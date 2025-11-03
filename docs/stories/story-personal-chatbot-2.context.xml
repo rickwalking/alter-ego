@@ -1,0 +1,266 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>1</epicId>
+    <storyId>2</storyId>
+    <title>Frontend Chat Interface</title>
+    <status>ready-for-dev</status>
+    <generatedAt>2025-11-02</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/stories/story-personal-chatbot-2.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>a recruiter</asA>
+    <iWant>an intuitive chat interface on a landing page</iWant>
+    <soThat>I can interact with the AI chatbot and learn about the candidate's background</soThat>
+    <tasks>
+      <task id="1" ac="1,11">Frontend Project Setup - Create frontend directory, run npm create vite with React TypeScript template, install Tailwind CSS 4.0 with @tailwindcss/vite plugin (no tailwind.config.js or postcss.config.js needed)</task>
+      <task id="2" ac="2">Shadcn UI Setup - Run npx shadcn@latest init (Default style, Neutral colors, CSS variables: yes), add button/card/input/scroll-area/avatar components, create src/lib/utils.ts with cn() helper</task>
+      <task id="2.1" ac="2">Storybook Setup - Run npx storybook@latest init, verify React+Vite configuration, create stories for all Shadcn UI components showing all variants and states, test on localhost:6006</task>
+      <task id="3" ac="7">TypeScript Types - Create src/types/index.ts, define Message interface { id, content, role, timestamp }, define ChatRequest and ChatResponse types</task>
+      <task id="4" ac="7,9">API Client - Install axios, create src/services/api.ts, set up axios instance with base URL from env, implement sendMessage(message: string) function, add error handling wrapper, configure timeout (30000ms)</task>
+      <task id="5" ac="3,10">Landing Page Component - Create src/components/LandingPage.tsx, use Card component for hero section, add project title and description, add introduction text, apply Tailwind responsive layout, test on mobile and desktop viewports</task>
+      <task id="6" ac="4,5,6,8,12">Chat Interface Component - Create src/components/ChatInterface.tsx, set up message state with useState hook, implement ScrollArea for message container, map messages with Avatar components, create Input field and Button for send action, implement send message handler, add loading and error states, implement auto-scroll to bottom on new messages, style with Tailwind CSS</task>
+      <task id="7" ac="1">Main App - Create src/App.tsx, combine LandingPage and ChatInterface, apply main layout with Tailwind grid/flex, update src/main.tsx entry point</task>
+      <task id="8" ac="7">Environment Configuration - Create .env.example with VITE_API_BASE_URL, create .env with localhost:8000 URL, update vite.config.ts if needed</task>
+      <task id="9" ac="8,9,10,12">Testing and Validation - Start backend on localhost:8000, start frontend with npm run dev, test sending messages and receiving responses, test loading state, test error state when backend is down, test responsive design on mobile (375px) and desktop, verify auto-scroll behavior, verify no CORS errors in console, test all Shadcn UI components render correctly</task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <criterion id="1">React TypeScript application runs on localhost:5173 with Vite dev server</criterion>
+    <criterion id="2">Shadcn UI component library installed and configured</criterion>
+    <criterion id="3">Landing page displays project introduction with Card component</criterion>
+    <criterion id="4">Chat interface displays message history with ScrollArea component</criterion>
+    <criterion id="5">Users can type and send messages using Input and Button components</criterion>
+    <criterion id="6">Messages display with Avatar components for user/AI distinction</criterion>
+    <criterion id="7">API client successfully communicates with backend at localhost:8000</criterion>
+    <criterion id="8">Loading state displays while waiting for AI response</criterion>
+    <criterion id="9">Error messages display when backend is unavailable</criterion>
+    <criterion id="10">Application is responsive on mobile (375px+) and desktop</criterion>
+    <criterion id="11">Tailwind CSS properly configured and styling applied</criterion>
+    <criterion id="12">Auto-scroll to latest message when new message arrives</criterion>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/tech-spec.md</path>
+        <title>Technical Specification</title>
+        <section>Source Tree Structure</section>
+        <snippet>Complete frontend directory structure showing all files to be created: frontend/src with App.tsx, main.tsx, components/ui (Shadcn components), components/ChatInterface.tsx, components/LandingPage.tsx, lib/utils.ts, services/api.ts, types/index.ts, and configuration files (package.json, tsconfig.json, tailwind.config.js, vite.config.ts)</snippet>
+      </doc>
+      <doc>
+        <path>docs/tech-spec.md</path>
+        <title>Technical Specification</title>
+        <section>Implementation Stack - Frontend</section>
+        <snippet>Node.js 22.x LTS, React 19.2.0, TypeScript 5.9.3, Vite 7.0, Axios 1.12.2, Tailwind CSS 4.0, Shadcn UI (CLI-managed, latest via npx), Radix UI (installed as Shadcn dependencies)</snippet>
+      </doc>
+      <doc>
+        <path>docs/tech-spec.md</path>
+        <title>Technical Specification</title>
+        <section>Technical Approach - Frontend Strategy</section>
+        <snippet>React SPA with Vite as build tool, Single landing page with embedded chat interface, Real-time chat UI with message history, API client service for backend communication, Responsive design for desktop and mobile</snippet>
+      </doc>
+      <doc>
+        <path>docs/tech-spec.md</path>
+        <title>Technical Specification</title>
+        <section>Technical Approach - Data Flow</section>
+        <snippet>User sends message through React chat interface → Frontend API client sends POST request to FastAPI backend → Backend loads knowledge base context and user message → OpenAI API processes request with system prompt + knowledge base → Response streamed back to frontend → Chat interface displays AI response</snippet>
+      </doc>
+      <doc>
+        <path>docs/tech-spec.md</path>
+        <title>Technical Specification</title>
+        <section>Technical Details - Frontend API Client</section>
+        <snippet>Base URL: http://localhost:8000, Axios instance with timeout: 30000ms, Error handling for network failures, TypeScript interfaces for request/response types</snippet>
+      </doc>
+      <doc>
+        <path>docs/tech-spec.md</path>
+        <title>Technical Specification</title>
+        <section>Technical Details - React Components</section>
+        <snippet>LandingPage.tsx: Hero section with project introduction using Card component. ChatInterface.tsx: Chat UI with message list and input field using ScrollArea, Input, Button, Avatar components. Message state managed with useState hook, Auto-scroll to latest message, Shadcn UI components styled with Tailwind CSS</snippet>
+      </doc>
+      <doc>
+        <path>docs/tech-spec.md</path>
+        <title>Technical Specification</title>
+        <section>Development Setup - Frontend Setup</section>
+        <snippet>Commands: cd frontend, npm create vite@latest . -- --template react-ts, npm install, npm install -D tailwindcss postcss autoprefixer, npx tailwindcss init -p, npm install axios, npx shadcn-ui@latest init (Default style, Neutral colors, CSS variables: yes), npx shadcn-ui@latest add button card input scroll-area avatar, cp .env.example .env</snippet>
+      </doc>
+      <doc>
+        <path>docs/tech-spec.md</path>
+        <title>Technical Specification</title>
+        <section>Implementation Guide - Phase 3</section>
+        <snippet>Frontend Component Library Setup (1-2 hours): Verify Shadcn UI components installed in src/components/ui/, create src/lib/utils.ts with cn() helper function, create TypeScript types in src/types/index.ts for Message interface and ChatRequest/ChatResponse types, create src/services/api.ts with axios instance and sendMessage function</snippet>
+      </doc>
+      <doc>
+        <path>docs/tech-spec.md</path>
+        <title>Technical Specification</title>
+        <section>Implementation Guide - Phase 4</section>
+        <snippet>Frontend UI Development (3-4 hours): Create src/components/LandingPage.tsx using Card component for hero section, create src/components/ChatInterface.tsx using ScrollArea for message list, Avatar for user/AI distinction, Input and Button for message input, implement loading state during API call, error handling display, auto-scroll to bottom on new messages, create src/App.tsx combining LandingPage and ChatInterface with Tailwind grid/flex layout</snippet>
+      </doc>
+      <doc>
+        <path>docs/tech-spec.md</path>
+        <title>Technical Specification</title>
+        <section>Testing Approach - Frontend Testing</section>
+        <snippet>Manual UI testing with real backend, test chat interface message sending and display, test loading states, test error states (backend down, network error), test responsive design on mobile/desktop, verify Shadcn UI components render correctly, test button click handlers, test input field validation, test scroll behavior on new messages</snippet>
+      </doc>
+      <doc>
+        <path>docs/tech-spec.md</path>
+        <title>Technical Specification</title>
+        <section>Testing Approach - Integration Testing</section>
+        <snippet>Start backend on localhost:8000, start frontend on localhost:5173, send test messages and verify messages appear in chat interface, AI responds with knowledge base information, timestamps display correctly, no CORS errors in browser console</snippet>
+      </doc>
+    </docs>
+    <code>
+      <artifact>
+        <path>backend/app/api/routes.py</path>
+        <kind>REST endpoint</kind>
+        <symbol>POST /api/chat</symbol>
+        <lines>21-49</lines>
+        <reason>Frontend API client must call this backend endpoint to send messages and receive AI responses. Request format: ChatRequest { message: str }, Response format: ChatResponse { response: str, timestamp: str }</reason>
+      </artifact>
+      <artifact>
+        <path>backend/app/main.py</path>
+        <kind>CORS configuration</kind>
+        <symbol>CORSMiddleware</symbol>
+        <lines>16-22</lines>
+        <reason>Frontend must ensure CORS is configured to allow localhost:5173 origin. Verify Access-Control-Allow-Origin header is present in responses.</reason>
+      </artifact>
+    </code>
+    <dependencies>
+      <node>
+        <package name="react" version="^19.2.0"/>
+        <package name="react-dom" version="^19.2.0"/>
+        <package name="typescript" version="^5.9.3"/>
+        <package name="vite" version="^7.0.0"/>
+        <package name="axios" version="^1.12.2"/>
+        <package name="tailwindcss" version="^4.0.0"/>
+        <package name="@tailwindcss/vite" version="^4.0.0"/>
+        <package name="@radix-ui/react-avatar" version="latest"/>
+        <package name="@radix-ui/react-scroll-area" version="latest"/>
+        <package name="class-variance-authority" version="latest"/>
+        <package name="clsx" version="latest"/>
+        <package name="tailwind-merge" version="latest"/>
+        <package name="@storybook/react-vite" version="^9.1.0" devDependency="true"/>
+        <package name="@storybook/addon-essentials" version="^9.1.0" devDependency="true"/>
+        <package name="@storybook/addon-interactions" version="^9.1.0" devDependency="true"/>
+        <package name="@storybook/test" version="^9.1.0" devDependency="true"/>
+      </node>
+      <tooling>
+        <tool name="node" version="22.x LTS"/>
+        <tool name="npm" version="latest"/>
+        <tool name="vite" version="7.0"/>
+        <tool name="storybook" version="9.x (latest)"/>
+        <tool name="shadcn-ui" version="latest (via npx)"/>
+      </tooling>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint>Use Vite 7.0 for all build tooling - do NOT use Create React App</constraint>
+    <constraint>CRITICAL: Vite 7.0 requires Node.js 22.12+ or 20.19+ minimum (Node.js 18 is EOL)</constraint>
+    <constraint>Use Shadcn UI components from src/components/ui directory - do NOT install alternative UI libraries</constraint>
+    <constraint>All environment variables must be prefixed with VITE_ to be exposed to frontend</constraint>
+    <constraint>API base URL must be configurable via VITE_API_BASE_URL environment variable, defaulting to http://localhost:8000</constraint>
+    <constraint>Use TypeScript 5.9.3 for ALL components - no JavaScript files in src/</constraint>
+    <constraint>Use Tailwind CSS 4.0 with Vite plugin (@tailwindcss/vite) - do NOT add CSS-in-JS libraries</constraint>
+    <constraint>CRITICAL: Tailwind CSS 4.0 uses CSS-first configuration - configure in CSS file using @theme directive, NOT tailwind.config.js</constraint>
+    <constraint>Tailwind CSS 4.0 has automatic content detection - no need to configure content globs in config</constraint>
+    <constraint>Use React 19.2.0 - be aware of breaking changes from React 18 (ref cleanup, Context.Provider deprecated, etc.)</constraint>
+    <constraint>Message state must be managed with React useState hook - do NOT add state management libraries for MVP</constraint>
+    <constraint>Frontend runs on port 5173 (Vite default), Storybook runs on port 6006 (default)</constraint>
+    <constraint>Follow frontend/ directory structure exactly as defined in tech-spec Source Tree</constraint>
+    <constraint>Use cn() utility from lib/utils.ts for conditional Tailwind classes</constraint>
+    <constraint>CRITICAL: All Shadcn UI components MUST have corresponding Storybook stories for component visibility and documentation</constraint>
+    <constraint>Storybook stories should be co-located with components (e.g., Button.stories.tsx next to button.tsx)</constraint>
+    <constraint>Use Storybook 9.x with @storybook/react-vite for optimal Vite integration and visual testing support</constraint>
+  </constraints>
+
+  <interfaces>
+    <interface>
+      <name>POST /api/chat</name>
+      <kind>REST endpoint (backend)</kind>
+      <signature>
+        Request: { message: string }
+        Response: { response: string, timestamp: string (ISO8601) }
+        Base URL: http://localhost:8000
+      </signature>
+      <path>backend/app/api/routes.py</path>
+    </interface>
+    <interface>
+      <name>Message</name>
+      <kind>TypeScript interface</kind>
+      <signature>
+        interface Message {
+          id: string;
+          content: string;
+          role: 'user' | 'assistant';
+          timestamp: string;
+        }
+      </signature>
+      <path>frontend/src/types/index.ts</path>
+    </interface>
+    <interface>
+      <name>ChatRequest</name>
+      <kind>TypeScript type</kind>
+      <signature>
+        type ChatRequest = {
+          message: string;
+        }
+      </signature>
+      <path>frontend/src/types/index.ts</path>
+    </interface>
+    <interface>
+      <name>ChatResponse</name>
+      <kind>TypeScript type</kind>
+      <signature>
+        type ChatResponse = {
+          response: string;
+          timestamp: string;
+        }
+      </signature>
+      <path>frontend/src/types/index.ts</path>
+    </interface>
+    <interface>
+      <name>sendMessage</name>
+      <kind>function signature</kind>
+      <signature>
+        async function sendMessage(message: string): Promise&lt;ChatResponse&gt;
+      </signature>
+      <path>frontend/src/services/api.ts</path>
+    </interface>
+    <interface>
+      <name>cn</name>
+      <kind>utility function</kind>
+      <signature>
+        function cn(...inputs: ClassValue[]): string
+      </signature>
+      <path>frontend/src/lib/utils.ts</path>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>Manual browser testing for UI and integration with backend. Storybook 9.x for component visibility and visual testing. Each Shadcn UI component must have stories showing all variants and states. Focus on integration testing with real backend, responsive design testing on multiple viewports (mobile 375px+, desktop), and Shadcn UI component rendering. Verify error handling for network failures and backend unavailability. Storybook provides visual testing and component documentation without requiring traditional test framework for MVP.</standards>
+    <locations>
+      <location>Manual browser testing - no test directory required for MVP</location>
+      <location>Storybook stories co-located with components: src/components/ui/*.stories.tsx</location>
+      <location>Storybook stories for custom components: src/components/*.stories.tsx</location>
+      <location>Storybook runs on http://localhost:6006</location>
+    </locations>
+    <ideas>
+      <idea ac="1">Start frontend with: npm run dev and verify it runs on localhost:5173 without errors, opens in browser automatically</idea>
+      <idea ac="2">Start Storybook with: npm run storybook and verify it runs on localhost:6006. Verify all Shadcn UI components have stories: Button.stories.tsx, Card.stories.tsx, Input.stories.tsx, ScrollArea.stories.tsx, Avatar.stories.tsx showing all variants (sizes, colors, states)</idea>
+      <idea ac="2">In Storybook, verify each Shadcn component renders correctly in isolation with different props and states. Test accessibility with Storybook's a11y addon.</idea>
+      <idea ac="3">Verify LandingPage displays with Card component showing project title, description, and introduction text. Check responsive layout on desktop.</idea>
+      <idea ac="4">Verify ChatInterface displays with ScrollArea containing message history. Send test messages and verify they appear in the scroll area.</idea>
+      <idea ac="5">Test message sending: type message in Input field, click Button, verify message appears in chat. Check Input clears after send.</idea>
+      <idea ac="6">Verify Avatar components display for both user and AI messages with distinct visual styling (different colors or icons).</idea>
+      <idea ac="7">Test API client: with backend running on localhost:8000, send test message and verify API call succeeds. Check browser network tab for POST /api/chat request. Verify no CORS errors in console.</idea>
+      <idea ac="8">Test loading state: send message and verify loading indicator appears while waiting for backend response. Loading should disappear when response arrives.</idea>
+      <idea ac="9">Test error handling: stop backend server, send message, verify error message displays to user (e.g., "Unable to connect to server" or similar user-friendly message).</idea>
+      <idea ac="10">Test responsive design: resize browser to 375px width and verify layout adapts properly. Test on desktop viewport (1920px) and verify layout looks good. Check all components remain usable at both sizes.</idea>
+      <idea ac="11">Verify Tailwind CSS is working: check that utility classes are applied and working. Inspect element styles in browser dev tools to confirm Tailwind classes are generating CSS.</idea>
+      <idea ac="12">Test auto-scroll: send multiple messages until ScrollArea has scrollbar, send new message, verify scroll position automatically moves to bottom to show latest message.</idea>
+    </ideas>
+  </tests>
+</story-context>

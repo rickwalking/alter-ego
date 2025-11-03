@@ -1,0 +1,178 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>1</epicId>
+    <storyId>1</storyId>
+    <title>Backend API and OpenAI Integration</title>
+    <status>ready-for-dev</status>
+    <generatedAt>2025-10-30</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/stories/story-personal-chatbot-1.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>a developer</asA>
+    <iWant>a complete FastAPI backend with OpenAI integration</iWant>
+    <soThat>the chatbot can process user messages and generate AI responses based on the knowledge base</soThat>
+    <tasks>
+      <task id="1" ac="8">Project Initialization - Create backend directory structure, run poetry init with Python 3.11, add dependencies (fastapi, uvicorn, openai, python-dotenv, pydantic), create .env.example template, initialize Git and create .gitignore</task>
+      <task id="2" ac="6">Configuration Setup - Create app/config/__init__.py and settings.py with environment variable loading, define Settings class with all required config values</task>
+      <task id="3" ac="3,4">OpenAI Service - Create app/services/__init__.py and openai_service.py, initialize OpenAI client, implement knowledge base file loading, implement get_chat_response function, build system prompt with PERSON_NAME and knowledge base context, configure temperature (0.7) and max_tokens (500)</task>
+      <task id="4" ac="2,9">API Routes - Create app/api/__init__.py and routes.py, define ChatRequest/ChatResponse Pydantic models, implement POST /api/chat endpoint with request validation</task>
+      <task id="5" ac="1,5,7">Main Application - Create app/__init__.py and main.py, initialize FastAPI app, configure CORS middleware with allowed origins, include API routes, add GET /health endpoint</task>
+      <task id="6" ac="4">Knowledge Base - Create data/ directory and knowledge_base.txt with sample career and personal information</task>
+      <task id="7" ac="10,1,2">Testing - Test server startup, health check endpoint, POST /api/chat with Postman/curl, verify OpenAI integration, test error handling, verify CORS headers</task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <criterion id="1">FastAPI application runs on localhost:8000 with auto-reload</criterion>
+    <criterion id="2">POST /api/chat endpoint accepts message and returns AI response</criterion>
+    <criterion id="3">OpenAI GPT-4 integration successfully processes requests</criterion>
+    <criterion id="4">Knowledge base loaded from data/knowledge_base.txt at startup</criterion>
+    <criterion id="5">CORS configured to allow frontend origin (localhost:5173)</criterion>
+    <criterion id="6">Environment variables properly loaded (OPENAI_API_KEY, PERSON_NAME, etc.)</criterion>
+    <criterion id="7">Health check endpoint returns 200 OK</criterion>
+    <criterion id="8">Poetry dependency management configured with all required packages</criterion>
+    <criterion id="9">API request validation with Pydantic models</criterion>
+    <criterion id="10">Error handling for OpenAI API failures</criterion>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/tech-spec.md</path>
+        <title>Technical Specification</title>
+        <section>Source Tree Structure</section>
+        <snippet>Complete backend directory structure showing all files to be created: backend/app with main.py, api/routes.py, services/openai_service.py, config/settings.py, and pyproject.toml for Poetry dependency management.</snippet>
+      </doc>
+      <doc>
+        <path>docs/tech-spec.md</path>
+        <title>Technical Specification</title>
+        <section>Implementation Stack - Backend</section>
+        <snippet>Python 3.11, FastAPI 0.104.1, OpenAI Python SDK 1.3.7, Uvicorn 0.24.0, Python-dotenv 1.0.0, Pydantic 2.5.0, Poetry 1.7.0</snippet>
+      </doc>
+      <doc>
+        <path>docs/tech-spec.md</path>
+        <title>Technical Specification</title>
+        <section>Technical Details - API Endpoints</section>
+        <snippet>POST /api/chat endpoint with Request: { "message": "string" } and Response: { "response": "string", "timestamp": "ISO8601" }</snippet>
+      </doc>
+      <doc>
+        <path>docs/tech-spec.md</path>
+        <title>Technical Specification</title>
+        <section>Technical Details - Backend Configuration</section>
+        <snippet>Settings include OPENAI_API_KEY, OPENAI_MODEL (gpt-4-turbo-preview), PERSON_NAME (from environment), KNOWLEDGE_BASE_PATH (../data/knowledge_base.txt), CORS_ORIGINS ([http://localhost:5173])</snippet>
+      </doc>
+      <doc>
+        <path>docs/tech-spec.md</path>
+        <title>Technical Specification</title>
+        <section>Technical Details - OpenAI Integration</section>
+        <snippet>System prompt: f"You are {PERSON_NAME}. Answer questions about your career and personal background based on the provided knowledge base. Be conversational and helpful." Temperature: 0.7, Max tokens: 500 per response</snippet>
+      </doc>
+      <doc>
+        <path>docs/tech-spec.md</path>
+        <title>Technical Specification</title>
+        <section>Development Setup - Backend</section>
+        <snippet>Commands: cd backend, poetry init --no-interaction --name alter-ego-backend --python "^3.11", poetry add fastapi uvicorn openai python-dotenv pydantic, poetry install, cp .env.example .env</snippet>
+      </doc>
+      <doc>
+        <path>docs/tech-spec.md</path>
+        <title>Technical Specification</title>
+        <section>Implementation Guide - Phase 2</section>
+        <snippet>Backend API Development (2-3 hours): Create settings.py for config, openai_service.py with get_chat_response function, routes.py with POST /api/chat endpoint, main.py with FastAPI app, CORS middleware, and health check</snippet>
+      </doc>
+      <doc>
+        <path>docs/tech-spec.md</path>
+        <title>Technical Specification</title>
+        <section>Testing Approach - Backend Testing</section>
+        <snippet>Manual API testing with Postman/curl, test cases include valid chat message returns AI response, empty message returns validation error, CORS headers present, health check returns 200 OK, environment variables loaded correctly</snippet>
+      </doc>
+    </docs>
+    <code>
+      <!-- No existing code - greenfield project -->
+    </code>
+    <dependencies>
+      <python>
+        <package name="fastapi" version="0.104.1"/>
+        <package name="uvicorn" version="0.24.0"/>
+        <package name="openai" version="1.3.7"/>
+        <package name="python-dotenv" version="1.0.0"/>
+        <package name="pydantic" version="2.5.0"/>
+      </python>
+      <tooling>
+        <tool name="poetry" version="1.7.0"/>
+        <tool name="python" version="3.11"/>
+      </tooling>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint>Use Poetry for all Python dependency management - do NOT use pip or requirements.txt</constraint>
+    <constraint>All environment variables must be loaded via python-dotenv from .env file</constraint>
+    <constraint>FastAPI app must use CORS middleware configured for localhost:5173 origin</constraint>
+    <constraint>OpenAI system prompt MUST include PERSON_NAME variable from environment</constraint>
+    <constraint>Knowledge base must be loaded at application startup, not per-request</constraint>
+    <constraint>All Pydantic models must use strict validation</constraint>
+    <constraint>Backend runs on port 8000 (hardcoded for development, $PORT for production)</constraint>
+    <constraint>Follow backend/ directory structure exactly as defined in tech-spec Source Tree</constraint>
+  </constraints>
+
+  <interfaces>
+    <interface>
+      <name>POST /api/chat</name>
+      <kind>REST endpoint</kind>
+      <signature>
+        Request Body: ChatRequest { message: str }
+        Response: ChatResponse { response: str, timestamp: str (ISO8601) }
+      </signature>
+      <path>backend/app/api/routes.py</path>
+    </interface>
+    <interface>
+      <name>GET /health</name>
+      <kind>REST endpoint</kind>
+      <signature>
+        Response: 200 OK (no body required)
+      </signature>
+      <path>backend/app/main.py</path>
+    </interface>
+    <interface>
+      <name>get_chat_response</name>
+      <kind>function signature</kind>
+      <signature>
+        async def get_chat_response(message: str) -> str
+      </signature>
+      <path>backend/app/services/openai_service.py</path>
+    </interface>
+    <interface>
+      <name>Settings</name>
+      <kind>class interface</kind>
+      <signature>
+        class Settings(BaseSettings):
+            OPENAI_API_KEY: str
+            OPENAI_MODEL: str = "gpt-4-turbo-preview"
+            PERSON_NAME: str
+            KNOWLEDGE_BASE_PATH: str = "../data/knowledge_base.txt"
+            CORS_ORIGINS: list[str] = ["http://localhost:5173"]
+      </signature>
+      <path>backend/app/config/settings.py</path>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>Manual testing using Postman or curl for API endpoints. No automated test framework required for MVP. Focus on integration testing of OpenAI API, FastAPI endpoints, and CORS configuration. Verify error handling for invalid API keys and empty messages.</standards>
+    <locations>
+      <location>Manual testing - no test directory required for MVP</location>
+    </locations>
+    <ideas>
+      <idea ac="1">Start backend with: poetry run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000 and verify it runs without errors</idea>
+      <idea ac="2,9">Test POST /api/chat with curl: curl -X POST http://localhost:8000/api/chat -H "Content-Type: application/json" -d '{"message":"Hello"}' and verify valid JSON response with response and timestamp fields</idea>
+      <idea ac="3">Send test message through API and verify OpenAI generates contextual response based on knowledge base content</idea>
+      <idea ac="4">Add temporary print statement in openai_service.py to verify knowledge base is loaded at startup and contains expected content</idea>
+      <idea ac="5">Test CORS by checking response headers include Access-Control-Allow-Origin: http://localhost:5173</idea>
+      <idea ac="6">Test with missing OPENAI_API_KEY in .env and verify application fails to start with clear error message</idea>
+      <idea ac="7">Test GET /health with: curl http://localhost:8000/health and verify 200 OK response</idea>
+      <idea ac="8">Verify poetry.lock file generated and all dependencies installed correctly with: poetry show</idea>
+      <idea ac="10">Test error handling by using invalid API key and verify graceful error response returned to client</idea>
+    </ideas>
+  </tests>
+</story-context>
