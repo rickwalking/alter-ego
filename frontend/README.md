@@ -1,4 +1,36 @@
-# React + TypeScript + Vite
+# Alter Ego - AI Personal Chatbot
+
+AI-powered chatbot interface built with React 19, TypeScript, and Vite, featuring liquid glass morphism design and WCAG 2.1 AA accessibility compliance.
+
+## Features
+
+- 🤖 Real-time AI chat interface
+- ♿ WCAG 2.1 Level AA accessible
+- ⌨️ Full keyboard navigation support
+- 🎨 Liquid glass morphism design
+- 📱 Responsive mobile/desktop layout
+- 🧪 Storybook component documentation
+
+## Accessibility
+
+This application implements WCAG 2.1 Level AA accessibility standards:
+
+- **Screen Reader Support**: ARIA labels, live regions, and semantic HTML
+- **Keyboard Navigation**: Tab, Enter, and Escape key support
+- **Focus Indicators**: Visible focus outlines meeting contrast requirements
+- **Error Handling**: Clear error messages announced to assistive technologies
+
+For detailed accessibility information, see [../docs/accessibility.md](../docs/accessibility.md).
+
+### Keyboard Shortcuts
+
+| Key | Action |
+|-----|--------|
+| Tab | Navigate between elements |
+| Enter | Send message |
+| Escape | Clear input field |
+
+## Development
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 

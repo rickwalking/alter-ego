@@ -87,6 +87,10 @@ export function ChatInterface() {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSendMessage();
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      setInputMessage('');
+      setError(null);
     }
   };
 
@@ -96,6 +100,10 @@ export function ChatInterface() {
       <ScrollArea
         className="flex-1 glass-card glass-scroll p-4 mb-4 rounded-xl"
         ref={scrollRef}
+        role="log"
+        aria-live="polite"
+        aria-busy={isLoading}
+        aria-label="Chat messages"
       >
         {messages.length === 0 ? (
           <div className="h-full flex items-center justify-center text-text-tertiary text-sm">
@@ -168,22 +176,31 @@ export function ChatInterface() {
       )}
 
       {/* Input Area */}
-      <div className="flex gap-2">
-        <Input
-          value={inputMessage}
-          onChange={(e) => setInputMessage(e.target.value)}
-          onKeyPress={handleKeyPress}
-          placeholder="Type your message..."
-          disabled={isLoading}
-          className="glass-input flex-1"
-        />
-        <Button
-          onClick={handleSendMessage}
-          disabled={isLoading || !inputMessage.trim()}
-          className="glass-button-primary text-white"
-        >
-          {isLoading ? 'Sending...' : 'Send'}
-        </Button>
+      <div className="flex flex-col gap-2">
+        <span id="message-input-description" className="sr-only">
+          Type your message and press Enter or click Send to send it to the AI assistant
+        </span>
+        <div className="flex gap-2">
+          <Input
+            value={inputMessage}
+            onChange={(e) => setInputMessage(e.target.value)}
+            onKeyPress={handleKeyPress}
+            placeholder="Type your message..."
+            disabled={isLoading}
+            className="glass-input flex-1"
+            aria-label="Message input"
+            aria-describedby="message-input-description"
+            aria-invalid={!!error}
+          />
+          <Button
+            onClick={handleSendMessage}
+            disabled={isLoading || !inputMessage.trim()}
+            className="glass-button-primary text-white"
+            aria-label="Send message"
+          >
+            {isLoading ? 'Sending...' : 'Send'}
+          </Button>
+        </div>
       </div>
     </div>
   );
