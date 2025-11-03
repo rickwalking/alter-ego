@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { Card, CardContent } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -95,16 +96,18 @@ export function ChatInterface() {
   };
 
   return (
-    <div className="w-full max-w-2xl mx-auto p-4 h-[600px] flex flex-col">
-      {/* Chat Messages */}
-      <ScrollArea
-        className="flex-1 glass-card glass-scroll p-4 mb-4 rounded-xl"
-        ref={scrollRef}
-        role="log"
-        aria-live="polite"
-        aria-busy={isLoading}
-        aria-label="Chat messages"
-      >
+    <div className="w-full max-w-2xl mx-auto p-4">
+      <Card className="glass-card h-[600px] flex flex-col">
+        <CardContent className="flex-1 flex flex-col p-6">
+          {/* Chat Messages */}
+          <ScrollArea
+            className="flex-1 glass-scroll mb-4"
+            ref={scrollRef}
+            role="log"
+            aria-live="polite"
+            aria-busy={isLoading}
+            aria-label="Chat messages"
+          >
         {messages.length === 0 ? (
           <div className="h-full flex items-center justify-center text-text-tertiary text-sm">
             Start a conversation by typing a message below
@@ -202,6 +205,8 @@ export function ChatInterface() {
           </Button>
         </div>
       </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
