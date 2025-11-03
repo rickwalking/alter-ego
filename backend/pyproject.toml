@@ -1,0 +1,22 @@
+[project]
+name = "alter-ego-backend"
+version = "0.1.0"
+description = ""
+authors = [
+    {name = "Pedro Marins",email = "ph.marins@hotmail.com"}
+]
+readme = "README.md"
+requires-python = "^3.11"
+dependencies = [
+    "fastapi (==0.104.1)",
+    "uvicorn (==0.24.0)",
+    "python-dotenv (==1.0.0)",
+    "pydantic (==2.5.0)",
+    "pydantic-settings (>=2.0,<2.6)",
+    "openai (>=1.12.0)"
+]
+
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
