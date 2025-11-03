@@ -1,6 +1,6 @@
 # Story 2.1: UX Design Alignment
 
-Status: backlog
+Status: ready-for-dev
 
 ## Story
 
