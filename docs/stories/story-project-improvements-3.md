@@ -1,6 +1,6 @@
 # Story 2.3: Accessibility Improvements
 
-Status: review
+Status: done
 
 ## Story
 
