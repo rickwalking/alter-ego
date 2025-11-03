@@ -1,6 +1,6 @@
 # Story 2.3: Accessibility Improvements
 
-Status: drafted
+Status: ready-for-dev
 
 ## Story
 
