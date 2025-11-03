@@ -1,6 +1,6 @@
 # Story: Frontend Chat Interface
 
-Status: review
+Status: done
 
 ## Story
 
