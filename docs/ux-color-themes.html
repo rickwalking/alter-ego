@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Alter Ego - Dark Liquid Glass Theme Options</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+            background: linear-gradient(135deg, #0f0f1e 0%, #1a1a2e 100%);
+            color: #e0e0e0;
+            padding: 2rem;
+            min-height: 100vh;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.5rem;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            color: #a0a0a0;
+        }
+
+        .themes-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 2rem;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .theme-card {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 24px;
+            padding: 2rem;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .theme-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+        }
+
+        .theme-header {
+            margin-bottom: 1.5rem;
+        }
+
+        .theme-header h2 {
+            font-size: 1.8rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .theme-header .subtitle {
+            color: #888;
+            font-size: 0.95rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .theme-header .description {
+            font-size: 0.9rem;
+            line-height: 1.6;
+            color: #aaa;
+        }
+
+        .palette-section {
+            margin: 1.5rem 0;
+        }
+
+        .palette-section h3 {
+            font-size: 1rem;
+            margin-bottom: 1rem;
+            color: #ccc;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 600;
+        }
+
+        .color-swatches {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+            gap: 0.75rem;
+        }
+
+        .swatch {
+            aspect-ratio: 1;
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 0.75rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: transform 0.2s ease;
+            cursor: pointer;
+        }
+
+        .swatch:hover {
+            transform: scale(1.05);
+        }
+
+        .swatch .label {
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            margin-bottom: 0.25rem;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+        }
+
+        .swatch .hex {
+            font-size: 0.65rem;
+            font-family: 'Courier New', monospace;
+            opacity: 0.9;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 0.2rem 0.4rem;
+            border-radius: 4px;
+        }
+
+        .components-preview {
+            margin-top: 1.5rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .components-preview h3 {
+            font-size: 1rem;
+            margin-bottom: 1rem;
+            color: #ccc;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 600;
+        }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .glass-card h4 {
+            font-size: 1.1rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .glass-card p {
+            font-size: 0.9rem;
+            color: #aaa;
+            line-height: 1.6;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+            margin-top: 1rem;
+        }
+
+        .btn {
+            padding: 0.65rem 1.5rem;
+            border-radius: 12px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            backdrop-filter: blur(10px);
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+        }
+
+        .chat-preview {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 16px;
+            padding: 1rem;
+            margin-top: 1rem;
+        }
+
+        .chat-message {
+            display: flex;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+            align-items: flex-start;
+        }
+
+        .chat-message.user {
+            flex-direction: row-reverse;
+        }
+
+        .avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.85rem;
+            flex-shrink: 0;
+        }
+
+        .message-bubble {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 0.75rem 1rem;
+            max-width: 80%;
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+
+        .input-group {
+            margin-top: 1rem;
+        }
+
+        .glass-input {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 0.75rem 1rem;
+            color: #e0e0e0;
+            font-size: 0.9rem;
+            transition: all 0.2s ease;
+        }
+
+        .glass-input:focus {
+            outline: none;
+            border-color: rgba(255, 255, 255, 0.3);
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .glass-input::placeholder {
+            color: #666;
+        }
+
+        /* Theme 1: Cyber Purple */
+        .theme-1 .theme-header h2 { color: #a78bfa; }
+        .theme-1 .btn-primary {
+            background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%);
+            color: white;
+            border: 1px solid rgba(139, 92, 246, 0.3);
+        }
+        .theme-1 .btn-secondary {
+            background: rgba(139, 92, 246, 0.1);
+            color: #a78bfa;
+            border: 1px solid rgba(139, 92, 246, 0.3);
+        }
+        .theme-1 .message-bubble.ai {
+            background: rgba(139, 92, 246, 0.15);
+            border-color: rgba(139, 92, 246, 0.3);
+        }
+        .theme-1 .avatar.ai {
+            background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%);
+            border-color: rgba(139, 92, 246, 0.5);
+        }
+        .theme-1 .glass-input:focus {
+            border-color: #8b5cf6;
+            box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
+        }
+
+        /* Theme 2: Neon Cyan */
+        .theme-2 .theme-header h2 { color: #22d3ee; }
+        .theme-2 .btn-primary {
+            background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
+            color: white;
+            border: 1px solid rgba(6, 182, 212, 0.3);
+        }
+        .theme-2 .btn-secondary {
+            background: rgba(6, 182, 212, 0.1);
+            color: #22d3ee;
+            border: 1px solid rgba(6, 182, 212, 0.3);
+        }
+        .theme-2 .message-bubble.ai {
+            background: rgba(6, 182, 212, 0.15);
+            border-color: rgba(6, 182, 212, 0.3);
+        }
+        .theme-2 .avatar.ai {
+            background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
+            border-color: rgba(6, 182, 212, 0.5);
+        }
+        .theme-2 .glass-input:focus {
+            border-color: #06b6d4;
+            box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.1);
+        }
+
+        /* Theme 3: Electric Blue */
+        .theme-3 .theme-header h2 { color: #60a5fa; }
+        .theme-3 .btn-primary {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            color: white;
+            border: 1px solid rgba(59, 130, 246, 0.3);
+        }
+        .theme-3 .btn-secondary {
+            background: rgba(59, 130, 246, 0.1);
+            color: #60a5fa;
+            border: 1px solid rgba(59, 130, 246, 0.3);
+        }
+        .theme-3 .message-bubble.ai {
+            background: rgba(59, 130, 246, 0.15);
+            border-color: rgba(59, 130, 246, 0.3);
+        }
+        .theme-3 .avatar.ai {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            border-color: rgba(59, 130, 246, 0.5);
+        }
+        .theme-3 .glass-input:focus {
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        @media (max-width: 768px) {
+            .themes-container {
+                grid-template-columns: 1fr;
+            }
+
+            .header h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🌌 Alter Ego Dark Liquid Glass Themes</h1>
+        <p>Modern, innovative AI chatbot design - Choose your accent color</p>
+    </div>
+
+    <div class="themes-container">
+        <!-- Theme 1: Cyber Purple -->
+        <div class="theme-card theme-1">
+            <div class="theme-header">
+                <h2>1. Cyber Purple</h2>
+                <p class="subtitle">Futuristic • Creative • Premium</p>
+                <p class="description">Deep purple gradients evoke AI intelligence and creativity. Perfect for showcasing innovative tech with a sophisticated, premium feel.</p>
+            </div>
+
+            <div class="palette-section">
+                <h3>Color Palette</h3>
+                <div class="color-swatches">
+                    <div class="swatch" style="background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%);">
+                        <span class="label">Primary</span>
+                        <span class="hex">#8b5cf6</span>
+                    </div>
+                    <div class="swatch" style="background: linear-gradient(135deg, #a78bfa 0%, #8b5cf6 100%);">
+                        <span class="label">Accent</span>
+                        <span class="hex">#a78bfa</span>
+                    </div>
+                    <div class="swatch" style="background: #22c55e;">
+                        <span class="label">Success</span>
+                        <span class="hex">#22c55e</span>
+                    </div>
+                    <div class="swatch" style="background: #ef4444;">
+                        <span class="label">Error</span>
+                        <span class="hex">#ef4444</span>
+                    </div>
+                    <div class="swatch" style="background: #1a1a2e; border: 2px solid #333;">
+                        <span class="label">Background</span>
+                        <span class="hex">#1a1a2e</span>
+                    </div>
+                    <div class="swatch" style="background: #e0e0e0; color: #000;">
+                        <span class="label">Text</span>
+                        <span class="hex">#e0e0e0</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="components-preview">
+                <h3>Component Preview</h3>
+
+                <div class="glass-card">
+                    <h4>About This Candidate</h4>
+                    <p>Experienced Full-Stack Developer with expertise in React, Node.js, and cloud architecture.</p>
+                </div>
+
+                <div class="button-group">
+                    <button class="btn btn-primary">Send Message</button>
+                    <button class="btn btn-secondary">View Profile</button>
+                </div>
+
+                <div class="chat-preview">
+                    <div class="chat-message">
+                        <div class="avatar">👤</div>
+                        <div class="message-bubble">Tell me about your experience with React.</div>
+                    </div>
+                    <div class="chat-message user">
+                        <div class="avatar ai">🤖</div>
+                        <div class="message-bubble ai">I have 5+ years of experience with React, building scalable applications...</div>
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <input type="text" class="glass-input" placeholder="Ask me anything...">
+                </div>
+            </div>
+        </div>
+
+        <!-- Theme 2: Neon Cyan -->
+        <div class="theme-card theme-2">
+            <div class="theme-header">
+                <h2>2. Neon Cyan</h2>
+                <p class="subtitle">Tech-Forward • Dynamic • Modern</p>
+                <p class="description">Vibrant cyan gives a cutting-edge, sci-fi aesthetic. High energy and attention-grabbing, perfect for standing out in tech.</p>
+            </div>
+
+            <div class="palette-section">
+                <h3>Color Palette</h3>
+                <div class="color-swatches">
+                    <div class="swatch" style="background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);">
+                        <span class="label">Primary</span>
+                        <span class="hex">#06b6d4</span>
+                    </div>
+                    <div class="swatch" style="background: linear-gradient(135deg, #22d3ee 0%, #06b6d4 100%);">
+                        <span class="label">Accent</span>
+                        <span class="hex">#22d3ee</span>
+                    </div>
+                    <div class="swatch" style="background: #22c55e;">
+                        <span class="label">Success</span>
+                        <span class="hex">#22c55e</span>
+                    </div>
+                    <div class="swatch" style="background: #ef4444;">
+                        <span class="label">Error</span>
+                        <span class="hex">#ef4444</span>
+                    </div>
+                    <div class="swatch" style="background: #1a1a2e; border: 2px solid #333;">
+                        <span class="label">Background</span>
+                        <span class="hex">#1a1a2e</span>
+                    </div>
+                    <div class="swatch" style="background: #e0e0e0; color: #000;">
+                        <span class="label">Text</span>
+                        <span class="hex">#e0e0e0</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="components-preview">
+                <h3>Component Preview</h3>
+
+                <div class="glass-card">
+                    <h4>About This Candidate</h4>
+                    <p>Experienced Full-Stack Developer with expertise in React, Node.js, and cloud architecture.</p>
+                </div>
+
+                <div class="button-group">
+                    <button class="btn btn-primary">Send Message</button>
+                    <button class="btn btn-secondary">View Profile</button>
+                </div>
+
+                <div class="chat-preview">
+                    <div class="chat-message">
+                        <div class="avatar">👤</div>
+                        <div class="message-bubble">Tell me about your experience with React.</div>
+                    </div>
+                    <div class="chat-message user">
+                        <div class="avatar ai">🤖</div>
+                        <div class="message-bubble ai">I have 5+ years of experience with React, building scalable applications...</div>
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <input type="text" class="glass-input" placeholder="Ask me anything...">
+                </div>
+            </div>
+        </div>
+
+        <!-- Theme 3: Electric Blue -->
+        <div class="theme-card theme-3">
+            <div class="theme-header">
+                <h2>3. Electric Blue</h2>
+                <p class="subtitle">Professional • Trustworthy • Tech</p>
+                <p class="description">Classic tech blue with modern glassmorphism. Balances professionalism with innovation—trusted yet forward-thinking.</p>
+            </div>
+
+            <div class="palette-section">
+                <h3>Color Palette</h3>
+                <div class="color-swatches">
+                    <div class="swatch" style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);">
+                        <span class="label">Primary</span>
+                        <span class="hex">#3b82f6</span>
+                    </div>
+                    <div class="swatch" style="background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);">
+                        <span class="label">Accent</span>
+                        <span class="hex">#60a5fa</span>
+                    </div>
+                    <div class="swatch" style="background: #22c55e;">
+                        <span class="label">Success</span>
+                        <span class="hex">#22c55e</span>
+                    </div>
+                    <div class="swatch" style="background: #ef4444;">
+                        <span class="label">Error</span>
+                        <span class="hex">#ef4444</span>
+                    </div>
+                    <div class="swatch" style="background: #1a1a2e; border: 2px solid #333;">
+                        <span class="label">Background</span>
+                        <span class="hex">#1a1a2e</span>
+                    </div>
+                    <div class="swatch" style="background: #e0e0e0; color: #000;">
+                        <span class="label">Text</span>
+                        <span class="hex">#e0e0e0</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="components-preview">
+                <h3>Component Preview</h3>
+
+                <div class="glass-card">
+                    <h4>About This Candidate</h4>
+                    <p>Experienced Full-Stack Developer with expertise in React, Node.js, and cloud architecture.</p>
+                </div>
+
+                <div class="button-group">
+                    <button class="btn btn-primary">Send Message</button>
+                    <button class="btn btn-secondary">View Profile</button>
+                </div>
+
+                <div class="chat-preview">
+                    <div class="chat-message">
+                        <div class="avatar">👤</div>
+                        <div class="message-bubble">Tell me about your experience with React.</div>
+                    </div>
+                    <div class="chat-message user">
+                        <div class="avatar ai">🤖</div>
+                        <div class="message-bubble ai">I have 5+ years of experience with React, building scalable applications...</div>
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <input type="text" class="glass-input" placeholder="Ask me anything...">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Add click to copy hex codes
+        document.querySelectorAll('.swatch').forEach(swatch => {
+            swatch.addEventListener('click', () => {
+                const hex = swatch.querySelector('.hex').textContent;
+                navigator.clipboard.writeText(hex);
+
+                // Show copied feedback
+                const originalText = swatch.querySelector('.hex').textContent;
+                swatch.querySelector('.hex').textContent = 'Copied!';
+                setTimeout(() => {
+                    swatch.querySelector('.hex').textContent = originalText;
+                }, 1000);
+            });
+        });
+    </script>
+</body>
+</html>
