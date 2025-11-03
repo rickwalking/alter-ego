@@ -40,5 +40,5 @@ story_location: "{project-root}/docs/stories"
 development_status:
   epic-1: backlog
   story-personal-chatbot-1: done
-  story-personal-chatbot-2: ready-for-dev
+  story-personal-chatbot-2: review
   epic-1-retrospective: optional
