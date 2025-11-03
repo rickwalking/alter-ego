@@ -99,25 +99,52 @@ Story files are located in: `/home/pmarins/Desktop/studies/ai_studies/alter_ego/
 
 ```
 Epic: Project Improvements
+├── Story 2.1: UX Design Alignment (3 points) [CRITICAL]
 ├── Story 3: Accessibility Improvements (3 points) [HIGH PRIORITY]
 ├── Story 4: Input Validation & Rate Limiting (3 points) [HIGH PRIORITY]
 ├── Story 5: Unit Test Coverage (5 points) [MEDIUM PRIORITY]
 └── Story 6: React Compiler Integration (2 points) [LOW PRIORITY]
 ```
 
-**Total Story Points:** 13
-**Estimated Timeline:** 1-2 weeks (1 sprint)
+**Total Story Points:** 16
+**Estimated Timeline:** 2 weeks (1 sprint)
 
 ### Implementation Sequence
 
-1. **Story 3** → Accessibility Improvements (High Priority)
-2. **Story 4** → Input Validation & Rate Limiting (High Priority)
-3. **Story 5** → Unit Test Coverage (Medium Priority)
-4. **Story 6** → React Compiler Integration (Low Priority)
+1. **Story 2.1** → UX Design Alignment (CRITICAL - Technical Debt)
+2. **Story 3** → Accessibility Improvements (High Priority)
+3. **Story 4** → Input Validation & Rate Limiting (High Priority)
+4. **Story 5** → Unit Test Coverage (Medium Priority)
+5. **Story 6** → React Compiler Integration (Low Priority)
 
 ---
 
 ## Story Summaries
+
+### Story 2.1: UX Design Alignment
+**Priority:** CRITICAL
+**Story Points:** 3
+
+Align frontend implementation with original UX design specifications (Cyber Purple and Electric Blue themes from ux-liquid-glass-themes.html). Fix discrepancies in hover effects, card structure, button sizing, and input states.
+
+**Key Deliverables:**
+- Wrap ChatInterface in Card component for consistent glass-card styling
+- Implement shimmer animation overlay on glass cards
+- Add ambient gradient glow border on card hover
+- Implement button ripple effect animation
+- Increase button size with larger padding
+- Enhance input focus effects matching UX design
+- Fix list item hover effects on LandingPage
+
+**Acceptance Criteria:**
+- ChatInterface wrapped in Card component with glass-card styling
+- Glass cards display shimmer animation overlay (::before pseudo-element)
+- Glass cards display ambient gradient glow on hover (::after pseudo-element)
+- Buttons have ripple animation on hover with expanding circle effect
+- Buttons are visibly larger (increased padding from UX specs)
+- Input focus state matches UX design intensity and glow
+- All hover effects match ux-liquid-glass-themes.html specifications
+- Visual comparison confirms alignment with UX design
 
 ### Story 3: Accessibility Improvements
 **Priority:** HIGH
