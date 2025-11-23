@@ -4,12 +4,12 @@ Professional Summary:
 Software Engineer with experience in full-stack development, AI integration, and modern web technologies. Passionate about building scalable applications and leveraging AI to solve real-world problems.
 
 Technical Skills:
-- Backend: Python (FastAPI, Django), Node.js
+- Backend: Python (FastAPI, Flask), Node.js
 - Frontend: React, TypeScript, JavaScript
-- AI/ML: OpenAI API integration, LLM applications
+- AI/ML: OpenAI API integration, LLM applications, RAG, Agentic solutions
 - Cloud: AWS, Docker, CI/CD
 - Databases: PostgreSQL, MongoDB, Redis
-- Tools: Git, Poetry, npm, Vite
+- Tools: Git, Poetry, npm, Vite, n8n, Flowise
 
 Projects:
 - Alter Ego: AI-powered personal chatbot using OpenAI GPT-4, FastAPI backend, and React frontend

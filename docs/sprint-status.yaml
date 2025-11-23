@@ -1,8 +1,8 @@
 # Sprint Status - Alter Ego
 # This file tracks development progress for all epics and stories
 
-# generated: 2025-10-30
-# project: Alter Ego
+# generated: 2025-11-05
+# project: alter_ego
 # project_key: alter_ego
 # tracking_system: file-system
 # story_location: {project-root}/docs/stories
@@ -31,8 +31,8 @@
 # - SM typically drafts next story ONLY after previous one is 'done' to incorporate learnings
 # - Dev moves story to 'review', dev reviews, then Dev moves to 'done'
 
-generated: 2025-10-30
-project: Alter Ego
+generated: 2025-11-05
+project: alter_ego
 project_key: alter_ego
 tracking_system: file-system
 story_location: "{project-root}/docs/stories"
@@ -42,10 +42,11 @@ development_status:
   story-personal-chatbot-1: done
   story-personal-chatbot-2: done
   epic-1-retrospective: completed
+
   epic-2: backlog
-  story-ux-alignment-2-1: review
+  story-ux-alignment-2-1: done
   story-project-improvements-3: done
-  story-project-improvements-4: backlog
+  story-project-improvements-4: done
   story-project-improvements-5: backlog
   story-project-improvements-6: backlog
   epic-2-retrospective: optional

@@ -1,0 +1,275 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>2</epicId>
+    <storyId>2.4</storyId>
+    <title>Input Validation & Rate Limiting</title>
+    <status>drafted</status>
+    <generatedAt>2025-11-05</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/stories/story-project-improvements-4.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>user</asA>
+    <iWant>the chat interface to validate my input and prevent spam</iWant>
+    <soThat>I have clear feedback about message requirements and cannot accidentally send too many messages too quickly</soThat>
+    <tasks>
+      <task id="1" status="pending">
+        <description>Implement Character Count Validation (AC: #1, #2, #6)</description>
+        <subtasks>
+          <subtask>Add state to track message length</subtask>
+          <subtask>Create validation function to check max length (5000 chars)</subtask>
+          <subtask>Display character counter UI component (e.g., "50 / 5000 characters")</subtask>
+          <subtask>Counter shows current count / maximum (conventional format)</subtask>
+          <subtask>Update counter in real-time on input change</subtask>
+          <subtask>Show error message when limit exceeded</subtask>
+          <subtask>Prevent send when over limit</subtask>
+        </subtasks>
+      </task>
+      <task id="2" status="pending">
+        <description>Implement Client-Side Rate Limiting (AC: #3, #7)</description>
+        <subtasks>
+          <subtask>Add state to track last message timestamp</subtask>
+          <subtask>Create rate limit validation (1 second minimum between messages)</subtask>
+          <subtask>Calculate time remaining until next message allowed</subtask>
+          <subtask>Display countdown timer when rate limit active (e.g., "Wait 0.8s")</subtask>
+          <subtask>Disable send button during rate limit period</subtask>
+          <subtask>Reset timer after successful send</subtask>
+        </subtasks>
+      </task>
+      <task id="3" status="pending">
+        <description>Create Validation Error Display (AC: #4)</description>
+        <subtasks>
+          <subtask>Add error state to ChatInterface component</subtask>
+          <subtask>Create error message UI below input field</subtask>
+          <subtask>Style with glass morphism error variant (red tint)</subtask>
+          <subtask>Display specific error messages</subtask>
+          <subtask>Clear errors when resolved</subtask>
+        </subtasks>
+      </task>
+      <task id="4" status="pending">
+        <description>Update Send Button Logic (AC: #8)</description>
+        <subtasks>
+          <subtask>Add disabled prop logic based on validation state</subtask>
+          <subtask>Disable if message length > 5000</subtask>
+          <subtask>Disable if rate limit active</subtask>
+          <subtask>Disable if message is empty (existing behavior)</subtask>
+          <subtask>Disable during API loading (existing behavior)</subtask>
+          <subtask>Show visual disabled state (opacity, cursor)</subtask>
+        </subtasks>
+      </task>
+      <task id="5" status="pending">
+        <description>Add Unit Tests for Validation (AC: #5)</description>
+        <subtasks>
+          <subtask>Test character count validation logic</subtask>
+          <subtask>Test rate limiting calculation</subtask>
+          <subtask>Test error message display</subtask>
+          <subtask>Test send button disable conditions</subtask>
+          <subtask>Test real-time counter updates</subtask>
+        </subtasks>
+      </task>
+      <task id="6" status="pending">
+        <description>Update Documentation</description>
+        <subtasks>
+          <subtask>Add validation rules to frontend/README.md</subtask>
+          <subtask>Document rate limiting behavior</subtask>
+          <subtask>Note that validation is client-side only</subtask>
+        </subtasks>
+      </task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <criterion id="1">Messages over 5000 characters are rejected with clear error message</criterion>
+    <criterion id="2">Character counter displays current/maximum format (e.g., "50 / 5000 characters") showing characters used out of total available</criterion>
+    <criterion id="3">Users cannot send messages faster than 1 per second (client-side rate limiting)</criterion>
+    <criterion id="4">Validation errors are displayed clearly below the input field</criterion>
+    <criterion id="5">All validation works without backend calls (client-side only)</criterion>
+    <criterion id="6">Character counter updates in real-time as user types</criterion>
+    <criterion id="7">Rate limiting displays countdown timer when triggered (e.g., "Wait 0.8s")</criterion>
+    <criterion id="8">Send button is disabled when validation fails or rate limit is active</criterion>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/accessibility.md</path>
+        <title>Accessibility Documentation</title>
+        <section>ARIA Patterns - Input Field</section>
+        <snippet>Input field implements aria-label, aria-describedby for help text, and aria-invalid for validation errors. Error messages must use aria-describedby pattern for screen reader association.</snippet>
+      </doc>
+      <doc>
+        <path>docs/accessibility.md</path>
+        <title>Accessibility Documentation</title>
+        <section>Form Validation</section>
+        <snippet>Validation errors must be announced to screen readers using aria-invalid and aria-describedby attributes. Error messages should be programmatically associated with input fields.</snippet>
+      </doc>
+      <doc>
+        <path>frontend/CLAUDE.md</path>
+        <title>Frontend Development Guide</title>
+        <section>Design System - Color Theme</section>
+        <snippet>Error colors: text-error (#ef4444 red), text-warning (#f59e0b amber), text-text-tertiary (#6b7280 muted). Error backgrounds use bg-error/20 with border-error/50 for glass morphism.</snippet>
+      </doc>
+      <doc>
+        <path>docs/stories/story-project-improvements-3.md</path>
+        <title>Story 2.3 - Accessibility Improvements</title>
+        <section>Learnings - Existing Patterns</section>
+        <snippet>Error handling pattern established in ChatInterface with error state (string | null) and glass morphism error display. Disabled button logic exists for loading state using isLoading state.</snippet>
+      </doc>
+    </docs>
+
+    <code>
+      <artifact>
+        <path>frontend/src/components/ChatInterface.tsx</path>
+        <kind>component</kind>
+        <symbol>ChatInterface</symbol>
+        <lines>1-220</lines>
+        <reason>PRIMARY FILE TO MODIFY - Main chat component with existing error handling, input validation stub, button disable logic, and ARIA accessibility attributes</reason>
+      </artifact>
+      <artifact>
+        <path>frontend/src/components/ChatInterface.tsx</path>
+        <kind>state</kind>
+        <symbol>error</symbol>
+        <lines>25</lines>
+        <reason>Existing error state pattern (string | null) to reuse for validation errors</reason>
+      </artifact>
+      <artifact>
+        <path>frontend/src/components/ChatInterface.tsx</path>
+        <kind>state</kind>
+        <symbol>isLoading</symbol>
+        <lines>24</lines>
+        <reason>Existing loading state used for button disable logic - pattern to follow for validation disable</reason>
+      </artifact>
+      <artifact>
+        <path>frontend/src/components/ChatInterface.tsx</path>
+        <kind>function</kind>
+        <symbol>handleSendMessage</symbol>
+        <lines>40-90</lines>
+        <reason>Send handler where validation logic must be added before API call</reason>
+      </artifact>
+      <artifact>
+        <path>frontend/src/components/ChatInterface.tsx</path>
+        <kind>JSX</kind>
+        <symbol>Button (Send button)</symbol>
+        <lines>204-213</lines>
+        <reason>Button with existing disabled logic - must extend to include validation and rate limit checks</reason>
+      </artifact>
+      <artifact>
+        <path>frontend/src/components/ChatInterface.tsx</path>
+        <kind>JSX</kind>
+        <symbol>Error message display</symbol>
+        <lines>180-185</lines>
+        <reason>Existing glass morphism error display pattern with bg-error/20 and border-error/50 to reuse for validation errors</reason>
+      </artifact>
+      <artifact>
+        <path>frontend/src/components/ui/input.tsx</path>
+        <kind>component</kind>
+        <symbol>Input</symbol>
+        <lines>5-19</lines>
+        <reason>Shadcn Input component with aria-invalid support (line 13) - automatically styles invalid state</reason>
+      </artifact>
+      <artifact>
+        <path>frontend/src/components/ui/button.tsx</path>
+        <kind>component</kind>
+        <symbol>Button</symbol>
+        <lines>7-50</lines>
+        <reason>Shadcn Button component with disabled prop support and opacity styling</reason>
+      </artifact>
+      <artifact>
+        <path>frontend/src/types/index.ts</path>
+        <kind>types</kind>
+        <symbol>Message</symbol>
+        <lines>1-9</lines>
+        <reason>Message interface for type-safe message handling</reason>
+      </artifact>
+      <artifact>
+        <path>frontend/src/index.css</path>
+        <kind>styles</kind>
+        <symbol>glass morphism utilities</symbol>
+        <lines>various</lines>
+        <reason>Contains design system variables: text-error, text-warning, text-text-tertiary, glass-input, glass-button-primary</reason>
+      </artifact>
+    </code>
+
+    <dependencies>
+      <node>
+        <react version="^19.1.1">Core framework with hooks (useState, useEffect, useRef) for state management</react>
+        <react-dom version="^19.1.1">React DOM rendering</react-dom>
+        <radix-ui-react-slot version="^1.2.3">Used by Button component for asChild pattern</radix-ui-react-slot>
+        <class-variance-authority version="^0.7.1">Used by Button component for variant management</class-variance-authority>
+        <clsx version="^2.1.1">Class name utility</clsx>
+        <tailwind-merge version="^3.3.1">Tailwind class merging via cn() utility</tailwind-merge>
+        <typescript version="~5.9.3">Type-safe development</typescript>
+        <vite version="^7.1.7">Build tool and dev server</vite>
+        <tailwindcss version="^4.1.16">Utility-first CSS framework</tailwindcss>
+      </node>
+      <testing>
+        <vitest version="^4.0.6">Unit testing framework (configured but no tests exist yet)</vitest>
+        <playwright version="^1.56.1">Browser automation for E2E tests</playwright>
+        <vitest-browser-playwright version="^4.0.6">Vitest browser integration</vitest-browser-playwright>
+      </testing>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint>All validation must be client-side only - no backend API calls for validation</constraint>
+    <constraint>Must maintain existing accessibility features (ARIA labels, aria-invalid, aria-describedby)</constraint>
+    <constraint>Must use existing error display pattern (glass morphism with bg-error/20 and border-error/50)</constraint>
+    <constraint>Must extend existing button disable logic without breaking loading state behavior</constraint>
+    <constraint>Character counter must update in real-time on input change (on every keystroke)</constraint>
+    <constraint>Rate limiting must use client-side timestamps only (Date.now() or performance.now())</constraint>
+    <constraint>All new UI elements must follow liquid glass morphism design system</constraint>
+    <constraint>TypeScript strict mode - all state must be properly typed</constraint>
+    <constraint>Must not recreate existing error handling patterns - reuse error state (string | null)</constraint>
+    <constraint>Counter and error messages must be positioned below input field per UI design notes</constraint>
+  </constraints>
+
+  <interfaces>
+    <interface>
+      <name>Input Component Props</name>
+      <kind>React Component Props</kind>
+      <signature>React.ComponentProps&lt;"input"&gt; with className, type, value, onChange, onKeyPress, disabled, aria-label, aria-describedby, aria-invalid</signature>
+      <path>frontend/src/components/ui/input.tsx</path>
+    </interface>
+    <interface>
+      <name>Button Component Props</name>
+      <kind>React Component Props</kind>
+      <signature>React.ComponentProps&lt;"button"&gt; & VariantProps with className, variant, size, disabled, onClick, aria-label, asChild</signature>
+      <path>frontend/src/components/ui/button.tsx</path>
+    </interface>
+    <interface>
+      <name>ChatInterface State</name>
+      <kind>React useState Hooks</kind>
+      <signature>
+        - messages: Message[]
+        - inputMessage: string
+        - isLoading: boolean
+        - error: string | null
+        NEW TO ADD:
+        - messageLength: number (derived from inputMessage.length or tracked separately)
+        - lastSentTime: number | null (timestamp in milliseconds)
+        - rateLimitRemaining: number (seconds remaining, 0 if not active)
+      </signature>
+      <path>frontend/src/components/ChatInterface.tsx</path>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      Testing framework is Vitest 4.0.6 with Playwright browser integration. No unit tests exist yet (Story 5 will add full test infrastructure). For this story, create basic validation test files following Vitest patterns. Tests should be placed in same directory as component with .test.tsx extension (e.g., ChatInterface.test.tsx). Use describe/it/expect syntax. Mock useState hooks and verify validation logic independently of UI rendering.
+    </standards>
+    <locations>
+      <location>frontend/src/components/ChatInterface.test.tsx (to be created)</location>
+      <location>frontend/src/components/__tests__/ (alternative pattern)</location>
+    </locations>
+    <ideas>
+      <idea ac="1,2">Test character count validation: verify messages over 5000 chars are rejected, counter displays correctly (e.g., "50 / 5000 characters"), error message shows "Message too long (X/5000 characters)"</idea>
+      <idea ac="3,7">Test rate limiting: verify 1 second minimum between sends, countdown timer calculates remaining time correctly, sends blocked when rate limit active</idea>
+      <idea ac="4">Test error display: validation errors render below input with glass morphism styling (bg-error/20 border-error/50), errors clear when resolved</idea>
+      <idea ac="6">Test real-time counter update: counter updates on every keystroke via onChange handler</idea>
+      <idea ac="8">Test button disable logic: button disabled when message > 5000, when rate limit active, when empty, when loading (combine all conditions with OR)</idea>
+      <idea ac="5">Test client-side validation: no API mocks needed, all validation pure functions</idea>
+      <idea>Test edge cases: exactly 5000 characters (should pass), 5001 characters (should fail), rapid clicking (rate limit blocks), countdown accuracy (within 100ms tolerance)</idea>
+    </ideas>
+  </tests>
+</story-context>
