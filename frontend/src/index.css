@@ -97,7 +97,7 @@
     box-shadow:
       0 8px 32px rgba(0, 0, 0, 0.3),
       inset 0 1px 0 rgba(255, 255, 255, 0.1);
-    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
     overflow: hidden;
   }
 
@@ -106,7 +106,7 @@
     content: '';
     position: absolute;
     top: -50%;
-    left: -50%;
+    left: -100%;
     width: 200%;
     height: 200%;
     background: linear-gradient(
@@ -116,7 +116,13 @@
       transparent 70%
     );
     animation: shimmer 8s linear infinite;
+    transition: left 0.6s ease;
     pointer-events: none;
+  }
+
+  /* Sweep animation on hover */
+  .glass-card:hover::before {
+    left: 100%;
   }
 
   /* Ambient glow border */
@@ -139,12 +145,12 @@
   }
 
   .glass-card:hover {
-    transform: translateY(-2px);
-    border-color: rgba(255, 255, 255, 0.2);
+    transform: translateY(-8px) scale(1.02);
+    border-color: rgba(255, 255, 255, 0.15);
     box-shadow:
-      0 12px 48px rgba(0, 0, 0, 0.4),
-      0 0 40px rgba(167, 139, 250, 0.15),
-      inset 0 1px 0 rgba(255, 255, 255, 0.15);
+      0 20px 60px rgba(0, 0, 0, 0.4),
+      0 0 80px rgba(167, 139, 250, 0.2),
+      inset 0 1px 0 rgba(255, 255, 255, 0.2);
   }
 
   .glass-card:hover::after {
@@ -155,10 +161,14 @@
     background: rgba(255, 255, 255, 0.04);
     backdrop-filter: blur(30px) saturate(150%);
     border: 1.5px solid rgba(255, 255, 255, 0.12);
+    border-radius: 16px;
+    padding: 1rem 1.25rem;
+    color: #e8e8f0;
+    font-size: 0.95rem;
     box-shadow:
       0 4px 16px rgba(0, 0, 0, 0.2),
       inset 0 1px 0 rgba(255, 255, 255, 0.08);
-    transition: all 300ms ease;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   .glass-input:hover:not(:disabled) {
@@ -169,29 +179,34 @@
       0 0 20px rgba(139, 92, 246, 0.2);
   }
 
-  .glass-input:focus {
+  .glass-input:focus,
+  .glass-input:focus-visible {
     outline: none;
     background: rgba(255, 255, 255, 0.06);
     border-color: #c4b5fd;
     box-shadow:
       0 8px 32px rgba(139, 92, 246, 0.4),
-      0 0 60px rgba(139, 92, 246, 0.3);
+      0 0 60px rgba(139, 92, 246, 0.3),
+      inset 0 1px 0 rgba(255, 255, 255, 0.12);
     transform: translateY(-2px);
+    ring: 0;
+    --tw-ring-shadow: 0 0 transparent;
   }
 
   .glass-button-primary {
     position: relative;
     background: linear-gradient(135deg,
-      var(--color-primary-600) 0%,
-      var(--color-primary-800) 100%);
+      rgba(139, 92, 246, 0.6) 0%,
+      rgba(109, 40, 217, 0.6) 100%);
     backdrop-filter: blur(20px);
-    border: 1.5px solid rgba(255, 255, 255, 0.2);
+    border: 1.5px solid rgba(196, 181, 253, 0.4);
     box-shadow:
-      0 4px 16px rgba(0, 0, 0, 0.2),
-      0 0 30px rgba(139, 92, 246, 0.4);
+      0 0 30px rgba(139, 92, 246, 0.4),
+      inset 0 1px 0 rgba(255, 255, 255, 0.2);
     padding: 0.85rem 2rem;
-    transition: all 300ms ease;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     overflow: hidden;
+    cursor: pointer;
   }
 
   /* Button ripple effect */
@@ -214,18 +229,15 @@
   }
 
   .glass-button-primary:hover:not(:disabled) {
-    background: linear-gradient(135deg,
-      var(--color-primary-500) 0%,
-      var(--color-primary-700) 100%);
     box-shadow:
-      0 12px 32px rgba(0, 0, 0, 0.3),
-      0 0 60px rgba(139, 92, 246, 0.5);
-    border-color: rgba(255, 255, 255, 0.3);
-    transform: translateY(-3px) scale(1.05);
+      0 12px 32px rgba(139, 92, 246, 0.6),
+      0 0 60px rgba(139, 92, 246, 0.5),
+      inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    transform: translateY(-3px) scale(1.05) !important;
   }
 
   .glass-button-primary:active:not(:disabled) {
-    transform: translateY(-1px) scale(1.02);
+    transform: translateY(-1px) scale(1.02) !important;
     box-shadow:
       0 4px 16px rgba(0, 0, 0, 0.2),
       0 0 30px rgba(139, 92, 246, 0.5);
@@ -237,6 +249,33 @@
 
   .glass-glow-blue {
     box-shadow: 0 0 40px rgba(59, 130, 246, 0.4);
+  }
+
+  /* Chat Message Bubbles - Per UX Spec */
+  .message-user {
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(30px);
+    border: 1.5px solid rgba(255, 255, 255, 0.1);
+    border-radius: 20px 20px 4px 20px;
+  }
+
+  .message-ai {
+    background: rgba(139, 92, 246, 0.15);
+    backdrop-filter: blur(30px);
+    border: 1.5px solid rgba(196, 181, 253, 0.3);
+    border-radius: 20px 20px 20px 4px;
+    box-shadow:
+      0 4px 16px rgba(0, 0, 0, 0.2),
+      0 0 20px rgba(139, 92, 246, 0.4);
+  }
+
+  /* Electric Blue Theme - AI Message Override */
+  [data-theme="electric-blue"] .message-ai {
+    background: rgba(59, 130, 246, 0.15);
+    border: 1.5px solid rgba(147, 197, 253, 0.3);
+    box-shadow:
+      0 4px 16px rgba(0, 0, 0, 0.2),
+      0 0 20px rgba(59, 130, 246, 0.4);
   }
 
   .glass-scroll::-webkit-scrollbar {
@@ -309,6 +348,27 @@ body {
   to {
     opacity: 1;
     transform: translateY(0) scale(1);
+  }
+}
+
+/* Accessibility: Respect prefers-reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  /* Disable continuous animations */
+  .glass-card::before {
+    animation: none !important;
+  }
+
+  /* Keep essential transforms but remove animations */
+  .glass-card:hover::before {
+    transition: none !important;
   }
 }
 

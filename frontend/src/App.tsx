@@ -1,5 +1,6 @@
 import { LandingPage } from '@/components/LandingPage';
 import { ChatInterface } from '@/components/ChatInterface';
+import { ThemeSwitcher } from '@/components/ThemeSwitcher';
 
 /**
  * Main Application Component
@@ -11,6 +12,9 @@ import { ChatInterface } from '@/components/ChatInterface';
 function App() {
   return (
     <div className="min-h-screen bg-bg-primary">
+      {/* Theme Switcher */}
+      <ThemeSwitcher />
+
       {/* Main Container */}
       <div className="container mx-auto px-4 py-8">
         {/* Responsive Grid Layout */}

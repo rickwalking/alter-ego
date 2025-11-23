@@ -23,19 +23,69 @@ export function ChatInterface() {
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [validationError, setValidationError] = useState<string | null>(null);
+  const [lastSentTime, setLastSentTime] = useState<number | null>(null);
+  const [rateLimitRemaining, setRateLimitRemaining] = useState(0);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Constants for validation
+  const MAX_MESSAGE_LENGTH = 5000;
+  const RATE_LIMIT_MS = 1000; // 1 second
 
   // Auto-scroll to bottom when messages change
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
+    // Double requestAnimationFrame ensures layout is complete
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        if (scrollRef.current) {
+          scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+        }
+      });
+    });
   }, [messages]);
 
+  // Rate limit countdown timer
+  useEffect(() => {
+    if (lastSentTime === null) return;
+
+    const updateRateLimit = () => {
+      const now = Date.now();
+      const elapsed = now - lastSentTime;
+      const remaining = Math.max(0, RATE_LIMIT_MS - elapsed);
+
+      setRateLimitRemaining(remaining);
+
+      if (remaining > 0) {
+        requestAnimationFrame(updateRateLimit);
+      }
+    };
+
+    requestAnimationFrame(updateRateLimit);
+  }, [lastSentTime, RATE_LIMIT_MS]);
+
   const handleSendMessage = async () => {
+    // Clear validation errors
+    setValidationError(null);
+
     // Validate input
     if (!inputMessage.trim()) {
       return;
+    }
+
+    // Validate character count
+    if (inputMessage.length > MAX_MESSAGE_LENGTH) {
+      setValidationError(`Message too long (${inputMessage.length}/${MAX_MESSAGE_LENGTH} characters)`);
+      return;
+    }
+
+    // Validate rate limit
+    if (lastSentTime !== null) {
+      const timeSinceLastSend = Date.now() - lastSentTime;
+      if (timeSinceLastSend < RATE_LIMIT_MS) {
+        const remainingSeconds = ((RATE_LIMIT_MS - timeSinceLastSend) / 1000).toFixed(1);
+        setValidationError(`Please wait ${remainingSeconds}s before sending another message`);
+        return;
+      }
     }
 
     // Clear error state
@@ -54,6 +104,9 @@ export function ChatInterface() {
 
     // Clear input
     setInputMessage('');
+
+    // Update rate limit timestamp
+    setLastSentTime(Date.now());
 
     // Set loading state
     setIsLoading(true);
@@ -84,7 +137,7 @@ export function ChatInterface() {
     }
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSendMessage();
@@ -98,18 +151,18 @@ export function ChatInterface() {
   return (
     <div className="w-full max-w-2xl mx-auto p-4">
       <Card className="glass-card h-[600px] flex flex-col">
-        <CardContent className="flex-1 flex flex-col p-6">
+        <CardContent className="flex-1 flex flex-col p-6 overflow-hidden">
           {/* Chat Messages */}
           <ScrollArea
-            className="flex-1 glass-scroll mb-4"
-            ref={scrollRef}
+            className="flex-1 mb-4 overflow-auto"
             role="log"
             aria-live="polite"
             aria-busy={isLoading}
             aria-label="Chat messages"
           >
+            <div ref={scrollRef} className="pr-4 h-full">
         {messages.length === 0 ? (
-          <div className="h-full flex items-center justify-center text-text-tertiary text-sm">
+          <div className="h-full flex items-center justify-center text-text-tertiary text-sm min-h-[400px]">
             Start a conversation by typing a message below
           </div>
         ) : (
@@ -135,10 +188,10 @@ export function ChatInterface() {
                 </Avatar>
 
                 {/* Message Content */}
-                <div className={`flex-1 glass-card p-3 rounded-lg ${
+                <div className={`flex-1 p-4 max-w-[75%] ${
                   message.role === 'user'
-                    ? 'bg-primary-600/10'
-                    : 'bg-white/5'
+                    ? 'message-user ml-auto'
+                    : 'message-ai'
                 }`}>
                   <p className="text-sm text-text-primary whitespace-pre-wrap">
                     {message.content}
@@ -160,7 +213,7 @@ export function ChatInterface() {
                 AI
               </AvatarFallback>
             </Avatar>
-            <div className="flex-1 glass-card p-3 rounded-lg bg-white/5">
+            <div className="flex-1 message-ai p-3 max-w-[75%]">
               <div className="flex gap-1">
                 <span className="w-2 h-2 rounded-full bg-primary-400 animate-bounce" style={{ animationDelay: '0ms' }}></span>
                 <span className="w-2 h-2 rounded-full bg-primary-400 animate-bounce" style={{ animationDelay: '150ms' }}></span>
@@ -169,9 +222,10 @@ export function ChatInterface() {
             </div>
           </div>
         )}
+            </div>
       </ScrollArea>
 
-      {/* Error Message */}
+      {/* API Error Message */}
       {error && (
         <div className="mb-4 p-3 rounded-lg bg-error/20 border border-error/50 text-error text-sm">
           <strong>Error:</strong> {error}
@@ -183,26 +237,53 @@ export function ChatInterface() {
         <span id="message-input-description" className="sr-only">
           Type your message and press Enter or click Send to send it to the AI assistant
         </span>
+        <span id="validation-error-description" className="sr-only">
+          {validationError || ''}
+        </span>
         <div className="flex gap-2">
           <Input
             value={inputMessage}
             onChange={(e) => setInputMessage(e.target.value)}
-            onKeyPress={handleKeyPress}
+            onKeyDown={handleKeyDown}
             placeholder="Type your message..."
             disabled={isLoading}
             className="glass-input flex-1"
             aria-label="Message input"
-            aria-describedby="message-input-description"
-            aria-invalid={!!error}
+            aria-describedby="message-input-description validation-error-description"
+            aria-invalid={!!validationError}
           />
           <Button
             onClick={handleSendMessage}
-            disabled={isLoading || !inputMessage.trim()}
+            disabled={isLoading || !inputMessage.trim() || inputMessage.length > MAX_MESSAGE_LENGTH || rateLimitRemaining > 0}
             className="glass-button-primary text-white"
+            size="lg"
             aria-label="Send message"
           >
-            {isLoading ? 'Sending...' : 'Send'}
+            {isLoading ? 'Sending...' : rateLimitRemaining > 0 ? `Wait ${(rateLimitRemaining / 1000).toFixed(1)}s` : 'Send'}
           </Button>
+        </div>
+
+        {/* Character Counter and Validation Error */}
+        <div className="flex items-start justify-between gap-4 min-h-[20px]">
+          {/* Validation Error (left-aligned) */}
+          <div className="flex-1">
+            {validationError && (
+              <div className="p-2 rounded-lg bg-error/20 border border-error/50 text-error text-xs">
+                {validationError}
+              </div>
+            )}
+          </div>
+
+          {/* Character Counter (right-aligned) */}
+          <div className={`text-xs whitespace-nowrap ${
+            inputMessage.length > MAX_MESSAGE_LENGTH
+              ? 'text-error font-semibold'
+              : inputMessage.length > MAX_MESSAGE_LENGTH * 0.9
+              ? 'text-warning'
+              : 'text-text-tertiary'
+          }`}>
+            {inputMessage.length} / {MAX_MESSAGE_LENGTH} characters
+          </div>
         </div>
       </div>
         </CardContent>

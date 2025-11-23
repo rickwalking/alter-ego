@@ -5,6 +5,8 @@ AI-powered chatbot interface built with React 19, TypeScript, and Vite, featurin
 ## Features
 
 - 🤖 Real-time AI chat interface
+- ✅ Client-side input validation with character count
+- ⏱️ Rate limiting to prevent message spam
 - ♿ WCAG 2.1 Level AA accessible
 - ⌨️ Full keyboard navigation support
 - 🎨 Liquid glass morphism design
@@ -29,6 +31,46 @@ For detailed accessibility information, see [../docs/accessibility.md](../docs/a
 | Tab | Navigate between elements |
 | Enter | Send message |
 | Escape | Clear input field |
+
+## Input Validation & Rate Limiting
+
+The chat interface includes client-side validation to ensure message quality and prevent spam. All validation is performed client-side without backend API calls.
+
+### Character Limit
+
+- **Maximum Length**: 5000 characters
+- **Counter Display**: Shows current character count in format "X / 5000 characters"
+- **Real-time Updates**: Counter updates on every keystroke
+- **Visual Feedback**:
+  - Normal (0-4500 chars): Muted gray text
+  - Warning (4501-5000 chars): Amber text
+  - Error (>5000 chars): Red text with bold styling
+- **Error Message**: "Message too long (X/5000 characters)" when limit exceeded
+- **Send Prevention**: Send button disabled when message exceeds limit
+
+### Rate Limiting
+
+- **Minimum Interval**: 1 second (1000ms) between messages
+- **Client-Side Only**: No backend enforcement, prevents accidental rapid clicks
+- **Countdown Timer**: Displays "Wait X.Xs" on send button when rate limit active
+- **Visual Feedback**: Send button disabled during countdown period
+- **Reset**: Timer resets after each successful message send
+
+### Validation Error Display
+
+- **Position**: Below input field, left-aligned
+- **Styling**: Glass morphism error variant (red tint with backdrop blur)
+- **Accessibility**: Errors announced to screen readers via aria-invalid and aria-describedby
+- **Auto-clear**: Errors automatically clear when validation passes
+
+### Send Button Behavior
+
+The send button is disabled when any of the following conditions are true:
+
+1. Message is empty or only whitespace
+2. Message exceeds 5000 characters
+3. Rate limit is active (less than 1 second since last send)
+4. Backend API request is in progress (loading state)
 
 ## Development
 
