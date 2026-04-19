@@ -1,0 +1,106 @@
+{
+  "common": {
+    "appName": "Pedro Marins",
+    "tagline": "Chat with my Personal Knowledge Base to get to know me better",
+    "startChatting": "Start Chatting",
+    "manageKnowledge": "Manage Knowledge",
+    "nav": {
+      "chat": "Chat",
+      "knowledgeBase": "Knowledge Base"
+    }
+  },
+  "home": {
+    "title": "Chat with my Alter-Ego",
+    "highlight": "to get to know me better",
+    "description": "Chat with an AI that knows everything about my career, experience, and skills. Also, see my blog posts and projects.",
+    "features": {
+      "intelligentChat": {
+        "title": "AI-Powered Chat",
+        "description": "Have natural conversations with an AI that understands your knowledge base and can answer questions about your content."
+      },
+      "knowledgeManagement": {
+        "title": "Knowledge Management",
+        "description": "Upload documents, organize information, and build a comprehensive knowledge base that the AI can reference."
+      },
+      "aiInsights": {
+        "title": "AI-Powered Insights",
+        "description": "Get intelligent insights, summaries, and connections across your documents powered by modern AI technology."
+      }
+    }
+  },
+  "chat": {
+    "title": "Chat",
+    "input": {
+      "placeholder": "Type your message...",
+      "send": "Send message",
+      "newChat": "New Chat"
+    },
+    "empty": "Start a conversation by typing a message below.",
+    "sidebar": {
+      "label": "Conversations",
+      "empty": "No conversations yet",
+      "loading": "Loading conversations"
+    }
+  },
+  "knowledge": {
+    "title": "Knowledge Base",
+    "description": "Manage your documents and information for the AI to reference.",
+    "search": "Search documents...",
+    "newDocument": "New Document",
+    "uploadButton": "Upload",
+    "empty": {
+      "title": "No documents yet.",
+      "subtitle": "Upload a file or create a document to get started."
+    },
+    "noResults": "No documents found matching your search.",
+    "document": {
+      "delete": "Delete document: {title}",
+      "removeFile": "Remove selected file",
+      "chunks": "{count} chunks"
+    },
+    "upload": {
+      "title": "Upload Document",
+      "dropZone": "File upload area",
+      "selectFile": "Select file to upload",
+      "dropText": "Drop your file here, or",
+      "browse": "browse",
+      "supports": "Supports PDF, TXT, and MD files (max 50MB)",
+      "uploading": "Uploading...",
+      "uploadButton": "Upload & Process",
+      "cancel": "Cancel",
+      "success": {
+        "title": "Document Uploaded",
+        "description": "Your document has been processed successfully.",
+        "done": "Done"
+      },
+      "error": {
+        "fileType": "File type not supported. Use PDF, TXT, or MD files.",
+        "generic": "Failed to upload document"
+      },
+      "fields": {
+        "title": "Title (optional)",
+        "titlePlaceholder": "Document title",
+        "tags": "Tags (comma-separated)",
+        "tagsPlaceholder": "e.g. research, notes, projects"
+      }
+    },
+    "form": {
+      "createTitle": "Create New Document",
+      "title": "Title",
+      "titlePlaceholder": "Document title",
+      "content": "Content",
+      "contentPlaceholder": "Document content...",
+      "tags": "Tags",
+      "addTag": "Add",
+      "tagPlaceholder": "Add a tag",
+      "submit": "Create Document",
+      "cancel": "Cancel"
+    }
+  },
+  "notFound": {
+    "code": "404",
+    "title": "Page Not Found",
+    "description": "The page you are looking for does not exist.",
+    "goHome": "Go Home"
+  }
+}
