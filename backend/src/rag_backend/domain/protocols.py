@@ -8,11 +8,16 @@ from typing import Any, AsyncIterator, Optional, Protocol
 from uuid import UUID
 
 from rag_backend.domain.models import (
+    CarouselProject,
+    CarouselSlide,
+    CarouselStatus,
     Conversation,
     Document,
     DocumentChunk,
     DocumentStatus,
     Message,
+    ResearchSource,
+    ResearchSourceType,
     SearchResult,
 )
 
@@ -191,10 +196,125 @@ class Agent(Protocol):
 
     async def chat(
         self, message: str, conversation_id: UUID, stream: bool = True
-    ) -> AsyncIterator[dict[str, Any]]:
+    ) -> AsyncIterator[dict[str, str | int | float | bool]]:
         """Process a chat message with optional streaming."""
         ...
 
     async def search_documents(self, query: str, top_k: int = 5) -> list[SearchResult]:
         """Search for relevant documents."""
+        ...
+
+
+# =============================================================================
+# Carousel Content Pipeline Protocols
+# =============================================================================
+
+
+class CarouselRepository(Protocol):
+    """Protocol for carousel project persistence operations."""
+
+    async def create_project(self, project: CarouselProject) -> CarouselProject:
+        """Create a new carousel project."""
+        ...
+
+    async def get_project_by_id(self, project_id: UUID) -> Optional[CarouselProject]:
+        """Get a carousel project by its ID."""
+        ...
+
+    async def get_all_projects(
+        self, status: Optional[CarouselStatus] = None, limit: int = 100, offset: int = 0
+    ) -> list[CarouselProject]:
+        """Get all carousel projects with optional filtering."""
+        ...
+
+    async def update_project(self, project: CarouselProject) -> CarouselProject:
+        """Update an existing carousel project."""
+        ...
+
+    async def delete_project(self, project_id: UUID) -> bool:
+        """Delete a carousel project and its slides."""
+        ...
+
+    async def create_slide(self, slide: CarouselSlide) -> CarouselSlide:
+        """Create a new carousel slide."""
+        ...
+
+    async def get_slides_by_project(self, project_id: UUID) -> list[CarouselSlide]:
+        """Get all slides for a project ordered by slide_number."""
+        ...
+
+    async def update_slide(self, slide: CarouselSlide) -> CarouselSlide:
+        """Update an existing carousel slide."""
+        ...
+
+    async def delete_slides_by_project(self, project_id: UUID) -> bool:
+        """Delete all slides for a project."""
+        ...
+
+    async def create_research_source(self, source: ResearchSource) -> ResearchSource:
+        """Create a new research source."""
+        ...
+
+    async def get_sources_by_project(self, project_id: UUID) -> list[ResearchSource]:
+        """Get all research sources for a project."""
+        ...
+
+
+class ImageGenerationService(Protocol):
+    """Protocol for AI image generation."""
+
+    async def generate_image(
+        self,
+        prompt: str,
+        output_path: str,
+    ) -> str:
+        """Generate an image from a text prompt and save to output_path.
+
+        Returns the path to the saved image file.
+        """
+        ...
+
+
+class CarouselExportService(Protocol):
+    """Protocol for carousel HTML to image export."""
+
+    async def export_slides(
+        self,
+        html_content: str,
+        output_dir: str,
+        width: int = 1080,
+        height: int = 1350,
+    ) -> list[str]:
+        """Render HTML carousel and export individual slide images.
+
+        Returns list of paths to exported slide images.
+        """
+        ...
+
+
+class ResearchTool(Protocol):
+    """Protocol for web research operations."""
+
+    async def scrape_url(self, url: str) -> str:
+        """Scrape and extract content from a URL."""
+        ...
+
+    async def search_web(
+        self, query: str, source_types: list[ResearchSourceType]
+    ) -> list[dict[str, str]]:
+        """Search the web for relevant sources.
+
+        Returns list of dicts with 'url', 'title', 'snippet' keys.
+        """
+        ...
+
+
+class CarouselAgent(Protocol):
+    """Protocol for the carousel content generation sub-agent."""
+
+    async def execute_pipeline(self, project_id: UUID) -> CarouselProject:
+        """Execute the full 7-phase carousel generation pipeline.
+
+        Returns the updated project with status COMPLETED or FAILED.
+        """
         ...
