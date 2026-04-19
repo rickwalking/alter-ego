@@ -1,0 +1,801 @@
+# API Contract - Frontend & Backend Integration
+
+## Overview
+
+This document defines the API contract between the Next.js frontend and Python backend for the Agentic RAG system.
+
+## Base URL
+
+```
+Development: http://localhost:8000
+Production: https://api.your-domain.com
+```
+
+## Authentication
+
+All API requests require an API key in the header:
+
+```http
+X-API-Key: your-api-key-here
+```
+
+## WebSocket Protocol (Primary)
+
+### Connection
+
+**Endpoint:** `ws://localhost:8000/ws/chat/{conversation_id}`
+
+**Connection Flow:**
+1. Frontend establishes WebSocket connection
+2. Backend accepts connection
+3. Bidirectional communication begins
+4. Either party can close connection
+
+### Message Types
+
+#### 1. Client -> Server: User Message
+
+```json
+{
+  "message": "What is machine learning?",
+  "conversation_id": "conv_123",
+  "metadata": {
+    "timestamp": "2024-01-15T10:30:00Z"
+  }
+}
+```
+
+#### 2. Server -> Client: Streaming Token
+
+```json
+{
+  "type": "token",
+  "content": "Machine",
+  "conversation_id": "conv_123",
+  "timestamp": "2024-01-15T10:30:01Z"
+}
+```
+
+#### 3. Server -> Client: Tool Call
+
+```json
+{
+  "type": "tool_call",
+  "tool": "hybrid_search_tool",
+  "input": {
+    "query": "machine learning",
+    "top_k": 5
+  },
+  "timestamp": "2024-01-15T10:30:02Z"
+}
+```
+
+#### 4. Server -> Client: Tool Result (with sources)
+
+```json
+{
+  "type": "tool_result",
+  "tool": "hybrid_search_tool",
+  "documents": [
+    {
+      "id": "chunk_abc123",
+      "title": "Introduction to Machine Learning",
+      "content_preview": "Machine learning is a subset of artificial intelligence...",
+      "score": 0.89,
+      "metadata": {
+        "source_file": "ml-basics.pdf",
+        "chunk_index": 3
+      }
+    },
+    {
+      "id": "chunk_def456",
+      "title": "Deep Learning Fundamentals",
+      "content_preview": "Deep learning uses neural networks with multiple layers...",
+      "score": 0.76,
+      "metadata": {
+        "source_file": "deep-learning.pdf",
+        "chunk_index": 1
+      }
+    }
+  ],
+  "timestamp": "2024-01-15T10:30:03Z"
+}
+```
+
+#### 5. Server -> Client: Completion
+
+```json
+{
+  "type": "done",
+  "conversation_id": "conv_123",
+  "timestamp": "2024-01-15T10:30:05Z"
+}
+```
+
+#### 6. Server -> Client: Error
+
+```json
+{
+  "type": "error",
+  "code": "AGENT_ERROR",
+  "message": "Failed to retrieve context from knowledge base",
+  "details": {
+    "error_type": "RetrievalError",
+    "retries": 3
+  },
+  "timestamp": "2024-01-15T10:30:06Z"
+}
+```
+
+## REST API Endpoints
+
+### Chat Endpoints
+
+#### Non-Streaming Chat
+
+**POST** `/api/chat`
+
+**Request:**
+```json
+{
+  "message": "What is machine learning?",
+  "conversation_id": "conv_123"
+}
+```
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "data": {
+    "response": "Machine learning is a subset of artificial intelligence...",
+    "sources": [
+      {
+        "id": "chunk_abc123",
+        "title": "Introduction to Machine Learning",
+        "content_preview": "Machine learning is a subset of artificial intelligence...",
+        "score": 0.89
+      }
+    ],
+    "conversation_id": "conv_123",
+    "timestamp": "2024-01-15T10:30:05Z"
+  }
+}
+```
+
+#### Streaming Chat (SSE)
+
+**POST** `/api/chat/stream`
+
+**Request:**
+```json
+{
+  "message": "What is machine learning?",
+  "conversation_id": "conv_123"
+}
+```
+
+**Response:** `text/event-stream`
+
+```
+data: {"type": "token", "content": "Machine"}
+
+data: {"type": "token", "content": " learning"}
+
+data: {"type": "tool_call", "tool": "hybrid_search_tool", "input": {"query": "machine learning"}}
+
+data: {"type": "tool_result", "tool": "hybrid_search_tool", "documents": [...]}
+
+data: {"type": "token", "content": " is a subset"}
+
+data: [DONE]
+```
+
+### Document Endpoints
+
+#### Upload Document
+
+**POST** `/api/documents`
+
+**Content-Type:** `multipart/form-data`
+
+**Request:**
+```http
+POST /api/documents HTTP/1.1
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary
+
+------WebKitFormBoundary
+Content-Disposition: form-data; name="file"; filename="document.pdf"
+Content-Type: application/pdf
+
+<binary data>
+------WebKitFormBoundary
+Content-Disposition: form-data; name="title"
+
+My Document
+------WebKitFormBoundary
+Content-Disposition: form-data; name="tags"
+
+machine-learning, ai, tutorial
+------WebKitFormBoundary--
+```
+
+**Response (201 Created):**
+```json
+{
+  "success": true,
+  "data": {
+    "id": "doc_abc123",
+    "title": "My Document",
+    "filename": "document.pdf",
+    "file_type": "application/pdf",
+    "tags": ["machine-learning", "ai", "tutorial"],
+    "chunks_processed": 12,
+    "status": "processed",
+    "created_at": "2024-01-15T10:30:00Z"
+  }
+}
+```
+
+#### List Documents
+
+**GET** `/api/documents`
+
+**Query Parameters:**
+- `search` (optional): Search by title or tags
+- `tags` (optional): Filter by tags (comma-separated)
+- `limit` (optional): Number of results (default: 20, max: 100)
+- `offset` (optional): Pagination offset (default: 0)
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "data": {
+    "documents": [
+      {
+        "id": "doc_abc123",
+        "title": "My Document",
+        "tags": ["machine-learning", "ai"],
+        "chunk_count": 12,
+        "created_at": "2024-01-15T10:30:00Z",
+        "updated_at": "2024-01-15T10:30:00Z"
+      }
+    ],
+    "pagination": {
+      "total": 45,
+      "limit": 20,
+      "offset": 0,
+      "has_more": true
+    }
+  }
+}
+```
+
+#### Get Single Document
+
+**GET** `/api/documents/{id}`
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "data": {
+    "id": "doc_abc123",
+    "title": "My Document",
+    "content": "Full document content or preview...",
+    "tags": ["machine-learning", "ai"],
+    "metadata": {
+      "original_filename": "document.pdf",
+      "file_size": 1024000,
+      "page_count": 10
+    },
+    "chunks": [
+      {
+        "id": "chunk_1",
+        "index": 0,
+        "preview": "First chunk content..."
+      }
+    ],
+    "created_at": "2024-01-15T10:30:00Z",
+    "updated_at": "2024-01-15T10:30:00Z"
+  }
+}
+```
+
+#### Update Document
+
+**PUT** `/api/documents/{id}`
+
+**Request:**
+```json
+{
+  "title": "Updated Title",
+  "tags": ["machine-learning", "ai", "updated"]
+}
+```
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "data": {
+    "id": "doc_abc123",
+    "title": "Updated Title",
+    "tags": ["machine-learning", "ai", "updated"],
+    "updated_at": "2024-01-15T11:00:00Z"
+  }
+}
+```
+
+#### Delete Document
+
+**DELETE** `/api/documents/{id}`
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "message": "Document deleted successfully",
+  "data": {
+    "id": "doc_abc123"
+  }
+}
+```
+
+### Search Endpoints
+
+#### Hybrid Search
+
+**POST** `/api/search`
+
+**Request:**
+```json
+{
+  "query": "machine learning neural networks",
+  "top_k": 5,
+  "alpha": 0.5,
+  "filter": {
+    "tags": ["machine-learning"]
+  }
+}
+```
+
+**Parameters:**
+- `query` (required): Search query string
+- `top_k` (optional): Number of results (default: 5, max: 20)
+- `alpha` (optional): Hybrid weight - 0=BM25 only, 1=semantic only, 0.5=balanced
+- `filter` (optional): Metadata filters
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "data": {
+    "results": [
+      {
+        "id": "chunk_abc123",
+        "content": "Neural networks are a fundamental component of deep learning...",
+        "title": "Deep Learning Basics",
+        "score": 0.92,
+        "metadata": {
+          "document_id": "doc_xyz789",
+          "chunk_index": 2,
+          "source_file": "deep-learning.pdf"
+        }
+      },
+      {
+        "id": "chunk_def456",
+        "content": "Machine learning algorithms can be supervised or unsupervised...",
+        "title": "ML Fundamentals",
+        "score": 0.87,
+        "metadata": {
+          "document_id": "doc_abc123",
+          "chunk_index": 0,
+          "source_file": "ml-intro.pdf"
+        }
+      }
+    ],
+    "query": "machine learning neural networks",
+    "alpha": 0.5,
+    "total_results": 2
+  }
+}
+```
+
+### Conversation Endpoints
+
+#### List Conversations
+
+**GET** `/api/conversations`
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "data": {
+    "conversations": [
+      {
+        "id": "conv_123",
+        "title": "Machine Learning Discussion",
+        "message_count": 15,
+        "last_message_at": "2024-01-15T10:30:00Z",
+        "created_at": "2024-01-15T09:00:00Z"
+      }
+    ]
+  }
+}
+```
+
+#### Get Conversation History
+
+**GET** `/api/conversations/{id}/messages`
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "data": {
+    "conversation_id": "conv_123",
+    "messages": [
+      {
+        "id": "msg_1",
+        "role": "user",
+        "content": "What is machine learning?",
+        "timestamp": "2024-01-15T10:30:00Z"
+      },
+      {
+        "id": "msg_2",
+        "role": "assistant",
+        "content": "Machine learning is a subset of AI...",
+        "sources": [
+          {
+            "id": "chunk_abc123",
+            "title": "Introduction to ML"
+          }
+        ],
+        "timestamp": "2024-01-15T10:30:05Z"
+      }
+    ]
+  }
+}
+```
+
+#### Delete Conversation
+
+**DELETE** `/api/conversations/{id}`
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "message": "Conversation deleted",
+  "data": {
+    "id": "conv_123"
+  }
+}
+```
+
+## Error Responses
+
+### Standard Error Format
+
+```json
+{
+  "success": false,
+  "error": {
+    "code": "ERROR_CODE",
+    "message": "Human-readable error message",
+    "details": {}
+  }
+}
+```
+
+### Error Codes
+
+| Code | HTTP Status | Description |
+|------|-------------|-------------|
+| `INVALID_REQUEST` | 400 | Request validation failed |
+| `UNAUTHORIZED` | 401 | Invalid or missing API key |
+| `FORBIDDEN` | 403 | Insufficient permissions |
+| `NOT_FOUND` | 404 | Resource not found |
+| `RATE_LIMITED` | 429 | Too many requests |
+| `AGENT_ERROR` | 500 | Agent execution failed |
+| `RETRIEVAL_ERROR` | 500 | Vector search failed |
+| `LLM_ERROR` | 502 | LLM provider error |
+| `INTERNAL_ERROR` | 500 | Internal server error |
+
+### Example Error Responses
+
+**Validation Error (400):**
+```json
+{
+  "success": false,
+  "error": {
+    "code": "INVALID_REQUEST",
+    "message": "Validation failed",
+    "details": {
+      "field": "title",
+      "error": "Title is required"
+    }
+  }
+}
+```
+
+**Rate Limit (429):**
+```json
+{
+  "success": false,
+  "error": {
+    "code": "RATE_LIMITED",
+    "message": "Too many requests",
+    "details": {
+      "retry_after": 60,
+      "limit": 100,
+      "remaining": 0
+    }
+  }
+}
+```
+
+## Frontend Integration Examples
+
+### React Hook for WebSocket Chat
+
+```typescript
+// hooks/useWebSocketChat.ts
+import { useEffect, useRef, useState, useCallback } from 'react';
+
+interface ChatMessage {
+  type: 'user' | 'assistant';
+  content: string;
+  sources?: Array<{
+    id: string;
+    title: string;
+    content_preview: string;
+  }>;
+  isStreaming?: boolean;
+}
+
+interface WebSocketEvent {
+  type: 'token' | 'tool_call' | 'tool_result' | 'done' | 'error';
+  content?: string;
+  tool?: string;
+  documents?: Array<{
+    id: string;
+    title: string;
+    content_preview: string;
+  }>;
+  message?: string;
+}
+
+export function useWebSocketChat(conversationId: string) {
+  const ws = useRef<WebSocket | null>(null);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [isConnected, setIsConnected] = useState(false);
+  const [isStreaming, setIsStreaming] = useState(false);
+
+  useEffect(() => {
+    const socket = new WebSocket(
+      `ws://localhost:8000/ws/chat/${conversationId}`
+    );
+
+    socket.onopen = () => setIsConnected(true);
+    socket.onclose = () => setIsConnected(false);
+    
+    socket.onmessage = (event) => {
+      const data: WebSocketEvent = JSON.parse(event.data);
+      
+      switch (data.type) {
+        case 'token':
+          setMessages(prev => {
+            const last = prev[prev.length - 1];
+            if (last?.type === 'assistant' && last.isStreaming) {
+              return [
+                ...prev.slice(0, -1),
+                { ...last, content: last.content + (data.content || '') }
+              ];
+            }
+            return [...prev, { 
+              type: 'assistant', 
+              content: data.content || '',
+              isStreaming: true 
+            }];
+          });
+          break;
+          
+        case 'tool_result':
+          setMessages(prev => {
+            const last = prev[prev.length - 1];
+            if (last?.type === 'assistant') {
+              return [
+                ...prev.slice(0, -1),
+                { ...last, sources: data.documents }
+              ];
+            }
+            return prev;
+          });
+          break;
+          
+        case 'done':
+          setMessages(prev => {
+            const last = prev[prev.length - 1];
+            if (last?.type === 'assistant') {
+              return [
+                ...prev.slice(0, -1),
+                { ...last, isStreaming: false }
+              ];
+            }
+            return prev;
+          });
+          setIsStreaming(false);
+          break;
+          
+        case 'error':
+          console.error('WebSocket error:', data.message);
+          setIsStreaming(false);
+          break;
+      }
+    };
+
+    ws.current = socket;
+
+    return () => {
+      socket.close();
+    };
+  }, [conversationId]);
+
+  const sendMessage = useCallback((message: string) => {
+    if (ws.current?.readyState === WebSocket.OPEN) {
+      // Add user message to list
+      setMessages(prev => [...prev, { type: 'user', content: message }]);
+      setIsStreaming(true);
+      
+      // Send to server
+      ws.current.send(JSON.stringify({ message }));
+    }
+  }, []);
+
+  return { messages, sendMessage, isConnected, isStreaming };
+}
+```
+
+### Usage in Component
+
+```tsx
+// components/ChatInterface.tsx
+import { useWebSocketChat } from '@/hooks/useWebSocketChat';
+
+export function ChatInterface({ conversationId }: { conversationId: string }) {
+  const { messages, sendMessage, isConnected, isStreaming } = useWebSocketChat(conversationId);
+  const [input, setInput] = useState('');
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (input.trim() && !isStreaming) {
+      sendMessage(input.trim());
+      setInput('');
+    }
+  };
+
+  return (
+    <div>
+      <div className="connection-status">
+        {isConnected ? '🟢 Connected' : '🔴 Disconnected'}
+      </div>
+      
+      <div className="messages">
+        {messages.map((msg, i) => (
+          <div key={i} className={`message ${msg.type}`}>
+            <p>{msg.content}</p>
+            {msg.isStreaming && <span className="typing">...</span>}
+            {msg.sources && (
+              <div className="sources">
+                {msg.sources.map(source => (
+                  <span key={source.id} className="source-tag">
+                    {source.title}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+      
+      <form onSubmit={handleSubmit}>
+        <input
+          value={input}
+          onChange={e => setInput(e.target.value)}
+          disabled={!isConnected || isStreaming}
+          placeholder="Type your message..."
+        />
+        <button type="submit" disabled={!isConnected || isStreaming}>
+          Send
+        </button>
+      </form>
+    </div>
+  );
+}
+```
+
+## Data Models
+
+### TypeScript Interfaces (Frontend)
+
+```typescript
+// types/api.ts
+
+export interface Document {
+  id: string;
+  title: string;
+  content?: string;
+  tags: string[];
+  file_type?: string;
+  chunk_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SearchResult {
+  id: string;
+  content: string;
+  title: string;
+  score: number;
+  metadata: {
+    document_id: string;
+    chunk_index: number;
+    source_file: string;
+  };
+}
+
+export interface ChatMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  sources?: Array<{
+    id: string;
+    title: string;
+  }>;
+  timestamp: string;
+}
+
+export interface Conversation {
+  id: string;
+  title: string;
+  message_count: number;
+  last_message_at: string;
+  created_at: string;
+}
+
+export interface ApiResponse<T> {
+  success: boolean;
+  data: T;
+  message?: string;
+}
+
+export interface ApiError {
+  success: false;
+  error: {
+    code: string;
+    message: string;
+    details?: Record<string, unknown>;
+  };
+}
+```
+
+## Versioning
+
+**Current API Version:** `v1`
+
+**Version Header:** All requests should include API version:
+```http
+X-API-Version: v1
+```
+
+## Changelog
+
+### v1.0.0 (Current)
+- Initial API release
+- WebSocket support for streaming
+- Hybrid search implementation
+- Document management endpoints
