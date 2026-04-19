@@ -5,14 +5,18 @@ All dependencies are configured here and injected into the application layer.
 """
 
 from dependency_injector import containers, providers
-from sqlalchemy.ext.asyncio import AsyncSession
 
+from rag_backend.application.services.carousel_agent import CarouselAgent
 from rag_backend.application.services.conversation_service import ConversationService
 from rag_backend.application.services.document_pipeline import (
     DocumentProcessingPipeline,
 )
 from rag_backend.application.services.rag_agent import RAGAgent
-from rag_backend.infrastructure.config.settings import Settings, get_settings
+from rag_backend.application.services.tools.research_tool import PlaywrightResearchTool
+from rag_backend.infrastructure.config.settings import get_settings
+from rag_backend.infrastructure.database.carousel_repository import (
+    PostgresCarouselRepository,
+)
 from rag_backend.infrastructure.database.config import get_session
 from rag_backend.infrastructure.database.conversation_repository import (
     PostgresConversationRepository,
@@ -21,11 +25,13 @@ from rag_backend.infrastructure.database.conversation_repository import (
 from rag_backend.infrastructure.database.document_repository import (
     PostgresDocumentRepository,
 )
+from rag_backend.infrastructure.external.gemini_image import GeminiImageService
 from rag_backend.infrastructure.external.openai_embeddings import (
     OpenAIEmbeddingService,
 )
 from rag_backend.infrastructure.external.openai_llm import OpenAILLMService
 from rag_backend.infrastructure.external.pinecone_store import PineconeVectorStore
+from rag_backend.infrastructure.external.playwright_export import PlaywrightExportService
 from rag_backend.infrastructure.retrieval.document_processor import (
     RecursiveDocumentProcessor,
 )
@@ -110,6 +116,31 @@ class Container(containers.DeclarativeContainer):
         retriever=retriever,
         message_repository=message_repository,
         document_repository=document_repository,
+    )
+
+    # Carousel Pipeline
+    carousel_repository = providers.Factory(
+        PostgresCarouselRepository,
+        session=db_session,
+    )
+
+    research_tool = providers.Singleton(PlaywrightResearchTool)
+
+    image_service = providers.Singleton(
+        GeminiImageService,
+        api_key=settings.provided().gemini_api_key,
+    )
+
+    export_service = providers.Singleton(PlaywrightExportService)
+
+    carousel_agent = providers.Factory(
+        CarouselAgent,
+        repository=carousel_repository,
+        llm_service=llm_service,
+        research_tool=research_tool,
+        image_service=image_service,
+        export_service=export_service,
+        output_base_dir=settings.provided().carousel_output_dir,
     )
 
 

@@ -56,6 +56,12 @@ class Settings(BaseSettings):
     secret_key: str = "change-me-in-production"
     access_token_expire_minutes: int = 60
 
+    # Gemini (for carousel image generation)
+    gemini_api_key: str = ""
+
+    # Carousel
+    carousel_output_dir: str = "./output/carousels"
+
 
 @lru_cache
 def get_settings() -> Settings:

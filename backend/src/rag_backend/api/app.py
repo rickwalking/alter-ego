@@ -10,7 +10,7 @@ from rag_backend.api.middleware.error_handlers import add_error_handlers
 from rag_backend.api.middleware.rate_limiting import setup_rate_limiting
 from rag_backend.api.middleware.request_logging import RequestLoggingMiddleware
 from rag_backend.api.middleware.security_headers import SecurityHeadersMiddleware
-from rag_backend.api.routes import auth, conversations, documents, search
+from rag_backend.api.routes import auth, carousels, conversations, documents, search
 from rag_backend.api.schemas import HealthCheckResponse, HealthResponse
 from rag_backend.api.websocket.chat import chat_handler
 from rag_backend.infrastructure.config.settings import get_settings
@@ -157,6 +157,7 @@ def create_app() -> FastAPI:
     app.include_router(documents.router, prefix="/api")
     app.include_router(conversations.router, prefix="/api")
     app.include_router(search.router, prefix="/api")
+    app.include_router(carousels.router, prefix="/api")
 
     # WebSocket endpoint for streaming chat
     @app.websocket("/ws/chat/{conversation_id}")
