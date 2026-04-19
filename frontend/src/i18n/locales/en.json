@@ -6,14 +6,24 @@
     "manageKnowledge": "Manage Knowledge",
     "nav": {
       "chat": "Chat",
-      "knowledgeBase": "Knowledge Base"
+      "knowledgeBase": "Knowledge Base",
+      "blog": "Blog"
     }
   },
   "home": {
-    "title": "Chat with my Alter-Ego",
-    "highlight": "to get to know me better",
-    "description": "Chat with an AI that knows everything about my career, experience, and skills. Also, see my blog posts and projects.",
+    "hero": {
+      "badge": "AI-Powered Content",
+      "title": "Chat with my Alter-Ego",
+      "highlight": "to get to know me better",
+      "subtitle": "Chat with an AI that knows everything about my career, experience, and skills. Also, see my blog posts and projects."
+    },
+    "posts": {
+      "title": "Latest Posts",
+      "subtitle": "AI-generated carousels and blog posts about tech, AI, and software engineering.",
+      "viewAll": "View all posts"
+    },
     "features": {
+      "title": "What I Can Do",
       "intelligentChat": {
         "title": "AI-Powered Chat",
         "description": "Have natural conversations with an AI that understands your knowledge base and can answer questions about your content."
@@ -96,6 +106,12 @@
       "submit": "Create Document",
       "cancel": "Cancel"
     }
+  },
+  "blog": {
+    "title": "Blog",
+    "subtitle": "AI-generated carousels and blog posts about tech, AI, and software engineering.",
+    "backHome": "Back to home",
+    "readMore": "Read more"
   },
   "notFound": {
     "code": "404",

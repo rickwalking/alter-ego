@@ -31,6 +31,12 @@ export function Header() {
               >
                 {t("nav.knowledgeBase")}
               </Link>
+              <Link
+                href="/blog"
+                className="transition-colors hover:text-[var(--color-primary)]"
+              >
+                {t("nav.blog")}
+              </Link>
             </nav>
           </div>
           <div className="flex items-center gap-4">
