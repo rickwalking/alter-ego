@@ -1,0 +1,46 @@
+# Dependencies
+node_modules/
+.venv/
+.python-version
+
+# Build outputs
+.next/
+out/
+build/
+dist/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Testing
+coverage/
+playwright-report/
+test-results/
+htmlcov/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Database
+test.db
+
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts
+
+# Python
+*.egg-info/
+.eggs/
