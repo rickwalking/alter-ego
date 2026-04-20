@@ -14,6 +14,9 @@ from rag_backend.infrastructure.database.config import Base
 from rag_backend.infrastructure.database.document_repository import (
     PostgresDocumentRepository,
 )
+from rag_backend.infrastructure.database.carousel_repository import (
+    PostgresCarouselRepository,
+)
 
 # Use SQLite in-memory for testing
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
@@ -45,21 +48,37 @@ async def test_engine():
 
 @pytest_asyncio.fixture
 async def db_session(test_engine) -> AsyncGenerator[AsyncSession, None]:
-    """Create a fresh database session for each test."""
+    """Create a fresh database session for each test with connection-level transaction rollback.
+
+    Uses a connection-level transaction pattern: all commits within the test
+    are part of a single transaction that is rolled back at test end.
+    """
     async_session = sessionmaker(
         test_engine,
         class_=AsyncSession,
         expire_on_commit=False,
     )
-    async with async_session() as session:
+    connection = await test_engine.connect()
+    transaction = await connection.begin()
+    session = async_session(bind=connection)
+    try:
         yield session
-        await session.rollback()
+    finally:
+        await session.close()
+        await transaction.rollback()
+        await connection.close()
 
 
 @pytest.fixture
 def document_repository(db_session: AsyncSession) -> PostgresDocumentRepository:
     """Create a document repository instance."""
     return PostgresDocumentRepository(db_session)
+
+
+@pytest.fixture
+def carousel_repository(db_session: AsyncSession) -> PostgresCarouselRepository:
+    """Create a carousel repository instance."""
+    return PostgresCarouselRepository(db_session)
 
 
 @pytest.fixture

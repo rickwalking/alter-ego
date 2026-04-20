@@ -1,0 +1,81 @@
+type: skill
+name: carousel-pipeline
+version: 1.0.0
+description: >
+  Instagram carousel and blog content generation pipeline.
+  Executes a 7-phase workflow: research, title optimization,
+  bilingual content synthesis, design system generation,
+  image generation, HTML export, and caption creation.
+  Produces slides, blog post (pt-BR + en), design tokens,
+  images, and Instagram caption.
+triggers:
+  - "create a carousel"
+  - "create a new social media post"
+  - "generate carousel slides"
+  - "make an Instagram post"
+  - "generate blog content"
+  - "create carousel"
+tools:
+  - Agent
+  - Bash
+  - WebFetch
+  - WebSearch
+  - Playwright
+input_schema:
+  title:
+    type: string
+    description: Working title for the carousel (will be optimized)
+  audience:
+    type: string
+    description: Target audience (e.g., "AI, software developers, architects")
+  niche:
+    type: string
+    description: Content niche (e.g., "AI/Tech", "Cybersecurity")
+  slides:
+    type: string
+    default: "1 intro, 3 content, 1 closing, 1 cta"
+    description: Slide configuration string
+  aspect_ratio:
+    type: string
+    default: "1080x1350"
+    description: Image dimensions (default Instagram portrait)
+  sources:
+    type: array
+    items:
+      type: string
+    description: List of source URLs to research (X posts, GitHub issues, blogs)
+  language:
+    type: string
+    default: "pt-BR"
+    description: Primary language for content (default Brazilian Portuguese)
+  generate_images:
+    type: boolean
+    default: true
+    description: Whether to generate images via Gemini
+output:
+  type: object
+  properties:
+    project_id:
+      type: string
+      description: UUID of the created carousel project
+    status:
+      type: string
+      description: Final status (completed or failed)
+    blog_pt:
+      type: string
+      description: Blog post in Brazilian Portuguese markdown
+    blog_en:
+      type: string
+      description: Blog post in English markdown
+    design_tokens:
+      type: object
+      description: Complete visual design system for frontend consumption
+    caption:
+      type: string
+      description: Instagram caption with hashtags
+    slides:
+      type: array
+      description: Array of slide objects with heading, body, image paths
+    output_dir:
+      type: string
+      description: Path to generated output files

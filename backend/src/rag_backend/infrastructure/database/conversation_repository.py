@@ -1,13 +1,11 @@
 """PostgreSQL repository implementations for Conversation and Message."""
 
-from typing import Optional
 from uuid import UUID
 
 from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.domain.models import Conversation, Message
-from rag_backend.domain.protocols import ConversationRepository, MessageRepository
 from rag_backend.infrastructure.database.models import (
     ConversationModel,
     MessageModel,
@@ -27,7 +25,7 @@ class PostgresConversationRepository:
         await self._session.flush()
         return db_conversation.to_entity()
 
-    async def get_by_id(self, conversation_id: UUID) -> Optional[Conversation]:
+    async def get_by_id(self, conversation_id: UUID) -> Conversation | None:
         """Get a conversation by its ID."""
         result = await self._session.execute(
             select(ConversationModel).where(

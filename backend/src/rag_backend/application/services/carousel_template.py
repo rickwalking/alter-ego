@@ -1,10 +1,35 @@
 """Carousel HTML template generation and prompt building."""
 
-from rag_backend.domain.constants import (
-    SLIDE_TYPE_CONTENT,
-    SLIDE_TYPE_INTRO,
-)
-from rag_backend.domain.models import CarouselProject
+from rag_backend.domain.constants import SLIDE_TYPE_CONTENT, SLIDE_TYPE_INTRO
+from rag_backend.domain.models import CarouselProject, DesignTokens
+
+THEME_PALETTES: dict[str, dict[str, str]] = {
+    "cybersecurity": {
+        "primary": "#ef4444",
+        "accent": "#00d4ff",
+        "background": "#0a0e17",
+    },
+    "ai_competition": {
+        "primary": "#3b82f6",
+        "accent": "#f59e0b",
+        "background": "#0a0e17",
+    },
+    "developer_skills": {
+        "primary": "#0ac5a8",
+        "accent": "#8b5cf6",
+        "background": "#080c12",
+    },
+    "source_code": {
+        "primary": "#a855f7",
+        "accent": "#f97316",
+        "background": "#0c0a14",
+    },
+    "social_engineering": {
+        "primary": "#f59e0b",
+        "accent": "#ef4444",
+        "background": "#0a0c14",
+    },
+}
 
 
 class CarouselTemplateBuilder:
@@ -25,14 +50,18 @@ class CarouselTemplateBuilder:
 
     @staticmethod
     def build_content_prompt(project: CarouselProject, research_context: str) -> str:
-        """Build prompt for content synthesis."""
+        """Build prompt for bilingual content synthesis."""
+        language_name = (
+            "Brazilian Portuguese (informal but professional)"
+            if project.language == "pt-BR"
+            else "English (professional, direct)"
+        )
         return (
-            f"Create a 6-slide Instagram carousel and a blog post.\n\n"
+            f"Create a 6-slide Instagram carousel and a blog post in TWO languages.\n\n"
             f"Topic: {project.topic}\n"
             f"Title: {project.title}\n"
             f"Subtitle: {project.subtitle}\n"
-            f"Audience: {project.audience}\n"
-            f"Language: {project.language}\n\n"
+            f"Audience: {project.audience}\n\n"
             f"Research context:\n{research_context}\n\n"
             f"Slide structure:\n"
             f"1. Intro: hook + hero image\n"
@@ -40,13 +69,58 @@ class CarouselTemplateBuilder:
             f"5. Closing: actionable takeaways\n"
             f"6. CTA: save + share\n\n"
             f"Return ONLY a JSON object with keys:\n"
-            f"- slides: array of {{number, type, heading, body, image_prompt}}\n"
-            f"- blog_markdown: full blog post in markdown format\n\n"
+            f"- slides: array of {{number, type, heading, body, image_prompt}} in pt-BR\n"
+            f"- blog_pt: full blog post in pt-BR markdown\n"
+            f"- blog_en: full blog post in English markdown\n"
+            f"- title_pt, title_en, subtitle_pt, subtitle_en\n\n"
             f"Rules:\n"
-            f"- Write in {project.language}\n"
+            f"- pt-BR version: {language_name}, engaging\n"
+            f"- EN version: professional, direct, same depth and structure\n"
+            f"- NEVER use em dashes in either language\n"
             f"- Each slide must have complete explanatory content\n"
             f"- image_prompt: describe the scene for comic/manga style generation\n"
             f"- Blog post should expand on carousel content\n"
+        )
+
+    @staticmethod
+    def generate_design_tokens(project: CarouselProject) -> DesignTokens:
+        """Generate complete design tokens for a blog post."""
+        from rag_backend.domain.constants import CAROUSEL_THEMES as PALETTES
+
+        theme = PALETTES.get(project.theme.value, PALETTES["ai_competition"])
+        primary = theme["primary"]
+        accent = theme["accent"]
+        bg = theme["background"]
+        swipe_text = "Deslize \u2192" if project.language == "pt-BR" else "Swipe \u2192"
+
+        return DesignTokens(
+            colors={
+                "primary": primary,
+                "accent": accent,
+                "bg": bg,
+                "text": "#ffffff",
+                "text_muted": "rgba(255,255,255,0.63)",
+                "text_dim": "rgba(255,255,255,0.48)",
+                "border": f"{primary}33",
+                "glow": f"{primary}0D",
+            },
+            typography={
+                "font_family_heading": "'Segoe UI', 'Helvetica Neue', Arial, sans-serif",
+                "font_family_body": "'Segoe UI', 'Helvetica Neue', Arial, sans-serif",
+                "font_family_badge": "'Courier New', monospace",
+            },
+            images={
+                "hero": f"/api/carousels/{project.id}/images/hero",
+                "slides": [
+                    f"/api/carousels/{project.id}/images/slide_{i}"
+                    for i in range(1, 5)
+                ],
+            },
+            layout={
+                "badge_label": project.niche,
+                "swipe_text": swipe_text,
+                "progress_segments": 6,
+            },
         )
 
     @staticmethod

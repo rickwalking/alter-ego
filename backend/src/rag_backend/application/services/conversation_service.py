@@ -1,7 +1,6 @@
 """Conversation service with memory management."""
 
-from typing import Optional
-from uuid import UUID, uuid4
+from uuid import UUID
 
 from rag_backend.domain.models import Conversation, Message, MessageRole
 from rag_backend.domain.protocols import ConversationRepository, MessageRepository
@@ -21,7 +20,7 @@ class ConversationService:
         self._max_context_tokens = max_context_tokens
 
     async def create_conversation(
-        self, title: Optional[str] = None, metadata: Optional[dict] = None
+        self, title: str | None = None, metadata: dict | None = None
     ) -> Conversation:
         """Create a new conversation.
 
@@ -38,7 +37,7 @@ class ConversationService:
         )
         return await self._conversation_repository.create(conversation)
 
-    async def get_conversation(self, conversation_id: UUID) -> Optional[Conversation]:
+    async def get_conversation(self, conversation_id: UUID) -> Conversation | None:
         """Get a conversation by ID.
 
         Args:
@@ -94,7 +93,7 @@ class ConversationService:
         conversation_id: UUID,
         role: MessageRole,
         content: str,
-        sources: Optional[list[dict]] = None,
+        sources: list[dict] | None = None,
     ) -> Message:
         """Add a message to a conversation.
 

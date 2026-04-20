@@ -2,12 +2,57 @@
 
 from dataclasses import dataclass, field
 from datetime import datetime
-from enum import Enum
-from typing import Optional
+from enum import StrEnum
+from typing import TypedDict
 from uuid import UUID, uuid4
 
 
-class DocumentStatus(str, Enum):
+class DesignTokenColors(TypedDict):
+    """Design token colors for blog post styling."""
+
+    primary: str
+    accent: str
+    bg: str
+    text: str
+    text_muted: str
+    text_dim: str
+    border: str
+    glow: str
+
+
+class DesignTokenTypography(TypedDict):
+    """Design token typography for blog post styling."""
+
+    font_family_heading: str
+    font_family_body: str
+    font_family_badge: str
+
+
+class DesignTokenImages(TypedDict):
+    """Design token image URLs for blog post."""
+
+    hero: str
+    slides: list[str]
+
+
+class DesignTokenLayout(TypedDict):
+    """Design token layout properties for blog post."""
+
+    badge_label: str
+    swipe_text: str
+    progress_segments: int
+
+
+class DesignTokens(TypedDict):
+    """Complete visual design tokens for a blog post / carousel."""
+
+    colors: DesignTokenColors
+    typography: DesignTokenTypography
+    images: DesignTokenImages
+    layout: DesignTokenLayout
+
+
+class DocumentStatus(StrEnum):
     """Document processing status."""
 
     PENDING = "pending"
@@ -27,11 +72,11 @@ class Document:
     created_at: datetime = field(default_factory=datetime.utcnow)
     updated_at: datetime = field(default_factory=datetime.utcnow)
     status: DocumentStatus = DocumentStatus.PENDING
-    error_message: Optional[str] = None
+    error_message: str | None = None
     chunk_count: int = 0
 
     def update_status(
-        self, status: DocumentStatus, error_message: Optional[str] = None
+        self, status: DocumentStatus, error_message: str | None = None
     ) -> None:
         """Update document status and timestamp."""
         self.status = status
@@ -61,11 +106,11 @@ class DocumentChunk:
     index: int
     id: UUID = field(default_factory=uuid4)
     metadata: dict[str, str | int | float | bool] = field(default_factory=dict)
-    dense_embedding: Optional[list[float]] = None
-    sparse_embedding: Optional[dict[str, float]] = None
+    dense_embedding: list[float] | None = None
+    sparse_embedding: dict[str, float] | None = None
 
 
-class MessageRole(str, Enum):
+class MessageRole(StrEnum):
     """Message role in conversation."""
 
     USER = "user"
@@ -91,7 +136,7 @@ class Conversation:
     """Represents a conversation session."""
 
     id: UUID = field(default_factory=uuid4)
-    title: Optional[str] = None
+    title: str | None = None
     created_at: datetime = field(default_factory=datetime.utcnow)
     updated_at: datetime = field(default_factory=datetime.utcnow)
     metadata: dict[str, str | int | float | bool] = field(default_factory=dict)
@@ -113,7 +158,7 @@ class SearchResult:
     content: str
     document_id: UUID
     score: float
-    chunk_id: Optional[UUID] = None
+    chunk_id: UUID | None = None
     metadata: dict[str, str | int | float | bool] = field(default_factory=dict)
     rank: int = 0
 
@@ -123,7 +168,7 @@ class SearchResult:
 # =============================================================================
 
 
-class CarouselStatus(str, Enum):
+class CarouselStatus(StrEnum):
     """Carousel project generation status."""
 
     PENDING = "pending"
@@ -136,7 +181,7 @@ class CarouselStatus(str, Enum):
     FAILED = "failed"
 
 
-class CarouselTheme(str, Enum):
+class CarouselTheme(StrEnum):
     """Predefined carousel color themes."""
 
     CYBERSECURITY = "cybersecurity"
@@ -147,7 +192,7 @@ class CarouselTheme(str, Enum):
     AUTO = "auto"
 
 
-class ResearchSourceType(str, Enum):
+class ResearchSourceType(StrEnum):
     """Types of research sources."""
 
     TWITTER = "twitter"
@@ -166,26 +211,28 @@ class CarouselProject:
     audience: str
     niche: str
     id: UUID = field(default_factory=uuid4)
-    title: Optional[str] = None
-    subtitle: Optional[str] = None
+    title: str | None = None
+    subtitle: str | None = None
     slides_config: str = "1 intro, 3 content, 1 closing, 1 cta"
     aspect_ratio: str = "1080x1350"
     language: str = "pt-BR"
     generate_images: bool = True
     theme: CarouselTheme = CarouselTheme.AUTO
-    primary_color: Optional[str] = None
-    accent_color: Optional[str] = None
-    background_color: Optional[str] = None
-    blog_markdown: Optional[str] = None
-    caption: Optional[str] = None
+    primary_color: str | None = None
+    accent_color: str | None = None
+    background_color: str | None = None
+    blog_markdown: str | None = None
+    blog_translations: dict[str, str] | None = None
+    caption: str | None = None
+    design_tokens: DesignTokens | None = None
     status: CarouselStatus = CarouselStatus.PENDING
-    error_message: Optional[str] = None
-    output_dir: Optional[str] = None
+    error_message: str | None = None
+    output_dir: str | None = None
     created_at: datetime = field(default_factory=datetime.utcnow)
     updated_at: datetime = field(default_factory=datetime.utcnow)
 
     def update_status(
-        self, status: CarouselStatus, error_message: Optional[str] = None
+        self, status: CarouselStatus, error_message: str | None = None
     ) -> None:
         """Update project status and timestamp."""
         self.status = status
@@ -213,11 +260,35 @@ class CarouselProject:
         self.accent_color = accent
         self.background_color = background
 
-    def set_title(self, title: str, subtitle: Optional[str] = None) -> None:
+    def set_title(self, title: str, subtitle: str | None = None) -> None:
         """Set the optimized title."""
         self.title = title
         self.subtitle = subtitle
         self.updated_at = datetime.utcnow()
+
+    def get_blog(self, language: str = "pt") -> str | None:
+        """Get blog markdown for a specific language."""
+        if self.blog_translations and language in self.blog_translations:
+            return self.blog_translations[language]
+        return self.blog_markdown
+
+    def get_available_languages(self) -> list[str]:
+        """Return list of available blog languages."""
+        if self.blog_translations:
+            return list(self.blog_translations.keys())
+        if self.blog_markdown:
+            return ["pt"]
+        return []
+
+    def get_design(self) -> DesignTokens | None:
+        """Return complete design tokens for frontend consumption."""
+        return self.design_tokens
+
+    def get_image_url(self, filename: str) -> str | None:
+        """Get the API URL for a carousel image."""
+        if not self.output_dir:
+            return None
+        return f"/api/carousels/{self.id}/images/{filename}"
 
 
 @dataclass
@@ -230,9 +301,9 @@ class CarouselSlide:
     heading: str
     body: str
     id: UUID = field(default_factory=uuid4)
-    html_content: Optional[str] = None
-    image_path: Optional[str] = None
-    image_prompt: Optional[str] = None
+    html_content: str | None = None
+    image_path: str | None = None
+    image_prompt: str | None = None
     metadata: dict[str, str | int | float | bool] = field(default_factory=dict)
     created_at: datetime = field(default_factory=datetime.utcnow)
     updated_at: datetime = field(default_factory=datetime.utcnow)
@@ -246,8 +317,8 @@ class ResearchSource:
     source_url: str
     source_type: ResearchSourceType
     id: UUID = field(default_factory=uuid4)
-    title: Optional[str] = None
-    extracted_content: Optional[str] = None
+    title: str | None = None
+    extracted_content: str | None = None
     relevance_score: float = 0.0
     metadata: dict[str, str | int | float | bool] = field(default_factory=dict)
     created_at: datetime = field(default_factory=datetime.utcnow)

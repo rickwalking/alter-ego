@@ -1,13 +1,11 @@
 """PostgreSQL repository implementations using SQLAlchemy."""
 
-from typing import Optional
 from uuid import UUID
 
 from sqlalchemy import desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.domain.models import Document, DocumentStatus
-from rag_backend.domain.protocols import DocumentRepository
 from rag_backend.infrastructure.database.models import DocumentModel
 
 
@@ -24,7 +22,7 @@ class PostgresDocumentRepository:
         await self._session.flush()
         return db_document.to_entity()
 
-    async def get_by_id(self, document_id: UUID) -> Optional[Document]:
+    async def get_by_id(self, document_id: UUID) -> Document | None:
         """Get a document by its ID."""
         result = await self._session.execute(
             select(DocumentModel).where(DocumentModel.id == str(document_id))
@@ -33,7 +31,7 @@ class PostgresDocumentRepository:
         return db_document.to_entity() if db_document else None
 
     async def get_all(
-        self, status: Optional[DocumentStatus] = None, limit: int = 100, offset: int = 0
+        self, status: DocumentStatus | None = None, limit: int = 100, offset: int = 0
     ) -> list[Document]:
         """Get all documents with optional filtering."""
         query = select(DocumentModel)
@@ -73,7 +71,7 @@ class PostgresDocumentRepository:
         await self._session.flush()
         return True
 
-    async def count(self, status: Optional[DocumentStatus] = None) -> int:
+    async def count(self, status: DocumentStatus | None = None) -> int:
         """Count documents with optional status filter."""
         query = select(func.count()).select_from(DocumentModel)
         if status:

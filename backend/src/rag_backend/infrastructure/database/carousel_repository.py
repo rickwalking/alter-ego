@@ -29,7 +29,7 @@ class PostgresCarouselRepository(CarouselRepository):
         """Create a new carousel project."""
         model = CarouselProjectModel.from_entity(project)
         self._session.add(model)
-        await self._session.flush()
+        await self._session.commit()
         await self._session.refresh(model)
         return model.to_entity()
 
@@ -71,7 +71,7 @@ class PostgresCarouselRepository(CarouselRepository):
         if model is None:
             raise ValueError(f"Carousel project {project.id} not found")
         model.update_from_entity(project)
-        await self._session.flush()
+        await self._session.commit()
         await self._session.refresh(model)
         return model.to_entity()
 
@@ -85,14 +85,14 @@ class PostgresCarouselRepository(CarouselRepository):
         if model is None:
             return False
         await self._session.delete(model)
-        await self._session.flush()
+        await self._session.commit()
         return True
 
     async def create_slide(self, slide: CarouselSlide) -> CarouselSlide:
         """Create a new carousel slide."""
         model = CarouselSlideModel.from_entity(slide)
         self._session.add(model)
-        await self._session.flush()
+        await self._session.commit()
         await self._session.refresh(model)
         return model.to_entity()
 
@@ -117,7 +117,7 @@ class PostgresCarouselRepository(CarouselRepository):
         if model is None:
             raise ValueError(f"Carousel slide {slide.id} not found")
         model.update_from_entity(slide)
-        await self._session.flush()
+        await self._session.commit()
         await self._session.refresh(model)
         return model.to_entity()
 

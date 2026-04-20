@@ -1,6 +1,6 @@
 """Document processing pipeline service."""
 
-from rag_backend.domain.models import Document, DocumentChunk, DocumentStatus
+from rag_backend.domain.models import Document, DocumentStatus
 from rag_backend.domain.protocols import (
     DocumentProcessor,
     DocumentRepository,

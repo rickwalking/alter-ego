@@ -4,7 +4,8 @@ These protocols define contracts that infrastructure implementations must fulfil
 Using Protocols instead of abstract classes allows for more flexible, decoupled design.
 """
 
-from typing import Any, AsyncIterator, Optional, Protocol
+from collections.abc import AsyncIterator
+from typing import Any, Protocol
 from uuid import UUID
 
 from rag_backend.domain.models import (
@@ -29,12 +30,12 @@ class DocumentRepository(Protocol):
         """Create a new document."""
         ...
 
-    async def get_by_id(self, document_id: UUID) -> Optional[Document]:
+    async def get_by_id(self, document_id: UUID) -> Document | None:
         """Get a document by its ID."""
         ...
 
     async def get_all(
-        self, status: Optional[DocumentStatus] = None, limit: int = 100, offset: int = 0
+        self, status: DocumentStatus | None = None, limit: int = 100, offset: int = 0
     ) -> list[Document]:
         """Get all documents with optional filtering."""
         ...
@@ -47,7 +48,7 @@ class DocumentRepository(Protocol):
         """Delete a document by ID."""
         ...
 
-    async def count(self, status: Optional[DocumentStatus] = None) -> int:
+    async def count(self, status: DocumentStatus | None = None) -> int:
         """Count documents with optional status filter."""
         ...
 
@@ -59,7 +60,7 @@ class ConversationRepository(Protocol):
         """Create a new conversation."""
         ...
 
-    async def get_by_id(self, conversation_id: UUID) -> Optional[Conversation]:
+    async def get_by_id(self, conversation_id: UUID) -> Conversation | None:
         """Get a conversation by its ID."""
         ...
 
@@ -148,7 +149,7 @@ class LLMService(Protocol):
         self,
         messages: list[dict[str, str]],
         temperature: float = 0.7,
-        max_tokens: Optional[int] = None,
+        max_tokens: int | None = None,
     ) -> str:
         """Generate a complete response."""
         ...
@@ -157,7 +158,7 @@ class LLMService(Protocol):
         self,
         messages: list[dict[str, str]],
         temperature: float = 0.7,
-        max_tokens: Optional[int] = None,
+        max_tokens: int | None = None,
     ) -> AsyncIterator[str]:
         """Generate a streaming response."""
         ...
@@ -217,12 +218,12 @@ class CarouselRepository(Protocol):
         """Create a new carousel project."""
         ...
 
-    async def get_project_by_id(self, project_id: UUID) -> Optional[CarouselProject]:
+    async def get_project_by_id(self, project_id: UUID) -> CarouselProject | None:
         """Get a carousel project by its ID."""
         ...
 
     async def get_all_projects(
-        self, status: Optional[CarouselStatus] = None, limit: int = 100, offset: int = 0
+        self, status: CarouselStatus | None = None, limit: int = 100, offset: int = 0
     ) -> list[CarouselProject]:
         """Get all carousel projects with optional filtering."""
         ...

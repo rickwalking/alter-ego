@@ -4,24 +4,18 @@ import { getTranslations } from "next-intl/server";
 import { Container } from "@/components/layout";
 import { Button } from "@/components/ui/button";
 import { MessageSquare, Database, Sparkles, ArrowRight } from "lucide-react";
-
-const LATEST_POSTS = [
-  {
-    slug: "gemma-4-google-compact-model",
-    title: "Gemma 4: O Modelo Compacto da Google que Supera Modelos 20x Maiores",
-    excerpt:
-      "A Google lancou uma familia de modelos que desafiam a logica de escala. O Gemma 4 27B supera modelos com trilhoes de parametros nos benchmarks mais importantes.",
-    date: "2025-04-01",
-    badge: "AI/ML",
-    image: "/hero-ai-assistant.jpg",
-    primaryColor: "#3b82f6",
-    accentColor: "#f59e0b",
-  },
-];
+import { fetchCompletedProjects } from "@/lib/server-fetch";
+import { FALLBACK_DESIGN_TOKENS } from "@/constants/blog";
+import type { CarouselProjectListResponse } from "@/schemas/carousel";
 
 export default async function HomePage() {
   const t = await getTranslations("home");
   const tc = await getTranslations("common");
+  const tb = await getTranslations("blog");
+
+  const data: CarouselProjectListResponse = await fetchCompletedProjects(3);
+  const fallback = FALLBACK_DESIGN_TOKENS;
+  const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
   return (
     <div className="flex-1">
@@ -39,7 +33,7 @@ export default async function HomePage() {
             <div className="relative mx-auto mb-8 h-64 w-full max-w-3xl overflow-hidden rounded-2xl border border-[var(--color-border)] shadow-lg md:h-80">
               <Image
                 src="/hero-ai-assistant-v2.jpg"
-                alt="AI Assistant"
+                alt={t("hero.badge")}
                 fill
                 className="object-cover"
                 priority
@@ -100,59 +94,74 @@ export default async function HomePage() {
             </Link>
           </div>
 
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {LATEST_POSTS.map((post) => (
-              <Link
-                key={post.slug}
-                href={`/blog/${post.slug}`}
-                className="group block overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] transition-all hover:border-[var(--color-primary)]/50 hover:shadow-md"
-              >
-                {/* Post Image */}
-                <div className="relative h-48 w-full overflow-hidden">
-                  <Image
-                    src={post.image}
-                    alt={post.title}
-                    fill
-                    className="object-cover transition-transform duration-300 group-hover:scale-105"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-[var(--color-card)] to-transparent" />
-                </div>
+          {data.items.length === 0 ? (
+            <div className="rounded-xl border border-dashed border-[var(--color-border)] p-12 text-center">
+              <p className="text-lg font-medium text-[var(--color-muted-foreground)]">
+                {tb("noPosts")}
+              </p>
+            </div>
+          ) : (
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {data.items.map((post) => {
+                const imageUrl = post.design_tokens &&
+                  typeof post.design_tokens === "object" &&
+                  "images" in (post.design_tokens as Record<string, unknown>)
+                  ? `${apiBaseUrl}/api/carousels/${post.id}/images/hero`
+                  : "/hero-ai-assistant-v2.jpg";
 
-                {/* Post Content */}
-                <div className="p-5">
-                  {/* Badge + Date */}
-                  <div className="mb-3 flex items-center gap-3">
-                    <span
-                      className="rounded px-2 py-0.5 font-mono text-xs font-bold uppercase tracking-wider"
-                      style={{
-                        color: post.primaryColor,
-                        background: `${post.primaryColor}14`,
-                      }}
-                    >
-                      {post.badge}
-                    </span>
-                    <span className="text-xs text-[var(--color-muted-foreground)]">
-                      {new Date(post.date).toLocaleDateString("en-US", {
-                        month: "short",
-                        day: "numeric",
-                        year: "numeric",
-                      })}
-                    </span>
-                  </div>
+                return (
+                  <Link
+                    key={post.id}
+                    href={`/blog/${post.id}`}
+                    className="group block overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] transition-all hover:border-[var(--color-primary)]/50 hover:shadow-md"
+                  >
+                    {/* Post Image */}
+                    <div className="relative h-48 w-full overflow-hidden">
+                      <img
+                        src={imageUrl}
+                        alt={post.title || post.topic}
+                        className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-[var(--color-card)] to-transparent" />
+                    </div>
 
-                  {/* Title */}
-                  <h3 className="mb-2 text-lg font-bold leading-snug transition-colors group-hover:text-[var(--color-primary)]">
-                    {post.title}
-                  </h3>
+                    {/* Post Content */}
+                    <div className="p-5">
+                      {/* Badge + Date */}
+                      <div className="mb-3 flex items-center gap-3">
+                        <span
+                          className="rounded px-2 py-0.5 font-mono text-xs font-bold uppercase tracking-wider"
+                          style={{
+                            color: fallback.colors.primary,
+                            background: `${fallback.colors.primary}14`,
+                          }}
+                        >
+                          {post.niche}
+                        </span>
+                        <span className="text-xs text-[var(--color-muted-foreground)]">
+                          {new Date(post.created_at).toLocaleDateString("en-US", {
+                            month: "short",
+                            day: "numeric",
+                            year: "numeric",
+                          })}
+                        </span>
+                      </div>
 
-                  {/* Excerpt */}
-                  <p className="text-sm leading-relaxed text-[var(--color-muted-foreground)]">
-                    {post.excerpt}
-                  </p>
-                </div>
-              </Link>
-            ))}
-          </div>
+                      {/* Title */}
+                      <h3 className="mb-2 text-lg font-bold leading-snug transition-colors group-hover:text-[var(--color-primary)]">
+                        {post.title || post.topic}
+                      </h3>
+
+                      {/* Excerpt */}
+                      <p className="text-sm leading-relaxed text-[var(--color-muted-foreground)]">
+                        {tb("readMore")}
+                      </p>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          )}
         </Container>
       </section>
 

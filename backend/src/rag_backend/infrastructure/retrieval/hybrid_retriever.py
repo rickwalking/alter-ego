@@ -3,7 +3,7 @@
 from typing import Any
 
 from rag_backend.domain.models import SearchResult
-from rag_backend.domain.protocols import EmbeddingService, Retriever, VectorStore
+from rag_backend.domain.protocols import EmbeddingService, VectorStore
 
 
 class HybridRetrieverWithRRF:

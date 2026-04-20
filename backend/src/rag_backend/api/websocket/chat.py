@@ -1,14 +1,12 @@
 """WebSocket handler for streaming chat."""
 
 import json
-from typing import Optional
 from uuid import UUID
 
 from fastapi import WebSocket, WebSocketDisconnect
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.infrastructure.container import get_container
-from rag_backend.infrastructure.database.config import get_session
 
 
 class ChatWebSocketHandler:
@@ -45,8 +43,9 @@ class ChatWebSocketHandler:
 
         # Create a new database session for this connection
         # In production, you might want to use connection pooling
-        from rag_backend.infrastructure.database.config import c_engine
         from sqlalchemy.ext.asyncio import async_sessionmaker
+
+        from rag_backend.infrastructure.database.config import c_engine
 
         session_maker = async_sessionmaker(
             c_engine,

@@ -12,6 +12,8 @@ from rag_backend.application.services.document_pipeline import (
     DocumentProcessingPipeline,
 )
 from rag_backend.application.services.rag_agent import RAGAgent
+from rag_backend.application.services.tools.export_tool import CarouselExportTool
+from rag_backend.application.services.tools.image_tool import ImageGenerationTool
 from rag_backend.application.services.tools.research_tool import PlaywrightResearchTool
 from rag_backend.infrastructure.config.settings import get_settings
 from rag_backend.infrastructure.database.carousel_repository import (
@@ -109,15 +111,6 @@ class Container(containers.DeclarativeContainer):
         max_context_tokens=4000,
     )
 
-    # Agent
-    rag_agent = providers.Factory(
-        RAGAgent,
-        settings=settings,
-        retriever=retriever,
-        message_repository=message_repository,
-        document_repository=document_repository,
-    )
-
     # Carousel Pipeline
     carousel_repository = providers.Factory(
         PostgresCarouselRepository,
@@ -133,6 +126,17 @@ class Container(containers.DeclarativeContainer):
 
     export_service = providers.Singleton(PlaywrightExportService)
 
+    # Application Tools (wrappers around infrastructure services)
+    image_generation_tool = providers.Singleton(
+        ImageGenerationTool,
+        image_service=image_service,
+    )
+
+    carousel_export_tool = providers.Singleton(
+        CarouselExportTool,
+        export_service=export_service,
+    )
+
     carousel_agent = providers.Factory(
         CarouselAgent,
         repository=carousel_repository,
@@ -141,6 +145,16 @@ class Container(containers.DeclarativeContainer):
         image_service=image_service,
         export_service=export_service,
         output_base_dir=settings.provided().carousel_output_dir,
+    )
+
+    # Agent (after carousel_agent is defined)
+    rag_agent = providers.Factory(
+        RAGAgent,
+        settings=settings,
+        retriever=retriever,
+        message_repository=message_repository,
+        document_repository=document_repository,
+        carousel_agent=carousel_agent,
     )
 
 

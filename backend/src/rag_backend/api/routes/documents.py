@@ -1,6 +1,5 @@
 """Document API routes."""
 
-from typing import Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, status
@@ -36,8 +35,8 @@ router = APIRouter(prefix="/documents", tags=["documents"])
 )
 async def upload_document(
     file: UploadFile,
-    title: Optional[str] = None,
-    tags: Optional[str] = None,
+    title: str | None = None,
+    tags: str | None = None,
     db: AsyncSession = Depends(get_session),
 ):
     """Upload a document file and process it immediately.
@@ -158,7 +157,7 @@ async def create_document(
     },
 )
 async def list_documents(
-    status: Optional[DocumentStatus] = Query(None, description="Filter by status"),
+    status: DocumentStatus | None = Query(None, description="Filter by status"),
     limit: int = Query(20, ge=1, le=100, description="Number of items to return"),
     offset: int = Query(0, ge=0, description="Number of items to skip"),
     db: AsyncSession = Depends(get_session),

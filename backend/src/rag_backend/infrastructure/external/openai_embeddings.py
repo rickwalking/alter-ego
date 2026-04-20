@@ -5,7 +5,6 @@ from typing import Any
 import tiktoken
 from langchain_openai import OpenAIEmbeddings
 
-from rag_backend.domain.protocols import EmbeddingService
 from rag_backend.infrastructure.config.settings import Settings
 
 

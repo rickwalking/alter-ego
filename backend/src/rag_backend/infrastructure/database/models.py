@@ -1,8 +1,6 @@
 """SQLAlchemy ORM models for PostgreSQL."""
 
 import uuid
-from datetime import datetime
-from typing import Any
 
 from sqlalchemy import (
     JSON,
@@ -19,16 +17,28 @@ from sqlalchemy.orm import relationship
 
 from rag_backend.domain.models import (
     CarouselProject as CarouselProjectEntity,
+)
+from rag_backend.domain.models import (
     CarouselSlide as CarouselSlideEntity,
+)
+from rag_backend.domain.models import (
     CarouselStatus,
     CarouselTheme,
-    Conversation as ConversationEntity,
-    Document as DocumentEntity,
     DocumentStatus,
-    Message as MessageEntity,
     MessageRole,
-    ResearchSource as ResearchSourceEntity,
     ResearchSourceType,
+)
+from rag_backend.domain.models import (
+    Conversation as ConversationEntity,
+)
+from rag_backend.domain.models import (
+    Document as DocumentEntity,
+)
+from rag_backend.domain.models import (
+    Message as MessageEntity,
+)
+from rag_backend.domain.models import (
+    ResearchSource as ResearchSourceEntity,
 )
 from rag_backend.infrastructure.database.config import Base
 
@@ -228,7 +238,10 @@ class CarouselProjectModel(Base):
     niche = Column(String(200), nullable=False)
     title = Column(String(500), nullable=True)
     subtitle = Column(Text, nullable=True)
-    slides_config = Column(String(200), nullable=False, default="1 intro, 3 content, 1 closing, 1 cta")
+    slides_config = Column(
+        String(200), nullable=False,
+        default="1 intro, 3 content, 1 closing, 1 cta",
+    )
     aspect_ratio = Column(String(20), nullable=False, default="1080x1350")
     language = Column(String(10), nullable=False, default="pt-BR")
     generate_images = Column(Integer, default=1, nullable=False)
@@ -237,7 +250,12 @@ class CarouselProjectModel(Base):
     accent_color = Column(String(20), nullable=True)
     background_color = Column(String(20), nullable=True)
     blog_markdown = Column(Text, nullable=True)
+    blog_translations = Column(JSON, nullable=True)
     caption = Column(Text, nullable=True)
+    design_tokens = Column(
+        JSON, nullable=True,
+        comment="Complete visual design: colors, typography, images, layout",
+    )
     status = Column(String(30), nullable=False, default=CarouselStatus.PENDING.value)
     error_message = Column(Text, nullable=True)
     output_dir = Column(String(500), nullable=True)
@@ -290,7 +308,9 @@ class CarouselProjectModel(Base):
             accent_color=self.accent_color,
             background_color=self.background_color,
             blog_markdown=self.blog_markdown,
+            blog_translations=self.blog_translations,
             caption=self.caption,
+            design_tokens=self.design_tokens,
             status=CarouselStatus(self.status),
             error_message=self.error_message,
             output_dir=self.output_dir,
@@ -317,7 +337,9 @@ class CarouselProjectModel(Base):
             accent_color=entity.accent_color,
             background_color=entity.background_color,
             blog_markdown=entity.blog_markdown,
+            blog_translations=entity.blog_translations,
             caption=entity.caption,
+            design_tokens=entity.design_tokens,
             status=entity.status.value,
             error_message=entity.error_message,
             output_dir=entity.output_dir,
@@ -333,7 +355,9 @@ class CarouselProjectModel(Base):
         self.accent_color = entity.accent_color
         self.background_color = entity.background_color
         self.blog_markdown = entity.blog_markdown
+        self.blog_translations = entity.blog_translations
         self.caption = entity.caption
+        self.design_tokens = entity.design_tokens
         self.status = entity.status.value
         self.error_message = entity.error_message
         self.output_dir = entity.output_dir

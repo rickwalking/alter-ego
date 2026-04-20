@@ -111,7 +111,25 @@
     "title": "Blog",
     "subtitle": "AI-generated carousels and blog posts about tech, AI, and software engineering.",
     "backHome": "Back to home",
-    "readMore": "Read more"
+    "backToPosts": "Back to posts",
+    "readMore": "Read more",
+    "noPosts": "No blog posts yet. Generate a carousel to create your first post.",
+    "loading": "Loading blog posts...",
+    "error": "Failed to load blog posts",
+    "languageSwitch": {
+      "pt": "PT",
+      "en": "EN",
+      "label": "Language"
+    },
+    "meta": {
+      "readTime": "{minutes} min read"
+    },
+    "badges": {
+      "aiMl": "AI/ML",
+      "cybersecurity": "Cybersecurity",
+      "devTools": "Dev Tools",
+      "openSource": "Open Source"
+    }
   },
   "notFound": {
     "code": "404",

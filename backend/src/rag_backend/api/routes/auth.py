@@ -3,7 +3,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 
-from rag_backend.infrastructure.auth import create_access_token, hash_password, verify_password
+from rag_backend.infrastructure.auth import create_access_token
 from rag_backend.infrastructure.config.settings import Settings, get_settings
 
 router = APIRouter(prefix="/auth", tags=["auth"])

@@ -1,11 +1,10 @@
 """Pydantic schemas for API requests and responses."""
 
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel, Field
-
 
 # ============== Document Schemas ==============
 
@@ -23,9 +22,9 @@ class DocumentCreate(DocumentBase):
 
 class DocumentUpdate(BaseModel):
     """Schema for updating a document."""
-    title: Optional[str] = Field(None, min_length=1, max_length=500)
-    content: Optional[str] = Field(None, min_length=1)
-    metadata: Optional[dict[str, Any]] = None
+    title: str | None = Field(None, min_length=1, max_length=500)
+    content: str | None = Field(None, min_length=1)
+    metadata: dict[str, Any] | None = None
 
 
 class DocumentResponse(BaseModel):
@@ -37,7 +36,7 @@ class DocumentResponse(BaseModel):
     chunk_count: int
     created_at: datetime
     updated_at: datetime
-    error_message: Optional[str] = None
+    error_message: str | None = None
 
     model_config = {"from_attributes": True}
 
@@ -63,20 +62,20 @@ class DocumentProcessingStatus(BaseModel):
 
 class ConversationCreate(BaseModel):
     """Schema for creating a conversation."""
-    title: Optional[str] = Field(None, max_length=500)
+    title: str | None = Field(None, max_length=500)
     metadata: dict[str, Any] = Field(default_factory=dict)
 
 
 class ConversationUpdate(BaseModel):
     """Schema for updating a conversation."""
-    title: Optional[str] = Field(None, max_length=500)
-    metadata: Optional[dict[str, Any]] = None
+    title: str | None = Field(None, max_length=500)
+    metadata: dict[str, Any] | None = None
 
 
 class ConversationResponse(BaseModel):
     """Schema for conversation response."""
     id: UUID
-    title: Optional[str]
+    title: str | None
     metadata: dict[str, Any]
     created_at: datetime
     updated_at: datetime
@@ -128,7 +127,7 @@ class DocumentUploadResponse(BaseModel):
     chunk_count: int
     created_at: datetime
     updated_at: datetime
-    error_message: Optional[str] = None
+    error_message: str | None = None
 
     model_config = {"from_attributes": True}
 
@@ -155,8 +154,8 @@ class ChatMessageRequest(BaseModel):
 class ChatStreamResponse(BaseModel):
     """Schema for streaming chat response."""
     type: str  # 'token', 'sources', 'complete', 'error'
-    content: Optional[str] = None
-    sources: Optional[list[MessageSource]] = None
+    content: str | None = None
+    sources: list[MessageSource] | None = None
 
 
 # ============== Search Schemas ==============
@@ -191,7 +190,7 @@ class ErrorResponse(BaseModel):
     """Schema for error responses."""
     error: str
     message: str
-    details: Optional[dict[str, Any]] = None
+    details: dict[str, Any] | None = None
 
 
 # ============== Health Schemas ==============
@@ -226,10 +225,10 @@ class CarouselProjectCreate(BaseModel):
 
 class CarouselProjectUpdate(BaseModel):
     """Schema for updating a carousel project."""
-    title: Optional[str] = Field(None, max_length=500)
-    subtitle: Optional[str] = None
-    blog_markdown: Optional[str] = None
-    caption: Optional[str] = None
+    title: str | None = Field(None, max_length=500)
+    subtitle: str | None = None
+    blog_markdown: str | None = None
+    caption: str | None = None
 
 
 class CarouselSlideResponse(BaseModel):
@@ -239,7 +238,7 @@ class CarouselSlideResponse(BaseModel):
     slide_type: str
     heading: str
     body: str
-    image_path: Optional[str] = None
+    image_path: str | None = None
     created_at: datetime
     updated_at: datetime
 
@@ -251,7 +250,7 @@ class ResearchSourceResponse(BaseModel):
     id: UUID
     source_url: str
     source_type: str
-    title: Optional[str] = None
+    title: str | None = None
     relevance_score: float
     created_at: datetime
 
@@ -264,17 +263,19 @@ class CarouselProjectResponse(BaseModel):
     topic: str
     audience: str
     niche: str
-    title: Optional[str]
-    subtitle: Optional[str]
+    title: str | None
+    subtitle: str | None
     theme: str
-    primary_color: Optional[str]
-    accent_color: Optional[str]
-    background_color: Optional[str]
-    blog_markdown: Optional[str]
-    caption: Optional[str]
+    primary_color: str | None
+    accent_color: str | None
+    background_color: str | None
+    blog_markdown: str | None
+    blog_translations: dict[str, str] | None = None
+    caption: str | None
+    design_tokens: dict[str, dict[str, str | int | list[str]]] | None = None
     status: str
-    error_message: Optional[str] = None
-    output_dir: Optional[str] = None
+    error_message: str | None = None
+    output_dir: str | None = None
     slides: list[CarouselSlideResponse] = Field(default_factory=list)
     research_sources: list[ResearchSourceResponse] = Field(default_factory=list)
     created_at: datetime
@@ -295,7 +296,7 @@ class CarouselStatusResponse(BaseModel):
     """Schema for carousel generation status."""
     id: UUID
     status: str
-    error_message: Optional[str] = None
+    error_message: str | None = None
     updated_at: datetime
 
     model_config = {"from_attributes": True}
@@ -303,7 +304,7 @@ class CarouselStatusResponse(BaseModel):
 
 class CarouselGenerateRequest(BaseModel):
     """Schema for triggering carousel generation."""
-    sources: Optional[list[str]] = Field(default=None, description="Optional source URLs to research")
+    sources: list[str] | None = Field(default=None, description="Optional source URLs to research")
 
 
 class CarouselCaptionResponse(BaseModel):
@@ -316,4 +317,70 @@ class CarouselBlogResponse(BaseModel):
     """Schema for generated blog post."""
     markdown: str
     title: str
-    subtitle: Optional[str] = None
+    subtitle: str | None = None
+
+
+class CarouselBlogI18nResponse(BaseModel):
+    """Schema for localized blog post response."""
+    markdown: str
+    title: str
+    subtitle: str | None
+    language: str
+    available_languages: list[str]
+
+    model_config = {"from_attributes": False}
+
+
+class CarouselDesignColors(BaseModel):
+    """Schema for design token colors."""
+    primary: str
+    accent: str
+    bg: str
+    text: str
+    text_muted: str
+    text_dim: str
+    border: str
+    glow: str
+
+
+class CarouselDesignTypography(BaseModel):
+    """Schema for design token typography."""
+    font_family_heading: str
+    font_family_body: str
+    font_family_badge: str
+
+
+class CarouselDesignImages(BaseModel):
+    """Schema for design token images."""
+    hero: str
+    slides: list[str]
+
+
+class CarouselDesignLayout(BaseModel):
+    """Schema for design token layout."""
+    badge_label: str
+    swipe_text: str
+    progress_segments: int
+
+
+class CarouselDesignResponse(BaseModel):
+    """Complete visual design tokens for a blog post."""
+    colors: CarouselDesignColors
+    typography: CarouselDesignTypography
+    images: CarouselDesignImages
+    layout: CarouselDesignLayout
+    theme_name: str
+
+    model_config = {"from_attributes": False}
+
+
+class CarouselBlogWithDesignResponse(BaseModel):
+    """Blog post response with inline design tokens."""
+    markdown: str
+    title: str
+    subtitle: str | None
+    language: str
+    available_languages: list[str]
+    design: CarouselDesignResponse
+
+    model_config = {"from_attributes": False}

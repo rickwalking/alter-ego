@@ -1,7 +1,6 @@
 """JWT authentication utilities."""
 
-from datetime import datetime, timedelta, timezone
-from typing import Optional
+from datetime import UTC, datetime, timedelta
 
 import jwt
 from passlib.context import CryptContext
@@ -16,7 +15,7 @@ ALGORITHM = "HS256"
 def create_access_token(
     settings: Settings,
     subject: str,
-    expires_delta: Optional[timedelta] = None,
+    expires_delta: timedelta | None = None,
 ) -> str:
     """Create a JWT access token.
 
@@ -28,18 +27,18 @@ def create_access_token(
     Returns:
         Encoded JWT token string.
     """
-    expire = datetime.now(timezone.utc) + (
+    expire = datetime.now(UTC) + (
         expires_delta or timedelta(minutes=settings.access_token_expire_minutes)
     )
     payload = {
         "sub": subject,
         "exp": expire,
-        "iat": datetime.now(timezone.utc),
+        "iat": datetime.now(UTC),
     }
     return jwt.encode(payload, settings.secret_key, algorithm=ALGORITHM)
 
 
-def decode_access_token(settings: Settings, token: str) -> Optional[dict]:
+def decode_access_token(settings: Settings, token: str) -> dict | None:
     """Decode and validate a JWT access token.
 
     Args:

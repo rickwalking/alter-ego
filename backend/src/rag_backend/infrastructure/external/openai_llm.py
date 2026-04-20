@@ -1,10 +1,9 @@
 """OpenAI LLM service implementation using LangChain."""
 
-from typing import AsyncIterator, Optional
+from collections.abc import AsyncIterator
 
 from langchain_openai import ChatOpenAI
 
-from rag_backend.domain.protocols import LLMService
 from rag_backend.infrastructure.config.settings import Settings
 
 
@@ -24,7 +23,7 @@ class OpenAILLMService:
         self,
         messages: list[dict[str, str]],
         temperature: float = 0.7,
-        max_tokens: Optional[int] = None,
+        max_tokens: int | None = None,
     ) -> str:
         """Generate a complete response."""
         from langchain_core.messages import (
@@ -58,7 +57,7 @@ class OpenAILLMService:
         self,
         messages: list[dict[str, str]],
         temperature: float = 0.7,
-        max_tokens: Optional[int] = None,
+        max_tokens: int | None = None,
     ) -> AsyncIterator[str]:
         """Generate a streaming response."""
         from langchain_core.messages import (

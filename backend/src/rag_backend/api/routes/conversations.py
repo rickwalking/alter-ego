@@ -13,16 +13,15 @@ from rag_backend.api.schemas import (
     ConversationResponse,
     ErrorResponse,
     MessageListResponse,
-    MessageResponse,
     MessageSource,
 )
+from rag_backend.application.services.conversation_service import ConversationService
 from rag_backend.infrastructure.container import get_container
 from rag_backend.infrastructure.database.config import get_session
 from rag_backend.infrastructure.database.conversation_repository import (
     PostgresConversationRepository,
     PostgresMessageRepository,
 )
-from rag_backend.application.services.conversation_service import ConversationService
 
 router = APIRouter(prefix="/conversations", tags=["conversations"])
 

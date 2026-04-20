@@ -6,7 +6,6 @@ from uuid import UUID
 from pinecone import Pinecone, ServerlessSpec
 
 from rag_backend.domain.models import DocumentChunk, SearchResult
-from rag_backend.domain.protocols import VectorStore
 from rag_backend.infrastructure.config.settings import Settings
 
 

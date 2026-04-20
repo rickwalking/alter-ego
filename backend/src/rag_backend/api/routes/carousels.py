@@ -6,20 +6,29 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from rag_backend.infrastructure.database.session import get_session
+from fastapi.params import Path as FastPath
+from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.api.schemas import (
+    CarouselBlogI18nResponse,
     CarouselBlogResponse,
     CarouselCaptionResponse,
+    CarouselDesignColors,
+    CarouselDesignImages,
+    CarouselDesignLayout,
+    CarouselDesignResponse,
+    CarouselDesignTypography,
     CarouselGenerateRequest,
     CarouselProjectCreate,
     CarouselProjectListResponse,
     CarouselProjectResponse,
+    CarouselSlideResponse,
     CarouselStatusResponse,
 )
 from rag_backend.domain.models import CarouselStatus
 from rag_backend.domain.protocols import CarouselAgent, CarouselRepository
+from rag_backend.infrastructure.database.config import get_session
 
 router = APIRouter(prefix="/carousels", tags=["carousels"])
 
@@ -122,7 +131,7 @@ async def get_carousel_blog(
     project_id: UUID,
     repo: Annotated[CarouselRepository, Depends(get_carousel_repo)],
 ) -> CarouselBlogResponse:
-    """Get the generated blog post for a carousel."""
+    """Get the generated blog post for a carousel (default pt-BR)."""
     project = await repo.get_project_by_id(project_id)
     if project is None:
         raise HTTPException(status_code=404, detail="Carousel project not found")
@@ -133,6 +142,126 @@ async def get_carousel_blog(
         title=project.title or project.topic,
         subtitle=project.subtitle,
     )
+
+
+@router.get("/{project_id}/blog/{lang}", response_model=CarouselBlogI18nResponse)
+async def get_carousel_blog_i18n(
+    project_id: UUID,
+    lang: Annotated[str, FastPath(pattern="^(pt|en)$")],
+    repo: Annotated[CarouselRepository, Depends(get_carousel_repo)],
+) -> CarouselBlogI18nResponse:
+    """Get the generated blog post in a specific language."""
+    project = await repo.get_project_by_id(project_id)
+    if project is None:
+        raise HTTPException(status_code=404, detail="Carousel project not found")
+
+    blog_content = project.get_blog(lang)
+    if blog_content is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Blog post not available in '{lang}'",
+            headers={"X-Available-Languages": ",".join(project.get_available_languages())},
+        )
+
+    translated_title, translated_subtitle = _extract_title_and_subtitle(blog_content)
+
+    return CarouselBlogI18nResponse(
+        markdown=blog_content,
+        title=translated_title or project.title or project.topic,
+        subtitle=translated_subtitle or project.subtitle,
+        language=lang,
+        available_languages=project.get_available_languages(),
+    )
+
+
+def _extract_title_and_subtitle(markdown: str) -> tuple[str | None, str | None]:
+    """Extract title and subtitle from markdown first heading.
+
+    The first line is expected to be '# Title: Subtitle' or '# Title'.
+    """
+    lines = markdown.strip().split("\n")
+    if not lines:
+        return None, None
+
+    first_line = lines[0]
+    if not first_line.startswith("# "):
+        return None, None
+
+    heading = first_line[2:].strip()
+
+    TITLE_SUBTITLE_SEPARATOR = ":"
+    if TITLE_SUBTITLE_SEPARATOR in heading:
+        separator_pos = heading.index(TITLE_SUBTITLE_SEPARATOR)
+        title = heading[:separator_pos].strip()
+        subtitle = heading[separator_pos + 1 :].strip()
+        return title, subtitle
+
+    return heading, None
+
+
+@router.get("/{project_id}/design", response_model=CarouselDesignResponse)
+async def get_carousel_design(
+    project_id: UUID,
+    repo: Annotated[CarouselRepository, Depends(get_carousel_repo)],
+) -> CarouselDesignResponse:
+    """Get the visual design tokens for a carousel."""
+    project = await repo.get_project_by_id(project_id)
+    if project is None:
+        raise HTTPException(status_code=404, detail="Carousel project not found")
+    if project.design_tokens is None:
+        raise HTTPException(status_code=404, detail="Design tokens not yet generated")
+
+    tokens = project.design_tokens
+    theme_name = project.theme.value
+
+    return CarouselDesignResponse(
+        colors=CarouselDesignColors(**tokens["colors"]),
+        typography=CarouselDesignTypography(**tokens["typography"]),
+        images=CarouselDesignImages(
+            hero=tokens["images"]["hero"],
+            slides=tokens["images"]["slides"],
+        ),
+        layout=CarouselDesignLayout(**tokens["layout"]),
+        theme_name=theme_name,
+    )
+
+
+@router.get("/{project_id}/images/{filename}")
+async def get_carousel_image(
+    project_id: UUID,
+    filename: str,
+    repo: Annotated[CarouselRepository, Depends(get_carousel_repo)],
+) -> FileResponse:
+    """Serve a carousel image file."""
+    project = await repo.get_project_by_id(project_id)
+    if project is None:
+        raise HTTPException(status_code=404, detail="Carousel project not found")
+    if project.output_dir is None:
+        raise HTTPException(status_code=404, detail="Carousel not yet generated")
+    images_dir = Path(project.output_dir) / "images"
+    image_path = images_dir / filename
+    if not image_path.is_file():
+        image_path = Path(str(image_path) + ".jpg")
+    if not image_path.is_file():
+        raise HTTPException(status_code=404, detail="Image file not found")
+    return FileResponse(
+        path=str(image_path),
+        media_type="image/jpeg",
+        headers={"Cache-Control": "public, max-age=31536000"},
+    )
+
+
+@router.get("/{project_id}/slides", response_model=list[CarouselSlideResponse])
+async def get_carousel_slides(
+    project_id: UUID,
+    repo: Annotated[CarouselRepository, Depends(get_carousel_repo)],
+) -> list[CarouselSlideResponse]:
+    """Get all slides for a carousel project."""
+    project = await repo.get_project_by_id(project_id)
+    if project is None:
+        raise HTTPException(status_code=404, detail="Carousel project not found")
+    slides = await repo.get_slides_by_project(project_id)
+    return [CarouselSlideResponse.model_validate(s) for s in slides]
 
 
 @router.post("/{project_id}/caption", response_model=CarouselCaptionResponse)

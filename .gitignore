@@ -44,3 +44,6 @@ next-env.d.ts
 # Python
 *.egg-info/
 .eggs/
+backend/output/
+backend/test.db
+backend/scripts/seed_gemma4.py

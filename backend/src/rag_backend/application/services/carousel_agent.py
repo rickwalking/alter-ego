@@ -103,13 +103,15 @@ class CarouselAgent:
                 )
                 await self._repo.create_slide(slide)
 
-            project.blog_markdown = blog_markdown
+            if project.blog_markdown is None:
+                project.blog_markdown = blog_markdown
             project = await self._repo.update_project(project)
 
             # Phase 4: Design system
             project.update_status(CarouselStatus.DESIGNING)
             project = await self._repo.update_project(project)
             html_content = self._phase4_design(project, slides_data)
+            project = await self._repo.update_project(project)
 
             # Phase 5: Image generation
             if project.generate_images:
@@ -189,7 +191,7 @@ class CarouselAgent:
         project: CarouselProject,
         sources: list[ResearchSource],
     ) -> tuple[list[SlideData], str]:
-        """Phases 2-3: Title optimization and content synthesis."""
+        """Phases 2-3: Title optimization and bilingual content synthesis."""
         research_context = "\n\n".join(
             f"Source: {s.source_url}\n{s.extracted_content or ''}"
             for s in sources
@@ -206,13 +208,13 @@ class CarouselAgent:
         try:
             title_data = json.loads(title_response)
             project.set_title(
-                title=title_data.get("title", project.topic),
-                subtitle=title_data.get("subtitle"),
+                title=title_data.get("title_pt", title_data.get("title", project.topic)),
+                subtitle=title_data.get("subtitle_pt", title_data.get("subtitle")),
             )
         except (json.JSONDecodeError, KeyError):
             project.set_title(title=project.topic)
 
-        # Phase 3: Content synthesis
+        # Phase 3: Bilingual content synthesis
         content_prompt = self._template.build_content_prompt(
             project, research_context
         )
@@ -234,7 +236,22 @@ class CarouselAgent:
                         image_prompt=slide_json.get("image_prompt"),
                     )
                 )
-            blog_markdown = content_data.get("blog_markdown", "")
+
+            blog_pt = content_data.get("blog_pt", content_data.get("blog_markdown", ""))
+            blog_en = content_data.get("blog_en", "")
+
+            project.blog_markdown = blog_pt
+            if blog_en:
+                project.blog_translations = {"pt": blog_pt, "en": blog_en}
+            else:
+                project.blog_translations = {"pt": blog_pt}
+
+            # Update title/subtitle with bilingual data if available
+            if "title_pt" in content_data:
+                project.set_title(
+                    title=content_data.get("title_pt", project.title or project.topic),
+                    subtitle=content_data.get("subtitle_pt", project.subtitle),
+                )
         except (json.JSONDecodeError, KeyError):
             slides_data = [
                 SlideData(
@@ -244,20 +261,22 @@ class CarouselAgent:
                     body=project.subtitle or "",
                 )
             ]
-            blog_markdown = ""
 
-        return slides_data, blog_markdown
+        return slides_data, project.blog_markdown or ""
 
     def _phase4_design(
         self, project: CarouselProject, slides: list[SlideData]
     ) -> str:
-        """Phase 4: Generate HTML carousel with design system."""
+        """Phase 4: Generate HTML carousel with design system and store design tokens."""
         theme = self._resolve_theme(project)
         project.set_theme_colors(
             primary=theme["primary"],
             accent=theme["accent"],
             background=theme["background"],
         )
+
+        design_tokens = CarouselTemplateBuilder.generate_design_tokens(project)
+        project.design_tokens = design_tokens
 
         slide_dicts = [
             {

@@ -2,8 +2,8 @@
 
 from slowapi import Limiter
 from slowapi.errors import RateLimitExceeded
-from slowapi.util import get_remote_address
 from slowapi.middleware import SlowAPIMiddleware
+from slowapi.util import get_remote_address
 
 from rag_backend.infrastructure.config.settings import Settings
 
@@ -31,6 +31,7 @@ def setup_rate_limiting(app, settings: Settings) -> None:
 def _rate_limit_exceeded_handler(request, exc):
     """Handle rate limit exceeded errors."""
     from fastapi.responses import JSONResponse
+
     from rag_backend.api.schemas import ErrorResponse
 
     return JSONResponse(

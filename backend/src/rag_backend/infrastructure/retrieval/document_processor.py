@@ -5,7 +5,7 @@ import os
 from pypdf import PdfReader
 
 from rag_backend.domain.models import Document, DocumentChunk
-from rag_backend.domain.protocols import DocumentProcessor, EmbeddingService
+from rag_backend.domain.protocols import EmbeddingService
 
 
 def load_file_content(file_content: bytes, filename: str) -> str:
@@ -69,7 +69,7 @@ class RecursiveDocumentProcessor:
         # Create DocumentChunk objects
         document_chunks = []
         for i, (chunk_text, dense_emb, sparse_emb) in enumerate(
-            zip(chunks, dense_embeddings, sparse_embeddings)
+            zip(chunks, dense_embeddings, sparse_embeddings, strict=False)
         ):
             document_chunks.append(
                 DocumentChunk(
