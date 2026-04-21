@@ -154,13 +154,19 @@ class LLMService(Protocol):
         """Generate a complete response."""
         ...
 
-    async def generate_stream(
+    def generate_stream(
         self,
         messages: list[dict[str, str]],
         temperature: float = 0.7,
         max_tokens: int | None = None,
     ) -> AsyncIterator[str]:
-        """Generate a streaming response."""
+        """Generate a streaming response.
+
+        Implementations are async generators (use `yield`). The method is
+        declared with plain `def` rather than `async def` so mypy matches the
+        async-generator return type (`AsyncIterator[str]`) rather than
+        `Coroutine[..., AsyncIterator[str]]`.
+        """
         ...
 
 

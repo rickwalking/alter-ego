@@ -7,7 +7,8 @@
     "nav": {
       "chat": "Chat",
       "knowledgeBase": "Knowledge Base",
-      "blog": "Blog"
+      "blog": "Blog",
+      "create": "Create"
     }
   },
   "home": {
@@ -129,6 +130,54 @@
       "cybersecurity": "Cybersecurity",
       "devTools": "Dev Tools",
       "openSource": "Open Source"
+    }
+  },
+  "create": {
+    "pageTitle": "Create Carousel",
+    "pageDescription": "Describe your topic and let AI generate a blog post and Instagram carousel for you.",
+    "form": {
+      "topicLabel": "Topic",
+      "topicPlaceholder": "e.g. Rust vs Go for backend development",
+      "audienceLabel": "Target Audience",
+      "audiencePlaceholder": "e.g. Senior developers, tech leads",
+      "nicheLabel": "Niche",
+      "nichePlaceholder": "e.g. Backend Engineering",
+      "themeLabel": "Visual Theme",
+      "submit": "Create Project",
+      "submitting": "Creating..."
+    },
+    "themes": {
+      "auto": "Auto-detect",
+      "cybersecurity": "Cybersecurity",
+      "ai_competition": "AI Competition",
+      "developer_skills": "Developer Skills",
+      "source_code": "Source Code",
+      "social_engineering": "Social Engineering"
+    },
+    "progress": {
+      "complete": "Carousel generated successfully!",
+      "failed": "Generation failed. Try again or refine your request.",
+      "currentlyProcessing": "Currently processing",
+      "stalled": "Still working after {seconds}s — the upstream LLM may be retrying a dropped connection.",
+      "phases": {
+        "researching": "Researching topic...",
+        "drafting": "Drafting content...",
+        "designing": "Applying design tokens...",
+        "generating_images": "Generating images...",
+        "exporting": "Exporting slides...",
+        "completed": "Complete"
+      }
+    },
+    "preview": {
+      "viewBlog": "View Blog Post"
+    },
+    "workspace": {
+      "title": "Carousel Workspace",
+      "viewBlog": "View Blog",
+      "error": "An error occurred while processing your request."
+    },
+    "chat": {
+      "error": "An error occurred while processing your request."
     }
   },
   "notFound": {

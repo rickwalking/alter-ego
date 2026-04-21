@@ -5,6 +5,8 @@ export const API_ENDPOINTS = {
   CONVERSATIONS: "/api/conversations",
   SEARCH: "/api/search",
   CAROUSELS: "/api/carousels",
+  CAROUSEL_GENERATE: (id: string) => `/api/carousels/${id}/generate`,
+  CAROUSEL_STATUS: (id: string) => `/api/carousels/${id}/status`,
   CAROUSEL_BLOG: (id: string) => `/api/carousels/${id}/blog`,
   CAROUSEL_BLOG_LANG: (id: string, lang: string) => `/api/carousels/${id}/blog/${lang}`,
   CAROUSEL_DESIGN: (id: string) => `/api/carousels/${id}/design`,
@@ -20,6 +22,8 @@ export const ROUTE_PATHS = {
   KNOWLEDGE: "/knowledge",
   BLOG: "/blog",
   BLOG_POST: (slug: string) => `/blog/${slug}`,
+  CREATE: "/create",
+  CREATE_WORKSPACE: (id: string) => `/create/${id}`,
 } as const;
 
 /** HTTP methods. */

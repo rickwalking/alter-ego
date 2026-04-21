@@ -37,6 +37,12 @@ export function Header() {
               >
                 {t("nav.blog")}
               </Link>
+              <Link
+                href="/create"
+                className="transition-colors hover:text-[var(--color-primary)]"
+              >
+                {t("nav.create")}
+              </Link>
             </nav>
           </div>
           <div className="flex items-center gap-4">

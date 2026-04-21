@@ -26,8 +26,12 @@ from rag_backend.api.schemas import (
     CarouselSlideResponse,
     CarouselStatusResponse,
 )
+from rag_backend.application.services.carousel_agent import CarouselAgent as CarouselAgentImpl
 from rag_backend.domain.models import CarouselStatus
 from rag_backend.domain.protocols import CarouselAgent, CarouselRepository
+from rag_backend.infrastructure.database.carousel_repository import (
+    PostgresCarouselRepository,
+)
 from rag_backend.infrastructure.database.config import get_session
 
 router = APIRouter(prefix="/carousels", tags=["carousels"])
@@ -36,19 +40,40 @@ router = APIRouter(prefix="/carousels", tags=["carousels"])
 def get_carousel_repo(
     session: Annotated[AsyncSession, Depends(get_session)],
 ) -> CarouselRepository:
-    """Get carousel repository from DI container."""
+    """Get a carousel repository bound to the per-request session."""
+    return PostgresCarouselRepository(session)
+
+
+def get_carousel_agent(
+    session: Annotated[AsyncSession, Depends(get_session)],
+) -> CarouselAgent:
+    """Build a CarouselAgent bound to the per-request session.
+
+    container.carousel_agent() cannot be resolved synchronously in production
+    because it depends on the async `db_session` Resource — calling it would
+    return an `_asyncio.Future` rather than an instance. So we construct the
+    agent directly from per-request repositories and session-free singletons.
+
+    Tests that call `container.carousel_agent.override(...)` still work: an
+    overridden provider returns its override directly (no dependency
+    resolution), so we honor overrides here before the direct-construction
+    path.
+    """
     from rag_backend.infrastructure.container import get_container
 
     container = get_container()
-    return container.carousel_repository(session=session)
+    if bool(container.carousel_agent.overridden):
+        return container.carousel_agent()
 
-
-def get_carousel_agent() -> CarouselAgent:
-    """Get carousel agent from DI container."""
-    from rag_backend.infrastructure.container import get_container
-
-    container = get_container()
-    return container.carousel_agent()
+    settings = container.settings()
+    return CarouselAgentImpl(
+        repository=PostgresCarouselRepository(session),
+        llm_service=container.llm_service(),
+        research_tool=container.research_tool(),
+        image_service=container.image_service(),
+        export_service=container.export_service(),
+        output_base_dir=settings.carousel_output_dir,
+    )
 
 
 @router.post("", response_model=CarouselProjectResponse, status_code=status.HTTP_201_CREATED)
@@ -110,7 +135,10 @@ async def generate_carousel(
     agent: Annotated[CarouselAgent, Depends(get_carousel_agent)],
 ) -> CarouselStatusResponse:
     """Trigger the full carousel generation pipeline."""
-    project = await agent.execute_pipeline(project_id)
+    project = await agent.execute_pipeline(
+        project_id,
+        seed_urls=request.sources,
+    )
     return CarouselStatusResponse.model_validate(project)
 
 

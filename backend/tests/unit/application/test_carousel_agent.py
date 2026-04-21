@@ -241,7 +241,7 @@ class TestCarouselAgent:
             mock_export_service,
         )
 
-        sources = await agent._phase1_research(sample_project)
+        sources = await agent._phase1_research(sample_project, [])
 
         assert mock_research_tool.search_web.called
         assert mock_repository.create_research_source.called
@@ -298,7 +298,7 @@ class TestCarouselAgent:
         assert slides_data[1].slide_type == "content"
         assert "Blog PT" in blog_markdown
 
-    async def test_phase2_3_content_handles_invalid_json(
+    async def test_phase2_3_content_raises_on_invalid_json(
         self,
         mock_repository,
         mock_llm_service,
@@ -307,8 +307,44 @@ class TestCarouselAgent:
         mock_export_service,
         sample_project,
     ):
-        """Should fallback to default slide when LLM returns invalid JSON."""
+        """LLM returning non-JSON must surface an error, not silently degrade.
+
+        The old behavior (fallback to a single stub slide + empty blog + mark
+        project `completed`) masked real failures — the content phase must
+        raise so the pipeline marks the project `failed`.
+        """
         mock_llm_service.generate.return_value = "not valid json"
+
+        agent = build_agent(
+            mock_repository,
+            mock_llm_service,
+            mock_research_tool,
+            mock_image_service,
+            mock_export_service,
+        )
+
+        with pytest.raises(ValueError, match="non-JSON"):
+            await agent._phase2_3_content(sample_project, [])
+
+    async def test_phase2_3_content_tolerates_markdown_fences(
+        self,
+        mock_repository,
+        mock_llm_service,
+        mock_research_tool,
+        mock_image_service,
+        mock_export_service,
+        sample_project,
+    ):
+        """Anthropic often wraps JSON in ```json fences — parsing must handle that."""
+        payload = {
+            "slides": [
+                {"number": 1, "type": "intro", "heading": "H", "body": "B"},
+            ],
+            "blog_pt": "# Blog",
+        }
+        mock_llm_service.generate.return_value = (
+            f"Sure, here you go:\n```json\n{json.dumps(payload)}\n```\nDone."
+        )
 
         agent = build_agent(
             mock_repository,
@@ -323,8 +359,8 @@ class TestCarouselAgent:
         )
 
         assert len(slides_data) == 1
-        assert slides_data[0].slide_type == "intro"
-        assert blog_markdown == ""
+        assert slides_data[0].heading == "H"
+        assert blog_markdown == "# Blog"
 
     async def test_phase2_3_content_sets_blog_translations(
         self,

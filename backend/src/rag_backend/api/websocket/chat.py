@@ -6,7 +6,13 @@ from uuid import UUID
 from fastapi import WebSocket, WebSocketDisconnect
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from rag_backend.api.dependencies.agents import build_rag_agent
+from rag_backend.application.services.conversation_service import ConversationService
 from rag_backend.infrastructure.container import get_container
+from rag_backend.infrastructure.database.conversation_repository import (
+    PostgresConversationRepository,
+    PostgresMessageRepository,
+)
 
 
 class ChatWebSocketHandler:
@@ -41,8 +47,6 @@ class ChatWebSocketHandler:
         """
         container = get_container()
 
-        # Create a new database session for this connection
-        # In production, you might want to use connection pooling
         from sqlalchemy.ext.asyncio import async_sessionmaker
 
         from rag_backend.infrastructure.database.config import c_engine
@@ -55,9 +59,13 @@ class ChatWebSocketHandler:
 
         async with session_maker() as db:
             try:
-                # Verify conversation exists
-                conversation_service = container.conversation_service(
-                    db_session=db
+                # Verify conversation exists — create service directly (not via container)
+                conv_repo = PostgresConversationRepository(db)
+                msg_repo = PostgresMessageRepository(db)
+                conversation_service = ConversationService(
+                    conversation_repository=conv_repo,
+                    message_repository=msg_repo,
+                    max_context_tokens=4000,
                 )
                 conversation = await conversation_service.get_conversation(
                     conversation_id
@@ -71,8 +79,7 @@ class ChatWebSocketHandler:
                     await websocket.close(code=4004)
                     return
 
-                # Get RAG agent
-                agent = container.rag_agent()
+                agent = build_rag_agent(db, container)
 
                 # Handle incoming messages
                 while True:

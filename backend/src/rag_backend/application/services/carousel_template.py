@@ -78,8 +78,22 @@ class CarouselTemplateBuilder:
             f"- EN version: professional, direct, same depth and structure\n"
             f"- NEVER use em dashes in either language\n"
             f"- Each slide must have complete explanatory content\n"
-            f"- image_prompt: describe the scene for comic/manga style generation\n"
             f"- Blog post should expand on carousel content\n"
+            f"\n"
+            f"image_prompt rules (CRITICAL — the system wraps it with style\n"
+            f"directives, so describe the SCENE ONLY):\n"
+            f"- 1-2 sentences describing a concrete cyberpunk/sci-fi tech\n"
+            f"  scene. Example: 'two hooded figures at glowing terminals\n"
+            f"  watching a package registry map pulse with red alerts'.\n"
+            f"- DO NOT specify style, colors, lighting, panel layouts, or\n"
+            f"  ratio — those are applied by the system.\n"
+            f"- DO NOT request any text, labels, speech bubbles, signs,\n"
+            f"  or words to appear in the image.\n"
+            f"- DO NOT use metaphorical/cultural settings (dojos, sensei,\n"
+            f"  crossroads, books). Use tech scenes only.\n"
+            f"- Elements to favor: monitors, terminals, code streams,\n"
+            f"  neon cityscapes, robots, circuit boards, holograms,\n"
+            f"  servers, data pipelines.\n"
         )
 
     @staticmethod
@@ -110,7 +124,10 @@ class CarouselTemplateBuilder:
                 "font_family_badge": "'Courier New', monospace",
             },
             images={
-                "hero": f"/api/carousels/{project.id}/images/hero",
+                # The intro slide's rendered image IS the hero; the pipeline
+                # writes it to images/slide_1.jpg. There is no separate
+                # "hero" file on disk.
+                "hero": f"/api/carousels/{project.id}/images/slide_1",
                 "slides": [
                     f"/api/carousels/{project.id}/images/slide_{i}"
                     for i in range(1, 5)

@@ -33,6 +33,20 @@ const nextConfig: NextConfig = {
   // Trailing slash for SEO
   trailingSlash: false,
 
+  // Rewrites to proxy API requests to backend
+  async rewrites() {
+    return [
+      {
+        source: "/api/:path*",
+        destination: "http://localhost:8000/api/:path*",
+      },
+      {
+        source: "/ws/:path*",
+        destination: "http://localhost:8000/ws/:path*",
+      },
+    ];
+  },
+
   // Redirects
   async redirects() {
     return [

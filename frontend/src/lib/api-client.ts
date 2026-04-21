@@ -55,30 +55,33 @@ export async function apiCall<T>(
 
   const json = await response.json();
 
-  // Validate response structure
+  // Support both wrapped {success, data} and direct responses
   const responseResult = apiResponseSchema.safeParse(json);
-  if (!responseResult.success) {
-    throw new ApiError(500, "Invalid API response structure");
-  }
-
-  if (!responseResult.data.success) {
-    const errorResult = errorResponseSchema.safeParse(json);
-    if (errorResult.success) {
-      throw new ApiError(
-        400,
-        errorResult.data.error.message,
-        errorResult.data.error.code
-      );
+  if (responseResult.success) {
+    if (!responseResult.data.success) {
+      const errorResult = errorResponseSchema.safeParse(json);
+      if (errorResult.success) {
+        throw new ApiError(
+          400,
+          errorResult.data.error.message,
+          errorResult.data.error.code
+        );
+      }
+      throw new ApiError(400, "API request failed");
     }
-    throw new ApiError(400, "API request failed");
+    const dataResult = schema.safeParse(responseResult.data.data);
+    if (!dataResult.success) {
+      console.error("Data validation failed:", dataResult.error.issues);
+      throw new ApiError(500, "Invalid data from API");
+    }
+    return dataResult.data;
   }
 
-  // Validate data with provided schema
-  const dataResult = schema.safeParse(responseResult.data.data);
+  // Direct response — validate against provided schema
+  const dataResult = schema.safeParse(json);
   if (!dataResult.success) {
     console.error("Data validation failed:", dataResult.error.issues);
     throw new ApiError(500, "Invalid data from API");
   }
-
   return dataResult.data;
 }

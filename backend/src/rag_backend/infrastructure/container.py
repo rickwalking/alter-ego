@@ -27,11 +27,11 @@ from rag_backend.infrastructure.database.conversation_repository import (
 from rag_backend.infrastructure.database.document_repository import (
     PostgresDocumentRepository,
 )
+from rag_backend.infrastructure.external.anthropic_llm import AnthropicLLMService
 from rag_backend.infrastructure.external.gemini_image import GeminiImageService
 from rag_backend.infrastructure.external.openai_embeddings import (
     OpenAIEmbeddingService,
 )
-from rag_backend.infrastructure.external.openai_llm import OpenAILLMService
 from rag_backend.infrastructure.external.pinecone_store import PineconeVectorStore
 from rag_backend.infrastructure.external.playwright_export import PlaywrightExportService
 from rag_backend.infrastructure.retrieval.document_processor import (
@@ -72,7 +72,7 @@ class Container(containers.DeclarativeContainer):
     )
 
     llm_service = providers.Singleton(
-        OpenAILLMService,
+        AnthropicLLMService,
         settings=settings,
     )
 
@@ -155,6 +155,7 @@ class Container(containers.DeclarativeContainer):
         message_repository=message_repository,
         document_repository=document_repository,
         carousel_agent=carousel_agent,
+        carousel_repository=carousel_repository,
     )
 
 

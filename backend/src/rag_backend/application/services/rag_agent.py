@@ -7,11 +7,12 @@ from uuid import UUID
 from deepagents import create_deep_agent
 from langchain_core.messages import AIMessage, HumanMessage
 from langchain_core.tools import tool
-from langchain_openai import ChatOpenAI
+from langchain_anthropic import ChatAnthropic
 
 from rag_backend.domain.models import DocumentStatus, Message, MessageRole, SearchResult
 from rag_backend.domain.protocols import (
     CarouselAgent,
+    CarouselRepository,
     DocumentRepository,
     MessageRepository,
     Retriever,
@@ -42,136 +43,146 @@ class RAGAgent:
         message_repository: MessageRepository,
         document_repository: DocumentRepository,
         carousel_agent: CarouselAgent | None = None,
+        carousel_repository: CarouselRepository | None = None,
     ) -> None:
         self._settings = settings
         self._retriever = retriever
         self._message_repository = message_repository
         self._document_repository = document_repository
         self._carousel_agent = carousel_agent
+        self._carousel_repository = carousel_repository
 
-        self._llm = ChatOpenAI(
-            api_key=settings.openai_api_key,
-            model=settings.openai_model,
+        self._llm = ChatAnthropic(
+            api_key=settings.anthropic_api_key,
+            model=settings.anthropic_model,
             temperature=0.7,
             streaming=True,
         )
 
-        agent_tools = [self._search_documents_tool, self._list_documents_tool]
-        if self._carousel_agent is not None:
-            agent_tools.append(self._generate_carousel_tool)
-
         self._agent = create_deep_agent(
             model=self._llm,
-            tools=agent_tools,
+            tools=self._build_tools(),
             system_prompt=SYSTEM_PROMPT,
         )
 
-    @tool
-    async def _search_documents_tool(self, query: str) -> str:
-        """Search the knowledge base for relevant information.
+    def _build_tools(self) -> list[Any]:
+        # Tools must be plain functions (not bound methods) — LangChain's
+        # @tool decorator turns them into StructuredTool instances, and if
+        # `self` is a parameter the agent framework injects it a second time
+        # at call time ("got multiple values for argument 'self'"). Capture
+        # the dependencies via closure instead.
+        retriever = self._retriever
+        document_repository = self._document_repository
+        carousel_agent = self._carousel_agent
+        carousel_repository = self._carousel_repository
 
-        Use this tool when you need to find specific information
-        from the uploaded documents.
+        @tool
+        async def search_documents(query: str) -> str:
+            """Search the knowledge base for relevant information.
 
-        Args:
-            query: The search query string
-        """
-        results = await self._retriever.retrieve(query, top_k=5)
-        if not results:
-            return "No relevant documents found."
+            Use this tool when you need to find specific information
+            from the uploaded documents.
 
-        formatted_results = []
-        for i, result in enumerate(results, 1):
-            formatted_results.append(
-                f"[{i}] {result.content[:300]}... (Score: {result.score:.3f})"
+            Args:
+                query: The search query string
+            """
+            results = await retriever.retrieve(query, top_k=5)
+            if not results:
+                return "No relevant documents found."
+
+            formatted_results = []
+            for i, result in enumerate(results, 1):
+                formatted_results.append(
+                    f"[{i}] {result.content[:300]}... (Score: {result.score:.3f})"
+                )
+
+            return "\n\n".join(formatted_results)
+
+        @tool
+        async def list_documents() -> str:
+            """List all available documents in the knowledge base.
+
+            Use this to see what information is available.
+            """
+            docs = await document_repository.get_all(
+                status=DocumentStatus.COMPLETED, limit=20
+            )
+            if not docs:
+                return "No documents found in the knowledge base."
+
+            formatted_docs = []
+            for doc in docs:
+                formatted_docs.append(f"- {doc.title} ({doc.chunk_count} chunks)")
+
+            return "Available documents:\n" + "\n".join(formatted_docs)
+
+        tools: list[Any] = [search_documents, list_documents]
+
+        if carousel_agent is None or carousel_repository is None:
+            return tools
+
+        @tool
+        async def generate_carousel(
+            topic: str,
+            audience: str,
+            niche: str,
+            theme: str = "auto",
+            language: str = "pt-BR",
+            sources: list[str] | None = None,
+        ) -> str:
+            """Generate an Instagram carousel and blog post with full 7-phase pipeline.
+
+            Creates research-backed carousel slides, bilingual blog content (pt-BR + en),
+            visual design tokens, images, and an Instagram caption.
+
+            Use when the user says "create a carousel", "create a social media post",
+            "generate carousel slides", or "make an Instagram post".
+
+            Args:
+                topic: The main topic for the carousel content
+                audience: Target audience (e.g., "software developers, AI engineers")
+                niche: Content niche (e.g., "AI/Tech", "Cybersecurity")
+                theme: Visual theme. Options: cybersecurity, ai_competition,
+                       developer_skills, source_code, social_engineering, auto
+                language: Primary language (default: pt-BR for Brazilian Portuguese)
+                sources: Optional list of source URLs to research
+            """
+            from rag_backend.domain.models import CarouselProject, CarouselTheme
+
+            theme_enum = CarouselTheme(theme)
+            project = CarouselProject(
+                topic=topic,
+                audience=audience,
+                niche=niche,
+                theme=theme_enum,
+                language=language,
             )
 
-        return "\n\n".join(formatted_results)
+            created = await carousel_repository.create_project(project)
+            result = await carousel_agent.execute_pipeline(
+                created.id, seed_urls=sources
+            )
 
-    @tool
-    async def _list_documents_tool(self) -> str:
-        """List all available documents in the knowledge base.
+            slides = await carousel_repository.get_slides_by_project(result.id)
+            return (
+                f"Carousel generation complete!\n"
+                f"Project ID: {result.id}\n"
+                f"Status: {result.status.value}\n"
+                f"Title: {result.title or topic}\n"
+                f"Slides: {len(slides)}\n"
+                f"Blog available: {'Yes' if result.blog_markdown else 'No'}\n"
+                f"Caption available: {'Yes' if result.caption else 'No'}\n"
+                f"Design tokens: {'Yes' if result.design_tokens else 'No'}\n\n"
+                f"Access the carousel content via:\n"
+                f"  GET /api/carousels/{result.id}/blog (default pt-BR)\n"
+                f"  GET /api/carousels/{result.id}/blog/pt\n"
+                f"  GET /api/carousels/{result.id}/blog/en\n"
+                f"  GET /api/carousels/{result.id}/design\n"
+                f"  GET /api/carousels/{result.id}/slides"
+            )
 
-        Use this to see what information is available.
-        """
-        docs = await self._document_repository.get_all(
-            status=DocumentStatus.COMPLETED, limit=20
-        )
-        if not docs:
-            return "No documents found in the knowledge base."
-
-        formatted_docs = []
-        for doc in docs:
-            formatted_docs.append(f"- {doc.title} ({doc.chunk_count} chunks)")
-
-        return "Available documents:\n" + "\n".join(formatted_docs)
-
-    @tool
-    async def _generate_carousel_tool(
-        self,
-        topic: str,
-        audience: str,
-        niche: str,
-        theme: str = "auto",
-        language: str = "pt-BR",
-        sources: list[str] | None = None,
-    ) -> str:
-        """Generate an Instagram carousel and blog post with full 7-phase pipeline.
-
-        Creates research-backed carousel slides, bilingual blog content (pt-BR + en),
-        visual design tokens, images, and an Instagram caption.
-
-        Use when the user says "create a carousel", "create a social media post",
-        "generate carousel slides", or "make an Instagram post".
-
-        Args:
-            topic: The main topic for the carousel content
-            audience: Target audience (e.g., "software developers, AI engineers")
-            niche: Content niche (e.g., "AI/Tech", "Cybersecurity")
-            theme: Visual theme. Options: cybersecurity, ai_competition,
-                   developer_skills, source_code, social_engineering, auto
-            language: Primary language (default: pt-BR for Brazilian Portuguese)
-            sources: Optional list of source URLs to research
-        """
-        if self._carousel_agent is None:
-            return "Carousel generation is not available. Please configure the carousel agent."
-
-        from rag_backend.domain.models import CarouselProject, CarouselTheme
-
-        theme_enum = CarouselTheme(theme)
-        project = CarouselProject(
-            topic=topic,
-            audience=audience,
-            niche=niche,
-            theme=theme_enum,
-            language=language,
-        )
-
-        from rag_backend.infrastructure.container import get_container
-
-        container = get_container()
-        repo = container.carousel_repository()
-
-        created = await repo.create_project(project)
-        result = await self._carousel_agent.execute_pipeline(created.id)
-
-        status_info = (
-            f"Carousel generation complete!\n"
-            f"Project ID: {result.id}\n"
-            f"Status: {result.status.value}\n"
-            f"Title: {result.title or topic}\n"
-            f"Slides: {len(await repo.get_slides_by_project(result.id))}\n"
-            f"Blog available: {'Yes' if result.blog_markdown else 'No'}\n"
-            f"Caption available: {'Yes' if result.caption else 'No'}\n"
-            f"Design tokens: {'Yes' if result.design_tokens else 'No'}\n\n"
-            f"Access the carousel content via:\n"
-            f"  GET /api/carousels/{result.id}/blog (default pt-BR)\n"
-            f"  GET /api/carousels/{result.id}/blog/pt\n"
-            f"  GET /api/carousels/{result.id}/blog/en\n"
-            f"  GET /api/carousels/{result.id}/design\n"
-            f"  GET /api/carousels/{result.id}/slides"
-        )
-        return status_info
+        tools.append(generate_carousel)
+        return tools
 
     async def chat(
         self, message: str, conversation_id: UUID, stream: bool = True
@@ -212,15 +223,36 @@ class RAGAgent:
         if stream:
             full_response = ""
 
-            async for chunk in self._agent.astream(
-                {"messages": [*chat_history, HumanMessage(content=message)]}
+            # `astream` in default (values) mode emits nested state chunks
+            # like {node_name: {messages: [...]}}, so there is no top-level
+            # "messages" key and the old code silently yielded nothing.
+            # `astream_events(version="v2")` gives real token deltas via
+            # `on_chat_model_stream` events — the LLM's streaming output.
+            async for event in self._agent.astream_events(
+                {"messages": [*chat_history, HumanMessage(content=message)]},
+                version="v2",
             ):
-                if isinstance(chunk, dict) and "messages" in chunk:
-                    for msg in chunk["messages"]:
-                        if isinstance(msg, AIMessage) and msg.content:
-                            token = msg.content
-                            full_response += token
-                            yield {"type": "token", "content": token}
+                if event.get("event") != "on_chat_model_stream":
+                    continue
+                chunk = event.get("data", {}).get("chunk")
+                if chunk is None:
+                    continue
+                content = getattr(chunk, "content", None)
+                if not content:
+                    continue
+                # Anthropic streams may deliver content as str OR a list of
+                # blocks like [{"type": "text", "text": "..."}, {"type": "tool_use", ...}].
+                token = ""
+                if isinstance(content, str):
+                    token = content
+                elif isinstance(content, list):
+                    for block in content:
+                        if isinstance(block, dict) and block.get("type") == "text":
+                            token += block.get("text", "")
+                if not token:
+                    continue
+                full_response += token
+                yield {"type": "token", "content": token}
 
             assistant_message = Message(
                 role=MessageRole.ASSISTANT,

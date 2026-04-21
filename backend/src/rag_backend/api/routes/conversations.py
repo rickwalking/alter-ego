@@ -15,6 +15,7 @@ from rag_backend.api.schemas import (
     MessageListResponse,
     MessageSource,
 )
+from rag_backend.api.dependencies.agents import build_rag_agent
 from rag_backend.application.services.conversation_service import ConversationService
 from rag_backend.infrastructure.container import get_container
 from rag_backend.infrastructure.database.config import get_session
@@ -223,7 +224,7 @@ async def chat(
             detail=f"Conversation with id {conversation_id} not found",
         )
 
-    rag_agent = container.rag_agent()
+    rag_agent = build_rag_agent(db, container)
     sources = []
     full_response = ""
 

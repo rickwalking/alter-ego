@@ -1,6 +1,7 @@
 """Application settings using Pydantic Settings."""
 
 from functools import lru_cache
+import os
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -34,6 +35,10 @@ class Settings(BaseSettings):
     openai_api_key: str = ""
     openai_model: str = "gpt-4o-mini"
     openai_embedding_model: str = "text-embedding-3-large"
+
+    # anthropic
+    anthropic_api_key: str = os.getenv("ANTHROPIC_API_KEY")
+    anthropic_model: str = "claude-sonnet-4-6"
 
     # LangSmith (optional, for monitoring)
     langsmith_api_key: str | None = None

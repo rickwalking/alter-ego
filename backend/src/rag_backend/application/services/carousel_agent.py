@@ -12,14 +12,17 @@ Orchestrates the 7-phase carousel pipeline:
 
 import asyncio
 import json
+import re
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 from uuid import UUID
 
 from rag_backend.application.services.carousel_template import CarouselTemplateBuilder
 from rag_backend.domain.constants import (
     CAROUSEL_THEMES,
     SLIDE_TYPE_CONTENT,
+    SLIDE_TYPE_INTRO,
 )
 from rag_backend.domain.models import (
     CarouselProject,
@@ -36,6 +39,63 @@ from rag_backend.domain.protocols import (
     LLMService,
     ResearchTool,
 )
+from rag_backend.infrastructure.logging import get_logger
+
+logger = get_logger()
+
+
+_JSON_FENCE_RE = re.compile(r"```(?:json)?\s*(.*?)\s*```", re.DOTALL)
+
+
+def _build_gemini_prompt(scene: str, theme: dict[str, str]) -> str:
+    """Wrap an LLM-provided scene description with mandatory style directives.
+
+    The LLM only controls WHAT is depicted. The HOW (style, palette, ratio,
+    no-text rule, concrete tech-scene vocabulary) is enforced by this
+    template so generated images match the carousel design system.
+    """
+    return (
+        "Comic/manga style illustration, cyberpunk/sci-fi tech aesthetic, "
+        "bold outlines, detailed crosshatching shading, dynamic composition. "
+        "Wide panoramic 3:1 ratio. "
+        "STRICT: no text, no words, no letters, no labels, no speech bubbles, "
+        "no signs, no captions, no code readable as text — purely visual. "
+        f"Dark background ({theme['background']}) with {theme['primary']} "
+        f"and {theme['accent']} neon glow accents, subtle radial light bloom. "
+        "Concrete tech scene only — acceptable elements: monitors, terminals, "
+        "code streams as abstract glowing glyphs, holographic UI panels, "
+        "circuit boards, neon cityscapes, robots, hooded figures, servers, "
+        "data pipelines, abstract geometric networks. "
+        "No traditional/dojo/warm-lighting/black-and-white/grid-panel layouts. "
+        f"Scene: {scene.strip()}"
+    )
+
+
+def _classify_source(url: str) -> ResearchSourceType:
+    """Infer a `ResearchSourceType` from the URL host."""
+    lowered = url.lower()
+    if "twitter.com" in lowered or "x.com" in lowered:
+        return ResearchSourceType.TWITTER
+    if "github.com" in lowered:
+        return ResearchSourceType.GITHUB
+    return ResearchSourceType.BLOG
+
+
+def _extract_json(raw: str) -> Any:
+    """Parse JSON from an LLM response, tolerating markdown code fences
+    and leading/trailing prose. Raises json.JSONDecodeError on failure.
+    """
+    candidate = raw.strip()
+    fence_match = _JSON_FENCE_RE.search(candidate)
+    if fence_match:
+        candidate = fence_match.group(1).strip()
+    else:
+        # Fallback: take the substring from the first '{' to the last '}'.
+        first = candidate.find("{")
+        last = candidate.rfind("}")
+        if first != -1 and last != -1 and last > first:
+            candidate = candidate[first : last + 1]
+    return json.loads(candidate)
 
 
 @dataclass
@@ -69,8 +129,19 @@ class CarouselAgent:
         self._output_base = Path(output_base_dir)
         self._template = CarouselTemplateBuilder()
 
-    async def execute_pipeline(self, project_id: UUID) -> CarouselProject:
-        """Execute the full 7-phase carousel generation pipeline."""
+    async def execute_pipeline(
+        self,
+        project_id: UUID,
+        seed_urls: list[str] | None = None,
+    ) -> CarouselProject:
+        """Execute the full 7-phase carousel generation pipeline.
+
+        Args:
+            project_id: Carousel project to run the pipeline for.
+            seed_urls: Primary sources the user provided (tweets, blog posts,
+                official docs). These are scraped first and bias the content
+                synthesis; DDG search only supplements them.
+        """
         project = await self._repo.get_project_by_id(project_id)
         if project is None:
             raise ValueError(f"Carousel project {project_id} not found")
@@ -82,7 +153,7 @@ class CarouselAgent:
             # Phase 1: Research
             project.update_status(CarouselStatus.RESEARCHING)
             project = await self._repo.update_project(project)
-            sources = await self._phase1_research(project)
+            sources = await self._phase1_research(project, seed_urls or [])
 
             # Phase 2-3: Content synthesis
             project.update_status(CarouselStatus.DRAFTING)
@@ -140,50 +211,81 @@ class CarouselAgent:
         return project
 
     async def _phase1_research(
-        self, project: CarouselProject
+        self,
+        project: CarouselProject,
+        seed_urls: list[str],
     ) -> list[ResearchSource]:
-        """Phase 1: Parallel web research."""
-        query = f"{project.topic} {project.niche}"
-        search_results = await self._research.search_web(
-            query=query,
-            source_types=[
-                ResearchSourceType.TWITTER,
-                ResearchSourceType.BLOG,
-                ResearchSourceType.NEWS,
-                ResearchSourceType.GITHUB,
-            ],
-        )
+        """Phase 1: research.
 
-        sources: list[ResearchSource] = []
-        for result in search_results[:10]:
-            source = ResearchSource(
+        User-provided `seed_urls` (the original tweet, blog post, etc.) are
+        the authoritative primary sources — they go first and get scraped
+        before anything else. DDG search only supplements them up to 10
+        sources total, so the carousel content stays anchored to the user's
+        actual context instead of drifting toward whatever DDG surfaces for
+        the topic string.
+        """
+        sources: list[ResearchSource] = [
+            ResearchSource(
                 project_id=project.id,
-                source_url=result.get("url", ""),
-                source_type=ResearchSourceType.BLOG,
-                title=result.get("title"),
-                relevance_score=1.0,
+                source_url=url,
+                source_type=_classify_source(url),
+                title=None,
+                relevance_score=2.0,
             )
-            created = await self._repo.create_research_source(source)
-            sources.append(created)
+            for url in seed_urls
+            if url
+        ]
 
-        # Scrape top sources in parallel
-        tasks = [self._scrape_source(s) for s in sources[:5]]
-        results = await asyncio.gather(*tasks, return_exceptions=True)
-        for source, result in zip(sources[:5], results, strict=False):
-            if not isinstance(result, Exception) and isinstance(result, str):
+        if len(sources) < 10:
+            query = f"{project.topic} {project.niche}"
+            search_results = await self._research.search_web(
+                query=query,
+                source_types=[
+                    ResearchSourceType.TWITTER,
+                    ResearchSourceType.BLOG,
+                    ResearchSourceType.NEWS,
+                    ResearchSourceType.GITHUB,
+                ],
+            )
+            existing = {s.source_url for s in sources}
+            remaining = 10 - len(sources)
+            for r in search_results:
+                url = r.get("url", "")
+                if url and url not in existing:
+                    sources.append(
+                        ResearchSource(
+                            project_id=project.id,
+                            source_url=url,
+                            source_type=ResearchSourceType.BLOG,
+                            title=r.get("title"),
+                            relevance_score=1.0,
+                        )
+                    )
+                    existing.add(url)
+                    if len(sources) - len(seed_urls) >= remaining:
+                        break
+
+        # Scrape top sources in parallel, attach content in memory —
+        # persisting each twice would violate the UNIQUE constraint on id.
+        scrape_tasks = [self._scrape_source(s.source_url) for s in sources[:5]]
+        scrape_results = await asyncio.gather(
+            *scrape_tasks, return_exceptions=True
+        )
+        for source, result in zip(sources[:5], scrape_results, strict=False):
+            if isinstance(result, str) and result:
                 source.extracted_content = result
-                await self._repo.create_research_source(source)
 
-        return sources
+        persisted: list[ResearchSource] = []
+        for source in sources:
+            persisted.append(await self._repo.create_research_source(source))
+        return persisted
 
-    async def _scrape_source(self, source: ResearchSource) -> str:
-        """Scrape a single source URL."""
+    async def _scrape_source(self, url: str) -> str:
+        """Scrape a single URL. Returns content or empty string on failure."""
         try:
-            content = await self._research.scrape_url(source.source_url)
-            source.extracted_content = content
-            await self._repo.create_research_source(source)
-            return content
-        except Exception:
+            return await self._research.scrape_url(url)
+        except Exception as exc:
+            logger.warning("carousel_scrape_failed", url=url, error=str(exc))
             return ""
 
     async def _phase2_3_content(
@@ -206,12 +308,18 @@ class CarouselAgent:
         )
 
         try:
-            title_data = json.loads(title_response)
+            title_data = _extract_json(title_response)
             project.set_title(
                 title=title_data.get("title_pt", title_data.get("title", project.topic)),
                 subtitle=title_data.get("subtitle_pt", title_data.get("subtitle")),
             )
-        except (json.JSONDecodeError, KeyError):
+        except (json.JSONDecodeError, KeyError, TypeError) as exc:
+            logger.warning(
+                "carousel_title_json_parse_failed",
+                project_id=str(project.id),
+                error=str(exc),
+                raw_response=title_response[:2000],
+            )
             project.set_title(title=project.topic)
 
         # Phase 3: Bilingual content synthesis
@@ -224,7 +332,19 @@ class CarouselAgent:
         )
 
         try:
-            content_data = json.loads(content_response)
+            content_data = _extract_json(content_response)
+        except (json.JSONDecodeError, TypeError) as exc:
+            logger.error(
+                "carousel_content_json_parse_failed",
+                project_id=str(project.id),
+                error=str(exc),
+                raw_response=content_response[:4000],
+            )
+            raise ValueError(
+                "Content synthesis returned non-JSON output; cannot continue."
+            ) from exc
+
+        try:
             slides_data: list[SlideData] = []
             for slide_json in content_data.get("slides", []):
                 slides_data.append(
@@ -236,31 +356,38 @@ class CarouselAgent:
                         image_prompt=slide_json.get("image_prompt"),
                     )
                 )
+        except (KeyError, TypeError) as exc:
+            logger.error(
+                "carousel_slide_shape_invalid",
+                project_id=str(project.id),
+                error=str(exc),
+                content_keys=list(content_data.keys()) if isinstance(content_data, dict) else None,
+            )
+            raise ValueError("Content synthesis returned slides with missing fields.") from exc
 
-            blog_pt = content_data.get("blog_pt", content_data.get("blog_markdown", ""))
-            blog_en = content_data.get("blog_en", "")
+        if not slides_data:
+            logger.error(
+                "carousel_no_slides_produced",
+                project_id=str(project.id),
+                content_keys=list(content_data.keys()),
+            )
+            raise ValueError("Content synthesis returned zero slides.")
 
-            project.blog_markdown = blog_pt
-            if blog_en:
-                project.blog_translations = {"pt": blog_pt, "en": blog_en}
-            else:
-                project.blog_translations = {"pt": blog_pt}
+        blog_pt = content_data.get("blog_pt", content_data.get("blog_markdown", ""))
+        blog_en = content_data.get("blog_en", "")
 
-            # Update title/subtitle with bilingual data if available
-            if "title_pt" in content_data:
-                project.set_title(
-                    title=content_data.get("title_pt", project.title or project.topic),
-                    subtitle=content_data.get("subtitle_pt", project.subtitle),
-                )
-        except (json.JSONDecodeError, KeyError):
-            slides_data = [
-                SlideData(
-                    slide_number=1,
-                    slide_type="intro",
-                    heading=project.title or project.topic,
-                    body=project.subtitle or "",
-                )
-            ]
+        project.blog_markdown = blog_pt
+        if blog_en:
+            project.blog_translations = {"pt": blog_pt, "en": blog_en}
+        else:
+            project.blog_translations = {"pt": blog_pt}
+
+        # Update title/subtitle with bilingual data if available
+        if "title_pt" in content_data:
+            project.set_title(
+                title=content_data.get("title_pt", project.title or project.topic),
+                subtitle=content_data.get("subtitle_pt", project.subtitle),
+            )
 
         return slides_data, project.blog_markdown or ""
 
@@ -295,18 +422,31 @@ class CarouselAgent:
         slides: list[SlideData],
         output_dir: Path,
     ) -> None:
-        """Phase 5: Generate images for content slides."""
+        """Phase 5: Generate images for content slides.
+
+        The LLM's `image_prompt` is treated as a scene *description* only —
+        it frequently ignores style rules (asks for speech bubbles, dojo
+        scenes, grid layouts, warm lighting). We wrap it here with the
+        mandatory cyberpunk/sci-fi directives and the project's palette so
+        every generated image matches the carousel design system.
+        """
         images_dir = output_dir / "images"
         images_dir.mkdir(parents=True, exist_ok=True)
 
-        content_slides = [
-            s for s in slides if s.slide_type == SLIDE_TYPE_CONTENT and s.image_prompt
+        theme = self._resolve_theme(project)
+
+        # Per the original skill: intro + content slides get images;
+        # closing (checklist) and cta (share-buttons) slides don't.
+        image_types = {SLIDE_TYPE_INTRO, SLIDE_TYPE_CONTENT}
+        slides_with_images = [
+            s for s in slides if s.slide_type in image_types and s.image_prompt
         ]
 
-        for slide in content_slides:
+        for slide in slides_with_images:
             image_path = str(images_dir / f"slide_{slide.slide_number}.jpg")
+            final_prompt = _build_gemini_prompt(slide.image_prompt or "", theme)
             await self._images.generate_image(
-                prompt=slide.image_prompt,
+                prompt=final_prompt,
                 output_path=image_path,
             )
 

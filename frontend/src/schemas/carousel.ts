@@ -88,9 +88,25 @@ export const carouselSlideResponseSchema = z.object({
   created_at: z.string(),
 });
 
+export const carouselCreateRequestSchema = z.object({
+  topic: z.string().min(1).max(500),
+  audience: z.string().min(1).max(500),
+  niche: z.string().min(1).max(200),
+  theme: z.string().max(30).default("auto"),
+});
+
+export const carouselStatusResponseSchema = z.object({
+  id: z.string(),
+  status: z.string(),
+  error_message: z.string().nullable(),
+  updated_at: z.string(),
+});
+
 export type CarouselDesignResponse = z.infer<typeof carouselDesignResponseSchema>;
 export type CarouselBlogI18nResponse = z.infer<typeof carouselBlogI18nResponseSchema>;
 export type CarouselBlogWithDesignResponse = z.infer<typeof carouselBlogWithDesignResponseSchema>;
 export type CarouselProjectResponse = z.infer<typeof carouselProjectResponseSchema>;
 export type CarouselProjectListResponse = z.infer<typeof carouselProjectListResponseSchema>;
 export type CarouselSlideResponse = z.infer<typeof carouselSlideResponseSchema>;
+export type CarouselCreateRequest = z.infer<typeof carouselCreateRequestSchema>;
+export type CarouselStatusResponse = z.infer<typeof carouselStatusResponseSchema>;

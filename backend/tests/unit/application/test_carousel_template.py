@@ -267,7 +267,12 @@ class TestGenerateDesignTokens:
         """Should generate image URLs with project ID."""
         tokens = CarouselTemplateBuilder.generate_design_tokens(sample_project)
 
-        assert tokens["images"]["hero"] == f"/api/carousels/{sample_project.id}/images/hero"
+        # The hero image is the intro slide's rendered JPG (slide_1) —
+        # there is no separate "hero" file on disk.
+        assert (
+            tokens["images"]["hero"]
+            == f"/api/carousels/{sample_project.id}/images/slide_1"
+        )
         assert len(tokens["images"]["slides"]) == 4
         assert tokens["images"]["slides"][0] == f"/api/carousels/{sample_project.id}/images/slide_1"
 
