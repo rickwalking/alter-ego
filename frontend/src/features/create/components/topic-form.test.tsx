@@ -14,6 +14,8 @@ vi.mock("next-intl", () => ({
       "form.nicheLabel": "Niche",
       "form.nichePlaceholder": "e.g. AI/ML",
       "form.themeLabel": "Theme",
+      "form.imagePresetLabel": "Image Style",
+      "form.imagePresetHelp": "Pick model + style",
       "form.submit": "Generate Carousel",
       "form.submitting": "Generating...",
       "themes.auto": "Auto",
@@ -22,6 +24,10 @@ vi.mock("next-intl", () => ({
       "themes.developer_skills": "Developer Skills",
       "themes.source_code": "Source Code",
       "themes.social_engineering": "Social Engineering",
+      "imagePresets.gemini_comic_neon": "Gemini Comic Neon",
+      "imagePresets.openai_hyperreal": "OpenAI Hyperreal",
+      "imagePresets.openai_cinematic": "OpenAI Cinematic",
+      "imagePresets.openai_neo_anime": "OpenAI Neo-Anime",
     };
     return (key: string) => translations[key] ?? key;
   }),
@@ -105,6 +111,8 @@ describe("TopicForm Component", () => {
           audience: "Developers",
           niche: "Frontend",
           theme: "auto",
+          image_model: "gemini",
+          image_style: "comic_neon",
         } as CarouselCreateRequest);
       });
 
@@ -123,7 +131,30 @@ describe("TopicForm Component", () => {
           audience: "Engineers",
           niche: "AI",
           theme: "ai_competition",
+          image_model: "gemini",
+          image_style: "comic_neon",
         } as CarouselCreateRequest);
+      });
+
+      it("Then picking an OpenAI preset should map to model+style", async () => {
+        const user = userEvent.setup();
+        render(<TopicForm onSubmit={mockOnSubmit} isPending={false} />);
+
+        await user.type(screen.getByLabelText(/topic/i), "Images 2.0");
+        await user.type(screen.getByLabelText(/audience/i), "Designers");
+        await user.type(screen.getByLabelText(/niche/i), "AI");
+        await user.selectOptions(
+          screen.getByLabelText(/image style/i),
+          "openai__hyperreal",
+        );
+        await user.click(screen.getByRole("button", { name: /generate carousel/i }));
+
+        expect(mockOnSubmit).toHaveBeenCalledWith(
+          expect.objectContaining({
+            image_model: "openai",
+            image_style: "hyperreal",
+          }),
+        );
       });
     });
 

@@ -245,6 +245,8 @@ class CarouselProjectModel(Base):
     aspect_ratio = Column(String(20), nullable=False, default="1080x1350")
     language = Column(String(10), nullable=False, default="pt-BR")
     generate_images = Column(Integer, default=1, nullable=False)
+    image_model = Column(String(30), nullable=False, server_default="gemini")
+    image_style = Column(String(30), nullable=False, server_default="comic_neon")
     theme = Column(String(30), nullable=False, default=CarouselTheme.AUTO.value)
     primary_color = Column(String(20), nullable=True)
     accent_color = Column(String(20), nullable=True)
@@ -303,6 +305,8 @@ class CarouselProjectModel(Base):
             aspect_ratio=self.aspect_ratio,
             language=self.language,
             generate_images=bool(self.generate_images),
+            image_model=self.image_model,
+            image_style=self.image_style,
             theme=CarouselTheme(self.theme),
             primary_color=self.primary_color,
             accent_color=self.accent_color,
@@ -332,6 +336,8 @@ class CarouselProjectModel(Base):
             aspect_ratio=entity.aspect_ratio,
             language=entity.language,
             generate_images=1 if entity.generate_images else 0,
+            image_model=entity.image_model,
+            image_style=entity.image_style,
             theme=entity.theme.value,
             primary_color=entity.primary_color,
             accent_color=entity.accent_color,

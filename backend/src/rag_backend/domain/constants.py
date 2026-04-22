@@ -105,3 +105,36 @@ VALID_RESEARCH_SOURCE_TYPES = {
     RESEARCH_SOURCE_NEWS,
     RESEARCH_SOURCE_DOCUMENTATION,
 }
+
+# Image generation providers (the concrete model behind the service).
+IMAGE_MODEL_GEMINI = "gemini"
+IMAGE_MODEL_OPENAI = "openai"
+
+VALID_IMAGE_MODELS: set[str] = {IMAGE_MODEL_GEMINI, IMAGE_MODEL_OPENAI}
+
+# Image style presets (wrap the LLM scene with provider-tuned directives).
+IMAGE_STYLE_COMIC_NEON = "comic_neon"
+IMAGE_STYLE_CINEMATIC = "cinematic"
+IMAGE_STYLE_HYPERREAL = "hyperreal"
+IMAGE_STYLE_NEO_ANIME = "neo_anime"
+
+VALID_IMAGE_STYLES: set[str] = {
+    IMAGE_STYLE_COMIC_NEON,
+    IMAGE_STYLE_CINEMATIC,
+    IMAGE_STYLE_HYPERREAL,
+    IMAGE_STYLE_NEO_ANIME,
+}
+
+# Default combo applied when a caller omits the fields (back-compat
+# with every carousel created before pluggable providers landed).
+IMAGE_MODEL_DEFAULT = IMAGE_MODEL_GEMINI
+IMAGE_STYLE_DEFAULT = IMAGE_STYLE_COMIC_NEON
+
+# Only these (model, style) tuples are wired in the registry. Anything
+# else fails API validation with a 422 before the pipeline runs.
+SUPPORTED_IMAGE_COMBOS: set[tuple[str, str]] = {
+    (IMAGE_MODEL_GEMINI, IMAGE_STYLE_COMIC_NEON),
+    (IMAGE_MODEL_OPENAI, IMAGE_STYLE_CINEMATIC),
+    (IMAGE_MODEL_OPENAI, IMAGE_STYLE_HYPERREAL),
+    (IMAGE_MODEL_OPENAI, IMAGE_STYLE_NEO_ANIME),
+}

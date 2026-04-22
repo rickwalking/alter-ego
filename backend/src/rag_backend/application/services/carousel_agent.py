@@ -19,6 +19,9 @@ from typing import Any
 from uuid import UUID
 
 from rag_backend.application.services.carousel_template import CarouselTemplateBuilder
+from rag_backend.application.services.image_provider_registry import (
+    ImageProviderRegistry,
+)
 from rag_backend.domain.constants import (
     CAROUSEL_THEMES,
     SLIDE_TYPE_CONTENT,
@@ -35,7 +38,6 @@ from rag_backend.domain.models import (
 from rag_backend.domain.protocols import (
     CarouselExportService,
     CarouselRepository,
-    ImageGenerationService,
     LLMService,
     ResearchTool,
 )
@@ -45,30 +47,6 @@ logger = get_logger()
 
 
 _JSON_FENCE_RE = re.compile(r"```(?:json)?\s*(.*?)\s*```", re.DOTALL)
-
-
-def _build_gemini_prompt(scene: str, theme: dict[str, str]) -> str:
-    """Wrap an LLM-provided scene description with mandatory style directives.
-
-    The LLM only controls WHAT is depicted. The HOW (style, palette, ratio,
-    no-text rule, concrete tech-scene vocabulary) is enforced by this
-    template so generated images match the carousel design system.
-    """
-    return (
-        "Comic/manga style illustration, cyberpunk/sci-fi tech aesthetic, "
-        "bold outlines, detailed crosshatching shading, dynamic composition. "
-        "Wide panoramic 3:1 ratio. "
-        "STRICT: no text, no words, no letters, no labels, no speech bubbles, "
-        "no signs, no captions, no code readable as text — purely visual. "
-        f"Dark background ({theme['background']}) with {theme['primary']} "
-        f"and {theme['accent']} neon glow accents, subtle radial light bloom. "
-        "Concrete tech scene only — acceptable elements: monitors, terminals, "
-        "code streams as abstract glowing glyphs, holographic UI panels, "
-        "circuit boards, neon cityscapes, robots, hooded figures, servers, "
-        "data pipelines, abstract geometric networks. "
-        "No traditional/dojo/warm-lighting/black-and-white/grid-panel layouts. "
-        f"Scene: {scene.strip()}"
-    )
 
 
 def _classify_source(url: str) -> ResearchSourceType:
@@ -107,6 +85,16 @@ class SlideData:
     heading: str
     body: str
     image_prompt: str | None = None
+    # Structured checklist items for closing/feature slides. Each item is
+    # `{"icon": "📝", "title": "...", "body": "..."}`. None for plain-prose
+    # slides (intro, CTA, most content slides).
+    features: list[dict[str, str]] | None = None
+    # Big-number stat cards rendered as a 3-column grid. Each item is
+    # `{"value": "80.2%", "label": "SWE-Bench Verified", "detail": "(era 68.9%)"}`.
+    stats: list[dict[str, str]] | None = None
+    # A single quoted insight with attribution rendered as an accent-
+    # bordered card. Shape: `{"quote": "...", "attribution": "..."}`.
+    insight: dict[str, str] | None = None
 
 
 class CarouselAgent:
@@ -117,14 +105,14 @@ class CarouselAgent:
         repository: CarouselRepository,
         llm_service: LLMService,
         research_tool: ResearchTool,
-        image_service: ImageGenerationService,
+        image_registry: ImageProviderRegistry,
         export_service: CarouselExportService,
         output_base_dir: str = "./output/carousels",
     ) -> None:
         self._repo = repository
         self._llm = llm_service
         self._research = research_tool
-        self._images = image_service
+        self._image_registry = image_registry
         self._export = export_service
         self._output_base = Path(output_base_dir)
         self._template = CarouselTemplateBuilder()
@@ -347,6 +335,37 @@ class CarouselAgent:
         try:
             slides_data: list[SlideData] = []
             for slide_json in content_data.get("slides", []):
+                raw_features = slide_json.get("features")
+                features: list[dict[str, str]] | None = None
+                if isinstance(raw_features, list) and raw_features:
+                    features = [
+                        {
+                            "icon": str(item.get("icon") or "✅"),
+                            "title": str(item.get("title") or ""),
+                            "body": str(item.get("body") or ""),
+                        }
+                        for item in raw_features
+                        if isinstance(item, dict)
+                    ]
+                raw_stats = slide_json.get("stats")
+                stats: list[dict[str, str]] | None = None
+                if isinstance(raw_stats, list) and raw_stats:
+                    stats = [
+                        {
+                            "value": str(item.get("value") or ""),
+                            "label": str(item.get("label") or ""),
+                            "detail": str(item.get("detail") or ""),
+                        }
+                        for item in raw_stats
+                        if isinstance(item, dict)
+                    ]
+                raw_insight = slide_json.get("insight")
+                insight: dict[str, str] | None = None
+                if isinstance(raw_insight, dict) and raw_insight.get("quote"):
+                    insight = {
+                        "quote": str(raw_insight.get("quote") or ""),
+                        "attribution": str(raw_insight.get("attribution") or ""),
+                    }
                 slides_data.append(
                     SlideData(
                         slide_number=slide_json["number"],
@@ -354,6 +373,9 @@ class CarouselAgent:
                         heading=slide_json["heading"],
                         body=slide_json["body"],
                         image_prompt=slide_json.get("image_prompt"),
+                        features=features,
+                        stats=stats,
+                        insight=insight,
                     )
                 )
         except (KeyError, TypeError) as exc:
@@ -405,12 +427,15 @@ class CarouselAgent:
         design_tokens = CarouselTemplateBuilder.generate_design_tokens(project)
         project.design_tokens = design_tokens
 
-        slide_dicts = [
+        slide_dicts: list[dict[str, Any]] = [
             {
                 "number": str(s.slide_number),
                 "type": s.slide_type,
                 "heading": s.heading,
                 "body": s.body,
+                "features": s.features,
+                "stats": s.stats,
+                "insight": s.insight,
             }
             for s in slides
         ]
@@ -426,14 +451,19 @@ class CarouselAgent:
 
         The LLM's `image_prompt` is treated as a scene *description* only —
         it frequently ignores style rules (asks for speech bubbles, dojo
-        scenes, grid layouts, warm lighting). We wrap it here with the
-        mandatory cyberpunk/sci-fi directives and the project's palette so
-        every generated image matches the carousel design system.
+        scenes, grid layouts, warm lighting). We resolve the project's
+        `(image_model, image_style)` pair through the registry to pick
+        the vendor SDK + style wrapper, then let the strategy prepend the
+        directives and palette to the scene. This is the DIP seam: the
+        agent doesn't know which vendor it's calling.
         """
         images_dir = output_dir / "images"
         images_dir.mkdir(parents=True, exist_ok=True)
 
         theme = self._resolve_theme(project)
+        provider = self._image_registry.resolve(
+            project.image_model, project.image_style
+        )
 
         # Per the original skill: intro + content slides get images;
         # closing (checklist) and cta (share-buttons) slides don't.
@@ -444,8 +474,8 @@ class CarouselAgent:
 
         for slide in slides_with_images:
             image_path = str(images_dir / f"slide_{slide.slide_number}.jpg")
-            final_prompt = _build_gemini_prompt(slide.image_prompt or "", theme)
-            await self._images.generate_image(
+            final_prompt = provider.strategy.wrap(slide.image_prompt or "", theme)
+            await provider.service.generate_image(
                 prompt=final_prompt,
                 output_path=image_path,
             )

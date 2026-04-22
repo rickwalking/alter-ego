@@ -4,7 +4,56 @@ export const CREATE_FORM_FIELDS = {
   AUDIENCE: "audience",
   NICHE: "niche",
   THEME: "theme",
+  IMAGE_PRESET: "image_preset",
 } as const;
+
+/** Image generation providers. */
+export const IMAGE_MODELS = {
+  GEMINI: "gemini",
+  OPENAI: "openai",
+} as const;
+
+/** Image style presets. */
+export const IMAGE_STYLES = {
+  COMIC_NEON: "comic_neon",
+  CINEMATIC: "cinematic",
+  HYPERREAL: "hyperreal",
+  NEO_ANIME: "neo_anime",
+} as const;
+
+/**
+ * The compound (model, style) presets exposed in the UI. Only combos
+ * the backend registers are selectable here — the API rejects anything
+ * else with 422, so keeping the frontend list narrow prevents dead ends.
+ */
+export const IMAGE_PRESETS = [
+  {
+    value: "gemini__comic_neon",
+    model: IMAGE_MODELS.GEMINI,
+    style: IMAGE_STYLES.COMIC_NEON,
+    labelKey: "imagePresets.gemini_comic_neon",
+  },
+  {
+    value: "openai__hyperreal",
+    model: IMAGE_MODELS.OPENAI,
+    style: IMAGE_STYLES.HYPERREAL,
+    labelKey: "imagePresets.openai_hyperreal",
+  },
+  {
+    value: "openai__cinematic",
+    model: IMAGE_MODELS.OPENAI,
+    style: IMAGE_STYLES.CINEMATIC,
+    labelKey: "imagePresets.openai_cinematic",
+  },
+  {
+    value: "openai__neo_anime",
+    model: IMAGE_MODELS.OPENAI,
+    style: IMAGE_STYLES.NEO_ANIME,
+    labelKey: "imagePresets.openai_neo_anime",
+  },
+] as const;
+
+export const DEFAULT_IMAGE_PRESET = IMAGE_PRESETS[0].value;
 
 /** Available carousel themes. */
 export const CAROUSEL_THEMES = {

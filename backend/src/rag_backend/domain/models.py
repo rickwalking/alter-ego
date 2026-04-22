@@ -6,6 +6,11 @@ from enum import StrEnum
 from typing import TypedDict
 from uuid import UUID, uuid4
 
+from rag_backend.domain.constants import (
+    IMAGE_MODEL_DEFAULT,
+    IMAGE_STYLE_DEFAULT,
+)
+
 
 class DesignTokenColors(TypedDict):
     """Design token colors for blog post styling."""
@@ -217,6 +222,8 @@ class CarouselProject:
     aspect_ratio: str = "1080x1350"
     language: str = "pt-BR"
     generate_images: bool = True
+    image_model: str = IMAGE_MODEL_DEFAULT
+    image_style: str = IMAGE_STYLE_DEFAULT
     theme: CarouselTheme = CarouselTheme.AUTO
     primary_color: str | None = None
     accent_color: str | None = None

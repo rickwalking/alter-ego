@@ -11,6 +11,9 @@ from rag_backend.application.services.conversation_service import ConversationSe
 from rag_backend.application.services.document_pipeline import (
     DocumentProcessingPipeline,
 )
+from rag_backend.application.services.image_provider_registry import (
+    ImageProviderRegistry,
+)
 from rag_backend.application.services.rag_agent import RAGAgent
 from rag_backend.application.services.tools.export_tool import CarouselExportTool
 from rag_backend.application.services.tools.image_tool import ImageGenerationTool
@@ -32,6 +35,7 @@ from rag_backend.infrastructure.external.gemini_image import GeminiImageService
 from rag_backend.infrastructure.external.openai_embeddings import (
     OpenAIEmbeddingService,
 )
+from rag_backend.infrastructure.external.openai_image import OpenAIImageService
 from rag_backend.infrastructure.external.pinecone_store import PineconeVectorStore
 from rag_backend.infrastructure.external.playwright_export import PlaywrightExportService
 from rag_backend.infrastructure.retrieval.document_processor import (
@@ -124,6 +128,17 @@ class Container(containers.DeclarativeContainer):
         api_key=settings.provided().gemini_api_key,
     )
 
+    openai_image_service = providers.Singleton(
+        OpenAIImageService,
+        api_key=settings.provided().openai_api_key,
+    )
+
+    image_provider_registry = providers.Singleton(
+        ImageProviderRegistry,
+        gemini_service=image_service,
+        openai_service=openai_image_service,
+    )
+
     export_service = providers.Singleton(PlaywrightExportService)
 
     # Application Tools (wrappers around infrastructure services)
@@ -142,7 +157,7 @@ class Container(containers.DeclarativeContainer):
         repository=carousel_repository,
         llm_service=llm_service,
         research_tool=research_tool,
-        image_service=image_service,
+        image_registry=image_provider_registry,
         export_service=export_service,
         output_base_dir=settings.provided().carousel_output_dir,
     )

@@ -10,6 +10,7 @@ import {
   carouselProjectResponseSchema,
   carouselProjectListResponseSchema,
   carouselSlideResponseSchema,
+  carouselCreateRequestSchema,
 } from "@/schemas/carousel";
 
 const VALID_DESIGN_COLORS = {
@@ -404,6 +405,57 @@ describe("Carousel Slide Response Schema", () => {
   it("rejects missing slide_number", () => {
     const { slide_number, ...rest } = VALID_SLIDE;
     const result = carouselSlideResponseSchema.safeParse(rest);
+    expect(result.success).toBe(false);
+  });
+});
+// Scenario: Pluggable image provider combo validation
+// (see backend tests/features/image_generation_provider.feature)
+describe("Carousel Create Request Schema — image_model/image_style", () => {
+  const BASE = {
+    topic: "T",
+    audience: "A",
+    niche: "N",
+  };
+
+  it("defaults to gemini + comic_neon when omitted", () => {
+    const result = carouselCreateRequestSchema.parse(BASE);
+    expect(result.image_model).toBe("gemini");
+    expect(result.image_style).toBe("comic_neon");
+  });
+
+  it("accepts supported openai + hyperreal combo", () => {
+    const result = carouselCreateRequestSchema.safeParse({
+      ...BASE,
+      image_model: "openai",
+      image_style: "hyperreal",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects unsupported (gemini, cinematic) combo", () => {
+    const result = carouselCreateRequestSchema.safeParse({
+      ...BASE,
+      image_model: "gemini",
+      image_style: "cinematic",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects unknown image_model", () => {
+    const result = carouselCreateRequestSchema.safeParse({
+      ...BASE,
+      image_model: "dalle-3",
+      image_style: "comic_neon",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects unknown image_style", () => {
+    const result = carouselCreateRequestSchema.safeParse({
+      ...BASE,
+      image_model: "gemini",
+      image_style: "ukiyo_e",
+    });
     expect(result.success).toBe(false);
   });
 });

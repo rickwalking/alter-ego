@@ -45,6 +45,8 @@ const MOCK_CREATE_REQUEST = {
   audience: "Developers",
   niche: "Frontend",
   theme: "auto",
+  image_model: "gemini" as const,
+  image_style: "comic_neon" as const,
 };
 
 function createWrapper() {

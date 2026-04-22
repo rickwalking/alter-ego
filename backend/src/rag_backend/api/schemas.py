@@ -4,7 +4,15 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator, model_validator
+
+from rag_backend.domain.constants import (
+    IMAGE_MODEL_DEFAULT,
+    IMAGE_STYLE_DEFAULT,
+    SUPPORTED_IMAGE_COMBOS,
+    VALID_IMAGE_MODELS,
+    VALID_IMAGE_STYLES,
+)
 
 # ============== Document Schemas ==============
 
@@ -221,6 +229,36 @@ class CarouselProjectCreate(BaseModel):
     language: str = Field(default="pt-BR", max_length=10)
     generate_images: bool = True
     theme: str = Field(default="auto", max_length=30)
+    image_model: str = Field(default=IMAGE_MODEL_DEFAULT, max_length=30)
+    image_style: str = Field(default=IMAGE_STYLE_DEFAULT, max_length=30)
+
+    @field_validator("image_model")
+    @classmethod
+    def _check_image_model(cls, value: str) -> str:
+        if value not in VALID_IMAGE_MODELS:
+            raise ValueError(
+                f"image_model must be one of {sorted(VALID_IMAGE_MODELS)}, got {value!r}"
+            )
+        return value
+
+    @field_validator("image_style")
+    @classmethod
+    def _check_image_style(cls, value: str) -> str:
+        if value not in VALID_IMAGE_STYLES:
+            raise ValueError(
+                f"image_style must be one of {sorted(VALID_IMAGE_STYLES)}, got {value!r}"
+            )
+        return value
+
+    @model_validator(mode="after")
+    def _check_combo(self) -> "CarouselProjectCreate":
+        if (self.image_model, self.image_style) not in SUPPORTED_IMAGE_COMBOS:
+            raise ValueError(
+                f"image_model={self.image_model!r} with image_style="
+                f"{self.image_style!r} is not supported. "
+                f"Allowed: {sorted(SUPPORTED_IMAGE_COMBOS)}"
+            )
+        return self
 
 
 class CarouselProjectUpdate(BaseModel):
@@ -266,6 +304,8 @@ class CarouselProjectResponse(BaseModel):
     title: str | None
     subtitle: str | None
     theme: str
+    image_model: str = IMAGE_MODEL_DEFAULT
+    image_style: str = IMAGE_STYLE_DEFAULT
     primary_color: str | None
     accent_color: str | None
     background_color: str | None

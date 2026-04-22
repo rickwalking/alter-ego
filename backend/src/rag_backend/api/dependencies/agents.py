@@ -32,7 +32,7 @@ def build_rag_agent(db: AsyncSession, container: Container) -> RAGAgent:
         repository=carousel_repo,
         llm_service=container.llm_service(),
         research_tool=container.research_tool(),
-        image_service=container.image_service(),
+        image_registry=container.image_provider_registry(),
         export_service=container.export_service(),
         output_base_dir=settings.carousel_output_dir,
     )

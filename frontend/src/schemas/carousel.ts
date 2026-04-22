@@ -88,12 +88,38 @@ export const carouselSlideResponseSchema = z.object({
   created_at: z.string(),
 });
 
-export const carouselCreateRequestSchema = z.object({
-  topic: z.string().min(1).max(500),
-  audience: z.string().min(1).max(500),
-  niche: z.string().min(1).max(200),
-  theme: z.string().max(30).default("auto"),
-});
+/**
+ * Only these (model, style) tuples are wired in the backend registry.
+ * Anything else is rejected by the API with 422 before the pipeline runs.
+ */
+export const SUPPORTED_IMAGE_COMBOS: ReadonlyArray<readonly [string, string]> = [
+  ["gemini", "comic_neon"],
+  ["openai", "cinematic"],
+  ["openai", "hyperreal"],
+  ["openai", "neo_anime"],
+];
+
+export const carouselCreateRequestSchema = z
+  .object({
+    topic: z.string().min(1).max(500),
+    audience: z.string().min(1).max(500),
+    niche: z.string().min(1).max(200),
+    theme: z.string().max(30).default("auto"),
+    image_model: z.enum(["gemini", "openai"]).default("gemini"),
+    image_style: z
+      .enum(["comic_neon", "cinematic", "hyperreal", "neo_anime"])
+      .default("comic_neon"),
+  })
+  .refine(
+    (data) =>
+      SUPPORTED_IMAGE_COMBOS.some(
+        ([m, s]) => m === data.image_model && s === data.image_style,
+      ),
+    {
+      message: "image_model + image_style combination is not supported",
+      path: ["image_style"],
+    },
+  );
 
 export const carouselStatusResponseSchema = z.object({
   id: z.string(),

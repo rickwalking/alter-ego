@@ -4,7 +4,7 @@ These protocols define contracts that infrastructure implementations must fulfil
 Using Protocols instead of abstract classes allows for more flexible, decoupled design.
 """
 
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Mapping
 from typing import Any, Protocol
 from uuid import UUID
 
@@ -268,7 +268,14 @@ class CarouselRepository(Protocol):
 
 
 class ImageGenerationService(Protocol):
-    """Protocol for AI image generation."""
+    """Protocol for AI image generation.
+
+    Implementations wrap a concrete vendor SDK (Gemini, OpenAI, ...) so
+    the agent pipeline can stay provider-agnostic. The caller is
+    responsible for composing the final prompt (style wrapper + scene)
+    before invoking `generate_image` — this protocol only handles the
+    vendor call and persistence to disk.
+    """
 
     async def generate_image(
         self,
@@ -278,6 +285,27 @@ class ImageGenerationService(Protocol):
         """Generate an image from a text prompt and save to output_path.
 
         Returns the path to the saved image file.
+        """
+        ...
+
+
+class ImageStyleStrategy(Protocol):
+    """Protocol for wrapping an LLM-produced scene description with
+    provider- and style-specific directives.
+
+    Each (model, style) preset gets its own strategy so the style
+    vocabulary can be tuned to what each model responds to best. The
+    scene text is treated as user data and MUST appear verbatim in the
+    output; the wrapper only prepends directives.
+    """
+
+    def wrap(self, scene: str, theme: Mapping[str, str]) -> str:
+        """Return the final prompt for the image service.
+
+        Args:
+            scene: The LLM-generated scene description, user-owned text.
+            theme: Palette dict with at minimum `primary`, `accent`,
+                `background` hex strings.
         """
         ...
 

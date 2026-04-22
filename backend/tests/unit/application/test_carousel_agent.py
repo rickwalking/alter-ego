@@ -7,6 +7,9 @@ from uuid import UUID, uuid4
 import pytest
 
 from rag_backend.application.services.carousel_agent import CarouselAgent, SlideData
+from rag_backend.application.services.image_provider_registry import (
+    ImageProviderRegistry,
+)
 from rag_backend.domain.models import (
     CarouselProject,
     CarouselSlide,
@@ -106,11 +109,15 @@ def build_agent(
     mock_export_service,
 ):
     """Build a CarouselAgent with mocked dependencies."""
+    registry = ImageProviderRegistry(
+        gemini_service=mock_image_service,
+        openai_service=mock_image_service,
+    )
     return CarouselAgent(
         repository=mock_repository,
         llm_service=mock_llm_service,
         research_tool=mock_research_tool,
-        image_service=mock_image_service,
+        image_registry=registry,
         export_service=mock_export_service,
         output_base_dir="./tmp/test_carousels",
     )

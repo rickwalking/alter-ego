@@ -143,6 +143,8 @@
       "nicheLabel": "Niche",
       "nichePlaceholder": "e.g. Backend Engineering",
       "themeLabel": "Visual Theme",
+      "imagePresetLabel": "Image Style",
+      "imagePresetHelp": "Picks the image model + style wrapper the pipeline uses. OpenAI presets require a verified OPENAI_API_KEY.",
       "submit": "Create Project",
       "submitting": "Creating..."
     },
@@ -153,6 +155,12 @@
       "developer_skills": "Developer Skills",
       "source_code": "Source Code",
       "social_engineering": "Social Engineering"
+    },
+    "imagePresets": {
+      "gemini_comic_neon": "Gemini · Comic Neon (default)",
+      "openai_hyperreal": "OpenAI · Hyperreal Graphic Novel",
+      "openai_cinematic": "OpenAI · Cinematic Photoreal",
+      "openai_neo_anime": "OpenAI · Neo-Anime"
     },
     "progress": {
       "complete": "Carousel generated successfully!",

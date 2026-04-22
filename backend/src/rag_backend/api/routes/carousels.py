@@ -70,7 +70,7 @@ def get_carousel_agent(
         repository=PostgresCarouselRepository(session),
         llm_service=container.llm_service(),
         research_tool=container.research_tool(),
-        image_service=container.image_service(),
+        image_registry=container.image_provider_registry(),
         export_service=container.export_service(),
         output_base_dir=settings.carousel_output_dir,
     )
@@ -92,6 +92,8 @@ async def create_carousel(
         slides_config=request.slides_config,
         language=request.language,
         generate_images=request.generate_images,
+        image_model=request.image_model,
+        image_style=request.image_style,
         theme=theme,
     )
     created = await repo.create_project(project)
