@@ -1,7 +1,18 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
 import { Header } from "./header";
+
+const NAV_LABELS: Record<string, string> = {
+  appName: "RAG Chat",
+  "nav.chat": "Chat",
+  "nav.knowledgeBase": "Knowledge Base",
+  "nav.blog": "Blog",
+  "nav.create": "Create",
+};
+
+vi.mock("next-intl", () => ({
+  useTranslations: () => (key: string) => NAV_LABELS[key] ?? key,
+}));
 
 // Mock next/link
 vi.mock("next/link", () => ({
@@ -18,11 +29,6 @@ vi.mock("next/link", () => ({
       {children}
     </a>
   ),
-}));
-
-// Mock ThemeToggle
-vi.mock("./theme-toggle", () => ({
-  ThemeToggle: () => <button data-testid="theme-toggle">Toggle Theme</button>,
 }));
 
 describe("Header Component", () => {
@@ -65,14 +71,6 @@ describe("Header Component", () => {
         render(<Header />);
         const knowledgeLink = screen.getByText("Knowledge Base").closest("a");
         expect(knowledgeLink).toHaveAttribute("href", "/knowledge");
-      });
-    });
-
-    describe("When the ThemeToggle is rendered", () => {
-      it("Then the theme toggle button should be visible after mount", () => {
-        render(<Header />);
-        // ThemeToggle renders after mount, so we need to wait for it
-        expect(screen.getByTestId("theme-toggle")).toBeInTheDocument();
       });
     });
 

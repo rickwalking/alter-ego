@@ -1,14 +1,9 @@
-"use client";
-
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { Container } from "./container";
-import { ThemeToggle } from "./theme-toggle";
-import { useMounted } from "@/hooks/use-mounted";
 
 export function Header() {
   const t = useTranslations("common");
-  const mounted = useMounted();
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-[var(--color-border)] bg-[var(--color-background)]/95 backdrop-blur supports-[backdrop-filter]:bg-[var(--color-background)]/60">
@@ -44,9 +39,6 @@ export function Header() {
                 {t("nav.create")}
               </Link>
             </nav>
-          </div>
-          <div className="flex items-center gap-4">
-            {mounted && <ThemeToggle />}
           </div>
         </div>
       </Container>
