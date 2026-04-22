@@ -60,9 +60,7 @@ class ConversationService:
         Returns:
             List of messages in chronological order
         """
-        return await self._message_repository.get_by_conversation(
-            conversation_id, limit=limit
-        )
+        return await self._message_repository.get_by_conversation(conversation_id, limit=limit)
 
     async def get_context_window(self, conversation_id: UUID) -> list[dict[str, str]]:
         """Get the context window for the LLM.
@@ -134,9 +132,7 @@ class ConversationService:
         """
         return await self._conversation_repository.delete(conversation_id)
 
-    async def list_conversations(
-        self, limit: int = 100, offset: int = 0
-    ) -> list[Conversation]:
+    async def list_conversations(self, limit: int = 100, offset: int = 0) -> list[Conversation]:
         """List all conversations.
 
         Args:
@@ -158,9 +154,7 @@ class ConversationService:
         Returns:
             Generated title
         """
-        messages = await self._message_repository.get_by_conversation(
-            conversation_id, limit=1
-        )
+        messages = await self._message_repository.get_by_conversation(conversation_id, limit=1)
 
         if not messages:
             return "New Conversation"
@@ -182,9 +176,7 @@ Title:"""
                 title = title[:97] + "..."
 
             # Update conversation
-            conversation = await self._conversation_repository.get_by_id(
-                conversation_id
-            )
+            conversation = await self._conversation_repository.get_by_id(conversation_id)
             if conversation:
                 conversation.update_title(title)
                 await self._conversation_repository.update(conversation)

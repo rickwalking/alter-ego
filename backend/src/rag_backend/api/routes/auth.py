@@ -11,17 +11,20 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 class TokenRequest(BaseModel):
     """Request body for token generation."""
+
     api_key: str = Field(..., description="API key for authentication")
 
 
 class TokenResponse(BaseModel):
     """Response body containing JWT token."""
+
     access_token: str
     token_type: str = "bearer"
 
 
 class SetupRequest(BaseModel):
     """Request body for initial setup."""
+
     api_key: str = Field(..., min_length=8, description="API key to set")
 
 

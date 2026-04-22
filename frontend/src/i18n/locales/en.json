@@ -182,11 +182,50 @@
     "workspace": {
       "title": "Carousel Workspace",
       "viewBlog": "View Blog",
+      "publish": "Publish",
       "error": "An error occurred while processing your request."
     },
     "chat": {
       "error": "An error occurred while processing your request."
     }
+  },
+  "publish": {
+    "loading": "Loading carousel…",
+    "notFound": "Carousel not found.",
+    "backToWorkspace": "← Back to workspace",
+    "carouselLabel": "Carousel preview",
+    "platformTabsLabel": "Choose a platform",
+    "downloadPdf": "Download PDF",
+    "tabs": {
+      "instagram": "Instagram",
+      "linkedin": "LinkedIn"
+    },
+    "instagram": {
+      "captionLabel": "Instagram caption",
+      "placeholder": "Write your Instagram caption…",
+      "hashtagHelp": "Hashtags: {count} / {max}",
+      "hashtagOver": "Over the 30-hashtag limit — Instagram will reject the post.",
+      "copyCaption": "Copy caption",
+      "publishNow": "Publish to Instagram",
+      "publishing": "Publishing…",
+      "queued": "Queued for publishing.",
+      "published": "Published to Instagram.",
+      "failed": "Publishing failed."
+    },
+    "linkedin": {
+      "languageTabsLabel": "Post language",
+      "postLabel": "LinkedIn post ({language})",
+      "placeholder": "Write your LinkedIn post…",
+      "help": "LinkedIn renders plain text — no markdown. Max 3000 characters.",
+      "copyPost": "Copy post",
+      "downloadPdf": "Download PDF",
+      "openLinkedIn": "Open LinkedIn",
+      "manualSteps": "LinkedIn does not allow programmatic document posts for solo accounts. Copy the post, download the PDF, open LinkedIn, paste the caption, and attach the PDF as a document."
+    },
+    "chatLabel": "Chat with the carousel agent",
+    "chatTitle": "Refine with the agent",
+    "chatHelp": "Ask the agent to tweak a caption, shorten a LinkedIn post, or rewrite a slide heading. Changes save automatically.",
+    "viewerLanguageLabel": "Carousel language"
   },
   "notFound": {
     "code": "404",

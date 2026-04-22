@@ -1,11 +1,19 @@
 """Anthropic LLM service implementation using LangChain."""
 
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Callable
 
 from langchain_anthropic import ChatAnthropic
-from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
+from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
 
+from rag_backend.domain.constants import ROLE_ASSISTANT, ROLE_SYSTEM, ROLE_USER
 from rag_backend.infrastructure.config.settings import Settings
+
+# Role → LangChain message constructor dispatch.
+_ROLE_TO_MESSAGE: dict[str, Callable[[str], BaseMessage]] = {
+    ROLE_SYSTEM: lambda content: SystemMessage(content=content),
+    ROLE_ASSISTANT: lambda content: AIMessage(content=content),
+    ROLE_USER: lambda content: HumanMessage(content=content),
+}
 
 
 class AnthropicLLMService:
@@ -18,21 +26,22 @@ class AnthropicLLMService:
             model=settings.anthropic_model,
             temperature=0.7,
             streaming=True,
+            # Bilingual content synthesis emits PT + EN slide arrays plus
+            # two full blog posts — 8K default was cutting the JSON off
+            # mid-string. 32K gives plenty of headroom for Sonnet/Opus.
+            max_tokens=32000,
         )
 
     @staticmethod
-    def _to_lc_messages(messages: list[dict[str, str]]) -> list[SystemMessage | HumanMessage | AIMessage]:
-        lc_messages: list[SystemMessage | HumanMessage | AIMessage] = []
-        for msg in messages:
-            role = msg.get("role", "user")
-            content = msg.get("content", "")
-            if role == "system":
-                lc_messages.append(SystemMessage(content=content))
-            elif role == "assistant":
-                lc_messages.append(AIMessage(content=content))
-            else:
-                lc_messages.append(HumanMessage(content=content))
-        return lc_messages
+    def _to_lc_messages(
+        messages: list[dict[str, str]],
+    ) -> list[BaseMessage]:
+        return [
+            _ROLE_TO_MESSAGE.get(msg.get("role", ROLE_USER), _ROLE_TO_MESSAGE[ROLE_USER])(
+                msg.get("content", "")
+            )
+            for msg in messages
+        ]
 
     async def generate(
         self,

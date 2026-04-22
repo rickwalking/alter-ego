@@ -55,6 +55,17 @@ export const IMAGE_PRESETS = [
 
 export const DEFAULT_IMAGE_PRESET = IMAGE_PRESETS[0].value;
 
+/** Phase 5 per-slide image-generation lifecycle. */
+export const SLIDE_GENERATION_STATUS = {
+  PENDING: "pending",
+  IN_FLIGHT: "in_flight",
+  DONE: "done",
+  FAILED: "failed",
+} as const;
+
+export type SlideGenerationStatus =
+  (typeof SLIDE_GENERATION_STATUS)[keyof typeof SLIDE_GENERATION_STATUS];
+
 /** Available carousel themes. */
 export const CAROUSEL_THEMES = {
   CYBERSECURITY: "cybersecurity",

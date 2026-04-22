@@ -5,6 +5,7 @@ Using Protocols instead of abstract classes allows for more flexible, decoupled 
 """
 
 from collections.abc import AsyncIterator, Mapping
+from dataclasses import dataclass
 from typing import Any, Protocol
 from uuid import UUID
 
@@ -19,6 +20,7 @@ from rag_backend.domain.models import (
     Message,
     ResearchSource,
     ResearchSourceType,
+    RetrievalQuery,
     SearchResult,
 )
 
@@ -84,9 +86,7 @@ class MessageRepository(Protocol):
         """Create a new message."""
         ...
 
-    async def get_by_conversation(
-        self, conversation_id: UUID, limit: int = 100
-    ) -> list[Message]:
+    async def get_by_conversation(self, conversation_id: UUID, limit: int = 100) -> list[Message]:
         """Get all messages for a conversation."""
         ...
 
@@ -100,9 +100,7 @@ class MessageRepository(Protocol):
 class VectorStore(Protocol):
     """Protocol for vector database operations."""
 
-    async def upsert_chunks(
-        self, chunks: list[DocumentChunk], document_id: UUID
-    ) -> None:
+    async def upsert_chunks(self, chunks: list[DocumentChunk], document_id: UUID) -> None:
         """Store document chunks with their embeddings."""
         ...
 
@@ -185,16 +183,13 @@ class DocumentProcessor(Protocol):
 class Retriever(Protocol):
     """Protocol for hybrid retrieval with RRF fusion."""
 
-    async def retrieve(
-        self, query: str, top_k: int = 5, alpha: float = 0.5
-    ) -> list[SearchResult]:
-        """Retrieve relevant chunks using hybrid search."""
-        ...
+    async def retrieve(self, request: RetrievalQuery) -> list[SearchResult]:
+        """Retrieve relevant chunks using hybrid search.
 
-    async def retrieve_with_filters(
-        self, query: str, filters: dict[str, Any], top_k: int = 5, alpha: float = 0.5
-    ) -> list[SearchResult]:
-        """Retrieve with metadata filters."""
+        Takes a single `RetrievalQuery` model bundling the query text,
+        top_k, alpha, and optional metadata filters. Keeps the protocol
+        surface stable as new retrieval knobs are added.
+        """
         ...
 
 
@@ -353,3 +348,37 @@ class CarouselAgent(Protocol):
         Returns the updated project with status COMPLETED or FAILED.
         """
         ...
+
+
+class SocialPublisher(Protocol):
+    """Protocol for publishing a carousel to a social network.
+
+    Implementations translate project content + media into whatever the
+    vendor SDK needs. The agent pipeline talks only to this interface,
+    so swapping Meta Graph API for a broker (Publer, Ayrshare) later is
+    a one-class change.
+    """
+
+    async def publish_instagram(
+        self,
+        caption: str,
+        image_urls: list[str],
+    ) -> "PublishResult":
+        """Publish an Instagram carousel post.
+
+        Args:
+            caption: Instagram caption (<= 2200 chars, <= 30 hashtags).
+            image_urls: Public HTTPS URLs of each slide, in order.
+
+        Returns a PublishResult with the vendor post ID or an error.
+        """
+        ...
+
+
+@dataclass(frozen=True)
+class PublishResult:
+    """Outcome of a publishing call."""
+
+    status: str  # "queued" | "published" | "failed"
+    post_id: str | None = None
+    error_message: str | None = None

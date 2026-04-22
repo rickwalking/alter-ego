@@ -7,7 +7,6 @@ from typing import Any
 from rag_backend.domain.constants import SLIDE_TYPE_CONTENT, SLIDE_TYPE_INTRO
 from rag_backend.domain.models import CarouselProject, DesignTokens
 
-
 _EM_DASH_RE = re.compile(r"\s*[—–]+\s*")
 _BOLD_RE = re.compile(r"\*\*(.+?)\*\*", re.DOTALL)
 _CODE_RE = re.compile(r"`([^`\n]+?)`")
@@ -144,11 +143,10 @@ def _render_insight_card(insight: dict[str, str]) -> str:
     quote_html = _render_inline(f'"{insight["quote"]}"')
     if insight.get("attribution"):
         quote_html += (
-            '<span class="insight-attribution">'
-            f'{_render_inline(insight["attribution"])}'
-            "</span>"
+            f'<span class="insight-attribution">{_render_inline(insight["attribution"])}</span>'
         )
     return f'<div class="insight-card">{quote_html}</div>'
+
 
 THEME_PALETTES: dict[str, dict[str, str]] = {
     "cybersecurity": {
@@ -216,7 +214,15 @@ class CarouselTemplateBuilder:
             f"5. Closing: actionable takeaways AS A CHECKLIST\n"
             f"6. CTA: save + share\n\n"
             f"Return ONLY a JSON object with keys:\n"
-            f"- slides: array of {{number, type, heading, body, image_prompt, features}} in pt-BR\n"
+            f"- slides: array of pt-BR slides\n"
+            f"    {{number, type, heading, body, image_prompt,\n"
+            f"     features?, stats?, insight?}}\n"
+            f"- slides_en: array of EN slides MIRRORING `slides` exactly.\n"
+            f"    Same `number` ordering, same `type` per slide. Translate\n"
+            f"    `heading`, `body`, and any `features`/`stats`/`insight`\n"
+            f"    text fields (title, body, label, detail, quote,\n"
+            f"    attribution). Icons + stat numbers stay identical.\n"
+            f"    `image_prompt` is omitted — the image is shared.\n"
             f"- blog_pt: full blog post in pt-BR markdown\n"
             f"- blog_en: full blog post in English markdown\n"
             f"- title_pt, title_en, subtitle_pt, subtitle_en\n\n"
@@ -234,7 +240,7 @@ class CarouselTemplateBuilder:
             f"      the metric name. Optional `detail` is a small baseline\n"
             f"      comparison like '(era 20.8%)' or '(vs Claude 4.6 53%)'.\n"
             f"      Pick 3 stats max; any fewer and the grid looks sparse.\n"
-            f"    * `features`: array of 2-6 items {{icon, title, body}} for\n"
+            f"    * `features`: array of 2-4 items {{icon, title, body}} for\n"
             f"      slides that naturally list things (architecture\n"
             f"      components, sub-products, pillars). Each item renders\n"
             f"      as its own boxed card with the emoji icon, the title\n"
@@ -250,7 +256,8 @@ class CarouselTemplateBuilder:
             f"  on the same slide.\n"
             f"- Closing (slide 5): 'body' is a single intro sentence AND the\n"
             f"  actionable takeaways MUST be returned as a `features` array of\n"
-            f"  4-6 items, each {{icon, title, body}}:\n"
+            f"  EXACTLY 3 or 4 items (never more — the grid overflows), each\n"
+            f"  {{icon, title, body}}:\n"
             f"    - icon: ONE emoji relevant to the item (📝 🏗️ ⚙️ 🧪 🗣️ 🚀 🔒 🧠)\n"
             f"    - title: the action name, 2-5 words\n"
             f"    - body: 1-2 sentences explaining how/why, with **bold** on\n"
@@ -341,13 +348,19 @@ class CarouselTemplateBuilder:
                 "font_family_badge": "'Courier New', monospace",
             },
             images={
-                # The intro slide's rendered image IS the hero; the pipeline
-                # writes it to images/slide_1.jpg. There is no separate
-                # "hero" file on disk.
+                # `hero` + `slides` reference the RAW OpenAI/Gemini hero
+                # images (no text overlay) — used by the blog page so the
+                # inline figures show the photographic source, not the
+                # composed slide. `rendered_slides_*` reference the FINAL
+                # slides with text overlay (output of phase 6) — used by
+                # the publish carousel viewer.
                 "hero": f"/api/carousels/{project.id}/images/slide_1",
-                "slides": [
-                    f"/api/carousels/{project.id}/images/slide_{i}"
-                    for i in range(1, 5)
+                "slides": [f"/api/carousels/{project.id}/images/slide_{i}" for i in range(1, 5)],
+                "rendered_slides_pt": [
+                    f"/api/carousels/{project.id}/slide-images/pt/slide_{i}" for i in range(1, 5)
+                ],
+                "rendered_slides_en": [
+                    f"/api/carousels/{project.id}/slide-images/en/slide_{i}" for i in range(1, 5)
                 ],
             },
             layout={
@@ -362,9 +375,7 @@ class CarouselTemplateBuilder:
         project: CarouselProject, slide_headings: list[tuple[int, str]]
     ) -> str:
         """Build prompt for Instagram caption generation."""
-        slide_summaries = "\n".join(
-            f"Slide {num}: {heading}" for num, heading in slide_headings
-        )
+        slide_summaries = "\n".join(f"Slide {num}: {heading}" for num, heading in slide_headings)
         return (
             f"Generate an Instagram caption for this carousel.\n\n"
             f"Title: {project.title}\n"
@@ -393,15 +404,11 @@ class CarouselTemplateBuilder:
         for slide in slides:
             slide_type = slide["type"]
             if slide_type == SLIDE_TYPE_INTRO:
-                slides_html += CarouselTemplateBuilder._render_intro_slide(
-                    slide, project, theme
-                )
+                slides_html += CarouselTemplateBuilder._render_intro_slide(slide, project, theme)
             elif slide_type == "cta":
                 slides_html += CarouselTemplateBuilder._render_cta_slide(slide, theme)
             else:
-                slides_html += CarouselTemplateBuilder._render_content_slide(
-                    slide, theme
-                )
+                slides_html += CarouselTemplateBuilder._render_content_slide(slide, theme)
 
         return f"""<!DOCTYPE html>
 <html lang="{project.language}">
@@ -603,7 +610,7 @@ class CarouselTemplateBuilder:
     <div class="s1-content">
       <div class="s1-badge">{badge}</div>
       <div class="s1-hero-img">
-        <img src="images/slide_{slide['number']}.jpg" alt="{heading}" />
+        <img src="images/slide_{slide["number"]}.jpg" alt="{heading}" />
       </div>
       <div class="s1-main">
         <h1 class="s1-title">{heading}</h1>
@@ -631,7 +638,7 @@ class CarouselTemplateBuilder:
         if slide["type"] == SLIDE_TYPE_CONTENT:
             image_html = f"""
       <div class="hero-img">
-        <img src="images/slide_{slide['number']}.jpg" alt="{_render_inline(str(slide['heading']))}" />
+        <img src="images/slide_{slide["number"]}.jpg" alt="{_render_inline(str(slide["heading"]))}" />
       </div>"""
 
         body_parts: list[str] = []
@@ -652,15 +659,13 @@ class CarouselTemplateBuilder:
         if insight is not None:
             body_parts.append(_render_insight_card(insight))
 
-        body_html = "".join(body_parts) or (
-            f'<p class="body-p">{_render_inline(raw_body)}</p>'
-        )
+        body_html = "".join(body_parts) or (f'<p class="body-p">{_render_inline(raw_body)}</p>')
 
         heading = _render_inline(str(slide["heading"]))
         return f"""
   <div class="slide content-slide">
     <div class="bg-glow"></div>
-    <div class="slide-num">0{slide['number']}</div>
+    <div class="slide-num">0{slide["number"]}</div>
     <h2 class="slide-heading">{heading}</h2>
     {image_html}
     <div class="slide-body">

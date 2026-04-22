@@ -67,15 +67,12 @@ class ChatWebSocketHandler:
                     message_repository=msg_repo,
                     max_context_tokens=4000,
                 )
-                conversation = await conversation_service.get_conversation(
-                    conversation_id
-                )
+                conversation = await conversation_service.get_conversation(conversation_id)
 
                 if not conversation:
-                    await websocket.send_json({
-                        "type": "error",
-                        "content": f"Conversation {conversation_id} not found"
-                    })
+                    await websocket.send_json(
+                        {"type": "error", "content": f"Conversation {conversation_id} not found"}
+                    )
                     await websocket.close(code=4004)
                     return
 
@@ -90,10 +87,9 @@ class ChatWebSocketHandler:
 
                         content = message_data.get("content", "").strip()
                         if not content:
-                            await websocket.send_json({
-                                "type": "error",
-                                "content": "Message content cannot be empty"
-                            })
+                            await websocket.send_json(
+                                {"type": "error", "content": "Message content cannot be empty"}
+                            )
                             continue
 
                         # Stream response from agent
@@ -105,23 +101,20 @@ class ChatWebSocketHandler:
                             await websocket.send_json(chunk)
 
                     except json.JSONDecodeError:
-                        await websocket.send_json({
-                            "type": "error",
-                            "content": "Invalid JSON format"
-                        })
+                        await websocket.send_json(
+                            {"type": "error", "content": "Invalid JSON format"}
+                        )
                     except WebSocketDisconnect:
                         break
                     except Exception as e:
-                        await websocket.send_json({
-                            "type": "error",
-                            "content": f"Error processing message: {str(e)}"
-                        })
+                        await websocket.send_json(
+                            {"type": "error", "content": f"Error processing message: {str(e)}"}
+                        )
 
             except Exception as e:
-                await websocket.send_json({
-                    "type": "error",
-                    "content": f"Connection error: {str(e)}"
-                })
+                await websocket.send_json(
+                    {"type": "error", "content": f"Connection error: {str(e)}"}
+                )
                 await websocket.close(code=1011)
 
             finally:

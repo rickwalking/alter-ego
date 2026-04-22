@@ -42,10 +42,14 @@ async def search_documents(
     retriever = container.retriever()
 
     try:
+        from rag_backend.domain.models import RetrievalQuery
+
         results = await retriever.retrieve(
-            query=request.query,
-            top_k=request.top_k,
-            alpha=request.alpha,
+            RetrievalQuery(
+                query=request.query,
+                top_k=request.top_k,
+                alpha=request.alpha,
+            )
         )
 
         # Format results
@@ -86,7 +90,9 @@ async def search_documents(
 async def search_documents_get(
     query: str = Query(..., min_length=1, max_length=1000, description="Search query"),
     top_k: int = Query(5, ge=1, le=20, description="Number of results to return"),
-    alpha: float = Query(0.5, ge=0.0, le=1.0, description="Hybrid search balance (0=BM25, 1=semantic)"),
+    alpha: float = Query(
+        0.5, ge=0.0, le=1.0, description="Hybrid search balance (0=BM25, 1=semantic)"
+    ),
     db: AsyncSession = Depends(get_session),
 ):
     """Search for relevant documents using GET request.

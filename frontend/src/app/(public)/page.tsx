@@ -103,10 +103,17 @@ export default async function HomePage() {
           ) : (
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
               {data.items.map((post) => {
-                const imageUrl = post.design_tokens &&
-                  typeof post.design_tokens === "object" &&
-                  "images" in (post.design_tokens as Record<string, unknown>)
-                  ? `${apiBaseUrl}/api/carousels/${post.id}/images/hero`
+                // Pull the hero path from design_tokens. The blog page does
+                // the same — keeps URL construction in one place. Falls
+                // back to the static asset for projects that pre-date the
+                // design-tokens schema.
+                const tokens = post.design_tokens as
+                  | { images?: { hero?: string } }
+                  | null
+                  | undefined;
+                const heroPath = tokens?.images?.hero;
+                const imageUrl = heroPath
+                  ? `${apiBaseUrl}${heroPath}`
                   : "/hero-ai-assistant-v2.jpg";
 
                 return (

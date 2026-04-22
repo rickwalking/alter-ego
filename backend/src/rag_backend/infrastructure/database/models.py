@@ -55,9 +55,7 @@ class DocumentModel(Base):
     status = Column(String(20), default=DocumentStatus.PENDING.value, nullable=False)
     error_message = Column(Text, nullable=True)
     chunk_count = Column(Integer, default=0, nullable=False)
-    created_at = Column(
-        DateTime(timezone=True), server_default=func.now(), nullable=False
-    )
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(
         DateTime(timezone=True),
         server_default=func.now(),
@@ -122,9 +120,7 @@ class ConversationModel(Base):
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     title = Column(String(500), nullable=True)
     conv_metadata = Column("metadata", JSON, default=dict, nullable=False)
-    created_at = Column(
-        DateTime(timezone=True), server_default=func.now(), nullable=False
-    )
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(
         DateTime(timezone=True),
         server_default=func.now(),
@@ -187,9 +183,7 @@ class MessageModel(Base):
     content = Column(Text, nullable=False)
     msg_metadata = Column("metadata", JSON, default=dict, nullable=False)
     sources = Column(JSON, default=list, nullable=False)
-    created_at = Column(
-        DateTime(timezone=True), server_default=func.now(), nullable=False
-    )
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     # Relationship to conversation
     conversation = relationship("ConversationModel", back_populates="messages")
@@ -239,7 +233,8 @@ class CarouselProjectModel(Base):
     title = Column(String(500), nullable=True)
     subtitle = Column(Text, nullable=True)
     slides_config = Column(
-        String(200), nullable=False,
+        String(200),
+        nullable=False,
         default="1 intro, 3 content, 1 closing, 1 cta",
     )
     aspect_ratio = Column(String(20), nullable=False, default="1080x1350")
@@ -254,16 +249,20 @@ class CarouselProjectModel(Base):
     blog_markdown = Column(Text, nullable=True)
     blog_translations = Column(JSON, nullable=True)
     caption = Column(Text, nullable=True)
+    linkedin_post_pt = Column(Text, nullable=True)
+    linkedin_post_en = Column(Text, nullable=True)
     design_tokens = Column(
-        JSON, nullable=True,
+        JSON,
+        nullable=True,
         comment="Complete visual design: colors, typography, images, layout",
     )
     status = Column(String(30), nullable=False, default=CarouselStatus.PENDING.value)
     error_message = Column(Text, nullable=True)
     output_dir = Column(String(500), nullable=True)
-    created_at = Column(
-        DateTime(timezone=True), server_default=func.now(), nullable=False
-    )
+    pdf_path = Column(String(500), nullable=True)
+    pdf_path_en = Column(String(500), nullable=True)
+    phase_progress = Column(JSON, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(
         DateTime(timezone=True),
         server_default=func.now(),
@@ -314,10 +313,15 @@ class CarouselProjectModel(Base):
             blog_markdown=self.blog_markdown,
             blog_translations=self.blog_translations,
             caption=self.caption,
+            linkedin_post_pt=self.linkedin_post_pt,
+            linkedin_post_en=self.linkedin_post_en,
             design_tokens=self.design_tokens,
             status=CarouselStatus(self.status),
             error_message=self.error_message,
             output_dir=self.output_dir,
+            pdf_path=self.pdf_path,
+            pdf_path_en=self.pdf_path_en,
+            phase_progress=self.phase_progress,
             created_at=self.created_at,
             updated_at=self.updated_at,
         )
@@ -345,10 +349,15 @@ class CarouselProjectModel(Base):
             blog_markdown=entity.blog_markdown,
             blog_translations=entity.blog_translations,
             caption=entity.caption,
+            linkedin_post_pt=entity.linkedin_post_pt,
+            linkedin_post_en=entity.linkedin_post_en,
             design_tokens=entity.design_tokens,
             status=entity.status.value,
             error_message=entity.error_message,
             output_dir=entity.output_dir,
+            pdf_path=entity.pdf_path,
+            pdf_path_en=entity.pdf_path_en,
+            phase_progress=entity.phase_progress,
             created_at=entity.created_at,
             updated_at=entity.updated_at,
         )
@@ -363,10 +372,15 @@ class CarouselProjectModel(Base):
         self.blog_markdown = entity.blog_markdown
         self.blog_translations = entity.blog_translations
         self.caption = entity.caption
+        self.linkedin_post_pt = entity.linkedin_post_pt
+        self.linkedin_post_en = entity.linkedin_post_en
         self.design_tokens = entity.design_tokens
         self.status = entity.status.value
         self.error_message = entity.error_message
         self.output_dir = entity.output_dir
+        self.pdf_path = entity.pdf_path
+        self.pdf_path_en = entity.pdf_path_en
+        self.phase_progress = entity.phase_progress
         self.updated_at = entity.updated_at
 
 
@@ -389,9 +403,8 @@ class CarouselSlideModel(Base):
     image_path = Column(String(500), nullable=True)
     image_prompt = Column(Text, nullable=True)
     slide_metadata = Column("metadata", JSON, default=dict, nullable=False)
-    created_at = Column(
-        DateTime(timezone=True), server_default=func.now(), nullable=False
-    )
+    extras = Column(JSON, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(
         DateTime(timezone=True),
         server_default=func.now(),
@@ -422,6 +435,7 @@ class CarouselSlideModel(Base):
             image_path=self.image_path,
             image_prompt=self.image_prompt,
             metadata=self.slide_metadata or {},
+            extras=self.extras,
             created_at=self.created_at,
             updated_at=self.updated_at,
         )
@@ -440,6 +454,7 @@ class CarouselSlideModel(Base):
             image_path=entity.image_path,
             image_prompt=entity.image_prompt,
             slide_metadata=entity.metadata,
+            extras=entity.extras,
             created_at=entity.created_at,
             updated_at=entity.updated_at,
         )
@@ -454,6 +469,7 @@ class CarouselSlideModel(Base):
         self.image_path = entity.image_path
         self.image_prompt = entity.image_prompt
         self.slide_metadata = entity.metadata
+        self.extras = entity.extras
         self.updated_at = entity.updated_at
 
 
@@ -474,9 +490,7 @@ class ResearchSourceModel(Base):
     extracted_content = Column(Text, nullable=True)
     relevance_score = Column(Integer, default=0, nullable=False)
     source_metadata = Column("metadata", JSON, default=dict, nullable=False)
-    created_at = Column(
-        DateTime(timezone=True), server_default=func.now(), nullable=False
-    )
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     # Relationship to project
     project = relationship("CarouselProjectModel", back_populates="research_sources")

@@ -25,10 +25,12 @@ from rag_backend.api.schemas import (
     CarouselProjectResponse,
     CarouselSlideResponse,
     CarouselStatusResponse,
+    InstagramPublishRequest,
+    InstagramPublishResponse,
 )
 from rag_backend.application.services.carousel_agent import CarouselAgent as CarouselAgentImpl
-from rag_backend.domain.models import CarouselStatus
-from rag_backend.domain.protocols import CarouselAgent, CarouselRepository
+from rag_backend.domain.models import CarouselProject, CarouselStatus
+from rag_backend.domain.protocols import CarouselAgent, CarouselRepository, SocialPublisher
 from rag_backend.infrastructure.database.carousel_repository import (
     PostgresCarouselRepository,
 )
@@ -42,6 +44,16 @@ def get_carousel_repo(
 ) -> CarouselRepository:
     """Get a carousel repository bound to the per-request session."""
     return PostgresCarouselRepository(session)
+
+
+def get_instagram_publisher() -> SocialPublisher:
+    """Resolve the Instagram publisher from the DI container."""
+    from rag_backend.infrastructure.container import get_container
+
+    container = get_container()
+    if bool(container.instagram_publisher.overridden):
+        return container.instagram_publisher()
+    return container.instagram_publisher()
 
 
 def get_carousel_agent(
@@ -72,6 +84,8 @@ def get_carousel_agent(
         research_tool=container.research_tool(),
         image_registry=container.image_provider_registry(),
         export_service=container.export_service(),
+        linkedin_post_generator=container.linkedin_post_generator(),
+        pdf_slide_builder=container.pdf_slide_builder(),
         output_base_dir=settings.carousel_output_dir,
     )
 
@@ -154,6 +168,40 @@ async def get_carousel_status(
     if project is None:
         raise HTTPException(status_code=404, detail="Carousel project not found")
     return CarouselStatusResponse.model_validate(project)
+
+
+def _pdf_path_for_language(project: CarouselProject, lang: str) -> str | None:
+    """Pick the right PDF path for `lang`, falling back to PT when EN is missing."""
+    if lang == "en":
+        return project.pdf_path_en or project.pdf_path
+    return project.pdf_path
+
+
+@router.get("/{project_id}/pdf")
+async def get_carousel_pdf(
+    project_id: UUID,
+    repo: Annotated[CarouselRepository, Depends(get_carousel_repo)],
+    lang: Annotated[str, Query(pattern="^(pt|en)$")] = "pt",
+) -> FileResponse:
+    """Stream the carousel.pdf file for LinkedIn document posting.
+
+    `lang=pt` (default) returns the Portuguese PDF; `lang=en` the
+    English one. EN falls back to PT if not yet built.
+    """
+    project = await repo.get_project_by_id(project_id)
+    if project is None:
+        raise HTTPException(status_code=404, detail="Carousel project not found")
+    target_path = _pdf_path_for_language(project, lang)
+    if not target_path:
+        raise HTTPException(status_code=404, detail="PDF not yet generated")
+    pdf_file = Path(target_path)
+    if not pdf_file.exists():
+        raise HTTPException(status_code=404, detail="PDF file missing on disk")
+    return FileResponse(
+        path=str(pdf_file),
+        media_type="application/pdf",
+        filename=f"carousel-{project_id}-{lang}.pdf",
+    )
 
 
 @router.get("/{project_id}/blog", response_model=CarouselBlogResponse)
@@ -250,10 +298,34 @@ async def get_carousel_design(
         images=CarouselDesignImages(
             hero=tokens["images"]["hero"],
             slides=tokens["images"]["slides"],
+            rendered_slides_pt=tokens["images"].get("rendered_slides_pt"),
+            rendered_slides_en=tokens["images"].get("rendered_slides_en"),
         ),
         layout=CarouselDesignLayout(**tokens["layout"]),
         theme_name=theme_name,
     )
+
+
+_JPEG_CACHE_HEADERS = {"Cache-Control": "public, max-age=31536000"}
+
+
+def _resolve_image_file(directory: Path, filename: str) -> Path | None:
+    """Return `directory/filename`, trying a `.jpg` extension as fallback."""
+    candidate = directory / filename
+    if candidate.is_file():
+        return candidate
+    with_ext = Path(f"{candidate}.jpg")
+    return with_ext if with_ext.is_file() else None
+
+
+async def _load_project_with_output(project_id: UUID, repo: CarouselRepository) -> CarouselProject:
+    """Fetch the project and 404 if missing or not yet exported."""
+    project = await repo.get_project_by_id(project_id)
+    if project is None:
+        raise HTTPException(status_code=404, detail="Carousel project not found")
+    if project.output_dir is None:
+        raise HTTPException(status_code=404, detail="Carousel not yet generated")
+    return project
 
 
 @router.get("/{project_id}/images/{filename}")
@@ -262,22 +334,34 @@ async def get_carousel_image(
     filename: str,
     repo: Annotated[CarouselRepository, Depends(get_carousel_repo)],
 ) -> FileResponse:
-    """Serve a carousel image file."""
-    project = await repo.get_project_by_id(project_id)
-    if project is None:
-        raise HTTPException(status_code=404, detail="Carousel project not found")
-    if project.output_dir is None:
-        raise HTTPException(status_code=404, detail="Carousel not yet generated")
-    images_dir = Path(project.output_dir) / "images"
-    image_path = images_dir / filename
-    if not image_path.is_file():
-        image_path = Path(str(image_path) + ".jpg")
-    if not image_path.is_file():
+    """Serve a raw hero image (from <output>/images/)."""
+    project = await _load_project_with_output(project_id, repo)
+    image_path = _resolve_image_file(Path(project.output_dir or "") / "images", filename)
+    if image_path is None:
         raise HTTPException(status_code=404, detail="Image file not found")
     return FileResponse(
         path=str(image_path),
         media_type="image/jpeg",
-        headers={"Cache-Control": "public, max-age=31536000"},
+        headers=_JPEG_CACHE_HEADERS,
+    )
+
+
+@router.get("/{project_id}/slide-images/{lang}/{filename}")
+async def get_carousel_slide_image(
+    project_id: UUID,
+    lang: Annotated[str, FastPath(pattern="^(pt|en)$")],
+    filename: str,
+    repo: Annotated[CarouselRepository, Depends(get_carousel_repo)],
+) -> FileResponse:
+    """Serve a per-language rendered slide JPG (from <output>/<lang>/)."""
+    project = await _load_project_with_output(project_id, repo)
+    image_path = _resolve_image_file(Path(project.output_dir or "") / lang, filename)
+    if image_path is None:
+        raise HTTPException(status_code=404, detail=f"Slide image not found for {lang}")
+    return FileResponse(
+        path=str(image_path),
+        media_type="image/jpeg",
+        headers=_JPEG_CACHE_HEADERS,
     )
 
 
@@ -339,3 +423,58 @@ async def delete_carousel(
         if output_path.exists():
             shutil.rmtree(output_path)
     await repo.delete_project(project_id)
+
+
+def _build_public_image_urls(project_id: UUID, slides_count: int = 4) -> list[str]:
+    """Prepend CAROUSEL_PUBLIC_BASE_URL to each slide path.
+
+    Meta fetches images server-side so localhost URLs won't work. If
+    the base URL isn't configured we raise — the caller translates that
+    into a 503 with an actionable hint.
+    """
+    from rag_backend.infrastructure.config.settings import get_settings
+
+    base = get_settings().carousel_public_base_url.rstrip("/")
+    if not base:
+        raise RuntimeError(
+            "CAROUSEL_PUBLIC_BASE_URL is not set — Instagram cannot "
+            "fetch images from localhost. Configure a public HTTPS base "
+            "URL in the backend .env."
+        )
+    return [
+        f"{base}/api/carousels/{project_id}/images/slide_{i}.jpg"
+        for i in range(1, slides_count + 1)
+    ]
+
+
+@router.post(
+    "/{project_id}/publish/instagram",
+    response_model=InstagramPublishResponse,
+)
+async def publish_to_instagram(
+    project_id: UUID,
+    body: InstagramPublishRequest,
+    repo: Annotated[CarouselRepository, Depends(get_carousel_repo)],
+    publisher: Annotated[SocialPublisher, Depends(get_instagram_publisher)],
+) -> InstagramPublishResponse:
+    """Publish the carousel's slides to Instagram with the provided caption."""
+    project = await repo.get_project_by_id(project_id)
+    if project is None:
+        raise HTTPException(status_code=404, detail="Carousel project not found")
+    if project.status != CarouselStatus.COMPLETED:
+        raise HTTPException(
+            status_code=409,
+            detail=f"Carousel is in status {project.status.value}; must be completed.",
+        )
+
+    try:
+        image_urls = _build_public_image_urls(project_id)
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+    result = await publisher.publish_instagram(body.caption, image_urls)
+    return InstagramPublishResponse(
+        status=result.status,
+        ig_post_id=result.post_id,
+        error_message=result.error_message,
+    )

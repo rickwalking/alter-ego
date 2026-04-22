@@ -1,15 +1,23 @@
 """LangChain Deep Agent implementation for RAG."""
 
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Awaitable, Callable
 from typing import Any
 from uuid import UUID
 
 from deepagents import create_deep_agent
+from langchain_anthropic import ChatAnthropic
 from langchain_core.messages import AIMessage, HumanMessage
 from langchain_core.tools import tool
-from langchain_anthropic import ChatAnthropic
 
-from rag_backend.domain.models import DocumentStatus, Message, MessageRole, SearchResult
+from rag_backend.domain.models import (
+    CarouselProject,
+    CarouselSlide,
+    DocumentStatus,
+    Message,
+    MessageRole,
+    RetrievalQuery,
+    SearchResult,
+)
 from rag_backend.domain.protocols import (
     CarouselAgent,
     CarouselRepository,
@@ -30,7 +38,17 @@ When answering questions:
 
 You can also create Instagram carousels and blog content. When a user asks to
 create a carousel, social media post, or blog content, use the generate_carousel
-tool to trigger the full 7-phase content generation pipeline."""
+tool to trigger the full 7-phase content generation pipeline.
+
+When a user asks to tweak, shorten, rewrite, or otherwise refine copy on an
+existing carousel, call refine_carousel_copy. The UI may prefix the message
+with "(carousel project_id=<uuid>)" — extract that UUID and pass it as
+project_id. Pick the right target from: instagram_caption, linkedin_post_pt,
+linkedin_post_en, slide_heading:N (or slide_heading:N:pt | slide_heading:N:en),
+slide_body:N (or slide_body:N:pt | slide_body:N:en). Slide-text edits trigger
+an automatic re-export of the slide JPGs and PDF in the language touched. Do
+not regenerate the whole carousel for minor edits; refine_carousel_copy is
+the correct tool."""
 
 
 class RAGAgent:
@@ -75,6 +93,7 @@ class RAGAgent:
         document_repository = self._document_repository
         carousel_agent = self._carousel_agent
         carousel_repository = self._carousel_repository
+        llm = self._llm
 
         @tool
         async def search_documents(query: str) -> str:
@@ -86,7 +105,7 @@ class RAGAgent:
             Args:
                 query: The search query string
             """
-            results = await retriever.retrieve(query, top_k=5)
+            results = await retriever.retrieve(RetrievalQuery(query=query, top_k=5))
             if not results:
                 return "No relevant documents found."
 
@@ -104,9 +123,7 @@ class RAGAgent:
 
             Use this to see what information is available.
             """
-            docs = await document_repository.get_all(
-                status=DocumentStatus.COMPLETED, limit=20
-            )
+            docs = await document_repository.get_all(status=DocumentStatus.COMPLETED, limit=20)
             if not docs:
                 return "No documents found in the knowledge base."
 
@@ -159,9 +176,7 @@ class RAGAgent:
             )
 
             created = await carousel_repository.create_project(project)
-            result = await carousel_agent.execute_pipeline(
-                created.id, seed_urls=sources
-            )
+            result = await carousel_agent.execute_pipeline(created.id, seed_urls=sources)
 
             slides = await carousel_repository.get_slides_by_project(result.id)
             return (
@@ -182,6 +197,80 @@ class RAGAgent:
             )
 
         tools.append(generate_carousel)
+
+        @tool
+        async def refine_carousel_copy(
+            project_id: str,
+            target: str,
+            instruction: str,
+        ) -> str:
+            """Rewrite a specific piece of copy on an existing carousel project.
+
+            Use when the user asks to tweak the Instagram caption, LinkedIn
+            post (PT or EN), a slide heading, or a slide body on a carousel
+            they already generated.
+
+            Args:
+                project_id: UUID of the carousel project to edit.
+                target: Which field to rewrite. One of:
+                    - "instagram_caption"
+                    - "linkedin_post_pt"
+                    - "linkedin_post_en"
+                    - "slide_heading:N" or "slide_heading:N:pt|en"
+                    - "slide_body:N" or "slide_body:N:pt|en"
+                    Bare slide_heading:N / slide_body:N defaults to PT.
+                instruction: Natural-language edit request from the user
+                    (e.g. "make it shorter", "swap the hashtags for tech ones",
+                    "less corporate").
+            """
+            from uuid import UUID as _UUID
+
+            try:
+                project_uuid = _UUID(project_id)
+            except ValueError:
+                return f"Invalid project_id {project_id!r} — expected a UUID."
+
+            project = await carousel_repository.get_project_by_id(project_uuid)
+            if project is None:
+                return f"Carousel project {project_id} not found."
+
+            original, apply_update = await _resolve_refine_target(
+                project, target, carousel_repository
+            )
+            if original is None:
+                return f"Cannot refine {target!r}: field is empty or target selector is unknown."
+
+            rewrite_prompt = (
+                "You are editing existing social copy. Apply the user's "
+                "instruction verbatim to the text below. Return ONLY the "
+                "rewritten text, nothing else.\n\n"
+                f"Instruction: {instruction}\n\n"
+                f"Original text:\n<<<\n{original}\n>>>"
+            )
+            response = await llm.ainvoke(rewrite_prompt)
+            new_text = str(getattr(response, "content", response) or "").strip()
+            if not new_text:
+                return "LLM returned empty text; no changes applied."
+
+            await apply_update(new_text)
+
+            # When the edit touches a slide's text, re-render the slide
+            # JPGs + PDF so the user-visible artifacts match the DB.
+            # Caption + LinkedIn edits skip this — they live in tabs.
+            re_render_note = ""
+            if target.startswith("slide_"):
+                try:
+                    await carousel_agent.re_render_slides(project_uuid)  # type: ignore[attr-defined]
+                    re_render_note = " Slides + PDF re-rendered."
+                except (ValueError, AttributeError) as exc:
+                    re_render_note = f" Re-render skipped: {exc}"
+
+            return (
+                f"Updated {target} on project {project_id}. "
+                f"New length: {len(new_text)} chars.{re_render_note}"
+            )
+
+        tools.append(refine_carousel_copy)
         return tools
 
     async def chat(
@@ -200,9 +289,7 @@ class RAGAgent:
             - type='sources': List of source documents
             - type='complete': Final complete message
         """
-        history = await self._message_repository.get_by_conversation(
-            conversation_id, limit=10
-        )
+        history = await self._message_repository.get_by_conversation(conversation_id, limit=10)
 
         chat_history = []
         for msg in history:
@@ -289,4 +376,104 @@ class RAGAgent:
 
     async def search_documents(self, query: str, top_k: int = 5) -> list[SearchResult]:
         """Search for relevant documents."""
-        return await self._retriever.retrieve(query, top_k=top_k)
+        return await self._retriever.retrieve(RetrievalQuery(query=query, top_k=top_k))
+
+
+async def _resolve_refine_target(
+    project: CarouselProject,
+    target: str,
+    repository: CarouselRepository,
+) -> tuple[str | None, Callable[[str], Awaitable[None]]]:
+    """Return (current_text, async_setter) for the refine target.
+
+    Keeps the branching out of the tool closure so the set of supported
+    targets is easy to extend without bloating the tool function.
+    """
+    if target == "instagram_caption":
+
+        async def _set_caption(new_text: str) -> None:
+            project.caption = new_text
+            await repository.update_project(project)
+
+        return project.caption, _set_caption
+
+    if target == "linkedin_post_pt":
+
+        async def _set_pt(new_text: str) -> None:
+            project.linkedin_post_pt = new_text
+            await repository.update_project(project)
+
+        return project.linkedin_post_pt, _set_pt
+
+    if target == "linkedin_post_en":
+
+        async def _set_en(new_text: str) -> None:
+            project.linkedin_post_en = new_text
+            await repository.update_project(project)
+
+        return project.linkedin_post_en, _set_en
+
+    async def _noop(_: str) -> None:
+        return None
+
+    if target.startswith("slide_heading:") or target.startswith("slide_body:"):
+        # Selectors:
+        #   slide_heading:N            (PT, default — backward compat)
+        #   slide_body:N
+        #   slide_heading:N:pt | slide_heading:N:en
+        #   slide_body:N:pt    | slide_body:N:en
+        parts = target.split(":")
+        field = parts[0]
+        if len(parts) < 2:
+            return None, _noop
+        try:
+            slide_number = int(parts[1])
+        except ValueError:
+            return None, _noop
+        language = parts[2] if len(parts) >= 3 else "pt"
+        if language not in {"pt", "en"}:
+            return None, _noop
+
+        slides = await repository.get_slides_by_project(project.id)
+        slide = next((s for s in slides if s.slide_number == slide_number), None)
+        if slide is None:
+            return None, _noop
+
+        current = _read_slide_field(slide, field, language)
+
+        async def _update_slide(new_text: str) -> None:
+            _write_slide_field(slide, field, language, new_text)
+            await repository.update_slide(slide)
+
+        return current, _update_slide
+
+    return None, _noop
+
+
+def _read_slide_field(slide: CarouselSlide, field: str, language: str) -> str:
+    """Read heading/body for the requested language, falling back to PT."""
+    if language == "en":
+        translation = (slide.extras or {}).get("translation_en") if slide.extras else None
+        if isinstance(translation, dict):
+            value = translation.get("heading" if field == "slide_heading" else "body")
+            if isinstance(value, str) and value:
+                return value
+    return slide.heading if field == "slide_heading" else slide.body
+
+
+def _write_slide_field(slide: CarouselSlide, field: str, language: str, new_text: str) -> None:
+    """Mutate heading/body in place for the target language."""
+    if language == "en":
+        extras: dict[str, object] = dict(slide.extras or {})
+        translation = extras.get("translation_en")
+        if not isinstance(translation, dict):
+            translation = {}
+        translation = dict(translation)
+        translation["heading" if field == "slide_heading" else "body"] = new_text
+        extras["translation_en"] = translation
+        slide.extras = extras
+        return
+    if field == "slide_heading":
+        slide.heading = new_text
+    else:
+        slide.body = new_text

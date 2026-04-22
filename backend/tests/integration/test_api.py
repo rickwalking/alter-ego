@@ -104,15 +104,14 @@ class TestDocumentEndpoints:
     @pytest.mark.asyncio
     async def test_get_document_not_found(self, client):
         """Given non-existent ID, when GET /api/documents/{id}, then returns 404."""
-        response = await client.get(
-            "/api/documents/00000000-0000-0000-0000-000000000000"
-        )
+        response = await client.get("/api/documents/00000000-0000-0000-0000-000000000000")
         assert response.status_code == 404
 
     @pytest.mark.asyncio
     async def test_upload_document_txt(self, client, monkeypatch):
         """Given a text file, when POST /api/documents/upload, then processes it."""
         import os
+
         if not os.environ.get("PINECONE_API_KEY"):
             pytest.skip("PINECONE_API_KEY not set")
         content = b"This is a test text file for upload testing."
@@ -164,9 +163,7 @@ class TestConversationEndpoints:
     @pytest.mark.asyncio
     async def test_list_conversations(self, client):
         """Given conversations exist, when GET /api/conversations, then returns list."""
-        await client.post(
-            "/api/conversations", json={"title": "Integration Test Conversation"}
-        )
+        await client.post("/api/conversations", json={"title": "Integration Test Conversation"})
 
         response = await client.get("/api/conversations")
         assert response.status_code == 200
@@ -177,9 +174,7 @@ class TestConversationEndpoints:
     @pytest.mark.asyncio
     async def test_get_conversation_not_found(self, client):
         """Given non-existent ID, when GET /api/conversations/{id}, then returns 404."""
-        response = await client.get(
-            "/api/conversations/00000000-0000-0000-0000-000000000000"
-        )
+        response = await client.get("/api/conversations/00000000-0000-0000-0000-000000000000")
         assert response.status_code == 404
 
     @pytest.mark.asyncio
@@ -193,9 +188,7 @@ class TestConversationEndpoints:
     @pytest.mark.asyncio
     async def test_conversation_crud(self, client):
         """Given a conversation, when CRUD operations, then all succeed."""
-        create_response = await client.post(
-            "/api/conversations", json={"title": "CRUD Test"}
-        )
+        create_response = await client.post("/api/conversations", json={"title": "CRUD Test"})
         assert create_response.status_code == 201
         conv_id = create_response.json()["id"]
 

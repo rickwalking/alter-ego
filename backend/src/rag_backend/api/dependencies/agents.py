@@ -34,6 +34,8 @@ def build_rag_agent(db: AsyncSession, container: Container) -> RAGAgent:
         research_tool=container.research_tool(),
         image_registry=container.image_provider_registry(),
         export_service=container.export_service(),
+        linkedin_post_generator=container.linkedin_post_generator(),
+        pdf_slide_builder=container.pdf_slide_builder(),
         output_base_dir=settings.carousel_output_dir,
     )
     return RAGAgent(

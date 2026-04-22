@@ -1,7 +1,6 @@
 """Application settings using Pydantic Settings."""
 
 from functools import lru_cache
-import os
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -36,8 +35,10 @@ class Settings(BaseSettings):
     openai_model: str = "gpt-4o-mini"
     openai_embedding_model: str = "text-embedding-3-large"
 
-    # anthropic
-    anthropic_api_key: str = os.getenv("ANTHROPIC_API_KEY")
+    # Anthropic — pydantic-settings reads ANTHROPIC_API_KEY from .env/env
+    # automatically via the case-insensitive field match. No manual
+    # os.getenv call needed.
+    anthropic_api_key: str = ""
     anthropic_model: str = "claude-sonnet-4-6"
 
     # LangSmith (optional, for monitoring)
@@ -66,6 +67,23 @@ class Settings(BaseSettings):
 
     # Carousel
     carousel_output_dir: str = "./output/carousels"
+
+    # LinkedIn voice cloning: comma-separated URLs of the user's own posts
+    # (public share URLs). The LinkedIn post generator scrapes previews from
+    # these and feeds them as few-shot examples. Empty → default neutral voice.
+    writing_style_urls: str = ""
+    writing_style_cache_dir: str = "./output/writing_style_cache"
+
+    # Instagram publishing via Meta Graph API. Both must be set for the
+    # /api/carousels/{id}/publish/instagram route to succeed; otherwise
+    # the route returns 503 with an actionable hint.
+    meta_ig_access_token: str = ""
+    meta_ig_user_id: str = ""
+
+    # Public HTTPS base URL for serving /api/carousels/{id}/images/*.
+    # Meta's fetchers need a reachable URL; localhost won't work for
+    # publishing. Empty → publisher refuses with an explanatory error.
+    carousel_public_base_url: str = ""
 
 
 @lru_cache

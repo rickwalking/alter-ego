@@ -33,11 +33,19 @@ class DesignTokenTypography(TypedDict):
     font_family_badge: str
 
 
-class DesignTokenImages(TypedDict):
-    """Design token image URLs for blog post."""
+class DesignTokenImages(TypedDict, total=False):
+    """Design token image URLs.
+
+    `hero` and `slides` point to the **raw** OpenAI/Gemini hero images
+    (no text overlay) and are consumed by the blog page.
+    `rendered_slides_pt` / `rendered_slides_en` point to the **rendered**
+    slide JPGs (with text overlay) used by the publish carousel viewer.
+    """
 
     hero: str
     slides: list[str]
+    rendered_slides_pt: list[str]
+    rendered_slides_en: list[str]
 
 
 class DesignTokenLayout(TypedDict):
@@ -80,9 +88,7 @@ class Document:
     error_message: str | None = None
     chunk_count: int = 0
 
-    def update_status(
-        self, status: DocumentStatus, error_message: str | None = None
-    ) -> None:
+    def update_status(self, status: DocumentStatus, error_message: str | None = None) -> None:
         """Update document status and timestamp."""
         self.status = status
         self.error_message = error_message
@@ -168,6 +174,21 @@ class SearchResult:
     rank: int = 0
 
 
+@dataclass
+class RetrievalQuery:
+    """Request for hybrid retrieval.
+
+    Single immutable object replaces the 3+ positional args that used to
+    be passed to `Retriever.retrieve`. Filters map metadata keys to exact
+    values (same type as `SearchResult.metadata`).
+    """
+
+    query: str
+    top_k: int = 5
+    alpha: float = 0.5
+    filters: dict[str, str | int | float | bool] | None = None
+
+
 # =============================================================================
 # Carousel Content Pipeline Models
 # =============================================================================
@@ -231,16 +252,24 @@ class CarouselProject:
     blog_markdown: str | None = None
     blog_translations: dict[str, str] | None = None
     caption: str | None = None
+    linkedin_post_pt: str | None = None
+    linkedin_post_en: str | None = None
     design_tokens: DesignTokens | None = None
     status: CarouselStatus = CarouselStatus.PENDING
     error_message: str | None = None
     output_dir: str | None = None
+    pdf_path: str | None = None
+    pdf_path_en: str | None = None
+    # phase_progress shape:
+    #   phase, label, current?, total?, detail?,
+    #   slides?: list[{number, status, style, scene}]
+    # Broad typing reflects that list values appear when phase 5 reports
+    # per-slide image-gen status during parallel execution.
+    phase_progress: dict[str, str | int | list[dict[str, str | int]]] | None = None
     created_at: datetime = field(default_factory=datetime.utcnow)
     updated_at: datetime = field(default_factory=datetime.utcnow)
 
-    def update_status(
-        self, status: CarouselStatus, error_message: str | None = None
-    ) -> None:
+    def update_status(self, status: CarouselStatus, error_message: str | None = None) -> None:
         """Update project status and timestamp."""
         self.status = status
         self.error_message = error_message
@@ -259,9 +288,7 @@ class CarouselProject:
         self.error_message = error_message
         self.updated_at = datetime.utcnow()
 
-    def set_theme_colors(
-        self, primary: str, accent: str, background: str
-    ) -> None:
+    def set_theme_colors(self, primary: str, accent: str, background: str) -> None:
         """Set the color palette for this carousel."""
         self.primary_color = primary
         self.accent_color = accent
@@ -312,6 +339,9 @@ class CarouselSlide:
     image_path: str | None = None
     image_prompt: str | None = None
     metadata: dict[str, str | int | float | bool] = field(default_factory=dict)
+    # Structured render cards (features/stats/insight) persisted so we
+    # can re-render this slide later without losing the visual cards.
+    extras: dict[str, object] | None = None
     created_at: datetime = field(default_factory=datetime.utcnow)
     updated_at: datetime = field(default_factory=datetime.utcnow)
 

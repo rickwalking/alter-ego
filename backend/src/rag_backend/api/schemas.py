@@ -16,8 +16,10 @@ from rag_backend.domain.constants import (
 
 # ============== Document Schemas ==============
 
+
 class DocumentBase(BaseModel):
     """Base document schema."""
+
     title: str = Field(..., min_length=1, max_length=500)
     content: str = Field(..., min_length=1)
     metadata: dict[str, Any] = Field(default_factory=dict)
@@ -25,11 +27,13 @@ class DocumentBase(BaseModel):
 
 class DocumentCreate(DocumentBase):
     """Schema for creating a document."""
+
     pass
 
 
 class DocumentUpdate(BaseModel):
     """Schema for updating a document."""
+
     title: str | None = Field(None, min_length=1, max_length=500)
     content: str | None = Field(None, min_length=1)
     metadata: dict[str, Any] | None = None
@@ -37,6 +41,7 @@ class DocumentUpdate(BaseModel):
 
 class DocumentResponse(BaseModel):
     """Schema for document response."""
+
     id: UUID
     title: str
     status: str
@@ -51,6 +56,7 @@ class DocumentResponse(BaseModel):
 
 class DocumentListResponse(BaseModel):
     """Schema for list of documents."""
+
     items: list[DocumentResponse]
     total: int
     limit: int
@@ -59,6 +65,7 @@ class DocumentListResponse(BaseModel):
 
 class DocumentProcessingStatus(BaseModel):
     """Schema for document processing status."""
+
     id: UUID
     status: str
     chunk_count: int
@@ -68,20 +75,24 @@ class DocumentProcessingStatus(BaseModel):
 
 # ============== Conversation Schemas ==============
 
+
 class ConversationCreate(BaseModel):
     """Schema for creating a conversation."""
+
     title: str | None = Field(None, max_length=500)
     metadata: dict[str, Any] = Field(default_factory=dict)
 
 
 class ConversationUpdate(BaseModel):
     """Schema for updating a conversation."""
+
     title: str | None = Field(None, max_length=500)
     metadata: dict[str, Any] | None = None
 
 
 class ConversationResponse(BaseModel):
     """Schema for conversation response."""
+
     id: UUID
     title: str | None
     metadata: dict[str, Any]
@@ -93,6 +104,7 @@ class ConversationResponse(BaseModel):
 
 class ConversationListResponse(BaseModel):
     """Schema for list of conversations."""
+
     items: list[ConversationResponse]
     total: int
     limit: int
@@ -101,8 +113,10 @@ class ConversationListResponse(BaseModel):
 
 # ============== Message Schemas ==============
 
+
 class MessageSource(BaseModel):
     """Schema for message source attribution."""
+
     document_id: UUID
     document_title: str
     content: str
@@ -111,6 +125,7 @@ class MessageSource(BaseModel):
 
 class MessageResponse(BaseModel):
     """Schema for message response."""
+
     id: UUID
     role: str
     content: str
@@ -122,12 +137,14 @@ class MessageResponse(BaseModel):
 
 class MessageListResponse(BaseModel):
     """Schema for list of messages."""
+
     items: list[MessageResponse]
     conversation_id: UUID
 
 
 class DocumentUploadResponse(BaseModel):
     """Schema for document upload response."""
+
     id: UUID
     title: str
     status: str
@@ -142,13 +159,16 @@ class DocumentUploadResponse(BaseModel):
 
 # ============== Chat Schemas ==============
 
+
 class ChatRequest(BaseModel):
     """Schema for sending a chat message."""
+
     content: str = Field(..., min_length=1, max_length=10000)
 
 
 class ChatResponse(BaseModel):
     """Schema for non-streaming chat response."""
+
     content: str
     sources: list[MessageSource] = Field(default_factory=list)
     conversation_id: UUID
@@ -156,11 +176,13 @@ class ChatResponse(BaseModel):
 
 class ChatMessageRequest(BaseModel):
     """Schema for sending a chat message."""
+
     content: str = Field(..., min_length=1, max_length=10000)
 
 
 class ChatStreamResponse(BaseModel):
     """Schema for streaming chat response."""
+
     type: str  # 'token', 'sources', 'complete', 'error'
     content: str | None = None
     sources: list[MessageSource] | None = None
@@ -168,8 +190,10 @@ class ChatStreamResponse(BaseModel):
 
 # ============== Search Schemas ==============
 
+
 class SearchRequest(BaseModel):
     """Schema for search request."""
+
     query: str = Field(..., min_length=1, max_length=1000)
     top_k: int = Field(default=5, ge=1, le=20)
     alpha: float = Field(default=0.5, ge=0.0, le=1.0)
@@ -177,6 +201,7 @@ class SearchRequest(BaseModel):
 
 class SearchResultResponse(BaseModel):
     """Schema for search result."""
+
     content: str
     document_id: UUID
     document_title: str
@@ -187,6 +212,7 @@ class SearchResultResponse(BaseModel):
 
 class SearchResponse(BaseModel):
     """Schema for search response."""
+
     query: str
     results: list[SearchResultResponse]
     total: int
@@ -194,8 +220,10 @@ class SearchResponse(BaseModel):
 
 # ============== Error Schemas ==============
 
+
 class ErrorResponse(BaseModel):
     """Schema for error responses."""
+
     error: str
     message: str
     details: dict[str, Any] | None = None
@@ -203,8 +231,10 @@ class ErrorResponse(BaseModel):
 
 # ============== Health Schemas ==============
 
+
 class HealthResponse(BaseModel):
     """Schema for basic health check response."""
+
     status: str
     version: str
     timestamp: datetime
@@ -212,6 +242,7 @@ class HealthResponse(BaseModel):
 
 class HealthCheckResponse(BaseModel):
     """Schema for detailed readiness check response."""
+
     status: str
     version: str
     timestamp: datetime
@@ -220,8 +251,10 @@ class HealthCheckResponse(BaseModel):
 
 # ============== Carousel Schemas ==============
 
+
 class CarouselProjectCreate(BaseModel):
     """Schema for creating a carousel project."""
+
     topic: str = Field(..., min_length=1, max_length=500)
     audience: str = Field(..., min_length=1, max_length=500)
     niche: str = Field(..., min_length=1, max_length=200)
@@ -263,6 +296,7 @@ class CarouselProjectCreate(BaseModel):
 
 class CarouselProjectUpdate(BaseModel):
     """Schema for updating a carousel project."""
+
     title: str | None = Field(None, max_length=500)
     subtitle: str | None = None
     blog_markdown: str | None = None
@@ -271,6 +305,7 @@ class CarouselProjectUpdate(BaseModel):
 
 class CarouselSlideResponse(BaseModel):
     """Schema for carousel slide response."""
+
     id: UUID
     slide_number: int
     slide_type: str
@@ -285,6 +320,7 @@ class CarouselSlideResponse(BaseModel):
 
 class ResearchSourceResponse(BaseModel):
     """Schema for research source response."""
+
     id: UUID
     source_url: str
     source_type: str
@@ -297,6 +333,7 @@ class ResearchSourceResponse(BaseModel):
 
 class CarouselProjectResponse(BaseModel):
     """Schema for carousel project response."""
+
     id: UUID
     topic: str
     audience: str
@@ -312,10 +349,14 @@ class CarouselProjectResponse(BaseModel):
     blog_markdown: str | None
     blog_translations: dict[str, str] | None = None
     caption: str | None
+    linkedin_post_pt: str | None = None
+    linkedin_post_en: str | None = None
     design_tokens: dict[str, dict[str, str | int | list[str]]] | None = None
     status: str
     error_message: str | None = None
     output_dir: str | None = None
+    pdf_path: str | None = None
+    pdf_path_en: str | None = None
     slides: list[CarouselSlideResponse] = Field(default_factory=list)
     research_sources: list[ResearchSourceResponse] = Field(default_factory=list)
     created_at: datetime
@@ -326,6 +367,7 @@ class CarouselProjectResponse(BaseModel):
 
 class CarouselProjectListResponse(BaseModel):
     """Schema for list of carousel projects."""
+
     items: list[CarouselProjectResponse]
     total: int
     limit: int
@@ -334,9 +376,11 @@ class CarouselProjectListResponse(BaseModel):
 
 class CarouselStatusResponse(BaseModel):
     """Schema for carousel generation status."""
+
     id: UUID
     status: str
     error_message: str | None = None
+    phase_progress: dict[str, str | int | list[dict[str, str | int]]] | None = None
     updated_at: datetime
 
     model_config = {"from_attributes": True}
@@ -344,17 +388,34 @@ class CarouselStatusResponse(BaseModel):
 
 class CarouselGenerateRequest(BaseModel):
     """Schema for triggering carousel generation."""
+
     sources: list[str] | None = Field(default=None, description="Optional source URLs to research")
+
+
+class InstagramPublishRequest(BaseModel):
+    """Schema for the Instagram publish route body."""
+
+    caption: str = Field(..., min_length=1, max_length=2200)
+
+
+class InstagramPublishResponse(BaseModel):
+    """Schema for the Instagram publish result."""
+
+    status: str  # "queued" | "published" | "failed"
+    ig_post_id: str | None = None
+    error_message: str | None = None
 
 
 class CarouselCaptionResponse(BaseModel):
     """Schema for generated Instagram caption."""
+
     caption: str
     hashtags: list[str]
 
 
 class CarouselBlogResponse(BaseModel):
     """Schema for generated blog post."""
+
     markdown: str
     title: str
     subtitle: str | None = None
@@ -362,6 +423,7 @@ class CarouselBlogResponse(BaseModel):
 
 class CarouselBlogI18nResponse(BaseModel):
     """Schema for localized blog post response."""
+
     markdown: str
     title: str
     subtitle: str | None
@@ -373,6 +435,7 @@ class CarouselBlogI18nResponse(BaseModel):
 
 class CarouselDesignColors(BaseModel):
     """Schema for design token colors."""
+
     primary: str
     accent: str
     bg: str
@@ -385,19 +448,29 @@ class CarouselDesignColors(BaseModel):
 
 class CarouselDesignTypography(BaseModel):
     """Schema for design token typography."""
+
     font_family_heading: str
     font_family_body: str
     font_family_badge: str
 
 
 class CarouselDesignImages(BaseModel):
-    """Schema for design token images."""
+    """Schema for design token images.
+
+    `hero` + `slides` are the raw OpenAI/Gemini hero JPGs (used by the
+    blog). `rendered_slides_pt` / `rendered_slides_en` are the post-
+    Playwright renders with text overlay (used by the publish viewer).
+    """
+
     hero: str
     slides: list[str]
+    rendered_slides_pt: list[str] | None = None
+    rendered_slides_en: list[str] | None = None
 
 
 class CarouselDesignLayout(BaseModel):
     """Schema for design token layout."""
+
     badge_label: str
     swipe_text: str
     progress_segments: int
@@ -405,6 +478,7 @@ class CarouselDesignLayout(BaseModel):
 
 class CarouselDesignResponse(BaseModel):
     """Complete visual design tokens for a blog post."""
+
     colors: CarouselDesignColors
     typography: CarouselDesignTypography
     images: CarouselDesignImages
@@ -416,6 +490,7 @@ class CarouselDesignResponse(BaseModel):
 
 class CarouselBlogWithDesignResponse(BaseModel):
     """Blog post response with inline design tokens."""
+
     markdown: str
     title: str
     subtitle: str | None

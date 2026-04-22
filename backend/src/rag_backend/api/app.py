@@ -99,12 +99,11 @@ def create_app() -> FastAPI:
         # Check database
         try:
             from rag_backend.infrastructure.database.config import c_engine
+
             if c_engine:
                 async with c_engine.connect() as conn:
                     await conn.execute(
-                        __import__("sqlalchemy").select(
-                            __import__("sqlalchemy").literal(1)
-                        )
+                        __import__("sqlalchemy").select(__import__("sqlalchemy").literal(1))
                     )
                 checks["database"] = {"status": "connected"}
             else:
@@ -116,6 +115,7 @@ def create_app() -> FastAPI:
         try:
             if settings.pinecone_api_key:
                 from pinecone import Pinecone
+
                 pc = Pinecone(api_key=settings.pinecone_api_key)
                 indexes = pc.list_indexes()
                 checks["pinecone"] = {
@@ -131,6 +131,7 @@ def create_app() -> FastAPI:
         try:
             if settings.openai_api_key:
                 from openai import AsyncOpenAI
+
                 client = AsyncOpenAI(api_key=settings.openai_api_key)
                 await client.models.list()
                 checks["openai"] = {"status": "connected"}
@@ -140,9 +141,7 @@ def create_app() -> FastAPI:
             checks["openai"] = {"status": "error", "detail": str(e)}
 
         # Determine overall status
-        has_error = any(
-            v.get("status") == "error" for v in checks.values()
-        )
+        has_error = any(v.get("status") == "error" for v in checks.values())
         overall_status = "unhealthy" if has_error else "ready"
 
         return HealthCheckResponse(

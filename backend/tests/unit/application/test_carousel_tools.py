@@ -10,9 +10,7 @@ from rag_backend.application.services.tools.image_tool import ImageGenerationToo
 class TestImageGenerationTool:
     """Tests for ImageGenerationTool."""
 
-    async def test_generate_content_images_creates_output(
-        self, tmp_path
-    ):
+    async def test_generate_content_images_creates_output(self, tmp_path):
         """Should generate images and return slide-to-path mapping."""
         from unittest.mock import AsyncMock
 
@@ -35,9 +33,7 @@ class TestImageGenerationTool:
         assert 3 in results
         assert mock_service.generate_image.call_count == 2
 
-    async def test_generate_content_images_rate_limit_delay(
-        self, tmp_path
-    ):
+    async def test_generate_content_images_rate_limit_delay(self, tmp_path):
         """Should add delay between image generation calls."""
         import time
         from unittest.mock import AsyncMock
@@ -59,9 +55,7 @@ class TestImageGenerationTool:
 
         assert elapsed >= 0.1
 
-    async def test_generate_content_images_empty_prompts(
-        self, tmp_path
-    ):
+    async def test_generate_content_images_empty_prompts(self, tmp_path):
         """Should return empty dict when no prompts provided."""
         from unittest.mock import AsyncMock
 
@@ -78,9 +72,7 @@ class TestImageGenerationTool:
         assert results == {}
         assert mock_service.generate_image.call_count == 0
 
-    async def test_generate_content_images_creates_images_dir(
-        self, tmp_path
-    ):
+    async def test_generate_content_images_creates_images_dir(self, tmp_path):
         """Should create the images subdirectory."""
         from unittest.mock import AsyncMock
 
@@ -98,6 +90,7 @@ class TestImageGenerationTool:
         )
 
         import os
+
         assert os.path.isdir(os.path.join(output_dir, "images"))
 
 

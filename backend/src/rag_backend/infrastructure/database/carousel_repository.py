@@ -35,9 +35,7 @@ class PostgresCarouselRepository(CarouselRepository):
 
     async def get_project_by_id(self, project_id: UUID) -> CarouselProject | None:
         """Get a carousel project by its ID with slides and sources."""
-        stmt = select(CarouselProjectModel).where(
-            CarouselProjectModel.id == str(project_id)
-        )
+        stmt = select(CarouselProjectModel).where(CarouselProjectModel.id == str(project_id))
         result = await self._session.execute(stmt)
         model = result.scalar_one_or_none()
         if model is None:
@@ -51,9 +49,7 @@ class PostgresCarouselRepository(CarouselRepository):
         offset: int = 0,
     ) -> list[CarouselProject]:
         """Get all carousel projects with optional filtering."""
-        stmt = select(CarouselProjectModel).order_by(
-            CarouselProjectModel.updated_at.desc()
-        )
+        stmt = select(CarouselProjectModel).order_by(CarouselProjectModel.updated_at.desc())
         if status is not None:
             stmt = stmt.where(CarouselProjectModel.status == status.value)
         stmt = stmt.limit(limit).offset(offset)
@@ -63,9 +59,7 @@ class PostgresCarouselRepository(CarouselRepository):
 
     async def update_project(self, project: CarouselProject) -> CarouselProject:
         """Update an existing carousel project."""
-        stmt = select(CarouselProjectModel).where(
-            CarouselProjectModel.id == str(project.id)
-        )
+        stmt = select(CarouselProjectModel).where(CarouselProjectModel.id == str(project.id))
         result = await self._session.execute(stmt)
         model = result.scalar_one_or_none()
         if model is None:
@@ -77,9 +71,7 @@ class PostgresCarouselRepository(CarouselRepository):
 
     async def delete_project(self, project_id: UUID) -> bool:
         """Delete a carousel project and its slides."""
-        stmt = select(CarouselProjectModel).where(
-            CarouselProjectModel.id == str(project_id)
-        )
+        stmt = select(CarouselProjectModel).where(CarouselProjectModel.id == str(project_id))
         result = await self._session.execute(stmt)
         model = result.scalar_one_or_none()
         if model is None:
@@ -109,9 +101,7 @@ class PostgresCarouselRepository(CarouselRepository):
 
     async def update_slide(self, slide: CarouselSlide) -> CarouselSlide:
         """Update an existing carousel slide."""
-        stmt = select(CarouselSlideModel).where(
-            CarouselSlideModel.id == str(slide.id)
-        )
+        stmt = select(CarouselSlideModel).where(CarouselSlideModel.id == str(slide.id))
         result = await self._session.execute(stmt)
         model = result.scalar_one_or_none()
         if model is None:
@@ -123,9 +113,7 @@ class PostgresCarouselRepository(CarouselRepository):
 
     async def delete_slides_by_project(self, project_id: UUID) -> bool:
         """Delete all slides for a project."""
-        stmt = select(CarouselSlideModel).where(
-            CarouselSlideModel.project_id == str(project_id)
-        )
+        stmt = select(CarouselSlideModel).where(CarouselSlideModel.project_id == str(project_id))
         result = await self._session.execute(stmt)
         models = result.scalars().all()
         if not models:

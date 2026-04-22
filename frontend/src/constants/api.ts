@@ -13,6 +13,11 @@ export const API_ENDPOINTS = {
   CAROUSEL_SLIDES: (id: string) => `/api/carousels/${id}/slides`,
   CAROUSEL_IMAGE: (id: string, filename: string) =>
     `/api/carousels/${id}/images/${filename}`,
+  CAROUSEL_PDF: (id: string) => `/api/carousels/${id}/pdf`,
+  CAROUSEL_PUBLISH_INSTAGRAM: (id: string) =>
+    `/api/carousels/${id}/publish/instagram`,
+  CAROUSEL_PUBLISH_INSTAGRAM_STATUS: (id: string) =>
+    `/api/carousels/${id}/publish/instagram/status`,
 } as const;
 
 /** Route paths for navigation. */
@@ -24,6 +29,7 @@ export const ROUTE_PATHS = {
   BLOG_POST: (slug: string) => `/blog/${slug}`,
   CREATE: "/create",
   CREATE_WORKSPACE: (id: string) => `/create/${id}`,
+  CREATE_PUBLISH: (id: string) => `/create/${id}/publish`,
 } as const;
 
 /** HTTP methods. */

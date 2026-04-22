@@ -38,7 +38,7 @@ export default async function BlogPostPage({ params, searchParams }: BlogPostPag
 
   return (
     <div
-      className="dark min-h-screen"
+      className="min-h-screen"
       style={{
         background: design.colors.bg,
         fontFamily: design.typography.font_family_body,

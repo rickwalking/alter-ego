@@ -1,8 +1,6 @@
 """Hybrid retriever with Reciprocal Rank Fusion (RRF)."""
 
-from typing import Any
-
-from rag_backend.domain.models import SearchResult
+from rag_backend.domain.models import RetrievalQuery, SearchResult
 from rag_backend.domain.protocols import EmbeddingService, VectorStore
 
 
@@ -17,6 +15,7 @@ class HybridRetrieverWithRRF:
     """
 
     RRF_K = 60  # RRF constant
+    _DOCUMENT_ID_KEY = "document_id"
 
     def __init__(
         self,
@@ -28,67 +27,53 @@ class HybridRetrieverWithRRF:
         self._embedding_service = embedding_service
         self._default_alpha = default_alpha
 
-    async def retrieve(
-        self, query: str, top_k: int = 5, alpha: float = 0.5
-    ) -> list[SearchResult]:
-        """Retrieve relevant chunks using hybrid search.
+    async def retrieve(self, request: RetrievalQuery) -> list[SearchResult]:
+        """Retrieve relevant chunks using hybrid search with optional filters."""
+        expand_factor = 3 if request.filters else 2
+        dense_embeddings = await self._embedding_service.embed_dense([request.query])
+        sparse_embeddings = await self._embedding_service.embed_sparse([request.query])
 
-        Args:
-            query: The search query
-            top_k: Number of results to return
-            alpha: Balance between dense (1.0) and sparse (0.0) search
-
-        Returns:
-            List of SearchResult objects
-        """
-        # Generate embeddings for the query
-        dense_embeddings = await self._embedding_service.embed_dense([query])
-        sparse_embeddings = await self._embedding_service.embed_sparse([query])
-
-        # Get results from hybrid search
-        results = await self._vector_store.hybrid_search(
-            query=query,
+        raw = await self._vector_store.hybrid_search(
+            query=request.query,
             dense_embedding=dense_embeddings[0],
             sparse_embedding=sparse_embeddings[0],
-            top_k=top_k * 2,  # Get more results for better fusion
-            alpha=alpha,
+            top_k=request.top_k * expand_factor,
+            alpha=request.alpha,
         )
 
-        # Apply RRF scoring
-        return self._apply_rrf(results, top_k)
+        ranked = self._apply_rrf(raw, request.top_k * expand_factor)
+        if not request.filters:
+            return ranked[: request.top_k]
+        return self._apply_filters(ranked, request.filters, request.top_k)
 
-    async def retrieve_with_filters(
-        self, query: str, filters: dict[str, Any], top_k: int = 5, alpha: float = 0.5
+    def _apply_filters(
+        self,
+        results: list[SearchResult],
+        filters: dict[str, str | int | float | bool],
+        top_k: int,
     ) -> list[SearchResult]:
-        """Retrieve with metadata filters.
-
-        Note: This is a simplified implementation. Full filter support
-        would require passing filters to the vector store query.
-        """
-        # Get all results first
-        results = await self.retrieve(query, top_k=top_k * 3, alpha=alpha)
-
-        # Apply filters
-        filtered_results = []
+        """Return the first `top_k` results where every filter matches."""
+        matched: list[SearchResult] = []
         for result in results:
-            match = True
-            for key, value in filters.items():
-                if key == "document_id":
-                    # Handle document ID filtering
-                    if str(result.document_id) != str(value):
-                        match = False
-                        break
-                elif result.metadata.get(key) != value:
-                    match = False
+            if self._matches_filters(result, filters):
+                matched.append(result)
+                if len(matched) >= top_k:
                     break
+        return matched
 
-            if match:
-                filtered_results.append(result)
-
-            if len(filtered_results) >= top_k:
-                break
-
-        return filtered_results[:top_k]
+    def _matches_filters(
+        self,
+        result: SearchResult,
+        filters: dict[str, str | int | float | bool],
+    ) -> bool:
+        """Apply each filter key against the right SearchResult field."""
+        for key, value in filters.items():
+            if key == self._DOCUMENT_ID_KEY:
+                if str(result.document_id) != str(value):
+                    return False
+            elif result.metadata.get(key) != value:
+                return False
+        return True
 
     def _apply_rrf(self, results: list[SearchResult], top_k: int) -> list[SearchResult]:
         """Apply Reciprocal Rank Fusion to search results.
@@ -114,9 +99,7 @@ class HybridRetrieverWithRRF:
             doc_scores[doc_id]["ranks"].append(rank)
 
         # Sort by RRF score (descending)
-        sorted_docs = sorted(
-            doc_scores.items(), key=lambda x: x[1]["rrf_score"], reverse=True
-        )
+        sorted_docs = sorted(doc_scores.items(), key=lambda x: x[1]["rrf_score"], reverse=True)
 
         # Create final results with RRF scores
         final_results = []

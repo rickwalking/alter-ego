@@ -20,6 +20,8 @@ export const carouselDesignTypographySchema = z.object({
 export const carouselDesignImagesSchema = z.object({
   hero: z.string(),
   slides: z.array(z.string()),
+  rendered_slides_pt: z.array(z.string()).nullable().optional(),
+  rendered_slides_en: z.array(z.string()).nullable().optional(),
 });
 
 export const carouselDesignLayoutSchema = z.object({
@@ -65,6 +67,10 @@ export const carouselProjectResponseSchema = z.object({
   blog_markdown: z.string().nullable(),
   blog_translations: z.record(z.string(), z.string()).nullable().optional(),
   caption: z.string().nullable(),
+  linkedin_post_pt: z.string().nullable().optional(),
+  linkedin_post_en: z.string().nullable().optional(),
+  pdf_path: z.string().nullable().optional(),
+  pdf_path_en: z.string().nullable().optional(),
   design_tokens: z.unknown().nullable().optional(),
   created_at: z.string(),
   updated_at: z.string(),
@@ -121,12 +127,31 @@ export const carouselCreateRequestSchema = z
     },
   );
 
+export const carouselPhaseProgressSlideSchema = z.object({
+  number: z.number(),
+  status: z.enum(["pending", "in_flight", "done", "failed"]),
+  style: z.string().optional(),
+  scene: z.string().optional(),
+});
+
+export const carouselPhaseProgressSchema = z.object({
+  phase: z.string(),
+  label: z.string(),
+  current: z.number().optional(),
+  total: z.number().optional(),
+  detail: z.string().optional(),
+  slides: z.array(carouselPhaseProgressSlideSchema).optional(),
+});
+
 export const carouselStatusResponseSchema = z.object({
   id: z.string(),
   status: z.string(),
   error_message: z.string().nullable(),
+  phase_progress: carouselPhaseProgressSchema.nullable().optional(),
   updated_at: z.string(),
 });
+
+export type CarouselPhaseProgress = z.infer<typeof carouselPhaseProgressSchema>;
 
 export type CarouselDesignResponse = z.infer<typeof carouselDesignResponseSchema>;
 export type CarouselBlogI18nResponse = z.infer<typeof carouselBlogI18nResponseSchema>;

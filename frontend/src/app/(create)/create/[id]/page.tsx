@@ -211,12 +211,20 @@ export default function WorkspacePage() {
             <div className="flex items-center justify-between">
               <h2 className="font-medium text-sm">{t("workspace.title")}</h2>
               {carouselComplete && completedProject && (
-                <Link
-                  href={ROUTE_PATHS.BLOG_POST(completedProject.id)}
-                  className="rounded-md bg-[var(--color-primary)] px-3 py-1 font-medium text-xs text-[var(--color-text)] transition-colors hover:opacity-90"
-                >
-                  {t("workspace.viewBlog")}
-                </Link>
+                <div className="flex items-center gap-2">
+                  <Link
+                    href={ROUTE_PATHS.BLOG_POST(completedProject.id)}
+                    className="rounded-md border border-[var(--color-border)] px-3 py-1 font-medium text-xs transition-colors hover:bg-[var(--color-background)]"
+                  >
+                    {t("workspace.viewBlog")}
+                  </Link>
+                  <Link
+                    href={ROUTE_PATHS.CREATE_PUBLISH(completedProject.id)}
+                    className="rounded-md bg-[var(--color-primary)] px-3 py-1 font-medium text-xs text-[var(--color-text)] transition-colors hover:opacity-90"
+                  >
+                    {t("workspace.publish")}
+                  </Link>
+                </div>
               )}
             </div>
           </div>
@@ -239,6 +247,7 @@ export default function WorkspacePage() {
                   hasError={false}
                   updatedAt={statusData?.updated_at}
                   errorMessage={statusData?.error_message}
+                  phaseProgress={statusData?.phase_progress ?? null}
                 />
               )}
 
@@ -249,6 +258,7 @@ export default function WorkspacePage() {
                   hasError
                   updatedAt={statusData?.updated_at}
                   errorMessage={statusData?.error_message}
+                  phaseProgress={statusData?.phase_progress ?? null}
                 />
               )}
 

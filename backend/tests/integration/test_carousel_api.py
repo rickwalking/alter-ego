@@ -136,9 +136,7 @@ class TestCarouselEndpoints:
     @pytest.mark.asyncio
     async def test_get_carousel_not_found(self, client):
         """Given non-existent ID, when GET, then returns 404."""
-        response = await client.get(
-            "/api/carousels/00000000-0000-0000-0000-000000000000"
-        )
+        response = await client.get("/api/carousels/00000000-0000-0000-0000-000000000000")
         assert response.status_code == 404
 
     @pytest.mark.asyncio
@@ -161,9 +159,7 @@ class TestCarouselEndpoints:
     @pytest.mark.asyncio
     async def test_get_carousel_status_not_found(self, client):
         """Given non-existent ID, when GET status, then returns 404."""
-        response = await client.get(
-            "/api/carousels/00000000-0000-0000-0000-000000000000/status"
-        )
+        response = await client.get("/api/carousels/00000000-0000-0000-0000-000000000000/status")
         assert response.status_code == 404
 
     @pytest.mark.asyncio
@@ -197,9 +193,7 @@ class TestCarouselEndpoints:
     @pytest.mark.asyncio
     async def test_delete_carousel_not_found(self, client):
         """Given non-existent ID, when DELETE, then returns 404."""
-        response = await client.delete(
-            "/api/carousels/00000000-0000-0000-0000-000000000000"
-        )
+        response = await client.delete("/api/carousels/00000000-0000-0000-0000-000000000000")
         assert response.status_code == 404
 
     @pytest.mark.asyncio
@@ -213,9 +207,7 @@ class TestCarouselEndpoints:
         create_response = await client.post("/api/carousels", json=payload)
         carousel_id = create_response.json()["id"]
 
-        with patch(
-            "rag_backend.infrastructure.container.get_container"
-        ) as mock_container:
+        with patch("rag_backend.infrastructure.container.get_container") as mock_container:
             from rag_backend.infrastructure.container import Container
 
             test_container = Container()

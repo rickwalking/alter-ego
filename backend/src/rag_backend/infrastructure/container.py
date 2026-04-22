@@ -14,7 +14,14 @@ from rag_backend.application.services.document_pipeline import (
 from rag_backend.application.services.image_provider_registry import (
     ImageProviderRegistry,
 )
+from rag_backend.application.services.linkedin_post_generator import (
+    LinkedInPostGenerator,
+)
+from rag_backend.application.services.pdf_slide_builder import PdfSlideBuilder
 from rag_backend.application.services.rag_agent import RAGAgent
+from rag_backend.application.services.writing_style_profile import (
+    WritingStyleProfile,
+)
 from rag_backend.application.services.tools.export_tool import CarouselExportTool
 from rag_backend.application.services.tools.image_tool import ImageGenerationTool
 from rag_backend.application.services.tools.research_tool import PlaywrightResearchTool
@@ -32,6 +39,9 @@ from rag_backend.infrastructure.database.document_repository import (
 )
 from rag_backend.infrastructure.external.anthropic_llm import AnthropicLLMService
 from rag_backend.infrastructure.external.gemini_image import GeminiImageService
+from rag_backend.infrastructure.external.meta_instagram_publisher import (
+    MetaInstagramPublisher,
+)
 from rag_backend.infrastructure.external.openai_embeddings import (
     OpenAIEmbeddingService,
 )
@@ -139,6 +149,28 @@ class Container(containers.DeclarativeContainer):
         openai_service=openai_image_service,
     )
 
+    writing_style_profile = providers.Singleton(
+        WritingStyleProfile,
+        research_tool=research_tool,
+        style_urls=settings.provided().writing_style_urls,
+        cache_dir=settings.provided().writing_style_cache_dir,
+        manual_samples_path="./config/writing_style_samples.yml",
+    )
+
+    linkedin_post_generator = providers.Singleton(
+        LinkedInPostGenerator,
+        llm_service=llm_service,
+        writing_style=writing_style_profile,
+    )
+
+    pdf_slide_builder = providers.Singleton(PdfSlideBuilder)
+
+    instagram_publisher = providers.Singleton(
+        MetaInstagramPublisher,
+        access_token=settings.provided().meta_ig_access_token,
+        ig_user_id=settings.provided().meta_ig_user_id,
+    )
+
     export_service = providers.Singleton(PlaywrightExportService)
 
     # Application Tools (wrappers around infrastructure services)
@@ -159,6 +191,8 @@ class Container(containers.DeclarativeContainer):
         research_tool=research_tool,
         image_registry=image_provider_registry,
         export_service=export_service,
+        linkedin_post_generator=linkedin_post_generator,
+        pdf_slide_builder=pdf_slide_builder,
         output_base_dir=settings.provided().carousel_output_dir,
     )
 

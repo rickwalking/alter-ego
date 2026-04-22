@@ -37,9 +37,7 @@ class PineconeVectorStore:
             self._index = self._client.Index(self._index_name)
         return self._index
 
-    async def upsert_chunks(
-        self, chunks: list[DocumentChunk], document_id: UUID
-    ) -> None:
+    async def upsert_chunks(self, chunks: list[DocumentChunk], document_id: UUID) -> None:
         """Store document chunks with their embeddings."""
         index = await self._get_index()
 

@@ -39,9 +39,7 @@ class PostgresDocumentRepository:
         if status:
             query = query.where(DocumentModel.status == status.value)
 
-        query = (
-            query.order_by(desc(DocumentModel.updated_at)).offset(offset).limit(limit)
-        )
+        query = query.order_by(desc(DocumentModel.updated_at)).offset(offset).limit(limit)
         result = await self._session.execute(query)
         return [doc.to_entity() for doc in result.scalars().all()]
 

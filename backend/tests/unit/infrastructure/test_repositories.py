@@ -53,9 +53,7 @@ class TestPostgresDocumentRepository:
 
         assert len(documents) == len(sample_documents)
 
-    async def test_get_all_with_status_filter(
-        self, document_repository, sample_documents
-    ):
+    async def test_get_all_with_status_filter(self, document_repository, sample_documents):
         """Should filter documents by status."""
         # Create documents with different statuses
         doc1 = Document(content="Test1", title="Test1")
@@ -85,9 +83,7 @@ class TestPostgresDocumentRepository:
         assert updated.status == DocumentStatus.COMPLETED
         assert updated.chunk_count == 10
 
-    async def test_update_nonexistent_document(
-        self, document_repository, sample_document
-    ):
+    async def test_update_nonexistent_document(self, document_repository, sample_document):
         """Should raise error when updating non-existent document."""
         # Create a document but don't save it
         document = sample_document
@@ -143,9 +139,7 @@ class TestPostgresDocumentRepository:
         await document_repository.create(doc3)
 
         pending_count = await document_repository.count(status=DocumentStatus.PENDING)
-        completed_count = await document_repository.count(
-            status=DocumentStatus.COMPLETED
-        )
+        completed_count = await document_repository.count(status=DocumentStatus.COMPLETED)
 
         assert pending_count == 2
         assert completed_count == 1
