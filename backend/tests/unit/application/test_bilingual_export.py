@@ -8,12 +8,12 @@ from uuid import uuid4
 
 import pytest
 
-from rag_backend.application.services.carousel_agent import (
-    CarouselAgent,
+from rag_backend.application.services.carousel.types import (
     SlideData,
-    _build_slides_en_index,
-    _slides_data_for_language,
+    build_slides_en_index,
+    slides_data_for_language,
 )
+from rag_backend.application.services.carousel_agent import CarouselAgent
 from rag_backend.application.services.image_provider_registry import (
     ImageProviderRegistry,
 )
@@ -29,7 +29,7 @@ class TestBuildSlidesEnIndex:
     """Bilingual slides_en parsing."""
 
     def test_indexes_by_slide_number(self) -> None:
-        idx = _build_slides_en_index(
+        idx = build_slides_en_index(
             [
                 {"number": 1, "heading": "EN H1", "body": "EN B1"},
                 {"number": 2, "heading": "EN H2", "body": "EN B2"},
@@ -39,11 +39,11 @@ class TestBuildSlidesEnIndex:
         assert idx[1]["heading"] == "EN H1"
 
     def test_tolerates_missing_field(self) -> None:
-        assert _build_slides_en_index(None) == {}
-        assert _build_slides_en_index("nonsense") == {}
+        assert build_slides_en_index(None) == {}
+        assert build_slides_en_index("nonsense") == {}
 
     def test_skips_items_without_number(self) -> None:
-        idx = _build_slides_en_index([{"heading": "no number"}])
+        idx = build_slides_en_index([{"heading": "no number"}])
         assert idx == {}
 
 
@@ -53,7 +53,7 @@ class TestSlidesDataForLanguage:
 
     def test_pt_returns_originals_unchanged(self) -> None:
         slides = [SlideData(1, "intro", "PT", "PT body")]
-        assert _slides_data_for_language(slides, "pt") is slides
+        assert slides_data_for_language(slides, "pt") is slides
 
     def test_en_swaps_text_when_translation_present(self) -> None:
         slide = SlideData(
@@ -63,13 +63,13 @@ class TestSlidesDataForLanguage:
             "PT body",
             translation_en={"heading": "EN heading", "body": "EN body"},
         )
-        en_slides = _slides_data_for_language([slide], "en")
+        en_slides = slides_data_for_language([slide], "en")
         assert en_slides[0].heading == "EN heading"
         assert en_slides[0].body == "EN body"
 
     def test_en_falls_back_to_pt_when_no_translation(self) -> None:
         slide = SlideData(1, "intro", "PT", "PT body")
-        en_slides = _slides_data_for_language([slide], "en")
+        en_slides = slides_data_for_language([slide], "en")
         assert en_slides[0].heading == "PT"
 
 

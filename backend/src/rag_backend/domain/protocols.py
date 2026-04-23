@@ -349,6 +349,25 @@ class CarouselAgent(Protocol):
         """
         ...
 
+    async def resume_pipeline(self, project_id: UUID) -> CarouselProject:
+        """Resume an interrupted pipeline from its last checkpoint.
+
+        Raises RuntimeError when no checkpointer is configured.
+        """
+        ...
+
+    def stream_pipeline(
+        self,
+        project_id: UUID,
+        seed_urls: list[str] | None = None,
+    ) -> AsyncIterator[dict[str, Any]]:
+        """Run the pipeline and yield SSE-shaped events.
+
+        Each event is a dict with `node`, `status`, `phase_progress`.
+        Terminates with `{"node": "end", ...}` or `{"node": "error", ...}`.
+        """
+        ...
+
 
 class SocialPublisher(Protocol):
     """Protocol for publishing a carousel to a social network.

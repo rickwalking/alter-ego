@@ -1,4 +1,4 @@
-"""Unit tests for CarouselAgent.re_render_slides + _unpack_extras helpers."""
+"""Unit tests for CarouselAgent.re_render_slides + unpack_extras helpers."""
 
 from __future__ import annotations
 
@@ -8,12 +8,12 @@ from uuid import uuid4
 
 import pytest
 
-from rag_backend.application.services.carousel_agent import (
-    CarouselAgent,
+from rag_backend.application.services.carousel.types import (
     SlideData,
-    _pack_extras,
-    _unpack_extras,
+    pack_extras,
+    unpack_extras,
 )
+from rag_backend.application.services.carousel_agent import CarouselAgent
 from rag_backend.application.services.image_provider_registry import (
     ImageProviderRegistry,
 )
@@ -51,7 +51,7 @@ class TestExtrasRoundTrip:
             stats=[{"value": "80%", "label": "L", "detail": ""}],
             insight={"quote": "Q", "attribution": "A"},
         )
-        packed = _pack_extras(sd)
+        packed = pack_extras(sd)
         assert packed is not None
         assert packed["features"] == sd.features
         assert packed["stats"] == sd.stats
@@ -60,7 +60,7 @@ class TestExtrasRoundTrip:
 
     def test_pack_returns_none_when_empty(self) -> None:
         sd = SlideData(slide_number=1, slide_type="intro", heading="H", body="B")
-        assert _pack_extras(sd) is None
+        assert pack_extras(sd) is None
 
     def test_unpack_restores_features_from_db_slide(self) -> None:
         slide = _slide(
@@ -73,7 +73,7 @@ class TestExtrasRoundTrip:
             },
         )
         slide.image_prompt = None  # ensure unpack falls back to extras
-        sd = _unpack_extras(slide)
+        sd = unpack_extras(slide)
         assert sd.features == [{"icon": "📝", "title": "T", "body": "B"}]
         assert sd.image_prompt == "scene from extras"
         assert sd.heading == "Heading 3"

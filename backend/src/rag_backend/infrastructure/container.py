@@ -19,12 +19,12 @@ from rag_backend.application.services.linkedin_post_generator import (
 )
 from rag_backend.application.services.pdf_slide_builder import PdfSlideBuilder
 from rag_backend.application.services.rag_agent import RAGAgent
-from rag_backend.application.services.writing_style_profile import (
-    WritingStyleProfile,
-)
 from rag_backend.application.services.tools.export_tool import CarouselExportTool
 from rag_backend.application.services.tools.image_tool import ImageGenerationTool
 from rag_backend.application.services.tools.research_tool import PlaywrightResearchTool
+from rag_backend.application.services.writing_style_profile import (
+    WritingStyleProfile,
+)
 from rag_backend.infrastructure.config.settings import get_settings
 from rag_backend.infrastructure.database.carousel_repository import (
     PostgresCarouselRepository,

@@ -67,6 +67,20 @@ class Settings(BaseSettings):
 
     # Carousel
     carousel_output_dir: str = "./output/carousels"
+    # Which checkpointer backend the carousel LangGraph pipeline uses:
+    #   - "sqlite"   → AsyncSqliteSaver on `carousel_checkpoint_sqlite_path` (dev)
+    #   - "postgres" → AsyncPostgresSaver on `carousel_checkpoint_postgres_url` (prod)
+    #   - "memory"   → InMemorySaver (ephemeral — loses state on restart)
+    #   - "disabled" → no checkpointer (no /resume, no mid-pipeline recovery)
+    carousel_checkpoint_backend: str = "sqlite"
+    carousel_checkpoint_sqlite_path: str = "./output/carousel_checkpoints.sqlite"
+    # Postgres connection string in psycopg form (`postgresql://user:pw@host/db`) —
+    # distinct from `database_url` which uses the SQLAlchemy-asyncpg dialect.
+    # Empty in dev; set in prod.
+    carousel_checkpoint_postgres_url: str = ""
+    # Cron-job TTL: projects in COMPLETED or FAILED status older than this
+    # get their checkpoint threads reaped by `scripts/cleanup_carousel_checkpoints.py`.
+    carousel_checkpoint_ttl_days: int = 30
 
     # LinkedIn voice cloning: comma-separated URLs of the user's own posts
     # (public share URLs). The LinkedIn post generator scrapes previews from
