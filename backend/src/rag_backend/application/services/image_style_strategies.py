@@ -64,6 +64,11 @@ class OpenAICinematicStrategy(ImageStyleStrategy):
             "desaturated base with neon bloom in key lights. "
             "STRICT: no readable text, no logos, no captions, no UI labels, "
             "no watermarks — purely visual storytelling. "
+            "ALSO STRICT: no real-world brand names, no celebrity or CEO "
+            "likenesses, no company logos, no identifiable product packaging. "
+            "Use generic analogies: a rocket ship instead of a named rocket, "
+            "a sleek sedan instead of a Tesla, a server room instead of a "
+            "named data center, an abstract tech campus instead of a known HQ. "
             f"{_palette_fragment(theme)} "
             f"Scene: {scene.strip()}"
         )
@@ -85,6 +90,8 @@ class OpenAIHyperrealStrategy(ImageStyleStrategy):
             "fabric, circuitry), dynamic wide composition. "
             "STRICT: no readable text, no logos, no captions, no UI labels, "
             "no speech bubbles — purely visual. "
+            "ALSO STRICT: no real-world brand names, no celebrity or CEO "
+            "likenesses, no company logos. Use generic analogies only. "
             f"{_palette_fragment(theme)} "
             f"Scene: {scene.strip()}"
         )
@@ -101,6 +108,8 @@ class OpenAINeoAnimeStrategy(ImageStyleStrategy):
             "background mattes, rim-lit characters against neon city haze. "
             "STRICT: no readable text, no logos, no captions, no UI labels, "
             "no speech bubbles — purely visual. "
+            "ALSO STRICT: no real-world brand names, no celebrity or CEO "
+            "likenesses, no company logos. Use generic analogies only. "
             f"{_palette_fragment(theme)} "
             f"Scene: {scene.strip()}"
         )
