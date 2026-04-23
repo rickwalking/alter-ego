@@ -1,9 +1,14 @@
-"""Unit tests for CarouselAgent.re_render_slides + unpack_extras helpers."""
+"""Unit tests for CarouselAgent.re_render_slides + unpack_extras helpers.
+
+Gherkin:
+  tests/features/carousel_image_refinement.feature
+  tests/features/carousel_design_refinement.feature
+"""
 
 from __future__ import annotations
 
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
@@ -40,6 +45,7 @@ def _slide(number: int, extras: dict[str, object] | None = None) -> CarouselSlid
 class TestExtrasRoundTrip:
     """Pack and unpack should preserve the structured render cards."""
 
+    # Scenario: Pack extras preserves structured render cards
     def test_pack_includes_features_stats_insight(self) -> None:
         sd = SlideData(
             slide_number=2,
@@ -58,10 +64,12 @@ class TestExtrasRoundTrip:
         assert packed["insight"] == sd.insight
         assert packed["image_prompt"] == "scene"
 
+    # Scenario: Pack returns None when no optional fields are present
     def test_pack_returns_none_when_empty(self) -> None:
         sd = SlideData(slide_number=1, slide_type="intro", heading="H", body="B")
         assert pack_extras(sd) is None
 
+    # Scenario: Unpack restores features from a DB slide with extras
     def test_unpack_restores_features_from_db_slide(self) -> None:
         slide = _slide(
             3,
@@ -105,6 +113,7 @@ def _agent_with_mocks() -> tuple[CarouselAgent, AsyncMock, AsyncMock, MagicMock]
 class TestReRenderSlides:
     """The refine flow's re-render entry point."""
 
+    # Scenario: Re-render writes PDF and bumps updated_at after text edits
     async def test_re_render_writes_pdf_and_bumps_updated_at(self, tmp_path: Path) -> None:
         agent, repo, export, pdf_builder = _agent_with_mocks()
         project = CarouselProject(
@@ -127,12 +136,14 @@ class TestReRenderSlides:
         assert result.updated_at != original_updated_at
         repo.update_project.assert_awaited()
 
+    # Scenario: Missing project is rejected during re-render
     async def test_re_render_raises_when_project_missing(self) -> None:
         agent, repo, _, _ = _agent_with_mocks()
         repo.get_project_by_id = AsyncMock(return_value=None)
         with pytest.raises(ValueError, match="not found"):
             await agent.re_render_slides(uuid4())
 
+    # Scenario: Missing output_dir is rejected during re-render
     async def test_re_render_raises_when_no_output_dir(self) -> None:
         agent, repo, _, _ = _agent_with_mocks()
         project = CarouselProject(
@@ -146,6 +157,7 @@ class TestReRenderSlides:
         with pytest.raises(ValueError, match="output_dir"):
             await agent.re_render_slides(project.id)
 
+    # Scenario: No slides is rejected during re-render
     async def test_re_render_raises_when_no_slides(self) -> None:
         agent, repo, _, _ = _agent_with_mocks()
         project = CarouselProject(
@@ -165,7 +177,11 @@ class TestReRenderSlides:
 class TestRegenerateSlideImage:
     """The image regeneration flow."""
 
-    async def test_regenerate_image_rewrites_prompt_and_exports(self, tmp_path: Path) -> None:
+    # Scenario: Regenerate image with a new prompt
+    @patch("rag_backend.application.services.carousel_refinement.run_image_one")
+    async def test_regenerate_image_rewrites_prompt_and_exports(
+        self, mock_run_image_one: AsyncMock, tmp_path: Path
+    ) -> None:
         agent, repo, export, pdf_builder = _agent_with_mocks()
         project = CarouselProject(
             topic="T",
@@ -185,16 +201,19 @@ class TestRegenerateSlideImage:
         assert slide.extras is not None
         assert slide.extras.get("image_prompt") == "new futuristic scene"
         repo.update_slide.assert_awaited()
+        mock_run_image_one.assert_awaited_once()
         export.export_slides.assert_awaited_once()
         pdf_builder.build.assert_called_once()
         assert result.id == project.id
 
+    # Scenario: Missing project is rejected during image regeneration
     async def test_regenerate_raises_when_project_missing(self) -> None:
         agent, repo, _, _ = _agent_with_mocks()
         repo.get_project_by_id = AsyncMock(return_value=None)
         with pytest.raises(ValueError, match="not found"):
             await agent.regenerate_slide_image(uuid4(), 1, "change colors")
 
+    # Scenario: Missing output_dir is rejected during image regeneration
     async def test_regenerate_raises_when_no_output_dir(self) -> None:
         agent, repo, _, _ = _agent_with_mocks()
         project = CarouselProject(
@@ -208,6 +227,7 @@ class TestRegenerateSlideImage:
         with pytest.raises(ValueError, match="output_dir"):
             await agent.regenerate_slide_image(project.id, 1, "change colors")
 
+    # Scenario: Missing slide is rejected during image regeneration
     async def test_regenerate_raises_when_slide_missing(self) -> None:
         agent, repo, _, _ = _agent_with_mocks()
         project = CarouselProject(
@@ -222,6 +242,7 @@ class TestRegenerateSlideImage:
         with pytest.raises(ValueError, match="Slide 2 not found"):
             await agent.regenerate_slide_image(project.id, 2, "change colors")
 
+    # Scenario: Missing image_prompt is rejected during image regeneration
     async def test_regenerate_raises_when_no_image_prompt(self) -> None:
         agent, repo, _, _ = _agent_with_mocks()
         project = CarouselProject(
@@ -244,6 +265,7 @@ class TestRegenerateSlideImage:
 class TestRefineCarouselDesign:
     """The design refinement flow."""
 
+    # Scenario: Apply a CSS override and re-export
     async def test_refinement_writes_css_and_re_exports(self, tmp_path: Path) -> None:
         agent, repo, export, pdf_builder = _agent_with_mocks()
         project = CarouselProject(
@@ -266,6 +288,7 @@ class TestRefineCarouselDesign:
         pdf_builder.build.assert_called_once()
         assert result.id == project.id
 
+    # Scenario: Markdown fences are stripped from LLM output
     async def test_refinement_strips_markdown_fences(self, tmp_path: Path) -> None:
         agent, repo, export, _ = _agent_with_mocks()
         project = CarouselProject(
@@ -286,12 +309,14 @@ class TestRefineCarouselDesign:
         assert "```" not in content
         assert ".hero-img { height: 600px; }" in content
 
+    # Scenario: Missing project is rejected during design refinement
     async def test_refinement_raises_when_project_missing(self) -> None:
         agent, repo, _, _ = _agent_with_mocks()
         repo.get_project_by_id = AsyncMock(return_value=None)
         with pytest.raises(ValueError, match="not found"):
             await agent.refine_carousel_design(uuid4(), "change layout")
 
+    # Scenario: Missing output_dir is rejected during design refinement
     async def test_refinement_raises_when_no_output_dir(self) -> None:
         agent, repo, _, _ = _agent_with_mocks()
         project = CarouselProject(
@@ -305,6 +330,7 @@ class TestRefineCarouselDesign:
         with pytest.raises(ValueError, match="output_dir"):
             await agent.refine_carousel_design(project.id, "change layout")
 
+    # Scenario: No slides is rejected during design refinement
     async def test_refinement_raises_when_no_slides(self) -> None:
         agent, repo, _, _ = _agent_with_mocks()
         project = CarouselProject(

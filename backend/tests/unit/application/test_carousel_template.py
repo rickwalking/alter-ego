@@ -1,4 +1,7 @@
-"""Unit tests for CarouselTemplateBuilder."""
+"""Unit tests for CarouselTemplateBuilder.
+
+Gherkin: tests/features/carousel_design_refinement.feature
+"""
 
 import pytest
 
@@ -195,6 +198,7 @@ class TestCarouselTemplateBuilder:
         assert "cta-btn secondary" in html
         assert "Salve" in html
 
+    # Scenario: Design overrides are injected into HTML before </style>
     def test_build_carousel_html_injects_design_overrides(self, sample_project, sample_theme):
         """Should inject custom CSS before the closing </style> tag."""
         slides = [
@@ -209,6 +213,7 @@ class TestCarouselTemplateBuilder:
         assert override in html
         assert html.index(override) < html.index("</style>")
 
+    # Scenario: No overrides block is emitted when design_overrides is None
     def test_build_carousel_html_omits_overrides_when_none(self, sample_project, sample_theme):
         """Should not contain an overrides block when None is passed."""
         slides = [
