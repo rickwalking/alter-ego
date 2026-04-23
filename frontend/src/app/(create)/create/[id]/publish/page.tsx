@@ -24,6 +24,10 @@ type PublishResult = {
   message?: string;
 };
 
+// Module-level guard: persists across React Strict Mode double-mounts
+// and HMR remounts so we only create one conversation per project.
+const _publishConversationsInitiated = new Set<string>();
+
 export default function PublishPage() {
   const params = useParams<{ id: string }>();
   const projectId = params.id;
@@ -47,7 +51,10 @@ export default function PublishPage() {
   // RAG agent — the user says "shorten the LinkedIn post" in plain text
   // and the agent picks the right target.
   useEffect(() => {
-    if (!projectId || conversationId) return;
+    if (!projectId || conversationId || _publishConversationsInitiated.has(projectId)) {
+      return;
+    }
+    _publishConversationsInitiated.add(projectId);
     void createConversation
       .mutateAsync({ title: `Refine: ${projectId}` })
       .then((conv) => setConversationId(conv.id));

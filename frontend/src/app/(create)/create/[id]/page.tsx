@@ -24,6 +24,10 @@ const WS_COMPLETE_TYPE = "complete";
 const WS_ERROR_TYPE = "error";
 const WS_TOOL_RESULT_TYPE = "tool_result";
 
+// Module-level guard: persists across React Strict Mode double-mounts
+// and HMR remounts so we only create one conversation per project.
+const _workspaceConversationsInitiated = new Set<string>();
+
 export default function WorkspacePage() {
   const params = useParams<{ id: string }>();
   const projectId = params.id;
@@ -46,7 +50,8 @@ export default function WorkspacePage() {
   const streamingMsgIdRef = useRef<string | null>(null);
 
   useEffect(() => {
-    if (!projectId) return;
+    if (!projectId || _workspaceConversationsInitiated.has(projectId)) return;
+    _workspaceConversationsInitiated.add(projectId);
 
     const setupConversation = async () => {
       const conv = await createConversation.mutateAsync({
@@ -56,7 +61,7 @@ export default function WorkspacePage() {
     };
 
     setupConversation();
-  }, [projectId]);
+  }, [projectId, createConversation, project]);
 
   useEffect(() => {
     if (!conversationId) return;
