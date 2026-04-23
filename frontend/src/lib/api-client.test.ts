@@ -1,5 +1,11 @@
 import { describe, it, expect, vi } from "vitest";
-import { apiCall, ApiError, apiResponseSchema, errorResponseSchema } from "./api-client";
+import {
+  apiCall,
+  apiCallNoContent,
+  ApiError,
+  apiResponseSchema,
+  errorResponseSchema,
+} from "./api-client";
 import { z } from "zod";
 
 describe("API Client Module", () => {
@@ -167,8 +173,13 @@ describe("API Client Module", () => {
           json: async () => ({ data: { id: "1", name: "Test" } }),
         } as Response));
 
+        // When the response has no `success` field, apiCall falls through
+        // to the direct-schema branch and tries to validate the raw JSON
+        // against `testSchema` (expects {id, name} at top level). The
+        // actual shape is {data: {id, name}}, so validation fails and we
+        // throw with "Invalid data from API".
         await expect(apiCall("/api/test", testSchema)).rejects.toThrow(
-          "Invalid API response structure"
+          "Invalid data from API"
         );
         vi.unstubAllGlobals();
       });
@@ -344,6 +355,104 @@ describe("API Client Module", () => {
           success: false,
         };
         expect(errorResponseSchema.safeParse(invalid).success).toBe(false);
+      });
+    });
+  });
+
+  describe("Given the apiCallNoContent function", () => {
+    describe("When the API returns 204 No Content", () => {
+      it("Then it should resolve without a value", async () => {
+        vi.stubGlobal(
+          "fetch",
+          vi.fn().mockResolvedValue({ ok: true, status: 204 } as Response),
+        );
+
+        await expect(
+          apiCallNoContent("/api/documents/1", { method: "DELETE" }),
+        ).resolves.toBeUndefined();
+        vi.unstubAllGlobals();
+      });
+
+      it("Then it should pass method and headers through to fetch", async () => {
+        const mockFetch = vi.fn().mockResolvedValue({
+          ok: true,
+          status: 204,
+        } as Response);
+        vi.stubGlobal("fetch", mockFetch);
+
+        await apiCallNoContent("/api/documents/1", {
+          method: "DELETE",
+          headers: { "X-Foo": "bar" },
+        });
+
+        expect(mockFetch).toHaveBeenCalledWith(
+          "/api/documents/1",
+          expect.objectContaining({
+            method: "DELETE",
+            headers: expect.objectContaining({
+              "Content-Type": "application/json",
+              "X-Foo": "bar",
+            }),
+          }),
+        );
+        vi.unstubAllGlobals();
+      });
+    });
+
+    describe("When the API returns a 4xx error", () => {
+      it("Then it should throw an ApiError with the returned message", async () => {
+        vi.stubGlobal(
+          "fetch",
+          vi.fn().mockResolvedValue({
+            ok: false,
+            status: 404,
+            json: async () => ({ message: "Document not found" }),
+          } as Response),
+        );
+
+        await expect(
+          apiCallNoContent("/api/documents/missing", { method: "DELETE" }),
+        ).rejects.toThrow("Document not found");
+        vi.unstubAllGlobals();
+      });
+
+      it("Then it should include the HTTP status code on the ApiError", async () => {
+        vi.stubGlobal(
+          "fetch",
+          vi.fn().mockResolvedValue({
+            ok: false,
+            status: 403,
+            json: async () => ({ message: "forbidden", code: "ACL_DENY" }),
+          } as Response),
+        );
+
+        try {
+          await apiCallNoContent("/api/conversations/1", { method: "DELETE" });
+          expect.fail("expected ApiError");
+        } catch (err) {
+          expect(err).toBeInstanceOf(ApiError);
+          expect((err as ApiError).status).toBe(403);
+          expect((err as ApiError).code).toBe("ACL_DENY");
+        }
+        vi.unstubAllGlobals();
+      });
+
+      it("Then it should fall back to a generic message when the body isn't JSON", async () => {
+        vi.stubGlobal(
+          "fetch",
+          vi.fn().mockResolvedValue({
+            ok: false,
+            status: 500,
+            json: async () => {
+              throw new Error("not json");
+            },
+          } as Response),
+        );
+
+        await expect(
+          apiCallNoContent("/api/documents/1", { method: "DELETE" }),
+        ).rejects.toThrow("HTTP error! status: 500");
+        vi.unstubAllGlobals();
       });
     });
   });

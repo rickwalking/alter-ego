@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiCall } from "@/lib/api-client";
+import { apiCall, apiCallNoContent } from "@/lib/api-client";
+import { API_ENDPOINTS, HTTP_METHODS } from "@/constants/api";
 import {
   documentSchema,
   documentListResponseSchema,
@@ -9,13 +10,14 @@ import {
 } from "@/schemas/knowledge";
 
 const DOCUMENTS_KEY = "documents";
+const DOCUMENT_KEY = "document";
 
 export function useDocuments() {
   return useQuery({
     queryKey: [DOCUMENTS_KEY],
     queryFn: async () => {
       const result = await apiCall<DocumentListResponse>(
-        "/api/documents",
+        API_ENDPOINTS.DOCUMENTS,
         documentListResponseSchema
       );
       return result.items;
@@ -25,10 +27,10 @@ export function useDocuments() {
 
 export function useDocument(id: string | null) {
   return useQuery({
-    queryKey: ["document", id],
+    queryKey: [DOCUMENT_KEY, id],
     queryFn: async () => {
       return apiCall<Document>(
-        `/api/documents/${id}`,
+        API_ENDPOINTS.DOCUMENT_BY_ID(id as string),
         documentSchema
       );
     },
@@ -41,8 +43,8 @@ export function useCreateDocument() {
 
   return useMutation({
     mutationFn: async (data: CreateDocumentRequest) => {
-      return apiCall<Document>("/api/documents", documentSchema, {
-        method: "POST",
+      return apiCall<Document>(API_ENDPOINTS.DOCUMENTS, documentSchema, {
+        method: HTTP_METHODS.POST,
         body: JSON.stringify(data),
       });
     },
@@ -57,7 +59,9 @@ export function useDeleteDocument() {
 
   return useMutation({
     mutationFn: async (id: string) => {
-      await fetch(`/api/documents/${id}`, { method: "DELETE" });
+      await apiCallNoContent(API_ENDPOINTS.DOCUMENT_BY_ID(id), {
+        method: HTTP_METHODS.DELETE,
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [DOCUMENTS_KEY] });
@@ -71,9 +75,9 @@ export function useReprocessDocument() {
   return useMutation({
     mutationFn: async (id: string) => {
       return apiCall<Document>(
-        `/api/documents/${id}/reprocess`,
+        API_ENDPOINTS.DOCUMENT_REPROCESS(id),
         documentSchema,
-        { method: "POST" }
+        { method: HTTP_METHODS.POST }
       );
     },
     onSuccess: () => {

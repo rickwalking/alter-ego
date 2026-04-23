@@ -85,3 +85,32 @@ export async function apiCall<T>(
   }
   return dataResult.data;
 }
+
+/**
+ * Issue a request that expects no response body (DELETE → 204, POST → 204).
+ *
+ * Threads the same error-handling path as `apiCall` so callers get
+ * `ApiError` with the server's status and message, but skips the JSON
+ * parse step that would otherwise fail on a 204 No Content response.
+ */
+export async function apiCallNoContent(
+  url: string,
+  options?: RequestInit
+): Promise<void> {
+  const response = await fetch(url, {
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      ...options?.headers,
+    },
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => null);
+    throw new ApiError(
+      response.status,
+      errorData?.message || `HTTP error! status: ${response.status}`,
+      errorData?.code
+    );
+  }
+}

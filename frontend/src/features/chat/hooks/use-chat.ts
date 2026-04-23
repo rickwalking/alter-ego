@@ -1,26 +1,27 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiCall } from "@/lib/api-client";
+import { apiCall, apiCallNoContent } from "@/lib/api-client";
+import { API_ENDPOINTS, HTTP_METHODS } from "@/constants/api";
 import {
   conversationSchema,
-  messageSchema,
   chatResponseSchema,
   conversationListResponseSchema,
   messageListResponseSchema,
   type Conversation,
-  type Message,
   type ChatResponse,
   type ConversationListResponse,
   type MessageListResponse,
 } from "@/schemas/chat";
 
 const CONVERSATIONS_KEY = "conversations";
+const CONVERSATION_KEY = "conversation";
+const MESSAGES_KEY = "messages";
 
 export function useConversations() {
   return useQuery({
     queryKey: [CONVERSATIONS_KEY],
     queryFn: async () => {
       const result = await apiCall<ConversationListResponse>(
-        "/api/conversations",
+        API_ENDPOINTS.CONVERSATIONS,
         conversationListResponseSchema
       );
       return result.items;
@@ -30,10 +31,10 @@ export function useConversations() {
 
 export function useConversation(conversationId: string | null) {
   return useQuery({
-    queryKey: ["conversation", conversationId],
+    queryKey: [CONVERSATION_KEY, conversationId],
     queryFn: async () => {
       return apiCall<Conversation>(
-        `/api/conversations/${conversationId}`,
+        API_ENDPOINTS.CONVERSATION_BY_ID(conversationId as string),
         conversationSchema
       );
     },
@@ -43,10 +44,10 @@ export function useConversation(conversationId: string | null) {
 
 export function useConversationMessages(conversationId: string | null) {
   return useQuery({
-    queryKey: ["messages", conversationId],
+    queryKey: [MESSAGES_KEY, conversationId],
     queryFn: async () => {
       const result = await apiCall<MessageListResponse>(
-        `/api/conversations/${conversationId}/messages`,
+        API_ENDPOINTS.CONVERSATION_MESSAGES(conversationId as string),
         messageListResponseSchema
       );
       return result.items;
@@ -60,8 +61,8 @@ export function useCreateConversation() {
 
   return useMutation({
     mutationFn: async ({ title, metadata }: { title?: string; metadata?: Record<string, unknown> }) => {
-      return apiCall<Conversation>("/api/conversations", conversationSchema, {
-        method: "POST",
+      return apiCall<Conversation>(API_ENDPOINTS.CONVERSATIONS, conversationSchema, {
+        method: HTTP_METHODS.POST,
         body: JSON.stringify({ title, metadata }),
       });
     },
@@ -77,16 +78,16 @@ export function useSendMessage() {
   return useMutation({
     mutationFn: async ({ conversationId, content }: { conversationId: string; content: string }) => {
       return apiCall<ChatResponse>(
-        `/api/conversations/${conversationId}/chat`,
+        API_ENDPOINTS.CONVERSATION_CHAT(conversationId),
         chatResponseSchema,
         {
-          method: "POST",
+          method: HTTP_METHODS.POST,
           body: JSON.stringify({ content }),
         }
       );
     },
     onSuccess: (_, { conversationId }) => {
-      queryClient.invalidateQueries({ queryKey: ["messages", conversationId] });
+      queryClient.invalidateQueries({ queryKey: [MESSAGES_KEY, conversationId] });
       queryClient.invalidateQueries({ queryKey: [CONVERSATIONS_KEY] });
     },
   });
@@ -97,7 +98,9 @@ export function useDeleteConversation() {
 
   return useMutation({
     mutationFn: async (conversationId: string) => {
-      await fetch(`/api/conversations/${conversationId}`, { method: "DELETE" });
+      await apiCallNoContent(API_ENDPOINTS.CONVERSATION_BY_ID(conversationId), {
+        method: HTTP_METHODS.DELETE,
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [CONVERSATIONS_KEY] });
