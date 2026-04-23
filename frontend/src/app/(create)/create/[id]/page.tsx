@@ -11,7 +11,8 @@ import { CarouselProgress, CarouselPreview } from "@/features/create/components"
 import {
   useCarouselProject,
   useCarouselStatus,
-  useGenerateCarousel,
+  useCarouselStream,
+  useResumeCarousel,
 } from "@/features/create/hooks";
 import { useCreateConversation } from "@/features/chat/hooks/use-chat";
 import { ROUTE_PATHS } from "@/constants/api";
@@ -29,9 +30,12 @@ export default function WorkspacePage() {
   const t = useTranslations("create");
   const { data: project } = useCarouselProject(projectId);
   const { data: statusData } = useCarouselStatus(projectId);
-  const generateCarousel = useGenerateCarousel();
+  // SSE stream writes into the same TanStack Query cache as the polling
+  // hook, so progress updates show up in real time; polling stays as a
+  // fallback when SSE is blocked (corporate proxies, etc.).
+  const stream = useCarouselStream(projectId);
+  const resumeCarousel = useResumeCarousel();
   const createConversation = useCreateConversation();
-  const generationTriggeredRef = useRef(false);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
@@ -150,22 +154,6 @@ export default function WorkspacePage() {
     }
   }, [statusData?.status, project]);
 
-  // Auto-trigger the pipeline once per project when we see it in `pending`.
-  // The ref prevents a second fire if the status query refetches before the
-  // backend has transitioned out of pending.
-  useEffect(() => {
-    if (
-      !projectId ||
-      generationTriggeredRef.current ||
-      generateCarousel.isPending ||
-      statusData?.status !== "pending"
-    ) {
-      return;
-    }
-    generationTriggeredRef.current = true;
-    generateCarousel.mutate({ projectId });
-  }, [projectId, statusData?.status, generateCarousel]);
-
   const handleSendMessage = useCallback((content: string) => {
     if (!content.trim()) return;
 
@@ -252,14 +240,44 @@ export default function WorkspacePage() {
               )}
 
               {hasError && (
-                <CarouselProgress
-                  currentPhase={currentPhase}
-                  isComplete={false}
-                  hasError
-                  updatedAt={statusData?.updated_at}
-                  errorMessage={statusData?.error_message}
-                  phaseProgress={statusData?.phase_progress ?? null}
-                />
+                <div className="space-y-2">
+                  <CarouselProgress
+                    currentPhase={currentPhase}
+                    isComplete={false}
+                    hasError
+                    updatedAt={statusData?.updated_at}
+                    errorMessage={statusData?.error_message}
+                    phaseProgress={statusData?.phase_progress ?? null}
+                  />
+                  <button
+                    type="button"
+                    onClick={() =>
+                      resumeCarousel.mutate(projectId, {
+                        onSuccess: () => stream.reconnect(),
+                      })
+                    }
+                    disabled={resumeCarousel.isPending}
+                    className="rounded-md bg-[var(--color-primary)] px-4 py-2 font-medium text-sm text-[var(--color-text)] transition-colors hover:opacity-90 disabled:opacity-50"
+                    data-testid="resume-button"
+                  >
+                    {resumeCarousel.isPending
+                      ? t("workspace.resuming")
+                      : t("workspace.resume")}
+                  </button>
+                </div>
+              )}
+
+              {isGenerating && !stream.isStreaming && stream.error && (
+                <div className="space-y-2">
+                  <button
+                    type="button"
+                    onClick={() => stream.reconnect()}
+                    className="rounded-md border border-[var(--color-border)] px-4 py-2 font-medium text-sm transition-colors hover:bg-[var(--color-background)]"
+                    data-testid="reconnect-button"
+                  >
+                    {t("workspace.reconnectStream")}
+                  </button>
+                </div>
               )}
 
               {carouselComplete && completedProject && (

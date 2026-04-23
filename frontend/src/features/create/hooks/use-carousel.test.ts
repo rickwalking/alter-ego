@@ -6,6 +6,8 @@ import {
   useCreateCarousel,
   useCarouselStatus,
   useCarouselProject,
+  useResumeCarousel,
+  useGenerateCarousel,
 } from "./use-carousel";
 import { API_ENDPOINTS } from "@/constants/api";
 
@@ -260,5 +262,121 @@ describe("useCarouselProject", () => {
     });
 
     expect(result.current.refetchInterval).toBeUndefined();
+  });
+});
+
+describe("useResumeCarousel", () => {
+  // Scenario: POSTs to /resume with the project id
+  it("calls the resume endpoint with POST", async () => {
+    mockApiCall.mockResolvedValueOnce(MOCK_STATUS);
+    const { result } = renderHook(() => useResumeCarousel(), {
+      wrapper: createWrapper(),
+    });
+
+    result.current.mutate("abc-123");
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(mockApiCall).toHaveBeenCalledWith(
+      API_ENDPOINTS.CAROUSEL_RESUME("abc-123"),
+      expect.anything(),
+      { method: "POST" },
+    );
+  });
+
+  // Scenario: propagates the returned status response
+  it("returns the updated status on success", async () => {
+    mockApiCall.mockResolvedValueOnce(MOCK_STATUS);
+    const { result } = renderHook(() => useResumeCarousel(), {
+      wrapper: createWrapper(),
+    });
+
+    result.current.mutate("abc-123");
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(result.current.data).toEqual(MOCK_STATUS);
+  });
+
+  // Scenario: API error surfaces as mutation error
+  it("surfaces API errors", async () => {
+    mockApiCall.mockRejectedValueOnce(new Error("resume failed"));
+    const { result } = renderHook(() => useResumeCarousel(), {
+      wrapper: createWrapper(),
+    });
+
+    result.current.mutate("abc-123");
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(result.current.error).toEqual(new Error("resume failed"));
+  });
+});
+
+describe("useGenerateCarousel", () => {
+  // Scenario: useGenerateCarousel calls the generate endpoint with POST
+  it("calls the API with correct endpoint and method", async () => {
+    mockApiCall.mockResolvedValueOnce(MOCK_STATUS);
+    const { result } = renderHook(() => useGenerateCarousel(), {
+      wrapper: createWrapper(),
+    });
+
+    result.current.mutate({ projectId: "abc-123", sources: ["https://example.com"] });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(mockApiCall).toHaveBeenCalledWith(
+      API_ENDPOINTS.CAROUSEL_GENERATE("abc-123"),
+      expect.anything(),
+      {
+        method: "POST",
+        body: JSON.stringify({ sources: ["https://example.com"] }),
+      }
+    );
+  });
+
+  // Scenario: useGenerateCarousel passes null sources when omitted
+  it("passes null sources when omitted", async () => {
+    mockApiCall.mockResolvedValueOnce(MOCK_STATUS);
+    const { result } = renderHook(() => useGenerateCarousel(), {
+      wrapper: createWrapper(),
+    });
+
+    result.current.mutate({ projectId: "abc-123" });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(mockApiCall).toHaveBeenCalledWith(
+      API_ENDPOINTS.CAROUSEL_GENERATE("abc-123"),
+      expect.anything(),
+      {
+        method: "POST",
+        body: JSON.stringify({ sources: null }),
+      }
+    );
+  });
+
+  // Scenario: useGenerateCarousel invalidates status and project queries on success
+  it("invalidates related query keys on success", async () => {
+    mockApiCall.mockResolvedValueOnce(MOCK_STATUS);
+    const { result } = renderHook(() => useGenerateCarousel(), {
+      wrapper: createWrapper(),
+    });
+
+    result.current.mutate({ projectId: "abc-123" });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(mockApiCall).toHaveBeenCalledTimes(1);
+  });
+
+  // Scenario: useGenerateCarousel surfaces API errors
+  it("surfaces API errors", async () => {
+    mockApiCall.mockRejectedValueOnce(new Error("generate failed"));
+    const { result } = renderHook(() => useGenerateCarousel(), {
+      wrapper: createWrapper(),
+    });
+
+    result.current.mutate({ projectId: "abc-123" });
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(result.current.error).toEqual(new Error("generate failed"));
   });
 });

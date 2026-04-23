@@ -183,6 +183,9 @@
       "title": "Carousel Workspace",
       "viewBlog": "View Blog",
       "publish": "Publish",
+      "resume": "Resume from last checkpoint",
+      "resuming": "Resuming…",
+      "reconnectStream": "Reconnect stream",
       "error": "An error occurred while processing your request."
     },
     "chat": {
