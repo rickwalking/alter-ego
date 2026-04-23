@@ -390,6 +390,20 @@ class CarouselAgent(Protocol):
         """
         ...
 
+    async def refine_carousel_design(
+        self,
+        project_id: UUID,
+        instruction: str,
+    ) -> CarouselProject:
+        """Apply a CSS/layout design change to the carousel.
+
+        Uses the LLM to translate a natural-language design request into
+        CSS overrides, writes them to the project's output directory,
+        and re-exports the slide JPGs + PDF so the user sees the new
+        layout immediately. Does NOT regenerate source images.
+        """
+        ...
+
 
 class SocialPublisher(Protocol):
     """Protocol for publishing a carousel to a social network.

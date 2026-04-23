@@ -238,3 +238,83 @@ class TestRegenerateSlideImage:
         repo.get_slides_by_project = AsyncMock(return_value=[slide])
         with pytest.raises(ValueError, match="no image_prompt"):
             await agent.regenerate_slide_image(project.id, 1, "change colors")
+
+
+@pytest.mark.unit
+class TestRefineCarouselDesign:
+    """The design refinement flow."""
+
+    async def test_refinement_writes_css_and_re_exports(self, tmp_path: Path) -> None:
+        agent, repo, export, pdf_builder = _agent_with_mocks()
+        project = CarouselProject(
+            topic="T",
+            audience="A",
+            niche="N",
+            status=CarouselStatus.COMPLETED,
+            output_dir=str(tmp_path),
+        )
+        repo.get_project_by_id = AsyncMock(return_value=project)
+        repo.get_slides_by_project = AsyncMock(return_value=[_slide(1), _slide(2)])
+        agent._llm.generate = AsyncMock(return_value=".hero-img { height: 500px; }")
+
+        result = await agent.refine_carousel_design(project.id, "make images bigger")
+
+        overrides_file = tmp_path / "design_overrides.css"
+        assert overrides_file.exists()
+        assert ".hero-img { height: 500px; }" in overrides_file.read_text()
+        export.export_slides.assert_awaited_once()
+        pdf_builder.build.assert_called_once()
+        assert result.id == project.id
+
+    async def test_refinement_strips_markdown_fences(self, tmp_path: Path) -> None:
+        agent, repo, export, _ = _agent_with_mocks()
+        project = CarouselProject(
+            topic="T",
+            audience="A",
+            niche="N",
+            status=CarouselStatus.COMPLETED,
+            output_dir=str(tmp_path),
+        )
+        repo.get_project_by_id = AsyncMock(return_value=project)
+        repo.get_slides_by_project = AsyncMock(return_value=[_slide(1)])
+        agent._llm.generate = AsyncMock(return_value="```css\n.hero-img { height: 600px; }\n```")
+
+        await agent.refine_carousel_design(project.id, "make images bigger")
+
+        overrides_file = tmp_path / "design_overrides.css"
+        content = overrides_file.read_text()
+        assert "```" not in content
+        assert ".hero-img { height: 600px; }" in content
+
+    async def test_refinement_raises_when_project_missing(self) -> None:
+        agent, repo, _, _ = _agent_with_mocks()
+        repo.get_project_by_id = AsyncMock(return_value=None)
+        with pytest.raises(ValueError, match="not found"):
+            await agent.refine_carousel_design(uuid4(), "change layout")
+
+    async def test_refinement_raises_when_no_output_dir(self) -> None:
+        agent, repo, _, _ = _agent_with_mocks()
+        project = CarouselProject(
+            topic="T",
+            audience="A",
+            niche="N",
+            status=CarouselStatus.COMPLETED,
+            output_dir=None,
+        )
+        repo.get_project_by_id = AsyncMock(return_value=project)
+        with pytest.raises(ValueError, match="output_dir"):
+            await agent.refine_carousel_design(project.id, "change layout")
+
+    async def test_refinement_raises_when_no_slides(self) -> None:
+        agent, repo, _, _ = _agent_with_mocks()
+        project = CarouselProject(
+            topic="T",
+            audience="A",
+            niche="N",
+            status=CarouselStatus.COMPLETED,
+            output_dir="/tmp/x",
+        )
+        repo.get_project_by_id = AsyncMock(return_value=project)
+        repo.get_slides_by_project = AsyncMock(return_value=[])
+        with pytest.raises(ValueError, match="no slides"):
+            await agent.refine_carousel_design(project.id, "change layout")

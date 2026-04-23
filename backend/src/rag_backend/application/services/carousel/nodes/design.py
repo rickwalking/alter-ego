@@ -8,6 +8,7 @@ same palette the template will render against.
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any
 
 from rag_backend.application.services.carousel.types import SlideData
@@ -16,6 +17,7 @@ from rag_backend.domain.constants import CAROUSEL_THEMES
 from rag_backend.domain.models import CarouselProject, CarouselTheme
 
 DEFAULT_THEME_KEY = "ai_competition"
+OVERRIDES_FILENAME = "design_overrides.css"
 
 
 def resolve_theme(project: CarouselProject) -> dict[str, str]:
@@ -23,6 +25,19 @@ def resolve_theme(project: CarouselProject) -> dict[str, str]:
     if project.theme != CarouselTheme.AUTO:
         return CAROUSEL_THEMES.get(project.theme.value, CAROUSEL_THEMES[DEFAULT_THEME_KEY])
     return CAROUSEL_THEMES[DEFAULT_THEME_KEY]
+
+
+def _read_design_overrides(output_dir: str | None) -> str | None:
+    """Read per-project CSS overrides from disk if present."""
+    if not output_dir:
+        return None
+    path = Path(output_dir) / OVERRIDES_FILENAME
+    if not path.exists():
+        return None
+    try:
+        return path.read_text(encoding="utf-8")
+    except OSError:
+        return None
 
 
 def run_design(
@@ -53,4 +68,7 @@ def run_design(
         }
         for s in slides
     ]
-    return template.build_carousel_html(project, slide_dicts, theme)
+
+    overrides = _read_design_overrides(project.output_dir)
+
+    return template.build_carousel_html(project, slide_dicts, theme, design_overrides=overrides)

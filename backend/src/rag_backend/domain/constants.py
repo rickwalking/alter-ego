@@ -125,6 +125,9 @@ VALID_IMAGE_STYLES: set[str] = {
     IMAGE_STYLE_NEO_ANIME,
 }
 
+# Design override key stored in project.extras for refine_carousel_design.
+DESIGN_OVERRIDES_KEY = "design_overrides"
+
 # Default combo applied when a caller omits the fields (back-compat
 # with every carousel created before pluggable providers landed).
 IMAGE_MODEL_DEFAULT = IMAGE_MODEL_GEMINI

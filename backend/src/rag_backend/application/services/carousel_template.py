@@ -398,6 +398,7 @@ class CarouselTemplateBuilder:
         project: CarouselProject,
         slides: list[dict[str, Any]],
         theme: dict[str, str],
+        design_overrides: str | None = None,
     ) -> str:
         """Build complete HTML carousel with inline CSS."""
         primary = theme["primary"]
@@ -413,6 +414,12 @@ class CarouselTemplateBuilder:
                 slides_html += CarouselTemplateBuilder._render_cta_slide(slide, theme)
             else:
                 slides_html += CarouselTemplateBuilder._render_content_slide(slide, theme)
+
+        if design_overrides:
+            stripped = design_overrides.strip()
+            override_block = f"\n  /* design overrides */\n  {stripped}\n"
+        else:
+            override_block = ""
 
         return f"""<!DOCTYPE html>
 <html lang="{project.language}">
@@ -435,7 +442,7 @@ class CarouselTemplateBuilder:
   .slide {{
     width: 1080px; height: 1350px; background: var(--bg);
     position: relative; overflow: hidden; margin: 0 auto 20px;
-  }}
+  }}{override_block}
   .bg-glow {{ position: absolute; inset: 0; pointer-events: none; }}
   .bg-glow::before {{
     content: ''; position: absolute; width: 600px; height: 600px;
@@ -640,9 +647,10 @@ class CarouselTemplateBuilder:
 
         image_html = ""
         if slide["type"] == SLIDE_TYPE_CONTENT:
+            heading_esc = _render_inline(str(slide["heading"]))
             image_html = f"""
       <div class="hero-img">
-        <img src="images/slide_{slide["number"]}.jpg" alt="{_render_inline(str(slide["heading"]))}" />
+        <img src="images/slide_{slide['number']}.jpg" alt="{heading_esc}" />
       </div>"""
 
         body_parts: list[str] = []

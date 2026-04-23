@@ -3,8 +3,8 @@
 import pytest
 
 from rag_backend.application.services.carousel_template import (
-    CarouselTemplateBuilder,
     THEME_PALETTES,
+    CarouselTemplateBuilder,
 )
 from rag_backend.domain.models import CarouselProject, CarouselTheme
 
@@ -194,6 +194,32 @@ class TestCarouselTemplateBuilder:
         assert "cta-btn primary" in html
         assert "cta-btn secondary" in html
         assert "Salve" in html
+
+    def test_build_carousel_html_injects_design_overrides(self, sample_project, sample_theme):
+        """Should inject custom CSS before the closing </style> tag."""
+        slides = [
+            {"number": "1", "type": "intro", "heading": "Intro", "body": "Body"},
+        ]
+        override = ".hero-img { height: 500px; }"
+
+        html = CarouselTemplateBuilder.build_carousel_html(
+            sample_project, slides, sample_theme, design_overrides=override
+        )
+
+        assert override in html
+        assert html.index(override) < html.index("</style>")
+
+    def test_build_carousel_html_omits_overrides_when_none(self, sample_project, sample_theme):
+        """Should not contain an overrides block when None is passed."""
+        slides = [
+            {"number": "1", "type": "intro", "heading": "Intro", "body": "Body"},
+        ]
+
+        html = CarouselTemplateBuilder.build_carousel_html(
+            sample_project, slides, sample_theme, design_overrides=None
+        )
+
+        assert "design overrides" not in html.lower()
 
 
 @pytest.mark.unit

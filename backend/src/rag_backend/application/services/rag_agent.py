@@ -53,7 +53,14 @@ the correct tool.
 When a user asks to change, update, or regenerate an image on a carousel slide,
 call regenerate_slide_image with the slide number and a natural-language
 instruction describing the desired change. This tool rewrites the image prompt,
-generates a new image, and re-exports the slides automatically."""
+generates a new image, and re-exports the slides automatically.
+
+When a user asks to change the layout, sizing, spacing, fonts, or any visual
+CSS property of the carousel (e.g., "make the image on slide 3 bigger",
+"increase font size", "add more padding"), call refine_carousel_design with
+a natural-language instruction. This tool generates CSS overrides, applies
+them to the rendered slides, and re-exports without regenerating images.
+Do NOT use refine_carousel_copy for layout or sizing changes."""
 
 
 class RAGAgent:
@@ -318,6 +325,48 @@ class RAGAgent:
             )
 
         tools.append(regenerate_slide_image)
+
+        @tool
+        async def refine_carousel_design(
+            project_id: str,
+            instruction: str,
+        ) -> str:
+            """Apply a CSS/layout design change to an existing carousel.
+
+            Use when the user asks to change sizing, spacing, fonts, image
+            dimensions, padding, margins, or any visual layout property of
+            the rendered carousel slides. This edits CSS only — it does NOT
+            regenerate the source images.
+
+            Args:
+                project_id: UUID of the carousel project.
+                instruction: Natural-language design request
+                    (e.g., "make the image on slide 3 bigger",
+                    "increase heading font size",
+                    "add more padding around the body text").
+            """
+            from uuid import UUID as _UUID
+
+            try:
+                project_uuid = _UUID(project_id)
+            except ValueError:
+                return f"Invalid project_id {project_id!r} — expected a UUID."
+
+            try:
+                await carousel_agent.refine_carousel_design(
+                    project_uuid, instruction
+                )
+            except ValueError as exc:
+                return f"Cannot apply design change: {exc}"
+            except Exception as exc:
+                return f"Design refinement failed: {exc}"
+
+            return (
+                f"Applied design change to project {project_id}. "
+                f"Slides + PDF re-exported."
+            )
+
+        tools.append(refine_carousel_design)
         return tools
 
     async def chat(

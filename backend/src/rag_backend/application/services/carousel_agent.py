@@ -465,6 +465,81 @@ class CarouselAgent:
         await self.re_render_slides(project_id)
         return project
 
+    async def refine_carousel_design(
+        self,
+        project_id: UUID,
+        instruction: str,
+    ) -> CarouselProject:
+        """Apply a CSS/layout design change to the carousel.
+
+        Uses the LLM to translate a natural-language design request into
+        CSS overrides, writes them to the project's output directory as
+        `design_overrides.css`, and re-exports the slide JPGs + PDF.
+        Does NOT regenerate source images.
+        """
+        project = await self._repo.get_project_by_id(project_id)
+        if project is None:
+            raise ValueError(f"Carousel project {project_id} not found")
+        if not project.output_dir:
+            raise ValueError(
+                f"Carousel project {project_id} has no output_dir; cannot apply design changes."
+            )
+
+        slides = await self._repo.get_slides_by_project(project_id)
+        if not slides:
+            raise ValueError(f"Carousel project {project_id} has no slides.")
+
+        # Build current HTML so the LLM can see the existing CSS classes
+        slides_data = [unpack_extras(s) for s in slides]
+        current_html = self._phase4_design(project, slides_data)
+
+        # Extract the CSS block from the HTML for the LLM
+        css_start = current_html.find("<style>")
+        css_end = current_html.find("</style>")
+        current_css = (
+            current_html[css_start + 7 : css_end].strip()
+            if css_start != -1 and css_end != -1
+            else ""
+        )
+
+        design_prompt = (
+            "You are a CSS expert editing an Instagram carousel HTML template. "
+            "The template uses fixed-size slides (1080x1350px) with inline CSS. "
+            "Generate ONLY a raw CSS snippet that applies the user's instruction. "
+            "Do NOT use <style> tags. Use existing class names where possible. "
+            "Keep the existing design system intact — only override what is needed.\n\n"
+            f"Instruction: {instruction}\n\n"
+            "Existing CSS classes (relevant excerpts):\n"
+            "```css\n"
+            f"{current_css[:2000]}\n"
+            "```\n\n"
+            "Return ONLY the CSS override snippet, nothing else."
+        )
+        override_css = await self._llm.generate(
+            [{"role": "user", "content": design_prompt}],
+            temperature=0.3,
+        )
+        override_css = override_css.strip()
+        if not override_css:
+            raise ValueError("LLM returned empty CSS; no changes applied.")
+
+        # Strip markdown fences if the LLM wrapped the CSS
+        if override_css.startswith("```css"):
+            override_css = override_css[5:]
+        if override_css.startswith("```"):
+            override_css = override_css[3:]
+        if override_css.endswith("```"):
+            override_css = override_css[:-3]
+        override_css = override_css.strip()
+
+        output_dir = Path(project.output_dir)
+        overrides_path = output_dir / "design_overrides.css"
+        overrides_path.write_text(override_css, encoding="utf-8")
+
+        # Re-export with the new overrides baked in
+        await self.re_render_slides(project_id)
+        return project
+
     async def _set_progress(
         self,
         project: CarouselProject,
