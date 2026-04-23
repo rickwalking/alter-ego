@@ -342,7 +342,11 @@ class ResearchTool(Protocol):
 class CarouselAgent(Protocol):
     """Protocol for the carousel content generation sub-agent."""
 
-    async def execute_pipeline(self, project_id: UUID) -> CarouselProject:
+    async def execute_pipeline(
+        self,
+        project_id: UUID,
+        seed_urls: list[str] | None = None,
+    ) -> CarouselProject:
         """Execute the full 7-phase carousel generation pipeline.
 
         Returns the updated project with status COMPLETED or FAILED.
