@@ -26,7 +26,7 @@ from rag_backend.application.services.carousel.nodes.export import (
     render_language,
     run_bilingual_export,
 )
-from rag_backend.application.services.carousel.nodes.images import run_images
+from rag_backend.application.services.carousel.nodes.images import run_image_one, run_images
 from rag_backend.application.services.carousel.nodes.linkedin import run_linkedin
 from rag_backend.application.services.carousel.nodes.progress import set_progress
 from rag_backend.application.services.carousel.nodes.research import run_research
@@ -382,6 +382,88 @@ class CarouselAgent:
         await self._phase6_bilingual_export(project, slides_data, pt_html, Path(project.output_dir))
         project.updated_at = datetime.utcnow()
         return await self._repo.update_project(project)
+
+    async def regenerate_slide_image(
+        self,
+        project_id: UUID,
+        slide_number: int,
+        instruction: str,
+    ) -> CarouselProject:
+        """Regenerate the hero image for a single slide.
+
+        Rewrites the slide's `image_prompt` via LLM using *instruction*,
+        generates a new image via the project's configured provider, and
+        re-exports the slide JPGs + PDF so the user sees the update.
+        """
+        project = await self._repo.get_project_by_id(project_id)
+        if project is None:
+            raise ValueError(f"Carousel project {project_id} not found")
+        if not project.output_dir:
+            raise ValueError(
+                f"Carousel project {project_id} has no output_dir; cannot regenerate image."
+            )
+
+        slides = await self._repo.get_slides_by_project(project_id)
+        slide = next((s for s in slides if s.slide_number == slide_number), None)
+        if slide is None:
+            raise ValueError(
+                f"Slide {slide_number} not found in project {project_id}"
+            )
+
+        slide_data = unpack_extras(slide)
+        current_prompt = slide_data.image_prompt or ""
+        if not current_prompt:
+            raise ValueError(
+                f"Slide {slide_number} has no image_prompt to refine."
+            )
+
+        rewrite_prompt = (
+            "You are editing an image generation prompt for a social media "
+            "carousel slide. Apply the user's instruction to the prompt below. "
+            "Return ONLY the rewritten prompt, nothing else.\n\n"
+            f"Instruction: {instruction}\n\n"
+            f"Original prompt:\n<<<{current_prompt}>>>"
+        )
+        new_prompt = await self._llm.generate(
+            [{"role": "user", "content": rewrite_prompt}],
+            temperature=0.7,
+        )
+        new_prompt = new_prompt.strip()
+        if not new_prompt:
+            raise ValueError("LLM returned an empty image prompt; no changes applied.")
+
+        # Persist the new prompt on both the column and in extras for safety
+        slide.image_prompt = new_prompt
+        extras: dict[str, object] = dict(slide.extras or {})
+        extras["image_prompt"] = new_prompt
+        slide.extras = extras
+        await self._repo.update_slide(slide)
+
+        # Update the in-memory SlideData so image generation uses the new prompt
+        slide_data = slide_data.__class__(
+            slide_number=slide_data.slide_number,
+            slide_type=slide_data.slide_type,
+            heading=slide_data.heading,
+            body=slide_data.body,
+            image_prompt=new_prompt,
+            features=slide_data.features,
+            stats=slide_data.stats,
+            insight=slide_data.insight,
+            translation_en=slide_data.translation_en,
+        )
+
+        # Regenerate the image file
+        output_dir = Path(project.output_dir)
+        await run_image_one(
+            project,
+            slide_data,
+            output_dir,
+            image_registry=self._image_registry,
+        )
+
+        # Re-export HTML + PDF so the new image is baked in
+        await self.re_render_slides(project_id)
+        return project
 
     async def _set_progress(
         self,

@@ -159,3 +159,82 @@ class TestReRenderSlides:
         repo.get_slides_by_project = AsyncMock(return_value=[])
         with pytest.raises(ValueError, match="no slides"):
             await agent.re_render_slides(project.id)
+
+
+@pytest.mark.unit
+class TestRegenerateSlideImage:
+    """The image regeneration flow."""
+
+    async def test_regenerate_image_rewrites_prompt_and_exports(self, tmp_path: Path) -> None:
+        agent, repo, export, pdf_builder = _agent_with_mocks()
+        project = CarouselProject(
+            topic="T",
+            audience="A",
+            niche="N",
+            status=CarouselStatus.COMPLETED,
+            output_dir=str(tmp_path),
+        )
+        repo.get_project_by_id = AsyncMock(return_value=project)
+        slide = _slide(2, extras={"image_prompt": "old scene"})
+        repo.get_slides_by_project = AsyncMock(return_value=[_slide(1), slide])
+        agent._llm.generate = AsyncMock(return_value="new futuristic scene")
+
+        result = await agent.regenerate_slide_image(project.id, 2, "make it futuristic")
+
+        assert slide.image_prompt == "new futuristic scene"
+        assert slide.extras is not None
+        assert slide.extras.get("image_prompt") == "new futuristic scene"
+        repo.update_slide.assert_awaited()
+        export.export_slides.assert_awaited_once()
+        pdf_builder.build.assert_called_once()
+        assert result.id == project.id
+
+    async def test_regenerate_raises_when_project_missing(self) -> None:
+        agent, repo, _, _ = _agent_with_mocks()
+        repo.get_project_by_id = AsyncMock(return_value=None)
+        with pytest.raises(ValueError, match="not found"):
+            await agent.regenerate_slide_image(uuid4(), 1, "change colors")
+
+    async def test_regenerate_raises_when_no_output_dir(self) -> None:
+        agent, repo, _, _ = _agent_with_mocks()
+        project = CarouselProject(
+            topic="T",
+            audience="A",
+            niche="N",
+            status=CarouselStatus.COMPLETED,
+            output_dir=None,
+        )
+        repo.get_project_by_id = AsyncMock(return_value=project)
+        with pytest.raises(ValueError, match="output_dir"):
+            await agent.regenerate_slide_image(project.id, 1, "change colors")
+
+    async def test_regenerate_raises_when_slide_missing(self) -> None:
+        agent, repo, _, _ = _agent_with_mocks()
+        project = CarouselProject(
+            topic="T",
+            audience="A",
+            niche="N",
+            status=CarouselStatus.COMPLETED,
+            output_dir="/tmp/x",
+        )
+        repo.get_project_by_id = AsyncMock(return_value=project)
+        repo.get_slides_by_project = AsyncMock(return_value=[_slide(1)])
+        with pytest.raises(ValueError, match="Slide 2 not found"):
+            await agent.regenerate_slide_image(project.id, 2, "change colors")
+
+    async def test_regenerate_raises_when_no_image_prompt(self) -> None:
+        agent, repo, _, _ = _agent_with_mocks()
+        project = CarouselProject(
+            topic="T",
+            audience="A",
+            niche="N",
+            status=CarouselStatus.COMPLETED,
+            output_dir="/tmp/x",
+        )
+        repo.get_project_by_id = AsyncMock(return_value=project)
+        slide = _slide(1)
+        slide.image_prompt = None
+        slide.extras = None
+        repo.get_slides_by_project = AsyncMock(return_value=[slide])
+        with pytest.raises(ValueError, match="no image_prompt"):
+            await agent.regenerate_slide_image(project.id, 1, "change colors")

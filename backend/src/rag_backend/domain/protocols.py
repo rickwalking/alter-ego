@@ -368,6 +368,28 @@ class CarouselAgent(Protocol):
         """
         ...
 
+    async def re_render_slides(self, project_id: UUID) -> CarouselProject:
+        """Re-render slide JPGs and PDF after text edits.
+
+        Reads slides from the DB, re-renders PT (and EN if available),
+        and bumps `updated_at` for cache-busting.
+        """
+        ...
+
+    async def regenerate_slide_image(
+        self,
+        project_id: UUID,
+        slide_number: int,
+        instruction: str,
+    ) -> CarouselProject:
+        """Regenerate the hero image for a single slide.
+
+        Rewrites the slide's `image_prompt` via LLM using *instruction*,
+        generates a new image, and re-exports the slides so the user
+        sees the updated artifact immediately.
+        """
+        ...
+
 
 class SocialPublisher(Protocol):
     """Protocol for publishing a carousel to a social network.

@@ -48,7 +48,12 @@ linkedin_post_en, slide_heading:N (or slide_heading:N:pt | slide_heading:N:en),
 slide_body:N (or slide_body:N:pt | slide_body:N:en). Slide-text edits trigger
 an automatic re-export of the slide JPGs and PDF in the language touched. Do
 not regenerate the whole carousel for minor edits; refine_carousel_copy is
-the correct tool."""
+the correct tool.
+
+When a user asks to change, update, or regenerate an image on a carousel slide,
+call regenerate_slide_image with the slide number and a natural-language
+instruction describing the desired change. This tool rewrites the image prompt,
+generates a new image, and re-exports the slides automatically."""
 
 
 class RAGAgent:
@@ -208,7 +213,8 @@ class RAGAgent:
 
             Use when the user asks to tweak the Instagram caption, LinkedIn
             post (PT or EN), a slide heading, or a slide body on a carousel
-            they already generated.
+            they already generated. This tool edits TEXT only — it does NOT
+            regenerate images. For image changes, use regenerate_slide_image.
 
             Args:
                 project_id: UUID of the carousel project to edit.
@@ -260,7 +266,7 @@ class RAGAgent:
             re_render_note = ""
             if target.startswith("slide_"):
                 try:
-                    await carousel_agent.re_render_slides(project_uuid)  # type: ignore[attr-defined]
+                    await carousel_agent.re_render_slides(project_uuid)
                     re_render_note = " Slides + PDF re-rendered."
                 except (ValueError, AttributeError) as exc:
                     re_render_note = f" Re-render skipped: {exc}"
@@ -271,6 +277,47 @@ class RAGAgent:
             )
 
         tools.append(refine_carousel_copy)
+
+        @tool
+        async def regenerate_slide_image(
+            project_id: str,
+            slide_number: int,
+            instruction: str,
+        ) -> str:
+            """Regenerate the hero image for a specific carousel slide.
+
+            Use when the user asks to change, update, or regenerate an image
+            on a carousel slide they already generated.
+
+            Args:
+                project_id: UUID of the carousel project.
+                slide_number: Which slide to regenerate (1-based index).
+                instruction: Natural-language description of the desired change
+                    (e.g., "make it more futuristic", "change to a blue color
+                    scheme", "show a different scene").
+            """
+            from uuid import UUID as _UUID
+
+            try:
+                project_uuid = _UUID(project_id)
+            except ValueError:
+                return f"Invalid project_id {project_id!r} — expected a UUID."
+
+            try:
+                await carousel_agent.regenerate_slide_image(
+                    project_uuid, slide_number, instruction
+                )
+            except ValueError as exc:
+                return f"Cannot regenerate image for slide {slide_number}: {exc}"
+            except Exception as exc:
+                return f"Image regeneration failed: {exc}"
+
+            return (
+                f"Regenerated image for slide {slide_number} on project "
+                f"{project_id}. Slides + PDF re-exported."
+            )
+
+        tools.append(regenerate_slide_image)
         return tools
 
     async def chat(
