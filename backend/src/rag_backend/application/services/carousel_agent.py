@@ -508,12 +508,17 @@ class CarouselAgent:
             "Generate ONLY a raw CSS snippet that applies the user's instruction. "
             "Do NOT use <style> tags. Use existing class names where possible. "
             "Keep the existing design system intact — only override what is needed.\n\n"
+            "IMPORTANT class names by slide type:\n"
+            "- Intro slide (slide 1): .s1-hero-img for the image\n"
+            "- Content slides (slides 2-5): .hero-img for the image\n"
+            "- CTA slide (slide 6): no image\n"
+            "Use the correct class for the slide mentioned in the instruction.\n\n"
             f"Instruction: {instruction}\n\n"
             "Existing CSS classes (relevant excerpts):\n"
             "```css\n"
             f"{current_css[:2000]}\n"
             "```\n\n"
-            "Return ONLY the CSS override snippet, nothing else."
+            "Return ONLY the raw CSS override snippet, nothing else."
         )
         override_css = await self._llm.generate(
             [{"role": "user", "content": design_prompt}],
@@ -525,7 +530,7 @@ class CarouselAgent:
 
         # Strip markdown fences if the LLM wrapped the CSS
         if override_css.startswith("```css"):
-            override_css = override_css[5:]
+            override_css = override_css[6:]
         if override_css.startswith("```"):
             override_css = override_css[3:]
         if override_css.endswith("```"):
