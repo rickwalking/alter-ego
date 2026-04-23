@@ -58,6 +58,10 @@ export default function PublishPage() {
     void createConversation
       .mutateAsync({ title: `Refine: ${projectId}` })
       .then((conv) => setConversationId(conv.id));
+
+    return () => {
+      _publishConversationsInitiated.delete(projectId);
+    };
   }, [projectId, conversationId, createConversation]);
 
   useEffect(() => {

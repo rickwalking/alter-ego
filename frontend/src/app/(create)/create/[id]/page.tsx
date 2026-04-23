@@ -61,6 +61,10 @@ export default function WorkspacePage() {
     };
 
     setupConversation();
+
+    return () => {
+      _workspaceConversationsInitiated.delete(projectId);
+    };
   }, [projectId, createConversation, project]);
 
   useEffect(() => {

@@ -228,7 +228,13 @@
     "chatLabel": "Chat with the carousel agent",
     "chatTitle": "Refine with the agent",
     "chatHelp": "Ask the agent to tweak a caption, shorten a LinkedIn post, or rewrite a slide heading. Changes save automatically.",
-    "viewerLanguageLabel": "Carousel language"
+    "viewerLanguageLabel": "Carousel language",
+    "carouselViewer": {
+      "previousSlide": "Previous slide",
+      "nextSlide": "Next slide",
+      "goToSlide": "Go to slide {number}",
+      "downloadImages": "Download images"
+    }
   },
   "notFound": {
     "code": "404",

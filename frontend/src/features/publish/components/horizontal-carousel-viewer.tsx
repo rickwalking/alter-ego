@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import { useTranslations } from "next-intl";
 import { ChevronLeft, ChevronRight, Download } from "lucide-react";
 
 interface HorizontalCarouselViewerProps {
@@ -17,6 +18,7 @@ export function HorizontalCarouselViewer({
   slideUrls,
   alt,
 }: HorizontalCarouselViewerProps) {
+  const t = useTranslations("publish.carouselViewer");
   const [activeIndex, setActiveIndex] = useState(0);
 
   if (slideUrls.length === 0) {
@@ -98,7 +100,7 @@ export function HorizontalCarouselViewer({
               type="button"
               onClick={goPrev}
               disabled={activeIndex === 0}
-              aria-label="Previous slide"
+              aria-label={t("previousSlide")}
               className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-black/50 p-2 text-white transition-opacity hover:bg-black/70 disabled:opacity-0"
             >
               <ChevronLeft className="h-5 w-5" />
@@ -107,7 +109,7 @@ export function HorizontalCarouselViewer({
               type="button"
               onClick={goNext}
               disabled={activeIndex === slideUrls.length - 1}
-              aria-label="Next slide"
+              aria-label={t("nextSlide")}
               className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-black/50 p-2 text-white transition-opacity hover:bg-black/70 disabled:opacity-0"
             >
               <ChevronRight className="h-5 w-5" />
@@ -122,7 +124,7 @@ export function HorizontalCarouselViewer({
             <button
               key={url}
               type="button"
-              aria-label={`Go to slide ${i + 1}`}
+              aria-label={t("goToSlide", { number: i + 1 })}
               onClick={() => scrollTo(i)}
               className={`h-1.5 rounded-full transition-all ${
                 i === activeIndex
@@ -139,7 +141,7 @@ export function HorizontalCarouselViewer({
           className="inline-flex items-center gap-1.5 rounded-md border border-[var(--color-border)] px-3 py-1.5 text-sm hover:bg-[var(--color-background)]"
         >
           <Download className="h-4 w-4" />
-          Download images
+          {t("downloadImages")}
         </button>
       </div>
     </div>
