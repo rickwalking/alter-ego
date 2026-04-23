@@ -193,7 +193,7 @@ class TestRefineSlideEnLanguage:
     """slide_*:N:en selectors mutate translation_en in extras."""
 
     async def test_resolve_slide_heading_en_uses_translation(self) -> None:
-        from rag_backend.application.services.rag_agent import _resolve_refine_target
+        from rag_backend.application.services.rag_agent_tools import _resolve_refine_target
 
         repo = AsyncMock()
         repo.update_slide = AsyncMock()
@@ -215,7 +215,7 @@ class TestRefineSlideEnLanguage:
         assert translation.get("heading") == "Reworked EN heading"
 
     async def test_resolve_slide_body_pt_default(self) -> None:
-        from rag_backend.application.services.rag_agent import _resolve_refine_target
+        from rag_backend.application.services.rag_agent_tools import _resolve_refine_target
 
         repo = AsyncMock()
         repo.update_slide = AsyncMock()
@@ -229,7 +229,7 @@ class TestRefineSlideEnLanguage:
         assert slide.body == "New PT body"
 
     async def test_invalid_language_returns_none(self) -> None:
-        from rag_backend.application.services.rag_agent import _resolve_refine_target
+        from rag_backend.application.services.rag_agent_tools import _resolve_refine_target
 
         repo = AsyncMock()
         slide = _slide(1)

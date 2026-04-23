@@ -9,7 +9,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from rag_backend.application.services.rag_agent import _resolve_refine_target
+from rag_backend.application.services.rag_agent_tools import _resolve_refine_target
 from rag_backend.domain.models import CarouselProject, CarouselSlide
 
 
