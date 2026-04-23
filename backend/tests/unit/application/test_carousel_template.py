@@ -234,7 +234,7 @@ class TestGenerateDesignTokens:
         # there is no separate "hero" file on disk.
         # `hero` + `slides` reference the raw hero images (used by blog).
         assert tokens["images"]["hero"] == f"/api/carousels/{sample_project.id}/images/slide_1"
-        assert len(tokens["images"]["slides"]) == 4
+        assert len(tokens["images"]["slides"]) == 6
         assert tokens["images"]["slides"][0] == f"/api/carousels/{sample_project.id}/images/slide_1"
         # `rendered_slides_*` reference the post-Playwright JPGs with
         # text overlay (used by publish viewer).

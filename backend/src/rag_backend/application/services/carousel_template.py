@@ -359,12 +359,12 @@ class CarouselTemplateBuilder:
                 # slides with text overlay (output of phase 6) — used by
                 # the publish carousel viewer.
                 "hero": f"/api/carousels/{project.id}/images/slide_1",
-                "slides": [f"/api/carousels/{project.id}/images/slide_{i}" for i in range(1, 5)],
+                "slides": [f"/api/carousels/{project.id}/images/slide_{i}" for i in range(1, 7)],
                 "rendered_slides_pt": [
-                    f"/api/carousels/{project.id}/slide-images/pt/slide_{i}" for i in range(1, 5)
+                    f"/api/carousels/{project.id}/slide-images/pt/slide_{i}" for i in range(1, 7)
                 ],
                 "rendered_slides_en": [
-                    f"/api/carousels/{project.id}/slide-images/en/slide_{i}" for i in range(1, 5)
+                    f"/api/carousels/{project.id}/slide-images/en/slide_{i}" for i in range(1, 7)
                 ],
             },
             layout={
