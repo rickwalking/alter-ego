@@ -2,6 +2,7 @@
 node_modules/
 .venv/
 .python-version
+.playwright-mcp/
 
 # Build outputs
 .next/
