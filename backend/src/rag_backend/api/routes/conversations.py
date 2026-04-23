@@ -5,6 +5,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from rag_backend.api.dependencies.agents import build_rag_agent
 from rag_backend.api.schemas import (
     ChatRequest,
     ChatResponse,
@@ -15,7 +16,6 @@ from rag_backend.api.schemas import (
     MessageListResponse,
     MessageSource,
 )
-from rag_backend.api.dependencies.agents import build_rag_agent
 from rag_backend.application.services.conversation_service import ConversationService
 from rag_backend.infrastructure.container import get_container
 from rag_backend.infrastructure.database.config import get_session

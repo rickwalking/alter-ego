@@ -1,13 +1,15 @@
 """FastAPI routes for carousel content generation."""
 
+import json
 import shutil
+from collections.abc import AsyncIterator
 from pathlib import Path
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from fastapi.params import Path as FastPath
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.api.schemas import (
@@ -57,6 +59,7 @@ def get_instagram_publisher() -> SocialPublisher:
 
 
 def get_carousel_agent(
+    request: Request,
     session: Annotated[AsyncSession, Depends(get_session)],
 ) -> CarouselAgent:
     """Build a CarouselAgent bound to the per-request session.
@@ -78,6 +81,8 @@ def get_carousel_agent(
         return container.carousel_agent()
 
     settings = container.settings()
+    # Checkpointer is stashed on app.state by the lifespan context.
+    checkpointer = getattr(request.app.state, "carousel_checkpointer", None)
     return CarouselAgentImpl(
         repository=PostgresCarouselRepository(session),
         llm_service=container.llm_service(),
@@ -87,6 +92,7 @@ def get_carousel_agent(
         linkedin_post_generator=container.linkedin_post_generator(),
         pdf_slide_builder=container.pdf_slide_builder(),
         output_base_dir=settings.carousel_output_dir,
+        checkpointer=checkpointer,
     )
 
 
@@ -155,6 +161,48 @@ async def generate_carousel(
         project_id,
         seed_urls=request.sources,
     )
+    return CarouselStatusResponse.model_validate(project)
+
+
+@router.get("/{project_id}/stream")
+async def stream_carousel(
+    project_id: UUID,
+    agent: Annotated[CarouselAgent, Depends(get_carousel_agent)],
+) -> StreamingResponse:
+    """Stream pipeline progress as Server-Sent Events.
+
+    Each event is `data: <json>\\n\\n` where the JSON object has
+    `node`, `status`, and `phase_progress`. The frontend subscribes
+    via EventSource (GET-only) and replaces its polling loop with push
+    updates.
+    """
+
+    async def event_generator() -> AsyncIterator[str]:
+        async for event in agent.stream_pipeline(project_id, seed_urls=None):
+            yield f"data: {json.dumps(event, default=str)}\n\n"
+
+    return StreamingResponse(event_generator(), media_type="text/event-stream")
+
+
+@router.post("/{project_id}/resume", response_model=CarouselStatusResponse)
+async def resume_carousel(
+    project_id: UUID,
+    agent: Annotated[CarouselAgent, Depends(get_carousel_agent)],
+) -> CarouselStatusResponse:
+    """Resume an interrupted pipeline from its last checkpoint.
+
+    Returns 503 when no checkpointer is configured (empty settings path,
+    tests, or containerized envs without a writable volume). The
+    idempotency hooks inside each node make expensive work (image API
+    calls, slide rows) skip if already complete.
+    """
+    try:
+        project = await agent.resume_pipeline(project_id)
+    except RuntimeError as exc:
+        raise HTTPException(
+            status_code=503,
+            detail=f"Resume unavailable: {exc}",
+        ) from exc
     return CarouselStatusResponse.model_validate(project)
 
 
