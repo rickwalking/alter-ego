@@ -10,9 +10,11 @@ Orchestrates the 7-phase carousel pipeline:
 7. Caption Generation - Instagram caption with hashtags
 """
 
+import asyncio
 from collections.abc import AsyncIterator
 from datetime import datetime
 from pathlib import Path
+from typing import ClassVar
 from uuid import UUID
 
 from langgraph.checkpoint.base import BaseCheckpointSaver
@@ -69,6 +71,13 @@ _ERR_NO_SLIDES = "Carousel project {} has no slides."
 
 class CarouselAgent(CarouselRefinementMixin):
     """Sub-agent specialized in carousel content generation."""
+
+    # Class-level registries so graph execution survives HTTP disconnects.
+    # `_tasks` holds the background asyncio.Task running the graph;
+    # `_queues` holds an asyncio.Queue that pipes events from the runner
+    # to every active SSE consumer.
+    _tasks: ClassVar[dict[str, asyncio.Task[None]]] = {}
+    _queues: ClassVar[dict[str, asyncio.Queue[PipelineEvent]]] = {}
 
     def __init__(  # noqa: PLR0913 — agent requires all pipeline dependencies
         self,
@@ -178,24 +187,24 @@ class CarouselAgent(CarouselRefinementMixin):
         final_project: CarouselProject = final_state["project"]
         return final_project
 
-    async def stream_pipeline(
+    async def _run_graph_producer(
         self,
         project_id: UUID,
-        seed_urls: list[str] | None = None,
-    ) -> AsyncIterator[PipelineEvent]:
-        """Run the pipeline and yield progress events as they happen.
-
-        Each yielded dict has:
-            - `node`: name of the node that just finished (or "start"/"end")
-            - `status`: current CarouselStatus value
-            - `phase_progress`: the live per-slide/label payload
-        The stream terminates with a final `{"node": "end", ...}` event.
-        Used by the SSE route to drive real-time UI updates without
-        polling `/status`.
-        """
+        seed_urls: list[str] | None,
+        queue: asyncio.Queue[PipelineEvent],
+    ) -> None:
+        """Background task that runs the graph and feeds events into *queue*."""
         project = await self._repo.get_project_by_id(project_id)
         if project is None:
-            raise ValueError(_ERR_PROJECT_NOT_FOUND.format(project_id))
+            await queue.put(
+                {
+                    "node": "error",
+                    "status": "failed",
+                    "phase_progress": None,
+                    "error": _ERR_PROJECT_NOT_FOUND.format(project_id),
+                }
+            )
+            return
 
         output_dir = self._output_base / str(project_id)
         output_dir.mkdir(parents=True, exist_ok=True)
@@ -213,8 +222,14 @@ class CarouselAgent(CarouselRefinementMixin):
             else None
         )
 
-        # If a checkpoint exists for this thread, resume from it so an SSE
-        # reconnect doesn't restart the pipeline from phase 1.
+        await queue.put(
+            {
+                "node": "start",
+                "status": project.status.value,
+                "phase_progress": project.phase_progress,
+            }
+        )
+
         has_checkpoint = False
         if config is not None:
             try:
@@ -223,49 +238,91 @@ class CarouselAgent(CarouselRefinementMixin):
             except Exception:
                 has_checkpoint = False
 
-        yield {
-            "node": "start",
-            "status": project.status.value,
-            "phase_progress": project.phase_progress,
-        }
-
         try:
             stream_input = None if has_checkpoint else initial_state
             async for update in graph.astream(stream_input, config=config):
-                # `update` is {node_name: partial_state_dict}. We emit
-                # one SSE event per finished node with the latest
-                # project snapshot so the frontend can refresh its UI.
                 for node_name, partial in update.items():
                     snapshot = partial.get("project") if isinstance(partial, dict) else None
                     if snapshot is None:
                         continue
-                    yield {
-                        "node": node_name,
-                        "status": snapshot.status.value,
-                        "phase_progress": snapshot.phase_progress,
-                    }
+                    await queue.put(
+                        {
+                            "node": node_name,
+                            "status": snapshot.status.value,
+                            "phase_progress": snapshot.phase_progress,
+                        }
+                    )
         except Exception as exc:
-            # Re-fetch so we capture the phase_progress that was updated
-            # inside the LangGraph state (the original `project` is stale).
             latest_project = await self._repo.get_project_by_id(project_id)
             if latest_project is None:
                 latest_project = project
             latest_project.mark_failed(str(exc))
             await self._repo.update_project(latest_project)
-            yield {
-                "node": "error",
-                "status": latest_project.status.value,
-                "phase_progress": latest_project.phase_progress,
-                "error": str(exc),
-            }
+            await queue.put(
+                {
+                    "node": "error",
+                    "status": latest_project.status.value,
+                    "phase_progress": latest_project.phase_progress,
+                    "error": str(exc),
+                }
+            )
             return
 
         final_project = await self._repo.get_project_by_id(project_id)
-        yield {
-            "node": "end",
-            "status": final_project.status.value if final_project else "completed",
-            "phase_progress": final_project.phase_progress if final_project else None,
-        }
+        await queue.put(
+            {
+                "node": "end",
+                "status": final_project.status.value if final_project else "completed",
+                "phase_progress": final_project.phase_progress if final_project else None,
+            }
+        )
+
+    async def stream_pipeline(
+        self,
+        project_id: UUID,
+        seed_urls: list[str] | None = None,
+    ) -> AsyncIterator[PipelineEvent]:
+        """Yield progress events from a background graph runner.
+
+        Graph execution is decoupled from the HTTP connection so an SSE
+        reconnect (or browser refresh) never cancels an in-flight LLM call
+        or restarts the pipeline from scratch.
+
+        Each yielded dict has:
+            - `node`: name of the node that just finished (or "start"/"end")
+            - `status`: current CarouselStatus value
+            - `phase_progress`: the live per-slide/label payload
+        The stream terminates with a final `{"node": "end", ...}` event.
+        """
+        thread_id = self._thread_id(project_id)
+
+        if thread_id not in self._tasks or self._tasks[thread_id].done():
+            queue: asyncio.Queue[PipelineEvent] = asyncio.Queue(maxsize=100)
+            self._queues[thread_id] = queue
+            self._tasks[thread_id] = asyncio.create_task(
+                self._run_graph_producer(project_id, seed_urls, queue)
+            )
+
+        queue = self._queues[thread_id]
+
+        while True:
+            try:
+                event = await asyncio.wait_for(queue.get(), timeout=5.0)
+            except TimeoutError:
+                task = self._tasks.get(thread_id)
+                if task is not None and task.done():
+                    final_project = await self._repo.get_project_by_id(project_id)
+                    yield {
+                        "node": "end",
+                        "status": final_project.status.value if final_project else "completed",
+                        "phase_progress": final_project.phase_progress if final_project else None,
+                    }
+                    break
+                continue
+
+            yield event
+            if event.get("node") in ("end", "error"):
+                break
 
     async def resume_pipeline(self, project_id: UUID) -> CarouselProject:
         """Re-invoke the pipeline against an existing checkpoint thread.
