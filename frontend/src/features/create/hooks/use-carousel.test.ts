@@ -8,6 +8,7 @@ import {
   useCarouselProject,
   useResumeCarousel,
   useGenerateCarousel,
+  useDeleteCarousel,
 } from "./use-carousel";
 import { API_ENDPOINTS } from "@/constants/api";
 
@@ -433,5 +434,59 @@ describe("useGenerateCarousel", () => {
 
     await waitFor(() => expect(result.current.isError).toBe(true));
     expect(result.current.error).toEqual(new Error("generate failed"));
+  });
+});
+
+describe("useDeleteCarousel", () => {
+  // Scenario: deleting a project removes it from the cache
+  it("removes project from cache on success", async () => {
+    mockApiCall.mockResolvedValueOnce({});
+    const queryClient = new QueryClient();
+    const removeQueries = vi.spyOn(queryClient, "removeQueries");
+    const invalidateQueries = vi.spyOn(queryClient, "invalidateQueries");
+
+    const createWrapper = () =>
+      function Wrapper({ children }: { children: ReactNode }) {
+        return createElement(
+          QueryClientProvider,
+          { client: queryClient },
+          children,
+        );
+      };
+
+    const { result } = renderHook(() => useDeleteCarousel(), {
+      wrapper: createWrapper(),
+    });
+
+    result.current.mutate("abc-123");
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(mockApiCall).toHaveBeenCalledWith(
+      API_ENDPOINTS.CAROUSEL_BY_ID("abc-123"),
+      expect.any(Object),
+      { method: "DELETE" },
+    );
+    expect(removeQueries).toHaveBeenCalledWith({
+      queryKey: ["carousel", "abc-123"],
+    });
+    expect(removeQueries).toHaveBeenCalledWith({
+      queryKey: ["carousel-status", "abc-123"],
+    });
+    expect(invalidateQueries).toHaveBeenCalledWith({
+      queryKey: ["carousels"],
+    });
+  });
+
+  // Scenario: delete mutation surfaces API errors
+  it("surfaces API errors", async () => {
+    mockApiCall.mockRejectedValueOnce(new Error("not found"));
+    const { result } = renderHook(() => useDeleteCarousel(), {
+      wrapper: createWrapper(),
+    });
+
+    result.current.mutate("abc-123");
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(result.current.error).toEqual(new Error("not found"));
   });
 });

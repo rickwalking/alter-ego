@@ -3,6 +3,7 @@ import { BLOG_LANGUAGES, DEFAULT_BLOG_LANGUAGE } from "@/constants/api";
 import { designTokensToCssVars } from "@/constants/blog";
 import { Container } from "@/components/layout";
 import { fetchBlogWithDesign } from "@/lib/server-fetch";
+import { BlogPostAdminPanel } from "./blog-post-admin-panel";
 import { BlogPostContent } from "./blog-post-content";
 import { BlogPostHeader } from "./blog-post-header";
 import { BlogPostHero } from "./blog-post-hero";
@@ -61,6 +62,7 @@ export default async function BlogPostPage({ params, searchParams }: BlogPostPag
       <Container className="relative z-10 py-12">
         <BackLink />
         <article className="mx-auto max-w-3xl">
+          <BlogPostAdminPanel projectId={id} design={design} />
           <BlogPostHeader
             title={blog.title}
             subtitle={blog.subtitle ?? undefined}

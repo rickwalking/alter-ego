@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useLayoutEffect, useRef, useState } from "react";
+import { z } from "zod";
 import { apiCall } from "@/lib/api-client";
 import { API_ENDPOINTS, HTTP_METHODS } from "@/constants/api";
 import {
@@ -146,6 +147,24 @@ export function useCarouselStatus(id: string | null) {
 /** Fetch carousel project by ID for workspace page. */
 export function useCarouselProject(id: string | null) {
   return useQuery(carouselProjectOptions(id));
+}
+
+/** Delete a carousel project and invalidate related caches. */
+export function useDeleteCarousel() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (projectId: string): Promise<void> => {
+      await apiCall(API_ENDPOINTS.CAROUSEL_BY_ID(projectId), z.object({}), {
+        method: HTTP_METHODS.DELETE,
+      });
+    },
+    onSuccess: (_data, projectId) => {
+      queryClient.removeQueries({ queryKey: carouselKeys.detail(projectId) });
+      queryClient.removeQueries({ queryKey: carouselKeys.status(projectId) });
+      queryClient.invalidateQueries({ queryKey: carouselKeys.list() });
+    },
+  });
 }
 
 /**
