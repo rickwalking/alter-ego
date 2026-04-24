@@ -107,6 +107,7 @@ def get_carousel_agent(
 async def create_carousel(
     request: CarouselProjectCreate,
     repo: Annotated[CarouselRepository, Depends(get_carousel_repo)],
+    session: Annotated[AsyncSession, Depends(get_session)],
 ) -> CarouselProjectResponse:
     """Create a new carousel project."""
     from rag_backend.domain.models import CarouselProject, CarouselTheme
@@ -124,6 +125,7 @@ async def create_carousel(
         theme=theme,
     )
     created = await repo.create_project(project)
+    await session.commit()
     return CarouselProjectResponse.model_validate(created)
 
 

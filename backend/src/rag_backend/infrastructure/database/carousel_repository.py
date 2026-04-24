@@ -33,6 +33,7 @@ class PostgresCarouselRepository(CarouselRepository):
         model = CarouselProjectModel.from_entity(project)
         self._session.add(model)
         await self._session.flush()
+        await self._session.commit()
         await self._session.refresh(model)
         return model.to_entity()
 
@@ -69,6 +70,7 @@ class PostgresCarouselRepository(CarouselRepository):
             raise ValueError(_ERR_PROJECT_NOT_FOUND.format(project.id))
         model.update_from_entity(project)
         await self._session.flush()
+        await self._session.commit()
         await self._session.refresh(model)
         return model.to_entity()
 
@@ -81,6 +83,7 @@ class PostgresCarouselRepository(CarouselRepository):
             return False
         await self._session.delete(model)
         await self._session.flush()
+        await self._session.commit()
         return True
 
     async def create_slide(self, slide: CarouselSlide) -> CarouselSlide:
@@ -88,6 +91,7 @@ class PostgresCarouselRepository(CarouselRepository):
         model = CarouselSlideModel.from_entity(slide)
         self._session.add(model)
         await self._session.flush()
+        await self._session.commit()
         await self._session.refresh(model)
         return model.to_entity()
 
@@ -111,6 +115,7 @@ class PostgresCarouselRepository(CarouselRepository):
             raise ValueError(_ERR_SLIDE_NOT_FOUND.format(slide.id))
         model.update_from_entity(slide)
         await self._session.flush()
+        await self._session.commit()
         await self._session.refresh(model)
         return model.to_entity()
 
@@ -124,6 +129,7 @@ class PostgresCarouselRepository(CarouselRepository):
         for model in models:
             await self._session.delete(model)
         await self._session.flush()
+        await self._session.commit()
         return True
 
     async def create_research_source(self, source: ResearchSource) -> ResearchSource:
@@ -131,6 +137,7 @@ class PostgresCarouselRepository(CarouselRepository):
         model = ResearchSourceModel.from_entity(source)
         self._session.add(model)
         await self._session.flush()
+        await self._session.commit()
         await self._session.refresh(model)
         return model.to_entity()
 
