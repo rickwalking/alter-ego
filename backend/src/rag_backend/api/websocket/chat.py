@@ -16,6 +16,19 @@ from rag_backend.infrastructure.database.conversation_repository import (
 )
 
 
+def _sanitize_chunk(chunk: dict[str, object]) -> dict[str, object]:
+    """Make an agent event chunk JSON-serializable for WebSocket.
+
+    Deep Agents subagents may return ``ToolMessage`` or other LangChain
+    message objects as the ``result`` of a ``tool_result`` event. This
+    replaces any non-serializable value with its string representation.
+    """
+    result = chunk.get("result")
+    if result is not None and not isinstance(result, str | int | float | bool | list | dict | None):
+        return {**chunk, "result": str(result)}
+    return chunk
+
+
 class ChatWebSocketHandler:
     """Handler for WebSocket chat connections."""
 
@@ -121,9 +134,13 @@ class ChatWebSocketHandler:
                             stream=True,
                             persist_messages=False,
                         ):
-                            await websocket.send_json(chunk)
-                            if chunk.get("type") == "token":
-                                full_response += chunk.get("content", "")
+                            # Sanitize chunk for JSON serialization.
+                            # Tool outputs from subagents may be LangChain
+                            # Message objects rather than plain strings.
+                            safe_chunk = _sanitize_chunk(chunk)
+                            await websocket.send_json(safe_chunk)
+                            if safe_chunk.get("type") == "token":
+                                full_response += safe_chunk.get("content", "")
 
                         # Persist the assistant message and commit AFTER the
                         # stream so tool side-effects are already committed.
