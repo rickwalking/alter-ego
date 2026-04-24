@@ -1,9 +1,15 @@
-"""OpenAI image-prompt sanitizer.
+"""OpenAI image-prompt sanitizer — FALLBACK safety net.
 
 OpenAI's moderation system flags photorealistic depictions of real brands,
-people, and controversial events. This module strips or replaces those
-triggers with generic analogies so the scene stays intact but passes
-moderation.
+people, and controversial events. The PRIMARY defense is the content-generation
+prompt (``agents/prompts/carousel/v1/content_prompt.yaml``), which instructs
+the LLM to avoid naming real-world brands, celebrities, or company logos in
+``image_prompt`` and to use generic analogies instead.
+
+This module exists as a SECONDARY fallback: it catches any trigger words that
+still slip through despite the prompt instruction. The hardcoded map below is
+for known, high-frequency triggers. **Do not add new brands here** — improve
+the prompt instructions instead so the LLM generalizes to any brand.
 
 Applied ONLY to OpenAI providers (gpt-image-2). Gemini's comic-neon style
 is already abstract enough that it rarely hits the same filters.
@@ -13,9 +19,12 @@ from __future__ import annotations
 
 import re
 
-# Map known trigger words to generic analogies.
+# Fallback map for known trigger words that the LLM prompt may miss.
 # Keys are lower-cased; matching is case-insensitive.
 # Values are the replacement text.
+# NOTE: Prefer updating the prompt template over expanding this map.
+#       The prompt generalizes to any brand; this map only catches
+#       specific slips.
 _ANALOGY_MAP: dict[str, str] = {
     # People
     "elon musk": "a tech CEO",
@@ -76,6 +85,10 @@ def sanitize_image_prompt(scene: str) -> str:
     Replaces real brands, people, and controversial terms with generic
     analogies. Preserves the overall scene description and cinematic
     style.
+
+    This is a FALLBACK. The primary defense is the LLM prompt that
+    generates ``image_prompt`` — it should already avoid naming brands
+    and celebrities.
     """
 
     def _replace(match: re.Match[str]) -> str:

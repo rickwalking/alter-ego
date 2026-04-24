@@ -139,6 +139,16 @@ template: |
   - Elements to favor: monitors, terminals, code streams,
     neon cityscapes, robots, circuit boards, holograms,
     servers, data pipelines.
+  - DO NOT name real-world brands, celebrities, CEOs, or
+    company logos in the image_prompt. Image generation APIs
+    block them. Use generic analogies:
+      * a ride-sharing app (not Uber)
+      * a tech CEO (not Elon Musk)
+      * an AI research lab (not OpenAI)
+      * a social network (not Facebook)
+      * a chip manufacturer (not NVIDIA)
+    If the topic is about a specific brand or person, describe
+    the scene conceptually without naming them.
 
 model:
   temperature: 0.7
