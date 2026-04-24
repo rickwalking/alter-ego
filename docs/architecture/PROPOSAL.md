@@ -147,7 +147,7 @@ async function getKnowledgeBase() {
 
 export default async function HomePage() {
   const kb = await getKnowledgeBase(); // Server-side fetch
-  
+
   return (
     <div>
       <h1>My Knowledge Base</h1>
@@ -335,7 +335,7 @@ function useAccordion() {
 
 export function Accordion({ children }: { children: React.ReactNode }) {
   const [openItem, setOpenItem] = useState<string | null>(null);
-  
+
   return (
     <AccordionContext.Provider value={{ openItem, setOpenItem }}>
       <div className="divide-y">{children}</div>
@@ -343,26 +343,26 @@ export function Accordion({ children }: { children: React.ReactNode }) {
   );
 }
 
-export function AccordionItem({ 
-  id, 
-  children 
-}: { 
-  id: string; 
-  children: React.ReactNode 
+export function AccordionItem({
+  id,
+  children
+}: {
+  id: string;
+  children: React.ReactNode
 }) {
   return <div className="py-2">{children}</div>;
 }
 
-export function AccordionTrigger({ 
-  itemId, 
-  children 
-}: { 
-  itemId: string; 
-  children: React.ReactNode 
+export function AccordionTrigger({
+  itemId,
+  children
+}: {
+  itemId: string;
+  children: React.ReactNode
 }) {
   const { openItem, setOpenItem } = useAccordion();
   const isOpen = openItem === itemId;
-  
+
   return (
     <button
       onClick={() => setOpenItem(isOpen ? null : itemId)}
@@ -374,16 +374,16 @@ export function AccordionTrigger({
   );
 }
 
-export function AccordionContent({ 
-  itemId, 
-  children 
-}: { 
-  itemId: string; 
-  children: React.ReactNode 
+export function AccordionContent({
+  itemId,
+  children
+}: {
+  itemId: string;
+  children: React.ReactNode
 }) {
   const { openItem } = useAccordion();
   if (openItem !== itemId) return null;
-  
+
   return <div className="pt-2">{children}</div>;
 }
 
@@ -425,7 +425,7 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     setupFiles: ['./src/test/setup.ts'],
-    
+
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html', 'lcov'],
@@ -446,7 +446,7 @@ export default defineConfig({
         statements: 90,
       },
     },
-    
+
     clearMocks: true,
     mockReset: true,
     restoreMocks: true,
@@ -500,45 +500,45 @@ import { Button } from './Button';
 describe('Button', () => {
   it('renders with default props', () => {
     render(<Button>Click me</Button>);
-    
+
     expect(screen.getByRole('button', { name: /click me/i })).toBeInTheDocument();
   });
-  
+
   it('handles click events', async () => {
     const handleClick = vi.fn();
     const user = userEvent.setup();
-    
+
     render(<Button onClick={handleClick}>Click me</Button>);
-    
+
     await user.click(screen.getByRole('button'));
-    
+
     expect(handleClick).toHaveBeenCalledTimes(1);
   });
-  
+
   it('is disabled when loading', async () => {
     const handleClick = vi.fn();
     const user = userEvent.setup();
-    
+
     render(<Button isLoading onClick={handleClick}>Loading</Button>);
-    
+
     const button = screen.getByRole('button');
     expect(button).toBeDisabled();
-    
+
     await user.click(button);
     expect(handleClick).not.toHaveBeenCalled();
   });
-  
+
   it('applies variant styles correctly', () => {
     const { rerender } = render(<Button variant="primary">Primary</Button>);
     expect(screen.getByRole('button')).toHaveClass('bg-primary');
-    
+
     rerender(<Button variant="danger">Danger</Button>);
     expect(screen.getByRole('button')).toHaveClass('bg-destructive');
   });
-  
+
   it('has correct ARIA attributes', () => {
     render(<Button aria-label="Submit form">Submit</Button>);
-    
+
     expect(screen.getByRole('button')).toHaveAttribute('aria-label', 'Submit form');
   });
 });
@@ -567,7 +567,7 @@ export function renderWithProviders(
   options?: Omit<RenderOptions, 'wrapper'>
 ) {
   const queryClient = createTestQueryClient();
-  
+
   return {
     ...render(ui, {
       wrapper: ({ children }) => (
@@ -598,7 +598,7 @@ export const handlers = [
       { id: '2', title: 'My Projects', content: '...' },
     ]);
   }),
-  
+
   http.post('/api/chat', async ({ request }) => {
     const body = await request.json();
     return HttpResponse.json({
@@ -643,11 +643,11 @@ afterAll(() => server.close());
 // ❌ BAD: useEffect for derived state
 function Cart({ items }) {
   const [total, setTotal] = useState(0);
-  
+
   useEffect(() => {
     setTotal(items.reduce((acc, item) => acc + item.price, 0));
   }, [items]);
-  
+
   return <div>Total: ${total}</div>;
 }
 
@@ -671,11 +671,11 @@ function useCartSummary(items: CartItem[]) {
 // ❌ BAD: useEffect for data fetching
 function UserProfile({ userId }) {
   const [user, setUser] = useState(null);
-  
+
   useEffect(() => {
     fetchUser(userId).then(setUser);
   }, [userId]);
-  
+
   return <div>{user?.name}</div>;
 }
 
@@ -691,7 +691,7 @@ function UserProfile({ userId }) {
     queryKey: ['user', userId],
     queryFn: () => fetchUser(userId),
   });
-  
+
   return <div>{user?.name}</div>;
 }
 ```
@@ -700,7 +700,7 @@ function UserProfile({ userId }) {
 // ❌ BAD: useEffect for browser API
 function OnlineStatus() {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
-  
+
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
     const handleOffline = () => setIsOnline(false);
@@ -711,7 +711,7 @@ function OnlineStatus() {
       window.removeEventListener('offline', handleOffline);
     };
   }, []);
-  
+
   return <div>{isOnline ? 'Online' : 'Offline'}</div>;
 }
 
@@ -790,14 +790,14 @@ With React Compiler enabled, you can **remove manual memoization**:
 const ExpensiveComponent = memo(function ExpensiveComponent({ data, onClick }) {
   const processed = useMemo(() => expensiveProcess(data), [data]);
   const handleClick = useCallback(() => onClick(processed), [onClick, processed]);
-  
+
   return <div onClick={handleClick}>{processed}</div>;
 });
 
 // AFTER: Compiler handles memoization automatically
 function ExpensiveComponent({ data, onClick }) {
   const processed = expensiveProcess(data); // Automatically memoized
-  
+
   return <div onClick={() => onClick(processed)}>{processed}</div>;
 }
 ```
@@ -812,7 +812,7 @@ function Component({ config }) {
     apiUrl: config.apiUrl,
     timeout: config.timeout
   }), [config.apiUrl, config.timeout]);
-  
+
   useEffect(() => {
     setupService(stableConfig);
   }, [stableConfig]);
@@ -892,7 +892,7 @@ export function ChatInput({ onSubmit }: { onSubmit: (data: ChatMessageForm) => v
         rows={3}
       />
       {errors.message && <span>{errors.message.message}</span>}
-      
+
       <button type="submit" disabled={isSubmitting}>
         Send
       </button>
@@ -920,24 +920,24 @@ export async function apiCall<T>(
 ): Promise<T> {
   const response = await fetch(url, options);
   const json = await response.json();
-  
+
   // Validate response structure
   const responseResult = apiResponseSchema.safeParse(json);
   if (!responseResult.success) {
     throw new Error('Invalid API response structure');
   }
-  
+
   if (!responseResult.data.success) {
     throw new Error(responseResult.data.message || 'API request failed');
   }
-  
+
   // Validate data
   const dataResult = schema.safeParse(responseResult.data.data);
   if (!dataResult.success) {
     console.error('Data validation failed:', dataResult.error.issues);
     throw new Error('Invalid data from API');
   }
-  
+
   return dataResult.data;
 }
 
@@ -995,20 +995,20 @@ export const env = envSchema.parse(process.env);
   --color-primary-800: oklch(0.42 0.199 278);
   --color-primary-900: oklch(0.38 0.146 278);
   --color-primary-950: oklch(0.28 0.091 278);
-  
+
   /* Semantic Colors */
   --color-success: oklch(0.72 0.219 150);
   --color-success-foreground: oklch(0.98 0.005 150);
-  
+
   --color-warning: oklch(0.84 0.16 84);
   --color-warning-foreground: oklch(0.28 0.07 46);
-  
+
   --color-error: oklch(0.58 0.253 18);
   --color-error-foreground: oklch(0.98 0.005 18);
-  
+
   --color-info: oklch(0.72 0.14 250);
   --color-info-foreground: oklch(0.98 0.005 250);
-  
+
   /* Neutral - Zinc */
   --color-gray-50: oklch(0.985 0 0);
   --color-gray-100: oklch(0.967 0.001 286);
@@ -1032,7 +1032,7 @@ export const env = envSchema.parse(process.env);
   --font-sans: Inter, ui-sans-serif, system-ui, sans-serif;
   --font-display: "Cal Sans", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, monospace;
-  
+
   /* Fluid Type Scale */
   --text-xs: clamp(0.75rem, 0.7rem + 0.25vw, 0.8125rem);
   --text-sm: clamp(0.8125rem, 0.75rem + 0.3vw, 0.875rem);
@@ -1073,10 +1073,10 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches
       ? 'dark'
       : 'light';
-    
+
     const resolved = theme === 'system' ? systemTheme : theme;
     setResolvedTheme(resolved);
-    
+
     root.classList.remove('light', 'dark');
     root.classList.add(resolved);
   }, [theme]);

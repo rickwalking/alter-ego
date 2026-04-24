@@ -14,12 +14,16 @@ import { ConversationSidebar } from "./conversation-sidebar";
 
 export function ChatInterface() {
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
+  const [isComposingNewChat, setIsComposingNewChat] = useState(false);
   const [optimisticMessages, setOptimisticMessages] = useState<Message[]>([]);
 
   const { data: conversations = [], isLoading: loadingConversations } = useConversations();
   const effectiveConversationId = useMemo(
-    () => activeConversationId ?? (conversations.length > 0 ? conversations[0].id : null),
-    [activeConversationId, conversations],
+    () =>
+      isComposingNewChat
+        ? null
+        : activeConversationId ?? (conversations.length > 0 ? conversations[0].id : null),
+    [activeConversationId, conversations, isComposingNewChat],
   );
   const { data: messages = [], isLoading: loadingMessages } = useConversationMessages(effectiveConversationId);
   const createConversation = useCreateConversation();
@@ -37,6 +41,7 @@ export function ChatInterface() {
       const newConv = await createConversation.mutateAsync({});
       convId = newConv.id;
       setActiveConversationId(convId);
+      setIsComposingNewChat(false);
     }
 
     const optimisticMsg: Message = {
@@ -66,11 +71,13 @@ export function ChatInterface() {
 
   const handleNewChat = useCallback(() => {
     setActiveConversationId(null);
+    setIsComposingNewChat(true);
     setOptimisticMessages([]);
   }, []);
 
   const handleSelectConversation = useCallback((id: string) => {
     setActiveConversationId(id);
+    setIsComposingNewChat(false);
     setOptimisticMessages([]);
   }, []);
 

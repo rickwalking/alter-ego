@@ -76,15 +76,14 @@ describe("MessageItem Component", () => {
 
   describe("Given a streaming message is rendered", () => {
     describe("When the MessageItem displays a streaming message", () => {
-      it("Then it should show the typing indicator", () => {
+      it("Then it should show the streaming message content", () => {
         render(<MessageItem message={mockStreamingMessage} />);
-        expect(screen.getByText("typing...")).toBeInTheDocument();
+        expect(screen.getByText("Typing response...")).toBeInTheDocument();
       });
 
-      it("Then the typing indicator should have animate-pulse class", () => {
+      it("Then the streaming message should use the standard message prose styling", () => {
         render(<MessageItem message={mockStreamingMessage} />);
-        const typingIndicator = screen.getByText("typing...");
-        expect(typingIndicator).toHaveClass("animate-pulse");
+        expect(screen.getByText("Typing response...")).toHaveClass("prose");
       });
     });
   });
@@ -93,7 +92,9 @@ describe("MessageItem Component", () => {
     describe("When the MessageItem displays the timestamp", () => {
       it("Then it should show the relative time", () => {
         render(<MessageItem message={mockUserMessage} />);
-        expect(screen.getByText("just now")).toBeInTheDocument();
+        expect(
+          screen.getByText(new Date(mockUserMessage.created_at).toLocaleTimeString()),
+        ).toBeInTheDocument();
       });
     });
   });

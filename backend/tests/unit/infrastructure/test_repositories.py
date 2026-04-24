@@ -1,12 +1,10 @@
 """Unit tests for PostgreSQL repositories."""
 
-import pytest
 from uuid import uuid4
 
+import pytest
+
 from rag_backend.domain.models import Document, DocumentStatus
-from rag_backend.infrastructure.database.document_repository import (
-    PostgresDocumentRepository,
-)
 
 
 @pytest.mark.unit

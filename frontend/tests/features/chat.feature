@@ -28,7 +28,15 @@ Feature: Chat Interface
     Given I am on the chat page
     When I click the "New Chat" button
     Then the message list is cleared
+    And no existing conversation remains selected
     And the input field is ready for a new message
+
+  Scenario: Send the first message in a new conversation
+    Given I clicked the "New Chat" button while existing conversations are listed
+    When I type the first message and click the send button
+    Then a new conversation is created
+    And the message is sent to the new conversation
+    And the new conversation becomes active
 
   Scenario: Submit message with Enter key
     Given I am on the chat page with an active conversation

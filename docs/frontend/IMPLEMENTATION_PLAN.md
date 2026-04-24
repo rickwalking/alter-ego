@@ -154,7 +154,7 @@ Create `app/globals.css`:
   /* Font families */
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, monospace;
-  
+
   /* Primary colors - Indigo */
   --color-primary-50: oklch(0.97 0.014 278);
   --color-primary-100: oklch(0.93 0.032 278);
@@ -167,22 +167,22 @@ Create `app/globals.css`:
   --color-primary-800: oklch(0.42 0.199 278);
   --color-primary-900: oklch(0.38 0.146 278);
   --color-primary-950: oklch(0.28 0.091 278);
-  
+
   /* Semantic colors */
   --color-success: oklch(0.72 0.219 150);
   --color-warning: oklch(0.84 0.16 84);
   --color-error: oklch(0.58 0.253 18);
   --color-info: oklch(0.72 0.14 250);
-  
+
   /* Animation */
   --animate-fade-in: fade-in 0.2s ease-out;
   --animate-slide-up: slide-up 0.3s ease-out;
-  
+
   @keyframes fade-in {
     0% { opacity: 0; }
     100% { opacity: 1; }
   }
-  
+
   @keyframes slide-up {
     0% { opacity: 0; transform: translateY(10px); }
     100% { opacity: 1; transform: translateY(0); }
@@ -309,10 +309,10 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches
       ? 'dark'
       : 'light';
-    
+
     const resolved = theme === 'system' ? systemTheme : theme;
     setResolvedTheme(resolved);
-    
+
     root.classList.remove('light', 'dark');
     root.classList.add(resolved);
   }, [theme]);
@@ -343,7 +343,7 @@ Build these components using React 19 + Tailwind v4:
 
 #### Layout Components
 - [ ] `Container` - Responsive width wrapper
-- [ ] `Stack` - Vertical spacing component  
+- [ ] `Stack` - Vertical spacing component
 - [ ] `Grid` - CSS Grid wrapper
 - [ ] `Flex` - Flexbox wrapper
 
@@ -517,19 +517,19 @@ export async function apiCall<T>(
       ...options?.headers,
     },
   });
-  
+
   const json = await response.json();
   const result = apiResponseSchema.safeParse(json);
-  
+
   if (!result.success || !result.data.success) {
     throw new Error(result.data?.message || 'API request failed');
   }
-  
+
   const dataResult = schema.safeParse(result.data.data);
   if (!dataResult.success) {
     throw new Error('Invalid data from API');
   }
-  
+
   return dataResult.data;
 }
 ```

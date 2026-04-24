@@ -4,6 +4,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
 import { apiCall } from "@/lib/api-client";
 import { API_ENDPOINTS } from "@/constants/api";
+import { carouselKeys } from "@/features/carousel/queries";
 
 const instagramPublishResponseSchema = z.object({
   status: z.enum(["queued", "published", "failed"]),
@@ -38,7 +39,7 @@ export function usePublishInstagram() {
     },
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({
-        queryKey: ["carousel", variables.projectId],
+        queryKey: carouselKeys.detail(variables.projectId),
       });
     },
   });

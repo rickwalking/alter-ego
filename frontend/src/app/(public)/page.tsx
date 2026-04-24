@@ -124,10 +124,13 @@ export default async function HomePage() {
                   >
                     {/* Post Image */}
                     <div className="relative h-48 w-full overflow-hidden">
-                      <img
+                      <Image
                         src={imageUrl}
                         alt={post.title || post.topic}
-                        className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                        fill
+                        className="object-cover transition-transform duration-300 group-hover:scale-105"
+                        sizes="(min-width: 1024px) 33vw, (min-width: 768px) 50vw, 100vw"
+                        unoptimized={imageUrl.startsWith("http") || imageUrl.startsWith("/api/")}
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-[var(--color-card)] to-transparent" />
                     </div>

@@ -23,7 +23,7 @@
 // ❌ BEFORE: Race condition prone
 function UserProfile({ userId }) {
   const [user, setUser] = useState(null);
-  
+
   useEffect(() => {
     fetchUser(userId).then(data => setUser(data));
   }, [userId]);
@@ -39,13 +39,13 @@ function ProductList() {
   const [products, setProducts] = useState([]);
   const [filtered, setFiltered] = useState([]);
   const [search, setSearch] = useState('');
-  
+
   useEffect(() => {
     fetchProducts().then(setProducts);
   }, []);
-  
+
   useEffect(() => {
-    setFiltered(products.filter(p => 
+    setFiltered(products.filter(p =>
       p.name.includes(search)
     ));
   }, [products, search]);
@@ -59,12 +59,12 @@ function ProductList() {
 function Chat({ roomId }) {
   const [messages, setMessages] = useState([]);
   const [connection, setConnection] = useState(null);
-  
+
   useEffect(() => {
     const conn = createConnection(roomId);
     conn.connect();
     setConnection(conn);
-    
+
     return () => conn.disconnect();
   }, [roomId]); // What if createConnection depends on auth token?
 }
@@ -75,12 +75,12 @@ function Chat({ roomId }) {
 // ❌ BEFORE: Hydration issues
 function Clock() {
   const [time, setTime] = useState(new Date());
-  
+
   useEffect(() => {
     const timer = setInterval(() => setTime(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
-  
+
   // Server renders one time, client hydrates with different time
   return <div>{time.toLocaleTimeString()}</div>;
 }
@@ -108,7 +108,7 @@ import { useEffect, useState } from 'react';
 export function ProductPage({ productId }) {
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
-  
+
   useEffect(() => {
     fetch(`/api/products/${productId}`)
       .then(r => r.json())
@@ -117,9 +117,9 @@ export function ProductPage({ productId }) {
         setLoading(false);
       });
   }, [productId]);
-  
+
   if (loading) return <Spinner />;
-  
+
   return (
     <div>
       <h1>{product.name}</h1>
@@ -143,7 +143,7 @@ async function getProduct(id) {
 export default async function ProductPage({ params }) {
   const product = await getProduct(params.productId);
   // Data is available immediately, no loading states needed!
-  
+
   return (
     <div>
       <h1>{product.name}</h1>
@@ -163,7 +163,7 @@ function Dashboard() {
   const [user, setUser] = useState(null);
   const [orders, setOrders] = useState([]);
   const [notifications, setNotifications] = useState([]);
-  
+
   useEffect(() => {
     // These run sequentially! Slow!
     fetchUser().then(setUser);
@@ -182,13 +182,13 @@ async function getDashboardData() {
     fetchOrders(),
     fetchNotifications()
   ]);
-  
+
   return { user, orders, notifications };
 }
 
 export default async function Dashboard() {
   const { user, orders, notifications } = await getDashboardData();
-  
+
   return (
     <div>
       <UserCard user={user} />
@@ -210,12 +210,12 @@ export default function ProductPage({ params }) {
     <div>
       {/* This renders immediately */}
       <ProductSkeleton />
-      
+
       {/* These stream in as they're ready */}
       <Suspense fallback={<ReviewsSkeleton />}>
         <Reviews productId={params.id} />
       </Suspense>
-      
+
       <Suspense fallback={<RelatedSkeleton />}>
         <RelatedProducts productId={params.id} />
       </Suspense>
@@ -248,19 +248,19 @@ function UserList() {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  
+
   useEffect(() => {
     let cancelled = false;
-    
+
     async function fetchUsers() {
       setLoading(true);
       setError(null);
-      
+
       try {
         const res = await fetch('/api/users');
         if (!res.ok) throw new Error('Failed to fetch');
         const data = await res.json();
-        
+
         if (!cancelled) {
           setUsers(data);
         }
@@ -274,15 +274,15 @@ function UserList() {
         }
       }
     }
-    
+
     fetchUsers();
-    
+
     return () => { cancelled = true; };
   }, []);
-  
+
   if (loading) return <Spinner />;
   if (error) return <Error message={error} />;
-  
+
   return (
     <ul>
       {users.map(user => (
@@ -304,10 +304,10 @@ function UserList() {
     staleTime: 5 * 60 * 1000, // 5 minutes
     gcTime: 10 * 60 * 1000,   // 10 minutes (formerly cacheTime)
   });
-  
+
   if (isLoading) return <Spinner />;
   if (error) return <Error message={error.message} />;
-  
+
   return (
     <ul>
       {users.map(user => (
@@ -330,7 +330,7 @@ async function fetchUsers() {
 // ❌ BEFORE: No caching, refetch on every mount
 function ProductDetails({ productId }) {
   const [product, setProduct] = useState(null);
-  
+
   useEffect(() => {
     fetchProduct(productId).then(setProduct);
   }, [productId]);
@@ -351,7 +351,7 @@ function ProductDetails({ productId }) {
     // - Automatic retry on error
     // - Deduplicates concurrent requests
   });
-  
+
   return (
     <div className={isFetching ? 'opacity-50' : ''}>
       <h1>{product?.name}</h1>
@@ -366,22 +366,22 @@ function ProductDetails({ productId }) {
 // ❌ BEFORE: Manual optimistic updates with useEffect
 function TodoList() {
   const [todos, setTodos] = useState([]);
-  
+
   const addTodo = async (text) => {
     const tempId = Date.now();
     const optimisticTodo = { id: tempId, text, completed: false };
-    
+
     // Optimistically add
     setTodos(prev => [...prev, optimisticTodo]);
-    
+
     try {
       const saved = await fetch('/api/todos', {
         method: 'POST',
         body: JSON.stringify({ text })
       }).then(r => r.json());
-      
+
       // Replace temp with real
-      setTodos(prev => 
+      setTodos(prev =>
         prev.map(t => t.id === tempId ? saved : t)
       );
     } catch (err) {
@@ -398,41 +398,41 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 function TodoList() {
   const queryClient = useQueryClient();
-  
+
   const addTodo = useMutation({
-    mutationFn: (text) => 
+    mutationFn: (text) =>
       fetch('/api/todos', {
         method: 'POST',
         body: JSON.stringify({ text })
       }).then(r => r.json()),
-    
+
     onMutate: async (text) => {
       // Cancel outgoing refetches
       await queryClient.cancelQueries({ queryKey: ['todos'] });
-      
+
       // Snapshot previous value
       const previousTodos = queryClient.getQueryData(['todos']);
-      
+
       // Optimistically update
       queryClient.setQueryData(['todos'], old => [
         ...old,
         { id: Date.now(), text, completed: false }
       ]);
-      
+
       return { previousTodos };
     },
-    
+
     onError: (err, text, context) => {
       // Rollback on error
       queryClient.setQueryData(['todos'], context.previousTodos);
     },
-    
+
     onSettled: () => {
       // Always refetch after error or success
       queryClient.invalidateQueries({ queryKey: ['todos'] });
     }
   });
-  
+
   return (
     <form onSubmit={(e) => {
       e.preventDefault();
@@ -454,16 +454,16 @@ function Feed() {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const loaderRef = useRef(null);
-  
+
   useEffect(() => {
     if (!hasMore) return;
-    
+
     fetchPosts(page).then(newPosts => {
       setPosts(prev => [...prev, ...newPosts]);
       setHasMore(newPosts.length === 10);
     });
   }, [page, hasMore]);
-  
+
   useEffect(() => {
     const observer = new IntersectionObserver(
       entries => {
@@ -472,14 +472,14 @@ function Feed() {
         }
       }
     );
-    
+
     if (loaderRef.current) {
       observer.observe(loaderRef.current);
     }
-    
+
     return () => observer.disconnect();
   }, []);
-  
+
   return (
     <>
       {posts.map(post => <Post key={post.id} {...post} />)}
@@ -496,7 +496,7 @@ import { useInView } from 'react-intersection-observer';
 
 function Feed() {
   const { ref, inView } = useInView();
-  
+
   const {
     data,
     fetchNextPage,
@@ -505,19 +505,19 @@ function Feed() {
   } = useInfiniteQuery({
     queryKey: ['posts'],
     queryFn: ({ pageParam = 1 }) => fetchPosts(pageParam),
-    getNextPageParam: (lastPage, pages) => 
+    getNextPageParam: (lastPage, pages) =>
       lastPage.length === 10 ? pages.length + 1 : undefined,
     initialPageParam: 1,
   });
-  
+
   useEffect(() => {
     if (inView && hasNextPage) {
       fetchNextPage();
     }
   }, [inView, hasNextPage, fetchNextPage]);
-  
+
   const posts = data?.pages.flat() ?? [];
-  
+
   return (
     <>
       {posts.map(post => <Post key={post.id} {...post} />)}
@@ -542,20 +542,20 @@ function Feed() {
 function Tooltip({ targetRef, children }) {
   const [position, setPosition] = useState({ top: 0, left: 0 });
   const tooltipRef = useRef(null);
-  
+
   useEffect(() => {
     // This runs AFTER paint - user sees tooltip jump!
     const targetRect = targetRef.current.getBoundingClientRect();
     const tooltipRect = tooltipRef.current.getBoundingClientRect();
-    
+
     setPosition({
       top: targetRect.bottom + 8,
       left: targetRect.left + (targetRect.width - tooltipRect.width) / 2
     });
   }, []);
-  
+
   return (
-    <div 
+    <div
       ref={tooltipRef}
       style={{ position: 'absolute', ...position }}
     >
@@ -572,20 +572,20 @@ import { useLayoutEffect } from 'react';
 function Tooltip({ targetRef, children }) {
   const [position, setPosition] = useState({ top: 0, left: 0 });
   const tooltipRef = useRef(null);
-  
+
   useLayoutEffect(() => {
     // This runs BEFORE paint - positioning is correct immediately
     const targetRect = targetRef.current.getBoundingClientRect();
     const tooltipRect = tooltipRef.current.getBoundingClientRect();
-    
+
     setPosition({
       top: targetRect.bottom + 8,
       left: targetRect.left + (targetRect.width - tooltipRect.width) / 2
     });
   }, []);
-  
+
   return (
-    <div 
+    <div
       ref={tooltipRef}
       style={{ position: 'absolute', ...position }}
     >
@@ -612,7 +612,7 @@ function Tooltip({ children }) {
 
 // CSS handles positioning automatically
 // .tooltip-container { position: relative; }
-// .tooltip { 
+// .tooltip {
 //   position: absolute;
 //   top: 100%;
 //   left: 50%;
@@ -661,7 +661,7 @@ useLayoutEffect(() => {
 function Comments({ postId }) {
   const [comments, setComments] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
-  
+
   useEffect(() => {
     setIsLoading(true);
     fetchComments(postId)
@@ -670,9 +670,9 @@ function Comments({ postId }) {
         setIsLoading(false);
       });
   }, [postId]);
-  
+
   if (isLoading) return <Spinner />;
-  
+
   return (
     <ul>
       {comments.map(c => <li key={c.id}>{c.text}</li>)}
@@ -688,7 +688,7 @@ import { use, Suspense } from 'react';
 function Comments({ postId }) {
   // use() can be called conditionally and inside loops!
   const comments = use(fetchComments(postId));
-  
+
   return (
     <ul>
       {comments.map(c => <li key={c.id}>{c.text}</li>)}
@@ -716,17 +716,17 @@ function Post({ postId }) {
 function UserProfile({ userId, showDetails }) {
   const [user, setUser] = useState(null);
   const [details, setDetails] = useState(null);
-  
+
   useEffect(() => {
     fetchUser(userId).then(setUser);
   }, [userId]);
-  
+
   useEffect(() => {
     if (showDetails) {
       fetchUserDetails(userId).then(setDetails);
     }
   }, [userId, showDetails]);
-  
+
   // ...
 }
 ```
@@ -735,7 +735,7 @@ function UserProfile({ userId, showDetails }) {
 // ✅ AFTER: Conditional fetching with use()
 function UserProfile({ userId, showDetails }) {
   const user = use(fetchUser(userId));
-  
+
   return (
     <div>
       <h1>{user.name}</h1>
@@ -766,7 +766,7 @@ const CommentsContext = createContext(null);
 function CommentsProvider({ children }) {
   // Create promise once, not on every render
   const [commentsPromise] = useState(() => fetchComments());
-  
+
   return (
     <CommentsContext.Provider value={commentsPromise}>
       {children}
@@ -778,7 +778,7 @@ function CommentList() {
   // use() unwraps the promise from context
   const commentsPromise = use(CommentsContext);
   const comments = use(commentsPromise);
-  
+
   return (
     <ul>
       {comments.map(c => <li key={c.id}>{c.text}</li>)}
@@ -822,10 +822,10 @@ function ContactForm() {
   const [formData, setFormData] = useState({ name: '', email: '' });
   const [shouldSubmit, setShouldSubmit] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
+
   useEffect(() => {
     if (!shouldSubmit) return;
-    
+
     setIsSubmitting(true);
     fetch('/api/contact', {
       method: 'POST',
@@ -835,7 +835,7 @@ function ContactForm() {
       setShouldSubmit(false);
     });
   }, [shouldSubmit, formData]);
-  
+
   return (
     <form onSubmit={(e) => {
       e.preventDefault();
@@ -851,20 +851,20 @@ function ContactForm() {
 // ✅ AFTER: Direct event handler
 function ContactForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
-    
+
     const formData = new FormData(e.target);
     await fetch('/api/contact', {
       method: 'POST',
       body: JSON.stringify(Object.fromEntries(formData))
     });
-    
+
     setIsSubmitting(false);
   };
-  
+
   return (
     <form onSubmit={handleSubmit}>
       <input name="name" required />
@@ -884,23 +884,23 @@ function ContactForm() {
 function Search() {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
-  
+
   useEffect(() => {
     if (!query) {
       setResults([]);
       return;
     }
-    
+
     const timer = setTimeout(() => {
       searchAPI(query).then(setResults);
     }, 300);
-    
+
     return () => clearTimeout(timer);
   }, [query]);
-  
+
   return (
     <div>
-      <input 
+      <input
         value={query}
         onChange={(e) => setQuery(e.target.value)}
       />
@@ -919,11 +919,11 @@ function Search() {
   const [query, setQuery] = useState('');
   const [isPending, startTransition] = useTransition();
   const deferredQuery = useDeferredValue(query);
-  
+
   // Results component uses deferredQuery for non-blocking updates
   return (
     <div>
-      <input 
+      <input
         value={query}
         onChange={(e) => {
           // Update immediately for responsive input
@@ -946,7 +946,7 @@ function SearchResults({ query }) {
     queryFn: () => searchAPI(query),
     enabled: query.length > 0,
   });
-  
+
   return (
     <ul>
       {results?.map(r => <li key={r.id}>{r.name}</li>)}
@@ -962,16 +962,16 @@ function SearchResults({ query }) {
 function FilterableList() {
   const [filters, setFilters] = useState({ category: '', sort: '' });
   const router = useRouter();
-  
+
   useEffect(() => {
     // Sync filters to URL
     const params = new URLSearchParams();
     if (filters.category) params.set('category', filters.category);
     if (filters.sort) params.set('sort', filters.sort);
-    
+
     router.replace(`?${params.toString()}`);
   }, [filters, router]);
-  
+
   useEffect(() => {
     // Sync URL to filters on mount
     const params = new URLSearchParams(window.location.search);
@@ -980,7 +980,7 @@ function FilterableList() {
       sort: params.get('sort') || ''
     });
   }, []);
-  
+
   // ...
 }
 ```
@@ -992,10 +992,10 @@ import { useSearchParams } from 'next/navigation';
 function FilterableList() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  
+
   const category = searchParams.get('category') || '';
   const sort = searchParams.get('sort') || '';
-  
+
   const updateFilter = (key, value) => {
     const params = new URLSearchParams(searchParams);
     if (value) {
@@ -1005,17 +1005,17 @@ function FilterableList() {
     }
     router.replace(`?${params.toString()}`);
   };
-  
+
   return (
     <div>
-      <select 
+      <select
         value={category}
         onChange={(e) => updateFilter('category', e.target.value)}
       >
         <option value="">All Categories</option>
         <option value="electronics">Electronics</option>
       </select>
-      
+
       <ProductList category={category} sort={sort} />
     </div>
   );
@@ -1034,21 +1034,21 @@ function Cart({ items }) {
   const [total, setTotal] = useState(0);
   const [itemCount, setItemCount] = useState(0);
   const [isFreeShipping, setIsFreeShipping] = useState(false);
-  
+
   useEffect(() => {
-    const sum = items.reduce((acc, item) => 
+    const sum = items.reduce((acc, item) =>
       acc + item.price * item.quantity, 0
     );
     setTotal(sum);
-    
-    const count = items.reduce((acc, item) => 
+
+    const count = items.reduce((acc, item) =>
       acc + item.quantity, 0
     );
     setItemCount(count);
-    
+
     setIsFreeShipping(sum > 50);
   }, [items]);
-  
+
   return (
     <div>
       <p>Items: {itemCount}</p>
@@ -1064,17 +1064,17 @@ function Cart({ items }) {
 function Cart({ items }) {
   // Compute directly - React will re-run when items change
   const total = items.reduce(
-    (acc, item) => acc + item.price * item.quantity, 
+    (acc, item) => acc + item.price * item.quantity,
     0
   );
-  
+
   const itemCount = items.reduce(
-    (acc, item) => acc + item.quantity, 
+    (acc, item) => acc + item.quantity,
     0
   );
-  
+
   const isFreeShipping = total > 50;
-  
+
   return (
     <div>
       <p>Items: {itemCount}</p>
@@ -1088,14 +1088,14 @@ function Cart({ items }) {
 function useCartSummary(items) {
   return useMemo(() => {
     const total = items.reduce(
-      (acc, item) => acc + item.price * item.quantity, 
+      (acc, item) => acc + item.price * item.quantity,
       0
     );
     const itemCount = items.reduce(
-      (acc, item) => acc + item.quantity, 
+      (acc, item) => acc + item.quantity,
       0
     );
-    
+
     return {
       total,
       itemCount,
@@ -1106,9 +1106,9 @@ function useCartSummary(items) {
 }
 
 function Cart({ items }) {
-  const { total, itemCount, isFreeShipping, formattedTotal } = 
+  const { total, itemCount, isFreeShipping, formattedTotal } =
     useCartSummary(items);
-  
+
   return (
     <div>
       <p>Items: {itemCount}</p>
@@ -1125,25 +1125,25 @@ function Cart({ items }) {
 // ❌ BEFORE: useEffect for filtering
 function ProductList({ products, searchTerm, sortBy }) {
   const [filtered, setFiltered] = useState(products);
-  
+
   useEffect(() => {
     let result = [...products];
-    
+
     if (searchTerm) {
-      result = result.filter(p => 
+      result = result.filter(p =>
         p.name.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
-    
+
     if (sortBy === 'price') {
       result.sort((a, b) => a.price - b.price);
     } else if (sortBy === 'name') {
       result.sort((a, b) => a.name.localeCompare(b.name));
     }
-    
+
     setFiltered(result);
   }, [products, searchTerm, sortBy]);
-  
+
   return (
     <ul>
       {filtered.map(p => <ProductCard key={p.id} {...p} />)}
@@ -1157,23 +1157,23 @@ function ProductList({ products, searchTerm, sortBy }) {
 function ProductList({ products, searchTerm, sortBy }) {
   const filtered = useMemo(() => {
     let result = products;
-    
+
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
-      result = result.filter(p => 
+      result = result.filter(p =>
         p.name.toLowerCase().includes(term)
       );
     }
-    
+
     if (sortBy === 'price') {
       result = [...result].sort((a, b) => a.price - b.price);
     } else if (sortBy === 'name') {
       result = [...result].sort((a, b) => a.name.localeCompare(b.name));
     }
-    
+
     return result;
   }, [products, searchTerm, sortBy]);
-  
+
   return (
     <ul>
       {filtered.map(p => <ProductCard key={p.id} {...p} />)}
@@ -1193,7 +1193,7 @@ function filterProducts(products: Product[], searchTerm: string): Product[] {
 
 function sortProducts(products: Product[], sortBy: SortOption): Product[] {
   if (!sortBy) return products;
-  
+
   const sorted = [...products];
   if (sortBy === 'price') {
     sorted.sort((a, b) => a.price - b.price);
@@ -1217,7 +1217,7 @@ function useProductFilter(products, searchTerm, sortBy) {
 // ❌ BEFORE: Derived state with useEffect
 function MessageList({ messages }) {
   const [groupedMessages, setGroupedMessages] = useState({});
-  
+
   useEffect(() => {
     const grouped = messages.reduce((acc, msg) => {
       const date = formatDate(msg.timestamp);
@@ -1225,10 +1225,10 @@ function MessageList({ messages }) {
       acc[date].push(msg);
       return acc;
     }, {});
-    
+
     setGroupedMessages(grouped);
   }, [messages]);
-  
+
   return (
     <div>
       {Object.entries(groupedMessages).map(([date, msgs]) => (
@@ -1250,7 +1250,7 @@ function MessageList({ messages }) {
       return acc;
     }, {});
   }, [messages]);
-  
+
   return (
     <div>
       {Object.entries(groupedMessages).map(([date, msgs]) => (
@@ -1271,20 +1271,20 @@ function MessageList({ messages }) {
 // ❌ BEFORE: Manual subscription with useEffect
 function OnlineStatus() {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
-  
+
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
     const handleOffline = () => setIsOnline(false);
-    
+
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
-    
+
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
   }, []);
-  
+
   return <div>{isOnline ? 'Online' : 'Offline'}</div>;
 }
 ```
@@ -1296,7 +1296,7 @@ import { useSyncExternalStore } from 'react';
 function subscribe(callback) {
   window.addEventListener('online', callback);
   window.addEventListener('offline', callback);
-  
+
   return () => {
     window.removeEventListener('online', callback);
     window.removeEventListener('offline', callback);
@@ -1331,18 +1331,18 @@ function OnlineStatus() {
 // ❌ BEFORE: useEffect for localStorage sync
 function useLocalStorage(key, initialValue) {
   const [value, setValue] = useState(initialValue);
-  
+
   useEffect(() => {
     const stored = localStorage.getItem(key);
     if (stored) {
       setValue(JSON.parse(stored));
     }
   }, [key]);
-  
+
   useEffect(() => {
     localStorage.setItem(key, JSON.stringify(value));
   }, [key, value]);
-  
+
   useEffect(() => {
     const handleStorage = (e) => {
       if (e.key === key) {
@@ -1352,7 +1352,7 @@ function useLocalStorage(key, initialValue) {
     window.addEventListener('storage', handleStorage);
     return () => window.removeEventListener('storage', handleStorage);
   }, [key]);
-  
+
   return [value, setValue];
 }
 ```
@@ -1374,16 +1374,16 @@ function getSnapshot(key) {
 
 function useLocalStorage(key, initialValue) {
   const getServerSnapshot = () => initialValue;
-  
+
   const value = useSyncExternalStore(
     (callback) => subscribe(key, callback),
     () => getSnapshot(key) ?? initialValue,
     getServerSnapshot
   );
-  
+
   const setValue = useCallback((newValue) => {
-    const valueToStore = newValue instanceof Function 
-      ? newValue(value) 
+    const valueToStore = newValue instanceof Function
+      ? newValue(value)
       : newValue;
     localStorage.setItem(key, JSON.stringify(valueToStore));
     // Dispatch storage event for same-tab updates
@@ -1392,14 +1392,14 @@ function useLocalStorage(key, initialValue) {
       newValue: JSON.stringify(valueToStore)
     }));
   }, [key, value]);
-  
+
   return [value, setValue];
 }
 
 // Usage
 function ThemeToggle() {
   const [theme, setTheme] = useLocalStorage('theme', 'light');
-  
+
   return (
     <button onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}>
       {theme}
@@ -1417,19 +1417,19 @@ class Store {
     this.state = initialState;
     this.listeners = new Set();
   }
-  
+
   subscribe(listener) {
     this.listeners.add(listener);
     return () => this.listeners.delete(listener);
   }
-  
+
   getState() {
     return this.state;
   }
-  
+
   setState(updater) {
-    this.state = updater instanceof Function 
-      ? updater(this.state) 
+    this.state = updater instanceof Function
+      ? updater(this.state)
       : { ...this.state, ...updater };
     this.listeners.forEach(l => l());
   }
@@ -1449,11 +1449,11 @@ function useStore(store, selector = (state) => state) {
 // ✅ Usage in components
 function Counter() {
   const count = useStore(globalStore, (state) => state.count);
-  
+
   return (
     <div>
       <p>Count: {count}</p>
-      <button onClick={() => 
+      <button onClick={() =>
         globalStore.setState((s) => ({ count: s.count + 1 }))
       }>
         Increment
@@ -1464,9 +1464,9 @@ function Counter() {
 
 function UserProfile() {
   const user = useStore(globalStore, (state) => state.user);
-  
+
   if (!user) return <LoginPrompt />;
-  
+
   return <div>Welcome, {user.name}</div>;
 }
 ```
@@ -1481,13 +1481,13 @@ function UserProfile() {
 // ❌ BEFORE: useEffect for focus
 function SearchInput({ autoFocus }) {
   const inputRef = useRef(null);
-  
+
   useEffect(() => {
     if (autoFocus) {
       inputRef.current?.focus();
     }
   }, [autoFocus]);
-  
+
   return <input ref={inputRef} type="search" />;
 }
 ```
@@ -1496,14 +1496,14 @@ function SearchInput({ autoFocus }) {
 // ✅ AFTER: Use callback ref for conditional focus
 function SearchInput({ autoFocus }) {
   const inputRef = useRef(null);
-  
+
   const setRef = useCallback((element) => {
     inputRef.current = element;
     if (element && autoFocus) {
       element.focus();
     }
   }, [autoFocus]);
-  
+
   return <input ref={setRef} type="search" />;
 }
 ```
@@ -1515,19 +1515,19 @@ function SearchInput({ autoFocus }) {
 function ChatContainer({ messages }) {
   const containerRef = useRef(null);
   const [shouldScrollToBottom, setShouldScrollToBottom] = useState(true);
-  
+
   useEffect(() => {
     if (shouldScrollToBottom && containerRef.current) {
       containerRef.current.scrollTop = containerRef.current.scrollHeight;
     }
   }, [messages, shouldScrollToBottom]);
-  
+
   const handleScroll = () => {
     const { scrollTop, scrollHeight, clientHeight } = containerRef.current;
     const isAtBottom = scrollHeight - scrollTop - clientHeight < 50;
     setShouldScrollToBottom(isAtBottom);
   };
-  
+
   return (
     <div ref={containerRef} onScroll={handleScroll}>
       {messages.map(m => <Message key={m.id} {...m} />)}
@@ -1541,20 +1541,20 @@ function ChatContainer({ messages }) {
 function ChatContainer({ messages }) {
   const containerRef = useRef(null);
   const shouldScrollRef = useRef(true);
-  
+
   // Store scroll decision in ref (doesn't trigger re-render)
   const handleScroll = () => {
     const { scrollTop, scrollHeight, clientHeight } = containerRef.current;
     shouldScrollRef.current = scrollHeight - scrollTop - clientHeight < 50;
   };
-  
+
   // Use layout effect only for the actual DOM manipulation
   useLayoutEffect(() => {
     if (shouldScrollRef.current) {
       containerRef.current.scrollTop = containerRef.current.scrollHeight;
     }
   });
-  
+
   return (
     <div ref={containerRef} onScroll={handleScroll}>
       {messages.map(m => <Message key={m.id} {...m} />)}
@@ -1569,19 +1569,19 @@ function ChatContainer({ messages }) {
 // ❌ BEFORE: useEffect driving animations
 function FadeIn({ children, delay = 0 }) {
   const [opacity, setOpacity] = useState(0);
-  
+
   useEffect(() => {
     const timer = setTimeout(() => {
       setOpacity(1);
     }, delay);
-    
+
     return () => clearTimeout(timer);
   }, [delay]);
-  
+
   return (
-    <div style={{ 
-      opacity, 
-      transition: 'opacity 300ms ease' 
+    <div style={{
+      opacity,
+      transition: 'opacity 300ms ease'
     }}>
       {children}
     </div>
@@ -1593,7 +1593,7 @@ function FadeIn({ children, delay = 0 }) {
 // ✅ AFTER: CSS animations, no JavaScript needed
 function FadeIn({ children, delay = 0 }) {
   return (
-    <div 
+    <div
       className="fade-in"
       style={{ animationDelay: `${delay}ms` }}
     >
@@ -1620,27 +1620,27 @@ function FadeIn({ children, delay = 0 }) {
 function Chart({ data }) {
   const containerRef = useRef(null);
   const [chart, setChart] = useState(null);
-  
+
   useEffect(() => {
     if (!containerRef.current) return;
-    
+
     const c = new ChartLibrary(containerRef.current, {
       type: 'line',
       data: { datasets: [{ data }] }
     });
-    
+
     setChart(c);
-    
+
     return () => c.destroy();
   }, []);
-  
+
   useEffect(() => {
     if (chart) {
       chart.data.datasets[0].data = data;
       chart.update();
     }
   }, [data, chart]);
-  
+
   return <div ref={containerRef} />;
 }
 ```
@@ -1650,46 +1650,46 @@ function Chart({ data }) {
 function Chart({ data }) {
   const containerRef = useRef(null);
   const chartRef = useRef(null);
-  
+
   useEffect(() => {
     if (!containerRef.current) return;
-    
+
     // Initialize once
     chartRef.current = new ChartLibrary(containerRef.current, {
       type: 'line',
       data: { datasets: [{ data }] }
     });
-    
+
     return () => {
       chartRef.current?.destroy();
       chartRef.current = null;
     };
   }, []); // Empty deps - initialize once
-  
+
   // Update data via ref (no state needed)
   if (chartRef.current) {
     chartRef.current.data.datasets[0].data = data;
     chartRef.current.update('none'); // 'none' for performance
   }
-  
+
   return <div ref={containerRef} />;
 }
 
 // ✅ EVEN BETTER: Extract to reusable hook
 function useChart(containerRef, config) {
   const chartRef = useRef(null);
-  
+
   useEffect(() => {
     if (!containerRef.current) return;
-    
+
     chartRef.current = new ChartLibrary(containerRef.current, config);
-    
+
     return () => {
       chartRef.current?.destroy();
       chartRef.current = null;
     };
   }, []);
-  
+
   return chartRef;
 }
 ```
@@ -1705,16 +1705,16 @@ function useChart(containerRef, config) {
 function Tabs({ tabs }) {
   const [activeTab, setActiveTab] = useState(0);
   const [visibleContent, setVisibleContent] = useState(null);
-  
+
   useEffect(() => {
     setVisibleContent(tabs[activeTab].content);
   }, [activeTab, tabs]);
-  
+
   return (
     <div>
       <div className="tab-list">
         {tabs.map((tab, i) => (
-          <button 
+          <button
             key={tab.id}
             onClick={() => setActiveTab(i)}
             className={i === activeTab ? 'active' : ''}
@@ -1733,14 +1733,14 @@ function Tabs({ tabs }) {
 // ✅ AFTER: Direct rendering based on state
 function Tabs({ tabs }) {
   const [activeTab, setActiveTab] = useState(0);
-  
+
   const ActiveComponent = tabs[activeTab].component;
-  
+
   return (
     <div>
       <div className="tab-list">
         {tabs.map((tab, i) => (
-          <button 
+          <button
             key={tab.id}
             onClick={() => setActiveTab(i)}
             className={i === activeTab ? 'active' : ''}
@@ -1774,14 +1774,14 @@ function Modal({ isOpen, onClose, children }) {
     } else {
       document.body.style.overflow = '';
     }
-    
+
     return () => {
       document.body.style.overflow = '';
     };
   }, [isOpen]);
-  
+
   if (!isOpen) return null;
-  
+
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
@@ -1801,7 +1801,7 @@ import { createPortal } from 'react-dom';
 
 function Modal({ isOpen, onClose, children }) {
   if (!isOpen) return null;
-  
+
   return createPortal(
     <div className="modal-overlay modal-open" onClick={onClose}>
       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
@@ -1821,7 +1821,7 @@ function LazyImage({ src, alt }) {
   const [isLoaded, setIsLoaded] = useState(false);
   const [shouldLoad, setShouldLoad] = useState(false);
   const imgRef = useRef(null);
-  
+
   useEffect(() => {
     const observer = new IntersectionObserver(
       ([entry]) => {
@@ -1832,22 +1832,22 @@ function LazyImage({ src, alt }) {
       },
       { rootMargin: '100px' }
     );
-    
+
     if (imgRef.current) {
       observer.observe(imgRef.current);
     }
-    
+
     return () => observer.disconnect();
   }, []);
-  
+
   useEffect(() => {
     if (!shouldLoad) return;
-    
+
     const img = new Image();
     img.src = src;
     img.onload = () => setIsLoaded(true);
   }, [shouldLoad, src]);
-  
+
   return (
     <div ref={imgRef} className="image-container">
       {isLoaded ? (
@@ -1864,9 +1864,9 @@ function LazyImage({ src, alt }) {
 // ✅ AFTER: Native loading="lazy" or library
 function LazyImage({ src, alt }) {
   return (
-    <img 
-      src={src} 
-      alt={alt} 
+    <img
+      src={src}
+      alt={alt}
       loading="lazy"
       decoding="async"
     />
@@ -1895,12 +1895,12 @@ function ProductImage({ src, alt }) {
 function Parent() {
   const [count, setCount] = useState(0);
   const [siblingCount, setSiblingCount] = useState(0);
-  
+
   // Trying to sync siblings - code smell!
   useEffect(() => {
     setSiblingCount(count * 2);
   }, [count]);
-  
+
   return (
     <div>
       <Counter count={count} setCount={setCount} />
@@ -1915,7 +1915,7 @@ function Parent() {
 function Parent() {
   const [count, setCount] = useState(0);
   const doubled = count * 2; // Derive, don't sync
-  
+
   return (
     <div>
       <Counter count={count} setCount={setCount} />
@@ -1927,7 +1927,7 @@ function Parent() {
 // ✅ Or use composition pattern
 function CounterProvider({ children }) {
   const [count, setCount] = useState(0);
-  
+
   return (
     <CounterContext.Provider value={{ count, setCount }}>
       {children}
@@ -1952,11 +1952,11 @@ function CounterButton() {
 // ✅ BEFORE: Effect-driven data flow
 function DataFetcher({ url, render }) {
   const [data, setData] = useState(null);
-  
+
   useEffect(() => {
     fetch(url).then(r => r.json()).then(setData);
   }, [url]);
-  
+
   return render(data);
 }
 ```
@@ -1996,7 +1996,7 @@ const SelectContext = createContext(null);
 
 function Select({ children, value, onChange }) {
   const [isOpen, setIsOpen] = useState(false);
-  
+
   return (
     <SelectContext.Provider value={{ value, onChange, isOpen, setIsOpen }}>
       <div className="select">{children}</div>
@@ -2006,7 +2006,7 @@ function Select({ children, value, onChange }) {
 
 function SelectTrigger({ children }) {
   const { isOpen, setIsOpen, value } = useContext(SelectContext);
-  
+
   return (
     <button onClick={() => setIsOpen(!isOpen)}>
       {children || value}
@@ -2016,17 +2016,17 @@ function SelectTrigger({ children }) {
 
 function SelectContent({ children }) {
   const { isOpen } = useContext(SelectContext);
-  
+
   if (!isOpen) return null;
-  
+
   return <div className="select-content">{children}</div>;
 }
 
 function SelectItem({ value, children }) {
   const { value: selectedValue, onChange, setIsOpen } = useContext(SelectContext);
-  
+
   return (
-    <div 
+    <div
       className={value === selectedValue ? 'selected' : ''}
       onClick={() => {
         onChange(value);
@@ -2045,7 +2045,7 @@ Select.Item = SelectItem;
 // Usage
 function App() {
   const [value, setValue] = useState('');
-  
+
   return (
     <Select value={value} onChange={setValue}>
       <Select.Trigger>Select an option</Select.Trigger>

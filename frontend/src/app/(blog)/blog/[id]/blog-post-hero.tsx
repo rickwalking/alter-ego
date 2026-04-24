@@ -1,3 +1,4 @@
+import Image from "next/image";
 import type { CarouselDesignResponse } from "@/schemas/carousel";
 
 interface BlogPostHeroProps {
@@ -17,11 +18,14 @@ export function BlogPostHero({ imageUrl, title, design }: BlogPostHeroProps) {
         boxShadow: `0 0 60px ${colors.primary}1F, 0 20px 40px rgba(0,0,0,0.4)`,
       }}
     >
-      <img
+      <Image
         src={imageUrl}
         alt={title}
-        className="h-full w-full object-cover"
-        loading="eager"
+        fill
+        className="object-cover"
+        sizes="(min-width: 768px) 768px, 100vw"
+        priority
+        unoptimized
       />
       <div
         className="absolute inset-0"

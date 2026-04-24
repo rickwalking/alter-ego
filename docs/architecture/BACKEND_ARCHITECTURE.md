@@ -79,7 +79,7 @@ class RAGAgent:
             tools=self.tools,
             system_prompt=self._get_system_prompt()
         )
-    
+
     @tool(response_format="content_and_artifact")
     def hybrid_search_tool(self, query: str, top_k: int = 5) -> tuple:
         """
@@ -88,29 +88,29 @@ class RAGAgent:
         """
         # Dense vector search (semantic)
         dense_results = self.vector_store.similarity_search(query, k=top_k)
-        
+
         # Sparse vector search (BM25 keyword)
         sparse_results = self.vector_store.sparse_search(query, k=top_k)
-        
+
         # Fusion: Reciprocal Rank Fusion (RRF)
         fused_results = self._reciprocal_rank_fusion(dense_results, sparse_results)
-        
+
         serialized = self._serialize_documents(fused_results)
         return serialized, fused_results
-    
+
     def _reciprocal_rank_fusion(self, dense_results, sparse_results, k=60):
         """
         Combine dense and sparse results using RRF algorithm.
         Score = Σ 1/(k + rank)
         """
         scores = {}
-        
+
         for rank, doc in enumerate(dense_results):
             scores[doc.id] = scores.get(doc.id, 0) + 1 / (k + rank)
-        
+
         for rank, doc in enumerate(sparse_results):
             scores[doc.id] = scores.get(doc.id, 0) + 1 / (k + rank)
-        
+
         # Sort by combined score
         sorted_docs = sorted(scores.items(), key=lambda x: x[1], reverse=True)
         return [doc for doc_id, score in sorted_docs]
@@ -136,7 +136,7 @@ class HybridRetriever:
     Hybrid retriever combining dense (semantic) and sparse (BM25) search.
     Uses Pinecone's hybrid index with dotproduct metric.
     """
-    
+
     def __init__(self, index_name: str, alpha: float = 0.5):
         """
         Args:
@@ -145,20 +145,20 @@ class HybridRetriever:
         self.pc = Pinecone(api_key=os.getenv("PINECONE_API_KEY"))
         self.index = self.pc.Index(index_name)
         self.alpha = alpha
-        
+
         # Embedding models
         self.dense_embedding_model = "text-embedding-3-large"  # OpenAI
         self.sparse_embedding_model = "pinecone-sparse-english-v0"  # Pinecone
-    
+
     async def hybrid_search(
-        self, 
-        query: str, 
+        self,
+        query: str,
         top_k: int = 5,
         filter: Dict = None
     ) -> List[Document]:
         """
         Perform hybrid search with fusion.
-        
+
         Pipeline:
         1. Generate dense vector (semantic embedding)
         2. Generate sparse vector (BM25 term frequencies)
@@ -168,12 +168,12 @@ class HybridRetriever:
         # Generate embeddings
         dense_vector = await self._get_dense_embedding(query)
         sparse_vector = await self._get_sparse_embedding(query)
-        
+
         # Apply alpha weighting
         weighted_dense, weighted_sparse = self._apply_weighting(
             dense_vector, sparse_vector, self.alpha
         )
-        
+
         # Query hybrid index
         results = self.index.query(
             vector=weighted_dense,
@@ -182,20 +182,20 @@ class HybridRetriever:
             filter=filter,
             include_metadata=True
         )
-        
+
         return self._convert_to_documents(results)
-    
+
     async def _get_dense_embedding(self, text: str) -> List[float]:
         """Generate dense vector using OpenAI embeddings."""
         from openai import AsyncOpenAI
         client = AsyncOpenAI()
-        
+
         response = await client.embeddings.create(
             model=self.dense_embedding_model,
             input=text
         )
         return response.data[0].embedding
-    
+
     async def _get_sparse_embedding(self, text: str) -> Dict:
         """Generate sparse vector using Pinecone's sparse encoder."""
         # Use Pinecone's inference API for sparse vectors
@@ -204,12 +204,12 @@ class HybridRetriever:
             inputs=[text],
             parameters={"input_type": "query"}
         )
-        
+
         return {
             'indices': sparse_embeddings[0]['sparse_indices'],
             'values': sparse_embeddings[0]['sparse_values']
         }
-    
+
     def _apply_weighting(self, dense, sparse, alpha):
         """Apply convex combination: alpha * dense + (1-alpha) * sparse"""
         weighted_dense = [v * alpha for v in dense]
@@ -242,7 +242,7 @@ app = FastAPI()
 async def websocket_chat(websocket: WebSocket, conversation_id: str):
     """
     WebSocket endpoint for real-time chat with streaming.
-    
+
     Message Types:
     - user_message: User sends a message
     - token: Streaming token from LLM
@@ -252,23 +252,23 @@ async def websocket_chat(websocket: WebSocket, conversation_id: str):
     - error: Error occurred
     """
     await websocket.accept()
-    
+
     try:
         while True:
             # Receive user message
             data = await websocket.receive_json()
             user_message = data["message"]
-            
+
             # Get agent for this conversation
             agent = await get_or_create_agent(conversation_id)
-            
+
             # Stream agent response
             async for event in agent.astream(
                 {"messages": [{"role": "user", "content": user_message}]},
                 stream_mode="values"
             ):
                 message = event["messages"][-1]
-                
+
                 # Send different message types based on content
                 if message.type == "ai":
                     # Streaming tokens
@@ -277,7 +277,7 @@ async def websocket_chat(websocket: WebSocket, conversation_id: str):
                             "type": "token",
                             "content": message.content
                         })
-                
+
                 elif message.type == "tool":
                     # Tool execution
                     await websocket.send_json({
@@ -285,7 +285,7 @@ async def websocket_chat(websocket: WebSocket, conversation_id: str):
                         "tool": message.name,
                         "input": message.args
                     })
-                    
+
                     # After tool execution, send results
                     if message.artifact:
                         await websocket.send_json({
@@ -300,13 +300,13 @@ async def websocket_chat(websocket: WebSocket, conversation_id: str):
                                 for doc in message.artifact
                             ]
                         })
-            
+
             # Signal completion
             await websocket.send_json({
                 "type": "done",
                 "conversation_id": conversation_id
             })
-            
+
     except Exception as e:
         await websocket.send_json({
             "type": "error",
@@ -323,23 +323,23 @@ async def chat_stream(request: ChatRequest):
     """
     async def event_generator():
         agent = await get_or_create_agent(request.conversation_id)
-        
+
         async for event in agent.astream(
             {"messages": [{"role": "user", "content": request.message}]},
             stream_mode="values"
         ):
             message = event["messages"][-1]
-            
+
             # Format as SSE
             yield f"data: {json.dumps({
                 'type': message.type,
                 'content': message.content if hasattr(message, 'content') else None,
                 'tool': message.name if hasattr(message, 'name') else None
             })}\n\n"
-        
+
         # End stream
         yield "data: [DONE]\n\n"
-    
+
     return StreamingResponse(
         event_generator(),
         media_type="text/event-stream"
@@ -362,14 +362,14 @@ import hashlib
 class DocumentProcessor:
     """
     Process documents for ingestion into vector store.
-    
+
     Pipeline:
     1. Load document (PDF, TXT, MD)
     2. Split into chunks
     3. Generate embeddings (dense + sparse)
     4. Upsert to hybrid index
     """
-    
+
     def __init__(self, vector_store):
         self.vector_store = vector_store
         self.text_splitter = RecursiveCharacterTextSplitter(
@@ -378,25 +378,25 @@ class DocumentProcessor:
             length_function=len,
             add_start_index=True
         )
-    
+
     async def process_document(
-        self, 
-        file_path: str, 
+        self,
+        file_path: str,
         metadata: Dict
     ) -> List[str]:
         """
         Process a document and ingest into vector store.
-        
+
         Returns:
             List of document IDs
         """
         # 1. Load document
         loader = self._get_loader(file_path)
         documents = loader.load()
-        
+
         # 2. Split into chunks
         chunks = self.text_splitter.split_documents(documents)
-        
+
         # 3. Add metadata
         for i, chunk in enumerate(chunks):
             chunk.metadata.update({
@@ -405,23 +405,23 @@ class DocumentProcessor:
                 "chunk_hash": self._hash_content(chunk.page_content),
                 "source_file": file_path
             })
-        
+
         # 4. Generate embeddings and upsert
         doc_ids = await self._upsert_chunks(chunks)
-        
+
         return doc_ids
-    
+
     async def _upsert_chunks(self, chunks: List[Document]) -> List[str]:
         """Generate embeddings and upsert to hybrid index."""
         records = []
-        
+
         for chunk in chunks:
             # Generate dense embedding (OpenAI)
             dense_vector = await self._get_dense_embedding(chunk.page_content)
-            
+
             # Generate sparse embedding (Pinecone)
             sparse_vector = await self._get_sparse_embedding(chunk.page_content)
-            
+
             records.append({
                 "id": chunk.metadata["chunk_hash"],
                 "values": dense_vector,
@@ -431,26 +431,26 @@ class DocumentProcessor:
                     **chunk.metadata
                 }
             })
-        
+
         # Batch upsert
         self.vector_store.upsert(vectors=records)
-        
+
         return [r["id"] for r in records]
-    
+
     def _get_loader(self, file_path: str):
         """Get appropriate loader based on file extension."""
         ext = file_path.lower().split('.')[-1]
-        
+
         loaders = {
             'pdf': PyPDFLoader,
             'txt': TextLoader,
             'md': UnstructuredMarkdownLoader,
             'markdown': UnstructuredMarkdownLoader
         }
-        
+
         loader_class = loaders.get(ext, TextLoader)
         return loader_class(file_path)
-    
+
     def _hash_content(self, content: str) -> str:
         """Generate unique hash for content deduplication."""
         return hashlib.md5(content.encode()).hexdigest()
@@ -530,7 +530,7 @@ paths:
       responses:
         200:
           description: List of documents
-    
+
     post:
       summary: Upload a new document
       requestBody:
@@ -555,10 +555,10 @@ paths:
   /api/documents/{id}:
     get:
       summary: Get document by ID
-    
+
     put:
       summary: Update document
-    
+
     delete:
       summary: Delete document
 
@@ -588,7 +588,7 @@ paths:
       summary: WebSocket endpoint for real-time chat
       description: |
         WebSocket connection for streaming chat.
-        
+
         Message Types:
         - Client -> Server: {"message": "user input"}
         - Server -> Client: {"type": "token", "content": "..."}

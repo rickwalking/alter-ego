@@ -1,13 +1,11 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiCall, ApiError } from "@/lib/api-client";
+import { ApiError } from "@/lib/api-client";
 import {
-  documentSchema,
   documentUploadResponseSchema,
-  type Document,
   type DocumentUploadResponse,
+  type Document,
 } from "@/schemas/knowledge";
-
-const DOCUMENTS_KEY = "documents";
+import { documentKeys } from "@/features/knowledge/queries";
 
 export function useUploadDocument() {
   const queryClient = useQueryClient();
@@ -65,8 +63,14 @@ export function useUploadDocument() {
 
       return promise;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [DOCUMENTS_KEY] });
+    onSuccess: (document) => {
+      queryClient.setQueryData(documentKeys.detail(document.id), document);
+      queryClient.setQueryData<Document[]>(documentKeys.list(), (previous) =>
+        previous
+          ? [document, ...previous.filter((item) => item.id !== document.id)]
+          : previous,
+      );
+      queryClient.invalidateQueries({ queryKey: documentKeys.list() });
     },
   });
 }

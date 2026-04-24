@@ -51,12 +51,15 @@ const MOCK_CREATE_REQUEST = {
   image_style: "comic_neon" as const,
 };
 
-function createWrapper() {
-  const queryClient = new QueryClient({
+function createQueryClient() {
+  return new QueryClient({
     defaultOptions: {
       queries: { retry: false, gcTime: 0 },
     },
   });
+}
+
+function createWrapper(queryClient = createQueryClient()) {
   return function Wrapper({ children }: { children: ReactNode }) {
     return createElement(
       QueryClientProvider,
@@ -108,14 +111,18 @@ describe("useCreateCarousel", () => {
   // Scenario: useCreateCarousel invalidates carousels query on success
   it("invalidates the carousels query key on success", async () => {
     mockApiCall.mockResolvedValueOnce(MOCK_PROJECT);
+    const queryClient = createQueryClient();
+    const invalidateQueries = vi.spyOn(queryClient, "invalidateQueries");
     const { result } = renderHook(() => useCreateCarousel(), {
-      wrapper: createWrapper(),
+      wrapper: createWrapper(queryClient),
     });
 
     result.current.mutate(MOCK_CREATE_REQUEST);
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(mockApiCall).toHaveBeenCalledTimes(1);
+    expect(invalidateQueries).toHaveBeenCalledWith({
+      queryKey: ["carousels"],
+    });
   });
 
   // Scenario: useCreateCarousel handles API errors
@@ -171,12 +178,16 @@ describe("useCarouselStatus", () => {
   // Scenario: useCarouselStatus uses correct query key
   it("uses the correct query key with status and ID", async () => {
     mockApiCall.mockResolvedValueOnce(MOCK_STATUS);
+    const queryClient = createQueryClient();
     const { result } = renderHook(() => useCarouselStatus("abc-123"), {
-      wrapper: createWrapper(),
+      wrapper: createWrapper(queryClient),
     });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(result.current.data).toEqual(MOCK_STATUS);
+    expect(queryClient.getQueryData(["carousel-status", "abc-123"])).toEqual(
+      MOCK_STATUS,
+    );
   });
 
   // Scenario: useCarouselStatus is disabled when ID is empty
@@ -228,12 +239,16 @@ describe("useCarouselProject", () => {
   // Scenario: useCarouselProject uses the correct query key
   it("uses the correct query key with carousel and ID", async () => {
     mockApiCall.mockResolvedValueOnce(MOCK_PROJECT);
+    const queryClient = createQueryClient();
     const { result } = renderHook(() => useCarouselProject("abc-123"), {
-      wrapper: createWrapper(),
+      wrapper: createWrapper(queryClient),
     });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(result.current.data).toEqual(MOCK_PROJECT);
+    expect(queryClient.getQueryData(["carousel", "abc-123"])).toEqual(
+      MOCK_PROJECT,
+    );
   });
 
   // Scenario: useCarouselProject is disabled when ID is empty
@@ -255,13 +270,14 @@ describe("useCarouselProject", () => {
   });
 
   // Scenario: useCarouselProject does not poll by default
-  it("does not have a refetch interval", () => {
+  it("does not poll by default", async () => {
     mockApiCall.mockResolvedValueOnce(MOCK_PROJECT);
     const { result } = renderHook(() => useCarouselProject("abc-123"), {
       wrapper: createWrapper(),
     });
 
-    expect(result.current.refetchInterval).toBeUndefined();
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(mockApiCall).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -287,14 +303,22 @@ describe("useResumeCarousel", () => {
   // Scenario: propagates the returned status response
   it("returns the updated status on success", async () => {
     mockApiCall.mockResolvedValueOnce(MOCK_STATUS);
+    const queryClient = createQueryClient();
+    const invalidateQueries = vi.spyOn(queryClient, "invalidateQueries");
     const { result } = renderHook(() => useResumeCarousel(), {
-      wrapper: createWrapper(),
+      wrapper: createWrapper(queryClient),
     });
 
     result.current.mutate("abc-123");
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(result.current.data).toEqual(MOCK_STATUS);
+    expect(invalidateQueries).toHaveBeenCalledWith({
+      queryKey: ["carousel-status", "abc-123"],
+    });
+    expect(invalidateQueries).toHaveBeenCalledWith({
+      queryKey: ["carousel", "abc-123"],
+    });
   });
 
   // Scenario: API error surfaces as mutation error
@@ -357,14 +381,21 @@ describe("useGenerateCarousel", () => {
   // Scenario: useGenerateCarousel invalidates status and project queries on success
   it("invalidates related query keys on success", async () => {
     mockApiCall.mockResolvedValueOnce(MOCK_STATUS);
+    const queryClient = createQueryClient();
+    const invalidateQueries = vi.spyOn(queryClient, "invalidateQueries");
     const { result } = renderHook(() => useGenerateCarousel(), {
-      wrapper: createWrapper(),
+      wrapper: createWrapper(queryClient),
     });
 
     result.current.mutate({ projectId: "abc-123" });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(mockApiCall).toHaveBeenCalledTimes(1);
+    expect(invalidateQueries).toHaveBeenCalledWith({
+      queryKey: ["carousel-status", "abc-123"],
+    });
+    expect(invalidateQueries).toHaveBeenCalledWith({
+      queryKey: ["carousel", "abc-123"],
+    });
   });
 
   // Scenario: useGenerateCarousel surfaces API errors

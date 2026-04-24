@@ -8,10 +8,8 @@ to verify that our tests kill the mutants.
 Run with: uv run python scripts/mutation_test.py
 """
 
-import ast
 import subprocess
 import sys
-import tempfile
 from pathlib import Path
 
 BACKEND_DIR = Path(__file__).parent.parent
@@ -23,44 +21,44 @@ MUTATIONS = [
     {
         "file": "rag_backend/application/services/carousel_agent.py",
         "name": "stream_checkpoint: skip check (config is None)",
-        "find": '        if config is not None:\n            try:\n                snapshot = await graph.aget_state(config)\n                has_checkpoint = snapshot is not None and bool(snapshot.values)\n            except Exception:\n                has_checkpoint = False',
-        "replace": '        if config is None:\n            try:\n                snapshot = await graph.aget_state(config)\n                has_checkpoint = snapshot is not None and bool(snapshot.values)\n            except Exception:\n                has_checkpoint = False',
+        "find": "        if config is not None:\n            try:\n                snapshot = await graph.aget_state(config)\n                has_checkpoint = snapshot is not None and bool(snapshot.values)\n            except Exception:\n                has_checkpoint = False",
+        "replace": "        if config is None:\n            try:\n                snapshot = await graph.aget_state(config)\n                has_checkpoint = snapshot is not None and bool(snapshot.values)\n            except Exception:\n                has_checkpoint = False",
         "tests_should_kill": ["test_stream_pipeline_resumes_from_checkpoint"],
     },
     {
         "file": "rag_backend/application/services/carousel_agent.py",
         "name": "stream_checkpoint: force has_checkpoint=True always",
-        "find": '        has_checkpoint = False',
-        "replace": '        has_checkpoint = True',
+        "find": "        has_checkpoint = False",
+        "replace": "        has_checkpoint = True",
         "tests_should_kill": ["test_stream_pipeline_yields_progress_events"],
     },
     {
         "file": "rag_backend/application/services/carousel_agent.py",
         "name": "stream_checkpoint: swap ternary (always resume)",
-        "find": '            stream_input = None if has_checkpoint else initial_state',
-        "replace": '            stream_input = initial_state if has_checkpoint else None',
+        "find": "            stream_input = None if has_checkpoint else initial_state",
+        "replace": "            stream_input = initial_state if has_checkpoint else None",
         "tests_should_kill": ["test_stream_pipeline_resumes_from_checkpoint"],
     },
     # --- graph.py mutations ---
     {
         "file": "rag_backend/application/services/carousel/graph.py",
         "name": "persist_slides: empty existing lookup",
-        "find": '        existing_by_number = {s.slide_number: s for s in existing_slides}',
-        "replace": '        existing_by_number = {}',
+        "find": "        existing_by_number = {s.slide_number: s for s in existing_slides}",
+        "replace": "        existing_by_number = {}",
         "tests_should_kill": ["test_persist_slides_is_idempotent_on_resume"],
     },
     {
         "file": "rag_backend/application/services/carousel/graph.py",
         "name": "persist_slides: invert existing check",
-        "find": '            if existing:',
-        "replace": '            if not existing:',
+        "find": "            if existing:",
+        "replace": "            if not existing:",
         "tests_should_kill": ["test_persist_slides_is_idempotent_on_resume"],
     },
     {
         "file": "rag_backend/application/services/carousel/graph.py",
         "name": "persist_slides: skip update_slide call",
-        "find": '                await deps.repo.update_slide(updated)',
-        "replace": '                pass  # skipped update',
+        "find": "                await deps.repo.update_slide(updated)",
+        "replace": "                pass  # skipped update",
         "tests_should_kill": ["test_persist_slides_is_idempotent_on_resume"],
     },
 ]
@@ -68,15 +66,20 @@ MUTATIONS = [
 
 def apply_mutation(source: str, find: str, replace: str) -> str:
     if find not in source:
-        raise ValueError(f"Could not find mutation target in source")
+        raise ValueError("Could not find mutation target in source")
     return source.replace(find, replace, 1)
 
 
 def run_tests(test_filter: list[str]) -> tuple[int, str]:
     """Run pytest with the given test filter. Returns (exit_code, output)."""
     cmd = [
-        "uv", "run", "pytest", str(TEST_FILE),
-        "-v", "--tb=short", "-x",
+        "uv",
+        "run",
+        "pytest",
+        str(TEST_FILE),
+        "-v",
+        "--tb=short",
+        "-x",
     ]
     for t in test_filter:
         cmd.extend(["-k", t])
@@ -119,11 +122,11 @@ def main() -> int:
             exit_code, output = run_tests(mutation["tests_should_kill"])
             if exit_code != 0:
                 print(f"\n🎉 {mutation['name']}")
-                print(f"   KILLED — tests failed as expected")
+                print("   KILLED — tests failed as expected")
                 killed += 1
             else:
                 print(f"\n🫥 {mutation['name']}")
-                print(f"   SURVIVED — tests passed despite mutation")
+                print("   SURVIVED — tests passed despite mutation")
                 print(f"   Output: {output[:300]}...")
                 survived += 1
         except Exception as e:

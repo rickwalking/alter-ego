@@ -446,7 +446,7 @@ describe("API Client Module", () => {
             json: async () => {
               throw new Error("not json");
             },
-          } as Response),
+          } as unknown as Response),
         );
 
         await expect(

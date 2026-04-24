@@ -315,6 +315,20 @@ describe("useCarouselStream", () => {
       vi.useRealTimers();
     });
 
+    it("manual reconnect opens a fresh stream while the current stream is active", () => {
+      const { result } = renderHook(() => useCarouselStream("abc-123"), {
+        wrapper: createWrapper(),
+      });
+
+      act(() => {
+        result.current.reconnect();
+      });
+
+      expect(MockEventSource.instances).toHaveLength(2);
+      expect(MockEventSource.instances[1].url).toBe("/api/carousels/abc-123/stream");
+      expect(result.current.isStreaming).toBe(true);
+    });
+
     // Mutation-killing tests below target specific Stryker mutants that
     // the happy-path tests above don't catch.
 
@@ -387,7 +401,6 @@ describe("useCarouselStream", () => {
           current.onerror?.();
         });
 
-        const before = vi.getTimerCount();
         // Fast-forward just enough to verify the delay is increasing.
         act(() => {
           vi.advanceTimersByTime(1);
@@ -408,6 +421,47 @@ describe("useCarouselStream", () => {
       expect(delays[2]).toBe(1); // 4s > 1ms
       expect(delays[3]).toBe(1); // 8s > 1ms
       expect(delays[4]).toBe(1); // 16s > 1ms
+
+      vi.useRealTimers();
+    });
+
+    it("waits for the exact exponential backoff delay before reconnecting", () => {
+      vi.useFakeTimers();
+      renderHook(() => useCarouselStream("abc-123"), {
+        wrapper: createWrapper(),
+      });
+
+      const first = MockEventSource.instances[0];
+      act(() => {
+        first.readyState = MockEventSource.CLOSED;
+        first.onerror?.();
+      });
+
+      act(() => {
+        vi.advanceTimersByTime(999);
+      });
+      expect(MockEventSource.instances).toHaveLength(1);
+
+      act(() => {
+        vi.advanceTimersByTime(1);
+      });
+      expect(MockEventSource.instances).toHaveLength(2);
+
+      const second = MockEventSource.instances[1];
+      act(() => {
+        second.readyState = MockEventSource.CLOSED;
+        second.onerror?.();
+      });
+
+      act(() => {
+        vi.advanceTimersByTime(1999);
+      });
+      expect(MockEventSource.instances).toHaveLength(2);
+
+      act(() => {
+        vi.advanceTimersByTime(1);
+      });
+      expect(MockEventSource.instances).toHaveLength(3);
 
       vi.useRealTimers();
     });

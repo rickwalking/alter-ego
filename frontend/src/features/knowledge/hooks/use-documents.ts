@@ -3,39 +3,21 @@ import { apiCall, apiCallNoContent } from "@/lib/api-client";
 import { API_ENDPOINTS, HTTP_METHODS } from "@/constants/api";
 import {
   documentSchema,
-  documentListResponseSchema,
   type Document,
-  type DocumentListResponse,
   type CreateDocumentRequest,
 } from "@/schemas/knowledge";
-
-const DOCUMENTS_KEY = "documents";
-const DOCUMENT_KEY = "document";
+import {
+  documentKeys,
+  documentOptions,
+  documentsOptions,
+} from "@/features/knowledge/queries";
 
 export function useDocuments() {
-  return useQuery({
-    queryKey: [DOCUMENTS_KEY],
-    queryFn: async () => {
-      const result = await apiCall<DocumentListResponse>(
-        API_ENDPOINTS.DOCUMENTS,
-        documentListResponseSchema
-      );
-      return result.items;
-    },
-  });
+  return useQuery(documentsOptions());
 }
 
 export function useDocument(id: string | null) {
-  return useQuery({
-    queryKey: [DOCUMENT_KEY, id],
-    queryFn: async () => {
-      return apiCall<Document>(
-        API_ENDPOINTS.DOCUMENT_BY_ID(id as string),
-        documentSchema
-      );
-    },
-    enabled: !!id,
-  });
+  return useQuery(documentOptions(id));
 }
 
 export function useCreateDocument() {
@@ -48,8 +30,14 @@ export function useCreateDocument() {
         body: JSON.stringify(data),
       });
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [DOCUMENTS_KEY] });
+    onSuccess: (document) => {
+      queryClient.setQueryData(documentKeys.detail(document.id), document);
+      queryClient.setQueryData<Document[]>(documentKeys.list(), (previous) =>
+        previous
+          ? [document, ...previous.filter((item) => item.id !== document.id)]
+          : previous,
+      );
+      queryClient.invalidateQueries({ queryKey: documentKeys.list() });
     },
   });
 }
@@ -63,8 +51,12 @@ export function useDeleteDocument() {
         method: HTTP_METHODS.DELETE,
       });
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [DOCUMENTS_KEY] });
+    onSuccess: (_, id) => {
+      queryClient.setQueryData<Document[]>(documentKeys.list(), (previous) =>
+        previous?.filter((document) => document.id !== id),
+      );
+      queryClient.removeQueries({ queryKey: documentKeys.detail(id) });
+      queryClient.invalidateQueries({ queryKey: documentKeys.list() });
     },
   });
 }
@@ -80,8 +72,12 @@ export function useReprocessDocument() {
         { method: HTTP_METHODS.POST }
       );
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [DOCUMENTS_KEY] });
+    onSuccess: (document) => {
+      queryClient.setQueryData(documentKeys.detail(document.id), document);
+      queryClient.setQueryData<Document[]>(documentKeys.list(), (previous) =>
+        previous?.map((item) => (item.id === document.id ? document : item)),
+      );
+      queryClient.invalidateQueries({ queryKey: documentKeys.list() });
     },
   });
 }

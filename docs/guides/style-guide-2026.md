@@ -34,24 +34,24 @@ Tailwind CSS v4 is a complete rewrite with significant improvements:
   /* Custom colors using OKLCH color space */
   --color-primary: oklch(0.65 0.22 267);
   --color-secondary: oklch(0.7 0.15 300);
-  
+
   /* Custom fonts */
   --font-sans: Inter, system-ui, sans-serif;
   --font-display: "Cal Sans", ui-sans-serif, system-ui, sans-serif;
-  
+
   /* Custom spacing */
   --spacing-4-5: 1.125rem;
   --spacing-18: 4.5rem;
-  
+
   /* Custom animations */
   --animate-fade-in: fade-in 0.3s ease-out;
   --animate-slide-up: slide-up 0.4s ease-out;
-  
+
   @keyframes fade-in {
     0% { opacity: 0; }
     100% { opacity: 1; }
   }
-  
+
   @keyframes slide-up {
     0% { opacity: 0; transform: translateY(10px); }
     100% { opacity: 1; transform: translateY(0); }
@@ -133,17 +133,17 @@ OKLCH is the recommended color space for 2026 - it provides perceptual uniformit
   --color-primary-800: oklch(0.42 0.199 278);
   --color-primary-900: oklch(0.38 0.146 278);
   --color-primary-950: oklch(0.28 0.091 278);
-  
+
   /* Semantic Colors */
   --color-success: oklch(0.72 0.219 150);
   --color-success-foreground: oklch(0.98 0.005 150);
-  
+
   --color-warning: oklch(0.84 0.16 84);
   --color-warning-foreground: oklch(0.28 0.07 46);
-  
+
   --color-error: oklch(0.58 0.253 18);
   --color-error-foreground: oklch(0.98 0.005 18);
-  
+
   --color-info: oklch(0.72 0.14 250);
   --color-info-foreground: oklch(0.98 0.005 250);
 }
@@ -223,16 +223,16 @@ OKLCH is the recommended color space for 2026 - it provides perceptual uniformit
   --font-sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-display: "Cal Sans", "SF Pro Display", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono", "Fira Code", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  
+
   /* Option 2: Geometric (For tech/fintech) */
   --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
   --font-display: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
-  
+
   /* Option 3: Editorial (For content-heavy) */
   --font-sans: "DM Sans", ui-sans-serif, system-ui, sans-serif;
   --font-display: "DM Serif Display", Georgia, ui-serif, serif;
   --font-body: "Source Serif 4", Georgia, ui-serif, serif;
-  
+
   /* Option 4: Swiss/Minimal (High-end products) */
   --font-sans: "Switzer", "Helvetica Neue", Arial, sans-serif;
   --font-display: "General Sans", "Helvetica Neue", Arial, sans-serif;
@@ -247,51 +247,51 @@ OKLCH is the recommended color space for 2026 - it provides perceptual uniformit
   --text-xs: clamp(0.75rem, 0.7rem + 0.25vw, 0.8125rem);
   --text-xs--line-height: calc(1 / 0.75);
   --text-xs--letter-spacing: 0.01em;
-  
+
   --text-sm: clamp(0.8125rem, 0.75rem + 0.3vw, 0.875rem);
   --text-sm--line-height: calc(1.25 / 0.875);
   --text-sm--letter-spacing: 0em;
-  
+
   --text-base: clamp(0.9375rem, 0.875rem + 0.3vw, 1rem);
   --text-base--line-height: 1.5;
   --text-base--letter-spacing: 0em;
-  
+
   --text-lg: clamp(1.0625rem, 0.95rem + 0.55vw, 1.125rem);
   --text-lg--line-height: calc(1.75 / 1.125);
   --text-lg--letter-spacing: -0.01em;
-  
+
   --text-xl: clamp(1.125rem, 0.975rem + 0.75vw, 1.25rem);
   --text-xl--line-height: calc(1.75 / 1.25);
   --text-xl--letter-spacing: -0.01em;
-  
+
   --text-2xl: clamp(1.25rem, 1rem + 1.25vw, 1.5rem);
   --text-2xl--line-height: calc(2 / 1.5);
   --text-2xl--letter-spacing: -0.02em;
-  
+
   --text-3xl: clamp(1.5rem, 1.125rem + 1.875vw, 1.875rem);
   --text-3xl--line-height: calc(2.25 / 1.875);
   --text-3xl--letter-spacing: -0.02em;
-  
+
   --text-4xl: clamp(1.75rem, 1.25rem + 2.5vw, 2.25rem);
   --text-4xl--line-height: calc(2.5 / 2.25);
   --text-4xl--letter-spacing: -0.03em;
-  
+
   --text-5xl: clamp(2rem, 1.25rem + 3.75vw, 3rem);
   --text-5xl--line-height: 1.1;
   --text-5xl--letter-spacing: -0.03em;
-  
+
   --text-6xl: clamp(2.5rem, 1.5rem + 5vw, 3.75rem);
   --text-6xl--line-height: 1.05;
   --text-6xl--letter-spacing: -0.04em;
-  
+
   --text-7xl: clamp(3rem, 1.75rem + 6.25vw, 4.5rem);
   --text-7xl--line-height: 1;
   --text-7xl--letter-spacing: -0.04em;
-  
+
   --text-8xl: clamp(3.5rem, 1.5rem + 10vw, 6rem);
   --text-8xl--line-height: 1;
   --text-8xl--letter-spacing: -0.05em;
-  
+
   --text-9xl: clamp(4rem, 1rem + 15vw, 8rem);
   --text-9xl--line-height: 1;
   --text-9xl--letter-spacing: -0.05em;
@@ -356,7 +356,7 @@ const textVariants = cva("font-sans", {
   },
 });
 
-interface HeadingProps 
+interface HeadingProps
   extends React.HTMLAttributes<HTMLHeadingElement>,
     VariantProps<typeof headingVariants> {
   as?: "h1" | "h2" | "h3" | "h4" | "h5" | "h6";
@@ -642,7 +642,7 @@ export function Grid({ className, cols, gap, ...props }: GridProps) {
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
-  
+
   /* Radius */
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
@@ -653,7 +653,7 @@ export function Grid({ className, cols, gap, ...props }: GridProps) {
 
 :root {
   --radius: 0.625rem;
-  
+
   /* Light mode tokens */
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
@@ -751,15 +751,15 @@ export function ThemeProvider({
 
   useEffect(() => {
     const root = window.document.documentElement;
-    
+
     const systemTheme = window.matchMedia("(prefers-color-scheme: dark)").matches
       ? "dark"
       : "light";
-    
+
     const resolved = theme === "system" ? systemTheme : theme;
-    
+
     setResolvedTheme(resolved);
-    
+
     root.classList.remove("light", "dark");
     root.classList.add(resolved);
   }, [theme]);
@@ -870,17 +870,17 @@ export function ThemeToggle() {
   --color-brand-800: oklch(0.41 0.20 267);
   --color-brand-900: oklch(0.36 0.16 267);
   --color-brand-950: oklch(0.27 0.12 267);
-  
+
   /* Semantic Mappings */
   --color-background-default: var(--color-gray-50);
   --color-background-elevated: var(--color-white);
   --color-background-pressed: var(--color-gray-100);
-  
+
   --color-foreground-default: var(--color-gray-900);
   --color-foreground-muted: var(--color-gray-600);
   --color-foreground-subtle: var(--color-gray-400);
   --color-foreground-inverse: var(--color-white);
-  
+
   --color-border-default: var(--color-gray-200);
   --color-border-hover: var(--color-gray-300);
   --color-border-active: var(--color-brand-500);
@@ -902,7 +902,7 @@ export function ThemeToggle() {
   --space-16: 4rem;
   --space-20: 5rem;
   --space-24: 6rem;
-  
+
   /* Semantic Spacing */
   --space-page-padding: var(--space-4);
   --space-section-gap: var(--space-16);
@@ -916,7 +916,7 @@ export function ThemeToggle() {
   --font-family-sans: Inter, system-ui, sans-serif;
   --font-family-display: "Cal Sans", Inter, system-ui, sans-serif;
   --font-family-mono: "JetBrains Mono", monospace;
-  
+
   /* Font Sizes */
   --font-size-xs: 0.75rem;
   --font-size-sm: 0.875rem;
@@ -926,19 +926,19 @@ export function ThemeToggle() {
   --font-size-2xl: 1.5rem;
   --font-size-3xl: 1.875rem;
   --font-size-4xl: 2.25rem;
-  
+
   /* Font Weights */
   --font-weight-normal: 400;
   --font-weight-medium: 500;
   --font-weight-semibold: 600;
   --font-weight-bold: 700;
-  
+
   /* Line Heights */
   --line-height-tight: 1.25;
   --line-height-snug: 1.375;
   --line-height-normal: 1.5;
   --line-height-relaxed: 1.625;
-  
+
   /* Letter Spacing */
   --letter-spacing-tight: -0.02em;
   --letter-spacing-normal: 0;
@@ -954,7 +954,7 @@ export function ThemeToggle() {
   --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
   --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
   --shadow-2xl: 0 25px 50px -12px rgb(0 0 0 / 0.25);
-  
+
   /* Dark Mode Shadows */
   --shadow-sm-dark: 0 1px 2px 0 rgb(0 0 0 / 0.3);
   --shadow-base-dark: 0 1px 3px 0 rgb(0 0 0 / 0.4), 0 1px 2px -1px rgb(0 0 0 / 0.4);
@@ -971,7 +971,7 @@ export function ThemeToggle() {
   --radius-2xl: 1rem;
   --radius-3xl: 1.5rem;
   --radius-full: 9999px;
-  
+
   /* Semantic */
   --radius-component: var(--radius-lg);
   --radius-button: var(--radius-md);
@@ -987,41 +987,41 @@ export function ThemeToggle() {
   --duration-normal: 150ms;
   --duration-slow: 300ms;
   --duration-slower: 500ms;
-  
+
   /* Easings */
   --ease-linear: linear;
   --ease-in: cubic-bezier(0.4, 0, 1, 1);
   --ease-out: cubic-bezier(0, 0, 0.2, 1);
   --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
   --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
-  
+
   /* Animations */
   --animate-fade-in: fade-in var(--duration-normal) var(--ease-out);
   --animate-fade-out: fade-out var(--duration-fast) var(--ease-in);
   --animate-scale-in: scale-in var(--duration-normal) var(--ease-spring);
   --animate-slide-up: slide-up var(--duration-normal) var(--ease-out);
   --animate-slide-down: slide-down var(--duration-normal) var(--ease-out);
-  
+
   @keyframes fade-in {
     from { opacity: 0; }
     to { opacity: 1; }
   }
-  
+
   @keyframes fade-out {
     from { opacity: 1; }
     to { opacity: 0; }
   }
-  
+
   @keyframes scale-in {
     from { opacity: 0; transform: scale(0.95); }
     to { opacity: 1; transform: scale(1); }
   }
-  
+
   @keyframes slide-up {
     from { opacity: 0; transform: translateY(10px); }
     to { opacity: 1; transform: translateY(0); }
   }
-  
+
   @keyframes slide-down {
     from { opacity: 0; transform: translateY(-10px); }
     to { opacity: 1; transform: translateY(0); }
@@ -1142,17 +1142,17 @@ export interface ButtonProps
 }
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ 
-    className, 
-    variant, 
-    size, 
+  ({
+    className,
+    variant,
+    size,
     radius,
     width,
-    asChild = false, 
+    asChild = false,
     isLoading = false,
     children,
     disabled,
-    ...props 
+    ...props
   }, ref) => {
     const Comp = asChild ? Slot : "button";
     return (
@@ -1438,8 +1438,8 @@ export function StaggerItem({
     <motion.div
       variants={{
         hidden: { opacity: 0, y: 20 },
-        visible: { 
-          opacity: 1, 
+        visible: {
+          opacity: 1,
           y: 0,
           transition: {
             duration: 0.5,
@@ -1497,10 +1497,10 @@ export function Pressable({ children, className }: PressableProps) {
     <motion.div
       whileHover={{ scale: 1.01 }}
       whileTap={{ scale: 0.97 }}
-      transition={{ 
-        type: "spring", 
-        stiffness: 400, 
-        damping: 17 
+      transition={{
+        type: "spring",
+        stiffness: 400,
+        damping: 17
       }}
       className={className}
     >
@@ -1554,7 +1554,7 @@ export function PageTransition({ children }: PageTransitionProps) {
   --transition-base: 150ms cubic-bezier(0.4, 0, 0.2, 1);
   --transition-smooth: 300ms cubic-bezier(0.4, 0, 0.2, 1);
   --transition-spring: 400ms cubic-bezier(0.34, 1.56, 0.64, 1);
-  
+
   /* Predefined transitions */
   --transition-colors: color, background-color, border-color, outline-color, text-decoration-color, fill, stroke;
   --transition-transform: transform, translate, scale, rotate;
@@ -1578,7 +1578,7 @@ function AnimatedComponent() {
       animate={{ opacity: 1 }}
       transition={{ duration: 0.3 }}
       // Reduced motion support
-      {...(typeof window !== "undefined" && 
+      {...(typeof window !== "undefined" &&
         window.matchMedia("(prefers-reduced-motion: reduce)").matches
         ? { initial: false }
         : {}
@@ -1609,7 +1609,7 @@ function AnimatedComponent() {
   --breakpoint-lg: 64rem;   /* 1024px */
   --breakpoint-xl: 80rem;   /* 1280px */
   --breakpoint-2xl: 96rem;  /* 1536px */
-  
+
   /* Extended breakpoints for 2026 */
   --breakpoint-3xl: 120rem; /* 1920px - Large monitors */
   --breakpoint-xs: 30rem;   /* 480px - Small phones */
@@ -1668,7 +1668,7 @@ function ResponsiveNav() {
       <button className="lg:hidden">
         <MenuIcon />
       </button>
-      
+
       {/* Desktop: Full navigation */}
       <ul className="hidden lg:flex lg:gap-8">
         <li>Home</li>
@@ -1762,7 +1762,7 @@ function CardGrid() {
   :focus-visible {
     @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
   }
-  
+
   /* Skip link */
   .skip-link {
     @apply sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-primary focus:text-primary-foreground focus:rounded-md;
@@ -1786,7 +1786,7 @@ function CardGrid() {
     white-space: nowrap;
     border: 0;
   }
-  
+
   /* Show element when focused */
   .not-sr-only {
     position: static;
@@ -1823,7 +1823,7 @@ export function FormField({
   const id = React.useId();
   const errorId = `${id}-error`;
   const helperId = `${id}-helper`;
-  
+
   return (
     <div className="space-y-2">
       <label
@@ -1833,20 +1833,20 @@ export function FormField({
         {label}
         {required && <span className="text-destructive ml-1" aria-hidden="true">*</span>}
       </label>
-      
+
       {React.cloneElement(children as React.ReactElement, {
         id,
         "aria-invalid": error ? true : undefined,
         "aria-describedby": error ? errorId : helperText ? helperId : undefined,
         "aria-required": required,
       })}
-      
+
       {helperText && !error && (
         <p id={helperId} className="text-sm text-muted-foreground">
           {helperText}
         </p>
       )}
-      
+
       {error && (
         <p id={errorId} className="text-sm text-destructive" role="alert">
           {error}
@@ -1901,7 +1901,7 @@ interface RespectMotionProps {
 
 export function RespectMotion({ children }: RespectMotionProps) {
   const shouldReduceMotion = useReducedMotion();
-  
+
   return (
     <motion.div
       initial={shouldReduceMotion ? false : { opacity: 0 }}
@@ -1951,12 +1951,12 @@ export function RespectMotion({ children }: RespectMotionProps) {
     <h1>Main Article Title</h1>
     <p>Published on <time dateTime="2026-01-15">January 15, 2026</time></p>
   </header>
-  
+
   <section aria-labelledby="section-1">
     <h2 id="section-1">First Section</h2>
     <p>Content...</p>
   </section>
-  
+
   <section aria-labelledby="section-2">
     <h2 id="section-2">Second Section</h2>
     <p>Content...</p>
@@ -1997,21 +1997,21 @@ function App() {
       <a href="#main-content" className="skip-link">
         Skip to main content
       </a>
-      
+
       <header role="banner">
         <nav role="navigation" aria-label="Main">
           {/* Navigation */}
         </nav>
       </header>
-      
+
       <main id="main-content" role="main" tabIndex={-1}>
         {/* Main content */}
       </main>
-      
+
       <aside role="complementary" aria-label="Related content">
         {/* Sidebar content */}
       </aside>
-      
+
       <footer role="contentinfo">
         {/* Footer content */}
       </footer>

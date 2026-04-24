@@ -1,7 +1,8 @@
 """Unit tests for PostgresCarouselRepository."""
 
-import pytest
 from uuid import uuid4
+
+import pytest
 
 from rag_backend.domain.models import (
     CarouselProject,

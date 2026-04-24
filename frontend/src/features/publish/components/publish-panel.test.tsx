@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { PublishPanel } from "./publish-panel";
 import type { CarouselProjectResponse } from "@/schemas/carousel";
@@ -32,6 +32,9 @@ vi.mock("next-intl", () => ({
       "linkedin.openLinkedIn": "Open LinkedIn",
       "linkedin.manualSteps": "Manual steps",
       viewerLanguageLabel: "Carousel language",
+      previousSlide: "Previous slide",
+      nextSlide: "Next slide",
+      downloadImages: "Download images",
     };
     return (key: string, values?: Record<string, unknown>) => {
       if (key === "instagram.hashtagHelp") {
@@ -39,6 +42,9 @@ vi.mock("next-intl", () => ({
       }
       if (key === "linkedin.postLabel") {
         return `LinkedIn post (${values?.language})`;
+      }
+      if (key === "goToSlide") {
+        return `Go to slide ${values?.number}`;
       }
       return entries[key] ?? key;
     };

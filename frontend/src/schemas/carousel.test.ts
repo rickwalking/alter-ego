@@ -83,6 +83,15 @@ const VALID_SLIDE = {
   created_at: "2026-04-20T00:00:00Z",
 };
 
+function omitKey<T extends Record<string, unknown>, K extends keyof T>(
+  object: T,
+  key: K,
+): Omit<T, K> {
+  const copy = { ...object };
+  delete copy[key];
+  return copy;
+}
+
 describe("Carousel Design Colors Schema", () => {
   // Scenario: Validate carousel design tokens schema — color fields
   it("validates complete color object", () => {
@@ -91,13 +100,13 @@ describe("Carousel Design Colors Schema", () => {
   });
 
   it("rejects missing primary color", () => {
-    const { primary, ...missingPrimary } = VALID_DESIGN_COLORS;
+    const missingPrimary = omitKey(VALID_DESIGN_COLORS, "primary");
     const result = carouselDesignColorsSchema.safeParse(missingPrimary);
     expect(result.success).toBe(false);
   });
 
   it("rejects missing text_muted color", () => {
-    const { text_muted, ...rest } = VALID_DESIGN_COLORS;
+    const rest = omitKey(VALID_DESIGN_COLORS, "text_muted");
     const result = carouselDesignColorsSchema.safeParse(rest);
     expect(result.success).toBe(false);
   });
@@ -118,7 +127,7 @@ describe("Carousel Design Typography Schema", () => {
   });
 
   it("rejects missing font_family_heading", () => {
-    const { font_family_heading, ...rest } = VALID_DESIGN_TYPOGRAPHY;
+    const rest = omitKey(VALID_DESIGN_TYPOGRAPHY, "font_family_heading");
     const result = carouselDesignTypographySchema.safeParse(rest);
     expect(result.success).toBe(false);
   });
@@ -195,7 +204,7 @@ describe("Carousel Design Response Schema", () => {
 
   // Scenario: Reject invalid design tokens with missing fields
   it("rejects design response with missing colors", () => {
-    const { colors, ...withoutColors } = VALID_DESIGN_RESPONSE;
+    const withoutColors = omitKey(VALID_DESIGN_RESPONSE, "colors");
     const result = carouselDesignResponseSchema.safeParse(withoutColors);
     expect(result.success).toBe(false);
   });
@@ -209,7 +218,7 @@ describe("Carousel Design Response Schema", () => {
   });
 
   it("rejects design response missing theme_name", () => {
-    const { theme_name, ...withoutTheme } = VALID_DESIGN_RESPONSE;
+    const withoutTheme = omitKey(VALID_DESIGN_RESPONSE, "theme_name");
     const result = carouselDesignResponseSchema.safeParse(withoutTheme);
     expect(result.success).toBe(false);
   });
@@ -224,7 +233,7 @@ describe("Carousel Blog I18n Response Schema", () => {
 
   // Scenario: markdown field is present
   it("requires markdown field", () => {
-    const { markdown, ...withoutMarkdown } = VALID_BLOG_I18N;
+    const withoutMarkdown = omitKey(VALID_BLOG_I18N, "markdown");
     const result = carouselBlogI18nResponseSchema.safeParse(withoutMarkdown);
     expect(result.success).toBe(false);
   });
@@ -253,7 +262,7 @@ describe("Carousel Blog I18n Response Schema", () => {
   });
 
   it("rejects missing title", () => {
-    const { title, ...withoutTitle } = VALID_BLOG_I18N;
+    const withoutTitle = omitKey(VALID_BLOG_I18N, "title");
     const result = carouselBlogI18nResponseSchema.safeParse(withoutTitle);
     expect(result.success).toBe(false);
   });
@@ -282,10 +291,10 @@ describe("Carousel Blog With Design Response Schema", () => {
   });
 
   it("rejects response missing design", () => {
-    const { design, ...withoutDesign } = {
+    const withoutDesign = omitKey({
       ...VALID_BLOG_I18N,
       design: VALID_DESIGN_RESPONSE,
-    };
+    }, "design");
     const result = carouselBlogWithDesignResponseSchema.safeParse(withoutDesign);
     expect(result.success).toBe(false);
   });
@@ -330,16 +339,16 @@ describe("Carousel Project Response Schema", () => {
   });
 
   it("accepts missing blog_translations", () => {
-    const { blog_translations, ...withoutTranslations } = {
+    const withoutTranslations = omitKey({
       ...VALID_PROJECT,
       blog_translations: undefined,
-    };
+    }, "blog_translations");
     const result = carouselProjectResponseSchema.safeParse(withoutTranslations);
     expect(result.success).toBe(true);
   });
 
   it("requires id field", () => {
-    const { id, ...withoutId } = VALID_PROJECT;
+    const withoutId = omitKey(VALID_PROJECT, "id");
     const result = carouselProjectResponseSchema.safeParse(withoutId);
     expect(result.success).toBe(false);
   });
@@ -403,7 +412,7 @@ describe("Carousel Slide Response Schema", () => {
   });
 
   it("rejects missing slide_number", () => {
-    const { slide_number, ...rest } = VALID_SLIDE;
+    const rest = omitKey(VALID_SLIDE, "slide_number");
     const result = carouselSlideResponseSchema.safeParse(rest);
     expect(result.success).toBe(false);
   });

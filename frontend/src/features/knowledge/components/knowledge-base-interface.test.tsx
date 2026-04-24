@@ -1,7 +1,44 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { render } from "@/test/utils";
 import { KnowledgeBaseInterface } from "./knowledge-base-interface";
+
+const knowledgeMocks = vi.hoisted(() => ({
+  documents: [
+    {
+      id: "doc-1",
+      title: "Document 1",
+      content: "Content 1",
+      metadata: { tags: ["one"] },
+      created_at: "2026-04-20T00:00:00Z",
+      updated_at: "2026-04-20T00:00:00Z",
+    },
+    {
+      id: "doc-2",
+      title: "Document 2",
+      content: "Content 2",
+      metadata: { tags: ["two"] },
+      created_at: "2026-04-21T00:00:00Z",
+      updated_at: "2026-04-21T00:00:00Z",
+    },
+  ],
+  createDocument: vi.fn(),
+  deleteDocument: vi.fn(),
+}));
+
+vi.mock("../hooks/use-documents", () => ({
+  useDocuments: () => ({
+    data: knowledgeMocks.documents,
+    isLoading: false,
+  }),
+  useCreateDocument: () => ({
+    mutate: knowledgeMocks.createDocument,
+  }),
+  useDeleteDocument: () => ({
+    mutate: knowledgeMocks.deleteDocument,
+  }),
+}));
 
 // Mock child components
 vi.mock("@/components/layout", () => ({
@@ -31,19 +68,19 @@ vi.mock("./document-list", () => ({
   DocumentList: ({
     documents,
     onCreateNew,
-    onSelectDocument,
+    onUploadNew,
   }: {
     documents: unknown[];
     onCreateNew: () => void;
-    onSelectDocument: (doc: unknown) => void;
+    onUploadNew: () => void;
   }) => (
     <div data-testid="document-list">
       <div data-testid="document-count">{documents.length}</div>
       <button data-testid="create-new-btn" onClick={onCreateNew}>
         Create New
       </button>
-      <button data-testid="select-doc-btn" onClick={() => onSelectDocument(documents[0])}>
-        Select Document
+      <button data-testid="upload-new-btn" onClick={onUploadNew}>
+        Upload New
       </button>
     </div>
   ),
@@ -71,6 +108,25 @@ vi.mock("./document-form", () => ({
   ),
 }));
 
+vi.mock("./file-upload", () => ({
+  FileUpload: ({
+    onUploadComplete,
+    onCancel,
+  }: {
+    onUploadComplete: () => void;
+    onCancel: () => void;
+  }) => (
+    <div data-testid="file-upload">
+      <button data-testid="upload-complete" onClick={onUploadComplete}>
+        Complete upload
+      </button>
+      <button data-testid="upload-cancel" onClick={onCancel}>
+        Cancel upload
+      </button>
+    </div>
+  ),
+}));
+
 // Mock generateId
 vi.mock("@/lib/utils", async () => ({
   generateId: vi.fn(() => "new-id-123"),
@@ -82,6 +138,9 @@ vi.mock("@/lib/utils", async () => ({
 describe("KnowledgeBaseInterface Component", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    knowledgeMocks.createDocument.mockImplementation((_data, options) => {
+      options?.onSuccess?.();
+    });
   });
 
   describe("Given the KnowledgeBaseInterface is rendered", () => {
@@ -142,38 +201,36 @@ describe("KnowledgeBaseInterface Component", () => {
       });
     });
 
-    describe("When a document is selected for editing", () => {
-      it("Then the document form should be displayed in edit mode", async () => {
+    describe("When upload is selected", () => {
+      it("Then the upload form should be displayed", async () => {
         const user = userEvent.setup();
         render(<KnowledgeBaseInterface />);
 
-        await user.click(screen.getByTestId("select-doc-btn"));
-        expect(screen.getByTestId("document-form")).toBeInTheDocument();
-        expect(screen.getByTestId("form-mode")).toHaveTextContent("edit");
+        await user.click(screen.getByTestId("upload-new-btn"));
+        expect(screen.getByTestId("file-upload")).toBeInTheDocument();
       });
 
-      it("Then the card title should indicate editing a document", async () => {
+      it("Then the card title should indicate uploading a document", async () => {
         const user = userEvent.setup();
         render(<KnowledgeBaseInterface />);
 
-        await user.click(screen.getByTestId("select-doc-btn"));
-        expect(screen.getByTestId("card-title")).toHaveTextContent(/edit document/i);
+        await user.click(screen.getByTestId("upload-new-btn"));
+        expect(screen.getByTestId("card-title")).toHaveTextContent(/upload document/i);
       });
     });
 
     describe("When the form is submitted for creating", () => {
-      it("Then the new document should be added to the list", async () => {
+      it("Then the create mutation should be called", async () => {
         const user = userEvent.setup();
         render(<KnowledgeBaseInterface />);
 
-        // Open create form
         await user.click(screen.getByTestId("create-new-btn"));
-        
-        // Submit form
         await user.click(screen.getByTestId("form-submit"));
 
-        // Should be back to list with new document
-        expect(screen.getByTestId("document-count")).toHaveTextContent("3");
+        expect(knowledgeMocks.createDocument).toHaveBeenCalledWith(
+          { title: "Test", content: "Content", tags: [] },
+          expect.objectContaining({ onSuccess: expect.any(Function) }),
+        );
       });
 
       it("Then the view should return to the list", async () => {
@@ -187,18 +244,14 @@ describe("KnowledgeBaseInterface Component", () => {
       });
     });
 
-    describe("When the form is submitted for editing", () => {
-      it("Then the document should be updated", async () => {
+    describe("When upload completes", () => {
+      it("Then the view should return to the list", async () => {
         const user = userEvent.setup();
         render(<KnowledgeBaseInterface />);
 
-        // Select document to edit
-        await user.click(screen.getByTestId("select-doc-btn"));
-        
-        // Submit form
-        await user.click(screen.getByTestId("form-submit"));
+        await user.click(screen.getByTestId("upload-new-btn"));
+        await user.click(screen.getByTestId("upload-complete"));
 
-        // Should be back to list
         expect(screen.getByTestId("document-list")).toBeInTheDocument();
       });
     });

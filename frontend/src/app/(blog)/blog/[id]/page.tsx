@@ -1,6 +1,5 @@
 import { notFound } from "next/navigation";
 import { BLOG_LANGUAGES, DEFAULT_BLOG_LANGUAGE } from "@/constants/api";
-import type { CarouselBlogI18nResponse, CarouselDesignResponse } from "@/schemas/carousel";
 import { designTokensToCssVars } from "@/constants/blog";
 import { Container } from "@/components/layout";
 import { fetchBlogWithDesign } from "@/lib/server-fetch";
@@ -17,7 +16,7 @@ interface BlogPostPageProps {
 export default async function BlogPostPage({ params, searchParams }: BlogPostPageProps) {
   const { id } = await params;
   const { lang: langParam } = await searchParams;
-  const currentLang = langParam === BLOG_LANGUAGES.ENGLISH ? BLOG_LANGUAGES.ENGLISH : BLOG_LANGUAGES.PORTUGUESE;
+  const currentLang = langParam === BLOG_LANGUAGES.ENGLISH ? BLOG_LANGUAGES.ENGLISH : DEFAULT_BLOG_LANGUAGE;
   const data = await fetchBlogWithDesign(id, currentLang);
 
   if (!data) {

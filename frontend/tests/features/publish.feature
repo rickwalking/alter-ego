@@ -47,3 +47,41 @@ Feature: Carousel publish workspace
     When the user clicks "Open LinkedIn"
     Then the browser navigates to https://www.linkedin.com/feed/?shareActive=true
     And manual-step instructions remain visible on the page
+
+  # Chat persistence --------------------------------------------------
+
+  Scenario: Chat history survives page refresh
+    Given a publish page with an existing conversation containing 3 messages
+    When the user refreshes the page
+    Then all 3 messages are still visible
+    And the message input is ready for a new message
+
+  Scenario: Invalid conversation ID is replaced on refresh
+    Given the browser has a stale conversation ID in localStorage
+    When the user opens the publish page
+    Then a new conversation is created
+    And the stale ID is removed from localStorage
+
+  Scenario: Mismatched conversation ID is replaced on refresh
+    Given the browser has a conversation ID for another carousel in localStorage
+    When the user opens the publish page
+    Then the mismatched ID is removed from localStorage
+    And a new project-scoped conversation is created
+
+  Scenario: Publish chat uses a project-scoped WebSocket
+    Given a valid conversation exists for the carousel
+    When the publish chat connects
+    Then the WebSocket URL contains the conversation ID
+    And HTTPS pages use the secure WebSocket protocol
+
+  Scenario: Rapid page refreshes do not create duplicate conversations
+    Given no conversation exists for the project
+    When the publish page mounts twice in rapid succession
+    Then only one conversation creation request is sent
+
+  Scenario: Agent context is preserved across refreshes
+    Given a conversation where the user asked to "shorten the caption"
+    And the agent responded with a shorter caption
+    When the user refreshes the page
+    Then the previous messages are loaded
+    And a subsequent message sent via WebSocket includes the full history

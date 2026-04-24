@@ -4,12 +4,6 @@ import {
   fetchBlogWithDesign,
   fetchBlogWithDesignCombined,
 } from "@/lib/server-fetch";
-import {
-  carouselProjectListResponseSchema,
-  carouselBlogI18nResponseSchema,
-  carouselDesignResponseSchema,
-  carouselBlogWithDesignResponseSchema,
-} from "@/schemas/carousel";
 
 vi.stubEnv("NEXT_PUBLIC_API_URL", "http://localhost:8000");
 
@@ -130,12 +124,8 @@ describe("server-fetch", () => {
 
   describe("fetchBlogWithDesign", () => {
     it("returns blog and design data on success", async () => {
-      const MOCK_BLOG_WITH_DESIGN = {
-        ...MOCK_BLOG,
-        design: MOCK_DESIGN,
-      };
-
-      vi.spyOn(globalThis, "fetch").mockImplementation((url: string) => {
+      vi.spyOn(globalThis, "fetch").mockImplementation((input: RequestInfo | URL) => {
+        const url = String(input);
         if (url.includes("/blog/")) {
           return Promise.resolve({
             ok: true,
@@ -167,7 +157,8 @@ describe("server-fetch", () => {
     });
 
     it("returns null on non-ok blog response", async () => {
-      vi.spyOn(globalThis, "fetch").mockImplementation((url: string) => {
+      vi.spyOn(globalThis, "fetch").mockImplementation((input: RequestInfo | URL) => {
+        const url = String(input);
         if (url.includes("/blog/")) {
           return Promise.resolve({ ok: false, status: 404 } as Response);
         }

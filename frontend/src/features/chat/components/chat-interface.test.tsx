@@ -1,7 +1,49 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { render } from "@/test/utils";
 import { ChatInterface } from "./chat-interface";
+
+const chatMocks = vi.hoisted(() => ({
+  conversations: [
+    {
+      id: "conv-1",
+      title: "Existing conversation",
+      created_at: "2026-04-20T00:00:00Z",
+      updated_at: "2026-04-20T00:00:00Z",
+    },
+  ],
+  messages: [] as Array<{
+    id: string;
+    role: "user" | "assistant";
+    content: string;
+    created_at: string;
+    sources: never[];
+  }>,
+  loadingConversations: false,
+  loadingMessages: false,
+  sendPending: false,
+  createConversation: vi.fn(),
+  sendMessage: vi.fn(),
+}));
+
+vi.mock("../hooks/use-chat", () => ({
+  useConversations: () => ({
+    data: chatMocks.conversations,
+    isLoading: chatMocks.loadingConversations,
+  }),
+  useConversationMessages: () => ({
+    data: chatMocks.messages,
+    isLoading: chatMocks.loadingMessages,
+  }),
+  useCreateConversation: () => ({
+    mutateAsync: chatMocks.createConversation,
+  }),
+  useSendMessage: () => ({
+    isPending: chatMocks.sendPending,
+    mutateAsync: chatMocks.sendMessage,
+  }),
+}));
 
 vi.mock("./message-list", () => ({
   MessageList: ({ messages }: { messages: Array<{ id: string; content: string }> }) => (
@@ -86,6 +128,25 @@ vi.mock("@/lib/utils", async () => ({
 
 describe("ChatInterface Component", () => {
   beforeEach(() => {
+    chatMocks.conversations = [
+      {
+        id: "conv-1",
+        title: "Existing conversation",
+        created_at: "2026-04-20T00:00:00Z",
+        updated_at: "2026-04-20T00:00:00Z",
+      },
+    ];
+    chatMocks.messages = [];
+    chatMocks.loadingConversations = false;
+    chatMocks.loadingMessages = false;
+    chatMocks.sendPending = false;
+    chatMocks.createConversation.mockReset();
+    chatMocks.createConversation.mockResolvedValue({ id: "new-id-123" });
+    chatMocks.sendMessage.mockReset();
+    chatMocks.sendMessage.mockResolvedValue({
+      content: "Assistant response",
+      sources: [],
+    });
     vi.useFakeTimers({ shouldAdvanceTime: true });
   });
 
@@ -117,24 +178,39 @@ describe("ChatInterface Component", () => {
     });
 
     describe("When the New Chat button is clicked", () => {
-      it("Then a new conversation should be created", async () => {
+      it("Then a new conversation should not be created until a message is sent", async () => {
         const user = userEvent.setup();
         render(<ChatInterface />);
 
         await user.click(screen.getByTestId("new-chat-button"));
-        expect(screen.getByTestId("conversations-count")).toHaveTextContent("2");
+        expect(chatMocks.createConversation).not.toHaveBeenCalled();
+        expect(screen.getByTestId("conversations-count")).toHaveTextContent("1");
       });
 
-      it("Then the new conversation should become active", async () => {
+      it("Then no existing conversation remains selected while composing", async () => {
         const user = userEvent.setup();
         render(<ChatInterface />);
 
-        const initialActiveId = screen.getByTestId("active-id").textContent;
         await user.click(screen.getByTestId("new-chat-button"));
-        const newActiveId = screen.getByTestId("active-id").textContent;
-        
-        expect(newActiveId).not.toBe(initialActiveId);
-        expect(newActiveId).toBe("new-id-123");
+        expect(screen.getByTestId("active-id")).toHaveTextContent("");
+      });
+
+      it("Then the new conversation is created when the first message is sent", async () => {
+        const user = userEvent.setup();
+        render(<ChatInterface />);
+
+        await user.click(screen.getByTestId("new-chat-button"));
+        const input = screen.getByTestId("message-text-input");
+        await user.type(input, "Start fresh");
+        await user.click(screen.getByTestId("send-button"));
+
+        expect(await screen.findByText("Start fresh")).toBeInTheDocument();
+        expect(chatMocks.createConversation).toHaveBeenCalledWith({});
+        expect(chatMocks.sendMessage).toHaveBeenCalledWith({
+          conversationId: "new-id-123",
+          content: "Start fresh",
+        });
+        expect(screen.getByTestId("active-id")).toHaveTextContent("new-id-123");
       });
     });
 
@@ -147,7 +223,7 @@ describe("ChatInterface Component", () => {
         await user.type(input, "Hello!");
         await user.click(screen.getByTestId("send-button"));
 
-        expect(screen.getByText("Hello!")).toBeInTheDocument();
+        expect(await screen.findByText("Hello!")).toBeInTheDocument();
       });
 
       it("Then the input should be cleared after sending", async () => {
@@ -163,15 +239,12 @@ describe("ChatInterface Component", () => {
     });
 
     describe("When the component is loading", () => {
-      it("Then the message input should be disabled during response", async () => {
-        const user = userEvent.setup();
+      it("Then the message input should be disabled during response", () => {
+        chatMocks.sendPending = true;
         render(<ChatInterface />);
 
         const input = screen.getByTestId("message-text-input");
         const sendButton = screen.getByTestId("send-button");
-
-        await user.type(input, "Hello!");
-        await user.click(sendButton);
 
         expect(input).toBeDisabled();
         expect(sendButton).toBeDisabled();

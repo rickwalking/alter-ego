@@ -48,3 +48,6 @@ next-env.d.ts
 backend/output/
 backend/test.db
 backend/scripts/seed_gemma4.py
+
+# System
+.codex

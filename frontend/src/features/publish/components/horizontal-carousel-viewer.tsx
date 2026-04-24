@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useState, useCallback } from "react";
 import { useTranslations } from "next-intl";
 import { ChevronLeft, ChevronRight, Download } from "lucide-react";
@@ -21,10 +22,6 @@ export function HorizontalCarouselViewer({
   const t = useTranslations("publish.carouselViewer");
   const [activeIndex, setActiveIndex] = useState(0);
 
-  if (slideUrls.length === 0) {
-    return null;
-  }
-
   const handleScroll = (event: React.UIEvent<HTMLDivElement>) => {
     const target = event.currentTarget;
     const index = Math.round(target.scrollLeft / target.clientWidth);
@@ -45,6 +42,10 @@ export function HorizontalCarouselViewer({
 
   const goPrev = useCallback(() => scrollTo(activeIndex - 1), [activeIndex, scrollTo]);
   const goNext = useCallback(() => scrollTo(activeIndex + 1), [activeIndex, scrollTo]);
+
+  if (slideUrls.length === 0) {
+    return null;
+  }
 
   const downloadAll = async () => {
     for (let i = 0; i < slideUrls.length; i++) {
@@ -81,10 +82,13 @@ export function HorizontalCarouselViewer({
               key={url}
               className="relative aspect-[4/5] w-full flex-shrink-0 snap-center"
             >
-              <img
+              <Image
                 src={url}
                 alt={`${alt} – slide ${i + 1}`}
-                className="h-full w-full object-cover"
+                fill
+                className="object-cover"
+                sizes="(min-width: 1024px) 50vw, 100vw"
+                unoptimized
               />
               <div className="absolute top-3 right-3 rounded-full bg-black/60 px-2 py-0.5 text-white text-xs">
                 {i + 1} / {slideUrls.length}

@@ -140,24 +140,28 @@ export function CarouselProgress({
  * them as UTC instead of local time.
  */
 function useStalledSeconds(updatedAt: string | undefined, frozen: boolean): number {
-  const [seconds, setSeconds] = useState(0);
+  const [, setTick] = useState(0);
+
   useEffect(() => {
     if (!updatedAt || frozen) {
-      setSeconds(0);
       return;
     }
-    const normalized =
-      /[zZ]|[+-]\d{2}:?\d{2}$/.test(updatedAt) ? updatedAt : `${updatedAt}Z`;
-    const referenceMs = new Date(normalized).getTime();
-    const compute = (): void => {
-      const since = (Date.now() - referenceMs) / 1000;
-      setSeconds(Math.max(0, since));
-    };
-    compute();
-    const id = window.setInterval(compute, 1000);
+    const id = window.setInterval(() => setTick((tick) => tick + 1), 1000);
     return () => window.clearInterval(id);
   }, [updatedAt, frozen]);
-  return seconds;
+
+  if (!updatedAt || frozen) {
+    return 0;
+  }
+
+  return secondsSince(updatedAt);
+}
+
+function secondsSince(updatedAt: string): number {
+  const normalized =
+    /[zZ]|[+-]\d{2}:?\d{2}$/.test(updatedAt) ? updatedAt : `${updatedAt}Z`;
+  const referenceMs = new Date(normalized).getTime();
+  return Math.max(0, (Date.now() - referenceMs) / 1000);
 }
 
 function formatElapsed(seconds: number): string {

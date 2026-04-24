@@ -130,14 +130,29 @@ The LLM MUST return JSON with both languages:
 
 ## Phase 4: Design System
 
-### Theme Resolution
+### Theme Resolution (Creative Palette Selection)
 
-If theme is "auto", select the most appropriate theme based on topic analysis:
-- Security/attacks -> cybersecurity
-- AI models/competitions -> ai_competition
-- Dev skills/tutorials -> developer_skills
-- Code/leaks/open source -> source_code
-- Social engineering/phishing -> social_engineering
+Each carousel gets a **unique, topic-aware color palette**. The system analyzes the project topic, title, subtitle, and niche to pick colors that match the subject — not a generic default.
+
+**Resolution order:**
+
+1. **Brand detection** — If the topic clearly belongs to a known tech brand, use that brand's identity colors:
+   - **Anthropic / Claude** → Orange `#ea580c` + Cyan `#22d3ee`
+   - **Google / Gemma / Gemini** → Blue `#3b82f6` + Amber `#f59e0b`
+   - **OpenAI / GPT / ChatGPT** → Green `#10a37f` + Amber `#f59e0b`
+   - **Meta / Llama** → Purple `#8b5cf6` + Teal `#0ac5a8`
+   - **Microsoft / Azure / Copilot** → Azure `#0078d4` + Amber `#f59e0b`
+
+2. **Category keyword detection** — If no brand is detected, scan for category keywords:
+   - Security/attacks/hacking/vulnerability → **cybersecurity** (Red + Cyan)
+   - AI models/competitions/benchmarks → **ai_competition** (Blue + Amber)
+   - Dev skills/tutorials/architecture → **developer_skills** (Teal + Purple)
+   - Code/leaks/open source/repository → **source_code** (Purple + Orange)
+   - Social engineering/phishing/scam → **social_engineering** (Amber + Red)
+
+3. **Fallback** — If nothing matches, default to `ai_competition`.
+
+> The content synthesis prompt receives the resolved palette so the LLM can tailor image prompts to the color mood (warm orange for Anthropic, cool blue for Google, aggressive red for security).
 
 ### Theme Palettes
 

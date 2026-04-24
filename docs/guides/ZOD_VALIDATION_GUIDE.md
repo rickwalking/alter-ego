@@ -212,19 +212,19 @@ function LoginForm() {
         <input {...register("email")} type="email" placeholder="Email" />
         {errors.email && <span>{errors.email.message}</span>}
       </div>
-      
+
       <div>
         <input {...register("password")} type="password" placeholder="Password" />
         {errors.password && <span>{errors.password.message}</span>}
       </div>
-      
+
       <div>
         <label>
           <input {...register("rememberMe")} type="checkbox" />
           Remember me
         </label>
       </div>
-      
+
       <button type="submit" disabled={isSubmitting}>
         {isSubmitting ? "Logging in..." : "Login"}
       </button>
@@ -381,21 +381,21 @@ const apiResponseSchema = z.object({
 // API function with validation
 async function fetchUser(userId: string) {
   const response = await fetch(`/api/users/${userId}`);
-  
+
   if (!response.ok) {
     throw new Error(`HTTP error! status: ${response.status}`);
   }
 
   const json = await response.json();
-  
+
   // Validate the response
   const result = apiResponseSchema.safeParse(json);
-  
+
   if (!result.success) {
     console.error("Invalid API response:", result.error.issues);
     throw new Error("Invalid response from server");
   }
-  
+
   return result.data;
 }
 ```
@@ -428,24 +428,24 @@ async function apiCall<T>(
 ): Promise<T> {
   const response = await fetch(url);
   const json = await response.json();
-  
+
   const result = apiResponseSchema.safeParse(json);
-  
+
   if (!result.success) {
     throw new Error("Invalid API response format");
   }
-  
+
   if (!result.data.success) {
     throw new Error(result.data.error.message);
   }
-  
+
   // Parse the actual data with the provided schema
   const dataResult = dataSchema.safeParse(result.data.data);
-  
+
   if (!dataResult.success) {
     throw new Error("Invalid data format from API");
   }
-  
+
   return dataResult.data;
 }
 
@@ -490,7 +490,7 @@ class ApiClient {
 
   async get<T>(path: string, schema: z.ZodSchema<T>): Promise<T> {
     const response = await fetch(`${this.baseUrl}${path}`);
-    
+
     if (!response.ok) {
       throw new ApiError(response.status, await response.text());
     }
@@ -516,12 +516,12 @@ class ApiClient {
 
   private validate<T>(schema: z.ZodSchema<T>, data: unknown): T {
     const result = schema.safeParse(data);
-    
+
     if (!result.success) {
       console.error("Validation failed:", result.error.issues);
       throw new ValidationError(result.error);
     }
-    
+
     return result.data;
   }
 }
@@ -586,8 +586,8 @@ type OutputType = z.output<typeof transformedSchema>;
 type Nullable<T> = z.infer<ReturnType<typeof z.nullable<z.ZodType<T>>>>;
 
 // Extract array item type
-type ArrayElement<T> = T extends z.ZodArray<infer U> 
-  ? z.infer<U> 
+type ArrayElement<T> = T extends z.ZodArray<infer U>
+  ? z.infer<U>
   : never;
 
 // Extract object keys as union
@@ -732,19 +732,19 @@ z.config({
 // Format errors for display
 function formatZodError(error: z.ZodError): Record<string, string> {
   const formatted: Record<string, string> = {};
-  
+
   for (const issue of error.issues) {
     const path = issue.path.join(".");
     formatted[path] = issue.message;
   }
-  
+
   return formatted;
 }
 
 // Format errors for React Hook Form
 function formatErrorsForRHF(error: z.ZodError) {
   const errors: Record<string, { message: string; type: string }> = {};
-  
+
   for (const issue of error.issues) {
     const path = issue.path.join(".");
     errors[path] = {
@@ -752,7 +752,7 @@ function formatErrorsForRHF(error: z.ZodError) {
       type: issue.code,
     };
   }
-  
+
   return errors;
 }
 
@@ -774,7 +774,7 @@ interface FieldErrorProps {
 
 function FieldError({ error }: FieldErrorProps) {
   if (!error) return null;
-  
+
   return (
     <span className="error-message" role="alert">
       {error.message}
@@ -789,7 +789,7 @@ interface ErrorSummaryProps {
 
 function ErrorSummary({ errors }: ErrorSummaryProps) {
   if (errors.length === 0) return null;
-  
+
   return (
     <div className="error-summary" role="alert">
       <h3>Please correct the following errors:</h3>
@@ -1101,7 +1101,7 @@ import * as z from "zod";
 
 const uniqueStringArray = z.array(z.string()).superRefine((val, ctx) => {
   const seen = new Set<string>();
-  
+
   for (let i = 0; i < val.length; i++) {
     if (seen.has(val[i])) {
       ctx.addIssue({
@@ -1129,7 +1129,7 @@ const bookingSchema = z
         path: ["checkOut"],
       });
     }
-    
+
     const maxGuests = 10;
     if (data.guests > maxGuests) {
       ctx.addIssue({
@@ -1376,15 +1376,15 @@ async function fetchWithValidation<T>(
 ): Promise<T> {
   const response = await fetch(url);
   const json = await response.json();
-  
+
   // Use safeParseAsync for async schemas
   const result = await schema.safeParseAsync(json);
-  
+
   if (!result.success) {
     console.error("Validation failed:", result.error.issues);
     throw new Error("Invalid response from server");
   }
-  
+
   return result.data;
 }
 ```
@@ -1404,11 +1404,11 @@ const envSchema = z.object({
   NODE_ENV: z.enum(["development", "production", "test"]),
   API_URL: z.url(),
   DATABASE_URL: z.string().min(1),
-  
+
   // Optional with defaults
   PORT: z.coerce.number().default(3000),
   LOG_LEVEL: z.enum(["debug", "info", "warn", "error"]).default("info"),
-  
+
   // Boolean from string (Zod 4+)
   ENABLE_ANALYTICS: z.stringbool().default(false),
   DEBUG_MODE: z.stringbool().default(false),
@@ -1461,17 +1461,17 @@ type CombinedEnv = z.infer<typeof combinedSchema>;
 // Validate based on environment
 function validateEnv() {
   const isServer = typeof window === "undefined";
-  
+
   // On client, only validate client env
   const schema = isServer ? combinedSchema : clientEnvSchema;
-  
+
   const result = schema.safeParse(process.env);
-  
+
   if (!result.success) {
     const errors = result.error.issues.map(
       (i) => `${i.path.join(".")}: ${i.message}`
     );
-    
+
     if (isServer) {
       console.error("❌ Invalid server environment variables:\n", errors.join("\n"));
       process.exit(1);
@@ -1480,7 +1480,7 @@ function validateEnv() {
       throw new Error("Environment validation failed");
     }
   }
-  
+
   return result.data;
 }
 
@@ -1519,7 +1519,7 @@ const testSchema = baseSchema.extend({
 // Select schema based on environment
 function getEnvSchema() {
   const nodeEnv = process.env.NODE_ENV;
-  
+
   switch (nodeEnv) {
     case "production":
       return productionSchema;
@@ -1585,17 +1585,17 @@ export function parseByteSize() {
   return z.string().transform((val) => {
     const match = val.match(/^(\d+(?:\.\d+)?)\s*(b|kb|mb|gb)?$/i);
     if (!match) throw new Error("Invalid byte size format");
-    
+
     const num = parseFloat(match[1]);
     const unit = (match[2] || "b").toLowerCase();
-    
+
     const multipliers: Record<string, number> = {
       b: 1,
       kb: 1024,
       mb: 1024 ** 2,
       gb: 1024 ** 3,
     };
-    
+
     return Math.floor(num * multipliers[unit]);
   });
 }
@@ -1751,7 +1751,7 @@ const router = Router();
 function validateBody<T>(schema: z.ZodSchema<T>) {
   return (req: Request, res: Response, next: NextFunction) => {
     const result = schema.safeParse(req.body);
-    
+
     if (!result.success) {
       return res.status(400).json({
         success: false,
@@ -1762,7 +1762,7 @@ function validateBody<T>(schema: z.ZodSchema<T>) {
         },
       });
     }
-    
+
     req.validatedBody = result.data;
     next();
   };
@@ -1772,7 +1772,7 @@ function validateBody<T>(schema: z.ZodSchema<T>) {
 function validateQuery<T>(schema: z.ZodSchema<T>) {
   return (req: Request, res: Response, next: NextFunction) => {
     const result = schema.safeParse(req.query);
-    
+
     if (!result.success) {
       return res.status(400).json({
         success: false,
@@ -1783,7 +1783,7 @@ function validateQuery<T>(schema: z.ZodSchema<T>) {
         },
       });
     }
-    
+
     req.validatedQuery = result.data;
     next();
   };
@@ -1835,7 +1835,7 @@ function UserRegistrationForm() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     });
-    
+
     if (!response.ok) {
       // Handle error
     }
@@ -1845,13 +1845,13 @@ function UserRegistrationForm() {
     <form onSubmit={handleSubmit(onSubmit)}>
       <input {...register("email")} type="email" />
       {errors.email && <span>{errors.email.message}</span>}
-      
+
       <input {...register("name")} />
       {errors.name && <span>{errors.name.message}</span>}
-      
+
       <input {...register("password")} type="password" />
       {errors.password && <span>{errors.password.message}</span>}
-      
+
       <button type="submit" disabled={isSubmitting}>
         Register
       </button>
@@ -1864,10 +1864,10 @@ function UserRegistrationForm() {
 
 ```typescript
 // frontend/src/lib/api.ts
-import { 
-  userSchema, 
+import {
+  userSchema,
   createPaginatedResponseSchema,
-  type User 
+  type User
 } from "@myapp/schemas";
 import * as z from "zod";
 
@@ -1883,10 +1883,10 @@ class ApiClient {
   async getUsers(): Promise<{ users: User[]; total: number }> {
     const response = await fetch(`${this.baseUrl}/users`);
     const json = await response.json();
-    
+
     // Validate with shared schema
     const result = paginatedUsersSchema.parse(json);
-    
+
     return {
       users: result.data,
       total: result.pagination.total,
@@ -1896,7 +1896,7 @@ class ApiClient {
   async getUser(id: string): Promise<User> {
     const response = await fetch(`${this.baseUrl}/users/${id}`);
     const json = await response.json();
-    
+
     return userSchema.parse(json.data);
   }
 }

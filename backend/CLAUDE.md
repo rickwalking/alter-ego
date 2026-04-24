@@ -48,10 +48,12 @@ uv run ruff format src/          # Formatting
 
 ### Type Safety
 - **mypy strict mode enabled** — All code must pass `mypy --strict`
-- **No `Any` types** — Use explicit, specific types. Never use `Any`, `object`, or bare `dict`/`list`
+- **No explicit `Any` types** — `disallow_any_explicit = true` in `pyproject.toml`. Use `Protocol`, `TypedDict`, `object`, or `cast` instead.
+- **No bare generics** — `disallow_any_generics = true`. Always parameterize `dict`, `list`, `Callable`, etc. (e.g., `dict[str, object]`, `list[int]`).
 - **Use `Protocol` for interfaces** — Not abstract base classes
 - **All functions must have explicit return type annotations**
 - **Use `TypedDict` for structured dicts**, not `dict[str, Any]`
+- **Decision tree for dynamic data**: `Protocol` → `object` → `cast(T, value)` → `type: ignore[any]` (last resort, with justification comment)
 
 ### Constants
 - **No magic strings** — All string literals used in multiple places must be constants

@@ -280,12 +280,12 @@ export default async function Page({
 import { useState } from 'react'
 import { likePost } from '@/lib/actions'
 
-export default function LikeButton({ 
-  initialLikes, 
-  postId 
-}: { 
+export default function LikeButton({
+  initialLikes,
+  postId
+}: {
   initialLikes: number
-  postId: string 
+  postId: string
 }) {
   const [likes, setLikes] = useState(initialLikes)
   const [isPending, setIsPending] = useState(false)
@@ -315,7 +315,7 @@ Pass Server Components as props (children) to Client Components:
 
 export default function Modal({ children }: { children: React.ReactNode }) {
   const [isOpen, setIsOpen] = useState(false)
-  
+
   return (
     <>
       <button onClick={() => setIsOpen(true)}>Open</button>
@@ -610,7 +610,7 @@ const increment = useCallback(() => {
 useEffect(() => {
   const connection = createConnection(serverUrl)
   connection.connect()
-  
+
   return () => {
     connection.disconnect() // Cleanup
   }
@@ -955,7 +955,7 @@ function PostLink({ post }: { post: Post }) {
 // app/posts/page.tsx
 export default async function PostsPage() {
   const queryClient = new QueryClient()
-  
+
   await queryClient.prefetchQuery({
     queryKey: ['posts'],
     queryFn: fetchPosts,
@@ -1023,7 +1023,7 @@ const HeavyChart = lazy(() => import('./components/HeavyChart'))
 
 function Analytics() {
   const [showChart, setShowChart] = useState(false)
-  
+
   return (
     <div>
       <button onClick={() => setShowChart(true)}>Show Chart</button>
@@ -1126,7 +1126,7 @@ const MemoizedItem = memo(Item, (prev, next) => {
 // 3. Memoize context value
 function AppProvider({ children }) {
   const [user, setUser] = useState(null)
-  
+
   const value = useMemo(() => ({
     user,
     setUser,
@@ -1159,12 +1159,12 @@ export function useWebWorker<T, R>(workerScript: string) {
   const postMessage = useCallback((data: T): Promise<R> => {
     return new Promise((resolve, reject) => {
       if (!workerRef.current) return reject('Worker not initialized')
-      
+
       const handleMessage = (e: MessageEvent) => {
         resolve(e.data)
         workerRef.current?.removeEventListener('message', handleMessage)
       }
-      
+
       workerRef.current.addEventListener('message', handleMessage)
       workerRef.current.postMessage(data)
     })
@@ -1251,7 +1251,7 @@ const AccordionContext = createContext<{
 
 function Accordion({ children }: { children: React.ReactNode }) {
   const [openItem, setOpenItem] = useState<string | null>(null)
-  
+
   return (
     <AccordionContext value={{ openItem, setOpenItem }}>
       <div className="accordion">{children}</div>
@@ -1259,31 +1259,31 @@ function Accordion({ children }: { children: React.ReactNode }) {
   )
 }
 
-function Item({ 
-  id, 
-  children 
-}: { 
+function Item({
+  id,
+  children
+}: {
   id: string
-  children: React.ReactNode 
+  children: React.ReactNode
 }) {
   return <div className="accordion-item">{children}</div>
 }
 
-function Trigger({ 
-  itemId, 
-  children 
-}: { 
+function Trigger({
+  itemId,
+  children
+}: {
   itemId: string
-  children: React.ReactNode 
+  children: React.ReactNode
 }) {
   const context = useContext(AccordionContext)
   if (!context) throw new Error('Trigger must be used within Accordion')
-  
+
   const { openItem, setOpenItem } = context
   const isOpen = openItem === itemId
 
   return (
-    <button 
+    <button
       className="accordion-trigger"
       onClick={() => setOpenItem(isOpen ? null : itemId)}
     >
@@ -1293,16 +1293,16 @@ function Trigger({
   )
 }
 
-function Content({ 
-  itemId, 
-  children 
-}: { 
+function Content({
+  itemId,
+  children
+}: {
   itemId: string
-  children: React.ReactNode 
+  children: React.ReactNode
 }) {
   const context = useContext(AccordionContext)
   if (!context) throw new Error('Content must be used within Accordion')
-  
+
   const { openItem } = context
   if (openItem !== itemId) return null
 
@@ -1392,10 +1392,10 @@ export function UserProfileContainer({ userId }: { userId: string }) {
   })
 
   return (
-    <UserProfileView 
-      user={user} 
-      isLoading={isLoading} 
-      error={error} 
+    <UserProfileView
+      user={user}
+      isLoading={isLoading}
+      error={error}
     />
   )
 }
@@ -1639,7 +1639,7 @@ const config = {
 } satisfies Record<string, string | number>
 
 // Component with typed props
-export function Button({ 
+export function Button({
   variant = 'primary',
   size = 'md',
   children,

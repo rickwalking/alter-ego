@@ -1,8 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useLayoutEffect, useRef, useState } from "react";
 import { apiCall } from "@/lib/api-client";
 import { API_ENDPOINTS, HTTP_METHODS } from "@/constants/api";
-import { STATUS_POLL_INTERVAL } from "@/constants/create";
 import {
   carouselProjectResponseSchema,
   carouselStatusResponseSchema,
@@ -12,10 +11,11 @@ import {
   type CarouselCreateRequest,
   type CarouselStreamEvent,
 } from "@/schemas/carousel";
-
-const CAROUSELS_KEY = "carousels";
-const CAROUSEL_STATUS_KEY = "carousel-status";
-const CAROUSEL_KEY = "carousel";
+import {
+  carouselKeys,
+  carouselProjectOptions,
+  carouselStatusOptions,
+} from "@/features/carousel/queries";
 
 // Lifecycle markers emitted by the backend /stream route alongside
 // real node names. When consumers see `end` or `error` the stream is
@@ -28,6 +28,22 @@ const STREAM_EVENT_ERROR = "error";
 const MAX_STREAM_RETRIES = 20;
 const BASE_RETRY_DELAY_MS = 1000;
 const MAX_RETRY_DELAY_MS = 30000;
+
+interface StreamState {
+  key: string | null;
+  latestEvent: CarouselStreamEvent | null;
+  closed: boolean;
+  error: string | null;
+}
+
+function createStreamState(key: string | null): StreamState {
+  return {
+    key,
+    latestEvent: null,
+    closed: false,
+    error: null,
+  };
+}
 
 type GenerateArgs = {
   projectId: string;
@@ -49,8 +65,16 @@ export function useCreateCarousel() {
         }
       );
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [CAROUSELS_KEY] });
+    onSuccess: (project) => {
+      queryClient.setQueryData(carouselKeys.detail(project.id), project);
+      queryClient.setQueryData<CarouselProjectResponse[]>(
+        carouselKeys.list(),
+        (previous) =>
+          previous
+            ? [project, ...previous.filter((item) => item.id !== project.id)]
+            : previous,
+      );
+      queryClient.invalidateQueries({ queryKey: carouselKeys.list() });
     },
   });
 }
@@ -70,9 +94,14 @@ export function useGenerateCarousel() {
         }
       );
     },
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: [CAROUSEL_STATUS_KEY, variables.projectId] });
-      queryClient.invalidateQueries({ queryKey: [CAROUSEL_KEY, variables.projectId] });
+    onSuccess: (status, variables) => {
+      queryClient.setQueryData(carouselKeys.status(variables.projectId), status);
+      queryClient.invalidateQueries({
+        queryKey: carouselKeys.status(variables.projectId),
+      });
+      queryClient.invalidateQueries({
+        queryKey: carouselKeys.detail(variables.projectId),
+      });
     },
   });
 }
@@ -96,9 +125,10 @@ export function useResumeCarousel() {
         { method: HTTP_METHODS.POST }
       );
     },
-    onSuccess: (_, projectId) => {
-      queryClient.invalidateQueries({ queryKey: [CAROUSEL_STATUS_KEY, projectId] });
-      queryClient.invalidateQueries({ queryKey: [CAROUSEL_KEY, projectId] });
+    onSuccess: (status, projectId) => {
+      queryClient.setQueryData(carouselKeys.status(projectId), status);
+      queryClient.invalidateQueries({ queryKey: carouselKeys.status(projectId) });
+      queryClient.invalidateQueries({ queryKey: carouselKeys.detail(projectId) });
     },
   });
 }
@@ -110,29 +140,12 @@ export function useResumeCarousel() {
  * hook when streaming fails.
  */
 export function useCarouselStatus(id: string | null) {
-  return useQuery({
-    queryKey: [CAROUSEL_STATUS_KEY, id],
-    queryFn: () =>
-      apiCall(
-        API_ENDPOINTS.CAROUSEL_STATUS(id as string),
-        carouselStatusResponseSchema
-      ),
-    enabled: !!id,
-    refetchInterval: STATUS_POLL_INTERVAL,
-  });
+  return useQuery(carouselStatusOptions(id));
 }
 
 /** Fetch carousel project by ID for workspace page. */
 export function useCarouselProject(id: string | null) {
-  return useQuery({
-    queryKey: [CAROUSEL_KEY, id],
-    queryFn: () =>
-      apiCall(
-        API_ENDPOINTS.CAROUSEL_BY_ID(id as string),
-        carouselProjectResponseSchema
-      ),
-    enabled: !!id,
-  });
+  return useQuery(carouselProjectOptions(id));
 }
 
 /**
@@ -178,15 +191,23 @@ export function useCarouselStream(
 ): CarouselStreamState {
   const { enabled = true } = options;
   const queryClient = useQueryClient();
-  const [latestEvent, setLatestEvent] = useState<CarouselStreamEvent | null>(null);
-  const [isStreaming, setIsStreaming] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [reconnectKey, setReconnectKey] = useState(0);
+  const streamKey = id && enabled ? `${id}:${reconnectKey}` : null;
+  const [streamState, setStreamState] = useState(() =>
+    createStreamState(streamKey),
+  );
+  const currentStreamState =
+    streamState.key === streamKey ? streamState : createStreamState(streamKey);
   const sourceRef = useRef<EventSource | null>(null);
   const retryCountRef = useRef(0);
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const close = (): void => {
+  if (streamState.key !== streamKey) {
+    setStreamState(currentStreamState);
+  }
+
+  const close = useCallback((): void => {
+    const key = streamKey;
     if (reconnectTimerRef.current) {
       clearTimeout(reconnectTimerRef.current);
       reconnectTimerRef.current = null;
@@ -195,15 +216,17 @@ export function useCarouselStream(
       sourceRef.current.close();
       sourceRef.current = null;
     }
-    setIsStreaming(false);
-  };
+    setStreamState((state) =>
+      state.key === key ? { ...state, closed: true } : state,
+    );
+  }, [streamKey]);
 
   const reconnect = (): void => {
     retryCountRef.current = 0;
     setReconnectKey((k) => k + 1);
   };
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!id || !enabled) {
       return;
     }
@@ -212,8 +235,6 @@ export function useCarouselStream(
     // is a GET endpoint, so the connection works out of the box.
     const source = new EventSource(API_ENDPOINTS.CAROUSEL_STREAM(id));
     sourceRef.current = source;
-    setIsStreaming(true);
-    setError(null);
 
     source.onmessage = (msg) => {
       try {
@@ -223,7 +244,9 @@ export function useCarouselStream(
           return;
         }
         const event = result.data;
-        setLatestEvent(event);
+        setStreamState((state) =>
+          state.key === streamKey ? { ...state, latestEvent: event } : state,
+        );
 
         // A successful event resets the retry budget — the pipeline is
         // alive and making progress.
@@ -232,7 +255,7 @@ export function useCarouselStream(
         // Keep the polling cache in sync so components that read
         // `useCarouselStatus` reflect the live event without polling.
         if (event.status !== undefined) {
-          queryClient.setQueryData([CAROUSEL_STATUS_KEY, id], (prev: CarouselStatusResponse | undefined) => ({
+          queryClient.setQueryData(carouselKeys.status(id), (prev: CarouselStatusResponse | undefined) => ({
             ...(prev ?? { id, error_message: null, updated_at: new Date().toISOString() }),
             id,
             status: event.status ?? prev?.status ?? "",
@@ -246,9 +269,13 @@ export function useCarouselStream(
           // Pipeline finished or failed — close the stream and let the
           // consumer read the terminal event from `latestEvent`.
           if (event.node === STREAM_EVENT_ERROR && event.error) {
-            setError(event.error);
+            setStreamState((state) =>
+              state.key === streamKey
+                ? { ...state, error: event.error ?? null }
+                : state,
+            );
           }
-          queryClient.invalidateQueries({ queryKey: [CAROUSEL_KEY, id] });
+          queryClient.invalidateQueries({ queryKey: carouselKeys.detail(id) });
           close();
         }
       } catch {
@@ -268,18 +295,23 @@ export function useCarouselStream(
             setReconnectKey((k) => k + 1);
           }, delay);
         } else {
-          setError("stream disconnected — max retries reached");
+          setStreamState((state) =>
+            state.key === streamKey
+              ? { ...state, error: "stream disconnected — max retries reached" }
+              : state,
+          );
         }
       }
     };
 
     return close;
-    // reconnectKey is intentionally omitted — it is the *trigger* for the
-    // effect, not a value consumed inside it. Including it in deps would
-    // cause a lint warning but not change behavior because the effect
-    // already re-runs when reconnectKey changes.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id, enabled, queryClient, reconnectKey]);
+  }, [id, enabled, queryClient, reconnectKey, streamKey, close]);
 
-  return { latestEvent, isStreaming, error, close, reconnect };
+  return {
+    latestEvent: currentStreamState.latestEvent,
+    isStreaming: streamKey !== null && !currentStreamState.closed,
+    error: currentStreamState.error,
+    close,
+    reconnect,
+  };
 }

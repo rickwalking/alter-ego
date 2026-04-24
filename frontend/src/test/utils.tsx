@@ -1,6 +1,8 @@
-import { ReactElement, ReactNode } from "react";
+import type { ReactElement, ReactNode } from "react";
 import { render, RenderOptions } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { NextIntlClientProvider } from "next-intl";
+import messages from "@/i18n/locales/en.json";
 
 // Create a test query client
 const createTestQueryClient = () =>
@@ -17,13 +19,14 @@ const createTestQueryClient = () =>
 // All providers wrapper
 interface AllProvidersProps {
   children: ReactNode;
+  queryClient: QueryClient;
 }
 
-function AllProviders({ children }: AllProvidersProps) {
-  const queryClient = createTestQueryClient();
-
+function AllProviders({ children, queryClient }: AllProvidersProps) {
   return (
-    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    <NextIntlClientProvider locale="en" messages={messages}>
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    </NextIntlClientProvider>
   );
 }
 
@@ -32,9 +35,14 @@ export function renderWithProviders(
   ui: ReactElement,
   options?: Omit<RenderOptions, "wrapper">
 ) {
+  const queryClient = createTestQueryClient();
+  const Wrapper = ({ children }: { children: ReactNode }) => (
+    <AllProviders queryClient={queryClient}>{children}</AllProviders>
+  );
+
   return {
-    ...render(ui, { wrapper: AllProviders, ...options }),
-    queryClient: createTestQueryClient(),
+    ...render(ui, { wrapper: Wrapper, ...options }),
+    queryClient,
   };
 }
 

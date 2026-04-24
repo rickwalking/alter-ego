@@ -1,7 +1,5 @@
 """Unit tests for domain models."""
 
-import pytest
-
 from rag_backend.domain.models import (
     Conversation,
     Document,
@@ -114,7 +112,6 @@ class TestConversation:
 
     def test_touch_updates_timestamp(self):
         """Touch should update the updated_at timestamp."""
-        from datetime import datetime
 
         conversation = Conversation()
         old_updated_at = conversation.updated_at

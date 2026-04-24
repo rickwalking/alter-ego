@@ -41,7 +41,7 @@ class TestOpenAIImageServiceHappyPath:
         service = OpenAIImageService(api_key="sk-test")
         fake_client = MagicMock()
         fake_client.images.generate.return_value = _fake_response()
-        service._client = fake_client  # noqa: SLF001 — bypass lazy init for test
+        service._client = fake_client
 
         out = tmp_path / "slide_1.jpg"
         result = await service.generate_image("prompt", str(out))

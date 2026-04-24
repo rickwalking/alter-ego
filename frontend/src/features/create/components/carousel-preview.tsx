@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { useTranslations } from "next-intl";
 import { ROUTE_PATHS } from "@/constants/api";
 import type { CarouselProjectResponse } from "@/schemas/carousel";
@@ -28,11 +29,14 @@ export function CarouselPreview({ project }: CarouselPreviewProps) {
   return (
     <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] overflow-hidden">
       {imageUrl && (
-        <div className="aspect-[4/3] w-full overflow-hidden">
-          <img
+        <div className="relative aspect-[4/3] w-full overflow-hidden">
+          <Image
             src={imageUrl}
             alt={project.title || project.topic}
-            className="h-full w-full object-cover"
+            fill
+            className="object-cover"
+            sizes="(min-width: 1024px) 33vw, 100vw"
+            unoptimized
           />
         </div>
       )}

@@ -33,9 +33,7 @@ logger = get_logger()
 FINISHED_STATUSES = (CarouselStatus.COMPLETED.value, CarouselStatus.FAILED.value)
 
 
-async def _build_saver(
-    settings: Any, stack: AsyncExitStack
-) -> BaseCheckpointSaver[Any] | None:
+async def _build_saver(settings: Any, stack: AsyncExitStack) -> BaseCheckpointSaver[Any] | None:
     backend = settings.carousel_checkpoint_backend.lower()
     if backend == "postgres":
         if not settings.carousel_checkpoint_postgres_url:
@@ -85,9 +83,7 @@ async def cleanup() -> int:
                 logger.info("checkpoint_cleanup_no_saver_configured")
                 return 0
 
-            cutoff = datetime.now(UTC) - timedelta(
-                days=settings.carousel_checkpoint_ttl_days
-            )
+            cutoff = datetime.now(UTC) - timedelta(days=settings.carousel_checkpoint_ttl_days)
             thread_ids = await _collect_stale_thread_ids(cutoff)
             logger.info(
                 "checkpoint_cleanup_targets",
@@ -99,7 +95,7 @@ async def cleanup() -> int:
                 try:
                     await saver.adelete_thread(thread_id)
                     deleted += 1
-                except Exception as exc:  # noqa: BLE001 — log and continue
+                except Exception as exc:
                     logger.warning(
                         "checkpoint_cleanup_delete_failed",
                         thread_id=thread_id,

@@ -15,12 +15,12 @@ dependencies = [
     "uvicorn[standard]==0.32.0",
     "websockets==13.1",
     "python-multipart==0.0.12",  # For file uploads
-    
+
     # Data Validation & Settings
     "pydantic==2.9.0",
     "pydantic-settings==2.5.0",
     "email-validator==2.2.0",
-    
+
     # LangChain & LLM
     "langchain==0.3.0",
     "langchain-core==0.3.0",
@@ -29,38 +29,38 @@ dependencies = [
     "langchain-pinecone==0.2.0",
     "langchain-text-splitters==0.3.0",
     "langchain-community==0.3.0",
-    
+
     # Vector Database
     "pinecone-client[grpc]==5.0.0",
-    
+
     # Document Processing
     "pypdf==5.0.0",
     "unstructured==0.15.0",
     "unstructured[pdf]==0.15.0",
     "python-magic==0.4.27",
     "aiofiles==24.1.0",
-    
+
     # Database
     "sqlalchemy[asyncio]==2.0.35",
     "asyncpg==0.29.0",
     "alembic==1.13.0",
-    
+
     # Caching & Message Queue
     "redis==5.0.0",
     "aioredis==2.0.1",
     "celery==5.4.0",
-    
+
     # HTTP Client
     "httpx==0.27.0",
     "aiohttp==3.10.0",
-    
+
     # Utilities
     "python-dotenv==1.0.0",
     "structlog==24.4.0",
     "tenacity==9.0.0",  # Retry logic
     "orjson==3.10.0",   # Fast JSON serialization
     "ulid-py==1.1.0",   # Unique IDs
-    
+
     # Security
     "python-jose[cryptography]==3.3.0",
     "passlib[bcrypt]==1.7.4",
@@ -80,12 +80,12 @@ dev = [
     "respx==0.21.0",             # HTTPX mocking
     "asgi-lifespan==2.1.0",      # ASGI lifespan testing
     "testcontainers==4.8.0",     # Integration testing with Docker
-    
+
     # Code Quality
     "ruff==0.6.0",               # Linting & formatting
     "mypy==1.11.0",              # Type checking
     "pre-commit==3.8.0",         # Git hooks
-    
+
     # Debugging
     "debugpy==1.8.0",
     "ipdb==0.13.0",
@@ -293,29 +293,29 @@ from rag_backend.domain.models.conversation import Conversation
 
 class DocumentRepository(Protocol):
     """Protocol for document persistence operations."""
-    
+
     async def get_by_id(self, document_id: UUID) -> Optional[Document]:
         """Retrieve document by ID."""
         ...
-    
+
     async def get_all(
-        self, 
-        limit: int = 20, 
+        self,
+        limit: int = 20,
         offset: int = 0,
         search: Optional[str] = None,
         tags: Optional[List[str]] = None
     ) -> List[Document]:
         """List documents with filtering."""
         ...
-    
+
     async def save(self, document: Document) -> Document:
         """Save or update document."""
         ...
-    
+
     async def delete(self, document_id: UUID) -> bool:
         """Delete document by ID."""
         ...
-    
+
     async def exists(self, document_id: UUID) -> bool:
         """Check if document exists."""
         ...
@@ -323,15 +323,15 @@ class DocumentRepository(Protocol):
 
 class ConversationRepository(Protocol):
     """Protocol for conversation persistence operations."""
-    
+
     async def get_by_id(self, conversation_id: UUID) -> Optional[Conversation]:
         """Retrieve conversation by ID."""
         ...
-    
+
     async def save(self, conversation: Conversation) -> Conversation:
         """Save or update conversation."""
         ...
-    
+
     async def delete(self, conversation_id: UUID) -> bool:
         """Delete conversation by ID."""
         ...
@@ -364,15 +364,15 @@ class SearchResult:
 
 class HybridRetriever(Protocol):
     """Protocol for hybrid search operations."""
-    
+
     async def retrieve(self, query: SearchQuery) -> List[SearchResult]:
         """Perform hybrid search and return ranked results."""
         ...
-    
+
     async def add_documents(self, chunks: List[DocumentChunk]) -> List[str]:
         """Index document chunks for search."""
         ...
-    
+
     async def delete_documents(self, chunk_ids: List[str]) -> bool:
         """Remove document chunks from index."""
         ...
@@ -388,18 +388,18 @@ from rag_backend.domain.models.chat import ChatMessage, ChatResponse
 
 class ChatService(Protocol):
     """Protocol for chat operations."""
-    
+
     async def send_message(
-        self, 
-        conversation_id: UUID, 
+        self,
+        conversation_id: UUID,
         message: str
     ) -> ChatResponse:
         """Send message and get response (non-streaming)."""
         ...
-    
+
     async def stream_message(
-        self, 
-        conversation_id: UUID, 
+        self,
+        conversation_id: UUID,
         message: str
     ) -> AsyncIterator[ChatResponse]:
         """Send message and stream response tokens."""
@@ -408,9 +408,9 @@ class ChatService(Protocol):
 
 class DocumentService(Protocol):
     """Protocol for document operations."""
-    
+
     async def upload_document(
-        self, 
+        self,
         file_content: bytes,
         filename: str,
         title: str,
@@ -418,7 +418,7 @@ class DocumentService(Protocol):
     ) -> Document:
         """Process and store uploaded document."""
         ...
-    
+
     async def delete_document(self, document_id: UUID) -> bool:
         """Delete document and its chunks."""
         ...
@@ -454,35 +454,35 @@ from rag_backend.application.services.document_service import (
 
 class Container(containers.DeclarativeContainer):
     """Application container for dependency injection."""
-    
+
     # Configuration
     settings = providers.Singleton(Settings)
-    
+
     # Infrastructure
     database = providers.Singleton(
         Database,
         connection_string=settings.provided.database_url
     )
-    
+
     vector_store = providers.Singleton(
         PineconeVectorStore,
         api_key=settings.provided.pinecone_api_key,
         index_name=settings.provided.pinecone_index_name
     )
-    
+
     # Repositories
     document_repository = providers.Factory(
         SQLDocumentRepository,
         session_factory=database.provided.session_factory
     )
-    
+
     # Retrievers
     hybrid_retriever = providers.Factory(
         PineconeHybridRetriever,
         vector_store=vector_store,
         alpha=settings.provided.hybrid_alpha
     )
-    
+
     # LLM / Agent
     chat_agent = providers.Factory(
         LangChainAgent,
@@ -490,14 +490,14 @@ class Container(containers.DeclarativeContainer):
         openai_api_key=settings.provided.openai_api_key,
         model=settings.provided.llm_model
     )
-    
+
     # Application Services
     chat_service = providers.Factory(
         ChatApplicationService,
         agent=chat_agent,
         conversation_repository=document_repository  # Will be replaced
     )
-    
+
     document_service = providers.Factory(
         DocumentApplicationService,
         repository=document_repository,
@@ -615,12 +615,12 @@ async def test_db():
     """Set up test database."""
     # Setup test database
     from rag_backend.infrastructure.persistence.database import Database
-    
+
     db = Database("postgresql+asyncpg://test:test@localhost/test_db")
     await db.create_tables()
-    
+
     yield db
-    
+
     # Teardown
     await db.drop_tables()
 
@@ -630,7 +630,7 @@ def test_client():
     """Create test client for API tests."""
     from fastapi.testclient import TestClient
     from rag_backend.main import app
-    
+
     return TestClient(app)
 ```
 
@@ -648,13 +648,13 @@ from rag_backend.domain.models.document import Document
 
 class TestDocument:
     """Test cases for Document domain model."""
-    
+
     def test_document_creation(self):
         """Given valid parameters, when creating document, then success."""
         # Given
         doc_id = uuid4()
         title = "Test Document"
-        
+
         # When
         document = Document(
             id=doc_id,
@@ -662,12 +662,12 @@ class TestDocument:
             content="Content",
             tags=["test"]
         )
-        
+
         # Then
         assert document.id == doc_id
         assert document.title == title
         assert document.tags == ["test"]
-    
+
     def test_document_adds_timestamp(self):
         """Given new document, when created, then has timestamps."""
         # When
@@ -676,7 +676,7 @@ class TestDocument:
             title="Test",
             content="Content"
         )
-        
+
         # Then
         assert document.created_at is not None
         assert document.updated_at is not None
@@ -697,10 +697,10 @@ from rag_backend.domain.exceptions.document import DocumentNotFoundError
 
 class TestDocumentService:
     """Test cases for DocumentApplicationService."""
-    
+
     @pytest.mark.asyncio
     async def test_delete_existing_document(
-        self, 
+        self,
         mock_document_repository,
         mock_hybrid_retriever
     ):
@@ -715,23 +715,23 @@ class TestDocumentService:
             id=doc_id,
             metadata={"chunk_ids": ["chunk1", "chunk2"]}
         )
-        
+
         service = DocumentApplicationService(
             repository=mock_document_repository,
             retriever=mock_hybrid_retriever,
             vector_store=AsyncMock()
         )
-        
+
         # When
         result = await service.delete_document(doc_id)
-        
+
         # Then
         assert result is True
         mock_hybrid_retriever.delete_documents.assert_called_once_with(
             ["chunk1", "chunk2"]
         )
         mock_document_repository.delete.assert_called_once_with(doc_id)
-    
+
     @pytest.mark.asyncio
     async def test_delete_nonexistent_document(
         self,
@@ -746,13 +746,13 @@ class TestDocumentService:
         # Given
         doc_id = uuid4()
         mock_document_repository.get_by_id.return_value = None
-        
+
         service = DocumentApplicationService(
             repository=mock_document_repository,
             retriever=mock_hybrid_retriever,
             vector_store=AsyncMock()
         )
-        
+
         # When / Then
         with pytest.raises(DocumentNotFoundError):
             await service.delete_document(doc_id)
@@ -780,7 +780,7 @@ async def async_client():
 
 class TestChatEndpoints:
     """Integration tests for chat endpoints."""
-    
+
     @pytest.mark.asyncio
     @pytest.mark.integration
     async def test_chat_endpoint_returns_response(self, async_client):
@@ -794,10 +794,10 @@ class TestChatEndpoints:
             "message": "What is machine learning?",
             "conversation_id": "test-conv-123"
         }
-        
+
         # When
         response = await async_client.post("/api/chat", json=payload)
-        
+
         # Then
         assert response.status_code == 200
         data = response.json()

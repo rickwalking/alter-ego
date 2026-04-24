@@ -166,7 +166,7 @@ ws://localhost:8000/ws/chat/{conversation_id}
 - [ ] Monitoring (LangSmith)
 - [ ] Security hardening
 
-**Total Duration**: 4 weeks  
+**Total Duration**: 4 weeks
 **Team Size**: 2-3 developers
 
 ---
@@ -237,11 +237,11 @@ my-app/
 
 This project delivers a complete blueprint for building a production-ready Agentic RAG backend with:
 
-✅ **Hybrid search** (semantic + lexical)  
-✅ **Intelligent agent** with tool use  
-✅ **Real-time streaming** (WebSocket/SSE)  
-✅ **Complete API specification**  
-✅ **4-week implementation plan**  
+✅ **Hybrid search** (semantic + lexical)
+✅ **Intelligent agent** with tool use
+✅ **Real-time streaming** (WebSocket/SSE)
+✅ **Complete API specification**
+✅ **4-week implementation plan**
 ✅ **Docker deployment ready**
 
 **Ready to start building!** 🚀

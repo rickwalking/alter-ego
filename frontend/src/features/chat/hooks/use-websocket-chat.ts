@@ -129,32 +129,6 @@ export function useWebSocketChat({
     };
   }, [conversationId, baseUrl]);
 
-  const sendMessage = useCallback(
-    (content: string) => {
-      if (!content.trim()) return;
-
-      const userMsg: Message = {
-        id: `user-${Date.now()}`,
-        role: "user",
-        content: content.trim(),
-        sources: [],
-        created_at: new Date().toISOString(),
-      };
-      setMessages((prev) => [...prev, userMsg]);
-
-      if (wsRef.current?.readyState === WebSocket.OPEN) {
-        wsRef.current.send(JSON.stringify({ content: content.trim() }));
-        setIsStreaming(true);
-        streamingMsgIdRef.current = null;
-        streamingContentRef.current = "";
-      } else if (fallbackToSse && conversationId) {
-        // Fallback to SSE streaming
-        fetchSseResponse(content.trim(), conversationId);
-      }
-    },
-    [conversationId, fallbackToSse]
-  );
-
   const fetchSseResponse = useCallback(async (content: string, convId: string) => {
     setIsStreaming(true);
     try {
@@ -181,6 +155,32 @@ export function useWebSocketChat({
       setIsStreaming(false);
     }
   }, []);
+
+  const sendMessage = useCallback(
+    (content: string) => {
+      if (!content.trim()) return;
+
+      const userMsg: Message = {
+        id: `user-${Date.now()}`,
+        role: "user",
+        content: content.trim(),
+        sources: [],
+        created_at: new Date().toISOString(),
+      };
+      setMessages((prev) => [...prev, userMsg]);
+
+      if (wsRef.current?.readyState === WebSocket.OPEN) {
+        wsRef.current.send(JSON.stringify({ content: content.trim() }));
+        setIsStreaming(true);
+        streamingMsgIdRef.current = null;
+        streamingContentRef.current = "";
+      } else if (fallbackToSse && conversationId) {
+        // Fallback to SSE streaming
+        fetchSseResponse(content.trim(), conversationId);
+      }
+    },
+    [conversationId, fallbackToSse, fetchSseResponse]
+  );
 
   return { messages, isConnected, isStreaming, sendMessage, error };
 }

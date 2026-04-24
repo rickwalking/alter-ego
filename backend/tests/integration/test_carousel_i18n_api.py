@@ -2,7 +2,6 @@
 
 import pytest
 from httpx import ASGITransport, AsyncClient
-from unittest.mock import AsyncMock
 
 from rag_backend.api.app import create_app
 from rag_backend.domain.models import CarouselProject, CarouselStatus, CarouselTheme

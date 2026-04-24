@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createElement, type ReactNode } from "react";
@@ -109,13 +109,14 @@ beforeEach(() => {
     isStreaming: false,
     error: null,
     close: vi.fn(),
+    reconnect: vi.fn(),
   });
   mockUseResumeCarousel.mockReturnValue({
     mutate: vi.fn(),
     isPending: false,
   } as unknown as ReturnType<typeof useResumeCarousel>);
   mockUseCreateConversation.mockReturnValue({
-    mutateAsync: vi.fn().mockResolvedValue({ id: "conv-1" }),
+    mutateAsync: vi.fn(() => new Promise(() => undefined)),
   } as unknown as ReturnType<typeof useCreateConversation>);
 });
 

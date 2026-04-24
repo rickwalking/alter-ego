@@ -1,8 +1,9 @@
 """Integration tests for carousel API endpoints."""
 
+from unittest.mock import AsyncMock, patch
+
 import pytest
 from httpx import ASGITransport, AsyncClient
-from unittest.mock import AsyncMock, patch
 
 from rag_backend.api.app import create_app
 from rag_backend.domain.models import CarouselProject, CarouselStatus

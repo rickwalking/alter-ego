@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useTranslations } from "next-intl";
 import type { CarouselProjectResponse } from "@/schemas/carousel";
 import { API_ENDPOINTS } from "@/constants/api";
@@ -14,6 +14,13 @@ const LINKEDIN_COMPOSE_URL = "https://www.linkedin.com/feed/?shareActive=true";
 
 type LanguageTab = "pt" | "en";
 type ActiveTab = "instagram" | "linkedin";
+
+interface EditorState {
+  seed: string;
+  caption: string;
+  linkedinPt: string;
+  linkedinEn: string;
+}
 
 interface PublishPanelProps {
   project: CarouselProjectResponse;
@@ -59,6 +66,19 @@ function pdfUrl(
   return `${base}${API_ENDPOINTS.CAROUSEL_PDF(project.id)}?lang=${language}&v=${v}`;
 }
 
+function createEditorState(project: CarouselProjectResponse): EditorState {
+  return {
+    seed: JSON.stringify([
+      project.caption ?? "",
+      project.linkedin_post_pt ?? "",
+      project.linkedin_post_en ?? "",
+    ]),
+    caption: project.caption ?? "",
+    linkedinPt: project.linkedin_post_pt ?? "",
+    linkedinEn: project.linkedin_post_en ?? "",
+  };
+}
+
 export function PublishPanel({
   project,
   onPublishInstagram,
@@ -68,22 +88,26 @@ export function PublishPanel({
   const t = useTranslations("publish");
   const [activeTab, setActiveTab] = useState<ActiveTab>("instagram");
   const [language, setLanguage] = useState<LanguageTab>("pt");
-  const [caption, setCaption] = useState(project.caption ?? "");
-  const [linkedinPt, setLinkedinPt] = useState(project.linkedin_post_pt ?? "");
-  const [linkedinEn, setLinkedinEn] = useState(project.linkedin_post_en ?? "");
+  const incomingEditorState = createEditorState(project);
+  const [editorState, setEditorState] = useState(incomingEditorState);
+  const editor =
+    editorState.seed === incomingEditorState.seed ? editorState : incomingEditorState;
 
-  // Re-seed editors whenever the project payload refreshes. Keeps the
-  // UI in sync after agent-driven refinements rewrite a field.
-  useEffect(() => {
-    setCaption(project.caption ?? "");
-    setLinkedinPt(project.linkedin_post_pt ?? "");
-    setLinkedinEn(project.linkedin_post_en ?? "");
-  }, [project.caption, project.linkedin_post_pt, project.linkedin_post_en]);
+  if (editorState.seed !== incomingEditorState.seed) {
+    setEditorState(incomingEditorState);
+  }
 
   const slideUrls = slideUrlsFromProject(project, language);
-  const activeLinkedInText = language === "pt" ? linkedinPt : linkedinEn;
-  const setActiveLinkedInText = language === "pt" ? setLinkedinPt : setLinkedinEn;
-  const hashtagCount = countHashtags(caption);
+  const activeLinkedInText = language === "pt" ? editor.linkedinPt : editor.linkedinEn;
+  const setCaption = (caption: string) =>
+    setEditorState((state) => ({ ...state, seed: editor.seed, caption }));
+  const setActiveLinkedInText = (text: string) =>
+    setEditorState((state) => ({
+      ...state,
+      seed: editor.seed,
+      ...(language === "pt" ? { linkedinPt: text } : { linkedinEn: text }),
+    }));
+  const hashtagCount = countHashtags(editor.caption);
   const hashtagsOver = hashtagCount > IG_MAX_HASHTAGS;
 
   const copyToClipboard = async (text: string) => {
@@ -160,7 +184,7 @@ export function PublishPanel({
         {activeTab === "instagram" && (
           <div className="space-y-3">
             <CaptionEditor
-              value={caption}
+              value={editor.caption}
               onChange={setCaption}
               maxChars={IG_MAX_CHARS}
               placeholder={t("instagram.placeholder")}
@@ -175,7 +199,7 @@ export function PublishPanel({
             <div className="flex flex-wrap gap-2">
               <button
                 type="button"
-                onClick={() => copyToClipboard(caption)}
+                onClick={() => copyToClipboard(editor.caption)}
                 className="rounded-md border border-[var(--color-border)] px-3 py-1.5 text-sm hover:bg-[var(--color-background)]"
               >
                 {t("instagram.copyCaption")}
@@ -183,11 +207,11 @@ export function PublishPanel({
               {onPublishInstagram && (
                 <button
                   type="button"
-                  onClick={() => onPublishInstagram(caption)}
+                  onClick={() => onPublishInstagram(editor.caption)}
                   disabled={
                     isPublishingInstagram ||
-                    caption.length === 0 ||
-                    caption.length > IG_MAX_CHARS ||
+                    editor.caption.length === 0 ||
+                    editor.caption.length > IG_MAX_CHARS ||
                     hashtagsOver
                   }
                   className="rounded-md bg-[var(--color-primary)] px-4 py-1.5 font-medium text-sm text-[var(--color-text)] disabled:cursor-not-allowed disabled:opacity-50"

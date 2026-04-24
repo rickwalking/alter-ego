@@ -19,7 +19,7 @@ This directory contains comprehensive documentation for building the Agentic RAG
 ```
 src/rag_backend/
 ├── domain/           # Business logic, entities, protocols
-├── application/      # Use cases, commands, queries  
+├── application/      # Use cases, commands, queries
 ├── infrastructure/   # External implementations
 └── api/             # FastAPI routes and schemas
 ```
@@ -72,12 +72,12 @@ class Document:
     id: UUID = field(default_factory=uuid4)
     created_at: datetime = field(default_factory=datetime.utcnow)
     updated_at: datetime = field(default_factory=datetime.utcnow)
-    
+
     def add_tag(self, tag: str) -> None:
         """Add a tag to the document."""
         if tag not in self.tags:
             self.tags.append(tag)
-    
+
     def update_content(self, new_content: str) -> None:
         """Update document content."""
         self.content = new_content
@@ -95,7 +95,7 @@ class DocumentApplicationService:
     Application service coordinating document operations.
     Follows Command Pattern for write operations.
     """
-    
+
     def __init__(
         self,
         repository: DocumentRepository,  # Injected via Protocol
@@ -105,7 +105,7 @@ class DocumentApplicationService:
         self._repository = repository
         self._retriever = retriever
         self._vector_store = vector_store
-    
+
     async def upload_document(
         self,
         file_content: bytes,
@@ -115,7 +115,7 @@ class DocumentApplicationService:
     ) -> Document:
         """
         Command: Upload and process a document.
-        
+
         Steps:
         1. Save file to storage
         2. Extract text content
@@ -141,22 +141,22 @@ class SQLDocumentRepository:
     Concrete implementation of DocumentRepository protocol.
     Depends on SQLAlchemy, isolated from domain logic.
     """
-    
+
     def __init__(self, session_factory: Callable[[], AsyncSession]):
         self._session_factory = session_factory
-    
+
     async def get_by_id(self, document_id: UUID) -> Optional[DomainDocument]:
         async with self._session_factory() as session:
             db_doc = await session.get(DBDocument, document_id)
             return self._to_domain(db_doc) if db_doc else None
-    
+
     async def save(self, document: DomainDocument) -> DomainDocument:
         async with self._session_factory() as session:
             db_doc = self._to_db_model(document)
             session.add(db_doc)
             await session.commit()
             return document
-    
+
     def _to_domain(self, db_doc: DBDocument) -> DomainDocument:
         """Map DB model to domain model."""
         return DomainDocument(
@@ -192,14 +192,14 @@ async def upload_document(
 ) -> DocumentResponse:
     """Upload and process a new document."""
     content = await file.read()
-    
+
     document = await service.upload_document(
         file_content=content,
         filename=file.filename,
         title=request.title,
         tags=request.tags
     )
-    
+
     return DocumentResponse(
         id=str(document.id),
         title=document.title,
@@ -259,7 +259,7 @@ class SearchDocumentsHandler:
 class ChatRequest(BaseModel):
     message: str = Field(..., min_length=1, max_length=4000)
     conversation_id: str = Field(..., pattern=r"^conv_[a-zA-Z0-9_-]+$")
-    
+
     @field_validator('message')
     @classmethod
     def validate_message(cls, v: str) -> str:
@@ -288,10 +288,10 @@ class TestDocumentService:
         mock_repo = MagicMock(spec=DocumentRepository)
         mock_retriever = MagicMock(spec=HybridRetriever)
         service = DocumentService(mock_repo, mock_retriever)
-        
+
         # Act
         result = await service.upload_document(...)
-        
+
         # Assert
         mock_repo.save.assert_called_once()
 ```
@@ -303,10 +303,10 @@ class TestDocumentService:
 async def test_document_repository_with_postgres(test_db):
     repo = SQLDocumentRepository(test_db)
     document = Document(title="Test")
-    
+
     saved = await repo.save(document)
     retrieved = await repo.get_by_id(saved.id)
-    
+
     assert retrieved.title == "Test"
 ```
 
@@ -316,10 +316,10 @@ async def test_document_repository_with_postgres(test_db):
 async def test_upload_and_chat_flow(async_client):
     # Upload document
     response = await async_client.post("/api/documents", ...)
-    
+
     # Ask question about document
     chat_response = await async_client.post("/api/chat", ...)
-    
+
     # Verify response references document
     assert "document" in chat_response.json()["data"]["response"]
 ```

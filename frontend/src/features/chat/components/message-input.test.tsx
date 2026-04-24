@@ -160,9 +160,9 @@ describe("MessageInput Component", () => {
 
         const textarea = screen.getByPlaceholderText("Type your message...");
         await user.type(textarea, "Test");
-        
+
         await user.keyboard("{Enter}");
-        
+
         expect(mockOnSend).toHaveBeenCalled();
       });
     });

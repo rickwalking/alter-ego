@@ -1,21 +1,20 @@
 """Pytest configuration and fixtures."""
 
 import asyncio
-from typing import AsyncGenerator
-from uuid import UUID
+from collections.abc import AsyncGenerator
 
 import pytest
 import pytest_asyncio
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
-from rag_backend.domain.models import Document, DocumentStatus
+from rag_backend.domain.models import Document
+from rag_backend.infrastructure.database.carousel_repository import (
+    PostgresCarouselRepository,
+)
 from rag_backend.infrastructure.database.config import Base
 from rag_backend.infrastructure.database.document_repository import (
     PostgresDocumentRepository,
-)
-from rag_backend.infrastructure.database.carousel_repository import (
-    PostgresCarouselRepository,
 )
 
 # Use SQLite in-memory for testing

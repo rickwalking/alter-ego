@@ -2,7 +2,15 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createElement, type ReactNode } from "react";
-import { useDeleteConversation } from "./use-chat";
+import {
+  MESSAGES_KEY,
+  useConversation,
+  useConversationMessages,
+  useConversations,
+  useCreateConversation,
+  useDeleteConversation,
+  useSendMessage,
+} from "./use-chat";
 import { API_ENDPOINTS } from "@/constants/api";
 
 vi.mock("@/lib/api-client", () => ({
@@ -20,14 +28,34 @@ vi.mock("@/lib/api-client", () => ({
   },
 }));
 
-import { apiCallNoContent, ApiError } from "@/lib/api-client";
+import { apiCall, apiCallNoContent, ApiError } from "@/lib/api-client";
 
+const mockApiCall = vi.mocked(apiCall);
 const mockDelete = vi.mocked(apiCallNoContent);
 
-function createWrapper() {
-  const queryClient = new QueryClient({
+const MOCK_CONVERSATION = {
+  id: "conv-1",
+  title: "Existing conversation",
+  metadata: { source: "test" },
+  created_at: "2026-04-20T00:00:00Z",
+  updated_at: "2026-04-20T00:00:00Z",
+};
+
+const MOCK_MESSAGE = {
+  id: "msg-1",
+  role: "user" as const,
+  content: "Hello",
+  sources: [],
+  created_at: "2026-04-20T00:00:00Z",
+};
+
+function createQueryClient() {
+  return new QueryClient({
     defaultOptions: { queries: { retry: false, gcTime: 0 } },
   });
+}
+
+function createWrapper(queryClient = createQueryClient()) {
   return function Wrapper({ children }: { children: ReactNode }) {
     return createElement(QueryClientProvider, { client: queryClient }, children);
   };
@@ -37,12 +65,166 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
+describe("useConversations", () => {
+  it("fetches conversations and stores them under the conversations query key", async () => {
+    mockApiCall.mockResolvedValueOnce({
+      items: [MOCK_CONVERSATION],
+      total: 1,
+      limit: 20,
+      offset: 0,
+    });
+    const queryClient = createQueryClient();
+    const { result } = renderHook(() => useConversations(), {
+      wrapper: createWrapper(queryClient),
+    });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(mockApiCall).toHaveBeenCalledWith(
+      API_ENDPOINTS.CONVERSATIONS,
+      expect.anything(),
+    );
+    expect(result.current.data).toEqual([MOCK_CONVERSATION]);
+    expect(queryClient.getQueryData(["conversations"])).toEqual([
+      MOCK_CONVERSATION,
+    ]);
+  });
+});
+
+describe("useConversation", () => {
+  it("fetches one conversation by id", async () => {
+    mockApiCall.mockResolvedValueOnce(MOCK_CONVERSATION);
+    const queryClient = createQueryClient();
+    const { result } = renderHook(() => useConversation("conv-1"), {
+      wrapper: createWrapper(queryClient),
+    });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(mockApiCall).toHaveBeenCalledWith(
+      API_ENDPOINTS.CONVERSATION_BY_ID("conv-1"),
+      expect.anything(),
+    );
+    expect(queryClient.getQueryData(["conversation", "conv-1"])).toEqual(
+      MOCK_CONVERSATION,
+    );
+  });
+
+  it("is disabled without a conversation id", () => {
+    const { result } = renderHook(() => useConversation(null), {
+      wrapper: createWrapper(),
+    });
+
+    expect(result.current.fetchStatus).toBe("idle");
+    expect(mockApiCall).not.toHaveBeenCalled();
+  });
+});
+
+describe("useConversationMessages", () => {
+  it("fetches messages by conversation id", async () => {
+    mockApiCall.mockResolvedValueOnce({
+      items: [MOCK_MESSAGE],
+      conversation_id: "conv-1",
+    });
+    const queryClient = createQueryClient();
+    const { result } = renderHook(() => useConversationMessages("conv-1"), {
+      wrapper: createWrapper(queryClient),
+    });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(mockApiCall).toHaveBeenCalledWith(
+      API_ENDPOINTS.CONVERSATION_MESSAGES("conv-1"),
+      expect.anything(),
+    );
+    expect(queryClient.getQueryData([MESSAGES_KEY, "conv-1"])).toEqual([
+      MOCK_MESSAGE,
+    ]);
+  });
+
+  it("is disabled without a conversation id", () => {
+    const { result } = renderHook(() => useConversationMessages(null), {
+      wrapper: createWrapper(),
+    });
+
+    expect(result.current.fetchStatus).toBe("idle");
+    expect(mockApiCall).not.toHaveBeenCalled();
+  });
+});
+
+describe("useCreateConversation", () => {
+  it("posts title and metadata then invalidates conversations", async () => {
+    mockApiCall.mockResolvedValueOnce(MOCK_CONVERSATION);
+    const queryClient = createQueryClient();
+    const invalidateQueries = vi.spyOn(queryClient, "invalidateQueries");
+    const { result } = renderHook(() => useCreateConversation(), {
+      wrapper: createWrapper(queryClient),
+    });
+
+    result.current.mutate({
+      title: "New chat",
+      metadata: { project_id: "project-1" },
+    });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(mockApiCall).toHaveBeenCalledWith(
+      API_ENDPOINTS.CONVERSATIONS,
+      expect.anything(),
+      {
+        method: "POST",
+        body: JSON.stringify({
+          title: "New chat",
+          metadata: { project_id: "project-1" },
+        }),
+      },
+    );
+    expect(invalidateQueries).toHaveBeenCalledWith({
+      queryKey: ["conversations"],
+    });
+  });
+});
+
+describe("useSendMessage", () => {
+  it("posts message content and invalidates messages plus conversations", async () => {
+    mockApiCall.mockResolvedValueOnce({
+      content: "Answer",
+      sources: [],
+      conversation_id: "conv-1",
+    });
+    const queryClient = createQueryClient();
+    const invalidateQueries = vi.spyOn(queryClient, "invalidateQueries");
+    const { result } = renderHook(() => useSendMessage(), {
+      wrapper: createWrapper(queryClient),
+    });
+
+    result.current.mutate({ conversationId: "conv-1", content: "Hello" });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(mockApiCall).toHaveBeenCalledWith(
+      API_ENDPOINTS.CONVERSATION_CHAT("conv-1"),
+      expect.anything(),
+      {
+        method: "POST",
+        body: JSON.stringify({ content: "Hello" }),
+      },
+    );
+    expect(invalidateQueries).toHaveBeenCalledWith({
+      queryKey: [MESSAGES_KEY, "conv-1"],
+    });
+    expect(invalidateQueries).toHaveBeenCalledWith({
+      queryKey: ["conversations"],
+    });
+  });
+});
+
 describe("useDeleteConversation", () => {
   // Scenario: Given a successful DELETE, the mutation resolves.
   it("calls the DELETE endpoint for the given id", async () => {
     mockDelete.mockResolvedValueOnce(undefined);
+    const queryClient = createQueryClient();
+    const invalidateQueries = vi.spyOn(queryClient, "invalidateQueries");
     const { result } = renderHook(() => useDeleteConversation(), {
-      wrapper: createWrapper(),
+      wrapper: createWrapper(queryClient),
     });
 
     result.current.mutate("conv-1");
@@ -52,6 +234,9 @@ describe("useDeleteConversation", () => {
       API_ENDPOINTS.CONVERSATION_BY_ID("conv-1"),
       { method: "DELETE" },
     );
+    expect(invalidateQueries).toHaveBeenCalledWith({
+      queryKey: ["conversations"],
+    });
   });
 
   // Scenario: Given a 404, the mutation surfaces an ApiError.

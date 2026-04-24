@@ -10,10 +10,12 @@ This document provides general guidelines for AI agents working on the Python ba
 
 ### 1. Type Safety First
 - **mypy strict mode** — All code must pass `mypy --strict`
-- **No `Any` types** — Use explicit types. Never use `Any`, `object`, or untyped collections
+- **No explicit `Any` types** — `disallow_any_explicit = true`. Use `Protocol`, `TypedDict`, `object`, or `cast` instead.
+- **No bare generics** — `disallow_any_generics = true`. Always parameterize `dict`, `list`, `Callable`, etc. (e.g., `dict[str, object]`, `list[int]`).
 - **Use `Protocol` for interfaces** — Define contracts, not implementations
 - **All functions have explicit return types** — No implicit `None` returns
 - **Use `TypedDict` for structured dictionaries** — Never `dict[str, Any]`
+- **Decision tree for dynamic data**: `Protocol` → `object` → `cast(T, value)` → `type: ignore[any]` (last resort, with justification comment)
 
 ### 2. No Magic Strings
 - Extract all string literals to named constants
@@ -177,7 +179,9 @@ Before submitting code:
 - [ ] All tests pass
 - [ ] mypy --strict passes with no errors
 - [ ] ruff check passes with no warnings
-- [ ] No `Any` types without explicit justification
+- [ ] No explicit `Any` types (`disallow_any_explicit`)
+- [ ] No bare generics (`disallow_any_generics`) — `dict`, `list`, `Callable` are parameterized
+- [ ] No unused imports/variables (`ruff --select F401,F841`)
 - [ ] No magic strings — all extracted to constants
 - [ ] Functions have explicit return types
 - [ ] Early returns used instead of nested ifs

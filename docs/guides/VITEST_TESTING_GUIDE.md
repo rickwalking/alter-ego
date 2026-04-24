@@ -33,7 +33,7 @@ export default defineConfig({
     // Environment
     environment: 'jsdom', // or 'happy-dom', 'node'
     globals: true, // Enable global APIs (describe, test, expect)
-    
+
     // File patterns
     include: ['**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
     exclude: [
@@ -43,7 +43,7 @@ export default defineConfig({
       '**/.{idea,git,cache,output,temp}/**',
       '**/{karma,rollup,webpack,vite,vitest,jest,ava,babel,nyc,cypress,tsup,build}.config.*',
     ],
-    
+
     // Coverage configuration
     coverage: {
       provider: 'v8', // 'v8' (faster) or 'istanbul' (more compatible)
@@ -66,7 +66,7 @@ export default defineConfig({
         statements: 90,
       },
     },
-    
+
     // Performance and reliability
     pool: 'forks', // 'forks' (default, more stable), 'threads' (faster)
     poolOptions: {
@@ -74,38 +74,38 @@ export default defineConfig({
         singleFork: false,
       },
     },
-    
+
     // Timeouts
     testTimeout: 10000,
     hookTimeout: 10000,
     teardownTimeout: 5000,
-    
+
     // Setup files
     setupFiles: ['./src/test/setup.ts'],
-    
+
     // Mock behavior
     clearMocks: true,
     mockReset: true,
     restoreMocks: true,
     unstubGlobals: true,
     unstubEnvs: true,
-    
+
     // Reporting
     reporters: ['verbose', 'html'],
     outputFile: {
       html: './test-report.html',
     },
-    
+
     // UI mode
     ui: false, // Set to true for interactive UI
-    
+
     // Retry flaky tests in CI
     retry: process.env.CI ? 2 : 0,
-    
+
     // Parallel execution
     fileParallelism: true,
     maxWorkers: process.env.CI ? 4 : undefined,
-    
+
     // TypeScript type checking (optional, slower)
     typecheck: {
       enabled: false,
@@ -201,57 +201,57 @@ describe('Button', () => {
   // Test rendering and basic functionality
   it('renders with default props', () => {
     render(<Button>Click me</Button>)
-    
+
     expect(screen.getByRole('button', { name: /click me/i })).toBeInTheDocument()
   })
-  
+
   // Test different variants/props
   it('renders with different variants', () => {
     const { rerender } = render(<Button variant="primary">Primary</Button>)
     expect(screen.getByRole('button')).toHaveClass('btn-primary')
-    
+
     rerender(<Button variant="secondary">Secondary</Button>)
     expect(screen.getByRole('button')).toHaveClass('btn-secondary')
   })
-  
+
   // Test user interactions
   it('handles click events', async () => {
     const handleClick = vi.fn()
     const user = userEvent.setup()
-    
+
     render(<Button onClick={handleClick}>Click me</Button>)
-    
+
     await user.click(screen.getByRole('button'))
-    
+
     expect(handleClick).toHaveBeenCalledTimes(1)
   })
-  
+
   // Test disabled state
   it('is disabled when disabled prop is true', async () => {
     const handleClick = vi.fn()
     const user = userEvent.setup()
-    
+
     render(<Button disabled onClick={handleClick}>Disabled</Button>)
-    
+
     const button = screen.getByRole('button')
     expect(button).toBeDisabled()
-    
+
     await user.click(button)
     expect(handleClick).not.toHaveBeenCalled()
   })
-  
+
   // Test loading state
   it('shows loading spinner when loading', () => {
     render(<Button loading>Loading</Button>)
-    
+
     expect(screen.getByRole('button')).toBeDisabled()
     expect(screen.getByTestId('loading-spinner')).toBeInTheDocument()
   })
-  
+
   // Test accessibility
   it('has correct ARIA attributes', () => {
     render(<Button aria-label="Submit form">Submit</Button>)
-    
+
     expect(screen.getByRole('button')).toHaveAttribute('aria-label', 'Submit form')
   })
 })
@@ -270,16 +270,16 @@ describe('LoginForm', () => {
   it('submits form with email and password', async () => {
     const onSubmit = vi.fn()
     const user = userEvent.setup()
-    
+
     render(<LoginForm onSubmit={onSubmit} />)
-    
+
     // Fill form fields
     await user.type(screen.getByLabelText(/email/i), 'user@example.com')
     await user.type(screen.getByLabelText(/password/i), 'password123')
-    
+
     // Submit form
     await user.click(screen.getByRole('button', { name: /sign in/i }))
-    
+
     // Assert submission
     await waitFor(() => {
       expect(onSubmit).toHaveBeenCalledWith({
@@ -288,28 +288,28 @@ describe('LoginForm', () => {
       })
     })
   })
-  
+
   it('shows validation errors for empty fields', async () => {
     const user = userEvent.setup()
-    
+
     render(<LoginForm onSubmit={vi.fn()} />)
-    
+
     await user.click(screen.getByRole('button', { name: /sign in/i }))
-    
+
     expect(await screen.findByText(/email is required/i)).toBeInTheDocument()
     expect(await screen.findByText(/password is required/i)).toBeInTheDocument()
   })
-  
+
   it('disables submit button while submitting', async () => {
     const onSubmit = vi.fn(() => new Promise((resolve) => setTimeout(resolve, 100)))
     const user = userEvent.setup()
-    
+
     render(<LoginForm onSubmit={onSubmit} />)
-    
+
     await user.type(screen.getByLabelText(/email/i), 'user@example.com')
     await user.type(screen.getByLabelText(/password/i), 'password123')
     await user.click(screen.getByRole('button', { name: /sign in/i }))
-    
+
     expect(screen.getByRole('button')).toBeDisabled()
     expect(screen.getByText(/signing in/i)).toBeInTheDocument()
   })
@@ -333,30 +333,30 @@ vi.mock('@/api/users', () => ({
 describe('UserProfile', () => {
   it('renders loading state initially', () => {
     vi.mocked(userApi.fetchUser).mockReturnValue(new Promise(() => {}))
-    
+
     render(<UserProfile userId="123" />)
-    
+
     expect(screen.getByText(/loading/i)).toBeInTheDocument()
   })
-  
+
   it('renders user data after loading', async () => {
     vi.mocked(userApi.fetchUser).mockResolvedValue({
       id: '123',
       name: 'John Doe',
       email: 'john@example.com',
     })
-    
+
     render(<UserProfile userId="123" />)
-    
+
     expect(await screen.findByText('John Doe')).toBeInTheDocument()
     expect(screen.getByText('john@example.com')).toBeInTheDocument()
   })
-  
+
   it('renders error state on failure', async () => {
     vi.mocked(userApi.fetchUser).mockRejectedValue(new Error('User not found'))
-    
+
     render(<UserProfile userId="123" />)
-    
+
     expect(await screen.findByText(/error loading user/i)).toBeInTheDocument()
   })
 })
@@ -368,14 +368,14 @@ describe('UserProfile', () => {
 
 ### Understanding Server Component Testing
 
-**Important:** Async Server Components are relatively new to the React ecosystem, and Vitest currently has limited support for them. 
+**Important:** Async Server Components are relatively new to the React ecosystem, and Vitest currently has limited support for them.
 
 ```typescript
 // app/components/ServerComponent.tsx
 // Server Component - runs only on the server
 export async function ServerUserList() {
   const users = await fetch('https://api.example.com/users').then((r) => r.json())
-  
+
   return (
     <ul>
       {users.map((user) => (
@@ -409,7 +409,7 @@ import { fetchUsers } from '@/api/users'
 
 export async function UserList() {
   const users = await fetchUsers()
-  
+
   return (
     <ul>
       {users.map((user) => (
@@ -429,24 +429,24 @@ describe('fetchUsers', () => {
     const mockUsers = [
       { id: '1', name: 'John', email: 'john@example.com' },
     ]
-    
+
     global.fetch = vi.fn().mockResolvedValue({
       ok: true,
       json: () => Promise.resolve(mockUsers),
     })
-    
+
     const users = await fetchUsers()
-    
+
     expect(users).toEqual(mockUsers)
     expect(fetch).toHaveBeenCalledWith('https://api.example.com/users')
   })
-  
+
   it('throws error on failed fetch', async () => {
     global.fetch = vi.fn().mockResolvedValue({
       ok: false,
       status: 500,
     })
-    
+
     await expect(fetchUsers()).rejects.toThrow('Failed to fetch users')
   })
 })
@@ -458,7 +458,7 @@ describe('UserList (as Client Component)', () => {
       { id: '1', name: 'John' },
       { id: '2', name: 'Jane' },
     ]
-    
+
     const { container } = render(
       <ul>
         {users.map((user) => (
@@ -466,7 +466,7 @@ describe('UserList (as Client Component)', () => {
         ))}
       </ul>
     )
-    
+
     expect(container.querySelectorAll('li')).toHaveLength(2)
   })
 })
@@ -477,7 +477,7 @@ describe('UserList (as Client Component)', () => {
 ```typescript
 /**
  * RECOMMENDED APPROACH FOR SERVER COMPONENTS
- * 
+ *
  * 1. Extract all data fetching logic into separate, testable functions
  * 2. Unit test those functions in isolation
  * 3. Use E2E tests (Playwright/Cypress) to test the full Server Component behavior
@@ -499,9 +499,9 @@ test('Server Component renders fetched data', async ({ page }) => {
       ]),
     })
   })
-  
+
   await page.goto('/users')
-  
+
   await expect(page.locator('li')).toHaveCount(2)
   await expect(page.locator('text=John')).toBeVisible()
 })
@@ -522,45 +522,45 @@ import { useCounter } from './useCounter'
 describe('useCounter', () => {
   it('initializes with default value', () => {
     const { result } = renderHook(() => useCounter())
-    
+
     expect(result.current.count).toBe(0)
   })
-  
+
   it('initializes with custom value', () => {
     const { result } = renderHook(() => useCounter(10))
-    
+
     expect(result.current.count).toBe(10)
   })
-  
+
   it('increments count', () => {
     const { result } = renderHook(() => useCounter())
-    
+
     act(() => {
       result.current.increment()
     })
-    
+
     expect(result.current.count).toBe(1)
   })
-  
+
   it('decrements count', () => {
     const { result } = renderHook(() => useCounter(5))
-    
+
     act(() => {
       result.current.decrement()
     })
-    
+
     expect(result.current.count).toBe(4)
   })
-  
+
   it('respects min and max bounds', () => {
     const { result } = renderHook(() => useCounter({ min: 0, max: 5 }))
-    
+
     // Try to decrement below min
     act(() => {
       result.current.decrement()
     })
     expect(result.current.count).toBe(0)
-    
+
     // Increment to max
     act(() => {
       result.current.increment()
@@ -585,22 +585,22 @@ interface UseCounterOptions {
 export function useCounter(initialValue: number | UseCounterOptions = 0) {
   const isOptions = typeof initialValue === 'object'
   const [count, setCount] = useState(isOptions ? 0 : initialValue)
-  
+
   const min = isOptions ? initialValue.min : undefined
   const max = isOptions ? initialValue.max : undefined
-  
+
   const increment = useCallback(() => {
     setCount((c) => (max !== undefined ? Math.min(c + 1, max) : c + 1))
   }, [max])
-  
+
   const decrement = useCallback(() => {
     setCount((c) => (min !== undefined ? Math.max(c - 1, min) : c - 1))
   }, [min])
-  
+
   const reset = useCallback(() => {
     setCount(isOptions ? 0 : initialValue)
   }, [initialValue])
-  
+
   return { count, increment, decrement, reset }
 }
 ```
@@ -617,43 +617,43 @@ describe('useFetch', () => {
   beforeEach(() => {
     vi.resetAllMocks()
   })
-  
+
   it('fetches data successfully', async () => {
     const mockData = { id: 1, name: 'Test' }
     global.fetch = vi.fn().mockResolvedValue({
       ok: true,
       json: () => Promise.resolve(mockData),
     })
-    
+
     const { result } = renderHook(() => useFetch('/api/data'))
-    
+
     // Initial state
     expect(result.current.loading).toBe(true)
     expect(result.current.data).toBeNull()
     expect(result.current.error).toBeNull()
-    
+
     // Wait for data
     await waitFor(() => {
       expect(result.current.loading).toBe(false)
     })
-    
+
     expect(result.current.data).toEqual(mockData)
     expect(result.current.error).toBeNull()
   })
-  
+
   it('handles fetch error', async () => {
     global.fetch = vi.fn().mockResolvedValue({
       ok: false,
       status: 404,
       statusText: 'Not Found',
     })
-    
+
     const { result } = renderHook(() => useFetch('/api/data'))
-    
+
     await waitFor(() => {
       expect(result.current.loading).toBe(false)
     })
-    
+
     expect(result.current.data).toBeNull()
     expect(result.current.error).toBeTruthy()
   })
@@ -672,21 +672,21 @@ describe('formatDate', () => {
     const date = new Date('2024-01-15')
     expect(formatDate(date)).toBe('Jan 15, 2024')
   })
-  
+
   it('formats date with custom format', () => {
     const date = new Date('2024-01-15')
     expect(formatDate(date, 'YYYY-MM-DD')).toBe('2024-01-15')
   })
-  
+
   it('handles string date input', () => {
     expect(formatDate('2024-01-15')).toBe('Jan 15, 2024')
   })
-  
+
   it('handles timestamp input', () => {
     const timestamp = new Date('2024-01-15').getTime()
     expect(formatDate(timestamp)).toBe('Jan 15, 2024')
   })
-  
+
   it('returns empty string for invalid date', () => {
     expect(formatDate('invalid')).toBe('')
     expect(formatDate(null as any)).toBe('')
@@ -699,31 +699,31 @@ describe('formatRelativeTime', () => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date('2024-01-15T12:00:00Z'))
   })
-  
+
   afterEach(() => {
     vi.useRealTimers()
   })
-  
+
   it('formats seconds ago', () => {
     const date = new Date('2024-01-15T11:59:30Z')
     expect(formatRelativeTime(date)).toBe('30 seconds ago')
   })
-  
+
   it('formats minutes ago', () => {
     const date = new Date('2024-01-15T11:55:00Z')
     expect(formatRelativeTime(date)).toBe('5 minutes ago')
   })
-  
+
   it('formats hours ago', () => {
     const date = new Date('2024-01-15T10:00:00Z')
     expect(formatRelativeTime(date)).toBe('2 hours ago')
   })
-  
+
   it('formats days ago', () => {
     const date = new Date('2024-01-13T12:00:00Z')
     expect(formatRelativeTime(date)).toBe('2 days ago')
   })
-  
+
   it('returns formatted date for older dates', () => {
     const date = new Date('2023-12-01T12:00:00Z')
     expect(formatRelativeTime(date)).toBe('Dec 1, 2023')
@@ -810,9 +810,9 @@ describe('userService', () => {
     vi.mocked(apiClient.get).mockResolvedValue({
       data: { id: 1, name: 'John' },
     })
-    
+
     const user = await getUserData(1)
-    
+
     expect(user).toEqual({ id: 1, name: 'John' })
     expect(apiClient.get).toHaveBeenCalledWith('/users/1')
     expect(logger.info).toHaveBeenCalledWith('Fetching user 1')
@@ -835,58 +835,58 @@ describe('browser API mocks', () => {
       removeItem: vi.fn(),
       clear: vi.fn(),
     }
-    
+
     beforeEach(() => {
       Object.defineProperty(window, 'localStorage', {
         value: localStorageMock,
         writable: true,
       })
     })
-    
+
     it('stores and retrieves data', () => {
       const { getItem, setItem } = window.localStorage
-      
+
       setItem('key', 'value')
       expect(setItem).toHaveBeenCalledWith('key', 'value')
     })
   })
-  
+
   // Fetch mock
   describe('fetch API', () => {
     beforeEach(() => {
       global.fetch = vi.fn()
     })
-    
+
     afterEach(() => {
       vi.restoreAllMocks()
     })
-    
+
     it('mocks successful response', async () => {
       vi.mocked(global.fetch).mockResolvedValue({
         ok: true,
         status: 200,
         json: () => Promise.resolve({ data: 'test' }),
       } as Response)
-      
+
       const response = await fetch('/api/data')
       const data = await response.json()
-      
+
       expect(data).toEqual({ data: 'test' })
     })
-    
+
     it('mocks error response', async () => {
       vi.mocked(global.fetch).mockResolvedValue({
         ok: false,
         status: 404,
         statusText: 'Not Found',
       } as Response)
-      
+
       const response = await fetch('/api/data')
-      
+
       expect(response.ok).toBe(false)
     })
   })
-  
+
   // MatchMedia mock
   describe('matchMedia', () => {
     beforeEach(() => {
@@ -901,17 +901,17 @@ describe('browser API mocks', () => {
         dispatchEvent: vi.fn(),
       }))
     })
-    
+
     it('checks media query', () => {
       const mql = window.matchMedia('(min-width: 768px)')
       expect(mql.matches).toBe(false)
     })
   })
-  
+
   // IntersectionObserver mock
   describe('IntersectionObserver', () => {
     let observerCallback: IntersectionObserverCallback
-    
+
     beforeEach(() => {
       global.IntersectionObserver = vi.fn((callback) => {
         observerCallback = callback
@@ -926,46 +926,46 @@ describe('browser API mocks', () => {
         }
       }) as unknown as typeof IntersectionObserver
     })
-    
+
     it('triggers intersection callback', () => {
       const element = document.createElement('div')
       const observer = new IntersectionObserver(() => {})
       observer.observe(element)
-      
+
       // Simulate intersection
       observerCallback(
         [{ isIntersecting: true, target: element } as IntersectionObserverEntry],
         observer
       )
-      
+
       expect(observer.observe).toHaveBeenCalledWith(element)
     })
   })
-  
+
   // Timer mocks
   describe('timers', () => {
     beforeEach(() => {
       vi.useFakeTimers()
     })
-    
+
     afterEach(() => {
       vi.useRealTimers()
     })
-    
+
     it('controls time', () => {
       const callback = vi.fn()
-      
+
       setTimeout(callback, 1000)
       expect(callback).not.toHaveBeenCalled()
-      
+
       vi.advanceTimersByTime(1000)
       expect(callback).toHaveBeenCalled()
     })
-    
+
     it('controls system time', () => {
       const mockDate = new Date('2024-01-15')
       vi.setSystemTime(mockDate)
-      
+
       expect(new Date()).toEqual(mockDate)
     })
   })
@@ -998,13 +998,13 @@ describe('UserProfile with AuthContext', () => {
       login: vi.fn(),
       logout: vi.fn(),
     }
-    
+
     renderWithAuth(<UserProfile />, authValue)
-    
+
     expect(screen.getByText('John')).toBeInTheDocument()
     expect(screen.getByText('john@example.com')).toBeInTheDocument()
   })
-  
+
   it('renders login prompt when not authenticated', () => {
     const authValue = {
       user: null,
@@ -1012,9 +1012,9 @@ describe('UserProfile with AuthContext', () => {
       login: vi.fn(),
       logout: vi.fn(),
     }
-    
+
     renderWithAuth(<UserProfile />, authValue)
-    
+
     expect(screen.getByText(/please log in/i)).toBeInTheDocument()
   })
 })
@@ -1034,7 +1034,7 @@ export const handlers = [
       { id: '2', name: 'Jane Smith', email: 'jane@example.com' },
     ])
   }),
-  
+
   http.get('/api/users/:id', ({ params }) => {
     const { id } = params
     return HttpResponse.json({
@@ -1043,7 +1043,7 @@ export const handlers = [
       email: 'john@example.com',
     })
   }),
-  
+
   http.post('/api/users', async ({ request }) => {
     const body = await request.json()
     return HttpResponse.json(
@@ -1051,7 +1051,7 @@ export const handlers = [
       { status: 201 }
     )
   }),
-  
+
   // Error simulation
   http.get('/api/error', () => {
     return HttpResponse.json(
@@ -1085,11 +1085,11 @@ describe('User API with MSW', () => {
   it('fetches users list', async () => {
     const response = await fetch('/api/users')
     const users = await response.json()
-    
+
     expect(users).toHaveLength(2)
     expect(users[0].name).toBe('John Doe')
   })
-  
+
   it('handles error state', async () => {
     // Override handler for this test
     server.use(
@@ -1100,9 +1100,9 @@ describe('User API with MSW', () => {
         )
       })
     )
-    
+
     const response = await fetch('/api/users')
-    
+
     expect(response.ok).toBe(false)
     expect(response.status).toBe(500)
   })
@@ -1122,7 +1122,7 @@ export default defineConfig({
     coverage: {
       // Provider selection
       provider: 'v8', // 'v8' is faster, 'istanbul' is more compatible
-      
+
       // Reporters
       reporter: [
         ['text', { skipFull: true }], // Console output, skip 100% files
@@ -1131,51 +1131,51 @@ export default defineConfig({
         'html', // HTML report
         'lcov', // LCOV for CI integration
       ],
-      
+
       // Output directory
       reportsDirectory: './coverage',
-      
+
       // Include/exclude patterns
       include: ['src/**/*.{ts,tsx}'],
       exclude: [
         // Config files
         '**/*.config.{ts,js}',
-        
+
         // Type definitions
         '**/*.d.ts',
-        
+
         // Test files
         '**/*.test.{ts,tsx}',
         '**/*.spec.{ts,tsx}',
         '**/__tests__/**',
         '**/__mocks__/**',
-        
+
         // Entry points
         'src/main.tsx',
         'src/App.tsx',
-        
+
         // Types and constants (pure data)
         'src/types/**',
         'src/constants/**',
-        
+
         // Generated files
         'src/generated/**',
-        
+
         // Stories (if using Storybook)
         '**/*.stories.{ts,tsx}',
       ],
-      
+
       // Coverage thresholds
       thresholds: {
         lines: 90,
         functions: 90,
         branches: 85, // Lower threshold for complex conditionals
         statements: 90,
-        
+
         // Per-file thresholds (optional)
         // autoUpdate: true, // Update thresholds based on current coverage
       },
-      
+
       // Watermarks for HTML report
       watermarks: {
         lines: [80, 95],
@@ -1183,7 +1183,7 @@ export default defineConfig({
         branches: [80, 95],
         statements: [80, 95],
       },
-      
+
       // Additional options
       clean: true, // Clean output directory before running
       cleanOnRerun: true,
@@ -1254,24 +1254,24 @@ function untestableCode() {
 ```typescript
 /**
  * COVERAGE BEST PRACTICES
- * 
+ *
  * 1. Set realistic thresholds:
  *    - 90% for lines/functions/statements
  *    - 85% for branches (complex conditionals are harder to fully cover)
- * 
+ *
  * 2. Exclude appropriate files:
  *    - Entry points (main.tsx, App.tsx)
  *    - Type definitions
  *    - Generated code
  *    - Configuration files
- * 
+ *
  * 3. Use v8 provider for speed, istanbul for compatibility
- * 
+ *
  * 4. Review uncovered code regularly:
  *    - Some code legitimately can't/shouldn't be tested
  *    - Use ignore hints with explanatory comments
  *    - Don't game the system to hit thresholds
- * 
+ *
  * 5. Focus on meaningful coverage:
  *    - Test critical business logic thoroughly
  *    - Test edge cases and error paths
@@ -1334,12 +1334,12 @@ describe('ComponentName', () => {
     it('renders with custom props', () => {})
     it('renders nothing when condition is false', () => {})
   })
-  
+
   describe('interactions', () => {
     it('calls onClick when clicked', () => {})
     it('disables button when loading', () => {})
   })
-  
+
   describe('accessibility', () => {
     it('has correct ARIA attributes', () => {})
     it('supports keyboard navigation', () => {})
@@ -1393,7 +1393,7 @@ interface AllProvidersProps {
 
 function AllProviders({ children, initialAuthState }: AllProvidersProps) {
   const queryClient = createTestQueryClient()
-  
+
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider initialState={initialAuthState}>
@@ -1415,7 +1415,7 @@ export function renderWithProviders(
   options: CustomRenderOptions = {}
 ) {
   const { initialAuthState, ...renderOptions } = options
-  
+
   return {
     ...render(ui, {
       wrapper: (props) => (
@@ -1508,46 +1508,46 @@ describe('ShoppingCart Integration', () => {
     { id: '1', name: 'Laptop', price: 999, stock: 5 },
     { id: '2', name: 'Mouse', price: 29, stock: 10 },
   ]
-  
+
   it('adds products to cart and updates summary', async () => {
     const user = userEvent.setup()
-    
+
     render(
       <ShoppingCart>
         <ProductList products={mockProducts} />
         <CartSummary />
       </ShoppingCart>
     )
-    
+
     // Add items to cart
     await user.click(screen.getByRole('button', { name: /add laptop/i }))
     await user.click(screen.getByRole('button', { name: /add mouse/i }))
     await user.click(screen.getByRole('button', { name: /add mouse/i }))
-    
+
     // Verify cart summary updated
     expect(screen.getByText(/total: \$1,057/i)).toBeInTheDocument()
     expect(screen.getByText(/3 items/i)).toBeInTheDocument()
   })
-  
+
   it('persists cart state across component interactions', async () => {
     const user = userEvent.setup()
-    
+
     const { rerender } = render(
       <ShoppingCart>
         <ProductList products={mockProducts} />
       </ShoppingCart>
     )
-    
+
     // Add item
     await user.click(screen.getByRole('button', { name: /add laptop/i }))
-    
+
     // Re-render with different child (simulating navigation)
     rerender(
       <ShoppingCart>
         <CartSummary />
       </ShoppingCart>
     )
-    
+
     // Cart state should persist
     expect(screen.getByText(/laptop/i)).toBeInTheDocument()
     expect(screen.getByText(/\$999/i)).toBeInTheDocument()
@@ -1570,7 +1570,7 @@ import { ProtectedRoute } from './ProtectedRoute'
 describe('Authentication Flow', () => {
   it('complete login flow', async () => {
     const user = userEvent.setup()
-    
+
     render(
       <AuthProvider>
         <LoginForm />
@@ -1579,48 +1579,48 @@ describe('Authentication Flow', () => {
         </ProtectedRoute>
       </AuthProvider>
     )
-    
+
     // Initial state - login form visible
     expect(screen.getByRole('form')).toBeInTheDocument()
     expect(screen.queryByText(/welcome/i)).not.toBeInTheDocument()
-    
+
     // Enter credentials
     await user.type(screen.getByLabelText(/email/i), 'user@example.com')
     await user.type(screen.getByLabelText(/password/i), 'password123')
     await user.click(screen.getByRole('button', { name: /login/i }))
-    
+
     // After successful login - profile visible
     await waitFor(() => {
       expect(screen.getByText(/welcome, user/i)).toBeInTheDocument()
     })
-    
+
     expect(screen.queryByRole('form')).not.toBeInTheDocument()
   })
-  
+
   it('handles login error and recovery', async () => {
     const user = userEvent.setup()
-    
+
     render(
       <AuthProvider>
         <LoginForm />
       </AuthProvider>
     )
-    
+
     // Failed login attempt
     await user.type(screen.getByLabelText(/email/i), 'wrong@example.com')
     await user.type(screen.getByLabelText(/password/i), 'wrongpassword')
     await user.click(screen.getByRole('button', { name: /login/i }))
-    
+
     // Error message displayed
     await waitFor(() => {
       expect(screen.getByText(/invalid credentials/i)).toBeInTheDocument()
     })
-    
+
     // Can retry
     await user.clear(screen.getByLabelText(/email/i))
     await user.type(screen.getByLabelText(/email/i), 'correct@example.com')
     await user.click(screen.getByRole('button', { name: /login/i }))
-    
+
     // Error cleared on new attempt
     await waitFor(() => {
       expect(screen.queryByText(/invalid credentials/i)).not.toBeInTheDocument()
@@ -1648,7 +1648,7 @@ const createWrapper = () => {
       queries: { retry: false },
     },
   })
-  
+
   return ({ children }: { children: React.ReactNode }) => (
     <QueryClientProvider client={queryClient}>
       {children}
@@ -1660,42 +1660,42 @@ describe('User Management Integration', () => {
   it('fetches and displays users, then shows details on selection', async () => {
     const user = userEvent.setup()
     const Wrapper = createWrapper()
-    
+
     render(
       <Wrapper>
         <UserList />
         <UserDetails />
       </Wrapper>
     )
-    
+
     // Loading state
     expect(screen.getByText(/loading users/i)).toBeInTheDocument()
-    
+
     // Users loaded
     await waitFor(() => {
       expect(screen.getByText('John Doe')).toBeInTheDocument()
     })
-    
+
     expect(screen.getByText('Jane Smith')).toBeInTheDocument()
-    
+
     // Select user to view details
     await user.click(screen.getByText('John Doe'))
-    
+
     // Details loading
     expect(screen.getByText(/loading details/i)).toBeInTheDocument()
-    
+
     // Details displayed
     await waitFor(() => {
       expect(screen.getByText(/john@example.com/i)).toBeInTheDocument()
     })
-    
+
     expect(screen.getByText(/admin/i)).toBeInTheDocument()
   })
-  
+
   it('handles user creation flow', async () => {
     const user = userEvent.setup()
     const Wrapper = createWrapper()
-    
+
     // Track POST request
     let createdUser: any = null
     server.use(
@@ -1704,19 +1704,19 @@ describe('User Management Integration', () => {
         return HttpResponse.json({ id: '3', ...createdUser }, { status: 201 })
       })
     )
-    
+
     render(
       <Wrapper>
         <UserList />
         <CreateUserForm />
       </Wrapper>
     )
-    
+
     // Fill form
     await user.type(screen.getByLabelText(/name/i), 'New User')
     await user.type(screen.getByLabelText(/email/i), 'new@example.com')
     await user.click(screen.getByRole('button', { name: /create user/i }))
-    
+
     // Verify API called with correct data
     await waitFor(() => {
       expect(createdUser).toEqual({
@@ -1724,7 +1724,7 @@ describe('User Management Integration', () => {
         email: 'new@example.com',
       })
     })
-    
+
     // New user appears in list
     await waitFor(() => {
       expect(screen.getByText('New User')).toBeInTheDocument()
@@ -1742,20 +1742,20 @@ describe('User Management Integration', () => {
 ```typescript
 /**
  * TESTING PYRAMID
- * 
+ *
  * E2E Tests (10%)
  * - Critical user journeys
  * - Cross-page workflows
  * - Payment flows
  * - Authentication flows
  * - Complex multi-step processes
- * 
+ *
  * Integration Tests (30%)
  * - Component interactions
  * - Feature workflows
  * - API integration
  * - State management
- * 
+ *
  * Unit Tests (60%)
  * - Individual functions
  * - Component rendering
@@ -1779,23 +1779,23 @@ test.describe('Authentication E2E', () => {
     await page.fill('[name="password"]', 'SecurePass123!')
     await page.fill('[name="confirmPassword"]', 'SecurePass123!')
     await page.click('button[type="submit"]')
-    
+
     // Verify redirect to dashboard
     await expect(page).toHaveURL('/dashboard')
     await expect(page.locator('text=Welcome')).toBeVisible()
-    
+
     // Log out
     await page.click('text=Logout')
     await expect(page).toHaveURL('/login')
-    
+
     // Log back in
     await page.fill('[name="email"]', 'newuser@example.com')
     await page.fill('[name="password"]', 'SecurePass123!')
     await page.click('button[type="submit"]')
-    
+
     await expect(page).toHaveURL('/dashboard')
   })
-  
+
   test('protected routes redirect unauthenticated users', async ({ page }) => {
     await page.goto('/dashboard')
     await expect(page).toHaveURL('/login?redirect=/dashboard')
@@ -1811,26 +1811,26 @@ test.describe('Checkout Flow', () => {
     await page.goto('/products')
     await page.click('[data-testid="add-to-cart"]:first-child')
     await page.click('[data-testid="add-to-cart"]:nth-child(2)')
-    
+
     // Go to cart
     await page.click('[data-testid="cart-link"]')
     await expect(page.locator('[data-testid="cart-count"]')).toHaveText('2')
-    
+
     // Proceed to checkout
     await page.click('text=Checkout')
-    
+
     // Fill shipping info
     await page.fill('[name="address"]', '123 Test St')
     await page.fill('[name="city"]', 'Test City')
     await page.fill('[name="zip"]', '12345')
     await page.click('text=Continue to Payment')
-    
+
     // Fill payment info (use test card)
     await page.fill('[name="cardNumber"]', '4242424242424242')
     await page.fill('[name="expiry"]', '12/25')
     await page.fill('[name="cvc"]', '123')
     await page.click('text=Complete Purchase')
-    
+
     // Verify success
     await expect(page.locator('text=Order Confirmed')).toBeVisible()
     await expect(page.locator('[data-testid="order-number"]')).toBeVisible()
@@ -1847,13 +1847,13 @@ export default defineConfig({
   retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 1 : undefined,
   reporter: 'html',
-  
+
   use: {
     baseURL: 'http://localhost:5173',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
   },
-  
+
   projects: [
     { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
     { name: 'firefox', use: { ...devices['Desktop Firefox'] } },
@@ -1862,7 +1862,7 @@ export default defineConfig({
     { name: 'Mobile Chrome', use: { ...devices['Pixel 5'] } },
     { name: 'Mobile Safari', use: { ...devices['iPhone 12'] } },
   ],
-  
+
   webServer: {
     command: 'npm run dev',
     url: 'http://localhost:5173',
@@ -1902,27 +1902,27 @@ import { Button } from './Button'
 describe('Button in real browser', () => {
   it('renders and handles clicks', async () => {
     const onClick = vi.fn()
-    
+
     render(<Button onClick={onClick}>Click me</Button>)
-    
+
     // Get element using page API
     const button = page.getByRole('button', { name: /click me/i })
-    
+
     // Assertions
     await expect.element(button).toBeVisible()
     await expect.element(button).toBeEnabled()
-    
+
     // Interaction
     await button.click()
-    
+
     expect(onClick).toHaveBeenCalled()
   })
-  
+
   it('has correct styles', async () => {
     render(<Button variant="primary">Styled</Button>)
-    
+
     const button = page.getByRole('button')
-    
+
     // Check computed styles
     const styles = await button.evaluate((el) => {
       const computed = window.getComputedStyle(el)
@@ -1931,7 +1931,7 @@ describe('Button in real browser', () => {
         color: computed.color,
       }
     })
-    
+
     expect(styles.backgroundColor).toBe('rgb(0, 123, 255)')
   })
 })
@@ -1958,7 +1958,7 @@ it('sets isOpen to true when clicked', () => {
 it('displays modal content when triggered', async () => {
   const user = userEvent.setup()
   render(<Modal trigger={<button>Open</button>} content={<p>Content</p>} />)
-  
+
   await user.click(screen.getByRole('button', { name: /open/i }))
   expect(screen.getByText('Content')).toBeVisible()
 })
@@ -2005,7 +2005,7 @@ it('submits form', () => {
 it('submits form', async () => {
   const user = userEvent.setup()
   render(<Form />)
-  
+
   await user.type(screen.getByLabelText(/email/i), 'test@example.com')
   await user.click(screen.getByRole('button'))
 })
@@ -2078,7 +2078,7 @@ describe('Flaky Prevention', () => {
     await new Promise((r) => setTimeout(r, 100)) // Flaky!
     expect(screen.getByText('Success')).toBeInTheDocument()
   })
-  
+
   // ✅ Better: wait for specific condition
   it('shows notification', async () => {
     render(<Notification />)
@@ -2086,42 +2086,42 @@ describe('Flaky Prevention', () => {
       expect(screen.getByText('Success')).toBeInTheDocument()
     })
   })
-  
+
   // 2. Control timers
   it('auto-hides after 5 seconds', async () => {
     vi.useFakeTimers()
     render(<Notification />)
-    
+
     expect(screen.getByText('Success')).toBeInTheDocument()
-    
+
     act(() => {
       vi.advanceTimersByTime(5000)
     })
-    
+
     expect(screen.queryByText('Success')).not.toBeInTheDocument()
     vi.useRealTimers()
   })
-  
+
   // 3. Use unique data in tests
   it('creates user', async () => {
     const uniqueEmail = `test-${Date.now()}@example.com` // Unique per run
     // ...test
   })
-  
+
   // 4. Isolate tests - don't share state
   // ❌ Bad: shared state
   let sharedValue = 0
-  
+
   it('increments', () => {
     sharedValue++
     expect(sharedValue).toBe(1)
   })
-  
+
   it('increments again', () => {
     sharedValue++ // Depends on order!
     expect(sharedValue).toBe(2) // May fail if tests run in parallel
   })
-  
+
   // ✅ Better: isolated state
   it('increments', () => {
     const value = 0
@@ -2139,19 +2139,19 @@ export default defineConfig({
   test: {
     // Use forks for stability, threads for speed
     pool: 'forks',
-    
+
     // Limit parallel tests in CI
     maxWorkers: process.env.CI ? 4 : undefined,
     minWorkers: 1,
-    
+
     // Cache results
     cache: {
       dir: './node_modules/.vitest',
     },
-    
+
     // Isolate tests (set to false for faster execution if tests are independent)
     isolate: true,
-    
+
     // Disable type checking during tests (run separately)
     typecheck: {
       enabled: false,
@@ -2166,33 +2166,33 @@ describe('Performance', () => {
     // Expensive operation
     return createLargeDataSet()
   }
-  
+
   // ❌ Bad: setup in each test
   it('test 1', () => {
     const data = setup()
     // ...
   })
-  
+
   it('test 2', () => {
     const data = setup() // Repeated!
     // ...
   })
-  
+
   // ✅ Better: use beforeAll for expensive setup
   let sharedData: any
-  
+
   beforeAll(() => {
     sharedData = setup()
   })
-  
+
   it('test 1', () => {
     // Use sharedData
   })
-  
+
   it('test 2', () => {
     // Use sharedData
   })
-  
+
   // Or use test.extend for fixtures
 })
 ```

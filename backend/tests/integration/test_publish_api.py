@@ -12,7 +12,7 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 
 from rag_backend.api.app import create_app
-from rag_backend.domain.models import CarouselProject, CarouselStatus
+from rag_backend.domain.models import CarouselStatus
 from rag_backend.domain.protocols import PublishResult
 
 
@@ -50,10 +50,10 @@ async def _seed_completed_project(client: AsyncClient) -> str:
 
     # Mark as COMPLETED directly in the repo — the full pipeline needs
     # real LLM + image SDKs we don't want to exercise here.
+    import rag_backend.infrastructure.database.config as db_config
     from rag_backend.infrastructure.database.carousel_repository import (
         PostgresCarouselRepository,
     )
-    import rag_backend.infrastructure.database.config as db_config
 
     assert db_config.c_engine is not None
     from sqlalchemy.ext.asyncio import async_sessionmaker

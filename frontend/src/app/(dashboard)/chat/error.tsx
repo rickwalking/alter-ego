@@ -24,7 +24,7 @@ export default function ChatError({
         <div className="h-20 w-20 rounded-full bg-[var(--color-destructive)]/10 flex items-center justify-center">
           <AlertCircle className="h-10 w-10 text-[var(--color-destructive)]" />
         </div>
-        
+
         <div className="space-y-2">
           <h1 className="text-3xl font-bold">Something went wrong</h1>
           <p className="text-[var(--color-muted-foreground)] max-w-md">

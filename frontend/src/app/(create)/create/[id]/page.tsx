@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useLayoutEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -24,9 +24,8 @@ const WS_COMPLETE_TYPE = "complete";
 const WS_ERROR_TYPE = "error";
 const WS_TOOL_RESULT_TYPE = "tool_result";
 
-// Module-level guard: persists across React Strict Mode double-mounts
-// and HMR remounts so we only create one conversation per project.
-const _workspaceConversationsInitiated = new Set<string>();
+const CONVERSATION_STORAGE_KEY = (projectId: string): string =>
+  `alter-ego:conversation:${projectId}`;
 
 export default function WorkspacePage() {
   const params = useParams<{ id: string }>();
@@ -49,25 +48,31 @@ export default function WorkspacePage() {
   const streamingContentRef = useRef("");
   const streamingMsgIdRef = useRef<string | null>(null);
 
-  useEffect(() => {
-    if (!projectId || _workspaceConversationsInitiated.has(projectId)) return;
-    _workspaceConversationsInitiated.add(projectId);
+  useLayoutEffect(() => {
+    if (!projectId) return;
 
-    const setupConversation = async () => {
-      const conv = await createConversation.mutateAsync({
+    const storedId = sessionStorage.getItem(CONVERSATION_STORAGE_KEY(projectId));
+    if (storedId) {
+      setConversationId(storedId);
+      return;
+    }
+
+    createConversation
+      .mutateAsync({
         title: `Carousel: ${project?.topic || projectId}`,
+      })
+      .then((conv) => {
+        sessionStorage.setItem(CONVERSATION_STORAGE_KEY(projectId), conv.id);
+        setConversationId(conv.id);
+      })
+      .catch(() => {
+        // Silently ignore creation errors (e.g. 429 rate-limit) so the
+        // user can still interact with the workspace chat manually.
       });
-      setConversationId(conv.id);
-    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectId]);
 
-    setupConversation();
-
-    return () => {
-      _workspaceConversationsInitiated.delete(projectId);
-    };
-  }, [projectId, createConversation, project]);
-
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!conversationId) return;
 
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
@@ -156,7 +161,7 @@ export default function WorkspacePage() {
     };
   }, [conversationId, t]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (statusData?.status === "completed" && project) {
       setCarouselComplete(true);
       setCompletedProject(project);

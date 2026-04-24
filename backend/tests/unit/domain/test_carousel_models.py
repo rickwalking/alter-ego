@@ -4,13 +4,12 @@ import pytest
 
 from rag_backend.domain.models import (
     CarouselProject,
-    CarouselStatus,
     CarouselTheme,
     DesignTokenColors,
     DesignTokenImages,
     DesignTokenLayout,
-    DesignTokenTypography,
     DesignTokens,
+    DesignTokenTypography,
 )
 
 
@@ -148,7 +147,6 @@ class TestCarouselProjectDesignMethods:
 
     def test_get_image_url_returns_api_url(self):
         """Should return API URL for carousel image."""
-        from uuid import UUID
 
         project = CarouselProject(
             topic="Test", audience="Everyone", niche="Tech", theme=CarouselTheme.AI_COMPETITION

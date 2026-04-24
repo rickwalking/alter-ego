@@ -1,7 +1,5 @@
 """Unit tests for the OpenAI image-prompt sanitizer."""
 
-import pytest
-
 from rag_backend.application.services.image_prompt_sanitizer import (
     sanitize_image_prompt,
 )

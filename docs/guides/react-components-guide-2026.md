@@ -133,10 +133,10 @@ function withAuth<P extends object>(
 ): ComponentType<P> {
   return function WithAuthComponent(props: P) {
     const { user, isLoading } = useAuth();
-    
+
     if (isLoading) return <LoadingScreen />;
     if (!user) return <LoginRedirect />;
-    
+
     return <WrappedComponent {...props} user={user} />;
   };
 }
@@ -158,7 +158,7 @@ export function UserListContainer() {
   });
 
   if (isLoading) return <UserListSkeleton />;
-  
+
   return <UserList users={users} />;
 }
 
@@ -215,9 +215,9 @@ interface TabsProps {
 
 export function Tabs({ children, defaultTab }: TabsProps) {
   const [activeTab, setActiveTab] = useState(defaultTab || '');
-  
+
   const value = useMemo(() => ({ activeTab, setActiveTab }), [activeTab]);
-  
+
   return (
     <TabsContext.Provider value={value}>
       <div className="tabs">{children}</div>
@@ -244,7 +244,7 @@ interface TabProps {
 export function Tab({ id, children, disabled }: TabProps) {
   const { activeTab, setActiveTab } = useTabs();
   const isActive = activeTab === id;
-  
+
   return (
     <button
       role="tab"
@@ -266,9 +266,9 @@ interface TabPanelProps {
 
 export function TabPanel({ id, children }: TabPanelProps) {
   const { activeTab } = useTabs();
-  
+
   if (activeTab !== id) return null;
-  
+
   return (
     <div role="tabpanel" className="p-4">
       {children}
@@ -286,15 +286,15 @@ export function TabPanel({ id, children }: TabPanelProps) {
     <Tab id="details">Details</Tab>
     <Tab id="settings">Settings</Tab>
   </TabList>
-  
+
   <TabPanel id="overview">
     <h2>Overview Content</h2>
   </TabPanel>
-  
+
   <TabPanel id="details">
     <h2>Details Content</h2>
   </TabPanel>
-  
+
   <TabPanel id="settings">
     <h2>Settings Content</h2>
   </TabPanel>
@@ -329,13 +329,13 @@ interface UncontrolledInputProps {
 
 export function UncontrolledInput({ defaultValue, onSubmit }: UncontrolledInputProps) {
   const inputRef = useRef<HTMLInputElement>(null);
-  
+
   const handleSubmit = () => {
     if (inputRef.current && onSubmit) {
       onSubmit(inputRef.current.value);
     }
   };
-  
+
   return (
     <div>
       <input
@@ -377,7 +377,7 @@ export function ControlledInput({ value, onChange, placeholder }: ControlledInpu
 // Usage
 function Form() {
   const [name, setName] = useState('');
-  
+
   return <ControlledInput value={name} onChange={setName} />;
 }
 ```
@@ -402,17 +402,17 @@ export function useControllableState<T>({
   onChange
 }: UseControllableStateProps<T>): [T, (value: T) => void] {
   const [internalValue, setInternalValue] = useState(defaultValue as T);
-  
+
   const isControlled = value !== undefined;
   const currentValue = isControlled ? value : internalValue;
-  
+
   const setValue = useCallback((newValue: T) => {
     if (!isControlled) {
       setInternalValue(newValue);
     }
     onChange?.(newValue);
   }, [isControlled, onChange]);
-  
+
   return [currentValue, setValue];
 }
 ```
@@ -431,7 +431,7 @@ export function Toggle({ checked, defaultChecked, onChange }: ToggleProps) {
     defaultValue: defaultChecked ?? false,
     onChange
   });
-  
+
   return (
     <button
       role="switch"
@@ -512,20 +512,20 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     ref
   ) => {
     const baseStyles = 'inline-flex items-center justify-center font-medium rounded transition-colors';
-    
+
     const variantStyles = {
       primary: 'bg-blue-600 text-white hover:bg-blue-700',
       secondary: 'bg-gray-200 text-gray-900 hover:bg-gray-300',
       ghost: 'bg-transparent text-gray-700 hover:bg-gray-100',
       danger: 'bg-red-600 text-white hover:bg-red-700'
     };
-    
+
     const sizeStyles = {
       sm: 'px-3 py-1.5 text-sm',
       md: 'px-4 py-2 text-base',
       lg: 'px-6 py-3 text-lg'
     };
-    
+
     return (
       <button
         ref={ref}
@@ -600,7 +600,7 @@ export type AlertProps = DismissibleAlertProps | NonDismissibleAlertProps;
 
 export function Alert(props: AlertProps) {
   const { title, children, isDismissible } = props;
-  
+
   return (
     <div className="alert">
       {title && <h4>{title}</h4>}
@@ -629,7 +629,7 @@ export function Badge({
   variant = 'default'
 }: BadgeProps) {
   const displayCount = count > max ? `${max}+` : count;
-  
+
   return (
     <span className="badge">
       {variant === 'dot' ? <span className="dot" /> : displayCount}
@@ -668,9 +668,9 @@ export default async function UserProfile({ userId }: { userId: string }) {
   const user = await db.users.findUnique({
     where: { id: userId }
   });
-  
+
   if (!user) return <div>User not found</div>;
-  
+
   return (
     <div className="p-6">
       <h1 className="text-2xl font-bold">{user.name}</h1>
@@ -700,7 +700,7 @@ export function FollowButton({ userId, initialIsFollowing }: FollowButtonProps) 
   const [isFollowing, setIsFollowing] = useState(initialIsFollowing);
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
-  
+
   const handleClick = async () => {
     setIsLoading(true);
     try {
@@ -713,14 +713,14 @@ export function FollowButton({ userId, initialIsFollowing }: FollowButtonProps) 
       setIsLoading(false);
     }
   };
-  
+
   return (
     <button
       onClick={handleClick}
       disabled={isLoading}
       className={`px-4 py-2 rounded ${
-        isFollowing 
-          ? 'bg-gray-200 text-gray-800' 
+        isFollowing
+          ? 'bg-gray-200 text-gray-800'
           : 'bg-blue-600 text-white'
       }`}
     >
@@ -742,7 +742,7 @@ import { LikeButton } from './LikeButton';
 
 export default async function Page() {
   const users = await db.users.findMany();
-  
+
   return (
     <div className="grid gap-4">
       {users.map(user => (
@@ -770,12 +770,12 @@ interface LikeButtonProps {
 
 export function LikeButton({ postId, initialLikes, children }: LikeButtonProps) {
   const [likes, setLikes] = useState(initialLikes);
-  
+
   const handleLike = async () => {
     await fetch(`/api/posts/${postId}/like`, { method: 'POST' });
     setLikes(prev => prev + 1);
   };
-  
+
   return (
     <div>
       <button onClick={handleLike}>❤️ {likes}</button>
@@ -1079,7 +1079,7 @@ function Dropdown({ items }) {
   const [isOpen, setIsOpen] = useState(false);
   const [focusedIndex, setFocusedIndex] = useState(-1);
   const buttonRef = useRef<HTMLButtonElement>(null);
-  
+
   const handleKeyDown = (e: KeyboardEvent) => {
     switch (e.key) {
       case 'Escape':
@@ -1102,7 +1102,7 @@ function Dropdown({ items }) {
         break;
     }
   };
-  
+
   return (
     <div onKeyDown={handleKeyDown}>
       <button
@@ -1139,17 +1139,17 @@ function Dropdown({ items }) {
 function useFocusTrap(isActive: boolean, containerRef: RefObject<HTMLElement>) {
   useEffect(() => {
     if (!isActive || !containerRef.current) return;
-    
+
     const container = containerRef.current;
     const focusableElements = container.querySelectorAll(
       'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
     );
     const firstElement = focusableElements[0] as HTMLElement;
     const lastElement = focusableElements[focusableElements.length - 1] as HTMLElement;
-    
+
     const handleTabKey = (e: KeyboardEvent) => {
       if (e.key !== 'Tab') return;
-      
+
       if (e.shiftKey && document.activeElement === firstElement) {
         e.preventDefault();
         lastElement.focus();
@@ -1158,10 +1158,10 @@ function useFocusTrap(isActive: boolean, containerRef: RefObject<HTMLElement>) {
         firstElement.focus();
       }
     };
-    
+
     container.addEventListener('keydown', handleTabKey);
     firstElement?.focus();
-    
+
     return () => container.removeEventListener('keydown', handleTabKey);
   }, [isActive, containerRef]);
 }
@@ -1176,7 +1176,7 @@ import { useId } from 'react';
 function FormField({ label, error, children }) {
   const id = useId();
   const errorId = `${id}-error`;
-  
+
   return (
     <div>
       <label htmlFor={id}>{label}</label>
@@ -1219,13 +1219,13 @@ function StatusBadge({ status }: { status: 'success' | 'error' | 'warning' }) {
     error: 'bg-red-100 text-red-800 border-red-300',
     warning: 'bg-yellow-100 text-yellow-800 border-yellow-300'
   };
-  
+
   const icons = {
     success: '✓',
     error: '✕',
     warning: '⚠'
   };
-  
+
   return (
     <span className={`inline-flex items-center px-2 py-1 rounded ${styles[status]}`}>
       <span aria-hidden="true">{icons[status]}</span>
@@ -1315,14 +1315,14 @@ export const ClickInteraction: Story = {
 ```tsx
 /**
  * A versatile button component that supports multiple variants, sizes, and states.
- * 
+ *
  * @example
  * ```tsx
  * <Button variant="primary" size="lg" onClick={handleClick}>
  *   Click me
  * </Button>
  * ```
- * 
+ *
  * @example
  * With loading state:
  * ```tsx
@@ -1392,7 +1392,7 @@ function Example() {
 ```tsx
 function ControlledExample() {
   const [activeTab, setActiveTab] = useState('tab1');
-  
+
   return (
     <Tabs activeTab={activeTab} onChange={setActiveTab}>
       {/* ... */}
@@ -1433,12 +1433,12 @@ function ControlledExample() {
 ```tsx
 // Use TypeScript to document expected shapes
 interface DataTableProps<T extends Record<string, unknown>> {
-  /** 
+  /**
    * Array of data items to display
    * Must have a unique 'id' field for React keys
    */
   data: Array<T & { id: string | number }>;
-  
+
   /**
    * Column definitions
    * Keys must exist in the data objects
@@ -1449,7 +1449,7 @@ interface DataTableProps<T extends Record<string, unknown>> {
     width?: string;
     render?: (value: T[keyof T], item: T) => React.ReactNode;
   }>;
-  
+
   /**
    * Called when a row is clicked
    * @param item - The clicked row's data
@@ -1524,7 +1524,7 @@ export const TextInput = forwardRef<TextInputHandle, TextInputProps>(
   ({ defaultValue, onChange }, ref) => {
     const inputRef = useRef<HTMLInputElement>(null);
     const [value, setValue] = useState(defaultValue || '');
-    
+
     useImperativeHandle(ref, () => ({
       focus: () => inputRef.current?.focus(),
       blur: () => inputRef.current?.blur(),
@@ -1534,7 +1534,7 @@ export const TextInput = forwardRef<TextInputHandle, TextInputProps>(
         onChange?.(newValue);
       }
     }), [onChange]);
-    
+
     return (
       <input
         ref={inputRef}
@@ -1551,7 +1551,7 @@ export const TextInput = forwardRef<TextInputHandle, TextInputProps>(
 // Usage
 function Parent() {
   const inputRef = useRef<TextInputHandle>(null);
-  
+
   return (
     <>
       <TextInput ref={inputRef} />
@@ -1674,7 +1674,7 @@ export const Button = forwardRef(
     ref: PolymorphicRef<T>
   ) => {
     const Component = as || 'button';
-    
+
     return (
       <Component
         ref={ref}
@@ -1727,12 +1727,12 @@ function InputWithMultipleRefs(props: InputProps) {
   const localRef = useRef<HTMLInputElement>(null);
   const forwardedRef = props.ref;
   const mergedRef = useMergeRefs(localRef, forwardedRef);
-  
+
   useEffect(() => {
     // Can access input via localRef.current
     localRef.current?.focus();
   }, []);
-  
+
   return <input ref={mergedRef} {...props} />;
 }
 ```

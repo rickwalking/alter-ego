@@ -87,29 +87,29 @@ class Settings(BaseSettings):
     # App
     app_name: str = "RAG Backend"
     debug: bool = False
-    
+
     # API Keys
     openai_api_key: str
     pinecone_api_key: str
     pinecone_environment: str = "us-east-1"
     pinecone_index_name: str = "rag-hybrid-index"
-    
+
     # Database
     database_url: str = "postgresql+asyncpg://user:pass@localhost/ragdb"
     redis_url: str = "redis://localhost:6379"
-    
+
     # LLM
     llm_model: str = "gpt-4o-mini"
     llm_temperature: float = 0.7
-    
+
     # Embeddings
     dense_embedding_model: str = "text-embedding-3-large"
     sparse_embedding_model: str = "pinecone-sparse-english-v0"
     embedding_dimensions: int = 1024
-    
+
     # Hybrid Search
     hybrid_alpha: float = 0.5  # 0=BM25 only, 1=semantic only
-    
+
     class Config:
         env_file = ".env"
 
@@ -129,7 +129,7 @@ Base = declarative_base()
 
 class Document(Base):
     __tablename__ = "documents"
-    
+
     id = Column(String, primary_key=True)
     title = Column(String, nullable=False)
     content = Column(String, nullable=True)  # Original content
@@ -143,7 +143,7 @@ class Document(Base):
 
 class Conversation(Base):
     __tablename__ = "conversations"
-    
+
     id = Column(String, primary_key=True)
     title = Column(String, nullable=True)
     user_id = Column(String, nullable=True)
@@ -179,30 +179,30 @@ class DocumentProcessor:
         self.vector_store = vector_store
         self.upload_dir = Path(upload_dir)
         self.upload_dir.mkdir(exist_ok=True)
-        
+
         self.text_splitter = RecursiveCharacterTextSplitter(
             chunk_size=1000,
             chunk_overlap=200,
             length_function=len,
             add_start_index=True
         )
-        
+
         self.loaders = {
             '.pdf': PyPDFLoader,
             '.txt': TextLoader,
             '.md': UnstructuredMarkdownLoader,
             '.markdown': UnstructuredMarkdownLoader
         }
-    
+
     async def process_upload(
-        self, 
-        file_content: bytes, 
+        self,
+        file_content: bytes,
         filename: str,
         metadata: dict
     ) -> List[str]:
         """
         Process uploaded file and ingest into vector store.
-        
+
         Returns:
             List of chunk IDs
         """
@@ -210,23 +210,23 @@ class DocumentProcessor:
         file_path = self.upload_dir / filename
         async with aiofiles.open(file_path, 'wb') as f:
             await f.write(file_content)
-        
+
         # Load and process
         return await self.process_document(str(file_path), metadata)
-    
+
     async def process_document(
-        self, 
-        file_path: str, 
+        self,
+        file_path: str,
         metadata: dict
     ) -> List[str]:
         """Process document and return chunk IDs."""
         # Load
         loader = self._get_loader(file_path)
         documents = loader.load()
-        
+
         # Split
         chunks = self.text_splitter.split_documents(documents)
-        
+
         # Add metadata
         for i, chunk in enumerate(chunks):
             chunk.metadata.update({
@@ -235,31 +235,31 @@ class DocumentProcessor:
                 "chunk_hash": self._hash_content(chunk.page_content),
                 "source_file": file_path
             })
-        
+
         # Generate embeddings and upsert
         doc_ids = await self._upsert_to_vector_store(chunks)
-        
+
         return doc_ids
-    
+
     async def _upsert_to_vector_store(
-        self, 
+        self,
         chunks: List[Document]
     ) -> List[str]:
         """Generate embeddings and upsert to Pinecone."""
         from app.core.embeddings import get_embeddings
-        
+
         records = []
         for chunk in chunks:
             # Dense embedding
             dense_vector = await get_embeddings().aembed_query(
                 chunk.page_content
             )
-            
+
             # Sparse embedding (using Pinecone's sparse encoder)
             sparse_vector = await self._get_sparse_embedding(
                 chunk.page_content
             )
-            
+
             records.append({
                 "id": chunk.metadata["chunk_hash"],
                 "values": dense_vector,
@@ -269,36 +269,36 @@ class DocumentProcessor:
                     **chunk.metadata
                 }
             })
-        
+
         # Batch upsert
         self.vector_store.upsert(vectors=records)
-        
+
         return [r["id"] for r in records]
-    
+
     async def _get_sparse_embedding(self, text: str) -> dict:
         """Generate sparse vector using Pinecone's inference."""
         from pinecone import Pinecone
         import os
-        
+
         pc = Pinecone(api_key=os.getenv("PINECONE_API_KEY"))
-        
+
         result = pc.inference.embed(
             model="pinecone-sparse-english-v0",
             inputs=[text],
             parameters={"input_type": "passage"}
         )
-        
+
         return {
             'indices': result[0]['sparse_indices'],
             'values': result[0]['sparse_values']
         }
-    
+
     def _get_loader(self, file_path: str):
         """Get appropriate loader based on file extension."""
         ext = Path(file_path).suffix.lower()
         loader_class = self.loaders.get(ext, TextLoader)
         return loader_class(file_path)
-    
+
     def _hash_content(self, content: str) -> str:
         """Generate unique hash for content."""
         return hashlib.md5(content.encode()).hexdigest()
@@ -319,10 +319,10 @@ class HybridRetriever:
     """
     Hybrid retriever combining dense (semantic) and sparse (BM25) search.
     """
-    
+
     def __init__(
-        self, 
-        index_name: str, 
+        self,
+        index_name: str,
         alpha: float = 0.5,
         top_k: int = 5
     ):
@@ -335,11 +335,11 @@ class HybridRetriever:
         self.index = self.pc.Index(index_name)
         self.alpha = alpha
         self.top_k = top_k
-    
+
     async def retrieve(self, query: str, filter: Dict = None) -> List[Document]:
         """
         Perform hybrid search.
-        
+
         Pipeline:
         1. Generate dense vector (semantic)
         2. Generate sparse vector (BM25)
@@ -350,12 +350,12 @@ class HybridRetriever:
         # Generate embeddings
         dense_vector = await self._get_dense_embedding(query)
         sparse_vector = await self._get_sparse_embedding(query)
-        
+
         # Apply weighting
         weighted_dense, weighted_sparse = self._apply_weighting(
             dense_vector, sparse_vector, self.alpha
         )
-        
+
         # Query
         results = self.index.query(
             vector=weighted_dense,
@@ -364,20 +364,20 @@ class HybridRetriever:
             filter=filter,
             include_metadata=True
         )
-        
+
         return self._convert_to_documents(results)
-    
+
     async def _get_dense_embedding(self, text: str) -> List[float]:
         """Generate dense vector using OpenAI."""
         from openai import AsyncOpenAI
-        
+
         client = AsyncOpenAI()
         response = await client.embeddings.create(
             model="text-embedding-3-large",
             input=text
         )
         return response.data[0].embedding
-    
+
     async def _get_sparse_embedding(self, text: str) -> Dict:
         """Generate sparse vector using Pinecone."""
         result = self.pc.inference.embed(
@@ -385,16 +385,16 @@ class HybridRetriever:
             inputs=[text],
             parameters={"input_type": "query"}
         )
-        
+
         return {
             'indices': result[0]['sparse_indices'],
             'values': result[0]['sparse_values']
         }
-    
+
     def _apply_weighting(
-        self, 
-        dense: List[float], 
-        sparse: Dict, 
+        self,
+        dense: List[float],
+        sparse: Dict,
         alpha: float
     ):
         """Apply convex combination."""
@@ -404,7 +404,7 @@ class HybridRetriever:
             'values': [v * (1 - alpha) for v in sparse['values']]
         }
         return weighted_dense, weighted_sparse
-    
+
     def _convert_to_documents(self, results) -> List[Document]:
         """Convert Pinecone results to LangChain Documents."""
         documents = []
@@ -434,35 +434,35 @@ class RAGAgent:
     """
     Agentic RAG with tools for hybrid search and conversation.
     """
-    
+
     def __init__(self, retriever, memory_store=None):
         self.retriever = retriever
         self.memory_store = memory_store
-        
+
         # Initialize LLM
         self.llm = ChatOpenAI(
             model="gpt-4o-mini",
             temperature=0.7,
             streaming=True
         )
-        
+
         # Define tools
         self.tools = [
             self.hybrid_search_tool,
             self.get_conversation_history
         ]
-        
+
         # Create agent
         self.agent = create_agent(
             model=self.llm,
             tools=self.tools,
             system_prompt=self._get_system_prompt()
         )
-    
+
     @tool(response_format="content_and_artifact")
     async def hybrid_search_tool(
-        self, 
-        query: str, 
+        self,
+        query: str,
         top_k: int = 5
     ) -> tuple:
         """
@@ -470,19 +470,19 @@ class RAGAgent:
         Use this when you need to find information from documents.
         """
         results = await self.retriever.retrieve(query)
-        
+
         # Format for LLM
         serialized = "\n\n".join([
             f"Source: {doc.metadata.get('title', 'Unknown')}\n"
             f"Content: {doc.page_content}"
             for doc in results
         ])
-        
+
         return serialized, results
-    
+
     @tool
     async def get_conversation_history(
-        self, 
+        self,
         conversation_id: str,
         limit: int = 10
     ) -> str:
@@ -492,24 +492,24 @@ class RAGAgent:
         """
         if not self.memory_store:
             return "No conversation history available."
-        
+
         history = await self.memory_store.get_history(
-            conversation_id, 
+            conversation_id,
             limit=limit
         )
         return "\n".join([
             f"{msg['role']}: {msg['content']}"
             for msg in history
         ])
-    
+
     async def stream_response(
-        self, 
-        message: str, 
+        self,
+        message: str,
         conversation_id: str
     ):
         """
         Stream agent response.
-        
+
         Yields events:
         - token: Streaming content
         - tool_call: Tool invocation
@@ -518,27 +518,27 @@ class RAGAgent:
         """
         # Build messages with conversation context
         messages = [{"role": "user", "content": message}]
-        
+
         # Stream agent execution
         async for event in self.agent.astream(
             {"messages": messages},
             stream_mode="values"
         ):
             message = event["messages"][-1]
-            
+
             if message.type == "ai":
                 yield {
                     "type": "token",
                     "content": message.content
                 }
-            
+
             elif message.type == "tool":
                 yield {
                     "type": "tool_call",
                     "tool": message.name,
                     "input": message.args
                 }
-                
+
                 # Yield tool results if available
                 if hasattr(message, 'artifact') and message.artifact:
                     yield {
@@ -553,9 +553,9 @@ class RAGAgent:
                             for doc in message.artifact
                         ]
                     }
-        
+
         yield {"type": "done"}
-    
+
     def _get_system_prompt(self) -> str:
         return """You are a helpful AI assistant with access to a knowledge base.
 
@@ -588,26 +588,26 @@ router = APIRouter()
 @router.websocket("/ws/chat/{conversation_id}")
 async def websocket_chat(websocket: WebSocket, conversation_id: str):
     await websocket.accept()
-    
+
     try:
         while True:
             # Receive message
             data = await websocket.receive_json()
             user_message = data.get("message")
-            
+
             if not user_message:
                 continue
-            
+
             # Get agent
             agent = await get_agent_for_conversation(conversation_id)
-            
+
             # Stream response
             async for event in agent.stream_response(
-                user_message, 
+                user_message,
                 conversation_id
             ):
                 await websocket.send_json(event)
-                
+
     except WebSocketDisconnect:
         print(f"Client disconnected: {conversation_id}")
     except Exception as e:
@@ -621,18 +621,18 @@ async def websocket_chat(websocket: WebSocket, conversation_id: str):
 async def chat_stream(request: ChatRequest):
     async def event_generator():
         agent = await get_agent_for_conversation(request.conversation_id)
-        
+
         async for event in agent.stream_response(
             request.message,
             request.conversation_id
         ):
             yield f"data: {json.dumps(event)}\n\n"
-            
+
             # Small delay for flow control
             await asyncio.sleep(0.01)
-        
+
         yield "data: [DONE]\n\n"
-    
+
     return StreamingResponse(
         event_generator(),
         media_type="text/event-stream",
@@ -647,10 +647,10 @@ async def chat_stream(request: ChatRequest):
 async def chat(request: ChatRequest):
     """Non-streaming chat endpoint for simple queries."""
     agent = await get_agent_for_conversation(request.conversation_id)
-    
+
     response_chunks = []
     sources = []
-    
+
     async for event in agent.stream_response(
         request.message,
         request.conversation_id
@@ -659,7 +659,7 @@ async def chat(request: ChatRequest):
             response_chunks.append(event["content"])
         elif event["type"] == "tool_result":
             sources = event.get("documents", [])
-    
+
     return {
         "response": "".join(response_chunks),
         "sources": sources,
@@ -687,10 +687,10 @@ async def upload_document(
     """Upload and process a document."""
     # Generate ID
     doc_id = str(uuid.uuid4())
-    
+
     # Read file
     content = await file.read()
-    
+
     # Process
     processor = DocumentProcessor(get_vector_store())
     chunk_ids = await processor.process_upload(
@@ -702,7 +702,7 @@ async def upload_document(
             "tags": tags.split(",") if tags else []
         }
     )
-    
+
     # Save to database
     document = Document(
         id=doc_id,
@@ -713,10 +713,10 @@ async def upload_document(
         chunk_count=len(chunk_ids),
         metadata={"chunk_ids": chunk_ids}
     )
-    
+
     db.add(document)
     await db.commit()
-    
+
     return {
         "id": doc_id,
         "title": title,
@@ -732,7 +732,7 @@ async def list_documents(
 ):
     """List all documents with optional filtering."""
     query = select(Document)
-    
+
     if search:
         query = query.filter(
             or_(
@@ -740,13 +740,13 @@ async def list_documents(
                 Document.tags.contains([search])
             )
         )
-    
+
     if tags:
         query = query.filter(Document.tags.contains(tags))
-    
+
     result = await db.execute(query.order_by(Document.created_at.desc()))
     documents = result.scalars().all()
-    
+
     return {
         "documents": [
             {
@@ -768,19 +768,19 @@ async def delete_document(doc_id: str, db = Depends(get_db)):
         select(Document).filter(Document.id == doc_id)
     )
     document = result.scalar_one_or_none()
-    
+
     if not document:
         raise HTTPException(status_code=404, detail="Document not found")
-    
+
     # Delete vectors
     chunk_ids = document.metadata.get("chunk_ids", [])
     if chunk_ids:
         get_vector_store().delete(ids=chunk_ids)
-    
+
     # Delete from database
     await db.delete(document)
     await db.commit()
-    
+
     return {"status": "deleted", "id": doc_id}
 ```
 
@@ -813,19 +813,19 @@ async def hybrid_search(request: SearchRequest):
         alpha=request.alpha or 0.5,
         top_k=request.top_k
     )
-    
+
     results = await retriever.retrieve(
         request.query,
         filter=request.filter
     )
-    
+
     return [
         SearchResult(
             id=doc.metadata.get("id", ""),
             content=doc.page_content,
             title=doc.metadata.get("title", "Unknown"),
             score=doc.metadata.get("score", 0.0),
-            metadata={k: v for k, v in doc.metadata.items() 
+            metadata={k: v for k, v in doc.metadata.items()
                      if k not in ["id", "score", "text"]}
         )
         for doc in results

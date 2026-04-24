@@ -1,8 +1,8 @@
 """Unit tests for CarouselAgent with mocked dependencies."""
 
 import json
-from unittest.mock import AsyncMock, MagicMock
-from uuid import UUID, uuid4
+from unittest.mock import AsyncMock
+from uuid import uuid4
 
 import pytest
 
@@ -12,7 +12,6 @@ from rag_backend.application.services.image_provider_registry import (
 )
 from rag_backend.domain.models import (
     CarouselProject,
-    CarouselSlide,
     CarouselStatus,
     CarouselTheme,
     ResearchSource,

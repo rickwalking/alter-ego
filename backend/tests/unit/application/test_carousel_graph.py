@@ -77,11 +77,13 @@ def _make_deps(
     repo.create_research_source = AsyncMock(side_effect=lambda s: s)
 
     llm = AsyncMock()
-    llm.generate = AsyncMock(side_effect=[
-        '{"title_pt": "T", "subtitle_pt": "S"}',
-        _content_response(),
-        "caption text",
-    ])
+    llm.generate = AsyncMock(
+        side_effect=[
+            '{"title_pt": "T", "subtitle_pt": "S"}',
+            _content_response(),
+            "caption text",
+        ]
+    )
 
     research_tool = AsyncMock()
     research_tool.search_web = AsyncMock(return_value=[])
@@ -89,9 +91,7 @@ def _make_deps(
 
     image_service = AsyncMock()
     image_service.generate_image = AsyncMock()
-    registry = ImageProviderRegistry(
-        gemini_service=image_service, openai_service=image_service
-    )
+    registry = ImageProviderRegistry(gemini_service=image_service, openai_service=image_service)
 
     export = AsyncMock()
     export.export_slides = AsyncMock(
@@ -119,9 +119,7 @@ class TestCarouselGraph:
 
     async def test_full_pipeline_with_images(self, tmp_path: Path) -> None:
         # Scenario: project with images enabled runs the image node.
-        deps, project, generate_image = _make_deps(
-            generate_images=True, tmp_path=tmp_path
-        )
+        deps, project, generate_image = _make_deps(generate_images=True, tmp_path=tmp_path)
         graph = build_graph(deps)
 
         initial: PipelineState = {
@@ -139,9 +137,7 @@ class TestCarouselGraph:
 
     async def test_pipeline_skips_images_when_disabled(self, tmp_path: Path) -> None:
         # Scenario: project with images disabled routes past the image node.
-        deps, project, generate_image = _make_deps(
-            generate_images=False, tmp_path=tmp_path
-        )
+        deps, project, generate_image = _make_deps(generate_images=False, tmp_path=tmp_path)
         graph = build_graph(deps)
 
         initial: PipelineState = {
@@ -175,13 +171,9 @@ class TestCarouselGraph:
         assert snapshot.values["project"].status == CarouselStatus.COMPLETED
         assert NODE_IMAGE_WORKER not in {step.name for step in snapshot.tasks}
 
-    async def test_image_worker_retries_on_transient_failure(
-        self, tmp_path: Path
-    ) -> None:
+    async def test_image_worker_retries_on_transient_failure(self, tmp_path: Path) -> None:
         # Scenario: the image API fails on first call, succeeds on retry.
-        deps, project, generate_image = _make_deps(
-            generate_images=True, tmp_path=tmp_path
-        )
+        deps, project, generate_image = _make_deps(generate_images=True, tmp_path=tmp_path)
         call_count = {"n": 0}
 
         async def flaky_generate(*, prompt: str, output_path: str) -> None:
@@ -241,14 +233,10 @@ class TestCarouselGraph:
         deps, _, _ = _make_deps(generate_images=False, tmp_path=tmp_path)
         spec = build_carousel_subagent(deps, output_base_dir=str(tmp_path))
         # Missing project_id
-        result = await spec["runnable"].ainvoke(
-            {"messages": [HumanMessage(content="{}")]}
-        )
+        result = await spec["runnable"].ainvoke({"messages": [HumanMessage(content="{}")]})
         assert "missing `project_id`" in result["messages"][-1].content
 
-    async def test_stream_pipeline_yields_progress_events(
-        self, tmp_path: Path
-    ) -> None:
+    async def test_stream_pipeline_yields_progress_events(self, tmp_path: Path) -> None:
         # Scenario: stream_pipeline emits start/node/end events for each
         # completed node. Frontend consumes these as SSE data lines.
         from rag_backend.application.services.carousel_agent import CarouselAgent
@@ -273,17 +261,13 @@ class TestCarouselGraph:
         assert "research" in node_names
         assert "finalize" in node_names
 
-    async def test_stream_pipeline_resumes_from_checkpoint(
-        self, tmp_path: Path
-    ) -> None:
+    async def test_stream_pipeline_resumes_from_checkpoint(self, tmp_path: Path) -> None:
         # Scenario: an SSE reconnect on a project that already has a
         # checkpoint does not restart from phase 1. The stream resumes
         # where the previous run left off.
         from rag_backend.application.services.carousel_agent import CarouselAgent
 
-        deps, project, generate_image = _make_deps(
-            generate_images=True, tmp_path=tmp_path
-        )
+        deps, project, generate_image = _make_deps(generate_images=True, tmp_path=tmp_path)
         deps.repo.get_project_by_id = AsyncMock(return_value=project)
         # Pre-seed slide JPGs so the image workers short-circuit.
         images_dir = tmp_path / str(project.id) / "images"
@@ -316,16 +300,12 @@ class TestCarouselGraph:
         # No additional image API calls on the idempotent reconnect.
         assert generate_image.await_count == pre_stream_calls
 
-    async def test_resume_pipeline_replays_from_checkpoint(
-        self, tmp_path: Path
-    ) -> None:
+    async def test_resume_pipeline_replays_from_checkpoint(self, tmp_path: Path) -> None:
         # Scenario: a pipeline crashes during images; resume finishes it
         # without re-running the expensive LLM calls that already happened.
         from rag_backend.application.services.carousel_agent import CarouselAgent
 
-        deps, project, generate_image = _make_deps(
-            generate_images=True, tmp_path=tmp_path
-        )
+        deps, project, generate_image = _make_deps(generate_images=True, tmp_path=tmp_path)
         # Pre-seed slide JPGs as if phase 5 already succeeded.
         images_dir = tmp_path / str(project.id) / "images"
         images_dir.mkdir(parents=True, exist_ok=True)
@@ -379,9 +359,7 @@ class TestCarouselGraph:
     async def test_image_worker_skips_when_file_exists(self, tmp_path: Path) -> None:
         # Scenario: a pre-existing JPG (from a prior partial run) is not
         # regenerated — the worker short-circuits and reports 'done'.
-        deps, project, generate_image = _make_deps(
-            generate_images=True, tmp_path=tmp_path
-        )
+        deps, project, generate_image = _make_deps(generate_images=True, tmp_path=tmp_path)
         # Pre-seed the target files as if a previous run completed them.
         images_dir = tmp_path / "images"
         images_dir.mkdir(parents=True, exist_ok=True)

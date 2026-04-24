@@ -16,17 +16,21 @@
   "coverageAnalysis": "off",
   "mutate": [
     "src/lib/api-client.ts",
+    "src/features/carousel/queries.ts",
+    "src/features/chat/queries.ts",
     "src/features/create/hooks/use-carousel.ts",
     "src/features/chat/hooks/use-chat.ts",
-    "src/features/knowledge/hooks/use-documents.ts"
+    "src/features/knowledge/queries.ts",
+    "src/features/knowledge/hooks/use-documents.ts",
+    "src/features/publish/hooks/use-publish-chat.ts"
   ],
   "mutate_comment": "Scoped to .ts files. Mutating .tsx files triggers a Stryker-instrumenter + @stryker/instrumenter bug (duplicate `stryNS_9fa48` declarations in JSX-transformed output). The hooks give us the highest-value coverage — business logic that silent tests can miss.",
   "thresholds": {
-    "high": 80,
-    "low": 60,
-    "break": 40
+    "high": 90,
+    "low": 80,
+    "break": 80
   },
-  "thresholds_comment": "Break at 40 — the hook tests currently only cover the delete mutations we added; raising the bar as we write tests for the other hooks (create, send, etc.). Target: 60 low / 80 high once chat+knowledge hook suites fill in.",
+  "thresholds_comment": "Break at 80 now that create/publish hook survivors are reduced. Keep the gate focused on behavior-preserving refactors, not broad UI mutation noise.",
   "timeoutMS": 60000,
   "concurrency": 4,
   "ignorePatterns": [
@@ -45,5 +49,5 @@
     "src/features/knowledge/components/document-list.test.tsx",
     "src/features/knowledge/components/knowledge-base-interface.test.tsx"
   ],
-  "ignorePatterns_comment": "Keep test files IN the sandbox — Stryker needs them to run assertions against mutants. The .test.tsx exclusions are pre-existing failing tests (missing NextIntlClientProvider mock context); they would prevent the dry run baseline from passing. api-client.test.ts has one pre-existing failure expecting a different error message than the implementation — excluded so Stryker's baseline clears."
+  "ignorePatterns_comment": "Keep the mutation target narrow and exclude component-heavy test files from the Stryker sandbox to avoid slow, low-signal dry runs. Hook and API-client tests remain in scope for the mutated files."
 }

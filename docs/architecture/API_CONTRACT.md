@@ -582,10 +582,10 @@ export function useWebSocketChat(conversationId: string) {
 
     socket.onopen = () => setIsConnected(true);
     socket.onclose = () => setIsConnected(false);
-    
+
     socket.onmessage = (event) => {
       const data: WebSocketEvent = JSON.parse(event.data);
-      
+
       switch (data.type) {
         case 'token':
           setMessages(prev => {
@@ -596,14 +596,14 @@ export function useWebSocketChat(conversationId: string) {
                 { ...last, content: last.content + (data.content || '') }
               ];
             }
-            return [...prev, { 
-              type: 'assistant', 
+            return [...prev, {
+              type: 'assistant',
               content: data.content || '',
-              isStreaming: true 
+              isStreaming: true
             }];
           });
           break;
-          
+
         case 'tool_result':
           setMessages(prev => {
             const last = prev[prev.length - 1];
@@ -616,7 +616,7 @@ export function useWebSocketChat(conversationId: string) {
             return prev;
           });
           break;
-          
+
         case 'done':
           setMessages(prev => {
             const last = prev[prev.length - 1];
@@ -630,7 +630,7 @@ export function useWebSocketChat(conversationId: string) {
           });
           setIsStreaming(false);
           break;
-          
+
         case 'error':
           console.error('WebSocket error:', data.message);
           setIsStreaming(false);
@@ -650,7 +650,7 @@ export function useWebSocketChat(conversationId: string) {
       // Add user message to list
       setMessages(prev => [...prev, { type: 'user', content: message }]);
       setIsStreaming(true);
-      
+
       // Send to server
       ws.current.send(JSON.stringify({ message }));
     }
@@ -683,7 +683,7 @@ export function ChatInterface({ conversationId }: { conversationId: string }) {
       <div className="connection-status">
         {isConnected ? '🟢 Connected' : '🔴 Disconnected'}
       </div>
-      
+
       <div className="messages">
         {messages.map((msg, i) => (
           <div key={i} className={`message ${msg.type}`}>
@@ -701,7 +701,7 @@ export function ChatInterface({ conversationId }: { conversationId: string }) {
           </div>
         ))}
       </div>
-      
+
       <form onSubmit={handleSubmit}>
         <input
           value={input}

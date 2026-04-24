@@ -1,73 +1,50 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiCall, apiCallNoContent } from "@/lib/api-client";
+import { apiCallNoContent } from "@/lib/api-client";
 import { API_ENDPOINTS, HTTP_METHODS } from "@/constants/api";
 import {
-  conversationSchema,
-  chatResponseSchema,
-  conversationListResponseSchema,
-  messageListResponseSchema,
   type Conversation,
-  type ChatResponse,
-  type ConversationListResponse,
-  type MessageListResponse,
 } from "@/schemas/chat";
+import {
+  chatKeys,
+  conversationMessagesOptions,
+  conversationOptions,
+  conversationsOptions,
+  createConversation,
+  sendConversationMessage,
+} from "@/features/chat/queries";
 
-const CONVERSATIONS_KEY = "conversations";
-const CONVERSATION_KEY = "conversation";
-const MESSAGES_KEY = "messages";
+export const MESSAGES_KEY = chatKeys.messages(null)[0];
 
 export function useConversations() {
-  return useQuery({
-    queryKey: [CONVERSATIONS_KEY],
-    queryFn: async () => {
-      const result = await apiCall<ConversationListResponse>(
-        API_ENDPOINTS.CONVERSATIONS,
-        conversationListResponseSchema
-      );
-      return result.items;
-    },
-  });
+  return useQuery(conversationsOptions());
 }
 
 export function useConversation(conversationId: string | null) {
-  return useQuery({
-    queryKey: [CONVERSATION_KEY, conversationId],
-    queryFn: async () => {
-      return apiCall<Conversation>(
-        API_ENDPOINTS.CONVERSATION_BY_ID(conversationId as string),
-        conversationSchema
-      );
-    },
-    enabled: !!conversationId,
-  });
+  return useQuery(conversationOptions(conversationId));
 }
 
 export function useConversationMessages(conversationId: string | null) {
-  return useQuery({
-    queryKey: [MESSAGES_KEY, conversationId],
-    queryFn: async () => {
-      const result = await apiCall<MessageListResponse>(
-        API_ENDPOINTS.CONVERSATION_MESSAGES(conversationId as string),
-        messageListResponseSchema
-      );
-      return result.items;
-    },
-    enabled: !!conversationId,
-  });
+  return useQuery(conversationMessagesOptions(conversationId));
 }
 
 export function useCreateConversation() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ title, metadata }: { title?: string; metadata?: Record<string, unknown> }) => {
-      return apiCall<Conversation>(API_ENDPOINTS.CONVERSATIONS, conversationSchema, {
-        method: HTTP_METHODS.POST,
-        body: JSON.stringify({ title, metadata }),
-      });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [CONVERSATIONS_KEY] });
+    mutationFn: createConversation,
+    onSuccess: (conversation) => {
+      queryClient.setQueryData(chatKeys.conversation(conversation.id), conversation);
+      queryClient.setQueryData<Conversation[]>(
+        chatKeys.conversations(),
+        (previous) =>
+          previous
+            ? [
+                conversation,
+                ...previous.filter((item) => item.id !== conversation.id),
+              ]
+            : previous,
+      );
+      queryClient.invalidateQueries({ queryKey: chatKeys.conversations() });
     },
   });
 }
@@ -76,19 +53,12 @@ export function useSendMessage() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ conversationId, content }: { conversationId: string; content: string }) => {
-      return apiCall<ChatResponse>(
-        API_ENDPOINTS.CONVERSATION_CHAT(conversationId),
-        chatResponseSchema,
-        {
-          method: HTTP_METHODS.POST,
-          body: JSON.stringify({ content }),
-        }
-      );
-    },
+    mutationFn: sendConversationMessage,
     onSuccess: (_, { conversationId }) => {
-      queryClient.invalidateQueries({ queryKey: [MESSAGES_KEY, conversationId] });
-      queryClient.invalidateQueries({ queryKey: [CONVERSATIONS_KEY] });
+      queryClient.invalidateQueries({
+        queryKey: chatKeys.messages(conversationId),
+      });
+      queryClient.invalidateQueries({ queryKey: chatKeys.conversations() });
     },
   });
 }
@@ -102,8 +72,19 @@ export function useDeleteConversation() {
         method: HTTP_METHODS.DELETE,
       });
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [CONVERSATIONS_KEY] });
+    onSuccess: (_, conversationId) => {
+      queryClient.setQueryData<Conversation[]>(
+        chatKeys.conversations(),
+        (previous) =>
+          previous?.filter((conversation) => conversation.id !== conversationId),
+      );
+      queryClient.removeQueries({
+        queryKey: chatKeys.conversation(conversationId),
+      });
+      queryClient.removeQueries({
+        queryKey: chatKeys.messages(conversationId),
+      });
+      queryClient.invalidateQueries({ queryKey: chatKeys.conversations() });
     },
   });
 }
