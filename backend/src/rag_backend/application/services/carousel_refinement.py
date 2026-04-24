@@ -10,12 +10,21 @@ from uuid import UUID
 
 from rag_backend.application.services.carousel.nodes.design import OVERRIDES_FILENAME
 from rag_backend.application.services.carousel.nodes.images import run_image_one
-from rag_backend.application.services.carousel.types import SlideData, unpack_extras
+from rag_backend.application.services.carousel.types import unpack_extras
 from rag_backend.domain.models import CarouselProject
-from rag_backend.domain.protocols import CarouselRepository, LLMService
 from rag_backend.infrastructure.logging import get_logger
 
 logger = get_logger()
+
+_ERR_PROJECT_NOT_FOUND = "Carousel project {} not found"
+_ERR_NO_OUTPUT_DIR_IMAGE = "Carousel project {} has no output_dir; cannot regenerate image."
+_ERR_SLIDE_NOT_FOUND = "Slide {} not found in project {}"
+_ERR_NO_IMAGE_PROMPT = "Slide {} has no image_prompt to refine."
+_ERR_EMPTY_IMAGE_PROMPT = "LLM returned an empty image prompt; no changes applied."
+_ERR_NO_OUTPUT_DIR_DESIGN = "Carousel project {} has no output_dir; cannot apply design changes."
+_ERR_NO_SLIDES = "Carousel project {} has no slides."
+_ERR_EMPTY_CSS = "LLM returned empty CSS; no changes applied."
+_ERR_WRITE_OVERRIDES = "Could not write design overrides to {}: {}"
 
 IMAGE_PROMPT_REWRITE_TEMPLATE = (
     "You are editing an image generation prompt for a social media "
@@ -24,8 +33,6 @@ IMAGE_PROMPT_REWRITE_TEMPLATE = (
     "Instruction: {instruction}\n\n"
     "Original prompt:\n<<<{current_prompt}>>>"
 )
-
-OVERRIDES_FILENAME = "design_overrides.css"
 
 DESIGN_PROMPT_TEMPLATE = (
     "You are a CSS expert editing an Instagram carousel HTML template. "
@@ -59,7 +66,7 @@ class CarouselRefinementMixin:
     """
 
     async def regenerate_slide_image(
-        self: "CarouselRefinementMixin",
+        self: CarouselRefinementMixin,
         project_id: UUID,
         slide_number: int,
         instruction: str,
@@ -72,28 +79,19 @@ class CarouselRefinementMixin:
         """
         project = await self._repo.get_project_by_id(project_id)
         if project is None:
-            raise ValueError(f"Carousel project {project_id} not found")
+            raise ValueError(_ERR_PROJECT_NOT_FOUND.format(project_id))
         if not project.output_dir:
-            raise ValueError(
-                f"Carousel project {project_id} has no output_dir; "
-                "cannot regenerate image."
-            )
+            raise ValueError(_ERR_NO_OUTPUT_DIR_IMAGE.format(project_id))
 
         slides = await self._repo.get_slides_by_project(project_id)
-        slide = next(
-            (s for s in slides if s.slide_number == slide_number), None
-        )
+        slide = next((s for s in slides if s.slide_number == slide_number), None)
         if slide is None:
-            raise ValueError(
-                f"Slide {slide_number} not found in project {project_id}"
-            )
+            raise ValueError(_ERR_SLIDE_NOT_FOUND.format(slide_number, project_id))
 
         slide_data = unpack_extras(slide)
         current_prompt = slide_data.image_prompt or ""
         if not current_prompt:
-            raise ValueError(
-                f"Slide {slide_number} has no image_prompt to refine."
-            )
+            raise ValueError(_ERR_NO_IMAGE_PROMPT.format(slide_number))
 
         rewrite_prompt = IMAGE_PROMPT_REWRITE_TEMPLATE.format(
             instruction=instruction, current_prompt=current_prompt
@@ -104,9 +102,7 @@ class CarouselRefinementMixin:
         )
         new_prompt = new_prompt.strip()
         if not new_prompt:
-            raise ValueError(
-                "LLM returned an empty image prompt; no changes applied."
-            )
+            raise ValueError(_ERR_EMPTY_IMAGE_PROMPT)
 
         # Persist the new prompt on both the column and in extras for safety
         slide.image_prompt = new_prompt
@@ -142,7 +138,7 @@ class CarouselRefinementMixin:
         return project
 
     async def refine_carousel_design(
-        self: "CarouselRefinementMixin",
+        self: CarouselRefinementMixin,
         project_id: UUID,
         instruction: str,
     ) -> CarouselProject:
@@ -155,18 +151,13 @@ class CarouselRefinementMixin:
         """
         project = await self._repo.get_project_by_id(project_id)
         if project is None:
-            raise ValueError(f"Carousel project {project_id} not found")
+            raise ValueError(_ERR_PROJECT_NOT_FOUND.format(project_id))
         if not project.output_dir:
-            raise ValueError(
-                f"Carousel project {project_id} has no output_dir; "
-                "cannot apply design changes."
-            )
+            raise ValueError(_ERR_NO_OUTPUT_DIR_DESIGN.format(project_id))
 
         slides = await self._repo.get_slides_by_project(project_id)
         if not slides:
-            raise ValueError(
-                f"Carousel project {project_id} has no slides."
-            )
+            raise ValueError(_ERR_NO_SLIDES.format(project_id))
 
         # Build current HTML so the LLM can see the existing CSS classes
         slides_data = [unpack_extras(s) for s in slides]
@@ -191,7 +182,7 @@ class CarouselRefinementMixin:
         )
         override_css = override_css.strip()
         if not override_css:
-            raise ValueError("LLM returned empty CSS; no changes applied.")
+            raise ValueError(_ERR_EMPTY_CSS)
 
         # Strip markdown fences if the LLM wrapped the CSS
         if override_css.startswith("```css"):
@@ -207,10 +198,8 @@ class CarouselRefinementMixin:
         try:
             overrides_path.write_text(override_css, encoding="utf-8")
         except OSError as exc:
-            logger.error("Failed to write design overrides: %s", exc)
-            raise ValueError(
-                f"Could not write design overrides to {overrides_path}: {exc}"
-            ) from exc
+            logger.exception("Failed to write design overrides")
+            raise ValueError(_ERR_WRITE_OVERRIDES.format(overrides_path, exc)) from exc
 
         # Re-export with the new overrides baked in
         await self.re_render_slides(project_id)

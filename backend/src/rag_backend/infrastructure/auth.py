@@ -38,7 +38,7 @@ def create_access_token(
     return jwt.encode(payload, settings.secret_key, algorithm=ALGORITHM)
 
 
-def decode_access_token(settings: Settings, token: str) -> dict | None:
+def decode_access_token(settings: Settings, token: str) -> dict[str, object] | None:
     """Decode and validate a JWT access token.
 
     Args:
@@ -49,8 +49,7 @@ def decode_access_token(settings: Settings, token: str) -> dict | None:
         Token payload dict if valid, None otherwise.
     """
     try:
-        payload = jwt.decode(token, settings.secret_key, algorithms=[ALGORITHM])
-        return payload
+        return jwt.decode(token, settings.secret_key, algorithms=[ALGORITHM])
     except jwt.PyJWTError:
         return None
 

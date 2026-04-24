@@ -5,6 +5,9 @@ from uuid import UUID
 from rag_backend.domain.models import Conversation, Message, MessageRole
 from rag_backend.domain.protocols import ConversationRepository, MessageRepository
 
+MAX_TITLE_TOKENS = 100
+MAX_FALLBACK_TITLE_LENGTH = 50
+
 
 class ConversationService:
     """Service for managing conversations and memory."""
@@ -20,7 +23,7 @@ class ConversationService:
         self._max_context_tokens = max_context_tokens
 
     async def create_conversation(
-        self, title: str | None = None, metadata: dict | None = None
+        self, title: str | None = None, metadata: dict[str, object] | None = None
     ) -> Conversation:
         """Create a new conversation.
 
@@ -91,7 +94,7 @@ class ConversationService:
         conversation_id: UUID,
         role: MessageRole,
         content: str,
-        sources: list[dict] | None = None,
+        sources: list[dict[str, object]] | None = None,
     ) -> Message:
         """Add a message to a conversation.
 
@@ -162,30 +165,30 @@ class ConversationService:
         first_message = messages[0].content
 
         # Generate title using LLM
-        prompt = f"""Generate a concise, descriptive title (max 5 words) for a conversation that starts with this message:
-
-Message: {first_message[:200]}
-
-Title:"""
+        prompt = (
+            "Generate a concise, descriptive title (max 5 words) "
+            f"for a conversation that starts with this message:\n\n"
+            f"Message: {first_message[:200]}\n\n"
+            "Title:"
+        )
 
         try:
             title = await llm_generate_func([{"role": "user", "content": prompt}])
             title = title.strip().strip('"').strip("'")
 
-            if len(title) > 100:
-                title = title[:97] + "..."
+            if len(title) > MAX_TITLE_TOKENS:
+                title = title[: MAX_TITLE_TOKENS - 3] + "..."
 
             # Update conversation
             conversation = await self._conversation_repository.get_by_id(conversation_id)
             if conversation:
                 conversation.update_title(title)
                 await self._conversation_repository.update(conversation)
-
-            return title
-
         except Exception:
             # Fallback to truncated message
-            fallback = first_message[:50]
-            if len(first_message) > 50:
+            fallback = first_message[:MAX_FALLBACK_TITLE_LENGTH]
+            if len(first_message) > MAX_FALLBACK_TITLE_LENGTH:
                 fallback += "..."
             return fallback
+        else:
+            return title

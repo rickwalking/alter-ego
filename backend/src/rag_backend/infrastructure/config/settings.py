@@ -47,7 +47,7 @@ class Settings(BaseSettings):
     langsmith_tracing: bool = False
 
     # Server
-    host: str = "0.0.0.0"
+    host: str = "0.0.0.0"  # noqa: S104  # nosec B104 — default binding address, overridden in production
     port: int = 8000
 
     # Search
@@ -59,7 +59,7 @@ class Settings(BaseSettings):
     max_upload_size_mb: int = 50
 
     # Security
-    secret_key: str = "change-me-in-production"
+    secret_key: str = "change-me-in-production"  # noqa: S105 — field name, overridden in production
     access_token_expire_minutes: int = 60
 
     # Gemini (for carousel image generation)

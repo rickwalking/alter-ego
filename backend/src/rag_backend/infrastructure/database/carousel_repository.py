@@ -18,6 +18,9 @@ from rag_backend.infrastructure.database.models import (
     ResearchSourceModel,
 )
 
+_ERR_PROJECT_NOT_FOUND = "Carousel project {} not found"
+_ERR_SLIDE_NOT_FOUND = "Carousel slide {} not found"
+
 
 class PostgresCarouselRepository(CarouselRepository):
     """PostgreSQL implementation of CarouselRepository protocol."""
@@ -29,7 +32,7 @@ class PostgresCarouselRepository(CarouselRepository):
         """Create a new carousel project."""
         model = CarouselProjectModel.from_entity(project)
         self._session.add(model)
-        await self._session.commit()
+        await self._session.flush()
         await self._session.refresh(model)
         return model.to_entity()
 
@@ -63,9 +66,9 @@ class PostgresCarouselRepository(CarouselRepository):
         result = await self._session.execute(stmt)
         model = result.scalar_one_or_none()
         if model is None:
-            raise ValueError(f"Carousel project {project.id} not found")
+            raise ValueError(_ERR_PROJECT_NOT_FOUND.format(project.id))
         model.update_from_entity(project)
-        await self._session.commit()
+        await self._session.flush()
         await self._session.refresh(model)
         return model.to_entity()
 
@@ -77,14 +80,14 @@ class PostgresCarouselRepository(CarouselRepository):
         if model is None:
             return False
         await self._session.delete(model)
-        await self._session.commit()
+        await self._session.flush()
         return True
 
     async def create_slide(self, slide: CarouselSlide) -> CarouselSlide:
         """Create a new carousel slide."""
         model = CarouselSlideModel.from_entity(slide)
         self._session.add(model)
-        await self._session.commit()
+        await self._session.flush()
         await self._session.refresh(model)
         return model.to_entity()
 
@@ -105,9 +108,9 @@ class PostgresCarouselRepository(CarouselRepository):
         result = await self._session.execute(stmt)
         model = result.scalar_one_or_none()
         if model is None:
-            raise ValueError(f"Carousel slide {slide.id} not found")
+            raise ValueError(_ERR_SLIDE_NOT_FOUND.format(slide.id))
         model.update_from_entity(slide)
-        await self._session.commit()
+        await self._session.flush()
         await self._session.refresh(model)
         return model.to_entity()
 

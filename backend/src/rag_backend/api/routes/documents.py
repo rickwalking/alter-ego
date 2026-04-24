@@ -1,5 +1,6 @@
 """Document API routes."""
 
+from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, status
@@ -37,7 +38,7 @@ async def upload_document(
     file: UploadFile,
     title: str | None = None,
     tags: str | None = None,
-    db: AsyncSession = Depends(get_session),
+    db: AsyncSession = Depends(get_session),  # noqa: FAST002
 ):
     """Upload a document file and process it immediately.
 
@@ -70,8 +71,8 @@ async def upload_document(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Failed to read file content: {str(e)}",
-        )
+            detail=f"Failed to read file content: {e!s}",
+        ) from e
 
     if not content.strip():
         raise HTTPException(
@@ -80,7 +81,7 @@ async def upload_document(
         )
 
     # Build metadata
-    metadata: dict = {"filename": file.filename, "content_type": file.content_type}
+    metadata: dict[str, object] = {"filename": file.filename, "content_type": file.content_type}
     if tags:
         metadata["tags"] = [t.strip() for t in tags.split(",") if t.strip()]
 
@@ -103,8 +104,8 @@ async def upload_document(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to process document: {str(e)}",
-        )
+            detail=f"Failed to process document: {e!s}",
+        ) from e
 
     return processed_doc
 
@@ -121,7 +122,7 @@ async def upload_document(
 )
 async def create_document(
     request: DocumentCreate,
-    db: AsyncSession = Depends(get_session),
+    db: Annotated[AsyncSession, Depends(get_session)],
 ):
     """Create a new document and start processing.
 
@@ -157,10 +158,10 @@ async def create_document(
     },
 )
 async def list_documents(
-    status: DocumentStatus | None = Query(None, description="Filter by status"),
-    limit: int = Query(20, ge=1, le=100, description="Number of items to return"),
-    offset: int = Query(0, ge=0, description="Number of items to skip"),
-    db: AsyncSession = Depends(get_session),
+    status: Annotated[DocumentStatus | None, Query(description="Filter by status")] = None,
+    limit: Annotated[int, Query(ge=1, le=100, description="Number of items to return")] = 20,
+    offset: Annotated[int, Query(ge=0, description="Number of items to skip")] = 0,
+    db: AsyncSession = Depends(get_session),  # noqa: FAST002
 ):
     """List all documents with optional filtering.
 
@@ -190,7 +191,7 @@ async def list_documents(
 )
 async def get_document(
     document_id: UUID,
-    db: AsyncSession = Depends(get_session),
+    db: Annotated[AsyncSession, Depends(get_session)],
 ):
     """Get a single document by ID."""
     container = get_container()
@@ -216,7 +217,7 @@ async def get_document(
 )
 async def get_document_status(
     document_id: UUID,
-    db: AsyncSession = Depends(get_session),
+    db: Annotated[AsyncSession, Depends(get_session)],
 ):
     """Get document processing status and estimates."""
     container = get_container()
@@ -252,7 +253,7 @@ async def get_document_status(
 )
 async def delete_document(
     document_id: UUID,
-    db: AsyncSession = Depends(get_session),
+    db: Annotated[AsyncSession, Depends(get_session)],
 ):
     """Delete a document and all its associated data.
 
@@ -269,8 +270,6 @@ async def delete_document(
             detail=f"Document with id {document_id} not found",
         )
 
-    return None
-
 
 @router.post(
     "/{document_id}/reprocess",
@@ -282,7 +281,7 @@ async def delete_document(
 )
 async def reprocess_document(
     document_id: UUID,
-    db: AsyncSession = Depends(get_session),
+    db: Annotated[AsyncSession, Depends(get_session)],
 ):
     """Reprocess a document.
 
@@ -292,10 +291,9 @@ async def reprocess_document(
     pipeline = container.document_pipeline(db_session=db)
 
     try:
-        document = await pipeline.reprocess_document(str(document_id))
-        return document
+        return await pipeline.reprocess_document(str(document_id))
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=str(e),
-        )
+        ) from e

@@ -11,6 +11,8 @@ from rag_backend.infrastructure.database.models import (
     MessageModel,
 )
 
+_ERR_CONVERSATION_NOT_FOUND = "Conversation with id {} not found"
+
 
 class PostgresConversationRepository:
     """PostgreSQL implementation of ConversationRepository protocol."""
@@ -50,7 +52,7 @@ class PostgresConversationRepository:
         )
         db_conversation = result.scalar_one_or_none()
         if not db_conversation:
-            raise ValueError(f"Conversation with id {conversation.id} not found")
+            raise ValueError(_ERR_CONVERSATION_NOT_FOUND.format(conversation.id))
 
         db_conversation.update_from_entity(conversation)
         await self._session.flush()

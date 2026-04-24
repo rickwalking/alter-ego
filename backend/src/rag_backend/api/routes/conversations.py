@@ -1,5 +1,6 @@
 """Conversation API routes."""
 
+from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -44,7 +45,7 @@ def _make_conversation_service(db: AsyncSession) -> ConversationService:
 )
 async def create_conversation(
     request: ConversationCreate,
-    db: AsyncSession = Depends(get_session),
+    db: Annotated[AsyncSession, Depends(get_session)],
 ):
     """Create a new conversation."""
     service = _make_conversation_service(db)
@@ -66,9 +67,9 @@ async def create_conversation(
     },
 )
 async def list_conversations(
-    limit: int = Query(20, ge=1, le=100, description="Number of items to return"),
-    offset: int = Query(0, ge=0, description="Number of items to skip"),
-    db: AsyncSession = Depends(get_session),
+    limit: Annotated[int, Query(ge=1, le=100, description="Number of items to return")] = 20,
+    offset: Annotated[int, Query(ge=0, description="Number of items to skip")] = 0,
+    db: AsyncSession = Depends(get_session),  # noqa: FAST002
 ):
     """List all conversations."""
     service = _make_conversation_service(db)
@@ -93,7 +94,7 @@ async def list_conversations(
 )
 async def get_conversation(
     conversation_id: UUID,
-    db: AsyncSession = Depends(get_session),
+    db: Annotated[AsyncSession, Depends(get_session)],
 ):
     """Get a single conversation by ID."""
     service = _make_conversation_service(db)
@@ -118,8 +119,8 @@ async def get_conversation(
 )
 async def get_conversation_messages(
     conversation_id: UUID,
-    limit: int = Query(50, ge=1, le=100, description="Number of messages to return"),
-    db: AsyncSession = Depends(get_session),
+    limit: Annotated[int, Query(ge=1, le=100, description="Number of messages to return")] = 50,
+    db: AsyncSession = Depends(get_session),  # noqa: FAST002
 ):
     """Get all messages for a conversation."""
     service = _make_conversation_service(db)
@@ -149,7 +150,7 @@ async def get_conversation_messages(
 )
 async def delete_conversation(
     conversation_id: UUID,
-    db: AsyncSession = Depends(get_session),
+    db: Annotated[AsyncSession, Depends(get_session)],
 ):
     """Delete a conversation and all its messages."""
     service = _make_conversation_service(db)
@@ -162,8 +163,6 @@ async def delete_conversation(
         )
     await db.commit()
 
-    return None
-
 
 @router.post(
     "/{conversation_id}/generate-title",
@@ -175,7 +174,7 @@ async def delete_conversation(
 )
 async def generate_conversation_title(
     conversation_id: UUID,
-    db: AsyncSession = Depends(get_session),
+    db: Annotated[AsyncSession, Depends(get_session)],
 ):
     """Generate a title for the conversation based on the first message."""
     container = get_container()
@@ -195,8 +194,7 @@ async def generate_conversation_title(
     )
     await db.commit()
 
-    updated_conversation = await service.get_conversation(conversation_id)
-    return updated_conversation
+    return await service.get_conversation(conversation_id)
 
 
 @router.post(
@@ -211,7 +209,7 @@ async def generate_conversation_title(
 async def chat(
     conversation_id: UUID,
     body: ChatRequest,
-    db: AsyncSession = Depends(get_session),
+    db: Annotated[AsyncSession, Depends(get_session)],
 ):
     """Send a chat message and get a non-streaming response with sources."""
     container = get_container()

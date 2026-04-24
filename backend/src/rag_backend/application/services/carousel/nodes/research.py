@@ -34,7 +34,7 @@ def classify_source(url: str) -> ResearchSourceType:
 async def _scrape_one(research_tool: ResearchTool, url: str) -> str:
     try:
         return await research_tool.scrape_url(url)
-    except Exception as exc:  # noqa: BLE001 — tolerate any scrape failure
+    except Exception as exc:
         logger.warning("carousel_scrape_failed", url=url, error=str(exc))
         return ""
 
@@ -63,7 +63,7 @@ async def run_research(
         query = f"{project.topic} {project.niche}"
         search_results = await research_tool.search_web(
             query=query,
-            source_types=[
+            _source_types=[
                 ResearchSourceType.TWITTER,
                 ResearchSourceType.BLOG,
                 ResearchSourceType.NEWS,

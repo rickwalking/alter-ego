@@ -7,6 +7,8 @@ from sqlalchemy.ext.asyncio import (
 )
 from sqlalchemy.orm import declarative_base
 
+_ERR_DB_NOT_INITIALIZED = "Database not initialized. Call init_db() first."
+
 # Base class for all SQLAlchemy models
 Base = declarative_base()
 
@@ -43,7 +45,7 @@ def get_session_maker() -> async_sessionmaker[AsyncSession]:
     """Get the async session maker."""
     global c_engine
     if not c_engine:
-        raise RuntimeError("Database not initialized. Call init_db() first.")
+        raise RuntimeError(_ERR_DB_NOT_INITIALIZED)
     return async_sessionmaker(
         c_engine,
         class_=AsyncSession,

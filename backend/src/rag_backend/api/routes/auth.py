@@ -1,5 +1,7 @@
 """Authentication API routes."""
 
+from typing import Annotated
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 
@@ -19,7 +21,7 @@ class TokenResponse(BaseModel):
     """Response body containing JWT token."""
 
     access_token: str
-    token_type: str = "bearer"
+    token_type: str = "bearer"  # noqa: S105 — field name, not a password
 
 
 class SetupRequest(BaseModel):
@@ -35,7 +37,7 @@ class SetupRequest(BaseModel):
         401: {"description": "Invalid credentials"},
     },
 )
-async def get_token(request: TokenRequest, settings: Settings = Depends(get_settings)):
+async def get_token(request: TokenRequest, settings: Annotated[Settings, Depends(get_settings)]):
     """Exchange an API key for a JWT access token.
 
     The API key must match the configured secret_key (for simple deployments)

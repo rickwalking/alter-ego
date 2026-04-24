@@ -8,7 +8,7 @@ from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from rag_backend.api.schemas import ErrorResponse
 
 
-async def validation_error_handler(request: Request, exc: ValidationError):
+async def validation_error_handler(_request: Request, exc: ValidationError):
     """Handle Pydantic validation errors."""
     errors = []
     for error in exc.errors():
@@ -30,7 +30,7 @@ async def validation_error_handler(request: Request, exc: ValidationError):
     )
 
 
-async def sqlalchemy_error_handler(request: Request, exc: SQLAlchemyError):
+async def sqlalchemy_error_handler(_request: Request, exc: SQLAlchemyError):
     """Handle SQLAlchemy database errors."""
     return JSONResponse(
         status_code=500,
@@ -42,7 +42,7 @@ async def sqlalchemy_error_handler(request: Request, exc: SQLAlchemyError):
     )
 
 
-async def integrity_error_handler(request: Request, exc: IntegrityError):
+async def integrity_error_handler(_request: Request, exc: IntegrityError):
     """Handle database integrity errors."""
     return JSONResponse(
         status_code=409,
@@ -54,7 +54,7 @@ async def integrity_error_handler(request: Request, exc: IntegrityError):
     )
 
 
-async def generic_error_handler(request: Request, exc: Exception):
+async def generic_error_handler(_request: Request, exc: Exception):
     """Handle generic exceptions."""
     return JSONResponse(
         status_code=500,

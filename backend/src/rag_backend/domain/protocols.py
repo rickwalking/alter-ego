@@ -6,7 +6,7 @@ Using Protocols instead of abstract classes allows for more flexible, decoupled 
 
 from collections.abc import AsyncIterator, Mapping
 from dataclasses import dataclass
-from typing import Any, Protocol
+from typing import Protocol
 from uuid import UUID
 
 from rag_backend.domain.models import (
@@ -23,6 +23,7 @@ from rag_backend.domain.models import (
     RetrievalQuery,
     SearchResult,
 )
+from rag_backend.domain.types import ChatEvent, PipelineEvent, SparseEmbedding, StatsResponse
 
 
 class DocumentRepository(Protocol):
@@ -112,14 +113,14 @@ class VectorStore(Protocol):
         self,
         query: str,
         dense_embedding: list[float],
-        sparse_embedding: dict[str, Any],
+        sparse_embedding: SparseEmbedding,
         top_k: int = 5,
         alpha: float = 0.5,
     ) -> list[SearchResult]:
         """Perform hybrid search combining dense and sparse vectors."""
         ...
 
-    async def get_stats(self) -> dict[str, Any]:
+    async def get_stats(self) -> StatsResponse:
         """Get vector store statistics."""
         ...
 
@@ -131,7 +132,7 @@ class EmbeddingService(Protocol):
         """Generate dense embeddings for texts."""
         ...
 
-    async def embed_sparse(self, texts: list[str]) -> list[dict[str, Any]]:
+    async def embed_sparse(self, texts: list[str]) -> list[SparseEmbedding]:
         """Generate sparse (BM25) embeddings for texts."""
         ...
 
@@ -197,8 +198,8 @@ class Agent(Protocol):
     """Protocol for the RAG agent."""
 
     async def chat(
-        self, message: str, conversation_id: UUID, stream: bool = True
-    ) -> AsyncIterator[dict[str, str | int | float | bool]]:
+        self, message: str, conversation_id: UUID, *, stream: bool = True
+    ) -> AsyncIterator[ChatEvent]:
         """Process a chat message with optional streaming."""
         ...
 
@@ -330,7 +331,7 @@ class ResearchTool(Protocol):
         ...
 
     async def search_web(
-        self, query: str, source_types: list[ResearchSourceType]
+        self, query: str, _source_types: list[ResearchSourceType]
     ) -> list[dict[str, str]]:
         """Search the web for relevant sources.
 
@@ -364,7 +365,7 @@ class CarouselAgent(Protocol):
         self,
         project_id: UUID,
         seed_urls: list[str] | None = None,
-    ) -> AsyncIterator[dict[str, Any]]:
+    ) -> AsyncIterator[PipelineEvent]:
         """Run the pipeline and yield SSE-shaped events.
 
         Each event is a dict with `node`, `status`, `phase_progress`.

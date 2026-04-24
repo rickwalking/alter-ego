@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.api.dependencies.agents import build_rag_agent
 from rag_backend.application.services.conversation_service import ConversationService
+from rag_backend.domain.models import Message, MessageRole
 from rag_backend.infrastructure.container import get_container
 from rag_backend.infrastructure.database.conversation_repository import (
     PostgresConversationRepository,
@@ -44,6 +45,15 @@ class ChatWebSocketHandler:
 
         This method manages the WebSocket connection and streams
         responses from the RAG agent.
+
+        Persistence strategy:
+            The user message is saved and committed *before* streaming
+            starts so that the DB session has no pending changes while
+            ``astream_events`` runs.  The assistant message is saved and
+            committed *after* the stream ends.  This prevents SQLAlchemy
+            async "Session is already flushing" errors that occur when
+            tool side-effects (carousel edits, image regenerations) flush
+            the same session concurrently.
         """
         container = get_container()
 
@@ -92,13 +102,39 @@ class ChatWebSocketHandler:
                             )
                             continue
 
-                        # Stream response from agent
+                        # Persist the user message and commit BEFORE streaming
+                        # so the session is clean while tools run.
+                        user_message = Message(
+                            role=MessageRole.USER,
+                            content=content,
+                            conversation_id=conversation_id,
+                        )
+                        await msg_repo.create(user_message)
+                        await db.commit()
+
+                        # Stream response from agent (do NOT let the agent
+                        # persist messages — we handle that ourselves).
+                        full_response = ""
                         async for chunk in agent.chat(
                             message=content,
                             conversation_id=conversation_id,
                             stream=True,
+                            persist_messages=False,
                         ):
                             await websocket.send_json(chunk)
+                            if chunk.get("type") == "token":
+                                full_response += chunk.get("content", "")
+
+                        # Persist the assistant message and commit AFTER the
+                        # stream so tool side-effects are already committed.
+                        assistant_message = Message(
+                            role=MessageRole.ASSISTANT,
+                            content=full_response,
+                            conversation_id=conversation_id,
+                            sources=[],
+                        )
+                        await msg_repo.create(assistant_message)
+                        await db.commit()
 
                     except json.JSONDecodeError:
                         await websocket.send_json(
@@ -108,13 +144,11 @@ class ChatWebSocketHandler:
                         break
                     except Exception as e:
                         await websocket.send_json(
-                            {"type": "error", "content": f"Error processing message: {str(e)}"}
+                            {"type": "error", "content": f"Error processing message: {e!s}"}
                         )
 
             except Exception as e:
-                await websocket.send_json(
-                    {"type": "error", "content": f"Connection error: {str(e)}"}
-                )
+                await websocket.send_json({"type": "error", "content": f"Connection error: {e!s}"})
                 await websocket.close(code=1011)
 
             finally:

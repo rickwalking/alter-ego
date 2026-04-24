@@ -25,7 +25,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import Sequence
-from typing import Annotated, Any, TypedDict
+from typing import Annotated, TypedDict
 from uuid import UUID
 
 from langchain_core.messages import AIMessage, AnyMessage, HumanMessage
@@ -65,7 +65,7 @@ class CarouselSubAgentState(TypedDict, total=False):
     project: CarouselProject
 
 
-def _parse_request(messages: Sequence[AnyMessage]) -> dict[str, Any]:
+def _parse_request(messages: Sequence[AnyMessage]) -> dict[str, object]:
     """Extract `{project_id, seed_urls}` from the last HumanMessage.
 
     Expected payload is a JSON object serialized in the message content.
@@ -87,27 +87,23 @@ def _parse_request(messages: Sequence[AnyMessage]) -> dict[str, Any]:
 def build_carousel_subagent(
     deps: CarouselDeps,
     *,
-    checkpointer: BaseCheckpointSaver[Any] | None = None,
+    checkpointer: BaseCheckpointSaver[object] | None = None,
     output_base_dir: str = "./output/carousels",
-) -> dict[str, Any]:
+) -> dict[str, object]:
     """Return a CompiledSubAgent-shaped dict for the carousel pipeline.
 
     Shape matches `deepagents.CompiledSubAgent`: `{name, description, runnable}`.
     """
     inner_graph = build_graph(deps, checkpointer=checkpointer)
 
-    async def request_node(state: CarouselSubAgentState) -> dict[str, Any]:
+    async def request_node(state: CarouselSubAgentState) -> dict[str, object]:
         """Parse the request message, load the project, seed inner state."""
         parsed = _parse_request(state.get("messages", []))
         project_id_raw = parsed.get("project_id")
         if not project_id_raw:
             return {
                 "messages": [
-                    AIMessage(
-                        content=(
-                            "carousel subagent: missing `project_id` in request"
-                        )
-                    )
+                    AIMessage(content=("carousel subagent: missing `project_id` in request"))
                 ],
             }
         try:
@@ -115,9 +111,7 @@ def build_carousel_subagent(
         except ValueError:
             return {
                 "messages": [
-                    AIMessage(
-                        content=f"carousel subagent: invalid project_id {project_id_raw!r}"
-                    )
+                    AIMessage(content=f"carousel subagent: invalid project_id {project_id_raw!r}")
                 ],
             }
 
@@ -125,9 +119,7 @@ def build_carousel_subagent(
         if project is None:
             return {
                 "messages": [
-                    AIMessage(
-                        content=f"carousel subagent: project {project_id} not found"
-                    )
+                    AIMessage(content=f"carousel subagent: project {project_id} not found")
                 ],
             }
 
@@ -141,7 +133,7 @@ def build_carousel_subagent(
             "project": project,
         }
 
-    async def run_pipeline_node(state: CarouselSubAgentState) -> dict[str, Any]:
+    async def run_pipeline_node(state: CarouselSubAgentState) -> dict[str, object]:
         """Delegate to the inner carousel graph."""
         if "project" not in state:
             # request_node already produced an error message.
@@ -155,7 +147,7 @@ def build_carousel_subagent(
         final = await inner_graph.ainvoke(inner_state)
         return {"project": final["project"]}
 
-    async def emit_summary_node(state: CarouselSubAgentState) -> dict[str, Any]:
+    async def emit_summary_node(state: CarouselSubAgentState) -> dict[str, object]:
         """Produce the AIMessage DeepAgents returns to the parent as a ToolMessage."""
         project = state.get("project")
         if project is None:

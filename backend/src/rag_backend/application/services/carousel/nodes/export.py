@@ -63,7 +63,7 @@ async def render_language(
         project.pdf_path = pdf_path
 
 
-async def run_bilingual_export(
+async def run_bilingual_export(  # noqa: PLR0913 — bilingual export needs all deps
     project: CarouselProject,
     slides_data: list[SlideData],
     pt_html: str,

@@ -14,7 +14,7 @@ limiter = Limiter(
 )
 
 
-def setup_rate_limiting(app, settings: Settings) -> None:
+def setup_rate_limiting(app, _settings: Settings) -> None:
     """Configure rate limiting on the FastAPI app.
 
     Args:
@@ -28,7 +28,7 @@ def setup_rate_limiting(app, settings: Settings) -> None:
     app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 
-def _rate_limit_exceeded_handler(request, exc):
+def _rate_limit_exceeded_handler(_request, exc):
     """Handle rate limit exceeded errors."""
     from fastapi.responses import JSONResponse
 

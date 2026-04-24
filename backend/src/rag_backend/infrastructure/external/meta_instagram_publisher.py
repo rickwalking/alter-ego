@@ -34,8 +34,13 @@ _CONTAINER_FINISHED = "FINISHED"
 _CONTAINER_ERROR = "ERROR"
 _CONTAINER_EXPIRED = "EXPIRED"
 _MAX_CAROUSEL_ITEMS = 10
+MIN_IMAGE_BATCH = 2
 
-_MSG_MISSING_TOKEN = (
+_ERR_CONTAINER_STATUS = "Instagram container {} returned status {} after {} poll(s)."
+_ERR_CONTAINER_TIMEOUT = "Instagram container {} did not reach FINISHED after {} poll attempts."
+_ERR_API_NO_ID = "Instagram API returned no id at {}: {}"
+
+_MSG_CREDENTIALS_MISSING = (
     "META_IG_ACCESS_TOKEN or META_IG_USER_ID is not configured — "
     "set both in the backend .env before publishing to Instagram."
 )
@@ -84,10 +89,10 @@ class MetaInstagramPublisher(SocialPublisher):
 
     def _ensure_configured(self) -> None:
         if not self._token or not self._ig_user_id:
-            raise RuntimeError(_MSG_MISSING_TOKEN)
+            raise RuntimeError(_MSG_CREDENTIALS_MISSING)
 
     def _validate_images(self, image_urls: list[str]) -> None:
-        if len(image_urls) < 2:
+        if len(image_urls) < MIN_IMAGE_BATCH:
             raise RuntimeError(_MSG_NO_IMAGES)
         if len(image_urls) > _MAX_CAROUSEL_ITEMS:
             raise RuntimeError(_MSG_TOO_MANY)
@@ -132,15 +137,9 @@ class MetaInstagramPublisher(SocialPublisher):
             if status == _CONTAINER_FINISHED:
                 return
             if status in {_CONTAINER_ERROR, _CONTAINER_EXPIRED}:
-                raise RuntimeError(
-                    f"Instagram container {container_id} returned status "
-                    f"{status} after {attempt + 1} poll(s)."
-                )
+                raise RuntimeError(_ERR_CONTAINER_STATUS.format(container_id, status, attempt + 1))
             await asyncio.sleep(_POLL_INTERVAL_SECONDS)
-        raise RuntimeError(
-            f"Instagram container {container_id} did not reach FINISHED "
-            f"after {_MAX_POLL_ATTEMPTS} poll attempts."
-        )
+        raise RuntimeError(_ERR_CONTAINER_TIMEOUT.format(container_id, _MAX_POLL_ATTEMPTS))
 
     async def _publish(self, parent_id: str) -> str:
         """Step 4: move the parent container to the published feed."""
@@ -158,5 +157,5 @@ class MetaInstagramPublisher(SocialPublisher):
         data = response.json()
         returned_id = data.get("id")
         if not returned_id:
-            raise RuntimeError(f"Instagram API returned no id at {url}: {data}")
+            raise RuntimeError(_ERR_API_NO_ID.format(url, data))
         return str(returned_id)

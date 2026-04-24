@@ -1,7 +1,7 @@
 """Phase 4: design system.
 
 Resolves the color theme, stamps design tokens onto the project, and
-builds the PT HTML carousel string. Shared helper `resolve_theme` is
+builds the PT HTML carousel string. Shared helper ``resolve_theme`` is
 also used by the image-generation node so the vendor strategy gets the
 same palette the template will render against.
 """
@@ -9,22 +9,15 @@ same palette the template will render against.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
 
-from rag_backend.application.services.carousel.types import SlideData
+from rag_backend.application.services.carousel.theme_resolver import (
+    resolve_theme,
+)
+from rag_backend.application.services.carousel.types import SlideData, SlideDict
 from rag_backend.application.services.carousel_template import CarouselTemplateBuilder
-from rag_backend.domain.constants import CAROUSEL_THEMES
-from rag_backend.domain.models import CarouselProject, CarouselTheme
+from rag_backend.domain.models import CarouselProject
 
-DEFAULT_THEME_KEY = "ai_competition"
 OVERRIDES_FILENAME = "design_overrides.css"
-
-
-def resolve_theme(project: CarouselProject) -> dict[str, str]:
-    """Pick the color theme for this project, falling back on the default."""
-    if project.theme != CarouselTheme.AUTO:
-        return CAROUSEL_THEMES.get(project.theme.value, CAROUSEL_THEMES[DEFAULT_THEME_KEY])
-    return CAROUSEL_THEMES[DEFAULT_THEME_KEY]
 
 
 def _read_design_overrides(output_dir: str | None) -> str | None:
@@ -56,7 +49,7 @@ def run_design(
 
     project.design_tokens = CarouselTemplateBuilder.generate_design_tokens(project)
 
-    slide_dicts: list[dict[str, Any]] = [
+    slide_dicts: list[SlideDict] = [
         {
             "number": str(s.slide_number),
             "type": s.slide_type,

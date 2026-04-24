@@ -8,6 +8,8 @@ from google.genai import types
 
 from rag_backend.domain.protocols import ImageGenerationService
 
+_ERR_NO_IMAGE_DATA = "No image data in Gemini response"
+
 
 class GeminiImageService(ImageGenerationService):
     """Google Gemini image generation implementation."""
@@ -40,7 +42,7 @@ class GeminiImageService(ImageGenerationService):
                     f.write(part.inline_data.data)
                 return output_path
 
-        raise RuntimeError("No image data in Gemini response")
+        raise RuntimeError(_ERR_NO_IMAGE_DATA)
 
     def generate_image_sync(
         self,

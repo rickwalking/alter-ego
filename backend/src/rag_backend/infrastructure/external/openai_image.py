@@ -36,6 +36,12 @@ _MSG_NOT_VERIFIED = (
     "before gpt-image-2 is available."
 )
 
+HTTP_STATUS_FORBIDDEN = 403
+
+_ERR_GENERATION_FAILED = "OpenAI image generation failed: {}"
+_ERR_NO_RESPONSE_DATA = "OpenAI image response contained no data"
+_ERR_MISSING_B64_JSON = "OpenAI image response missing b64_json payload"
+
 
 class OpenAIImageService(ImageGenerationService):
     """OpenAI Images 2.0 (`gpt-image-2`) implementation."""
@@ -81,20 +87,20 @@ class OpenAIImageService(ImageGenerationService):
                 n=1,
             )
         except APIStatusError as exc:
-            if exc.status_code == 403:
+            if exc.status_code == HTTP_STATUS_FORBIDDEN:
                 raise RuntimeError(_MSG_NOT_VERIFIED) from exc
-            raise RuntimeError(f"OpenAI image generation failed: {exc}") from exc
+            raise RuntimeError(_ERR_GENERATION_FAILED.format(exc)) from exc
         except APIError as exc:
-            raise RuntimeError(f"OpenAI image generation failed: {exc}") from exc
+            raise RuntimeError(_ERR_GENERATION_FAILED.format(exc)) from exc
 
         data = getattr(resp, "data", None)
         if not data:
-            raise RuntimeError("OpenAI image response contained no data")
+            raise RuntimeError(_ERR_NO_RESPONSE_DATA)
 
         entry = data[0]
         b64 = getattr(entry, "b64_json", None)
         if not b64:
-            raise RuntimeError("OpenAI image response missing b64_json payload")
+            raise RuntimeError(_ERR_MISSING_B64_JSON)
 
         output = Path(output_path)
         output.parent.mkdir(parents=True, exist_ok=True)

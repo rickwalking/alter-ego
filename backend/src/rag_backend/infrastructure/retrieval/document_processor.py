@@ -25,10 +25,9 @@ def load_file_content(file_content: bytes, filename: str) -> str:
 
     if ext == ".pdf":
         return _load_pdf(file_content)
-    elif ext in (".txt", ".md", ".markdown"):
+    if ext in (".txt", ".md", ".markdown"):
         return file_content.decode("utf-8")
-    else:
-        return file_content.decode("utf-8")
+    return file_content.decode("utf-8")
 
 
 def _load_pdf(raw_bytes: bytes) -> str:

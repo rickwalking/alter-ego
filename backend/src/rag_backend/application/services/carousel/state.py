@@ -12,11 +12,12 @@ than re-fetching from the repo.
 from __future__ import annotations
 
 from operator import add
-from typing import Annotated, Any, TypedDict
+from typing import Annotated, TypedDict
 from uuid import UUID
 
 from rag_backend.application.services.carousel.types import SlideData
 from rag_backend.domain.models import CarouselProject, ResearchSource
+from rag_backend.domain.types import ImageResult
 
 
 class PipelineState(TypedDict, total=False):
@@ -40,4 +41,4 @@ class PipelineState(TypedDict, total=False):
     # `{"number": N, "status": "done"|"failed", "path": "..."}` via the
     # `add` reducer. Lets us see which slides finished vs failed after
     # the fan-in collector node runs.
-    image_results: Annotated[list[dict[str, Any]], add]
+    image_results: Annotated[list[ImageResult], add]

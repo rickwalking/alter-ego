@@ -6,6 +6,8 @@ from langchain_openai import ChatOpenAI
 
 from rag_backend.infrastructure.config.settings import Settings
 
+DEFAULT_TEMPERATURE = 0.7
+
 
 class OpenAILLMService:
     """OpenAI implementation of LLMService protocol."""
@@ -47,7 +49,7 @@ class OpenAILLMService:
 
         # Configure temperature and max_tokens if provided
         llm = self._llm
-        if temperature != 0.7 or max_tokens:
+        if temperature != DEFAULT_TEMPERATURE or max_tokens:
             llm = self._llm.with_config(temperature=temperature, max_tokens=max_tokens)
 
         response = await llm.ainvoke(lc_messages)
@@ -81,7 +83,7 @@ class OpenAILLMService:
 
         # Configure temperature and max_tokens if provided
         llm = self._llm
-        if temperature != 0.7 or max_tokens:
+        if temperature != DEFAULT_TEMPERATURE or max_tokens:
             llm = self._llm.with_config(temperature=temperature, max_tokens=max_tokens)
 
         # Stream the response

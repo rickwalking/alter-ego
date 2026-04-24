@@ -8,6 +8,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from rag_backend.domain.models import Document, DocumentStatus
 from rag_backend.infrastructure.database.models import DocumentModel
 
+_ERR_DOCUMENT_NOT_FOUND = "Document with id {} not found"
+
 
 class PostgresDocumentRepository:
     """PostgreSQL implementation of DocumentRepository protocol."""
@@ -50,7 +52,7 @@ class PostgresDocumentRepository:
         )
         db_document = result.scalar_one_or_none()
         if not db_document:
-            raise ValueError(f"Document with id {document.id} not found")
+            raise ValueError(_ERR_DOCUMENT_NOT_FOUND.format(document.id))
 
         db_document.update_from_entity(document)
         await self._session.flush()

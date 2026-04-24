@@ -3,7 +3,6 @@
 from contextlib import AsyncExitStack, asynccontextmanager
 from datetime import datetime
 from pathlib import Path
-from typing import Any
 
 from fastapi import FastAPI, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
@@ -19,7 +18,7 @@ from rag_backend.api.middleware.security_headers import SecurityHeadersMiddlewar
 from rag_backend.api.routes import auth, carousels, conversations, documents, search
 from rag_backend.api.schemas import HealthCheckResponse, HealthResponse
 from rag_backend.api.websocket.chat import chat_handler
-from rag_backend.infrastructure.config.settings import get_settings
+from rag_backend.infrastructure.config.settings import Settings, get_settings
 from rag_backend.infrastructure.container import container
 from rag_backend.infrastructure.database.config import close_db, init_db
 from rag_backend.infrastructure.logging import get_logger, setup_logging
@@ -64,8 +63,8 @@ async def lifespan(app: FastAPI):
 
 
 async def _build_checkpointer(
-    settings: Any, stack: AsyncExitStack
-) -> BaseCheckpointSaver[Any] | None:
+    settings: Settings, stack: AsyncExitStack
+) -> BaseCheckpointSaver[object] | None:
     """Construct the configured checkpointer, registering cleanup on the stack."""
     backend = settings.carousel_checkpoint_backend.lower()
 
@@ -85,19 +84,15 @@ async def _build_checkpointer(
         )
         await saver_pg.setup()  # idempotent DDL for checkpoint tables
         return saver_pg
-    # Default: SQLite
     if not settings.carousel_checkpoint_sqlite_path:
         return None
-    Path(settings.carousel_checkpoint_sqlite_path).parent.mkdir(
-        parents=True, exist_ok=True
-    )
-    saver_sqlite = await stack.enter_async_context(
+    Path(settings.carousel_checkpoint_sqlite_path).parent.mkdir(parents=True, exist_ok=True)
+    return await stack.enter_async_context(
         AsyncSqliteSaver.from_conn_string(settings.carousel_checkpoint_sqlite_path)
     )
-    return saver_sqlite
 
 
-def create_app() -> FastAPI:
+def create_app() -> FastAPI:  # noqa: PLR0915 — app factory configures all middleware/routes
     """Create and configure the FastAPI application."""
     settings = get_settings()
 

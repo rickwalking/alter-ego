@@ -1,7 +1,6 @@
 """Pydantic schemas for API requests and responses."""
 
 from datetime import datetime
-from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel, Field, field_validator, model_validator
@@ -14,6 +13,12 @@ from rag_backend.domain.constants import (
     VALID_IMAGE_STYLES,
 )
 
+_ERR_INVALID_IMAGE_MODEL = "image_model must be one of {}, got {!r}"
+_ERR_INVALID_IMAGE_STYLE = "image_style must be one of {}, got {!r}"
+_ERR_UNSUPPORTED_IMAGE_COMBO = (
+    "image_model={!r} with image_style={!r} is not supported. Allowed: {}"
+)
+
 # ============== Document Schemas ==============
 
 
@@ -22,7 +27,7 @@ class DocumentBase(BaseModel):
 
     title: str = Field(..., min_length=1, max_length=500)
     content: str = Field(..., min_length=1)
-    metadata: dict[str, Any] = Field(default_factory=dict)
+    metadata: dict[str, object] = Field(default_factory=dict)
 
 
 class DocumentCreate(DocumentBase):
@@ -36,7 +41,7 @@ class DocumentUpdate(BaseModel):
 
     title: str | None = Field(None, min_length=1, max_length=500)
     content: str | None = Field(None, min_length=1)
-    metadata: dict[str, Any] | None = None
+    metadata: dict[str, object] | None = None
 
 
 class DocumentResponse(BaseModel):
@@ -45,7 +50,7 @@ class DocumentResponse(BaseModel):
     id: UUID
     title: str
     status: str
-    metadata: dict[str, Any]
+    metadata: dict[str, object]
     chunk_count: int
     created_at: datetime
     updated_at: datetime
@@ -80,14 +85,14 @@ class ConversationCreate(BaseModel):
     """Schema for creating a conversation."""
 
     title: str | None = Field(None, max_length=500)
-    metadata: dict[str, Any] = Field(default_factory=dict)
+    metadata: dict[str, object] = Field(default_factory=dict)
 
 
 class ConversationUpdate(BaseModel):
     """Schema for updating a conversation."""
 
     title: str | None = Field(None, max_length=500)
-    metadata: dict[str, Any] | None = None
+    metadata: dict[str, object] | None = None
 
 
 class ConversationResponse(BaseModel):
@@ -95,7 +100,7 @@ class ConversationResponse(BaseModel):
 
     id: UUID
     title: str | None
-    metadata: dict[str, Any]
+    metadata: dict[str, object]
     created_at: datetime
     updated_at: datetime
 
@@ -148,7 +153,7 @@ class DocumentUploadResponse(BaseModel):
     id: UUID
     title: str
     status: str
-    metadata: dict[str, Any]
+    metadata: dict[str, object]
     chunk_count: int
     created_at: datetime
     updated_at: datetime
@@ -207,7 +212,7 @@ class SearchResultResponse(BaseModel):
     document_title: str
     score: float
     rank: int
-    metadata: dict[str, Any]
+    metadata: dict[str, object]
 
 
 class SearchResponse(BaseModel):
@@ -226,7 +231,7 @@ class ErrorResponse(BaseModel):
 
     error: str
     message: str
-    details: dict[str, Any] | None = None
+    details: dict[str, object] | None = None
 
 
 # ============== Health Schemas ==============
@@ -269,27 +274,23 @@ class CarouselProjectCreate(BaseModel):
     @classmethod
     def _check_image_model(cls, value: str) -> str:
         if value not in VALID_IMAGE_MODELS:
-            raise ValueError(
-                f"image_model must be one of {sorted(VALID_IMAGE_MODELS)}, got {value!r}"
-            )
+            raise ValueError(_ERR_INVALID_IMAGE_MODEL.format(sorted(VALID_IMAGE_MODELS), value))
         return value
 
     @field_validator("image_style")
     @classmethod
     def _check_image_style(cls, value: str) -> str:
         if value not in VALID_IMAGE_STYLES:
-            raise ValueError(
-                f"image_style must be one of {sorted(VALID_IMAGE_STYLES)}, got {value!r}"
-            )
+            raise ValueError(_ERR_INVALID_IMAGE_STYLE.format(sorted(VALID_IMAGE_STYLES), value))
         return value
 
     @model_validator(mode="after")
     def _check_combo(self) -> "CarouselProjectCreate":
         if (self.image_model, self.image_style) not in SUPPORTED_IMAGE_COMBOS:
             raise ValueError(
-                f"image_model={self.image_model!r} with image_style="
-                f"{self.image_style!r} is not supported. "
-                f"Allowed: {sorted(SUPPORTED_IMAGE_COMBOS)}"
+                _ERR_UNSUPPORTED_IMAGE_COMBO.format(
+                    self.image_model, self.image_style, sorted(SUPPORTED_IMAGE_COMBOS)
+                )
             )
         return self
 

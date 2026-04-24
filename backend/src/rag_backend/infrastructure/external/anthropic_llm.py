@@ -15,6 +15,8 @@ _ROLE_TO_MESSAGE: dict[str, Callable[[str], BaseMessage]] = {
     ROLE_USER: lambda content: HumanMessage(content=content),
 }
 
+DEFAULT_TEMPERATURE = 0.7
+
 
 class AnthropicLLMService:
     """Anthropic implementation of the LLMService protocol."""
@@ -53,7 +55,7 @@ class AnthropicLLMService:
         lc_messages = self._to_lc_messages(messages)
 
         llm = self._llm
-        if temperature != 0.7 or max_tokens:
+        if temperature != DEFAULT_TEMPERATURE or max_tokens:
             llm = self._llm.with_config(temperature=temperature, max_tokens=max_tokens)
 
         response = await llm.ainvoke(lc_messages)
@@ -69,7 +71,7 @@ class AnthropicLLMService:
         lc_messages = self._to_lc_messages(messages)
 
         llm = self._llm
-        if temperature != 0.7 or max_tokens:
+        if temperature != DEFAULT_TEMPERATURE or max_tokens:
             llm = self._llm.with_config(temperature=temperature, max_tokens=max_tokens)
 
         async for chunk in llm.astream(lc_messages):

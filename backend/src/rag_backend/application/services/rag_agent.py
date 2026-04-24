@@ -1,13 +1,12 @@
 """LangChain Deep Agent implementation for RAG."""
 
 from collections.abc import AsyncIterator
-from typing import Any
 from uuid import UUID
 
 from deepagents import create_deep_agent
 from langchain_anthropic import ChatAnthropic
 from langchain_core.messages import AIMessage, HumanMessage
-from langchain_core.tools import tool
+from langchain_core.tools import BaseTool, tool
 
 from rag_backend.application.services.rag_agent_tools import (
     build_refine_carousel_copy_tool,
@@ -28,6 +27,7 @@ from rag_backend.domain.protocols import (
     MessageRepository,
     Retriever,
 )
+from rag_backend.domain.types import ChatEvent
 from rag_backend.infrastructure.config.settings import Settings
 
 SYSTEM_PROMPT = """You are a helpful AI assistant with access to a knowledge base.
@@ -98,7 +98,7 @@ class RAGAgent:
             system_prompt=SYSTEM_PROMPT,
         )
 
-    def _build_tools(self) -> list[Any]:
+    def _build_tools(self) -> list[BaseTool]:
         # Tools must be plain functions (not bound methods) — LangChain's
         # @tool decorator turns them into StructuredTool instances, and if
         # `self` is a parameter the agent framework injects it a second time
@@ -148,7 +148,7 @@ class RAGAgent:
 
             return "Available documents:\n" + "\n".join(formatted_docs)
 
-        tools: list[Any] = [search_documents, list_documents]
+        tools: list[BaseTool] = [search_documents, list_documents]
 
         if carousel_agent is None or carousel_repository is None:
             return tools
@@ -217,19 +217,29 @@ class RAGAgent:
         tools.append(build_refine_carousel_design_tool(carousel_agent))
         return tools
 
-    async def chat(
-        self, message: str, conversation_id: UUID, stream: bool = True
-    ) -> AsyncIterator[dict[str, Any]]:
+    async def chat(  # noqa: C901,PLR0912,PLR0915 — streaming + non-streaming paths
+        self,
+        message: str,
+        conversation_id: UUID,
+        *,
+        stream: bool = True,
+        persist_messages: bool = True,
+    ) -> AsyncIterator[ChatEvent]:
         """Process a chat message with optional streaming.
 
         Args:
             message: The user's message
             conversation_id: The conversation ID
             stream: Whether to stream the response
+            persist_messages: Whether to persist user/assistant messages to
+                the message repository. Set to False when the caller handles
+                persistence (e.g. WebSocket handler) to avoid session-flush
+                conflicts with tool side-effects.
 
         Yields:
             Dictionary with 'type' and content:
             - type='token': Token text chunk
+            - type='tool_result': A tool finished (name + raw output)
             - type='sources': List of source documents
             - type='complete': Final complete message
         """
@@ -242,29 +252,39 @@ class RAGAgent:
             elif msg.role == MessageRole.ASSISTANT:
                 chat_history.append(AIMessage(content=msg.content))
 
-        user_message = Message(
-            role=MessageRole.USER,
-            content=message,
-            conversation_id=conversation_id,
-        )
-        await self._message_repository.create(user_message)
+        if persist_messages:
+            user_message = Message(
+                role=MessageRole.USER,
+                content=message,
+                conversation_id=conversation_id,
+            )
+            await self._message_repository.create(user_message)
 
         sources = []
 
         if stream:
             full_response = ""
 
-            # `astream` in default (values) mode emits nested state chunks
-            # like {node_name: {messages: [...]}}, so there is no top-level
-            # "messages" key and the old code silently yielded nothing.
-            # `astream_events(version="v2")` gives real token deltas via
-            # `on_chat_model_stream` events — the LLM's streaming output.
             async for event in self._agent.astream_events(
                 {"messages": [*chat_history, HumanMessage(content=message)]},
                 version="v2",
             ):
-                if event.get("event") != "on_chat_model_stream":
+                event_name = event.get("event")
+
+                if event_name == "on_tool_end":
+                    tool_output = event.get("data", {}).get("output")
+                    tool_name = event.get("name", "")
+                    if tool_output is not None:
+                        yield {
+                            "type": "tool_result",
+                            "tool": tool_name,
+                            "result": tool_output,
+                        }
                     continue
+
+                if event_name != "on_chat_model_stream":
+                    continue
+
                 chunk = event.get("data", {}).get("chunk")
                 if chunk is None:
                     continue
@@ -273,7 +293,7 @@ class RAGAgent:
                     continue
                 # Anthropic streams may deliver content as str OR a list of
                 # blocks like [{"type": "text", "text": "..."}, {"type": "tool_use", ...}].
-                token = ""
+                token = ""  # nosec B105 — string accumulator, not a password
                 if isinstance(content, str):
                     token = content
                 elif isinstance(content, list):
@@ -285,13 +305,14 @@ class RAGAgent:
                 full_response += token
                 yield {"type": "token", "content": token}
 
-            assistant_message = Message(
-                role=MessageRole.ASSISTANT,
-                content=full_response,
-                conversation_id=conversation_id,
-                sources=sources,
-            )
-            await self._message_repository.create(assistant_message)
+            if persist_messages:
+                assistant_message = Message(
+                    role=MessageRole.ASSISTANT,
+                    content=full_response,
+                    conversation_id=conversation_id,
+                    sources=sources,
+                )
+                await self._message_repository.create(assistant_message)
 
             yield {"type": "sources", "content": sources}
             yield {"type": "complete", "content": full_response}
@@ -308,13 +329,14 @@ class RAGAgent:
                     response = msg.content
                     break
 
-            assistant_message = Message(
-                role=MessageRole.ASSISTANT,
-                content=response,
-                conversation_id=conversation_id,
-                sources=sources,
-            )
-            await self._message_repository.create(assistant_message)
+            if persist_messages:
+                assistant_message = Message(
+                    role=MessageRole.ASSISTANT,
+                    content=response,
+                    conversation_id=conversation_id,
+                    sources=sources,
+                )
+                await self._message_repository.create(assistant_message)
 
             yield {"type": "complete", "content": response}
 

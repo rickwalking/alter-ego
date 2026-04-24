@@ -12,7 +12,7 @@ security = HTTPBearer(auto_error=False)
 async def get_current_user(
     credentials: HTTPAuthorizationCredentials | None = Depends(security),
     settings: Settings = Depends(get_settings),
-) -> dict:
+) -> dict[str, str]:
     """Validate JWT token and return current user payload.
 
     Use this as a dependency in protected routes.
@@ -48,7 +48,7 @@ async def get_current_user(
 async def get_current_user_optional(
     credentials: HTTPAuthorizationCredentials | None = Depends(security),
     settings: Settings = Depends(get_settings),
-) -> dict | None:
+) -> dict[str, str] | None:
     """Validate JWT token if present, otherwise return None.
 
     Use this for routes that work with or without authentication.

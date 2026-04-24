@@ -41,6 +41,13 @@ from rag_backend.infrastructure.database.config import get_session
 router = APIRouter(prefix="/carousels", tags=["carousels"])
 
 
+_ERR_MISSING_PUBLIC_BASE_URL = (
+    "CAROUSEL_PUBLIC_BASE_URL is not set — Instagram cannot "
+    "fetch images from localhost. Configure a public HTTPS base "
+    "URL in the backend .env."
+)
+
+
 def get_carousel_repo(
     session: Annotated[AsyncSession, Depends(get_session)],
 ) -> CarouselRepository:
@@ -96,7 +103,7 @@ def get_carousel_agent(
     )
 
 
-@router.post("", response_model=CarouselProjectResponse, status_code=status.HTTP_201_CREATED)
+@router.post("", status_code=status.HTTP_201_CREATED)
 async def create_carousel(
     request: CarouselProjectCreate,
     repo: Annotated[CarouselRepository, Depends(get_carousel_repo)],
@@ -120,11 +127,11 @@ async def create_carousel(
     return CarouselProjectResponse.model_validate(created)
 
 
-@router.get("", response_model=CarouselProjectListResponse)
+@router.get("")
 async def list_carousels(
     status_filter: Annotated[CarouselStatus | None, Query(alias="status")] = None,
-    limit: int = Query(default=20, ge=1, le=100),
-    offset: int = Query(default=0, ge=0),
+    limit: Annotated[int, Query(ge=1, le=100)] = 20,
+    offset: Annotated[int, Query(ge=0)] = 0,
     repo: Annotated[CarouselRepository, Depends(get_carousel_repo)] = None,
 ) -> CarouselProjectListResponse:
     """List all carousel projects."""
@@ -138,7 +145,7 @@ async def list_carousels(
     )
 
 
-@router.get("/{project_id}", response_model=CarouselProjectResponse)
+@router.get("/{project_id}")
 async def get_carousel(
     project_id: UUID,
     repo: Annotated[CarouselRepository, Depends(get_carousel_repo)],
@@ -150,7 +157,7 @@ async def get_carousel(
     return CarouselProjectResponse.model_validate(project)
 
 
-@router.post("/{project_id}/generate", response_model=CarouselStatusResponse)
+@router.post("/{project_id}/generate")
 async def generate_carousel(
     project_id: UUID,
     request: CarouselGenerateRequest,
@@ -184,7 +191,7 @@ async def stream_carousel(
     return StreamingResponse(event_generator(), media_type="text/event-stream")
 
 
-@router.post("/{project_id}/resume", response_model=CarouselStatusResponse)
+@router.post("/{project_id}/resume")
 async def resume_carousel(
     project_id: UUID,
     agent: Annotated[CarouselAgent, Depends(get_carousel_agent)],
@@ -206,7 +213,7 @@ async def resume_carousel(
     return CarouselStatusResponse.model_validate(project)
 
 
-@router.get("/{project_id}/status", response_model=CarouselStatusResponse)
+@router.get("/{project_id}/status")
 async def get_carousel_status(
     project_id: UUID,
     repo: Annotated[CarouselRepository, Depends(get_carousel_repo)],
@@ -252,7 +259,7 @@ async def get_carousel_pdf(
     )
 
 
-@router.get("/{project_id}/blog", response_model=CarouselBlogResponse)
+@router.get("/{project_id}/blog")
 async def get_carousel_blog(
     project_id: UUID,
     repo: Annotated[CarouselRepository, Depends(get_carousel_repo)],
@@ -270,7 +277,7 @@ async def get_carousel_blog(
     )
 
 
-@router.get("/{project_id}/blog/{lang}", response_model=CarouselBlogI18nResponse)
+@router.get("/{project_id}/blog/{lang}")
 async def get_carousel_blog_i18n(
     project_id: UUID,
     lang: Annotated[str, FastPath(pattern="^(pt|en)$")],
@@ -315,9 +322,9 @@ def _extract_title_and_subtitle(markdown: str) -> tuple[str | None, str | None]:
 
     heading = first_line[2:].strip()
 
-    TITLE_SUBTITLE_SEPARATOR = ":"
-    if TITLE_SUBTITLE_SEPARATOR in heading:
-        separator_pos = heading.index(TITLE_SUBTITLE_SEPARATOR)
+    title_subtitle_separator = ":"
+    if title_subtitle_separator in heading:
+        separator_pos = heading.index(title_subtitle_separator)
         title = heading[:separator_pos].strip()
         subtitle = heading[separator_pos + 1 :].strip()
         return title, subtitle
@@ -325,7 +332,7 @@ def _extract_title_and_subtitle(markdown: str) -> tuple[str | None, str | None]:
     return heading, None
 
 
-@router.get("/{project_id}/design", response_model=CarouselDesignResponse)
+@router.get("/{project_id}/design")
 async def get_carousel_design(
     project_id: UUID,
     repo: Annotated[CarouselRepository, Depends(get_carousel_repo)],
@@ -413,7 +420,7 @@ async def get_carousel_slide_image(
     )
 
 
-@router.get("/{project_id}/slides", response_model=list[CarouselSlideResponse])
+@router.get("/{project_id}/slides")
 async def get_carousel_slides(
     project_id: UUID,
     repo: Annotated[CarouselRepository, Depends(get_carousel_repo)],
@@ -426,7 +433,7 @@ async def get_carousel_slides(
     return [CarouselSlideResponse.model_validate(s) for s in slides]
 
 
-@router.post("/{project_id}/caption", response_model=CarouselCaptionResponse)
+@router.post("/{project_id}/caption")
 async def generate_caption(
     project_id: UUID,
     agent: Annotated[CarouselAgent, Depends(get_carousel_agent)],
@@ -484,11 +491,7 @@ def _build_public_image_urls(project_id: UUID, slides_count: int = 4) -> list[st
 
     base = get_settings().carousel_public_base_url.rstrip("/")
     if not base:
-        raise RuntimeError(
-            "CAROUSEL_PUBLIC_BASE_URL is not set — Instagram cannot "
-            "fetch images from localhost. Configure a public HTTPS base "
-            "URL in the backend .env."
-        )
+        raise RuntimeError(_ERR_MISSING_PUBLIC_BASE_URL)
     return [
         f"{base}/api/carousels/{project_id}/images/slide_{i}.jpg"
         for i in range(1, slides_count + 1)
@@ -497,7 +500,6 @@ def _build_public_image_urls(project_id: UUID, slides_count: int = 4) -> list[st
 
 @router.post(
     "/{project_id}/publish/instagram",
-    response_model=InstagramPublishResponse,
 )
 async def publish_to_instagram(
     project_id: UUID,

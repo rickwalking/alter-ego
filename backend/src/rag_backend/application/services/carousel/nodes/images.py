@@ -21,7 +21,7 @@ from __future__ import annotations
 import asyncio
 from pathlib import Path
 
-from rag_backend.application.services.carousel.nodes.design import resolve_theme
+from rag_backend.application.services.carousel.theme_resolver import resolve_theme
 from rag_backend.application.services.carousel.types import (
     SlideData,
     short_scene,
@@ -46,9 +46,7 @@ def filter_image_slides(slides: list[SlideData]) -> list[SlideData]:
     return [s for s in slides if s.slide_type in IMAGE_SLIDE_TYPES and s.image_prompt]
 
 
-def build_initial_status(
-    slides: list[SlideData], style_label: str
-) -> list[dict[str, str | int]]:
+def build_initial_status(slides: list[SlideData], style_label: str) -> list[dict[str, str | int]]:
     """Initial all-pending snapshot for the per-slide UI checklist."""
     return [
         {

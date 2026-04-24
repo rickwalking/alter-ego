@@ -9,19 +9,21 @@ function for the Deep Agent framework.
 from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
-from uuid import UUID
 
-from langchain_core.tools import tool
+from langchain_core.tools import BaseTool, tool
 
 from rag_backend.domain.models import CarouselProject, CarouselSlide
 from rag_backend.domain.protocols import CarouselAgent, CarouselRepository
 
+MIN_TARGET_PARTS = 2
+MAX_TARGET_PARTS = 3
 
 # ---------------------------------------------------------------------------
 # Internal helpers
 # ---------------------------------------------------------------------------
 
-async def _resolve_refine_target(
+
+async def _resolve_refine_target(  # noqa: C901,PLR0911 — dispatcher with early returns
     project: CarouselProject,
     target: str,
     repository: CarouselRepository,
@@ -61,13 +63,13 @@ async def _resolve_refine_target(
     if target.startswith("slide_heading:") or target.startswith("slide_body:"):
         parts = target.split(":")
         field = parts[0]
-        if len(parts) < 2:
+        if len(parts) < MIN_TARGET_PARTS:
             return None, _noop
         try:
             slide_number = int(parts[1])
         except ValueError:
             return None, _noop
-        language = parts[2] if len(parts) >= 3 else "pt"
+        language = parts[2] if len(parts) >= MAX_TARGET_PARTS else "pt"
         if language not in {"pt", "en"}:
             return None, _noop
 
@@ -120,11 +122,12 @@ def _write_slide_field(slide: CarouselSlide, field: str, language: str, new_text
 # Tool factories
 # ---------------------------------------------------------------------------
 
+
 def build_refine_carousel_copy_tool(
     llm: object,
     carousel_repository: CarouselRepository,
     carousel_agent: CarouselAgent,
-) -> Callable[..., Awaitable[str]]:
+) -> BaseTool:
     """Return the refine_carousel_copy tool closure."""
 
     @tool
@@ -164,9 +167,7 @@ def build_refine_carousel_copy_tool(
         if project is None:
             return f"Carousel project {project_id} not found."
 
-        original, apply_update = await _resolve_refine_target(
-            project, target, carousel_repository
-        )
+        original, apply_update = await _resolve_refine_target(project, target, carousel_repository)
         if original is None:
             return f"Cannot refine {target!r}: field is empty or target selector is unknown."
 
@@ -189,7 +190,7 @@ def build_refine_carousel_copy_tool(
             try:
                 await carousel_agent.re_render_slides(project_uuid)
                 re_render_note = " Slides + PDF re-rendered."
-            except (ValueError, AttributeError) as exc:
+            except Exception as exc:
                 re_render_note = f" Re-render skipped: {exc}"
 
         return (
@@ -202,7 +203,7 @@ def build_refine_carousel_copy_tool(
 
 def build_regenerate_slide_image_tool(
     carousel_agent: CarouselAgent,
-) -> Callable[..., Awaitable[str]]:
+) -> BaseTool:
     """Return the regenerate_slide_image tool closure."""
 
     @tool
@@ -231,15 +232,15 @@ def build_regenerate_slide_image_tool(
             return f"Invalid project_id {project_id!r} — expected a UUID."
 
         try:
-            await carousel_agent.regenerate_slide_image(
-                project_uuid, slide_number, instruction
-            )
+            await carousel_agent.regenerate_slide_image(project_uuid, slide_number, instruction)
         except ValueError as exc:
             return f"Cannot regenerate image for slide {slide_number}: {exc}"
         except OSError as exc:
             return f"Image regeneration failed due to a file system error: {exc}"
         except RuntimeError as exc:
             return f"Image regeneration failed: {exc}"
+        except Exception as exc:
+            return f"Image regeneration failed unexpectedly: {exc}"
 
         return (
             f"Regenerated image for slide {slide_number} on project "
@@ -251,7 +252,7 @@ def build_regenerate_slide_image_tool(
 
 def build_refine_carousel_design_tool(
     carousel_agent: CarouselAgent,
-) -> Callable[..., Awaitable[str]]:
+) -> BaseTool:
     """Return the refine_carousel_design tool closure."""
 
     @tool
@@ -281,19 +282,16 @@ def build_refine_carousel_design_tool(
             return f"Invalid project_id {project_id!r} — expected a UUID."
 
         try:
-            await carousel_agent.refine_carousel_design(
-                project_uuid, instruction
-            )
+            await carousel_agent.refine_carousel_design(project_uuid, instruction)
         except ValueError as exc:
             return f"Cannot apply design change: {exc}"
         except OSError as exc:
             return f"Design refinement failed due to a file system error: {exc}"
         except RuntimeError as exc:
             return f"Design refinement failed: {exc}"
+        except Exception as exc:
+            return f"Design refinement failed unexpectedly: {exc}"
 
-        return (
-            f"Applied design change to project {project_id}. "
-            f"Slides + PDF re-exported."
-        )
+        return f"Applied design change to project {project_id}. Slides + PDF re-exported."
 
     return refine_carousel_design

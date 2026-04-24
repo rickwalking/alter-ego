@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import json
 import re
-from typing import Any
+from typing import cast
 
 from rag_backend.application.services.carousel.types import (
     MAX_FEATURE_ITEMS,
@@ -27,13 +27,17 @@ from rag_backend.infrastructure.logging import get_logger
 
 logger = get_logger()
 
+_ERR_CONTENT_NON_JSON = "Content synthesis returned non-JSON output; cannot continue."
+_ERR_CONTENT_INVALID_SLIDES = "Content synthesis returned slides with missing fields."
+_ERR_CONTENT_ZERO_SLIDES = "Content synthesis returned zero slides."
+
 _JSON_FENCE_RE = re.compile(r"```(?:json)?\s*(.*?)\s*```", re.DOTALL)
 
 TITLE_TEMPERATURE = 0.8
 CONTENT_TEMPERATURE = 0.7
 
 
-def extract_json(raw: str) -> Any:
+def extract_json(raw: str) -> object:
     """Parse JSON from an LLM response, tolerating markdown code fences
     and leading/trailing prose. Raises json.JSONDecodeError on failure.
     """
@@ -64,10 +68,11 @@ async def _optimize_title(
     )
 
     try:
-        title_data = extract_json(title_response)
+        title_data = cast(dict[str, object], extract_json(title_response))
+        subtitle_value = title_data.get("subtitle_pt", title_data.get("subtitle"))
         project.set_title(
-            title=title_data.get("title_pt", title_data.get("title", project.topic)),
-            subtitle=title_data.get("subtitle_pt", title_data.get("subtitle")),
+            title=str(title_data.get("title_pt", title_data.get("title", project.topic))),
+            subtitle=str(subtitle_value) if subtitle_value is not None else None,
         )
     except (json.JSONDecodeError, KeyError, TypeError) as exc:
         logger.warning(
@@ -79,14 +84,17 @@ async def _optimize_title(
         project.set_title(title=project.topic)
 
 
-def _parse_slides(content_data: dict[str, Any]) -> list[SlideData]:
+def _parse_slides(content_data: dict[str, object]) -> list[SlideData]:
     """Materialize the LLM's `slides` array into SlideData dataclasses.
 
     Raises ValueError if the shape is malformed; the caller turns that
     into a pipeline abort so we never persist half-parsed slides.
     """
     slides_data: list[SlideData] = []
-    for slide_json in content_data.get("slides", []):
+    raw_slides = content_data.get("slides", [])
+    if not isinstance(raw_slides, list):
+        raw_slides = []
+    for slide_json in raw_slides:
         raw_features = slide_json.get("features")
         features: list[dict[str, str]] | None = None
         if isinstance(raw_features, list) and raw_features:
@@ -159,17 +167,15 @@ async def run_content(
     )
 
     try:
-        content_data = extract_json(content_response)
+        content_data = cast(dict[str, object], extract_json(content_response))
     except (json.JSONDecodeError, TypeError) as exc:
-        logger.error(
+        logger.exception(
             "carousel_content_json_parse_failed",
             project_id=str(project.id),
             error=str(exc),
             raw_response=content_response[:4000],
         )
-        raise ValueError(
-            "Content synthesis returned non-JSON output; cannot continue."
-        ) from exc
+        raise ValueError(_ERR_CONTENT_NON_JSON) from exc
 
     try:
         slides_data = _parse_slides(content_data)
@@ -179,13 +185,13 @@ async def run_content(
             if en is not None:
                 sd.translation_en = en
     except (KeyError, TypeError) as exc:
-        logger.error(
+        logger.exception(
             "carousel_slide_shape_invalid",
             project_id=str(project.id),
             error=str(exc),
             content_keys=list(content_data.keys()) if isinstance(content_data, dict) else None,
         )
-        raise ValueError("Content synthesis returned slides with missing fields.") from exc
+        raise ValueError(_ERR_CONTENT_INVALID_SLIDES) from exc
 
     if not slides_data:
         logger.error(
@@ -193,18 +199,20 @@ async def run_content(
             project_id=str(project.id),
             content_keys=list(content_data.keys()),
         )
-        raise ValueError("Content synthesis returned zero slides.")
+        raise ValueError(_ERR_CONTENT_ZERO_SLIDES)
 
-    blog_pt = content_data.get("blog_pt", content_data.get("blog_markdown", ""))
-    blog_en = content_data.get("blog_en", "")
+    blog_pt = str(content_data.get("blog_pt", content_data.get("blog_markdown", "")))
+    blog_en = str(content_data.get("blog_en", ""))
 
     project.blog_markdown = blog_pt
     project.blog_translations = {"pt": blog_pt, "en": blog_en} if blog_en else {"pt": blog_pt}
 
     if "title_pt" in content_data:
+        title_value = content_data.get("title_pt", project.title or project.topic)
+        subtitle_value = content_data.get("subtitle_pt", project.subtitle)
         project.set_title(
-            title=content_data.get("title_pt", project.title or project.topic),
-            subtitle=content_data.get("subtitle_pt", project.subtitle),
+            title=str(title_value) if title_value is not None else project.topic,
+            subtitle=str(subtitle_value) if subtitle_value is not None else None,
         )
 
     return slides_data, project.blog_markdown or ""

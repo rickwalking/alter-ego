@@ -7,6 +7,8 @@ from rag_backend.domain.protocols import (
     VectorStore,
 )
 
+_ERR_DOCUMENT_NOT_FOUND = "Document with id {} not found"
+
 
 class DocumentProcessingPipeline:
     """Pipeline for processing documents end-to-end.
@@ -56,14 +58,13 @@ class DocumentProcessingPipeline:
             # Mark as completed
             document.mark_completed(chunk_count=len(chunks))
             await self._document_repository.update(document)
-
-            return document
-
         except Exception as e:
             # Mark as failed
             document.mark_failed(str(e))
             await self._document_repository.update(document)
             raise
+
+        return document
 
     async def reprocess_document(self, document_id: str) -> Document:
         """Reprocess an existing document.
@@ -78,7 +79,7 @@ class DocumentProcessingPipeline:
 
         document = await self._document_repository.get_by_id(UUID(document_id))
         if not document:
-            raise ValueError(f"Document with id {document_id} not found")
+            raise ValueError(_ERR_DOCUMENT_NOT_FOUND.format(document_id))
 
         # Delete existing chunks from vector store
         await self._vector_store.delete_by_document(document.id)
@@ -110,7 +111,7 @@ class DocumentProcessingPipeline:
         # Delete from database
         return await self._document_repository.delete(doc_id)
 
-    def estimate_processing_time(self, document: Document) -> dict:
+    def estimate_processing_time(self, document: Document) -> dict[str, object]:
         """Estimate processing time for a document.
 
         Returns:

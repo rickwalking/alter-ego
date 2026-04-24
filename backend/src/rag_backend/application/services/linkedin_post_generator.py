@@ -26,6 +26,8 @@ from rag_backend.infrastructure.logging import get_logger
 
 logger = get_logger()
 
+_ERR_NO_BLOG_CONTENT = "project {} has no blog content for language {!r}"
+
 LINKEDIN_MAX_CHARS = 3000
 _LANG_EN = "en"
 _LANG_PT = "pt"
@@ -62,7 +64,7 @@ class LinkedInPostGenerator:
         """Generate a LinkedIn post in the given language ('pt' or 'en')."""
         blog = _pick_blog_source(project, language)
         if not blog:
-            raise ValueError(f"project {project.id} has no blog content for language {language!r}")
+            raise ValueError(_ERR_NO_BLOG_CONTENT.format(project.id, language))
         samples = await self._style.get_samples()
         prompt = _build_prompt(
             blog=blog,
@@ -95,7 +97,7 @@ class LinkedInPostGenerator:
 def _pick_blog_source(project: CarouselProject, language: str) -> str:
     """Return the blog body for the given language or empty string."""
     translations = project.blog_translations or {}
-    if language in translations and translations[language]:
+    if translations.get(language):
         return translations[language]
     if language == _LANG_PT and project.blog_markdown:
         return project.blog_markdown

@@ -11,7 +11,7 @@ def get_logger():
     return structlog.get_logger()
 
 
-def setup_logging(debug: bool = False) -> None:
+def setup_logging(*, debug: bool = False) -> None:
     """Configure structured logging for the application.
 
     Args:
@@ -25,12 +25,11 @@ def setup_logging(debug: bool = False) -> None:
         structlog.processors.TimeStamper(fmt="iso"),
     ]
 
+    renderer: structlog.types.Processor = (
+        structlog.processors.JSONRenderer() if not debug else structlog.dev.ConsoleRenderer()
+    )
     structlog.configure(
-        processors=shared_processors
-        + [
-            structlog.processors.format_exc_info,
-            structlog.processors.JSONRenderer() if not debug else structlog.dev.ConsoleRenderer(),
-        ],
+        processors=[*shared_processors, structlog.processors.format_exc_info, renderer],
         wrapper_class=structlog.BoundLogger,
         logger_factory=structlog.PrintLoggerFactory(),
         cache_logger_on_first_use=False,

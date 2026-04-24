@@ -1,7 +1,7 @@
 """PDF slide builder.
 
 Assembles the exported JPG slides into a single multi-page PDF — one
-page per slide, each page sized to the source image so the 1080×1350
+page per slide, each page sized to the source image so the 1080x1350
 layout is preserved byte-accurate. Uses `img2pdf` because it embeds
 JPEG bytes losslessly without re-encoding (ReportLab and Pillow would
 rasterize and bloat the file).
@@ -23,6 +23,8 @@ from rag_backend.infrastructure.logging import get_logger
 logger = get_logger()
 
 _PDF_FILENAME = "carousel.pdf"
+_ERR_EMPTY_SLIDE_LIST = "Cannot build PDF from empty slide list"
+_ERR_SLIDE_IMAGE_NOT_FOUND = "Slide image not found: {}"
 
 
 class PdfSlideBuilder:
@@ -36,13 +38,13 @@ class PdfSlideBuilder:
             FileNotFoundError: if any slide file is missing.
         """
         if not slide_paths:
-            raise ValueError("Cannot build PDF from empty slide list")
+            raise ValueError(_ERR_EMPTY_SLIDE_LIST)
 
         existing: list[bytes] = []
         for path in slide_paths:
             slide_file = Path(path)
             if not slide_file.exists():
-                raise FileNotFoundError(f"Slide image not found: {path}")
+                raise FileNotFoundError(_ERR_SLIDE_IMAGE_NOT_FOUND.format(path))
             existing.append(slide_file.read_bytes())
 
         output = Path(output_dir) / _PDF_FILENAME

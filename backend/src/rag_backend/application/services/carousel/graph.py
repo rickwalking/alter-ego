@@ -16,10 +16,11 @@ from __future__ import annotations
 import asyncio
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, TypedDict
+from typing import TypedDict
 
 from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.graph import END, START, StateGraph
+from langgraph.graph.state import CompiledStateGraph
 from langgraph.types import RetryPolicy, Send
 
 from rag_backend.application.services.carousel.nodes.caption import run_caption
@@ -55,6 +56,8 @@ from rag_backend.domain.protocols import (
     LLMService,
     ResearchTool,
 )
+
+_ERR_IMAGE_GENERATION_FAILED = "image generation failed for slides: {}"
 
 
 class _ImageWorkerState(TypedDict):
@@ -106,11 +109,11 @@ NODE_LINKEDIN = "linkedin"
 NODE_FINALIZE = "finalize"
 
 
-def build_graph(
+def build_graph(  # noqa: C901,PLR0915 — LangGraph pipeline builder; each node is a thin wrapper
     deps: CarouselDeps,
     *,
-    checkpointer: BaseCheckpointSaver[Any] | None = None,
-) -> Any:
+    checkpointer: BaseCheckpointSaver[object] | None = None,
+) -> CompiledStateGraph[PipelineState, object, object, object]:
     """Compile the carousel pipeline into a runnable LangGraph.
 
     Image generation uses `Send` fan-out: one worker task per slide.
@@ -130,13 +133,11 @@ def build_graph(
     style_label_box: list[str] = [""]
     total_box: list[int] = [0]
 
-    async def research_node(state: PipelineState) -> dict[str, Any]:
+    async def research_node(state: PipelineState) -> dict[str, object]:
         project = state["project"]
         project.update_status(CarouselStatus.RESEARCHING)
         project = await deps.repo.update_project(project)
-        project = await set_progress(
-            project, repo=deps.repo, label="Searching the web for sources"
-        )
+        project = await set_progress(project, repo=deps.repo, label="Searching the web for sources")
         sources = await run_research(
             project,
             state.get("seed_urls", []),
@@ -145,7 +146,7 @@ def build_graph(
         )
         return {"project": project, "sources": sources}
 
-    async def content_node(state: PipelineState) -> dict[str, Any]:
+    async def content_node(state: PipelineState) -> dict[str, object]:
         project = state["project"]
         project.update_status(CarouselStatus.DRAFTING)
         project = await set_progress(
@@ -160,7 +161,7 @@ def build_graph(
             "blog_markdown": blog_markdown,
         }
 
-    async def persist_slides_node(state: PipelineState) -> dict[str, Any]:
+    async def persist_slides_node(state: PipelineState) -> dict[str, object]:
         project = state["project"]
         existing_slides = await deps.repo.get_slides_by_project(project.id)
         existing_by_number = {s.slide_number: s for s in existing_slides}
@@ -199,7 +200,7 @@ def build_graph(
         project = await deps.repo.update_project(project)
         return {"project": project}
 
-    async def design_node(state: PipelineState) -> dict[str, Any]:
+    async def design_node(state: PipelineState) -> dict[str, object]:
         project = state["project"]
         project.update_status(CarouselStatus.DESIGNING)
         project = await set_progress(
@@ -219,18 +220,15 @@ def build_graph(
             project.phase_progress = {
                 "phase": project.status.value,
                 "label": (
-                    f"Generating {total_box[0]} slide images in parallel — "
-                    f"{style_label_box[0]}"
+                    f"Generating {total_box[0]} slide images in parallel — {style_label_box[0]}"
                 ),
-                "current": sum(
-                    1 for s in slide_status_box[0] if s["status"] == STATUS_DONE
-                ),
+                "current": sum(1 for s in slide_status_box[0] if s["status"] == STATUS_DONE),
                 "total": total_box[0],
                 "slides": [dict(s) for s in slide_status_box[0]],
             }
             return await deps.repo.update_project(project)
 
-    async def images_dispatch_node(state: PipelineState) -> dict[str, Any]:
+    async def images_dispatch_node(state: PipelineState) -> dict[str, object]:
         """Publish initial per-slide pending snapshot and transition status."""
         project = state["project"]
         project.update_status(CarouselStatus.GENERATING_IMAGES)
@@ -263,7 +261,7 @@ def build_graph(
             for i, sd in enumerate(slides_with_images)
         ]
 
-    async def image_worker_node(worker_state: _ImageWorkerState) -> dict[str, Any]:
+    async def image_worker_node(worker_state: _ImageWorkerState) -> dict[str, object]:
         """Generate one slide image. Writes `image_results` via reducer.
 
         Idempotency hook: if the target JPG already exists on disk,
@@ -332,17 +330,15 @@ def build_graph(
             ]
         }
 
-    async def images_collect_node(state: PipelineState) -> dict[str, Any]:
+    async def images_collect_node(state: PipelineState) -> dict[str, object]:
         """Fan-in: after all workers finish, surface any failures."""
         results = state.get("image_results", [])
         failed = [r for r in results if r.get("status") == STATUS_FAILED]
         if failed:
-            raise RuntimeError(
-                f"image generation failed for slides: {[r['number'] for r in failed]}"
-            )
+            raise RuntimeError(_ERR_IMAGE_GENERATION_FAILED.format([r["number"] for r in failed]))
         return {"project": state["project"]}
 
-    async def export_node(state: PipelineState) -> dict[str, Any]:
+    async def export_node(state: PipelineState) -> dict[str, object]:
         project = state["project"]
         project.update_status(CarouselStatus.EXPORTING)
         project = await set_progress(
@@ -359,7 +355,7 @@ def build_graph(
         )
         return {"project": project}
 
-    async def caption_node(state: PipelineState) -> dict[str, Any]:
+    async def caption_node(state: PipelineState) -> dict[str, object]:
         project = state["project"]
         caption = await run_caption(
             project, state["slides_data"], llm=deps.llm, template=deps.template
@@ -367,12 +363,12 @@ def build_graph(
         project.caption = caption
         return {"project": project, "caption": caption}
 
-    async def linkedin_node(state: PipelineState) -> dict[str, Any]:
+    async def linkedin_node(state: PipelineState) -> dict[str, object]:
         project = state["project"]
         await run_linkedin(project, repo=deps.repo, generator=deps.linkedin_generator)
         return {"project": project}
 
-    async def finalize_node(state: PipelineState) -> dict[str, Any]:
+    async def finalize_node(state: PipelineState) -> dict[str, object]:
         project = state["project"]
         project.mark_completed(state["output_dir"])
         project = await deps.repo.update_project(project)

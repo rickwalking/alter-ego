@@ -13,7 +13,6 @@ Orchestrates the 7-phase carousel pipeline:
 from collections.abc import AsyncIterator
 from datetime import datetime
 from pathlib import Path
-from typing import Any
 from uuid import UUID
 
 from langgraph.checkpoint.base import BaseCheckpointSaver
@@ -21,7 +20,7 @@ from langgraph.checkpoint.base import BaseCheckpointSaver
 from rag_backend.application.services.carousel.graph import CarouselDeps, build_graph
 from rag_backend.application.services.carousel.nodes.caption import run_caption
 from rag_backend.application.services.carousel.nodes.content import run_content
-from rag_backend.application.services.carousel.nodes.design import resolve_theme, run_design
+from rag_backend.application.services.carousel.nodes.design import run_design
 from rag_backend.application.services.carousel.nodes.export import (
     render_language,
     run_bilingual_export,
@@ -31,6 +30,7 @@ from rag_backend.application.services.carousel.nodes.linkedin import run_linkedi
 from rag_backend.application.services.carousel.nodes.progress import set_progress
 from rag_backend.application.services.carousel.nodes.research import run_research
 from rag_backend.application.services.carousel.state import PipelineState
+from rag_backend.application.services.carousel.theme_resolver import resolve_theme
 from rag_backend.application.services.carousel.types import (
     SlideData,
     unpack_extras,
@@ -56,15 +56,21 @@ from rag_backend.domain.protocols import (
     LLMService,
     ResearchTool,
 )
+from rag_backend.domain.types import PipelineEvent
 from rag_backend.infrastructure.logging import get_logger
 
 logger = get_logger()
+
+_ERR_PROJECT_NOT_FOUND = "Carousel project {} not found"
+_ERR_NO_CHECKPOINTER = "resume_pipeline requires a checkpointer; none was injected"
+_ERR_NO_OUTPUT_DIR = "Carousel project {} has no output_dir; cannot re-render slides."
+_ERR_NO_SLIDES = "Carousel project {} has no slides."
 
 
 class CarouselAgent(CarouselRefinementMixin):
     """Sub-agent specialized in carousel content generation."""
 
-    def __init__(
+    def __init__(  # noqa: PLR0913 — agent requires all pipeline dependencies
         self,
         repository: CarouselRepository,
         llm_service: LLMService,
@@ -74,7 +80,7 @@ class CarouselAgent(CarouselRefinementMixin):
         linkedin_post_generator: LinkedInPostGenerator | None = None,
         pdf_slide_builder: PdfSlideBuilder | None = None,
         output_base_dir: str = "./output/carousels",
-        checkpointer: BaseCheckpointSaver[Any] | None = None,
+        checkpointer: BaseCheckpointSaver[object] | None = None,
     ) -> None:
         self._repo = repository
         self._llm = llm_service
@@ -122,7 +128,7 @@ class CarouselAgent(CarouselRefinementMixin):
         """
         project = await self._repo.get_project_by_id(project_id)
         if project is None:
-            raise ValueError(f"Carousel project {project_id} not found")
+            raise ValueError(_ERR_PROJECT_NOT_FOUND.format(project_id))
 
         output_dir = self._output_base / str(project_id)
         output_dir.mkdir(parents=True, exist_ok=True)
@@ -159,7 +165,7 @@ class CarouselAgent(CarouselRefinementMixin):
         self,
         project_id: UUID,
         seed_urls: list[str] | None = None,
-    ) -> AsyncIterator[dict[str, Any]]:
+    ) -> AsyncIterator[PipelineEvent]:
         """Run the pipeline and yield progress events as they happen.
 
         Each yielded dict has:
@@ -172,7 +178,7 @@ class CarouselAgent(CarouselRefinementMixin):
         """
         project = await self._repo.get_project_by_id(project_id)
         if project is None:
-            raise ValueError(f"Carousel project {project_id} not found")
+            raise ValueError(_ERR_PROJECT_NOT_FOUND.format(project_id))
 
         output_dir = self._output_base / str(project_id)
         output_dir.mkdir(parents=True, exist_ok=True)
@@ -252,12 +258,10 @@ class CarouselAgent(CarouselRefinementMixin):
         already-completed work so expensive API calls don't re-fire.
         """
         if self._checkpointer is None:
-            raise RuntimeError(
-                "resume_pipeline requires a checkpointer; none was injected"
-            )
+            raise RuntimeError(_ERR_NO_CHECKPOINTER)
         project = await self._repo.get_project_by_id(project_id)
         if project is None:
-            raise ValueError(f"Carousel project {project_id} not found")
+            raise ValueError(_ERR_PROJECT_NOT_FOUND.format(project_id))
 
         output_dir = self._output_base / str(project_id)
         graph = build_graph(self._build_deps(), checkpointer=self._checkpointer)
@@ -335,7 +339,7 @@ class CarouselAgent(CarouselRefinementMixin):
     async def _render_language(
         self,
         project: CarouselProject,
-        slides: list[SlideData],
+        _slides: list[SlideData],
         language: str,
         html_content: str,
         output_dir: Path,
@@ -353,9 +357,7 @@ class CarouselAgent(CarouselRefinementMixin):
         return await run_caption(project, slides, llm=self._llm, template=self._template)
 
     async def _phase8_linkedin(self, project: CarouselProject) -> None:
-        await run_linkedin(
-            project, repo=self._repo, generator=self._linkedin_post_generator
-        )
+        await run_linkedin(project, repo=self._repo, generator=self._linkedin_post_generator)
 
     def _resolve_theme(self, project: CarouselProject) -> dict[str, str]:
         return resolve_theme(project)
@@ -371,14 +373,12 @@ class CarouselAgent(CarouselRefinementMixin):
         """
         project = await self._repo.get_project_by_id(project_id)
         if project is None:
-            raise ValueError(f"Carousel project {project_id} not found")
+            raise ValueError(_ERR_PROJECT_NOT_FOUND.format(project_id))
         if not project.output_dir:
-            raise ValueError(
-                f"Carousel project {project_id} has no output_dir; cannot re-render slides."
-            )
+            raise ValueError(_ERR_NO_OUTPUT_DIR.format(project_id))
         slides = await self._repo.get_slides_by_project(project_id)
         if not slides:
-            raise ValueError(f"Carousel project {project_id} has no slides.")
+            raise ValueError(_ERR_NO_SLIDES.format(project_id))
 
         slides_data = [unpack_extras(s) for s in slides]
         pt_html = self._phase4_design(project, slides_data)

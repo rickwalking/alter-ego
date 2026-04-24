@@ -1,11 +1,11 @@
 """Pinecone vector store implementation with hybrid search."""
 
-from typing import Any
 from uuid import UUID
 
 from pinecone import Pinecone, ServerlessSpec
 
 from rag_backend.domain.models import DocumentChunk, SearchResult
+from rag_backend.domain.types import SparseEmbedding, StatsResponse
 from rag_backend.infrastructure.config.settings import Settings
 
 
@@ -78,9 +78,9 @@ class PineconeVectorStore:
 
     async def hybrid_search(
         self,
-        query: str,
+        _query: str,
         dense_embedding: list[float],
-        sparse_embedding: dict[str, Any],
+        sparse_embedding: SparseEmbedding,
         top_k: int = 5,
         alpha: float = 0.5,
     ) -> list[SearchResult]:
@@ -135,7 +135,7 @@ class PineconeVectorStore:
 
         return search_results
 
-    async def get_stats(self) -> dict[str, Any]:
+    async def get_stats(self) -> StatsResponse:
         """Get vector store statistics."""
         index = await self._get_index()
         stats = index.describe_index_stats()

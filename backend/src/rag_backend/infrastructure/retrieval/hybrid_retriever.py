@@ -1,7 +1,16 @@
 """Hybrid retriever with Reciprocal Rank Fusion (RRF)."""
 
+from dataclasses import dataclass, field
+
 from rag_backend.domain.models import RetrievalQuery, SearchResult
 from rag_backend.domain.protocols import EmbeddingService, VectorStore
+
+
+@dataclass
+class _DocScore:
+    result: SearchResult
+    rrf_score: float = 0.0
+    ranks: list[int] = field(default_factory=list)
 
 
 class HybridRetrieverWithRRF:
@@ -85,27 +94,27 @@ class HybridRetrieverWithRRF:
             return []
 
         # Group results by document_id to handle duplicates
-        doc_scores: dict[str, dict[str, Any]] = {}
+        doc_scores: dict[str, _DocScore] = {}
 
         for rank, result in enumerate(results, start=1):
             doc_id = str(result.document_id)
 
             if doc_id not in doc_scores:
-                doc_scores[doc_id] = {"result": result, "rrf_score": 0.0, "ranks": []}
+                doc_scores[doc_id] = _DocScore(result=result)
 
             # Calculate RRF score for this rank
             rrf_score = 1.0 / (self.RRF_K + rank)
-            doc_scores[doc_id]["rrf_score"] += rrf_score
-            doc_scores[doc_id]["ranks"].append(rank)
+            doc_scores[doc_id].rrf_score += rrf_score
+            doc_scores[doc_id].ranks.append(rank)
 
         # Sort by RRF score (descending)
-        sorted_docs = sorted(doc_scores.items(), key=lambda x: x[1]["rrf_score"], reverse=True)
+        sorted_docs = sorted(doc_scores.items(), key=lambda x: x[1].rrf_score, reverse=True)
 
         # Create final results with RRF scores
         final_results = []
-        for i, (doc_id, data) in enumerate(sorted_docs[:top_k], start=1):
-            result = data["result"]
-            result.score = data["rrf_score"]
+        for i, (_doc_id, data) in enumerate(sorted_docs[:top_k], start=1):
+            result = data.result
+            result.score = data.rrf_score
             result.rank = i
             final_results.append(result)
 

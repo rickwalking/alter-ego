@@ -2,12 +2,14 @@
 
 import html
 import re
-from typing import Any
 
+from rag_backend.application.services.carousel.types import MAX_FEATURE_ITEMS, SlideDict
 from rag_backend.domain.constants import SLIDE_TYPE_CONTENT, SLIDE_TYPE_INTRO
 from rag_backend.domain.models import CarouselProject, DesignTokens
 
-_EM_DASH_RE = re.compile(r"\s*[—–]+\s*")
+FEATURE_GRID_TWO_COLUMNS = 2
+
+_EM_DASH_RE = re.compile(r"\s*[—-]+\s*")
 _BOLD_RE = re.compile(r"\*\*(.+?)\*\*", re.DOTALL)
 _CODE_RE = re.compile(r"`([^`\n]+?)`")
 
@@ -16,7 +18,7 @@ def _render_inline(text: str) -> str:
     """Render inline carousel body text into safe HTML.
 
     - Escapes HTML first so content can't break the template.
-    - Collapses em/en dashes (—, –) into a period + space because those
+    - Collapses em/en dashes (—, -) into a period + space because those
       dashes are a well-known AI-writing tell. The original skill bans
       them outright and the LLM still slips them in, so we strip
       defensively on the render side as a safety net.
@@ -32,7 +34,7 @@ def _render_inline(text: str) -> str:
     return _BOLD_RE.sub(r"<strong>\1</strong>", with_code)
 
 
-def _feature_items(slide: dict[str, Any]) -> list[dict[str, str]] | None:
+def _feature_items(slide: SlideDict) -> list[dict[str, str]] | None:
     """Return the list of feature/checklist items for this slide, if any.
 
     The content LLM may return a `features` array on closing/content slides.
@@ -60,7 +62,7 @@ def _feature_items(slide: dict[str, Any]) -> list[dict[str, str]] | None:
     return items or None
 
 
-def _stat_items(slide: dict[str, Any]) -> list[dict[str, str]] | None:
+def _stat_items(slide: SlideDict) -> list[dict[str, str]] | None:
     """Return stat-card items for this slide, if any.
 
     The content LLM may return a `stats` array on content slides with
@@ -88,7 +90,7 @@ def _stat_items(slide: dict[str, Any]) -> list[dict[str, str]] | None:
     return items or None
 
 
-def _insight_quote(slide: dict[str, Any]) -> dict[str, str] | None:
+def _insight_quote(slide: SlideDict) -> dict[str, str] | None:
     """Return the insight-card payload for this slide, if any.
 
     Shape: `{quote, attribution}`. Renders as an italic quote with a
@@ -124,7 +126,7 @@ def _render_stat_row(items: list[dict[str, str]]) -> str:
 
 def _render_feature_grid(items: list[dict[str, str]], *, columns: int = 1) -> str:
     """Render a 1- or 2-column grid of feature cards."""
-    cls = "feature-grid cols-2" if columns == 2 else "feature-grid"
+    cls = "feature-grid cols-2" if columns == FEATURE_GRID_TWO_COLUMNS else "feature-grid"
     cards = []
     for item in items:
         cards.append(
@@ -196,6 +198,15 @@ class CarouselTemplateBuilder:
     @staticmethod
     def build_content_prompt(project: CarouselProject, research_context: str) -> str:
         """Build prompt for bilingual content synthesis."""
+        from rag_backend.application.services.carousel.theme_resolver import (
+            resolve_theme,
+        )
+
+        theme = resolve_theme(project)
+        primary = theme["primary"]
+        accent = theme["accent"]
+        bg = theme["background"]
+
         language_name = (
             "Brazilian Portuguese (informal but professional)"
             if project.language == "pt-BR"
@@ -208,6 +219,14 @@ class CarouselTemplateBuilder:
             f"Subtitle: {project.subtitle}\n"
             f"Audience: {project.audience}\n\n"
             f"Research context:\n{research_context}\n\n"
+            f"Selected color theme (based on topic analysis):\n"
+            f"  Primary: {primary}\n"
+            f"  Accent: {accent}\n"
+            f"  Background: {bg}\n"
+            f"The visual system uses these colors for headings, stats, code\n"
+            f"pills, borders, and glows. Let this palette influence the mood\n"
+            f"of your image prompts (e.g., warm orange/cyan for Anthropic,\n"
+            f"cool blue/amber for Google, red/cyan for security).\n\n"
             f"Slide structure:\n"
             f"1. Intro: hook + hero image\n"
             f"2-4. Content: deep information with stats/quotes\n"
@@ -270,7 +289,7 @@ class CarouselTemplateBuilder:
             f"- CTA (slide 6): 'body' is 2-3 punchy sentences. No bullets.\n"
             f"\n"
             f"Forbidden characters in ALL text (title, subtitle, headings,\n"
-            f"bodies, features, blog): em dash (—) and en dash (–). These\n"
+            f"bodies, features, blog): em dash (—) and en dash (-). These\n"
             f"are the #1 AI-writing tell. Use periods, commas, colons, or\n"
             f"parentheses instead. This ban applies to both pt-BR and EN.\n"
             f"\n"
@@ -327,9 +346,11 @@ class CarouselTemplateBuilder:
     @staticmethod
     def generate_design_tokens(project: CarouselProject) -> DesignTokens:
         """Generate complete design tokens for a blog post."""
-        from rag_backend.domain.constants import CAROUSEL_THEMES as PALETTES
+        from rag_backend.application.services.carousel.theme_resolver import (
+            resolve_theme,
+        )
 
-        theme = PALETTES.get(project.theme.value, PALETTES["ai_competition"])
+        theme = resolve_theme(project)
         primary = theme["primary"]
         accent = theme["accent"]
         bg = theme["background"]
@@ -396,7 +417,7 @@ class CarouselTemplateBuilder:
     @staticmethod
     def build_carousel_html(
         project: CarouselProject,
-        slides: list[dict[str, Any]],
+        slides: list[SlideDict],
         theme: dict[str, str],
         design_overrides: str | None = None,
     ) -> str:
@@ -607,7 +628,7 @@ class CarouselTemplateBuilder:
 
     @staticmethod
     def _render_intro_slide(
-        slide: dict[str, Any], project: CarouselProject, theme: dict[str, str]
+        slide: SlideDict, project: CarouselProject, theme: dict[str, str]
     ) -> str:
         """Render intro slide HTML."""
         primary = theme["primary"]
@@ -636,7 +657,7 @@ class CarouselTemplateBuilder:
   </div>"""
 
     @staticmethod
-    def _render_content_slide(slide: dict[str, Any], theme: dict[str, str]) -> str:
+    def _render_content_slide(slide: SlideDict, _theme: dict[str, str]) -> str:
         """Render content slide HTML."""
         total_slides = 6
         active_bar = int(slide["number"])
@@ -650,7 +671,7 @@ class CarouselTemplateBuilder:
             heading_esc = _render_inline(str(slide["heading"]))
             image_html = f"""
       <div class="hero-img">
-        <img src="images/slide_{slide['number']}.jpg" alt="{heading_esc}" />
+        <img src="images/slide_{slide["number"]}.jpg" alt="{heading_esc}" />
       </div>"""
 
         body_parts: list[str] = []
@@ -664,7 +685,7 @@ class CarouselTemplateBuilder:
 
         features = _feature_items(slide)
         if features is not None:
-            columns = 2 if len(features) >= 4 and slide["type"] != "closing" else 1
+            columns = 2 if len(features) >= MAX_FEATURE_ITEMS and slide["type"] != "closing" else 1
             body_parts.append(_render_feature_grid(features, columns=columns))
 
         insight = _insight_quote(slide)
@@ -687,7 +708,7 @@ class CarouselTemplateBuilder:
   </div>"""
 
     @staticmethod
-    def _render_cta_slide(slide: dict[str, Any], theme: dict[str, str]) -> str:
+    def _render_cta_slide(slide: SlideDict, _theme: dict[str, str]) -> str:
         """Render CTA slide HTML."""
         heading = _render_inline(str(slide["heading"]))
         body = _render_inline(str(slide["body"]))

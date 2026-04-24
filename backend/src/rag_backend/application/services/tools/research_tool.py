@@ -22,7 +22,7 @@ class PlaywrightResearchTool(ResearchTool):
                 await browser.close()
 
     async def search_web(
-        self, query: str, source_types: list[ResearchSourceType]
+        self, query: str, _source_types: list[ResearchSourceType]
     ) -> list[dict[str, str]]:
         """Search the web via the `ddgs` library (DuckDuckGo + fallbacks).
 

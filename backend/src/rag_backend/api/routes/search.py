@@ -1,5 +1,7 @@
 """Search API routes."""
 
+from typing import Annotated
+
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -25,7 +27,7 @@ router = APIRouter(prefix="/search", tags=["search"])
 )
 async def search_documents(
     request: SearchRequest,
-    db: AsyncSession = Depends(get_session),
+    _db: Annotated[AsyncSession, Depends(get_session)],
 ):
     """Search for relevant documents using hybrid search.
 
@@ -75,8 +77,8 @@ async def search_documents(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Search failed: {str(e)}",
-        )
+            detail=f"Search failed: {e!s}",
+        ) from e
 
 
 @router.get(
@@ -88,12 +90,13 @@ async def search_documents(
     },
 )
 async def search_documents_get(
-    query: str = Query(..., min_length=1, max_length=1000, description="Search query"),
-    top_k: int = Query(5, ge=1, le=20, description="Number of results to return"),
-    alpha: float = Query(
-        0.5, ge=0.0, le=1.0, description="Hybrid search balance (0=BM25, 1=semantic)"
-    ),
-    db: AsyncSession = Depends(get_session),
+    query: Annotated[str, Query(min_length=1, max_length=1000, description="Search query")],
+    top_k: Annotated[int, Query(ge=1, le=20, description="Number of results to return")] = 5,
+    alpha: Annotated[
+        float,
+        Query(ge=0.0, le=1.0, description="Hybrid search balance (0=BM25, 1=semantic)"),
+    ] = 0.5,
+    db: AsyncSession = Depends(get_session),  # noqa: FAST002
 ):
     """Search for relevant documents using GET request.
 
