@@ -2,7 +2,21 @@
 
 > **Scope:** `rag_backend.application.services` — RAGAgent, CarouselAgent, LangGraph pipeline
 > **Last updated:** 2026-04-24
-> **Status:** Research complete — awaiting implementation approval
+> **Status:** ✅ All 5 phases implemented and deployed
+
+---
+
+## Implementation Summary
+
+| Phase | Status | Key Deliverables |
+|-------|--------|------------------|
+| 1. Prompt Externalization | ✅ Complete | `agents/prompts/` with Jinja2 registry, 8 prompts extracted to YAML/Markdown |
+| 2. Tool Registry Refactor | ✅ Complete | `application/tools/` with domain-separated modules (knowledge_base/, carousel/) |
+| 3. Agent Reclassification | ✅ Complete | `agents/rag_agent.py`, `agents/carousel_orchestrator.py`, backward-compat shims |
+| 4. Subgraph Decomposition | ✅ Complete | `carousel/phases/` with 8 phase modules, graph.py is ~80-line orchestrator |
+| 5. Deep Agents Alignment | ✅ Complete | Subagent registration, skill files, `agents/AGENTS.md`, `skills/` expanded |
+
+**Quality gates:** ruff ✅ bandit ✅ vulture ✅ import-linter (4/4) ✅ **Tests:** 252 passed
 
 ---
 
