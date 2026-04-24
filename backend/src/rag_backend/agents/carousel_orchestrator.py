@@ -114,6 +114,23 @@ class CarouselAgent(CarouselRefinementMixin):
             pdf_builder=self._pdf_slide_builder,
         )
 
+    def to_subagent(self, output_base_dir: str = "./output/carousels") -> dict[str, object]:
+        """Return a DeepAgents-compatible ``CompiledSubAgent`` dict.
+
+        Allows the carousel pipeline to be registered as a subagent under
+        a parent RAG agent, so complex carousel requests are delegated
+        via the ``task`` tool instead of cluttering the parent toolset.
+        """
+        from rag_backend.application.services.carousel.subagent import (
+            build_carousel_subagent,
+        )
+
+        return build_carousel_subagent(
+            self._build_deps(),
+            checkpointer=self._checkpointer,
+            output_base_dir=output_base_dir,
+        )
+
     async def execute_pipeline(
         self,
         project_id: UUID,
