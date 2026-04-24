@@ -11,13 +11,14 @@ Orchestrates the 7-phase carousel pipeline:
 """
 
 import asyncio
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Callable
 from datetime import datetime
 from pathlib import Path
 from typing import ClassVar
 from uuid import UUID
 
 from langgraph.checkpoint.base import BaseCheckpointSaver
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from rag_backend.application.services.carousel.graph import CarouselDeps, build_graph
 from rag_backend.application.services.carousel.nodes.caption import run_caption
@@ -90,6 +91,8 @@ class CarouselAgent(CarouselRefinementMixin):
         pdf_slide_builder: PdfSlideBuilder | None = None,
         output_base_dir: str = "./output/carousels",
         checkpointer: BaseCheckpointSaver[object] | None = None,
+        session_maker: async_sessionmaker[AsyncSession] | None = None,
+        repository_factory: Callable[[AsyncSession], CarouselRepository] | None = None,
     ) -> None:
         self._repo = repository
         self._llm = llm_service
@@ -101,6 +104,8 @@ class CarouselAgent(CarouselRefinementMixin):
         self._output_base = Path(output_base_dir)
         self._template = CarouselTemplateBuilder()
         self._checkpointer = checkpointer
+        self._session_maker = session_maker
+        self._repository_factory = repository_factory
 
     @staticmethod
     def _thread_id(project_id: UUID) -> str:
@@ -111,9 +116,9 @@ class CarouselAgent(CarouselRefinementMixin):
         """
         return f"carousel-{project_id}"
 
-    def _build_deps(self) -> CarouselDeps:
+    def _build_deps(self, repo: CarouselRepository | None = None) -> CarouselDeps:
         return CarouselDeps(
-            repo=self._repo,
+            repo=repo or self._repo,
             llm=self._llm,
             research_tool=self._research,
             image_registry=self._image_registry,
@@ -187,14 +192,19 @@ class CarouselAgent(CarouselRefinementMixin):
         final_project: CarouselProject = final_state["project"]
         return final_project
 
-    async def _run_graph_producer(
+    async def _run_graph_body(
         self,
         project_id: UUID,
         seed_urls: list[str] | None,
         queue: asyncio.Queue[PipelineEvent],
+        repo: CarouselRepository,
     ) -> None:
-        """Background task that runs the graph and feeds events into *queue*."""
-        project = await self._repo.get_project_by_id(project_id)
+        """Actual graph execution using the provided *repo*.
+
+        Extracted so ``_run_graph_producer`` can swap in a fresh-session
+        repository for background tasks.
+        """
+        project = await repo.get_project_by_id(project_id)
         if project is None:
             await queue.put(
                 {
@@ -209,7 +219,7 @@ class CarouselAgent(CarouselRefinementMixin):
         output_dir = self._output_base / str(project_id)
         output_dir.mkdir(parents=True, exist_ok=True)
 
-        graph = build_graph(self._build_deps(), checkpointer=self._checkpointer)
+        graph = build_graph(self._build_deps(repo=repo), checkpointer=self._checkpointer)
         initial_state: PipelineState = {
             "project_id": project_id,
             "seed_urls": seed_urls or [],
@@ -253,11 +263,11 @@ class CarouselAgent(CarouselRefinementMixin):
                         }
                     )
         except Exception as exc:
-            latest_project = await self._repo.get_project_by_id(project_id)
+            latest_project = await repo.get_project_by_id(project_id)
             if latest_project is None:
                 latest_project = project
             latest_project.mark_failed(str(exc))
-            await self._repo.update_project(latest_project)
+            await repo.update_project(latest_project)
             await queue.put(
                 {
                     "node": "error",
@@ -268,7 +278,7 @@ class CarouselAgent(CarouselRefinementMixin):
             )
             return
 
-        final_project = await self._repo.get_project_by_id(project_id)
+        final_project = await repo.get_project_by_id(project_id)
         await queue.put(
             {
                 "node": "end",
@@ -276,6 +286,44 @@ class CarouselAgent(CarouselRefinementMixin):
                 "phase_progress": final_project.phase_progress if final_project else None,
             }
         )
+
+    async def _run_graph_producer(
+        self,
+        project_id: UUID,
+        seed_urls: list[str] | None,
+        queue: asyncio.Queue[PipelineEvent],
+    ) -> None:
+        """Background task that runs the graph and feeds events into *queue*.
+
+        When ``session_maker`` was injected (production), a fresh session is
+        created for the background task so the graph survives the HTTP
+        response lifecycle. Tests that don't pass a session_maker fall back
+        to ``self._repo`` (usually a mock).
+        """
+        if self._session_maker is not None and self._repository_factory is not None:
+            async with self._session_maker() as session:
+                repo = self._repository_factory(session)
+                await self._run_graph_body(project_id, seed_urls, queue, repo)
+        else:
+            await self._run_graph_body(project_id, seed_urls, queue, self._repo)
+
+    def start_pipeline(
+        self,
+        project_id: UUID,
+        seed_urls: list[str] | None = None,
+    ) -> None:
+        """Start the graph producer in the background if it is not already running.
+
+        Idempotent: multiple calls for the same project_id are no-ops while
+        the task is alive. Used by the non-blocking ``/resume`` route.
+        """
+        thread_id = self._thread_id(project_id)
+        if thread_id not in self._tasks or self._tasks[thread_id].done():
+            queue: asyncio.Queue[PipelineEvent] = asyncio.Queue(maxsize=100)
+            self._queues[thread_id] = queue
+            self._tasks[thread_id] = asyncio.create_task(
+                self._run_graph_producer(project_id, seed_urls, queue)
+            )
 
     async def stream_pipeline(
         self,
@@ -294,15 +342,8 @@ class CarouselAgent(CarouselRefinementMixin):
             - `phase_progress`: the live per-slide/label payload
         The stream terminates with a final `{"node": "end", ...}` event.
         """
+        self.start_pipeline(project_id, seed_urls)
         thread_id = self._thread_id(project_id)
-
-        if thread_id not in self._tasks or self._tasks[thread_id].done():
-            queue: asyncio.Queue[PipelineEvent] = asyncio.Queue(maxsize=100)
-            self._queues[thread_id] = queue
-            self._tasks[thread_id] = asyncio.create_task(
-                self._run_graph_producer(project_id, seed_urls, queue)
-            )
-
         queue = self._queues[thread_id]
 
         while True:
@@ -330,6 +371,9 @@ class CarouselAgent(CarouselRefinementMixin):
         Used by the `/resume` route after a crash. Idempotent-by-design
         nodes (persist_slides, image_worker, export) short-circuit on
         already-completed work so expensive API calls don't re-fire.
+
+        If no checkpoint exists (e.g. the previous run failed before the
+        first node completed), the pipeline starts from scratch.
         """
         if self._checkpointer is None:
             raise RuntimeError(_ERR_NO_CHECKPOINTER)
@@ -338,18 +382,40 @@ class CarouselAgent(CarouselRefinementMixin):
             raise ValueError(_ERR_PROJECT_NOT_FOUND.format(project_id))
 
         output_dir = self._output_base / str(project_id)
+        output_dir.mkdir(parents=True, exist_ok=True)
+
         graph = build_graph(self._build_deps(), checkpointer=self._checkpointer)
         config = {"configurable": {"thread_id": self._thread_id(project_id)}}
 
+        # Guard against missing checkpoints — a node may have failed before
+        # LangGraph wrote the first checkpoint, or the sqlite file may have
+        # been deleted. Fall back to a fresh run rather than crash on None.
+        has_checkpoint = False
         try:
-            final_state = await graph.ainvoke(None, config=config)  # resume from checkpoint
+            snapshot = await graph.aget_state(config)
+            has_checkpoint = snapshot is not None and bool(snapshot.values)
+        except Exception:
+            has_checkpoint = False
+
+        input_state = (
+            None
+            if has_checkpoint
+            else {
+                "project_id": project_id,
+                "seed_urls": [],
+                "output_dir": str(output_dir),
+                "project": project,
+            }
+        )
+
+        try:
+            final_state = await graph.ainvoke(input_state, config=config)
         except Exception as exc:
             project.mark_failed(str(exc))
             await self._repo.update_project(project)
             raise
 
         final_project: CarouselProject = final_state["project"]
-        _ = output_dir  # output_dir is baked into the checkpointed state
         return final_project
 
     async def _phase1_research(

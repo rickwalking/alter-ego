@@ -373,6 +373,19 @@ class CarouselAgent(Protocol):
         """
         ...
 
+    def start_pipeline(
+        self,
+        project_id: UUID,
+        seed_urls: list[str] | None = None,
+    ) -> None:
+        """Start the graph producer in the background if not already running.
+
+        Idempotent: no-op when a task for the project is already alive.
+        The frontend should poll `/status` or connect to `/stream` after
+        calling this.
+        """
+        ...
+
     async def re_render_slides(self, project_id: UUID) -> CarouselProject:
         """Re-render slide JPGs and PDF after text edits.
 

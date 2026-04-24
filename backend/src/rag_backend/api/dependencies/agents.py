@@ -16,6 +16,7 @@ from rag_backend.infrastructure.container import Container
 from rag_backend.infrastructure.database.carousel_repository import (
     PostgresCarouselRepository,
 )
+from rag_backend.infrastructure.database.config import get_session_maker
 from rag_backend.infrastructure.database.conversation_repository import (
     PostgresMessageRepository,
 )
@@ -37,6 +38,8 @@ def build_rag_agent(db: AsyncSession, container: Container) -> RAGAgent:
         linkedin_post_generator=container.linkedin_post_generator(),
         pdf_slide_builder=container.pdf_slide_builder(),
         output_base_dir=settings.carousel_output_dir,
+        session_maker=get_session_maker(),
+        repository_factory=PostgresCarouselRepository,
     )
     return RAGAgent(
         settings=settings,

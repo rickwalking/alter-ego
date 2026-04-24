@@ -1,7 +1,9 @@
 """Unit tests for CarouselAgent with mocked dependencies."""
 
+import asyncio
+import contextlib
 import json
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
@@ -612,3 +614,124 @@ class TestCarouselAgent:
         )
 
         assert slide.image_prompt is None
+
+    async def test_start_pipeline_creates_background_task(
+        self,
+        mock_repository,
+        mock_llm_service,
+        mock_research_tool,
+        mock_image_service,
+        mock_export_service,
+        sample_project,
+    ):
+        """Given no running task, when start_pipeline is called,
+        then a background asyncio.Task is created."""
+        mock_repository.get_project_by_id = AsyncMock(return_value=sample_project)
+        agent = build_agent(
+            mock_repository,
+            mock_llm_service,
+            mock_research_tool,
+            mock_image_service,
+            mock_export_service,
+        )
+        thread_id = agent._thread_id(sample_project.id)
+
+        # Clear any previous tasks
+        agent._tasks.pop(thread_id, None)
+
+        agent.start_pipeline(sample_project.id, seed_urls=None)
+
+        assert thread_id in agent._tasks
+        task = agent._tasks[thread_id]
+        assert isinstance(task, asyncio.Task)
+        # Clean up
+        task.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await task
+
+    async def test_start_pipeline_is_idempotent(
+        self,
+        mock_repository,
+        mock_llm_service,
+        mock_research_tool,
+        mock_image_service,
+        mock_export_service,
+        sample_project,
+    ):
+        """Given a running task, when start_pipeline is called again,
+        then it is a no-op and the original task is preserved."""
+        mock_repository.get_project_by_id = AsyncMock(return_value=sample_project)
+        agent = build_agent(
+            mock_repository,
+            mock_llm_service,
+            mock_research_tool,
+            mock_image_service,
+            mock_export_service,
+        )
+        thread_id = agent._thread_id(sample_project.id)
+
+        # Clear any previous tasks
+        agent._tasks.pop(thread_id, None)
+
+        agent.start_pipeline(sample_project.id, seed_urls=None)
+        first_task = agent._tasks[thread_id]
+
+        agent.start_pipeline(sample_project.id, seed_urls=None)
+        second_task = agent._tasks[thread_id]
+
+        assert first_task is second_task
+        # Clean up
+        first_task.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await first_task
+
+    async def test_run_graph_producer_uses_session_maker_when_provided(
+        self,
+        mock_repository,
+        mock_llm_service,
+        mock_research_tool,
+        mock_image_service,
+        mock_export_service,
+        sample_project,
+    ):
+        """Given a session_maker, when _run_graph_producer runs,
+        then it creates a fresh session and repository for the background
+        task instead of reusing the request-scoped one."""
+        mock_repository.get_project_by_id = AsyncMock(return_value=sample_project)
+
+        session_maker = MagicMock()
+        session_maker.return_value.__aenter__ = AsyncMock(return_value=mock_repository)
+        session_maker.return_value.__aexit__ = AsyncMock(return_value=False)
+
+        registry = ImageProviderRegistry(
+            gemini_service=mock_image_service,
+            openai_service=mock_image_service,
+        )
+        agent = CarouselAgent(
+            repository=mock_repository,
+            llm_service=mock_llm_service,
+            research_tool=mock_research_tool,
+            image_registry=registry,
+            export_service=mock_export_service,
+            output_base_dir="./tmp/test_carousels",
+            session_maker=session_maker,
+            repository_factory=lambda _session: mock_repository,
+        )
+
+        # Patch _run_graph_body so we don't need to mock the entire graph
+        body_calls: list = []
+
+        async def capture_body(project_id, seed_urls, queue, repo):
+            body_calls.append(repo)
+            await queue.put({"node": "start", "status": "pending", "phase_progress": None})
+            await queue.put({"node": "end", "status": "completed", "phase_progress": None})
+
+        agent._run_graph_body = capture_body
+
+        queue: asyncio.Queue[dict] = asyncio.Queue()
+        await agent._run_graph_producer(sample_project.id, None, queue)
+
+        assert session_maker.called
+        # _run_graph_body should have been called with the repo from the factory
+        assert len(body_calls) == 1
+        assert body_calls[0] is mock_repository

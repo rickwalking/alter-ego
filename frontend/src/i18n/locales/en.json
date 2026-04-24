@@ -168,6 +168,7 @@
       "currentlyProcessing": "Currently processing",
       "stalled": "Still working after {seconds}s — the upstream LLM may be retrying a dropped connection.",
       "phases": {
+        "pending": "Waiting to start...",
         "researching": "Researching topic...",
         "drafting": "Drafting content...",
         "designing": "Applying design tokens...",

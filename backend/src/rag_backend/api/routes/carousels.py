@@ -90,6 +90,8 @@ def get_carousel_agent(
     settings = container.settings()
     # Checkpointer is stashed on app.state by the lifespan context.
     checkpointer = getattr(request.app.state, "carousel_checkpointer", None)
+    from rag_backend.infrastructure.database.config import get_session_maker
+
     return CarouselAgentImpl(
         repository=PostgresCarouselRepository(session),
         llm_service=container.llm_service(),
@@ -100,6 +102,8 @@ def get_carousel_agent(
         pdf_slide_builder=container.pdf_slide_builder(),
         output_base_dir=settings.carousel_output_dir,
         checkpointer=checkpointer,
+        session_maker=get_session_maker(),
+        repository_factory=PostgresCarouselRepository,
     )
 
 
@@ -197,21 +201,28 @@ async def stream_carousel(
 async def resume_carousel(
     project_id: UUID,
     agent: Annotated[CarouselAgent, Depends(get_carousel_agent)],
+    repo: Annotated[CarouselRepository, Depends(get_carousel_repo)],
 ) -> CarouselStatusResponse:
     """Resume an interrupted pipeline from its last checkpoint.
 
+    Returns immediately with the current project status; the pipeline
+    continues in the background. Poll `/status` or connect to `/stream`
+    to monitor progress.
+
     Returns 503 when no checkpointer is configured (empty settings path,
-    tests, or containerized envs without a writable volume). The
-    idempotency hooks inside each node make expensive work (image API
-    calls, slide rows) skip if already complete.
+    tests, or containerized envs without a writable volume).
     """
     try:
-        project = await agent.resume_pipeline(project_id)
+        agent.start_pipeline(project_id, seed_urls=None)
     except RuntimeError as exc:
         raise HTTPException(
             status_code=503,
             detail=f"Resume unavailable: {exc}",
         ) from exc
+
+    project = await repo.get_project_by_id(project_id)
+    if project is None:
+        raise HTTPException(status_code=404, detail="Carousel project not found")
     return CarouselStatusResponse.model_validate(project)
 
 

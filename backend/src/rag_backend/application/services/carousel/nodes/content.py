@@ -30,6 +30,7 @@ logger = get_logger()
 _ERR_CONTENT_NON_JSON = "Content synthesis returned non-JSON output; cannot continue."
 _ERR_CONTENT_INVALID_SLIDES = "Content synthesis returned slides with missing fields."
 _ERR_CONTENT_ZERO_SLIDES = "Content synthesis returned zero slides."
+_ERR_JSON_NOT_FOUND = "No valid JSON object found"
 
 _JSON_FENCE_RE = re.compile(r"```(?:json)?\s*(.*?)\s*```", re.DOTALL)
 
@@ -37,20 +38,127 @@ TITLE_TEMPERATURE = 0.8
 CONTENT_TEMPERATURE = 0.7
 
 
+def _strip_trailing_commas(text: str) -> str:
+    """Remove trailing commas before } or ] — a common LLM JSON mistake."""
+    # Remove commas followed immediately by } or ]
+    return re.sub(r",(\s*[}\]])", r"\1", text)
+
+
+def _find_json_object(text: str) -> str | None:
+    """Use brace counting to find the outermost JSON object in *text*."""
+    depth = 0
+    start = None
+    for i, ch in enumerate(text):
+        if ch == "{":
+            if depth == 0:
+                start = i
+            depth += 1
+        elif ch == "}":
+            depth -= 1
+            if depth == 0 and start is not None:
+                return text[start : i + 1]
+    return None
+
+
 def extract_json(raw: str) -> object:
-    """Parse JSON from an LLM response, tolerating markdown code fences
-    and leading/trailing prose. Raises json.JSONDecodeError on failure.
+    """Parse JSON from an LLM response, tolerating markdown code fences,
+    leading/trailing prose, trailing commas, and multiple code blocks.
+
+    Raises json.JSONDecodeError only when every strategy fails.
     """
     candidate = raw.strip()
-    fence_match = _JSON_FENCE_RE.search(candidate)
-    if fence_match:
-        candidate = fence_match.group(1).strip()
-    else:
-        first = candidate.find("{")
-        last = candidate.rfind("}")
-        if first != -1 and last != -1 and last > first:
-            candidate = candidate[first : last + 1]
-    return json.loads(candidate)
+
+    # Strategy 1: raw string is valid JSON
+    try:
+        return json.loads(candidate)
+    except json.JSONDecodeError:
+        pass
+
+    # Strategy 2: try each markdown code block (non-greedy match may
+    # catch the first block; we iterate all of them).
+    for match in _JSON_FENCE_RE.finditer(candidate):
+        block = match.group(1).strip()
+        try:
+            return json.loads(block)
+        except json.JSONDecodeError:
+            pass
+
+    # Strategy 3: brace-counting to find the outermost {…} object
+    obj_text = _find_json_object(candidate)
+    if obj_text:
+        try:
+            return json.loads(obj_text)
+        except json.JSONDecodeError:
+            pass
+        # Strategy 3b: same object with trailing commas stripped
+        cleaned = _strip_trailing_commas(obj_text)
+        try:
+            return json.loads(cleaned)
+        except json.JSONDecodeError:
+            pass
+
+    # Strategy 4: naive first-{ to last-} with trailing-comma cleanup
+    first = candidate.find("{")
+    last = candidate.rfind("}")
+    if first != -1 and last != -1 and last > first:
+        snippet = _strip_trailing_commas(candidate[first : last + 1])
+        try:
+            return json.loads(snippet)
+        except json.JSONDecodeError:
+            pass
+
+    raise json.JSONDecodeError(_ERR_JSON_NOT_FOUND, raw, 0)
+
+
+_JSON_REPAIR_PROMPT = (
+    "Your previous response contained invalid JSON. "
+    "Please return ONLY the corrected JSON object, with no additional text, "
+    "no markdown fences, and no explanations."
+)
+
+
+async def _extract_json_with_repair(
+    raw: str,
+    *,
+    llm: LLMService,
+    project_id: str,
+) -> dict[str, object]:
+    """Parse JSON from an LLM response, with one LLM retry on failure.
+
+    First tries the robust ``extract_json`` heuristics. If those fail,
+    sends the raw response back to the LLM with a repair prompt and
+    tries again. This handles cases where the LLM returns malformed
+    JSON, comments, or explanatory text mixed with the payload.
+    """
+    try:
+        return cast(dict[str, object], extract_json(raw))
+    except json.JSONDecodeError as exc:
+        logger.warning(
+            "carousel_content_json_parse_failed_attempt_1",
+            project_id=project_id,
+            error=str(exc),
+            raw_response=raw[:2000],
+        )
+
+    repair_response = await llm.generate(
+        messages=[
+            {"role": "user", "content": raw},
+            {"role": "assistant", "content": _JSON_REPAIR_PROMPT},
+        ],
+        temperature=0.2,
+    )
+
+    try:
+        return cast(dict[str, object], extract_json(repair_response))
+    except json.JSONDecodeError as exc:
+        logger.exception(
+            "carousel_content_json_parse_failed_attempt_2",
+            project_id=project_id,
+            error=str(exc),
+            raw_response=raw[:2000],
+            repair_response=repair_response[:2000],
+        )
+        raise
 
 
 async def _optimize_title(
@@ -167,14 +275,12 @@ async def run_content(
     )
 
     try:
-        content_data = cast(dict[str, object], extract_json(content_response))
-    except (json.JSONDecodeError, TypeError) as exc:
-        logger.exception(
-            "carousel_content_json_parse_failed",
+        content_data = await _extract_json_with_repair(
+            content_response,
+            llm=llm,
             project_id=str(project.id),
-            error=str(exc),
-            raw_response=content_response[:4000],
         )
+    except (json.JSONDecodeError, TypeError) as exc:
         raise ValueError(_ERR_CONTENT_NON_JSON) from exc
 
     try:

@@ -1,6 +1,6 @@
 """Integration tests for carousel API endpoints."""
 
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -390,3 +390,35 @@ class TestCarouselEndpoints:
 
         response = await client.get(f"/api/carousels/{carousel_id}/download")
         assert response.status_code == 404
+
+    @pytest.mark.asyncio
+    async def test_resume_carousel_non_blocking(self, client, mock_carousel_agent):
+        """Given carousel exists, when POST resume, then returns immediately.
+
+        Mutation guard: the /resume route must not block waiting for the
+        graph to complete. It should start a background task and return the
+        current status within a few milliseconds.
+        """
+        payload = {
+            "topic": "Resume Test",
+            "audience": "Everyone",
+            "niche": "Tech",
+        }
+        create_response = await client.post("/api/carousels", json=payload)
+        carousel_id = create_response.json()["id"]
+
+        mock_carousel_agent.start_pipeline = MagicMock()
+
+        with patch("rag_backend.infrastructure.container.get_container") as mock_container:
+            from rag_backend.infrastructure.container import Container
+
+            test_container = Container()
+            test_container.carousel_agent.override(mock_carousel_agent)
+            mock_container.return_value = test_container
+
+            response = await client.post(f"/api/carousels/{carousel_id}/resume")
+            assert response.status_code == 200
+            data = response.json()
+            assert data["id"] == carousel_id
+            # start_pipeline should have been called, not execute_pipeline
+            assert mock_carousel_agent.start_pipeline.called
