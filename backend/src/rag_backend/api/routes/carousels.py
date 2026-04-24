@@ -12,6 +12,7 @@ from fastapi.params import Path as FastPath
 from fastapi.responses import FileResponse, StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from rag_backend.agents.carousel_orchestrator import CarouselAgent as CarouselAgentImpl
 from rag_backend.api.schemas import (
     CarouselBlogI18nResponse,
     CarouselBlogResponse,
@@ -30,7 +31,6 @@ from rag_backend.api.schemas import (
     InstagramPublishRequest,
     InstagramPublishResponse,
 )
-from rag_backend.application.services.carousel_agent import CarouselAgent as CarouselAgentImpl
 from rag_backend.domain.models import CarouselProject, CarouselStatus
 from rag_backend.domain.protocols import CarouselAgent, CarouselRepository, SocialPublisher
 from rag_backend.infrastructure.database.carousel_repository import (

@@ -1,11 +1,8 @@
-"""RAG agent carousel tool definitions.
+"""Carousel generation and refinement tools."""
 
-DEPRECATED: Tools have been moved to `rag_backend.application.tools`.
-This module re-exports the factories for backward compatibility.
-
-Use `rag_backend.application.tools` for new code.
-"""
-
+from rag_backend.application.tools.carousel.generate_carousel import (
+    build_generate_carousel_tool,
+)
 from rag_backend.application.tools.carousel.refine_copy import (
     build_refine_carousel_copy_tool,
 )
@@ -17,6 +14,7 @@ from rag_backend.application.tools.carousel.regenerate_image import (
 )
 
 __all__ = [
+    "build_generate_carousel_tool",
     "build_refine_carousel_copy_tool",
     "build_refine_carousel_design_tool",
     "build_regenerate_slide_image_tool",

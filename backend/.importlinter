@@ -22,11 +22,12 @@ source_modules =
 forbidden_modules =
     rag_backend.infrastructure
     rag_backend.api
-# Logging is a cross-cutting concern; the application layer uses the
-# infrastructure logger via a thin wrapper. This is an accepted exception
-# in Clean Architecture for observability concerns.
+# Logging is a cross-cutting concern; the application layer and agent
+# orchestrators use the infrastructure logger via a thin wrapper. This
+# is an accepted exception in Clean Architecture for observability.
 ignore_imports =
     rag_backend.application.** -> rag_backend.infrastructure.logging
+    rag_backend.agents.** -> rag_backend.infrastructure.logging
 
 # Contract 3: Infrastructure must not import API
 [importlinter:contract:infrastructure-independence]

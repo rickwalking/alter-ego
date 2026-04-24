@@ -6,7 +6,8 @@ All dependencies are configured here and injected into the application layer.
 
 from dependency_injector import containers, providers
 
-from rag_backend.application.services.carousel_agent import CarouselAgent
+from rag_backend.agents.carousel_orchestrator import CarouselAgent
+from rag_backend.agents.rag_agent import RAGAgent
 from rag_backend.application.services.conversation_service import ConversationService
 from rag_backend.application.services.document_pipeline import (
     DocumentProcessingPipeline,
@@ -18,7 +19,6 @@ from rag_backend.application.services.linkedin_post_generator import (
     LinkedInPostGenerator,
 )
 from rag_backend.application.services.pdf_slide_builder import PdfSlideBuilder
-from rag_backend.application.services.rag_agent import RAGAgent
 from rag_backend.application.services.tools.export_tool import CarouselExportTool
 from rag_backend.application.services.tools.image_tool import ImageGenerationTool
 from rag_backend.application.services.tools.research_tool import PlaywrightResearchTool

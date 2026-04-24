@@ -10,8 +10,8 @@ retriever, external services) from the container.
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from rag_backend.application.services.carousel_agent import CarouselAgent
-from rag_backend.application.services.rag_agent import RAGAgent
+from rag_backend.agents.carousel_orchestrator import CarouselAgent
+from rag_backend.agents.rag_agent import RAGAgent
 from rag_backend.infrastructure.container import Container
 from rag_backend.infrastructure.database.carousel_repository import (
     PostgresCarouselRepository,
