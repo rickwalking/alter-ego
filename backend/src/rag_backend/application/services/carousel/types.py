@@ -9,6 +9,7 @@ no repository or LLM dependencies.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import TypedDict
 
 from rag_backend.domain.models import CarouselSlide
 
@@ -34,6 +35,19 @@ IMAGE_PRESET_DISPLAY: dict[tuple[str, str], str] = {
     ("openai", "hyperreal"): "OpenAI Hyperreal Graphic Novel",
     ("openai", "neo_anime"): "OpenAI Neo-Anime",
 }
+
+
+class SlideDict(TypedDict, total=False):
+    """Dictionary shape passed to template renderers."""
+
+    number: int | str
+    type: str
+    heading: str
+    body: str
+    features: list[dict[str, str]] | None
+    stats: list[dict[str, str]] | None
+    insight: dict[str, str] | None
+    image_prompt: str | None
 
 
 @dataclass
@@ -135,9 +149,7 @@ def unpack_extras(slide: CarouselSlide) -> SlideData:
     )
 
 
-def slides_data_for_language(
-    slides: list[SlideData], language: str
-) -> list[SlideData]:
+def slides_data_for_language(slides: list[SlideData], language: str) -> list[SlideData]:
     """Return a copy of slides with text overridden to the target language.
 
     For 'pt' we return the originals untouched. For 'en' we swap heading,

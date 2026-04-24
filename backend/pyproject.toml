@@ -59,6 +59,11 @@ dev = [
     "pytest-cov>=7.1.0",
     "pytest-pythonpath>=0.7.3",
     "ruff>=0.15.11",
+    "vulture>=2.14.0",
+    "diff-cover>=9.2.0",
+    "interrogate>=1.7.0",
+    "import-linter>=2.2",
+    "bandit[toml]>=1.7.10",
 ]
 
 [tool.pytest.ini_options]
@@ -79,10 +84,104 @@ warn_unused_ignores = true
 warn_no_return = true
 warn_unreachable = true
 strict_equality = true
+# Strict: ban Any usage completely
+disallow_any_explicit = true
+# disallow_any_expr = true  # disabled: too aggressive with untyped third-party libs
+disallow_any_generics = true
+# disallow_any_decorated = true  # disabled: untyped library decorators trigger constantly
+show_error_codes = true
+
+[[tool.mypy.overrides]]
+module = [
+    "rag_backend.api.schemas",
+    "rag_backend.api.routes.auth",
+    "rag_backend.infrastructure.config.settings",
+]
+disable_error_code = ["explicit-any"]
 
 [tool.ruff]
 target-version = "py311"
 line-length = 100
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "N", "W", "UP", "B", "SIM"]
+select = [
+    "E", "F", "I", "N", "W", "UP", "B", "SIM",
+    # Security & bug prevention (Tier 1)
+    "S",       # flake8-bandit — hardcoded passwords, unsafe eval, missing timeouts
+    "BLE",     # blind except — prevents bare `except Exception:`
+    # Control flow & simplification (Tier 1)
+    "RET",     # return consistency — early returns, no implicit None after return
+    "RSE",     # raise consistency — correct raise usage
+    "C4",      # comprehensions — efficient list/dict/set patterns
+    "SIM",     # simplification — already enabled, kept for clarity
+    # API quality (Tier 1)
+    "FBT",     # boolean trap — no boolean positional args
+    "A",       # builtins shadow — don't shadow `id`, `type`, `list`, etc.
+    "ERA",     # eradicate — commented-out code
+    "ARG",     # unused arguments
+    "FAST",    # FastAPI-specific — Annotated deps, unused path params
+    # Complexity (Tier 2)
+    "PLR",     # pylint refactor — branches, statements, args, locals
+    "C90",     # mccabe complexity
+    "TRY",     # tryceratops — better exception handling patterns
+    # Ruff-specific
+    "RUF",     # RUF100 catches unused noqa comments
+]
+ignore = [
+    # Test-specific rules handled via per-file-ignores
+    # FastAPI dependency injection pattern triggers B008
+    "B008",    # Do not perform function call in argument defaults (FastAPI Depends)
+    # Health-check endpoints legitimately catch broad exceptions from external services
+    "BLE001",  # Do not catch blind exception: `Exception`
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*" = [
+    "S101",   # assert_used — idiomatic in tests
+    "ANN",    # missing-type annotations — test fixtures are often untyped
+    "PLR2004", # magic-value-in-comparison — HTTP status codes in asserts
+    "ARG001", # unused-function-argument — mock callbacks/fixtures
+    "ARG002", # unused-method-argument — test helpers
+    "S108",   # hardcoded-temp-directory — test tmp paths
+    "S106",   # hardcoded-password — test tokens/credentials
+    "N806",   # non-lowercase-variable — test factory variables
+    "F841",   # unused-variable — test setup variables
+    "RUF059", # unused-unpacked-variable — mock tuple unpacking
+    "TRY003", # raise-vanilla-args — test helper exceptions
+    "PLR0913", # too-many-arguments — test methods with many fixtures
+]
+"**/__init__.py" = ["F401"]  # Re-exports are OK
+
+[tool.ruff.lint.mccabe]
+max-complexity = 12
+
+[tool.ruff.lint.pylint]
+max-branches = 12
+max-statements = 50
+max-args = 6
+max-returns = 6
+max-locals = 15
+max-nested-blocks = 5
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.bandit]
+exclude_dirs = ["tests"]
+skips = ["B101"]  # assert_used — we use assert in tests, excluded via exclude_dirs anyway
+
+[tool.interrogate]
+fail-under = 80
+exclude = ["tests", "build", "docs"]
+ignore-init-method = true
+ignore-init-module = true
+ignore-magic = true
+ignore-semiprivate = true
+ignore-private = true
+ignore-property-decorators = true
+ignore-nested-functions = true
+ignore-nested-classes = true
+ignore-setters = true
+verbose = 0
+quiet = false
+color = true
