@@ -1,0 +1,26 @@
+---
+name: carousel_title
+version: "1.0.0"
+description: "Optimize carousel title/subtitle based on research context"
+
+template: |
+  Optimize this carousel title for maximum scroll-stop power.
+
+  Topic: {{ topic }}
+  Audience: {{ audience }}
+  Niche: {{ niche }}
+
+  Research context:
+  {{ research_context }}
+
+  Return ONLY a JSON object with keys: title, subtitle
+  Title should be max 60 chars, provocative and specific.
+
+model:
+  temperature: 0.7
+  max_tokens: 512
+
+metadata:
+  author: "content-team"
+  created_at: "2024-01-15"
+  tags: ["carousel", "title", "optimization"]

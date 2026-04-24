@@ -44,7 +44,7 @@ const MOCK_DOCUMENT = {
 
 function createQueryClient() {
   return new QueryClient({
-    defaultOptions: { queries: { retry: false, gcTime: 0 } },
+    defaultOptions: { queries: { retry: false, gcTime: Infinity } },
   });
 }
 
@@ -113,6 +113,13 @@ describe("useCreateDocument", () => {
   it("posts document content and invalidates documents", async () => {
     mockApiCall.mockResolvedValueOnce(MOCK_DOCUMENT);
     const queryClient = createQueryClient();
+    queryClient.setQueryData(["documents"], [
+      {
+        ...MOCK_DOCUMENT,
+        id: "doc-old",
+        title: "Old document",
+      },
+    ]);
     const invalidateQueries = vi.spyOn(queryClient, "invalidateQueries");
     const { result } = renderHook(() => useCreateDocument(), {
       wrapper: createWrapper(queryClient),
@@ -140,6 +147,17 @@ describe("useCreateDocument", () => {
     expect(invalidateQueries).toHaveBeenCalledWith({
       queryKey: ["documents"],
     });
+    expect(queryClient.getQueryData(["document", "doc-1"])).toEqual(
+      MOCK_DOCUMENT,
+    );
+    expect(queryClient.getQueryData(["documents"])).toEqual([
+      MOCK_DOCUMENT,
+      {
+        ...MOCK_DOCUMENT,
+        id: "doc-old",
+        title: "Old document",
+      },
+    ]);
   });
 });
 
@@ -148,7 +166,17 @@ describe("useDeleteDocument", () => {
   it("calls the DELETE endpoint for the given id", async () => {
     mockDelete.mockResolvedValueOnce(undefined);
     const queryClient = createQueryClient();
+    queryClient.setQueryData(["documents"], [
+      MOCK_DOCUMENT,
+      {
+        ...MOCK_DOCUMENT,
+        id: "doc-keep",
+        title: "Keep document",
+      },
+    ]);
+    queryClient.setQueryData(["document", "doc-1"], MOCK_DOCUMENT);
     const invalidateQueries = vi.spyOn(queryClient, "invalidateQueries");
+    const removeQueries = vi.spyOn(queryClient, "removeQueries");
     const { result } = renderHook(() => useDeleteDocument(), {
       wrapper: createWrapper(queryClient),
     });
@@ -163,6 +191,16 @@ describe("useDeleteDocument", () => {
     expect(invalidateQueries).toHaveBeenCalledWith({
       queryKey: ["documents"],
     });
+    expect(removeQueries).toHaveBeenCalledWith({
+      queryKey: ["document", "doc-1"],
+    });
+    expect(queryClient.getQueryData(["documents"])).toEqual([
+      {
+        ...MOCK_DOCUMENT,
+        id: "doc-keep",
+        title: "Keep document",
+      },
+    ]);
   });
 
   // Scenario: Given a server error, the mutation surfaces an ApiError.
@@ -182,8 +220,21 @@ describe("useDeleteDocument", () => {
 
 describe("useReprocessDocument", () => {
   it("posts to the reprocess endpoint and invalidates documents", async () => {
-    mockApiCall.mockResolvedValueOnce(MOCK_DOCUMENT);
+    const reprocessedDocument = {
+      ...MOCK_DOCUMENT,
+      status: "processing",
+      updated_at: "2026-04-21T00:00:00Z",
+    };
+    mockApiCall.mockResolvedValueOnce(reprocessedDocument);
     const queryClient = createQueryClient();
+    queryClient.setQueryData(["documents"], [
+      MOCK_DOCUMENT,
+      {
+        ...MOCK_DOCUMENT,
+        id: "doc-other",
+        title: "Other document",
+      },
+    ]);
     const invalidateQueries = vi.spyOn(queryClient, "invalidateQueries");
     const { result } = renderHook(() => useReprocessDocument(), {
       wrapper: createWrapper(queryClient),
@@ -200,5 +251,16 @@ describe("useReprocessDocument", () => {
     expect(invalidateQueries).toHaveBeenCalledWith({
       queryKey: ["documents"],
     });
+    expect(queryClient.getQueryData(["document", "doc-1"])).toEqual(
+      reprocessedDocument,
+    );
+    expect(queryClient.getQueryData(["documents"])).toEqual([
+      reprocessedDocument,
+      {
+        ...MOCK_DOCUMENT,
+        id: "doc-other",
+        title: "Other document",
+      },
+    ]);
   });
 });

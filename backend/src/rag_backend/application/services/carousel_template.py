@@ -185,163 +185,53 @@ class CarouselTemplateBuilder:
     @staticmethod
     def build_title_prompt(project: CarouselProject, research_context: str) -> str:
         """Build prompt for title optimization."""
-        return (
-            f"Optimize this carousel title for maximum scroll-stop power.\n\n"
-            f"Topic: {project.topic}\n"
-            f"Audience: {project.audience}\n"
-            f"Niche: {project.niche}\n\n"
-            f"Research context:\n{research_context}\n\n"
-            f"Return ONLY a JSON object with keys: title, subtitle\n"
-            f"Title should be max 60 chars, provocative and specific.\n"
+        from rag_backend.agents.prompts.registry import render_prompt
+
+        prompt_text, _ = render_prompt(
+            "carousel",
+            "title_prompt",
+            variables={
+                "topic": project.topic,
+                "audience": project.audience,
+                "niche": project.niche,
+                "research_context": research_context,
+            },
+            version="v1",
         )
+        return prompt_text
 
     @staticmethod
     def build_content_prompt(project: CarouselProject, research_context: str) -> str:
         """Build prompt for bilingual content synthesis."""
+        from rag_backend.agents.prompts.registry import render_prompt
         from rag_backend.application.services.carousel.theme_resolver import (
             resolve_theme,
         )
 
         theme = resolve_theme(project)
-        primary = theme["primary"]
-        accent = theme["accent"]
-        bg = theme["background"]
-
         language_name = (
             "Brazilian Portuguese (informal but professional)"
             if project.language == "pt-BR"
             else "English (professional, direct)"
         )
-        return (
-            f"Create a 6-slide Instagram carousel and a blog post in TWO languages.\n\n"
-            f"Topic: {project.topic}\n"
-            f"Title: {project.title}\n"
-            f"Subtitle: {project.subtitle}\n"
-            f"Audience: {project.audience}\n\n"
-            f"Research context:\n{research_context}\n\n"
-            f"Selected color theme (based on topic analysis):\n"
-            f"  Primary: {primary}\n"
-            f"  Accent: {accent}\n"
-            f"  Background: {bg}\n"
-            f"The visual system uses these colors for headings, stats, code\n"
-            f"pills, borders, and glows. Let this palette influence the mood\n"
-            f"of your image prompts (e.g., warm orange/cyan for Anthropic,\n"
-            f"cool blue/amber for Google, red/cyan for security).\n\n"
-            f"Slide structure:\n"
-            f"1. Intro: hook + hero image\n"
-            f"2-4. Content: deep information with stats/quotes\n"
-            f"5. Closing: actionable takeaways AS A CHECKLIST\n"
-            f"6. CTA: save + share\n\n"
-            f"Return ONLY a JSON object with keys:\n"
-            f"- slides: array of pt-BR slides\n"
-            f"    {{number, type, heading, body, image_prompt,\n"
-            f"     features?, stats?, insight?}}\n"
-            f"- slides_en: array of EN slides MIRRORING `slides` exactly.\n"
-            f"    Same `number` ordering, same `type` per slide. Translate\n"
-            f"    `heading`, `body`, and any `features`/`stats`/`insight`\n"
-            f"    text fields (title, body, label, detail, quote,\n"
-            f"    attribution). Icons + stat numbers stay identical.\n"
-            f"    `image_prompt` is omitted — the image is shared.\n"
-            f"- blog_pt: full blog post in pt-BR markdown\n"
-            f"- blog_en: full blog post in English markdown\n"
-            f"- title_pt, title_en, subtitle_pt, subtitle_en\n\n"
-            f"Per-slide body format:\n"
-            f"- Intro (slide 1): 'body' is a 2-3 sentence subtitle hook. No\n"
-            f"  bullet points, no markdown, no features array.\n"
-            f"- Content (slides 2-4): 'body' is a dense paragraph (max 4\n"
-            f"  sentences). Use **word** for inline emphasis on key terms,\n"
-            f"  numbers, and tool names. Do NOT invent your own bullet\n"
-            f"  characters; use the structured fields below instead.\n"
-            f"  Optional structured extras (use whichever fit the slide):\n"
-            f"    * `stats`: array of 3 cards {{value, label, detail?}} for\n"
-            f"      benchmark slides, metrics, growth numbers. `value` is\n"
-            f"      the big number ('80.2%', '+185%', '2150'). `label` is\n"
-            f"      the metric name. Optional `detail` is a small baseline\n"
-            f"      comparison like '(era 20.8%)' or '(vs Claude 4.6 53%)'.\n"
-            f"      Pick 3 stats max; any fewer and the grid looks sparse.\n"
-            f"    * `features`: array of 2-4 items {{icon, title, body}} for\n"
-            f"      slides that naturally list things (architecture\n"
-            f"      components, sub-products, pillars). Each item renders\n"
-            f"      as its own boxed card with the emoji icon, the title\n"
-            f"      in white, and the body (backticks + bold allowed).\n"
-            f"    * `insight`: {{quote, attribution}} for a single pullquote\n"
-            f"      from a primary source (tweet, blog post, interview).\n"
-            f"      Renders as an italic card with accent-colored left\n"
-            f"      border. Use at most ONE per slide and only on slides\n"
-            f"      where an external voice strengthens the point.\n"
-            f"      IMPORTANT: the `slides` array is pt-BR. If the original\n"
-            f"      quote is in English, translate the `quote` text into\n"
-            f"      Portuguese for `slides`, and put the original English\n"
-            f"      text in `slides_en`. The `attribution` stays identical.\n"
-            f"  Slides 2-4 should average 1 structured extra each\n"
-            f"  (benchmarks slide → stats; architecture slide → features;\n"
-            f"  reaction slide → insight quote). Do NOT stack all three\n"
-            f"  on the same slide.\n"
-            f"- Closing (slide 5): 'body' is a single intro sentence AND the\n"
-            f"  actionable takeaways MUST be returned as a `features` array of\n"
-            f"  EXACTLY 3 or 4 items (never more — the grid overflows), each\n"
-            f"  {{icon, title, body}}:\n"
-            f"    - icon: ONE emoji relevant to the item (📝 🏗️ ⚙️ 🧪 🗣️ 🚀 🔒 🧠)\n"
-            f"    - title: the action name, 2-5 words\n"
-            f"    - body: 1-2 sentences explaining how/why, with **bold** on\n"
-            f"      the key tool or concept\n"
-            f"  Do NOT cram actions into a single prose paragraph.\n"
-            f"- CTA (slide 6): 'body' is 2-3 punchy sentences. No bullets.\n"
-            f"\n"
-            f"Forbidden characters in ALL text (title, subtitle, headings,\n"
-            f"bodies, features, blog): em dash (—) and en dash (-). These\n"
-            f"are the #1 AI-writing tell. Use periods, commas, colons, or\n"
-            f"parentheses instead. This ban applies to both pt-BR and EN.\n"
-            f"\n"
-            f"Inline emphasis, two flavors:\n"
-            f"- **bold** (double asterisks) for prose emphasis: key\n"
-            f"  phrases, numbers, stats, company/person names. Renders\n"
-            f"  as <strong> (white bold inside body, accent color inside\n"
-            f"  headings).\n"
-            f"- `code` (backticks) for TECHNICAL TOKENS: package names\n"
-            f"  (`axios`, `moonshotai/Kimi-K2.6`), versions (`2.1.88`,\n"
-            f"  `v4.9`), file patterns (`*.map`, `.npmignore`), commands\n"
-            f"  (`npm publish`, `kimi-code`), config keys\n"
-            f"  (`temperature=1.0`, `top_p=0.9`), or env vars\n"
-            f"  (`ANTHROPIC_API_KEY`). Renders as a monospace pill in the\n"
-            f"  primary palette color. Use this instead of **bold** when\n"
-            f"  the term is a literal code/config token.\n"
-            f"- Rule of thumb: if a reader would copy/paste it into a\n"
-            f"  terminal or config file, wrap it in backticks. Otherwise\n"
-            f"  use **bold**.\n"
-            f"\n"
-            f"EVERY slide heading (title) must mark 1-2 key words with **...**\n"
-            f"so the renderer paints them in the palette accent color. Pick\n"
-            f"the word that carries the emotional punch or the specific\n"
-            f"subject. Examples:\n"
-            f"  - 'Código do Claude Code **vazou**. O que descobrimos?'\n"
-            f"  - 'As **features escondidas** que ninguém deveria ver'\n"
-            f"  - 'O **impacto** e a reação da comunidade'\n"
-            f"  - 'O que isso **significa** pra devs'\n"
-            f"Never highlight a whole heading; 1-2 words max. The rest stays\n"
-            f"white so the highlight does its job.\n"
-            f"\n"
-            f"Other rules:\n"
-            f"- pt-BR version: {language_name}, engaging\n"
-            f"- EN version: professional, direct, same depth and structure\n"
-            f"- Each slide must have complete explanatory content\n"
-            f"- Blog post should expand on carousel content\n"
-            f"\n"
-            f"image_prompt rules (CRITICAL — the system wraps it with style\n"
-            f"directives, so describe the SCENE ONLY):\n"
-            f"- 1-2 sentences describing a concrete cyberpunk/sci-fi tech\n"
-            f"  scene. Example: 'two hooded figures at glowing terminals\n"
-            f"  watching a package registry map pulse with red alerts'.\n"
-            f"- DO NOT specify style, colors, lighting, panel layouts, or\n"
-            f"  ratio — those are applied by the system.\n"
-            f"- DO NOT request any text, labels, speech bubbles, signs,\n"
-            f"  or words to appear in the image.\n"
-            f"- DO NOT use metaphorical/cultural settings (dojos, sensei,\n"
-            f"  crossroads, books). Use tech scenes only.\n"
-            f"- Elements to favor: monitors, terminals, code streams,\n"
-            f"  neon cityscapes, robots, circuit boards, holograms,\n"
-            f"  servers, data pipelines.\n"
+
+        prompt_text, _ = render_prompt(
+            "carousel",
+            "content_prompt",
+            variables={
+                "topic": project.topic,
+                "title": project.title,
+                "subtitle": project.subtitle,
+                "audience": project.audience,
+                "research_context": research_context,
+                "primary_color": theme["primary"],
+                "accent_color": theme["accent"],
+                "background_color": theme["background"],
+                "language_name": language_name,
+            },
+            version="v1",
         )
+        return prompt_text
 
     @staticmethod
     def generate_design_tokens(project: CarouselProject) -> DesignTokens:
@@ -400,19 +290,18 @@ class CarouselTemplateBuilder:
         project: CarouselProject, slide_headings: list[tuple[int, str]]
     ) -> str:
         """Build prompt for Instagram caption generation."""
-        slide_summaries = "\n".join(f"Slide {num}: {heading}" for num, heading in slide_headings)
-        return (
-            f"Generate an Instagram caption for this carousel.\n\n"
-            f"Title: {project.title}\n"
-            f"Slides:\n{slide_summaries}\n\n"
-            f"Structure:\n"
-            f"1. Hook (1-2 lines with emoji)\n"
-            f"2. Value promise\n"
-            f"3. Comment question\n"
-            f"4. Double CTA (save + share)\n"
-            f"5. 12-18 hashtags mixing Portuguese and English\n\n"
-            f"Style: Informal Brazilian Portuguese, engaging, use emojis.\n"
+        from rag_backend.agents.prompts.registry import render_prompt
+
+        prompt_text, _ = render_prompt(
+            "carousel",
+            "caption_prompt",
+            variables={
+                "title": project.title,
+                "slide_headings": slide_headings,
+            },
+            version="v1",
         )
+        return prompt_text
 
     @staticmethod
     def build_carousel_html(

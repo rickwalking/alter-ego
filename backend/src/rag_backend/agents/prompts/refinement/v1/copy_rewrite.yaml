@@ -1,0 +1,25 @@
+---
+name: copy_rewrite
+version: "1.0.0"
+description: "Rewrite carousel copy based on user instruction"
+
+template: |
+  You are editing existing social copy. Apply the user's
+  instruction verbatim to the text below. Return ONLY the
+  rewritten text, nothing else.
+
+  Instruction: {{ instruction }}
+
+  Original text:
+  <<<
+  {{ original_text }}
+  >>>
+
+model:
+  temperature: 0.7
+  max_tokens: 1024
+
+metadata:
+  author: "content-team"
+  created_at: "2024-01-15"
+  tags: ["carousel", "refinement", "copy"]

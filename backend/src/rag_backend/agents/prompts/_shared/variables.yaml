@@ -1,0 +1,15 @@
+---
+name: shared-variables
+version: "1.0.0"
+description: "Shared template variables across prompt domains"
+
+variables:
+  brand_name: "Alter-Ego"
+  max_slide_count: 6
+  slide_dimensions:
+    width: 1080
+    height: 1350
+  default_language: "pt-BR"
+  forbidden_chars:
+    - "—"
+    - "–"

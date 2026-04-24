@@ -171,12 +171,16 @@ def build_refine_carousel_copy_tool(
         if original is None:
             return f"Cannot refine {target!r}: field is empty or target selector is unknown."
 
-        rewrite_prompt = (
-            "You are editing existing social copy. Apply the user's "
-            "instruction verbatim to the text below. Return ONLY the "
-            "rewritten text, nothing else.\n\n"
-            f"Instruction: {instruction}\n\n"
-            f"Original text:\n<<<\n{original}\n>>>"
+        from rag_backend.agents.prompts.registry import render_prompt
+
+        rewrite_prompt, _ = render_prompt(
+            "refinement",
+            "copy_rewrite",
+            variables={
+                "instruction": instruction,
+                "original_text": original,
+            },
+            version="v1",
         )
         response = await llm.ainvoke(rewrite_prompt)
         new_text = str(getattr(response, "content", response) or "").strip()

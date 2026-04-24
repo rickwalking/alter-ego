@@ -54,7 +54,7 @@ const MOCK_CREATE_REQUEST = {
 function createQueryClient() {
   return new QueryClient({
     defaultOptions: {
-      queries: { retry: false, gcTime: 0 },
+      queries: { retry: false, gcTime: Infinity },
     },
   });
 }
@@ -112,6 +112,13 @@ describe("useCreateCarousel", () => {
   it("invalidates the carousels query key on success", async () => {
     mockApiCall.mockResolvedValueOnce(MOCK_PROJECT);
     const queryClient = createQueryClient();
+    queryClient.setQueryData(["carousels"], [
+      {
+        ...MOCK_PROJECT,
+        id: "old-project",
+        topic: "Old topic",
+      },
+    ]);
     const invalidateQueries = vi.spyOn(queryClient, "invalidateQueries");
     const { result } = renderHook(() => useCreateCarousel(), {
       wrapper: createWrapper(queryClient),
@@ -123,6 +130,17 @@ describe("useCreateCarousel", () => {
     expect(invalidateQueries).toHaveBeenCalledWith({
       queryKey: ["carousels"],
     });
+    expect(queryClient.getQueryData(["carousel", "abc-123"])).toEqual(
+      MOCK_PROJECT,
+    );
+    expect(queryClient.getQueryData(["carousels"])).toEqual([
+      MOCK_PROJECT,
+      {
+        ...MOCK_PROJECT,
+        id: "old-project",
+        topic: "Old topic",
+      },
+    ]);
   });
 
   // Scenario: useCreateCarousel handles API errors
@@ -319,6 +337,9 @@ describe("useResumeCarousel", () => {
     expect(invalidateQueries).toHaveBeenCalledWith({
       queryKey: ["carousel", "abc-123"],
     });
+    expect(queryClient.getQueryData(["carousel-status", "abc-123"])).toEqual(
+      MOCK_STATUS,
+    );
   });
 
   // Scenario: API error surfaces as mutation error
@@ -396,6 +417,9 @@ describe("useGenerateCarousel", () => {
     expect(invalidateQueries).toHaveBeenCalledWith({
       queryKey: ["carousel", "abc-123"],
     });
+    expect(queryClient.getQueryData(["carousel-status", "abc-123"])).toEqual(
+      MOCK_STATUS,
+    );
   });
 
   // Scenario: useGenerateCarousel surfaces API errors

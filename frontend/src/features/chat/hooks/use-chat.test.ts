@@ -51,7 +51,7 @@ const MOCK_MESSAGE = {
 
 function createQueryClient() {
   return new QueryClient({
-    defaultOptions: { queries: { retry: false, gcTime: 0 } },
+    defaultOptions: { queries: { retry: false, gcTime: Infinity } },
   });
 }
 
@@ -156,6 +156,13 @@ describe("useCreateConversation", () => {
   it("posts title and metadata then invalidates conversations", async () => {
     mockApiCall.mockResolvedValueOnce(MOCK_CONVERSATION);
     const queryClient = createQueryClient();
+    queryClient.setQueryData(["conversations"], [
+      {
+        ...MOCK_CONVERSATION,
+        id: "conv-old",
+        title: "Old conversation",
+      },
+    ]);
     const invalidateQueries = vi.spyOn(queryClient, "invalidateQueries");
     const { result } = renderHook(() => useCreateConversation(), {
       wrapper: createWrapper(queryClient),
@@ -181,6 +188,17 @@ describe("useCreateConversation", () => {
     expect(invalidateQueries).toHaveBeenCalledWith({
       queryKey: ["conversations"],
     });
+    expect(queryClient.getQueryData(["conversation", "conv-1"])).toEqual(
+      MOCK_CONVERSATION,
+    );
+    expect(queryClient.getQueryData(["conversations"])).toEqual([
+      MOCK_CONVERSATION,
+      {
+        ...MOCK_CONVERSATION,
+        id: "conv-old",
+        title: "Old conversation",
+      },
+    ]);
   });
 });
 
@@ -222,7 +240,18 @@ describe("useDeleteConversation", () => {
   it("calls the DELETE endpoint for the given id", async () => {
     mockDelete.mockResolvedValueOnce(undefined);
     const queryClient = createQueryClient();
+    queryClient.setQueryData(["conversations"], [
+      MOCK_CONVERSATION,
+      {
+        ...MOCK_CONVERSATION,
+        id: "conv-2",
+        title: "Keep me",
+      },
+    ]);
+    queryClient.setQueryData(["conversation", "conv-1"], MOCK_CONVERSATION);
+    queryClient.setQueryData([MESSAGES_KEY, "conv-1"], [MOCK_MESSAGE]);
     const invalidateQueries = vi.spyOn(queryClient, "invalidateQueries");
+    const removeQueries = vi.spyOn(queryClient, "removeQueries");
     const { result } = renderHook(() => useDeleteConversation(), {
       wrapper: createWrapper(queryClient),
     });
@@ -237,6 +266,19 @@ describe("useDeleteConversation", () => {
     expect(invalidateQueries).toHaveBeenCalledWith({
       queryKey: ["conversations"],
     });
+    expect(removeQueries).toHaveBeenCalledWith({
+      queryKey: ["conversation", "conv-1"],
+    });
+    expect(removeQueries).toHaveBeenCalledWith({
+      queryKey: [MESSAGES_KEY, "conv-1"],
+    });
+    expect(queryClient.getQueryData(["conversations"])).toEqual([
+      {
+        ...MOCK_CONVERSATION,
+        id: "conv-2",
+        title: "Keep me",
+      },
+    ]);
   });
 
   // Scenario: Given a 404, the mutation surfaces an ApiError.

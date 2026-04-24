@@ -30,7 +30,21 @@ from rag_backend.domain.protocols import (
 from rag_backend.domain.types import ChatEvent
 from rag_backend.infrastructure.config.settings import Settings
 
-SYSTEM_PROMPT = """You are a helpful AI assistant with access to a knowledge base.
+
+def _load_system_prompt() -> str:
+    """Load RAG system prompt from external registry.
+
+    Falls back to inline constant if registry is unavailable.
+    """
+    try:
+        from rag_backend.agents.prompts.registry import get_system_prompt
+
+        return get_system_prompt("rag", version="v1")
+    except Exception:
+        return _FALLBACK_SYSTEM_PROMPT
+
+
+_FALLBACK_SYSTEM_PROMPT = """You are a helpful AI assistant with access to a knowledge base.
 
 When answering questions:
 1. First, search the knowledge base using the search_documents tool
@@ -54,8 +68,8 @@ not regenerate the whole carousel for minor edits; refine_carousel_copy is
 the correct tool.
 
 When a user asks to change, update, or regenerate an image on a carousel slide,
-call regenerate_slide_image with the slide number and a natural-language
-instruction describing the desired change. This tool rewrites the image prompt,
+call regenerate_slide_image with the slide number and a natural-language instruction
+describing the desired change. This tool rewrites the image prompt,
 generates a new image, and re-exports the slides automatically.
 
 When a user asks to change the layout, sizing, spacing, fonts, or any visual
@@ -95,7 +109,7 @@ class RAGAgent:
         self._agent = create_deep_agent(
             model=self._llm,
             tools=self._build_tools(),
-            system_prompt=SYSTEM_PROMPT,
+            system_prompt=_load_system_prompt(),
         )
 
     def _build_tools(self) -> list[BaseTool]:

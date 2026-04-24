@@ -54,6 +54,54 @@ DESIGN_PROMPT_TEMPLATE = (
 )
 
 
+def _render_image_rewrite_prompt(instruction: str, current_prompt: str) -> str:
+    """Render image prompt rewrite via external registry.
+
+    Falls back to inline template if registry is unavailable.
+    """
+    try:
+        from rag_backend.agents.prompts.registry import render_prompt
+
+        prompt_text, _ = render_prompt(
+            "refinement",
+            "image_rewrite",
+            variables={
+                "instruction": instruction,
+                "current_prompt": current_prompt,
+            },
+            version="v1",
+        )
+    except Exception:
+        return IMAGE_PROMPT_REWRITE_TEMPLATE.format(
+            instruction=instruction, current_prompt=current_prompt
+        )
+    else:
+        return prompt_text
+
+
+def _render_design_prompt(instruction: str, current_css: str) -> str:
+    """Render design CSS prompt via external registry.
+
+    Falls back to inline template if registry is unavailable.
+    """
+    try:
+        from rag_backend.agents.prompts.registry import render_prompt
+
+        prompt_text, _ = render_prompt(
+            "refinement",
+            "design_css",
+            variables={
+                "instruction": instruction,
+                "current_css": current_css,
+            },
+            version="v1",
+        )
+    except Exception:
+        return DESIGN_PROMPT_TEMPLATE.format(instruction=instruction, current_css=current_css)
+    else:
+        return prompt_text
+
+
 class CarouselRefinementMixin:
     """Mixin providing carousel refinement operations.
 
@@ -93,9 +141,7 @@ class CarouselRefinementMixin:
         if not current_prompt:
             raise ValueError(_ERR_NO_IMAGE_PROMPT.format(slide_number))
 
-        rewrite_prompt = IMAGE_PROMPT_REWRITE_TEMPLATE.format(
-            instruction=instruction, current_prompt=current_prompt
-        )
+        rewrite_prompt = _render_image_rewrite_prompt(instruction, current_prompt)
         new_prompt = await self._llm.generate(
             [{"role": "user", "content": rewrite_prompt}],
             temperature=0.7,
@@ -172,10 +218,7 @@ class CarouselRefinementMixin:
             else ""
         )
 
-        design_prompt = DESIGN_PROMPT_TEMPLATE.format(
-            instruction=instruction,
-            current_css=current_css[:2000],
-        )
+        design_prompt = _render_design_prompt(instruction, current_css[:2000])
         override_css = await self._llm.generate(
             [{"role": "user", "content": design_prompt}],
             temperature=0.3,
