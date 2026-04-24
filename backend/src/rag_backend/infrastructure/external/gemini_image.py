@@ -1,5 +1,6 @@
 """Google Gemini image generation service."""
 
+import asyncio
 import time
 from pathlib import Path
 
@@ -17,14 +18,17 @@ class GeminiImageService(ImageGenerationService):
     def __init__(self, api_key: str) -> None:
         self._client = genai.Client(api_key=api_key)
 
-    async def generate_image(
+    def _generate_image_blocking(
         self,
         prompt: str,
         output_path: str,
     ) -> str:
-        """Generate an image from a text prompt and save to output_path.
+        """Synchronous image generation; runs in a thread pool.
 
-        Returns the path to the saved image file.
+        ``generate_content`` is a blocking HTTP call. Wrapping it in
+        ``asyncio.to_thread`` keeps the event loop free so the FastAPI
+        server can continue serving ``/status`` polls while images are
+        being generated.
         """
         response = self._client.models.generate_content(
             model="gemini-3.1-flash-image-preview",
@@ -44,6 +48,17 @@ class GeminiImageService(ImageGenerationService):
 
         raise RuntimeError(_ERR_NO_IMAGE_DATA)
 
+    async def generate_image(
+        self,
+        prompt: str,
+        output_path: str,
+    ) -> str:
+        """Generate an image from a text prompt and save to output_path.
+
+        Returns the path to the saved image file.
+        """
+        return await asyncio.to_thread(self._generate_image_blocking, prompt, output_path)
+
     def generate_image_sync(
         self,
         prompt: str,
@@ -54,6 +69,6 @@ class GeminiImageService(ImageGenerationService):
 
         Returns the path to the saved image file.
         """
-        result = self.generate_image(prompt, output_path)
+        result = self._generate_image_blocking(prompt, output_path)
         time.sleep(delay_seconds)
         return result
