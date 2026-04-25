@@ -6,9 +6,9 @@ Gherkin: tests/features/carousel_design_refinement.feature
 import pytest
 
 from rag_backend.application.services.carousel.theme_resolver import (
-    DEFAULT_THEME_KEY,
     _detect_brand,
     _detect_category,
+    _hash_to_theme_key,
     _score_brands,
     _score_categories,
     resolve_theme,
@@ -111,6 +111,26 @@ class TestDetectBrand:
 
 
 @pytest.mark.unit
+class TestHashToThemeKey:
+    """Tests for _hash_to_theme_key."""
+
+    def test_returns_valid_theme_key(self):
+        """Should always return a key present in CAROUSEL_THEMES."""
+        key = _hash_to_theme_key("any topic text")
+        assert key in CAROUSEL_THEMES
+
+    def test_is_deterministic(self):
+        """Same input should always produce the same key."""
+        text = "deterministic topic"
+        assert _hash_to_theme_key(text) == _hash_to_theme_key(text)
+
+    def test_distributes_across_themes(self):
+        """Different inputs should produce different keys."""
+        keys = {_hash_to_theme_key(f"topic {i}") for i in range(20)}
+        assert len(keys) > 1
+
+
+@pytest.mark.unit
 class TestDetectCategory:
     """Tests for _detect_category."""
 
@@ -122,9 +142,13 @@ class TestDetectCategory:
         """Should detect source_code from leak keywords."""
         assert _detect_category("Source code leaked from GitHub repository") == "source_code"
 
-    def test_fallback_to_default(self):
-        """Should fallback to default theme when no keywords match."""
-        assert _detect_category("completely unrelated fluffy topic") == DEFAULT_THEME_KEY
+    def test_detects_ai_competition_from_generic_ai(self):
+        """Should detect ai_competition from generic 'AI' mention."""
+        assert _detect_category("Uber AI budget for 2026 was blown") == "ai_competition"
+
+    def test_returns_none_when_no_match(self):
+        """Should return None when no keywords match."""
+        assert _detect_category("completely unrelated fluffy topic") is None
 
 
 @pytest.mark.unit
@@ -207,16 +231,39 @@ class TestResolveTheme:
         # but brand detection scores higher for "anthropic"
         assert theme == BRAND_PALETTES["anthropic"]
 
-    def test_auto_fallback_when_nothing_matches(self):
-        """AUTO theme should fallback to default when no brand or category matches."""
-        project = CarouselProject(
+    def test_auto_fallback_is_diverse(self):
+        """AUTO theme should rotate through palettes when nothing matches."""
+        project_a = CarouselProject(
             topic="Something completely unrelated",
             audience="Everyone",
             niche="General",
             theme=CarouselTheme.AUTO,
         )
-        theme = resolve_theme(project)
-        assert theme == CAROUSEL_THEMES[DEFAULT_THEME_KEY]
+        theme_a = resolve_theme(project_a)
+        assert theme_a in CAROUSEL_THEMES.values()
+
+        project_b = CarouselProject(
+            topic="Another totally different topic about gardening",
+            audience="Everyone",
+            niche="General",
+            theme=CarouselTheme.AUTO,
+        )
+        theme_b = resolve_theme(project_b)
+        assert theme_b in CAROUSEL_THEMES.values()
+        # Different topics should typically yield different themes
+        assert theme_a != theme_b
+
+    def test_auto_fallback_is_deterministic(self):
+        """Same topic should always yield the same fallback theme."""
+        project = CarouselProject(
+            topic="Uber AI budget for 2026 was blown",
+            audience="Everyone",
+            niche="General",
+            theme=CarouselTheme.AUTO,
+        )
+        theme_first = resolve_theme(project)
+        theme_second = resolve_theme(project)
+        assert theme_first == theme_second
 
     def test_auto_detects_meta(self):
         """AUTO theme should detect Meta brand from Llama mention."""

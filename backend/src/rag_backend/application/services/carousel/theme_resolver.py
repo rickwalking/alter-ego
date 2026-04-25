@@ -2,10 +2,12 @@
 
 Reproduces the creative palette-selection behavior of the original
 carousel skill: brand-aware color detection, keyword-based category
-fallback, and custom palette generation when a known brand is detected.
+fallback, and diverse palette selection when auto-detecting themes.
 """
 
 from __future__ import annotations
+
+import hashlib
 
 from rag_backend.domain.constants import (
     BRAND_KEYWORDS,
@@ -15,7 +17,22 @@ from rag_backend.domain.constants import (
 )
 from rag_backend.domain.models import CarouselProject, CarouselTheme
 
-DEFAULT_THEME_KEY = "ai_competition"
+# Keys of all predefined category themes available for auto-detection.
+# Used as the rotation pool when no brand or category keyword matches.
+CATEGORY_THEME_KEYS: tuple[str, ...] = tuple(CAROUSEL_THEMES.keys())
+
+
+def _hash_to_theme_key(text: str) -> str:
+    """Deterministically map *text* to one of the category theme keys.
+
+    Uses a stable hash so the same topic always yields the same theme,
+    while different topics spread evenly across the available palettes.
+    This prevents the repetitive fallback where every unmatched topic
+    received the same default colors.
+    """
+    digest = hashlib.sha256(text.encode("utf-8")).hexdigest()
+    index = int(digest, 16) % len(CATEGORY_THEME_KEYS)
+    return CATEGORY_THEME_KEYS[index]
 
 
 def _score_brands(text: str) -> dict[str, int]:
@@ -57,14 +74,15 @@ def _detect_brand(text: str) -> str | None:
     return max(scores, key=scores.get)  # type: ignore[arg-type]
 
 
-def _detect_category(text: str) -> str:
+def _detect_category(text: str) -> str | None:
     """Return the category theme key with the highest keyword score.
 
-    Falls back to ``DEFAULT_THEME_KEY`` when no keywords match.
+    Returns ``None`` when no keywords match, letting the caller pick a
+    diverse fallback instead of a static default.
     """
     scores = _score_categories(text)
     if not scores:
-        return DEFAULT_THEME_KEY
+        return None
     return max(scores, key=scores.get)  # type: ignore[arg-type]
 
 
@@ -79,7 +97,9 @@ def resolve_theme(project: CarouselProject) -> dict[str, str]:
        least one keyword match, return the brand's custom palette.
     4. Run category detection on the same blob. Return the best-matching
        predefined theme.
-    5. If nothing matches, fall back to ``DEFAULT_THEME_KEY``.
+    5. If nothing matches, deterministically rotate through all
+       available category themes based on a hash of the topic text.
+       This guarantees creative diversity without randomness.
 
     The returned dict always has ``primary``, ``accent``, and
     ``background`` keys.
@@ -87,7 +107,7 @@ def resolve_theme(project: CarouselProject) -> dict[str, str]:
     if project.theme != CarouselTheme.AUTO:
         return CAROUSEL_THEMES.get(
             project.theme.value,
-            CAROUSEL_THEMES[DEFAULT_THEME_KEY],
+            CAROUSEL_THEMES[CATEGORY_THEME_KEYS[0]],
         )
 
     text_parts = [
@@ -100,7 +120,10 @@ def resolve_theme(project: CarouselProject) -> dict[str, str]:
 
     brand = _detect_brand(analysis_text)
     if brand is not None:
-        return BRAND_PALETTES.get(brand, CAROUSEL_THEMES[DEFAULT_THEME_KEY])
+        return BRAND_PALETTES.get(brand, CAROUSEL_THEMES[_hash_to_theme_key(analysis_text)])
 
     category = _detect_category(analysis_text)
-    return CAROUSEL_THEMES.get(category, CAROUSEL_THEMES[DEFAULT_THEME_KEY])
+    if category is not None:
+        return CAROUSEL_THEMES.get(category, CAROUSEL_THEMES[_hash_to_theme_key(analysis_text)])
+
+    return CAROUSEL_THEMES[_hash_to_theme_key(analysis_text)]

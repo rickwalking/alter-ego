@@ -250,6 +250,11 @@ THEME_CATEGORY_KEYWORDS: dict[str, list[str]] = {
         "ips",
     ],
     "ai_competition": [
+        "ai",
+        "artificial intelligence",
+        "machine learning",
+        "deep learning",
+        "neural",
         "model",
         "llm",
         "benchmark",
