@@ -17,6 +17,7 @@ from typing import cast
 
 from rag_backend.application.services.carousel.types import (
     MAX_FEATURE_ITEMS,
+    MAX_SLIDES,
     SlideData,
     build_slides_en_index,
 )
@@ -313,12 +314,40 @@ async def run_content(
     project.blog_markdown = blog_pt
     project.blog_translations = {"pt": blog_pt, "en": blog_en} if blog_en else {"pt": blog_pt}
 
+    # Parse blog_image_map if present; defensively normalize to a list
+    # of dicts with slide_number (int) and heading (str).
+    raw_image_map = content_data.get("blog_image_map")
+    if isinstance(raw_image_map, list):
+        image_map: list[dict[str, str | int]] = []
+        for entry in raw_image_map:
+            if isinstance(entry, dict):
+                slide_number = entry.get("slide_number")
+                heading = entry.get("heading")
+                if isinstance(slide_number, int) and 1 <= slide_number <= MAX_SLIDES:
+                    image_map.append(
+                        {
+                            "slide_number": slide_number,
+                            "heading": str(heading) if heading is not None else "",
+                            "alt": str(entry.get("alt", "")),
+                        }
+                    )
+        project.blog_image_map = image_map if image_map else None
+
     if "title_pt" in content_data:
         title_value = content_data.get("title_pt", project.title or project.topic)
         subtitle_value = content_data.get("subtitle_pt", project.subtitle)
         project.set_title(
             title=str(title_value) if title_value is not None else project.topic,
             subtitle=str(subtitle_value) if subtitle_value is not None else None,
+        )
+
+    # Store English title/subtitle when provided by the LLM
+    if "title_en" in content_data:
+        title_en_value = content_data.get("title_en")
+        subtitle_en_value = content_data.get("subtitle_en")
+        project.set_title_en(
+            title=str(title_en_value) if title_en_value is not None else "",
+            subtitle=str(subtitle_en_value) if subtitle_en_value is not None else None,
         )
 
     return slides_data, project.blog_markdown or ""

@@ -341,6 +341,8 @@ class CarouselProjectResponse(BaseModel):
     niche: str
     title: str | None
     subtitle: str | None
+    title_en: str | None = None
+    subtitle_en: str | None = None
     theme: str
     image_model: str = IMAGE_MODEL_DEFAULT
     image_style: str = IMAGE_STYLE_DEFAULT
@@ -455,18 +457,29 @@ class CarouselDesignTypography(BaseModel):
     font_family_badge: str
 
 
+class CarouselBlogImageMapEntry(BaseModel):
+    """Single entry mapping a blog H2 heading to a carousel slide image."""
+
+    slide_number: int
+    heading: str
+    alt: str
+
+
 class CarouselDesignImages(BaseModel):
     """Schema for design token images.
 
     `hero` + `slides` are the raw OpenAI/Gemini hero JPGs (used by the
     blog). `rendered_slides_pt` / `rendered_slides_en` are the post-
     Playwright renders with text overlay (used by the publish viewer).
+    `blog_image_map` tells the frontend which slide image belongs to
+    each blog section heading.
     """
 
     hero: str
     slides: list[str]
     rendered_slides_pt: list[str] | None = None
     rendered_slides_en: list[str] | None = None
+    blog_image_map: list[CarouselBlogImageMapEntry] | None = None
 
 
 class CarouselDesignLayout(BaseModel):

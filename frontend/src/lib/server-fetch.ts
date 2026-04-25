@@ -69,7 +69,7 @@ export async function fetchBlogWithDesign(
       { revalidate: 3600 }
     ),
     validatedFetch(
-      API_ENDPOINTS.CAROUSEL_DESIGN(id),
+      API_ENDPOINTS.CAROUSEL_DESIGN(id, lang),
       carouselDesignResponseSchema,
       { revalidate: 3600 }
     ),

@@ -1,0 +1,255 @@
+{
+  "common": {
+    "appName": "Pedro Marins",
+    "tagline": "Converse com minha Base de Conhecimento Pessoal para me conhecer melhor",
+    "startChatting": "Começar a Conversar",
+    "manageKnowledge": "Gerenciar Conhecimento",
+    "nav": {
+      "chat": "Chat",
+      "knowledgeBase": "Base de Conhecimento",
+      "blog": "Blog",
+      "create": "Criar"
+    }
+  },
+  "home": {
+    "hero": {
+      "badge": "Conteúdo Gerado por IA",
+      "title": "Converse com meu Alter-Ego",
+      "highlight": "para me conhecer melhor",
+      "subtitle": "Converse com uma IA que sabe tudo sobre minha carreira, experiência e habilidades. Veja também meus posts e projetos."
+    },
+    "posts": {
+      "title": "Posts Recentes",
+      "subtitle": "Carrosséis e posts de blog gerados por IA sobre tecnologia, IA e engenharia de software.",
+      "viewAll": "Ver todos os posts"
+    },
+    "features": {
+      "title": "O que Eu Posso Fazer",
+      "intelligentChat": {
+        "title": "Chat com IA",
+        "description": "Tenha conversas naturais com uma IA que entende sua base de conhecimento e pode responder perguntas sobre seu conteúdo."
+      },
+      "knowledgeManagement": {
+        "title": "Gerenciamento de Conhecimento",
+        "description": "Faça upload de documentos, organize informações e construa uma base de conhecimento abrangente que a IA possa consultar."
+      },
+      "aiInsights": {
+        "title": "Insights com IA",
+        "description": "Obtenha insights inteligentes, resumos e conexões entre seus documentos, impulsionados por tecnologia de IA moderna."
+      }
+    }
+  },
+  "chat": {
+    "title": "Chat",
+    "input": {
+      "placeholder": "Digite sua mensagem...",
+      "send": "Enviar mensagem",
+      "newChat": "Novo Chat"
+    },
+    "empty": "Inicie uma conversa digitando uma mensagem abaixo.",
+    "sidebar": {
+      "label": "Conversas",
+      "empty": "Nenhuma conversa ainda",
+      "loading": "Carregando conversas"
+    }
+  },
+  "knowledge": {
+    "title": "Base de Conhecimento",
+    "description": "Gerencie seus documentos e informações para a IA consultar.",
+    "search": "Buscar documentos...",
+    "newDocument": "Novo Documento",
+    "uploadButton": "Enviar",
+    "empty": {
+      "title": "Nenhum documento ainda.",
+      "subtitle": "Faça upload de um arquivo ou crie um documento para começar."
+    },
+    "noResults": "Nenhum documento encontrado para sua busca.",
+    "document": {
+      "delete": "Excluir documento: {title}",
+      "removeFile": "Remover arquivo selecionado",
+      "chunks": "{count} fragmentos"
+    },
+    "upload": {
+      "title": "Enviar Documento",
+      "dropZone": "Área de upload de arquivo",
+      "selectFile": "Selecionar arquivo para enviar",
+      "dropText": "Solte seu arquivo aqui, ou",
+      "browse": "navegue",
+      "supports": "Suporta PDF, TXT e MD (máx 50MB)",
+      "uploading": "Enviando...",
+      "uploadButton": "Enviar e Processar",
+      "cancel": "Cancelar",
+      "success": {
+        "title": "Documento Enviado",
+        "description": "Seu documento foi processado com sucesso.",
+        "done": "Concluído"
+      },
+      "error": {
+        "fileType": "Tipo de arquivo não suportado. Use PDF, TXT ou MD.",
+        "generic": "Falha ao enviar documento"
+      },
+      "fields": {
+        "title": "Título (opcional)",
+        "titlePlaceholder": "Título do documento",
+        "tags": "Tags (separadas por vírgula)",
+        "tagsPlaceholder": "ex: pesquisa, notas, projetos"
+      }
+    },
+    "form": {
+      "createTitle": "Criar Novo Documento",
+      "title": "Título",
+      "titlePlaceholder": "Título do documento",
+      "content": "Conteúdo",
+      "contentPlaceholder": "Conteúdo do documento...",
+      "tags": "Tags",
+      "addTag": "Adicionar",
+      "tagPlaceholder": "Adicionar uma tag",
+      "submit": "Criar Documento",
+      "cancel": "Cancelar"
+    }
+  },
+  "blog": {
+    "title": "Blog",
+    "subtitle": "Carrosséis e posts de blog gerados por IA sobre tecnologia, IA e engenharia de software.",
+    "backHome": "Voltar ao início",
+    "backToPosts": "Voltar aos posts",
+    "readMore": "Ler mais",
+    "noPosts": "Nenhum post ainda. Gere um carrossel para criar seu primeiro post.",
+    "loading": "Carregando posts...",
+    "error": "Falha ao carregar posts",
+    "languageSwitch": {
+      "pt": "PT",
+      "en": "EN",
+      "label": "Idioma"
+    },
+    "meta": {
+      "readTime": "{minutes} min de leitura"
+    },
+    "badges": {
+      "aiMl": "IA/ML",
+      "cybersecurity": "Cibersegurança",
+      "devTools": "Ferramentas Dev",
+      "openSource": "Open Source"
+    },
+    "admin": {
+      "title": "Admin",
+      "publish": "Publicar no Instagram / LinkedIn",
+      "delete": "Excluir post",
+      "deleteConfirm": "Tem certeza que deseja excluir este post? Esta ação não pode ser desfeita.",
+      "deleteConfirmTitle": "Excluir post",
+      "cancel": "Cancelar",
+      "deleting": "Excluindo..."
+    }
+  },
+  "create": {
+    "pageTitle": "Criar Carrossel",
+    "pageDescription": "Descreva seu tópico e deixe a IA gerar um post de blog e um carrossel do Instagram para você.",
+    "form": {
+      "topicLabel": "Tópico",
+      "topicPlaceholder": "ex: Rust vs Go para backend",
+      "audienceLabel": "Público-alvo",
+      "audiencePlaceholder": "ex: Desenvolvedores senior, tech leads",
+      "nicheLabel": "Nicho",
+      "nichePlaceholder": "ex: Engenharia Backend",
+      "themeLabel": "Tema Visual",
+      "imagePresetLabel": "Estilo de Imagem",
+      "imagePresetHelp": "Escolhe o modelo de imagem + wrapper de estilo que o pipeline usa. Presets OpenAI requerem uma OPENAI_API_KEY verificada.",
+      "submit": "Criar Projeto",
+      "submitting": "Criando..."
+    },
+    "themes": {
+      "auto": "Auto-detectar",
+      "cybersecurity": "Cibersegurança",
+      "ai_competition": "Competição de IA",
+      "developer_skills": "Habilidades de Dev",
+      "source_code": "Código Fonte",
+      "social_engineering": "Engenharia Social"
+    },
+    "imagePresets": {
+      "gemini_comic_neon": "Gemini · Comic Neon (padrão)",
+      "openai_hyperreal": "OpenAI · Hyperreal Graphic Novel",
+      "openai_cinematic": "OpenAI · Cinematic Photoreal",
+      "openai_neo_anime": "OpenAI · Neo-Anime"
+    },
+    "progress": {
+      "complete": "Carrossel gerado com sucesso!",
+      "failed": "Geração falhou. Tente novamente ou refine sua solicitação.",
+      "currentlyProcessing": "Processando atualmente",
+      "stalled": "Ainda trabalhando após {seconds}s — o LLM upstream pode estar reetentando uma conexão perdida.",
+      "phases": {
+        "pending": "Aguardando para começar...",
+        "researching": "Pesquisando tópico...",
+        "drafting": "Elaborando conteúdo...",
+        "designing": "Aplicando tokens de design...",
+        "generating_images": "Gerando imagens...",
+        "exporting": "Exportando slides...",
+        "completed": "Concluído"
+      }
+    },
+    "preview": {
+      "viewBlog": "Ver Post do Blog"
+    },
+    "workspace": {
+      "title": "Área de Trabalho do Carrossel",
+      "viewBlog": "Ver Blog",
+      "publish": "Publicar",
+      "resume": "Retomar do último checkpoint",
+      "resuming": "Retomando…",
+      "reconnectStream": "Reconectar stream",
+      "error": "Ocorreu um erro ao processar sua solicitação."
+    },
+    "chat": {
+      "error": "Ocorreu um erro ao processar sua solicitação."
+    }
+  },
+  "publish": {
+    "loading": "Carregando carrossel…",
+    "notFound": "Carrossel não encontrado.",
+    "backToWorkspace": "← Voltar à área de trabalho",
+    "carouselLabel": "Prévia do carrossel",
+    "platformTabsLabel": "Escolha uma plataforma",
+    "downloadPdf": "Baixar PDF",
+    "tabs": {
+      "instagram": "Instagram",
+      "linkedin": "LinkedIn"
+    },
+    "instagram": {
+      "captionLabel": "Legenda do Instagram",
+      "placeholder": "Escreva sua legenda do Instagram…",
+      "hashtagHelp": "Hashtags: {count} / {max}",
+      "hashtagOver": "Acima do limite de 30 hashtags — o Instagram rejeitará o post.",
+      "copyCaption": "Copiar legenda",
+      "publishNow": "Publicar no Instagram",
+      "publishing": "Publicando…",
+      "queued": "Na fila para publicação.",
+      "published": "Publicado no Instagram.",
+      "failed": "Falha na publicação."
+    },
+    "linkedin": {
+      "languageTabsLabel": "Idioma do post",
+      "postLabel": "Post do LinkedIn ({language})",
+      "placeholder": "Escreva seu post do LinkedIn…",
+      "help": "O LinkedIn renderiza texto puro — sem markdown. Máx 3000 caracteres.",
+      "copyPost": "Copiar post",
+      "downloadPdf": "Baixar PDF",
+      "openLinkedIn": "Abrir LinkedIn",
+      "manualSteps": "O LinkedIn não permite posts programáticos de documentos para contas solo. Copie o post, baixe o PDF, abra o LinkedIn, cole a legenda e anexe o PDF como documento."
+    },
+    "chatLabel": "Chat com o agente do carrossel",
+    "chatTitle": "Refinar com o agente",
+    "chatHelp": "Peça ao agente para ajustar uma legenda, encurtar um post do LinkedIn ou reescrever um título de slide. As alterações são salvas automaticamente.",
+    "viewerLanguageLabel": "Idioma do carrossel",
+    "carouselViewer": {
+      "previousSlide": "Slide anterior",
+      "nextSlide": "Próximo slide",
+      "goToSlide": "Ir para slide {number}",
+      "downloadImages": "Baixar imagens"
+    }
+  },
+  "notFound": {
+    "code": "404",
+    "title": "Página Não Encontrada",
+    "description": "A página que você está procurando não existe.",
+    "goHome": "Ir para o Início"
+  }
+}

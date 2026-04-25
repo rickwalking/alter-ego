@@ -17,7 +17,8 @@ export const API_ENDPOINTS = {
   CAROUSEL_STATUS: (id: string) => `/api/carousels/${id}/status`,
   CAROUSEL_BLOG: (id: string) => `/api/carousels/${id}/blog`,
   CAROUSEL_BLOG_LANG: (id: string, lang: string) => `/api/carousels/${id}/blog/${lang}`,
-  CAROUSEL_DESIGN: (id: string) => `/api/carousels/${id}/design`,
+  CAROUSEL_DESIGN: (id: string, lang?: string) =>
+    `/api/carousels/${id}/design${lang ? `?lang=${lang}` : ""}`,
   CAROUSEL_SLIDES: (id: string) => `/api/carousels/${id}/slides`,
   CAROUSEL_IMAGE: (id: string, filename: string) =>
     `/api/carousels/${id}/images/${filename}`,

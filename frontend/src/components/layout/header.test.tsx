@@ -14,6 +14,12 @@ vi.mock("next-intl", () => ({
   useTranslations: () => (key: string) => NAV_LABELS[key] ?? key,
 }));
 
+vi.mock("@/components/language-switcher", () => ({
+  LanguageSwitcher: ({ currentLocale }: { currentLocale: string }) => (
+    <div data-testid="language-switcher">{currentLocale}</div>
+  ),
+}));
+
 // Mock next/link
 vi.mock("next/link", () => ({
   default: ({
@@ -39,12 +45,12 @@ describe("Header Component", () => {
   describe("Given the Header component is rendered", () => {
     describe("When the Header is displayed", () => {
       it("Then the logo text should be visible", () => {
-        render(<Header />);
+        render(<Header locale="en" />);
         expect(screen.getByText("RAG Chat")).toBeInTheDocument();
       });
 
       it("Then the logo should link to the home page", () => {
-        render(<Header />);
+        render(<Header locale="en" />);
         const logo = screen.getByText("RAG Chat").closest("a");
         expect(logo).toHaveAttribute("href", "/");
       });
@@ -52,23 +58,23 @@ describe("Header Component", () => {
 
     describe("When the navigation links are present", () => {
       it("Then the Chat link should be visible", () => {
-        render(<Header />);
+        render(<Header locale="en" />);
         expect(screen.getByText("Chat")).toBeInTheDocument();
       });
 
       it("Then the Chat link should link to /chat", () => {
-        render(<Header />);
+        render(<Header locale="en" />);
         const chatLink = screen.getByText("Chat").closest("a");
         expect(chatLink).toHaveAttribute("href", "/chat");
       });
 
       it("Then the Knowledge Base link should be visible", () => {
-        render(<Header />);
+        render(<Header locale="en" />);
         expect(screen.getByText("Knowledge Base")).toBeInTheDocument();
       });
 
       it("Then the Knowledge Base link should link to /knowledge", () => {
-        render(<Header />);
+        render(<Header locale="en" />);
         const knowledgeLink = screen.getByText("Knowledge Base").closest("a");
         expect(knowledgeLink).toHaveAttribute("href", "/knowledge");
       });
@@ -76,20 +82,20 @@ describe("Header Component", () => {
 
     describe("When the Header has default styling", () => {
       it("Then it should have sticky positioning", () => {
-        render(<Header />);
+        render(<Header locale="en" />);
         const header = screen.getByRole("banner");
         expect(header).toHaveClass("sticky");
         expect(header).toHaveClass("top-0");
       });
 
       it("Then it should have backdrop blur effect", () => {
-        render(<Header />);
+        render(<Header locale="en" />);
         const header = screen.getByRole("banner");
         expect(header).toHaveClass("backdrop-blur");
       });
 
       it("Then it should have a border", () => {
-        render(<Header />);
+        render(<Header locale="en" />);
         const header = screen.getByRole("banner");
         expect(header).toHaveClass("border-b");
       });
@@ -97,7 +103,7 @@ describe("Header Component", () => {
 
     describe("When the navigation is displayed on different screen sizes", () => {
       it("Then the navigation should be hidden on mobile", () => {
-        render(<Header />);
+        render(<Header locale="en" />);
         const nav = screen.getByText("Chat").closest("nav");
         expect(nav).toHaveClass("hidden");
         expect(nav).toHaveClass("md:flex");

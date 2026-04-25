@@ -17,6 +17,9 @@ from rag_backend.domain.models import CarouselSlide
 # is tuned for 2-4 items; 5+ overflow past the slide footer.
 MAX_FEATURE_ITEMS = 4
 
+# Maximum number of content slides in a carousel (excludes title/CTA).
+MAX_SLIDES = 6
+
 # Fields copied from SlideData into the persisted `extras` JSON. Listed
 # here so `pack_extras` stays a one-liner loop instead of four branches.
 EXTRAS_FIELDS: tuple[str, ...] = (

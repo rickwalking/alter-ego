@@ -1,9 +1,18 @@
+"use client";
+
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { Container } from "./container";
+import { LanguageSwitcher } from "@/components/language-switcher";
+import { DEFAULT_LOCALE } from "@/i18n/config";
 
-export function Header() {
+interface HeaderProps {
+  locale?: string;
+}
+
+export function Header({ locale }: HeaderProps) {
   const t = useTranslations("common");
+  const currentLocale = locale || DEFAULT_LOCALE;
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-[var(--color-border)] bg-[var(--color-background)]/95 backdrop-blur supports-[backdrop-filter]:bg-[var(--color-background)]/60">
@@ -40,6 +49,7 @@ export function Header() {
               </Link>
             </nav>
           </div>
+          <LanguageSwitcher currentLocale={currentLocale} />
         </div>
       </Container>
     </header>

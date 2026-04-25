@@ -38,9 +38,6 @@ describe("BlogPostHeader Component", () => {
       title: "Understanding Zero Trust Architecture",
       badge: "Cybersecurity",
       design: MOCK_DESIGN,
-      currentLang: "pt",
-      availableLanguages: ["pt", "en"],
-      blogPath: "/blog/test-id",
     };
 
     describe("When the component is rendered", () => {
@@ -92,41 +89,6 @@ describe("BlogPostHeader Component", () => {
       });
     });
 
-    describe("When multiple languages are available", () => {
-      it("Then language switcher links are displayed", () => {
-        render(<BlogPostHeader {...defaultProps} />);
-        const ptLink = screen.getByText("🇧🇷 PT");
-        const enLink = screen.getByText("🇺🇸 EN");
-        expect(ptLink).toBeInTheDocument();
-        expect(enLink).toBeInTheDocument();
-      });
 
-      it("Then PT link points to blog path with lang=pt", () => {
-        render(<BlogPostHeader {...defaultProps} />);
-        const ptLink = screen.getByText("🇧🇷 PT");
-        expect(ptLink.closest("a")).toHaveAttribute("href", "/blog/test-id?lang=pt");
-      });
-
-      it("Then EN link points to blog path with lang=en", () => {
-        render(<BlogPostHeader {...defaultProps} />);
-        const enLink = screen.getByText("🇺🇸 EN");
-        expect(enLink.closest("a")).toHaveAttribute("href", "/blog/test-id?lang=en");
-      });
-    });
-
-    describe("When only one language is available", () => {
-      it("Then no language switcher is displayed", () => {
-        render(<BlogPostHeader {...defaultProps} availableLanguages={["pt"]} />);
-        expect(screen.queryByText("🇧🇷 PT")).not.toBeInTheDocument();
-      });
-    });
-
-    describe("When current language is English", () => {
-      it("Then EN link has active styling", () => {
-        render(<BlogPostHeader {...defaultProps} currentLang="en" />);
-        const enLink = screen.getByText("🇺🇸 EN");
-        expect(enLink.closest("a")?.style.background).toBeTruthy();
-      });
-    });
   });
 });

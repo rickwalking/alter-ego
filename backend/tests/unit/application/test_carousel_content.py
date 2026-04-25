@@ -7,7 +7,7 @@ Feature: Content synthesis JSON extraction
 """
 
 import json
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -15,7 +15,9 @@ from rag_backend.application.services.carousel.nodes.content import (
     _ERR_JSON_NOT_FOUND,
     _extract_json_with_repair,
     extract_json,
+    run_content,
 )
+from rag_backend.domain.models import CarouselProject
 
 
 @pytest.mark.unit
@@ -141,3 +143,135 @@ class TestExtractJsonWithRepair:
 
         assert result == payload
         assert not llm.generate.called
+
+
+@pytest.mark.unit
+class TestRunContentImageMap:
+    """Tests for blog_image_map extraction during content synthesis."""
+
+    async def test_parses_valid_blog_image_map(self):
+        """Given a JSON response with blog_image_map, when run_content is called,
+        then stores the image map on the project."""
+        llm = AsyncMock()
+        template = MagicMock()
+        template.build_content_prompt.return_value = "prompt"
+        response = {
+            "slides": [
+                {"number": 1, "type": "intro", "heading": "Intro", "body": "B"},
+                {"number": 2, "type": "content", "heading": "Stats", "body": "B"},
+            ],
+            "blog_pt": "# Blog",
+            "blog_en": "# Blog EN",
+            "blog_image_map": [
+                {"slide_number": 2, "heading": "Stats", "alt": "Stats image"},
+            ],
+        }
+        llm.generate = AsyncMock(return_value=json.dumps(response))
+
+        project = CarouselProject(topic="T", audience="A", niche="N")
+        await run_content(project, [], llm=llm, template=template)
+
+        assert project.blog_image_map is not None
+        assert len(project.blog_image_map) == 1
+        assert project.blog_image_map[0]["slide_number"] == 2
+        assert project.blog_image_map[0]["heading"] == "Stats"
+        assert project.blog_image_map[0]["alt"] == "Stats image"
+
+    async def test_ignores_invalid_slide_numbers(self):
+        """Given a blog_image_map with out-of-range slide_numbers, when run_content
+        is called, then filters out invalid entries."""
+        llm = AsyncMock()
+        template = MagicMock()
+        template.build_content_prompt.return_value = "prompt"
+        response = {
+            "slides": [
+                {"number": 1, "type": "intro", "heading": "Intro", "body": "B"},
+            ],
+            "blog_pt": "# Blog",
+            "blog_image_map": [
+                {"slide_number": 0, "heading": "Invalid", "alt": ""},
+                {"slide_number": 7, "heading": "Invalid", "alt": ""},
+                {"slide_number": 3, "heading": "Valid", "alt": "Valid image"},
+            ],
+        }
+        llm.generate = AsyncMock(return_value=json.dumps(response))
+
+        project = CarouselProject(topic="T", audience="A", niche="N")
+        await run_content(project, [], llm=llm, template=template)
+
+        assert project.blog_image_map is not None
+        assert len(project.blog_image_map) == 1
+        assert project.blog_image_map[0]["slide_number"] == 3
+
+    async def test_ignores_missing_blog_image_map(self):
+        """Given a JSON response without blog_image_map, when run_content is called,
+        then project.blog_image_map remains None."""
+        llm = AsyncMock()
+        template = MagicMock()
+        template.build_content_prompt.return_value = "prompt"
+        response = {
+            "slides": [
+                {"number": 1, "type": "intro", "heading": "Intro", "body": "B"},
+            ],
+            "blog_pt": "# Blog",
+        }
+        llm.generate = AsyncMock(return_value=json.dumps(response))
+
+        project = CarouselProject(topic="T", audience="A", niche="N")
+        await run_content(project, [], llm=llm, template=template)
+
+        assert project.blog_image_map is None
+
+
+@pytest.mark.unit
+class TestRunContentTitleEn:
+    """Tests for title_en/subtitle_en storage during content synthesis."""
+
+    async def test_stores_title_en_and_subtitle_en(self):
+        """Given a JSON response with title_en and subtitle_en, when run_content
+        is called, then stores the English title and subtitle on the project."""
+        llm = AsyncMock()
+        template = MagicMock()
+        template.build_content_prompt.return_value = "prompt"
+        response = {
+            "slides": [
+                {"number": 1, "type": "intro", "heading": "Intro", "body": "B"},
+            ],
+            "blog_pt": "# Blog",
+            "blog_en": "# Blog EN",
+            "title_pt": "Título PT",
+            "subtitle_pt": "Subtítulo PT",
+            "title_en": "English Title",
+            "subtitle_en": "English Subtitle",
+        }
+        llm.generate = AsyncMock(return_value=json.dumps(response))
+
+        project = CarouselProject(topic="T", audience="A", niche="N")
+        await run_content(project, [], llm=llm, template=template)
+
+        assert project.title == "Título PT"
+        assert project.subtitle == "Subtítulo PT"
+        assert project.title_en == "English Title"
+        assert project.subtitle_en == "English Subtitle"
+
+    async def test_ignores_missing_title_en(self):
+        """Given a JSON response without title_en, when run_content is called,
+        then title_en remains None."""
+        llm = AsyncMock()
+        template = MagicMock()
+        template.build_content_prompt.return_value = "prompt"
+        response = {
+            "slides": [
+                {"number": 1, "type": "intro", "heading": "Intro", "body": "B"},
+            ],
+            "blog_pt": "# Blog",
+            "title_pt": "Título PT",
+        }
+        llm.generate = AsyncMock(return_value=json.dumps(response))
+
+        project = CarouselProject(topic="T", audience="A", niche="N")
+        await run_content(project, [], llm=llm, template=template)
+
+        assert project.title == "Título PT"
+        assert project.title_en is None
+        assert project.subtitle_en is None

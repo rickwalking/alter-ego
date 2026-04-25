@@ -239,6 +239,8 @@ class CarouselProject:
     id: UUID = field(default_factory=uuid4)
     title: str | None = None
     subtitle: str | None = None
+    title_en: str | None = None
+    subtitle_en: str | None = None
     slides_config: str = "1 intro, 3 content, 1 closing, 1 cta"
     aspect_ratio: str = "1080x1350"
     language: str = "pt-BR"
@@ -251,6 +253,7 @@ class CarouselProject:
     background_color: str | None = None
     blog_markdown: str | None = None
     blog_translations: dict[str, str] | None = None
+    blog_image_map: list[dict[str, str | int]] | None = None
     caption: str | None = None
     linkedin_post_pt: str | None = None
     linkedin_post_en: str | None = None
@@ -298,6 +301,12 @@ class CarouselProject:
         """Set the optimized title."""
         self.title = title
         self.subtitle = subtitle
+        self.updated_at = datetime.utcnow()
+
+    def set_title_en(self, title: str, subtitle: str | None = None) -> None:
+        """Set the English title and subtitle."""
+        self.title_en = title
+        self.subtitle_en = subtitle
         self.updated_at = datetime.utcnow()
 
     def get_blog(self, language: str = "pt") -> str | None:

@@ -41,6 +41,14 @@ template: |
       `image_prompt` is omitted — the image is shared.
   - blog_pt: full blog post in pt-BR markdown
   - blog_en: full blog post in English markdown
+  - blog_image_map: array of image references for the blog post.
+      Each entry: {slide_number: int, heading: str, alt: str}
+      where slide_number is 1-6 referencing the EXISTING carousel
+      slide images. The blog renderer inserts these images at the
+      corresponding H2 sections. DO NOT invent image URLs or filenames;
+      only reference slide_number 1-6. If a section has no relevant
+      image, omit it from the array. heading must match the blog's H2
+      text exactly (in the same language as the blog).
   - title_pt, title_en, subtitle_pt, subtitle_en
 
   Per-slide body format:

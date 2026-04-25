@@ -1,17 +1,27 @@
 import Link from "next/link";
 import Image from "next/image";
 import { getTranslations } from "next-intl/server";
+import { cookies } from "next/headers";
 import { Container } from "@/components/layout";
 import { Button } from "@/components/ui/button";
 import { MessageSquare, Database, Sparkles, ArrowRight } from "lucide-react";
 import { fetchCompletedProjects } from "@/lib/server-fetch";
 import { FALLBACK_DESIGN_TOKENS } from "@/constants/blog";
+import { DEFAULT_LOCALE, SUPPORTED_LOCALES } from "@/i18n/config";
+import type { SupportedLocale } from "@/i18n/config";
 import type { CarouselProjectListResponse } from "@/schemas/carousel";
 
 export default async function HomePage() {
   const t = await getTranslations("home");
   const tc = await getTranslations("common");
   const tb = await getTranslations("blog");
+
+  const cookieStore = await cookies();
+  const localeCookie = cookieStore.get("locale")?.value;
+  const locale: SupportedLocale =
+    localeCookie && SUPPORTED_LOCALES.includes(localeCookie as SupportedLocale)
+      ? (localeCookie as SupportedLocale)
+      : DEFAULT_LOCALE;
 
   const data: CarouselProjectListResponse = await fetchCompletedProjects(3);
   const fallback = FALLBACK_DESIGN_TOKENS;
@@ -159,7 +169,9 @@ export default async function HomePage() {
 
                       {/* Title */}
                       <h3 className="mb-2 text-lg font-bold leading-snug transition-colors group-hover:text-[var(--color-primary)]">
-                        {post.title || post.topic}
+                        {locale === "en"
+                          ? post.title_en || post.title || post.topic
+                          : post.title || post.topic}
                       </h3>
 
                       {/* Excerpt */}

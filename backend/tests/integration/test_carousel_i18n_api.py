@@ -131,6 +131,65 @@ class TestCarouselDesignEndpoints:
         data = response.json()
         assert "not yet generated" in data["detail"]
 
+    @pytest.mark.asyncio
+    async def test_get_carousel_design_translated_swipe_text(self, client):
+        """Given a completed carousel, when GET /design?lang=en, then
+        swipe_text is translated to English."""
+        payload = {
+            "topic": "Translated Swipe",
+            "audience": "Everyone",
+            "niche": "Tech",
+        }
+        create_resp = await client.post("/api/carousels", json=payload)
+        carousel_id = create_resp.json()["id"]
+
+        # Simulate completed project with design tokens
+        from uuid import UUID
+
+        from sqlalchemy.ext.asyncio import async_sessionmaker
+
+        import rag_backend.infrastructure.database.config as db_config
+        from rag_backend.infrastructure.database.carousel_repository import (
+            PostgresCarouselRepository,
+        )
+
+        assert db_config.c_engine is not None
+        Session = async_sessionmaker(db_config.c_engine, expire_on_commit=False)
+        async with Session() as session:
+            repo = PostgresCarouselRepository(session)
+            proj = await repo.get_project_by_id(UUID(carousel_id))
+            assert proj is not None
+            proj.status = CarouselStatus.COMPLETED
+            proj.design_tokens = {
+                "colors": {
+                    "primary": "#ff0000",
+                    "accent": "#00ff00",
+                    "bg": "#000000",
+                    "text": "#ffffff",
+                    "text_muted": "#888888",
+                    "text_dim": "#666666",
+                    "border": "#333333",
+                    "glow": "#ff0000",
+                },
+                "typography": {
+                    "font_family_heading": "Arial",
+                    "font_family_body": "Arial",
+                    "font_family_badge": "Courier",
+                },
+                "images": {"hero": "/hero", "slides": []},
+                "layout": {
+                    "badge_label": "Tech",
+                    "swipe_text": "Deslize →",
+                    "progress_segments": 6,
+                },
+            }
+            await repo.update_project(proj)
+
+        response = await client.get(f"/api/carousels/{carousel_id}/design?lang=en")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["layout"]["swipe_text"] == "Swipe →"
+
 
 @pytest.mark.integration
 class TestCarouselImageEndpoint:

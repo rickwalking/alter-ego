@@ -1,8 +1,11 @@
 import { notFound } from "next/navigation";
-import { BLOG_LANGUAGES, DEFAULT_BLOG_LANGUAGE } from "@/constants/api";
+import { cookies } from "next/headers";
+import { BLOG_LANGUAGES } from "@/constants/api";
 import { designTokensToCssVars } from "@/constants/blog";
 import { Container } from "@/components/layout";
 import { fetchBlogWithDesign } from "@/lib/server-fetch";
+import { DEFAULT_LOCALE, SUPPORTED_LOCALES } from "@/i18n/config";
+import type { SupportedLocale } from "@/i18n/config";
 import { BlogPostAdminPanel } from "./blog-post-admin-panel";
 import { BlogPostContent } from "./blog-post-content";
 import { BlogPostHeader } from "./blog-post-header";
@@ -17,7 +20,20 @@ interface BlogPostPageProps {
 export default async function BlogPostPage({ params, searchParams }: BlogPostPageProps) {
   const { id } = await params;
   const { lang: langParam } = await searchParams;
-  const currentLang = langParam === BLOG_LANGUAGES.ENGLISH ? BLOG_LANGUAGES.ENGLISH : DEFAULT_BLOG_LANGUAGE;
+
+  // Read global locale cookie; query param overrides for direct linking
+  const cookieStore = await cookies();
+  const localeCookie = cookieStore.get("locale")?.value;
+  const cookieLang: SupportedLocale =
+    localeCookie && SUPPORTED_LOCALES.includes(localeCookie as SupportedLocale)
+      ? (localeCookie as SupportedLocale)
+      : DEFAULT_LOCALE;
+
+  const currentLang =
+    langParam === BLOG_LANGUAGES.ENGLISH || langParam === BLOG_LANGUAGES.PORTUGUESE
+      ? langParam
+      : cookieLang;
+
   const data = await fetchBlogWithDesign(id, currentLang);
 
   if (!data) {
@@ -34,7 +50,6 @@ export default async function BlogPostPage({ params, searchParams }: BlogPostPag
   const slideImageUrls = design.images.slides.map(
     (path) => `${apiBaseUrl}${path}`
   );
-  const blogPath = `/blog/${id}`;
 
   return (
     <div
@@ -68,9 +83,6 @@ export default async function BlogPostPage({ params, searchParams }: BlogPostPag
             subtitle={blog.subtitle ?? undefined}
             badge={badge}
             design={design}
-            currentLang={currentLang}
-            availableLanguages={blog.available_languages}
-            blogPath={blogPath}
           />
           {heroImageUrl && (
             <BlogPostHero

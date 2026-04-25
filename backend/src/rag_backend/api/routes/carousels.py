@@ -311,10 +311,18 @@ async def get_carousel_blog_i18n(
 
     translated_title, translated_subtitle = _extract_title_and_subtitle(blog_content)
 
+    # Use language-specific title/subtitle fallbacks
+    if lang == "en":
+        title = translated_title or project.title_en or project.title or project.topic
+        subtitle = translated_subtitle or project.subtitle_en or project.subtitle
+    else:
+        title = translated_title or project.title or project.topic
+        subtitle = translated_subtitle or project.subtitle
+
     return CarouselBlogI18nResponse(
         markdown=blog_content,
-        title=translated_title or project.title or project.topic,
-        subtitle=translated_subtitle or project.subtitle,
+        title=title,
+        subtitle=subtitle,
         language=lang,
         available_languages=project.get_available_languages(),
     )
@@ -349,8 +357,12 @@ def _extract_title_and_subtitle(markdown: str) -> tuple[str | None, str | None]:
 async def get_carousel_design(
     project_id: UUID,
     repo: Annotated[CarouselRepository, Depends(get_carousel_repo)],
+    lang: Annotated[str, Query(pattern="^(pt|en)$")] = "pt",
 ) -> CarouselDesignResponse:
-    """Get the visual design tokens for a carousel."""
+    """Get the visual design tokens for a carousel.
+
+    `lang` overrides the swipe_text to match the viewer's language.
+    """
     project = await repo.get_project_by_id(project_id)
     if project is None:
         raise HTTPException(status_code=404, detail="Carousel project not found")
@@ -360,6 +372,10 @@ async def get_carousel_design(
     tokens = project.design_tokens
     theme_name = project.theme.value
 
+    # Override swipe_text based on the requested language
+    layout = dict(tokens["layout"])
+    layout["swipe_text"] = "Swipe \u2192" if lang == "en" else "Deslize \u2192"
+
     return CarouselDesignResponse(
         colors=CarouselDesignColors(**tokens["colors"]),
         typography=CarouselDesignTypography(**tokens["typography"]),
@@ -368,8 +384,9 @@ async def get_carousel_design(
             slides=tokens["images"]["slides"],
             rendered_slides_pt=tokens["images"].get("rendered_slides_pt"),
             rendered_slides_en=tokens["images"].get("rendered_slides_en"),
+            blog_image_map=tokens["images"].get("blog_image_map"),
         ),
-        layout=CarouselDesignLayout(**tokens["layout"]),
+        layout=CarouselDesignLayout(**layout),
         theme_name=theme_name,
     )
 

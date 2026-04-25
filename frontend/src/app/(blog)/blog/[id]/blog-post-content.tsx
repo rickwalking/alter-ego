@@ -152,16 +152,52 @@ function Section({ markdown, design, slideImage }: SectionProps) {
   );
 }
 
+export function extractH2Heading(markdown: string): string | null {
+  const match = markdown.match(/^##\s+(.+)$/m);
+  return match ? match[1].trim() : null;
+}
+
+export function resolveSlideImage(
+  sectionMarkdown: string,
+  design: CarouselDesignResponse,
+  slideImages: string[]
+): string | null {
+  const heading = extractH2Heading(sectionMarkdown);
+  if (!heading) {
+    return null;
+  }
+
+  const imageMap = design.images.blog_image_map;
+  if (imageMap && imageMap.length > 0) {
+    const entry = imageMap.find((e) => e.heading.trim() === heading);
+    if (entry && entry.slide_number >= 1 && entry.slide_number <= slideImages.length) {
+      return slideImages[entry.slide_number - 1];
+    }
+    return null;
+  }
+
+  // Fallback: positional mapping for legacy posts without image map
+  const sections = splitByH2(sectionMarkdown);
+  const sectionIndex = sections.findIndex((s) => s === sectionMarkdown);
+  if (sectionIndex > 0) {
+    const contentSlides = slideImages.length > 1 ? slideImages.slice(1) : [];
+    const slideIndex = sectionIndex - 1;
+    if (slideIndex < contentSlides.length) {
+      return contentSlides[slideIndex];
+    }
+  }
+  return null;
+}
+
 export function BlogPostContent({ markdown, design, slideImages }: BlogPostContentProps) {
   const sections = splitByH2(markdown);
-  const contentSlides = slideImages.length > 1 ? slideImages.slice(1) : [];
 
   return (
     <div className="space-y-6">
       {sections.map((section, index) => {
-        const slideImage = index > 0 && index - 1 < contentSlides.length
-          ? contentSlides[index - 1]
-          : null;
+        const slideImage = index === 0
+          ? null
+          : resolveSlideImage(section, design, slideImages);
 
         return (
           <Section

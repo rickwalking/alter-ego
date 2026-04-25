@@ -277,6 +277,7 @@ class CarouselTemplateBuilder:
                 "rendered_slides_en": [
                     f"/api/carousels/{project.id}/slide-images/en/slide_{i}" for i in range(1, 7)
                 ],
+                "blog_image_map": project.blog_image_map,
             },
             layout={
                 "badge_label": project.niche,

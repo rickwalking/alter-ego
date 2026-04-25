@@ -17,11 +17,18 @@ export const carouselDesignTypographySchema = z.object({
   font_family_badge: z.string(),
 });
 
+export const carouselBlogImageMapEntrySchema = z.object({
+  slide_number: z.number(),
+  heading: z.string(),
+  alt: z.string(),
+});
+
 export const carouselDesignImagesSchema = z.object({
   hero: z.string(),
   slides: z.array(z.string()),
   rendered_slides_pt: z.array(z.string()).nullable().optional(),
   rendered_slides_en: z.array(z.string()).nullable().optional(),
+  blog_image_map: z.array(carouselBlogImageMapEntrySchema).nullable().optional(),
 });
 
 export const carouselDesignLayoutSchema = z.object({
@@ -62,6 +69,8 @@ export const carouselProjectResponseSchema = z.object({
   niche: z.string(),
   title: z.string().nullable(),
   subtitle: z.string().nullable(),
+  title_en: z.string().nullable().optional(),
+  subtitle_en: z.string().nullable().optional(),
   theme: z.string(),
   status: z.string(),
   blog_markdown: z.string().nullable(),
@@ -168,6 +177,7 @@ export const carouselStreamEventSchema = z.object({
 export type CarouselPhaseProgress = z.infer<typeof carouselPhaseProgressSchema>;
 export type CarouselStreamEvent = z.infer<typeof carouselStreamEventSchema>;
 
+export type CarouselBlogImageMapEntry = z.infer<typeof carouselBlogImageMapEntrySchema>;
 export type CarouselDesignResponse = z.infer<typeof carouselDesignResponseSchema>;
 export type CarouselBlogI18nResponse = z.infer<typeof carouselBlogI18nResponseSchema>;
 export type CarouselBlogWithDesignResponse = z.infer<typeof carouselBlogWithDesignResponseSchema>;
