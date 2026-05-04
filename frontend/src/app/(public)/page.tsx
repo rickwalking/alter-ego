@@ -4,7 +4,7 @@ import { getTranslations } from "next-intl/server";
 import { cookies } from "next/headers";
 import { Container } from "@/components/layout";
 import { Button } from "@/components/ui/button";
-import { MessageSquare, Database, Sparkles, ArrowRight } from "lucide-react";
+import { MessageSquare, BookOpen, Images, ArrowRight } from "lucide-react";
 import { fetchCompletedProjects } from "@/lib/server-fetch";
 import { FALLBACK_DESIGN_TOKENS } from "@/constants/blog";
 import { DEFAULT_LOCALE, SUPPORTED_LOCALES } from "@/i18n/config";
@@ -46,7 +46,9 @@ export default async function HomePage() {
                 alt={t("hero.badge")}
                 fill
                 className="object-cover"
+                sizes="(max-width: 768px) 100vw, 768px"
                 priority
+                unoptimized
               />
               <div className="absolute inset-0 bg-gradient-to-t from-[var(--color-background)] via-transparent to-transparent" />
             </div>
@@ -70,12 +72,6 @@ export default async function HomePage() {
                 <Button size="lg" className="gap-2">
                   <MessageSquare className="h-5 w-5" aria-hidden="true" />
                   {tc("startChatting")}
-                </Button>
-              </Link>
-              <Link href="/knowledge">
-                <Button variant="outline" size="lg" className="gap-2">
-                  <Database className="h-5 w-5" aria-hidden="true" />
-                  {tc("manageKnowledge")}
                 </Button>
               </Link>
             </div>
@@ -124,7 +120,7 @@ export default async function HomePage() {
                 const heroPath = tokens?.images?.hero;
                 const imageUrl = heroPath
                   ? `${apiBaseUrl}${heroPath}`
-                  : "/hero-ai-assistant-v2.jpg";
+                  : `${apiBaseUrl}/api/carousels/${post.id}/images/slide_1.jpg`;
 
                 return (
                   <Link
@@ -176,7 +172,9 @@ export default async function HomePage() {
 
                       {/* Excerpt */}
                       <p className="text-sm leading-relaxed text-[var(--color-muted-foreground)]">
-                        {tb("readMore")}
+                        {locale === "en"
+                          ? post.subtitle_en || post.subtitle || post.topic
+                          : post.subtitle || post.topic}
                       </p>
                     </div>
                   </Link>
@@ -197,42 +195,42 @@ export default async function HomePage() {
           </div>
 
           <div className="grid gap-6 md:grid-cols-3">
-            {/* Feature 1 */}
+            {/* Feature 1 — Chat */}
             <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] p-6 transition-all hover:border-[var(--color-primary)]/50 hover:shadow-md">
               <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-[var(--color-primary)]/10 text-[var(--color-primary)]">
                 <MessageSquare className="h-6 w-6" aria-hidden="true" />
               </div>
               <h3 className="mb-2 text-lg font-bold">
-                {t("features.intelligentChat.title")}
+                {t("features.chat.title")}
               </h3>
               <p className="text-sm leading-relaxed text-[var(--color-muted-foreground)]">
-                {t("features.intelligentChat.description")}
+                {t("features.chat.description")}
               </p>
             </div>
 
-            {/* Feature 2 */}
+            {/* Feature 2 — Blog */}
             <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] p-6 transition-all hover:border-[var(--color-primary)]/50 hover:shadow-md">
               <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-[var(--color-primary)]/10 text-[var(--color-primary)]">
-                <Database className="h-6 w-6" aria-hidden="true" />
+                <BookOpen className="h-6 w-6" aria-hidden="true" />
               </div>
               <h3 className="mb-2 text-lg font-bold">
-                {t("features.knowledgeManagement.title")}
+                {t("features.blog.title")}
               </h3>
               <p className="text-sm leading-relaxed text-[var(--color-muted-foreground)]">
-                {t("features.knowledgeManagement.description")}
+                {t("features.blog.description")}
               </p>
             </div>
 
-            {/* Feature 3 */}
+            {/* Feature 3 — Carousels */}
             <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] p-6 transition-all hover:border-[var(--color-primary)]/50 hover:shadow-md">
               <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-[var(--color-primary)]/10 text-[var(--color-primary)]">
-                <Sparkles className="h-6 w-6" aria-hidden="true" />
+                <Images className="h-6 w-6" aria-hidden="true" />
               </div>
               <h3 className="mb-2 text-lg font-bold">
-                {t("features.aiInsights.title")}
+                {t("features.carousels.title")}
               </h3>
               <p className="text-sm leading-relaxed text-[var(--color-muted-foreground)]">
-                {t("features.aiInsights.description")}
+                {t("features.carousels.description")}
               </p>
             </div>
           </div>
