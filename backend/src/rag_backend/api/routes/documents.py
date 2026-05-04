@@ -6,6 +6,10 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from rag_backend.api.dependencies import (
+    require_authenticated_user,
+    require_editor_or_admin,
+)
 from rag_backend.api.schemas import (
     DocumentCreate,
     DocumentListResponse,
@@ -14,7 +18,7 @@ from rag_backend.api.schemas import (
     DocumentUploadResponse,
     ErrorResponse,
 )
-from rag_backend.domain.models import Document, DocumentStatus
+from rag_backend.domain.models import Document, DocumentScope, DocumentStatus, User
 from rag_backend.infrastructure.container import get_container
 from rag_backend.infrastructure.database.config import get_session
 from rag_backend.infrastructure.retrieval.document_processor import load_file_content
@@ -29,6 +33,8 @@ router = APIRouter(prefix="/documents", tags=["documents"])
     responses={
         201: {"description": "Document uploaded and processed successfully"},
         400: {"model": ErrorResponse, "description": "Invalid file or input"},
+        401: {"model": ErrorResponse, "description": "Not authenticated"},
+        403: {"model": ErrorResponse, "description": "Forbidden"},
         413: {"model": ErrorResponse, "description": "File too large"},
         429: {"model": ErrorResponse, "description": "Rate limit exceeded"},
         500: {"model": ErrorResponse, "description": "Internal server error"},
@@ -38,6 +44,9 @@ async def upload_document(
     file: UploadFile,
     title: str | None = None,
     tags: str | None = None,
+    scope: str = "personal",
+    is_public: bool = False,
+    user: Annotated[User, Depends(require_editor_or_admin)] = None,
     db: AsyncSession = Depends(get_session),  # noqa: FAST002
 ):
     """Upload a document file and process it immediately.
@@ -85,11 +94,23 @@ async def upload_document(
     if tags:
         metadata["tags"] = [t.strip() for t in tags.split(",") if t.strip()]
 
+    # Validate scope
+    try:
+        doc_scope = DocumentScope(scope)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid scope: {scope}. Must be one of: {', '.join(s.value for s in DocumentScope)}",
+        ) from None
+
     # Create document entity
     document = Document(
         title=title or file.filename or "Untitled",
         content=content,
         metadata=metadata,
+        scope=doc_scope,
+        is_public=is_public,
+        owner_id=user.id if user else None,
     )
 
     # Save to database
@@ -117,11 +138,14 @@ async def upload_document(
     responses={
         201: {"description": "Document created successfully"},
         400: {"model": ErrorResponse, "description": "Invalid input"},
+        401: {"model": ErrorResponse, "description": "Not authenticated"},
+        403: {"model": ErrorResponse, "description": "Forbidden"},
         500: {"model": ErrorResponse, "description": "Internal server error"},
     },
 )
 async def create_document(
     request: DocumentCreate,
+    user: Annotated[User, Depends(require_editor_or_admin)],
     db: Annotated[AsyncSession, Depends(get_session)],
 ):
     """Create a new document and start processing.
@@ -131,11 +155,23 @@ async def create_document(
     """
     container = get_container()
 
+    # Validate scope
+    try:
+        doc_scope = DocumentScope(request.scope)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid scope: {request.scope}. Must be one of: {', '.join(s.value for s in DocumentScope)}",
+        ) from None
+
     # Create document entity
     document = Document(
         title=request.title,
         content=request.content,
         metadata=request.metadata,
+        scope=doc_scope,
+        is_public=request.is_public,
+        owner_id=user.id,
     )
 
     # Save to database
@@ -155,9 +191,11 @@ async def create_document(
     response_model=DocumentListResponse,
     responses={
         200: {"description": "List of documents"},
+        401: {"model": ErrorResponse, "description": "Not authenticated"},
     },
 )
 async def list_documents(
+    user: Annotated[User, Depends(require_authenticated_user)],
     status: Annotated[DocumentStatus | None, Query(description="Filter by status")] = None,
     limit: Annotated[int, Query(ge=1, le=100, description="Number of items to return")] = 20,
     offset: Annotated[int, Query(ge=0, description="Number of items to skip")] = 0,
@@ -186,11 +224,14 @@ async def list_documents(
     response_model=DocumentResponse,
     responses={
         200: {"description": "Document found"},
+        401: {"model": ErrorResponse, "description": "Not authenticated"},
+        403: {"model": ErrorResponse, "description": "Forbidden"},
         404: {"model": ErrorResponse, "description": "Document not found"},
     },
 )
 async def get_document(
     document_id: UUID,
+    user: Annotated[User, Depends(require_authenticated_user)],
     db: Annotated[AsyncSession, Depends(get_session)],
 ):
     """Get a single document by ID."""
@@ -212,11 +253,13 @@ async def get_document(
     response_model=DocumentProcessingStatus,
     responses={
         200: {"description": "Processing status"},
+        401: {"model": ErrorResponse, "description": "Not authenticated"},
         404: {"model": ErrorResponse, "description": "Document not found"},
     },
 )
 async def get_document_status(
     document_id: UUID,
+    user: Annotated[User, Depends(require_authenticated_user)],
     db: Annotated[AsyncSession, Depends(get_session)],
 ):
     """Get document processing status and estimates."""
@@ -248,11 +291,14 @@ async def get_document_status(
     status_code=status.HTTP_204_NO_CONTENT,
     responses={
         204: {"description": "Document deleted successfully"},
+        401: {"model": ErrorResponse, "description": "Not authenticated"},
+        403: {"model": ErrorResponse, "description": "Forbidden"},
         404: {"model": ErrorResponse, "description": "Document not found"},
     },
 )
 async def delete_document(
     document_id: UUID,
+    user: Annotated[User, Depends(require_authenticated_user)],
     db: Annotated[AsyncSession, Depends(get_session)],
 ):
     """Delete a document and all its associated data.
@@ -276,11 +322,14 @@ async def delete_document(
     response_model=DocumentResponse,
     responses={
         200: {"description": "Document reprocessing started"},
+        401: {"model": ErrorResponse, "description": "Not authenticated"},
+        403: {"model": ErrorResponse, "description": "Forbidden"},
         404: {"model": ErrorResponse, "description": "Document not found"},
     },
 )
 async def reprocess_document(
     document_id: UUID,
+    user: Annotated[User, Depends(require_authenticated_user)],
     db: Annotated[AsyncSession, Depends(get_session)],
 ):
     """Reprocess a document.

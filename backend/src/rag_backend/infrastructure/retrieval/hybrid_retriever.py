@@ -42,18 +42,46 @@ class HybridRetrieverWithRRF:
         dense_embeddings = await self._embedding_service.embed_dense([request.query])
         sparse_embeddings = await self._embedding_service.embed_sparse([request.query])
 
-        raw = await self._vector_store.hybrid_search(
-            query=request.query,
-            dense_embedding=dense_embeddings[0],
-            sparse_embedding=sparse_embeddings[0],
-            top_k=request.top_k * expand_factor,
-            alpha=request.alpha,
-        )
+        # Determine which namespace(s) to search
+        namespaces = self._resolve_namespaces(request.namespace_prefix)
 
-        ranked = self._apply_rrf(raw, request.top_k * expand_factor)
+        all_results: list[SearchResult] = []
+        for ns in namespaces:
+            raw = await self._vector_store.hybrid_search(
+                query=request.query,
+                dense_embedding=dense_embeddings[0],
+                sparse_embedding=sparse_embeddings[0],
+                top_k=request.top_k * expand_factor,
+                alpha=request.alpha,
+                namespace=ns,
+            )
+            all_results.extend(raw)
+
+        ranked = self._apply_rrf(all_results, request.top_k * expand_factor)
         if not request.filters:
             return ranked[: request.top_k]
         return self._apply_filters(ranked, request.filters, request.top_k)
+
+    def _resolve_namespaces(self, namespace_prefix: str | None) -> list[str]:
+        """Resolve a namespace prefix into concrete Pinecone namespace names.
+
+        The Alter-Ego agent searches both ``personal`` and ``public``
+        namespaces so visitors can ask about Pedro's career *and* read
+        published blog posts.  The Carousel agent does not search any
+        of these namespaces — it uses its own data sources.
+        """
+        if namespace_prefix is None:
+            # Default: search all knowledge-base scopes
+            return ["personal", "public"]
+        if namespace_prefix == "personal":
+            # Alter-Ego agent: personal CV/bio + public blog posts
+            return ["personal", "public"]
+        if namespace_prefix == "carousel":
+            return ["carousel"]
+        if namespace_prefix == "internal":
+            return ["internal"]
+        # Exact namespace match for any other value
+        return [namespace_prefix]
 
     def _apply_filters(
         self,

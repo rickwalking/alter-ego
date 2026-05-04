@@ -5,12 +5,14 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from rag_backend.api.dependencies import require_authenticated_user
 from rag_backend.api.schemas import (
     ErrorResponse,
     SearchRequest,
     SearchResponse,
     SearchResultResponse,
 )
+from rag_backend.domain.models import User
 from rag_backend.infrastructure.container import get_container
 from rag_backend.infrastructure.database.config import get_session
 
@@ -23,10 +25,12 @@ router = APIRouter(prefix="/search", tags=["search"])
     responses={
         200: {"description": "Search results"},
         400: {"model": ErrorResponse, "description": "Invalid search query"},
+        401: {"model": ErrorResponse, "description": "Not authenticated"},
     },
 )
 async def search_documents(
     request: SearchRequest,
+    user: Annotated[User, Depends(require_authenticated_user)],
     _db: Annotated[AsyncSession, Depends(get_session)],
 ):
     """Search for relevant documents using hybrid search.
@@ -87,9 +91,11 @@ async def search_documents(
     responses={
         200: {"description": "Search results"},
         400: {"model": ErrorResponse, "description": "Invalid search query"},
+        401: {"model": ErrorResponse, "description": "Not authenticated"},
     },
 )
 async def search_documents_get(
+    user: Annotated[User, Depends(require_authenticated_user)],
     query: Annotated[str, Query(min_length=1, max_length=1000, description="Search query")],
     top_k: Annotated[int, Query(ge=1, le=20, description="Number of results to return")] = 5,
     alpha: Annotated[
@@ -104,4 +110,4 @@ async def search_documents_get(
     Use POST for more complex search scenarios.
     """
     request = SearchRequest(query=query, top_k=top_k, alpha=alpha)
-    return await search_documents(request, db)
+    return await search_documents(request, user, db)

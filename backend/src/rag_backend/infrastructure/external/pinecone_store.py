@@ -37,9 +37,21 @@ class PineconeVectorStore:
             self._index = self._client.Index(self._index_name)
         return self._index
 
-    async def upsert_chunks(self, chunks: list[DocumentChunk], document_id: UUID) -> None:
-        """Store document chunks with their embeddings."""
+    async def upsert_chunks(
+        self,
+        chunks: list[DocumentChunk],
+        document_id: UUID,
+        namespace: str | None = None,
+    ) -> None:
+        """Store document chunks with their embeddings.
+
+        Args:
+            chunks: Document chunks to upsert
+            document_id: Parent document ID
+            namespace: Pinecone namespace. If None, uses str(document_id).
+        """
         index = await self._get_index()
+        ns = namespace if namespace is not None else str(document_id)
 
         vectors = []
         for chunk in chunks:
@@ -67,14 +79,20 @@ class PineconeVectorStore:
         batch_size = 100
         for i in range(0, len(vectors), batch_size):
             batch = vectors[i : i + batch_size]
-            index.upsert(vectors=batch, namespace=str(document_id))
+            index.upsert(vectors=batch, namespace=ns)
 
-    async def delete_by_document(self, document_id: UUID) -> None:
-        """Delete all chunks belonging to a document."""
+    async def delete_by_document(self, document_id: UUID, namespace: str | None = None) -> None:
+        """Delete all chunks belonging to a document.
+
+        Args:
+            document_id: Parent document ID
+            namespace: Pinecone namespace. If None, uses str(document_id).
+        """
         index = await self._get_index()
+        ns = namespace if namespace is not None else str(document_id)
 
         # Delete all vectors in the document's namespace
-        index.delete(delete_all=True, namespace=str(document_id))
+        index.delete(delete_all=True, namespace=ns)
 
     async def hybrid_search(
         self,
@@ -83,6 +101,7 @@ class PineconeVectorStore:
         sparse_embedding: SparseEmbedding,
         top_k: int = 5,
         alpha: float = 0.5,
+        namespace: str | None = None,
     ) -> list[SearchResult]:
         """Perform hybrid search combining dense and sparse vectors.
 
@@ -92,6 +111,7 @@ class PineconeVectorStore:
             sparse_embedding: Sparse vector with 'indices' and 'values'
             top_k: Number of results to return
             alpha: Weight for dense vs sparse (0=BM25 only, 1=semantic only)
+            namespace: Pinecone namespace to search. If None, searches default.
 
         Returns:
             List of SearchResult objects
@@ -99,12 +119,15 @@ class PineconeVectorStore:
         index = await self._get_index()
 
         # Build query parameters
-        query_params = {
+        query_params: dict[str, object] = {
             "vector": dense_embedding,
             "top_k": top_k,
             "include_metadata": True,
             "include_values": False,
         }
+
+        if namespace is not None:
+            query_params["namespace"] = namespace
 
         # Add sparse vector for hybrid search if alpha < 1
         if alpha < 1.0 and sparse_embedding:
@@ -113,7 +136,7 @@ class PineconeVectorStore:
                 "values": sparse_embedding.get("values", []),
             }
 
-        # Search across all namespaces (documents)
+        # Search the specified namespace
         results = index.query(**query_params)
 
         search_results = []

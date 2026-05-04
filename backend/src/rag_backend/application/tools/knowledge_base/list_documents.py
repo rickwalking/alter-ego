@@ -15,11 +15,18 @@ async def list_documents() -> str:
     raise NotImplementedError("Use build_list_documents_tool() to create a bound instance")
 
 
-def build_list_documents_tool(document_repository: DocumentRepository) -> ...:
+def build_list_documents_tool(
+    document_repository: DocumentRepository,
+    scope_filter: str | None = None,
+) -> ...:
     """Return a bound list_documents tool closure.
 
     Captures the repository dependency so the tool can be used
     without passing it at call time.
+
+    Args:
+        document_repository: Document repository instance
+        scope_filter: Optional scope to filter documents by
     """
 
     @tool
@@ -31,6 +38,10 @@ def build_list_documents_tool(document_repository: DocumentRepository) -> ...:
         docs = await document_repository.get_all(status=DocumentStatus.COMPLETED, limit=20)
         if not docs:
             return "No documents found in the knowledge base."
+
+        # Filter by scope if specified
+        if scope_filter is not None:
+            docs = [d for d in docs if d.scope.value == scope_filter]
 
         formatted_docs = []
         for doc in docs:

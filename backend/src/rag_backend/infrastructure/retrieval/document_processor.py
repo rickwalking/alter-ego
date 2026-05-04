@@ -80,6 +80,8 @@ class RecursiveDocumentProcessor:
                     metadata={
                         "title": document.title,
                         "chunk_index": i,
+                        "scope": document.scope.value,
+                        "is_public": document.is_public,
                         **document.metadata,
                     },
                 )

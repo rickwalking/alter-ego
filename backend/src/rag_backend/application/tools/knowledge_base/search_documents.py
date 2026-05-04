@@ -19,11 +19,18 @@ async def search_documents(query: str) -> str:
     raise NotImplementedError("Use build_search_documents_tool() to create a bound instance")
 
 
-def build_search_documents_tool(retriever: Retriever, *, top_k: int = 5) -> ...:
+def build_search_documents_tool(
+    retriever: Retriever, *, top_k: int = 5, namespace_prefix: str | None = None
+) -> ...:
     """Return a bound search_documents tool closure.
 
     Captures the retriever dependency so the tool can be used
     without passing it at call time.
+
+    Args:
+        retriever: Hybrid retriever instance
+        top_k: Number of results to return
+        namespace_prefix: Optional namespace filter for scoped search
     """
 
     @tool
@@ -36,7 +43,9 @@ def build_search_documents_tool(retriever: Retriever, *, top_k: int = 5) -> ...:
         Args:
             query: The search query string
         """
-        results = await retriever.retrieve(RetrievalQuery(query=query, top_k=top_k))
+        results = await retriever.retrieve(
+            RetrievalQuery(query=query, top_k=top_k, namespace_prefix=namespace_prefix)
+        )
         if not results:
             return "No relevant documents found."
 
