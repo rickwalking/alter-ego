@@ -169,12 +169,17 @@ class TestBilingualExport:
             project,
             [SlideData(1, "intro", "H", "B")],
             "pt",
-            '<img src="images/slide_1.jpg">',
+            (
+                '<img src="images/slide_1.jpg">'
+                "<style>.bg{background:url('images/slide_1.jpg')}</style>"
+            ),
             tmp_path,
         )
         rewritten_html = export.export_slides.await_args.kwargs["html_content"]
         assert "../images/slide_1.jpg" in rewritten_html
         assert 'src="images/slide_1' not in rewritten_html
+        assert "url('../images/slide_1.jpg')" in rewritten_html
+        assert "url('images/slide_1" not in rewritten_html
 
 
 def _slide(number: int, extras: dict[str, object] | None = None) -> CarouselSlide:

@@ -84,7 +84,7 @@ def sample_project():
         theme=CarouselTheme.AI_COMPETITION,
         id=project_id,
     )
-    project.set_title(title="Master ML in 6 Slides", subtitle="A beginner's guide")
+    project.set_title(title="Master ML in 7 Slides", subtitle="A beginner's guide")
     return project
 
 
@@ -320,7 +320,7 @@ class TestCarouselAgent:
         """
         oversized = [
             {"icon": "🧠", "title": f"Item {i}", "body": f"Body {i}"}
-            for i in range(1, 7)  # 6 items
+            for i in range(1, 8)  # 7 items
         ]
         llm_response = json.dumps(
             {

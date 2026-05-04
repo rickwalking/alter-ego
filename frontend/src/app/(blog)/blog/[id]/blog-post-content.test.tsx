@@ -47,6 +47,7 @@ describe("resolveSlideImage", () => {
         "/api/carousels/1/images/slide_4",
         "/api/carousels/1/images/slide_5",
         "/api/carousels/1/images/slide_6",
+        "/api/carousels/1/images/slide_7",
       ],
       rendered_slides_pt: null,
       rendered_slides_en: null,
@@ -55,7 +56,7 @@ describe("resolveSlideImage", () => {
     layout: {
       badge_label: "Tech",
       swipe_text: "Swipe →",
-      progress_segments: 6,
+      progress_segments: 7,
     },
     theme_name: "cybersecurity",
   });

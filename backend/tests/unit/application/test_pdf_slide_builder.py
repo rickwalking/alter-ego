@@ -24,7 +24,7 @@ class TestPdfSlideBuilder:
 
     def test_n_slides_produce_n_pages(self, tmp_path: Path) -> None:
         slide_paths: list[str] = []
-        for i in range(1, 7):
+        for i in range(1, 8):
             p = tmp_path / f"slide_{i}.jpg"
             _make_jpg(p)
             slide_paths.append(str(p))
@@ -39,7 +39,7 @@ class TestPdfSlideBuilder:
         import pypdf
 
         reader = pypdf.PdfReader(str(pdf_file))
-        assert len(reader.pages) == 6
+        assert len(reader.pages) == 7
 
     def test_single_slide_page_aspect_ratio_is_preserved(self, tmp_path: Path) -> None:
         slide = tmp_path / "only.jpg"

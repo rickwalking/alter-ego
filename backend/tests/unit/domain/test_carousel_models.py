@@ -127,7 +127,7 @@ class TestCarouselProjectDesignMethods:
             layout=DesignTokenLayout(
                 badge_label="Tech",
                 swipe_text="Deslize \u2192",
-                progress_segments=6,
+                progress_segments=7,
             ),
         )
         project.design_tokens = design_tokens
@@ -135,7 +135,7 @@ class TestCarouselProjectDesignMethods:
         result = project.get_design()
         assert result is not None
         assert result["colors"]["primary"] == "#3b82f6"
-        assert result["layout"]["progress_segments"] == 6
+        assert result["layout"]["progress_segments"] == 7
 
     def test_get_design_returns_none_when_not_set(self):
         """Should return None when design tokens not set."""
@@ -207,10 +207,10 @@ class TestDesignTokensTypedDicts:
         layout = DesignTokenLayout(
             badge_label="AI",
             swipe_text="Deslize \u2192",
-            progress_segments=6,
+            progress_segments=7,
         )
         assert layout["badge_label"] == "AI"
-        assert layout["progress_segments"] == 6
+        assert layout["progress_segments"] == 7
 
     def test_complete_design_tokens(self):
         """Should construct full DesignTokens from all sub-tokens."""
@@ -237,10 +237,10 @@ class TestDesignTokensTypedDicts:
             layout=DesignTokenLayout(
                 badge_label="AI",
                 swipe_text="Deslize \u2192",
-                progress_segments=6,
+                progress_segments=7,
             ),
         )
         assert tokens["colors"]["primary"] == "#3b82f6"
         assert tokens["typography"]["font_family_badge"] == "'Courier New', monospace"
         assert tokens["images"]["hero"] == "/api/carousels/abc/images/hero"
-        assert tokens["layout"]["progress_segments"] == 6
+        assert tokens["layout"]["progress_segments"] == 7
