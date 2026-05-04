@@ -13,29 +13,29 @@
   },
   "home": {
     "hero": {
-      "badge": "AI-Powered Content",
+      "badge": "Tech Content",
       "title": "Chat with my Alter-Ego",
       "highlight": "to get to know me better",
-      "subtitle": "Chat with an AI that knows everything about my career, experience, and skills. Also, see my blog posts and projects."
+      "subtitle": "Chat with an intelligent assistant that knows everything about my career, experience, and skills. Also, see my blog posts and projects."
     },
     "posts": {
       "title": "Latest Posts",
-      "subtitle": "AI-generated carousels and blog posts about tech, AI, and software engineering.",
+      "subtitle": "Carousels and blog posts about tech, software engineering, and the future of development.",
       "viewAll": "View all posts"
     },
     "features": {
-      "title": "What I Can Do",
-      "intelligentChat": {
-        "title": "AI-Powered Chat",
-        "description": "Have natural conversations with an AI that understands your knowledge base and can answer questions about your content."
+      "title": "What You Can Explore",
+      "chat": {
+        "title": "Chat with My Alter-Ego",
+        "description": "Have natural conversations with an AI that knows my entire career, skills, and experience. Ask anything about my work, projects, or tech opinions."
       },
-      "knowledgeManagement": {
-        "title": "Knowledge Management",
-        "description": "Upload documents, organize information, and build a comprehensive knowledge base that the AI can reference."
+      "blog": {
+        "title": "Blog Posts",
+        "description": "Read long-form articles about tech, AI, and software engineering — researched, drafted, and designed with care."
       },
-      "aiInsights": {
-        "title": "AI-Powered Insights",
-        "description": "Get intelligent insights, summaries, and connections across your documents powered by modern AI technology."
+      "carousels": {
+        "title": "Visual Carousels",
+        "description": "Browse visually rich Instagram-style carousels that break down complex tech topics into beautiful, easy-to-digest slides."
       }
     }
   },
@@ -245,6 +245,71 @@
       "goToSlide": "Go to slide {number}",
       "downloadImages": "Download images"
     }
+  },
+  "auth": {
+    "loginTitle": "Sign In",
+    "loginSubtitle": "Access your account",
+    "emailLabel": "Email",
+    "emailPlaceholder": "you@example.com",
+    "passwordLabel": "Password",
+    "passwordPlaceholder": "Enter your password",
+    "signIn": "Sign In",
+    "signingIn": "Signing in...",
+    "loginError": "Invalid email or password",
+    "forbiddenTitle": "Access Denied",
+    "forbiddenDescription": "You do not have permission to access this page.",
+    "goHome": "Go Home"
+  },
+  "admin": {
+    "panelTitle": "Admin Panel",
+    "usersLink": "Users",
+    "logout": "Logout",
+    "usersTitle": "User Management",
+    "usersSubtitle": "Total users: {count}",
+    "createUser": "Create User",
+    "loading": "Loading...",
+    "noUsers": "No users found.",
+    "nameColumn": "Name",
+    "emailColumn": "Email",
+    "roleColumn": "Role",
+    "statusColumn": "Status",
+    "createdColumn": "Created",
+    "actionsColumn": "Actions",
+    "active": "Active",
+    "inactive": "Inactive",
+    "edit": "Edit",
+    "delete": "Delete",
+    "resetPassword": "Reset Password",
+    "createUserTitle": "Create New User",
+    "createError": "Failed to create user",
+    "createSuccess": "User created successfully",
+    "createSuccessWithPassword": "User created. Temporary password: {password}",
+    "fullNameLabel": "Full Name",
+    "roleLabel": "Role",
+    "editorRole": "Editor",
+    "adminRole": "Admin",
+    "passwordOptional": "optional - auto-generated if empty",
+    "passwordPlaceholder": "Min 12 characters",
+    "cancel": "Cancel",
+    "create": "Create",
+    "creating": "Creating...",
+    "editUserTitle": "Edit User",
+    "updateError": "Failed to update user",
+    "activeLabel": "Active",
+    "save": "Save",
+    "saving": "Saving...",
+    "deleteUserTitle": "Delete User",
+    "deleteUserDescription": "Are you sure you want to delete {email}? This action cannot be undone.",
+    "deleteError": "Failed to delete user",
+    "deleting": "Deleting...",
+    "resetPasswordTitle": "Reset Password",
+    "resetPasswordDescription": "This will generate a new temporary password for the user.",
+    "resetError": "Failed to reset password",
+    "resetSuccess": "Password reset successfully",
+    "reset": "Reset",
+    "resetting": "Resetting...",
+    "copy": "Copy",
+    "done": "Done"
   },
   "notFound": {
     "code": "404",

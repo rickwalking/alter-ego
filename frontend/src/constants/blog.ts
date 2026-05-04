@@ -49,7 +49,7 @@ export const FALLBACK_DESIGN_TOKENS: CarouselDesignResponse = {
   layout: {
     badge_label: "AI/ML",
     swipe_text: "Deslize \u2192",
-    progress_segments: 6,
+    progress_segments: 7,
   },
   theme_name: "ai_competition",
 };

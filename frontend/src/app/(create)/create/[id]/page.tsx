@@ -76,7 +76,10 @@ export default function WorkspacePage() {
     if (!conversationId) return;
 
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    const wsUrl = `${protocol}//${window.location.host}/ws/chat/${conversationId}`;
+    const baseWsUrl = `${protocol}//${window.location.host}/ws/chat/${conversationId}`;
+    const tokenMatch = document.cookie.match(new RegExp("(^| )access_token=([^;]+)"));
+    const token = tokenMatch ? decodeURIComponent(tokenMatch[2]) : null;
+    const wsUrl = token ? `${baseWsUrl}?token=${encodeURIComponent(token)}` : baseWsUrl;
     const socket = new WebSocket(wsUrl);
 
     socket.onopen = () => {

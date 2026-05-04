@@ -1,6 +1,8 @@
 import { notFound } from "next/navigation";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { BLOG_LANGUAGES } from "@/constants/api";
+
+export const dynamic = "force-dynamic";
 import { designTokensToCssVars } from "@/constants/blog";
 import { Container } from "@/components/layout";
 import { fetchBlogWithDesign } from "@/lib/server-fetch";
@@ -43,7 +45,17 @@ export default async function BlogPostPage({ params, searchParams }: BlogPostPag
   const { blog, design } = data;
   const cssVars = designTokensToCssVars(design);
   const badge = design.layout.badge_label;
-  const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
+  // Derive the public base URL from the incoming request so images work
+  // in production (Docker + CloudFlare) without NEXT_PUBLIC_API_URL.
+  const headerList = await headers();
+  const forwardedProto = headerList.get("x-forwarded-proto");
+  const forwardedHost = headerList.get("x-forwarded-host");
+  const host = headerList.get("host");
+  const protocol = forwardedProto || "https";
+  const publicHost = forwardedHost || host || "marinssolutions.com";
+  const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || `${protocol}://${publicHost}`;
+
   const heroImageUrl = design.images.hero
     ? `${apiBaseUrl}${design.images.hero}`
     : "";

@@ -10,20 +10,32 @@ import {
 const DEFAULT_BASE_URL = "http://localhost:8000";
 
 function getBaseUrl(): string {
-  return process.env.NEXT_PUBLIC_API_URL || DEFAULT_BASE_URL;
+  // Server-side in Docker: explicit override
+  if (typeof window === "undefined" && process.env.API_BASE_URL) {
+    return process.env.API_BASE_URL;
+  }
+  const envUrl = process.env.NEXT_PUBLIC_API_URL;
+  if (typeof window === "undefined" && envUrl?.startsWith("/")) {
+    return "http://backend:8000";
+  }
+  return envUrl || DEFAULT_BASE_URL;
 }
 
 async function validatedFetch<T>(
   url: string,
   schema: z.ZodSchema<T>,
-  options?: { revalidate?: number }
+  options?: { revalidate?: number; cache?: RequestInit["cache"] }
 ): Promise<T | null> {
   const baseUrl = getBaseUrl();
 
   try {
-    const res = await fetch(`${baseUrl}${url}`, {
-      next: options?.revalidate ? { revalidate: options.revalidate } : undefined,
-    });
+    const fetchOptions: RequestInit & { next?: { revalidate?: number } } = {};
+    if (options?.cache) {
+      fetchOptions.cache = options.cache;
+    } else if (options?.revalidate) {
+      fetchOptions.next = { revalidate: options.revalidate };
+    }
+    const res = await fetch(`${baseUrl}${url}`, fetchOptions);
 
     if (!res.ok) {
       return null;
@@ -49,7 +61,7 @@ export async function fetchCompletedProjects(
   const result = await validatedFetch(
     `${API_ENDPOINTS.CAROUSELS}?status=completed&limit=${limit}`,
     carouselProjectListResponseSchema,
-    { revalidate: 3600 }
+    { cache: "no-store" }
   );
 
   return result ?? { items: [], total: 0, limit, offset: 0 };
@@ -66,12 +78,12 @@ export async function fetchBlogWithDesign(
     validatedFetch(
       API_ENDPOINTS.CAROUSEL_BLOG_LANG(id, lang),
       carouselBlogI18nResponseSchema,
-      { revalidate: 3600 }
+      { cache: "no-store" }
     ),
     validatedFetch(
       API_ENDPOINTS.CAROUSEL_DESIGN(id, lang),
       carouselDesignResponseSchema,
-      { revalidate: 3600 }
+      { cache: "no-store" }
     ),
   ]);
 

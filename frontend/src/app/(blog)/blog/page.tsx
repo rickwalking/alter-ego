@@ -1,13 +1,19 @@
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
+import { cookies } from "next/headers";
 import { Container } from "@/components/layout";
 import { fetchCompletedProjects } from "@/lib/server-fetch";
 import { FALLBACK_DESIGN_TOKENS } from "@/constants/blog";
+import { DEFAULT_LOCALE, SUPPORTED_LOCALES } from "@/i18n/config";
+import type { SupportedLocale } from "@/i18n/config";
 import type { CarouselProjectListResponse } from "@/schemas/carousel";
+
+export const dynamic = "force-dynamic";
 
 interface PostCardProps {
   id: string;
   title: string;
+  titleEn: string | null;
   topic: string;
   niche: string;
   status: string;
@@ -15,10 +21,11 @@ interface PostCardProps {
   createdAt: string;
   readMoreText: string;
   descriptionText: string;
+  locale: SupportedLocale;
 }
 
-function PostCard({ id, title, topic, niche, status, primaryColor, createdAt, readMoreText, descriptionText }: PostCardProps) {
-  const displayTitle = title || topic;
+function PostCard({ id, title, titleEn, topic, niche, status, primaryColor, createdAt, readMoreText, descriptionText, locale }: PostCardProps) {
+  const displayTitle = (locale === "en" ? titleEn || title : title) || topic;
 
   return (
     <Link
@@ -34,9 +41,6 @@ function PostCard({ id, title, topic, niche, status, primaryColor, createdAt, re
           }}
         >
           {niche}
-        </span>
-        <span className="rounded bg-green-500/10 px-2 py-0.5 text-xs font-medium text-green-500">
-          {status}
         </span>
       </div>
       <h2 className="mb-2 text-lg font-bold leading-snug transition-colors group-hover:text-[var(--color-primary)]">
@@ -61,8 +65,21 @@ function PostCard({ id, title, topic, niche, status, primaryColor, createdAt, re
   );
 }
 
+function truncate(text: string, maxLength: number): string {
+  if (text.length <= maxLength) return text;
+  return text.slice(0, maxLength).trimEnd() + "...";
+}
+
 export default async function BlogPage() {
   const t = await getTranslations("blog");
+  const cookieStore = await cookies();
+  const localeCookie = cookieStore.get("locale")?.value;
+  const locale: SupportedLocale =
+    localeCookie && SUPPORTED_LOCALES.includes(localeCookie as SupportedLocale)
+      ? (localeCookie as SupportedLocale)
+      : DEFAULT_LOCALE;
+
+  // Fetch latest completed projects for the blog listing
   const data: CarouselProjectListResponse = await fetchCompletedProjects(20);
   const fallback = FALLBACK_DESIGN_TOKENS;
 
@@ -102,20 +119,30 @@ export default async function BlogPage() {
         </div>
       ) : (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {data.items.map((post) => (
-            <PostCard
-              key={post.id}
-              id={post.id}
-              title={post.title ?? ""}
-              topic={post.topic}
-              niche={post.niche}
-              status={post.status}
-              primaryColor={fallback.colors.primary}
-              createdAt={post.created_at}
-              readMoreText={t("readMore")}
-              descriptionText={t("subtitle")}
-            />
-          ))}
+          {data.items.map((post) => {
+            const rawSubtitle =
+              locale === "en"
+                ? post.subtitle_en || post.subtitle
+                : post.subtitle;
+            const description = truncate(rawSubtitle || post.topic, 120);
+
+            return (
+              <PostCard
+                key={post.id}
+                id={post.id}
+                title={post.title ?? ""}
+                titleEn={post.title_en ?? null}
+                topic={post.topic}
+                niche={post.niche}
+                status={post.status}
+                primaryColor={fallback.colors.primary}
+                createdAt={post.created_at}
+                readMoreText={t("readMore")}
+                descriptionText={description}
+                locale={locale}
+              />
+            );
+          })}
         </div>
       )}
     </Container>

@@ -38,7 +38,7 @@ const VALID_DESIGN_IMAGES = {
 const VALID_DESIGN_LAYOUT = {
   badge_label: "AI/ML",
   swipe_text: "Deslize →",
-  progress_segments: 6,
+  progress_segments: 7,
 };
 
 const VALID_DESIGN_RESPONSE = {

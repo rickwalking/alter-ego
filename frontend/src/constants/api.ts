@@ -1,5 +1,11 @@
 /** API endpoint paths. */
 export const API_ENDPOINTS = {
+  AUTH_LOGIN: "/api/auth/token",
+  AUTH_ME: "/api/auth/me",
+  AUTH_CHANGE_PASSWORD: "/api/auth/change-password",
+  ADMIN_USERS: "/api/admin/users",
+  ADMIN_USER_BY_ID: (id: string) => `/api/admin/users/${id}`,
+  ADMIN_USER_RESET_PASSWORD: (id: string) => `/api/admin/users/${id}/reset-password`,
   DOCUMENTS: "/api/documents",
   DOCUMENT_BY_ID: (id: string) => `/api/documents/${id}`,
   DOCUMENT_REPROCESS: (id: string) => `/api/documents/${id}/reprocess`,
@@ -32,6 +38,7 @@ export const API_ENDPOINTS = {
 /** Route paths for navigation. */
 export const ROUTE_PATHS = {
   HOME: "/",
+  LOGIN: "/login",
   CHAT: "/chat",
   KNOWLEDGE: "/knowledge",
   BLOG: "/blog",
@@ -39,6 +46,8 @@ export const ROUTE_PATHS = {
   CREATE: "/create",
   CREATE_WORKSPACE: (id: string) => `/create/${id}`,
   CREATE_PUBLISH: (id: string) => `/create/${id}/publish`,
+  ADMIN: "/admin",
+  ADMIN_USERS: "/admin/users",
 } as const;
 
 /** HTTP methods. */

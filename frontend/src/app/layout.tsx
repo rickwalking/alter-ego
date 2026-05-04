@@ -16,13 +16,13 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "RAG Chat - Personal Knowledge Assistant",
-  description: "Chat with an AI about your personal knowledge base",
-  keywords: ["RAG", "AI", "Chat", "Knowledge Base", "Next.js", "React"],
-  authors: [{ name: "RAG Chat Team" }],
+  title: "Pedro Marins - My Personal Blog and Assistant",
+  description: "AI-generated carousels and blog posts about tech, AI, and software engineering.",
+  keywords: ["AI", "Blog", "Tech", "Software Engineering", "Next.js", "React"],
+  authors: [{ name: "Pedro Marins" }],
   openGraph: {
-    title: "RAG Chat - Personal Knowledge Assistant",
-    description: "Chat with an AI about your personal knowledge base",
+    title: "Pedro Marins - My Personal Blog and Assistant",
+    description: "AI-generated carousels and blog posts about tech, AI, and software engineering.",
     type: "website",
   },
 };

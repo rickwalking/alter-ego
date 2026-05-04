@@ -13,29 +13,29 @@
   },
   "home": {
     "hero": {
-      "badge": "Conteúdo Gerado por IA",
+      "badge": "Conteúdo Tech",
       "title": "Converse com meu Alter-Ego",
       "highlight": "para me conhecer melhor",
-      "subtitle": "Converse com uma IA que sabe tudo sobre minha carreira, experiência e habilidades. Veja também meus posts e projetos."
+      "subtitle": "Converse com um assistente inteligente que sabe tudo sobre minha carreira, experiência e habilidades. Veja também meus posts e projetos."
     },
     "posts": {
       "title": "Posts Recentes",
-      "subtitle": "Carrosséis e posts de blog gerados por IA sobre tecnologia, IA e engenharia de software.",
+      "subtitle": "Carrosséis e posts de blog sobre tecnologia, engenharia de software e o futuro do desenvolvimento.",
       "viewAll": "Ver todos os posts"
     },
     "features": {
-      "title": "O que Eu Posso Fazer",
-      "intelligentChat": {
-        "title": "Chat com IA",
-        "description": "Tenha conversas naturais com uma IA que entende sua base de conhecimento e pode responder perguntas sobre seu conteúdo."
+      "title": "O que Você Pode Explorar",
+      "chat": {
+        "title": "Converse com Meu Alter-Ego",
+        "description": "Tenha conversas naturais com uma IA que conhece toda minha carreira, habilidades e experiência. Pergunte sobre meu trabalho, projetos ou opiniões sobre tecnologia."
       },
-      "knowledgeManagement": {
-        "title": "Gerenciamento de Conhecimento",
-        "description": "Faça upload de documentos, organize informações e construa uma base de conhecimento abrangente que a IA possa consultar."
+      "blog": {
+        "title": "Posts de Blog",
+        "description": "Leia artigos longos sobre tecnologia, IA e engenharia de software — pesquisados, escritos e desenhados com cuidado."
       },
-      "aiInsights": {
-        "title": "Insights com IA",
-        "description": "Obtenha insights inteligentes, resumos e conexões entre seus documentos, impulsionados por tecnologia de IA moderna."
+      "carousels": {
+        "title": "Carrosséis Visuais",
+        "description": "Navegue por carrosséis visuais no estilo Instagram que quebram tópicos complexos de tecnologia em slides bonitos e fáceis de entender."
       }
     }
   },
@@ -245,6 +245,71 @@
       "goToSlide": "Ir para slide {number}",
       "downloadImages": "Baixar imagens"
     }
+  },
+  "auth": {
+    "loginTitle": "Entrar",
+    "loginSubtitle": "Acesse sua conta",
+    "emailLabel": "Email",
+    "emailPlaceholder": "voce@exemplo.com",
+    "passwordLabel": "Senha",
+    "passwordPlaceholder": "Digite sua senha",
+    "signIn": "Entrar",
+    "signingIn": "Entrando...",
+    "loginError": "Email ou senha inválidos",
+    "forbiddenTitle": "Acesso Negado",
+    "forbiddenDescription": "Você não tem permissão para acessar esta página.",
+    "goHome": "Ir para o Início"
+  },
+  "admin": {
+    "panelTitle": "Painel de Admin",
+    "usersLink": "Usuários",
+    "logout": "Sair",
+    "usersTitle": "Gerenciamento de Usuários",
+    "usersSubtitle": "Total de usuários: {count}",
+    "createUser": "Criar Usuário",
+    "loading": "Carregando...",
+    "noUsers": "Nenhum usuário encontrado.",
+    "nameColumn": "Nome",
+    "emailColumn": "Email",
+    "roleColumn": "Função",
+    "statusColumn": "Status",
+    "createdColumn": "Criado",
+    "actionsColumn": "Ações",
+    "active": "Ativo",
+    "inactive": "Inativo",
+    "edit": "Editar",
+    "delete": "Excluir",
+    "resetPassword": "Redefinir Senha",
+    "createUserTitle": "Criar Novo Usuário",
+    "createError": "Falha ao criar usuário",
+    "createSuccess": "Usuário criado com sucesso",
+    "createSuccessWithPassword": "Usuário criado. Senha temporária: {password}",
+    "fullNameLabel": "Nome Completo",
+    "roleLabel": "Função",
+    "editorRole": "Editor",
+    "adminRole": "Administrador",
+    "passwordOptional": "opcional - auto-gerada se vazio",
+    "passwordPlaceholder": "Mín 12 caracteres",
+    "cancel": "Cancelar",
+    "create": "Criar",
+    "creating": "Criando...",
+    "editUserTitle": "Editar Usuário",
+    "updateError": "Falha ao atualizar usuário",
+    "activeLabel": "Ativo",
+    "save": "Salvar",
+    "saving": "Salvando...",
+    "deleteUserTitle": "Excluir Usuário",
+    "deleteUserDescription": "Tem certeza que deseja excluir {email}? Esta ação não pode ser desfeita.",
+    "deleteError": "Falha ao excluir usuário",
+    "deleting": "Excluindo...",
+    "resetPasswordTitle": "Redefinir Senha",
+    "resetPasswordDescription": "Isso gerará uma nova senha temporária para o usuário.",
+    "resetError": "Falha ao redefinir senha",
+    "resetSuccess": "Senha redefinida com sucesso",
+    "reset": "Redefinir",
+    "resetting": "Redefinindo...",
+    "copy": "Copiar",
+    "done": "Concluído"
   },
   "notFound": {
     "code": "404",

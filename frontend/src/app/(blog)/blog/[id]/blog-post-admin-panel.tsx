@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useDeleteCarousel } from "@/features/create/hooks";
+import { useAuth } from "@/hooks/use-auth";
 import { ROUTE_PATHS } from "@/constants/api";
 import type { CarouselDesignResponse } from "@/schemas/carousel";
 
@@ -18,6 +19,11 @@ export function BlogPostAdminPanel({ projectId, design }: BlogPostAdminPanelProp
   const router = useRouter();
   const deleteMutation = useDeleteCarousel();
   const [showConfirm, setShowConfirm] = useState(false);
+  const { user, isAdmin } = useAuth();
+
+  if (!user || !isAdmin) {
+    return null;
+  }
 
   const handleDelete = async () => {
     try {

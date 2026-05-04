@@ -189,8 +189,23 @@ export function resolveSlideImage(
   return null;
 }
 
+function stripLeadingH1(markdown: string): string {
+  const lines = markdown.split("\n");
+  if (lines.length === 0) return markdown;
+  const first = lines[0].trim();
+  if (first.startsWith("# ")) {
+    let idx = 1;
+    while (idx < lines.length && lines[idx].trim() === "") {
+      idx += 1;
+    }
+    return lines.slice(idx).join("\n");
+  }
+  return markdown;
+}
+
 export function BlogPostContent({ markdown, design, slideImages }: BlogPostContentProps) {
-  const sections = splitByH2(markdown);
+  const cleaned = stripLeadingH1(markdown);
+  const sections = splitByH2(cleaned);
 
   return (
     <div className="space-y-6">

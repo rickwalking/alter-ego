@@ -60,7 +60,7 @@ const MOCK_DESIGN = {
   layout: {
     badge_label: "AI/ML",
     swipe_text: "Deslize →",
-    progress_segments: 6,
+    progress_segments: 7,
   },
   theme_name: "ai_competition",
 };
