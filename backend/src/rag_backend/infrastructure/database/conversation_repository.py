@@ -2,7 +2,7 @@
 
 from uuid import UUID
 
-from sqlalchemy import desc, select
+from sqlalchemy import desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.domain.models import Conversation, Message
@@ -94,6 +94,13 @@ class PostgresMessageRepository:
             .limit(limit)
         )
         return [msg.to_entity() for msg in result.scalars().all()]
+
+    async def count_by_conversation(self, conversation_id: UUID) -> int:
+        """Count messages in a conversation."""
+        result = await self._session.execute(
+            select(func.count()).where(MessageModel.conversation_id == str(conversation_id))
+        )
+        return result.scalar() or 0
 
     async def get_recent_context(
         self, conversation_id: UUID, max_tokens: int = 4000

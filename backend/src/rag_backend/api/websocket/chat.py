@@ -6,7 +6,7 @@ from uuid import UUID
 from fastapi import WebSocket, WebSocketDisconnect
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from rag_backend.api.dependencies.agents import build_rag_agent
+from rag_backend.api.dependencies.agents import build_alter_ego_agent
 from rag_backend.application.services.conversation_service import ConversationService
 from rag_backend.domain.models import Message, MessageRole
 from rag_backend.infrastructure.container import get_container
@@ -99,7 +99,7 @@ class ChatWebSocketHandler:
                     await websocket.close(code=4004)
                     return
 
-                agent = build_rag_agent(db, container)
+                agent = build_alter_ego_agent(db, container)
 
                 # Handle incoming messages
                 while True:

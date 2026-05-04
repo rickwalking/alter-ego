@@ -21,6 +21,11 @@ interface UseWebSocketChatReturn {
   error: string | null;
 }
 
+function getTokenFromCookie(name: string): string | null {
+  const match = document.cookie.match(new RegExp("(^| )" + name + "=([^;]+)"));
+  return match ? decodeURIComponent(match[2]) : null;
+}
+
 export function useWebSocketChat({
   conversationId,
   baseUrl = "",
@@ -38,9 +43,13 @@ export function useWebSocketChat({
     if (!conversationId) return;
 
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    const wsUrl = baseUrl
+    const baseWsUrl = baseUrl
       ? baseUrl.replace(/^http/, "ws") + `/ws/chat/${conversationId}`
       : `${protocol}//${window.location.host}/ws/chat/${conversationId}`;
+
+    // Include token as query param for WebSocket auth
+    const token = getTokenFromCookie("access_token") || getTokenFromCookie("anon_token");
+    const wsUrl = token ? `${baseWsUrl}?token=${encodeURIComponent(token)}` : baseWsUrl;
 
     const socket = new WebSocket(wsUrl);
 
@@ -135,6 +144,7 @@ export function useWebSocketChat({
       const response = await fetch(`/api/conversations/${convId}/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ content }),
       });
 
