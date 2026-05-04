@@ -13,6 +13,11 @@ from fastapi.responses import FileResponse, StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.agents.carousel_orchestrator import CarouselAgent as CarouselAgentImpl
+from rag_backend.api.dependencies import (
+    get_optional_user,
+    require_authenticated_user,
+    require_editor_or_admin,
+)
 from rag_backend.api.schemas import (
     CarouselBlogI18nResponse,
     CarouselBlogResponse,
@@ -31,7 +36,8 @@ from rag_backend.api.schemas import (
     InstagramPublishRequest,
     InstagramPublishResponse,
 )
-from rag_backend.domain.models import CarouselProject, CarouselStatus
+from rag_backend.domain.constants import BRAND_KEYWORDS, BRAND_PALETTES, CAROUSEL_THEMES
+from rag_backend.domain.models import CarouselProject, CarouselStatus, User
 from rag_backend.domain.protocols import CarouselAgent, CarouselRepository, SocialPublisher
 from rag_backend.infrastructure.database.carousel_repository import (
     PostgresCarouselRepository,
@@ -107,9 +113,17 @@ def get_carousel_agent(
     )
 
 
-@router.post("", status_code=status.HTTP_201_CREATED)
+@router.post(
+    "",
+    status_code=status.HTTP_201_CREATED,
+    responses={
+        401: {"description": "Not authenticated"},
+        403: {"description": "Forbidden"},
+    },
+)
 async def create_carousel(
     request: CarouselProjectCreate,
+    user: Annotated[User, Depends(require_editor_or_admin)],
     repo: Annotated[CarouselRepository, Depends(get_carousel_repo)],
     session: Annotated[AsyncSession, Depends(get_session)],
 ) -> CarouselProjectResponse:
@@ -133,14 +147,20 @@ async def create_carousel(
     return CarouselProjectResponse.model_validate(created)
 
 
-@router.get("")
+@router.get(
+    "",
+    responses={
+        401: {"description": "Not authenticated"},
+    },
+)
 async def list_carousels(
+    user: Annotated[User | None, Depends(get_optional_user)],
     status_filter: Annotated[CarouselStatus | None, Query(alias="status")] = None,
     limit: Annotated[int, Query(ge=1, le=100)] = 20,
     offset: Annotated[int, Query(ge=0)] = 0,
     repo: Annotated[CarouselRepository, Depends(get_carousel_repo)] = None,
 ) -> CarouselProjectListResponse:
-    """List all carousel projects."""
+    """List all carousel projects. Publicly accessible for completed projects."""
     items = await repo.get_all_projects(status=status_filter, limit=limit, offset=offset)
     total = await repo.count(status=status_filter)
     return CarouselProjectListResponse(
@@ -151,9 +171,17 @@ async def list_carousels(
     )
 
 
-@router.get("/{project_id}")
+@router.get(
+    "/{project_id}",
+    responses={
+        401: {"description": "Not authenticated"},
+        403: {"description": "Forbidden"},
+        404: {"description": "Not found"},
+    },
+)
 async def get_carousel(
     project_id: UUID,
+    user: Annotated[User, Depends(require_authenticated_user)],
     repo: Annotated[CarouselRepository, Depends(get_carousel_repo)],
 ) -> CarouselProjectResponse:
     """Get a carousel project by ID."""
@@ -163,10 +191,18 @@ async def get_carousel(
     return CarouselProjectResponse.model_validate(project)
 
 
-@router.post("/{project_id}/generate")
+@router.post(
+    "/{project_id}/generate",
+    responses={
+        401: {"description": "Not authenticated"},
+        403: {"description": "Forbidden"},
+        404: {"description": "Not found"},
+    },
+)
 async def generate_carousel(
     project_id: UUID,
     request: CarouselGenerateRequest,
+    user: Annotated[User, Depends(require_editor_or_admin)],
     agent: Annotated[CarouselAgent, Depends(get_carousel_agent)],
 ) -> CarouselStatusResponse:
     """Trigger the full carousel generation pipeline."""
@@ -177,14 +213,21 @@ async def generate_carousel(
     return CarouselStatusResponse.model_validate(project)
 
 
-@router.get("/{project_id}/stream")
+@router.get(
+    "/{project_id}/stream",
+    responses={
+        401: {"description": "Not authenticated"},
+        403: {"description": "Forbidden"},
+    },
+)
 async def stream_carousel(
     project_id: UUID,
+    user: Annotated[User, Depends(require_authenticated_user)],
     agent: Annotated[CarouselAgent, Depends(get_carousel_agent)],
 ) -> StreamingResponse:
     """Stream pipeline progress as Server-Sent Events.
 
-    Each event is `data: <json>\\n\\n` where the JSON object has
+    Each event is `data: <json>\n\n` where the JSON object has
     `node`, `status`, and `phase_progress`. The frontend subscribes
     via EventSource (GET-only) and replaces its polling loop with push
     updates.
@@ -197,9 +240,18 @@ async def stream_carousel(
     return StreamingResponse(event_generator(), media_type="text/event-stream")
 
 
-@router.post("/{project_id}/resume")
+@router.post(
+    "/{project_id}/resume",
+    responses={
+        401: {"description": "Not authenticated"},
+        403: {"description": "Forbidden"},
+        404: {"description": "Not found"},
+        503: {"description": "Resume unavailable"},
+    },
+)
 async def resume_carousel(
     project_id: UUID,
+    user: Annotated[User, Depends(require_editor_or_admin)],
     agent: Annotated[CarouselAgent, Depends(get_carousel_agent)],
     repo: Annotated[CarouselRepository, Depends(get_carousel_repo)],
 ) -> CarouselStatusResponse:
@@ -226,9 +278,16 @@ async def resume_carousel(
     return CarouselStatusResponse.model_validate(project)
 
 
-@router.get("/{project_id}/status")
+@router.get(
+    "/{project_id}/status",
+    responses={
+        401: {"description": "Not authenticated"},
+        404: {"description": "Not found"},
+    },
+)
 async def get_carousel_status(
     project_id: UUID,
+    user: Annotated[User, Depends(require_authenticated_user)],
     repo: Annotated[CarouselRepository, Depends(get_carousel_repo)],
 ) -> CarouselStatusResponse:
     """Check carousel generation status."""
@@ -245,9 +304,17 @@ def _pdf_path_for_language(project: CarouselProject, lang: str) -> str | None:
     return project.pdf_path
 
 
-@router.get("/{project_id}/pdf")
+@router.get(
+    "/{project_id}/pdf",
+    responses={
+        401: {"description": "Not authenticated"},
+        403: {"description": "Forbidden"},
+        404: {"description": "Not found"},
+    },
+)
 async def get_carousel_pdf(
     project_id: UUID,
+    user: Annotated[User, Depends(require_authenticated_user)],
     repo: Annotated[CarouselRepository, Depends(get_carousel_repo)],
     lang: Annotated[str, Query(pattern="^(pt|en)$")] = "pt",
 ) -> FileResponse:
@@ -272,12 +339,20 @@ async def get_carousel_pdf(
     )
 
 
-@router.get("/{project_id}/blog")
+@router.get(
+    "/{project_id}/blog",
+    responses={
+        404: {"description": "Not found"},
+    },
+)
 async def get_carousel_blog(
     project_id: UUID,
     repo: Annotated[CarouselRepository, Depends(get_carousel_repo)],
 ) -> CarouselBlogResponse:
-    """Get the generated blog post for a carousel (default pt-BR)."""
+    """Get the generated blog post for a carousel (default pt-BR).
+
+    **Public endpoint** — no authentication required.
+    """
     project = await repo.get_project_by_id(project_id)
     if project is None:
         raise HTTPException(status_code=404, detail="Carousel project not found")
@@ -290,13 +365,21 @@ async def get_carousel_blog(
     )
 
 
-@router.get("/{project_id}/blog/{lang}")
+@router.get(
+    "/{project_id}/blog/{lang}",
+    responses={
+        404: {"description": "Not found"},
+    },
+)
 async def get_carousel_blog_i18n(
     project_id: UUID,
     lang: Annotated[str, FastPath(pattern="^(pt|en)$")],
     repo: Annotated[CarouselRepository, Depends(get_carousel_repo)],
 ) -> CarouselBlogI18nResponse:
-    """Get the generated blog post in a specific language."""
+    """Get the generated blog post in a specific language.
+
+    **Public endpoint** — no authentication required.
+    """
     project = await repo.get_project_by_id(project_id)
     if project is None:
         raise HTTPException(status_code=404, detail="Carousel project not found")
@@ -353,9 +436,90 @@ def _extract_title_and_subtitle(markdown: str) -> tuple[str | None, str | None]:
     return heading, None
 
 
-@router.get("/{project_id}/design")
+def _count_slide_images(output_dir: str | None) -> int:
+    """Count slide JPG files in the project's images directory."""
+    if not output_dir:
+        return 0
+    images_dir = Path(output_dir) / "images"
+    if not images_dir.is_dir():
+        return 0
+    return len(list(images_dir.glob("slide_*.jpg")))
+
+
+def _build_default_design_tokens(
+    project: CarouselProject,
+) -> dict[str, object]:
+    """Construct fallback design tokens when the DB record is empty."""
+    theme_value = project.theme.value
+    palette = CAROUSEL_THEMES.get(theme_value)
+    if palette is None:
+        # Attempt brand match for AUTO theme
+        topic_lower = project.topic.lower()
+        for brand, keywords in BRAND_KEYWORDS.items():
+            if any(kw in topic_lower for kw in keywords):
+                palette = BRAND_PALETTES.get(brand)
+                break
+    if palette is None:
+        palette = {
+            "primary": "#3b82f6",
+            "accent": "#f59e0b",
+            "background": "#0a0e17",
+        }
+
+    slide_count = _count_slide_images(project.output_dir)
+    if slide_count == 0:
+        slide_count = 4  # sensible fallback
+
+    project_id_str = str(project.id)
+    slide_paths = [
+        f"/api/carousels/{project_id_str}/images/slide_{i}.jpg" for i in range(1, slide_count + 1)
+    ]
+    hero_path = slide_paths[0] if slide_paths else ""
+
+    colors = {
+        "primary": palette["primary"],
+        "accent": palette["accent"],
+        "bg": palette.get("background", "#0a0e17"),
+        "text": "#e2e8f0",
+        "text_muted": "#94a3b8",
+        "text_dim": "#64748b",
+        "border": "#1e293b",
+        "glow": palette["accent"],
+    }
+    typography = {
+        "font_family_heading": "Inter, system-ui, sans-serif",
+        "font_family_body": "Inter, system-ui, sans-serif",
+        "font_family_badge": "JetBrains Mono, monospace",
+    }
+    images = {
+        "hero": hero_path,
+        "slides": slide_paths,
+    }
+    badge = project.niche.strip() if project.niche else "CARROSSEL"
+    layout = {
+        "badge_label": badge,
+        "swipe_text": "Deslize \u2192",
+        "progress_segments": slide_count,
+    }
+
+    return {
+        "colors": colors,
+        "typography": typography,
+        "images": images,
+        "layout": layout,
+    }
+
+
+@router.get(
+    "/{project_id}/design",
+    responses={
+        401: {"description": "Not authenticated"},
+        404: {"description": "Not found"},
+    },
+)
 async def get_carousel_design(
     project_id: UUID,
+    user: Annotated[User | None, Depends(get_optional_user)],
     repo: Annotated[CarouselRepository, Depends(get_carousel_repo)],
     lang: Annotated[str, Query(pattern="^(pt|en)$")] = "pt",
 ) -> CarouselDesignResponse:
@@ -369,22 +533,29 @@ async def get_carousel_design(
     if project.design_tokens is None:
         raise HTTPException(status_code=404, detail="Design tokens not yet generated")
 
-    tokens = project.design_tokens
+    raw_tokens = project.design_tokens
     theme_name = project.theme.value
 
+    # Use fallback defaults when design_tokens is empty or incomplete
+    required_keys = ("colors", "typography", "images", "layout")
+    if not raw_tokens or not all(k in raw_tokens for k in required_keys):
+        tokens: dict[str, object] = _build_default_design_tokens(project)
+    else:
+        tokens = raw_tokens  # type: ignore[assignment]
+
     # Override swipe_text based on the requested language
-    layout = dict(tokens["layout"])
+    layout = dict(tokens["layout"])  # type: ignore[arg-type]
     layout["swipe_text"] = "Swipe \u2192" if lang == "en" else "Deslize \u2192"
 
     return CarouselDesignResponse(
-        colors=CarouselDesignColors(**tokens["colors"]),
-        typography=CarouselDesignTypography(**tokens["typography"]),
+        colors=CarouselDesignColors(**tokens["colors"]),  # type: ignore[arg-type]
+        typography=CarouselDesignTypography(**tokens["typography"]),  # type: ignore[arg-type]
         images=CarouselDesignImages(
-            hero=tokens["images"]["hero"],
-            slides=tokens["images"]["slides"],
-            rendered_slides_pt=tokens["images"].get("rendered_slides_pt"),
-            rendered_slides_en=tokens["images"].get("rendered_slides_en"),
-            blog_image_map=tokens["images"].get("blog_image_map"),
+            hero=tokens["images"]["hero"],  # type: ignore[index]
+            slides=tokens["images"]["slides"],  # type: ignore[index]
+            rendered_slides_pt=tokens["images"].get("rendered_slides_pt"),  # type: ignore[union-attr]
+            rendered_slides_en=tokens["images"].get("rendered_slides_en"),  # type: ignore[union-attr]
+            blog_image_map=tokens["images"].get("blog_image_map"),  # type: ignore[union-attr]
         ),
         layout=CarouselDesignLayout(**layout),
         theme_name=theme_name,
@@ -413,13 +584,21 @@ async def _load_project_with_output(project_id: UUID, repo: CarouselRepository) 
     return project
 
 
-@router.get("/{project_id}/images/{filename}")
+@router.get(
+    "/{project_id}/images/{filename}",
+    responses={
+        404: {"description": "Not found"},
+    },
+)
 async def get_carousel_image(
     project_id: UUID,
     filename: str,
     repo: Annotated[CarouselRepository, Depends(get_carousel_repo)],
 ) -> FileResponse:
-    """Serve a raw hero image (from <output>/images/)."""
+    """Serve a raw hero image (from <output>/images/).
+
+    **Public endpoint** — no authentication required.
+    """
     project = await _load_project_with_output(project_id, repo)
     image_path = _resolve_image_file(Path(project.output_dir or "") / "images", filename)
     if image_path is None:
@@ -431,14 +610,22 @@ async def get_carousel_image(
     )
 
 
-@router.get("/{project_id}/slide-images/{lang}/{filename}")
+@router.get(
+    "/{project_id}/slide-images/{lang}/{filename}",
+    responses={
+        404: {"description": "Not found"},
+    },
+)
 async def get_carousel_slide_image(
     project_id: UUID,
     lang: Annotated[str, FastPath(pattern="^(pt|en)$")],
     filename: str,
     repo: Annotated[CarouselRepository, Depends(get_carousel_repo)],
 ) -> FileResponse:
-    """Serve a per-language rendered slide JPG (from <output>/<lang>/)."""
+    """Serve a per-language rendered slide JPG (from <output>/<lang>/).
+
+    **Public endpoint** — no authentication required.
+    """
     project = await _load_project_with_output(project_id, repo)
     image_path = _resolve_image_file(Path(project.output_dir or "") / lang, filename)
     if image_path is None:
@@ -450,9 +637,16 @@ async def get_carousel_slide_image(
     )
 
 
-@router.get("/{project_id}/slides")
+@router.get(
+    "/{project_id}/slides",
+    responses={
+        401: {"description": "Not authenticated"},
+        404: {"description": "Not found"},
+    },
+)
 async def get_carousel_slides(
     project_id: UUID,
+    user: Annotated[User, Depends(require_authenticated_user)],
     repo: Annotated[CarouselRepository, Depends(get_carousel_repo)],
 ) -> list[CarouselSlideResponse]:
     """Get all slides for a carousel project."""
@@ -463,9 +657,17 @@ async def get_carousel_slides(
     return [CarouselSlideResponse.model_validate(s) for s in slides]
 
 
-@router.post("/{project_id}/caption")
+@router.post(
+    "/{project_id}/caption",
+    responses={
+        401: {"description": "Not authenticated"},
+        403: {"description": "Forbidden"},
+        404: {"description": "Not found"},
+    },
+)
 async def generate_caption(
     project_id: UUID,
+    user: Annotated[User, Depends(require_editor_or_admin)],
     agent: Annotated[CarouselAgent, Depends(get_carousel_agent)],
 ) -> CarouselCaptionResponse:
     """Generate Instagram caption for a carousel."""
@@ -476,9 +678,17 @@ async def generate_caption(
     )
 
 
-@router.get("/{project_id}/download")
+@router.get(
+    "/{project_id}/download",
+    responses={
+        401: {"description": "Not authenticated"},
+        403: {"description": "Forbidden"},
+        404: {"description": "Not found"},
+    },
+)
 async def download_carousel(
     project_id: UUID,
+    user: Annotated[User, Depends(require_authenticated_user)],
     repo: Annotated[CarouselRepository, Depends(get_carousel_repo)],
 ) -> dict[str, str]:
     """Get download info for carousel files."""
@@ -494,9 +704,18 @@ async def download_carousel(
     return {"output_dir": project.output_dir, "files": files}
 
 
-@router.delete("/{project_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/{project_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    responses={
+        401: {"description": "Not authenticated"},
+        403: {"description": "Forbidden"},
+        404: {"description": "Not found"},
+    },
+)
 async def delete_carousel(
     project_id: UUID,
+    user: Annotated[User, Depends(require_authenticated_user)],
     repo: Annotated[CarouselRepository, Depends(get_carousel_repo)],
 ) -> None:
     """Delete a carousel project and its output files."""
@@ -530,10 +749,18 @@ def _build_public_image_urls(project_id: UUID, slides_count: int = 4) -> list[st
 
 @router.post(
     "/{project_id}/publish/instagram",
+    responses={
+        401: {"description": "Not authenticated"},
+        403: {"description": "Forbidden"},
+        404: {"description": "Not found"},
+        409: {"description": "Carousel not completed"},
+        503: {"description": "Public base URL not configured"},
+    },
 )
 async def publish_to_instagram(
     project_id: UUID,
     body: InstagramPublishRequest,
+    user: Annotated[User, Depends(require_editor_or_admin)],
     repo: Annotated[CarouselRepository, Depends(get_carousel_repo)],
     publisher: Annotated[SocialPublisher, Depends(get_instagram_publisher)],
 ) -> InstagramPublishResponse:

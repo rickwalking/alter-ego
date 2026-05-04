@@ -47,7 +47,7 @@ def sample_carousel_with_blog():
         "pt": "# ML Basico\n\nConteudo em portugues.",
         "en": "# ML Basics\n\nContent in English.",
     }
-    project.set_title(title="Master ML in 6 Slides", subtitle="A beginner's guide")
+    project.set_title(title="Master ML in 7 Slides", subtitle="A beginner's guide")
     project.status = CarouselStatus.COMPLETED
     return project
 
@@ -180,7 +180,7 @@ class TestCarouselDesignEndpoints:
                 "layout": {
                     "badge_label": "Tech",
                     "swipe_text": "Deslize →",
-                    "progress_segments": 6,
+                    "progress_segments": 7,
                 },
             }
             await repo.update_project(proj)

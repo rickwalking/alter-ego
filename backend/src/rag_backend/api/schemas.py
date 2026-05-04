@@ -33,7 +33,8 @@ class DocumentBase(BaseModel):
 class DocumentCreate(DocumentBase):
     """Schema for creating a document."""
 
-    pass
+    scope: str = Field(default="personal", max_length=20)
+    is_public: bool = False
 
 
 class DocumentUpdate(BaseModel):
@@ -42,6 +43,8 @@ class DocumentUpdate(BaseModel):
     title: str | None = Field(None, min_length=1, max_length=500)
     content: str | None = Field(None, min_length=1)
     metadata: dict[str, object] | None = None
+    scope: str | None = Field(None, max_length=20)
+    is_public: bool | None = None
 
 
 class DocumentResponse(BaseModel):
@@ -52,6 +55,8 @@ class DocumentResponse(BaseModel):
     status: str
     metadata: dict[str, object]
     chunk_count: int
+    scope: str
+    is_public: bool
     created_at: datetime
     updated_at: datetime
     error_message: str | None = None
@@ -155,6 +160,8 @@ class DocumentUploadResponse(BaseModel):
     status: str
     metadata: dict[str, object]
     chunk_count: int
+    scope: str
+    is_public: bool
     created_at: datetime
     updated_at: datetime
     error_message: str | None = None
@@ -168,7 +175,7 @@ class DocumentUploadResponse(BaseModel):
 class ChatRequest(BaseModel):
     """Schema for sending a chat message."""
 
-    content: str = Field(..., min_length=1, max_length=10000)
+    content: str = Field(..., min_length=1, max_length=2000)
 
 
 class ChatResponse(BaseModel):
@@ -182,7 +189,7 @@ class ChatResponse(BaseModel):
 class ChatMessageRequest(BaseModel):
     """Schema for sending a chat message."""
 
-    content: str = Field(..., min_length=1, max_length=10000)
+    content: str = Field(..., min_length=1, max_length=2000)
 
 
 class ChatStreamResponse(BaseModel):
@@ -354,7 +361,7 @@ class CarouselProjectResponse(BaseModel):
     caption: str | None
     linkedin_post_pt: str | None = None
     linkedin_post_en: str | None = None
-    design_tokens: dict[str, dict[str, str | int | list[str]]] | None = None
+    design_tokens: dict[str, dict[str, str | int | list[str] | None]] | None = None
     status: str
     error_message: str | None = None
     output_dir: str | None = None
