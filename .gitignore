@@ -51,3 +51,11 @@ backend/scripts/seed_gemma4.py
 
 # System
 .codex
+
+# Temporary verification files
+blog-*.yml
+blog-*.png
+broken-post-*.png
+homepage-*.png
+uncle-bob-*.yml
+working-post-*.png
