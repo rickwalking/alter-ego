@@ -1,6 +1,23 @@
 """Domain-level constants."""
 
+# =============================================================================
+# Authentication & Authorization
+# =============================================================================
+
+ROLE_ADMIN = "admin"
+ROLE_EDITOR = "editor"
+VALID_ROLES: set[str] = {ROLE_ADMIN, ROLE_EDITOR}
+
+MIN_PASSWORD_LENGTH = 12
+
+JWT_ALGORITHM = "HS256"
+JWT_TYPE_AUTH = "auth"
+JWT_TYPE_ANON = "anon"
+
+# =============================================================================
 # Document statuses
+# =============================================================================
+
 STATUS_PENDING = "pending"
 STATUS_PROCESSING = "processing"
 STATUS_COMPLETED = "completed"
@@ -45,6 +62,7 @@ VALID_CAROUSEL_STATUSES = {
 
 # Slide types
 SLIDE_TYPE_INTRO = "intro"
+SLIDE_TYPE_SUMMARY = "summary"
 SLIDE_TYPE_CONTENT = "content"
 SLIDE_TYPE_CLOSING = "closing"
 SLIDE_TYPE_CTA = "cta"
@@ -58,7 +76,7 @@ CAROUSEL_HEIGHT = 1350
 CAROUSEL_DEFAULT_LANGUAGE = "pt-BR"
 
 # Default slides config
-CAROUSEL_DEFAULT_SLIDES_CONFIG = "1 intro, 3 content, 1 closing, 1 cta"
+CAROUSEL_DEFAULT_SLIDES_CONFIG = "1 intro, 1 summary, 3 content, 1 closing, 1 cta"
 
 # Theme color palettes
 CAROUSEL_THEMES: dict[str, dict[str, str]] = {
@@ -124,6 +142,11 @@ BRAND_PALETTES: dict[str, dict[str, str]] = {
         "accent": "#f59e0b",
         "background": "#0a0e17",
     },
+    "glm": {
+        "primary": "#2563eb",
+        "accent": "#06b6d4",
+        "background": "#0a0e17",
+    },
 }
 
 # Keywords that trigger brand detection. Each brand maps to a list of
@@ -173,6 +196,19 @@ BRAND_KEYWORDS: dict[str, list[str]] = {
         "o3",
         "sam altman",
         "greg brockman",
+    ],
+    "glm": [
+        "glm",
+        "glm-4",
+        "glm-5",
+        "glm-4.5",
+        "glm-5.1",
+        "glm4",
+        "glm5",
+        "chatglm",
+        "zhipu",
+        "zhupai",
+        "z.ai",
     ],
     "meta": [
         "meta",

@@ -9,7 +9,53 @@ from uuid import UUID, uuid4
 from rag_backend.domain.constants import (
     IMAGE_MODEL_DEFAULT,
     IMAGE_STYLE_DEFAULT,
+    ROLE_ADMIN,
+    ROLE_EDITOR,
 )
+
+
+class UserRole(StrEnum):
+    """User role for RBAC."""
+
+    ADMIN = ROLE_ADMIN
+    EDITOR = ROLE_EDITOR
+
+
+@dataclass
+class User:
+    """Represents a user in the system."""
+
+    email: str
+    full_name: str
+    hashed_password: str
+    role: UserRole = UserRole.EDITOR
+    is_active: bool = True
+    id: UUID = field(default_factory=uuid4)
+    created_at: datetime = field(default_factory=datetime.utcnow)
+    updated_at: datetime = field(default_factory=datetime.utcnow)
+
+    def is_admin(self) -> bool:
+        """Check if user has admin role."""
+        return self.role == UserRole.ADMIN
+
+    def is_editor(self) -> bool:
+        """Check if user has editor role."""
+        return self.role == UserRole.EDITOR
+
+    def deactivate(self) -> None:
+        """Deactivate the user account."""
+        self.is_active = False
+        self.updated_at = datetime.utcnow()
+
+    def activate(self) -> None:
+        """Activate the user account."""
+        self.is_active = True
+        self.updated_at = datetime.utcnow()
+
+    def set_role(self, role: UserRole) -> None:
+        """Update user role."""
+        self.role = role
+        self.updated_at = datetime.utcnow()
 
 
 class DesignTokenColors(TypedDict):
@@ -74,6 +120,19 @@ class DocumentStatus(StrEnum):
     FAILED = "failed"
 
 
+class DocumentScope(StrEnum):
+    """Security scope for knowledge-base documents.
+
+    Determines which agent(s) can retrieve a document and which
+    Pinecone namespace prefix it is stored under.
+    """
+
+    PERSONAL = "personal"
+    PUBLIC = "public"
+    CAROUSEL = "carousel"
+    INTERNAL = "internal"
+
+
 @dataclass
 class Document:
     """Represents a document in the knowledge base."""
@@ -87,6 +146,9 @@ class Document:
     status: DocumentStatus = DocumentStatus.PENDING
     error_message: str | None = None
     chunk_count: int = 0
+    scope: DocumentScope = DocumentScope.PERSONAL
+    owner_id: UUID | None = None
+    is_public: bool = False
 
     def update_status(self, status: DocumentStatus, error_message: str | None = None) -> None:
         """Update document status and timestamp."""
@@ -187,6 +249,7 @@ class RetrievalQuery:
     top_k: int = 5
     alpha: float = 0.5
     filters: dict[str, str | int | float | bool] | None = None
+    namespace_prefix: str | None = None
 
 
 # =============================================================================

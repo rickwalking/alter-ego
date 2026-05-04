@@ -22,8 +22,46 @@ from rag_backend.domain.models import (
     ResearchSourceType,
     RetrievalQuery,
     SearchResult,
+    User,
+    UserRole,
 )
 from rag_backend.domain.types import ChatEvent, PipelineEvent, SparseEmbedding, StatsResponse
+
+
+class UserRepository(Protocol):
+    """Protocol for user persistence operations."""
+
+    async def create(self, user: User) -> User:
+        """Create a new user."""
+        ...
+
+    async def get_by_id(self, user_id: UUID) -> User | None:
+        """Get a user by ID."""
+        ...
+
+    async def get_by_email(self, email: str) -> User | None:
+        """Get a user by email address."""
+        ...
+
+    async def get_all(self, limit: int = 100, offset: int = 0) -> list[User]:
+        """Get all users."""
+        ...
+
+    async def update(self, user: User) -> User:
+        """Update an existing user."""
+        ...
+
+    async def delete(self, user_id: UUID) -> bool:
+        """Delete a user by ID."""
+        ...
+
+    async def count(self) -> int:
+        """Count all users."""
+        ...
+
+    async def count_by_role(self, role: UserRole) -> int:
+        """Count users with a specific role."""
+        ...
 
 
 class DocumentRepository(Protocol):
@@ -101,11 +139,16 @@ class MessageRepository(Protocol):
 class VectorStore(Protocol):
     """Protocol for vector database operations."""
 
-    async def upsert_chunks(self, chunks: list[DocumentChunk], document_id: UUID) -> None:
+    async def upsert_chunks(
+        self,
+        chunks: list[DocumentChunk],
+        document_id: UUID,
+        namespace: str | None = None,
+    ) -> None:
         """Store document chunks with their embeddings."""
         ...
 
-    async def delete_by_document(self, document_id: UUID) -> None:
+    async def delete_by_document(self, document_id: UUID, namespace: str | None = None) -> None:
         """Delete all chunks belonging to a document."""
         ...
 
@@ -116,6 +159,7 @@ class VectorStore(Protocol):
         sparse_embedding: SparseEmbedding,
         top_k: int = 5,
         alpha: float = 0.5,
+        namespace: str | None = None,
     ) -> list[SearchResult]:
         """Perform hybrid search combining dense and sparse vectors."""
         ...

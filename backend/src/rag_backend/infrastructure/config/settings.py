@@ -59,8 +59,10 @@ class Settings(BaseSettings):
     max_upload_size_mb: int = 50
 
     # Security
-    secret_key: str = "change-me-in-production"  # noqa: S105 — field name, overridden in production
+    secret_key: str
+    anon_secret_key: str
     access_token_expire_minutes: int = 60
+    anon_token_expire_minutes: int = 60
 
     # Gemini (for carousel image generation)
     gemini_api_key: str = ""

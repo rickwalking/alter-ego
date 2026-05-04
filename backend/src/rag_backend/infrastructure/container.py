@@ -6,6 +6,7 @@ All dependencies are configured here and injected into the application layer.
 
 from dependency_injector import containers, providers
 
+from rag_backend.agents.alter_ego_agent import AlterEgoAgent
 from rag_backend.agents.carousel_orchestrator import CarouselAgent
 from rag_backend.agents.rag_agent import RAGAgent
 from rag_backend.application.services.conversation_service import ConversationService
@@ -36,6 +37,9 @@ from rag_backend.infrastructure.database.conversation_repository import (
 )
 from rag_backend.infrastructure.database.document_repository import (
     PostgresDocumentRepository,
+)
+from rag_backend.infrastructure.database.user_repository import (
+    PostgresUserRepository,
 )
 from rag_backend.infrastructure.external.anthropic_llm import AnthropicLLMService
 from rag_backend.infrastructure.external.gemini_image import GeminiImageService
@@ -76,6 +80,11 @@ class Container(containers.DeclarativeContainer):
 
     message_repository = providers.Factory(
         PostgresMessageRepository,
+        session=db_session,
+    )
+
+    user_repository = providers.Factory(
+        PostgresUserRepository,
         session=db_session,
     )
 
@@ -196,7 +205,16 @@ class Container(containers.DeclarativeContainer):
         output_base_dir=settings.provided().carousel_output_dir,
     )
 
-    # Agent (after carousel_agent is defined)
+    # Alter-Ego Agent (public chat — NO carousel tools)
+    alter_ego_agent = providers.Factory(
+        AlterEgoAgent,
+        settings=settings,
+        retriever=retriever,
+        message_repository=message_repository,
+        document_repository=document_repository,
+    )
+
+    # Legacy RAG Agent (deprecated — keep for backward compatibility)
     rag_agent = providers.Factory(
         RAGAgent,
         settings=settings,

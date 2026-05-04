@@ -4,6 +4,7 @@ import uuid
 
 from sqlalchemy import (
     JSON,
+    Boolean,
     Column,
     DateTime,
     ForeignKey,
@@ -27,6 +28,7 @@ from rag_backend.domain.models import (
     DocumentStatus,
     MessageRole,
     ResearchSourceType,
+    UserRole,
 )
 from rag_backend.domain.models import (
     Conversation as ConversationEntity,
@@ -40,7 +42,64 @@ from rag_backend.domain.models import (
 from rag_backend.domain.models import (
     ResearchSource as ResearchSourceEntity,
 )
+from rag_backend.domain.models import (
+    User as UserEntity,
+)
 from rag_backend.infrastructure.database.config import Base
+
+
+class UserModel(Base):
+    """SQLAlchemy model for User entity."""
+
+    __tablename__ = "users"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    email = Column(String(255), unique=True, nullable=False)
+    full_name = Column(String(255), nullable=False)
+    hashed_password = Column(String(255), nullable=False)
+    role = Column(String(20), default=UserRole.EDITOR.value, nullable=False)
+    is_active = Column(Boolean, default=True, nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )
+
+    __table_args__ = (
+        Index("idx_users_email", "email"),
+        Index("idx_users_role", "role"),
+    )
+
+    def to_entity(self) -> UserEntity:
+        """Convert ORM model to domain entity."""
+        from uuid import UUID
+
+        return UserEntity(
+            id=UUID(self.id),
+            email=self.email,
+            full_name=self.full_name,
+            hashed_password=self.hashed_password,
+            role=UserRole(self.role),
+            is_active=self.is_active,
+            created_at=self.created_at,
+            updated_at=self.updated_at,
+        )
+
+    @classmethod
+    def from_entity(cls, entity: UserEntity) -> "UserModel":
+        """Create ORM model from domain entity."""
+        return cls(
+            id=str(entity.id),
+            email=entity.email,
+            full_name=entity.full_name,
+            hashed_password=entity.hashed_password,
+            role=entity.role.value,
+            is_active=entity.is_active,
+            created_at=entity.created_at,
+            updated_at=entity.updated_at,
+        )
 
 
 class DocumentModel(Base):
@@ -49,6 +108,7 @@ class DocumentModel(Base):
     __tablename__ = "documents"
 
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    owner_id = Column(String(36), ForeignKey("users.id"), nullable=True)
     content = Column(Text, nullable=False)
     title = Column(String(500), nullable=False)
     doc_metadata = Column("metadata", JSON, default=dict, nullable=False)
@@ -63,11 +123,15 @@ class DocumentModel(Base):
         nullable=False,
     )
 
+    # Relationship to owner
+    owner = relationship("UserModel")
+
     # Indexes for common queries
     __table_args__ = (
         Index("idx_documents_status", "status"),
         Index("idx_documents_created_at", "created_at"),
         Index("idx_documents_updated_at", "updated_at"),
+        Index("idx_documents_owner_id", "owner_id"),
     )
 
     def to_entity(self) -> DocumentEntity:
@@ -118,6 +182,7 @@ class ConversationModel(Base):
     __tablename__ = "conversations"
 
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    owner_id = Column(String(36), ForeignKey("users.id"), nullable=True)
     title = Column(String(500), nullable=True)
     conv_metadata = Column("metadata", JSON, default=dict, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
@@ -136,7 +201,13 @@ class ConversationModel(Base):
         order_by="MessageModel.created_at",
     )
 
-    __table_args__ = (Index("idx_conversations_updated_at", "updated_at"),)
+    # Relationship to owner
+    owner = relationship("UserModel")
+
+    __table_args__ = (
+        Index("idx_conversations_updated_at", "updated_at"),
+        Index("idx_conversations_owner_id", "owner_id"),
+    )
 
     def to_entity(self) -> ConversationEntity:
         """Convert ORM model to domain entity."""
@@ -227,11 +298,15 @@ class CarouselProjectModel(Base):
     __tablename__ = "carousel_projects"
 
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    owner_id = Column(String(36), ForeignKey("users.id"), nullable=True)
+    is_public = Column(Boolean, default=False, nullable=False)
     topic = Column(String(500), nullable=False)
     audience = Column(String(500), nullable=False)
     niche = Column(String(200), nullable=False)
     title = Column(String(500), nullable=True)
     subtitle = Column(Text, nullable=True)
+    title_en = Column(String(500), nullable=True)
+    subtitle_en = Column(Text, nullable=True)
     slides_config = Column(
         String(200),
         nullable=False,
@@ -300,6 +375,8 @@ class CarouselProjectModel(Base):
             niche=self.niche,
             title=self.title,
             subtitle=self.subtitle,
+            title_en=self.title_en,
+            subtitle_en=self.subtitle_en,
             slides_config=self.slides_config,
             aspect_ratio=self.aspect_ratio,
             language=self.language,
@@ -336,6 +413,8 @@ class CarouselProjectModel(Base):
             niche=entity.niche,
             title=entity.title,
             subtitle=entity.subtitle,
+            title_en=entity.title_en,
+            subtitle_en=entity.subtitle_en,
             slides_config=entity.slides_config,
             aspect_ratio=entity.aspect_ratio,
             language=entity.language,
@@ -366,6 +445,8 @@ class CarouselProjectModel(Base):
         """Update ORM model from domain entity."""
         self.title = entity.title
         self.subtitle = entity.subtitle
+        self.title_en = entity.title_en
+        self.subtitle_en = entity.subtitle_en
         self.primary_color = entity.primary_color
         self.accent_color = entity.accent_color
         self.background_color = entity.background_color
