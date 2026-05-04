@@ -15,7 +15,7 @@ from rag_backend.api.middleware.error_handlers import add_error_handlers
 from rag_backend.api.middleware.rate_limiting import setup_rate_limiting
 from rag_backend.api.middleware.request_logging import RequestLoggingMiddleware
 from rag_backend.api.middleware.security_headers import SecurityHeadersMiddleware
-from rag_backend.api.routes import auth, carousels, conversations, documents, search
+from rag_backend.api.routes import admin, auth, carousels, conversations, documents, search
 from rag_backend.api.schemas import HealthCheckResponse, HealthResponse
 from rag_backend.api.websocket.chat import chat_handler
 from rag_backend.infrastructure.config.settings import Settings, get_settings
@@ -112,13 +112,16 @@ def create_app() -> FastAPI:  # noqa: PLR0915 — app factory configures all mid
     app.add_middleware(RequestLoggingMiddleware)
 
     # CORS middleware
-    allowed_origins = settings.allowed_origins.split(",") if settings.allowed_origins else ["*"]
+    if settings.debug:
+        allowed_origins = ["*"]
+    else:
+        allowed_origins = settings.allowed_origins.split(",") if settings.allowed_origins else ["*"]
     app.add_middleware(
         CORSMiddleware,
         allow_origins=allowed_origins,
         allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
+        allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+        allow_headers=["Authorization", "Content-Type", "X-Requested-With"],
     )
 
     # Rate limiting
@@ -195,6 +198,7 @@ def create_app() -> FastAPI:  # noqa: PLR0915 — app factory configures all mid
 
     # API routes
     app.include_router(auth.router, prefix="/api")
+    app.include_router(admin.router, prefix="/api")
     app.include_router(documents.router, prefix="/api")
     app.include_router(conversations.router, prefix="/api")
     app.include_router(search.router, prefix="/api")
@@ -205,7 +209,38 @@ def create_app() -> FastAPI:  # noqa: PLR0915 — app factory configures all mid
     async def websocket_chat(websocket: WebSocket, conversation_id: str):
         from uuid import UUID
 
+        from rag_backend.infrastructure.auth import (
+            decode_access_token,
+            decode_anonymous_token,
+        )
+
         conv_id = UUID(conversation_id)
+        settings = get_settings()
+
+        # Validate token from query params or cookies
+        token = websocket.query_params.get("token")
+        if not token:
+            token = websocket.cookies.get("access_token") or websocket.cookies.get("anon_token")
+
+        is_authorized = False
+
+        if token:
+            # Try authenticated token first
+            auth_payload = decode_access_token(settings, token)
+            if auth_payload is not None:
+                is_authorized = True
+            else:
+                # Try anonymous token
+                anon_payload = decode_anonymous_token(settings, token)
+                if anon_payload is not None:
+                    # Verify conversation_id matches
+                    if anon_payload.get("conversation_id") == conversation_id:
+                        is_authorized = True
+
+        if not is_authorized:
+            await websocket.close(code=1008)
+            return
+
         await chat_handler.connect(websocket, conv_id)
         await chat_handler.handle_chat(websocket, conv_id)
 

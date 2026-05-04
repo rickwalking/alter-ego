@@ -10,6 +10,7 @@ retriever, external services) from the container.
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from rag_backend.agents.alter_ego_agent import AlterEgoAgent
 from rag_backend.agents.carousel_orchestrator import CarouselAgent
 from rag_backend.agents.rag_agent import RAGAgent
 from rag_backend.infrastructure.container import Container
@@ -25,8 +26,26 @@ from rag_backend.infrastructure.database.document_repository import (
 )
 
 
+def build_alter_ego_agent(db: AsyncSession, container: Container) -> AlterEgoAgent:
+    """Build an AlterEgoAgent bound to the given per-request session.
+
+    This agent is scoped to personal knowledge base search ONLY.
+    It has ZERO carousel tools and cannot create or edit content.
+    """
+    return AlterEgoAgent(
+        settings=container.settings(),
+        retriever=container.retriever(),
+        message_repository=PostgresMessageRepository(db),
+        document_repository=PostgresDocumentRepository(db),
+    )
+
+
 def build_rag_agent(db: AsyncSession, container: Container) -> RAGAgent:
-    """Build a RAGAgent bound to the given per-request session."""
+    """Build a RAGAgent bound to the given per-request session.
+
+    Deprecated: kept for backward compatibility during migration.
+    New chat routes should use ``build_alter_ego_agent``.
+    """
     settings = container.settings()
     carousel_repo = PostgresCarouselRepository(db)
     carousel_agent = CarouselAgent(

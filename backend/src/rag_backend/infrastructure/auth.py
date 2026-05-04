@@ -2,26 +2,24 @@
 
 from datetime import UTC, datetime, timedelta
 
+import bcrypt
 import jwt
-from passlib.context import CryptContext
 
+from rag_backend.domain.constants import JWT_ALGORITHM, JWT_TYPE_ANON, JWT_TYPE_AUTH
+from rag_backend.domain.models import User
 from rag_backend.infrastructure.config.settings import Settings
-
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
-ALGORITHM = "HS256"
 
 
 def create_access_token(
     settings: Settings,
-    subject: str,
+    user: User,
     expires_delta: timedelta | None = None,
 ) -> str:
-    """Create a JWT access token.
+    """Create a JWT access token for an authenticated user.
 
     Args:
         settings: Application settings containing the secret key.
-        subject: The token subject (typically user ID or API key identifier).
+        user: The user to create the token for.
         expires_delta: Optional custom expiration time.
 
     Returns:
@@ -31,15 +29,46 @@ def create_access_token(
         expires_delta or timedelta(minutes=settings.access_token_expire_minutes)
     )
     payload = {
-        "sub": subject,
+        "sub": str(user.id),
+        "email": user.email,
+        "role": user.role.value,
+        "type": JWT_TYPE_AUTH,
         "exp": expire,
         "iat": datetime.now(UTC),
     }
-    return jwt.encode(payload, settings.secret_key, algorithm=ALGORITHM)
+    return jwt.encode(payload, settings.secret_key, algorithm=JWT_ALGORITHM)
+
+
+def create_anonymous_token(
+    settings: Settings,
+    conversation_id: str,
+    expires_delta: timedelta | None = None,
+) -> str:
+    """Create a JWT access token for an anonymous visitor.
+
+    Args:
+        settings: Application settings containing the secret key.
+        conversation_id: The conversation ID for the anonymous session.
+        expires_delta: Optional custom expiration time.
+
+    Returns:
+        Encoded JWT token string.
+    """
+    expire = datetime.now(UTC) + (
+        expires_delta or timedelta(minutes=settings.anon_token_expire_minutes)
+    )
+    payload = {
+        "sub": f"anon:{conversation_id}",
+        "conversation_id": conversation_id,
+        "type": JWT_TYPE_ANON,
+        "exp": expire,
+        "iat": datetime.now(UTC),
+    }
+    return jwt.encode(payload, settings.anon_secret_key, algorithm=JWT_ALGORITHM)
 
 
 def decode_access_token(settings: Settings, token: str) -> dict[str, object] | None:
-    """Decode and validate a JWT access token.
+    """Decode and validate an authenticated JWT access token.
 
     Args:
         settings: Application settings containing the secret key.
@@ -49,7 +78,29 @@ def decode_access_token(settings: Settings, token: str) -> dict[str, object] | N
         Token payload dict if valid, None otherwise.
     """
     try:
-        return jwt.decode(token, settings.secret_key, algorithms=[ALGORITHM])
+        payload = jwt.decode(token, settings.secret_key, algorithms=[JWT_ALGORITHM])
+        if payload.get("type") != JWT_TYPE_AUTH:
+            return None
+        return payload
+    except jwt.PyJWTError:
+        return None
+
+
+def decode_anonymous_token(settings: Settings, token: str) -> dict[str, object] | None:
+    """Decode and validate an anonymous JWT token.
+
+    Args:
+        settings: Application settings containing the anonymous secret key.
+        token: The JWT token string to decode.
+
+    Returns:
+        Token payload dict if valid, None otherwise.
+    """
+    try:
+        payload = jwt.decode(token, settings.anon_secret_key, algorithms=[JWT_ALGORITHM])
+        if payload.get("type") != JWT_TYPE_ANON:
+            return None
+        return payload
     except jwt.PyJWTError:
         return None
 
@@ -63,7 +114,10 @@ def hash_password(password: str) -> str:
     Returns:
         Hashed password string.
     """
-    return pwd_context.hash(password)
+    password_bytes = password.encode("utf-8")[:72]
+    salt = bcrypt.gensalt(rounds=12)
+    hashed = bcrypt.hashpw(password_bytes, salt)
+    return hashed.decode("utf-8")
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
@@ -76,4 +130,6 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     Returns:
         True if the password matches, False otherwise.
     """
-    return pwd_context.verify(plain_password, hashed_password)
+    plain_bytes = plain_password.encode("utf-8")[:72]
+    hash_bytes = hashed_password.encode("utf-8")
+    return bcrypt.checkpw(plain_bytes, hash_bytes)

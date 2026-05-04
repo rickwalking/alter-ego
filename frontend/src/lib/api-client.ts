@@ -38,11 +38,36 @@ export async function apiCall<T>(
 ): Promise<T> {
   const response = await fetch(url, {
     ...options,
+    credentials: "include",
     headers: {
       "Content-Type": "application/json",
       ...options?.headers,
     },
   });
+
+  if (response.status === 401) {
+    const errorData = await response.json().catch(() => null);
+    if (typeof window !== "undefined") {
+      window.location.href = "/login";
+    }
+    throw new ApiError(
+      401,
+      errorData?.message || "Unauthorized",
+      errorData?.code
+    );
+  }
+
+  if (response.status === 403) {
+    const errorData = await response.json().catch(() => null);
+    if (typeof window !== "undefined") {
+      window.location.href = "/403";
+    }
+    throw new ApiError(
+      403,
+      errorData?.message || "Forbidden",
+      errorData?.code
+    );
+  }
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => null);
@@ -99,11 +124,36 @@ export async function apiCallNoContent(
 ): Promise<void> {
   const response = await fetch(url, {
     ...options,
+    credentials: "include",
     headers: {
       "Content-Type": "application/json",
       ...options?.headers,
     },
   });
+
+  if (response.status === 401) {
+    const errorData = await response.json().catch(() => null);
+    if (typeof window !== "undefined") {
+      window.location.href = "/login";
+    }
+    throw new ApiError(
+      401,
+      errorData?.message || "Unauthorized",
+      errorData?.code
+    );
+  }
+
+  if (response.status === 403) {
+    const errorData = await response.json().catch(() => null);
+    if (typeof window !== "undefined") {
+      window.location.href = "/403";
+    }
+    throw new ApiError(
+      403,
+      errorData?.message || "Forbidden",
+      errorData?.code
+    );
+  }
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => null);
