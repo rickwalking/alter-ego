@@ -1,0 +1,83 @@
+name: Deploy to DigitalOcean
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install uv
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+
+      - name: Run backend tests
+        working-directory: backend
+        run: |
+          uv sync
+          uv run pytest --cov=rag_backend --cov-report=xml
+
+      - name: Run frontend tests
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run test -- --run
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Deploy to DigitalOcean via SSH
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.DO_HOST }}
+          username: ${{ secrets.DO_USER }}
+          key: ${{ secrets.DO_SSH_KEY }}
+          script: |
+            cd /opt/alter-ego
+            
+            # Pull latest code
+            git fetch origin
+            git reset --hard origin/main
+            
+            # Create/update environment file
+            cat > .env << 'EOF'
+            POSTGRES_USER=${{ secrets.POSTGRES_USER }}
+            POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
+            POSTGRES_DB=${{ secrets.POSTGRES_DB }}
+            PINECONE_API_KEY=${{ secrets.PINECONE_API_KEY }}
+            OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
+            ANTHROPIC_API_KEY=${{ secrets.ANTHROPIC_API_KEY }}
+            SECRET_KEY=${{ secrets.SECRET_KEY }}
+            ANON_SECRET_KEY=${{ secrets.ANON_SECRET_KEY }}
+            ALLOWED_ORIGINS=https://marinssolutions.com
+            EOF
+            
+            # Deploy with Docker Compose
+            docker compose -f docker-compose.prod.yml down
+            docker compose -f docker-compose.prod.yml pull
+            docker compose -f docker-compose.prod.yml up -d --build
+            
+            # Clean up old images
+            docker image prune -af --filter "until=168h"
+            
+            # Verify health
+            sleep 10
+            curl -sf http://localhost:8000/health || exit 1
