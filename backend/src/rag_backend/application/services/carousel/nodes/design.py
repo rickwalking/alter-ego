@@ -58,6 +58,8 @@ def run_design(
             "features": s.features,
             "stats": s.stats,
             "insight": s.insight,
+            "summary_points": s.summary_points,
+            "tldr_strip": s.tldr_strip,
         }
         for s in slides
     ]

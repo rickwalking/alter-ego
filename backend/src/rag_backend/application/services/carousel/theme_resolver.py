@@ -113,7 +113,6 @@ def resolve_theme(project: CarouselProject) -> dict[str, str]:
     text_parts = [
         project.topic or "",
         project.title or "",
-        project.subtitle or "",
         project.niche or "",
     ]
     analysis_text = " ".join(text_parts)

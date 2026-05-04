@@ -37,7 +37,12 @@ async def render_language(
     """Export a single language's slide JPGs + PDF into `<output>/<lang>/`."""
     lang_dir = output_dir / language
     lang_dir.mkdir(parents=True, exist_ok=True)
-    rewritten_html = html_content.replace('src="images/', 'src="../images/')
+    rewritten_html = (
+        html_content.replace('src="images/', 'src="../images/')
+        .replace("src='images/", "src='../images/")
+        .replace('url("images/', 'url("../images/')
+        .replace("url('images/", "url('../images/")
+    )
     slide_paths = await export.export_slides(
         html_content=rewritten_html,
         output_dir=str(lang_dir),

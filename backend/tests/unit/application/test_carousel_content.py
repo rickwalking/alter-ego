@@ -190,7 +190,7 @@ class TestRunContentImageMap:
             "blog_pt": "# Blog",
             "blog_image_map": [
                 {"slide_number": 0, "heading": "Invalid", "alt": ""},
-                {"slide_number": 7, "heading": "Invalid", "alt": ""},
+                {"slide_number": 8, "heading": "Invalid", "alt": ""},
                 {"slide_number": 3, "heading": "Valid", "alt": "Valid image"},
             ],
         }
@@ -275,3 +275,100 @@ class TestRunContentTitleEn:
         assert project.title == "Título PT"
         assert project.title_en is None
         assert project.subtitle_en is None
+
+
+class TestRunContentSummaryAndTldr:
+    """Tests for parsing summary_points and tldr_strip from LLM output."""
+
+    async def test_parses_summary_points_on_summary_slide(self):
+        """Given a JSON response with summary_points, when run_content is called,
+        then SlideData includes the summary_points."""
+        llm = AsyncMock()
+        template = MagicMock()
+        template.build_content_prompt.return_value = "prompt"
+        response = {
+            "slides": [
+                {"number": 1, "type": "intro", "heading": "Intro", "body": "B"},
+                {
+                    "number": 2,
+                    "type": "summary",
+                    "heading": "Resumo",
+                    "body": "",
+                    "summary_points": [
+                        {"icon": "🎯", "title": "T1", "body": "B1"},
+                        {"icon": "🔍", "title": "T2", "body": "B2"},
+                    ],
+                },
+            ],
+            "blog_pt": "# Blog",
+        }
+        llm.generate = AsyncMock(return_value=json.dumps(response))
+
+        project = CarouselProject(topic="T", audience="A", niche="N")
+        slides_data, _ = await run_content(project, [], llm=llm, template=template)
+
+        summary_slide = next((s for s in slides_data if s.slide_type == "summary"), None)
+        assert summary_slide is not None
+        assert summary_slide.summary_points is not None
+        assert len(summary_slide.summary_points) == 2
+        assert summary_slide.summary_points[0]["icon"] == "🎯"
+        assert summary_slide.summary_points[0]["title"] == "T1"
+
+    async def test_parses_tldr_strip_on_intro_slide(self):
+        """Given a JSON response with tldr_strip on intro, when run_content is called,
+        then SlideData includes the tldr_strip."""
+        llm = AsyncMock()
+        template = MagicMock()
+        template.build_content_prompt.return_value = "prompt"
+        response = {
+            "slides": [
+                {
+                    "number": 1,
+                    "type": "intro",
+                    "heading": "Intro",
+                    "body": "B",
+                    "tldr_strip": "TLDR: quick summary here.",
+                },
+            ],
+            "blog_pt": "# Blog",
+        }
+        llm.generate = AsyncMock(return_value=json.dumps(response))
+
+        project = CarouselProject(topic="T", audience="A", niche="N")
+        slides_data, _ = await run_content(project, [], llm=llm, template=template)
+
+        intro_slide = slides_data[0]
+        assert intro_slide.tldr_strip == "TLDR: quick summary here."
+
+    async def test_caps_summary_points_at_max_features(self):
+        """Given summary_points exceeding MAX_FEATURE_ITEMS, when run_content is called,
+        then points are truncated to MAX_FEATURE_ITEMS."""
+        llm = AsyncMock()
+        template = MagicMock()
+        template.build_content_prompt.return_value = "prompt"
+        response = {
+            "slides": [
+                {
+                    "number": 2,
+                    "type": "summary",
+                    "heading": "Resumo",
+                    "body": "",
+                    "summary_points": [
+                        {"icon": "1", "title": "T1", "body": "B1"},
+                        {"icon": "2", "title": "T2", "body": "B2"},
+                        {"icon": "3", "title": "T3", "body": "B3"},
+                        {"icon": "4", "title": "T4", "body": "B4"},
+                        {"icon": "5", "title": "T5", "body": "B5"},
+                    ],
+                },
+            ],
+            "blog_pt": "# Blog",
+        }
+        llm.generate = AsyncMock(return_value=json.dumps(response))
+
+        project = CarouselProject(topic="T", audience="A", niche="N")
+        slides_data, _ = await run_content(project, [], llm=llm, template=template)
+
+        summary_slide = slides_data[0]
+        assert summary_slide.summary_points is not None
+        assert len(summary_slide.summary_points) == 4

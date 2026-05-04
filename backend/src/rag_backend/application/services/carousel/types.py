@@ -17,8 +17,9 @@ from rag_backend.domain.models import CarouselSlide
 # is tuned for 2-4 items; 5+ overflow past the slide footer.
 MAX_FEATURE_ITEMS = 4
 
-# Maximum number of content slides in a carousel (excludes title/CTA).
-MAX_SLIDES = 6
+# Maximum number of slides in a carousel (includes intro, summary, content,
+# closing, and CTA).
+MAX_SLIDES = 7
 
 # Fields copied from SlideData into the persisted `extras` JSON. Listed
 # here so `pack_extras` stays a one-liner loop instead of four branches.
@@ -28,6 +29,8 @@ EXTRAS_FIELDS: tuple[str, ...] = (
     "insight",
     "image_prompt",
     "translation_en",
+    "summary_points",
+    "tldr_strip",
 )
 
 # (image_model, image_style) → human-readable preset name, surfaced in
@@ -51,6 +54,8 @@ class SlideDict(TypedDict, total=False):
     stats: list[dict[str, str]] | None
     insight: dict[str, str] | None
     image_prompt: str | None
+    summary_points: list[dict[str, str]] | None
+    tldr_strip: str | None
 
 
 @dataclass
@@ -76,6 +81,12 @@ class SlideData:
     # for bilingual rendering. None = no translation provided; we fall
     # back to PT when rendering EN slides.
     translation_en: dict[str, object] | None = None
+    # Three snapshot cards for the summary slide (slide 2). Each item is
+    # `{"icon": "🎯", "title": "...", "body": "..."}`. None for non-summary slides.
+    summary_points: list[dict[str, str]] | None = None
+    # One-sentence TLDR strip rendered on the intro slide (slide 1) below
+    # the subtitle. None when the intro has no strip.
+    tldr_strip: str | None = None
 
 
 def style_display_name(model: str, style: str) -> str:
@@ -104,7 +115,8 @@ def build_slides_en_index(raw: object) -> dict[int, dict[str, object]]:
     """Index the optional `slides_en` array by slide number for fast lookup.
 
     Tolerates the field being absent or malformed (LLM may skip it).
-    Each EN slide carries: heading, body, features?, stats?, insight?
+    Each EN slide carries: heading, body, features?, stats?, insight?,
+    summary_points?, tldr_strip?
     """
     result: dict[int, dict[str, object]] = {}
     if not isinstance(raw, list):
@@ -121,6 +133,8 @@ def build_slides_en_index(raw: object) -> dict[int, dict[str, object]]:
             "features": item.get("features"),
             "stats": item.get("stats"),
             "insight": item.get("insight"),
+            "summary_points": item.get("summary_points"),
+            "tldr_strip": item.get("tldr_strip"),
         }
     return result
 
@@ -129,13 +143,16 @@ def unpack_extras(slide: CarouselSlide) -> SlideData:
     """Hydrate a SlideData from a persisted CarouselSlide.
 
     Used by the refine re-render path so the new HTML carries the same
-    structured cards (features/stats/insight) as the original render.
+    structured cards (features/stats/insight/summary_points/tldr_strip)
+    as the original render.
     """
     extras = slide.extras or {}
     features = extras.get("features") if isinstance(extras, dict) else None
     stats = extras.get("stats") if isinstance(extras, dict) else None
     insight = extras.get("insight") if isinstance(extras, dict) else None
     translation_en = extras.get("translation_en") if isinstance(extras, dict) else None
+    summary_points = extras.get("summary_points") if isinstance(extras, dict) else None
+    tldr_strip = extras.get("tldr_strip") if isinstance(extras, dict) else None
     image_prompt = slide.image_prompt or (
         extras.get("image_prompt") if isinstance(extras, dict) else None
     )
@@ -149,6 +166,8 @@ def unpack_extras(slide: CarouselSlide) -> SlideData:
         stats=stats if isinstance(stats, list) else None,
         insight=insight if isinstance(insight, dict) else None,
         translation_en=(translation_en if isinstance(translation_en, dict) else None),
+        summary_points=summary_points if isinstance(summary_points, list) else None,
+        tldr_strip=str(tldr_strip) if tldr_strip else None,
     )
 
 
@@ -156,7 +175,8 @@ def slides_data_for_language(slides: list[SlideData], language: str) -> list[Sli
     """Return a copy of slides with text overridden to the target language.
 
     For 'pt' we return the originals untouched. For 'en' we swap heading,
-    body, features, stats, insight from `translation_en` when present.
+    body, features, stats, insight, summary_points, tldr_strip from
+    `translation_en` when present.
     """
     if language == "pt":
         return slides
@@ -170,6 +190,8 @@ def slides_data_for_language(slides: list[SlideData], language: str) -> list[Sli
         en_features = en.get("features") if isinstance(en, dict) else None
         en_stats = en.get("stats") if isinstance(en, dict) else None
         en_insight = en.get("insight") if isinstance(en, dict) else None
+        en_summary_points = en.get("summary_points") if isinstance(en, dict) else None
+        en_tldr_strip = en.get("tldr_strip") if isinstance(en, dict) else None
         swapped.append(
             SlideData(
                 slide_number=sd.slide_number,
@@ -181,6 +203,10 @@ def slides_data_for_language(slides: list[SlideData], language: str) -> list[Sli
                 stats=en_stats if isinstance(en_stats, list) else sd.stats,
                 insight=en_insight if isinstance(en_insight, dict) else sd.insight,
                 translation_en=sd.translation_en,
+                summary_points=en_summary_points
+                if isinstance(en_summary_points, list)
+                else sd.summary_points,
+                tldr_strip=str(en_tldr_strip) if en_tldr_strip else sd.tldr_strip,
             )
         )
     return swapped

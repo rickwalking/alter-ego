@@ -3,8 +3,12 @@
 import html
 import re
 
-from rag_backend.application.services.carousel.types import MAX_FEATURE_ITEMS, SlideDict
-from rag_backend.domain.constants import SLIDE_TYPE_CONTENT, SLIDE_TYPE_INTRO
+from rag_backend.application.services.carousel.types import MAX_FEATURE_ITEMS, MAX_SLIDES, SlideDict
+from rag_backend.domain.constants import (
+    SLIDE_TYPE_CONTENT,
+    SLIDE_TYPE_INTRO,
+    SLIDE_TYPE_SUMMARY,
+)
 from rag_backend.domain.models import CarouselProject, DesignTokens
 
 FEATURE_GRID_TWO_COLUMNS = 2
@@ -270,19 +274,24 @@ class CarouselTemplateBuilder:
                 # slides with text overlay (output of phase 6) — used by
                 # the publish carousel viewer.
                 "hero": f"/api/carousels/{project.id}/images/slide_1",
-                "slides": [f"/api/carousels/{project.id}/images/slide_{i}" for i in range(1, 7)],
+                "slides": [
+                    f"/api/carousels/{project.id}/images/slide_{i}"
+                    for i in range(1, MAX_SLIDES + 1)
+                ],
                 "rendered_slides_pt": [
-                    f"/api/carousels/{project.id}/slide-images/pt/slide_{i}" for i in range(1, 7)
+                    f"/api/carousels/{project.id}/slide-images/pt/slide_{i}"
+                    for i in range(1, MAX_SLIDES + 1)
                 ],
                 "rendered_slides_en": [
-                    f"/api/carousels/{project.id}/slide-images/en/slide_{i}" for i in range(1, 7)
+                    f"/api/carousels/{project.id}/slide-images/en/slide_{i}"
+                    for i in range(1, MAX_SLIDES + 1)
                 ],
                 "blog_image_map": project.blog_image_map,
             },
             layout={
                 "badge_label": project.niche,
                 "swipe_text": swipe_text,
-                "progress_segments": 6,
+                "progress_segments": MAX_SLIDES,
             },
         )
 
@@ -321,6 +330,8 @@ class CarouselTemplateBuilder:
             slide_type = slide["type"]
             if slide_type == SLIDE_TYPE_INTRO:
                 slides_html += CarouselTemplateBuilder._render_intro_slide(slide, project, theme)
+            elif slide_type == SLIDE_TYPE_SUMMARY:
+                slides_html += CarouselTemplateBuilder._render_summary_slide(slide, theme)
             elif slide_type == "cta":
                 slides_html += CarouselTemplateBuilder._render_cta_slide(slide, theme)
             else:
@@ -395,6 +406,18 @@ class CarouselTemplateBuilder:
     font-size: 28px; font-weight: 400; color: var(--text-48); line-height: 1.5;
   }}
   .s1-subtitle strong {{ color: var(--text); font-weight: 600; }}
+  .tldr-strip {{
+    margin-top: 20px;
+    padding: 14px 18px;
+    border-radius: 10px;
+    border-left: 3px solid {accent};
+    background: {primary}14;
+    font-size: 22px;
+    font-weight: 500;
+    color: var(--text-60);
+    line-height: 1.4;
+  }}
+  .tldr-strip strong {{ color: var(--text); font-weight: 700; }}
   .content-slide {{
     padding: 70px 72px 60px; display: flex; flex-direction: column;
   }}
@@ -452,6 +475,51 @@ class CarouselTemplateBuilder:
   .feature-grid.cols-2 {{
     display: grid; grid-template-columns: 1fr 1fr; gap: 14px;
   }}
+  .summary-slide {{
+    padding: 70px 72px 60px; display: flex; flex-direction: column;
+  }}
+  .summary-bg {{
+    position: absolute; inset: 0; z-index: 0;
+    overflow: hidden;
+  }}
+  .summary-bg-img {{
+    position: absolute; inset: 0; width: 100%; height: 100%;
+    object-fit: cover; display: block;
+    filter: blur(6px) brightness(1.0);
+  }}
+  .summary-bg::after {{
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(to bottom, {bg}99 0%, {bg}66 100%);
+  }}
+  .summary-slide > *:not(.summary-bg):not(.progress) {{ position: relative; z-index: 1; }}
+  .summary-subtitle {{
+    font-size: 24px; color: var(--text-45); margin-top: -16px;
+    margin-bottom: 24px; font-weight: 400;
+  }}
+  .summary-grid {{
+    display: grid; grid-template-columns: 1fr 1fr; gap: 14px;
+  }}
+  .summary-grid > .summary-item:nth-child(3) {{
+    grid-column: 1 / -1;
+  }}
+  .summary-item {{
+    display: flex; gap: 18px; align-items: flex-start;
+    padding: 28px 24px; border-radius: 16px;
+    background: rgba(8,12,18,0.88);
+    border: 1px solid {primary}45;
+    border-top: 3px solid {accent};
+    box-shadow: 0 8px 32px rgba(0,0,0,0.35);
+  }}
+  .summary-icon {{ font-size: 36px; line-height: 1; flex-shrink: 0; }}
+  .summary-text {{ flex: 1; }}
+  .summary-title {{
+    font-size: 30px; font-weight: 700; color: var(--text);
+    margin-bottom: 6px; line-height: 1.25;
+  }}
+  .summary-body {{
+    font-size: 24px; color: var(--text-60); line-height: 1.5;
+  }}
+  .summary-body strong {{ color: var(--text); font-weight: 700; }}
   .stat-row {{
     display: grid; grid-template-columns: repeat(3, 1fr);
     gap: 16px; margin: 20px 0;
@@ -526,6 +594,10 @@ class CarouselTemplateBuilder:
         subtitle = _render_inline(str(slide["body"]))
         badge = html.escape(project.niche, quote=False)
         audience = html.escape(project.audience, quote=False)
+        tldr = slide.get("tldr_strip")
+        tldr_html = ""
+        if tldr:
+            tldr_html = f'<div class="tldr-strip">{_render_inline(str(tldr))}</div>'
         return f"""
   <div class="slide">
     <div class="bg-glow"></div>
@@ -537,6 +609,7 @@ class CarouselTemplateBuilder:
       <div class="s1-main">
         <h1 class="s1-title">{heading}</h1>
         <p class="s1-subtitle">{subtitle}</p>
+        {tldr_html}
       </div>
       <div class="s1-footer" style="display:flex;justify-content:space-between;
         padding-top:24px;border-top:1px solid rgba(255,255,255,0.06);">
@@ -547,12 +620,62 @@ class CarouselTemplateBuilder:
   </div>"""
 
     @staticmethod
-    def _render_content_slide(slide: SlideDict, _theme: dict[str, str]) -> str:
-        """Render content slide HTML."""
-        total_slides = 6
+    def _render_summary_slide(slide: SlideDict, _theme: dict[str, str]) -> str:
+        """Render summary (TLDR) slide HTML."""
         active_bar = int(slide["number"])
         bars = ""
-        for i in range(1, total_slides + 1):
+        for i in range(1, MAX_SLIDES + 1):
+            active_class = "active" if i <= active_bar else ""
+            bars += f'<div class="bar {active_class}"></div>'
+
+        summary_points = slide.get("summary_points")
+        points_html = ""
+        if isinstance(summary_points, list) and summary_points:
+            cards = []
+            for item in summary_points:
+                if not isinstance(item, dict):
+                    continue
+                icon = html.escape(str(item.get("icon") or "🎯"), quote=False)
+                title = _render_inline(str(item.get("title") or ""))
+                body = _render_inline(str(item.get("body") or ""))
+                cards.append(
+                    '<div class="summary-item">'
+                    f'<div class="summary-icon">{icon}</div>'
+                    '<div class="summary-text">'
+                    f'<div class="summary-title">{title}</div>'
+                    f'<div class="summary-body">{body}</div>'
+                    "</div></div>"
+                )
+            points_html = '<div class="summary-grid">' + "".join(cards) + "</div>"
+
+        heading = _render_inline(str(slide["heading"]))
+        subtitle_raw = str(slide.get("body") or "").strip()
+        subtitle_html = (
+            f'<p class="summary-subtitle">{_render_inline(subtitle_raw)}</p>'
+            if subtitle_raw
+            else ""
+        )
+        return f"""
+  <div class="slide summary-slide">
+    <div class="summary-bg">
+      <img src="images/slide_1.jpg" class="summary-bg-img" alt="" />
+    </div>
+    <div class="bg-glow"></div>
+    <div class="slide-num">0{slide["number"]}</div>
+    <h2 class="slide-heading">{heading}</h2>
+    {subtitle_html}
+    <div class="slide-body">
+      {points_html}
+    </div>
+    <div class="progress">{bars}</div>
+  </div>"""
+
+    @staticmethod
+    def _render_content_slide(slide: SlideDict, _theme: dict[str, str]) -> str:
+        """Render content slide HTML."""
+        active_bar = int(slide["number"])
+        bars = ""
+        for i in range(1, MAX_SLIDES + 1):
             active_class = "active" if i <= active_bar else ""
             bars += f'<div class="bar {active_class}"></div>'
 

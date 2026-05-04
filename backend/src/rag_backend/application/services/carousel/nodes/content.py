@@ -238,6 +238,20 @@ def _parse_slides(content_data: dict[str, object]) -> list[SlideData]:
                 "quote": str(raw_insight.get("quote") or ""),
                 "attribution": str(raw_insight.get("attribution") or ""),
             }
+        raw_summary_points = slide_json.get("summary_points")
+        summary_points: list[dict[str, str]] | None = None
+        if isinstance(raw_summary_points, list) and raw_summary_points:
+            summary_points = [
+                {
+                    "icon": str(item.get("icon") or "🎯"),
+                    "title": str(item.get("title") or ""),
+                    "body": str(item.get("body") or ""),
+                }
+                for item in raw_summary_points[:MAX_FEATURE_ITEMS]
+                if isinstance(item, dict)
+            ]
+        raw_tldr = slide_json.get("tldr_strip")
+        tldr_strip: str | None = str(raw_tldr) if raw_tldr else None
         slides_data.append(
             SlideData(
                 slide_number=slide_json["number"],
@@ -248,9 +262,148 @@ def _parse_slides(content_data: dict[str, object]) -> list[SlideData]:
                 features=features,
                 stats=stats,
                 insight=insight,
+                summary_points=summary_points,
+                tldr_strip=tldr_strip,
             )
         )
     return slides_data
+
+
+def _strip_leading_h1(markdown: str) -> str:
+    """Remove the first '# Title' or '# Title: Subtitle' line."""
+    lines = markdown.split("\n")
+    if not lines:
+        return markdown
+    first = lines[0].strip()
+    if first.startswith("# "):
+        idx = 1
+        while idx < len(lines) and lines[idx].strip() == "":
+            idx += 1
+        return "\n".join(lines[idx:])
+    return markdown
+
+
+def _remove_backtick_duplicates(text: str) -> str:
+    """Remove lines wrapped in backticks that duplicate the following line."""
+    lines = text.split("\n")
+    result: list[str] = []
+    i = 0
+    while i < len(lines):
+        line = lines[i]
+        stripped = line.strip()
+        if (
+            stripped.startswith("`")
+            and stripped.endswith("`")
+            and stripped.count("`") == 2
+            and i + 1 < len(lines)
+        ):
+            inner = stripped[1:-1].strip()
+            next_line = lines[i + 1].strip()
+            if inner == next_line:
+                i += 1
+                continue
+        result.append(line)
+        i += 1
+    return "\n".join(result)
+
+
+def _strip_html_fragments(text: str) -> str:
+    """Remove common HTML fragment artifacts."""
+    text = re.sub(r'"\s*/?>\s*$', "", text, flags=re.MULTILINE)
+    text = re.sub(r"<img\s+[^>]*?/>", "", text, flags=re.IGNORECASE)
+    text = re.sub(r"<\w+[^>]*?>", "", text)
+    text = re.sub(r"</\w+>", "", text)
+    return text
+
+
+def _collapse_whitespace(text: str) -> str:
+    """Collapse more than 2 consecutive blank lines to 2."""
+    while "\n\n\n" in text:
+        text = text.replace("\n\n\n", "\n\n")
+    return text.strip()
+
+
+def _remove_indented_duplicates(text: str) -> str:
+    """Remove lines with 4+ spaces of indentation that duplicate a nearby heading."""
+    lines = text.split("\n")
+    result: list[str] = []
+    recent_headings: set[str] = set()
+    for line in lines:
+        stripped = line.strip()
+        if stripped.startswith("## "):
+            recent_headings.add(stripped[3:].strip().lower())
+        elif stripped.startswith("# "):
+            recent_headings.add(stripped[2:].strip().lower())
+        if line.startswith("    ") and stripped:
+            lowered = stripped.lower()
+            if any(lowered in h or h in lowered for h in recent_headings):
+                continue
+        result.append(line)
+    return "\n".join(result)
+
+
+def _remove_duplicate_paragraphs(text: str) -> str:
+    """Remove duplicate paragraphs, even when separated by blank lines."""
+    lines = text.split("\n")
+    result: list[str] = []
+    i = 0
+    while i < len(lines):
+        line = lines[i]
+        result.append(line)
+        if line.strip():
+            j = i + 1
+            while j < len(lines) and not lines[j].strip():
+                j += 1
+            if j < len(lines) and lines[j].strip() == line.strip():
+                i = j + 1
+                continue
+        i += 1
+    return "\n".join(result)
+
+
+def _remove_indented_emoji_lines(text: str) -> str:
+    """Remove indented lines that contain only emojis/symbols (common LLM artifacts)."""
+    lines = text.split("\n")
+    result: list[str] = []
+    for line in lines:
+        if line.startswith("    "):
+            stripped = line.strip()
+            if stripped and not any(c.isalnum() for c in stripped):
+                continue
+        result.append(line)
+    return "\n".join(result)
+
+
+def _remove_indented_paragraph_duplicates(text: str) -> str:
+    """Remove indented lines that duplicate the following non-indented paragraph."""
+    lines = text.split("\n")
+    result: list[str] = []
+    i = 0
+    while i < len(lines):
+        line = lines[i]
+        if line.startswith("    ") and i + 1 < len(lines):
+            stripped = line.strip()
+            next_line = lines[i + 1].strip()
+            if stripped and next_line and (stripped in next_line or next_line in stripped):
+                i += 1
+                continue
+        result.append(line)
+        i += 1
+    return "\n".join(result)
+
+
+def cleanup_blog_markdown(raw: str) -> str:
+    """Run full cleanup pipeline on blog markdown."""
+    text = raw
+    text = _strip_leading_h1(text)
+    text = _remove_backtick_duplicates(text)
+    text = _remove_indented_duplicates(text)
+    text = _remove_indented_emoji_lines(text)
+    text = _remove_indented_paragraph_duplicates(text)
+    text = _remove_duplicate_paragraphs(text)
+    text = _strip_html_fragments(text)
+    text = _collapse_whitespace(text)
+    return text
 
 
 async def run_content(
@@ -308,8 +461,11 @@ async def run_content(
         )
         raise ValueError(_ERR_CONTENT_ZERO_SLIDES)
 
-    blog_pt = str(content_data.get("blog_pt", content_data.get("blog_markdown", "")))
-    blog_en = str(content_data.get("blog_en", ""))
+    blog_pt_raw = str(content_data.get("blog_pt", content_data.get("blog_markdown", "")))
+    blog_en_raw = str(content_data.get("blog_en", ""))
+
+    blog_pt = cleanup_blog_markdown(blog_pt_raw)
+    blog_en = cleanup_blog_markdown(blog_en_raw) if blog_en_raw else ""
 
     project.blog_markdown = blog_pt
     project.blog_translations = {"pt": blog_pt, "en": blog_en} if blog_en else {"pt": blog_pt}

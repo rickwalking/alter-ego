@@ -42,8 +42,9 @@ DESIGN_PROMPT_TEMPLATE = (
     "Keep the existing design system intact — only override what is needed.\n\n"
     "IMPORTANT class names by slide type:\n"
     "- Intro slide (slide 1): .s1-hero-img for the image\n"
-    "- Content slides (slides 2-5): .hero-img for the image\n"
-    "- CTA slide (slide 6): no image\n"
+    "- Summary slide (slide 2): .summary-slide, no image\n"
+    "- Content slides (slides 3-5): .hero-img for the image\n"
+    "- CTA slide (slide 7): no image\n"
     "Use the correct class for the slide mentioned in the instruction.\n\n"
     "Instruction: {instruction}\n\n"
     "Existing CSS classes (relevant excerpts):\n"
@@ -168,6 +169,8 @@ class CarouselRefinementMixin:
             stats=slide_data.stats,
             insight=slide_data.insight,
             translation_en=slide_data.translation_en,
+            summary_points=slide_data.summary_points,
+            tldr_strip=slide_data.tldr_strip,
         )
 
         # Regenerate the image file
