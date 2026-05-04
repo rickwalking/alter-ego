@@ -33,8 +33,13 @@ const nextConfig: NextConfig = {
   // Trailing slash for SEO
   trailingSlash: false,
 
-  // Rewrites to proxy API requests to backend
+  // Rewrites to proxy API requests to backend (dev only)
   async rewrites() {
+    // In production (Docker + Nginx), Nginx handles proxying.
+    // In development, Next.js rewrites proxy to localhost backend.
+    if (process.env.NODE_ENV === "production") {
+      return [];
+    }
     return [
       {
         source: "/api/:path*",
@@ -79,6 +84,14 @@ const nextConfig: NextConfig = {
           {
             key: "Referrer-Policy",
             value: "origin-when-cross-origin",
+          },
+          {
+            key: "Content-Security-Policy",
+            value: "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline' https://va.vercel-scripts.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https: http://localhost:8000; font-src 'self'; connect-src 'self' ws: wss: http: https:; frame-ancestors 'none'; base-uri 'self'; form-action 'self';",
+          },
+          {
+            key: "X-Frame-Options",
+            value: "DENY",
           },
         ],
       },
