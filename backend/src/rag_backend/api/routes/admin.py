@@ -10,7 +10,8 @@ from pydantic import BaseModel, EmailStr, Field
 
 from rag_backend.api.dependencies import require_admin
 from rag_backend.api.middleware.rate_limiting import limiter
-from rag_backend.domain.constants import MIN_PASSWORD_LENGTH, ROLE_ADMIN, VALID_ROLES
+from rag_backend.domain.constants import MIN_PASSWORD_LENGTH
+from rag_backend.domain.constants.auth import VALID_ROLES
 from rag_backend.domain.models import User, UserRole
 from rag_backend.infrastructure.auth import hash_password
 from rag_backend.infrastructure.database.config import get_session

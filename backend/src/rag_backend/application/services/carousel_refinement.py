@@ -11,6 +11,7 @@ from uuid import UUID
 from rag_backend.application.services.carousel.nodes.design import OVERRIDES_FILENAME
 from rag_backend.application.services.carousel.nodes.images import run_image_one
 from rag_backend.application.services.carousel.types import unpack_extras
+from rag_backend.domain.constants import ENCODING_UTF8
 from rag_backend.domain.models import CarouselProject
 from rag_backend.infrastructure.logging import get_logger
 
@@ -242,7 +243,7 @@ class CarouselRefinementMixin:
         output_dir = Path(project.output_dir)
         overrides_path = output_dir / OVERRIDES_FILENAME
         try:
-            overrides_path.write_text(override_css, encoding="utf-8")
+            overrides_path.write_text(override_css, encoding=ENCODING_UTF8)
         except OSError as exc:
             logger.exception("Failed to write design overrides")
             raise ValueError(_ERR_WRITE_OVERRIDES.format(overrides_path, exc)) from exc

@@ -38,7 +38,9 @@ from rag_backend.application.services.carousel.graph import (
     build_graph,
 )
 from rag_backend.application.services.carousel.state import PipelineState
+from rag_backend.domain.constants.retry import LANGGRAPH_MAX_ATTEMPTS
 from rag_backend.domain.models import CarouselProject
+from rag_backend.domain.retry import retry_async
 
 SUBAGENT_NAME = "generate_carousel"
 SUBAGENT_DESCRIPTION = (
@@ -144,7 +146,9 @@ def build_carousel_subagent(
             "output_dir": state["output_dir"],
             "project": state["project"],
         }
-        final = await inner_graph.ainvoke(inner_state)
+        async for attempt in retry_async(attempts=LANGGRAPH_MAX_ATTEMPTS):
+            with attempt:
+                final = await inner_graph.ainvoke(inner_state)
         return {"project": final["project"]}
 
     async def emit_summary_node(state: CarouselSubAgentState) -> dict[str, object]:

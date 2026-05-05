@@ -46,6 +46,9 @@ export function useCreateConversation() {
       );
       queryClient.invalidateQueries({ queryKey: chatKeys.conversations() });
     },
+    onError: (error) => {
+      console.error("Failed to create conversation:", error);
+    },
   });
 }
 
@@ -59,6 +62,9 @@ export function useSendMessage() {
         queryKey: chatKeys.messages(conversationId),
       });
       queryClient.invalidateQueries({ queryKey: chatKeys.conversations() });
+    },
+    onError: (error) => {
+      console.error("Failed to send message:", error);
     },
   });
 }
@@ -85,6 +91,9 @@ export function useDeleteConversation() {
         queryKey: chatKeys.messages(conversationId),
       });
       queryClient.invalidateQueries({ queryKey: chatKeys.conversations() });
+    },
+    onError: (error) => {
+      console.error("Failed to delete conversation:", error);
     },
   });
 }

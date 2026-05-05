@@ -170,14 +170,11 @@ describe("Utils Module", () => {
         expect(id1).not.toBe(id2);
       });
 
-      it("Then it should return a 7-character string", () => {
+      it("Then it should return a UUID-formatted string", () => {
         const id = generateId();
-        expect(id.length).toBe(7);
-      });
-
-      it("Then it should only contain alphanumeric characters", () => {
-        const id = generateId();
-        expect(id).toMatch(/^[a-z0-9]+$/);
+        expect(id).toMatch(
+          /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
+        );
       });
     });
   });

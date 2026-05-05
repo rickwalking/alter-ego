@@ -17,6 +17,7 @@ from rag_backend.application.tools.knowledge_base import (
     build_list_documents_tool,
     build_search_documents_tool,
 )
+from rag_backend.domain.constants.retry import LANGGRAPH_MAX_ATTEMPTS
 from rag_backend.domain.models import (
     Message,
     MessageRole,
@@ -28,9 +29,9 @@ from rag_backend.domain.protocols import (
     MessageRepository,
     Retriever,
 )
+from rag_backend.domain.retry import retry_async
 from rag_backend.domain.types import ChatEvent
 from rag_backend.infrastructure.config.settings import Settings
-
 
 _ALTER_EGO_FALLBACK_PROMPT = (
     "You are the Alter-Ego of Pedro Marins, a helpful AI assistant that "
@@ -188,9 +189,11 @@ class AlterEgoAgent:
             yield {"type": "complete", "content": full_response}
 
         else:
-            result = await self._agent.ainvoke(
-                {"messages": [*chat_history, HumanMessage(content=message)]}
-            )
+            async for attempt in retry_async(attempts=LANGGRAPH_MAX_ATTEMPTS):
+                with attempt:
+                    result = await self._agent.ainvoke(
+                        {"messages": [*chat_history, HumanMessage(content=message)]}
+                    )
 
             messages = result.get("messages", [])
             response = ""

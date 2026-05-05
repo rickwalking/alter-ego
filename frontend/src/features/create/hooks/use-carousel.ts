@@ -77,6 +77,9 @@ export function useCreateCarousel() {
       );
       queryClient.invalidateQueries({ queryKey: carouselKeys.list() });
     },
+    onError: (error) => {
+      console.error("Failed to create carousel:", error);
+    },
   });
 }
 
@@ -104,6 +107,9 @@ export function useGenerateCarousel() {
         queryKey: carouselKeys.detail(variables.projectId),
       });
     },
+    onError: (error) => {
+      console.error("Failed to generate carousel:", error);
+    },
   });
 }
 
@@ -130,6 +136,9 @@ export function useResumeCarousel() {
       queryClient.setQueryData(carouselKeys.status(projectId), status);
       queryClient.invalidateQueries({ queryKey: carouselKeys.status(projectId) });
       queryClient.invalidateQueries({ queryKey: carouselKeys.detail(projectId) });
+    },
+    onError: (error) => {
+      console.error("Failed to resume carousel:", error);
     },
   });
 }
@@ -163,6 +172,9 @@ export function useDeleteCarousel() {
       queryClient.removeQueries({ queryKey: carouselKeys.detail(projectId) });
       queryClient.removeQueries({ queryKey: carouselKeys.status(projectId) });
       queryClient.invalidateQueries({ queryKey: carouselKeys.list() });
+    },
+    onError: (error) => {
+      console.error("Failed to delete carousel:", error);
     },
   });
 }

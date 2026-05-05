@@ -22,6 +22,7 @@ from pathlib import Path
 
 import yaml
 
+from rag_backend.domain.constants import ENCODING_UTF8
 from rag_backend.domain.protocols import ResearchTool
 from rag_backend.infrastructure.logging import get_logger
 
@@ -88,7 +89,7 @@ class WritingStyleProfile:
         if not self._manual_samples_path or not self._manual_samples_path.exists():
             return []
         try:
-            raw = yaml.safe_load(self._manual_samples_path.read_text(encoding="utf-8"))
+            raw = yaml.safe_load(self._manual_samples_path.read_text(encoding=ENCODING_UTF8))
         except (yaml.YAMLError, OSError) as exc:
             logger.warning("writing_style_manual_load_failed", error=str(exc))
             return []
@@ -111,7 +112,7 @@ class WritingStyleProfile:
         if not self._cache_path.exists():
             return []
         try:
-            raw = json.loads(self._cache_path.read_text(encoding="utf-8"))
+            raw = json.loads(self._cache_path.read_text(encoding=ENCODING_UTF8))
         except (json.JSONDecodeError, OSError) as exc:
             logger.warning("writing_style_cache_load_failed", error=str(exc))
             return []
@@ -133,7 +134,7 @@ class WritingStyleProfile:
         try:
             self._cache_path.write_text(
                 json.dumps(payload, ensure_ascii=False, indent=2),
-                encoding="utf-8",
+                encoding=ENCODING_UTF8,
             )
         except OSError as exc:
             logger.warning("writing_style_cache_save_failed", error=str(exc))

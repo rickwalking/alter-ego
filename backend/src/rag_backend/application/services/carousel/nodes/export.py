@@ -88,7 +88,7 @@ async def run_bilingual_export(  # noqa: PLR0913 — bilingual export needs all 
         return
 
     en_slides = slides_data_for_language(slides_data, "en")
-    en_html = run_design(project, en_slides, template=template)
+    en_html = run_design(project, en_slides, template=template, language="en")
     await render_language(
         project, "en", en_html, output_dir, export=export, pdf_builder=pdf_builder
     )

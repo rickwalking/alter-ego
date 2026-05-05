@@ -44,6 +44,11 @@ function getWsProtocol(): string {
   return window.location.protocol === "https:" ? WS_PROTOCOL_SECURE : WS_PROTOCOL_INSECURE;
 }
 
+function getTokenFromCookie(name: string): string | null {
+  const match = document.cookie.match(new RegExp("(^| )" + name + "=([^;]+)"));
+  return match ? decodeURIComponent(match[2]) : null;
+}
+
 function buildWsUrl(conversationId: string): string {
   return `${getWsProtocol()}//${window.location.host}/ws/chat/${conversationId}`;
 }
@@ -139,7 +144,10 @@ export function usePublishChat(projectId: string): UsePublishChatReturn {
     streamingContentRef.current = "";
     streamingMsgIdRef.current = null;
 
-    const socket = new WebSocket(buildWsUrl(conversationId));
+    const token = getTokenFromCookie("access_token") || getTokenFromCookie("anon_token");
+    const socket = token
+      ? new WebSocket(buildWsUrl(conversationId), [token])
+      : new WebSocket(buildWsUrl(conversationId));
 
     socket.onopen = () => {
       setOptimisticMessages([]);

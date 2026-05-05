@@ -15,6 +15,7 @@ from rag_backend.application.tools import (
     build_regenerate_slide_image_tool,
     build_search_documents_tool,
 )
+from rag_backend.domain.constants.retry import LANGGRAPH_MAX_ATTEMPTS
 from rag_backend.domain.models import (
     Message,
     MessageRole,
@@ -28,6 +29,7 @@ from rag_backend.domain.protocols import (
     MessageRepository,
     Retriever,
 )
+from rag_backend.domain.retry import retry_async
 from rag_backend.domain.types import ChatEvent
 from rag_backend.infrastructure.config.settings import Settings
 
@@ -229,9 +231,11 @@ class RAGAgent:
             yield {"type": "complete", "content": full_response}
 
         else:
-            result = await self._agent.ainvoke(
-                {"messages": [*chat_history, HumanMessage(content=message)]}
-            )
+            async for attempt in retry_async(attempts=LANGGRAPH_MAX_ATTEMPTS):
+                with attempt:
+                    result = await self._agent.ainvoke(
+                        {"messages": [*chat_history, HumanMessage(content=message)]}
+                    )
 
             messages = result.get("messages", [])
             response = ""

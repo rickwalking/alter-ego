@@ -13,6 +13,7 @@ from rag_backend.domain.constants import (
     BRAND_KEYWORDS,
     BRAND_PALETTES,
     CAROUSEL_THEMES,
+    ENCODING_UTF8,
     THEME_CATEGORY_KEYWORDS,
 )
 from rag_backend.domain.models import CarouselProject, CarouselTheme
@@ -30,7 +31,7 @@ def _hash_to_theme_key(text: str) -> str:
     This prevents the repetitive fallback where every unmatched topic
     received the same default colors.
     """
-    digest = hashlib.sha256(text.encode("utf-8")).hexdigest()
+    digest = hashlib.sha256(text.encode(ENCODING_UTF8)).hexdigest()
     index = int(digest, 16) % len(CATEGORY_THEME_KEYS)
     return CATEGORY_THEME_KEYS[index]
 

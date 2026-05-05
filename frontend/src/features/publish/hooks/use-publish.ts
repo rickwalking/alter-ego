@@ -42,5 +42,8 @@ export function usePublishInstagram() {
         queryKey: carouselKeys.detail(variables.projectId),
       });
     },
+    onError: (error) => {
+      console.error("Failed to publish to Instagram:", error);
+    },
   });
 }

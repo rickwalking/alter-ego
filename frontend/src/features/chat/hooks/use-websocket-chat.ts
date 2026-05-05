@@ -47,11 +47,9 @@ export function useWebSocketChat({
       ? baseUrl.replace(/^http/, "ws") + `/ws/chat/${conversationId}`
       : `${protocol}//${window.location.host}/ws/chat/${conversationId}`;
 
-    // Include token as query param for WebSocket auth
+    // Pass token as WebSocket subprotocol instead of query param
     const token = getTokenFromCookie("access_token") || getTokenFromCookie("anon_token");
-    const wsUrl = token ? `${baseWsUrl}?token=${encodeURIComponent(token)}` : baseWsUrl;
-
-    const socket = new WebSocket(wsUrl);
+    const socket = token ? new WebSocket(baseWsUrl, [token]) : new WebSocket(baseWsUrl);
 
     socket.onopen = () => {
       setIsConnected(true);
