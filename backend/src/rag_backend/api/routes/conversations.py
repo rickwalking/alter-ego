@@ -6,6 +6,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from rag_backend.api.constants import ERR_FORBIDDEN, ERR_NOT_AUTHENTICATED
 from rag_backend.api.dependencies import (
     get_optional_user,
     require_authenticated_user,
@@ -114,7 +115,7 @@ async def create_conversation(
     response_model=ConversationListResponse,
     responses={
         200: {"description": "List of conversations"},
-        401: {"model": ErrorResponse, "description": "Not authenticated"},
+        401: {"model": ErrorResponse, "description": ERR_NOT_AUTHENTICATED},
     },
 )
 async def list_conversations(
@@ -141,8 +142,8 @@ async def list_conversations(
     response_model=ConversationResponse,
     responses={
         200: {"description": "Conversation found"},
-        401: {"model": ErrorResponse, "description": "Not authenticated"},
-        403: {"model": ErrorResponse, "description": "Forbidden"},
+        401: {"model": ErrorResponse, "description": ERR_NOT_AUTHENTICATED},
+        403: {"model": ErrorResponse, "description": ERR_FORBIDDEN},
         404: {"model": ErrorResponse, "description": "Conversation not found"},
     },
 )
@@ -169,8 +170,8 @@ async def get_conversation(
     response_model=MessageListResponse,
     responses={
         200: {"description": "List of messages"},
-        401: {"model": ErrorResponse, "description": "Not authenticated"},
-        403: {"model": ErrorResponse, "description": "Forbidden"},
+        401: {"model": ErrorResponse, "description": ERR_NOT_AUTHENTICATED},
+        403: {"model": ErrorResponse, "description": ERR_FORBIDDEN},
         404: {"model": ErrorResponse, "description": "Conversation not found"},
     },
 )
@@ -203,8 +204,8 @@ async def get_conversation_messages(
     status_code=status.HTTP_204_NO_CONTENT,
     responses={
         204: {"description": "Conversation deleted successfully"},
-        401: {"model": ErrorResponse, "description": "Not authenticated"},
-        403: {"model": ErrorResponse, "description": "Forbidden"},
+        401: {"model": ErrorResponse, "description": ERR_NOT_AUTHENTICATED},
+        403: {"model": ErrorResponse, "description": ERR_FORBIDDEN},
         404: {"model": ErrorResponse, "description": "Conversation not found"},
     },
 )
@@ -230,8 +231,8 @@ async def delete_conversation(
     response_model=ConversationResponse,
     responses={
         200: {"description": "Title generated successfully"},
-        401: {"model": ErrorResponse, "description": "Not authenticated"},
-        403: {"model": ErrorResponse, "description": "Forbidden"},
+        401: {"model": ErrorResponse, "description": ERR_NOT_AUTHENTICATED},
+        403: {"model": ErrorResponse, "description": ERR_FORBIDDEN},
         404: {"model": ErrorResponse, "description": "Conversation not found"},
     },
 )
@@ -266,7 +267,7 @@ async def generate_conversation_title(
     response_model=ChatResponse,
     responses={
         200: {"description": "Chat response with sources"},
-        401: {"model": ErrorResponse, "description": "Not authenticated"},
+        401: {"model": ErrorResponse, "description": ERR_NOT_AUTHENTICATED},
         404: {"model": ErrorResponse, "description": "Conversation not found"},
         429: {"model": ErrorResponse, "description": "Rate limit exceeded"},
     },

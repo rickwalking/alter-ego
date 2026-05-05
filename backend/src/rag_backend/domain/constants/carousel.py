@@ -1,42 +1,4 @@
-"""Domain-level constants."""
-
-# =============================================================================
-# Authentication & Authorization
-# =============================================================================
-
-ROLE_ADMIN = "admin"
-ROLE_EDITOR = "editor"
-VALID_ROLES: set[str] = {ROLE_ADMIN, ROLE_EDITOR}
-
-MIN_PASSWORD_LENGTH = 12
-
-JWT_ALGORITHM = "HS256"
-JWT_TYPE_AUTH = "auth"
-JWT_TYPE_ANON = "anon"
-
-# =============================================================================
-# Document statuses
-# =============================================================================
-
-STATUS_PENDING = "pending"
-STATUS_PROCESSING = "processing"
-STATUS_COMPLETED = "completed"
-STATUS_FAILED = "failed"
-
-# Valid document statuses
-VALID_STATUSES = {STATUS_PENDING, STATUS_PROCESSING, STATUS_COMPLETED, STATUS_FAILED}
-
-# Message roles
-ROLE_USER = "user"
-ROLE_ASSISTANT = "assistant"
-ROLE_SYSTEM = "system"
-
-# Valid message roles
-VALID_ROLES = {ROLE_USER, ROLE_ASSISTANT, ROLE_SYSTEM}
-
-# =============================================================================
-# Carousel Pipeline Constants
-# =============================================================================
+"""Carousel pipeline constants — statuses, slide types, themes, brands, image presets."""
 
 # Carousel statuses
 CAROUSEL_STATUS_PENDING = "pending"
@@ -48,7 +10,6 @@ CAROUSEL_STATUS_EXPORTING = "exporting"
 CAROUSEL_STATUS_COMPLETED = "completed"
 CAROUSEL_STATUS_FAILED = "failed"
 
-# Valid carousel statuses
 VALID_CAROUSEL_STATUSES = {
     CAROUSEL_STATUS_PENDING,
     CAROUSEL_STATUS_RESEARCHING,
@@ -107,15 +68,7 @@ CAROUSEL_THEMES: dict[str, dict[str, str]] = {
     },
 }
 
-# =============================================================================
-# Brand-Aware Theme Resolution
-# =============================================================================
-
-# Brand color palettes extracted from real-world examples and corporate
-# identity guidelines. When the carousel topic matches a brand, the
-# pipeline uses these colors instead of the generic category themes.
-# This reproduces the creative behavior of the original carousel skill
-# (e.g., orange for Anthropic/Claude, blue for Google/Gemma).
+# Brand color palettes
 BRAND_PALETTES: dict[str, dict[str, str]] = {
     "anthropic": {
         "primary": "#ea580c",
@@ -149,10 +102,7 @@ BRAND_PALETTES: dict[str, dict[str, str]] = {
     },
 }
 
-# Keywords that trigger brand detection. Each brand maps to a list of
-# lower-case tokens that strongly indicate the carousel is about that
-# company or product line. The resolver scores matches and picks the
-# highest-scoring brand.
+# Brand keywords
 BRAND_KEYWORDS: dict[str, list[str]] = {
     "anthropic": [
         "anthropic",
@@ -237,9 +187,7 @@ BRAND_KEYWORDS: dict[str, list[str]] = {
     ],
 }
 
-# Category keywords used when no brand is detected. Maps the five
-# predefined theme names to topic keywords that indicate the content
-# belongs to that category.
+# Category keywords
 THEME_CATEGORY_KEYWORDS: dict[str, list[str]] = {
     "cybersecurity": [
         "security",
@@ -437,13 +385,13 @@ VALID_RESEARCH_SOURCE_TYPES = {
     RESEARCH_SOURCE_DOCUMENTATION,
 }
 
-# Image generation providers (the concrete model behind the service).
+# Image generation providers
 IMAGE_MODEL_GEMINI = "gemini"
 IMAGE_MODEL_OPENAI = "openai"
 
 VALID_IMAGE_MODELS: set[str] = {IMAGE_MODEL_GEMINI, IMAGE_MODEL_OPENAI}
 
-# Image style presets (wrap the LLM scene with provider-tuned directives).
+# Image style presets
 IMAGE_STYLE_COMIC_NEON = "comic_neon"
 IMAGE_STYLE_CINEMATIC = "cinematic"
 IMAGE_STYLE_HYPERREAL = "hyperreal"
@@ -456,13 +404,11 @@ VALID_IMAGE_STYLES: set[str] = {
     IMAGE_STYLE_NEO_ANIME,
 }
 
-# Default combo applied when a caller omits the fields (back-compat
-# with every carousel created before pluggable providers landed).
+# Default combo
 IMAGE_MODEL_DEFAULT = IMAGE_MODEL_GEMINI
 IMAGE_STYLE_DEFAULT = IMAGE_STYLE_COMIC_NEON
 
-# Only these (model, style) tuples are wired in the registry. Anything
-# else fails API validation with a 422 before the pipeline runs.
+# Supported (model, style) combos
 SUPPORTED_IMAGE_COMBOS: set[tuple[str, str]] = {
     (IMAGE_MODEL_GEMINI, IMAGE_STYLE_COMIC_NEON),
     (IMAGE_MODEL_OPENAI, IMAGE_STYLE_CINEMATIC),

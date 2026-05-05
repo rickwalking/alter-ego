@@ -6,6 +6,7 @@ from uuid import UUID
 from fastapi import Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from rag_backend.api.constants import ERR_ADMIN_REQUIRED, ERR_USER_NOT_FOUND
 from rag_backend.api.middleware.auth import get_current_user, get_current_user_optional
 from rag_backend.domain.models import User, UserRole
 from rag_backend.domain.protocols import UserRepository
@@ -43,7 +44,7 @@ async def require_authenticated_user(
     if user is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="User not found",
+            detail=ERR_USER_NOT_FOUND,
         )
 
     if not user.is_active:
@@ -72,7 +73,7 @@ async def require_admin(
     if not user.is_admin():
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Admin access required",
+            detail=ERR_ADMIN_REQUIRED,
         )
     return user
 

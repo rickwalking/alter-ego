@@ -1,0 +1,44 @@
+"""Domain protocols (interfaces) using Python's typing.Protocol.
+
+These protocols define contracts that infrastructure implementations must fulfill.
+Using Protocols instead of abstract classes allows for more flexible, decoupled design.
+"""
+
+from rag_backend.domain.protocols.ai import Agent, DocumentProcessor, LLMService
+from rag_backend.domain.protocols.carousel import (
+    CarouselAgent,
+    CarouselExportService,
+    ImageGenerationService,
+    ImageStyleStrategy,
+    ResearchTool,
+)
+from rag_backend.domain.protocols.repositories import (
+    CarouselRepository,
+    ConversationRepository,
+    DocumentRepository,
+    MessageRepository,
+    UserRepository,
+)
+from rag_backend.domain.protocols.social import PublishResult, SocialPublisher
+from rag_backend.domain.protocols.vector import EmbeddingService, Retriever, VectorStore
+
+__all__ = [
+    "Agent",
+    "CarouselAgent",
+    "CarouselExportService",
+    "CarouselRepository",
+    "ConversationRepository",
+    "DocumentProcessor",
+    "DocumentRepository",
+    "EmbeddingService",
+    "ImageGenerationService",
+    "ImageStyleStrategy",
+    "LLMService",
+    "MessageRepository",
+    "PublishResult",
+    "ResearchTool",
+    "Retriever",
+    "SocialPublisher",
+    "UserRepository",
+    "VectorStore",
+]

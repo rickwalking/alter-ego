@@ -1,0 +1,109 @@
+from typing import Protocol
+from uuid import UUID
+
+from rag_backend.domain.models import (
+    CarouselProject,
+    CarouselSlide,
+    CarouselStatus,
+    Conversation,
+    Document,
+    DocumentStatus,
+    Message,
+    ResearchSource,
+    User,
+    UserRole,
+)
+
+
+class UserRepository(Protocol):
+    """Protocol for user persistence operations."""
+
+    async def create(self, user: User) -> User: ...
+
+    async def get_by_id(self, user_id: UUID) -> User | None: ...
+
+    async def get_by_email(self, email: str) -> User | None: ...
+
+    async def get_all(self, limit: int = 100, offset: int = 0) -> list[User]: ...
+
+    async def update(self, user: User) -> User: ...
+
+    async def delete(self, user_id: UUID) -> bool: ...
+
+    async def count(self) -> int: ...
+
+    async def count_by_role(self, role: UserRole) -> int: ...
+
+
+class DocumentRepository(Protocol):
+    """Protocol for document persistence operations."""
+
+    async def create(self, document: Document) -> Document: ...
+
+    async def get_by_id(self, document_id: UUID) -> Document | None: ...
+
+    async def get_all(
+        self, status: DocumentStatus | None = None, limit: int = 100, offset: int = 0
+    ) -> list[Document]: ...
+
+    async def update(self, document: Document) -> Document: ...
+
+    async def delete(self, document_id: UUID) -> bool: ...
+
+    async def count(self, status: DocumentStatus | None = None) -> int: ...
+
+
+class ConversationRepository(Protocol):
+    """Protocol for conversation persistence operations."""
+
+    async def create(self, conversation: Conversation) -> Conversation: ...
+
+    async def get_by_id(self, conversation_id: UUID) -> Conversation | None: ...
+
+    async def get_all(self, limit: int = 100, offset: int = 0) -> list[Conversation]: ...
+
+    async def update(self, conversation: Conversation) -> Conversation: ...
+
+    async def delete(self, conversation_id: UUID) -> bool: ...
+
+
+class MessageRepository(Protocol):
+    """Protocol for message persistence operations."""
+
+    async def create(self, message: Message) -> Message: ...
+
+    async def get_by_conversation(
+        self, conversation_id: UUID, limit: int = 100
+    ) -> list[Message]: ...
+
+    async def get_recent_context(
+        self, conversation_id: UUID, max_tokens: int = 4000
+    ) -> list[Message]: ...
+
+
+class CarouselRepository(Protocol):
+    """Protocol for carousel project persistence operations."""
+
+    async def create_project(self, project: CarouselProject) -> CarouselProject: ...
+
+    async def get_project_by_id(self, project_id: UUID) -> CarouselProject | None: ...
+
+    async def get_all_projects(
+        self, status: CarouselStatus | None = None, limit: int = 100, offset: int = 0
+    ) -> list[CarouselProject]: ...
+
+    async def update_project(self, project: CarouselProject) -> CarouselProject: ...
+
+    async def delete_project(self, project_id: UUID) -> bool: ...
+
+    async def create_slide(self, slide: CarouselSlide) -> CarouselSlide: ...
+
+    async def get_slides_by_project(self, project_id: UUID) -> list[CarouselSlide]: ...
+
+    async def update_slide(self, slide: CarouselSlide) -> CarouselSlide: ...
+
+    async def delete_slides_by_project(self, project_id: UUID) -> bool: ...
+
+    async def create_research_source(self, source: ResearchSource) -> ResearchSource: ...
+
+    async def get_sources_by_project(self, project_id: UUID) -> list[ResearchSource]: ...

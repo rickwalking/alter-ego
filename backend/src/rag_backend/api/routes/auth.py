@@ -5,9 +5,10 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from pydantic import BaseModel, EmailStr, Field
 
+from rag_backend.api.constants import ERR_NOT_AUTHENTICATED
 from rag_backend.api.dependencies import require_authenticated_user
 from rag_backend.api.middleware.rate_limiting import limiter
-from rag_backend.domain.constants import MIN_PASSWORD_LENGTH
+from rag_backend.domain.constants import COOKIE_ACCESS_TOKEN, MIN_PASSWORD_LENGTH
 from rag_backend.domain.models import User
 from rag_backend.infrastructure.auth import (
     create_access_token,
@@ -91,7 +92,7 @@ async def login(
         token = create_access_token(settings, user)
 
         response.set_cookie(
-            key="access_token",
+            key=COOKIE_ACCESS_TOKEN,
             value=token,
             httponly=True,
             secure=not settings.debug,
@@ -117,7 +118,7 @@ async def logout(
 ) -> None:
     """Log out the current user by clearing the access_token cookie."""
     response.delete_cookie(
-        key="access_token",
+        key=COOKIE_ACCESS_TOKEN,
         path="/",
         httponly=True,
         secure=not settings.debug,
@@ -129,7 +130,7 @@ async def logout(
     "/me",
     response_model=MeResponse,
     responses={
-        401: {"description": "Not authenticated"},
+        401: {"description": ERR_NOT_AUTHENTICATED},
     },
 )
 async def get_me(

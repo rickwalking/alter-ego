@@ -5,6 +5,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from rag_backend.api.constants import ERR_NOT_AUTHENTICATED
 from rag_backend.api.dependencies import require_authenticated_user
 from rag_backend.api.schemas import (
     ErrorResponse,
@@ -25,7 +26,7 @@ router = APIRouter(prefix="/search", tags=["search"])
     responses={
         200: {"description": "Search results"},
         400: {"model": ErrorResponse, "description": "Invalid search query"},
-        401: {"model": ErrorResponse, "description": "Not authenticated"},
+        401: {"model": ErrorResponse, "description": ERR_NOT_AUTHENTICATED},
     },
 )
 async def search_documents(
@@ -91,7 +92,7 @@ async def search_documents(
     responses={
         200: {"description": "Search results"},
         400: {"model": ErrorResponse, "description": "Invalid search query"},
-        401: {"model": ErrorResponse, "description": "Not authenticated"},
+        401: {"model": ErrorResponse, "description": ERR_NOT_AUTHENTICATED},
     },
 )
 async def search_documents_get(

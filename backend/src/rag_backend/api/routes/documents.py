@@ -6,6 +6,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from rag_backend.api.constants import ERR_FORBIDDEN, ERR_NOT_AUTHENTICATED
 from rag_backend.api.dependencies import (
     require_authenticated_user,
     require_editor_or_admin,
@@ -33,8 +34,8 @@ router = APIRouter(prefix="/documents", tags=["documents"])
     responses={
         201: {"description": "Document uploaded and processed successfully"},
         400: {"model": ErrorResponse, "description": "Invalid file or input"},
-        401: {"model": ErrorResponse, "description": "Not authenticated"},
-        403: {"model": ErrorResponse, "description": "Forbidden"},
+        401: {"model": ErrorResponse, "description": ERR_NOT_AUTHENTICATED},
+        403: {"model": ErrorResponse, "description": ERR_FORBIDDEN},
         413: {"model": ErrorResponse, "description": "File too large"},
         429: {"model": ErrorResponse, "description": "Rate limit exceeded"},
         500: {"model": ErrorResponse, "description": "Internal server error"},
@@ -138,8 +139,8 @@ async def upload_document(
     responses={
         201: {"description": "Document created successfully"},
         400: {"model": ErrorResponse, "description": "Invalid input"},
-        401: {"model": ErrorResponse, "description": "Not authenticated"},
-        403: {"model": ErrorResponse, "description": "Forbidden"},
+        401: {"model": ErrorResponse, "description": ERR_NOT_AUTHENTICATED},
+        403: {"model": ErrorResponse, "description": ERR_FORBIDDEN},
         500: {"model": ErrorResponse, "description": "Internal server error"},
     },
 )
@@ -191,7 +192,7 @@ async def create_document(
     response_model=DocumentListResponse,
     responses={
         200: {"description": "List of documents"},
-        401: {"model": ErrorResponse, "description": "Not authenticated"},
+        401: {"model": ErrorResponse, "description": ERR_NOT_AUTHENTICATED},
     },
 )
 async def list_documents(
@@ -224,8 +225,8 @@ async def list_documents(
     response_model=DocumentResponse,
     responses={
         200: {"description": "Document found"},
-        401: {"model": ErrorResponse, "description": "Not authenticated"},
-        403: {"model": ErrorResponse, "description": "Forbidden"},
+        401: {"model": ErrorResponse, "description": ERR_NOT_AUTHENTICATED},
+        403: {"model": ErrorResponse, "description": ERR_FORBIDDEN},
         404: {"model": ErrorResponse, "description": "Document not found"},
     },
 )
@@ -253,7 +254,7 @@ async def get_document(
     response_model=DocumentProcessingStatus,
     responses={
         200: {"description": "Processing status"},
-        401: {"model": ErrorResponse, "description": "Not authenticated"},
+        401: {"model": ErrorResponse, "description": ERR_NOT_AUTHENTICATED},
         404: {"model": ErrorResponse, "description": "Document not found"},
     },
 )
@@ -291,8 +292,8 @@ async def get_document_status(
     status_code=status.HTTP_204_NO_CONTENT,
     responses={
         204: {"description": "Document deleted successfully"},
-        401: {"model": ErrorResponse, "description": "Not authenticated"},
-        403: {"model": ErrorResponse, "description": "Forbidden"},
+        401: {"model": ErrorResponse, "description": ERR_NOT_AUTHENTICATED},
+        403: {"model": ErrorResponse, "description": ERR_FORBIDDEN},
         404: {"model": ErrorResponse, "description": "Document not found"},
     },
 )
@@ -322,8 +323,8 @@ async def delete_document(
     response_model=DocumentResponse,
     responses={
         200: {"description": "Document reprocessing started"},
-        401: {"model": ErrorResponse, "description": "Not authenticated"},
-        403: {"model": ErrorResponse, "description": "Forbidden"},
+        401: {"model": ErrorResponse, "description": ERR_NOT_AUTHENTICATED},
+        403: {"model": ErrorResponse, "description": ERR_FORBIDDEN},
         404: {"model": ErrorResponse, "description": "Document not found"},
     },
 )

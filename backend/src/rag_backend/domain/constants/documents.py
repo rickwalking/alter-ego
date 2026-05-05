@@ -1,0 +1,16 @@
+"""Document and message status/role constants."""
+
+STATUS_PENDING = "pending"
+STATUS_PROCESSING = "processing"
+STATUS_COMPLETED = "completed"
+STATUS_FAILED = "failed"
+
+VALID_STATUSES = {STATUS_PENDING, STATUS_PROCESSING, STATUS_COMPLETED, STATUS_FAILED}
+
+ROLE_USER = "user"
+ROLE_ASSISTANT = "assistant"
+ROLE_SYSTEM = "system"
+
+VALID_ROLES = {ROLE_USER, ROLE_ASSISTANT, ROLE_SYSTEM}
+
+ENCODING_UTF8 = "utf-8"
