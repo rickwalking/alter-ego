@@ -4,6 +4,7 @@ from pathlib import Path
 
 from playwright.async_api import async_playwright
 
+from rag_backend.domain.constants import ENCODING_UTF8
 from rag_backend.domain.protocols import CarouselExportService
 
 
@@ -26,7 +27,7 @@ class PlaywrightExportService(CarouselExportService):
 
         # Write HTML to temp file
         html_file = output_path / "carousel.html"
-        html_file.write_text(html_content, encoding="utf-8")
+        html_file.write_text(html_content, encoding=ENCODING_UTF8)
 
         exported_paths: list[str] = []
 

@@ -86,14 +86,14 @@ async def bootstrap_admin(email: str, full_name: str) -> None:
             created = await repo.create(admin)
             await session.commit()
 
-            print(f"Admin user created successfully!")
+            print("Admin user created successfully!")
             print(f"  ID:       {created.id}")
             print(f"  Email:    {created.email}")
             print(f"  Name:     {created.full_name}")
             print(f"  Role:     {created.role.value}")
             print(f"  Password: {temp_password}")
-            print(f"")
-            print(f"IMPORTANT: Save this password. It will not be displayed again.")
+            print("")
+            print("IMPORTANT: Save this password. It will not be displayed again.")
 
     except Exception as e:
         print(f"ERROR: Failed to bootstrap admin: {e}", file=sys.stderr)

@@ -15,10 +15,11 @@ class OpenAILLMService:
     def __init__(self, settings: Settings) -> None:
         self._settings = settings
         self._llm = ChatOpenAI(
-            api_key=settings.openai_api_key,
+            api_key=settings.openai_api_key.get_secret_value(),
             model=settings.openai_model,
             temperature=0.7,
             streaming=True,
+            max_retries=3,
         )
 
     async def generate(

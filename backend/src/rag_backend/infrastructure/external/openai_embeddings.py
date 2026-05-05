@@ -15,7 +15,7 @@ class OpenAIEmbeddingService:
     def __init__(self, settings: Settings) -> None:
         self._settings = settings
         self._embeddings = OpenAIEmbeddings(
-            api_key=settings.openai_api_key,
+            api_key=settings.openai_api_key.get_secret_value(),
             model=settings.openai_embedding_model,
             dimensions=3072,  # text-embedding-3-large
         )

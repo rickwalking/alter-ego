@@ -4,6 +4,7 @@ import os
 
 from pypdf import PdfReader
 
+from rag_backend.domain.constants import ENCODING_UTF8
 from rag_backend.domain.models import Document, DocumentChunk
 from rag_backend.domain.protocols import EmbeddingService
 
@@ -26,8 +27,8 @@ def load_file_content(file_content: bytes, filename: str) -> str:
     if ext == ".pdf":
         return _load_pdf(file_content)
     if ext in (".txt", ".md", ".markdown"):
-        return file_content.decode("utf-8")
-    return file_content.decode("utf-8")
+        return file_content.decode(ENCODING_UTF8)
+    return file_content.decode(ENCODING_UTF8)
 
 
 def _load_pdf(raw_bytes: bytes) -> str:

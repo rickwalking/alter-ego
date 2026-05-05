@@ -7,7 +7,9 @@ from pathlib import Path
 from google import genai
 from google.genai import types
 
+from rag_backend.domain.constants.retry import GEMINI_MAX_ATTEMPTS
 from rag_backend.domain.protocols import ImageGenerationService
+from rag_backend.domain.retry import retry_sync
 
 _ERR_NO_IMAGE_DATA = "No image data in Gemini response"
 
@@ -30,13 +32,15 @@ class GeminiImageService(ImageGenerationService):
         server can continue serving ``/status`` polls while images are
         being generated.
         """
-        response = self._client.models.generate_content(
-            model="gemini-3.1-flash-image-preview",
-            contents=prompt,
-            config=types.GenerateContentConfig(
-                response_modalities=["IMAGE", "TEXT"],
-            ),
-        )
+        for attempt in retry_sync(attempts=GEMINI_MAX_ATTEMPTS):
+            with attempt:
+                response = self._client.models.generate_content(
+                    model="gemini-3.1-flash-image-preview",
+                    contents=prompt,
+                    config=types.GenerateContentConfig(
+                        response_modalities=["IMAGE", "TEXT"],
+                    ),
+                )
 
         for part in response.candidates[0].content.parts:
             if part.inline_data:

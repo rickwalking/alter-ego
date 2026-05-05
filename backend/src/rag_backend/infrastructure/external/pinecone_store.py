@@ -4,7 +4,9 @@ from uuid import UUID
 
 from pinecone import Pinecone, ServerlessSpec
 
+from rag_backend.domain.constants.retry import PINECONE_MAX_ATTEMPTS
 from rag_backend.domain.models import DocumentChunk, SearchResult
+from rag_backend.domain.retry import retry_sync
 from rag_backend.domain.types import SparseEmbedding, StatsResponse
 from rag_backend.infrastructure.config.settings import Settings
 
@@ -14,26 +16,28 @@ class PineconeVectorStore:
 
     def __init__(self, settings: Settings) -> None:
         self._settings = settings
-        self._client = Pinecone(api_key=settings.pinecone_api_key)
+        self._client = Pinecone(api_key=settings.pinecone_api_key.get_secret_value())
         self._index_name = settings.pinecone_index_name
         self._index = None
 
     async def _get_index(self):
         """Get or create Pinecone index."""
         if self._index is None:
-            # Check if index exists
-            existing_indexes = self._client.list_indexes()
+            for attempt in retry_sync(attempts=PINECONE_MAX_ATTEMPTS):
+                with attempt:
+                    existing_indexes = self._client.list_indexes()
             if self._index_name not in [idx.name for idx in existing_indexes]:
-                # Create index with hybrid search support
-                self._client.create_index(
-                    name=self._index_name,
-                    dimension=3072,  # text-embedding-3-large dimension
-                    metric="dotproduct",  # Required for hybrid search
-                    spec=ServerlessSpec(
-                        cloud="aws",
-                        region=self._settings.pinecone_environment,
-                    ),
-                )
+                for attempt in retry_sync(attempts=PINECONE_MAX_ATTEMPTS):
+                    with attempt:
+                        self._client.create_index(
+                            name=self._index_name,
+                            dimension=3072,
+                            metric="dotproduct",
+                            spec=ServerlessSpec(
+                                cloud="aws",
+                                region=self._settings.pinecone_environment,
+                            ),
+                        )
             self._index = self._client.Index(self._index_name)
         return self._index
 
@@ -79,7 +83,9 @@ class PineconeVectorStore:
         batch_size = 100
         for i in range(0, len(vectors), batch_size):
             batch = vectors[i : i + batch_size]
-            index.upsert(vectors=batch, namespace=ns)
+            for attempt in retry_sync(attempts=PINECONE_MAX_ATTEMPTS):
+                with attempt:
+                    index.upsert(vectors=batch, namespace=ns)
 
     async def delete_by_document(self, document_id: UUID, namespace: str | None = None) -> None:
         """Delete all chunks belonging to a document.
@@ -91,8 +97,9 @@ class PineconeVectorStore:
         index = await self._get_index()
         ns = namespace if namespace is not None else str(document_id)
 
-        # Delete all vectors in the document's namespace
-        index.delete(delete_all=True, namespace=ns)
+        for attempt in retry_sync(attempts=PINECONE_MAX_ATTEMPTS):
+            with attempt:
+                index.delete(delete_all=True, namespace=ns)
 
     async def hybrid_search(
         self,
@@ -136,8 +143,9 @@ class PineconeVectorStore:
                 "values": sparse_embedding.get("values", []),
             }
 
-        # Search the specified namespace
-        results = index.query(**query_params)
+        for attempt in retry_sync(attempts=PINECONE_MAX_ATTEMPTS):
+            with attempt:
+                results = index.query(**query_params)
 
         search_results = []
         for i, match in enumerate(results.matches):
@@ -161,7 +169,9 @@ class PineconeVectorStore:
     async def get_stats(self) -> StatsResponse:
         """Get vector store statistics."""
         index = await self._get_index()
-        stats = index.describe_index_stats()
+        for attempt in retry_sync(attempts=PINECONE_MAX_ATTEMPTS):
+            with attempt:
+                stats = index.describe_index_stats()
         return {
             "total_vectors": stats.total_vector_count,
             "dimension": stats.dimension,

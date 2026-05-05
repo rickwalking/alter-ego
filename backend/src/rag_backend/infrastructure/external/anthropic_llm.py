@@ -24,7 +24,7 @@ class AnthropicLLMService:
     def __init__(self, settings: Settings) -> None:
         self._settings = settings
         self._llm = ChatAnthropic(
-            api_key=settings.anthropic_api_key,
+            api_key=settings.anthropic_api_key.get_secret_value(),
             model=settings.anthropic_model,
             temperature=0.7,
             streaming=True,
@@ -32,6 +32,7 @@ class AnthropicLLMService:
             # two full blog posts — 8K default was cutting the JSON off
             # mid-string. 32K gives plenty of headroom for Sonnet/Opus.
             max_tokens=32000,
+            max_retries=3,
         )
 
     @staticmethod

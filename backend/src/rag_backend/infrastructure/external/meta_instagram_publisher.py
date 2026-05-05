@@ -22,7 +22,10 @@ import asyncio
 
 import httpx
 
+from rag_backend.domain.constants import COOKIE_ACCESS_TOKEN
+from rag_backend.domain.constants.retry import META_MAX_ATTEMPTS
 from rag_backend.domain.protocols import PublishResult, SocialPublisher
+from rag_backend.domain.retry import retry_async
 from rag_backend.infrastructure.logging import get_logger
 
 logger = get_logger()
@@ -104,7 +107,7 @@ class MetaInstagramPublisher(SocialPublisher):
             payload = {
                 "image_url": url,
                 "is_carousel_item": "true",
-                "access_token": self._token,
+                COOKIE_ACCESS_TOKEN: self._token,
             }
             container_id = await self._post_and_extract_id(
                 f"{_GRAPH_BASE}/{self._ig_user_id}/media", payload
@@ -118,21 +121,23 @@ class MetaInstagramPublisher(SocialPublisher):
             "media_type": "CAROUSEL",
             "children": ",".join(item_ids),
             "caption": caption,
-            "access_token": self._token,
+            COOKIE_ACCESS_TOKEN: self._token,
         }
         return await self._post_and_extract_id(f"{_GRAPH_BASE}/{self._ig_user_id}/media", payload)
 
     async def _wait_for_finished(self, container_id: str) -> None:
         """Step 3: poll status_code until FINISHED or ERROR."""
         for attempt in range(_MAX_POLL_ATTEMPTS):
-            response = await self._client.get(
-                f"{_GRAPH_BASE}/{container_id}",
-                params={
-                    "fields": "status_code",
-                    "access_token": self._token,
-                },
-            )
-            response.raise_for_status()
+            async for retry_attempt in retry_async(attempts=META_MAX_ATTEMPTS):
+                with retry_attempt:
+                    response = await self._client.get(
+                        f"{_GRAPH_BASE}/{container_id}",
+                        params={
+                            "fields": "status_code",
+                            COOKIE_ACCESS_TOKEN: self._token,
+                        },
+                    )
+                    response.raise_for_status()
             status = response.json().get("status_code", "")
             if status == _CONTAINER_FINISHED:
                 return
@@ -145,15 +150,17 @@ class MetaInstagramPublisher(SocialPublisher):
         """Step 4: move the parent container to the published feed."""
         payload = {
             "creation_id": parent_id,
-            "access_token": self._token,
+            COOKIE_ACCESS_TOKEN: self._token,
         }
         return await self._post_and_extract_id(
             f"{_GRAPH_BASE}/{self._ig_user_id}/media_publish", payload
         )
 
     async def _post_and_extract_id(self, url: str, payload: dict[str, str]) -> str:
-        response = await self._client.post(url, data=payload)
-        response.raise_for_status()
+        async for attempt in retry_async(attempts=META_MAX_ATTEMPTS):
+            with attempt:
+                response = await self._client.post(url, data=payload)
+                response.raise_for_status()
         data = response.json()
         returned_id = data.get("id")
         if not returned_id:
