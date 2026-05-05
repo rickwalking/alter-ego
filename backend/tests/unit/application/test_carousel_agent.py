@@ -302,7 +302,7 @@ class TestCarouselAgent:
         assert len(slides_data) == 2
         assert slides_data[0].heading == "Intro Heading"
         assert slides_data[1].slide_type == "content"
-        assert "Blog PT" in blog_markdown
+        assert "Conteudo em portugues." in blog_markdown
 
     async def test_phase2_3_content_caps_features_at_four(
         self,
@@ -414,7 +414,7 @@ class TestCarouselAgent:
 
         assert len(slides_data) == 1
         assert slides_data[0].heading == "H"
-        assert blog_markdown == "# Blog"
+        assert blog_markdown == ""  # Leading H1 is stripped by cleanup_blog_markdown
 
     async def test_phase2_3_content_sets_blog_translations(
         self,

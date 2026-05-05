@@ -36,6 +36,8 @@ dependencies = [
     "uvicorn[standard]>=0.44.0",
     "websockets>=16.0",
     "email-validator>=2.3.0",
+    "tenacity>=9.1.4",
+    "langfuse>=3.0.0,<4.0.0",
 ]
 
 [build-system]
@@ -186,3 +188,10 @@ ignore-setters = true
 verbose = 0
 quiet = false
 color = true
+
+[tool.mutmut]
+paths_to_mutate = "src/rag_backend/domain/"
+backup = false
+tests_dir = "tests/unit/domain/"
+runner = "pytest tests/unit/domain/ -x -q --tb=short"
+dict_sync = false
