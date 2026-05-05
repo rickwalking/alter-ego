@@ -8,7 +8,7 @@ export async function BackLink() {
     <Link
       href="/blog"
       className="mb-8 inline-flex items-center gap-2 text-sm transition-colors hover:opacity-80"
-      style={{ color: "var(--blog-text-dim, rgba(255,255,255,0.45))" }}
+      style={{ color: "var(--color-muted-foreground)" }}
     >
       <svg
         xmlns="http://www.w3.org/2000/svg"

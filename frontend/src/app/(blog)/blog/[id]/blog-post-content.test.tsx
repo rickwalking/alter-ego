@@ -68,7 +68,7 @@ describe("resolveSlideImage", () => {
     const slideImages = design.images.slides;
     const markdown = "## The Architecture\n\nSome content here.";
 
-    const result = resolveSlideImage(markdown, design, slideImages);
+    const result = resolveSlideImage(markdown, design, slideImages, 2);
 
     expect(result).toBe("/api/carousels/1/images/slide_3");
   });
@@ -80,7 +80,7 @@ describe("resolveSlideImage", () => {
     const slideImages = design.images.slides;
     const markdown = "## The Architecture\n\nSome content here.";
 
-    const result = resolveSlideImage(markdown, design, slideImages);
+    const result = resolveSlideImage(markdown, design, slideImages, 1);
 
     expect(result).toBeNull();
   });
@@ -92,7 +92,7 @@ describe("resolveSlideImage", () => {
     const slideImages = design.images.slides;
     const markdown = "## The Architecture\n\nSome content here.";
 
-    const result = resolveSlideImage(markdown, design, slideImages);
+    const result = resolveSlideImage(markdown, design, slideImages, 1);
 
     expect(result).toBeNull();
   });
@@ -100,16 +100,21 @@ describe("resolveSlideImage", () => {
   it("falls back to positional mapping when no image map exists", () => {
     const design = createDesign(undefined);
     const slideImages = design.images.slides;
-    // First section after intro (index 1) gets slide_2 (index 1 in slides array)
+    // First section after intro (index 1) gets slide_2 (first content slide)
     const markdown = "## Some Section\n\nContent.";
 
-    const result = resolveSlideImage(markdown, design, slideImages);
+    const result = resolveSlideImage(markdown, design, slideImages, 1);
 
-    // With no image map, it uses positional fallback based on section index
-    // Since we can't easily determine section index from single markdown in isolation,
-    // the fallback logic checks if the section is in the list and uses index - 1
-    // For a single section markdown, findIndex returns 0, which is not > 0, so returns null
-    // This is expected behavior — positional mapping only works in the full context
+    expect(result).toBe("/api/carousels/1/images/slide_2");
+  });
+
+  it("returns null for positional mapping when section index is 0 (intro)", () => {
+    const design = createDesign(undefined);
+    const slideImages = design.images.slides;
+    const markdown = "## Intro Section\n\nContent.";
+
+    const result = resolveSlideImage(markdown, design, slideImages, 0);
+
     expect(result).toBeNull();
   });
 
@@ -120,7 +125,7 @@ describe("resolveSlideImage", () => {
     const slideImages = design.images.slides;
     const markdown = "Just a paragraph without heading.";
 
-    const result = resolveSlideImage(markdown, design, slideImages);
+    const result = resolveSlideImage(markdown, design, slideImages, 1);
 
     expect(result).toBeNull();
   });

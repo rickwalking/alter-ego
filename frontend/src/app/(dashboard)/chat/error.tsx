@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { Container } from "@/components/layout";
 import { Button } from "@/components/ui/button";
 import { AlertCircle } from "lucide-react";
@@ -13,8 +14,10 @@ export default function ChatError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  const t = useTranslations("chat");
+  const tc = useTranslations("common");
+
   useEffect(() => {
-    // Log error to monitoring service
     console.error("Chat error:", error);
   }, [error]);
 
@@ -26,9 +29,9 @@ export default function ChatError({
         </div>
 
         <div className="space-y-2">
-          <h1 className="text-3xl font-bold">Something went wrong</h1>
+          <h1 className="text-3xl font-bold">{t("errorTitle")}</h1>
           <p className="text-[var(--color-muted-foreground)] max-w-md">
-            We encountered an error loading the chat interface. Please try again.
+            {t("errorDescription")}
           </p>
         </div>
 
@@ -41,9 +44,9 @@ export default function ChatError({
         )}
 
         <div className="flex gap-4">
-          <Button onClick={reset}>Try Again</Button>
+          <Button onClick={reset}>{t("tryAgain")}</Button>
           <Link href="/">
-            <Button variant="outline">Go Home</Button>
+            <Button variant="outline">{tc("goHome")}</Button>
           </Link>
         </div>
       </div>

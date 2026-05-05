@@ -20,11 +20,43 @@ function Section({ markdown, design, slideImage }: SectionProps) {
   return (
     <>
       <ReactMarkdown
+        allowedElements={[
+          "h1",
+          "h2",
+          "h3",
+          "h4",
+          "h5",
+          "h6",
+          "p",
+          "strong",
+          "em",
+          "code",
+          "pre",
+          "ul",
+          "ol",
+          "li",
+          "blockquote",
+          "a",
+          "hr",
+          "br",
+          "img",
+          "table",
+          "thead",
+          "tbody",
+          "tr",
+          "th",
+          "td",
+          "del",
+          "ins",
+        ]}
         components={{
           h1: ({ children }) => (
             <h1
               className="mb-6 text-4xl font-extrabold leading-tight"
-              style={{ color: colors.text, fontFamily: typography.font_family_heading }}
+              style={{
+                color: colors.text,
+                fontFamily: typography.font_family_heading,
+              }}
             >
               {children}
             </h1>
@@ -32,7 +64,10 @@ function Section({ markdown, design, slideImage }: SectionProps) {
           h2: ({ children }) => (
             <h2
               className="mt-10 mb-6 text-3xl font-extrabold leading-tight"
-              style={{ color: colors.text, fontFamily: typography.font_family_heading }}
+              style={{
+                color: colors.text,
+                fontFamily: typography.font_family_heading,
+              }}
             >
               {children}
             </h2>
@@ -40,13 +75,19 @@ function Section({ markdown, design, slideImage }: SectionProps) {
           h3: ({ children }) => (
             <h3
               className="mt-8 mb-4 text-2xl font-bold leading-tight"
-              style={{ color: colors.text, fontFamily: typography.font_family_heading }}
+              style={{
+                color: colors.text,
+                fontFamily: typography.font_family_heading,
+              }}
             >
               {children}
             </h3>
           ),
           p: ({ children }) => (
-            <p className="text-base leading-relaxed" style={{ color: colors.text_muted }}>
+            <p
+              className="text-base leading-relaxed"
+              style={{ color: colors.text_muted }}
+            >
               {children}
             </p>
           ),
@@ -80,15 +121,17 @@ function Section({ markdown, design, slideImage }: SectionProps) {
               {children}
             </pre>
           ),
-          ul: ({ children }) => (
-            <ul className="space-y-3">{children}</ul>
-          ),
-          ol: ({ children }) => (
-            <ol className="space-y-3 pl-6">{children}</ol>
-          ),
+          ul: ({ children }) => <ul className="space-y-3">{children}</ul>,
+          ol: ({ children }) => <ol className="space-y-3 pl-6">{children}</ol>,
           li: ({ children }) => (
-            <li className="flex gap-3 text-base" style={{ color: colors.text_muted }}>
-              <span className="shrink-0 text-lg" style={{ color: colors.primary }}>
+            <li
+              className="flex gap-3 text-base"
+              style={{ color: colors.text_muted }}
+            >
+              <span
+                className="shrink-0 text-lg"
+                style={{ color: colors.primary }}
+              >
                 &bull;
               </span>
               <span>{children}</span>
@@ -102,10 +145,7 @@ function Section({ markdown, design, slideImage }: SectionProps) {
                 background: `${colors.accent}08`,
               }}
             >
-              <div
-                className="mb-2 text-lg italic leading-relaxed"
-                style={{ color: "rgba(255,255,255,0.58)" }}
-              >
+              <div className="mb-2 text-lg italic leading-relaxed text-muted-foreground/60">
                 {children}
               </div>
             </blockquote>
@@ -121,9 +161,7 @@ function Section({ markdown, design, slideImage }: SectionProps) {
               {children}
             </a>
           ),
-          hr: () => (
-            <hr style={{ borderColor: `${colors.primary}1F` }} />
-          ),
+          hr: () => <hr style={{ borderColor: `${colors.primary}1F` }} />,
         }}
       >
         {markdown}
@@ -160,7 +198,8 @@ export function extractH2Heading(markdown: string): string | null {
 export function resolveSlideImage(
   sectionMarkdown: string,
   design: CarouselDesignResponse,
-  slideImages: string[]
+  slideImages: string[],
+  sectionIndex: number,
 ): string | null {
   const heading = extractH2Heading(sectionMarkdown);
   if (!heading) {
@@ -170,15 +209,18 @@ export function resolveSlideImage(
   const imageMap = design.images.blog_image_map;
   if (imageMap && imageMap.length > 0) {
     const entry = imageMap.find((e) => e.heading.trim() === heading);
-    if (entry && entry.slide_number >= 1 && entry.slide_number <= slideImages.length) {
+    if (
+      entry &&
+      entry.slide_number >= 1 &&
+      entry.slide_number <= slideImages.length
+    ) {
       return slideImages[entry.slide_number - 1];
     }
     return null;
   }
 
-  // Fallback: positional mapping for legacy posts without image map
-  const sections = splitByH2(sectionMarkdown);
-  const sectionIndex = sections.findIndex((s) => s === sectionMarkdown);
+  // Fallback: positional mapping for legacy posts without image map.
+  // Skip the first section (intro) and map each H2 section to a content slide.
   if (sectionIndex > 0) {
     const contentSlides = slideImages.length > 1 ? slideImages.slice(1) : [];
     const slideIndex = sectionIndex - 1;
@@ -203,16 +245,21 @@ function stripLeadingH1(markdown: string): string {
   return markdown;
 }
 
-export function BlogPostContent({ markdown, design, slideImages }: BlogPostContentProps) {
+export function BlogPostContent({
+  markdown,
+  design,
+  slideImages,
+}: BlogPostContentProps) {
   const cleaned = stripLeadingH1(markdown);
   const sections = splitByH2(cleaned);
 
   return (
     <div className="space-y-6">
       {sections.map((section, index) => {
-        const slideImage = index === 0
-          ? null
-          : resolveSlideImage(section, design, slideImages);
+        const slideImage =
+          index === 0
+            ? null
+            : resolveSlideImage(section, design, slideImages, index);
 
         return (
           <Section

@@ -41,7 +41,9 @@ export function CaptionEditor({
         )}
         <p
           className={`ml-auto font-mono ${
-            over ? "font-semibold text-red-500" : "text-[var(--color-text-muted)]"
+            over
+              ? "font-semibold text-destructive"
+              : "text-[var(--color-text-muted)]"
           }`}
         >
           {count} / {maxChars}

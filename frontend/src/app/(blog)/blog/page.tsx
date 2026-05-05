@@ -65,9 +65,11 @@ function PostCard({ id, title, titleEn, topic, niche, status, primaryColor, crea
   );
 }
 
-function truncate(text: string, maxLength: number): string {
-  if (text.length <= maxLength) return text;
-  return text.slice(0, maxLength).trimEnd() + "...";
+function truncateWords(text: string, maxWords: number): string {
+  const cleaned = text.replace(/\*\*|\*|__|\`|\[|\]|\(|\)/g, "").trim();
+  const words = cleaned.split(/\s+/).filter((w) => w.length > 0);
+  if (words.length <= maxWords) return cleaned;
+  return words.slice(0, maxWords).join(" ") + "...";
 }
 
 export default async function BlogPage() {
@@ -124,7 +126,7 @@ export default async function BlogPage() {
               locale === "en"
                 ? post.subtitle_en || post.subtitle
                 : post.subtitle;
-            const description = truncate(rawSubtitle || post.topic, 120);
+            const description = truncateWords(rawSubtitle || post.topic, 15);
 
             return (
               <PostCard

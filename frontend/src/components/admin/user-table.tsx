@@ -81,19 +81,19 @@ export function UserTable({ users, onRefresh }: UserTableProps) {
               <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
                 <button
                   onClick={() => setEditUser(user)}
-                  className="mr-3 text-indigo-600 hover:text-indigo-900"
+                  className="mr-3 text-primary hover:text-primary-900"
                 >
                   {t("edit")}
                 </button>
                 <button
                   onClick={() => setResetUser(user)}
-                  className="mr-3 text-indigo-600 hover:text-indigo-900"
+                  className="mr-3 text-primary hover:text-primary-900"
                 >
                   {t("resetPassword")}
                 </button>
                 <button
                   onClick={() => setDeleteUser(user)}
-                  className="text-red-600 hover:text-red-900"
+                  className="text-destructive hover:text-destructive/80"
                 >
                   {t("delete")}
                 </button>

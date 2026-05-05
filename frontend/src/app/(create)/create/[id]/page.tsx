@@ -79,8 +79,7 @@ export default function WorkspacePage() {
     const baseWsUrl = `${protocol}//${window.location.host}/ws/chat/${conversationId}`;
     const tokenMatch = document.cookie.match(new RegExp("(^| )access_token=([^;]+)"));
     const token = tokenMatch ? decodeURIComponent(tokenMatch[2]) : null;
-    const wsUrl = token ? `${baseWsUrl}?token=${encodeURIComponent(token)}` : baseWsUrl;
-    const socket = new WebSocket(wsUrl);
+    const socket = token ? new WebSocket(baseWsUrl, [token]) : new WebSocket(baseWsUrl);
 
     socket.onopen = () => {
       // Connection established

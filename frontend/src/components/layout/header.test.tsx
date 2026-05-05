@@ -93,10 +93,10 @@ describe("Header Component", () => {
     });
 
     describe("When the user is anonymous", () => {
-      it("Then only the Blog link should be visible in nav", () => {
+      it("Then Chat and Blog links should be visible, others hidden", () => {
         render(<Header locale="en" />);
         expect(screen.getByText("Blog")).toBeInTheDocument();
-        expect(screen.queryByText("Chat")).not.toBeInTheDocument();
+        expect(screen.getByText("Chat")).toBeInTheDocument();
         expect(screen.queryByText("Knowledge Base")).not.toBeInTheDocument();
         expect(screen.queryByText("Create")).not.toBeInTheDocument();
         expect(screen.queryByText("Admin")).not.toBeInTheDocument();

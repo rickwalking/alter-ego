@@ -59,7 +59,11 @@ export default async function BlogPostPage({ params, searchParams }: BlogPostPag
   const heroImageUrl = design.images.hero
     ? `${apiBaseUrl}${design.images.hero}`
     : "";
-  const slideImageUrls = design.images.slides.map(
+  // Use rendered slides (with text overlay) when available; fall back to raw hero images
+  const renderedSlides = currentLang === "en"
+    ? design.images.rendered_slides_en
+    : design.images.rendered_slides_pt;
+  const slideImageUrls = (renderedSlides ?? design.images.slides).map(
     (path) => `${apiBaseUrl}${path}`
   );
 

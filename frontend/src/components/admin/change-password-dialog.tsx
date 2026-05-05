@@ -18,7 +18,11 @@ interface ChangePasswordDialogProps {
   onSuccess: () => void;
 }
 
-export function ChangePasswordDialog({ user, onClose, onSuccess }: ChangePasswordDialogProps) {
+export function ChangePasswordDialog({
+  user,
+  onClose,
+  onSuccess,
+}: ChangePasswordDialogProps) {
   const t = useTranslations("admin");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -32,10 +36,13 @@ export function ChangePasswordDialog({ user, onClose, onSuccess }: ChangePasswor
     setIsLoading(true);
 
     try {
-      const response = await fetch(`/api/admin/users/${user.id}/reset-password`, {
-        method: "POST",
-        credentials: "include",
-      });
+      const response = await fetch(
+        `/api/admin/users/${user.id}/reset-password`,
+        {
+          method: "POST",
+          credentials: "include",
+        },
+      );
 
       if (!response.ok) {
         const data = await response.json().catch(() => ({}));
@@ -53,22 +60,28 @@ export function ChangePasswordDialog({ user, onClose, onSuccess }: ChangePasswor
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+    <div className="fixed inset-0 z-50 flex items-center justify-center   bg-background/50">
       <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
-        <h2 className="text-lg font-semibold text-gray-900">{t("resetPasswordTitle")}</h2>
+        <h2 className="text-lg font-semibold text-gray-900">
+          {t("resetPasswordTitle")}
+        </h2>
         <p className="text-sm text-gray-500">{user.email}</p>
 
         {error && (
-          <div className="mt-4 rounded-md bg-red-50 p-3 text-sm text-red-700">{error}</div>
+          <div className="mt-4 rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+            {error}
+          </div>
         )}
         {success && (
-          <div className="mt-4 rounded-md bg-green-50 p-3 text-sm text-green-700">
+          <div className="mt-4 rounded-md bg-success/10 p-3 text-sm text-success-foreground">
             {success}
             <div className="mt-2 flex items-center space-x-2">
-              <code className="rounded bg-gray-100 px-2 py-1 text-sm font-mono">{password}</code>
+              <code className="rounded bg-gray-100 px-2 py-1 text-sm font-mono">
+                {password}
+              </code>
               <button
                 onClick={() => navigator.clipboard.writeText(password)}
-                className="text-xs text-indigo-600 hover:text-indigo-900"
+                className="text-xs text-primary hover:text-primary-900"
               >
                 {t("copy")}
               </button>
@@ -78,7 +91,9 @@ export function ChangePasswordDialog({ user, onClose, onSuccess }: ChangePasswor
 
         {!success && (
           <form onSubmit={handleSubmit} className="mt-4">
-            <p className="text-sm text-gray-600">{t("resetPasswordDescription")}</p>
+            <p className="text-sm text-gray-600">
+              {t("resetPasswordDescription")}
+            </p>
             <div className="mt-6 flex justify-end space-x-3">
               <button
                 type="button"
@@ -90,7 +105,7 @@ export function ChangePasswordDialog({ user, onClose, onSuccess }: ChangePasswor
               <button
                 type="submit"
                 disabled={isLoading}
-                className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500 disabled:opacity-50"
+                className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary-600 disabled:opacity-50"
               >
                 {isLoading ? t("resetting") : t("reset")}
               </button>
@@ -106,7 +121,7 @@ export function ChangePasswordDialog({ user, onClose, onSuccess }: ChangePasswor
                 onSuccess();
                 onClose();
               }}
-              className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500"
+              className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary-600"
             >
               {t("done")}
             </button>

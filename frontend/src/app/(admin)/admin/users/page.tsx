@@ -31,7 +31,10 @@ export default function UsersPage() {
       if (!response.ok) {
         throw new Error("Failed to fetch users");
       }
-      const data = (await response.json()) as { items: UserItem[]; total: number };
+      const data = (await response.json()) as {
+        items: UserItem[];
+        total: number;
+      };
       setUsers(data.items);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unknown error");
@@ -53,21 +56,23 @@ export default function UsersPage() {
     <div>
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">{t("usersTitle")}</h1>
+          <h1 className="text-2xl font-bold text-gray-900">
+            {t("usersTitle")}
+          </h1>
           <p className="mt-1 text-sm text-gray-500">
             {t("usersSubtitle", { count: users.length })}
           </p>
         </div>
         <button
           onClick={() => setIsCreateOpen(true)}
-          className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500"
+          className="rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-sm hover:bg-primary-600"
         >
           {t("createUser")}
         </button>
       </div>
 
       {error && (
-        <div className="mb-4 rounded-md bg-red-50 p-3 text-sm text-red-700">
+        <div className="mb-4 rounded-md bg-destructive/10 p-3 text-sm text-destructive">
           {error}
         </div>
       )}

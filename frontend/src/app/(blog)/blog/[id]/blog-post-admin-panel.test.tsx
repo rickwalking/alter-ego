@@ -69,6 +69,10 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: mockPush, refresh: mockRefresh }),
 }));
 
+vi.mock("@/hooks/use-auth", () => ({
+  useAuth: () => ({ user: { id: "1", email: "admin@test.com" }, isAdmin: true }),
+}));
+
 describe("BlogPostAdminPanel", () => {
   beforeEach(() => {
     vi.clearAllMocks();

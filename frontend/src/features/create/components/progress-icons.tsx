@@ -2,7 +2,9 @@ import type { SlideGenerationStatus } from "@/constants/create";
 import { SLIDE_GENERATION_STATUS } from "@/constants/create";
 
 /** Generic checkmark — used for completed phases and done-slide badges. */
-export function CheckIcon({ testId }: { testId?: string } = {}): React.ReactElement {
+export function CheckIcon({
+  testId,
+}: { testId?: string } = {}): React.ReactElement {
   return (
     <svg
       className="h-4 w-4"
@@ -29,7 +31,11 @@ export function ErrorIcon(): React.ReactElement {
       strokeWidth={2}
       aria-hidden="true"
     >
-      <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v4m0 4h.01M4.93 19h14.14a2 2 0 001.74-3L13.74 4a2 2 0 00-3.48 0L3.19 16a2 2 0 001.74 3z" />
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M12 9v4m0 4h.01M4.93 19h14.14a2 2 0 001.74-3L13.74 4a2 2 0 00-3.48 0L3.19 16a2 2 0 001.74 3z"
+      />
     </svg>
   );
 }
@@ -56,7 +62,9 @@ export function WarningIcon(): React.ReactElement {
  * circles and per-slide status badges; the default 4×4 is for header
  * contexts.
  */
-export function Spinner({ small }: { small?: boolean } = {}): React.ReactElement {
+export function Spinner({
+  small,
+}: { small?: boolean } = {}): React.ReactElement {
   const size = small ? "h-3 w-3" : "h-4 w-4";
   return (
     <svg
@@ -65,20 +73,34 @@ export function Spinner({ small }: { small?: boolean } = {}): React.ReactElement
       viewBox="0 0 24 24"
       aria-hidden="true"
     >
-      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth={4} />
-      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+      <circle
+        className="opacity-25"
+        cx="12"
+        cy="12"
+        r="10"
+        stroke="currentColor"
+        strokeWidth={4}
+      />
+      <path
+        className="opacity-75"
+        fill="currentColor"
+        d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+      />
     </svg>
   );
 }
 
-const SLIDE_STATUS_ICON: Record<SlideGenerationStatus, () => React.ReactElement> = {
+const SLIDE_STATUS_ICON: Record<
+  SlideGenerationStatus,
+  () => React.ReactElement
+> = {
   [SLIDE_GENERATION_STATUS.DONE]: () => (
     <span className="mt-0.5 inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-[var(--color-primary)] text-[10px] text-[var(--color-text)]">
       ✓
     </span>
   ),
   [SLIDE_GENERATION_STATUS.FAILED]: () => (
-    <span className="mt-0.5 inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-red-500 text-[10px] text-white">
+    <span className="mt-0.5 inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-destructive text-[10px] text-destructive-foreground">
       ×
     </span>
   ),

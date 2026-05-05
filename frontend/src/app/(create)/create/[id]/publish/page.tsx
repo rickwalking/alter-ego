@@ -72,7 +72,7 @@ export default function PublishPage() {
     return (
       <div className="min-h-screen">
         <Header />
-        <p className="p-8 text-red-500">{t("notFound")}</p>
+        <p className="p-8 text-destructive">{t("notFound")}</p>
       </div>
     );
   }

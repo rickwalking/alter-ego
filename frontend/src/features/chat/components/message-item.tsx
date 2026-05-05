@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { User, Bot, BookOpen } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { type Message } from "@/schemas/chat";
@@ -9,6 +10,7 @@ interface MessageItemProps {
 }
 
 export function MessageItem({ message }: MessageItemProps) {
+  const t = useTranslations("chat");
   const isUser = message.role === "user";
 
   return (
@@ -32,7 +34,7 @@ export function MessageItem({ message }: MessageItemProps) {
       <div className="flex-1 space-y-2">
         <div className="flex items-center gap-2">
           <span className="font-semibold">
-            {isUser ? "You" : "Assistant"}
+            {isUser ? t("you") : t("assistant")}
           </span>
           <span className="text-xs text-[var(--color-muted-foreground)]">
             {new Date(message.created_at).toLocaleTimeString()}
@@ -45,7 +47,7 @@ export function MessageItem({ message }: MessageItemProps) {
           <div className="mt-3 space-y-2">
             <div className="flex items-center gap-1 text-xs font-medium text-[var(--color-muted-foreground)]">
               <BookOpen className="h-3 w-3" />
-              Sources
+              {t("sources")}
             </div>
             <div className="flex flex-wrap gap-2">
               {message.sources.map((source, i) => (

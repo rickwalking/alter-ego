@@ -23,7 +23,10 @@ export function Header({ locale }: HeaderProps) {
       <Container>
         <div className="flex h-14 items-center justify-between">
           <div className="flex items-center gap-6">
-            <Link href="/" className="flex items-center gap-2 font-bold text-xl">
+            <Link
+              href="/"
+              className="flex items-center gap-2 font-bold text-xl"
+            >
               {t("appName")}
             </Link>
             <nav className="hidden md:flex items-center gap-4 text-sm">
@@ -58,7 +61,7 @@ export function Header({ locale }: HeaderProps) {
               {isAdmin && (
                 <Link
                   href="/admin/users"
-                  className="transition-colors hover:text-[var(--color-primary)] text-red-500"
+                  className="transition-colors hover:text-[var(--color-primary)] text-destructive"
                 >
                   Admin
                 </Link>
@@ -79,7 +82,7 @@ export function Header({ locale }: HeaderProps) {
                 ) : (
                   <Link
                     href="/login"
-                    className="text-sm text-indigo-600 hover:text-indigo-800 transition-colors"
+                    className="text-sm text-primary hover:text-primary-800 transition-colors"
                   >
                     Login
                   </Link>

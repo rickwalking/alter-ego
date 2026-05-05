@@ -35,23 +35,29 @@ export function FileUpload({ onUploadComplete, onCancel }: FileUploadProps) {
     setIsDragging(false);
   }, []);
 
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
-    const files = e.dataTransfer.files;
-    if (files.length > 0) {
-      setSelectedFile(files[0]);
-      if (!title) setTitle(files[0].name.replace(/\.[^/.]+$/, ""));
-    }
-  }, [title]);
+  const handleDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      setIsDragging(false);
+      const files = e.dataTransfer.files;
+      if (files.length > 0) {
+        setSelectedFile(files[0]);
+        if (!title) setTitle(files[0].name.replace(/\.[^/.]+$/, ""));
+      }
+    },
+    [title],
+  );
 
-  const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (files && files.length > 0) {
-      setSelectedFile(files[0]);
-      if (!title) setTitle(files[0].name.replace(/\.[^/.]+$/, ""));
-    }
-  }, [title]);
+  const handleFileSelect = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const files = e.target.files;
+      if (files && files.length > 0) {
+        setSelectedFile(files[0]);
+        if (!title) setTitle(files[0].name.replace(/\.[^/.]+$/, ""));
+      }
+    },
+    [title],
+  );
 
   const handleUpload = useCallback(() => {
     if (!selectedFile) return;
@@ -72,7 +78,7 @@ export function FileUpload({ onUploadComplete, onCancel }: FileUploadProps) {
           setProgress(0);
           onUploadComplete?.();
         },
-      }
+      },
     );
   }, [selectedFile, title, tags, upload, onUploadComplete]);
 
@@ -97,7 +103,7 @@ export function FileUpload({ onUploadComplete, onCancel }: FileUploadProps) {
   if (upload.isSuccess) {
     return (
       <div className="flex flex-col items-center justify-center py-12 text-center">
-        <CheckCircle className="h-12 w-12 text-green-500 mb-4" />
+        <CheckCircle className="h-12 w-12 text-success mb-4" />
         <h3 className="text-lg font-semibold">{t("success.title")}</h3>
         <p className="text-sm text-[var(--color-muted-foreground)] mt-1">
           {t("success.description")}
@@ -118,7 +124,7 @@ export function FileUpload({ onUploadComplete, onCancel }: FileUploadProps) {
           isDragging
             ? "border-[var(--color-primary)] bg-[var(--color-primary)]/5"
             : "border-[var(--color-border)] hover:border-[var(--color-primary)]/50",
-          upload.isPending && "pointer-events-none opacity-50"
+          upload.isPending && "pointer-events-none opacity-50",
         )}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
@@ -139,7 +145,10 @@ export function FileUpload({ onUploadComplete, onCancel }: FileUploadProps) {
         {selectedFile ? (
           <div className="space-y-3">
             <div className="flex items-center justify-center gap-3">
-              <FileText className="h-8 w-8 text-[var(--color-primary)]" aria-hidden="true" />
+              <FileText
+                className="h-8 w-8 text-[var(--color-primary)]"
+                aria-hidden="true"
+              />
               <div className="text-left">
                 <p className="font-medium">{selectedFile.name}</p>
                 <p className="text-sm text-[var(--color-muted-foreground)]">
@@ -161,7 +170,10 @@ export function FileUpload({ onUploadComplete, onCancel }: FileUploadProps) {
               )}
             </div>
             {!isFileTypeValid && (
-              <div className="flex items-center justify-center gap-2 text-sm text-[var(--color-destructive)]" role="alert">
+              <div
+                className="flex items-center justify-center gap-2 text-sm text-[var(--color-destructive)]"
+                role="alert"
+              >
                 <AlertCircle className="h-4 w-4" aria-hidden="true" />
                 {t("error.fileType")}
               </div>
@@ -169,7 +181,10 @@ export function FileUpload({ onUploadComplete, onCancel }: FileUploadProps) {
           </div>
         ) : (
           <div className="space-y-3">
-            <Upload className="mx-auto h-10 w-10 text-[var(--color-muted-foreground)]" aria-hidden="true" />
+            <Upload
+              className="mx-auto h-10 w-10 text-[var(--color-muted-foreground)]"
+              aria-hidden="true"
+            />
             <div>
               <p className="font-medium">
                 {t("dropText")}{" "}
@@ -196,9 +211,17 @@ export function FileUpload({ onUploadComplete, onCancel }: FileUploadProps) {
             <span className="text-[var(--color-muted-foreground)]">
               {t("uploading")}
             </span>
-            <span className="font-medium" aria-live="polite">{progress}%</span>
+            <span className="font-medium" aria-live="polite">
+              {progress}%
+            </span>
           </div>
-          <div className="h-2 w-full overflow-hidden rounded-full bg-[var(--color-muted)]" role="progressbar" aria-valuenow={progress} aria-valuemin={0} aria-valuemax={100}>
+          <div
+            className="h-2 w-full overflow-hidden rounded-full bg-[var(--color-muted)]"
+            role="progressbar"
+            aria-valuenow={progress}
+            aria-valuemin={0}
+            aria-valuemax={100}
+          >
             <div
               className="h-full bg-[var(--color-primary)] transition-all duration-300"
               style={{ width: `${progress}%` }}
@@ -209,7 +232,10 @@ export function FileUpload({ onUploadComplete, onCancel }: FileUploadProps) {
 
       {/* Error */}
       {upload.isError && (
-        <div className="flex items-center gap-2 rounded-lg border border-[var(--color-destructive)]/20 bg-[var(--color-destructive)]/5 p-3 text-sm text-[var(--color-destructive)]" role="alert">
+        <div
+          className="flex items-center gap-2 rounded-lg border border-[var(--color-destructive)]/20 bg-[var(--color-destructive)]/5 p-3 text-sm text-[var(--color-destructive)]"
+          role="alert"
+        >
           <AlertCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
           {upload.error?.message || t("error.generic")}
         </div>

@@ -15,10 +15,12 @@ export function DocumentCard({ document, onDelete }: DocumentCardProps) {
   const meta = document.metadata as Record<string, unknown> | undefined;
   const tags = (meta?.tags as string[] | undefined) ?? [];
   const statusColors: Record<string, string> = {
-    completed: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
-    processing: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200",
-    pending: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
-    failed: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
+    completed:
+      "bg-success/20 text-success dark:bg-success/30 dark:text-success-foreground",
+    processing: "bg-warning/20 text-warning-foreground dark:bg-warning/30",
+    pending: "bg-info/20 text-info-foreground dark:bg-info/30",
+    failed:
+      "bg-destructive/20 text-destructive-foreground dark:bg-destructive/30",
   };
 
   return (
@@ -30,7 +32,9 @@ export function DocumentCard({ document, onDelete }: DocumentCardProps) {
               <FileText className="h-5 w-5" aria-hidden="true" />
             </div>
             <div className="flex-1 min-w-0">
-              <CardTitle className="text-lg truncate">{document.title}</CardTitle>
+              <CardTitle className="text-lg truncate">
+                {document.title}
+              </CardTitle>
               <div className="flex items-center gap-2 text-xs text-[var(--color-muted-foreground)] mt-1">
                 <span>{formatDate(document.created_at)}</span>
                 <span>·</span>

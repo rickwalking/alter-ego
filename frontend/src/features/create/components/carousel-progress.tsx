@@ -63,13 +63,13 @@ export function CarouselProgress({
 
   if (hasError) {
     return (
-      <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-4">
-        <div className="flex items-start gap-2 text-red-500">
+      <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-4">
+        <div className="flex items-start gap-2 text-destructive">
           <ErrorIcon />
           <div className="flex-1 space-y-1">
             <span className="font-medium">{t("progress.failed")}</span>
             {errorMessage ? (
-              <p className="break-words font-mono text-red-400 text-xs">
+              <p className="break-words font-mono text-destructive/80 text-xs">
                 {errorMessage}
               </p>
             ) : null}
@@ -102,9 +102,11 @@ export function CarouselProgress({
       </div>
 
       {isStalled ? (
-        <div className="flex items-start gap-2 rounded-md border border-yellow-500/30 bg-yellow-500/10 p-2 text-yellow-400 text-xs">
+        <div className="flex items-start gap-2 rounded-md border border-warning/30 bg-warning/10 p-2 text-warning-foreground text-xs">
           <WarningIcon />
-          <span>{t("progress.stalled", { seconds: Math.floor(stalledSeconds) })}</span>
+          <span>
+            {t("progress.stalled", { seconds: Math.floor(stalledSeconds) })}
+          </span>
         </div>
       ) : null}
 
@@ -139,7 +141,10 @@ export function CarouselProgress({
  * we append "Z" when no offset is present so `new Date(...)` treats
  * them as UTC instead of local time.
  */
-function useStalledSeconds(updatedAt: string | undefined, frozen: boolean): number {
+function useStalledSeconds(
+  updatedAt: string | undefined,
+  frozen: boolean,
+): number {
   const [, setTick] = useState(0);
 
   useEffect(() => {
@@ -158,8 +163,9 @@ function useStalledSeconds(updatedAt: string | undefined, frozen: boolean): numb
 }
 
 function secondsSince(updatedAt: string): number {
-  const normalized =
-    /[zZ]|[+-]\d{2}:?\d{2}$/.test(updatedAt) ? updatedAt : `${updatedAt}Z`;
+  const normalized = /[zZ]|[+-]\d{2}:?\d{2}$/.test(updatedAt)
+    ? updatedAt
+    : `${updatedAt}Z`;
   const referenceMs = new Date(normalized).getTime();
   return Math.max(0, (Date.now() - referenceMs) / 1000);
 }

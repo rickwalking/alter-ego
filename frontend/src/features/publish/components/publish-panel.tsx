@@ -91,14 +91,17 @@ export function PublishPanel({
   const incomingEditorState = createEditorState(project);
   const [editorState, setEditorState] = useState(incomingEditorState);
   const editor =
-    editorState.seed === incomingEditorState.seed ? editorState : incomingEditorState;
+    editorState.seed === incomingEditorState.seed
+      ? editorState
+      : incomingEditorState;
 
   if (editorState.seed !== incomingEditorState.seed) {
     setEditorState(incomingEditorState);
   }
 
   const slideUrls = slideUrlsFromProject(project, language);
-  const activeLinkedInText = language === "pt" ? editor.linkedinPt : editor.linkedinEn;
+  const activeLinkedInText =
+    language === "pt" ? editor.linkedinPt : editor.linkedinEn;
   const setCaption = (caption: string) =>
     setEditorState((state) => ({ ...state, seed: editor.seed, caption }));
   const setActiveLinkedInText = (text: string) =>
@@ -189,10 +192,13 @@ export function PublishPanel({
               maxChars={IG_MAX_CHARS}
               placeholder={t("instagram.placeholder")}
               ariaLabel={t("instagram.captionLabel")}
-              helpText={t("instagram.hashtagHelp", { count: hashtagCount, max: IG_MAX_HASHTAGS })}
+              helpText={t("instagram.hashtagHelp", {
+                count: hashtagCount,
+                max: IG_MAX_HASHTAGS,
+              })}
             />
             {hashtagsOver && (
-              <p className="text-red-500 text-xs">
+              <p className="text-destructive text-xs">
                 {t("instagram.hashtagOver")}
               </p>
             )}
@@ -223,10 +229,12 @@ export function PublishPanel({
               )}
             </div>
             {publishResult?.status === "success" && (
-              <p className="text-green-500 text-sm">{publishResult.message}</p>
+              <p className="text-success text-sm">{publishResult.message}</p>
             )}
             {publishResult?.status === "error" && (
-              <p className="text-red-500 text-sm">{publishResult.message}</p>
+              <p className="text-destructive text-sm">
+                {publishResult.message}
+              </p>
             )}
           </div>
         )}
@@ -260,7 +268,9 @@ export function PublishPanel({
               onChange={setActiveLinkedInText}
               maxChars={LINKEDIN_MAX_CHARS}
               placeholder={t("linkedin.placeholder")}
-              ariaLabel={t("linkedin.postLabel", { language: language.toUpperCase() })}
+              ariaLabel={t("linkedin.postLabel", {
+                language: language.toUpperCase(),
+              })}
               helpText={t("linkedin.help")}
             />
             <div className="flex flex-wrap gap-2">

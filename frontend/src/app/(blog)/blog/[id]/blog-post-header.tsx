@@ -48,10 +48,7 @@ export function BlogPostHeader({
         className="mb-8 border-b pb-6"
         style={{ borderColor: `${colors.primary}0F` }}
       >
-        <span
-          className="flex items-center gap-1 text-sm"
-          style={{ color: "rgba(255,255,255,0.45)" }}
-        >
+        <span className="flex items-center gap-1 text-sm text-muted-foreground/45">
           {design.layout.swipe_text}
         </span>
       </div>

@@ -14,7 +14,10 @@ interface BlogPostAdminPanelProps {
   design: CarouselDesignResponse;
 }
 
-export function BlogPostAdminPanel({ projectId, design }: BlogPostAdminPanelProps) {
+export function BlogPostAdminPanel({
+  projectId,
+  design,
+}: BlogPostAdminPanelProps) {
   const t = useTranslations("blog.admin");
   const router = useRouter();
   const deleteMutation = useDeleteCarousel();
@@ -110,7 +113,7 @@ export function BlogPostAdminPanel({ projectId, design }: BlogPostAdminPanelProp
       </div>
 
       {showConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/60 p-4">
           <div
             className="w-full max-w-sm rounded-lg border p-6 shadow-xl"
             style={{
@@ -124,7 +127,10 @@ export function BlogPostAdminPanel({ projectId, design }: BlogPostAdminPanelProp
             >
               {t("deleteConfirmTitle")}
             </h3>
-            <p className="mb-6 text-sm" style={{ color: design.colors.text_dim }}>
+            <p
+              className="mb-6 text-sm"
+              style={{ color: design.colors.text_dim }}
+            >
               {t("deleteConfirm")}
             </p>
             <div className="flex justify-end gap-2">
@@ -145,8 +151,8 @@ export function BlogPostAdminPanel({ projectId, design }: BlogPostAdminPanelProp
                 disabled={deleteMutation.isPending}
                 className="rounded-md px-4 py-2 text-sm font-medium transition-opacity hover:opacity-80 disabled:opacity-50"
                 style={{
-                  background: "#dc2626",
-                  color: "#ffffff",
+                  background: "var(--color-destructive)",
+                  color: "var(--color-destructive-foreground)",
                 }}
               >
                 {deleteMutation.isPending ? t("deleting") : t("delete")}

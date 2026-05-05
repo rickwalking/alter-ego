@@ -11,10 +11,12 @@ export default function ForbiddenPage() {
       <div className="text-center">
         <h1 className="text-6xl font-bold text-gray-900">403</h1>
         <p className="mt-4 text-xl text-gray-600">{t("forbiddenTitle")}</p>
-        <p className="mt-2 text-sm text-gray-500">{t("forbiddenDescription")}</p>
+        <p className="mt-2 text-sm text-gray-500">
+          {t("forbiddenDescription")}
+        </p>
         <Link
           href="/"
-          className="mt-6 inline-block rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500"
+          className="mt-6 inline-block rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary-600"
         >
           {t("goHome")}
         </Link>

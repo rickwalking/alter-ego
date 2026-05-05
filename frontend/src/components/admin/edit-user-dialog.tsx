@@ -18,7 +18,11 @@ interface EditUserDialogProps {
   onSuccess: () => void;
 }
 
-export function EditUserDialog({ user, onClose, onSuccess }: EditUserDialogProps) {
+export function EditUserDialog({
+  user,
+  onClose,
+  onSuccess,
+}: EditUserDialogProps) {
   const t = useTranslations("admin");
   const [role, setRole] = useState(user.role);
   const [isActive, setIsActive] = useState(user.is_active);
@@ -53,22 +57,28 @@ export function EditUserDialog({ user, onClose, onSuccess }: EditUserDialogProps
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+    <div className="fixed inset-0 z-50 flex items-center justify-center   bg-background/50">
       <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
-        <h2 className="text-lg font-semibold text-gray-900">{t("editUserTitle")}</h2>
+        <h2 className="text-lg font-semibold text-gray-900">
+          {t("editUserTitle")}
+        </h2>
         <p className="text-sm text-gray-500">{user.email}</p>
 
         {error && (
-          <div className="mt-4 rounded-md bg-red-50 p-3 text-sm text-red-700">{error}</div>
+          <div className="mt-4 rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+            {error}
+          </div>
         )}
 
         <form onSubmit={handleSubmit} className="mt-4 space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700">{t("roleLabel")}</label>
+            <label className="block text-sm font-medium text-gray-700">
+              {t("roleLabel")}
+            </label>
             <select
               value={role}
               onChange={(e) => setRole(e.target.value)}
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500"
+              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-primary-500"
             >
               <option value="editor">{t("editorRole")}</option>
               <option value="admin">{t("adminRole")}</option>
@@ -81,9 +91,12 @@ export function EditUserDialog({ user, onClose, onSuccess }: EditUserDialogProps
               type="checkbox"
               checked={isActive}
               onChange={(e) => setIsActive(e.target.checked)}
-              className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+              className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary-500"
             />
-            <label htmlFor="is_active" className="ml-2 block text-sm text-gray-900">
+            <label
+              htmlFor="is_active"
+              className="ml-2 block text-sm text-gray-900"
+            >
               {t("activeLabel")}
             </label>
           </div>
@@ -99,7 +112,7 @@ export function EditUserDialog({ user, onClose, onSuccess }: EditUserDialogProps
             <button
               type="submit"
               disabled={isLoading}
-              className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500 disabled:opacity-50"
+              className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary-600 disabled:opacity-50"
             >
               {isLoading ? t("saving") : t("save")}
             </button>

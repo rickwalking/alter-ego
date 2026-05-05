@@ -31,18 +31,27 @@ export function HorizontalCarouselViewer({
     }
   };
 
-  const scrollTo = useCallback((index: number) => {
-    const viewport = document.getElementById("carousel-viewport");
-    if (!viewport) return;
-    const clamped = Math.max(0, Math.min(index, slideUrls.length - 1));
-    viewport.scrollTo({
-      left: clamped * viewport.clientWidth,
-      behavior: "smooth",
-    });
-  }, [slideUrls.length]);
+  const scrollTo = useCallback(
+    (index: number) => {
+      const viewport = document.getElementById("carousel-viewport");
+      if (!viewport) return;
+      const clamped = Math.max(0, Math.min(index, slideUrls.length - 1));
+      viewport.scrollTo({
+        left: clamped * viewport.clientWidth,
+        behavior: "smooth",
+      });
+    },
+    [slideUrls.length],
+  );
 
-  const goPrev = useCallback(() => scrollTo(activeIndex - 1), [activeIndex, scrollTo]);
-  const goNext = useCallback(() => scrollTo(activeIndex + 1), [activeIndex, scrollTo]);
+  const goPrev = useCallback(
+    () => scrollTo(activeIndex - 1),
+    [activeIndex, scrollTo],
+  );
+  const goNext = useCallback(
+    () => scrollTo(activeIndex + 1),
+    [activeIndex, scrollTo],
+  );
 
   if (slideUrls.length === 0) {
     return null;
@@ -98,7 +107,7 @@ export function HorizontalCarouselViewer({
                 sizes="(min-width: 1024px) 50vw, 100vw"
                 unoptimized
               />
-              <div className="absolute top-3 right-3 rounded-full bg-black/60 px-2 py-0.5 text-white text-xs">
+              <div className="absolute top-3 right-3 rounded-full bg-background/60 px-2 py-0.5 text-foreground text-xs">
                 {i + 1} / {slideUrls.length}
               </div>
             </div>
@@ -113,7 +122,7 @@ export function HorizontalCarouselViewer({
               onClick={goPrev}
               disabled={activeIndex === 0}
               aria-label={t("previousSlide")}
-              className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-black/50 p-2 text-white transition-opacity hover:bg-black/70 disabled:opacity-0"
+              className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-background/50 p-2 text-foreground transition-opacity hover:bg-background/70 disabled:opacity-0"
             >
               <ChevronLeft className="h-5 w-5" />
             </button>
@@ -122,7 +131,7 @@ export function HorizontalCarouselViewer({
               onClick={goNext}
               disabled={activeIndex === slideUrls.length - 1}
               aria-label={t("nextSlide")}
-              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-black/50 p-2 text-white transition-opacity hover:bg-black/70 disabled:opacity-0"
+              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-background/50 p-2 text-foreground transition-opacity hover:bg-background/70 disabled:opacity-0"
             >
               <ChevronRight className="h-5 w-5" />
             </button>

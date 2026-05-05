@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { Container } from "@/components/layout";
 import { Button } from "@/components/ui/button";
 import { AlertCircle } from "lucide-react";
@@ -13,6 +14,9 @@ export default function KnowledgeError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  const t = useTranslations("knowledge");
+  const tc = useTranslations("common");
+
   useEffect(() => {
     console.error("Knowledge base error:", error);
   }, [error]);
@@ -25,16 +29,16 @@ export default function KnowledgeError({
         </div>
 
         <div className="space-y-2">
-          <h1 className="text-3xl font-bold">Failed to load Knowledge Base</h1>
+          <h1 className="text-3xl font-bold">{t("errorTitle")}</h1>
           <p className="text-[var(--color-muted-foreground)] max-w-md">
-            We could not load your documents. This might be a temporary issue.
+            {t("errorDescription")}
           </p>
         </div>
 
         <div className="flex gap-4">
-          <Button onClick={reset}>Try Again</Button>
+          <Button onClick={reset}>{t("tryAgain")}</Button>
           <Link href="/">
-            <Button variant="outline">Go Home</Button>
+            <Button variant="outline">{tc("goHome")}</Button>
           </Link>
         </div>
       </div>

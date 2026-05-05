@@ -11,6 +11,13 @@ import { DEFAULT_LOCALE, SUPPORTED_LOCALES } from "@/i18n/config";
 import type { SupportedLocale } from "@/i18n/config";
 import type { CarouselProjectListResponse } from "@/schemas/carousel";
 
+function truncateWords(text: string, maxWords: number): string {
+  const cleaned = text.replace(/\*\*|\*|__|\`|\[|\]|\(|\)/g, "").trim();
+  const words = cleaned.split(/\s+/).filter((w) => w.length > 0);
+  if (words.length <= maxWords) return cleaned;
+  return words.slice(0, maxWords).join(" ") + "...";
+}
+
 export default async function HomePage() {
   const t = await getTranslations("home");
   const tc = await getTranslations("common");
@@ -172,9 +179,12 @@ export default async function HomePage() {
 
                       {/* Excerpt */}
                       <p className="text-sm leading-relaxed text-[var(--color-muted-foreground)]">
-                        {locale === "en"
-                          ? post.subtitle_en || post.subtitle || post.topic
-                          : post.subtitle || post.topic}
+                        {truncateWords(
+                          locale === "en"
+                            ? post.subtitle_en || post.subtitle || post.topic
+                            : post.subtitle || post.topic,
+                          15
+                        )}
                       </p>
                     </div>
                   </Link>
