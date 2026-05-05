@@ -39,6 +39,14 @@ http {
     # Rate limiting
     limit_req_zone $binary_remote_addr zone=api:10m rate=10r/s;
     limit_req_zone $binary_remote_addr zone=ws:10m rate=5r/s;
+    limit_req_zone $binary_remote_addr zone=chat_ws:10m rate=1r/s;
+    limit_req_zone $binary_remote_addr zone=chat_api:10m rate=6r/m;
+
+    # Preserve original protocol from upstream proxy (or fallback to $scheme)
+    map $http_x_forwarded_proto $real_scheme {
+        default $http_x_forwarded_proto;
+        ''      $scheme;
+    }
 
     # Upstream definitions
     upstream frontend {
@@ -94,7 +102,7 @@ http {
             proxy_set_header Host $host;
             proxy_set_header X-Real-IP $remote_addr;
             proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-            proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_set_header X-Forwarded-Proto $real_scheme;
             proxy_cache_bypass $http_upgrade;
         }
 
@@ -105,7 +113,7 @@ http {
             proxy_set_header Host $host;
             proxy_set_header X-Real-IP $remote_addr;
             proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-            proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_set_header X-Forwarded-Proto $real_scheme;
             proxy_set_header X-Forwarded-Host $host;
         }
 
@@ -117,7 +125,19 @@ http {
             proxy_set_header Host $host;
             proxy_set_header X-Real-IP $remote_addr;
             proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-            proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_set_header X-Forwarded-Proto $real_scheme;
+            proxy_set_header X-Forwarded-Host $host;
+        }
+
+        # Chat API — strict rate limit to prevent token cost abuse
+        location /api/conversations/ {
+            limit_req zone=chat_api burst=3 nodelay;
+            proxy_pass http://backend/api/conversations/;
+            proxy_http_version 1.1;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $real_scheme;
             proxy_set_header X-Forwarded-Host $host;
         }
 
@@ -131,7 +151,21 @@ http {
             proxy_set_header Host $host;
             proxy_set_header X-Real-IP $remote_addr;
             proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-            proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_set_header X-Forwarded-Proto $real_scheme;
+            proxy_read_timeout 86400;
+        }
+
+        # Chat WebSocket — stricter rate limit
+        location /ws/chat/ {
+            limit_req zone=chat_ws burst=5 nodelay;
+            proxy_pass http://backend/ws/chat/;
+            proxy_http_version 1.1;
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection "upgrade";
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $real_scheme;
             proxy_read_timeout 86400;
         }
     }

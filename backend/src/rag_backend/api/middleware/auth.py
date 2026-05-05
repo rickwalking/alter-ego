@@ -3,6 +3,8 @@
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
+from rag_backend.api.constants import ERR_NOT_AUTHENTICATED
+from rag_backend.domain.constants import COOKIE_ACCESS_TOKEN
 from rag_backend.infrastructure.auth import (
     decode_access_token,
     decode_anonymous_token,
@@ -18,7 +20,7 @@ def _extract_token_from_request(request: Request) -> str | None:
     if auth_header and auth_header.lower().startswith("bearer "):
         return auth_header[7:]
 
-    cookie_token = request.cookies.get("access_token")
+    cookie_token = request.cookies.get(COOKIE_ACCESS_TOKEN)
     if cookie_token:
         return cookie_token
 
@@ -50,7 +52,7 @@ async def get_current_user(
     if not token:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Not authenticated",
+            detail=ERR_NOT_AUTHENTICATED,
             headers={"WWW-Authenticate": "Bearer"},
         )
 

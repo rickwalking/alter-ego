@@ -46,6 +46,9 @@ services:
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-https://marinssolutions.com}
       REDIS_URL: redis://redis:6379
       DEBUG: "false"
+      LANGFUSE_SECRET_KEY: ${LANGFUSE_SECRET_KEY:-}
+      LANGFUSE_PUBLIC_KEY: ${LANGFUSE_PUBLIC_KEY:-}
+      LANGFUSE_HOST: ${LANGFUSE_HOST:-http://langfuse:3000}
     depends_on:
       postgres:
         condition: service_healthy
@@ -104,8 +107,81 @@ services:
     entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
     restart: unless-stopped
 
+  langfuse-db-init:
+    image: postgres:17-alpine
+    entrypoint:
+      - sh
+      - -c
+      - |
+        until pg_isready -h postgres -U "$$POSTGRES_USER"; do sleep 1; done
+        createdb -h postgres -U "$$POSTGRES_USER" langfuse 2>/dev/null || echo "langfuse database already exists"
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-rag_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-rag_password}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  clickhouse:
+    image: clickhouse/clickhouse-server:24.12-alpine
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+    environment:
+      CLICKHOUSE_USER: langfuse
+      CLICKHOUSE_PASSWORD: ${LANGFUSE_CLICKHOUSE_PASSWORD:-changeme}
+      CLICKHOUSE_DB: langfuse
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  langfuse:
+    image: langfuse/langfuse:3
+    ports:
+      - "127.0.0.1:3001:3000"
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-rag_user}:${POSTGRES_PASSWORD:-rag_password}@postgres:5432/langfuse
+      DIRECT_URL: postgresql://${POSTGRES_USER:-rag_user}:${POSTGRES_PASSWORD:-rag_password}@postgres:5432/langfuse
+      NEXTAUTH_SECRET: ${LANGFUSE_NEXTAUTH_SECRET:-}
+      NEXTAUTH_URL: ${LANGFUSE_HOST:-http://localhost:3001}
+      SALT: ${LANGFUSE_SALT:-}
+      ENCRYPTION_KEY: ${LANGFUSE_ENCRYPTION_KEY:-}
+      LANGFUSE_ENABLE_EXPERIMENTAL_FEATURES: "false"
+      CLICKHOUSE_URL: http://clickhouse:8123
+      CLICKHOUSE_USER: langfuse
+      CLICKHOUSE_PASSWORD: ${LANGFUSE_CLICKHOUSE_PASSWORD:-changeme}
+      CLICKHOUSE_CLUSTER_ENABLED: "false"
+      LANGFUSE_DEFAULT_ORG_ID: ${LANGFUSE_DEFAULT_ORG_ID:-default}
+      LANGFUSE_DEFAULT_PROJECT_ID: ${LANGFUSE_DEFAULT_PROJECT_ID:-default}
+      LANGFUSE_DEFAULT_PROJECT_NAME: ${LANGFUSE_DEFAULT_PROJECT_NAME:-alter-ego}
+      REDIS_CONNECTION_STRING: redis://redis:6379
+      TELEMETRY_ENABLED: "false"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      langfuse-db-init:
+        condition: service_completed_successfully
+      clickhouse:
+        condition: service_started
+      redis:
+        condition: service_started
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
 volumes:
   postgres_data:
   redis_data:
+  clickhouse_data:
   certbot_data:
   certbot_www:

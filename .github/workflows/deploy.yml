@@ -52,11 +52,11 @@ jobs:
           key: ${{ secrets.DO_SSH_KEY }}
           script: |
             cd /opt/alter-ego
-            
+
             # Pull latest code
             git fetch origin
             git reset --hard origin/main
-            
+
             # Create/update environment file
             cat > .env << 'EOF'
             POSTGRES_USER=${{ secrets.POSTGRES_USER }}
@@ -67,17 +67,20 @@ jobs:
             ANTHROPIC_API_KEY=${{ secrets.ANTHROPIC_API_KEY }}
             SECRET_KEY=${{ secrets.SECRET_KEY }}
             ANON_SECRET_KEY=${{ secrets.ANON_SECRET_KEY }}
+            GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}
+            LANGFUSE_SECRET_KEY=${{ secrets.LANGFUSE_SECRET_KEY }}
+            LANGFUSE_PUBLIC_KEY=${{ secrets.LANGFUSE_PUBLIC_KEY }}
             ALLOWED_ORIGINS=https://marinssolutions.com
             EOF
-            
-            # Deploy with Docker Compose
+
+            # Deploy with Docker Compose (server caches layers automatically)
             docker compose -f docker-compose.prod.yml down
             docker compose -f docker-compose.prod.yml pull
             docker compose -f docker-compose.prod.yml up -d --build
-            
+
             # Clean up old images
             docker image prune -af --filter "until=168h"
-            
+
             # Verify health
             sleep 10
             curl -sf http://localhost:8000/health || exit 1

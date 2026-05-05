@@ -18,11 +18,13 @@ from rag_backend.api.middleware.security_headers import SecurityHeadersMiddlewar
 from rag_backend.api.routes import admin, auth, carousels, conversations, documents, search
 from rag_backend.api.schemas import HealthCheckResponse, HealthResponse
 from rag_backend.api.websocket.chat import chat_handler
+from rag_backend.domain.constants import COOKIE_ACCESS_TOKEN
 from rag_backend.infrastructure.config.settings import Settings, get_settings
 from rag_backend.infrastructure.container import container
 from rag_backend.infrastructure.database.config import close_db, init_db
 from rag_backend.infrastructure.logging import get_logger, setup_logging
 from rag_backend.infrastructure.monitoring import init_langsmith
+from rag_backend.infrastructure.monitoring_langfuse import init_langfuse
 
 logger = get_logger()
 
@@ -38,6 +40,9 @@ async def lifespan(app: FastAPI):
     settings = get_settings()
     setup_logging(debug=settings.debug)
     init_langsmith(settings)
+    langfuse_handler = init_langfuse(settings)
+    if langfuse_handler:
+        logger.info("langfuse_initialized", host=settings.langfuse_host)
 
     logger.info("application_startup", version=settings.app_version)
 
@@ -158,10 +163,10 @@ def create_app() -> FastAPI:  # noqa: PLR0915 — app factory configures all mid
 
         # Check Pinecone
         try:
-            if settings.pinecone_api_key:
+            if settings.pinecone_api_key.get_secret_value():
                 from pinecone import Pinecone
 
-                pc = Pinecone(api_key=settings.pinecone_api_key)
+                pc = Pinecone(api_key=settings.pinecone_api_key.get_secret_value())
                 indexes = pc.list_indexes()
                 checks["pinecone"] = {
                     "status": "connected",
@@ -174,10 +179,10 @@ def create_app() -> FastAPI:  # noqa: PLR0915 — app factory configures all mid
 
         # Check OpenAI
         try:
-            if settings.openai_api_key:
+            if settings.openai_api_key.get_secret_value():
                 from openai import AsyncOpenAI
 
-                client = AsyncOpenAI(api_key=settings.openai_api_key)
+                client = AsyncOpenAI(api_key=settings.openai_api_key.get_secret_value())
                 await client.models.list()
                 checks["openai"] = {"status": "connected"}
             else:
@@ -217,25 +222,27 @@ def create_app() -> FastAPI:  # noqa: PLR0915 — app factory configures all mid
         conv_id = UUID(conversation_id)
         settings = get_settings()
 
-        # Validate token from query params or cookies
-        token = websocket.query_params.get("token")
+        # Extract token from Sec-WebSocket-Protocol header (subprotocol),
+        # then fall back to cookies
+        subprotocols = websocket.headers.get("sec-websocket-protocol", "")
+        token = subprotocols.strip() or None
         if not token:
-            token = websocket.cookies.get("access_token") or websocket.cookies.get("anon_token")
+            token = websocket.cookies.get(COOKIE_ACCESS_TOKEN) or websocket.cookies.get(
+                "anon_token"
+            )
 
         is_authorized = False
 
         if token:
-            # Try authenticated token first
             auth_payload = decode_access_token(settings, token)
             if auth_payload is not None:
                 is_authorized = True
+                await websocket.accept(subprotocol=token)
             else:
-                # Try anonymous token
                 anon_payload = decode_anonymous_token(settings, token)
-                if anon_payload is not None:
-                    # Verify conversation_id matches
-                    if anon_payload.get("conversation_id") == conversation_id:
-                        is_authorized = True
+                if anon_payload is not None and anon_payload.get("conversation_id") == conversation_id:
+                    is_authorized = True
+                    await websocket.accept(subprotocol=token)
 
         if not is_authorized:
             await websocket.close(code=1008)

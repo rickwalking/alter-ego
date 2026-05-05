@@ -72,3 +72,6 @@ export const BLOG_LANGUAGES = {
 
 /** Default blog language. */
 export const DEFAULT_BLOG_LANGUAGE = BLOG_LANGUAGES.PORTUGUESE;
+
+/** Site URL used for SEO metadata and sitemap generation. */
+export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://alterego.app";

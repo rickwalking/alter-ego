@@ -5,7 +5,7 @@ from datetime import UTC, datetime, timedelta
 import bcrypt
 import jwt
 
-from rag_backend.domain.constants import JWT_ALGORITHM, JWT_TYPE_ANON, JWT_TYPE_AUTH
+from rag_backend.domain.constants import ENCODING_UTF8, JWT_ALGORITHM, JWT_TYPE_ANON, JWT_TYPE_AUTH
 from rag_backend.domain.models import User
 from rag_backend.infrastructure.config.settings import Settings
 
@@ -36,7 +36,7 @@ def create_access_token(
         "exp": expire,
         "iat": datetime.now(UTC),
     }
-    return jwt.encode(payload, settings.secret_key, algorithm=JWT_ALGORITHM)
+    return jwt.encode(payload, settings.secret_key.get_secret_value(), algorithm=JWT_ALGORITHM)
 
 
 def create_anonymous_token(
@@ -64,7 +64,7 @@ def create_anonymous_token(
         "exp": expire,
         "iat": datetime.now(UTC),
     }
-    return jwt.encode(payload, settings.anon_secret_key, algorithm=JWT_ALGORITHM)
+    return jwt.encode(payload, settings.anon_secret_key.get_secret_value(), algorithm=JWT_ALGORITHM)
 
 
 def decode_access_token(settings: Settings, token: str) -> dict[str, object] | None:
@@ -78,7 +78,9 @@ def decode_access_token(settings: Settings, token: str) -> dict[str, object] | N
         Token payload dict if valid, None otherwise.
     """
     try:
-        payload = jwt.decode(token, settings.secret_key, algorithms=[JWT_ALGORITHM])
+        payload = jwt.decode(
+            token, settings.secret_key.get_secret_value(), algorithms=[JWT_ALGORITHM]
+        )
         if payload.get("type") != JWT_TYPE_AUTH:
             return None
         return payload
@@ -97,7 +99,9 @@ def decode_anonymous_token(settings: Settings, token: str) -> dict[str, object] 
         Token payload dict if valid, None otherwise.
     """
     try:
-        payload = jwt.decode(token, settings.anon_secret_key, algorithms=[JWT_ALGORITHM])
+        payload = jwt.decode(
+            token, settings.anon_secret_key.get_secret_value(), algorithms=[JWT_ALGORITHM]
+        )
         if payload.get("type") != JWT_TYPE_ANON:
             return None
         return payload
@@ -114,10 +118,10 @@ def hash_password(password: str) -> str:
     Returns:
         Hashed password string.
     """
-    password_bytes = password.encode("utf-8")[:72]
+    password_bytes = password.encode(ENCODING_UTF8)[:72]
     salt = bcrypt.gensalt(rounds=12)
     hashed = bcrypt.hashpw(password_bytes, salt)
-    return hashed.decode("utf-8")
+    return hashed.decode(ENCODING_UTF8)
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
@@ -130,6 +134,6 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     Returns:
         True if the password matches, False otherwise.
     """
-    plain_bytes = plain_password.encode("utf-8")[:72]
-    hash_bytes = hashed_password.encode("utf-8")
+    plain_bytes = plain_password.encode(ENCODING_UTF8)[:72]
+    hash_bytes = hashed_password.encode(ENCODING_UTF8)
     return bcrypt.checkpw(plain_bytes, hash_bytes)
