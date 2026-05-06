@@ -34,6 +34,9 @@ services:
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       SECRET_KEY: ${SECRET_KEY:-}
+      LANGFUSE_SECRET_KEY: ${LANGFUSE_SECRET_KEY:-}
+      LANGFUSE_PUBLIC_KEY: ${LANGFUSE_PUBLIC_KEY:-}
+      LANGFUSE_HOST: ${LANGFUSE_HOST:-http://langfuse:3000}
       DEBUG: "false"
     ports:
       - "127.0.0.1:8000:8000"
@@ -69,5 +72,79 @@ services:
     security_opt:
       - no-new-privileges:true
 
+  langfuse-db-init:
+    image: postgres:17-alpine
+    entrypoint:
+      - sh
+      - -c
+      - |
+        until pg_isready -h postgres -U "$$POSTGRES_USER"; do sleep 1; done
+        createdb -h postgres -U "$$POSTGRES_USER" langfuse 2>/dev/null || echo "langfuse database already exists"
+    environment:
+      POSTGRES_USER: rag_user
+      POSTGRES_PASSWORD: rag_password
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  clickhouse:
+    image: clickhouse/clickhouse-server:24.12-alpine
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+    environment:
+      CLICKHOUSE_USER: langfuse
+      CLICKHOUSE_PASSWORD: ${LANGFUSE_CLICKHOUSE_PASSWORD:-changeme}
+      CLICKHOUSE_DB: langfuse
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: "1.0"
+    security_opt:
+      - no-new-privileges:true
+
+  langfuse:
+    image: langfuse/langfuse:3
+    ports:
+      - "127.0.0.1:3001:3000"
+    environment:
+      DATABASE_URL: postgresql://rag_user:rag_password@postgres:5432/langfuse
+      DIRECT_URL: postgresql://rag_user:rag_password@postgres:5432/langfuse
+      NEXTAUTH_SECRET: ${LANGFUSE_NEXTAUTH_SECRET:-}
+      NEXTAUTH_URL: http://localhost:3001
+      SALT: ${LANGFUSE_SALT:-}
+      ENCRYPTION_KEY: ${LANGFUSE_ENCRYPTION_KEY:-}
+      LANGFUSE_ENABLE_EXPERIMENTAL_FEATURES: "false"
+      CLICKHOUSE_URL: http://clickhouse:8123
+      CLICKHOUSE_USER: langfuse
+      CLICKHOUSE_PASSWORD: ${LANGFUSE_CLICKHOUSE_PASSWORD:-changeme}
+      CLICKHOUSE_CLUSTER_ENABLED: "false"
+      LANGFUSE_DEFAULT_ORG_ID: ${LANGFUSE_DEFAULT_ORG_ID:-default}
+      LANGFUSE_DEFAULT_PROJECT_ID: ${LANGFUSE_DEFAULT_PROJECT_ID:-default}
+      LANGFUSE_DEFAULT_PROJECT_NAME: ${LANGFUSE_DEFAULT_PROJECT_NAME:-alter-ego}
+      TELEMETRY_ENABLED: "false"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      langfuse-db-init:
+        condition: service_completed_successfully
+      clickhouse:
+        condition: service_started
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: "1.0"
+    security_opt:
+      - no-new-privileges:true
+
 volumes:
   postgres_data:
+  clickhouse_data:
