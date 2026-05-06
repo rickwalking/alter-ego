@@ -114,7 +114,7 @@ services:
       - -c
       - |
         until pg_isready -h postgres -U "$$POSTGRES_USER"; do sleep 1; done
-        createdb -h postgres -U "$$POSTGRES_USER" langfuse 2>/dev/null || echo "langfuse database already exists"
+        PGPASSWORD=$$POSTGRES_PASSWORD createdb -h postgres -U "$$POSTGRES_USER" langfuse 2>/dev/null || echo "langfuse database already exists"
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-rag_user}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-rag_password}
@@ -155,6 +155,7 @@ services:
       ENCRYPTION_KEY: ${LANGFUSE_ENCRYPTION_KEY:-}
       LANGFUSE_ENABLE_EXPERIMENTAL_FEATURES: "false"
       CLICKHOUSE_URL: http://clickhouse:8123
+      CLICKHOUSE_MIGRATION_URL: clickhouse://langfuse:${LANGFUSE_CLICKHOUSE_PASSWORD:-changeme}@clickhouse:9000
       CLICKHOUSE_USER: langfuse
       CLICKHOUSE_PASSWORD: ${LANGFUSE_CLICKHOUSE_PASSWORD:-changeme}
       CLICKHOUSE_CLUSTER_ENABLED: "false"
@@ -162,6 +163,7 @@ services:
       LANGFUSE_DEFAULT_PROJECT_ID: ${LANGFUSE_DEFAULT_PROJECT_ID:-default}
       LANGFUSE_DEFAULT_PROJECT_NAME: ${LANGFUSE_DEFAULT_PROJECT_NAME:-alter-ego}
       REDIS_CONNECTION_STRING: redis://redis:6379
+      LANGFUSE_S3_EVENT_UPLOAD_BUCKET: "none"
       TELEMETRY_ENABLED: "false"
     depends_on:
       postgres:

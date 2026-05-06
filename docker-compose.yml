@@ -6,8 +6,8 @@ services:
       POSTGRES_USER: rag_user
       POSTGRES_PASSWORD: rag_password
       POSTGRES_DB: rag_db
-    ports:
-      - "127.0.0.1:5432:5432"
+    #ports:
+    #  - "127.0.0.1:5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -79,7 +79,7 @@ services:
       - -c
       - |
         until pg_isready -h postgres -U "$$POSTGRES_USER"; do sleep 1; done
-        createdb -h postgres -U "$$POSTGRES_USER" langfuse 2>/dev/null || echo "langfuse database already exists"
+        PGPASSWORD=$$POSTGRES_PASSWORD createdb -h postgres -U "$$POSTGRES_USER" langfuse 2>/dev/null || echo "langfuse database already exists"
     environment:
       POSTGRES_USER: rag_user
       POSTGRES_PASSWORD: rag_password
@@ -114,6 +114,7 @@ services:
     ports:
       - "127.0.0.1:3001:3000"
     environment:
+      NODE_OPTIONS: "--max-old-space-size=1024"
       DATABASE_URL: postgresql://rag_user:rag_password@postgres:5432/langfuse
       DIRECT_URL: postgresql://rag_user:rag_password@postgres:5432/langfuse
       NEXTAUTH_SECRET: ${LANGFUSE_NEXTAUTH_SECRET:-}
@@ -122,12 +123,14 @@ services:
       ENCRYPTION_KEY: ${LANGFUSE_ENCRYPTION_KEY:-}
       LANGFUSE_ENABLE_EXPERIMENTAL_FEATURES: "false"
       CLICKHOUSE_URL: http://clickhouse:8123
+      CLICKHOUSE_MIGRATION_URL: clickhouse://langfuse:${LANGFUSE_CLICKHOUSE_PASSWORD:-changeme}@clickhouse:9000
       CLICKHOUSE_USER: langfuse
       CLICKHOUSE_PASSWORD: ${LANGFUSE_CLICKHOUSE_PASSWORD:-changeme}
       CLICKHOUSE_CLUSTER_ENABLED: "false"
       LANGFUSE_DEFAULT_ORG_ID: ${LANGFUSE_DEFAULT_ORG_ID:-default}
       LANGFUSE_DEFAULT_PROJECT_ID: ${LANGFUSE_DEFAULT_PROJECT_ID:-default}
       LANGFUSE_DEFAULT_PROJECT_NAME: ${LANGFUSE_DEFAULT_PROJECT_NAME:-alter-ego}
+      LANGFUSE_S3_EVENT_UPLOAD_BUCKET: "none"
       TELEMETRY_ENABLED: "false"
     depends_on:
       postgres:
@@ -140,8 +143,8 @@ services:
     deploy:
       resources:
         limits:
-          memory: 512M
-          cpus: "1.0"
+          memory: 1G
+          cpus: "2.0"
     security_opt:
       - no-new-privileges:true
 
