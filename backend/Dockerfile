@@ -8,17 +8,19 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl libpq5 && \
     rm -rf /var/lib/apt/lists/*
 
-COPY pyproject.toml uv.lock ./
+COPY backend/pyproject.toml backend/uv.lock ./
+RUN mkdir -p src/rag_backend && touch src/rag_backend/__init__.py README.md
 RUN uv sync --frozen --no-dev
 
-COPY src/ src/
+COPY backend/src/ src/
 COPY README.md ./
+RUN uv sync --frozen --no-dev
 
 RUN uv run playwright install chromium
 RUN uv run playwright install-deps chromium
 
 RUN addgroup --system --gid 1001 fastapi && \
-    adduser --system --uid 1001 fastapi && \
+    adduser --system --uid 1001 --home /app fastapi && \
     chown -R fastapi:fastapi /app
 
 USER fastapi
