@@ -13,9 +13,8 @@ router.include_router(generation_router, prefix=PREFIX)
 router.include_router(media_router, prefix=PREFIX)
 router.include_router(publishing_router, prefix=PREFIX)
 
-from .crud import *  # noqa: E402, F403
-from .deps import *  # noqa: E402, F403
-from .generation import *  # noqa: E402, F403
-from .helpers import *  # noqa: E402, F403
-from .media import *  # noqa: E402, F403
-from .publishing import *  # noqa: E402, F403
+# Explicit re-exports for convenience
+from .crud import create_carousel  # noqa: E402
+from .generation import generate_carousel  # noqa: E402
+from .media import get_carousel_blog, get_carousel_image, get_carousel_pdf  # noqa: E402
+from .publishing import generate_caption  # noqa: E402

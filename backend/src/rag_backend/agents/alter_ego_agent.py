@@ -11,6 +11,7 @@ from uuid import UUID
 from deepagents import create_deep_agent
 from langchain_anthropic import ChatAnthropic
 from langchain_core.messages import AIMessage, HumanMessage
+from langchain_core.runnables.config import RunnableConfig
 from langchain_core.tools import BaseTool
 
 from rag_backend.application.tools.knowledge_base import (
@@ -32,6 +33,7 @@ from rag_backend.domain.protocols import (
 from rag_backend.domain.retry import retry_async
 from rag_backend.domain.types import ChatEvent
 from rag_backend.infrastructure.config.settings import Settings
+from rag_backend.monitoring_langfuse import get_langfuse_handler
 
 _ALTER_EGO_FALLBACK_PROMPT = (
     "You are the Alter-Ego of Pedro Marins, a helpful AI assistant that "
@@ -99,7 +101,7 @@ class AlterEgoAgent:
             ),
         ]
 
-    async def chat(
+    async def chat(  # noqa: C901, PLR0912, PLR0915
         self,
         message: str,
         conversation_id: UUID,
@@ -112,9 +114,7 @@ class AlterEgoAgent:
         Mirrors the interface of the legacy RAGAgent so route handlers
         can swap agents without changing their call sites.
         """
-        history = await self._message_repository.get_by_conversation(
-            conversation_id, limit=10
-        )
+        history = await self._message_repository.get_by_conversation(conversation_id, limit=10)
 
         chat_history = []
         for msg in history:
@@ -136,8 +136,12 @@ class AlterEgoAgent:
         if stream:
             full_response = ""
 
+            callbacks = get_langfuse_handler()
+            lf_config: RunnableConfig = {"callbacks": [callbacks]} if callbacks else {}
+
             async for event in self._agent.astream_events(
                 {"messages": [*chat_history, HumanMessage(content=message)]},
+                lf_config,
                 version="v2",
             ):
                 event_name = event.get("event")
@@ -189,10 +193,13 @@ class AlterEgoAgent:
             yield {"type": "complete", "content": full_response}
 
         else:
+            callbacks = get_langfuse_handler()
+            lf_config: RunnableConfig = {"callbacks": [callbacks]} if callbacks else {}
             async for attempt in retry_async(attempts=LANGGRAPH_MAX_ATTEMPTS):
                 with attempt:
                     result = await self._agent.ainvoke(
-                        {"messages": [*chat_history, HumanMessage(content=message)]}
+                        {"messages": [*chat_history, HumanMessage(content=message)]},
+                        lf_config,
                     )
 
             messages = result.get("messages", [])

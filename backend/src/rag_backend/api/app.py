@@ -24,7 +24,7 @@ from rag_backend.infrastructure.container import container
 from rag_backend.infrastructure.database.config import close_db, init_db
 from rag_backend.infrastructure.logging import get_logger, setup_logging
 from rag_backend.infrastructure.monitoring import init_langsmith
-from rag_backend.infrastructure.monitoring_langfuse import init_langfuse
+from rag_backend.monitoring_langfuse import init_langfuse
 
 logger = get_logger()
 
@@ -40,7 +40,11 @@ async def lifespan(app: FastAPI):
     settings = get_settings()
     setup_logging(debug=settings.debug)
     init_langsmith(settings)
-    langfuse_handler = init_langfuse(settings)
+    langfuse_handler = init_langfuse(
+        settings.langfuse_public_key,
+        settings.langfuse_secret_key.get_secret_value() if settings.langfuse_secret_key else "",
+        settings.langfuse_host,
+    )
     if langfuse_handler:
         logger.info("langfuse_initialized", host=settings.langfuse_host)
 
@@ -97,7 +101,7 @@ async def _build_checkpointer(
     )
 
 
-def create_app() -> FastAPI:  # noqa: PLR0915 — app factory configures all middleware/routes
+def create_app() -> FastAPI:  # noqa: C901, PLR0915 — app factory configures all middleware/routes
     """Create and configure the FastAPI application."""
     settings = get_settings()
 
@@ -240,7 +244,10 @@ def create_app() -> FastAPI:  # noqa: PLR0915 — app factory configures all mid
                 await websocket.accept(subprotocol=token)
             else:
                 anon_payload = decode_anonymous_token(settings, token)
-                if anon_payload is not None and anon_payload.get("conversation_id") == conversation_id:
+                if (
+                    anon_payload is not None
+                    and anon_payload.get("conversation_id") == conversation_id
+                ):
                     is_authorized = True
                     await websocket.accept(subprotocol=token)
 

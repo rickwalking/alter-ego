@@ -12,6 +12,7 @@ from rag_backend.application.services.carousel.state import PipelineState
 from rag_backend.domain.protocols import CarouselRepository
 from rag_backend.domain.types import PipelineEvent
 from rag_backend.infrastructure.logging import get_logger
+from rag_backend.monitoring_langfuse import get_langfuse_handler
 
 from ._constants import _ERR_PROJECT_NOT_FOUND
 
@@ -47,11 +48,13 @@ async def _run_graph_body(
         "output_dir": str(output_dir),
         "project": project,
     }
-    config = (
-        {"configurable": {"thread_id": self._thread_id(project_id)}}
-        if self._checkpointer is not None
-        else None
-    )
+    lf_handler = get_langfuse_handler()
+    config: dict[str, object] = {}
+    if self._checkpointer is not None:
+        config["configurable"] = {"thread_id": self._thread_id(project_id)}
+    if lf_handler is not None:
+        config["callbacks"] = [lf_handler]
+    config = config or None
 
     await queue.put(
         {

@@ -12,13 +12,23 @@ from rag_backend.domain.protocols import ImageGenerationService
 from rag_backend.domain.retry import retry_sync
 
 _ERR_NO_IMAGE_DATA = "No image data in Gemini response"
+_ERR_GEMINI_NOT_CONFIGURED = (
+    "Gemini API key is not configured. Set GEMINI_API_KEY or GOOGLE_API_KEY."
+)
 
 
 class GeminiImageService(ImageGenerationService):
     """Google Gemini image generation implementation."""
 
     def __init__(self, api_key: str) -> None:
-        self._client = genai.Client(api_key=api_key)
+        raw_key = api_key.get_secret_value() if hasattr(api_key, "get_secret_value") else api_key
+        if not raw_key:
+            self._client = None
+        else:
+            try:
+                self._client = genai.Client(api_key=raw_key)
+            except (ValueError, AttributeError):
+                self._client = None
 
     def _generate_image_blocking(
         self,
@@ -32,6 +42,8 @@ class GeminiImageService(ImageGenerationService):
         server can continue serving ``/status`` polls while images are
         being generated.
         """
+        if self._client is None:
+            raise RuntimeError(_ERR_GEMINI_NOT_CONFIGURED)
         for attempt in retry_sync(attempts=GEMINI_MAX_ATTEMPTS):
             with attempt:
                 response = self._client.models.generate_content(

@@ -55,7 +55,9 @@ class OpenAIImageService(ImageGenerationService):
         # Client is built lazily so a user who never touches an OpenAI
         # preset doesn't need OPENAI_API_KEY set — the failure surfaces
         # only when an OpenAI-backed image is actually requested.
-        self._api_key = api_key
+        self._api_key = (
+            api_key.get_secret_value() if hasattr(api_key, "get_secret_value") else api_key
+        )
         self._model = model
         self._size = size
         self._client: OpenAI | None = None

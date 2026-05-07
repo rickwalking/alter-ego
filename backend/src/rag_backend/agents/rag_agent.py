@@ -6,6 +6,7 @@ from uuid import UUID
 from deepagents import create_deep_agent
 from langchain_anthropic import ChatAnthropic
 from langchain_core.messages import AIMessage, HumanMessage
+from langchain_core.runnables.config import RunnableConfig
 from langchain_core.tools import BaseTool
 
 from rag_backend.application.tools import (
@@ -32,6 +33,7 @@ from rag_backend.domain.protocols import (
 from rag_backend.domain.retry import retry_async
 from rag_backend.domain.types import ChatEvent
 from rag_backend.infrastructure.config.settings import Settings
+from rag_backend.monitoring_langfuse import get_langfuse_handler
 
 
 def _load_system_prompt() -> str:
@@ -178,8 +180,12 @@ class RAGAgent:
         if stream:
             full_response = ""
 
+            callbacks = get_langfuse_handler()
+            lf_config: RunnableConfig = {"callbacks": [callbacks]} if callbacks else {}
+
             async for event in self._agent.astream_events(
                 {"messages": [*chat_history, HumanMessage(content=message)]},
+                lf_config,
                 version="v2",
             ):
                 event_name = event.get("event")
@@ -231,10 +237,13 @@ class RAGAgent:
             yield {"type": "complete", "content": full_response}
 
         else:
+            callbacks = get_langfuse_handler()
+            lf_config: RunnableConfig = {"callbacks": [callbacks]} if callbacks else {}
             async for attempt in retry_async(attempts=LANGGRAPH_MAX_ATTEMPTS):
                 with attempt:
                     result = await self._agent.ainvoke(
-                        {"messages": [*chat_history, HumanMessage(content=message)]}
+                        {"messages": [*chat_history, HumanMessage(content=message)]},
+                        lf_config,
                     )
 
             messages = result.get("messages", [])

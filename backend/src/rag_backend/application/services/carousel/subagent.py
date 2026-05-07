@@ -29,6 +29,7 @@ from typing import Annotated, TypedDict
 from uuid import UUID
 
 from langchain_core.messages import AIMessage, AnyMessage, HumanMessage
+from langchain_core.runnables.config import RunnableConfig
 from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.message import add_messages
@@ -41,6 +42,7 @@ from rag_backend.application.services.carousel.state import PipelineState
 from rag_backend.domain.constants.retry import LANGGRAPH_MAX_ATTEMPTS
 from rag_backend.domain.models import CarouselProject
 from rag_backend.domain.retry import retry_async
+from rag_backend.monitoring_langfuse import get_langfuse_handler
 
 SUBAGENT_NAME = "generate_carousel"
 SUBAGENT_DESCRIPTION = (
@@ -146,9 +148,11 @@ def build_carousel_subagent(
             "output_dir": state["output_dir"],
             "project": state["project"],
         }
+        lf_handler = get_langfuse_handler()
+        lf_cfg: RunnableConfig = {"callbacks": [lf_handler]} if lf_handler else {}
         async for attempt in retry_async(attempts=LANGGRAPH_MAX_ATTEMPTS):
             with attempt:
-                final = await inner_graph.ainvoke(inner_state)
+                final = await inner_graph.ainvoke(inner_state, lf_cfg)
         return {"project": final["project"]}
 
     async def emit_summary_node(state: CarouselSubAgentState) -> dict[str, object]:

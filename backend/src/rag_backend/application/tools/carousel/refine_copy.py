@@ -3,11 +3,13 @@
 from collections.abc import Awaitable, Callable
 from uuid import UUID
 
+from langchain_core.runnables.config import RunnableConfig
 from langchain_core.tools import BaseTool, tool
 
 from rag_backend.agents.prompts.registry import render_prompt
 from rag_backend.domain.models import CarouselProject, CarouselSlide
 from rag_backend.domain.protocols import CarouselAgent, CarouselRepository
+from rag_backend.monitoring_langfuse import get_langfuse_handler
 
 MIN_TARGET_PARTS = 2
 MAX_TARGET_PARTS = 3
@@ -168,7 +170,9 @@ def build_refine_carousel_copy_tool(
             },
             version="v1",
         )
-        response = await llm.ainvoke(rewrite_prompt)
+        lf_handler = get_langfuse_handler()
+        lf_cfg: RunnableConfig = {"callbacks": [lf_handler]} if lf_handler else {}
+        response = await llm.ainvoke(rewrite_prompt, lf_cfg)
         new_text = str(getattr(response, "content", response) or "").strip()
         if not new_text:
             return _ERR_EMPTY_LLM_RESPONSE

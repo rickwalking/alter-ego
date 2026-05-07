@@ -17,6 +17,7 @@ from pathlib import Path
 from typing import ClassVar
 from uuid import UUID
 
+from langchain_core.runnables.config import RunnableConfig
 from langgraph.checkpoint.base import BaseCheckpointSaver
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
@@ -45,6 +46,7 @@ from rag_backend.domain.protocols import (
 from rag_backend.domain.retry import retry_async
 from rag_backend.domain.types import PipelineEvent
 from rag_backend.infrastructure.logging import get_logger
+from rag_backend.monitoring_langfuse import get_langfuse_handler
 
 from ._constants import (
     _ERR_NO_CHECKPOINTER,
@@ -174,11 +176,13 @@ class CarouselAgent(CarouselRefinementMixin):
             "output_dir": str(output_dir),
             "project": project,
         }
-        config = (
-            {"configurable": {"thread_id": self._thread_id(project_id)}}
-            if self._checkpointer is not None
-            else None
-        )
+        lf_handler = get_langfuse_handler()
+        base_config: dict[str, object] = {}
+        if self._checkpointer is not None:
+            base_config["configurable"] = {"thread_id": self._thread_id(project_id)}
+        if lf_handler is not None:
+            base_config["callbacks"] = [lf_handler]
+        config: RunnableConfig | None = base_config if base_config else None
 
         try:
             async for attempt in retry_async(attempts=LANGGRAPH_MAX_ATTEMPTS):

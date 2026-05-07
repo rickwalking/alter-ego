@@ -36,21 +36,20 @@ const nextConfig: NextConfig = {
   // Trailing slash for SEO
   trailingSlash: false,
 
-  // Rewrites to proxy API requests to backend (dev only)
+  // Rewrites to proxy API requests to backend (Docker/Dev)
   async rewrites() {
-    // In production (Docker + Nginx), Nginx handles proxying.
-    // In development, Next.js rewrites proxy to localhost backend.
-    if (process.env.NODE_ENV === "production") {
-      return [];
-    }
+    const backendUrl =
+      process.env.NODE_ENV === "production"
+        ? "http://backend:8000"
+        : process.env.API_BASE_URL || "http://localhost:8000";
     return [
       {
         source: "/api/:path*",
-        destination: "http://localhost:8000/api/:path*",
+        destination: `${backendUrl}/api/:path*`,
       },
       {
         source: "/ws/:path*",
-        destination: "http://localhost:8000/ws/:path*",
+        destination: `${backendUrl}/ws/:path*`,
       },
     ];
   },
