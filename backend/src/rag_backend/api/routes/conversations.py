@@ -119,7 +119,7 @@ async def create_conversation(
     },
 )
 async def list_conversations(
-    user: Annotated[User, Depends(require_authenticated_user)],
+    _user: Annotated[User, Depends(require_authenticated_user)],
     limit: Annotated[int, Query(ge=1, le=100, description="Number of items to return")] = 20,
     offset: Annotated[int, Query(ge=0, description="Number of items to skip")] = 0,
     db: AsyncSession = Depends(get_session),  # noqa: FAST002
@@ -149,7 +149,7 @@ async def list_conversations(
 )
 async def get_conversation(
     conversation_id: UUID,
-    user: Annotated[User, Depends(require_authenticated_user)],
+    _user: Annotated[User, Depends(require_authenticated_user)],
     db: Annotated[AsyncSession, Depends(get_session)],
 ):
     """Get a single conversation by ID."""
@@ -177,7 +177,7 @@ async def get_conversation(
 )
 async def get_conversation_messages(
     conversation_id: UUID,
-    user: Annotated[User, Depends(require_authenticated_user)],
+    _user: Annotated[User, Depends(require_authenticated_user)],
     limit: Annotated[int, Query(ge=1, le=100, description="Number of messages to return")] = 50,
     db: AsyncSession = Depends(get_session),  # noqa: FAST002
 ):
@@ -211,7 +211,7 @@ async def get_conversation_messages(
 )
 async def delete_conversation(
     conversation_id: UUID,
-    user: Annotated[User, Depends(require_authenticated_user)],
+    _user: Annotated[User, Depends(require_authenticated_user)],
     db: Annotated[AsyncSession, Depends(get_session)],
 ):
     """Delete a conversation and all its messages."""
@@ -238,7 +238,7 @@ async def delete_conversation(
 )
 async def generate_conversation_title(
     conversation_id: UUID,
-    user: Annotated[User, Depends(require_authenticated_user)],
+    _user: Annotated[User, Depends(require_authenticated_user)],
     db: Annotated[AsyncSession, Depends(get_session)],
 ):
     """Generate a title for the conversation based on the first message."""
@@ -276,9 +276,9 @@ async def generate_conversation_title(
 async def chat(
     conversation_id: UUID,
     body: ChatRequest,
-    request: Request,
+    _request: Request,
     response: Response,
-    user: Annotated[User | None, Depends(get_optional_user)] = None,
+    _user: Annotated[User | None, Depends(get_optional_user)] = None,
     db: Annotated[AsyncSession, Depends(get_session)] = None,
 ):
     """Send a chat message and get a non-streaming response with sources.
@@ -306,9 +306,12 @@ async def chat(
     msg_count = await msg_repo.count_by_conversation(conversation_id)
     _check_conversation_limit(msg_count)
 
-    from rag_backend.api.dependencies.agents import build_alter_ego_agent
+    from rag_backend.agents.rag_agent import RAGAgent
+    from rag_backend.api.dependencies.agents import build_agent_for_conversation
 
-    agent = build_alter_ego_agent(db, container)
+    agent = build_agent_for_conversation(conversation, db, container)
+    agent_origin = "rag-agent" if isinstance(agent, RAGAgent) else "alter-ego"
+    response.headers["X-Agent-Origin"] = agent_origin
     sources = []
     full_response = ""
 
@@ -334,7 +337,7 @@ async def chat(
                 )
             )
 
-    response.headers["X-Agent-Origin"] = "alter-ego"
+    response.headers["X-Agent-Origin"] = agent_origin
     return ChatResponse(
         content=full_response,
         sources=formatted_sources,

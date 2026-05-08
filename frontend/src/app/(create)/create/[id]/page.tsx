@@ -16,6 +16,7 @@ import {
 } from "@/features/create/hooks";
 import { useCreateConversation } from "@/features/chat/hooks/use-chat";
 import { ROUTE_PATHS } from "@/constants/api";
+import { CONVERSATION_METADATA_PROJECT_ID } from "@/constants/publish-chat";
 import type { Message } from "@/schemas/chat";
 import type { CarouselProjectResponse } from "@/schemas/carousel";
 
@@ -60,6 +61,7 @@ export default function WorkspacePage() {
     createConversation
       .mutateAsync({
         title: `Carousel: ${project?.topic || projectId}`,
+        metadata: { [CONVERSATION_METADATA_PROJECT_ID]: projectId },
       })
       .then((conv) => {
         sessionStorage.setItem(CONVERSATION_STORAGE_KEY(projectId), conv.id);

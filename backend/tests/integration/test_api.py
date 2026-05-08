@@ -1,5 +1,7 @@
 """Integration tests for API endpoints."""
 
+from unittest.mock import AsyncMock
+
 import pytest
 from httpx import ASGITransport, AsyncClient
 
@@ -221,6 +223,123 @@ class TestSearchEndpoint:
         """Given empty query, when GET /api/search, then returns 422."""
         response = await client.get("/api/search", params={"query": ""})
         assert response.status_code == 422
+
+
+class TestAgentRoutingByMetadata:
+    """Integration tests for metadata-based agent routing.
+
+    Feature: Agent Security Boundary — Metadata-Based Agent Routing
+    See tests/features/agent_split/security_boundaries.feature
+
+    Scenario: Conversation with project_id metadata routes to RAGAgent (carousel-capable)
+      Given a conversation exists with metadata including "project_id" = "abc-123"
+      When a chat message is sent to that conversation
+      Then the response should include header "X-Agent-Origin: rag-agent"
+
+    Scenario: Conversation without project_id metadata routes to AlterEgoAgent
+      Given a conversation exists with empty metadata
+      When a chat message is sent to that conversation
+      Then the response should include header "X-Agent-Origin: alter-ego"
+    """
+
+    @pytest.mark.asyncio
+    async def test_carousel_conversation_gets_rag_agent_origin(self, client, monkeypatch):
+        """Given a conversation with project_id metadata,
+        when a chat message is sent,
+        then X-Agent-Origin: rag-agent is returned."""
+        from rag_backend.agents.rag_agent import RAGAgent
+
+        async def _mock_agent_chat(*args, **kwargs):
+            yield {"type": "complete", "content": "response"}
+            yield {"type": "sources", "content": []}
+
+        mock_agent = AsyncMock(spec=RAGAgent)
+        mock_agent.chat = _mock_agent_chat
+
+        monkeypatch.setattr(
+            "rag_backend.api.dependencies.agents.build_rag_agent",
+            lambda _db, _container: mock_agent,
+        )
+
+        create_resp = await client.post(
+            "/api/conversations",
+            json={"title": "Carousel Chat", "metadata": {"project_id": "abc-123"}},
+        )
+        assert create_resp.status_code == 201
+        conv_id = create_resp.json()["id"]
+
+        chat_resp = await client.post(
+            f"/api/conversations/{conv_id}/chat",
+            json={"content": "refine this carousel"},
+        )
+        assert chat_resp.status_code == 200
+        assert chat_resp.headers.get("X-Agent-Origin") == "rag-agent"
+
+    @pytest.mark.asyncio
+    async def test_normal_conversation_gets_alter_ego_origin(self, client, monkeypatch):
+        """Given a conversation without project_id metadata,
+        when a chat message is sent,
+        then X-Agent-Origin: alter-ego is returned."""
+        from rag_backend.agents.alter_ego_agent import AlterEgoAgent
+
+        async def _mock_agent_chat(*args, **kwargs):
+            yield {"type": "complete", "content": "response"}
+            yield {"type": "sources", "content": []}
+
+        mock_agent = AsyncMock(spec=AlterEgoAgent)
+        mock_agent.chat = _mock_agent_chat
+
+        monkeypatch.setattr(
+            "rag_backend.api.dependencies.agents.build_alter_ego_agent",
+            lambda _db, _container: mock_agent,
+        )
+
+        create_resp = await client.post(
+            "/api/conversations",
+            json={"title": "Personal Chat"},
+        )
+        assert create_resp.status_code == 201
+        conv_id = create_resp.json()["id"]
+
+        chat_resp = await client.post(
+            f"/api/conversations/{conv_id}/chat",
+            json={"content": "search my documents"},
+        )
+        assert chat_resp.status_code == 200
+        assert chat_resp.headers.get("X-Agent-Origin") == "alter-ego"
+
+    @pytest.mark.asyncio
+    async def test_metadata_with_other_keys_gets_alter_ego_origin(self, client, monkeypatch):
+        """Given a conversation with non-carousel metadata,
+        when a chat message is sent,
+        then X-Agent-Origin: alter-ego is returned."""
+        from rag_backend.agents.alter_ego_agent import AlterEgoAgent
+
+        async def _mock_agent_chat(*args, **kwargs):
+            yield {"type": "complete", "content": "response"}
+            yield {"type": "sources", "content": []}
+
+        mock_agent = AsyncMock(spec=AlterEgoAgent)
+        mock_agent.chat = _mock_agent_chat
+
+        monkeypatch.setattr(
+            "rag_backend.api.dependencies.agents.build_alter_ego_agent",
+            lambda _db, _container: mock_agent,
+        )
+
+        create_resp = await client.post(
+            "/api/conversations",
+            json={"title": "Source Chat", "metadata": {"source": "web", "user_id": 42}},
+        )
+        assert create_resp.status_code == 201
+        conv_id = create_resp.json()["id"]
+
+        chat_resp = await client.post(
+            f"/api/conversations/{conv_id}/chat",
+            json={"content": "hello"},
+        )
+        assert chat_resp.status_code == 200
+        assert chat_resp.headers.get("X-Agent-Origin") == "alter-ego"
 
 
 class TestRateLimiting:
