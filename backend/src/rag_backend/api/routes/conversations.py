@@ -276,7 +276,7 @@ async def generate_conversation_title(
 async def chat(
     conversation_id: UUID,
     body: ChatRequest,
-    _request: Request,
+    request: Request,  # noqa: ARG001 — required by slowapi
     response: Response,
     _user: Annotated[User | None, Depends(get_optional_user)] = None,
     db: Annotated[AsyncSession, Depends(get_session)] = None,
