@@ -54,6 +54,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_started
+    volumes:
+      - carousel_output:/app/output
     restart: unless-stopped
     logging:
       driver: "json-file"
@@ -187,3 +189,4 @@ volumes:
   clickhouse_data:
   certbot_data:
   certbot_www:
+  carousel_output:
