@@ -9,6 +9,7 @@ from uuid import UUID, uuid4
 
 class EvaluationMethod(StrEnum):
     """Methods for evaluating rubric criteria."""
+
     AI_AUTO = "ai_auto"
     HUMAN_REQUIRED = "human_required"
     HYBRID = "hybrid"
@@ -16,6 +17,7 @@ class EvaluationMethod(StrEnum):
 
 class ScoringScale(StrEnum):
     """Scales for scoring rubric criteria."""
+
     PASS_FAIL = "pass_fail"
     GRADE_A_F = "grade_a_f"
     SCORE_1_10 = "1-10"
@@ -24,6 +26,7 @@ class ScoringScale(StrEnum):
 
 class RubricCriterion(TypedDict):
     """A single criterion within a quality rubric."""
+
     id: str
     name: str
     description: str
@@ -37,6 +40,7 @@ class RubricCriterion(TypedDict):
 @dataclass
 class QualityRubric:
     """Quality rubric for evaluating content."""
+
     id: UUID = field(default_factory=uuid4)
     name: str = "Instagram Carousel Quality"
     description: str = "Standard quality criteria for Instagram carousels"
@@ -79,6 +83,7 @@ class QualityRubric:
 @dataclass
 class RubricEvaluationScore:
     """Result of evaluating content against a rubric."""
+
     rubric_id: UUID
     content_id: UUID
     content_type: str

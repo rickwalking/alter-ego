@@ -14,6 +14,7 @@ import {
   AlertDescription,
   Spinner,
 } from "@/components/ui";
+import { VoiceMatchScorer } from "@/features/personas/components/voice-match-scorer";
 import { usePersonas } from "@/features/persona/hooks/use-personas";
 import type { PersonaProfile, PersonaCreatePayload } from "@/features/persona/types";
 
@@ -229,6 +230,11 @@ export default function PersonasPage() {
                 placeholder="In today's world, Let's dive in"
               />
             </div>
+            {editingId ? (
+              <div className="border-t pt-4 mt-2">
+                <VoiceMatchScorer personaId={editingId} />
+              </div>
+            ) : null}
             <div className="flex gap-2">
               <Button
                 onClick={() => {

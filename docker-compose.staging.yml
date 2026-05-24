@@ -1,0 +1,90 @@
+# Staging environment — DEPLOY-001
+#
+# Usage:
+#   cp .env.staging.example .env.staging
+#   docker compose -f docker-compose.staging.yml --env-file .env.staging up -d
+#
+# Differs from production:
+#   - DEBUG=true (OpenAPI docs enabled)
+#   - Feature flags default ON (toggle via env for canary testing)
+#   - Separate volume names to avoid clobbering prod data
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-rag_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-rag_password_staging}
+      POSTGRES_DB: ${POSTGRES_DB:-rag_db_staging}
+    volumes:
+      - postgres_staging_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-rag_user} -d ${POSTGRES_DB:-rag_db_staging}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    volumes:
+      - redis_staging_data:/data
+    command: redis-server --appendonly yes
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-rag_user}:${POSTGRES_PASSWORD:-rag_password_staging}@postgres:5432/${POSTGRES_DB:-rag_db_staging}
+      PINECONE_API_KEY: ${PINECONE_API_KEY}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      SECRET_KEY: ${SECRET_KEY}
+      ANON_SECRET_KEY: ${ANON_SECRET_KEY}
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-https://staging.marinssolutions.com}
+      REDIS_URL: redis://redis:6379
+      DEBUG: "true"
+      CAROUSEL_CHECKPOINT_BACKEND: ${CAROUSEL_CHECKPOINT_BACKEND:-sqlite}
+      LANGFUSE_SECRET_KEY: ${LANGFUSE_SECRET_KEY:-}
+      LANGFUSE_PUBLIC_KEY: ${LANGFUSE_PUBLIC_KEY:-}
+      LANGFUSE_HOST: ${LANGFUSE_HOST:-}
+      FEATURE_FLAG_EDITORIAL_WORKFLOW: ${FEATURE_FLAG_EDITORIAL_WORKFLOW:-true}
+      FEATURE_FLAG_QUALITY_CHECKS: ${FEATURE_FLAG_QUALITY_CHECKS:-true}
+      FEATURE_FLAG_WORKFLOW_BOARD: ${FEATURE_FLAG_WORKFLOW_BOARD:-true}
+      FEATURE_FLAG_CONTENT_CALENDAR: ${FEATURE_FLAG_CONTENT_CALENDAR:-true}
+      WORKFLOW_ALERTS_ENABLED: ${WORKFLOW_ALERTS_ENABLED:-true}
+      OTEL_ENABLED: ${OTEL_ENABLED:-false}
+      CDN_ENABLED: ${CDN_ENABLED:-false}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    volumes:
+      - carousel_staging_output:/app/output
+    ports:
+      - "127.0.0.1:8001:8000"
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: /api
+    environment:
+      NEXT_PUBLIC_API_URL: /api
+      API_BASE_URL: http://backend:8000
+    depends_on:
+      - backend
+    ports:
+      - "127.0.0.1:3002:3000"
+    restart: unless-stopped
+
+volumes:
+  postgres_staging_data:
+  redis_staging_data:
+  carousel_staging_output:

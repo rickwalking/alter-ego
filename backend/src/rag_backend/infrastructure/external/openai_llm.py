@@ -22,6 +22,11 @@ class OpenAILLMService:
             max_retries=3,
         )
 
+    @property
+    def chat_model(self) -> ChatOpenAI:
+        """Expose the underlying LangChain chat model."""
+        return self._llm
+
     async def generate(
         self,
         messages: list[dict[str, str]],

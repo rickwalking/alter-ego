@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import {
   Button,
   Card,
@@ -14,18 +15,27 @@ import {
   AlertDescription,
   Spinner,
 } from "@/components/ui";
+import { AccessibilityChecker } from "@/features/blog/components/accessibility-checker";
+import { AiSuggestionPanel } from "@/features/blog/components/ai-suggestion-panel";
+import { BlogPostFilters } from "@/features/blog/components/blog-post-filters";
+import { ImageGenModal } from "@/features/blog/components/image-gen-modal";
+import { KeyboardShortcutsHelp } from "@/features/blog/components/keyboard-shortcuts-help";
+import { SeoPreview } from "@/features/blog/components/seo-preview";
+import { useEditorShortcuts } from "@/features/blog/hooks/use-editor-shortcuts";
 import { useBlogPosts } from "@/features/blog/hooks/use-blog-posts";
+import { BlogPostEditExtras } from "@/features/workflow/components/blog-post-edit-extras";
 import type { BlogPost, BlogPostCreatePayload } from "@/features/blog/types";
 
-const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
-  draft: { label: "Draft", color: "bg-yellow-500" },
-  under_review: { label: "Under Review", color: "bg-blue-500" },
-  approved: { label: "Approved", color: "bg-green-500" },
-  published: { label: "Published", color: "bg-emerald-600" },
-  archived: { label: "Archived", color: "bg-gray-500" },
+const STATUS_COLORS: Record<string, string> = {
+  draft: "bg-yellow-500",
+  under_review: "bg-blue-500",
+  approved: "bg-green-500",
+  published: "bg-emerald-600",
+  archived: "bg-gray-500",
 };
 
 export default function BlogPostsPage() {
+  const t = useTranslations("dashboard.blogPosts");
   const {
     posts,
     loading,
@@ -37,7 +47,10 @@ export default function BlogPostsPage() {
     submitForReview,
     approve,
     publish,
+    filters,
+    setFilters,
   } = useBlogPosts();
+
   const [isCreating, setIsCreating] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState<BlogPostCreatePayload>({
@@ -47,44 +60,36 @@ export default function BlogPostsPage() {
     excerpt: "",
     author_id: "",
   });
+  const [bodyText, setBodyText] = useState("");
+  const [selectedText, setSelectedText] = useState("");
+  const [showImageModal, setShowImageModal] = useState(false);
+  const [featuredImageUrl, setFeaturedImageUrl] = useState<string | null>(null);
+  const [previousBodyText, setPreviousBodyText] = useState("");
+  const [editingStatus, setEditingStatus] = useState<string>("draft");
+  const [editingLockVersion, setEditingLockVersion] = useState<number>(1);
+  const [showShortcuts, setShowShortcuts] = useState(false);
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+
+  const filteredPosts = posts;
+
+  const resetForm = () => {
+    setFormData({ title: "", slug: "", content: {}, excerpt: "", author_id: "" });
+    setBodyText("");
+    setSelectedText("");
+    setFeaturedImageUrl(null);
+  };
 
   const handleCreate = async () => {
-    try {
-      await create(formData);
-      setIsCreating(false);
-      resetForm();
-    } catch (err) {
-      console.error("Failed to create blog post:", err);
-    }
+    await create(formData);
+    setIsCreating(false);
+    resetForm();
   };
 
   const handleUpdate = async (id: string) => {
-    try {
-      await update(id, formData);
-      setEditingId(null);
-      resetForm();
-    } catch (err) {
-      console.error("Failed to update blog post:", err);
-    }
-  };
-
-  const handleDelete = async (id: string) => {
-    if (!window.confirm("Are you sure you want to delete this blog post?")) return;
-    try {
-      await deletePost(id);
-    } catch (err) {
-      console.error("Failed to delete blog post:", err);
-    }
-  };
-
-  const resetForm = () => {
-    setFormData({
-      title: "",
-      slug: "",
-      content: {},
-      excerpt: "",
-      author_id: "",
-    });
+    await update(id, formData, editingLockVersion);
+    setEditingId(null);
+    resetForm();
   };
 
   const startEdit = (post: BlogPost) => {
@@ -95,72 +100,38 @@ export default function BlogPostsPage() {
       content: post.content,
       excerpt: post.excerpt || "",
       author_id: post.author_id || "",
+      reviewer_id: post.reviewer_id || "",
+      meta_title: post.meta_title || "",
+      meta_description: post.meta_description || "",
     });
+    const contentText =
+      typeof post.content === "object" && post.content !== null && "body" in post.content
+        ? String((post.content as { body?: string }).body ?? "")
+        : "";
+    setBodyText(contentText);
+    setPreviousBodyText(contentText);
+    setEditingStatus(post.status);
+    setEditingLockVersion(post.lock_version ?? 1);
+    setFeaturedImageUrl(post.featured_image_url ?? null);
   };
 
-  const handleSubmitForReview = async (id: string) => {
-    try {
-      await submitForReview(id);
-    } catch (err) {
-      console.error("Failed to submit for review:", err);
-    }
-  };
+  useEditorShortcuts(
+    {
+      onSave: editingId ? () => void handleUpdate(editingId) : undefined,
+      onSubmitReview: editingId && formData.reviewer_id
+        ? () => void submitForReview(editingId, formData.reviewer_id!)
+        : undefined,
+      onShowHelp: () => setShowShortcuts(true),
+    },
+    Boolean(editingId || isCreating),
+  );
 
-  const handleApprove = async (id: string) => {
-    try {
-      await approve(id, "current-user");
-    } catch (err) {
-      console.error("Failed to approve:", err);
-    }
-  };
-
-  const handlePublish = async (id: string) => {
-    try {
-      await publish(id);
-    } catch (err) {
-      console.error("Failed to publish:", err);
-    }
-  };
-
-  const getStatusBadge = (status: string) => {
-    const config = STATUS_CONFIG[status] || { label: status, color: "bg-gray-500" };
-    return (
-      <div className="flex items-center gap-2">
-        <div className={`w-2 h-2 rounded-full ${config.color}`} />
-        <span className="text-sm font-medium">{config.label}</span>
-      </div>
-    );
-  };
-
-  const getWorkflowActions = (post: BlogPost) => {
-    const actions = [];
-
-    if (post.status === "draft") {
-      actions.push(
-        <Button key="review" size="sm" onClick={() => handleSubmitForReview(post.id)}>
-          Submit for Review
-        </Button>
-      );
-    }
-
-    if (post.status === "under_review") {
-      actions.push(
-        <Button key="approve" size="sm" variant="outline" onClick={() => handleApprove(post.id)}>
-          Approve
-        </Button>
-      );
-    }
-
-    if (post.status === "approved") {
-      actions.push(
-        <Button key="publish" size="sm" onClick={() => handlePublish(post.id)}>
-          Publish
-        </Button>
-      );
-    }
-
-    return actions;
-  };
+  const getStatusBadge = (status: string) => (
+    <div className="flex items-center gap-2">
+      <div className={`w-2 h-2 rounded-full ${STATUS_COLORS[status] ?? "bg-gray-500"}`} />
+      <span className="text-sm font-medium">{t(`status.${status}` as "status.draft")}</span>
+    </div>
+  );
 
   if (loading && posts.length === 0) {
     return (
@@ -172,12 +143,25 @@ export default function BlogPostsPage() {
 
   return (
     <div className="container mx-auto py-8 px-4">
-      <div className="flex items-center justify-between mb-8">
-        <h1 className="text-3xl font-bold">Blog Posts</h1>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+        <h1 className="text-3xl font-bold">{t("title")}</h1>
         <Button onClick={() => setIsCreating(true)} disabled={isCreating}>
-          Create Post
+          {t("createPost")}
         </Button>
       </div>
+
+      <BlogPostFilters
+        search={search}
+        status={statusFilter}
+        onSearchChange={(v) => {
+          setSearch(v);
+          setFilters({ ...filters, search: v || undefined });
+        }}
+        onStatusChange={(v) => {
+          setStatusFilter(v);
+          setFilters({ ...filters, status: v || undefined });
+        }}
+      />
 
       {error && (
         <Alert variant="destructive" className="mb-6">
@@ -188,139 +172,186 @@ export default function BlogPostsPage() {
       {(isCreating || editingId) && (
         <Card className="mb-8">
           <CardHeader>
-            <CardTitle>{editingId ? "Edit Blog Post" : "Create New Blog Post"}</CardTitle>
+            <CardTitle>{editingId ? t("editPost") : t("createNew")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div>
-              <label className="text-sm font-medium mb-2 block">Title</label>
-              <Input
-                value={formData.title}
-                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                placeholder="Enter post title..."
-              />
+            <div className="grid gap-4 lg:grid-cols-2">
+              <div className="space-y-4">
+                <Field label={t("fields.title")}>
+                  <Input
+                    value={formData.title}
+                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                  />
+                </Field>
+                <Field label={t("fields.slug")}>
+                  <Input
+                    value={formData.slug || ""}
+                    onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
+                  />
+                </Field>
+                <Field label={t("fields.excerpt")}>
+                  <Textarea
+                    value={formData.excerpt || ""}
+                    onChange={(e) => setFormData({ ...formData, excerpt: e.target.value })}
+                    rows={2}
+                  />
+                </Field>
+                <Field label={t("fields.metaTitle")}>
+                  <Input
+                    value={formData.meta_title || ""}
+                    onChange={(e) => setFormData({ ...formData, meta_title: e.target.value })}
+                  />
+                </Field>
+                <Field label={t("fields.metaDescription")}>
+                  <Textarea
+                    value={formData.meta_description || ""}
+                    onChange={(e) => setFormData({ ...formData, meta_description: e.target.value })}
+                    rows={2}
+                  />
+                </Field>
+                <Field label={t("fields.reviewerId")}>
+                  <Input
+                    value={formData.reviewer_id || ""}
+                    onChange={(e) => setFormData({ ...formData, reviewer_id: e.target.value })}
+                  />
+                </Field>
+                <Field label={t("fields.content")}>
+                  <Textarea
+                    value={bodyText}
+                    onChange={(e) => {
+                      setBodyText(e.target.value);
+                      setFormData({ ...formData, content: { body: e.target.value } });
+                    }}
+                    onSelect={(e) => {
+                      const target = e.target as HTMLTextAreaElement;
+                      setSelectedText(target.value.substring(target.selectionStart, target.selectionEnd));
+                    }}
+                    rows={8}
+                  />
+                </Field>
+              </div>
+              <div className="space-y-4">
+                <SeoPreview
+                  postId={editingId}
+                  title={formData.title}
+                  slug={formData.slug || ""}
+                  metaTitle={formData.meta_title ?? undefined}
+                  metaDescription={formData.meta_description ?? undefined}
+                  excerpt={formData.excerpt ?? undefined}
+                  featuredImageUrl={featuredImageUrl}
+                />
+                <AccessibilityChecker postId={editingId} />
+              </div>
             </div>
-            <div>
-              <label className="text-sm font-medium mb-2 block">Slug</label>
-              <Input
-                value={formData.slug || ""}
-                onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
-                placeholder="url-friendly-slug"
-              />
-            </div>
-            <div>
-              <label className="text-sm font-medium mb-2 block">Excerpt</label>
-              <Textarea
-                value={formData.excerpt || ""}
-                onChange={(e) => setFormData({ ...formData, excerpt: e.target.value })}
-                placeholder="Brief summary of the post..."
-                rows={3}
-              />
-            </div>
-            <div>
-              <label className="text-sm font-medium mb-2 block">Author ID</label>
-              <Input
-                value={formData.author_id || ""}
-                onChange={(e) => setFormData({ ...formData, author_id: e.target.value })}
-                placeholder="author-identifier"
-              />
-            </div>
+            {editingId && (
+              <>
+                <AiSuggestionPanel
+                  postId={editingId}
+                  selectedText={selectedText || bodyText}
+                  onApplySuggestion={(text) => {
+                    setBodyText(text);
+                    setFormData({ ...formData, content: { body: text } });
+                  }}
+                />
+                <Button type="button" variant="outline" onClick={() => setShowImageModal(true)}>
+                  {t("actions.generateImage")}
+                </Button>
+                {featuredImageUrl && (
+                  <img src={featuredImageUrl} alt="Featured" className="h-12 w-12 rounded object-cover" />
+                )}
+                <ImageGenModal
+                  postId={editingId}
+                  open={showImageModal}
+                  onClose={() => setShowImageModal(false)}
+                  onImageGenerated={setFeaturedImageUrl}
+                />
+                <BlogPostEditExtras
+                  postId={editingId}
+                  title={formData.title}
+                  status={editingStatus}
+                  bodyText={bodyText}
+                  previousBodyText={previousBodyText}
+                  onScheduled={() => void refetch()}
+                />
+              </>
+            )}
             <div className="flex gap-2">
-              <Button
-                onClick={() => {
-                  if (editingId) {
-                    handleUpdate(editingId);
-                  } else {
-                    handleCreate();
-                  }
-                }}
-              >
-                {editingId ? "Update" : "Create"}
+              <Button onClick={() => (editingId ? void handleUpdate(editingId) : void handleCreate())}>
+                {editingId ? t("actions.update") : t("actions.create")}
               </Button>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setIsCreating(false);
-                  setEditingId(null);
-                  resetForm();
-                }}
-              >
-                Cancel
+              <Button variant="outline" onClick={() => { setIsCreating(false); setEditingId(null); resetForm(); }}>
+                {t("actions.cancel")}
               </Button>
             </div>
           </CardContent>
         </Card>
       )}
 
+      <KeyboardShortcutsHelp open={showShortcuts} onClose={() => setShowShortcuts(false)} />
+
       <div className="grid gap-4">
-        {posts.length === 0 ? (
+        {filteredPosts.length === 0 ? (
           <Card>
             <CardContent className="py-8 text-center text-muted-foreground">
-              No blog posts yet. Create your first post to get started.
+              {search || statusFilter ? t("noResults") : t("empty")}
             </CardContent>
           </Card>
         ) : (
-          posts.map((post) => (
+          filteredPosts.map((post) => (
             <Card key={post.id}>
               <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div className="flex items-center gap-3">
                     <CardTitle className="text-xl">{post.title}</CardTitle>
                     {getStatusBadge(post.status)}
                   </div>
-                  <div className="flex gap-2">
-                    {getWorkflowActions(post)}
+                  <div className="flex flex-wrap gap-2">
+                    {post.status === "draft" && post.reviewer_id && (
+                      <Button size="sm" onClick={() => void submitForReview(post.id, post.reviewer_id!)}>
+                        {t("actions.submitReview")}
+                      </Button>
+                    )}
+                    {post.status === "under_review" && (
+                      <Button size="sm" variant="outline" onClick={() => void approve(post.id)}>
+                        {t("actions.approve")}
+                      </Button>
+                    )}
+                    {post.status === "approved" && (
+                      <Button size="sm" onClick={() => void publish(post.id)}>
+                        {t("actions.publish")}
+                      </Button>
+                    )}
                     <Button variant="outline" size="sm" onClick={() => startEdit(post)}>
-                      Edit
+                      {t("actions.edit")}
                     </Button>
                     <Button
                       variant="destructive"
                       size="sm"
-                      onClick={() => handleDelete(post.id)}
+                      onClick={() => {
+                        if (window.confirm(t("confirmDelete"))) void deletePost(post.id);
+                      }}
                     >
-                      Delete
+                      {t("actions.delete")}
                     </Button>
                   </div>
                 </div>
-                <div className="flex items-center gap-4 text-sm text-muted-foreground mt-2">
-                  <span>Slug: {post.slug}</span>
-                  {post.author_id && <span>Author: {post.author_id}</span>}
-                  {post.published_at && (
-                    <span>Published: {new Date(post.published_at).toLocaleDateString()}</span>
-                  )}
-                </div>
               </CardHeader>
               <CardContent>
-                {post.excerpt && (
-                  <p className="text-sm text-muted-foreground mb-4">{post.excerpt}</p>
-                )}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                  <div>
-                    <span className="text-muted-foreground">Views:</span> {post.view_count}
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Likes:</span> {post.like_count}
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Comments:</span> {post.comment_count}
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Shares:</span> {post.share_count}
-                  </div>
-                </div>
-                {post.keywords.length > 0 && (
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    {post.keywords.map((keyword) => (
-                      <Badge key={keyword} variant="secondary">
-                        {keyword}
-                      </Badge>
-                    ))}
-                  </div>
-                )}
+                {post.excerpt && <p className="text-sm text-muted-foreground mb-4">{post.excerpt}</p>}
               </CardContent>
             </Card>
           ))
         )}
       </div>
+    </div>
+  );
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <label className="text-sm font-medium mb-2 block">{label}</label>
+      {children}
     </div>
   );
 }

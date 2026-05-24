@@ -3,12 +3,12 @@
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import StrEnum
-from typing import TypedDict
 from uuid import UUID, uuid4
 
 
 class SourceType(StrEnum):
     """Types of content sources."""
+
     URL = "url"
     DOCUMENT = "document"
     NOTE = "note"
@@ -19,6 +19,7 @@ class SourceType(StrEnum):
 @dataclass
 class ContentSource:
     """A content source for a project or blog post."""
+
     id: UUID = field(default_factory=uuid4)
     project_id: UUID | None = None
     blog_post_id: UUID | None = None
@@ -49,6 +50,7 @@ class ContentSource:
 @dataclass
 class EditorialComment:
     """An editorial comment on content."""
+
     id: UUID = field(default_factory=uuid4)
     content_id: UUID = field(default_factory=uuid4)
     content_type: str = ""
@@ -74,6 +76,7 @@ class EditorialComment:
 @dataclass
 class ContentVersion:
     """A version of content for tracking changes."""
+
     id: UUID = field(default_factory=uuid4)
     content_id: UUID = field(default_factory=uuid4)
     content_type: str = ""

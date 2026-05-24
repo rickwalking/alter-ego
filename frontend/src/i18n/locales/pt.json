@@ -10,8 +10,17 @@
       "chat": "Chat",
       "knowledgeBase": "Base de Conhecimento",
       "blog": "Blog",
-      "create": "Criar"
-    }
+      "create": "Criar",
+      "personas": "Personas",
+      "rubrics": "Rubricas",
+      "blogPosts": "Posts do Blog",
+      "workflow": "Workflow",
+      "calendar": "Calendário",
+      "analytics": "Analytics",
+      "admin": "Admin"
+    },
+    "logout": "Sair",
+    "login": "Entrar"
   },
   "home": {
     "hero": {
@@ -212,6 +221,80 @@
       "error": "Ocorreu um erro ao processar sua solicitação."
     }
   },
+  "blogEditorial": {
+    "aiPanelTitle": "Assistente de Escrita IA",
+    "voiceScorerTitle": "Pontuação de Voz",
+    "imageModalTitle": "Gerar Imagem Destacada",
+    "imagePromptPlaceholder": "Descreva a imagem que deseja gerar...",
+    "generatedImageAlt": "Prévia da imagem gerada",
+    "selectTextHint": "Selecione texto no editor para sugestões direcionadas.",
+    "voiceScore": "Correspondência de voz: {score}",
+    "actions": {
+      "improve": "Sugerir com IA",
+      "shorten": "Encurtar",
+      "addOpinion": "Adicionar Opinião",
+      "applyImprovement": "Aplicar Melhoria",
+      "apply": "Aplicar",
+      "cancel": "Cancelar",
+      "generate": "Gerar",
+      "useImage": "Usar Esta Imagem",
+      "scoreVoice": "Pontuar Voz"
+    },
+    "seo": {
+      "title": "Prévia SEO",
+      "analyze": "Analisar SEO",
+      "analyzing": "Analisando...",
+      "score": "Score: {score}",
+      "platform": {
+        "google": "Google",
+        "twitter": "Twitter/X",
+        "linkedin": "LinkedIn"
+      }
+    },
+    "accessibility": {
+      "title": "Verificação de Acessibilidade",
+      "runCheck": "Executar Verificação",
+      "checking": "Verificando...",
+      "score": "Score: {score}",
+      "noIssues": "Nenhum problema de acessibilidade encontrado",
+      "hint": "Execute a verificação para validar alt text e estrutura de headings"
+    },
+    "shortcuts": {
+      "title": "Atalhos de Teclado",
+      "close": "Fechar",
+      "actions": {
+        "save": "Salvar post",
+        "submitReview": "Enviar para revisão",
+        "aiSuggest": "Sugestão IA",
+        "showHelp": "Mostrar esta ajuda"
+      }
+    }
+  },
+  "editorialWorkflow": {
+    "title": "Fluxo Editorial",
+    "currentPhase": "Fase atual",
+    "phaseStatus": "Status",
+    "sourcesTitle": "Materiais de Origem",
+    "noSources": "Nenhuma fonte adicionada ainda.",
+    "actions": {
+      "start": "Iniciar Fluxo Editorial",
+      "approve": "Aprovar Fase",
+      "reject": "Solicitar Alterações",
+      "refresh": "Atualizar",
+      "extract": "Extrair Pontos-Chave"
+    }
+  },
+  "rubrics": {
+    "evaluation": {
+      "title": "Avaliar Conteúdo",
+      "run": "Executar Avaliação",
+      "score": "Pontuação: {score}",
+      "passed": "Aprovado",
+      "failed": "Reprovado",
+      "pass": "aprovado",
+      "fail": "reprovado"
+    }
+  },
   "publish": {
     "loading": "Carregando carrossel…",
     "notFound": "Carrossel não encontrado.",
@@ -276,5 +359,111 @@
     "title": "Página Não Encontrada",
     "description": "A página que você está procurando não existe.",
     "goHome": "Ir para o Início"
+  },
+  "workflow": {
+    "board": {
+      "title": "Quadro de Workflow",
+      "subtitle": "Acompanhe projetos de carrossel nas fases editoriais.",
+      "noProjects": "Nenhum projeto",
+      "retry": "Tentar novamente"
+    },
+    "calendar": {
+      "title": "Calendário de Conteúdo",
+      "subtitle": "Veja conteúdo agendado e publicado em posts e carrosséis.",
+      "empty": "Nenhum conteúdo agendado neste período",
+      "scheduled": "Agendado"
+    },
+    "kanban": {
+      "retry": "Tentar novamente"
+    },
+    "notifications": {
+      "title": "Notificações",
+      "ariaLabel": "Notificações",
+      "loading": "Carregando...",
+      "empty": "Nenhuma notificação nova"
+    },
+    "collaboration": {
+      "lockedByOther": "{name} está editando este post. Suas alterações podem conflitar."
+    },
+    "review": {
+      "title": "Atribuir Revisor",
+      "reviewerId": "ID do revisor",
+      "reviewerPlaceholder": "UUID do usuário",
+      "deadlineHours": "Prazo (horas)",
+      "assigning": "Atribuindo...",
+      "assignNotify": "Atribuir e Notificar",
+      "assigned": "Revisor notificado",
+      "failed": "Falha na atribuição"
+    },
+    "schedule": {
+      "title": "Agendar Publicação",
+      "publishAt": "Publicar em",
+      "scheduling": "Agendando...",
+      "schedule": "Agendar",
+      "success": "Post agendado com sucesso",
+      "failed": "Falha ao agendar"
+    },
+    "diff": {
+      "previousVersion": "Versão anterior",
+      "currentDraft": "Rascunho atual"
+    },
+    "errors": {
+      "loadBoardFailed": "Falha ao carregar o quadro de workflow",
+      "loadCalendarFailed": "Falha ao carregar o calendário",
+      "loadNotificationsFailed": "Falha ao carregar notificações",
+      "markReadFailed": "Falha ao marcar notificação como lida",
+      "unknown": "Erro desconhecido"
+    }
+  },
+  "dashboard": {
+    "blogPosts": {
+      "title": "Posts do Blog",
+      "createPost": "Criar Post",
+      "editPost": "Editar Post",
+      "createNew": "Criar Novo Post",
+      "searchPlaceholder": "Buscar posts...",
+      "filterStatus": "Filtrar por status",
+      "allStatuses": "Todos os status",
+      "noResults": "Nenhum post corresponde aos filtros",
+      "empty": "Nenhum post ainda. Crie seu primeiro post.",
+      "confirmDelete": "Tem certeza que deseja excluir este post?",
+      "status": {
+        "draft": "Rascunho",
+        "under_review": "Em Revisão",
+        "approved": "Aprovado",
+        "published": "Publicado",
+        "archived": "Arquivado"
+      },
+      "fields": {
+        "title": "Título",
+        "slug": "Slug",
+        "excerpt": "Resumo",
+        "metaTitle": "Meta Título",
+        "metaDescription": "Meta Descrição",
+        "reviewerId": "ID do Revisor",
+        "content": "Conteúdo"
+      },
+      "actions": {
+        "update": "Atualizar",
+        "create": "Criar",
+        "cancel": "Cancelar",
+        "edit": "Editar",
+        "delete": "Excluir",
+        "submitReview": "Enviar para Revisão",
+        "approve": "Aprovar",
+        "publish": "Publicar",
+        "generateImage": "Gerar Imagem"
+      }
+    },
+    "analytics": {
+      "title": "Analytics Editorial",
+      "subtitle": "Velocidade de conteúdo e métricas de qualidade",
+      "totalPosts": "Total de Posts",
+      "publishedWeek": "Publicados Esta Semana",
+      "pendingReview": "Aguardando Revisão",
+      "qualityScore": "Score Médio de Qualidade",
+      "velocityTitle": "Velocidade de Publicação (8 semanas)",
+      "loadFailed": "Falha ao carregar analytics"
+    }
   }
 }

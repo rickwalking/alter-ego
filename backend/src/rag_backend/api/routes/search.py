@@ -103,7 +103,7 @@ async def search_documents_get(
         float,
         Query(ge=0.0, le=1.0, description="Hybrid search balance (0=BM25, 1=semantic)"),
     ] = 0.5,
-    db: AsyncSession = Depends(get_session),  # noqa: FAST002
+    db: AsyncSession = Depends(get_session),
 ):
     """Search for relevant documents using GET request.
 

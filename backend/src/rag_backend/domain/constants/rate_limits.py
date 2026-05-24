@@ -1,0 +1,13 @@
+"""Rate limit constants for API endpoints."""
+
+RATE_LIMIT_AI_ENDPOINTS = "10/minute"
+RATE_LIMIT_SSE_STREAM = "30/minute"
+RATE_LIMIT_WORKFLOW_ENDPOINTS = "60/minute"
+RATE_LIMIT_ADMIN_MIGRATION = "2/minute"
+
+__all__ = [
+    "RATE_LIMIT_ADMIN_MIGRATION",
+    "RATE_LIMIT_AI_ENDPOINTS",
+    "RATE_LIMIT_SSE_STREAM",
+    "RATE_LIMIT_WORKFLOW_ENDPOINTS",
+]

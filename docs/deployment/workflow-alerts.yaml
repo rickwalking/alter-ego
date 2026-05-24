@@ -1,0 +1,40 @@
+# Workflow Failure Alert Rules — MON-002
+#
+# These rules define alert conditions emitted by WorkflowFailureAlertService.
+# Wire to your observability stack (Langfuse, Grafana, CloudWatch, PagerDuty).
+#
+# Reference: docs/guides/LANGFUSE_OBSERVABILITY_GUIDE.md §8
+
+alerts:
+  - name: carousel_generation_failed
+    description: A carousel project failed during generation
+    condition: |
+      log.event == "workflow_failure_alert"
+      AND log.alert_type == "carousel_failed"
+    severity: critical
+    action: notify_admins_in_app
+    window: 1h
+
+  - name: stuck_workflow
+    description: Workflow has not progressed in 48+ hours
+    condition: |
+      log.event == "workflow_failure_alert"
+      AND log.alert_type == "stuck_workflow"
+    severity: warning
+    action: notify_ops_channel
+    window: 48h
+
+  - name: high_workflow_failure_rate
+    description: Failure rate exceeds 10% in the hour
+    condition: |
+      log.event == "workflow_failure_alert"
+      AND log.alert_type == "high_failure_rate"
+      AND log.failure_rate > 0.10
+    severity: critical
+    action: pagerduty("AI workflow failure rate critical")
+
+langfuse:
+  - name: workflow_trace_failure
+    condition: traces where tags include "workflow" AND level == "ERROR"
+    severity: warning
+    action: notify("Workflow trace error spike")

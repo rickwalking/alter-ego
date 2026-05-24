@@ -46,6 +46,7 @@ services:
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-https://marinssolutions.com}
       REDIS_URL: redis://redis:6379
       DEBUG: "false"
+      CAROUSEL_CHECKPOINT_BACKEND: ${CAROUSEL_CHECKPOINT_BACKEND:-memory}
       LANGFUSE_SECRET_KEY: ${LANGFUSE_SECRET_KEY:-}
       LANGFUSE_PUBLIC_KEY: ${LANGFUSE_PUBLIC_KEY:-}
       LANGFUSE_HOST: ${LANGFUSE_HOST:-http://langfuse:3000}

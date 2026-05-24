@@ -2,6 +2,21 @@
 
 # Common
 # Carousel
+# Blog Posts
+from rag_backend.api.schemas.blog_post import (
+    BlogPostCreate,
+    BlogPostListResponse,
+    BlogPostResponse,
+    BlogPostUpdate,
+    BlogPostVersionResponse,
+    ContentSourceCreate,
+    ContentSourceListResponse,
+    ContentSourceResponse,
+    ContentVersionResponse,
+    EditorialCommentCreate,
+    EditorialCommentListResponse,
+    EditorialCommentResponse,
+)
 from rag_backend.api.schemas.carousel import (
     CarouselBlogI18nResponse,
     CarouselBlogImageMapEntry,
@@ -55,7 +70,28 @@ from rag_backend.api.schemas.documents import (
     DocumentUploadResponse,
 )
 
+# Persona & Rubric
+from rag_backend.api.schemas.persona_rubric import (
+    PersonaProfileCreate,
+    PersonaProfileListResponse,
+    PersonaProfileResponse,
+    PersonaProfileUpdate,
+    QualityRubricCreate,
+    QualityRubricListResponse,
+    QualityRubricResponse,
+    QualityRubricUpdate,
+    RubricCriterion,
+    RubricEvaluationResponse,
+    RubricEvaluationScore,
+    ToneAttributes,
+)
+
 __all__ = [
+    "BlogPostCreate",
+    "BlogPostListResponse",
+    "BlogPostResponse",
+    "BlogPostUpdate",
+    "BlogPostVersionResponse",
     "CarouselBlogI18nResponse",
     "CarouselBlogImageMapEntry",
     "CarouselBlogResponse",
@@ -77,6 +113,10 @@ __all__ = [
     "ChatRequest",
     "ChatResponse",
     "ChatStreamResponse",
+    "ContentSourceCreate",
+    "ContentSourceListResponse",
+    "ContentSourceResponse",
+    "ContentVersionResponse",
     "ConversationCreate",
     "ConversationListResponse",
     "ConversationResponse",
@@ -88,6 +128,9 @@ __all__ = [
     "DocumentResponse",
     "DocumentUpdate",
     "DocumentUploadResponse",
+    "EditorialCommentCreate",
+    "EditorialCommentListResponse",
+    "EditorialCommentResponse",
     "ErrorResponse",
     "HealthCheckResponse",
     "HealthResponse",
@@ -96,8 +139,20 @@ __all__ = [
     "MessageListResponse",
     "MessageResponse",
     "MessageSource",
+    "PersonaProfileCreate",
+    "PersonaProfileListResponse",
+    "PersonaProfileResponse",
+    "PersonaProfileUpdate",
+    "QualityRubricCreate",
+    "QualityRubricListResponse",
+    "QualityRubricResponse",
+    "QualityRubricUpdate",
     "ResearchSourceResponse",
+    "RubricCriterion",
+    "RubricEvaluationResponse",
+    "RubricEvaluationScore",
     "SearchRequest",
     "SearchResponse",
     "SearchResultResponse",
+    "ToneAttributes",
 ]

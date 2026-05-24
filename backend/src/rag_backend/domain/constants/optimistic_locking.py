@@ -1,0 +1,27 @@
+"""Constants for optimistic locking (WF-005)."""
+
+LOCK_CONTENT_TYPE_BLOG_POST = "blog_post"
+LOCK_CONTENT_TYPE_CAROUSEL = "carousel"
+
+LOCK_STATUS_ACTIVE = "active"
+LOCK_STATUS_EXPIRED = "expired"
+
+DEFAULT_LOCK_TTL_SECONDS = 300
+
+ERR_VERSION_CONFLICT = "version_conflict"
+ERR_LOCK_HELD_BY_OTHER = "lock_held_by_other"
+ERR_LOCK_NOT_FOUND = "lock_not_found"
+
+HTTP_HEADER_IF_MATCH = "If-Match"
+
+__all__ = [
+    "DEFAULT_LOCK_TTL_SECONDS",
+    "ERR_LOCK_HELD_BY_OTHER",
+    "ERR_LOCK_NOT_FOUND",
+    "ERR_VERSION_CONFLICT",
+    "HTTP_HEADER_IF_MATCH",
+    "LOCK_CONTENT_TYPE_BLOG_POST",
+    "LOCK_CONTENT_TYPE_CAROUSEL",
+    "LOCK_STATUS_ACTIVE",
+    "LOCK_STATUS_EXPIRED",
+]

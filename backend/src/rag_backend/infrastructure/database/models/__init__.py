@@ -6,11 +6,13 @@ from rag_backend.infrastructure.database.models.carousel import (
     CarouselSlideModel,
     ResearchSourceModel,
 )
+from rag_backend.infrastructure.database.models.content_lock import ContentLockModel
 from rag_backend.infrastructure.database.models.conversation import (
     ConversationModel,
     MessageModel,
 )
 from rag_backend.infrastructure.database.models.document import DocumentModel
+from rag_backend.infrastructure.database.models.notification import NotificationModel
 from rag_backend.infrastructure.database.models.persona_rubric import (
     PersonaProfileModel,
     QualityRubricModel,
@@ -22,20 +24,24 @@ from rag_backend.infrastructure.database.models.source_comment import (
     EditorialCommentModel,
 )
 from rag_backend.infrastructure.database.models.user import UserModel
+from rag_backend.infrastructure.database.models.workflow_audit_log import WorkflowAuditLogModel
 
 __all__ = [
     "BlogPostModel",
     "CarouselProjectModel",
     "CarouselSlideModel",
+    "ContentLockModel",
     "ContentSourceModel",
     "ContentVersionModel",
     "ConversationModel",
     "DocumentModel",
     "EditorialCommentModel",
     "MessageModel",
+    "NotificationModel",
     "PersonaProfileModel",
     "QualityRubricModel",
     "ResearchSourceModel",
     "RubricEvaluationScoreModel",
     "UserModel",
+    "WorkflowAuditLogModel",
 ]

@@ -1,7 +1,7 @@
 # Alter-Ego Professional Content Platform — Comprehensive Pivot Plan
 
 **Date:** 2026-05-23
-**Status:** Phase 1 Complete → Phase 2 Ready
+**Status:** Phase 5 Complete → Launched
 **Goal:** Transform Alter-Ego from an autonomous AI content factory into a professional, human-in-the-loop content platform that captures Pedro's authentic voice and expertise.
 
 ---
@@ -111,14 +111,15 @@ Blog Post Published
 
 ### 2.3 Technical Debt
 
-| Issue | Impact |
-|-------|--------|
-| Monolithic generation pipeline | Can't pause/resume at stages |
-| No workflow state persistence | Lost progress on errors |
-| No versioning | Can't compare iterations |
-| No collaboration primitives | Single-user only |
-| Fixed prompt templates | Can't adapt to content type |
-| No feedback loops | System doesn't learn from corrections |
+| Issue | Impact | Tracking |
+|-------|--------|----------|
+| Monolithic generation pipeline | Can't pause/resume at stages | Phase 3 (WF-*) |
+| No workflow state persistence | Lost progress on errors | TD-006 |
+| No versioning | Can't compare iterations | Phase 1 UI-008 |
+| No collaboration primitives | Single-user only | Phase 3 (UI-021) |
+| Fixed prompt templates | Can't adapt to content type | Partially addressed Phase 2 |
+| No feedback loops | System doesn't learn from corrections | TD-005 (in-memory stub exists) |
+| Phase 2 QA remainder | Test depth, auth consistency, mutation score | [TECHNICAL_DEBT.md](TECHNICAL_DEBT.md) |
 
 ---
 
@@ -453,7 +454,7 @@ class Project:
     niche: str
     visual_theme: str
     image_style: str
-    
+
     # NEW FIELDS
     creative_brief: str  # Detailed instructions and goals
     persona_id: str  # Reference to PersonaProfile
@@ -462,13 +463,13 @@ class Project:
     reference_carousels: list[str]  # URLs or IDs of "good" examples
     instructions: str  # "Make this controversial" / "Focus on data" / "Tell a story"
     quality_target: dict  # {"originality": 0.8, "engagement": 0.9}
-    
+
     # WORKFLOW STATE
     current_phase: str  # Phase name
     phase_status: str  # "in_progress" | "awaiting_human" | "approved" | "rejected"
     phase_started_at: datetime
     phase_deadline: datetime | None
-    
+
     # METADATA
     created_by: str
     created_at: datetime
@@ -485,38 +486,38 @@ class BlogPost:
     title: str
     slug: str
     status: str  # "draft" | "under_review" | "approved" | "published" | "archived"
-    
+
     # CONTENT
     content: dict  # Rich text JSON (TipTap/ProseMirror format)
     excerpt: str
     featured_image: str | None
-    
+
     # EDITORIAL
     author_id: str
     reviewer_id: str | None
     editor_comments: list[str]  # EditorialComment IDs
     version_history: list[str]  # ContentVersion IDs
-    
+
     # SOURCES
     sources: list[str]  # ContentSource IDs
     citations: list[dict]  # [{"text": "According to...", "source_id": "..."}]
-    
+
     # AI ASSISTANCE
     ai_suggestions: list[dict]  # [{"type": "improve", "text": "...", "applied": false}]
     ai_generation_metadata: dict  # prompt used, model, temperature
-    
+
     # SEO
     meta_title: str
     meta_description: str
     keywords: list[str]
     canonical_url: str | None
-    
+
     # ENGAGEMENT
     view_count: int
     like_count: int
     comment_count: int
     share_count: int
-    
+
     # TIMESTAMPS
     created_at: datetime
     updated_at: datetime
@@ -669,70 +670,70 @@ class CarouselWorkflowState(TypedDict):
     project_id: str
     current_phase: str
     phase_history: list[dict]
-    
+
     # Brief Phase
     brief: dict  # creative_brief, persona_id, rubric_id, sources, instructions
     brief_approved: bool
-    
+
     # Research Phase
     research_findings: list[dict]
     synthesized_sources: list[dict]
     research_notes: str
     research_approved: bool
-    
+
     # Outline Phase
     outline: list[dict]  # [{slide_index, title, key_points, visual_direction}]
     outline_approved: bool
-    
+
     # Content Phase
     slide_drafts: Annotated[list[dict], operator.add]
     content_approved: bool
-    
+
     # Design Phase
     design_applied: bool
     design_feedback: str
     design_approved: bool
-    
+
     # Images Phase
     images_generated: bool
     image_assets: list[str]
     image_feedback: str
     images_approved: bool
-    
+
     # Quality
     rubric_scores: dict
     quality_passed: bool
-    
+
     # Final
     status: str  # "draft" | "published" | "archived"
 
 class BlogPostWorkflowState(TypedDict):
     post_id: str
     status: str
-    
+
     # Content
     title: str
     content: dict  # rich text JSON
     excerpt: str
     featured_image: str | None
-    
+
     # Editorial
     editor_comments: list[dict]
     reviewer_id: str | None
     review_feedback: str
-    
+
     # AI
     ai_suggestions: list[dict]
     ai_metadata: dict
-    
+
     # Sources
     sources: list[str]
     citations: list[dict]
-    
+
     # Versions
     current_version: int
     version_history: list[dict]
-    
+
     # Quality
     rubric_scores: dict
     quality_passed: bool
@@ -750,14 +751,14 @@ async def research_phase(state: CarouselWorkflowState):
         brief=state["brief"],
         sources=state["brief"]["sources"],
     )
-    
+
     # INTERRUPT — wait for human
     human_review = interrupt({
         "type": "research_review",
         "findings": findings,
         "message": "Please review research findings and add notes.",
     })
-    
+
     # Human provides feedback
     if human_review["action"] == "approve":
         return {"research_approved": True, "research_notes": human_review["notes"]}
@@ -797,47 +798,47 @@ result = app.invoke(None, config)  # Continues from interrupt
 ```python
 class PersonaAgent:
     """Enforces Pedro's writing voice on all AI-generated content."""
-    
+
     def __init__(self, persona: PersonaProfile):
         self.persona = persona
         self.style_guide = self._build_style_guide()
-    
+
     def _build_style_guide(self) -> str:
         return f"""
         You are writing as {self.persona.name}.
-        
+
         TONE: {self.persona.tone_attributes}
         SENTENCE STRUCTURE: {self.persona.sentence_structure_preferences}
         PARAGRAPH STYLE: {self.persona.paragraph_style}
         OPINION EXPRESSION: {self.persona.opinion_expression}
-        
+
         FORBIDDEN PHRASES: {', '.join(self.persona.forbidden_phrases)}
         PREFERRED PHRASES: {', '.join(self.persona.preferred_phrases)}
-        
+
         EXPERTISE AREAS: {', '.join(self.persona.expertise_areas)}
-        
+
         WRITING SAMPLES:
         {chr(10).join(f'- {sample}' for sample in self.persona.writing_samples[:3])}
-        
+
         INSTRUCTION: Rewrite the following content to match this voice perfectly.
         It should sound authentically human, with strong opinions, personal anecdotes where relevant,
         and zero generic AI-speak. Never use dashes as bullet points unless explicitly asked.
         """
-    
+
     async def enforce(self, content: str, context: str = "") -> str:
         """Rewrite content to match persona."""
         prompt = f"{self.style_guide}\n\nCONTEXT: {context}\n\nCONTENT TO REWRITE:\n{content}"
         return await llm.complete(prompt)
-    
+
     async def evaluate_match(self, content: str) -> dict:
         """Score how well content matches persona (0-100)."""
         prompt = f"""
         Score this content on how well it matches the following persona.
-        
+
         PERSONA: {self.persona.description}
-        
+
         CONTENT: {content}
-        
+
         Provide scores (0-100) for:
         - tone_match
         - sentence_structure_match
@@ -845,7 +846,7 @@ class PersonaAgent:
         - originality
         - human_authenticity
         - overall
-        
+
         Also provide specific improvement suggestions.
         """
         return await llm.structured_complete(prompt, schema=PersonaScoreSchema)
@@ -856,14 +857,14 @@ class PersonaAgent:
 ```python
 class QualityAgent:
     """Evaluates content against rubrics and provides actionable feedback."""
-    
+
     def __init__(self, rubric: QualityRubric):
         self.rubric = rubric
-    
+
     async def evaluate(self, content: str, sources: list[str]) -> dict:
         scores = {}
         feedback = []
-        
+
         for criterion in self.rubric.criteria:
             if criterion.evaluation_method == "ai_auto":
                 score = await self._ai_evaluate(criterion, content, sources)
@@ -873,13 +874,13 @@ class QualityAgent:
                 ai_score = await self._ai_evaluate(criterion, content, sources)
                 human_score = await self._request_human_evaluation(criterion, content)
                 score = (ai_score * 0.4) + (human_score * 0.6)
-            
+
             scores[criterion.id] = {
                 "score": score,
                 "weight": criterion.weight,
                 "passed": score >= criterion.min_threshold,
             }
-            
+
             if score < criterion.min_threshold:
                 feedback.append({
                     "criterion": criterion.name,
@@ -887,18 +888,18 @@ class QualityAgent:
                     "threshold": criterion.min_threshold,
                     "suggestion": await self._generate_improvement(criterion, content),
                 })
-        
+
         overall_score = sum(
             s["score"] * s["weight"] for s in scores.values()
         ) / sum(s["weight"] for s in scores.values())
-        
+
         return {
             "overall_score": overall_score,
             "criteria_scores": scores,
             "feedback": feedback,
             "passed": all(s["passed"] for s in scores.values()),
         }
-    
+
     async def _ai_evaluate(self, criterion: RubricCriterion, content: str, sources: list[str]) -> float:
         prompt = criterion.prompt_template.format(
             content=content,
@@ -913,7 +914,7 @@ class QualityAgent:
 ```python
 class FeedbackLearningLoop:
     """Learns from human corrections to improve AI outputs over time."""
-    
+
     async def record_correction(self, original: str, corrected: str, context: str, persona_id: str):
         """Store a human correction for future learning."""
         await db.corrections.insert({
@@ -924,15 +925,15 @@ class FeedbackLearningLoop:
             "correction_type": self._classify_correction(original, corrected),
             "created_at": datetime.now(),
         })
-        
+
         # Update persona with new examples
         await self._update_persona_examples(persona_id, corrected)
-    
+
     async def _update_persona_examples(self, persona_id: str, example: str):
         """Add corrected example to persona's writing samples."""
         persona = await db.personas.get(persona_id)
         persona.writing_samples.append(example)
-        
+
         # Keep only the best N examples (most recent + highest quality)
         if len(persona.writing_samples) > 50:
             # Score each and keep top 50
@@ -942,26 +943,26 @@ class FeedbackLearningLoop:
                 scored.append((sample, quality["overall"]))
             scored.sort(key=lambda x: x[1], reverse=True)
             persona.writing_samples = [s[0] for s in scored[:50]]
-        
+
         await db.personas.update(persona_id, persona)
-    
+
     async def get_relevant_examples(self, prompt: str, persona_id: str, k: int = 3) -> list[str]:
         """Retrieve similar past corrections to improve new outputs."""
         corrections = await db.corrections.find({"persona_id": persona_id})
-        
+
         # Embed all corrections and find similar ones
         prompt_embedding = await embeddings.embed(prompt)
         correction_embeddings = [
             (c, await embeddings.embed(c["original"])) for c in corrections
         ]
-        
+
         # Find k-nearest neighbors
         similarities = [
-            (c, cosine_similarity(prompt_embedding, emb)) 
+            (c, cosine_similarity(prompt_embedding, emb))
             for c, emb in correction_embeddings
         ]
         similarities.sort(key=lambda x: x[1], reverse=True)
-        
+
         return [
             f"Original: {c['original']}\nCorrected: {c['corrected']}"
             for c, _ in similarities[:k]
@@ -1182,7 +1183,7 @@ async def create_blog_from_carousel(project_id: str, carousel_trace_id: str):
         },
         tags=["blog_post", "from_carousel"],
     )
-    
+
     # Add relationship event
     child_trace.event(
         name="parent_trace_linked",
@@ -1312,7 +1313,7 @@ interface RichTextEditorProps {
 
 export function RichTextEditor({ content, onChange, postId }: RichTextEditorProps) {
   const { suggestions, applySuggestion, generateSuggestions } = useAiSuggestions(postId);
-  
+
   const editor = useEditor({
     extensions: [StarterKit],
     content,
@@ -1324,18 +1325,18 @@ export function RichTextEditor({ content, onChange, postId }: RichTextEditorProp
   const handleAiImprove = async (type: 'improve' | 'shorten' | 'expand') => {
     const selection = editor?.state.selection;
     if (!selection || selection.empty) return;
-    
+
     const selectedText = editor.state.doc.textBetween(
       selection.from,
       selection.to
     );
-    
+
     const suggestion = await generateSuggestions({
       text: selectedText,
       type,
       context: editor.getText(),
     });
-    
+
     // Show suggestion in a tooltip/popover
     editor.commands.setContent(suggestion.text);
   };
@@ -1343,13 +1344,13 @@ export function RichTextEditor({ content, onChange, postId }: RichTextEditorProp
   return (
     <div className="rich-text-editor">
       <EditorContent editor={editor} />
-      
+
       <AiToolbar
         onImprove={() => handleAiImprove('improve')}
         onShorten={() => handleAiImprove('shorten')}
         onExpand={() => handleAiImprove('expand')}
       />
-      
+
       <SuggestionsPanel
         suggestions={suggestions}
         onApply={applySuggestion}
@@ -1371,7 +1372,7 @@ interface WorkflowStageProps {
 
 export function WorkflowStage({ projectId }: WorkflowStageProps) {
   const { currentPhase, phases, approvePhase, rejectPhase } = useWorkflow(projectId);
-  
+
   return (
     <div className="workflow-stage">
       <div className="phase-indicator">
@@ -1386,7 +1387,7 @@ export function WorkflowStage({ projectId }: WorkflowStageProps) {
           />
         ))}
       </div>
-      
+
       <div className="phase-content">
         {phases.map((phase) => (
           phase.id === currentPhase && (
@@ -1455,7 +1456,7 @@ class CarouselWorkflow:
         CarouselPhase.IMAGES,
         CarouselPhase.FINAL_REVIEW,
     ]
-    
+
     def __init__(self, project_id: str):
         self.project_id = project_id
         self.phase_states: dict[CarouselPhase, PhaseState] = {
@@ -1471,33 +1472,33 @@ class CarouselWorkflow:
             for phase in self.PHASE_ORDER
         }
         self.current_phase = CarouselPhase.BRIEF
-    
+
     def start_phase(self, phase: CarouselPhase):
         self.phase_states[phase].status = PhaseStatus.IN_PROGRESS
         self.phase_states[phase].started_at = datetime.now()
         self.current_phase = phase
-    
+
     def request_human_review(self, phase: CarouselPhase, message: str):
         self.phase_states[phase].status = PhaseStatus.AWAITING_HUMAN
         # Emit event: project.review.requested
-        
+
     def approve_phase(self, phase: CarouselPhase, reviewer_id: str, notes: str = ""):
         self.phase_states[phase].status = PhaseStatus.APPROVED
         self.phase_states[phase].completed_at = datetime.now()
         self.phase_states[phase].reviewer_id = reviewer_id
         self.phase_states[phase].review_notes = notes
-        
+
         # Move to next phase
         current_index = self.PHASE_ORDER.index(phase)
         if current_index < len(self.PHASE_ORDER) - 1:
             next_phase = self.PHASE_ORDER[current_index + 1]
             self.start_phase(next_phase)
-    
+
     def reject_phase(self, phase: CarouselPhase, reviewer_id: str, feedback: str):
         self.phase_states[phase].status = PhaseStatus.REJECTED
         self.phase_states[phase].reviewer_id = reviewer_id
         self.phase_states[phase].review_notes = feedback
-        
+
         # Return to previous phase or stay in current for revision
         # depending on the feedback
 ```
@@ -1513,31 +1514,31 @@ import uuid
 
 class BlogPostModel(Base):
     __tablename__ = "blog_posts"
-    
+
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     project_id = Column(UUID(as_uuid=True), ForeignKey("projects.id"), nullable=True)
     title = Column(String(255), nullable=False)
     slug = Column(String(255), unique=True, nullable=False)
     status = Column(String(50), default="draft")  # draft, under_review, approved, published, archived
-    
+
     # Content stored as JSONB for rich text
     content = Column(JSONB, default={})
     excerpt = Column(String(500))
     featured_image_url = Column(String(500))
-    
+
     # Editorial
     author_id = Column(UUID(as_uuid=True), ForeignKey("users.id"))
     reviewer_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
-    
+
     # SEO
     meta_title = Column(String(255))
     meta_description = Column(String(500))
     keywords = Column(JSONB, default=[])
-    
+
     # Engagement
     view_count = Column(Integer, default=0)
     like_count = Column(Integer, default=0)
-    
+
     # Timestamps
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -1545,7 +1546,7 @@ class BlogPostModel(Base):
     approved_at = Column(DateTime, nullable=True)
     published_at = Column(DateTime, nullable=True)
     scheduled_publish_at = Column(DateTime, nullable=True)
-    
+
     # Relationships
     versions = relationship("ContentVersionModel", back_populates="blog_post")
     comments = relationship("EditorialCommentModel", back_populates="blog_post")
@@ -1553,7 +1554,7 @@ class BlogPostModel(Base):
 
 class ContentVersionModel(Base):
     __tablename__ = "content_versions"
-    
+
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     blog_post_id = Column(UUID(as_uuid=True), ForeignKey("blog_posts.id"))
     version_number = Column(Integer, nullable=False)
@@ -1561,12 +1562,12 @@ class ContentVersionModel(Base):
     change_summary = Column(String(500))
     author_id = Column(UUID(as_uuid=True), ForeignKey("users.id"))
     created_at = Column(DateTime, default=datetime.utcnow)
-    
+
     blog_post = relationship("BlogPostModel", back_populates="versions")
 
 class EditorialCommentModel(Base):
     __tablename__ = "editorial_comments"
-    
+
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     blog_post_id = Column(UUID(as_uuid=True), ForeignKey("blog_posts.id"))
     content_type = Column(String(50))  # "paragraph", "slide", "section"
@@ -1577,7 +1578,7 @@ class EditorialCommentModel(Base):
     ai_suggestion = Column(String(2000), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     resolved_at = Column(DateTime, nullable=True)
-    
+
     blog_post = relationship("BlogPostModel", back_populates="comments")
 ```
 
@@ -1628,7 +1629,7 @@ def upgrade():
         sa.Column('published_at', sa.DateTime, nullable=True),
         sa.Column('scheduled_publish_at', sa.DateTime, nullable=True),
     )
-    
+
     # Create content_versions table
     op.create_table(
         'content_versions',
@@ -1640,7 +1641,7 @@ def upgrade():
         sa.Column('author_id', postgresql.UUID(as_uuid=True), sa.ForeignKey('users.id')),
         sa.Column('created_at', sa.DateTime, default=sa.func.now()),
     )
-    
+
     # Create editorial_comments table
     op.create_table(
         'editorial_comments',
@@ -1655,7 +1656,7 @@ def upgrade():
         sa.Column('created_at', sa.DateTime, default=sa.func.now()),
         sa.Column('resolved_at', sa.DateTime, nullable=True),
     )
-    
+
     # Add new columns to projects table
     op.add_column('projects', sa.Column('creative_brief', sa.Text, nullable=True))
     op.add_column('projects', sa.Column('persona_id', postgresql.UUID(as_uuid=True), nullable=True))
@@ -1663,7 +1664,7 @@ def upgrade():
     op.add_column('projects', sa.Column('instructions', sa.Text, nullable=True))
     op.add_column('projects', sa.Column('current_phase', sa.String(50), default='brief'))
     op.add_column('projects', sa.Column('phase_status', sa.String(50), default='pending'))
-    
+
     # Create persona_profiles table
     op.create_table(
         'persona_profiles',
@@ -1682,7 +1683,7 @@ def upgrade():
         sa.Column('updated_at', sa.DateTime, default=sa.func.now(), onupdate=sa.func.now()),
         sa.Column('version', sa.Integer, default=1),
     )
-    
+
     # Create indexes
     op.create_index('ix_blog_posts_status', 'blog_posts', ['status'])
     op.create_index('ix_blog_posts_slug', 'blog_posts', ['slug'])
@@ -1697,7 +1698,7 @@ def downgrade():
     op.drop_table('content_versions')
     op.drop_table('blog_posts')
     op.drop_table('persona_profiles')
-    
+
     op.drop_column('projects', 'creative_brief')
     op.drop_column('projects', 'persona_id')
     op.drop_column('projects', 'rubric_id')
@@ -1745,7 +1746,7 @@ Feature: Carousel Creation with Enhanced Workflow
     When the research phase completes
     Then I should see research findings with key points
     And I should see a "Review Research" button
-    
+
     When I click "Review Research"
     And I add a note: "Add more details about the Marriott breach"
     And I click "Approve & Continue"
@@ -1756,7 +1757,7 @@ Feature: Carousel Creation with Enhanced Workflow
     Then I should see a slide-by-slide outline
     And I should be able to reorder slides
     And I should be able to edit slide titles
-    
+
     When I move slide 3 to position 1
     And I edit slide 2 title to "The Real Cost of AI Breaches"
     And I click "Approve Outline"
@@ -1770,7 +1771,7 @@ Feature: Carousel Creation with Enhanced Workflow
       | draft text       | "AI breaches cost $4.2M on avg..." |
       | sources used     | "Q1 2026 Breach Report"        |
       | confidence score | "0.92"                         |
-    
+
     When I edit slide 1 text to add a personal anecdote
     And I click "Approve Content"
     Then the project status should be "designing"
@@ -1778,20 +1779,20 @@ Feature: Carousel Creation with Enhanced Workflow
     When the design phase completes
     Then I should see the styled carousel preview
     And I should see a "Request Design Changes" button
-    
+
     When I click "Approve Design"
     Then the project status should be "image_generating"
 
     When the images phase completes
     Then I should see generated images for each slide
     And I should see an "Upload Custom Image" button
-    
+
     When I replace image 2 with a custom upload
     And I click "Approve Images"
     Then the project status should be "final_review"
     And I should see a quality score of "87/100"
     And I should see "All criteria passed"
-    
+
     When I click "Publish"
     Then the project status should be "published"
     And I should see "Carousel published successfully"
@@ -1893,7 +1894,7 @@ Feature: Blog Post Creation with Editorial Workflow
     And I click "Create Draft"
     Then the post status should be "draft"
     And I should see a rich text editor
-    
+
     When I type "AI security breaches are becoming more frequent..."
     And I click "AI Suggest"
     Then I should see suggestions:
@@ -1901,41 +1902,41 @@ Feature: Blog Post Creation with Editorial Workflow
       | improve     | "Add a specific statistic about 2026 breach costs" |
       | shorten     | "This paragraph is 200 words — consider splitting"   |
       | add_opinion | "Pedro's take: I predicted this in my 2024 talk..."  |
-    
+
     When I click the "add_opinion" suggestion
     Then the text should be inserted with Pedro's opinion
     And I should see "Added based on your persona"
-    
+
     When I upload an image " breach-chart.jpg"
     And I position it after paragraph 2
     Then the image should appear in the editor
     And I should see "Alt text: AI security breach cost chart showing..."
-    
+
     When I add a source reference:
       | type  | title                    | url                        |
       | url   | "2026 Breach Report"     | "https://example.com/..."  |
     Then the source should appear in the references section
     And in-text citations should be updated
-    
+
     When I click "Submit for Review"
     Then the post status should be "under_review"
     And "Pedro" should receive a review notification
-    
+
     When "Pedro" reviews the post
     And adds a comment on paragraph 3: "Add more detail about the Marriott case"
     And clicks "Request Changes"
     Then the post status should be "draft"
     And I should see the comment in the editor
-    
+
     When I address the comment by adding Marriott details
     And click "Resolve Comment"
     And click "Submit for Review" again
     Then the post status should be "under_review"
-    
+
     When "Pedro" approves the post
     Then the post status should be "approved"
     And I should see "Ready to publish"
-    
+
     When I click "Publish Now"
     Then the post status should be "published"
     And the post should be visible at "/blog/the-real-cost-of-ai-security-breaches"
@@ -1949,7 +1950,7 @@ Feature: Blog Post Creation with Editorial Workflow
     Then the AI should generate an image
     And I should see a preview of the generated image
     And I should see "Generated in 12 seconds"
-    
+
     When I click "Use This Image"
     Then the image should be inserted into the post
     And the alt text should be auto-generated
@@ -1965,11 +1966,11 @@ Feature: Blog Post Creation with Editorial Workflow
       | version | date       | author | change_summary              |
       | 5       | 2026-05-20 | Pedro  | "Added conclusion paragraph"|
       | 4       | 2026-05-19 | Pedro  | "Fixed typo in title"       |
-    
+
     When I select version 4
     And click "Preview Version"
     Then I should see the post as it appeared in version 4
-    
+
     When I click "Restore This Version"
     And confirm "This will create version 6 with the content from version 4"
     Then a new version 6 should be created
@@ -1998,7 +1999,7 @@ Feature: Blog Post Creation with Editorial Workflow
     Then the post status should be "approved"
     And I should see "Scheduled for June 1, 2026 at 9:00 AM"
     And the post should not be publicly visible
-    
+
     When the scheduled time arrives
     Then the post should automatically change status to "published"
     And I should receive a notification "Your post is now live"
@@ -2010,7 +2011,7 @@ Feature: Blog Post Creation with Editorial Workflow
     Then the post status should be "draft"
     And the public URL should return 404
     And SEO crawlers should see "noindex"
-    
+
     When I edit the post and add new content
     And click "Publish"
     Then the post should be visible again
@@ -2074,11 +2075,11 @@ Feature: Persona Profile Management
       | common_phrases                | ["Here's the thing", "What most people miss"] |
       | forbidden_patterns            | ["In today's world", "Let's dive in"]       |
     And I should see a persona preview with sample rewrite
-    
+
     When I adjust the "formality" slider to 0.3
     Then the sample rewrite should update in real-time
     And it should sound less formal
-    
+
     When I click "Save Persona"
     Then the persona should be saved
     And I should see "Persona 'Pedro's Professional Voice' created"
@@ -2095,7 +2096,7 @@ Feature: Persona Profile Management
       | pattern          | example                              |
       | strong_opinions  | "isn't just... it's eating them alive" |
       | vivid_language   | "eating them alive"                    |
-    
+
     When I generate another carousel
     Then the AI should use more vivid language and strong opinions
 
@@ -2154,97 +2155,124 @@ Feature: Persona Profile Management
 
 **Backend Tasks**
 
-- [ ] **AI-001**: Implement `PersonaAgent` with voice enforcement and scoring
-- [ ] **AI-002**: Implement `QualityAgent` with rubric evaluation
-- [ ] **AI-003**: Implement `FeedbackLearningLoop` for recording corrections
-- [ ] **AI-004**: Extend carousel workflow with 7 phases and human interrupt points
-- [ ] **AI-005**: Implement blog post AI assistance endpoints (`ai-suggest`, `ai-improve`, `generate-image`)
-- [ ] **AI-006**: Implement source synthesis agent (extract key points from uploaded materials)
-- [ ] **AI-007**: Implement outline generation with human-editable output
-- [ ] **AI-008**: Implement content draft generation with persona enforcement
-- [ ] **AI-009**: Implement quality auto-evaluation with threshold checks
-- [ ] **AI-010**: Add originality scoring using similarity detection
-- [ ] **CACHE-001**: Implement caching layer for AI prompt responses
-- [ ] **TEST-005**: Write tests for all AI agents
-- [ ] **OBS-001**: Implement Langfuse trace tree for carousel workflows (all phases visible)
-- [ ] **OBS-002**: Implement Langfuse trace tree for blog post workflows (independent creation)
-- [ ] **OBS-003**: Link blog post traces to parent carousel traces (cross-trace visibility)
-- [ ] **OBS-004**: Add `propagate_attributes()` for multi-agent workflow tracing
-- [ ] **OBS-005**: Implement custom spans for human review gates with events
-- [ ] **OBS-006**: Add Langfuse scores for quality, voice match, originality per trace
+- [x] **AI-001**: Implement `PersonaAgent` with voice enforcement and scoring
+- [x] **AI-002**: Implement `QualityAgent` with rubric evaluation
+- [x] **AI-003**: Implement `FeedbackLearningLoop` for recording corrections
+- [x] **AI-004**: Extend carousel workflow with 7 phases and human interrupt points
+- [x] **AI-005**: Implement blog post AI assistance endpoints (`ai-suggest`, `ai-improve`, `generate-image`)
+- [x] **AI-006**: Implement source synthesis agent (extract key points from uploaded materials)
+- [x] **AI-007**: Implement outline generation with human-editable output
+- [x] **AI-008**: Implement content draft generation with persona enforcement
+- [x] **AI-009**: Implement quality auto-evaluation with threshold checks
+- [x] **AI-010**: Add originality scoring using similarity detection
+- [x] **CACHE-001**: Implement caching layer for AI prompt responses
+- [x] **TEST-005**: Write tests for all AI agents
+- [x] **OBS-001**: Implement Langfuse trace tree for carousel workflows (all phases visible)
+- [x] **OBS-002**: Implement Langfuse trace tree for blog post workflows (independent creation)
+- [x] **OBS-003**: Link blog post traces to parent carousel traces (cross-trace visibility)
+- [x] **OBS-004**: Add `propagate_attributes()` for multi-agent workflow tracing
+- [x] **OBS-005**: Implement custom spans for human review gates with events
+- [x] **OBS-006**: Add Langfuse scores for quality, voice match, originality per trace
 
 **Frontend Tasks**
 
-- [ ] **UI-011**: Integrate AI suggestion panel into rich text editor
-- [ ] **UI-012**: Create AI image generation modal with prompt input and preview
-- [ ] **UI-013**: Create persona voice match scorer with real-time feedback
-- [ ] **UI-014**: Create quality rubric display with pass/fail indicators
-- [ ] **UI-015**: Implement workflow phase panels (research, outline, content, design, images)
-- [ ] **UI-016**: Implement real-time workflow status updates via SSE
-- [ ] **UI-017**: Create source material viewer with AI-extracted key points
+- [x] **UI-011**: Integrate AI suggestion panel into rich text editor
+- [x] **UI-012**: Create AI image generation modal with prompt input and preview
+- [x] **UI-013**: Create persona voice match scorer with real-time feedback
+- [x] **UI-014**: Create quality rubric display with pass/fail indicators
+- [x] **UI-015**: Implement workflow phase panels (research, outline, content, design, images)
+- [x] **UI-016**: Implement real-time workflow status updates via SSE
+- [x] **UI-017**: Create source material viewer with AI-extracted key points
 
 ### Phase 3: Workflow & Collaboration (Weeks 5-6)
 
 **Backend Tasks**
 
-- [ ] **WF-001**: Implement event-driven workflow engine with Kafka/Redis Streams
-- [ ] **WF-002**: Implement workflow persistence with checkpoints (LangGraph checkpointer)
-- [ ] **WF-003**: Implement phase approval/rejection with notification system
-- [ ] **WF-004**: Implement workflow audit log (event sourcing)
-- [ ] **WF-005**: Implement concurrent editing prevention (optimistic locking)
-- [ ] **NOTIF-001**: Implement notification system (email, in-app) for review requests
-- [ ] **NOTIF-002**: Implement deadline reminders for pending reviews
-- [ ] **SCHED-001**: Implement scheduled publishing with cron worker
-- [ ] **SCHED-002**: Implement content calendar view endpoint
+- [x] **WF-001**: Implement event-driven workflow engine with Kafka/Redis Streams
+- [x] **WF-002**: Implement workflow persistence with checkpoints (LangGraph checkpointer)
+- [x] **WF-003**: Implement phase approval/rejection with notification system
+- [x] **WF-004**: Implement workflow audit log (event sourcing)
+- [x] **WF-005**: Implement concurrent editing prevention (optimistic locking)
+- [x] **NOTIF-001**: Implement notification system (email, in-app) for review requests
+- [x] **NOTIF-002**: Implement deadline reminders for pending reviews
+- [x] **SCHED-001**: Implement scheduled publishing with cron worker
+- [x] **SCHED-002**: Implement content calendar view endpoint
 
 **Frontend Tasks**
 
-- [ ] **UI-018**: Create workflow Kanban board view
-- [ ] **UI-019**: Create notification center component
-- [ ] **UI-020**: Create content calendar view
-- [ ] **UI-021**: Implement collaborative editing with Yjs or Liveblocks
-- [ ] **UI-022**: Create review assignment interface
-- [ ] **UI-023**: Create diff view for version comparison
-- [ ] **UI-024**: Implement scheduled publish datetime picker
+- [x] **UI-018**: Create workflow Kanban board view
+- [x] **UI-019**: Create notification center component
+- [x] **UI-020**: Create content calendar view
+- [x] **UI-021**: Implement collaborative editing with Yjs or Liveblocks
+- [x] **UI-022**: Create review assignment interface
+- [x] **UI-023**: Create diff view for version comparison
+- [x] **UI-024**: Implement scheduled publish datetime picker
 
 ### Phase 4: Quality & Polish (Weeks 7-8)
 
 **Backend Tasks**
 
-- [ ] **QUAL-001**: Implement plagiarism detection integration
-- [ ] **QUAL-002**: Implement AI content disclosure labeling
-- [ ] **QUAL-003**: Implement SEO analysis endpoint
-- [ ] **QUAL-004**: Implement accessibility check (alt text, color contrast)
-- [ ] **PERF-001**: Optimize database queries for blog post listings
-- [ ] **PERF-002**: Implement CDN integration for image assets
-- [ ] **MON-001**: Add OpenTelemetry instrumentation for new services
-- [ ] **SEC-001**: Implement audit logging for all editorial actions
+- [x] **QUAL-001**: Implement plagiarism detection integration
+- [x] **QUAL-002**: Implement AI content disclosure labeling
+- [x] **QUAL-003**: Implement SEO analysis endpoint
+- [x] **QUAL-004**: Implement accessibility check (alt text, color contrast)
+- [x] **PERF-001**: Optimize database queries for blog post listings
+- [x] **PERF-002**: Implement CDN integration for image assets
+- [x] **MON-001**: Add OpenTelemetry instrumentation for new services
+- [x] **SEC-001**: Implement audit logging for all editorial actions
 
 **Frontend Tasks**
 
-- [ ] **UI-025**: Implement SEO preview component (title, description, social cards)
-- [ ] **UI-026**: Implement accessibility checker with warnings
-- [ ] **UI-027**: Create dashboard analytics (content velocity, quality scores)
-- [ ] **UI-028**: Implement search and filter for blog posts
-- [ ] **UI-029**: Create mobile-responsive workflow views
-- [ ] **UI-030**: Add keyboard shortcuts for editor
-- [ ] **I18N-001**: Add translations for all new UI text
+- [x] **UI-025**: Implement SEO preview component (title, description, social cards)
+- [x] **UI-026**: Implement accessibility checker with warnings
+- [x] **UI-027**: Create dashboard analytics (content velocity, quality scores)
+- [x] **UI-028**: Implement search and filter for blog posts
+- [x] **UI-029**: Create mobile-responsive workflow views
+- [x] **UI-030**: Add keyboard shortcuts for editor
+- [x] **I18N-001**: Add translations for all new UI text
 
 ### Phase 5: Migration & Launch (Week 9)
 
 **Tasks**
 
-- [ ] **MIG-001**: Migrate existing projects to new schema (creative_brief = concatenation of existing fields)
-- [ ] **MIG-002**: Create default persona from existing carousel outputs
-- [ ] **MIG-003**: Create default quality rubric
-- [ ] **MIG-004**: Backfill workflow state for in-progress projects
-- [ ] **DOC-001**: Update API documentation
-- [ ] **DOC-002**: Create user guide for new workflow features
-- [ ] **DOC-003**: Update architecture documentation
-- [ ] **DEPLOY-001**: Deploy to staging environment
-- [ ] **DEPLOY-002**: Run load tests on new endpoints
-- [ ] **DEPLOY-003**: Deploy to production with feature flags
-- [ ] **MON-002**: Set up alerts for workflow failures
+- [x] **MIG-001**: Migrate existing projects to new schema (creative_brief = concatenation of existing fields)
+- [x] **MIG-002**: Create default persona from existing carousel outputs
+- [x] **MIG-003**: Create default quality rubric
+- [x] **MIG-004**: Backfill workflow state for in-progress projects
+- [x] **DOC-001**: Update API documentation
+- [x] **DOC-002**: Create user guide for new workflow features
+- [x] **DOC-003**: Update architecture documentation
+- [x] **DEPLOY-001**: Deploy to staging environment
+- [x] **DEPLOY-002**: Run load tests on new endpoints
+- [x] **DEPLOY-003**: Deploy to production with feature flags
+- [x] **MON-002**: Set up alerts for workflow failures
+
+---
+
+## 12. Technical Debt Backlog (Post–Phase 5)
+
+Phase 2 QA remediation cleared all **blockers** (score: 78/100). Remaining items are deferred until after Phase 5 launch.
+
+**Full register:** [docs/TECHNICAL_DEBT.md](TECHNICAL_DEBT.md)
+
+| ID | Priority | Summary |
+|----|----------|---------|
+| TD-001 | P1 | `use-blog-posts.ts` → `authenticatedFetch`; remove stale `reviewer_id` |
+| TD-002 | P1 | Mutation score ≥ 70% (ADR-005) — carousel workflow + blog AI tests |
+| TD-003 | P1 | Vitest tests for Phase 2 UI components/hooks |
+| TD-004 | P1 | Wire Gherkin specs or demote to manual test plans |
+| TD-005 | P2 | Persist `FeedbackLearningLoop` to database |
+| TD-006 | P2 | Replace in-memory editorial workflow cache (Redis/checkpointer) |
+| TD-007 | P2 | Generic error responses in `documents.py` |
+| TD-008 | P2 | API route integration tests (blog AI, editorial workflow) |
+| TD-009 | P2 | Observability test coverage (OBS-003–006) |
+| TD-010 | P3 | i18n for AI hook error strings |
+| TD-011 | P3 | Wire `personaId` into `AiSuggestionPanel` |
+| TD-012 | P3 | Consolidate rubric threshold constants |
+| TD-013 | P3 | Strengthen prompt-injection defenses |
+| TD-014 | P3 | `documents.py` ruff cleanup |
+| TD-015 | P3 | Resolve npm moderate advisories |
+| TD-016 | P3 | Remove unused exports / document test-only APIs |
 
 ---
 

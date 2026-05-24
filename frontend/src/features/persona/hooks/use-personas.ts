@@ -2,10 +2,11 @@
  * Custom hook for managing persona profiles
  */
 
-import { useState, useEffect } from 'react';
-import type { PersonaProfile, PersonaCreatePayload, PersonaUpdatePayload } from '../types';
+import { useState, useEffect } from "react";
+import { authenticatedFetch } from "@/lib/authenticated-fetch";
+import type { PersonaProfile, PersonaCreatePayload, PersonaUpdatePayload } from "../types";
 
-const API_BASE = '/api';
+const API_BASE = "/api";
 
 export function usePersonas() {
   const [personas, setPersonas] = useState<PersonaProfile[]>([]);
@@ -15,72 +16,58 @@ export function usePersonas() {
   const fetchPersonas = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${API_BASE}/personas`);
+      const response = await authenticatedFetch(`${API_BASE}/personas`);
       if (!response.ok) {
-        throw new Error('Failed to fetch personas');
+        throw new Error("Failed to fetch personas");
       }
       const data = await response.json();
       setPersonas(data.items);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
+      setError(err instanceof Error ? err.message : "An error occurred");
     } finally {
       setLoading(false);
     }
   };
 
   const createPersona = async (data: PersonaCreatePayload) => {
-    try {
-      const response = await fetch(`${API_BASE}/personas`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      });
-      if (!response.ok) {
-        throw new Error('Failed to create persona');
-      }
-      const persona = await response.json();
-      setPersonas(prev => [persona, ...prev]);
-      return persona;
-    } catch (err) {
-      throw err;
+    const response = await authenticatedFetch(`${API_BASE}/personas`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+    if (!response.ok) {
+      throw new Error("Failed to create persona");
     }
+    const persona = await response.json();
+    setPersonas((prev) => [persona, ...prev]);
+    return persona;
   };
 
   const updatePersona = async (id: string, data: PersonaUpdatePayload) => {
-    try {
-      const response = await fetch(`${API_BASE}/personas/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      });
-      if (!response.ok) {
-        throw new Error('Failed to update persona');
-      }
-      const persona = await response.json();
-      setPersonas(prev => prev.map(p => p.id === id ? persona : p));
-      return persona;
-    } catch (err) {
-      throw err;
+    const response = await authenticatedFetch(`${API_BASE}/personas/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+    if (!response.ok) {
+      throw new Error("Failed to update persona");
     }
+    const persona = await response.json();
+    setPersonas((prev) => prev.map((p) => (p.id === id ? persona : p)));
+    return persona;
   };
 
   const deletePersona = async (id: string) => {
-    try {
-      const response = await fetch(`${API_BASE}/personas/${id}`, {
-        method: 'DELETE',
-      });
-      if (!response.ok) {
-        throw new Error('Failed to delete persona');
-      }
-      setPersonas(prev => prev.filter(p => p.id !== id));
-      return true;
-    } catch (err) {
-      throw err;
+    const response = await authenticatedFetch(`${API_BASE}/personas/${id}`, {
+      method: "DELETE",
+    });
+    if (!response.ok) {
+      throw new Error("Failed to delete persona");
     }
+    setPersonas((prev) => prev.filter((p) => p.id !== id));
+    return true;
   };
 
   useEffect(() => {
-    fetchPersonas();
+    void fetchPersonas();
   }, []);
 
   return {

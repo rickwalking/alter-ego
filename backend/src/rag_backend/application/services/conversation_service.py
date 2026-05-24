@@ -23,19 +23,24 @@ class ConversationService:
         self._max_context_tokens = max_context_tokens
 
     async def create_conversation(
-        self, title: str | None = None, metadata: dict[str, object] | None = None
+        self,
+        title: str | None = None,
+        metadata: dict[str, object] | None = None,
+        user_id: UUID | None = None,
     ) -> Conversation:
         """Create a new conversation.
 
         Args:
             title: Optional conversation title
             metadata: Optional metadata dictionary
+            user_id: Optional owner user UUID
 
         Returns:
             The created conversation
         """
         conversation = Conversation(
             title=title,
+            user_id=user_id,
             metadata=metadata or {},
         )
         return await self._conversation_repository.create(conversation)
@@ -135,17 +140,24 @@ class ConversationService:
         """
         return await self._conversation_repository.delete(conversation_id)
 
-    async def list_conversations(self, limit: int = 100, offset: int = 0) -> list[Conversation]:
-        """List all conversations.
-
-        Args:
-            limit: Maximum number to return
-            offset: Pagination offset
-
-        Returns:
-            List of conversations ordered by updated_at desc
-        """
+    async def list_conversations(
+        self,
+        limit: int = 100,
+        offset: int = 0,
+        user_id: UUID | None = None,
+    ) -> list[Conversation]:
+        """List conversations, optionally filtered by owner."""
+        if user_id is not None:
+            return await self._conversation_repository.get_by_user_id(
+                user_id=user_id,
+                limit=limit,
+                offset=offset,
+            )
         return await self._conversation_repository.get_all(limit=limit, offset=offset)
+
+    async def count_conversations_for_user(self, user_id: UUID) -> int:
+        """Count conversations owned by a user."""
+        return await self._conversation_repository.count_by_user_id(user_id)
 
     async def generate_title(self, conversation_id: UUID, llm_generate_func) -> str:
         """Generate a title for a conversation based on first message.

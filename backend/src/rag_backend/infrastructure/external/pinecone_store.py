@@ -103,7 +103,7 @@ class PineconeVectorStore:
 
     async def hybrid_search(
         self,
-        _query: str,
+        query: str,
         dense_embedding: list[float],
         sparse_embedding: SparseEmbedding,
         top_k: int = 5,

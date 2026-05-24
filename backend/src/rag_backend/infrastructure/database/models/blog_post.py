@@ -50,6 +50,7 @@ class BlogPostModel(Base):
     # AI Assistance
     ai_suggestions = Column(JSON, default=list, nullable=False)
     ai_generation_metadata = Column(JSON, default=dict, nullable=False)
+    ai_disclosure_label = Column(String(50), default="none", nullable=True)
 
     # SEO
     meta_title = Column(String(255), nullable=True)
@@ -75,12 +76,14 @@ class BlogPostModel(Base):
     approved_at = Column(DateTime(timezone=True), nullable=True)
     published_at = Column(DateTime(timezone=True), nullable=True)
     scheduled_publish_at = Column(DateTime(timezone=True), nullable=True)
+    lock_version = Column(Integer, default=1, nullable=False)
 
     __table_args__ = (
         Index("idx_blog_posts_status", "status"),
         Index("idx_blog_posts_slug", "slug"),
         Index("idx_blog_posts_author", "author_id"),
         Index("idx_blog_posts_project", "project_id"),
+        Index("idx_blog_posts_author_status_updated", "author_id", "status", "updated_at"),
     )
 
     content_sources = relationship(
@@ -108,6 +111,7 @@ class BlogPostModel(Base):
             "citations": self.citations,
             "ai_suggestions": self.ai_suggestions,
             "ai_generation_metadata": self.ai_generation_metadata,
+            "ai_disclosure_label": self.ai_disclosure_label,
             "meta_title": self.meta_title,
             "meta_description": self.meta_description,
             "keywords": self.keywords,
@@ -122,6 +126,7 @@ class BlogPostModel(Base):
             "approved_at": self.approved_at,
             "published_at": self.published_at,
             "scheduled_publish_at": self.scheduled_publish_at,
+            "lock_version": self.lock_version,
         }
 
     @classmethod
@@ -144,6 +149,7 @@ class BlogPostModel(Base):
             citations=entity.get("citations", []),
             ai_suggestions=entity.get("ai_suggestions", []),
             ai_generation_metadata=entity.get("ai_generation_metadata", {}),
+            ai_disclosure_label=entity.get("ai_disclosure_label", "none"),
             meta_title=entity.get("meta_title"),
             meta_description=entity.get("meta_description"),
             keywords=entity.get("keywords", []),
@@ -158,7 +164,5 @@ class BlogPostModel(Base):
             approved_at=entity.get("approved_at"),
             published_at=entity.get("published_at"),
             scheduled_publish_at=entity.get("scheduled_publish_at"),
+            lock_version=entity.get("lock_version", 1),
         )
-
-
-

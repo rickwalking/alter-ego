@@ -74,6 +74,16 @@ class CarouselProjectModel(Base):
     pdf_path = Column(String(500), nullable=True)
     pdf_path_en = Column(String(500), nullable=True)
     phase_progress = Column(JSON, nullable=True)
+
+    # NEW: Workflow extension fields
+    creative_brief = Column(Text, nullable=True)
+    persona_id = Column(String(36), ForeignKey("persona_profiles.id"), nullable=True)
+    rubric_id = Column(String(36), ForeignKey("quality_rubrics.id"), nullable=True)
+    instructions = Column(Text, nullable=True)
+    current_phase = Column(String(50), default="brief")
+    phase_status = Column(String(50), default="pending")
+    lock_version = Column(Integer, default=1, nullable=False)
+
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(
         DateTime(timezone=True),
@@ -135,6 +145,13 @@ class CarouselProjectModel(Base):
             pdf_path=self.pdf_path,
             pdf_path_en=self.pdf_path_en,
             phase_progress=self.phase_progress,
+            # NEW: workflow extension fields
+            creative_brief=self.creative_brief,
+            persona_id=self.persona_id,
+            rubric_id=self.rubric_id,
+            instructions=self.instructions,
+            current_phase=self.current_phase,
+            phase_status=self.phase_status,
             created_at=self.created_at,
             updated_at=self.updated_at,
         )
@@ -173,6 +190,13 @@ class CarouselProjectModel(Base):
             pdf_path=entity.pdf_path,
             pdf_path_en=entity.pdf_path_en,
             phase_progress=entity.phase_progress,
+            # NEW: workflow extension fields
+            creative_brief=entity.creative_brief,
+            persona_id=entity.persona_id,
+            rubric_id=entity.rubric_id,
+            instructions=entity.instructions,
+            current_phase=entity.current_phase,
+            phase_status=entity.phase_status,
             created_at=entity.created_at,
             updated_at=entity.updated_at,
         )
@@ -198,6 +222,13 @@ class CarouselProjectModel(Base):
         self.pdf_path = entity.pdf_path
         self.pdf_path_en = entity.pdf_path_en
         self.phase_progress = entity.phase_progress
+        # NEW: workflow extension fields
+        self.creative_brief = entity.creative_brief
+        self.persona_id = entity.persona_id
+        self.rubric_id = entity.rubric_id
+        self.instructions = entity.instructions
+        self.current_phase = entity.current_phase
+        self.phase_status = entity.phase_status
         self.updated_at = entity.updated_at
 
 

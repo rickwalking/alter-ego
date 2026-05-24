@@ -101,6 +101,11 @@ npm run lint                     # ESLint
 - **Test behavior, not implementation**
 - **Use MSW for API mocking**
 - **Unit tests in `tests/unit/`**, **E2E tests in `tests/e2e/`**
+- **Mutation testing** — StrykerJS runs weekly
+  - Thresholds: break: 50%, low: 60%, high: 70% for business logic
+  - Disable `Regex` and `ObjectLiteral` mutators (high noise)
+  - Run incrementally on PRs after 80%+ baseline established
+  - Focus on hooks and services (components are lower priority)
 
 ### Styling
 - **Tailwind CSS utility classes** — No custom CSS unless necessary
@@ -120,12 +125,29 @@ npm run lint                     # ESLint
   };
   ```
 
+### Workflow UI Patterns
+- **Approval gates** — Show clear action buttons (Approve / Request Changes / Reject)
+- **Phase indicators** — Visual progress through workflow stages
+- **Timeout warnings** — Show countdown for human review deadlines
+- **Conflict resolution** — Diff view when concurrent edits detected
+- **Version history** — Side-by-side comparison with restore capability
+- **AI suggestions** — Inline tooltips with "Apply" / "Dismiss" actions
+- **Source attribution** — Show which sources were used for each content section
+
 ### Accessibility
 - **WCAG 2.1 AA compliance**
 - **All interactive elements keyboard accessible**
 - **ARIA labels where needed**
 - **`aria-hidden="true"` on decorative icons**
 - **`role` attributes for semantic structure**
+
+## Architecture Decision Records
+
+See `../docs/decisions/` for all ADRs:
+- [ADR-001: Adopt MADR for ADRs](../docs/decisions/0001-adopt-madr-for-adrs.md)
+- [ADR-003: Implement Persona-Driven AI Content](../docs/decisions/0003-implement-persona-driven-ai-content.md)
+- [ADR-004: Adopt Event-Driven Architecture](../docs/decisions/0004-adopt-event-driven-architecture.md)
+- [ADR-005: Adopt Mutation Testing](../docs/decisions/0005-adopt-mutation-testing.md)
 
 ## Documentation References
 
@@ -134,3 +156,5 @@ npm run lint                     # ESLint
 - **Style Guide**: `../docs/guides/style-guide-2026.md`
 - **Testing Guide**: `../docs/guides/VITEST_TESTING_GUIDE.md`
 - **Zod Guide**: `../docs/guides/ZOD_VALIDATION_GUIDE.md`
+- **LangGraph Deep Agents Guide**: `../docs/architecture/langchain-deep-agents-guide.md`
+- **Professional Pivot Plan**: `../docs/PROFESSIONAL_PIVOT_PLAN.md`

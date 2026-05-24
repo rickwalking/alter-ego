@@ -726,6 +726,48 @@ structlog==24.4.0
    - Context isolation
    - Defensive system prompts
 
+## Phase 5: Migration & Launch
+
+### Data Migration Service
+
+`Phase5MigrationService` (`application/services/phase5_migration_service.py`) handles one-time migration:
+
+| Step | ID | Action |
+|------|-----|--------|
+| Creative brief | MIG-001 | Concatenate topic, audience, niche, title, etc. |
+| Default persona | MIG-002 | Derive writing samples from completed carousels |
+| Default rubric | MIG-003 | Create editorial quality rubric with 4 criteria |
+| Workflow state | MIG-004 | Map legacy `status` → `current_phase` / `phase_status` |
+
+CLI: `scripts/migrate_phase5.py` | API: `POST /api/admin/migration/phase5`
+
+### Feature Flags (DEPLOY-003)
+
+Settings (`infrastructure/config/settings.py`) expose boolean flags consumed by `api/dependencies/feature_flags.py`:
+
+- `FEATURE_FLAG_EDITORIAL_WORKFLOW`
+- `FEATURE_FLAG_QUALITY_CHECKS`
+- `FEATURE_FLAG_WORKFLOW_BOARD`
+- `FEATURE_FLAG_CONTENT_CALENDAR`
+
+Disabled flags return HTTP 503 on gated routers.
+
+### Workflow Failure Alerts (MON-002)
+
+`WorkflowFailureAlertService` runs in `workflow_workers.py` when `WORKFLOW_ALERTS_ENABLED=true`:
+
+- Recent carousel failures → admin in-app notifications + structured error logs
+- Stuck workflows (>48h) → warning logs
+- High failure rate (>10%/hour) → critical alert
+
+Alert rules: `docs/deployment/workflow-alerts.yaml`
+
+### Staging Deployment
+
+See `docs/deployment/STAGING_DEPLOY.md` and `docker-compose.staging.yml`.
+
+---
+
 ## Next Steps
 
 1. Set up development environment

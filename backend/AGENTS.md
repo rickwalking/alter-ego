@@ -192,4 +192,56 @@ Before submitting code:
 
 ---
 
+## Prompt Management
+
+### Prompts Live in `.md` and `.yaml` Files — Never in `.py`
+- **System prompts:** Stored as `.md` files in `src/rag_backend/agents/prompts/{agent}/{version}/system.md`
+- **Parameterized prompts:** Stored as `.yaml` files with Jinja2 templates in `src/rag_backend/agents/prompts/{domain}/{version}/{name}.yaml`
+- **Shared guidelines:** Stored in `src/rag_backend/agents/prompts/_shared/`
+- **Loading:** Use `get_system_prompt()` or `render_prompt()` from `agents.prompts.registry`
+
+### Prompt Registry Usage
+```python
+from rag_backend.agents.prompts.registry import get_system_prompt, render_prompt
+
+# Load system prompt from .md file
+system_prompt = get_system_prompt("rag", version="v1")
+
+# Render parameterized prompt from .yaml with Jinja2
+prompt_text, model_config = render_prompt(
+    "carousel", "content_prompt",
+    variables={"topic": "AI", "audience": "devs"},
+    version="v1",
+)
+```
+
+## Architecture Decision Records
+
+See `../docs/decisions/` for all ADRs:
+- [ADR-002: Use LangGraph for Workflow Engine](../docs/decisions/0002-use-langgraph-for-workflow-engine.md)
+- [ADR-003: Implement Persona-Driven AI Content](../docs/decisions/0003-implement-persona-driven-ai-content.md)
+- [ADR-005: Adopt Mutation Testing](../docs/decisions/0005-adopt-mutation-testing.md)
+- [ADR-006: Use JSONB for Rich Content](../docs/decisions/0006-use-jsonb-for-rich-content.md)
+
+## Observability (Langfuse)
+
+### All LLM Calls Must Be Traced
+- Every LLM invocation uses Langfuse `CallbackHandler` via `get_langfuse_handler()`
+- Metadata includes: `project_id`, `phase`, `agent_name`, `user_id`
+
+### Required Metadata for Traces
+| Field | Description | Example |
+|-------|-------------|---------|
+| `project_id` | Project UUID | `"550e8400..."` |
+| `phase` | Workflow phase | `"research"`, `"content_drafting"` |
+| `agent_name` | Agent/subagent name | `"researcher"` |
+| `user_id` | Human reviewer | `"pedro-user-id"` |
+
+### Example
+```python
+from rag_backend.monitoring_langfuse import get_langfuse_handler
+
+llm = ChatOpenAI(callbacks=[get_langfuse_handler()])
+```
+
 *These guidelines ensure consistency and quality across the backend codebase.*

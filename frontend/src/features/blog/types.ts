@@ -33,6 +33,7 @@ export interface BlogPost {
   approved_at?: string | null;
   published_at?: string | null;
   scheduled_publish_at?: string | null;
+  lock_version: number;
 }
 
 export interface BlogPostCreatePayload {
@@ -45,6 +46,7 @@ export interface BlogPostCreatePayload {
   meta_description?: string | null;
   keywords?: string[];
   author_id?: string | null;
+  reviewer_id?: string | null;
   sources?: string[];
   citations?: Record<string, unknown>[];
 }

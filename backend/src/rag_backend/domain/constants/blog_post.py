@@ -5,6 +5,7 @@ from enum import StrEnum
 
 class BlogPostStatus(StrEnum):
     """Blog post workflow status values."""
+
     DRAFT = "draft"
     UNDER_REVIEW = "under_review"
     APPROVED = "approved"
@@ -14,6 +15,7 @@ class BlogPostStatus(StrEnum):
 
 class EditorialCommentStatus(StrEnum):
     """Editorial comment status values."""
+
     OPEN = "open"
     RESOLVED = "resolved"
 
@@ -29,9 +31,9 @@ DEFAULT_FORBIDDEN_PHRASES = [
 ]
 
 __all__ = [
-    "BlogPostStatus",
-    "EditorialCommentStatus",
+    "DEFAULT_FORBIDDEN_PHRASES",
     "FORBIDDEN_PHRASE_IN_TODAYS_WORLD",
     "FORBIDDEN_PHRASE_LETS_DIVE_IN",
-    "DEFAULT_FORBIDDEN_PHRASES",
+    "BlogPostStatus",
+    "EditorialCommentStatus",
 ]

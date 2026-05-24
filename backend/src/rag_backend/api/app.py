@@ -1,5 +1,6 @@
 """FastAPI application factory with lifespan management."""
 
+import asyncio
 from contextlib import AsyncExitStack, asynccontextmanager
 from datetime import datetime
 from pathlib import Path
@@ -17,27 +18,39 @@ from rag_backend.api.middleware.request_logging import RequestLoggingMiddleware
 from rag_backend.api.middleware.security_headers import SecurityHeadersMiddleware
 from rag_backend.api.routes import (
     admin,
+    admin_migration,
     auth,
     blog_post,
+    blog_post_ai,
     blog_post_comments,
+    blog_post_quality,
     blog_post_versions,
     blog_post_workflow,
     carousels,
     chat_stream,
+    content_calendar,
     conversations,
     documents,
+    notifications,
     personas,
     rubrics,
     search,
     sources,
+    workflow_audit,
+    workflow_board,
 )
 from rag_backend.api.schemas import HealthCheckResponse, HealthResponse
+from rag_backend.application.workers.workflow_workers import run_workflow_workers
 from rag_backend.infrastructure.config.settings import Settings, get_settings
 from rag_backend.infrastructure.container import container
 from rag_backend.infrastructure.database.config import close_db, init_db
+from rag_backend.infrastructure.langfuse_client import init_langfuse
 from rag_backend.infrastructure.logging import get_logger, setup_logging
 from rag_backend.infrastructure.monitoring import init_langsmith
-from rag_backend.infrastructure.monitoring_langfuse import init_langfuse
+from rag_backend.infrastructure.telemetry.opentelemetry import (
+    init_opentelemetry,
+    instrument_fastapi,
+)
 
 logger = get_logger()
 
@@ -53,6 +66,11 @@ async def lifespan(app: FastAPI):
     settings = get_settings()
     setup_logging(debug=settings.debug)
     init_langsmith(settings)
+    init_opentelemetry(
+        service_name=settings.otel_service_name,
+        exporter_endpoint=settings.otel_exporter_endpoint,
+        enabled=settings.otel_enabled,
+    )
     langfuse_handler = init_langfuse(
         settings.langfuse_public_key,
         settings.langfuse_secret_key.get_secret_value() if settings.langfuse_secret_key else "",
@@ -77,8 +95,15 @@ async def lifespan(app: FastAPI):
     # sqlite (dev), postgres (prod), memory (ephemeral), disabled (no resume).
     async with AsyncExitStack() as stack:
         app.state.carousel_checkpointer = await _build_checkpointer(settings, stack)
+        worker_stop = asyncio.Event()
+        worker_task = asyncio.create_task(run_workflow_workers(settings, worker_stop))
+        app.state.workflow_worker_stop = worker_stop
+        app.state.workflow_worker_task = worker_task
 
         yield
+
+        worker_stop.set()
+        await worker_task
 
     logger.info("application_shutdown")
     await close_db()
@@ -114,11 +139,13 @@ async def _build_checkpointer(
             AsyncSqliteSaver.from_conn_string(settings.carousel_checkpoint_sqlite_path)
         )
     except Exception:
-        logger.warning("carousel_checkpoint_sqlite_fallback", hint="sqlite path not available, using memory")
+        logger.warning(
+            "carousel_checkpoint_sqlite_fallback", hint="sqlite path not available, using memory"
+        )
         return InMemorySaver()
 
 
-def create_app() -> FastAPI:  # noqa: C901, PLR0915 — app factory configures all middleware/routes
+def create_app() -> FastAPI:  # noqa: PLR0915 — app factory configures all middleware/routes
     """Create and configure the FastAPI application."""
     settings = get_settings()
 
@@ -225,24 +252,35 @@ def create_app() -> FastAPI:  # noqa: C901, PLR0915 — app factory configures a
     # API routes
     app.include_router(auth.router, prefix="/api")
     app.include_router(admin.router, prefix="/api")
+    app.include_router(admin_migration.router, prefix="/api")
     app.include_router(documents.router, prefix="/api")
     app.include_router(conversations.router, prefix="/api")
     app.include_router(search.router, prefix="/api")
     app.include_router(carousels.router, prefix="/api")
-    
+
     # New Phase 1 routes
     app.include_router(blog_post.router, prefix="/api")
+    app.include_router(blog_post_ai.router, prefix="/api")
     app.include_router(blog_post_workflow.router, prefix="/api")
     app.include_router(blog_post_versions.router, prefix="/api")
     app.include_router(blog_post_comments.router, prefix="/api")
+    app.include_router(blog_post_quality.router, prefix="/api")
     app.include_router(personas.router, prefix="/api")
     app.include_router(rubrics.router, prefix="/api")
     app.include_router(sources.router, prefix="/api")
+
+    # Phase 3: workflow, notifications, calendar
+    app.include_router(notifications.router, prefix="/api")
+    app.include_router(content_calendar.router, prefix="/api")
+    app.include_router(workflow_audit.router, prefix="/api")
+    app.include_router(workflow_board.router, prefix="/api")
 
     # SSE streaming chat endpoints
     app.include_router(chat_stream.router, prefix="/api")
 
     # Add error handlers
     add_error_handlers(app)
+
+    instrument_fastapi(app)
 
     return app

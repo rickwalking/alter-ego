@@ -11,6 +11,7 @@ from rag_backend.api.dependencies import (
     require_authenticated_user,
     require_editor_or_admin,
 )
+from rag_backend.api.dependencies.resource_access import assert_document_access
 from rag_backend.api.schemas import (
     DocumentCreate,
     DocumentListResponse,
@@ -48,7 +49,7 @@ async def upload_document(
     scope: str = "personal",
     is_public: bool = False,
     user: Annotated[User, Depends(require_editor_or_admin)] = None,
-    db: AsyncSession = Depends(get_session),  # noqa: FAST002
+    db: AsyncSession = Depends(get_session),
 ):
     """Upload a document file and process it immediately.
 
@@ -200,7 +201,7 @@ async def list_documents(
     status: Annotated[DocumentStatus | None, Query(description="Filter by status")] = None,
     limit: Annotated[int, Query(ge=1, le=100, description="Number of items to return")] = 20,
     offset: Annotated[int, Query(ge=0, description="Number of items to skip")] = 0,
-    db: AsyncSession = Depends(get_session),  # noqa: FAST002
+    db: AsyncSession = Depends(get_session),
 ):
     """List all documents with optional filtering.
 
@@ -209,8 +210,17 @@ async def list_documents(
     container = get_container()
     repo = container.document_repository(session=db)
 
-    documents = await repo.get_all(status=status, limit=limit, offset=offset)
-    total = await repo.count(status=status)
+    if user.is_admin():
+        documents = await repo.get_all(status=status, limit=limit, offset=offset)
+        total = await repo.count(status=status)
+    else:
+        documents = await repo.get_all_for_owner(
+            owner_id=user.id,
+            status=status,
+            limit=limit,
+            offset=offset,
+        )
+        total = await repo.count_for_owner(owner_id=user.id, status=status)
 
     return {
         "items": documents,
@@ -246,6 +256,7 @@ async def get_document(
             detail=f"Document with id {document_id} not found",
         )
 
+    assert_document_access(document, user)
     return document
 
 
@@ -273,6 +284,8 @@ async def get_document_status(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Document with id {document_id} not found",
         )
+
+    assert_document_access(document, user)
 
     # Get pipeline for estimation
     pipeline = container.document_pipeline(db_session=db)
@@ -308,6 +321,15 @@ async def delete_document(
     associated vectors from the vector store.
     """
     container = get_container()
+    repo = container.document_repository(session=db)
+    document = await repo.get_by_id(document_id)
+    if not document:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Document with id {document_id} not found",
+        )
+
+    assert_document_access(document, user)
     pipeline = container.document_pipeline(db_session=db)
 
     success = await pipeline.delete_document(str(document_id))
@@ -338,6 +360,15 @@ async def reprocess_document(
     This will delete existing vectors and regenerate chunks and embeddings.
     """
     container = get_container()
+    repo = container.document_repository(session=db)
+    document = await repo.get_by_id(document_id)
+    if not document:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Document with id {document_id} not found",
+        )
+
+    assert_document_access(document, user)
     pipeline = container.document_pipeline(db_session=db)
 
     try:

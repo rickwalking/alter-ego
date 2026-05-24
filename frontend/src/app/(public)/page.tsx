@@ -32,7 +32,6 @@ export default async function HomePage() {
 
   const data: CarouselProjectListResponse = await fetchCompletedProjects(3);
   const fallback = FALLBACK_DESIGN_TOKENS;
-  const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
   return (
     <div className="flex-1">
@@ -124,10 +123,7 @@ export default async function HomePage() {
                   | { images?: { hero?: string } }
                   | null
                   | undefined;
-                const heroPath = tokens?.images?.hero;
-                const imageUrl = heroPath
-                  ? `${apiBaseUrl}${heroPath}`
-                  : `${apiBaseUrl}/api/carousels/${post.id}/images/slide_1.jpg`;
+                const imageUrl = tokens?.images?.hero ?? "";
 
                 return (
                   <Link

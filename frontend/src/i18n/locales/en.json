@@ -10,8 +10,17 @@
       "chat": "Chat",
       "knowledgeBase": "Knowledge Base",
       "blog": "Blog",
-      "create": "Create"
-    }
+      "create": "Create",
+      "personas": "Personas",
+      "rubrics": "Rubrics",
+      "blogPosts": "Blog Posts",
+      "workflow": "Workflow",
+      "calendar": "Calendar",
+      "analytics": "Analytics",
+      "admin": "Admin"
+    },
+    "logout": "Logout",
+    "login": "Login"
   },
   "home": {
     "hero": {
@@ -212,6 +221,80 @@
       "error": "An error occurred while processing your request."
     }
   },
+  "blogEditorial": {
+    "aiPanelTitle": "AI Writing Assistant",
+    "voiceScorerTitle": "Voice Match Scorer",
+    "imageModalTitle": "Generate Featured Image",
+    "imagePromptPlaceholder": "Describe the image you want to generate...",
+    "generatedImageAlt": "Generated blog image preview",
+    "selectTextHint": "Select text in the editor to get targeted suggestions.",
+    "voiceScore": "Voice match: {score}",
+    "actions": {
+      "improve": "AI Suggest",
+      "shorten": "Shorten",
+      "addOpinion": "Add Opinion",
+      "applyImprovement": "Apply Improvement",
+      "apply": "Apply",
+      "cancel": "Cancel",
+      "generate": "Generate",
+      "useImage": "Use This Image",
+      "scoreVoice": "Score Voice"
+    },
+    "seo": {
+      "title": "SEO Preview",
+      "analyze": "Analyze SEO",
+      "analyzing": "Analyzing...",
+      "score": "Score: {score}",
+      "platform": {
+        "google": "Google",
+        "twitter": "Twitter/X",
+        "linkedin": "LinkedIn"
+      }
+    },
+    "accessibility": {
+      "title": "Accessibility Check",
+      "runCheck": "Run Check",
+      "checking": "Checking...",
+      "score": "Score: {score}",
+      "noIssues": "No accessibility issues found",
+      "hint": "Run a check to validate alt text and heading structure"
+    },
+    "shortcuts": {
+      "title": "Keyboard Shortcuts",
+      "close": "Close",
+      "actions": {
+        "save": "Save post",
+        "submitReview": "Submit for review",
+        "aiSuggest": "AI suggest",
+        "showHelp": "Show this help"
+      }
+    }
+  },
+  "editorialWorkflow": {
+    "title": "Editorial Workflow",
+    "currentPhase": "Current phase",
+    "phaseStatus": "Status",
+    "sourcesTitle": "Source Materials",
+    "noSources": "No sources added yet.",
+    "actions": {
+      "start": "Start Editorial Workflow",
+      "approve": "Approve Phase",
+      "reject": "Request Changes",
+      "refresh": "Refresh",
+      "extract": "Extract Key Points"
+    }
+  },
+  "rubrics": {
+    "evaluation": {
+      "title": "Evaluate Content",
+      "run": "Run Evaluation",
+      "score": "Score: {score}",
+      "passed": "Passed",
+      "failed": "Failed",
+      "pass": "pass",
+      "fail": "fail"
+    }
+  },
   "publish": {
     "loading": "Loading carousel…",
     "notFound": "Carousel not found.",
@@ -276,5 +359,111 @@
     "title": "Page Not Found",
     "description": "The page you are looking for does not exist.",
     "goHome": "Go Home"
+  },
+  "workflow": {
+    "board": {
+      "title": "Workflow Board",
+      "subtitle": "Track carousel projects across editorial phases.",
+      "noProjects": "No projects",
+      "retry": "Retry"
+    },
+    "calendar": {
+      "title": "Content Calendar",
+      "subtitle": "View scheduled and published content across blog posts and carousels.",
+      "empty": "No scheduled content in this range",
+      "scheduled": "Scheduled"
+    },
+    "kanban": {
+      "retry": "Retry"
+    },
+    "notifications": {
+      "title": "Notifications",
+      "ariaLabel": "Notifications",
+      "loading": "Loading...",
+      "empty": "No new notifications"
+    },
+    "collaboration": {
+      "lockedByOther": "{name} is currently editing this post. Your changes may conflict."
+    },
+    "review": {
+      "title": "Assign Reviewer",
+      "reviewerId": "Reviewer user ID",
+      "reviewerPlaceholder": "User UUID",
+      "deadlineHours": "Deadline (hours)",
+      "assigning": "Assigning...",
+      "assignNotify": "Assign & Notify",
+      "assigned": "Reviewer notified",
+      "failed": "Assignment failed"
+    },
+    "schedule": {
+      "title": "Schedule Publication",
+      "publishAt": "Publish at",
+      "scheduling": "Scheduling...",
+      "schedule": "Schedule",
+      "success": "Post scheduled successfully",
+      "failed": "Scheduling failed"
+    },
+    "diff": {
+      "previousVersion": "Previous version",
+      "currentDraft": "Current draft"
+    },
+    "errors": {
+      "loadBoardFailed": "Failed to load workflow board",
+      "loadCalendarFailed": "Failed to load calendar",
+      "loadNotificationsFailed": "Failed to load notifications",
+      "markReadFailed": "Failed to mark notification read",
+      "unknown": "Unknown error"
+    }
+  },
+  "dashboard": {
+    "blogPosts": {
+      "title": "Blog Posts",
+      "createPost": "Create Post",
+      "editPost": "Edit Blog Post",
+      "createNew": "Create New Blog Post",
+      "searchPlaceholder": "Search posts...",
+      "filterStatus": "Filter by status",
+      "allStatuses": "All statuses",
+      "noResults": "No posts match your filters",
+      "empty": "No blog posts yet. Create your first post to get started.",
+      "confirmDelete": "Are you sure you want to delete this blog post?",
+      "status": {
+        "draft": "Draft",
+        "under_review": "Under Review",
+        "approved": "Approved",
+        "published": "Published",
+        "archived": "Archived"
+      },
+      "fields": {
+        "title": "Title",
+        "slug": "Slug",
+        "excerpt": "Excerpt",
+        "metaTitle": "Meta Title",
+        "metaDescription": "Meta Description",
+        "reviewerId": "Reviewer ID",
+        "content": "Content"
+      },
+      "actions": {
+        "update": "Update",
+        "create": "Create",
+        "cancel": "Cancel",
+        "edit": "Edit",
+        "delete": "Delete",
+        "submitReview": "Submit for Review",
+        "approve": "Approve",
+        "publish": "Publish",
+        "generateImage": "Generate Image"
+      }
+    },
+    "analytics": {
+      "title": "Editorial Analytics",
+      "subtitle": "Content velocity and quality metrics",
+      "totalPosts": "Total Posts",
+      "publishedWeek": "Published This Week",
+      "pendingReview": "Pending Review",
+      "qualityScore": "Avg Quality Score",
+      "velocityTitle": "Publish Velocity (8 weeks)",
+      "loadFailed": "Failed to load analytics"
+    }
   }
 }

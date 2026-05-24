@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field
 
 class ToneAttributes(BaseModel):
     """Tone attributes for persona voice profile."""
+
     formal: Annotated[float, Field(ge=0.0, le=1.0)] = 0.3
     conversational: Annotated[float, Field(ge=0.0, le=1.0)] = 0.8
     humorous: Annotated[float, Field(ge=0.0, le=1.0)] = 0.4
@@ -16,6 +17,7 @@ class ToneAttributes(BaseModel):
 
 class PersonaProfileCreate(BaseModel):
     """Schema for creating a persona profile."""
+
     name: str = Field(..., min_length=1, max_length=255)
     description: str | None = None
     tone_attributes: ToneAttributes | None = None
@@ -30,6 +32,7 @@ class PersonaProfileCreate(BaseModel):
 
 class PersonaProfileUpdate(BaseModel):
     """Schema for updating a persona profile."""
+
     name: str | None = Field(None, min_length=1, max_length=255)
     description: str | None = None
     tone_attributes: ToneAttributes | None = None
@@ -44,6 +47,7 @@ class PersonaProfileUpdate(BaseModel):
 
 class PersonaProfileResponse(BaseModel):
     """Schema for persona profile response."""
+
     id: UUID
     name: str
     description: str | None = None
@@ -65,12 +69,14 @@ class PersonaProfileResponse(BaseModel):
 
 class PersonaProfileListResponse(BaseModel):
     """Schema for listing persona profiles."""
+
     items: list[PersonaProfileResponse]
     total: int
 
 
 class RubricCriterion(BaseModel):
     """Schema for a rubric criterion."""
+
     id: str
     name: str
     description: str
@@ -83,6 +89,7 @@ class RubricCriterion(BaseModel):
 
 class QualityRubricCreate(BaseModel):
     """Schema for creating a quality rubric."""
+
     name: str = Field(..., min_length=1, max_length=255)
     description: str | None = None
     criteria: list[RubricCriterion] = Field(default_factory=list)
@@ -92,6 +99,7 @@ class QualityRubricCreate(BaseModel):
 
 class QualityRubricUpdate(BaseModel):
     """Schema for updating a quality rubric."""
+
     name: str | None = Field(None, min_length=1, max_length=255)
     description: str | None = None
     criteria: list[RubricCriterion] | None = None
@@ -101,6 +109,7 @@ class QualityRubricUpdate(BaseModel):
 
 class QualityRubricResponse(BaseModel):
     """Schema for quality rubric response."""
+
     id: UUID
     name: str
     description: str | None = None
@@ -117,41 +126,74 @@ class QualityRubricResponse(BaseModel):
 
 class QualityRubricListResponse(BaseModel):
     """Schema for listing quality rubrics."""
+
     items: list[QualityRubricResponse]
     total: int
 
 
 class RubricEvaluationScore(BaseModel):
     """Schema for rubric evaluation score."""
+
     criterion_id: str
-    score: Annotated[float, Field(ge=0.0, le=1.0)]
+    score: Annotated[float, Field(ge=0.0, le=100.0)]
     weight: Annotated[float, Field(ge=0.0, le=1.0)]
     passed: bool
 
 
+class RubricEvaluationRequest(BaseModel):
+    """Request body for rubric content evaluation."""
+
+    content_type: str = Field(..., min_length=1, max_length=100)
+    content_text: str = Field(..., min_length=1, max_length=10000)
+    sources: list[str] = Field(default_factory=list)
+
+
 class RubricEvaluationResponse(BaseModel):
     """Schema for rubric evaluation response."""
+
     rubric_id: UUID
     content_id: UUID
     content_type: str
     evaluated_at: datetime
     scores: dict[str, RubricEvaluationScore]
-    overall_score: Annotated[float, Field(ge=0.0, le=1.0)]
+    overall_score: Annotated[float, Field(ge=0.0, le=100.0)]
     passed: bool
     feedback: list[dict]
 
 
+class VoiceScoreRequest(BaseModel):
+    """Request body for persona voice match scoring."""
+
+    text: str = Field(..., min_length=1, max_length=10000)
+
+
+class VoiceScoreResponse(BaseModel):
+    """Persona voice match scoring result."""
+
+    tone_match: float
+    sentence_structure_match: float
+    opinion_strength: float
+    originality: float
+    human_authenticity: float
+    overall: float
+    suggestions: list[str] = Field(default_factory=list)
+    passed: bool
+
+
 __all__ = [
     "PersonaProfileCreate",
-    "PersonaProfileUpdate",
-    "PersonaProfileResponse",
     "PersonaProfileListResponse",
-    "ToneAttributes",
+    "PersonaProfileResponse",
+    "PersonaProfileUpdate",
     "QualityRubricCreate",
-    "QualityRubricUpdate",
-    "QualityRubricResponse",
     "QualityRubricListResponse",
+    "QualityRubricResponse",
+    "QualityRubricUpdate",
     "RubricCriterion",
-    "RubricEvaluationScore",
+    "RubricEvaluationRequest",
     "RubricEvaluationResponse",
+    "RubricEvaluationScore",
+    "ToneAttributes",
+    "VoiceScoreRequest",
+    "VoiceScoreResponse",
 ]

@@ -5,11 +5,10 @@ from datetime import datetime
 from typing import TypedDict
 from uuid import UUID, uuid4
 
-from rag_backend.domain.constants import TONE_CONVERSATIONAL, TONE_FORMAL, TONE_HUMOROUS
-
 
 class ToneAttributes(TypedDict):
     """Tone attributes for persona voice profile."""
+
     formal: float
     conversational: float
     humorous: float
@@ -18,21 +17,28 @@ class ToneAttributes(TypedDict):
 @dataclass
 class PersonaProfile:
     """Persona profile capturing writing voice and style."""
+
     id: UUID = field(default_factory=uuid4)
     name: str = "Pedro's Professional Voice"
     description: str = "Professional, opinionated, authentic voice"
-    tone_attributes: ToneAttributes = field(default_factory=lambda: {
-        "formal": 0.3,
-        "conversational": 0.8,
-        "humorous": 0.4,
-    })
+    tone_attributes: ToneAttributes = field(
+        default_factory=lambda: {
+            "formal": 0.3,
+            "conversational": 0.8,
+            "humorous": 0.4,
+        }
+    )
     writing_samples: list[str] = field(default_factory=list)
     forbidden_phrases: list[str] = field(default_factory=list)
     preferred_phrases: list[str] = field(default_factory=list)
-    sentence_structure_preferences: str = "Short punchy sentences. Occasional longer ones for rhythm."
+    sentence_structure_preferences: str = (
+        "Short punchy sentences. Occasional longer ones for rhythm."
+    )
     paragraph_style: str = "1-3 sentences per paragraph. White space is key."
     opinion_expression: str = "Strong opinions, loosely held. Never neutral."
-    expertise_areas: list[str] = field(default_factory=lambda: ["cybersecurity", "entrepreneurship", "AI"])
+    expertise_areas: list[str] = field(
+        default_factory=lambda: ["cybersecurity", "entrepreneurship", "AI"]
+    )
     created_at: datetime = field(default_factory=datetime.utcnow)
     updated_at: datetime = field(default_factory=datetime.utcnow)
     version: int = 1

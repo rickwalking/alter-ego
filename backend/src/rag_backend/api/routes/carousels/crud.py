@@ -17,6 +17,7 @@ from rag_backend.api.dependencies import (
     require_authenticated_user,
     require_editor_or_admin,
 )
+from rag_backend.api.dependencies.resource_access import get_carousel_project_for_domain_user
 from rag_backend.api.schemas import (
     CarouselProjectCreate,
     CarouselProjectListResponse,
@@ -25,6 +26,7 @@ from rag_backend.api.schemas import (
 from rag_backend.domain.models import CarouselProject, CarouselStatus, User
 from rag_backend.domain.protocols import CarouselRepository
 from rag_backend.infrastructure.database.config import get_session
+from rag_backend.infrastructure.database.models.carousel import CarouselProjectModel
 
 from .deps import get_carousel_repo
 
@@ -35,8 +37,8 @@ router = APIRouter()
     "",
     status_code=status.HTTP_201_CREATED,
     responses={
-         401: {"description": ERR_NOT_AUTHENTICATED},
-         403: {"description": ERR_FORBIDDEN},
+        401: {"description": ERR_NOT_AUTHENTICATED},
+        403: {"description": ERR_FORBIDDEN},
     },
 )
 async def create_carousel(
@@ -61,14 +63,17 @@ async def create_carousel(
         theme=theme,
     )
     created = await repo.create_project(project)
-    await session.commit()
+    model = await session.get(CarouselProjectModel, str(created.id))
+    if model is not None:
+        model.owner_id = str(user.id)
+        await session.commit()
     return CarouselProjectResponse.model_validate(created)
 
 
 @router.get(
     "",
     responses={
-         401: {"description": ERR_NOT_AUTHENTICATED},
+        401: {"description": ERR_NOT_AUTHENTICATED},
     },
 )
 async def list_carousels(
@@ -92,17 +97,19 @@ async def list_carousels(
 @router.get(
     "/{project_id}",
     responses={
-         401: {"description": ERR_NOT_AUTHENTICATED},
-         403: {"description": ERR_FORBIDDEN},
-         404: {"description": ERR_NOT_FOUND},
+        401: {"description": ERR_NOT_AUTHENTICATED},
+        403: {"description": ERR_FORBIDDEN},
+        404: {"description": ERR_NOT_FOUND},
     },
 )
 async def get_carousel(
     project_id: UUID,
     user: Annotated[User, Depends(require_authenticated_user)],
     repo: Annotated[CarouselRepository, Depends(get_carousel_repo)],
+    session: Annotated[AsyncSession, Depends(get_session)],
 ) -> CarouselProjectResponse:
     """Get a carousel project by ID."""
+    await get_carousel_project_for_domain_user(session, project_id, user)
     project = await repo.get_project_by_id(project_id)
     if project is None:
         raise HTTPException(status_code=404, detail=ERR_CAROUSEL_NOT_FOUND)
@@ -113,17 +120,19 @@ async def get_carousel(
     "/{project_id}",
     status_code=status.HTTP_204_NO_CONTENT,
     responses={
-         401: {"description": ERR_NOT_AUTHENTICATED},
-         403: {"description": ERR_FORBIDDEN},
-         404: {"description": ERR_NOT_FOUND},
+        401: {"description": ERR_NOT_AUTHENTICATED},
+        403: {"description": ERR_FORBIDDEN},
+        404: {"description": ERR_NOT_FOUND},
     },
 )
 async def delete_carousel(
     project_id: UUID,
     user: Annotated[User, Depends(require_authenticated_user)],
     repo: Annotated[CarouselRepository, Depends(get_carousel_repo)],
+    session: Annotated[AsyncSession, Depends(get_session)],
 ) -> None:
     """Delete a carousel project and its output files."""
+    await get_carousel_project_for_domain_user(session, project_id, user)
     project = await repo.get_project_by_id(project_id)
     if project is None:
         raise HTTPException(status_code=404, detail=ERR_CAROUSEL_NOT_FOUND)

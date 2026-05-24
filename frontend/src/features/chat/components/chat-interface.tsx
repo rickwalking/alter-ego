@@ -3,11 +3,9 @@
 import { useState, useCallback, useMemo } from "react";
 import {
   useConversations,
-  useConversationMessages,
   useCreateConversation,
-  useSendMessage,
 } from "../hooks/use-chat";
-import { type Message } from "@/schemas/chat";
+import { useSseChat } from "../hooks/use-sse-chat";
 import { MessageList } from "./message-list";
 import { MessageInput } from "./message-input";
 import { ConversationSidebar } from "./conversation-sidebar";
@@ -15,9 +13,10 @@ import { ConversationSidebar } from "./conversation-sidebar";
 export function ChatInterface() {
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
   const [isComposingNewChat, setIsComposingNewChat] = useState(false);
-  const [optimisticMessages, setOptimisticMessages] = useState<Message[]>([]);
 
   const { data: conversations = [], isLoading: loadingConversations } = useConversations();
+  const createConversation = useCreateConversation();
+
   const effectiveConversationId = useMemo(
     () =>
       isComposingNewChat
@@ -25,61 +24,51 @@ export function ChatInterface() {
         : activeConversationId ?? (conversations.length > 0 ? conversations[0].id : null),
     [activeConversationId, conversations, isComposingNewChat],
   );
-  const { data: messages = [], isLoading: loadingMessages } = useConversationMessages(effectiveConversationId);
-  const createConversation = useCreateConversation();
-  const sendMessage = useSendMessage();
 
-  const isLoading = sendMessage.isPending || loadingMessages;
-  const displayMessages = [...messages, ...optimisticMessages];
+  const {
+    conversationId: sseConversationId,
+    messages: sseMessages,
+    isStreaming,
+    error: sseError,
+    sendMessage: sendSseMessage,
+    startNewChat: startSseNewChat,
+  } = useSseChat({ conversationId: effectiveConversationId });
 
-  const handleSendMessage = useCallback(async (content: string) => {
-    if (!content.trim()) return;
+  const handleSendMessage = useCallback(
+    async (content: string) => {
+      if (!content.trim()) return;
 
-    let convId = effectiveConversationId;
+      // If no conversation is active, create one first so the sidebar knows
+      let convId = effectiveConversationId;
+      if (!convId && isComposingNewChat) {
+        const newConv = await createConversation.mutateAsync({});
+        convId = newConv.id;
+        setActiveConversationId(convId);
+        setIsComposingNewChat(false);
+      }
 
-    if (!convId) {
-      const newConv = await createConversation.mutateAsync({});
-      convId = newConv.id;
-      setActiveConversationId(convId);
-      setIsComposingNewChat(false);
-    }
-
-    const optimisticMsg: Message = {
-      id: `opt-${Date.now()}`,
-      role: "user",
-      content,
-      sources: [],
-      created_at: new Date().toISOString(),
-    };
-    setOptimisticMessages((prev) => [...prev, optimisticMsg]);
-
-    try {
-      const response = await sendMessage.mutateAsync({ conversationId: convId, content });
-
-      const assistantMsg: Message = {
-        id: `opt-res-${Date.now()}`,
-        role: "assistant",
-        content: response.content,
-        sources: response.sources,
-        created_at: new Date().toISOString(),
-      };
-      setOptimisticMessages((prev) => [...prev, assistantMsg]);
-    } catch {
-      setOptimisticMessages((prev) => prev.filter((m) => m.id !== optimisticMsg.id));
-    }
-  }, [effectiveConversationId, createConversation, sendMessage]);
+      await sendSseMessage(content, convId ?? undefined);
+    },
+    [effectiveConversationId, isComposingNewChat, createConversation, sendSseMessage],
+  );
 
   const handleNewChat = useCallback(() => {
     setActiveConversationId(null);
     setIsComposingNewChat(true);
-    setOptimisticMessages([]);
-  }, []);
+    startSseNewChat();
+  }, [startSseNewChat]);
 
-  const handleSelectConversation = useCallback((id: string) => {
-    setActiveConversationId(id);
-    setIsComposingNewChat(false);
-    setOptimisticMessages([]);
-  }, []);
+  const handleSelectConversation = useCallback(
+    (id: string) => {
+      setActiveConversationId(id);
+      setIsComposingNewChat(false);
+      startSseNewChat();
+    },
+    [startSseNewChat],
+  );
+
+  const displayConversationId = sseConversationId ?? effectiveConversationId;
+  const isLoading = isStreaming;
 
   return (
     <div className="flex h-[calc(100vh-3.5rem)]">
@@ -92,8 +81,13 @@ export function ChatInterface() {
       />
       <div className="flex flex-1 flex-col">
         <div className="flex-1 overflow-auto">
-          <MessageList messages={displayMessages} />
+          <MessageList messages={sseMessages} isStreaming={isStreaming} />
         </div>
+        {sseError && (
+          <div className="border-t border-destructive/20 bg-destructive/10 px-4 py-2 text-destructive text-sm">
+            {sseError}
+          </div>
+        )}
         <MessageInput
           onSend={handleSendMessage}
           isLoading={isLoading}

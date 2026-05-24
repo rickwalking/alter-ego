@@ -15,6 +15,7 @@ import {
   Spinner,
 } from "@/components/ui";
 import { useRubrics } from "@/features/rubrics/hooks/use-rubrics";
+import { RubricEvaluationPanel } from "@/features/rubrics/components/rubric-evaluation-panel";
 import type { QualityRubric, QualityRubricCreatePayload, RubricCriterion } from "@/features/rubrics/types";
 
 export default function RubricsPage() {
@@ -320,6 +321,7 @@ export default function RubricsPage() {
                     </Badge>
                   ))}
                 </div>
+                <RubricEvaluationPanel rubricId={rubric.id} />
               </CardContent>
             </Card>
           ))

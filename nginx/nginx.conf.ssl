@@ -38,8 +38,6 @@ http {
 
     # Rate limiting
     limit_req_zone $binary_remote_addr zone=api:10m rate=10r/s;
-    limit_req_zone $binary_remote_addr zone=ws:10m rate=5r/s;
-    limit_req_zone $binary_remote_addr zone=chat_ws:10m rate=1r/s;
     limit_req_zone $binary_remote_addr zone=chat_api:10m rate=6r/m;
 
     # Preserve original protocol from upstream proxy (or fallback to $scheme)
@@ -93,7 +91,7 @@ http {
         add_header Referrer-Policy "origin-when-cross-origin" always;
         add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
 
-        # Frontend (Next.js)
+        # Frontend (Next.js) — never cache (prevents Cloudflare from caching)
         location / {
             proxy_pass http://frontend;
             proxy_http_version 1.1;
@@ -104,6 +102,39 @@ http {
             proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
             proxy_set_header X-Forwarded-Proto $real_scheme;
             proxy_cache_bypass $http_upgrade;
+            proxy_hide_header Cache-Control;
+            add_header Cache-Control "private, no-cache, no-store, must-revalidate" always;
+            expires 0;
+            proxy_no_cache 1;
+            proxy_cache_bypass 1;
+        }
+
+        # Publish route — never cache (prevents Cloudflare from caching SSR errors)
+        location ~* ^/create/[^/]+/publish {
+            proxy_pass http://frontend;
+            proxy_http_version 1.1;
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection "upgrade";
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $real_scheme;
+            proxy_cache_bypass $http_upgrade;
+            # Hide Cloudflare geo headers that crash Next.js middleware (non-ASCII chars)
+            proxy_hide_header cf-ipcity;
+            proxy_hide_header cf-ipcountry;
+            proxy_hide_header cf-iplatitude;
+            proxy_hide_header cf-iplongitude;
+            proxy_hide_header cf-ipcontinent;
+            proxy_hide_header cf-region;
+            proxy_hide_header cf-region-code;
+            proxy_hide_header cf-metro-code;
+            proxy_hide_header cf-postal-code;
+            proxy_hide_header cf-timezone;
+            add_header Cache-Control "private, no-cache, no-store, must-revalidate" always;
+            expires 0;
+            proxy_no_cache 1;
+            proxy_cache_bypass 1;
         }
 
         # Health check (backend serves at /health, not /api/health)
@@ -134,6 +165,7 @@ http {
             limit_req zone=chat_api burst=3 nodelay;
             proxy_pass http://backend/api/conversations/;
             proxy_http_version 1.1;
+            proxy_buffering off;
             proxy_set_header Host $host;
             proxy_set_header X-Real-IP $remote_addr;
             proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -141,32 +173,6 @@ http {
             proxy_set_header X-Forwarded-Host $host;
         }
 
-        # WebSocket for chat
-        location /ws/ {
-            limit_req zone=ws burst=10 nodelay;
-            proxy_pass http://backend/ws/;
-            proxy_http_version 1.1;
-            proxy_set_header Upgrade $http_upgrade;
-            proxy_set_header Connection "upgrade";
-            proxy_set_header Host $host;
-            proxy_set_header X-Real-IP $remote_addr;
-            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-            proxy_set_header X-Forwarded-Proto $real_scheme;
-            proxy_read_timeout 86400;
-        }
-
-        # Chat WebSocket — stricter rate limit
-        location /ws/chat/ {
-            limit_req zone=chat_ws burst=5 nodelay;
-            proxy_pass http://backend/ws/chat/;
-            proxy_http_version 1.1;
-            proxy_set_header Upgrade $http_upgrade;
-            proxy_set_header Connection "upgrade";
-            proxy_set_header Host $host;
-            proxy_set_header X-Real-IP $remote_addr;
-            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-            proxy_set_header X-Forwarded-Proto $real_scheme;
-            proxy_read_timeout 86400;
-        }
+        # SSE streaming endpoints are handled by /api/ location above
     }
 }

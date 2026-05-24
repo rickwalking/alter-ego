@@ -50,8 +50,8 @@ describe("API_ENDPOINTS", () => {
     expect(API_ENDPOINTS.DOCUMENTS).toBe("/api/documents");
   });
 
-  it("preserves CONVERSATIONS endpoint", () => {
-    expect(API_ENDPOINTS.CONVERSATIONS).toBe("/api/conversations");
+  it("preserves CONVERSATIONS endpoint with trailing slash", () => {
+    expect(API_ENDPOINTS.CONVERSATIONS).toBe("/api/conversations/");
   });
 
   it("preserves SEARCH endpoint", () => {

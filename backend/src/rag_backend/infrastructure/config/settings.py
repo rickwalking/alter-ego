@@ -75,6 +75,39 @@ class Settings(BaseSettings):
 
     carousel_public_base_url: str = ""
 
+    cdn_base_url: str = ""
+    cdn_enabled: bool = False
+
+    otel_enabled: bool = False
+    otel_exporter_endpoint: str = ""
+    otel_service_name: str = "rag-backend"
+
+    redis_url: str = ""
+    workflow_worker_interval_seconds: int = 60
+
+    feature_flag_editorial_workflow: bool = True
+    feature_flag_quality_checks: bool = True
+    feature_flag_workflow_board: bool = True
+    feature_flag_content_calendar: bool = True
+    workflow_alerts_enabled: bool = True
+
+    @property
+    def feature_flags(self) -> dict[str, bool]:
+        """Feature flag map for gradual rollout (DEPLOY-003)."""
+        from rag_backend.domain.constants.feature_flags import (
+            FLAG_CONTENT_CALENDAR,
+            FLAG_EDITORIAL_WORKFLOW,
+            FLAG_QUALITY_CHECKS,
+            FLAG_WORKFLOW_BOARD,
+        )
+
+        return {
+            FLAG_EDITORIAL_WORKFLOW: self.feature_flag_editorial_workflow,
+            FLAG_QUALITY_CHECKS: self.feature_flag_quality_checks,
+            FLAG_WORKFLOW_BOARD: self.feature_flag_workflow_board,
+            FLAG_CONTENT_CALENDAR: self.feature_flag_content_calendar,
+        }
+
 
 @lru_cache
 def get_settings() -> Settings:

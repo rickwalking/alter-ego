@@ -11,7 +11,7 @@ from rag_backend.infrastructure.database.models import UserModel
 @pytest.fixture
 async def client():
     """Create async test client with in-memory SQLite and auth."""
-    from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
+    from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 
     import rag_backend.infrastructure.database.config as db_config
     from rag_backend.infrastructure.database.config import Base, close_db
@@ -89,7 +89,7 @@ class TestPersonaEndpoints:
         create_payload = {"name": "Get Test", "description": "For get test"}
         create_response = await client.post("/api/personas", json=create_payload)
         created = create_response.json()
-        
+
         # Then get it
         response = await client.get(f"/api/personas/{created['id']}")
         assert response.status_code == 200
@@ -103,7 +103,7 @@ class TestPersonaEndpoints:
         create_payload = {"name": "Update Test", "description": "Before update"}
         create_response = await client.post("/api/personas", json=create_payload)
         created = create_response.json()
-        
+
         # Then update it
         update_payload = {"name": "Updated Name", "description": "After update"}
         response = await client.put(f"/api/personas/{created['id']}", json=update_payload)
@@ -119,7 +119,7 @@ class TestPersonaEndpoints:
         create_payload = {"name": "Delete Test"}
         create_response = await client.post("/api/personas", json=create_payload)
         created = create_response.json()
-        
+
         # Then delete it
         response = await client.delete(f"/api/personas/{created['id']}")
         assert response.status_code == 204
@@ -200,7 +200,7 @@ class TestBlogPostEndpoints:
         create_payload = {"title": "Get Test", "slug": "get-test"}
         create_response = await client.post("/api/blog-posts", json=create_payload)
         created = create_response.json()
-        
+
         # Then get it
         response = await client.get(f"/api/blog-posts/{created['id']}")
         assert response.status_code == 200
@@ -214,13 +214,82 @@ class TestBlogPostEndpoints:
         create_payload = {"title": "Update Test", "slug": "update-test"}
         create_response = await client.post("/api/blog-posts", json=create_payload)
         created = create_response.json()
-        
-        # Then update it
+
+        # Then update it with optimistic locking
         update_payload = {"title": "Updated Title"}
-        response = await client.put(f"/api/blog-posts/{created['id']}", json=update_payload)
+        response = await client.put(
+            f"/api/blog-posts/{created['id']}",
+            json=update_payload,
+            headers={"If-Match": str(created.get("lock_version", 1))},
+        )
         assert response.status_code == 200
         data = response.json()
         assert data["title"] == "Updated Title"
+
+    @pytest.mark.asyncio
+    async def test_update_blog_post_requires_if_match(self, client: AsyncClient):
+        """Test that blog post update requires If-Match header."""
+        create_payload = {"title": "Lock Test", "slug": "lock-test"}
+        create_response = await client.post("/api/blog-posts", json=create_payload)
+        created = create_response.json()
+
+        response = await client.put(
+            f"/api/blog-posts/{created['id']}",
+            json={"title": "No Header"},
+        )
+        assert response.status_code == 428
+
+    @pytest.mark.asyncio
+    async def test_update_blog_post_rejects_status_change(self, client: AsyncClient):
+        """Non-admin cannot bypass workflow by setting status on PUT."""
+        create_payload = {"title": "Status Bypass Test", "slug": "status-bypass-test"}
+        create_response = await client.post("/api/blog-posts", json=create_payload)
+        created = create_response.json()
+
+        response = await client.put(
+            f"/api/blog-posts/{created['id']}",
+            json={"status": "published"},
+            headers={"If-Match": str(created.get("lock_version", 1))},
+        )
+        assert response.status_code == 400
+        assert response.json()["detail"] == "workflow_field_immutable"
+
+    @pytest.mark.asyncio
+    async def test_update_blog_post_rejects_status_change_for_admin(self, client: AsyncClient):
+        """Admin cannot bypass workflow by setting status on PUT."""
+        create_payload = {"title": "Admin Status Bypass", "slug": "admin-status-bypass"}
+        create_response = await client.post("/api/blog-posts", json=create_payload)
+        created = create_response.json()
+
+        response = await client.put(
+            f"/api/blog-posts/{created['id']}",
+            json={"status": "published"},
+            headers={"If-Match": str(created.get("lock_version", 1))},
+        )
+        assert response.status_code == 400
+        assert response.json()["detail"] == "workflow_field_immutable"
+
+    @pytest.mark.asyncio
+    async def test_update_blog_post_version_conflict(self, client: AsyncClient):
+        """Stale If-Match should return 409 version_conflict."""
+        create_payload = {"title": "Conflict Test", "slug": "conflict-test"}
+        create_response = await client.post("/api/blog-posts", json=create_payload)
+        created = create_response.json()
+        initial_version = created.get("lock_version", 1)
+
+        first_update = await client.put(
+            f"/api/blog-posts/{created['id']}",
+            json={"title": "First Update"},
+            headers={"If-Match": str(initial_version)},
+        )
+        assert first_update.status_code == 200
+
+        response = await client.put(
+            f"/api/blog-posts/{created['id']}",
+            json={"title": "Stale Update"},
+            headers={"If-Match": str(initial_version)},
+        )
+        assert response.status_code == 409
 
     @pytest.mark.asyncio
     async def test_delete_blog_post(self, client: AsyncClient):
@@ -229,7 +298,7 @@ class TestBlogPostEndpoints:
         create_payload = {"title": "Delete Test", "slug": "delete-test"}
         create_response = await client.post("/api/blog-posts", json=create_payload)
         created = create_response.json()
-        
+
         # Then delete it
         response = await client.delete(f"/api/blog-posts/{created['id']}")
         assert response.status_code == 204
@@ -237,25 +306,44 @@ class TestBlogPostEndpoints:
     @pytest.mark.asyncio
     async def test_blog_post_workflow(self, client: AsyncClient):
         """Test the full blog post workflow."""
-        # Create a blog post
-        create_payload = {"title": "Workflow Test", "slug": "workflow-test"}
+        from sqlalchemy.ext.asyncio import AsyncSession
+
+        import rag_backend.infrastructure.database.config as db_config
+
+        async with AsyncSession(db_config.c_engine) as session:
+            reviewer = UserModel(
+                id="workflow-reviewer-id",
+                email="reviewer@example.com",
+                full_name="Workflow Reviewer",
+                hashed_password="hashed-password",
+                role=UserRole.EDITOR,
+            )
+            session.add(reviewer)
+            await session.commit()
+
+        # Create a blog post owned by admin
+        create_payload = {
+            "title": "Workflow Test",
+            "slug": "workflow-test",
+            "author_id": "test-user-id",
+        }
         create_response = await client.post("/api/blog-posts", json=create_payload)
         post = create_response.json()
-        
-        # Submit for review
-        review_response = await client.post(f"/api/blog-posts/{post['id']}/submit-review")
+
+        # Submit for review with explicit reviewer (not the author)
+        review_response = await client.post(
+            f"/api/blog-posts/{post['id']}/submit-review?reviewer_id=workflow-reviewer-id",
+        )
         assert review_response.status_code == 200
         reviewed = review_response.json()
         assert reviewed["status"] == "under_review"
-        
-        # Approve
-        approve_response = await client.post(
-            f"/api/blog-posts/{post['id']}/approve?reviewer_id=test-reviewer"
-        )
+
+        # Approve as admin (assigned reviewer or admin)
+        approve_response = await client.post(f"/api/blog-posts/{post['id']}/approve")
         assert approve_response.status_code == 200
         approved = approve_response.json()
         assert approved["status"] == "approved"
-        
+
         # Publish
         publish_response = await client.post(f"/api/blog-posts/{post['id']}/publish")
         assert publish_response.status_code == 200

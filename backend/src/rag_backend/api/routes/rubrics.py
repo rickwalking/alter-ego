@@ -3,27 +3,49 @@
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.api.dependencies.database import get_db
 from rag_backend.api.dependencies.roles import EditorUser
+from rag_backend.api.middleware.rate_limiting import limiter
 from rag_backend.api.schemas.persona_rubric import (
     QualityRubricCreate,
     QualityRubricListResponse,
     QualityRubricResponse,
     QualityRubricUpdate,
+    RubricEvaluationRequest,
     RubricEvaluationResponse,
 )
+from rag_backend.application.services.quality_evaluation_service import QualityEvaluationService
+from rag_backend.domain.constants.rate_limits import RATE_LIMIT_AI_ENDPOINTS
+from rag_backend.domain.models.rubric import QualityRubric
+from rag_backend.infrastructure.container import get_container
 from rag_backend.infrastructure.database.models import (
     QualityRubricModel,
     RubricEvaluationScoreModel,
 )
 
-MIN_PASSING_SCORE = 0.7
+MIN_PASSING_SCORE = 70.0
 
 router = APIRouter(tags=["rubrics"])
+
+
+def _to_domain_rubric(model: QualityRubricModel) -> QualityRubric:
+    return QualityRubric(
+        id=UUID(str(model.id)),
+        name=model.name,
+        description=model.description or "",
+        criteria=model.criteria or [],
+        applicable_content_types=model.applicable_content_types or [],
+        is_default=model.is_default,
+    )
+
+
+def _build_quality_service() -> QualityEvaluationService:
+    container = get_container()
+    return QualityEvaluationService(llm=container.llm_service().chat_model)
 
 
 @router.post(
@@ -154,18 +176,15 @@ async def delete_rubric(
     response_model=RubricEvaluationResponse,
     summary="Evaluate content",
 )
+@limiter.limit(RATE_LIMIT_AI_ENDPOINTS)
 async def evaluate_content(
+    request: Request,
     rubric_id: UUID,
+    body: RubricEvaluationRequest,
     db: Annotated[AsyncSession, Depends(get_db)],
     current_user: EditorUser,
-    content_type: str = Query(...),
-    content_text: str = Query(..., min_length=1),
 ) -> RubricEvaluationResponse:
-    """Evaluate content against a rubric.
-
-    Performs a basic deterministic evaluation based on content metrics.
-    In production, this should be replaced with AI-powered evaluation.
-    """
+    """Evaluate content against a rubric using QualityAgent."""
     rubric = await db.get(QualityRubricModel, str(rubric_id))
     if not rubric:
         raise HTTPException(
@@ -173,50 +192,42 @@ async def evaluate_content(
             detail=f"Rubric not found: {rubric_id}",
         )
 
-    content_length = len(content_text)
-    word_count = len(content_text.split())
+    service = _build_quality_service()
+    domain_rubric = _to_domain_rubric(rubric)
+    evaluation_result = await service.evaluate_with_thresholds(
+        rubric=domain_rubric,
+        content=body.content_text,
+        sources=body.sources or None,
+        project_id=rubric_id,
+        user_id=current_user.id,
+        content_type=body.content_type,
+    )
 
+    criteria_scores = evaluation_result.get("criteria_scores", {})
     scores: dict[str, dict[str, object]] = {}
-    overall_score = 0.0
-    total_weight = 0.0
+    if isinstance(criteria_scores, dict):
+        for criterion_id, data in criteria_scores.items():
+            if isinstance(data, dict):
+                scores[str(criterion_id)] = {
+                    "score": float(data.get("score", 0)),
+                    "weight": float(data.get("weight", 0)),
+                    "passed": bool(data.get("passed", False)),
+                }
 
-    for criterion in rubric.criteria:
-        criterion_id = criterion.get("id", "unknown")
-        weight = criterion.get("weight", 0.25)
-        min_threshold = criterion.get("min_threshold", 0.7)
-
-        # Basic deterministic scoring based on content metrics
-        criterion_name = criterion.get("name", "").lower()
-        if "length" in criterion_name or "size" in criterion_name:
-            score = min(content_length / 1000, 1.0)
-        elif "word" in criterion_name or "count" in criterion_name:
-            score = min(word_count / 200, 1.0)
-        else:
-            score = 0.75  # Default moderate score
-
-        passed = score >= min_threshold
-        scores[criterion_id] = {
-            "score": round(score * 100, 1),
-            "weight": weight,
-            "passed": passed,
-        }
-        overall_score += score * weight
-        total_weight += weight
-
-    if total_weight > 0:
-        overall_score = overall_score / total_weight
-
-    passed = overall_score >= MIN_PASSING_SCORE
-    overall_score_normalized = round(overall_score * 100, 1)
+    overall_score = float(evaluation_result.get("overall_score", 0))
+    passed = bool(evaluation_result.get("passed", overall_score >= MIN_PASSING_SCORE))
+    feedback = evaluation_result.get("feedback", [])
+    if not isinstance(feedback, list):
+        feedback = []
 
     evaluation = RubricEvaluationScoreModel(
         rubric_id=rubric_id,
         content_id=UUID(int=0),
-        content_type=content_type,
+        content_type=body.content_type,
         scores=scores,
-        overall_score=overall_score_normalized,
+        overall_score=overall_score,
         passed=passed,
-        feedback=[],
+        feedback=feedback,
     )
 
     db.add(evaluation)

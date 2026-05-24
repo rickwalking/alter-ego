@@ -18,8 +18,7 @@ function buildHeroImageUrl(project: CarouselProjectResponse): string | null {
     | undefined;
   const heroPath = tokens?.images?.hero;
   if (!heroPath) return null;
-  const base = process.env.NEXT_PUBLIC_API_URL ?? "";
-  return `${base}${heroPath}`;
+  return heroPath;
 }
 
 export function CarouselPreview({ project }: CarouselPreviewProps) {

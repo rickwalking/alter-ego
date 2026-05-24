@@ -1,0 +1,499 @@
+# QA Checkpoints Reference
+
+> Comprehensive reference for all QA validation checkpoints used by the QA Agent skill.
+> Covers OWASP Top 10:2025, code quality standards, mutation testing thresholds,
+> acceptance criteria validation, and orphan/unfinished code detection.
+
+## Table of Contents
+
+1. [Security Checkpoints (OWASP Top 10:2025)](#1-security-checkpoints-owasp-top-102025)
+2. [Code Quality Checkpoints](#2-code-quality-checkpoints)
+3. [Mutation Testing Thresholds](#3-mutation-testing-thresholds)
+4. [Acceptance Criteria Validation](#4-acceptance-criteria-validation)
+5. [Orphan & Unfinished Code Detection](#5-orphan--unfinished-code-detection)
+6. [Dependency Security](#6-dependency-security)
+7. [CI/CD Quality Gates](#7-cicd-quality-gates)
+8. [Tool Reference](#8-tool-reference)
+9. [False Positive Management](#9-false-positive-management)
+
+---
+
+## 1. Security Checkpoints (OWASP Top 10:2025)
+
+### A01:2025 - Broken Access Control
+
+| Checkpoint | How to Verify | Tool/Command |
+|------------|---------------|--------------|
+| Authorization on all protected endpoints | Inspect route handlers for auth middleware/decorators | Manual code inspection |
+| Role-based permissions enforced server-side | Check that frontend role checks are mirrored server-side | Manual code inspection |
+| No IDOR vulnerabilities | Verify object ownership checks before returning data | Manual + semgrep |
+| CORS configured restrictively | Check CORSMiddleware settings | ruff + manual |
+| Rate limiting on auth endpoints | Look for rate limiter middleware | Manual inspection |
+
+**References:**
+- OWASP: https://owasp.org/Top10/2025/A01_2025-Broken_Access_Control/
+- CWE-284: Improper Access Control
+- CWE-639: Authorization Bypass Through User-Controlled Key
+
+### A02:2025 - Security Misconfiguration
+
+| Checkpoint | How to Verify | Tool/Command |
+|------------|---------------|--------------|
+| Debug mode disabled in production | Check env var usage for debug flags | Manual + grep |
+| Default credentials changed | Search for default passwords in config | truffleHog / gitleaks |
+| CORS not using wildcard in production | Inspect CORS configuration | Manual |
+| HTTP security headers set | Check for X-Frame-Options, CSP, HSTS | Manual |
+| Unnecessary features disabled | Check for disabled endpoints/services | Manual |
+| Error handling does not leak stack traces | Check exception handlers | Manual |
+
+**References:**
+- OWASP: https://owasp.org/Top10/2025/A02_2025-Security_Misconfiguration/
+- CWE-16: Configuration
+
+### A03:2025 - Software Supply Chain Failures
+
+| Checkpoint | How to Verify | Tool/Command |
+|------------|---------------|--------------|
+| No dependencies with known critical vulnerabilities | Run vulnerability scanner | pip audit / npm audit |
+| Dependencies within 7-day update window | Check release dates of current versions | pip list --outdated / npm outdated |
+| CI/CD pipeline signed/verified | Check workflow configuration | Manual |
+| Dependency integrity verified | Check lock files (not just loose versions) | Verify uv.lock / package-lock.json |
+| No malicious packages | Run pip audit / npm audit | pip audit / npm audit |
+
+**References:**
+- OWASP: https://owasp.org/Top10/2025/A03_2025-Software_Supply_Chain_Failures/
+- CWE-1104: Use of Unmaintained Third-Party Components
+
+### A04:2025 - Cryptographic Failures
+
+| Checkpoint | How to Verify | Tool/Command |
+|------------|---------------|--------------|
+| Passwords hashed with bcrypt/argon2 | Check auth service | Manual + grep for hash functions |
+| TLS enforced in production | Check HTTPS configuration | Manual |
+| Secrets encrypted at rest | Check secret storage | Manual |
+| No weak crypto algorithms (MD5, SHA1, RC4) | Search for weak algorithm usage | ruff S rules + manual |
+| Proper key management | Check where keys are stored/rotated | Manual |
+
+**References:**
+- OWASP: https://owasp.org/Top10/2025/A04_2025-Cryptographic_Failures/
+- CWE-327: Use of a Broken or Risky Cryptographic Algorithm
+
+### A05:2025 - Injection
+
+| Checkpoint | How to Verify | Tool/Command |
+|------------|---------------|--------------|
+| All SQL queries parameterized | Check for raw SQL string concatenation | ruff S rules + semgrep |
+| No eval() / exec() calls | Search for dynamic code execution | grep for eval(, exec( |
+| No raw NoSQL queries | Check MongoDB/other DB query construction | Manual |
+| Input validation at API boundary | Check Pydantic/Zod schemas | Manual |
+| Output encoding for HTML/JS | Check template rendering | Manual |
+
+**References:**
+- OWASP: https://owasp.org/Top10/2025/A05_2025-Injection/
+- CWE-89: SQL Injection
+- CWE-79: Cross-site Scripting (XSS)
+
+### A06:2025 - Insecure Design
+
+| Checkpoint | How to Verify | Tool/Command |
+|------------|---------------|--------------|
+| Rate limiting on API endpoints | Check for rate limiter middleware | Manual |
+| Input validation at boundary | Check schema definitions | Manual |
+| Business logic not bypassable | Test edge cases in business logic | Manual review |
+| Secure defaults used | Check default values in configs | Manual |
+
+**References:**
+- OWASP: https://owasp.org/Top10/2025/A06_2025-Insecure_Design/
+- CWE-657: Violation of Secure Design Principles
+
+### A07:2025 - Authentication Failures
+
+| Checkpoint | How to Verify | Tool/Command |
+|------------|---------------|--------------|
+| Session tokens properly managed | Check token generation, storage, expiry | Manual |
+| MFA available (if applicable) | Check auth configuration | Manual |
+| Password policies enforced | Check password validation rules | Manual |
+| No hardcoded credentials | Search for hardcoded secrets | truffleHog / gitleaks |
+| Brute force protection | Check for account lockout | Manual |
+
+**References:**
+- OWASP: https://owasp.org/Top10/2025/A07_2025-Authentication_Failures/
+- CWE-287: Improper Authentication
+
+### A08:2025 - Software and Data Integrity Failures
+
+| Checkpoint | How to Verify | Tool/Command |
+|------------|---------------|--------------|
+| CI/CD pipeline integrity | Check for unsigned artifacts | Manual |
+| Dependency integrity | Verify checksums in lock files | Manual |
+| No unsigned auto-update mechanisms | Check update logic | Manual |
+
+**References:**
+- OWASP: https://owasp.org/Top10/2025/A08_2025-Software_or_Data_Integrity_Failures/
+- CWE-829: Inclusion of Functionality from Untrusted Control Sphere
+
+### A09:2025 - Security Logging and Monitoring Failures
+
+| Checkpoint | How to Verify | Tool/Command |
+|------------|---------------|--------------|
+| Security events logged (auth failures, access denials) | Check logging configuration | Manual |
+| Logs exclude PII | Check log statements for sensitive data | Manual + grep |
+| Logs are monitored/alerted | Check monitoring setup | Manual |
+| Audit trail for sensitive operations | Check audit logging | Manual |
+
+**References:**
+- OWASP: https://owasp.org/Top10/2025/A09_2025-Security_Logging_and_Alerting_Failures/
+- CWE-778: Insufficient Logging
+
+### A10:2025 - Mishandling of Exceptional Conditions
+
+| Checkpoint | How to Verify | Tool/Command |
+|------------|---------------|--------------|
+| Exceptions caught and handled properly | Check try/except blocks | Manual + ruff |
+| Error messages don't leak internals | Check error response format | Manual |
+| Graceful degradation on failure | Check fallback behavior | Manual |
+| No bare except: clauses | Check for overly broad exception handling | ruff PLE0704 + manual |
+
+**References:**
+- OWASP: https://owasp.org/Top10/2025/A10_2025-Mishandling_of_Exceptional_Conditions/
+- CWE-248: Uncaught Exception
+- CWE-209: Information Exposure Through an Error Message
+
+---
+
+## 2. Code Quality Checkpoints
+
+### Linting (ruff / ESLint)
+
+| Checkpoint | Command | Threshold |
+|------------|---------|-----------|
+| No lint errors | ruff check src/ (backend) / eslint src/ (frontend) | Zero errors |
+| No lint warnings | ruff check --show-fixes src/ | Zero warnings (preferred) |
+| No unused imports | ruff check --select F401 src/ | Zero |
+| No unused variables | ruff check --select F841 src/ | Zero |
+| No commented-out code | ruff check --select ERA001 src/ | Zero |
+
+### Type Checking
+
+| Checkpoint | Command | Threshold |
+|------------|---------|-----------|
+| mypy strict passes | mypy --strict src/ | Zero errors |
+| No explicit Any | disallow_any_explicit = true in mypy config | Zero |
+| No bare generics | disallow_any_generics = true in mypy config | Zero |
+| All functions have return types | disallow_untyped_defs = true | Zero |
+| TypeScript strict passes | tsc --noEmit --strict | Zero errors |
+
+### Complexity
+
+| Checkpoint | Tool | Threshold |
+|------------|------|-----------|
+| Cyclomatic complexity per function | ruff C90 | Max 10 |
+| Module average complexity | xenon | Max A (CC avg less than or equal 5) |
+| Max branches per function | ruff PLR0912 | Max 10 |
+| Max statements per function | ruff PLR0915 | Max 40 |
+| Max nested blocks | ruff | Max 4 |
+| Max arguments per function | ruff PLR0913 | Max 5 |
+| Max return statements | ruff PLR0911 | Max 6 |
+| Max locals per function | ruff | Max 15 |
+
+### File and Function Size
+
+| Checkpoint | How to Verify | Threshold |
+|------------|---------------|-----------|
+| Max lines per file | wc -l on each file | 400 |
+| Max lines per function | Manual inspection | 50 |
+| Max line length | ruff E501 | 100 (backend) / 80 (frontend) |
+
+### Architecture
+
+| Checkpoint | Tool | Threshold |
+|------------|------|-----------|
+| Import boundaries respected | import-linter / pytest-archon | Zero violations |
+| No circular dependencies | grimp | Zero |
+| Layer isolation (domain to infrastructure) | import-linter layers | Zero violations |
+
+### Documentation
+
+| Checkpoint | Tool | Threshold |
+|------------|------|-----------|
+| Public functions documented | ruff D (D100-D107) | Google convention |
+| Docstrings match signatures | Manual / pydoclint | Match |
+
+### Naming Conventions
+
+| Checkpoint | Tool | Threshold |
+|------------|------|-----------|
+| No magic strings | Manual + ruff | All strings in constants |
+| Python snake_case | ruff N | Pass |
+| TypeScript camelCase | eslint naming rules | Pass |
+| Constants UPPER_SNAKE_CASE | Manual | Pass |
+
+---
+
+## 3. Mutation Testing Thresholds
+
+### Backend (mutmut)
+
+| Module Type | Break (Fail) | Low (Warn) | High (Target) |
+|-------------|-------------|-------------|---------------|
+| Business Logic | 50% | 70% | 80% |
+| API Routes | 40% | 60% | 75% |
+| Data Access / Repositories | 40% | 60% | 75% |
+| Services / Use Cases | 50% | 70% | 80% |
+
+### Frontend (StrykerJS)
+
+| Module Type | Break (Fail) | Low (Warn) | High (Target) |
+|-------------|-------------|-------------|---------------|
+| Business Logic (hooks, services) | 50% | 70% | 80% |
+| API Routes / Server Actions | 40% | 60% | 75% |
+| UI Components | 30% | 50% | 65% |
+| Utility Functions | 50% | 70% | 80% |
+
+### mutmut Configuration
+
+```toml
+[tool.mutmut]
+paths_to_exclude = [
+    "tests/",
+    "migrations/",
+    "**/constants.py",
+    "**/schemas.py",
+]
+backup = false
+runner = "pytest"
+```
+
+### StrykerJS Configuration
+
+```json
+{
+  "mutate": ["src/**/*.{ts,tsx}", "!src/**/*.test.{ts,tsx}", "!src/**/*.spec.{ts,tsx}"],
+  "testRunner": "vitest",
+  "reporters": ["html", "progress", "json"],
+  "thresholds": {
+    "high": 80,
+    "low": 50,
+    "break": 30
+  },
+  "mutator": {
+    "excludedMutations": ["StringLiteral", "ObjectLiteral"]
+  }
+}
+```
+
+**ADR Reference:** ADR-005: Adopt Mutation Testing
+
+---
+
+## 4. Acceptance Criteria Validation
+
+### Process
+
+1. **Extract criteria** from the plan/spec file
+2. **Map each criterion** to test(s) by searching for Gherkin scenarios or test function names
+3. **Run specific tests** for each criterion
+4. **Verify implementation** satisfies the criterion (not just tests passing)
+5. **Report** per-criterion status
+
+### Checklist
+
+| Checkpoint | Method |
+|------------|--------|
+| Each criterion has at least one test | Search for Gherkin scenario or test matching criterion description |
+| Test covers happy path | Verify the primary success case is tested |
+| Test covers edge cases | Verify boundary conditions are tested |
+| Test covers failure modes | Verify error cases are tested |
+| Test actually passes | Run the specific test(s) |
+| Implementation satisfies criterion | Manual inspection of code behavior |
+| No scope creep | Verify no behavior exists that is not in the criteria |
+
+### Gherkin Mapping Convention
+
+```python
+# Feature: Document Management
+# Scenario: Create document with valid data
+#   Given a valid document payload
+#   When POST /api/documents
+#   Then returns 201 with created document
+async def test_create_document_valid(self, client):
+    ...
+```
+
+---
+
+## 5. Orphan and Unfinished Code Detection
+
+### Dead Code
+
+| Checkpoint | Tool/Command | Threshold |
+|------------|--------------|-----------|
+| Unused functions/classes | dead / vulture | Zero in production code |
+| Unused imports | ruff F401 | Zero |
+| Unused variables | ruff F841 | Zero |
+| Commented-out code blocks | ruff ERA001 | Zero |
+| Unused route handlers | Manual inspection | Flag for review |
+| Unused event listeners | Manual inspection | Flag for review |
+
+### Unfinished Work
+
+| Checkpoint | Tool/Command | Threshold |
+|------------|--------------|-----------|
+| TODO markers | grep -r TODO src/ | Flag files with 5+ |
+| FIXME markers | grep -r FIXME src/ | Flag files with 3+ |
+| HACK markers | grep -r HACK src/ | Flag any |
+| XXX markers | grep -r XXX src/ | Flag any |
+| Stub functions | Search for pass, NotImplementedError | Flag any in production code |
+| Empty catch blocks | ruff + manual | Zero |
+| Placeholder values | Search for TODO, placeholder, lorem | Flag any |
+
+### Orphaned Files
+
+| Checkpoint | Method |
+|------------|--------|
+| Files not imported by any other file | Build import graph, find islands |
+| Exported functions never called | Cross-reference exports vs. imports |
+| Unused CSS classes | PurgeCSS or manual |
+| Unused dependencies | pip list / npm ls vs. actual imports |
+
+---
+
+## 6. Dependency Security
+
+### Vulnerability Scanning
+
+| Checkpoint | Command | Threshold |
+|------------|---------|-----------|
+| Python vulnerabilities | pip audit | Zero critical/high |
+| npm vulnerabilities | npm audit | Zero critical/high |
+| Outdated packages | pip list --outdated / npm outdated | Flag >7 days behind |
+
+### 7-Day Update Window Policy
+
+Dependencies should be updated within **7 calendar days** of a new release if:
+- The release contains a security fix (CVE)
+- The release is a patch version (semver)
+- The release is for a direct dependency with a critical/high severity advisory
+
+Exceptions require documented justification in an ADR or docs/decisions/.
+
+### Tools
+
+| Tool | Purpose | Installation |
+|------|---------|--------------|
+| pip-audit | Python vulnerability scanner | pip install pip-audit |
+| npm audit | Node.js vulnerability scanner | Built into npm |
+| safety | Python vulnerability scanner (alternative) | pip install safety |
+| dependabot | GitHub-native dependency updates | Built into GitHub |
+| renovate | Cross-platform dependency updater | GitHub app |
+
+---
+
+## 7. CI/CD Quality Gates
+
+### Pre-Merge Gates (Must Pass)
+
+| Gate | Tool | Enforcement |
+|------|------|-------------|
+| Lint | ruff check / eslint | CI failure |
+| Type check | mypy --strict / tsc --noEmit | CI failure |
+| Unit tests | pytest / vitest | CI failure |
+| Test coverage | pytest --cov / vitest --coverage | CI failure if below 90% |
+| Build | docker build / npm run build | CI failure |
+
+### Pre-Merge Gates (Should Pass)
+
+| Gate | Tool | Enforcement |
+|------|------|-------------|
+| Mutation tests | mutmut / stryker | CI warning (nightly enforce) |
+| Vulnerability scan | pip audit / npm audit | CI warning |
+| Complexity check | xenon | CI warning |
+| Dead code | dead / vulture | CI warning |
+| Architecture boundaries | import-linter | CI warning |
+
+### Nightly / Weekly Gates
+
+| Gate | Tool | Cadence |
+|------|------|---------|
+| Full mutation suite | mutmut / stryker | Weekly |
+| Full vulnerability scan | pip audit / npm audit | Daily |
+| Dependency freshness | pip list --outdated | Weekly |
+| Dead code sweep | vulture / dead | Weekly |
+| Maintainability index | radon mi | Weekly |
+
+---
+
+## 8. Tool Reference
+
+### Python Backend
+
+| Tool | Purpose | Configuration File | Command |
+|------|---------|-------------------|---------|
+| ruff | Linting + formatting | pyproject.toml | ruff check src/ |
+| mypy | Type checking | pyproject.toml | mypy --strict src/ |
+| pytest | Testing | pyproject.toml | pytest |
+| mutmut | Mutation testing | pyproject.toml | mutmut run |
+| xenon | Complexity monitoring | setup.cfg | xenon --max-absolute B --max-modules A --max-average A src/ |
+| radon | Code metrics | setup.cfg | radon mi -s --min B src/ |
+| import-linter | Architecture rules | .importlinter | lint-imports |
+| dead | Dead code detection | CLI args | dead --exclude ^migrations/ src/ |
+| vulture | Dead code detection | CLI args | vulture src/ --min-confidence 80 |
+| pip-audit | Vulnerability scanning | CLI args | pip-audit |
+| bandit | Security linting | CLI args | bandit -r src/ |
+| semgrep | Static analysis | .semgrep/ | semgrep --config=auto src/ |
+| truffleHog | Secret scanning | CLI args | trufflehog filesystem . |
+
+### TypeScript Frontend
+
+| Tool | Purpose | Configuration File | Command |
+|------|---------|-------------------|---------|
+| eslint | Linting | eslint.config.js | eslint src/ |
+| tsc | Type checking | tsconfig.json | tsc --noEmit --strict |
+| vitest | Testing | vitest.config.ts | vitest run |
+| stryker | Mutation testing | stryker.config.json | stryker run |
+| npm audit | Vulnerability scanning | Built-in | npm audit |
+
+---
+
+## 9. False Positive Management
+
+### Suppression Mechanisms
+
+| Tool | Mechanism | Example |
+|------|-----------|---------|
+| ruff | noqa comments | # noqa: ERA001 |
+| mypy | type: ignore comments | # type: ignore[arg-type] |
+| mutmut | __mutmut_exclude__ list | __mutmut_exclude__ = ["constants.py"] |
+| dead | # dead: disable comments | # dead: disable |
+| vulture | Whitelist file | vulture --whitelist whitelist.py |
+
+### .qa-ignore File
+
+Create a .qa-ignore file at the project root to suppress known false positives:
+
+```ini
+# .qa-ignore
+# Format: tool:pattern
+# Example:
+# ruff:ERA001:templates/*  # Template files use Jinja comments
+# mutmut:src/rag_backend/constants.py  # Constants file has trivial mutants
+# vulture:src/rag_backend/api/routes/*  # Routes registered dynamically
+```
+
+### Review Cadence
+
+- False positive suppressions should be reviewed **monthly**
+- Remove suppressions when the underlying issue is resolved
+- Document the reason for each suppression
+
+---
+
+## References
+
+- ADR-005: Adopt Mutation Testing (../decisions/0005-adopt-mutation-testing.md)
+- Architectural Quality Enforcement Guide (./architectural-quality-enforcement.md)
+- OWASP Top 10:2025 (https://owasp.org/Top10/2025/)
+- OWASP ASVS (https://owasp.org/www-project-application-security-verification-standard/)
+- Backend AGENTS.md (../../backend/AGENTS.md)
+- Frontend AGENTS.md (../../frontend/AGENTS.md)
+- CLAUDE.md (Root) (../../CLAUDE.md)

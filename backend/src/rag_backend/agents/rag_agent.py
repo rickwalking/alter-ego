@@ -250,7 +250,13 @@ class RAGAgent:
             response = ""
             for msg in reversed(messages):
                 if isinstance(msg, AIMessage) and msg.content:
-                    response = msg.content
+                    raw = msg.content
+                    if isinstance(raw, str):
+                        response = raw
+                    elif isinstance(raw, list):
+                        for block in raw:
+                            if isinstance(block, dict) and block.get("type") == "text":
+                                response += block.get("text", "")
                     break
 
             if persist_messages:

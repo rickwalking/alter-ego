@@ -38,6 +38,7 @@ dependencies = [
     "email-validator>=2.3.0",
     "tenacity>=9.1.4",
     "langfuse>=3.0.0,<4.0.0",
+    "redis>=5.2.0",
 ]
 
 [build-system]
@@ -147,11 +148,20 @@ ignore = [
     "ARG002", # unused-method-argument — test helpers
     "S108",   # hardcoded-temp-directory — test tmp paths
     "S106",   # hardcoded-password — test tokens/credentials
+    "S105",   # hardcoded password variable names in tests
+    "E501",   # long docstrings/assert messages in tests
+    "SIM105", # try-except-pass in integration test parsers
     "N806",   # non-lowercase-variable — test factory variables
     "F841",   # unused-variable — test setup variables
     "RUF059", # unused-unpacked-variable — mock tuple unpacking
     "TRY003", # raise-vanilla-args — test helper exceptions
     "PLR0913", # too-many-arguments — test methods with many fixtures
+    "ERA001", # Gherkin scenario reference comments in test files
+]
+# Pre-commit passes paths as backend/tests/... from repo root
+"backend/tests/**/*" = [
+    "S101", "ANN", "PLR2004", "ARG001", "ARG002", "S108", "S106", "S105",
+    "E501", "SIM105", "N806", "F841", "RUF059", "TRY003", "PLR0913", "ERA001",
 ]
 "**/__init__.py" = ["F401"]  # Re-exports are OK
 "src/rag_backend/api/routes/*.py" = [
@@ -160,6 +170,21 @@ ignore = [
     "ARG001",   # auth dependencies are used by FastAPI DI but not in function body
     "FBT001",   # boolean query params are standard in FastAPI filters
 ]
+"src/rag_backend/api/app.py" = ["PLR0911"]
+"src/rag_backend/api/constants.py" = ["S105"]
+"src/rag_backend/api/routes/documents.py" = ["PLR0913", "FBT002", "E501"]
+"src/rag_backend/domain/constants/plagiarism.py" = ["S105"]
+"src/rag_backend/domain/models/rubric.py" = ["S105", "PLR0913", "FBT001"]
+"src/rag_backend/domain/models/persona.py" = ["PLR2004"]
+"src/rag_backend/application/services/chat_stream_service.py" = ["FBT001", "SIM105"]
+"src/rag_backend/application/services/workflow_event_service.py" = ["PLR0913"]
+"src/rag_backend/infrastructure/config/settings.py" = ["S104"]
+"src/rag_backend/infrastructure/auth.py" = ["TRY300"]
+"src/rag_backend/infrastructure/langfuse_client.py" = ["TRY300"]
+"src/rag_backend/infrastructure/database/user_repository.py" = ["TRY003"]
+"src/rag_backend/infrastructure/external/pinecone_store.py" = ["ARG002"]
+"src/rag_backend/domain/retry.py" = ["SIM103"]
+"src/rag_backend/scripts/bootstrap_admin.py" = ["E501"]
 
 [tool.ruff.lint.mccabe]
 max-complexity = 12

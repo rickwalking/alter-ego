@@ -5,6 +5,7 @@ Gherkin: tests/features/carousel_design_refinement.feature
 
 import pytest
 
+from rag_backend.application.services.carousel.types import slide_count_from_config
 from rag_backend.application.services.carousel_template import (
     THEME_PALETTES,
     CarouselTemplateBuilder,
@@ -228,6 +229,35 @@ class TestCarouselTemplateBuilder:
 
 
 @pytest.mark.unit
+class TestSlideCountFromConfig:
+    """Tests for slide_count_from_config()."""
+
+    def test_n_slides_format(self):
+        assert slide_count_from_config("7_slides") == 7
+
+    def test_n_slides_format_6(self):
+        assert slide_count_from_config("6_slides") == 6
+
+    def test_comma_format(self):
+        assert slide_count_from_config("1 intro, 3 content, 1 closing, 1 cta") == 6
+
+    def test_comma_format_alt(self):
+        assert slide_count_from_config("1 intro, 2 content, 1 closing, 1 cta") == 5
+
+    def test_fallback_to_max_slides(self):
+        assert slide_count_from_config("invalid") == 7
+
+    def test_empty_string(self):
+        assert slide_count_from_config("") == 7
+
+    def test_extra_whitespace(self):
+        assert slide_count_from_config("  7_slides  ") == 7
+
+    def test_mixed_case(self):
+        assert slide_count_from_config("6_SLIDES") == 6
+
+
+@pytest.mark.unit
 class TestGenerateDesignTokens:
     """Tests for CarouselTemplateBuilder.generate_design_tokens()."""
 
@@ -241,7 +271,7 @@ class TestGenerateDesignTokens:
         assert tokens["colors"]["text"] == "#ffffff"
         assert tokens["typography"]["font_family_badge"] == "'Courier New', monospace"
         assert tokens["layout"]["badge_label"] == "AI Education"
-        assert tokens["layout"]["progress_segments"] == 7
+        assert tokens["layout"]["progress_segments"] == 6
 
     def test_generate_design_tokens_cybersecurity(self):
         """Should generate correct design tokens for cybersecurity theme."""
@@ -265,16 +295,18 @@ class TestGenerateDesignTokens:
         # there is no separate "hero" file on disk.
         # `hero` + `slides` reference the raw hero images (used by blog).
         assert tokens["images"]["hero"] == f"/api/carousels/{sample_project.id}/images/slide_1"
-        assert len(tokens["images"]["slides"]) == 7
+        assert len(tokens["images"]["slides"]) == 6
         assert tokens["images"]["slides"][0] == f"/api/carousels/{sample_project.id}/images/slide_1"
         # `rendered_slides_*` reference the post-Playwright JPGs with
         # text overlay (used by publish viewer).
         assert "rendered_slides_pt" in tokens["images"]
+        assert len(tokens["images"]["rendered_slides_pt"]) == 6
         assert (
             tokens["images"]["rendered_slides_pt"][0]
             == f"/api/carousels/{sample_project.id}/slide-images/pt/slide_1"
         )
         assert "rendered_slides_en" in tokens["images"]
+        assert len(tokens["images"]["rendered_slides_en"]) == 6
         assert (
             tokens["images"]["rendered_slides_en"][0]
             == f"/api/carousels/{sample_project.id}/slide-images/en/slide_1"
@@ -318,6 +350,58 @@ class TestGenerateDesignTokens:
 
         assert tokens["colors"]["border"] == "#3b82f633"
         assert tokens["colors"]["glow"] == "#3b82f60D"
+
+    def test_generate_design_tokens_slides_config_7_slides(self):
+        """Should use slides_config for 7_slides format."""
+        project = CarouselProject(
+            topic="Test",
+            audience="Everyone",
+            niche="Tech",
+            theme=CarouselTheme.AI_COMPETITION,
+            slides_config="7_slides",
+        )
+        tokens = CarouselTemplateBuilder.generate_design_tokens(project)
+        assert len(tokens["images"]["slides"]) == 7
+        assert tokens["layout"]["progress_segments"] == 7
+
+    def test_generate_design_tokens_slides_config_6_slides(self):
+        """Should use slides_config for 6_slides format."""
+        project = CarouselProject(
+            topic="Test",
+            audience="Everyone",
+            niche="Tech",
+            theme=CarouselTheme.AI_COMPETITION,
+            slides_config="6_slides",
+        )
+        tokens = CarouselTemplateBuilder.generate_design_tokens(project)
+        assert len(tokens["images"]["slides"]) == 6
+        assert tokens["layout"]["progress_segments"] == 6
+
+    def test_generate_design_tokens_slides_config_comma_format(self):
+        """Should use slides_config for comma format."""
+        project = CarouselProject(
+            topic="Test",
+            audience="Everyone",
+            niche="Tech",
+            theme=CarouselTheme.AI_COMPETITION,
+            slides_config="1 intro, 2 content, 1 closing, 1 cta",
+        )
+        tokens = CarouselTemplateBuilder.generate_design_tokens(project)
+        assert len(tokens["images"]["slides"]) == 5
+        assert tokens["layout"]["progress_segments"] == 5
+
+    def test_generate_design_tokens_invalid_slides_config(self):
+        """Should fall back to MAX_SLIDES for unparseable config."""
+        project = CarouselProject(
+            topic="Test",
+            audience="Everyone",
+            niche="Tech",
+            theme=CarouselTheme.AI_COMPETITION,
+            slides_config="something_wrong",
+        )
+        tokens = CarouselTemplateBuilder.generate_design_tokens(project)
+        assert len(tokens["images"]["slides"]) == 7
+        assert tokens["layout"]["progress_segments"] == 7
 
     def test_theme_pallets_constant_has_all_themes(self):
         """Should have all 5 theme palettes defined."""

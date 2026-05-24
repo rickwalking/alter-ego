@@ -3,26 +3,24 @@
 import uuid
 
 from sqlalchemy import (
+    JSON,
     Boolean,
     Column,
     DateTime,
     ForeignKey,
     Index,
     Integer,
-    JSON,
     String,
     Text,
     func,
 )
-from sqlalchemy.orm import relationship
 
 from rag_backend.domain.models.persona import PersonaProfile as PersonaProfileEntity
 from rag_backend.domain.models.rubric import (
-    EvaluationMethod,
     QualityRubric as QualityRubricEntity,
-    RubricCriterion,
+)
+from rag_backend.domain.models.rubric import (
     RubricEvaluationScore,
-    ScoringScale,
 )
 from rag_backend.infrastructure.database.config import Base
 
@@ -35,11 +33,15 @@ class PersonaProfileModel(Base):
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     name = Column(String(255), nullable=False)
     description = Column(Text, nullable=True)
-    tone_attributes = Column(JSON, default=lambda: {
-        "formal": 0.3,
-        "conversational": 0.8,
-        "humorous": 0.4,
-    }, nullable=False)
+    tone_attributes = Column(
+        JSON,
+        default=lambda: {
+            "formal": 0.3,
+            "conversational": 0.8,
+            "humorous": 0.4,
+        },
+        nullable=False,
+    )
     writing_samples = Column(JSON, default=list, nullable=False)
     forbidden_phrases = Column(JSON, default=list, nullable=False)
     preferred_phrases = Column(JSON, default=list, nullable=False)
@@ -69,7 +71,8 @@ class PersonaProfileModel(Base):
             id=UUID(self.id),
             name=self.name,
             description=self.description,
-            tone_attributes=self.tone_attributes or {
+            tone_attributes=self.tone_attributes
+            or {
                 "formal": 0.3,
                 "conversational": 0.8,
                 "humorous": 0.4,

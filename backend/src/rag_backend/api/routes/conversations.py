@@ -3,24 +3,25 @@
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from rag_backend.api.constants import ERR_FORBIDDEN, ERR_NOT_AUTHENTICATED
+from rag_backend.api.constants import (
+    ERR_CONVERSATION_NOT_FOUND,
+    ERR_FORBIDDEN,
+    ERR_NOT_AUTHENTICATED,
+)
 from rag_backend.api.dependencies import (
     get_optional_user,
     require_authenticated_user,
 )
-from rag_backend.api.middleware.rate_limiting import limiter
+from rag_backend.api.dependencies.resource_access import assert_conversation_access
 from rag_backend.api.schemas import (
-    ChatRequest,
-    ChatResponse,
     ConversationCreate,
     ConversationListResponse,
     ConversationResponse,
     ErrorResponse,
     MessageListResponse,
-    MessageSource,
 )
 from rag_backend.application.services.conversation_service import ConversationService
 from rag_backend.domain.models import User
@@ -61,7 +62,7 @@ def _make_conversation_service(db: AsyncSession) -> ConversationService:
 
 
 @router.post(
-    "",
+    "/",
     response_model=ConversationResponse,
     status_code=status.HTTP_201_CREATED,
     responses={
@@ -92,6 +93,7 @@ async def create_conversation(
     conversation = await service.create_conversation(
         title=request.title,
         metadata=request.metadata,
+        user_id=user.id if user else None,
     )
     await db.commit()
 
@@ -111,7 +113,7 @@ async def create_conversation(
 
 
 @router.get(
-    "",
+    "/",
     response_model=ConversationListResponse,
     responses={
         200: {"description": "List of conversations"},
@@ -119,19 +121,24 @@ async def create_conversation(
     },
 )
 async def list_conversations(
-    _user: Annotated[User, Depends(require_authenticated_user)],
+    user: Annotated[User, Depends(require_authenticated_user)],
     limit: Annotated[int, Query(ge=1, le=100, description="Number of items to return")] = 20,
     offset: Annotated[int, Query(ge=0, description="Number of items to skip")] = 0,
-    db: AsyncSession = Depends(get_session),  # noqa: FAST002
+    db: AsyncSession = Depends(get_session),
 ):
-    """List all conversations for the authenticated user."""
+    """List conversations owned by the authenticated user."""
     service = _make_conversation_service(db)
 
-    conversations = await service.list_conversations(limit=limit, offset=offset)
+    conversations = await service.list_conversations(
+        limit=limit,
+        offset=offset,
+        user_id=user.id,
+    )
+    total = await service.count_conversations_for_user(user.id)
 
     return {
         "items": conversations,
-        "total": len(conversations),
+        "total": total,
         "limit": limit,
         "offset": offset,
     }
@@ -149,7 +156,7 @@ async def list_conversations(
 )
 async def get_conversation(
     conversation_id: UUID,
-    _user: Annotated[User, Depends(require_authenticated_user)],
+    user: Annotated[User, Depends(require_authenticated_user)],
     db: Annotated[AsyncSession, Depends(get_session)],
 ):
     """Get a single conversation by ID."""
@@ -159,9 +166,10 @@ async def get_conversation(
     if not conversation:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Conversation with id {conversation_id} not found",
+            detail=ERR_CONVERSATION_NOT_FOUND,
         )
 
+    assert_conversation_access(conversation, user)
     return conversation
 
 
@@ -177,9 +185,9 @@ async def get_conversation(
 )
 async def get_conversation_messages(
     conversation_id: UUID,
-    _user: Annotated[User, Depends(require_authenticated_user)],
+    user: Annotated[User, Depends(require_authenticated_user)],
     limit: Annotated[int, Query(ge=1, le=100, description="Number of messages to return")] = 50,
-    db: AsyncSession = Depends(get_session),  # noqa: FAST002
+    db: AsyncSession = Depends(get_session),
 ):
     """Get all messages for a conversation."""
     service = _make_conversation_service(db)
@@ -188,9 +196,10 @@ async def get_conversation_messages(
     if not conversation:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Conversation with id {conversation_id} not found",
+            detail=ERR_CONVERSATION_NOT_FOUND,
         )
 
+    assert_conversation_access(conversation, user)
     messages = await service.get_conversation_history(conversation_id, limit=limit)
 
     return {
@@ -211,17 +220,25 @@ async def get_conversation_messages(
 )
 async def delete_conversation(
     conversation_id: UUID,
-    _user: Annotated[User, Depends(require_authenticated_user)],
+    user: Annotated[User, Depends(require_authenticated_user)],
     db: Annotated[AsyncSession, Depends(get_session)],
 ):
     """Delete a conversation and all its messages."""
     service = _make_conversation_service(db)
 
+    conversation = await service.get_conversation(conversation_id)
+    if not conversation:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=ERR_CONVERSATION_NOT_FOUND,
+        )
+
+    assert_conversation_access(conversation, user)
     success = await service.delete_conversation(conversation_id)
     if not success:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Conversation with id {conversation_id} not found",
+            detail=ERR_CONVERSATION_NOT_FOUND,
         )
     await db.commit()
 
@@ -238,7 +255,7 @@ async def delete_conversation(
 )
 async def generate_conversation_title(
     conversation_id: UUID,
-    _user: Annotated[User, Depends(require_authenticated_user)],
+    user: Annotated[User, Depends(require_authenticated_user)],
     db: Annotated[AsyncSession, Depends(get_session)],
 ):
     """Generate a title for the conversation based on the first message."""
@@ -250,8 +267,10 @@ async def generate_conversation_title(
     if not conversation:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Conversation with id {conversation_id} not found",
+            detail=ERR_CONVERSATION_NOT_FOUND,
         )
+
+    assert_conversation_access(conversation, user)
 
     await service.generate_title(
         conversation_id=conversation_id,
@@ -260,86 +279,3 @@ async def generate_conversation_title(
     await db.commit()
 
     return await service.get_conversation(conversation_id)
-
-
-@router.post(
-    "/{conversation_id}/chat",
-    response_model=ChatResponse,
-    responses={
-        200: {"description": "Chat response with sources"},
-        401: {"model": ErrorResponse, "description": ERR_NOT_AUTHENTICATED},
-        404: {"model": ErrorResponse, "description": "Conversation not found"},
-        429: {"model": ErrorResponse, "description": "Rate limit exceeded"},
-    },
-)
-@limiter.limit("10/minute")
-async def chat(
-    conversation_id: UUID,
-    body: ChatRequest,
-    request: Request,  # noqa: ARG001 — required by slowapi
-    response: Response,
-    _user: Annotated[User | None, Depends(get_optional_user)] = None,
-    db: Annotated[AsyncSession, Depends(get_session)] = None,
-):
-    """Send a chat message and get a non-streaming response with sources.
-
-    Accessible to both authenticated users and anonymous visitors.
-    """
-    if db is None:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Database session not resolved",
-        )
-
-    container = get_container()
-    service = _make_conversation_service(db)
-
-    conversation = await service.get_conversation(conversation_id)
-    if not conversation:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Conversation with id {conversation_id} not found",
-        )
-
-    # Enforce per-conversation message limit
-    msg_repo = PostgresMessageRepository(db)
-    msg_count = await msg_repo.count_by_conversation(conversation_id)
-    _check_conversation_limit(msg_count)
-
-    from rag_backend.agents.rag_agent import RAGAgent
-    from rag_backend.api.dependencies.agents import build_agent_for_conversation
-
-    agent = build_agent_for_conversation(conversation, db, container)
-    agent_origin = "rag-agent" if isinstance(agent, RAGAgent) else "alter-ego"
-    response.headers["X-Agent-Origin"] = agent_origin
-    sources = []
-    full_response = ""
-
-    async for event in agent.chat(
-        message=body.content,
-        conversation_id=conversation_id,
-        stream=False,
-    ):
-        if event["type"] == "complete":
-            full_response = event["content"]
-        elif event["type"] == "sources":
-            sources = event["content"]
-
-    formatted_sources = []
-    for src in sources:
-        if isinstance(src, dict):
-            formatted_sources.append(
-                MessageSource(
-                    document_id=src.get("document_id", ""),
-                    document_title=src.get("document_title", ""),
-                    content=src.get("content", ""),
-                    score=src.get("score", 0.0),
-                )
-            )
-
-    response.headers["X-Agent-Origin"] = agent_origin
-    return ChatResponse(
-        content=full_response,
-        sources=formatted_sources,
-        conversation_id=conversation_id,
-    )

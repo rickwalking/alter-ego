@@ -3,23 +3,31 @@
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from rag_backend.agents.feedback_learning import FeedbackLearningLoop
+from rag_backend.agents.persona_agent import PersonaAgent
 from rag_backend.api.dependencies.database import get_db
 from rag_backend.api.dependencies.roles import EditorUser
+from rag_backend.api.middleware.rate_limiting import limiter
 from rag_backend.api.schemas.persona_rubric import (
     PersonaProfileCreate,
     PersonaProfileListResponse,
     PersonaProfileResponse,
     PersonaProfileUpdate,
+    VoiceScoreRequest,
+    VoiceScoreResponse,
 )
+from rag_backend.application.services.embedding_adapter import EmbeddingAdapter
 from rag_backend.domain.constants.blog_post import (
     FORBIDDEN_PHRASE_IN_TODAYS_WORLD,
     FORBIDDEN_PHRASE_LETS_DIVE_IN,
 )
-from rag_backend.domain.constants.persona import DEFAULT_TONE_ATTRIBUTES
+from rag_backend.domain.constants.persona import DEFAULT_TONE_ATTRIBUTES, VOICE_MATCH_MIN_SCORE
+from rag_backend.domain.constants.rate_limits import RATE_LIMIT_AI_ENDPOINTS
+from rag_backend.infrastructure.container import get_container
 from rag_backend.infrastructure.database.models import PersonaProfileModel
 
 router = APIRouter(tags=["personas"])
@@ -41,9 +49,7 @@ async def create_persona(
         name=data.name,
         description=data.description,
         tone_attributes=(
-            data.tone_attributes.model_dump()
-            if data.tone_attributes
-            else DEFAULT_TONE_ATTRIBUTES
+            data.tone_attributes.model_dump() if data.tone_attributes else DEFAULT_TONE_ATTRIBUTES
         ),
         writing_samples=data.writing_samples or [],
         forbidden_phrases=data.forbidden_phrases or [],
@@ -171,6 +177,59 @@ async def add_persona_feedback(
     if FORBIDDEN_PHRASE_LETS_DIVE_IN in original_text:
         persona.add_forbidden_phrase(FORBIDDEN_PHRASE_LETS_DIVE_IN)
 
+    container = get_container()
+    feedback_loop = FeedbackLearningLoop(
+        session=db,
+        embeddings=EmbeddingAdapter(container.embedding_service()),
+    )
+    await feedback_loop.record_correction(
+        _original=original_text,
+        _corrected=corrected_text,
+        _context="persona_feedback",
+        _persona_id=str(persona_id),
+    )
+
     await db.commit()
     await db.refresh(persona)
     return persona
+
+
+@router.post(
+    "/personas/{persona_id}/voice-score",
+    response_model=VoiceScoreResponse,
+    summary="Score content against persona voice",
+)
+@limiter.limit(RATE_LIMIT_AI_ENDPOINTS)
+async def score_persona_voice(
+    request: Request,
+    persona_id: UUID,
+    body: VoiceScoreRequest,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: EditorUser,
+) -> VoiceScoreResponse:
+    """Evaluate how well content matches a persona voice (AI-001)."""
+    persona = await db.get(PersonaProfileModel, str(persona_id))
+    if not persona:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Persona not found: {persona_id}",
+        )
+
+    container = get_container()
+    agent = PersonaAgent(persona=persona.to_entity(), llm=container.llm_service().chat_model)
+    scores = await agent.evaluate_match(body.text)
+    overall = float(scores.get("overall", 0))
+    suggestions = scores.get("suggestions", [])
+    if not isinstance(suggestions, list):
+        suggestions = []
+
+    return VoiceScoreResponse(
+        tone_match=float(scores.get("tone_match", 0)),
+        sentence_structure_match=float(scores.get("sentence_structure_match", 0)),
+        opinion_strength=float(scores.get("opinion_strength", 0)),
+        originality=float(scores.get("originality", 0)),
+        human_authenticity=float(scores.get("human_authenticity", 0)),
+        overall=overall,
+        suggestions=[str(item) for item in suggestions],
+        passed=overall >= VOICE_MATCH_MIN_SCORE,
+    )

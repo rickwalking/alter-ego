@@ -43,7 +43,7 @@ async def fix_design_tokens_and_subtitles() -> None:
                 if lang_dir.exists():
                     slide_files = sorted(lang_dir.glob("slide_*.jpg"))
                     slide_count = max(slide_count, len(slide_files))
-        
+
         if slide_count == 0:
             if "slides" in images and isinstance(images["slides"], list):
                 slide_count = len(images["slides"])

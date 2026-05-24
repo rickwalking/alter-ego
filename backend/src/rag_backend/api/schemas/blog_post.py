@@ -1,7 +1,6 @@
 """Pydantic schemas for Blog Post management."""
 
 from datetime import datetime
-from typing import Annotated, Any
 from uuid import UUID
 
 from pydantic import BaseModel, Field
@@ -9,6 +8,7 @@ from pydantic import BaseModel, Field
 
 class BlogPostCreate(BaseModel):
     """Schema for creating a blog post."""
+
     title: str = Field(..., min_length=1, max_length=255)
     slug: str | None = None
     content: dict = Field(default_factory=dict)
@@ -24,6 +24,7 @@ class BlogPostCreate(BaseModel):
 
 class BlogPostUpdate(BaseModel):
     """Schema for updating a blog post."""
+
     title: str | None = Field(None, min_length=1, max_length=255)
     slug: str | None = None
     content: dict | None = None
@@ -41,6 +42,7 @@ class BlogPostUpdate(BaseModel):
 
 class BlogPostResponse(BaseModel):
     """Schema for blog post response."""
+
     id: UUID
     project_id: UUID | None = None
     title: str
@@ -57,6 +59,7 @@ class BlogPostResponse(BaseModel):
     citations: list[dict] = Field(default_factory=list)
     ai_suggestions: list[dict] = Field(default_factory=list)
     ai_generation_metadata: dict = Field(default_factory=dict)
+    ai_disclosure_label: str | None = "none"
     meta_title: str | None = None
     meta_description: str | None = None
     keywords: list[str] = Field(default_factory=list)
@@ -71,6 +74,33 @@ class BlogPostResponse(BaseModel):
     approved_at: datetime | None = None
     published_at: datetime | None = None
     scheduled_publish_at: datetime | None = None
+    lock_version: int = 1
+
+    class Config:
+        from_attributes = True
+
+
+class BlogPostSummaryResponse(BaseModel):
+    """Lightweight blog post for list views (PERF-001)."""
+
+    id: UUID
+    title: str
+    slug: str
+    status: str
+    excerpt: str | None = None
+    featured_image_url: str | None = None
+    author_id: str | None = None
+    meta_title: str | None = None
+    meta_description: str | None = None
+    keywords: list[str] = Field(default_factory=list)
+    view_count: int = 0
+    like_count: int = 0
+    comment_count: int = 0
+    share_count: int = 0
+    created_at: datetime
+    updated_at: datetime
+    published_at: datetime | None = None
+    lock_version: int = 1
 
     class Config:
         from_attributes = True
@@ -78,12 +108,16 @@ class BlogPostResponse(BaseModel):
 
 class BlogPostListResponse(BaseModel):
     """Schema for listing blog posts."""
-    items: list[BlogPostResponse]
+
+    items: list[BlogPostSummaryResponse]
     total: int
+    limit: int = 50
+    offset: int = 0
 
 
 class BlogPostVersionResponse(BaseModel):
     """Schema for blog post version response."""
+
     id: UUID
     version_number: int
     snapshot: dict
@@ -94,6 +128,7 @@ class BlogPostVersionResponse(BaseModel):
 
 class EditorialCommentCreate(BaseModel):
     """Schema for creating an editorial comment."""
+
     content_id: UUID
     content_type: str
     text: str
@@ -103,6 +138,7 @@ class EditorialCommentCreate(BaseModel):
 
 class EditorialCommentUpdate(BaseModel):
     """Schema for updating an editorial comment."""
+
     text: str | None = None
     status: str | None = None
     ai_suggestion: str | None = None
@@ -110,6 +146,7 @@ class EditorialCommentUpdate(BaseModel):
 
 class EditorialCommentResponse(BaseModel):
     """Schema for editorial comment response."""
+
     id: UUID
     content_id: UUID
     content_type: str
@@ -127,12 +164,14 @@ class EditorialCommentResponse(BaseModel):
 
 class EditorialCommentListResponse(BaseModel):
     """Schema for listing editorial comments."""
+
     items: list[EditorialCommentResponse]
     total: int
 
 
 class ContentSourceCreate(BaseModel):
     """Schema for creating a content source."""
+
     project_id: UUID | None = None
     blog_post_id: UUID | None = None
     source_type: str = "url"  # url, document, note, interview, data
@@ -145,6 +184,7 @@ class ContentSourceCreate(BaseModel):
 
 class ContentSourceResponse(BaseModel):
     """Schema for content source response."""
+
     id: UUID
     project_id: UUID | None = None
     blog_post_id: UUID | None = None
@@ -165,12 +205,14 @@ class ContentSourceResponse(BaseModel):
 
 class ContentSourceListResponse(BaseModel):
     """Schema for listing content sources."""
+
     items: list[ContentSourceResponse]
     total: int
 
 
 class ContentVersionResponse(BaseModel):
     """Schema for content version response."""
+
     id: UUID
     content_id: UUID
     content_type: str
@@ -185,6 +227,7 @@ __all__ = [
     "BlogPostCreate",
     "BlogPostListResponse",
     "BlogPostResponse",
+    "BlogPostSummaryResponse",
     "BlogPostUpdate",
     "BlogPostVersionResponse",
     "ContentSourceCreate",

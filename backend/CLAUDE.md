@@ -85,6 +85,21 @@ uv run ruff format src/          # Formatting
 - **Dependency Inversion** — Domain defines protocols, infrastructure implements them
 - **Protocol-based contracts** — Use `typing.Protocol`, not ABCs
 - **Async-first** — All I/O operations must be async
+- **Event-driven** — Workflow state changes emit events to Redis Streams
+  - Event schema: `{event_id, event_type, aggregate_id, timestamp, version, payload, metadata}`
+  - All events must be idempotent (same event processed twice → same result)
+  - Consumers use Redis consumer groups for load balancing
+
+### LangGraph / Deep Agents
+- **Use Deep Agents** for complex multi-step workflows (carousel, blog post)
+- **Use raw LangGraph** for deterministic nodes (formatting, scoring, validation)
+- **Use Subagent pattern** for parallel tasks (research, drafting, image generation)
+- **Use `interrupt()`** for all human approval gates
+- **Never wrap `interrupt()` in bare `try/except`** — always re-raise `GraphInterrupt`
+- **Use DeltaChannel** (LangGraph 1.2+) for append-only state to prevent O(N²) checkpoint growth
+- **Use PostgresSaver** for production checkpoint persistence
+- **Make side effects before `interrupt()` idempotent**
+- **Deterministic nodes** — Never use `datetime.now()` or `random()` in graph logic; pass as state
 
 ### Testing
 - **90%+ branch coverage required** — Focus on branches, not just lines
@@ -94,6 +109,11 @@ uv run ruff format src/          # Formatting
 - **Test behavior, not implementation**
 - **Mock external dependencies** (Pinecone, OpenAI, etc.)
 - **Use SQLite in-memory for database tests**
+- **Mutation testing** — `mutmut` runs weekly
+  - Target: 70%+ mutation score on business logic modules
+  - Use `mutate_only_covered_lines = true` and `type_check_command` to reduce noise
+  - Exclude logging statements with `do_not_mutate_patterns`
+  - Run incrementally on PRs after 80%+ baseline established
 - **Test structure**:
   ```python
   # Scenario: Given X, when Y, then Z (see features/documents.feature)
@@ -112,9 +132,21 @@ uv run ruff format src/          # Formatting
 - **Input validation** — All inputs validated with Pydantic
 - **SQL injection** — Use SQLAlchemy ORM, never raw SQL with string interpolation
 
+## Architecture Decision Records
+
+See `../docs/decisions/` for all ADRs:
+- [ADR-002: Use LangGraph for Workflow Engine](../docs/decisions/0002-use-langgraph-for-workflow-engine.md)
+- [ADR-003: Implement Persona-Driven AI Content](../docs/decisions/0003-implement-persona-driven-ai-content.md)
+- [ADR-004: Adopt Event-Driven Architecture](../docs/decisions/0004-adopt-event-driven-architecture.md)
+- [ADR-005: Adopt Mutation Testing](../docs/decisions/0005-adopt-mutation-testing.md)
+- [ADR-006: Use JSONB for Rich Content](../docs/decisions/0006-use-jsonb-for-rich-content.md)
+
 ## Documentation References
 
 - **Architecture**: `../docs/architecture/`
 - **Implementation Plan**: `../docs/backend/`
 - **API Contract**: `../docs/architecture/API_CONTRACT.md`
 - **Deployment**: `../docs/deployment/`
+- **LangGraph Deep Agents Guide**: `../docs/architecture/langchain-deep-agents-guide.md`
+- **Professional Pivot Plan**: `../docs/PROFESSIONAL_PIVOT_PLAN.md`
+- **Prompt Registry**: `src/rag_backend/agents/prompts/registry.py`

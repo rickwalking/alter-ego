@@ -1,7 +1,9 @@
 import asyncio
-import asyncpg
 import json
 import os
+
+import asyncpg
+
 
 async def fix():
     db_url = os.environ['DATABASE_URL'].replace('+asyncpg', '')

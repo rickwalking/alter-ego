@@ -45,6 +45,31 @@ class PostgresConversationRepository:
         )
         return [conv.to_entity() for conv in result.scalars().all()]
 
+    async def get_by_user_id(
+        self,
+        user_id: UUID,
+        limit: int = 100,
+        offset: int = 0,
+    ) -> list[Conversation]:
+        """Get conversations owned by a user."""
+        result = await self._session.execute(
+            select(ConversationModel)
+            .where(ConversationModel.owner_id == str(user_id))
+            .order_by(desc(ConversationModel.updated_at))
+            .offset(offset)
+            .limit(limit)
+        )
+        return [conv.to_entity() for conv in result.scalars().all()]
+
+    async def count_by_user_id(self, user_id: UUID) -> int:
+        """Count conversations owned by a user."""
+        result = await self._session.execute(
+            select(func.count())
+            .select_from(ConversationModel)
+            .where(ConversationModel.owner_id == str(user_id))
+        )
+        return result.scalar() or 0
+
     async def update(self, conversation: Conversation) -> Conversation:
         """Update an existing conversation."""
         result = await self._session.execute(
