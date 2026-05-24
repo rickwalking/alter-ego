@@ -154,6 +154,12 @@ ignore = [
     "PLR0913", # too-many-arguments — test methods with many fixtures
 ]
 "**/__init__.py" = ["F401"]  # Re-exports are OK
+"src/rag_backend/api/routes/*.py" = [
+    "FAST001",  # response_model is intentionally explicit in FastAPI routes
+    "FAST002",  # Depends() in function signature is standard FastAPI pattern
+    "ARG001",   # auth dependencies are used by FastAPI DI but not in function body
+    "FBT001",   # boolean query params are standard in FastAPI filters
+]
 
 [tool.ruff.lint.mccabe]
 max-complexity = 12

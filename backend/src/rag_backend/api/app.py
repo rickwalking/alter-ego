@@ -4,7 +4,7 @@ from contextlib import AsyncExitStack, asynccontextmanager
 from datetime import datetime
 from pathlib import Path
 
-from fastapi import FastAPI, WebSocket
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.checkpoint.memory import InMemorySaver
@@ -15,16 +15,29 @@ from rag_backend.api.middleware.error_handlers import add_error_handlers
 from rag_backend.api.middleware.rate_limiting import setup_rate_limiting
 from rag_backend.api.middleware.request_logging import RequestLoggingMiddleware
 from rag_backend.api.middleware.security_headers import SecurityHeadersMiddleware
-from rag_backend.api.routes import admin, auth, carousels, conversations, documents, search
+from rag_backend.api.routes import (
+    admin,
+    auth,
+    blog_post,
+    blog_post_comments,
+    blog_post_versions,
+    blog_post_workflow,
+    carousels,
+    chat_stream,
+    conversations,
+    documents,
+    personas,
+    rubrics,
+    search,
+    sources,
+)
 from rag_backend.api.schemas import HealthCheckResponse, HealthResponse
-from rag_backend.api.websocket.chat import chat_handler
-from rag_backend.domain.constants import COOKIE_ACCESS_TOKEN
 from rag_backend.infrastructure.config.settings import Settings, get_settings
 from rag_backend.infrastructure.container import container
 from rag_backend.infrastructure.database.config import close_db, init_db
 from rag_backend.infrastructure.logging import get_logger, setup_logging
 from rag_backend.infrastructure.monitoring import init_langsmith
-from rag_backend.monitoring_langfuse import init_langfuse
+from rag_backend.infrastructure.monitoring_langfuse import init_langfuse
 
 logger = get_logger()
 
@@ -94,11 +107,15 @@ async def _build_checkpointer(
         await saver_pg.setup()  # idempotent DDL for checkpoint tables
         return saver_pg
     if not settings.carousel_checkpoint_sqlite_path:
-        return None
-    Path(settings.carousel_checkpoint_sqlite_path).parent.mkdir(parents=True, exist_ok=True)
-    return await stack.enter_async_context(
-        AsyncSqliteSaver.from_conn_string(settings.carousel_checkpoint_sqlite_path)
-    )
+        return InMemorySaver()
+    try:
+        Path(settings.carousel_checkpoint_sqlite_path).parent.mkdir(parents=True, exist_ok=True)
+        return await stack.enter_async_context(
+            AsyncSqliteSaver.from_conn_string(settings.carousel_checkpoint_sqlite_path)
+        )
+    except Exception:
+        logger.warning("carousel_checkpoint_sqlite_fallback", hint="sqlite path not available, using memory")
+        return InMemorySaver()
 
 
 def create_app() -> FastAPI:  # noqa: C901, PLR0915 — app factory configures all middleware/routes
@@ -212,51 +229,18 @@ def create_app() -> FastAPI:  # noqa: C901, PLR0915 — app factory configures a
     app.include_router(conversations.router, prefix="/api")
     app.include_router(search.router, prefix="/api")
     app.include_router(carousels.router, prefix="/api")
+    
+    # New Phase 1 routes
+    app.include_router(blog_post.router, prefix="/api")
+    app.include_router(blog_post_workflow.router, prefix="/api")
+    app.include_router(blog_post_versions.router, prefix="/api")
+    app.include_router(blog_post_comments.router, prefix="/api")
+    app.include_router(personas.router, prefix="/api")
+    app.include_router(rubrics.router, prefix="/api")
+    app.include_router(sources.router, prefix="/api")
 
-    # WebSocket endpoint for streaming chat
-    @app.websocket("/ws/chat/{conversation_id}")
-    async def websocket_chat(websocket: WebSocket, conversation_id: str):
-        from uuid import UUID
-
-        from rag_backend.infrastructure.auth import (
-            decode_access_token,
-            decode_anonymous_token,
-        )
-
-        conv_id = UUID(conversation_id)
-        settings = get_settings()
-
-        # Extract token from Sec-WebSocket-Protocol header (subprotocol),
-        # then fall back to cookies
-        subprotocols = websocket.headers.get("sec-websocket-protocol", "")
-        token = subprotocols.strip() or None
-        if not token:
-            token = websocket.cookies.get(COOKIE_ACCESS_TOKEN) or websocket.cookies.get(
-                "anon_token"
-            )
-
-        is_authorized = False
-
-        if token:
-            auth_payload = decode_access_token(settings, token)
-            if auth_payload is not None:
-                is_authorized = True
-                await websocket.accept(subprotocol=token)
-            else:
-                anon_payload = decode_anonymous_token(settings, token)
-                if (
-                    anon_payload is not None
-                    and anon_payload.get("conversation_id") == conversation_id
-                ):
-                    is_authorized = True
-                    await websocket.accept(subprotocol=token)
-
-        if not is_authorized:
-            await websocket.close(code=1008)
-            return
-
-        await chat_handler.connect(websocket, conv_id)
-        await chat_handler.handle_chat(websocket, conv_id)
+    # SSE streaming chat endpoints
+    app.include_router(chat_stream.router, prefix="/api")
 
     # Add error handlers
     add_error_handlers(app)

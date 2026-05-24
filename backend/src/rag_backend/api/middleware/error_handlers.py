@@ -6,9 +6,12 @@ from pydantic import ValidationError
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
 from rag_backend.api.schemas import ErrorResponse
+from rag_backend.infrastructure.logging import get_logger
+
+logger = get_logger()
 
 
-async def validation_error_handler(_request: Request, exc: ValidationError):
+async def validation_error_handler(_request: Request, exc: ValidationError) -> JSONResponse:
     """Handle Pydantic validation errors."""
     errors = []
     for error in exc.errors():
@@ -30,43 +33,46 @@ async def validation_error_handler(_request: Request, exc: ValidationError):
     )
 
 
-async def sqlalchemy_error_handler(_request: Request, exc: SQLAlchemyError):
+async def sqlalchemy_error_handler(_request: Request, exc: SQLAlchemyError) -> JSONResponse:
     """Handle SQLAlchemy database errors."""
+    logger.error("database_error", error=str(exc))
     return JSONResponse(
         status_code=500,
         content=ErrorResponse(
             error="Database Error",
             message="An error occurred while accessing the database",
-            details={"detail": str(exc)} if isinstance(exc, SQLAlchemyError) else None,
+            details=None,
         ).model_dump(),
     )
 
 
-async def integrity_error_handler(_request: Request, exc: IntegrityError):
+async def integrity_error_handler(_request: Request, exc: IntegrityError) -> JSONResponse:
     """Handle database integrity errors."""
+    logger.error("integrity_error", error=str(exc))
     return JSONResponse(
         status_code=409,
         content=ErrorResponse(
             error="Conflict",
             message="A conflict occurred with the current state of the resource",
-            details={"detail": str(exc.orig) if hasattr(exc, "orig") else str(exc)},
+            details=None,
         ).model_dump(),
     )
 
 
-async def generic_error_handler(_request: Request, exc: Exception):
+async def generic_error_handler(_request: Request, exc: Exception) -> JSONResponse:
     """Handle generic exceptions."""
+    logger.error("unexpected_error", error=str(exc), exc_info=True)
     return JSONResponse(
         status_code=500,
         content=ErrorResponse(
             error="Internal Server Error",
             message="An unexpected error occurred",
-            details={"detail": str(exc)} if isinstance(exc, Exception) else None,
+            details=None,
         ).model_dump(),
     )
 
 
-def add_error_handlers(app):
+def add_error_handlers(app) -> None:
     """Add error handlers to the FastAPI app."""
     app.add_exception_handler(ValidationError, validation_error_handler)
     app.add_exception_handler(IntegrityError, integrity_error_handler)

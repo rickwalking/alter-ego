@@ -58,6 +58,30 @@ export function Header({ locale }: HeaderProps) {
                   {t("nav.create")}
                 </Link>
               )}
+              {isEditor && (
+                <Link
+                  href="/personas"
+                  className="transition-colors hover:text-[var(--color-primary)]"
+                >
+                  Personas
+                </Link>
+              )}
+              {isEditor && (
+                <Link
+                  href="/rubrics"
+                  className="transition-colors hover:text-[var(--color-primary)]"
+                >
+                  Rubrics
+                </Link>
+              )}
+              {isEditor && (
+                <Link
+                  href="/blog-posts"
+                  className="transition-colors hover:text-[var(--color-primary)]"
+                >
+                  Blog Posts
+                </Link>
+              )}
               {isAdmin && (
                 <Link
                   href="/admin/users"
