@@ -10,7 +10,7 @@ from uuid import UUID
 
 from deepagents import create_deep_agent
 from langchain_anthropic import ChatAnthropic
-from langchain_core.messages import AIMessage, HumanMessage
+from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 from langchain_core.runnables.config import RunnableConfig
 from langchain_core.tools import BaseTool
 
@@ -136,97 +136,136 @@ class AlterEgoAgent:
         sources = []
 
         if stream:
-            full_response = ""
-
-            callbacks = get_langfuse_handler()
-            lf_config: RunnableConfig = {"callbacks": [callbacks]} if callbacks else {}
-
-            async for event in self._agent.astream_events(
-                {"messages": [*chat_history, HumanMessage(content=message)]},
-                lf_config,
-                version="v2",
-            ):
-                event_name = event.get("event")
-
-                if event_name == "on_tool_end":
-                    tool_output = event.get("data", {}).get("output")
-                    tool_name = event.get("name", "")
-                    if tool_output is not None:
-                        yield {
-                            "type": "tool_result",
-                            "tool": tool_name,
-                            "result": tool_output,
-                        }
-                    continue
-
-                if event_name != "on_chat_model_stream":
-                    continue
-
-                chunk = event.get("data", {}).get("chunk")
-                if chunk is None:
-                    continue
-                content = getattr(chunk, "content", None)
-                if not content:
-                    continue
-
-                token = ""
-                if isinstance(content, str):
-                    token = content
-                elif isinstance(content, list):
-                    for block in content:
-                        if isinstance(block, dict) and block.get("type") == "text":
-                            token += block.get("text", "")
-                if not token:
-                    continue
-
-                full_response += token
-                yield {"type": "token", "content": token}
-
-            if persist_messages:
-                assistant_message = Message(
-                    role=MessageRole.ASSISTANT,
-                    content=full_response,
-                    conversation_id=conversation_id,
-                    sources=sources,
-                )
-                await self._message_repository.create(assistant_message)
-
-            yield {"type": "sources", "content": sources}
-            yield {"type": "complete", "content": full_response}
-
+            yield from self._chat_stream(
+                message,
+                conversation_id,
+                chat_history,
+                sources,
+                persist_messages,
+            )
         else:
-            callbacks = get_langfuse_handler()
-            lf_config: RunnableConfig = {"callbacks": [callbacks]} if callbacks else {}
-            async for attempt in retry_async(attempts=LANGGRAPH_MAX_ATTEMPTS):
-                with attempt:
-                    result = await self._agent.ainvoke(
-                        {"messages": [*chat_history, HumanMessage(content=message)]},
-                        lf_config,
-                    )
+            yield from self._chat_non_streaming(
+                message,
+                conversation_id,
+                chat_history,
+                sources,
+                persist_messages,
+            )
 
-            messages = result.get("messages", [])
-            response = ""
-            for msg in reversed(messages):
-                if isinstance(msg, AIMessage) and msg.content:
-                    raw = msg.content
-                    if isinstance(raw, str):
-                        response = raw
-                    elif isinstance(raw, list):
-                        for block in raw:
-                            if isinstance(block, dict) and block.get("type") == "text":
-                                response += block.get("text", "")
-                    break
+    async def _chat_stream(
+        self,
+        message: str,
+        conversation_id: UUID,
+        chat_history: list[BaseMessage],
+        sources: list[dict[str, object]],
+        persist_messages: bool,
+    ) -> AsyncIterator[ChatEvent]:
+        """Streaming chat implementation.
 
-            if persist_messages:
-                assistant_message = Message(
-                    role=MessageRole.ASSISTANT,
-                    content=response,
-                    conversation_id=conversation_id,
-                    sources=sources,
+        Yields tokens as they arrive from the LLM.
+        """
+        full_response = ""
+
+        callbacks = get_langfuse_handler()
+        lf_config: RunnableConfig = {"callbacks": [callbacks]} if callbacks else {}
+
+        async for event in self._agent.astream_events(
+            {"messages": [*chat_history, HumanMessage(content=message)]},
+            lf_config,
+            version="v2",
+        ):
+            event_name = event.get("event")
+
+            if event_name == "on_tool_end":
+                tool_output = event.get("data", {}).get("output")
+                tool_name = event.get("name", "")
+                if tool_output is not None:
+                    yield {
+                        "type": "tool_result",
+                        "tool": tool_name,
+                        "result": tool_output,
+                    }
+                    continue
+
+            if event_name != "on_chat_model_stream":
+                continue
+
+            chunk = event.get("data", {}).get("chunk")
+            if chunk is None:
+                continue
+            content = getattr(chunk, "content", None)
+            if not content:
+                continue
+
+            token = ""
+            if isinstance(content, str):
+                token = content
+            elif isinstance(content, list):
+                for block in content:
+                    if isinstance(block, dict) and block.get("type") == "text":
+                        token += block.get("text", "")
+            if not token:
+                continue
+
+            full_response += token
+            yield {"type": "token", "content": token}
+
+        if persist_messages:
+            assistant_message = Message(
+                role=MessageRole.ASSISTANT,
+                content=full_response,
+                conversation_id=conversation_id,
+                sources=sources,
+            )
+            await self._message_repository.create(assistant_message)
+
+        yield {"type": "sources", "content": sources}
+        yield {"type": "complete", "content": full_response}
+
+    async def _chat_non_streaming(
+        self,
+        message: str,
+        conversation_id: UUID,
+        chat_history: list[BaseMessage],
+        sources: list[dict[str, object]],
+        persist_messages: bool,
+    ) -> AsyncIterator[ChatEvent]:
+        """Non-streaming chat implementation.
+
+        Returns complete response at once.
+        """
+        callbacks = get_langfuse_handler()
+        lf_config: RunnableConfig = {"callbacks": [callbacks]} if callbacks else {}
+        async for attempt in retry_async(attempts=LANGGRAPH_MAX_ATTEMPTS):
+            with attempt:
+                result = await self._agent.ainvoke(
+                    {"messages": [*chat_history, HumanMessage(content=message)]},
+                    lf_config,
                 )
-                await self._message_repository.create(assistant_message)
 
-            yield {"type": "complete", "content": response}
+        messages = result.get("messages", [])
+        response = ""
+        for msg in reversed(messages):
+            if isinstance(msg, AIMessage) and msg.content:
+                raw = msg.content
+                if isinstance(raw, str):
+                    response = raw
+                elif isinstance(raw, list):
+                    for block in raw:
+                        if isinstance(block, dict) and block.get("type") == "text":
+                            response += block.get("text", "")
+                break
+
+        if persist_messages:
+            assistant_message = Message(
+                role=MessageRole.ASSISTANT,
+                content=response,
+                conversation_id=conversation_id,
+                sources=sources,
+            )
+            await self._message_repository.create(assistant_message)
+
+        yield {"type": "complete", "content": response}
 
     async def search_documents(self, query: str, top_k: int = 5) -> list[SearchResult]:
         """Search for relevant documents (scoped to personal + public)."""

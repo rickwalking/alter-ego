@@ -303,7 +303,7 @@ ignore-names = [
 "src/rag_backend/application/services/chat_stream_service.py" = ["FBT001", "SIM105"]
 "src/rag_backend/domain/retry.py" = ["SIM103"]
 # PLR091x: Complexity thresholds — some files need more flexibility
-"src/rag_backend/agents/alter_ego_agent.py" = ["PLR0914", "PLR1702", "PLR0912", "PLR0911", "PLR0915"]
+"src/rag_backend/agents/alter_ego_agent.py" = ["PLR0914", "PLR1702", "PLR0912", "PLR0911", "PLR0915", "FBT001"]
 "src/rag_backend/application/services/carousel/graph.py" = ["C901", "PLR0912", "PLR0911", "PLR0915"]
 "src/rag_backend/application/services/carousel/carousel_orchestrator.py" = ["C901", "PLR0912", "PLR0914", "RUF029"]
 "src/rag_backend/application/services/carousel_refinement.py" = ["C901", "PLR0912", "PLR0913", "PLR0914"]
