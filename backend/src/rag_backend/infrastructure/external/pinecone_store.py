@@ -6,8 +6,9 @@ from pinecone import Pinecone, ServerlessSpec
 
 from rag_backend.domain.constants.retry import PINECONE_MAX_ATTEMPTS
 from rag_backend.domain.models import DocumentChunk, SearchResult
+from rag_backend.domain.protocols.vector import HybridSearchParams
 from rag_backend.domain.retry import retry_sync
-from rag_backend.domain.types import SparseEmbedding, StatsResponse
+from rag_backend.domain.types import StatsResponse
 from rag_backend.infrastructure.config.settings import Settings
 
 
@@ -105,22 +106,12 @@ class PineconeVectorStore:
 
     async def hybrid_search(
         self,
-        query: str,
-        dense_embedding: list[float],
-        sparse_embedding: SparseEmbedding,
-        top_k: int = 5,
-        alpha: float = 0.5,
-        namespace: str | None = None,
+        params: HybridSearchParams,
     ) -> list[SearchResult]:
         """Perform hybrid search combining dense and sparse vectors.
 
         Args:
-            query: The search query (for reference)
-            dense_embedding: Dense vector from embedding model
-            sparse_embedding: Sparse vector with 'indices' and 'values'
-            top_k: Number of results to return
-            alpha: Weight for dense vs sparse (0=BM25 only, 1=semantic only)
-            namespace: Pinecone namespace to search. If None, searches default.
+            params: Hybrid search parameters (query, embeddings, top_k, alpha, namespace)
 
         Returns:
             List of SearchResult objects
@@ -129,20 +120,20 @@ class PineconeVectorStore:
 
         # Build query parameters
         query_params: dict[str, object] = {
-            "vector": dense_embedding,
-            "top_k": top_k,
+            "vector": params.dense_embedding,
+            "top_k": params.top_k,
             "include_metadata": True,
             "include_values": False,
         }
 
-        if namespace is not None:
-            query_params["namespace"] = namespace
+        if params.namespace is not None:
+            query_params["namespace"] = params.namespace
 
         # Add sparse vector for hybrid search if alpha < 1
-        if alpha < 1.0 and sparse_embedding:
+        if params.alpha < 1.0 and params.sparse_embedding:
             query_params["sparse_vector"] = {
-                "indices": sparse_embedding.get("indices", []),
-                "values": sparse_embedding.get("values", []),
+                "indices": params.sparse_embedding.get("indices", []),
+                "values": params.sparse_embedding.get("values", []),
             }
 
         for attempt in retry_sync(attempts=PINECONE_MAX_ATTEMPTS):

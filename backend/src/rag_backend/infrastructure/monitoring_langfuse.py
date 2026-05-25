@@ -317,6 +317,9 @@ def add_voice_match_score(
     )
 
 
+from rag_backend.domain.models.carousels import ReviewEventParams
+
+
 def record_human_review(
     trace: object,
     phase: str,
@@ -340,13 +343,13 @@ def record_human_review(
 
     trace.event(  # type: ignore[attr-defined]
         name=f"human_review_{phase}_completed",
-        metadata={
-            "phase": phase,
-            "action": action,
-            "reviewer_id": reviewer_id,
-            "time_to_respond": time_to_respond,
-            "feedback": feedback,
-        },
+        metadata=ReviewEventParams(
+            phase=phase,
+            action=action,
+            reviewer_id=reviewer_id,
+            time_to_respond=time_to_respond,
+            feedback=feedback,
+        ),
     )
 
 
