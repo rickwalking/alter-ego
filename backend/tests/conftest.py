@@ -1,5 +1,11 @@
 """Pytest configuration and fixtures."""
 
+import os
+
+# Required before any import that loads Settings (e.g. Container) during test collection.
+os.environ.setdefault("SECRET_KEY", "test-secret-key-for-pytest-suite!!")
+os.environ.setdefault("ANON_SECRET_KEY", "test-anon-secret-for-pytest-suite!")
+
 import asyncio
 from collections.abc import AsyncGenerator
 

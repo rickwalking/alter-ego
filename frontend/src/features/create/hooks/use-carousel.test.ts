@@ -182,7 +182,9 @@ describe("useCreateCarousel", () => {
   });
 
   it("logs create errors without updating the cache", async () => {
-    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
     mockApiCall.mockRejectedValueOnce(new Error("API Error"));
     const queryClient = createQueryClient();
     queryClient.setQueryData(["carousels"], [MOCK_PROJECT]);
@@ -204,14 +206,17 @@ describe("useCreateCarousel", () => {
   it("deduplicates the created project in the cache by id", async () => {
     mockApiCall.mockResolvedValueOnce(MOCK_PROJECT);
     const queryClient = createQueryClient();
-    queryClient.setQueryData(["carousels"], [
-      MOCK_PROJECT,
-      {
-        ...MOCK_PROJECT,
-        id: "old-project",
-        topic: "Old topic",
-      },
-    ]);
+    queryClient.setQueryData(
+      ["carousels"],
+      [
+        MOCK_PROJECT,
+        {
+          ...MOCK_PROJECT,
+          id: "old-project",
+          topic: "Old topic",
+        },
+      ],
+    );
     const { result } = renderHook(() => useCreateCarousel(), {
       wrapper: createWrapper(queryClient),
     });
@@ -429,7 +434,9 @@ describe("useResumeCarousel", () => {
   });
 
   it("logs resume errors without updating the cache", async () => {
-    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
     mockApiCall.mockRejectedValueOnce(new Error("resume failed"));
     const { result } = renderHook(() => useResumeCarousel(), {
       wrapper: createWrapper(),
@@ -549,7 +556,9 @@ describe("useGenerateCarousel", () => {
   });
 
   it("logs generate errors without updating the cache", async () => {
-    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
     mockApiCall.mockRejectedValueOnce(new Error("generate failed"));
     const { result } = renderHook(() => useGenerateCarousel(), {
       wrapper: createWrapper(),
@@ -640,7 +649,9 @@ describe("useDeleteCarousel", () => {
   });
 
   it("logs delete errors without removing cached queries", async () => {
-    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
     mockApiCall.mockRejectedValueOnce(new Error("not found"));
     const queryClient = createQueryClient();
     const removeQueries = vi.spyOn(queryClient, "removeQueries");

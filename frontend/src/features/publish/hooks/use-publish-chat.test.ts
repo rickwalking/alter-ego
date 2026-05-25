@@ -658,7 +658,8 @@ describe("usePublishChat (SSE comprehensive)", () => {
     await waitFor(() =>
       expect(
         result.current.messages.some(
-          (message) => message.role === "assistant" && message.content === "Hel",
+          (message) =>
+            message.role === "assistant" && message.content === "Hel",
         ),
       ).toBe(true),
     );
@@ -670,7 +671,8 @@ describe("usePublishChat (SSE comprehensive)", () => {
     await waitFor(() =>
       expect(
         result.current.messages.some(
-          (message) => message.role === "assistant" && message.content === "Hello",
+          (message) =>
+            message.role === "assistant" && message.content === "Hello",
         ),
       ).toBe(true),
     );

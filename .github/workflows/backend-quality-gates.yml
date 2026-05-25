@@ -185,6 +185,8 @@ jobs:
         run: uv run pytest --cov=rag_backend --cov-report=xml --cov-report=term
         env:
           DATABASE_URL: postgresql+asyncpg://test:test@localhost:5432/rag_test
+          SECRET_KEY: test-secret-key-for-ci-tests!!
+          ANON_SECRET_KEY: test-anon-secret-for-ci-tests!
 
       - name: Enforce diff coverage ≥75% (phase 1-5 pivot baseline)
         run: uv run diff-cover coverage.xml --compare-branch=origin/main --fail-under=75

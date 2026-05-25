@@ -211,14 +211,17 @@ describe("useCreateConversation", () => {
   it("deduplicates the created conversation in the cache by id", async () => {
     mockApiCall.mockResolvedValueOnce(MOCK_CONVERSATION);
     const queryClient = createQueryClient();
-    queryClient.setQueryData(["conversations"], [
-      MOCK_CONVERSATION,
-      {
-        ...MOCK_CONVERSATION,
-        id: "conv-old",
-        title: "Old conversation",
-      },
-    ]);
+    queryClient.setQueryData(
+      ["conversations"],
+      [
+        MOCK_CONVERSATION,
+        {
+          ...MOCK_CONVERSATION,
+          id: "conv-old",
+          title: "Old conversation",
+        },
+      ],
+    );
     const { result } = renderHook(() => useCreateConversation(), {
       wrapper: createWrapper(queryClient),
     });
@@ -240,7 +243,9 @@ describe("useCreateConversation", () => {
   });
 
   it("logs create errors without updating the cache", async () => {
-    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
     mockApiCall.mockRejectedValueOnce(new Error("create failed"));
     const queryClient = createQueryClient();
     queryClient.setQueryData(["conversations"], [MOCK_CONVERSATION]);
@@ -295,7 +300,9 @@ describe("useSendMessage", () => {
   });
 
   it("logs send errors without invalidating queries", async () => {
-    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
     mockApiCall.mockRejectedValueOnce(new Error("send failed"));
     const queryClient = createQueryClient();
     const invalidateQueries = vi.spyOn(queryClient, "invalidateQueries");
@@ -395,7 +402,9 @@ describe("useDeleteConversation", () => {
   });
 
   it("logs delete errors without mutating the cache", async () => {
-    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
     mockDelete.mockRejectedValueOnce(new ApiError(500, "delete failed"));
     const queryClient = createQueryClient();
     queryClient.setQueryData(["conversations"], [MOCK_CONVERSATION]);
