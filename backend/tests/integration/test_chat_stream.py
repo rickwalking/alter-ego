@@ -109,7 +109,9 @@ async def test_user(client):
     """Create a test user and return it."""
     from rag_backend.domain.models import User, UserRole
     from rag_backend.infrastructure.database.config import get_session_maker
-    from rag_backend.infrastructure.database.user_repository import PostgresUserRepository
+    from rag_backend.infrastructure.database.user_repository import (
+        PostgresUserRepository,
+    )
 
     session_maker = get_session_maker()
     async with session_maker() as session:

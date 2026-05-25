@@ -24,7 +24,9 @@ from rag_backend.infrastructure.database.models.source_comment import (
     EditorialCommentModel,
 )
 from rag_backend.infrastructure.database.models.user import UserModel
-from rag_backend.infrastructure.database.models.workflow_audit_log import WorkflowAuditLogModel
+from rag_backend.infrastructure.database.models.workflow_audit_log import (
+    WorkflowAuditLogModel,
+)
 
 __all__ = [
     "BlogPostModel",

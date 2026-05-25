@@ -11,17 +11,18 @@ from rag_backend.infrastructure.logging import get_logger
 logger = get_logger()
 
 
-async def validation_error_handler(_request: Request, exc: ValidationError) -> JSONResponse:
+async def validation_error_handler(
+    _request: Request, exc: ValidationError
+) -> JSONResponse:
     """Handle Pydantic validation errors."""
-    errors = []
-    for error in exc.errors():
-        errors.append(
-            {
-                "field": ".".join(str(loc) for loc in error["loc"]),
-                "message": error["msg"],
-                "type": error["type"],
-            }
-        )
+    errors = [
+        {
+            "field": ".".join(str(loc) for loc in error["loc"]),
+            "message": error["msg"],
+            "type": error["type"],
+        }
+        for error in exc.errors()
+    ]
 
     return JSONResponse(
         status_code=422,
@@ -33,7 +34,9 @@ async def validation_error_handler(_request: Request, exc: ValidationError) -> J
     )
 
 
-async def sqlalchemy_error_handler(_request: Request, exc: SQLAlchemyError) -> JSONResponse:
+async def sqlalchemy_error_handler(
+    _request: Request, exc: SQLAlchemyError
+) -> JSONResponse:
     """Handle SQLAlchemy database errors."""
     logger.error("database_error", error=str(exc))
     return JSONResponse(
@@ -46,7 +49,9 @@ async def sqlalchemy_error_handler(_request: Request, exc: SQLAlchemyError) -> J
     )
 
 
-async def integrity_error_handler(_request: Request, exc: IntegrityError) -> JSONResponse:
+async def integrity_error_handler(
+    _request: Request, exc: IntegrityError
+) -> JSONResponse:
     """Handle database integrity errors."""
     logger.error("integrity_error", error=str(exc))
     return JSONResponse(

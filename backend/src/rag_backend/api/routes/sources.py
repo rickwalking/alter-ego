@@ -40,7 +40,9 @@ async def list_sources_for_project(
 ) -> ContentSourceListResponse:
     """List all content sources for a project."""
     await get_carousel_project_for_user(db, project_id, current_user)
-    query = select(ContentSourceModel).where(ContentSourceModel.project_id == str(project_id))
+    query = select(ContentSourceModel).where(
+        ContentSourceModel.project_id == str(project_id)
+    )
     result = await db.execute(query)
     sources = result.scalars().all()
     return ContentSourceListResponse(items=list(sources), total=len(sources))

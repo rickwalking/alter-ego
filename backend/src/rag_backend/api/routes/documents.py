@@ -92,7 +92,10 @@ async def upload_document(
         )
 
     # Build metadata
-    metadata: dict[str, object] = {"filename": file.filename, "content_type": file.content_type}
+    metadata: dict[str, object] = {
+        "filename": file.filename,
+        "content_type": file.content_type,
+    }
     if tags:
         metadata["tags"] = [t.strip() for t in tags.split(",") if t.strip()]
 
@@ -198,8 +201,12 @@ async def create_document(
 )
 async def list_documents(
     user: Annotated[User, Depends(require_authenticated_user)],
-    status: Annotated[DocumentStatus | None, Query(description="Filter by status")] = None,
-    limit: Annotated[int, Query(ge=1, le=100, description="Number of items to return")] = 20,
+    status: Annotated[
+        DocumentStatus | None, Query(description="Filter by status")
+    ] = None,
+    limit: Annotated[
+        int, Query(ge=1, le=100, description="Number of items to return")
+    ] = 20,
     offset: Annotated[int, Query(ge=0, description="Number of items to skip")] = 0,
     db: AsyncSession = Depends(get_session),
 ):

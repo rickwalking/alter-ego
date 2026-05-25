@@ -29,10 +29,14 @@ class EditorialAnalyticsService:
         month_ago = now - timedelta(days=30)
 
         published_week = sum(
-            1 for p in posts if p.published_at and p.published_at.replace(tzinfo=UTC) >= week_ago
+            1
+            for p in posts
+            if p.published_at and p.published_at.replace(tzinfo=UTC) >= week_ago
         )
         published_month = sum(
-            1 for p in posts if p.published_at and p.published_at.replace(tzinfo=UTC) >= month_ago
+            1
+            for p in posts
+            if p.published_at and p.published_at.replace(tzinfo=UTC) >= month_ago
         )
 
         status_counts: dict[str, int] = {}
@@ -78,12 +82,10 @@ class EditorialAnalyticsService:
                 for p in posts
                 if p.published_at and start <= p.published_at.replace(tzinfo=UTC) < end
             )
-            buckets.append(
-                {
-                    "week_start": start.date().isoformat(),
-                    "published_count": count,
-                }
-            )
+            buckets.append({
+                "week_start": start.date().isoformat(),
+                "published_count": count,
+            })
         return buckets
 
     def _estimate_quality_score(self, posts: list[BlogPostModel]) -> float:
@@ -97,7 +99,9 @@ class EditorialAnalyticsService:
                 if isinstance(score, (int, float)):
                     scores.append(float(score))
         if not scores:
-            published_ratio = sum(1 for p in posts if p.status == "published") / len(posts)
+            published_ratio = sum(1 for p in posts if p.status == "published") / len(
+                posts
+            )
             return round(published_ratio * 100, 1)
         return round(sum(scores) / len(scores), 1)
 

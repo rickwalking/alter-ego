@@ -18,7 +18,9 @@ from rag_backend.application.services.workflow_failure_alert_service import (
 )
 from rag_backend.domain.constants.carousel import CAROUSEL_STATUS_FAILED
 from rag_backend.domain.constants.carousel_workflow import PHASE_RESEARCH
-from rag_backend.domain.constants.workflow_alerts import NOTIFICATION_TYPE_WORKFLOW_FAILURE
+from rag_backend.domain.constants.workflow_alerts import (
+    NOTIFICATION_TYPE_WORKFLOW_FAILURE,
+)
 from rag_backend.infrastructure.database.config import Base
 from rag_backend.infrastructure.database.models.carousel import CarouselProjectModel
 from rag_backend.infrastructure.database.models.notification import NotificationModel
@@ -49,7 +51,9 @@ async def session() -> AsyncSession:
 
 @pytest.mark.asyncio
 class TestWorkflowFailureAlertService:
-    async def test_alerts_on_recent_failed_carousel(self, session: AsyncSession) -> None:
+    async def test_alerts_on_recent_failed_carousel(
+        self, session: AsyncSession
+    ) -> None:
         now = datetime.now(UTC)
         project = CarouselProjectModel(
             id=str(uuid.uuid4()),
@@ -70,13 +74,16 @@ class TestWorkflowFailureAlertService:
         assert count >= 1
         result = await session.execute(
             select(NotificationModel).where(
-                NotificationModel.notification_type == NOTIFICATION_TYPE_WORKFLOW_FAILURE
+                NotificationModel.notification_type
+                == NOTIFICATION_TYPE_WORKFLOW_FAILURE
             )
         )
         notifications = list(result.scalars().all())
         assert len(notifications) >= 1
 
-    async def test_no_duplicate_alerts_on_second_tick(self, session: AsyncSession) -> None:
+    async def test_no_duplicate_alerts_on_second_tick(
+        self, session: AsyncSession
+    ) -> None:
         now = datetime.now(UTC)
         project = CarouselProjectModel(
             id=str(uuid.uuid4()),
@@ -100,7 +107,9 @@ class TestWorkflowFailureAlertService:
         assert first >= 1
         assert second == 0
 
-    async def test_no_alert_when_no_recent_failures(self, session: AsyncSession) -> None:
+    async def test_no_alert_when_no_recent_failures(
+        self, session: AsyncSession
+    ) -> None:
         old = datetime.now(UTC) - timedelta(hours=5)
         project = CarouselProjectModel(
             id=str(uuid.uuid4()),

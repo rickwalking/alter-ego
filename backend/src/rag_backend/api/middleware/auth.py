@@ -47,7 +47,9 @@ async def get_current_user(
     Raises:
         HTTPException: If token is missing or invalid.
     """
-    token = credentials.credentials if credentials else _extract_token_from_request(request)
+    token = (
+        credentials.credentials if credentials else _extract_token_from_request(request)
+    )
 
     if not token:
         raise HTTPException(
@@ -82,7 +84,9 @@ async def get_current_user_optional(
     Returns:
         Token payload dict if valid, None otherwise.
     """
-    token = credentials.credentials if credentials else _extract_token_from_request(request)
+    token = (
+        credentials.credentials if credentials else _extract_token_from_request(request)
+    )
 
     if not token:
         return None

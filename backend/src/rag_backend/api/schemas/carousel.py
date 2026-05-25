@@ -24,7 +24,9 @@ class CarouselProjectCreate(BaseModel):
     topic: str = Field(..., min_length=1, max_length=500)
     audience: str = Field(..., min_length=1, max_length=500)
     niche: str = Field(..., min_length=1, max_length=200)
-    slides_config: str = Field(default="1 intro, 3 content, 1 closing, 1 cta", max_length=200)
+    slides_config: str = Field(
+        default="1 intro, 3 content, 1 closing, 1 cta", max_length=200
+    )
     language: str = Field(default="pt-BR", max_length=10)
     generate_images: bool = True
     theme: str = Field(default="auto", max_length=30)
@@ -35,14 +37,18 @@ class CarouselProjectCreate(BaseModel):
     @classmethod
     def _check_image_model(cls, value: str) -> str:
         if value not in VALID_IMAGE_MODELS:
-            raise ValueError(_ERR_INVALID_IMAGE_MODEL.format(sorted(VALID_IMAGE_MODELS), value))
+            raise ValueError(
+                _ERR_INVALID_IMAGE_MODEL.format(sorted(VALID_IMAGE_MODELS), value)
+            )
         return value
 
     @field_validator("image_style")
     @classmethod
     def _check_image_style(cls, value: str) -> str:
         if value not in VALID_IMAGE_STYLES:
-            raise ValueError(_ERR_INVALID_IMAGE_STYLE.format(sorted(VALID_IMAGE_STYLES), value))
+            raise ValueError(
+                _ERR_INVALID_IMAGE_STYLE.format(sorted(VALID_IMAGE_STYLES), value)
+            )
         return value
 
     @model_validator(mode="after")
@@ -139,7 +145,9 @@ class CarouselStatusResponse(BaseModel):
 
 
 class CarouselGenerateRequest(BaseModel):
-    sources: list[str] | None = Field(default=None, description="Optional source URLs to research")
+    sources: list[str] | None = Field(
+        default=None, description="Optional source URLs to research"
+    )
 
 
 class InstagramPublishRequest(BaseModel):

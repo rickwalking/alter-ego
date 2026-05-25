@@ -74,7 +74,9 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     )
     langfuse_handler = init_langfuse(
         settings.langfuse_public_key,
-        settings.langfuse_secret_key.get_secret_value() if settings.langfuse_secret_key else "",
+        settings.langfuse_secret_key.get_secret_value()
+        if settings.langfuse_secret_key
+        else "",
         settings.langfuse_host,
     )
     if langfuse_handler:
@@ -128,25 +130,30 @@ async def _build_checkpointer(
             )
             return None
         saver_pg = await stack.enter_async_context(
-            AsyncPostgresSaver.from_conn_string(settings.carousel_checkpoint_postgres_url)
+            AsyncPostgresSaver.from_conn_string(
+                settings.carousel_checkpoint_postgres_url
+            )
         )
         await saver_pg.setup()  # idempotent DDL for checkpoint tables
         return saver_pg
     if not settings.carousel_checkpoint_sqlite_path:
         return InMemorySaver()
     try:
-        Path(settings.carousel_checkpoint_sqlite_path).parent.mkdir(parents=True, exist_ok=True)
+        Path(settings.carousel_checkpoint_sqlite_path).parent.mkdir(
+            parents=True, exist_ok=True
+        )
         return await stack.enter_async_context(
             AsyncSqliteSaver.from_conn_string(settings.carousel_checkpoint_sqlite_path)
         )
     except Exception:
         logger.warning(
-            "carousel_checkpoint_sqlite_fallback", hint="sqlite path not available, using memory"
+            "carousel_checkpoint_sqlite_fallback",
+            hint="sqlite path not available, using memory",
         )
         return InMemorySaver()
 
 
-def create_app() -> FastAPI:  # noqa: PLR0915 — app factory configures all middleware/routes
+def create_app() -> FastAPI:
     """Create and configure the FastAPI application."""
     settings = get_settings()
 
@@ -169,7 +176,9 @@ def create_app() -> FastAPI:  # noqa: PLR0915 — app factory configures all mid
     if settings.debug:
         allowed_origins = ["*"]
     else:
-        allowed_origins = settings.allowed_origins.split(",") if settings.allowed_origins else ["*"]
+        allowed_origins = (
+            settings.allowed_origins.split(",") if settings.allowed_origins else ["*"]
+        )
     app.add_middleware(
         CORSMiddleware,
         allow_origins=allowed_origins,
@@ -202,7 +211,9 @@ def create_app() -> FastAPI:  # noqa: PLR0915 — app factory configures all mid
             if c_engine:
                 async with c_engine.connect() as conn:
                     await conn.execute(
-                        __import__("sqlalchemy").select(__import__("sqlalchemy").literal(1))
+                        __import__("sqlalchemy").select(
+                            __import__("sqlalchemy").literal(1)
+                        )
                     )
                 checks["database"] = {"status": "connected"}
             else:

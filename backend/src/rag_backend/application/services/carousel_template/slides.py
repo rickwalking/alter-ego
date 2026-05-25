@@ -2,7 +2,11 @@
 
 import html
 
-from rag_backend.application.services.carousel.types import MAX_FEATURE_ITEMS, MAX_SLIDES, SlideDict
+from rag_backend.application.services.carousel.types import (
+    MAX_FEATURE_ITEMS,
+    MAX_SLIDES,
+    SlideDict,
+)
 from rag_backend.application.services.carousel_template.helpers import (
     _feature_items,
     _insight_quote,
@@ -16,7 +20,9 @@ from rag_backend.domain.constants import SLIDE_TYPE_CONTENT
 from rag_backend.domain.models import CarouselProject
 
 
-def _render_intro_slide(slide: SlideDict, project: CarouselProject, theme: dict[str, str]) -> str:
+def _render_intro_slide(
+    slide: SlideDict, project: CarouselProject, theme: dict[str, str]
+) -> str:
     primary = theme["primary"]
     heading = _render_inline(str(slide["heading"]))
     subtitle = _render_inline(str(slide["body"]))
@@ -78,7 +84,9 @@ def _render_summary_slide(slide: SlideDict, _theme: dict[str, str]) -> str:
     heading = _render_inline(str(slide["heading"]))
     subtitle_raw = str(slide.get("body") or "").strip()
     subtitle_html = (
-        f'<p class="summary-subtitle">{_render_inline(subtitle_raw)}</p>' if subtitle_raw else ""
+        f'<p class="summary-subtitle">{_render_inline(subtitle_raw)}</p>'
+        if subtitle_raw
+        else ""
     )
     return f"""
   <div class="slide summary-slide">
@@ -122,14 +130,20 @@ def _render_content_slide(slide: SlideDict, _theme: dict[str, str]) -> str:
 
     features = _feature_items(slide)
     if features is not None:
-        columns = 2 if len(features) >= MAX_FEATURE_ITEMS and slide["type"] != "closing" else 1
+        columns = (
+            2
+            if len(features) >= MAX_FEATURE_ITEMS and slide["type"] != "closing"
+            else 1
+        )
         body_parts.append(_render_feature_grid(features, columns=columns))
 
     insight = _insight_quote(slide)
     if insight is not None:
         body_parts.append(_render_insight_card(insight))
 
-    body_html = "".join(body_parts) or (f'<p class="body-p">{_render_inline(raw_body)}</p>')
+    body_html = "".join(body_parts) or (
+        f'<p class="body-p">{_render_inline(raw_body)}</p>'
+    )
 
     heading = _render_inline(str(slide["heading"]))
     return f"""
@@ -145,7 +159,9 @@ def _render_content_slide(slide: SlideDict, _theme: dict[str, str]) -> str:
   </div>"""
 
 
-def _render_cta_slide(slide: SlideDict, _theme: dict[str, str], language: str = "pt") -> str:
+def _render_cta_slide(
+    slide: SlideDict, _theme: dict[str, str], language: str = "pt"
+) -> str:
     heading = _render_inline(str(slide["heading"]))
     body = _render_inline(str(slide["body"]))
     if language == "en":

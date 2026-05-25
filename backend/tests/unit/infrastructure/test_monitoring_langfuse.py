@@ -51,14 +51,18 @@ class TestLangfuseCallbackHandler:
         """Create a LangfuseCallbackHandler instance."""
         return LangfuseCallbackHandler(mock_client)
 
-    def test_init(self, handler: LangfuseCallbackHandler, mock_client: MagicMock) -> None:
+    def test_init(
+        self, handler: LangfuseCallbackHandler, mock_client: MagicMock
+    ) -> None:
         """Given client, when initializing, then handler is created."""
         assert handler.client == mock_client
         assert handler._current_trace is None
         assert handler._current_span is None
         assert handler._run_stack == []
 
-    def test_on_text(self, handler: LangfuseCallbackHandler, mock_client: MagicMock) -> None:
+    def test_on_text(
+        self, handler: LangfuseCallbackHandler, mock_client: MagicMock
+    ) -> None:
         """Given run, when on_text is called, then trace is created."""
         run = MagicMock()
         run.name = "test_run"
@@ -72,7 +76,9 @@ class TestLangfuseCallbackHandler:
         assert handler._current_trace is not None
         mock_client.trace.assert_called_once()
 
-    def test_on_error(self, handler: LangfuseCallbackHandler, mock_client: MagicMock) -> None:
+    def test_on_error(
+        self, handler: LangfuseCallbackHandler, mock_client: MagicMock
+    ) -> None:
         """Given error, when on_error is called, then span is updated."""
         run = MagicMock()
         run.name = "test"
@@ -86,7 +92,9 @@ class TestLangfuseCallbackHandler:
 
         assert handler._current_span.update.called
 
-    def test_set_tags(self, handler: LangfuseCallbackHandler, mock_client: MagicMock) -> None:
+    def test_set_tags(
+        self, handler: LangfuseCallbackHandler, mock_client: MagicMock
+    ) -> None:
         """Given tags, when set_tags is called, then trace is updated."""
         run = MagicMock()
         run.name = "test"
@@ -100,7 +108,9 @@ class TestLangfuseCallbackHandler:
 
         handler._current_trace.update.assert_called_with(tags=["new_tag"])
 
-    def test_set_metadata(self, handler: LangfuseCallbackHandler, mock_client: MagicMock) -> None:
+    def test_set_metadata(
+        self, handler: LangfuseCallbackHandler, mock_client: MagicMock
+    ) -> None:
         """Given metadata, when set_metadata is called, then trace is updated."""
         run = MagicMock()
         run.name = "test"
@@ -114,7 +124,9 @@ class TestLangfuseCallbackHandler:
 
         handler._current_trace.update.assert_called_with(metadata={"key": "value"})
 
-    def test_add_score(self, handler: LangfuseCallbackHandler, mock_client: MagicMock) -> None:
+    def test_add_score(
+        self, handler: LangfuseCallbackHandler, mock_client: MagicMock
+    ) -> None:
         """Given score, when add_score is called, then score is added."""
         run = MagicMock()
         run.name = "test"
@@ -145,7 +157,9 @@ class TestTraceFunctions:
     """Tests for standalone trace functions."""
 
     @patch("rag_backend.infrastructure.monitoring_langfuse.get_langfuse_client")
-    def test_create_workflow_trace_with_none_client(self, mock_get_client: MagicMock) -> None:
+    def test_create_workflow_trace_with_none_client(
+        self, mock_get_client: MagicMock
+    ) -> None:
         """Given None client, when creating trace, then None is returned."""
         mock_get_client.return_value = None
 
@@ -158,7 +172,9 @@ class TestTraceFunctions:
         assert result is None
 
     @patch("rag_backend.infrastructure.langfuse_client.get_langfuse_client")
-    def test_add_quality_score_with_none_trace(self, mock_get_client: MagicMock) -> None:
+    def test_add_quality_score_with_none_trace(
+        self, mock_get_client: MagicMock
+    ) -> None:
         """Given None trace, when adding score, then no exception is raised."""
         add_quality_score(
             trace=None,
@@ -169,7 +185,9 @@ class TestTraceFunctions:
         )
 
     @patch("rag_backend.infrastructure.langfuse_client.get_langfuse_client")
-    def test_add_voice_match_score_with_none_trace(self, mock_get_client: MagicMock) -> None:
+    def test_add_voice_match_score_with_none_trace(
+        self, mock_get_client: MagicMock
+    ) -> None:
         """Given None trace, when adding score, then no exception is raised."""
         add_voice_match_score(
             trace=None,
@@ -178,7 +196,9 @@ class TestTraceFunctions:
         )
 
     @patch("rag_backend.infrastructure.langfuse_client.get_langfuse_client")
-    def test_record_human_review_with_none_trace(self, mock_get_client: MagicMock) -> None:
+    def test_record_human_review_with_none_trace(
+        self, mock_get_client: MagicMock
+    ) -> None:
         """Given None trace, when recording review, then no exception is raised."""
         record_human_review(
             trace=None,

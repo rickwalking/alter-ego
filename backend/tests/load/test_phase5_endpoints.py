@@ -15,7 +15,9 @@ import pytest
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 import rag_backend.infrastructure.database.config as db_config
-from rag_backend.application.services.phase5_migration_service import Phase5MigrationService
+from rag_backend.application.services.phase5_migration_service import (
+    Phase5MigrationService,
+)
 from rag_backend.domain.constants.carousel import CAROUSEL_STATUS_COMPLETED
 from rag_backend.infrastructure.database.config import Base
 from rag_backend.infrastructure.database.models.carousel import CarouselProjectModel
@@ -97,7 +99,9 @@ async def test_concurrent_brief_building() -> None:
         for index in range(100)
     ]
 
-    from rag_backend.application.services.phase5_migration_service import build_creative_brief
+    from rag_backend.application.services.phase5_migration_service import (
+        build_creative_brief,
+    )
 
     start = time.perf_counter()
 

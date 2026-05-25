@@ -15,7 +15,9 @@ DEFAULT_PERSONA_DESCRIPTION = (
     "Auto-generated persona from existing carousel outputs during Phase 5 migration."
 )
 DEFAULT_RUBRIC_NAME = "Editorial Quality (Default)"
-DEFAULT_RUBRIC_DESCRIPTION = "Standard editorial quality rubric for carousel and blog content."
+DEFAULT_RUBRIC_DESCRIPTION = (
+    "Standard editorial quality rubric for carousel and blog content."
+)
 
 MAX_WRITING_SAMPLES = 10
 MAX_SAMPLE_LENGTH = 500

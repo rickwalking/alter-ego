@@ -27,7 +27,9 @@ def setup_logging(*, debug: bool = False) -> None:
     ]
 
     renderer: structlog.types.Processor = (
-        structlog.processors.JSONRenderer() if not debug else structlog.dev.ConsoleRenderer()
+        structlog.processors.JSONRenderer()
+        if not debug
+        else structlog.dev.ConsoleRenderer()
     )
     structlog.configure(
         processors=[*shared_processors, structlog.processors.format_exc_info, renderer],

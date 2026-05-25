@@ -12,7 +12,9 @@ NODE_CAPTION = "caption"
 async def _caption_node(state: PipelineState, *, deps: object) -> dict[str, object]:
     """Generate an Instagram caption from slide headings."""
     project: CarouselProject = state["project"]
-    caption = await run_caption(project, state["slides_data"], llm=deps.llm, template=deps.template)
+    caption = await run_caption(
+        project, state["slides_data"], llm=deps.llm, template=deps.template
+    )
     project.caption = caption
     return {"project": project, "caption": caption}
 

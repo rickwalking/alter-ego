@@ -49,7 +49,9 @@ class PersonaProfileModel(Base):
     paragraph_style = Column(Text, nullable=True)
     opinion_expression = Column(Text, nullable=True)
     expertise_areas = Column(JSON, default=list, nullable=False)
-    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    created_at = Column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
     updated_at = Column(
         DateTime(timezone=True),
         server_default=func.now(),
@@ -134,9 +136,13 @@ class QualityRubricModel(Base):
     name = Column(String(255), nullable=False)
     description = Column(Text, nullable=True)
     criteria = Column(JSON, default=list, nullable=False)
-    applicable_content_types = Column(JSON, default=lambda: ["carousel"], nullable=False)
+    applicable_content_types = Column(
+        JSON, default=lambda: ["carousel"], nullable=False
+    )
     is_default = Column(Boolean, default=False, nullable=False)
-    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    created_at = Column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
     updated_at = Column(
         DateTime(timezone=True),
         server_default=func.now(),
@@ -201,7 +207,9 @@ class RubricEvaluationScoreModel(Base):
     rubric_id = Column(String(36), ForeignKey("quality_rubrics.id"), nullable=False)
     content_id = Column(String(36), nullable=False)
     content_type = Column(String(30), nullable=False)
-    evaluated_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    evaluated_at = Column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
     scores = Column(JSON, default=dict, nullable=False)
     overall_score = Column(Integer, default=0, nullable=False)
     passed = Column(Boolean, default=False, nullable=False)

@@ -60,18 +60,17 @@ async def search_documents(
         )
 
         # Format results
-        formatted_results = []
-        for result in results:
-            formatted_results.append(
-                SearchResultResponse(
-                    content=result.content,
-                    document_id=result.document_id,
-                    document_title=result.metadata.get("title", "Untitled"),
-                    score=result.score,
-                    rank=result.rank,
-                    metadata=result.metadata,
-                )
+        formatted_results = [
+            SearchResultResponse(
+                content=result.content,
+                document_id=result.document_id,
+                document_title=result.metadata.get("title", "Untitled"),
+                score=result.score,
+                rank=result.rank,
+                metadata=result.metadata,
             )
+            for result in results
+        ]
 
         return {
             "query": request.query,
@@ -97,8 +96,12 @@ async def search_documents(
 )
 async def search_documents_get(
     user: Annotated[User, Depends(require_authenticated_user)],
-    query: Annotated[str, Query(min_length=1, max_length=1000, description="Search query")],
-    top_k: Annotated[int, Query(ge=1, le=20, description="Number of results to return")] = 5,
+    query: Annotated[
+        str, Query(min_length=1, max_length=1000, description="Search query")
+    ],
+    top_k: Annotated[
+        int, Query(ge=1, le=20, description="Number of results to return")
+    ] = 5,
     alpha: Annotated[
         float,
         Query(ge=0.0, le=1.0, description="Hybrid search balance (0=BM25, 1=semantic)"),

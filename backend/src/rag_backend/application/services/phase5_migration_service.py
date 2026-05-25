@@ -185,7 +185,9 @@ def _collect_writing_samples(projects: list[CarouselProjectModel]) -> list[str]:
 class Phase5MigrationService:
     """Migrates legacy carousel projects to the editorial workflow schema."""
 
-    async def run(self, db: AsyncSession, *, dry_run: bool = False) -> Phase5MigrationReport:
+    async def run(
+        self, db: AsyncSession, *, dry_run: bool = False
+    ) -> Phase5MigrationReport:
         """Execute all Phase 5 migration steps."""
         report = Phase5MigrationReport(dry_run=dry_run)
         projects = await self._load_projects(db)
@@ -254,7 +256,9 @@ class Phase5MigrationService:
         report: Phase5MigrationReport,
     ) -> str | None:
         existing = await db.execute(
-            select(PersonaProfileModel).where(PersonaProfileModel.name == DEFAULT_PERSONA_NAME)
+            select(PersonaProfileModel).where(
+                PersonaProfileModel.name == DEFAULT_PERSONA_NAME
+            )
         )
         found = existing.scalar_one_or_none()
         if found:

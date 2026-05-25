@@ -10,7 +10,10 @@ from langchain_core.messages import BaseMessage, HumanMessage
 
 from rag_backend.agents.input_sanitizer import sanitize_llm_input
 from rag_backend.agents.persona_agent import PersonaAgent
-from rag_backend.domain.constants.ai_agents import ERR_INVALID_JSON, PROMPT_CONTENT_DRAFT
+from rag_backend.domain.constants.ai_agents import (
+    ERR_INVALID_JSON,
+    PROMPT_CONTENT_DRAFT,
+)
 from rag_backend.domain.models.persona import PersonaProfile
 from rag_backend.infrastructure.cache.ai_response_cache import get_ai_response_cache
 from rag_backend.infrastructure.monitoring_langfuse import get_langfuse_handler
@@ -47,7 +50,9 @@ class ContentDraftAgent:
         raw = cached
         if raw is None:
             messages: list[BaseMessage] = [HumanMessage(content=prompt)]
-            response = await self.llm.ainvoke(messages, callbacks=get_langfuse_handler())
+            response = await self.llm.ainvoke(
+                messages, callbacks=get_langfuse_handler()
+            )
             raw = cast(str, response.content)
             self._cache.set(prompt, self.model_id, raw)
 

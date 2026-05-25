@@ -39,7 +39,9 @@ class TestPersonaAgent:
         return PersonaAgent(persona=persona, llm=mock_llm)
 
     # Scenario: Enforce persona voice on content
-    async def test_enforce_rewrites_content(self, agent: PersonaAgent, mock_llm: AsyncMock) -> None:
+    async def test_enforce_rewrites_content(
+        self, agent: PersonaAgent, mock_llm: AsyncMock
+    ) -> None:
         """Given content, when enforce is called, then rewritten content is returned."""
         mock_llm.ainvoke.return_value = MagicMock(content="rewritten text")
 
@@ -48,7 +50,9 @@ class TestPersonaAgent:
         assert result == "rewritten text"
         mock_llm.ainvoke.assert_called_once()
 
-    async def test_enforce_includes_context(self, agent: PersonaAgent, mock_llm: AsyncMock) -> None:
+    async def test_enforce_includes_context(
+        self, agent: PersonaAgent, mock_llm: AsyncMock
+    ) -> None:
         """Given content and context, when enforce is called, then context is included in prompt."""
         mock_llm.ainvoke.return_value = MagicMock(content="rewritten")
 
@@ -94,7 +98,9 @@ class TestPersonaAgent:
         self, agent: PersonaAgent, mock_llm: AsyncMock
     ) -> None:
         """Given JSON missing keys, when evaluate_match called, then missing default to 0."""
-        mock_llm.ainvoke.return_value = MagicMock(content=json.dumps({"tone_match": 50.0}))
+        mock_llm.ainvoke.return_value = MagicMock(
+            content=json.dumps({"tone_match": 50.0})
+        )
 
         result = await agent.evaluate_match("test content")
 
@@ -108,13 +114,17 @@ class TestPersonaAgent:
 
         assert "Test Voice" in guide
 
-    def test_build_style_guide_includes_forbidden_phrases(self, agent: PersonaAgent) -> None:
+    def test_build_style_guide_includes_forbidden_phrases(
+        self, agent: PersonaAgent
+    ) -> None:
         """Given persona with forbidden phrases, when building style guide, phrases included."""
         guide = agent._build_style_guide()
 
         assert "bad phrase" in guide
 
-    def test_build_style_guide_includes_preferred_phrases(self, agent: PersonaAgent) -> None:
+    def test_build_style_guide_includes_preferred_phrases(
+        self, agent: PersonaAgent
+    ) -> None:
         """Given persona with preferred phrases, when building style guide, phrases included."""
         guide = agent._build_style_guide()
 
@@ -127,26 +137,28 @@ class TestPersonaAgent:
         assert "testing" in guide
 
     # Scenario: Parse evaluation response
-    def test_parse_evaluation_response_with_valid_json(self, agent: PersonaAgent) -> None:
+    def test_parse_evaluation_response_with_valid_json(
+        self, agent: PersonaAgent
+    ) -> None:
         """Given valid JSON, when parsing, then scores are extracted."""
-        response = json.dumps(
-            {
-                "tone_match": 80.0,
-                "sentence_structure_match": 85.0,
-                "opinion_strength": 70.0,
-                "originality": 90.0,
-                "human_authenticity": 95.0,
-                "overall": 84.0,
-                "suggestions": ["improve"],
-            }
-        )
+        response = json.dumps({
+            "tone_match": 80.0,
+            "sentence_structure_match": 85.0,
+            "opinion_strength": 70.0,
+            "originality": 90.0,
+            "human_authenticity": 95.0,
+            "overall": 84.0,
+            "suggestions": ["improve"],
+        })
 
         result = agent._parse_evaluation_response(response)
 
         assert result["overall"] == 84.0
         assert result["suggestions"] == ["improve"]
 
-    def test_parse_evaluation_response_with_invalid_json(self, agent: PersonaAgent) -> None:
+    def test_parse_evaluation_response_with_invalid_json(
+        self, agent: PersonaAgent
+    ) -> None:
         """Given invalid JSON, when parsing, then default scores are returned."""
         result = agent._parse_evaluation_response("not json")
 

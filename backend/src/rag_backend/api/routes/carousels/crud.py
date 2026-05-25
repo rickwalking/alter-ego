@@ -17,7 +17,9 @@ from rag_backend.api.dependencies import (
     require_authenticated_user,
     require_editor_or_admin,
 )
-from rag_backend.api.dependencies.resource_access import get_carousel_project_for_domain_user
+from rag_backend.api.dependencies.resource_access import (
+    get_carousel_project_for_domain_user,
+)
 from rag_backend.api.schemas import (
     CarouselProjectCreate,
     CarouselProjectListResponse,
@@ -84,7 +86,9 @@ async def list_carousels(
     repo: Annotated[CarouselRepository, Depends(get_carousel_repo)] = None,
 ) -> CarouselProjectListResponse:
     """List all carousel projects. Publicly accessible for completed projects."""
-    items = await repo.get_all_projects(status=status_filter, limit=limit, offset=offset)
+    items = await repo.get_all_projects(
+        status=status_filter, limit=limit, offset=offset
+    )
     total = await repo.count(status=status_filter)
     return CarouselProjectListResponse(
         items=[CarouselProjectResponse.model_validate(i) for i in items],

@@ -21,10 +21,18 @@ from rag_backend.api.schemas.blog_post import BlogPostResponse
 from rag_backend.api.schemas.calendar import SchedulePublishRequest
 from rag_backend.application.services.ai_disclosure_service import AiDisclosureService
 from rag_backend.application.services.notification_service import NotificationService
-from rag_backend.application.services.scheduled_publish_service import ScheduledPublishService
+from rag_backend.application.services.scheduled_publish_service import (
+    ScheduledPublishService,
+)
 from rag_backend.application.services.workflow_event_service import WorkflowEventService
-from rag_backend.domain.constants.ai_disclosure import AI_DISCLOSURE_NONE, ERR_DISCLOSURE_REQUIRED
-from rag_backend.domain.constants.blog_post import BlogPostStatus, EditorialCommentStatus
+from rag_backend.domain.constants.ai_disclosure import (
+    AI_DISCLOSURE_NONE,
+    ERR_DISCLOSURE_REQUIRED,
+)
+from rag_backend.domain.constants.blog_post import (
+    BlogPostStatus,
+    EditorialCommentStatus,
+)
 from rag_backend.domain.constants.notifications import NOTIFICATION_TYPE_PHASE_REJECTED
 from rag_backend.domain.constants.rate_limits import RATE_LIMIT_WORKFLOW_ENDPOINTS
 from rag_backend.domain.constants.workflow_events import (
@@ -107,7 +115,9 @@ async def submit_blog_post_for_review(
     post.submitted_for_review_at = datetime.now(UTC)
     post.reviewer_id = reviewer_id
 
-    await _emit_status_change(db, str(post.id), old_status, post.status, current_user.id)
+    await _emit_status_change(
+        db, str(post.id), old_status, post.status, current_user.id
+    )
     if reviewer_id != current_user.id:
         await NotificationService().create_review_request(
             db,
@@ -143,7 +153,9 @@ async def approve_blog_post(
     post.status = BlogPostStatus.APPROVED.value
     post.approved_at = datetime.now(UTC)
 
-    await _emit_status_change(db, str(post.id), old_status, post.status, current_user.id)
+    await _emit_status_change(
+        db, str(post.id), old_status, post.status, current_user.id
+    )
     await db.commit()
     await db.refresh(post)
     return post
@@ -173,15 +185,15 @@ async def reject_blog_post(
 
     if post.editor_comments is None:
         post.editor_comments = []
-    post.editor_comments.append(
-        {
-            "text": WORKFLOW_REJECT_COMMENT_PREFIX.format(reason=reason),
-            "author_id": current_user.id,
-            "status": EditorialCommentStatus.OPEN.value,
-        }
-    )
+    post.editor_comments.append({
+        "text": WORKFLOW_REJECT_COMMENT_PREFIX.format(reason=reason),
+        "author_id": current_user.id,
+        "status": EditorialCommentStatus.OPEN.value,
+    })
 
-    await _emit_status_change(db, str(post.id), old_status, post.status, current_user.id)
+    await _emit_status_change(
+        db, str(post.id), old_status, post.status, current_user.id
+    )
     if post.author_id:
         await NotificationService().create_workflow_update(
             db,
@@ -215,7 +227,11 @@ async def publish_blog_post(
     assert_blog_post_status(post, BlogPostStatus.APPROVED)
 
     disclosure = AiDisclosureService()
-    metadata = post.ai_generation_metadata if isinstance(post.ai_generation_metadata, dict) else {}
+    metadata = (
+        post.ai_generation_metadata
+        if isinstance(post.ai_generation_metadata, dict)
+        else {}
+    )
     label = str(post.ai_disclosure_label or disclosure.compute_label(metadata))
     if disclosure.requires_disclosure(label) and label == AI_DISCLOSURE_NONE:
         raise HTTPException(
@@ -229,7 +245,9 @@ async def publish_blog_post(
     post.published_at = datetime.now(UTC)
     post.scheduled_publish_at = None
 
-    await _emit_status_change(db, str(post.id), old_status, post.status, current_user.id)
+    await _emit_status_change(
+        db, str(post.id), old_status, post.status, current_user.id
+    )
     await db.commit()
     await db.refresh(post)
     return post
@@ -287,7 +305,9 @@ async def unpublish_blog_post(
     post.published_at = None
     post.submitted_for_review_at = None
 
-    await _emit_status_change(db, str(post.id), old_status, post.status, current_user.id)
+    await _emit_status_change(
+        db, str(post.id), old_status, post.status, current_user.id
+    )
     await db.commit()
     await db.refresh(post)
     return post

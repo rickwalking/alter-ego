@@ -22,7 +22,9 @@ class WorkflowAuditLogModel(Base):
     payload = Column(JSON, nullable=False, default=dict)
     metadata_json = Column("metadata", JSON, nullable=False, default=dict)
     stream_entry_id = Column(String(100), nullable=True)
-    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    created_at = Column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
 
     __table_args__ = (
         Index("idx_audit_aggregate", "aggregate_type", "aggregate_id"),

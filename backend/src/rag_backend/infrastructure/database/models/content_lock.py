@@ -18,7 +18,9 @@ class ContentLockModel(Base):
     user_id = Column(String(36), nullable=False)
     user_name = Column(String(255), nullable=False, default="")
     expires_at = Column(DateTime(timezone=True), nullable=False)
-    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    created_at = Column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
 
     __table_args__ = (
         Index("idx_content_locks_content", "content_type", "content_id", unique=True),

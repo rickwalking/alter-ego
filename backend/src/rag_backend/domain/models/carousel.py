@@ -123,7 +123,9 @@ class CarouselProject:
     created_at: datetime = field(default_factory=datetime.utcnow)
     updated_at: datetime = field(default_factory=datetime.utcnow)
 
-    def update_status(self, status: CarouselStatus, error_message: str | None = None) -> None:
+    def update_status(
+        self, status: CarouselStatus, error_message: str | None = None
+    ) -> None:
         self.status = status
         self.error_message = error_message
         self.updated_at = datetime.utcnow()

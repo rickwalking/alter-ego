@@ -28,7 +28,9 @@ class EmbeddingServiceProtocol(Protocol):
 class PlagiarismDetectionService:
     """Detects content similarity against reference sources."""
 
-    def __init__(self, embedding_service: EmbeddingServiceProtocol | None = None) -> None:
+    def __init__(
+        self, embedding_service: EmbeddingServiceProtocol | None = None
+    ) -> None:
         self._embedding_service = embedding_service
 
     async def check(self, content: str, sources: list[str]) -> dict[str, object]:
@@ -52,15 +54,15 @@ class PlagiarismDetectionService:
             overlap = self._ngram_overlap_ratio(normalized_content, normalized_source)
             max_overlap = max(max_overlap, overlap)
             if overlap >= PLAGIARISM_MIN_OVERLAP_RATIO:
-                matches.append(
-                    {
-                        "source_index": idx,
-                        "overlap_ratio": round(overlap, 4),
-                        "method": "ngram",
-                    }
-                )
+                matches.append({
+                    "source_index": idx,
+                    "overlap_ratio": round(overlap, 4),
+                    "method": "ngram",
+                })
 
-        embedding_penalty = await self._embedding_similarity_penalty(normalized_content, sources)
+        embedding_penalty = await self._embedding_similarity_penalty(
+            normalized_content, sources
+        )
         ngram_score = max(0.0, (1.0 - max_overlap) * 100)
         overall = round(min(ngram_score, embedding_penalty), 2)
 
@@ -72,7 +74,9 @@ class PlagiarismDetectionService:
             FIELD_MATCHES: matches,
         }
 
-    async def _embedding_similarity_penalty(self, content: str, sources: list[str]) -> float:
+    async def _embedding_similarity_penalty(
+        self, content: str, sources: list[str]
+    ) -> float:
         if not sources or self._embedding_service is None:
             return 100.0
         texts = [content, *[self._normalize(s) for s in sources if s.strip()]]

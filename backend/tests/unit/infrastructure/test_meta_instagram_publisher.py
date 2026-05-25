@@ -37,7 +37,9 @@ def _happy_path_handler() -> tuple[Any, dict[str, int]]:
             body = request.read().decode()
             if "is_carousel_item=true" in body:
                 counters["item_create"] += 1
-                return httpx.Response(200, json={"id": f"item-{counters['item_create']}"})
+                return httpx.Response(
+                    200, json={"id": f"item-{counters['item_create']}"}
+                )
             counters["parent_create"] += 1
             return httpx.Response(200, json={"id": "parent-abc"})
         if request.method == "GET":
@@ -95,7 +97,9 @@ class TestMetaInstagramPublisherConfiguration:
 
     async def test_fewer_than_two_images_rejected(self) -> None:
         publisher = MetaInstagramPublisher(access_token="t", ig_user_id="u")
-        result = await publisher.publish_instagram("caption", ["https://example.com/a.jpg"])
+        result = await publisher.publish_instagram(
+            "caption", ["https://example.com/a.jpg"]
+        )
         assert result.status == "failed"
         assert "at least 2" in (result.error_message or "")
 

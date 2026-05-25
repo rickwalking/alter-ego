@@ -18,7 +18,9 @@ from rag_backend.api.schemas.workflow_audit import (
     WorkflowAuditEntryResponse,
     WorkflowAuditListResponse,
 )
-from rag_backend.application.services.optimistic_lock_service import OptimisticLockService
+from rag_backend.application.services.optimistic_lock_service import (
+    OptimisticLockService,
+)
 from rag_backend.application.services.workflow_event_service import WorkflowEventService
 from rag_backend.domain.constants.access_control import ERR_INVALID_REQUEST
 from rag_backend.domain.constants.optimistic_locking import ERR_LOCK_HELD_BY_OTHER

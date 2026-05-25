@@ -16,7 +16,9 @@ async def search_documents(query: str) -> str:
     Args:
         query: The search query string
     """
-    raise NotImplementedError("Use build_search_documents_tool() to create a bound instance")
+    raise NotImplementedError(
+        "Use build_search_documents_tool() to create a bound instance"
+    )
 
 
 def build_search_documents_tool(
@@ -51,7 +53,9 @@ def build_search_documents_tool(
 
         formatted_results = []
         for i, result in enumerate(results, 1):
-            formatted_results.append(f"[{i}] {result.content[:300]}... (Score: {result.score:.3f})")
+            formatted_results.append(
+                f"[{i}] {result.content[:300]}... (Score: {result.score:.3f})"
+            )
 
         return "\n\n".join(formatted_results)
 

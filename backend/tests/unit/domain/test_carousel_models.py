@@ -20,7 +20,10 @@ class TestCarouselProjectBlogMethods:
     def test_get_blog_returns_pt_from_translations(self):
         """Should return Portuguese blog from translations."""
         project = CarouselProject(
-            topic="Test", audience="Everyone", niche="Tech", theme=CarouselTheme.AI_COMPETITION
+            topic="Test",
+            audience="Everyone",
+            niche="Tech",
+            theme=CarouselTheme.AI_COMPETITION,
         )
         project.blog_markdown = "# PT Default\n\nConteudo."
         project.blog_translations = {
@@ -34,7 +37,10 @@ class TestCarouselProjectBlogMethods:
     def test_get_blog_returns_en_from_translations(self):
         """Should return English blog from translations."""
         project = CarouselProject(
-            topic="Test", audience="Everyone", niche="Tech", theme=CarouselTheme.AI_COMPETITION
+            topic="Test",
+            audience="Everyone",
+            niche="Tech",
+            theme=CarouselTheme.AI_COMPETITION,
         )
         project.blog_markdown = "# PT Default\n\nConteudo."
         project.blog_translations = {
@@ -48,7 +54,10 @@ class TestCarouselProjectBlogMethods:
     def test_get_blog_returns_default_when_no_translations(self):
         """Should return blog_markdown as fallback when no translations."""
         project = CarouselProject(
-            topic="Test", audience="Everyone", niche="Tech", theme=CarouselTheme.AI_COMPETITION
+            topic="Test",
+            audience="Everyone",
+            niche="Tech",
+            theme=CarouselTheme.AI_COMPETITION,
         )
         project.blog_markdown = "# PT Default\n\nConteudo."
 
@@ -58,7 +67,10 @@ class TestCarouselProjectBlogMethods:
     def test_get_blog_returns_none_when_no_content(self):
         """Should return None when no blog content exists."""
         project = CarouselProject(
-            topic="Test", audience="Everyone", niche="Tech", theme=CarouselTheme.AI_COMPETITION
+            topic="Test",
+            audience="Everyone",
+            niche="Tech",
+            theme=CarouselTheme.AI_COMPETITION,
         )
 
         result = project.get_blog("pt")
@@ -67,7 +79,10 @@ class TestCarouselProjectBlogMethods:
     def test_get_available_languages_with_translations(self):
         """Should return language keys from translations dict."""
         project = CarouselProject(
-            topic="Test", audience="Everyone", niche="Tech", theme=CarouselTheme.AI_COMPETITION
+            topic="Test",
+            audience="Everyone",
+            niche="Tech",
+            theme=CarouselTheme.AI_COMPETITION,
         )
         project.blog_translations = {"pt": "content", "en": "content"}
 
@@ -78,7 +93,10 @@ class TestCarouselProjectBlogMethods:
     def test_get_available_languages_with_default_only(self):
         """Should return pt when only blog_markdown exists."""
         project = CarouselProject(
-            topic="Test", audience="Everyone", niche="Tech", theme=CarouselTheme.AI_COMPETITION
+            topic="Test",
+            audience="Everyone",
+            niche="Tech",
+            theme=CarouselTheme.AI_COMPETITION,
         )
         project.blog_markdown = "# Content"
 
@@ -88,7 +106,10 @@ class TestCarouselProjectBlogMethods:
     def test_get_available_languages_with_no_content(self):
         """Should return empty list when no blog content."""
         project = CarouselProject(
-            topic="Test", audience="Everyone", niche="Tech", theme=CarouselTheme.AI_COMPETITION
+            topic="Test",
+            audience="Everyone",
+            niche="Tech",
+            theme=CarouselTheme.AI_COMPETITION,
         )
 
         langs = project.get_available_languages()
@@ -102,7 +123,10 @@ class TestCarouselProjectDesignMethods:
     def test_get_design_returns_tokens(self):
         """Should return design tokens when set."""
         project = CarouselProject(
-            topic="Test", audience="Everyone", niche="Tech", theme=CarouselTheme.AI_COMPETITION
+            topic="Test",
+            audience="Everyone",
+            niche="Tech",
+            theme=CarouselTheme.AI_COMPETITION,
         )
         design_tokens: DesignTokens = DesignTokens(
             colors=DesignTokenColors(
@@ -140,7 +164,10 @@ class TestCarouselProjectDesignMethods:
     def test_get_design_returns_none_when_not_set(self):
         """Should return None when design tokens not set."""
         project = CarouselProject(
-            topic="Test", audience="Everyone", niche="Tech", theme=CarouselTheme.AI_COMPETITION
+            topic="Test",
+            audience="Everyone",
+            niche="Tech",
+            theme=CarouselTheme.AI_COMPETITION,
         )
 
         assert project.get_design() is None
@@ -149,7 +176,10 @@ class TestCarouselProjectDesignMethods:
         """Should return API URL for carousel image."""
 
         project = CarouselProject(
-            topic="Test", audience="Everyone", niche="Tech", theme=CarouselTheme.AI_COMPETITION
+            topic="Test",
+            audience="Everyone",
+            niche="Tech",
+            theme=CarouselTheme.AI_COMPETITION,
         )
         project.output_dir = "/tmp/carousels/test"
 
@@ -159,7 +189,10 @@ class TestCarouselProjectDesignMethods:
     def test_get_image_url_returns_none_when_no_output_dir(self):
         """Should return None when output_dir is not set."""
         project = CarouselProject(
-            topic="Test", audience="Everyone", niche="Tech", theme=CarouselTheme.AI_COMPETITION
+            topic="Test",
+            audience="Everyone",
+            niche="Tech",
+            theme=CarouselTheme.AI_COMPETITION,
         )
 
         assert project.get_image_url("slide_1.jpg") is None

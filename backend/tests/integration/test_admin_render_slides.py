@@ -68,7 +68,9 @@ def mock_carousel_agent():
 async def _create_user(client, email: str, role: UserRole) -> User:
 
     from rag_backend.infrastructure.database.config import get_session_maker
-    from rag_backend.infrastructure.database.user_repository import PostgresUserRepository
+    from rag_backend.infrastructure.database.user_repository import (
+        PostgresUserRepository,
+    )
 
     session_maker = get_session_maker()
     async with session_maker() as session:
@@ -100,7 +102,9 @@ def _auth_headers(user: User) -> dict[str, str]:
     return {"Authorization": f"Bearer {_token(user)}"}
 
 
-async def _create_carousel(client, output_dir: str | None = "/tmp/test-output") -> CarouselProject:
+async def _create_carousel(
+    client, output_dir: str | None = "/tmp/test-output"
+) -> CarouselProject:
     from rag_backend.infrastructure.database.carousel_repository import (
         PostgresCarouselRepository,
     )
@@ -134,7 +138,9 @@ class TestAdminRenderSlides:
         admin = await _create_user(client, "admin@test.com", UserRole.ADMIN)
         await _create_carousel(client)
 
-        with patch("rag_backend.infrastructure.container.get_container") as mock_container:
+        with patch(
+            "rag_backend.infrastructure.container.get_container"
+        ) as mock_container:
             from rag_backend.infrastructure.container import Container
 
             test_container = Container()
@@ -181,9 +187,13 @@ class TestAdminRenderSlides:
         admin = await _create_user(client, "admin2@test.com", UserRole.ADMIN)
         await _create_carousel(client)
 
-        mock_carousel_agent.re_render_slides = AsyncMock(side_effect=ValueError("playwright error"))
+        mock_carousel_agent.re_render_slides = AsyncMock(
+            side_effect=ValueError("playwright error")
+        )
 
-        with patch("rag_backend.infrastructure.container.get_container") as mock_container:
+        with patch(
+            "rag_backend.infrastructure.container.get_container"
+        ) as mock_container:
             from rag_backend.infrastructure.container import Container
 
             test_container = Container()

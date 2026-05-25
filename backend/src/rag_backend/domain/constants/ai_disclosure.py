@@ -16,7 +16,9 @@ AI_ACTION_SUGGEST = "ai_suggest"
 AI_ACTION_IMPROVE = "ai_improve"
 AI_ACTION_GENERATE_IMAGE = "ai_generate_image"
 
-ERR_DISCLOSURE_REQUIRED = "AI disclosure label is required before publishing AI-assisted content"
+ERR_DISCLOSURE_REQUIRED = (
+    "AI disclosure label is required before publishing AI-assisted content"
+)
 
 __all__ = [
     "AI_ACTION_GENERATE_IMAGE",

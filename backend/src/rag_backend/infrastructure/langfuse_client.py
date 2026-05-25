@@ -7,7 +7,9 @@ from rag_backend.infrastructure.config.settings import get_settings
 LANGFUSE_CLIENT: Langfuse | None = None
 
 
-def init_langfuse(public_key: str | None, secret_key: str, host: str) -> Langfuse | None:
+def init_langfuse(
+    public_key: str | None, secret_key: str, host: str
+) -> Langfuse | None:
     """Initialize LangFuse tracing.
 
     Returns None if not configured.

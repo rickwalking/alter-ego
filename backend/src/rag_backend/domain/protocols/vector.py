@@ -15,7 +15,9 @@ class VectorStore(Protocol):
         namespace: str | None = None,
     ) -> None: ...
 
-    async def delete_by_document(self, document_id: UUID, namespace: str | None = None) -> None: ...
+    async def delete_by_document(
+        self, document_id: UUID, namespace: str | None = None
+    ) -> None: ...
 
     async def hybrid_search(
         self,

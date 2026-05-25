@@ -27,7 +27,9 @@ def _test_settings():
 
 async def _create_user(email: str, role: UserRole) -> User:
     from rag_backend.infrastructure.database.config import get_session_maker
-    from rag_backend.infrastructure.database.user_repository import PostgresUserRepository
+    from rag_backend.infrastructure.database.user_repository import (
+        PostgresUserRepository,
+    )
 
     session_maker = get_session_maker()
     async with session_maker() as session:
@@ -150,7 +152,9 @@ class TestPersonaEndpoints:
 
         # Then update it
         update_payload = {"name": "Updated Name", "description": "After update"}
-        response = await client.put(f"/api/personas/{created['id']}", json=update_payload)
+        response = await client.put(
+            f"/api/personas/{created['id']}", json=update_payload
+        )
         assert response.status_code == 200
         data = response.json()
         assert data["name"] == "Updated Name"
@@ -299,7 +303,9 @@ class TestBlogPostEndpoints:
         assert response.json()["detail"] == "workflow_field_immutable"
 
     @pytest.mark.asyncio
-    async def test_update_blog_post_rejects_status_change_for_admin(self, client: AsyncClient):
+    async def test_update_blog_post_rejects_status_change_for_admin(
+        self, client: AsyncClient
+    ):
         """Admin cannot bypass workflow by setting status on PUT."""
         create_payload = {"title": "Admin Status Bypass", "slug": "admin-status-bypass"}
         create_response = await client.post("/api/blog-posts", json=create_payload)

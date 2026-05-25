@@ -43,6 +43,8 @@ async def test_emit_publishes_and_persists_audit(db_session: AsyncSession) -> No
     assert len(events) == 1
     assert events[0][1]["event_id"] == event_id
 
-    entries = await service.list_for_aggregate(db_session, AGGREGATE_TYPE_PROJECT, "project-1")
+    entries = await service.list_for_aggregate(
+        db_session, AGGREGATE_TYPE_PROJECT, "project-1"
+    )
     assert len(entries) == 1
     assert entries[0].event_type == EVENT_TYPE_PROJECT_PHASE_CHANGED

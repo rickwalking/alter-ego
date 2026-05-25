@@ -25,7 +25,9 @@ class NotificationModel(Base):
     email_sent = Column(Boolean, nullable=False, default=False)
     deadline_at = Column(DateTime(timezone=True), nullable=True)
     read_at = Column(DateTime(timezone=True), nullable=True)
-    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    created_at = Column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
 
     __table_args__ = (
         Index("idx_notifications_user_status", "user_id", "status"),

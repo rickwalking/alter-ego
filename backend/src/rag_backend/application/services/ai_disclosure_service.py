@@ -25,7 +25,9 @@ DISCLOSURE_WEIGHT_HYBRID = 2
 class AiDisclosureService:
     """Tracks and computes AI disclosure labels for editorial content."""
 
-    def record_action(self, metadata: dict[str, object], action: str) -> dict[str, object]:
+    def record_action(
+        self, metadata: dict[str, object], action: str
+    ) -> dict[str, object]:
         """Record an AI action and update disclosure metadata."""
         updated = dict(metadata)
         actions = list(updated.get("ai_actions", []))
@@ -65,7 +67,11 @@ class AiDisclosureService:
         """Disclosure labels must be set for AI-assisted content before publish."""
         if label is None or label == AI_DISCLOSURE_NONE:
             return True
-        return label in (AI_DISCLOSURE_ASSISTED, AI_DISCLOSURE_GENERATED, AI_DISCLOSURE_HYBRID)
+        return label in {
+            AI_DISCLOSURE_ASSISTED,
+            AI_DISCLOSURE_GENERATED,
+            AI_DISCLOSURE_HYBRID,
+        }
 
 
 __all__ = ["AiDisclosureService"]

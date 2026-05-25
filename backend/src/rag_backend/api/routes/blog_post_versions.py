@@ -14,7 +14,9 @@ from rag_backend.api.schemas.blog_post import (
     BlogPostResponse,
     BlogPostVersionResponse,
 )
-from rag_backend.application.services.editorial_audit_service import EditorialAuditService
+from rag_backend.application.services.editorial_audit_service import (
+    EditorialAuditService,
+)
 from rag_backend.application.services.workflow_event_service import WorkflowEventService
 from rag_backend.domain.constants.access_control import ERR_BLOG_VERSION_NOT_FOUND
 from rag_backend.infrastructure.config.settings import get_settings
@@ -82,20 +84,20 @@ async def restore_blog_post_version(
     )
     new_version_number = max_version + 1
     snapshot = post.content.copy()
-    post.version_history.append(
-        {
-            "id": str(uuid4()),
-            "content_id": str(post_id),
-            "content_type": "blog_post",
-            "version_number": new_version_number,
-            "snapshot": snapshot,
-            "change_summary": f"Restored from version {version_number}",
-            "author_id": current_user.id,
-            "created_at": datetime.now(UTC),
-        }
-    )
+    post.version_history.append({
+        "id": str(uuid4()),
+        "content_id": str(post_id),
+        "content_type": "blog_post",
+        "version_number": new_version_number,
+        "snapshot": snapshot,
+        "change_summary": f"Restored from version {version_number}",
+        "author_id": current_user.id,
+        "created_at": datetime.now(UTC),
+    })
 
-    await _audit_service().log_version_restored(db, str(post_id), current_user.id, version_number)
+    await _audit_service().log_version_restored(
+        db, str(post_id), current_user.id, version_number
+    )
     await db.commit()
     await db.refresh(post)
     return post

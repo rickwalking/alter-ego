@@ -101,7 +101,7 @@ class AlterEgoAgent:
             ),
         ]
 
-    async def chat(  # noqa: C901, PLR0912, PLR0915
+    async def chat(
         self,
         message: str,
         conversation_id: UUID,
@@ -114,7 +114,9 @@ class AlterEgoAgent:
         Mirrors the interface of the legacy RAGAgent so route handlers
         can swap agents without changing their call sites.
         """
-        history = await self._message_repository.get_by_conversation(conversation_id, limit=10)
+        history = await self._message_repository.get_by_conversation(
+            conversation_id, limit=10
+        )
 
         chat_history = []
         for msg in history:

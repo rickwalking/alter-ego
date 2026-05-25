@@ -16,7 +16,11 @@ from rag_backend.api.schemas import (
     InstagramPublishResponse,
 )
 from rag_backend.domain.models import CarouselStatus, User
-from rag_backend.domain.protocols import CarouselAgent, CarouselRepository, SocialPublisher
+from rag_backend.domain.protocols import (
+    CarouselAgent,
+    CarouselRepository,
+    SocialPublisher,
+)
 
 from .deps import get_carousel_agent, get_carousel_repo, get_instagram_publisher
 from .helpers import _build_public_image_urls

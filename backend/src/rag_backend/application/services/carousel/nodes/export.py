@@ -38,7 +38,8 @@ async def render_language(
     lang_dir = output_dir / language
     lang_dir.mkdir(parents=True, exist_ok=True)
     rewritten_html = (
-        html_content.replace('src="images/', 'src="../images/')
+        html_content
+        .replace('src="images/', 'src="../images/')
         .replace("src='images/", "src='../images/")
         .replace('url("images/', 'url("../images/')
         .replace("url('images/", "url('../images/")
@@ -68,7 +69,7 @@ async def render_language(
         project.pdf_path = pdf_path
 
 
-async def run_bilingual_export(  # noqa: PLR0913 — bilingual export needs all deps
+async def run_bilingual_export(
     project: CarouselProject,
     slides_data: list[SlideData],
     pt_html: str,

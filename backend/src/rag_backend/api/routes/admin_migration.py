@@ -58,7 +58,9 @@ async def run_phase5_migration(
     request: Request,
     db: Annotated[AsyncSession, Depends(get_db)],
     admin: AdminUser,
-    dry_run: bool = Query(default=False, description="Preview changes without committing"),
+    dry_run: bool = Query(
+        default=False, description="Preview changes without committing"
+    ),
 ) -> Phase5MigrationResponse:
     """Migrate legacy carousel projects to editorial workflow schema."""
     service = Phase5MigrationService()

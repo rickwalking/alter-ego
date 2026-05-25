@@ -25,15 +25,23 @@ async def test_list_summaries_with_search(db_session: AsyncSession) -> None:
     # Scenario: Blog post list supports search and pagination
     repo = BlogPostRepository()
     db_session.add(
-        BlogPostModel.from_entity(
-            {"title": "AI Security", "slug": "ai-security", "author_id": "u1"}
-        )
+        BlogPostModel.from_entity({
+            "title": "AI Security",
+            "slug": "ai-security",
+            "author_id": "u1",
+        })
     )
     db_session.add(
-        BlogPostModel.from_entity({"title": "Cloud Tips", "slug": "cloud-tips", "author_id": "u1"})
+        BlogPostModel.from_entity({
+            "title": "Cloud Tips",
+            "slug": "cloud-tips",
+            "author_id": "u1",
+        })
     )
     await db_session.commit()
 
-    posts, total = await repo.list_summaries(db_session, search="security", limit=10, offset=0)
+    posts, total = await repo.list_summaries(
+        db_session, search="security", limit=10, offset=0
+    )
     assert total == 1
     assert posts[0].title == "AI Security"

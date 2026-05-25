@@ -3,8 +3,12 @@
 from __future__ import annotations
 
 from rag_backend.domain.protocols.event_publisher import EventPublisherProtocol
-from rag_backend.infrastructure.events.memory_event_publisher import MemoryEventPublisher
-from rag_backend.infrastructure.events.redis_stream_publisher import RedisStreamEventPublisher
+from rag_backend.infrastructure.events.memory_event_publisher import (
+    MemoryEventPublisher,
+)
+from rag_backend.infrastructure.events.redis_stream_publisher import (
+    RedisStreamEventPublisher,
+)
 from rag_backend.infrastructure.logging import get_logger
 
 logger = get_logger()

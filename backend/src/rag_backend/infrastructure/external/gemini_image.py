@@ -21,7 +21,11 @@ class GeminiImageService(ImageGenerationService):
     """Google Gemini image generation implementation."""
 
     def __init__(self, api_key: str) -> None:
-        raw_key = api_key.get_secret_value() if hasattr(api_key, "get_secret_value") else api_key
+        raw_key = (
+            api_key.get_secret_value()
+            if hasattr(api_key, "get_secret_value")
+            else api_key
+        )
         if not raw_key:
             self._client = None
         else:
@@ -58,7 +62,7 @@ class GeminiImageService(ImageGenerationService):
             if part.inline_data:
                 output_dir = Path(output_path).parent
                 output_dir.mkdir(parents=True, exist_ok=True)
-                with open(output_path, "wb") as f:
+                with Path(output_path).open("wb") as f:
                     f.write(part.inline_data.data)
                 return output_path
 
@@ -73,7 +77,9 @@ class GeminiImageService(ImageGenerationService):
 
         Returns the path to the saved image file.
         """
-        return await asyncio.to_thread(self._generate_image_blocking, prompt, output_path)
+        return await asyncio.to_thread(
+            self._generate_image_blocking, prompt, output_path
+        )
 
     def generate_image_sync(
         self,

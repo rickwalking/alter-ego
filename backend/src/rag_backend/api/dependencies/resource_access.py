@@ -151,7 +151,9 @@ async def get_blog_post_by_id(
     return post
 
 
-def assert_blog_post_status(post: BlogPostModel, expected_status: BlogPostStatus) -> None:
+def assert_blog_post_status(
+    post: BlogPostModel, expected_status: BlogPostStatus
+) -> None:
     """Raise when the post is not in the expected workflow status."""
     if post.status != expected_status.value:
         raise HTTPException(

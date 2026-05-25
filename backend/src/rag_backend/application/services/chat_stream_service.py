@@ -49,7 +49,9 @@ def _sanitize_chunk(chunk: dict[str, object]) -> dict[str, object]:
     replaces any non-serializable value with its string representation.
     """
     result = chunk.get("result")
-    if result is not None and not isinstance(result, str | int | float | bool | list | dict | None):
+    if result is not None and not isinstance(
+        result, str | int | float | bool | list | dict | None
+    ):
         return {**chunk, "result": str(result)}
     return chunk
 
@@ -109,7 +111,9 @@ async def stream_chat_response(
         SSE-formatted event strings (``id``, ``data``, blank line).
     """
     if not content or not content.strip():
-        yield _format_sse_event(0, {"type": SSE_EVENT_ERROR, "content": ERR_EMPTY_MESSAGE})
+        yield _format_sse_event(
+            0, {"type": SSE_EVENT_ERROR, "content": ERR_EMPTY_MESSAGE}
+        )
         return
 
     conv_repo = PostgresConversationRepository(db)
@@ -186,7 +190,10 @@ async def stream_chat_response(
         await queue.put(
             _format_sse_event(
                 event_id,
-                {"type": SSE_EVENT_ERROR, "content": f"Error processing message: {exc!s}"},
+                {
+                    "type": SSE_EVENT_ERROR,
+                    "content": f"Error processing message: {exc!s}",
+                },
             )
         )
     finally:

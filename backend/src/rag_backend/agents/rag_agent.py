@@ -120,19 +120,19 @@ class RAGAgent:
             build_generate_carousel_tool,
         )
 
-        tools.extend(
-            [
-                build_generate_carousel_tool(self._carousel_agent, self._carousel_repository),
-                build_refine_carousel_copy_tool(
-                    self._llm, self._carousel_repository, self._carousel_agent
-                ),
-                build_regenerate_slide_image_tool(self._carousel_agent),
-                build_refine_carousel_design_tool(self._carousel_agent),
-            ]
-        )
+        tools.extend([
+            build_generate_carousel_tool(
+                self._carousel_agent, self._carousel_repository
+            ),
+            build_refine_carousel_copy_tool(
+                self._llm, self._carousel_repository, self._carousel_agent
+            ),
+            build_regenerate_slide_image_tool(self._carousel_agent),
+            build_refine_carousel_design_tool(self._carousel_agent),
+        ])
         return tools
 
-    async def chat(  # noqa: C901,PLR0912,PLR0915 — streaming + non-streaming paths
+    async def chat(
         self,
         message: str,
         conversation_id: UUID,
@@ -158,7 +158,9 @@ class RAGAgent:
             - type='sources': List of source documents
             - type='complete': Final complete message
         """
-        history = await self._message_repository.get_by_conversation(conversation_id, limit=10)
+        history = await self._message_repository.get_by_conversation(
+            conversation_id, limit=10
+        )
 
         chat_history = []
         for msg in history:

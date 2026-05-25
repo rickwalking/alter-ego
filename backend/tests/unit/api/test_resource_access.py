@@ -77,7 +77,9 @@ class TestGetBlogPostForRead:
         post = MagicMock(author_id="author-1", reviewer_id="reviewer-1")
         db.get = AsyncMock(return_value=post)
 
-        result = await get_blog_post_for_read(db, post_id, _user(UserRole.EDITOR, "reviewer-1"))
+        result = await get_blog_post_for_read(
+            db, post_id, _user(UserRole.EDITOR, "reviewer-1")
+        )
 
         assert result is post
 
@@ -100,7 +102,9 @@ class TestGetCarouselProjectForUser:
         project = MagicMock(owner_id="user-1")
         db.get = AsyncMock(return_value=project)
 
-        result = await get_carousel_project_for_user(db, project_id, _user(UserRole.EDITOR))
+        result = await get_carousel_project_for_user(
+            db, project_id, _user(UserRole.EDITOR)
+        )
 
         assert result is project
 
@@ -173,7 +177,9 @@ class TestAssignContentReviewer:
         db.get = AsyncMock(return_value=post)
         db.flush = AsyncMock()
 
-        await assign_content_reviewer(db, "post-1", CONTENT_TYPE_BLOG_POST, "reviewer-1")
+        await assign_content_reviewer(
+            db, "post-1", CONTENT_TYPE_BLOG_POST, "reviewer-1"
+        )
 
         assert post.reviewer_id == "reviewer-1"
 
@@ -183,7 +189,9 @@ class TestAssignContentReviewer:
         db.get = AsyncMock(return_value=post)
 
         with pytest.raises(HTTPException) as exc_info:
-            await assign_content_reviewer(db, "post-1", CONTENT_TYPE_BLOG_POST, "author-1")
+            await assign_content_reviewer(
+                db, "post-1", CONTENT_TYPE_BLOG_POST, "author-1"
+            )
 
         assert exc_info.value.status_code == 400
         assert exc_info.value.detail == ERR_SELF_REVIEW
@@ -192,7 +200,9 @@ class TestAssignContentReviewer:
         db = AsyncMock()
 
         with pytest.raises(HTTPException) as exc_info:
-            await assign_content_reviewer(db, "project-1", CONTENT_TYPE_CAROUSEL, "reviewer-1")
+            await assign_content_reviewer(
+                db, "project-1", CONTENT_TYPE_CAROUSEL, "reviewer-1"
+            )
 
         assert exc_info.value.status_code == 400
         assert exc_info.value.detail == ERR_REVIEWER_ASSIGNMENT_UNSUPPORTED

@@ -35,7 +35,9 @@ def _test_settings():
 
 async def _create_user(email: str, role: UserRole) -> User:
     from rag_backend.infrastructure.database.config import get_session_maker
-    from rag_backend.infrastructure.database.user_repository import PostgresUserRepository
+    from rag_backend.infrastructure.database.user_repository import (
+        PostgresUserRepository,
+    )
 
     session_maker = get_session_maker()
     async with session_maker() as session:
@@ -133,7 +135,9 @@ class TestInstagramPublishRoute:
     """API-level coverage for /publish/instagram."""
 
     @pytest.mark.asyncio
-    async def test_503_when_public_base_url_missing(self, client_and_container, monkeypatch):
+    async def test_503_when_public_base_url_missing(
+        self, client_and_container, monkeypatch
+    ):
         client, container = client_and_container
         project_id = await _seed_completed_project(client)
 
@@ -191,7 +195,9 @@ class TestInstagramPublishRoute:
         assert resp.status_code == 422
 
     @pytest.mark.asyncio
-    async def test_happy_path_returns_published(self, client_and_container, monkeypatch):
+    async def test_happy_path_returns_published(
+        self, client_and_container, monkeypatch
+    ):
         client, container = client_and_container
         project_id = await _seed_completed_project(client)
 
@@ -225,7 +231,9 @@ class TestInstagramPublishRoute:
         assert all(url.startswith("https://public.test/") for url in urls)
 
     @pytest.mark.asyncio
-    async def test_failure_bubbles_up_error_message(self, client_and_container, monkeypatch):
+    async def test_failure_bubbles_up_error_message(
+        self, client_and_container, monkeypatch
+    ):
         client, container = client_and_container
         project_id = await _seed_completed_project(client)
 

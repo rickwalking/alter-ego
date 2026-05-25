@@ -82,7 +82,9 @@ def mock_conversation():
 class MockAgent:
     """Mock agent for testing."""
 
-    def __init__(self, chunks: list[dict] | None = None, error: Exception | None = None):
+    def __init__(
+        self, chunks: list[dict] | None = None, error: Exception | None = None
+    ):
         self.chunks = chunks or []
         self.error = error
 
@@ -291,7 +293,11 @@ class TestStreamChatResponse:
 
         agent = MockAgent(
             chunks=[
-                {"type": SSE_EVENT_TOOL_RESULT, "tool": "test_tool", "result": NonSerializable()},
+                {
+                    "type": SSE_EVENT_TOOL_RESULT,
+                    "tool": "test_tool",
+                    "result": NonSerializable(),
+                },
             ]
         )
 

@@ -4,8 +4,14 @@ from fastapi import Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.agents.carousel_orchestrator import CarouselAgent as CarouselAgentImpl
-from rag_backend.domain.protocols import CarouselAgent, CarouselRepository, SocialPublisher
-from rag_backend.infrastructure.database.carousel_repository import PostgresCarouselRepository
+from rag_backend.domain.protocols import (
+    CarouselAgent,
+    CarouselRepository,
+    SocialPublisher,
+)
+from rag_backend.infrastructure.database.carousel_repository import (
+    PostgresCarouselRepository,
+)
 from rag_backend.infrastructure.database.config import get_session
 
 

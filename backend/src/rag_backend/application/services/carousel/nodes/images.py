@@ -27,9 +27,17 @@ from rag_backend.application.services.carousel.types import (
     short_scene,
     style_display_name,
 )
-from rag_backend.application.services.image_prompt_sanitizer import sanitize_image_prompt
-from rag_backend.application.services.image_provider_registry import ImageProviderRegistry
-from rag_backend.domain.constants import IMAGE_MODEL_OPENAI, SLIDE_TYPE_CONTENT, SLIDE_TYPE_INTRO
+from rag_backend.application.services.image_prompt_sanitizer import (
+    sanitize_image_prompt,
+)
+from rag_backend.application.services.image_provider_registry import (
+    ImageProviderRegistry,
+)
+from rag_backend.domain.constants import (
+    IMAGE_MODEL_OPENAI,
+    SLIDE_TYPE_CONTENT,
+    SLIDE_TYPE_INTRO,
+)
 from rag_backend.domain.models import CarouselProject
 from rag_backend.domain.protocols import CarouselRepository
 
@@ -46,7 +54,9 @@ def filter_image_slides(slides: list[SlideData]) -> list[SlideData]:
     return [s for s in slides if s.slide_type in IMAGE_SLIDE_TYPES and s.image_prompt]
 
 
-def build_initial_status(slides: list[SlideData], style_label: str) -> list[dict[str, str | int]]:
+def build_initial_status(
+    slides: list[SlideData], style_label: str
+) -> list[dict[str, str | int]]:
     """Initial all-pending snapshot for the per-slide UI checklist."""
     return [
         {

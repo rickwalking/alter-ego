@@ -11,7 +11,9 @@ import pytest
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from rag_backend.application.services.notification_service import NotificationService
-from rag_backend.application.services.scheduled_publish_service import ScheduledPublishService
+from rag_backend.application.services.scheduled_publish_service import (
+    ScheduledPublishService,
+)
 from rag_backend.application.services.workflow_event_service import WorkflowEventService
 from rag_backend.domain.constants.blog_post import BlogPostStatus
 from rag_backend.infrastructure.database.models.blog_post import BlogPostModel
@@ -29,7 +31,9 @@ def _clear_events() -> None:
 @pytest.mark.asyncio
 async def test_process_due_posts_is_idempotent(test_engine) -> None:
     """Processing due posts twice should only publish once."""
-    session_factory = async_sessionmaker(test_engine, class_=AsyncSession, expire_on_commit=False)
+    session_factory = async_sessionmaker(
+        test_engine, class_=AsyncSession, expire_on_commit=False
+    )
     async with session_factory() as db:
         post = BlogPostModel(
             id="scheduled-post-1",

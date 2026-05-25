@@ -11,7 +11,9 @@ from rag_backend.agents.carousel_workflow import (
     CarouselWorkflowEngine,
     build_carousel_workflow_graph,
 )
-from rag_backend.application.services.carousel.workflow_state import get_initial_carousel_state
+from rag_backend.application.services.carousel.workflow_state import (
+    get_initial_carousel_state,
+)
 from rag_backend.domain.constants.carousel_workflow import (
     PHASE_BRIEF,
     PHASE_OUTLINE,

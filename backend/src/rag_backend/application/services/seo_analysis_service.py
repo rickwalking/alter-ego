@@ -59,12 +59,16 @@ class SeoAnalysisService:
             "suggestions": [issue["message"] for issue in issues],
         }
 
-    def _check_title(self, title: str, meta_title: str | None, issues: list[dict[str, str]]) -> int:
+    def _check_title(
+        self, title: str, meta_title: str | None, issues: list[dict[str, str]]
+    ) -> int:
         penalty = 0
         effective_title = meta_title or title
         if not meta_title:
             issues.append(
-                self._issue(ISSUE_MISSING_META_TITLE, "Add a meta title for search results")
+                self._issue(
+                    ISSUE_MISSING_META_TITLE, "Add a meta title for search results"
+                )
             )
             penalty += 15
         elif len(effective_title) < SEO_TITLE_MIN_LENGTH:
@@ -79,10 +83,14 @@ class SeoAnalysisService:
             penalty += 5
         return penalty
 
-    def _check_description(self, meta_description: str | None, issues: list[dict[str, str]]) -> int:
+    def _check_description(
+        self, meta_description: str | None, issues: list[dict[str, str]]
+    ) -> int:
         penalty = 0
         if not meta_description:
-            issues.append(self._issue(ISSUE_MISSING_META_DESCRIPTION, "Add a meta description"))
+            issues.append(
+                self._issue(ISSUE_MISSING_META_DESCRIPTION, "Add a meta description")
+            )
             penalty += 15
         elif len(meta_description) < SEO_DESCRIPTION_MIN_LENGTH:
             msg = f"Description is under {SEO_DESCRIPTION_MIN_LENGTH} chars"
@@ -92,7 +100,11 @@ class SeoAnalysisService:
             msg = f"Description exceeds {SEO_DESCRIPTION_MAX_LENGTH} chars"
             issues.append(self._issue(ISSUE_DESCRIPTION_TOO_LONG, msg))
             penalty += 10
-        elif not (SEO_DESCRIPTION_IDEAL_MIN <= len(meta_description) <= SEO_DESCRIPTION_IDEAL_MAX):
+        elif not (
+            SEO_DESCRIPTION_IDEAL_MIN
+            <= len(meta_description)
+            <= SEO_DESCRIPTION_IDEAL_MAX
+        ):
             penalty += 5
         return penalty
 
@@ -114,7 +126,9 @@ class SeoAnalysisService:
     def _check_excerpt(self, excerpt: str | None, issues: list[dict[str, str]]) -> int:
         if not excerpt:
             issues.append(
-                self._issue(ISSUE_NO_EXCERPT, "Add an excerpt for social sharing previews")
+                self._issue(
+                    ISSUE_NO_EXCERPT, "Add an excerpt for social sharing previews"
+                )
             )
             return 5
         return 0

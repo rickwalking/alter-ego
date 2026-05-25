@@ -79,7 +79,9 @@ async def get_workflow_kanban(
     result = await db.execute(query)
     projects = list(result.scalars().all())
 
-    cards_by_phase: dict[str, list[KanbanCardResponse]] = {phase: [] for phase in KANBAN_PHASES}
+    cards_by_phase: dict[str, list[KanbanCardResponse]] = {
+        phase: [] for phase in KANBAN_PHASES
+    }
     for project in projects:
         phase = project.current_phase or PHASE_BRIEF
         if phase not in cards_by_phase:
@@ -91,7 +93,9 @@ async def get_workflow_kanban(
                 topic=project.topic,
                 current_phase=phase,
                 phase_status=project.phase_status or "pending",
-                updated_at=project.updated_at.isoformat() if project.updated_at else None,
+                updated_at=project.updated_at.isoformat()
+                if project.updated_at
+                else None,
             )
         )
 

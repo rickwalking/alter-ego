@@ -75,7 +75,9 @@ class BlogPostAIService:
             raise ValueError(ERR_INVALID_AI_ACTION)
 
         trace_context = trace or BlogAiTraceContext()
-        start_blog_workflow_trace(trace_context.post_id or "unknown", trace_context.user_id)
+        start_blog_workflow_trace(
+            trace_context.post_id or "unknown", trace_context.user_id
+        )
         safe_text = sanitize_llm_input(text)
         safe_context = sanitize_llm_input(context or "")
         with blog_ai_propagate(trace_context.post_id or "unknown", "ai_suggest"):
@@ -118,7 +120,9 @@ class BlogPostAIService:
             raise ValueError(ERR_INVALID_AI_ACTION)
 
         trace_context = trace or BlogAiTraceContext()
-        start_blog_workflow_trace(trace_context.post_id or "unknown", trace_context.user_id)
+        start_blog_workflow_trace(
+            trace_context.post_id or "unknown", trace_context.user_id
+        )
         safe_text = sanitize_llm_input(text)
         safe_context = sanitize_llm_input(context or "")
 
@@ -171,7 +175,9 @@ class BlogPostAIService:
             try:
                 await self._image_service.generate_image(safe_prompt, str(output_path))
             except Exception as exc:
-                raise RuntimeError(ERR_IMAGE_GENERATION_FAILED.format(reason=str(exc))) from exc
+                raise RuntimeError(
+                    ERR_IMAGE_GENERATION_FAILED.format(reason=str(exc))
+                ) from exc
 
         return {
             "prompt": safe_prompt,

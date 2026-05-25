@@ -107,7 +107,9 @@ def build_carousel_subagent(
         if not project_id_raw:
             return {
                 "messages": [
-                    AIMessage(content=("carousel subagent: missing `project_id` in request"))
+                    AIMessage(
+                        content=("carousel subagent: missing `project_id` in request")
+                    )
                 ],
             }
         try:
@@ -115,7 +117,9 @@ def build_carousel_subagent(
         except ValueError:
             return {
                 "messages": [
-                    AIMessage(content=f"carousel subagent: invalid project_id {project_id_raw!r}")
+                    AIMessage(
+                        content=f"carousel subagent: invalid project_id {project_id_raw!r}"
+                    )
                 ],
             }
 
@@ -123,7 +127,9 @@ def build_carousel_subagent(
         if project is None:
             return {
                 "messages": [
-                    AIMessage(content=f"carousel subagent: project {project_id} not found")
+                    AIMessage(
+                        content=f"carousel subagent: project {project_id} not found"
+                    )
                 ],
             }
 

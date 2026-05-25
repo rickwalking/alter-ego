@@ -87,9 +87,13 @@ async def assign_reviewer(
     current_user: EditorUser,
 ) -> NotificationResponse:
     """Assign a reviewer and notify them (UI-022)."""
-    await assert_content_owner_or_admin(db, body.content_id, body.content_type, current_user)
+    await assert_content_owner_or_admin(
+        db, body.content_id, body.content_type, current_user
+    )
     await validate_reviewer_user(db, body.reviewer_id)
-    await assign_content_reviewer(db, body.content_id, body.content_type, body.reviewer_id)
+    await assign_content_reviewer(
+        db, body.content_id, body.content_type, body.reviewer_id
+    )
     service = _notification_service()
     notification = await service.create_review_request(
         db,

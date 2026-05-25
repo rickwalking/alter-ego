@@ -128,7 +128,9 @@ async def get_carousel_blog_i18n(
         raise HTTPException(
             status_code=404,
             detail=f"Blog post not available in '{lang}'",
-            headers={"X-Available-Languages": ",".join(project.get_available_languages())},
+            headers={
+                "X-Available-Languages": ",".join(project.get_available_languages())
+            },
         )
 
     translated_title, translated_subtitle = _extract_title_and_subtitle(blog_content)
@@ -225,7 +227,9 @@ async def get_carousel_image(
 ) -> FileResponse:
     """Serve a raw hero image (from <output>/images/)."""
     project = await _load_project_with_output(project_id, repo)
-    image_path = _resolve_image_file(Path(project.output_dir or "") / "images", filename)
+    image_path = _resolve_image_file(
+        Path(project.output_dir or "") / "images", filename
+    )
     if image_path is None:
         raise HTTPException(status_code=404, detail=ERR_IMAGE_NOT_FOUND)
     return FileResponse(
@@ -301,5 +305,7 @@ async def download_carousel(
     output_path = Path(project.output_dir)
     if not output_path.exists():
         raise HTTPException(status_code=404, detail=ERR_OUTPUT_NOT_FOUND)
-    files = [str(p.relative_to(output_path)) for p in output_path.rglob("*") if p.is_file()]
+    files = [
+        str(p.relative_to(output_path)) for p in output_path.rglob("*") if p.is_file()
+    ]
     return {"output_dir": project.output_dir, "files": files}

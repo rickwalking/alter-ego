@@ -6,7 +6,11 @@ from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import BaseMessage, HumanMessage
 
 from rag_backend.agents.input_sanitizer import sanitize_llm_input
-from rag_backend.domain.models.rubric import EvaluationMethod, QualityRubric, RubricCriterion
+from rag_backend.domain.models.rubric import (
+    EvaluationMethod,
+    QualityRubric,
+    RubricCriterion,
+)
 from rag_backend.infrastructure.monitoring_langfuse import get_langfuse_handler
 
 
@@ -27,7 +31,9 @@ class QualityAgent:
         self.llm = llm
         self._embedding_service = embedding_service
 
-    async def evaluate(self, content: str, sources: list[str] | None = None) -> dict[str, object]:
+    async def evaluate(
+        self, content: str, sources: list[str] | None = None
+    ) -> dict[str, object]:
         """Evaluate content against the rubric."""
         content = sanitize_llm_input(content)
         if sources:
@@ -41,7 +47,9 @@ class QualityAgent:
 
     def _build_evaluation_prompt(self, content: str, sources_str: str) -> str:
         """Build the evaluation prompt."""
-        criteria_str = "\n".join(f"{c['name']}: {c['description']}" for c in self.rubric.criteria)
+        criteria_str = "\n".join(
+            f"{c['name']}: {c['description']}" for c in self.rubric.criteria
+        )
         return f"""Evaluate this content against the following quality rubric.
 
 RUBRIC NAME: {self.rubric.name}
@@ -145,7 +153,9 @@ CONTENT: {content}
 
         suggestions = __import__("re").split(r"[\n·•\-\*]", cast(str, response.content))
         return [
-            s.strip() for s in suggestions if s.strip() and not s.strip().startswith("Here are")
+            s.strip()
+            for s in suggestions
+            if s.strip() and not s.strip().startswith("Here are")
         ]
 
     async def calculate_originality(self, content: str, sources: list[str]) -> float:

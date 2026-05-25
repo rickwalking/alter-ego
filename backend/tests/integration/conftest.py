@@ -46,7 +46,9 @@ async def client():
 
     app = create_app()
     transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test", headers=headers) as ac:
+    async with AsyncClient(
+        transport=transport, base_url="http://test", headers=headers
+    ) as ac:
         yield ac
 
     db_config.c_engine = None
@@ -57,7 +59,9 @@ async def client():
 async def create_test_user(email: str, role: UserRole) -> User:
     """Persist a user for integration tests."""
     from rag_backend.infrastructure.database.config import get_session_maker
-    from rag_backend.infrastructure.database.user_repository import PostgresUserRepository
+    from rag_backend.infrastructure.database.user_repository import (
+        PostgresUserRepository,
+    )
 
     session_maker = get_session_maker()
     async with session_maker() as session:

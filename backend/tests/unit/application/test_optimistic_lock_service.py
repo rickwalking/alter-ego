@@ -8,7 +8,9 @@ from __future__ import annotations
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from rag_backend.application.services.optimistic_lock_service import OptimisticLockService
+from rag_backend.application.services.optimistic_lock_service import (
+    OptimisticLockService,
+)
 from rag_backend.domain.constants.optimistic_locking import (
     ERR_LOCK_HELD_BY_OTHER,
     ERR_VERSION_CONFLICT,
@@ -49,7 +51,9 @@ async def test_apply_versioned_update_increments_lock(db_session: AsyncSession) 
 
 
 @pytest.mark.asyncio
-async def test_apply_versioned_update_raises_on_stale_version(db_session: AsyncSession) -> None:
+async def test_apply_versioned_update_raises_on_stale_version(
+    db_session: AsyncSession,
+) -> None:
     post = BlogPostModel(
         title="Stale Version",
         slug="stale-version-test",

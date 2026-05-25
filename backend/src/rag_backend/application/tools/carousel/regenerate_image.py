@@ -42,7 +42,9 @@ def build_regenerate_slide_image_tool(
             return _ERR_INVALID_PROJECT_ID.format(project_id)
 
         try:
-            await carousel_agent.regenerate_slide_image(project_uuid, slide_number, instruction)
+            await carousel_agent.regenerate_slide_image(
+                project_uuid, slide_number, instruction
+            )
         except ValueError as exc:
             return _ERR_CANNOT_REGENERATE.format(slide_number=slide_number, exc=exc)
         except OSError as exc:

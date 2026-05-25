@@ -7,7 +7,9 @@ LinkedIn posts, and the pipeline still completes.
 from __future__ import annotations
 
 from rag_backend.application.services.carousel.nodes.progress import set_progress
-from rag_backend.application.services.linkedin_post_generator import LinkedInPostGenerator
+from rag_backend.application.services.linkedin_post_generator import (
+    LinkedInPostGenerator,
+)
 from rag_backend.domain.models import CarouselProject
 from rag_backend.domain.protocols import CarouselRepository
 

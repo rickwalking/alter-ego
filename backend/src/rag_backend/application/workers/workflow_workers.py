@@ -5,7 +5,9 @@ from __future__ import annotations
 import asyncio
 
 from rag_backend.application.services.notification_service import NotificationService
-from rag_backend.application.services.scheduled_publish_service import ScheduledPublishService
+from rag_backend.application.services.scheduled_publish_service import (
+    ScheduledPublishService,
+)
 from rag_backend.application.services.workflow_event_service import WorkflowEventService
 from rag_backend.application.services.workflow_failure_alert_service import (
     WorkflowFailureAlertService,
@@ -25,7 +27,9 @@ async def run_workflow_workers(settings: Settings, stop_event: asyncio.Event) ->
     event_service = WorkflowEventService(publisher)
     notification_service = NotificationService()
     alert_service = WorkflowFailureAlertService()
-    scheduler = ScheduledPublishService(session_factory, event_service, notification_service)
+    scheduler = ScheduledPublishService(
+        session_factory, event_service, notification_service
+    )
     interval = settings.workflow_worker_interval_seconds
 
     logger.info("workflow_workers_started", interval_seconds=interval)

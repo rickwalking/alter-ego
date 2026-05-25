@@ -14,7 +14,9 @@ from rag_backend.agents.content_draft_agent import ContentDraftAgent
 from rag_backend.agents.outline_agent import OutlineAgent
 from rag_backend.agents.persona_agent import PersonaAgent
 from rag_backend.agents.source_synthesis_agent import SourceSynthesisAgent
-from rag_backend.application.services.carousel.workflow_state import CarouselWorkflowState
+from rag_backend.application.services.carousel.workflow_state import (
+    CarouselWorkflowState,
+)
 from rag_backend.application.services.notification_service import NotificationService
 from rag_backend.application.services.workflow_event_service import WorkflowEventService
 from rag_backend.domain.constants.carousel_workflow import (
@@ -97,9 +99,14 @@ class EditorialWorkflowService:
                     content=source.get("content", ""),
                     source_type=source.get("source_type", "document"),
                 )
-                research_findings.append({"source": source.get("title", ""), **extracted})
+                research_findings.append({
+                    "source": source.get("title", ""),
+                    **extracted,
+                })
 
-        with propagate_attributes(metadata={"project_id": project_id, "phase": PHASE_OUTLINE}):
+        with propagate_attributes(
+            metadata={"project_id": project_id, "phase": PHASE_OUTLINE}
+        ):
             source_texts = [s.get("content", "") for s in workflow_input.sources]
             outline = await self._outline_agent.generate_outline(
                 topic=workflow_input.topic,
@@ -109,14 +116,20 @@ class EditorialWorkflowService:
             )
 
         slide_drafts: list[dict[str, object]] = []
-        with propagate_attributes(metadata={"project_id": project_id, "phase": PHASE_CONTENT}):
+        with propagate_attributes(
+            metadata={"project_id": project_id, "phase": PHASE_CONTENT}
+        ):
             for slide in outline:
                 if not isinstance(slide, dict):
                     continue
                 draft = await self._content_agent.draft_slide(
                     slide_index=int(slide.get("slide_index", 0)),
                     title=str(slide.get("title", "")),
-                    key_points=[str(p) for p in slide.get("key_points", []) if isinstance(p, str)],
+                    key_points=[
+                        str(p)
+                        for p in slide.get("key_points", [])
+                        if isinstance(p, str)
+                    ],
                     persona=workflow_input.persona,
                 )
                 slide_drafts.append({**slide, **draft})
@@ -182,7 +195,11 @@ class EditorialWorkflowService:
                 reviewer_id=reviewer_id,
                 feedback=feedback,
             )
-        human_input = {"action": action, "reviewer_id": reviewer_id, "feedback": feedback}
+        human_input = {
+            "action": action,
+            "reviewer_id": reviewer_id,
+            "feedback": feedback,
+        }
         state = await self._engine.resume(project_id, human_input)
         await self._emit_review_event(
             db,
@@ -246,7 +263,7 @@ class EditorialWorkflowService:
             metadata={"user_id": user_id, "source": EVENT_SOURCE_WORKFLOW_ENGINE},
         )
 
-    async def _emit_review_event(  # noqa: PLR0913
+    async def _emit_review_event(
         self,
         db: AsyncSession | None,
         project_id: str,
@@ -266,7 +283,10 @@ class EditorialWorkflowService:
             aggregate_id=project_id,
             aggregate_type=AGGREGATE_TYPE_PROJECT,
             payload={"action": action, "feedback": feedback or "", "phase": new_phase},
-            metadata={"reviewer_id": reviewer_id, "source": EVENT_SOURCE_WORKFLOW_ENGINE},
+            metadata={
+                "reviewer_id": reviewer_id,
+                "source": EVENT_SOURCE_WORKFLOW_ENGINE,
+            },
         )
         if old_phase != new_phase:
             await self._events.emit(
@@ -279,7 +299,10 @@ class EditorialWorkflowService:
                     "phase": new_phase,
                     "phase_status": str(state.get("phase_status", "")),
                 },
-                metadata={"reviewer_id": reviewer_id, "source": EVENT_SOURCE_WORKFLOW_ENGINE},
+                metadata={
+                    "reviewer_id": reviewer_id,
+                    "source": EVENT_SOURCE_WORKFLOW_ENGINE,
+                },
             )
         notif_type = (
             NOTIFICATION_TYPE_PHASE_APPROVED

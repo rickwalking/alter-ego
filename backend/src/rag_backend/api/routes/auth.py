@@ -33,7 +33,7 @@ class TokenResponse(BaseModel):
     """Response body containing JWT token."""
 
     access_token: str
-    token_type: str = "bearer"  # noqa: S105 — field name, not a password
+    token_type: str = "bearer"
 
 
 class MeResponse(BaseModel):

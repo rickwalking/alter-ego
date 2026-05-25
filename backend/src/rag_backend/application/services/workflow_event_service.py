@@ -19,7 +19,9 @@ from rag_backend.domain.constants.workflow_events import (
     STREAM_CONTENT_EVENTS,
 )
 from rag_backend.domain.protocols.event_publisher import EventPublisherProtocol
-from rag_backend.infrastructure.database.models.workflow_audit_log import WorkflowAuditLogModel
+from rag_backend.infrastructure.database.models.workflow_audit_log import (
+    WorkflowAuditLogModel,
+)
 
 
 class WorkflowEventService:

@@ -33,7 +33,9 @@ class Document:
     owner_id: UUID | None = None
     is_public: bool = False
 
-    def update_status(self, status: DocumentStatus, error_message: str | None = None) -> None:
+    def update_status(
+        self, status: DocumentStatus, error_message: str | None = None
+    ) -> None:
         self.status = status
         self.error_message = error_message
         self.updated_at = datetime.utcnow()

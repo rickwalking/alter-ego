@@ -92,11 +92,15 @@ def _agent_with_mocks() -> tuple[CarouselAgent, AsyncMock, AsyncMock, MagicMock]
     repo.update_project = AsyncMock(side_effect=lambda p: p)
     repo.get_slides_by_project = AsyncMock()
     export = AsyncMock()
-    export.export_slides = AsyncMock(return_value=["/tmp/slide_1.jpg", "/tmp/slide_2.jpg"])
+    export.export_slides = AsyncMock(
+        return_value=["/tmp/slide_1.jpg", "/tmp/slide_2.jpg"]
+    )
     pdf_builder = MagicMock()
     pdf_builder.build = MagicMock(return_value="/tmp/carousel.pdf")
     image_service = AsyncMock()
-    registry = ImageProviderRegistry(gemini_service=image_service, openai_service=image_service)
+    registry = ImageProviderRegistry(
+        gemini_service=image_service, openai_service=image_service
+    )
     agent = CarouselAgent(
         repository=repo,
         llm_service=AsyncMock(),
@@ -114,7 +118,9 @@ class TestReRenderSlides:
     """The refine flow's re-render entry point."""
 
     # Scenario: Re-render writes PDF and bumps updated_at after text edits
-    async def test_re_render_writes_pdf_and_bumps_updated_at(self, tmp_path: Path) -> None:
+    async def test_re_render_writes_pdf_and_bumps_updated_at(
+        self, tmp_path: Path
+    ) -> None:
         agent, repo, export, pdf_builder = _agent_with_mocks()
         project = CarouselProject(
             topic="T",
@@ -300,7 +306,9 @@ class TestRefineCarouselDesign:
         )
         repo.get_project_by_id = AsyncMock(return_value=project)
         repo.get_slides_by_project = AsyncMock(return_value=[_slide(1)])
-        agent._llm.generate = AsyncMock(return_value="```css\n.hero-img { height: 600px; }\n```")
+        agent._llm.generate = AsyncMock(
+            return_value="```css\n.hero-img { height: 600px; }\n```"
+        )
 
         await agent.refine_carousel_design(project.id, "make images bigger")
 

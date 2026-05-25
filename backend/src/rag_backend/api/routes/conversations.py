@@ -133,7 +133,9 @@ async def create_conversation(
 )
 async def list_conversations(
     user: Annotated[User, Depends(require_authenticated_user)],
-    limit: Annotated[int, Query(ge=1, le=100, description="Number of items to return")] = 20,
+    limit: Annotated[
+        int, Query(ge=1, le=100, description="Number of items to return")
+    ] = 20,
     offset: Annotated[int, Query(ge=0, description="Number of items to skip")] = 0,
     db: AsyncSession = Depends(get_session),
 ):
@@ -197,7 +199,9 @@ async def get_conversation(
 async def get_conversation_messages(
     conversation_id: UUID,
     user: Annotated[User, Depends(require_authenticated_user)],
-    limit: Annotated[int, Query(ge=1, le=100, description="Number of messages to return")] = 50,
+    limit: Annotated[
+        int, Query(ge=1, le=100, description="Number of messages to return")
+    ] = 50,
     db: AsyncSession = Depends(get_session),
 ):
     """Get all messages for a conversation."""
@@ -352,17 +356,16 @@ async def chat(
         elif event["type"] == "sources":
             sources = list(event["content"])
 
-    formatted_sources = []
-    for src in sources:
-        if isinstance(src, dict):
-            formatted_sources.append(
-                MessageSource(
-                    document_id=str(src.get("document_id", "")),
-                    document_title=str(src.get("document_title", "")),
-                    content=str(src.get("content", "")),
-                    score=float(src.get("score", 0.0)),
-                )
-            )
+    formatted_sources = [
+        MessageSource(
+            document_id=str(src.get("document_id", "")),
+            document_title=str(src.get("document_title", "")),
+            content=str(src.get("content", "")),
+            score=float(src.get("score", 0.0)),
+        )
+        for src in sources
+        if isinstance(src, dict)
+    ]
 
     response.headers["X-Agent-Origin"] = agent_origin
     return ChatResponse(

@@ -34,7 +34,9 @@ class TestExtractJson:
     def test_tolerates_markdown_fences(self):
         """Given JSON wrapped in ```json fences, when extract_json is called,
         then returns parsed object."""
-        payload = {"slides": [{"number": 1, "type": "intro", "heading": "H", "body": "B"}]}
+        payload = {
+            "slides": [{"number": 1, "type": "intro", "heading": "H", "body": "B"}]
+        }
         raw = f"Here is the JSON:\n```json\n{json.dumps(payload)}\n```\nDone."
         result = extract_json(raw)
         assert result == payload
@@ -307,7 +309,9 @@ class TestRunContentSummaryAndTldr:
         project = CarouselProject(topic="T", audience="A", niche="N")
         slides_data, _ = await run_content(project, [], llm=llm, template=template)
 
-        summary_slide = next((s for s in slides_data if s.slide_type == "summary"), None)
+        summary_slide = next(
+            (s for s in slides_data if s.slide_type == "summary"), None
+        )
         assert summary_slide is not None
         assert summary_slide.summary_points is not None
         assert len(summary_slide.summary_points) == 2

@@ -23,8 +23,12 @@ class EditorialAuditService:
     def __init__(self, event_service: WorkflowEventService) -> None:
         self._events = event_service
 
-    async def log_created(self, db: AsyncSession, post_id: str, user_id: str, title: str) -> str:
-        return await self._emit(db, EVENT_TYPE_BLOGPOST_CREATED, post_id, {"title": title}, user_id)
+    async def log_created(
+        self, db: AsyncSession, post_id: str, user_id: str, title: str
+    ) -> str:
+        return await self._emit(
+            db, EVENT_TYPE_BLOGPOST_CREATED, post_id, {"title": title}, user_id
+        )
 
     async def log_updated(
         self, db: AsyncSession, post_id: str, user_id: str, fields: list[str]
@@ -58,7 +62,9 @@ class EditorialAuditService:
             user_id,
         )
 
-    async def log_ai_action(self, db: AsyncSession, post_id: str, user_id: str, action: str) -> str:
+    async def log_ai_action(
+        self, db: AsyncSession, post_id: str, user_id: str, action: str
+    ) -> str:
         return await self._emit(
             db, EVENT_TYPE_BLOGPOST_AI_ACTION, post_id, {"action": action}, user_id
         )

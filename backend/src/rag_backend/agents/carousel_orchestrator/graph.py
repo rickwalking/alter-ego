@@ -28,14 +28,12 @@ async def _run_graph_body(
 ) -> None:
     project = await repo.get_project_by_id(project_id)
     if project is None:
-        await queue.put(
-            {
-                "node": "error",
-                "status": "failed",
-                "phase_progress": None,
-                "error": _ERR_PROJECT_NOT_FOUND.format(project_id),
-            }
-        )
+        await queue.put({
+            "node": "error",
+            "status": "failed",
+            "phase_progress": None,
+            "error": _ERR_PROJECT_NOT_FOUND.format(project_id),
+        })
         return
 
     output_dir = self._output_base / str(project_id)
@@ -56,13 +54,11 @@ async def _run_graph_body(
         config["callbacks"] = [lf_handler]
     config = config or None
 
-    await queue.put(
-        {
-            "node": "start",
-            "status": project.status.value,
-            "phase_progress": project.phase_progress,
-        }
-    )
+    await queue.put({
+        "node": "start",
+        "status": project.status.value,
+        "phase_progress": project.phase_progress,
+    })
 
     has_checkpoint = False
     if config is not None:
@@ -79,37 +75,31 @@ async def _run_graph_body(
                 snapshot = partial.get("project") if isinstance(partial, dict) else None
                 if snapshot is None:
                     continue
-                await queue.put(
-                    {
-                        "node": node_name,
-                        "status": snapshot.status.value,
-                        "phase_progress": snapshot.phase_progress,
-                    }
-                )
+                await queue.put({
+                    "node": node_name,
+                    "status": snapshot.status.value,
+                    "phase_progress": snapshot.phase_progress,
+                })
     except Exception as exc:
         latest_project = await repo.get_project_by_id(project_id)
         if latest_project is None:
             latest_project = project
         latest_project.mark_failed(str(exc))
         await repo.update_project(latest_project)
-        await queue.put(
-            {
-                "node": "error",
-                "status": latest_project.status.value,
-                "phase_progress": latest_project.phase_progress,
-                "error": str(exc),
-            }
-        )
+        await queue.put({
+            "node": "error",
+            "status": latest_project.status.value,
+            "phase_progress": latest_project.phase_progress,
+            "error": str(exc),
+        })
         return
 
     final_project = await repo.get_project_by_id(project_id)
-    await queue.put(
-        {
-            "node": "end",
-            "status": final_project.status.value if final_project else "completed",
-            "phase_progress": final_project.phase_progress if final_project else None,
-        }
-    )
+    await queue.put({
+        "node": "end",
+        "status": final_project.status.value if final_project else "completed",
+        "phase_progress": final_project.phase_progress if final_project else None,
+    })
 
 
 async def _run_graph_producer(

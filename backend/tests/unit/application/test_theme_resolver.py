@@ -136,11 +136,16 @@ class TestDetectCategory:
 
     def test_detects_cybersecurity(self):
         """Should detect cybersecurity from attack keywords."""
-        assert _detect_category("New malware attack breaches firewall") == "cybersecurity"
+        assert (
+            _detect_category("New malware attack breaches firewall") == "cybersecurity"
+        )
 
     def test_detects_source_code(self):
         """Should detect source_code from leak keywords."""
-        assert _detect_category("Source code leaked from GitHub repository") == "source_code"
+        assert (
+            _detect_category("Source code leaked from GitHub repository")
+            == "source_code"
+        )
 
     def test_detects_ai_competition_from_generic_ai(self):
         """Should detect ai_competition from generic 'AI' mention."""

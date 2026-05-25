@@ -45,7 +45,9 @@ class TestNamespacePrefixBypass:
 
         # Mock embeddings
         mock_embedding.embed_dense.return_value = [[0.1, 0.2, 0.3]]
-        mock_embedding.embed_sparse.return_value = [{"indices": [1, 2], "values": [0.5, 0.5]}]
+        mock_embedding.embed_sparse.return_value = [
+            {"indices": [1, 2], "values": [0.5, 0.5]}
+        ]
 
         # Mock Pinecone results
         mock_vector_store.hybrid_search.return_value = [
@@ -291,7 +293,9 @@ class TestVectorStoreNamespace:
         """
         import inspect
 
-        from rag_backend.infrastructure.external.pinecone_store import PineconeVectorStore
+        from rag_backend.infrastructure.external.pinecone_store import (
+            PineconeVectorStore,
+        )
 
         # Verify the method signature includes namespace parameter
         sig = inspect.signature(PineconeVectorStore.upsert_chunks)
@@ -305,7 +309,9 @@ class TestVectorStoreNamespace:
         wrong vectors are deleted or scope isolation breaks."""
         import inspect
 
-        from rag_backend.infrastructure.external.pinecone_store import PineconeVectorStore
+        from rag_backend.infrastructure.external.pinecone_store import (
+            PineconeVectorStore,
+        )
 
         # Verify the method signature includes namespace parameter
         sig = inspect.signature(PineconeVectorStore.delete_by_document)

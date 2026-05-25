@@ -10,7 +10,9 @@ from datetime import UTC, datetime, timedelta
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from rag_backend.application.services.content_calendar_service import ContentCalendarService
+from rag_backend.application.services.content_calendar_service import (
+    ContentCalendarService,
+)
 from rag_backend.domain.constants.blog_post import BlogPostStatus
 from rag_backend.infrastructure.database.models.blog_post import BlogPostModel
 

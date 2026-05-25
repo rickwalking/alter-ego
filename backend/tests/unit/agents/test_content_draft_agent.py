@@ -41,7 +41,11 @@ class TestContentDraftAgent:
     async def test_draft_slide_with_persona_enforces_voice(
         self, agent: ContentDraftAgent, mock_llm: AsyncMock
     ) -> None:
-        draft_payload = {"draft_text": "Raw copy", "confidence_score": 0.8, "sources_used": []}
+        draft_payload = {
+            "draft_text": "Raw copy",
+            "confidence_score": 0.8,
+            "sources_used": [],
+        }
         mock_llm.ainvoke.side_effect = [
             MagicMock(content=json.dumps(draft_payload)),
             MagicMock(content="Persona-enforced copy"),

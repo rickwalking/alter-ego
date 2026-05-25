@@ -31,13 +31,11 @@ def _feature_items(slide: SlideDict) -> list[dict[str, str]] | None:
         body = entry.get("body") or ""
         if not title and not body:
             continue
-        items.append(
-            {
-                "icon": str(entry.get("icon") or "✅"),
-                "title": str(title),
-                "body": str(body),
-            }
-        )
+        items.append({
+            "icon": str(entry.get("icon") or "✅"),
+            "title": str(title),
+            "body": str(body),
+        })
     return items or None
 
 
@@ -53,13 +51,11 @@ def _stat_items(slide: SlideDict) -> list[dict[str, str]] | None:
         label = str(entry.get("label") or "").strip()
         if not value:
             continue
-        items.append(
-            {
-                "value": value,
-                "label": label,
-                "detail": str(entry.get("detail") or ""),
-            }
-        )
+        items.append({
+            "value": value,
+            "label": label,
+            "detail": str(entry.get("detail") or ""),
+        })
     return items or None
 
 
@@ -92,24 +88,23 @@ def _render_stat_row(items: list[dict[str, str]]) -> str:
 
 
 def _render_feature_grid(items: list[dict[str, str]], *, columns: int = 1) -> str:
-    cls = "feature-grid cols-2" if columns == FEATURE_GRID_TWO_COLUMNS else "feature-grid"
-    cards: list[str] = []
-    for item in items:
-        cards.append(
-            '<div class="feature-item">'
-            f'<div class="feature-icon">{html.escape(item["icon"], quote=False)}</div>'
-            '<div class="feature-text">'
-            f'<div class="feature-title">{_render_inline(item["title"])}</div>'
-            f'<div class="feature-body">{_render_inline(item["body"])}</div>'
-            "</div></div>"
-        )
+    cls = (
+        "feature-grid cols-2" if columns == FEATURE_GRID_TWO_COLUMNS else "feature-grid"
+    )
+    cards: list[str] = [
+        '<div class="feature-item">'
+        f'<div class="feature-icon">{html.escape(item["icon"], quote=False)}</div>'
+        '<div class="feature-text">'
+        f'<div class="feature-title">{_render_inline(item["title"])}</div>'
+        f'<div class="feature-body">{_render_inline(item["body"])}</div>'
+        "</div></div>"
+        for item in items
+    ]
     return f'<div class="{cls}">' + "".join(cards) + "</div>"
 
 
 def _render_insight_card(insight: dict[str, str]) -> str:
     quote_html = _render_inline(f'"{insight["quote"]}"')
     if insight.get("attribution"):
-        quote_html += (
-            f'<span class="insight-attribution">{_render_inline(insight["attribution"])}</span>'
-        )
+        quote_html += f'<span class="insight-attribution">{_render_inline(insight["attribution"])}</span>'
     return f'<div class="insight-card">{quote_html}</div>'

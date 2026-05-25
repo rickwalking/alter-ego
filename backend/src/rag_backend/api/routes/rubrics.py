@@ -18,7 +18,9 @@ from rag_backend.api.schemas.persona_rubric import (
     RubricEvaluationRequest,
     RubricEvaluationResponse,
 )
-from rag_backend.application.services.quality_evaluation_service import QualityEvaluationService
+from rag_backend.application.services.quality_evaluation_service import (
+    QualityEvaluationService,
+)
 from rag_backend.domain.constants.rate_limits import RATE_LIMIT_AI_ENDPOINTS
 from rag_backend.domain.models.rubric import QualityRubric
 from rag_backend.infrastructure.container import get_container
@@ -60,7 +62,9 @@ async def create_rubric(
     current_user: EditorUser,
 ) -> QualityRubricResponse:
     """Create a new quality rubric."""
-    criteria_data = [c.model_dump() if hasattr(c, "model_dump") else c for c in data.criteria]
+    criteria_data = [
+        c.model_dump() if hasattr(c, "model_dump") else c for c in data.criteria
+    ]
     rubric = QualityRubricModel(
         name=data.name,
         description=data.description,

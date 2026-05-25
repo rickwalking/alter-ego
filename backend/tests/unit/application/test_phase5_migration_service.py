@@ -24,7 +24,10 @@ from rag_backend.domain.constants.carousel_workflow import (
     PHASE_RESEARCH,
     PHASE_STATUS_IN_PROGRESS,
 )
-from rag_backend.domain.constants.migration import DEFAULT_PERSONA_NAME, DEFAULT_RUBRIC_NAME
+from rag_backend.domain.constants.migration import (
+    DEFAULT_PERSONA_NAME,
+    DEFAULT_RUBRIC_NAME,
+)
 from rag_backend.infrastructure.database.config import Base
 from rag_backend.infrastructure.database.models.carousel import CarouselProjectModel
 from rag_backend.infrastructure.database.models.persona_rubric import (
@@ -106,7 +109,9 @@ class TestPhase5MigrationService:
         assert project.phase_status == PHASE_STATUS_IN_PROGRESS
 
     # Scenario: MIG-002
-    async def test_creates_default_persona_from_outputs(self, session: AsyncSession) -> None:
+    async def test_creates_default_persona_from_outputs(
+        self, session: AsyncSession
+    ) -> None:
         completed = _project(
             status=CAROUSEL_STATUS_COMPLETED,
             caption="Hook readers with a bold opening.",
@@ -154,8 +159,12 @@ class TestPhase5MigrationService:
         assert report.dry_run is True
         assert project.creative_brief is None
 
-    async def test_links_persona_and_rubric_to_projects(self, session: AsyncSession) -> None:
-        project = _project(status=CAROUSEL_STATUS_COMPLETED, caption="Linked sample text.")
+    async def test_links_persona_and_rubric_to_projects(
+        self, session: AsyncSession
+    ) -> None:
+        project = _project(
+            status=CAROUSEL_STATUS_COMPLETED, caption="Linked sample text."
+        )
         session.add(project)
         await session.commit()
 

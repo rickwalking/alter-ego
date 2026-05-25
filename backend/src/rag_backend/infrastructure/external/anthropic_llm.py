@@ -40,9 +40,9 @@ class AnthropicLLMService:
         messages: list[dict[str, str]],
     ) -> list[BaseMessage]:
         return [
-            _ROLE_TO_MESSAGE.get(msg.get("role", ROLE_USER), _ROLE_TO_MESSAGE[ROLE_USER])(
-                msg.get("content", "")
-            )
+            _ROLE_TO_MESSAGE.get(
+                msg.get("role", ROLE_USER), _ROLE_TO_MESSAGE[ROLE_USER]
+            )(msg.get("content", ""))
             for msg in messages
         ]
 

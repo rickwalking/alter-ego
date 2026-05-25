@@ -2,9 +2,13 @@
 
 import pytest
 
-from rag_backend.application.services.accessibility_check_service import AccessibilityCheckService
+from rag_backend.application.services.accessibility_check_service import (
+    AccessibilityCheckService,
+)
 from rag_backend.application.services.ai_disclosure_service import AiDisclosureService
-from rag_backend.application.services.plagiarism_detection_service import PlagiarismDetectionService
+from rag_backend.application.services.plagiarism_detection_service import (
+    PlagiarismDetectionService,
+)
 from rag_backend.application.services.seo_analysis_service import SeoAnalysisService
 from rag_backend.domain.constants.ai_disclosure import (
     AI_ACTION_SUGGEST,
@@ -84,7 +88,9 @@ class TestPlagiarismDetectionService:
     async def test_detects_high_overlap(self) -> None:
         service = PlagiarismDetectionService()
         content = "AI security breaches are becoming more frequent every year"
-        sources = ["AI security breaches are becoming more frequent every year in enterprise"]
+        sources = [
+            "AI security breaches are becoming more frequent every year in enterprise"
+        ]
         result = await service.check(content, sources)
         assert result["overall_score"] < 85
         assert len(result["matches"]) >= 1

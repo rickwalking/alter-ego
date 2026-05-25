@@ -73,7 +73,9 @@ class TestCarouselBlogI18nEndpoints:
     @pytest.mark.asyncio
     async def test_get_carousel_blog_i18n_not_found_project(self, client):
         """Given non-existent project, when GET /blog/pt, then returns 404."""
-        response = await client.get("/api/carousels/00000000-0000-0000-0000-000000000000/blog/pt")
+        response = await client.get(
+            "/api/carousels/00000000-0000-0000-0000-000000000000/blog/pt"
+        )
         assert response.status_code == 404
 
 
@@ -84,7 +86,9 @@ class TestCarouselDesignEndpoints:
     @pytest.mark.asyncio
     async def test_get_carousel_design_not_found_project(self, client):
         """Given non-existent project, when GET /design, then returns 404."""
-        response = await client.get("/api/carousels/00000000-0000-0000-0000-000000000000/design")
+        response = await client.get(
+            "/api/carousels/00000000-0000-0000-0000-000000000000/design"
+        )
         assert response.status_code == 404
 
     @pytest.mark.asyncio
@@ -199,7 +203,9 @@ class TestCarouselSlidesEndpoint:
     @pytest.mark.asyncio
     async def test_get_carousel_slides_not_found_project(self, client):
         """Given non-existent project, when GET /slides, then returns 404."""
-        response = await client.get("/api/carousels/00000000-0000-0000-0000-000000000000/slides")
+        response = await client.get(
+            "/api/carousels/00000000-0000-0000-0000-000000000000/slides"
+        )
         assert response.status_code == 404
 
     @pytest.mark.asyncio

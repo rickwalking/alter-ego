@@ -26,12 +26,16 @@ def init_opentelemetry(
         return False
     try:
         from opentelemetry import trace
-        from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+        from opentelemetry.exporter.otlp.proto.http.trace_exporter import (
+            OTLPSpanExporter,
+        )
         from opentelemetry.sdk.resources import Resource
         from opentelemetry.sdk.trace import TracerProvider
         from opentelemetry.sdk.trace.export import BatchSpanProcessor
     except ImportError:
-        logger.warning("opentelemetry_not_installed", hint="pip install opentelemetry-sdk")
+        logger.warning(
+            "opentelemetry_not_installed", hint="pip install opentelemetry-sdk"
+        )
         return False
 
     resource = Resource.create({"service.name": service_name})
@@ -41,7 +45,9 @@ def init_opentelemetry(
     trace.set_tracer_provider(provider)
     _tracer = trace.get_tracer(service_name)
     _initialized = True
-    logger.info("opentelemetry_initialized", service=service_name, endpoint=exporter_endpoint)
+    logger.info(
+        "opentelemetry_initialized", service=service_name, endpoint=exporter_endpoint
+    )
     return True
 
 
@@ -58,7 +64,9 @@ def instrument_fastapi(app: object) -> None:
 
 
 @contextmanager
-def start_span(name: str, attributes: dict[str, str] | None = None) -> Generator[None, None, None]:
+def start_span(
+    name: str, attributes: dict[str, str] | None = None
+) -> Generator[None, None, None]:
     """Start a span if tracing is enabled, otherwise no-op."""
     if _tracer is None:
         yield

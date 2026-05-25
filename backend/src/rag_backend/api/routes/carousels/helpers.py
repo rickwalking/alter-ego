@@ -115,7 +115,8 @@ def _build_default_design_tokens(
 
     project_id_str = str(project.id)
     slide_paths = [
-        f"/api/carousels/{project_id_str}/images/slide_{i}.jpg" for i in range(1, slide_count + 1)
+        f"/api/carousels/{project_id_str}/images/slide_{i}.jpg"
+        for i in range(1, slide_count + 1)
     ]
     hero_path = slide_paths[0] if slide_paths else ""
 
@@ -172,7 +173,9 @@ def _resolve_image_file(directory: Path, filename: str) -> Path | None:
     return with_ext if with_ext.is_file() else None
 
 
-async def _load_project_with_output(project_id: UUID, repo: CarouselRepository) -> CarouselProject:
+async def _load_project_with_output(
+    project_id: UUID, repo: CarouselRepository
+) -> CarouselProject:
     project = await repo.get_project_by_id(project_id)
     if project is None:
         raise HTTPException(status_code=404, detail=ERR_CAROUSEL_NOT_FOUND)

@@ -39,9 +39,7 @@ def sample_theme():
 @pytest.fixture
 def sample_research_context():
     """Create sample research context text."""
-    return (
-        "Source: https://example.com/ml\nMachine learning is a subset of artificial intelligence..."
-    )
+    return "Source: https://example.com/ml\nMachine learning is a subset of artificial intelligence..."
 
 
 @pytest.mark.unit
@@ -52,7 +50,9 @@ class TestCarouselTemplateBuilder:
         self, sample_project, sample_research_context
     ):
         """Should include topic, audience, niche, and research context in title prompt."""
-        prompt = CarouselTemplateBuilder.build_title_prompt(sample_project, sample_research_context)
+        prompt = CarouselTemplateBuilder.build_title_prompt(
+            sample_project, sample_research_context
+        )
 
         assert "Machine Learning Basics" in prompt
         assert "Beginners" in prompt
@@ -60,7 +60,9 @@ class TestCarouselTemplateBuilder:
         assert "Research context" in prompt
         assert "JSON" in prompt
 
-    def test_build_content_prompt_bilingual(self, sample_project, sample_research_context):
+    def test_build_content_prompt_bilingual(
+        self, sample_project, sample_research_context
+    ):
         """Should include bilingual content instructions."""
         prompt = CarouselTemplateBuilder.build_content_prompt(
             sample_project, sample_research_context
@@ -93,7 +95,9 @@ class TestCarouselTemplateBuilder:
             (3, "Unsupervised Learning"),
         ]
 
-        prompt = CarouselTemplateBuilder.build_caption_prompt(sample_project, slide_headings)
+        prompt = CarouselTemplateBuilder.build_caption_prompt(
+            sample_project, slide_headings
+        )
 
         assert "Master ML in 7 Slides" in prompt
         assert "Slide 1: What is ML?" in prompt
@@ -106,25 +110,33 @@ class TestCarouselTemplateBuilder:
             {"number": "1", "type": "intro", "heading": "Intro", "body": "Body"},
         ]
 
-        html = CarouselTemplateBuilder.build_carousel_html(sample_project, slides, sample_theme)
+        html = CarouselTemplateBuilder.build_carousel_html(
+            sample_project, slides, sample_theme
+        )
 
         assert "<!DOCTYPE html>" in html
         assert "<html" in html
         assert "</html>" in html
 
-    def test_build_carousel_html_contains_css_variables(self, sample_project, sample_theme):
+    def test_build_carousel_html_contains_css_variables(
+        self, sample_project, sample_theme
+    ):
         """Should embed theme colors as CSS variables."""
         slides = [
             {"number": "1", "type": "intro", "heading": "Intro", "body": "Body"},
         ]
 
-        html = CarouselTemplateBuilder.build_carousel_html(sample_project, slides, sample_theme)
+        html = CarouselTemplateBuilder.build_carousel_html(
+            sample_project, slides, sample_theme
+        )
 
         assert "--primary: #3b82f6" in html
         assert "--accent: #f59e0b" in html
         assert "--bg: #0a0e17" in html
 
-    def test_build_carousel_html_contains_slide_content(self, sample_project, sample_theme):
+    def test_build_carousel_html_contains_slide_content(
+        self, sample_project, sample_theme
+    ):
         """Should include slide heading and body in HTML."""
         slides = [
             {
@@ -135,7 +147,9 @@ class TestCarouselTemplateBuilder:
             },
         ]
 
-        html = CarouselTemplateBuilder.build_carousel_html(sample_project, slides, sample_theme)
+        html = CarouselTemplateBuilder.build_carousel_html(
+            sample_project, slides, sample_theme
+        )
 
         assert "Test Heading" in html
         assert "Test Body" in html
@@ -144,11 +158,18 @@ class TestCarouselTemplateBuilder:
         """Should render multiple slides in sequence."""
         slides = [
             {"number": "1", "type": "intro", "heading": "Intro", "body": "Intro body"},
-            {"number": "2", "type": "content", "heading": "Content", "body": "Content body"},
+            {
+                "number": "2",
+                "type": "content",
+                "heading": "Content",
+                "body": "Content body",
+            },
             {"number": "3", "type": "cta", "heading": "CTA", "body": "CTA body"},
         ]
 
-        html = CarouselTemplateBuilder.build_carousel_html(sample_project, slides, sample_theme)
+        html = CarouselTemplateBuilder.build_carousel_html(
+            sample_project, slides, sample_theme
+        )
 
         assert "Intro" in html
         assert "Content" in html
@@ -161,46 +182,62 @@ class TestCarouselTemplateBuilder:
             {"number": "1", "type": "intro", "heading": "H", "body": "B"},
         ]
 
-        html = CarouselTemplateBuilder.build_carousel_html(sample_project, slides, sample_theme)
+        html = CarouselTemplateBuilder.build_carousel_html(
+            sample_project, slides, sample_theme
+        )
 
         assert 'lang="pt-BR"' in html
 
-    def test_build_carousel_html_intro_slide_has_badge(self, sample_project, sample_theme):
+    def test_build_carousel_html_intro_slide_has_badge(
+        self, sample_project, sample_theme
+    ):
         """Should render niche badge on intro slide."""
         slides = [
             {"number": "1", "type": "intro", "heading": "H", "body": "B"},
         ]
 
-        html = CarouselTemplateBuilder.build_carousel_html(sample_project, slides, sample_theme)
+        html = CarouselTemplateBuilder.build_carousel_html(
+            sample_project, slides, sample_theme
+        )
 
         assert "AI Education" in html
         assert "s1-badge" in html
 
-    def test_build_carousel_html_content_slide_has_progress(self, sample_project, sample_theme):
+    def test_build_carousel_html_content_slide_has_progress(
+        self, sample_project, sample_theme
+    ):
         """Should render progress bars on content slides."""
         slides = [
             {"number": "2", "type": "content", "heading": "H", "body": "B"},
         ]
 
-        html = CarouselTemplateBuilder.build_carousel_html(sample_project, slides, sample_theme)
+        html = CarouselTemplateBuilder.build_carousel_html(
+            sample_project, slides, sample_theme
+        )
 
         assert "progress" in html
         assert "bar active" in html
 
-    def test_build_carousel_html_cta_slide_has_buttons(self, sample_project, sample_theme):
+    def test_build_carousel_html_cta_slide_has_buttons(
+        self, sample_project, sample_theme
+    ):
         """Should render CTA buttons on cta slides."""
         slides = [
             {"number": "7", "type": "cta", "heading": "Save & Share", "body": "CTA"},
         ]
 
-        html = CarouselTemplateBuilder.build_carousel_html(sample_project, slides, sample_theme)
+        html = CarouselTemplateBuilder.build_carousel_html(
+            sample_project, slides, sample_theme
+        )
 
         assert "cta-btn primary" in html
         assert "cta-btn secondary" in html
         assert "Salve" in html
 
     # Scenario: Design overrides are injected into HTML before </style>
-    def test_build_carousel_html_injects_design_overrides(self, sample_project, sample_theme):
+    def test_build_carousel_html_injects_design_overrides(
+        self, sample_project, sample_theme
+    ):
         """Should inject custom CSS before the closing </style> tag."""
         slides = [
             {"number": "1", "type": "intro", "heading": "Intro", "body": "Body"},
@@ -215,7 +252,9 @@ class TestCarouselTemplateBuilder:
         assert html.index(override) < html.index("</style>")
 
     # Scenario: No overrides block is emitted when design_overrides is None
-    def test_build_carousel_html_omits_overrides_when_none(self, sample_project, sample_theme):
+    def test_build_carousel_html_omits_overrides_when_none(
+        self, sample_project, sample_theme
+    ):
         """Should not contain an overrides block when None is passed."""
         slides = [
             {"number": "1", "type": "intro", "heading": "Intro", "body": "Body"},
@@ -294,9 +333,15 @@ class TestGenerateDesignTokens:
         # The hero image is the intro slide's rendered JPG (slide_1) —
         # there is no separate "hero" file on disk.
         # `hero` + `slides` reference the raw hero images (used by blog).
-        assert tokens["images"]["hero"] == f"/api/carousels/{sample_project.id}/images/slide_1"
+        assert (
+            tokens["images"]["hero"]
+            == f"/api/carousels/{sample_project.id}/images/slide_1"
+        )
         assert len(tokens["images"]["slides"]) == 6
-        assert tokens["images"]["slides"][0] == f"/api/carousels/{sample_project.id}/images/slide_1"
+        assert (
+            tokens["images"]["slides"][0]
+            == f"/api/carousels/{sample_project.id}/images/slide_1"
+        )
         # `rendered_slides_*` reference the post-Playwright JPGs with
         # text overlay (used by publish viewer).
         assert "rendered_slides_pt" in tokens["images"]
@@ -418,7 +463,9 @@ class TestGenerateDesignTokens:
             assert "accent" in theme, f"Theme {theme_name} missing accent"
             assert "background" in theme, f"Theme {theme_name} missing background"
 
-    def test_build_carousel_html_summary_slide_has_points(self, sample_project, sample_theme):
+    def test_build_carousel_html_summary_slide_has_points(
+        self, sample_project, sample_theme
+    ):
         """Should render summary slide with summary_points cards."""
         slides = [
             {
@@ -428,13 +475,19 @@ class TestGenerateDesignTokens:
                 "body": "",
                 "summary_points": [
                     {"icon": "🎯", "title": "Código vazou", "body": "Publicado por 6h"},
-                    {"icon": "🔍", "title": "Malware embutido", "body": "Exfiltrou dados"},
+                    {
+                        "icon": "🔍",
+                        "title": "Malware embutido",
+                        "body": "Exfiltrou dados",
+                    },
                     {"icon": "⚡", "title": "2.3M afetados", "body": "Removido em 72h"},
                 ],
             },
         ]
 
-        html = CarouselTemplateBuilder.build_carousel_html(sample_project, slides, sample_theme)
+        html = CarouselTemplateBuilder.build_carousel_html(
+            sample_project, slides, sample_theme
+        )
 
         assert "summary-slide" in html
         assert "summary-grid" in html
@@ -444,18 +497,24 @@ class TestGenerateDesignTokens:
         assert "Publicado por 6h" in html
         assert "02" in html
 
-    def test_build_carousel_html_summary_slide_without_points(self, sample_project, sample_theme):
+    def test_build_carousel_html_summary_slide_without_points(
+        self, sample_project, sample_theme
+    ):
         """Should render summary slide without cards when no summary_points."""
         slides = [
             {"number": "2", "type": "summary", "heading": "Resumo", "body": ""},
         ]
 
-        html = CarouselTemplateBuilder.build_carousel_html(sample_project, slides, sample_theme)
+        html = CarouselTemplateBuilder.build_carousel_html(
+            sample_project, slides, sample_theme
+        )
 
         assert "summary-slide" in html
         assert 'class="summary-item">' not in html
 
-    def test_build_carousel_html_intro_with_tldr_strip(self, sample_project, sample_theme):
+    def test_build_carousel_html_intro_with_tldr_strip(
+        self, sample_project, sample_theme
+    ):
         """Should render tldr_strip on intro slide when present."""
         slides = [
             {
@@ -467,28 +526,38 @@ class TestGenerateDesignTokens:
             },
         ]
 
-        html = CarouselTemplateBuilder.build_carousel_html(sample_project, slides, sample_theme)
+        html = CarouselTemplateBuilder.build_carousel_html(
+            sample_project, slides, sample_theme
+        )
 
         assert 'class="tldr-strip">' in html
         assert "Código vazou com malware" in html
 
-    def test_build_carousel_html_intro_without_tldr_strip(self, sample_project, sample_theme):
+    def test_build_carousel_html_intro_without_tldr_strip(
+        self, sample_project, sample_theme
+    ):
         """Should not render tldr-strip element on intro slide when absent."""
         slides = [
             {"number": "1", "type": "intro", "heading": "Intro", "body": "Body"},
         ]
 
-        html = CarouselTemplateBuilder.build_carousel_html(sample_project, slides, sample_theme)
+        html = CarouselTemplateBuilder.build_carousel_html(
+            sample_project, slides, sample_theme
+        )
 
         assert 'class="tldr-strip">' not in html
 
-    def test_build_carousel_html_summary_slide_progress_bars(self, sample_project, sample_theme):
+    def test_build_carousel_html_summary_slide_progress_bars(
+        self, sample_project, sample_theme
+    ):
         """Summary slide should render 7 progress bars."""
         slides = [
             {"number": "2", "type": "summary", "heading": "Resumo", "body": ""},
         ]
 
-        html = CarouselTemplateBuilder.build_carousel_html(sample_project, slides, sample_theme)
+        html = CarouselTemplateBuilder.build_carousel_html(
+            sample_project, slides, sample_theme
+        )
 
         # Count progress bars: should be 7 (MAX_SLIDES)
         assert html.count('class="bar ') == 7

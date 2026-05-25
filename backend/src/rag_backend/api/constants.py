@@ -1,6 +1,8 @@
 """API-layer constants including error messages for HTTPException responses."""
 
-from rag_backend.domain.constants import COOKIE_ACCESS_TOKEN as COOKIE_ACCESS_TOKEN  # re-export
+from rag_backend.domain.constants import (
+    COOKIE_ACCESS_TOKEN as COOKIE_ACCESS_TOKEN,
+)  # re-export
 
 # OpenAPI response descriptions (used in @router decorators)
 ERR_NOT_AUTHENTICATED = "Not authenticated"

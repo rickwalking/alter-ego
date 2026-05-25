@@ -84,7 +84,9 @@ class CarouselProjectModel(Base):
     phase_status = Column(String(50), default="pending")
     lock_version = Column(Integer, default=1, nullable=False)
 
-    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    created_at = Column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
     updated_at = Column(
         DateTime(timezone=True),
         server_default=func.now(),
@@ -252,7 +254,9 @@ class CarouselSlideModel(Base):
     image_prompt = Column(Text, nullable=True)
     slide_metadata = Column("metadata", JSON, default=dict, nullable=False)
     extras = Column(JSON, nullable=True)
-    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    created_at = Column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
     updated_at = Column(
         DateTime(timezone=True),
         server_default=func.now(),
@@ -337,7 +341,9 @@ class ResearchSourceModel(Base):
     extracted_content = Column(Text, nullable=True)
     relevance_score = Column(Integer, default=0, nullable=False)
     source_metadata = Column("metadata", JSON, default=dict, nullable=False)
-    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    created_at = Column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
 
     project = relationship("CarouselProjectModel", back_populates="research_sources")
 

@@ -15,11 +15,15 @@ from rag_backend.api.schemas.blog_post import (
     EditorialCommentListResponse,
     EditorialCommentResponse,
 )
-from rag_backend.application.services.editorial_audit_service import EditorialAuditService
+from rag_backend.application.services.editorial_audit_service import (
+    EditorialAuditService,
+)
 from rag_backend.application.services.workflow_event_service import WorkflowEventService
 from rag_backend.domain.constants.blog_post import EditorialCommentStatus
 from rag_backend.infrastructure.config.settings import get_settings
-from rag_backend.infrastructure.database.models.source_comment import EditorialCommentModel
+from rag_backend.infrastructure.database.models.source_comment import (
+    EditorialCommentModel,
+)
 from rag_backend.infrastructure.events.factory import get_event_publisher
 
 router = APIRouter(tags=["blog_post_comments"])
@@ -61,7 +65,9 @@ async def add_blog_post_comment(
     post.editor_comments.append(str(comment.id))
 
     db.add(comment)
-    await _audit_service().log_comment_added(db, str(post_id), current_user.id, str(comment.id))
+    await _audit_service().log_comment_added(
+        db, str(post_id), current_user.id, str(comment.id)
+    )
     await db.commit()
     await db.refresh(comment)
     return comment

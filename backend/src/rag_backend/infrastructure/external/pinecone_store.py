@@ -87,7 +87,9 @@ class PineconeVectorStore:
                 with attempt:
                     index.upsert(vectors=batch, namespace=ns)
 
-    async def delete_by_document(self, document_id: UUID, namespace: str | None = None) -> None:
+    async def delete_by_document(
+        self, document_id: UUID, namespace: str | None = None
+    ) -> None:
         """Delete all chunks belonging to a document.
 
         Args:
@@ -158,7 +160,7 @@ class PineconeVectorStore:
                     metadata={
                         k: v
                         for k, v in match.metadata.items()
-                        if k not in ["content", "document_id"]
+                        if k not in {"content", "document_id"}
                     },
                     rank=i + 1,
                 )

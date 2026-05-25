@@ -93,7 +93,9 @@ class RubricEvaluationScore:
     passed: bool = False
     feedback: list[dict[str, object]] = field(default_factory=list)
 
-    def add_score(self, criterion_id: str, score: float, weight: float, passed: bool) -> None:
+    def add_score(
+        self, criterion_id: str, score: float, weight: float, passed: bool
+    ) -> None:
         """Add a criterion score."""
         self.scores[criterion_id] = {
             "score": score,

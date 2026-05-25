@@ -30,7 +30,9 @@ class PostgresConversationRepository:
     async def get_by_id(self, conversation_id: UUID) -> Conversation | None:
         """Get a conversation by its ID."""
         result = await self._session.execute(
-            select(ConversationModel).where(ConversationModel.id == str(conversation_id))
+            select(ConversationModel).where(
+                ConversationModel.id == str(conversation_id)
+            )
         )
         db_conversation = result.scalar_one_or_none()
         return db_conversation.to_entity() if db_conversation else None
@@ -73,7 +75,9 @@ class PostgresConversationRepository:
     async def update(self, conversation: Conversation) -> Conversation:
         """Update an existing conversation."""
         result = await self._session.execute(
-            select(ConversationModel).where(ConversationModel.id == str(conversation.id))
+            select(ConversationModel).where(
+                ConversationModel.id == str(conversation.id)
+            )
         )
         db_conversation = result.scalar_one_or_none()
         if not db_conversation:
@@ -86,7 +90,9 @@ class PostgresConversationRepository:
     async def delete(self, conversation_id: UUID) -> bool:
         """Delete a conversation and all its messages."""
         result = await self._session.execute(
-            select(ConversationModel).where(ConversationModel.id == str(conversation_id))
+            select(ConversationModel).where(
+                ConversationModel.id == str(conversation_id)
+            )
         )
         db_conversation = result.scalar_one_or_none()
         if not db_conversation:
@@ -110,7 +116,9 @@ class PostgresMessageRepository:
         await self._session.flush()
         return db_message.to_entity()
 
-    async def get_by_conversation(self, conversation_id: UUID, limit: int = 100) -> list[Message]:
+    async def get_by_conversation(
+        self, conversation_id: UUID, limit: int = 100
+    ) -> list[Message]:
         """Get all messages for a conversation."""
         result = await self._session.execute(
             select(MessageModel)
@@ -123,7 +131,9 @@ class PostgresMessageRepository:
     async def count_by_conversation(self, conversation_id: UUID) -> int:
         """Count messages in a conversation."""
         result = await self._session.execute(
-            select(func.count()).where(MessageModel.conversation_id == str(conversation_id))
+            select(func.count()).where(
+                MessageModel.conversation_id == str(conversation_id)
+            )
         )
         return result.scalar() or 0
 

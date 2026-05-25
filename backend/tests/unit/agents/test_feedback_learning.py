@@ -7,7 +7,10 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from rag_backend.agents.feedback_learning import CorrectionClassifier, FeedbackLearningLoop
+from rag_backend.agents.feedback_learning import (
+    CorrectionClassifier,
+    FeedbackLearningLoop,
+)
 
 
 class TestFeedbackLearningLoop:
@@ -26,12 +29,16 @@ class TestFeedbackLearningLoop:
         return mock
 
     @pytest.fixture
-    def loop(self, mock_session: AsyncMock, mock_embeddings: MagicMock) -> FeedbackLearningLoop:
+    def loop(
+        self, mock_session: AsyncMock, mock_embeddings: MagicMock
+    ) -> FeedbackLearningLoop:
         """Create a FeedbackLearningLoop instance."""
         return FeedbackLearningLoop(session=mock_session, embeddings=mock_embeddings)
 
     # Scenario: Record a correction
-    async def test_record_correction_does_not_raise(self, loop: FeedbackLearningLoop) -> None:
+    async def test_record_correction_does_not_raise(
+        self, loop: FeedbackLearningLoop
+    ) -> None:
         """Given correction data, when record_correction is called, then no exception is raised."""
         await loop.record_correction(
             _original="original text",
@@ -41,7 +48,9 @@ class TestFeedbackLearningLoop:
             _correction_type="tone",
         )
 
-    async def test_record_then_retrieve_correction(self, loop: FeedbackLearningLoop) -> None:
+    async def test_record_then_retrieve_correction(
+        self, loop: FeedbackLearningLoop
+    ) -> None:
         """Given a recorded correction, when retrieving examples, then corrected text is returned."""
         await loop.record_correction(
             _original="Hello",
@@ -65,7 +74,9 @@ class TestFeedbackLearningLoop:
         assert result == []
 
     # Scenario: Cosine similarity
-    def test_cosine_similarity_with_identical_vectors(self, loop: FeedbackLearningLoop) -> None:
+    def test_cosine_similarity_with_identical_vectors(
+        self, loop: FeedbackLearningLoop
+    ) -> None:
         """Given identical vectors, when calculating similarity, then 1.0 is returned."""
         a = [1.0, 0.0, 0.0]
         b = [1.0, 0.0, 0.0]
@@ -74,7 +85,9 @@ class TestFeedbackLearningLoop:
 
         assert result == 1.0
 
-    def test_cosine_similarity_with_orthogonal_vectors(self, loop: FeedbackLearningLoop) -> None:
+    def test_cosine_similarity_with_orthogonal_vectors(
+        self, loop: FeedbackLearningLoop
+    ) -> None:
         """Given orthogonal vectors, when calculating similarity, then 0.0 is returned."""
         a = [1.0, 0.0]
         b = [0.0, 1.0]
@@ -83,7 +96,9 @@ class TestFeedbackLearningLoop:
 
         assert result == 0.0
 
-    def test_cosine_similarity_with_zero_vector(self, loop: FeedbackLearningLoop) -> None:
+    def test_cosine_similarity_with_zero_vector(
+        self, loop: FeedbackLearningLoop
+    ) -> None:
         """Given zero vector, when calculating similarity, then 0.0 is returned."""
         a = [0.0, 0.0]
         b = [1.0, 0.0]
@@ -93,7 +108,9 @@ class TestFeedbackLearningLoop:
         assert result == 0.0
 
     # Scenario: Classify correction
-    async def test_classify_correction_detects_tone(self, loop: FeedbackLearningLoop) -> None:
+    async def test_classify_correction_detects_tone(
+        self, loop: FeedbackLearningLoop
+    ) -> None:
         """Given tone-related correction, when classifying, then "tone" is returned."""
         original = "Hello"
         corrected = "Hello!"
@@ -102,7 +119,9 @@ class TestFeedbackLearningLoop:
 
         assert result == "tone"
 
-    async def test_classify_correction_detects_content(self, loop: FeedbackLearningLoop) -> None:
+    async def test_classify_correction_detects_content(
+        self, loop: FeedbackLearningLoop
+    ) -> None:
         """Given content correction, when classifying, then "content" is returned."""
         original = "old text"
         corrected = "new text"
@@ -132,9 +151,13 @@ class TestFeedbackLearningLoop:
         assert result == []
 
     # Scenario: Analyze voice drift
-    async def test_analyze_voice_drift_with_no_samples(self, loop: FeedbackLearningLoop) -> None:
+    async def test_analyze_voice_drift_with_no_samples(
+        self, loop: FeedbackLearningLoop
+    ) -> None:
         """Given no samples, when analyzing drift, then zero score is returned."""
-        result = await loop.analyze_voice_drift(_persona_id="test-id", recent_samples=[])
+        result = await loop.analyze_voice_drift(
+            _persona_id="test-id", recent_samples=[]
+        )
 
         assert result["drift_score"] == 0.0
         assert result["trends"] == []

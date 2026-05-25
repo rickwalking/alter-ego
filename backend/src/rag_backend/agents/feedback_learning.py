@@ -59,7 +59,9 @@ class FeedbackLearningLoop:
         corrected = sanitize_llm_input(_corrected)
         context = sanitize_llm_input(_context)
         persona_id = _persona_id if isinstance(_persona_id, str) else str(_persona_id)
-        correction_type = _correction_type or await self.classify_correction(original, corrected)
+        correction_type = _correction_type or await self.classify_correction(
+            original, corrected
+        )
         entry = StoredCorrection(
             original=original,
             corrected=corrected,
@@ -68,7 +70,9 @@ class FeedbackLearningLoop:
         )
         self._corrections.setdefault(persona_id, []).append(entry)
 
-    async def get_relevant_examples(self, _persona_id: object, _k: int = 3) -> list[str]:
+    async def get_relevant_examples(
+        self, _persona_id: object, _k: int = 3
+    ) -> list[str]:
         """Retrieve similar past corrections to improve new outputs."""
         persona_id = _persona_id if isinstance(_persona_id, str) else str(_persona_id)
         entries = self._corrections.get(persona_id, [])
@@ -108,7 +112,9 @@ class FeedbackLearningLoop:
             return "content"
         return "minor_edit"
 
-    async def suggest_improvements(self, content: str, _persona_id: object) -> list[str]:
+    async def suggest_improvements(
+        self, content: str, _persona_id: object
+    ) -> list[str]:
         """Get improvement suggestions based on similar past corrections."""
         persona_id = _persona_id if isinstance(_persona_id, str) else str(_persona_id)
         entries = self._corrections.get(persona_id, [])
@@ -123,7 +129,10 @@ class FeedbackLearningLoop:
             scored.append((similarity, entry))
 
         scored.sort(key=lambda item: item[0], reverse=True)
-        return [f"Consider: {entry.corrected} (was: {entry.original})" for _, entry in scored[:3]]
+        return [
+            f"Consider: {entry.corrected} (was: {entry.original})"
+            for _, entry in scored[:3]
+        ]
 
     async def analyze_voice_drift(
         self, _persona_id: object, recent_samples: list[tuple[str, str]]
@@ -133,10 +142,12 @@ class FeedbackLearningLoop:
             return {"drift_score": 0.0, "trends": []}
 
         total_similarity = 0.0
-        for _original, corrected in recent_samples:
-            original_embedding = await self.embeddings.embed(_original)  # type: ignore[attr-defined]
+        for original, corrected in recent_samples:
+            original_embedding = await self.embeddings.embed(original)  # type: ignore[attr-defined]
             corrected_embedding = await self.embeddings.embed(corrected)  # type: ignore[attr-defined]
-            similarity = self._cosine_similarity(original_embedding, corrected_embedding)
+            similarity = self._cosine_similarity(
+                original_embedding, corrected_embedding
+            )
             total_similarity += similarity
 
         avg_similarity = total_similarity / len(recent_samples)

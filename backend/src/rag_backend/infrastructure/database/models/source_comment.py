@@ -43,7 +43,9 @@ class ContentSourceModel(Base):
     extracted_key_points = Column(JSON, default=list, nullable=False)
     is_primary = Column(Boolean, default=False, nullable=False)
     created_by = Column(String(36), nullable=False)
-    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    created_at = Column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
     updated_at = Column(
         DateTime(timezone=True),
         server_default=func.now(),
@@ -73,7 +75,9 @@ class EditorialCommentModel(Base):
     position = Column(JSON, nullable=True)
     status = Column(String(20), default="open", nullable=False)
     ai_suggestion = Column(Text, nullable=True)
-    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    created_at = Column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
     resolved_at = Column(DateTime(timezone=True), nullable=True)
 
     __table_args__ = (
@@ -94,10 +98,17 @@ class ContentVersionModel(Base):
     snapshot = Column(JSON, nullable=False)
     change_summary = Column(String(500), nullable=True)
     author_id = Column(String(36), nullable=True)
-    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    created_at = Column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
 
     __table_args__ = (
         Index("idx_content_versions_content_id", "content_id"),
         Index("idx_content_versions_type", "content_type"),
-        Index("idx_content_versions_version", "content_type", "version_number", unique=True),
+        Index(
+            "idx_content_versions_version",
+            "content_type",
+            "version_number",
+            unique=True,
+        ),
     )

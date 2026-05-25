@@ -65,7 +65,9 @@ class BlogPostModel(Base):
     share_count = Column(Integer, default=0, nullable=False)
 
     # Timestamps
-    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    created_at = Column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
     updated_at = Column(
         DateTime(timezone=True),
         server_default=func.now(),
@@ -83,7 +85,9 @@ class BlogPostModel(Base):
         Index("idx_blog_posts_slug", "slug"),
         Index("idx_blog_posts_author", "author_id"),
         Index("idx_blog_posts_project", "project_id"),
-        Index("idx_blog_posts_author_status_updated", "author_id", "status", "updated_at"),
+        Index(
+            "idx_blog_posts_author_status_updated", "author_id", "status", "updated_at"
+        ),
     )
 
     content_sources = relationship(

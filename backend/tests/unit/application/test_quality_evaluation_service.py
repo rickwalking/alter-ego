@@ -5,7 +5,9 @@ from uuid import uuid4
 
 import pytest
 
-from rag_backend.application.services.quality_evaluation_service import QualityEvaluationService
+from rag_backend.application.services.quality_evaluation_service import (
+    QualityEvaluationService,
+)
 from rag_backend.domain.models.rubric import QualityRubric
 
 
@@ -44,7 +46,9 @@ class TestQualityEvaluationService:
                 "rag_backend.application.services.quality_evaluation_service.get_container",
                 return_value=mock_container,
             ),
-            patch.object(QualityEvaluationService, "_build_agent", return_value=mock_agent),
+            patch.object(
+                QualityEvaluationService, "_build_agent", return_value=mock_agent
+            ),
         ):
             service = QualityEvaluationService(llm=llm)
             result = await service.evaluate_with_thresholds(

@@ -17,7 +17,9 @@ Base = declarative_base()
 c_engine: AsyncEngine | None = None
 
 
-async def init_db(database_url: str, pool_size: int = 5, max_overflow: int = 10) -> None:
+async def init_db(
+    database_url: str, pool_size: int = 5, max_overflow: int = 10
+) -> None:
     """Initialize database engine and create tables."""
     global c_engine
     if c_engine is not None:

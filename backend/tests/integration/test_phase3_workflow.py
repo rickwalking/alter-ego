@@ -61,7 +61,9 @@ async def client():
 
 async def _create_user(email: str, role: UserRole) -> User:
     from rag_backend.infrastructure.database.config import get_session_maker
-    from rag_backend.infrastructure.database.user_repository import PostgresUserRepository
+    from rag_backend.infrastructure.database.user_repository import (
+        PostgresUserRepository,
+    )
 
     session_maker = get_session_maker()
     async with session_maker() as session:
@@ -93,7 +95,9 @@ def _auth_headers(user: User) -> dict[str, str]:
     return {"Authorization": f"Bearer {_token(user)}"}
 
 
-async def _create_blog_post(client: AsyncClient, user: User, slug: str) -> dict[str, object]:
+async def _create_blog_post(
+    client: AsyncClient, user: User, slug: str
+) -> dict[str, object]:
     response = await client.post(
         "/api/blog-posts",
         json={"title": f"Post {slug}", "slug": slug},
@@ -107,7 +111,9 @@ class TestPhase3ReviewAssignment:
     """Feature: In-app notifications — assign reviewer to blog post."""
 
     @pytest.mark.asyncio
-    async def test_reviewer_can_read_assigned_blog_post(self, client: AsyncClient) -> None:
+    async def test_reviewer_can_read_assigned_blog_post(
+        self, client: AsyncClient
+    ) -> None:
         """Assigned reviewer should read blog posts they do not own."""
         author = await _create_user("author@example.com", UserRole.EDITOR)
         reviewer = await _create_user("reviewer@example.com", UserRole.EDITOR)
@@ -164,7 +170,9 @@ class TestPhase3ReviewAssignment:
         assert response.status_code == 403
 
     @pytest.mark.asyncio
-    async def test_carousel_assign_review_is_unsupported(self, client: AsyncClient) -> None:
+    async def test_carousel_assign_review_is_unsupported(
+        self, client: AsyncClient
+    ) -> None:
         """Carousel assign-review should fail before sending a notification."""
         author = await _create_user("carousel-author@example.com", UserRole.EDITOR)
         reviewer = await _create_user("carousel-reviewer@example.com", UserRole.EDITOR)
@@ -204,7 +212,9 @@ class TestPhase3WorkflowViews:
         user = await _create_user("calendar@example.com", UserRole.EDITOR)
         await _create_blog_post(client, user, "calendar-entry")
 
-        response = await client.get("/api/content-calendar", headers=_auth_headers(user))
+        response = await client.get(
+            "/api/content-calendar", headers=_auth_headers(user)
+        )
         assert response.status_code == 200
         data = response.json()
         assert "items" in data

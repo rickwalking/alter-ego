@@ -41,7 +41,10 @@ class BlogPostRepository:
             list_query = list_query.where(clause)
 
         list_query = (
-            list_query.order_by(BlogPostModel.updated_at.desc()).limit(limit).offset(offset)
+            list_query
+            .order_by(BlogPostModel.updated_at.desc())
+            .limit(limit)
+            .offset(offset)
         )
 
         total_result = await db.execute(count_query)

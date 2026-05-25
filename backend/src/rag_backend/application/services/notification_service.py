@@ -58,7 +58,9 @@ class NotificationService:
             status=NOTIFICATION_STATUS_UNREAD,
             content_id=content_id,
             content_type=content_type,
-            metadata_json={"channels": [NOTIFICATION_CHANNEL_IN_APP, NOTIFICATION_CHANNEL_EMAIL]},
+            metadata_json={
+                "channels": [NOTIFICATION_CHANNEL_IN_APP, NOTIFICATION_CHANNEL_EMAIL]
+            },
             deadline_at=deadline,
         )
         db.add(notification)
@@ -116,7 +118,9 @@ class NotificationService:
         pending = list(result.scalars().all())
         sent = 0
         for item in pending:
-            metadata = item.metadata_json if isinstance(item.metadata_json, dict) else {}
+            metadata = (
+                item.metadata_json if isinstance(item.metadata_json, dict) else {}
+            )
             if metadata.get(METADATA_KEY_REMINDER_SENT):
                 continue
             reminder = NotificationModel(
@@ -170,7 +174,7 @@ class NotificationService:
         )
         return notification
 
-    async def create_workflow_update(  # noqa: PLR0913
+    async def create_workflow_update(
         self,
         db: AsyncSession,
         *,

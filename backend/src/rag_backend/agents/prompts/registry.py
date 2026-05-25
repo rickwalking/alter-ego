@@ -24,7 +24,7 @@ PROMPTS_DIR = Path(__file__).parent
 
 _jinja_env = Environment(
     loader=FileSystemLoader(PROMPTS_DIR),
-    autoescape=False,  # noqa: S701 — prompts are plain text, not HTML  # nosec B701
+    autoescape=False,  # noqa: S701 — prompts are markdown/AI content, not HTML
 )
 
 
@@ -53,7 +53,7 @@ def _load_prompt_config(domain: str, name: str, version: str) -> dict:
     path = PROMPTS_DIR / domain / version / f"{name}.yaml"
     if not path.exists():
         raise PromptNotFoundError(_ERR_PROMPT_NOT_FOUND.format(path))
-    with open(path) as f:
+    with Path(path).open() as f:
         return yaml.safe_load(f)
 
 
@@ -107,5 +107,5 @@ def get_system_prompt(
     path = PROMPTS_DIR / agent / version / "system.md"
     if not path.exists():
         raise PromptNotFoundError(_ERR_SYSTEM_PROMPT_NOT_FOUND.format(path))
-    with open(path) as f:
+    with Path(path).open() as f:
         return f.read()

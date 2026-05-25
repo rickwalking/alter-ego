@@ -9,7 +9,10 @@ from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import BaseMessage, HumanMessage
 
 from rag_backend.agents.input_sanitizer import sanitize_llm_input
-from rag_backend.domain.constants.ai_agents import ERR_INVALID_JSON, PROMPT_SOURCE_SYNTHESIS
+from rag_backend.domain.constants.ai_agents import (
+    ERR_INVALID_JSON,
+    PROMPT_SOURCE_SYNTHESIS,
+)
 from rag_backend.infrastructure.cache.ai_response_cache import get_ai_response_cache
 from rag_backend.infrastructure.monitoring_langfuse import get_langfuse_handler
 

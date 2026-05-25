@@ -120,10 +120,14 @@ def resolve_theme(project: CarouselProject) -> dict[str, str]:
 
     brand = _detect_brand(analysis_text)
     if brand is not None:
-        return BRAND_PALETTES.get(brand, CAROUSEL_THEMES[_hash_to_theme_key(analysis_text)])
+        return BRAND_PALETTES.get(
+            brand, CAROUSEL_THEMES[_hash_to_theme_key(analysis_text)]
+        )
 
     category = _detect_category(analysis_text)
     if category is not None:
-        return CAROUSEL_THEMES.get(category, CAROUSEL_THEMES[_hash_to_theme_key(analysis_text)])
+        return CAROUSEL_THEMES.get(
+            category, CAROUSEL_THEMES[_hash_to_theme_key(analysis_text)]
+        )
 
     return CAROUSEL_THEMES[_hash_to_theme_key(analysis_text)]

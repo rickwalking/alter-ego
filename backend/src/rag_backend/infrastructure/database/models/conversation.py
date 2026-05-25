@@ -33,7 +33,9 @@ class ConversationModel(Base):
     owner_id = Column(String(36), ForeignKey("users.id"), nullable=True)
     title = Column(String(500), nullable=True)
     conv_metadata = Column("metadata", JSON, default=dict, nullable=False)
-    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    created_at = Column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
     updated_at = Column(
         DateTime(timezone=True),
         server_default=func.now(),
@@ -103,7 +105,9 @@ class MessageModel(Base):
     content = Column(Text, nullable=False)
     msg_metadata = Column("metadata", JSON, default=dict, nullable=False)
     sources = Column(JSON, default=list, nullable=False)
-    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    created_at = Column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
 
     conversation = relationship("ConversationModel", back_populates="messages")
 

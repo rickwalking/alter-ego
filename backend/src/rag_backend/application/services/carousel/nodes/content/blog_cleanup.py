@@ -119,7 +119,11 @@ def _remove_indented_paragraph_duplicates(text: str) -> str:
         if line.startswith("    ") and i + 1 < len(lines):
             stripped = line.strip()
             next_line = lines[i + 1].strip()
-            if stripped and next_line and (stripped in next_line or next_line in stripped):
+            if (
+                stripped
+                and next_line
+                and (stripped in next_line or next_line in stripped)
+            ):
                 i += 1
                 continue
         result.append(line)

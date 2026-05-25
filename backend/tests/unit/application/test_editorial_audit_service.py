@@ -4,7 +4,9 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from rag_backend.application.services.editorial_audit_service import EditorialAuditService
+from rag_backend.application.services.editorial_audit_service import (
+    EditorialAuditService,
+)
 from rag_backend.domain.constants.workflow_events import EVENT_TYPE_BLOGPOST_UPDATED
 
 

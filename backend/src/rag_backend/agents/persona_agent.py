@@ -23,7 +23,9 @@ class PersonaAgent:
         context = sanitize_llm_input(context)
 
         style_guide = self._build_style_guide()
-        prompt = f"{style_guide}\n\nCONTEXT: {context}\n\nCONTENT TO REWRITE:\n{content}"
+        prompt = (
+            f"{style_guide}\n\nCONTEXT: {context}\n\nCONTENT TO REWRITE:\n{content}"
+        )
         messages: list[BaseMessage] = [HumanMessage(content=prompt)]
         response = await self.llm.ainvoke(messages, callbacks=get_langfuse_handler())
         return cast(str, response.content)
@@ -49,7 +51,9 @@ class PersonaAgent:
             data = __import__("json").loads(response)
             return {
                 "tone_match": float(data.get("tone_match", 0)),
-                "sentence_structure_match": float(data.get("sentence_structure_match", 0)),
+                "sentence_structure_match": float(
+                    data.get("sentence_structure_match", 0)
+                ),
                 "opinion_strength": float(data.get("opinion_strength", 0)),
                 "originality": float(data.get("originality", 0)),
                 "human_authenticity": float(data.get("human_authenticity", 0)),
@@ -69,9 +73,15 @@ class PersonaAgent:
 
     def _build_style_guide(self) -> str:
         """Build the style guide string from persona attributes."""
-        forbidden = "\n".join(f"- {phrase}" for phrase in self.persona.forbidden_phrases)
-        preferred = "\n".join(f"- {phrase}" for phrase in self.persona.preferred_phrases)
-        samples = "\n".join(f"- {sample}" for sample in self.persona.writing_samples[:5])
+        forbidden = "\n".join(
+            f"- {phrase}" for phrase in self.persona.forbidden_phrases
+        )
+        preferred = "\n".join(
+            f"- {phrase}" for phrase in self.persona.preferred_phrases
+        )
+        samples = "\n".join(
+            f"- {sample}" for sample in self.persona.writing_samples[:5]
+        )
         tone_formal = self.persona.tone_attributes.get("formal", 0.5)
         tone_conv = self.persona.tone_attributes.get("conversational", 0.5)
         tone_hum = self.persona.tone_attributes.get("humorous", 0.5)

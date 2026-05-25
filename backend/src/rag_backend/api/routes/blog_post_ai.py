@@ -25,7 +25,9 @@ from rag_backend.application.services.blog_post_ai_service import (
     BlogAiTraceContext,
     BlogPostAIService,
 )
-from rag_backend.application.services.editorial_audit_service import EditorialAuditService
+from rag_backend.application.services.editorial_audit_service import (
+    EditorialAuditService,
+)
 from rag_backend.application.services.workflow_event_service import WorkflowEventService
 from rag_backend.domain.constants import IMAGE_MODEL_OPENAI, IMAGE_STYLE_CINEMATIC
 from rag_backend.domain.constants.access_control import ERR_INVALID_REQUEST
@@ -52,7 +54,9 @@ def _audit_service() -> EditorialAuditService:
 
 def _cdn_service() -> AssetCdnService:
     settings = get_settings()
-    return AssetCdnService(cdn_base_url=settings.cdn_base_url, enabled=settings.cdn_enabled)
+    return AssetCdnService(
+        cdn_base_url=settings.cdn_base_url, enabled=settings.cdn_enabled
+    )
 
 
 def _disclosure_service() -> AiDisclosureService:
@@ -189,6 +193,11 @@ async def generate_image(
     metadata = dict(post.ai_generation_metadata or {})
     metadata["last_image_prompt"] = result["prompt"]
     post.ai_generation_metadata = metadata
-    await _record_ai_action(db, post, post_id, current_user.id, AI_ACTION_GENERATE_IMAGE)
+    await _record_ai_action(
+        db, post, post_id, current_user.id, AI_ACTION_GENERATE_IMAGE
+    )
     await db.commit()
-    return BlogPostGenerateImageResponse(**{**result, "image_url": post.featured_image_url})
+    return BlogPostGenerateImageResponse(**{
+        **result,
+        "image_url": post.featured_image_url,
+    })

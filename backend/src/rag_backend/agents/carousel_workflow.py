@@ -43,14 +43,12 @@ def _await_human_review(
     payload: dict[str, object],
 ) -> dict[str, object]:
     """Pause workflow until a human reviewer responds."""
-    review = interrupt(
-        {
-            "type": interrupt_type,
-            "phase": phase,
-            "project_id": state.get("project_id"),
-            **payload,
-        }
-    )
+    review = interrupt({
+        "type": interrupt_type,
+        "phase": phase,
+        "project_id": state.get("project_id"),
+        **payload,
+    })
     if not isinstance(review, dict):
         return {"phase_status": PHASE_STATUS_AWAITING_HUMAN}
     if review.get("action") == REVIEW_ACTION_APPROVE:
@@ -124,7 +122,10 @@ def design_phase(state: CarouselWorkflowState) -> dict[str, object]:
         state,
         PHASE_DESIGN,
         INTERRUPT_TYPE_DESIGN_REVIEW,
-        {"design_applied": state.get("design_applied", False), "message": "Review design."},
+        {
+            "design_applied": state.get("design_applied", False),
+            "message": "Review design.",
+        },
     )
     approved = review_update.get("phase_status") == PHASE_STATUS_APPROVED
     return {

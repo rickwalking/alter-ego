@@ -43,8 +43,12 @@ class TestMetadataRoutingDecision:
         container = MagicMock()
 
         with (
-            patch("rag_backend.api.dependencies.agents.build_rag_agent") as mock_build_rag,
-            patch("rag_backend.api.dependencies.agents.build_alter_ego_agent") as mock_build_alter,
+            patch(
+                "rag_backend.api.dependencies.agents.build_rag_agent"
+            ) as mock_build_rag,
+            patch(
+                "rag_backend.api.dependencies.agents.build_alter_ego_agent"
+            ) as mock_build_alter,
         ):
             mock_build_rag.return_value = MagicMock()
             mock_build_alter.return_value = MagicMock()
@@ -67,8 +71,12 @@ class TestMetadataRoutingDecision:
         container = MagicMock()
 
         with (
-            patch("rag_backend.api.dependencies.agents.build_rag_agent") as mock_build_rag,
-            patch("rag_backend.api.dependencies.agents.build_alter_ego_agent") as mock_build_alter,
+            patch(
+                "rag_backend.api.dependencies.agents.build_rag_agent"
+            ) as mock_build_rag,
+            patch(
+                "rag_backend.api.dependencies.agents.build_alter_ego_agent"
+            ) as mock_build_alter,
         ):
             mock_build_rag.return_value = MagicMock()
             mock_build_alter.return_value = MagicMock()
@@ -91,8 +99,12 @@ class TestMetadataRoutingDecision:
         container = MagicMock()
 
         with (
-            patch("rag_backend.api.dependencies.agents.build_rag_agent") as mock_build_rag,
-            patch("rag_backend.api.dependencies.agents.build_alter_ego_agent") as mock_build_alter,
+            patch(
+                "rag_backend.api.dependencies.agents.build_rag_agent"
+            ) as mock_build_rag,
+            patch(
+                "rag_backend.api.dependencies.agents.build_alter_ego_agent"
+            ) as mock_build_alter,
         ):
             mock_build_rag.return_value = MagicMock()
             mock_build_alter.return_value = MagicMock()

@@ -20,7 +20,9 @@ async def _content_node(state: PipelineState, *, deps: object) -> dict[str, obje
     """Optimize title and synthesize bilingual slide content."""
     project: CarouselProject = state["project"]
     project.update_status(CarouselStatus.DRAFTING)
-    project = await set_progress(project, repo=deps.repo, label="Drafting bilingual slide content")
+    project = await set_progress(
+        project, repo=deps.repo, label="Drafting bilingual slide content"
+    )
     slides_data, blog_markdown = await run_content(
         project, state["sources"], llm=deps.llm, template=deps.template
     )
@@ -31,7 +33,9 @@ async def _content_node(state: PipelineState, *, deps: object) -> dict[str, obje
     }
 
 
-async def _persist_slides_node(state: PipelineState, *, deps: object) -> dict[str, object]:
+async def _persist_slides_node(
+    state: PipelineState, *, deps: object
+) -> dict[str, object]:
     """Idempotently persist slides to the DB."""
     project: CarouselProject = state["project"]
     existing_slides = await deps.repo.get_slides_by_project(project.id)

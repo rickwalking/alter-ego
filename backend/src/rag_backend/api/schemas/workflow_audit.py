@@ -48,7 +48,9 @@ class AcquireLockRequest(BaseModel):
     """Request to acquire an edit lock."""
 
     content_type: str
-    ttl_seconds: int = Field(default=300, ge=MIN_LOCK_TTL_SECONDS, le=MAX_LOCK_TTL_SECONDS)
+    ttl_seconds: int = Field(
+        default=300, ge=MIN_LOCK_TTL_SECONDS, le=MAX_LOCK_TTL_SECONDS
+    )
 
 
 __all__ = [

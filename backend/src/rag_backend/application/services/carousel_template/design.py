@@ -63,7 +63,8 @@ def generate_design_tokens(project: CarouselProject) -> DesignTokens:
         images={
             "hero": f"/api/carousels/{project.id}/images/slide_1",
             "slides": [
-                f"/api/carousels/{project.id}/images/slide_{i}" for i in range(1, slide_count + 1)
+                f"/api/carousels/{project.id}/images/slide_{i}"
+                for i in range(1, slide_count + 1)
             ],
             "rendered_slides_pt": [
                 f"/api/carousels/{project.id}/slide-images/pt/slide_{i}"

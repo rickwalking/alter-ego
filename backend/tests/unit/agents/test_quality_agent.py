@@ -47,12 +47,19 @@ class TestQualityAgent:
         return QualityAgent(rubric=rubric, llm=mock_llm)
 
     # Scenario: Evaluate content against rubric
-    async def test_evaluate_returns_scores(self, agent: QualityAgent, mock_llm: AsyncMock) -> None:
+    async def test_evaluate_returns_scores(
+        self, agent: QualityAgent, mock_llm: AsyncMock
+    ) -> None:
         """Given content, when evaluate is called, then scores are returned."""
         response_data = {
             "overall_score": 85.0,
             "criterion_scores": {
-                "tone": {"score": 85.0, "weight": 0.5, "passed": True, "feedback": "Good"}
+                "tone": {
+                    "score": 85.0,
+                    "weight": 0.5,
+                    "passed": True,
+                    "feedback": "Good",
+                }
             },
             "feedback": ["Good job"],
             "passed": True,
@@ -65,17 +72,17 @@ class TestQualityAgent:
         assert result["passed"] is True
         assert "tone" in result["criteria_scores"]
 
-    async def test_evaluate_with_sources(self, agent: QualityAgent, mock_llm: AsyncMock) -> None:
+    async def test_evaluate_with_sources(
+        self, agent: QualityAgent, mock_llm: AsyncMock
+    ) -> None:
         """Given content and sources, when evaluate is called, then sources included in prompt."""
         mock_llm.ainvoke.return_value = MagicMock(
-            content=json.dumps(
-                {
-                    "overall_score": 80.0,
-                    "criteria_scores": {},
-                    "feedback": [],
-                    "passed": True,
-                }
-            )
+            content=json.dumps({
+                "overall_score": 80.0,
+                "criteria_scores": {},
+                "feedback": [],
+                "passed": True,
+            })
         )
 
         await agent.evaluate("content", sources=["http://example.com"])
@@ -106,7 +113,9 @@ class TestQualityAgent:
 
         assert score == 85.0
 
-    async def test_evaluate_criterion_with_human_required(self, agent: QualityAgent) -> None:
+    async def test_evaluate_criterion_with_human_required(
+        self, agent: QualityAgent
+    ) -> None:
         """Given HUMAN_REQUIRED criterion, when evaluate_criterion called, then default returned."""
         criterion = {
             "id": "human",
@@ -141,36 +150,50 @@ class TestQualityAgent:
         self, agent: QualityAgent, mock_llm: AsyncMock
     ) -> None:
         """Given score below threshold, when generating suggestions, then suggestions returned."""
-        mock_llm.ainvoke.return_value = MagicMock(content="- Improve tone\n- Add examples")
+        mock_llm.ainvoke.return_value = MagicMock(
+            content="- Improve tone\n- Add examples"
+        )
 
         criterion = agent.rubric.criteria[0]
-        suggestions = await agent.generate_improvement_suggestions(criterion, "content", 60.0)
+        suggestions = await agent.generate_improvement_suggestions(
+            criterion, "content", 60.0
+        )
 
         assert len(suggestions) > 0
 
-    async def test_generate_suggestions_above_threshold(self, agent: QualityAgent) -> None:
+    async def test_generate_suggestions_above_threshold(
+        self, agent: QualityAgent
+    ) -> None:
         """Given score above threshold, when generating suggestions, then empty list returned."""
         criterion = agent.rubric.criteria[0]
-        suggestions = await agent.generate_improvement_suggestions(criterion, "content", 80.0)
+        suggestions = await agent.generate_improvement_suggestions(
+            criterion, "content", 80.0
+        )
 
         assert suggestions == []
 
     # Scenario: Calculate originality
-    async def test_calculate_originality_with_sources(self, agent: QualityAgent) -> None:
+    async def test_calculate_originality_with_sources(
+        self, agent: QualityAgent
+    ) -> None:
         """Given content and sources, when calculating originality, then score is calculated."""
         score = await agent.calculate_originality("content", ["source1", "source2"])
 
         assert score > 50.0
         assert score <= 100.0
 
-    async def test_calculate_originality_without_sources(self, agent: QualityAgent) -> None:
+    async def test_calculate_originality_without_sources(
+        self, agent: QualityAgent
+    ) -> None:
         """Given content without sources, when calculating originality, then base score returned."""
         score = await agent.calculate_originality("content", [])
 
         assert pytest.approx(score, abs=0.01) == 50.0
 
     # Scenario: Evaluate E-E-A-T
-    async def test_evaluate_eeat(self, agent: QualityAgent, mock_llm: AsyncMock) -> None:
+    async def test_evaluate_eeat(
+        self, agent: QualityAgent, mock_llm: AsyncMock
+    ) -> None:
         """Given content and sources, when evaluating E-E-A-T, then dimensions are scored."""
         response_data = {
             "experience": 80.0,

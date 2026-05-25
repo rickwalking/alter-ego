@@ -32,7 +32,10 @@ from rag_backend.application.services.carousel.editorial_workflow_service import
 )
 from rag_backend.application.services.workflow_event_service import WorkflowEventService
 from rag_backend.domain.constants.access_control import ERR_INVALID_REQUEST
-from rag_backend.domain.constants.rate_limits import RATE_LIMIT_AI_ENDPOINTS, RATE_LIMIT_SSE_STREAM
+from rag_backend.domain.constants.rate_limits import (
+    RATE_LIMIT_AI_ENDPOINTS,
+    RATE_LIMIT_SSE_STREAM,
+)
 from rag_backend.domain.constants.workflow_validation import ERR_SELF_REVIEW
 from rag_backend.domain.models.persona import PersonaProfile
 from rag_backend.infrastructure.config.settings import get_settings
@@ -40,7 +43,9 @@ from rag_backend.infrastructure.container import get_container
 from rag_backend.infrastructure.database.models import PersonaProfileModel
 from rag_backend.infrastructure.events.factory import get_event_publisher
 
-router = APIRouter(tags=["carousel_editorial_workflow"], dependencies=[RequireEditorialWorkflow])
+router = APIRouter(
+    tags=["carousel_editorial_workflow"], dependencies=[RequireEditorialWorkflow]
+)
 
 
 def _build_service(request: Request) -> EditorialWorkflowService:
@@ -50,7 +55,9 @@ def _build_service(request: Request) -> EditorialWorkflowService:
     settings = get_settings()
     publisher = get_event_publisher(settings.redis_url or None)
     events = WorkflowEventService(publisher)
-    return EditorialWorkflowService(llm=llm, checkpointer=checkpointer, event_service=events)
+    return EditorialWorkflowService(
+        llm=llm, checkpointer=checkpointer, event_service=events
+    )
 
 
 def _state_response(state: dict[str, object]) -> EditorialWorkflowStateResponse:
@@ -65,7 +72,9 @@ def _state_response(state: dict[str, object]) -> EditorialWorkflowStateResponse:
     )
 
 
-async def _load_persona(db: AsyncSession, persona_id: str | None) -> PersonaProfile | None:
+async def _load_persona(
+    db: AsyncSession, persona_id: str | None
+) -> PersonaProfile | None:
     if persona_id is None:
         return None
     model = await db.get(PersonaProfileModel, persona_id)

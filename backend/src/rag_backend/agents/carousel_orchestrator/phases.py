@@ -116,10 +116,12 @@ async def _phase7_caption(
 
 
 async def _phase8_linkedin(self, project: CarouselProject) -> None:
-    await run_linkedin(project, repo=self._repo, generator=self._linkedin_post_generator)
+    await run_linkedin(
+        project, repo=self._repo, generator=self._linkedin_post_generator
+    )
 
 
-def _resolve_theme(self, project: CarouselProject) -> dict[str, str]:  # noqa: ARG001 — required for method-binding protocol
+def _resolve_theme(self, project: CarouselProject) -> dict[str, str]:
     return resolve_theme(project)
 
 

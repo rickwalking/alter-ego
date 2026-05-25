@@ -37,9 +37,10 @@ class TestBlogPostAIService:
     def llm_service(self) -> AsyncMock:
         service = AsyncMock()
         service.generate = AsyncMock(
-            return_value=json.dumps(
-                {"suggested_text": "Better text", "explanation": "Clearer wording"}
-            )
+            return_value=json.dumps({
+                "suggested_text": "Better text",
+                "explanation": "Clearer wording",
+            })
         )
         service.chat_model = MagicMock()
         return service
@@ -64,7 +65,9 @@ class TestBlogPostAIService:
         llm_service.generate.assert_awaited_once()
 
     @pytest.mark.asyncio
-    async def test_suggest_rejects_invalid_action(self, service: BlogPostAIService) -> None:
+    async def test_suggest_rejects_invalid_action(
+        self, service: BlogPostAIService
+    ) -> None:
         """Given invalid action, when suggesting, then ValueError is raised."""
         with pytest.raises(ValueError, match=ERR_INVALID_AI_ACTION):
             await service.suggest("text", action="invalid")
@@ -86,7 +89,9 @@ class TestBlogPostAIService:
         assert result["action"] == "shorten"
 
     @pytest.mark.asyncio
-    async def test_improve_with_persona_uses_persona_agent(self, tmp_path: Path) -> None:
+    async def test_improve_with_persona_uses_persona_agent(
+        self, tmp_path: Path
+    ) -> None:
         """Given persona and OpenAI service, when improving, then PersonaAgent is used."""
 
         class StubOpenAIService:
@@ -127,7 +132,9 @@ class TestBlogPostAIService:
         assert result["improved_text"] == "Pedro-style text"
 
     @pytest.mark.asyncio
-    async def test_generate_image_requires_service(self, service: BlogPostAIService) -> None:
+    async def test_generate_image_requires_service(
+        self, service: BlogPostAIService
+    ) -> None:
         """Given no image service, when generating image, then RuntimeError is raised."""
         with pytest.raises(RuntimeError, match="image service unavailable"):
             await service.generate_image("post-1", "A blog hero image")

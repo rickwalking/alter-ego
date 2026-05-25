@@ -22,8 +22,12 @@ from rag_backend.api.schemas.blog_post import (
     BlogPostUpdate,
 )
 from rag_backend.api.schemas.blog_post_list import BlogPostListParams
-from rag_backend.application.services.editorial_audit_service import EditorialAuditService
-from rag_backend.application.services.optimistic_lock_service import OptimisticLockService
+from rag_backend.application.services.editorial_audit_service import (
+    EditorialAuditService,
+)
+from rag_backend.application.services.optimistic_lock_service import (
+    OptimisticLockService,
+)
 from rag_backend.application.services.workflow_event_service import WorkflowEventService
 from rag_backend.domain.constants.blog_ai import ERR_BLOG_POST_NOT_FOUND
 from rag_backend.domain.constants.optimistic_locking import (
@@ -95,7 +99,9 @@ async def list_blog_posts(
     """List blog posts visible to the caller with pagination and search."""
     with start_span("blog_post.list"):
         repo = BlogPostRepository()
-        filter_author = params.author_id if _user_is_admin(current_user) else current_user.id
+        filter_author = (
+            params.author_id if _user_is_admin(current_user) else current_user.id
+        )
 
         posts, total = await repo.list_summaries(
             db,
@@ -175,7 +181,9 @@ async def update_blog_post(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=ERR_BLOG_POST_NOT_FOUND.format(post_id=post_id),
         )
-    await _audit_service().log_updated(db, str(post_id), current_user.id, list(update_data.keys()))
+    await _audit_service().log_updated(
+        db, str(post_id), current_user.id, list(update_data.keys())
+    )
     await db.commit()
     await db.refresh(post)
     return post

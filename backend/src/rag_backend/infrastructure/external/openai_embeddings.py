@@ -54,12 +54,10 @@ class OpenAIEmbeddingService:
             # Pinecone sparse vector format: indices as ints, values as floats.
             # Skip empty vectors to avoid "unexpected data in sparse_values".
             if top_terms:
-                sparse_embeddings.append(
-                    {
-                        "indices": list(range(len(top_terms))),
-                        "values": [float(freq) for _, freq in top_terms],
-                    }
-                )
+                sparse_embeddings.append({
+                    "indices": list(range(len(top_terms))),
+                    "values": [float(freq) for _, freq in top_terms],
+                })
             else:
                 sparse_embeddings.append(SparseEmbedding(indices=[], values=[]))
 

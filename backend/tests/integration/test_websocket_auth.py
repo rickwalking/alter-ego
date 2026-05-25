@@ -82,7 +82,9 @@ def conversation_id() -> str:
     return str(uuid4())
 
 
-def _mock_websocket(*, headers: dict | None = None, cookies: dict | None = None) -> MagicMock:
+def _mock_websocket(
+    *, headers: dict | None = None, cookies: dict | None = None
+) -> MagicMock:
     ws = MagicMock(spec=WebSocket)
     ws.headers = headers or {}
     ws.cookies = cookies or {}
@@ -178,7 +180,10 @@ async def test_accepts_anon_cookie_token(
         cookies={"anon_token": token},
     )
 
-    from rag_backend.infrastructure.auth import decode_access_token, decode_anonymous_token
+    from rag_backend.infrastructure.auth import (
+        decode_access_token,
+        decode_anonymous_token,
+    )
 
     subprotocols = ws.headers.get("sec-websocket-protocol", "")
     token_from_header = subprotocols.strip()
@@ -193,7 +198,10 @@ async def test_accepts_anon_cookie_token(
             is_authorized = True
         else:
             anon_payload = decode_anonymous_token(settings, token_candidate)
-            if anon_payload is not None and anon_payload.get("conversation_id") == conversation_id:
+            if (
+                anon_payload is not None
+                and anon_payload.get("conversation_id") == conversation_id
+            ):
                 is_authorized = True
                 if token_from_header:
                     await ws.accept(subprotocol=token_candidate)
@@ -249,7 +257,10 @@ async def test_rejects_wrong_conversation_anon_token(
         headers={"sec-websocket-protocol": token},
     )
 
-    from rag_backend.infrastructure.auth import decode_access_token, decode_anonymous_token
+    from rag_backend.infrastructure.auth import (
+        decode_access_token,
+        decode_anonymous_token,
+    )
 
     subprotocols = ws.headers.get("sec-websocket-protocol", "")
     token_from_header = subprotocols.strip()
@@ -262,7 +273,10 @@ async def test_rejects_wrong_conversation_anon_token(
             is_authorized = True
         else:
             anon_payload = decode_anonymous_token(settings, token_candidate)
-            if anon_payload is not None and anon_payload.get("conversation_id") == conversation_id:
+            if (
+                anon_payload is not None
+                and anon_payload.get("conversation_id") == conversation_id
+            ):
                 is_authorized = True
 
     if not is_authorized:

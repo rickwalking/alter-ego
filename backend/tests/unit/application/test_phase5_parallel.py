@@ -35,10 +35,14 @@ def _slide_data(n: int) -> SlideData:
     )
 
 
-def _agent_with_image_service(image_service: AsyncMock) -> tuple[CarouselAgent, AsyncMock]:
+def _agent_with_image_service(
+    image_service: AsyncMock,
+) -> tuple[CarouselAgent, AsyncMock]:
     repo = AsyncMock()
     repo.update_project = AsyncMock(side_effect=lambda p: p)
-    registry = ImageProviderRegistry(gemini_service=image_service, openai_service=image_service)
+    registry = ImageProviderRegistry(
+        gemini_service=image_service, openai_service=image_service
+    )
     agent = CarouselAgent(
         repository=repo,
         llm_service=AsyncMock(),
@@ -112,7 +116,9 @@ class TestParallelImageGeneration:
         assert published_states[-1] == ["done", "done"]
         assert any("in_flight" in state for state in published_states)
 
-    async def test_failure_marks_slide_failed_and_propagates(self, tmp_path: Path) -> None:
+    async def test_failure_marks_slide_failed_and_propagates(
+        self, tmp_path: Path
+    ) -> None:
         """One slide failing marks its slot 'failed' and raises."""
         captured_states: list[list[str]] = []
 

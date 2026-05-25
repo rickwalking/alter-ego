@@ -25,7 +25,10 @@ from rag_backend.domain.constants.blog_post import (
     FORBIDDEN_PHRASE_IN_TODAYS_WORLD,
     FORBIDDEN_PHRASE_LETS_DIVE_IN,
 )
-from rag_backend.domain.constants.persona import DEFAULT_TONE_ATTRIBUTES, VOICE_MATCH_MIN_SCORE
+from rag_backend.domain.constants.persona import (
+    DEFAULT_TONE_ATTRIBUTES,
+    VOICE_MATCH_MIN_SCORE,
+)
 from rag_backend.domain.constants.rate_limits import RATE_LIMIT_AI_ENDPOINTS
 from rag_backend.infrastructure.container import get_container
 from rag_backend.infrastructure.database.models import PersonaProfileModel
@@ -49,7 +52,9 @@ async def create_persona(
         name=data.name,
         description=data.description,
         tone_attributes=(
-            data.tone_attributes.model_dump() if data.tone_attributes else DEFAULT_TONE_ATTRIBUTES
+            data.tone_attributes.model_dump()
+            if data.tone_attributes
+            else DEFAULT_TONE_ATTRIBUTES
         ),
         writing_samples=data.writing_samples or [],
         forbidden_phrases=data.forbidden_phrases or [],
@@ -216,7 +221,9 @@ async def score_persona_voice(
         )
 
     container = get_container()
-    agent = PersonaAgent(persona=persona.to_entity(), llm=container.llm_service().chat_model)
+    agent = PersonaAgent(
+        persona=persona.to_entity(), llm=container.llm_service().chat_model
+    )
     scores = await agent.evaluate_match(body.text)
     overall = float(scores.get("overall", 0))
     suggestions = scores.get("suggestions", [])

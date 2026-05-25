@@ -57,7 +57,11 @@ from rag_backend.api.schemas.chat import (
     SearchResponse,
     SearchResultResponse,
 )
-from rag_backend.api.schemas.common import ErrorResponse, HealthCheckResponse, HealthResponse
+from rag_backend.api.schemas.common import (
+    ErrorResponse,
+    HealthCheckResponse,
+    HealthResponse,
+)
 
 # Documents
 from rag_backend.api.schemas.documents import (

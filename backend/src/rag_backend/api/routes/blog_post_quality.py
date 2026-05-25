@@ -22,10 +22,16 @@ from rag_backend.api.schemas.content_quality import (
     PlagiarismCheckResponse,
     SeoAnalysisResponse,
 )
-from rag_backend.application.services.accessibility_check_service import AccessibilityCheckService
+from rag_backend.application.services.accessibility_check_service import (
+    AccessibilityCheckService,
+)
 from rag_backend.application.services.ai_disclosure_service import AiDisclosureService
-from rag_backend.application.services.editorial_analytics_service import EditorialAnalyticsService
-from rag_backend.application.services.plagiarism_detection_service import PlagiarismDetectionService
+from rag_backend.application.services.editorial_analytics_service import (
+    EditorialAnalyticsService,
+)
+from rag_backend.application.services.plagiarism_detection_service import (
+    PlagiarismDetectionService,
+)
 from rag_backend.application.services.seo_analysis_service import SeoAnalysisService
 from rag_backend.domain.constants.rate_limits import (
     RATE_LIMIT_AI_ENDPOINTS,
@@ -69,7 +75,9 @@ async def check_plagiarism(
     """Run plagiarism detection against post content and sources."""
     with start_span("quality.plagiarism_check", {"post_id": str(post_id)}):
         post = await get_blog_post_for_read(db, post_id, current_user)
-        content_text = _extract_body_text(post.content if isinstance(post.content, dict) else {})
+        content_text = _extract_body_text(
+            post.content if isinstance(post.content, dict) else {}
+        )
         sources = list(post.sources or [])
         result = await _plagiarism_service().check(content_text, sources)
         return PlagiarismCheckResponse(**result)  # type: ignore[arg-type]
@@ -145,10 +153,16 @@ async def get_ai_disclosure(
 ) -> AiDisclosureResponse:
     """Return AI disclosure label for a blog post."""
     post = await get_blog_post_for_read(db, post_id, current_user)
-    metadata = post.ai_generation_metadata if isinstance(post.ai_generation_metadata, dict) else {}
+    metadata = (
+        post.ai_generation_metadata
+        if isinstance(post.ai_generation_metadata, dict)
+        else {}
+    )
     service = AiDisclosureService()
     label = service.compute_label(metadata)
-    action_count = int(metadata.get("ai_action_count", 0)) if isinstance(metadata, dict) else 0
+    action_count = (
+        int(metadata.get("ai_action_count", 0)) if isinstance(metadata, dict) else 0
+    )
     return AiDisclosureResponse(
         label=label,
         requires_disclosure=service.requires_disclosure(label),
@@ -170,9 +184,13 @@ async def get_editorial_analytics(
 ) -> EditorialAnalyticsResponse:
     """Return content velocity and quality metrics for dashboard."""
     service = EditorialAnalyticsService()
-    author_filter = None if current_user.role == UserRole.ADMIN.value else current_user.id
+    author_filter = (
+        None if current_user.role == UserRole.ADMIN.value else current_user.id
+    )
     summary = await service.get_summary(db, author_id=author_filter)
-    velocity = await service.get_velocity_by_week(db, weeks=weeks, author_id=author_filter)
+    velocity = await service.get_velocity_by_week(
+        db, weeks=weeks, author_id=author_filter
+    )
     return EditorialAnalyticsResponse(
         summary=EditorialAnalyticsSummary(**summary),  # type: ignore[arg-type]
         velocity_by_week=[EditorialVelocityWeek(**v) for v in velocity],  # type: ignore[arg-type]

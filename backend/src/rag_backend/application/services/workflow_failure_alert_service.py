@@ -209,7 +209,9 @@ class WorkflowFailureAlertService:
 
     async def _admin_user_ids(self, db: AsyncSession) -> list[str]:
         result = await db.execute(
-            select(UserModel.id).where(UserModel.role == ROLE_ADMIN, UserModel.is_active.is_(True))
+            select(UserModel.id).where(
+                UserModel.role == ROLE_ADMIN, UserModel.is_active.is_(True)
+            )
         )
         return [str(row) for row in result.scalars().all()]
 

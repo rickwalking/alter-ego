@@ -113,7 +113,9 @@ class AccessibilityCheckService:
                 f"Text/background contrast ratio {ratio:.1f}:1 is below "
                 f"WCAG AA ({WCAG_AA_CONTRAST_NORMAL}:1)"
             )
-            issues.append(self._issue(A11Y_ISSUE_LOW_CONTRAST, msg, A11Y_SEVERITY_ERROR))
+            issues.append(
+                self._issue(A11Y_ISSUE_LOW_CONTRAST, msg, A11Y_SEVERITY_ERROR)
+            )
         return issues
 
     def _contrast_ratio(self, fg_hex: str, bg_hex: str) -> float:
