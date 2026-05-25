@@ -83,6 +83,42 @@ describe("API Client Module", () => {
         vi.unstubAllGlobals();
       });
 
+      it("Then it should validate direct responses without a success wrapper", async () => {
+        const mockData = { id: "1", name: "Direct" };
+        vi.stubGlobal(
+          "fetch",
+          vi.fn().mockResolvedValue({
+            ok: true,
+            json: async () => mockData,
+          } as Response),
+        );
+
+        const result = await apiCall("/api/test", testSchema);
+        expect(result).toEqual(mockData);
+        vi.unstubAllGlobals();
+      });
+
+      it("Then it should include credentials on every request", async () => {
+        const mockFetch = vi.fn().mockResolvedValue({
+          ok: true,
+          json: async () => ({
+            success: true,
+            data: { id: "1", name: "Test" },
+          }),
+        } as Response);
+        vi.stubGlobal("fetch", mockFetch);
+
+        await apiCall("/api/test", testSchema);
+
+        expect(mockFetch).toHaveBeenCalledWith(
+          "/api/test",
+          expect.objectContaining({
+            credentials: "include",
+          }),
+        );
+        vi.unstubAllGlobals();
+      });
+
       it("Then it should pass custom options to fetch", async () => {
         const mockFetch = vi.fn().mockResolvedValue({
           ok: true,
@@ -105,6 +141,87 @@ describe("API Client Module", () => {
             body: JSON.stringify({ test: true }),
           }),
         );
+        vi.unstubAllGlobals();
+      });
+    });
+
+    describe("When the API returns 401 Unauthorized", () => {
+      it("Then it should throw with the server message", async () => {
+        vi.stubGlobal(
+          "fetch",
+          vi.fn().mockResolvedValue({
+            ok: false,
+            status: 401,
+            json: async () => ({ message: "Session expired", code: "AUTH" }),
+          } as Response),
+        );
+
+        await expect(apiCall("/api/test", testSchema)).rejects.toMatchObject({
+          status: 401,
+          message: "Session expired",
+          code: "AUTH",
+        });
+        vi.unstubAllGlobals();
+      });
+
+      it("Then it should fall back to Unauthorized when the body is not JSON", async () => {
+        vi.stubGlobal(
+          "fetch",
+          vi.fn().mockResolvedValue({
+            ok: false,
+            status: 401,
+            json: async () => {
+              throw new Error("not json");
+            },
+          } as unknown as Response),
+        );
+
+        await expect(apiCall("/api/test", testSchema)).rejects.toMatchObject({
+          status: 401,
+          message: "Unauthorized",
+        });
+        vi.unstubAllGlobals();
+      });
+    });
+
+    describe("When the API returns 403 Forbidden", () => {
+      it("Then it should throw with the server message", async () => {
+        vi.stubGlobal(
+          "fetch",
+          vi.fn().mockResolvedValue({
+            ok: false,
+            status: 403,
+            json: async () => ({
+              message: "Access denied",
+              code: "ACL_DENY",
+            }),
+          } as Response),
+        );
+
+        await expect(apiCall("/api/test", testSchema)).rejects.toMatchObject({
+          status: 403,
+          message: "Access denied",
+          code: "ACL_DENY",
+        });
+        vi.unstubAllGlobals();
+      });
+
+      it("Then it should fall back to Forbidden when the body is not JSON", async () => {
+        vi.stubGlobal(
+          "fetch",
+          vi.fn().mockResolvedValue({
+            ok: false,
+            status: 403,
+            json: async () => {
+              throw new Error("not json");
+            },
+          } as unknown as Response),
+        );
+
+        await expect(apiCall("/api/test", testSchema)).rejects.toMatchObject({
+          status: 403,
+          message: "Forbidden",
+        });
         vi.unstubAllGlobals();
       });
     });
@@ -346,6 +463,14 @@ describe("API Client Module", () => {
         };
         expect(apiResponseSchema.safeParse(invalid).success).toBe(false);
       });
+
+      it("Then it should reject non-boolean success values", () => {
+        const invalid = {
+          success: "yes",
+          data: { id: "1" },
+        };
+        expect(apiResponseSchema.safeParse(invalid).success).toBe(false);
+      });
     });
   });
 
@@ -391,6 +516,14 @@ describe("API Client Module", () => {
         };
         expect(errorResponseSchema.safeParse(invalid).success).toBe(false);
       });
+
+      it("Then it should require error code and message fields", () => {
+        const invalid = {
+          success: false,
+          error: { code: "ONLY_CODE" },
+        };
+        expect(errorResponseSchema.safeParse(invalid).success).toBe(false);
+      });
     });
   });
 
@@ -430,6 +563,29 @@ describe("API Client Module", () => {
             }),
           }),
         );
+        vi.unstubAllGlobals();
+      });
+    });
+
+    describe("When the API returns 403 Forbidden", () => {
+      it("Then it should fall back to Forbidden when the body is not JSON", async () => {
+        vi.stubGlobal(
+          "fetch",
+          vi.fn().mockResolvedValue({
+            ok: false,
+            status: 403,
+            json: async () => {
+              throw new Error("not json");
+            },
+          } as unknown as Response),
+        );
+
+        await expect(
+          apiCallNoContent("/api/conversations/1", { method: "DELETE" }),
+        ).rejects.toMatchObject({
+          status: 403,
+          message: "Forbidden",
+        });
         vi.unstubAllGlobals();
       });
     });

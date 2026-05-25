@@ -1,27 +1,32 @@
-"""Domain models for user management."""
-
 from dataclasses import dataclass, field
 from datetime import datetime
+from enum import StrEnum
 from uuid import UUID, uuid4
+
+from rag_backend.domain.constants import ROLE_ADMIN, ROLE_EDITOR
+
+
+class UserRole(StrEnum):
+    ADMIN = ROLE_ADMIN
+    EDITOR = ROLE_EDITOR
 
 
 @dataclass
 class User:
-    """Represents a system user."""
-
-    id: UUID = field(default_factory=uuid4)
     email: str
     full_name: str
-    role: str
+    hashed_password: str
+    role: UserRole = UserRole.EDITOR
     is_active: bool = True
+    id: UUID = field(default_factory=uuid4)
     created_at: datetime = field(default_factory=datetime.utcnow)
     updated_at: datetime = field(default_factory=datetime.utcnow)
 
     def is_admin(self) -> bool:
-        return self.role == "admin"
+        return self.role == UserRole.ADMIN
 
     def is_editor(self) -> bool:
-        return self.role == "editor"
+        return self.role == UserRole.EDITOR
 
     def deactivate(self) -> None:
         self.is_active = False
@@ -31,6 +36,6 @@ class User:
         self.is_active = True
         self.updated_at = datetime.utcnow()
 
-    def set_role(self, role: str) -> None:
+    def set_role(self, role: UserRole) -> None:
         self.role = role
         self.updated_at = datetime.utcnow()

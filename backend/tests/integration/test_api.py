@@ -3,35 +3,6 @@
 from unittest.mock import AsyncMock
 
 import pytest
-from httpx import ASGITransport, AsyncClient
-
-from rag_backend.api.app import create_app
-
-
-@pytest.fixture
-async def client():
-    """Create async test client with in-memory SQLite."""
-    from sqlalchemy.ext.asyncio import create_async_engine
-
-    import rag_backend.infrastructure.database.config as db_config
-    from rag_backend.infrastructure.database.config import Base, close_db
-
-    engine = create_async_engine("sqlite+aiosqlite:///:memory:", echo=False)
-
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-
-    db_config.c_engine = engine
-
-    app = create_app()
-
-    transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as ac:
-        yield ac
-
-    db_config.c_engine = None
-    await close_db()
-    await engine.dispose()
 
 
 class TestHealthEndpoints:
@@ -148,7 +119,7 @@ class TestConversationEndpoints:
     async def test_create_conversation(self, client):
         """Given valid data, when POST /api/conversations, then returns created conversation."""
         payload = {"title": "Test Conversation", "metadata": {"source": "test"}}
-        response = await client.post("/api/conversations", json=payload)
+        response = await client.post("/api/conversations/", json=payload)
         assert response.status_code == 201
         data = response.json()
         assert data["title"] == "Test Conversation"
@@ -157,7 +128,7 @@ class TestConversationEndpoints:
     @pytest.mark.asyncio
     async def test_create_conversation_no_title(self, client):
         """Given no title, when POST /api/conversations, then creates with null title."""
-        response = await client.post("/api/conversations", json={})
+        response = await client.post("/api/conversations/", json={})
         assert response.status_code == 201
         data = response.json()
         assert data["title"] is None
@@ -165,9 +136,9 @@ class TestConversationEndpoints:
     @pytest.mark.asyncio
     async def test_list_conversations(self, client):
         """Given conversations exist, when GET /api/conversations, then returns list."""
-        await client.post("/api/conversations", json={"title": "Integration Test Conversation"})
+        await client.post("/api/conversations/", json={"title": "Integration Test Conversation"})
 
-        response = await client.get("/api/conversations")
+        response = await client.get("/api/conversations/")
         assert response.status_code == 200
         data = response.json()
         assert data["total"] >= 1
@@ -190,7 +161,7 @@ class TestConversationEndpoints:
     @pytest.mark.asyncio
     async def test_conversation_crud(self, client):
         """Given a conversation, when CRUD operations, then all succeed."""
-        create_response = await client.post("/api/conversations", json={"title": "CRUD Test"})
+        create_response = await client.post("/api/conversations/", json={"title": "CRUD Test"})
         assert create_response.status_code == 201
         conv_id = create_response.json()["id"]
 
@@ -262,7 +233,7 @@ class TestAgentRoutingByMetadata:
         )
 
         create_resp = await client.post(
-            "/api/conversations",
+            "/api/conversations/",
             json={"title": "Carousel Chat", "metadata": {"project_id": "abc-123"}},
         )
         assert create_resp.status_code == 201
@@ -295,7 +266,7 @@ class TestAgentRoutingByMetadata:
         )
 
         create_resp = await client.post(
-            "/api/conversations",
+            "/api/conversations/",
             json={"title": "Personal Chat"},
         )
         assert create_resp.status_code == 201
@@ -328,7 +299,7 @@ class TestAgentRoutingByMetadata:
         )
 
         create_resp = await client.post(
-            "/api/conversations",
+            "/api/conversations/",
             json={"title": "Source Chat", "metadata": {"source": "web", "user_id": 42}},
         )
         assert create_resp.status_code == 201

@@ -3,7 +3,7 @@
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.api.constants import (
@@ -15,13 +15,21 @@ from rag_backend.api.dependencies import (
     get_optional_user,
     require_authenticated_user,
 )
+from rag_backend.api.dependencies.agents import (
+    CONVERSATION_METADATA_PROJECT_ID,
+    build_agent_for_conversation,
+)
 from rag_backend.api.dependencies.resource_access import assert_conversation_access
+from rag_backend.api.middleware.rate_limiting import limiter
 from rag_backend.api.schemas import (
+    ChatRequest,
+    ChatResponse,
     ConversationCreate,
     ConversationListResponse,
     ConversationResponse,
     ErrorResponse,
     MessageListResponse,
+    MessageSource,
 )
 from rag_backend.application.services.conversation_service import ConversationService
 from rag_backend.domain.models import User
@@ -35,6 +43,9 @@ from rag_backend.infrastructure.database.conversation_repository import (
 )
 
 router = APIRouter(prefix="/conversations", tags=["conversations"])
+
+_AGENT_ORIGIN_ALTER_EGO = "alter-ego"
+_AGENT_ORIGIN_RAG = "rag-agent"
 
 _MAX_MESSAGES_PER_CONVERSATION = 20
 
@@ -279,3 +290,83 @@ async def generate_conversation_title(
     await db.commit()
 
     return await service.get_conversation(conversation_id)
+
+
+@router.post(
+    "/{conversation_id}/chat",
+    response_model=ChatResponse,
+    responses={
+        200: {"description": "Chat response with sources"},
+        401: {"model": ErrorResponse, "description": ERR_NOT_AUTHENTICATED},
+        404: {"model": ErrorResponse, "description": "Conversation not found"},
+        429: {"model": ErrorResponse, "description": "Rate limit exceeded"},
+    },
+)
+@limiter.limit("10/minute")
+async def chat(
+    conversation_id: UUID,
+    body: ChatRequest,
+    request: Request,
+    response: Response,
+    user: Annotated[User | None, Depends(get_optional_user)] = None,
+    db: Annotated[AsyncSession, Depends(get_session)] = None,
+) -> ChatResponse:
+    """Send a chat message and get a non-streaming response with sources."""
+    if db is None:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Database session not resolved",
+        )
+
+    container = get_container()
+    service = _make_conversation_service(db)
+
+    conversation = await service.get_conversation(conversation_id)
+    if not conversation:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Conversation with id {conversation_id} not found",
+        )
+
+    msg_repo = PostgresMessageRepository(db)
+    msg_count = await msg_repo.count_by_conversation(conversation_id)
+    _check_conversation_limit(msg_count)
+
+    agent = build_agent_for_conversation(conversation, db, container)
+    agent_origin = (
+        _AGENT_ORIGIN_RAG
+        if CONVERSATION_METADATA_PROJECT_ID in conversation.metadata
+        else _AGENT_ORIGIN_ALTER_EGO
+    )
+
+    sources: list[dict[str, object]] = []
+    full_response = ""
+
+    async for event in agent.chat(
+        message=body.content,
+        conversation_id=conversation_id,
+        stream=False,
+    ):
+        if event["type"] == "complete":
+            full_response = str(event["content"])
+        elif event["type"] == "sources":
+            sources = list(event["content"])
+
+    formatted_sources = []
+    for src in sources:
+        if isinstance(src, dict):
+            formatted_sources.append(
+                MessageSource(
+                    document_id=str(src.get("document_id", "")),
+                    document_title=str(src.get("document_title", "")),
+                    content=str(src.get("content", "")),
+                    score=float(src.get("score", 0.0)),
+                )
+            )
+
+    response.headers["X-Agent-Origin"] = agent_origin
+    return ChatResponse(
+        content=full_response,
+        sources=formatted_sources,
+        conversation_id=conversation_id,
+    )

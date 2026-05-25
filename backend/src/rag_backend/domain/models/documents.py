@@ -1,40 +1,29 @@
-"""Domain models for document management."""
-
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import StrEnum
 from uuid import UUID, uuid4
 
 
-class DocumentScope(StrEnum):
-    """Scope enum for document storage and access control."""
-
-    PRIVATE = "private"
-    SHARED = "shared"
-    PUBLIC = "public"
-
-
 class DocumentStatus(StrEnum):
-    """Status enum for document processing lifecycle."""
-
     PENDING = "pending"
-    UPLOADED = "uploaded"
     PROCESSING = "processing"
-    READY = "ready"
+    COMPLETED = "completed"
     FAILED = "failed"
+
+
+class DocumentScope(StrEnum):
+    PERSONAL = "personal"
+    PUBLIC = "public"
+    CAROUSEL = "carousel"
+    INTERNAL = "internal"
 
 
 @dataclass
 class Document:
-    """Represents a document for RAG ingestion."""
-
-    id: UUID = field(default_factory=uuid4)
-    title: str
     content: str
-    scope: DocumentScope
-    status: DocumentStatus
-    user_id: str | None = None
+    title: str
     metadata: dict[str, str | int | float | bool] = field(default_factory=dict)
+    id: UUID = field(default_factory=uuid4)
     created_at: datetime = field(default_factory=datetime.utcnow)
     updated_at: datetime = field(default_factory=datetime.utcnow)
     status: DocumentStatus = DocumentStatus.PENDING

@@ -5,15 +5,66 @@ Gherkin: tests/features/instagram_publisher.feature
 
 from __future__ import annotations
 
+import os
+from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock
 from uuid import uuid4
 
+import jwt
 import pytest
 from httpx import ASGITransport, AsyncClient
 
-from rag_backend.api.app import create_app
-from rag_backend.domain.models import CarouselStatus
+from rag_backend.domain.constants import JWT_ALGORITHM, JWT_TYPE_AUTH
+from rag_backend.domain.models import CarouselStatus, User, UserRole
 from rag_backend.domain.protocols import PublishResult
+
+TEST_SECRET = "test-secret-for-publish-api-integration-tests!"
+
+
+@pytest.fixture(autouse=True)
+def _test_settings():
+    """Override secret keys for all tests in this module."""
+    from rag_backend.infrastructure.config.settings import get_settings
+
+    get_settings.cache_clear()
+    os.environ["SECRET_KEY"] = TEST_SECRET
+    os.environ["ANON_SECRET_KEY"] = "test-anon-secret-for-publish-api-tests"
+    yield
+    get_settings.cache_clear()
+
+
+async def _create_user(email: str, role: UserRole) -> User:
+    from rag_backend.infrastructure.database.config import get_session_maker
+    from rag_backend.infrastructure.database.user_repository import PostgresUserRepository
+
+    session_maker = get_session_maker()
+    async with session_maker() as session:
+        repo = PostgresUserRepository(session)
+        user = User(
+            email=email,
+            full_name=email.split("@")[0].title(),
+            role=role,
+            hashed_password="not-used-in-tests",
+        )
+        created = await repo.create(user)
+        await session.commit()
+        return created
+
+
+def _token(user: User) -> str:
+    payload = {
+        "sub": str(user.id),
+        "email": user.email,
+        "role": user.role.value,
+        "type": JWT_TYPE_AUTH,
+        "exp": datetime.now(UTC) + timedelta(hours=1),
+        "iat": datetime.now(UTC),
+    }
+    return jwt.encode(payload, TEST_SECRET, algorithm=JWT_ALGORITHM)
+
+
+def _auth_headers(user: User) -> dict[str, str]:
+    return {"Authorization": f"Bearer {_token(user)}"}
 
 
 @pytest.fixture
@@ -21,6 +72,7 @@ async def client_and_container():
     from sqlalchemy.ext.asyncio import create_async_engine
 
     import rag_backend.infrastructure.database.config as db_config
+    from rag_backend.api.app import create_app
     from rag_backend.infrastructure.container import get_container
     from rag_backend.infrastructure.database.config import Base, close_db
 
@@ -29,10 +81,16 @@ async def client_and_container():
         await conn.run_sync(Base.metadata.create_all)
     db_config.c_engine = engine
 
+    editor = await _create_user("editor@example.com", UserRole.EDITOR)
+
     app = create_app()
     container = get_container()
     transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as ac:
+    async with AsyncClient(
+        transport=transport,
+        base_url="http://test",
+        headers=_auth_headers(editor),
+    ) as ac:
         yield ac, container
 
     db_config.c_engine = None

@@ -2,13 +2,14 @@
 
 import logging
 import sys
+from typing import cast
 
 import structlog
 
 
-def get_logger():
+def get_logger() -> structlog.BoundLogger:
     """Get a structured logger instance."""
-    return structlog.get_logger()
+    return cast(structlog.BoundLogger, structlog.get_logger())
 
 
 def setup_logging(*, debug: bool = False) -> None:

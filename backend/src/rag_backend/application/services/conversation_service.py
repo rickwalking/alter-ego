@@ -1,5 +1,6 @@
 """Conversation service with memory management."""
 
+from collections.abc import Awaitable, Callable
 from uuid import UUID
 
 from rag_backend.domain.models import Conversation, Message, MessageRole
@@ -159,7 +160,11 @@ class ConversationService:
         """Count conversations owned by a user."""
         return await self._conversation_repository.count_by_user_id(user_id)
 
-    async def generate_title(self, conversation_id: UUID, llm_generate_func) -> str:
+    async def generate_title(
+        self,
+        conversation_id: UUID,
+        llm_generate_func: Callable[[list[dict[str, str]]], Awaitable[str]],
+    ) -> str:
         """Generate a title for a conversation based on first message.
 
         Args:

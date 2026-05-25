@@ -14,6 +14,14 @@ class ToneAttributes(TypedDict):
     humorous: float
 
 
+def _default_tone_attributes() -> ToneAttributes:
+    return {
+        "formal": 0.3,
+        "conversational": 0.8,
+        "humorous": 0.4,
+    }
+
+
 @dataclass
 class PersonaProfile:
     """Persona profile capturing writing voice and style."""
@@ -21,13 +29,7 @@ class PersonaProfile:
     id: UUID = field(default_factory=uuid4)
     name: str = "Pedro's Professional Voice"
     description: str = "Professional, opinionated, authentic voice"
-    tone_attributes: ToneAttributes = field(
-        default_factory=lambda: {
-            "formal": 0.3,
-            "conversational": 0.8,
-            "humorous": 0.4,
-        }
-    )
+    tone_attributes: ToneAttributes = field(default_factory=_default_tone_attributes)
     writing_samples: list[str] = field(default_factory=list)
     forbidden_phrases: list[str] = field(default_factory=list)
     preferred_phrases: list[str] = field(default_factory=list)

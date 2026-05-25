@@ -1,6 +1,7 @@
 """FastAPI application factory with lifespan management."""
 
 import asyncio
+from collections.abc import AsyncIterator
 from contextlib import AsyncExitStack, asynccontextmanager
 from datetime import datetime
 from pathlib import Path
@@ -56,7 +57,7 @@ logger = get_logger()
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     """Application lifespan manager.
 
     Handles startup and shutdown events:
@@ -111,7 +112,7 @@ async def lifespan(app: FastAPI):
 
 async def _build_checkpointer(
     settings: Settings, stack: AsyncExitStack
-) -> BaseCheckpointSaver[object] | None:
+) -> BaseCheckpointSaver | None:
     """Construct the configured checkpointer, registering cleanup on the stack."""
     backend = settings.carousel_checkpoint_backend.lower()
 
@@ -182,7 +183,7 @@ def create_app() -> FastAPI:  # noqa: PLR0915 — app factory configures all mid
 
     # Health check endpoint
     @app.get("/health", response_model=HealthResponse)
-    async def health_check():
+    async def health_check() -> HealthResponse:
         return HealthResponse(
             status="healthy",
             version=settings.app_version,
@@ -191,8 +192,8 @@ def create_app() -> FastAPI:  # noqa: PLR0915 — app factory configures all mid
 
     # Detailed health check with dependency status
     @app.get("/health/ready", response_model=HealthCheckResponse)
-    async def readiness_check():
-        checks = {}
+    async def readiness_check() -> HealthCheckResponse:
+        checks: dict[str, dict[str, str | int]] = {}
 
         # Check database
         try:

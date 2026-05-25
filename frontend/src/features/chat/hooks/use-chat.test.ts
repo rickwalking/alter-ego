@@ -207,6 +207,59 @@ describe("useCreateConversation", () => {
       },
     ]);
   });
+
+  it("deduplicates the created conversation in the cache by id", async () => {
+    mockApiCall.mockResolvedValueOnce(MOCK_CONVERSATION);
+    const queryClient = createQueryClient();
+    queryClient.setQueryData(["conversations"], [
+      MOCK_CONVERSATION,
+      {
+        ...MOCK_CONVERSATION,
+        id: "conv-old",
+        title: "Old conversation",
+      },
+    ]);
+    const { result } = renderHook(() => useCreateConversation(), {
+      wrapper: createWrapper(queryClient),
+    });
+
+    result.current.mutate({
+      title: "Duplicate id",
+      metadata: { project_id: "project-1" },
+    });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(queryClient.getQueryData(["conversations"])).toEqual([
+      MOCK_CONVERSATION,
+      {
+        ...MOCK_CONVERSATION,
+        id: "conv-old",
+        title: "Old conversation",
+      },
+    ]);
+  });
+
+  it("logs create errors without updating the cache", async () => {
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+    mockApiCall.mockRejectedValueOnce(new Error("create failed"));
+    const queryClient = createQueryClient();
+    queryClient.setQueryData(["conversations"], [MOCK_CONVERSATION]);
+    const { result } = renderHook(() => useCreateConversation(), {
+      wrapper: createWrapper(queryClient),
+    });
+
+    result.current.mutate({ title: "Broken" });
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(consoleError).toHaveBeenCalledWith(
+      "Failed to create conversation:",
+      expect.any(Error),
+    );
+    expect(queryClient.getQueryData(["conversations"])).toEqual([
+      MOCK_CONVERSATION,
+    ]);
+    consoleError.mockRestore();
+  });
 });
 
 describe("useSendMessage", () => {
@@ -239,6 +292,26 @@ describe("useSendMessage", () => {
     expect(invalidateQueries).toHaveBeenCalledWith({
       queryKey: ["conversations"],
     });
+  });
+
+  it("logs send errors without invalidating queries", async () => {
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+    mockApiCall.mockRejectedValueOnce(new Error("send failed"));
+    const queryClient = createQueryClient();
+    const invalidateQueries = vi.spyOn(queryClient, "invalidateQueries");
+    const { result } = renderHook(() => useSendMessage(), {
+      wrapper: createWrapper(queryClient),
+    });
+
+    result.current.mutate({ conversationId: "conv-1", content: "Hello" });
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(consoleError).toHaveBeenCalledWith(
+      "Failed to send message:",
+      expect.any(Error),
+    );
+    expect(invalidateQueries).not.toHaveBeenCalled();
+    consoleError.mockRestore();
   });
 });
 
@@ -302,5 +375,44 @@ describe("useDeleteConversation", () => {
 
     await waitFor(() => expect(result.current.isError).toBe(true));
     expect((result.current.error as ApiError).status).toBe(404);
+  });
+
+  it("leaves the conversations cache unchanged when it was never loaded", async () => {
+    mockDelete.mockResolvedValueOnce(undefined);
+    const queryClient = createQueryClient();
+    const removeQueries = vi.spyOn(queryClient, "removeQueries");
+    const { result } = renderHook(() => useDeleteConversation(), {
+      wrapper: createWrapper(queryClient),
+    });
+
+    result.current.mutate("conv-1");
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(queryClient.getQueryData(["conversations"])).toBeUndefined();
+    expect(removeQueries).toHaveBeenCalledWith({
+      queryKey: ["conversation", "conv-1"],
+    });
+  });
+
+  it("logs delete errors without mutating the cache", async () => {
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+    mockDelete.mockRejectedValueOnce(new ApiError(500, "delete failed"));
+    const queryClient = createQueryClient();
+    queryClient.setQueryData(["conversations"], [MOCK_CONVERSATION]);
+    const { result } = renderHook(() => useDeleteConversation(), {
+      wrapper: createWrapper(queryClient),
+    });
+
+    result.current.mutate("conv-1");
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(consoleError).toHaveBeenCalledWith(
+      "Failed to delete conversation:",
+      expect.any(ApiError),
+    );
+    expect(queryClient.getQueryData(["conversations"])).toEqual([
+      MOCK_CONVERSATION,
+    ]);
+    consoleError.mockRestore();
   });
 });

@@ -591,9 +591,10 @@ describe("usePublishChat (SSE comprehensive)", () => {
 
   // Mutation-killing: onComplete clears streaming state
   it("clears streaming state when the stream completes", async () => {
-    mockStreamSseEvents.mockImplementation(({ onEvent }) => {
+    mockStreamSseEvents.mockImplementation(({ onEvent, onComplete }) => {
       onEvent({ event: "token", data: { content: "msg" } });
       onEvent({ event: "complete", data: {} });
+      onComplete?.();
       return Promise.resolve();
     });
 
@@ -607,6 +608,162 @@ describe("usePublishChat (SSE comprehensive)", () => {
     result.current.sendMessage("test");
     await waitFor(() => expect(mockStreamSseEvents).toHaveBeenCalled());
     await waitFor(() => expect(result.current.isStreaming).toBe(false));
+  });
+
+  it("clears streaming state when the transport onError callback fires", async () => {
+    mockStreamSseEvents.mockImplementation(({ onError }) => {
+      onError?.(new Error("transport error"));
+      return Promise.resolve();
+    });
+
+    const { result } = renderHook(() => usePublishChat(PROJECT_ID), {
+      wrapper: createWrapper(),
+    });
+
+    await waitFor(() => expect(result.current.conversationId).toBe("conv-sse"));
+
+    act(() => {
+      result.current.sendMessage("trigger transport error");
+    });
+
+    await waitFor(() => expect(result.current.isStreaming).toBe(false));
+  });
+
+  it("accumulates assistant tokens onto the existing streaming message", async () => {
+    let emitSecondToken: (() => void) | undefined;
+    let emitComplete: (() => void) | undefined;
+    mockStreamSseEvents.mockImplementation(({ onEvent }) => {
+      onEvent({ event: "token", data: { content: "Hel" } });
+      return new Promise<void>((resolve) => {
+        emitSecondToken = () => {
+          onEvent({ event: "token", data: { content: "lo" } });
+        };
+        emitComplete = () => {
+          onEvent({ event: "complete", data: {} });
+          resolve();
+        };
+      });
+    });
+
+    const { result } = renderHook(() => usePublishChat(PROJECT_ID), {
+      wrapper: createWrapper(),
+    });
+
+    await waitFor(() => expect(result.current.conversationId).toBe("conv-sse"));
+
+    act(() => {
+      result.current.sendMessage("hello");
+    });
+
+    await waitFor(() =>
+      expect(
+        result.current.messages.some(
+          (message) => message.role === "assistant" && message.content === "Hel",
+        ),
+      ).toBe(true),
+    );
+
+    await act(async () => {
+      emitSecondToken?.();
+    });
+
+    await waitFor(() =>
+      expect(
+        result.current.messages.some(
+          (message) => message.role === "assistant" && message.content === "Hello",
+        ),
+      ).toBe(true),
+    );
+
+    await act(async () => {
+      emitComplete?.();
+    });
+  });
+
+  it("aborts the previous stream when sending a new message", async () => {
+    const abortSpy = vi.spyOn(AbortController.prototype, "abort");
+    mockStreamSseEvents.mockImplementation(({ onEvent }) => {
+      onEvent({ event: "token", data: { content: "first reply" } });
+      onEvent({ event: "complete", data: {} });
+      return Promise.resolve();
+    });
+
+    const { result } = renderHook(() => usePublishChat(PROJECT_ID), {
+      wrapper: createWrapper(),
+    });
+
+    await waitFor(() => expect(result.current.conversationId).toBe("conv-sse"));
+
+    act(() => {
+      result.current.sendMessage("first");
+    });
+    await waitFor(() => expect(result.current.isStreaming).toBe(false));
+
+    mockStreamSseEvents.mockImplementation(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    });
+
+    act(() => {
+      result.current.sendMessage("second");
+    });
+
+    expect(abortSpy).toHaveBeenCalled();
+    abortSpy.mockRestore();
+  });
+
+  it("aborts the active stream on unmount", async () => {
+    const abortSpy = vi.spyOn(AbortController.prototype, "abort");
+    mockStreamSseEvents.mockImplementation(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+
+    const { result, unmount } = renderHook(() => usePublishChat(PROJECT_ID), {
+      wrapper: createWrapper(),
+    });
+
+    await waitFor(() => expect(result.current.conversationId).toBe("conv-sse"));
+
+    act(() => {
+      result.current.sendMessage("hello");
+    });
+
+    unmount();
+    expect(abortSpy).toHaveBeenCalled();
+    abortSpy.mockRestore();
+  });
+
+  it("does not send when conversationId is not ready yet", async () => {
+    mockUseCreateConversation.mockReturnValue({
+      mutateAsync: vi.fn(() => new Promise(() => {})),
+      isPending: true,
+    } as unknown as ReturnType<typeof useCreateConversation>);
+
+    const { result } = renderHook(() => usePublishChat(PROJECT_ID), {
+      wrapper: createWrapper(),
+    });
+
+    expect(result.current.conversationId).toBeNull();
+
+    act(() => {
+      result.current.sendMessage("hello");
+    });
+
+    expect(mockStreamSseEvents).not.toHaveBeenCalled();
+  });
+
+  it("does not create a conversation when projectId is empty", async () => {
+    const mutateAsync = vi.fn().mockResolvedValue({ id: "conv-new" });
+    mockUseCreateConversation.mockReturnValue({
+      mutateAsync,
+      isPending: false,
+    } as unknown as ReturnType<typeof useCreateConversation>);
+
+    renderHook(() => usePublishChat(""), {
+      wrapper: createWrapper(),
+    });
+
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    expect(mutateAsync).not.toHaveBeenCalled();
   });
 
   // Mutation-killing: non-refine_carousel_copy tool results do not invalidate

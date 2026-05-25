@@ -44,7 +44,7 @@ class QualityRubric:
     id: UUID = field(default_factory=uuid4)
     name: str = "Instagram Carousel Quality"
     description: str = "Standard quality criteria for Instagram carousels"
-    criteria: list[dict] = field(default_factory=list)
+    criteria: list[RubricCriterion] = field(default_factory=list)
     applicable_content_types: list[str] = field(default_factory=lambda: ["carousel"])
     is_default: bool = False
     created_at: datetime = field(default_factory=datetime.utcnow)
@@ -62,7 +62,7 @@ class QualityRubric:
         prompt_template: str,
     ) -> None:
         """Add a criterion to the rubric."""
-        criterion: dict = {
+        criterion: RubricCriterion = {
             "id": f"{name.lower().replace(' ', '_')}_criterion",
             "name": name,
             "description": description,
@@ -88,10 +88,10 @@ class RubricEvaluationScore:
     content_id: UUID
     content_type: str
     evaluated_at: datetime = field(default_factory=datetime.utcnow)
-    scores: dict[str, dict] = field(default_factory=dict)
+    scores: dict[str, dict[str, float | bool]] = field(default_factory=dict)
     overall_score: float = 0.0
     passed: bool = False
-    feedback: list[dict] = field(default_factory=list)
+    feedback: list[dict[str, object]] = field(default_factory=list)
 
     def add_score(self, criterion_id: str, score: float, weight: float, passed: bool) -> None:
         """Add a criterion score."""

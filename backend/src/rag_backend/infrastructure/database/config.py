@@ -1,6 +1,7 @@
 """SQLAlchemy database configuration."""
 
 from sqlalchemy.ext.asyncio import (
+    AsyncEngine,
     AsyncSession,
     async_sessionmaker,
     create_async_engine,
@@ -13,7 +14,7 @@ _ERR_DB_NOT_INITIALIZED = "Database not initialized. Call init_db() first."
 Base = declarative_base()
 
 # Engine will be initialized in lifespan
-c_engine = None
+c_engine: AsyncEngine | None = None
 
 
 async def init_db(database_url: str, pool_size: int = 5, max_overflow: int = 10) -> None:

@@ -3,36 +3,8 @@
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from httpx import ASGITransport, AsyncClient
 
-from rag_backend.api.app import create_app
 from rag_backend.domain.models import CarouselProject, CarouselStatus
-
-
-@pytest.fixture
-async def client():
-    """Create async test client with in-memory SQLite."""
-    from sqlalchemy.ext.asyncio import create_async_engine
-
-    import rag_backend.infrastructure.database.config as db_config
-    from rag_backend.infrastructure.database.config import Base, close_db
-
-    engine = create_async_engine("sqlite+aiosqlite:///:memory:", echo=False)
-
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-
-    db_config.c_engine = engine
-
-    app = create_app()
-
-    transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as ac:
-        yield ac
-
-    db_config.c_engine = None
-    await close_db()
-    await engine.dispose()
 
 
 @pytest.fixture
