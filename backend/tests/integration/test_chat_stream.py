@@ -148,10 +148,10 @@ class TestAlterEgoChatStream:
         """Given no auth, when POST /chat/stream, then returns SSE token events."""
         # Feature: Alter-Ego Public Chat Streaming
         # Scenario: Anonymous user streams chat without any auth
-        from rag_backend.api.dependencies import agents as agents_module
+        from rag_backend.api.routes import chat_stream as chat_stream_module
 
         monkeypatch.setattr(
-            agents_module,
+            chat_stream_module,
             "build_alter_ego_agent",
             lambda _db, _container: mock_agent,
         )
@@ -175,10 +175,10 @@ class TestAlterEgoChatStream:
         """Given empty content, when POST /chat/stream, then returns error SSE event."""
         # Feature: Alter-Ego Public Chat Streaming
         # Scenario: User sends empty message
-        from rag_backend.api.dependencies import agents as agents_module
+        from rag_backend.api.routes import chat_stream as chat_stream_module
 
         monkeypatch.setattr(
-            agents_module,
+            chat_stream_module,
             "build_alter_ego_agent",
             lambda _db, _container: mock_agent,
         )
@@ -197,10 +197,10 @@ class TestAlterEgoChatStream:
         """Given invalid conversation id, when POST /chat/stream, then returns error SSE event."""
         # Feature: Alter-Ego Public Chat Streaming
         # Scenario: Chat for non-existent conversation
-        from rag_backend.api.dependencies import agents as agents_module
+        from rag_backend.api.routes import chat_stream as chat_stream_module
 
         monkeypatch.setattr(
-            agents_module,
+            chat_stream_module,
             "build_alter_ego_agent",
             lambda _db, _container: mock_agent,
         )
@@ -236,10 +236,10 @@ class TestPublishChatStream:
         """Given conversation without project_id, when POST /publish-chat/stream, then returns 400."""
         # Feature: Publish Page Carousel Agent Streaming
         # Scenario: Publish chat for non-carousel conversation
-        from rag_backend.api.dependencies import agents as agents_module
+        from rag_backend.api.routes import chat_stream as chat_stream_module
 
         monkeypatch.setattr(
-            agents_module,
+            chat_stream_module,
             "build_rag_agent",
             lambda _db, _container: mock_agent,
         )
