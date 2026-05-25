@@ -4,7 +4,11 @@ import { useState, useCallback } from "react";
 import { useTranslations } from "next-intl";
 import { Container } from "@/components/layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useDocuments, useCreateDocument, useDeleteDocument } from "../hooks/use-documents";
+import {
+  useDocuments,
+  useCreateDocument,
+  useDeleteDocument,
+} from "../hooks/use-documents";
 import { DocumentList } from "./document-list";
 import { DocumentForm } from "./document-form";
 import { FileUpload } from "./file-upload";
@@ -35,7 +39,7 @@ export function KnowledgeBaseInterface() {
         },
       });
     },
-    [createDocument]
+    [createDocument],
   );
 
   const handleUploadComplete = useCallback(() => {
@@ -50,7 +54,7 @@ export function KnowledgeBaseInterface() {
     (id: string) => {
       deleteDocument.mutate(id);
     },
-    [deleteDocument]
+    [deleteDocument],
   );
 
   const adaptedDocuments: Document[] = documents.map((doc) => {

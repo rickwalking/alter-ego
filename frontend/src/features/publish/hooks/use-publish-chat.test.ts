@@ -73,13 +73,15 @@ function createWrapper() {
     defaultOptions: { queries: { retry: false, gcTime: 0 } },
   });
   return function Wrapper({ children }: { children: ReactNode }) {
-    return createElement(QueryClientProvider, { client: queryClient }, children);
+    return createElement(
+      QueryClientProvider,
+      { client: queryClient },
+      children,
+    );
   };
 }
 
-function mockLocalStorage(
-  store: Record<string, string | null> = {},
-): {
+function mockLocalStorage(store: Record<string, string | null> = {}): {
   getItem: typeof localStorage.getItem;
   setItem: typeof localStorage.setItem;
   removeItem: typeof localStorage.removeItem;
@@ -242,7 +244,9 @@ describe("usePublishChat (SSE comprehensive)", () => {
       wrapper: createWrapper(),
     });
 
-    await waitFor(() => expect(result.current.conversationId).toBe("conv-stored"));
+    await waitFor(() =>
+      expect(result.current.conversationId).toBe("conv-stored"),
+    );
     expect(result.current.messages).toHaveLength(2);
   });
 
@@ -349,9 +353,7 @@ describe("usePublishChat (SSE comprehensive)", () => {
 
     await waitFor(() => expect(mutateAsync).toHaveBeenCalled());
     expect(setItem).not.toHaveBeenCalled();
-    expect(getItem).toHaveBeenCalledWith(
-      PUBLISH_CHAT_STORAGE_KEY(PROJECT_ID),
-    );
+    expect(getItem).toHaveBeenCalledWith(PUBLISH_CHAT_STORAGE_KEY(PROJECT_ID));
   });
 
   it("replaces a stored conversation that no longer exists", async () => {
@@ -363,14 +365,17 @@ describe("usePublishChat (SSE comprehensive)", () => {
     const { removeItem, setItem } = mockLocalStorage({
       [PUBLISH_CHAT_STORAGE_KEY(PROJECT_ID)]: "conv-stale",
     });
-    mockUseConversationMessages.mockImplementation((conversationId: string | null) => ({
-      data: [],
-      isLoading: false,
-      error:
-        conversationId === "conv-stale"
-          ? new ApiError(404, "not found")
-          : null,
-    } as unknown as ReturnType<typeof useConversationMessages>));
+    mockUseConversationMessages.mockImplementation(
+      (conversationId: string | null) =>
+        ({
+          data: [],
+          isLoading: false,
+          error:
+            conversationId === "conv-stale"
+              ? new ApiError(404, "not found")
+              : null,
+        }) as unknown as ReturnType<typeof useConversationMessages>,
+    );
 
     renderHook(() => usePublishChat(PROJECT_ID), {
       wrapper: createWrapper(),
@@ -399,20 +404,25 @@ describe("usePublishChat (SSE comprehensive)", () => {
     const { removeItem } = mockLocalStorage({
       [PUBLISH_CHAT_STORAGE_KEY(PROJECT_ID)]: "conv-other-project",
     });
-    mockUseConversation.mockImplementation((conversationId: string | null) => ({
-      data:
-        conversationId === "conv-other-project"
-          ? {
-              id: "conv-other-project",
-              title: "Other",
-              metadata: { [CONVERSATION_METADATA_PROJECT_ID]: "other-project" },
-              created_at: "2026-04-23T00:00:00Z",
-              updated_at: "2026-04-23T00:00:00Z",
-            }
-          : undefined,
-      isLoading: false,
-      error: null,
-    } as unknown as ReturnType<typeof useConversation>));
+    mockUseConversation.mockImplementation(
+      (conversationId: string | null) =>
+        ({
+          data:
+            conversationId === "conv-other-project"
+              ? {
+                  id: "conv-other-project",
+                  title: "Other",
+                  metadata: {
+                    [CONVERSATION_METADATA_PROJECT_ID]: "other-project",
+                  },
+                  created_at: "2026-04-23T00:00:00Z",
+                  updated_at: "2026-04-23T00:00:00Z",
+                }
+              : undefined,
+          isLoading: false,
+          error: null,
+        }) as unknown as ReturnType<typeof useConversation>,
+    );
 
     renderHook(() => usePublishChat(PROJECT_ID), {
       wrapper: createWrapper(),

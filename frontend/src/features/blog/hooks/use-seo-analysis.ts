@@ -22,7 +22,9 @@ export function useSeoAnalysis(postId: string | null) {
     setLoading(true);
     setError(null);
     try {
-      const response = await authenticatedFetch(API_ENDPOINTS.BLOG_POST_SEO_ANALYZE(postId));
+      const response = await authenticatedFetch(
+        API_ENDPOINTS.BLOG_POST_SEO_ANALYZE(postId),
+      );
       if (!response.ok) throw new Error("SEO analysis failed");
       const data = (await response.json()) as SeoAnalysisResult;
       setResult(data);

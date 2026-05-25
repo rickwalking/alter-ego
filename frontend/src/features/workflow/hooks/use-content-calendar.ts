@@ -41,7 +41,9 @@ export function useContentCalendar(start?: string, end?: string) {
       if (start) params.set("start", start);
       if (end) params.set("end", end);
       const query = params.toString() ? `?${params.toString()}` : "";
-      const response = await authenticatedFetch(`${WORKFLOW_API.CONTENT_CALENDAR}${query}`);
+      const response = await authenticatedFetch(
+        `${WORKFLOW_API.CONTENT_CALENDAR}${query}`,
+      );
       if (!response.ok) {
         throw new Error(t("loadCalendarFailed"));
       }

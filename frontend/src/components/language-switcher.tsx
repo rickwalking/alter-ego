@@ -26,7 +26,11 @@ export function LanguageSwitcher({ currentLocale }: LanguageSwitcherProps) {
   };
 
   return (
-    <div className="flex items-center gap-1" aria-label={t("label")} suppressHydrationWarning>
+    <div
+      className="flex items-center gap-1"
+      aria-label={t("label")}
+      suppressHydrationWarning
+    >
       <button
         onClick={() => handleSwitch("pt")}
         className={`rounded px-2 py-1 text-xs font-bold uppercase tracking-wide transition-all ${

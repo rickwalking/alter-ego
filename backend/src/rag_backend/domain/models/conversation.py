@@ -1,21 +1,42 @@
+"""Domain models for chat conversation management."""
+
 from dataclasses import dataclass, field
 from datetime import datetime
-from enum import StrEnum
 from uuid import UUID, uuid4
 
 
-class MessageRole(StrEnum):
-    USER = "user"
-    ASSISTANT = "assistant"
-    SYSTEM = "system"
+@dataclass
+class Conversation:
+    """Represents a user conversation session."""
+
+    id: UUID = field(default_factory=uuid4)
+    user_id: str
+    title: str
+    messages: list[dict] = field(default_factory=list)
+    created_at: datetime = field(default_factory=datetime.utcnow)
+    updated_at: datetime = field(default_factory=datetime.utcnow)
 
 
 @dataclass
 class Message:
-    role: MessageRole
-    content: str
-    conversation_id: UUID
+    """Represents a message within a conversation."""
+
     id: UUID = field(default_factory=uuid4)
+    conversation_id: UUID
+    role: str
+    content: str
+    created_at: datetime = field(default_factory=datetime.utcnow)
+    updated_at: datetime = field(default_factory=datetime.utcnow)
+
+
+@dataclass
+class Message:
+    """Represents a message within a conversation."""
+
+    id: UUID = field(default_factory=uuid4)
+    conversation_id: UUID
+    role: str
+    content: str
     created_at: datetime = field(default_factory=datetime.utcnow)
     metadata: dict[str, str | int | float | bool] = field(default_factory=dict)
     sources: list[dict[str, str | int | float | bool]] = field(default_factory=list)

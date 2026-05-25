@@ -11,8 +11,7 @@ export const SSE_EVENT_TYPE = {
   TOOL_RESULT: "tool_result",
 } as const;
 
-export type SseEventType =
-  (typeof SSE_EVENT_TYPE)[keyof typeof SSE_EVENT_TYPE];
+export type SseEventType = (typeof SSE_EVENT_TYPE)[keyof typeof SSE_EVENT_TYPE];
 
 /**
  * Parsed SSE event.
@@ -112,11 +111,11 @@ export async function streamSseEvents({
           }
 
           // Backend embeds event type in data.type rather than using SSE event: field
-          const eventType = currentEvent ?? (
-            parsedData.type && typeof parsedData.type === "string"
+          const eventType =
+            currentEvent ??
+            (parsedData.type && typeof parsedData.type === "string"
               ? (parsedData.type as SseEventType)
-              : undefined
-          );
+              : undefined);
 
           onEvent({ id: currentId, event: eventType, data: parsedData });
         }
@@ -136,18 +135,16 @@ export async function streamSseEvents({
           parsedData = { raw: currentData };
         }
       }
-      const eventType = currentEvent ?? (
-        parsedData.type && typeof parsedData.type === "string"
+      const eventType =
+        currentEvent ??
+        (parsedData.type && typeof parsedData.type === "string"
           ? (parsedData.type as SseEventType)
-          : undefined
-      );
+          : undefined);
       onEvent({ id: currentId, event: eventType, data: parsedData });
     }
 
     onComplete?.();
   } catch (error) {
-    onError?.(
-      error instanceof Error ? error : new Error(String(error)),
-    );
+    onError?.(error instanceof Error ? error : new Error(String(error)));
   }
 }

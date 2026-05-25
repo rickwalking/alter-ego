@@ -7,11 +7,15 @@ type VersionDiffViewProps = {
   rightText: string;
 };
 
-function computeLineDiff(left: string, right: string): Array<{ type: "same" | "removed" | "added"; line: string }> {
+function computeLineDiff(
+  left: string,
+  right: string,
+): Array<{ type: "same" | "removed" | "added"; line: string }> {
   const leftLines = left.split("\n");
   const rightLines = right.split("\n");
   const maxLen = Math.max(leftLines.length, rightLines.length);
-  const result: Array<{ type: "same" | "removed" | "added"; line: string }> = [];
+  const result: Array<{ type: "same" | "removed" | "added"; line: string }> =
+    [];
 
   for (let i = 0; i < maxLen; i += 1) {
     const l = leftLines[i];
@@ -26,7 +30,12 @@ function computeLineDiff(left: string, right: string): Array<{ type: "same" | "r
   return result;
 }
 
-export function VersionDiffView({ leftLabel, rightLabel, leftText, rightText }: VersionDiffViewProps) {
+export function VersionDiffView({
+  leftLabel,
+  rightLabel,
+  leftText,
+  rightText,
+}: VersionDiffViewProps) {
   const diff = computeLineDiff(leftText, rightText);
 
   return (
@@ -48,7 +57,11 @@ export function VersionDiffView({ leftLabel, rightLabel, leftText, rightText }: 
                   : ""
             }
           >
-            {entry.type === "removed" ? "- " : entry.type === "added" ? "+ " : "  "}
+            {entry.type === "removed"
+              ? "- "
+              : entry.type === "added"
+                ? "+ "
+                : "  "}
             {entry.line}
           </div>
         ))}

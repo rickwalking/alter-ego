@@ -1,0 +1,95 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e34]:
+    - generic [ref=e38]:
+      - generic [ref=e42]:
+        - link "Langfuse Icon Langfuse" [ref=e43] [cursor=pointer]:
+          - /url: /
+          - generic [ref=e44]:
+            - img "Langfuse Icon" [ref=e45]
+            - generic [ref=e46]: Langfuse
+        - button "v3.172.1 OSS" [ref=e47] [cursor=pointer]: v3.172.1 OSS
+      - generic [ref=e53]:
+        - list [ref=e56]:
+          - listitem [ref=e57]:
+            - button "Go to... Ctrl K" [ref=e58] [cursor=pointer]:
+              - img [ref=e59]
+              - text: Go to...
+              - generic:
+                - generic: Ctrl
+                - generic: K
+          - listitem [ref=e62]:
+            - link "Organizations" [ref=e63] [cursor=pointer]:
+              - /url: /
+              - img [ref=e64]
+              - generic [ref=e66]: Organizations
+        - generic [ref=e70]:
+          - button "Dismiss" [ref=e71] [cursor=pointer]:
+            - img [ref=e72]
+          - generic [ref=e75]:
+            - heading "Star Langfuse" [level=3] [ref=e76]
+            - generic [ref=e77]: See the latest releases and help grow the community on GitHub
+          - link "Langfuse GitHub stars" [ref=e79] [cursor=pointer]:
+            - /url: https://github.com/langfuse/langfuse
+            - img "Langfuse GitHub stars" [ref=e80]
+        - list [ref=e83]:
+          - listitem
+          - listitem [ref=e84]:
+            - link "Book a call" [ref=e85] [cursor=pointer]:
+              - /url: https://cal.com/team/langfuse/welcome-to-langfuse
+              - img [ref=e86]
+              - text: Book a call
+          - listitem [ref=e88]:
+            - button "Support" [ref=e89] [cursor=pointer]:
+              - img [ref=e90]
+              - text: Support
+      - list [ref=e98]:
+        - listitem [ref=e99]:
+          - button "PM Pedro Marins ph.marins@hotmail.com" [ref=e100] [cursor=pointer]:
+            - generic [ref=e102]: PM
+            - generic [ref=e103]:
+              - generic [ref=e104]: Pedro Marins
+              - generic "ph.marins@hotmail.com" [ref=e105]
+            - img [ref=e106]
+      - button "Toggle Sidebar" [ref=e109] [cursor=pointer]
+    - main [ref=e110]:
+      - generic [ref=e115]:
+        - generic [ref=e118]:
+          - generic [ref=e120]:
+            - button "Toggle Sidebar" [ref=e121] [cursor=pointer]:
+              - img [ref=e122]
+              - generic [ref=e124]: Toggle Sidebar
+            - navigation "breadcrumb" [ref=e126]:
+              - list [ref=e127]:
+                - listitem [ref=e128]
+                - listitem [ref=e131]
+          - generic [ref=e134]:
+            - heading "Organizations" [level=2] [ref=e138]:
+              - generic "Organizations" [ref=e139]:
+                - text: Organizations
+                - img [ref=e142] [cursor=pointer]
+            - generic [ref=e144]:
+              - textbox "Search projects" [ref=e145]
+              - link "New Organization" [ref=e146] [cursor=pointer]:
+                - /url: /setup
+                - img [ref=e147]
+                - text: New Organization
+        - main [ref=e148]:
+          - generic [ref=e149]:
+            - generic [ref=e151]:
+              - heading "alter-ego" [level=3] [ref=e154]
+              - generic [ref=e155]:
+                - link [ref=e156] [cursor=pointer]:
+                  - /url: /organization/cmotk8ok40001lw07mjdosnhf/settings
+                - link [ref=e160] [cursor=pointer]:
+                  - /url: /organization/cmotk8ok40001lw07mjdosnhf/settings/members
+                - link "New project" [ref=e166] [cursor=pointer]:
+                  - /url: /organization/cmotk8ok40001lw07mjdosnhf/setup?orgstep=create-project
+            - generic [ref=e169]:
+              - heading "carousel-creation" [level=3] [ref=e171]
+              - generic [ref=e172]:
+                - link "Go to project" [ref=e173] [cursor=pointer]:
+                  - /url: /project/cmotk90hy0006lw07a85r4avl
+                - link [ref=e174] [cursor=pointer]:
+                  - /url: /project/cmotk90hy0006lw07a85r4avl/settings
+      - region "Notifications alt+T"
+  - alert [ref=e7]: Organizations | Langfuse

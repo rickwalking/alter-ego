@@ -16,10 +16,22 @@ import {
 } from "@/components/ui";
 import { useRubrics } from "@/features/rubrics/hooks/use-rubrics";
 import { RubricEvaluationPanel } from "@/features/rubrics/components/rubric-evaluation-panel";
-import type { QualityRubric, QualityRubricCreatePayload, RubricCriterion } from "@/features/rubrics/types";
+import type {
+  QualityRubric,
+  QualityRubricCreatePayload,
+  RubricCriterion,
+} from "@/features/rubrics/types";
 
 export default function RubricsPage() {
-  const { rubrics, loading, error, refetch, create, update, delete: deleteRubric } = useRubrics();
+  const {
+    rubrics,
+    loading,
+    error,
+    refetch,
+    create,
+    update,
+    delete: deleteRubric,
+  } = useRubrics();
   const [isCreating, setIsCreating] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState<QualityRubricCreatePayload>({
@@ -141,22 +153,30 @@ export default function RubricsPage() {
       {(isCreating || editingId) && (
         <Card className="mb-8">
           <CardHeader>
-            <CardTitle>{editingId ? "Edit Rubric" : "Create New Rubric"}</CardTitle>
+            <CardTitle>
+              {editingId ? "Edit Rubric" : "Create New Rubric"}
+            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
               <label className="text-sm font-medium mb-2 block">Name</label>
               <Input
                 value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, name: e.target.value })
+                }
                 placeholder="e.g., Blog Post Quality Standards"
               />
             </div>
             <div>
-              <label className="text-sm font-medium mb-2 block">Description</label>
+              <label className="text-sm font-medium mb-2 block">
+                Description
+              </label>
               <Textarea
                 value={formData.description || ""}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, description: e.target.value })
+                }
                 placeholder="Describe what this rubric evaluates..."
               />
             </div>
@@ -165,7 +185,9 @@ export default function RubricsPage() {
                 type="checkbox"
                 id="is_default"
                 checked={formData.is_default || false}
-                onChange={(e) => setFormData({ ...formData, is_default: e.target.checked })}
+                onChange={(e) =>
+                  setFormData({ ...formData, is_default: e.target.checked })
+                }
               />
               <label htmlFor="is_default" className="text-sm font-medium">
                 Set as default rubric
@@ -176,14 +198,21 @@ export default function RubricsPage() {
               <h3 className="font-medium mb-3">Criteria</h3>
               <div className="grid gap-3 mb-4">
                 {formData.criteria?.map((criterion, index) => (
-                  <div key={index} className="flex items-center justify-between bg-muted p-3 rounded-md">
+                  <div
+                    key={index}
+                    className="flex items-center justify-between bg-muted p-3 rounded-md"
+                  >
                     <div>
                       <span className="font-medium">{criterion.name}</span>
                       <span className="text-muted-foreground text-sm ml-2">
                         Weight: {criterion.weight}
                       </span>
                     </div>
-                    <Button variant="ghost" size="sm" onClick={() => removeCriterion(index)}>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => removeCriterion(index)}
+                    >
                       Remove
                     </Button>
                   </div>
@@ -193,12 +222,16 @@ export default function RubricsPage() {
                 <Input
                   placeholder="Criterion ID (e.g., e_at_score)"
                   value={criterionForm.id}
-                  onChange={(e) => setCriterionForm({ ...criterionForm, id: e.target.value })}
+                  onChange={(e) =>
+                    setCriterionForm({ ...criterionForm, id: e.target.value })
+                  }
                 />
                 <Input
                   placeholder="Criterion Name"
                   value={criterionForm.name}
-                  onChange={(e) => setCriterionForm({ ...criterionForm, name: e.target.value })}
+                  onChange={(e) =>
+                    setCriterionForm({ ...criterionForm, name: e.target.value })
+                  }
                 />
                 <Input
                   type="number"
@@ -207,12 +240,22 @@ export default function RubricsPage() {
                   max="1"
                   placeholder="Weight"
                   value={criterionForm.weight}
-                  onChange={(e) => setCriterionForm({ ...criterionForm, weight: parseFloat(e.target.value) })}
+                  onChange={(e) =>
+                    setCriterionForm({
+                      ...criterionForm,
+                      weight: parseFloat(e.target.value),
+                    })
+                  }
                 />
                 <select
                   className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                   value={criterionForm.evaluation_method}
-                  onChange={(e) => setCriterionForm({ ...criterionForm, evaluation_method: e.target.value })}
+                  onChange={(e) =>
+                    setCriterionForm({
+                      ...criterionForm,
+                      evaluation_method: e.target.value,
+                    })
+                  }
                 >
                   <option value="ai_auto">AI Auto</option>
                   <option value="human_required">Human Required</option>
@@ -221,7 +264,12 @@ export default function RubricsPage() {
                 <Textarea
                   placeholder="Prompt Template"
                   value={criterionForm.prompt_template}
-                  onChange={(e) => setCriterionForm({ ...criterionForm, prompt_template: e.target.value })}
+                  onChange={(e) =>
+                    setCriterionForm({
+                      ...criterionForm,
+                      prompt_template: e.target.value,
+                    })
+                  }
                   className="col-span-2"
                 />
                 <Button onClick={addCriterion} className="col-span-2">
@@ -276,7 +324,11 @@ export default function RubricsPage() {
                     )}
                   </div>
                   <div className="flex gap-2">
-                    <Button variant="outline" size="sm" onClick={() => startEdit(rubric)}>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => startEdit(rubric)}
+                    >
                       Edit
                     </Button>
                     <Button
@@ -303,18 +355,24 @@ export default function RubricsPage() {
                         className="flex items-center justify-between p-3 bg-muted rounded-md"
                       >
                         <div>
-                          <span className="font-medium text-sm">{criterion.name}</span>
+                          <span className="font-medium text-sm">
+                            {criterion.name}
+                          </span>
                           <span className="text-muted-foreground text-sm ml-2">
                             ({criterion.evaluation_method})
                           </span>
                         </div>
-                        <Badge variant="secondary">Weight: {criterion.weight}</Badge>
+                        <Badge variant="secondary">
+                          Weight: {criterion.weight}
+                        </Badge>
                       </div>
                     ))}
                   </div>
                 </div>
                 <div className="mt-4 flex flex-wrap gap-2">
-                  <span className="text-sm text-muted-foreground">Applies to:</span>
+                  <span className="text-sm text-muted-foreground">
+                    Applies to:
+                  </span>
                   {rubric.applicable_content_types.map((type: string) => (
                     <Badge key={type} variant="outline">
                       {type}

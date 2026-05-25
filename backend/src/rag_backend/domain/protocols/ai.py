@@ -1,3 +1,5 @@
+"""Protocols for AI service interfaces."""
+
 from collections.abc import AsyncIterator
 from typing import Protocol
 from uuid import UUID

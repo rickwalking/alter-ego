@@ -17,12 +17,14 @@ const inter = Inter({
 export const metadata: Metadata = {
   referrer: "no-referrer",
   title: "Pedro Marins - My Personal Blog and Assistant",
-  description: "AI-generated carousels and blog posts about tech, AI, and software engineering.",
+  description:
+    "AI-generated carousels and blog posts about tech, AI, and software engineering.",
   keywords: ["AI", "Blog", "Tech", "Software Engineering", "Next.js", "React"],
   authors: [{ name: "Pedro Marins" }],
   openGraph: {
     title: "Pedro Marins - My Personal Blog and Assistant",
-    description: "AI-generated carousels and blog posts about tech, AI, and software engineering.",
+    description:
+      "AI-generated carousels and blog posts about tech, AI, and software engineering.",
     type: "website",
   },
 };

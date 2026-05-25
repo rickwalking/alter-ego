@@ -49,7 +49,11 @@ function createWrapper() {
     defaultOptions: { queries: { retry: false, gcTime: 0 } },
   });
   return function Wrapper({ children }: { children: ReactNode }) {
-    return createElement(QueryClientProvider, { client: queryClient }, children);
+    return createElement(
+      QueryClientProvider,
+      { client: queryClient },
+      children,
+    );
   };
 }
 
@@ -63,9 +67,12 @@ describe("useCarouselStream", () => {
 
   describe("Given enabled=false", () => {
     it("does not open an EventSource", () => {
-      const { result } = renderHook(() => useCarouselStream("abc", { enabled: false }), {
-        wrapper: createWrapper(),
-      });
+      const { result } = renderHook(
+        () => useCarouselStream("abc", { enabled: false }),
+        {
+          wrapper: createWrapper(),
+        },
+      );
       expect(MockEventSource.instances).toHaveLength(0);
       expect(result.current.isStreaming).toBe(false);
     });
@@ -73,9 +80,13 @@ describe("useCarouselStream", () => {
 
   describe("Given a valid id", () => {
     it("opens an EventSource to the /stream endpoint", () => {
-      renderHook(() => useCarouselStream("abc-123"), { wrapper: createWrapper() });
+      renderHook(() => useCarouselStream("abc-123"), {
+        wrapper: createWrapper(),
+      });
       expect(MockEventSource.instances).toHaveLength(1);
-      expect(MockEventSource.instances[0].url).toBe("/api/carousels/abc-123/stream");
+      expect(MockEventSource.instances[0].url).toBe(
+        "/api/carousels/abc-123/stream",
+      );
     });
 
     it("updates latestEvent when a message arrives", async () => {
@@ -157,7 +168,7 @@ describe("useCarouselStream", () => {
         mock.emit({ node: "research", status: "researching" });
       });
       await waitFor(() =>
-        expect(result.current.latestEvent?.node).toBe("research")
+        expect(result.current.latestEvent?.node).toBe("research"),
       );
       expect(result.current.isStreaming).toBe(true);
       expect(mock.close).not.toHaveBeenCalled();
@@ -193,14 +204,18 @@ describe("useCarouselStream", () => {
         {
           wrapper: createWrapper(),
           initialProps: { id: "abc-123" },
-        }
+        },
       );
       expect(MockEventSource.instances).toHaveLength(1);
-      expect(MockEventSource.instances[0].url).toBe("/api/carousels/abc-123/stream");
+      expect(MockEventSource.instances[0].url).toBe(
+        "/api/carousels/abc-123/stream",
+      );
 
       rerender({ id: "def-456" });
       expect(MockEventSource.instances).toHaveLength(2);
-      expect(MockEventSource.instances[1].url).toBe("/api/carousels/def-456/stream");
+      expect(MockEventSource.instances[1].url).toBe(
+        "/api/carousels/def-456/stream",
+      );
     });
 
     it("auto-reconnects after a transport error with exponential backoff", () => {
@@ -276,7 +291,8 @@ describe("useCarouselStream", () => {
 
       // Exhaust all retries (20 retries = 21 total connections).
       for (let i = 0; i < 21; i += 1) {
-        const current = MockEventSource.instances[MockEventSource.instances.length - 1];
+        const current =
+          MockEventSource.instances[MockEventSource.instances.length - 1];
         act(() => {
           current.readyState = MockEventSource.CLOSED;
           current.onerror?.();
@@ -286,7 +302,9 @@ describe("useCarouselStream", () => {
         });
       }
 
-      expect(result.current.error).toBe("stream disconnected — max retries reached");
+      expect(result.current.error).toBe(
+        "stream disconnected — max retries reached",
+      );
       expect(result.current.isStreaming).toBe(false);
 
       vi.useRealTimers();
@@ -325,7 +343,9 @@ describe("useCarouselStream", () => {
       });
 
       expect(MockEventSource.instances).toHaveLength(2);
-      expect(MockEventSource.instances[1].url).toBe("/api/carousels/abc-123/stream");
+      expect(MockEventSource.instances[1].url).toBe(
+        "/api/carousels/abc-123/stream",
+      );
       expect(result.current.isStreaming).toBe(true);
     });
 
@@ -360,7 +380,8 @@ describe("useCarouselStream", () => {
 
       // 20 failures should all be retried (21 total connections).
       for (let i = 0; i < 20; i += 1) {
-        const current = MockEventSource.instances[MockEventSource.instances.length - 1];
+        const current =
+          MockEventSource.instances[MockEventSource.instances.length - 1];
         act(() => {
           current.readyState = MockEventSource.CLOSED;
           current.onerror?.();
@@ -371,7 +392,8 @@ describe("useCarouselStream", () => {
       }
 
       // 21st should fail permanently.
-      const last = MockEventSource.instances[MockEventSource.instances.length - 1];
+      const last =
+        MockEventSource.instances[MockEventSource.instances.length - 1];
       act(() => {
         last.readyState = MockEventSource.CLOSED;
         last.onerror?.();
@@ -380,7 +402,9 @@ describe("useCarouselStream", () => {
         vi.runOnlyPendingTimers();
       });
 
-      expect(result.current.error).toBe("stream disconnected — max retries reached");
+      expect(result.current.error).toBe(
+        "stream disconnected — max retries reached",
+      );
       // No 22nd EventSource created.
       expect(MockEventSource.instances).toHaveLength(21);
 
@@ -395,7 +419,8 @@ describe("useCarouselStream", () => {
 
       const delays: number[] = [];
       for (let i = 0; i < 5; i += 1) {
-        const current = MockEventSource.instances[MockEventSource.instances.length - 1];
+        const current =
+          MockEventSource.instances[MockEventSource.instances.length - 1];
         act(() => {
           current.readyState = MockEventSource.CLOSED;
           current.onerror?.();
@@ -501,7 +526,8 @@ describe("useCarouselStream", () => {
 
       // Exhaust retries to set an error.
       for (let i = 0; i < 21; i += 1) {
-        const current = MockEventSource.instances[MockEventSource.instances.length - 1];
+        const current =
+          MockEventSource.instances[MockEventSource.instances.length - 1];
         act(() => {
           current.readyState = MockEventSource.CLOSED;
           current.onerror?.();
@@ -510,7 +536,9 @@ describe("useCarouselStream", () => {
           vi.runOnlyPendingTimers();
         });
       }
-      expect(result.current.error).toBe("stream disconnected — max retries reached");
+      expect(result.current.error).toBe(
+        "stream disconnected — max retries reached",
+      );
 
       // Manual reconnect should clear the error.
       act(() => {

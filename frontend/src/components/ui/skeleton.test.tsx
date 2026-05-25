@@ -37,7 +37,7 @@ describe("Skeleton Component", () => {
         render(
           <Skeleton data-testid="skeleton">
             <div>Loading content</div>
-          </Skeleton>
+          </Skeleton>,
         );
         expect(screen.getByTestId("skeleton")).toBeInTheDocument();
         expect(screen.getByText("Loading content")).toBeInTheDocument();
@@ -47,12 +47,21 @@ describe("Skeleton Component", () => {
     describe("When the Skeleton is used as a loading placeholder", () => {
       it("Then it should be usable for various content types", () => {
         const { rerender } = render(
-          <Skeleton className="h-4 w-full" data-testid="skeleton" />
+          <Skeleton className="h-4 w-full" data-testid="skeleton" />,
         );
         expect(screen.getByTestId("skeleton")).toHaveClass("h-4", "w-full");
 
-        rerender(<Skeleton className="h-12 w-12 rounded-full" data-testid="skeleton" />);
-        expect(screen.getByTestId("skeleton")).toHaveClass("h-12", "w-12", "rounded-full");
+        rerender(
+          <Skeleton
+            className="h-12 w-12 rounded-full"
+            data-testid="skeleton"
+          />,
+        );
+        expect(screen.getByTestId("skeleton")).toHaveClass(
+          "h-12",
+          "w-12",
+          "rounded-full",
+        );
 
         rerender(<Skeleton className="h-32 w-full" data-testid="skeleton" />);
         expect(screen.getByTestId("skeleton")).toHaveClass("h-32", "w-full");
@@ -66,7 +75,7 @@ describe("Skeleton Component", () => {
             <Skeleton className="skeleton-1" data-testid="skeleton-1" />
             <Skeleton className="skeleton-2" data-testid="skeleton-2" />
             <Skeleton className="skeleton-3" data-testid="skeleton-3" />
-          </>
+          </>,
         );
         expect(screen.getByTestId("skeleton-1")).toHaveClass("skeleton-1");
         expect(screen.getByTestId("skeleton-2")).toHaveClass("skeleton-2");

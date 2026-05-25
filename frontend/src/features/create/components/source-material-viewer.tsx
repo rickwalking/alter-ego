@@ -2,7 +2,16 @@
 
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Alert, AlertDescription, Badge, Button, Card, CardContent, CardHeader, CardTitle } from "@/components/ui";
+import {
+  Alert,
+  AlertDescription,
+  Badge,
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui";
 import { API_ENDPOINTS, HTTP_METHODS } from "@/constants/api";
 import type { ContentSource } from "@/features/blog/types-ai";
 import { authenticatedFetch } from "@/lib/authenticated-fetch";
@@ -11,7 +20,9 @@ interface SourceMaterialViewerProps {
   projectId: string;
 }
 
-export function SourceMaterialViewer({ projectId }: SourceMaterialViewerProps): React.JSX.Element {
+export function SourceMaterialViewer({
+  projectId,
+}: SourceMaterialViewerProps): React.JSX.Element {
   const t = useTranslations("editorialWorkflow");
   const [sources, setSources] = useState<ContentSource[]>([]);
   const [loading, setLoading] = useState(false);
@@ -21,7 +32,9 @@ export function SourceMaterialViewer({ projectId }: SourceMaterialViewerProps): 
     setLoading(true);
     setError(null);
     try {
-      const response = await authenticatedFetch(API_ENDPOINTS.PROJECT_SOURCES(projectId));
+      const response = await authenticatedFetch(
+        API_ENDPOINTS.PROJECT_SOURCES(projectId),
+      );
       if (!response.ok) {
         throw new Error("Failed to load sources");
       }
@@ -43,7 +56,9 @@ export function SourceMaterialViewer({ projectId }: SourceMaterialViewerProps): 
       throw new Error("Extraction failed");
     }
     const updated = (await response.json()) as ContentSource;
-    setSources((prev) => prev.map((source) => (source.id === sourceId ? updated : source)));
+    setSources((prev) =>
+      prev.map((source) => (source.id === sourceId ? updated : source)),
+    );
   };
 
   useEffect(() => {
@@ -54,7 +69,12 @@ export function SourceMaterialViewer({ projectId }: SourceMaterialViewerProps): 
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>{t("sourcesTitle")}</CardTitle>
-        <Button size="sm" variant="outline" disabled={loading} onClick={() => void loadSources()}>
+        <Button
+          size="sm"
+          variant="outline"
+          disabled={loading}
+          onClick={() => void loadSources()}
+        >
           {t("actions.refresh")}
         </Button>
       </CardHeader>
@@ -64,14 +84,18 @@ export function SourceMaterialViewer({ projectId }: SourceMaterialViewerProps): 
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
-        {sources.length === 0 && <p className="text-sm text-muted-foreground">{t("noSources")}</p>}
+        {sources.length === 0 && (
+          <p className="text-sm text-muted-foreground">{t("noSources")}</p>
+        )}
         {sources.map((source) => (
           <div key={source.id} className="rounded-md border p-3 space-y-2">
             <div className="flex items-center justify-between">
               <p className="font-medium">{source.title}</p>
               <Badge variant="outline">{source.source_type}</Badge>
             </div>
-            <p className="text-sm text-muted-foreground line-clamp-3">{source.content}</p>
+            <p className="text-sm text-muted-foreground line-clamp-3">
+              {source.content}
+            </p>
             {source.extracted_key_points.length > 0 && (
               <ul className="text-sm list-disc pl-5">
                 {source.extracted_key_points.map((point) => (

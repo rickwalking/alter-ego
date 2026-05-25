@@ -22,7 +22,11 @@ describe("Badge Component", () => {
 
     describe("When the secondary variant is specified", () => {
       it("Then the Badge should have secondary styling", () => {
-        render(<Badge variant="secondary" data-testid="badge">Secondary</Badge>);
+        render(
+          <Badge variant="secondary" data-testid="badge">
+            Secondary
+          </Badge>,
+        );
         const badge = screen.getByTestId("badge");
         expect(badge).toHaveClass("bg-[var(--color-secondary)]");
         expect(badge).toHaveClass("text-[var(--color-secondary-foreground)]");
@@ -31,7 +35,11 @@ describe("Badge Component", () => {
 
     describe("When the destructive variant is specified", () => {
       it("Then the Badge should have destructive styling", () => {
-        render(<Badge variant="destructive" data-testid="badge">Destructive</Badge>);
+        render(
+          <Badge variant="destructive" data-testid="badge">
+            Destructive
+          </Badge>,
+        );
         const badge = screen.getByTestId("badge");
         expect(badge).toHaveClass("bg-[var(--color-destructive)]");
         expect(badge).toHaveClass("text-[var(--color-destructive-foreground)]");
@@ -40,14 +48,22 @@ describe("Badge Component", () => {
 
     describe("When the outline variant is specified", () => {
       it("Then the Badge should have outline styling without background", () => {
-        render(<Badge variant="outline" data-testid="badge">Outline</Badge>);
+        render(
+          <Badge variant="outline" data-testid="badge">
+            Outline
+          </Badge>,
+        );
         expect(screen.getByTestId("badge")).toHaveClass("border");
       });
     });
 
     describe("When a custom className is provided", () => {
       it("Then the custom class should be applied to the Badge", () => {
-        render(<Badge className="custom-class" data-testid="badge">Custom</Badge>);
+        render(
+          <Badge className="custom-class" data-testid="badge">
+            Custom
+          </Badge>,
+        );
         expect(screen.getByTestId("badge")).toHaveClass("custom-class");
       });
     });
@@ -72,7 +88,7 @@ describe("Badge Component", () => {
           <Badge data-testid="badge">
             <span>Icon</span>
             <span>Text</span>
-          </Badge>
+          </Badge>,
         );
         expect(screen.getByText("Icon")).toBeInTheDocument();
         expect(screen.getByText("Text")).toBeInTheDocument();
@@ -81,19 +97,35 @@ describe("Badge Component", () => {
 
     describe("When switching between variants", () => {
       it("Then the variant classes should update correctly", () => {
-        const { rerender } = render(<Badge variant="default" data-testid="badge">Badge</Badge>);
+        const { rerender } = render(
+          <Badge variant="default" data-testid="badge">
+            Badge
+          </Badge>,
+        );
         let badge = screen.getByTestId("badge");
         expect(badge).toHaveClass("bg-[var(--color-primary)]");
 
-        rerender(<Badge variant="secondary" data-testid="badge">Badge</Badge>);
+        rerender(
+          <Badge variant="secondary" data-testid="badge">
+            Badge
+          </Badge>,
+        );
         badge = screen.getByTestId("badge");
         expect(badge).toHaveClass("bg-[var(--color-secondary)]");
 
-        rerender(<Badge variant="destructive" data-testid="badge">Badge</Badge>);
+        rerender(
+          <Badge variant="destructive" data-testid="badge">
+            Badge
+          </Badge>,
+        );
         badge = screen.getByTestId("badge");
         expect(badge).toHaveClass("bg-[var(--color-destructive)]");
 
-        rerender(<Badge variant="outline" data-testid="badge">Badge</Badge>);
+        rerender(
+          <Badge variant="outline" data-testid="badge">
+            Badge
+          </Badge>,
+        );
         badge = screen.getByTestId("badge");
         expect(badge).toHaveClass("border");
       });

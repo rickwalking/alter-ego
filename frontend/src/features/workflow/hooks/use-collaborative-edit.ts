@@ -45,11 +45,14 @@ export function useCollaborativeEdit(contentId: string, contentType: string) {
   }, [applyLockState, contentId, contentType]);
 
   const acquireLock = useCallback(async () => {
-    const response = await authenticatedFetch(WORKFLOW_API.CONTENT_LOCK(contentId), {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ content_type: contentType }),
-    });
+    const response = await authenticatedFetch(
+      WORKFLOW_API.CONTENT_LOCK(contentId),
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content_type: contentType }),
+      },
+    );
     if (response.status === 409) {
       await refreshLock();
       return false;
@@ -75,11 +78,14 @@ export function useCollaborativeEdit(contentId: string, contentType: string) {
     let cancelled = false;
 
     const bootstrap = async () => {
-      const response = await authenticatedFetch(WORKFLOW_API.CONTENT_LOCK(contentId), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content_type: contentType }),
-      });
+      const response = await authenticatedFetch(
+        WORKFLOW_API.CONTENT_LOCK(contentId),
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ content_type: contentType }),
+        },
+      );
       if (cancelled) {
         return;
       }

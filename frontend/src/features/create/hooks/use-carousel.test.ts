@@ -65,7 +65,7 @@ function createWrapper(queryClient = createQueryClient()) {
     return createElement(
       QueryClientProvider,
       { client: queryClient },
-      children
+      children,
     );
   };
 }
@@ -92,7 +92,7 @@ describe("useCreateCarousel", () => {
       {
         method: "POST",
         body: JSON.stringify(MOCK_CREATE_REQUEST),
-      }
+      },
     );
   });
 
@@ -113,13 +113,16 @@ describe("useCreateCarousel", () => {
   it("invalidates the carousels query key on success", async () => {
     mockApiCall.mockResolvedValueOnce(MOCK_PROJECT);
     const queryClient = createQueryClient();
-    queryClient.setQueryData(["carousels"], [
-      {
-        ...MOCK_PROJECT,
-        id: "old-project",
-        topic: "Old topic",
-      },
-    ]);
+    queryClient.setQueryData(
+      ["carousels"],
+      [
+        {
+          ...MOCK_PROJECT,
+          id: "old-project",
+          topic: "Old topic",
+        },
+      ],
+    );
     const invalidateQueries = vi.spyOn(queryClient, "invalidateQueries");
     const { result } = renderHook(() => useCreateCarousel(), {
       wrapper: createWrapper(queryClient),
@@ -161,9 +164,10 @@ describe("useCreateCarousel", () => {
   it("shows pending state while mutation is in progress", async () => {
     let resolvePromise: (value: typeof MOCK_PROJECT) => void;
     mockApiCall.mockImplementation(
-      () => new Promise((resolve) => {
-        resolvePromise = resolve;
-      })
+      () =>
+        new Promise((resolve) => {
+          resolvePromise = resolve;
+        }),
     );
     const { result } = renderHook(() => useCreateCarousel(), {
       wrapper: createWrapper(),
@@ -190,7 +194,7 @@ describe("useCarouselStatus", () => {
     expect(result.current.data).toEqual(MOCK_STATUS);
     expect(mockApiCall).toHaveBeenCalledWith(
       API_ENDPOINTS.CAROUSEL_STATUS("abc-123"),
-      expect.anything()
+      expect.anything(),
     );
   });
 
@@ -251,7 +255,7 @@ describe("useCarouselProject", () => {
     expect(result.current.data).toEqual(MOCK_PROJECT);
     expect(mockApiCall).toHaveBeenCalledWith(
       API_ENDPOINTS.CAROUSELS + "/abc-123",
-      expect.anything()
+      expect.anything(),
     );
   });
 
@@ -365,7 +369,10 @@ describe("useGenerateCarousel", () => {
       wrapper: createWrapper(),
     });
 
-    result.current.mutate({ projectId: "abc-123", sources: ["https://example.com"] });
+    result.current.mutate({
+      projectId: "abc-123",
+      sources: ["https://example.com"],
+    });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
@@ -375,7 +382,7 @@ describe("useGenerateCarousel", () => {
       {
         method: "POST",
         body: JSON.stringify({ sources: ["https://example.com"] }),
-      }
+      },
     );
   });
 
@@ -396,7 +403,7 @@ describe("useGenerateCarousel", () => {
       {
         method: "POST",
         body: JSON.stringify({ sources: null }),
-      }
+      },
     );
   });
 

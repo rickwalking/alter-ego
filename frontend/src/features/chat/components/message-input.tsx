@@ -12,10 +12,7 @@ interface MessageInputProps {
   isLoading?: boolean;
 }
 
-export function MessageInput({
-  onSend,
-  isLoading = false,
-}: MessageInputProps) {
+export function MessageInput({ onSend, isLoading = false }: MessageInputProps) {
   const t = useTranslations("chat");
   const [message, setMessage] = useState("");
 
@@ -35,7 +32,12 @@ export function MessageInput({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="flex items-end gap-2 p-4 border-t" role="form" aria-label="Message input">
+    <form
+      onSubmit={handleSubmit}
+      className="flex items-end gap-2 p-4 border-t"
+      role="form"
+      aria-label="Message input"
+    >
       <Textarea
         value={message}
         onChange={(e) => setMessage(e.target.value)}
@@ -44,10 +46,7 @@ export function MessageInput({
         disabled={isLoading}
         rows={1}
         aria-label={t("input.placeholder")}
-        className={cn(
-          "min-h-[60px] resize-none",
-          isLoading && "opacity-50"
-        )}
+        className={cn("min-h-[60px] resize-none", isLoading && "opacity-50")}
       />
       <Button
         type="submit"

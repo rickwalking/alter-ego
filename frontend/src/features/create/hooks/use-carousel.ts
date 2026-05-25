@@ -56,15 +56,13 @@ export function useCreateCarousel() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (data: CarouselCreateRequest): Promise<CarouselProjectResponse> => {
-      return apiCall(
-        API_ENDPOINTS.CAROUSELS,
-        carouselProjectResponseSchema,
-        {
-          method: HTTP_METHODS.POST,
-          body: JSON.stringify(data),
-        }
-      );
+    mutationFn: async (
+      data: CarouselCreateRequest,
+    ): Promise<CarouselProjectResponse> => {
+      return apiCall(API_ENDPOINTS.CAROUSELS, carouselProjectResponseSchema, {
+        method: HTTP_METHODS.POST,
+        body: JSON.stringify(data),
+      });
     },
     onSuccess: (project) => {
       queryClient.setQueryData(carouselKeys.detail(project.id), project);
@@ -88,18 +86,24 @@ export function useGenerateCarousel() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ projectId, sources }: GenerateArgs): Promise<CarouselStatusResponse> => {
+    mutationFn: async ({
+      projectId,
+      sources,
+    }: GenerateArgs): Promise<CarouselStatusResponse> => {
       return apiCall(
         API_ENDPOINTS.CAROUSEL_GENERATE(projectId),
         carouselStatusResponseSchema,
         {
           method: HTTP_METHODS.POST,
           body: JSON.stringify({ sources: sources ?? null }),
-        }
+        },
       );
     },
     onSuccess: (status, variables) => {
-      queryClient.setQueryData(carouselKeys.status(variables.projectId), status);
+      queryClient.setQueryData(
+        carouselKeys.status(variables.projectId),
+        status,
+      );
       queryClient.invalidateQueries({
         queryKey: carouselKeys.status(variables.projectId),
       });
@@ -129,13 +133,17 @@ export function useResumeCarousel() {
       return apiCall(
         API_ENDPOINTS.CAROUSEL_RESUME(projectId),
         carouselStatusResponseSchema,
-        { method: HTTP_METHODS.POST }
+        { method: HTTP_METHODS.POST },
       );
     },
     onSuccess: (status, projectId) => {
       queryClient.setQueryData(carouselKeys.status(projectId), status);
-      queryClient.invalidateQueries({ queryKey: carouselKeys.status(projectId) });
-      queryClient.invalidateQueries({ queryKey: carouselKeys.detail(projectId) });
+      queryClient.invalidateQueries({
+        queryKey: carouselKeys.status(projectId),
+      });
+      queryClient.invalidateQueries({
+        queryKey: carouselKeys.detail(projectId),
+      });
     },
     onError: (error) => {
       console.error("Failed to resume carousel:", error);
@@ -286,17 +294,28 @@ export function useCarouselStream(
         // Keep the polling cache in sync so components that read
         // `useCarouselStatus` reflect the live event without polling.
         if (event.status !== undefined) {
-          queryClient.setQueryData(carouselKeys.status(id), (prev: CarouselStatusResponse | undefined) => ({
-            ...(prev ?? { id, error_message: null, updated_at: new Date().toISOString() }),
-            id,
-            status: event.status ?? prev?.status ?? "",
-            phase_progress: event.phase_progress ?? prev?.phase_progress ?? null,
-            error_message: event.error ?? prev?.error_message ?? null,
-            updated_at: new Date().toISOString(),
-          }));
+          queryClient.setQueryData(
+            carouselKeys.status(id),
+            (prev: CarouselStatusResponse | undefined) => ({
+              ...(prev ?? {
+                id,
+                error_message: null,
+                updated_at: new Date().toISOString(),
+              }),
+              id,
+              status: event.status ?? prev?.status ?? "",
+              phase_progress:
+                event.phase_progress ?? prev?.phase_progress ?? null,
+              error_message: event.error ?? prev?.error_message ?? null,
+              updated_at: new Date().toISOString(),
+            }),
+          );
         }
 
-        if (event.node === STREAM_EVENT_END || event.node === STREAM_EVENT_ERROR) {
+        if (
+          event.node === STREAM_EVENT_END ||
+          event.node === STREAM_EVENT_ERROR
+        ) {
           // Pipeline finished or failed — close the stream and let the
           // consumer read the terminal event from `latestEvent`.
           if (event.node === STREAM_EVENT_ERROR && event.error) {

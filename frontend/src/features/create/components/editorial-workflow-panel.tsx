@@ -18,7 +18,8 @@ export function EditorialWorkflowPanel({
   brief,
 }: EditorialWorkflowPanelProps): React.JSX.Element {
   const t = useTranslations("editorialWorkflow");
-  const { state, phaseEvents, loading, error, start, approve, reject } = useEditorialWorkflow(projectId);
+  const { state, phaseEvents, loading, error, start, approve, reject } =
+    useEditorialWorkflow(projectId);
 
   return (
     <div className="space-y-4 rounded-lg border p-4">
@@ -49,7 +50,8 @@ export function EditorialWorkflowPanel({
       {state && (
         <div className="space-y-2 text-sm">
           <p>
-            {t("currentPhase")}: <Badge variant="secondary">{state.current_phase}</Badge>
+            {t("currentPhase")}:{" "}
+            <Badge variant="secondary">{state.current_phase}</Badge>
           </p>
           <p>
             {t("phaseStatus")}: <Badge>{state.phase_status}</Badge>
@@ -58,7 +60,12 @@ export function EditorialWorkflowPanel({
             <Button size="sm" disabled={loading} onClick={() => void approve()}>
               {t("actions.approve")}
             </Button>
-            <Button size="sm" variant="outline" disabled={loading} onClick={() => void reject("Needs revision")}>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={loading}
+              onClick={() => void reject("Needs revision")}
+            >
               {t("actions.reject")}
             </Button>
           </div>

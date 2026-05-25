@@ -7,7 +7,10 @@ import { useTranslations } from "next-intl";
 import { Header } from "@/components/layout";
 import { MessageInput } from "@/features/chat/components";
 import { MessageList } from "@/features/chat/components";
-import { CarouselProgress, CarouselPreview } from "@/features/create/components";
+import {
+  CarouselProgress,
+  CarouselPreview,
+} from "@/features/create/components";
 import { EditorialWorkflowPanel } from "@/features/create/components/editorial-workflow-panel";
 import { SourceMaterialViewer } from "@/features/create/components/source-material-viewer";
 import {
@@ -42,7 +45,8 @@ export default function WorkspacePage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
   const [carouselComplete, setCarouselComplete] = useState(false);
-  const [completedProject, setCompletedProject] = useState<CarouselProjectResponse | null>(null);
+  const [completedProject, setCompletedProject] =
+    useState<CarouselProjectResponse | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const streamingContentRef = useRef("");
   const streamingMsgIdRef = useRef<string | null>(null);
@@ -50,7 +54,9 @@ export default function WorkspacePage() {
   useLayoutEffect(() => {
     if (!projectId) return;
 
-    const storedId = sessionStorage.getItem(CONVERSATION_STORAGE_KEY(projectId));
+    const storedId = sessionStorage.getItem(
+      CONVERSATION_STORAGE_KEY(projectId),
+    );
     if (storedId) {
       setConversationId(storedId);
       return;
@@ -79,103 +85,114 @@ export default function WorkspacePage() {
     }
   }, [statusData?.status, project]);
 
-  const handleSendMessage = useCallback((content: string) => {
-    if (!content.trim() || !conversationId) return;
+  const handleSendMessage = useCallback(
+    (content: string) => {
+      if (!content.trim() || !conversationId) return;
 
-    const userMsg: Message = {
-      id: `user-${Date.now()}`,
-      role: "user",
-      content: content.trim(),
-      sources: [],
-      created_at: new Date().toISOString(),
-    };
-    setMessages((prev) => [...prev, userMsg]);
+      const userMsg: Message = {
+        id: `user-${Date.now()}`,
+        role: "user",
+        content: content.trim(),
+        sources: [],
+        created_at: new Date().toISOString(),
+      };
+      setMessages((prev) => [...prev, userMsg]);
 
-    setIsStreaming(true);
-    streamingMsgIdRef.current = null;
-    streamingContentRef.current = "";
+      setIsStreaming(true);
+      streamingMsgIdRef.current = null;
+      streamingContentRef.current = "";
 
-    if (abortRef.current) {
-      abortRef.current.abort();
-    }
-    abortRef.current = new AbortController();
+      if (abortRef.current) {
+        abortRef.current.abort();
+      }
+      abortRef.current = new AbortController();
 
-    streamSseEvents({
-      url: API_ENDPOINTS.CONVERSATION_PUBLISH_CHAT_STREAM(conversationId),
-      body: { content: content.trim() },
-      signal: abortRef.current.signal,
-      onEvent: (event) => {
-        const data = event.data;
+      streamSseEvents({
+        url: API_ENDPOINTS.CONVERSATION_PUBLISH_CHAT_STREAM(conversationId),
+        body: { content: content.trim() },
+        signal: abortRef.current.signal,
+        onEvent: (event) => {
+          const data = event.data;
 
-        if (event.event === SSE_EVENT_TYPE.TOOL_RESULT) {
-          const tool = data.tool as string | undefined;
-          const result = data.result as { project_id?: string; status?: string } | undefined;
-          if (tool === "generate_carousel" && result?.status === "completed") {
-            setCarouselComplete(true);
+          if (event.event === SSE_EVENT_TYPE.TOOL_RESULT) {
+            const tool = data.tool as string | undefined;
+            const result = data.result as
+              | { project_id?: string; status?: string }
+              | undefined;
+            if (
+              tool === "generate_carousel" &&
+              result?.status === "completed"
+            ) {
+              setCarouselComplete(true);
+            }
+            return;
           }
-          return;
-        }
 
-        if (event.event === SSE_EVENT_TYPE.TOKEN) {
-          const tokenContent = (data.content as string) ?? "";
-          streamingContentRef.current += tokenContent;
-          setMessages((prev) => {
-            const last = prev[prev.length - 1];
-            if (last?.role === "assistant" && last.id === streamingMsgIdRef.current) {
-              return [
-                ...prev.slice(0, -1),
-                { ...last, content: streamingContentRef.current },
-              ];
-            }
-            const newMsg: Message = {
-              id: streamingMsgIdRef.current || `stream-${Date.now()}`,
-              role: "assistant",
-              content: streamingContentRef.current,
-              sources: [],
-              created_at: new Date().toISOString(),
-            };
-            if (!streamingMsgIdRef.current) {
-              streamingMsgIdRef.current = newMsg.id;
-            }
-            return [...prev, newMsg];
-          });
-          return;
-        }
+          if (event.event === SSE_EVENT_TYPE.TOKEN) {
+            const tokenContent = (data.content as string) ?? "";
+            streamingContentRef.current += tokenContent;
+            setMessages((prev) => {
+              const last = prev[prev.length - 1];
+              if (
+                last?.role === "assistant" &&
+                last.id === streamingMsgIdRef.current
+              ) {
+                return [
+                  ...prev.slice(0, -1),
+                  { ...last, content: streamingContentRef.current },
+                ];
+              }
+              const newMsg: Message = {
+                id: streamingMsgIdRef.current || `stream-${Date.now()}`,
+                role: "assistant",
+                content: streamingContentRef.current,
+                sources: [],
+                created_at: new Date().toISOString(),
+              };
+              if (!streamingMsgIdRef.current) {
+                streamingMsgIdRef.current = newMsg.id;
+              }
+              return [...prev, newMsg];
+            });
+            return;
+          }
 
-        if (event.event === SSE_EVENT_TYPE.COMPLETE) {
+          if (event.event === SSE_EVENT_TYPE.COMPLETE) {
+            setIsStreaming(false);
+            streamingContentRef.current = "";
+            streamingMsgIdRef.current = null;
+            return;
+          }
+
+          if (event.event === SSE_EVENT_TYPE.ERROR) {
+            const errorContent = (data.content as string) ?? t("chat.error");
+            setIsStreaming(false);
+            streamingContentRef.current = "";
+            streamingMsgIdRef.current = null;
+            setMessages((prev) => [
+              ...prev,
+              {
+                id: `error-${Date.now()}`,
+                role: "assistant",
+                content: errorContent,
+                sources: [],
+                created_at: new Date().toISOString(),
+              },
+            ]);
+          }
+        },
+        onError: () => {
           setIsStreaming(false);
           streamingContentRef.current = "";
           streamingMsgIdRef.current = null;
-          return;
-        }
-
-        if (event.event === SSE_EVENT_TYPE.ERROR) {
-          const errorContent = (data.content as string) ?? t("chat.error");
+        },
+        onComplete: () => {
           setIsStreaming(false);
-          streamingContentRef.current = "";
-          streamingMsgIdRef.current = null;
-          setMessages((prev) => [
-            ...prev,
-            {
-              id: `error-${Date.now()}`,
-              role: "assistant",
-              content: errorContent,
-              sources: [],
-              created_at: new Date().toISOString(),
-            },
-          ]);
-        }
-      },
-      onError: () => {
-        setIsStreaming(false);
-        streamingContentRef.current = "";
-        streamingMsgIdRef.current = null;
-      },
-      onComplete: () => {
-        setIsStreaming(false);
-      },
-    });
-  }, [conversationId, t]);
+        },
+      });
+    },
+    [conversationId, t],
+  );
 
   // Cleanup abort controller on unmount
   useLayoutEffect(() => {
@@ -200,7 +217,9 @@ export default function WorkspacePage() {
   const currentPhase = statusData?.status || "researching";
   const hasError = statusData?.status === "failed";
   const isGenerating =
-    !carouselComplete && !hasError && ACTIVE_PHASES.has(statusData?.status ?? "");
+    !carouselComplete &&
+    !hasError &&
+    ACTIVE_PHASES.has(statusData?.status ?? "");
 
   return (
     <div className="min-h-screen">
@@ -313,7 +332,10 @@ export default function WorkspacePage() {
 
           <div className="border-t border-[var(--color-border)] p-4">
             <div className="mx-auto max-w-2xl">
-              <MessageInput onSend={handleSendMessage} isLoading={isStreaming} />
+              <MessageInput
+                onSend={handleSendMessage}
+                isLoading={isStreaming}
+              />
             </div>
           </div>
         </div>

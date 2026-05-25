@@ -30,12 +30,18 @@ vi.mock("@/components/layout", () => ({
 }));
 
 vi.mock("@/features/chat/components", () => ({
-  MessageList: vi.fn(() => createElement("div", { "data-testid": "message-list" })),
-  MessageInput: vi.fn(() => createElement("div", { "data-testid": "message-input" })),
+  MessageList: vi.fn(() =>
+    createElement("div", { "data-testid": "message-list" }),
+  ),
+  MessageInput: vi.fn(() =>
+    createElement("div", { "data-testid": "message-input" }),
+  ),
 }));
 
 vi.mock("@/features/publish/components", () => ({
-  PublishPanel: vi.fn(() => createElement("div", { "data-testid": "publish-panel" })),
+  PublishPanel: vi.fn(() =>
+    createElement("div", { "data-testid": "publish-panel" }),
+  ),
 }));
 
 import { useParams } from "next/navigation";
@@ -53,7 +59,11 @@ function createWrapper() {
     defaultOptions: { queries: { retry: false, gcTime: 0 } },
   });
   return function Wrapper({ children }: { children: ReactNode }) {
-    return createElement(QueryClientProvider, { client: queryClient }, children);
+    return createElement(
+      QueryClientProvider,
+      { client: queryClient },
+      children,
+    );
   };
 }
 
@@ -159,8 +169,20 @@ describe("PublishPage", () => {
       mockUsePublishChat.mockReturnValue({
         conversationId: "conv-1",
         messages: [
-          { id: "m1", role: "user", content: "Hey", sources: [], created_at: "2026-04-23T00:00:00Z" },
-          { id: "m2", role: "assistant", content: "Hi", sources: [], created_at: "2026-04-23T00:00:01Z" },
+          {
+            id: "m1",
+            role: "user",
+            content: "Hey",
+            sources: [],
+            created_at: "2026-04-23T00:00:00Z",
+          },
+          {
+            id: "m2",
+            role: "assistant",
+            content: "Hi",
+            sources: [],
+            created_at: "2026-04-23T00:00:01Z",
+          },
         ],
         isStreaming: false,
         sendMessage: vi.fn(),
@@ -191,9 +213,7 @@ describe("PublishPage", () => {
   // Scenario: Given publish mutation error, shows error message
   describe("Given a failed Instagram publish", () => {
     it("displays an error banner after a failed publish", async () => {
-      const mutateAsync = vi
-        .fn()
-        .mockRejectedValue(new Error("Network error"));
+      const mutateAsync = vi.fn().mockRejectedValue(new Error("Network error"));
       mockUsePublishInstagram.mockReturnValue({
         mutateAsync,
         isPending: false,

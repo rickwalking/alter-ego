@@ -24,7 +24,7 @@ export class ApiError extends Error {
   constructor(
     public status: number,
     message: string,
-    public code?: string
+    public code?: string,
   ) {
     super(message);
     this.name = "ApiError";
@@ -34,7 +34,7 @@ export class ApiError extends Error {
 export async function apiCall<T>(
   url: string,
   schema: z.ZodSchema<T>,
-  options?: RequestInit
+  options?: RequestInit,
 ): Promise<T> {
   const response = await fetch(url, {
     ...options,
@@ -53,7 +53,7 @@ export async function apiCall<T>(
     throw new ApiError(
       401,
       errorData?.message || "Unauthorized",
-      errorData?.code
+      errorData?.code,
     );
   }
 
@@ -62,11 +62,7 @@ export async function apiCall<T>(
     if (typeof window !== "undefined") {
       window.location.href = "/403";
     }
-    throw new ApiError(
-      403,
-      errorData?.message || "Forbidden",
-      errorData?.code
-    );
+    throw new ApiError(403, errorData?.message || "Forbidden", errorData?.code);
   }
 
   if (!response.ok) {
@@ -74,7 +70,7 @@ export async function apiCall<T>(
     throw new ApiError(
       response.status,
       errorData?.message || `HTTP error! status: ${response.status}`,
-      errorData?.code
+      errorData?.code,
     );
   }
 
@@ -89,7 +85,7 @@ export async function apiCall<T>(
         throw new ApiError(
           400,
           errorResult.data.error.message,
-          errorResult.data.error.code
+          errorResult.data.error.code,
         );
       }
       throw new ApiError(400, "API request failed");
@@ -120,7 +116,7 @@ export async function apiCall<T>(
  */
 export async function apiCallNoContent(
   url: string,
-  options?: RequestInit
+  options?: RequestInit,
 ): Promise<void> {
   const response = await fetch(url, {
     ...options,
@@ -139,7 +135,7 @@ export async function apiCallNoContent(
     throw new ApiError(
       401,
       errorData?.message || "Unauthorized",
-      errorData?.code
+      errorData?.code,
     );
   }
 
@@ -148,11 +144,7 @@ export async function apiCallNoContent(
     if (typeof window !== "undefined") {
       window.location.href = "/403";
     }
-    throw new ApiError(
-      403,
-      errorData?.message || "Forbidden",
-      errorData?.code
-    );
+    throw new ApiError(403, errorData?.message || "Forbidden", errorData?.code);
   }
 
   if (!response.ok) {
@@ -160,7 +152,7 @@ export async function apiCallNoContent(
     throw new ApiError(
       response.status,
       errorData?.message || `HTTP error! status: ${response.status}`,
-      errorData?.code
+      errorData?.code,
     );
   }
 }

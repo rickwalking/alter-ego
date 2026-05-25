@@ -30,7 +30,9 @@ export function useEditorialAnalytics() {
     setLoading(true);
     setError(null);
     try {
-      const response = await authenticatedFetch(API_ENDPOINTS.EDITORIAL_ANALYTICS);
+      const response = await authenticatedFetch(
+        API_ENDPOINTS.EDITORIAL_ANALYTICS,
+      );
       if (!response.ok) throw new Error("Failed to load analytics");
       setData((await response.json()) as EditorialAnalytics);
     } catch (err) {

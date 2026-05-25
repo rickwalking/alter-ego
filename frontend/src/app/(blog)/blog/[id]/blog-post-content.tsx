@@ -173,10 +173,7 @@ function Section({ markdown, design, slideImage }: SectionProps) {
             boxShadow: `0 0 30px ${colors.primary}0D`,
           }}
         >
-          <img
-            src={slideImage}
-            alt=""
-            className="h-auto w-full object-cover" />
+          <img src={slideImage} alt="" className="h-auto w-full object-cover" />
         </div>
       )}
     </>

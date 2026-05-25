@@ -30,7 +30,8 @@ export function isEditorRoute(pathname: string): boolean {
 
 export const COOKIE_ACCESS_TOKEN = "access_token";
 
-export const STATIC_FILE_PATTERN = /\.(svg|png|jpg|jpeg|gif|webp|ico|css|js|woff|woff2|ttf|eot)$/i;
+export const STATIC_FILE_PATTERN =
+  /\.(svg|png|jpg|jpeg|gif|webp|ico|css|js|woff|woff2|ttf|eot)$/i;
 
 export function isStaticAsset(pathname: string): boolean {
   return (

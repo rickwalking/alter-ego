@@ -24,7 +24,19 @@ interface PostCardProps {
   locale: SupportedLocale;
 }
 
-function PostCard({ id, title, titleEn, topic, niche, status, primaryColor, createdAt, readMoreText, descriptionText, locale }: PostCardProps) {
+function PostCard({
+  id,
+  title,
+  titleEn,
+  topic,
+  niche,
+  status,
+  primaryColor,
+  createdAt,
+  readMoreText,
+  descriptionText,
+  locale,
+}: PostCardProps) {
   const displayTitle = (locale === "en" ? titleEn || title : title) || topic;
 
   return (

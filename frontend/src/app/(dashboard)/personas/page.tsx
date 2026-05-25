@@ -16,7 +16,10 @@ import {
 } from "@/components/ui";
 import { VoiceMatchScorer } from "@/features/personas/components/voice-match-scorer";
 import { usePersonas } from "@/features/persona/hooks/use-personas";
-import type { PersonaProfile, PersonaCreatePayload } from "@/features/persona/types";
+import type {
+  PersonaProfile,
+  PersonaCreatePayload,
+} from "@/features/persona/types";
 
 const STATUS_COLORS: Record<string, string> = {
   draft: "bg-yellow-500",
@@ -25,7 +28,15 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 export default function PersonasPage() {
-  const { personas, loading, error, refetch, create, update, delete: deletePersona } = usePersonas();
+  const {
+    personas,
+    loading,
+    error,
+    refetch,
+    create,
+    update,
+    delete: deletePersona,
+  } = usePersonas();
   const [isCreating, setIsCreating] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState<PersonaCreatePayload>({
@@ -63,7 +74,8 @@ export default function PersonasPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!window.confirm("Are you sure you want to delete this persona?")) return;
+    if (!window.confirm("Are you sure you want to delete this persona?"))
+      return;
     try {
       await deletePersona(id);
     } catch (err) {
@@ -126,22 +138,30 @@ export default function PersonasPage() {
       {(isCreating || editingId) && (
         <Card className="mb-8">
           <CardHeader>
-            <CardTitle>{editingId ? "Edit Persona" : "Create New Persona"}</CardTitle>
+            <CardTitle>
+              {editingId ? "Edit Persona" : "Create New Persona"}
+            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
               <label className="text-sm font-medium mb-2 block">Name</label>
               <Input
                 value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, name: e.target.value })
+                }
                 placeholder="e.g., Professional Tech Writer"
               />
             </div>
             <div>
-              <label className="text-sm font-medium mb-2 block">Description</label>
+              <label className="text-sm font-medium mb-2 block">
+                Description
+              </label>
               <Textarea
                 value={formData.description || ""}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, description: e.target.value })
+                }
                 placeholder="Describe this persona's voice and style..."
               />
             </div>
@@ -166,7 +186,9 @@ export default function PersonasPage() {
                 />
               </div>
               <div>
-                <label className="text-sm font-medium mb-2 block">Conversational</label>
+                <label className="text-sm font-medium mb-2 block">
+                  Conversational
+                </label>
                 <Input
                   type="number"
                   min="0"
@@ -185,7 +207,9 @@ export default function PersonasPage() {
                 />
               </div>
               <div>
-                <label className="text-sm font-medium mb-2 block">Humorous</label>
+                <label className="text-sm font-medium mb-2 block">
+                  Humorous
+                </label>
                 <Input
                   type="number"
                   min="0"
@@ -205,26 +229,36 @@ export default function PersonasPage() {
               </div>
             </div>
             <div>
-              <label className="text-sm font-medium mb-2 block">Expertise Areas (comma-separated)</label>
+              <label className="text-sm font-medium mb-2 block">
+                Expertise Areas (comma-separated)
+              </label>
               <Input
                 value={formData.expertise_areas?.join(", ") || ""}
                 onChange={(e) =>
                   setFormData({
                     ...formData,
-                    expertise_areas: e.target.value.split(",").map((s) => s.trim()).filter(Boolean),
+                    expertise_areas: e.target.value
+                      .split(",")
+                      .map((s) => s.trim())
+                      .filter(Boolean),
                   })
                 }
                 placeholder="AI, Software Engineering, Cloud Computing"
               />
             </div>
             <div>
-              <label className="text-sm font-medium mb-2 block">Forbidden Phrases (comma-separated)</label>
+              <label className="text-sm font-medium mb-2 block">
+                Forbidden Phrases (comma-separated)
+              </label>
               <Input
                 value={formData.forbidden_phrases?.join(", ") || ""}
                 onChange={(e) =>
                   setFormData({
                     ...formData,
-                    forbidden_phrases: e.target.value.split(",").map((s) => s.trim()).filter(Boolean),
+                    forbidden_phrases: e.target.value
+                      .split(",")
+                      .map((s) => s.trim())
+                      .filter(Boolean),
                   })
                 }
                 placeholder="In today's world, Let's dive in"
@@ -281,7 +315,11 @@ export default function PersonasPage() {
                     </p>
                   </div>
                   <div className="flex gap-2">
-                    <Button variant="outline" size="sm" onClick={() => startEdit(persona)}>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => startEdit(persona)}
+                    >
                       Edit
                     </Button>
                     <Button
@@ -301,7 +339,9 @@ export default function PersonasPage() {
                     {persona.tone_attributes.formal}
                   </div>
                   <div>
-                    <span className="text-muted-foreground">Conversational:</span>{" "}
+                    <span className="text-muted-foreground">
+                      Conversational:
+                    </span>{" "}
                     {persona.tone_attributes.conversational}
                   </div>
                   <div>
@@ -324,7 +364,9 @@ export default function PersonasPage() {
                 )}
                 {persona.forbidden_phrases.length > 0 && (
                   <div className="mt-3">
-                    <span className="text-sm text-muted-foreground">Forbidden:</span>{" "}
+                    <span className="text-sm text-muted-foreground">
+                      Forbidden:
+                    </span>{" "}
                     <span className="text-sm text-destructive">
                       {persona.forbidden_phrases.join(", ")}
                     </span>

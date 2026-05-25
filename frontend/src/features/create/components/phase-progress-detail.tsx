@@ -1,4 +1,7 @@
-import { SlideProgressGrid, type SlideProgressItem } from "./slide-progress-grid";
+import {
+  SlideProgressGrid,
+  type SlideProgressItem,
+} from "./slide-progress-grid";
 
 interface PhaseProgressDetailProps {
   /** Backend-provided label (e.g. "Drafting bilingual slide content"). */
@@ -35,11 +38,16 @@ export function PhaseProgressDetail({
 
   return (
     <div className="space-y-2 rounded-md border border-[var(--color-border)] bg-[var(--color-background)] p-3">
-      <p className="text-[var(--color-text)] text-sm" data-testid="phase-progress-label">
+      <p
+        className="text-[var(--color-text)] text-sm"
+        data-testid="phase-progress-label"
+      >
         {label}
       </p>
       {detail ? (
-        <p className="text-[var(--color-text-muted)] text-xs italic">{detail}</p>
+        <p className="text-[var(--color-text-muted)] text-xs italic">
+          {detail}
+        </p>
       ) : null}
       {hasProgressBar ? (
         <div className="space-y-1">
@@ -58,7 +66,9 @@ export function PhaseProgressDetail({
           </div>
         </div>
       ) : null}
-      {slides && slides.length > 0 ? <SlideProgressGrid slides={slides} /> : null}
+      {slides && slides.length > 0 ? (
+        <SlideProgressGrid slides={slides} />
+      ) : null}
     </div>
   );
 }

@@ -16,9 +16,7 @@ from rag_backend.domain.constants import SLIDE_TYPE_CONTENT
 from rag_backend.domain.models import CarouselProject
 
 
-def _render_intro_slide(
-    slide: SlideDict, project: CarouselProject, theme: dict[str, str]
-) -> str:
+def _render_intro_slide(slide: SlideDict, project: CarouselProject, theme: dict[str, str]) -> str:
     primary = theme["primary"]
     heading = _render_inline(str(slide["heading"]))
     subtitle = _render_inline(str(slide["body"]))
@@ -80,9 +78,7 @@ def _render_summary_slide(slide: SlideDict, _theme: dict[str, str]) -> str:
     heading = _render_inline(str(slide["heading"]))
     subtitle_raw = str(slide.get("body") or "").strip()
     subtitle_html = (
-        f'<p class="summary-subtitle">{_render_inline(subtitle_raw)}</p>'
-        if subtitle_raw
-        else ""
+        f'<p class="summary-subtitle">{_render_inline(subtitle_raw)}</p>' if subtitle_raw else ""
     )
     return f"""
   <div class="slide summary-slide">
@@ -149,9 +145,7 @@ def _render_content_slide(slide: SlideDict, _theme: dict[str, str]) -> str:
   </div>"""
 
 
-def _render_cta_slide(
-    slide: SlideDict, _theme: dict[str, str], language: str = "pt"
-) -> str:
+def _render_cta_slide(slide: SlideDict, _theme: dict[str, str], language: str = "pt") -> str:
     heading = _render_inline(str(slide["heading"]))
     body = _render_inline(str(slide["body"]))
     if language == "en":

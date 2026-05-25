@@ -139,7 +139,10 @@ export default async function HomePage() {
                         fill
                         className="object-cover transition-transform duration-300 group-hover:scale-105"
                         sizes="(min-width: 1024px) 33vw, (min-width: 768px) 50vw, 100vw"
-                        unoptimized={imageUrl.startsWith("http") || imageUrl.startsWith("/api/")}
+                        unoptimized={
+                          imageUrl.startsWith("http") ||
+                          imageUrl.startsWith("/api/")
+                        }
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-[var(--color-card)] to-transparent" />
                     </div>
@@ -158,11 +161,14 @@ export default async function HomePage() {
                           {post.niche}
                         </span>
                         <span className="text-xs text-[var(--color-muted-foreground)]">
-                          {new Date(post.created_at).toLocaleDateString("en-US", {
-                            month: "short",
-                            day: "numeric",
-                            year: "numeric",
-                          })}
+                          {new Date(post.created_at).toLocaleDateString(
+                            "en-US",
+                            {
+                              month: "short",
+                              day: "numeric",
+                              year: "numeric",
+                            },
+                          )}
                         </span>
                       </div>
 
@@ -179,7 +185,7 @@ export default async function HomePage() {
                           locale === "en"
                             ? post.subtitle_en || post.subtitle || post.topic
                             : post.subtitle || post.topic,
-                          15
+                          15,
                         )}
                       </p>
                     </div>

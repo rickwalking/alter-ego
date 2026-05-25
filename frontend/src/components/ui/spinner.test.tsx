@@ -63,7 +63,9 @@ describe("Spinner Component", () => {
 
     describe("When switching between sizes", () => {
       it("Then the size classes should update correctly", () => {
-        const { rerender } = render(<Spinner size="sm" data-testid="spinner" />);
+        const { rerender } = render(
+          <Spinner size="sm" data-testid="spinner" />,
+        );
         let spinner = screen.getByTestId("spinner");
         expect(spinner).toHaveClass("h-4 w-4");
 

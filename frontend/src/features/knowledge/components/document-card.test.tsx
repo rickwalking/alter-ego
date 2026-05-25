@@ -56,8 +56,9 @@ describe("DocumentCard Component", () => {
 
       it("Then the FileText icon should be visible", () => {
         render(<DocumentCard document={mockDocument} />);
-        const card = screen.getByText("Test Document").closest('[class*="card"]') ||
-                    screen.getByText("Test Document").parentElement?.parentElement;
+        const card =
+          screen.getByText("Test Document").closest('[class*="card"]') ||
+          screen.getByText("Test Document").parentElement?.parentElement;
         expect(card).toBeInTheDocument();
       });
     });
@@ -73,8 +74,12 @@ describe("DocumentCard Component", () => {
 
     describe("When the document has no tags", () => {
       it("Then no tags section should be rendered", () => {
-        const { container } = render(<DocumentCard document={mockDocumentNoTags} />);
-        const tagsContainer = container.querySelector('[class*="flex flex-wrap gap-1"]');
+        const { container } = render(
+          <DocumentCard document={mockDocumentNoTags} />,
+        );
+        const tagsContainer = container.querySelector(
+          '[class*="flex flex-wrap gap-1"]',
+        );
         expect(tagsContainer).toBeFalsy();
       });
     });
@@ -82,9 +87,13 @@ describe("DocumentCard Component", () => {
     describe("When the delete button is clicked", () => {
       it("Then the onDelete handler should be called", async () => {
         const user = userEvent.setup();
-        render(<DocumentCard document={mockDocument} onDelete={mockOnDelete} />);
+        render(
+          <DocumentCard document={mockDocument} onDelete={mockOnDelete} />,
+        );
 
-        const deleteButton = screen.getByRole("button", { name: /delete document/i });
+        const deleteButton = screen.getByRole("button", {
+          name: /delete document/i,
+        });
         await user.click(deleteButton);
         expect(mockOnDelete).toHaveBeenCalledTimes(1);
       });
@@ -94,7 +103,8 @@ describe("DocumentCard Component", () => {
       it("Then the title should be truncated if too long", () => {
         const longTitleDoc: Document = {
           ...mockDocument,
-          title: "This is a very long title that should be truncated when displayed",
+          title:
+            "This is a very long title that should be truncated when displayed",
         };
         render(<DocumentCard document={longTitleDoc} />);
         const title = screen.getByText(longTitleDoc.title);

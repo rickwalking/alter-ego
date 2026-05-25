@@ -1,27 +1,28 @@
 "use client";
 
 import { useState, useCallback, useMemo } from "react";
-import {
-  useConversations,
-  useCreateConversation,
-} from "../hooks/use-chat";
+import { useConversations, useCreateConversation } from "../hooks/use-chat";
 import { useSseChat } from "../hooks/use-sse-chat";
 import { MessageList } from "./message-list";
 import { MessageInput } from "./message-input";
 import { ConversationSidebar } from "./conversation-sidebar";
 
 export function ChatInterface() {
-  const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
+  const [activeConversationId, setActiveConversationId] = useState<
+    string | null
+  >(null);
   const [isComposingNewChat, setIsComposingNewChat] = useState(false);
 
-  const { data: conversations = [], isLoading: loadingConversations } = useConversations();
+  const { data: conversations = [], isLoading: loadingConversations } =
+    useConversations();
   const createConversation = useCreateConversation();
 
   const effectiveConversationId = useMemo(
     () =>
       isComposingNewChat
         ? null
-        : activeConversationId ?? (conversations.length > 0 ? conversations[0].id : null),
+        : (activeConversationId ??
+          (conversations.length > 0 ? conversations[0].id : null)),
     [activeConversationId, conversations, isComposingNewChat],
   );
 
@@ -49,7 +50,12 @@ export function ChatInterface() {
 
       await sendSseMessage(content, convId ?? undefined);
     },
-    [effectiveConversationId, isComposingNewChat, createConversation, sendSseMessage],
+    [
+      effectiveConversationId,
+      isComposingNewChat,
+      createConversation,
+      sendSseMessage,
+    ],
   );
 
   const handleNewChat = useCallback(() => {
@@ -88,10 +94,7 @@ export function ChatInterface() {
             {sseError}
           </div>
         )}
-        <MessageInput
-          onSend={handleSendMessage}
-          isLoading={isLoading}
-        />
+        <MessageInput onSend={handleSendMessage} isLoading={isLoading} />
       </div>
     </div>
   );

@@ -62,3 +62,7 @@ broken-post-*.png
 homepage-*.png
 uncle-bob-*.yml
 working-post-*.png
+
+# mutmut backups
+*.py.bak
+mutmut-cache/

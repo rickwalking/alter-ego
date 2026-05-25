@@ -12,7 +12,10 @@ export function TypingIndicator() {
         <div className="flex items-center gap-2">
           <span className="font-semibold">Assistant</span>
         </div>
-        <div className="flex items-center gap-1" aria-label="Assistant is typing">
+        <div
+          className="flex items-center gap-1"
+          aria-label="Assistant is typing"
+        >
           <span className="inline-block h-2 w-2 animate-bounce rounded-full bg-[var(--color-muted-foreground)] [animation-delay:0ms]" />
           <span className="inline-block h-2 w-2 animate-bounce rounded-full bg-[var(--color-muted-foreground)] [animation-delay:150ms]" />
           <span className="inline-block h-2 w-2 animate-bounce rounded-full bg-[var(--color-muted-foreground)] [animation-delay:300ms]" />

@@ -1,12 +1,6 @@
 "use client";
 
-import {
-  useCallback,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   useCreateConversation,
@@ -62,10 +56,8 @@ export function usePublishChat(projectId: string): UsePublishChatReturn {
   const streamingMsgIdRef = useRef<string | null>(null);
   const creatingRef = useRef(false);
 
-  const {
-    data: historyMessages = [],
-    error: historyError,
-  } = useConversationMessages(conversationId);
+  const { data: historyMessages = [], error: historyError } =
+    useConversationMessages(conversationId);
 
   const { data: conversation } = useConversation(conversationId);
 

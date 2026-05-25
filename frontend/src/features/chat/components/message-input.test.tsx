@@ -14,12 +14,16 @@ describe("MessageInput Component", () => {
     describe("When the component is displayed", () => {
       it("Then the textarea should be visible with default placeholder", () => {
         render(<MessageInput onSend={mockOnSend} />);
-        expect(screen.getByPlaceholderText("Type your message...")).toBeInTheDocument();
+        expect(
+          screen.getByPlaceholderText("Type your message..."),
+        ).toBeInTheDocument();
       });
 
       it("Then the send button should be visible", () => {
         render(<MessageInput onSend={mockOnSend} />);
-        expect(screen.getByRole("button", { name: /send message/i })).toBeInTheDocument();
+        expect(
+          screen.getByRole("button", { name: /send message/i }),
+        ).toBeInTheDocument();
       });
     });
   });
@@ -92,7 +96,9 @@ describe("MessageInput Component", () => {
     describe("When the textarea is empty", () => {
       it("Then the send button should be disabled", () => {
         render(<MessageInput onSend={mockOnSend} />);
-        expect(screen.getByRole("button", { name: /send message/i })).toBeDisabled();
+        expect(
+          screen.getByRole("button", { name: /send message/i }),
+        ).toBeDisabled();
       });
     });
 
@@ -104,7 +110,9 @@ describe("MessageInput Component", () => {
         const textarea = screen.getByPlaceholderText("Type your message...");
         await user.type(textarea, "   ");
 
-        expect(screen.getByRole("button", { name: /send message/i })).toBeDisabled();
+        expect(
+          screen.getByRole("button", { name: /send message/i }),
+        ).toBeDisabled();
       });
 
       it("Then clicking the button should not call onSend", async () => {
@@ -137,17 +145,23 @@ describe("MessageInput Component", () => {
     describe("When the component is in loading state", () => {
       it("Then the textarea should be disabled", () => {
         render(<MessageInput onSend={mockOnSend} isLoading />);
-        expect(screen.getByPlaceholderText("Type your message...")).toBeDisabled();
+        expect(
+          screen.getByPlaceholderText("Type your message..."),
+        ).toBeDisabled();
       });
 
       it("Then the send button should be disabled", () => {
         render(<MessageInput onSend={mockOnSend} isLoading />);
-        expect(screen.getByRole("button", { name: /send message/i })).toBeDisabled();
+        expect(
+          screen.getByRole("button", { name: /send message/i }),
+        ).toBeDisabled();
       });
 
       it("Then the textarea should have reduced opacity", () => {
         render(<MessageInput onSend={mockOnSend} isLoading />);
-        expect(screen.getByPlaceholderText("Type your message...")).toHaveClass("opacity-50");
+        expect(screen.getByPlaceholderText("Type your message...")).toHaveClass(
+          "opacity-50",
+        );
       });
     });
   });

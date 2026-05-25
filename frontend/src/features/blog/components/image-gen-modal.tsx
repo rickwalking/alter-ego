@@ -54,13 +54,20 @@ export function ImageGenModal({
           </Alert>
         )}
         {previewUrl && (
-          <img src={previewUrl} alt={t("generatedImageAlt")} className="w-full rounded-md border" />
+          <img
+            src={previewUrl}
+            alt={t("generatedImageAlt")}
+            className="w-full rounded-md border"
+          />
         )}
         <div className="flex justify-end gap-2">
           <Button variant="outline" onClick={onClose}>
             {t("actions.cancel")}
           </Button>
-          <Button disabled={loading || !prompt.trim()} onClick={() => void handleGenerate()}>
+          <Button
+            disabled={loading || !prompt.trim()}
+            onClick={() => void handleGenerate()}
+          >
             {t("actions.generate")}
           </Button>
           <Button disabled={!previewUrl} onClick={handleUseImage}>

@@ -42,7 +42,13 @@ vi.mock("../hooks/use-documents", () => ({
 
 // Mock child components
 vi.mock("@/components/layout", () => ({
-  Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+  Container: ({
+    children,
+    className,
+  }: {
+    children: React.ReactNode;
+    className?: string;
+  }) => (
     <div data-testid="container" className={className}>
       {children}
     </div>
@@ -98,7 +104,12 @@ vi.mock("./document-form", () => ({
   }) => (
     <div data-testid="document-form">
       <div data-testid="form-mode">{document ? "edit" : "create"}</div>
-      <button data-testid="form-submit" onClick={() => onSubmit({ title: "Test", content: "Content", tags: [] })}>
+      <button
+        data-testid="form-submit"
+        onClick={() =>
+          onSubmit({ title: "Test", content: "Content", tags: [] })
+        }
+      >
         Submit
       </button>
       <button data-testid="form-cancel" onClick={onCancel}>
@@ -147,12 +158,16 @@ describe("KnowledgeBaseInterface Component", () => {
     describe("When the component is displayed", () => {
       it("Then the page title should be visible", () => {
         render(<KnowledgeBaseInterface />);
-        expect(screen.getByRole("heading", { name: /knowledge base/i })).toBeInTheDocument();
+        expect(
+          screen.getByRole("heading", { name: /knowledge base/i }),
+        ).toBeInTheDocument();
       });
 
       it("Then the page description should be visible", () => {
         render(<KnowledgeBaseInterface />);
-        expect(screen.getByText(/manage your documents and information/i)).toBeInTheDocument();
+        expect(
+          screen.getByText(/manage your documents and information/i),
+        ).toBeInTheDocument();
       });
 
       it("Then the document list should be visible by default", () => {
@@ -197,7 +212,9 @@ describe("KnowledgeBaseInterface Component", () => {
         render(<KnowledgeBaseInterface />);
 
         await user.click(screen.getByTestId("create-new-btn"));
-        expect(screen.getByTestId("card-title")).toHaveTextContent(/create new document/i);
+        expect(screen.getByTestId("card-title")).toHaveTextContent(
+          /create new document/i,
+        );
       });
     });
 
@@ -215,7 +232,9 @@ describe("KnowledgeBaseInterface Component", () => {
         render(<KnowledgeBaseInterface />);
 
         await user.click(screen.getByTestId("upload-new-btn"));
-        expect(screen.getByTestId("card-title")).toHaveTextContent(/upload document/i);
+        expect(screen.getByTestId("card-title")).toHaveTextContent(
+          /upload document/i,
+        );
       });
     });
 

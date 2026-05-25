@@ -44,9 +44,7 @@ class PostgresUserRepository(UserRepository):
         Returns:
             User entity if found, None otherwise.
         """
-        result = await self._session.execute(
-            select(UserModel).where(UserModel.id == str(user_id))
-        )
+        result = await self._session.execute(select(UserModel).where(UserModel.id == str(user_id)))
         model = result.scalar_one_or_none()
         return model.to_entity() if model else None
 
@@ -59,9 +57,7 @@ class PostgresUserRepository(UserRepository):
         Returns:
             User entity if found, None otherwise.
         """
-        result = await self._session.execute(
-            select(UserModel).where(UserModel.email == email)
-        )
+        result = await self._session.execute(select(UserModel).where(UserModel.email == email))
         model = result.scalar_one_or_none()
         return model.to_entity() if model else None
 
@@ -76,10 +72,7 @@ class PostgresUserRepository(UserRepository):
             List of user entities.
         """
         result = await self._session.execute(
-            select(UserModel)
-            .order_by(UserModel.created_at.desc())
-            .limit(limit)
-            .offset(offset)
+            select(UserModel).order_by(UserModel.created_at.desc()).limit(limit).offset(offset)
         )
         return [m.to_entity() for m in result.scalars().all()]
 
@@ -92,9 +85,7 @@ class PostgresUserRepository(UserRepository):
         Returns:
             Updated user entity.
         """
-        result = await self._session.execute(
-            select(UserModel).where(UserModel.id == str(user.id))
-        )
+        result = await self._session.execute(select(UserModel).where(UserModel.id == str(user.id)))
         model = result.scalar_one_or_none()
         if model is None:
             raise ValueError(f"User with id {user.id} not found")
@@ -118,9 +109,7 @@ class PostgresUserRepository(UserRepository):
         Returns:
             True if deleted, False if not found.
         """
-        result = await self._session.execute(
-            select(UserModel).where(UserModel.id == str(user_id))
-        )
+        result = await self._session.execute(select(UserModel).where(UserModel.id == str(user_id)))
         model = result.scalar_one_or_none()
         if model is None:
             return False
@@ -148,8 +137,6 @@ class PostgresUserRepository(UserRepository):
             Number of users with the given role.
         """
         result = await self._session.execute(
-            select(func.count())
-            .select_from(UserModel)
-            .where(UserModel.role == role.value)
+            select(func.count()).select_from(UserModel).where(UserModel.role == role.value)
         )
         return result.scalar() or 0

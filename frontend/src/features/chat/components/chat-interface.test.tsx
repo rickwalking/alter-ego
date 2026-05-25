@@ -72,7 +72,11 @@ vi.mock("../hooks/use-chat", () => ({
 }));
 
 vi.mock("./message-list", () => ({
-  MessageList: ({ messages }: { messages: Array<{ id: string; content: string }> }) => (
+  MessageList: ({
+    messages,
+  }: {
+    messages: Array<{ id: string; content: string }>;
+  }) => (
     <div data-testid="message-list">
       {messages.length === 0 ? (
         <p>Start a conversation by typing a message below.</p>
@@ -106,7 +110,7 @@ vi.mock("./message-input", () => ({
         disabled={isLoading}
         onClick={() => {
           const input = document.querySelector(
-            '[data-testid="message-text-input"]'
+            '[data-testid="message-text-input"]',
           ) as HTMLInputElement;
           if (input?.value) {
             onSend(input.value);
@@ -146,7 +150,7 @@ vi.mock("@/lib/utils", async () => ({
   cn: (...inputs: (string | undefined | false | null)[]) =>
     inputs.filter(Boolean).join(" "),
   truncate: vi.fn((str: string, len: number) =>
-    str.length > len ? str.slice(0, len - 3) + "..." : str
+    str.length > len ? str.slice(0, len - 3) + "..." : str,
   ),
   debounce: vi.fn((fn: () => void) => fn),
   throttle: vi.fn((fn: () => void) => fn),
@@ -200,7 +204,9 @@ describe("ChatInterface Component", () => {
 
       it("Then initial conversations should be loaded", () => {
         render(<ChatInterface />);
-        expect(screen.getByTestId("conversations-count")).toHaveTextContent("1");
+        expect(screen.getByTestId("conversations-count")).toHaveTextContent(
+          "1",
+        );
       });
     });
 
@@ -211,7 +217,9 @@ describe("ChatInterface Component", () => {
 
         await user.click(screen.getByTestId("new-chat-button"));
         expect(chatMocks.createConversation).not.toHaveBeenCalled();
-        expect(screen.getByTestId("conversations-count")).toHaveTextContent("1");
+        expect(screen.getByTestId("conversations-count")).toHaveTextContent(
+          "1",
+        );
       });
 
       it("Then no existing conversation remains selected while composing", async () => {
@@ -246,8 +254,6 @@ describe("ChatInterface Component", () => {
 
         expect(input).toHaveValue("");
       });
-
-
     });
 
     describe("When the component is loading", () => {

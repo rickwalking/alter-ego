@@ -58,7 +58,9 @@ describe("PhaseProgressDetail", () => {
 
   describe("Given a detail line", () => {
     it("should display the italicized detail", () => {
-      render(<PhaseProgressDetail label="Images" detail="via OpenAI Hyperreal" />);
+      render(
+        <PhaseProgressDetail label="Images" detail="via OpenAI Hyperreal" />,
+      );
       expect(screen.getByText("via OpenAI Hyperreal")).toBeInTheDocument();
     });
   });

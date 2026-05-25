@@ -2,7 +2,13 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { Alert, AlertDescription, Badge, Button, Textarea } from "@/components/ui";
+import {
+  Alert,
+  AlertDescription,
+  Badge,
+  Button,
+  Textarea,
+} from "@/components/ui";
 import { BLOG_AI_ACTIONS, VOICE_MATCH_MIN_SCORE } from "@/constants/blog-ai";
 import { useBlogAi } from "@/features/blog/hooks/use-blog-ai";
 import type { BlogAiSuggestResult } from "@/features/blog/types-ai";
@@ -41,7 +47,12 @@ export function AiSuggestionPanel({
     if (!selectedText.trim()) {
       return;
     }
-    const result = await improve(selectedText, BLOG_AI_ACTIONS.IMPROVE, undefined, personaId);
+    const result = await improve(
+      selectedText,
+      BLOG_AI_ACTIONS.IMPROVE,
+      undefined,
+      personaId,
+    );
     onApplySuggestion(result.improved_text);
   };
 
@@ -50,7 +61,11 @@ export function AiSuggestionPanel({
       <div className="flex items-center justify-between">
         <h3 className="font-semibold">{t("aiPanelTitle")}</h3>
         {voiceScore !== null && (
-          <Badge variant={voiceScore >= VOICE_MATCH_MIN_SCORE ? "default" : "destructive"}>
+          <Badge
+            variant={
+              voiceScore >= VOICE_MATCH_MIN_SCORE ? "default" : "destructive"
+            }
+          >
             {t("voiceScore", { score: Math.round(voiceScore) })}
           </Badge>
         )}
@@ -69,31 +84,60 @@ export function AiSuggestionPanel({
       )}
 
       <div className="flex flex-wrap gap-2">
-        <Button size="sm" disabled={loading || !selectedText.trim()} onClick={() => void runSuggestion(BLOG_AI_ACTIONS.IMPROVE)}>
+        <Button
+          size="sm"
+          disabled={loading || !selectedText.trim()}
+          onClick={() => void runSuggestion(BLOG_AI_ACTIONS.IMPROVE)}
+        >
           {t("actions.improve")}
         </Button>
-        <Button size="sm" variant="outline" disabled={loading || !selectedText.trim()} onClick={() => void runSuggestion(BLOG_AI_ACTIONS.SHORTEN)}>
+        <Button
+          size="sm"
+          variant="outline"
+          disabled={loading || !selectedText.trim()}
+          onClick={() => void runSuggestion(BLOG_AI_ACTIONS.SHORTEN)}
+        >
           {t("actions.shorten")}
         </Button>
-        <Button size="sm" variant="outline" disabled={loading || !selectedText.trim()} onClick={() => void runSuggestion(BLOG_AI_ACTIONS.ADD_OPINION)}>
+        <Button
+          size="sm"
+          variant="outline"
+          disabled={loading || !selectedText.trim()}
+          onClick={() => void runSuggestion(BLOG_AI_ACTIONS.ADD_OPINION)}
+        >
           {t("actions.addOpinion")}
         </Button>
-        <Button size="sm" variant="secondary" disabled={loading || !selectedText.trim()} onClick={() => void runImprove()}>
+        <Button
+          size="sm"
+          variant="secondary"
+          disabled={loading || !selectedText.trim()}
+          onClick={() => void runImprove()}
+        >
           {t("actions.applyImprovement")}
         </Button>
       </div>
 
       <div className="space-y-3">
         {suggestions.map((item, index) => (
-          <div key={`${item.suggestion_type}-${index}`} className="rounded-md bg-muted p-3 space-y-2">
+          <div
+            key={`${item.suggestion_type}-${index}`}
+            className="rounded-md bg-muted p-3 space-y-2"
+          >
             <div className="flex items-center justify-between">
               <Badge variant="secondary">{item.suggestion_type}</Badge>
-              <Button size="sm" onClick={() => onApplySuggestion(item.suggested_text)}>
+              <Button
+                size="sm"
+                onClick={() => onApplySuggestion(item.suggested_text)}
+              >
                 {t("actions.apply")}
               </Button>
             </div>
             <Textarea value={item.suggested_text} readOnly rows={3} />
-            {item.explanation && <p className="text-sm text-muted-foreground">{item.explanation}</p>}
+            {item.explanation && (
+              <p className="text-sm text-muted-foreground">
+                {item.explanation}
+              </p>
+            )}
           </div>
         ))}
       </div>

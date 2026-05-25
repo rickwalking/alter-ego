@@ -6,7 +6,8 @@ export const WORKFLOW_API = {
   NOTIFICATION_READ: (id: string) => `/api/notifications/${id}/read`,
   ASSIGN_REVIEW: "/api/notifications/assign-review",
   CONTENT_CALENDAR: "/api/content-calendar",
-  WORKFLOW_AUDIT: (type: string, id: string) => `/api/workflow-audit/${type}/${id}`,
+  WORKFLOW_AUDIT: (type: string, id: string) =>
+    `/api/workflow-audit/${type}/${id}`,
   CONTENT_LOCK: (contentId: string) => `/api/content/${contentId}/lock`,
   BLOG_SCHEDULE: (postId: string) => `/api/blog-posts/${postId}/schedule`,
   BLOG_VERSIONS: (postId: string) => `/api/blog-posts/${postId}/versions`,

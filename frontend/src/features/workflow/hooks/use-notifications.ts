@@ -16,35 +16,48 @@ export function useNotifications() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchNotifications = useCallback(async (unreadOnly = false) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const query = unreadOnly ? "?unread_only=true" : "";
-      const response = await authenticatedFetch(`${WORKFLOW_API.NOTIFICATIONS}${query}`);
-      if (!response.ok) {
-        throw new Error(t("loadNotificationsFailed"));
+  const fetchNotifications = useCallback(
+    async (unreadOnly = false) => {
+      setLoading(true);
+      setError(null);
+      try {
+        const query = unreadOnly ? "?unread_only=true" : "";
+        const response = await authenticatedFetch(
+          `${WORKFLOW_API.NOTIFICATIONS}${query}`,
+        );
+        if (!response.ok) {
+          throw new Error(t("loadNotificationsFailed"));
+        }
+        const data = (await response.json()) as NotificationListResponse;
+        setNotifications(data.items);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : t("unknown"));
+      } finally {
+        setLoading(false);
       }
-      const data = (await response.json()) as NotificationListResponse;
-      setNotifications(data.items);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : t("unknown"));
-    } finally {
-      setLoading(false);
-    }
-  }, [t]);
+    },
+    [t],
+  );
 
-  const markRead = useCallback(async (id: string) => {
-    const response = await authenticatedFetch(WORKFLOW_API.NOTIFICATION_READ(id), {
-      method: "POST",
-    });
-    if (!response.ok) {
-      throw new Error(t("markReadFailed"));
-    }
-    setNotifications((prev) =>
-      prev.map((item) => (item.id === id ? { ...item, status: "read" } : item)),
-    );
-  }, [t]);
+  const markRead = useCallback(
+    async (id: string) => {
+      const response = await authenticatedFetch(
+        WORKFLOW_API.NOTIFICATION_READ(id),
+        {
+          method: "POST",
+        },
+      );
+      if (!response.ok) {
+        throw new Error(t("markReadFailed"));
+      }
+      setNotifications((prev) =>
+        prev.map((item) =>
+          item.id === id ? { ...item, status: "read" } : item,
+        ),
+      );
+    },
+    [t],
+  );
 
   useEffect(() => {
     void fetchNotifications(true);

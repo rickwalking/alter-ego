@@ -16,7 +16,7 @@ describe("Card Component", () => {
         render(
           <Card data-testid="card">
             <p>Card content</p>
-          </Card>
+          </Card>,
         );
         expect(screen.getByTestId("card")).toBeInTheDocument();
         expect(screen.getByText("Card content")).toBeInTheDocument();
@@ -47,7 +47,7 @@ describe("Card Component", () => {
         render(
           <CardHeader data-testid="header">
             <p>Header content</p>
-          </CardHeader>
+          </CardHeader>,
         );
         expect(screen.getByTestId("header")).toBeInTheDocument();
         expect(screen.getByText("Header content")).toBeInTheDocument();
@@ -66,7 +66,9 @@ describe("Card Component", () => {
     describe("When the CardTitle contains text", () => {
       it("Then the title should be rendered as an h3 element", () => {
         render(<CardTitle>Card Title</CardTitle>);
-        expect(screen.getByRole("heading", { name: /card title/i })).toBeInTheDocument();
+        expect(
+          screen.getByRole("heading", { name: /card title/i }),
+        ).toBeInTheDocument();
       });
     });
 
@@ -97,7 +99,11 @@ describe("Card Component", () => {
 
     describe("When a custom className is provided", () => {
       it("Then the custom class should be applied to the CardDescription", () => {
-        render(<CardDescription className="custom-desc">Description</CardDescription>);
+        render(
+          <CardDescription className="custom-desc">
+            Description
+          </CardDescription>,
+        );
         expect(screen.getByText("Description")).toHaveClass("custom-desc");
       });
     });
@@ -117,7 +123,7 @@ describe("Card Component", () => {
         render(
           <CardContent data-testid="content">
             <p>Content here</p>
-          </CardContent>
+          </CardContent>,
         );
         expect(screen.getByTestId("content")).toBeInTheDocument();
       });
@@ -125,7 +131,9 @@ describe("Card Component", () => {
 
     describe("When a custom className is provided", () => {
       it("Then the custom class should be applied to the CardContent", () => {
-        render(<CardContent className="custom-content" data-testid="content" />);
+        render(
+          <CardContent className="custom-content" data-testid="content" />,
+        );
         expect(screen.getByTestId("content")).toHaveClass("custom-content");
       });
     });
@@ -137,7 +145,7 @@ describe("Card Component", () => {
         render(
           <CardFooter data-testid="footer">
             <button>Action</button>
-          </CardFooter>
+          </CardFooter>,
         );
         expect(screen.getByTestId("footer")).toBeInTheDocument();
         expect(screen.getByRole("button")).toBeInTheDocument();
@@ -167,13 +175,17 @@ describe("Card Component", () => {
             <CardFooter>
               <button>Submit</button>
             </CardFooter>
-          </Card>
+          </Card>,
         );
 
-        expect(screen.getByRole("heading", { name: /test card/i })).toBeInTheDocument();
+        expect(
+          screen.getByRole("heading", { name: /test card/i }),
+        ).toBeInTheDocument();
         expect(screen.getByText("A test description")).toBeInTheDocument();
         expect(screen.getByText("Main content")).toBeInTheDocument();
-        expect(screen.getByRole("button", { name: /submit/i })).toBeInTheDocument();
+        expect(
+          screen.getByRole("button", { name: /submit/i }),
+        ).toBeInTheDocument();
       });
     });
   });

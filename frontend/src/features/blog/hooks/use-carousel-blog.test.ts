@@ -99,7 +99,7 @@ function createWrapper() {
     return createElement(
       QueryClientProvider,
       { client: queryClient },
-      children
+      children,
     );
   };
 }
@@ -120,7 +120,7 @@ describe("useCarouselProject", () => {
     expect(result.current.data).toEqual(MOCK_PROJECT);
     expect(mockApiCall).toHaveBeenCalledWith(
       API_ENDPOINTS.CAROUSELS + "/abc-123",
-      expect.anything()
+      expect.anything(),
     );
   });
 
@@ -144,7 +144,12 @@ describe("useCarouselProject", () => {
 
 describe("useCarouselProjects", () => {
   it("fetches all projects without status filter", async () => {
-    const mockResponse = { items: [MOCK_PROJECT], total: 1, limit: 20, offset: 0 };
+    const mockResponse = {
+      items: [MOCK_PROJECT],
+      total: 1,
+      limit: 20,
+      offset: 0,
+    };
     mockApiCall.mockResolvedValueOnce(mockResponse);
     const { result } = renderHook(() => useCarouselProjects(), {
       wrapper: createWrapper(),
@@ -155,7 +160,12 @@ describe("useCarouselProjects", () => {
   });
 
   it("fetches projects with status filter", async () => {
-    const mockResponse = { items: [MOCK_PROJECT], total: 1, limit: 20, offset: 0 };
+    const mockResponse = {
+      items: [MOCK_PROJECT],
+      total: 1,
+      limit: 20,
+      offset: 0,
+    };
     mockApiCall.mockResolvedValueOnce(mockResponse);
     const { result } = renderHook(() => useCarouselProjects("completed"), {
       wrapper: createWrapper(),
@@ -164,14 +174,19 @@ describe("useCarouselProjects", () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(mockApiCall).toHaveBeenCalledWith(
       expect.stringContaining("status=completed"),
-      expect.anything()
+      expect.anything(),
     );
   });
 });
 
 describe("useBlogPosts", () => {
   it("fetches completed carousel projects", async () => {
-    const mockResponse = { items: [MOCK_PROJECT], total: 1, limit: 20, offset: 0 };
+    const mockResponse = {
+      items: [MOCK_PROJECT],
+      total: 1,
+      limit: 20,
+      offset: 0,
+    };
     mockApiCall.mockResolvedValueOnce(mockResponse);
     const { result } = renderHook(() => useBlogPosts(), {
       wrapper: createWrapper(),
@@ -181,7 +196,7 @@ describe("useBlogPosts", () => {
     expect(result.current.data).toEqual(mockResponse);
     expect(mockApiCall).toHaveBeenCalledWith(
       expect.stringContaining("status=completed"),
-      expect.anything()
+      expect.anything(),
     );
   });
 });
@@ -197,7 +212,7 @@ describe("useCarouselBlog", () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(mockApiCall).toHaveBeenCalledWith(
       API_ENDPOINTS.CAROUSEL_BLOG_LANG("abc-123", DEFAULT_BLOG_LANGUAGE),
-      expect.anything()
+      expect.anything(),
     );
   });
 
@@ -210,7 +225,7 @@ describe("useCarouselBlog", () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(mockApiCall).toHaveBeenCalledWith(
       API_ENDPOINTS.CAROUSEL_BLOG_LANG("abc-123", "en"),
-      expect.anything()
+      expect.anything(),
     );
   });
 
@@ -227,14 +242,14 @@ describe("useCarouselBlogWithDesign", () => {
     mockApiCall.mockResolvedValueOnce(MOCK_BLOG_WITH_DESIGN);
     const { result } = renderHook(
       () => useCarouselBlogWithDesign("abc-123", "pt"),
-      { wrapper: createWrapper() }
+      { wrapper: createWrapper() },
     );
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(result.current.data).toEqual(MOCK_BLOG_WITH_DESIGN);
     expect(mockApiCall).toHaveBeenCalledWith(
       expect.stringContaining("include_design=true"),
-      expect.anything()
+      expect.anything(),
     );
   });
 
@@ -257,7 +272,7 @@ describe("useCarouselDesign", () => {
     expect(result.current.data).toEqual(MOCK_DESIGN);
     expect(mockApiCall).toHaveBeenCalledWith(
       API_ENDPOINTS.CAROUSEL_DESIGN("abc-123"),
-      expect.anything()
+      expect.anything(),
     );
   });
 
@@ -280,7 +295,7 @@ describe("useCarouselSlides", () => {
     expect(result.current.data).toEqual([MOCK_SLIDE]);
     expect(mockApiCall).toHaveBeenCalledWith(
       API_ENDPOINTS.CAROUSEL_SLIDES("abc-123"),
-      expect.anything()
+      expect.anything(),
     );
   });
 

@@ -8,7 +8,9 @@ describe("Button Component", () => {
     describe("When the button is displayed with text content", () => {
       it("Then the button should be visible with the provided text", () => {
         render(<Button>Click me</Button>);
-        expect(screen.getByRole("button", { name: /click me/i })).toBeInTheDocument();
+        expect(
+          screen.getByRole("button", { name: /click me/i }),
+        ).toBeInTheDocument();
       });
     });
 
@@ -29,7 +31,11 @@ describe("Button Component", () => {
         const handleClick = vi.fn();
         const user = userEvent.setup();
 
-        render(<Button disabled onClick={handleClick}>Disabled</Button>);
+        render(
+          <Button disabled onClick={handleClick}>
+            Disabled
+          </Button>,
+        );
 
         const button = screen.getByRole("button");
         expect(button).toBeDisabled();
@@ -41,17 +47,25 @@ describe("Button Component", () => {
 
     describe("When different variant props are provided", () => {
       it("Then the destructive variant should have destructive styling", () => {
-        const { rerender } = render(<Button variant="destructive">Destructive</Button>);
-        expect(screen.getByRole("button")).toHaveClass("bg-[var(--color-destructive)]");
+        const { rerender } = render(
+          <Button variant="destructive">Destructive</Button>,
+        );
+        expect(screen.getByRole("button")).toHaveClass(
+          "bg-[var(--color-destructive)]",
+        );
 
         rerender(<Button variant="outline">Outline</Button>);
         expect(screen.getByRole("button")).toHaveClass("border");
 
         rerender(<Button variant="ghost">Ghost</Button>);
-        expect(screen.getByRole("button")).toHaveClass("hover:bg-[var(--color-accent)]");
+        expect(screen.getByRole("button")).toHaveClass(
+          "hover:bg-[var(--color-accent)]",
+        );
 
         rerender(<Button variant="secondary">Secondary</Button>);
-        expect(screen.getByRole("button")).toHaveClass("bg-[var(--color-secondary)]");
+        expect(screen.getByRole("button")).toHaveClass(
+          "bg-[var(--color-secondary)]",
+        );
 
         rerender(<Button variant="link">Link</Button>);
         expect(screen.getByRole("button")).toHaveClass("underline-offset-4");
@@ -79,10 +93,12 @@ describe("Button Component", () => {
         render(
           <Button asChild>
             <a href="/test">Link Button</a>
-          </Button>
+          </Button>,
         );
 
-        expect(screen.getByRole("link", { name: /link button/i })).toBeInTheDocument();
+        expect(
+          screen.getByRole("link", { name: /link button/i }),
+        ).toBeInTheDocument();
       });
     });
 
@@ -119,7 +135,7 @@ describe("Button Component", () => {
         render(
           <Button variant="outline" size="lg" className="my-custom-class">
             Combined
-          </Button>
+          </Button>,
         );
         const button = screen.getByRole("button");
         expect(button).toHaveClass("border");

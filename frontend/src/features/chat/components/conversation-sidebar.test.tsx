@@ -61,9 +61,11 @@ describe("ConversationSidebar Component", () => {
             activeId={null}
             onNewChat={mockOnNewChat}
             onSelectConversation={mockOnSelect}
-          />
+          />,
         );
-        expect(screen.getByRole("button", { name: /new chat/i })).toBeInTheDocument();
+        expect(
+          screen.getByRole("button", { name: /new chat/i }),
+        ).toBeInTheDocument();
       });
 
       it("Then all conversations should be listed", () => {
@@ -73,7 +75,7 @@ describe("ConversationSidebar Component", () => {
             activeId={null}
             onNewChat={mockOnNewChat}
             onSelectConversation={mockOnSelect}
-          />
+          />,
         );
         expect(screen.getByText("First Conversation")).toBeInTheDocument();
         expect(screen.getByText("Second Conversation")).toBeInTheDocument();
@@ -90,7 +92,7 @@ describe("ConversationSidebar Component", () => {
             activeId={null}
             onNewChat={mockOnNewChat}
             onSelectConversation={mockOnSelect}
-          />
+          />,
         );
 
         await user.click(screen.getByRole("button", { name: /new chat/i }));
@@ -106,7 +108,7 @@ describe("ConversationSidebar Component", () => {
             activeId={null}
             onNewChat={mockOnNewChat}
             onSelectConversation={mockOnSelect}
-          />
+          />,
         );
         const buttons = screen.getAllByRole("listitem");
         expect(buttons).toHaveLength(3);
@@ -119,7 +121,7 @@ describe("ConversationSidebar Component", () => {
             activeId={null}
             onNewChat={mockOnNewChat}
             onSelectConversation={mockOnSelect}
-          />
+          />,
         );
         const buttons = screen.getAllByRole("listitem");
         expect(buttons).toHaveLength(3);
@@ -134,11 +136,13 @@ describe("ConversationSidebar Component", () => {
             activeId="2"
             onNewChat={mockOnNewChat}
             onSelectConversation={mockOnSelect}
-          />
+          />,
         );
         const activeButton = screen.getAllByRole("listitem")[1];
         expect(activeButton).toHaveClass("bg-[var(--color-primary)]");
-        expect(activeButton).toHaveClass("text-[var(--color-primary-foreground)]");
+        expect(activeButton).toHaveClass(
+          "text-[var(--color-primary-foreground)]",
+        );
       });
 
       it("Then inactive conversations should not have active styling", () => {
@@ -148,7 +152,7 @@ describe("ConversationSidebar Component", () => {
             activeId="2"
             onNewChat={mockOnNewChat}
             onSelectConversation={mockOnSelect}
-          />
+          />,
         );
         const inactiveButton = screen.getAllByRole("listitem")[0];
         expect(inactiveButton).not.toHaveClass("bg-[var(--color-primary)]");
@@ -163,7 +167,7 @@ describe("ConversationSidebar Component", () => {
             activeId={null}
             onNewChat={mockOnNewChat}
             onSelectConversation={mockOnSelect}
-          />
+          />,
         );
         const buttons = screen.getAllByRole("listitem");
         buttons.forEach((button) => {
@@ -180,7 +184,7 @@ describe("ConversationSidebar Component", () => {
             activeId={null}
             onNewChat={mockOnNewChat}
             onSelectConversation={mockOnSelect}
-          />
+          />,
         );
         expect(container.firstChild).toHaveClass("w-64");
       });
@@ -192,7 +196,7 @@ describe("ConversationSidebar Component", () => {
             activeId={null}
             onNewChat={mockOnNewChat}
             onSelectConversation={mockOnSelect}
-          />
+          />,
         );
         expect(container.firstChild).toHaveClass("border-r");
       });
@@ -204,7 +208,7 @@ describe("ConversationSidebar Component", () => {
             activeId={null}
             onNewChat={mockOnNewChat}
             onSelectConversation={mockOnSelect}
-          />
+          />,
         );
         expect(container.firstChild).toHaveClass("bg-[var(--color-muted)]");
       });
@@ -214,7 +218,8 @@ describe("ConversationSidebar Component", () => {
       it("Then long titles should be truncated", () => {
         const longTitleConversation: Conversation = {
           id: "4",
-          title: "This is a very long conversation title that should be truncated",
+          title:
+            "This is a very long conversation title that should be truncated",
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
           metadata: null,
@@ -225,9 +230,11 @@ describe("ConversationSidebar Component", () => {
             activeId={null}
             onNewChat={mockOnNewChat}
             onSelectConversation={mockOnSelect}
-          />
+          />,
         );
-        const titleSpan = screen.getByText(longTitleConversation.title as string);
+        const titleSpan = screen.getByText(
+          longTitleConversation.title as string,
+        );
         expect(titleSpan).toHaveClass("truncate");
       });
     });
@@ -240,9 +247,11 @@ describe("ConversationSidebar Component", () => {
             activeId={null}
             onNewChat={mockOnNewChat}
             onSelectConversation={mockOnSelect}
-          />
+          />,
         );
-        expect(screen.getByRole("button", { name: /new chat/i })).toBeInTheDocument();
+        expect(
+          screen.getByRole("button", { name: /new chat/i }),
+        ).toBeInTheDocument();
       });
 
       it("Then no conversation items should be rendered", () => {
@@ -252,7 +261,7 @@ describe("ConversationSidebar Component", () => {
             activeId={null}
             onNewChat={mockOnNewChat}
             onSelectConversation={mockOnSelect}
-          />
+          />,
         );
         expect(screen.queryByRole("listitem")).not.toBeInTheDocument();
       });

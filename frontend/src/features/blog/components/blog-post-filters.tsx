@@ -10,7 +10,14 @@ interface BlogPostFiltersProps {
   onStatusChange: (value: string) => void;
 }
 
-const STATUS_OPTIONS = ["", "draft", "under_review", "approved", "published", "archived"];
+const STATUS_OPTIONS = [
+  "",
+  "draft",
+  "under_review",
+  "approved",
+  "published",
+  "archived",
+];
 
 export function BlogPostFilters({
   search,

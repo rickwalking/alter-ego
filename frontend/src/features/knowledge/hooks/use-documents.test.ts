@@ -50,7 +50,11 @@ function createQueryClient() {
 
 function createWrapper(queryClient = createQueryClient()) {
   return function Wrapper({ children }: { children: ReactNode }) {
-    return createElement(QueryClientProvider, { client: queryClient }, children);
+    return createElement(
+      QueryClientProvider,
+      { client: queryClient },
+      children,
+    );
   };
 }
 
@@ -113,13 +117,16 @@ describe("useCreateDocument", () => {
   it("posts document content and invalidates documents", async () => {
     mockApiCall.mockResolvedValueOnce(MOCK_DOCUMENT);
     const queryClient = createQueryClient();
-    queryClient.setQueryData(["documents"], [
-      {
-        ...MOCK_DOCUMENT,
-        id: "doc-old",
-        title: "Old document",
-      },
-    ]);
+    queryClient.setQueryData(
+      ["documents"],
+      [
+        {
+          ...MOCK_DOCUMENT,
+          id: "doc-old",
+          title: "Old document",
+        },
+      ],
+    );
     const invalidateQueries = vi.spyOn(queryClient, "invalidateQueries");
     const { result } = renderHook(() => useCreateDocument(), {
       wrapper: createWrapper(queryClient),
@@ -166,14 +173,17 @@ describe("useDeleteDocument", () => {
   it("calls the DELETE endpoint for the given id", async () => {
     mockDelete.mockResolvedValueOnce(undefined);
     const queryClient = createQueryClient();
-    queryClient.setQueryData(["documents"], [
-      MOCK_DOCUMENT,
-      {
-        ...MOCK_DOCUMENT,
-        id: "doc-keep",
-        title: "Keep document",
-      },
-    ]);
+    queryClient.setQueryData(
+      ["documents"],
+      [
+        MOCK_DOCUMENT,
+        {
+          ...MOCK_DOCUMENT,
+          id: "doc-keep",
+          title: "Keep document",
+        },
+      ],
+    );
     queryClient.setQueryData(["document", "doc-1"], MOCK_DOCUMENT);
     const invalidateQueries = vi.spyOn(queryClient, "invalidateQueries");
     const removeQueries = vi.spyOn(queryClient, "removeQueries");
@@ -227,14 +237,17 @@ describe("useReprocessDocument", () => {
     };
     mockApiCall.mockResolvedValueOnce(reprocessedDocument);
     const queryClient = createQueryClient();
-    queryClient.setQueryData(["documents"], [
-      MOCK_DOCUMENT,
-      {
-        ...MOCK_DOCUMENT,
-        id: "doc-other",
-        title: "Other document",
-      },
-    ]);
+    queryClient.setQueryData(
+      ["documents"],
+      [
+        MOCK_DOCUMENT,
+        {
+          ...MOCK_DOCUMENT,
+          id: "doc-other",
+          title: "Other document",
+        },
+      ],
+    );
     const invalidateQueries = vi.spyOn(queryClient, "invalidateQueries");
     const { result } = renderHook(() => useReprocessDocument(), {
       wrapper: createWrapper(queryClient),

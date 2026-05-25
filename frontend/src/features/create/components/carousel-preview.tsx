@@ -45,9 +45,13 @@ export function CarouselPreview({ project }: CarouselPreviewProps) {
             {project.niche}
           </span>
         </div>
-        <h3 className="font-semibold text-lg">{project.title || project.topic}</h3>
+        <h3 className="font-semibold text-lg">
+          {project.title || project.topic}
+        </h3>
         {project.subtitle && (
-          <p className="text-[var(--color-text-muted)] text-sm">{project.subtitle}</p>
+          <p className="text-[var(--color-text-muted)] text-sm">
+            {project.subtitle}
+          </p>
         )}
         <Link
           href={ROUTE_PATHS.BLOG_POST(project.id)}

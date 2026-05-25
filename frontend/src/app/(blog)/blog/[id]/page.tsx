@@ -19,7 +19,10 @@ interface BlogPostPageProps {
   searchParams: Promise<{ lang?: string }>;
 }
 
-export default async function BlogPostPage({ params, searchParams }: BlogPostPageProps) {
+export default async function BlogPostPage({
+  params,
+  searchParams,
+}: BlogPostPageProps) {
   const { id } = await params;
   const { lang: langParam } = await searchParams;
 
@@ -32,7 +35,8 @@ export default async function BlogPostPage({ params, searchParams }: BlogPostPag
       : DEFAULT_LOCALE;
 
   const currentLang =
-    langParam === BLOG_LANGUAGES.ENGLISH || langParam === BLOG_LANGUAGES.PORTUGUESE
+    langParam === BLOG_LANGUAGES.ENGLISH ||
+    langParam === BLOG_LANGUAGES.PORTUGUESE
       ? langParam
       : cookieLang;
 

@@ -16,33 +16,37 @@ describe("API_ENDPOINTS", () => {
   // Scenario: API endpoints generate correct carousel URLs
   it("generates CAROUSEL_BLOG_LANG URL with id and language", () => {
     expect(API_ENDPOINTS.CAROUSEL_BLOG_LANG("abc-123", "pt")).toBe(
-      "/api/carousels/abc-123/blog/pt"
+      "/api/carousels/abc-123/blog/pt",
     );
   });
 
   it("generates CAROUSEL_BLOG_LANG URL for English", () => {
     expect(API_ENDPOINTS.CAROUSEL_BLOG_LANG("xyz", "en")).toBe(
-      "/api/carousels/xyz/blog/en"
+      "/api/carousels/xyz/blog/en",
     );
   });
 
   it("generates CAROUSEL_DESIGN URL", () => {
-    expect(API_ENDPOINTS.CAROUSEL_DESIGN("id1")).toBe("/api/carousels/id1/design");
+    expect(API_ENDPOINTS.CAROUSEL_DESIGN("id1")).toBe(
+      "/api/carousels/id1/design",
+    );
   });
 
   it("generates CAROUSEL_SLIDES URL", () => {
-    expect(API_ENDPOINTS.CAROUSEL_SLIDES("id1")).toBe("/api/carousels/id1/slides");
+    expect(API_ENDPOINTS.CAROUSEL_SLIDES("id1")).toBe(
+      "/api/carousels/id1/slides",
+    );
   });
 
   it("generates CAROUSEL_IMAGE URL", () => {
     expect(API_ENDPOINTS.CAROUSEL_IMAGE("id1", "hero")).toBe(
-      "/api/carousels/id1/images/hero"
+      "/api/carousels/id1/images/hero",
     );
   });
 
   it("generates CAROUSEL_IMAGE URL with extension", () => {
     expect(API_ENDPOINTS.CAROUSEL_IMAGE("id1", "slide_1.jpg")).toBe(
-      "/api/carousels/id1/images/slide_1.jpg"
+      "/api/carousels/id1/images/slide_1.jpg",
     );
   });
 

@@ -1,3 +1,5 @@
+"""Domain models for carousel workflow."""
+
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import StrEnum
@@ -45,6 +47,8 @@ class DesignTokens(TypedDict):
 
 
 class CarouselStatus(StrEnum):
+    """Status values for carousel workflow lifecycle."""
+
     PENDING = "pending"
     RESEARCHING = "researching"
     DRAFTING = "drafting"
@@ -56,6 +60,8 @@ class CarouselStatus(StrEnum):
 
 
 class CarouselTheme(StrEnum):
+    """Predefined themes for carousel content generation."""
+
     CYBERSECURITY = "cybersecurity"
     AI_COMPETITION = "ai_competition"
     DEVELOPER_SKILLS = "developer_skills"
@@ -65,6 +71,8 @@ class CarouselTheme(StrEnum):
 
 
 class ResearchSourceType(StrEnum):
+    """Source types for research data collection."""
+
     TWITTER = "twitter"
     BLOG = "blog"
     REDDIT = "reddit"

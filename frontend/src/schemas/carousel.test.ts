@@ -122,7 +122,9 @@ describe("Carousel Design Colors Schema", () => {
 
 describe("Carousel Design Typography Schema", () => {
   it("validates complete typography object", () => {
-    const result = carouselDesignTypographySchema.safeParse(VALID_DESIGN_TYPOGRAPHY);
+    const result = carouselDesignTypographySchema.safeParse(
+      VALID_DESIGN_TYPOGRAPHY,
+    );
     expect(result.success).toBe(true);
   });
 
@@ -174,7 +176,9 @@ describe("Carousel Design Layout Schema", () => {
 describe("Carousel Design Response Schema", () => {
   // Scenario: Validate carousel design tokens schema
   it("validates complete design response", () => {
-    const result = carouselDesignResponseSchema.safeParse(VALID_DESIGN_RESPONSE);
+    const result = carouselDesignResponseSchema.safeParse(
+      VALID_DESIGN_RESPONSE,
+    );
     expect(result.success).toBe(true);
   });
 
@@ -291,11 +295,15 @@ describe("Carousel Blog With Design Response Schema", () => {
   });
 
   it("rejects response missing design", () => {
-    const withoutDesign = omitKey({
-      ...VALID_BLOG_I18N,
-      design: VALID_DESIGN_RESPONSE,
-    }, "design");
-    const result = carouselBlogWithDesignResponseSchema.safeParse(withoutDesign);
+    const withoutDesign = omitKey(
+      {
+        ...VALID_BLOG_I18N,
+        design: VALID_DESIGN_RESPONSE,
+      },
+      "design",
+    );
+    const result =
+      carouselBlogWithDesignResponseSchema.safeParse(withoutDesign);
     expect(result.success).toBe(false);
   });
 });
@@ -339,10 +347,13 @@ describe("Carousel Project Response Schema", () => {
   });
 
   it("accepts missing blog_translations", () => {
-    const withoutTranslations = omitKey({
-      ...VALID_PROJECT,
-      blog_translations: undefined,
-    }, "blog_translations");
+    const withoutTranslations = omitKey(
+      {
+        ...VALID_PROJECT,
+        blog_translations: undefined,
+      },
+      "blog_translations",
+    );
     const result = carouselProjectResponseSchema.safeParse(withoutTranslations);
     expect(result.success).toBe(true);
   });

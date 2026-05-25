@@ -25,9 +25,12 @@ export function useEditorialWorkflow(projectId: string) {
       return;
     }
 
-    const source = new EventSource(API_ENDPOINTS.CAROUSEL_WORKFLOW_STREAM(projectId), {
-      withCredentials: true,
-    });
+    const source = new EventSource(
+      API_ENDPOINTS.CAROUSEL_WORKFLOW_STREAM(projectId),
+      {
+        withCredentials: true,
+      },
+    );
 
     const handlePhaseChange = (event: MessageEvent<string>): void => {
       try {
@@ -52,16 +55,19 @@ export function useEditorialWorkflow(projectId: string) {
       setLoading(true);
       setError(null);
       try {
-        const response = await authenticatedFetch(API_ENDPOINTS.CAROUSEL_WORKFLOW_START(projectId), {
-          method: HTTP_METHODS.POST,
-          body: JSON.stringify({
-            topic: input.topic,
-            audience: input.audience,
-            brief: input.brief,
-            sources: input.sources,
-            persona_id: input.personaId,
-          }),
-        });
+        const response = await authenticatedFetch(
+          API_ENDPOINTS.CAROUSEL_WORKFLOW_START(projectId),
+          {
+            method: HTTP_METHODS.POST,
+            body: JSON.stringify({
+              topic: input.topic,
+              audience: input.audience,
+              brief: input.brief,
+              sources: input.sources,
+              persona_id: input.personaId,
+            }),
+          },
+        );
         if (!response.ok) {
           throw new Error("Failed to start editorial workflow");
         }
@@ -69,7 +75,8 @@ export function useEditorialWorkflow(projectId: string) {
         setState(workflowState);
         return workflowState;
       } catch (err) {
-        const message = err instanceof Error ? err.message : "Workflow start failed";
+        const message =
+          err instanceof Error ? err.message : "Workflow start failed";
         setError(message);
         throw err;
       } finally {
@@ -80,14 +87,20 @@ export function useEditorialWorkflow(projectId: string) {
   );
 
   const resume = useCallback(
-    async (action: string, feedback?: string): Promise<EditorialWorkflowState> => {
+    async (
+      action: string,
+      feedback?: string,
+    ): Promise<EditorialWorkflowState> => {
       setLoading(true);
       setError(null);
       try {
-        const response = await authenticatedFetch(API_ENDPOINTS.CAROUSEL_WORKFLOW_RESUME(projectId), {
-          method: HTTP_METHODS.POST,
-          body: JSON.stringify({ action, feedback }),
-        });
+        const response = await authenticatedFetch(
+          API_ENDPOINTS.CAROUSEL_WORKFLOW_RESUME(projectId),
+          {
+            method: HTTP_METHODS.POST,
+            body: JSON.stringify({ action, feedback }),
+          },
+        );
         if (!response.ok) {
           throw new Error("Failed to resume editorial workflow");
         }
@@ -95,7 +108,8 @@ export function useEditorialWorkflow(projectId: string) {
         setState(workflowState);
         return workflowState;
       } catch (err) {
-        const message = err instanceof Error ? err.message : "Workflow resume failed";
+        const message =
+          err instanceof Error ? err.message : "Workflow resume failed";
         setError(message);
         throw err;
       } finally {
@@ -113,6 +127,7 @@ export function useEditorialWorkflow(projectId: string) {
     start,
     resume,
     approve: () => resume(EDITORIAL_REVIEW_ACTIONS.APPROVE),
-    reject: (feedback: string) => resume(EDITORIAL_REVIEW_ACTIONS.REJECT, feedback),
+    reject: (feedback: string) =>
+      resume(EDITORIAL_REVIEW_ACTIONS.REJECT, feedback),
   };
 }

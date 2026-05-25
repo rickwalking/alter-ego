@@ -52,9 +52,7 @@ def build_content_prompt(project: CarouselProject, research_context: str) -> str
     return prompt_text
 
 
-def build_caption_prompt(
-    project: CarouselProject, slide_headings: list[tuple[int, str]]
-) -> str:
+def build_caption_prompt(project: CarouselProject, slide_headings: list[tuple[int, str]]) -> str:
     from rag_backend.agents.prompts.registry import render_prompt
 
     prompt_text, _ = render_prompt(

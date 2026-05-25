@@ -21,7 +21,12 @@ export const FILE_TYPES = {
 } as const;
 
 /** Supported file extensions. */
-export const SUPPORTED_EXTENSIONS = [".pdf", ".txt", ".md", ".markdown"] as const;
+export const SUPPORTED_EXTENSIONS = [
+  ".pdf",
+  ".txt",
+  ".md",
+  ".markdown",
+] as const;
 
 /** Upload limits. */
 export const UPLOAD_LIMITS = {

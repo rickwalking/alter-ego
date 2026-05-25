@@ -78,7 +78,10 @@ export function ReviewAssignmentPanel({
           onChange={(e) => setDeadlineHours(e.target.value)}
         />
       </div>
-      <Button onClick={() => void handleAssign()} disabled={submitting || !reviewerId.trim()}>
+      <Button
+        onClick={() => void handleAssign()}
+        disabled={submitting || !reviewerId.trim()}
+      >
         {submitting ? t("assigning") : t("assignNotify")}
       </Button>
       {message && <p className="text-sm text-muted-foreground">{message}</p>}

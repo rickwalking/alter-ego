@@ -69,7 +69,7 @@ export function useReprocessDocument() {
       return apiCall<Document>(
         API_ENDPOINTS.DOCUMENT_REPROCESS(id),
         documentSchema,
-        { method: HTTP_METHODS.POST }
+        { method: HTTP_METHODS.POST },
       );
     },
     onSuccess: (document) => {

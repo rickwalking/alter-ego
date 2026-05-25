@@ -95,6 +95,9 @@ disallow_any_generics = true
 # disallow_any_decorated = true  # disabled: untyped library decorators trigger constantly
 show_error_codes = true
 
+# Exclude src/ directory when running from src/ to avoid src.rag_backend vs rag_backend conflict
+exclude = "src/"
+
 [[tool.mypy.overrides]]
 module = [
     "rag_backend.api.schemas",

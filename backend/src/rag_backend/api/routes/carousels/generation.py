@@ -32,9 +32,9 @@ router = APIRouter()
 @router.post(
     "/{project_id}/generate",
     responses={
-         401: {"description": ERR_NOT_AUTHENTICATED},
-         403: {"description": ERR_FORBIDDEN},
-         404: {"description": ERR_NOT_FOUND},
+        401: {"description": ERR_NOT_AUTHENTICATED},
+        403: {"description": ERR_FORBIDDEN},
+        404: {"description": ERR_NOT_FOUND},
     },
 )
 async def generate_carousel(
@@ -54,8 +54,8 @@ async def generate_carousel(
 @router.get(
     "/{project_id}/stream",
     responses={
-         401: {"description": ERR_NOT_AUTHENTICATED},
-         403: {"description": ERR_FORBIDDEN},
+        401: {"description": ERR_NOT_AUTHENTICATED},
+        403: {"description": ERR_FORBIDDEN},
     },
 )
 async def stream_carousel(
@@ -75,9 +75,9 @@ async def stream_carousel(
 @router.post(
     "/{project_id}/resume",
     responses={
-         401: {"description": ERR_NOT_AUTHENTICATED},
-         403: {"description": ERR_FORBIDDEN},
-         404: {"description": ERR_NOT_FOUND},
+        401: {"description": ERR_NOT_AUTHENTICATED},
+        403: {"description": ERR_FORBIDDEN},
+        404: {"description": ERR_NOT_FOUND},
         503: {"description": "Resume unavailable"},
     },
 )
@@ -105,8 +105,8 @@ async def resume_carousel(
 @router.get(
     "/{project_id}/status",
     responses={
-         401: {"description": ERR_NOT_AUTHENTICATED},
-         404: {"description": ERR_NOT_FOUND},
+        401: {"description": ERR_NOT_AUTHENTICATED},
+        404: {"description": ERR_NOT_FOUND},
     },
 )
 async def get_carousel_status(

@@ -6,7 +6,8 @@ export const BLOG_AI_ACTIONS = {
   ADD_OPINION: "add_opinion",
 } as const;
 
-export type BlogAiAction = (typeof BLOG_AI_ACTIONS)[keyof typeof BLOG_AI_ACTIONS];
+export type BlogAiAction =
+  (typeof BLOG_AI_ACTIONS)[keyof typeof BLOG_AI_ACTIONS];
 
 /** Voice match threshold aligned with backend. */
 export const VOICE_MATCH_MIN_SCORE = 70;

@@ -12,7 +12,10 @@ type ScheduledPublishPickerProps = {
   onScheduled?: () => void;
 };
 
-export function ScheduledPublishPicker({ postId, onScheduled }: ScheduledPublishPickerProps) {
+export function ScheduledPublishPicker({
+  postId,
+  onScheduled,
+}: ScheduledPublishPickerProps) {
   const t = useTranslations("workflow.schedule");
   const [datetime, setDatetime] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -23,11 +26,16 @@ export function ScheduledPublishPicker({ postId, onScheduled }: ScheduledPublish
     setSubmitting(true);
     setMessage(null);
     try {
-      const response = await authenticatedFetch(WORKFLOW_API.BLOG_SCHEDULE(postId), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ scheduled_publish_at: new Date(datetime).toISOString() }),
-      });
+      const response = await authenticatedFetch(
+        WORKFLOW_API.BLOG_SCHEDULE(postId),
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            scheduled_publish_at: new Date(datetime).toISOString(),
+          }),
+        },
+      );
       if (!response.ok) {
         throw new Error(t("failed"));
       }
@@ -52,7 +60,10 @@ export function ScheduledPublishPicker({ postId, onScheduled }: ScheduledPublish
           onChange={(e) => setDatetime(e.target.value)}
         />
       </div>
-      <Button onClick={() => void handleSchedule()} disabled={submitting || !datetime}>
+      <Button
+        onClick={() => void handleSchedule()}
+        disabled={submitting || !datetime}
+      >
         {submitting ? t("scheduling") : t("schedule")}
       </Button>
       {message && <p className="text-sm text-muted-foreground">{message}</p>}

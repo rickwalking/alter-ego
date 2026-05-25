@@ -55,9 +55,9 @@ router = APIRouter()
 @router.get(
     "/{project_id}/pdf",
     responses={
-         401: {"description": ERR_NOT_AUTHENTICATED},
-         403: {"description": ERR_FORBIDDEN},
-         404: {"description": ERR_NOT_FOUND},
+        401: {"description": ERR_NOT_AUTHENTICATED},
+        403: {"description": ERR_FORBIDDEN},
+        404: {"description": ERR_NOT_FOUND},
     },
 )
 async def get_carousel_pdf(
@@ -86,7 +86,7 @@ async def get_carousel_pdf(
 @router.get(
     "/{project_id}/blog",
     responses={
-         404: {"description": ERR_NOT_FOUND},
+        404: {"description": ERR_NOT_FOUND},
     },
 )
 async def get_carousel_blog(
@@ -109,7 +109,7 @@ async def get_carousel_blog(
 @router.get(
     "/{project_id}/blog/{lang}",
     responses={
-         404: {"description": ERR_NOT_FOUND},
+        404: {"description": ERR_NOT_FOUND},
     },
 )
 async def get_carousel_blog_i18n(
@@ -157,8 +157,8 @@ async def get_carousel_blog_i18n(
 @router.get(
     "/{project_id}/design",
     responses={
-         401: {"description": ERR_NOT_AUTHENTICATED},
-         404: {"description": ERR_NOT_FOUND},
+        401: {"description": ERR_NOT_AUTHENTICATED},
+        404: {"description": ERR_NOT_FOUND},
     },
 )
 async def get_carousel_design(
@@ -215,7 +215,7 @@ async def get_carousel_design(
 @router.get(
     "/{project_id}/images/{filename}",
     responses={
-         404: {"description": ERR_NOT_FOUND},
+        404: {"description": ERR_NOT_FOUND},
     },
 )
 async def get_carousel_image(
@@ -238,7 +238,7 @@ async def get_carousel_image(
 @router.get(
     "/{project_id}/slide-images/{lang}/{filename}",
     responses={
-         404: {"description": ERR_NOT_FOUND},
+        404: {"description": ERR_NOT_FOUND},
     },
 )
 async def get_carousel_slide_image(
@@ -262,8 +262,8 @@ async def get_carousel_slide_image(
 @router.get(
     "/{project_id}/slides",
     responses={
-         401: {"description": ERR_NOT_AUTHENTICATED},
-         404: {"description": ERR_NOT_FOUND},
+        401: {"description": ERR_NOT_AUTHENTICATED},
+        404: {"description": ERR_NOT_FOUND},
     },
 )
 async def get_carousel_slides(
@@ -282,9 +282,9 @@ async def get_carousel_slides(
 @router.get(
     "/{project_id}/download",
     responses={
-         401: {"description": ERR_NOT_AUTHENTICATED},
-         403: {"description": ERR_FORBIDDEN},
-         404: {"description": ERR_NOT_FOUND},
+        401: {"description": ERR_NOT_AUTHENTICATED},
+        403: {"description": ERR_FORBIDDEN},
+        404: {"description": ERR_NOT_FOUND},
     },
 )
 async def download_carousel(

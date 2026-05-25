@@ -4,7 +4,11 @@
 
 import { useState, useEffect } from "react";
 import { authenticatedFetch } from "@/lib/authenticated-fetch";
-import type { PersonaProfile, PersonaCreatePayload, PersonaUpdatePayload } from "../types";
+import type {
+  PersonaProfile,
+  PersonaCreatePayload,
+  PersonaUpdatePayload,
+} from "../types";
 
 const API_BASE = "/api";
 

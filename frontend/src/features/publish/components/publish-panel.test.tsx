@@ -51,7 +51,9 @@ vi.mock("next-intl", () => ({
   }),
 }));
 
-function buildProject(overrides?: Partial<CarouselProjectResponse>): CarouselProjectResponse {
+function buildProject(
+  overrides?: Partial<CarouselProjectResponse>,
+): CarouselProjectResponse {
   return {
     id: "proj-1",
     topic: "Topic",
@@ -113,7 +115,9 @@ describe("PublishPanel", () => {
   it("renders 4 slides and 4 dot indicators", () => {
     render(<PublishPanel project={buildProject()} />);
     expect(screen.getAllByRole("img")).toHaveLength(4);
-    expect(screen.getAllByRole("button", { name: /go to slide/i })).toHaveLength(4);
+    expect(
+      screen.getAllByRole("button", { name: /go to slide/i }),
+    ).toHaveLength(4);
   });
 
   // Scenario: Instagram caption editor shows live char counter
@@ -159,7 +163,8 @@ describe("PublishPanel", () => {
     render(<PublishPanel project={buildProject()} />);
     await user.click(screen.getByRole("tab", { name: "LinkedIn" }));
     expect(
-      (screen.getByLabelText("LinkedIn post (PT)") as HTMLTextAreaElement).value,
+      (screen.getByLabelText("LinkedIn post (PT)") as HTMLTextAreaElement)
+        .value,
     ).toBe("Post em português");
     // Two "en" tabs now exist (viewer toggle + LinkedIn language toggle).
     // The LinkedIn one lives inside the LinkedIn tab's tablist; pick the
@@ -167,7 +172,8 @@ describe("PublishPanel", () => {
     const enTabs = screen.getAllByRole("tab", { name: "en" });
     await user.click(enTabs[0]);
     expect(
-      (screen.getByLabelText("LinkedIn post (EN)") as HTMLTextAreaElement).value,
+      (screen.getByLabelText("LinkedIn post (EN)") as HTMLTextAreaElement)
+        .value,
     ).toBe("English post body");
   });
 
@@ -175,9 +181,7 @@ describe("PublishPanel", () => {
   it("Download PDF link points to the pdf endpoint", () => {
     render(<PublishPanel project={buildProject()} />);
     const pdfLink = screen.getByRole("link", { name: /Download PDF/ });
-    expect(pdfLink.getAttribute("href")).toContain(
-      "/api/carousels/proj-1/pdf",
-    );
+    expect(pdfLink.getAttribute("href")).toContain("/api/carousels/proj-1/pdf");
   });
 
   // Scenario: Open LinkedIn points to the compose URL

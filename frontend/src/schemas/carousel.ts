@@ -28,7 +28,10 @@ export const carouselDesignImagesSchema = z.object({
   slides: z.array(z.string()),
   rendered_slides_pt: z.array(z.string()).nullable().optional(),
   rendered_slides_en: z.array(z.string()).nullable().optional(),
-  blog_image_map: z.array(carouselBlogImageMapEntrySchema).nullable().optional(),
+  blog_image_map: z
+    .array(carouselBlogImageMapEntrySchema)
+    .nullable()
+    .optional(),
 });
 
 export const carouselDesignLayoutSchema = z.object({
@@ -107,12 +110,13 @@ export const carouselSlideResponseSchema = z.object({
  * Only these (model, style) tuples are wired in the backend registry.
  * Anything else is rejected by the API with 422 before the pipeline runs.
  */
-export const SUPPORTED_IMAGE_COMBOS: ReadonlyArray<readonly [string, string]> = [
-  ["gemini", "comic_neon"],
-  ["openai", "cinematic"],
-  ["openai", "hyperreal"],
-  ["openai", "neo_anime"],
-];
+export const SUPPORTED_IMAGE_COMBOS: ReadonlyArray<readonly [string, string]> =
+  [
+    ["gemini", "comic_neon"],
+    ["openai", "cinematic"],
+    ["openai", "hyperreal"],
+    ["openai", "neo_anime"],
+  ];
 
 export const carouselCreateRequestSchema = z
   .object({
@@ -177,12 +181,26 @@ export const carouselStreamEventSchema = z.object({
 export type CarouselPhaseProgress = z.infer<typeof carouselPhaseProgressSchema>;
 export type CarouselStreamEvent = z.infer<typeof carouselStreamEventSchema>;
 
-export type CarouselBlogImageMapEntry = z.infer<typeof carouselBlogImageMapEntrySchema>;
-export type CarouselDesignResponse = z.infer<typeof carouselDesignResponseSchema>;
-export type CarouselBlogI18nResponse = z.infer<typeof carouselBlogI18nResponseSchema>;
-export type CarouselBlogWithDesignResponse = z.infer<typeof carouselBlogWithDesignResponseSchema>;
-export type CarouselProjectResponse = z.infer<typeof carouselProjectResponseSchema>;
-export type CarouselProjectListResponse = z.infer<typeof carouselProjectListResponseSchema>;
+export type CarouselBlogImageMapEntry = z.infer<
+  typeof carouselBlogImageMapEntrySchema
+>;
+export type CarouselDesignResponse = z.infer<
+  typeof carouselDesignResponseSchema
+>;
+export type CarouselBlogI18nResponse = z.infer<
+  typeof carouselBlogI18nResponseSchema
+>;
+export type CarouselBlogWithDesignResponse = z.infer<
+  typeof carouselBlogWithDesignResponseSchema
+>;
+export type CarouselProjectResponse = z.infer<
+  typeof carouselProjectResponseSchema
+>;
+export type CarouselProjectListResponse = z.infer<
+  typeof carouselProjectListResponseSchema
+>;
 export type CarouselSlideResponse = z.infer<typeof carouselSlideResponseSchema>;
 export type CarouselCreateRequest = z.infer<typeof carouselCreateRequestSchema>;
-export type CarouselStatusResponse = z.infer<typeof carouselStatusResponseSchema>;
+export type CarouselStatusResponse = z.infer<
+  typeof carouselStatusResponseSchema
+>;

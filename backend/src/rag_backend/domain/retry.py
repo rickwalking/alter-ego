@@ -15,13 +15,15 @@ from rag_backend.domain.constants.retry import (
     DEFAULT_MIN_WAIT_SECONDS,
 )
 
-_RETRYABLE_HTTP_CODES: frozenset[int] = frozenset({
-    429,  # Too Many Requests
-    500,  # Internal Server Error
-    502,  # Bad Gateway
-    503,  # Service Unavailable
-    504,  # Gateway Timeout
-})
+_RETRYABLE_HTTP_CODES: frozenset[int] = frozenset(
+    {
+        429,  # Too Many Requests
+        500,  # Internal Server Error
+        502,  # Bad Gateway
+        503,  # Service Unavailable
+        504,  # Gateway Timeout
+    }
+)
 
 
 def _is_retryable_http(exc: BaseException) -> bool:

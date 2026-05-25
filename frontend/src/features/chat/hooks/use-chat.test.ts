@@ -57,7 +57,11 @@ function createQueryClient() {
 
 function createWrapper(queryClient = createQueryClient()) {
   return function Wrapper({ children }: { children: ReactNode }) {
-    return createElement(QueryClientProvider, { client: queryClient }, children);
+    return createElement(
+      QueryClientProvider,
+      { client: queryClient },
+      children,
+    );
   };
 }
 
@@ -156,13 +160,16 @@ describe("useCreateConversation", () => {
   it("posts title and metadata then invalidates conversations", async () => {
     mockApiCall.mockResolvedValueOnce(MOCK_CONVERSATION);
     const queryClient = createQueryClient();
-    queryClient.setQueryData(["conversations"], [
-      {
-        ...MOCK_CONVERSATION,
-        id: "conv-old",
-        title: "Old conversation",
-      },
-    ]);
+    queryClient.setQueryData(
+      ["conversations"],
+      [
+        {
+          ...MOCK_CONVERSATION,
+          id: "conv-old",
+          title: "Old conversation",
+        },
+      ],
+    );
     const invalidateQueries = vi.spyOn(queryClient, "invalidateQueries");
     const { result } = renderHook(() => useCreateConversation(), {
       wrapper: createWrapper(queryClient),
@@ -240,14 +247,17 @@ describe("useDeleteConversation", () => {
   it("calls the DELETE endpoint for the given id", async () => {
     mockDelete.mockResolvedValueOnce(undefined);
     const queryClient = createQueryClient();
-    queryClient.setQueryData(["conversations"], [
-      MOCK_CONVERSATION,
-      {
-        ...MOCK_CONVERSATION,
-        id: "conv-2",
-        title: "Keep me",
-      },
-    ]);
+    queryClient.setQueryData(
+      ["conversations"],
+      [
+        MOCK_CONVERSATION,
+        {
+          ...MOCK_CONVERSATION,
+          id: "conv-2",
+          title: "Keep me",
+        },
+      ],
+    );
     queryClient.setQueryData(["conversation", "conv-1"], MOCK_CONVERSATION);
     queryClient.setQueryData([MESSAGES_KEY, "conv-1"], [MOCK_MESSAGE]);
     const invalidateQueries = vi.spyOn(queryClient, "invalidateQueries");

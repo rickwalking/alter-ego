@@ -1,3 +1,5 @@
+"""Protocols for carousel workflow services."""
+
 from collections.abc import AsyncIterator, Mapping
 from typing import Protocol
 from uuid import UUID
@@ -70,7 +72,10 @@ class ResearchTool(Protocol):
 
 
 class CarouselAgent(Protocol):
-    """Protocol for the carousel content generation sub-agent."""
+    """Protocol for the carousel content generation sub-agent.
+
+    Orchestrates the full carousel creation pipeline from research to export.
+    """
 
     async def execute_pipeline(
         self,

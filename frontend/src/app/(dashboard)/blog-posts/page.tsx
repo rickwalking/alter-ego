@@ -74,7 +74,13 @@ export default function BlogPostsPage() {
   const filteredPosts = posts;
 
   const resetForm = () => {
-    setFormData({ title: "", slug: "", content: {}, excerpt: "", author_id: "" });
+    setFormData({
+      title: "",
+      slug: "",
+      content: {},
+      excerpt: "",
+      author_id: "",
+    });
     setBodyText("");
     setSelectedText("");
     setFeaturedImageUrl(null);
@@ -105,7 +111,9 @@ export default function BlogPostsPage() {
       meta_description: post.meta_description || "",
     });
     const contentText =
-      typeof post.content === "object" && post.content !== null && "body" in post.content
+      typeof post.content === "object" &&
+      post.content !== null &&
+      "body" in post.content
         ? String((post.content as { body?: string }).body ?? "")
         : "";
     setBodyText(contentText);
@@ -118,9 +126,10 @@ export default function BlogPostsPage() {
   useEditorShortcuts(
     {
       onSave: editingId ? () => void handleUpdate(editingId) : undefined,
-      onSubmitReview: editingId && formData.reviewer_id
-        ? () => void submitForReview(editingId, formData.reviewer_id!)
-        : undefined,
+      onSubmitReview:
+        editingId && formData.reviewer_id
+          ? () => void submitForReview(editingId, formData.reviewer_id!)
+          : undefined,
       onShowHelp: () => setShowShortcuts(true),
     },
     Boolean(editingId || isCreating),
@@ -128,8 +137,12 @@ export default function BlogPostsPage() {
 
   const getStatusBadge = (status: string) => (
     <div className="flex items-center gap-2">
-      <div className={`w-2 h-2 rounded-full ${STATUS_COLORS[status] ?? "bg-gray-500"}`} />
-      <span className="text-sm font-medium">{t(`status.${status}` as "status.draft")}</span>
+      <div
+        className={`w-2 h-2 rounded-full ${STATUS_COLORS[status] ?? "bg-gray-500"}`}
+      />
+      <span className="text-sm font-medium">
+        {t(`status.${status}` as "status.draft")}
+      </span>
     </div>
   );
 
@@ -180,39 +193,54 @@ export default function BlogPostsPage() {
                 <Field label={t("fields.title")}>
                   <Input
                     value={formData.title}
-                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, title: e.target.value })
+                    }
                   />
                 </Field>
                 <Field label={t("fields.slug")}>
                   <Input
                     value={formData.slug || ""}
-                    onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, slug: e.target.value })
+                    }
                   />
                 </Field>
                 <Field label={t("fields.excerpt")}>
                   <Textarea
                     value={formData.excerpt || ""}
-                    onChange={(e) => setFormData({ ...formData, excerpt: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, excerpt: e.target.value })
+                    }
                     rows={2}
                   />
                 </Field>
                 <Field label={t("fields.metaTitle")}>
                   <Input
                     value={formData.meta_title || ""}
-                    onChange={(e) => setFormData({ ...formData, meta_title: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, meta_title: e.target.value })
+                    }
                   />
                 </Field>
                 <Field label={t("fields.metaDescription")}>
                   <Textarea
                     value={formData.meta_description || ""}
-                    onChange={(e) => setFormData({ ...formData, meta_description: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        meta_description: e.target.value,
+                      })
+                    }
                     rows={2}
                   />
                 </Field>
                 <Field label={t("fields.reviewerId")}>
                   <Input
                     value={formData.reviewer_id || ""}
-                    onChange={(e) => setFormData({ ...formData, reviewer_id: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, reviewer_id: e.target.value })
+                    }
                   />
                 </Field>
                 <Field label={t("fields.content")}>
@@ -220,11 +248,19 @@ export default function BlogPostsPage() {
                     value={bodyText}
                     onChange={(e) => {
                       setBodyText(e.target.value);
-                      setFormData({ ...formData, content: { body: e.target.value } });
+                      setFormData({
+                        ...formData,
+                        content: { body: e.target.value },
+                      });
                     }}
                     onSelect={(e) => {
                       const target = e.target as HTMLTextAreaElement;
-                      setSelectedText(target.value.substring(target.selectionStart, target.selectionEnd));
+                      setSelectedText(
+                        target.value.substring(
+                          target.selectionStart,
+                          target.selectionEnd,
+                        ),
+                      );
                     }}
                     rows={8}
                   />
@@ -253,11 +289,19 @@ export default function BlogPostsPage() {
                     setFormData({ ...formData, content: { body: text } });
                   }}
                 />
-                <Button type="button" variant="outline" onClick={() => setShowImageModal(true)}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setShowImageModal(true)}
+                >
                   {t("actions.generateImage")}
                 </Button>
                 {featuredImageUrl && (
-                  <img src={featuredImageUrl} alt="Featured" className="h-12 w-12 rounded object-cover" />
+                  <img
+                    src={featuredImageUrl}
+                    alt="Featured"
+                    className="h-12 w-12 rounded object-cover"
+                  />
                 )}
                 <ImageGenModal
                   postId={editingId}
@@ -276,10 +320,21 @@ export default function BlogPostsPage() {
               </>
             )}
             <div className="flex gap-2">
-              <Button onClick={() => (editingId ? void handleUpdate(editingId) : void handleCreate())}>
+              <Button
+                onClick={() =>
+                  editingId ? void handleUpdate(editingId) : void handleCreate()
+                }
+              >
                 {editingId ? t("actions.update") : t("actions.create")}
               </Button>
-              <Button variant="outline" onClick={() => { setIsCreating(false); setEditingId(null); resetForm(); }}>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setIsCreating(false);
+                  setEditingId(null);
+                  resetForm();
+                }}
+              >
                 {t("actions.cancel")}
               </Button>
             </div>
@@ -287,7 +342,10 @@ export default function BlogPostsPage() {
         </Card>
       )}
 
-      <KeyboardShortcutsHelp open={showShortcuts} onClose={() => setShowShortcuts(false)} />
+      <KeyboardShortcutsHelp
+        open={showShortcuts}
+        onClose={() => setShowShortcuts(false)}
+      />
 
       <div className="grid gap-4">
         {filteredPosts.length === 0 ? (
@@ -307,12 +365,21 @@ export default function BlogPostsPage() {
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {post.status === "draft" && post.reviewer_id && (
-                      <Button size="sm" onClick={() => void submitForReview(post.id, post.reviewer_id!)}>
+                      <Button
+                        size="sm"
+                        onClick={() =>
+                          void submitForReview(post.id, post.reviewer_id!)
+                        }
+                      >
                         {t("actions.submitReview")}
                       </Button>
                     )}
                     {post.status === "under_review" && (
-                      <Button size="sm" variant="outline" onClick={() => void approve(post.id)}>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => void approve(post.id)}
+                      >
                         {t("actions.approve")}
                       </Button>
                     )}
@@ -321,14 +388,19 @@ export default function BlogPostsPage() {
                         {t("actions.publish")}
                       </Button>
                     )}
-                    <Button variant="outline" size="sm" onClick={() => startEdit(post)}>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => startEdit(post)}
+                    >
                       {t("actions.edit")}
                     </Button>
                     <Button
                       variant="destructive"
                       size="sm"
                       onClick={() => {
-                        if (window.confirm(t("confirmDelete"))) void deletePost(post.id);
+                        if (window.confirm(t("confirmDelete")))
+                          void deletePost(post.id);
                       }}
                     >
                       {t("actions.delete")}
@@ -337,7 +409,11 @@ export default function BlogPostsPage() {
                 </div>
               </CardHeader>
               <CardContent>
-                {post.excerpt && <p className="text-sm text-muted-foreground mb-4">{post.excerpt}</p>}
+                {post.excerpt && (
+                  <p className="text-sm text-muted-foreground mb-4">
+                    {post.excerpt}
+                  </p>
+                )}
               </CardContent>
             </Card>
           ))
@@ -347,7 +423,13 @@ export default function BlogPostsPage() {
   );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
   return (
     <div>
       <label className="text-sm font-medium mb-2 block">{label}</label>

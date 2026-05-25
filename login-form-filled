@@ -1,0 +1,19 @@
+- document [ref=e16]:
+  - generic [ref=e1]:
+    - generic [ref=e3]:
+      - generic [ref=e4]:
+        - heading "Sign In" [level=1] [ref=e5]
+        - paragraph [ref=e6]: Access your account
+      - generic [ref=e7]:
+        - generic [ref=e8]:
+          - generic [ref=e9]: Email
+          - textbox "Email" [ref=e10]:
+            - /placeholder: you@example.com
+            - text: admin@alterego.app
+        - generic [ref=e11]:
+          - generic [ref=e12]: Password
+          - textbox "Password" [active] [ref=e13]:
+            - /placeholder: Enter your password
+            - text: "#CD3w6xspHDMm%FA"
+        - button "Sign In" [ref=e14]
+    - alert [ref=e15]

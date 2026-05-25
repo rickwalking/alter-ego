@@ -15,7 +15,10 @@ export interface UseSseChatReturn {
   messages: Message[];
   isStreaming: boolean;
   error: string | null;
-  sendMessage: (content: string, overrideConversationId?: string) => Promise<void>;
+  sendMessage: (
+    content: string,
+    overrideConversationId?: string,
+  ) => Promise<void>;
   startNewChat: () => void;
 }
 
@@ -29,7 +32,8 @@ export function useSseChat(options: UseSseChatOptions = {}): UseSseChatReturn {
 
   const conversationId = options.conversationId ?? null;
 
-  const { data: historyMessages = [] } = useConversationMessages(conversationId);
+  const { data: historyMessages = [] } =
+    useConversationMessages(conversationId);
 
   const startNewChat = useCallback(() => {
     if (abortRef.current) {
@@ -95,7 +99,9 @@ export function useSseChat(options: UseSseChatOptions = {}): UseSseChatReturn {
               const newMsg: Message = {
                 id: streamingMsgIdRef.current || `stream-${Date.now()}`,
                 role: "assistant",
-                content: (last?.role === "assistant" ? last.content : "") + tokenContent,
+                content:
+                  (last?.role === "assistant" ? last.content : "") +
+                  tokenContent,
                 sources: [],
                 created_at: new Date().toISOString(),
               };
@@ -109,11 +115,16 @@ export function useSseChat(options: UseSseChatOptions = {}): UseSseChatReturn {
 
           if (event.event === SSE_EVENT_TYPE.SOURCES) {
             // Backend sends sources in data.content (e.g. {"type":"sources","content":[]})
-            const sources = (data.sources || data.content) as Message["sources"] | undefined;
+            const sources = (data.sources || data.content) as
+              | Message["sources"]
+              | undefined;
             setOptimisticMessages((prev) => {
               const last = prev[prev.length - 1];
               if (last?.role === "assistant") {
-                return [...prev.slice(0, -1), { ...last, sources: sources ?? [] }];
+                return [
+                  ...prev.slice(0, -1),
+                  { ...last, sources: sources ?? [] },
+                ];
               }
               return prev;
             });

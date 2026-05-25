@@ -1,7 +1,14 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { Badge, Card, CardContent, CardHeader, CardTitle, Spinner } from "@/components/ui";
+import {
+  Badge,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  Spinner,
+} from "@/components/ui";
 import { useContentCalendar } from "@/features/workflow/hooks/use-content-calendar";
 import { format, parseISO } from "date-fns";
 
@@ -25,12 +32,15 @@ export function ContentCalendarView() {
     return null;
   }
 
-  const grouped = calendar.items.reduce<Record<string, typeof calendar.items>>((acc, item) => {
-    const day = format(parseISO(item.event_date), "yyyy-MM-dd");
-    if (!acc[day]) acc[day] = [];
-    acc[day].push(item);
-    return acc;
-  }, {});
+  const grouped = calendar.items.reduce<Record<string, typeof calendar.items>>(
+    (acc, item) => {
+      const day = format(parseISO(item.event_date), "yyyy-MM-dd");
+      if (!acc[day]) acc[day] = [];
+      acc[day].push(item);
+      return acc;
+    },
+    {},
+  );
 
   const days = Object.keys(grouped).sort();
 
@@ -42,7 +52,9 @@ export function ContentCalendarView() {
       {days.map((day) => (
         <Card key={day}>
           <CardHeader className="pb-2">
-            <CardTitle className="text-base">{format(parseISO(day), "MMMM d, yyyy")}</CardTitle>
+            <CardTitle className="text-base">
+              {format(parseISO(day), "MMMM d, yyyy")}
+            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
             {grouped[day]?.map((item) => (
@@ -52,7 +64,9 @@ export function ContentCalendarView() {
               >
                 <div>
                   <p className="font-medium text-sm">{item.title}</p>
-                  <p className="text-xs text-muted-foreground">{item.content_type}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {item.content_type}
+                  </p>
                 </div>
                 <div className="flex gap-2">
                   <Badge variant="outline">{item.status}</Badge>

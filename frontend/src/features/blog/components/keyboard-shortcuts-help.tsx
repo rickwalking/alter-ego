@@ -2,14 +2,23 @@
 
 import { useTranslations } from "next-intl";
 import { EDITOR_SHORTCUTS } from "@/constants/editor-shortcuts";
-import { Button, Card, CardContent, CardHeader, CardTitle } from "@/components/ui";
+import {
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui";
 
 interface KeyboardShortcutsHelpProps {
   open: boolean;
   onClose: () => void;
 }
 
-export function KeyboardShortcutsHelp({ open, onClose }: KeyboardShortcutsHelpProps) {
+export function KeyboardShortcutsHelp({
+  open,
+  onClose,
+}: KeyboardShortcutsHelpProps) {
   const t = useTranslations("blogEditorial.shortcuts");
 
   if (!open) return null;

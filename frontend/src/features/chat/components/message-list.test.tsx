@@ -42,7 +42,9 @@ describe("MessageList Component", () => {
     describe("When the MessageList is rendered with no messages", () => {
       it("Then it should display the empty state message", () => {
         render(<MessageList messages={[]} />);
-        expect(screen.getByText("Start a conversation by typing a message below.")).toBeInTheDocument();
+        expect(
+          screen.getByText("Start a conversation by typing a message below."),
+        ).toBeInTheDocument();
       });
     });
   });
@@ -59,7 +61,9 @@ describe("MessageList Component", () => {
       it("Then message content should be visible", () => {
         render(<MessageList messages={mockMessages} />);
         expect(screen.getByText("Hello!")).toBeInTheDocument();
-        expect(screen.getByText("Hi there! How can I help you?")).toBeInTheDocument();
+        expect(
+          screen.getByText("Hi there! How can I help you?"),
+        ).toBeInTheDocument();
         expect(screen.getByText("I have a question.")).toBeInTheDocument();
       });
 
@@ -73,14 +77,18 @@ describe("MessageList Component", () => {
       it("Then each message should have a unique key", () => {
         render(<MessageList messages={mockMessages} />);
         mockMessages.forEach((message) => {
-          expect(screen.getByTestId(`message-${message.id}`)).toBeInTheDocument();
+          expect(
+            screen.getByTestId(`message-${message.id}`),
+          ).toBeInTheDocument();
         });
       });
     });
 
     describe("When messages are updated", () => {
       it("Then new messages should be added to the list", () => {
-        const { rerender } = render(<MessageList messages={mockMessages.slice(0, 1)} />);
+        const { rerender } = render(
+          <MessageList messages={mockMessages.slice(0, 1)} />,
+        );
         expect(screen.getByTestId("message-1")).toBeInTheDocument();
         expect(screen.queryByTestId("message-2")).not.toBeInTheDocument();
 

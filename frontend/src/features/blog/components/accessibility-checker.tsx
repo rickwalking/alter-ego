@@ -1,7 +1,16 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { Alert, AlertDescription, Badge, Button, Card, CardContent, CardHeader, CardTitle } from "@/components/ui";
+import {
+  Alert,
+  AlertDescription,
+  Badge,
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui";
 import { useAccessibilityCheck } from "@/features/blog/hooks/use-accessibility-check";
 
 interface AccessibilityCheckerProps {
@@ -18,7 +27,12 @@ export function AccessibilityChecker({ postId }: AccessibilityCheckerProps) {
         <div className="flex items-center justify-between">
           <CardTitle className="text-sm">{t("title")}</CardTitle>
           {postId && (
-            <Button size="sm" variant="outline" onClick={() => void check()} disabled={loading}>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => void check()}
+              disabled={loading}
+            >
               {loading ? t("checking") : t("runCheck")}
             </Button>
           )}
@@ -39,7 +53,10 @@ export function AccessibilityChecker({ postId }: AccessibilityCheckerProps) {
               <p className="text-sm text-green-700">{t("noIssues")}</p>
             )}
             {result.issues.map((issue) => (
-              <Alert key={issue.code} variant={issue.severity === "error" ? "destructive" : "default"}>
+              <Alert
+                key={issue.code}
+                variant={issue.severity === "error" ? "destructive" : "default"}
+              >
                 <AlertDescription>{issue.message}</AlertDescription>
               </Alert>
             ))}

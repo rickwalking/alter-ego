@@ -9,7 +9,7 @@ describe("Container Component", () => {
         render(
           <Container data-testid="container">
             <p>Content</p>
-          </Container>
+          </Container>,
         );
         expect(screen.getByTestId("container")).toBeInTheDocument();
         expect(screen.getByText("Content")).toBeInTheDocument();
@@ -46,7 +46,7 @@ describe("Container Component", () => {
         render(
           <Container className="custom-class" data-testid="container">
             Content
-          </Container>
+          </Container>,
         );
         expect(screen.getByTestId("container")).toHaveClass("custom-class");
       });
@@ -59,7 +59,7 @@ describe("Container Component", () => {
             <div>Child 1</div>
             <div>Child 2</div>
             <div>Child 3</div>
-          </Container>
+          </Container>,
         );
         expect(screen.getByText("Child 1")).toBeInTheDocument();
         expect(screen.getByText("Child 2")).toBeInTheDocument();
@@ -80,9 +80,11 @@ describe("Container Component", () => {
             <footer>
               <span>Footer</span>
             </footer>
-          </Container>
+          </Container>,
         );
-        expect(screen.getByRole("heading", { name: /title/i })).toBeInTheDocument();
+        expect(
+          screen.getByRole("heading", { name: /title/i }),
+        ).toBeInTheDocument();
         expect(screen.getByText("Main content")).toBeInTheDocument();
         expect(screen.getByText("Footer")).toBeInTheDocument();
       });

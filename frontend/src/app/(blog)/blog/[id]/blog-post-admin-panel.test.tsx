@@ -70,7 +70,10 @@ vi.mock("next/navigation", () => ({
 }));
 
 vi.mock("@/hooks/use-auth", () => ({
-  useAuth: () => ({ user: { id: "1", email: "admin@test.com" }, isAdmin: true }),
+  useAuth: () => ({
+    user: { id: "1", email: "admin@test.com" },
+    isAdmin: true,
+  }),
 }));
 
 describe("BlogPostAdminPanel", () => {
@@ -84,7 +87,7 @@ describe("BlogPostAdminPanel", () => {
     expect(screen.getByText("Admin")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Publish/i })).toHaveAttribute(
       "href",
-      "/create/abc123/publish"
+      "/create/abc123/publish",
     );
     expect(screen.getByRole("button", { name: /Delete/i })).toBeInTheDocument();
   });

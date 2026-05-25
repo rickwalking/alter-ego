@@ -24,9 +24,14 @@ export default function CreatePage() {
       <main className="mx-auto max-w-4xl px-4 py-12">
         <div className="mb-8 space-y-2">
           <h1 className="font-bold text-2xl">{t("pageTitle")}</h1>
-          <p className="text-[var(--color-text-muted)]">{t("pageDescription")}</p>
+          <p className="text-[var(--color-text-muted)]">
+            {t("pageDescription")}
+          </p>
         </div>
-        <TopicForm onSubmit={handleSubmit} isPending={createCarousel.isPending} />
+        <TopicForm
+          onSubmit={handleSubmit}
+          isPending={createCarousel.isPending}
+        />
       </main>
     </div>
   );

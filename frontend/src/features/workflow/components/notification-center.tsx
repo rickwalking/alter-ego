@@ -30,9 +30,15 @@ export function NotificationCenter() {
       </Button>
       {open && (
         <div className="absolute right-0 top-full mt-2 w-80 rounded-md border bg-background shadow-lg z-50">
-          <div className="border-b px-4 py-3 font-medium text-sm">{t("title")}</div>
+          <div className="border-b px-4 py-3 font-medium text-sm">
+            {t("title")}
+          </div>
           <div className="max-h-80 overflow-y-auto">
-            {loading && <p className="p-4 text-sm text-muted-foreground">{t("loading")}</p>}
+            {loading && (
+              <p className="p-4 text-sm text-muted-foreground">
+                {t("loading")}
+              </p>
+            )}
             {!loading && notifications.length === 0 && (
               <p className="p-4 text-sm text-muted-foreground">{t("empty")}</p>
             )}
@@ -45,7 +51,9 @@ export function NotificationCenter() {
               >
                 <p className="text-sm font-medium">{item.title}</p>
                 {item.body && (
-                  <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{item.body}</p>
+                  <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                    {item.body}
+                  </p>
                 )}
                 <p className="text-xs text-muted-foreground mt-1">
                   {new Date(item.created_at).toLocaleString()}

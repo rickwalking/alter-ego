@@ -26,7 +26,10 @@ export function BlogPostEditExtras({
   onScheduled,
 }: BlogPostEditExtrasProps) {
   const t = useTranslations("workflow");
-  const { activeLock, isLockedByOther } = useCollaborativeEdit(postId, LOCK_CONTENT_TYPE_BLOG);
+  const { activeLock, isLockedByOther } = useCollaborativeEdit(
+    postId,
+    LOCK_CONTENT_TYPE_BLOG,
+  );
 
   return (
     <div className="space-y-4 border-t pt-4">
@@ -37,7 +40,11 @@ export function BlogPostEditExtras({
           </AlertDescription>
         </Alert>
       )}
-      <ReviewAssignmentPanel contentId={postId} contentType={LOCK_CONTENT_TYPE_BLOG} title={title} />
+      <ReviewAssignmentPanel
+        contentId={postId}
+        contentType={LOCK_CONTENT_TYPE_BLOG}
+        title={title}
+      />
       {status === "approved" && (
         <ScheduledPublishPicker postId={postId} onScheduled={onScheduled} />
       )}

@@ -14,7 +14,11 @@ describe("SlideProgressGrid", () => {
   describe("Given a populated slide list", () => {
     const slides = [
       { number: 1, status: SLIDE_GENERATION_STATUS.DONE, scene: "Intro scene" },
-      { number: 2, status: SLIDE_GENERATION_STATUS.IN_FLIGHT, scene: "Body scene" },
+      {
+        number: 2,
+        status: SLIDE_GENERATION_STATUS.IN_FLIGHT,
+        scene: "Body scene",
+      },
       { number: 3, status: SLIDE_GENERATION_STATUS.FAILED, scene: "Scene 3" },
       { number: 4, status: SLIDE_GENERATION_STATUS.PENDING },
     ];
