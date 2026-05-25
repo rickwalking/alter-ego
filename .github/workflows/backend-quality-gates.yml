@@ -220,10 +220,13 @@ jobs:
 
       - name: Run mutation tests
         run: uv run mutmut run
+        env:
+          SECRET_KEY: test-secret-key-for-ci-tests!!
+          ANON_SECRET_KEY: test-anon-secret-for-ci-tests!
 
       - name: Show mutation results
         if: always()
-        run: uv run mutmut results --no-diff
+        run: uv run mutmut results
 
   dead-code:
     name: Dead Code Detection

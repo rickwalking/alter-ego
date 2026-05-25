@@ -315,8 +315,8 @@ quiet = false
 color = true
 
 [tool.mutmut]
-paths_to_mutate = "src/rag_backend/domain/"
+paths_to_mutate = ["src/rag_backend/domain/"]
 backup = false
-tests_dir = "tests/unit/domain/"
+tests_dir = ["tests/unit/domain/"]
 runner = "pytest tests/unit/domain/ -x -q --tb=short"
 dict_sync = false
