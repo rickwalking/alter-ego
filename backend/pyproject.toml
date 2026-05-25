@@ -315,8 +315,24 @@ quiet = false
 color = true
 
 [tool.mutmut]
-paths_to_mutate = ["src/rag_backend/domain/"]
-backup = false
-tests_dir = ["tests/unit/domain/"]
-runner = "pytest tests/unit/domain/ -x -q --tb=short"
+paths_to_mutate = [
+    "src/rag_backend/application/services/carousel_refinement.py",
+    "src/rag_backend/application/services/rag_agent_tools.py",
+    "src/rag_backend/application/services/carousel_agent.py",
+    "src/rag_backend/application/services/carousel/graph.py",
+    "src/rag_backend/agents/persona_agent.py",
+    "src/rag_backend/agents/quality_agent.py",
+    "src/rag_backend/agents/feedback_learning.py",
+    "src/rag_backend/agents/carousel_workflow.py",
+    "src/rag_backend/application/services/blog_post_ai_service.py",
+]
+tests_dir = [
+    "tests/unit/application",
+    "tests/unit/agents",
+    "tests/unit/infrastructure",
+    "tests/unit/api",
+]
+also_copy = ["src", "tests", "setup.cfg", "pyproject.toml", "pytest.ini", ".gitignore"]
+runner_options = "-x -q --no-header"
+debug = false
 dict_sync = false
