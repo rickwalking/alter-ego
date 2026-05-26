@@ -20,7 +20,9 @@ class TestIsRetryableHttp:
     _REQUEST = httpx.Request("GET", "/")
 
     def _http(self, status: int, msg: str = "") -> httpx.HTTPStatusError:
-        return httpx.HTTPStatusError(msg, request=self._REQUEST, response=_make_response(status))
+        return httpx.HTTPStatusError(
+            msg, request=self._REQUEST, response=_make_response(status)
+        )
 
     def test_429_too_many_requests(self) -> None:
         assert _is_retryable_http(self._http(429))

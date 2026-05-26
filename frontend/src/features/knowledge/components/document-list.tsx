@@ -26,17 +26,15 @@ export function DocumentList({
   const t = useTranslations("knowledge");
   const [searchQuery, setSearchQuery] = useState("");
 
-  const filteredDocuments = documents.filter(
-    (doc) => {
-      const meta = doc.metadata as Record<string, unknown> | undefined;
-      const tags = (meta?.tags as string[] | undefined) ?? [];
-      return (
-        doc.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        doc.status.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        tags.some((tag) => tag.toLowerCase().includes(searchQuery.toLowerCase()))
-      );
-    }
-  );
+  const filteredDocuments = documents.filter((doc) => {
+    const meta = doc.metadata as Record<string, unknown> | undefined;
+    const tags = (meta?.tags as string[] | undefined) ?? [];
+    return (
+      doc.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      doc.status.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      tags.some((tag) => tag.toLowerCase().includes(searchQuery.toLowerCase()))
+    );
+  });
 
   if (isLoading) {
     return (

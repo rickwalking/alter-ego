@@ -1,3 +1,5 @@
+"""Protocols for AI service interfaces."""
+
 from collections.abc import AsyncIterator
 from typing import Protocol
 from uuid import UUID
@@ -47,4 +49,6 @@ class Agent(Protocol):
         self, message: str, conversation_id: UUID, *, stream: bool = True
     ) -> AsyncIterator[ChatEvent]: ...
 
-    async def search_documents(self, query: str, top_k: int = 5) -> list[SearchResult]: ...
+    async def search_documents(
+        self, query: str, top_k: int = 5
+    ) -> list[SearchResult]: ...

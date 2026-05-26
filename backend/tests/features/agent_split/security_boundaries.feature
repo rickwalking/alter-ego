@@ -130,3 +130,39 @@ Feature: Agent Security Boundary — Alter-Ego vs Carousel
     Then the carousel should be created successfully
     And the chat response should not reference carousel internal data
     And no cross-agent data leakage should occur
+
+  # ─── Metadata-Based Agent Routing ───
+
+  Scenario: Conversation with project_id metadata routes to RAGAgent (carousel-capable)
+    Given a conversation exists with metadata including "project_id" = "abc-123"
+    When a chat message is sent to that conversation
+    Then the response should include header "X-Agent-Origin: rag-agent"
+    And the agent should have carousel tools available
+
+  Scenario: Conversation without project_id metadata routes to AlterEgoAgent
+    Given a conversation exists with empty metadata
+    When a chat message is sent to that conversation
+    Then the response should include header "X-Agent-Origin: alter-ego"
+    And the agent should NOT have carousel tools
+
+  Scenario: Conversation with non-carousel metadata routes to AlterEgoAgent
+    Given a conversation exists with metadata including "source" = "web"
+    When a chat message is sent to that conversation
+    Then the response should include header "X-Agent-Origin: alter-ego"
+
+  Scenario: build_agent_for_conversation selects RAGAgent when project_id present
+    Given a Conversation domain model with metadata {"project_id": "abc"}
+    When build_agent_for_conversation is called
+    Then the result should be an instance of RAGAgent
+
+  Scenario: build_agent_for_conversation selects AlterEgoAgent when no project_id
+    Given a Conversation domain model with empty metadata
+    When build_agent_for_conversation is called
+    Then the result should be an instance of AlterEgoAgent
+
+  Scenario: WebSocket with carousel metadata routes to RAGAgent
+    Given a conversation exists with metadata including "project_id" = "abc-123"
+    When a user connects to the WebSocket chat endpoint
+    And sends a message
+    Then the streaming response should come from the RAG agent
+    And carousel tool events may appear in the stream

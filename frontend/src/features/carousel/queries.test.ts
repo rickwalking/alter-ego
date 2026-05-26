@@ -29,10 +29,7 @@ function callQueryFn(options: { queryFn?: unknown }) {
 
 describe("carouselKeys", () => {
   it("returns stable keys for detail and related resources", () => {
-    expect(carouselKeys.detail("project-1")).toEqual([
-      "carousel",
-      "project-1",
-    ]);
+    expect(carouselKeys.detail("project-1")).toEqual(["carousel", "project-1"]);
     expect(carouselKeys.blog("project-1", "en")).toEqual([
       "carousel",
       "project-1",

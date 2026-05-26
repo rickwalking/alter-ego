@@ -17,7 +17,9 @@ async def _design_node(state: PipelineState, *, deps: object) -> dict[str, objec
     """Resolve theme and build PT HTML."""
     project: CarouselProject = state["project"]
     project.update_status(CarouselStatus.DESIGNING)
-    project = await set_progress(project, repo=deps.repo, label="Resolving theme and design tokens")
+    project = await set_progress(
+        project, repo=deps.repo, label="Resolving theme and design tokens"
+    )
     pt_html = run_design(project, state["slides_data"], template=deps.template)
     project = await deps.repo.update_project(project)
     return {"project": project, "pt_html": pt_html}

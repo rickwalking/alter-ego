@@ -10,5 +10,5 @@ JWT_ALGORITHM = "HS256"
 JWT_TYPE_AUTH = "auth"
 JWT_TYPE_ANON = "anon"
 
-COOKIE_ACCESS_TOKEN = "access_token"  # noqa: S105 — not a password, cookie name
-COOKIE_ANON_TOKEN = "anon_token"  # noqa: S105 — not a password, cookie name
+COOKIE_ACCESS_TOKEN = "access_token"
+COOKIE_ANON_TOKEN = "anon_token"

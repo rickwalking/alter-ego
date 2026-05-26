@@ -6,7 +6,9 @@ export default async function NotFound() {
 
   return (
     <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
-      <h1 className="text-6xl font-bold text-[var(--color-primary)]">{t("code")}</h1>
+      <h1 className="text-6xl font-bold text-[var(--color-primary)]">
+        {t("code")}
+      </h1>
       <h2 className="mt-4 text-2xl font-semibold">{t("title")}</h2>
       <p className="mt-2 text-[var(--color-muted-foreground)]">
         {t("description")}

@@ -8,6 +8,15 @@ const NAV_LABELS: Record<string, string> = {
   "nav.knowledgeBase": "Knowledge Base",
   "nav.blog": "Blog",
   "nav.create": "Create",
+  "nav.personas": "Personas",
+  "nav.rubrics": "Rubrics",
+  "nav.blogPosts": "Blog Posts",
+  "nav.workflow": "Workflow",
+  "nav.calendar": "Calendar",
+  "nav.analytics": "Analytics",
+  logout: "Logout",
+  "nav.admin": "Admin",
+  login: "Login",
 };
 
 vi.mock("next-intl", () => ({
@@ -54,7 +63,12 @@ function mockAnonymous() {
 
 function mockEditor() {
   mockUseAuth.mockReturnValue({
-    user: { id: "1", email: "editor@test.com", full_name: "Editor", role: "editor" },
+    user: {
+      id: "1",
+      email: "editor@test.com",
+      full_name: "Editor",
+      role: "editor",
+    },
     isAdmin: false,
     isEditor: true,
     isLoading: false,
@@ -64,7 +78,12 @@ function mockEditor() {
 
 function mockAdmin() {
   mockUseAuth.mockReturnValue({
-    user: { id: "1", email: "admin@test.com", full_name: "Admin", role: "admin" },
+    user: {
+      id: "1",
+      email: "admin@test.com",
+      full_name: "Admin",
+      role: "admin",
+    },
     isAdmin: true,
     isEditor: true,
     isLoading: false,

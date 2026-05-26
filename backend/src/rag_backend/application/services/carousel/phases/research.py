@@ -24,7 +24,9 @@ async def _research_node(state: PipelineState, *, deps: object) -> dict[str, obj
     project: CarouselProject = state["project"]
     project.update_status(CarouselStatus.RESEARCHING)
     project = await deps.repo.update_project(project)
-    project = await set_progress(project, repo=deps.repo, label="Searching the web for sources")
+    project = await set_progress(
+        project, repo=deps.repo, label="Searching the web for sources"
+    )
     sources = await run_research(
         project,
         state.get("seed_urls", []),

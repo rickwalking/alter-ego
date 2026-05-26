@@ -47,7 +47,11 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL("/403", request.url));
   }
 
-  if (isEditorRoute(pathname) && role !== ROLES.ADMIN && role !== ROLES.EDITOR) {
+  if (
+    isEditorRoute(pathname) &&
+    role !== ROLES.ADMIN &&
+    role !== ROLES.EDITOR
+  ) {
     return NextResponse.redirect(new URL("/403", request.url));
   }
 

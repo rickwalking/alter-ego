@@ -31,9 +31,7 @@ def build_carousel_html(
         elif slide_type == SLIDE_TYPE_SUMMARY:
             slides_html += _render_summary_slide(slide, theme)
         elif slide_type == "cta":
-            slides_html += _render_cta_slide(
-                slide, theme, lang
-            )
+            slides_html += _render_cta_slide(slide, theme, lang)
         else:
             slides_html += _render_content_slide(slide, theme)
 

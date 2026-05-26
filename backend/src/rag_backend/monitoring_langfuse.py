@@ -6,10 +6,20 @@ from langfuse import Langfuse
 from langfuse.langchain import CallbackHandler
 
 _langfuse_handler: CallbackHandler | None = None
+_langfuse_client: Langfuse | None = None
 
 
 def get_langfuse_handler() -> CallbackHandler | None:
     return _langfuse_handler
+
+
+def get_langfuse_client() -> Langfuse | None:
+    """Get the Langfuse client for manual span creation.
+
+    Returns:
+        Langfuse client instance, or None if not configured.
+    """
+    return _langfuse_client
 
 
 def init_langfuse(
@@ -17,22 +27,25 @@ def init_langfuse(
     secret_key: str,
     host: str,
 ) -> CallbackHandler | None:
-    global _langfuse_handler
+    global _langfuse_handler, _langfuse_client
 
     if not secret_key:
         _langfuse_handler = None
+        _langfuse_client = None
         return None
 
     os.environ.setdefault("LANGFUSE_SECRET_KEY", secret_key)
     os.environ.setdefault("LANGFUSE_PUBLIC_KEY", public_key)
     os.environ.setdefault("LANGFUSE_HOST", host)
 
-    Langfuse(
+    # Initialize Langfuse client for manual tracing
+    _langfuse_client = Langfuse(
         secret_key=secret_key,
         public_key=public_key,
         host=host,
     )
 
+    # Initialize LangChain callback handler
     handler = CallbackHandler(public_key=public_key)
     _langfuse_handler = handler
     return handler

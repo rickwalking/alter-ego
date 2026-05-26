@@ -41,9 +41,47 @@ class PostgresDocumentRepository:
         if status:
             query = query.where(DocumentModel.status == status.value)
 
-        query = query.order_by(desc(DocumentModel.updated_at)).offset(offset).limit(limit)
+        query = (
+            query.order_by(desc(DocumentModel.updated_at)).offset(offset).limit(limit)
+        )
         result = await self._session.execute(query)
         return [doc.to_entity() for doc in result.scalars().all()]
+
+    async def get_all_for_owner(
+        self,
+        owner_id: UUID,
+        status: DocumentStatus | None = None,
+        limit: int = 100,
+        offset: int = 0,
+    ) -> list[Document]:
+        """Get documents owned by a user."""
+        query = select(DocumentModel).where(DocumentModel.owner_id == str(owner_id))
+
+        if status:
+            query = query.where(DocumentModel.status == status.value)
+
+        query = (
+            query.order_by(desc(DocumentModel.updated_at)).offset(offset).limit(limit)
+        )
+        result = await self._session.execute(query)
+        return [doc.to_entity() for doc in result.scalars().all()]
+
+    async def count_for_owner(
+        self,
+        owner_id: UUID,
+        status: DocumentStatus | None = None,
+    ) -> int:
+        """Count documents owned by a user."""
+        query = (
+            select(func.count())
+            .select_from(DocumentModel)
+            .where(DocumentModel.owner_id == str(owner_id))
+        )
+        if status:
+            query = query.where(DocumentModel.status == status.value)
+
+        result = await self._session.execute(query)
+        return result.scalar() or 0
 
     async def update(self, document: Document) -> Document:
         """Update an existing document."""

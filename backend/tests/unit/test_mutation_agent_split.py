@@ -7,22 +7,22 @@ and verifies that existing tests catch the vulnerability.
 Run with: uv run pytest tests/unit/test_mutation_agent_split.py -v
 """
 
-import pytest
-from uuid import UUID, uuid4
 from unittest.mock import AsyncMock, MagicMock
+from uuid import uuid4
+
+import pytest
 
 from rag_backend.agents.alter_ego_agent import AlterEgoAgent
 from rag_backend.domain.models import (
     Document,
     DocumentScope,
-    DocumentStatus,
     RetrievalQuery,
     SearchResult,
 )
 from rag_backend.infrastructure.retrieval.hybrid_retriever import HybridRetrieverWithRRF
 
-
 # ─── Mutation 1: Namespace Prefix Bypass ───
+
 
 class TestNamespacePrefixBypass:
     """Simulate mutation where namespace filter is removed."""
@@ -60,9 +60,7 @@ class TestNamespacePrefixBypass:
         ]
 
         # Test: Alter-Ego query should only search personal+public
-        query = RetrievalQuery(
-            query="test", top_k=5, namespace_prefix="personal"
-        )
+        query = RetrievalQuery(query="test", top_k=5, namespace_prefix="personal")
         await retriever.retrieve(query)
 
         # Verify: hybrid_search called exactly twice (personal + public)
@@ -97,6 +95,7 @@ class TestNamespacePrefixBypass:
 
 
 # ─── Mutation 2: Tool Scope Bypass ───
+
 
 class TestToolScopeBypass:
     """Simulate mutation where tool scope filter is removed."""
@@ -162,6 +161,7 @@ class TestToolScopeBypass:
 
 # ─── Mutation 3: Document Scope Default Bypass ───
 
+
 class TestDocumentScopeDefault:
     """Simulate mutation where Document default scope changes."""
 
@@ -197,6 +197,7 @@ class TestDocumentScopeDefault:
 
 # ─── Mutation 4: CORS Origin Bypass ───
 
+
 class TestCORSOriginEnforcement:
     """Simulate mutation where CORS allows all origins in production."""
 
@@ -226,6 +227,7 @@ class TestCORSOriginEnforcement:
 
 # ─── Mutation 5: Agent Origin Header Bypass ───
 
+
 class TestAgentOriginHeader:
     """Simulate mutation where X-Agent-Origin header is removed."""
 
@@ -248,6 +250,7 @@ class TestAgentOriginHeader:
 
 # ─── Mutation 6: Role-Based Access Bypass ───
 
+
 class TestRoleAccessBoundary:
     """Simulate mutation where role checks are bypassed."""
 
@@ -258,7 +261,6 @@ class TestRoleAccessBoundary:
         SCENARIO: Attacker bypasses auth check in carousel routes.
         EXPECTED: Test must verify anonymous users have no role.
         """
-        from rag_backend.api.dependencies import get_optional_user
 
         # In a real request context, get_optional_user returns None for anonymous
         # This test verifies that None is handled correctly
@@ -277,6 +279,7 @@ class TestRoleAccessBoundary:
 
 # ─── Mutation 7: Vector Store Namespace Bypass ───
 
+
 class TestVectorStoreNamespace:
     """Simulate mutation where namespace parameter is ignored."""
 
@@ -289,7 +292,10 @@ class TestVectorStoreNamespace:
         EXPECTED: Test must verify namespace is passed to Pinecone.
         """
         import inspect
-        from rag_backend.infrastructure.external.pinecone_store import PineconeVectorStore
+
+        from rag_backend.infrastructure.external.pinecone_store import (
+            PineconeVectorStore,
+        )
 
         # Verify the method signature includes namespace parameter
         sig = inspect.signature(PineconeVectorStore.upsert_chunks)
@@ -302,7 +308,10 @@ class TestVectorStoreNamespace:
         """MUTATION: If delete ignores namespace,
         wrong vectors are deleted or scope isolation breaks."""
         import inspect
-        from rag_backend.infrastructure.external.pinecone_store import PineconeVectorStore
+
+        from rag_backend.infrastructure.external.pinecone_store import (
+            PineconeVectorStore,
+        )
 
         # Verify the method signature includes namespace parameter
         sig = inspect.signature(PineconeVectorStore.delete_by_document)
@@ -312,6 +321,7 @@ class TestVectorStoreNamespace:
 
 
 # ─── Mutation 8: Retrieval Query Scope Bypass ───
+
 
 class TestRetrievalQueryScope:
     """Simulate mutation where RetrievalQuery ignores namespace_prefix."""

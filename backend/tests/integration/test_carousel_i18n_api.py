@@ -1,36 +1,8 @@
 """Integration tests for carousel i18n and design API endpoints."""
 
 import pytest
-from httpx import ASGITransport, AsyncClient
 
-from rag_backend.api.app import create_app
 from rag_backend.domain.models import CarouselProject, CarouselStatus, CarouselTheme
-
-
-@pytest.fixture
-async def client():
-    """Create async test client with in-memory SQLite."""
-    from sqlalchemy.ext.asyncio import create_async_engine
-
-    import rag_backend.infrastructure.database.config as db_config
-    from rag_backend.infrastructure.database.config import Base, close_db
-
-    engine = create_async_engine("sqlite+aiosqlite:///:memory:", echo=False)
-
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-
-    db_config.c_engine = engine
-
-    app = create_app()
-
-    transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as ac:
-        yield ac
-
-    db_config.c_engine = None
-    await close_db()
-    await engine.dispose()
 
 
 @pytest.fixture
@@ -101,7 +73,9 @@ class TestCarouselBlogI18nEndpoints:
     @pytest.mark.asyncio
     async def test_get_carousel_blog_i18n_not_found_project(self, client):
         """Given non-existent project, when GET /blog/pt, then returns 404."""
-        response = await client.get("/api/carousels/00000000-0000-0000-0000-000000000000/blog/pt")
+        response = await client.get(
+            "/api/carousels/00000000-0000-0000-0000-000000000000/blog/pt"
+        )
         assert response.status_code == 404
 
 
@@ -112,7 +86,9 @@ class TestCarouselDesignEndpoints:
     @pytest.mark.asyncio
     async def test_get_carousel_design_not_found_project(self, client):
         """Given non-existent project, when GET /design, then returns 404."""
-        response = await client.get("/api/carousels/00000000-0000-0000-0000-000000000000/design")
+        response = await client.get(
+            "/api/carousels/00000000-0000-0000-0000-000000000000/design"
+        )
         assert response.status_code == 404
 
     @pytest.mark.asyncio
@@ -227,7 +203,9 @@ class TestCarouselSlidesEndpoint:
     @pytest.mark.asyncio
     async def test_get_carousel_slides_not_found_project(self, client):
         """Given non-existent project, when GET /slides, then returns 404."""
-        response = await client.get("/api/carousels/00000000-0000-0000-0000-000000000000/slides")
+        response = await client.get(
+            "/api/carousels/00000000-0000-0000-0000-000000000000/slides"
+        )
         assert response.status_code == 404
 
     @pytest.mark.asyncio

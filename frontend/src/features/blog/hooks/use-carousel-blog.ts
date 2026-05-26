@@ -25,14 +25,17 @@ export function useBlogPosts(limit?: number) {
 }
 
 /** Fetch blog content in a specific language. */
-export function useCarouselBlog(id: string, lang: string = DEFAULT_BLOG_LANGUAGE) {
+export function useCarouselBlog(
+  id: string,
+  lang: string = DEFAULT_BLOG_LANGUAGE,
+) {
   return useQuery(carouselBlogOptions(id, lang));
 }
 
 /** Fetch blog content with design tokens. */
 export function useCarouselBlogWithDesign(
   id: string,
-  lang: string = DEFAULT_BLOG_LANGUAGE
+  lang: string = DEFAULT_BLOG_LANGUAGE,
 ) {
   return useQuery(carouselBlogWithDesignOptions(id, lang));
 }

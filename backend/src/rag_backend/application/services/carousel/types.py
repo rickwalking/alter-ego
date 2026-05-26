@@ -8,6 +8,7 @@ no repository or LLM dependencies.
 
 from __future__ import annotations
 
+from contextlib import suppress
 from dataclasses import dataclass
 from typing import TypedDict
 
@@ -87,6 +88,21 @@ class SlideData:
     # One-sentence TLDR strip rendered on the intro slide (slide 1) below
     # the subtitle. None when the intro has no strip.
     tldr_strip: str | None = None
+
+
+def slide_count_from_config(slides_config: str) -> int:
+    cleaned = slides_config.strip().lower()
+    parts = [p.strip() for p in cleaned.replace("_slides", "").split(",")]
+    if len(parts) == 1:
+        try:
+            return int(parts[0])
+        except ValueError:
+            pass
+    total = 0
+    for part in parts:
+        with suppress(ValueError, IndexError):
+            total += int(part.split()[0])
+    return total if total > 0 else MAX_SLIDES
 
 
 def style_display_name(model: str, style: str) -> str:

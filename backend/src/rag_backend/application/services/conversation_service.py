@@ -1,5 +1,6 @@
 """Conversation service with memory management."""
 
+from collections.abc import Awaitable, Callable
 from uuid import UUID
 
 from rag_backend.domain.models import Conversation, Message, MessageRole
@@ -23,19 +24,24 @@ class ConversationService:
         self._max_context_tokens = max_context_tokens
 
     async def create_conversation(
-        self, title: str | None = None, metadata: dict[str, object] | None = None
+        self,
+        title: str | None = None,
+        metadata: dict[str, object] | None = None,
+        user_id: UUID | None = None,
     ) -> Conversation:
         """Create a new conversation.
 
         Args:
             title: Optional conversation title
             metadata: Optional metadata dictionary
+            user_id: Optional owner user UUID
 
         Returns:
             The created conversation
         """
         conversation = Conversation(
             title=title,
+            user_id=user_id,
             metadata=metadata or {},
         )
         return await self._conversation_repository.create(conversation)
@@ -63,7 +69,9 @@ class ConversationService:
         Returns:
             List of messages in chronological order
         """
-        return await self._message_repository.get_by_conversation(conversation_id, limit=limit)
+        return await self._message_repository.get_by_conversation(
+            conversation_id, limit=limit
+        )
 
     async def get_context_window(self, conversation_id: UUID) -> list[dict[str, str]]:
         """Get the context window for the LLM.
@@ -135,19 +143,30 @@ class ConversationService:
         """
         return await self._conversation_repository.delete(conversation_id)
 
-    async def list_conversations(self, limit: int = 100, offset: int = 0) -> list[Conversation]:
-        """List all conversations.
-
-        Args:
-            limit: Maximum number to return
-            offset: Pagination offset
-
-        Returns:
-            List of conversations ordered by updated_at desc
-        """
+    async def list_conversations(
+        self,
+        limit: int = 100,
+        offset: int = 0,
+        user_id: UUID | None = None,
+    ) -> list[Conversation]:
+        """List conversations, optionally filtered by owner."""
+        if user_id is not None:
+            return await self._conversation_repository.get_by_user_id(
+                user_id=user_id,
+                limit=limit,
+                offset=offset,
+            )
         return await self._conversation_repository.get_all(limit=limit, offset=offset)
 
-    async def generate_title(self, conversation_id: UUID, llm_generate_func) -> str:
+    async def count_conversations_for_user(self, user_id: UUID) -> int:
+        """Count conversations owned by a user."""
+        return await self._conversation_repository.count_by_user_id(user_id)
+
+    async def generate_title(
+        self,
+        conversation_id: UUID,
+        llm_generate_func: Callable[[list[dict[str, str]]], Awaitable[str]],
+    ) -> str:
         """Generate a title for a conversation based on first message.
 
         Args:
@@ -157,7 +176,9 @@ class ConversationService:
         Returns:
             Generated title
         """
-        messages = await self._message_repository.get_by_conversation(conversation_id, limit=1)
+        messages = await self._message_repository.get_by_conversation(
+            conversation_id, limit=1
+        )
 
         if not messages:
             return "New Conversation"
@@ -180,7 +201,9 @@ class ConversationService:
                 title = title[: MAX_TITLE_TOKENS - 3] + "..."
 
             # Update conversation
-            conversation = await self._conversation_repository.get_by_id(conversation_id)
+            conversation = await self._conversation_repository.get_by_id(
+                conversation_id
+            )
             if conversation:
                 conversation.update_title(title)
                 await self._conversation_repository.update(conversation)

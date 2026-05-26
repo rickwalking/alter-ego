@@ -27,6 +27,14 @@ vi.mock("@/features/chat/hooks/use-chat", () => ({
   useCreateConversation: vi.fn(),
 }));
 
+vi.mock("@/features/create/components/editorial-workflow-panel", () => ({
+  EditorialWorkflowPanel: () => null,
+}));
+
+vi.mock("@/features/create/components/source-material-viewer", () => ({
+  SourceMaterialViewer: () => null,
+}));
+
 import { useParams } from "next/navigation";
 import {
   useCarouselProject,
@@ -61,7 +69,11 @@ function createWrapper() {
     defaultOptions: { queries: { retry: false, gcTime: 0 } },
   });
   return function Wrapper({ children }: { children: ReactNode }) {
-    return createElement(QueryClientProvider, { client: queryClient }, children);
+    return createElement(
+      QueryClientProvider,
+      { client: queryClient },
+      children,
+    );
   };
 }
 

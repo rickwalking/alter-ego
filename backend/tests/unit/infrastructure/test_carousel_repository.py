@@ -62,7 +62,9 @@ class TestPostgresCarouselRepository:
         assert created.audience == sample_carousel_project.audience
         assert created.status == CarouselStatus.PENDING
 
-    async def test_get_project_by_id_existing(self, carousel_repository, sample_carousel_project):
+    async def test_get_project_by_id_existing(
+        self, carousel_repository, sample_carousel_project
+    ):
         """Should retrieve existing project by ID."""
         created = await carousel_repository.create_project(sample_carousel_project)
 
@@ -84,7 +86,9 @@ class TestPostgresCarouselRepository:
 
         assert projects == []
 
-    async def test_get_all_projects_with_data(self, carousel_repository, sample_carousel_project):
+    async def test_get_all_projects_with_data(
+        self, carousel_repository, sample_carousel_project
+    ):
         """Should return all created projects."""
         await carousel_repository.create_project(sample_carousel_project)
 
@@ -108,7 +112,9 @@ class TestPostgresCarouselRepository:
         )
         await carousel_repository.create_project(project2)
 
-        completed = await carousel_repository.get_all_projects(status=CarouselStatus.COMPLETED)
+        completed = await carousel_repository.get_all_projects(
+            status=CarouselStatus.COMPLETED
+        )
 
         assert len(completed) == 1
         assert completed[0].status == CarouselStatus.COMPLETED
@@ -127,7 +133,9 @@ class TestPostgresCarouselRepository:
         assert updated.status == CarouselStatus.COMPLETED
         assert updated.output_dir == "/output/test"
 
-    async def test_update_nonexistent_project(self, carousel_repository, sample_carousel_project):
+    async def test_update_nonexistent_project(
+        self, carousel_repository, sample_carousel_project
+    ):
         """Should raise error when updating non-existent project."""
         project = sample_carousel_project
         project.id = uuid4()
@@ -135,7 +143,9 @@ class TestPostgresCarouselRepository:
         with pytest.raises(ValueError, match="not found"):
             await carousel_repository.update_project(project)
 
-    async def test_delete_project_existing(self, carousel_repository, sample_carousel_project):
+    async def test_delete_project_existing(
+        self, carousel_repository, sample_carousel_project
+    ):
         """Should delete an existing project."""
         created = await carousel_repository.create_project(sample_carousel_project)
 
@@ -158,7 +168,9 @@ class TestPostgresCarouselRepository:
 
         assert count == 0
 
-    async def test_count_projects_with_data(self, carousel_repository, sample_carousel_project):
+    async def test_count_projects_with_data(
+        self, carousel_repository, sample_carousel_project
+    ):
         """Should return correct project count."""
         await carousel_repository.create_project(sample_carousel_project)
         await carousel_repository.create_project(
@@ -188,7 +200,9 @@ class TestPostgresCarouselRepository:
         )
         await carousel_repository.create_project(project2)
 
-        completed_count = await carousel_repository.count(status=CarouselStatus.COMPLETED)
+        completed_count = await carousel_repository.count(
+            status=CarouselStatus.COMPLETED
+        )
         pending_count = await carousel_repository.count(status=CarouselStatus.PENDING)
 
         assert completed_count == 1
@@ -209,7 +223,9 @@ class TestPostgresCarouselRepository:
         await carousel_repository.create_project(sample_carousel_project)
         await carousel_repository.create_slide(sample_slide)
 
-        slides = await carousel_repository.get_slides_by_project(sample_carousel_project.id)
+        slides = await carousel_repository.get_slides_by_project(
+            sample_carousel_project.id
+        )
 
         assert len(slides) == 1
         assert slides[0].slide_number == 1
@@ -247,11 +263,15 @@ class TestPostgresCarouselRepository:
         await carousel_repository.create_project(sample_carousel_project)
         await carousel_repository.create_slide(sample_slide)
 
-        deleted = await carousel_repository.delete_slides_by_project(sample_carousel_project.id)
+        deleted = await carousel_repository.delete_slides_by_project(
+            sample_carousel_project.id
+        )
 
         assert deleted is True
 
-        slides = await carousel_repository.get_slides_by_project(sample_carousel_project.id)
+        slides = await carousel_repository.get_slides_by_project(
+            sample_carousel_project.id
+        )
         assert slides == []
 
     async def test_delete_slides_by_project_empty(self, carousel_repository):
@@ -260,9 +280,13 @@ class TestPostgresCarouselRepository:
 
         assert deleted is False
 
-    async def test_create_research_source(self, carousel_repository, sample_research_source):
+    async def test_create_research_source(
+        self, carousel_repository, sample_research_source
+    ):
         """Should create a research source in the database."""
-        created = await carousel_repository.create_research_source(sample_research_source)
+        created = await carousel_repository.create_research_source(
+            sample_research_source
+        )
 
         assert created.id is not None
         assert created.source_url == sample_research_source.source_url
@@ -275,7 +299,9 @@ class TestPostgresCarouselRepository:
         await carousel_repository.create_project(sample_carousel_project)
         await carousel_repository.create_research_source(sample_research_source)
 
-        sources = await carousel_repository.get_sources_by_project(sample_carousel_project.id)
+        sources = await carousel_repository.get_sources_by_project(
+            sample_carousel_project.id
+        )
 
         assert len(sources) == 1
         assert sources[0].source_url == sample_research_source.source_url

@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { renderHook, act, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createElement, type ReactNode } from "react";
+import { carouselKeys } from "@/features/carousel/queries";
 import { useCarouselStream } from "./use-carousel";
 
 /**
@@ -49,7 +50,25 @@ function createWrapper() {
     defaultOptions: { queries: { retry: false, gcTime: 0 } },
   });
   return function Wrapper({ children }: { children: ReactNode }) {
-    return createElement(QueryClientProvider, { client: queryClient }, children);
+    return createElement(
+      QueryClientProvider,
+      { client: queryClient },
+      children,
+    );
+  };
+}
+
+function createWrapperWithClient(): {
+  queryClient: QueryClient;
+  Wrapper: ({ children }: { children: ReactNode }) => ReactNode;
+} {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false, gcTime: 0 } },
+  });
+  return {
+    queryClient,
+    Wrapper: ({ children }: { children: ReactNode }) =>
+      createElement(QueryClientProvider, { client: queryClient }, children),
   };
 }
 
@@ -63,9 +82,12 @@ describe("useCarouselStream", () => {
 
   describe("Given enabled=false", () => {
     it("does not open an EventSource", () => {
-      const { result } = renderHook(() => useCarouselStream("abc", { enabled: false }), {
-        wrapper: createWrapper(),
-      });
+      const { result } = renderHook(
+        () => useCarouselStream("abc", { enabled: false }),
+        {
+          wrapper: createWrapper(),
+        },
+      );
       expect(MockEventSource.instances).toHaveLength(0);
       expect(result.current.isStreaming).toBe(false);
     });
@@ -73,9 +95,13 @@ describe("useCarouselStream", () => {
 
   describe("Given a valid id", () => {
     it("opens an EventSource to the /stream endpoint", () => {
-      renderHook(() => useCarouselStream("abc-123"), { wrapper: createWrapper() });
+      renderHook(() => useCarouselStream("abc-123"), {
+        wrapper: createWrapper(),
+      });
       expect(MockEventSource.instances).toHaveLength(1);
-      expect(MockEventSource.instances[0].url).toBe("/api/carousels/abc-123/stream");
+      expect(MockEventSource.instances[0].url).toBe(
+        "/api/carousels/abc-123/stream",
+      );
     });
 
     it("updates latestEvent when a message arrives", async () => {
@@ -157,7 +183,7 @@ describe("useCarouselStream", () => {
         mock.emit({ node: "research", status: "researching" });
       });
       await waitFor(() =>
-        expect(result.current.latestEvent?.node).toBe("research")
+        expect(result.current.latestEvent?.node).toBe("research"),
       );
       expect(result.current.isStreaming).toBe(true);
       expect(mock.close).not.toHaveBeenCalled();
@@ -193,14 +219,18 @@ describe("useCarouselStream", () => {
         {
           wrapper: createWrapper(),
           initialProps: { id: "abc-123" },
-        }
+        },
       );
       expect(MockEventSource.instances).toHaveLength(1);
-      expect(MockEventSource.instances[0].url).toBe("/api/carousels/abc-123/stream");
+      expect(MockEventSource.instances[0].url).toBe(
+        "/api/carousels/abc-123/stream",
+      );
 
       rerender({ id: "def-456" });
       expect(MockEventSource.instances).toHaveLength(2);
-      expect(MockEventSource.instances[1].url).toBe("/api/carousels/def-456/stream");
+      expect(MockEventSource.instances[1].url).toBe(
+        "/api/carousels/def-456/stream",
+      );
     });
 
     it("auto-reconnects after a transport error with exponential backoff", () => {
@@ -276,7 +306,8 @@ describe("useCarouselStream", () => {
 
       // Exhaust all retries (20 retries = 21 total connections).
       for (let i = 0; i < 21; i += 1) {
-        const current = MockEventSource.instances[MockEventSource.instances.length - 1];
+        const current =
+          MockEventSource.instances[MockEventSource.instances.length - 1];
         act(() => {
           current.readyState = MockEventSource.CLOSED;
           current.onerror?.();
@@ -286,7 +317,9 @@ describe("useCarouselStream", () => {
         });
       }
 
-      expect(result.current.error).toBe("stream disconnected — max retries reached");
+      expect(result.current.error).toBe(
+        "stream disconnected — max retries reached",
+      );
       expect(result.current.isStreaming).toBe(false);
 
       vi.useRealTimers();
@@ -325,7 +358,9 @@ describe("useCarouselStream", () => {
       });
 
       expect(MockEventSource.instances).toHaveLength(2);
-      expect(MockEventSource.instances[1].url).toBe("/api/carousels/abc-123/stream");
+      expect(MockEventSource.instances[1].url).toBe(
+        "/api/carousels/abc-123/stream",
+      );
       expect(result.current.isStreaming).toBe(true);
     });
 
@@ -360,7 +395,8 @@ describe("useCarouselStream", () => {
 
       // 20 failures should all be retried (21 total connections).
       for (let i = 0; i < 20; i += 1) {
-        const current = MockEventSource.instances[MockEventSource.instances.length - 1];
+        const current =
+          MockEventSource.instances[MockEventSource.instances.length - 1];
         act(() => {
           current.readyState = MockEventSource.CLOSED;
           current.onerror?.();
@@ -371,7 +407,8 @@ describe("useCarouselStream", () => {
       }
 
       // 21st should fail permanently.
-      const last = MockEventSource.instances[MockEventSource.instances.length - 1];
+      const last =
+        MockEventSource.instances[MockEventSource.instances.length - 1];
       act(() => {
         last.readyState = MockEventSource.CLOSED;
         last.onerror?.();
@@ -380,7 +417,9 @@ describe("useCarouselStream", () => {
         vi.runOnlyPendingTimers();
       });
 
-      expect(result.current.error).toBe("stream disconnected — max retries reached");
+      expect(result.current.error).toBe(
+        "stream disconnected — max retries reached",
+      );
       // No 22nd EventSource created.
       expect(MockEventSource.instances).toHaveLength(21);
 
@@ -395,7 +434,8 @@ describe("useCarouselStream", () => {
 
       const delays: number[] = [];
       for (let i = 0; i < 5; i += 1) {
-        const current = MockEventSource.instances[MockEventSource.instances.length - 1];
+        const current =
+          MockEventSource.instances[MockEventSource.instances.length - 1];
         act(() => {
           current.readyState = MockEventSource.CLOSED;
           current.onerror?.();
@@ -501,7 +541,8 @@ describe("useCarouselStream", () => {
 
       // Exhaust retries to set an error.
       for (let i = 0; i < 21; i += 1) {
-        const current = MockEventSource.instances[MockEventSource.instances.length - 1];
+        const current =
+          MockEventSource.instances[MockEventSource.instances.length - 1];
         act(() => {
           current.readyState = MockEventSource.CLOSED;
           current.onerror?.();
@@ -510,7 +551,9 @@ describe("useCarouselStream", () => {
           vi.runOnlyPendingTimers();
         });
       }
-      expect(result.current.error).toBe("stream disconnected — max retries reached");
+      expect(result.current.error).toBe(
+        "stream disconnected — max retries reached",
+      );
 
       // Manual reconnect should clear the error.
       act(() => {
@@ -523,13 +566,11 @@ describe("useCarouselStream", () => {
     });
 
     it("does not update cache for events missing a status field", () => {
-      vi.useFakeTimers();
+      const { queryClient, Wrapper } = createWrapperWithClient();
       const { result } = renderHook(() => useCarouselStream("abc-123"), {
-        wrapper: createWrapper(),
+        wrapper: Wrapper,
       });
 
-      // Emit an event without `status` — should be ignored for cache update
-      // but still update latestEvent.
       act(() => {
         MockEventSource.instances[0].emit({
           node: "heartbeat",
@@ -537,10 +578,83 @@ describe("useCarouselStream", () => {
         });
       });
 
-      // latestEvent should still be set (the event passed schema validation).
       expect(result.current.latestEvent?.node).toBe("heartbeat");
+      expect(queryClient.getQueryData(carouselKeys.status("abc-123"))).toBeUndefined();
+    });
 
-      vi.useRealTimers();
+    it("updates the status query cache when a stream event includes status", async () => {
+      const { queryClient, Wrapper } = createWrapperWithClient();
+      queryClient.setQueryData(carouselKeys.status("abc-123"), {
+        id: "abc-123",
+        status: "pending",
+        phase_progress: null,
+        error_message: null,
+        updated_at: "2026-01-01T00:00:00Z",
+      });
+
+      renderHook(() => useCarouselStream("abc-123"), { wrapper: Wrapper });
+
+      act(() => {
+        MockEventSource.instances[0].emit({
+          node: "research",
+          status: "researching",
+          phase_progress: {
+            phase: "research",
+            label: "Researching",
+            current: 2,
+            total: 5,
+          },
+          error: "transient warning",
+        });
+      });
+
+      await waitFor(() => {
+        expect(queryClient.getQueryData(carouselKeys.status("abc-123"))).toMatchObject({
+          id: "abc-123",
+          status: "researching",
+          phase_progress: {
+            phase: "research",
+            label: "Researching",
+            current: 2,
+            total: 5,
+          },
+          error_message: "transient warning",
+        });
+      });
+    });
+
+    it("invalidates the carousel detail query when the stream ends", async () => {
+      const { queryClient, Wrapper } = createWrapperWithClient();
+      const invalidateQueries = vi.spyOn(queryClient, "invalidateQueries");
+
+      renderHook(() => useCarouselStream("abc-123"), { wrapper: Wrapper });
+
+      act(() => {
+        MockEventSource.instances[0].emit({ node: "end", status: "completed" });
+      });
+
+      await waitFor(() =>
+        expect(invalidateQueries).toHaveBeenCalledWith({
+          queryKey: carouselKeys.detail("abc-123"),
+        }),
+      );
+    });
+
+    it("does not set stream error state on a clean end event", async () => {
+      const { result } = renderHook(() => useCarouselStream("abc-123"), {
+        wrapper: createWrapper(),
+      });
+
+      act(() => {
+        MockEventSource.instances[0].emit({
+          node: "end",
+          status: "completed",
+          error: "should be ignored on end",
+        });
+      });
+
+      await waitFor(() => expect(result.current.isStreaming).toBe(false));
+      expect(result.current.error).toBeNull();
     });
   });
 });

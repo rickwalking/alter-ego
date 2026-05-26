@@ -56,7 +56,7 @@ export const FALLBACK_DESIGN_TOKENS: CarouselDesignResponse = {
 
 /** Convert design tokens to CSS custom properties style object. */
 export function designTokensToCssVars(
-  design: CarouselDesignResponse
+  design: CarouselDesignResponse,
 ): Record<string, string> {
   return {
     [BLOG_CSS_VARS.PRIMARY]: design.colors.primary,

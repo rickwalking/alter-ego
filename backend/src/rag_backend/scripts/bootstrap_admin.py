@@ -70,7 +70,10 @@ async def bootstrap_admin(email: str, full_name: str) -> None:
             # Check if any users exist
             count = await repo.count()
             if count > 0:
-                print("ERROR: Users already exist in the database. Bootstrap is only for initial setup.", file=sys.stderr)
+                print(
+                    "ERROR: Users already exist in the database. Bootstrap is only for initial setup.",
+                    file=sys.stderr,
+                )
                 sys.exit(1)
 
             temp_password = _generate_temp_password()

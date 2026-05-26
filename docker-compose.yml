@@ -37,6 +37,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    volumes:
+      - carousel_output:/app/output
     deploy:
       resources:
         limits:
@@ -256,3 +258,4 @@ volumes:
   postgres_data:
   clickhouse_data:
   minio_data:
+  carousel_output:

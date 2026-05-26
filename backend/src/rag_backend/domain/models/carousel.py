@@ -1,3 +1,5 @@
+"""Domain models for carousel workflow."""
+
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import StrEnum
@@ -45,6 +47,8 @@ class DesignTokens(TypedDict):
 
 
 class CarouselStatus(StrEnum):
+    """Status values for carousel workflow lifecycle."""
+
     PENDING = "pending"
     RESEARCHING = "researching"
     DRAFTING = "drafting"
@@ -56,6 +60,8 @@ class CarouselStatus(StrEnum):
 
 
 class CarouselTheme(StrEnum):
+    """Predefined themes for carousel content generation."""
+
     CYBERSECURITY = "cybersecurity"
     AI_COMPETITION = "ai_competition"
     DEVELOPER_SKILLS = "developer_skills"
@@ -65,6 +71,8 @@ class CarouselTheme(StrEnum):
 
 
 class ResearchSourceType(StrEnum):
+    """Source types for research data collection."""
+
     TWITTER = "twitter"
     BLOG = "blog"
     REDDIT = "reddit"
@@ -106,10 +114,18 @@ class CarouselProject:
     pdf_path: str | None = None
     pdf_path_en: str | None = None
     phase_progress: dict[str, str | int | list[dict[str, str | int]]] | None = None
+    creative_brief: str | None = None
+    persona_id: str | None = None
+    rubric_id: str | None = None
+    instructions: str | None = None
+    current_phase: str = "brief"
+    phase_status: str = "pending"
     created_at: datetime = field(default_factory=datetime.utcnow)
     updated_at: datetime = field(default_factory=datetime.utcnow)
 
-    def update_status(self, status: CarouselStatus, error_message: str | None = None) -> None:
+    def update_status(
+        self, status: CarouselStatus, error_message: str | None = None
+    ) -> None:
         self.status = status
         self.error_message = error_message
         self.updated_at = datetime.utcnow()

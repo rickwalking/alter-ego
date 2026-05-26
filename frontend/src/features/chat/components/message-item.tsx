@@ -17,7 +17,7 @@ export function MessageItem({ message }: MessageItemProps) {
     <div
       className={cn(
         "flex gap-4 p-6",
-        isUser ? "bg-[var(--color-background)]" : "bg-[var(--color-muted)]"
+        isUser ? "bg-[var(--color-background)]" : "bg-[var(--color-muted)]",
       )}
     >
       <div
@@ -25,7 +25,7 @@ export function MessageItem({ message }: MessageItemProps) {
           "flex h-8 w-8 shrink-0 select-none items-center justify-center rounded-md border shadow",
           isUser
             ? "bg-[var(--color-background)]"
-            : "bg-[var(--color-primary)] text-[var(--color-primary-foreground)]"
+            : "bg-[var(--color-primary)] text-[var(--color-primary-foreground)]",
         )}
       >
         {isUser ? <User className="h-4 w-4" /> : <Bot className="h-4 w-4" />}

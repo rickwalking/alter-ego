@@ -55,7 +55,9 @@ class _ImagePhaseState:
     """Mutable shared state for the image phase closure."""
 
     progress_lock: asyncio.Lock = field(default_factory=asyncio.Lock)
-    slide_status_box: list[list[dict[str, str | int]]] = field(default_factory=lambda: [[]])
+    slide_status_box: list[list[dict[str, str | int]]] = field(
+        default_factory=lambda: [[]]
+    )
     style_label_box: list[str] = field(default_factory=lambda: [""])
     total_box: list[int] = field(default_factory=lambda: [0])
 
@@ -98,7 +100,9 @@ async def _images_dispatch_node(
     style_label = style_display_name(project.image_model, project.image_style)
     phase_state.style_label_box[0] = style_label
     phase_state.total_box[0] = len(slides_with_images)
-    phase_state.slide_status_box[0] = build_initial_status(slides_with_images, style_label)
+    phase_state.slide_status_box[0] = build_initial_status(
+        slides_with_images, style_label
+    )
 
     project = await _publish_progress(project, deps=deps, phase_state=phase_state)
     return {"project": project}
@@ -197,7 +201,9 @@ async def _images_collect_node(state: PipelineState) -> dict[str, object]:
     results = state.get("image_results", [])
     failed = [r for r in results if r.get("status") == STATUS_FAILED]
     if failed:
-        raise RuntimeError(_ERR_IMAGE_GENERATION_FAILED.format([r["number"] for r in failed]))
+        raise RuntimeError(
+            _ERR_IMAGE_GENERATION_FAILED.format([r["number"] for r in failed])
+        )
     return {"project": state["project"]}
 
 
@@ -214,7 +220,9 @@ def build_image_nodes(deps: object) -> tuple[object, object, object, object]:
         return await _images_dispatch_node(state, deps=deps, phase_state=phase_state)
 
     async def worker_node(worker_state: _ImageWorkerState) -> dict[str, object]:
-        return await _image_worker_node(worker_state, deps=deps, phase_state=phase_state)
+        return await _image_worker_node(
+            worker_state, deps=deps, phase_state=phase_state
+        )
 
     def dispatch_sends(state: PipelineState) -> list[Send]:
         return _dispatch_image_sends(state)

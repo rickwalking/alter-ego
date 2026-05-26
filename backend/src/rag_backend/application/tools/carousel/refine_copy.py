@@ -20,7 +20,7 @@ _ERR_EMPTY_LLM_RESPONSE = "LLM returned empty text; no changes applied."
 _ERR_FIELD_EMPTY = "Cannot refine {!r}: field is empty or target selector is unknown."
 
 
-async def _resolve_refine_target(  # noqa: C901,PLR0911 — dispatcher with early returns
+async def _resolve_refine_target(
     project: CarouselProject,
     target: str,
     repository: CarouselRepository,
@@ -57,7 +57,7 @@ async def _resolve_refine_target(  # noqa: C901,PLR0911 — dispatcher with earl
     async def _noop(_: str) -> None:
         return None
 
-    if target.startswith("slide_heading:") or target.startswith("slide_body:"):
+    if target.startswith(("slide_heading:", "slide_body:")):
         parts = target.split(":")
         field = parts[0]
         if len(parts) < MIN_TARGET_PARTS:
@@ -89,7 +89,9 @@ async def _resolve_refine_target(  # noqa: C901,PLR0911 — dispatcher with earl
 def _read_slide_field(slide: CarouselSlide, field: str, language: str) -> str:
     """Read heading/body for the requested language, falling back to PT."""
     if language == "en":
-        translation = (slide.extras or {}).get("translation_en") if slide.extras else None
+        translation = (
+            (slide.extras or {}).get("translation_en") if slide.extras else None
+        )
         if isinstance(translation, dict):
             value = translation.get("heading" if field == "slide_heading" else "body")
             if isinstance(value, str) and value:
@@ -97,7 +99,9 @@ def _read_slide_field(slide: CarouselSlide, field: str, language: str) -> str:
     return slide.heading if field == "slide_heading" else slide.body
 
 
-def _write_slide_field(slide: CarouselSlide, field: str, language: str, new_text: str) -> None:
+def _write_slide_field(
+    slide: CarouselSlide, field: str, language: str, new_text: str
+) -> None:
     """Mutate heading/body in place for the target language."""
     if language == "en":
         extras: dict[str, object] = dict(slide.extras or {})
@@ -157,7 +161,9 @@ def build_refine_carousel_copy_tool(
         if project is None:
             return _ERR_PROJECT_NOT_FOUND.format(project_id)
 
-        original, apply_update = await _resolve_refine_target(project, target, carousel_repository)
+        original, apply_update = await _resolve_refine_target(
+            project, target, carousel_repository
+        )
         if original is None:
             return _ERR_FIELD_EMPTY.format(target)
 

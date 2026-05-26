@@ -2,7 +2,11 @@
 
 import html
 
-from rag_backend.application.services.carousel.types import MAX_FEATURE_ITEMS, MAX_SLIDES, SlideDict
+from rag_backend.application.services.carousel.types import (
+    MAX_FEATURE_ITEMS,
+    MAX_SLIDES,
+    SlideDict,
+)
 from rag_backend.application.services.carousel_template.helpers import (
     _feature_items,
     _insight_quote,
@@ -126,14 +130,20 @@ def _render_content_slide(slide: SlideDict, _theme: dict[str, str]) -> str:
 
     features = _feature_items(slide)
     if features is not None:
-        columns = 2 if len(features) >= MAX_FEATURE_ITEMS and slide["type"] != "closing" else 1
+        columns = (
+            2
+            if len(features) >= MAX_FEATURE_ITEMS and slide["type"] != "closing"
+            else 1
+        )
         body_parts.append(_render_feature_grid(features, columns=columns))
 
     insight = _insight_quote(slide)
     if insight is not None:
         body_parts.append(_render_insight_card(insight))
 
-    body_html = "".join(body_parts) or (f'<p class="body-p">{_render_inline(raw_body)}</p>')
+    body_html = "".join(body_parts) or (
+        f'<p class="body-p">{_render_inline(raw_body)}</p>'
+    )
 
     heading = _render_inline(str(slide["heading"]))
     return f"""

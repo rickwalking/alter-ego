@@ -1,6 +1,8 @@
 """API-layer constants including error messages for HTTPException responses."""
 
-from rag_backend.domain.constants import COOKIE_ACCESS_TOKEN as COOKIE_ACCESS_TOKEN  # re-export
+from rag_backend.domain.constants import (
+    COOKIE_ACCESS_TOKEN as COOKIE_ACCESS_TOKEN,
+)  # re-export
 
 # OpenAPI response descriptions (used in @router decorators)
 ERR_NOT_AUTHENTICATED = "Not authenticated"
@@ -28,3 +30,15 @@ CAROUSEL_CACHE_HEADERS = {"Cache-Control": "public, max-age=31536000"}
 MEDIA_TYPE_JPEG = "image/jpeg"
 MEDIA_TYPE_PDF = "application/pdf"
 MEDIA_TYPE_STREAM = "text/event-stream"
+
+# SSE event type constants
+SSE_EVENT_TOKEN = "token"
+SSE_EVENT_SOURCES = "sources"
+SSE_EVENT_COMPLETE = "complete"
+SSE_EVENT_ERROR = "error"
+SSE_EVENT_TOOL_RESULT = "tool_result"
+SSE_KEEP_ALIVE_INTERVAL_SECONDS = 15
+
+# SSE validation / error messages
+ERR_EMPTY_MESSAGE = "Message content cannot be empty"
+ERR_NOT_CAROUSEL_CONVERSATION = "Not a carousel conversation"

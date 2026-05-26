@@ -65,7 +65,7 @@ function createWrapper(queryClient = createQueryClient()) {
     return createElement(
       QueryClientProvider,
       { client: queryClient },
-      children
+      children,
     );
   };
 }
@@ -92,7 +92,7 @@ describe("useCreateCarousel", () => {
       {
         method: "POST",
         body: JSON.stringify(MOCK_CREATE_REQUEST),
-      }
+      },
     );
   });
 
@@ -113,13 +113,16 @@ describe("useCreateCarousel", () => {
   it("invalidates the carousels query key on success", async () => {
     mockApiCall.mockResolvedValueOnce(MOCK_PROJECT);
     const queryClient = createQueryClient();
-    queryClient.setQueryData(["carousels"], [
-      {
-        ...MOCK_PROJECT,
-        id: "old-project",
-        topic: "Old topic",
-      },
-    ]);
+    queryClient.setQueryData(
+      ["carousels"],
+      [
+        {
+          ...MOCK_PROJECT,
+          id: "old-project",
+          topic: "Old topic",
+        },
+      ],
+    );
     const invalidateQueries = vi.spyOn(queryClient, "invalidateQueries");
     const { result } = renderHook(() => useCreateCarousel(), {
       wrapper: createWrapper(queryClient),
@@ -144,6 +147,27 @@ describe("useCreateCarousel", () => {
     ]);
   });
 
+  // Scenario: useCreateCarousel exposes pending state
+  it("shows pending state while mutation is in progress", async () => {
+    let resolvePromise: (value: typeof MOCK_PROJECT) => void;
+    mockApiCall.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolvePromise = resolve;
+        }),
+    );
+    const { result } = renderHook(() => useCreateCarousel(), {
+      wrapper: createWrapper(),
+    });
+
+    result.current.mutate(MOCK_CREATE_REQUEST);
+
+    await waitFor(() => expect(result.current.isPending).toBe(true));
+
+    resolvePromise!(MOCK_PROJECT);
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+  });
+
   // Scenario: useCreateCarousel handles API errors
   it("returns error state on API failure", async () => {
     mockApiCall.mockRejectedValueOnce(new Error("API Error"));
@@ -157,24 +181,57 @@ describe("useCreateCarousel", () => {
     expect(result.current.error).toEqual(new Error("API Error"));
   });
 
-  // Scenario: useCreateCarousel exposes pending state
-  it("shows pending state while mutation is in progress", async () => {
-    let resolvePromise: (value: typeof MOCK_PROJECT) => void;
-    mockApiCall.mockImplementation(
-      () => new Promise((resolve) => {
-        resolvePromise = resolve;
-      })
-    );
+  it("logs create errors without updating the cache", async () => {
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
+    mockApiCall.mockRejectedValueOnce(new Error("API Error"));
+    const queryClient = createQueryClient();
+    queryClient.setQueryData(["carousels"], [MOCK_PROJECT]);
     const { result } = renderHook(() => useCreateCarousel(), {
-      wrapper: createWrapper(),
+      wrapper: createWrapper(queryClient),
     });
 
     result.current.mutate(MOCK_CREATE_REQUEST);
 
-    await waitFor(() => expect(result.current.isPending).toBe(true));
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(consoleError).toHaveBeenCalledWith(
+      "Failed to create carousel:",
+      expect.any(Error),
+    );
+    expect(queryClient.getQueryData(["carousels"])).toEqual([MOCK_PROJECT]);
+    consoleError.mockRestore();
+  });
 
-    resolvePromise!(MOCK_PROJECT);
+  it("deduplicates the created project in the cache by id", async () => {
+    mockApiCall.mockResolvedValueOnce(MOCK_PROJECT);
+    const queryClient = createQueryClient();
+    queryClient.setQueryData(
+      ["carousels"],
+      [
+        MOCK_PROJECT,
+        {
+          ...MOCK_PROJECT,
+          id: "old-project",
+          topic: "Old topic",
+        },
+      ],
+    );
+    const { result } = renderHook(() => useCreateCarousel(), {
+      wrapper: createWrapper(queryClient),
+    });
+
+    result.current.mutate(MOCK_CREATE_REQUEST);
+
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(queryClient.getQueryData(["carousels"])).toEqual([
+      MOCK_PROJECT,
+      {
+        ...MOCK_PROJECT,
+        id: "old-project",
+        topic: "Old topic",
+      },
+    ]);
   });
 });
 
@@ -190,7 +247,7 @@ describe("useCarouselStatus", () => {
     expect(result.current.data).toEqual(MOCK_STATUS);
     expect(mockApiCall).toHaveBeenCalledWith(
       API_ENDPOINTS.CAROUSEL_STATUS("abc-123"),
-      expect.anything()
+      expect.anything(),
     );
   });
 
@@ -251,7 +308,7 @@ describe("useCarouselProject", () => {
     expect(result.current.data).toEqual(MOCK_PROJECT);
     expect(mockApiCall).toHaveBeenCalledWith(
       API_ENDPOINTS.CAROUSELS + "/abc-123",
-      expect.anything()
+      expect.anything(),
     );
   });
 
@@ -355,6 +412,45 @@ describe("useResumeCarousel", () => {
     await waitFor(() => expect(result.current.isError).toBe(true));
     expect(result.current.error).toEqual(new Error("resume failed"));
   });
+
+  it("shows pending state while resume is in progress", async () => {
+    let resolvePromise: (value: typeof MOCK_STATUS) => void;
+    mockApiCall.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolvePromise = resolve;
+        }),
+    );
+    const { result } = renderHook(() => useResumeCarousel(), {
+      wrapper: createWrapper(),
+    });
+
+    result.current.mutate("abc-123");
+
+    await waitFor(() => expect(result.current.isPending).toBe(true));
+
+    resolvePromise!(MOCK_STATUS);
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+  });
+
+  it("logs resume errors without updating the cache", async () => {
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
+    mockApiCall.mockRejectedValueOnce(new Error("resume failed"));
+    const { result } = renderHook(() => useResumeCarousel(), {
+      wrapper: createWrapper(),
+    });
+
+    result.current.mutate("abc-123");
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(consoleError).toHaveBeenCalledWith(
+      "Failed to resume carousel:",
+      expect.any(Error),
+    );
+    consoleError.mockRestore();
+  });
 });
 
 describe("useGenerateCarousel", () => {
@@ -365,7 +461,10 @@ describe("useGenerateCarousel", () => {
       wrapper: createWrapper(),
     });
 
-    result.current.mutate({ projectId: "abc-123", sources: ["https://example.com"] });
+    result.current.mutate({
+      projectId: "abc-123",
+      sources: ["https://example.com"],
+    });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
@@ -375,7 +474,7 @@ describe("useGenerateCarousel", () => {
       {
         method: "POST",
         body: JSON.stringify({ sources: ["https://example.com"] }),
-      }
+      },
     );
   });
 
@@ -396,7 +495,7 @@ describe("useGenerateCarousel", () => {
       {
         method: "POST",
         body: JSON.stringify({ sources: null }),
-      }
+      },
     );
   });
 
@@ -434,6 +533,45 @@ describe("useGenerateCarousel", () => {
 
     await waitFor(() => expect(result.current.isError).toBe(true));
     expect(result.current.error).toEqual(new Error("generate failed"));
+  });
+
+  it("shows pending state while generate is in progress", async () => {
+    let resolvePromise: (value: typeof MOCK_STATUS) => void;
+    mockApiCall.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolvePromise = resolve;
+        }),
+    );
+    const { result } = renderHook(() => useGenerateCarousel(), {
+      wrapper: createWrapper(),
+    });
+
+    result.current.mutate({ projectId: "abc-123" });
+
+    await waitFor(() => expect(result.current.isPending).toBe(true));
+
+    resolvePromise!(MOCK_STATUS);
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+  });
+
+  it("logs generate errors without updating the cache", async () => {
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
+    mockApiCall.mockRejectedValueOnce(new Error("generate failed"));
+    const { result } = renderHook(() => useGenerateCarousel(), {
+      wrapper: createWrapper(),
+    });
+
+    result.current.mutate({ projectId: "abc-123" });
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(consoleError).toHaveBeenCalledWith(
+      "Failed to generate carousel:",
+      expect.any(Error),
+    );
+    consoleError.mockRestore();
   });
 });
 
@@ -488,5 +626,47 @@ describe("useDeleteCarousel", () => {
 
     await waitFor(() => expect(result.current.isError).toBe(true));
     expect(result.current.error).toEqual(new Error("not found"));
+  });
+
+  it("shows pending state while delete is in progress", async () => {
+    let resolvePromise: (value: Record<string, never>) => void;
+    mockApiCall.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolvePromise = resolve;
+        }),
+    );
+    const { result } = renderHook(() => useDeleteCarousel(), {
+      wrapper: createWrapper(),
+    });
+
+    result.current.mutate("abc-123");
+
+    await waitFor(() => expect(result.current.isPending).toBe(true));
+
+    resolvePromise!({});
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+  });
+
+  it("logs delete errors without removing cached queries", async () => {
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
+    mockApiCall.mockRejectedValueOnce(new Error("not found"));
+    const queryClient = createQueryClient();
+    const removeQueries = vi.spyOn(queryClient, "removeQueries");
+    const { result } = renderHook(() => useDeleteCarousel(), {
+      wrapper: createWrapper(queryClient),
+    });
+
+    result.current.mutate("abc-123");
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(consoleError).toHaveBeenCalledWith(
+      "Failed to delete carousel:",
+      expect.any(Error),
+    );
+    expect(removeQueries).not.toHaveBeenCalled();
+    consoleError.mockRestore();
   });
 });

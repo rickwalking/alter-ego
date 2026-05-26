@@ -18,7 +18,8 @@ export const mockMessage = {
 export const mockAssistantMessage = {
   id: "2",
   role: "assistant" as const,
-  content: "Hi! I'm an AI assistant. I can help you learn more about the knowledge base.",
+  content:
+    "Hi! I'm an AI assistant. I can help you learn more about the knowledge base.",
   timestamp: new Date().toISOString(),
 };
 

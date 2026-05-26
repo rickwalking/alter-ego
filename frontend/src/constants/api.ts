@@ -5,7 +5,8 @@ export const API_ENDPOINTS = {
   AUTH_CHANGE_PASSWORD: "/api/auth/change-password",
   ADMIN_USERS: "/api/admin/users",
   ADMIN_USER_BY_ID: (id: string) => `/api/admin/users/${id}`,
-  ADMIN_USER_RESET_PASSWORD: (id: string) => `/api/admin/users/${id}/reset-password`,
+  ADMIN_USER_RESET_PASSWORD: (id: string) =>
+    `/api/admin/users/${id}/reset-password`,
   DOCUMENTS: "/api/documents",
   DOCUMENT_BY_ID: (id: string) => `/api/documents/${id}`,
   DOCUMENT_REPROCESS: (id: string) => `/api/documents/${id}/reprocess`,
@@ -14,6 +15,10 @@ export const API_ENDPOINTS = {
   CONVERSATION_BY_ID: (id: string) => `/api/conversations/${id}`,
   CONVERSATION_MESSAGES: (id: string) => `/api/conversations/${id}/messages`,
   CONVERSATION_CHAT: (id: string) => `/api/conversations/${id}/chat`,
+  CONVERSATION_CHAT_STREAM: (id: string) =>
+    `/api/conversations/${id}/chat/stream`,
+  CONVERSATION_PUBLISH_CHAT_STREAM: (id: string) =>
+    `/api/conversations/${id}/publish-chat/stream`,
   SEARCH: "/api/search",
   CAROUSELS: "/api/carousels",
   CAROUSEL_BY_ID: (id: string) => `/api/carousels/${id}`,
@@ -22,7 +27,8 @@ export const API_ENDPOINTS = {
   CAROUSEL_STREAM: (id: string) => `/api/carousels/${id}/stream`,
   CAROUSEL_STATUS: (id: string) => `/api/carousels/${id}/status`,
   CAROUSEL_BLOG: (id: string) => `/api/carousels/${id}/blog`,
-  CAROUSEL_BLOG_LANG: (id: string, lang: string) => `/api/carousels/${id}/blog/${lang}`,
+  CAROUSEL_BLOG_LANG: (id: string, lang: string) =>
+    `/api/carousels/${id}/blog/${lang}`,
   CAROUSEL_DESIGN: (id: string, lang?: string) =>
     `/api/carousels/${id}/design${lang ? `?lang=${lang}` : ""}`,
   CAROUSEL_SLIDES: (id: string) => `/api/carousels/${id}/slides`,
@@ -33,6 +39,39 @@ export const API_ENDPOINTS = {
     `/api/carousels/${id}/publish/instagram`,
   CAROUSEL_PUBLISH_INSTAGRAM_STATUS: (id: string) =>
     `/api/carousels/${id}/publish/instagram/status`,
+  CAROUSEL_WORKFLOW_START: (id: string) =>
+    `/api/carousels/${id}/workflow/start`,
+  CAROUSEL_WORKFLOW_STATE: (id: string) =>
+    `/api/carousels/${id}/workflow/state`,
+  CAROUSEL_WORKFLOW_RESUME: (id: string) =>
+    `/api/carousels/${id}/workflow/resume`,
+  CAROUSEL_WORKFLOW_STREAM: (id: string) =>
+    `/api/carousels/${id}/workflow/stream`,
+  BLOG_POSTS: "/api/blog-posts",
+  BLOG_POST_BY_ID: (id: string) => `/api/blog-posts/${id}`,
+  BLOG_POST_AI_SUGGEST: (id: string) => `/api/blog-posts/${id}/ai-suggest`,
+  BLOG_POST_AI_IMPROVE: (id: string) => `/api/blog-posts/${id}/ai-improve`,
+  BLOG_POST_GENERATE_IMAGE: (id: string) =>
+    `/api/blog-posts/${id}/generate-image`,
+  PERSONAS: "/api/personas",
+  PERSONA_VOICE_SCORE: (id: string) => `/api/personas/${id}/voice-score`,
+  RUBRICS: "/api/rubrics",
+  RUBRIC_EVALUATE: (id: string) => `/api/rubrics/${id}/evaluate`,
+  PROJECT_SOURCES: (projectId: string) => `/api/projects/${projectId}/sources`,
+  PROJECT_SOURCE_EXTRACT: (projectId: string, sourceId: string) =>
+    `/api/projects/${projectId}/sources/${sourceId}/extract`,
+  WORKFLOW_BOARD: "/api/workflow-board",
+  NOTIFICATIONS: "/api/notifications",
+  CONTENT_CALENDAR: "/api/content-calendar",
+  BLOG_SCHEDULE: (id: string) => `/api/blog-posts/${id}/schedule`,
+  BLOG_POST_SEO_ANALYZE: (id: string) => `/api/blog-posts/${id}/seo-analyze`,
+  BLOG_POST_ACCESSIBILITY_CHECK: (id: string) =>
+    `/api/blog-posts/${id}/accessibility-check`,
+  BLOG_POST_PLAGIARISM_CHECK: (id: string) =>
+    `/api/blog-posts/${id}/plagiarism-check`,
+  BLOG_POST_AI_DISCLOSURE: (id: string) =>
+    `/api/blog-posts/${id}/ai-disclosure`,
+  EDITORIAL_ANALYTICS: "/api/editorial-analytics",
 } as const;
 
 /** Route paths for navigation. */
@@ -74,4 +113,5 @@ export const BLOG_LANGUAGES = {
 export const DEFAULT_BLOG_LANGUAGE = BLOG_LANGUAGES.PORTUGUESE;
 
 /** Site URL used for SEO metadata and sitemap generation. */
-export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://alterego.app";
+export const SITE_URL =
+  process.env.NEXT_PUBLIC_SITE_URL ?? "https://alterego.app";

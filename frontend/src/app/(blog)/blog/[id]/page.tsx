@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { cookies, headers } from "next/headers";
+import { cookies } from "next/headers";
 import { BLOG_LANGUAGES } from "@/constants/api";
 
 export const dynamic = "force-dynamic";
@@ -19,7 +19,10 @@ interface BlogPostPageProps {
   searchParams: Promise<{ lang?: string }>;
 }
 
-export default async function BlogPostPage({ params, searchParams }: BlogPostPageProps) {
+export default async function BlogPostPage({
+  params,
+  searchParams,
+}: BlogPostPageProps) {
   const { id } = await params;
   const { lang: langParam } = await searchParams;
 
@@ -32,7 +35,8 @@ export default async function BlogPostPage({ params, searchParams }: BlogPostPag
       : DEFAULT_LOCALE;
 
   const currentLang =
-    langParam === BLOG_LANGUAGES.ENGLISH || langParam === BLOG_LANGUAGES.PORTUGUESE
+    langParam === BLOG_LANGUAGES.ENGLISH ||
+    langParam === BLOG_LANGUAGES.PORTUGUESE
       ? langParam
       : cookieLang;
 
@@ -46,26 +50,8 @@ export default async function BlogPostPage({ params, searchParams }: BlogPostPag
   const cssVars = designTokensToCssVars(design);
   const badge = design.layout.badge_label;
 
-  // Derive the public base URL from the incoming request so images work
-  // in production (Docker + CloudFlare) without NEXT_PUBLIC_API_URL.
-  const headerList = await headers();
-  const forwardedProto = headerList.get("x-forwarded-proto");
-  const forwardedHost = headerList.get("x-forwarded-host");
-  const host = headerList.get("host");
-  const protocol = forwardedProto || "https";
-  const publicHost = forwardedHost || host || "marinssolutions.com";
-  const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || `${protocol}://${publicHost}`;
-
-  const heroImageUrl = design.images.hero
-    ? `${apiBaseUrl}${design.images.hero}`
-    : "";
-  // Use rendered slides (with text overlay) when available; fall back to raw hero images
-  const renderedSlides = currentLang === "en"
-    ? design.images.rendered_slides_en
-    : design.images.rendered_slides_pt;
-  const slideImageUrls = (renderedSlides ?? design.images.slides).map(
-    (path) => `${apiBaseUrl}${path}`
-  );
+  const heroImageUrl = design.images.hero ?? "";
+  const slideImageUrls = design.images.slides;
 
   return (
     <div

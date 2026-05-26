@@ -70,7 +70,7 @@ describe("DocumentList Component", () => {
             onCreateNew={mockOnCreateNew}
             onUploadNew={mockOnUploadNew}
             onDeleteDocument={mockOnDeleteDocument}
-          />
+          />,
         );
         expect(screen.getByTestId("document-card-1")).toBeInTheDocument();
         expect(screen.getByTestId("document-card-2")).toBeInTheDocument();
@@ -84,9 +84,11 @@ describe("DocumentList Component", () => {
             onCreateNew={mockOnCreateNew}
             onUploadNew={mockOnUploadNew}
             onDeleteDocument={mockOnDeleteDocument}
-          />
+          />,
         );
-        expect(screen.getByRole("button", { name: /new document/i })).toBeInTheDocument();
+        expect(
+          screen.getByRole("button", { name: /new document/i }),
+        ).toBeInTheDocument();
       });
 
       it("Then the search input should be visible", () => {
@@ -96,9 +98,11 @@ describe("DocumentList Component", () => {
             onCreateNew={mockOnCreateNew}
             onUploadNew={mockOnUploadNew}
             onDeleteDocument={mockOnDeleteDocument}
-          />
+          />,
         );
-        expect(screen.getByPlaceholderText(/search documents/i)).toBeInTheDocument();
+        expect(
+          screen.getByPlaceholderText(/search documents/i),
+        ).toBeInTheDocument();
       });
     });
 
@@ -111,7 +115,7 @@ describe("DocumentList Component", () => {
             onCreateNew={mockOnCreateNew}
             onUploadNew={mockOnUploadNew}
             onDeleteDocument={mockOnDeleteDocument}
-          />
+          />,
         );
 
         await user.click(screen.getByRole("button", { name: /new document/i }));
@@ -128,7 +132,7 @@ describe("DocumentList Component", () => {
             onCreateNew={mockOnCreateNew}
             onUploadNew={mockOnUploadNew}
             onDeleteDocument={mockOnDeleteDocument}
-          />
+          />,
         );
 
         const searchInput = screen.getByPlaceholderText(/search documents/i);
@@ -147,7 +151,7 @@ describe("DocumentList Component", () => {
             onCreateNew={mockOnCreateNew}
             onUploadNew={mockOnUploadNew}
             onDeleteDocument={mockOnDeleteDocument}
-          />
+          />,
         );
 
         const searchInput = screen.getByPlaceholderText(/search documents/i);
@@ -166,7 +170,7 @@ describe("DocumentList Component", () => {
             onCreateNew={mockOnCreateNew}
             onUploadNew={mockOnUploadNew}
             onDeleteDocument={mockOnDeleteDocument}
-          />
+          />,
         );
 
         const searchInput = screen.getByPlaceholderText(/search documents/i);
@@ -183,7 +187,7 @@ describe("DocumentList Component", () => {
             onCreateNew={mockOnCreateNew}
             onUploadNew={mockOnUploadNew}
             onDeleteDocument={mockOnDeleteDocument}
-          />
+          />,
         );
 
         const searchInput = screen.getByPlaceholderText(/search documents/i);
@@ -205,7 +209,7 @@ describe("DocumentList Component", () => {
             onCreateNew={mockOnCreateNew}
             onUploadNew={mockOnUploadNew}
             onDeleteDocument={mockOnDeleteDocument}
-          />
+          />,
         );
 
         const searchInput = screen.getByPlaceholderText(/search documents/i);
@@ -223,7 +227,7 @@ describe("DocumentList Component", () => {
             onCreateNew={mockOnCreateNew}
             onUploadNew={mockOnUploadNew}
             onDeleteDocument={mockOnDeleteDocument}
-          />
+          />,
         );
         expect(screen.getByText(/no documents yet/i)).toBeInTheDocument();
       });
@@ -237,7 +241,7 @@ describe("DocumentList Component", () => {
             onCreateNew={mockOnCreateNew}
             onUploadNew={mockOnUploadNew}
             onDeleteDocument={mockOnDeleteDocument}
-          />
+          />,
         );
         const searchInput = screen.getByPlaceholderText(/search documents/i);
         expect(searchInput).toHaveClass("pl-10");

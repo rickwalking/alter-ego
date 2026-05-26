@@ -54,7 +54,9 @@ class DocumentProcessingPipeline:
 
             # Store chunks in vector store under scope-based namespace
             namespace = document.scope.value
-            await self._vector_store.upsert_chunks(chunks, document.id, namespace=namespace)
+            await self._vector_store.upsert_chunks(
+                chunks, document.id, namespace=namespace
+            )
 
             # Mark as completed
             document.mark_completed(chunk_count=len(chunks))
@@ -83,7 +85,9 @@ class DocumentProcessingPipeline:
             raise ValueError(_ERR_DOCUMENT_NOT_FOUND.format(document_id))
 
         # Delete existing chunks from vector store (using current scope namespace)
-        await self._vector_store.delete_by_document(document.id, namespace=document.scope.value)
+        await self._vector_store.delete_by_document(
+            document.id, namespace=document.scope.value
+        )
 
         # Reset status and reprocess
         document.update_status(DocumentStatus.PENDING)

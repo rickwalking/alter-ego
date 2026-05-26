@@ -129,7 +129,7 @@ describe("CarouselPreview Component", () => {
         // "/api/carousels/{id}/images/" prefixing.
         expect(img).toHaveAttribute(
           "src",
-          "/api/carousels/abc-123/images/slide_1"
+          "/api/carousels/abc-123/images/slide_1",
         );
       });
 

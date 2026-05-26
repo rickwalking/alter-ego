@@ -35,7 +35,9 @@ class DocumentModel(Base):
     status = Column(String(20), default=DocumentStatus.PENDING.value, nullable=False)
     error_message = Column(Text, nullable=True)
     chunk_count = Column(Integer, default=0, nullable=False)
-    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    created_at = Column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
     updated_at = Column(
         DateTime(timezone=True),
         server_default=func.now(),
@@ -64,6 +66,7 @@ class DocumentModel(Base):
             status=DocumentStatus(self.status),
             error_message=self.error_message,
             chunk_count=self.chunk_count,
+            owner_id=UUID(self.owner_id) if self.owner_id else None,
             created_at=self.created_at,
             updated_at=self.updated_at,
         )
@@ -73,6 +76,7 @@ class DocumentModel(Base):
         """Create ORM model from domain entity."""
         return cls(
             id=str(entity.id),
+            owner_id=str(entity.owner_id) if entity.owner_id else None,
             content=entity.content,
             title=entity.title,
             doc_metadata=entity.metadata,

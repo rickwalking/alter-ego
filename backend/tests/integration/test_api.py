@@ -1,35 +1,8 @@
 """Integration tests for API endpoints."""
 
+from unittest.mock import AsyncMock
+
 import pytest
-from httpx import ASGITransport, AsyncClient
-
-from rag_backend.api.app import create_app
-
-
-@pytest.fixture
-async def client():
-    """Create async test client with in-memory SQLite."""
-    from sqlalchemy.ext.asyncio import create_async_engine
-
-    import rag_backend.infrastructure.database.config as db_config
-    from rag_backend.infrastructure.database.config import Base, close_db
-
-    engine = create_async_engine("sqlite+aiosqlite:///:memory:", echo=False)
-
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-
-    db_config.c_engine = engine
-
-    app = create_app()
-
-    transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as ac:
-        yield ac
-
-    db_config.c_engine = None
-    await close_db()
-    await engine.dispose()
 
 
 class TestHealthEndpoints:
@@ -104,7 +77,9 @@ class TestDocumentEndpoints:
     @pytest.mark.asyncio
     async def test_get_document_not_found(self, client):
         """Given non-existent ID, when GET /api/documents/{id}, then returns 404."""
-        response = await client.get("/api/documents/00000000-0000-0000-0000-000000000000")
+        response = await client.get(
+            "/api/documents/00000000-0000-0000-0000-000000000000"
+        )
         assert response.status_code == 404
 
     @pytest.mark.asyncio
@@ -146,7 +121,7 @@ class TestConversationEndpoints:
     async def test_create_conversation(self, client):
         """Given valid data, when POST /api/conversations, then returns created conversation."""
         payload = {"title": "Test Conversation", "metadata": {"source": "test"}}
-        response = await client.post("/api/conversations", json=payload)
+        response = await client.post("/api/conversations/", json=payload)
         assert response.status_code == 201
         data = response.json()
         assert data["title"] == "Test Conversation"
@@ -155,7 +130,7 @@ class TestConversationEndpoints:
     @pytest.mark.asyncio
     async def test_create_conversation_no_title(self, client):
         """Given no title, when POST /api/conversations, then creates with null title."""
-        response = await client.post("/api/conversations", json={})
+        response = await client.post("/api/conversations/", json={})
         assert response.status_code == 201
         data = response.json()
         assert data["title"] is None
@@ -163,9 +138,11 @@ class TestConversationEndpoints:
     @pytest.mark.asyncio
     async def test_list_conversations(self, client):
         """Given conversations exist, when GET /api/conversations, then returns list."""
-        await client.post("/api/conversations", json={"title": "Integration Test Conversation"})
+        await client.post(
+            "/api/conversations/", json={"title": "Integration Test Conversation"}
+        )
 
-        response = await client.get("/api/conversations")
+        response = await client.get("/api/conversations/")
         assert response.status_code == 200
         data = response.json()
         assert data["total"] >= 1
@@ -174,7 +151,9 @@ class TestConversationEndpoints:
     @pytest.mark.asyncio
     async def test_get_conversation_not_found(self, client):
         """Given non-existent ID, when GET /api/conversations/{id}, then returns 404."""
-        response = await client.get("/api/conversations/00000000-0000-0000-0000-000000000000")
+        response = await client.get(
+            "/api/conversations/00000000-0000-0000-0000-000000000000"
+        )
         assert response.status_code == 404
 
     @pytest.mark.asyncio
@@ -188,7 +167,9 @@ class TestConversationEndpoints:
     @pytest.mark.asyncio
     async def test_conversation_crud(self, client):
         """Given a conversation, when CRUD operations, then all succeed."""
-        create_response = await client.post("/api/conversations", json={"title": "CRUD Test"})
+        create_response = await client.post(
+            "/api/conversations/", json={"title": "CRUD Test"}
+        )
         assert create_response.status_code == 201
         conv_id = create_response.json()["id"]
 
@@ -221,6 +202,127 @@ class TestSearchEndpoint:
         """Given empty query, when GET /api/search, then returns 422."""
         response = await client.get("/api/search", params={"query": ""})
         assert response.status_code == 422
+
+
+class TestAgentRoutingByMetadata:
+    """Integration tests for metadata-based agent routing.
+
+    Feature: Agent Security Boundary — Metadata-Based Agent Routing
+    See tests/features/agent_split/security_boundaries.feature
+
+    Scenario: Conversation with project_id metadata routes to RAGAgent (carousel-capable)
+      Given a conversation exists with metadata including "project_id" = "abc-123"
+      When a chat message is sent to that conversation
+      Then the response should include header "X-Agent-Origin: rag-agent"
+
+    Scenario: Conversation without project_id metadata routes to AlterEgoAgent
+      Given a conversation exists with empty metadata
+      When a chat message is sent to that conversation
+      Then the response should include header "X-Agent-Origin: alter-ego"
+    """
+
+    @pytest.mark.asyncio
+    async def test_carousel_conversation_gets_rag_agent_origin(
+        self, client, monkeypatch
+    ):
+        """Given a conversation with project_id metadata,
+        when a chat message is sent,
+        then X-Agent-Origin: rag-agent is returned."""
+        from rag_backend.agents.rag_agent import RAGAgent
+
+        async def _mock_agent_chat(*args, **kwargs):
+            yield {"type": "complete", "content": "response"}
+            yield {"type": "sources", "content": []}
+
+        mock_agent = AsyncMock(spec=RAGAgent)
+        mock_agent.chat = _mock_agent_chat
+
+        monkeypatch.setattr(
+            "rag_backend.api.dependencies.agents.build_rag_agent",
+            lambda _db, _container: mock_agent,
+        )
+
+        create_resp = await client.post(
+            "/api/conversations/",
+            json={"title": "Carousel Chat", "metadata": {"project_id": "abc-123"}},
+        )
+        assert create_resp.status_code == 201
+        conv_id = create_resp.json()["id"]
+
+        chat_resp = await client.post(
+            f"/api/conversations/{conv_id}/chat",
+            json={"content": "refine this carousel"},
+        )
+        assert chat_resp.status_code == 200
+        assert chat_resp.headers.get("X-Agent-Origin") == "rag-agent"
+
+    @pytest.mark.asyncio
+    async def test_normal_conversation_gets_alter_ego_origin(self, client, monkeypatch):
+        """Given a conversation without project_id metadata,
+        when a chat message is sent,
+        then X-Agent-Origin: alter-ego is returned."""
+        from rag_backend.agents.alter_ego_agent import AlterEgoAgent
+
+        async def _mock_agent_chat(*args, **kwargs):
+            yield {"type": "complete", "content": "response"}
+            yield {"type": "sources", "content": []}
+
+        mock_agent = AsyncMock(spec=AlterEgoAgent)
+        mock_agent.chat = _mock_agent_chat
+
+        monkeypatch.setattr(
+            "rag_backend.api.dependencies.agents.build_alter_ego_agent",
+            lambda _db, _container: mock_agent,
+        )
+
+        create_resp = await client.post(
+            "/api/conversations/",
+            json={"title": "Personal Chat"},
+        )
+        assert create_resp.status_code == 201
+        conv_id = create_resp.json()["id"]
+
+        chat_resp = await client.post(
+            f"/api/conversations/{conv_id}/chat",
+            json={"content": "search my documents"},
+        )
+        assert chat_resp.status_code == 200
+        assert chat_resp.headers.get("X-Agent-Origin") == "alter-ego"
+
+    @pytest.mark.asyncio
+    async def test_metadata_with_other_keys_gets_alter_ego_origin(
+        self, client, monkeypatch
+    ):
+        """Given a conversation with non-carousel metadata,
+        when a chat message is sent,
+        then X-Agent-Origin: alter-ego is returned."""
+        from rag_backend.agents.alter_ego_agent import AlterEgoAgent
+
+        async def _mock_agent_chat(*args, **kwargs):
+            yield {"type": "complete", "content": "response"}
+            yield {"type": "sources", "content": []}
+
+        mock_agent = AsyncMock(spec=AlterEgoAgent)
+        mock_agent.chat = _mock_agent_chat
+
+        monkeypatch.setattr(
+            "rag_backend.api.dependencies.agents.build_alter_ego_agent",
+            lambda _db, _container: mock_agent,
+        )
+
+        create_resp = await client.post(
+            "/api/conversations/",
+            json={"title": "Source Chat", "metadata": {"source": "web", "user_id": 42}},
+        )
+        assert create_resp.status_code == 201
+        conv_id = create_resp.json()["id"]
+
+        chat_resp = await client.post(
+            f"/api/conversations/{conv_id}/chat",
+            json={"content": "hello"},
+        )
+        assert chat_resp.status_code == 200
+        assert chat_resp.headers.get("X-Agent-Origin") == "alter-ego"
 
 
 class TestRateLimiting:

@@ -8,7 +8,8 @@ vi.mock("@/lib/utils", async () => {
   return {
     ...actual,
     formatRelativeTime: vi.fn(() => "just now"),
-    cn: (...inputs: (string | undefined | false | null)[]) => inputs.filter(Boolean).join(" "),
+    cn: (...inputs: (string | undefined | false | null)[]) =>
+      inputs.filter(Boolean).join(" "),
   };
 });
 
@@ -48,7 +49,9 @@ describe("MessageItem Component", () => {
 
       it("Then it should have user-specific background styling", () => {
         render(<MessageItem message={mockUserMessage} />);
-        const messageContainer = screen.getByText("Hello, how are you?").closest("div")?.parentElement?.parentElement;
+        const messageContainer = screen
+          .getByText("Hello, how are you?")
+          .closest("div")?.parentElement?.parentElement;
         expect(messageContainer).toHaveClass("bg-[var(--color-background)]");
       });
     });
@@ -63,12 +66,16 @@ describe("MessageItem Component", () => {
 
       it("Then it should display the message content", () => {
         render(<MessageItem message={mockAssistantMessage} />);
-        expect(screen.getByText("I'm doing well, thank you for asking!")).toBeInTheDocument();
+        expect(
+          screen.getByText("I'm doing well, thank you for asking!"),
+        ).toBeInTheDocument();
       });
 
       it("Then it should have assistant-specific background styling", () => {
         render(<MessageItem message={mockAssistantMessage} />);
-        const messageContainer = screen.getByText("I'm doing well, thank you for asking!").closest("div")?.parentElement?.parentElement;
+        const messageContainer = screen
+          .getByText("I'm doing well, thank you for asking!")
+          .closest("div")?.parentElement?.parentElement;
         expect(messageContainer).toHaveClass("bg-[var(--color-muted)]");
       });
     });
@@ -93,7 +100,9 @@ describe("MessageItem Component", () => {
       it("Then it should show the relative time", () => {
         render(<MessageItem message={mockUserMessage} />);
         expect(
-          screen.getByText(new Date(mockUserMessage.created_at).toLocaleTimeString()),
+          screen.getByText(
+            new Date(mockUserMessage.created_at).toLocaleTimeString(),
+          ),
         ).toBeInTheDocument();
       });
     });
@@ -104,7 +113,8 @@ describe("MessageItem Component", () => {
       it("Then it should render the content within prose styling", () => {
         const longMessage: Message = {
           ...mockUserMessage,
-          content: "This is a longer message with multiple sentences. It should be displayed properly.",
+          content:
+            "This is a longer message with multiple sentences. It should be displayed properly.",
         };
         render(<MessageItem message={longMessage} />);
         const content = screen.getByText(longMessage.content);

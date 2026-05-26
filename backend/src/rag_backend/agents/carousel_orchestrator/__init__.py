@@ -103,7 +103,7 @@ class CarouselAgent(CarouselRefinementMixin):
     _run_graph_body = _run_graph_body
     _run_graph_producer = _run_graph_producer
 
-    def __init__(  # noqa: PLR0913 — agent requires all pipeline dependencies
+    def __init__(
         self,
         repository: CarouselRepository,
         llm_service: LLMService,
@@ -146,7 +146,9 @@ class CarouselAgent(CarouselRefinementMixin):
             pdf_builder=self._pdf_slide_builder,
         )
 
-    def to_subagent(self, output_base_dir: str = "./output/carousels") -> dict[str, object]:
+    def to_subagent(
+        self, output_base_dir: str = "./output/carousels"
+    ) -> dict[str, object]:
         from rag_backend.application.services.carousel.subagent import (
             build_carousel_subagent,
         )
@@ -230,14 +232,18 @@ class CarouselAgent(CarouselRefinementMixin):
                     final_project = await self._repo.get_project_by_id(project_id)
                     yield {
                         "node": "end",
-                        "status": final_project.status.value if final_project else "completed",
-                        "phase_progress": final_project.phase_progress if final_project else None,
+                        "status": final_project.status.value
+                        if final_project
+                        else "completed",
+                        "phase_progress": final_project.phase_progress
+                        if final_project
+                        else None,
                     }
                     break
                 continue
 
             yield event
-            if event.get("node") in ("end", "error"):
+            if event.get("node") in {"end", "error"}:
                 break
 
     async def resume_pipeline(self, project_id: UUID) -> CarouselProject:
@@ -295,6 +301,8 @@ class CarouselAgent(CarouselRefinementMixin):
 
         slides_data = [unpack_extras(s) for s in slides]
         pt_html = self._phase4_design(project, slides_data)
-        await self._phase6_bilingual_export(project, slides_data, pt_html, Path(project.output_dir))
+        await self._phase6_bilingual_export(
+            project, slides_data, pt_html, Path(project.output_dir)
+        )
         project.updated_at = datetime.utcnow()
         return await self._repo.update_project(project)

@@ -50,20 +50,16 @@ function slideUrlsFromProject(
     tokens?.images?.rendered_slides_pt ?? tokens?.images?.slides ?? [];
   const enSlides = tokens?.images?.rendered_slides_en ?? ptSlides;
   const slides = language === "en" ? enSlides : ptSlides;
-  const base = process.env.NEXT_PUBLIC_API_URL ?? "";
-  // Append the project's updated_at as a cache-busting query param so the
-  // browser refetches the JPG after agent-driven re-renders bump the row.
   const v = encodeURIComponent(project.updated_at);
-  return slides.map((path) => `${base}${path}?v=${v}`);
+  return slides.map((path) => `${path}?v=${v}`);
 }
 
 function pdfUrl(
   project: CarouselProjectResponse,
   language: "pt" | "en",
 ): string {
-  const base = process.env.NEXT_PUBLIC_API_URL ?? "";
   const v = encodeURIComponent(project.updated_at);
-  return `${base}${API_ENDPOINTS.CAROUSEL_PDF(project.id)}?lang=${language}&v=${v}`;
+  return `${API_ENDPOINTS.CAROUSEL_PDF(project.id)}?lang=${language}&v=${v}`;
 }
 
 function createEditorState(project: CarouselProjectResponse): EditorState {

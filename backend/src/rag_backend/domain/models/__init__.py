@@ -22,6 +22,20 @@ from rag_backend.domain.models.documents import (
     RetrievalQuery,
     SearchResult,
 )
+from rag_backend.domain.models.persona import PersonaProfile, ToneAttributes
+from rag_backend.domain.models.rubric import (
+    EvaluationMethod,
+    QualityRubric,
+    RubricCriterion,
+    RubricEvaluationScore,
+    ScoringScale,
+)
+from rag_backend.domain.models.source_comment import (
+    ContentSource,
+    ContentVersion,
+    EditorialComment,
+    SourceType,
+)
 from rag_backend.domain.models.user import User, UserRole
 
 __all__ = [
@@ -29,6 +43,8 @@ __all__ = [
     "CarouselSlide",
     "CarouselStatus",
     "CarouselTheme",
+    "ContentSource",
+    "ContentVersion",
     "Conversation",
     "DesignTokenColors",
     "DesignTokenImages",
@@ -39,12 +55,20 @@ __all__ = [
     "DocumentChunk",
     "DocumentScope",
     "DocumentStatus",
+    "EditorialComment",
+    "EvaluationMethod",
     "Message",
     "MessageRole",
+    "PersonaProfile",
+    "QualityRubric",
     "ResearchSource",
     "ResearchSourceType",
     "RetrievalQuery",
+    "RubricCriterion",
+    "ScoringScale",
     "SearchResult",
+    "SourceType",
+    "ToneAttributes",
     "User",
     "UserRole",
 ]

@@ -53,6 +53,8 @@ def build_refine_carousel_design_tool(
         except Exception as exc:
             return _ERR_UNEXPECTED.format(exc=exc)
 
-        return f"Applied design change to project {project_id}. Slides + PDF re-exported."
+        return (
+            f"Applied design change to project {project_id}. Slides + PDF re-exported."
+        )
 
     return refine_carousel_design

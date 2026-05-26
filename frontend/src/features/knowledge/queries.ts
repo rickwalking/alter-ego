@@ -30,7 +30,8 @@ export function documentOptions(id: string | null) {
   return queryOptions({
     queryKey: documentKeys.detail(id),
     queryFn: id
-      ? () => apiCall<Document>(API_ENDPOINTS.DOCUMENT_BY_ID(id), documentSchema)
+      ? () =>
+          apiCall<Document>(API_ENDPOINTS.DOCUMENT_BY_ID(id), documentSchema)
       : skipToken,
   });
 }

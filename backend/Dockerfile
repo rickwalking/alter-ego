@@ -16,6 +16,8 @@ COPY backend/src/ src/
 COPY README.md ./
 RUN uv sync --frozen --no-dev
 
+ENV PLAYWRIGHT_BROWSERS_PATH=/app/ms-playwright
+
 RUN uv run playwright install chromium
 RUN uv run playwright install-deps chromium
 
@@ -27,6 +29,7 @@ USER fastapi
 
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONPATH=/app/src
+ENV PLAYWRIGHT_BROWSERS_PATH=/app/ms-playwright
 
 EXPOSE 8000
 

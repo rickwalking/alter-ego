@@ -31,7 +31,9 @@ from rag_backend.domain.protocols import (
     ImageStyleStrategy,
 )
 
-_ERR_IMAGE_PRESET_UNSUPPORTED = "Image preset ({!r}, {!r}) is not supported. Allowed combos: {}"
+_ERR_IMAGE_PRESET_UNSUPPORTED = (
+    "Image preset ({!r}, {!r}) is not supported. Allowed combos: {}"
+)
 _ERR_IMAGE_PRESET_NO_PROVIDER = "Image preset ({!r}, {!r}) has no registered provider."
 
 
@@ -80,7 +82,9 @@ class ImageProviderRegistry:
         key = (model, style)
         if key not in SUPPORTED_IMAGE_COMBOS:
             raise ValueError(
-                _ERR_IMAGE_PRESET_UNSUPPORTED.format(model, style, sorted(SUPPORTED_IMAGE_COMBOS))
+                _ERR_IMAGE_PRESET_UNSUPPORTED.format(
+                    model, style, sorted(SUPPORTED_IMAGE_COMBOS)
+                )
             )
         provider = self._providers.get(key)
         if provider is None:

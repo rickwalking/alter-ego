@@ -1,0 +1,65 @@
+"""Constants for Phase 5 data migration (MIG-001-MIG-004)."""
+
+BRIEF_FIELD_TOPIC = "Topic"
+BRIEF_FIELD_AUDIENCE = "Audience"
+BRIEF_FIELD_NICHE = "Niche"
+BRIEF_FIELD_TITLE = "Title"
+BRIEF_FIELD_SUBTITLE = "Subtitle"
+BRIEF_FIELD_SLIDES = "Slides"
+BRIEF_FIELD_LANGUAGE = "Language"
+BRIEF_FIELD_THEME = "Theme"
+BRIEF_FIELD_IMAGE_STYLE = "Image style"
+
+DEFAULT_PERSONA_NAME = "Default (Migrated)"
+DEFAULT_PERSONA_DESCRIPTION = (
+    "Auto-generated persona from existing carousel outputs during Phase 5 migration."
+)
+DEFAULT_RUBRIC_NAME = "Editorial Quality (Default)"
+DEFAULT_RUBRIC_DESCRIPTION = (
+    "Standard editorial quality rubric for carousel and blog content."
+)
+
+MAX_WRITING_SAMPLES = 10
+MAX_SAMPLE_LENGTH = 500
+
+CRITERION_ORIGINALITY = "originality"
+CRITERION_VOICE_MATCH = "voice_match"
+CRITERION_ENGAGEMENT = "engagement"
+CRITERION_CLARITY = "clarity"
+
+BRIEF_FIELD_INSTRUCTIONS = "Instructions"
+
+DEFAULT_PERSONA_EXPERTISE = ["technology", "AI", "software development"]
+ERR_NO_WRITING_SAMPLES = "No completed carousel outputs to derive writing samples"
+
+CONTENT_TYPE_CAROUSEL = "carousel"
+CONTENT_TYPE_BLOG_POST = "blog_post"
+
+MIGRATION_DRY_RUN = "dry_run"
+
+__all__ = [
+    "BRIEF_FIELD_AUDIENCE",
+    "BRIEF_FIELD_IMAGE_STYLE",
+    "BRIEF_FIELD_INSTRUCTIONS",
+    "BRIEF_FIELD_LANGUAGE",
+    "BRIEF_FIELD_NICHE",
+    "BRIEF_FIELD_SLIDES",
+    "BRIEF_FIELD_SUBTITLE",
+    "BRIEF_FIELD_THEME",
+    "BRIEF_FIELD_TITLE",
+    "BRIEF_FIELD_TOPIC",
+    "CONTENT_TYPE_BLOG_POST",
+    "CONTENT_TYPE_CAROUSEL",
+    "CRITERION_CLARITY",
+    "CRITERION_ENGAGEMENT",
+    "CRITERION_ORIGINALITY",
+    "CRITERION_VOICE_MATCH",
+    "DEFAULT_PERSONA_DESCRIPTION",
+    "DEFAULT_PERSONA_EXPERTISE",
+    "DEFAULT_PERSONA_NAME",
+    "DEFAULT_RUBRIC_DESCRIPTION",
+    "DEFAULT_RUBRIC_NAME",
+    "ERR_NO_WRITING_SAMPLES",
+    "MAX_SAMPLE_LENGTH",
+    "MAX_WRITING_SAMPLES",
+]

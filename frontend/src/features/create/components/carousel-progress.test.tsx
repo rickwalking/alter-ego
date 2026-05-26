@@ -38,7 +38,7 @@ describe("CarouselProgress Component", () => {
             currentPhase="completed"
             isComplete={true}
             hasError={false}
-          />
+          />,
         );
         expect(screen.getByText(/complete!/i)).toBeInTheDocument();
       });
@@ -49,10 +49,12 @@ describe("CarouselProgress Component", () => {
             currentPhase="completed"
             isComplete={true}
             hasError={false}
-          />
+          />,
         );
         PIPELINE_PHASES.forEach((phase) => {
-          expect(screen.queryByTestId(`phase-item-${phase}`)).not.toBeInTheDocument();
+          expect(
+            screen.queryByTestId(`phase-item-${phase}`),
+          ).not.toBeInTheDocument();
         });
       });
     });
@@ -66,7 +68,7 @@ describe("CarouselProgress Component", () => {
             currentPhase="researching"
             isComplete={false}
             hasError={true}
-          />
+          />,
         );
         expect(screen.getByText(/generation failed/i)).toBeInTheDocument();
       });
@@ -77,10 +79,12 @@ describe("CarouselProgress Component", () => {
             currentPhase="researching"
             isComplete={false}
             hasError={true}
-          />
+          />,
         );
         PIPELINE_PHASES.forEach((phase) => {
-          expect(screen.queryByTestId(`phase-item-${phase}`)).not.toBeInTheDocument();
+          expect(
+            screen.queryByTestId(`phase-item-${phase}`),
+          ).not.toBeInTheDocument();
         });
       });
 
@@ -91,10 +95,10 @@ describe("CarouselProgress Component", () => {
             isComplete={false}
             hasError={true}
             errorMessage="Anthropic rate limit exceeded"
-          />
+          />,
         );
         expect(
-          screen.getByText(/anthropic rate limit exceeded/i)
+          screen.getByText(/anthropic rate limit exceeded/i),
         ).toBeInTheDocument();
       });
     });
@@ -108,7 +112,7 @@ describe("CarouselProgress Component", () => {
             currentPhase="researching"
             isComplete={false}
             hasError={false}
-          />
+          />,
         );
         PIPELINE_PHASES.forEach((phase) => {
           expect(screen.getByTestId(`phase-item-${phase}`)).toBeInTheDocument();
@@ -121,10 +125,10 @@ describe("CarouselProgress Component", () => {
             currentPhase="researching"
             isComplete={false}
             hasError={false}
-          />
+          />,
         );
         expect(screen.getByTestId("phase-label-researching")).toHaveClass(
-          "text-[var(--color-primary)]"
+          "text-[var(--color-primary)]",
         );
       });
 
@@ -134,7 +138,7 @@ describe("CarouselProgress Component", () => {
             currentPhase="researching"
             isComplete={false}
             hasError={false}
-          />
+          />,
         );
         expect(screen.queryByTestId("phase-check")).not.toBeInTheDocument();
       });
@@ -147,10 +151,10 @@ describe("CarouselProgress Component", () => {
             currentPhase="drafting"
             isComplete={false}
             hasError={false}
-          />
+          />,
         );
         expect(screen.getByTestId("phase-label-researching")).toHaveClass(
-          "text-[var(--color-text)]"
+          "text-[var(--color-text)]",
         );
       });
 
@@ -160,10 +164,10 @@ describe("CarouselProgress Component", () => {
             currentPhase="drafting"
             isComplete={false}
             hasError={false}
-          />
+          />,
         );
         expect(screen.getByTestId("phase-label-drafting")).toHaveClass(
-          "text-[var(--color-primary)]"
+          "text-[var(--color-primary)]",
         );
       });
 
@@ -173,10 +177,10 @@ describe("CarouselProgress Component", () => {
             currentPhase="drafting"
             isComplete={false}
             hasError={false}
-          />
+          />,
         );
         expect(screen.getByTestId("phase-label-designing")).toHaveClass(
-          "text-[var(--color-text-muted)]"
+          "text-[var(--color-text-muted)]",
         );
       });
     });
@@ -188,11 +192,11 @@ describe("CarouselProgress Component", () => {
             currentPhase="completed"
             isComplete={false}
             hasError={false}
-          />
+          />,
         );
         PIPELINE_PHASES.slice(0, -1).forEach((phase) => {
           expect(screen.getByTestId(`phase-label-${phase}`)).toHaveClass(
-            "text-[var(--color-text)]"
+            "text-[var(--color-text)]",
           );
         });
       });
@@ -203,10 +207,10 @@ describe("CarouselProgress Component", () => {
             currentPhase="completed"
             isComplete={false}
             hasError={false}
-          />
+          />,
         );
         expect(screen.getByTestId("phase-label-completed")).toHaveClass(
-          "text-[var(--color-primary)]"
+          "text-[var(--color-primary)]",
         );
       });
     });
@@ -218,11 +222,11 @@ describe("CarouselProgress Component", () => {
             currentPhase="generating_images"
             isComplete={false}
             hasError={false}
-          />
+          />,
         );
         ["researching", "drafting", "designing"].forEach((phase) => {
           expect(screen.getByTestId(`phase-label-${phase}`)).toHaveClass(
-            "text-[var(--color-text)]"
+            "text-[var(--color-text)]",
           );
         });
       });
@@ -233,10 +237,10 @@ describe("CarouselProgress Component", () => {
             currentPhase="generating_images"
             isComplete={false}
             hasError={false}
-          />
+          />,
         );
         expect(screen.getByTestId("phase-label-generating_images")).toHaveClass(
-          "text-[var(--color-primary)]"
+          "text-[var(--color-primary)]",
         );
       });
 
@@ -246,11 +250,11 @@ describe("CarouselProgress Component", () => {
             currentPhase="generating_images"
             isComplete={false}
             hasError={false}
-          />
+          />,
         );
         ["exporting", "completed"].forEach((phase) => {
           expect(screen.getByTestId(`phase-label-${phase}`)).toHaveClass(
-            "text-[var(--color-text-muted)]"
+            "text-[var(--color-text-muted)]",
           );
         });
       });
@@ -266,7 +270,7 @@ describe("CarouselProgress Component", () => {
             isComplete={false}
             hasError={false}
             updatedAt={longAgo}
-          />
+          />,
         );
         expect(screen.getByText(/still working after/i)).toBeInTheDocument();
       });
@@ -277,7 +281,7 @@ describe("CarouselProgress Component", () => {
             currentPhase="drafting"
             isComplete={false}
             hasError={false}
-          />
+          />,
         );
         // Header shows the name in addition to the list — both should exist.
         const labels = screen.getAllByText(/drafting/i);
@@ -294,7 +298,7 @@ describe("CarouselProgress Component", () => {
             currentPhase="designing"
             isComplete={false}
             hasError={false}
-          />
+          />,
         );
         PIPELINE_PHASES.forEach((phase) => {
           expect(screen.getByTestId(`phase-item-${phase}`)).toBeInTheDocument();

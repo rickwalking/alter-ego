@@ -32,7 +32,6 @@ export default async function HomePage() {
 
   const data: CarouselProjectListResponse = await fetchCompletedProjects(3);
   const fallback = FALLBACK_DESIGN_TOKENS;
-  const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
   return (
     <div className="flex-1">
@@ -124,10 +123,7 @@ export default async function HomePage() {
                   | { images?: { hero?: string } }
                   | null
                   | undefined;
-                const heroPath = tokens?.images?.hero;
-                const imageUrl = heroPath
-                  ? `${apiBaseUrl}${heroPath}`
-                  : `${apiBaseUrl}/api/carousels/${post.id}/images/slide_1.jpg`;
+                const imageUrl = tokens?.images?.hero ?? "";
 
                 return (
                   <Link
@@ -143,7 +139,10 @@ export default async function HomePage() {
                         fill
                         className="object-cover transition-transform duration-300 group-hover:scale-105"
                         sizes="(min-width: 1024px) 33vw, (min-width: 768px) 50vw, 100vw"
-                        unoptimized={imageUrl.startsWith("http") || imageUrl.startsWith("/api/")}
+                        unoptimized={
+                          imageUrl.startsWith("http") ||
+                          imageUrl.startsWith("/api/")
+                        }
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-[var(--color-card)] to-transparent" />
                     </div>
@@ -162,11 +161,14 @@ export default async function HomePage() {
                           {post.niche}
                         </span>
                         <span className="text-xs text-[var(--color-muted-foreground)]">
-                          {new Date(post.created_at).toLocaleDateString("en-US", {
-                            month: "short",
-                            day: "numeric",
-                            year: "numeric",
-                          })}
+                          {new Date(post.created_at).toLocaleDateString(
+                            "en-US",
+                            {
+                              month: "short",
+                              day: "numeric",
+                              year: "numeric",
+                            },
+                          )}
                         </span>
                       </div>
 
@@ -183,7 +185,7 @@ export default async function HomePage() {
                           locale === "en"
                             ? post.subtitle_en || post.subtitle || post.topic
                             : post.subtitle || post.topic,
-                          15
+                          15,
                         )}
                       </p>
                     </div>

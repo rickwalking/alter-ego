@@ -21,7 +21,7 @@ describe("extractH2Heading", () => {
 
 describe("resolveSlideImage", () => {
   const createDesign = (
-    imageMap?: Array<{ slide_number: number; heading: string; alt: string }>
+    imageMap?: Array<{ slide_number: number; heading: string; alt: string }>,
   ): CarouselDesignResponse => ({
     colors: {
       primary: "#ff6b00",
@@ -63,7 +63,11 @@ describe("resolveSlideImage", () => {
 
   it("returns the correct slide image when heading matches image map", () => {
     const design = createDesign([
-      { slide_number: 3, heading: "The Architecture", alt: "Architecture diagram" },
+      {
+        slide_number: 3,
+        heading: "The Architecture",
+        alt: "Architecture diagram",
+      },
     ]);
     const slideImages = design.images.slides;
     const markdown = "## The Architecture\n\nSome content here.";

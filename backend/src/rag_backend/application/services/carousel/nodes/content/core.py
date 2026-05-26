@@ -59,7 +59,9 @@ async def _optimize_title(
         title_data = cast(dict[str, object], extract_json(title_response))
         subtitle_value = title_data.get("subtitle_pt", title_data.get("subtitle"))
         project.set_title(
-            title=str(title_data.get("title_pt", title_data.get("title", project.topic))),
+            title=str(
+                title_data.get("title_pt", title_data.get("title", project.topic))
+            ),
             subtitle=str(subtitle_value) if subtitle_value is not None else None,
         )
     except (json.JSONDecodeError, KeyError, TypeError) as exc:
@@ -114,7 +116,9 @@ async def run_content(
             "carousel_slide_shape_invalid",
             project_id=str(project.id),
             error=str(exc),
-            content_keys=list(content_data.keys()) if isinstance(content_data, dict) else None,
+            content_keys=list(content_data.keys())
+            if isinstance(content_data, dict)
+            else None,
         )
         raise ValueError(_ERR_CONTENT_INVALID_SLIDES) from exc
 
@@ -126,14 +130,18 @@ async def run_content(
         )
         raise ValueError(_ERR_CONTENT_ZERO_SLIDES)
 
-    blog_pt_raw = str(content_data.get("blog_pt", content_data.get("blog_markdown", "")))
+    blog_pt_raw = str(
+        content_data.get("blog_pt", content_data.get("blog_markdown", ""))
+    )
     blog_en_raw = str(content_data.get("blog_en", ""))
 
     blog_pt = cleanup_blog_markdown(blog_pt_raw)
     blog_en = cleanup_blog_markdown(blog_en_raw) if blog_en_raw else ""
 
     project.blog_markdown = blog_pt
-    project.blog_translations = {"pt": blog_pt, "en": blog_en} if blog_en else {"pt": blog_pt}
+    project.blog_translations = (
+        {"pt": blog_pt, "en": blog_en} if blog_en else {"pt": blog_pt}
+    )
 
     raw_image_map = content_data.get("blog_image_map")
     if isinstance(raw_image_map, list):
@@ -143,13 +151,11 @@ async def run_content(
                 slide_number = entry.get("slide_number")
                 heading = entry.get("heading")
                 if isinstance(slide_number, int) and 1 <= slide_number <= MAX_SLIDES:
-                    image_map.append(
-                        {
-                            "slide_number": slide_number,
-                            "heading": str(heading) if heading is not None else "",
-                            "alt": str(entry.get("alt", "")),
-                        }
-                    )
+                    image_map.append({
+                        "slide_number": slide_number,
+                        "heading": str(heading) if heading is not None else "",
+                        "alt": str(entry.get("alt", "")),
+                    })
         project.blog_image_map = image_map if image_map else None
 
     if "title_pt" in content_data:

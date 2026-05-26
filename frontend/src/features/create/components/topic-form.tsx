@@ -20,11 +20,26 @@ interface ThemeOption {
 
 const THEME_OPTIONS: ThemeOption[] = [
   { value: CAROUSEL_THEMES.AUTO, labelKey: THEME_LABEL_KEYS.auto },
-  { value: CAROUSEL_THEMES.CYBERSECURITY, labelKey: THEME_LABEL_KEYS.cybersecurity },
-  { value: CAROUSEL_THEMES.AI_COMPETITION, labelKey: THEME_LABEL_KEYS.ai_competition },
-  { value: CAROUSEL_THEMES.DEVELOPER_SKILLS, labelKey: THEME_LABEL_KEYS.developer_skills },
-  { value: CAROUSEL_THEMES.SOURCE_CODE, labelKey: THEME_LABEL_KEYS.source_code },
-  { value: CAROUSEL_THEMES.SOCIAL_ENGINEERING, labelKey: THEME_LABEL_KEYS.social_engineering },
+  {
+    value: CAROUSEL_THEMES.CYBERSECURITY,
+    labelKey: THEME_LABEL_KEYS.cybersecurity,
+  },
+  {
+    value: CAROUSEL_THEMES.AI_COMPETITION,
+    labelKey: THEME_LABEL_KEYS.ai_competition,
+  },
+  {
+    value: CAROUSEL_THEMES.DEVELOPER_SKILLS,
+    labelKey: THEME_LABEL_KEYS.developer_skills,
+  },
+  {
+    value: CAROUSEL_THEMES.SOURCE_CODE,
+    labelKey: THEME_LABEL_KEYS.source_code,
+  },
+  {
+    value: CAROUSEL_THEMES.SOCIAL_ENGINEERING,
+    labelKey: THEME_LABEL_KEYS.social_engineering,
+  },
 ];
 
 function presetFromValue(value: string): { model: string; style: string } {
@@ -50,7 +65,9 @@ export function TopicForm({ onSubmit, isPending }: TopicFormProps) {
       topic: formData.get(CREATE_FORM_FIELDS.TOPIC) as string,
       audience: formData.get(CREATE_FORM_FIELDS.AUDIENCE) as string,
       niche: formData.get(CREATE_FORM_FIELDS.NICHE) as string,
-      theme: (formData.get(CREATE_FORM_FIELDS.THEME) as string) || CAROUSEL_THEMES.AUTO,
+      theme:
+        (formData.get(CREATE_FORM_FIELDS.THEME) as string) ||
+        CAROUSEL_THEMES.AUTO,
       image_model: model as CarouselCreateRequest["image_model"],
       image_style: style as CarouselCreateRequest["image_style"],
     });

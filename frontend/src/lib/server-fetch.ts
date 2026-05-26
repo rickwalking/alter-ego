@@ -24,7 +24,7 @@ function getBaseUrl(): string {
 async function validatedFetch<T>(
   url: string,
   schema: z.ZodSchema<T>,
-  options?: { revalidate?: number; cache?: RequestInit["cache"] }
+  options?: { revalidate?: number; cache?: RequestInit["cache"] },
 ): Promise<T | null> {
   const baseUrl = getBaseUrl();
 
@@ -56,12 +56,12 @@ async function validatedFetch<T>(
 }
 
 export async function fetchCompletedProjects(
-  limit: number = 20
+  limit: number = 20,
 ): Promise<z.infer<typeof carouselProjectListResponseSchema>> {
   const result = await validatedFetch(
     `${API_ENDPOINTS.CAROUSELS}?status=completed&limit=${limit}`,
     carouselProjectListResponseSchema,
-    { cache: "no-store" }
+    { cache: "no-store" },
   );
 
   return result ?? { items: [], total: 0, limit, offset: 0 };
@@ -69,7 +69,7 @@ export async function fetchCompletedProjects(
 
 export async function fetchBlogWithDesign(
   id: string,
-  lang: string = "pt"
+  lang: string = "pt",
 ): Promise<{
   blog: z.infer<typeof carouselBlogI18nResponseSchema>;
   design: z.infer<typeof carouselDesignResponseSchema>;
@@ -78,12 +78,12 @@ export async function fetchBlogWithDesign(
     validatedFetch(
       API_ENDPOINTS.CAROUSEL_BLOG_LANG(id, lang),
       carouselBlogI18nResponseSchema,
-      { cache: "no-store" }
+      { cache: "no-store" },
     ),
     validatedFetch(
       API_ENDPOINTS.CAROUSEL_DESIGN(id, lang),
       carouselDesignResponseSchema,
-      { cache: "no-store" }
+      { cache: "no-store" },
     ),
   ]);
 
@@ -96,11 +96,11 @@ export async function fetchBlogWithDesign(
 
 export async function fetchBlogWithDesignCombined(
   id: string,
-  lang: string = "pt"
+  lang: string = "pt",
 ): Promise<z.infer<typeof carouselBlogWithDesignResponseSchema> | null> {
   return validatedFetch(
     `${API_ENDPOINTS.CAROUSEL_BLOG_LANG(id, lang)}?include_design=true`,
     carouselBlogWithDesignResponseSchema,
-    { revalidate: 3600 }
+    { revalidate: 3600 },
   );
 }

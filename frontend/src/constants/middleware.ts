@@ -30,13 +30,13 @@ export function isEditorRoute(pathname: string): boolean {
 
 export const COOKIE_ACCESS_TOKEN = "access_token";
 
-export const STATIC_FILE_PATTERN = /\.(svg|png|jpg|jpeg|gif|webp|ico|css|js|woff|woff2|ttf|eot)$/i;
+export const STATIC_FILE_PATTERN =
+  /\.(svg|png|jpg|jpeg|gif|webp|ico|css|js|woff|woff2|ttf|eot)$/i;
 
 export function isStaticAsset(pathname: string): boolean {
   return (
     pathname.startsWith("/_next/") ||
     pathname.startsWith("/api/") ||
-    pathname.startsWith("/ws/") ||
     pathname === "/favicon.ico" ||
     pathname === "/robots.txt" ||
     pathname === "/sitemap.xml" ||

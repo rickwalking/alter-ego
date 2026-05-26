@@ -48,7 +48,9 @@ describe("BlogPostHeader Component", () => {
 
       it("Then the title is displayed", () => {
         render(<BlogPostHeader {...defaultProps} />);
-        expect(screen.getByText("Understanding Zero Trust Architecture")).toBeInTheDocument();
+        expect(
+          screen.getByText("Understanding Zero Trust Architecture"),
+        ).toBeInTheDocument();
       });
 
       it("Then the badge color uses colors.primary", () => {
@@ -85,10 +87,10 @@ describe("BlogPostHeader Component", () => {
     describe("When the swipe text is rendered", () => {
       it("Then it displays the swipe_text from design layout", () => {
         render(<BlogPostHeader {...defaultProps} />);
-        expect(screen.getByText(MOCK_DESIGN.layout.swipe_text)).toBeInTheDocument();
+        expect(
+          screen.getByText(MOCK_DESIGN.layout.swipe_text),
+        ).toBeInTheDocument();
       });
     });
-
-
   });
 });

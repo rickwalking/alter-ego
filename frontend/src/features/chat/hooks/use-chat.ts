@@ -1,9 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiCallNoContent } from "@/lib/api-client";
 import { API_ENDPOINTS, HTTP_METHODS } from "@/constants/api";
-import {
-  type Conversation,
-} from "@/schemas/chat";
+import { type Conversation } from "@/schemas/chat";
 import {
   chatKeys,
   conversationMessagesOptions,
@@ -33,7 +31,10 @@ export function useCreateConversation() {
   return useMutation({
     mutationFn: createConversation,
     onSuccess: (conversation) => {
-      queryClient.setQueryData(chatKeys.conversation(conversation.id), conversation);
+      queryClient.setQueryData(
+        chatKeys.conversation(conversation.id),
+        conversation,
+      );
       queryClient.setQueryData<Conversation[]>(
         chatKeys.conversations(),
         (previous) =>
@@ -82,7 +83,9 @@ export function useDeleteConversation() {
       queryClient.setQueryData<Conversation[]>(
         chatKeys.conversations(),
         (previous) =>
-          previous?.filter((conversation) => conversation.id !== conversationId),
+          previous?.filter(
+            (conversation) => conversation.id !== conversationId,
+          ),
       );
       queryClient.removeQueries({
         queryKey: chatKeys.conversation(conversationId),

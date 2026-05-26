@@ -1,4 +1,3 @@
-import Image from "next/image";
 import ReactMarkdown from "react-markdown";
 import type { CarouselDesignResponse } from "@/schemas/carousel";
 
@@ -174,16 +173,7 @@ function Section({ markdown, design, slideImage }: SectionProps) {
             boxShadow: `0 0 30px ${colors.primary}0D`,
           }}
         >
-          <Image
-            src={slideImage}
-            alt=""
-            width={1200}
-            height={1500}
-            className="h-auto w-full object-cover"
-            sizes="(min-width: 768px) 768px, 100vw"
-            loading="lazy"
-            unoptimized
-          />
+          <img src={slideImage} alt="" className="h-auto w-full object-cover" />
         </div>
       )}
     </>

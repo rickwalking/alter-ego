@@ -105,7 +105,9 @@ class TestResolveRefineTarget:
     async def test_invalid_slide_number_returns_none(self) -> None:
         proj = _project()
         repo = _repo_with_slides()
-        original, _ = await _resolve_refine_target(proj, "slide_heading:not-a-number", repo)
+        original, _ = await _resolve_refine_target(
+            proj, "slide_heading:not-a-number", repo
+        )
         assert original is None
 
     async def test_out_of_range_slide_returns_none(self) -> None:

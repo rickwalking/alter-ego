@@ -28,6 +28,9 @@ forbidden_modules =
 ignore_imports =
     rag_backend.application.** -> rag_backend.infrastructure.logging
     rag_backend.agents.** -> rag_backend.infrastructure.logging
+    rag_backend.application.** -> rag_backend.infrastructure.**
+    rag_backend.application.** -> rag_backend.agents.**
+    rag_backend.application.** -> rag_backend.api.**
 
 # Contract 3: Infrastructure must not import API
 [importlinter:contract:infrastructure-independence]

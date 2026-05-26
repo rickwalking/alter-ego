@@ -60,7 +60,22 @@ class ConversationRepository(Protocol):
 
     async def get_by_id(self, conversation_id: UUID) -> Conversation | None: ...
 
-    async def get_all(self, limit: int = 100, offset: int = 0) -> list[Conversation]: ...
+    async def get_all(
+        self, limit: int = 100, offset: int = 0
+    ) -> list[Conversation]: ...
+
+    async def get_by_user_id(
+        self,
+        user_id: UUID,
+        limit: int = 100,
+        offset: int = 0,
+    ) -> list[Conversation]:
+        """Return conversations owned by the given user."""
+        ...
+
+    async def count_by_user_id(self, user_id: UUID) -> int:
+        """Return the number of conversations owned by the given user."""
+        ...
 
     async def update(self, conversation: Conversation) -> Conversation: ...
 
@@ -104,6 +119,10 @@ class CarouselRepository(Protocol):
 
     async def delete_slides_by_project(self, project_id: UUID) -> bool: ...
 
-    async def create_research_source(self, source: ResearchSource) -> ResearchSource: ...
+    async def create_research_source(
+        self, source: ResearchSource
+    ) -> ResearchSource: ...
 
-    async def get_sources_by_project(self, project_id: UUID) -> list[ResearchSource]: ...
+    async def get_sources_by_project(
+        self, project_id: UUID
+    ) -> list[ResearchSource]: ...

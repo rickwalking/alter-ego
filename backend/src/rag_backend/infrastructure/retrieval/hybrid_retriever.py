@@ -136,7 +136,9 @@ class HybridRetrieverWithRRF:
             doc_scores[doc_id].ranks.append(rank)
 
         # Sort by RRF score (descending)
-        sorted_docs = sorted(doc_scores.items(), key=lambda x: x[1].rrf_score, reverse=True)
+        sorted_docs = sorted(
+            doc_scores.items(), key=lambda x: x[1].rrf_score, reverse=True
+        )
 
         # Create final results with RRF scores
         final_results = []

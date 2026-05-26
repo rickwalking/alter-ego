@@ -84,14 +84,18 @@ describe("Textarea Component", () => {
 
     describe("When the Textarea has defaultValue", () => {
       it("Then the Textarea should display the default value", () => {
-        render(<Textarea defaultValue="default value" data-testid="textarea" />);
+        render(
+          <Textarea defaultValue="default value" data-testid="textarea" />,
+        );
         expect(screen.getByDisplayValue("default value")).toBeInTheDocument();
       });
     });
 
     describe("When the Textarea has name and id props", () => {
       it("Then the Textarea should have the correct name and id attributes", () => {
-        render(<Textarea name="description" id="desc-id" data-testid="textarea" />);
+        render(
+          <Textarea name="description" id="desc-id" data-testid="textarea" />,
+        );
         const textarea = screen.getByTestId("textarea");
         expect(textarea).toHaveAttribute("name", "description");
         expect(textarea).toHaveAttribute("id", "desc-id");

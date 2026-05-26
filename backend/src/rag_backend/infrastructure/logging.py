@@ -2,13 +2,14 @@
 
 import logging
 import sys
+from typing import cast
 
 import structlog
 
 
-def get_logger():
+def get_logger() -> structlog.BoundLogger:
     """Get a structured logger instance."""
-    return structlog.get_logger()
+    return cast(structlog.BoundLogger, structlog.get_logger())
 
 
 def setup_logging(*, debug: bool = False) -> None:
@@ -26,7 +27,9 @@ def setup_logging(*, debug: bool = False) -> None:
     ]
 
     renderer: structlog.types.Processor = (
-        structlog.processors.JSONRenderer() if not debug else structlog.dev.ConsoleRenderer()
+        structlog.processors.JSONRenderer()
+        if not debug
+        else structlog.dev.ConsoleRenderer()
     )
     structlog.configure(
         processors=[*shared_processors, structlog.processors.format_exc_info, renderer],

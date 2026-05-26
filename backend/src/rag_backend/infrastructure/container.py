@@ -51,7 +51,9 @@ from rag_backend.infrastructure.external.openai_embeddings import (
 )
 from rag_backend.infrastructure.external.openai_image import OpenAIImageService
 from rag_backend.infrastructure.external.pinecone_store import PineconeVectorStore
-from rag_backend.infrastructure.external.playwright_export import PlaywrightExportService
+from rag_backend.infrastructure.external.playwright_export import (
+    PlaywrightExportService,
+)
 from rag_backend.infrastructure.retrieval.document_processor import (
     RecursiveDocumentProcessor,
 )

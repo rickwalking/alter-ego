@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from rag_backend.agents.alter_ego_agent import AlterEgoAgent
 from rag_backend.agents.carousel_orchestrator import CarouselAgent
 from rag_backend.agents.rag_agent import RAGAgent
+from rag_backend.domain.models import Conversation
 from rag_backend.infrastructure.container import Container
 from rag_backend.infrastructure.database.carousel_repository import (
     PostgresCarouselRepository,
@@ -24,6 +25,24 @@ from rag_backend.infrastructure.database.conversation_repository import (
 from rag_backend.infrastructure.database.document_repository import (
     PostgresDocumentRepository,
 )
+
+CONVERSATION_METADATA_PROJECT_ID = "project_id"
+
+
+def build_agent_for_conversation(
+    conversation: Conversation,
+    db: AsyncSession,
+    container: Container,
+) -> AlterEgoAgent | RAGAgent:
+    """Route to the appropriate agent based on conversation metadata.
+
+    Conversations with ``project_id`` metadata get the full RAGAgent
+    (carousel tools + subagent). All others get the AlterEgoAgent
+    (personal knowledge base only).
+    """
+    if CONVERSATION_METADATA_PROJECT_ID in conversation.metadata:
+        return build_rag_agent(db, container)
+    return build_alter_ego_agent(db, container)
 
 
 def build_alter_ego_agent(db: AsyncSession, container: Container) -> AlterEgoAgent:
@@ -43,8 +62,8 @@ def build_alter_ego_agent(db: AsyncSession, container: Container) -> AlterEgoAge
 def build_rag_agent(db: AsyncSession, container: Container) -> RAGAgent:
     """Build a RAGAgent bound to the given per-request session.
 
-    Deprecated: kept for backward compatibility during migration.
-    New chat routes should use ``build_alter_ego_agent``.
+    Carousel-related conversations get the full agent with carousel
+    tools and the carousel pipeline subagent.
     """
     settings = container.settings()
     carousel_repo = PostgresCarouselRepository(db)

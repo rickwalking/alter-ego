@@ -173,7 +173,7 @@ describe("Utils Module", () => {
       it("Then it should return a UUID-formatted string", () => {
         const id = generateId();
         expect(id).toMatch(
-          /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
+          /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
         );
       });
     });
@@ -215,7 +215,9 @@ describe("Utils Module", () => {
       });
 
       it("Then it should pass arguments to the debounced function", () => {
-        const fn = vi.fn<(a: string, b: string) => void>(() => undefined) as unknown as (...args: unknown[]) => unknown;
+        const fn = vi.fn<(a: string, b: string) => void>(
+          () => undefined,
+        ) as unknown as (...args: unknown[]) => unknown;
         const debouncedFn = debounce(fn, 100);
 
         debouncedFn("arg1", "arg2");
@@ -225,7 +227,9 @@ describe("Utils Module", () => {
       });
 
       it("Then it should handle multiple arguments correctly", () => {
-        const fn = vi.fn<(a: number, b: number, c: string) => string>((a: number, b: number, c: string) => a + b + c) as unknown as (...args: unknown[]) => unknown;
+        const fn = vi.fn<(a: number, b: number, c: string) => string>(
+          (a: number, b: number, c: string) => a + b + c,
+        ) as unknown as (...args: unknown[]) => unknown;
         const debouncedFn = debounce(fn, 100);
 
         debouncedFn(1, 2, "test");

@@ -3,36 +3,8 @@
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from httpx import ASGITransport, AsyncClient
 
-from rag_backend.api.app import create_app
 from rag_backend.domain.models import CarouselProject, CarouselStatus
-
-
-@pytest.fixture
-async def client():
-    """Create async test client with in-memory SQLite."""
-    from sqlalchemy.ext.asyncio import create_async_engine
-
-    import rag_backend.infrastructure.database.config as db_config
-    from rag_backend.infrastructure.database.config import Base, close_db
-
-    engine = create_async_engine("sqlite+aiosqlite:///:memory:", echo=False)
-
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-
-    db_config.c_engine = engine
-
-    app = create_app()
-
-    transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as ac:
-        yield ac
-
-    db_config.c_engine = None
-    await close_db()
-    await engine.dispose()
 
 
 @pytest.fixture
@@ -137,7 +109,9 @@ class TestCarouselEndpoints:
     @pytest.mark.asyncio
     async def test_get_carousel_not_found(self, client):
         """Given non-existent ID, when GET, then returns 404."""
-        response = await client.get("/api/carousels/00000000-0000-0000-0000-000000000000")
+        response = await client.get(
+            "/api/carousels/00000000-0000-0000-0000-000000000000"
+        )
         assert response.status_code == 404
 
     @pytest.mark.asyncio
@@ -160,7 +134,9 @@ class TestCarouselEndpoints:
     @pytest.mark.asyncio
     async def test_get_carousel_status_not_found(self, client):
         """Given non-existent ID, when GET status, then returns 404."""
-        response = await client.get("/api/carousels/00000000-0000-0000-0000-000000000000/status")
+        response = await client.get(
+            "/api/carousels/00000000-0000-0000-0000-000000000000/status"
+        )
         assert response.status_code == 404
 
     @pytest.mark.asyncio
@@ -194,7 +170,9 @@ class TestCarouselEndpoints:
     @pytest.mark.asyncio
     async def test_delete_carousel_not_found(self, client):
         """Given non-existent ID, when DELETE, then returns 404."""
-        response = await client.delete("/api/carousels/00000000-0000-0000-0000-000000000000")
+        response = await client.delete(
+            "/api/carousels/00000000-0000-0000-0000-000000000000"
+        )
         assert response.status_code == 404
 
     @pytest.mark.asyncio
@@ -208,7 +186,9 @@ class TestCarouselEndpoints:
         create_response = await client.post("/api/carousels", json=payload)
         carousel_id = create_response.json()["id"]
 
-        with patch("rag_backend.infrastructure.container.get_container") as mock_container:
+        with patch(
+            "rag_backend.infrastructure.container.get_container"
+        ) as mock_container:
             from rag_backend.infrastructure.container import Container
 
             test_container = Container()
@@ -240,7 +220,9 @@ class TestCarouselEndpoints:
 
         mock_carousel_agent.stream_pipeline = fake_stream
 
-        with patch("rag_backend.infrastructure.container.get_container") as mock_container:
+        with patch(
+            "rag_backend.infrastructure.container.get_container"
+        ) as mock_container:
             from rag_backend.infrastructure.container import Container
 
             test_container = Container()
@@ -249,7 +231,9 @@ class TestCarouselEndpoints:
 
             response = await client.get(f"/api/carousels/{carousel_id}/stream")
             assert response.status_code == 200
-            assert response.headers["content-type"] == "text/event-stream; charset=utf-8"
+            assert (
+                response.headers["content-type"] == "text/event-stream; charset=utf-8"
+            )
             text = response.text
             assert "start" in text
             assert "end" in text
@@ -273,7 +257,9 @@ class TestCarouselEndpoints:
         assert response.status_code == 405
 
     @pytest.mark.asyncio
-    async def test_stream_carousel_passes_null_seed_urls(self, client, mock_carousel_agent):
+    async def test_stream_carousel_passes_null_seed_urls(
+        self, client, mock_carousel_agent
+    ):
         """Given GET stream, when invoked, then seed_urls is None.
 
         Mutation guard: EventSource cannot send a body, so the route must
@@ -297,7 +283,9 @@ class TestCarouselEndpoints:
 
         mock_carousel_agent.stream_pipeline = capturing_stream
 
-        with patch("rag_backend.infrastructure.container.get_container") as mock_container:
+        with patch(
+            "rag_backend.infrastructure.container.get_container"
+        ) as mock_container:
             from rag_backend.infrastructure.container import Container
 
             test_container = Container()
@@ -309,7 +297,9 @@ class TestCarouselEndpoints:
             assert captured_args.get("kwargs", {}).get("seed_urls") is None
 
     @pytest.mark.asyncio
-    async def test_stream_carousel_yields_error_event(self, client, mock_carousel_agent):
+    async def test_stream_carousel_yields_error_event(
+        self, client, mock_carousel_agent
+    ):
         """Given pipeline error, when GET stream, then yields error event and closes.
 
         Mutation guard: ensures the SSE stream passes through the error
@@ -329,7 +319,9 @@ class TestCarouselEndpoints:
 
         mock_carousel_agent.stream_pipeline = error_stream
 
-        with patch("rag_backend.infrastructure.container.get_container") as mock_container:
+        with patch(
+            "rag_backend.infrastructure.container.get_container"
+        ) as mock_container:
             from rag_backend.infrastructure.container import Container
 
             test_container = Container()
@@ -409,7 +401,9 @@ class TestCarouselEndpoints:
 
         mock_carousel_agent.start_pipeline = MagicMock()
 
-        with patch("rag_backend.infrastructure.container.get_container") as mock_container:
+        with patch(
+            "rag_backend.infrastructure.container.get_container"
+        ) as mock_container:
             from rag_backend.infrastructure.container import Container
 
             test_container = Container()

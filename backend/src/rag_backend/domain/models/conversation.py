@@ -25,6 +25,7 @@ class Message:
 class Conversation:
     id: UUID = field(default_factory=uuid4)
     title: str | None = None
+    user_id: UUID | None = None
     created_at: datetime = field(default_factory=datetime.utcnow)
     updated_at: datetime = field(default_factory=datetime.utcnow)
     metadata: dict[str, str | int | float | bool] = field(default_factory=dict)

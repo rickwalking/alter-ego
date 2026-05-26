@@ -129,7 +129,9 @@ class TestWritingStyleProfileManualOverride:
         assert samples[0].source_url == "my-blog"
         tool.scrape_url.assert_not_called()
 
-    async def test_malformed_manual_file_falls_back_to_scraping(self, tmp_path: Path) -> None:
+    async def test_malformed_manual_file_falls_back_to_scraping(
+        self, tmp_path: Path
+    ) -> None:
         manual = tmp_path / "writing_style_samples.yml"
         manual.write_text("::not-yaml::", encoding="utf-8")
         responses = {"https://li/ok": _html_with_og("conteúdo válido")}

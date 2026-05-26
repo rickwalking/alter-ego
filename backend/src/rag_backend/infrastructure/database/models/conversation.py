@@ -33,7 +33,9 @@ class ConversationModel(Base):
     owner_id = Column(String(36), ForeignKey("users.id"), nullable=True)
     title = Column(String(500), nullable=True)
     conv_metadata = Column("metadata", JSON, default=dict, nullable=False)
-    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    created_at = Column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
     updated_at = Column(
         DateTime(timezone=True),
         server_default=func.now(),
@@ -62,6 +64,7 @@ class ConversationModel(Base):
         return ConversationEntity(
             id=UUID(self.id),
             title=self.title,
+            user_id=UUID(self.owner_id) if self.owner_id else None,
             metadata=self.conv_metadata or {},
             created_at=self.created_at,
             updated_at=self.updated_at,
@@ -73,6 +76,7 @@ class ConversationModel(Base):
         return cls(
             id=str(entity.id),
             title=entity.title,
+            owner_id=str(entity.user_id) if entity.user_id else None,
             conv_metadata=entity.metadata,
             created_at=entity.created_at,
             updated_at=entity.updated_at,
@@ -81,6 +85,7 @@ class ConversationModel(Base):
     def update_from_entity(self, entity: ConversationEntity) -> None:
         """Update ORM model from domain entity."""
         self.title = entity.title
+        self.owner_id = str(entity.user_id) if entity.user_id else None
         self.conv_metadata = entity.metadata
         self.updated_at = entity.updated_at
 
@@ -100,7 +105,9 @@ class MessageModel(Base):
     content = Column(Text, nullable=False)
     msg_metadata = Column("metadata", JSON, default=dict, nullable=False)
     sources = Column(JSON, default=list, nullable=False)
-    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    created_at = Column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
 
     conversation = relationship("ConversationModel", back_populates="messages")
 

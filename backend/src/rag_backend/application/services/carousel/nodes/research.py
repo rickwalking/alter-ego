@@ -11,7 +11,11 @@ from __future__ import annotations
 
 import asyncio
 
-from rag_backend.domain.models import CarouselProject, ResearchSource, ResearchSourceType
+from rag_backend.domain.models import (
+    CarouselProject,
+    ResearchSource,
+    ResearchSourceType,
+)
 from rag_backend.domain.protocols import CarouselRepository, ResearchTool
 from rag_backend.infrastructure.logging import get_logger
 
@@ -88,13 +92,15 @@ async def run_research(
                 if len(sources) - len(seed_urls) >= remaining:
                     break
 
-    scrape_tasks = [_scrape_one(research_tool, s.source_url) for s in sources[:SCRAPE_TOP_N]]
+    scrape_tasks = [
+        _scrape_one(research_tool, s.source_url) for s in sources[:SCRAPE_TOP_N]
+    ]
     scrape_results = await asyncio.gather(*scrape_tasks, return_exceptions=True)
     for source, result in zip(sources[:SCRAPE_TOP_N], scrape_results, strict=False):
         if isinstance(result, str) and result:
             source.extracted_content = result
 
-    persisted: list[ResearchSource] = []
-    for source in sources:
-        persisted.append(await repo.create_research_source(source))
+    persisted: list[ResearchSource] = [
+        await repo.create_research_source(source) for source in sources
+    ]
     return persisted

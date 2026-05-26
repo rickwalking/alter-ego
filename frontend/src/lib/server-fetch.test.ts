@@ -88,7 +88,9 @@ describe("server-fetch", () => {
     });
 
     it("returns empty list on fetch failure", async () => {
-      vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("Network error"));
+      vi.spyOn(globalThis, "fetch").mockRejectedValue(
+        new Error("Network error"),
+      );
 
       const result = await fetchCompletedProjects(20);
 
@@ -124,22 +126,24 @@ describe("server-fetch", () => {
 
   describe("fetchBlogWithDesign", () => {
     it("returns blog and design data on success", async () => {
-      vi.spyOn(globalThis, "fetch").mockImplementation((input: RequestInfo | URL) => {
-        const url = String(input);
-        if (url.includes("/blog/")) {
-          return Promise.resolve({
-            ok: true,
-            json: () => Promise.resolve(MOCK_BLOG),
-          } as Response);
-        }
-        if (url.includes("/design")) {
-          return Promise.resolve({
-            ok: true,
-            json: () => Promise.resolve(MOCK_DESIGN),
-          } as Response);
-        }
-        return Promise.resolve({ ok: false, status: 404 } as Response);
-      });
+      vi.spyOn(globalThis, "fetch").mockImplementation(
+        (input: RequestInfo | URL) => {
+          const url = String(input);
+          if (url.includes("/blog/")) {
+            return Promise.resolve({
+              ok: true,
+              json: () => Promise.resolve(MOCK_BLOG),
+            } as Response);
+          }
+          if (url.includes("/design")) {
+            return Promise.resolve({
+              ok: true,
+              json: () => Promise.resolve(MOCK_DESIGN),
+            } as Response);
+          }
+          return Promise.resolve({ ok: false, status: 404 } as Response);
+        },
+      );
 
       const result = await fetchBlogWithDesign("test-id", "en");
 
@@ -149,7 +153,9 @@ describe("server-fetch", () => {
     });
 
     it("returns null on fetch failure", async () => {
-      vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("Network error"));
+      vi.spyOn(globalThis, "fetch").mockRejectedValue(
+        new Error("Network error"),
+      );
 
       const result = await fetchBlogWithDesign("test-id");
 
@@ -157,16 +163,18 @@ describe("server-fetch", () => {
     });
 
     it("returns null on non-ok blog response", async () => {
-      vi.spyOn(globalThis, "fetch").mockImplementation((input: RequestInfo | URL) => {
-        const url = String(input);
-        if (url.includes("/blog/")) {
-          return Promise.resolve({ ok: false, status: 404 } as Response);
-        }
-        return Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve(MOCK_DESIGN),
-        } as Response);
-      });
+      vi.spyOn(globalThis, "fetch").mockImplementation(
+        (input: RequestInfo | URL) => {
+          const url = String(input);
+          if (url.includes("/blog/")) {
+            return Promise.resolve({ ok: false, status: 404 } as Response);
+          }
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve(MOCK_DESIGN),
+          } as Response);
+        },
+      );
 
       const result = await fetchBlogWithDesign("bad-id");
 
@@ -194,7 +202,9 @@ describe("server-fetch", () => {
     });
 
     it("returns null on fetch failure", async () => {
-      vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("Network error"));
+      vi.spyOn(globalThis, "fetch").mockRejectedValue(
+        new Error("Network error"),
+      );
 
       const result = await fetchBlogWithDesignCombined("test-id");
 

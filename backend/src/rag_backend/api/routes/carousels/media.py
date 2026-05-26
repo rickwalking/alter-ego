@@ -55,9 +55,9 @@ router = APIRouter()
 @router.get(
     "/{project_id}/pdf",
     responses={
-         401: {"description": ERR_NOT_AUTHENTICATED},
-         403: {"description": ERR_FORBIDDEN},
-         404: {"description": ERR_NOT_FOUND},
+        401: {"description": ERR_NOT_AUTHENTICATED},
+        403: {"description": ERR_FORBIDDEN},
+        404: {"description": ERR_NOT_FOUND},
     },
 )
 async def get_carousel_pdf(
@@ -86,7 +86,7 @@ async def get_carousel_pdf(
 @router.get(
     "/{project_id}/blog",
     responses={
-         404: {"description": ERR_NOT_FOUND},
+        404: {"description": ERR_NOT_FOUND},
     },
 )
 async def get_carousel_blog(
@@ -109,7 +109,7 @@ async def get_carousel_blog(
 @router.get(
     "/{project_id}/blog/{lang}",
     responses={
-         404: {"description": ERR_NOT_FOUND},
+        404: {"description": ERR_NOT_FOUND},
     },
 )
 async def get_carousel_blog_i18n(
@@ -128,7 +128,9 @@ async def get_carousel_blog_i18n(
         raise HTTPException(
             status_code=404,
             detail=f"Blog post not available in '{lang}'",
-            headers={"X-Available-Languages": ",".join(project.get_available_languages())},
+            headers={
+                "X-Available-Languages": ",".join(project.get_available_languages())
+            },
         )
 
     translated_title, translated_subtitle = _extract_title_and_subtitle(blog_content)
@@ -157,8 +159,8 @@ async def get_carousel_blog_i18n(
 @router.get(
     "/{project_id}/design",
     responses={
-         401: {"description": ERR_NOT_AUTHENTICATED},
-         404: {"description": ERR_NOT_FOUND},
+        401: {"description": ERR_NOT_AUTHENTICATED},
+        404: {"description": ERR_NOT_FOUND},
     },
 )
 async def get_carousel_design(
@@ -215,7 +217,7 @@ async def get_carousel_design(
 @router.get(
     "/{project_id}/images/{filename}",
     responses={
-         404: {"description": ERR_NOT_FOUND},
+        404: {"description": ERR_NOT_FOUND},
     },
 )
 async def get_carousel_image(
@@ -225,7 +227,9 @@ async def get_carousel_image(
 ) -> FileResponse:
     """Serve a raw hero image (from <output>/images/)."""
     project = await _load_project_with_output(project_id, repo)
-    image_path = _resolve_image_file(Path(project.output_dir or "") / "images", filename)
+    image_path = _resolve_image_file(
+        Path(project.output_dir or "") / "images", filename
+    )
     if image_path is None:
         raise HTTPException(status_code=404, detail=ERR_IMAGE_NOT_FOUND)
     return FileResponse(
@@ -238,7 +242,7 @@ async def get_carousel_image(
 @router.get(
     "/{project_id}/slide-images/{lang}/{filename}",
     responses={
-         404: {"description": ERR_NOT_FOUND},
+        404: {"description": ERR_NOT_FOUND},
     },
 )
 async def get_carousel_slide_image(
@@ -262,8 +266,8 @@ async def get_carousel_slide_image(
 @router.get(
     "/{project_id}/slides",
     responses={
-         401: {"description": ERR_NOT_AUTHENTICATED},
-         404: {"description": ERR_NOT_FOUND},
+        401: {"description": ERR_NOT_AUTHENTICATED},
+        404: {"description": ERR_NOT_FOUND},
     },
 )
 async def get_carousel_slides(
@@ -282,9 +286,9 @@ async def get_carousel_slides(
 @router.get(
     "/{project_id}/download",
     responses={
-         401: {"description": ERR_NOT_AUTHENTICATED},
-         403: {"description": ERR_FORBIDDEN},
-         404: {"description": ERR_NOT_FOUND},
+        401: {"description": ERR_NOT_AUTHENTICATED},
+        403: {"description": ERR_FORBIDDEN},
+        404: {"description": ERR_NOT_FOUND},
     },
 )
 async def download_carousel(
@@ -301,5 +305,7 @@ async def download_carousel(
     output_path = Path(project.output_dir)
     if not output_path.exists():
         raise HTTPException(status_code=404, detail=ERR_OUTPUT_NOT_FOUND)
-    files = [str(p.relative_to(output_path)) for p in output_path.rglob("*") if p.is_file()]
+    files = [
+        str(p.relative_to(output_path)) for p in output_path.rglob("*") if p.is_file()
+    ]
     return {"output_dir": project.output_dir, "files": files}

@@ -95,7 +95,9 @@ describe("BLOG_CSS_VARS", () => {
 describe("FALLBACK_DESIGN_TOKENS", () => {
   // Scenario: Fallback design tokens match schema
   it("validates against carouselDesignResponseSchema", () => {
-    const result = carouselDesignResponseSchema.safeParse(FALLBACK_DESIGN_TOKENS);
+    const result = carouselDesignResponseSchema.safeParse(
+      FALLBACK_DESIGN_TOKENS,
+    );
     expect(result.success).toBe(true);
   });
 
@@ -125,7 +127,9 @@ describe("designTokensToCssVars", () => {
   it("returns a flat Record<string, string>", () => {
     const result = designTokensToCssVars(MOCK_DESIGN);
     expect(typeof result).toBe("object");
-    expect(Object.values(result).every((v) => typeof v === "string")).toBe(true);
+    expect(Object.values(result).every((v) => typeof v === "string")).toBe(
+      true,
+    );
   });
 
   it("maps each color field to the corresponding CSS variable", () => {
@@ -135,7 +139,9 @@ describe("designTokensToCssVars", () => {
     expect(result[BLOG_CSS_VARS.ACCENT]).toBe(MOCK_DESIGN.colors.accent);
     expect(result[BLOG_CSS_VARS.BG]).toBe(MOCK_DESIGN.colors.bg);
     expect(result[BLOG_CSS_VARS.TEXT]).toBe(MOCK_DESIGN.colors.text);
-    expect(result[BLOG_CSS_VARS.TEXT_MUTED]).toBe(MOCK_DESIGN.colors.text_muted);
+    expect(result[BLOG_CSS_VARS.TEXT_MUTED]).toBe(
+      MOCK_DESIGN.colors.text_muted,
+    );
     expect(result[BLOG_CSS_VARS.TEXT_DIM]).toBe(MOCK_DESIGN.colors.text_dim);
     expect(result[BLOG_CSS_VARS.BORDER]).toBe(MOCK_DESIGN.colors.border);
     expect(result[BLOG_CSS_VARS.GLOW]).toBe(MOCK_DESIGN.colors.glow);
@@ -144,9 +150,15 @@ describe("designTokensToCssVars", () => {
   it("maps each typography field to the corresponding CSS variable", () => {
     const result = designTokensToCssVars(MOCK_DESIGN);
 
-    expect(result[BLOG_CSS_VARS.FONT_HEADING]).toBe(MOCK_DESIGN.typography.font_family_heading);
-    expect(result[BLOG_CSS_VARS.FONT_BODY]).toBe(MOCK_DESIGN.typography.font_family_body);
-    expect(result[BLOG_CSS_VARS.FONT_BADGE]).toBe(MOCK_DESIGN.typography.font_family_badge);
+    expect(result[BLOG_CSS_VARS.FONT_HEADING]).toBe(
+      MOCK_DESIGN.typography.font_family_heading,
+    );
+    expect(result[BLOG_CSS_VARS.FONT_BODY]).toBe(
+      MOCK_DESIGN.typography.font_family_body,
+    );
+    expect(result[BLOG_CSS_VARS.FONT_BADGE]).toBe(
+      MOCK_DESIGN.typography.font_family_badge,
+    );
   });
 
   it("produces exactly 11 CSS custom properties", () => {

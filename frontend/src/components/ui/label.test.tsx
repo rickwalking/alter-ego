@@ -17,7 +17,7 @@ describe("Label Component", () => {
           <>
             <Label htmlFor="username">Username</Label>
             <input id="username" type="text" />
-          </>
+          </>,
         );
         expect(screen.getByLabelText("Username")).toBeInTheDocument();
       });
@@ -25,7 +25,11 @@ describe("Label Component", () => {
 
     describe("When a custom className is provided", () => {
       it("Then the custom class should be applied to the Label", () => {
-        render(<Label className="custom-class" data-testid="label">Custom</Label>);
+        render(
+          <Label className="custom-class" data-testid="label">
+            Custom
+          </Label>,
+        );
         expect(screen.getByTestId("label")).toHaveClass("custom-class");
       });
     });
@@ -46,7 +50,7 @@ describe("Label Component", () => {
           <>
             <Label htmlFor="email">Email</Label>
             <input id="email" type="email" />
-          </>
+          </>,
         );
         expect(screen.getByLabelText("Email")).toHaveAttribute("type", "email");
 
@@ -54,9 +58,12 @@ describe("Label Component", () => {
           <>
             <Label htmlFor="password">Password</Label>
             <input id="password" type="password" />
-          </>
+          </>,
         );
-        expect(screen.getByLabelText("Password")).toHaveAttribute("type", "password");
+        expect(screen.getByLabelText("Password")).toHaveAttribute(
+          "type",
+          "password",
+        );
       });
 
       it("Then it should work with textarea elements", () => {
@@ -64,7 +71,7 @@ describe("Label Component", () => {
           <>
             <Label htmlFor="description">Description</Label>
             <textarea id="description" />
-          </>
+          </>,
         );
         expect(screen.getByLabelText("Description")).toBeInTheDocument();
       });
@@ -75,8 +82,10 @@ describe("Label Component", () => {
         render(
           <>
             <input id="disabled-input" disabled className="peer" />
-            <Label htmlFor="disabled-input" data-testid="label">Disabled Label</Label>
-          </>
+            <Label htmlFor="disabled-input" data-testid="label">
+              Disabled Label
+            </Label>
+          </>,
         );
         const label = screen.getByTestId("label");
         expect(label).toHaveClass("peer-disabled:cursor-not-allowed");
@@ -90,7 +99,7 @@ describe("Label Component", () => {
           <Label>
             <span>Required Field</span>
             <span className="text-red-500">*</span>
-          </Label>
+          </Label>,
         );
         expect(screen.getByText("Required Field")).toBeInTheDocument();
         expect(screen.getByText("*")).toBeInTheDocument();

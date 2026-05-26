@@ -41,7 +41,9 @@ export function SlideProgressGrid({ slides }: SlideProgressGridProps) {
               Slide {slide.number}
             </span>
             {slide.scene ? (
-              <p className="text-[var(--color-text-muted)] italic">{slide.scene}</p>
+              <p className="text-[var(--color-text-muted)] italic">
+                {slide.scene}
+              </p>
             ) : null}
           </div>
         </li>

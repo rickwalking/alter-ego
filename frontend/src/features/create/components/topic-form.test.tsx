@@ -65,7 +65,7 @@ describe("TopicForm Component", () => {
       it("Then the submit button should be visible with default text", () => {
         render(<TopicForm onSubmit={mockOnSubmit} isPending={false} />);
         expect(
-          screen.getByRole("button", { name: /generate carousel/i })
+          screen.getByRole("button", { name: /generate carousel/i }),
         ).toBeInTheDocument();
       });
     });
@@ -81,7 +81,7 @@ describe("TopicForm Component", () => {
         render(<TopicForm onSubmit={mockOnSubmit} isPending={false} />);
         const select = screen.getByLabelText(/theme/i);
         const options = Array.from(select.querySelectorAll("option")).map(
-          (o) => o.value
+          (o) => o.value,
         );
         expect(options).toContain("cybersecurity");
       });
@@ -104,7 +104,9 @@ describe("TopicForm Component", () => {
         await user.type(screen.getByLabelText(/topic/i), "React Testing");
         await user.type(screen.getByLabelText(/audience/i), "Developers");
         await user.type(screen.getByLabelText(/niche/i), "Frontend");
-        await user.click(screen.getByRole("button", { name: /generate carousel/i }));
+        await user.click(
+          screen.getByRole("button", { name: /generate carousel/i }),
+        );
 
         expect(mockOnSubmit).toHaveBeenCalledWith({
           topic: "React Testing",
@@ -123,8 +125,13 @@ describe("TopicForm Component", () => {
         await user.type(screen.getByLabelText(/topic/i), "AI Trends");
         await user.type(screen.getByLabelText(/audience/i), "Engineers");
         await user.type(screen.getByLabelText(/niche/i), "AI");
-        await user.selectOptions(screen.getByLabelText(/theme/i), "ai_competition");
-        await user.click(screen.getByRole("button", { name: /generate carousel/i }));
+        await user.selectOptions(
+          screen.getByLabelText(/theme/i),
+          "ai_competition",
+        );
+        await user.click(
+          screen.getByRole("button", { name: /generate carousel/i }),
+        );
 
         expect(mockOnSubmit).toHaveBeenCalledWith({
           topic: "AI Trends",
@@ -147,7 +154,9 @@ describe("TopicForm Component", () => {
           screen.getByLabelText(/image style/i),
           "openai__hyperreal",
         );
-        await user.click(screen.getByRole("button", { name: /generate carousel/i }));
+        await user.click(
+          screen.getByRole("button", { name: /generate carousel/i }),
+        );
 
         expect(mockOnSubmit).toHaveBeenCalledWith(
           expect.objectContaining({
@@ -166,10 +175,12 @@ describe("TopicForm Component", () => {
         await user.type(screen.getByLabelText(/topic/i), "Test Topic");
         await user.type(screen.getByLabelText(/audience/i), "Test Audience");
         await user.type(screen.getByLabelText(/niche/i), "Test Niche");
-        await user.click(screen.getByRole("button", { name: /generate carousel/i }));
+        await user.click(
+          screen.getByRole("button", { name: /generate carousel/i }),
+        );
 
         expect(mockOnSubmit).toHaveBeenCalledWith(
-          expect.objectContaining({ theme: "auto" })
+          expect.objectContaining({ theme: "auto" }),
         );
       });
     });
@@ -180,14 +191,14 @@ describe("TopicForm Component", () => {
       it("Then the submit button should be disabled", () => {
         render(<TopicForm onSubmit={mockOnSubmit} isPending={true} />);
         expect(
-          screen.getByRole("button", { name: /generating/i })
+          screen.getByRole("button", { name: /generating/i }),
         ).toBeDisabled();
       });
 
       it("Then the button text should show submitting state", () => {
         render(<TopicForm onSubmit={mockOnSubmit} isPending={true} />);
         expect(
-          screen.getByRole("button", { name: /generating/i })
+          screen.getByRole("button", { name: /generating/i }),
         ).toBeInTheDocument();
       });
 
@@ -203,7 +214,7 @@ describe("TopicForm Component", () => {
       it("Then the submit button should be enabled", () => {
         render(<TopicForm onSubmit={mockOnSubmit} isPending={false} />);
         expect(
-          screen.getByRole("button", { name: /generate carousel/i })
+          screen.getByRole("button", { name: /generate carousel/i }),
         ).not.toBeDisabled();
       });
     });
@@ -230,7 +241,7 @@ describe("TopicForm Component", () => {
         render(<TopicForm onSubmit={mockOnSubmit} isPending={false} />);
         expect(screen.getByLabelText(/topic/i)).toHaveAttribute(
           "maxlength",
-          "500"
+          "500",
         );
       });
 
@@ -238,7 +249,7 @@ describe("TopicForm Component", () => {
         render(<TopicForm onSubmit={mockOnSubmit} isPending={false} />);
         expect(screen.getByLabelText(/audience/i)).toHaveAttribute(
           "maxlength",
-          "500"
+          "500",
         );
       });
 
@@ -246,7 +257,7 @@ describe("TopicForm Component", () => {
         render(<TopicForm onSubmit={mockOnSubmit} isPending={false} />);
         expect(screen.getByLabelText(/niche/i)).toHaveAttribute(
           "maxlength",
-          "200"
+          "200",
         );
       });
     });

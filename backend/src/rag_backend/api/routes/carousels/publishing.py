@@ -16,7 +16,11 @@ from rag_backend.api.schemas import (
     InstagramPublishResponse,
 )
 from rag_backend.domain.models import CarouselStatus, User
-from rag_backend.domain.protocols import CarouselAgent, CarouselRepository, SocialPublisher
+from rag_backend.domain.protocols import (
+    CarouselAgent,
+    CarouselRepository,
+    SocialPublisher,
+)
 
 from .deps import get_carousel_agent, get_carousel_repo, get_instagram_publisher
 from .helpers import _build_public_image_urls
@@ -27,9 +31,9 @@ router = APIRouter()
 @router.post(
     "/{project_id}/caption",
     responses={
-         401: {"description": ERR_NOT_AUTHENTICATED},
-         403: {"description": ERR_FORBIDDEN},
-         404: {"description": ERR_NOT_FOUND},
+        401: {"description": ERR_NOT_AUTHENTICATED},
+        403: {"description": ERR_FORBIDDEN},
+        404: {"description": ERR_NOT_FOUND},
     },
 )
 async def generate_caption(
@@ -48,9 +52,9 @@ async def generate_caption(
 @router.post(
     "/{project_id}/publish/instagram",
     responses={
-         401: {"description": ERR_NOT_AUTHENTICATED},
-         403: {"description": ERR_FORBIDDEN},
-         404: {"description": ERR_NOT_FOUND},
+        401: {"description": ERR_NOT_AUTHENTICATED},
+        403: {"description": ERR_FORBIDDEN},
+        404: {"description": ERR_NOT_FOUND},
         409: {"description": "Carousel not completed"},
         503: {"description": "Public base URL not configured"},
     },

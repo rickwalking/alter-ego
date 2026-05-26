@@ -5,7 +5,12 @@ from datetime import UTC, datetime, timedelta
 import bcrypt
 import jwt
 
-from rag_backend.domain.constants import ENCODING_UTF8, JWT_ALGORITHM, JWT_TYPE_ANON, JWT_TYPE_AUTH
+from rag_backend.domain.constants import (
+    ENCODING_UTF8,
+    JWT_ALGORITHM,
+    JWT_TYPE_ANON,
+    JWT_TYPE_AUTH,
+)
 from rag_backend.domain.models import User
 from rag_backend.infrastructure.config.settings import Settings
 
@@ -36,7 +41,9 @@ def create_access_token(
         "exp": expire,
         "iat": datetime.now(UTC),
     }
-    return jwt.encode(payload, settings.secret_key.get_secret_value(), algorithm=JWT_ALGORITHM)
+    return jwt.encode(
+        payload, settings.secret_key.get_secret_value(), algorithm=JWT_ALGORITHM
+    )
 
 
 def create_anonymous_token(
@@ -64,7 +71,9 @@ def create_anonymous_token(
         "exp": expire,
         "iat": datetime.now(UTC),
     }
-    return jwt.encode(payload, settings.anon_secret_key.get_secret_value(), algorithm=JWT_ALGORITHM)
+    return jwt.encode(
+        payload, settings.anon_secret_key.get_secret_value(), algorithm=JWT_ALGORITHM
+    )
 
 
 def decode_access_token(settings: Settings, token: str) -> dict[str, object] | None:
@@ -100,7 +109,9 @@ def decode_anonymous_token(settings: Settings, token: str) -> dict[str, object] 
     """
     try:
         payload = jwt.decode(
-            token, settings.anon_secret_key.get_secret_value(), algorithms=[JWT_ALGORITHM]
+            token,
+            settings.anon_secret_key.get_secret_value(),
+            algorithms=[JWT_ALGORITHM],
         )
         if payload.get("type") != JWT_TYPE_ANON:
             return None

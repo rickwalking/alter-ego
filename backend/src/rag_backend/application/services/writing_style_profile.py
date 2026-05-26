@@ -61,7 +61,9 @@ class WritingStyleProfile:
         self._research = research_tool
         self._urls = [u.strip() for u in style_urls.split(",") if u.strip()]
         self._cache_path = Path(cache_dir) / _CACHE_FILENAME
-        self._manual_samples_path = Path(manual_samples_path) if manual_samples_path else None
+        self._manual_samples_path = (
+            Path(manual_samples_path) if manual_samples_path else None
+        )
         self._samples: list[VoiceSample] | None = None
 
     async def get_samples(self) -> list[VoiceSample]:
@@ -89,7 +91,9 @@ class WritingStyleProfile:
         if not self._manual_samples_path or not self._manual_samples_path.exists():
             return []
         try:
-            raw = yaml.safe_load(self._manual_samples_path.read_text(encoding=ENCODING_UTF8))
+            raw = yaml.safe_load(
+                self._manual_samples_path.read_text(encoding=ENCODING_UTF8)
+            )
         except (yaml.YAMLError, OSError) as exc:
             logger.warning("writing_style_manual_load_failed", error=str(exc))
             return []
@@ -129,7 +133,8 @@ class WritingStyleProfile:
     def _save_cached_samples(self, samples: list[VoiceSample]) -> None:
         self._cache_path.parent.mkdir(parents=True, exist_ok=True)
         payload = [
-            {"source_url": s.source_url, "language": s.language, "text": s.text} for s in samples
+            {"source_url": s.source_url, "language": s.language, "text": s.text}
+            for s in samples
         ]
         try:
             self._cache_path.write_text(
@@ -173,7 +178,8 @@ def _extract_preview(html: str) -> str:
 def _html_unescape(text: str) -> str:
     """Cheap entity decode for the handful that appear in LinkedIn previews."""
     return (
-        text.replace("&quot;", '"')
+        text
+        .replace("&quot;", '"')
         .replace("&amp;", "&")
         .replace("&#39;", "'")
         .replace("&lt;", "<")

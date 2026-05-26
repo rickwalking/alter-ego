@@ -135,7 +135,9 @@ class PostgresUserRepository(UserRepository):
         Returns:
             Total number of users.
         """
-        result = await self._session.execute(select(func.count()).select_from(UserModel))
+        result = await self._session.execute(
+            select(func.count()).select_from(UserModel)
+        )
         return result.scalar() or 0
 
     async def count_by_role(self, role: UserRole) -> int:

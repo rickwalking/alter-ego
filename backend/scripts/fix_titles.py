@@ -1,5 +1,7 @@
 import asyncio
+
 import asyncpg
+
 
 async def fix():
     conn = await asyncpg.connect('postgresql://rag_user:EAd4u2v60WL14sXLAid2iP35TXapCUm9bXA1WZvaTZM=@postgres:5432/rag_db')

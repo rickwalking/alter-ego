@@ -50,7 +50,9 @@ class TestOpenAIImageServiceHappyPath:
         assert out.read_bytes() == b"pixel-data"
 
     async def test_uses_configured_model_and_size(self, tmp_path: Path) -> None:
-        service = OpenAIImageService(api_key="sk-test", model="gpt-image-2", size="1024x1024")
+        service = OpenAIImageService(
+            api_key="sk-test", model="gpt-image-2", size="1024x1024"
+        )
         fake_client = MagicMock()
         fake_client.images.generate.return_value = _fake_response()
         service._client = fake_client
@@ -69,7 +71,9 @@ class TestOpenAIImageServiceHappyPath:
 class TestOpenAIImageServiceFailureModes:
     """Scenario: Missing OPENAI_API_KEY / 403 verification error."""
 
-    async def test_missing_api_key_surfaces_actionable_message(self, tmp_path: Path) -> None:
+    async def test_missing_api_key_surfaces_actionable_message(
+        self, tmp_path: Path
+    ) -> None:
         service = OpenAIImageService(api_key="")
         with pytest.raises(RuntimeError, match="OPENAI_API_KEY"):
             await service.generate_image("prompt", str(tmp_path / "x.jpg"))

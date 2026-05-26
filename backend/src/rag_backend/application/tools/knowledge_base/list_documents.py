@@ -12,7 +12,9 @@ async def list_documents() -> str:
 
     Use this to see what information is available.
     """
-    raise NotImplementedError("Use build_list_documents_tool() to create a bound instance")
+    raise NotImplementedError(
+        "Use build_list_documents_tool() to create a bound instance"
+    )
 
 
 def build_list_documents_tool(
@@ -35,7 +37,9 @@ def build_list_documents_tool(
 
         Use this to see what information is available.
         """
-        docs = await document_repository.get_all(status=DocumentStatus.COMPLETED, limit=20)
+        docs = await document_repository.get_all(
+            status=DocumentStatus.COMPLETED, limit=20
+        )
         if not docs:
             return "No documents found in the knowledge base."
 
@@ -43,9 +47,7 @@ def build_list_documents_tool(
         if scope_filter is not None:
             docs = [d for d in docs if d.scope.value == scope_filter]
 
-        formatted_docs = []
-        for doc in docs:
-            formatted_docs.append(f"- {doc.title} ({doc.chunk_count} chunks)")
+        formatted_docs = [f"- {doc.title} ({doc.chunk_count} chunks)" for doc in docs]
 
         return "Available documents:\n" + "\n".join(formatted_docs)
 

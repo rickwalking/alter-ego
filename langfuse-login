@@ -1,0 +1,28 @@
+- generic [ref=e1]:
+  - main [ref=e9]:
+    - generic [ref=e10]:
+      - generic [ref=e11]:
+        - img "Langfuse Icon" [ref=e12]
+        - heading "Sign in to your account" [level=2] [ref=e13]
+      - generic [ref=e14]:
+        - generic [ref=e17]:
+          - generic [ref=e18]:
+            - text: Email
+            - textbox "Email" [ref=e19]:
+              - /placeholder: jsdoe@example.com
+              - text: admin@alterego.app
+          - generic [ref=e20]:
+            - generic [ref=e21]:
+              - text: Password
+              - link "(forgot password?)" [ref=e22] [cursor=pointer]:
+                - /url: /auth/reset-password
+            - generic [ref=e23]:
+              - textbox "Password (forgot password?)" [active] [ref=e24]: "#CD3w6xspHDMm%FA"
+              - button "Show password" [ref=e25] [cursor=pointer]:
+                - img [ref=e26]
+          - button "Sign in" [ref=e29] [cursor=pointer]
+        - paragraph [ref=e30]:
+          - text: No account yet?
+          - link "Sign up" [ref=e31] [cursor=pointer]:
+            - /url: /auth/sign-up
+  - alert [ref=e7]: Sign in | Langfuse

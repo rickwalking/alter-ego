@@ -794,6 +794,34 @@ X-API-Version: v1
 
 ## Changelog
 
+### v1.5.0 (Phase 5 — Migration & Launch)
+- `POST /api/admin/migration/phase5` — Run data migration (MIG-001–004)
+- Feature flags gate editorial workflow, quality, kanban, calendar endpoints (503 when disabled)
+- Workflow failure alerts via background worker (MON-002)
+- See [editorial-workflow-user-guide.md](../guides/editorial-workflow-user-guide.md)
+
+### v1.4.0 (Phase 4 — Quality & Polish)
+- `GET /api/blog-posts/{id}/seo-analyze` — SEO analysis
+- `GET /api/blog-posts/{id}/accessibility-check` — Accessibility validation
+- `POST /api/blog-posts/{id}/plagiarism-check` — Plagiarism detection
+- `GET /api/blog-posts/{id}/ai-disclosure` — AI disclosure label
+- `GET /api/editorial-analytics` — Dashboard analytics
+
+### v1.3.0 (Phase 3 — Workflow & Collaboration)
+- `GET /api/workflow` — Kanban board
+- `GET /api/content-calendar` — Content calendar
+- `GET /api/notifications` — Notification center
+- `GET /api/workflow-audit/{type}/{id}` — Audit log
+- Blog workflow: submit, approve, reject, publish, schedule
+
+### v1.2.0 (Phase 2 — AI Editorial)
+- `POST /api/carousels/{id}/editorial-workflow/start` — Start carousel workflow
+- `POST /api/carousels/{id}/editorial-workflow/resume` — Resume after human review
+- `GET /api/carousels/{id}/editorial-workflow/stream` — SSE workflow events
+- `POST /api/blog-posts/{id}/ai/suggest` — AI writing suggestions
+- `POST /api/personas`, `GET /api/personas` — Persona management
+- `POST /api/rubrics`, `GET /api/rubrics` — Quality rubrics
+
 ### v1.0.0 (Current)
 - Initial API release
 - WebSocket support for streaming

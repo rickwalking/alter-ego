@@ -1,15 +1,14 @@
 #!/usr/bin/env python3
 """Seed production database with carousel projects and slides from local runs."""
 
+import asyncio
 import json
 import os
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 import asyncpg
-import asyncio
-
 
 SEED_FILE = "/opt/alter-ego/seed/carousel_seed_final.json"
 OWNER_ID = "25c56d3c-a9b9-41df-ad1c-9084ea5a97e7"  # Admin user ID
@@ -20,7 +19,7 @@ ID_MAP = {}
 
 
 def now() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 async def seed_database():
@@ -46,14 +45,14 @@ async def seed_database():
                 OWNER_ID,
                 "admin@alterego.app",
                 "System Administrator",
-                "$2b$12$dummy_hash_for_admin_user_created_by_seed_script",  # noqa: S105
+                "$2b$12$dummy_hash_for_admin_user_created_by_seed_script",
                 "admin",
                 True,
                 now(),
             )
 
         # 2. Load seed data
-        with open(SEED_FILE, "r", encoding="utf-8") as f:
+        with open(SEED_FILE, encoding="utf-8") as f:
             projects = json.load(f)
 
         print(f"Seeding {len(projects)} carousel projects...")

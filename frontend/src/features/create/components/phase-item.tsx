@@ -21,7 +21,10 @@ export function PhaseItem({ phase, isActive, isPast, index }: PhaseItemProps) {
   const t = useTranslations("create");
 
   return (
-    <div className="flex items-center gap-3" data-testid={`phase-item-${phase}`}>
+    <div
+      className="flex items-center gap-3"
+      data-testid={`phase-item-${phase}`}
+    >
       <div
         className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold transition-colors ${
           isPast

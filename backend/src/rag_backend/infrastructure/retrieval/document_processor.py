@@ -1,6 +1,6 @@
 """Document processor for chunking and embedding documents."""
 
-import os
+from pathlib import Path
 
 from pypdf import PdfReader
 
@@ -22,11 +22,11 @@ def load_file_content(file_content: bytes, filename: str) -> str:
     Raises:
         ValueError: If the file type is unsupported or content cannot be decoded
     """
-    ext = os.path.splitext(filename)[1].lower()
+    ext = Path(filename).suffix.lower()
 
     if ext == ".pdf":
         return _load_pdf(file_content)
-    if ext in (".txt", ".md", ".markdown"):
+    if ext in {".txt", ".md", ".markdown"}:
         return file_content.decode(ENCODING_UTF8)
     return file_content.decode(ENCODING_UTF8)
 

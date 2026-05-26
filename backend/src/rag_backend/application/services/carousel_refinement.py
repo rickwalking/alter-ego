@@ -18,11 +18,15 @@ from rag_backend.infrastructure.logging import get_logger
 logger = get_logger()
 
 _ERR_PROJECT_NOT_FOUND = "Carousel project {} not found"
-_ERR_NO_OUTPUT_DIR_IMAGE = "Carousel project {} has no output_dir; cannot regenerate image."
+_ERR_NO_OUTPUT_DIR_IMAGE = (
+    "Carousel project {} has no output_dir; cannot regenerate image."
+)
 _ERR_SLIDE_NOT_FOUND = "Slide {} not found in project {}"
 _ERR_NO_IMAGE_PROMPT = "Slide {} has no image_prompt to refine."
 _ERR_EMPTY_IMAGE_PROMPT = "LLM returned an empty image prompt; no changes applied."
-_ERR_NO_OUTPUT_DIR_DESIGN = "Carousel project {} has no output_dir; cannot apply design changes."
+_ERR_NO_OUTPUT_DIR_DESIGN = (
+    "Carousel project {} has no output_dir; cannot apply design changes."
+)
 _ERR_NO_SLIDES = "Carousel project {} has no slides."
 _ERR_EMPTY_CSS = "LLM returned empty CSS; no changes applied."
 _ERR_WRITE_OVERRIDES = "Could not write design overrides to {}: {}"
@@ -99,7 +103,9 @@ def _render_design_prompt(instruction: str, current_css: str) -> str:
             version="v1",
         )
     except Exception:
-        return DESIGN_PROMPT_TEMPLATE.format(instruction=instruction, current_css=current_css)
+        return DESIGN_PROMPT_TEMPLATE.format(
+            instruction=instruction, current_css=current_css
+        )
     else:
         return prompt_text
 

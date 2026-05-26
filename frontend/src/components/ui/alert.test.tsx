@@ -9,7 +9,7 @@ describe("Alert Component", () => {
         render(
           <Alert data-testid="alert">
             <p>Alert message</p>
-          </Alert>
+          </Alert>,
         );
         expect(screen.getByTestId("alert")).toBeInTheDocument();
         expect(screen.getByRole("alert")).toBeInTheDocument();
@@ -19,7 +19,9 @@ describe("Alert Component", () => {
     describe("When the default variant is used", () => {
       it("Then the Alert should have default styling", () => {
         render(<Alert data-testid="alert">Default alert</Alert>);
-        expect(screen.getByTestId("alert")).toHaveClass("bg-[var(--color-background)]");
+        expect(screen.getByTestId("alert")).toHaveClass(
+          "bg-[var(--color-background)]",
+        );
       });
     });
 
@@ -28,10 +30,14 @@ describe("Alert Component", () => {
         render(
           <Alert variant="destructive" data-testid="alert">
             Destructive alert
-          </Alert>
+          </Alert>,
         );
-        expect(screen.getByTestId("alert")).toHaveClass("border-[var(--color-destructive)]/50");
-        expect(screen.getByTestId("alert")).toHaveClass("text-[var(--color-destructive)]");
+        expect(screen.getByTestId("alert")).toHaveClass(
+          "border-[var(--color-destructive)]/50",
+        );
+        expect(screen.getByTestId("alert")).toHaveClass(
+          "text-[var(--color-destructive)]",
+        );
       });
     });
 
@@ -47,7 +53,9 @@ describe("Alert Component", () => {
     describe("When the AlertTitle contains text", () => {
       it("Then the title should be rendered as a heading", () => {
         render(<AlertTitle>Alert Title</AlertTitle>);
-        expect(screen.getByRole("heading", { name: /alert title/i })).toBeInTheDocument();
+        expect(
+          screen.getByRole("heading", { name: /alert title/i }),
+        ).toBeInTheDocument();
       });
     });
 
@@ -78,7 +86,11 @@ describe("Alert Component", () => {
 
     describe("When a custom className is provided", () => {
       it("Then the custom class should be applied to the AlertDescription", () => {
-        render(<AlertDescription className="custom-desc">Description</AlertDescription>);
+        render(
+          <AlertDescription className="custom-desc">
+            Description
+          </AlertDescription>,
+        );
         expect(screen.getByText("Description")).toHaveClass("custom-desc");
       });
     });
@@ -99,11 +111,15 @@ describe("Alert Component", () => {
           <Alert>
             <AlertTitle>Warning</AlertTitle>
             <AlertDescription>This is a warning message</AlertDescription>
-          </Alert>
+          </Alert>,
         );
 
-        expect(screen.getByRole("heading", { name: /warning/i })).toBeInTheDocument();
-        expect(screen.getByText("This is a warning message")).toBeInTheDocument();
+        expect(
+          screen.getByRole("heading", { name: /warning/i }),
+        ).toBeInTheDocument();
+        expect(
+          screen.getByText("This is a warning message"),
+        ).toBeInTheDocument();
       });
     });
 
@@ -113,17 +129,21 @@ describe("Alert Component", () => {
           <Alert data-testid="alert">
             <AlertTitle>Default</AlertTitle>
             <AlertDescription>Default alert description</AlertDescription>
-          </Alert>
+          </Alert>,
         );
-        expect(screen.getByTestId("alert")).toHaveClass("bg-[var(--color-background)]");
+        expect(screen.getByTestId("alert")).toHaveClass(
+          "bg-[var(--color-background)]",
+        );
 
         rerender(
           <Alert variant="destructive" data-testid="alert">
             <AlertTitle>Error</AlertTitle>
             <AlertDescription>Error alert description</AlertDescription>
-          </Alert>
+          </Alert>,
         );
-        expect(screen.getByTestId("alert")).toHaveClass("border-[var(--color-destructive)]/50");
+        expect(screen.getByTestId("alert")).toHaveClass(
+          "border-[var(--color-destructive)]/50",
+        );
       });
     });
   });

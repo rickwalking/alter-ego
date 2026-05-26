@@ -44,8 +44,12 @@ from rag_backend.application.services.carousel.phases import (
 )
 from rag_backend.application.services.carousel.state import PipelineState
 from rag_backend.application.services.carousel_template import CarouselTemplateBuilder
-from rag_backend.application.services.image_provider_registry import ImageProviderRegistry
-from rag_backend.application.services.linkedin_post_generator import LinkedInPostGenerator
+from rag_backend.application.services.image_provider_registry import (
+    ImageProviderRegistry,
+)
+from rag_backend.application.services.linkedin_post_generator import (
+    LinkedInPostGenerator,
+)
 from rag_backend.application.services.pdf_slide_builder import PdfSlideBuilder
 from rag_backend.domain.protocols import (
     CarouselExportService,
@@ -99,7 +103,9 @@ def build_graph(
     ) = build_image_nodes(deps)
 
     graph = StateGraph(PipelineState)
-    graph.add_node(NODE_RESEARCH, build_research_node(deps), retry_policy=_RETRY_RESEARCH)
+    graph.add_node(
+        NODE_RESEARCH, build_research_node(deps), retry_policy=_RETRY_RESEARCH
+    )
     graph.add_node(NODE_CONTENT, build_content_node(deps), retry_policy=_RETRY_LLM)
     graph.add_node(NODE_PERSIST_SLIDES, build_persist_slides_node(deps))
     graph.add_node(NODE_DESIGN, build_design_node(deps))

@@ -29,12 +29,10 @@ class TestBuildSlidesEnIndex:
     """Bilingual slides_en parsing."""
 
     def test_indexes_by_slide_number(self) -> None:
-        idx = build_slides_en_index(
-            [
-                {"number": 1, "heading": "EN H1", "body": "EN B1"},
-                {"number": 2, "heading": "EN H2", "body": "EN B2"},
-            ]
-        )
+        idx = build_slides_en_index([
+            {"number": 1, "heading": "EN H1", "body": "EN B1"},
+            {"number": 2, "heading": "EN H2", "body": "EN B2"},
+        ])
         assert set(idx.keys()) == {1, 2}
         assert idx[1]["heading"] == "EN H1"
 
@@ -73,23 +71,36 @@ class TestSlidesDataForLanguage:
         assert en_slides[0].heading == "PT"
 
 
-def _agent_with_export_mock(tmp_path: Path) -> tuple[CarouselAgent, AsyncMock, MagicMock]:
+def _agent_with_export_mock(
+    tmp_path: Path,
+) -> tuple[CarouselAgent, AsyncMock, MagicMock]:
     repo = AsyncMock()
     repo.update_project = AsyncMock(side_effect=lambda p: p)
     repo.get_slides_by_project = AsyncMock()
     export = AsyncMock()
     export.export_slides = AsyncMock(
         side_effect=[
-            [str(tmp_path / "pt" / "slide_1.jpg"), str(tmp_path / "pt" / "slide_2.jpg")],
-            [str(tmp_path / "en" / "slide_1.jpg"), str(tmp_path / "en" / "slide_2.jpg")],
+            [
+                str(tmp_path / "pt" / "slide_1.jpg"),
+                str(tmp_path / "pt" / "slide_2.jpg"),
+            ],
+            [
+                str(tmp_path / "en" / "slide_1.jpg"),
+                str(tmp_path / "en" / "slide_2.jpg"),
+            ],
         ]
     )
     pdf_builder = MagicMock()
     pdf_builder.build = MagicMock(
-        side_effect=[str(tmp_path / "pt" / "carousel.pdf"), str(tmp_path / "en" / "carousel.pdf")]
+        side_effect=[
+            str(tmp_path / "pt" / "carousel.pdf"),
+            str(tmp_path / "en" / "carousel.pdf"),
+        ]
     )
     image_service = AsyncMock()
-    registry = ImageProviderRegistry(gemini_service=image_service, openai_service=image_service)
+    registry = ImageProviderRegistry(
+        gemini_service=image_service, openai_service=image_service
+    )
     agent = CarouselAgent(
         repository=repo,
         llm_service=AsyncMock(),
@@ -131,7 +142,9 @@ class TestBilingualExport:
                 translation_en={"heading": "EN H2", "body": "EN B2"},
             ),
         ]
-        await agent._phase6_bilingual_export(project, slides, "<html>pt</html>", tmp_path)
+        await agent._phase6_bilingual_export(
+            project, slides, "<html>pt</html>", tmp_path
+        )
 
         assert export.export_slides.await_count == 2
         assert pdf_builder.build.call_count == 2
@@ -150,7 +163,9 @@ class TestBilingualExport:
             output_dir=str(tmp_path),
         )
         slides = [SlideData(1, "intro", "PT", "PT body")]
-        await agent._phase6_bilingual_export(project, slides, "<html>pt</html>", tmp_path)
+        await agent._phase6_bilingual_export(
+            project, slides, "<html>pt</html>", tmp_path
+        )
 
         assert export.export_slides.await_count == 1
         assert pdf_builder.build.call_count == 1
@@ -198,7 +213,9 @@ class TestRefineSlideEnLanguage:
     """slide_*:N:en selectors mutate translation_en in extras."""
 
     async def test_resolve_slide_heading_en_uses_translation(self) -> None:
-        from rag_backend.application.tools.carousel.refine_copy import _resolve_refine_target
+        from rag_backend.application.tools.carousel.refine_copy import (
+            _resolve_refine_target,
+        )
 
         repo = AsyncMock()
         repo.update_slide = AsyncMock()
@@ -209,7 +226,9 @@ class TestRefineSlideEnLanguage:
         repo.get_slides_by_project = AsyncMock(return_value=[slide])
 
         project = CarouselProject(topic="T", audience="A", niche="N")
-        original, setter = await _resolve_refine_target(project, "slide_heading:2:en", repo)
+        original, setter = await _resolve_refine_target(
+            project, "slide_heading:2:en", repo
+        )
         assert original == "EN heading"
 
         await setter("Reworked EN heading")
@@ -220,7 +239,9 @@ class TestRefineSlideEnLanguage:
         assert translation.get("heading") == "Reworked EN heading"
 
     async def test_resolve_slide_body_pt_default(self) -> None:
-        from rag_backend.application.tools.carousel.refine_copy import _resolve_refine_target
+        from rag_backend.application.tools.carousel.refine_copy import (
+            _resolve_refine_target,
+        )
 
         repo = AsyncMock()
         repo.update_slide = AsyncMock()
@@ -234,7 +255,9 @@ class TestRefineSlideEnLanguage:
         assert slide.body == "New PT body"
 
     async def test_invalid_language_returns_none(self) -> None:
-        from rag_backend.application.tools.carousel.refine_copy import _resolve_refine_target
+        from rag_backend.application.tools.carousel.refine_copy import (
+            _resolve_refine_target,
+        )
 
         repo = AsyncMock()
         slide = _slide(1)

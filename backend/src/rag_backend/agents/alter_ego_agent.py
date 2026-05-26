@@ -10,10 +10,11 @@ from uuid import UUID
 
 from deepagents import create_deep_agent
 from langchain_anthropic import ChatAnthropic
-from langchain_core.messages import AIMessage, HumanMessage
+from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 from langchain_core.runnables.config import RunnableConfig
 from langchain_core.tools import BaseTool
 
+from rag_backend.agents.chat_streaming import extract_message_text, extract_stream_token
 from rag_backend.application.tools.knowledge_base import (
     build_list_documents_tool,
     build_search_documents_tool,
@@ -101,7 +102,7 @@ class AlterEgoAgent:
             ),
         ]
 
-    async def chat(  # noqa: C901, PLR0912, PLR0915
+    async def chat(
         self,
         message: str,
         conversation_id: UUID,
@@ -114,7 +115,9 @@ class AlterEgoAgent:
         Mirrors the interface of the legacy RAGAgent so route handlers
         can swap agents without changing their call sites.
         """
-        history = await self._message_repository.get_by_conversation(conversation_id, limit=10)
+        history = await self._message_repository.get_by_conversation(
+            conversation_id, limit=10
+        )
 
         chat_history = []
         for msg in history:
@@ -134,91 +137,127 @@ class AlterEgoAgent:
         sources = []
 
         if stream:
-            full_response = ""
-
-            callbacks = get_langfuse_handler()
-            lf_config: RunnableConfig = {"callbacks": [callbacks]} if callbacks else {}
-
-            async for event in self._agent.astream_events(
-                {"messages": [*chat_history, HumanMessage(content=message)]},
-                lf_config,
-                version="v2",
+            async for event in self._chat_stream(
+                message,
+                conversation_id,
+                chat_history,
+                sources,
+                persist_messages,
             ):
-                event_name = event.get("event")
-
-                if event_name == "on_tool_end":
-                    tool_output = event.get("data", {}).get("output")
-                    tool_name = event.get("name", "")
-                    if tool_output is not None:
-                        yield {
-                            "type": "tool_result",
-                            "tool": tool_name,
-                            "result": tool_output,
-                        }
-                    continue
-
-                if event_name != "on_chat_model_stream":
-                    continue
-
-                chunk = event.get("data", {}).get("chunk")
-                if chunk is None:
-                    continue
-                content = getattr(chunk, "content", None)
-                if not content:
-                    continue
-
-                token = ""
-                if isinstance(content, str):
-                    token = content
-                elif isinstance(content, list):
-                    for block in content:
-                        if isinstance(block, dict) and block.get("type") == "text":
-                            token += block.get("text", "")
-                if not token:
-                    continue
-
-                full_response += token
-                yield {"type": "token", "content": token}
-
-            if persist_messages:
-                assistant_message = Message(
-                    role=MessageRole.ASSISTANT,
-                    content=full_response,
-                    conversation_id=conversation_id,
-                    sources=sources,
-                )
-                await self._message_repository.create(assistant_message)
-
-            yield {"type": "sources", "content": sources}
-            yield {"type": "complete", "content": full_response}
-
+                yield event
         else:
-            callbacks = get_langfuse_handler()
-            lf_config: RunnableConfig = {"callbacks": [callbacks]} if callbacks else {}
-            async for attempt in retry_async(attempts=LANGGRAPH_MAX_ATTEMPTS):
-                with attempt:
-                    result = await self._agent.ainvoke(
-                        {"messages": [*chat_history, HumanMessage(content=message)]},
-                        lf_config,
-                    )
+            async for event in self._chat_non_streaming(
+                message,
+                conversation_id,
+                chat_history,
+                sources,
+                persist_messages,
+            ):
+                yield event
 
-            messages = result.get("messages", [])
-            response = ""
-            for msg in reversed(messages):
-                if isinstance(msg, AIMessage) and msg.content:
-                    response = msg.content
+    async def _chat_stream(
+        self,
+        message: str,
+        conversation_id: UUID,
+        chat_history: list[BaseMessage],
+        sources: list[dict[str, object]],
+        persist_messages: bool,
+    ) -> AsyncIterator[ChatEvent]:
+        """Streaming chat implementation.
+
+        Yields tokens as they arrive from the LLM.
+        """
+        full_response = ""
+
+        callbacks = get_langfuse_handler()
+        lf_config: RunnableConfig = {"callbacks": [callbacks]} if callbacks else {}
+
+        async for event in self._agent.astream_events(
+            {"messages": [*chat_history, HumanMessage(content=message)]},
+            lf_config,
+            version="v2",
+        ):
+            event_name = event.get("event")
+
+            if event_name == "on_tool_end":
+                tool_output = event.get("data", {}).get("output")
+                tool_name = event.get("name", "")
+                if tool_output is not None:
+                    yield {
+                        "type": "tool_result",
+                        "tool": tool_name,
+                        "result": tool_output,
+                    }
+                    continue
+
+            if event_name != "on_chat_model_stream":
+                continue
+
+            chunk = event.get("data", {}).get("chunk")
+            if chunk is None:
+                continue
+            content = getattr(chunk, "content", None)
+            if not content:
+                continue
+
+            token = extract_stream_token(content)
+            if not token:
+                continue
+
+            full_response += token
+            yield {"type": "token", "content": token}
+
+        if persist_messages:
+            assistant_message = Message(
+                role=MessageRole.ASSISTANT,
+                content=full_response,
+                conversation_id=conversation_id,
+                sources=sources,
+            )
+            await self._message_repository.create(assistant_message)
+
+        yield {"type": "sources", "content": sources}
+        yield {"type": "complete", "content": full_response}
+
+    async def _chat_non_streaming(
+        self,
+        message: str,
+        conversation_id: UUID,
+        chat_history: list[BaseMessage],
+        sources: list[dict[str, object]],
+        persist_messages: bool,
+    ) -> AsyncIterator[ChatEvent]:
+        """Non-streaming chat implementation.
+
+        Returns complete response at once.
+        """
+        callbacks = get_langfuse_handler()
+        lf_config: RunnableConfig = {"callbacks": [callbacks]} if callbacks else {}
+        async for attempt in retry_async(attempts=LANGGRAPH_MAX_ATTEMPTS):
+            with attempt:
+                result = await self._agent.ainvoke(
+                    {"messages": [*chat_history, HumanMessage(content=message)]},
+                    lf_config,
+                )
+
+        messages = result.get("messages", [])
+        response = ""
+        for msg in reversed(messages):
+            if isinstance(msg, AIMessage) and msg.content:
+                response = extract_message_text(msg.content)
+                if response:
                     break
 
-            if persist_messages:
-                assistant_message = Message(
-                    role=MessageRole.ASSISTANT,
-                    content=response,
-                    conversation_id=conversation_id,
-                    sources=sources,
-                )
-                await self._message_repository.create(assistant_message)
+        if persist_messages:
+            assistant_message = Message(
+                role=MessageRole.ASSISTANT,
+                content=response,
+                conversation_id=conversation_id,
+                sources=sources,
+            )
+            await self._message_repository.create(assistant_message)
 
-            yield {"type": "complete", "content": response}
+        yield {"type": "complete", "content": response}
 
     async def search_documents(self, query: str, top_k: int = 5) -> list[SearchResult]:
         """Search for relevant documents (scoped to personal + public)."""

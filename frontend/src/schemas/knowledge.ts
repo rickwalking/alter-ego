@@ -38,4 +38,6 @@ export const documentUploadResponseSchema = z.object({
 export type Document = z.infer<typeof documentSchema>;
 export type DocumentListResponse = z.infer<typeof documentListResponseSchema>;
 export type CreateDocumentRequest = z.infer<typeof createDocumentRequestSchema>;
-export type DocumentUploadResponse = z.infer<typeof documentUploadResponseSchema>;
+export type DocumentUploadResponse = z.infer<
+  typeof documentUploadResponseSchema
+>;

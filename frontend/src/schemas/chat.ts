@@ -48,7 +48,9 @@ export const chatResponseSchema = z.object({
 export type MessageSource = z.infer<typeof messageSourceSchema>;
 export type Message = z.infer<typeof messageSchema>;
 export type Conversation = z.infer<typeof conversationSchema>;
-export type ConversationListResponse = z.infer<typeof conversationListResponseSchema>;
+export type ConversationListResponse = z.infer<
+  typeof conversationListResponseSchema
+>;
 export type MessageListResponse = z.infer<typeof messageListResponseSchema>;
 export type ChatRequest = z.infer<typeof chatRequestSchema>;
 export type ChatResponse = z.infer<typeof chatResponseSchema>;

@@ -33,7 +33,7 @@ function AllProviders({ children, queryClient }: AllProvidersProps) {
 // Custom render function
 export function renderWithProviders(
   ui: ReactElement,
-  options?: Omit<RenderOptions, "wrapper">
+  options?: Omit<RenderOptions, "wrapper">,
 ) {
   const queryClient = createTestQueryClient();
   const Wrapper = ({ children }: { children: ReactNode }) => (

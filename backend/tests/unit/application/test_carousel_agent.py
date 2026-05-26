@@ -69,7 +69,9 @@ def mock_image_service():
 def mock_export_service():
     """Create a mock export service."""
     service = AsyncMock()
-    service.export_slides = AsyncMock(return_value=["/path/slide_1.jpg", "/path/slide_2.jpg"])
+    service.export_slides = AsyncMock(
+        return_value=["/path/slide_1.jpg", "/path/slide_2.jpg"]
+    )
     return service
 
 
@@ -167,16 +169,14 @@ class TestCarouselAgent:
         mock_repository.get_project_by_id.return_value = sample_project
         mock_repository.update_project.side_effect = track_update
         mock_research_tool.search_web.return_value = []
-        mock_llm_service.generate.return_value = json.dumps(
-            {
-                "title": "T",
-                "subtitle": "S",
-                "slides": [
-                    {"number": 1, "type": "intro", "heading": "H", "body": "B"},
-                ],
-                "blog_markdown": "",
-            }
-        )
+        mock_llm_service.generate.return_value = json.dumps({
+            "title": "T",
+            "subtitle": "S",
+            "slides": [
+                {"number": 1, "type": "intro", "heading": "H", "body": "B"},
+            ],
+            "blog_markdown": "",
+        })
 
         agent = build_agent(
             mock_repository,
@@ -215,7 +215,9 @@ class TestCarouselAgent:
         with pytest.raises(RuntimeError, match="Network error"):
             await agent.execute_pipeline(sample_project.id)
 
-        update_calls = [call.args[0] for call in mock_repository.update_project.call_args_list]
+        update_calls = [
+            call.args[0] for call in mock_repository.update_project.call_args_list
+        ]
         failed_found = any(p.status == CarouselStatus.FAILED for p in update_calls)
         assert failed_found
 
@@ -262,30 +264,28 @@ class TestCarouselAgent:
         sample_project,
     ):
         """Should parse slide data from bilingual LLM JSON response."""
-        llm_response = json.dumps(
-            {
-                "title_pt": "Titulo Otimizado",
-                "subtitle_pt": "Subtitulo",
-                "slides": [
-                    {
-                        "number": 1,
-                        "type": "intro",
-                        "heading": "Intro Heading",
-                        "body": "Intro Body",
-                        "image_prompt": "A comic style intro image",
-                    },
-                    {
-                        "number": 2,
-                        "type": "content",
-                        "heading": "Content Heading",
-                        "body": "Content Body",
-                        "image_prompt": "A comic style content image",
-                    },
-                ],
-                "blog_pt": "# Blog PT\n\nConteudo em portugues.",
-                "blog_en": "# Blog EN\n\nContent in English.",
-            }
-        )
+        llm_response = json.dumps({
+            "title_pt": "Titulo Otimizado",
+            "subtitle_pt": "Subtitulo",
+            "slides": [
+                {
+                    "number": 1,
+                    "type": "intro",
+                    "heading": "Intro Heading",
+                    "body": "Intro Body",
+                    "image_prompt": "A comic style intro image",
+                },
+                {
+                    "number": 2,
+                    "type": "content",
+                    "heading": "Content Heading",
+                    "body": "Content Body",
+                    "image_prompt": "A comic style content image",
+                },
+            ],
+            "blog_pt": "# Blog PT\n\nConteudo em portugues.",
+            "blog_en": "# Blog EN\n\nContent in English.",
+        })
 
         mock_llm_service.generate.return_value = llm_response
 
@@ -322,22 +322,20 @@ class TestCarouselAgent:
             {"icon": "🧠", "title": f"Item {i}", "body": f"Body {i}"}
             for i in range(1, 8)  # 7 items
         ]
-        llm_response = json.dumps(
-            {
-                "title_pt": "Titulo",
-                "slides": [
-                    {
-                        "number": 5,
-                        "type": "closing",
-                        "heading": "Closing",
-                        "body": "Intro line",
-                        "features": oversized,
-                    },
-                ],
-                "blog_pt": "# Blog",
-                "blog_en": "# Blog EN",
-            }
-        )
+        llm_response = json.dumps({
+            "title_pt": "Titulo",
+            "slides": [
+                {
+                    "number": 5,
+                    "type": "closing",
+                    "heading": "Closing",
+                    "body": "Intro line",
+                    "features": oversized,
+                },
+            ],
+            "blog_pt": "# Blog",
+            "blog_en": "# Blog EN",
+        })
         mock_llm_service.generate.return_value = llm_response
         agent = build_agent(
             mock_repository,
@@ -426,17 +424,15 @@ class TestCarouselAgent:
         sample_project,
     ):
         """Should set blog_translations on project from bilingual response."""
-        llm_response = json.dumps(
-            {
-                "title_pt": "Titulo PT",
-                "subtitle_pt": "Sub PT",
-                "slides": [
-                    {"number": 1, "type": "intro", "heading": "H", "body": "B"},
-                ],
-                "blog_pt": "# Blog PT\n\nConteudo.",
-                "blog_en": "# Blog EN\n\nContent.",
-            }
-        )
+        llm_response = json.dumps({
+            "title_pt": "Titulo PT",
+            "subtitle_pt": "Sub PT",
+            "slides": [
+                {"number": 1, "type": "intro", "heading": "H", "body": "B"},
+            ],
+            "blog_pt": "# Blog PT\n\nConteudo.",
+            "blog_en": "# Blog EN\n\nContent.",
+        })
         mock_llm_service.generate.return_value = llm_response
 
         agent = build_agent(
@@ -536,7 +532,9 @@ class TestCarouselAgent:
 
         slides = [
             SlideData(slide_number=1, slide_type="intro", heading="Intro", body="B"),
-            SlideData(slide_number=2, slide_type="content", heading="Content", body="B"),
+            SlideData(
+                slide_number=2, slide_type="content", heading="Content", body="B"
+            ),
         ]
 
         agent = build_agent(
@@ -723,8 +721,16 @@ class TestCarouselAgent:
 
         async def capture_body(project_id, seed_urls, queue, repo):
             body_calls.append(repo)
-            await queue.put({"node": "start", "status": "pending", "phase_progress": None})
-            await queue.put({"node": "end", "status": "completed", "phase_progress": None})
+            await queue.put({
+                "node": "start",
+                "status": "pending",
+                "phase_progress": None,
+            })
+            await queue.put({
+                "node": "end",
+                "status": "completed",
+                "phase_progress": None,
+            })
 
         agent._run_graph_body = capture_body
 

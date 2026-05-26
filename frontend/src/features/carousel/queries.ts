@@ -28,10 +28,8 @@ export const carouselKeys = {
   status: (id: string | null) => ["carousel-status", id] as const,
   blog: (id: string | null, lang: string = DEFAULT_BLOG_LANGUAGE) =>
     ["carousel", id, "blog", lang] as const,
-  blogWithDesign: (
-    id: string | null,
-    lang: string = DEFAULT_BLOG_LANGUAGE,
-  ) => ["carousel", id, "blog", lang, "with-design"] as const,
+  blogWithDesign: (id: string | null, lang: string = DEFAULT_BLOG_LANGUAGE) =>
+    ["carousel", id, "blog", lang, "with-design"] as const,
   design: (id: string | null) => ["carousel", id, "design"] as const,
   slides: (id: string | null) => ["carousel", id, "slides"] as const,
 };
@@ -128,7 +126,11 @@ export function carouselDesignOptions(id: string | null) {
   return queryOptions({
     queryKey: carouselKeys.design(id),
     queryFn: id
-      ? () => apiCall(API_ENDPOINTS.CAROUSEL_DESIGN(id), carouselDesignResponseSchema)
+      ? () =>
+          apiCall(
+            API_ENDPOINTS.CAROUSEL_DESIGN(id),
+            carouselDesignResponseSchema,
+          )
       : skipToken,
     staleTime: 1000 * 60 * 15,
   });

@@ -6,11 +6,20 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from rag_backend.api.constants import ERR_FORBIDDEN, ERR_NOT_AUTHENTICATED
+from rag_backend.api.constants import (
+    ERR_CONVERSATION_NOT_FOUND,
+    ERR_FORBIDDEN,
+    ERR_NOT_AUTHENTICATED,
+)
 from rag_backend.api.dependencies import (
     get_optional_user,
     require_authenticated_user,
 )
+from rag_backend.api.dependencies.agents import (
+    CONVERSATION_METADATA_PROJECT_ID,
+    build_agent_for_conversation,
+)
+from rag_backend.api.dependencies.resource_access import assert_conversation_access
 from rag_backend.api.middleware.rate_limiting import limiter
 from rag_backend.api.schemas import (
     ChatRequest,
@@ -34,6 +43,9 @@ from rag_backend.infrastructure.database.conversation_repository import (
 )
 
 router = APIRouter(prefix="/conversations", tags=["conversations"])
+
+_AGENT_ORIGIN_ALTER_EGO = "alter-ego"
+_AGENT_ORIGIN_RAG = "rag-agent"
 
 _MAX_MESSAGES_PER_CONVERSATION = 20
 
@@ -69,6 +81,12 @@ def _make_conversation_service(db: AsyncSession) -> ConversationService:
         400: {"model": ErrorResponse, "description": "Invalid input"},
     },
 )
+@router.post(
+    "/",
+    response_model=ConversationResponse,
+    status_code=status.HTTP_201_CREATED,
+    include_in_schema=False,
+)
 async def create_conversation(
     request: ConversationCreate,
     response: Response,
@@ -92,6 +110,7 @@ async def create_conversation(
     conversation = await service.create_conversation(
         title=request.title,
         metadata=request.metadata,
+        user_id=user.id if user else None,
     )
     await db.commit()
 
@@ -118,20 +137,32 @@ async def create_conversation(
         401: {"model": ErrorResponse, "description": ERR_NOT_AUTHENTICATED},
     },
 )
+@router.get(
+    "/",
+    response_model=ConversationListResponse,
+    include_in_schema=False,
+)
 async def list_conversations(
     user: Annotated[User, Depends(require_authenticated_user)],
-    limit: Annotated[int, Query(ge=1, le=100, description="Number of items to return")] = 20,
+    limit: Annotated[
+        int, Query(ge=1, le=100, description="Number of items to return")
+    ] = 20,
     offset: Annotated[int, Query(ge=0, description="Number of items to skip")] = 0,
-    db: AsyncSession = Depends(get_session),  # noqa: FAST002
+    db: AsyncSession = Depends(get_session),
 ):
-    """List all conversations for the authenticated user."""
+    """List conversations owned by the authenticated user."""
     service = _make_conversation_service(db)
 
-    conversations = await service.list_conversations(limit=limit, offset=offset)
+    conversations = await service.list_conversations(
+        limit=limit,
+        offset=offset,
+        user_id=user.id,
+    )
+    total = await service.count_conversations_for_user(user.id)
 
     return {
         "items": conversations,
-        "total": len(conversations),
+        "total": total,
         "limit": limit,
         "offset": offset,
     }
@@ -159,9 +190,10 @@ async def get_conversation(
     if not conversation:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Conversation with id {conversation_id} not found",
+            detail=ERR_CONVERSATION_NOT_FOUND,
         )
 
+    assert_conversation_access(conversation, user)
     return conversation
 
 
@@ -178,8 +210,10 @@ async def get_conversation(
 async def get_conversation_messages(
     conversation_id: UUID,
     user: Annotated[User, Depends(require_authenticated_user)],
-    limit: Annotated[int, Query(ge=1, le=100, description="Number of messages to return")] = 50,
-    db: AsyncSession = Depends(get_session),  # noqa: FAST002
+    limit: Annotated[
+        int, Query(ge=1, le=100, description="Number of messages to return")
+    ] = 50,
+    db: AsyncSession = Depends(get_session),
 ):
     """Get all messages for a conversation."""
     service = _make_conversation_service(db)
@@ -188,9 +222,10 @@ async def get_conversation_messages(
     if not conversation:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Conversation with id {conversation_id} not found",
+            detail=ERR_CONVERSATION_NOT_FOUND,
         )
 
+    assert_conversation_access(conversation, user)
     messages = await service.get_conversation_history(conversation_id, limit=limit)
 
     return {
@@ -217,11 +252,19 @@ async def delete_conversation(
     """Delete a conversation and all its messages."""
     service = _make_conversation_service(db)
 
+    conversation = await service.get_conversation(conversation_id)
+    if not conversation:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=ERR_CONVERSATION_NOT_FOUND,
+        )
+
+    assert_conversation_access(conversation, user)
     success = await service.delete_conversation(conversation_id)
     if not success:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Conversation with id {conversation_id} not found",
+            detail=ERR_CONVERSATION_NOT_FOUND,
         )
     await db.commit()
 
@@ -250,8 +293,10 @@ async def generate_conversation_title(
     if not conversation:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Conversation with id {conversation_id} not found",
+            detail=ERR_CONVERSATION_NOT_FOUND,
         )
+
+    assert_conversation_access(conversation, user)
 
     await service.generate_title(
         conversation_id=conversation_id,
@@ -280,11 +325,8 @@ async def chat(
     response: Response,
     user: Annotated[User | None, Depends(get_optional_user)] = None,
     db: Annotated[AsyncSession, Depends(get_session)] = None,
-):
-    """Send a chat message and get a non-streaming response with sources.
-
-    Accessible to both authenticated users and anonymous visitors.
-    """
+) -> ChatResponse:
+    """Send a chat message and get a non-streaming response with sources."""
     if db is None:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -301,15 +343,18 @@ async def chat(
             detail=f"Conversation with id {conversation_id} not found",
         )
 
-    # Enforce per-conversation message limit
     msg_repo = PostgresMessageRepository(db)
     msg_count = await msg_repo.count_by_conversation(conversation_id)
     _check_conversation_limit(msg_count)
 
-    from rag_backend.api.dependencies.agents import build_alter_ego_agent
+    agent = build_agent_for_conversation(conversation, db, container)
+    agent_origin = (
+        _AGENT_ORIGIN_RAG
+        if CONVERSATION_METADATA_PROJECT_ID in conversation.metadata
+        else _AGENT_ORIGIN_ALTER_EGO
+    )
 
-    agent = build_alter_ego_agent(db, container)
-    sources = []
+    sources: list[dict[str, object]] = []
     full_response = ""
 
     async for event in agent.chat(
@@ -318,23 +363,22 @@ async def chat(
         stream=False,
     ):
         if event["type"] == "complete":
-            full_response = event["content"]
+            full_response = str(event["content"])
         elif event["type"] == "sources":
-            sources = event["content"]
+            sources = list(event["content"])
 
-    formatted_sources = []
-    for src in sources:
-        if isinstance(src, dict):
-            formatted_sources.append(
-                MessageSource(
-                    document_id=src.get("document_id", ""),
-                    document_title=src.get("document_title", ""),
-                    content=src.get("content", ""),
-                    score=src.get("score", 0.0),
-                )
-            )
+    formatted_sources = [
+        MessageSource(
+            document_id=str(src.get("document_id", "")),
+            document_title=str(src.get("document_title", "")),
+            content=str(src.get("content", "")),
+            score=float(src.get("score", 0.0)),
+        )
+        for src in sources
+        if isinstance(src, dict)
+    ]
 
-    response.headers["X-Agent-Origin"] = "alter-ego"
+    response.headers["X-Agent-Origin"] = agent_origin
     return ChatResponse(
         content=full_response,
         sources=formatted_sources,

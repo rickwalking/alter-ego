@@ -40,7 +40,9 @@ _MAX_CAROUSEL_ITEMS = 10
 MIN_IMAGE_BATCH = 2
 
 _ERR_CONTAINER_STATUS = "Instagram container {} returned status {} after {} poll(s)."
-_ERR_CONTAINER_TIMEOUT = "Instagram container {} did not reach FINISHED after {} poll attempts."
+_ERR_CONTAINER_TIMEOUT = (
+    "Instagram container {} did not reach FINISHED after {} poll attempts."
+)
 _ERR_API_NO_ID = "Instagram API returned no id at {}: {}"
 
 _MSG_CREDENTIALS_MISSING = (
@@ -123,7 +125,9 @@ class MetaInstagramPublisher(SocialPublisher):
             "caption": caption,
             COOKIE_ACCESS_TOKEN: self._token,
         }
-        return await self._post_and_extract_id(f"{_GRAPH_BASE}/{self._ig_user_id}/media", payload)
+        return await self._post_and_extract_id(
+            f"{_GRAPH_BASE}/{self._ig_user_id}/media", payload
+        )
 
     async def _wait_for_finished(self, container_id: str) -> None:
         """Step 3: poll status_code until FINISHED or ERROR."""
@@ -142,9 +146,13 @@ class MetaInstagramPublisher(SocialPublisher):
             if status == _CONTAINER_FINISHED:
                 return
             if status in {_CONTAINER_ERROR, _CONTAINER_EXPIRED}:
-                raise RuntimeError(_ERR_CONTAINER_STATUS.format(container_id, status, attempt + 1))
+                raise RuntimeError(
+                    _ERR_CONTAINER_STATUS.format(container_id, status, attempt + 1)
+                )
             await asyncio.sleep(_POLL_INTERVAL_SECONDS)
-        raise RuntimeError(_ERR_CONTAINER_TIMEOUT.format(container_id, _MAX_POLL_ATTEMPTS))
+        raise RuntimeError(
+            _ERR_CONTAINER_TIMEOUT.format(container_id, _MAX_POLL_ATTEMPTS)
+        )
 
     async def _publish(self, parent_id: str) -> str:
         """Step 4: move the parent container to the published feed."""

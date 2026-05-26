@@ -46,6 +46,7 @@ services:
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-https://marinssolutions.com}
       REDIS_URL: redis://redis:6379
       DEBUG: "false"
+      CAROUSEL_CHECKPOINT_BACKEND: ${CAROUSEL_CHECKPOINT_BACKEND:-memory}
       LANGFUSE_SECRET_KEY: ${LANGFUSE_SECRET_KEY:-}
       LANGFUSE_PUBLIC_KEY: ${LANGFUSE_PUBLIC_KEY:-}
       LANGFUSE_HOST: ${LANGFUSE_HOST:-http://langfuse:3000}
@@ -54,6 +55,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_started
+    volumes:
+      - carousel_output:/app/output
     restart: unless-stopped
     logging:
       driver: "json-file"
@@ -85,7 +88,7 @@ services:
       - "80:80"
       - "443:443"
     volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/nginx.conf.ssl:/etc/nginx/nginx.conf:ro
       - ./nginx/ssl:/etc/nginx/ssl:ro
       - certbot_data:/etc/letsencrypt
       - certbot_www:/var/www/certbot
@@ -187,3 +190,4 @@ volumes:
   clickhouse_data:
   certbot_data:
   certbot_www:
+  carousel_output:

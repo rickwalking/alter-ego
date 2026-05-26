@@ -77,7 +77,7 @@ describe("Input Component", () => {
           <>
             <label id="email-label">Email</label>
             <Input aria-labelledby="email-label" />
-          </>
+          </>,
         );
         expect(screen.getByLabelText("Email")).toBeInTheDocument();
       });

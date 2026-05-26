@@ -69,9 +69,26 @@ def _count_slide_images(output_dir: str | None) -> int:
     if not output_dir:
         return 0
     images_dir = Path(output_dir) / "images"
-    if not images_dir.is_dir():
-        return 0
-    return len(list(images_dir.glob("slide_*.jpg")))
+    if images_dir.is_dir():
+        count = len(list(images_dir.glob("slide_*.jpg")))
+        if count > 0:
+            return count
+    pt_dir = Path(output_dir) / "pt"
+    if pt_dir.is_dir():
+        count = len(list(pt_dir.glob("slide_*.jpg")))
+        if count > 0:
+            return count
+    en_dir = Path(output_dir) / "en"
+    if en_dir.is_dir():
+        count = len(list(en_dir.glob("slide_*.jpg")))
+        if count > 0:
+            return count
+    return 0
+
+
+def _has_rendered_slides(output_dir: str, lang: str) -> bool:
+    lang_dir = Path(output_dir) / lang
+    return lang_dir.is_dir() and len(list(lang_dir.glob("slide_*.jpg"))) > 0
 
 
 def _build_default_design_tokens(
@@ -98,7 +115,8 @@ def _build_default_design_tokens(
 
     project_id_str = str(project.id)
     slide_paths = [
-        f"/api/carousels/{project_id_str}/images/slide_{i}.jpg" for i in range(1, slide_count + 1)
+        f"/api/carousels/{project_id_str}/images/slide_{i}.jpg"
+        for i in range(1, slide_count + 1)
     ]
     hero_path = slide_paths[0] if slide_paths else ""
 
@@ -120,15 +138,18 @@ def _build_default_design_tokens(
     images: dict[str, object] = {
         "hero": hero_path,
         "slides": slide_paths,
-        "rendered_slides_pt": [
+    }
+    output_dir = project.output_dir
+    if output_dir and _has_rendered_slides(output_dir, "pt"):
+        images["rendered_slides_pt"] = [
             f"/api/carousels/{project_id_str}/slide-images/pt/slide_{i}.jpg"
             for i in range(1, slide_count + 1)
-        ],
-        "rendered_slides_en": [
+        ]
+    if output_dir and _has_rendered_slides(output_dir, "en"):
+        images["rendered_slides_en"] = [
             f"/api/carousels/{project_id_str}/slide-images/en/slide_{i}.jpg"
             for i in range(1, slide_count + 1)
-        ],
-    }
+        ]
     badge = project.niche.strip() if project.niche else "CARROSSEL"
     layout = {
         "badge_label": badge,
@@ -152,7 +173,9 @@ def _resolve_image_file(directory: Path, filename: str) -> Path | None:
     return with_ext if with_ext.is_file() else None
 
 
-async def _load_project_with_output(project_id: UUID, repo: CarouselRepository) -> CarouselProject:
+async def _load_project_with_output(
+    project_id: UUID, repo: CarouselRepository
+) -> CarouselProject:
     project = await repo.get_project_by_id(project_id)
     if project is None:
         raise HTTPException(status_code=404, detail=ERR_CAROUSEL_NOT_FOUND)
