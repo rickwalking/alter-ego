@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, afterEach } from "vitest";
+import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
 import {
   apiCall,
   apiCallNoContent,
@@ -356,6 +356,32 @@ describe("API Client Module", () => {
     });
 
     describe("When the API response structure is invalid", () => {
+      it("Then it should log validation issues for wrapped responses", async () => {
+        const errorSpy = vi
+          .spyOn(console, "error")
+          .mockImplementation(() => undefined);
+        vi.stubGlobal(
+          "fetch",
+          vi.fn().mockResolvedValue({
+            ok: true,
+            json: async () => ({
+              success: true,
+              data: { id: "1" },
+            }),
+          } as Response),
+        );
+
+        await expect(apiCall("/api/test", testSchema)).rejects.toThrow(
+          "Invalid data from API",
+        );
+        expect(errorSpy).toHaveBeenCalledWith(
+          "Data validation failed:",
+          expect.anything(),
+        );
+        errorSpy.mockRestore();
+        vi.unstubAllGlobals();
+      });
+
       it("Then it should throw an ApiError for missing success field", async () => {
         vi.stubGlobal(
           "fetch",
@@ -377,6 +403,9 @@ describe("API Client Module", () => {
       });
 
       it("Then it should throw an ApiError for invalid data structure", async () => {
+        const errorSpy = vi
+          .spyOn(console, "error")
+          .mockImplementation(() => undefined);
         vi.stubGlobal(
           "fetch",
           vi.fn().mockResolvedValue({
@@ -391,6 +420,34 @@ describe("API Client Module", () => {
         await expect(apiCall("/api/test", testSchema)).rejects.toThrow(
           "Invalid data from API",
         );
+        expect(errorSpy).toHaveBeenCalledWith(
+          "Data validation failed:",
+          expect.anything(),
+        );
+        errorSpy.mockRestore();
+        vi.unstubAllGlobals();
+      });
+
+      it("Then it should log validation issues for direct responses", async () => {
+        const errorSpy = vi
+          .spyOn(console, "error")
+          .mockImplementation(() => undefined);
+        vi.stubGlobal(
+          "fetch",
+          vi.fn().mockResolvedValue({
+            ok: true,
+            json: async () => ({ id: "1" }),
+          } as Response),
+        );
+
+        await expect(apiCall("/api/test", testSchema)).rejects.toThrow(
+          "Invalid data from API",
+        );
+        expect(errorSpy).toHaveBeenCalledWith(
+          "Data validation failed:",
+          expect.anything(),
+        );
+        errorSpy.mockRestore();
         vi.unstubAllGlobals();
       });
     });
@@ -584,6 +641,37 @@ describe("API Client Module", () => {
       vi.unstubAllGlobals();
     });
 
+    describe("When called without custom options", () => {
+      it("Then it should include credentials and default headers", async () => {
+        const mockFetch = vi.fn().mockResolvedValue({
+          ok: true,
+          status: 204,
+        } as Response);
+        vi.stubGlobal("fetch", mockFetch);
+
+        await apiCallNoContent("/api/documents/1");
+
+        expect(mockFetch).toHaveBeenCalledWith(
+          "/api/documents/1",
+          expect.objectContaining({
+            credentials: "include",
+            headers: expect.objectContaining({
+              "Content-Type": "application/json",
+            }),
+          }),
+        );
+      });
+
+      it("Then it should resolve without a value on success", async () => {
+        vi.stubGlobal(
+          "fetch",
+          vi.fn().mockResolvedValue({ ok: true, status: 204 } as Response),
+        );
+
+        await expect(apiCallNoContent("/api/documents/1")).resolves.toBeUndefined();
+      });
+    });
+
     describe("When the API returns 401 Unauthorized", () => {
       it("Then it should redirect to login and throw ApiError", async () => {
         const location = mockWindowLocation();
@@ -774,6 +862,106 @@ describe("API Client Module", () => {
         ).rejects.toThrow("HTTP error! status: 500");
         vi.unstubAllGlobals();
       });
+    });
+  });
+
+  describe("Given apiCall runs without a browser window", () => {
+    const testSchema = z.object({ id: z.string() });
+    let originalWindow: Window & typeof globalThis;
+
+    beforeEach(() => {
+      originalWindow = globalThis.window;
+    });
+
+    afterEach(() => {
+      globalThis.window = originalWindow;
+      vi.unstubAllGlobals();
+    });
+
+    it("Then apiCall should throw without redirecting on 401", async () => {
+      const location = mockWindowLocation();
+      // @ts-expect-error simulate SSR where window is unavailable
+      delete globalThis.window;
+
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockResolvedValue({
+          ok: false,
+          status: 401,
+          json: async () => ({ message: "Session expired", code: "AUTH" }),
+        } as Response),
+      );
+
+      await expect(apiCall("/api/test", testSchema)).rejects.toMatchObject({
+        status: 401,
+        message: "Session expired",
+        code: "AUTH",
+      });
+      expect(location.href).toBe("");
+    });
+
+    it("Then apiCall should throw without redirecting on 403", async () => {
+      const location = mockWindowLocation();
+      // @ts-expect-error simulate SSR where window is unavailable
+      delete globalThis.window;
+
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockResolvedValue({
+          ok: false,
+          status: 403,
+          json: async () => ({ message: "Access denied" }),
+        } as Response),
+      );
+
+      await expect(apiCall("/api/test", testSchema)).rejects.toMatchObject({
+        status: 403,
+        message: "Access denied",
+      });
+      expect(location.href).toBe("");
+    });
+
+    it("Then apiCallNoContent should throw without redirecting on 401", async () => {
+      const location = mockWindowLocation();
+      // @ts-expect-error simulate SSR where window is unavailable
+      delete globalThis.window;
+
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockResolvedValue({
+          ok: false,
+          status: 401,
+          json: async () => ({ message: "Session expired" }),
+        } as Response),
+      );
+
+      await expect(apiCallNoContent("/api/documents/1")).rejects.toMatchObject({
+        status: 401,
+        message: "Session expired",
+      });
+      expect(location.href).toBe("");
+    });
+
+    it("Then apiCallNoContent should throw without redirecting on 403", async () => {
+      const location = mockWindowLocation();
+      // @ts-expect-error simulate SSR where window is unavailable
+      delete globalThis.window;
+
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockResolvedValue({
+          ok: false,
+          status: 403,
+          json: async () => ({ message: "Access denied", code: "ACL_DENY" }),
+        } as Response),
+      );
+
+      await expect(apiCallNoContent("/api/documents/1")).rejects.toMatchObject({
+        status: 403,
+        message: "Access denied",
+        code: "ACL_DENY",
+      });
+      expect(location.href).toBe("");
     });
   });
 });

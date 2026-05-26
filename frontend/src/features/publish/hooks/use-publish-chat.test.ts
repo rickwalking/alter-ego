@@ -128,6 +128,10 @@ vi.mock("@/lib/sse-client", () => ({
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mockUseCreateConversation.mockReset();
+  mockUseConversationMessages.mockReset();
+  mockUseConversation.mockReset();
+  mockUseQueryClient.mockReset();
   mockUseQueryClient.mockReturnValue({
     invalidateQueries: vi.fn(),
   } as unknown as ReturnType<typeof useQueryClient>);
@@ -156,6 +160,10 @@ describe("usePublishChat (SSE comprehensive)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockStreamSseEvents.mockReset();
+    mockUseCreateConversation.mockReset();
+    mockUseConversationMessages.mockReset();
+    mockUseConversation.mockReset();
+    mockUseQueryClient.mockReset();
     mockUseQueryClient.mockReturnValue({
       invalidateQueries: vi.fn(),
     } as unknown as ReturnType<typeof useQueryClient>);
@@ -934,6 +942,7 @@ describe("usePublishChat (SSE comprehensive)", () => {
     );
     expect(assistantMessages).toHaveLength(1);
     expect(assistantMessages[0]?.content).toBe("");
+    expect(assistantMessages[0]?.content).not.toContain("Stryker");
     expect(assistantMessages[0]?.sources).toEqual([]);
   });
 
@@ -954,5 +963,505 @@ describe("usePublishChat (SSE comprehensive)", () => {
     });
 
     await waitFor(() => expect(result.current.isStreaming).toBe(false));
+  });
+
+  it("retries conversation creation on the same hook instance after failure", async () => {
+    const mutateAsync = vi
+      .fn()
+      .mockRejectedValueOnce(new ApiError(429, "rate limited"))
+      .mockResolvedValueOnce({ id: "conv-retry" });
+
+    mockUseCreateConversation.mockReturnValue({
+      mutateAsync,
+      isPending: false,
+    } as unknown as ReturnType<typeof useCreateConversation>);
+
+    const { result, rerender } = renderHook(() => usePublishChat(PROJECT_ID), {
+      wrapper: createWrapper(),
+    });
+
+    await waitFor(() => expect(mutateAsync).toHaveBeenCalledTimes(1));
+    expect(result.current.conversationId).toBeNull();
+
+    mockUseCreateConversation.mockReturnValue({
+      mutateAsync,
+      isPending: false,
+    } as unknown as ReturnType<typeof useCreateConversation>);
+    rerender();
+
+    await waitFor(() => expect(mutateAsync).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(result.current.conversationId).toBe("conv-retry"));
+  });
+
+  it("does not clear storage when projectId is empty", async () => {
+    const { removeItem } = mockLocalStorage({
+      [PUBLISH_CHAT_STORAGE_KEY("")]: "conv-stale",
+    });
+    mockUseConversationMessages.mockReturnValue({
+      data: [],
+      isLoading: false,
+      error: new ApiError(404, "not found"),
+    } as unknown as ReturnType<typeof useConversationMessages>);
+
+    renderHook(() => usePublishChat(""), {
+      wrapper: createWrapper(),
+    });
+
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(removeItem).not.toHaveBeenCalled();
+  });
+
+  it("clears stale storage when a 404 appears after the initial render", async () => {
+    const mutateAsync = vi.fn().mockResolvedValue({ id: "conv-replacement" });
+    mockUseCreateConversation.mockReturnValue({
+      mutateAsync,
+      isPending: false,
+    } as unknown as ReturnType<typeof useCreateConversation>);
+    const { removeItem } = mockLocalStorage({
+      [PUBLISH_CHAT_STORAGE_KEY(PROJECT_ID)]: "conv-stale",
+    });
+
+    let historyError: ApiError | null = null;
+    mockUseConversationMessages.mockImplementation(
+      (conversationId: string | null) =>
+        ({
+          data: [],
+          isLoading: false,
+          error:
+            conversationId === "conv-stale" && historyError !== null
+              ? historyError
+              : null,
+        }) as unknown as ReturnType<typeof useConversationMessages>,
+    );
+
+    const { rerender } = renderHook(() => usePublishChat(PROJECT_ID), {
+      wrapper: createWrapper(),
+    });
+
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    expect(removeItem).not.toHaveBeenCalled();
+
+    historyError = new ApiError(404, "not found");
+    rerender();
+
+    await waitFor(() =>
+      expect(removeItem).toHaveBeenCalledWith(
+        PUBLISH_CHAT_STORAGE_KEY(PROJECT_ID),
+      ),
+    );
+    await waitFor(() => expect(mutateAsync).toHaveBeenCalledTimes(1));
+  });
+
+  it("does not treat primitive metadata as a project mismatch", async () => {
+    const mutateAsync = vi.fn().mockResolvedValue({ id: "conv-replacement" });
+    mockUseCreateConversation.mockReturnValue({
+      mutateAsync,
+      isPending: false,
+    } as unknown as ReturnType<typeof useCreateConversation>);
+    const { removeItem } = mockLocalStorage({
+      [PUBLISH_CHAT_STORAGE_KEY(PROJECT_ID)]: "conv-primitive-metadata",
+    });
+    mockUseConversation.mockReturnValue({
+      data: {
+        id: "conv-primitive-metadata",
+        metadata: "legacy-string-metadata",
+      },
+      error: null,
+    } as unknown as ReturnType<typeof useConversation>);
+
+    renderHook(() => usePublishChat(PROJECT_ID), {
+      wrapper: createWrapper(),
+    });
+
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(removeItem).not.toHaveBeenCalled();
+    expect(mutateAsync).not.toHaveBeenCalled();
+  });
+
+  it("clears the stale-conversation timer on unmount", async () => {
+    const clearTimeoutSpy = vi.spyOn(globalThis, "clearTimeout");
+    const { removeItem } = mockLocalStorage({
+      [PUBLISH_CHAT_STORAGE_KEY(PROJECT_ID)]: "conv-stale",
+    });
+    mockUseConversationMessages.mockReturnValue({
+      data: [],
+      isLoading: false,
+      error: new ApiError(404, "not found"),
+    } as unknown as ReturnType<typeof useConversationMessages>);
+
+    const { unmount } = renderHook(() => usePublishChat(PROJECT_ID), {
+      wrapper: createWrapper(),
+    });
+
+    await waitFor(() =>
+      expect(removeItem).toHaveBeenCalledWith(
+        PUBLISH_CHAT_STORAGE_KEY(PROJECT_ID),
+      ),
+    );
+
+    unmount();
+    expect(clearTimeoutSpy).toHaveBeenCalled();
+    clearTimeoutSpy.mockRestore();
+  });
+
+  it("starts assistant content from an empty stream buffer", async () => {
+    mockStreamSseEvents.mockImplementation(({ onEvent }) => {
+      onEvent({ event: "token", data: { content: "Hi" } });
+      return Promise.resolve();
+    });
+
+    const { result } = renderHook(() => usePublishChat(PROJECT_ID), {
+      wrapper: createWrapper(),
+    });
+
+    await waitFor(() => expect(result.current.conversationId).toBe("conv-sse"));
+
+    act(() => {
+      result.current.sendMessage("hello");
+    });
+
+    await waitFor(() => {
+      const assistantMessages = result.current.messages.filter(
+        (message) => message.role === MESSAGE_ROLE_ASSISTANT,
+      );
+      expect(assistantMessages).toHaveLength(1);
+      expect(assistantMessages[0]?.content).toBe("Hi");
+      expect(assistantMessages[0]?.content).not.toContain("Stryker");
+    });
+  });
+
+  it("keeps prior history messages while streaming assistant tokens", async () => {
+    const history: Message[] = [
+      makeHistoryMessage({ id: "h1", content: "Earlier question" }),
+      makeHistoryMessage({
+        id: "h2",
+        role: "assistant",
+        content: "Earlier answer",
+      }),
+    ];
+    mockUseConversationMessages.mockReturnValue({
+      data: history,
+      error: null,
+    } as unknown as ReturnType<typeof useConversationMessages>);
+
+    let emitSecondToken: (() => void) | undefined;
+    let emitComplete: (() => void) | undefined;
+    mockStreamSseEvents.mockImplementation(({ onEvent }) => {
+      onEvent({ event: "token", data: { content: "New" } });
+      return new Promise<void>((resolve) => {
+        emitSecondToken = () => {
+          onEvent({ event: "token", data: { content: " reply" } });
+        };
+        emitComplete = () => {
+          onEvent({ event: "complete", data: {} });
+          resolve();
+        };
+      });
+    });
+
+    const { result } = renderHook(() => usePublishChat(PROJECT_ID), {
+      wrapper: createWrapper(),
+    });
+
+    await waitFor(() => expect(result.current.conversationId).toBe("conv-sse"));
+
+    act(() => {
+      result.current.sendMessage("follow up");
+    });
+
+    await waitFor(() =>
+      expect(result.current.messages.map((message) => message.id)).toEqual([
+        "h1",
+        "h2",
+        expect.stringMatching(new RegExp(`^${OPTIMISTIC_MESSAGE_ID_PREFIX}`)),
+        expect.stringMatching(new RegExp(`^${STREAM_MESSAGE_ID_PREFIX}`)),
+      ]),
+    );
+
+    await act(async () => {
+      emitSecondToken?.();
+    });
+
+    await waitFor(() => {
+      const assistantMessages = result.current.messages.filter(
+        (message) => message.role === MESSAGE_ROLE_ASSISTANT,
+      );
+      expect(assistantMessages).toHaveLength(2);
+      expect(assistantMessages[1]?.content).toBe("New reply");
+    });
+
+    await act(async () => {
+      emitComplete?.();
+    });
+  });
+
+  it("keeps streaming active after unrelated tool results until complete", async () => {
+    mockStreamSseEvents.mockImplementation(({ onEvent }) => {
+      onEvent({ event: "tool_result", data: { tool: "some_other_tool" } });
+      return new Promise<void>((resolve) => {
+        setTimeout(() => {
+          onEvent({ event: "complete", data: {} });
+          resolve();
+        }, 20);
+      });
+    });
+
+    const { result } = renderHook(() => usePublishChat(PROJECT_ID), {
+      wrapper: createWrapper(),
+    });
+
+    await waitFor(() => expect(result.current.conversationId).toBe("conv-sse"));
+
+    act(() => {
+      result.current.sendMessage("run tool");
+    });
+
+    await waitFor(() => expect(result.current.isStreaming).toBe(true));
+    await waitFor(() => expect(result.current.isStreaming).toBe(false));
+  });
+
+  it("starts a fresh assistant stream after a transport error", async () => {
+    mockStreamSseEvents
+      .mockImplementationOnce(({ onError }) => {
+        onError?.(new Error("transport error"));
+        return Promise.resolve();
+      })
+      .mockImplementationOnce(({ onEvent }) => {
+        onEvent({ event: "token", data: { content: "Recovered" } });
+        return Promise.resolve();
+      });
+
+    const { result } = renderHook(() => usePublishChat(PROJECT_ID), {
+      wrapper: createWrapper(),
+    });
+
+    await waitFor(() => expect(result.current.conversationId).toBe("conv-sse"));
+
+    act(() => {
+      result.current.sendMessage("first attempt");
+    });
+    await waitFor(() => expect(result.current.isStreaming).toBe(false));
+
+    act(() => {
+      result.current.sendMessage("second attempt");
+    });
+
+    await waitFor(() => {
+      const assistantMessages = result.current.messages.filter(
+        (message) => message.role === MESSAGE_ROLE_ASSISTANT,
+      );
+      expect(assistantMessages).toHaveLength(1);
+      expect(assistantMessages[0]?.content).toBe("Recovered");
+      expect(assistantMessages[0]?.content).not.toContain("Stryker");
+    });
+  });
+
+  it("does not treat token events as terminal error events", async () => {
+    mockStreamSseEvents.mockImplementation(({ onEvent }) => {
+      onEvent({ event: "token", data: { content: "partial" } });
+      return Promise.resolve();
+    });
+
+    const { result } = renderHook(() => usePublishChat(PROJECT_ID), {
+      wrapper: createWrapper(),
+    });
+
+    await waitFor(() => expect(result.current.conversationId).toBe("conv-sse"));
+
+    act(() => {
+      result.current.sendMessage("stream");
+    });
+
+    await waitFor(() => expect(result.current.isStreaming).toBe(true));
+    expect(
+      result.current.messages.some(
+        (message) =>
+          message.role === MESSAGE_ROLE_ASSISTANT &&
+          message.content === "partial",
+      ),
+    ).toBe(true);
+  });
+
+  it("defaults to an empty history when message data is undefined", async () => {
+    mockUseConversationMessages.mockReturnValue({
+      data: undefined,
+      error: null,
+    } as unknown as ReturnType<typeof useConversationMessages>);
+
+    const { result } = renderHook(() => usePublishChat(PROJECT_ID), {
+      wrapper: createWrapper(),
+    });
+
+    await waitFor(() => expect(result.current.conversationId).toBe("conv-sse"));
+    expect(result.current.messages).toEqual([]);
+  });
+
+  it("does not call createConversation twice while the first request is pending", async () => {
+    let resolveCreate: ((value: { id: string }) => void) | undefined;
+    const pendingCreate = new Promise<{ id: string }>((resolve) => {
+      resolveCreate = resolve;
+    });
+    const mutateAsync = vi.fn().mockReturnValue(pendingCreate);
+    mockUseCreateConversation.mockReturnValue({
+      mutateAsync,
+      isPending: false,
+    } as unknown as ReturnType<typeof useCreateConversation>);
+
+    const { rerender } = renderHook(() => usePublishChat(PROJECT_ID), {
+      wrapper: createWrapper(),
+    });
+
+    await waitFor(() => expect(mutateAsync).toHaveBeenCalledTimes(1));
+
+    mockUseCreateConversation.mockReturnValue({
+      mutateAsync,
+      isPending: false,
+    } as unknown as ReturnType<typeof useCreateConversation>);
+    rerender();
+
+    expect(mutateAsync).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      resolveCreate?.({ id: "conv-pending" });
+    });
+  });
+
+  it("clears the scheduled stale-conversation reset timer on unmount", async () => {
+    const setTimeoutSpy = vi.spyOn(globalThis, "setTimeout");
+    const clearTimeoutSpy = vi.spyOn(globalThis, "clearTimeout");
+    const { removeItem } = mockLocalStorage({
+      [PUBLISH_CHAT_STORAGE_KEY(PROJECT_ID)]: "conv-stale",
+    });
+    mockUseConversationMessages.mockReturnValue({
+      data: [],
+      isLoading: false,
+      error: new ApiError(404, "not found"),
+    } as unknown as ReturnType<typeof useConversationMessages>);
+
+    const { unmount } = renderHook(() => usePublishChat(PROJECT_ID), {
+      wrapper: createWrapper(),
+    });
+
+    await waitFor(() =>
+      expect(removeItem).toHaveBeenCalledWith(
+        PUBLISH_CHAT_STORAGE_KEY(PROJECT_ID),
+      ),
+    );
+
+    const zeroDelayTimerIds = setTimeoutSpy.mock.results.flatMap(
+      (result, index) =>
+        setTimeoutSpy.mock.calls[index]?.[1] === 0 ? [result.value] : [],
+    );
+    unmount();
+    expect(
+      clearTimeoutSpy.mock.calls.some(([timerId]) =>
+        zeroDelayTimerIds.includes(timerId),
+      ),
+    ).toBe(true);
+    setTimeoutSpy.mockRestore();
+    clearTimeoutSpy.mockRestore();
+  });
+
+  it("creates a new assistant message for each completed turn", async () => {
+    let completeFirstTurn: (() => void) | undefined;
+    mockStreamSseEvents
+      .mockImplementationOnce(({ onEvent }) => {
+        onEvent({ event: "token", data: { content: "First answer" } });
+        return new Promise<void>((resolve) => {
+          completeFirstTurn = () => {
+            onEvent({ event: "complete", data: {} });
+            resolve();
+          };
+        });
+      })
+      .mockImplementationOnce(({ onEvent }) => {
+        onEvent({ event: "token", data: { content: "Second answer" } });
+        return Promise.resolve();
+      });
+
+    const { result } = renderHook(() => usePublishChat(PROJECT_ID), {
+      wrapper: createWrapper(),
+    });
+
+    await waitFor(() => expect(result.current.conversationId).toBe("conv-sse"));
+
+    act(() => {
+      result.current.sendMessage("first question");
+    });
+    await waitFor(() =>
+      expect(
+        result.current.messages.filter(
+          (message) => message.role === MESSAGE_ROLE_ASSISTANT,
+        ),
+      ).toEqual([
+        expect.objectContaining({ content: "First answer" }),
+      ]),
+    );
+
+    await act(async () => {
+      completeFirstTurn?.();
+    });
+    await waitFor(() => expect(result.current.isStreaming).toBe(false));
+
+    act(() => {
+      result.current.sendMessage("second question");
+    });
+    await waitFor(() =>
+      expect(
+        result.current.messages.filter(
+          (message) => message.role === MESSAGE_ROLE_ASSISTANT,
+        ),
+      ).toEqual([
+        expect.objectContaining({ content: "First answer" }),
+        expect.objectContaining({ content: "Second answer" }),
+      ]),
+    );
+  });
+
+  it("does not treat unknown SSE events as terminal completion", async () => {
+    mockStreamSseEvents.mockImplementation(({ onEvent }) => {
+      onEvent({ event: "token", data: { content: "partial" } });
+      onEvent({ event: "heartbeat", data: {} });
+      return Promise.resolve();
+    });
+
+    const { result } = renderHook(() => usePublishChat(PROJECT_ID), {
+      wrapper: createWrapper(),
+    });
+
+    await waitFor(() => expect(result.current.conversationId).toBe("conv-sse"));
+
+    act(() => {
+      result.current.sendMessage("stream");
+    });
+
+    await waitFor(() => expect(result.current.isStreaming).toBe(true));
+  });
+
+  it("does not treat unknown SSE events as terminal errors", async () => {
+    mockStreamSseEvents.mockImplementation(({ onEvent }) => {
+      onEvent({ event: "token", data: { content: "partial" } });
+      onEvent({ event: "heartbeat", data: {} });
+      return Promise.resolve();
+    });
+
+    const { result } = renderHook(() => usePublishChat(PROJECT_ID), {
+      wrapper: createWrapper(),
+    });
+
+    await waitFor(() => expect(result.current.conversationId).toBe("conv-sse"));
+
+    act(() => {
+      result.current.sendMessage("stream");
+    });
+
+    await waitFor(() => {
+      expect(result.current.isStreaming).toBe(true);
+      expect(
+        result.current.messages.filter(
+          (message) => message.role === MESSAGE_ROLE_ASSISTANT,
+        ),
+      ).toEqual([expect.objectContaining({ content: "partial" })]);
+    });
   });
 });

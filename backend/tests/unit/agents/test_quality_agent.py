@@ -217,6 +217,83 @@ class TestQualityAgent:
         assert tone["feedback"] == "Strong tone"
         assert result["feedback"] == ["Nice work"]
 
+    def test_build_evaluation_prompt_joins_criteria_with_newlines(
+        self, mock_llm: AsyncMock
+    ) -> None:
+        """Given multiple criteria, when building prompt, then criteria are newline-joined."""
+        rubric = QualityRubric(
+            name="Multi Rubric",
+            description="Two criteria",
+            applicable_content_types=["blog_post"],
+            criteria=[
+                {
+                    "id": "tone",
+                    "name": "Tone",
+                    "description": "Check tone",
+                    "weight": 0.5,
+                    "evaluation_method": EvaluationMethod.AI_AUTO,
+                    "min_threshold": 70.0,
+                    "scoring_scale": "0-100",
+                    "prompt_template": "Evaluate tone: {content}",
+                },
+                {
+                    "id": "clarity",
+                    "name": "Clarity",
+                    "description": "Check clarity",
+                    "weight": 0.5,
+                    "evaluation_method": EvaluationMethod.AI_AUTO,
+                    "min_threshold": 70.0,
+                    "scoring_scale": "0-100",
+                    "prompt_template": "Evaluate clarity: {content}",
+                },
+            ],
+        )
+        agent = QualityAgent(rubric=rubric, llm=mock_llm)
+
+        prompt = agent._build_evaluation_prompt("body text", "source one")
+
+        assert "Tone: Check tone\nClarity: Check clarity" in prompt
+
+    def test_parse_evaluation_response_defaults_missing_overall_score(
+        self, agent: QualityAgent
+    ) -> None:
+        """Given JSON without overall_score, when parsing, then zero is used."""
+        result = agent._parse_evaluation_response(
+            json.dumps({"criterion_scores": {}, "passed": True})
+        )
+
+        assert result["overall_score"] == 0.0
+
+    def test_parse_evaluation_response_defaults_missing_criterion_fields(
+        self, agent: QualityAgent
+    ) -> None:
+        """Given sparse criterion JSON, when parsing, then defaults are applied."""
+        result = agent._parse_evaluation_response(
+            json.dumps({
+                "overall_score": 55.0,
+                "criterion_scores": {"tone": {}},
+                "passed": True,
+            })
+        )
+
+        tone = result["criteria_scores"]["tone"]
+        assert tone["score"] == 0.0
+        assert tone["weight"] == 0.0
+        assert tone["passed"] is False
+        assert tone["feedback"] == ""
+
+    def test_parse_evaluation_response_defaults_missing_top_level_fields(
+        self, agent: QualityAgent
+    ) -> None:
+        """Given JSON without feedback/passed, when parsing, then defaults are applied."""
+        result = agent._parse_evaluation_response(
+            json.dumps({"overall_score": 40.0, "criterion_scores": {}})
+        )
+
+        assert result["feedback"] == []
+        assert result["passed"] is False
+        assert result["criteria_scores"] == {}
+
     def test_build_evaluation_prompt_includes_all_sections(
         self, agent: QualityAgent
     ) -> None:
