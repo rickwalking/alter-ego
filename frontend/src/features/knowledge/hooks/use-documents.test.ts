@@ -166,6 +166,29 @@ describe("useCreateDocument", () => {
       },
     ]);
   });
+
+  it("replaces an existing document with the same id in the cache", async () => {
+    mockApiCall.mockResolvedValueOnce({
+      ...MOCK_DOCUMENT,
+      title: "Updated title",
+    });
+    const queryClient = createQueryClient();
+    queryClient.setQueryData(["documents"], [MOCK_DOCUMENT]);
+    const { result } = renderHook(() => useCreateDocument(), {
+      wrapper: createWrapper(queryClient),
+    });
+
+    result.current.mutate({
+      title: "Updated title",
+      content: "Updated body.",
+      metadata: { tags: ["architecture"] },
+    });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(queryClient.getQueryData(["documents"])).toEqual([
+      { ...MOCK_DOCUMENT, title: "Updated title" },
+    ]);
+  });
 });
 
 describe("useDeleteDocument", () => {
@@ -226,6 +249,19 @@ describe("useDeleteDocument", () => {
     expect(result.current.error).toBeInstanceOf(ApiError);
     expect((result.current.error as ApiError).status).toBe(403);
   });
+
+  it("leaves the documents cache unchanged when the list was never loaded", async () => {
+    mockDelete.mockResolvedValueOnce(undefined);
+    const queryClient = createQueryClient();
+    const { result } = renderHook(() => useDeleteDocument(), {
+      wrapper: createWrapper(queryClient),
+    });
+
+    result.current.mutate("doc-1");
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(queryClient.getQueryData(["documents"])).toBeUndefined();
+  });
 });
 
 describe("useReprocessDocument", () => {
@@ -275,5 +311,25 @@ describe("useReprocessDocument", () => {
         title: "Other document",
       },
     ]);
+  });
+
+  it("leaves the documents cache unchanged when the list was never loaded", async () => {
+    const reprocessedDocument = {
+      ...MOCK_DOCUMENT,
+      status: "processing",
+    };
+    mockApiCall.mockResolvedValueOnce(reprocessedDocument);
+    const queryClient = createQueryClient();
+    const { result } = renderHook(() => useReprocessDocument(), {
+      wrapper: createWrapper(queryClient),
+    });
+
+    result.current.mutate("doc-1");
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(queryClient.getQueryData(["document", "doc-1"])).toEqual(
+      reprocessedDocument,
+    );
+    expect(queryClient.getQueryData(["documents"])).toBeUndefined();
   });
 });

@@ -320,36 +320,19 @@ def add_voice_match_score(
 from rag_backend.domain.models.carousels import ReviewEventParams
 
 
-def record_human_review(
-    trace: object,
-    phase: str,
-    action: str,
-    reviewer_id: str,
-    time_to_respond: str | None = None,
-    feedback: str | None = None,
-) -> None:
+def record_human_review(trace: object, *, params: ReviewEventParams) -> None:
     """Record a human review event.
 
     Args:
         trace: LangFuse trace object
-        phase: Workflow phase being reviewed
-        action: Action taken (approve, reject, edit, etc.)
-        reviewer_id: ID of the human reviewer
-        time_to_respond: Time taken to respond
-        feedback: Optional feedback notes
+        params: Review event metadata
     """
     if trace is None:
         return
 
     trace.event(  # type: ignore[attr-defined]
-        name=f"human_review_{phase}_completed",
-        metadata=ReviewEventParams(
-            phase=phase,
-            action=action,
-            reviewer_id=reviewer_id,
-            time_to_respond=time_to_respond,
-            feedback=feedback,
-        ),
+        name=f"human_review_{params['phase']}_completed",
+        metadata=params,
     )
 
 

@@ -203,6 +203,11 @@ class TestRegenerateSlideImage:
 
         result = await agent.regenerate_slide_image(project.id, 2, "make it futuristic")
 
+        llm_messages = agent._llm.generate.call_args[0][0]
+        rewrite_prompt = llm_messages[0]["content"]
+        assert agent._llm.generate.call_args.kwargs["temperature"] == 0.7
+        assert "make it futuristic" in rewrite_prompt
+        assert "A scene" in rewrite_prompt
         assert slide.image_prompt == "new futuristic scene"
         assert slide.extras is not None
         assert slide.extras.get("image_prompt") == "new futuristic scene"
@@ -248,6 +253,27 @@ class TestRegenerateSlideImage:
         with pytest.raises(ValueError, match="Slide 2 not found"):
             await agent.regenerate_slide_image(project.id, 2, "change colors")
 
+    # Scenario: Empty LLM response is rejected during image regeneration
+    @patch("rag_backend.application.services.carousel_refinement.run_image_one")
+    async def test_regenerate_raises_when_llm_returns_empty_prompt(
+        self, _mock_run_image_one: AsyncMock, tmp_path: Path
+    ) -> None:
+        agent, repo, _, _ = _agent_with_mocks()
+        project = CarouselProject(
+            topic="T",
+            audience="A",
+            niche="N",
+            status=CarouselStatus.COMPLETED,
+            output_dir=str(tmp_path),
+        )
+        repo.get_project_by_id = AsyncMock(return_value=project)
+        slide = _slide(1, extras={"image_prompt": "old scene"})
+        repo.get_slides_by_project = AsyncMock(return_value=[slide])
+        agent._llm.generate = AsyncMock(return_value="   ")
+
+        with pytest.raises(ValueError, match="empty image prompt"):
+            await agent.regenerate_slide_image(project.id, 1, "make it brighter")
+
     # Scenario: Missing image_prompt is rejected during image regeneration
     async def test_regenerate_raises_when_no_image_prompt(self) -> None:
         agent, repo, _, _ = _agent_with_mocks()
@@ -287,6 +313,9 @@ class TestRefineCarouselDesign:
 
         result = await agent.refine_carousel_design(project.id, "make images bigger")
 
+        design_prompt = agent._llm.generate.call_args[0][0][0]["content"]
+        assert agent._llm.generate.call_args.kwargs["temperature"] == 0.3
+        assert "make images bigger" in design_prompt
         overrides_file = tmp_path / "design_overrides.css"
         assert overrides_file.exists()
         assert ".hero-img { height: 500px; }" in overrides_file.read_text()
@@ -316,6 +345,25 @@ class TestRefineCarouselDesign:
         content = overrides_file.read_text()
         assert "```" not in content
         assert ".hero-img { height: 600px; }" in content
+
+    # Scenario: Empty LLM CSS response is rejected during design refinement
+    async def test_refinement_raises_when_llm_returns_empty_css(
+        self, tmp_path: Path
+    ) -> None:
+        agent, repo, _, _ = _agent_with_mocks()
+        project = CarouselProject(
+            topic="T",
+            audience="A",
+            niche="N",
+            status=CarouselStatus.COMPLETED,
+            output_dir=str(tmp_path),
+        )
+        repo.get_project_by_id = AsyncMock(return_value=project)
+        repo.get_slides_by_project = AsyncMock(return_value=[_slide(1)])
+        agent._llm.generate = AsyncMock(return_value="  ")
+
+        with pytest.raises(ValueError, match="empty CSS"):
+            await agent.refine_carousel_design(project.id, "make images bigger")
 
     # Scenario: Missing project is rejected during design refinement
     async def test_refinement_raises_when_project_missing(self) -> None:

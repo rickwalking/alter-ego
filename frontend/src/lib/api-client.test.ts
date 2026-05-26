@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, afterEach } from "vitest";
 import {
   apiCall,
   apiCallNoContent,
@@ -7,6 +7,24 @@ import {
   errorResponseSchema,
 } from "./api-client";
 import { z } from "zod";
+
+function mockWindowLocation(): { get href(): string; set href(value: string) } {
+  let href = "";
+  const location = {
+    get href() {
+      return href;
+    },
+    set href(value: string) {
+      href = value;
+    },
+  };
+  Object.defineProperty(globalThis, "location", {
+    value: location,
+    writable: true,
+    configurable: true,
+  });
+  return location;
+}
 
 describe("API Client Module", () => {
   describe("Given the apiCall function", () => {
@@ -146,6 +164,10 @@ describe("API Client Module", () => {
     });
 
     describe("When the API returns 401 Unauthorized", () => {
+      afterEach(() => {
+        vi.unstubAllGlobals();
+      });
+
       it("Then it should throw with the server message", async () => {
         vi.stubGlobal(
           "fetch",
@@ -161,7 +183,6 @@ describe("API Client Module", () => {
           message: "Session expired",
           code: "AUTH",
         });
-        vi.unstubAllGlobals();
       });
 
       it("Then it should fall back to Unauthorized when the body is not JSON", async () => {
@@ -180,11 +201,29 @@ describe("API Client Module", () => {
           status: 401,
           message: "Unauthorized",
         });
-        vi.unstubAllGlobals();
+      });
+
+      it("Then it should redirect the browser to the login page", async () => {
+        const location = mockWindowLocation();
+        vi.stubGlobal(
+          "fetch",
+          vi.fn().mockResolvedValue({
+            ok: false,
+            status: 401,
+            json: async () => ({ message: "Session expired" }),
+          } as Response),
+        );
+
+        await expect(apiCall("/api/test", testSchema)).rejects.toThrow(ApiError);
+        expect(location.href).toBe("/login");
       });
     });
 
     describe("When the API returns 403 Forbidden", () => {
+      afterEach(() => {
+        vi.unstubAllGlobals();
+      });
+
       it("Then it should throw with the server message", async () => {
         vi.stubGlobal(
           "fetch",
@@ -203,7 +242,6 @@ describe("API Client Module", () => {
           message: "Access denied",
           code: "ACL_DENY",
         });
-        vi.unstubAllGlobals();
       });
 
       it("Then it should fall back to Forbidden when the body is not JSON", async () => {
@@ -222,7 +260,21 @@ describe("API Client Module", () => {
           status: 403,
           message: "Forbidden",
         });
-        vi.unstubAllGlobals();
+      });
+
+      it("Then it should redirect the browser to the forbidden page", async () => {
+        const location = mockWindowLocation();
+        vi.stubGlobal(
+          "fetch",
+          vi.fn().mockResolvedValue({
+            ok: false,
+            status: 403,
+            json: async () => ({ message: "Access denied" }),
+          } as Response),
+        );
+
+        await expect(apiCall("/api/test", testSchema)).rejects.toThrow(ApiError);
+        expect(location.href).toBe("/403");
       });
     });
 
@@ -528,6 +580,58 @@ describe("API Client Module", () => {
   });
 
   describe("Given the apiCallNoContent function", () => {
+    afterEach(() => {
+      vi.unstubAllGlobals();
+    });
+
+    describe("When the API returns 401 Unauthorized", () => {
+      it("Then it should redirect to login and throw ApiError", async () => {
+        const location = mockWindowLocation();
+        vi.stubGlobal(
+          "fetch",
+          vi.fn().mockResolvedValue({
+            ok: false,
+            status: 401,
+            json: async () => ({
+              message: "Session expired",
+              code: "AUTH_EXPIRED",
+            }),
+          } as Response),
+        );
+
+        await expect(
+          apiCallNoContent("/api/conversations/1", { method: "DELETE" }),
+        ).rejects.toMatchObject({
+          status: 401,
+          message: "Session expired",
+          code: "AUTH_EXPIRED",
+        });
+        expect(location.href).toBe("/login");
+      });
+
+      it("Then it should fall back to Unauthorized when the body is not JSON", async () => {
+        const location = mockWindowLocation();
+        vi.stubGlobal(
+          "fetch",
+          vi.fn().mockResolvedValue({
+            ok: false,
+            status: 401,
+            json: async () => {
+              throw new Error("not json");
+            },
+          } as unknown as Response),
+        );
+
+        await expect(
+          apiCallNoContent("/api/conversations/1", { method: "DELETE" }),
+        ).rejects.toMatchObject({
+          status: 401,
+          message: "Unauthorized",
+        });
+        expect(location.href).toBe("/login");
+      });
+    });
+
     describe("When the API returns 204 No Content", () => {
       it("Then it should resolve without a value", async () => {
         vi.stubGlobal(
@@ -568,7 +672,32 @@ describe("API Client Module", () => {
     });
 
     describe("When the API returns 403 Forbidden", () => {
+      it("Then it should redirect to the forbidden page and throw ApiError", async () => {
+        const location = mockWindowLocation();
+        vi.stubGlobal(
+          "fetch",
+          vi.fn().mockResolvedValue({
+            ok: false,
+            status: 403,
+            json: async () => ({
+              message: "Access denied",
+              code: "ACL_DENY",
+            }),
+          } as Response),
+        );
+
+        await expect(
+          apiCallNoContent("/api/conversations/1", { method: "DELETE" }),
+        ).rejects.toMatchObject({
+          status: 403,
+          message: "Access denied",
+          code: "ACL_DENY",
+        });
+        expect(location.href).toBe("/403");
+      });
+
       it("Then it should fall back to Forbidden when the body is not JSON", async () => {
+        const location = mockWindowLocation();
         vi.stubGlobal(
           "fetch",
           vi.fn().mockResolvedValue({
@@ -586,7 +715,7 @@ describe("API Client Module", () => {
           status: 403,
           message: "Forbidden",
         });
-        vi.unstubAllGlobals();
+        expect(location.href).toBe("/403");
       });
     });
 

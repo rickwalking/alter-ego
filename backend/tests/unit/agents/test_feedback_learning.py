@@ -4,6 +4,7 @@ Feature: Continuous persona improvement from human corrections
 """
 
 from unittest.mock import AsyncMock, MagicMock
+from uuid import uuid4
 
 import pytest
 
@@ -141,6 +142,31 @@ class TestFeedbackLearningLoop:
 
         assert result == "conciseness"
 
+    async def test_classify_correction_returns_minor_edit_for_same_text(
+        self, loop: FeedbackLearningLoop
+    ) -> None:
+        """Given identical text, when classifying, then minor_edit is returned."""
+        result = await loop.classify_correction("same text", "same text")
+
+        assert result == "minor_edit"
+
+    async def test_get_relevant_examples_respects_k_limit(
+        self, loop: FeedbackLearningLoop
+    ) -> None:
+        """Given many corrections, when retrieving examples, then only k are returned."""
+        for idx in range(5):
+            await loop.record_correction(
+                _original=f"orig {idx}",
+                _corrected=f"corr {idx}",
+                _context="ctx",
+                _persona_id="persona-1",
+                _correction_type="tone",
+            )
+
+        examples = await loop.get_relevant_examples(_persona_id="persona-1", _k=2)
+
+        assert examples == ["corr 3", "corr 4"]
+
     # Scenario: Suggest improvements
     async def test_suggest_improvements_returns_empty_list(
         self, loop: FeedbackLearningLoop
@@ -161,6 +187,92 @@ class TestFeedbackLearningLoop:
 
         assert result["drift_score"] == 0.0
         assert result["trends"] == []
+
+    async def test_record_correction_auto_classifies_when_type_missing(
+        self, loop: FeedbackLearningLoop
+    ) -> None:
+        """Given no correction type, when recording, then type is inferred."""
+        await loop.record_correction(
+            _original="old text",
+            _corrected="new text",
+            _context="ctx",
+            _persona_id="persona-1",
+        )
+
+        examples = await loop.get_relevant_examples(_persona_id="persona-1")
+        assert examples == ["new text"]
+
+    async def test_record_correction_accepts_non_string_persona_id(
+        self, loop: FeedbackLearningLoop
+    ) -> None:
+        """Given UUID persona id, when recording, then correction is stored under str id."""
+        persona_id = uuid4()
+        await loop.record_correction(
+            _original="hello",
+            _corrected="hello!",
+            _context="greeting",
+            _persona_id=persona_id,
+            _correction_type="tone",
+        )
+
+        examples = await loop.get_relevant_examples(_persona_id=str(persona_id))
+
+        assert examples == ["hello!"]
+
+    async def test_suggest_improvements_returns_ranked_suggestions(
+        self, loop: FeedbackLearningLoop, mock_embeddings: MagicMock
+    ) -> None:
+        """Given stored corrections, when suggesting, then ranked suggestions returned."""
+        mock_embeddings.embed = AsyncMock(
+            side_effect=[[1.0, 0.0], [0.9, 0.1], [0.5, 0.5]]
+        )
+        await loop.record_correction(
+            _original="hello",
+            _corrected="hello!",
+            _context="greeting",
+            _persona_id="persona-1",
+            _correction_type="tone",
+        )
+        await loop.record_correction(
+            _original="world",
+            _corrected="world!",
+            _context="greeting",
+            _persona_id="persona-1",
+            _correction_type="tone",
+        )
+
+        result = await loop.suggest_improvements("hello there", _persona_id="persona-1")
+
+        assert len(result) > 0
+        assert result[0].startswith("Consider:")
+
+    async def test_analyze_voice_drift_reports_stable_voice(
+        self, loop: FeedbackLearningLoop, mock_embeddings: MagicMock
+    ) -> None:
+        """Given similar samples, when analyzing drift, then voice is stable."""
+        mock_embeddings.embed = AsyncMock(return_value=[1.0, 0.0])
+
+        result = await loop.analyze_voice_drift(
+            _persona_id="test-id",
+            recent_samples=[("sample1", "sample1")],
+        )
+
+        assert result["drift_score"] == 0.0
+        assert result["trends"] == ["voice_stable"]
+
+    async def test_analyze_voice_drift_reports_drifting_voice(
+        self, loop: FeedbackLearningLoop, mock_embeddings: MagicMock
+    ) -> None:
+        """Given dissimilar samples, when analyzing drift, then voice is drifting."""
+        mock_embeddings.embed = AsyncMock(side_effect=[[1.0, 0.0], [0.0, 1.0]])
+
+        result = await loop.analyze_voice_drift(
+            _persona_id="test-id",
+            recent_samples=[("sample1", "sample2")],
+        )
+
+        assert result["drift_score"] > 0.2
+        assert result["trends"] == ["voice_drifting"]
 
     async def test_analyze_voice_drift_with_samples(
         self, loop: FeedbackLearningLoop, mock_embeddings: MagicMock
@@ -197,3 +309,10 @@ class TestCorrectionClassifier:
         result = CorrectionClassifier.classify("old text", "new text")
 
         assert result["correction_type"] == "content"
+
+    def test_classify_uses_default_confidence_for_minor_edit(self) -> None:
+        """Given unchanged text, when classifying, then default confidence is used."""
+        result = CorrectionClassifier.classify("same text", "same text")
+
+        assert result["correction_type"] == "tone"
+        assert result["confidence"] == 0.5

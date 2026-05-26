@@ -6,6 +6,10 @@ import { createElement, type ReactNode } from "react";
 import {
   PUBLISH_CHAT_STORAGE_KEY,
   CONVERSATION_METADATA_PROJECT_ID,
+  MESSAGE_ROLE_ASSISTANT,
+  MESSAGE_ROLE_USER,
+  OPTIMISTIC_MESSAGE_ID_PREFIX,
+  STREAM_MESSAGE_ID_PREFIX,
 } from "@/constants/publish-chat";
 import { ApiError } from "@/lib/api-client";
 import type { Message } from "@/schemas/chat";
@@ -792,5 +796,163 @@ describe("usePublishChat (SSE comprehensive)", () => {
 
     await waitFor(() => expect(result.current.isStreaming).toBe(false));
     expect(invalidateQueries).not.toHaveBeenCalled();
+  });
+
+  it("returns null when localStorage reads fail", async () => {
+    const mutateAsync = vi.fn().mockResolvedValue({ id: "conv-recovered" });
+    mockUseCreateConversation.mockReturnValue({
+      mutateAsync,
+      isPending: false,
+    } as unknown as ReturnType<typeof useCreateConversation>);
+    Object.defineProperty(globalThis, "localStorage", {
+      value: {
+        getItem: vi.fn(() => {
+          throw new Error("storage blocked");
+        }),
+        setItem: vi.fn(),
+        removeItem: vi.fn(),
+      },
+      writable: true,
+      configurable: true,
+    });
+
+    renderHook(() => usePublishChat(PROJECT_ID), {
+      wrapper: createWrapper(),
+    });
+
+    await waitFor(() => expect(mutateAsync).toHaveBeenCalledTimes(1));
+  });
+
+  it("does not replace a stored conversation when history fails with a non-404 error", async () => {
+    const mutateAsync = vi.fn().mockResolvedValue({ id: "conv-replacement" });
+    mockUseCreateConversation.mockReturnValue({
+      mutateAsync,
+      isPending: false,
+    } as unknown as ReturnType<typeof useCreateConversation>);
+    const { removeItem } = mockLocalStorage({
+      [PUBLISH_CHAT_STORAGE_KEY(PROJECT_ID)]: "conv-stale",
+    });
+    mockUseConversationMessages.mockReturnValue({
+      data: [],
+      isLoading: false,
+      error: new ApiError(500, "server error"),
+    } as unknown as ReturnType<typeof useConversationMessages>);
+
+    renderHook(() => usePublishChat(PROJECT_ID), {
+      wrapper: createWrapper(),
+    });
+
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(removeItem).not.toHaveBeenCalled();
+    expect(mutateAsync).not.toHaveBeenCalled();
+  });
+
+  it("builds optimistic user messages with the expected role, id prefix, and sources", async () => {
+    const { result } = renderHook(() => usePublishChat(PROJECT_ID), {
+      wrapper: createWrapper(),
+    });
+
+    await waitFor(() => expect(result.current.conversationId).toBe("conv-sse"));
+
+    act(() => {
+      result.current.sendMessage("hello");
+    });
+
+    await waitFor(() => expect(result.current.messages).toHaveLength(1));
+    const userMessage = result.current.messages[0];
+    expect(userMessage?.role).toBe(MESSAGE_ROLE_USER);
+    expect(userMessage?.id.startsWith(OPTIMISTIC_MESSAGE_ID_PREFIX)).toBe(true);
+    expect(userMessage?.sources).toEqual([]);
+  });
+
+  it("keeps a single assistant message while streaming tokens", async () => {
+    let emitSecondToken: (() => void) | undefined;
+    mockStreamSseEvents.mockImplementation(({ onEvent }) => {
+      onEvent({ event: "token", data: { content: "Hel" } });
+      return new Promise<void>((resolve) => {
+        emitSecondToken = () => {
+          onEvent({ event: "token", data: { content: "lo" } });
+          resolve();
+        };
+      });
+    });
+
+    const { result } = renderHook(() => usePublishChat(PROJECT_ID), {
+      wrapper: createWrapper(),
+    });
+
+    await waitFor(() => expect(result.current.conversationId).toBe("conv-sse"));
+
+    act(() => {
+      result.current.sendMessage("hello");
+    });
+
+    await waitFor(() => {
+      const assistantMessages = result.current.messages.filter(
+        (message) => message.role === MESSAGE_ROLE_ASSISTANT,
+      );
+      expect(assistantMessages).toHaveLength(1);
+      expect(assistantMessages[0]?.content).toBe("Hel");
+      expect(assistantMessages[0]?.id.startsWith(STREAM_MESSAGE_ID_PREFIX)).toBe(
+        true,
+      );
+    });
+
+    await act(async () => {
+      emitSecondToken?.();
+    });
+
+    await waitFor(() => {
+      const assistantMessages = result.current.messages.filter(
+        (message) => message.role === MESSAGE_ROLE_ASSISTANT,
+      );
+      expect(assistantMessages).toHaveLength(1);
+      expect(assistantMessages[0]?.content).toBe("Hello");
+    });
+  });
+
+  it("ignores token events with missing content", async () => {
+    mockStreamSseEvents.mockImplementation(({ onEvent }) => {
+      onEvent({ event: "token", data: {} });
+      onEvent({ event: "complete", data: {} });
+      return Promise.resolve();
+    });
+
+    const { result } = renderHook(() => usePublishChat(PROJECT_ID), {
+      wrapper: createWrapper(),
+    });
+
+    await waitFor(() => expect(result.current.conversationId).toBe("conv-sse"));
+
+    act(() => {
+      result.current.sendMessage("hello");
+    });
+
+    await waitFor(() => expect(result.current.isStreaming).toBe(false));
+    const assistantMessages = result.current.messages.filter(
+      (message) => message.role === MESSAGE_ROLE_ASSISTANT,
+    );
+    expect(assistantMessages).toHaveLength(1);
+    expect(assistantMessages[0]?.content).toBe("");
+    expect(assistantMessages[0]?.sources).toEqual([]);
+  });
+
+  it("clears streaming only through onComplete when no terminal SSE event arrives", async () => {
+    mockStreamSseEvents.mockImplementation(({ onComplete }) => {
+      onComplete?.();
+      return Promise.resolve();
+    });
+
+    const { result } = renderHook(() => usePublishChat(PROJECT_ID), {
+      wrapper: createWrapper(),
+    });
+
+    await waitFor(() => expect(result.current.conversationId).toBe("conv-sse"));
+
+    act(() => {
+      result.current.sendMessage("hello");
+    });
+
+    await waitFor(() => expect(result.current.isStreaming).toBe(false));
   });
 });

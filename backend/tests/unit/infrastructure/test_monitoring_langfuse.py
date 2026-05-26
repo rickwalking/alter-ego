@@ -7,6 +7,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from rag_backend.domain.models.carousels import ReviewEventParams
 from rag_backend.infrastructure.langfuse_client import init_langfuse
 from rag_backend.infrastructure.monitoring_langfuse import (
     LangfuseCallbackHandler,
@@ -202,9 +203,13 @@ class TestTraceFunctions:
         """Given None trace, when recording review, then no exception is raised."""
         record_human_review(
             trace=None,
-            phase="content",
-            action="approve",
-            reviewer_id="user123",
+            params=ReviewEventParams(
+                phase="content",
+                action="approve",
+                reviewer_id="user123",
+                time_to_respond=None,
+                feedback=None,
+            ),
         )
 
     @patch("rag_backend.infrastructure.langfuse_client.get_langfuse_client")

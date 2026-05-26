@@ -14,6 +14,7 @@ from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 from langchain_core.runnables.config import RunnableConfig
 from langchain_core.tools import BaseTool
 
+from rag_backend.agents.chat_streaming import extract_message_text, extract_stream_token
 from rag_backend.application.tools.knowledge_base import (
     build_list_documents_tool,
     build_search_documents_tool,
@@ -136,21 +137,23 @@ class AlterEgoAgent:
         sources = []
 
         if stream:
-            yield from self._chat_stream(
+            async for event in self._chat_stream(
                 message,
                 conversation_id,
                 chat_history,
                 sources,
                 persist_messages,
-            )
+            ):
+                yield event
         else:
-            yield from self._chat_non_streaming(
+            async for event in self._chat_non_streaming(
                 message,
                 conversation_id,
                 chat_history,
                 sources,
                 persist_messages,
-            )
+            ):
+                yield event
 
     async def _chat_stream(
         self,
@@ -197,13 +200,7 @@ class AlterEgoAgent:
             if not content:
                 continue
 
-            token = ""
-            if isinstance(content, str):
-                token = content
-            elif isinstance(content, list):
-                for block in content:
-                    if isinstance(block, dict) and block.get("type") == "text":
-                        token += block.get("text", "")
+            token = extract_stream_token(content)
             if not token:
                 continue
 
@@ -247,14 +244,9 @@ class AlterEgoAgent:
         response = ""
         for msg in reversed(messages):
             if isinstance(msg, AIMessage) and msg.content:
-                raw = msg.content
-                if isinstance(raw, str):
-                    response = raw
-                elif isinstance(raw, list):
-                    for block in raw:
-                        if isinstance(block, dict) and block.get("type") == "text":
-                            response += block.get("text", "")
-                break
+                response = extract_message_text(msg.content)
+                if response:
+                    break
 
         if persist_messages:
             assistant_message = Message(

@@ -36,6 +36,7 @@ from rag_backend.domain.constants.workflow_events import (
     EVENT_TYPE_PROJECT_REVIEW_COMPLETED,
     EVENT_TYPE_PROJECT_REVIEW_REQUESTED,
 )
+from rag_backend.domain.models.carousels import ReviewEventParams
 from rag_backend.domain.models.persona import PersonaProfile
 from rag_backend.infrastructure.monitoring_langfuse import (
     create_workflow_trace,
@@ -55,6 +56,18 @@ class EditorialWorkflowStartInput:
     persona: PersonaProfile | None = None
     user_id: str = "system"
     reviewer_id: str | None = None
+
+
+@dataclass(frozen=True)
+class ReviewEventEmitContext:
+    """Parameters for emitting carousel review workflow events."""
+
+    project_id: str
+    action: str
+    reviewer_id: str
+    feedback: str | None
+    prior: CarouselWorkflowState | None
+    state: CarouselWorkflowState
 
 
 class EditorialWorkflowService:
@@ -141,10 +154,13 @@ class EditorialWorkflowService:
             if trace is not None:
                 record_human_review(
                     trace=trace,
-                    phase=PHASE_CONTENT,
-                    action="voice_scored",
-                    reviewer_id="ai",
-                    feedback=str(voice_scores.get("overall", 0)),
+                    params=ReviewEventParams(
+                        phase=PHASE_CONTENT,
+                        action="voice_scored",
+                        reviewer_id="ai",
+                        time_to_respond=None,
+                        feedback=str(voice_scores.get("overall", 0)),
+                    ),
                 )
 
         initial_brief = {
@@ -190,10 +206,13 @@ class EditorialWorkflowService:
         if trace is not None:
             record_human_review(
                 trace=trace,
-                phase="review",
-                action=action,
-                reviewer_id=reviewer_id,
-                feedback=feedback,
+                params=ReviewEventParams(
+                    phase="review",
+                    action=action,
+                    reviewer_id=reviewer_id,
+                    time_to_respond=None,
+                    feedback=feedback,
+                ),
             )
         human_input = {
             "action": action,
@@ -203,12 +222,14 @@ class EditorialWorkflowService:
         state = await self._engine.resume(project_id, human_input)
         await self._emit_review_event(
             db,
-            project_id,
-            action,
-            reviewer_id,
-            feedback,
-            prior,
-            state,
+            ReviewEventEmitContext(
+                project_id=project_id,
+                action=action,
+                reviewer_id=reviewer_id,
+                feedback=feedback,
+                prior=prior,
+                state=state,
+            ),
         )
         return state
 
@@ -266,25 +287,24 @@ class EditorialWorkflowService:
     async def _emit_review_event(
         self,
         db: AsyncSession | None,
-        project_id: str,
-        action: str,
-        reviewer_id: str,
-        feedback: str | None,
-        prior: CarouselWorkflowState | None,
-        state: CarouselWorkflowState,
+        ctx: ReviewEventEmitContext,
     ) -> None:
         if db is None or self._events is None:
             return
-        old_phase = str(prior.get("current_phase", "")) if prior else ""
-        new_phase = str(state.get("current_phase", ""))
+        old_phase = str(ctx.prior.get("current_phase", "")) if ctx.prior else ""
+        new_phase = str(ctx.state.get("current_phase", ""))
         await self._events.emit(
             db,
             event_type=EVENT_TYPE_PROJECT_REVIEW_COMPLETED,
-            aggregate_id=project_id,
+            aggregate_id=ctx.project_id,
             aggregate_type=AGGREGATE_TYPE_PROJECT,
-            payload={"action": action, "feedback": feedback or "", "phase": new_phase},
+            payload={
+                "action": ctx.action,
+                "feedback": ctx.feedback or "",
+                "phase": new_phase,
+            },
             metadata={
-                "reviewer_id": reviewer_id,
+                "reviewer_id": ctx.reviewer_id,
                 "source": EVENT_SOURCE_WORKFLOW_ENGINE,
             },
         )
@@ -292,30 +312,30 @@ class EditorialWorkflowService:
             await self._events.emit(
                 db,
                 event_type=EVENT_TYPE_PROJECT_PHASE_CHANGED,
-                aggregate_id=project_id,
+                aggregate_id=ctx.project_id,
                 aggregate_type=AGGREGATE_TYPE_PROJECT,
                 payload={
                     "old_phase": old_phase,
                     "phase": new_phase,
-                    "phase_status": str(state.get("phase_status", "")),
+                    "phase_status": str(ctx.state.get("phase_status", "")),
                 },
                 metadata={
-                    "reviewer_id": reviewer_id,
+                    "reviewer_id": ctx.reviewer_id,
                     "source": EVENT_SOURCE_WORKFLOW_ENGINE,
                 },
             )
         notif_type = (
             NOTIFICATION_TYPE_PHASE_APPROVED
-            if action == REVIEW_ACTION_APPROVE
+            if ctx.action == REVIEW_ACTION_APPROVE
             else NOTIFICATION_TYPE_PHASE_REJECTED
         )
         await self._notifications.create_workflow_update(
             db,
-            user_id=reviewer_id,
+            user_id=ctx.reviewer_id,
             notification_type=notif_type,
-            title=f"Phase {action}: {new_phase}",
-            body=feedback or "",
-            content_id=project_id,
+            title=f"Phase {ctx.action}: {new_phase}",
+            body=ctx.feedback or "",
+            content_id=ctx.project_id,
             content_type="carousel",
         )
 

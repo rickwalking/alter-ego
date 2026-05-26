@@ -6,7 +6,15 @@ limits across the codebase.
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TypedDict
+
+
+class ViolationEntry(TypedDict, total=False):
+    """Single complexity threshold violation."""
+
+    type: str
+    actual: int
+
 
 # Maximum allowed complexity metrics (industry standard)
 MAX_COMPLEXITY = 10
@@ -32,7 +40,7 @@ COMPLEXITY_THRESHOLDS: dict[str, int] = {
 class ComplexityViolationError(Exception):
     """Raised when complexity metrics exceed thresholds."""
 
-    def __init__(self, violations: list[dict[str, Any]]) -> None:
+    def __init__(self, violations: list[ViolationEntry]) -> None:
         self.violations = violations
         self.message = self._generate_message()
 
@@ -56,4 +64,5 @@ __all__ = [
     "MAX_RETURNS",
     "MAX_STATEMENTS",
     "ComplexityViolationError",
+    "ViolationEntry",
 ]

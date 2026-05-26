@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { renderHook, act, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createElement, type ReactNode } from "react";
+import { carouselKeys } from "@/features/carousel/queries";
 import { useCarouselStream } from "./use-carousel";
 
 /**
@@ -54,6 +55,20 @@ function createWrapper() {
       { client: queryClient },
       children,
     );
+  };
+}
+
+function createWrapperWithClient(): {
+  queryClient: QueryClient;
+  Wrapper: ({ children }: { children: ReactNode }) => ReactNode;
+} {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false, gcTime: 0 } },
+  });
+  return {
+    queryClient,
+    Wrapper: ({ children }: { children: ReactNode }) =>
+      createElement(QueryClientProvider, { client: queryClient }, children),
   };
 }
 
@@ -551,13 +566,11 @@ describe("useCarouselStream", () => {
     });
 
     it("does not update cache for events missing a status field", () => {
-      vi.useFakeTimers();
+      const { queryClient, Wrapper } = createWrapperWithClient();
       const { result } = renderHook(() => useCarouselStream("abc-123"), {
-        wrapper: createWrapper(),
+        wrapper: Wrapper,
       });
 
-      // Emit an event without `status` — should be ignored for cache update
-      // but still update latestEvent.
       act(() => {
         MockEventSource.instances[0].emit({
           node: "heartbeat",
@@ -565,10 +578,83 @@ describe("useCarouselStream", () => {
         });
       });
 
-      // latestEvent should still be set (the event passed schema validation).
       expect(result.current.latestEvent?.node).toBe("heartbeat");
+      expect(queryClient.getQueryData(carouselKeys.status("abc-123"))).toBeUndefined();
+    });
 
-      vi.useRealTimers();
+    it("updates the status query cache when a stream event includes status", async () => {
+      const { queryClient, Wrapper } = createWrapperWithClient();
+      queryClient.setQueryData(carouselKeys.status("abc-123"), {
+        id: "abc-123",
+        status: "pending",
+        phase_progress: null,
+        error_message: null,
+        updated_at: "2026-01-01T00:00:00Z",
+      });
+
+      renderHook(() => useCarouselStream("abc-123"), { wrapper: Wrapper });
+
+      act(() => {
+        MockEventSource.instances[0].emit({
+          node: "research",
+          status: "researching",
+          phase_progress: {
+            phase: "research",
+            label: "Researching",
+            current: 2,
+            total: 5,
+          },
+          error: "transient warning",
+        });
+      });
+
+      await waitFor(() => {
+        expect(queryClient.getQueryData(carouselKeys.status("abc-123"))).toMatchObject({
+          id: "abc-123",
+          status: "researching",
+          phase_progress: {
+            phase: "research",
+            label: "Researching",
+            current: 2,
+            total: 5,
+          },
+          error_message: "transient warning",
+        });
+      });
+    });
+
+    it("invalidates the carousel detail query when the stream ends", async () => {
+      const { queryClient, Wrapper } = createWrapperWithClient();
+      const invalidateQueries = vi.spyOn(queryClient, "invalidateQueries");
+
+      renderHook(() => useCarouselStream("abc-123"), { wrapper: Wrapper });
+
+      act(() => {
+        MockEventSource.instances[0].emit({ node: "end", status: "completed" });
+      });
+
+      await waitFor(() =>
+        expect(invalidateQueries).toHaveBeenCalledWith({
+          queryKey: carouselKeys.detail("abc-123"),
+        }),
+      );
+    });
+
+    it("does not set stream error state on a clean end event", async () => {
+      const { result } = renderHook(() => useCarouselStream("abc-123"), {
+        wrapper: createWrapper(),
+      });
+
+      act(() => {
+        MockEventSource.instances[0].emit({
+          node: "end",
+          status: "completed",
+          error: "should be ignored on end",
+        });
+      });
+
+      await waitFor(() => expect(result.current.isStreaming).toBe(false));
+      expect(result.current.error).toBeNull();
     });
   });
 });

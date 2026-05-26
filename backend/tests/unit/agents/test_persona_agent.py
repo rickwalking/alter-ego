@@ -4,7 +4,8 @@ Feature: Persona voice enforcement and scoring
 """
 
 import json
-from unittest.mock import AsyncMock, MagicMock
+from inspect import signature
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -50,6 +51,46 @@ class TestPersonaAgent:
         assert result == "rewritten text"
         mock_llm.ainvoke.assert_called_once()
 
+    async def test_enforce_prompt_includes_style_guide_and_content(
+        self, agent: PersonaAgent, mock_llm: AsyncMock
+    ) -> None:
+        """Given content without context, when enforce is called, then prompt is complete."""
+        mock_llm.ainvoke.return_value = MagicMock(content="rewritten text")
+
+        await agent.enforce("original content")
+
+        prompt = mock_llm.ainvoke.call_args[0][0][0].content
+        assert "Test Voice" in prompt
+        assert "bad phrase" in prompt
+        assert "good phrase" in prompt
+        assert "CONTENT TO REWRITE:\noriginal content" in prompt
+        context_value = prompt.split("CONTEXT: ", 1)[1].split(
+            "\n\nCONTENT TO REWRITE:", 1
+        )[0]
+        assert context_value.strip() == ""
+
+    def test_enforce_default_context_parameter_is_empty(
+        self, agent: PersonaAgent
+    ) -> None:
+        """Given PersonaAgent, when inspecting enforce, then context default is empty."""
+        assert signature(agent.enforce).parameters["context"].default == ""
+
+    async def test_enforce_passes_langfuse_callbacks(
+        self, agent: PersonaAgent, mock_llm: AsyncMock
+    ) -> None:
+        """Given enforce call, when invoking LLM, then Langfuse callbacks are attached."""
+        mock_llm.ainvoke.return_value = MagicMock(content="rewritten text")
+        handler = MagicMock()
+
+        with patch(
+            "rag_backend.agents.persona_agent.get_langfuse_handler",
+            return_value=[handler],
+        ) as mock_handler:
+            await agent.enforce("original content")
+
+        mock_handler.assert_called_once()
+        assert mock_llm.ainvoke.call_args.kwargs["callbacks"] == [handler]
+
     async def test_enforce_includes_context(
         self, agent: PersonaAgent, mock_llm: AsyncMock
     ) -> None:
@@ -82,6 +123,39 @@ class TestPersonaAgent:
         assert result["tone_match"] == 85.0
         assert result["overall"] == 85.0
         assert result["suggestions"] == ["suggestion 1"]
+
+    async def test_evaluate_match_prompt_includes_content_and_style_guide(
+        self, agent: PersonaAgent, mock_llm: AsyncMock
+    ) -> None:
+        """Given content, when evaluate_match is called, then prompt includes rubric details."""
+        mock_llm.ainvoke.return_value = MagicMock(
+            content=json.dumps({"overall": 80.0, "suggestions": []})
+        )
+
+        await agent.evaluate_match("unique eval content xyz")
+
+        prompt = mock_llm.ainvoke.call_args[0][0][0].content
+        assert "unique eval content xyz" in prompt
+        assert "Test Voice" in prompt
+        assert "tone_match" in prompt
+
+    async def test_evaluate_match_passes_langfuse_callbacks(
+        self, agent: PersonaAgent, mock_llm: AsyncMock
+    ) -> None:
+        """Given evaluate_match call, when invoking LLM, then Langfuse callbacks are attached."""
+        mock_llm.ainvoke.return_value = MagicMock(
+            content=json.dumps({"overall": 80.0, "suggestions": []})
+        )
+        handler = MagicMock()
+
+        with patch(
+            "rag_backend.agents.persona_agent.get_langfuse_handler",
+            return_value=[handler],
+        ) as mock_handler:
+            await agent.evaluate_match("content")
+
+        mock_handler.assert_called_once()
+        assert mock_llm.ainvoke.call_args.kwargs["callbacks"] == [handler]
 
     async def test_evaluate_match_handles_invalid_json(
         self, agent: PersonaAgent, mock_llm: AsyncMock
@@ -136,6 +210,16 @@ class TestPersonaAgent:
 
         assert "testing" in guide
 
+    def test_build_style_guide_includes_tone_attributes(
+        self, agent: PersonaAgent
+    ) -> None:
+        """Given persona tone attributes, when building style guide, then values appear."""
+        guide = agent._build_style_guide()
+
+        assert "formal=0.3" in guide
+        assert "conversational=0.8" in guide
+        assert "humorous=0.4" in guide
+
     # Scenario: Parse evaluation response
     def test_parse_evaluation_response_with_valid_json(
         self, agent: PersonaAgent
@@ -155,6 +239,28 @@ class TestPersonaAgent:
 
         assert result["overall"] == 84.0
         assert result["suggestions"] == ["improve"]
+
+    def test_parse_evaluation_response_preserves_all_score_fields(
+        self, agent: PersonaAgent
+    ) -> None:
+        """Given full JSON payload, when parsing, then every score field is preserved."""
+        response = json.dumps({
+            "tone_match": 80.0,
+            "sentence_structure_match": 85.0,
+            "opinion_strength": 70.0,
+            "originality": 90.0,
+            "human_authenticity": 95.0,
+            "overall": 84.0,
+            "suggestions": ["improve"],
+        })
+
+        result = agent._parse_evaluation_response(response)
+
+        assert result["tone_match"] == 80.0
+        assert result["sentence_structure_match"] == 85.0
+        assert result["opinion_strength"] == 70.0
+        assert result["originality"] == 90.0
+        assert result["human_authenticity"] == 95.0
 
     def test_parse_evaluation_response_with_invalid_json(
         self, agent: PersonaAgent
