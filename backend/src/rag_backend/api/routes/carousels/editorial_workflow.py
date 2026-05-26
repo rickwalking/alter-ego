@@ -83,6 +83,30 @@ async def _load_persona(
     return model.to_entity()
 
 
+@router.get(
+    "/carousels/{project_id}/workflow/state",
+    response_model=EditorialWorkflowStateResponse,
+    summary="Get editorial carousel workflow state",
+)
+@limiter.limit(RATE_LIMIT_AI_ENDPOINTS)
+async def get_editorial_workflow_state(
+    project_id: UUID,
+    request: Request,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: EditorUser,
+) -> EditorialWorkflowStateResponse:
+    """Return persisted workflow state for UI polling."""
+    await get_carousel_project_for_user(db, project_id, current_user)
+    service = _build_service(request)
+    state = await service.get_workflow_state(str(project_id))
+    if state is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=ERR_INVALID_REQUEST,
+        )
+    return _state_response(dict(state))
+
+
 @router.post(
     "/carousels/{project_id}/workflow/start",
     response_model=EditorialWorkflowStateResponse,
@@ -154,6 +178,7 @@ async def resume_editorial_workflow(
     """Resume workflow after human review."""
     await get_carousel_project_for_user(db, project_id, current_user)
     service = _build_service(request)
+    persona = await _load_persona(db, body.persona_id)
     safe_feedback = sanitize_llm_input(body.feedback or "")
     state = await service.resume_workflow(
         project_id=str(project_id),
@@ -161,6 +186,7 @@ async def resume_editorial_workflow(
         reviewer_id=current_user.id,
         feedback=safe_feedback,
         db=db,
+        persona=persona,
     )
     await db.commit()
     return _state_response(dict(state))

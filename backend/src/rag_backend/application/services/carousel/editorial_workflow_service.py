@@ -38,6 +38,7 @@ from rag_backend.domain.constants.workflow_events import (
 )
 from rag_backend.domain.models.carousels import ReviewEventParams
 from rag_backend.domain.models.persona import PersonaProfile
+from rag_backend.infrastructure.database.models.carousel import CarouselProjectModel
 from rag_backend.infrastructure.monitoring_langfuse import (
     create_workflow_trace,
     propagate_attributes,
@@ -94,8 +95,8 @@ class EditorialWorkflowService:
         workflow_input: EditorialWorkflowStartInput,
         db: AsyncSession | None = None,
     ) -> CarouselWorkflowState:
-        """Run research synthesis, outline, and content phases before human gates."""
-        trace = create_workflow_trace(
+        """Run research synthesis then pause at the first human review gate."""
+        _trace = create_workflow_trace(
             project_id=UUID(project_id),
             user_id=workflow_input.user_id,
             content_type="carousel",
@@ -105,63 +106,7 @@ class EditorialWorkflowService:
         with propagate_attributes(
             metadata={"project_id": project_id, "phase": PHASE_RESEARCH},
         ):
-            research_findings: list[dict[str, object]] = []
-            for source in workflow_input.sources:
-                extracted = await self._source_agent.extract_key_points(
-                    title=source.get("title", ""),
-                    content=source.get("content", ""),
-                    source_type=source.get("source_type", "document"),
-                )
-                research_findings.append({
-                    "source": source.get("title", ""),
-                    **extracted,
-                })
-
-        with propagate_attributes(
-            metadata={"project_id": project_id, "phase": PHASE_OUTLINE}
-        ):
-            source_texts = [s.get("content", "") for s in workflow_input.sources]
-            outline = await self._outline_agent.generate_outline(
-                topic=workflow_input.topic,
-                audience=workflow_input.audience,
-                brief=workflow_input.brief,
-                sources=source_texts,
-            )
-
-        slide_drafts: list[dict[str, object]] = []
-        with propagate_attributes(
-            metadata={"project_id": project_id, "phase": PHASE_CONTENT}
-        ):
-            for slide in outline:
-                if not isinstance(slide, dict):
-                    continue
-                draft = await self._content_agent.draft_slide(
-                    slide_index=int(slide.get("slide_index", 0)),
-                    title=str(slide.get("title", "")),
-                    key_points=[
-                        str(p)
-                        for p in slide.get("key_points", [])
-                        if isinstance(p, str)
-                    ],
-                    persona=workflow_input.persona,
-                )
-                slide_drafts.append({**slide, **draft})
-
-        if workflow_input.persona is not None and slide_drafts:
-            persona_agent = PersonaAgent(persona=workflow_input.persona, llm=self._llm)
-            first_text = str(slide_drafts[0].get("draft_text", ""))
-            voice_scores = await persona_agent.evaluate_match(first_text)
-            if trace is not None:
-                record_human_review(
-                    trace=trace,
-                    params=ReviewEventParams(
-                        phase=PHASE_CONTENT,
-                        action="voice_scored",
-                        reviewer_id="ai",
-                        time_to_respond=None,
-                        feedback=str(voice_scores.get("overall", 0)),
-                    ),
-                )
+            research_findings = await self._synthesize_research(workflow_input.sources)
 
         initial_brief = {
             "topic": workflow_input.topic,
@@ -173,9 +118,8 @@ class EditorialWorkflowService:
             project_id,
             initial_brief,
             research_findings=research_findings,
-            outline=outline,
-            slide_drafts=slide_drafts,
         )
+        await self._sync_project_phase(db, project_id, state)
         await self._emit_phase_event(db, project_id, state, workflow_input.user_id)
         if db and workflow_input.reviewer_id:
             await self._notifications.create_review_request(
@@ -187,6 +131,120 @@ class EditorialWorkflowService:
             )
         return state
 
+    async def _synthesize_research(
+        self, sources: list[dict[str, str]]
+    ) -> list[dict[str, object]]:
+        """Extract research findings from source documents."""
+        research_findings: list[dict[str, object]] = []
+        for source in sources:
+            extracted = await self._source_agent.extract_key_points(
+                title=source.get("title", ""),
+                content=source.get("content", ""),
+                source_type=source.get("source_type", "document"),
+            )
+            research_findings.append({
+                "source": source.get("title", ""),
+                **extracted,
+            })
+        return research_findings
+
+    async def _generate_outline(
+        self,
+        workflow_input: EditorialWorkflowStartInput,
+    ) -> list[dict[str, object]]:
+        """Generate carousel outline from brief and sources."""
+        source_texts = [s.get("content", "") for s in workflow_input.sources]
+        outline = await self._outline_agent.generate_outline(
+            topic=workflow_input.topic,
+            audience=workflow_input.audience,
+            brief=workflow_input.brief,
+            sources=source_texts,
+        )
+        return [slide for slide in outline if isinstance(slide, dict)]
+
+    async def _generate_slide_drafts(
+        self,
+        outline: list[dict[str, object]],
+        persona: PersonaProfile | None,
+    ) -> list[dict[str, object]]:
+        """Draft slide copy for each outline entry."""
+        slide_drafts: list[dict[str, object]] = []
+        for slide in outline:
+            draft = await self._content_agent.draft_slide(
+                slide_index=int(slide.get("slide_index", 0)),
+                title=str(slide.get("title", "")),
+                key_points=[
+                    str(p) for p in slide.get("key_points", []) if isinstance(p, str)
+                ],
+                persona=persona,
+            )
+            slide_drafts.append({**slide, **draft})
+        return slide_drafts
+
+    async def _prepare_phase_before_resume(
+        self,
+        prior: CarouselWorkflowState,
+        action: str,
+        workflow_input: EditorialWorkflowStartInput,
+    ) -> None:
+        """Generate the next phase artifact after approval, before graph resumes."""
+        if action != REVIEW_ACTION_APPROVE:
+            return
+        phase = str(prior.get("current_phase", ""))
+        brief = prior.get("brief")
+        if isinstance(brief, dict):
+            raw_sources = brief.get("sources", workflow_input.sources)
+            sources = (
+                raw_sources if isinstance(raw_sources, list) else workflow_input.sources
+            )
+            resolved_input = EditorialWorkflowStartInput(
+                topic=str(brief.get("topic", workflow_input.topic)),
+                audience=str(brief.get("audience", workflow_input.audience)),
+                brief=str(brief.get("brief", workflow_input.brief)),
+                sources=sources,
+                persona=workflow_input.persona,
+                user_id=workflow_input.user_id,
+                reviewer_id=workflow_input.reviewer_id,
+            )
+        else:
+            resolved_input = workflow_input
+        updates: dict[str, object] = {}
+        if phase == PHASE_RESEARCH and not prior.get("outline"):
+            updates["outline"] = await self._generate_outline(resolved_input)
+        elif phase == PHASE_OUTLINE and not prior.get("slide_drafts"):
+            outline = prior.get("outline") or updates.get("outline") or []
+            if isinstance(outline, list):
+                updates["slide_drafts"] = await self._generate_slide_drafts(
+                    [s for s in outline if isinstance(s, dict)],
+                    resolved_input.persona,
+                )
+        elif phase == PHASE_CONTENT and resolved_input.persona is not None:
+            slide_drafts = prior.get("slide_drafts") or []
+            if isinstance(slide_drafts, list) and slide_drafts:
+                persona_agent = PersonaAgent(
+                    persona=resolved_input.persona, llm=self._llm
+                )
+                first_text = str(slide_drafts[0].get("draft_text", ""))
+                await persona_agent.evaluate_match(first_text)
+        if updates:
+            await self._engine.update_state(str(prior.get("project_id", "")), updates)
+
+    async def _sync_project_phase(
+        self,
+        db: AsyncSession | None,
+        project_id: str,
+        state: CarouselWorkflowState,
+    ) -> None:
+        """Keep carousel project row in sync with workflow state for the Kanban board."""
+        if db is None:
+            return
+        project = await db.get(CarouselProjectModel, UUID(project_id))
+        if project is None:
+            return
+        project.current_phase = str(state.get("current_phase", project.current_phase))
+        project.phase_status = str(state.get("phase_status", project.phase_status))
+        await db.flush()
+
     async def resume_workflow(
         self,
         project_id: str,
@@ -194,6 +252,7 @@ class EditorialWorkflowService:
         reviewer_id: str,
         feedback: str | None = None,
         db: AsyncSession | None = None,
+        persona: PersonaProfile | None = None,
     ) -> CarouselWorkflowState:
         """Resume workflow after human review."""
         prior = await self._engine.get_state(project_id)
@@ -214,12 +273,23 @@ class EditorialWorkflowService:
                     feedback=feedback,
                 ),
             )
+        workflow_input = EditorialWorkflowStartInput(
+            topic="",
+            audience="",
+            brief="",
+            sources=[],
+            persona=persona,
+            user_id=reviewer_id,
+        )
+        if prior is not None:
+            await self._prepare_phase_before_resume(prior, action, workflow_input)
         human_input = {
             "action": action,
             "reviewer_id": reviewer_id,
             "feedback": feedback,
         }
         state = await self._engine.resume(project_id, human_input)
+        await self._sync_project_phase(db, project_id, state)
         await self._emit_review_event(
             db,
             ReviewEventEmitContext(

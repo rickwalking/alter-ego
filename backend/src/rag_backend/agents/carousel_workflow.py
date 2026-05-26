@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import cast
 
 from langgraph.graph import END, StateGraph
-from langgraph.types import interrupt
+from langgraph.types import Command, interrupt
 
 from rag_backend.application.services.carousel.workflow_state import (
     CarouselWorkflowState,
@@ -248,8 +248,20 @@ class CarouselWorkflowEngine:
     ) -> CarouselWorkflowState:
         """Resume a paused workflow after human review."""
         config = {"configurable": {"thread_id": project_id}}
-        result = await self._app.ainvoke(human_input, config=config)
+        result = await self._app.ainvoke(
+            Command(resume=human_input or {}),
+            config=config,
+        )
         return cast(CarouselWorkflowState, result)
+
+    async def update_state(
+        self,
+        project_id: str,
+        values: dict[str, object],
+    ) -> None:
+        """Patch workflow state before resuming from an interrupt."""
+        config = {"configurable": {"thread_id": project_id}}
+        await self._app.aupdate_state(config, values)
 
     async def get_state(self, project_id: str) -> CarouselWorkflowState | None:
         """Load persisted workflow state from checkpointer (WF-002)."""

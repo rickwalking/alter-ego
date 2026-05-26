@@ -6,7 +6,10 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
-import { WORKFLOW_API } from "@/constants/workflow";
+import {
+  WORKFLOW_API,
+  WORKFLOW_BOARD_POLL_INTERVAL_MS,
+} from "@/constants/workflow";
 import { authenticatedFetch } from "@/lib/authenticated-fetch";
 
 export type KanbanCard = {
@@ -52,6 +55,17 @@ export function useWorkflowKanban() {
 
   useEffect(() => {
     void fetchBoard();
+    const intervalId = window.setInterval(() => {
+      void fetchBoard();
+    }, WORKFLOW_BOARD_POLL_INTERVAL_MS);
+    const handleFocus = (): void => {
+      void fetchBoard();
+    };
+    window.addEventListener("focus", handleFocus);
+    return () => {
+      window.clearInterval(intervalId);
+      window.removeEventListener("focus", handleFocus);
+    };
   }, [fetchBoard]);
 
   return { board, loading, error, refetch: fetchBoard };

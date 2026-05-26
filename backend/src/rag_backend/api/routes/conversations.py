@@ -73,13 +73,19 @@ def _make_conversation_service(db: AsyncSession) -> ConversationService:
 
 
 @router.post(
-    "/",
+    "",
     response_model=ConversationResponse,
     status_code=status.HTTP_201_CREATED,
     responses={
         201: {"description": "Conversation created successfully"},
         400: {"model": ErrorResponse, "description": "Invalid input"},
     },
+)
+@router.post(
+    "/",
+    response_model=ConversationResponse,
+    status_code=status.HTTP_201_CREATED,
+    include_in_schema=False,
 )
 async def create_conversation(
     request: ConversationCreate,
@@ -124,12 +130,17 @@ async def create_conversation(
 
 
 @router.get(
-    "/",
+    "",
     response_model=ConversationListResponse,
     responses={
         200: {"description": "List of conversations"},
         401: {"model": ErrorResponse, "description": ERR_NOT_AUTHENTICATED},
     },
+)
+@router.get(
+    "/",
+    response_model=ConversationListResponse,
+    include_in_schema=False,
 )
 async def list_conversations(
     user: Annotated[User, Depends(require_authenticated_user)],

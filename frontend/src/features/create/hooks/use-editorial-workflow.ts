@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { API_ENDPOINTS, HTTP_METHODS } from "@/constants/api";
+import { WORKFLOW_PHASE_STATUS } from "@/constants/workflow";
 import { EDITORIAL_REVIEW_ACTIONS } from "@/constants/blog-ai";
 import type { EditorialWorkflowState } from "@/features/blog/types-ai";
 import { authenticatedFetch } from "@/lib/authenticated-fetch";
@@ -34,9 +35,23 @@ export function useEditorialWorkflow(projectId: string) {
 
     const handlePhaseChange = (event: MessageEvent<string>): void => {
       try {
-        const payload = JSON.parse(event.data) as { phase?: string };
+        const payload = JSON.parse(event.data) as {
+          phase?: string;
+          phase_status?: string;
+        };
         if (payload.phase) {
           setPhaseEvents((prev) => [...prev, payload.phase as string]);
+        }
+        if (payload.phase || payload.phase_status) {
+          setState((prev) => ({
+            project_id: projectId,
+            current_phase: payload.phase ?? prev?.current_phase ?? "",
+            phase_status: payload.phase_status ?? prev?.phase_status ?? "",
+            research_findings: prev?.research_findings ?? [],
+            outline: prev?.outline ?? [],
+            slide_drafts: prev?.slide_drafts ?? [],
+            status: prev?.status ?? "draft",
+          }));
         }
       } catch {
         // Ignore malformed SSE payloads.
@@ -49,6 +64,25 @@ export function useEditorialWorkflow(projectId: string) {
       source.close();
     };
   }, [projectId]);
+
+  const refreshState = useCallback(async (): Promise<void> => {
+    try {
+      const response = await authenticatedFetch(
+        API_ENDPOINTS.CAROUSEL_WORKFLOW_STATE(projectId),
+      );
+      if (!response.ok) {
+        return;
+      }
+      const workflowState = (await response.json()) as EditorialWorkflowState;
+      setState(workflowState);
+    } catch {
+      // Workflow may not exist yet for new projects.
+    }
+  }, [projectId]);
+
+  useEffect(() => {
+    void refreshState();
+  }, [refreshState]);
 
   const start = useCallback(
     async (input: StartWorkflowInput): Promise<EditorialWorkflowState> => {
@@ -126,8 +160,11 @@ export function useEditorialWorkflow(projectId: string) {
     error,
     start,
     resume,
+    refreshState,
     approve: () => resume(EDITORIAL_REVIEW_ACTIONS.APPROVE),
     reject: (feedback: string) =>
       resume(EDITORIAL_REVIEW_ACTIONS.REJECT, feedback),
+    awaitingHumanReview:
+      state?.phase_status === WORKFLOW_PHASE_STATUS.AWAITING_HUMAN,
   };
 }

@@ -11,7 +11,7 @@ export const API_ENDPOINTS = {
   DOCUMENT_BY_ID: (id: string) => `/api/documents/${id}`,
   DOCUMENT_REPROCESS: (id: string) => `/api/documents/${id}/reprocess`,
   DOCUMENT_UPLOAD: "/api/documents/upload",
-  CONVERSATIONS: "/api/conversations/",
+  CONVERSATIONS: "/api/conversations",
   CONVERSATION_BY_ID: (id: string) => `/api/conversations/${id}`,
   CONVERSATION_MESSAGES: (id: string) => `/api/conversations/${id}/messages`,
   CONVERSATION_CHAT: (id: string) => `/api/conversations/${id}/chat`,
@@ -41,6 +41,8 @@ export const API_ENDPOINTS = {
     `/api/carousels/${id}/publish/instagram/status`,
   CAROUSEL_WORKFLOW_START: (id: string) =>
     `/api/carousels/${id}/workflow/start`,
+  CAROUSEL_WORKFLOW_STATE: (id: string) =>
+    `/api/carousels/${id}/workflow/state`,
   CAROUSEL_WORKFLOW_RESUME: (id: string) =>
     `/api/carousels/${id}/workflow/resume`,
   CAROUSEL_WORKFLOW_STREAM: (id: string) =>

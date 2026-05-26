@@ -23,6 +23,16 @@ export const WORKFLOW_PHASES = [
   "final_review",
 ] as const;
 
+export const WORKFLOW_PHASE_STATUS = {
+  PENDING: "pending",
+  IN_PROGRESS: "in_progress",
+  AWAITING_HUMAN: "awaiting_human",
+  APPROVED: "approved",
+  REJECTED: "rejected",
+} as const;
+
+export const WORKFLOW_BOARD_POLL_INTERVAL_MS = 15_000;
+
 export const LOCK_CONTENT_TYPE_BLOG = "blog_post";
 export const LOCK_CONTENT_TYPE_CAROUSEL = "carousel";
 
