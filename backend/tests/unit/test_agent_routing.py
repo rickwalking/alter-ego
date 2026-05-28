@@ -37,6 +37,7 @@ class TestMetadataRoutingDecision:
 
         conversation = Conversation(
             id=uuid4(),
+            user_id=uuid4(),
             metadata={CONVERSATION_METADATA_PROJECT_ID: "abc-123"},
         )
         db = AsyncMock()
@@ -55,7 +56,12 @@ class TestMetadataRoutingDecision:
 
             agent = build_agent_for_conversation(conversation, db, container)
 
-            mock_build_rag.assert_called_once_with(db, container)
+            mock_build_rag.assert_called_once_with(
+                db,
+                container,
+                owner_user_id=str(conversation.user_id),
+                bound_project_id="abc-123",
+            )
             mock_build_alter.assert_not_called()
             assert agent == mock_build_rag.return_value
 

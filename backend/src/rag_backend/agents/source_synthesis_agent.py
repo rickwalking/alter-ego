@@ -14,7 +14,8 @@ from rag_backend.domain.constants.ai_agents import (
     PROMPT_SOURCE_SYNTHESIS,
 )
 from rag_backend.infrastructure.cache.ai_response_cache import get_ai_response_cache
-from rag_backend.infrastructure.monitoring_langfuse import get_langfuse_handler
+from rag_backend.infrastructure.llm.json_utils import extract_json
+from rag_backend.infrastructure.monitoring_langfuse import get_langfuse_runnable_config
 
 
 class SourceSynthesisAgent:
@@ -46,23 +47,25 @@ class SourceSynthesisAgent:
             return self._parse_response(cached)
 
         messages: list[BaseMessage] = [HumanMessage(content=prompt)]
-        response = await self.llm.ainvoke(messages, callbacks=get_langfuse_handler())
+        response = await self.llm.ainvoke(messages, get_langfuse_runnable_config())
         raw = cast(str, response.content)
         self._cache.set(prompt, self.model_id, raw)
         return self._parse_response(raw)
 
     def _parse_response(self, raw: str) -> dict[str, object]:
         try:
-            data = json.loads(raw)
-            key_points = data.get("key_points", [])
-            if not isinstance(key_points, list):
-                key_points = []
-            return {
-                "key_points": [str(point) for point in key_points],
-                "summary": str(data.get("summary", "")),
-            }
+            data = extract_json(raw)
         except json.JSONDecodeError as exc:
             raise ValueError(ERR_INVALID_JSON) from exc
+        if not isinstance(data, dict):
+            raise TypeError(ERR_INVALID_JSON)
+        key_points = data.get("key_points", [])
+        if not isinstance(key_points, list):
+            key_points = []
+        return {
+            "key_points": [str(point) for point in key_points],
+            "summary": str(data.get("summary", "")),
+        }
 
 
 __all__ = ["SourceSynthesisAgent"]

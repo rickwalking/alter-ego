@@ -10,13 +10,16 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from rag_backend.domain.constants.notifications import (
     EMAIL_SUBJECT_DEADLINE_REMINDER,
     EMAIL_SUBJECT_REVIEW_REQUEST,
+    EMAIL_SUBJECT_REVISION_CAP_ESCALATION,
     EMAIL_SUBJECT_SCHEDULED_PUBLISHED,
+    NOTIFICATION_BODY_REVISION_CAP_ESCALATION,
     NOTIFICATION_CHANNEL_EMAIL,
     NOTIFICATION_CHANNEL_IN_APP,
     NOTIFICATION_STATUS_READ,
     NOTIFICATION_STATUS_UNREAD,
     NOTIFICATION_TYPE_DEADLINE_REMINDER,
     NOTIFICATION_TYPE_REVIEW_REQUEST,
+    NOTIFICATION_TYPE_REVISION_CAP_ESCALATION,
     NOTIFICATION_TYPE_SCHEDULED_PUBLISHED,
 )
 from rag_backend.domain.constants.workflow_validation import (
@@ -72,6 +75,49 @@ class NotificationService:
             body,
         )
         return notification
+
+    async def create_revision_cap_escalation(
+        self,
+        db: AsyncSession,
+        *,
+        content_id: str,
+        content_type: str,
+        phase: str,
+        title: str,
+    ) -> list[NotificationModel]:
+        """Notify all admins when a workflow phase exceeds the revision cap."""
+        from rag_backend.domain.models import UserRole
+        from rag_backend.infrastructure.database.models.user import UserModel
+
+        result = await db.execute(
+            select(UserModel).where(UserModel.role == UserRole.ADMIN.value)
+        )
+        admins = list(result.scalars().all())
+        body = NOTIFICATION_BODY_REVISION_CAP_ESCALATION.format(
+            content_id=content_id,
+            phase=phase,
+        )
+        subject = EMAIL_SUBJECT_REVISION_CAP_ESCALATION.format(title=title)
+        notifications: list[NotificationModel] = []
+        for admin in admins:
+            notification = NotificationModel(
+                user_id=str(admin.id),
+                notification_type=NOTIFICATION_TYPE_REVISION_CAP_ESCALATION,
+                title=subject,
+                body=body,
+                status=NOTIFICATION_STATUS_UNREAD,
+                content_id=content_id,
+                content_type=content_type,
+                metadata_json={
+                    "phase": phase,
+                    "channels": [NOTIFICATION_CHANNEL_IN_APP],
+                },
+            )
+            db.add(notification)
+            notifications.append(notification)
+        if notifications:
+            await db.flush()
+        return notifications
 
     async def list_for_user(
         self,

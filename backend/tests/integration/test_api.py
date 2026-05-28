@@ -239,12 +239,27 @@ class TestAgentRoutingByMetadata:
 
         monkeypatch.setattr(
             "rag_backend.api.dependencies.agents.build_rag_agent",
-            lambda _db, _container: mock_agent,
+            lambda _db, _container, **kwargs: mock_agent,
         )
+
+        carousel_resp = await client.post(
+            "/api/carousels",
+            json={
+                "topic": "Security routing test",
+                "audience": "Devs",
+                "niche": "AI",
+                "theme": "ai_competition",
+            },
+        )
+        assert carousel_resp.status_code == 201
+        project_id = carousel_resp.json()["id"]
 
         create_resp = await client.post(
             "/api/conversations/",
-            json={"title": "Carousel Chat", "metadata": {"project_id": "abc-123"}},
+            json={
+                "title": "Carousel Chat",
+                "metadata": {"project_id": project_id},
+            },
         )
         assert create_resp.status_code == 201
         conv_id = create_resp.json()["id"]
@@ -255,6 +270,69 @@ class TestAgentRoutingByMetadata:
         )
         assert chat_resp.status_code == 200
         assert chat_resp.headers.get("X-Agent-Origin") == "rag-agent"
+
+    @pytest.mark.asyncio
+    async def test_anonymous_carousel_conversation_metadata_rejected(self, client):
+        """Given anonymous user, when creating carousel-bound conversation, then 403."""
+        unauth = client.__class__(
+            transport=client._transport,
+            base_url=client.base_url,
+        )
+        response = await unauth.post(
+            "/api/conversations/",
+            json={
+                "title": "Blocked",
+                "metadata": {"project_id": "00000000-0000-0000-0000-000000000001"},
+            },
+        )
+        assert response.status_code == 403
+
+    @pytest.mark.asyncio
+    async def test_unauthenticated_carousel_chat_rejected(self, client, monkeypatch):
+        """Given carousel-bound conversation, when unauthenticated POST /chat, then 403."""
+        from rag_backend.agents.rag_agent import RAGAgent
+
+        mock_agent = AsyncMock(spec=RAGAgent)
+        mock_agent.chat = AsyncMock()
+        monkeypatch.setattr(
+            "rag_backend.api.dependencies.agents.build_rag_agent",
+            lambda _db, _container, **kwargs: mock_agent,
+        )
+
+        carousel_resp = await client.post(
+            "/api/carousels",
+            json={
+                "topic": "Chat ACL test",
+                "audience": "Devs",
+                "niche": "AI",
+                "theme": "ai_competition",
+            },
+        )
+        assert carousel_resp.status_code == 201
+        project_id = carousel_resp.json()["id"]
+
+        create_resp = await client.post(
+            "/api/conversations/",
+            json={
+                "title": "Carousel Chat",
+                "metadata": {"project_id": project_id},
+            },
+        )
+        assert create_resp.status_code == 201
+        conv_id = create_resp.json()["id"]
+
+        unauth = client.__class__(
+            transport=client._transport,
+            base_url=client.base_url,
+        )
+        chat_resp = await unauth.post(
+            f"/api/conversations/{conv_id}/chat",
+            json={"content": "refine this carousel"},
+        )
+        assert chat_resp.status_code == 403
+        assert chat_resp.json()["detail"] == (
+            "Carousel conversations require an authenticated owner"
+        )
 
     @pytest.mark.asyncio
     async def test_normal_conversation_gets_alter_ego_origin(self, client, monkeypatch):

@@ -15,9 +15,10 @@ from rag_backend.api.dependencies import (
     get_optional_user,
     require_authenticated_user,
 )
-from rag_backend.api.dependencies.agents import (
-    CONVERSATION_METADATA_PROJECT_ID,
-    build_agent_for_conversation,
+from rag_backend.api.dependencies.agents import build_agent_for_conversation
+from rag_backend.api.dependencies.carousel_access import (
+    assert_carousel_conversation_chat_access,
+    validate_carousel_conversation_metadata,
 )
 from rag_backend.api.dependencies.resource_access import assert_conversation_access
 from rag_backend.api.middleware.rate_limiting import limiter
@@ -32,6 +33,9 @@ from rag_backend.api.schemas import (
     MessageSource,
 )
 from rag_backend.application.services.conversation_service import ConversationService
+from rag_backend.domain.constants.conversation import (
+    CONVERSATION_METADATA_PROJECT_ID,
+)
 from rag_backend.domain.models import User
 from rag_backend.infrastructure.auth import create_anonymous_token
 from rag_backend.infrastructure.config.settings import Settings, get_settings
@@ -107,6 +111,8 @@ async def create_conversation(
 
     service = _make_conversation_service(db)
 
+    await validate_carousel_conversation_metadata(db, request.metadata, user)
+
     conversation = await service.create_conversation(
         title=request.title,
         metadata=request.metadata,
@@ -148,6 +154,10 @@ async def list_conversations(
         int, Query(ge=1, le=100, description="Number of items to return")
     ] = 20,
     offset: Annotated[int, Query(ge=0, description="Number of items to skip")] = 0,
+    origin: Annotated[
+        str | None,
+        Query(description="Filter by agent origin (e.g. alter_ego)"),
+    ] = None,
     db: AsyncSession = Depends(get_session),
 ):
     """List conversations owned by the authenticated user."""
@@ -157,8 +167,9 @@ async def list_conversations(
         limit=limit,
         offset=offset,
         user_id=user.id,
+        origin=origin,
     )
-    total = await service.count_conversations_for_user(user.id)
+    total = await service.count_conversations_for_user(user.id, origin=origin)
 
     return {
         "items": conversations,
@@ -342,6 +353,11 @@ async def chat(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Conversation with id {conversation_id} not found",
         )
+
+    if user is not None and conversation.user_id is not None:
+        assert_conversation_access(conversation, user)
+
+    assert_carousel_conversation_chat_access(conversation, user)
 
     msg_repo = PostgresMessageRepository(db)
     msg_count = await msg_repo.count_by_conversation(conversation_id)

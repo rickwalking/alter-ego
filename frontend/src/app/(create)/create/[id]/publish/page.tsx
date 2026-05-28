@@ -1,15 +1,18 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Header } from "@/components/layout";
 import { MessageInput, MessageList } from "@/features/chat/components";
 import { useCarouselProject } from "@/features/create/hooks";
+import { useEditorialWorkflow } from "@/features/create/hooks/use-editorial-workflow";
 import { PublishPanel } from "@/features/publish/components";
 import { usePublishInstagram, usePublishChat } from "@/features/publish/hooks";
-import { ROUTE_PATHS } from "@/constants/api";
+import { ROUTE_PATHS, API_ENDPOINTS, HTTP_METHODS } from "@/constants/api";
+import { EDITORIAL_WORKFLOW_STATUS } from "@/constants/editorial-workflow";
+import { authenticatedFetch } from "@/lib/authenticated-fetch";
 
 type PublishResult = {
   status: "idle" | "success" | "error";
@@ -21,11 +24,40 @@ export default function PublishPage() {
   const projectId = params.id;
   const t = useTranslations("publish");
   const { data: project, isLoading } = useCarouselProject(projectId);
+  const workflow = useEditorialWorkflow(projectId);
   const publishInstagram = usePublishInstagram();
   const { messages, isStreaming, sendMessage } = usePublishChat(projectId);
   const [publishResult, setPublishResult] = useState<PublishResult>({
     status: "idle",
   });
+  const [sitePublishMessage, setSitePublishMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    void workflow.refreshState();
+  }, [workflow.refreshState]);
+
+  const canPublishToSite =
+    workflow.state?.workflow_status ===
+    EDITORIAL_WORKFLOW_STATUS.APPROVED_FOR_PUBLISH;
+
+  const handlePublishToSite = useCallback(async (): Promise<void> => {
+    setSitePublishMessage(null);
+    try {
+      const response = await authenticatedFetch(
+        API_ENDPOINTS.CAROUSEL_PUBLISH(projectId),
+        { method: HTTP_METHODS.POST },
+      );
+      if (!response.ok) {
+        throw new Error(await response.text());
+      }
+      setSitePublishMessage(t("sitePublished"));
+      await workflow.refreshState();
+    } catch (error) {
+      setSitePublishMessage(
+        error instanceof Error ? error.message : t("sitePublishFailed"),
+      );
+    }
+  }, [projectId, t, workflow.refreshState]);
 
   const handlePublishInstagram = useCallback(
     async (caption: string) => {
@@ -99,9 +131,30 @@ export default function PublishPage() {
         </div>
       </div>
       <main className="mx-auto max-w-6xl p-4">
+        {!canPublishToSite && (
+          <p className="mb-4 rounded-md border border-[var(--color-border)] p-3 text-[var(--color-text-muted)] text-sm">
+            {t("awaitingFinalApproval")}
+          </p>
+        )}
+        {canPublishToSite && (
+          <div className="mb-4 flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              className="rounded-md bg-[var(--color-primary)] px-4 py-2 text-sm text-white"
+              onClick={() => void handlePublishToSite()}
+            >
+              {t("publishToSite")}
+            </button>
+            {sitePublishMessage ? (
+              <span className="text-[var(--color-text-muted)] text-sm">
+                {sitePublishMessage}
+              </span>
+            ) : null}
+          </div>
+        )}
         <PublishPanel
           project={project}
-          onPublishInstagram={handlePublishInstagram}
+          onPublishInstagram={canPublishToSite ? handlePublishInstagram : undefined}
           isPublishingInstagram={publishInstagram.isPending}
           publishResult={publishResult}
         />

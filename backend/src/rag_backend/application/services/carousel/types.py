@@ -1,8 +1,7 @@
 """Shared types + helpers for the carousel pipeline.
 
-Lifted from carousel_agent.py during the LangGraph refactor so nodes and
-the legacy `CarouselAgent` class can share the same data shapes without
-circular imports. Pure-data / pure-function module — no side effects,
+Lifted during the LangGraph refactor so workflow nodes and refinement
+service share the same data shapes without circular imports. Pure-data / pure-function module — no side effects,
 no repository or LLM dependencies.
 """
 

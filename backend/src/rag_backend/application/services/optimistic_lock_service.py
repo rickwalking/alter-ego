@@ -54,6 +54,38 @@ class OptimisticLockService:
         if result.rowcount != 1:
             raise ValueError(ERR_VERSION_CONFLICT)
 
+    async def bump_carousel_version(
+        self,
+        db: AsyncSession,
+        *,
+        project_id: str,
+        expected_version: int | None,
+    ) -> int:
+        """Validate and increment carousel project lock_version."""
+        from sqlalchemy import update
+
+        from rag_backend.infrastructure.database.models.carousel import (
+            CarouselProjectModel,
+        )
+
+        project = await db.get(CarouselProjectModel, project_id)
+        if project is None:
+            raise ValueError(ERR_VERSION_CONFLICT)
+        current_version = int(project.lock_version or 1)
+        await self.check_version(current_version, expected_version)
+        new_version = current_version + 1
+        result = await db.execute(
+            update(CarouselProjectModel)
+            .where(
+                CarouselProjectModel.id == project_id,
+                CarouselProjectModel.lock_version == current_version,
+            )
+            .values(lock_version=new_version)
+        )
+        if result.rowcount != 1:
+            raise ValueError(ERR_VERSION_CONFLICT)
+        return new_version
+
     async def acquire_lock(
         self,
         db: AsyncSession,

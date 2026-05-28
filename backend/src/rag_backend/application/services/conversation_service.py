@@ -148,19 +148,25 @@ class ConversationService:
         limit: int = 100,
         offset: int = 0,
         user_id: UUID | None = None,
+        origin: str | None = None,
     ) -> list[Conversation]:
-        """List conversations, optionally filtered by owner."""
+        """List conversations, optionally filtered by owner and agent origin."""
         if user_id is not None:
             return await self._conversation_repository.get_by_user_id(
                 user_id=user_id,
                 limit=limit,
                 offset=offset,
+                origin=origin,
             )
         return await self._conversation_repository.get_all(limit=limit, offset=offset)
 
-    async def count_conversations_for_user(self, user_id: UUID) -> int:
+    async def count_conversations_for_user(
+        self, user_id: UUID, origin: str | None = None
+    ) -> int:
         """Count conversations owned by a user."""
-        return await self._conversation_repository.count_by_user_id(user_id)
+        return await self._conversation_repository.count_by_user_id(
+            user_id, origin=origin
+        )
 
     async def generate_title(
         self,

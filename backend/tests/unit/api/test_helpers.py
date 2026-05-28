@@ -7,7 +7,10 @@ from pathlib import Path
 
 import pytest
 
-from rag_backend.api.routes.carousels.helpers import _count_slide_images
+from rag_backend.api.routes.carousels.helpers import (
+    _count_slide_images,
+    _merge_design_tokens_with_disk,
+)
 
 
 @pytest.mark.unit
@@ -41,7 +44,7 @@ class TestCountSlideImages:
 
         assert _count_slide_images(output_dir) == 7
 
-    def test_prefers_images_over_fallback(self, tmp_path: Path):
+    def test_uses_max_count_across_directories(self, tmp_path: Path):
         output_dir = str(tmp_path)
         images_dir = tmp_path / "images"
         images_dir.mkdir()
@@ -52,10 +55,51 @@ class TestCountSlideImages:
         for i in range(1, 8):
             (pt_dir / f"slide_{i}.jpg").write_text("")
 
-        assert _count_slide_images(output_dir) == 4
+        assert _count_slide_images(output_dir) == 7
 
     def test_returns_0_for_none_output_dir(self):
         assert _count_slide_images(None) == 0
 
     def test_returns_0_for_empty_output_dir(self, tmp_path: Path):
         assert _count_slide_images(str(tmp_path)) == 0
+
+
+@pytest.mark.unit
+class TestMergeDesignTokensWithDisk:
+    def test_uses_rendered_slide_count_over_stale_tokens(self, tmp_path: Path):
+        output_dir = str(tmp_path)
+        pt_dir = tmp_path / "pt"
+        pt_dir.mkdir()
+        for i in range(1, 8):
+            (pt_dir / f"slide_{i}.jpg").write_text("")
+
+        from rag_backend.domain.models import CarouselProject, CarouselTheme
+
+        project = CarouselProject(
+            id="2958760d-89c4-4a68-b9be-36daeba6dba0",
+            topic="Test",
+            audience="Devs",
+            niche="Tech",
+            theme=CarouselTheme.CYBERSECURITY,
+            output_dir=output_dir,
+            design_tokens={
+                "colors": {},
+                "typography": {},
+                "images": {
+                    "hero": "/api/carousels/x/images/slide_1.jpg",
+                    "slides": [
+                        f"/api/carousels/x/images/slide_{i}.jpg" for i in range(1, 7)
+                    ],
+                    "rendered_slides_pt": [
+                        f"/api/carousels/x/slide-images/pt/slide_{i}.jpg"
+                        for i in range(1, 7)
+                    ],
+                },
+                "layout": {"progress_segments": 6},
+            },
+        )
+
+        merged = _merge_design_tokens_with_disk(project)
+        rendered = merged["images"]["rendered_slides_pt"]
+        assert isinstance(rendered, list)
+        assert len(rendered) == 7

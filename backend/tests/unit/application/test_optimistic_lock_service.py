@@ -17,6 +17,7 @@ from rag_backend.domain.constants.optimistic_locking import (
     LOCK_CONTENT_TYPE_BLOG_POST,
 )
 from rag_backend.infrastructure.database.models.blog_post import BlogPostModel
+from rag_backend.infrastructure.database.models.carousel import CarouselProjectModel
 
 
 @pytest.mark.asyncio
@@ -90,4 +91,49 @@ async def test_acquire_lock_blocks_other_user(db_session: AsyncSession) -> None:
             content_type=LOCK_CONTENT_TYPE_BLOG_POST,
             user_id="user-b",
             user_name="Bob",
+        )
+
+
+@pytest.mark.asyncio
+async def test_bump_carousel_version_increments_lock(db_session: AsyncSession) -> None:
+    """Gherkin: Optimistic lock conflict on concurrent resume."""
+    project = CarouselProjectModel(
+        topic="Carousel lock",
+        audience="Devs",
+        niche="AI",
+        lock_version=2,
+    )
+    db_session.add(project)
+    await db_session.flush()
+
+    service = OptimisticLockService()
+    new_version = await service.bump_carousel_version(
+        db_session,
+        project_id=str(project.id),
+        expected_version=2,
+    )
+    await db_session.refresh(project)
+    assert new_version == 3
+    assert project.lock_version == 3
+
+
+@pytest.mark.asyncio
+async def test_bump_carousel_version_raises_on_stale_version(
+    db_session: AsyncSession,
+) -> None:
+    project = CarouselProjectModel(
+        topic="Stale carousel lock",
+        audience="Devs",
+        niche="AI",
+        lock_version=3,
+    )
+    db_session.add(project)
+    await db_session.flush()
+
+    service = OptimisticLockService()
+    with pytest.raises(ValueError, match=ERR_VERSION_CONFLICT):
+        await service.bump_carousel_version(
+            db_session,
+            project_id=str(project.id),
+            expected_version=2,
         )

@@ -6,6 +6,11 @@ from uuid import uuid4
 import pytest
 from fastapi import HTTPException
 
+from rag_backend.api.dependencies.carousel_access import (
+    get_carousel_project_for_domain_user,
+    get_carousel_project_for_user,
+    get_carousel_project_for_workflow_user,
+)
 from rag_backend.api.dependencies.resource_access import (
     assert_content_access,
     assert_content_owner_or_admin,
@@ -13,9 +18,9 @@ from rag_backend.api.dependencies.resource_access import (
     assign_content_reviewer,
     get_blog_post_for_read,
     get_blog_post_for_user,
-    get_carousel_project_for_user,
     guard_blog_post_update_fields,
 )
+from rag_backend.domain.constants.access_control import ERR_CAROUSEL_TOOL_ACCESS_DENIED
 from rag_backend.domain.constants.workflow_validation import (
     CONTENT_TYPE_BLOG_POST,
     CONTENT_TYPE_CAROUSEL,
@@ -119,6 +124,50 @@ class TestGetCarouselProjectForUser:
 
 
 @pytest.mark.asyncio
+class TestGetCarouselProjectForWorkflowUser:
+    async def test_allows_assigned_reviewer(self) -> None:
+        project_id = uuid4()
+        db = AsyncMock()
+        project = MagicMock(owner_id="owner-1", assigned_reviewer_id="reviewer-1")
+        db.get = AsyncMock(return_value=project)
+
+        result = await get_carousel_project_for_workflow_user(
+            db, project_id, _user(UserRole.EDITOR, "reviewer-1")
+        )
+
+        assert result is project
+
+    async def test_denies_unrelated_editor(self) -> None:
+        db = AsyncMock()
+        project = MagicMock(owner_id="owner-1", assigned_reviewer_id="reviewer-1")
+        db.get = AsyncMock(return_value=project)
+
+        with pytest.raises(HTTPException) as exc_info:
+            await get_carousel_project_for_workflow_user(
+                db, uuid4(), _user(UserRole.EDITOR, "other")
+            )
+
+        assert exc_info.value.status_code == 403
+        assert exc_info.value.detail == ERR_CAROUSEL_TOOL_ACCESS_DENIED
+
+
+@pytest.mark.asyncio
+class TestGetCarouselProjectForDomainUser:
+    async def test_raises_not_found_when_missing(self) -> None:
+        db = AsyncMock()
+        db.get = AsyncMock(return_value=None)
+
+        with pytest.raises(HTTPException) as exc_info:
+            await get_carousel_project_for_domain_user(
+                db,
+                uuid4(),
+                MagicMock(id="user-1", is_admin=lambda: False),
+            )
+
+        assert exc_info.value.status_code == 404
+
+
+@pytest.mark.asyncio
 class TestAssertContentAccess:
     async def test_allows_assigned_reviewer(self) -> None:
         db = AsyncMock()
@@ -140,6 +189,15 @@ class TestAssertContentAccess:
             )
 
         assert exc_info.value.status_code == 403
+
+    async def test_allows_assigned_carousel_reviewer(self) -> None:
+        db = AsyncMock()
+        project = MagicMock(owner_id="owner-1", assigned_reviewer_id="reviewer-1")
+        db.get = AsyncMock(return_value=project)
+
+        await assert_content_access(
+            db, "project-1", CONTENT_TYPE_CAROUSEL, _user(UserRole.EDITOR, "reviewer-1")
+        )
 
 
 @pytest.mark.asyncio

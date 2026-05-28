@@ -37,12 +37,13 @@ def init_langfuse(
     os.environ.setdefault("LANGFUSE_SECRET_KEY", secret_key)
     os.environ.setdefault("LANGFUSE_PUBLIC_KEY", public_key)
     os.environ.setdefault("LANGFUSE_HOST", host)
+    os.environ.setdefault("LANGFUSE_BASE_URL", host)
 
     # Initialize Langfuse client for manual tracing
     _langfuse_client = Langfuse(
         secret_key=secret_key,
         public_key=public_key,
-        host=host,
+        base_url=host,
     )
 
     # Initialize LangChain callback handler

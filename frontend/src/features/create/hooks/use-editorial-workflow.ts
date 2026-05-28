@@ -1,11 +1,23 @@
 /** Editorial carousel workflow hook with SSE updates. */
 
 import { useCallback, useEffect, useState } from "react";
-import { API_ENDPOINTS, HTTP_METHODS } from "@/constants/api";
-import { WORKFLOW_PHASE_STATUS } from "@/constants/workflow";
+import { useTranslations } from "next-intl";
+import { API_ENDPOINTS, HTTP_METHODS, HTTP_STATUS } from "@/constants/api";
 import { EDITORIAL_REVIEW_ACTIONS } from "@/constants/blog-ai";
+import {
+  EDITORIAL_WORKFLOW_TRANSPORT_MODE,
+  type EditorialWorkflowTransportMode,
+} from "@/constants/editorial-workflow";
+import { WORKFLOW_PHASE_STATUS } from "@/constants/workflow";
 import type { EditorialWorkflowState } from "@/features/blog/types-ai";
 import { authenticatedFetch } from "@/lib/authenticated-fetch";
+import { resolveClientApiUrl } from "@/lib/client-api-url";
+import { appendUniquePhase, readApiError } from "./use-editorial-workflow-utils";
+import {
+  useEditorialWorkflowResume,
+  type EditorialReviseOptions,
+} from "./use-editorial-workflow-resume";
+import { useEditorialWorkflowSse } from "./use-editorial-workflow-sse";
 
 interface StartWorkflowInput {
   topic: string;
@@ -15,74 +27,76 @@ interface StartWorkflowInput {
   personaId?: string;
 }
 
+export type { EditorialReviseOptions };
+
 export function useEditorialWorkflow(projectId: string) {
+  const t = useTranslations("editorialWorkflow.errors");
   const [state, setState] = useState<EditorialWorkflowState | null>(null);
   const [phaseEvents, setPhaseEvents] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [transportMode, setTransportMode] = useState<EditorialWorkflowTransportMode>(
+    EDITORIAL_WORKFLOW_TRANSPORT_MODE.SSE,
+  );
 
-  useEffect(() => {
-    if (typeof EventSource === "undefined") {
-      return;
-    }
-
-    const source = new EventSource(
-      API_ENDPOINTS.CAROUSEL_WORKFLOW_STREAM(projectId),
-      {
-        withCredentials: true,
-      },
-    );
-
-    const handlePhaseChange = (event: MessageEvent<string>): void => {
-      try {
-        const payload = JSON.parse(event.data) as {
-          phase?: string;
-          phase_status?: string;
-        };
-        if (payload.phase) {
-          setPhaseEvents((prev) => [...prev, payload.phase as string]);
-        }
-        if (payload.phase || payload.phase_status) {
-          setState((prev) => ({
-            project_id: projectId,
-            current_phase: payload.phase ?? prev?.current_phase ?? "",
-            phase_status: payload.phase_status ?? prev?.phase_status ?? "",
-            research_findings: prev?.research_findings ?? [],
-            outline: prev?.outline ?? [],
-            slide_drafts: prev?.slide_drafts ?? [],
-            status: prev?.status ?? "draft",
-          }));
-        }
-      } catch {
-        // Ignore malformed SSE payloads.
-      }
-    };
-
-    source.addEventListener("project.phase.changed", handlePhaseChange);
-    return () => {
-      source.removeEventListener("project.phase.changed", handlePhaseChange);
-      source.close();
-    };
-  }, [projectId]);
-
-  const refreshState = useCallback(async (): Promise<void> => {
+  const refreshState = useCallback(async (): Promise<EditorialWorkflowState | null> => {
     try {
       const response = await authenticatedFetch(
-        API_ENDPOINTS.CAROUSEL_WORKFLOW_STATE(projectId),
+        resolveClientApiUrl(API_ENDPOINTS.CAROUSEL_WORKFLOW_STATE(projectId)),
       );
+      if (response.status === HTTP_STATUS.NOT_FOUND) {
+        return null;
+      }
       if (!response.ok) {
-        return;
+        return null;
       }
       const workflowState = (await response.json()) as EditorialWorkflowState;
       setState(workflowState);
+      if (workflowState.current_phase) {
+        setPhaseEvents((prev) =>
+          appendUniquePhase(prev, workflowState.current_phase),
+        );
+      }
+      return workflowState;
     } catch {
-      // Workflow may not exist yet for new projects.
+      return null;
     }
   }, [projectId]);
+
+  const {
+    enterPollingFallback,
+    stopPollingFallback,
+    transportModeRef,
+    workflowStateRef,
+  } = useEditorialWorkflowSse({
+    projectId,
+    state,
+    transportMode,
+    setState,
+    setPhaseEvents,
+    setTransportMode,
+    setError,
+    refreshState,
+  });
 
   useEffect(() => {
     void refreshState();
   }, [refreshState]);
+
+  const { resume } = useEditorialWorkflowResume({
+    projectId,
+    lockVersion: state?.lock_version,
+    translateError: t,
+    workflowStateRef,
+    transportModeRef,
+    refreshState,
+    setState,
+    setPhaseEvents,
+    setLoading,
+    setError,
+    enterPollingFallback,
+    stopPollingFallback,
+  });
 
   const start = useCallback(
     async (input: StartWorkflowInput): Promise<EditorialWorkflowState> => {
@@ -103,54 +117,28 @@ export function useEditorialWorkflow(projectId: string) {
           },
         );
         if (!response.ok) {
-          throw new Error("Failed to start editorial workflow");
+          throw new Error(await readApiError(response, t("startFailed")));
         }
         const workflowState = (await response.json()) as EditorialWorkflowState;
         setState(workflowState);
+        workflowStateRef.current = workflowState;
+        if (workflowState.current_phase) {
+          setPhaseEvents((prev) =>
+            appendUniquePhase(prev, workflowState.current_phase),
+          );
+        }
         return workflowState;
       } catch (err) {
         const message =
-          err instanceof Error ? err.message : "Workflow start failed";
+          err instanceof Error ? err.message : t("startUnknown");
         setError(message);
+        await refreshState();
         throw err;
       } finally {
         setLoading(false);
       }
     },
-    [projectId],
-  );
-
-  const resume = useCallback(
-    async (
-      action: string,
-      feedback?: string,
-    ): Promise<EditorialWorkflowState> => {
-      setLoading(true);
-      setError(null);
-      try {
-        const response = await authenticatedFetch(
-          API_ENDPOINTS.CAROUSEL_WORKFLOW_RESUME(projectId),
-          {
-            method: HTTP_METHODS.POST,
-            body: JSON.stringify({ action, feedback }),
-          },
-        );
-        if (!response.ok) {
-          throw new Error("Failed to resume editorial workflow");
-        }
-        const workflowState = (await response.json()) as EditorialWorkflowState;
-        setState(workflowState);
-        return workflowState;
-      } catch (err) {
-        const message =
-          err instanceof Error ? err.message : "Workflow resume failed";
-        setError(message);
-        throw err;
-      } finally {
-        setLoading(false);
-      }
-    },
-    [projectId],
+    [projectId, refreshState, t, workflowStateRef],
   );
 
   return {
@@ -158,13 +146,15 @@ export function useEditorialWorkflow(projectId: string) {
     phaseEvents,
     loading,
     error,
+    transportMode,
     start,
     resume,
     refreshState,
     approve: () => resume(EDITORIAL_REVIEW_ACTIONS.APPROVE),
-    reject: (feedback: string) =>
-      resume(EDITORIAL_REVIEW_ACTIONS.REJECT, feedback),
+    revise: (feedback: string, options?: EditorialReviseOptions) =>
+      resume(EDITORIAL_REVIEW_ACTIONS.REVISE, feedback, options),
     awaitingHumanReview:
       state?.phase_status === WORKFLOW_PHASE_STATUS.AWAITING_HUMAN,
+    hasActiveWorkflow: Boolean(state?.current_phase),
   };
 }

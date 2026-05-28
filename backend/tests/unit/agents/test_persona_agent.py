@@ -83,13 +83,13 @@ class TestPersonaAgent:
         handler = MagicMock()
 
         with patch(
-            "rag_backend.agents.persona_agent.get_langfuse_handler",
-            return_value=[handler],
-        ) as mock_handler:
+            "rag_backend.agents.persona_agent.get_langfuse_runnable_config",
+            return_value={"callbacks": [handler]},
+        ) as mock_config:
             await agent.enforce("original content")
 
-        mock_handler.assert_called_once()
-        assert mock_llm.ainvoke.call_args.kwargs["callbacks"] == [handler]
+        mock_config.assert_called_once()
+        assert mock_llm.ainvoke.call_args.args[1] == {"callbacks": [handler]}
 
     async def test_enforce_includes_context(
         self, agent: PersonaAgent, mock_llm: AsyncMock
@@ -149,13 +149,13 @@ class TestPersonaAgent:
         handler = MagicMock()
 
         with patch(
-            "rag_backend.agents.persona_agent.get_langfuse_handler",
-            return_value=[handler],
-        ) as mock_handler:
+            "rag_backend.agents.persona_agent.get_langfuse_runnable_config",
+            return_value={"callbacks": [handler]},
+        ) as mock_config:
             await agent.evaluate_match("content")
 
-        mock_handler.assert_called_once()
-        assert mock_llm.ainvoke.call_args.kwargs["callbacks"] == [handler]
+        mock_config.assert_called_once()
+        assert mock_llm.ainvoke.call_args.args[1] == {"callbacks": [handler]}
 
     async def test_evaluate_match_handles_invalid_json(
         self, agent: PersonaAgent, mock_llm: AsyncMock

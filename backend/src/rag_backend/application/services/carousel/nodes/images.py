@@ -1,19 +1,13 @@
 """Phase 5: parallel image generation.
 
-Exposes two entry points:
+Exposes entry points used by the editorial workflow image phase and tests:
 
-- `run_images`: a single-node implementation used by the legacy
-  `CarouselAgent._phase5_images` wrapper and by tests that drive image
-  gen directly.
+- `run_images`: batch image generation for a slide list.
 - `run_image_one` + `filter_image_slides`: primitives for LangGraph's
-  `Send` fan-out. Each slide becomes its own graph task, which gives
-  per-item checkpointing — if one slide fails partway through, the
-  next resume only re-runs that slide, not the whole batch.
+  `Send` fan-out with per-slide checkpointing.
 
-Both paths share the same UI contract: the frontend polls `/status`
-and reads `project.phase_progress.slides`, a list of per-slide status
-dicts. The fan-out path maintains that contract by updating a shared
-lock-protected list captured in the build_graph closure.
+Both paths share the UI contract: progress is persisted on the project row
+(`phase_progress.slides`) for the create workspace SSE stream.
 """
 
 from __future__ import annotations
@@ -21,6 +15,9 @@ from __future__ import annotations
 import asyncio
 from pathlib import Path
 
+from rag_backend.application.services.carousel.editorial_workflow_support import (
+    publish_workflow_progress,
+)
 from rag_backend.application.services.carousel.theme_resolver import resolve_theme
 from rag_backend.application.services.carousel.types import (
     SlideData,
@@ -34,10 +31,12 @@ from rag_backend.application.services.image_provider_registry import (
     ImageProviderRegistry,
 )
 from rag_backend.domain.constants import (
+    CAROUSEL_STATUS_GENERATING_IMAGES,
     IMAGE_MODEL_OPENAI,
     SLIDE_TYPE_CONTENT,
     SLIDE_TYPE_INTRO,
 )
+from rag_backend.domain.constants.carousel_workflow import PHASE_IMAGES
 from rag_backend.domain.models import CarouselProject
 from rag_backend.domain.protocols import CarouselRepository
 
@@ -88,6 +87,8 @@ async def run_images(
     total = len(slides_with_images)
     style_label = style_display_name(project.image_model, project.image_style)
     slide_status = build_initial_status(slides_with_images, style_label)
+    db_slides = await repo.get_slides_by_project(project.id)
+    slides_by_number = {slide.slide_number: slide for slide in db_slides}
 
     done_count = 0
     progress_lock = asyncio.Lock()
@@ -97,13 +98,18 @@ async def run_images(
         nonlocal mutable_project
         async with progress_lock:
             mutable_project.phase_progress = {
-                "phase": mutable_project.status.value,
+                "phase": CAROUSEL_STATUS_GENERATING_IMAGES,
                 "label": f"Generating {total} slide images in parallel — {style_label}",
                 "current": done_count,
                 "total": total,
                 "slides": [dict(s) for s in slide_status],
             }
             mutable_project = await repo.update_project(mutable_project)
+            await publish_workflow_progress(
+                str(mutable_project.id),
+                PHASE_IMAGES,
+                dict(mutable_project.phase_progress or {}),
+            )
 
     async def _run_one(index: int, slide: SlideData) -> None:
         nonlocal done_count
@@ -125,6 +131,10 @@ async def run_images(
             raise
         slide_status[index]["status"] = STATUS_DONE
         done_count += 1
+        persisted_slide = slides_by_number.get(slide.slide_number)
+        if persisted_slide is not None:
+            persisted_slide.image_path = image_path
+            await repo.update_slide(persisted_slide)
         await _publish_progress()
 
     await _publish_progress()

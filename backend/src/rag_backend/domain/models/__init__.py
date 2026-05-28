@@ -19,6 +19,7 @@ from rag_backend.domain.models.documents import (
     DocumentChunk,
     DocumentScope,
     DocumentStatus,
+    HybridSearchParams,
     RetrievalQuery,
     SearchResult,
 )
@@ -57,6 +58,7 @@ __all__ = [
     "DocumentStatus",
     "EditorialComment",
     "EvaluationMethod",
+    "HybridSearchParams",
     "Message",
     "MessageRole",
     "PersonaProfile",

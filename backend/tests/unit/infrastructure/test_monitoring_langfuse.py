@@ -172,6 +172,25 @@ class TestTraceFunctions:
 
         assert result is None
 
+    @patch("rag_backend.infrastructure.monitoring_langfuse.get_langfuse_client")
+    def test_create_workflow_trace_with_v3_client(
+        self, mock_get_client: MagicMock
+    ) -> None:
+        """Given Langfuse v3 client, create a workflow span via start_span()."""
+        mock_span = MagicMock()
+        mock_client = MagicMock()
+        mock_client.start_span.return_value = mock_span
+        mock_get_client.return_value = mock_client
+
+        result = create_workflow_trace(
+            project_id=MagicMock(),
+            user_id="user123",
+            content_type="carousel",
+        )
+
+        assert result is mock_span
+        mock_client.start_span.assert_called_once()
+
     @patch("rag_backend.infrastructure.langfuse_client.get_langfuse_client")
     def test_add_quality_score_with_none_trace(
         self, mock_get_client: MagicMock

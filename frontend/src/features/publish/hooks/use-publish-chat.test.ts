@@ -1421,7 +1421,7 @@ describe("usePublishChat (SSE comprehensive)", () => {
   it("does not treat unknown SSE events as terminal completion", async () => {
     mockStreamSseEvents.mockImplementation(({ onEvent }) => {
       onEvent({ event: "token", data: { content: "partial" } });
-      onEvent({ event: "heartbeat", data: {} });
+      onEvent({ event: undefined, data: {} });
       return Promise.resolve();
     });
 
@@ -1441,7 +1441,7 @@ describe("usePublishChat (SSE comprehensive)", () => {
   it("does not treat unknown SSE events as terminal errors", async () => {
     mockStreamSseEvents.mockImplementation(({ onEvent }) => {
       onEvent({ event: "token", data: { content: "partial" } });
-      onEvent({ event: "heartbeat", data: {} });
+      onEvent({ event: undefined, data: {} });
       return Promise.resolve();
     });
 

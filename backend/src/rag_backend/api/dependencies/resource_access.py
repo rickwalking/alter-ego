@@ -34,9 +34,6 @@ from rag_backend.domain.models import Conversation, Document, User
 from rag_backend.domain.models.user import UserRole
 from rag_backend.infrastructure.database.models import BlogPostModel, UserModel
 from rag_backend.infrastructure.database.models.carousel import CarouselProjectModel
-from rag_backend.infrastructure.database.models.source_comment import ContentSourceModel
-
-ERR_SOURCE_NOT_FOUND = "Source not found: {source_id}"
 
 
 def _user_is_admin(user: UserModel) -> bool:
@@ -251,6 +248,10 @@ async def assert_content_access(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=ERR_CAROUSEL_NOT_FOUND,
             )
+        if _user_is_admin(user):
+            return
+        if _user_is_assigned_reviewer(project.assigned_reviewer_id, user):
+            return
         assert_owner_or_admin(project.owner_id, user)
         return
     raise HTTPException(
@@ -305,55 +306,6 @@ async def assign_content_reviewer(
     await db.flush()
 
 
-async def get_carousel_project_for_user(
-    db: AsyncSession,
-    project_id: UUID,
-    user: UserModel,
-) -> CarouselProjectModel:
-    """Load a carousel project and verify the caller may manage it."""
-    project = await db.get(CarouselProjectModel, str(project_id))
-    if project is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=ERR_CAROUSEL_NOT_FOUND,
-        )
-    assert_owner_or_admin(project.owner_id, user)
-    return project
-
-
-async def get_carousel_project_for_domain_user(
-    db: AsyncSession,
-    project_id: UUID,
-    user: User,
-) -> CarouselProjectModel:
-    """Load a carousel project and verify ownership for domain User."""
-    project = await db.get(CarouselProjectModel, str(project_id))
-    if project is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=ERR_CAROUSEL_NOT_FOUND,
-        )
-    assert_domain_owner_or_admin(project.owner_id, user)
-    return project
-
-
-async def get_project_source_for_user(
-    db: AsyncSession,
-    project_id: UUID,
-    source_id: UUID,
-    user: UserModel,
-) -> ContentSourceModel:
-    """Load a project source after verifying carousel ownership."""
-    await get_carousel_project_for_user(db, project_id, user)
-    source = await db.get(ContentSourceModel, str(source_id))
-    if source is None or source.project_id != str(project_id):
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=ERR_SOURCE_NOT_FOUND.format(source_id=source_id),
-        )
-    return source
-
-
 __all__ = [
     "assert_audit_aggregate_access",
     "assert_blog_post_reviewer_or_admin",
@@ -368,9 +320,6 @@ __all__ = [
     "get_blog_post_by_id",
     "get_blog_post_for_read",
     "get_blog_post_for_user",
-    "get_carousel_project_for_domain_user",
-    "get_carousel_project_for_user",
-    "get_project_source_for_user",
     "guard_blog_post_update_fields",
     "validate_reviewer_user",
 ]

@@ -9,10 +9,10 @@ from rag_backend.application.services.carousel_template.design import (
     generate_design_tokens,
 )
 from rag_backend.domain.models import CarouselProject, CarouselStatus, User
-from rag_backend.domain.protocols import CarouselAgent, CarouselRepository
+from rag_backend.domain.protocols import CarouselRefinementService, CarouselRepository
 from rag_backend.infrastructure.database.config import get_session
 
-from .deps import get_carousel_agent, get_carousel_repo
+from .deps import get_carousel_refinement, get_carousel_repo
 from .helpers import _has_rendered_slides
 
 router = APIRouter(tags=["carousels-admin"])
@@ -91,7 +91,7 @@ async def refresh_design_tokens(
 async def render_missing_slides(
     _admin: Annotated[User, Depends(require_admin)],
     repo: Annotated[CarouselRepository, Depends(get_carousel_repo)],
-    agent: Annotated[CarouselAgent, Depends(get_carousel_agent)],
+    refinement: Annotated[CarouselRefinementService, Depends(get_carousel_refinement)],
 ) -> RenderSlidesResponse:
     projects = await repo.get_all_projects(
         status=CarouselStatus.COMPLETED, limit=1000, offset=0
@@ -107,7 +107,7 @@ async def render_missing_slides(
             skipped += 1
             continue
         try:
-            await agent.re_render_slides(project.id)
+            await refinement.re_render_slides(project.id)
             updated += 1
         except Exception as exc:
             failed += 1

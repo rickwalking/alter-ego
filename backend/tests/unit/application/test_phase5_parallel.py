@@ -8,7 +8,8 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from rag_backend.application.services.carousel_agent import CarouselAgent, SlideData
+from rag_backend.application.services.carousel.nodes.images import run_images
+from rag_backend.application.services.carousel.types import SlideData
 from rag_backend.application.services.image_provider_registry import (
     ImageProviderRegistry,
 )
@@ -35,23 +36,17 @@ def _slide_data(n: int) -> SlideData:
     )
 
 
-def _agent_with_image_service(
+def _registry_with_image_service(
     image_service: AsyncMock,
-) -> tuple[CarouselAgent, AsyncMock]:
+) -> tuple[ImageProviderRegistry, AsyncMock]:
     repo = AsyncMock()
     repo.update_project = AsyncMock(side_effect=lambda p: p)
+    repo.get_slides_by_project = AsyncMock(return_value=[])
+    repo.update_slide = AsyncMock(side_effect=lambda slide: slide)
     registry = ImageProviderRegistry(
         gemini_service=image_service, openai_service=image_service
     )
-    agent = CarouselAgent(
-        repository=repo,
-        llm_service=AsyncMock(),
-        research_tool=AsyncMock(),
-        image_registry=registry,
-        export_service=AsyncMock(),
-        output_base_dir="/tmp",
-    )
-    return agent, repo
+    return registry, repo
 
 
 @pytest.mark.unit
@@ -78,13 +73,18 @@ class TestParallelImageGeneration:
 
         image_service = AsyncMock()
         image_service.generate_image = AsyncMock(side_effect=slow_generate)
-        agent, _ = _agent_with_image_service(image_service)
+        registry, repo = _registry_with_image_service(image_service)
 
         slides = [_slide_data(i) for i in range(1, 5)]
-        await agent._phase5_images(_project(tmp_path), slides, tmp_path)
+        await run_images(
+            _project(tmp_path),
+            slides,
+            tmp_path,
+            repo=repo,
+            image_registry=registry,
+        )
 
         assert call_count == 4
-        # 4 concurrent calls, not 1 at a time.
         assert max_concurrent == 4
 
     async def test_publishes_per_slide_status_lifecycle(self, tmp_path: Path) -> None:
@@ -96,7 +96,7 @@ class TestParallelImageGeneration:
 
         image_service = AsyncMock()
         image_service.generate_image = AsyncMock(side_effect=capture)
-        agent, repo = _agent_with_image_service(image_service)
+        registry, repo = _registry_with_image_service(image_service)
 
         async def _track(project: CarouselProject) -> CarouselProject:
             if project.phase_progress and "slides" in project.phase_progress:
@@ -109,12 +109,52 @@ class TestParallelImageGeneration:
 
         slides = [_slide_data(i) for i in range(1, 3)]
         project = _project(tmp_path)
-        await agent._phase5_images(project, slides, tmp_path)
+        await run_images(
+            project,
+            slides,
+            tmp_path,
+            repo=repo,
+            image_registry=registry,
+        )
 
-        # First snapshot = all pending, last = all done.
         assert published_states[0] == ["pending", "pending"]
         assert published_states[-1] == ["done", "done"]
         assert any("in_flight" in state for state in published_states)
+
+    async def test_persists_image_path_on_slide_rows(self, tmp_path: Path) -> None:
+        """Successful generation writes image_path back to slide rows."""
+        from uuid import uuid4
+
+        from rag_backend.domain.models import CarouselSlide
+
+        image_service = AsyncMock()
+        image_service.generate_image = AsyncMock(
+            side_effect=lambda prompt, output_path: output_path
+        )
+        registry, repo = _registry_with_image_service(image_service)
+        slide_entity = CarouselSlide(
+            id=uuid4(),
+            project_id=_project(tmp_path).id,
+            slide_number=1,
+            slide_type="intro",
+            heading="H1",
+            body="B1",
+            image_prompt="Scene",
+        )
+        repo.get_slides_by_project = AsyncMock(return_value=[slide_entity])
+
+        slides = [_slide_data(1)]
+        await run_images(
+            _project(tmp_path),
+            slides,
+            tmp_path,
+            repo=repo,
+            image_registry=registry,
+        )
+
+        repo.update_slide.assert_awaited()
+        updated = repo.update_slide.await_args.args[0]
+        assert updated.image_path.endswith("slide_1.jpg")
 
     async def test_failure_marks_slide_failed_and_propagates(
         self, tmp_path: Path
@@ -129,7 +169,7 @@ class TestParallelImageGeneration:
 
         image_service = AsyncMock()
         image_service.generate_image = AsyncMock(side_effect=flaky)
-        agent, repo = _agent_with_image_service(image_service)
+        registry, repo = _registry_with_image_service(image_service)
 
         async def _track(project: CarouselProject) -> CarouselProject:
             if project.phase_progress and "slides" in project.phase_progress:
@@ -144,16 +184,21 @@ class TestParallelImageGeneration:
         project = _project(tmp_path)
 
         with pytest.raises(RuntimeError, match="flaked"):
-            await agent._phase5_images(project, slides, tmp_path)
+            await run_images(
+                project,
+                slides,
+                tmp_path,
+                repo=repo,
+                image_registry=registry,
+            )
 
-        # The failed slide's slot is marked "failed" before the exception bubbles.
         assert any("failed" in state for state in captured_states)
 
     async def test_slide_scene_snippet_populated(self, tmp_path: Path) -> None:
         """Each slide entry carries a short scene snippet for the UI."""
         image_service = AsyncMock()
         image_service.generate_image = AsyncMock(return_value="/tmp/x.jpg")
-        agent, repo = _agent_with_image_service(image_service)
+        registry, repo = _registry_with_image_service(image_service)
 
         slides = [
             SlideData(
@@ -165,7 +210,13 @@ class TestParallelImageGeneration:
             ),
         ]
         project = _project(tmp_path)
-        await agent._phase5_images(project, slides, tmp_path)
+        await run_images(
+            project,
+            slides,
+            tmp_path,
+            repo=repo,
+            image_registry=registry,
+        )
 
         assert project.phase_progress is not None
         slide_entries = project.phase_progress.get("slides")

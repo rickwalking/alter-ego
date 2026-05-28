@@ -694,6 +694,8 @@ def build_graph(deps, *, checkpointer=None):
 
 ### 9.1 Adopt Skill-Based Prompt Composition
 
+> **Updated (ADR-007):** Carousel generation is consolidated under the editorial workflow orchestrator (`CarouselEditorialOrchestrator`). The legacy `agents/carousel_orchestrator/` package remains only for refinement tools (copy/design/image) until CP-024 completes full removal. Runtime prompts for editorial phases live under `agents/prompts/carousel/`; canonical human-readable standards live under `skills/carousel-pipeline/_shared/` and `phases/`.
+
 **Current:** Single monolithic `SYSTEM_PROMPT` string.
 
 **Target:** Decompose into `AGENTS.md` + skill files. The project already has a Deep Agents skill at `skills/carousel-pipeline/SKILL.md` — this stays as the canonical location.

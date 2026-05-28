@@ -29,6 +29,8 @@ const chatMocks = vi.hoisted(() => ({
 
 const sseMocks = vi.hoisted(() => ({
   isStreaming: false,
+  sendMessage: vi.fn(),
+  startNewChat: vi.fn(),
 }));
 
 vi.mock("../hooks/use-sse-chat", () => ({
@@ -37,8 +39,8 @@ vi.mock("../hooks/use-sse-chat", () => ({
     messages: [],
     isStreaming: sseMocks.isStreaming,
     error: null,
-    sendMessage: vi.fn(),
-    startNewChat: vi.fn(),
+    sendMessage: sseMocks.sendMessage,
+    startNewChat: sseMocks.startNewChat,
   })),
 }));
 
@@ -177,6 +179,9 @@ describe("ChatInterface Component", () => {
       content: "Assistant response",
       sources: [],
     });
+    sseMocks.sendMessage.mockReset();
+    sseMocks.sendMessage.mockResolvedValue(undefined);
+    sseMocks.startNewChat.mockReset();
     sseMocks.isStreaming = false;
     vi.useFakeTimers({ shouldAdvanceTime: true });
   });
@@ -239,7 +244,30 @@ describe("ChatInterface Component", () => {
         await user.type(input, "Start fresh");
         await user.click(screen.getByTestId("send-button"));
 
+        expect(chatMocks.createConversation).toHaveBeenCalledTimes(1);
+        expect(sseMocks.sendMessage).toHaveBeenCalledWith(
+          "Start fresh",
+          "new-id-123",
+        );
         expect(input).toHaveValue("");
+      });
+    });
+
+    describe("When there are no conversations", () => {
+      it("Then the first message creates a conversation without clicking New Chat", async () => {
+        chatMocks.conversations = [];
+        const user = userEvent.setup();
+        render(<ChatInterface />);
+
+        const input = screen.getByTestId("message-text-input");
+        await user.type(input, "Hello there");
+        await user.click(screen.getByTestId("send-button"));
+
+        expect(chatMocks.createConversation).toHaveBeenCalledTimes(1);
+        expect(sseMocks.sendMessage).toHaveBeenCalledWith(
+          "Hello there",
+          "new-id-123",
+        );
       });
     });
 

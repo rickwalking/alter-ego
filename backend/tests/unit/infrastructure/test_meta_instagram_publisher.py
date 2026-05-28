@@ -10,6 +10,12 @@ from typing import Any
 import httpx
 import pytest
 
+from rag_backend.domain.constants.instagram_publish import (
+    ERR_INSTAGRAM_API_REQUEST_FAILED,
+    ERR_INSTAGRAM_CONTAINER_FAILED,
+    ERR_INSTAGRAM_CREDENTIALS_NOT_CONFIGURED,
+    ERR_INSTAGRAM_IMAGE_COUNT_INVALID,
+)
 from rag_backend.infrastructure.external.meta_instagram_publisher import (
     MetaInstagramPublisher,
 )
@@ -93,7 +99,7 @@ class TestMetaInstagramPublisherConfiguration:
             ["https://example.com/a.jpg", "https://example.com/b.jpg"],
         )
         assert result.status == "failed"
-        assert "META_IG_ACCESS_TOKEN" in (result.error_message or "")
+        assert result.error_message == ERR_INSTAGRAM_CREDENTIALS_NOT_CONFIGURED
 
     async def test_fewer_than_two_images_rejected(self) -> None:
         publisher = MetaInstagramPublisher(access_token="t", ig_user_id="u")
@@ -101,14 +107,14 @@ class TestMetaInstagramPublisherConfiguration:
             "caption", ["https://example.com/a.jpg"]
         )
         assert result.status == "failed"
-        assert "at least 2" in (result.error_message or "")
+        assert result.error_message == ERR_INSTAGRAM_IMAGE_COUNT_INVALID
 
     async def test_more_than_ten_images_rejected(self) -> None:
         publisher = MetaInstagramPublisher(access_token="t", ig_user_id="u")
         urls = [f"https://example.com/{i}.jpg" for i in range(11)]
         result = await publisher.publish_instagram("caption", urls)
         assert result.status == "failed"
-        assert "at most 10" in (result.error_message or "")
+        assert result.error_message == ERR_INSTAGRAM_IMAGE_COUNT_INVALID
 
 
 @pytest.mark.unit
@@ -134,7 +140,7 @@ class TestMetaInstagramPublisherFailureModes:
         urls = [f"https://example.com/{i}.jpg" for i in range(2)]
         result = await publisher.publish_instagram("cap", urls)
         assert result.status == "failed"
-        assert "ERROR" in (result.error_message or "")
+        assert result.error_message == ERR_INSTAGRAM_CONTAINER_FAILED
 
     async def test_http_400_surfaces_not_raises(self) -> None:
         def handler(request: httpx.Request) -> httpx.Response:
@@ -148,4 +154,4 @@ class TestMetaInstagramPublisherFailureModes:
         urls = [f"https://example.com/{i}.jpg" for i in range(2)]
         result = await publisher.publish_instagram("cap", urls)
         assert result.status == "failed"
-        assert "Instagram API" in (result.error_message or "")
+        assert result.error_message == ERR_INSTAGRAM_API_REQUEST_FAILED

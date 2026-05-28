@@ -6,8 +6,8 @@ Using Protocols instead of abstract classes allows for more flexible, decoupled 
 
 from rag_backend.domain.protocols.ai import Agent, DocumentProcessor, LLMService
 from rag_backend.domain.protocols.carousel import (
-    CarouselAgent,
     CarouselExportService,
+    CarouselRefinementService,
     ImageGenerationService,
     ImageStyleStrategy,
     ResearchTool,
@@ -24,8 +24,8 @@ from rag_backend.domain.protocols.vector import EmbeddingService, Retriever, Vec
 
 __all__ = [
     "Agent",
-    "CarouselAgent",
     "CarouselExportService",
+    "CarouselRefinementService",
     "CarouselRepository",
     "ConversationRepository",
     "DocumentProcessor",

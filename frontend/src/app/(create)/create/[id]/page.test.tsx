@@ -3,10 +3,7 @@ import { render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createElement, type ReactNode } from "react";
 
-// Feature: Workspace Page
-// Mutation guard: ensures the workspace page relies on SSE streaming
-// (GET /stream via EventSource) and does not auto-fire POST /generate,
-// which would cause double pipeline execution.
+// Feature: carousel_editorial_consolidation.feature — Create workspace uses editorial workflow only
 
 vi.mock("next/navigation", () => ({
   useParams: vi.fn(),
@@ -18,9 +15,10 @@ vi.mock("next-intl", () => ({
 
 vi.mock("@/features/create/hooks", () => ({
   useCarouselProject: vi.fn(),
-  useCarouselStatus: vi.fn(),
-  useCarouselStream: vi.fn(),
-  useResumeCarousel: vi.fn(),
+}));
+
+vi.mock("@/features/create/hooks/use-editorial-workflow", () => ({
+  useEditorialWorkflow: vi.fn(),
 }));
 
 vi.mock("@/features/chat/hooks/use-chat", () => ({
@@ -36,33 +34,15 @@ vi.mock("@/features/create/components/source-material-viewer", () => ({
 }));
 
 import { useParams } from "next/navigation";
-import {
-  useCarouselProject,
-  useCarouselStatus,
-  useCarouselStream,
-  useResumeCarousel,
-} from "@/features/create/hooks";
+import { useCarouselProject } from "@/features/create/hooks";
+import { useEditorialWorkflow } from "@/features/create/hooks/use-editorial-workflow";
 import { useCreateConversation } from "@/features/chat/hooks/use-chat";
 import WorkspacePage from "./page";
 
 const mockUseParams = vi.mocked(useParams);
 const mockUseCarouselProject = vi.mocked(useCarouselProject);
-const mockUseCarouselStatus = vi.mocked(useCarouselStatus);
-const mockUseCarouselStream = vi.mocked(useCarouselStream);
-const mockUseResumeCarousel = vi.mocked(useResumeCarousel);
+const mockUseEditorialWorkflow = vi.mocked(useEditorialWorkflow);
 const mockUseCreateConversation = vi.mocked(useCreateConversation);
-
-class MockWebSocket {
-  static instances: MockWebSocket[] = [];
-  constructor(public url: string) {
-    MockWebSocket.instances.push(this);
-  }
-  send = vi.fn();
-  close = vi.fn();
-  onopen: (() => void) | null = null;
-  onclose: (() => void) | null = null;
-  onmessage: ((event: { data: string }) => void) | null = null;
-}
 
 function createWrapper() {
   const queryClient = new QueryClient({
@@ -79,12 +59,6 @@ function createWrapper() {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  MockWebSocket.instances = [];
-  Object.defineProperty(globalThis, "WebSocket", {
-    value: MockWebSocket as unknown as typeof WebSocket,
-    writable: true,
-    configurable: true,
-  });
 
   mockUseParams.mockReturnValue({ id: "test-project-id" });
   mockUseCarouselProject.mockReturnValue({
@@ -106,98 +80,42 @@ beforeEach(() => {
     },
     isLoading: false,
   } as ReturnType<typeof useCarouselProject>);
-  mockUseCarouselStatus.mockReturnValue({
-    data: {
-      id: "test-project-id",
-      status: "pending",
-      error_message: null,
-      updated_at: "2026-04-20T00:00:00Z",
-      phase_progress: null,
-    },
-    isLoading: false,
-  } as ReturnType<typeof useCarouselStatus>);
-  mockUseCarouselStream.mockReturnValue({
-    latestEvent: null,
-    isStreaming: false,
+  mockUseEditorialWorkflow.mockReturnValue({
+    state: null,
+    phaseEvents: [],
+    loading: false,
     error: null,
-    close: vi.fn(),
-    reconnect: vi.fn(),
+    hasActiveWorkflow: false,
+    transportMode: "sse",
+    start: vi.fn(),
+    resume: vi.fn(),
+    refreshState: vi.fn(),
+    approve: vi.fn(),
+    revise: vi.fn(),
+    awaitingHumanReview: false,
   });
-  mockUseResumeCarousel.mockReturnValue({
-    mutate: vi.fn(),
-    isPending: false,
-  } as unknown as ReturnType<typeof useResumeCarousel>);
   mockUseCreateConversation.mockReturnValue({
     mutateAsync: vi.fn(() => new Promise(() => undefined)),
   } as unknown as ReturnType<typeof useCreateConversation>);
 });
 
 afterEach(() => {
-  Object.defineProperty(globalThis, "WebSocket", {
-    value: undefined,
-    writable: true,
-    configurable: true,
-  });
+  sessionStorage.clear();
 });
 
 describe("WorkspacePage", () => {
-  describe("Given a pending project", () => {
-    it("subscribes to the SSE stream on mount", () => {
-      render(<WorkspacePage />, { wrapper: createWrapper() });
-      expect(mockUseCarouselStream).toHaveBeenCalledWith("test-project-id");
-    });
-
-    it("renders the progress tracker without auto-firing generate", () => {
-      render(<WorkspacePage />, { wrapper: createWrapper() });
-      // The progress section is present when status is pending.
-      expect(screen.getByText(/workspace\.title/)).toBeInTheDocument();
-    });
-
-    it("does not mark carousel complete while still pending", () => {
-      render(<WorkspacePage />, { wrapper: createWrapper() });
-      // When pending, the preview component should not be shown.
-      const publishButton = screen.queryByText("create.workspace.publish");
-      expect(publishButton).not.toBeInTheDocument();
-    });
+  it("renders the workspace title", () => {
+    render(<WorkspacePage />, { wrapper: createWrapper() });
+    expect(screen.getByText(/workspace\.title/)).toBeInTheDocument();
   });
 
-  describe("Given a completed project", () => {
-    beforeEach(() => {
-      mockUseCarouselStatus.mockReturnValue({
-        data: {
-          id: "test-project-id",
-          status: "completed",
-          error_message: null,
-          updated_at: "2026-04-20T00:00:00Z",
-          phase_progress: null,
-        },
-        isLoading: false,
-      } as ReturnType<typeof useCarouselStatus>);
-    });
-
-    it("shows publish actions when generation is done", () => {
-      render(<WorkspacePage />, { wrapper: createWrapper() });
-      expect(screen.getByText(/workspace\.publish/)).toBeInTheDocument();
-    });
+  it("subscribes to editorial workflow for the project", () => {
+    render(<WorkspacePage />, { wrapper: createWrapper() });
+    expect(mockUseEditorialWorkflow).toHaveBeenCalledWith("test-project-id");
   });
 
-  describe("Given a failed project", () => {
-    beforeEach(() => {
-      mockUseCarouselStatus.mockReturnValue({
-        data: {
-          id: "test-project-id",
-          status: "failed",
-          error_message: "Something broke",
-          updated_at: "2026-04-20T00:00:00Z",
-          phase_progress: null,
-        },
-        isLoading: false,
-      } as ReturnType<typeof useCarouselStatus>);
-    });
-
-    it("shows the resume button", () => {
-      render(<WorkspacePage />, { wrapper: createWrapper() });
-      expect(screen.getByTestId("resume-button")).toBeInTheDocument();
-    });
+  it("shows brief materials gate before workflow starts", () => {
+    render(<WorkspacePage />, { wrapper: createWrapper() });
+    expect(screen.getByText("title")).toBeInTheDocument();
   });
 });

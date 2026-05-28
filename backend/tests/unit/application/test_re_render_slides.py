@@ -1,4 +1,4 @@
-"""Unit tests for CarouselAgent.re_render_slides + unpack_extras helpers.
+"""Unit tests for CarouselRefinementService.re_render_slides + unpack_extras helpers.
 
 Gherkin:
   tests/features/carousel_image_refinement.feature
@@ -13,12 +13,14 @@ from uuid import uuid4
 
 import pytest
 
+from rag_backend.application.services.carousel.refinement_service import (
+    CarouselRefinementService,
+)
 from rag_backend.application.services.carousel.types import (
     SlideData,
     pack_extras,
     unpack_extras,
 )
-from rag_backend.application.services.carousel_agent import CarouselAgent
 from rag_backend.application.services.image_provider_registry import (
     ImageProviderRegistry,
 )
@@ -87,7 +89,9 @@ class TestExtrasRoundTrip:
         assert sd.heading == "Heading 3"
 
 
-def _agent_with_mocks() -> tuple[CarouselAgent, AsyncMock, AsyncMock, MagicMock]:
+def _agent_with_mocks() -> tuple[
+    CarouselRefinementService, AsyncMock, AsyncMock, MagicMock
+]:
     repo = AsyncMock()
     repo.update_project = AsyncMock(side_effect=lambda p: p)
     repo.get_slides_by_project = AsyncMock()
@@ -101,14 +105,12 @@ def _agent_with_mocks() -> tuple[CarouselAgent, AsyncMock, AsyncMock, MagicMock]
     registry = ImageProviderRegistry(
         gemini_service=image_service, openai_service=image_service
     )
-    agent = CarouselAgent(
+    agent = CarouselRefinementService(
         repository=repo,
         llm_service=AsyncMock(),
-        research_tool=AsyncMock(),
         image_registry=registry,
         export_service=export,
         pdf_slide_builder=pdf_builder,
-        output_base_dir="/tmp",
     )
     return agent, repo, export, pdf_builder
 

@@ -17,6 +17,7 @@ from rag_backend.application.tools import (
     build_regenerate_slide_image_tool,
     build_search_documents_tool,
 )
+from rag_backend.application.tools.carousel.access import CarouselToolAccessContext
 from rag_backend.domain.constants.retry import LANGGRAPH_MAX_ATTEMPTS
 from rag_backend.domain.models import (
     Message,
@@ -25,7 +26,7 @@ from rag_backend.domain.models import (
     SearchResult,
 )
 from rag_backend.domain.protocols import (
-    CarouselAgent,
+    CarouselRefinementService,
     CarouselRepository,
     DocumentRepository,
     MessageRepository,
@@ -65,15 +66,21 @@ class RAGAgent:
         retriever: Retriever,
         message_repository: MessageRepository,
         document_repository: DocumentRepository,
-        carousel_agent: CarouselAgent | None = None,
+        carousel_refinement: CarouselRefinementService | None = None,
         carousel_repository: CarouselRepository | None = None,
+        editorial_subagent: dict[str, object] | None = None,
+        start_editorial_workflow: object | None = None,
+        carousel_tool_access: CarouselToolAccessContext | None = None,
     ) -> None:
         self._settings = settings
         self._retriever = retriever
         self._message_repository = message_repository
         self._document_repository = document_repository
-        self._carousel_agent = carousel_agent
+        self._carousel_refinement = carousel_refinement
         self._carousel_repository = carousel_repository
+        self._editorial_subagent = editorial_subagent
+        self._start_editorial_workflow = start_editorial_workflow
+        self._carousel_tool_access = carousel_tool_access
 
         self._llm = ChatAnthropic(
             api_key=settings.anthropic_api_key,
@@ -87,20 +94,14 @@ class RAGAgent:
             tools=self._build_tools(),
             subagents=self._build_subagents(),
             system_prompt=_load_system_prompt(),
-            skills=["skills/carousel-pipeline"],
             name="rag-agent",
         )
 
     def _build_subagents(self) -> list[dict[str, object]]:
-        """Return DeepAgents-compatible subagent specs.
-
-        The carousel pipeline is exposed as a subagent so the parent RAG
-        agent can delegate complex multi-step carousel work via the
-        ``task`` tool instead of cluttering the top-level toolset.
-        """
-        if self._carousel_agent is None:
+        """Return DeepAgents-compatible subagent specs."""
+        if self._editorial_subagent is None:
             return []
-        return [self._carousel_agent.to_subagent(self._settings.carousel_output_dir)]
+        return [self._editorial_subagent]
 
     def _build_tools(self) -> list[BaseTool]:
         """Assemble agent tools from domain-specific builders.
@@ -114,7 +115,9 @@ class RAGAgent:
             build_list_documents_tool(self._document_repository),
         ]
 
-        if self._carousel_agent is None or self._carousel_repository is None:
+        if self._carousel_refinement is None or self._carousel_repository is None:
+            return tools
+        if self._carousel_tool_access is None:
             return tools
 
         from rag_backend.application.tools.carousel.generate_carousel import (
@@ -123,13 +126,26 @@ class RAGAgent:
 
         tools.extend([
             build_generate_carousel_tool(
-                self._carousel_agent, self._carousel_repository
+                self._carousel_repository,
+                self._carousel_tool_access,
+                start_editorial_workflow=self._start_editorial_workflow,
             ),
             build_refine_carousel_copy_tool(
-                self._llm, self._carousel_repository, self._carousel_agent
+                self._llm,
+                self._carousel_repository,
+                self._carousel_refinement,
+                self._carousel_tool_access,
             ),
-            build_regenerate_slide_image_tool(self._carousel_agent),
-            build_refine_carousel_design_tool(self._carousel_agent),
+            build_regenerate_slide_image_tool(
+                self._carousel_refinement,
+                self._carousel_repository,
+                self._carousel_tool_access,
+            ),
+            build_refine_carousel_design_tool(
+                self._carousel_refinement,
+                self._carousel_repository,
+                self._carousel_tool_access,
+            ),
         ])
         return tools
 

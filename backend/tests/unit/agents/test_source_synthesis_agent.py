@@ -28,6 +28,21 @@ class TestSourceSynthesisAgent:
         assert result["key_points"] == ["Point A", "Point B"]
         assert result["summary"] == "Summary text"
 
+    async def test_extract_key_points_parses_markdown_fenced_json(
+        self, agent: SourceSynthesisAgent, mock_llm: AsyncMock
+    ) -> None:
+        payload = {"key_points": ["Point A"], "summary": "Summary text"}
+        mock_llm.ainvoke.return_value = MagicMock(
+            content=f"```json\n{json.dumps(payload)}\n```"
+        )
+
+        result = await agent.extract_key_points(
+            "Markdown Title", "Markdown content body", "document"
+        )
+
+        assert result["key_points"] == ["Point A"]
+        assert result["summary"] == "Summary text"
+
     async def test_extract_key_points_invalid_json_raises(
         self, agent: SourceSynthesisAgent, mock_llm: AsyncMock
     ) -> None:

@@ -1,5 +1,7 @@
 """Unit tests for ImageGenerationTool and CarouselExportTool."""
 
+import pathlib
+
 import pytest
 
 from rag_backend.application.services.tools.export_tool import CarouselExportTool
@@ -89,9 +91,7 @@ class TestImageGenerationTool:
             output_dir=output_dir,
         )
 
-        import os
-
-        assert os.path.isdir(os.path.join(output_dir, "images"))
+        assert (pathlib.Path(output_dir) / "images").is_dir()
 
 
 @pytest.mark.unit

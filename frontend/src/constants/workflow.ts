@@ -29,6 +29,7 @@ export const WORKFLOW_PHASE_STATUS = {
   AWAITING_HUMAN: "awaiting_human",
   APPROVED: "approved",
   REJECTED: "rejected",
+  FAILED: "failed",
 } as const;
 
 export const WORKFLOW_BOARD_POLL_INTERVAL_MS = 15_000;

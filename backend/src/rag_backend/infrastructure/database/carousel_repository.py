@@ -51,6 +51,9 @@ class PostgresCarouselRepository(CarouselRepository):
     async def get_all_projects(
         self,
         status: CarouselStatus | None = None,
+        *,
+        public_only: bool = False,
+        owner_id: str | None = None,
         limit: int = 100,
         offset: int = 0,
     ) -> list[CarouselProject]:
@@ -60,6 +63,10 @@ class PostgresCarouselRepository(CarouselRepository):
         )
         if status is not None:
             stmt = stmt.where(CarouselProjectModel.status == status.value)
+        if public_only:
+            stmt = stmt.where(CarouselProjectModel.is_public.is_(True))
+        if owner_id is not None:
+            stmt = stmt.where(CarouselProjectModel.owner_id == owner_id)
         stmt = stmt.limit(limit).offset(offset)
         result = await self._session.execute(stmt)
         models = result.scalars().all()
@@ -162,10 +169,20 @@ class PostgresCarouselRepository(CarouselRepository):
         models = result.scalars().all()
         return [model.to_entity() for model in models]
 
-    async def count(self, status: CarouselStatus | None = None) -> int:
-        """Count carousel projects with optional status filter."""
+    async def count(
+        self,
+        status: CarouselStatus | None = None,
+        *,
+        public_only: bool = False,
+        owner_id: str | None = None,
+    ) -> int:
+        """Count carousel projects with optional filters."""
         stmt = select(func.count(CarouselProjectModel.id))
         if status is not None:
             stmt = stmt.where(CarouselProjectModel.status == status.value)
+        if public_only:
+            stmt = stmt.where(CarouselProjectModel.is_public.is_(True))
+        if owner_id is not None:
+            stmt = stmt.where(CarouselProjectModel.owner_id == owner_id)
         result = await self._session.execute(stmt)
         return result.scalar_one()
