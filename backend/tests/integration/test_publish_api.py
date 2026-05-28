@@ -14,7 +14,11 @@ import jwt
 import pytest
 from httpx import ASGITransport, AsyncClient
 
+from rag_backend.api.constants import ERR_INSTAGRAM_PUBLIC_BASE_URL_NOT_CONFIGURED
 from rag_backend.domain.constants import JWT_ALGORITHM, JWT_TYPE_AUTH
+from rag_backend.domain.constants.carousel_workflow import (
+    WORKFLOW_STATUS_APPROVED_FOR_PUBLISH,
+)
 from rag_backend.domain.models import CarouselStatus, User, UserRole
 from rag_backend.domain.protocols import PublishResult
 
@@ -118,6 +122,8 @@ async def _seed_completed_project(client: AsyncClient) -> str:
     assert db_config.c_engine is not None
     from sqlalchemy.ext.asyncio import async_sessionmaker
 
+    from rag_backend.infrastructure.database.models.carousel import CarouselProjectModel
+
     Session = async_sessionmaker(db_config.c_engine, expire_on_commit=False)
     async with Session() as session:
         repo = PostgresCarouselRepository(session)
@@ -127,6 +133,10 @@ async def _seed_completed_project(client: AsyncClient) -> str:
         assert proj is not None
         proj.status = CarouselStatus.COMPLETED
         await repo.update_project(proj)
+        model = await session.get(CarouselProjectModel, project_id)
+        if model is not None:
+            model.workflow_status = WORKFLOW_STATUS_APPROVED_FOR_PUBLISH
+            await session.commit()
     return project_id
 
 
@@ -159,7 +169,7 @@ class TestInstagramPublishRoute:
         )
         container.instagram_publisher.reset_override()
         assert resp.status_code == 503, resp.text
-        assert "CAROUSEL_PUBLIC_BASE_URL" in resp.text
+        assert ERR_INSTAGRAM_PUBLIC_BASE_URL_NOT_CONFIGURED in resp.text
 
     @pytest.mark.asyncio
     async def test_409_when_project_not_completed(self, client_and_container):
@@ -169,6 +179,22 @@ class TestInstagramPublishRoute:
             json={"topic": "T", "audience": "A", "niche": "N"},
         )
         project_id = resp.json()["id"]
+
+        from sqlalchemy.ext.asyncio import async_sessionmaker
+
+        import rag_backend.infrastructure.database.config as db_config
+        from rag_backend.infrastructure.database.models.carousel import (
+            CarouselProjectModel,
+        )
+
+        assert db_config.c_engine is not None
+        Session = async_sessionmaker(db_config.c_engine, expire_on_commit=False)
+        async with Session() as session:
+            model = await session.get(CarouselProjectModel, project_id)
+            assert model is not None
+            model.workflow_status = WORKFLOW_STATUS_APPROVED_FOR_PUBLISH
+            await session.commit()
+
         publish_resp = await client.post(
             f"/api/carousels/{project_id}/publish/instagram",
             json={"caption": "hello"},

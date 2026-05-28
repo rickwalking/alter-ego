@@ -1,8 +1,22 @@
 """Integration tests for carousel i18n and design API endpoints."""
 
+from uuid import UUID
+
 import pytest
 
 from rag_backend.domain.models import CarouselProject, CarouselStatus, CarouselTheme
+
+
+async def _set_carousel_public(project_id: str, *, is_public: bool = True) -> None:
+    from rag_backend.infrastructure.database.config import get_session_maker
+    from rag_backend.infrastructure.database.models.carousel import CarouselProjectModel
+
+    session_maker = get_session_maker()
+    async with session_maker() as session:
+        model = await session.get(CarouselProjectModel, project_id)
+        if model is not None:
+            model.is_public = is_public
+            await session.commit()
 
 
 @pytest.fixture
@@ -101,6 +115,7 @@ class TestCarouselDesignEndpoints:
         }
         create_resp = await client.post("/api/carousels", json=payload)
         carousel_id = create_resp.json()["id"]
+        await _set_carousel_public(carousel_id)
 
         response = await client.get(f"/api/carousels/{carousel_id}/design")
         assert response.status_code == 404
@@ -118,10 +133,9 @@ class TestCarouselDesignEndpoints:
         }
         create_resp = await client.post("/api/carousels", json=payload)
         carousel_id = create_resp.json()["id"]
+        await _set_carousel_public(carousel_id)
 
         # Simulate completed project with design tokens
-        from uuid import UUID
-
         from sqlalchemy.ext.asyncio import async_sessionmaker
 
         import rag_backend.infrastructure.database.config as db_config
