@@ -1,6 +1,11 @@
 /** Resume/approve/revise actions for editorial workflow hook. */
 
-import { useCallback, type Dispatch, type RefObject, type SetStateAction } from "react";
+import {
+  useCallback,
+  type Dispatch,
+  type RefObject,
+  type SetStateAction,
+} from "react";
 import { API_ENDPOINTS, HTTP_METHODS, HTTP_STATUS } from "@/constants/api";
 import {
   EDITORIAL_WORKFLOW_TRANSPORT_MODE,
@@ -78,12 +83,13 @@ export function useEditorialWorkflowResume({
       const preferSseTransport = (): boolean =>
         transportModeRef.current === EDITORIAL_WORKFLOW_TRANSPORT_MODE.SSE;
 
-      const waitForReadyState = async (): Promise<EditorialWorkflowState | null> =>
-        waitUntilWorkflowReadyWithTransport(
-          () => workflowStateRef.current,
-          refreshState,
-          { preferSse: preferSseTransport() },
-        );
+      const waitForReadyState =
+        async (): Promise<EditorialWorkflowState | null> =>
+          waitUntilWorkflowReadyWithTransport(
+            () => workflowStateRef.current,
+            refreshState,
+            { preferSse: preferSseTransport() },
+          );
 
       const finalizeResume = async (
         workflowState: EditorialWorkflowState | null,
@@ -99,7 +105,9 @@ export function useEditorialWorkflowResume({
           );
         }
         if (isWorkflowReady(workflowState)) {
-          if (workflowState.phase_status === WORKFLOW_PHASE_STATUS.AWAITING_HUMAN) {
+          if (
+            workflowState.phase_status === WORKFLOW_PHASE_STATUS.AWAITING_HUMAN
+          ) {
             stopPollingFallback();
           }
           return workflowState;
@@ -151,7 +159,9 @@ export function useEditorialWorkflowResume({
         let response: Response;
         try {
           response = await authenticatedFetch(
-            resolveClientApiUrl(API_ENDPOINTS.CAROUSEL_WORKFLOW_RESUME(projectId)),
+            resolveClientApiUrl(
+              API_ENDPOINTS.CAROUSEL_WORKFLOW_RESUME(projectId),
+            ),
             {
               method: HTTP_METHODS.POST,
               body: JSON.stringify(payload),
@@ -163,7 +173,8 @@ export function useEditorialWorkflowResume({
         }
 
         if (response.status === HTTP_STATUS.ACCEPTED) {
-          const accepted = (await response.json()) as EditorialWorkflowResumeAcceptedResponse;
+          const accepted =
+            (await response.json()) as EditorialWorkflowResumeAcceptedResponse;
           if (!isResumeAcceptedResponse(accepted)) {
             throw new Error(translateError("resumeFailed"));
           }
@@ -189,12 +200,15 @@ export function useEditorialWorkflowResume({
         }
 
         if (response.ok) {
-          const workflowState = (await response.json()) as EditorialWorkflowState;
+          const workflowState =
+            (await response.json()) as EditorialWorkflowState;
           return finalizeResume(workflowState);
         }
 
         if (isResumeClientErrorStatus(response.status)) {
-          throw new Error(await readApiError(response, translateError("resumeFailed")));
+          throw new Error(
+            await readApiError(response, translateError("resumeFailed")),
+          );
         }
 
         if (isResumeTransportFailure(response.status)) {
@@ -202,7 +216,9 @@ export function useEditorialWorkflowResume({
           return finalizeResume(await waitForReadyState());
         }
 
-        throw new Error(await readApiError(response, translateError("resumeFailed")));
+        throw new Error(
+          await readApiError(response, translateError("resumeFailed")),
+        );
       } catch (err) {
         const message =
           err instanceof Error ? err.message : translateError("resumeUnknown");

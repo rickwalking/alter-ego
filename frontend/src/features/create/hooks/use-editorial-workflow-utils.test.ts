@@ -1,5 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { EDITORIAL_PHASES, EDITORIAL_WORKFLOW_SSE_EVENTS } from "@/constants/editorial-workflow";
+import {
+  EDITORIAL_PHASES,
+  EDITORIAL_WORKFLOW_SSE_EVENTS,
+} from "@/constants/editorial-workflow";
 import { HTTP_STATUS } from "@/constants/api";
 import { WORKFLOW_PHASE_STATUS } from "@/constants/workflow";
 import type { EditorialWorkflowState } from "@/features/blog/types-ai";
@@ -72,7 +75,9 @@ describe("useEditorialWorkflow utils", () => {
 
   it("classifies resume client errors separately from transport failures", () => {
     expect(isResumeClientErrorStatus(HTTP_STATUS.CONFLICT)).toBe(true);
-    expect(isResumeTransportFailure(HTTP_STATUS.INTERNAL_SERVER_ERROR)).toBe(true);
+    expect(isResumeTransportFailure(HTTP_STATUS.INTERNAL_SERVER_ERROR)).toBe(
+      true,
+    );
     expect(isResumeTransportFailure(HTTP_STATUS.CONFLICT)).toBe(false);
   });
 
@@ -120,9 +125,9 @@ describe("useEditorialWorkflow utils", () => {
       status: "draft",
     };
 
-    expect(hasPhaseArtifacts({ ...base, research_findings: [{ title: "Finding" }] })).toBe(
-      true,
-    );
+    expect(
+      hasPhaseArtifacts({ ...base, research_findings: [{ title: "Finding" }] }),
+    ).toBe(true);
     expect(
       hasPhaseArtifacts({
         ...base,

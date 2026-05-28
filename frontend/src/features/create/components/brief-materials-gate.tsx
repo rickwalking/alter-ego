@@ -22,9 +22,7 @@ export function BriefMaterialsGate({
     <div className="space-y-3 rounded-lg border border-dashed p-4">
       <h4 className="font-medium text-sm">{t("title")}</h4>
       <p className="text-muted-foreground text-sm">{t("description")}</p>
-      <p className="text-sm">
-        {t("sourceCount", { count: sourceCount })}
-      </p>
+      <p className="text-sm">{t("sourceCount", { count: sourceCount })}</p>
       <div className="flex flex-wrap gap-2">
         <Button
           size="sm"

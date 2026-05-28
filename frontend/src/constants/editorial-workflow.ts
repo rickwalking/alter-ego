@@ -37,7 +37,9 @@ export type EditorialWorkflowTransportMode =
   (typeof EDITORIAL_WORKFLOW_TRANSPORT_MODE)[keyof typeof EDITORIAL_WORKFLOW_TRANSPORT_MODE];
 
 /** Polling backoff intervals (ms) when SSE is unavailable. */
-export const EDITORIAL_WORKFLOW_POLL_BACKOFF_MS = [5_000, 10_000, 30_000] as const;
+export const EDITORIAL_WORKFLOW_POLL_BACKOFF_MS = [
+  5_000, 10_000, 30_000,
+] as const;
 
 /** Resume polling while backend continues after proxy/client timeout. */
 export const EDITORIAL_WORKFLOW_RESUME_POLL_INTERVAL_MS = 5_000;

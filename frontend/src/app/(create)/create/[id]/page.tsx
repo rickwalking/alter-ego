@@ -232,30 +232,34 @@ export default function WorkspacePage() {
                 onSourcesChange={setProjectSources}
               />
 
-              {project && !workflowStarted && !editorialWorkflow.hasActiveWorkflow && (
-                <BriefMaterialsGate
-                  sourceCount={projectSources.length}
-                  loading={editorialWorkflow.loading}
-                  onStartWithMaterials={() => setWorkflowStarted(true)}
-                  onStartWithoutMaterials={() => setWorkflowStarted(true)}
-                />
-              )}
+              {project &&
+                !workflowStarted &&
+                !editorialWorkflow.hasActiveWorkflow && (
+                  <BriefMaterialsGate
+                    sourceCount={projectSources.length}
+                    loading={editorialWorkflow.loading}
+                    onStartWithMaterials={() => setWorkflowStarted(true)}
+                    onStartWithoutMaterials={() => setWorkflowStarted(true)}
+                  />
+                )}
 
               {project &&
                 (workflowStarted || editorialWorkflow.hasActiveWorkflow) && (
-                <EditorialWorkflowPanel
-                  projectId={projectId}
-                  topic={project.topic}
-                  audience={project.audience}
-                  brief={project.niche}
-                  sources={mappedSources}
-                  autoStart={workflowStarted && !editorialWorkflow.hasActiveWorkflow}
-                  onPublished={() => {
-                    setPublishedProject(project);
-                  }}
-                  workflow={editorialWorkflow}
-                />
-              )}
+                  <EditorialWorkflowPanel
+                    projectId={projectId}
+                    topic={project.topic}
+                    audience={project.audience}
+                    brief={project.niche}
+                    sources={mappedSources}
+                    autoStart={
+                      workflowStarted && !editorialWorkflow.hasActiveWorkflow
+                    }
+                    onPublished={() => {
+                      setPublishedProject(project);
+                    }}
+                    workflow={editorialWorkflow}
+                  />
+                )}
 
               {publishedProject && (
                 <CarouselPreview project={publishedProject} />

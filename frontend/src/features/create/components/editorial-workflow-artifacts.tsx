@@ -36,9 +36,7 @@ export function EditorialWorkflowArtifacts({
         {outlineCount > 0 && (
           <li>{t("outlineSlides", { count: outlineCount })}</li>
         )}
-        {draftCount > 0 && (
-          <li>{t("contentDrafts", { count: draftCount })}</li>
-        )}
+        {draftCount > 0 && <li>{t("contentDrafts", { count: draftCount })}</li>}
         {state.design_applied && (
           <li className="flex items-center gap-2">
             {t("designApplied")}

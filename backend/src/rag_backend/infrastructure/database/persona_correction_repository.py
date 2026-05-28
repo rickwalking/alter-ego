@@ -64,10 +64,10 @@ class PersonaCorrectionRepository:
         rows = result.scalars().all()
         return [
             PersonaCorrectionRecord(
-                original_text=row.original_text,
-                corrected_text=row.corrected_text,
-                context=row.context,
-                correction_type=row.correction_type,
+                original_text=str(row.original_text),
+                corrected_text=str(row.corrected_text),
+                context=str(row.context),
+                correction_type=str(row.correction_type),
             )
             for row in rows
         ]
@@ -84,10 +84,10 @@ class PersonaCorrectionRepository:
         rows = result.scalars().all()
         return [
             PersonaCorrectionRecord(
-                original_text=row.original_text,
-                corrected_text=row.corrected_text,
-                context=row.context,
-                correction_type=row.correction_type,
+                original_text=str(row.original_text),
+                corrected_text=str(row.corrected_text),
+                context=str(row.context),
+                correction_type=str(row.correction_type),
             )
             for row in rows
         ]

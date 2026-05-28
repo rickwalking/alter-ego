@@ -51,11 +51,11 @@ class PostgresCarouselRepository(CarouselRepository):
     async def get_all_projects(
         self,
         status: CarouselStatus | None = None,
+        limit: int = 100,
+        offset: int = 0,
         *,
         public_only: bool = False,
         owner_id: str | None = None,
-        limit: int = 100,
-        offset: int = 0,
     ) -> list[CarouselProject]:
         """Get all carousel projects with optional filtering."""
         stmt = select(CarouselProjectModel).order_by(

@@ -33,7 +33,7 @@ export async function installWorkflowSseTestBridge(page: Page): Promise<void> {
       listenersBySource.set(source, listenersByType);
     }
 
-    window.EventSource = function EventSourceProxy(
+    const EventSourceProxy = function EventSourceProxy(
       url: string | URL,
       eventSourceInitDict?: EventSourceInit,
     ): EventSource {
@@ -42,24 +42,34 @@ export async function installWorkflowSseTestBridge(page: Page): Promise<void> {
       listenersBySource.set(source, new Map<string, SseListener[]>());
 
       const originalAddEventListener = source.addEventListener.bind(source);
-      source.addEventListener = (
+      source.addEventListener = ((
         type: string,
-        listener: EventListenerOrEventListenerObject | null,
+        listener: EventListenerOrEventListenerObject,
         options?: boolean | AddEventListenerOptions,
       ): void => {
         if (typeof listener === "function") {
           trackListener(source, type, listener as SseListener);
         }
         originalAddEventListener(type, listener, options);
-      };
+      }) as typeof source.addEventListener;
 
       return source;
     } as unknown as typeof EventSource;
 
-    window.EventSource.CONNECTING = originalEventSource.CONNECTING;
-    window.EventSource.OPEN = originalEventSource.OPEN;
-    window.EventSource.CLOSED = originalEventSource.CLOSED;
-    window.EventSource.prototype = originalEventSource.prototype;
+    Object.defineProperty(EventSourceProxy, "CONNECTING", {
+      value: originalEventSource.CONNECTING,
+    });
+    Object.defineProperty(EventSourceProxy, "OPEN", {
+      value: originalEventSource.OPEN,
+    });
+    Object.defineProperty(EventSourceProxy, "CLOSED", {
+      value: originalEventSource.CLOSED,
+    });
+    Object.defineProperty(EventSourceProxy, "prototype", {
+      value: originalEventSource.prototype,
+    });
+
+    window.EventSource = EventSourceProxy;
 
     (
       window as unknown as Record<

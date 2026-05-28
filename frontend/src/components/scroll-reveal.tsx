@@ -8,7 +8,11 @@ interface ScrollRevealProps {
   delay?: number;
 }
 
-export function ScrollReveal({ children, className, delay = 0 }: ScrollRevealProps) {
+export function ScrollReveal({
+  children,
+  className,
+  delay = 0,
+}: ScrollRevealProps) {
   const ref = useRef<HTMLDivElement>(null);
   const [isVisible, setIsVisible] = useState(false);
 

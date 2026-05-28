@@ -72,7 +72,9 @@ export function SourceMaterialViewer({
     }
   }, [projectId, updateSources]);
 
-  const addSource = async (event: React.FormEvent<HTMLFormElement>): Promise<void> => {
+  const addSource = async (
+    event: React.FormEvent<HTMLFormElement>,
+  ): Promise<void> => {
     event.preventDefault();
     if (!title.trim() || !content.trim()) {
       return;
@@ -139,7 +141,10 @@ export function SourceMaterialViewer({
         </Button>
       </CardHeader>
       <CardContent className="space-y-4">
-        <form className="space-y-3 rounded-md border p-3" onSubmit={(event) => void addSource(event)}>
+        <form
+          className="space-y-3 rounded-md border p-3"
+          onSubmit={(event) => void addSource(event)}
+        >
           <p className="font-medium text-sm">{t("addSourceTitle")}</p>
           <div className="space-y-2">
             <label htmlFor="source-title" className="block text-sm">

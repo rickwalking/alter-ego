@@ -1,7 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { render, screen, fireEvent, waitFor, act } from "@testing-library/react";
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+  act,
+} from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
 import {
   EDITORIAL_PHASES,
@@ -77,12 +83,18 @@ describe("EditorialWorkflowPanel final review send-back", () => {
   it("submits structured_feedback.target_phase when requesting revision", async () => {
     renderPanel();
 
-    fireEvent.change(screen.getByLabelText(en.editorialWorkflow.sendBack.label), {
-      target: { value: EDITORIAL_PHASES.CONTENT },
-    });
-    fireEvent.change(screen.getByLabelText(en.editorialWorkflow.feedback.label), {
-      target: { value: "Intro slide needs a personal anecdote" },
-    });
+    fireEvent.change(
+      screen.getByLabelText(en.editorialWorkflow.sendBack.label),
+      {
+        target: { value: EDITORIAL_PHASES.CONTENT },
+      },
+    );
+    fireEvent.change(
+      screen.getByLabelText(en.editorialWorkflow.feedback.label),
+      {
+        target: { value: "Intro slide needs a personal anecdote" },
+      },
+    );
 
     await act(async () => {
       fireEvent.click(
@@ -160,7 +172,9 @@ describe("EditorialWorkflowPanel persona and publish gating", () => {
     );
 
     expect(
-      screen.getByRole("button", { name: en.editorialWorkflow.actions.approve }),
+      screen.getByRole("button", {
+        name: en.editorialWorkflow.actions.approve,
+      }),
     ).toBeDisabled();
     expect(
       screen.getByText(en.editorialWorkflow.persona.belowThreshold),
@@ -206,7 +220,10 @@ describe("EditorialWorkflowPanel persona and publish gating", () => {
 describe("Editorial workflow legacy constants", () => {
   // Scenario: Create workspace does not reference legacy stream constants
   it("uses workflow stream endpoint only in api constants", () => {
-    const apiConstantsPath = path.resolve(process.cwd(), "src/constants/api.ts");
+    const apiConstantsPath = path.resolve(
+      process.cwd(),
+      "src/constants/api.ts",
+    );
     const progressSource = readFileSync(
       path.resolve(
         process.cwd(),
@@ -217,7 +234,7 @@ describe("Editorial workflow legacy constants", () => {
     const hookSource = readFileSync(
       path.resolve(
         process.cwd(),
-        "src/features/create/hooks/use-editorial-workflow.ts",
+        "src/features/create/hooks/use-editorial-workflow-sse.ts",
       ),
       "utf8",
     );

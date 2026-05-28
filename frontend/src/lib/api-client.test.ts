@@ -214,7 +214,9 @@ describe("API Client Module", () => {
           } as Response),
         );
 
-        await expect(apiCall("/api/test", testSchema)).rejects.toThrow(ApiError);
+        await expect(apiCall("/api/test", testSchema)).rejects.toThrow(
+          ApiError,
+        );
         expect(location.href).toBe("/login");
       });
     });
@@ -273,7 +275,9 @@ describe("API Client Module", () => {
           } as Response),
         );
 
-        await expect(apiCall("/api/test", testSchema)).rejects.toThrow(ApiError);
+        await expect(apiCall("/api/test", testSchema)).rejects.toThrow(
+          ApiError,
+        );
         expect(location.href).toBe("/403");
       });
     });
@@ -668,7 +672,9 @@ describe("API Client Module", () => {
           vi.fn().mockResolvedValue({ ok: true, status: 204 } as Response),
         );
 
-        await expect(apiCallNoContent("/api/documents/1")).resolves.toBeUndefined();
+        await expect(
+          apiCallNoContent("/api/documents/1"),
+        ).resolves.toBeUndefined();
       });
     });
 

@@ -46,9 +46,9 @@ export function EditorialWorkflowProgress({
   const hasPersistedProgressLabel = Boolean(editorialProgress?.label?.trim());
 
   const isActiveWork =
-    loading
-    || phaseStatus === WORKFLOW_PHASE_STATUS.IN_PROGRESS
-    || hasPersistedProgressLabel;
+    loading ||
+    phaseStatus === WORKFLOW_PHASE_STATUS.IN_PROGRESS ||
+    hasPersistedProgressLabel;
 
   if (!isActiveWork) {
     return null;
@@ -65,14 +65,15 @@ export function EditorialWorkflowProgress({
   };
 
   const phaseProgress =
-    editorialProgress ?? buildSyntheticProgress(
+    editorialProgress ??
+    buildSyntheticProgress(
       currentPhase ? resolvePipelinePhase(currentPhase) : "pending",
       labels,
     );
 
   const pipelinePhase =
-    phaseProgress?.phase
-    ?? (currentPhase ? resolvePipelinePhase(currentPhase) : "pending");
+    phaseProgress?.phase ??
+    (currentPhase ? resolvePipelinePhase(currentPhase) : "pending");
 
   return (
     <CarouselProgress

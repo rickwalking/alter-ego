@@ -303,6 +303,7 @@ ignore-names = [
 "src/rag_backend/infrastructure/auth.py" = ["TRY300"]
 "src/rag_backend/infrastructure/langfuse_client.py" = ["TRY300"]
 "src/rag_backend/infrastructure/database/user_repository.py" = ["TRY003"]
+"src/rag_backend/infrastructure/database/carousel_repository.py" = ["FBT001", "FBT002"]
 "src/rag_backend/scripts/bootstrap_admin.py" = ["E501"]
 "scripts/**/*" = ["S404", "S603", "S108", "TRY003", "PLR0911", "E501"]
 "backend/scripts/**/*" = ["S404", "S603", "S108", "TRY003", "PLR0911", "E501"]

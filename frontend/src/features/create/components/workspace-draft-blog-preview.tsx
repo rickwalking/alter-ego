@@ -2,10 +2,7 @@
 
 import { useCallback, useState } from "react";
 import { useTranslations } from "next-intl";
-import {
-  API_ENDPOINTS,
-  DEFAULT_BLOG_LANGUAGE,
-} from "@/constants/api";
+import { API_ENDPOINTS, DEFAULT_BLOG_LANGUAGE } from "@/constants/api";
 import { authenticatedFetch } from "@/lib/authenticated-fetch";
 
 interface WorkspaceDraftBlogPreviewProps {

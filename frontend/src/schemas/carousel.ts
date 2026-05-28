@@ -154,7 +154,7 @@ export const carouselPhaseProgressSchema = z.object({
   total: z.number().optional(),
   detail: z.string().optional(),
   slides: z.array(carouselPhaseProgressSlideSchema).optional(),
-}  );
+});
 
 export type CarouselPhaseProgress = z.infer<typeof carouselPhaseProgressSchema>;
 

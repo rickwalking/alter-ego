@@ -12,8 +12,6 @@ from httpx import ASGITransport, AsyncClient
 
 from tests.integration.carousel_consolidation.helpers import TEST_SECRET
 
-pytest_plugins: list[str] = []
-
 
 @pytest.fixture(autouse=True)
 def _test_settings() -> None:

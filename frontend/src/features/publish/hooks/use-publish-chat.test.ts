@@ -901,9 +901,9 @@ describe("usePublishChat (SSE comprehensive)", () => {
       );
       expect(assistantMessages).toHaveLength(1);
       expect(assistantMessages[0]?.content).toBe("Hel");
-      expect(assistantMessages[0]?.id.startsWith(STREAM_MESSAGE_ID_PREFIX)).toBe(
-        true,
-      );
+      expect(
+        assistantMessages[0]?.id.startsWith(STREAM_MESSAGE_ID_PREFIX),
+      ).toBe(true);
     });
 
     await act(async () => {
@@ -990,7 +990,9 @@ describe("usePublishChat (SSE comprehensive)", () => {
     rerender();
 
     await waitFor(() => expect(mutateAsync).toHaveBeenCalledTimes(2));
-    await waitFor(() => expect(result.current.conversationId).toBe("conv-retry"));
+    await waitFor(() =>
+      expect(result.current.conversationId).toBe("conv-retry"),
+    );
   });
 
   it("does not clear storage when projectId is empty", async () => {
@@ -1393,9 +1395,7 @@ describe("usePublishChat (SSE comprehensive)", () => {
         result.current.messages.filter(
           (message) => message.role === MESSAGE_ROLE_ASSISTANT,
         ),
-      ).toEqual([
-        expect.objectContaining({ content: "First answer" }),
-      ]),
+      ).toEqual([expect.objectContaining({ content: "First answer" })]),
     );
 
     await act(async () => {

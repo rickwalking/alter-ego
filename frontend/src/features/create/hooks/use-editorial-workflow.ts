@@ -12,7 +12,10 @@ import { WORKFLOW_PHASE_STATUS } from "@/constants/workflow";
 import type { EditorialWorkflowState } from "@/features/blog/types-ai";
 import { authenticatedFetch } from "@/lib/authenticated-fetch";
 import { resolveClientApiUrl } from "@/lib/client-api-url";
-import { appendUniquePhase, readApiError } from "./use-editorial-workflow-utils";
+import {
+  appendUniquePhase,
+  readApiError,
+} from "./use-editorial-workflow-utils";
 import {
   useEditorialWorkflowResume,
   type EditorialReviseOptions,
@@ -35,33 +38,35 @@ export function useEditorialWorkflow(projectId: string) {
   const [phaseEvents, setPhaseEvents] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [transportMode, setTransportMode] = useState<EditorialWorkflowTransportMode>(
-    EDITORIAL_WORKFLOW_TRANSPORT_MODE.SSE,
-  );
+  const [transportMode, setTransportMode] =
+    useState<EditorialWorkflowTransportMode>(
+      EDITORIAL_WORKFLOW_TRANSPORT_MODE.SSE,
+    );
 
-  const refreshState = useCallback(async (): Promise<EditorialWorkflowState | null> => {
-    try {
-      const response = await authenticatedFetch(
-        resolveClientApiUrl(API_ENDPOINTS.CAROUSEL_WORKFLOW_STATE(projectId)),
-      );
-      if (response.status === HTTP_STATUS.NOT_FOUND) {
-        return null;
-      }
-      if (!response.ok) {
-        return null;
-      }
-      const workflowState = (await response.json()) as EditorialWorkflowState;
-      setState(workflowState);
-      if (workflowState.current_phase) {
-        setPhaseEvents((prev) =>
-          appendUniquePhase(prev, workflowState.current_phase),
+  const refreshState =
+    useCallback(async (): Promise<EditorialWorkflowState | null> => {
+      try {
+        const response = await authenticatedFetch(
+          resolveClientApiUrl(API_ENDPOINTS.CAROUSEL_WORKFLOW_STATE(projectId)),
         );
+        if (response.status === HTTP_STATUS.NOT_FOUND) {
+          return null;
+        }
+        if (!response.ok) {
+          return null;
+        }
+        const workflowState = (await response.json()) as EditorialWorkflowState;
+        setState(workflowState);
+        if (workflowState.current_phase) {
+          setPhaseEvents((prev) =>
+            appendUniquePhase(prev, workflowState.current_phase),
+          );
+        }
+        return workflowState;
+      } catch {
+        return null;
       }
-      return workflowState;
-    } catch {
-      return null;
-    }
-  }, [projectId]);
+    }, [projectId]);
 
   const {
     enterPollingFallback,
@@ -129,8 +134,7 @@ export function useEditorialWorkflow(projectId: string) {
         }
         return workflowState;
       } catch (err) {
-        const message =
-          err instanceof Error ? err.message : t("startUnknown");
+        const message = err instanceof Error ? err.message : t("startUnknown");
         setError(message);
         await refreshState();
         throw err;

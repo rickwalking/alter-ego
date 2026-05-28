@@ -132,11 +132,7 @@ function TraitTag({ label }: { label: string }) {
   );
 }
 
-function StatusBadge({
-  status,
-}: {
-  status: "active" | "inactive";
-}) {
+function StatusBadge({ status }: { status: "active" | "inactive" }) {
   const isActive = status === "active";
   return (
     <span
@@ -291,7 +287,12 @@ function CreatePersonaCard() {
         e.currentTarget.style.background = "var(--color-card, #111318)";
       }}
     >
-      <div style={{ textAlign: "center", color: "var(--color-muted-foreground, #7f7f7f)" }}>
+      <div
+        style={{
+          textAlign: "center",
+          color: "var(--color-muted-foreground, #7f7f7f)",
+        }}
+      >
         <svg
           width="32"
           height="32"
@@ -332,12 +333,49 @@ export default function PersonasPage() {
   );
 
   return (
-    <div className="flex-1 text-white relative" style={{ fontFamily: "Inter, system-ui, sans-serif" }}>
+    <div
+      className="flex-1 text-white relative"
+      style={{ fontFamily: "Inter, system-ui, sans-serif" }}
+    >
       {/* Top Bar */}
-      <div style={{ height: "56px", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 32px", borderBottom: "1px solid rgba(0,212,255,0.06)", background: "rgba(6,10,18,0.6)", backdropFilter: "blur(12px)", position: "sticky", top: 0, zIndex: 30 }}>
+      <div
+        style={{
+          height: "56px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          padding: "0 32px",
+          borderBottom: "1px solid rgba(0,212,255,0.06)",
+          background: "rgba(6,10,18,0.6)",
+          backdropFilter: "blur(12px)",
+          position: "sticky",
+          top: 0,
+          zIndex: 30,
+        }}
+      >
         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-          <h1 style={{ fontSize: "16px", fontWeight: 700, color: "rgba(255,255,255,0.88)", letterSpacing: "-0.02em" }}>Personas</h1>
-          <div style={{ fontFamily: "'JetBrains Mono', ui-monospace, monospace", fontSize: "11px", color: "rgba(255,255,255,0.3)" }}>/ <span style={{ color: "rgba(255,255,255,0.55)" }}>voice profiles</span></div>
+          <h1
+            style={{
+              fontSize: "16px",
+              fontWeight: 700,
+              color: "rgba(255,255,255,0.88)",
+              letterSpacing: "-0.02em",
+            }}
+          >
+            Personas
+          </h1>
+          <div
+            style={{
+              fontFamily: "'JetBrains Mono', ui-monospace, monospace",
+              fontSize: "11px",
+              color: "rgba(255,255,255,0.3)",
+            }}
+          >
+            /{" "}
+            <span style={{ color: "rgba(255,255,255,0.55)" }}>
+              voice profiles
+            </span>
+          </div>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
           <input
@@ -361,64 +399,71 @@ export default function PersonasPage() {
       </div>
 
       <div className="page-content" style={{ padding: "24px 32px" }}>
-      {/* Grid */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))",
-          gap: 16,
-        }}
-      >
-        {filtered.map((persona) => (
-          <PersonaCard key={persona.name} persona={persona} />
-        ))}
-        <CreatePersonaCard />
-      </div>
-
-      {/* Empty state */}
-      {filtered.length === 0 && (
+        {/* Grid */}
         <div
           style={{
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "center",
-            padding: "80px 20px",
-            textAlign: "center",
-            color: "var(--color-muted-foreground, #7f7f7f)",
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))",
+            gap: 16,
           }}
         >
-          <svg
-            width="56"
-            height="56"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            style={{ opacity: 0.2, marginBottom: 16 }}
-            aria-hidden="true"
-          >
-            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-            <circle cx="12" cy="7" r="4" />
-          </svg>
-          <h3
+          {filtered.map((persona) => (
+            <PersonaCard key={persona.name} persona={persona} />
+          ))}
+          <CreatePersonaCard />
+        </div>
+
+        {/* Empty state */}
+        {filtered.length === 0 && (
+          <div
             style={{
-              fontSize: 18,
-              color: "rgba(255,255,255,0.45)",
-              marginBottom: 8,
-              fontWeight: 700,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: "80px 20px",
+              textAlign: "center",
+              color: "var(--color-muted-foreground, #7f7f7f)",
             }}
           >
-            No personas found
-          </h3>
-          <p style={{ fontSize: 13, maxWidth: 400, lineHeight: 1.6, margin: 0 }}>
-            {searchQuery
-              ? `No results for "${searchQuery}". Try a different search term.`
-              : "Create your first persona to define a unique voice profile for your content pipeline."}
-          </p>
-        </div>
-      )}
-    </div>
+            <svg
+              width="56"
+              height="56"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              style={{ opacity: 0.2, marginBottom: 16 }}
+              aria-hidden="true"
+            >
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+              <circle cx="12" cy="7" r="4" />
+            </svg>
+            <h3
+              style={{
+                fontSize: 18,
+                color: "rgba(255,255,255,0.45)",
+                marginBottom: 8,
+                fontWeight: 700,
+              }}
+            >
+              No personas found
+            </h3>
+            <p
+              style={{
+                fontSize: 13,
+                maxWidth: 400,
+                lineHeight: 1.6,
+                margin: 0,
+              }}
+            >
+              {searchQuery
+                ? `No results for "${searchQuery}". Try a different search term.`
+                : "Create your first persona to define a unique voice profile for your content pipeline."}
+            </p>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

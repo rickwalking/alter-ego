@@ -2,7 +2,14 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Badge, Button, Card, CardContent, CardHeader, CardTitle } from "@/components/ui";
+import {
+  Badge,
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui";
 import { API_ENDPOINTS } from "@/constants/api";
 import { authenticatedFetch } from "@/lib/authenticated-fetch";
 
@@ -51,9 +58,7 @@ export function VersionHistorySidebar({
   }, [loadVersions]);
 
   const selectedBody =
-    typeof selected?.snapshot?.body === "string"
-      ? selected.snapshot.body
-      : "";
+    typeof selected?.snapshot?.body === "string" ? selected.snapshot.body : "";
 
   return (
     <Card>
@@ -61,7 +66,9 @@ export function VersionHistorySidebar({
         <CardTitle className="text-base">{t("title")}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
-        {loading && <p className="text-muted-foreground text-sm">{t("loading")}</p>}
+        {loading && (
+          <p className="text-muted-foreground text-sm">{t("loading")}</p>
+        )}
         {!loading && versions.length === 0 && (
           <p className="text-muted-foreground text-sm">{t("empty")}</p>
         )}
@@ -92,7 +99,11 @@ export function VersionHistorySidebar({
               {currentBody.slice(0, 400)}
               {currentBody.length > 400 ? "…" : ""}
             </p>
-            <Button size="sm" variant="outline" onClick={() => onRestore(selected)}>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => onRestore(selected)}
+            >
               {t("restore")}
             </Button>
           </div>

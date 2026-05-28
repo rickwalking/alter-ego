@@ -1,6 +1,13 @@
 /** SSE subscription and polling fallback for editorial workflow. */
 
-import { useCallback, useEffect, useRef, type Dispatch, type RefObject, type SetStateAction } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  type Dispatch,
+  type RefObject,
+  type SetStateAction,
+} from "react";
 import { API_ENDPOINTS } from "@/constants/api";
 import { resolveClientApiUrl } from "@/lib/client-api-url";
 import {
@@ -112,7 +119,10 @@ export function useEditorialWorkflowSse({
           backoffIndexRef.current + 1,
           EDITORIAL_WORKFLOW_POLL_BACKOFF_MS.length - 1,
         );
-        if (transportModeRef.current === EDITORIAL_WORKFLOW_TRANSPORT_MODE.POLLING_FALLBACK) {
+        if (
+          transportModeRef.current ===
+          EDITORIAL_WORKFLOW_TRANSPORT_MODE.POLLING_FALLBACK
+        ) {
           schedulePollFallbackRef.current?.();
         }
       });

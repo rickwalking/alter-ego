@@ -2,148 +2,197 @@
 
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
-import { STAT_CARDS, QUICK_ACTIONS, RECENT_ACTIVITIES, UPCOMING_SCHEDULE } from "./constants";
+import {
+  STAT_CARDS,
+  QUICK_ACTIONS,
+  RECENT_ACTIVITIES,
+  UPCOMING_SCHEDULE,
+} from "./constants";
 
 export default function DashboardPage() {
   const t = useTranslations("dashboard.overview");
 
   return (
-    <div className="flex-1 text-white relative" style={{ fontFamily: "Inter, system-ui, sans-serif" }}>
+    <div
+      className="flex-1 text-white relative"
+      style={{ fontFamily: "Inter, system-ui, sans-serif" }}
+    >
       {/* Top Bar */}
-      <div style={{ height: "56px", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 32px", borderBottom: "1px solid rgba(0,212,255,0.06)", background: "rgba(6,10,18,0.6)", backdropFilter: "blur(12px)", position: "sticky", top: 0, zIndex: 30 }}>
+      <div
+        style={{
+          height: "56px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          padding: "0 32px",
+          borderBottom: "1px solid rgba(0,212,255,0.06)",
+          background: "rgba(6,10,18,0.6)",
+          backdropFilter: "blur(12px)",
+          position: "sticky",
+          top: 0,
+          zIndex: 30,
+        }}
+      >
         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-          <h1 style={{ fontSize: "16px", fontWeight: 700, color: "rgba(255,255,255,0.88)", letterSpacing: "-0.02em" }}>Dashboard</h1>
-          <div style={{ fontFamily: "'JetBrains Mono', ui-monospace, monospace", fontSize: "11px", color: "rgba(255,255,255,0.3)" }}>/ <span style={{ color: "rgba(255,255,255,0.55)" }}>overview</span></div>
+          <h1
+            style={{
+              fontSize: "16px",
+              fontWeight: 700,
+              color: "rgba(255,255,255,0.88)",
+              letterSpacing: "-0.02em",
+            }}
+          >
+            Dashboard
+          </h1>
+          <div
+            style={{
+              fontFamily: "'JetBrains Mono', ui-monospace, monospace",
+              fontSize: "11px",
+              color: "rgba(255,255,255,0.3)",
+            }}
+          >
+            / <span style={{ color: "rgba(255,255,255,0.55)" }}>overview</span>
+          </div>
         </div>
       </div>
 
       <div style={{ padding: "28px 32px" }}>
-      {/* Stats Grid — auto-fit, same as shell .stats-grid */}
-      <div
-        className="grid gap-4 mb-7"
-        style={{ gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))" }}
-      >
-        {STAT_CARDS.map((stat) => (
-          <StatCard key={stat.label} {...stat} />
-        ))}
-      </div>
-
-      {/* Quick Actions */}
-      <div className="mb-7">
-        <div className="flex items-center justify-between mb-4">
-          <h2
-            className="font-extrabold tracking-tight"
-            style={{ fontSize: 18, color: "var(--text, rgba(255,255,255,0.88))" }}
-          >
-            {t("quickActions.title")}
-          </h2>
-        </div>
+        {/* Stats Grid — auto-fit, same as shell .stats-grid */}
         <div
-          className="grid gap-4"
-          style={{ gridTemplateColumns: "repeat(3, 1fr)" }}
+          className="grid gap-4 mb-7"
+          style={{
+            gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+          }}
         >
-          {QUICK_ACTIONS.map((action) => (
-            <QuickActionCard key={action.title} {...action} />
+          {STAT_CARDS.map((stat) => (
+            <StatCard key={stat.label} {...stat} />
           ))}
         </div>
-      </div>
 
-      {/* Recent Activity + Upcoming Schedule */}
-      <div
-        className="grid gap-5"
-        style={{ gridTemplateColumns: "1fr 1fr" }}
-      >
-        {/* Recent Activity */}
-        <div
-          className="overflow-hidden"
-          style={{
-            background: "#0d1324",
-            border: "1px solid rgba(255,255,255,0.06)",
-            borderRadius: 8,
-          }}
-        >
-          <div
-            className="flex items-center justify-between"
-            style={{
-              padding: "16px 20px",
-              borderBottom: "1px solid rgba(255,255,255,0.04)",
-            }}
-          >
-            <h3
-              style={{ fontSize: 14, fontWeight: 700, color: "rgba(255,255,255,0.88)" }}
-            >
-              {t("recentActivity.title")}
-            </h3>
-            <span
-              className="inline-flex items-center gap-[5px] font-mono font-semibold"
+        {/* Quick Actions */}
+        <div className="mb-7">
+          <div className="flex items-center justify-between mb-4">
+            <h2
+              className="font-extrabold tracking-tight"
               style={{
-                padding: "3px 9px",
-                borderRadius: 4,
-                fontSize: 10,
-                background: "rgba(0,212,255,0.12)",
-                color: "#00d4ff",
-                letterSpacing: "0.3px",
+                fontSize: 18,
+                color: "var(--text, rgba(255,255,255,0.88))",
               }}
             >
+              {t("quickActions.title")}
+            </h2>
+          </div>
+          <div
+            className="grid gap-4"
+            style={{ gridTemplateColumns: "repeat(3, 1fr)" }}
+          >
+            {QUICK_ACTIONS.map((action) => (
+              <QuickActionCard key={action.title} {...action} />
+            ))}
+          </div>
+        </div>
+
+        {/* Recent Activity + Upcoming Schedule */}
+        <div className="grid gap-5" style={{ gridTemplateColumns: "1fr 1fr" }}>
+          {/* Recent Activity */}
+          <div
+            className="overflow-hidden"
+            style={{
+              background: "#0d1324",
+              border: "1px solid rgba(255,255,255,0.06)",
+              borderRadius: 8,
+            }}
+          >
+            <div
+              className="flex items-center justify-between"
+              style={{
+                padding: "16px 20px",
+                borderBottom: "1px solid rgba(255,255,255,0.04)",
+              }}
+            >
+              <h3
+                style={{
+                  fontSize: 14,
+                  fontWeight: 700,
+                  color: "rgba(255,255,255,0.88)",
+                }}
+              >
+                {t("recentActivity.title")}
+              </h3>
               <span
-                className="rounded-full"
-                style={{ width: 5, height: 5, background: "currentColor" }}
-              />
-              {t("recentActivity.live")}
-            </span>
+                className="inline-flex items-center gap-[5px] font-mono font-semibold"
+                style={{
+                  padding: "3px 9px",
+                  borderRadius: 4,
+                  fontSize: 10,
+                  background: "rgba(0,212,255,0.12)",
+                  color: "#00d4ff",
+                  letterSpacing: "0.3px",
+                }}
+              >
+                <span
+                  className="rounded-full"
+                  style={{ width: 5, height: 5, background: "currentColor" }}
+                />
+                {t("recentActivity.live")}
+              </span>
+            </div>
+            <div style={{ padding: "8px 20px" }}>
+              {RECENT_ACTIVITIES.map((activity) => (
+                <ActivityItem key={activity.title} {...activity} />
+              ))}
+            </div>
           </div>
-          <div style={{ padding: "8px 20px" }}>
-            {RECENT_ACTIVITIES.map((activity) => (
-              <ActivityItem key={activity.title} {...activity} />
-            ))}
-          </div>
-        </div>
 
-        {/* Upcoming Schedule */}
-        <div
-          className="overflow-hidden"
-          style={{
-            background: "#0d1324",
-            border: "1px solid rgba(255,255,255,0.06)",
-            borderRadius: 8,
-          }}
-        >
+          {/* Upcoming Schedule */}
           <div
-            className="flex items-center justify-between"
+            className="overflow-hidden"
             style={{
-              padding: "16px 20px",
-              borderBottom: "1px solid rgba(255,255,255,0.04)",
+              background: "#0d1324",
+              border: "1px solid rgba(255,255,255,0.06)",
+              borderRadius: 8,
             }}
           >
-            <h3
-              style={{ fontSize: 14, fontWeight: 700, color: "rgba(255,255,255,0.88)" }}
-            >
-              {t("upcomingSchedule.title")}
-            </h3>
-            <button
-              type="button"
-              className="inline-flex items-center gap-2 font-semibold cursor-pointer transition-all duration-200"
+            <div
+              className="flex items-center justify-between"
               style={{
-                padding: "6px 12px",
-                borderRadius: 6,
-                fontSize: 12,
-                lineHeight: 1,
-                background: "transparent",
-                color: "#00d4ff",
-                border: "1px solid rgba(0,212,255,0.25)",
-                fontFamily: "inherit",
+                padding: "16px 20px",
+                borderBottom: "1px solid rgba(255,255,255,0.04)",
               }}
             >
-              {t("upcomingSchedule.viewAll")}
-            </button>
-          </div>
-          <div style={{ padding: "8px 20px" }}>
-            {UPCOMING_SCHEDULE.map((item) => (
-              <ActivityItem key={item.title} {...item} />
-            ))}
+              <h3
+                style={{
+                  fontSize: 14,
+                  fontWeight: 700,
+                  color: "rgba(255,255,255,0.88)",
+                }}
+              >
+                {t("upcomingSchedule.title")}
+              </h3>
+              <button
+                type="button"
+                className="inline-flex items-center gap-2 font-semibold cursor-pointer transition-all duration-200"
+                style={{
+                  padding: "6px 12px",
+                  borderRadius: 6,
+                  fontSize: 12,
+                  lineHeight: 1,
+                  background: "transparent",
+                  color: "#00d4ff",
+                  border: "1px solid rgba(0,212,255,0.25)",
+                  fontFamily: "inherit",
+                }}
+              >
+                {t("upcomingSchedule.viewAll")}
+              </button>
+            </div>
+            <div style={{ padding: "8px 20px" }}>
+              {UPCOMING_SCHEDULE.map((item) => (
+                <ActivityItem key={item.title} {...item} />
+              ))}
+            </div>
           </div>
         </div>
-      </div>
       </div>
     </div>
   );
@@ -193,7 +242,16 @@ function StatCard({
           marginBottom: 12,
         }}
       >
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <svg
+          width="18"
+          height="18"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
           {icon}
         </svg>
       </div>
@@ -288,14 +346,35 @@ function QuickActionCard({
           color: iconColor,
         }}
       >
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <svg
+          width="22"
+          height="22"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
           {icon}
         </svg>
       </div>
-      <h4 style={{ fontSize: 13, fontWeight: 600, color: "rgba(255,255,255,0.88)" }}>
+      <h4
+        style={{
+          fontSize: 13,
+          fontWeight: 600,
+          color: "rgba(255,255,255,0.88)",
+        }}
+      >
         {title}
       </h4>
-      <p style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", lineHeight: 1.4 }}>
+      <p
+        style={{
+          fontSize: 11,
+          color: "rgba(255,255,255,0.3)",
+          lineHeight: 1.4,
+        }}
+      >
         {description}
       </p>
     </button>
@@ -309,7 +388,12 @@ interface ActivityItemProps {
   time: string;
 }
 
-function ActivityItem({ dotColor, title, description, time }: ActivityItemProps) {
+function ActivityItem({
+  dotColor,
+  title,
+  description,
+  time,
+}: ActivityItemProps) {
   return (
     <div
       className="flex items-start"
@@ -329,10 +413,18 @@ function ActivityItem({ dotColor, title, description, time }: ActivityItemProps)
         }}
       />
       <div className="flex-1" style={{ minWidth: 0 }}>
-        <div style={{ fontSize: 13, fontWeight: 500, color: "rgba(255,255,255,0.88)" }}>
+        <div
+          style={{
+            fontSize: 13,
+            fontWeight: 500,
+            color: "rgba(255,255,255,0.88)",
+          }}
+        >
           {title}
         </div>
-        <div style={{ fontSize: 12, color: "rgba(255,255,255,0.3)", marginTop: 2 }}>
+        <div
+          style={{ fontSize: 12, color: "rgba(255,255,255,0.3)", marginTop: 2 }}
+        >
           {description}
         </div>
         <div
@@ -342,6 +434,6 @@ function ActivityItem({ dotColor, title, description, time }: ActivityItemProps)
           {time}
         </div>
       </div>
-      </div>
-    );
-  }
+    </div>
+  );
+}

@@ -2,10 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
-import {
-  API_ENDPOINTS,
-  DEFAULT_BLOG_LANGUAGE,
-} from "@/constants/api";
+import { API_ENDPOINTS, DEFAULT_BLOG_LANGUAGE } from "@/constants/api";
 import { cn } from "@/lib/utils";
 import { authenticatedFetch } from "@/lib/authenticated-fetch";
 import {
@@ -74,7 +71,10 @@ interface PreviewBlogResponse {
   markdown?: string;
 }
 
-function FinalReviewTabs({ projectId, state }: FinalReviewTabsProps): React.JSX.Element {
+function FinalReviewTabs({
+  projectId,
+  state,
+}: FinalReviewTabsProps): React.JSX.Element {
   const tReview = useTranslations("editorialWorkflow.review");
   const t = useTranslations("editorialWorkflow.review.finalReview");
   const untitledSlide = tReview("untitledSlide");
@@ -159,7 +159,9 @@ function FinalReviewTabs({ projectId, state }: FinalReviewTabsProps): React.JSX.
                   const text = draft ? draftText(draft) : "";
                   return (
                     <li key={`${index}-${title}`} className="space-y-1">
-                      <p className="font-medium text-[var(--color-text)]">{title}</p>
+                      <p className="font-medium text-[var(--color-text)]">
+                        {title}
+                      </p>
                       {text ? (
                         <p className="line-clamp-4 whitespace-pre-wrap text-[var(--color-text-muted)] text-xs">
                           {text}
@@ -170,14 +172,18 @@ function FinalReviewTabs({ projectId, state }: FinalReviewTabsProps): React.JSX.
                 })}
               </ol>
             ) : (
-              <p className="text-[var(--color-text-muted)]">{t("carouselEmpty")}</p>
+              <p className="text-[var(--color-text-muted)]">
+                {t("carouselEmpty")}
+              </p>
             )}
           </div>
         )}
         {activeTab === FINAL_REVIEW_TABS.BLOG && (
           <div className="space-y-2">
             {previewLoading ? (
-              <p className="text-[var(--color-text-muted)]">{t("blogPreviewLoading")}</p>
+              <p className="text-[var(--color-text-muted)]">
+                {t("blogPreviewLoading")}
+              </p>
             ) : previewError ? (
               <p className="text-[var(--color-text-muted)]">{previewError}</p>
             ) : displayedBlogMarkdown ? (
@@ -185,16 +191,22 @@ function FinalReviewTabs({ projectId, state }: FinalReviewTabsProps): React.JSX.
                 {displayedBlogMarkdown}
               </pre>
             ) : (
-              <p className="text-[var(--color-text-muted)]">{t("blogPlaceholder")}</p>
+              <p className="text-[var(--color-text-muted)]">
+                {t("blogPlaceholder")}
+              </p>
             )}
           </div>
         )}
         {activeTab === FINAL_REVIEW_TABS.CAPTION && (
           <div className="space-y-2">
             {caption ? (
-              <p className="whitespace-pre-wrap text-[var(--color-text-muted)]">{caption}</p>
+              <p className="whitespace-pre-wrap text-[var(--color-text-muted)]">
+                {caption}
+              </p>
             ) : (
-              <p className="text-[var(--color-text-muted)]">{t("captionEmpty")}</p>
+              <p className="text-[var(--color-text-muted)]">
+                {t("captionEmpty")}
+              </p>
             )}
           </div>
         )}
@@ -207,13 +219,17 @@ function FinalReviewTabs({ projectId, state }: FinalReviewTabsProps): React.JSX.
                     key={name}
                     className="flex items-center justify-between gap-2 text-[var(--color-text-muted)]"
                   >
-                    <span className="font-medium capitalize">{name.replaceAll("_", " ")}</span>
+                    <span className="font-medium capitalize">
+                      {name.replaceAll("_", " ")}
+                    </span>
                     <span>{asString(value) || JSON.stringify(value)}</span>
                   </li>
                 ))}
               </ul>
             ) : (
-              <p className="text-[var(--color-text-muted)]">{t("qualityEmpty")}</p>
+              <p className="text-[var(--color-text-muted)]">
+                {t("qualityEmpty")}
+              </p>
             )}
           </div>
         )}
@@ -230,15 +246,22 @@ export function EditorialPhaseReview({
   const untitledSlide = t("untitledSlide");
   const phase = state.current_phase;
 
-  if (phase === EDITORIAL_PHASES.RESEARCH && state.research_findings.length > 0) {
+  if (
+    phase === EDITORIAL_PHASES.RESEARCH &&
+    state.research_findings.length > 0
+  ) {
     return (
       <div className="space-y-2 rounded-md border border-[var(--color-border)] bg-[var(--color-background)] p-3 text-sm">
         <p className="font-medium">{t("researchTitle")}</p>
         <ul className="space-y-2">
           {state.research_findings.map((finding, index) => {
-            const source = asString(finding.source) || t("findingFallback", { index: index + 1 });
+            const source =
+              asString(finding.source) ||
+              t("findingFallback", { index: index + 1 });
             const points = Array.isArray(finding.key_points)
-              ? finding.key_points.filter((p): p is string => typeof p === "string")
+              ? finding.key_points.filter(
+                  (p): p is string => typeof p === "string",
+                )
               : [];
             return (
               <li key={source} className="space-y-1">
@@ -267,7 +290,9 @@ export function EditorialPhaseReview({
             const title = outlineTitle(slide, untitledSlide);
             const key = `${asString(slide.slide_index) || index}-${title}`;
             const points = Array.isArray(slide.key_points)
-              ? slide.key_points.filter((p): p is string => typeof p === "string")
+              ? slide.key_points.filter(
+                  (p): p is string => typeof p === "string",
+                )
               : [];
             return (
               <li key={key} className="space-y-0.5">
@@ -295,7 +320,10 @@ export function EditorialPhaseReview({
             const text = draftText(slide);
             const key = `${asString(slide.slide_index) || index}-${title}`;
             return (
-              <div key={key} className="space-y-1 border-[var(--color-border)] border-b pb-2 last:border-0">
+              <div
+                key={key}
+                className="space-y-1 border-[var(--color-border)] border-b pb-2 last:border-0"
+              >
                 <p className="font-medium text-[var(--color-text)]">{title}</p>
                 {text ? (
                   <p className="whitespace-pre-wrap text-[var(--color-text-muted)] text-xs">
@@ -325,9 +353,7 @@ export function EditorialPhaseReview({
             <ol className="list-decimal space-y-1 pl-4 text-[var(--color-text-muted)]">
               {state.outline.map((slide, index) => {
                 const title = outlineTitle(slide, untitledSlide);
-                return (
-                  <li key={`${index}-${title}`}>{title}</li>
-                );
+                return <li key={`${index}-${title}`}>{title}</li>;
               })}
             </ol>
           </div>
@@ -355,7 +381,10 @@ export function EditorialPhaseReview({
     );
   }
 
-  if (phase === EDITORIAL_PHASES.IMAGES && (state.image_assets?.length ?? 0) > 0) {
+  if (
+    phase === EDITORIAL_PHASES.IMAGES &&
+    (state.image_assets?.length ?? 0) > 0
+  ) {
     return (
       <div className="space-y-2 rounded-md border border-[var(--color-border)] bg-[var(--color-background)] p-3 text-sm">
         <p className="font-medium">{t("imagesTitle")}</p>

@@ -29,7 +29,10 @@ class MockEventSource {
   onmessage: ((event: MessageEvent<string>) => void) | null = null;
   onerror: (() => void) | null = null;
   onopen: (() => void) | null = null;
-  private listeners = new Map<string, Array<(event: MessageEvent<string>) => void>>();
+  private listeners = new Map<
+    string,
+    Array<(event: MessageEvent<string>) => void>
+  >();
 
   constructor(public url: string) {
     MockEventSource.instances.push(this);
@@ -473,7 +476,9 @@ describe("useEditorialWorkflow", () => {
 
     vi.useFakeTimers();
     await act(async () => {
-      const revisePromise = result.current.revise("Prioritize the breach example first");
+      const revisePromise = result.current.revise(
+        "Prioritize the breach example first",
+      );
       MockEventSource.instances[0]?.emit(
         EDITORIAL_WORKFLOW_SSE_EVENTS.REVIEW_REQUIRED,
         {
@@ -769,7 +774,9 @@ describe("useEditorialWorkflow", () => {
     expect(result.current.state?.current_phase).toBe("outline");
     expect(result.current.state?.outline).toHaveLength(1);
     expect(result.current.error).toBeNull();
-    expect(countStateFetches() - statePollsBeforeApprove).toBeLessThanOrEqual(1);
+    expect(countStateFetches() - statePollsBeforeApprove).toBeLessThanOrEqual(
+      1,
+    );
   });
 
   // Feature: Resume recovery without false errors or manual refresh

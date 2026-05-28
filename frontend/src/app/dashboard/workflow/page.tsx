@@ -168,7 +168,8 @@ const styles = {
     letterSpacing: "1px",
   } as const,
   colCount: {
-    fontFamily: '"JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+    fontFamily:
+      '"JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
     fontSize: "10px",
     color: "rgba(255,255,255,0.4)",
     background: "rgba(255,255,255,0.04)",
@@ -227,7 +228,8 @@ const styles = {
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    fontFamily: '"JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+    fontFamily:
+      '"JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
     fontSize: "9px",
     fontWeight: 700,
     flexShrink: 0 as const,
@@ -242,7 +244,8 @@ const styles = {
     fontSize: "9px",
     padding: "2px 6px",
     borderRadius: "3px",
-    fontFamily: '"JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+    fontFamily:
+      '"JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
     background: "rgba(255,255,255,0.04)",
     color: "rgba(255,255,255,0.4)",
   } as const,
@@ -331,7 +334,9 @@ function BoardColumn({ column }: { column: ColumnData }) {
   return (
     <div style={styles.column}>
       <div style={styles.colHeader}>
-        <h3 style={{ ...styles.colTitle, color: column.color }}>{column.label}</h3>
+        <h3 style={{ ...styles.colTitle, color: column.color }}>
+          {column.label}
+        </h3>
         <span
           tabIndex={0}
           role="button"
@@ -358,27 +363,87 @@ function BoardColumn({ column }: { column: ColumnData }) {
 /* ── Page ── */
 export default function WorkflowBoardPage() {
   return (
-    <div className="flex-1 text-white relative" style={{ fontFamily: "Inter, system-ui, sans-serif" }}>
+    <div
+      className="flex-1 text-white relative"
+      style={{ fontFamily: "Inter, system-ui, sans-serif" }}
+    >
       {/* Top Bar */}
-      <div style={{ height: "56px", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 32px", borderBottom: "1px solid rgba(0,212,255,0.06)", background: "rgba(6,10,18,0.6)", backdropFilter: "blur(12px)", position: "sticky", top: 0, zIndex: 30 }}>
+      <div
+        style={{
+          height: "56px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          padding: "0 32px",
+          borderBottom: "1px solid rgba(0,212,255,0.06)",
+          background: "rgba(6,10,18,0.6)",
+          backdropFilter: "blur(12px)",
+          position: "sticky",
+          top: 0,
+          zIndex: 30,
+        }}
+      >
         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-          <h1 style={{ fontSize: "16px", fontWeight: 700, color: "rgba(255,255,255,0.88)", letterSpacing: "-0.02em" }}>Workflow Board</h1>
-          <div style={{ fontFamily: "'JetBrains Mono', ui-monospace, monospace", fontSize: "11px", color: "rgba(255,255,255,0.3)" }}>/ <span style={{ color: "rgba(255,255,255,0.55)" }}>pipeline</span></div>
+          <h1
+            style={{
+              fontSize: "16px",
+              fontWeight: 700,
+              color: "rgba(255,255,255,0.88)",
+              letterSpacing: "-0.02em",
+            }}
+          >
+            Workflow Board
+          </h1>
+          <div
+            style={{
+              fontFamily: "'JetBrains Mono', ui-monospace, monospace",
+              fontSize: "11px",
+              color: "rgba(255,255,255,0.3)",
+            }}
+          >
+            / <span style={{ color: "rgba(255,255,255,0.55)" }}>pipeline</span>
+          </div>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-          <button style={{ display: "inline-flex", alignItems: "center", gap: "8px", padding: "6px 14px", borderRadius: "6px", fontSize: "12px", fontWeight: 600, border: "none", cursor: "pointer", fontFamily: "inherit", background: "linear-gradient(135deg, #00d4ff 0%, #0090b0 100%)", color: "#060a12", boxShadow: "0 0 16px rgba(0,212,255,0.15)" }}>
-            <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M12 5v14" strokeLinecap="round" /><path d="M5 12h14" strokeLinecap="round" /></svg>
+          <button
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "8px",
+              padding: "6px 14px",
+              borderRadius: "6px",
+              fontSize: "12px",
+              fontWeight: 600,
+              border: "none",
+              cursor: "pointer",
+              fontFamily: "inherit",
+              background: "linear-gradient(135deg, #00d4ff 0%, #0090b0 100%)",
+              color: "#060a12",
+              boxShadow: "0 0 16px rgba(0,212,255,0.15)",
+            }}
+          >
+            <svg
+              width="14"
+              height="14"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              viewBox="0 0 24 24"
+            >
+              <path d="M12 5v14" strokeLinecap="round" />
+              <path d="M5 12h14" strokeLinecap="round" />
+            </svg>
             New Card
           </button>
         </div>
       </div>
-    <div style={styles.pageContent}>
-      <div style={styles.grid}>
-        {COLUMNS.map((column) => (
-          <BoardColumn key={column.id} column={column} />
-        ))}
-      </div>
-      <style>{`
+      <div style={styles.pageContent}>
+        <div style={styles.grid}>
+          {COLUMNS.map((column) => (
+            <BoardColumn key={column.id} column={column} />
+          ))}
+        </div>
+        <style>{`
         @media (max-width: 1200px) {
           div[style*="grid-template-columns: repeat(6, 1fr)"] {
             grid-template-columns: repeat(4, 1fr) !important;
@@ -402,7 +467,7 @@ export default function WorkflowBoardPage() {
           transform: scale(0.98);
         }
       `}</style>
-    </div>
+      </div>
     </div>
   );
 }

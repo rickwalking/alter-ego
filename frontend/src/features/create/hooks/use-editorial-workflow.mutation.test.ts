@@ -6,7 +6,10 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { EDITORIAL_WORKFLOW_SSE_EVENTS, EDITORIAL_WORKFLOW_TRANSPORT_MODE } from "@/constants/editorial-workflow";
+import {
+  EDITORIAL_WORKFLOW_SSE_EVENTS,
+  EDITORIAL_WORKFLOW_TRANSPORT_MODE,
+} from "@/constants/editorial-workflow";
 import { WORKFLOW_PHASE_STATUS } from "@/constants/workflow";
 import {
   isResumeClientErrorStatus,

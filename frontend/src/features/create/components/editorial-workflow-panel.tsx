@@ -2,7 +2,13 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Alert, AlertDescription, Badge, Button, Textarea } from "@/components/ui";
+import {
+  Alert,
+  AlertDescription,
+  Badge,
+  Button,
+  Textarea,
+} from "@/components/ui";
 import {
   EDITORIAL_PHASES,
   EDITORIAL_WORKFLOW_STATUS,
@@ -43,9 +49,8 @@ export function EditorialWorkflowPanel({
   const startedRef = useRef(false);
   const [feedback, setFeedback] = useState("");
   const [feedbackError, setFeedbackError] = useState<string | null>(null);
-  const [sendBackTarget, setSendBackTarget] = useState<FinalReviewSendBackPhase>(
-    EDITORIAL_PHASES.CONTENT,
-  );
+  const [sendBackTarget, setSendBackTarget] =
+    useState<FinalReviewSendBackPhase>(EDITORIAL_PHASES.CONTENT);
   const {
     state,
     phaseEvents,
@@ -69,8 +74,9 @@ export function EditorialWorkflowPanel({
 
   useEffect(() => {
     if (
-      state?.workflow_status === EDITORIAL_WORKFLOW_STATUS.APPROVED_FOR_PUBLISH
-      && onPublished
+      state?.workflow_status ===
+        EDITORIAL_WORKFLOW_STATUS.APPROVED_FOR_PUBLISH &&
+      onPublished
     ) {
       onPublished();
     }
@@ -92,7 +98,8 @@ export function EditorialWorkflowPanel({
     });
   };
 
-  const isFinalReviewGate = state?.current_phase === EDITORIAL_PHASES.FINAL_REVIEW;
+  const isFinalReviewGate =
+    state?.current_phase === EDITORIAL_PHASES.FINAL_REVIEW;
 
   const minPersonaScore =
     state?.current_phase === EDITORIAL_PHASES.CONTENT && state.persona_scores
@@ -100,7 +107,9 @@ export function EditorialWorkflowPanel({
           ...Object.values(state.persona_scores).map((entry) => {
             if (entry && typeof entry === "object" && "overall" in entry) {
               const overall = (entry as { overall?: unknown }).overall;
-              return typeof overall === "number" ? overall : Number(overall ?? 0);
+              return typeof overall === "number"
+                ? overall
+                : Number(overall ?? 0);
             }
             return typeof entry === "number" ? entry : 0;
           }),
@@ -116,7 +125,8 @@ export function EditorialWorkflowPanel({
       <div className="flex items-center justify-between gap-2">
         <h3 className="font-semibold">{t("title")}</h3>
         <div className="flex items-center gap-2">
-          {transportMode === EDITORIAL_WORKFLOW_TRANSPORT_MODE.POLLING_FALLBACK && (
+          {transportMode ===
+            EDITORIAL_WORKFLOW_TRANSPORT_MODE.POLLING_FALLBACK && (
             <Badge variant="outline">{t("transport.pollingFallback")}</Badge>
           )}
           {hasActiveWorkflow && (
@@ -163,7 +173,9 @@ export function EditorialWorkflowPanel({
                     className="border-input bg-background w-full rounded-md border px-3 py-2 text-sm"
                     value={sendBackTarget}
                     onChange={(event) => {
-                      setSendBackTarget(event.target.value as FinalReviewSendBackPhase);
+                      setSendBackTarget(
+                        event.target.value as FinalReviewSendBackPhase,
+                      );
                     }}
                   >
                     {FINAL_REVIEW_SEND_BACK_PHASES.map((phase) => (
@@ -203,7 +215,9 @@ export function EditorialWorkflowPanel({
             <div className="flex gap-2">
               <Button
                 size="sm"
-                disabled={loading || !awaitingHumanReview || personaApproveBlocked}
+                disabled={
+                  loading || !awaitingHumanReview || personaApproveBlocked
+                }
                 onClick={() => void approve()}
               >
                 {loading ? t("actions.processing") : t("actions.approve")}
@@ -218,10 +232,14 @@ export function EditorialWorkflowPanel({
               </Button>
             </div>
             {personaApproveBlocked && (
-              <p className="text-destructive text-xs">{t("persona.belowThreshold")}</p>
+              <p className="text-destructive text-xs">
+                {t("persona.belowThreshold")}
+              </p>
             )}
             {showPublishLink && (
-              <p className="text-[var(--color-text-muted)] text-xs">{t("publishReady")}</p>
+              <p className="text-[var(--color-text-muted)] text-xs">
+                {t("publishReady")}
+              </p>
             )}
           </div>
         </div>

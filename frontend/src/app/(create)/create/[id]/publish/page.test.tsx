@@ -65,7 +65,9 @@ describe("PublishPage", () => {
   // Scenario: Publish panel appears after final review approval
   it("shows publish to site action when workflow is approved for publish", () => {
     render(<PublishPage />);
-    expect(screen.getByRole("button", { name: "publishToSite" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "publishToSite" }),
+    ).toBeInTheDocument();
     expect(screen.getByText("PublishPanel")).toBeInTheDocument();
   });
 });

@@ -28,24 +28,53 @@ const TEMPLATES = [
 ];
 
 const ARTIFACTS = [
-  { name: "Research Report", desc: "Collecting data from Twitter, GitHub, tech blogs, and documentation...", status: "pending" },
-  { name: "Slide Outline", desc: "Generating structured outline with slide-by-slide breakdown...", status: "pending" },
-  { name: "Slide Content", desc: "Drafting content with persona voice matching...", status: "pending" },
-  { name: "Design Tokens", desc: "Generating color palette, typography, and layout tokens...", status: "pending" },
-  { name: "Generated Images", desc: "Creating custom images with selected model and style...", status: "pending" },
-  { name: "Final Review", desc: "Quality check, persona enforcement, and rubric validation...", status: "pending" },
+  {
+    name: "Research Report",
+    desc: "Collecting data from Twitter, GitHub, tech blogs, and documentation...",
+    status: "pending",
+  },
+  {
+    name: "Slide Outline",
+    desc: "Generating structured outline with slide-by-slide breakdown...",
+    status: "pending",
+  },
+  {
+    name: "Slide Content",
+    desc: "Drafting content with persona voice matching...",
+    status: "pending",
+  },
+  {
+    name: "Design Tokens",
+    desc: "Generating color palette, typography, and layout tokens...",
+    status: "pending",
+  },
+  {
+    name: "Generated Images",
+    desc: "Creating custom images with selected model and style...",
+    status: "pending",
+  },
+  {
+    name: "Final Review",
+    desc: "Quality check, persona enforcement, and rubric validation...",
+    status: "pending",
+  },
 ];
 
 export default function CreateCarouselPage() {
   const [selectedTemplate, setSelectedTemplate] = useState(0);
 
   return (
-    <div className="flex-1 text-white relative" style={{ fontFamily: "Inter, system-ui, sans-serif" }}>
+    <div
+      className="flex-1 text-white relative"
+      style={{ fontFamily: "Inter, system-ui, sans-serif" }}
+    >
       {/* Top Bar */}
       <div className="h-[56px] flex items-center justify-between px-6 border-b border-[rgba(0,212,255,0.06)] bg-[rgba(6,10,18,0.6)] backdrop-blur-xl sticky top-0 z-30">
         <div className="flex items-center gap-3">
           <h1 className="text-[16px] font-bold">Create Carousel</h1>
-          <div className="font-mono text-[11px] text-[rgba(255,255,255,0.3)]">/ <span>new project</span></div>
+          <div className="font-mono text-[11px] text-[rgba(255,255,255,0.3)]">
+            / <span>new project</span>
+          </div>
         </div>
         <div className="flex items-center gap-3">
           <input
@@ -79,11 +108,29 @@ export default function CreateCarouselPage() {
               position: "relative",
             }}
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+            >
               <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
               <path d="M13.73 21a2 2 0 0 1-3.46 0" />
             </svg>
-            <span style={{ position: "absolute", top: "6px", right: "6px", width: "6px", height: "6px", borderRadius: "50%", background: "#ff2770" }} />
+            <span
+              style={{
+                position: "absolute",
+                top: "6px",
+                right: "6px",
+                width: "6px",
+                height: "6px",
+                borderRadius: "50%",
+                background: "#ff2770",
+              }}
+            />
           </button>
         </div>
       </div>
@@ -111,7 +158,10 @@ export default function CreateCarouselPage() {
                 gap: "8px",
                 fontSize: "12px",
                 color: step.num === 1 ? TEXT : TEXT_DIM,
-                borderRight: step.num < STEPS.length ? "1px solid rgba(255,255,255,0.04)" : "none",
+                borderRight:
+                  step.num < STEPS.length
+                    ? "1px solid rgba(255,255,255,0.04)"
+                    : "none",
               }}
             >
               <span
@@ -126,7 +176,8 @@ export default function CreateCarouselPage() {
                   fontSize: "10px",
                   fontWeight: 700,
                   flexShrink: 0,
-                  background: step.num === 1 ? CYAN_DIM : "rgba(255,255,255,0.04)",
+                  background:
+                    step.num === 1 ? CYAN_DIM : "rgba(255,255,255,0.04)",
                   color: step.num === 1 ? CYAN : TEXT_DIM,
                 }}
               >
@@ -138,58 +189,205 @@ export default function CreateCarouselPage() {
         </div>
 
         {/* Main Layout */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 360px", gap: "24px" }}>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "1fr 360px",
+            gap: "24px",
+          }}
+        >
           {/* Left Column - Forms */}
-          <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+          <div
+            style={{ display: "flex", flexDirection: "column", gap: "24px" }}
+          >
             {/* Section 1: Topic & Brief */}
-            <div style={{ background: "#0d1324", border: "1px solid rgba(255,255,255,0.06)", borderRadius: "8px", padding: "24px" }}>
-              <div style={{ fontSize: "14px", fontWeight: 700, marginBottom: "12px", display: "flex", alignItems: "center", gap: "8px" }}>
-                <span style={{ width: "22px", height: "22px", borderRadius: "50%", background: CYAN_DIM, color: CYAN, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'JetBrains Mono', ui-monospace, monospace", fontSize: "11px", fontWeight: 700 }}>1</span>
+            <div
+              style={{
+                background: "#0d1324",
+                border: "1px solid rgba(255,255,255,0.06)",
+                borderRadius: "8px",
+                padding: "24px",
+              }}
+            >
+              <div
+                style={{
+                  fontSize: "14px",
+                  fontWeight: 700,
+                  marginBottom: "12px",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                }}
+              >
+                <span
+                  style={{
+                    width: "22px",
+                    height: "22px",
+                    borderRadius: "50%",
+                    background: CYAN_DIM,
+                    color: CYAN,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontFamily: "'JetBrains Mono', ui-monospace, monospace",
+                    fontSize: "11px",
+                    fontWeight: 700,
+                  }}
+                >
+                  1
+                </span>
                 Topic & Brief
               </div>
               <div style={{ marginBottom: "14px" }}>
-                <label style={{ fontSize: "12px", color: TEXT_MUTED, marginBottom: "6px", display: "block" }}>Carousel Topic <span style={{ color: TEXT_DIM, fontSize: "11px" }}>(max 500 chars)</span></label>
+                <label
+                  style={{
+                    fontSize: "12px",
+                    color: TEXT_MUTED,
+                    marginBottom: "6px",
+                    display: "block",
+                  }}
+                >
+                  Carousel Topic{" "}
+                  <span style={{ color: TEXT_DIM, fontSize: "11px" }}>
+                    (max 500 chars)
+                  </span>
+                </label>
                 <input
                   type="text"
                   defaultValue="DeepSeek V4 Analysis"
-                  style={{ width: "100%", padding: "10px 12px", borderRadius: "6px", border: "1px solid rgba(255,255,255,0.08)", background: "rgba(6,10,18,0.6)", color: TEXT, fontSize: "13px", outline: "none" }}
+                  style={{
+                    width: "100%",
+                    padding: "10px 12px",
+                    borderRadius: "6px",
+                    border: "1px solid rgba(255,255,255,0.08)",
+                    background: "rgba(6,10,18,0.6)",
+                    color: TEXT,
+                    fontSize: "13px",
+                    outline: "none",
+                  }}
                   placeholder="e.g., DeepSeek V4: Open-Source LLM Benchmark Performance"
                 />
               </div>
               <div style={{ marginBottom: "14px" }}>
-                <label style={{ fontSize: "12px", color: TEXT_MUTED, marginBottom: "6px", display: "block" }}>Target Audience <span style={{ color: TEXT_DIM, fontSize: "11px" }}>(max 500 chars)</span></label>
+                <label
+                  style={{
+                    fontSize: "12px",
+                    color: TEXT_MUTED,
+                    marginBottom: "6px",
+                    display: "block",
+                  }}
+                >
+                  Target Audience{" "}
+                  <span style={{ color: TEXT_DIM, fontSize: "11px" }}>
+                    (max 500 chars)
+                  </span>
+                </label>
                 <input
                   type="text"
                   defaultValue="AI/ML Engineers, Software Developers"
-                  style={{ width: "100%", padding: "10px 12px", borderRadius: "6px", border: "1px solid rgba(255,255,255,0.08)", background: "rgba(6,10,18,0.6)", color: TEXT, fontSize: "13px", outline: "none" }}
+                  style={{
+                    width: "100%",
+                    padding: "10px 12px",
+                    borderRadius: "6px",
+                    border: "1px solid rgba(255,255,255,0.08)",
+                    background: "rgba(6,10,18,0.6)",
+                    color: TEXT,
+                    fontSize: "13px",
+                    outline: "none",
+                  }}
                   placeholder="Who should read this carousel?"
                 />
               </div>
               <div>
-                <label style={{ fontSize: "12px", color: TEXT_MUTED, marginBottom: "6px", display: "block" }}>Brief / Description <span style={{ color: TEXT_DIM, fontSize: "11px" }}>(max 200 chars)</span></label>
+                <label
+                  style={{
+                    fontSize: "12px",
+                    color: TEXT_MUTED,
+                    marginBottom: "6px",
+                    display: "block",
+                  }}
+                >
+                  Brief / Description{" "}
+                  <span style={{ color: TEXT_DIM, fontSize: "11px" }}>
+                    (max 200 chars)
+                  </span>
+                </label>
                 <textarea
                   defaultValue="Analyze DeepSeek V4's architecture, benchmark performance against open-source LLMs, pricing strategy, and implications for the open-source AI landscape."
                   rows={4}
-                  style={{ width: "100%", padding: "10px 12px", borderRadius: "6px", border: "1px solid rgba(255,255,255,0.08)", background: "rgba(6,10,18,0.6)", color: TEXT, fontSize: "13px", outline: "none", resize: "vertical", fontFamily: "inherit" }}
+                  style={{
+                    width: "100%",
+                    padding: "10px 12px",
+                    borderRadius: "6px",
+                    border: "1px solid rgba(255,255,255,0.08)",
+                    background: "rgba(6,10,18,0.6)",
+                    color: TEXT,
+                    fontSize: "13px",
+                    outline: "none",
+                    resize: "vertical",
+                    fontFamily: "inherit",
+                  }}
                   placeholder="What should this carousel cover?"
                 />
               </div>
             </div>
 
             {/* Section 2: Template Style */}
-            <div style={{ background: "#0d1324", border: "1px solid rgba(255,255,255,0.06)", borderRadius: "8px", padding: "24px" }}>
-              <div style={{ fontSize: "14px", fontWeight: 700, marginBottom: "12px", display: "flex", alignItems: "center", gap: "8px" }}>
-                <span style={{ width: "22px", height: "22px", borderRadius: "50%", background: CYAN_DIM, color: CYAN, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'JetBrains Mono', ui-monospace, monospace", fontSize: "11px", fontWeight: 700 }}>2</span>
+            <div
+              style={{
+                background: "#0d1324",
+                border: "1px solid rgba(255,255,255,0.06)",
+                borderRadius: "8px",
+                padding: "24px",
+              }}
+            >
+              <div
+                style={{
+                  fontSize: "14px",
+                  fontWeight: 700,
+                  marginBottom: "12px",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                }}
+              >
+                <span
+                  style={{
+                    width: "22px",
+                    height: "22px",
+                    borderRadius: "50%",
+                    background: CYAN_DIM,
+                    color: CYAN,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontFamily: "'JetBrains Mono', ui-monospace, monospace",
+                    fontSize: "11px",
+                    fontWeight: 700,
+                  }}
+                >
+                  2
+                </span>
                 Template Style
               </div>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "10px" }}>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(3, 1fr)",
+                  gap: "10px",
+                }}
+              >
                 {TEMPLATES.map((tpl, idx) => (
                   <div
                     key={tpl.name}
                     onClick={() => setSelectedTemplate(idx)}
                     style={{
-                      background: idx === selectedTemplate ? CYAN_DIM : "#0d1324",
-                      border: idx === selectedTemplate ? `1px solid ${CYAN}` : "1px solid rgba(255,255,255,0.06)",
+                      background:
+                        idx === selectedTemplate ? CYAN_DIM : "#0d1324",
+                      border:
+                        idx === selectedTemplate
+                          ? `1px solid ${CYAN}`
+                          : "1px solid rgba(255,255,255,0.06)",
                       borderRadius: "8px",
                       padding: "14px",
                       cursor: "pointer",
@@ -197,23 +395,92 @@ export default function CreateCarouselPage() {
                       textAlign: "center",
                     }}
                   >
-                    <div style={{ fontSize: "20px", marginBottom: "4px" }}>{tpl.icon}</div>
-                    <h4 style={{ fontSize: "12px", fontWeight: 600, color: TEXT, margin: 0 }}>{tpl.name}</h4>
-                    <p style={{ fontSize: "10px", color: TEXT_DIM, margin: "4px 0 0" }}>{tpl.desc}</p>
+                    <div style={{ fontSize: "20px", marginBottom: "4px" }}>
+                      {tpl.icon}
+                    </div>
+                    <h4
+                      style={{
+                        fontSize: "12px",
+                        fontWeight: 600,
+                        color: TEXT,
+                        margin: 0,
+                      }}
+                    >
+                      {tpl.name}
+                    </h4>
+                    <p
+                      style={{
+                        fontSize: "10px",
+                        color: TEXT_DIM,
+                        margin: "4px 0 0",
+                      }}
+                    >
+                      {tpl.desc}
+                    </p>
                   </div>
                 ))}
               </div>
             </div>
 
             {/* Section 3: Theme & Voice */}
-            <div style={{ background: "#0d1324", border: "1px solid rgba(255,255,255,0.06)", borderRadius: "8px", padding: "24px" }}>
-              <div style={{ fontSize: "14px", fontWeight: 700, marginBottom: "12px", display: "flex", alignItems: "center", gap: "8px" }}>
-                <span style={{ width: "22px", height: "22px", borderRadius: "50%", background: CYAN_DIM, color: CYAN, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'JetBrains Mono', ui-monospace, monospace", fontSize: "11px", fontWeight: 700 }}>3</span>
+            <div
+              style={{
+                background: "#0d1324",
+                border: "1px solid rgba(255,255,255,0.06)",
+                borderRadius: "8px",
+                padding: "24px",
+              }}
+            >
+              <div
+                style={{
+                  fontSize: "14px",
+                  fontWeight: 700,
+                  marginBottom: "12px",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                }}
+              >
+                <span
+                  style={{
+                    width: "22px",
+                    height: "22px",
+                    borderRadius: "50%",
+                    background: CYAN_DIM,
+                    color: CYAN,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontFamily: "'JetBrains Mono', ui-monospace, monospace",
+                    fontSize: "11px",
+                    fontWeight: 700,
+                  }}
+                >
+                  3
+                </span>
                 Theme & Voice
               </div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: "12px",
+                }}
+              >
                 <div>
-                  <label style={{ fontSize: "12px", color: TEXT_MUTED, marginBottom: "6px", display: "block" }}>Theme <span style={{ color: TEXT_DIM, fontSize: "11px" }}>(enum)</span></label>
+                  <label
+                    style={{
+                      fontSize: "12px",
+                      color: TEXT_MUTED,
+                      marginBottom: "6px",
+                      display: "block",
+                    }}
+                  >
+                    Theme{" "}
+                    <span style={{ color: TEXT_DIM, fontSize: "11px" }}>
+                      (enum)
+                    </span>
+                  </label>
                   <select
                     style={{
                       width: "100%",
@@ -231,11 +498,25 @@ export default function CreateCarouselPage() {
                     <option value="ai_competition">AI Competition</option>
                     <option value="developer_skills">Developer Skills</option>
                     <option value="source_code">Source Code</option>
-                    <option value="social_engineering">Social Engineering</option>
+                    <option value="social_engineering">
+                      Social Engineering
+                    </option>
                   </select>
                 </div>
                 <div>
-                  <label style={{ fontSize: "12px", color: TEXT_MUTED, marginBottom: "6px", display: "block" }}>Image Preset <span style={{ color: TEXT_DIM, fontSize: "11px" }}>(model + style)</span></label>
+                  <label
+                    style={{
+                      fontSize: "12px",
+                      color: TEXT_MUTED,
+                      marginBottom: "6px",
+                      display: "block",
+                    }}
+                  >
+                    Image Preset{" "}
+                    <span style={{ color: TEXT_DIM, fontSize: "11px" }}>
+                      (model + style)
+                    </span>
+                  </label>
                   <select
                     style={{
                       width: "100%",
@@ -259,12 +540,39 @@ export default function CreateCarouselPage() {
           </div>
 
           {/* Right Sidebar */}
-          <div style={{ position: "sticky", top: "84px", alignSelf: "start", display: "flex", flexDirection: "column", gap: "16px" }}>
-            <div style={{ background: "#0d1324", border: "1px solid rgba(255,255,255,0.06)", borderRadius: "8px", padding: "20px" }}>
-              <h3 style={{ fontSize: "14px", fontWeight: 700, marginBottom: "12px" }}>Project Summary</h3>
+          <div
+            style={{
+              position: "sticky",
+              top: "84px",
+              alignSelf: "start",
+              display: "flex",
+              flexDirection: "column",
+              gap: "16px",
+            }}
+          >
+            <div
+              style={{
+                background: "#0d1324",
+                border: "1px solid rgba(255,255,255,0.06)",
+                borderRadius: "8px",
+                padding: "20px",
+              }}
+            >
+              <h3
+                style={{
+                  fontSize: "14px",
+                  fontWeight: 700,
+                  marginBottom: "12px",
+                }}
+              >
+                Project Summary
+              </h3>
               {[
                 { label: "Type", value: "Analysis" },
-                { label: "Slides", value: "1 intro, 3 content, 1 closing, 1 CTA" },
+                {
+                  label: "Slides",
+                  value: "1 intro, 3 content, 1 closing, 1 CTA",
+                },
                 { label: "Aspect Ratio", value: "1080x1350" },
                 { label: "Language", value: "pt-BR" },
                 { label: "Generate Images", value: "Yes" },
@@ -282,23 +590,73 @@ export default function CreateCarouselPage() {
                 >
                   <span style={{ color: TEXT_DIM }}>{row.label}</span>
                   {row.badge ? (
-                    <span style={{ padding: "2px 6px", borderRadius: "4px", fontSize: "11px", fontWeight: 600, background: "rgba(245,158,11,0.15)", color: "#f59e0b" }}>
+                    <span
+                      style={{
+                        padding: "2px 6px",
+                        borderRadius: "4px",
+                        fontSize: "11px",
+                        fontWeight: 600,
+                        background: "rgba(245,158,11,0.15)",
+                        color: "#f59e0b",
+                      }}
+                    >
                       {row.value}
                     </span>
                   ) : (
-                    <span style={{ color: TEXT, fontWeight: 600 }}>{row.value}</span>
+                    <span style={{ color: TEXT, fontWeight: 600 }}>
+                      {row.value}
+                    </span>
                   )}
                 </div>
               ))}
             </div>
 
-            <div style={{ background: "#0d1324", border: "1px solid rgba(255,255,255,0.06)", borderRadius: "8px", padding: "20px" }}>
-              <h3 style={{ fontSize: "14px", fontWeight: 700, marginBottom: "12px" }}>Generation Report</h3>
+            <div
+              style={{
+                background: "#0d1324",
+                border: "1px solid rgba(255,255,255,0.06)",
+                borderRadius: "8px",
+                padding: "20px",
+              }}
+            >
+              <h3
+                style={{
+                  fontSize: "14px",
+                  fontWeight: 700,
+                  marginBottom: "12px",
+                }}
+              >
+                Generation Report
+              </h3>
               <div style={{ maxHeight: "400px", overflowY: "auto" }}>
                 {ARTIFACTS.map((artifact) => (
-                  <div key={artifact.name} style={{ padding: "12px 0", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
-                    <h4 style={{ fontSize: "12px", fontWeight: 600, color: TEXT, margin: "0 0 4px" }}>{artifact.name}</h4>
-                    <p style={{ fontSize: "10px", color: TEXT_DIM, margin: 0, lineHeight: 1.4 }}>{artifact.desc}</p>
+                  <div
+                    key={artifact.name}
+                    style={{
+                      padding: "12px 0",
+                      borderBottom: "1px solid rgba(255,255,255,0.04)",
+                    }}
+                  >
+                    <h4
+                      style={{
+                        fontSize: "12px",
+                        fontWeight: 600,
+                        color: TEXT,
+                        margin: "0 0 4px",
+                      }}
+                    >
+                      {artifact.name}
+                    </h4>
+                    <p
+                      style={{
+                        fontSize: "10px",
+                        color: TEXT_DIM,
+                        margin: 0,
+                        lineHeight: 1.4,
+                      }}
+                    >
+                      {artifact.desc}
+                    </p>
                     <span
                       style={{
                         display: "inline-block",

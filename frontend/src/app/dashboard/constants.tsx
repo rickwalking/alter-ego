@@ -31,9 +31,7 @@ function ClockPaths() {
 }
 
 function ShieldPaths() {
-  return (
-    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-  );
+  return <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />;
 }
 
 function PlusPaths() {
@@ -141,7 +139,8 @@ export interface QuickActionConfig {
 export const QUICK_ACTIONS: QuickActionConfig[] = [
   {
     title: "New Carousel",
-    description: "Start a new carousel project from scratch or from a template.",
+    description:
+      "Start a new carousel project from scratch or from a template.",
     icon: <PlusPaths />,
     iconBg: NEON_CYAN_DIM,
     iconColor: NEON_CYAN,
@@ -175,13 +174,15 @@ export const RECENT_ACTIVITIES: ActivityConfig[] = [
   {
     dotColor: NEON_GREEN,
     title: 'Carousel published: "DeepSeek V4 Analysis"',
-    description: "Published to Instagram and LinkedIn. 2.4k impressions in first hour.",
+    description:
+      "Published to Instagram and LinkedIn. 2.4k impressions in first hour.",
     time: "12 minutes ago",
   },
   {
     dotColor: NEON_CYAN,
     title: "Blog post draft completed",
-    description: '"Building RAG Pipelines with LangGraph" passed AI review. Ready for human review.',
+    description:
+      '"Building RAG Pipelines with LangGraph" passed AI review. Ready for human review.',
     time: "1 hour ago",
   },
   {
@@ -199,7 +200,8 @@ export const RECENT_ACTIVITIES: ActivityConfig[] = [
   {
     dotColor: NEON_TEAL,
     title: "Scheduled publication confirmed",
-    description: '"AI Competition Landscape" carousel set for May 28 at 10:00 AM.',
+    description:
+      '"AI Competition Landscape" carousel set for May 28 at 10:00 AM.',
     time: "Yesterday at 4:15 PM",
   },
 ];

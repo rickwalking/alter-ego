@@ -2,9 +2,10 @@
 
 from collections.abc import Generator
 from contextlib import contextmanager
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 from uuid import UUID
 
+from langchain_core.callbacks.base import BaseCallbackHandler
 from langfuse import Langfuse
 
 from rag_backend.infrastructure.langfuse_client import (
@@ -173,14 +174,14 @@ class LangfuseCallbackHandler:
         )
 
 
-def get_langfuse_handler() -> list[object]:
+def get_langfuse_handler() -> list[BaseCallbackHandler]:
     """Get LangChain-compatible Langfuse callbacks when configured."""
     from rag_backend.monitoring_langfuse import get_langfuse_handler as get_root_handler
 
     handler = get_root_handler()
     if handler is None:
         return []
-    return [handler]
+    return [cast(BaseCallbackHandler, handler)]
 
 
 def get_langfuse_runnable_config() -> "RunnableConfig":
@@ -312,7 +313,7 @@ def record_human_review(trace: object, *, params: ReviewEventParams) -> None:
         return
 
     if hasattr(trace, "create_event"):
-        trace.create_event(  # type: ignore[attr-defined]
+        trace.create_event(
             name=f"human_review_{params['phase']}_completed",
             metadata=params,
         )

@@ -109,7 +109,10 @@ export default function BlogPostEditPage() {
       <div className="mb-6 flex items-center justify-between gap-4">
         <h1 className="text-2xl font-bold">{t("editPost")}</h1>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={() => router.push(ROUTE_PATHS.BLOG_POSTS)}>
+          <Button
+            variant="outline"
+            onClick={() => router.push(ROUTE_PATHS.BLOG_POSTS)}
+          >
             {t("backToList")}
           </Button>
           <Button onClick={() => void handleSave()} disabled={saving}>

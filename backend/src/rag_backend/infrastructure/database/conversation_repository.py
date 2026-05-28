@@ -1,9 +1,11 @@
 """PostgreSQL repository implementations for Conversation and Message."""
 
+from typing import TypeVar
 from uuid import UUID
 
 from sqlalchemy import desc, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.sql import Select
 
 from rag_backend.domain.constants.conversation import (
     CONVERSATION_METADATA_PROJECT_ID,
@@ -16,6 +18,8 @@ from rag_backend.infrastructure.database.models import (
 )
 
 _ERR_CONVERSATION_NOT_FOUND = "Conversation with id {} not found"
+
+_SelectRow = TypeVar("_SelectRow", bound=tuple[object, ...])
 
 
 class PostgresConversationRepository:
@@ -51,7 +55,9 @@ class PostgresConversationRepository:
         )
         return [conv.to_entity() for conv in result.scalars().all()]
 
-    def _apply_origin_filter(self, stmt, origin: str | None):
+    def _apply_origin_filter(
+        self, stmt: Select[_SelectRow], origin: str | None
+    ) -> Select[_SelectRow]:
         if origin != CONVERSATION_ORIGIN_FILTER_ALTER_EGO:
             return stmt
         return stmt.where(

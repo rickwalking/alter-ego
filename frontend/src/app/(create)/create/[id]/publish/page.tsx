@@ -30,7 +30,9 @@ export default function PublishPage() {
   const [publishResult, setPublishResult] = useState<PublishResult>({
     status: "idle",
   });
-  const [sitePublishMessage, setSitePublishMessage] = useState<string | null>(null);
+  const [sitePublishMessage, setSitePublishMessage] = useState<string | null>(
+    null,
+  );
 
   useEffect(() => {
     void workflow.refreshState();
@@ -154,7 +156,9 @@ export default function PublishPage() {
         )}
         <PublishPanel
           project={project}
-          onPublishInstagram={canPublishToSite ? handlePublishInstagram : undefined}
+          onPublishInstagram={
+            canPublishToSite ? handlePublishInstagram : undefined
+          }
           isPublishingInstagram={publishInstagram.isPending}
           publishResult={publishResult}
         />

@@ -19,7 +19,15 @@ export const metadata: Metadata = {
   title: "Pedro Marins · Alter Ego",
   description:
     "An intelligent assistant that knows everything about my career, experience, and skills. Dive into my knowledge base, explore carousels, and read curated tech content.",
-  keywords: ["AI", "Blog", "Tech", "Software Engineering", "Next.js", "React", "Neon Shell"],
+  keywords: [
+    "AI",
+    "Blog",
+    "Tech",
+    "Software Engineering",
+    "Next.js",
+    "React",
+    "Neon Shell",
+  ],
   authors: [{ name: "Pedro Marins" }],
   openGraph: {
     title: "Pedro Marins · Alter Ego",

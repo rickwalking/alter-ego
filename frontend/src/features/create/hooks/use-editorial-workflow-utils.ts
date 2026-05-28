@@ -150,7 +150,8 @@ export function resolveWorkflowEventPayload(
     ...payload,
     ...gate,
     phase: payload.phase ?? (gate.current_phase as string | undefined),
-    phase_status: payload.phase_status ?? (gate.phase_status as string | undefined),
+    phase_status:
+      payload.phase_status ?? (gate.phase_status as string | undefined),
   };
 }
 
@@ -187,7 +188,10 @@ export function mergeWorkflowState(
       image_assets: payload.image_assets ?? prev?.image_assets ?? [],
       design_applied: payload.design_applied ?? prev?.design_applied ?? false,
       phase_progress:
-        normalizedProgress ?? payload.phase_progress ?? prev?.phase_progress ?? null,
+        normalizedProgress ??
+        payload.phase_progress ??
+        prev?.phase_progress ??
+        null,
       rubric_scores: payload.rubric_scores ?? prev?.rubric_scores,
       persona_scores: payload.persona_scores ?? prev?.persona_scores,
       caption: payload.caption ?? prev?.caption,
@@ -198,15 +202,20 @@ export function mergeWorkflowState(
 
   return {
     project_id: projectId,
-    current_phase: payload.phase ?? payload.current_phase ?? prev?.current_phase ?? "",
+    current_phase:
+      payload.phase ?? payload.current_phase ?? prev?.current_phase ?? "",
     phase_status: payload.phase_status ?? prev?.phase_status ?? "",
-    research_findings: payload.research_findings ?? prev?.research_findings ?? [],
+    research_findings:
+      payload.research_findings ?? prev?.research_findings ?? [],
     outline: payload.outline ?? prev?.outline ?? [],
     slide_drafts: payload.slide_drafts ?? prev?.slide_drafts ?? [],
     image_assets: payload.image_assets ?? prev?.image_assets ?? [],
     design_applied: payload.design_applied ?? prev?.design_applied ?? false,
     phase_progress:
-      normalizedProgress ?? payload.phase_progress ?? prev?.phase_progress ?? null,
+      normalizedProgress ??
+      payload.phase_progress ??
+      prev?.phase_progress ??
+      null,
     rubric_scores: payload.rubric_scores ?? prev?.rubric_scores,
     persona_scores: payload.persona_scores ?? prev?.persona_scores,
     caption: payload.caption ?? prev?.caption,
@@ -258,7 +267,9 @@ export function hasPhaseArtifacts(state: EditorialWorkflowState): boolean {
     case EDITORIAL_PHASES.CONTENT: {
       const draftCount = state.slide_drafts?.length ?? 0;
       const outlineCount = state.outline?.length ?? 0;
-      return draftCount > 0 && (outlineCount === 0 || draftCount >= outlineCount);
+      return (
+        draftCount > 0 && (outlineCount === 0 || draftCount >= outlineCount)
+      );
     }
     case EDITORIAL_PHASES.DESIGN:
       return state.design_applied === true;

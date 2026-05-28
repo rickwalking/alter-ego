@@ -49,27 +49,90 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ background: BG_DEEP, color: TEXT, fontFamily: "Inter, system-ui, sans-serif" }}>
+    <div
+      className="min-h-screen flex flex-col"
+      style={{
+        background: BG_DEEP,
+        color: TEXT,
+        fontFamily: "Inter, system-ui, sans-serif",
+      }}
+    >
       {/* Grid Background */}
-      <div className="fixed inset-0 pointer-events-none z-0" aria-hidden="true" style={{ perspective: "600px", overflow: "hidden" }}>
-        <div className="absolute inset-[-50%] w-[200%] h-[200%]" style={{
-          backgroundImage: `linear-gradient(rgba(0, 212, 255, 0.025) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 212, 255, 0.025) 1px, transparent 1px)`,
-          backgroundSize: "60px 60px",
-          transform: "rotateX(60deg)",
-          animation: "grid-drift 20s linear infinite",
-        }} />
+      <div
+        className="fixed inset-0 pointer-events-none z-0"
+        aria-hidden="true"
+        style={{ perspective: "600px", overflow: "hidden" }}
+      >
+        <div
+          className="absolute inset-[-50%] w-[200%] h-[200%]"
+          style={{
+            backgroundImage: `linear-gradient(rgba(0, 212, 255, 0.025) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 212, 255, 0.025) 1px, transparent 1px)`,
+            backgroundSize: "60px 60px",
+            transform: "rotateX(60deg)",
+            animation: "grid-drift 20s linear infinite",
+          }}
+        />
       </div>
 
       {/* Scanline Overlay */}
-      <div className="fixed inset-0 pointer-events-none z-50" style={{
-        background: "repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0, 212, 255, 0.012) 2px, rgba(0, 212, 255, 0.012) 4px)",
-      }} />
+      <div
+        className="fixed inset-0 pointer-events-none z-50"
+        style={{
+          background:
+            "repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0, 212, 255, 0.012) 2px, rgba(0, 212, 255, 0.012) 4px)",
+        }}
+      />
 
       {/* Header */}
-      <header className="relative z-10" style={{ padding: "16px 0", background: "rgba(6,10,18,0.85)", backdropFilter: "blur(20px)", borderBottom: "1px solid rgba(0,212,255,0.08)" }}>
-        <div className="mx-auto px-6" style={{ maxWidth: "1200px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <Link href="/" style={{ display: "flex", alignItems: "center", gap: "12px", fontSize: "20px", fontWeight: 800, color: TEXT, textDecoration: "none", letterSpacing: "-0.02em" }}>
-            <span style={{ width: "32px", height: "32px", border: `2px solid ${CYAN}`, borderRadius: "4px", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'JetBrains Mono', ui-monospace, monospace", fontSize: "14px", fontWeight: 700, color: CYAN, boxShadow: `0 0 12px rgba(0,212,255,0.15), inset 0 0 12px rgba(0,212,255,0.15)` }}>P</span>
+      <header
+        className="relative z-10"
+        style={{
+          padding: "16px 0",
+          background: "rgba(6,10,18,0.85)",
+          backdropFilter: "blur(20px)",
+          borderBottom: "1px solid rgba(0,212,255,0.08)",
+        }}
+      >
+        <div
+          className="mx-auto px-6"
+          style={{
+            maxWidth: "1200px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+          }}
+        >
+          <Link
+            href="/"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "12px",
+              fontSize: "20px",
+              fontWeight: 800,
+              color: TEXT,
+              textDecoration: "none",
+              letterSpacing: "-0.02em",
+            }}
+          >
+            <span
+              style={{
+                width: "32px",
+                height: "32px",
+                border: `2px solid ${CYAN}`,
+                borderRadius: "4px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontFamily: "'JetBrains Mono', ui-monospace, monospace",
+                fontSize: "14px",
+                fontWeight: 700,
+                color: CYAN,
+                boxShadow: `0 0 12px rgba(0,212,255,0.15), inset 0 0 12px rgba(0,212,255,0.15)`,
+              }}
+            >
+              P
+            </span>
             <span>Pedro Marins</span>
           </Link>
         </div>
@@ -79,11 +142,43 @@ export default function LoginPage() {
       <main className="flex-1 flex items-center justify-center relative z-10 px-4">
         <div style={{ width: "100%", maxWidth: "420px" }}>
           <div style={{ textAlign: "center", marginBottom: "32px" }}>
-            <div style={{ display: "inline-flex", alignItems: "center", gap: "8px", padding: "4px 12px", borderRadius: "4px", fontFamily: "'JetBrains Mono', ui-monospace, monospace", fontSize: "10px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "2px", color: CYAN, background: CYAN_DIM, border: `1px solid rgba(0,212,255,0.15)`, marginBottom: "16px" }}>
-              <span style={{ width: "5px", height: "5px", borderRadius: "50%", background: CYAN, boxShadow: `0 0 6px ${CYAN}` }} />
+            <div
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "8px",
+                padding: "4px 12px",
+                borderRadius: "4px",
+                fontFamily: "'JetBrains Mono', ui-monospace, monospace",
+                fontSize: "10px",
+                fontWeight: 700,
+                textTransform: "uppercase",
+                letterSpacing: "2px",
+                color: CYAN,
+                background: CYAN_DIM,
+                border: `1px solid rgba(0,212,255,0.15)`,
+                marginBottom: "16px",
+              }}
+            >
+              <span
+                style={{
+                  width: "5px",
+                  height: "5px",
+                  borderRadius: "50%",
+                  background: CYAN,
+                  boxShadow: `0 0 6px ${CYAN}`,
+                }}
+              />
               Authentication
             </div>
-            <h1 style={{ fontSize: "28px", fontWeight: 900, letterSpacing: "-0.03em", marginBottom: "8px" }}>
+            <h1
+              style={{
+                fontSize: "28px",
+                fontWeight: 900,
+                letterSpacing: "-0.03em",
+                marginBottom: "8px",
+              }}
+            >
               {t("loginTitle")}
             </h1>
             <p style={{ fontSize: "14px", color: TEXT_MUTED }}>
@@ -91,15 +186,42 @@ export default function LoginPage() {
             </p>
           </div>
 
-          <form onSubmit={handleSubmit} style={{ background: BG_CARD, border: "1px solid rgba(255,255,255,0.06)", borderRadius: "8px", padding: "32px" }}>
+          <form
+            onSubmit={handleSubmit}
+            style={{
+              background: BG_CARD,
+              border: "1px solid rgba(255,255,255,0.06)",
+              borderRadius: "8px",
+              padding: "32px",
+            }}
+          >
             {error && (
-              <div style={{ marginBottom: "20px", padding: "10px 14px", borderRadius: "6px", fontSize: "13px", background: "rgba(239,68,68,0.12)", color: "#ef4444", border: "1px solid rgba(239,68,68,0.15)" }}>
+              <div
+                style={{
+                  marginBottom: "20px",
+                  padding: "10px 14px",
+                  borderRadius: "6px",
+                  fontSize: "13px",
+                  background: "rgba(239,68,68,0.12)",
+                  color: "#ef4444",
+                  border: "1px solid rgba(239,68,68,0.15)",
+                }}
+              >
                 {error}
               </div>
             )}
 
             <div style={{ marginBottom: "20px" }}>
-              <label htmlFor="email" style={{ display: "block", fontSize: "13px", fontWeight: 600, color: TEXT, marginBottom: "6px" }}>
+              <label
+                htmlFor="email"
+                style={{
+                  display: "block",
+                  fontSize: "13px",
+                  fontWeight: 600,
+                  color: TEXT,
+                  marginBottom: "6px",
+                }}
+              >
                 {t("emailLabel")}
               </label>
               <input
@@ -121,13 +243,24 @@ export default function LoginPage() {
                   outline: "none",
                   transition: "border-color 0.2s",
                 }}
-                onFocus={(e) => e.target.style.borderColor = CYAN}
-                onBlur={(e) => e.target.style.borderColor = "rgba(255,255,255,0.08)"}
+                onFocus={(e) => (e.target.style.borderColor = CYAN)}
+                onBlur={(e) =>
+                  (e.target.style.borderColor = "rgba(255,255,255,0.08)")
+                }
               />
             </div>
 
             <div style={{ marginBottom: "24px" }}>
-              <label htmlFor="password" style={{ display: "block", fontSize: "13px", fontWeight: 600, color: TEXT, marginBottom: "6px" }}>
+              <label
+                htmlFor="password"
+                style={{
+                  display: "block",
+                  fontSize: "13px",
+                  fontWeight: 600,
+                  color: TEXT,
+                  marginBottom: "6px",
+                }}
+              >
                 {t("passwordLabel")}
               </label>
               <input
@@ -149,8 +282,10 @@ export default function LoginPage() {
                   outline: "none",
                   transition: "border-color 0.2s",
                 }}
-                onFocus={(e) => e.target.style.borderColor = CYAN}
-                onBlur={(e) => e.target.style.borderColor = "rgba(255,255,255,0.08)"}
+                onFocus={(e) => (e.target.style.borderColor = CYAN)}
+                onBlur={(e) =>
+                  (e.target.style.borderColor = "rgba(255,255,255,0.08)")
+                }
               />
             </div>
 
@@ -179,10 +314,30 @@ export default function LoginPage() {
       </main>
 
       {/* Footer */}
-      <footer className="relative z-10" style={{ borderTop: "1px solid rgba(0,212,255,0.06)", padding: "24px 0", background: "rgba(6,10,18,0.5)" }}>
-        <div className="mx-auto px-6" style={{ maxWidth: "1200px", display: "flex", justifyContent: "space-between", alignItems: "center", fontFamily: "'JetBrains Mono', ui-monospace, monospace", fontSize: "11px", color: TEXT_DIM }}>
+      <footer
+        className="relative z-10"
+        style={{
+          borderTop: "1px solid rgba(0,212,255,0.06)",
+          padding: "24px 0",
+          background: "rgba(6,10,18,0.5)",
+        }}
+      >
+        <div
+          className="mx-auto px-6"
+          style={{
+            maxWidth: "1200px",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            fontFamily: "'JetBrains Mono', ui-monospace, monospace",
+            fontSize: "11px",
+            color: TEXT_DIM,
+          }}
+        >
           <span>© 2026 Pedro Marins</span>
-          <Link href="/" style={{ color: TEXT_MUTED, textDecoration: "none" }}>Back to Home</Link>
+          <Link href="/" style={{ color: TEXT_MUTED, textDecoration: "none" }}>
+            Back to Home
+          </Link>
         </div>
       </footer>
 
