@@ -5,8 +5,6 @@ Feature: carousel_pipeline_consolidation.feature
 
 from __future__ import annotations
 
-from pathlib import Path
-
 import pytest
 from httpx import AsyncClient
 
@@ -20,6 +18,7 @@ from tests.integration.carousel_consolidation.helpers import (
     auth_header,
     create_carousel,
     create_user,
+    repo_root,
     set_carousel_status,
     set_workflow_status,
 )
@@ -195,17 +194,16 @@ class TestCarouselSkillsMigration:
     """Scenario: Shared standards files exist after migration (CP-001)."""
 
     def test_shared_standards_files_exist(self) -> None:
-        repo_root = Path(__file__).resolve().parents[4]
-        shared = repo_root / "skills" / "carousel-pipeline" / "_shared"
-        phases = repo_root / "skills" / "carousel-pipeline" / "phases"
+        root = repo_root()
+        shared = root / "skills" / "carousel-pipeline" / "_shared"
+        phases = root / "skills" / "carousel-pipeline" / "phases"
         assert (shared / "content-contracts.md").is_file()
         assert (shared / "anti-patterns.md").is_file()
         assert (phases / "content" / "SKILL.md").is_file()
 
     def test_content_contracts_mentions_slide_types(self) -> None:
-        repo_root = Path(__file__).resolve().parents[4]
         text = (
-            repo_root
+            repo_root()
             / "skills"
             / "carousel-pipeline"
             / "_shared"
@@ -218,16 +216,12 @@ class TestCarouselSkillsMigration:
 
     def test_shared_standards_preserve_design_and_image_rules(self) -> None:
         """Scenario: Monolithic workflow content is preserved in shared standards."""
-        repo_root = Path(__file__).resolve().parents[4]
+        root = repo_root()
         design_text = (
-            repo_root / "skills" / "carousel-pipeline" / "_shared" / "design-system.md"
+            root / "skills" / "carousel-pipeline" / "_shared" / "design-system.md"
         ).read_text(encoding="utf-8")
         image_text = (
-            repo_root
-            / "skills"
-            / "carousel-pipeline"
-            / "_shared"
-            / "image-generation.md"
+            root / "skills" / "carousel-pipeline" / "_shared" / "image-generation.md"
         ).read_text(encoding="utf-8")
         assert "1080" in design_text
         assert "1350" in design_text
