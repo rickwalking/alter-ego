@@ -1,7 +1,7 @@
 "use client";
+import { NeonButton } from "@/components/atoms/neon-button";
 
 import { useTranslations } from "next-intl";
-import { Button } from "@/components/ui";
 
 interface BriefMaterialsGateProps {
   sourceCount: number;
@@ -24,15 +24,15 @@ export function BriefMaterialsGate({
       <p className="text-muted-foreground text-sm">{t("description")}</p>
       <p className="text-sm">{t("sourceCount", { count: sourceCount })}</p>
       <div className="flex flex-wrap gap-2">
-        <Button
+        <NeonButton
           size="sm"
           disabled={loading || sourceCount === 0}
           onClick={onStartWithMaterials}
           data-testid="start-with-materials"
         >
           {t("startWithMaterials")}
-        </Button>
-        <Button
+        </NeonButton>
+        <NeonButton
           size="sm"
           variant="outline"
           disabled={loading}
@@ -40,7 +40,7 @@ export function BriefMaterialsGate({
           data-testid="start-without-materials"
         >
           {t("startWithoutMaterials")}
-        </Button>
+        </NeonButton>
       </div>
     </div>
   );

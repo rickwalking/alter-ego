@@ -1,7 +1,7 @@
 "use client";
+import { NeonBadge } from "@/components/atoms/neon-badge";
 
 import { useTranslations } from "next-intl";
-import { Badge } from "@/components/ui";
 import type { EditorialWorkflowState } from "@/features/blog/types-ai";
 
 interface EditorialWorkflowArtifactsProps {
@@ -40,7 +40,7 @@ export function EditorialWorkflowArtifacts({
         {state.design_applied && (
           <li className="flex items-center gap-2">
             {t("designApplied")}
-            <Badge variant="secondary">{t("ready")}</Badge>
+            <NeonBadge variant="secondary">{t("ready")}</NeonBadge>
           </li>
         )}
         {imageCount > 0 && (

@@ -27,6 +27,9 @@ export default defineConfig([
     ".stryker-tmp/**",
     "coverage/**",
     "reports/**",
+    ".storybook/**",
+    "**/*.stories.tsx",
+    "**/*.stories.ts",
   ]),
   {
     plugins: {

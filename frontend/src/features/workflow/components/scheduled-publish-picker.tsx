@@ -1,9 +1,10 @@
 "use client";
+import { NeonButton } from "@/components/atoms/neon-button";
+import { NeonInput } from "@/components/atoms/neon-input";
+import { NeonLabel } from "@/components/atoms/neon-label";
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { Button, Input } from "@/components/ui";
-import { Label } from "@/components/ui/label";
 import { WORKFLOW_API } from "@/constants/workflow";
 import { authenticatedFetch } from "@/lib/authenticated-fetch";
 
@@ -52,20 +53,20 @@ export function ScheduledPublishPicker({
     <div className="space-y-3 rounded-md border p-4">
       <h3 className="font-medium text-sm">{t("title")}</h3>
       <div className="space-y-2">
-        <Label htmlFor="schedule-datetime">{t("publishAt")}</Label>
-        <Input
+        <NeonLabel htmlFor="schedule-datetime">{t("publishAt")}</NeonLabel>
+        <NeonInput
           id="schedule-datetime"
           type="datetime-local"
           value={datetime}
           onChange={(e) => setDatetime(e.target.value)}
         />
       </div>
-      <Button
+      <NeonButton
         onClick={() => void handleSchedule()}
         disabled={submitting || !datetime}
       >
         {submitting ? t("scheduling") : t("schedule")}
-      </Button>
+      </NeonButton>
       {message && <p className="text-sm text-muted-foreground">{message}</p>}
     </div>
   );

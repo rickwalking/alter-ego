@@ -2,13 +2,10 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import {
-  Alert,
-  AlertDescription,
-  Badge,
-  Button,
-  Textarea,
-} from "@/components/ui";
+import { NeonAlert, NeonAlertDescription } from "@/components/molecules/neon-alert";
+import { NeonBadge } from "@/components/atoms/neon-badge";
+import { NeonButton } from "@/components/atoms/neon-button";
+import { NeonTextarea } from "@/components/atoms/neon-textarea";
 import {
   EDITORIAL_PHASES,
   EDITORIAL_WORKFLOW_STATUS,
@@ -127,18 +124,18 @@ export function EditorialWorkflowPanel({
         <div className="flex items-center gap-2">
           {transportMode ===
             EDITORIAL_WORKFLOW_TRANSPORT_MODE.POLLING_FALLBACK && (
-            <Badge variant="outline">{t("transport.pollingFallback")}</Badge>
+            <NeonBadge variant="outline">{t("transport.pollingFallback")}</NeonBadge>
           )}
           {hasActiveWorkflow && (
-            <Badge variant="secondary">{state?.current_phase}</Badge>
+            <NeonBadge variant="secondary">{state?.current_phase}</NeonBadge>
           )}
         </div>
       </div>
 
       {error && (
-        <Alert variant="destructive">
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
+        <NeonAlert variant="destructive">
+          <NeonAlertDescription>{error}</NeonAlertDescription>
+        </NeonAlert>
       )}
 
       <EditorialWorkflowProgress state={state} loading={loading} />
@@ -153,10 +150,10 @@ export function EditorialWorkflowPanel({
         <div className="space-y-2 text-sm">
           <p>
             {t("currentPhase")}:{" "}
-            <Badge variant="secondary">{state.current_phase}</Badge>
+            <NeonBadge variant="secondary">{state.current_phase}</NeonBadge>
           </p>
           <p>
-            {t("phaseStatus")}: <Badge>{state.phase_status}</Badge>
+            {t("phaseStatus")}: <NeonBadge>{state.phase_status}</NeonBadge>
           </p>
           {awaitingHumanReview && (
             <div className="space-y-2">
@@ -189,7 +186,7 @@ export function EditorialWorkflowPanel({
               <label className="block font-medium" htmlFor="editorial-feedback">
                 {t("feedback.label")}
               </label>
-              <Textarea
+              <NeonTextarea
                 id="editorial-feedback"
                 value={feedback}
                 onChange={(event) => {
@@ -213,7 +210,7 @@ export function EditorialWorkflowPanel({
               </p>
             )}
             <div className="flex gap-2">
-              <Button
+              <NeonButton
                 size="sm"
                 disabled={
                   loading || !awaitingHumanReview || personaApproveBlocked
@@ -221,15 +218,15 @@ export function EditorialWorkflowPanel({
                 onClick={() => void approve()}
               >
                 {loading ? t("actions.processing") : t("actions.approve")}
-              </Button>
-              <Button
+              </NeonButton>
+              <NeonButton
                 size="sm"
                 variant="outline"
                 disabled={loading || !awaitingHumanReview}
                 onClick={handleRevise}
               >
                 {t("actions.requestRevision")}
-              </Button>
+              </NeonButton>
             </div>
             {personaApproveBlocked && (
               <p className="text-destructive text-xs">
@@ -248,12 +245,12 @@ export function EditorialWorkflowPanel({
       {phaseEvents.length > 0 && (
         <div className="flex flex-wrap gap-1">
           {phaseEvents.map((phase) => (
-            <Badge
+            <NeonBadge
               key={phase}
               variant={phase === state?.current_phase ? "default" : "outline"}
             >
               {phase}
-            </Badge>
+            </NeonBadge>
           ))}
         </div>
       )}

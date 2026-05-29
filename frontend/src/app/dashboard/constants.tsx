@@ -58,17 +58,32 @@ function ChatPaths() {
   );
 }
 
-/* ── Neon Shell Colors (exact from shell.css) ── */
-export const NEON_CYAN = "#00d4ff";
-export const NEON_CYAN_DIM = "rgba(0,212,255,0.12)";
-export const NEON_MAGENTA = "#ff2770";
-export const NEON_MAGENTA_DIM = "rgba(255,39,112,0.12)";
-export const NEON_TEAL = "#0ac5a8";
-export const NEON_TEAL_DIM = "rgba(10,197,168,0.12)";
-export const NEON_AMBER = "#f59e0b";
-export const NEON_AMBER_DIM = "rgba(245,158,11,0.12)";
-export const NEON_GREEN = "#22c55e";
-export const NEON_RED = "#ef4444";
+import {
+  NEON_CYAN,
+  NEON_CYAN_DIM,
+  NEON_MAGENTA,
+  NEON_MAGENTA_DIM,
+  NEON_TEAL,
+  NEON_TEAL_DIM,
+  NEON_AMBER,
+  NEON_AMBER_DIM,
+  NEON_GREEN,
+  NEON_RED,
+  NEON_GLOW_CYAN_STAT,
+} from "@/constants/neon";
+
+export {
+  NEON_CYAN,
+  NEON_CYAN_DIM,
+  NEON_MAGENTA,
+  NEON_MAGENTA_DIM,
+  NEON_TEAL,
+  NEON_TEAL_DIM,
+  NEON_AMBER,
+  NEON_AMBER_DIM,
+  NEON_GREEN,
+  NEON_RED,
+};
 
 /* ── Stat Card Configuration ── */
 
@@ -92,7 +107,7 @@ export const STAT_CARDS: StatCardConfig[] = [
     iconBg: NEON_CYAN_DIM,
     iconColor: NEON_CYAN,
     valueColor: NEON_CYAN,
-    valueGlow: "0 0 20px rgba(0,212,255,0.12)",
+    valueGlow: NEON_GLOW_CYAN_STAT,
   },
   {
     label: "Published Posts",
@@ -102,7 +117,7 @@ export const STAT_CARDS: StatCardConfig[] = [
     iconBg: NEON_MAGENTA_DIM,
     iconColor: NEON_MAGENTA,
     valueColor: NEON_CYAN,
-    valueGlow: "0 0 20px rgba(0,212,255,0.12)",
+    valueGlow: NEON_GLOW_CYAN_STAT,
   },
   {
     label: "Processing",
@@ -112,7 +127,7 @@ export const STAT_CARDS: StatCardConfig[] = [
     iconBg: NEON_TEAL_DIM,
     iconColor: NEON_TEAL,
     valueColor: NEON_CYAN,
-    valueGlow: "0 0 20px rgba(0,212,255,0.12)",
+    valueGlow: NEON_GLOW_CYAN_STAT,
   },
   {
     label: "Scheduled",
@@ -122,7 +137,7 @@ export const STAT_CARDS: StatCardConfig[] = [
     iconBg: NEON_AMBER_DIM,
     iconColor: NEON_AMBER,
     valueColor: NEON_CYAN,
-    valueGlow: "0 0 20px rgba(0,212,255,0.12)",
+    valueGlow: NEON_GLOW_CYAN_STAT,
   },
 ];
 

@@ -1,9 +1,9 @@
 "use client";
+import { NeonCard, NeonCardContent, NeonCardHeader, NeonCardTitle } from "@/components/molecules/neon-card";
 
 import { useState, useCallback } from "react";
 import { useTranslations } from "next-intl";
 import { Container } from "@/components/layout";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   useDocuments,
   useCreateDocument,
@@ -85,26 +85,26 @@ export function KnowledgeBaseInterface() {
           onDeleteDocument={handleDelete}
         />
       ) : viewMode === "create" ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>{t("form.createTitle")}</CardTitle>
-          </CardHeader>
-          <CardContent>
+        <NeonCard>
+          <NeonCardHeader>
+            <NeonCardTitle>{t("form.createTitle")}</NeonCardTitle>
+          </NeonCardHeader>
+          <NeonCardContent>
             <DocumentForm onSubmit={handleSubmit} onCancel={handleCancel} />
-          </CardContent>
-        </Card>
+          </NeonCardContent>
+        </NeonCard>
       ) : (
-        <Card>
-          <CardHeader>
-            <CardTitle>{t("upload.title")}</CardTitle>
-          </CardHeader>
-          <CardContent>
+        <NeonCard>
+          <NeonCardHeader>
+            <NeonCardTitle>{t("upload.title")}</NeonCardTitle>
+          </NeonCardHeader>
+          <NeonCardContent>
             <FileUpload
               onUploadComplete={handleUploadComplete}
               onCancel={handleCancel}
             />
-          </CardContent>
-        </Card>
+          </NeonCardContent>
+        </NeonCard>
       )}
     </Container>
   );

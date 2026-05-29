@@ -2,14 +2,9 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import {
-  Badge,
-  Button,
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui";
+import { NeonBadge } from "@/components/atoms/neon-badge";
+import { NeonButton } from "@/components/atoms/neon-button";
+import { NeonCard, NeonCardContent, NeonCardHeader, NeonCardTitle } from "@/components/molecules/neon-card";
 import {
   SEO_PREVIEW_GOOGLE,
   SEO_PREVIEW_LINKEDIN,
@@ -54,19 +49,19 @@ export function SeoPreview({
   ];
 
   return (
-    <Card>
-      <CardHeader className="pb-2">
+    <NeonCard>
+      <NeonCardHeader className="pb-2">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-sm">{t("title")}</CardTitle>
+          <NeonCardTitle className="text-sm">{t("title")}</NeonCardTitle>
           {postId && (
-            <Button
+            <NeonButton
               size="sm"
               variant="outline"
               onClick={() => void analyze()}
               disabled={loading}
             >
               {loading ? t("analyzing") : t("analyze")}
-            </Button>
+            </NeonButton>
           )}
         </div>
         <div role="tablist" className="flex gap-2 mt-2">
@@ -82,8 +77,8 @@ export function SeoPreview({
             </button>
           ))}
         </div>
-      </CardHeader>
-      <CardContent className="space-y-3">
+      </NeonCardHeader>
+      <NeonCardContent className="space-y-3">
         {platform === SEO_PREVIEW_GOOGLE && (
           <div className="rounded border p-3 space-y-1">
             <p className="text-blue-600 text-sm truncate">{url}</p>
@@ -119,9 +114,9 @@ export function SeoPreview({
         )}
         {result && (
           <div className="flex items-center gap-2">
-            <Badge variant={result.passed ? "default" : "destructive"}>
+            <NeonBadge variant={result.passed ? "default" : "destructive"}>
               {t("score", { score: result.overall_score })}
-            </Badge>
+            </NeonBadge>
             <span className="text-xs text-muted-foreground">
               {result.severity}
             </span>
@@ -132,7 +127,7 @@ export function SeoPreview({
             {s}
           </p>
         ))}
-      </CardContent>
-    </Card>
+      </NeonCardContent>
+    </NeonCard>
   );
 }

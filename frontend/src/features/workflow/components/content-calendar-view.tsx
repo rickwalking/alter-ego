@@ -1,14 +1,9 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import {
-  Badge,
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  Spinner,
-} from "@/components/ui";
+import { NeonBadge } from "@/components/atoms/neon-badge";
+import { NeonCard, NeonCardContent, NeonCardHeader, NeonCardTitle } from "@/components/molecules/neon-card";
+import { NeonSpinner } from "@/components/atoms/neon-spinner";
 import { useContentCalendar } from "@/features/workflow/hooks/use-content-calendar";
 import { format, parseISO } from "date-fns";
 
@@ -19,7 +14,7 @@ export function ContentCalendarView() {
   if (loading) {
     return (
       <div className="flex justify-center py-12">
-        <Spinner />
+        <NeonSpinner />
       </div>
     );
   }
@@ -50,13 +45,13 @@ export function ContentCalendarView() {
         <p className="text-muted-foreground text-center py-8">{t("empty")}</p>
       )}
       {days.map((day) => (
-        <Card key={day}>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">
+        <NeonCard key={day}>
+          <NeonCardHeader className="pb-2">
+            <NeonCardTitle className="text-base">
               {format(parseISO(day), "MMMM d, yyyy")}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
+            </NeonCardTitle>
+          </NeonCardHeader>
+          <NeonCardContent className="space-y-2">
             {grouped[day]?.map((item) => (
               <div
                 key={`${item.content_type}-${item.id}`}
@@ -69,13 +64,13 @@ export function ContentCalendarView() {
                   </p>
                 </div>
                 <div className="flex gap-2">
-                  <Badge variant="outline">{item.status}</Badge>
-                  {item.is_scheduled && <Badge>{t("scheduled")}</Badge>}
+                  <NeonBadge variant="outline">{item.status}</NeonBadge>
+                  {item.is_scheduled && <NeonBadge>{t("scheduled")}</NeonBadge>}
                 </div>
               </div>
             ))}
-          </CardContent>
-        </Card>
+          </NeonCardContent>
+        </NeonCard>
       ))}
     </div>
   );

@@ -1,8 +1,8 @@
 "use client";
+import { NeonCard, NeonCardContent, NeonCardHeader, NeonCardTitle } from "@/components/molecules/neon-card";
+import { NeonBadge } from "@/components/atoms/neon-badge";
 
 import { FileText, Trash2 } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { type Document } from "@/schemas/knowledge";
 import { formatDate } from "@/lib/utils";
 
@@ -24,17 +24,17 @@ export function DocumentCard({ document, onDelete }: DocumentCardProps) {
   };
 
   return (
-    <Card className="transition-shadow hover:shadow-md">
-      <CardHeader className="pb-3">
+    <NeonCard className="transition-shadow hover:shadow-md">
+      <NeonCardHeader className="pb-3">
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-start gap-3 flex-1 min-w-0">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[var(--color-primary)]/10 text-[var(--color-primary)]">
               <FileText className="h-5 w-5" aria-hidden="true" />
             </div>
             <div className="flex-1 min-w-0">
-              <CardTitle className="text-lg truncate">
+              <NeonCardTitle className="text-lg truncate">
                 {document.title}
-              </CardTitle>
+              </NeonCardTitle>
               <div className="flex items-center gap-2 text-xs text-[var(--color-muted-foreground)] mt-1">
                 <span>{formatDate(document.created_at)}</span>
                 <span>·</span>
@@ -56,15 +56,15 @@ export function DocumentCard({ document, onDelete }: DocumentCardProps) {
             </button>
           )}
         </div>
-      </CardHeader>
-      <CardContent>
+      </NeonCardHeader>
+      <NeonCardContent>
         <div className="flex items-center gap-2 mb-3">
-          <Badge
+          <NeonBadge
             variant="secondary"
             className={`text-xs ${statusColors[document.status] ?? ""}`}
           >
             {document.status}
-          </Badge>
+          </NeonBadge>
           {document.error_message && (
             <span className="text-xs text-[var(--color-destructive)] truncate">
               {document.error_message}
@@ -74,13 +74,13 @@ export function DocumentCard({ document, onDelete }: DocumentCardProps) {
         {tags.length > 0 && (
           <div className="flex flex-wrap gap-1">
             {tags.map((tag) => (
-              <Badge key={tag} variant="secondary" className="text-xs">
+              <NeonBadge key={tag} variant="secondary" className="text-xs">
                 {tag}
-              </Badge>
+              </NeonBadge>
             ))}
           </div>
         )}
-      </CardContent>
-    </Card>
+      </NeonCardContent>
+    </NeonCard>
   );
 }

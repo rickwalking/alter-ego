@@ -15,6 +15,7 @@ import {
 } from "@/features/dashboard/calendar/constants";
 import { buildCalendarDays } from "@/features/dashboard/calendar/helpers";
 import type { CalendarContentType } from "@/features/dashboard/calendar/types";
+import { NEON_BORDER_FOCUS, NEON_BORDER_SUBTLE } from "@/constants/neon";
 
 const CONTENT_TYPE_ICON: Record<
   CalendarContentType,
@@ -169,7 +170,7 @@ export default function CalendarPage() {
             background: CALENDAR_COLORS.cG,
             borderRadius: 8,
             overflow: "hidden",
-            border: "1px solid rgba(0,212,255,0.06)",
+            border: `1px solid ${NEON_BORDER_SUBTLE}`,
           }}
         >
           {CALENDAR_WEEKDAY_HEADERS.map((header) => (
@@ -225,7 +226,7 @@ export default function CalendarPage() {
                   background: cell.today
                     ? CALENDAR_COLORS.cD
                     : CALENDAR_COLORS.card,
-                  border: cell.today ? "1px solid rgba(0,212,255,0.2)" : "none",
+                  border: cell.today ? `1px solid ${NEON_BORDER_FOCUS}` : "none",
                   cursor: "pointer",
                   opacity: cell.cur ? 1 : 0.3,
                 }}

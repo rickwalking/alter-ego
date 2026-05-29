@@ -2,16 +2,10 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
-import {
-  Alert,
-  AlertDescription,
-  Badge,
-  Button,
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui";
+import { NeonAlert, NeonAlertDescription } from "@/components/molecules/neon-alert";
+import { NeonBadge } from "@/components/atoms/neon-badge";
+import { NeonButton } from "@/components/atoms/neon-button";
+import { NeonCard, NeonCardContent, NeonCardHeader, NeonCardTitle } from "@/components/molecules/neon-card";
 import { CONTENT_SOURCE_TYPES } from "@/constants/blog-ai";
 import { API_ENDPOINTS, HTTP_METHODS } from "@/constants/api";
 import type { ContentSource } from "@/features/blog/types-ai";
@@ -128,19 +122,19 @@ export function SourceMaterialViewer({
   }, [loadSources]);
 
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle>{t("sourcesTitle")}</CardTitle>
-        <Button
+    <NeonCard>
+      <NeonCardHeader className="flex flex-row items-center justify-between">
+        <NeonCardTitle>{t("sourcesTitle")}</NeonCardTitle>
+        <NeonButton
           size="sm"
           variant="outline"
           disabled={loading}
           onClick={() => void loadSources()}
         >
           {t("actions.refresh")}
-        </Button>
-      </CardHeader>
-      <CardContent className="space-y-4">
+        </NeonButton>
+      </NeonCardHeader>
+      <NeonCardContent className="space-y-4">
         <form
           className="space-y-3 rounded-md border p-3"
           onSubmit={(event) => void addSource(event)}
@@ -189,15 +183,15 @@ export function SourceMaterialViewer({
               required
             />
           </div>
-          <Button type="submit" size="sm" disabled={adding}>
+          <NeonButton type="submit" size="sm" disabled={adding}>
             {adding ? t("actions.adding") : t("actions.addSource")}
-          </Button>
+          </NeonButton>
         </form>
 
         {error && (
-          <Alert variant="destructive">
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
+          <NeonAlert variant="destructive">
+            <NeonAlertDescription>{error}</NeonAlertDescription>
+          </NeonAlert>
         )}
         {sources.length === 0 && (
           <p className="text-sm text-muted-foreground">{t("noSources")}</p>
@@ -206,7 +200,7 @@ export function SourceMaterialViewer({
           <div key={source.id} className="rounded-md border p-3 space-y-2">
             <div className="flex items-center justify-between">
               <p className="font-medium">{source.title}</p>
-              <Badge variant="outline">{source.source_type}</Badge>
+              <NeonBadge variant="outline">{source.source_type}</NeonBadge>
             </div>
             <p className="text-sm text-muted-foreground line-clamp-3">
               {source.content}
@@ -218,12 +212,12 @@ export function SourceMaterialViewer({
                 ))}
               </ul>
             )}
-            <Button size="sm" onClick={() => void extractKeyPoints(source.id)}>
+            <NeonButton size="sm" onClick={() => void extractKeyPoints(source.id)}>
               {t("actions.extract")}
-            </Button>
+            </NeonButton>
           </div>
         ))}
-      </CardContent>
-    </Card>
+      </NeonCardContent>
+    </NeonCard>
   );
 }

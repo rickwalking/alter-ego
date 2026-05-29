@@ -1,8 +1,8 @@
 "use client";
+import { NeonButton } from "@/components/atoms/neon-button";
 
 import { useTranslations } from "next-intl";
 import { MessageSquare, Plus } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { type Conversation } from "@/schemas/chat";
 import { cn } from "@/lib/utils";
 
@@ -29,14 +29,14 @@ export function ConversationSidebar({
       aria-label={t("sidebar.label")}
     >
       <div className="p-4">
-        <Button
+        <NeonButton
           onClick={onNewChat}
           className="w-full gap-2"
           aria-label={t("input.newChat")}
         >
           <Plus className="h-4 w-4" aria-hidden="true" />
           {t("input.newChat")}
-        </Button>
+        </NeonButton>
       </div>
 
       <div

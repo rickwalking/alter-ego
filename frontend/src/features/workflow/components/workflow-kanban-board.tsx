@@ -1,15 +1,10 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import {
-  Badge,
-  Button,
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  Spinner,
-} from "@/components/ui";
+import { NeonBadge } from "@/components/atoms/neon-badge";
+import { NeonButton } from "@/components/atoms/neon-button";
+import { NeonCard, NeonCardContent, NeonCardHeader, NeonCardTitle } from "@/components/molecules/neon-card";
+import { NeonSpinner } from "@/components/atoms/neon-spinner";
 import { useWorkflowKanban } from "@/features/workflow/hooks/use-workflow-kanban";
 import Link from "next/link";
 
@@ -24,7 +19,7 @@ export function WorkflowKanbanBoard() {
   if (loading) {
     return (
       <div className="flex justify-center py-12">
-        <Spinner />
+        <NeonSpinner />
       </div>
     );
   }
@@ -33,13 +28,13 @@ export function WorkflowKanbanBoard() {
     return (
       <div className="text-center py-8 text-red-500">
         <p>{error}</p>
-        <Button
+        <NeonButton
           variant="outline"
           onClick={() => void refetch()}
           className="mt-4"
         >
           {t("kanban.retry")}
-        </Button>
+        </NeonButton>
       </div>
     );
   }
@@ -52,14 +47,14 @@ export function WorkflowKanbanBoard() {
     <div className="overflow-x-auto pb-4 md:overflow-visible">
       <div className="flex flex-col md:flex-row gap-4 md:min-w-max">
         {board.columns.map((column) => (
-          <Card key={column.phase} className="w-full md:w-72 shrink-0">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium flex items-center justify-between">
+          <NeonCard key={column.phase} className="w-full md:w-72 shrink-0">
+            <NeonCardHeader className="pb-2">
+              <NeonCardTitle className="text-sm font-medium flex items-center justify-between">
                 {formatPhase(column.phase)}
-                <Badge variant="secondary">{column.cards.length}</Badge>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
+                <NeonBadge variant="secondary">{column.cards.length}</NeonBadge>
+              </NeonCardTitle>
+            </NeonCardHeader>
+            <NeonCardContent className="space-y-2">
               {column.cards.length === 0 && (
                 <p className="text-xs text-muted-foreground">
                   {t("board.noProjects")}
@@ -75,13 +70,13 @@ export function WorkflowKanbanBoard() {
                   <p className="text-xs text-muted-foreground truncate">
                     {card.topic}
                   </p>
-                  <Badge variant="outline" className="mt-2 text-xs">
+                  <NeonBadge variant="outline" className="mt-2 text-xs">
                     {card.phase_status}
-                  </Badge>
+                  </NeonBadge>
                 </Link>
               ))}
-            </CardContent>
-          </Card>
+            </NeonCardContent>
+          </NeonCard>
         ))}
       </div>
     </div>

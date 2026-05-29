@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { NeonGridBackground, NeonScanlineOverlay } from "@/components/organisms";
+import { BG_DEEP, NEON_CYAN, TEXT, TEXT_MUTED } from "@/constants/neon";
 
 function LanguageSwitch() {
   return (
@@ -52,32 +54,9 @@ export default function PublicLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <div className="min-h-full flex flex-col" style={{ background: "#060a12" }}>
-      {/* Grid Background */}
-      <div
-        className="fixed inset-0 pointer-events-none z-0"
-        aria-hidden="true"
-        style={{ perspective: "600px", overflow: "hidden" }}
-      >
-        <div
-          className="absolute inset-[-50%] w-[200%] h-[200%]"
-          style={{
-            backgroundImage: `linear-gradient(rgba(0, 212, 255, 0.025) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 212, 255, 0.025) 1px, transparent 1px)`,
-            backgroundSize: "60px 60px",
-            transform: "rotateX(60deg)",
-            animation: "grid-drift 20s linear infinite",
-          }}
-        />
-      </div>
-
-      {/* Scanline Overlay */}
-      <div
-        className="fixed inset-0 pointer-events-none z-50"
-        style={{
-          background:
-            "repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0, 212, 255, 0.012) 2px, rgba(0, 212, 255, 0.012) 4px)",
-        }}
-      />
+    <div className="min-h-full flex flex-col" style={{ background: BG_DEEP }}>
+      <NeonGridBackground />
+      <NeonScanlineOverlay />
 
       {/* Neon Shell Header */}
       <header
@@ -107,7 +86,7 @@ export default function PublicLayout({
               gap: "12px",
               fontSize: "20px",
               fontWeight: 800,
-              color: "rgba(255,255,255,0.88)",
+              color: TEXT,
               textDecoration: "none",
               letterSpacing: "-0.02em",
             }}
@@ -116,7 +95,7 @@ export default function PublicLayout({
               style={{
                 width: "32px",
                 height: "32px",
-                border: "2px solid #00d4ff",
+                border: `2px solid ${NEON_CYAN}`,
                 borderRadius: "4px",
                 display: "flex",
                 alignItems: "center",
@@ -124,7 +103,7 @@ export default function PublicLayout({
                 fontFamily: "'JetBrains Mono', ui-monospace, monospace",
                 fontSize: "14px",
                 fontWeight: 700,
-                color: "#00d4ff",
+                color: NEON_CYAN,
                 boxShadow:
                   "0 0 12px rgba(0,212,255,0.15), inset 0 0 12px rgba(0,212,255,0.15)",
               }}
@@ -137,7 +116,7 @@ export default function PublicLayout({
             <Link
               href="/dashboard/chat"
               style={{
-                color: "rgba(255,255,255,0.55)",
+                color: TEXT_MUTED,
                 textDecoration: "none",
                 fontSize: "14px",
                 fontWeight: 500,
@@ -150,7 +129,7 @@ export default function PublicLayout({
             <Link
               href="/dashboard/blog-posts"
               style={{
-                color: "rgba(255,255,255,0.55)",
+                color: TEXT_MUTED,
                 textDecoration: "none",
                 fontSize: "14px",
                 fontWeight: 500,
@@ -163,7 +142,7 @@ export default function PublicLayout({
             <Link
               href="/dashboard"
               style={{
-                color: "rgba(255,255,255,0.55)",
+                color: TEXT_MUTED,
                 textDecoration: "none",
                 fontSize: "14px",
                 fontWeight: 500,
@@ -176,7 +155,7 @@ export default function PublicLayout({
             <Link
               href="/login"
               style={{
-                color: "#00d4ff",
+                color: NEON_CYAN,
                 textDecoration: "none",
                 fontSize: "14px",
                 fontWeight: 500,

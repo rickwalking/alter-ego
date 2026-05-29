@@ -1,10 +1,10 @@
 "use client";
+import { NeonButton } from "@/components/atoms/neon-button";
 
 import { useEffect } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { Container } from "@/components/layout";
-import { Button } from "@/components/ui/button";
 import { AlertCircle } from "lucide-react";
 
 export default function KnowledgeError({
@@ -36,9 +36,9 @@ export default function KnowledgeError({
         </div>
 
         <div className="flex gap-4">
-          <Button onClick={reset}>{t("tryAgain")}</Button>
+          <NeonButton onClick={reset}>{t("tryAgain")}</NeonButton>
           <Link href="/">
-            <Button variant="outline">{tc("goHome")}</Button>
+            <NeonButton variant="outline">{tc("goHome")}</NeonButton>
           </Link>
         </div>
       </div>

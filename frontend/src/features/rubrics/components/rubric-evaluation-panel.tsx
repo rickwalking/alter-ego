@@ -2,13 +2,10 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import {
-  Alert,
-  AlertDescription,
-  Badge,
-  Button,
-  Textarea,
-} from "@/components/ui";
+import { NeonAlert, NeonAlertDescription } from "@/components/molecules/neon-alert";
+import { NeonBadge } from "@/components/atoms/neon-badge";
+import { NeonButton } from "@/components/atoms/neon-button";
+import { NeonTextarea } from "@/components/atoms/neon-textarea";
 import { API_ENDPOINTS, HTTP_METHODS } from "@/constants/api";
 import { CONTENT_TYPE_BLOG_POST } from "@/constants/rubrics";
 import type { RubricEvaluationResult } from "@/features/blog/types-ai";
@@ -56,28 +53,28 @@ export function RubricEvaluationPanel({
   return (
     <div className="space-y-3 rounded-lg border p-4 mt-4">
       <h4 className="font-medium">{t("evaluation.title")}</h4>
-      <Textarea
+      <NeonTextarea
         value={content}
         onChange={(event) => setContent(event.target.value)}
         rows={4}
       />
-      <Button
+      <NeonButton
         disabled={loading || !content.trim()}
         onClick={() => void evaluate()}
       >
         {t("evaluation.run")}
-      </Button>
+      </NeonButton>
       {error && (
-        <Alert variant="destructive">
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
+        <NeonAlert variant="destructive">
+          <NeonAlertDescription>{error}</NeonAlertDescription>
+        </NeonAlert>
       )}
       {result && (
         <div className="space-y-2">
-          <Badge variant={result.passed ? "default" : "destructive"}>
+          <NeonBadge variant={result.passed ? "default" : "destructive"}>
             {t("evaluation.score", { score: Math.round(result.overall_score) })}{" "}
             — {result.passed ? t("evaluation.passed") : t("evaluation.failed")}
-          </Badge>
+          </NeonBadge>
           <ul className="text-sm space-y-1">
             {Object.entries(result.scores).map(([criterionId, score]) => (
               <li key={criterionId}>
