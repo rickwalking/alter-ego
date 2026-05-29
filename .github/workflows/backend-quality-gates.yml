@@ -5,16 +5,21 @@ on:
     branches: [main]
     paths:
       - 'backend/**'
+      - 'scripts/ci/**'
       - '.github/workflows/backend-quality-gates.yml'
   pull_request:
-    branches: [main]
     paths:
       - 'backend/**'
+      - 'scripts/ci/**'
       - '.github/workflows/backend-quality-gates.yml'
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: backend-quality-${{ github.ref }}
   cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
 
 defaults:
   run:
@@ -22,10 +27,12 @@ defaults:
 
 jobs:
   lint-and-format:
-    name: Lint & Format
+    name: backend / Lint & Format
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Install uv
         uses: astral-sh/setup-uv@v5
@@ -46,8 +53,81 @@ jobs:
       - name: Lint with Ruff
         run: uv run ruff check src/
 
+      - name: Ruff review comments (PR)
+        if: github.event_name == 'pull_request' && failure()
+        uses: reviewdog/action-setup@v1
+
+      - name: Post ruff inline review comments
+        if: github.event_name == 'pull_request' && failure()
+        env:
+          REVIEWDOG_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: bash ../scripts/ci/ruff-reviewdog.sh check src/
+
+      - name: Post PR summary on failure
+        if: failure() && github.event_name == 'pull_request'
+        working-directory: .
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_EVENT_PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          bash scripts/ci/post-pr-quality-comment.sh \
+            "Backend" "Lint & Format" \
+            "Ruff format or lint failed. See inline review comments when available."
+
+  strict-diff:
+    name: backend / Strict Diff (args & complexity)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: "0.6.x"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: uv sync --locked
+
+      - name: Strict ruff on changed files
+        working-directory: .
+        run: bash scripts/ci/ruff-strict-changed.sh
+
+      - name: Strict ruff review comments (PR)
+        if: github.event_name == 'pull_request' && failure()
+        uses: reviewdog/action-setup@v1
+
+      - name: Post strict ruff inline review comments
+        if: github.event_name == 'pull_request' && failure()
+        working-directory: .
+        env:
+          REVIEWDOG_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mapfile -t files < <(bash scripts/ci/changed-backend-files.sh)
+          if ((${#files[@]})); then
+            cd backend
+            bash ../scripts/ci/ruff-reviewdog.sh check --select PLR0913,C901,PLR0912 "${files[@]}"
+          fi
+
+      - name: Post PR summary on failure
+        if: failure() && github.event_name == 'pull_request'
+        working-directory: .
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_EVENT_PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          bash scripts/ci/post-pr-quality-comment.sh \
+            "Backend" "Strict Diff" \
+            "Changed files exceed max-args (3), cyclomatic complexity, or branch limits."
+
   type-check:
-    name: Type Check
+    name: backend / Type Check
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -69,7 +149,7 @@ jobs:
         run: cd src && uv run mypy rag_backend/ --explicit-package-bases
 
   architecture:
-    name: Architecture Enforcement
+    name: backend / Architecture
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -91,7 +171,7 @@ jobs:
         run: uv run lint-imports
 
   docstrings:
-    name: Docstring Coverage
+    name: backend / Docstrings
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -113,7 +193,7 @@ jobs:
         run: uv run interrogate src/ --verbose
 
   security:
-    name: Security Audit
+    name: backend / Security
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -147,7 +227,7 @@ jobs:
           PIPAPI_PYTHON_LOCATION: ${{ env.pythonLocation }}/bin/python
 
   test:
-    name: Test & Coverage
+    name: backend / Test & Coverage
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -166,7 +246,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Required for diff-cover
+          fetch-depth: 0
 
       - name: Install uv
         uses: astral-sh/setup-uv@v5
@@ -198,10 +278,22 @@ jobs:
           fail_ci_if_error: false
           token: ${{ secrets.CODECOV_TOKEN }}
 
-  mutation-test:
-    name: Mutation Test
+      - name: Post PR summary on failure
+        if: failure() && github.event_name == 'pull_request'
+        working-directory: .
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_EVENT_PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          bash scripts/ci/post-pr-quality-comment.sh \
+            "Backend" "Test & Coverage" \
+            "Tests failed or diff coverage is below 75%."
+
+  mutation-advisory:
+    name: backend / Mutation (advisory)
     needs: [test]
     runs-on: ubuntu-latest
+    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
 
@@ -228,8 +320,19 @@ jobs:
         if: always()
         run: uv run mutmut results
 
+      - name: Post PR mutation summary
+        if: always() && github.event_name == 'pull_request'
+        working-directory: .
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_EVENT_PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          bash scripts/ci/post-pr-quality-comment.sh \
+            "Backend" "Mutation (advisory)" \
+            "Mutation testing completed (non-blocking). Review \`mutmut results\` in workflow logs."
+
   dead-code:
-    name: Dead Code Detection
+    name: backend / Dead Code
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

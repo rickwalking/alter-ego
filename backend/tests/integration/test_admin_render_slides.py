@@ -144,7 +144,7 @@ class TestAdminRenderSlides:
             from rag_backend.infrastructure.container import Container
 
             test_container = Container()
-            test_container.carousel_agent.override(mock_carousel_agent)
+            test_container.carousel_refinement.override(mock_carousel_agent)
             mock_container.return_value = test_container
 
             response = await client.post(
@@ -197,7 +197,7 @@ class TestAdminRenderSlides:
             from rag_backend.infrastructure.container import Container
 
             test_container = Container()
-            test_container.carousel_agent.override(mock_carousel_agent)
+            test_container.carousel_refinement.override(mock_carousel_agent)
             mock_container.return_value = test_container
 
             response = await client.post(

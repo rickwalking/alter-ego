@@ -50,6 +50,24 @@ describe("API_ENDPOINTS", () => {
     );
   });
 
+  it("generates CAROUSEL_PREVIEW_BLOG URL", () => {
+    expect(API_ENDPOINTS.CAROUSEL_PREVIEW_BLOG("id1", "pt")).toBe(
+      "/api/carousels/id1/preview/blog/pt",
+    );
+  });
+
+  it("generates CAROUSEL_PREVIEW_DESIGN URL", () => {
+    expect(API_ENDPOINTS.CAROUSEL_PREVIEW_DESIGN("id1", "en")).toBe(
+      "/api/carousels/id1/preview/design/en",
+    );
+  });
+
+  it("generates CAROUSEL_PREVIEW_IMAGE URL", () => {
+    expect(API_ENDPOINTS.CAROUSEL_PREVIEW_IMAGE("id1", "slide_1.jpg")).toBe(
+      "/api/carousels/id1/preview/images/slide_1.jpg",
+    );
+  });
+
   it("preserves DOCUMENTS endpoint", () => {
     expect(API_ENDPOINTS.DOCUMENTS).toBe("/api/documents");
   });

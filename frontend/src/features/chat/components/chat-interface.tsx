@@ -3,6 +3,10 @@
 import { useState, useCallback, useMemo } from "react";
 import { useConversations, useCreateConversation } from "../hooks/use-chat";
 import { useSseChat } from "../hooks/use-sse-chat";
+import {
+  AGENT_ORIGIN_ALTER_EGO,
+  CONVERSATION_METADATA_AGENT_ORIGIN,
+} from "@/constants/publish-chat";
 import { MessageList } from "./message-list";
 import { MessageInput } from "./message-input";
 import { ConversationSidebar } from "./conversation-sidebar";
@@ -27,7 +31,7 @@ export function ChatInterface() {
   );
 
   const {
-    conversationId: sseConversationId,
+    conversationId: _sseConversationId,
     messages: sseMessages,
     isStreaming,
     error: sseError,
@@ -39,23 +43,22 @@ export function ChatInterface() {
     async (content: string) => {
       if (!content.trim()) return;
 
-      // If no conversation is active, create one first so the sidebar knows
+      // Create a conversation when none is selected (new chat or first message).
       let convId = effectiveConversationId;
-      if (!convId && isComposingNewChat) {
-        const newConv = await createConversation.mutateAsync({});
+      if (!convId) {
+        const newConv = await createConversation.mutateAsync({
+          metadata: {
+            [CONVERSATION_METADATA_AGENT_ORIGIN]: AGENT_ORIGIN_ALTER_EGO,
+          },
+        });
         convId = newConv.id;
         setActiveConversationId(convId);
         setIsComposingNewChat(false);
       }
 
-      await sendSseMessage(content, convId ?? undefined);
+      await sendSseMessage(content, convId);
     },
-    [
-      effectiveConversationId,
-      isComposingNewChat,
-      createConversation,
-      sendSseMessage,
-    ],
+    [effectiveConversationId, createConversation, sendSseMessage],
   );
 
   const handleNewChat = useCallback(() => {
@@ -73,7 +76,6 @@ export function ChatInterface() {
     [startSseNewChat],
   );
 
-  const displayConversationId = sseConversationId ?? effectiveConversationId;
   const isLoading = isStreaming;
 
   return (

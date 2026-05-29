@@ -11,6 +11,7 @@
       "knowledgeBase": "Base de Conhecimento",
       "blog": "Blog",
       "create": "Criar",
+      "createCarousel": "Criar Carrossel",
       "personas": "Personas",
       "rubrics": "Rubricas",
       "blogPosts": "Posts do Blog",
@@ -18,6 +19,20 @@
       "calendar": "Calendário",
       "analytics": "Analytics",
       "admin": "Admin"
+    },
+    "sidebar": {
+      "sectionMain": "Principal",
+      "sectionContent": "Conteúdo",
+      "sectionManagement": "Gestão",
+      "dashboard": "Dashboard",
+      "chat": "Chat",
+      "createCarousel": "Criar Carrossel",
+      "blogPosts": "Posts do Blog",
+      "workflowBoard": "Workflow",
+      "calendar": "Calendário",
+      "rubrics": "Rubricas",
+      "personas": "Personas",
+      "alterEgo": "Alter Ego"
     },
     "logout": "Sair",
     "login": "Entrar"
@@ -212,6 +227,11 @@
       "title": "Área de Trabalho do Carrossel",
       "viewBlog": "Ver Blog",
       "publish": "Publicar",
+      "draftBlogPreview": "Pré-visualização do rascunho do blog",
+      "loadDraftBlog": "Carregar pré-visualização",
+      "loadingPreview": "Carregando…",
+      "previewEmpty": "Ainda não há conteúdo de rascunho.",
+      "previewError": "Não foi possível carregar a pré-visualização do rascunho.",
       "resume": "Retomar do último checkpoint",
       "resuming": "Retomando…",
       "reconnectStream": "Reconectar stream",
@@ -276,12 +296,111 @@
     "phaseStatus": "Status",
     "sourcesTitle": "Materiais de Origem",
     "noSources": "Nenhuma fonte adicionada ainda.",
+    "addSourceTitle": "Adicionar material",
+    "fields": {
+      "title": "Título",
+      "titlePlaceholder": "ex.: notas de pesquisa ou URL do artigo",
+      "type": "Tipo",
+      "content": "Conteúdo",
+      "contentPlaceholder": "Cole URL, notas, citações ou texto de referência"
+    },
+    "sourceTypes": {
+      "url": "URL",
+      "document": "Documento",
+      "note": "Nota",
+      "interview": "Entrevista",
+      "data": "Dados"
+    },
     "actions": {
       "start": "Iniciar Fluxo Editorial",
       "approve": "Aprovar Fase",
+      "requestRevision": "Solicitar revisão",
       "reject": "Solicitar Alterações",
       "refresh": "Atualizar",
-      "extract": "Extrair Pontos-Chave"
+      "extract": "Extrair Pontos-Chave",
+      "addSource": "Adicionar Material",
+      "adding": "Adicionando...",
+      "processing": "Processando aprovação… pode levar até um minuto."
+    },
+    "feedback": {
+      "label": "Feedback para revisão",
+      "placeholder": "Descreva o que deve mudar antes de aprovar esta fase…",
+      "required": "O feedback é obrigatório ao solicitar revisão."
+    },
+    "sendBack": {
+      "label": "Enviar de volta para a fase",
+      "phases": {
+        "research": "Pesquisa",
+        "outline": "Outline",
+        "content": "Conteúdo",
+        "design": "Design",
+        "images": "Imagens"
+      }
+    },
+    "persona": {
+      "belowThreshold": "A correspondência de voz da persona está abaixo do limite exigido. Revise o conteúdo antes de aprovar."
+    },
+    "publishReady": "Revisão final aprovada. Abra o painel de publicação para liberar o carrossel no site público.",
+    "gate": {
+      "title": "Pronto para iniciar?",
+      "description": "Adicione materiais de origem ou continue sem eles. A geração só começa após sua confirmação.",
+      "sourceCount": "{count, plural, =0 {Nenhum material adicionado} one {# material adicionado} other {# materiais adicionados}}",
+      "startWithMaterials": "Iniciar com materiais",
+      "startWithoutMaterials": "Continuar sem materiais"
+    },
+    "progress": {
+      "research": "Sintetizando achados de pesquisa…",
+      "outline": "Gerando outline do carrossel…",
+      "content": "Redigindo textos dos slides…",
+      "design": "Aplicando tokens de design…",
+      "images": "Gerando imagens dos slides…",
+      "finalReview": "Executando verificações finais de qualidade…",
+      "processing": "Processando aprovação…"
+    },
+    "artifacts": {
+      "title": "Artefatos gerados",
+      "outlineSlides": "{count, plural, one {# slide no outline} other {# slides no outline}}",
+      "contentDrafts": "{count, plural, one {# rascunho de conteúdo} other {# rascunhos de conteúdo}}",
+      "designApplied": "Sistema de design aplicado",
+      "ready": "Pronto",
+      "imagesGenerated": "{count, plural, one {# imagem gerada} other {# imagens geradas}}"
+    },
+    "review": {
+      "researchTitle": "Achados de pesquisa",
+      "findingFallback": "Achado {index}",
+      "outlineTitle": "Outline para revisão",
+      "contentTitle": "Textos dos slides para revisão",
+      "designTitle": "Revisão de design",
+      "designReady": "Tokens de design aplicados. Aprove para gerar as imagens dos slides.",
+      "designPending": "Revise o outline e o conteúdo acima, depois aprove para aplicar o design e gerar imagens.",
+      "outlineSlides": "{count, plural, one {# slide no outline} other {# slides no outline}}",
+      "imagesTitle": "Imagens geradas",
+      "untitledSlide": "Slide sem título",
+      "emptyPhase": "Nenhum conteúdo gerado está disponível para esta fase. Tente atualizar ou aprovar novamente a etapa anterior.",
+      "finalReview": {
+        "title": "Revisão final",
+        "tabs": {
+          "carousel": "Carrossel",
+          "blog": "Blog",
+          "caption": "Legenda",
+          "quality": "Qualidade"
+        },
+        "carouselEmpty": "Nenhum conteúdo de slide disponível ainda.",
+        "blogPlaceholder": "O markdown do blog aparecerá aqui quando gerado.",
+        "blogPreviewLoading": "Carregando pré-visualização do rascunho…",
+        "blogPreviewError": "Não foi possível carregar a pré-visualização do rascunho.",
+        "captionEmpty": "Nenhuma legenda foi gerada ainda.",
+        "qualityEmpty": "Pontuações de qualidade ainda não estão disponíveis."
+      }
+    },
+    "errors": {
+      "startFailed": "Falha ao iniciar o fluxo editorial",
+      "startUnknown": "Falha ao iniciar o fluxo de trabalho",
+      "resumeFailed": "Falha ao retomar o fluxo editorial",
+      "resumeUnknown": "Falha ao retomar o fluxo de trabalho"
+    },
+    "transport": {
+      "pollingFallback": "Fallback de polling ativo"
     }
   },
   "rubrics": {
@@ -299,6 +418,10 @@
     "loading": "Carregando carrossel…",
     "notFound": "Carrossel não encontrado.",
     "backToWorkspace": "← Voltar à área de trabalho",
+    "awaitingFinalApproval": "Conclua a revisão final na área de criação antes de publicar no site público.",
+    "publishToSite": "Publicar no site",
+    "sitePublished": "O carrossel agora está público no blog.",
+    "sitePublishFailed": "Não foi possível publicar no site público.",
     "carouselLabel": "Prévia do carrossel",
     "platformTabsLabel": "Escolha uma plataforma",
     "downloadPdf": "Baixar PDF",
@@ -416,6 +539,21 @@
     }
   },
   "dashboard": {
+    "overview": {
+      "title": "Dashboard",
+      "subtitle": "Visão geral do seu pipeline de conteúdo e atividade recente",
+      "quickActions": {
+        "title": "Ações Rápidas"
+      },
+      "recentActivity": {
+        "title": "Atividade Recente",
+        "live": "Ao Vivo"
+      },
+      "upcomingSchedule": {
+        "title": "Agenda",
+        "viewAll": "Ver Tudo"
+      }
+    },
     "blogPosts": {
       "title": "Posts do Blog",
       "createPost": "Criar Post",
@@ -453,6 +591,18 @@
         "approve": "Aprovar",
         "publish": "Publicar",
         "generateImage": "Gerar Imagem"
+      },
+      "notFound": "Post não encontrado.",
+      "backToList": "Voltar à lista",
+      "saveChanges": "Salvar alterações",
+      "saving": "Salvando…",
+      "versions": {
+        "title": "Histórico de versões",
+        "loading": "Carregando versões…",
+        "empty": "Nenhuma versão salva ainda.",
+        "versionLabel": "Versão {number}",
+        "diffTitle": "Prévia da diferença",
+        "restore": "Restaurar esta versão"
       }
     },
     "analytics": {

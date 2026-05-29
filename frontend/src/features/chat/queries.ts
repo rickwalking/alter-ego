@@ -1,5 +1,6 @@
 import { queryOptions, skipToken } from "@tanstack/react-query";
 import { API_ENDPOINTS } from "@/constants/api";
+import { CONVERSATION_ORIGIN_FILTER_ALTER_EGO } from "@/constants/publish-chat";
 import { apiCall } from "@/lib/api-client";
 import {
   chatResponseSchema,
@@ -25,7 +26,7 @@ export function conversationsOptions() {
     queryKey: chatKeys.conversations(),
     queryFn: async () => {
       const result = await apiCall<ConversationListResponse>(
-        API_ENDPOINTS.CONVERSATIONS,
+        `${API_ENDPOINTS.CONVERSATIONS}?origin=${CONVERSATION_ORIGIN_FILTER_ALTER_EGO}`,
         conversationListResponseSchema,
       );
       return result.items;

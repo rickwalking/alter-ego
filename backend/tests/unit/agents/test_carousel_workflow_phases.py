@@ -8,18 +8,22 @@ from unittest.mock import patch
 
 import pytest
 
-from rag_backend.agents.carousel_workflow import (
-    CarouselWorkflowEngine,
-    _await_human_review,
-    _route_after_gate,
-    brief_phase,
+from rag_backend.agents.carousel_workflow import CarouselWorkflowEngine
+from rag_backend.agents.carousel_workflow_graph import (
     build_carousel_workflow_graph,
+    route_after_final_review,
+    route_after_gate,
+)
+from rag_backend.agents.carousel_workflow_nodes import (
+    await_human_review,
+    brief_phase,
     content_phase,
     design_phase,
     final_review_phase,
     images_phase,
     outline_phase,
     research_phase,
+    review_updates_from_response,
 )
 from rag_backend.application.services.carousel.workflow_state import (
     get_initial_carousel_state,
@@ -34,12 +38,16 @@ from rag_backend.domain.constants.carousel_workflow import (
     PHASE_FINAL_REVIEW,
     PHASE_IMAGES,
     PHASE_OUTLINE,
-    PHASE_PUBLISHED,
     PHASE_RESEARCH,
     PHASE_STATUS_APPROVED,
     PHASE_STATUS_AWAITING_HUMAN,
     PHASE_STATUS_IN_PROGRESS,
     REVIEW_ACTION_APPROVE,
+    REVIEW_ACTION_REVISE,
+    SEND_BACK_TARGET_PHASE_KEY,
+    STRUCTURED_FEEDBACK_KEY,
+    STRUCTURED_FEEDBACK_TARGET_PHASE_KEY,
+    WORKFLOW_STATUS_APPROVED_FOR_PUBLISH,
 )
 
 
@@ -53,12 +61,12 @@ def _state(**overrides: object) -> dict[str, object]:
 class TestAwaitHumanReview:
     """Tests for the shared human-review interrupt helper."""
 
-    @patch("rag_backend.agents.carousel_workflow.interrupt")
+    @patch("rag_backend.agents.carousel_workflow_nodes.interrupt")
     def test_approve_returns_approved_status(self, mock_interrupt: object) -> None:
         """Given approve action, when awaiting review, then phase is approved."""
         mock_interrupt.return_value = {"action": REVIEW_ACTION_APPROVE}
 
-        result = _await_human_review(
+        result = await_human_review(
             _state(),
             PHASE_RESEARCH,
             INTERRUPT_TYPE_RESEARCH_REVIEW,
@@ -67,12 +75,12 @@ class TestAwaitHumanReview:
 
         assert result["phase_status"] == PHASE_STATUS_APPROVED
 
-    @patch("rag_backend.agents.carousel_workflow.interrupt")
+    @patch("rag_backend.agents.carousel_workflow_nodes.interrupt")
     def test_reject_returns_awaiting_human(self, mock_interrupt: object) -> None:
         """Given reject action, when awaiting review, then workflow waits for human."""
         mock_interrupt.return_value = {"action": "reject"}
 
-        result = _await_human_review(
+        result = await_human_review(
             _state(),
             PHASE_OUTLINE,
             INTERRUPT_TYPE_OUTLINE_REVIEW,
@@ -81,12 +89,26 @@ class TestAwaitHumanReview:
 
         assert result["phase_status"] == PHASE_STATUS_AWAITING_HUMAN
 
-    @patch("rag_backend.agents.carousel_workflow.interrupt")
+    @patch("rag_backend.agents.carousel_workflow_nodes.interrupt")
+    def test_revise_returns_awaiting_human(self, mock_interrupt: object) -> None:
+        """Given revise action, when awaiting review, then workflow waits for human."""
+        mock_interrupt.return_value = {"action": REVIEW_ACTION_REVISE}
+
+        result = await_human_review(
+            _state(),
+            PHASE_RESEARCH,
+            INTERRUPT_TYPE_RESEARCH_REVIEW,
+            {"message": "Review research findings."},
+        )
+
+        assert result["phase_status"] == PHASE_STATUS_AWAITING_HUMAN
+
+    @patch("rag_backend.agents.carousel_workflow_nodes.interrupt")
     def test_non_dict_response_awaits_human(self, mock_interrupt: object) -> None:
         """Given invalid interrupt payload, when awaiting review, then human is awaited."""
         mock_interrupt.return_value = "invalid"
 
-        result = _await_human_review(
+        result = await_human_review(
             _state(),
             PHASE_CONTENT,
             INTERRUPT_TYPE_CONTENT_REVIEW,
@@ -95,14 +117,14 @@ class TestAwaitHumanReview:
 
         assert result["phase_status"] == PHASE_STATUS_AWAITING_HUMAN
 
-    @patch("rag_backend.agents.carousel_workflow.interrupt")
+    @patch("rag_backend.agents.carousel_workflow_nodes.interrupt")
     def test_interrupt_payload_includes_project_and_phase(
         self, mock_interrupt: object
     ) -> None:
         """Given state, when awaiting review, then interrupt payload is complete."""
         mock_interrupt.return_value = {"action": REVIEW_ACTION_APPROVE}
 
-        _await_human_review(
+        await_human_review(
             _state(project_id="proj-42"),
             PHASE_DESIGN,
             INTERRUPT_TYPE_DESIGN_REVIEW,
@@ -147,7 +169,7 @@ class TestWorkflowPhaseNodes:
         assert result["phase_status"] == PHASE_STATUS_IN_PROGRESS
         assert result["brief_approved"] is True
 
-    @patch("rag_backend.agents.carousel_workflow.interrupt")
+    @patch("rag_backend.agents.carousel_workflow_nodes.interrupt")
     def test_research_phase_approves(self, mock_interrupt: object) -> None:
         """Given approved research review, when phase runs, then research is approved."""
         mock_interrupt.return_value = {"action": REVIEW_ACTION_APPROVE}
@@ -158,7 +180,7 @@ class TestWorkflowPhaseNodes:
         assert result["current_phase"] == PHASE_RESEARCH
         assert result["phase_status"] == PHASE_STATUS_APPROVED
 
-    @patch("rag_backend.agents.carousel_workflow.interrupt")
+    @patch("rag_backend.agents.carousel_workflow_nodes.interrupt")
     def test_research_phase_passes_findings_to_interrupt(
         self, mock_interrupt: object
     ) -> None:
@@ -171,7 +193,7 @@ class TestWorkflowPhaseNodes:
         payload = mock_interrupt.call_args[0][0]
         assert payload["findings"] == findings
 
-    @patch("rag_backend.agents.carousel_workflow.interrupt")
+    @patch("rag_backend.agents.carousel_workflow_nodes.interrupt")
     def test_outline_phase_passes_outline_to_interrupt(
         self, mock_interrupt: object
     ) -> None:
@@ -184,7 +206,7 @@ class TestWorkflowPhaseNodes:
         payload = mock_interrupt.call_args[0][0]
         assert payload["outline"] == outline
 
-    @patch("rag_backend.agents.carousel_workflow.interrupt")
+    @patch("rag_backend.agents.carousel_workflow_nodes.interrupt")
     def test_outline_phase_rejects(self, mock_interrupt: object) -> None:
         """Given rejected outline review, when phase runs, then outline stays unapproved."""
         mock_interrupt.return_value = {"action": "reject"}
@@ -194,7 +216,7 @@ class TestWorkflowPhaseNodes:
         assert result["outline_approved"] is False
         assert result["current_phase"] == PHASE_OUTLINE
 
-    @patch("rag_backend.agents.carousel_workflow.interrupt")
+    @patch("rag_backend.agents.carousel_workflow_nodes.interrupt")
     def test_content_phase_approves(self, mock_interrupt: object) -> None:
         """Given approved content review, when phase runs, then content is approved."""
         mock_interrupt.return_value = {"action": REVIEW_ACTION_APPROVE}
@@ -204,7 +226,7 @@ class TestWorkflowPhaseNodes:
         assert result["content_approved"] is True
         assert result["current_phase"] == PHASE_CONTENT
 
-    @patch("rag_backend.agents.carousel_workflow.interrupt")
+    @patch("rag_backend.agents.carousel_workflow_nodes.interrupt")
     def test_content_phase_passes_drafts_to_interrupt(
         self, mock_interrupt: object
     ) -> None:
@@ -217,7 +239,7 @@ class TestWorkflowPhaseNodes:
         payload = mock_interrupt.call_args[0][0]
         assert payload["slide_drafts"] == drafts
 
-    @patch("rag_backend.agents.carousel_workflow.interrupt")
+    @patch("rag_backend.agents.carousel_workflow_nodes.interrupt")
     def test_design_phase_marks_design_applied(self, mock_interrupt: object) -> None:
         """Given approved design review, when phase runs, then design is applied."""
         mock_interrupt.return_value = {"action": REVIEW_ACTION_APPROVE}
@@ -228,7 +250,7 @@ class TestWorkflowPhaseNodes:
         assert result["design_approved"] is True
         assert result["current_phase"] == PHASE_DESIGN
 
-    @patch("rag_backend.agents.carousel_workflow.interrupt")
+    @patch("rag_backend.agents.carousel_workflow_nodes.interrupt")
     def test_design_phase_passes_design_flag_to_interrupt(
         self, mock_interrupt: object
     ) -> None:
@@ -240,7 +262,7 @@ class TestWorkflowPhaseNodes:
         payload = mock_interrupt.call_args[0][0]
         assert payload["design_applied"] is True
 
-    @patch("rag_backend.agents.carousel_workflow.interrupt")
+    @patch("rag_backend.agents.carousel_workflow_nodes.interrupt")
     def test_images_phase_approves_assets(self, mock_interrupt: object) -> None:
         """Given approved image review, when phase runs, then images are approved."""
         mock_interrupt.return_value = {"action": REVIEW_ACTION_APPROVE}
@@ -250,7 +272,7 @@ class TestWorkflowPhaseNodes:
         assert result["images_approved"] is True
         assert result["current_phase"] == PHASE_IMAGES
 
-    @patch("rag_backend.agents.carousel_workflow.interrupt")
+    @patch("rag_backend.agents.carousel_workflow_nodes.interrupt")
     def test_images_phase_passes_assets_to_interrupt(
         self, mock_interrupt: object
     ) -> None:
@@ -263,20 +285,21 @@ class TestWorkflowPhaseNodes:
         payload = mock_interrupt.call_args[0][0]
         assert payload["image_assets"] == assets
 
-    @patch("rag_backend.agents.carousel_workflow.interrupt")
-    def test_final_review_phase_publishes_when_approved(
+    @patch("rag_backend.agents.carousel_workflow_nodes.interrupt")
+    def test_final_review_phase_approves_for_publish_when_approved(
         self, mock_interrupt: object
     ) -> None:
-        """Given approved final review, when phase runs, then project is published."""
+        """Given approved final review, when phase runs, then workflow is approved for publish."""
         mock_interrupt.return_value = {"action": REVIEW_ACTION_APPROVE}
 
         result = final_review_phase(_state(rubric_scores={"tone": 90}))
 
         assert result["quality_passed"] is True
-        assert result["current_phase"] == PHASE_PUBLISHED
-        assert result["status"] == "published"
+        assert result["current_phase"] == PHASE_FINAL_REVIEW
+        assert result["workflow_status"] == WORKFLOW_STATUS_APPROVED_FOR_PUBLISH
+        assert result["status"] == "draft"
 
-    @patch("rag_backend.agents.carousel_workflow.interrupt")
+    @patch("rag_backend.agents.carousel_workflow_nodes.interrupt")
     def test_final_review_phase_passes_rubric_scores_to_interrupt(
         self, mock_interrupt: object
     ) -> None:
@@ -289,7 +312,7 @@ class TestWorkflowPhaseNodes:
         payload = mock_interrupt.call_args[0][0]
         assert payload["rubric_scores"] == scores
 
-    @patch("rag_backend.agents.carousel_workflow.interrupt")
+    @patch("rag_backend.agents.carousel_workflow_nodes.interrupt")
     def test_final_review_phase_stays_draft_when_rejected(
         self, mock_interrupt: object
     ) -> None:
@@ -307,19 +330,43 @@ class TestWorkflowPhaseNodes:
 class TestWorkflowRouting:
     """Tests for conditional routing helpers."""
 
-    def test_route_after_gate_returns_approved(self) -> None:
+    def testroute_after_gate_returns_approved(self) -> None:
         """Given approved field, when routing, then approved path is chosen."""
         assert (
-            _route_after_gate(_state(research_approved=True), "research_approved")
+            route_after_gate(_state(research_approved=True), "research_approved")
             == "approved"
         )
 
-    def test_route_after_gate_returns_retry(self) -> None:
+    def testroute_after_gate_returns_retry(self) -> None:
         """Given unapproved field, when routing, then retry path is chosen."""
         assert (
-            _route_after_gate(_state(research_approved=False), "research_approved")
+            route_after_gate(_state(research_approved=False), "research_approved")
             == "retry"
         )
+
+    def testroute_after_final_review_send_back_to_content(self) -> None:
+        """Given final review send-back, when routing, then target phase is chosen."""
+        assert (
+            route_after_final_review(
+                _state(
+                    quality_passed=False,
+                    **{SEND_BACK_TARGET_PHASE_KEY: PHASE_CONTENT},
+                )
+            )
+            == PHASE_CONTENT
+        )
+
+    def test_structured_feedback_sets_send_back_target(self) -> None:
+        """Given structured feedback, when parsing review, then target phase is set."""
+        updates = review_updates_from_response({
+            "action": REVIEW_ACTION_REVISE,
+            STRUCTURED_FEEDBACK_KEY: {
+                STRUCTURED_FEEDBACK_TARGET_PHASE_KEY: PHASE_OUTLINE,
+            },
+        })
+
+        assert updates[SEND_BACK_TARGET_PHASE_KEY] == PHASE_OUTLINE
+        assert updates["current_phase"] == PHASE_OUTLINE
 
 
 @pytest.mark.unit
@@ -332,9 +379,11 @@ class TestCarouselWorkflowEngineLifecycle:
         engine = CarouselWorkflowEngine()
         engine._app = AsyncMockWrapper()
 
-        result = await engine.resume("project-9", {"action": REVIEW_ACTION_APPROVE})
+        result = await engine.resume(
+            "project-9", {"action": REVIEW_ACTION_APPROVE, "reviewer_id": "user-1"}
+        )
 
-        assert result["action"] == REVIEW_ACTION_APPROVE
+        assert result["project_id"] == "project-9"
         assert engine._app.last_config == {"configurable": {"thread_id": "project-9"}}
 
     @pytest.mark.asyncio
@@ -383,12 +432,12 @@ class AsyncMockWrapper:
 
     async def ainvoke(
         self,
-        payload: dict[str, object] | None,
+        payload: dict[str, object] | object | None,
         *,
         config: dict[str, object],
     ) -> dict[str, object]:
         self.last_config = config
-        if payload:
+        if isinstance(payload, dict):
             return payload
         return _state(project_id=str(config["configurable"]["thread_id"]))
 

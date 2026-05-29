@@ -11,6 +11,7 @@ vi.mock("next-intl", () => ({
       "progress.currentlyProcessing": "Currently processing",
       "progress.stalled": "Still working after {seconds}s",
       "progress.phases.researching": "Researching",
+      "progress.phases.pending": "Waiting to start...",
       "progress.phases.drafting": "Drafting",
       "progress.phases.designing": "Designing",
       "progress.phases.generating_images": "Generating Images",
@@ -141,6 +142,17 @@ describe("CarouselProgress Component", () => {
           />,
         );
         expect(screen.queryByTestId("phase-check")).not.toBeInTheDocument();
+      });
+
+      it("Then an empty phase uses the pending label", () => {
+        render(
+          <CarouselProgress
+            currentPhase=""
+            isComplete={false}
+            hasError={false}
+          />,
+        );
+        expect(screen.getByText("Waiting to start...")).toBeInTheDocument();
       });
     });
 

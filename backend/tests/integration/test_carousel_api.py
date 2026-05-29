@@ -1,26 +1,6 @@
 """Integration tests for carousel API endpoints."""
 
-from unittest.mock import AsyncMock, MagicMock, patch
-
 import pytest
-
-from rag_backend.domain.models import CarouselProject, CarouselStatus
-
-
-@pytest.fixture
-def mock_carousel_agent():
-    """Create a mock carousel agent for pipeline tests."""
-    agent = AsyncMock()
-    project = CarouselProject(
-        topic="Test Topic",
-        audience="Test Audience",
-        niche="Test Niche",
-    )
-    project.status = CarouselStatus.COMPLETED
-    project.blog_markdown = "# Blog Post\n\nContent here."
-    project.caption = "Great post! #ML #AI"
-    agent.execute_pipeline.return_value = project
-    return agent
 
 
 @pytest.mark.integration
@@ -115,8 +95,8 @@ class TestCarouselEndpoints:
         assert response.status_code == 404
 
     @pytest.mark.asyncio
-    async def test_get_carousel_status(self, client):
-        """Given carousel exists, when GET /api/carousels/{id}/status, then returns status."""
+    async def test_get_carousel_status_returns_gone(self, client):
+        """Legacy status endpoint returns 410 Gone."""
         payload = {
             "topic": "Status Test",
             "audience": "Everyone",
@@ -126,14 +106,11 @@ class TestCarouselEndpoints:
         carousel_id = create_response.json()["id"]
 
         response = await client.get(f"/api/carousels/{carousel_id}/status")
-        assert response.status_code == 200
-        data = response.json()
-        assert data["id"] == carousel_id
-        assert data["status"] == "pending"
+        assert response.status_code == 404
 
     @pytest.mark.asyncio
     async def test_get_carousel_status_not_found(self, client):
-        """Given non-existent ID, when GET status, then returns 404."""
+        """Given non-existent ID, when GET legacy status, then returns 410."""
         response = await client.get(
             "/api/carousels/00000000-0000-0000-0000-000000000000/status"
         )
@@ -176,8 +153,8 @@ class TestCarouselEndpoints:
         assert response.status_code == 404
 
     @pytest.mark.asyncio
-    async def test_generate_carousel_with_mock(self, client, mock_carousel_agent):
-        """Given carousel exists, when POST generate, then runs pipeline."""
+    async def test_generate_carousel_returns_gone(self, client):
+        """Legacy generate endpoint returns 410 Gone."""
         payload = {
             "topic": "Generate Test",
             "audience": "Everyone",
@@ -186,26 +163,15 @@ class TestCarouselEndpoints:
         create_response = await client.post("/api/carousels", json=payload)
         carousel_id = create_response.json()["id"]
 
-        with patch(
-            "rag_backend.infrastructure.container.get_container"
-        ) as mock_container:
-            from rag_backend.infrastructure.container import Container
-
-            test_container = Container()
-            test_container.carousel_agent.override(mock_carousel_agent)
-            mock_container.return_value = test_container
-
-            response = await client.post(
-                f"/api/carousels/{carousel_id}/generate",
-                json={"sources": None},
-            )
-            assert response.status_code == 200
-            data = response.json()
-            assert data["status"] == "completed"
+        response = await client.post(
+            f"/api/carousels/{carousel_id}/generate",
+            json={"sources": None},
+        )
+        assert response.status_code == 404
 
     @pytest.mark.asyncio
-    async def test_stream_carousel_with_mock(self, client, mock_carousel_agent):
-        """Given carousel exists, when GET stream, then returns SSE events."""
+    async def test_stream_carousel_returns_gone(self, client):
+        """Legacy stream endpoint returns 410 Gone."""
         payload = {
             "topic": "Stream Test",
             "audience": "Everyone",
@@ -214,29 +180,8 @@ class TestCarouselEndpoints:
         create_response = await client.post("/api/carousels", json=payload)
         carousel_id = create_response.json()["id"]
 
-        async def fake_stream(*args, **kwargs):
-            yield {"node": "start", "status": "pending", "phase_progress": None}
-            yield {"node": "end", "status": "completed", "phase_progress": None}
-
-        mock_carousel_agent.stream_pipeline = fake_stream
-
-        with patch(
-            "rag_backend.infrastructure.container.get_container"
-        ) as mock_container:
-            from rag_backend.infrastructure.container import Container
-
-            test_container = Container()
-            test_container.carousel_agent.override(mock_carousel_agent)
-            mock_container.return_value = test_container
-
-            response = await client.get(f"/api/carousels/{carousel_id}/stream")
-            assert response.status_code == 200
-            assert (
-                response.headers["content-type"] == "text/event-stream; charset=utf-8"
-            )
-            text = response.text
-            assert "start" in text
-            assert "end" in text
+        response = await client.get(f"/api/carousels/{carousel_id}/stream")
+        assert response.status_code == 404
 
     @pytest.mark.asyncio
     async def test_stream_carousel_rejects_post(self, client):
@@ -254,18 +199,11 @@ class TestCarouselEndpoints:
         carousel_id = create_response.json()["id"]
 
         response = await client.post(f"/api/carousels/{carousel_id}/stream", json={})
-        assert response.status_code == 405
+        assert response.status_code == 404
 
     @pytest.mark.asyncio
-    async def test_stream_carousel_passes_null_seed_urls(
-        self, client, mock_carousel_agent
-    ):
-        """Given GET stream, when invoked, then seed_urls is None.
-
-        Mutation guard: EventSource cannot send a body, so the route must
-        not require one. If seed_urls is accidentally made required, the
-        endpoint will break browser-based streaming.
-        """
+    async def test_stream_carousel_passes_null_seed_urls(self, client):
+        """Legacy stream endpoint returns 410 Gone (no SSE body)."""
         payload = {
             "topic": "Stream Null Seeds Test",
             "audience": "Everyone",
@@ -274,37 +212,12 @@ class TestCarouselEndpoints:
         create_response = await client.post("/api/carousels", json=payload)
         carousel_id = create_response.json()["id"]
 
-        captured_args: dict = {}
-
-        async def capturing_stream(*args, **kwargs):
-            captured_args["args"] = args
-            captured_args["kwargs"] = kwargs
-            yield {"node": "end", "status": "completed", "phase_progress": None}
-
-        mock_carousel_agent.stream_pipeline = capturing_stream
-
-        with patch(
-            "rag_backend.infrastructure.container.get_container"
-        ) as mock_container:
-            from rag_backend.infrastructure.container import Container
-
-            test_container = Container()
-            test_container.carousel_agent.override(mock_carousel_agent)
-            mock_container.return_value = test_container
-
-            response = await client.get(f"/api/carousels/{carousel_id}/stream")
-            assert response.status_code == 200
-            assert captured_args.get("kwargs", {}).get("seed_urls") is None
+        response = await client.get(f"/api/carousels/{carousel_id}/stream")
+        assert response.status_code == 404
 
     @pytest.mark.asyncio
-    async def test_stream_carousel_yields_error_event(
-        self, client, mock_carousel_agent
-    ):
-        """Given pipeline error, when GET stream, then yields error event and closes.
-
-        Mutation guard: ensures the SSE stream passes through the error
-        event emitted by stream_pipeline rather than silently dropping it.
-        """
+    async def test_stream_carousel_yields_error_event(self, client):
+        """Legacy stream endpoint returns 410 Gone."""
         payload = {
             "topic": "Stream Error Test",
             "audience": "Everyone",
@@ -313,26 +226,8 @@ class TestCarouselEndpoints:
         create_response = await client.post("/api/carousels", json=payload)
         carousel_id = create_response.json()["id"]
 
-        async def error_stream(*args, **kwargs):
-            yield {"node": "start", "status": "pending", "phase_progress": None}
-            yield {"node": "error", "status": "failed", "error": "pipeline exploded"}
-
-        mock_carousel_agent.stream_pipeline = error_stream
-
-        with patch(
-            "rag_backend.infrastructure.container.get_container"
-        ) as mock_container:
-            from rag_backend.infrastructure.container import Container
-
-            test_container = Container()
-            test_container.carousel_agent.override(mock_carousel_agent)
-            mock_container.return_value = test_container
-
-            response = await client.get(f"/api/carousels/{carousel_id}/stream")
-            assert response.status_code == 200
-            text = response.text
-            assert "start" in text
-            assert "pipeline exploded" in text
+        response = await client.get(f"/api/carousels/{carousel_id}/stream")
+        assert response.status_code == 404
 
     @pytest.mark.asyncio
     async def test_list_carousels_with_status_filter(self, client):
@@ -384,13 +279,8 @@ class TestCarouselEndpoints:
         assert response.status_code == 404
 
     @pytest.mark.asyncio
-    async def test_resume_carousel_non_blocking(self, client, mock_carousel_agent):
-        """Given carousel exists, when POST resume, then returns immediately.
-
-        Mutation guard: the /resume route must not block waiting for the
-        graph to complete. It should start a background task and return the
-        current status within a few milliseconds.
-        """
+    async def test_resume_carousel_returns_gone(self, client):
+        """Legacy resume endpoint returns 410 Gone."""
         payload = {
             "topic": "Resume Test",
             "audience": "Everyone",
@@ -399,20 +289,5 @@ class TestCarouselEndpoints:
         create_response = await client.post("/api/carousels", json=payload)
         carousel_id = create_response.json()["id"]
 
-        mock_carousel_agent.start_pipeline = MagicMock()
-
-        with patch(
-            "rag_backend.infrastructure.container.get_container"
-        ) as mock_container:
-            from rag_backend.infrastructure.container import Container
-
-            test_container = Container()
-            test_container.carousel_agent.override(mock_carousel_agent)
-            mock_container.return_value = test_container
-
-            response = await client.post(f"/api/carousels/{carousel_id}/resume")
-            assert response.status_code == 200
-            data = response.json()
-            assert data["id"] == carousel_id
-            # start_pipeline should have been called, not execute_pipeline
-            assert mock_carousel_agent.start_pipeline.called
+        response = await client.post(f"/api/carousels/{carousel_id}/resume")
+        assert response.status_code == 404

@@ -33,6 +33,17 @@ class CarouselWorkflowState(TypedDict, total=False):
     rubric_scores: dict[str, object]
     quality_passed: bool
     status: str
+    phase_feedback: dict[str, list[str]]
+    revision_count: dict[str, int]
+    workflow_status: str
+    assigned_reviewer_id: str
+    caption: str
+    blog_markdown: str
+    blog_translations: dict[str, str]
+    phase_progress: dict[str, object]
+    persona_scores: dict[str, object]
+    send_back_target_phase: str
+    workflow_error: str
 
 
 def get_initial_carousel_state(
@@ -61,6 +72,14 @@ def get_initial_carousel_state(
         "rubric_scores": {},
         "quality_passed": False,
         "status": "draft",
+        "phase_feedback": {},
+        "revision_count": {},
+        "workflow_status": "",
+        "caption": "",
+        "blog_markdown": "",
+        "blog_translations": {},
+        "phase_progress": {},
+        "persona_scores": {},
     }
 
 

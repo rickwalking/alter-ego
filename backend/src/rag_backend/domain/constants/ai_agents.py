@@ -34,4 +34,5 @@ Return JSON: {{"draft_text": "...", "confidence_score": 0.0-1.0, "sources_used":
 """
 
 MODEL_ID_DEFAULT = "default-llm"
+RAG_AGENT_USER_ID = "rag-agent"
 ERR_INVALID_JSON = "Invalid JSON response from LLM"

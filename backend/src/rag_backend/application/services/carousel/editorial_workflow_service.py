@@ -3,39 +3,56 @@
 from __future__ import annotations
 
 from collections.abc import AsyncIterator
-from dataclasses import dataclass
 from uuid import UUID
 
 from langchain_core.language_models import BaseChatModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from rag_backend.agents.carousel_workflow import CarouselWorkflowEngine
-from rag_backend.agents.content_draft_agent import ContentDraftAgent
-from rag_backend.agents.outline_agent import OutlineAgent
-from rag_backend.agents.persona_agent import PersonaAgent
-from rag_backend.agents.source_synthesis_agent import SourceSynthesisAgent
+from rag_backend.agents.carousel_editorial_orchestrator import (
+    CarouselEditorialOrchestrator,
+)
+from rag_backend.application.services.carousel.editorial_workflow_events import (
+    PhaseEventEmitContext,
+    ReviewEventEmitRequest,
+    emit_phase_event,
+    emit_review_event,
+)
+from rag_backend.application.services.carousel.editorial_workflow_service_helpers import (
+    FeedbackCorrectionContext,
+    RevisionCapValidationContext,
+    prepare_resume_workflow,
+    record_feedback_correction,
+    stream_workflow_phase_updates,
+    validate_revision_cap,
+)
+from rag_backend.application.services.carousel.editorial_workflow_support import (
+    EditorialWorkflowStartInput,
+    ReviewEventEmitContext,
+    publish_workflow_sse_updates,
+)
+from rag_backend.application.services.carousel.editorial_workflow_support import (
+    read_checkpoint_phase as read_engine_checkpoint_phase,
+)
 from rag_backend.application.services.carousel.workflow_state import (
     CarouselWorkflowState,
+)
+from rag_backend.application.services.image_provider_registry import (
+    ImageProviderRegistry,
 )
 from rag_backend.application.services.notification_service import NotificationService
 from rag_backend.application.services.workflow_event_service import WorkflowEventService
 from rag_backend.domain.constants.carousel_workflow import (
-    PHASE_CONTENT,
-    PHASE_OUTLINE,
     PHASE_RESEARCH,
-    REVIEW_ACTION_APPROVE,
+    PHASE_STATUS_FAILED,
+    PHASE_STATUS_IN_PROGRESS,
+    REVIEW_ACTION_REJECT,
+    REVIEW_ACTION_REVISE,
+    STRUCTURED_FEEDBACK_KEY,
+    WORKFLOW_METADATA_EDITORIAL_7_PHASE,
+    WORKFLOW_TRACE_PHASE_HUMAN_REVIEW,
+    WORKFLOW_TRACE_PHASE_REVIEW,
 )
-from rag_backend.domain.constants.notifications import (
-    NOTIFICATION_TYPE_PHASE_APPROVED,
-    NOTIFICATION_TYPE_PHASE_REJECTED,
-)
-from rag_backend.domain.constants.workflow_events import (
-    AGGREGATE_TYPE_PROJECT,
-    EVENT_SOURCE_WORKFLOW_ENGINE,
-    EVENT_TYPE_PROJECT_PHASE_CHANGED,
-    EVENT_TYPE_PROJECT_REVIEW_COMPLETED,
-    EVENT_TYPE_PROJECT_REVIEW_REQUESTED,
-)
+from rag_backend.domain.constants.workflow_validation import CONTENT_TYPE_CAROUSEL
 from rag_backend.domain.models.carousels import ReviewEventParams
 from rag_backend.domain.models.persona import PersonaProfile
 from rag_backend.infrastructure.database.models.carousel import CarouselProjectModel
@@ -44,31 +61,6 @@ from rag_backend.infrastructure.monitoring_langfuse import (
     propagate_attributes,
     record_human_review,
 )
-
-
-@dataclass(frozen=True)
-class EditorialWorkflowStartInput:
-    """Inputs required to start the editorial workflow."""
-
-    topic: str
-    audience: str
-    brief: str
-    sources: list[dict[str, str]]
-    persona: PersonaProfile | None = None
-    user_id: str = "system"
-    reviewer_id: str | None = None
-
-
-@dataclass(frozen=True)
-class ReviewEventEmitContext:
-    """Parameters for emitting carousel review workflow events."""
-
-    project_id: str
-    action: str
-    reviewer_id: str
-    feedback: str | None
-    prior: CarouselWorkflowState | None
-    state: CarouselWorkflowState
 
 
 class EditorialWorkflowService:
@@ -80,12 +72,14 @@ class EditorialWorkflowService:
         checkpointer: object | None = None,
         event_service: WorkflowEventService | None = None,
         notification_service: NotificationService | None = None,
+        image_registry: ImageProviderRegistry | None = None,
     ) -> None:
         self._llm = llm
-        self._engine = CarouselWorkflowEngine(checkpointer=checkpointer)
-        self._source_agent = SourceSynthesisAgent(llm=llm)
-        self._outline_agent = OutlineAgent(llm=llm)
-        self._content_agent = ContentDraftAgent(llm=llm)
+        self._orchestrator = CarouselEditorialOrchestrator(
+            llm=llm,
+            checkpointer=checkpointer,
+            image_registry=image_registry,
+        )
         self._events = event_service
         self._notifications = notification_service or NotificationService()
 
@@ -96,17 +90,23 @@ class EditorialWorkflowService:
         db: AsyncSession | None = None,
     ) -> CarouselWorkflowState:
         """Run research synthesis then pause at the first human review gate."""
+        existing = await self._orchestrator.get_state(project_id)
+        if existing is not None and str(existing.get("current_phase", "")).strip():
+            return existing
+
         _trace = create_workflow_trace(
             project_id=UUID(project_id),
             user_id=workflow_input.user_id,
-            content_type="carousel",
-            metadata={"workflow": "editorial_7_phase"},
+            content_type=CONTENT_TYPE_CAROUSEL,
+            metadata={"workflow": WORKFLOW_METADATA_EDITORIAL_7_PHASE},
         )
 
         with propagate_attributes(
             metadata={"project_id": project_id, "phase": PHASE_RESEARCH},
         ):
-            research_findings = await self._synthesize_research(workflow_input.sources)
+            research_findings = await self._orchestrator.synthesize_research(
+                workflow_input.sources,
+            )
 
         initial_brief = {
             "topic": workflow_input.topic,
@@ -114,120 +114,53 @@ class EditorialWorkflowService:
             "brief": workflow_input.brief,
             "sources": workflow_input.sources,
         }
-        state = await self._engine.start(
+        state = await self._orchestrator.start(
             project_id,
             initial_brief,
             research_findings=research_findings,
         )
+        persisted = await self._orchestrator.get_state(project_id)
+        if persisted is not None:
+            state = persisted
+        if workflow_input.reviewer_id:
+            await self._orchestrator.update_state(
+                project_id,
+                {"assigned_reviewer_id": workflow_input.reviewer_id},
+            )
+            if db is not None:
+                project = await db.get(CarouselProjectModel, project_id)
+                if project is not None:
+                    project.assigned_reviewer_id = workflow_input.reviewer_id
+            assigned_state = await self._orchestrator.get_state(project_id)
+            if assigned_state is not None:
+                state = assigned_state
         await self._sync_project_phase(db, project_id, state)
-        await self._emit_phase_event(db, project_id, state, workflow_input.user_id)
+        await emit_phase_event(
+            db=db,
+            event_service=self._events,
+            ctx=PhaseEventEmitContext(
+                project_id=project_id,
+                state=state,
+                user_id=workflow_input.user_id,
+            ),
+        )
         if db and workflow_input.reviewer_id:
             await self._notifications.create_review_request(
                 db,
                 user_id=workflow_input.reviewer_id,
                 content_id=project_id,
-                content_type="carousel",
+                content_type=CONTENT_TYPE_CAROUSEL,
                 title=workflow_input.topic,
             )
+        await publish_workflow_sse_updates(project_id, state)
         return state
 
-    async def _synthesize_research(
-        self, sources: list[dict[str, str]]
-    ) -> list[dict[str, object]]:
-        """Extract research findings from source documents."""
-        research_findings: list[dict[str, object]] = []
-        for source in sources:
-            extracted = await self._source_agent.extract_key_points(
-                title=source.get("title", ""),
-                content=source.get("content", ""),
-                source_type=source.get("source_type", "document"),
-            )
-            research_findings.append({
-                "source": source.get("title", ""),
-                **extracted,
-            })
-        return research_findings
-
-    async def _generate_outline(
-        self,
-        workflow_input: EditorialWorkflowStartInput,
-    ) -> list[dict[str, object]]:
-        """Generate carousel outline from brief and sources."""
-        source_texts = [s.get("content", "") for s in workflow_input.sources]
-        outline = await self._outline_agent.generate_outline(
-            topic=workflow_input.topic,
-            audience=workflow_input.audience,
-            brief=workflow_input.brief,
-            sources=source_texts,
+    async def read_checkpoint_phase(self, project_id: str) -> str:
+        """Return checkpoint phase for structured feedback validation."""
+        return await read_engine_checkpoint_phase(
+            self._orchestrator.engine,
+            project_id,
         )
-        return [slide for slide in outline if isinstance(slide, dict)]
-
-    async def _generate_slide_drafts(
-        self,
-        outline: list[dict[str, object]],
-        persona: PersonaProfile | None,
-    ) -> list[dict[str, object]]:
-        """Draft slide copy for each outline entry."""
-        slide_drafts: list[dict[str, object]] = []
-        for slide in outline:
-            draft = await self._content_agent.draft_slide(
-                slide_index=int(slide.get("slide_index", 0)),
-                title=str(slide.get("title", "")),
-                key_points=[
-                    str(p) for p in slide.get("key_points", []) if isinstance(p, str)
-                ],
-                persona=persona,
-            )
-            slide_drafts.append({**slide, **draft})
-        return slide_drafts
-
-    async def _prepare_phase_before_resume(
-        self,
-        prior: CarouselWorkflowState,
-        action: str,
-        workflow_input: EditorialWorkflowStartInput,
-    ) -> None:
-        """Generate the next phase artifact after approval, before graph resumes."""
-        if action != REVIEW_ACTION_APPROVE:
-            return
-        phase = str(prior.get("current_phase", ""))
-        brief = prior.get("brief")
-        if isinstance(brief, dict):
-            raw_sources = brief.get("sources", workflow_input.sources)
-            sources = (
-                raw_sources if isinstance(raw_sources, list) else workflow_input.sources
-            )
-            resolved_input = EditorialWorkflowStartInput(
-                topic=str(brief.get("topic", workflow_input.topic)),
-                audience=str(brief.get("audience", workflow_input.audience)),
-                brief=str(brief.get("brief", workflow_input.brief)),
-                sources=sources,
-                persona=workflow_input.persona,
-                user_id=workflow_input.user_id,
-                reviewer_id=workflow_input.reviewer_id,
-            )
-        else:
-            resolved_input = workflow_input
-        updates: dict[str, object] = {}
-        if phase == PHASE_RESEARCH and not prior.get("outline"):
-            updates["outline"] = await self._generate_outline(resolved_input)
-        elif phase == PHASE_OUTLINE and not prior.get("slide_drafts"):
-            outline = prior.get("outline") or updates.get("outline") or []
-            if isinstance(outline, list):
-                updates["slide_drafts"] = await self._generate_slide_drafts(
-                    [s for s in outline if isinstance(s, dict)],
-                    resolved_input.persona,
-                )
-        elif phase == PHASE_CONTENT and resolved_input.persona is not None:
-            slide_drafts = prior.get("slide_drafts") or []
-            if isinstance(slide_drafts, list) and slide_drafts:
-                persona_agent = PersonaAgent(
-                    persona=resolved_input.persona, llm=self._llm
-                )
-                first_text = str(slide_drafts[0].get("draft_text", ""))
-                await persona_agent.evaluate_match(first_text)
-        if updates:
-            await self._engine.update_state(str(prior.get("project_id", "")), updates)
 
     async def _sync_project_phase(
         self,
@@ -238,11 +171,18 @@ class EditorialWorkflowService:
         """Keep carousel project row in sync with workflow state for the Kanban board."""
         if db is None:
             return
-        project = await db.get(CarouselProjectModel, UUID(project_id))
+        project = await db.get(CarouselProjectModel, project_id)
         if project is None:
             return
         project.current_phase = str(state.get("current_phase", project.current_phase))
         project.phase_status = str(state.get("phase_status", project.phase_status))
+        if str(state.get("phase_status", "")) == PHASE_STATUS_FAILED:
+            from rag_backend.domain.models import CarouselStatus
+
+            project.status = CarouselStatus.FAILED.value
+        raw_workflow_status = state.get("workflow_status")
+        if raw_workflow_status is not None:
+            project.workflow_status = str(raw_workflow_status)
         await db.flush()
 
     async def resume_workflow(
@@ -253,20 +193,39 @@ class EditorialWorkflowService:
         feedback: str | None = None,
         db: AsyncSession | None = None,
         persona: PersonaProfile | None = None,
+        project_title: str = "",
+        structured_feedback: dict[str, object] | None = None,
     ) -> CarouselWorkflowState:
         """Resume workflow after human review."""
-        prior = await self._engine.get_state(project_id)
+        prior = await self._orchestrator.get_state(project_id)
+        if action == REVIEW_ACTION_REVISE and prior is not None:
+            await validate_revision_cap(
+                prior,
+                RevisionCapValidationContext(
+                    project_id=project_id,
+                    project_title=project_title,
+                    db=db,
+                    notifications=self._notifications,
+                ),
+            )
+        await prepare_resume_workflow(
+            self._orchestrator,
+            project_id,
+            action,
+            prior,
+            feedback,
+        )
         trace = create_workflow_trace(
             project_id=UUID(project_id),
             user_id=reviewer_id,
-            content_type="carousel",
-            metadata={"phase": "human_review"},
+            content_type=CONTENT_TYPE_CAROUSEL,
+            metadata={"phase": WORKFLOW_TRACE_PHASE_HUMAN_REVIEW},
         )
         if trace is not None:
             record_human_review(
                 trace=trace,
                 params=ReviewEventParams(
-                    phase="review",
+                    phase=WORKFLOW_TRACE_PHASE_REVIEW,
                     action=action,
                     reviewer_id=reviewer_id,
                     time_to_respond=None,
@@ -281,133 +240,135 @@ class EditorialWorkflowService:
             persona=persona,
             user_id=reviewer_id,
         )
-        if prior is not None:
-            await self._prepare_phase_before_resume(prior, action, workflow_input)
-        human_input = {
-            "action": action,
+        graph_action = (
+            REVIEW_ACTION_REJECT
+            if action in {REVIEW_ACTION_REVISE, REVIEW_ACTION_REJECT}
+            else action
+        )
+        if action == REVIEW_ACTION_REVISE and prior is not None:
+            await record_feedback_correction(
+                self._orchestrator,
+                FeedbackCorrectionContext(
+                    project_id=project_id,
+                    prior=prior,
+                    feedback=feedback,
+                    persona=persona,
+                    structured_feedback=structured_feedback,
+                    db=db,
+                ),
+            )
+        human_input: dict[str, object] = {
+            "action": graph_action,
             "reviewer_id": reviewer_id,
             "feedback": feedback,
         }
-        state = await self._engine.resume(project_id, human_input)
+        if structured_feedback:
+            human_input[STRUCTURED_FEEDBACK_KEY] = structured_feedback
+        state = await self._orchestrator.resume(
+            project_id,
+            human_input,
+            db=db,
+            workflow_input=workflow_input,
+        )
+        persisted = await self._orchestrator.get_state(project_id)
+        if persisted is not None:
+            state = persisted
         await self._sync_project_phase(db, project_id, state)
-        await self._emit_review_event(
-            db,
-            ReviewEventEmitContext(
-                project_id=project_id,
-                action=action,
-                reviewer_id=reviewer_id,
-                feedback=feedback,
-                prior=prior,
-                state=state,
+        await emit_review_event(
+            ReviewEventEmitRequest(
+                db=db,
+                event_service=self._events,
+                notification_service=self._notifications,
+                context=ReviewEventEmitContext(
+                    project_id=project_id,
+                    action=action,
+                    reviewer_id=reviewer_id,
+                    feedback=feedback,
+                    prior=prior,
+                    state=state,
+                ),
             ),
         )
+        await publish_workflow_sse_updates(project_id, state)
         return state
 
     async def get_workflow_state(self, project_id: str) -> CarouselWorkflowState | None:
         """Load persisted workflow state from checkpointer (WF-002)."""
-        return await self._engine.get_state(project_id)
+        state = await self._orchestrator.get_state(project_id)
+        if state is None:
+            return None
+        if not str(state.get("current_phase", "")).strip():
+            return None
+        return state
+
+    async def mark_resume_in_progress(
+        self,
+        project_id: str,
+        db: AsyncSession | None,
+    ) -> str:
+        """Set workflow to in_progress and broadcast SSE before background resume."""
+        prior = await self.get_workflow_state(project_id)
+        current_phase = str(prior.get("current_phase", "")) if prior else ""
+        in_progress_state: CarouselWorkflowState = {
+            **(prior or {}),
+            "project_id": project_id,
+            "current_phase": current_phase,
+            "phase_status": PHASE_STATUS_IN_PROGRESS,
+        }
+        await self._orchestrator.update_state(
+            project_id,
+            {"phase_status": PHASE_STATUS_IN_PROGRESS},
+        )
+        await self._sync_project_phase(db, project_id, in_progress_state)
+        from rag_backend.application.services.carousel.editorial_workflow_support import (
+            publish_workflow_phase_change,
+        )
+
+        await publish_workflow_phase_change(
+            project_id,
+            current_phase,
+            PHASE_STATUS_IN_PROGRESS,
+        )
+        return current_phase
+
+    async def publish_resume_error_event(
+        self,
+        project_id: str,
+        *,
+        message: str,
+        recoverable: bool,
+    ) -> None:
+        """Publish recoverable workflow error after background resume failure."""
+        prior = await self.get_workflow_state(project_id)
+        phase = str(prior.get("current_phase", "")) if prior else ""
+        from rag_backend.application.services.carousel.editorial_workflow_support import (
+            publish_workflow_error,
+        )
+
+        await publish_workflow_error(
+            project_id,
+            phase,
+            message,
+            recoverable=recoverable,
+        )
 
     async def stream_phase_updates(
         self,
         project_id: str,
-    ) -> AsyncIterator[dict[str, str]]:
-        """Yield the current workflow phase for SSE consumers."""
-        state = await self._engine.get_state(project_id)
-        if state is None:
-            return
-        current_phase = str(state.get("current_phase", ""))
-        if not current_phase:
-            return
-        yield {
-            "event": "project.phase.changed",
-            "project_id": project_id,
-            "phase": current_phase,
-            "phase_status": str(state.get("phase_status", "")),
-        }
-
-    async def _emit_phase_event(
-        self,
-        db: AsyncSession | None,
-        project_id: str,
-        state: CarouselWorkflowState,
-        user_id: str,
-    ) -> None:
-        if db is None or self._events is None:
-            return
-        await self._events.emit(
-            db,
-            event_type=EVENT_TYPE_PROJECT_PHASE_CHANGED,
-            aggregate_id=project_id,
-            aggregate_type=AGGREGATE_TYPE_PROJECT,
-            payload={
-                "phase": str(state.get("current_phase", "")),
-                "phase_status": str(state.get("phase_status", "")),
-            },
-            metadata={"user_id": user_id, "source": EVENT_SOURCE_WORKFLOW_ENGINE},
-        )
-        await self._events.emit(
-            db,
-            event_type=EVENT_TYPE_PROJECT_REVIEW_REQUESTED,
-            aggregate_id=project_id,
-            aggregate_type=AGGREGATE_TYPE_PROJECT,
-            payload={"phase": str(state.get("current_phase", ""))},
-            metadata={"user_id": user_id, "source": EVENT_SOURCE_WORKFLOW_ENGINE},
-        )
-
-    async def _emit_review_event(
-        self,
-        db: AsyncSession | None,
-        ctx: ReviewEventEmitContext,
-    ) -> None:
-        if db is None or self._events is None:
-            return
-        old_phase = str(ctx.prior.get("current_phase", "")) if ctx.prior else ""
-        new_phase = str(ctx.state.get("current_phase", ""))
-        await self._events.emit(
-            db,
-            event_type=EVENT_TYPE_PROJECT_REVIEW_COMPLETED,
-            aggregate_id=ctx.project_id,
-            aggregate_type=AGGREGATE_TYPE_PROJECT,
-            payload={
-                "action": ctx.action,
-                "feedback": ctx.feedback or "",
-                "phase": new_phase,
-            },
-            metadata={
-                "reviewer_id": ctx.reviewer_id,
-                "source": EVENT_SOURCE_WORKFLOW_ENGINE,
-            },
-        )
-        if old_phase != new_phase:
-            await self._events.emit(
-                db,
-                event_type=EVENT_TYPE_PROJECT_PHASE_CHANGED,
-                aggregate_id=ctx.project_id,
-                aggregate_type=AGGREGATE_TYPE_PROJECT,
-                payload={
-                    "old_phase": old_phase,
-                    "phase": new_phase,
-                    "phase_status": str(ctx.state.get("phase_status", "")),
-                },
-                metadata={
-                    "reviewer_id": ctx.reviewer_id,
-                    "source": EVENT_SOURCE_WORKFLOW_ENGINE,
-                },
-            )
-        notif_type = (
-            NOTIFICATION_TYPE_PHASE_APPROVED
-            if ctx.action == REVIEW_ACTION_APPROVE
-            else NOTIFICATION_TYPE_PHASE_REJECTED
-        )
-        await self._notifications.create_workflow_update(
-            db,
-            user_id=ctx.reviewer_id,
-            notification_type=notif_type,
-            title=f"Phase {ctx.action}: {new_phase}",
-            body=ctx.feedback or "",
-            content_id=ctx.project_id,
-            content_type="carousel",
-        )
+        *,
+        phase_progress: dict[str, object] | None = None,
+    ) -> AsyncIterator[dict[str, object]]:
+        """Yield workflow phase and progress events for SSE consumers."""
+        async for event in stream_workflow_phase_updates(
+            self._orchestrator,
+            project_id,
+            phase_progress=phase_progress,
+        ):
+            yield event
 
 
-__all__ = ["EditorialWorkflowService", "EditorialWorkflowStartInput"]
+__all__ = [
+    "EditorialWorkflowService",
+    "EditorialWorkflowStartInput",
+    "ReviewEventEmitContext",
+]

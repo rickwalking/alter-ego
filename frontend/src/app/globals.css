@@ -47,7 +47,7 @@
   --color-brand-bg-lighter: #0f1420;
 
   /* Dark-only app — semantic tokens resolve straight to the dark palette. */
-  --color-background: var(--color-gray-950);
+  --color-background: #060a12;
   --color-foreground: var(--color-gray-50);
   --color-card: var(--color-gray-900);
   --color-card-foreground: var(--color-gray-50);
@@ -114,13 +114,91 @@
    components that use it; no per-class overrides are needed here. */
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* ── Neon Shell Animations ── */
+@keyframes grid-drift {
+  0% {
+    transform: rotateX(60deg) translateY(0);
+  }
+  100% {
+    transform: rotateX(60deg) translateY(60px);
+  }
+}
+@keyframes terminal-type {
+  0% {
+    opacity: 0;
+    transform: translateX(-8px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+@keyframes ring-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.5;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 1;
+  }
+}
+@keyframes pulse-dot {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.3;
+  }
+}
+@keyframes glow-pulse {
+  0%,
+  100% {
+    box-shadow:
+      0 0 12px rgba(0, 212, 255, 0.12),
+      inset 0 0 12px rgba(0, 212, 255, 0.12);
+  }
+  50% {
+    box-shadow:
+      0 0 24px rgba(0, 212, 255, 0.2),
+      inset 0 0 24px rgba(0, 212, 255, 0.2);
+  }
+}
+@keyframes blink-cursor {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+}
+@keyframes particle-float {
+  0% {
+    opacity: 0;
+    transform: translateY(100vh) scale(0);
+  }
+  10% {
+    opacity: 0.6;
+  }
+  90% {
+    opacity: 0.4;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-10vh) scale(1);
+  }
+}
+
 /* Base styles */
 * {
   border-color: var(--color-border);
 }
 
 body {
-  background: var(--color-background);
+  background: #060a12;
   color: var(--color-foreground);
   font-family: var(--font-sans);
 }

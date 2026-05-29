@@ -25,14 +25,6 @@ class ImageResult(TypedDict):
     skipped: bool
 
 
-class PipelineEvent(TypedDict):
-    """SSE-shaped event emitted by CarouselAgent.stream_pipeline."""
-
-    node: str
-    status: str
-    phase_progress: dict[str, object] | None
-
-
 class ChatEvent(TypedDict, total=False):
     """Event yielded by RAGAgent.chat."""
 

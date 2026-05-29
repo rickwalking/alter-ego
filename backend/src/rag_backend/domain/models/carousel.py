@@ -120,6 +120,8 @@ class CarouselProject:
     instructions: str | None = None
     current_phase: str = "brief"
     phase_status: str = "pending"
+    is_public: bool = False
+    owner_id: str | None = None
     created_at: datetime = field(default_factory=datetime.utcnow)
     updated_at: datetime = field(default_factory=datetime.utcnow)
 

@@ -19,12 +19,17 @@
     "src/features/carousel/queries.ts",
     "src/features/chat/queries.ts",
     "src/features/create/hooks/use-carousel.ts",
+    "src/features/create/hooks/use-editorial-workflow.ts",
+    "src/features/create/hooks/use-editorial-workflow-utils.ts",
+    "src/features/create/hooks/use-editorial-workflow-resume.ts",
+    "src/features/create/hooks/use-editorial-workflow-sse.ts",
+    "src/lib/client-api-url.ts",
     "src/features/chat/hooks/use-chat.ts",
     "src/features/knowledge/queries.ts",
     "src/features/knowledge/hooks/use-documents.ts",
     "src/features/publish/hooks/use-publish-chat.ts"
   ],
-  "mutate_comment": "Scoped to .ts files. Mutating .tsx files triggers a Stryker-instrumenter + @stryker/instrumenter bug (duplicate `stryNS_9fa48` declarations in JSX-transformed output). The hooks give us the highest-value coverage — business logic that silent tests can miss.",
+  "mutate_comment": "Scoped to .ts hook/query modules. Editorial workflow split hooks are mutation-gated alongside unit tests in matching *.test.ts files.",
   "thresholds": {
     "high": 90,
     "low": 80,

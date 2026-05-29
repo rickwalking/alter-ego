@@ -233,7 +233,7 @@ class TestPublishChatStream:
 
     @pytest.mark.asyncio
     async def test_non_carousel_conversation_returns_400(
-        self, client, test_conversation, mock_agent, monkeypatch, test_user
+        self, client, mock_agent, monkeypatch, test_user
     ):
         """Given conversation without project_id, when POST /publish-chat/stream, then returns 400."""
         # Feature: Publish Page Carousel Agent Streaming
@@ -243,14 +243,62 @@ class TestPublishChatStream:
         monkeypatch.setattr(
             chat_stream_module,
             "build_rag_agent",
-            lambda _db, _container: mock_agent,
+            lambda _db, _container, **kwargs: mock_agent,
         )
 
         token = _make_test_token(user_id=str(test_user.id))
+        create_resp = await client.post(
+            "/api/conversations/",
+            json={"title": "Owned non-carousel chat"},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert create_resp.status_code == 201
+        conversation_id = create_resp.json()["id"]
+
         response = await client.post(
-            f"/api/conversations/{test_conversation}/publish-chat/stream",
+            f"/api/conversations/{conversation_id}/publish-chat/stream",
             json={"content": "Hello"},
             headers={"Authorization": f"Bearer {token}"},
         )
 
         assert response.status_code == 400
+
+    @pytest.mark.asyncio
+    async def test_anonymous_conversation_rejected_for_publish_chat(
+        self, client, test_user
+    ):
+        """Given anonymous carousel-bound conversation, when publish-chat, then 403."""
+        from uuid import uuid4
+
+        from rag_backend.domain.constants.conversation import (
+            CONVERSATION_METADATA_PROJECT_ID,
+            ERR_ANONYMOUS_CAROUSEL_CONVERSATION,
+        )
+        from rag_backend.domain.models import Conversation
+        from rag_backend.infrastructure.database.config import get_session_maker
+        from rag_backend.infrastructure.database.conversation_repository import (
+            PostgresConversationRepository,
+        )
+
+        project_id = str(uuid4())
+        session_maker = get_session_maker()
+        async with session_maker() as session:
+            repo = PostgresConversationRepository(session)
+            conversation = await repo.create(
+                Conversation(
+                    title="Anonymous carousel chat",
+                    user_id=None,
+                    metadata={CONVERSATION_METADATA_PROJECT_ID: project_id},
+                )
+            )
+            await session.commit()
+            conversation_id = conversation.id
+
+        token = _make_test_token(user_id=str(test_user.id))
+        response = await client.post(
+            f"/api/conversations/{conversation_id}/publish-chat/stream",
+            json={"content": "Hello"},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert response.status_code == 403
+        assert response.json()["detail"] == ERR_ANONYMOUS_CAROUSEL_CONVERSATION

@@ -27,7 +27,6 @@ forbidden_modules =
 # is an accepted exception in Clean Architecture for observability.
 ignore_imports =
     rag_backend.application.** -> rag_backend.infrastructure.logging
-    rag_backend.agents.** -> rag_backend.infrastructure.logging
     rag_backend.application.** -> rag_backend.infrastructure.**
     rag_backend.application.** -> rag_backend.agents.**
     rag_backend.application.** -> rag_backend.api.**

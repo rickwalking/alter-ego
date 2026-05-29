@@ -35,6 +35,11 @@ class AnthropicLLMService:
             max_retries=3,
         )
 
+    @property
+    def chat_model(self) -> ChatAnthropic:
+        """Expose the underlying LangChain chat model."""
+        return self._llm
+
     @staticmethod
     def _to_lc_messages(
         messages: list[dict[str, str]],

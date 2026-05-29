@@ -129,8 +129,6 @@ disable_error_code = ["explicit-any", "type-arg"]
 module = [
     "rag_backend.infrastructure.database.models.*",
     "rag_backend.agents.*",
-    "rag_backend.agents.carousel_orchestrator.*",
-    "rag_backend.application.services.carousel.graph",
 ]
 ignore_errors = true
 
@@ -288,14 +286,15 @@ ignore-names = [
     "FBT002", # boolean default value
     "E402",   # module level import
     "ERA001", # Gherkin scenario reference comments in test files
+    "PLR6201", "ARG005", "PERF401", "B007",
 ]
 # Pre-commit passes paths as backend/tests/... from repo root
 "backend/tests/**/*" = [
     "S101", "ANN", "PLR2004", "ARG001", "ARG002", "S108", "S106", "S105",
     "E501", "SIM105", "N806", "N807", "F841", "RUF059", "TRY003", "PLR0913",
-    "PLR0912", "PLR0911", "PLR0915", "PLR0914", "PLR0917", "PLR0904", "RUF069",
-    "RUF029", "B903", "C901", "PLR6301",
-    "FBT001", "FBT002", "E402", "ERA001",
+    "PLR0912", "PLR0911", "PLR0915", "PLR0914", "PLR0917", "PLR0904",
+    "RUF069", "RUF029", "B903", "C901", "PLR6301",
+    "FBT001", "FBT002", "E402", "ERA001", "PLR6201", "ARG005", "PERF401", "B007",
 ]
 "**/__init__.py" = ["F401"]  # Re-exports are OK
 # PLR6301: Methods that could be static — style preference, not a bug
@@ -304,19 +303,20 @@ ignore-names = [
 "src/rag_backend/infrastructure/auth.py" = ["TRY300"]
 "src/rag_backend/infrastructure/langfuse_client.py" = ["TRY300"]
 "src/rag_backend/infrastructure/database/user_repository.py" = ["TRY003"]
+"src/rag_backend/infrastructure/database/carousel_repository.py" = ["FBT001", "FBT002"]
 "src/rag_backend/scripts/bootstrap_admin.py" = ["E501"]
+"scripts/**/*" = ["S404", "S603", "S108", "TRY003", "PLR0911", "E501"]
+"backend/scripts/**/*" = ["S404", "S603", "S108", "TRY003", "PLR0911", "E501"]
 "src/rag_backend/application/services/chat_stream_service.py" = ["FBT001", "SIM105"]
 "src/rag_backend/domain/retry.py" = ["SIM103"]
 # PLR091x: Complexity thresholds — some files need more flexibility
 "src/rag_backend/agents/alter_ego_agent.py" = ["PLR0914", "FBT001"]
 "src/rag_backend/agents/rag_agent.py" = ["PLR0914", "FBT001"]
-"src/rag_backend/application/services/carousel/graph.py" = ["C901", "PLR0912", "PLR0911", "PLR0915"]
-"src/rag_backend/application/services/carousel/carousel_orchestrator.py" = ["C901", "PLR0912", "PLR0914", "RUF029"]
+"src/rag_backend/application/services/carousel/refinement_service.py" = ["PLR0913"]
 "src/rag_backend/application/services/carousel_refinement.py" = ["C901", "PLR0912", "PLR0913", "PLR0914"]
 "src/rag_backend/application/services/content_calendar_service.py" = ["PLR0912", "PLR0913"]
 "src/rag_backend/application/services/blog_post_service.py" = ["PLR0913"]
 "src/rag_backend/application/services/carousel/nodes/content/core.py" = ["PLR0912", "PLR0913"]
-"src/rag_backend/application/services/carousel/subagent.py" = ["PLR1702", "PLR0912", "PLR0913", "RUF029"]
 "src/rag_backend/application/services/editorial_analytics_service.py" = ["PLR0912", "PLR0913", "PLR0914"]
 "src/rag_backend/application/services/accessibility_check_service.py" = ["PLR0913", "PLR0912"]
 "src/rag_backend/application/services/persona_service.py" = ["PLR0913"]
@@ -326,10 +326,8 @@ ignore-names = [
 "src/rag_backend/infrastructure/retrieval/hybrid_retriever.py" = ["PLR0911", "PLR0913", "PLR0912"]
 "src/rag_backend/infrastructure/retrieval/document_processor.py" = ["PLR0912", "PLR0913"]
 "src/rag_backend/infrastructure/external/pinecone_store.py" = ["ARG002", "PLR0912", "PLR0913"]
-"src/rag_backend/agents/carousel_orchestrator/graph.py" = ["PLR0913", "PLR1702"]
-"src/rag_backend/agents/carousel_orchestrator/__init__.py" = ["RUF067"]
-"src/rag_backend/agents/constants.py" = ["RUF067"]
-"src/rag_backend/application/services/carousel_template/__init__.py" = ["RUF067"]
+"src/rag_backend/agents/constants.py" = []
+"src/rag_backend/application/services/carousel_template/__init__.py" = []
 "src/rag_backend/application/services/carousel_template/slides.py" = ["PLR0913"]
 "src/rag_backend/application/services/carousel_template/html_template.py" = ["PLR0913"]
 "src/rag_backend/application/services/image_style_strategies.py" = ["PLR0913"]
@@ -345,25 +343,21 @@ ignore-names = [
 "src/rag_backend/application/tools/carousel/refine_copy.py" = ["PLR0913", "RUF029"]
 "src/rag_backend/application/tools/carousel/refine_design.py" = ["PLR0912"]
 "src/rag_backend/application/workers/workflow_workers.py" = ["PLR0913"]
-"src/rag_backend/domain/constants/ai_agents.py" = ["RUF067"]
-"src/rag_backend/domain/protocols/vector.py" = ["RUF067"]
+"src/rag_backend/domain/constants/ai_agents.py" = []
+"src/rag_backend/domain/protocols/vector.py" = []
 "src/rag_backend/infrastructure/cache/ai_response_cache.py" = ["PLR0913"]
 "src/rag_backend/infrastructure/database/blog_post_repository.py" = ["PLR0913"]
 "src/rag_backend/infrastructure/events/memory_event_publisher.py" = ["PLR0913"]
 "src/rag_backend/infrastructure/external/openai_llm.py" = ["PLR0913"]
 "src/rag_backend/infrastructure/external/playwright_export.py" = ["PLR0913"]
-"src/rag_backend/infrastructure/logging.py" = ["RUF067"]
+"src/rag_backend/infrastructure/logging.py" = []
 # RUF029: Functions declared async but don't await — remove where safe
 "src/rag_backend/api/dependencies/**/*.py" = ["RUF029"]
 "src/rag_backend/api/middleware/error_handler*.py" = ["RUF029"]
 "src/rag_backend/api/middleware/auth.py" = ["RUF029"]
-"src/rag_backend/agents/carousel_orchestrator/phases.py" = ["RUF029"]
-"src/rag_backend/application/services/carousel/phases/images.py" = ["RUF029"]
-# Remaining style/complexity issues
 "src/rag_backend/application/services/carousel/nodes/design.py" = ["C901", "PLR0912"]
 "src/rag_backend/application/services/carousel/nodes/export.py" = ["PLR0917", "PLR0915"]
 "src/rag_backend/application/services/carousel/nodes/content/slides.py" = ["E402"]
-"src/rag_backend/application/services/carousel/nodes/progress.py" = ["E402"]
 "src/rag_backend/application/services/carousel/theme_resolver.py" = ["C901", "PLR0912"]
 # E501: Line length — wrap where practical, suppress where not
 "src/rag_backend/domain/metrics.py" = ["E501"]
@@ -382,11 +376,11 @@ ignore-names = [
 "src/rag_backend/agents/prompts/registry.py" = ["S105"]
 "src/rag_backend/api/schemas.py" = ["E501"]
 # Broad ignores for remaining style issues
-"src/rag_backend/agents/*.py" = ["PLR6301", "RUF067"]
-"src/rag_backend/**/__init__.py" = ["RUF067", "E402"]
-"src/rag_backend/domain/constants/*.py" = ["RUF067", "E402"]
+"src/rag_backend/agents/*.py" = ["PLR6301", ]
+"src/rag_backend/**/__init__.py" = ["E402"]
+"src/rag_backend/domain/constants/*.py" = ["E402"]
 # Broad ignore for remaining complexity issues
-"src/rag_backend/**" = ["C901", "PLR0911", "PLR0912", "PLR0913", "PLR0914", "PLR0915", "PLR0917", "PLR1702", "E402", "RUF067", "ARG001", "E501"]
+"src/rag_backend/**" = ["C901", "PLR0911", "PLR0912", "PLR0913", "PLR0914", "PLR0915", "PLR0917", "PLR1702", "E402", "ARG001", "E501"]
 "src/rag_backend/api/routes/*.py" = [
     "FAST001", "FAST002", "ARG001", "FBT001", "E501",
 ]
@@ -437,21 +431,27 @@ color = true
 
 [tool.mutmut]
 paths_to_mutate = [
+    "src/rag_backend/application/services/carousel/editorial_workflow_service.py",
+    "src/rag_backend/application/services/carousel/editorial_workflow_support.py",
+    "src/rag_backend/application/services/carousel/editorial_workflow_resume_runner.py",
+    "src/rag_backend/agents/carousel_editorial_orchestrator.py",
+    "src/rag_backend/application/services/carousel/phase_subagents.py",
+    "src/rag_backend/agents/carousel_workflow.py",
     "src/rag_backend/application/services/carousel_refinement.py",
     "src/rag_backend/application/services/rag_agent_tools.py",
-    "src/rag_backend/application/services/carousel_agent.py",
-    "src/rag_backend/application/services/carousel/graph.py",
+    "src/rag_backend/application/services/carousel/editorial_workflow_support.py",
     "src/rag_backend/agents/persona_agent.py",
     "src/rag_backend/agents/quality_agent.py",
     "src/rag_backend/agents/feedback_learning.py",
-    "src/rag_backend/agents/carousel_workflow.py",
     "src/rag_backend/application/services/blog_post_ai_service.py",
+    "src/rag_backend/application/tools/carousel/generate_carousel.py",
 ]
 tests_dir = [
     "tests/unit/application",
     "tests/unit/agents",
     "tests/unit/infrastructure",
     "tests/unit/api",
+    "tests/integration/carousel_consolidation",
 ]
 also_copy = ["src", "tests", "setup.cfg", "pyproject.toml", "pytest.ini", ".gitignore"]
 runner_options = "-x -q --no-header"

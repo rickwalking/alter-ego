@@ -3,8 +3,12 @@
 from typing import Protocol
 from uuid import UUID
 
-from rag_backend.domain.models import DocumentChunk, RetrievalQuery, SearchResult
-from rag_backend.domain.types import SparseEmbedding
+from rag_backend.domain.models import (
+    DocumentChunk,
+    HybridSearchParams,
+    RetrievalQuery,
+    SearchResult,
+)
 
 
 class EmbeddingService(Protocol):
@@ -12,21 +16,6 @@ class EmbeddingService(Protocol):
 
     async def embed_documents(self, documents: list[str]) -> list[list[float]]: ...
     async def embed_query(self, query: str) -> list[float]: ...
-
-
-class HybridSearchParams(Protocol):
-    """Parameters for hybrid search operation.
-
-    This protocol provides a type-safe interface for hybrid search parameters,
-    replacing the use of `dict[str, Any]` or `list[dict[str, Any]]`.
-    """
-
-    query: str
-    dense_embedding: list[float]
-    sparse_embedding: SparseEmbedding
-    top_k: int
-    alpha: float
-    namespace: str | None = None
 
 
 class Retriever(Protocol):

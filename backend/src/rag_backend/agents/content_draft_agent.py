@@ -16,7 +16,8 @@ from rag_backend.domain.constants.ai_agents import (
 )
 from rag_backend.domain.models.persona import PersonaProfile
 from rag_backend.infrastructure.cache.ai_response_cache import get_ai_response_cache
-from rag_backend.infrastructure.monitoring_langfuse import get_langfuse_handler
+from rag_backend.infrastructure.llm.json_utils import extract_json
+from rag_backend.infrastructure.monitoring_langfuse import get_langfuse_runnable_config
 
 
 class ContentDraftAgent:
@@ -50,9 +51,7 @@ class ContentDraftAgent:
         raw = cached
         if raw is None:
             messages: list[BaseMessage] = [HumanMessage(content=prompt)]
-            response = await self.llm.ainvoke(
-                messages, callbacks=get_langfuse_handler()
-            )
+            response = await self.llm.ainvoke(messages, get_langfuse_runnable_config())
             raw = cast(str, response.content)
             self._cache.set(prompt, self.model_id, raw)
 
@@ -65,13 +64,18 @@ class ContentDraftAgent:
 
     def _parse_draft(self, raw: str) -> dict[str, object]:
         try:
-            data = json.loads(raw)
+            data = extract_json(raw)
+        except json.JSONDecodeError as exc:
+            raise ValueError(ERR_INVALID_JSON) from exc
+        if not isinstance(data, dict):
+            raise TypeError(ERR_INVALID_JSON)
+        try:
             return {
                 "draft_text": str(data.get("draft_text", "")),
                 "confidence_score": float(data.get("confidence_score", 0.5)),
                 "sources_used": list(data.get("sources_used", [])),
             }
-        except (json.JSONDecodeError, TypeError, ValueError) as exc:
+        except (TypeError, ValueError) as exc:
             raise ValueError(ERR_INVALID_JSON) from exc
 
 

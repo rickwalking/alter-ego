@@ -2,13 +2,18 @@
 
 from collections.abc import Generator
 from contextlib import contextmanager
+from typing import TYPE_CHECKING, cast
 from uuid import UUID
 
+from langchain_core.callbacks.base import BaseCallbackHandler
 from langfuse import Langfuse
 
 from rag_backend.infrastructure.langfuse_client import (
     get_langfuse_client,
 )
+
+if TYPE_CHECKING:
+    from langchain_core.runnables import RunnableConfig
 
 
 class LangfuseCallbackHandler:
@@ -169,16 +174,22 @@ class LangfuseCallbackHandler:
         )
 
 
-def get_langfuse_handler() -> list[object]:
-    """Get the LangFuse callback handler.
+def get_langfuse_handler() -> list[BaseCallbackHandler]:
+    """Get LangChain-compatible Langfuse callbacks when configured."""
+    from rag_backend.monitoring_langfuse import get_langfuse_handler as get_root_handler
 
-    Returns:
-        Callbacks object with LangFuse handler
-    """
-    client = get_langfuse_client()
-    if client is None:
+    handler = get_root_handler()
+    if handler is None:
         return []
-    return [LangfuseCallbackHandler(client)]
+    return [cast(BaseCallbackHandler, handler)]
+
+
+def get_langfuse_runnable_config() -> "RunnableConfig":
+    """Return LangChain RunnableConfig with Langfuse callbacks when available."""
+    handlers = get_langfuse_handler()
+    if not handlers:
+        return {}
+    return {"callbacks": handlers}
 
 
 @contextmanager
@@ -186,42 +197,23 @@ def propagate_attributes(
     metadata: dict[str, str],
     callbacks: list[object] | None = None,
 ) -> Generator[None, None, None]:
-    """Propagate metadata across multiple LLM calls.
-
-    Useful for workflow phases where multiple agents need shared context.
-
-    Args:
-        metadata: Metadata to propagate (e.g., project_id, phase)
-        callbacks: Optional existing callbacks to merge with
-
-    Example:
-        with propagate_attributes(
-            metadata={"project_id": "abc123", "phase": "research"}
-        ):
-            result = await researcher_agent.run()
-            result = await quality_agent.run()
-    """
+    """Propagate metadata across multiple LLM calls via Langfuse v3 spans."""
+    _ = callbacks
     client = get_langfuse_client()
 
     if client is None:
         yield
         return
 
-    if callbacks is None:
-        callbacks = [LangfuseCallbackHandler(client)]
-    elif not any(isinstance(cb, LangfuseCallbackHandler) for cb in callbacks):
-        callbacks = [*callbacks, LangfuseCallbackHandler(client)]
-
-    trace = client.trace(  # type: ignore[attr-defined]
+    span = client.start_as_current_span(
         name=f"workflow_{metadata.get('phase', 'unknown')}",
         metadata=metadata,
-        tags=[metadata.get("phase", "unknown")],
     )
-
     try:
-        yield
+        with span:
+            yield
     finally:
-        trace.flush()
+        client.flush()
 
 
 def create_workflow_trace(
@@ -230,29 +222,19 @@ def create_workflow_trace(
     content_type: str,
     metadata: dict[str, object] | None = None,
 ) -> object:
-    """Create a trace for a workflow.
-
-    Args:
-        project_id: The project UUID
-        user_id: The human user ID
-        content_type: Type of content ("carousel", "blog_post")
-        metadata: Additional metadata
-
-    Returns:
-        LangFuse trace object
-    """
+    """Create a trace span for a workflow using Langfuse v3 SDK."""
     client = get_langfuse_client()
 
     if client is None:
         return None
 
-    return client.trace(  # type: ignore[attr-defined]
+    return client.start_span(
         name=f"{content_type}_workflow_{project_id}",
-        tags=[content_type, "workflow"],
         metadata={
             "project_id": str(project_id),
             "user_id": user_id,
             "content_type": content_type,
+            "tags": [content_type, "workflow"],
             **(metadata or {}),
         },
     )
@@ -330,6 +312,13 @@ def record_human_review(trace: object, *, params: ReviewEventParams) -> None:
     if trace is None:
         return
 
+    if hasattr(trace, "create_event"):
+        trace.create_event(
+            name=f"human_review_{params['phase']}_completed",
+            metadata=params,
+        )
+        return
+
     trace.event(  # type: ignore[attr-defined]
         name=f"human_review_{params['phase']}_completed",
         metadata=params,
@@ -376,5 +365,6 @@ __all__ = [
     "add_voice_match_score",
     "create_workflow_trace",
     "get_langfuse_handler",
+    "get_langfuse_runnable_config",
     "propagate_attributes",
 ]

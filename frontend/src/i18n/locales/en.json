@@ -11,13 +11,28 @@
       "knowledgeBase": "Knowledge Base",
       "blog": "Blog",
       "create": "Create",
+      "createCarousel": "Create Carousel",
       "personas": "Personas",
       "rubrics": "Rubrics",
       "blogPosts": "Blog Posts",
-      "workflow": "Workflow",
+      "workflow": "Workflow Board",
       "calendar": "Calendar",
       "analytics": "Analytics",
       "admin": "Admin"
+    },
+    "sidebar": {
+      "sectionMain": "Main",
+      "sectionContent": "Content",
+      "sectionManagement": "Management",
+      "dashboard": "Dashboard",
+      "chat": "Chat",
+      "createCarousel": "Create Carousel",
+      "blogPosts": "Blog Posts",
+      "workflowBoard": "Workflow Board",
+      "calendar": "Calendar",
+      "rubrics": "Rubrics",
+      "personas": "Personas",
+      "alterEgo": "Alter Ego"
     },
     "logout": "Logout",
     "login": "Login"
@@ -212,6 +227,11 @@
       "title": "Carousel Workspace",
       "viewBlog": "View Blog",
       "publish": "Publish",
+      "draftBlogPreview": "Draft blog preview",
+      "loadDraftBlog": "Load preview",
+      "loadingPreview": "Loading…",
+      "previewEmpty": "No draft content yet.",
+      "previewError": "Could not load draft blog preview.",
       "resume": "Resume from last checkpoint",
       "resuming": "Resuming…",
       "reconnectStream": "Reconnect stream",
@@ -276,12 +296,111 @@
     "phaseStatus": "Status",
     "sourcesTitle": "Source Materials",
     "noSources": "No sources added yet.",
+    "addSourceTitle": "Add source material",
+    "fields": {
+      "title": "Title",
+      "titlePlaceholder": "e.g. Research notes or article URL",
+      "type": "Type",
+      "content": "Content",
+      "contentPlaceholder": "Paste URL, notes, quotes, or reference text"
+    },
+    "sourceTypes": {
+      "url": "URL",
+      "document": "Document",
+      "note": "Note",
+      "interview": "Interview",
+      "data": "Data"
+    },
     "actions": {
       "start": "Start Editorial Workflow",
       "approve": "Approve Phase",
+      "requestRevision": "Request revision",
       "reject": "Request Changes",
       "refresh": "Refresh",
-      "extract": "Extract Key Points"
+      "extract": "Extract Key Points",
+      "addSource": "Add Material",
+      "adding": "Adding...",
+      "processing": "Processing approval… this may take up to a minute."
+    },
+    "feedback": {
+      "label": "Feedback for revision",
+      "placeholder": "Describe what should change before approving this phase…",
+      "required": "Feedback is required when requesting a revision."
+    },
+    "sendBack": {
+      "label": "Send back to phase",
+      "phases": {
+        "research": "Research",
+        "outline": "Outline",
+        "content": "Content",
+        "design": "Design",
+        "images": "Images"
+      }
+    },
+    "persona": {
+      "belowThreshold": "Persona voice match is below the required threshold. Revise content before approving."
+    },
+    "publishReady": "Final review approved. Open the publish panel to release the carousel to the public site.",
+    "gate": {
+      "title": "Ready to start?",
+      "description": "Add source materials or continue without them. Generation begins only after you confirm.",
+      "sourceCount": "{count, plural, =0 {No materials added yet} one {# material added} other {# materials added}}",
+      "startWithMaterials": "Start with materials",
+      "startWithoutMaterials": "Continue without materials"
+    },
+    "progress": {
+      "research": "Synthesizing research findings…",
+      "outline": "Generating carousel outline…",
+      "content": "Drafting slide copy…",
+      "design": "Applying design tokens…",
+      "images": "Generating slide images…",
+      "finalReview": "Running final quality checks…",
+      "processing": "Processing approval…"
+    },
+    "artifacts": {
+      "title": "Generated artifacts",
+      "outlineSlides": "{count, plural, one {# outline slide} other {# outline slides}}",
+      "contentDrafts": "{count, plural, one {# content draft} other {# content drafts}}",
+      "designApplied": "Design system applied",
+      "ready": "Ready",
+      "imagesGenerated": "{count, plural, one {# image generated} other {# images generated}}"
+    },
+    "review": {
+      "researchTitle": "Research findings",
+      "findingFallback": "Finding {index}",
+      "outlineTitle": "Outline for review",
+      "contentTitle": "Slide copy for review",
+      "designTitle": "Design review",
+      "designReady": "Design tokens are applied. Approve to generate slide images.",
+      "designPending": "Review the outline and content above, then approve to apply design and generate images.",
+      "outlineSlides": "{count, plural, one {# slide in outline} other {# slides in outline}}",
+      "imagesTitle": "Generated images",
+      "untitledSlide": "Untitled slide",
+      "emptyPhase": "No generated content is available for this phase yet. Try refreshing or re-approving the previous step.",
+      "finalReview": {
+        "title": "Final review",
+        "tabs": {
+          "carousel": "Carousel",
+          "blog": "Blog",
+          "caption": "Caption",
+          "quality": "Quality"
+        },
+        "carouselEmpty": "No slide content is available yet.",
+        "blogPlaceholder": "Blog markdown will appear here once generated.",
+        "blogPreviewLoading": "Loading draft blog preview…",
+        "blogPreviewError": "Could not load draft blog preview.",
+        "captionEmpty": "No caption has been generated yet.",
+        "qualityEmpty": "Quality scores are not available yet."
+      }
+    },
+    "errors": {
+      "startFailed": "Failed to start editorial workflow",
+      "startUnknown": "Workflow start failed",
+      "resumeFailed": "Failed to resume editorial workflow",
+      "resumeUnknown": "Workflow resume failed"
+    },
+    "transport": {
+      "pollingFallback": "Polling fallback active"
     }
   },
   "rubrics": {
@@ -299,6 +418,10 @@
     "loading": "Loading carousel…",
     "notFound": "Carousel not found.",
     "backToWorkspace": "← Back to workspace",
+    "awaitingFinalApproval": "Complete final review in the create workspace before publishing to the public site.",
+    "publishToSite": "Publish to site",
+    "sitePublished": "Carousel is now public on the blog.",
+    "sitePublishFailed": "Could not publish to the public site.",
     "carouselLabel": "Carousel preview",
     "platformTabsLabel": "Choose a platform",
     "downloadPdf": "Download PDF",
@@ -416,6 +539,21 @@
     }
   },
   "dashboard": {
+    "overview": {
+      "title": "Dashboard",
+      "subtitle": "Overview of your content pipeline and recent activity",
+      "quickActions": {
+        "title": "Quick Actions"
+      },
+      "recentActivity": {
+        "title": "Recent Activity",
+        "live": "Live"
+      },
+      "upcomingSchedule": {
+        "title": "Upcoming Schedule",
+        "viewAll": "View All"
+      }
+    },
     "blogPosts": {
       "title": "Blog Posts",
       "createPost": "Create Post",
@@ -453,6 +591,18 @@
         "approve": "Approve",
         "publish": "Publish",
         "generateImage": "Generate Image"
+      },
+      "notFound": "Blog post not found.",
+      "backToList": "Back to list",
+      "saveChanges": "Save changes",
+      "saving": "Saving…",
+      "versions": {
+        "title": "Version history",
+        "loading": "Loading versions…",
+        "empty": "No saved versions yet.",
+        "versionLabel": "Version {number}",
+        "diffTitle": "Preview diff",
+        "restore": "Restore this version"
       }
     },
     "analytics": {

@@ -1,20 +1,72 @@
 type: skill
 name: carousel-pipeline
-version: 1.0.0
+version: 2.0.0
 description: >
-  Instagram carousel and blog content generation pipeline.
-  Executes a 7-phase workflow: research, title optimization,
-  bilingual content synthesis, design system generation,
-  image generation, HTML export, and caption creation.
-  Produces slides, blog post (pt-BR + en), design tokens,
-  images, and Instagram caption.
+  Editorial carousel and blog content generation pipeline with per-phase human review.
+  Seven phases: research, outline, content, design, images, final review.
+  Produces bilingual slides, blog post (pt-BR + en), design tokens, images,
+  and Instagram caption. Standards live in _shared/; phase workflow in phases/.
 triggers:
   - "create a carousel"
   - "create a new social media post"
   - "generate carousel slides"
   - "make an Instagram post"
-  - "generate blog content"
+  - "create blog content"
   - "create carousel"
+  - "start editorial workflow"
+  - "editorial workflow"
+workflow:
+  type: editorial
+  api_base: /api/carousels/{id}/workflow
+  phases:
+    - id: research
+      skill: phases/research
+      subagent: research_synthesizer
+      shared:
+        - _shared/critical-rules.md
+        - _shared/anti-patterns.md
+    - id: outline
+      skill: phases/outline
+      subagent: outline_planner
+      shared:
+        - _shared/critical-rules.md
+        - _shared/text-formatting.md
+    - id: content
+      skill: phases/content
+      subagent: content_drafter
+      shared:
+        - _shared/content-contracts.md
+        - _shared/text-formatting.md
+        - _shared/anti-patterns.md
+    - id: design
+      skill: phases/design
+      node: apply_design
+      shared:
+        - _shared/design-system.md
+    - id: images
+      skill: phases/images
+      node: render_images
+      shared:
+        - _shared/image-generation.md
+    - id: final_review
+      skill: phases/final-review
+      nodes:
+        - compose_blog
+        - score_quality
+        - caption_writer
+      shared:
+        - _shared/export-and-caption.md
+        - _shared/content-contracts.md
+  endpoints:
+    start: POST /api/carousels/{id}/workflow/start
+    resume: POST /api/carousels/{id}/workflow/resume
+    stream: GET /api/carousels/{id}/workflow/stream
+    preview: GET /api/carousels/{id}/preview/*
+  deprecated_endpoints:
+    - POST /api/carousels/{id}/generate
+    - GET /api/carousels/{id}/stream
+    - GET /api/carousels/{id}/status
+    - POST /api/carousels/{id}/resume
 tools:
   - Agent
   - Bash
@@ -24,7 +76,7 @@ tools:
 input_schema:
   title:
     type: string
-    description: Working title for the carousel (will be optimized)
+    description: Working title for the carousel (optimized in outline phase)
   audience:
     type: string
     description: Target audience (e.g., "AI, software developers, architects")
@@ -43,7 +95,7 @@ input_schema:
     type: array
     items:
       type: string
-    description: List of source URLs to research (X posts, GitHub issues, blogs)
+    description: Authoritative source URLs (X posts, GitHub issues, blogs) — scraped first in research
   language:
     type: string
     default: "pt-BR"
@@ -51,16 +103,22 @@ input_schema:
   generate_images:
     type: boolean
     default: true
-    description: Whether to generate images via Gemini
+    description: Whether to generate images via Gemini in images phase
 output:
   type: object
   properties:
     project_id:
       type: string
       description: UUID of the created carousel project
-    status:
+    workflow_status:
       type: string
-      description: Final status (completed or failed)
+      description: Editorial workflow status (e.g., approved_for_publish, failed)
+    phase:
+      type: string
+      description: Current workflow phase
+    phase_status:
+      type: string
+      description: in_progress, awaiting_human, or completed for current phase
     blog_pt:
       type: string
       description: Blog post in Brazilian Portuguese markdown
@@ -79,3 +137,14 @@ output:
     output_dir:
       type: string
       description: Path to generated output files
+standards:
+  canonical_path: _shared/
+  readme: _shared/README.md
+  files:
+    - _shared/critical-rules.md
+    - _shared/anti-patterns.md
+    - _shared/content-contracts.md
+    - _shared/text-formatting.md
+    - _shared/design-system.md
+    - _shared/image-generation.md
+    - _shared/export-and-caption.md

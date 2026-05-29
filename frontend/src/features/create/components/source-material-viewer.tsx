@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import {
   Alert,
@@ -12,23 +12,48 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui";
+import { CONTENT_SOURCE_TYPES } from "@/constants/blog-ai";
 import { API_ENDPOINTS, HTTP_METHODS } from "@/constants/api";
 import type { ContentSource } from "@/features/blog/types-ai";
 import { authenticatedFetch } from "@/lib/authenticated-fetch";
 
 interface SourceMaterialViewerProps {
   projectId: string;
+  onSourcesChange?: (sources: ContentSource[]) => void;
 }
+
+const SOURCE_TYPE_OPTIONS = [
+  CONTENT_SOURCE_TYPES.URL,
+  CONTENT_SOURCE_TYPES.DOCUMENT,
+  CONTENT_SOURCE_TYPES.NOTE,
+  CONTENT_SOURCE_TYPES.INTERVIEW,
+  CONTENT_SOURCE_TYPES.DATA,
+] as const;
 
 export function SourceMaterialViewer({
   projectId,
+  onSourcesChange,
 }: SourceMaterialViewerProps): React.JSX.Element {
   const t = useTranslations("editorialWorkflow");
   const [sources, setSources] = useState<ContentSource[]>([]);
   const [loading, setLoading] = useState(false);
+  const [adding, setAdding] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [title, setTitle] = useState("");
+  const [content, setContent] = useState("");
+  const [sourceType, setSourceType] = useState<string>(
+    CONTENT_SOURCE_TYPES.NOTE,
+  );
 
-  const loadSources = async (): Promise<void> => {
+  const updateSources = useCallback(
+    (next: ContentSource[]) => {
+      setSources(next);
+      onSourcesChange?.(next);
+    },
+    [onSourcesChange],
+  );
+
+  const loadSources = useCallback(async (): Promise<void> => {
     setLoading(true);
     setError(null);
     try {
@@ -39,11 +64,48 @@ export function SourceMaterialViewer({
         throw new Error("Failed to load sources");
       }
       const payload = (await response.json()) as { items: ContentSource[] };
-      setSources(payload.items);
+      updateSources(payload.items);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load sources");
     } finally {
       setLoading(false);
+    }
+  }, [projectId, updateSources]);
+
+  const addSource = async (
+    event: React.FormEvent<HTMLFormElement>,
+  ): Promise<void> => {
+    event.preventDefault();
+    if (!title.trim() || !content.trim()) {
+      return;
+    }
+
+    setAdding(true);
+    setError(null);
+    try {
+      const response = await authenticatedFetch(
+        API_ENDPOINTS.PROJECT_SOURCES(projectId),
+        {
+          method: HTTP_METHODS.POST,
+          body: JSON.stringify({
+            title: title.trim(),
+            content: content.trim(),
+            source_type: sourceType,
+          }),
+        },
+      );
+      if (!response.ok) {
+        throw new Error("Failed to add source");
+      }
+      const created = (await response.json()) as ContentSource;
+      updateSources([created, ...sources]);
+      setTitle("");
+      setContent("");
+      setSourceType(CONTENT_SOURCE_TYPES.NOTE);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to add source");
+    } finally {
+      setAdding(false);
     }
   };
 
@@ -56,14 +118,14 @@ export function SourceMaterialViewer({
       throw new Error("Extraction failed");
     }
     const updated = (await response.json()) as ContentSource;
-    setSources((prev) =>
-      prev.map((source) => (source.id === sourceId ? updated : source)),
+    updateSources(
+      sources.map((source) => (source.id === sourceId ? updated : source)),
     );
   };
 
   useEffect(() => {
     void loadSources();
-  }, [projectId]);
+  }, [loadSources]);
 
   return (
     <Card>
@@ -78,7 +140,60 @@ export function SourceMaterialViewer({
           {t("actions.refresh")}
         </Button>
       </CardHeader>
-      <CardContent className="space-y-3">
+      <CardContent className="space-y-4">
+        <form
+          className="space-y-3 rounded-md border p-3"
+          onSubmit={(event) => void addSource(event)}
+        >
+          <p className="font-medium text-sm">{t("addSourceTitle")}</p>
+          <div className="space-y-2">
+            <label htmlFor="source-title" className="block text-sm">
+              {t("fields.title")}
+            </label>
+            <input
+              id="source-title"
+              value={title}
+              onChange={(event) => setTitle(event.target.value)}
+              className="w-full rounded-md border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-sm text-[var(--color-text)]"
+              placeholder={t("fields.titlePlaceholder")}
+              required
+            />
+          </div>
+          <div className="space-y-2">
+            <label htmlFor="source-type" className="block text-sm">
+              {t("fields.type")}
+            </label>
+            <select
+              id="source-type"
+              value={sourceType}
+              onChange={(event) => setSourceType(event.target.value)}
+              className="w-full rounded-md border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-sm text-[var(--color-text)] [&>option]:bg-[var(--color-background)] [&>option]:text-[var(--color-text)]"
+            >
+              {SOURCE_TYPE_OPTIONS.map((option) => (
+                <option key={option} value={option}>
+                  {t(`sourceTypes.${option}`)}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="space-y-2">
+            <label htmlFor="source-content" className="block text-sm">
+              {t("fields.content")}
+            </label>
+            <textarea
+              id="source-content"
+              value={content}
+              onChange={(event) => setContent(event.target.value)}
+              className="min-h-24 w-full rounded-md border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-sm text-[var(--color-text)]"
+              placeholder={t("fields.contentPlaceholder")}
+              required
+            />
+          </div>
+          <Button type="submit" size="sm" disabled={adding}>
+            {adding ? t("actions.adding") : t("actions.addSource")}
+          </Button>
+        </form>
+
         {error && (
           <Alert variant="destructive">
             <AlertDescription>{error}</AlertDescription>

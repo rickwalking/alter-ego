@@ -39,6 +39,16 @@ interface CarouselProgressProps {
 
 const PHASE_ORDER = PIPELINE_PHASES as readonly string[];
 
+function resolvePipelinePhaseLabel(
+  currentPhase: string,
+  translate: ReturnType<typeof useTranslations>,
+): string {
+  if (!currentPhase || !PHASE_ORDER.includes(currentPhase)) {
+    return translate("progress.phases.pending");
+  }
+  return translate(`progress.phases.${currentPhase}`);
+}
+
 export function CarouselProgress({
   currentPhase,
   isComplete,
@@ -79,8 +89,11 @@ export function CarouselProgress({
     );
   }
 
-  const currentIndex = PHASE_ORDER.indexOf(currentPhase);
+  const currentIndex = PHASE_ORDER.indexOf(
+    currentPhase && PHASE_ORDER.includes(currentPhase) ? currentPhase : "",
+  );
   const isStalled = stalledSeconds >= STALLED_THRESHOLD_MS / 1000;
+  const phaseLabel = resolvePipelinePhaseLabel(currentPhase, t);
 
   return (
     <div className="space-y-3 rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] p-4">
@@ -92,7 +105,7 @@ export function CarouselProgress({
               {t("progress.currentlyProcessing")}
             </span>
             <span className="font-medium text-[var(--color-primary)] text-sm">
-              {t(`progress.phases.${currentPhase}`)}
+              {phaseLabel}
             </span>
           </div>
         </div>

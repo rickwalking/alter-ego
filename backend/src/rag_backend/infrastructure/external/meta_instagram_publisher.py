@@ -23,6 +23,14 @@ import asyncio
 import httpx
 
 from rag_backend.domain.constants import COOKIE_ACCESS_TOKEN
+from rag_backend.domain.constants.instagram_publish import (
+    ERR_INSTAGRAM_API_NO_ID,
+    ERR_INSTAGRAM_API_REQUEST_FAILED,
+    ERR_INSTAGRAM_CONTAINER_FAILED,
+    ERR_INSTAGRAM_CONTAINER_TIMEOUT,
+    ERR_INSTAGRAM_CREDENTIALS_NOT_CONFIGURED,
+    ERR_INSTAGRAM_IMAGE_COUNT_INVALID,
+)
 from rag_backend.domain.constants.retry import META_MAX_ATTEMPTS
 from rag_backend.domain.protocols import PublishResult, SocialPublisher
 from rag_backend.domain.retry import retry_async
@@ -38,19 +46,6 @@ _CONTAINER_ERROR = "ERROR"
 _CONTAINER_EXPIRED = "EXPIRED"
 _MAX_CAROUSEL_ITEMS = 10
 MIN_IMAGE_BATCH = 2
-
-_ERR_CONTAINER_STATUS = "Instagram container {} returned status {} after {} poll(s)."
-_ERR_CONTAINER_TIMEOUT = (
-    "Instagram container {} did not reach FINISHED after {} poll attempts."
-)
-_ERR_API_NO_ID = "Instagram API returned no id at {}: {}"
-
-_MSG_CREDENTIALS_MISSING = (
-    "META_IG_ACCESS_TOKEN or META_IG_USER_ID is not configured — "
-    "set both in the backend .env before publishing to Instagram."
-)
-_MSG_NO_IMAGES = "Instagram carousel requires at least 2 images."
-_MSG_TOO_MANY = f"Instagram carousel accepts at most {_MAX_CAROUSEL_ITEMS} images."
 
 
 class MetaInstagramPublisher(SocialPublisher):
@@ -81,10 +76,11 @@ class MetaInstagramPublisher(SocialPublisher):
             post_id = await self._publish(parent_id)
         except RuntimeError as exc:
             return PublishResult(status="failed", error_message=str(exc))
-        except httpx.HTTPError as exc:
+        except httpx.HTTPError:
+            logger.exception("instagram_publish_http_error")
             return PublishResult(
                 status="failed",
-                error_message=f"Instagram API error: {exc}",
+                error_message=ERR_INSTAGRAM_API_REQUEST_FAILED,
             )
         return PublishResult(status="published", post_id=post_id)
 
@@ -94,13 +90,11 @@ class MetaInstagramPublisher(SocialPublisher):
 
     def _ensure_configured(self) -> None:
         if not self._token or not self._ig_user_id:
-            raise RuntimeError(_MSG_CREDENTIALS_MISSING)
+            raise RuntimeError(ERR_INSTAGRAM_CREDENTIALS_NOT_CONFIGURED)
 
     def _validate_images(self, image_urls: list[str]) -> None:
-        if len(image_urls) < MIN_IMAGE_BATCH:
-            raise RuntimeError(_MSG_NO_IMAGES)
-        if len(image_urls) > _MAX_CAROUSEL_ITEMS:
-            raise RuntimeError(_MSG_TOO_MANY)
+        if len(image_urls) < MIN_IMAGE_BATCH or len(image_urls) > _MAX_CAROUSEL_ITEMS:
+            raise RuntimeError(ERR_INSTAGRAM_IMAGE_COUNT_INVALID)
 
     async def _create_item_containers(self, image_urls: list[str]) -> list[str]:
         """Step 1: one container per slide."""
@@ -131,7 +125,7 @@ class MetaInstagramPublisher(SocialPublisher):
 
     async def _wait_for_finished(self, container_id: str) -> None:
         """Step 3: poll status_code until FINISHED or ERROR."""
-        for attempt in range(_MAX_POLL_ATTEMPTS):
+        for _attempt in range(_MAX_POLL_ATTEMPTS):
             async for retry_attempt in retry_async(attempts=META_MAX_ATTEMPTS):
                 with retry_attempt:
                     response = await self._client.get(
@@ -146,13 +140,9 @@ class MetaInstagramPublisher(SocialPublisher):
             if status == _CONTAINER_FINISHED:
                 return
             if status in {_CONTAINER_ERROR, _CONTAINER_EXPIRED}:
-                raise RuntimeError(
-                    _ERR_CONTAINER_STATUS.format(container_id, status, attempt + 1)
-                )
+                raise RuntimeError(ERR_INSTAGRAM_CONTAINER_FAILED)
             await asyncio.sleep(_POLL_INTERVAL_SECONDS)
-        raise RuntimeError(
-            _ERR_CONTAINER_TIMEOUT.format(container_id, _MAX_POLL_ATTEMPTS)
-        )
+        raise RuntimeError(ERR_INSTAGRAM_CONTAINER_TIMEOUT)
 
     async def _publish(self, parent_id: str) -> str:
         """Step 4: move the parent container to the published feed."""
@@ -172,5 +162,6 @@ class MetaInstagramPublisher(SocialPublisher):
         data = response.json()
         returned_id = data.get("id")
         if not returned_id:
-            raise RuntimeError(_ERR_API_NO_ID.format(url, data))
+            logger.error("instagram_api_missing_id", url=url, data=data)
+            raise RuntimeError(ERR_INSTAGRAM_API_NO_ID)
         return str(returned_id)

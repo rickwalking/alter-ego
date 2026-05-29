@@ -22,7 +22,7 @@ def init_langfuse(
         LANGFUSE_CLIENT = Langfuse(
             public_key=public_key or "",
             secret_key=secret_key,
-            host=host,
+            base_url=host,
         )
         from rag_backend import monitoring_langfuse as root_monitoring
 

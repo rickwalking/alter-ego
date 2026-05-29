@@ -2,7 +2,7 @@
 
 from functools import lru_cache
 
-from pydantic import SecretStr
+from pydantic import AliasChoices, Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from rag_backend.domain.constants import ENCODING_UTF8
@@ -43,7 +43,15 @@ class Settings(BaseSettings):
 
     langfuse_secret_key: SecretStr | None = None
     langfuse_public_key: str = ""
-    langfuse_host: str = "http://langfuse:3000"
+    langfuse_host: str = Field(
+        default="http://langfuse:3000",
+        validation_alias=AliasChoices("langfuse_host", "langfuse_base_url"),
+    )
+
+    @field_validator("langfuse_host")
+    @classmethod
+    def _strip_langfuse_host_trailing_slash(cls, value: str) -> str:
+        return value.rstrip("/")
 
     host: str = "0.0.0.0"
     port: int = 8000

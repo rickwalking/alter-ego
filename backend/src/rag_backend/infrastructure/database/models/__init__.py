@@ -13,6 +13,9 @@ from rag_backend.infrastructure.database.models.conversation import (
 )
 from rag_backend.infrastructure.database.models.document import DocumentModel
 from rag_backend.infrastructure.database.models.notification import NotificationModel
+from rag_backend.infrastructure.database.models.persona_correction import (
+    PersonaCorrectionModel,
+)
 from rag_backend.infrastructure.database.models.persona_rubric import (
     PersonaProfileModel,
     QualityRubricModel,
@@ -40,6 +43,7 @@ __all__ = [
     "EditorialCommentModel",
     "MessageModel",
     "NotificationModel",
+    "PersonaCorrectionModel",
     "PersonaProfileModel",
     "QualityRubricModel",
     "ResearchSourceModel",

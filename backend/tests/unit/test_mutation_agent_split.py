@@ -68,7 +68,7 @@ class TestNamespacePrefixBypass:
 
         # Verify: namespace parameter passed correctly
         calls = mock_vector_store.hybrid_search.call_args_list
-        namespaces = [call.kwargs.get("namespace") for call in calls]
+        namespaces = [call.args[0].namespace for call in calls]
         assert "personal" in namespaces
         assert "public" in namespaces
         assert "carousel" not in namespaces

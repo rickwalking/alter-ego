@@ -1,7 +1,9 @@
 "use client";
 
 import { useCallback, useMemo, useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useConversationMessages } from "@/features/chat/hooks/use-chat";
+import { chatKeys } from "@/features/chat/queries";
 import { streamSseEvents, SSE_EVENT_TYPE } from "@/lib/sse-client";
 import { API_ENDPOINTS } from "@/constants/api";
 import type { Message } from "@/schemas/chat";
@@ -22,15 +24,53 @@ export interface UseSseChatReturn {
   startNewChat: () => void;
 }
 
+function mergeMessages(
+  historyMessages: Message[],
+  optimisticMessages: Message[],
+): Message[] {
+  if (optimisticMessages.length === 0) {
+    return historyMessages;
+  }
+
+  const seen = new Set(
+    historyMessages.map((message) => `${message.role}:${message.content}`),
+  );
+  const uniqueOptimistic = optimisticMessages.filter(
+    (message) => !seen.has(`${message.role}:${message.content}`),
+  );
+
+  return [...historyMessages, ...uniqueOptimistic];
+}
+
 export function useSseChat(options: UseSseChatOptions = {}): UseSseChatReturn {
+  const queryClient = useQueryClient();
   const [optimisticMessages, setOptimisticMessages] = useState<Message[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const streamingContentRef = useRef("");
   const streamingMsgIdRef = useRef<string | null>(null);
+  const finalizedRef = useRef(false);
 
   const conversationId = options.conversationId ?? null;
+
+  const finalizeStream = useCallback(
+    (convId: string) => {
+      if (finalizedRef.current) {
+        return;
+      }
+      finalizedRef.current = true;
+      setIsStreaming(false);
+      streamingContentRef.current = "";
+      streamingMsgIdRef.current = null;
+      void queryClient
+        .invalidateQueries({ queryKey: chatKeys.messages(convId) })
+        .then(() => {
+          setOptimisticMessages([]);
+        });
+    },
+    [queryClient],
+  );
 
   const { data: historyMessages = [] } =
     useConversationMessages(conversationId);
@@ -53,6 +93,7 @@ export function useSseChat(options: UseSseChatOptions = {}): UseSseChatReturn {
       const convId = overrideConversationId ?? conversationId;
       if (!convId) return;
 
+      finalizedRef.current = false;
       setError(null);
 
       const userMsg: Message = {
@@ -132,9 +173,7 @@ export function useSseChat(options: UseSseChatOptions = {}): UseSseChatReturn {
           }
 
           if (event.event === SSE_EVENT_TYPE.COMPLETE) {
-            setIsStreaming(false);
-            streamingContentRef.current = "";
-            streamingMsgIdRef.current = null;
+            finalizeStream(convId);
             return;
           }
 
@@ -153,15 +192,15 @@ export function useSseChat(options: UseSseChatOptions = {}): UseSseChatReturn {
           streamingMsgIdRef.current = null;
         },
         onComplete: () => {
-          setIsStreaming(false);
+          finalizeStream(convId);
         },
       });
     },
-    [conversationId, isStreaming],
+    [conversationId, finalizeStream, isStreaming],
   );
 
   const messages = useMemo(
-    () => [...historyMessages, ...optimisticMessages],
+    () => mergeMessages(historyMessages, optimisticMessages),
     [historyMessages, optimisticMessages],
   );
 

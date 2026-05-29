@@ -64,7 +64,7 @@ export function HorizontalCarouselViewer({
 
     const fetches = slideUrls.map(async (url, i) => {
       try {
-        const response = await fetch(url);
+        const response = await fetch(url, { credentials: "include" });
         const blob = await response.blob();
         folder.file(`slide_${i + 1}.jpg`, blob);
       } catch {
@@ -96,7 +96,7 @@ export function HorizontalCarouselViewer({
         >
           {slideUrls.map((url, i) => (
             <div
-              key={url}
+              key={`slide-${i + 1}`}
               className="relative aspect-[4/5] w-full flex-shrink-0 snap-center"
             >
               <Image
@@ -143,7 +143,7 @@ export function HorizontalCarouselViewer({
         <div className="flex justify-center gap-1.5">
           {slideUrls.map((url, i) => (
             <button
-              key={url}
+              key={`dot-${i + 1}`}
               type="button"
               aria-label={t("goToSlide", { number: i + 1 })}
               onClick={() => scrollTo(i)}

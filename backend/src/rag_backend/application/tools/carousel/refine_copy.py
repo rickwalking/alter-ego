@@ -6,16 +6,22 @@ from uuid import UUID
 from langchain_core.runnables.config import RunnableConfig
 from langchain_core.tools import BaseTool, tool
 
+from rag_backend.agents.input_sanitizer import sanitize_llm_input
 from rag_backend.agents.prompts.registry import render_prompt
+from rag_backend.domain.constants.access_control import ERR_CAROUSEL_TOOL_ACCESS_DENIED
+from rag_backend.domain.constants.carousel_tools import (
+    ERR_CAROUSEL_TOOL_INVALID_PROJECT_ID,
+    ERR_CAROUSEL_TOOL_PROJECT_NOT_FOUND,
+)
 from rag_backend.domain.models import CarouselProject, CarouselSlide
-from rag_backend.domain.protocols import CarouselAgent, CarouselRepository
+from rag_backend.domain.protocols import CarouselRefinementService, CarouselRepository
 from rag_backend.monitoring_langfuse import get_langfuse_handler
+
+from .access import CarouselToolAccessContext, verify_carousel_tool_access
 
 MIN_TARGET_PARTS = 2
 MAX_TARGET_PARTS = 3
 
-_ERR_INVALID_PROJECT_ID = "Invalid project_id {!r} — expected a UUID."
-_ERR_PROJECT_NOT_FOUND = "Carousel project {} not found."
 _ERR_EMPTY_LLM_RESPONSE = "LLM returned empty text; no changes applied."
 _ERR_FIELD_EMPTY = "Cannot refine {!r}: field is empty or target selector is unknown."
 
@@ -122,7 +128,8 @@ def _write_slide_field(
 def build_refine_carousel_copy_tool(
     llm: object,
     carousel_repository: CarouselRepository,
-    carousel_agent: CarouselAgent,
+    carousel_refinement: CarouselRefinementService,
+    access: CarouselToolAccessContext,
 ) -> BaseTool:
     """Return the refine_carousel_copy tool closure."""
 
@@ -155,11 +162,14 @@ def build_refine_carousel_copy_tool(
         try:
             project_uuid = UUID(project_id)
         except ValueError:
-            return _ERR_INVALID_PROJECT_ID.format(project_id)
+            return ERR_CAROUSEL_TOOL_INVALID_PROJECT_ID
 
         project = await carousel_repository.get_project_by_id(project_uuid)
         if project is None:
-            return _ERR_PROJECT_NOT_FOUND.format(project_id)
+            return ERR_CAROUSEL_TOOL_PROJECT_NOT_FOUND
+        access_error = verify_carousel_tool_access(project, access)
+        if access_error is not None:
+            return ERR_CAROUSEL_TOOL_ACCESS_DENIED
 
         original, apply_update = await _resolve_refine_target(
             project, target, carousel_repository
@@ -171,8 +181,8 @@ def build_refine_carousel_copy_tool(
             "refinement",
             "copy_rewrite",
             variables={
-                "instruction": instruction,
-                "original_text": original,
+                "instruction": sanitize_llm_input(instruction),
+                "original_text": sanitize_llm_input(original),
             },
             version="v1",
         )
@@ -188,10 +198,10 @@ def build_refine_carousel_copy_tool(
         re_render_note = ""
         if target.startswith("slide_"):
             try:
-                await carousel_agent.re_render_slides(project_uuid)
+                await carousel_refinement.re_render_slides(project_uuid)
                 re_render_note = " Slides + PDF re-rendered."
-            except Exception as exc:
-                re_render_note = f" Re-render skipped: {exc}"
+            except Exception:
+                re_render_note = " Re-render skipped due to an internal error."
 
         return (
             f"Updated {target} on project {project_id}. "

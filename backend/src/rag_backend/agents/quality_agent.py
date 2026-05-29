@@ -11,7 +11,7 @@ from rag_backend.domain.models.rubric import (
     QualityRubric,
     RubricCriterion,
 )
-from rag_backend.infrastructure.monitoring_langfuse import get_langfuse_handler
+from rag_backend.infrastructure.monitoring_langfuse import get_langfuse_runnable_config
 
 
 class EmbeddingServiceProtocol(Protocol):
@@ -42,7 +42,7 @@ class QualityAgent:
         prompt = self._build_evaluation_prompt(content, sources_str)
 
         messages: list[BaseMessage] = [HumanMessage(content=prompt)]
-        response = await self.llm.ainvoke(messages, callbacks=get_langfuse_handler())
+        response = await self.llm.ainvoke(messages, get_langfuse_runnable_config())
         return self._parse_evaluation_response(cast(str, response.content))
 
     def _build_evaluation_prompt(self, content: str, sources_str: str) -> str:
@@ -115,7 +115,7 @@ Format your response as JSON with criterion_scores, overall_score, passed, feedb
         prompt = criterion["prompt_template"].format(content=content, sources=sources)
 
         messages: list[BaseMessage] = [HumanMessage(content=prompt)]
-        response = await self.llm.ainvoke(messages, callbacks=get_langfuse_handler())
+        response = await self.llm.ainvoke(messages, get_langfuse_runnable_config())
         return self._extract_score(cast(str, response.content))
 
     def _extract_score(self, response: str) -> float:
@@ -149,7 +149,7 @@ CONTENT: {content}
 """
 
         messages: list[BaseMessage] = [HumanMessage(content=prompt)]
-        response = await self.llm.ainvoke(messages, callbacks=get_langfuse_handler())
+        response = await self.llm.ainvoke(messages, get_langfuse_runnable_config())
 
         suggestions = __import__("re").split(r"[\n·•\-\*]", cast(str, response.content))
         return [
@@ -203,7 +203,7 @@ Format as JSON with experience, expertise, authoritativeness, trustworthiness, o
 """
 
         messages: list[BaseMessage] = [HumanMessage(content=prompt)]
-        response = await self.llm.ainvoke(messages, callbacks=get_langfuse_handler())
+        response = await self.llm.ainvoke(messages, get_langfuse_runnable_config())
 
         try:
             data = __import__("json").loads(cast(str, response.content))

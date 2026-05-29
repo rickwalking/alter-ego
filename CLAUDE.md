@@ -77,6 +77,7 @@ All architecturally significant decisions are documented as ADRs in `docs/decisi
 - [ADR-004: Adopt Event-Driven Architecture](docs/decisions/0004-adopt-event-driven-architecture.md)
 - [ADR-005: Adopt Mutation Testing](docs/decisions/0005-adopt-mutation-testing.md)
 - [ADR-006: Use JSONB for Rich Content](docs/decisions/0006-use-jsonb-for-rich-content.md)
+- [ADR-007: Consolidate Carousel Pipelines Under DeepAgents](docs/decisions/0007-consolidate-carousel-pipelines-under-deepagents.md)
 
 **ADR Lifecycle:** `proposed` → `accepted` → `deprecated` (superseded by newer ADR)
 **Format:** MADR 4.x | **Naming:** `NNNN-short-title.md` | **Review:** Annually

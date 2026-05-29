@@ -8,12 +8,14 @@ from uuid import uuid4
 
 import pytest
 
+from rag_backend.application.services.carousel.refinement_service import (
+    CarouselRefinementService,
+)
 from rag_backend.application.services.carousel.types import (
     SlideData,
     build_slides_en_index,
     slides_data_for_language,
 )
-from rag_backend.application.services.carousel_agent import CarouselAgent
 from rag_backend.application.services.image_provider_registry import (
     ImageProviderRegistry,
 )
@@ -73,7 +75,7 @@ class TestSlidesDataForLanguage:
 
 def _agent_with_export_mock(
     tmp_path: Path,
-) -> tuple[CarouselAgent, AsyncMock, MagicMock]:
+) -> tuple[CarouselRefinementService, AsyncMock, MagicMock]:
     repo = AsyncMock()
     repo.update_project = AsyncMock(side_effect=lambda p: p)
     repo.get_slides_by_project = AsyncMock()
@@ -101,14 +103,12 @@ def _agent_with_export_mock(
     registry = ImageProviderRegistry(
         gemini_service=image_service, openai_service=image_service
     )
-    agent = CarouselAgent(
+    agent = CarouselRefinementService(
         repository=repo,
         llm_service=AsyncMock(),
-        research_tool=AsyncMock(),
         image_registry=registry,
         export_service=export,
         pdf_slide_builder=pdf_builder,
-        output_base_dir=str(tmp_path),
     )
     return agent, export, pdf_builder
 
@@ -172,7 +172,11 @@ class TestBilingualExport:
         assert project.pdf_path_en is None
 
     async def test_render_language_rewrites_image_paths(self, tmp_path: Path) -> None:
-        agent, export, _ = _agent_with_export_mock(tmp_path)
+        from rag_backend.application.services.carousel.nodes.export import (
+            render_language,
+        )
+
+        agent, export, pdf_builder = _agent_with_export_mock(tmp_path)
         project = CarouselProject(
             topic="T",
             audience="A",
@@ -180,15 +184,16 @@ class TestBilingualExport:
             status=CarouselStatus.COMPLETED,
             output_dir=str(tmp_path),
         )
-        await agent._render_language(
+        await render_language(
             project,
-            [SlideData(1, "intro", "H", "B")],
             "pt",
             (
                 '<img src="images/slide_1.jpg">'
                 "<style>.bg{background:url('images/slide_1.jpg')}</style>"
             ),
             tmp_path,
+            export=export,
+            pdf_builder=pdf_builder,
         )
         rewritten_html = export.export_slides.await_args.kwargs["html_content"]
         assert "../images/slide_1.jpg" in rewritten_html

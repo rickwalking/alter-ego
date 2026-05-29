@@ -80,3 +80,15 @@ class RetrievalQuery:
     alpha: float = 0.5
     filters: dict[str, str | int | float | bool] | None = None
     namespace_prefix: str | None = None
+
+
+@dataclass
+class HybridSearchParams:
+    """Parameters for vector-store hybrid search."""
+
+    query: str
+    dense_embedding: list[float]
+    sparse_embedding: dict[str, list[int] | list[float]]
+    top_k: int
+    alpha: float
+    namespace: str | None = None

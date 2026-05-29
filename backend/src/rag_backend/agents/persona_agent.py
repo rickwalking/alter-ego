@@ -7,7 +7,7 @@ from langchain_core.messages import BaseMessage, HumanMessage
 
 from rag_backend.agents.input_sanitizer import sanitize_llm_input
 from rag_backend.domain.models.persona import PersonaProfile
-from rag_backend.infrastructure.monitoring_langfuse import get_langfuse_handler
+from rag_backend.infrastructure.monitoring_langfuse import get_langfuse_runnable_config
 
 
 class PersonaAgent:
@@ -27,7 +27,7 @@ class PersonaAgent:
             f"{style_guide}\n\nCONTEXT: {context}\n\nCONTENT TO REWRITE:\n{content}"
         )
         messages: list[BaseMessage] = [HumanMessage(content=prompt)]
-        response = await self.llm.ainvoke(messages, callbacks=get_langfuse_handler())
+        response = await self.llm.ainvoke(messages, get_langfuse_runnable_config())
         return cast(str, response.content)
 
     async def evaluate_match(self, content: str) -> dict[str, object]:
@@ -42,7 +42,7 @@ class PersonaAgent:
             "opinion_strength, originality, human_authenticity, overall, suggestions."
         )
         messages: list[BaseMessage] = [HumanMessage(content=prompt)]
-        response = await self.llm.ainvoke(messages, callbacks=get_langfuse_handler())
+        response = await self.llm.ainvoke(messages, get_langfuse_runnable_config())
         return self._parse_evaluation_response(cast(str, response.content))
 
     def _parse_evaluation_response(self, response: str) -> dict[str, object]:
