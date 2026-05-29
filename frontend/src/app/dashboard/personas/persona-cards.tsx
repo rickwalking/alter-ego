@@ -186,9 +186,23 @@ export function PersonaCard({ persona }: { persona: PersonaData }): React.ReactE
   );
 }
 
-export function CreatePersonaCard(): React.ReactElement {
+export interface CreatePersonaCardProps {
+  onCreate?: () => void;
+}
+
+export function CreatePersonaCard({
+  onCreate,
+}: CreatePersonaCardProps): React.ReactElement {
   return (
     <div
+      role="button"
+      tabIndex={0}
+      onClick={onCreate}
+      onKeyDown={(e) => {
+        if ((e.key === "Enter" || e.key === " ") && onCreate) {
+          onCreate();
+        }
+      }}
       style={{
         background: BG_CARD,
         border: `2px dashed ${NEON_BORDER_DASHED}`,

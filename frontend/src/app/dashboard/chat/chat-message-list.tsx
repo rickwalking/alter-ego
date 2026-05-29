@@ -15,10 +15,12 @@ import type { DashboardChatMessage } from "@/features/dashboard/chat/types";
 
 export interface ChatMessageListProps {
   messages: DashboardChatMessage[];
+  isStreaming?: boolean;
 }
 
 export function ChatMessageList({
   messages,
+  isStreaming = false,
 }: ChatMessageListProps): React.ReactElement {
   return (
     <div
@@ -119,56 +121,58 @@ export function ChatMessageList({
           </div>
         </div>
       ))}
-      <div
-        style={{
-          display: "flex",
-          gap: "10px",
-          maxWidth: "720px",
-          opacity: 0.6,
-        }}
-      >
+      {isStreaming && (
         <div
           style={{
-            width: "32px",
-            height: "32px",
-            borderRadius: "50%",
             display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            fontFamily: DASHBOARD_CHAT_MONO_FONT,
-            fontSize: "14px",
-            fontWeight: 700,
-            flexShrink: 0,
-            background: DASHBOARD_CHAT_CYAN_DIM,
-            color: DASHBOARD_CHAT_CYAN,
+            gap: "10px",
+            maxWidth: "720px",
+            opacity: 0.6,
           }}
         >
-          ◆
-        </div>
-        <div
-          style={{
-            padding: "10px 16px",
-            borderRadius: "10px",
-            fontSize: "13px",
-            background: DASHBOARD_CHAT_BG_CARD,
-            border: `1px solid ${DASHBOARD_CHAT_CARD_BORDER}`,
-            display: "flex",
-            alignItems: "center",
-            gap: "8px",
-          }}
-        >
-          <span
+          <div
             style={{
-              display: "inline-block",
-              width: "6px",
-              height: "6px",
+              width: "32px",
+              height: "32px",
               borderRadius: "50%",
-              background: DASHBOARD_CHAT_CYAN,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontFamily: DASHBOARD_CHAT_MONO_FONT,
+              fontSize: "14px",
+              fontWeight: 700,
+              flexShrink: 0,
+              background: DASHBOARD_CHAT_CYAN_DIM,
+              color: DASHBOARD_CHAT_CYAN,
             }}
-          />
-          {DASHBOARD_CHAT_TYPING_LABEL}
+          >
+            ◆
+          </div>
+          <div
+            style={{
+              padding: "10px 16px",
+              borderRadius: "10px",
+              fontSize: "13px",
+              background: DASHBOARD_CHAT_BG_CARD,
+              border: `1px solid ${DASHBOARD_CHAT_CARD_BORDER}`,
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+            }}
+          >
+            <span
+              style={{
+                display: "inline-block",
+                width: "6px",
+                height: "6px",
+                borderRadius: "50%",
+                background: DASHBOARD_CHAT_CYAN,
+              }}
+            />
+            {DASHBOARD_CHAT_TYPING_LABEL}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

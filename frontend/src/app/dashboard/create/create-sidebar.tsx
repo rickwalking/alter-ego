@@ -1,3 +1,7 @@
+"use client";
+
+import { useTranslations } from "next-intl";
+import { NeonSpinner } from "@/components/atoms/neon-spinner";
 import {
   BG_CARD,
   BG_DEEP,
@@ -7,10 +11,9 @@ import {
   TEXT,
   TEXT_DIM,
 } from "@/constants/neon";
-import {
-  CREATE_ARTIFACTS,
-  CREATE_SUMMARY_ROWS,
-} from "@/app/dashboard/create/constants";
+import { CREATE_TEMPLATES } from "@/app/dashboard/create/constants";
+import type { CreateCarouselFormState } from "@/app/dashboard/create/types";
+import { IMAGE_PRESETS } from "@/constants/create";
 
 const sidebarCardStyle = {
   background: BG_CARD,
@@ -19,7 +22,34 @@ const sidebarCardStyle = {
   padding: "20px",
 };
 
-export function CreateSidebar(): React.ReactElement {
+export interface CreateSidebarProps {
+  form: CreateCarouselFormState;
+  onSubmit: () => void;
+  isPending: boolean;
+  error: string | null;
+}
+
+export function CreateSidebar({
+  form,
+  onSubmit,
+  isPending,
+  error,
+}: CreateSidebarProps): React.ReactElement {
+  const t = useTranslations("create");
+  const template = CREATE_TEMPLATES[form.selectedTemplate];
+  const preset = IMAGE_PRESETS.find((p) => p.value === form.imagePreset);
+
+  const summaryRows = [
+    { label: "Template", value: template?.name ?? "—" },
+    { label: "Theme", value: form.theme },
+    {
+      label: "Image preset",
+      value: preset ? t(preset.labelKey) : form.imagePreset,
+    },
+    { label: "Topic", value: form.topic.trim() || "—" },
+    { label: "Status", value: "Draft", badge: true },
+  ] as const;
+
   return (
     <div
       style={{
@@ -35,7 +65,7 @@ export function CreateSidebar(): React.ReactElement {
         <h3 style={{ fontSize: "14px", fontWeight: 700, marginBottom: "12px" }}>
           Project Summary
         </h3>
-        {CREATE_SUMMARY_ROWS.map((row) => (
+        {summaryRows.map((row) => (
           <div
             key={row.label}
             style={{
@@ -44,6 +74,7 @@ export function CreateSidebar(): React.ReactElement {
               padding: "8px 0",
               fontSize: "13px",
               borderBottom: "1px solid rgba(255,255,255,0.03)",
+              gap: "12px",
             }}
           >
             <span style={{ color: TEXT_DIM }}>{row.label}</span>
@@ -61,66 +92,33 @@ export function CreateSidebar(): React.ReactElement {
                 {row.value}
               </span>
             ) : (
-              <span style={{ color: TEXT, fontWeight: 600 }}>{row.value}</span>
+              <span
+                style={{
+                  color: TEXT,
+                  fontWeight: 600,
+                  textAlign: "right",
+                  maxWidth: "60%",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                }}
+              >
+                {row.value}
+              </span>
             )}
           </div>
         ))}
       </div>
 
-      <div style={sidebarCardStyle}>
-        <h3 style={{ fontSize: "14px", fontWeight: 700, marginBottom: "12px" }}>
-          Generation Report
-        </h3>
-        <div style={{ maxHeight: "400px", overflowY: "auto" }}>
-          {CREATE_ARTIFACTS.map((artifact) => (
-            <div
-              key={artifact.name}
-              style={{
-                padding: "12px 0",
-                borderBottom: "1px solid rgba(255,255,255,0.04)",
-              }}
-            >
-              <h4
-                style={{
-                  fontSize: "12px",
-                  fontWeight: 600,
-                  color: TEXT,
-                  margin: "0 0 4px",
-                }}
-              >
-                {artifact.name}
-              </h4>
-              <p
-                style={{
-                  fontSize: "10px",
-                  color: TEXT_DIM,
-                  margin: 0,
-                  lineHeight: 1.4,
-                }}
-              >
-                {artifact.desc}
-              </p>
-              <span
-                style={{
-                  display: "inline-block",
-                  fontSize: "9px",
-                  padding: "1px 6px",
-                  borderRadius: "3px",
-                  fontFamily: "'JetBrains Mono', ui-monospace, monospace",
-                  marginTop: "6px",
-                  background: NEON_AMBER_DIM,
-                  color: NEON_AMBER,
-                }}
-              >
-                {artifact.status}
-              </span>
-            </div>
-          ))}
-        </div>
-      </div>
+      {error && (
+        <p className="text-sm text-red-400" role="alert">
+          {error}
+        </p>
+      )}
 
       <button
         type="button"
+        onClick={onSubmit}
+        disabled={isPending || !form.topic.trim() || !form.audience.trim()}
         style={{
           width: "100%",
           padding: "12px",
@@ -130,7 +128,8 @@ export function CreateSidebar(): React.ReactElement {
           color: BG_DEEP,
           fontSize: "13px",
           fontWeight: 700,
-          cursor: "pointer",
+          cursor: isPending ? "wait" : "pointer",
+          opacity: isPending ? 0.7 : 1,
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
@@ -138,6 +137,7 @@ export function CreateSidebar(): React.ReactElement {
           fontFamily: "inherit",
         }}
       >
+        {isPending ? <NeonSpinner size="sm" /> : null}
         Start Carousel
       </button>
     </div>

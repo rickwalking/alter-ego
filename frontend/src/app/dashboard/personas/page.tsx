@@ -17,7 +17,20 @@ const PAGE_FONT_FAMILY = "Inter, system-ui, sans-serif";
 
 export default function PersonasPage(): React.ReactElement {
   const [searchQuery, setSearchQuery] = useState("");
-  const { personas, loading, error } = usePersonas();
+  const { personas, loading, error, create, refetch } = usePersonas();
+
+  const handleCreatePersona = async (): Promise<void> => {
+    const name = window.prompt("Persona name");
+    if (!name?.trim()) return;
+    await create({
+      name: name.trim(),
+      expertise_areas: [],
+      writing_samples: [],
+      forbidden_phrases: [],
+      preferred_phrases: [],
+    });
+    await refetch();
+  };
 
   const filtered = personas.filter((p) =>
     p.name.toLowerCase().includes(searchQuery.toLowerCase()),
@@ -69,7 +82,7 @@ export default function PersonasPage(): React.ReactElement {
                 {...mapPersonaProfileToCardProps(persona)}
               />
             ))}
-            <CreatePersonaCard />
+            <CreatePersonaCard onCreate={() => void handleCreatePersona()} />
           </div>
         )}
       </div>

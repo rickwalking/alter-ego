@@ -12,7 +12,18 @@ const PAGE_FONT_FAMILY = "Inter, system-ui, sans-serif";
 const PAGE_CONTENT_PADDING = "24px 32px";
 
 export default function RubricsPage(): React.ReactElement {
-  const { rubrics, loading, error } = useRubrics();
+  const { rubrics, loading, error, create, refetch } = useRubrics();
+
+  const handleNewRubric = async (): Promise<void> => {
+    const name = window.prompt("Rubric name");
+    if (!name?.trim()) return;
+    await create({
+      name: name.trim(),
+      applicable_content_types: ["carousel"],
+      criteria: [],
+    });
+    await refetch();
+  };
 
   return (
     <div
@@ -25,6 +36,7 @@ export default function RubricsPage(): React.ReactElement {
         actions={
           <NeonButton
             size="sm"
+            onClick={() => void handleNewRubric()}
             icon={
               <svg
                 width="14"

@@ -58,6 +58,8 @@ function ChatPaths() {
   );
 }
 
+import { DASHBOARD_ROUTES } from "@/constants/dashboard-routes";
+
 import {
   NEON_CYAN,
   NEON_CYAN_DIM,
@@ -146,6 +148,7 @@ export const STAT_CARDS: StatCardConfig[] = [
 export interface QuickActionConfig {
   title: string;
   description: string;
+  href: string;
   icon: React.ReactNode;
   iconBg: string;
   iconColor: string;
@@ -156,6 +159,7 @@ export const QUICK_ACTIONS: QuickActionConfig[] = [
     title: "New Carousel",
     description:
       "Start a new carousel project from scratch or from a template.",
+    href: DASHBOARD_ROUTES.CREATE,
     icon: <PlusPaths />,
     iconBg: NEON_CYAN_DIM,
     iconColor: NEON_CYAN,
@@ -163,6 +167,7 @@ export const QUICK_ACTIONS: QuickActionConfig[] = [
   {
     title: "Write Blog Post",
     description: "Draft a new blog article with AI-assisted editing.",
+    href: DASHBOARD_ROUTES.BLOG_POSTS,
     icon: <EditPaths />,
     iconBg: NEON_MAGENTA_DIM,
     iconColor: NEON_MAGENTA,
@@ -170,6 +175,7 @@ export const QUICK_ACTIONS: QuickActionConfig[] = [
   {
     title: "Open Chat",
     description: "Ask the Alter Ego anything about projects and knowledge.",
+    href: DASHBOARD_ROUTES.CHAT,
     icon: <ChatPaths />,
     iconBg: NEON_AMBER_DIM,
     iconColor: NEON_AMBER,

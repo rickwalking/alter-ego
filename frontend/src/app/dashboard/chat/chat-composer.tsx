@@ -13,11 +13,15 @@ import {
 export interface ChatComposerProps {
   value: string;
   onChange: (value: string) => void;
+  onSend: () => void;
+  disabled?: boolean;
 }
 
 export function ChatComposer({
   value,
   onChange,
+  onSend,
+  disabled = false,
 }: ChatComposerProps): React.ReactElement {
   return (
     <div
@@ -31,8 +35,15 @@ export function ChatComposer({
         <textarea
           value={value}
           onChange={(e) => onChange(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              onSend();
+            }
+          }}
           placeholder="Ask the Alter-Ego anything..."
           rows={1}
+          disabled={disabled}
           style={{
             flex: 1,
             padding: "10px 16px",
@@ -52,6 +63,8 @@ export function ChatComposer({
         <button
           type="button"
           aria-label="Send message"
+          onClick={onSend}
+          disabled={disabled || !value.trim()}
           style={{
             width: "42px",
             height: "42px",

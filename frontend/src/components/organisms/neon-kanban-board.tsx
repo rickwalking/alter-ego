@@ -1,5 +1,7 @@
+import Link from "next/link";
 import { NeonBadge } from "@/components/atoms/neon-badge";
 import { NeonCard } from "@/components/molecules/neon-card";
+import { ROUTE_PATHS } from "@/constants/api";
 import { TEXT, TEXT_DIM, TEXT_MUTED } from "@/constants/neon";
 import type { KanbanColumn } from "@/schemas/neon-kanban";
 
@@ -31,33 +33,40 @@ export function NeonKanbanBoard({
           </div>
           <div className="space-y-3 flex-1">
             {column.cards.map((card) => (
-              <NeonCard key={card.id} padding="sm" hover>
-                <p className="text-sm font-semibold mb-1" style={{ color: TEXT }}>
-                  {card.title}
-                </p>
-                <p
-                  className="text-xs line-clamp-2 mb-2"
-                  style={{ color: TEXT_MUTED }}
-                >
-                  {card.description}
-                </p>
-                <div className="flex items-center justify-between">
-                  <NeonBadge variant="teal" size="sm">
-                    {card.phaseStatus}
-                  </NeonBadge>
-                  {card.assignee && (
-                    <span
-                      className="text-[10px]"
-                      style={{
-                        fontFamily: "'JetBrains Mono', ui-monospace, monospace",
-                        color: TEXT_DIM,
-                      }}
-                    >
-                      {card.assignee}
-                    </span>
-                  )}
-                </div>
-              </NeonCard>
+              <Link
+                key={card.id}
+                href={ROUTE_PATHS.CREATE_WORKSPACE(card.id)}
+                className="block no-underline"
+              >
+                <NeonCard padding="sm" hover>
+                  <p className="text-sm font-semibold mb-1" style={{ color: TEXT }}>
+                    {card.title}
+                  </p>
+                  <p
+                    className="text-xs line-clamp-2 mb-2"
+                    style={{ color: TEXT_MUTED }}
+                  >
+                    {card.description}
+                  </p>
+                  <div className="flex items-center justify-between">
+                    <NeonBadge variant="teal" size="sm">
+                      {card.phaseStatus}
+                    </NeonBadge>
+                    {card.assignee && (
+                      <span
+                        className="text-[10px]"
+                        style={{
+                          fontFamily:
+                            "'JetBrains Mono', ui-monospace, monospace",
+                          color: TEXT_DIM,
+                        }}
+                      >
+                        {card.assignee}
+                      </span>
+                    )}
+                  </div>
+                </NeonCard>
+              </Link>
             ))}
           </div>
         </div>

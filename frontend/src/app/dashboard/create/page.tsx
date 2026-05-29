@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { NeonTopBar } from "@/components/organisms/neon-top-bar";
 import {
   CreateTemplateSection,
@@ -9,9 +10,38 @@ import {
 } from "@/app/dashboard/create/create-form-sections";
 import { CreateSidebar } from "@/app/dashboard/create/create-sidebar";
 import { CreateProgressSteps } from "@/app/dashboard/create/create-progress-steps";
+import { buildCarouselCreateRequest } from "@/app/dashboard/create/helpers";
+import {
+  INITIAL_CREATE_FORM_STATE,
+  type CreateCarouselFormState,
+} from "@/app/dashboard/create/types";
+import { useCreateCarousel } from "@/features/create/hooks";
+import { ROUTE_PATHS } from "@/constants/api";
+import { DEFAULT_IMAGE_PRESET } from "@/constants/create";
 
 export default function CreateCarouselPage(): React.ReactElement {
-  const [selectedTemplate, setSelectedTemplate] = useState(0);
+  const router = useRouter();
+  const createCarousel = useCreateCarousel();
+  const [form, setForm] = useState<CreateCarouselFormState>({
+    ...INITIAL_CREATE_FORM_STATE,
+    imagePreset: DEFAULT_IMAGE_PRESET,
+  });
+  const [error, setError] = useState<string | null>(null);
+
+  const handleChange = (patch: Partial<CreateCarouselFormState>): void => {
+    setForm((prev) => ({ ...prev, ...patch }));
+  };
+
+  const handleSubmit = async (): Promise<void> => {
+    setError(null);
+    try {
+      const payload = buildCarouselCreateRequest(form);
+      const project = await createCarousel.mutateAsync(payload);
+      router.push(ROUTE_PATHS.CREATE_WORKSPACE(project.id));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to create carousel");
+    }
+  };
 
   return (
     <div
@@ -33,14 +63,16 @@ export default function CreateCarouselPage(): React.ReactElement {
           }}
         >
           <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
-            <CreateTopicSection />
-            <CreateTemplateSection
-              selectedTemplate={selectedTemplate}
-              onSelectTemplate={setSelectedTemplate}
-            />
-            <CreateThemeSection />
+            <CreateTopicSection form={form} onChange={handleChange} />
+            <CreateTemplateSection form={form} onChange={handleChange} />
+            <CreateThemeSection form={form} onChange={handleChange} />
           </div>
-          <CreateSidebar />
+          <CreateSidebar
+            form={form}
+            onSubmit={() => void handleSubmit()}
+            isPending={createCarousel.isPending}
+            error={error}
+          />
         </div>
       </div>
     </div>

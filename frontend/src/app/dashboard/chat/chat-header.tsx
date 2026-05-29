@@ -8,7 +8,11 @@ import {
   DASHBOARD_CHAT_TEXT_MUTED,
 } from "@/features/dashboard/chat/constants";
 
-export function ChatHeader(): React.ReactElement {
+export interface ChatHeaderProps {
+  onNewChat?: () => void;
+}
+
+export function ChatHeader({ onNewChat }: ChatHeaderProps): React.ReactElement {
   return (
     <header
       style={{
@@ -36,6 +40,24 @@ export function ChatHeader(): React.ReactElement {
         </span>
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+        {onNewChat && (
+          <button
+            type="button"
+            onClick={onNewChat}
+            style={{
+              padding: "6px 12px",
+              borderRadius: "6px",
+              border: `1px solid ${DASHBOARD_CHAT_BORDER_LIGHT}`,
+              background: "transparent",
+              color: DASHBOARD_CHAT_TEXT_MUTED,
+              fontSize: "12px",
+              fontWeight: 600,
+              cursor: "pointer",
+            }}
+          >
+            New chat
+          </button>
+        )}
         <button
           type="button"
           aria-label="Notifications"

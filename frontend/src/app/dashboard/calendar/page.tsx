@@ -1,5 +1,6 @@
 "use client";
 
+import { NeonSpinner } from "@/components/atoms/neon-spinner";
 import { CalendarSvgIcon } from "@/features/dashboard/calendar/components/svg-icon";
 import {
   CALENDAR_BTN_GHOST,
@@ -13,9 +14,13 @@ import {
   CALENDAR_VIEW_MODES,
   CALENDAR_WEEKDAY_HEADERS,
 } from "@/features/dashboard/calendar/constants";
-import { buildCalendarDays } from "@/features/dashboard/calendar/helpers";
+import {
+  buildCalendarDays,
+  buildCalendarDaysFromApi,
+} from "@/features/dashboard/calendar/helpers";
 import type { CalendarContentType } from "@/features/dashboard/calendar/types";
-import { NEON_BORDER_FOCUS, NEON_BORDER_SUBTLE } from "@/constants/neon";
+import { useContentCalendar } from "@/features/workflow/hooks/use-content-calendar";
+import { NEON_BORDER_FOCUS, NEON_BORDER_SUBTLE, NEON_RED } from "@/constants/neon";
 
 const CONTENT_TYPE_ICON: Record<
   CalendarContentType,
@@ -28,7 +33,11 @@ const CONTENT_TYPE_ICON: Record<
 };
 
 export default function CalendarPage() {
-  const days = buildCalendarDays();
+  const { calendar, loading, error } = useContentCalendar();
+  const days =
+    calendar && calendar.items.length > 0
+      ? buildCalendarDaysFromApi(calendar.items)
+      : buildCalendarDays();
 
   return (
     <div
@@ -39,6 +48,16 @@ export default function CalendarPage() {
         minHeight: "100vh",
       }}
     >
+      {error && (
+        <p className="text-center py-4" style={{ color: NEON_RED }}>
+          {error}
+        </p>
+      )}
+      {loading && (
+        <div className="flex justify-center py-12">
+          <NeonSpinner size="lg" />
+        </div>
+      )}
       <div
         style={{
           height: 56,
@@ -51,6 +70,7 @@ export default function CalendarPage() {
           position: "sticky",
           top: 0,
           zIndex: 50,
+          opacity: loading ? 0.5 : 1,
         }}
       >
         <div style={{ ...CALENDAR_FLEX_CENTER, gap: 12 }}>

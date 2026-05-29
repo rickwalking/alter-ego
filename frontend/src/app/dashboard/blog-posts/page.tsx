@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { NeonButton } from "@/components/atoms/neon-button";
 import { NeonSearchBar } from "@/components/molecules/neon-search-bar";
 import { NeonTopBar } from "@/components/organisms/neon-top-bar";
@@ -13,6 +14,7 @@ import {
   filterBlogPosts,
   formatBlogPostDate,
 } from "@/features/dashboard/blog-posts/helpers";
+import { DASHBOARD_ROUTES } from "@/constants/dashboard-routes";
 import { mapBlogPostToDashboard } from "@/features/dashboard/blog-posts/adapters/blog-post-adapter";
 import { useBlogPosts } from "@/features/blog/hooks/use-blog-posts";
 import { NeonSpinner } from "@/components/atoms/neon-spinner";
@@ -29,10 +31,26 @@ import {
 } from "@/constants/neon";
 
 export default function BlogPostsPage() {
+  const router = useRouter();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
-  const { posts, loading, error } = useBlogPosts();
+  const [creating, setCreating] = useState(false);
+  const { posts, loading, error, create } = useBlogPosts();
+
+  const handleNewPost = async (): Promise<void> => {
+    setCreating(true);
+    try {
+      const post = await create({
+        title: "Untitled draft",
+        content: { blocks: [] },
+        excerpt: "",
+      });
+      router.push(DASHBOARD_ROUTES.BLOG_POST_EDIT(post.id));
+    } catch {
+      setCreating(false);
+    }
+  };
 
   const dashboardPosts = posts.map(mapBlogPostToDashboard);
 
@@ -63,6 +81,8 @@ export default function BlogPostsPage() {
             />
             <NeonButton
               size="sm"
+              disabled={creating}
+              onClick={() => void handleNewPost()}
               icon={
                 <svg
                   width="14"

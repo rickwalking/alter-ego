@@ -1,5 +1,11 @@
 "use client";
 
+import { useTranslations } from "next-intl";
+import {
+  CAROUSEL_THEMES,
+  IMAGE_PRESETS,
+  THEME_LABEL_KEYS,
+} from "@/constants/create";
 import {
   BG_CARD,
   NEON_CYAN,
@@ -9,6 +15,7 @@ import {
   TEXT_MUTED,
 } from "@/constants/neon";
 import { CREATE_TEMPLATES } from "@/app/dashboard/create/constants";
+import type { CreateCarouselFormState } from "@/app/dashboard/create/types";
 
 const CYAN = NEON_CYAN;
 const CYAN_DIM = NEON_CYAN_DIM;
@@ -28,6 +35,17 @@ const sectionHeaderStyle = {
   alignItems: "center",
   gap: "8px",
 };
+
+const inputStyle = {
+  width: "100%",
+  padding: "10px 12px",
+  borderRadius: "6px",
+  border: "1px solid rgba(255,255,255,0.08)",
+  background: "rgba(6,10,18,0.6)",
+  color: TEXT,
+  fontSize: "13px",
+  outline: "none",
+} as const;
 
 function SectionNumber({ num }: { num: number }): React.ReactElement {
   return (
@@ -51,7 +69,15 @@ function SectionNumber({ num }: { num: number }): React.ReactElement {
   );
 }
 
-export function CreateTopicSection(): React.ReactElement {
+export interface CreateFormSectionProps {
+  form: CreateCarouselFormState;
+  onChange: (patch: Partial<CreateCarouselFormState>) => void;
+}
+
+export function CreateTopicSection({
+  form,
+  onChange,
+}: CreateFormSectionProps): React.ReactElement {
   return (
     <div style={sectionCardStyle}>
       <div style={sectionHeaderStyle}>
@@ -65,18 +91,11 @@ export function CreateTopicSection(): React.ReactElement {
         </label>
         <input
           type="text"
-          defaultValue="DeepSeek V4 Analysis"
-          style={{
-            width: "100%",
-            padding: "10px 12px",
-            borderRadius: "6px",
-            border: "1px solid rgba(255,255,255,0.08)",
-            background: "rgba(6,10,18,0.6)",
-            color: TEXT,
-            fontSize: "13px",
-            outline: "none",
-          }}
+          value={form.topic}
+          onChange={(e) => onChange({ topic: e.target.value })}
+          style={inputStyle}
           placeholder="e.g., DeepSeek V4: Open-Source LLM Benchmark Performance"
+          maxLength={500}
         />
       </div>
       <div style={{ marginBottom: "14px" }}>
@@ -86,56 +105,35 @@ export function CreateTopicSection(): React.ReactElement {
         </label>
         <input
           type="text"
-          defaultValue="AI/ML Engineers, Software Developers"
-          style={{
-            width: "100%",
-            padding: "10px 12px",
-            borderRadius: "6px",
-            border: "1px solid rgba(255,255,255,0.08)",
-            background: "rgba(6,10,18,0.6)",
-            color: TEXT,
-            fontSize: "13px",
-            outline: "none",
-          }}
+          value={form.audience}
+          onChange={(e) => onChange({ audience: e.target.value })}
+          style={inputStyle}
           placeholder="Who should read this carousel?"
+          maxLength={500}
         />
       </div>
       <div>
         <label style={{ fontSize: "12px", color: TEXT_MUTED, marginBottom: "6px", display: "block" }}>
-          Brief / Description{" "}
+          Brief / Niche{" "}
           <span style={{ color: TEXT_DIM, fontSize: "11px" }}>(max 200 chars)</span>
         </label>
         <textarea
-          defaultValue="Analyze DeepSeek V4's architecture, benchmark performance against open-source LLMs, pricing strategy, and implications for the open-source AI landscape."
+          value={form.niche}
+          onChange={(e) => onChange({ niche: e.target.value })}
           rows={4}
-          style={{
-            width: "100%",
-            padding: "10px 12px",
-            borderRadius: "6px",
-            border: "1px solid rgba(255,255,255,0.08)",
-            background: "rgba(6,10,18,0.6)",
-            color: TEXT,
-            fontSize: "13px",
-            outline: "none",
-            resize: "vertical",
-            fontFamily: "inherit",
-          }}
+          style={{ ...inputStyle, resize: "vertical", fontFamily: "inherit" }}
           placeholder="What should this carousel cover?"
+          maxLength={200}
         />
       </div>
     </div>
   );
 }
 
-export interface CreateTemplateSectionProps {
-  selectedTemplate: number;
-  onSelectTemplate: (index: number) => void;
-}
-
 export function CreateTemplateSection({
-  selectedTemplate,
-  onSelectTemplate,
-}: CreateTemplateSectionProps): React.ReactElement {
+  form,
+  onChange,
+}: CreateFormSectionProps): React.ReactElement {
   return (
     <div style={sectionCardStyle}>
       <div style={sectionHeaderStyle}>
@@ -152,11 +150,18 @@ export function CreateTemplateSection({
         {CREATE_TEMPLATES.map((tpl, idx) => (
           <div
             key={tpl.name}
-            onClick={() => onSelectTemplate(idx)}
+            role="button"
+            tabIndex={0}
+            onClick={() => onChange({ selectedTemplate: idx })}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                onChange({ selectedTemplate: idx });
+              }
+            }}
             style={{
-              background: idx === selectedTemplate ? CYAN_DIM : BG_CARD,
+              background: idx === form.selectedTemplate ? CYAN_DIM : BG_CARD,
               border:
-                idx === selectedTemplate
+                idx === form.selectedTemplate
                   ? `1px solid ${CYAN}`
                   : "1px solid rgba(255,255,255,0.06)",
               borderRadius: "8px",
@@ -180,7 +185,21 @@ export function CreateTemplateSection({
   );
 }
 
-export function CreateThemeSection(): React.ReactElement {
+const THEME_OPTIONS = [
+  CAROUSEL_THEMES.AUTO,
+  CAROUSEL_THEMES.CYBERSECURITY,
+  CAROUSEL_THEMES.AI_COMPETITION,
+  CAROUSEL_THEMES.DEVELOPER_SKILLS,
+  CAROUSEL_THEMES.SOURCE_CODE,
+  CAROUSEL_THEMES.SOCIAL_ENGINEERING,
+] as const;
+
+export function CreateThemeSection({
+  form,
+  onChange,
+}: CreateFormSectionProps): React.ReactElement {
+  const t = useTranslations("create");
+
   return (
     <div style={sectionCardStyle}>
       <div style={sectionHeaderStyle}>
@@ -196,49 +215,38 @@ export function CreateThemeSection(): React.ReactElement {
       >
         <div>
           <label style={{ fontSize: "12px", color: TEXT_MUTED, marginBottom: "6px", display: "block" }}>
-            Theme <span style={{ color: TEXT_DIM, fontSize: "11px" }}>(enum)</span>
+            Theme
           </label>
           <select
-            style={{
-              width: "100%",
-              padding: "10px 12px",
-              borderRadius: "6px",
-              border: "1px solid rgba(255,255,255,0.08)",
-              background: "rgba(6,10,18,0.45)",
-              color: TEXT,
-              fontSize: "13px",
-              outline: "none",
-            }}
+            value={form.theme}
+            onChange={(e) =>
+              onChange({
+                theme: e.target.value as CreateCarouselFormState["theme"],
+              })
+            }
+            style={inputStyle}
           >
-            <option value="auto">Auto-detect</option>
-            <option value="cybersecurity">Cybersecurity</option>
-            <option value="ai_competition">AI Competition</option>
-            <option value="developer_skills">Developer Skills</option>
-            <option value="source_code">Source Code</option>
-            <option value="social_engineering">Social Engineering</option>
+            {THEME_OPTIONS.map((theme) => (
+              <option key={theme} value={theme}>
+                {t(THEME_LABEL_KEYS[theme])}
+              </option>
+            ))}
           </select>
         </div>
         <div>
           <label style={{ fontSize: "12px", color: TEXT_MUTED, marginBottom: "6px", display: "block" }}>
-            Image Preset{" "}
-            <span style={{ color: TEXT_DIM, fontSize: "11px" }}>(model + style)</span>
+            Image Preset (model + style)
           </label>
           <select
-            style={{
-              width: "100%",
-              padding: "10px 12px",
-              borderRadius: "6px",
-              border: "1px solid rgba(255,255,255,0.08)",
-              background: "rgba(6,10,18,0.45)",
-              color: TEXT,
-              fontSize: "13px",
-              outline: "none",
-            }}
+            value={form.imagePreset}
+            onChange={(e) => onChange({ imagePreset: e.target.value })}
+            style={inputStyle}
           >
-            <option value="default">Default (SDXL + realistic)</option>
-            <option value="cyberpunk">Cyberpunk</option>
-            <option value="minimal">Minimal</option>
-            <option value="tech">Tech</option>
+            {IMAGE_PRESETS.map((preset) => (
+              <option key={preset.value} value={preset.value}>
+                {t(preset.labelKey)}
+              </option>
+            ))}
           </select>
         </div>
       </div>

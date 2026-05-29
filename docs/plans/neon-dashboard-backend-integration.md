@@ -1,234 +1,256 @@
 # Neon Dashboard — Backend Integration Plan
 
-**Status:** In progress (Phase 1–4 partially landed on `design-implementation`)
+**Status:** In progress (regression remediation sprint)
 **Branch:** `design-implementation`
-**Depends on:** Neon Shell UI migration (atoms/molecules/organisms, Storybook)
-**Goal:** Make the new dashboard shell **functional** — real API data, auth enforcement, and existing hooks/services — not mock-only UI.
+**PR:** [#5](https://github.com/rickwalking/alter-ego/pull/5)
+**Goal:** Neon shell is **functional** — correct UI, real API data, working navigation and CTAs.
 
 ---
 
-## Problem Statement
+## Regression Report (2026-05-29 QA)
 
-The neon redesign replaced shadcn with `Neon*` components but several dashboard routes were implemented as **static/mock shells**:
+The first integration pass wired APIs but introduced regressions. **Do not revert to legacy page UIs** (`ChatInterface`, old `/create` TopicForm page). Fix behavior **inside the neon designs**.
 
-| Route | Current state | Existing backend integration |
-|-------|---------------|------------------------------|
-| `/dashboard` | `STAT_CARDS`, `RECENT_ACTIVITIES` constants | `useEditorialAnalytics` (same as analytics page) |
-| `/dashboard/chat` | `MOCK_DASHBOARD_*` | `ChatInterface` + `useConversations` + `useSseChat` |
-| `/dashboard/workflow` | `WORKFLOW_COLUMNS` mock | `useWorkflowKanban` + `WorkflowKanbanBoard` |
-| `/dashboard/calendar` | `buildCalendarDays()` static | `useContentCalendar` |
-| `/dashboard/rubrics` | `RUBRICS` constant | `useRubrics` |
-| `/dashboard/personas` | `PERSONAS` constant | `usePersonas` |
-| `/dashboard/blog-posts` | `MOCK_BLOG_POSTS` | `useBlogPosts` |
-| `/dashboard/create` | Static form, no submit | `useCreateCarousel` → `/(create)/create/[id]` |
-| `/dashboard/knowledge` | Already wired | `useDocuments` / `KnowledgeBaseInterface` |
-| `/dashboard/analytics` | **Already wired** | `useEditorialAnalytics` ✅ |
+| # | Issue | Root cause | Fix (neon-only) |
+|---|--------|------------|-----------------|
+| R1 | Chat shows **old** sidebar/layout | `dashboard/chat/page.tsx` replaced with `<ChatInterface />` | Restore `ChatHeader` + `ChatSidebar` + `ChatMessageList` + `ChatComposer`; wire `useConversations` + `useSseChat` via adapters |
+| R2 | Dashboard quick actions go **nowhere** | `QUICK_ACTIONS` cards have no `href` / `onClick` | Add `href` to each card: `/dashboard/create`, `/dashboard/blog-posts?new=1`, `/dashboard/chat` |
+| R3 | **Create carousel** dummy data, no submit | Form sections use `defaultValue`; sidebar button inert | Controlled form state; `IMAGE_PRESETS` + `CAROUSEL_THEMES` from `@/constants/create`; `useCreateCarousel` → `router.push(/create/[id])` |
+| R4 | **New blog post** button dead | No handler / route | `createPost` via `useBlogPosts` → redirect `/dashboard/blog-posts/[id]/edit` |
+| R5 | **Workflow board** layout broken | `NeonKanbanBoard` lacks column chrome + card links vs mock | Add card `Link` to `/create/[id]`; align column styling with design spec; optional: merge patterns from `WorkflowKanbanBoard` |
+| R6 | **New card** on workflow dead | `NeonButton` without `href` | `href="/dashboard/create"` or `onClick` → create flow |
+| R7 | **Calendar** static `buildCalendarDays()` | Never wired `useContentCalendar` | Map API `CalendarItem[]` onto month grid by `event_date` |
+| R8 | **New rubric** dead | Top bar button decorative | `onClick` → create via `useRubrics().create` (minimal prompt) or `/dashboard/rubrics/new` |
+| R9 | **Create persona** dead | `CreatePersonaCard` not interactive | `onClick` → `usePersonas().create` (minimal prompt) or persona form route |
 
-**Auth:** Middleware exists but `/dashboard/*` is not named explicitly; post-login redirect targets `/chat` (no route — should be `/dashboard/chat`). Editor-only routes omit `/dashboard/create`.
+---
+
+## Non-Goals (this sprint)
+
+- Reintroducing `components/ui` or shadcn aliases
+- Replacing neon create page with `/(create)/create` TopicForm layout
+- Replacing neon chat with `ChatInterface` layout
+- Full CRUD modals for personas/rubrics (minimal create OK first)
 
 ---
 
 ## Architecture Principles
 
-1. **Reuse existing hooks** — Do not duplicate API clients; wire pages to `features/*/hooks`.
-2. **Adapters at the boundary** — Map API types → `Neon*` props via `features/dashboard/*/adapters/`.
-3. **Presentation stays dumb** — Pages orchestrate hooks + neon organisms; no `fetch` in atoms/molecules.
-4. **Loading / error / empty** — Every integrated page uses `NeonSpinner`, error copy, and empty states.
-5. **Gherkin + tests** — Extend `.feature` files and unit tests when behavior changes.
+1. **Neon UI is the source of truth** for dashboard presentation.
+2. **Reuse hooks** in `features/*/hooks` — no duplicate API clients.
+3. **Adapters** in `features/dashboard/*/adapters/` map API → neon props (no `app/` imports from `features/`).
+4. **Every CTA must navigate or mutate** — no decorative buttons.
 
 ---
 
-## Phase 1 — Auth & Route Protection (P0)
+## Phase 1 — Chat (P0) — R1
 
-### Task 1.1 — Harden middleware
+**Files:** `app/dashboard/chat/page.tsx`, `chat-*.tsx`, `features/dashboard/chat/adapters/chat-adapter.ts`
 
-**Files:** `src/constants/middleware.ts`, `src/middleware.ts`
+### Tasks
 
-- [x] Add `isDashboardRoute(pathname)` helper.
-- [x] Require valid JWT for all `/dashboard/*` (middleware redirect when no token).
-- [x] Fix authenticated redirect on `/login`: `/chat` → `/dashboard/chat`.
-- [x] Extend `isEditorRoute` to include `/dashboard/create`.
-- [ ] Add middleware unit tests in `src/constants/middleware.test.ts` (or existing test file).
+- [ ] Remove `ChatInterface` from dashboard chat route.
+- [ ] Add `mapConversationToDashboard()` — `Conversation` → `DashboardConversation` (avatar, preview from title/updated_at).
+- [ ] Add `mapMessageToDashboard()` — `Message` → `DashboardChatMessage`.
+- [ ] Page orchestration:
+  - `useConversations()` → sidebar list
+  - `useSseChat({ conversationId })` → message list
+  - `useCreateConversation()` on first send / new chat
+- [ ] `ChatComposer`: `onSend`, Enter to submit, disable while streaming.
+- [ ] `ChatMessageList`: show typing row only when `isStreaming`.
+- [ ] New conversation button in sidebar header (optional).
 
-**Acceptance criteria:**
-- Unauthenticated `GET /dashboard` → 307 to `/login`.
-- Authenticated `GET /login` → 307 to `/dashboard/chat`.
-- Editor role required for `/dashboard/create`.
+### Acceptance
 
-### Task 1.2 — Dashboard layout auth guard (client)
-
-**Files:** `src/app/dashboard/layout.tsx`, optional `src/features/auth/components/auth-guard.tsx`
-
-- [ ] Optional client guard: redirect to `/login` if `authenticatedFetch` returns 401 (belt-and-suspenders).
-- [ ] Show loading shell while verifying session.
+- [ ] UI matches neon mock (Image #1 chat), not legacy chat.
+- [ ] Messages stream via SSE; conversations from `/api/conversations`.
 
 ---
 
-## Phase 2 — Chat Agent (P0)
+## Phase 2 — Navigation & CTAs (P0) — R2, R4, R6
 
-### Task 2.1 — Replace mock chat with `ChatInterface`
+**Files:** `app/dashboard/constants.tsx`, `app/dashboard/page.tsx`, `constants/dashboard-routes.ts`
 
-**Files:** `src/app/dashboard/chat/page.tsx`, subcomponents (keep neon chrome OR wrap `ChatInterface`)
+### Dashboard quick actions
 
-**Options (pick A):**
-- **A (recommended):** Thin page renders `<ChatInterface />` inside dashboard layout; deprecate mock subcomponents.
-- **B:** Refactor `ChatInterface` to accept neon slot components (sidebar, header).
+| Action | Route |
+|--------|-------|
+| New Carousel | `/dashboard/create` |
+| Write Blog Post | `/dashboard/blog-posts` (+ create handler) |
+| Open Chat | `/dashboard/chat` |
 
-- [x] Wire `ChatInterface` (`useConversations`, `useSseChat`) on `/dashboard/chat`.
-- [x] Remove mock data from production chat page.
-- [ ] Keep `chat-interface.test.tsx` green; add dashboard smoke test.
+- [ ] Extend `QuickActionConfig` with `href: string`.
+- [ ] Wrap `NeonCard` in `next/link` or `router.push` on click.
 
-**Acceptance criteria:**
-- Send message → SSE stream from `/api/chat/stream`.
-- Conversation list loads from `/api/conversations`.
-- New chat creates conversation via API.
+### Blog “New Post”
 
----
+- [ ] `NeonButton` calls `create({ title: "Untitled draft", ... })`.
+- [ ] Redirect to `/dashboard/blog-posts/{id}/edit`.
 
-## Phase 3 — Workflow Board (P0)
+### Workflow “New Card”
 
-### Task 3.1 — Wire kanban to API
+- [ ] `NeonButton` → `/dashboard/create`.
 
-**Files:** `src/app/dashboard/workflow/page.tsx`, `workflow-adapter.ts`
+### Acceptance
 
-- [x] Use `useWorkflowKanban()` instead of `WORKFLOW_COLUMNS`.
-- [x] Map API via `mapApiWorkflowKanbanToNeon`.
-- [ ] Loading: `NeonSpinner`; error: retry `NeonButton`.
-- [ ] Card links → `/create/[id]` or workflow detail when ID present.
-
-**Alternative:** Embed existing `WorkflowKanbanBoard` organism and style-match later.
-
-**Acceptance criteria:**
-- Board columns match `GET /api/workflow-board`.
-- Polling interval from `WORKFLOW_BOARD_POLL_INTERVAL_MS`.
+- [ ] All three homepage cards navigate correctly.
+- [ ] Blog new post opens editor with new UUID.
 
 ---
 
-## Phase 4 — Personas & Rubrics (P1)
+## Phase 3 — Create Carousel E2E (P0) — R3
 
-### Task 4.1 — Personas
+**Files:** `app/dashboard/create/*`, `constants/create.ts`
 
-**Files:** `src/app/dashboard/personas/page.tsx`, `persona-adapter.ts`
+### Form state model
 
-- [x] `usePersonas()` for list; map `PersonaProfile` → `NeonPersonaCard` props.
-- [ ] Extend adapter: `expertise_areas` → skills, description from API.
-- [ ] Create persona → navigate to create flow or modal (reuse existing persona forms if any).
+```typescript
+interface CreateCarouselFormState {
+  topic: string;
+  audience: string;
+  niche: string;
+  theme: CarouselTheme;
+  imagePreset: string; // IMAGE_PRESETS value
+  selectedTemplate: number;
+}
+```
 
-### Task 4.2 — Rubrics
+### Wire to backend
 
-**Files:** `src/app/dashboard/rubrics/page.tsx`, `rubric-adapter.ts`, `rubric-panel.tsx`
+- [ ] Controlled inputs in `CreateTopicSection`, `CreateThemeSection`.
+- [ ] Theme `<select>`: `CAROUSEL_THEMES` + `THEME_LABEL_KEYS` (i18n).
+- [ ] Image preset `<select>`: `IMAGE_PRESETS` (real model/style pairs).
+- [ ] `CreateSidebar` “Start Carousel” → `useCreateCarousel().mutateAsync` → `ROUTE_PATHS.CREATE_WORKSPACE(id)`.
+- [ ] Sidebar summary reflects live form state (not `CREATE_SUMMARY_ROWS` static).
+- [ ] Loading/error on submit (`NeonSpinner`, error text).
+- [ ] Template picker remains UI-only or maps to `niche` hint (document in code).
 
-- [x] `useRubrics()` for list; map `QualityRubric` → `RubricPanel` via `mapQualityRubricToPanelData`.
-- [ ] Preserve neon table UI; drive rows from `rubric.criteria`.
+### Post-create
 
----
+- [ ] User lands in **existing** editorial workspace `/create/[id]` (feedback, images, approval) — unchanged backend flow.
 
-## Phase 5 — Calendar & Blog Posts (P1)
+### Acceptance
 
-### Task 5.1 — Calendar
-
-**Files:** `src/app/dashboard/calendar/page.tsx`, `calendar-adapter.ts`
-
-- [ ] `useContentCalendar(start, end)` for visible month range.
-- [ ] Map `CalendarItem[]` onto calendar grid cells.
-- [ ] Month navigation updates `start`/`end` query params.
-
-### Task 5.2 — Blog posts list
-
-**Files:** `src/app/dashboard/blog-posts/page.tsx`, `blog-post-adapter.ts`
-
-- [ ] `useBlogPosts({ search, status })` instead of `MOCK_BLOG_POSTS`.
-- [ ] `NeonBlogPostCard` + filters wired to hook.
-
----
-
-## Phase 6 — Dashboard Home & Create (P1)
-
-### Task 6.1 — Overview stats
-
-**Files:** `src/app/dashboard/page.tsx`
-
-- [ ] `useEditorialAnalytics()` for stat cards (mirror `analytics/page.tsx`).
-- [ ] Map `summary` → `NeonStatsGrid`; derive activity feed from analytics or `useNotifications` if available.
-
-### Task 6.2 — Create carousel
-
-**Files:** `src/app/dashboard/create/page.tsx`, form sections
-
-- [ ] Wire submit to `useCreateCarousel().mutateAsync`.
-- [ ] On success → `router.push(/create/${project.id})` (existing editorial workspace).
-- [ ] Or redirect sidebar link to `/(create)/create` until dashboard form is complete.
+- [ ] Submit creates project via `POST /api/carousels`.
+- [ ] Image model/style match selected preset (backend-validated).
+- [ ] No dummy `defaultValue` text left in production path.
 
 ---
 
-## Phase 7 — QA & Docs (P2)
+## Phase 4 — Workflow Board (P0) — R5, R6
 
-- [ ] Update `docs/plans/neon-migration-qa-todo.md` — mark integration items.
-- [ ] E2E: auth redirect, workflow board load, chat send (Playwright).
-- [ ] Remove unused mock-data files or gate behind `NODE_ENV === 'development'` only.
-- [ ] Update `frontend/CLAUDE.md` — “dashboard pages must use hooks, not mock constants”.
+**Files:** `organisms/neon-kanban-board.tsx`, `app/dashboard/workflow/page.tsx`, `workflow-adapter.ts`
+
+- [ ] Card click → `Link` `/create/{card.id}`.
+- [ ] Column headers: formatted phase label + count badge.
+- [ ] Fix layout: min-height, horizontal scroll, card spacing per design.
+- [ ] Empty column copy from i18n `workflow.board.noProjects`.
+- [ ] Compare rendered output with design screenshot; adjust `NeonCard` padding/borders.
+
+### Acceptance
+
+- [ ] Board loads from `/api/workflow-board`.
+- [ ] Cards open editorial workspace.
+- [ ] New Card navigates to create page.
 
 ---
 
-## Implementation Order
+## Phase 5 — Calendar (P1) — R7
+
+**Files:** `app/dashboard/calendar/page.tsx`, `features/dashboard/calendar/helpers.ts`, `calendar-adapter.ts`
+
+- [ ] `useContentCalendar(monthStart, monthEnd)` for visible range.
+- [ ] `mapCalendarItemsToGrid(items)` → `CalendarDay[]` with events on correct days.
+- [ ] Loading / error states in neon calendar chrome.
+- [ ] Keep existing month grid UI; only replace event data source.
+
+### Acceptance
+
+- [ ] Events from API appear on correct calendar cells.
+- [ ] No static `CALENDAR_EVENTS_BY_DAY` in production path.
+
+---
+
+## Phase 6 — Personas & Rubrics CTAs (P1) — R8, R9
+
+**Files:** `app/dashboard/personas/*`, `app/dashboard/rubrics/page.tsx`
+
+### Personas
+
+- [ ] `CreatePersonaCard` `onClick` → prompt/minimal form → `usePersonas().create` → refetch.
+- [ ] Future: dedicated `/dashboard/personas/new` neon form.
+
+### Rubrics
+
+- [ ] “New Rubric” → `useRubrics().create` with defaults → refetch list.
+- [ ] Future: `/dashboard/rubrics/new` editor.
+
+### Acceptance
+
+- [ ] Buttons trigger visible API action (new item in list or toast).
+
+---
+
+## Phase 7 — Already integrated (verify)
+
+| Route | Hook | Re-verify |
+|-------|------|-----------|
+| `/dashboard` | `useEditorialAnalytics` | Stats + activity from API |
+| `/dashboard/analytics` | `useEditorialAnalytics` | ✅ |
+| `/dashboard/personas` | `usePersonas` | List ✅; create in Phase 6 |
+| `/dashboard/rubrics` | `useRubrics` | List ✅; create in Phase 6 |
+| `/dashboard/blog-posts` | `useBlogPosts` | List ✅; new post Phase 2 |
+| `/dashboard/knowledge` | `useDocuments` | ✅ |
+| `/dashboard/workflow` | `useWorkflowKanban` | Layout Phase 4 |
+
+---
+
+## Auth (unchanged, verify)
+
+- [x] Middleware redirect `/login` → `/dashboard/chat` when authenticated.
+- [x] `/dashboard/create` requires editor/admin.
+- [ ] E2E: unauthenticated `/dashboard` → `/login`.
+
+---
+
+## Implementation order
 
 ```mermaid
-flowchart LR
-  P1[Phase 1 Auth] --> P2[Phase 2 Chat]
-  P1 --> P3[Phase 3 Workflow]
-  P2 --> P4[Phase 4 Personas Rubrics]
-  P3 --> P5[Phase 5 Calendar Blog]
-  P4 --> P6[Phase 6 Overview Create]
-  P6 --> P7[Phase 7 QA]
+flowchart TD
+  R1[Phase 1 Chat neon + API] --> R2[Phase 2 CTAs]
+  R2 --> R3[Phase 3 Create carousel]
+  R3 --> R4[Phase 4 Workflow]
+  R4 --> R5[Phase 5 Calendar]
+  R5 --> R6[Phase 6 Persona/Rubric CTAs]
 ```
 
 | Sprint | Deliverable |
 |--------|-------------|
-| **Now (PR #1)** | Neon UI commit + this plan + begin Phase 1–2 |
-| **Next** | Phases 3–5 |
-| **Then** | Phase 6–7 |
+| **Immediate** | Plan update + Phase 1–3 (chat, links, create) |
+| **Next** | Phase 4–5 (workflow layout, calendar) |
+| **Then** | Phase 6 + E2E smoke tests |
 
 ---
 
-## Key File Reference
+## Key references
 
 ```
-frontend/src/
-├── middleware.ts
-├── constants/middleware.ts
-├── features/
-│   ├── chat/hooks/use-chat.ts, use-sse-chat.ts
-│   ├── chat/components/chat-interface.tsx
-│   ├── workflow/hooks/use-workflow-kanban.ts
-│   ├── workflow/hooks/use-content-calendar.ts
-│   ├── persona/hooks/use-personas.ts
-│   ├── rubrics/hooks/use-rubrics.ts
-│   ├── blog/hooks/use-blog-posts.ts
-│   ├── create/hooks/use-carousel.ts
-│   └── analytics/hooks/use-editorial-analytics.ts
-└── app/dashboard/
-    ├── page.tsx
-    ├── chat/page.tsx
-    ├── workflow/page.tsx
-    └── …
+features/chat/hooks/use-chat.ts, use-sse-chat.ts
+features/create/hooks/use-carousel.ts
+features/workflow/hooks/use-workflow-kanban.ts, use-content-calendar.ts
+features/blog/hooks/use-blog-posts.ts
+features/persona/hooks/use-personas.ts
+features/rubrics/hooks/use-rubrics.ts
+constants/create.ts  # IMAGE_PRESETS, CAROUSEL_THEMES
+app/dashboard/chat/  # neon chat shell (keep)
 ```
 
 ---
 
-## Risks
+## Success metrics
 
-| Risk | Mitigation |
-|------|------------|
-| API shape ≠ neon card props | Extend adapters; don’t change API |
-| `NeonKanbanBoard` vs `WorkflowKanbanBoard` duplication | Single data hook, one presentation component |
-| Chat UI regression | Keep `ChatInterface` tests; minimal page diff |
-| Role matrix incomplete | Align with `ROLES` in middleware + backend |
-
----
-
-## Success Metrics
-
-- [ ] All dashboard routes require authentication (verified E2E).
-- [ ] Zero production imports of `mock-data.ts` in `app/dashboard/`.
-- [ ] Chat, workflow, personas, rubrics show live API data with loading/error states.
-- [ ] `npm run test`, `npm run build` pass on `design-implementation`.
+- [ ] Zero imports of `ChatInterface` under `app/dashboard/chat/`.
+- [ ] Zero `MOCK_*` / static `defaultValue` in dashboard production paths.
+- [ ] Every top-bar and quick-action CTA has defined behavior.
+- [ ] `npm run test`, `npm run build` pass.
+- [ ] Manual QA matches neon design screenshots (Images #1).

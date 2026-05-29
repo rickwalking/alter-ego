@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { NeonSpinner } from "@/components/atoms/neon-spinner";
 import { NeonTopBar } from "@/components/organisms/neon-top-bar";
@@ -127,7 +128,8 @@ export default function DashboardPage(): React.ReactElement {
             style={{ gridTemplateColumns: "repeat(3, 1fr)" }}
           >
             {QUICK_ACTIONS.map((action) => (
-              <NeonCard key={action.title} hover padding="md" className="text-center">
+              <Link key={action.title} href={action.href} className="block no-underline">
+              <NeonCard hover padding="md" className="text-center">
                 <div
                   className="flex items-center justify-center mx-auto mb-3"
                   style={{
@@ -156,6 +158,7 @@ export default function DashboardPage(): React.ReactElement {
                 </h4>
                 <p className="text-xs text-text-dim">{action.description}</p>
               </NeonCard>
+              </Link>
             ))}
           </div>
         </div>
