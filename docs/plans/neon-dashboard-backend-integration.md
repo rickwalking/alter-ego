@@ -1,6 +1,6 @@
 # Neon Dashboard — Backend Integration Plan
 
-**Status:** In progress
+**Status:** In progress (Phase 1–4 partially landed on `design-implementation`)
 **Branch:** `design-implementation`
 **Depends on:** Neon Shell UI migration (atoms/molecules/organisms, Storybook)
 **Goal:** Make the new dashboard shell **functional** — real API data, auth enforcement, and existing hooks/services — not mock-only UI.
@@ -44,10 +44,10 @@ The neon redesign replaced shadcn with `Neon*` components but several dashboard 
 
 **Files:** `src/constants/middleware.ts`, `src/middleware.ts`
 
-- [ ] Add `DASHBOARD_PREFIX = "/dashboard"` and `isDashboardRoute(pathname)`.
-- [ ] Require valid JWT for all `/dashboard/*` (already implied; document + test).
-- [ ] Fix authenticated redirect on `/login`: `/chat` → `/dashboard/chat`.
-- [ ] Extend `isEditorRoute` to include `/dashboard/create` (and optionally `/dashboard/knowledge` if moved).
+- [x] Add `isDashboardRoute(pathname)` helper.
+- [x] Require valid JWT for all `/dashboard/*` (middleware redirect when no token).
+- [x] Fix authenticated redirect on `/login`: `/chat` → `/dashboard/chat`.
+- [x] Extend `isEditorRoute` to include `/dashboard/create`.
 - [ ] Add middleware unit tests in `src/constants/middleware.test.ts` (or existing test file).
 
 **Acceptance criteria:**
@@ -74,8 +74,8 @@ The neon redesign replaced shadcn with `Neon*` components but several dashboard 
 - **A (recommended):** Thin page renders `<ChatInterface />` inside dashboard layout; deprecate mock subcomponents.
 - **B:** Refactor `ChatInterface` to accept neon slot components (sidebar, header).
 
-- [ ] Wire `useConversations`, `useCreateConversation`, `useSseChat` (via `ChatInterface`).
-- [ ] Remove `MOCK_DASHBOARD_CONVERSATIONS` / `MOCK_DASHBOARD_MESSAGES` from production path.
+- [x] Wire `ChatInterface` (`useConversations`, `useSseChat`) on `/dashboard/chat`.
+- [x] Remove mock data from production chat page.
 - [ ] Keep `chat-interface.test.tsx` green; add dashboard smoke test.
 
 **Acceptance criteria:**
@@ -91,8 +91,8 @@ The neon redesign replaced shadcn with `Neon*` components but several dashboard 
 
 **Files:** `src/app/dashboard/workflow/page.tsx`, `workflow-adapter.ts`
 
-- [ ] Use `useWorkflowKanban()` instead of `WORKFLOW_COLUMNS`.
-- [ ] Map API `WorkflowKanban` → `NeonKanbanBoard` via `mapWorkflowToKanbanColumns` (already exists).
+- [x] Use `useWorkflowKanban()` instead of `WORKFLOW_COLUMNS`.
+- [x] Map API via `mapApiWorkflowKanbanToNeon`.
 - [ ] Loading: `NeonSpinner`; error: retry `NeonButton`.
 - [ ] Card links → `/create/[id]` or workflow detail when ID present.
 
@@ -110,7 +110,7 @@ The neon redesign replaced shadcn with `Neon*` components but several dashboard 
 
 **Files:** `src/app/dashboard/personas/page.tsx`, `persona-adapter.ts`
 
-- [ ] `usePersonas()` for list; map `PersonaProfile` → `NeonPersonaCard` props.
+- [x] `usePersonas()` for list; map `PersonaProfile` → `NeonPersonaCard` props.
 - [ ] Extend adapter: `expertise_areas` → skills, description from API.
 - [ ] Create persona → navigate to create flow or modal (reuse existing persona forms if any).
 
@@ -118,8 +118,7 @@ The neon redesign replaced shadcn with `Neon*` components but several dashboard 
 
 **Files:** `src/app/dashboard/rubrics/page.tsx`, `rubric-adapter.ts`, `rubric-panel.tsx`
 
-- [ ] `useRubrics()` for list; map `QualityRubric` → `RubricPanel` / criteria rows.
-- [ ] Replace static `RUBRICS` constant with API-driven data.
+- [x] `useRubrics()` for list; map `QualityRubric` → `RubricPanel` via `mapQualityRubricToPanelData`.
 - [ ] Preserve neon table UI; drive rows from `rubric.criteria`.
 
 ---

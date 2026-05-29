@@ -13,7 +13,10 @@ import {
   filterBlogPosts,
   formatBlogPostDate,
 } from "@/features/dashboard/blog-posts/helpers";
-import { MOCK_BLOG_POSTS } from "@/features/dashboard/blog-posts/mock-data";
+import { mapBlogPostToDashboard } from "@/features/dashboard/blog-posts/adapters/blog-post-adapter";
+import { useBlogPosts } from "@/features/blog/hooks/use-blog-posts";
+import { NeonSpinner } from "@/components/atoms/neon-spinner";
+import { NEON_RED } from "@/constants/neon";
 import {
   BG_CARD,
   NEON_BORDER_STRONG,
@@ -29,8 +32,11 @@ export default function BlogPostsPage() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
+  const { posts, loading, error } = useBlogPosts();
 
-  const filteredPosts = filterBlogPosts(MOCK_BLOG_POSTS, {
+  const dashboardPosts = posts.map(mapBlogPostToDashboard);
+
+  const filteredPosts = filterBlogPosts(dashboardPosts, {
     search,
     statusFilter,
     categoryFilter,
@@ -79,6 +85,18 @@ export default function BlogPostsPage() {
       />
 
       <div className="p-7 flex flex-col gap-4">
+        {loading && (
+          <div className="flex justify-center py-12">
+            <NeonSpinner size="lg" />
+          </div>
+        )}
+        {error && !loading && (
+          <p className="text-center py-8" style={{ color: NEON_RED }}>
+            {error}
+          </p>
+        )}
+        {!loading && !error && (
+        <>
         {/* Filters */}
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div className="flex gap-2">
@@ -222,6 +240,8 @@ export default function BlogPostsPage() {
             ))}
           </div>
         </div>
+        </>
+        )}
       </div>
     </div>
   );

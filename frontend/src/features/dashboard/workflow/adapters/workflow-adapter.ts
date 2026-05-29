@@ -1,5 +1,14 @@
 import type { WorkflowColumnData } from "@/features/dashboard/workflow/constants";
+import type {
+  KanbanCard as ApiKanbanCard,
+  KanbanColumn as ApiKanbanColumn,
+  WorkflowKanban,
+} from "@/features/workflow/hooks/use-workflow-kanban";
 import type { KanbanColumn } from "@/schemas/neon-kanban";
+
+function formatPhaseLabel(phase: string): string {
+  return phase.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+}
 
 export interface WorkflowCardSource {
   id: string;
@@ -50,4 +59,23 @@ export function mapWorkflowToKanbanColumns(
       assignee: card.assignee,
     })),
   }));
+}
+
+export function mapApiKanbanColumn(column: ApiKanbanColumn): KanbanColumn {
+  return {
+    phase: column.phase,
+    status: formatPhaseLabel(column.phase),
+    count: column.cards.length,
+    cards: column.cards.map((card: ApiKanbanCard) => ({
+      id: card.id,
+      title: card.title,
+      description: card.topic,
+      phase: card.current_phase,
+      phaseStatus: card.phase_status,
+    })),
+  };
+}
+
+export function mapApiWorkflowKanbanToNeon(board: WorkflowKanban): KanbanColumn[] {
+  return board.columns.map(mapApiKanbanColumn);
 }

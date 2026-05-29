@@ -1,5 +1,5 @@
 import { getScoreClass } from "@/app/dashboard/rubrics/helpers";
-import type { ScoreLevel } from "@/app/dashboard/rubrics/constants";
+import type { ScoreLevel } from "@/app/dashboard/rubrics/helpers";
 
 interface ScoreCellProps {
   label: string;

@@ -1,4 +1,6 @@
-import { RUBRIC_COLORS, type RubricColorKey, type ScoreLevel } from "@/app/dashboard/rubrics/constants";
+import { RUBRIC_COLORS, type RubricColorKey } from "@/features/dashboard/rubrics/types";
+
+export type ScoreLevel = "excellent" | "good" | "poor";
 
 export function dimColor(hex: string): string {
   return `${hex}1F`;

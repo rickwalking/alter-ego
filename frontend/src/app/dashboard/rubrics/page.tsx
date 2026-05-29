@@ -1,14 +1,19 @@
 "use client";
 
 import { NeonButton } from "@/components/atoms/neon-button";
+import { NeonSpinner } from "@/components/atoms/neon-spinner";
 import { NeonTopBar } from "@/components/organisms/neon-top-bar";
-import { RUBRICS } from "@/app/dashboard/rubrics/constants";
+import { NEON_RED } from "@/constants/neon";
 import { RubricPanel } from "@/app/dashboard/rubrics/rubric-panel";
+import { mapQualityRubricToPanelData } from "@/features/dashboard/rubrics/adapters/rubric-adapter";
+import { useRubrics } from "@/features/rubrics/hooks/use-rubrics";
 
 const PAGE_FONT_FAMILY = "Inter, system-ui, sans-serif";
 const PAGE_CONTENT_PADDING = "24px 32px";
 
 export default function RubricsPage(): React.ReactElement {
+  const { rubrics, loading, error } = useRubrics();
+
   return (
     <div
       className="flex-1 text-white relative"
@@ -41,9 +46,24 @@ export default function RubricsPage(): React.ReactElement {
       />
 
       <div className="page-content" style={{ padding: PAGE_CONTENT_PADDING }}>
-        {RUBRICS.map((rubric) => (
-          <RubricPanel key={rubric.title} rubric={rubric} />
-        ))}
+        {loading && (
+          <div className="flex justify-center py-12">
+            <NeonSpinner size="lg" />
+          </div>
+        )}
+        {error && !loading && (
+          <p className="text-center py-8" style={{ color: NEON_RED }}>
+            {error}
+          </p>
+        )}
+        {!loading &&
+          !error &&
+          rubrics.map((rubric) => (
+            <RubricPanel
+              key={rubric.id}
+              rubric={mapQualityRubricToPanelData(rubric)}
+            />
+          ))}
       </div>
     </div>
   );

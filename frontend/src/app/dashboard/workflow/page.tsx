@@ -1,10 +1,13 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { NeonButton } from "@/components/atoms/neon-button";
+import { NeonSpinner } from "@/components/atoms/neon-spinner";
 import { NeonKanbanBoard } from "@/components/organisms/neon-kanban-board";
 import { NeonTopBar } from "@/components/organisms/neon-top-bar";
-import { WORKFLOW_COLUMNS } from "@/features/dashboard/workflow/constants";
-import { mapWorkflowColumnDataToKanban } from "@/features/dashboard/workflow/adapters/workflow-adapter";
+import { NEON_RED } from "@/constants/neon";
+import { mapApiWorkflowKanbanToNeon } from "@/features/dashboard/workflow/adapters/workflow-adapter";
+import { useWorkflowKanban } from "@/features/workflow/hooks/use-workflow-kanban";
 
 const NEW_CARD_ICON = (
   <svg
@@ -21,12 +24,14 @@ const NEW_CARD_ICON = (
   </svg>
 );
 
+const PAGE_FONT_FAMILY = "Inter, system-ui, sans-serif";
+
 export default function WorkflowBoardPage(): React.ReactElement {
+  const t = useTranslations("workflow");
+  const { board, loading, error, refetch } = useWorkflowKanban();
+
   return (
-    <div
-      className="flex-1 text-white relative"
-      style={{ fontFamily: "Inter, system-ui, sans-serif" }}
-    >
+    <div className="flex-1 text-white relative" style={{ fontFamily: PAGE_FONT_FAMILY }}>
       <NeonTopBar
         title="Workflow Board"
         breadcrumb={[{ label: "pipeline" }]}
@@ -37,9 +42,26 @@ export default function WorkflowBoardPage(): React.ReactElement {
         }
       />
       <div className="p-6">
-        <NeonKanbanBoard
-          columns={mapWorkflowColumnDataToKanban(WORKFLOW_COLUMNS)}
-        />
+        {loading && (
+          <div className="flex justify-center py-12">
+            <NeonSpinner size="lg" />
+          </div>
+        )}
+        {error && !loading && (
+          <div className="text-center py-8">
+            <p style={{ color: NEON_RED }}>{error}</p>
+            <NeonButton
+              variant="secondary"
+              onClick={() => void refetch()}
+              className="mt-4"
+            >
+              {t("kanban.retry")}
+            </NeonButton>
+          </div>
+        )}
+        {board && !loading && !error && (
+          <NeonKanbanBoard columns={mapApiWorkflowKanbanToNeon(board)} />
+        )}
       </div>
     </div>
   );

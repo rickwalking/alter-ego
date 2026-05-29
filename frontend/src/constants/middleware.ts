@@ -19,12 +19,18 @@ export function isAdminRoute(pathname: string): boolean {
   return pathname === "/admin" || pathname.startsWith("/admin/");
 }
 
+export function isDashboardRoute(pathname: string): boolean {
+  return pathname === "/dashboard" || pathname.startsWith("/dashboard/");
+}
+
 export function isEditorRoute(pathname: string): boolean {
   return (
     pathname.startsWith("/create/") ||
     pathname === "/create" ||
     pathname.startsWith("/knowledge/") ||
-    pathname === "/knowledge"
+    pathname === "/knowledge" ||
+    pathname === "/dashboard/create" ||
+    pathname.startsWith("/dashboard/create/")
   );
 }
 

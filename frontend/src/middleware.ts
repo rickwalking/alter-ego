@@ -40,7 +40,7 @@ export function middleware(request: NextRequest) {
   const { role } = payload;
 
   if (isAuthRoute(pathname)) {
-    return NextResponse.redirect(new URL("/chat", request.url));
+    return NextResponse.redirect(new URL("/dashboard/chat", request.url));
   }
 
   if (isAdminRoute(pathname) && role !== ROLES.ADMIN) {
