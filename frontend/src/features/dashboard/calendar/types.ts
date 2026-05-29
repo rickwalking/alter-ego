@@ -1,4 +1,8 @@
-export type CalendarContentType = "carousel" | "blog" | "meeting" | "management";
+export type CalendarContentType =
+  | "carousel"
+  | "blog"
+  | "meeting"
+  | "management";
 
 export type CalendarStatusType =
   | "published"

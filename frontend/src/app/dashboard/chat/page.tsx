@@ -24,7 +24,10 @@ export default function ChatPage() {
   const [input, setInput] = useState("");
 
   return (
-    <div className="flex flex-col min-h-screen" style={{ background: DASHBOARD_CHAT_BG_DEEP }}>
+    <div
+      className="flex flex-col min-h-screen"
+      style={{ background: DASHBOARD_CHAT_BG_DEEP }}
+    >
       <header
         style={{
           height: "56px",
@@ -144,7 +147,9 @@ export default function ChatPage() {
                   borderRadius: "6px",
                   cursor: "pointer",
                   background:
-                    activeConv === conv.id ? DASHBOARD_CHAT_CYAN_DIM : "transparent",
+                    activeConv === conv.id
+                      ? DASHBOARD_CHAT_CYAN_DIM
+                      : "transparent",
                   transition: "background 0.2s",
                 }}
               >

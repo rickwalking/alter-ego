@@ -55,13 +55,13 @@ jobs:
 
       - name: Ruff review comments (PR)
         if: github.event_name == 'pull_request' && failure()
-        uses: reviewdog/action-ruff@v1
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          reporter: github-pr-review
-          level: error
-          filter_mode: diff_context
-          workdir: backend
+        uses: reviewdog/action-setup@v1
+
+      - name: Post ruff inline review comments
+        if: github.event_name == 'pull_request' && failure()
+        env:
+          REVIEWDOG_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: bash ../scripts/ci/ruff-reviewdog.sh check src/
 
       - name: Post PR summary on failure
         if: failure() && github.event_name == 'pull_request'
@@ -101,14 +101,19 @@ jobs:
 
       - name: Strict ruff review comments (PR)
         if: github.event_name == 'pull_request' && failure()
-        uses: reviewdog/action-ruff@v1
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          reporter: github-pr-review
-          level: error
-          filter_mode: diff_context
-          ruff_flags: --select PLR0913,C901,PLR0912
-          workdir: backend
+        uses: reviewdog/action-setup@v1
+
+      - name: Post strict ruff inline review comments
+        if: github.event_name == 'pull_request' && failure()
+        working-directory: .
+        env:
+          REVIEWDOG_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mapfile -t files < <(bash scripts/ci/changed-backend-files.sh)
+          if ((${#files[@]})); then
+            cd backend
+            bash ../scripts/ci/ruff-reviewdog.sh check --select PLR0913,C901,PLR0912 "${files[@]}"
+          fi
 
       - name: Post PR summary on failure
         if: failure() && github.event_name == 'pull_request'

@@ -148,12 +148,15 @@ describe("useEditorialWorkflowSse mutation coverage", () => {
     });
 
     act(() => {
-      MockEventSource.instances[0]?.emit(EDITORIAL_WORKFLOW_SSE_EVENTS.ARTIFACT, {
-        event: EDITORIAL_WORKFLOW_SSE_EVENTS.ARTIFACT,
-        phase: "content",
-        artifact_type: "slide_drafts",
-        data: [{ draft_text: "Slide 1" }],
-      });
+      MockEventSource.instances[0]?.emit(
+        EDITORIAL_WORKFLOW_SSE_EVENTS.ARTIFACT,
+        {
+          event: EDITORIAL_WORKFLOW_SSE_EVENTS.ARTIFACT,
+          phase: "content",
+          artifact_type: "slide_drafts",
+          data: [{ draft_text: "Slide 1" }],
+        },
+      );
     });
 
     expect(setState).toHaveBeenCalledWith(
@@ -347,11 +350,14 @@ describe("useEditorialWorkflowSse mutation coverage", () => {
     setState.mockClear();
 
     act(() => {
-      MockEventSource.instances[0]?.emit(EDITORIAL_WORKFLOW_SSE_EVENTS.ARTIFACT, {
-        event: EDITORIAL_WORKFLOW_SSE_EVENTS.ARTIFACT,
-        artifact_type: "outline",
-        data: [{ title: "Intro" }],
-      });
+      MockEventSource.instances[0]?.emit(
+        EDITORIAL_WORKFLOW_SSE_EVENTS.ARTIFACT,
+        {
+          event: EDITORIAL_WORKFLOW_SSE_EVENTS.ARTIFACT,
+          artifact_type: "outline",
+          data: [{ title: "Intro" }],
+        },
+      );
     });
 
     expect(setState).toHaveBeenCalled();
@@ -367,10 +373,13 @@ describe("useEditorialWorkflowSse mutation coverage", () => {
     setState.mockClear();
 
     act(() => {
-      MockEventSource.instances[0]?.emit(EDITORIAL_WORKFLOW_SSE_EVENTS.PROGRESS, {
-        event: EDITORIAL_WORKFLOW_SSE_EVENTS.PROGRESS,
-        phase_status: WORKFLOW_PHASE_STATUS.AWAITING_HUMAN,
-      });
+      MockEventSource.instances[0]?.emit(
+        EDITORIAL_WORKFLOW_SSE_EVENTS.PROGRESS,
+        {
+          event: EDITORIAL_WORKFLOW_SSE_EVENTS.PROGRESS,
+          phase_status: WORKFLOW_PHASE_STATUS.AWAITING_HUMAN,
+        },
+      );
     });
 
     expect(setState).toHaveBeenCalledWith(
@@ -390,11 +399,14 @@ describe("useEditorialWorkflowSse mutation coverage", () => {
     setPhaseEvents.mockClear();
 
     act(() => {
-      MockEventSource.instances[0]?.emit(EDITORIAL_WORKFLOW_SSE_EVENTS.PROGRESS, {
-        event: EDITORIAL_WORKFLOW_SSE_EVENTS.PROGRESS,
-        phase: "",
-        phase_status: WORKFLOW_PHASE_STATUS.IN_PROGRESS,
-      });
+      MockEventSource.instances[0]?.emit(
+        EDITORIAL_WORKFLOW_SSE_EVENTS.PROGRESS,
+        {
+          event: EDITORIAL_WORKFLOW_SSE_EVENTS.PROGRESS,
+          phase: "",
+          phase_status: WORKFLOW_PHASE_STATUS.IN_PROGRESS,
+        },
+      );
     });
 
     expect(setPhaseEvents).not.toHaveBeenCalled();
@@ -434,7 +446,9 @@ describe("useEditorialWorkflowSse mutation coverage", () => {
     const callsAfterReady = refreshState.mock.calls.length;
 
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(EDITORIAL_WORKFLOW_POLL_BACKOFF_MS[1] ?? 10_000);
+      await vi.advanceTimersByTimeAsync(
+        EDITORIAL_WORKFLOW_POLL_BACKOFF_MS[1] ?? 10_000,
+      );
     });
 
     expect(refreshState.mock.calls.length).toBe(callsAfterReady);
@@ -505,10 +519,13 @@ describe("useEditorialWorkflowSse mutation coverage", () => {
     setState.mockClear();
 
     act(() => {
-      MockEventSource.instances[0]?.emit(EDITORIAL_WORKFLOW_SSE_EVENTS.PROGRESS, {
-        event: EDITORIAL_WORKFLOW_SSE_EVENTS.PROGRESS,
-        phase_progress: { current: 3, total: 8, label: "Slide 3 of 8" },
-      });
+      MockEventSource.instances[0]?.emit(
+        EDITORIAL_WORKFLOW_SSE_EVENTS.PROGRESS,
+        {
+          event: EDITORIAL_WORKFLOW_SSE_EVENTS.PROGRESS,
+          phase_progress: { current: 3, total: 8, label: "Slide 3 of 8" },
+        },
+      );
     });
 
     expect(setState).toHaveBeenCalledWith(
@@ -528,10 +545,13 @@ describe("useEditorialWorkflowSse mutation coverage", () => {
     setState.mockClear();
 
     act(() => {
-      MockEventSource.instances[0]?.emit(EDITORIAL_WORKFLOW_SSE_EVENTS.PHASE_CHANGED, {
-        event: EDITORIAL_WORKFLOW_SSE_EVENTS.PHASE_CHANGED,
-        current_phase: "outline",
-      });
+      MockEventSource.instances[0]?.emit(
+        EDITORIAL_WORKFLOW_SSE_EVENTS.PHASE_CHANGED,
+        {
+          event: EDITORIAL_WORKFLOW_SSE_EVENTS.PHASE_CHANGED,
+          current_phase: "outline",
+        },
+      );
     });
 
     expect(setState).toHaveBeenCalledWith(

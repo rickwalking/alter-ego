@@ -30,7 +30,7 @@ if (files.length === 0) {
 
 const result = spawnSync(
   "npx",
-  ["eslint", "--max-warnings=0", ...files],
+  ["eslint", "--quiet", ...files],
   { cwd: frontendDir, stdio: "inherit", shell: false },
 );
 

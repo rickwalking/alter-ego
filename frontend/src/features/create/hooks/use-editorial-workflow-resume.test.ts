@@ -2,9 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { renderHook, act } from "@testing-library/react";
 import { createRef } from "react";
 import { HTTP_STATUS, HTTP_METHODS } from "@/constants/api";
-import {
-  EDITORIAL_WORKFLOW_TRANSPORT_MODE,
-} from "@/constants/editorial-workflow";
+import { EDITORIAL_WORKFLOW_TRANSPORT_MODE } from "@/constants/editorial-workflow";
 import type { EditorialWorkflowTransportMode } from "@/constants/editorial-workflow";
 import { WORKFLOW_PHASE_STATUS } from "@/constants/workflow";
 import type { EditorialWorkflowState } from "@/features/blog/types-ai";
@@ -37,13 +35,22 @@ function createHookOptions(overrides?: {
 }) {
   const workflowStateRef = createRef<EditorialWorkflowState | null>();
   workflowStateRef.current =
-    overrides?.workflowState === undefined ? baseState : overrides.workflowState;
+    overrides?.workflowState === undefined
+      ? baseState
+      : overrides.workflowState;
   const transportModeRef = createRef<EditorialWorkflowTransportMode>();
   transportModeRef.current =
     overrides?.transportMode ?? EDITORIAL_WORKFLOW_TRANSPORT_MODE.SSE;
 
   const setState = vi.fn(
-    (value: EditorialWorkflowState | null | ((prev: EditorialWorkflowState | null) => EditorialWorkflowState | null)) => {
+    (
+      value:
+        | EditorialWorkflowState
+        | null
+        | ((
+            prev: EditorialWorkflowState | null,
+          ) => EditorialWorkflowState | null),
+    ) => {
       if (typeof value === "function") {
         workflowStateRef.current = value(workflowStateRef.current);
       } else {
@@ -228,7 +235,9 @@ describe("useEditorialWorkflowResume", () => {
           "http://localhost:8000/api/carousels/project-1/workflow/resume" &&
         init?.method === HTTP_METHODS.POST
       ) {
-        const body = JSON.parse(String(init.body)) as { expected_version: number };
+        const body = JSON.parse(String(init.body)) as {
+          expected_version: number;
+        };
         expect(body.expected_version).toBe(3);
         return {
           ok: true,
@@ -239,7 +248,9 @@ describe("useEditorialWorkflowResume", () => {
       throw new Error(`Unexpected fetch: ${String(url)}`);
     });
 
-    const { hookParams, refreshState } = createHookOptions({ lockVersion: undefined });
+    const { hookParams, refreshState } = createHookOptions({
+      lockVersion: undefined,
+    });
     refreshState.mockResolvedValue(readyState);
 
     const { result } = renderHook(() => useEditorialWorkflowResume(hookParams));
@@ -289,7 +300,8 @@ describe("useEditorialWorkflowResume", () => {
       json: async () => ({ detail: "gateway timeout" }),
     } as Response);
 
-    const { hookParams, enterPollingFallback, refreshState } = createHookOptions();
+    const { hookParams, enterPollingFallback, refreshState } =
+      createHookOptions();
     refreshState.mockResolvedValue(readyState);
     const { result } = renderHook(() => useEditorialWorkflowResume(hookParams));
 
@@ -314,7 +326,8 @@ describe("useEditorialWorkflowResume", () => {
 
     mockAuthenticatedFetch.mockRejectedValue(new TypeError("Failed to fetch"));
 
-    const { hookParams, enterPollingFallback, refreshState } = createHookOptions();
+    const { hookParams, enterPollingFallback, refreshState } =
+      createHookOptions();
     refreshState.mockResolvedValue(readyState);
     const { result } = renderHook(() => useEditorialWorkflowResume(hookParams));
 
@@ -538,7 +551,10 @@ describe("useEditorialWorkflowResume", () => {
         const updater = value as (
           prev: EditorialWorkflowState | null,
         ) => EditorialWorkflowState | null;
-        return updater(readyState)?.phase_status === WORKFLOW_PHASE_STATUS.IN_PROGRESS;
+        return (
+          updater(readyState)?.phase_status ===
+          WORKFLOW_PHASE_STATUS.IN_PROGRESS
+        );
       }),
     ).toBe(false);
   });

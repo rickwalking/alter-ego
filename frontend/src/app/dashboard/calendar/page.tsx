@@ -16,13 +16,15 @@ import {
 import { buildCalendarDays } from "@/features/dashboard/calendar/helpers";
 import type { CalendarContentType } from "@/features/dashboard/calendar/types";
 
-const CONTENT_TYPE_ICON: Record<CalendarContentType, "grid" | "file" | "cal" | "user"> =
-  {
-    carousel: "grid",
-    blog: "file",
-    meeting: "cal",
-    management: "user",
-  };
+const CONTENT_TYPE_ICON: Record<
+  CalendarContentType,
+  "grid" | "file" | "cal" | "user"
+> = {
+  carousel: "grid",
+  blog: "file",
+  meeting: "cal",
+  management: "user",
+};
 
 export default function CalendarPage() {
   const days = buildCalendarDays();
@@ -61,8 +63,15 @@ export default function CalendarPage() {
           >
             Calendar
           </span>
-          <span style={{ fontFamily: CALENDAR_MONO_FONT, fontSize: 11, color: CALENDAR_COLORS.tD }}>
-            / <span style={{ color: CALENDAR_COLORS.tM }}>content calendar</span>
+          <span
+            style={{
+              fontFamily: CALENDAR_MONO_FONT,
+              fontSize: 11,
+              color: CALENDAR_COLORS.tD,
+            }}
+          >
+            /{" "}
+            <span style={{ color: CALENDAR_COLORS.tM }}>content calendar</span>
           </span>
         </div>
         <div style={{ ...CALENDAR_FLEX_CENTER, gap: 16 }}>
@@ -128,7 +137,10 @@ export default function CalendarPage() {
             >
               <CalendarSvgIcon name="right" />
             </button>
-            <button type="button" style={{ ...CALENDAR_BTN_GHOST, marginLeft: 8 }}>
+            <button
+              type="button"
+              style={{ ...CALENDAR_BTN_GHOST, marginLeft: 8 }}
+            >
               Today
             </button>
           </div>
@@ -191,7 +203,13 @@ export default function CalendarPage() {
               <p style={{ fontSize: 15, color: CALENDAR_COLORS.tM, margin: 0 }}>
                 No scheduled content this month
               </p>
-              <p style={{ fontSize: 12, marginTop: 8, color: CALENDAR_COLORS.tD }}>
+              <p
+                style={{
+                  fontSize: 12,
+                  marginTop: 8,
+                  color: CALENDAR_COLORS.tD,
+                }}
+              >
                 Schedule a post or carousel to see it on the calendar.
               </p>
             </div>
@@ -204,7 +222,9 @@ export default function CalendarPage() {
                 style={{
                   minHeight: 100,
                   padding: 8,
-                  background: cell.today ? CALENDAR_COLORS.cD : CALENDAR_COLORS.card,
+                  background: cell.today
+                    ? CALENDAR_COLORS.cD
+                    : CALENDAR_COLORS.card,
                   border: cell.today ? "1px solid rgba(0,212,255,0.2)" : "none",
                   cursor: "pointer",
                   opacity: cell.cur ? 1 : 0.3,
@@ -214,7 +234,9 @@ export default function CalendarPage() {
                   style={{
                     fontFamily: CALENDAR_MONO_FONT,
                     fontSize: 13,
-                    color: cell.today ? CALENDAR_COLORS.cyan : CALENDAR_COLORS.tM,
+                    color: cell.today
+                      ? CALENDAR_COLORS.cyan
+                      : CALENDAR_COLORS.tM,
                     fontWeight: 600,
                     marginBottom: 6,
                   }}
@@ -280,7 +302,13 @@ export default function CalendarPage() {
                           {CALENDAR_STATUS_META[event.status].l}
                         </div>
                       )}
-                      <div style={{ fontSize: 8, color: CALENDAR_COLORS.tM, marginTop: 2 }}>
+                      <div
+                        style={{
+                          fontSize: 8,
+                          color: CALENDAR_COLORS.tM,
+                          marginTop: 2,
+                        }}
+                      >
                         May {cell.day}
                       </div>
                     </div>

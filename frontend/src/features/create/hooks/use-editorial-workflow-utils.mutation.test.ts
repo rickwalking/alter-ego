@@ -256,9 +256,13 @@ describe("editorial workflow utils mutation coverage", () => {
   });
 
   it("classifies every resume transport failure status", () => {
-    expect(isResumeTransportFailure(HTTP_STATUS.INTERNAL_SERVER_ERROR)).toBe(true);
+    expect(isResumeTransportFailure(HTTP_STATUS.INTERNAL_SERVER_ERROR)).toBe(
+      true,
+    );
     expect(isResumeTransportFailure(HTTP_STATUS.BAD_GATEWAY)).toBe(true);
-    expect(isResumeTransportFailure(HTTP_STATUS.SERVICE_UNAVAILABLE)).toBe(true);
+    expect(isResumeTransportFailure(HTTP_STATUS.SERVICE_UNAVAILABLE)).toBe(
+      true,
+    );
     expect(isResumeTransportFailure(HTTP_STATUS.GATEWAY_TIMEOUT)).toBe(true);
     expect(isResumeTransportFailure(HTTP_STATUS.OK)).toBe(false);
   });
@@ -331,7 +335,9 @@ describe("editorial workflow utils mutation coverage", () => {
   });
 
   it("parses workflow JSON events safely", () => {
-    expect(parseWorkflowEvent('{"phase":"research"}')).toEqual({ phase: "research" });
+    expect(parseWorkflowEvent('{"phase":"research"}')).toEqual({
+      phase: "research",
+    });
     expect(parseWorkflowEvent("not-json")).toBeNull();
   });
 
@@ -437,9 +443,13 @@ describe("editorial workflow utils mutation coverage", () => {
     expect(isResumeAcceptedResponse(valid)).toBe(true);
     expect(isResumeAcceptedResponse({ ...valid, accepted: false })).toBe(false);
     expect(isResumeAcceptedResponse({ ...valid, project_id: 1 })).toBe(false);
-    expect(isResumeAcceptedResponse({ ...valid, current_phase: 1 })).toBe(false);
+    expect(isResumeAcceptedResponse({ ...valid, current_phase: 1 })).toBe(
+      false,
+    );
     expect(isResumeAcceptedResponse({ ...valid, phase_status: 1 })).toBe(false);
-    expect(isResumeAcceptedResponse({ ...valid, lock_version: "2" })).toBe(false);
+    expect(isResumeAcceptedResponse({ ...valid, lock_version: "2" })).toBe(
+      false,
+    );
   });
 
   it("returns early from polling when refresh becomes ready on first attempt", async () => {

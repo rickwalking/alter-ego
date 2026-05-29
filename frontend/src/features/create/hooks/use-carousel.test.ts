@@ -163,11 +163,17 @@ describe("useCreateCarousel", () => {
   });
 
   it("replaces duplicate carousel ids in the cached list", async () => {
-    mockApiCall.mockResolvedValueOnce({ ...MOCK_PROJECT, topic: "Updated topic" });
+    mockApiCall.mockResolvedValueOnce({
+      ...MOCK_PROJECT,
+      topic: "Updated topic",
+    });
     const queryClient = createQueryClient();
     queryClient.setQueryData(
       ["carousels"],
-      [{ ...MOCK_PROJECT, topic: "Stale topic" }, { ...MOCK_PROJECT, id: "other" }],
+      [
+        { ...MOCK_PROJECT, topic: "Stale topic" },
+        { ...MOCK_PROJECT, id: "other" },
+      ],
     );
     const { result } = renderHook(() => useCreateCarousel(), {
       wrapper: createWrapper(queryClient),

@@ -618,9 +618,9 @@ describe("useEditorialWorkflow utils", () => {
       status: "draft",
     };
 
-    expect(hasPhaseArtifacts({ ...base, research_findings: [{ title: "A" }] })).toBe(
-      true,
-    );
+    expect(
+      hasPhaseArtifacts({ ...base, research_findings: [{ title: "A" }] }),
+    ).toBe(true);
     expect(
       hasPhaseArtifacts({
         ...base,
@@ -674,7 +674,9 @@ describe("useEditorialWorkflow utils", () => {
   });
 
   it("parses workflow events and rejects malformed JSON", () => {
-    expect(parseWorkflowEvent('{"event":"progress"}')).toEqual({ event: "progress" });
+    expect(parseWorkflowEvent('{"event":"progress"}')).toEqual({
+      event: "progress",
+    });
     expect(parseWorkflowEvent("{invalid")).toBeNull();
   });
 
@@ -688,13 +690,22 @@ describe("useEditorialWorkflow utils", () => {
     await expect(
       readApiError(
         {
-          json: async () => ({ detail: [{ msg: "bad field" }, { msg: "missing" }] }),
+          json: async () => ({
+            detail: [{ msg: "bad field" }, { msg: "missing" }],
+          }),
         } as Response,
         "fallback",
       ),
     ).resolves.toBe("bad field, missing");
     await expect(
-      readApiError({ json: async () => { throw new Error("broken"); } } as unknown as Response, "fallback"),
+      readApiError(
+        {
+          json: async () => {
+            throw new Error("broken");
+          },
+        } as unknown as Response,
+        "fallback",
+      ),
     ).resolves.toBe("fallback");
   });
 
@@ -709,7 +720,9 @@ describe("useEditorialWorkflow utils", () => {
 
   it("classifies all resume transport failure statuses", () => {
     expect(isResumeTransportFailure(HTTP_STATUS.BAD_GATEWAY)).toBe(true);
-    expect(isResumeTransportFailure(HTTP_STATUS.SERVICE_UNAVAILABLE)).toBe(true);
+    expect(isResumeTransportFailure(HTTP_STATUS.SERVICE_UNAVAILABLE)).toBe(
+      true,
+    );
     expect(isResumeTransportFailure(HTTP_STATUS.GATEWAY_TIMEOUT)).toBe(true);
   });
 

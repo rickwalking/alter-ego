@@ -7,9 +7,9 @@ import {
 
 describe("carousel-media-url", () => {
   it("appends cache buster with ? when no query exists", () => {
-    expect(appendCacheBuster("/api/carousels/id/images/slide_1.jpg", "v1")).toBe(
-      "/api/carousels/id/images/slide_1.jpg?v=v1",
-    );
+    expect(
+      appendCacheBuster("/api/carousels/id/images/slide_1.jpg", "v1"),
+    ).toBe("/api/carousels/id/images/slide_1.jpg?v=v1");
   });
 
   it("appends cache buster with & when lang query exists", () => {

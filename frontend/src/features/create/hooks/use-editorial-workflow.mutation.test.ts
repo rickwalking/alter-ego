@@ -131,8 +131,8 @@ describe("editorial workflow mutation resilience", () => {
       slide_drafts: [],
       status: "draft",
     };
-    expect(mergeWorkflowState("project-1", null, failedState).phase_status).toBe(
-      WORKFLOW_PHASE_STATUS.FAILED,
-    );
+    expect(
+      mergeWorkflowState("project-1", null, failedState).phase_status,
+    ).toBe(WORKFLOW_PHASE_STATUS.FAILED);
   });
 });

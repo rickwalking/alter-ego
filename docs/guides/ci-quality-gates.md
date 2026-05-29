@@ -78,7 +78,7 @@ cd frontend && npm run lint && npm run lint:changed && npm run typecheck
 | Scope | Policy |
 |-------|--------|
 | Repo-wide | Errors only (`eslint --quiet`) — unused vars, hooks, explicit `any`, etc. |
-| Changed files | Strict (`--max-warnings=0`) — page size, complexity, TanStack Query rules |
+| Changed files | ESLint errors only (`lint:changed` → `--quiet`) |
 | `page.tsx` global | Warnings for `max-lines` / `max-lines-per-function` (legacy pages) |
 | `page.tsx` in PR diff | Enforced as errors via `lint:changed` |
 

@@ -1,7 +1,4 @@
-import {
-  BLOG_POST_BADGE_CLASS,
-  BLOG_POST_BADGE_COLORS,
-} from "../constants";
+import { BLOG_POST_BADGE_CLASS, BLOG_POST_BADGE_COLORS } from "../constants";
 
 interface BlogPostBadgeProps {
   children: React.ReactNode;

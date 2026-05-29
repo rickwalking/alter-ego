@@ -1070,7 +1070,9 @@ describe("useEditorialWorkflow", () => {
   it("prefixes workflow state refresh with NEXT_PUBLIC_API_URL", async () => {
     vi.stubEnv("NEXT_PUBLIC_API_URL", "http://localhost:8000");
     mockAuthenticatedFetch.mockImplementation(async (url) => {
-      if (url === "http://localhost:8000/api/carousels/project-1/workflow/state") {
+      if (
+        url === "http://localhost:8000/api/carousels/project-1/workflow/state"
+      ) {
         return {
           ok: true,
           json: async () => baseState,
@@ -1614,8 +1616,7 @@ describe("useEditorialWorkflow", () => {
     });
 
     const { result, rerender } = renderHook(
-      ({ projectId }: { projectId: string }) =>
-        useEditorialWorkflow(projectId),
+      ({ projectId }: { projectId: string }) => useEditorialWorkflow(projectId),
       { initialProps: { projectId: "project-1" } },
     );
 

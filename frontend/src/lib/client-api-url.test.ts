@@ -29,9 +29,9 @@ describe("resolveClientApiUrl", () => {
 
   it("throws when the API path does not start with a slash", () => {
     vi.stubEnv("NEXT_PUBLIC_API_URL", "http://localhost:8000");
-    expect(() => resolveClientApiUrl("api/carousels/id/workflow/state")).toThrow(
-      "API path must start with /",
-    );
+    expect(() =>
+      resolveClientApiUrl("api/carousels/id/workflow/state"),
+    ).toThrow("API path must start with /");
   });
 
   it("returns relative paths during SSR even when NEXT_PUBLIC_API_URL is set", () => {

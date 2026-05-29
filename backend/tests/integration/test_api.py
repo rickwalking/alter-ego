@@ -239,7 +239,7 @@ class TestAgentRoutingByMetadata:
 
         monkeypatch.setattr(
             "rag_backend.api.dependencies.agents.build_rag_agent",
-            lambda _db, _container, **kwargs: mock_agent,
+            lambda _db, _container, _ctx, **kwargs: mock_agent,
         )
 
         carousel_resp = await client.post(
@@ -296,7 +296,7 @@ class TestAgentRoutingByMetadata:
         mock_agent.chat = AsyncMock()
         monkeypatch.setattr(
             "rag_backend.api.dependencies.agents.build_rag_agent",
-            lambda _db, _container, **kwargs: mock_agent,
+            lambda _db, _container, _ctx, **kwargs: mock_agent,
         )
 
         carousel_resp = await client.post(

@@ -39,7 +39,11 @@ export const CALENDAR_STATUS_META: Record<
   { c: string; b: string; l: string }
 > = {
   published: { c: "#27ae60", b: "rgba(46,204,113,0.15)", l: "published" },
-  approved: { c: CALENDAR_COLORS.cyan, b: "rgba(0,212,255,0.15)", l: "approved" },
+  approved: {
+    c: CALENDAR_COLORS.cyan,
+    b: "rgba(0,212,255,0.15)",
+    l: "approved",
+  },
   in_progress: {
     c: CALENDAR_COLORS.cyan,
     b: "rgba(0,212,255,0.15)",
@@ -99,4 +103,4 @@ export const CALENDAR_FLEX_CENTER: CSSProperties = {
 export const CALENDAR_MONO_FONT = "'JetBrains Mono', ui-monospace, monospace";
 
 export const CALENDAR_RESPONSIVE_STYLE =
-  "@media(max-width:768px){div[role=\"gridcell\"]{min-height:60px!important;padding:4px!important}div[role=\"gridcell\"]>div:first-child{font-size:11px!important}}";
+  '@media(max-width:768px){div[role="gridcell"]{min-height:60px!important;padding:4px!important}div[role="gridcell"]>div:first-child{font-size:11px!important}}';

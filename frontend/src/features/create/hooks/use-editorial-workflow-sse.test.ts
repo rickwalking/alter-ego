@@ -307,13 +307,16 @@ describe("useEditorialWorkflowSse", () => {
     });
 
     act(() => {
-      MockEventSource.instances[0]?.emit(EDITORIAL_WORKFLOW_SSE_EVENTS.PROGRESS, {
-        event: EDITORIAL_WORKFLOW_SSE_EVENTS.PROGRESS,
-        phase: "images",
-        current: 2,
-        total: 5,
-        label: "Generating slide 2 of 5",
-      });
+      MockEventSource.instances[0]?.emit(
+        EDITORIAL_WORKFLOW_SSE_EVENTS.PROGRESS,
+        {
+          event: EDITORIAL_WORKFLOW_SSE_EVENTS.PROGRESS,
+          phase: "images",
+          current: 2,
+          total: 5,
+          label: "Generating slide 2 of 5",
+        },
+      );
     });
 
     expect(setState).toHaveBeenCalledWith(

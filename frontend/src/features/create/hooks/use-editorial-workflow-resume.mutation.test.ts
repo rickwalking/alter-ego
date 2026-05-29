@@ -6,9 +6,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { renderHook, act } from "@testing-library/react";
 import { createRef } from "react";
 import { HTTP_STATUS } from "@/constants/api";
-import {
-  EDITORIAL_WORKFLOW_TRANSPORT_MODE,
-} from "@/constants/editorial-workflow";
+import { EDITORIAL_WORKFLOW_TRANSPORT_MODE } from "@/constants/editorial-workflow";
 import type { EditorialWorkflowTransportMode } from "@/constants/editorial-workflow";
 import { WORKFLOW_PHASE_STATUS } from "@/constants/workflow";
 import type { EditorialWorkflowState } from "@/features/blog/types-ai";
@@ -59,7 +57,9 @@ function createHookOptions(overrides?: {
       value:
         | EditorialWorkflowState
         | null
-        | ((prev: EditorialWorkflowState | null) => EditorialWorkflowState | null),
+        | ((
+            prev: EditorialWorkflowState | null,
+          ) => EditorialWorkflowState | null),
     ) => {
       if (typeof value === "function") {
         workflowStateRef.current = value(workflowStateRef.current);
@@ -141,7 +141,9 @@ describe("useEditorialWorkflowResume mutation coverage", () => {
 
   it("defaults expected_version to 1 when lock version is missing", async () => {
     mockAuthenticatedFetch.mockImplementation(async (_url, init) => {
-      const body = JSON.parse(String(init?.body)) as { expected_version: number };
+      const body = JSON.parse(String(init?.body)) as {
+        expected_version: number;
+      };
       expect(body.expected_version).toBe(1);
       return {
         ok: true,
@@ -150,7 +152,9 @@ describe("useEditorialWorkflowResume mutation coverage", () => {
       } as Response;
     });
 
-    const { hookParams, refreshState } = createHookOptions({ lockVersion: undefined });
+    const { hookParams, refreshState } = createHookOptions({
+      lockVersion: undefined,
+    });
     refreshState.mockResolvedValue(null);
     const { result } = renderHook(() => useEditorialWorkflowResume(hookParams));
 
@@ -176,7 +180,9 @@ describe("useEditorialWorkflowResume mutation coverage", () => {
     const { result } = renderHook(() => useEditorialWorkflowResume(hookParams));
 
     await act(async () => {
-      await result.current.resume("revise", "Rewrite", { targetPhase: "content" });
+      await result.current.resume("revise", "Rewrite", {
+        targetPhase: "content",
+      });
     });
   });
 
