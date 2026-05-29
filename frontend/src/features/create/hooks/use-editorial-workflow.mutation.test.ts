@@ -109,4 +109,30 @@ describe("editorial workflow mutation resilience", () => {
     expect(isResumeTransportFailure(500)).toBe(true);
     expect(isResumeTransportFailure(409)).toBe(false);
   });
+
+  it("kills mutants that drop flat progress fields", () => {
+    expect(
+      normalizeProgressPayload({
+        event: EDITORIAL_WORKFLOW_SSE_EVENTS.PROGRESS,
+        current: 1,
+        total: 4,
+        label: "Generating slide 1 of 4",
+      }),
+    ).toEqual({ current: 1, total: 4, label: "Generating slide 1 of 4" });
+  });
+
+  it("kills mutants that skip failed workflow readiness", () => {
+    const failedState = {
+      project_id: "project-1",
+      current_phase: "research",
+      phase_status: WORKFLOW_PHASE_STATUS.FAILED,
+      research_findings: [],
+      outline: [],
+      slide_drafts: [],
+      status: "draft",
+    };
+    expect(mergeWorkflowState("project-1", null, failedState).phase_status).toBe(
+      WORKFLOW_PHASE_STATUS.FAILED,
+    );
+  });
 });

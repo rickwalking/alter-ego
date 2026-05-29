@@ -24,7 +24,8 @@ export default function PublishPage() {
   const projectId = params.id;
   const t = useTranslations("publish");
   const { data: project, isLoading } = useCarouselProject(projectId);
-  const workflow = useEditorialWorkflow(projectId);
+  const { refreshState, state: workflowState } =
+    useEditorialWorkflow(projectId);
   const publishInstagram = usePublishInstagram();
   const { messages, isStreaming, sendMessage } = usePublishChat(projectId);
   const [publishResult, setPublishResult] = useState<PublishResult>({
@@ -35,11 +36,11 @@ export default function PublishPage() {
   );
 
   useEffect(() => {
-    void workflow.refreshState();
-  }, [workflow.refreshState]);
+    void refreshState();
+  }, [refreshState]);
 
   const canPublishToSite =
-    workflow.state?.workflow_status ===
+    workflowState?.workflow_status ===
     EDITORIAL_WORKFLOW_STATUS.APPROVED_FOR_PUBLISH;
 
   const handlePublishToSite = useCallback(async (): Promise<void> => {
@@ -53,13 +54,13 @@ export default function PublishPage() {
         throw new Error(await response.text());
       }
       setSitePublishMessage(t("sitePublished"));
-      await workflow.refreshState();
+      await refreshState();
     } catch (error) {
       setSitePublishMessage(
         error instanceof Error ? error.message : t("sitePublishFailed"),
       );
     }
-  }, [projectId, t, workflow.refreshState]);
+  }, [projectId, t, refreshState]);
 
   const handlePublishInstagram = useCallback(
     async (caption: string) => {

@@ -12,10 +12,14 @@ from rag_backend.agents.carousel_editorial_orchestrator import (
     CarouselEditorialOrchestrator,
 )
 from rag_backend.application.services.carousel.editorial_workflow_events import (
+    PhaseEventEmitContext,
+    ReviewEventEmitRequest,
     emit_phase_event,
     emit_review_event,
 )
 from rag_backend.application.services.carousel.editorial_workflow_service_helpers import (
+    FeedbackCorrectionContext,
+    RevisionCapValidationContext,
     prepare_resume_workflow,
     record_feedback_correction,
     stream_workflow_phase_updates,
@@ -134,9 +138,11 @@ class EditorialWorkflowService:
         await emit_phase_event(
             db=db,
             event_service=self._events,
-            project_id=project_id,
-            state=state,
-            user_id=workflow_input.user_id,
+            ctx=PhaseEventEmitContext(
+                project_id=project_id,
+                state=state,
+                user_id=workflow_input.user_id,
+            ),
         )
         if db and workflow_input.reviewer_id:
             await self._notifications.create_review_request(
@@ -195,10 +201,12 @@ class EditorialWorkflowService:
         if action == REVIEW_ACTION_REVISE and prior is not None:
             await validate_revision_cap(
                 prior,
-                db=db,
-                notifications=self._notifications,
-                project_id=project_id,
-                project_title=project_title,
+                RevisionCapValidationContext(
+                    project_id=project_id,
+                    project_title=project_title,
+                    db=db,
+                    notifications=self._notifications,
+                ),
             )
         await prepare_resume_workflow(
             self._orchestrator,
@@ -239,13 +247,15 @@ class EditorialWorkflowService:
         )
         if action == REVIEW_ACTION_REVISE and prior is not None:
             await record_feedback_correction(
-                orchestrator=self._orchestrator,
-                db=db,
-                project_id=project_id,
-                prior=prior,
-                persona=persona,
-                feedback=feedback,
-                structured_feedback=structured_feedback,
+                self._orchestrator,
+                FeedbackCorrectionContext(
+                    project_id=project_id,
+                    prior=prior,
+                    feedback=feedback,
+                    persona=persona,
+                    structured_feedback=structured_feedback,
+                    db=db,
+                ),
             )
         human_input: dict[str, object] = {
             "action": graph_action,
@@ -265,16 +275,18 @@ class EditorialWorkflowService:
             state = persisted
         await self._sync_project_phase(db, project_id, state)
         await emit_review_event(
-            db=db,
-            event_service=self._events,
-            notification_service=self._notifications,
-            ctx=ReviewEventEmitContext(
-                project_id=project_id,
-                action=action,
-                reviewer_id=reviewer_id,
-                feedback=feedback,
-                prior=prior,
-                state=state,
+            ReviewEventEmitRequest(
+                db=db,
+                event_service=self._events,
+                notification_service=self._notifications,
+                context=ReviewEventEmitContext(
+                    project_id=project_id,
+                    action=action,
+                    reviewer_id=reviewer_id,
+                    feedback=feedback,
+                    prior=prior,
+                    state=state,
+                ),
             ),
         )
         await publish_workflow_sse_updates(project_id, state)

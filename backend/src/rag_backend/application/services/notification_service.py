@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import select
@@ -35,6 +36,16 @@ from rag_backend.infrastructure.database.models.user import UserModel
 from rag_backend.infrastructure.logging import get_logger
 
 logger = get_logger()
+
+
+@dataclass(frozen=True)
+class RevisionCapEscalationParams:
+    """Inputs for revision cap escalation notifications."""
+
+    content_id: str
+    content_type: str
+    phase: str
+    title: str
 
 
 class NotificationService:
@@ -79,11 +90,7 @@ class NotificationService:
     async def create_revision_cap_escalation(
         self,
         db: AsyncSession,
-        *,
-        content_id: str,
-        content_type: str,
-        phase: str,
-        title: str,
+        params: RevisionCapEscalationParams,
     ) -> list[NotificationModel]:
         """Notify all admins when a workflow phase exceeds the revision cap."""
         from rag_backend.domain.models import UserRole
@@ -94,10 +101,10 @@ class NotificationService:
         )
         admins = list(result.scalars().all())
         body = NOTIFICATION_BODY_REVISION_CAP_ESCALATION.format(
-            content_id=content_id,
-            phase=phase,
+            content_id=params.content_id,
+            phase=params.phase,
         )
-        subject = EMAIL_SUBJECT_REVISION_CAP_ESCALATION.format(title=title)
+        subject = EMAIL_SUBJECT_REVISION_CAP_ESCALATION.format(title=params.title)
         notifications: list[NotificationModel] = []
         for admin in admins:
             notification = NotificationModel(
@@ -106,10 +113,10 @@ class NotificationService:
                 title=subject,
                 body=body,
                 status=NOTIFICATION_STATUS_UNREAD,
-                content_id=content_id,
-                content_type=content_type,
+                content_id=params.content_id,
+                content_type=params.content_type,
                 metadata_json={
-                    "phase": phase,
+                    "phase": params.phase,
                     "channels": [NOTIFICATION_CHANNEL_IN_APP],
                 },
             )
@@ -265,4 +272,4 @@ class NotificationService:
         return True
 
 
-__all__ = ["NotificationService"]
+__all__ = ["NotificationService", "RevisionCapEscalationParams"]

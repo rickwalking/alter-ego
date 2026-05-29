@@ -7,6 +7,7 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from rag_backend.application.services.carousel.editorial_workflow_generators import (
+    SlideDraftGenerationParams,
     generate_slide_drafts,
 )
 
@@ -21,9 +22,10 @@ async def test_generate_slide_drafts_includes_revision_notes_in_persona_context(
 
     await generate_slide_drafts(
         content_agent,
-        [{"slide_index": 1, "title": "Intro", "key_points": ["Point"]}],
-        persona=None,
-        revision_notes=["Slide 2 tone is too formal"],
+        SlideDraftGenerationParams(
+            outline=[{"slide_index": 1, "title": "Intro", "key_points": ["Point"]}],
+            revision_notes=["Slide 2 tone is too formal"],
+        ),
     )
 
     kwargs = content_agent.draft_slide.await_args.kwargs

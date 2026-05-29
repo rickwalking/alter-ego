@@ -24,6 +24,7 @@ class MockEventSource {
   static readonly OPEN = 1;
   static readonly CLOSED = 2;
   static instances: MockEventSource[] = [];
+  static lastInit: EventSourceInit | undefined;
 
   readyState = MockEventSource.CONNECTING;
   onmessage: ((event: MessageEvent<string>) => void) | null = null;
@@ -34,7 +35,11 @@ class MockEventSource {
     Array<(event: MessageEvent<string>) => void>
   >();
 
-  constructor(public url: string) {
+  constructor(
+    public url: string,
+    init?: EventSourceInit,
+  ) {
+    MockEventSource.lastInit = init;
     MockEventSource.instances.push(this);
   }
 
@@ -110,6 +115,7 @@ async function advanceResumeWaitTimers(): Promise<void> {
 
 beforeEach(() => {
   MockEventSource.instances = [];
+  MockEventSource.lastInit = undefined;
   mockAuthenticatedFetch.mockReset();
   mockWorkflowStateResponse(baseState);
   // @ts-expect-error — swap in the mock for the duration of each test.
@@ -119,6 +125,7 @@ beforeEach(() => {
 afterEach(() => {
   globalThis.EventSource = originalEventSource;
   vi.useRealTimers();
+  vi.unstubAllEnvs();
 });
 
 describe("useEditorialWorkflow", () => {
@@ -995,5 +1002,647 @@ describe("useEditorialWorkflow", () => {
     expect(statePolls).toBeGreaterThanOrEqual(2);
     expect(result.current.state?.outline).toHaveLength(1);
     expect(result.current.error).toBeNull();
+  });
+
+  it("starts workflow via POST and stores returned state", async () => {
+    mockAuthenticatedFetch.mockImplementation(async (url, init) => {
+      if (
+        url === API_ENDPOINTS.CAROUSEL_WORKFLOW_START("project-1") &&
+        init?.method === "POST"
+      ) {
+        return {
+          ok: true,
+          json: async () => ({
+            ...baseState,
+            current_phase: "research",
+            phase_status: WORKFLOW_PHASE_STATUS.IN_PROGRESS,
+          }),
+        } as Response;
+      }
+      return {
+        ok: true,
+        json: async () => baseState,
+      } as Response;
+    });
+
+    const { result } = renderHook(() => useEditorialWorkflow("project-1"));
+
+    await waitFor(() => {
+      expect(result.current.state).not.toBeNull();
+    });
+
+    await act(async () => {
+      await result.current.start({
+        topic: "Security",
+        audience: "Developers",
+        brief: "Brief",
+        sources: [{ title: "Source", content: "Body" }],
+      });
+    });
+
+    expect(result.current.state?.current_phase).toBe("research");
+    expect(result.current.error).toBeNull();
+    expect(result.current.phaseEvents).toEqual(["research"]);
+  });
+
+  it("returns null from refreshState when workflow is missing", async () => {
+    mockAuthenticatedFetch.mockImplementation(async (url) => {
+      if (url === API_ENDPOINTS.CAROUSEL_WORKFLOW_STATE("project-1")) {
+        return {
+          ok: false,
+          status: HTTP_STATUS.NOT_FOUND,
+          json: async () => ({ detail: "not found" }),
+        } as Response;
+      }
+      return {
+        ok: true,
+        json: async () => baseState,
+      } as Response;
+    });
+
+    const { result } = renderHook(() => useEditorialWorkflow("project-1"));
+
+    await waitFor(() => {
+      expect(result.current.state).toBeNull();
+    });
+  });
+
+  it("prefixes workflow state refresh with NEXT_PUBLIC_API_URL", async () => {
+    vi.stubEnv("NEXT_PUBLIC_API_URL", "http://localhost:8000");
+    mockAuthenticatedFetch.mockImplementation(async (url) => {
+      if (url === "http://localhost:8000/api/carousels/project-1/workflow/state") {
+        return {
+          ok: true,
+          json: async () => baseState,
+        } as Response;
+      }
+      return {
+        ok: true,
+        json: async () => baseState,
+      } as Response;
+    });
+
+    renderHook(() => useEditorialWorkflow("project-1"));
+
+    await waitFor(() => {
+      expect(mockAuthenticatedFetch).toHaveBeenCalledWith(
+        "http://localhost:8000/api/carousels/project-1/workflow/state",
+      );
+    });
+  });
+
+  it("surfaces start failures from the API", async () => {
+    mockAuthenticatedFetch.mockImplementation(async (url, init) => {
+      if (
+        url === API_ENDPOINTS.CAROUSEL_WORKFLOW_START("project-1") &&
+        init?.method === "POST"
+      ) {
+        return {
+          ok: false,
+          status: 400,
+          json: async () => ({ detail: "invalid brief" }),
+        } as Response;
+      }
+      return {
+        ok: true,
+        json: async () => baseState,
+      } as Response;
+    });
+
+    const { result } = renderHook(() => useEditorialWorkflow("project-1"));
+
+    await waitFor(() => {
+      expect(result.current.state).not.toBeNull();
+    });
+
+    let caught: unknown;
+    await act(async () => {
+      try {
+        await result.current.start({
+          topic: "Security",
+          audience: "Developers",
+          brief: "",
+          sources: [],
+        });
+      } catch (error) {
+        caught = error;
+      }
+    });
+
+    expect(caught).toEqual(new Error("invalid brief"));
+    await waitFor(() => {
+      expect(result.current.error).toBe("invalid brief");
+      expect(result.current.loading).toBe(false);
+    });
+  });
+
+  it("returns null when refresh receives a non-ok response", async () => {
+    mockAuthenticatedFetch.mockImplementation(async (url) => {
+      if (url === API_ENDPOINTS.CAROUSEL_WORKFLOW_STATE("project-1")) {
+        return {
+          ok: false,
+          status: 500,
+          json: async () => ({ detail: "server error" }),
+        } as Response;
+      }
+      return {
+        ok: true,
+        json: async () => baseState,
+      } as Response;
+    });
+
+    const { result } = renderHook(() => useEditorialWorkflow("project-1"));
+
+    await waitFor(() => {
+      expect(result.current.state).toBeNull();
+    });
+  });
+
+  it("returns null when refresh throws a network error", async () => {
+    mockAuthenticatedFetch.mockImplementation(async (url) => {
+      if (url === API_ENDPOINTS.CAROUSEL_WORKFLOW_STATE("project-1")) {
+        throw new TypeError("Failed to fetch");
+      }
+      return {
+        ok: true,
+        json: async () => baseState,
+      } as Response;
+    });
+
+    const { result } = renderHook(() => useEditorialWorkflow("project-1"));
+
+    await waitFor(() => {
+      expect(result.current.state).toBeNull();
+    });
+  });
+
+  it("does not append phase events when refreshed state lacks current_phase", async () => {
+    mockAuthenticatedFetch.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        ...baseState,
+        current_phase: "",
+      }),
+    } as Response);
+
+    const { result } = renderHook(() => useEditorialWorkflow("project-1"));
+
+    await waitFor(() => {
+      expect(result.current.state?.current_phase).toBe("");
+    });
+    expect(result.current.phaseEvents).toEqual([]);
+  });
+
+  it("reports workflow review flags from hydrated state", async () => {
+    mockWorkflowStateResponse({
+      ...baseState,
+      phase_status: WORKFLOW_PHASE_STATUS.AWAITING_HUMAN,
+      research_findings: [{ title: "Finding" }],
+    });
+
+    const { result } = renderHook(() => useEditorialWorkflow("project-1"));
+
+    await waitFor(() => {
+      expect(result.current.awaitingHumanReview).toBe(true);
+      expect(result.current.hasActiveWorkflow).toBe(true);
+    });
+  });
+
+  it("reports inactive workflow before a phase exists", async () => {
+    mockAuthenticatedFetch.mockResolvedValue({
+      ok: false,
+      status: HTTP_STATUS.NOT_FOUND,
+      json: async () => ({ detail: "not found" }),
+    } as Response);
+
+    const { result } = renderHook(() => useEditorialWorkflow("project-1"));
+
+    await waitFor(() => {
+      expect(result.current.hasActiveWorkflow).toBe(false);
+      expect(result.current.awaitingHumanReview).toBe(false);
+    });
+  });
+
+  it("uses unknown start error messaging for non-Error throws", async () => {
+    mockAuthenticatedFetch.mockImplementation(async (url, init) => {
+      if (
+        url === API_ENDPOINTS.CAROUSEL_WORKFLOW_START("project-1") &&
+        init?.method === "POST"
+      ) {
+        throw "boom";
+      }
+      return {
+        ok: true,
+        json: async () => baseState,
+      } as Response;
+    });
+
+    const { result } = renderHook(() => useEditorialWorkflow("project-1"));
+
+    await waitFor(() => {
+      expect(result.current.state).not.toBeNull();
+    });
+
+    let caught: unknown;
+    await act(async () => {
+      try {
+        await result.current.start({
+          topic: "Security",
+          audience: "Developers",
+          brief: "Brief",
+          sources: [],
+        });
+      } catch (error) {
+        caught = error;
+      }
+    });
+
+    expect(caught).toBe("boom");
+    await waitFor(() => {
+      expect(result.current.error).toBe("Workflow start failed");
+    });
+  });
+
+  it("initializes with loading false and no error", () => {
+    const { result } = renderHook(() => useEditorialWorkflow("project-1"));
+    expect(result.current.loading).toBe(false);
+    expect(result.current.error).toBeNull();
+  });
+
+  it("does not report awaiting human review while workflow is in progress", async () => {
+    mockWorkflowStateResponse({
+      ...baseState,
+      phase_status: WORKFLOW_PHASE_STATUS.IN_PROGRESS,
+    });
+
+    const { result } = renderHook(() => useEditorialWorkflow("project-1"));
+
+    await waitFor(() => {
+      expect(result.current.state?.phase_status).toBe(
+        WORKFLOW_PHASE_STATUS.IN_PROGRESS,
+      );
+    });
+    expect(result.current.awaitingHumanReview).toBe(false);
+  });
+
+  it("refreshState returns null for non-ok responses without parsing JSON", async () => {
+    const json = vi.fn(async () => ({ detail: "server error" }));
+    mockAuthenticatedFetch.mockImplementation(async (url) => {
+      if (url === API_ENDPOINTS.CAROUSEL_WORKFLOW_STATE("project-1")) {
+        return {
+          ok: false,
+          status: HTTP_STATUS.INTERNAL_SERVER_ERROR,
+          json,
+        } as unknown as Response;
+      }
+      return {
+        ok: true,
+        json: async () => baseState,
+      } as Response;
+    });
+
+    const { result } = renderHook(() => useEditorialWorkflow("project-1"));
+
+    await waitFor(() => {
+      expect(result.current.state).toBeNull();
+    });
+
+    let refreshed: EditorialWorkflowState | null = baseState;
+    await act(async () => {
+      refreshed = await result.current.refreshState();
+    });
+
+    expect(refreshed).toBeNull();
+    expect(json).not.toHaveBeenCalled();
+  });
+
+  it("refreshState returns null when the state request throws", async () => {
+    mockAuthenticatedFetch.mockImplementation(async (url) => {
+      if (url === API_ENDPOINTS.CAROUSEL_WORKFLOW_STATE("project-1")) {
+        throw new TypeError("Failed to fetch");
+      }
+      return {
+        ok: true,
+        json: async () => baseState,
+      } as Response;
+    });
+
+    const { result } = renderHook(() => useEditorialWorkflow("project-1"));
+
+    await waitFor(() => {
+      expect(result.current.state).toBeNull();
+    });
+
+    await act(async () => {
+      expect(await result.current.refreshState()).toBeNull();
+    });
+  });
+
+  it("refreshState appends the current phase to phase events", async () => {
+    mockAuthenticatedFetch.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        ...baseState,
+        current_phase: "outline",
+      }),
+    } as Response);
+
+    const { result } = renderHook(() => useEditorialWorkflow("project-1"));
+
+    await waitFor(() => {
+      expect(result.current.phaseEvents).toEqual(["outline"]);
+    });
+
+    mockAuthenticatedFetch.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        ...baseState,
+        current_phase: "content",
+      }),
+    } as Response);
+
+    await act(async () => {
+      await result.current.refreshState();
+    });
+
+    expect(result.current.phaseEvents).toEqual(["outline", "content"]);
+  });
+
+  it("sets loading while start is in flight", async () => {
+    let resolveStart: ((value: Response) => void) | undefined;
+    const pendingStart = new Promise<Response>((resolve) => {
+      resolveStart = resolve;
+    });
+
+    mockAuthenticatedFetch.mockImplementation(async (url, init) => {
+      if (
+        url === API_ENDPOINTS.CAROUSEL_WORKFLOW_START("project-1") &&
+        init?.method === "POST"
+      ) {
+        return pendingStart;
+      }
+      return {
+        ok: true,
+        json: async () => baseState,
+      } as Response;
+    });
+
+    const { result } = renderHook(() => useEditorialWorkflow("project-1"));
+
+    await waitFor(() => {
+      expect(result.current.state).not.toBeNull();
+    });
+
+    let startPromise: Promise<EditorialWorkflowState> | undefined;
+    act(() => {
+      startPromise = result.current.start({
+        topic: "Security",
+        audience: "Developers",
+        brief: "Brief",
+        sources: [{ title: "Source", content: "Body", source_type: "url" }],
+        personaId: "persona-1",
+      });
+    });
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(true);
+    });
+
+    await act(async () => {
+      resolveStart?.({
+        ok: true,
+        json: async () => baseState,
+      } as Response);
+      await startPromise;
+    });
+
+    expect(result.current.loading).toBe(false);
+  });
+
+  it("includes persona and source fields in the start payload", async () => {
+    mockAuthenticatedFetch.mockImplementation(async (url, init) => {
+      if (
+        url === API_ENDPOINTS.CAROUSEL_WORKFLOW_START("project-1") &&
+        init?.method === "POST"
+      ) {
+        expect(JSON.parse(String(init.body))).toEqual({
+          topic: "Security",
+          audience: "Developers",
+          brief: "Brief",
+          sources: [{ title: "Source", content: "Body", source_type: "url" }],
+          persona_id: "persona-1",
+        });
+        return {
+          ok: true,
+          json: async () => baseState,
+        } as Response;
+      }
+      return {
+        ok: true,
+        json: async () => baseState,
+      } as Response;
+    });
+
+    const { result } = renderHook(() => useEditorialWorkflow("project-1"));
+
+    await waitFor(() => {
+      expect(result.current.state).not.toBeNull();
+    });
+
+    await act(async () => {
+      await result.current.start({
+        topic: "Security",
+        audience: "Developers",
+        brief: "Brief",
+        sources: [{ title: "Source", content: "Body", source_type: "url" }],
+        personaId: "persona-1",
+      });
+    });
+  });
+
+  it("uses the startFailed fallback when the API omits error detail", async () => {
+    mockAuthenticatedFetch.mockImplementation(async (url, init) => {
+      if (
+        url === API_ENDPOINTS.CAROUSEL_WORKFLOW_START("project-1") &&
+        init?.method === "POST"
+      ) {
+        return {
+          ok: false,
+          status: HTTP_STATUS.INTERNAL_SERVER_ERROR,
+          json: async () => ({}),
+        } as Response;
+      }
+      return {
+        ok: true,
+        json: async () => baseState,
+      } as Response;
+    });
+
+    const { result } = renderHook(() => useEditorialWorkflow("project-1"));
+
+    await waitFor(() => {
+      expect(result.current.state).not.toBeNull();
+    });
+
+    await act(async () => {
+      await expect(
+        result.current.start({
+          topic: "Security",
+          audience: "Developers",
+          brief: "Brief",
+          sources: [],
+        }),
+      ).rejects.toThrow("Failed to start editorial workflow");
+    });
+
+    await waitFor(() => {
+      expect(result.current.error).toBe("Failed to start editorial workflow");
+    });
+  });
+
+  it("does not append phase events when start returns an empty current phase", async () => {
+    mockAuthenticatedFetch.mockImplementation(async (url, init) => {
+      if (
+        url === API_ENDPOINTS.CAROUSEL_WORKFLOW_START("project-1") &&
+        init?.method === "POST"
+      ) {
+        return {
+          ok: true,
+          json: async () => ({
+            ...baseState,
+            current_phase: "",
+          }),
+        } as Response;
+      }
+      return {
+        ok: true,
+        json: async () => ({
+          ...baseState,
+          current_phase: "",
+        }),
+      } as Response;
+    });
+
+    const { result } = renderHook(() => useEditorialWorkflow("project-1"));
+
+    await waitFor(() => {
+      expect(result.current.state?.current_phase).toBe("");
+    });
+    expect(result.current.phaseEvents).toEqual([]);
+
+    await act(async () => {
+      await result.current.start({
+        topic: "Security",
+        audience: "Developers",
+        brief: "Brief",
+        sources: [],
+      });
+    });
+
+    expect(result.current.phaseEvents).toEqual([]);
+  });
+
+  it("revise wrapper forwards feedback and options to the resume endpoint", async () => {
+    mockAuthenticatedFetch.mockImplementation(async (url, init) => {
+      if (
+        url === API_ENDPOINTS.CAROUSEL_WORKFLOW_RESUME("project-1") &&
+        init?.method === "POST"
+      ) {
+        const body = JSON.parse(String(init.body)) as {
+          action: string;
+          feedback?: string;
+          structured_feedback?: { target_phase?: string; edited_text?: string };
+        };
+        expect(body.action).toBe(EDITORIAL_REVIEW_ACTIONS.REVISE);
+        expect(body.feedback).toBe("Rewrite intro");
+        expect(body.structured_feedback).toEqual({
+          target_phase: "content",
+          edited_text: "Updated body",
+        });
+        return {
+          ok: true,
+          status: HTTP_STATUS.OK,
+          json: async () => ({
+            ...baseState,
+            phase_status: WORKFLOW_PHASE_STATUS.AWAITING_HUMAN,
+            research_findings: [{ title: "Finding" }],
+          }),
+        } as Response;
+      }
+      return {
+        ok: true,
+        json: async () => baseState,
+      } as Response;
+    });
+
+    const { result } = renderHook(() => useEditorialWorkflow("project-1"));
+
+    await waitFor(() => {
+      expect(result.current.state).not.toBeNull();
+    });
+
+    await act(async () => {
+      await result.current.revise("Rewrite intro", {
+        targetPhase: "content",
+        editedText: "Updated body",
+      });
+    });
+  });
+
+  it("refetches workflow state when the project id changes", async () => {
+    mockAuthenticatedFetch.mockImplementation(async (url) => {
+      if (url === API_ENDPOINTS.CAROUSEL_WORKFLOW_STATE("project-1")) {
+        return {
+          ok: true,
+          json: async () => baseState,
+        } as Response;
+      }
+      if (url === API_ENDPOINTS.CAROUSEL_WORKFLOW_STATE("project-2")) {
+        return {
+          ok: true,
+          json: async () => ({
+            ...baseState,
+            project_id: "project-2",
+            current_phase: "outline",
+          }),
+        } as Response;
+      }
+      return {
+        ok: true,
+        json: async () => baseState,
+      } as Response;
+    });
+
+    const { result, rerender } = renderHook(
+      ({ projectId }: { projectId: string }) =>
+        useEditorialWorkflow(projectId),
+      { initialProps: { projectId: "project-1" } },
+    );
+
+    await waitFor(() => {
+      expect(result.current.state?.project_id).toBe("project-1");
+    });
+
+    rerender({ projectId: "project-2" });
+
+    await waitFor(() => {
+      expect(result.current.state?.project_id).toBe("project-2");
+      expect(result.current.state?.current_phase).toBe("outline");
+    });
+  });
+
+  it("opens SSE with credentials and closes the stream on unmount", async () => {
+    const { unmount } = renderHook(() => useEditorialWorkflow("project-1"));
+
+    await waitFor(() => {
+      expect(MockEventSource.instances).toHaveLength(1);
+    });
+
+    expect(MockEventSource.lastInit).toEqual({ withCredentials: true });
+
+    const source = MockEventSource.instances[0];
+    unmount();
+
+    expect(source?.close).toHaveBeenCalled();
   });
 });

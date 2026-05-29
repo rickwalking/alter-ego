@@ -9,6 +9,7 @@ import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.application.services.optimistic_lock_service import (
+    CarouselVersionBumpParams,
     OptimisticLockService,
 )
 from rag_backend.domain.constants.optimistic_locking import (
@@ -109,8 +110,10 @@ async def test_bump_carousel_version_increments_lock(db_session: AsyncSession) -
     service = OptimisticLockService()
     new_version = await service.bump_carousel_version(
         db_session,
-        project_id=str(project.id),
-        expected_version=2,
+        CarouselVersionBumpParams(
+            project_id=str(project.id),
+            expected_version=2,
+        ),
     )
     await db_session.refresh(project)
     assert new_version == 3
@@ -134,6 +137,8 @@ async def test_bump_carousel_version_raises_on_stale_version(
     with pytest.raises(ValueError, match=ERR_VERSION_CONFLICT):
         await service.bump_carousel_version(
             db_session,
-            project_id=str(project.id),
-            expected_version=2,
+            CarouselVersionBumpParams(
+                project_id=str(project.id),
+                expected_version=2,
+            ),
         )

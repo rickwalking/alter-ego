@@ -10,6 +10,7 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from rag_backend.application.services.carousel.editorial_workflow_support import (
+    PhaseFeedbackPersistParams,
     build_progress_event,
     format_sse_event,
     persist_phase_feedback,
@@ -62,9 +63,11 @@ class TestPersistPhaseFeedback:
 
         await persist_phase_feedback(
             engine,
-            "project-1",
-            prior,
-            "Slide 2 tone is too formal",
+            PhaseFeedbackPersistParams(
+                project_id="project-1",
+                prior=prior,
+                feedback="Slide 2 tone is too formal",
+            ),
         )
 
         engine.update_state.assert_awaited_once()
@@ -80,7 +83,12 @@ class TestPersistPhaseFeedback:
         engine.update_state = AsyncMock()
 
         await persist_phase_feedback(
-            engine, "project-1", {"current_phase": "content"}, "  "
+            engine,
+            PhaseFeedbackPersistParams(
+                project_id="project-1",
+                prior={"current_phase": "content"},
+                feedback="  ",
+            ),
         )
 
         engine.update_state.assert_not_awaited()

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, cast
 
 from langchain_core.runnables import RunnableConfig
@@ -43,6 +44,20 @@ if TYPE_CHECKING:
     )
 
 _CONFIG_ARTIFACT_RUNNER = "artifact_runner"
+
+
+@dataclass(frozen=True)
+class SyncArtifactPhaseConfig:
+    """Parameters for sync artifact phase nodes with human review gates."""
+
+    phase: str
+    interrupt_type: str
+    payload_key: str
+    approved_field: str
+    message: str
+    extra_payload: dict[str, object] | None = None
+    payload_builder: object | None = None
+    post_review: dict[str, object] | None = None
 
 
 def artifact_runner_from_config(
@@ -132,35 +147,31 @@ def research_phase(state: CarouselWorkflowState) -> dict[str, object]:
 
 def _run_sync_artifact_phase(
     state: CarouselWorkflowState,
-    config: RunnableConfig | None,
-    *,
-    phase: str,
-    interrupt_type: str,
-    payload_key: str,
-    approved_field: str,
-    message: str,
-    extra_payload: dict[str, object] | None = None,
-    payload_builder: object | None = None,
-    post_review: dict[str, object] | None = None,
+    _config: RunnableConfig | None,
+    artifact: SyncArtifactPhaseConfig,
 ) -> dict[str, object]:
-    """Sync wrapper: artifact generation runs via engine pre-node hook."""
     merged = dict(state)
-    if payload_builder is not None and callable(payload_builder):
-        payload = payload_builder(merged)
+    if artifact.payload_builder is not None and callable(artifact.payload_builder):
+        payload = artifact.payload_builder(merged)
     else:
-        payload = {payload_key: merged.get(payload_key) or []}
-    if extra_payload:
-        payload.update(extra_payload)
-    payload["message"] = message
-    review_update = await_human_review(merged, phase, interrupt_type, payload)
+        payload = {artifact.payload_key: merged.get(artifact.payload_key) or []}
+    if artifact.extra_payload:
+        payload.update(artifact.extra_payload)
+    payload["message"] = artifact.message
+    review_update = await_human_review(
+        merged,
+        artifact.phase,
+        artifact.interrupt_type,
+        payload,
+    )
     approved = review_update.get("phase_status") == PHASE_STATUS_APPROVED
     result: dict[str, object] = {
         **review_update,
-        approved_field: approved,
-        "current_phase": phase,
+        artifact.approved_field: approved,
+        "current_phase": artifact.phase,
     }
-    if post_review:
-        result.update(post_review)
+    if artifact.post_review:
+        result.update(artifact.post_review)
     return result
 
 
@@ -172,11 +183,13 @@ def outline_phase(
     return _run_sync_artifact_phase(
         state,
         config,
-        phase=PHASE_OUTLINE,
-        interrupt_type=INTERRUPT_TYPE_OUTLINE_REVIEW,
-        payload_key="outline",
-        approved_field="outline_approved",
-        message="Review and approve the outline.",
+        SyncArtifactPhaseConfig(
+            phase=PHASE_OUTLINE,
+            interrupt_type=INTERRUPT_TYPE_OUTLINE_REVIEW,
+            payload_key="outline",
+            approved_field="outline_approved",
+            message="Review and approve the outline.",
+        ),
     )
 
 
@@ -188,14 +201,16 @@ def content_phase(
     return _run_sync_artifact_phase(
         state,
         config,
-        phase=PHASE_CONTENT,
-        interrupt_type=INTERRUPT_TYPE_CONTENT_REVIEW,
-        payload_key="slide_drafts",
-        approved_field="content_approved",
-        message="Review slide copy.",
-        extra_payload={
-            "persona_scores": state.get("persona_scores") or {},
-        },
+        SyncArtifactPhaseConfig(
+            phase=PHASE_CONTENT,
+            interrupt_type=INTERRUPT_TYPE_CONTENT_REVIEW,
+            payload_key="slide_drafts",
+            approved_field="content_approved",
+            message="Review slide copy.",
+            extra_payload={
+                "persona_scores": state.get("persona_scores") or {},
+            },
+        ),
     )
 
 
@@ -207,15 +222,17 @@ def design_phase(
     return _run_sync_artifact_phase(
         state,
         config,
-        phase=PHASE_DESIGN,
-        interrupt_type=INTERRUPT_TYPE_DESIGN_REVIEW,
-        payload_key="design_applied",
-        approved_field="design_approved",
-        message="Review design.",
-        payload_builder=lambda merged: {
-            "design_applied": merged.get("design_applied", False),
-        },
-        post_review={"design_applied": True},
+        SyncArtifactPhaseConfig(
+            phase=PHASE_DESIGN,
+            interrupt_type=INTERRUPT_TYPE_DESIGN_REVIEW,
+            payload_key="design_applied",
+            approved_field="design_approved",
+            message="Review design.",
+            payload_builder=lambda merged: {
+                "design_applied": merged.get("design_applied", False),
+            },
+            post_review={"design_applied": True},
+        ),
     )
 
 
@@ -227,14 +244,16 @@ def images_phase(
     return _run_sync_artifact_phase(
         state,
         config,
-        phase=PHASE_IMAGES,
-        interrupt_type=INTERRUPT_TYPE_IMAGE_REVIEW,
-        payload_key="image_assets",
-        approved_field="images_approved",
-        message="Review generated images.",
-        payload_builder=lambda merged: {
-            "image_assets": merged.get("image_assets") or [],
-        },
+        SyncArtifactPhaseConfig(
+            phase=PHASE_IMAGES,
+            interrupt_type=INTERRUPT_TYPE_IMAGE_REVIEW,
+            payload_key="image_assets",
+            approved_field="images_approved",
+            message="Review generated images.",
+            payload_builder=lambda merged: {
+                "image_assets": merged.get("image_assets") or [],
+            },
+        ),
     )
 
 

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import AsyncIterator
+from dataclasses import dataclass
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -10,6 +11,7 @@ from rag_backend.agents.carousel_editorial_orchestrator import (
     CarouselEditorialOrchestrator,
 )
 from rag_backend.application.services.carousel.editorial_workflow_support import (
+    PhaseFeedbackPersistParams,
     build_phase_change_event,
     build_progress_event,
     build_review_gate_payload,
@@ -22,7 +24,10 @@ from rag_backend.application.services.carousel.workflow_sse_hub import (
 from rag_backend.application.services.carousel.workflow_state import (
     CarouselWorkflowState,
 )
-from rag_backend.application.services.notification_service import NotificationService
+from rag_backend.application.services.notification_service import (
+    NotificationService,
+    RevisionCapEscalationParams,
+)
 from rag_backend.domain.constants.carousel_workflow import (
     DEFAULT_REVISION_CAP_PER_PHASE,
     ERR_PERSONA_SCORE_TOO_LOW,
@@ -38,6 +43,28 @@ from rag_backend.domain.constants.carousel_workflow import (
 from rag_backend.domain.constants.persona import VOICE_MATCH_MIN_SCORE
 from rag_backend.domain.constants.workflow_validation import CONTENT_TYPE_CAROUSEL
 from rag_backend.domain.models.persona import PersonaProfile
+
+
+@dataclass(frozen=True)
+class RevisionCapValidationContext:
+    """Inputs for revision cap validation during workflow resume."""
+
+    project_id: str
+    project_title: str
+    db: AsyncSession | None = None
+    notifications: NotificationService | None = None
+
+
+@dataclass(frozen=True)
+class FeedbackCorrectionContext:
+    """Inputs for persisting reviewer feedback corrections."""
+
+    project_id: str
+    prior: CarouselWorkflowState
+    feedback: str | None
+    persona: PersonaProfile | None = None
+    structured_feedback: dict[str, object] | None = None
+    db: AsyncSession | None = None
 
 
 def validate_content_approve_persona_score(prior: CarouselWorkflowState) -> None:
@@ -60,11 +87,7 @@ def validate_content_approve_persona_score(prior: CarouselWorkflowState) -> None
 
 async def validate_revision_cap(
     prior: CarouselWorkflowState,
-    *,
-    db: AsyncSession | None,
-    notifications: NotificationService | None,
-    project_id: str,
-    project_title: str,
+    ctx: RevisionCapValidationContext,
 ) -> None:
     """Reject revise when the per-phase revision cap is exceeded."""
     phase = str(prior.get("current_phase", ""))
@@ -74,43 +97,29 @@ async def validate_revision_cap(
     )
     if current_count < DEFAULT_REVISION_CAP_PER_PHASE:
         return
-    if db is not None and notifications is not None:
-        await notifications.create_revision_cap_escalation(
-            db,
-            content_id=project_id,
-            content_type=CONTENT_TYPE_CAROUSEL,
-            phase=phase,
-            title=project_title or project_id,
+    if ctx.db is not None and ctx.notifications is not None:
+        await ctx.notifications.create_revision_cap_escalation(
+            ctx.db,
+            RevisionCapEscalationParams(
+                content_id=ctx.project_id,
+                content_type=CONTENT_TYPE_CAROUSEL,
+                phase=phase,
+                title=ctx.project_title or ctx.project_id,
+            ),
         )
     raise ValueError(ERR_REVISION_CAP_EXCEEDED)
 
 
 async def record_feedback_correction(
-    *,
     orchestrator: CarouselEditorialOrchestrator,
-    db: AsyncSession | None,
-    project_id: str,
-    prior: CarouselWorkflowState,
-    persona: PersonaProfile | None,
-    feedback: str | None,
-    structured_feedback: dict[str, object] | None,
+    ctx: FeedbackCorrectionContext,
 ) -> None:
     """Persist reviewer edits for feedback learning (CP-007)."""
-    if db is None or persona is None or not feedback:
+    if ctx.db is None or ctx.persona is None or not ctx.feedback:
         return
-    phase = str(prior.get("current_phase", ""))
-    original = ""
-    if phase == PHASE_CONTENT:
-        slide_drafts = prior.get("slide_drafts") or []
-        if isinstance(slide_drafts, list) and slide_drafts:
-            first_slide = slide_drafts[0]
-            if isinstance(first_slide, dict):
-                original = str(first_slide.get(SLIDE_DRAFT_TEXT_KEY, ""))
-    corrected = feedback
-    if structured_feedback is not None:
-        edited = structured_feedback.get(STRUCTURED_FEEDBACK_EDITED_TEXT_KEY)
-        if isinstance(edited, str) and edited.strip():
-            corrected = edited
+    phase = str(ctx.prior.get("current_phase", ""))
+    original = _feedback_original_text(ctx.prior, phase)
+    corrected = _feedback_corrected_text(ctx.feedback, ctx.structured_feedback)
     if corrected.strip() == original.strip():
         return
     from rag_backend.agents.feedback_learning import FeedbackLearningLoop
@@ -118,14 +127,38 @@ async def record_feedback_correction(
         OpenAIEmbeddings,
     )
 
-    feedback_loop = FeedbackLearningLoop(session=db, embeddings=OpenAIEmbeddings())
+    feedback_loop = FeedbackLearningLoop(session=ctx.db, embeddings=OpenAIEmbeddings())
     await feedback_loop.record_correction(
         _original=original,
         _corrected=corrected,
         _context=phase,
-        _persona_id=str(persona.id),
-        project_id=project_id,
+        _persona_id=str(ctx.persona.id),
+        project_id=ctx.project_id,
     )
+
+
+def _feedback_original_text(prior: CarouselWorkflowState, phase: str) -> str:
+    if phase != PHASE_CONTENT:
+        return ""
+    slide_drafts = prior.get("slide_drafts") or []
+    if not isinstance(slide_drafts, list) or not slide_drafts:
+        return ""
+    first_slide = slide_drafts[0]
+    if not isinstance(first_slide, dict):
+        return ""
+    return str(first_slide.get(SLIDE_DRAFT_TEXT_KEY, ""))
+
+
+def _feedback_corrected_text(
+    feedback: str,
+    structured_feedback: dict[str, object] | None,
+) -> str:
+    if structured_feedback is None:
+        return feedback
+    edited = structured_feedback.get(STRUCTURED_FEEDBACK_EDITED_TEXT_KEY)
+    if isinstance(edited, str) and edited.strip():
+        return edited
+    return feedback
 
 
 async def prepare_resume_workflow(
@@ -143,9 +176,11 @@ async def prepare_resume_workflow(
     if action == REVIEW_ACTION_REVISE:
         await persist_phase_feedback(
             orchestrator.engine,
-            project_id,
-            prior,
-            feedback,
+            PhaseFeedbackPersistParams(
+                project_id=project_id,
+                prior=prior,
+                feedback=feedback,
+            ),
         )
 
 
@@ -192,6 +227,8 @@ async def stream_workflow_phase_updates(
 
 
 __all__ = [
+    "FeedbackCorrectionContext",
+    "RevisionCapValidationContext",
     "prepare_resume_workflow",
     "record_feedback_correction",
     "stream_workflow_phase_updates",

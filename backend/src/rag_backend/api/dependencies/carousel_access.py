@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from uuid import UUID
 
 from fastapi import HTTPException, status
@@ -26,6 +27,15 @@ from rag_backend.infrastructure.database.models.carousel import CarouselProjectM
 from rag_backend.infrastructure.database.models.source_comment import ContentSourceModel
 
 from .resource_access import assert_domain_owner_or_admin, assert_owner_or_admin
+
+
+@dataclass(frozen=True)
+class ProjectSourceLookup:
+    """Identifies a project source for access-controlled lookup."""
+
+    project_id: UUID
+    source_id: UUID
+    user: UserModel
 
 
 def _raise_workflow_access_denied() -> None:
@@ -157,23 +167,22 @@ async def get_carousel_project_for_domain_user(
 
 async def get_project_source_for_user(
     db: AsyncSession,
-    project_id: UUID,
-    source_id: UUID,
-    user: UserModel,
+    lookup: ProjectSourceLookup,
 ) -> ContentSourceModel:
     """Load a project source after verifying carousel ownership."""
-    await get_carousel_project_for_user(db, project_id, user)
-    source = await db.get(ContentSourceModel, str(source_id))
-    if source is None or source.project_id != str(project_id):
+    await get_carousel_project_for_user(db, lookup.project_id, lookup.user)
+    source = await db.get(ContentSourceModel, str(lookup.source_id))
+    if source is None or source.project_id != str(lookup.project_id):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=ERR_SOURCE_NOT_FOUND.format(source_id=source_id),
+            detail=ERR_SOURCE_NOT_FOUND.format(source_id=lookup.source_id),
         )
     return source
 
 
 __all__ = [
     "ERR_SOURCE_NOT_FOUND",
+    "ProjectSourceLookup",
     "assert_carousel_conversation_chat_access",
     "get_carousel_project_for_domain_user",
     "get_carousel_project_for_user",

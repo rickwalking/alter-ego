@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.agents.source_synthesis_agent import SourceSynthesisAgent
 from rag_backend.api.dependencies.carousel_access import (
+    ProjectSourceLookup,
     get_carousel_project_for_user,
     get_project_source_for_user,
 )
@@ -90,7 +91,14 @@ async def remove_source_from_project(
     current_user: EditorUser,
 ) -> None:
     """Remove a content source from a project."""
-    source = await get_project_source_for_user(db, project_id, source_id, current_user)
+    source = await get_project_source_for_user(
+        db,
+        ProjectSourceLookup(
+            project_id=project_id,
+            source_id=source_id,
+            user=current_user,
+        ),
+    )
     await db.delete(source)
     await db.commit()
 
@@ -109,7 +117,14 @@ async def extract_source_key_points(
     current_user: EditorUser,
 ) -> ContentSourceResponse:
     """Run source synthesis agent and persist extracted key points (AI-006)."""
-    source = await get_project_source_for_user(db, project_id, source_id, current_user)
+    source = await get_project_source_for_user(
+        db,
+        ProjectSourceLookup(
+            project_id=project_id,
+            source_id=source_id,
+            user=current_user,
+        ),
+    )
 
     container = get_container()
     agent = SourceSynthesisAgent(llm=container.llm_service().chat_model)

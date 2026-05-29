@@ -75,6 +75,15 @@ class ReviewEventEmitContext:
     state: CarouselWorkflowState
 
 
+@dataclass(frozen=True)
+class PhaseFeedbackPersistParams:
+    """Inputs for persisting reviewer phase feedback."""
+
+    project_id: str
+    prior: CarouselWorkflowState
+    feedback: str | None
+
+
 def build_workflow_event(event_type: str, **payload: object) -> dict[str, object]:
     """Build a workflow SSE payload with a normalized event field."""
     return {SSE_PAYLOAD_FIELD_EVENT: event_type, **payload}
@@ -364,26 +373,24 @@ async def read_checkpoint_phase(
 
 async def persist_phase_feedback(
     engine: CarouselWorkflowEngine,
-    project_id: str,
-    prior: CarouselWorkflowState,
-    feedback: str | None,
+    params: PhaseFeedbackPersistParams,
 ) -> None:
     """Store reviewer feedback and increment revision count for the current phase."""
-    trimmed = (feedback or "").strip()
+    trimmed = (params.feedback or "").strip()
     if not trimmed:
         return
-    phase = str(prior.get("current_phase", ""))
+    phase = str(params.prior.get("current_phase", ""))
     if not phase:
         return
-    phase_feedback = dict(prior.get("phase_feedback") or {})
+    phase_feedback = dict(params.prior.get("phase_feedback") or {})
     existing = phase_feedback.get(phase, [])
     prior_feedback = existing if isinstance(existing, list) else []
     phase_feedback[phase] = [*prior_feedback, trimmed]
-    revision_count = dict(prior.get("revision_count") or {})
+    revision_count = dict(params.prior.get("revision_count") or {})
     count = int(revision_count.get(phase, 0)) + 1
     revision_count[phase] = count
     await engine.update_state(
-        project_id,
+        params.project_id,
         {
             "phase_feedback": phase_feedback,
             "revision_count": revision_count,

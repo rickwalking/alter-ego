@@ -95,6 +95,55 @@ def _count_slide_images(output_dir: str | None) -> int:
     return max(counts) if counts else 0
 
 
+def _preview_rendered_slide_urls(
+    project_id: UUID,
+    slide_count: int,
+    lang: str,
+) -> list[str]:
+    """Authenticated preview URLs for draft carousels (publish workspace)."""
+    project_id_str = str(project_id)
+    return [
+        f"/api/carousels/{project_id_str}/preview/images/slide_{i}.jpg?lang={lang}"
+        for i in range(1, slide_count + 1)
+    ]
+
+
+def _apply_draft_preview_urls(
+    project: CarouselProject,
+    tokens: dict[str, object],
+) -> dict[str, object]:
+    """Use owner-scoped preview routes until the carousel is published publicly."""
+    if project.is_public or not project.output_dir:
+        return tokens
+    slide_count = _count_slide_images(project.output_dir)
+    if slide_count == 0:
+        return tokens
+    raw_images = tokens.get("images")
+    if not isinstance(raw_images, dict):
+        return tokens
+    images = dict(raw_images)
+    if _has_rendered_slides(project.output_dir, "pt"):
+        preview_pt = _preview_rendered_slide_urls(
+            project.id,
+            slide_count,
+            "pt",
+        )
+        images["rendered_slides_pt"] = preview_pt
+        if preview_pt:
+            images["hero"] = preview_pt[0]
+            hero_slot_count = min(4, len(preview_pt))
+            images["slides"] = preview_pt[:hero_slot_count]
+    if _has_rendered_slides(project.output_dir, "en"):
+        images["rendered_slides_en"] = _preview_rendered_slide_urls(
+            project.id,
+            slide_count,
+            "en",
+        )
+    else:
+        images.pop("rendered_slides_en", None)
+    return {**tokens, "images": images}
+
+
 def _merge_design_tokens_with_disk(
     project: CarouselProject,
 ) -> dict[str, object]:
@@ -102,7 +151,7 @@ def _merge_design_tokens_with_disk(
     defaults = _build_default_design_tokens(project)
     raw_tokens = project.design_tokens
     if not raw_tokens or not isinstance(raw_tokens, dict):
-        return defaults
+        return _apply_draft_preview_urls(project, defaults)
 
     raw_images = dict(raw_tokens.get("images", {}))
     default_images = defaults["images"]
@@ -115,8 +164,13 @@ def _merge_design_tokens_with_disk(
                 merged_images[key] = raw_list
             else:
                 merged_images[key] = default_list
+        elif key == "rendered_slides_en":
+            merged_images.pop("rendered_slides_en", None)
 
-    return {
+    if project.output_dir and not _has_rendered_slides(project.output_dir, "en"):
+        merged_images.pop("rendered_slides_en", None)
+
+    merged = {
         **defaults,
         **raw_tokens,
         "images": merged_images,
@@ -126,6 +180,7 @@ def _merge_design_tokens_with_disk(
             "progress_segments": defaults["layout"]["progress_segments"],
         },
     }
+    return _apply_draft_preview_urls(project, merged)
 
 
 def _has_rendered_slides(output_dir: str, lang: str) -> bool:

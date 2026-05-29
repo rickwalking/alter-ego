@@ -10,7 +10,11 @@ from uuid import uuid4
 import pytest
 
 from rag_backend.agents.alter_ego_agent import AlterEgoAgent
-from rag_backend.api.dependencies.agents import CONVERSATION_METADATA_PROJECT_ID
+from rag_backend.api.dependencies.agents import (
+    RagAgentBuildContext,
+    build_agent_for_conversation,
+)
+from rag_backend.domain.constants.conversation import CONVERSATION_METADATA_PROJECT_ID
 from rag_backend.domain.models import Conversation
 
 
@@ -33,8 +37,6 @@ class TestMetadataRoutingDecision:
 
     @pytest.mark.asyncio
     async def test_routes_to_rag_agent_when_project_id_present(self):
-        from rag_backend.api.dependencies.agents import build_agent_for_conversation
-
         conversation = Conversation(
             id=uuid4(),
             user_id=uuid4(),
@@ -59,16 +61,16 @@ class TestMetadataRoutingDecision:
             mock_build_rag.assert_called_once_with(
                 db,
                 container,
-                owner_user_id=str(conversation.user_id),
-                bound_project_id="abc-123",
+                RagAgentBuildContext(
+                    owner_user_id=str(conversation.user_id),
+                    bound_project_id="abc-123",
+                ),
             )
             mock_build_alter.assert_not_called()
             assert agent == mock_build_rag.return_value
 
     @pytest.mark.asyncio
     async def test_routes_to_alter_ego_when_metadata_empty(self):
-        from rag_backend.api.dependencies.agents import build_agent_for_conversation
-
         conversation = Conversation(
             id=uuid4(),
             metadata={},
@@ -95,8 +97,6 @@ class TestMetadataRoutingDecision:
 
     @pytest.mark.asyncio
     async def test_routes_to_alter_ego_when_metadata_has_other_keys(self):
-        from rag_backend.api.dependencies.agents import build_agent_for_conversation
-
         conversation = Conversation(
             id=uuid4(),
             metadata={"source": "web", "user_id": 42},

@@ -1,7 +1,5 @@
 import Link from "next/link";
 
-const CYAN = "#00d4ff";
-
 function LanguageSwitch() {
   return (
     <div

@@ -28,6 +28,7 @@ from rag_backend.api.dependencies import (
     require_authenticated_user,
 )
 from rag_backend.api.dependencies.agents import (
+    RagAgentBuildContext,
     build_alter_ego_agent,
     build_rag_agent,
 )
@@ -192,9 +193,11 @@ async def publish_chat_stream(
             agent_builder=lambda: build_rag_agent(
                 db,
                 get_container(),
-                owner_user_id=str(user.id),
-                bound_project_id=str(
-                    conversation.metadata[CONVERSATION_METADATA_PROJECT_ID]
+                RagAgentBuildContext(
+                    owner_user_id=str(user.id),
+                    bound_project_id=str(
+                        conversation.metadata[CONVERSATION_METADATA_PROJECT_ID]
+                    ),
                 ),
             ),
             last_event_id=last_event_id,

@@ -31,7 +31,7 @@ export function ChatInterface() {
   );
 
   const {
-    conversationId: sseConversationId,
+    conversationId: _sseConversationId,
     messages: sseMessages,
     isStreaming,
     error: sseError,
@@ -76,7 +76,6 @@ export function ChatInterface() {
     [startSseNewChat],
   );
 
-  const displayConversationId = sseConversationId ?? effectiveConversationId;
   const isLoading = isStreaming;
 
   return (

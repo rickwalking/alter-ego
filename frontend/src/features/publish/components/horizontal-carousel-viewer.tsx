@@ -64,7 +64,7 @@ export function HorizontalCarouselViewer({
 
     const fetches = slideUrls.map(async (url, i) => {
       try {
-        const response = await fetch(url);
+        const response = await fetch(url, { credentials: "include" });
         const blob = await response.blob();
         folder.file(`slide_${i + 1}.jpg`, blob);
       } catch {

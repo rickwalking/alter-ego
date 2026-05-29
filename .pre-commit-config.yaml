@@ -47,3 +47,19 @@ repos:
         language: system
         pass_filenames: false
         files: ^backend/src/.*\.py$
+
+  # Frontend: ESLint + TypeScript (CI QA subset)
+  - repo: local
+    hooks:
+      - id: frontend-eslint
+        name: Frontend ESLint (errors only)
+        entry: bash -c 'cd frontend && npm run lint'
+        language: system
+        pass_filenames: false
+        files: ^frontend/src/.*\.(ts|tsx)$
+      - id: frontend-typecheck
+        name: Frontend TypeScript
+        entry: bash -c 'cd frontend && npm run typecheck'
+        language: system
+        pass_filenames: false
+        files: ^frontend/src/.*\.(ts|tsx)$

@@ -31,12 +31,12 @@ function truncateWords(text: string, maxWords: number): string {
 }
 
 function HomePageContent({
-  t,
-  tc,
+  t: _t,
+  tc: _tc,
   tb,
   data,
   locale,
-  fallback,
+  fallback: _fallback,
 }: {
   t: ReturnType<typeof getTranslations> extends Promise<infer R> ? R : never;
   tc: ReturnType<typeof getTranslations> extends Promise<infer R> ? R : never;

@@ -13,6 +13,7 @@ from fastapi import HTTPException
 
 from rag_backend.api.constants import ERR_CAROUSEL_NOT_FOUND
 from rag_backend.api.dependencies.carousel_access import (
+    ProjectSourceLookup,
     assert_carousel_conversation_chat_access,
     get_carousel_project_for_domain_user,
     get_carousel_project_for_user,
@@ -274,9 +275,11 @@ class TestGetProjectSourceForUser:
         with pytest.raises(HTTPException) as exc_info:
             await get_project_source_for_user(
                 db,
-                project_id,
-                source_id,
-                _user_model(UserRole.EDITOR, "user-1"),
+                ProjectSourceLookup(
+                    project_id=project_id,
+                    source_id=source_id,
+                    user=_user_model(UserRole.EDITOR, "user-1"),
+                ),
             )
         assert exc_info.value.status_code == 404
         assert exc_info.value.detail == ERR_SOURCE_NOT_FOUND.format(source_id=source_id)
@@ -293,9 +296,11 @@ class TestGetProjectSourceForUser:
         with pytest.raises(HTTPException) as exc_info:
             await get_project_source_for_user(
                 db,
-                project_id,
-                source_id,
-                _user_model(UserRole.EDITOR, "user-1"),
+                ProjectSourceLookup(
+                    project_id=project_id,
+                    source_id=source_id,
+                    user=_user_model(UserRole.EDITOR, "user-1"),
+                ),
             )
         assert exc_info.value.status_code == 404
         assert exc_info.value.detail == ERR_SOURCE_NOT_FOUND.format(source_id=source_id)
@@ -310,9 +315,11 @@ class TestGetProjectSourceForUser:
 
         result = await get_project_source_for_user(
             db,
-            project_id,
-            source_id,
-            _user_model(UserRole.EDITOR, "user-1"),
+            ProjectSourceLookup(
+                project_id=project_id,
+                source_id=source_id,
+                user=_user_model(UserRole.EDITOR, "user-1"),
+            ),
         )
         assert result is source
         assert db.get.await_args_list[0] == ((CarouselProjectModel, str(project_id)),)

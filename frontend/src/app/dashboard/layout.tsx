@@ -6,7 +6,6 @@ import { useTranslations } from "next-intl";
 
 const CYAN = "#00d4ff";
 const CYAN_DIM = "rgba(0,212,255,0.12)";
-const BG_DEEP = "#060a12";
 const BG_SIDEBAR = "#080c18";
 const TEXT = "rgba(255,255,255,0.88)";
 const TEXT_MUTED = "rgba(255,255,255,0.55)";

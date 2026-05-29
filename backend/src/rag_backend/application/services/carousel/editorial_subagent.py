@@ -36,13 +36,15 @@ class EditorialSubAgentState(dict):
 
 def _parse_request(messages: Sequence[AnyMessage]) -> dict[str, object]:
     for msg in reversed(messages):
-        if isinstance(msg, HumanMessage):
-            try:
-                parsed = json.loads(msg.content if isinstance(msg.content, str) else "")
-                if isinstance(parsed, dict):
-                    return parsed
-            except (json.JSONDecodeError, TypeError):
-                return {}
+        if not isinstance(msg, HumanMessage):
+            continue
+        content = msg.content if isinstance(msg.content, str) else ""
+        try:
+            parsed = json.loads(content)
+        except (json.JSONDecodeError, TypeError):
+            return {}
+        if isinstance(parsed, dict):
+            return parsed
     return {}
 
 

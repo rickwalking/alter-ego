@@ -26,4 +26,24 @@ describe("resolveClientApiUrl", () => {
       "http://localhost:8000/api/carousels/id/workflow/stream",
     );
   });
+
+  it("throws when the API path does not start with a slash", () => {
+    vi.stubEnv("NEXT_PUBLIC_API_URL", "http://localhost:8000");
+    expect(() => resolveClientApiUrl("api/carousels/id/workflow/state")).toThrow(
+      "API path must start with /",
+    );
+  });
+
+  it("returns relative paths during SSR even when NEXT_PUBLIC_API_URL is set", () => {
+    vi.stubEnv("NEXT_PUBLIC_API_URL", "http://localhost:8000");
+    const originalWindow = globalThis.window;
+    // @ts-expect-error — simulate SSR where window is unavailable.
+    delete globalThis.window;
+
+    expect(resolveClientApiUrl("/api/carousels/id/workflow/resume")).toBe(
+      "/api/carousels/id/workflow/resume",
+    );
+
+    globalThis.window = originalWindow;
+  });
 });

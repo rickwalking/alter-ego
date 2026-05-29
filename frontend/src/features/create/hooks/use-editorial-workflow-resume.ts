@@ -36,7 +36,7 @@ interface UseEditorialWorkflowResumeParams {
   lockVersion: number | undefined;
   translateError: (key: string) => string;
   workflowStateRef: RefObject<EditorialWorkflowState | null>;
-  transportModeRef: RefObject<EditorialWorkflowTransportMode>;
+  transportModeRef: RefObject<EditorialWorkflowTransportMode | null>;
   refreshState: () => Promise<EditorialWorkflowState | null>;
   setState: Dispatch<SetStateAction<EditorialWorkflowState | null>>;
   setPhaseEvents: Dispatch<SetStateAction<string[]>>;

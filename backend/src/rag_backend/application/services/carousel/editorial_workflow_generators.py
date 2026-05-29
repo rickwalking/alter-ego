@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 from rag_backend.agents.content_draft_agent import ContentDraftAgent
 from rag_backend.agents.outline_agent import OutlineAgent
 from rag_backend.agents.source_synthesis_agent import SourceSynthesisAgent
@@ -12,6 +14,16 @@ from rag_backend.domain.constants.carousel_workflow import SOURCE_TYPE_DOCUMENT
 from rag_backend.domain.models.persona import PersonaProfile
 
 from .editorial_workflow_support import EditorialWorkflowStartInput
+
+
+@dataclass(frozen=True)
+class SlideDraftGenerationParams:
+    """Inputs for generating slide drafts from an outline."""
+
+    outline: list[dict[str, object]]
+    persona: PersonaProfile | None = None
+    revision_notes: list[str] | None = None
+    learned_examples: list[str] | None = None
 
 
 async def synthesize_research(
@@ -50,36 +62,32 @@ async def generate_outline(
 
 async def generate_slide_drafts(
     content_agent: ContentDraftAgent,
-    outline: list[dict[str, object]],
-    persona: PersonaProfile | None,
-    *,
-    revision_notes: list[str] | None = None,
-    learned_examples: list[str] | None = None,
+    params: SlideDraftGenerationParams,
 ) -> list[dict[str, object]]:
     """Draft slide copy for each outline entry."""
     persona_context_parts: list[str] = []
-    if revision_notes:
+    if params.revision_notes:
         persona_context_parts.append(
             "Apply these reviewer notes:\n"
-            + "\n".join(f"- {note}" for note in revision_notes if note.strip())
+            + "\n".join(f"- {note}" for note in params.revision_notes if note.strip())
         )
-    if learned_examples:
+    if params.learned_examples:
         persona_context_parts.append(
             "Past successful corrections:\n"
             + "\n".join(
-                f"- {example}" for example in learned_examples if example.strip()
+                f"- {example}" for example in params.learned_examples if example.strip()
             )
         )
     persona_context = "\n\n".join(persona_context_parts)
     slide_drafts: list[dict[str, object]] = []
-    for slide in outline:
+    for slide in params.outline:
         draft = await content_agent.draft_slide(
             slide_index=int(slide.get("slide_index", 0)),
             title=str(slide.get("title", "")),
             key_points=[
                 str(p) for p in slide.get("key_points", []) if isinstance(p, str)
             ],
-            persona=persona,
+            persona=params.persona,
             persona_context=persona_context,
         )
         slide_drafts.append({**slide, **draft})
@@ -105,3 +113,12 @@ def resolve_workflow_input(
         user_id=workflow_input.user_id,
         reviewer_id=workflow_input.reviewer_id,
     )
+
+
+__all__ = [
+    "SlideDraftGenerationParams",
+    "generate_outline",
+    "generate_slide_drafts",
+    "resolve_workflow_input",
+    "synthesize_research",
+]

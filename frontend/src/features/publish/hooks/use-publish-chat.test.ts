@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook, waitFor, act } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createElement, type ReactNode } from "react";
@@ -55,22 +55,6 @@ const mockUseCreateConversation = vi.mocked(useCreateConversation);
 const mockUseConversationMessages = vi.mocked(useConversationMessages);
 const mockUseConversation = vi.mocked(useConversation);
 const mockUseQueryClient = vi.mocked(useQueryClient);
-
-class MockWebSocket {
-  static instances: MockWebSocket[] = [];
-  static OPEN = 1;
-  static CLOSED = 3;
-  constructor(public url: string) {
-    MockWebSocket.instances.push(this);
-  }
-  send = vi.fn();
-  close = vi.fn();
-  onopen: (() => void) | null = null;
-  onclose: (() => void) | null = null;
-  onmessage: ((event: { data: string }) => void) | null = null;
-  onerror: (() => void) | null = null;
-  readyState: number = MockWebSocket.OPEN;
-}
 
 function createWrapper() {
   const queryClient = new QueryClient({

@@ -30,7 +30,7 @@ function PostCard({
   titleEn,
   topic,
   niche,
-  status,
+  status: _status,
   primaryColor,
   createdAt,
   readMoreText,

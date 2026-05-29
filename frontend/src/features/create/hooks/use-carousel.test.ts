@@ -128,6 +128,7 @@ describe("useCreateCarousel", () => {
 
   it("returns error state on API failure", async () => {
     mockApiCall.mockRejectedValueOnce(new Error("API Error"));
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     const { result } = renderHook(() => useCreateCarousel(), {
       wrapper: createWrapper(),
     });
@@ -136,6 +137,62 @@ describe("useCreateCarousel", () => {
 
     await waitFor(() => expect(result.current.isError).toBe(true));
     expect(result.current.error).toEqual(new Error("API Error"));
+    expect(consoleSpy).toHaveBeenCalledWith(
+      "Failed to create carousel:",
+      expect.any(Error),
+    );
+    consoleSpy.mockRestore();
+  });
+
+  it("prepends created projects to the cached carousel list", async () => {
+    mockApiCall.mockResolvedValueOnce(MOCK_PROJECT);
+    const queryClient = createQueryClient();
+    const existing = { ...MOCK_PROJECT, id: "existing-id", topic: "Existing" };
+    queryClient.setQueryData(["carousels"], [existing]);
+    const { result } = renderHook(() => useCreateCarousel(), {
+      wrapper: createWrapper(queryClient),
+    });
+
+    result.current.mutate(MOCK_CREATE_REQUEST);
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(queryClient.getQueryData(["carousels"])).toEqual([
+      MOCK_PROJECT,
+      existing,
+    ]);
+  });
+
+  it("replaces duplicate carousel ids in the cached list", async () => {
+    mockApiCall.mockResolvedValueOnce({ ...MOCK_PROJECT, topic: "Updated topic" });
+    const queryClient = createQueryClient();
+    queryClient.setQueryData(
+      ["carousels"],
+      [{ ...MOCK_PROJECT, topic: "Stale topic" }, { ...MOCK_PROJECT, id: "other" }],
+    );
+    const { result } = renderHook(() => useCreateCarousel(), {
+      wrapper: createWrapper(queryClient),
+    });
+
+    result.current.mutate(MOCK_CREATE_REQUEST);
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(queryClient.getQueryData(["carousels"])).toEqual([
+      { ...MOCK_PROJECT, topic: "Updated topic" },
+      { ...MOCK_PROJECT, id: "other" },
+    ]);
+  });
+
+  it("does not create a list cache entry when none exists yet", async () => {
+    mockApiCall.mockResolvedValueOnce(MOCK_PROJECT);
+    const queryClient = createQueryClient();
+    const { result } = renderHook(() => useCreateCarousel(), {
+      wrapper: createWrapper(queryClient),
+    });
+
+    result.current.mutate(MOCK_CREATE_REQUEST);
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(queryClient.getQueryData(["carousels"])).toBeUndefined();
   });
 });
 
@@ -192,6 +249,7 @@ describe("useDeleteCarousel", () => {
 
   it("surfaces API errors", async () => {
     mockApiCall.mockRejectedValueOnce(new Error("not found"));
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     const { result } = renderHook(() => useDeleteCarousel(), {
       wrapper: createWrapper(),
     });
@@ -200,5 +258,10 @@ describe("useDeleteCarousel", () => {
 
     await waitFor(() => expect(result.current.isError).toBe(true));
     expect(result.current.error).toEqual(new Error("not found"));
+    expect(consoleSpy).toHaveBeenCalledWith(
+      "Failed to delete carousel:",
+      expect.any(Error),
+    );
+    consoleSpy.mockRestore();
   });
 });

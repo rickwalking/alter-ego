@@ -8,6 +8,10 @@ scoped `AsyncSession` and pull only the session-free providers (settings,
 retriever, external services) from the container.
 """
 
+from __future__ import annotations
+
+from collections.abc import Callable
+from dataclasses import dataclass
 from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -38,7 +42,7 @@ from rag_backend.domain.constants.carousel_tools import (
 )
 from rag_backend.domain.constants.carousel_workflow import SOURCE_TYPE_URL
 from rag_backend.domain.constants.conversation import CONVERSATION_METADATA_PROJECT_ID
-from rag_backend.domain.models import Conversation
+from rag_backend.domain.models import CarouselProject, Conversation
 from rag_backend.infrastructure.container import Container
 from rag_backend.infrastructure.database.carousel_repository import (
     PostgresCarouselRepository,
@@ -49,6 +53,28 @@ from rag_backend.infrastructure.database.conversation_repository import (
 from rag_backend.infrastructure.database.document_repository import (
     PostgresDocumentRepository,
 )
+
+ProjectAccessVerifier = Callable[
+    [CarouselProject, CarouselToolAccessContext], str | None
+]
+
+
+@dataclass(frozen=True)
+class RagAgentBuildContext:
+    """Optional caller identity for scoped carousel tool access."""
+
+    owner_user_id: str | None = None
+    bound_project_id: str | None = None
+
+
+@dataclass(frozen=True)
+class SubagentWorkflowStartRequest:
+    """Inputs for starting an editorial workflow from the RAG subagent."""
+
+    topic: str
+    audience: str
+    brief: str
+    source_urls: list[str]
 
 
 def build_agent_for_conversation(
@@ -62,18 +88,20 @@ def build_agent_for_conversation(
     (carousel tools + subagent). All others get the AlterEgoAgent
     (personal knowledge base only).
     """
-    if CONVERSATION_METADATA_PROJECT_ID in conversation.metadata:
-        if conversation.user_id is None:
-            return build_alter_ego_agent(db, container)
-        bound_project_id = str(conversation.metadata[CONVERSATION_METADATA_PROJECT_ID])
-        owner_user_id = str(conversation.user_id)
-        return build_rag_agent(
-            db,
-            container,
-            owner_user_id=owner_user_id,
-            bound_project_id=bound_project_id,
-        )
-    return build_alter_ego_agent(db, container)
+    if CONVERSATION_METADATA_PROJECT_ID not in conversation.metadata:
+        return build_alter_ego_agent(db, container)
+    if conversation.user_id is None:
+        return build_alter_ego_agent(db, container)
+    return build_rag_agent(
+        db,
+        container,
+        RagAgentBuildContext(
+            owner_user_id=str(conversation.user_id),
+            bound_project_id=str(
+                conversation.metadata[CONVERSATION_METADATA_PROJECT_ID]
+            ),
+        ),
+    )
 
 
 def build_alter_ego_agent(db: AsyncSession, container: Container) -> AlterEgoAgent:
@@ -90,18 +118,74 @@ def build_alter_ego_agent(db: AsyncSession, container: Container) -> AlterEgoAge
     )
 
 
+async def _assert_carousel_project_access(
+    project_id: str,
+    tool_access: CarouselToolAccessContext | None,
+    carousel_repo: PostgresCarouselRepository,
+    verify_access: ProjectAccessVerifier,
+) -> None:
+    if tool_access is None:
+        raise ValueError(ERR_CAROUSEL_TOOL_ACCESS_DENIED)
+    try:
+        project_uuid = UUID(project_id)
+    except ValueError as exc:
+        raise ValueError(ERR_CAROUSEL_TOOL_INVALID_PROJECT_ID) from exc
+    project = await carousel_repo.get_project_by_id(project_uuid)
+    if project is None:
+        raise ValueError(ERR_CAROUSEL_TOOL_PROJECT_NOT_FOUND)
+    access_error = verify_access(project, tool_access)
+    if access_error is not None:
+        raise ValueError(access_error)
+
+
+def _sanitize_url_sources(source_urls: list[str]) -> list[dict[str, str]]:
+    return [
+        {
+            "title": sanitize_llm_input(url),
+            "content": sanitize_llm_input(url),
+            "source_type": SOURCE_TYPE_URL,
+        }
+        for url in source_urls
+    ]
+
+
+async def _start_editorial_workflow_for_rag(
+    project_id: str,
+    request: SubagentWorkflowStartRequest,
+    *,
+    workflow_service: EditorialWorkflowService,
+    workflow_user_id: str,
+    db: AsyncSession,
+) -> str:
+    state = await workflow_service.start_workflow(
+        project_id=project_id,
+        workflow_input=EditorialWorkflowStartInput(
+            topic=sanitize_llm_input(request.topic),
+            audience=sanitize_llm_input(request.audience),
+            brief=sanitize_llm_input(request.brief),
+            sources=_sanitize_url_sources(request.source_urls),
+            user_id=workflow_user_id,
+        ),
+        db=db,
+    )
+    await db.commit()
+    return (
+        f"Phase: {state.get('current_phase', '')}; "
+        f"Status: {state.get('phase_status', '')}"
+    )
+
+
 def build_rag_agent(
     db: AsyncSession,
     container: Container,
-    *,
-    owner_user_id: str | None = None,
-    bound_project_id: str | None = None,
+    context: RagAgentBuildContext | None = None,
 ) -> RAGAgent:
     """Build a RAGAgent bound to the given per-request session.
 
     Carousel-related conversations get the full agent with carousel
     tools and the carousel pipeline subagent.
     """
+    build_context = context or RagAgentBuildContext()
     settings = container.settings()
     carousel_repo = PostgresCarouselRepository(db)
     carousel_refinement = CarouselRefinementService(
@@ -116,75 +200,43 @@ def build_rag_agent(
         llm=llm,
         image_registry=container.image_provider_registry(),
     )
-    workflow_user_id = owner_user_id or RAG_AGENT_USER_ID
+    workflow_user_id = build_context.owner_user_id or RAG_AGENT_USER_ID
     tool_access = (
         CarouselToolAccessContext(
             owner_user_id=workflow_user_id,
-            bound_project_id=bound_project_id,
+            bound_project_id=build_context.bound_project_id,
         )
-        if owner_user_id is not None
+        if build_context.owner_user_id is not None
         else None
     )
 
     async def _assert_subagent_project_access(project_id: str) -> None:
-        if tool_access is None:
-            raise ValueError(ERR_CAROUSEL_TOOL_ACCESS_DENIED)
-        try:
-            project_uuid = UUID(project_id)
-        except ValueError as exc:
-            raise ValueError(ERR_CAROUSEL_TOOL_INVALID_PROJECT_ID) from exc
-        project = await carousel_repo.get_project_by_id(project_uuid)
-        if project is None:
-            raise ValueError(ERR_CAROUSEL_TOOL_PROJECT_NOT_FOUND)
-        access_error = verify_carousel_tool_access(project, tool_access)
-        if access_error is not None:
-            raise ValueError(access_error)
+        await _assert_carousel_project_access(
+            project_id,
+            tool_access,
+            carousel_repo,
+            verify_carousel_tool_access,
+        )
 
     async def _assert_workflow_start_access(project_id: str) -> None:
-        if tool_access is None:
-            raise ValueError(ERR_CAROUSEL_TOOL_ACCESS_DENIED)
-        try:
-            project_uuid = UUID(project_id)
-        except ValueError as exc:
-            raise ValueError(ERR_CAROUSEL_TOOL_INVALID_PROJECT_ID) from exc
-        project = await carousel_repo.get_project_by_id(project_uuid)
-        if project is None:
-            raise ValueError(ERR_CAROUSEL_TOOL_PROJECT_NOT_FOUND)
-        access_error = verify_carousel_workflow_start_access(project, tool_access)
-        if access_error is not None:
-            raise ValueError(access_error)
+        await _assert_carousel_project_access(
+            project_id,
+            tool_access,
+            carousel_repo,
+            verify_carousel_workflow_start_access,
+        )
 
     async def start_editorial_workflow(
         project_id: str,
-        topic: str,
-        audience: str,
-        brief: str,
-        source_urls: list[str],
+        request: SubagentWorkflowStartRequest,
     ) -> str:
         await _assert_workflow_start_access(project_id)
-        sources = [
-            {
-                "title": sanitize_llm_input(url),
-                "content": sanitize_llm_input(url),
-                "source_type": SOURCE_TYPE_URL,
-            }
-            for url in source_urls
-        ]
-        state = await workflow_service.start_workflow(
-            project_id=project_id,
-            workflow_input=EditorialWorkflowStartInput(
-                topic=sanitize_llm_input(topic),
-                audience=sanitize_llm_input(audience),
-                brief=sanitize_llm_input(brief),
-                sources=sources,
-                user_id=workflow_user_id,
-            ),
+        return await _start_editorial_workflow_for_rag(
+            project_id,
+            request,
+            workflow_service=workflow_service,
+            workflow_user_id=workflow_user_id,
             db=db,
-        )
-        await db.commit()
-        return (
-            f"Phase: {state.get('current_phase', '')}; "
-            f"Status: {state.get('phase_status', '')}"
         )
 
     async def start_from_subagent(
@@ -229,6 +281,24 @@ def build_rag_agent(
         if tool_access is not None
         else None
     )
+
+    async def start_editorial_workflow_compat(
+        project_id: str,
+        topic: str,
+        audience: str,
+        brief: str,
+        source_urls: list[str],
+    ) -> str:
+        return await start_editorial_workflow(
+            project_id,
+            SubagentWorkflowStartRequest(
+                topic=topic,
+                audience=audience,
+                brief=brief,
+                source_urls=source_urls,
+            ),
+        )
+
     return RAGAgent(
         settings=settings,
         retriever=container.retriever(),
@@ -237,6 +307,6 @@ def build_rag_agent(
         carousel_refinement=carousel_refinement,
         carousel_repository=carousel_repo,
         editorial_subagent=editorial_subagent,
-        start_editorial_workflow=start_editorial_workflow,
+        start_editorial_workflow=start_editorial_workflow_compat,
         carousel_tool_access=tool_access,
     )

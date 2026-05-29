@@ -81,7 +81,7 @@ test.describe("Carousel editorial consolidation E2E", () => {
 });
 
 test.describe("Editorial workflow API (authenticated)", () => {
-  test.beforeEach(async ({ request }, testInfo) => {
+  test.beforeEach(async (_context, testInfo) => {
     if (!process.env.PLAYWRIGHT_E2E_EMAIL || !process.env.PLAYWRIGHT_E2E_PASSWORD) {
       testInfo.skip(
         true,

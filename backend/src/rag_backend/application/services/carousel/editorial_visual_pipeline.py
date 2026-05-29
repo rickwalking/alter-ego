@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from pathlib import Path
 from uuid import UUID
 
@@ -23,6 +24,53 @@ from rag_backend.infrastructure.database.carousel_repository import (
 DEFAULT_OUTPUT_BASE = "./output/carousels"
 
 
+@dataclass(frozen=True)
+class CarouselImageGenerationContext:
+    """Inputs for generating carousel hero and slide images."""
+
+    project_id: str
+    slides: list[SlideData]
+    image_registry: ImageProviderRegistry
+
+
+def _slide_data_from_outline_item(
+    item: dict[str, object],
+    index: int,
+) -> SlideData | None:
+    slide_number = int(item.get("slide_index", index + 1))
+    heading = str(item.get("title", ""))
+    key_points = item.get("key_points", [])
+    body_parts = [
+        str(point) for point in key_points if isinstance(point, (str, int, float))
+    ]
+    body = " · ".join(body_parts) if body_parts else heading
+    slide_type = SLIDE_TYPE_INTRO if slide_number == 1 else SLIDE_TYPE_CONTENT
+    image_prompt = f"Editorial illustration for carousel slide: {heading}"
+    return SlideData(
+        slide_number=slide_number,
+        slide_type=slide_type,
+        heading=heading,
+        body=body,
+        image_prompt=image_prompt,
+    )
+
+
+async def _persist_outline_slide(
+    repo: PostgresCarouselRepository,
+    project_id: UUID,
+    data: SlideData,
+) -> None:
+    slide = CarouselSlide(
+        project_id=project_id,
+        slide_number=data.slide_number,
+        slide_type=data.slide_type,
+        heading=data.heading,
+        body=data.body,
+        image_prompt=data.image_prompt,
+    )
+    await repo.create_slide(slide)
+
+
 async def ensure_slides_from_outline(
     db: AsyncSession,
     project_id: str,
@@ -41,31 +89,10 @@ async def ensure_slides_from_outline(
     for index, item in enumerate(outline):
         if not isinstance(item, dict):
             continue
-        slide_number = int(item.get("slide_index", index + 1))
-        heading = str(item.get("title", ""))
-        key_points = item.get("key_points", [])
-        body_parts = [
-            str(point) for point in key_points if isinstance(point, (str, int, float))
-        ]
-        body = " · ".join(body_parts) if body_parts else heading
-        slide_type = SLIDE_TYPE_INTRO if slide_number == 1 else SLIDE_TYPE_CONTENT
-        image_prompt = f"Editorial illustration for carousel slide: {heading}"
-        data = SlideData(
-            slide_number=slide_number,
-            slide_type=slide_type,
-            heading=heading,
-            body=body,
-            image_prompt=image_prompt,
-        )
-        slide = CarouselSlide(
-            project_id=project.id,
-            slide_number=data.slide_number,
-            slide_type=data.slide_type,
-            heading=data.heading,
-            body=data.body,
-            image_prompt=data.image_prompt,
-        )
-        await repo.create_slide(slide)
+        data = _slide_data_from_outline_item(item, index)
+        if data is None:
+            continue
+        await _persist_outline_slide(repo, project.id, data)
         slide_data.append(data)
     return slide_data
 
@@ -87,25 +114,31 @@ async def apply_design_tokens(
 
 async def generate_carousel_images(
     db: AsyncSession,
-    project_id: str,
-    slides: list[SlideData],
-    image_registry: ImageProviderRegistry,
+    ctx: CarouselImageGenerationContext,
 ) -> list[str]:
     """Generate hero images and return their filesystem paths."""
     repo = PostgresCarouselRepository(session=db)
-    project = await repo.get_project_by_id(UUID(project_id))
-    if project is None or not slides:
+    project = await repo.get_project_by_id(UUID(ctx.project_id))
+    if project is None or not ctx.slides:
         return []
-    output_dir = Path(project.output_dir or f"{DEFAULT_OUTPUT_BASE}/{project_id}")
+    output_dir = Path(project.output_dir or f"{DEFAULT_OUTPUT_BASE}/{ctx.project_id}")
     output_dir.mkdir(parents=True, exist_ok=True)
     await run_images(
         project,
-        slides,
+        ctx.slides,
         output_dir,
         repo=repo,
-        image_registry=image_registry,
+        image_registry=ctx.image_registry,
     )
-    refreshed = await repo.get_slides_by_project(project.id)
+    return await _collect_generated_image_paths(repo, project.id, output_dir)
+
+
+async def _collect_generated_image_paths(
+    repo: PostgresCarouselRepository,
+    project_id: UUID,
+    output_dir: Path,
+) -> list[str]:
+    refreshed = await repo.get_slides_by_project(project_id)
     asset_paths = [
         str(slide.image_path)
         for slide in refreshed
@@ -120,6 +153,7 @@ async def generate_carousel_images(
 
 
 __all__ = [
+    "CarouselImageGenerationContext",
     "apply_design_tokens",
     "ensure_slides_from_outline",
     "generate_carousel_images",

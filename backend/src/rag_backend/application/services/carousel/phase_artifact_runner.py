@@ -10,6 +10,7 @@ from rag_backend.agents.feedback_learning import FeedbackLearningLoop
 from rag_backend.agents.outline_agent import OutlineAgent
 from rag_backend.agents.persona_agent import PersonaAgent
 from rag_backend.application.services.carousel.editorial_visual_pipeline import (
+    CarouselImageGenerationContext,
     apply_design_tokens,
     ensure_slides_from_outline,
     generate_carousel_images,
@@ -35,6 +36,7 @@ from rag_backend.infrastructure.external.openai_embeddings import (  # type: ign
 )
 
 from .editorial_workflow_generators import (
+    SlideDraftGenerationParams,
     generate_outline,
     generate_slide_drafts,
     resolve_workflow_input,
@@ -122,46 +124,83 @@ class PhaseArtifactRunner:
         revision_notes = self._content_revision_notes(state)
         should_regenerate = not state.get("slide_drafts") or bool(revision_notes)
         if should_regenerate and isinstance(outline, list):
-            learned_examples = await self._load_learned_examples(resolved.persona)
-            try:
-                updates["slide_drafts"] = await generate_slide_drafts(
-                    self._content_agent,
-                    [slide for slide in outline if isinstance(slide, dict)],
-                    resolved.persona,
+            draft_updates = await self._generate_content_drafts(
+                resolved,
+                outline,
+                revision_notes,
+            )
+            if draft_updates.get("phase_status") == PHASE_STATUS_FAILED:
+                return draft_updates
+            updates.update(draft_updates)
+        slide_drafts = updates.get("slide_drafts") or state.get("slide_drafts") or []
+        persona_updates = await self._score_content_drafts(resolved, slide_drafts)
+        updates.update(persona_updates)
+        design_updates = await self._apply_content_design(state, outline)
+        updates.update(design_updates)
+        return updates
+
+    async def _generate_content_drafts(
+        self,
+        resolved: EditorialWorkflowStartInput,
+        outline: list[object],
+        revision_notes: list[str],
+    ) -> dict[str, object]:
+        learned_examples = await self._load_learned_examples(resolved.persona)
+        try:
+            slide_drafts = await generate_slide_drafts(
+                self._content_agent,
+                SlideDraftGenerationParams(
+                    outline=[slide for slide in outline if isinstance(slide, dict)],
+                    persona=resolved.persona,
                     revision_notes=revision_notes or None,
                     learned_examples=learned_examples or None,
-                )
-            except ValueError as exc:
-                if str(exc) == ERR_INVALID_JSON:
-                    return {
-                        "phase_status": PHASE_STATUS_FAILED,
-                        WORKFLOW_ERROR_KEY: ERR_INVALID_JSON,
-                    }
-                raise
-        slide_drafts = updates.get("slide_drafts") or state.get("slide_drafts") or []
-        if (
-            resolved.persona is not None
-            and isinstance(slide_drafts, list)
-            and slide_drafts
-        ):
-            updates["persona_scores"] = await self._score_slides(
+                ),
+            )
+        except ValueError as exc:
+            if str(exc) == ERR_INVALID_JSON:
+                return {
+                    "phase_status": PHASE_STATUS_FAILED,
+                    WORKFLOW_ERROR_KEY: ERR_INVALID_JSON,
+                }
+            raise
+        return {"slide_drafts": slide_drafts}
+
+    async def _score_content_drafts(
+        self,
+        resolved: EditorialWorkflowStartInput,
+        slide_drafts: object,
+    ) -> dict[str, object]:
+        if resolved.persona is None:
+            return {}
+        if not isinstance(slide_drafts, list) or not slide_drafts:
+            return {}
+        return {
+            "persona_scores": await self._score_slides(
                 slide_drafts,
                 resolved.persona,
             )
-        if self._db is not None and isinstance(outline, list):
-            slides = await ensure_slides_from_outline(
-                self._db,
-                str(state.get("project_id", "")),
-                [slide for slide in outline if isinstance(slide, dict)],
-            )
-            if slides:
-                await apply_design_tokens(
-                    self._db,
-                    str(state.get("project_id", "")),
-                    slides,
-                )
-                updates["design_applied"] = True
-        return updates
+        }
+
+    async def _apply_content_design(
+        self,
+        state: CarouselWorkflowState,
+        outline: object,
+    ) -> dict[str, object]:
+        if self._db is None or not isinstance(outline, list):
+            return {}
+        slides = await ensure_slides_from_outline(
+            self._db,
+            str(state.get("project_id", "")),
+            [slide for slide in outline if isinstance(slide, dict)],
+        )
+        if not slides:
+            return {}
+        await apply_design_tokens(
+            self._db,
+            str(state.get("project_id", "")),
+            slides,
+        )
+        return {"design_applied": True}
 
     @staticmethod
     def _content_revision_notes(state: CarouselWorkflowState) -> list[str]:
@@ -227,9 +266,11 @@ class PhaseArtifactRunner:
             return {}
         assets = await generate_carousel_images(
             self._db,
-            str(state.get("project_id", "")),
-            slides,
-            self._image_registry,
+            CarouselImageGenerationContext(
+                project_id=str(state.get("project_id", "")),
+                slides=slides,
+                image_registry=self._image_registry,
+            ),
         )
         return {"image_assets": assets, "design_applied": True}
 
