@@ -71,6 +71,8 @@ SEND_BACK_TARGET_PHASE_KEY = "send_back_target_phase"
 WORKFLOW_ERROR_KEY = "workflow_error"
 PERSONA_SCORE_OVERALL_KEY = "overall"
 SLIDE_DRAFT_TEXT_KEY = "draft_text"
+WORKFLOW_STATE_LINKEDIN_POST_PT_KEY = "linkedin_post_pt"
+WORKFLOW_STATE_LINKEDIN_POST_EN_KEY = "linkedin_post_en"
 
 WORKFLOW_ARTIFACT_TYPE_OUTLINE = "outline"
 WORKFLOW_ARTIFACT_TYPE_SLIDE_DRAFTS = "slide_drafts"

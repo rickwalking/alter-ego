@@ -161,6 +161,7 @@ export function ChatMessageList({
             }}
           >
             <span
+              className="chat-typing-dot"
               style={{
                 display: "inline-block",
                 width: "6px",
@@ -173,6 +174,15 @@ export function ChatMessageList({
           </div>
         </div>
       )}
+      <style>{`
+        @keyframes chat-pulse-dot {
+          0%, 100% { opacity: 0.35; transform: scale(0.85); }
+          50% { opacity: 1; transform: scale(1.15); }
+        }
+        .chat-typing-dot {
+          animation: chat-pulse-dot 1.2s ease-in-out infinite;
+        }
+      `}</style>
     </div>
   );
 }

@@ -120,6 +120,9 @@ class TestCarouselExportTool:
             output_dir="/output",
             width=1080,
             height=1350,
+            css_overrides=None,
+            quality=95,
+            hd=False,
         )
 
     async def test_export_carousel_custom_dimensions(self):
@@ -143,6 +146,9 @@ class TestCarouselExportTool:
             output_dir="/output",
             width=1920,
             height=1080,
+            css_overrides=None,
+            quality=95,
+            hd=False,
         )
 
     async def test_export_defaults(self):

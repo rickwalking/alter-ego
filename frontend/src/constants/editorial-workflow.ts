@@ -25,6 +25,7 @@ export const EDITORIAL_PHASES = {
   DESIGN: "design",
   IMAGES: "images",
   FINAL_REVIEW: "final_review",
+  PUBLISHED: "published",
 } as const;
 
 /** Workflow state transport modes for UI observability. */

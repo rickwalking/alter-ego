@@ -35,6 +35,7 @@ from rag_backend.infrastructure.external.openai_embeddings import (  # type: ign
     OpenAIEmbeddings,
 )
 
+from .editorial_distribution_pack import build_editorial_distribution_updates
 from .editorial_workflow_generators import (
     SlideDraftGenerationParams,
     generate_outline,
@@ -45,6 +46,7 @@ from .editorial_workflow_support import (
     EditorialWorkflowStartInput,
     publish_workflow_artifacts_from_updates,
 )
+from .outline_normalize import normalize_editorial_outline
 
 
 class PhaseArtifactRunner:
@@ -90,6 +92,14 @@ class PhaseArtifactRunner:
             return {}
         resolved = resolve_workflow_input(state, self._workflow_input)
         updates: dict[str, object] = {}
+        raw_outline = state.get("outline")
+        if isinstance(raw_outline, list):
+            outline_dicts = [slide for slide in raw_outline if isinstance(slide, dict)]
+            if outline_dicts:
+                normalized_outline = normalize_editorial_outline(outline_dicts)
+                if len(normalized_outline) != len(outline_dicts):
+                    updates["outline"] = normalized_outline
+                    state = {**state, "outline": normalized_outline}
 
         if phase == PHASE_OUTLINE and not state.get("outline"):
             updates["outline"] = await generate_outline(self._outline_agent, resolved)
@@ -120,7 +130,15 @@ class PhaseArtifactRunner:
         pending: dict[str, object],
     ) -> dict[str, object]:
         updates: dict[str, object] = {}
-        outline = pending.get("outline") or state.get("outline") or []
+        raw_outline = pending.get("outline") or state.get("outline") or []
+        outline: list[object] = raw_outline
+        if isinstance(raw_outline, list):
+            outline_dicts = [slide for slide in raw_outline if isinstance(slide, dict)]
+            if outline_dicts:
+                normalized_outline = normalize_editorial_outline(outline_dicts)
+                if len(normalized_outline) != len(outline_dicts):
+                    outline = normalized_outline
+                    updates["outline"] = normalized_outline
         revision_notes = self._content_revision_notes(state)
         should_regenerate = not state.get("slide_drafts") or bool(revision_notes)
         if should_regenerate and isinstance(outline, list):
@@ -135,6 +153,21 @@ class PhaseArtifactRunner:
         slide_drafts = updates.get("slide_drafts") or state.get("slide_drafts") or []
         persona_updates = await self._score_content_drafts(resolved, slide_drafts)
         updates.update(persona_updates)
+        if self._db is not None and self._should_build_distribution(
+            state, outline, slide_drafts, updates
+        ):
+            from rag_backend.infrastructure.container import get_container
+
+            container = get_container()
+            distribution = await build_editorial_distribution_updates(
+                self._db,
+                self._llm,
+                str(state.get("project_id", "")),
+                [slide for slide in outline if isinstance(slide, dict)],
+                [slide for slide in slide_drafts if isinstance(slide, dict)],
+                linkedin_generator=container.linkedin_post_generator(),
+            )
+            updates.update(distribution)
         design_updates = await self._apply_content_design(state, outline)
         updates.update(design_updates)
         return updates
@@ -201,6 +234,26 @@ class PhaseArtifactRunner:
             slides,
         )
         return {"design_applied": True}
+
+    @staticmethod
+    def _should_build_distribution(
+        state: CarouselWorkflowState,
+        outline: object,
+        slide_drafts: object,
+        updates: dict[str, object],
+    ) -> bool:
+        if not isinstance(outline, list) or not isinstance(slide_drafts, list):
+            return False
+        if not slide_drafts:
+            return False
+        drafts_were_generated = "slide_drafts" in updates
+        needs_distribution = (
+            not state.get("caption")
+            or not state.get("blog_markdown")
+            or not state.get("linkedin_post_pt")
+            or not state.get("linkedin_post_en")
+        )
+        return drafts_were_generated or needs_distribution
 
     @staticmethod
     def _content_revision_notes(state: CarouselWorkflowState) -> list[str]:

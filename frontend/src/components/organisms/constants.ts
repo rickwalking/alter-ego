@@ -1,4 +1,19 @@
 import type { SidebarSection } from "@/schemas/neon-sidebar";
+import { PUBLIC_ROUTE_PATHS } from "@/constants/public-routes";
+
+/** Anonymous visitors: chat only (public shell). */
+export const PUBLIC_SIDEBAR_SECTIONS: SidebarSection[] = [
+  {
+    sectionKey: "sectionMain",
+    items: [
+      {
+        href: PUBLIC_ROUTE_PATHS.CHAT,
+        labelKey: "chat",
+        icon: "M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z",
+      },
+    ],
+  },
+];
 
 export const DASHBOARD_SIDEBAR_SECTIONS: SidebarSection[] = [
   {

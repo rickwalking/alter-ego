@@ -17,7 +17,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.9,
     },
     {
-      url: `${baseUrl}/knowledge`,
+      url: `${baseUrl}/dashboard/knowledge`,
       lastModified: new Date(),
       changeFrequency: "weekly",
       priority: 0.9,

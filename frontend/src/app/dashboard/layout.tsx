@@ -28,7 +28,10 @@ export default function DashboardLayout({
         }}
       >
         <div className="flex min-h-screen">
-          <NeonSidebar sections={DASHBOARD_SIDEBAR_SECTIONS} />
+          <NeonSidebar
+            sections={DASHBOARD_SIDEBAR_SECTIONS}
+            showUserFooter
+          />
 
           <div
             className="flex flex-1 flex-col min-h-screen"

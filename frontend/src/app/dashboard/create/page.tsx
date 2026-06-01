@@ -10,13 +10,14 @@ import {
 } from "@/app/dashboard/create/create-form-sections";
 import { CreateSidebar } from "@/app/dashboard/create/create-sidebar";
 import { CreateProgressSteps } from "@/app/dashboard/create/create-progress-steps";
+import { CREATE_STEP_IDS } from "@/app/dashboard/create/step-ids";
 import { buildCarouselCreateRequest } from "@/app/dashboard/create/helpers";
 import {
   INITIAL_CREATE_FORM_STATE,
   type CreateCarouselFormState,
 } from "@/app/dashboard/create/types";
 import { useCreateCarousel } from "@/features/create/hooks";
-import { ROUTE_PATHS } from "@/constants/api";
+import { DASHBOARD_ROUTES } from "@/constants/dashboard-routes";
 import { DEFAULT_IMAGE_PRESET } from "@/constants/create";
 
 export default function CreateCarouselPage(): React.ReactElement {
@@ -37,7 +38,7 @@ export default function CreateCarouselPage(): React.ReactElement {
     try {
       const payload = buildCarouselCreateRequest(form);
       const project = await createCarousel.mutateAsync(payload);
-      router.push(ROUTE_PATHS.CREATE_WORKSPACE(project.id));
+      router.push(DASHBOARD_ROUTES.CREATE_WORKSPACE(project.id));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create carousel");
     }
@@ -54,7 +55,10 @@ export default function CreateCarouselPage(): React.ReactElement {
       />
 
       <div className="p-7">
-        <CreateProgressSteps />
+        <CreateProgressSteps
+          activeStepId={CREATE_STEP_IDS.BRIEF}
+          onStepChange={() => undefined}
+        />
         <div
           style={{
             display: "grid",

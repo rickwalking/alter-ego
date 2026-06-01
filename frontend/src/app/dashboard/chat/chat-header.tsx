@@ -15,6 +15,7 @@ export interface ChatHeaderProps {
 export function ChatHeader({ onNewChat }: ChatHeaderProps): React.ReactElement {
   return (
     <header
+      className="sticky top-0 z-20 shrink-0"
       style={{
         height: "56px",
         display: "flex",

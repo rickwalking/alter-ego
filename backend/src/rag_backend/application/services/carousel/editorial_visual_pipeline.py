@@ -10,12 +10,18 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.application.services.carousel.nodes.design import run_design
 from rag_backend.application.services.carousel.nodes.images import run_images
-from rag_backend.application.services.carousel.types import SlideData, unpack_extras
+from rag_backend.application.services.carousel.outline_normalize import (
+    canonical_slide_type,
+)
+from rag_backend.application.services.carousel.types import (
+    MAX_SLIDES,
+    SlideData,
+    unpack_extras,
+)
 from rag_backend.application.services.carousel_template import CarouselTemplateBuilder
 from rag_backend.application.services.image_provider_registry import (
     ImageProviderRegistry,
 )
-from rag_backend.domain.constants.carousel import SLIDE_TYPE_CONTENT, SLIDE_TYPE_INTRO
 from rag_backend.domain.models import CarouselSlide
 from rag_backend.infrastructure.database.carousel_repository import (
     PostgresCarouselRepository,
@@ -44,7 +50,12 @@ def _slide_data_from_outline_item(
         str(point) for point in key_points if isinstance(point, (str, int, float))
     ]
     body = " · ".join(body_parts) if body_parts else heading
-    slide_type = SLIDE_TYPE_INTRO if slide_number == 1 else SLIDE_TYPE_CONTENT
+    raw_type = item.get("slide_type")
+    slide_type = (
+        str(raw_type)
+        if isinstance(raw_type, str) and raw_type.strip()
+        else canonical_slide_type(slide_number)
+    )
     image_prompt = f"Editorial illustration for carousel slide: {heading}"
     return SlideData(
         slide_number=slide_number,
@@ -86,7 +97,7 @@ async def ensure_slides_from_outline(
         return [unpack_extras(slide) for slide in existing]
 
     slide_data: list[SlideData] = []
-    for index, item in enumerate(outline):
+    for index, item in enumerate(outline[:MAX_SLIDES]):
         if not isinstance(item, dict):
             continue
         data = _slide_data_from_outline_item(item, index)
@@ -123,6 +134,9 @@ async def generate_carousel_images(
         return []
     output_dir = Path(project.output_dir or f"{DEFAULT_OUTPUT_BASE}/{ctx.project_id}")
     output_dir.mkdir(parents=True, exist_ok=True)
+    if not project.output_dir:
+        project.output_dir = str(output_dir)
+        await repo.update_project(project)
     await run_images(
         project,
         ctx.slides,

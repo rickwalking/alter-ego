@@ -63,6 +63,33 @@ const nextConfig: NextConfig = {
         destination: "/",
         permanent: true,
       },
+      {
+        source: "/create",
+        destination: "/dashboard/create",
+        permanent: false,
+      },
+      {
+        source: "/create/:id",
+        destination: "/dashboard/create/:id",
+        permanent: false,
+      },
+      {
+        source: "/create/:id/publish",
+        destination: "/dashboard/create/:id/publish",
+        permanent: false,
+      },
+      { source: "/knowledge", destination: "/dashboard/knowledge", permanent: false },
+      { source: "/personas", destination: "/dashboard/personas", permanent: false },
+      { source: "/rubrics", destination: "/dashboard/rubrics", permanent: false },
+      { source: "/blog-posts", destination: "/dashboard/blog-posts", permanent: false },
+      {
+        source: "/blog-posts/:id/edit",
+        destination: "/dashboard/blog-posts/:id/edit",
+        permanent: false,
+      },
+      { source: "/workflow", destination: "/dashboard/workflow", permanent: false },
+      { source: "/calendar", destination: "/dashboard/calendar", permanent: false },
+      { source: "/analytics", destination: "/dashboard/analytics", permanent: false },
     ];
   },
 

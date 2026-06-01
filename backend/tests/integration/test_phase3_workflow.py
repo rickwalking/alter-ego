@@ -229,3 +229,5 @@ class TestPhase3WorkflowViews:
         assert response.status_code == 200
         data = response.json()
         assert "columns" in data
+        phases = [column["phase"] for column in data["columns"]]
+        assert "published" in phases

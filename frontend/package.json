@@ -18,6 +18,8 @@
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",
     "typecheck": "tsc --noEmit",
+    "check:legacy": "node scripts/check-legacy-usage.mjs",
+    "check:legacy-inventory": "node scripts/check-legacy-usage.mjs --inventory",
     "prepare": "husky"
   },
   "lint-staged": {
@@ -48,6 +50,7 @@
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
     "framer-motion": "^12.7.4",
+    "jose": "^6.2.3",
     "jszip": "^3.10.1",
     "lucide-react": "^0.488.0",
     "next": "^16.2.6",

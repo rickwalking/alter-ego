@@ -15,8 +15,8 @@ import {
   CALENDAR_WEEKDAY_HEADERS,
 } from "@/features/dashboard/calendar/constants";
 import {
-  buildCalendarDays,
   buildCalendarDaysFromApi,
+  buildEmptyCalendarDays,
 } from "@/features/dashboard/calendar/helpers";
 import type { CalendarContentType } from "@/features/dashboard/calendar/types";
 import { useContentCalendar } from "@/features/workflow/hooks/use-content-calendar";
@@ -37,7 +37,7 @@ export default function CalendarPage() {
   const days =
     calendar && calendar.items.length > 0
       ? buildCalendarDaysFromApi(calendar.items)
-      : buildCalendarDays();
+      : buildEmptyCalendarDays();
 
   return (
     <div

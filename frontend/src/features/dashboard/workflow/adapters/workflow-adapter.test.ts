@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
+  mapApiKanbanColumn,
   mapWorkflowColumnDataToKanban,
   mapWorkflowToKanbanColumns,
 } from "@/features/dashboard/workflow/adapters/workflow-adapter";
@@ -47,5 +48,40 @@ describe("workflow-adapter", () => {
       },
     ]);
     expect(result[0].cards[0].id).toBe("uuid-1");
+  });
+
+  it("mapApiKanbanColumn prefers workflow_status over phase_status", () => {
+    const result = mapApiKanbanColumn({
+      phase: "final_review",
+      cards: [
+        {
+          id: "proj-1",
+          title: "Carousel",
+          topic: "AI",
+          current_phase: "final_review",
+          phase_status: "awaiting_human",
+          workflow_status: "approved_for_publish",
+          updated_at: null,
+        },
+      ],
+    });
+    expect(result.cards[0].phaseStatus).toBe("approved_for_publish");
+  });
+
+  it("mapApiKanbanColumn falls back to phase_status when workflow_status absent", () => {
+    const result = mapApiKanbanColumn({
+      phase: "outline",
+      cards: [
+        {
+          id: "proj-2",
+          title: "Draft",
+          topic: "Topic",
+          current_phase: "outline",
+          phase_status: "in_progress",
+          updated_at: null,
+        },
+      ],
+    });
+    expect(result.cards[0].phaseStatus).toBe("in_progress");
   });
 });

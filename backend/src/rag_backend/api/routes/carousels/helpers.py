@@ -122,7 +122,11 @@ def _apply_draft_preview_urls(
     if not isinstance(raw_images, dict):
         return tokens
     images = dict(raw_images)
-    if _has_rendered_slides(project.output_dir, "pt"):
+
+    has_rendered_pt = _has_rendered_slides(project.output_dir, "pt")
+    has_rendered_en = _has_rendered_slides(project.output_dir, "en")
+
+    if has_rendered_pt:
         preview_pt = _preview_rendered_slide_urls(
             project.id,
             slide_count,
@@ -133,7 +137,21 @@ def _apply_draft_preview_urls(
             images["hero"] = preview_pt[0]
             hero_slot_count = min(4, len(preview_pt))
             images["slides"] = preview_pt[:hero_slot_count]
-    if _has_rendered_slides(project.output_dir, "en"):
+    else:
+        images.pop("rendered_slides_pt", None)
+        # Fall back to raw images via the preview route so unpublished
+        # carousels can still show their AI-generated hero images.
+        preview_pt = _preview_rendered_slide_urls(
+            project.id,
+            slide_count,
+            "pt",
+        )
+        if preview_pt:
+            images["hero"] = preview_pt[0]
+            hero_slot_count = min(4, len(preview_pt))
+            images["slides"] = preview_pt[:hero_slot_count]
+
+    if has_rendered_en:
         images["rendered_slides_en"] = _preview_rendered_slide_urls(
             project.id,
             slide_count,

@@ -18,6 +18,12 @@ from rag_backend.application.services.carousel.types import (
 )
 from rag_backend.application.services.carousel_template import CarouselTemplateBuilder
 from rag_backend.application.services.pdf_slide_builder import PdfSlideBuilder
+from rag_backend.domain.constants import (
+    HD_SUBDIR_NAME,
+    LANGUAGE_EN,
+    LANGUAGE_PT,
+    SHARED_IMAGES_DIR_NAME,
+)
 from rag_backend.domain.models import CarouselProject
 from rag_backend.domain.protocols import CarouselExportService
 from rag_backend.infrastructure.logging import get_logger
@@ -37,17 +43,38 @@ async def render_language(
     """Export a single language's slide JPGs + PDF into `<output>/<lang>/`."""
     lang_dir = output_dir / language
     lang_dir.mkdir(parents=True, exist_ok=True)
+    src_dq = f'src="{SHARED_IMAGES_DIR_NAME}/'
+    src_sq = f"src='{SHARED_IMAGES_DIR_NAME}/"
+    url_dq = f'url("{SHARED_IMAGES_DIR_NAME}/'
+    url_sq = f"url('{SHARED_IMAGES_DIR_NAME}/"
     rewritten_html = (
         html_content
-        .replace('src="images/', 'src="../images/')
-        .replace("src='images/", "src='../images/")
-        .replace('url("images/', 'url("../images/')
-        .replace("url('images/", "url('../images/")
+        .replace(src_dq, 'src="../images/')
+        .replace(src_sq, "src='../images/")
+        .replace(url_dq, 'url("../images/')
+        .replace(url_sq, "url('../images/")
     )
     slide_paths = await export.export_slides(
         html_content=rewritten_html,
         output_dir=str(lang_dir),
     )
+    # Export HD slides too (2160x2700 for archive/retina). Non-blocking:
+    # if HD fails the standard slides are still available.
+    try:
+        hd_dir = lang_dir / HD_SUBDIR_NAME
+        hd_dir.mkdir(parents=True, exist_ok=True)
+        await export.export_slides(
+            html_content=rewritten_html,
+            output_dir=str(hd_dir),
+            hd=True,
+        )
+    except Exception:
+        logger.warning(
+            "hd_export_failed",
+            project_id=str(project.id),
+            language=language,
+            exc_info=True,
+        )
     if pdf_builder is None or not slide_paths:
         return
     try:
@@ -63,7 +90,7 @@ async def render_language(
             error=str(exc),
         )
         return
-    if language == "en":
+    if language == LANGUAGE_EN:
         project.pdf_path_en = pdf_path
     else:
         project.pdf_path = pdf_path
@@ -81,15 +108,25 @@ async def run_bilingual_export(
 ) -> None:
     """Render PT slides, then EN slides when translations exist."""
     await render_language(
-        project, "pt", pt_html, output_dir, export=export, pdf_builder=pdf_builder
+        project,
+        LANGUAGE_PT,
+        pt_html,
+        output_dir,
+        export=export,
+        pdf_builder=pdf_builder,
     )
 
     en_available = any(s.translation_en for s in slides_data)
     if not en_available:
         return
 
-    en_slides = slides_data_for_language(slides_data, "en")
-    en_html = run_design(project, en_slides, template=template, language="en")
+    en_slides = slides_data_for_language(slides_data, LANGUAGE_EN)
+    en_html = run_design(project, en_slides, template=template, language=LANGUAGE_EN)
     await render_language(
-        project, "en", en_html, output_dir, export=export, pdf_builder=pdf_builder
+        project,
+        LANGUAGE_EN,
+        en_html,
+        output_dir,
+        export=export,
+        pdf_builder=pdf_builder,
     )

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { NeonBadge } from "@/components/atoms/neon-badge";
 import { NeonCard } from "@/components/molecules/neon-card";
-import { ROUTE_PATHS } from "@/constants/api";
+import { DASHBOARD_ROUTES } from "@/constants/dashboard-routes";
 import { TEXT, TEXT_DIM, TEXT_MUTED } from "@/constants/neon";
 import type { KanbanColumn } from "@/schemas/neon-kanban";
 
@@ -35,7 +35,7 @@ export function NeonKanbanBoard({
             {column.cards.map((card) => (
               <Link
                 key={card.id}
-                href={ROUTE_PATHS.CREATE_WORKSPACE(card.id)}
+                href={DASHBOARD_ROUTES.CREATE_WORKSPACE(card.id)}
                 className="block no-underline"
               >
                 <NeonCard padding="sm" hover>

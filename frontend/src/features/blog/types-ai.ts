@@ -61,6 +61,8 @@ export interface EditorialWorkflowState {
   rubric_scores?: Record<string, unknown>;
   caption?: string;
   blog_markdown?: string;
+  linkedin_post_pt?: string;
+  linkedin_post_en?: string;
   status: string;
   workflow_status?: string;
   persona_scores?: Record<string, unknown>;

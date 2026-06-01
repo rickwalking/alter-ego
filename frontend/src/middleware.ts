@@ -1,17 +1,41 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { AUTH_LOGIN_REDIRECT_PARAM } from "@/constants/auth";
+import { PUBLIC_ROUTE_PATHS } from "@/constants/public-routes";
+import { DASHBOARD_ROUTES } from "@/constants/dashboard-routes";
 import {
   isPublicRoute,
   isAuthRoute,
   isAdminRoute,
-  isEditorRoute,
+  isDashboardRoute,
+  isEditorDashboardRoute,
+  isLegacyEditorRoute,
+  isPublicChatRoute,
   isStaticAsset,
-  decodeJwtPayload,
   COOKIE_ACCESS_TOKEN,
   ROLES,
 } from "@/constants/middleware";
+import { clearAccessTokenCookie } from "@/lib/auth-cookie";
+import { verifyAccessToken } from "@/lib/jwt-auth";
 
-export function middleware(request: NextRequest) {
+function loginRedirectUrl(request: NextRequest, returnPath?: string): URL {
+  const loginUrl = new URL(PUBLIC_ROUTE_PATHS.LOGIN, request.url);
+  if (returnPath && returnPath !== PUBLIC_ROUTE_PATHS.LOGIN) {
+    loginUrl.searchParams.set(AUTH_LOGIN_REDIRECT_PARAM, returnPath);
+  }
+  return loginUrl;
+}
+
+function redirectWithClearedSession(
+  request: NextRequest,
+  returnPath?: string,
+): NextResponse {
+  const response = NextResponse.redirect(loginRedirectUrl(request, returnPath));
+  clearAccessTokenCookie(response);
+  return response;
+}
+
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const token = request.cookies.get(COOKIE_ACCESS_TOKEN)?.value;
 
@@ -27,20 +51,30 @@ export function middleware(request: NextRequest) {
     if (isAuthRoute(pathname)) {
       return NextResponse.next();
     }
-    return NextResponse.redirect(new URL("/login", request.url));
+    if (isDashboardRoute(pathname) || isLegacyEditorRoute(pathname)) {
+      return NextResponse.redirect(loginRedirectUrl(request, pathname));
+    }
+    return NextResponse.redirect(loginRedirectUrl(request, pathname));
   }
 
-  const payload = decodeJwtPayload(token);
+  const payload = await verifyAccessToken(token);
   if (!payload) {
-    const response = NextResponse.redirect(new URL("/login", request.url));
-    response.cookies.delete(COOKIE_ACCESS_TOKEN);
-    return response;
+    if (isAuthRoute(pathname)) {
+      const response = NextResponse.next();
+      clearAccessTokenCookie(response);
+      return response;
+    }
+    return redirectWithClearedSession(request, pathname);
   }
 
   const { role } = payload;
 
   if (isAuthRoute(pathname)) {
-    return NextResponse.redirect(new URL("/dashboard/chat", request.url));
+    return NextResponse.redirect(new URL(DASHBOARD_ROUTES.CHAT, request.url));
+  }
+
+  if (isPublicChatRoute(pathname)) {
+    return NextResponse.redirect(new URL(DASHBOARD_ROUTES.CHAT, request.url));
   }
 
   if (isAdminRoute(pathname) && role !== ROLES.ADMIN) {
@@ -48,7 +82,7 @@ export function middleware(request: NextRequest) {
   }
 
   if (
-    isEditorRoute(pathname) &&
+    (isEditorDashboardRoute(pathname) || isLegacyEditorRoute(pathname)) &&
     role !== ROLES.ADMIN &&
     role !== ROLES.EDITOR
   ) {

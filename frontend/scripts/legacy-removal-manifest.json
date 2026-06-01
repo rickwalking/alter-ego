@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "Manifest for frontend v1.0 removal. Enforced by check-legacy-usage.mjs. See docs/plans/frontend-legacy-removal.md.",
+  "forbiddenImportsInDashboard": [
+    "ChatInterface",
+    "TopicForm",
+    "WorkflowKanbanBoard",
+    "ContentCalendarView",
+    "RubricEvaluationPanel",
+    "MOCK_DASHBOARD_CONVERSATIONS",
+    "MOCK_DASHBOARD_MESSAGES",
+    "MOCK_BLOG_POSTS"
+  ],
+  "forbiddenLegacyImportPathPrefixes": [
+    "@/features/chat/components/chat-interface",
+    "@/features/chat/components/conversation-sidebar",
+    "@/features/chat/components/message-list",
+    "@/features/chat/components/message-input",
+    "@/features/create/components/topic-form",
+    "@/features/create/components/editorial-workflow-panel",
+    "@/features/create/components/brief-materials-gate",
+    "@/features/create/components/source-material-viewer"
+  ],
+  "forbiddenImportPathsInDashboard": [
+    "@/features/create/components",
+    "@/components/ui"
+  ],
+  "forbiddenRouteDirectories": [
+    "src/app/(create)",
+    "src/app/(blog)"
+  ],
+  "scheduledDeletionFiles": [
+    "src/features/dashboard/chat/mock-data.ts",
+    "src/features/dashboard/blog-posts/mock-data.ts",
+    "src/app/dashboard/rubrics/constants.ts",
+    "src/features/chat/components/chat-interface.tsx",
+    "src/features/chat/components/chat-interface.test.tsx",
+    "src/features/chat/components/conversation-sidebar.tsx",
+    "src/features/chat/components/conversation-sidebar.test.tsx",
+    "src/features/chat/components/message-list.tsx",
+    "src/features/chat/components/message-list.test.tsx",
+    "src/features/chat/components/message-input.tsx",
+    "src/features/chat/components/message-input.test.tsx",
+    "src/features/chat/components/message-item.tsx",
+    "src/features/chat/components/message-item.test.tsx",
+    "src/features/chat/components/typing-indicator.tsx",
+    "src/features/chat/components/index.ts",
+    "src/features/workflow/components/workflow-kanban-board.tsx",
+    "src/features/workflow/components/content-calendar-view.tsx",
+    "src/features/rubrics/components/rubric-evaluation-panel.tsx",
+    "src/features/create/components/index.ts"
+  ],
+  "scheduledDeletionSymbolsInCreateConstants": [
+    "CREATE_ARTIFACTS",
+    "CREATE_SUMMARY_ROWS"
+  ],
+  "scheduledDeletionSymbolsInChatConstants": [
+    "DASHBOARD_CHAT_ASSISTANT_INTRO",
+    "DASHBOARD_CHAT_USER_PROMPT",
+    "DASHBOARD_CHAT_ASSISTANT_REPLY",
+    "DASHBOARD_CHAT_USER_FOLLOW_UP"
+  ]
+}

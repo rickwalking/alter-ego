@@ -84,6 +84,10 @@ export const carouselProjectResponseSchema = z.object({
   pdf_path: z.string().nullable().optional(),
   pdf_path_en: z.string().nullable().optional(),
   design_tokens: z.unknown().nullable().optional(),
+  creator_name: z.string().nullable().optional(),
+  creator_handle: z.string().nullable().optional(),
+  creator_avatar_url: z.string().nullable().optional(),
+  template_version: z.string().nullable().optional(),
   created_at: z.string(),
   updated_at: z.string(),
 });

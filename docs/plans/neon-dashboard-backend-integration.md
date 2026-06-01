@@ -5,6 +5,8 @@
 **PR:** [#5](https://github.com/rickwalking/alter-ego/pull/5)
 **Goal:** Neon shell is **functional** — correct UI, real API data, working navigation and CTAs.
 
+**Legacy removal (detailed inventory & CI guards):** [frontend-legacy-removal.md](./frontend-legacy-removal.md)
+
 ---
 
 ## Regression Report (2026-05-29 QA)

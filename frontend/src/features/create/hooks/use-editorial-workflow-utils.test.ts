@@ -441,6 +441,30 @@ describe("useEditorialWorkflow utils", () => {
     expect(merged.caption).toBe("Caption");
   });
 
+  it("merges distribution fields and workflow_status from partial SSE payloads", () => {
+    const previous: EditorialWorkflowState = {
+      project_id: "project-1",
+      current_phase: "final_review",
+      phase_status: WORKFLOW_PHASE_STATUS.AWAITING_HUMAN,
+      research_findings: [],
+      outline: [],
+      slide_drafts: [],
+      caption: "Old caption",
+      status: "draft",
+    };
+
+    const merged = mergeWorkflowState("project-1", previous, {
+      linkedin_post_pt: "Post PT",
+      linkedin_post_en: "Post EN",
+      workflow_status: "approved_for_publish",
+    });
+
+    expect(merged.linkedin_post_pt).toBe("Post PT");
+    expect(merged.linkedin_post_en).toBe("Post EN");
+    expect(merged.workflow_status).toBe("approved_for_publish");
+    expect(merged.caption).toBe("Old caption");
+  });
+
   it("preserves previous workflow values when SSE payload is partial", () => {
     const previous: EditorialWorkflowState = {
       project_id: "project-1",

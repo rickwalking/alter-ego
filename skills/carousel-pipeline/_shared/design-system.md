@@ -51,9 +51,9 @@ The content synthesis prompt receives the resolved palette so image prompts can 
     "glow": "#3b82f60D"
   },
   "typography": {
-    "font_family_heading": "'Segoe UI', 'Helvetica Neue', Arial, sans-serif",
-    "font_family_body": "'Segoe UI', 'Helvetica Neue', Arial, sans-serif",
-    "font_family_badge": "'Courier New', monospace"
+    "font_family_heading": "'Inter', system-ui, -apple-system, sans-serif",
+    "font_family_body": "'Inter', system-ui, -apple-system, sans-serif",
+    "font_family_badge": "'JetBrains Mono', monospace"
   },
   "images": {
     "hero": "/api/carousels/{id}/images/hero",
@@ -61,7 +61,7 @@ The content synthesis prompt receives the resolved palette so image prompts can 
   },
   "layout": {
     "badge_label": "AI Education",
-    "swipe_text": "Desliza",
+    "swipe_text": "Deslize →",
     "progress_segments": 6
   }
 }
@@ -88,21 +88,24 @@ Build self-contained HTML with:
 
 Validated original sizes — **do NOT downsize**. If content feels cramped, structure the body (feature grid / stat cards / insight quote), do not shrink text.
 
-| Element | Size | Weight |
-|---------|------|--------|
-| s1-title (intro) | 52px | 800 |
-| s1-subtitle | 28px | 400 |
-| slide-heading | 50px | 800 |
-| body-p | 30px | 400 |
-| body-p strong | 30px | 700 (white `#fff`) |
-| cta-title | 52px | 800 |
-| cta-body | 31px | 400 |
-| hero-img height | 310px (content) / 380px (intro) | — |
-| feature-title | 28px | 700 |
-| feature-body | 24px | 400 |
-| feature-icon | 34px | — |
-| insight-card | 26px | 400 italic |
-| badge / slide-num | 16px | 700 mono, 3px letter-spacing |
+| Element | Size | Weight | Notes |
+|---------|------|--------|-------|
+| s1-title (intro) | 52px | 800 | letter-spacing: -0.02em |
+| s1-subtitle | 28px | 400 | |
+| slide-heading | 50px | 800 | accent `<strong>` highlights |
+| body-p | 30px | 400 | `<strong>` renders white `#fff` |
+| cta-title | 52px | 800 | |
+| cta-body | 31px | 400 | |
+| hero-img height | 310px (content) / 380px (intro) | — | gradient overlay |
+| feature-title | 28px | 700 | |
+| feature-body | 24px | 400 | |
+| feature-icon | 34px | — | |
+| insight-card | 26px | 400 italic | |
+| badge / slide-num | 16px | 700 mono | 3px letter-spacing |
+| stat-number | 42px | 900 | accent color |
+| stat-label | 20px | 400 | |
+| creator-watermark name | 11px | 700 | |
+| creator-watermark handle | 9px | 400 | JetBrains Mono |
 
 ## Feature grid CSS
 

@@ -40,6 +40,8 @@ class CarouselWorkflowState(TypedDict, total=False):
     caption: str
     blog_markdown: str
     blog_translations: dict[str, str]
+    linkedin_post_pt: str
+    linkedin_post_en: str
     phase_progress: dict[str, object]
     persona_scores: dict[str, object]
     send_back_target_phase: str
@@ -78,6 +80,8 @@ def get_initial_carousel_state(
         "caption": "",
         "blog_markdown": "",
         "blog_translations": {},
+        "linkedin_post_pt": "",
+        "linkedin_post_en": "",
         "phase_progress": {},
         "persona_scores": {},
     }

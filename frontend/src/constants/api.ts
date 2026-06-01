@@ -83,17 +83,18 @@ export const API_ENDPOINTS = {
 export const ROUTE_PATHS = {
   HOME: "/",
   LOGIN: "/login",
-  CHAT: "/chat",
-  KNOWLEDGE: "/knowledge",
+  CHAT: "/dashboard/chat",
+  PUBLIC_CHAT: "/chat",
+  KNOWLEDGE: "/dashboard/knowledge",
   BLOG: "/blog",
   BLOG_POST: (slug: string) => `/blog/${slug}`,
-  CREATE: "/create",
-  CREATE_WORKSPACE: (id: string) => `/create/${id}`,
-  CREATE_PUBLISH: (id: string) => `/create/${id}/publish`,
+  CREATE: "/dashboard/create",
+  CREATE_WORKSPACE: (id: string) => `/dashboard/create/${id}`,
+  CREATE_PUBLISH: (id: string) => `/dashboard/create/${id}/publish`,
   ADMIN: "/admin",
   ADMIN_USERS: "/admin/users",
-  BLOG_POSTS: "/blog-posts",
-  BLOG_POST_EDIT: (id: string) => `/blog-posts/${id}/edit`,
+  BLOG_POSTS: "/dashboard/blog-posts",
+  BLOG_POST_EDIT: (id: string) => `/dashboard/blog-posts/${id}/edit`,
 } as const;
 
 /** HTTP methods. */

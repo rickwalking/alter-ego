@@ -74,6 +74,8 @@ class EditorialWorkflowStateResponse(BaseModel):
     persona_scores: dict[str, object] = Field(default_factory=dict)
     caption: str | None = None
     blog_markdown: str | None = None
+    linkedin_post_pt: str | None = None
+    linkedin_post_en: str | None = None
     rubric_scores: dict[str, object] = Field(default_factory=dict)
     phase_feedback: dict[str, list[str]] = Field(default_factory=dict)
     revision_count: dict[str, int] = Field(default_factory=dict)

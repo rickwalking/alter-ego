@@ -125,6 +125,16 @@ def build_workflow_state_response(
         blog_markdown=(
             str(state.get("blog_markdown")) if state.get("blog_markdown") else None
         ),
+        linkedin_post_pt=(
+            str(state.get("linkedin_post_pt"))
+            if state.get("linkedin_post_pt")
+            else None
+        ),
+        linkedin_post_en=(
+            str(state.get("linkedin_post_en"))
+            if state.get("linkedin_post_en")
+            else None
+        ),
         rubric_scores=(
             dict(state.get("rubric_scores"))
             if isinstance(state.get("rubric_scores"), dict)

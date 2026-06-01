@@ -178,6 +178,49 @@ async def publish_carousel(
             status_code=status.HTTP_409_CONFLICT,
             detail=ERR_CAROUSEL_NOT_COMPLETED,
         )
+    if not project.blog_markdown:
+        from rag_backend.application.services.carousel.editorial_distribution_constants import (
+            BLOG_LANG_ENGLISH,
+            BLOG_LANG_PORTUGUESE,
+            SLIDE_DRAFT_TEXT_KEY,
+            SLIDE_INDEX_KEY,
+        )
+        from rag_backend.application.services.carousel.editorial_distribution_pack import (
+            build_blog_markdown_en_from_translations,
+            build_blog_markdown_from_drafts,
+        )
+        from rag_backend.application.services.carousel.types import unpack_extras
+
+        slides = await repo.get_slides_by_project(project_id)
+        draft_payload = [
+            {
+                SLIDE_INDEX_KEY: slide.slide_number,
+                "title": slide.heading,
+                SLIDE_DRAFT_TEXT_KEY: slide.body,
+            }
+            for slide in slides
+        ]
+        if draft_payload:
+            translations_en: dict[int, dict[str, object]] = {}
+            for slide in slides:
+                slide_data = unpack_extras(slide)
+                if slide_data.translation_en:
+                    translations_en[slide.slide_number] = slide_data.translation_en
+            blog_pt = build_blog_markdown_from_drafts(
+                draft_payload,
+                title=project.title or project.topic,
+            )
+            blog_en = build_blog_markdown_en_from_translations(
+                draft_payload,
+                translations_en,
+                title=project.title_en or project.title or project.topic,
+            )
+            project.blog_markdown = blog_pt
+            project.blog_translations = {
+                BLOG_LANG_PORTUGUESE: blog_pt,
+                BLOG_LANG_ENGLISH: blog_en or blog_pt,
+            }
+            await repo.update_project(project)
     project.is_public = True
     project.current_phase = PHASE_PUBLISHED
     updated = await repo.update_project(project)

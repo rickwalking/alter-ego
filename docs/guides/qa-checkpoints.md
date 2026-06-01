@@ -434,6 +434,20 @@ See [CI Quality Gates Guide](./ci-quality-gates.md) for workflow names, branch p
 | frontend / Format | prettier --check | CI failure |
 | frontend / Security | npm audit --audit-level=high | CI failure |
 | frontend / Mutation (advisory) | Stryker | Non-blocking; PR summary comment |
+| frontend / Legacy guard | `npm run check:legacy` | CI failure — no v1 imports in `src/app/dashboard` |
+| frontend / Legacy inventory | `npm run check:legacy-inventory` | Advisory until Phase 1 complete ([plan](../plans/frontend-legacy-removal.md)) |
+
+### Frontend legacy removal (neon shell)
+
+| Checkpoint | How to verify | Tool/Command |
+|------------|---------------|--------------|
+| No `ChatInterface` in dashboard routes | Import guard | `cd frontend && npm run check:legacy` |
+| No `/(create)` route group | Route guard | `npm run check:legacy` |
+| Phase 1 mock/orphan files deleted | Inventory guard | `npm run check:legacy-inventory` |
+| Gherkin spec for removal | Scenario review | `tests/features/frontend-legacy-removal.feature` |
+| Vitest guard | Unit test | `src/scripts/legacy-removal-guard.test.ts` |
+
+**Plan:** [docs/plans/frontend-legacy-removal.md](../plans/frontend-legacy-removal.md)
 
 ### Pre-Merge Gates (Must Pass)
 
@@ -444,6 +458,7 @@ See [CI Quality Gates Guide](./ci-quality-gates.md) for workflow names, branch p
 | Unit tests | pytest / vitest | CI failure |
 | Diff coverage | diff-cover ≥75% (backend) | CI failure |
 | Build | docker build / npm run build | CI failure (release pipelines) |
+| Legacy guard (frontend) | `npm run check:legacy` | CI failure on dashboard PRs |
 
 ### Pre-Merge Gates (Should Pass / Advisory)
 

@@ -20,19 +20,21 @@ import {
   TEXT_MUTED,
 } from "@/constants/neon";
 import type { SidebarSection } from "@/schemas/neon-sidebar";
-import { LOGOUT_PATH, SIDEBAR_WIDTH_PX } from "@/components/organisms/constants";
+import { useAuth } from "@/hooks/use-auth";
+import { SIDEBAR_WIDTH_PX } from "@/components/organisms/constants";
 
 export interface NeonSidebarProps {
   sections: SidebarSection[];
+  showUserFooter?: boolean;
 }
 
-export function NeonSidebar({ sections }: NeonSidebarProps): React.ReactElement {
+export function NeonSidebar({
+  sections,
+  showUserFooter = false,
+}: NeonSidebarProps): React.ReactElement {
   const pathname = usePathname();
   const t = useTranslations("common.sidebar");
-
-  const handleLogout = (): void => {
-    window.location.href = LOGOUT_PATH;
-  };
+  const { user, logout, isLoading } = useAuth();
 
   return (
     <aside
@@ -154,74 +156,79 @@ export function NeonSidebar({ sections }: NeonSidebarProps): React.ReactElement 
         ))}
       </nav>
 
-      <div
-        style={{
-          padding: "12px",
-          borderTop: `1px solid ${NEON_BORDER_SUBTLE}`,
-          display: "flex",
-          alignItems: "center",
-          gap: "10px",
-        }}
-      >
-        <img
-          src="/about-pedro.png"
-          alt=""
+      {showUserFooter && !isLoading && user && (
+        <div
           style={{
-            width: "28px",
-            height: "28px",
-            borderRadius: "50%",
-            border: `1px solid ${NEON_BORDER_STRONG}`,
-            objectFit: "cover",
-          }}
-        />
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div
-            style={{
-              fontSize: "12px",
-              fontWeight: 600,
-              color: TEXT,
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
-            }}
-          >
-            Pedro Marins
-          </div>
-          <div
-            style={{
-              fontFamily: "'JetBrains Mono', ui-monospace, monospace",
-              fontSize: "9px",
-              color: TEXT_DIM,
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
-            }}
-          >
-            admin@alterego.app
-          </div>
-        </div>
-        <button
-          type="button"
-          onClick={handleLogout}
-          aria-label="Logout"
-          title="Logout"
-          style={{
+            padding: "12px",
+            borderTop: `1px solid ${NEON_BORDER_SUBTLE}`,
             display: "flex",
             alignItems: "center",
-            justifyContent: "center",
-            width: "28px",
-            height: "28px",
-            borderRadius: "6px",
-            border: `1px solid ${NEON_BORDER_LIGHT}`,
-            background: "transparent",
-            color: TEXT_MUTED,
-            cursor: "pointer",
-            flexShrink: 0,
+            gap: "10px",
           }}
         >
-          <NeonIcon path="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5M21 12H9" size={14} />
-        </button>
-      </div>
+          <img
+            src="/about-pedro.png"
+            alt=""
+            style={{
+              width: "28px",
+              height: "28px",
+              borderRadius: "50%",
+              border: `1px solid ${NEON_BORDER_STRONG}`,
+              objectFit: "cover",
+            }}
+          />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div
+              style={{
+                fontSize: "12px",
+                fontWeight: 600,
+                color: TEXT,
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {user.full_name}
+            </div>
+            <div
+              style={{
+                fontFamily: "'JetBrains Mono', ui-monospace, monospace",
+                fontSize: "9px",
+                color: TEXT_DIM,
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {user.email}
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => logout()}
+            aria-label="Logout"
+            title="Logout"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              width: "28px",
+              height: "28px",
+              borderRadius: "6px",
+              border: `1px solid ${NEON_BORDER_LIGHT}`,
+              background: "transparent",
+              color: TEXT_MUTED,
+              cursor: "pointer",
+              flexShrink: 0,
+            }}
+          >
+            <NeonIcon
+              path="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5M21 12H9"
+              size={14}
+            />
+          </button>
+        </div>
+      )}
     </aside>
   );
 }

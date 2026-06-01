@@ -12,17 +12,36 @@ Use `CarouselExportTool` (Playwright screenshots) to render each slide.
 2. Launch Chromium browser via Playwright
 3. Navigate to `file://{html_path}`
 4. Wait 4 seconds for full render
-5. Locate all `.slide` elements
-6. Screenshot each slide at **1080×1350**, quality **95 JPEG**
-7. Save as `{output_dir}/slide_{n}.jpg`
+5. Inject CSS overrides via `page.evaluate()` for font clamp values tuned to 1080px canvas
+6. Locate all `.ig-slide-inner` elements (fallback to `.slide` for legacy templates)
+7. Screenshot each slide at **1080×1350**, quality **95 JPEG**
+8. Save as `{output_dir}/slide_{n}.jpg`
+
+### CSS injection at export time
+
+The export service injects CSS overrides to ensure fonts scale correctly on the 1080px canvas:
+
+```css
+.ig-feed { max-width: 1150px !important; }
+.ig-slide-inner {
+  width: 1080px !important;
+  height: 1350px !important;
+}
+.s1-title { font-size: clamp(26px, 5.5vw, 56px) !important; }
+.slide-heading { font-size: clamp(20px, 4.5vw, 50px) !important; }
+.body-p { font-size: clamp(12px, 2.5vw, 30px) !important; }
+```
+
+This injection is performed via `page.evaluate()` so the original HTML template stays untouched.
 
 ### Export requirements
 
 - Dimensions: **1080×1350** (Instagram portrait) — every slide, no exceptions
-- Quality: 95 JPEG
+- Quality: 95 JPEG (optionally 100)
 - Embed images as base64 data URIs in self-contained HTML
 - Each slide is a self-contained unit
 - Final output: individual JPG files and source HTML
+- Optional 2x HD export: **2160×2700** with `deviceScaleFactor: 2` and scaled font clamps
 
 **Anti-pattern:** CTA slide exported at wrong height when slide-level `height: 100%` collapses layout. See [`anti-patterns.md`](anti-patterns.md).
 

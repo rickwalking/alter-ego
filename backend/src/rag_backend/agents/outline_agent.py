@@ -9,6 +9,9 @@ from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import BaseMessage, HumanMessage
 
 from rag_backend.agents.input_sanitizer import sanitize_llm_input
+from rag_backend.application.services.carousel.outline_normalize import (
+    normalize_editorial_outline,
+)
 from rag_backend.domain.constants.ai_agents import (
     ERR_INVALID_JSON,
     PROMPT_OUTLINE_GENERATION,
@@ -65,7 +68,7 @@ class OutlineAgent:
         outline: list[dict[str, object]] = [
             item for item in data if isinstance(item, dict)
         ]
-        return outline
+        return normalize_editorial_outline(outline)
 
 
 __all__ = ["OutlineAgent"]

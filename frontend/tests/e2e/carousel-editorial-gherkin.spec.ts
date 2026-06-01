@@ -24,10 +24,10 @@ async function newGuestContext(browser: Browser) {
 
 /** Hard reload so Docker rebuilds do not serve stale client chunks. */
 async function openCreateWorkspace(page: Page, projectId: string): Promise<void> {
-  await page.goto(`/create/${projectId}`);
+  await page.goto(`/dashboard/create/${projectId}`);
   await page.waitForLoadState("domcontentloaded");
   await page.reload({ waitUntil: "domcontentloaded" });
-  await expect(page.getByRole("heading", { name: "Carousel Workspace" })).toBeVisible({
+  await expect(page.getByRole("heading", { name: "Create Carousel" })).toBeVisible({
     timeout: 15_000,
   });
 }
@@ -101,7 +101,7 @@ test.describe("Carousel editorial consolidation — browser E2E", () => {
 
     await page.getByRole("tab", { name: "Blog" }).click();
     await expect(page.getByText("E2E Published Blog")).toBeVisible();
-    await expect(page).toHaveURL(new RegExp(`/create/${E2E_FIXTURES.finalReview}`));
+    await expect(page).toHaveURL(new RegExp(`/dashboard/create/${E2E_FIXTURES.finalReview}`));
 
     await page.getByRole("tab", { name: "Quality" }).click();
     await expect(page.getByText("voice match")).toBeVisible();
@@ -163,7 +163,7 @@ test.describe("Carousel editorial consolidation — browser E2E", () => {
     await expect(page.getByRole("heading", { name: "Draft blog preview" })).toBeVisible();
     await page.getByRole("button", { name: "Load preview" }).click();
     await expect(page.getByText("E2E Published Blog")).toBeVisible();
-    expect(page.url()).toContain(`/create/${E2E_FIXTURES.finalReview}`);
+    expect(page.url()).toContain(`/dashboard/create/${E2E_FIXTURES.finalReview}`);
     expect(page.url()).not.toContain("/blog/");
   });
 
@@ -179,7 +179,7 @@ test.describe("Carousel editorial consolidation — browser E2E", () => {
   test("publish panel shows Instagram LinkedIn and Publish to site when approved", async ({
     page,
   }) => {
-    await page.goto(`/create/${E2E_FIXTURES.approvedPublish}/publish`);
+    await page.goto(`/dashboard/create/${E2E_FIXTURES.approvedPublish}/publish`);
     await page.reload({ waitUntil: "domcontentloaded" });
 
     await expect(page.getByRole("tab", { name: "Instagram" })).toBeVisible();
@@ -189,7 +189,7 @@ test.describe("Carousel editorial consolidation — browser E2E", () => {
 
   // Scenario: Publish panel gated before approval
   test("publish panel hides Publish to site before final approval", async ({ page }) => {
-    await page.goto(`/create/${E2E_FIXTURES.outline}/publish`);
+    await page.goto(`/dashboard/create/${E2E_FIXTURES.outline}/publish`);
     await page.reload({ waitUntil: "domcontentloaded" });
 
     await expect(page.getByText("Complete final review in the create workspace")).toBeVisible();
@@ -211,7 +211,7 @@ test.describe("Carousel editorial consolidation — browser E2E", () => {
   test("create workspace requires authentication", async ({ browser }) => {
     const context = await newGuestContext(browser);
     const page = await context.newPage();
-    await page.goto(`/create/${E2E_FIXTURES.research}`);
+    await page.goto(`/dashboard/create/${E2E_FIXTURES.research}`);
     await expect(page).toHaveURL(/\/login/);
     await context.close();
   });
@@ -273,7 +273,7 @@ test.describe("Resume gap — @cp-resume-gap", () => {
 
     await expect(page.getByText("Hook slide")).toBeVisible({ timeout: 15_000 });
     await expect(page.getByText("Outline for review")).toBeVisible();
-    expect(page.url()).toContain(`/create/${E2E_FIXTURES.research}`);
+    expect(page.url()).toContain(`/dashboard/create/${E2E_FIXTURES.research}`);
   });
 
   // Scenario: Resume transport failure does not show error banner when workflow recovers
@@ -423,7 +423,7 @@ test.describe("Publish to site — full browser flow", () => {
     page,
     browser,
   }) => {
-    await page.goto(`/create/${E2E_FIXTURES.approvedPublish}/publish`);
+    await page.goto(`/dashboard/create/${E2E_FIXTURES.approvedPublish}/publish`);
     await page.reload({ waitUntil: "domcontentloaded" });
 
     const publishButton = page.getByRole("button", { name: "Publish to site" });

@@ -75,7 +75,7 @@ test.describe("Carousel editorial consolidation E2E", () => {
   });
 
   test("create workspace route requires authentication", async ({ page }) => {
-    await page.goto("/create/00000000-0000-0000-0000-000000000001");
+    await page.goto("/dashboard/create/00000000-0000-0000-0000-000000000001");
     await expect(page).toHaveURL(/\/login/);
   });
 });

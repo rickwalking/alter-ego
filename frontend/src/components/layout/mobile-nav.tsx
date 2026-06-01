@@ -3,11 +3,14 @@
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
+import { ROUTE_PATHS } from "@/constants/api";
+import { DASHBOARD_ROUTES } from "@/constants/dashboard-routes";
 import { useAuth } from "@/hooks/use-auth";
 
 export function MobileNav() {
   const t = useTranslations("common.nav");
-  const { isEditor, isAdmin } = useAuth();
+  const { user, isEditor, isAdmin } = useAuth();
+  const isAuthenticated = user !== null;
   const [open, setOpen] = useState(false);
 
   return (
@@ -22,54 +25,56 @@ export function MobileNav() {
       </button>
       {open && (
         <nav className="absolute left-0 right-0 top-14 z-40 border-b bg-background p-4 flex flex-col gap-3 text-sm shadow-md">
-          <Link href="/chat" onClick={() => setOpen(false)}>
-            {t("chat")}
-          </Link>
+          {isAuthenticated && (
+            <Link href={DASHBOARD_ROUTES.CHAT} onClick={() => setOpen(false)}>
+              {t("chat")}
+            </Link>
+          )}
           {isEditor && (
-            <Link href="/knowledge" onClick={() => setOpen(false)}>
+            <Link href={DASHBOARD_ROUTES.KNOWLEDGE} onClick={() => setOpen(false)}>
               {t("knowledgeBase")}
             </Link>
           )}
-          <Link href="/blog" onClick={() => setOpen(false)}>
+          <Link href={ROUTE_PATHS.BLOG} onClick={() => setOpen(false)}>
             {t("blog")}
           </Link>
           {isEditor && (
-            <Link href="/create" onClick={() => setOpen(false)}>
+            <Link href={DASHBOARD_ROUTES.CREATE} onClick={() => setOpen(false)}>
               {t("create")}
             </Link>
           )}
           {isEditor && (
-            <Link href="/personas" onClick={() => setOpen(false)}>
+            <Link href={DASHBOARD_ROUTES.PERSONAS} onClick={() => setOpen(false)}>
               {t("personas")}
             </Link>
           )}
           {isEditor && (
-            <Link href="/rubrics" onClick={() => setOpen(false)}>
+            <Link href={DASHBOARD_ROUTES.RUBRICS} onClick={() => setOpen(false)}>
               {t("rubrics")}
             </Link>
           )}
           {isEditor && (
-            <Link href="/blog-posts" onClick={() => setOpen(false)}>
+            <Link href={DASHBOARD_ROUTES.BLOG_POSTS} onClick={() => setOpen(false)}>
               {t("blogPosts")}
             </Link>
           )}
           {isEditor && (
-            <Link href="/workflow" onClick={() => setOpen(false)}>
+            <Link href={DASHBOARD_ROUTES.WORKFLOW} onClick={() => setOpen(false)}>
               {t("workflow")}
             </Link>
           )}
           {isEditor && (
-            <Link href="/calendar" onClick={() => setOpen(false)}>
+            <Link href={DASHBOARD_ROUTES.CALENDAR} onClick={() => setOpen(false)}>
               {t("calendar")}
             </Link>
           )}
           {isEditor && (
-            <Link href="/analytics" onClick={() => setOpen(false)}>
+            <Link href={DASHBOARD_ROUTES.ANALYTICS} onClick={() => setOpen(false)}>
               {t("analytics")}
             </Link>
           )}
           {isAdmin && (
-            <Link href="/admin/users" onClick={() => setOpen(false)}>
+            <Link href={ROUTE_PATHS.ADMIN_USERS} onClick={() => setOpen(false)}>
               {t("admin")}
             </Link>
           )}

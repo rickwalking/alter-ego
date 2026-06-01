@@ -97,6 +97,7 @@ function renderSseHook(
     ({ projectId, state, transportMode }) =>
       useEditorialWorkflowSse({
         projectId,
+        sseEnabled: Boolean(state?.current_phase),
         state,
         transportMode,
         setState,

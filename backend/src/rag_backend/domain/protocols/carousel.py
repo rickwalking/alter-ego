@@ -52,8 +52,12 @@ class CarouselExportService(Protocol):
         self,
         html_content: str,
         output_dir: str,
+        *,
         width: int = 1080,
         height: int = 1350,
+        css_overrides: str | None = None,
+        quality: int = 95,
+        hd: bool = False,
     ) -> list[str]: ...
 
 

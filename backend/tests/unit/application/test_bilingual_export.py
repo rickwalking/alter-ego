@@ -82,13 +82,25 @@ def _agent_with_export_mock(
     export = AsyncMock()
     export.export_slides = AsyncMock(
         side_effect=[
+            # PT standard
             [
                 str(tmp_path / "pt" / "slide_1.jpg"),
                 str(tmp_path / "pt" / "slide_2.jpg"),
             ],
+            # PT HD
+            [
+                str(tmp_path / "pt" / "hd" / "slide_1.jpg"),
+                str(tmp_path / "pt" / "hd" / "slide_2.jpg"),
+            ],
+            # EN standard
             [
                 str(tmp_path / "en" / "slide_1.jpg"),
                 str(tmp_path / "en" / "slide_2.jpg"),
+            ],
+            # EN HD
+            [
+                str(tmp_path / "en" / "hd" / "slide_1.jpg"),
+                str(tmp_path / "en" / "hd" / "slide_2.jpg"),
             ],
         ]
     )
@@ -146,7 +158,10 @@ class TestBilingualExport:
             project, slides, "<html>pt</html>", tmp_path
         )
 
-        assert export.export_slides.await_count == 2
+        # Each language calls export_slides twice (standard + HD)
+        assert export.export_slides.await_count == 4
+        assert export.export_slides.call_args_list[1].kwargs["hd"] is True
+        assert export.export_slides.call_args_list[3].kwargs["hd"] is True
         assert pdf_builder.build.call_count == 2
         assert project.pdf_path is not None
         assert project.pdf_path_en is not None
@@ -167,7 +182,8 @@ class TestBilingualExport:
             project, slides, "<html>pt</html>", tmp_path
         )
 
-        assert export.export_slides.await_count == 1
+        # PT-only: standard + HD = 2 calls
+        assert export.export_slides.await_count == 2
         assert pdf_builder.build.call_count == 1
         assert project.pdf_path_en is None
 
@@ -195,7 +211,7 @@ class TestBilingualExport:
             export=export,
             pdf_builder=pdf_builder,
         )
-        rewritten_html = export.export_slides.await_args.kwargs["html_content"]
+        rewritten_html = export.export_slides.await_args_list[0].kwargs["html_content"]
         assert "../images/slide_1.jpg" in rewritten_html
         assert 'src="images/slide_1' not in rewritten_html
         assert "url('../images/slide_1.jpg')" in rewritten_html

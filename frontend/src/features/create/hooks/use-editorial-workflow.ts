@@ -75,6 +75,7 @@ export function useEditorialWorkflow(projectId: string) {
     workflowStateRef,
   } = useEditorialWorkflowSse({
     projectId,
+    sseEnabled: Boolean(state?.current_phase),
     state,
     transportMode,
     setState,

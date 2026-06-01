@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -11,6 +11,7 @@ import {
   NeonGridBackground,
   NeonScanlineOverlay,
 } from "@/components/organisms";
+import { AUTH_LOGIN_REDIRECT_PARAM } from "@/constants/auth";
 import {
   BG_CARD,
   BG_DEEP,
@@ -20,6 +21,7 @@ import {
   TEXT_DIM,
   TEXT_MUTED,
 } from "@/constants/neon";
+import { sanitizeLoginRedirect } from "@/lib/auth-cookie";
 
 export default function LoginPage() {
   const t = useTranslations("auth");
@@ -28,6 +30,13 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("error") === "session_expired") {
+      setError(t("sessionExpired"));
+    }
+  }, [t]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,7 +56,11 @@ export default function LoginPage() {
         throw new Error(data.detail || t("loginError"));
       }
 
-      router.push("/dashboard/chat");
+      const params = new URLSearchParams(window.location.search);
+      const redirectTo = sanitizeLoginRedirect(
+        params.get(AUTH_LOGIN_REDIRECT_PARAM),
+      );
+      router.push(redirectTo);
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : t("loginError"));

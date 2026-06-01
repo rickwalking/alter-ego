@@ -40,16 +40,36 @@
   "home": {
     "hero": {
       "badge": "Tech Content",
+      "badgeVersion": "Alter-Ego v2.0",
+      "titleLine1": "Chat with my",
+      "titleHighlight": "Alter-Ego",
       "title": "Chat with my Alter-Ego",
       "highlight": "to get to know me better",
-      "subtitle": "Chat with an intelligent assistant that knows everything about my career, experience, and skills. Also, see my blog posts and projects."
+      "subtitle": "Chat with an intelligent assistant that knows everything about my career, experience, and skills. Also, see my blog posts and projects.",
+      "exploreBlog": "Explore Blog"
+    },
+    "stats": {
+      "years": "Years Engineering",
+      "carousels": "Carousels Published",
+      "topics": "Topics Explored"
+    },
+    "capabilities": {
+      "label": "Capabilities"
+    },
+    "terminal": {
+      "ready": "ready. Ask me anything."
     },
     "posts": {
+      "titlePrefix": "Latest",
+      "titleHighlight": "Posts",
       "title": "Latest Posts",
+      "feedLabel": "Feed",
       "subtitle": "Carousels and blog posts about tech, software engineering, and the future of development.",
       "viewAll": "View all posts"
     },
     "features": {
+      "titlePrefix": "What You Can",
+      "titleHighlight": "Explore",
       "title": "What You Can Explore",
       "chat": {
         "title": "Chat with My Alter-Ego",
@@ -222,6 +242,23 @@
     },
     "preview": {
       "viewBlog": "View Blog Post"
+    },
+    "publishCta": "Open Publish",
+    "futureStep": "This step has not been reached yet. The workflow is currently in {phase}.",
+    "startWorkflowHint": "Start the workflow from the Brief tab to run this phase.",
+    "stepHistory": {
+      "historicalHint": "Completed phase: {phase}. Read-only snapshot.",
+      "researchTitle": "{count} research sources",
+      "outlineTitle": "{count} outline slides",
+      "contentTitle": "{count} content drafts",
+      "imagesTitle": "{count} images generated",
+      "designApplied": "design applied",
+      "reviewHint": "Open the Review tab during final review for carousel, blog, and caption previews.",
+      "publishEmpty": "Caption and LinkedIn copy will appear after the content phase completes.",
+      "publishCaptionLabel": "Instagram caption",
+      "publishLinkedInLabel": "LinkedIn post (PT)",
+      "empty": "No artifacts saved for this step yet.",
+      "untitledSlide": "Untitled slide"
     },
     "workspace": {
       "title": "Carousel Workspace",
@@ -421,6 +458,7 @@
     "awaitingFinalApproval": "Complete final review in the create workspace before publishing to the public site.",
     "publishToSite": "Publish to site",
     "sitePublished": "Carousel is now public on the blog.",
+    "sitePublishedLink": "View public post",
     "sitePublishFailed": "Could not publish to the public site.",
     "carouselLabel": "Carousel preview",
     "platformTabsLabel": "Choose a platform",
@@ -459,7 +497,8 @@
       "previousSlide": "Previous slide",
       "nextSlide": "Next slide",
       "goToSlide": "Go to slide {number}",
-      "downloadImages": "Download images"
+      "downloadImages": "Download images",
+      "downloadingImages": "Downloading..."
     }
   },
   "auth": {
@@ -472,6 +511,7 @@
     "signIn": "Sign In",
     "signingIn": "Signing in...",
     "loginError": "Invalid email or password",
+    "sessionExpired": "Your session expired. Please sign in again.",
     "forbiddenTitle": "Access Denied",
     "forbiddenDescription": "You do not have permission to access this page.",
     "goHome": "Go Home",

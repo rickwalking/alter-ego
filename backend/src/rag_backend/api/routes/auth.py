@@ -22,6 +22,16 @@ from rag_backend.infrastructure.database.user_repository import PostgresUserRepo
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
+def _auth_cookie_secure(request: Request, settings: Settings) -> bool:
+    """Use Secure cookies only on HTTPS; honor reverse-proxy proto in production."""
+    if settings.debug:
+        return False
+    forwarded = request.headers.get("x-forwarded-proto", "")
+    if forwarded:
+        return forwarded.split(",")[0].strip().lower() == "https"
+    return request.url.scheme == "https"
+
+
 class LoginRequest(BaseModel):
     """Request body for user login."""
 
@@ -95,7 +105,7 @@ async def login(
             key=COOKIE_ACCESS_TOKEN,
             value=token,
             httponly=True,
-            secure=not settings.debug,
+            secure=_auth_cookie_secure(request, settings),
             samesite="strict",
             max_age=settings.access_token_expire_minutes * 60,
         )
@@ -113,6 +123,7 @@ async def login(
     status_code=status.HTTP_204_NO_CONTENT,
 )
 async def logout(
+    request: Request,
     response: Response,
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> None:
@@ -121,7 +132,7 @@ async def logout(
         key=COOKIE_ACCESS_TOKEN,
         path="/",
         httponly=True,
-        secure=not settings.debug,
+        secure=_auth_cookie_secure(request, settings),
         samesite="strict",
     )
 

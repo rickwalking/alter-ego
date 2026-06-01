@@ -1,12 +1,14 @@
+import { CREATE_STEP_IDS } from "@/app/dashboard/create/step-ids";
+
 export const CREATE_STEPS = [
-  { num: 1, label: "Brief" },
-  { num: 2, label: "Research" },
-  { num: 3, label: "Outline" },
-  { num: 4, label: "Content" },
-  { num: 5, label: "Images" },
-  { num: 6, label: "Review" },
-  { num: 7, label: "Publish" },
-];
+  { num: 1, id: CREATE_STEP_IDS.BRIEF, label: "Brief" },
+  { num: 2, id: CREATE_STEP_IDS.RESEARCH, label: "Research" },
+  { num: 3, id: CREATE_STEP_IDS.OUTLINE, label: "Outline" },
+  { num: 4, id: CREATE_STEP_IDS.CONTENT, label: "Content" },
+  { num: 5, id: CREATE_STEP_IDS.IMAGES, label: "Images" },
+  { num: 6, id: CREATE_STEP_IDS.REVIEW, label: "Review" },
+  { num: 7, id: CREATE_STEP_IDS.PUBLISH, label: "Publish" },
+] as const;
 
 export const CREATE_TEMPLATES = [
   { icon: "📊", name: "Analysis", desc: "Deep dive with data" },
@@ -15,46 +17,4 @@ export const CREATE_TEMPLATES = [
   { icon: "📰", name: "News Flash", desc: "Quick update" },
   { icon: "🧠", name: "Deep Dive", desc: "Comprehensive" },
   { icon: "🎯", name: "Listicle", desc: "Top N format" },
-];
-
-export const CREATE_ARTIFACTS = [
-  {
-    name: "Research Report",
-    desc: "Collecting data from Twitter, GitHub, tech blogs, and documentation...",
-    status: "pending",
-  },
-  {
-    name: "Slide Outline",
-    desc: "Generating structured outline with slide-by-slide breakdown...",
-    status: "pending",
-  },
-  {
-    name: "Slide Content",
-    desc: "Drafting content with persona voice matching...",
-    status: "pending",
-  },
-  {
-    name: "Design Tokens",
-    desc: "Generating color palette, typography, and layout tokens...",
-    status: "pending",
-  },
-  {
-    name: "Generated Images",
-    desc: "Creating custom images with selected model and style...",
-    status: "pending",
-  },
-  {
-    name: "Final Review",
-    desc: "Quality check, persona enforcement, and rubric validation...",
-    status: "pending",
-  },
-];
-
-export const CREATE_SUMMARY_ROWS = [
-  { label: "Type", value: "Analysis" },
-  { label: "Slides", value: "1 intro, 3 content, 1 closing, 1 CTA" },
-  { label: "Aspect Ratio", value: "1080x1350" },
-  { label: "Language", value: "pt-BR" },
-  { label: "Generate Images", value: "Yes" },
-  { label: "Status", value: "Draft", badge: true },
 ] as const;

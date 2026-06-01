@@ -10,7 +10,7 @@ Feature: Carousel publish workspace
   # Carousel preview --------------------------------------------------
 
   Scenario: The carousel renders all slides with dot indicators
-    When the user opens /create/{id}/publish
+    When the user opens /dashboard/create/{id}/publish
     Then the viewer shows 4 slides in horizontal order
     And 4 dot indicators appear under the viewport
 

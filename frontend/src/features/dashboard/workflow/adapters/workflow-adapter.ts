@@ -71,7 +71,7 @@ export function mapApiKanbanColumn(column: ApiKanbanColumn): KanbanColumn {
       title: card.title,
       description: card.topic,
       phase: card.current_phase,
-      phaseStatus: card.phase_status,
+      phaseStatus: card.workflow_status ?? card.phase_status,
     })),
   };
 }

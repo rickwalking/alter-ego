@@ -58,15 +58,3 @@ export const DASHBOARD_CHAT_MONO_FONT =
   "'JetBrains Mono', ui-monospace, monospace";
 
 export const DASHBOARD_CHAT_TYPING_LABEL = "Analyzing tone alignment...";
-
-export const DASHBOARD_CHAT_ASSISTANT_INTRO =
-  "Hello Pedro. I'm your Alter-Ego assistant. I have access to your knowledge graph, carousel pipeline, and blog archive. How can I help you today?";
-
-export const DASHBOARD_CHAT_USER_PROMPT =
-  "Can you review the DeepSeek V4 carousel draft and check if the market positioning aligns with the competitive analysis we did last week?";
-
-export const DASHBOARD_CHAT_ASSISTANT_REPLY =
-  "I've cross-referenced the carousel with the competitive analysis from last week. A few observations:\n\n1. The price comparison slide ($3.50 vs $25) is accurate and well-contextualized.\n2. The benchmark data (93.5% LiveCodeBench) matches our latest evaluation run.\n3. Consider adding a note about the Huawei Ascend chip compatibility, which was a key differentiator in our analysis.";
-
-export const DASHBOARD_CHAT_USER_FOLLOW_UP =
-  "Good catch. I'll add the Huawei chip detail. Can you also check the tone for the technical audience slide?";

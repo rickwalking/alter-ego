@@ -55,6 +55,14 @@ frontend/
 | i18n | next-intl |
 | Animation | Framer Motion |
 
+## Legacy v1.0 removal
+
+Do **not** reintroduce `ChatInterface`, `TopicForm`, `/(create)/*` routes, or `features/dashboard/chat/mock-data.ts`.
+
+- **Plan (component inventory, phases, replacements):** [`docs/plans/frontend-legacy-removal.md`](../docs/plans/frontend-legacy-removal.md)
+- **Gherkin:** `tests/features/frontend-legacy-removal.feature`
+- **CI guards:** `npm run check:legacy` (blocking), `npm run check:legacy-inventory` (Phase 1 advisory)
+
 ## Development Commands
 
 ```bash
@@ -65,6 +73,8 @@ npm run test:coverage            # Coverage report (90%+ project target)
 npm run test:e2e                 # E2E tests (Playwright)
 npm run test:mutate              # StrykerJS mutation testing
 npm run typecheck                # TypeScript check
+npm run check:legacy             # Block v1 imports in dashboard app
+npm run check:legacy-inventory   # Phase 1 scheduled file deletions
 npm run lint                     # ESLint
 npm run storybook                # Storybook dev server
 npm run build-storybook          # Static Storybook build

@@ -4,6 +4,8 @@ Feature: Chat Interface
   I want to chat with the AI about my knowledge base
   So that I can get answers based on my documents
 
+  # Public chat: /chat (authenticated editors use /dashboard/chat in dashboard shell)
+
   Scenario: Display chat interface
     Given I navigate to the chat page
     Then I see the chat interface

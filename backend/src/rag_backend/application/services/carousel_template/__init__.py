@@ -17,6 +17,9 @@ from rag_backend.application.services.carousel_template.helpers import (
     _render_stat_row,
     _stat_items,
 )
+from rag_backend.application.services.carousel_template.neon_styles import (
+    get_neon_shell_css,
+)
 
 __all__ = [
     "FEATURE_GRID_TWO_COLUMNS",
@@ -30,4 +33,5 @@ __all__ = [
     "_render_stat_row",
     "_stat_items",
     "generate_design_tokens",
+    "get_neon_shell_css",
 ]

@@ -25,6 +25,27 @@ function mapCalendarItemToEvent(item: CalendarItem): CalendarEvent {
   };
 }
 
+function buildMonthGridShell(): CalendarDay[] {
+  const days: CalendarDay[] = [];
+  for (const day of [27, 28, 29, 30]) {
+    days.push({ day, cur: false, today: false, events: [] });
+  }
+  for (let day = 1; day <= 31; day += 1) {
+    days.push({
+      day,
+      cur: true,
+      today: day === CALENDAR_TODAY,
+      events: [],
+    });
+  }
+  return days;
+}
+
+/** Empty month grid when the API returns no scheduled items. */
+export function buildEmptyCalendarDays(): CalendarDay[] {
+  return buildMonthGridShell();
+}
+
 /** Build month grid days with API calendar items on event_date. */
 export function buildCalendarDaysFromApi(items: CalendarItem[]): CalendarDay[] {
   const eventsByDay: Record<number, CalendarEvent[]> = {};
@@ -38,57 +59,8 @@ export function buildCalendarDaysFromApi(items: CalendarItem[]): CalendarDay[] {
     eventsByDay[day].push(event);
   }
 
-  const days: CalendarDay[] = [];
-  for (const day of [27, 28, 29, 30]) {
-    days.push({ day, cur: false, today: false, events: [] });
-  }
-  for (let day = 1; day <= 31; day += 1) {
-    days.push({
-      day,
-      cur: true,
-      today: day === CALENDAR_TODAY,
-      events: eventsByDay[day] ?? [],
-    });
-  }
-  return days;
-}
-
-/** @deprecated Static demo events — use buildCalendarDaysFromApi in production. */
-export const CALENDAR_EVENTS_BY_DAY: Record<number, CalendarEvent[]> = {
-  22: [{ title: "RAG Pipeline", contentType: "blog", status: "published" }],
-  24: [
-    { title: "Sonnet 4 vs GPT-5", contentType: "carousel", status: "approved" },
-  ],
-  26: [
-    {
-      title: "GitHub Leak Post",
-      contentType: "blog",
-      status: "awaiting_human",
-    },
-    { title: "K8s Review", contentType: "carousel", status: "in_progress" },
-  ],
-  27: [{ title: "Security Sync", contentType: "meeting" }],
-  28: [{ title: "Persona Review", contentType: "management" }],
-  29: [
-    { title: "K8s Guide Pub.", contentType: "carousel", status: "published" },
-  ],
-  30: [
-    { title: "AI Safety Research", contentType: "blog", status: "published" },
-  ],
-};
-
-export function buildCalendarDays(): CalendarDay[] {
-  const days: CalendarDay[] = [];
-  for (const day of [27, 28, 29, 30]) {
-    days.push({ day, cur: false, today: false, events: [] });
-  }
-  for (let day = 1; day <= 31; day += 1) {
-    days.push({
-      day,
-      cur: true,
-      today: day === CALENDAR_TODAY,
-      events: CALENDAR_EVENTS_BY_DAY[day] ?? [],
-    });
-  }
-  return days;
+  return buildMonthGridShell().map((cell) => ({
+    ...cell,
+    events: cell.cur ? (eventsByDay[cell.day] ?? []) : [],
+  }));
 }
