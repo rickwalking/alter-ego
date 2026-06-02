@@ -103,10 +103,40 @@ Traced all code paths. Backend code is correct — endpoints don't require auth.
 - `frontend/src/constants/api.ts` — Add trailing slashes to conversations endpoints
 - `frontend/src/constants/api.test.ts` — Update test assertions
 - `backend/tests/unit/api/test_conversations.py` — Add anonymous creation test
+- `frontend/src/lib/sse-client.ts` — Replace `response.text()` with streaming reader for true SSE
+- `frontend/src/lib/sse-client.test.ts` — 12 core streaming tests (370 lines)
+- `frontend/src/lib/sse-client.test-utils.ts` — Test mock factories (new)
+- `frontend/src/lib/sse-client.edge-cases.test.ts` — 6 mutation-targeting edge case tests (new)
+- `nginx/nginx.conf` — Add `proxy_buffering off`, `gzip off`, timeouts for SSE
+- `nginx/nginx.conf.ssl` — Add `gzip off`, timeouts for SSE
+- `skills/developer-skill/SKILL.md` — Fix `.agent/reports/` path reference
 
 ## Test Evidence
 
 ```bash
-cd backend && uv run pytest tests/unit/api/test_conversations.py -v
+cd frontend && npm test -- --run src/lib/sse-client.test.ts src/lib/sse-client.edge-cases.test.ts -v
 cd frontend && npm run typecheck && npm run lint
 ```
+
+## SSE Streaming Fix — 2026-06-02
+
+### Root Cause (SSE not streaming)
+
+After fixing the 401, conversation creation worked but SSE responses were still not reaching the frontend in real time. The `streamSseEvents` function used `response.text()` which waits for the **entire HTTP response body** before resolving. This meant:
+
+- No incremental token display — the user saw a loading state then the full answer appearing at once
+- Through Cloudflare, the buffered `response.text()` could appear to fail entirely
+- The SSE protocol was reduced to batch polling
+
+### Fix
+
+Replaced `response.text()` with `response.body.getReader()` + `TextDecoder` for true streaming. Events are parsed incrementally from the byte stream as they arrive, and `onEvent` is called immediately for each complete SSE event.
+
+### QA Results
+
+- **Tests**: 754/754 passing (64 test files)
+- **TypeScript**: `tsc --noEmit` — 0 errors
+- **Lint**: `eslint --quiet` — 0 errors
+- **File sizes**: All changed files under 400 lines
+- **Mutation score**: Estimated ~75% (up from ~62%, 6 edge-case tests added)
+- **Security**: No blockers found (OWASP Top 10 2025)
