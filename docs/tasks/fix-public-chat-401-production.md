@@ -1,6 +1,6 @@
 # TASK-003 — Fix Public Chat 401 in Production
 
-Status: In Review
+Status: Resolved
 Owner: agent
 Branch: fix/public-chat-401-production
 Created: 2026-06-02
@@ -28,15 +28,17 @@ Both endpoints are correctly configured. The `get_optional_user` → `get_curren
 - Both use relative URLs with `credentials: "include"`
 - `apiCall` has a 401 redirect handler (`api-client.ts:60-68`) that redirects to `/api/auth/logout`
 
-### Suspected Root Causes (in priority order)
+### Actual Root Cause
 
-1. **The `access_token` cookie from a previous authenticated session** triggers the `get_user_repo` dependency chain which opens a database session. If the database connection pool is exhausted or the session fails in production, it cascades. However, `get_optional_user` returns `None` even in this case.
+**Nginx trailing slash routing mismatch + 301 redirect method change.**
 
-2. **Nginx routing mismatch** — `location /api/conversations/` (with trailing slash) does NOT match `POST /api/conversations` (no trailing slash). The request falls through to `location /api/`. While this should still work, the rate limiting is different (`api` zone vs `chat_api` zone).
+The frontend sent `POST /api/conversations` (no trailing slash). Nginx's `location /api/conversations/` (with trailing slash) did NOT match, so the request fell through to `location /api/`. The backend FastAPI redirected `/api/conversations` → `/api/conversations/`, but the redirect was returned as a **301** (not 307), causing the browser to convert POST → GET. The `GET /api/conversations/` hit the listing endpoint which requires auth → **401**.
 
-3. **Cloudflare interference** — WAF rules or security features might be intercepting API calls.
+### Suspected Root Causes (investigated and ruled out)
 
-4. **Missing `ARG NEXT_PUBLIC_API_URL` in frontend Dockerfile** — The build arg is passed in `docker-compose.prod.yml` but silently ignored because there's no `ARG` declaration in the Dockerfile.
+1. ~~Stale `access_token` cookie~~ — Ruled out: `get_optional_user` returns `None` for missing/expired tokens, never 401.
+2. ~~Cloudflare WAF~~ — Ruled out: No WAF blocks on this endpoint.
+3. ~~Missing `ARG NEXT_PUBLIC_API_URL`~~ — Fixed but unrelated to 401.
 
 ## Scope
 
@@ -55,8 +57,8 @@ Both endpoints are correctly configured. The `get_optional_user` → `get_curren
 
 ## Acceptance Criteria
 
-- [ ] Anonymous users can create conversations in production without 401
-- [ ] Anonymous users can send messages via SSE in production without 401
+- [x] Anonymous users can create conversations in production without 401
+- [x] Anonymous users can send messages via SSE in production without 401
 - [x] Diagnostic logging added to `create_conversation` for future debugging
 - [x] Missing `ARG NEXT_PUBLIC_API_URL` added to frontend Dockerfile
 - [x] Backend tests cover anonymous conversation creation
@@ -87,10 +89,19 @@ Traced all code paths. Backend code is correct — endpoints don't require auth.
 - All 849 backend tests pass
 - Opened PR #6: https://github.com/rickwalking/alter-ego/pull/6
 
+### 2026-06-02 — Production Verification Complete
+
+- Identified actual root cause: nginx trailing slash mismatch causing 301 redirect → POST→GET conversion → 401
+- Fixed by adding trailing slashes to `CONVERSATIONS` and `CONVERSATIONS_ALTER_EGO` endpoints in `frontend/src/constants/api.ts`
+- Playwright MCP verified: `POST /api/conversations/` → 201, `POST /api/conversations/{id}/chat/stream` → 200
+- Public chat now works for anonymous users in production
+
 ## Files Touched
 
 - `backend/src/rag_backend/api/routes/conversations.py` — Add request logging
 - `frontend/Dockerfile` — Add `ARG NEXT_PUBLIC_API_URL`
+- `frontend/src/constants/api.ts` — Add trailing slashes to conversations endpoints
+- `frontend/src/constants/api.test.ts` — Update test assertions
 - `backend/tests/unit/api/test_conversations.py` — Add anonymous creation test
 
 ## Test Evidence
