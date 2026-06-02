@@ -1,6 +1,6 @@
 # TASK-003 — Fix Public Chat 401 in Production
 
-Status: Draft
+Status: In Review
 Owner: agent
 Branch: fix/public-chat-401-production
 Created: 2026-06-02
@@ -57,10 +57,10 @@ Both endpoints are correctly configured. The `get_optional_user` → `get_curren
 
 - [ ] Anonymous users can create conversations in production without 401
 - [ ] Anonymous users can send messages via SSE in production without 401
-- [ ] Diagnostic logging added to `create_conversation` for future debugging
-- [ ] Missing `ARG NEXT_PUBLIC_API_URL` added to frontend Dockerfile
-- [ ] Backend tests cover anonymous conversation creation
-- [ ] Existing tests still pass
+- [x] Diagnostic logging added to `create_conversation` for future debugging
+- [x] Missing `ARG NEXT_PUBLIC_API_URL` added to frontend Dockerfile
+- [x] Backend tests cover anonymous conversation creation
+- [x] Existing tests still pass
 
 ## Plan
 
@@ -79,9 +79,13 @@ Traced all code paths. Backend code is correct — endpoints don't require auth.
 - Cloudflare WAF intercepting the request
 - A stale cookie from a previous session
 
-### 2026-06-02 — Plan Created
+### 2026-06-02 — Implementation Complete
 
-Plan documented. Ready for implementation.
+- Added diagnostic logging to `create_conversation` (logs auth state, cookie keys, content-length)
+- Added `ARG NEXT_PUBLIC_API_URL` to frontend Dockerfile
+- Added unit tests for anonymous conversation creation (2 tests, both passing)
+- All 849 backend tests pass
+- Opened PR #6: https://github.com/rickwalking/alter-ego/pull/6
 
 ## Files Touched
 
