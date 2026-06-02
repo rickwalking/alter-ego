@@ -2,7 +2,7 @@
 
 Status: Resolved
 Owner: agent
-Branch: fix/public-chat-401-production
+Branch: fix/sse-streaming-production
 Created: 2026-06-02
 Updated: 2026-06-02
 
