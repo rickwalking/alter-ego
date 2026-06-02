@@ -135,8 +135,6 @@ async def stream_chat_response(
         )
         return
 
-    agent = agent_builder()
-
     # Persist user message and commit BEFORE streaming
     user_message = Message(
         role=MessageRole.USER,
@@ -157,6 +155,7 @@ async def stream_chat_response(
     )
 
     try:
+        agent = agent_builder()
         async for chunk in agent.chat(
             message=content.strip(),
             conversation_id=conversation_id,
