@@ -101,5 +101,24 @@ jobs:
             docker compose -f docker-compose.prod.yml pull
             docker compose -f docker-compose.prod.yml up -d --build
 
+            # Wait for services to start
+            sleep 10
+
+            # Post-deploy health check & diagnostics
+            echo "--- Checking listening ports ---"
+            ss -tlnp | grep -E ':80|:443|:3000|:8000' || true
+
+            echo "--- Local curl to nginx ---"
+            curl -s -o /dev/null -w "%{http_code}" http://localhost/ || true
+
+            echo "--- Container status ---"
+            docker compose -f docker-compose.prod.yml ps
+
+            echo "--- Nginx logs (last 20 lines) ---"
+            docker compose -f docker-compose.prod.yml logs --tail=20 nginx || true
+
+            echo "--- Frontend logs (last 20 lines) ---"
+            docker compose -f docker-compose.prod.yml logs --tail=20 frontend || true
+
             # Clean up old images
             docker image prune -af --filter "until=168h"
