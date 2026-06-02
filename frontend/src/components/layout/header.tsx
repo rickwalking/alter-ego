@@ -8,6 +8,7 @@ import { MobileNav } from "@/components/layout/mobile-nav";
 import { NotificationCenter } from "@/features/workflow/components/notification-center";
 import { DEFAULT_LOCALE } from "@/i18n/config";
 import { useAuth } from "@/hooks/use-auth";
+import { JSX } from "react";
 import { DASHBOARD_ROUTES } from "@/constants/dashboard-routes";
 interface HeaderProps {
   locale?: string;
@@ -19,7 +20,7 @@ export function Header({ locale }: HeaderProps) {
   const { user, isAdmin, isEditor, logout, isLoading } = useAuth();
   const isAuthenticated = user !== null;
 
-  const editorLinks = isEditor ? (
+  const editorLinks: JSX.Element | null = isEditor ? (
     <>
       <Link
         href={DASHBOARD_ROUTES.KNOWLEDGE}

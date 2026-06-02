@@ -1,0 +1,1228 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SpaceX + Cursor - Instagram Carousel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════════════════════════
+   NEON SHELL × SPACEX + CURSOR — Instagram Carousel
+   Theme: Dev Tools (Teal #0ac5a8 + Purple #8b5cf6)
+   ═══════════════════════════════════════════════════════ */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  background: #060a12;
+  color: rgba(255,255,255,0.85);
+  line-height: 1.6;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+:root {
+  --primary: #0ac5a8;
+  --primary-dim: rgba(10,197,168,0.15);
+  --primary-glow: rgba(10,197,168,0.08);
+  --accent: #8b5cf6;
+  --accent-dim: rgba(139,92,246,0.12);
+  --bg: #080c12;
+  --text: #ffffff;
+  --text-60: rgba(255,255,255,0.63);
+  --text-48: rgba(255,255,255,0.48);
+  --text-55: rgba(255,255,255,0.55);
+  --text-06: rgba(255,255,255,0.06);
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --font-heading: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    0deg, transparent, transparent 2px,
+    rgba(10,197,168,0.012) 2px, rgba(10,197,168,0.012) 4px
+  );
+}
+
+.grid-bg {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  perspective: 600px;
+  overflow: hidden;
+}
+.grid-bg-inner {
+  position: absolute;
+  inset: -50% -50%;
+  width: 200%; height: 200%;
+  background-image:
+    linear-gradient(rgba(10,197,168,0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(10,197,168,0.025) 1px, transparent 1px);
+  background-size: 60px 60px;
+  transform: rotateX(60deg);
+  animation: grid-drift 25s linear infinite;
+}
+@keyframes grid-drift {
+  0% { transform: rotateX(60deg) translateY(0); }
+  100% { transform: rotateX(60deg) translateY(60px); }
+}
+
+.page-header {
+  position: relative;
+  z-index: 10;
+  text-align: center;
+  padding: 40px 20px 20px;
+}
+.page-header h1 {
+  font-size: clamp(16px, 3vw, 20px);
+  font-weight: 800;
+  color: var(--text);
+  letter-spacing: -0.02em;
+  overflow-wrap: break-word;
+}
+.page-header .sub {
+  font-size: clamp(11px, 2vw, 13px);
+  color: var(--text-48);
+  margin-top: 4px;
+  font-family: var(--font-mono);
+}
+.back-link {
+  position: fixed;
+  top: 16px;
+  left: 16px;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: rgba(6,10,18,0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(10,197,168,0.1);
+  border-radius: 6px;
+  color: var(--text-60);
+  text-decoration: none;
+  font-size: clamp(11px, 1.5vw, 12px);
+  font-weight: 500;
+  transition: border-color 0.2s, color 0.2s;
+}
+.back-link:hover { border-color: rgba(10,197,168,0.25); color: var(--primary); }
+.back-link:focus-visible,
+.cta-btn:focus-visible,
+.action-btn:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+.feed {
+  position: relative;
+  z-index: 1;
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 0 16px 60px;
+}
+
+.ig-slide {
+  background: var(--bg);
+  border-radius: 4px;
+  overflow: hidden;
+  border: 1px solid rgba(10,197,168,0.08);
+  position: relative;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.5);
+}
+.ig-slide-inner {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1080 / 1350;
+  overflow: hidden;
+}
+
+.slide-content {
+  position: absolute;
+  inset: 0;
+  padding: 48px 36px 40px;
+  display: flex;
+  flex-direction: column;
+  z-index: 2;
+}
+
+.bg-glow {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+.bg-glow::before {
+  content: '';
+  position: absolute;
+  width: min(450px, 70vw);
+  height: min(450px, 70vw);
+  border-radius: 50%;
+  top: -80px;
+  right: -120px;
+  background: radial-gradient(circle, rgba(10,197,168,0.06) 0%, transparent 70%);
+}
+.bg-glow::after {
+  content: '';
+  position: absolute;
+  width: min(350px, 55vw);
+  height: min(350px, 55vw);
+  border-radius: 50%;
+  bottom: -60px;
+  left: -80px;
+  background: radial-gradient(circle, rgba(139,92,246,0.04) 0%, transparent 70%);
+}
+
+/* ── Creator Watermark ── */
+.creator-watermark {
+  position: absolute;
+  bottom: 16px;
+  left: 16px;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px 6px 6px;
+  background: rgba(6,10,18,0.7);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 100px;
+  max-width: calc(100% - 32px);
+}
+.creator-watermark-avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+  border: 1.5px solid var(--primary);
+  box-shadow: 0 0 6px var(--primary-dim);
+}
+.creator-watermark-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.creator-watermark-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.creator-watermark-name {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 120px;
+}
+.creator-watermark-handle {
+  font-size: 9px;
+  color: var(--text-60);
+  font-family: var(--font-mono);
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 120px;
+}
+
+/* ── Slide 1: Intro ── */
+.slide-1 .slide-content { padding: 0; }
+.slide-1-bg-img {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+}
+.slide-1-bg-img img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 25%;
+  display: block;
+}
+.slide-1-bg-gradient {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background:
+    linear-gradient(180deg,
+      rgba(8,12,18,0.08) 0%,
+      rgba(8,12,18,0.35) 25%,
+      rgba(8,12,18,0.75) 50%,
+      var(--bg) 70%);
+  pointer-events: none;
+}
+.slide-1-content {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  padding: 40px 36px 64px;
+}
+.slide-1-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+.s1-badge {
+  display: inline-flex;
+  align-self: flex-start;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 2.5px;
+  color: var(--primary);
+  background: var(--primary-dim);
+  border: 1px solid rgba(10,197,168,0.2);
+  margin-bottom: 16px;
+}
+.s1-badge-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--primary);
+  box-shadow: 0 0 6px var(--primary-dim);
+  animation: pulse-dot 2s ease-in-out infinite;
+  flex-shrink: 0;
+}
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+.s1-title {
+  font-family: var(--font-heading);
+  font-size: clamp(24px, 5vw, 30px);
+  font-weight: 900;
+  line-height: 1.08;
+  letter-spacing: -0.02em;
+  margin-bottom: 12px;
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+.s1-title .highlight { color: var(--accent); }
+.s1-subtitle {
+  font-size: clamp(12px, 2.4vw, 14px);
+  color: var(--text-60);
+  line-height: 1.6;
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+.s1-subtitle strong { color: var(--text); font-weight: 600; }
+.s1-tldr {
+  margin-top: 12px;
+  padding: 10px 14px;
+  border-radius: 6px;
+  background: var(--primary-dim);
+  border: 1px solid rgba(10,197,168,0.15);
+  font-size: clamp(11px, 2.2vw, 13px);
+  font-weight: 500;
+  color: var(--text-60);
+  line-height: 1.5;
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+.s1-tldr strong { color: var(--text); font-weight: 700; }
+.s1-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--text-06);
+}
+.s1-niche {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-55);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.s1-swipe {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--primary);
+  font-family: var(--font-mono);
+  letter-spacing: 1px;
+  flex-shrink: 0;
+  animation: swipe-pulse 2s ease-in-out infinite;
+}
+@keyframes swipe-pulse {
+  0%, 100% { opacity: 0.6; transform: translateX(0); }
+  50% { opacity: 1; transform: translateX(3px); }
+}
+
+/* ── Content Slides ── */
+.content-slide { background: var(--bg); }
+.slide-number {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 3px;
+  color: var(--primary);
+  margin-bottom: 10px;
+  flex-shrink: 0;
+}
+.slide-heading {
+  font-family: var(--font-heading);
+  font-size: clamp(19px, 4.2vw, 26px);
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  margin-bottom: 12px;
+  flex-shrink: 0;
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+.slide-heading .highlight { color: var(--accent); }
+.slide-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.body-p {
+  font-size: clamp(12px, 2.4vw, 14px);
+  font-weight: 400;
+  color: var(--text-60);
+  line-height: 1.55;
+  margin-bottom: 10px;
+  flex-shrink: 0;
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+.body-p strong { color: var(--text); font-weight: 700; }
+.code-tag {
+  display: inline-block;
+  padding: 1px 7px;
+  margin: 0 1px;
+  border-radius: 4px;
+  background: var(--primary-dim);
+  color: var(--primary);
+  font-family: var(--font-mono);
+  font-size: 0.82em;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  border: 1px solid rgba(10,197,168,0.12);
+  line-height: 1.4;
+}
+
+.hero-img {
+  width: 100%;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid rgba(10,197,168,0.1);
+  flex-shrink: 0;
+  margin-bottom: 10px;
+  position: relative;
+}
+.hero-img-sm { height: 110px; }
+.hero-img-md { height: 120px; }
+.hero-img img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.hero-img::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(10,197,168,0.04) 0%, transparent 50%);
+  pointer-events: none;
+}
+
+.feature-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+.feature-item {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 9px 12px;
+  border-radius: 8px;
+  background: rgba(255,255,255,0.015);
+  border: 1px solid rgba(10,197,168,0.06);
+  min-width: 0;
+  overflow: hidden;
+}
+.feature-icon {
+  font-size: 16px;
+  line-height: 1.5;
+  flex-shrink: 0;
+  width: 20px;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.feature-text { flex: 1; min-width: 0; }
+.feature-title {
+  font-size: clamp(11px, 2.2vw, 13px);
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 1px;
+  line-height: 1.3;
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+.feature-body {
+  font-size: clamp(10px, 2vw, 12px);
+  color: var(--text-60);
+  line-height: 1.5;
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+.feature-body strong { color: var(--text); font-weight: 600; }
+
+.feature-grid.cols-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.stat-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin: 8px 0;
+  flex-shrink: 0;
+}
+.stat-card {
+  background: rgba(255,255,255,0.02);
+  border: 1px solid rgba(10,197,168,0.08);
+  border-radius: 8px;
+  padding: 12px 6px;
+  text-align: center;
+  min-width: 0;
+}
+.stat-number {
+  font-size: clamp(18px, 4vw, 24px);
+  font-weight: 900;
+  color: var(--accent);
+  line-height: 1;
+  margin-bottom: 3px;
+  letter-spacing: -0.02em;
+  overflow-wrap: break-word;
+}
+.stat-label {
+  font-size: clamp(10px, 1.8vw, 11px);
+  color: var(--text-60);
+  line-height: 1.3;
+  font-weight: 500;
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+.stat-detail {
+  font-size: clamp(8px, 1.5vw, 10px);
+  color: var(--text-55);
+  margin-top: 2px;
+  font-family: var(--font-mono);
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  flex: 1;
+}
+.summary-grid .summary-item:nth-child(3) {
+  grid-column: 1 / -1;
+}
+.summary-item {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 14px 14px;
+  border-radius: 8px;
+  background: rgba(8,12,18,0.8);
+  border: 1px solid rgba(10,197,168,0.15);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  min-width: 0;
+  overflow: hidden;
+}
+.summary-item .summary-icon { font-size: 20px; line-height: 1.3; flex-shrink: 0; display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; }
+.summary-item .summary-text { flex: 1; min-width: 0; }
+.summary-item .summary-title {
+  font-size: clamp(12px, 2.4vw, 14px);
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 2px;
+  line-height: 1.3;
+}
+.summary-item .summary-body {
+  font-size: clamp(10px, 2vw, 12px);
+  color: var(--text-60);
+  line-height: 1.5;
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+.summary-item .summary-body strong { color: var(--text); font-weight: 600; }
+
+.insight-card {
+  padding: 12px 16px;
+  border-radius: 6px;
+  background: rgba(139,92,246,0.03);
+  border: 1px solid rgba(139,92,246,0.08);
+  font-size: clamp(11px, 2.2vw, 13px);
+  font-style: italic;
+  color: var(--text-60);
+  line-height: 1.55;
+  position: relative;
+  flex-shrink: 0;
+  margin-top: 4px;
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+.insight-card::before {
+  content: '\201C';
+  position: absolute;
+  top: -2px;
+  left: 6px;
+  font-size: 28px;
+  font-weight: 900;
+  color: var(--primary);
+  opacity: 0.12;
+  font-family: serif;
+  line-height: 1;
+}
+.insight-card strong { color: var(--text); font-weight: 600; font-style: italic; }
+.insight-attribution {
+  display: block;
+  font-size: clamp(9px, 1.8vw, 11px);
+  font-style: normal;
+  color: var(--text-55);
+  margin-top: 4px;
+  font-family: var(--font-mono);
+}
+
+.slide-cta {
+  background: var(--bg);
+  text-align: center;
+}
+.slide-cta.slide-content {
+  align-items: center;
+  justify-content: center;
+}
+.slide-cta .slide-number {
+  text-align: center;
+  width: 100%;
+}
+.slide-cta .cta-title {
+  text-align: center;
+  margin-inline: auto;
+}
+.slide-cta .cta-body {
+  text-align: center;
+  margin-inline: auto;
+}
+.cta-icon { font-size: clamp(32px, 7vw, 40px); margin-bottom: 14px; flex-shrink: 0; }
+.cta-title {
+  font-family: var(--font-heading);
+  font-size: clamp(20px, 4.5vw, 26px);
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  margin-bottom: 10px;
+  line-height: 1.2;
+  max-width: 440px;
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+.cta-title .highlight { color: var(--accent); }
+.cta-body {
+  font-size: clamp(12px, 2.4vw, 14px);
+  color: var(--text-60);
+  line-height: 1.6;
+  margin-bottom: 22px;
+  max-width: 440px;
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+.cta-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.cta-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 20px;
+  border-radius: 6px;
+  font-size: clamp(12px, 2.2vw, 13px);
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.2s, box-shadow 0.2s;
+  border: none;
+  white-space: nowrap;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cta-btn.primary {
+  background: linear-gradient(135deg, var(--primary) 0%, #0891b2 100%);
+  color: #fff;
+  box-shadow: 0 0 16px var(--primary-dim);
+}
+.cta-btn.primary:hover { transform: translateY(-1px); box-shadow: 0 0 24px var(--primary-dim); }
+.cta-btn.secondary {
+  background: transparent;
+  color: var(--primary);
+  border: 1px solid rgba(10,197,168,0.25);
+}
+.cta-btn.secondary:hover { background: var(--primary-dim); border-color: var(--primary); transform: translateY(-1px); }
+
+.slide-counter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 0;
+}
+.counter-dots {
+  display: flex;
+  gap: 4px;
+  min-width: 0;
+}
+.counter-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.18);
+  transition: background 0.3s, width 0.3s, border-radius 0.3s, box-shadow 0.3s;
+  flex-shrink: 0;
+}
+.counter-dot.active {
+  background: var(--primary);
+  box-shadow: 0 0 6px var(--primary-dim);
+  width: 16px;
+  border-radius: 3px;
+}
+.counter-dot.past { background: rgba(10,197,168,0.25); }
+.counter-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-55);
+  flex-shrink: 0;
+}
+
+.action-bar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 10px 0;
+}
+.action-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: none;
+  color: var(--text-60);
+  font-size: 13px;
+  cursor: pointer;
+  padding: 4px;
+  transition: color 0.2s;
+}
+.action-btn:hover { color: var(--primary); }
+.action-btn svg { width: 20px; height: 20px; display: block; flex-shrink: 0; }
+.action-save { margin-left: auto; }
+
+.caption {
+  padding: 6px 0 16px;
+  font-size: clamp(12px, 2.2vw, 13px);
+  color: var(--text-60);
+  line-height: 1.6;
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+.caption strong { color: var(--text); font-weight: 600; }
+.caption a { color: var(--primary); text-decoration: none; }
+.caption a:hover { text-decoration: underline; }
+.caption-hashtags {
+  color: var(--primary);
+  margin-top: 4px;
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+
+.ig-post { margin-bottom: 24px; }
+
+@media (max-width: 640px) {
+  .feed { padding: 0 0 40px; }
+  .slide-content { padding: 28px 20px 24px; }
+  .slide-1-content { padding: 24px 20px 56px; }
+  .slide-1-bg-img img { object-position: center 20%; }
+  .stat-row { gap: 5px; }
+  .stat-card { padding: 8px 4px; }
+  .feature-item { padding: 7px 10px; }
+  .feature-grid.cols-2 { grid-template-columns: 1fr; }
+  .summary-grid { grid-template-columns: 1fr; }
+  .hero-img { height: 100px; }
+  .page-header { padding: 32px 16px 16px; }
+  .back-link { top: 8px; left: 8px; padding: 4px 10px; }
+  .creator-watermark { bottom: 10px; left: 10px; padding: 4px 10px 4px 4px; }
+  .creator-watermark-avatar { width: 20px; height: 20px; }
+  .creator-watermark-name { font-size: 10px; max-width: 90px; }
+  .creator-watermark-handle { font-size: 8px; max-width: 90px; }
+}
+@media (max-width: 400px) {
+  .slide-content { padding: 20px 14px 18px; }
+  .slide-1-content { padding: 18px 14px 48px; }
+  .counter-dot { width: 5px; height: 5px; }
+  .counter-dot.active { width: 12px; }
+  .action-bar { gap: 10px; }
+}
+</style>
+</head>
+<body>
+<svg style="display:none" aria-hidden="true">
+  <defs>
+    <symbol id="icon-rocket" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 2l4 7-4 4-4-4z"/><path d="M10 13v4l4-2v-2"/><circle cx="12" cy="7" r="1" fill="currentColor" opacity="0.3"/>
+    </symbol>
+    <symbol id="icon-handshake" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 11l-3-3M12 11l3-3"/><path d="M18 7l1.5-1.5a2.12 2.12 0 0 0-3-3L9 10"/><path d="M6 7l-1.5-1.5a2.12 2.12 0 0 1 3-3L15 10"/>
+    </symbol>
+    <symbol id="icon-zap" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <polygon points="13 2 4 13 11 13 10 22 20 11 13 11 14 2"/>
+    </symbol>
+    <symbol id="icon-fork" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="18" r="2"/><path d="M12 16V8"/><path d="M8 4v4"/><path d="M16 4v4"/><path d="M8 8a4 4 0 0 0 8 0"/>
+    </symbol>
+    <symbol id="icon-brain" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 4a4 4 0 0 1 4 4c0 2-1 3-2 4l-2 2-2-2c-1-1-2-2-2-4a4 4 0 0 1 4-4z"/><path d="M8 18c2 1 4 1 6 0"/><path d="M6 15c-1 1-1 3 0 4"/><path d="M18 15c1 1 1 3 0 4"/>
+    </symbol>
+    <symbol id="icon-bot" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="4" y="4" width="16" height="14" rx="3"/><circle cx="9" cy="10" r="1.5" fill="currentColor"/><circle cx="15" cy="10" r="1.5" fill="currentColor"/><path d="M9 15c1.5 1 4.5 1 6 0"/><path d="M12 2v2"/>
+    </symbol>
+    <symbol id="icon-store" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="3" y="9" width="18" height="12"/><path d="M3 9l2-7h14l2 7"/><rect x="8" y="15" width="8" height="6"/><path d="M6 15H5"/><path d="M19 15h-1"/>
+    </symbol>
+    <symbol id="icon-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
+    </symbol>
+    <symbol id="icon-briefcase" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
+    </symbol>
+    <symbol id="icon-save" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/>
+    </symbol>
+    <symbol id="icon-refresh" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+    </symbol>
+  </defs>
+</svg>
+
+<div class="grid-bg" aria-hidden="true">
+  <div class="grid-bg-inner"></div>
+</div>
+
+<a href="/redesign.html" class="back-link">
+  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>
+  Back
+</a>
+
+<div class="page-header">
+  <h1>SpaceX just bet $60B on your IDE</h1>
+  <div class="sub">Developer Tools - 7 slides</div>
+</div>
+
+<div class="feed">
+
+  <!-- ─── SLIDE 1: INTRO ─── -->
+  <div class="ig-post">
+    <div class="ig-slide">
+      <div class="ig-slide-inner">
+        <div class="slide-1-bg-img">
+          <img src="/carousel-spacex/slide_1.jpg" alt="SpaceX Cursor acquisition cyberpunk illustration" />
+        </div>
+        <div class="slide-1-bg-gradient"></div>
+        <div class="slide-1-content">
+          <div class="s1-badge">
+            <span class="s1-badge-dot"></span>
+            <span>SpaceX + Cursor</span>
+          </div>
+          <div class="slide-1-main">
+            <h1 class="s1-title">
+              SpaceX just bet <span class="highlight">$60B</span><br>
+              to own the AI tool you use daily
+            </h1>
+            <p class="s1-subtitle">
+              Four MIT graduates built the fastest-growing code editor in history, going from <strong>$1M to $2B ARR</strong> in just 26 months. Now SpaceX has secured the right to acquire Cursor for <strong>$60 billion</strong>.
+            </p>
+            <div class="s1-tldr">
+              <strong>TL;DR:</strong> SpaceX secured a $60B acquisition option for Cursor: the biggest bet in AI developer tools history.
+            </div>
+            <div class="s1-footer">
+              <span class="s1-niche">Software Developers</span>
+              <span class="s1-swipe">Swipe &rarr;</span>
+            </div>
+          </div>
+        </div>
+        <div class="creator-watermark">
+          <div class="creator-watermark-avatar">
+            <img src="/about-pedro.png" alt="Pedro Marins" />
+          </div>
+          <div class="creator-watermark-text">
+            <span class="creator-watermark-name">Pedro Marins</span>
+            <span class="creator-watermark-handle">@pedromarins.dev</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="slide-counter">
+      <div class="counter-dots">
+        <span class="counter-dot active"></span><span class="counter-dot"></span><span class="counter-dot"></span><span class="counter-dot"></span><span class="counter-dot"></span><span class="counter-dot"></span><span class="counter-dot"></span>
+      </div>
+      <span class="counter-label">1/7</span>
+    </div>
+
+    <div class="action-bar">
+      <button class="action-btn" aria-label="Like"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3H14z"/></svg></button>
+      <button class="action-btn" aria-label="Comment"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></button>
+      <button class="action-btn" aria-label="Share"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg></button>
+      <button class="action-btn action-save" aria-label="Save"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></button>
+    </div>
+
+    <div class="caption">
+      <strong>pedromarins.dev</strong> SpaceX just secured a $60B option to acquire Cursor. Four MIT grads built the fastest-growing code editor ever: $1M to $2B ARR in 26 months. Your dev stack is about to change.
+      <div class="caption-hashtags">#SpaceX #Cursor #AI #DeveloperTools #SaaS #TechNews</div>
+    </div>
+  </div>
+
+  <!-- ─── SLIDE 2: 3-POINT SUMMARY ─── -->
+  <div class="ig-post">
+    <div class="ig-slide">
+      <div class="ig-slide-inner">
+        <div class="bg-glow"></div>
+        <div class="slide-content content-slide">
+          <div class="slide-number">02 / 07</div>
+          <h2 class="slide-heading">The story in <span class="highlight">3 points</span></h2>
+          <div class="slide-body">
+            <div class="summary-grid">
+              <div class="summary-item">
+                <div class="summary-icon" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-rocket"/></svg></div>
+                <div class="summary-text">
+                  <div class="summary-title">Fastest SaaS growth ever</div>
+                  <div class="summary-body"><strong>Cursor</strong> went from <strong>$1M</strong> to <strong>$2B ARR</strong> in <strong>26 months</strong>, outpacing Snowflake, Slack, and Zoom.</div>
+                </div>
+              </div>
+              <div class="summary-item">
+                <div class="summary-icon" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-handshake"/></svg></div>
+                <div class="summary-text">
+                  <div class="summary-title">SpaceX locks in $60B option</div>
+                  <div class="summary-body">SpaceX can buy <strong>Cursor</strong> for <strong>$60B</strong> or pay <strong>$10B</strong> for joint work if acquisition does not proceed.</div>
+                </div>
+              </div>
+              <div class="summary-item">
+                <div class="summary-icon" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-zap"/></svg></div>
+                <div class="summary-text">
+                  <div class="summary-title">$60B redefines dev tooling</div>
+                  <div class="summary-body">Integration with <strong>Grok</strong> and <strong>200,000 H100 GPUs</strong> in Colossus could make Cursor the most powerful coding agent on Earth.</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="creator-watermark">
+          <div class="creator-watermark-avatar"><img src="/about-pedro.png" alt="Pedro Marins" /></div>
+          <div class="creator-watermark-text"><span class="creator-watermark-name">Pedro Marins</span><span class="creator-watermark-handle">@pedromarins.dev</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="slide-counter">
+      <div class="counter-dots"><span class="counter-dot past"></span><span class="counter-dot active"></span><span class="counter-dot"></span><span class="counter-dot"></span><span class="counter-dot"></span><span class="counter-dot"></span><span class="counter-dot"></span></div>
+      <span class="counter-label">2/7</span>
+    </div>
+  </div>
+
+  <!-- ─── SLIDE 3: SaaS GROWTH ─── -->
+  <div class="ig-post">
+    <div class="ig-slide">
+      <div class="ig-slide-inner">
+        <div class="bg-glow"></div>
+        <div class="slide-content content-slide">
+          <div class="slide-number">03 / 07</div>
+          <h2 class="slide-heading">The growth that <span class="highlight">broke</span> every SaaS record</h2>
+          <div class="hero-img hero-img-sm">
+            <img src="/carousel-spacex/slide_3.jpg" alt="Cursor growth chart from $1M to $2B ARR" loading="lazy" />
+          </div>
+          <div class="slide-body">
+            <p class="body-p">
+              From <strong>$1M ARR</strong> in Dec 2023 to <strong>$2B ARR</strong> in Feb 2026 — a <strong>2,000x jump in 26 months</strong>. Snowflake took six quarters to go from $1B to $2B. Slack took six years to reach $1B. Cursor did it faster than both with just <strong>300 employees</strong>.
+            </p>
+            <div class="stat-row">
+              <div class="stat-card">
+                <div class="stat-number">$2B</div>
+                <div class="stat-label">ARR in 26 months</div>
+                <div class="stat-detail">started at $1M</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-number">36%</div>
+                <div class="stat-label">Freemium conversion</div>
+                <div class="stat-detail">industry: 2-5%</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-number">$6.7M</div>
+                <div class="stat-label">Rev per employee</div>
+                <div class="stat-detail">Google: $1.7M</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="creator-watermark">
+          <div class="creator-watermark-avatar"><img src="/about-pedro.png" alt="Pedro Marins" /></div>
+          <div class="creator-watermark-text"><span class="creator-watermark-name">Pedro Marins</span><span class="creator-watermark-handle">@pedromarins.dev</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="slide-counter">
+      <div class="counter-dots"><span class="counter-dot past"></span><span class="counter-dot past"></span><span class="counter-dot active"></span><span class="counter-dot"></span><span class="counter-dot"></span><span class="counter-dot"></span><span class="counter-dot"></span></div>
+      <span class="counter-label">3/7</span>
+    </div>
+  </div>
+
+  <!-- ─── SLIDE 4: MIT FOUNDERS ─── -->
+  <div class="ig-post">
+    <div class="ig-slide">
+      <div class="ig-slide-inner">
+        <div class="bg-glow"></div>
+        <div class="slide-content content-slide">
+          <div class="slide-number">04 / 07</div>
+          <h2 class="slide-heading">Four MIT grads who <span class="highlight">rewrote</span> the rules</h2>
+          <div class="hero-img hero-img-sm">
+            <img src="/carousel-spacex/slide_4.jpg" alt="Cursor founders MIT illustration" loading="lazy" />
+          </div>
+          <div class="slide-body">
+            <p class="body-p">
+              Four MIT grads founded Anysphere in 2022 with <strong>$400,000</strong> in pre-seed. The decisive move: forking <strong>VS Code</strong> instead of building a plugin. By Nov 2025, a <strong>$2.3B Series D</strong> at <strong>$29.3B</strong> valuation. Each co-founder holds ~<strong>$1.3B</strong>. From $400K to $29.3B: <strong>73,250x in 43 months</strong>.
+            </p>
+            <div class="feature-grid cols-2">
+              <div class="feature-item">
+                <div class="feature-icon" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-fork"/></svg></div>
+                <div class="feature-text">
+                  <div class="feature-title">VS Code Fork</div>
+                  <div class="feature-body">Full editor control, not a plugin. Every surface integrates <strong>LLMs</strong>.</div>
+                </div>
+              </div>
+              <div class="feature-item">
+                <div class="feature-icon" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-brain"/></svg></div>
+                <div class="feature-text">
+                  <div class="feature-title">Composer Model</div>
+                  <div class="feature-body"><strong>4x faster</strong> than previous models, slashing API costs.</div>
+                </div>
+              </div>
+              <div class="feature-item">
+                <div class="feature-icon" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-bot"/></svg></div>
+                <div class="feature-text">
+                  <div class="feature-title">Cloud Agents</div>
+                  <div class="feature-body">Background VMs execute ticket-to-<span class="code-tag">PR</span> workflows autonomously.</div>
+                </div>
+              </div>
+              <div class="feature-item">
+                <div class="feature-icon" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-store"/></svg></div>
+                <div class="feature-text">
+                  <div class="feature-title">Plugin Marketplace</div>
+                  <div class="feature-body">Native integrations with <strong>Figma</strong>, Linear, Stripe, AWS.</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="creator-watermark">
+          <div class="creator-watermark-avatar"><img src="/about-pedro.png" alt="Pedro Marins" /></div>
+          <div class="creator-watermark-text"><span class="creator-watermark-name">Pedro Marins</span><span class="creator-watermark-handle">@pedromarins.dev</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="slide-counter">
+      <div class="counter-dots"><span class="counter-dot past"></span><span class="counter-dot past"></span><span class="counter-dot past"></span><span class="counter-dot active"></span><span class="counter-dot"></span><span class="counter-dot"></span><span class="counter-dot"></span></div>
+      <span class="counter-label">4/7</span>
+    </div>
+  </div>
+
+  <!-- ─── SLIDE 5: SPACEX BET ─── -->
+  <div class="ig-post">
+    <div class="ig-slide">
+      <div class="ig-slide-inner">
+        <div class="bg-glow"></div>
+        <div class="slide-content content-slide">
+          <div class="slide-number">05 / 07</div>
+          <h2 class="slide-heading">SpaceX's <span class="highlight">$60B</span> bet and what changes</h2>
+          <div class="hero-img hero-img-md">
+            <img src="/carousel-spacex/slide_5.jpg" alt="SpaceX Colossus supercomputer illustration" loading="lazy" />
+          </div>
+          <div class="slide-body">
+            <p class="body-p">
+              SpaceX secured the right to acquire Cursor for <strong>$60B</strong> later in 2026, or pay <strong>$10B</strong> for joint work. The plan: integrate Cursor with <strong>Grok</strong> and the <strong>Colossus</strong> supercomputer (<strong>200,000 H100 GPUs</strong>). This would directly compete with <strong>OpenAI's Codex</strong> and <strong>Anthropic's Claude Code</strong>, while giving Cursor access to one of the largest AI clusters in the world.
+            </p>
+            <div class="insight-card">
+              "A meaningful step on our path to build the best place to code with AI."
+              <span class="insight-attribution">Michael Truell, CEO of Cursor</span>
+            </div>
+          </div>
+        </div>
+        <div class="creator-watermark">
+          <div class="creator-watermark-avatar"><img src="/about-pedro.png" alt="Pedro Marins" /></div>
+          <div class="creator-watermark-text"><span class="creator-watermark-name">Pedro Marins</span><span class="creator-watermark-handle">@pedromarins.dev</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="slide-counter">
+      <div class="counter-dots"><span class="counter-dot past"></span><span class="counter-dot past"></span><span class="counter-dot past"></span><span class="counter-dot past"></span><span class="counter-dot active"></span><span class="counter-dot"></span><span class="counter-dot"></span></div>
+      <span class="counter-label">5/7</span>
+    </div>
+  </div>
+
+  <!-- ─── SLIDE 6: WHAT TO DO ─── -->
+  <div class="ig-post">
+    <div class="ig-slide">
+      <div class="ig-slide-inner">
+        <div class="bg-glow"></div>
+        <div class="slide-content content-slide">
+          <div class="slide-number">06 / 07</div>
+          <h2 class="slide-heading">What you should <span class="highlight">do right now</span></h2>
+          <div class="slide-body">
+            <p class="body-p">The acquisition is not finalized yet, but the ecosystem is already shifting. Here's what to do:</p>
+            <div class="feature-grid" style="overflow:visible;">
+              <div class="feature-item">
+                <div class="feature-icon" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-brain"/></svg></div>
+                <div class="feature-text">
+                  <div class="feature-title">Audit your lock-in</div>
+                  <div class="feature-body">Map which workflow parts depend on <strong>Cursor</strong>. Pricing and data policies could change fast.</div>
+                </div>
+              </div>
+              <div class="feature-item">
+                <div class="feature-icon" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-search"/></svg></div>
+                <div class="feature-text">
+                  <div class="feature-title">Watch the competitors</div>
+                  <div class="feature-body">Track <strong>Claude Code</strong>, GitHub Copilot, and Windsurf: competitive pressure will accelerate features.</div>
+                </div>
+              </div>
+              <div class="feature-item">
+                <div class="feature-icon" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-rocket"/></svg></div>
+                <div class="feature-text">
+                  <div class="feature-title">Try the cloud agents</div>
+                  <div class="feature-body"><strong>Cloud agents</strong> are already live. Test ticket-to-<span class="code-tag">pull request</span> workflows now.</div>
+                </div>
+              </div>
+              <div class="feature-item">
+                <div class="feature-icon" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-briefcase"/></svg></div>
+                <div class="feature-text">
+                  <div class="feature-title">Revisit your investment thesis</div>
+                  <div class="feature-body">The <strong>$60B</strong> valuation signals dev tools are the new critical AI infrastructure.</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="creator-watermark">
+          <div class="creator-watermark-avatar"><img src="/about-pedro.png" alt="Pedro Marins" /></div>
+          <div class="creator-watermark-text"><span class="creator-watermark-name">Pedro Marins</span><span class="creator-watermark-handle">@pedromarins.dev</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="slide-counter">
+      <div class="counter-dots"><span class="counter-dot past"></span><span class="counter-dot past"></span><span class="counter-dot past"></span><span class="counter-dot past"></span><span class="counter-dot past"></span><span class="counter-dot active"></span><span class="counter-dot"></span></div>
+      <span class="counter-label">6/7</span>
+    </div>
+  </div>
+
+  <!-- ─── SLIDE 7: CTA ─── -->
+  <div class="ig-post">
+    <div class="ig-slide">
+      <div class="ig-slide-inner">
+        <div class="bg-glow"></div>
+        <div class="slide-content slide-cta">
+          <div class="slide-number">07 / 07</div>
+          <div class="cta-icon" aria-hidden="true"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-rocket"/></svg></div>
+          <h2 class="cta-title">Save this before your <span class="highlight">stack changes</span></h2>
+          <p class="cta-body">
+            The biggest deal in developer tools history is forming right now. Save this carousel to reference when the acquisition is confirmed.
+          </p>
+          <div class="cta-row">
+            <button class="cta-btn primary" aria-label="Save this carousel"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-save"/></svg> Save</button>
+            <button class="cta-btn secondary" aria-label="Share this carousel"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-refresh"/></svg> Share</button>
+          </div>
+        </div>
+        <div class="creator-watermark">
+          <div class="creator-watermark-avatar"><img src="/about-pedro.png" alt="Pedro Marins" /></div>
+          <div class="creator-watermark-text"><span class="creator-watermark-name">Pedro Marins</span><span class="creator-watermark-handle">@pedromarins.dev</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="slide-counter">
+      <div class="counter-dots"><span class="counter-dot past"></span><span class="counter-dot past"></span><span class="counter-dot past"></span><span class="counter-dot past"></span><span class="counter-dot past"></span><span class="counter-dot past"></span><span class="counter-dot active"></span></div>
+      <span class="counter-label">7/7</span>
+    </div>
+    <div class="action-bar">
+      <button class="action-btn" aria-label="Like"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3H14z"/></svg></button>
+      <button class="action-btn" aria-label="Comment"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></button>
+      <button class="action-btn" aria-label="Share"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg></button>
+      <button class="action-btn action-save" aria-label="Save"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></button>
+    </div>
+    <div class="caption">
+      <strong>pedromarins.dev</strong> Save this carousel. The SpaceX + Cursor deal at $60B is the story to watch in 2026. Your dev stack will feel the impact.
+      <div class="caption-hashtags">#SpaceX #Cursor #DeveloperTools #AI #SaaS #TechNews</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+(function() {
+  if ('IntersectionObserver' in window) {
+    new IntersectionObserver(function(entries) {
+      entries.forEach(function(e) { if (e.isIntersecting) e.target.classList.add('visible'); });
+    }, { threshold: 0.1 });
+  }
+})();
+</script>
+</body>
+</html>

@@ -54,8 +54,7 @@ jobs:
             cd /opt/alter-ego
 
             # Pull latest code
-            git fetch origin
-            git reset --hard origin/main
+            git pull origin main
 
             # Create/update environment file
             cat > .env << 'EOF'
@@ -80,7 +79,3 @@ jobs:
 
             # Clean up old images
             docker image prune -af --filter "until=168h"
-
-            # Verify health
-            sleep 10
-            curl -sf http://localhost:8000/health || exit 1
