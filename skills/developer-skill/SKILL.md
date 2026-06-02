@@ -1,7 +1,7 @@
 ---
 name: developer-skill
 description: "Implement task details from plans following project standards. Use when the user says 'develop this task', 'implement the plan', 'work on this ticket', 'start development', or after a plan has been created. Follows SDD (Spec-Driven Development): reads specs first, implements in increments, self-verifies. Never use for code review or QA validation."
-version: 1.0.0
+version: 1.1.0
 ---
 
 # Developer Skill
@@ -55,11 +55,72 @@ After implementing each criterion, run:
 - Never commit secrets, API keys, or `.env` files
 - Never force-push or amend commits unless explicitly asked
 
+## Work tier routing
+
+Read `Tier:` from `.agent/tasks/` ticket (default T2 if absent).
+
+| Tier | Ticket protocol |
+|------|-----------------|
+| T0 | No ticket required; skip BOARD updates |
+| T1 | Minimal ticket (`_template.hotfix.md`); update progress + test evidence |
+| T2/T3 | Full Agentic Ticket Protocol below |
+
+## Agentic Ticket Protocol
+
+**Before coding:**
+
+1. Read `.agent/active-task.md` and the active ticket under `.agent/tasks/`.
+2. Verify acceptance criteria and implementation plan exist (T2+).
+3. `uv run python scripts/agent_tasks/move_ticket.py AE-#### --status "In Development"` (or update Status manually).
+4. Add timestamped entry to ticket `Progress Log`.
+5. Record branch/worktree in ticket.
+
+**During coding:**
+
+1. One acceptance criterion at a time.
+2. Update `Progress Log`, `Files Touched`, `Test Evidence` after each verification run.
+3. Do not mark criteria `[x]` until code and tests exist.
+
+**After coding:**
+
+1. Status → `Dev Complete` via `move_ticket.py`.
+2. Write `.agent/reports/AE-####.dev-summary.md` (see template below). Create the `.agent/reports/` directory if it does not exist.
+3. `uv run python scripts/agent_tasks/render_board.py`
+4. Hand off to `/qa-agent`.
+
+### Developer completion report template
+
+```markdown
+## Developer Completion Report
+Ticket: AE-####
+Status: Dev Complete
+
+### Acceptance Criteria Implemented
+- [x] ...
+
+### Files Changed
+- ...
+
+### Tests Run
+\`\`\`bash
+...
+\`\`\`
+
+### Deviations
+None.
+
+### Known Risks
+None.
+
+### Suggested Next Step
+Run QA Agent for AE-####.
+```
+
 ## Workflow
 
 ### Phase 1: Context Loading
 
-1. Read the task/plan file thoroughly
+1. Read the task/plan file thoroughly (and `.agent/tasks/` ticket when present)
 2. Read `CLAUDE.md` (root), sub-project `CLAUDE.md`, and `AGENTS.md`
 3. Read relevant ADRs from `docs/decisions/`
 4. Read relevant guides from `docs/guides/`
