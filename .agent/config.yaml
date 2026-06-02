@@ -1,0 +1,117 @@
+project: alter-ego
+
+ticket_prefix: AE
+
+statuses:
+  - Intake
+  - Shaping
+  - Ready
+  - Planning
+  - In Development
+  - Dev Complete
+  - QA Running
+  - Needs Fixes
+  - Blocked
+  - Review
+  - Ready to Merge
+  - Done
+  - Cancelled
+
+wip_limits:
+  Planning: 2
+  In Development: 3
+  QA Running: 2
+  Review: 3
+
+high_risk_areas:
+  - authentication
+  - authorization
+  - database_migrations
+  - langgraph_workflow_state
+  - prompts
+  - llm_provider_changes
+  - publishing
+  - scheduling
+  - file_uploads
+  - deployment
+
+tiers:
+  T0:
+    description: Trivial; no ticket required
+    required_skills:
+      - developer-skill
+  T1:
+    description: Hotfix / small bug
+    template: _template.hotfix.md
+    required_skills:
+      - developer-skill
+      - qa-agent
+    qa_mode: lite
+  T2:
+    description: Standard feature
+    template: _template.md
+    required_skills:
+      - developer-skill
+      - qa-agent
+      - release-manager-skill
+  T3:
+    description: Epic / architecture
+    template: _template.md
+    required_skills:
+      - planner-skill
+      - architect-skill
+      - ticket-writer-skill
+      - developer-skill
+      - qa-agent
+      - release-manager-skill
+      - orchestrator-skill
+
+architect_modes:
+  default: plan
+  optional:
+    - skeptical
+    - research
+    - bugfix
+    - validate
+
+architect_mode_triggers:
+  skeptical:
+    - high_risk_areas
+    - T3
+    - human_requested
+  research:
+    - unfamiliar_domain
+    - multiple_valid_approaches
+    - ADR_required
+  bugfix:
+    - T1_with_unclear_root_cause
+    - refactor_before_fix
+    - legacy_hotspot
+  validate:
+    - before_Ready
+    - before_In_Development
+    - after_research_or_skeptical
+
+stale_ticket_days:
+  In Development: 5
+  QA Running: 2
+  Review: 7
+
+auto_commit:
+  allowed:
+    - docs
+    - ticket_metadata
+    - tests_only
+  forbidden:
+    - database_migrations
+    - authentication
+    - authorization
+    - deployment
+    - dependency_upgrades
+    - prompt_behavior_changes
+
+human_approval_required:
+  - merge
+  - release
+  - high_risk_changes
+  - security_sensitive_changes

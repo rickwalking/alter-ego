@@ -1,7 +1,7 @@
 ---
 name: qa-agent
 description: "Validate implementation quality across security, code quality, acceptance criteria, and completeness. Use when the user says 'run QA', 'validate the implementation', 'check my code', 'review this PR', 'run the checks', or after the Developer Skill completes. Runs parallel subagents for security audit, code quality, mutation testing, acceptance criteria validation, and orphan code detection. Never use for implementation or development."
-version: 1.0.0
+version: 1.1.0
 ---
 
 # QA Agent
@@ -50,6 +50,35 @@ The final report must include:
 - **Per-Dimension Results**: PASS/FAIL/WARN with score breakdown
 - **Findings List**: Sorted by severity (blockers first)
 - **Summary**: Top 3 risks and recommended next steps
+
+## QA modes
+
+| Mode | When |
+|------|------|
+| **full** (default) | T2/T3 — all five subagents |
+| **lite** | T1 — security (if high-risk area), AC validation, lint/tests evidence; skip mutation/orphan unless scope warrants |
+
+Read ticket `Tier:` from `.agent/tasks/`.
+
+## Agentic Ticket QA Protocol
+
+**Before QA:**
+
+1. Read `.agent/tasks/AE-####.md` and `.agent/reports/AE-####.dev-summary.md`.
+2. Move ticket to `QA Running`.
+3. Identify changed files and acceptance criteria.
+
+**During QA:**
+
+1. Run QA dimensions per mode above.
+2. Link findings to file:line.
+
+**After QA:**
+
+1. Write `.agent/reports/AE-####.qa.md` (use report header from source plan).
+2. Update ticket `QA Report` section with link.
+3. Status: blockers → `Needs Fixes`; warnings only or pass → `Review`; inconclusive → `Blocked`.
+4. `uv run python scripts/agent_tasks/render_board.py`
 
 ## Workflow
 
