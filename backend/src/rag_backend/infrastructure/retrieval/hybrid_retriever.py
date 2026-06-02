@@ -1,16 +1,13 @@
 """Hybrid retriever with Reciprocal Rank Fusion (RRF)."""
 
-from dataclasses import dataclass, field
-
+from rag_backend.domain.constants.namespaces import (
+    DEFAULT_KB_NAMESPACES,
+    NAMESPACE_CAROUSEL,
+    NAMESPACE_INTERNAL,
+    NAMESPACE_PERSONAL,
+)
 from rag_backend.domain.models import HybridSearchParams, RetrievalQuery, SearchResult
 from rag_backend.domain.protocols import EmbeddingService, VectorStore
-
-
-@dataclass
-class _DocScore:
-    result: SearchResult
-    rrf_score: float = 0.0
-    ranks: list[int] = field(default_factory=list)
 
 
 class HybridRetrieverWithRRF:
@@ -73,14 +70,14 @@ class HybridRetrieverWithRRF:
         """
         if namespace_prefix is None:
             # Default: search all knowledge-base scopes
-            return ["personal", "public"]
-        if namespace_prefix == "personal":
+            return DEFAULT_KB_NAMESPACES
+        if namespace_prefix == NAMESPACE_PERSONAL:
             # Alter-Ego agent: personal CV/bio + public blog posts
-            return ["personal", "public"]
-        if namespace_prefix == "carousel":
-            return ["carousel"]
-        if namespace_prefix == "internal":
-            return ["internal"]
+            return DEFAULT_KB_NAMESPACES
+        if namespace_prefix == NAMESPACE_CAROUSEL:
+            return [NAMESPACE_CAROUSEL]
+        if namespace_prefix == NAMESPACE_INTERNAL:
+            return [NAMESPACE_INTERNAL]
         # Exact namespace match for any other value
         return [namespace_prefix]
 

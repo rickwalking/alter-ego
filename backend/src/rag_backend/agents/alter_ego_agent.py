@@ -19,6 +19,7 @@ from rag_backend.application.tools.knowledge_base import (
     build_list_documents_tool,
     build_search_documents_tool,
 )
+from rag_backend.domain.constants.namespaces import NAMESPACE_PERSONAL
 from rag_backend.domain.constants.retry import LANGGRAPH_MAX_ATTEMPTS
 from rag_backend.domain.models import (
     Message,
@@ -37,9 +38,13 @@ from rag_backend.infrastructure.config.settings import Settings
 from rag_backend.monitoring_langfuse import get_langfuse_handler
 
 _ALTER_EGO_FALLBACK_PROMPT = (
-    "You are the Alter-Ego of Pedro Marins, a helpful AI assistant that "
-    "represents Pedro's professional identity. You answer questions about "
-    "Pedro's career, skills, projects, and published content."
+    "You are Pedro Marins. Not an AI assistant. Not a chatbot. You.\n\n"
+    "You know your own career, your projects, your blog posts, your takes on "
+    "tech and leadership. When someone asks you something, you answer like "
+    "you're talking to a friend at a coffee shop — direct, honest, sometimes "
+    "opinionated.\n\n"
+    "You never mention company names, employer names, or client names. "
+    "You never answer in bullet points like a resume. You just talk like a person."
 )
 
 
@@ -84,7 +89,7 @@ class AlterEgoAgent:
         try:
             from rag_backend.agents.prompts.registry import get_system_prompt
 
-            return get_system_prompt("alter_ego", version="v2")
+            return get_system_prompt("alter_ego", version="v3")
         except Exception:
             return _ALTER_EGO_FALLBACK_PROMPT
 
@@ -98,7 +103,7 @@ class AlterEgoAgent:
             ),
             build_list_documents_tool(
                 self._document_repository,
-                scope_filter="personal",
+                scope_filter=NAMESPACE_PERSONAL,
             ),
         ]
 
@@ -134,14 +139,11 @@ class AlterEgoAgent:
             )
             await self._message_repository.create(user_message)
 
-        sources = []
-
         if stream:
             async for event in self._chat_stream(
                 message,
                 conversation_id,
                 chat_history,
-                sources,
                 persist_messages,
             ):
                 yield event
@@ -150,7 +152,6 @@ class AlterEgoAgent:
                 message,
                 conversation_id,
                 chat_history,
-                sources,
                 persist_messages,
             ):
                 yield event
@@ -160,7 +161,6 @@ class AlterEgoAgent:
         message: str,
         conversation_id: UUID,
         chat_history: list[BaseMessage],
-        sources: list[dict[str, object]],
         persist_messages: bool,
     ) -> AsyncIterator[ChatEvent]:
         """Streaming chat implementation.
@@ -212,11 +212,9 @@ class AlterEgoAgent:
                 role=MessageRole.ASSISTANT,
                 content=full_response,
                 conversation_id=conversation_id,
-                sources=sources,
             )
             await self._message_repository.create(assistant_message)
 
-        yield {"type": "sources", "content": sources}
         yield {"type": "complete", "content": full_response}
 
     async def _chat_non_streaming(
@@ -224,7 +222,6 @@ class AlterEgoAgent:
         message: str,
         conversation_id: UUID,
         chat_history: list[BaseMessage],
-        sources: list[dict[str, object]],
         persist_messages: bool,
     ) -> AsyncIterator[ChatEvent]:
         """Non-streaming chat implementation.
@@ -253,7 +250,6 @@ class AlterEgoAgent:
                 role=MessageRole.ASSISTANT,
                 content=response,
                 conversation_id=conversation_id,
-                sources=sources,
             )
             await self._message_repository.create(assistant_message)
 

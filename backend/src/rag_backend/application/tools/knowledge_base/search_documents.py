@@ -1,6 +1,6 @@
 """Search documents tool for the RAG agent."""
 
-from langchain_core.tools import tool
+from langchain_core.tools import BaseTool, tool
 
 from rag_backend.domain.models import RetrievalQuery
 from rag_backend.domain.protocols import Retriever
@@ -26,7 +26,7 @@ async def search_documents(query: str) -> str:
 
 def build_search_documents_tool(
     retriever: Retriever, *, top_k: int = 5, namespace_prefix: str | None = None
-) -> ...:
+) -> "BaseTool":
     """Return a bound search_documents tool closure.
 
     Captures the retriever dependency so the tool can be used
