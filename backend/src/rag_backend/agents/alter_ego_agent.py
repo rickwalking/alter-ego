@@ -84,7 +84,7 @@ class AlterEgoAgent:
         try:
             from rag_backend.agents.prompts.registry import get_system_prompt
 
-            return get_system_prompt("alter_ego", version="v1")
+            return get_system_prompt("alter_ego", version="v2")
         except Exception:
             return _ALTER_EGO_FALLBACK_PROMPT
 
@@ -93,7 +93,7 @@ class AlterEgoAgent:
         return [
             build_search_documents_tool(
                 self._retriever,
-                top_k=5,
+                top_k=10,
                 namespace_prefix="personal",
             ),
             build_list_documents_tool(
