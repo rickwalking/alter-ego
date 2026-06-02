@@ -371,7 +371,7 @@ function HomePageContent({
                   <span style={{ color: TEXT_DIM }}>
                     ▸ Syncing experience vectors...
                   </span>{" "}
-                  <span style={{ color: TEAL }}>✓ 12 yrs</span>
+                  <span style={{ color: TEAL }}>✓ 8 yrs</span>
                 </div>
                 <div
                   style={{
@@ -440,7 +440,7 @@ function HomePageContent({
                   lineHeight: 1,
                 }}
               >
-                12+
+                8+
               </div>
               <div
                 style={{
