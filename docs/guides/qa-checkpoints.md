@@ -391,34 +391,92 @@ Exceptions require documented justification in an ADR or docs/decisions/.
 
 ## 7. CI/CD Quality Gates
 
+CI runs a **deterministic subset** of the full QA agent checklist. Use `/qa-agent` locally for acceptance-criteria validation, deep security review, and architecture judgment before merge.
+
+See [CI Quality Gates Guide](./ci-quality-gates.md) for workflow names, branch protection, and rollout policy.
+
+### CI vs Full QA Agent
+
+| Dimension | CI (blocking) | CI (advisory) | Full `/qa-agent` only |
+|-----------|---------------|---------------|------------------------|
+| Lint & format | ruff, eslint | — | — |
+| Types | mypy, tsc | — | — |
+| Tests & coverage | pytest, vitest, diff-cover ≥75% | — | — |
+| Architecture | import-linter | — | Scope / ADR compliance |
+| Security | bandit, pip-audit, npm audit (high) | — | IDOR, authz logic |
+| Dead code | vulture | — | Orphan routes, TODO sweep |
+| Complexity (new code) | diff-scoped PLR0913/C901, eslint changed | — | — |
+| Mutation testing | — | mutmut, Stryker | Deep mutation analysis |
+| Acceptance criteria | — | — | Plan/spec mapping |
+
+### Backend Quality Gates (`Backend Quality Gates` workflow)
+
+| Job | Tool | Enforcement |
+|-----|------|-------------|
+| backend / Lint & Format | ruff check + format | CI failure + reviewdog inline (PR) |
+| backend / Strict Diff | ruff `--select PLR0913,C901,PLR0912` on changed files | CI failure |
+| backend / Type Check | mypy | CI failure |
+| backend / Architecture | import-linter | CI failure |
+| backend / Docstrings | interrogate ≥80% | CI failure |
+| backend / Security | bandit + pip-audit | CI failure |
+| backend / Test & Coverage | pytest + diff-cover ≥75% | CI failure |
+| backend / Dead Code | vulture | CI failure |
+| backend / Mutation (advisory) | mutmut | Non-blocking; PR summary comment |
+
+### Frontend Quality Gates (`Frontend Quality Gates` workflow)
+
+| Job | Tool | Enforcement |
+|-----|------|-------------|
+| frontend / Lint | eslint `--quiet` (repo-wide errors) | CI failure |
+| frontend / Lint (changed) | eslint `--max-warnings=0` on diff | CI failure |
+| frontend / Type Check | tsc --noEmit | CI failure |
+| frontend / Test | vitest | CI failure |
+| frontend / Format | prettier --check | CI failure |
+| frontend / Security | npm audit --audit-level=high | CI failure |
+| frontend / Mutation (advisory) | Stryker | Non-blocking; PR summary comment |
+| frontend / Legacy guard | `npm run check:legacy` | CI failure — no v1 imports in `src/app/dashboard` |
+| frontend / Legacy inventory | `npm run check:legacy-inventory` | Advisory until Phase 1 complete ([plan](../plans/frontend-legacy-removal.md)) |
+
+### Frontend legacy removal (neon shell)
+
+| Checkpoint | How to verify | Tool/Command |
+|------------|---------------|--------------|
+| No `ChatInterface` in dashboard routes | Import guard | `cd frontend && npm run check:legacy` |
+| No `/(create)` route group | Route guard | `npm run check:legacy` |
+| Phase 1 mock/orphan files deleted | Inventory guard | `npm run check:legacy-inventory` |
+| Gherkin spec for removal | Scenario review | `tests/features/frontend-legacy-removal.feature` |
+| Vitest guard | Unit test | `src/scripts/legacy-removal-guard.test.ts` |
+
+**Plan:** [docs/plans/frontend-legacy-removal.md](../plans/frontend-legacy-removal.md)
+
 ### Pre-Merge Gates (Must Pass)
 
 | Gate | Tool | Enforcement |
 |------|------|-------------|
 | Lint | ruff check / eslint | CI failure |
-| Type check | mypy --strict / tsc --noEmit | CI failure |
+| Type check | mypy / tsc --noEmit | CI failure |
 | Unit tests | pytest / vitest | CI failure |
-| Test coverage | pytest --cov / vitest --coverage | CI failure if below 90% |
-| Build | docker build / npm run build | CI failure |
+| Diff coverage | diff-cover ≥75% (backend) | CI failure |
+| Build | docker build / npm run build | CI failure (release pipelines) |
+| Legacy guard (frontend) | `npm run check:legacy` | CI failure on dashboard PRs |
 
-### Pre-Merge Gates (Should Pass)
+### Pre-Merge Gates (Should Pass / Advisory)
 
 | Gate | Tool | Enforcement |
 |------|------|-------------|
-| Mutation tests | mutmut / stryker | CI warning (nightly enforce) |
-| Vulnerability scan | pip audit / npm audit | CI warning |
-| Complexity check | xenon | CI warning |
-| Dead code | dead / vulture | CI warning |
-| Architecture boundaries | import-linter | CI warning |
+| Mutation tests | mutmut / stryker | CI advisory job |
+| Strict diff lint | ruff PLR0913/C901, eslint changed | CI failure on changed files |
+| Dead code | vulture | CI failure |
+| Architecture boundaries | import-linter | CI failure |
 
 ### Nightly / Weekly Gates
 
 | Gate | Tool | Cadence |
 |------|------|---------|
 | Full mutation suite | mutmut / stryker | Weekly |
-| Full vulnerability scan | pip audit / npm audit | Daily |
+| Full vulnerability scan | pip audit / npm audit | Daily (PR: high severity) |
 | Dependency freshness | pip list --outdated | Weekly |
-| Dead code sweep | vulture / dead | Weekly |
+| Dead code sweep | vulture | Weekly |
 | Maintainability index | radon mi | Weekly |
 
 ---

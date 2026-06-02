@@ -84,6 +84,10 @@ export const carouselProjectResponseSchema = z.object({
   pdf_path: z.string().nullable().optional(),
   pdf_path_en: z.string().nullable().optional(),
   design_tokens: z.unknown().nullable().optional(),
+  creator_name: z.string().nullable().optional(),
+  creator_handle: z.string().nullable().optional(),
+  creator_avatar_url: z.string().nullable().optional(),
+  template_version: z.string().nullable().optional(),
   created_at: z.string(),
   updated_at: z.string(),
 });
@@ -156,30 +160,7 @@ export const carouselPhaseProgressSchema = z.object({
   slides: z.array(carouselPhaseProgressSlideSchema).optional(),
 });
 
-export const carouselStatusResponseSchema = z.object({
-  id: z.string(),
-  status: z.string(),
-  error_message: z.string().nullable(),
-  phase_progress: carouselPhaseProgressSchema.nullable().optional(),
-  updated_at: z.string(),
-});
-
-/**
- * Shape of each SSE event emitted by the backend's `/stream` route.
- * `node` is either a phase name ("research", "content", …) or one of
- * the lifecycle markers "start" / "end" / "error". Other fields mirror
- * the polling `/status` payload so consumers can treat a stream event
- * as a drop-in replacement for a status snapshot.
- */
-export const carouselStreamEventSchema = z.object({
-  node: z.string(),
-  status: z.string().optional(),
-  phase_progress: carouselPhaseProgressSchema.nullable().optional(),
-  error: z.string().optional(),
-});
-
 export type CarouselPhaseProgress = z.infer<typeof carouselPhaseProgressSchema>;
-export type CarouselStreamEvent = z.infer<typeof carouselStreamEventSchema>;
 
 export type CarouselBlogImageMapEntry = z.infer<
   typeof carouselBlogImageMapEntrySchema
@@ -201,6 +182,3 @@ export type CarouselProjectListResponse = z.infer<
 >;
 export type CarouselSlideResponse = z.infer<typeof carouselSlideResponseSchema>;
 export type CarouselCreateRequest = z.infer<typeof carouselCreateRequestSchema>;
-export type CarouselStatusResponse = z.infer<
-  typeof carouselStatusResponseSchema
->;

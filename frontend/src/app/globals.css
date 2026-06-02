@@ -46,8 +46,49 @@
   --color-brand-bg: #0a0e17;
   --color-brand-bg-lighter: #0f1420;
 
+  /* ── Neon Shell Accent Colors ── */
+  --color-neon-cyan: #00d4ff;
+  --color-neon-cyan-dim: rgba(0, 212, 255, 0.12);
+  --color-neon-magenta: #ff2770;
+  --color-neon-magenta-dim: rgba(255, 39, 112, 0.12);
+  --color-neon-teal: #0ac5a8;
+  --color-neon-teal-dim: rgba(10, 197, 168, 0.12);
+  --color-neon-amber: #f59e0b;
+  --color-neon-amber-dim: rgba(245, 158, 11, 0.12);
+  --color-neon-green: #22c55e;
+  --color-neon-red: #ef4444;
+  --color-neon-purple: #a855f7;
+
+  /* ── Background Hierarchy ── */
+  --color-bg-deep: #060a12;
+  --color-bg-surface: #0a0f1e;
+  --color-bg-card: #0d1324;
+  --color-bg-elevated: #111a30;
+  --color-bg-sidebar: #080c18;
+
+  /* ── Text Hierarchy ── */
+  --color-text-primary: rgba(255, 255, 255, 0.88);
+  --color-text-muted: rgba(255, 255, 255, 0.55);
+  --color-text-dim: rgba(255, 255, 255, 0.3);
+
+  /* ── Component Defaults ── */
+  --color-neon-card-bg: var(--color-bg-card);
+  --color-neon-card-border: rgba(255, 255, 255, 0.06);
+  --color-neon-card-hover-border: rgba(0, 212, 255, 0.2);
+  --color-neon-input-bg: rgba(6, 10, 18, 0.45);
+  --color-neon-input-border: rgba(255, 255, 255, 0.08);
+  --color-neon-input-focus-border: #00d4ff;
+  --color-neon-sidebar-bg: #080c18;
+  --color-neon-cyan-border-30: rgba(0, 212, 255, 0.3);
+  --shadow-neon-button: 0 0 16px rgba(0, 212, 255, 0.15);
+  --shadow-neon-button-hover: 0 0 24px rgba(0, 212, 255, 0.25);
+  --shadow-neon-card-hover: 0 4px 24px rgba(0, 212, 255, 0.08);
+  --shadow-neon-danger: 0 0 12px rgba(239, 68, 68, 0.2);
+  --color-neon-cyan-teal-end: #0090b0;
+  --color-neon-red-dark-end: #dc2626;
+
   /* Dark-only app — semantic tokens resolve straight to the dark palette. */
-  --color-background: var(--color-gray-950);
+  --color-background: #060a12;
   --color-foreground: var(--color-gray-50);
   --color-card: var(--color-gray-900);
   --color-card-foreground: var(--color-gray-50);
@@ -114,13 +155,91 @@
    components that use it; no per-class overrides are needed here. */
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* ── Neon Shell Animations ── */
+@keyframes grid-drift {
+  0% {
+    transform: rotateX(60deg) translateY(0);
+  }
+  100% {
+    transform: rotateX(60deg) translateY(60px);
+  }
+}
+@keyframes terminal-type {
+  0% {
+    opacity: 0;
+    transform: translateX(-8px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+@keyframes ring-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.5;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 1;
+  }
+}
+@keyframes pulse-dot {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.3;
+  }
+}
+@keyframes glow-pulse {
+  0%,
+  100% {
+    box-shadow:
+      0 0 12px rgba(0, 212, 255, 0.12),
+      inset 0 0 12px rgba(0, 212, 255, 0.12);
+  }
+  50% {
+    box-shadow:
+      0 0 24px rgba(0, 212, 255, 0.2),
+      inset 0 0 24px rgba(0, 212, 255, 0.2);
+  }
+}
+@keyframes blink-cursor {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+}
+@keyframes particle-float {
+  0% {
+    opacity: 0;
+    transform: translateY(100vh) scale(0);
+  }
+  10% {
+    opacity: 0.6;
+  }
+  90% {
+    opacity: 0.4;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-10vh) scale(1);
+  }
+}
+
 /* Base styles */
 * {
   border-color: var(--color-border);
 }
 
 body {
-  background: var(--color-background);
+  background: #060a12;
   color: var(--color-foreground);
   font-family: var(--font-sans);
 }

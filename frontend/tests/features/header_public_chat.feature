@@ -1,26 +1,25 @@
 Feature: Header Public Chat Link
   As a visitor
-  I want to see the Chat link in the header without logging in
-  So that I can start a conversation immediately
+  I want chat available on the public shell but not on the blog header when anonymous
+  So that public blog reading stays focused on content
 
   Background:
     Given the Header component is rendered
 
   # ---------------------------------------------------------------------------
-  # Public Visibility
+  # Blog header (v1 layout)
   # ---------------------------------------------------------------------------
 
-  Scenario: Anonymous user sees Chat link in header
+  Scenario: Anonymous user does not see Chat in blog header
     Given the user is not authenticated
     When the Header component renders
-    Then the navigation contains a "Chat" link
-    And the link href is "/chat"
+    Then the navigation does not contain "Chat"
 
-  Scenario: Authenticated user also sees Chat link
-    Given the user is authenticated
+  Scenario: Authenticated editor sees Chat in blog header
+    Given the user has editor role
     When the Header component renders
     Then the navigation contains a "Chat" link
-    And the link href is "/chat"
+    And the link href is "/dashboard/chat"
 
   Scenario: Editor sees Knowledge Base and Create links
     Given the user has editor role

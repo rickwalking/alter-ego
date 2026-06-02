@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { useState, useCallback } from "react";
 import { useTranslations } from "next-intl";
-import { ChevronLeft, ChevronRight, Download } from "lucide-react";
+import { ChevronLeft, ChevronRight, Download, Loader } from "lucide-react";
 import JSZip from "jszip";
 
 interface HorizontalCarouselViewerProps {
@@ -22,6 +22,7 @@ export function HorizontalCarouselViewer({
 }: HorizontalCarouselViewerProps) {
   const t = useTranslations("publish.carouselViewer");
   const [activeIndex, setActiveIndex] = useState(0);
+  const [isDownloading, setIsDownloading] = useState(false);
 
   const handleScroll = (event: React.UIEvent<HTMLDivElement>) => {
     const target = event.currentTarget;
@@ -58,31 +59,49 @@ export function HorizontalCarouselViewer({
   }
 
   const downloadAll = async () => {
-    const zip = new JSZip();
-    const folder = zip.folder(alt.replace(/\s+/g, "_") || "slides");
-    if (!folder) return;
+    setIsDownloading(true);
+    try {
+      const zip = new JSZip();
+      const folder = zip.folder(alt.replace(/\s+/g, "_") || "slides");
+      if (!folder) return;
 
-    const fetches = slideUrls.map(async (url, i) => {
-      try {
-        const response = await fetch(url);
-        const blob = await response.blob();
-        folder.file(`slide_${i + 1}.jpg`, blob);
-      } catch {
-        // Ignore individual fetch failures
-      }
-    });
+      const FETCH_TIMEOUT_MS = 30000;
 
-    await Promise.all(fetches);
+      const fetches = slideUrls.map(async (url, i) => {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(
+          () => controller.abort(),
+          FETCH_TIMEOUT_MS,
+        );
+        try {
+          const response = await fetch(url, {
+            credentials: "include",
+            signal: controller.signal,
+          });
+          clearTimeout(timeoutId);
+          const blob = await response.blob();
+          folder.file(`slide_${i + 1}.jpg`, blob);
+        } catch {
+          // Ignore individual fetch failures
+        } finally {
+          clearTimeout(timeoutId);
+        }
+      });
 
-    const content = await zip.generateAsync({ type: "blob" });
-    const downloadUrl = window.URL.createObjectURL(content);
-    const a = document.createElement("a");
-    a.href = downloadUrl;
-    a.download = `${alt.replace(/\s+/g, "_") || "slides"}.zip`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    window.URL.revokeObjectURL(downloadUrl);
+      await Promise.all(fetches);
+
+      const content = await zip.generateAsync({ type: "blob" });
+      const downloadUrl = window.URL.createObjectURL(content);
+      const a = document.createElement("a");
+      a.href = downloadUrl;
+      a.download = `${alt.replace(/\s+/g, "_") || "slides"}.zip`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(downloadUrl);
+    } finally {
+      setIsDownloading(false);
+    }
   };
 
   return (
@@ -96,7 +115,7 @@ export function HorizontalCarouselViewer({
         >
           {slideUrls.map((url, i) => (
             <div
-              key={url}
+              key={`slide-${i + 1}`}
               className="relative aspect-[4/5] w-full flex-shrink-0 snap-center"
             >
               <Image
@@ -106,6 +125,7 @@ export function HorizontalCarouselViewer({
                 className="object-cover"
                 sizes="(min-width: 1024px) 50vw, 100vw"
                 unoptimized
+                priority={i === 0}
               />
               <div className="absolute top-3 right-3 rounded-full bg-background/60 px-2 py-0.5 text-foreground text-xs">
                 {i + 1} / {slideUrls.length}
@@ -143,7 +163,7 @@ export function HorizontalCarouselViewer({
         <div className="flex justify-center gap-1.5">
           {slideUrls.map((url, i) => (
             <button
-              key={url}
+              key={`dot-${i + 1}`}
               type="button"
               aria-label={t("goToSlide", { number: i + 1 })}
               onClick={() => scrollTo(i)}
@@ -159,10 +179,15 @@ export function HorizontalCarouselViewer({
         <button
           type="button"
           onClick={downloadAll}
-          className="inline-flex items-center gap-1.5 rounded-md border border-[var(--color-border)] px-3 py-1.5 text-sm hover:bg-[var(--color-background)]"
+          disabled={isDownloading}
+          className="inline-flex items-center gap-1.5 rounded-md border border-[var(--color-border)] px-3 py-1.5 text-sm hover:bg-[var(--color-background)] disabled:opacity-50"
         >
-          <Download className="h-4 w-4" />
-          {t("downloadImages")}
+          {isDownloading ? (
+            <Loader className="h-4 w-4 animate-spin" />
+          ) : (
+            <Download className="h-4 w-4" />
+          )}
+          {isDownloading ? t("downloadingImages") : t("downloadImages")}
         </button>
       </div>
     </div>

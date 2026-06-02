@@ -2,13 +2,18 @@
 
 from dataclasses import dataclass
 
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from rag_backend.agents.constants import DEFAULT_CONFIDENCE
 from rag_backend.agents.input_sanitizer import sanitize_llm_input
+from rag_backend.infrastructure.database.persona_correction_repository import (
+    PersonaCorrectionRecord,
+    PersonaCorrectionRepository,
+)
 from rag_backend.infrastructure.external.openai_embeddings import (  # type: ignore[attr-defined]
     OpenAIEmbeddings,
 )
 
-# Constants
 DRIFT_THRESHOLD = 0.2
 
 
@@ -23,28 +28,16 @@ class StoredCorrection:
 
 
 class FeedbackLearningLoop:
-    """Learns from human corrections to improve AI outputs over time.
-
-    This component records human corrections and uses them to:
-    1. Update persona profiles with new writing samples
-    2. Retrieve similar corrections for future generations
-    3. Continuously improve voice match quality
-    """
+    """Learns from human corrections to improve AI outputs over time."""
 
     def __init__(
         self,
-        session: object,
+        session: AsyncSession,
         embeddings: OpenAIEmbeddings,
     ) -> None:
-        """Initialize the feedback learning loop.
-
-        Args:
-            session: Async database session
-            embeddings: Embedding model for similarity search
-        """
         self.session = session
         self.embeddings = embeddings
-        self._corrections: dict[str, list[StoredCorrection]] = {}
+        self._repository = PersonaCorrectionRepository(session)
 
     async def record_correction(
         self,
@@ -53,6 +46,8 @@ class FeedbackLearningLoop:
         _context: str,
         _persona_id: object,
         _correction_type: str | None = None,
+        *,
+        project_id: str | None = None,
     ) -> None:
         """Store a human correction for future learning."""
         original = sanitize_llm_input(_original)
@@ -62,24 +57,24 @@ class FeedbackLearningLoop:
         correction_type = _correction_type or await self.classify_correction(
             original, corrected
         )
-        entry = StoredCorrection(
-            original=original,
-            corrected=corrected,
+        await self._repository.create(
+            persona_id=persona_id,
+            original_text=original,
+            corrected_text=corrected,
             context=context,
             correction_type=correction_type,
+            project_id=project_id,
         )
-        self._corrections.setdefault(persona_id, []).append(entry)
 
     async def get_relevant_examples(
         self, _persona_id: object, _k: int = 3
     ) -> list[str]:
         """Retrieve similar past corrections to improve new outputs."""
         persona_id = _persona_id if isinstance(_persona_id, str) else str(_persona_id)
-        entries = self._corrections.get(persona_id, [])
-        return [entry.corrected for entry in entries[-_k:]]
+        rows = await self._repository.list_recent_by_persona(persona_id, _k)
+        return [row.corrected_text for row in rows]
 
     def _cosine_similarity(self, a: list[float], b: list[float]) -> float:
-        """Calculate cosine similarity between two embeddings."""
         dot_product = sum(x * y for x, y in zip(a, b, strict=True))
         norm_a = sum(x * x for x in a) ** 0.5
         norm_b = sum(x * x for x in b) ** 0.5
@@ -94,16 +89,6 @@ class FeedbackLearningLoop:
         original: str,
         corrected: str,
     ) -> str:
-        """Classify the type of correction made.
-
-        Args:
-            original: The original text
-            corrected: The corrected text
-
-        Returns:
-            Classification string (e.g., "tone", "grammar", "clarity", "voice")
-        """
-        # Simple heuristics
         if len(corrected) < len(original) * 0.5:
             return "conciseness"
         if "!" in corrected and "!" not in original:
@@ -115,9 +100,8 @@ class FeedbackLearningLoop:
     async def suggest_improvements(
         self, content: str, _persona_id: object
     ) -> list[str]:
-        """Get improvement suggestions based on similar past corrections."""
         persona_id = _persona_id if isinstance(_persona_id, str) else str(_persona_id)
-        entries = self._corrections.get(persona_id, [])
+        entries = await self._load_entries(persona_id)
         if not entries:
             return []
 
@@ -137,7 +121,6 @@ class FeedbackLearningLoop:
     async def analyze_voice_drift(
         self, _persona_id: object, recent_samples: list[tuple[str, str]]
     ) -> dict[str, object]:
-        """Analyze how much the persona voice has drifted from its original."""
         if not recent_samples:
             return {"drift_score": 0.0, "trends": []}
 
@@ -160,28 +143,28 @@ class FeedbackLearningLoop:
             ],
         }
 
+    async def _load_entries(self, persona_id: str) -> list[StoredCorrection]:
+        rows = await self._repository.list_all_by_persona(persona_id)
+        return [self._to_stored(row) for row in rows]
+
+    @staticmethod
+    def _to_stored(row: PersonaCorrectionRecord) -> StoredCorrection:
+        return StoredCorrection(
+            original=row.original_text,
+            corrected=row.corrected_text,
+            context=row.context,
+            correction_type=row.correction_type,
+        )
+
 
 class CorrectionClassifier:
-    """Classifies corrections into categories for better learning.
-
-    Provides structured classification of human corrections to improve
-    the feedback learning loop's effectiveness.
-    """
+    """Classifies corrections into categories for better learning."""
 
     @staticmethod
     def classify(
         original: str,
         corrected: str,
     ) -> dict[str, object]:
-        """Classify a correction into categories.
-
-        Args:
-            original: Original text
-            corrected: Corrected text
-
-        Returns:
-            Dictionary with classification results
-        """
         classification: dict[str, object] = {
             "correction_type": "tone",
             "severity": "minor",
@@ -189,17 +172,14 @@ class CorrectionClassifier:
             "confidence": DEFAULT_CONFIDENCE,
         }
 
-        # Check for tone changes
         if corrected.count("!") > original.count("!"):
             classification["correction_type"] = "tone"
             classification["confidence"] = 0.8
 
-        # Check for grammar fixes
         if original.count("  ") > 0 and "  " not in corrected:
             classification["correction_type"] = "grammar"
             classification["severity"] = "minor"
 
-        # Check for content changes (only if still default classification)
         if (
             original.lower() != corrected.lower()
             and classification["correction_type"] == "tone"

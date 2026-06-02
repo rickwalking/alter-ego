@@ -1,9 +1,12 @@
 """Unit tests for ImageGenerationTool and CarouselExportTool."""
 
+import pathlib
+
 import pytest
 
 from rag_backend.application.services.tools.export_tool import CarouselExportTool
 from rag_backend.application.services.tools.image_tool import ImageGenerationTool
+from rag_backend.domain.protocols import ExportConfig
 
 
 @pytest.mark.unit
@@ -89,9 +92,7 @@ class TestImageGenerationTool:
             output_dir=output_dir,
         )
 
-        import os
-
-        assert os.path.isdir(os.path.join(output_dir, "images"))
+        assert (pathlib.Path(output_dir) / "images").is_dir()
 
 
 @pytest.mark.unit
@@ -118,8 +119,7 @@ class TestCarouselExportTool:
         mock_service.export_slides.assert_called_once_with(
             html_content="<html>test</html>",
             output_dir="/output",
-            width=1080,
-            height=1350,
+            config=ExportConfig(),
         )
 
     async def test_export_carousel_custom_dimensions(self):
@@ -134,19 +134,17 @@ class TestCarouselExportTool:
         await tool.export_carousel(
             html_content="<html>test</html>",
             output_dir="/output",
-            width=1920,
-            height=1080,
+            config=ExportConfig(width=1920, height=1080),
         )
 
         mock_service.export_slides.assert_called_once_with(
             html_content="<html>test</html>",
             output_dir="/output",
-            width=1920,
-            height=1080,
+            config=ExportConfig(width=1920, height=1080),
         )
 
     async def test_export_defaults(self):
         """Should have correct default dimensions."""
-        assert CarouselExportTool.DEFAULT_WIDTH == 1080
-        assert CarouselExportTool.DEFAULT_HEIGHT == 1350
-        assert CarouselExportTool.DEFAULT_QUALITY == 95
+        assert ExportConfig().width == 1080
+        assert ExportConfig().height == 1350
+        assert ExportConfig().quality == 95

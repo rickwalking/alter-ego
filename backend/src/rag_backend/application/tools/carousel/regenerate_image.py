@@ -4,17 +4,24 @@ from uuid import UUID
 
 from langchain_core.tools import BaseTool, tool
 
-from rag_backend.domain.protocols import CarouselAgent
+from rag_backend.agents.input_sanitizer import sanitize_llm_input
+from rag_backend.domain.constants.access_control import ERR_CAROUSEL_TOOL_ACCESS_DENIED
+from rag_backend.domain.constants.carousel_tools import (
+    ERR_CAROUSEL_TOOL_INVALID_PROJECT_ID,
+    ERR_CAROUSEL_TOOL_PROJECT_NOT_FOUND,
+    ERR_CAROUSEL_TOOL_UNEXPECTED,
+)
+from rag_backend.domain.protocols import CarouselRefinementService, CarouselRepository
 
-_ERR_INVALID_PROJECT_ID = "Invalid project_id {!r} — expected a UUID."
-_ERR_CANNOT_REGENERATE = "Cannot regenerate image for slide {slide_number}: {exc}"
-_ERR_FILESYSTEM_ERROR = "Image regeneration failed due to a file system error: {exc}"
-_ERR_RUNTIME_ERROR = "Image regeneration failed: {exc}"
-_ERR_UNEXPECTED = "Image regeneration failed unexpectedly: {exc}"
+from .access import CarouselToolAccessContext, verify_carousel_tool_access
+
+_ERR_CANNOT_REGENERATE = "Cannot regenerate image for slide {slide_number}."
 
 
 def build_regenerate_slide_image_tool(
-    carousel_agent: CarouselAgent,
+    carousel_refinement: CarouselRefinementService,
+    carousel_repository: CarouselRepository,
+    access: CarouselToolAccessContext,
 ) -> BaseTool:
     """Return the regenerate_slide_image tool closure."""
 
@@ -39,20 +46,27 @@ def build_regenerate_slide_image_tool(
         try:
             project_uuid = UUID(project_id)
         except ValueError:
-            return _ERR_INVALID_PROJECT_ID.format(project_id)
+            return ERR_CAROUSEL_TOOL_INVALID_PROJECT_ID
+
+        project = await carousel_repository.get_project_by_id(project_uuid)
+        if project is None:
+            return ERR_CAROUSEL_TOOL_PROJECT_NOT_FOUND
+        access_error = verify_carousel_tool_access(project, access)
+        if access_error is not None:
+            return ERR_CAROUSEL_TOOL_ACCESS_DENIED
+
+        safe_instruction = sanitize_llm_input(instruction)
 
         try:
-            await carousel_agent.regenerate_slide_image(
-                project_uuid, slide_number, instruction
+            await carousel_refinement.regenerate_slide_image(
+                project_uuid, slide_number, safe_instruction
             )
-        except ValueError as exc:
-            return _ERR_CANNOT_REGENERATE.format(slide_number=slide_number, exc=exc)
-        except OSError as exc:
-            return _ERR_FILESYSTEM_ERROR.format(exc=exc)
-        except RuntimeError as exc:
-            return _ERR_RUNTIME_ERROR.format(exc=exc)
-        except Exception as exc:
-            return _ERR_UNEXPECTED.format(exc=exc)
+        except ValueError:
+            return _ERR_CANNOT_REGENERATE.format(slide_number=slide_number)
+        except (OSError, RuntimeError):
+            return ERR_CAROUSEL_TOOL_UNEXPECTED
+        except Exception:
+            return ERR_CAROUSEL_TOOL_UNEXPECTED
 
         return (
             f"Regenerated image for slide {slide_number} on project "

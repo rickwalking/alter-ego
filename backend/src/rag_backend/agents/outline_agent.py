@@ -9,12 +9,16 @@ from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import BaseMessage, HumanMessage
 
 from rag_backend.agents.input_sanitizer import sanitize_llm_input
+from rag_backend.application.services.carousel.outline_normalize import (
+    normalize_editorial_outline,
+)
 from rag_backend.domain.constants.ai_agents import (
     ERR_INVALID_JSON,
     PROMPT_OUTLINE_GENERATION,
 )
 from rag_backend.infrastructure.cache.ai_response_cache import get_ai_response_cache
-from rag_backend.infrastructure.monitoring_langfuse import get_langfuse_handler
+from rag_backend.infrastructure.llm.json_utils import extract_json
+from rag_backend.infrastructure.monitoring_langfuse import get_langfuse_runnable_config
 
 
 class OutlineAgent:
@@ -48,9 +52,7 @@ class OutlineAgent:
         raw = cached
         if raw is None:
             messages: list[BaseMessage] = [HumanMessage(content=prompt)]
-            response = await self.llm.ainvoke(
-                messages, callbacks=get_langfuse_handler()
-            )
+            response = await self.llm.ainvoke(messages, get_langfuse_runnable_config())
             raw = cast(str, response.content)
             self._cache.set(prompt, self.model_id, raw)
 
@@ -58,7 +60,7 @@ class OutlineAgent:
 
     def _parse_outline(self, raw: str) -> list[dict[str, object]]:
         try:
-            data = json.loads(raw)
+            data = extract_json(raw)
         except json.JSONDecodeError as exc:
             raise ValueError(ERR_INVALID_JSON) from exc
         if not isinstance(data, list):
@@ -66,7 +68,7 @@ class OutlineAgent:
         outline: list[dict[str, object]] = [
             item for item in data if isinstance(item, dict)
         ]
-        return outline
+        return normalize_editorial_outline(outline)
 
 
 __all__ = ["OutlineAgent"]

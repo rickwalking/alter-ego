@@ -119,6 +119,13 @@ class CarouselProjectResponse(BaseModel):
     output_dir: str | None = None
     pdf_path: str | None = None
     pdf_path_en: str | None = None
+    creator_name: str | None = None
+    creator_handle: str | None = None
+    creator_avatar_url: str | None = None
+    template_version: str | None = None
+    is_public: bool = False
+    current_phase: str | None = None
+    phase_status: str | None = None
     slides: list[CarouselSlideResponse] = Field(default_factory=list)
     research_sources: list[ResearchSourceResponse] = Field(default_factory=list)
     created_at: datetime
@@ -132,22 +139,6 @@ class CarouselProjectListResponse(BaseModel):
     total: int
     limit: int
     offset: int
-
-
-class CarouselStatusResponse(BaseModel):
-    id: UUID
-    status: str
-    error_message: str | None = None
-    phase_progress: dict[str, str | int | list[dict[str, str | int]]] | None = None
-    updated_at: datetime
-
-    model_config = {"from_attributes": True}
-
-
-class CarouselGenerateRequest(BaseModel):
-    sources: list[str] | None = Field(
-        default=None, description="Optional source URLs to research"
-    )
 
 
 class InstagramPublishRequest(BaseModel):

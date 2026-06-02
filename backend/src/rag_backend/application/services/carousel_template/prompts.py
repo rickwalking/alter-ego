@@ -15,7 +15,7 @@ def build_title_prompt(project: CarouselProject, research_context: str) -> str:
             "niche": project.niche,
             "research_context": research_context,
         },
-        version="v1",
+        version="v2",
     )
     return prompt_text
 
@@ -47,7 +47,7 @@ def build_content_prompt(project: CarouselProject, research_context: str) -> str
             "background_color": theme["background"],
             "language_name": language_name,
         },
-        version="v1",
+        version="v2",
     )
     return prompt_text
 
@@ -64,6 +64,6 @@ def build_caption_prompt(
             "title": project.title,
             "slide_headings": slide_headings,
         },
-        version="v1",
+        version="v2",
     )
     return prompt_text

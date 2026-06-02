@@ -4,17 +4,24 @@ from uuid import UUID
 
 from langchain_core.tools import BaseTool, tool
 
-from rag_backend.domain.protocols import CarouselAgent
+from rag_backend.agents.input_sanitizer import sanitize_llm_input
+from rag_backend.domain.constants.access_control import ERR_CAROUSEL_TOOL_ACCESS_DENIED
+from rag_backend.domain.constants.carousel_tools import (
+    ERR_CAROUSEL_TOOL_INVALID_PROJECT_ID,
+    ERR_CAROUSEL_TOOL_PROJECT_NOT_FOUND,
+    ERR_CAROUSEL_TOOL_UNEXPECTED,
+)
+from rag_backend.domain.protocols import CarouselRefinementService, CarouselRepository
 
-_ERR_INVALID_PROJECT_ID = "Invalid project_id {!r} — expected a UUID."
-_ERR_CANNOT_APPLY = "Cannot apply design change: {exc}"
-_ERR_FILESYSTEM_ERROR = "Design refinement failed due to a file system error: {exc}"
-_ERR_RUNTIME_ERROR = "Design refinement failed: {exc}"
-_ERR_UNEXPECTED = "Design refinement failed unexpectedly: {exc}"
+from .access import CarouselToolAccessContext, verify_carousel_tool_access
+
+_ERR_CANNOT_APPLY = "Cannot apply design change to this carousel."
 
 
 def build_refine_carousel_design_tool(
-    carousel_agent: CarouselAgent,
+    carousel_refinement: CarouselRefinementService,
+    carousel_repository: CarouselRepository,
+    access: CarouselToolAccessContext,
 ) -> BaseTool:
     """Return the refine_carousel_design tool closure."""
 
@@ -40,18 +47,27 @@ def build_refine_carousel_design_tool(
         try:
             project_uuid = UUID(project_id)
         except ValueError:
-            return _ERR_INVALID_PROJECT_ID.format(project_id)
+            return ERR_CAROUSEL_TOOL_INVALID_PROJECT_ID
+
+        project = await carousel_repository.get_project_by_id(project_uuid)
+        if project is None:
+            return ERR_CAROUSEL_TOOL_PROJECT_NOT_FOUND
+        access_error = verify_carousel_tool_access(project, access)
+        if access_error is not None:
+            return ERR_CAROUSEL_TOOL_ACCESS_DENIED
+
+        safe_instruction = sanitize_llm_input(instruction)
 
         try:
-            await carousel_agent.refine_carousel_design(project_uuid, instruction)
-        except ValueError as exc:
-            return _ERR_CANNOT_APPLY.format(exc=exc)
-        except OSError as exc:
-            return _ERR_FILESYSTEM_ERROR.format(exc=exc)
-        except RuntimeError as exc:
-            return _ERR_RUNTIME_ERROR.format(exc=exc)
-        except Exception as exc:
-            return _ERR_UNEXPECTED.format(exc=exc)
+            await carousel_refinement.refine_carousel_design(
+                project_uuid, safe_instruction
+            )
+        except ValueError:
+            return _ERR_CANNOT_APPLY
+        except (OSError, RuntimeError):
+            return ERR_CAROUSEL_TOOL_UNEXPECTED
+        except Exception:
+            return ERR_CAROUSEL_TOOL_UNEXPECTED
 
         return (
             f"Applied design change to project {project_id}. Slides + PDF re-exported."

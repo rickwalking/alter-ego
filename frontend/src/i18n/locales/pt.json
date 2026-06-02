@@ -11,6 +11,7 @@
       "knowledgeBase": "Base de Conhecimento",
       "blog": "Blog",
       "create": "Criar",
+      "createCarousel": "Criar Carrossel",
       "personas": "Personas",
       "rubrics": "Rubricas",
       "blogPosts": "Posts do Blog",
@@ -19,22 +20,56 @@
       "analytics": "Analytics",
       "admin": "Admin"
     },
+    "sidebar": {
+      "sectionMain": "Principal",
+      "sectionContent": "Conteúdo",
+      "sectionManagement": "Gestão",
+      "dashboard": "Dashboard",
+      "chat": "Chat",
+      "createCarousel": "Criar Carrossel",
+      "blogPosts": "Posts do Blog",
+      "workflowBoard": "Workflow",
+      "calendar": "Calendário",
+      "rubrics": "Rubricas",
+      "personas": "Personas",
+      "alterEgo": "Alter Ego"
+    },
     "logout": "Sair",
     "login": "Entrar"
   },
   "home": {
     "hero": {
       "badge": "Conteúdo Tech",
+      "badgeVersion": "Alter-Ego v2.0",
+      "titleLine1": "Converse com meu",
+      "titleHighlight": "Alter-Ego",
       "title": "Converse com meu Alter-Ego",
       "highlight": "para me conhecer melhor",
-      "subtitle": "Converse com um assistente inteligente que sabe tudo sobre minha carreira, experiência e habilidades. Veja também meus posts e projetos."
+      "subtitle": "Converse com um assistente inteligente que sabe tudo sobre minha carreira, experiência e habilidades. Veja também meus posts e projetos.",
+      "exploreBlog": "Explorar Blog"
+    },
+    "stats": {
+      "years": "Anos de Engenharia",
+      "carousels": "Carrosséis Publicados",
+      "topics": "Tópicos Explorados"
+    },
+    "capabilities": {
+      "label": "Capacidades"
+    },
+    "terminal": {
+      "ready": "pronto. Pergunte o que quiser."
     },
     "posts": {
+      "titlePrefix": "Posts",
+      "titleHighlight": "Recentes",
       "title": "Posts Recentes",
+      "feedLabel": "Feed",
       "subtitle": "Carrosséis e posts de blog sobre tecnologia, engenharia de software e o futuro do desenvolvimento.",
       "viewAll": "Ver todos os posts"
     },
     "features": {
+      "titlePrefix": "O que Você Pode",
+      "titleHighlight": "Explorar",
       "title": "O que Você Pode Explorar",
       "chat": {
         "title": "Converse com Meu Alter-Ego",
@@ -67,7 +102,8 @@
     "sidebar": {
       "label": "Conversas",
       "empty": "Nenhuma conversa ainda",
-      "loading": "Carregando conversas"
+      "loading": "Carregando conversas",
+      "searchPlaceholder": "Buscar conversas..."
     }
   },
   "knowledge": {
@@ -208,10 +244,32 @@
     "preview": {
       "viewBlog": "Ver Post do Blog"
     },
+    "publishCta": "Abrir Publicação",
+    "futureStep": "Esta etapa ainda não foi alcançada. O fluxo está atualmente em {phase}.",
+    "startWorkflowHint": "Inicie o fluxo na aba Brief para executar esta fase.",
+    "stepHistory": {
+      "historicalHint": "Fase concluída: {phase}. Visualização somente leitura.",
+      "researchTitle": "{count} fontes de pesquisa",
+      "outlineTitle": "{count} slides no outline",
+      "contentTitle": "{count} rascunhos de conteúdo",
+      "imagesTitle": "{count} imagens geradas",
+      "designApplied": "design aplicado",
+      "reviewHint": "Durante a revisão final, use a aba Revisão para ver carrossel, blog e legenda.",
+      "publishEmpty": "Legenda e textos do LinkedIn aparecem após a fase de conteúdo.",
+      "publishCaptionLabel": "Legenda do Instagram",
+      "publishLinkedInLabel": "Post do LinkedIn (PT)",
+      "empty": "Ainda não há artefatos salvos para esta etapa.",
+      "untitledSlide": "Slide sem título"
+    },
     "workspace": {
       "title": "Área de Trabalho do Carrossel",
       "viewBlog": "Ver Blog",
       "publish": "Publicar",
+      "draftBlogPreview": "Pré-visualização do rascunho do blog",
+      "loadDraftBlog": "Carregar pré-visualização",
+      "loadingPreview": "Carregando…",
+      "previewEmpty": "Ainda não há conteúdo de rascunho.",
+      "previewError": "Não foi possível carregar a pré-visualização do rascunho.",
       "resume": "Retomar do último checkpoint",
       "resuming": "Retomando…",
       "reconnectStream": "Reconectar stream",
@@ -276,12 +334,111 @@
     "phaseStatus": "Status",
     "sourcesTitle": "Materiais de Origem",
     "noSources": "Nenhuma fonte adicionada ainda.",
+    "addSourceTitle": "Adicionar material",
+    "fields": {
+      "title": "Título",
+      "titlePlaceholder": "ex.: notas de pesquisa ou URL do artigo",
+      "type": "Tipo",
+      "content": "Conteúdo",
+      "contentPlaceholder": "Cole URL, notas, citações ou texto de referência"
+    },
+    "sourceTypes": {
+      "url": "URL",
+      "document": "Documento",
+      "note": "Nota",
+      "interview": "Entrevista",
+      "data": "Dados"
+    },
     "actions": {
       "start": "Iniciar Fluxo Editorial",
       "approve": "Aprovar Fase",
+      "requestRevision": "Solicitar revisão",
       "reject": "Solicitar Alterações",
       "refresh": "Atualizar",
-      "extract": "Extrair Pontos-Chave"
+      "extract": "Extrair Pontos-Chave",
+      "addSource": "Adicionar Material",
+      "adding": "Adicionando...",
+      "processing": "Processando aprovação… pode levar até um minuto."
+    },
+    "feedback": {
+      "label": "Feedback para revisão",
+      "placeholder": "Descreva o que deve mudar antes de aprovar esta fase…",
+      "required": "O feedback é obrigatório ao solicitar revisão."
+    },
+    "sendBack": {
+      "label": "Enviar de volta para a fase",
+      "phases": {
+        "research": "Pesquisa",
+        "outline": "Outline",
+        "content": "Conteúdo",
+        "design": "Design",
+        "images": "Imagens"
+      }
+    },
+    "persona": {
+      "belowThreshold": "A correspondência de voz da persona está abaixo do limite exigido. Revise o conteúdo antes de aprovar."
+    },
+    "publishReady": "Revisão final aprovada. Abra o painel de publicação para liberar o carrossel no site público.",
+    "gate": {
+      "title": "Pronto para iniciar?",
+      "description": "Adicione materiais de origem ou continue sem eles. A geração só começa após sua confirmação.",
+      "sourceCount": "{count, plural, =0 {Nenhum material adicionado} one {# material adicionado} other {# materiais adicionados}}",
+      "startWithMaterials": "Iniciar com materiais",
+      "startWithoutMaterials": "Continuar sem materiais"
+    },
+    "progress": {
+      "research": "Sintetizando achados de pesquisa…",
+      "outline": "Gerando outline do carrossel…",
+      "content": "Redigindo textos dos slides…",
+      "design": "Aplicando tokens de design…",
+      "images": "Gerando imagens dos slides…",
+      "finalReview": "Executando verificações finais de qualidade…",
+      "processing": "Processando aprovação…"
+    },
+    "artifacts": {
+      "title": "Artefatos gerados",
+      "outlineSlides": "{count, plural, one {# slide no outline} other {# slides no outline}}",
+      "contentDrafts": "{count, plural, one {# rascunho de conteúdo} other {# rascunhos de conteúdo}}",
+      "designApplied": "Sistema de design aplicado",
+      "ready": "Pronto",
+      "imagesGenerated": "{count, plural, one {# imagem gerada} other {# imagens geradas}}"
+    },
+    "review": {
+      "researchTitle": "Achados de pesquisa",
+      "findingFallback": "Achado {index}",
+      "outlineTitle": "Outline para revisão",
+      "contentTitle": "Textos dos slides para revisão",
+      "designTitle": "Revisão de design",
+      "designReady": "Tokens de design aplicados. Aprove para gerar as imagens dos slides.",
+      "designPending": "Revise o outline e o conteúdo acima, depois aprove para aplicar o design e gerar imagens.",
+      "outlineSlides": "{count, plural, one {# slide no outline} other {# slides no outline}}",
+      "imagesTitle": "Imagens geradas",
+      "untitledSlide": "Slide sem título",
+      "emptyPhase": "Nenhum conteúdo gerado está disponível para esta fase. Tente atualizar ou aprovar novamente a etapa anterior.",
+      "finalReview": {
+        "title": "Revisão final",
+        "tabs": {
+          "carousel": "Carrossel",
+          "blog": "Blog",
+          "caption": "Legenda",
+          "quality": "Qualidade"
+        },
+        "carouselEmpty": "Nenhum conteúdo de slide disponível ainda.",
+        "blogPlaceholder": "O markdown do blog aparecerá aqui quando gerado.",
+        "blogPreviewLoading": "Carregando pré-visualização do rascunho…",
+        "blogPreviewError": "Não foi possível carregar a pré-visualização do rascunho.",
+        "captionEmpty": "Nenhuma legenda foi gerada ainda.",
+        "qualityEmpty": "Pontuações de qualidade ainda não estão disponíveis."
+      }
+    },
+    "errors": {
+      "startFailed": "Falha ao iniciar o fluxo editorial",
+      "startUnknown": "Falha ao iniciar o fluxo de trabalho",
+      "resumeFailed": "Falha ao retomar o fluxo editorial",
+      "resumeUnknown": "Falha ao retomar o fluxo de trabalho"
+    },
+    "transport": {
+      "pollingFallback": "Fallback de polling ativo"
     }
   },
   "rubrics": {
@@ -299,6 +456,11 @@
     "loading": "Carregando carrossel…",
     "notFound": "Carrossel não encontrado.",
     "backToWorkspace": "← Voltar à área de trabalho",
+    "awaitingFinalApproval": "Conclua a revisão final na área de criação antes de publicar no site público.",
+    "publishToSite": "Publicar no site",
+    "sitePublished": "O carrossel agora está público no blog.",
+    "sitePublishedLink": "Ver post público",
+    "sitePublishFailed": "Não foi possível publicar no site público.",
     "carouselLabel": "Prévia do carrossel",
     "platformTabsLabel": "Escolha uma plataforma",
     "downloadPdf": "Baixar PDF",
@@ -336,7 +498,8 @@
       "previousSlide": "Slide anterior",
       "nextSlide": "Próximo slide",
       "goToSlide": "Ir para slide {number}",
-      "downloadImages": "Baixar imagens"
+      "downloadImages": "Baixar imagens",
+      "downloadingImages": "Baixando..."
     }
   },
   "auth": {
@@ -349,6 +512,7 @@
     "signIn": "Entrar",
     "signingIn": "Entrando...",
     "loginError": "Email ou senha inválidos",
+    "sessionExpired": "Sua sessão expirou. Entre novamente.",
     "forbiddenTitle": "Acesso Negado",
     "forbiddenDescription": "Você não tem permissão para acessar esta página.",
     "goHome": "Ir para o Início",
@@ -416,6 +580,21 @@
     }
   },
   "dashboard": {
+    "overview": {
+      "title": "Dashboard",
+      "subtitle": "Visão geral do seu pipeline de conteúdo e atividade recente",
+      "quickActions": {
+        "title": "Ações Rápidas"
+      },
+      "recentActivity": {
+        "title": "Atividade Recente",
+        "live": "Ao Vivo"
+      },
+      "upcomingSchedule": {
+        "title": "Agenda",
+        "viewAll": "Ver Tudo"
+      }
+    },
     "blogPosts": {
       "title": "Posts do Blog",
       "createPost": "Criar Post",
@@ -453,6 +632,18 @@
         "approve": "Aprovar",
         "publish": "Publicar",
         "generateImage": "Gerar Imagem"
+      },
+      "notFound": "Post não encontrado.",
+      "backToList": "Voltar à lista",
+      "saveChanges": "Salvar alterações",
+      "saving": "Salvando…",
+      "versions": {
+        "title": "Histórico de versões",
+        "loading": "Carregando versões…",
+        "empty": "Nenhuma versão salva ainda.",
+        "versionLabel": "Versão {number}",
+        "diffTitle": "Prévia da diferença",
+        "restore": "Restaurar esta versão"
       }
     },
     "analytics": {

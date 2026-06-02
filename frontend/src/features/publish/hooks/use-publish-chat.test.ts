@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook, waitFor, act } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createElement, type ReactNode } from "react";
@@ -55,22 +55,6 @@ const mockUseCreateConversation = vi.mocked(useCreateConversation);
 const mockUseConversationMessages = vi.mocked(useConversationMessages);
 const mockUseConversation = vi.mocked(useConversation);
 const mockUseQueryClient = vi.mocked(useQueryClient);
-
-class MockWebSocket {
-  static instances: MockWebSocket[] = [];
-  static OPEN = 1;
-  static CLOSED = 3;
-  constructor(public url: string) {
-    MockWebSocket.instances.push(this);
-  }
-  send = vi.fn();
-  close = vi.fn();
-  onopen: (() => void) | null = null;
-  onclose: (() => void) | null = null;
-  onmessage: ((event: { data: string }) => void) | null = null;
-  onerror: (() => void) | null = null;
-  readyState: number = MockWebSocket.OPEN;
-}
 
 function createWrapper() {
   const queryClient = new QueryClient({
@@ -901,9 +885,9 @@ describe("usePublishChat (SSE comprehensive)", () => {
       );
       expect(assistantMessages).toHaveLength(1);
       expect(assistantMessages[0]?.content).toBe("Hel");
-      expect(assistantMessages[0]?.id.startsWith(STREAM_MESSAGE_ID_PREFIX)).toBe(
-        true,
-      );
+      expect(
+        assistantMessages[0]?.id.startsWith(STREAM_MESSAGE_ID_PREFIX),
+      ).toBe(true);
     });
 
     await act(async () => {
@@ -990,7 +974,9 @@ describe("usePublishChat (SSE comprehensive)", () => {
     rerender();
 
     await waitFor(() => expect(mutateAsync).toHaveBeenCalledTimes(2));
-    await waitFor(() => expect(result.current.conversationId).toBe("conv-retry"));
+    await waitFor(() =>
+      expect(result.current.conversationId).toBe("conv-retry"),
+    );
   });
 
   it("does not clear storage when projectId is empty", async () => {
@@ -1393,9 +1379,7 @@ describe("usePublishChat (SSE comprehensive)", () => {
         result.current.messages.filter(
           (message) => message.role === MESSAGE_ROLE_ASSISTANT,
         ),
-      ).toEqual([
-        expect.objectContaining({ content: "First answer" }),
-      ]),
+      ).toEqual([expect.objectContaining({ content: "First answer" })]),
     );
 
     await act(async () => {
@@ -1421,7 +1405,7 @@ describe("usePublishChat (SSE comprehensive)", () => {
   it("does not treat unknown SSE events as terminal completion", async () => {
     mockStreamSseEvents.mockImplementation(({ onEvent }) => {
       onEvent({ event: "token", data: { content: "partial" } });
-      onEvent({ event: "heartbeat", data: {} });
+      onEvent({ event: undefined, data: {} });
       return Promise.resolve();
     });
 
@@ -1441,7 +1425,7 @@ describe("usePublishChat (SSE comprehensive)", () => {
   it("does not treat unknown SSE events as terminal errors", async () => {
     mockStreamSseEvents.mockImplementation(({ onEvent }) => {
       onEvent({ event: "token", data: { content: "partial" } });
-      onEvent({ event: "heartbeat", data: {} });
+      onEvent({ event: undefined, data: {} });
       return Promise.resolve();
     });
 

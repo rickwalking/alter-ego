@@ -104,7 +104,13 @@ class CarouselRepository(Protocol):
     async def get_project_by_id(self, project_id: UUID) -> CarouselProject | None: ...
 
     async def get_all_projects(
-        self, status: CarouselStatus | None = None, limit: int = 100, offset: int = 0
+        self,
+        status: CarouselStatus | None = None,
+        limit: int = 100,
+        offset: int = 0,
+        *,
+        public_only: bool = False,
+        owner_id: str | None = None,
     ) -> list[CarouselProject]: ...
 
     async def update_project(self, project: CarouselProject) -> CarouselProject: ...

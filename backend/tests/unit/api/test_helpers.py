@@ -7,7 +7,11 @@ from pathlib import Path
 
 import pytest
 
-from rag_backend.api.routes.carousels.helpers import _count_slide_images
+from rag_backend.api.routes.carousels.helpers import (
+    _count_slide_images,
+    _merge_design_tokens_with_disk,
+    _preview_rendered_slide_urls,
+)
 
 
 @pytest.mark.unit
@@ -41,7 +45,7 @@ class TestCountSlideImages:
 
         assert _count_slide_images(output_dir) == 7
 
-    def test_prefers_images_over_fallback(self, tmp_path: Path):
+    def test_uses_max_count_across_directories(self, tmp_path: Path):
         output_dir = str(tmp_path)
         images_dir = tmp_path / "images"
         images_dir.mkdir()
@@ -52,10 +56,107 @@ class TestCountSlideImages:
         for i in range(1, 8):
             (pt_dir / f"slide_{i}.jpg").write_text("")
 
-        assert _count_slide_images(output_dir) == 4
+        assert _count_slide_images(output_dir) == 7
 
     def test_returns_0_for_none_output_dir(self):
         assert _count_slide_images(None) == 0
 
     def test_returns_0_for_empty_output_dir(self, tmp_path: Path):
         assert _count_slide_images(str(tmp_path)) == 0
+
+
+@pytest.mark.unit
+class TestMergeDesignTokensWithDisk:
+    def test_uses_rendered_slide_count_over_stale_tokens(self, tmp_path: Path):
+        output_dir = str(tmp_path)
+        pt_dir = tmp_path / "pt"
+        pt_dir.mkdir()
+        for i in range(1, 8):
+            (pt_dir / f"slide_{i}.jpg").write_text("")
+
+        from rag_backend.domain.models import CarouselProject, CarouselTheme
+
+        project = CarouselProject(
+            id="2958760d-89c4-4a68-b9be-36daeba6dba0",
+            topic="Test",
+            audience="Devs",
+            niche="Tech",
+            theme=CarouselTheme.CYBERSECURITY,
+            output_dir=output_dir,
+            design_tokens={
+                "colors": {},
+                "typography": {},
+                "images": {
+                    "hero": "/api/carousels/x/images/slide_1.jpg",
+                    "slides": [
+                        f"/api/carousels/x/images/slide_{i}.jpg" for i in range(1, 7)
+                    ],
+                    "rendered_slides_pt": [
+                        f"/api/carousels/x/slide-images/pt/slide_{i}.jpg"
+                        for i in range(1, 7)
+                    ],
+                },
+                "layout": {"progress_segments": 6},
+            },
+        )
+
+        merged = _merge_design_tokens_with_disk(project)
+        rendered = merged["images"]["rendered_slides_pt"]
+        assert isinstance(rendered, list)
+        assert len(rendered) == 7
+
+    def test_draft_project_uses_preview_urls_for_rendered_slides(
+        self, tmp_path: Path
+    ) -> None:
+        from uuid import UUID
+
+        from rag_backend.domain.models import CarouselProject, CarouselTheme
+
+        project_id = UUID("2958760d-89c4-4a68-b9be-36daeba6dba0")
+        output_dir = str(tmp_path)
+        pt_dir = tmp_path / "pt"
+        pt_dir.mkdir()
+        for i in range(1, 7):
+            (pt_dir / f"slide_{i}.jpg").write_text("")
+
+        project = CarouselProject(
+            id=project_id,
+            topic="Test",
+            audience="Devs",
+            niche="Tech",
+            theme=CarouselTheme.CYBERSECURITY,
+            output_dir=output_dir,
+            is_public=False,
+            design_tokens={
+                "images": {
+                    "rendered_slides_pt": [
+                        f"/api/carousels/{project_id}/slide-images/pt/slide_{i}.jpg"
+                        for i in range(1, 7)
+                    ],
+                    "rendered_slides_en": [
+                        f"/api/carousels/{project_id}/slide-images/en/slide_{i}.jpg"
+                        for i in range(1, 7)
+                    ],
+                },
+            },
+        )
+
+        merged = _merge_design_tokens_with_disk(project)
+        rendered_pt = merged["images"]["rendered_slides_pt"]
+        assert isinstance(rendered_pt, list)
+        assert rendered_pt[0].startswith(
+            f"/api/carousels/{project_id}/preview/images/slide_1.jpg?lang=pt"
+        )
+        assert merged["images"]["hero"] == rendered_pt[0]
+        assert merged["images"]["slides"] == rendered_pt[:4]
+        assert "rendered_slides_en" not in merged["images"]
+
+    def test_preview_rendered_slide_urls_include_lang_query(self) -> None:
+        from uuid import UUID
+
+        project_id = UUID("2958760d-89c4-4a68-b9be-36daeba6dba0")
+        urls = _preview_rendered_slide_urls(project_id, 2, "pt")
+        assert urls == [
+            f"/api/carousels/{project_id}/preview/images/slide_1.jpg?lang=pt",
+            f"/api/carousels/{project_id}/preview/images/slide_2.jpg?lang=pt",
+        ]

@@ -153,13 +153,13 @@ class TestQualityAgent:
         handler = MagicMock()
 
         with patch(
-            "rag_backend.agents.quality_agent.get_langfuse_handler",
-            return_value=[handler],
-        ) as mock_handler:
+            "rag_backend.agents.quality_agent.get_langfuse_runnable_config",
+            return_value={"callbacks": [handler]},
+        ) as mock_config:
             await agent.evaluate("content")
 
-        mock_handler.assert_called_once()
-        assert mock_llm.ainvoke.call_args.kwargs["callbacks"] == [handler]
+        mock_config.assert_called_once()
+        assert mock_llm.ainvoke.call_args.args[1] == {"callbacks": [handler]}
 
     async def test_evaluate_with_sources(
         self, agent: QualityAgent, mock_llm: AsyncMock

@@ -1,24 +1,19 @@
-import { cookies } from "next/headers";
-import { Header } from "@/components/layout";
-import { DEFAULT_LOCALE, SUPPORTED_LOCALES } from "@/i18n/config";
-import type { SupportedLocale } from "@/i18n/config";
+import {
+  NeonGridBackground,
+  NeonScanlineOverlay,
+} from "@/components/organisms";
+import { BG_DEEP } from "@/constants/neon";
 
-export default async function PublicLayout({
+export default function PublicLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
-}>) {
-  const cookieStore = await cookies();
-  const localeCookie = cookieStore.get("locale")?.value;
-  const locale: SupportedLocale =
-    localeCookie && SUPPORTED_LOCALES.includes(localeCookie as SupportedLocale)
-      ? (localeCookie as SupportedLocale)
-      : DEFAULT_LOCALE;
-
+}>): React.ReactElement {
   return (
-    <div className="min-h-full flex flex-col">
-      <Header locale={locale} />
-      <main className="flex-1">{children}</main>
+    <div className="min-h-full flex flex-col" style={{ background: BG_DEEP }}>
+      <NeonGridBackground />
+      <NeonScanlineOverlay />
+      {children}
     </div>
   );
 }

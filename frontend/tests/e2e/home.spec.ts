@@ -10,15 +10,18 @@ test.describe('Home Page', () => {
     ).toContainText('Chat with my Alter-Ego');
   });
 
-  test('navigation links work', async ({ page }) => {
+  test('homepage has no dashboard neon sidebar', async ({ page }) => {
     await page.goto('/');
 
-    await page.getByRole('link', { name: 'Chat', exact: true }).click();
-    await expect(page).toHaveURL('/chat');
+    await expect(page.getByText('Alter Ego')).not.toBeVisible();
+    await expect(page.getByText('v2.0 · Neon Shell')).not.toBeVisible();
+  });
 
+  test('header blog link goes to public blog', async ({ page }) => {
     await page.goto('/');
-    await page.getByRole('link', { name: 'Knowledge Base', exact: true }).click();
-    await expect(page).toHaveURL('/knowledge');
+
+    await page.getByRole('navigation').getByRole('link', { name: 'Blog' }).click();
+    await expect(page).toHaveURL('/blog');
   });
 
   test('CTA buttons navigate correctly', async ({ page }) => {
@@ -28,15 +31,7 @@ test.describe('Home Page', () => {
     await expect(page).toHaveURL('/chat');
 
     await page.goto('/');
-    await page.getByRole('link', { name: 'Manage Knowledge' }).click();
-    await expect(page).toHaveURL('/knowledge');
-  });
-
-  test('feature cards are displayed', async ({ page }) => {
-    await page.goto('/');
-
-    await expect(page.getByRole('heading', { name: 'AI-Powered Chat' })).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Knowledge Management' })).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'AI-Powered Insights' })).toBeVisible();
+    await page.getByRole('link', { name: 'Explore Blog' }).click();
+    await expect(page).toHaveURL('/blog');
   });
 });

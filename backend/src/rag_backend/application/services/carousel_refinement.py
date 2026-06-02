@@ -1,6 +1,6 @@
 """Carousel refinement operations: image regeneration and design overrides.
 
-Extracted from CarouselAgent to keep the main class under 400 lines.
+Extracted from the legacy monolith agent to keep the refinement module focused.
 """
 
 from __future__ import annotations

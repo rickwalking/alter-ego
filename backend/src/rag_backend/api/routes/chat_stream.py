@@ -20,6 +20,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from rag_backend.api.constants import (
     ERR_CONVERSATION_NOT_FOUND,
     ERR_NOT_AUTHENTICATED,
+    ERR_NOT_CAROUSEL_CONVERSATION,
     ERR_NOT_FOUND,
     MEDIA_TYPE_STREAM,
 )
@@ -27,14 +28,18 @@ from rag_backend.api.dependencies import (
     require_authenticated_user,
 )
 from rag_backend.api.dependencies.agents import (
-    CONVERSATION_METADATA_PROJECT_ID,
+    RagAgentBuildContext,
     build_alter_ego_agent,
     build_rag_agent,
+)
+from rag_backend.api.dependencies.carousel_access import (
+    assert_carousel_conversation_chat_access,
 )
 from rag_backend.api.middleware.rate_limiting import limiter
 from rag_backend.api.schemas import ChatRequest, ErrorResponse
 from rag_backend.application.services.chat_stream_service import stream_chat_response
 from rag_backend.application.services.conversation_service import ConversationService
+from rag_backend.domain.constants.conversation import CONVERSATION_METADATA_PROJECT_ID
 from rag_backend.domain.models import User
 from rag_backend.infrastructure.container import get_container
 from rag_backend.infrastructure.database.config import get_session
@@ -164,17 +169,13 @@ async def publish_chat_stream(
             detail=ERR_CONVERSATION_NOT_FOUND,
         )
 
-    # Enforce conversation ownership
-    if conversation.user_id is not None and conversation.user_id != user.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You do not own this conversation",
-        )
+    # Enforce conversation ownership for carousel publish chat
+    assert_carousel_conversation_chat_access(conversation, user)
 
     if CONVERSATION_METADATA_PROJECT_ID not in conversation.metadata:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Not a carousel conversation",
+            detail=ERR_NOT_CAROUSEL_CONVERSATION,
         )
 
     # Enforce per-conversation message limit
@@ -189,7 +190,16 @@ async def publish_chat_stream(
             conversation_id=conversation_id,
             content=body.content,
             db=db,
-            agent_builder=lambda: build_rag_agent(db, get_container()),
+            agent_builder=lambda: build_rag_agent(
+                db,
+                get_container(),
+                RagAgentBuildContext(
+                    owner_user_id=str(user.id),
+                    bound_project_id=str(
+                        conversation.metadata[CONVERSATION_METADATA_PROJECT_ID]
+                    ),
+                ),
+            ),
             last_event_id=last_event_id,
         ):
             yield event

@@ -3,7 +3,7 @@ from pathlib import Path
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.api.constants import (
@@ -17,20 +17,29 @@ from rag_backend.api.dependencies import (
     require_authenticated_user,
     require_editor_or_admin,
 )
-from rag_backend.api.dependencies.resource_access import (
+from rag_backend.api.dependencies.carousel_access import (
     get_carousel_project_for_domain_user,
 )
+from rag_backend.api.middleware.rate_limiting import limiter
 from rag_backend.api.schemas import (
     CarouselProjectCreate,
     CarouselProjectListResponse,
     CarouselProjectResponse,
 )
+from rag_backend.domain.constants.carousel_workflow import (
+    ERR_CAROUSEL_NOT_COMPLETED,
+    ERR_WORKFLOW_NOT_APPROVED_FOR_PUBLISH,
+    PHASE_PUBLISHED,
+    WORKFLOW_STATUS_APPROVED_FOR_PUBLISH,
+)
+from rag_backend.domain.constants.rate_limits import RATE_LIMIT_CAROUSEL_PUBLISH
 from rag_backend.domain.models import CarouselProject, CarouselStatus, User
 from rag_backend.domain.protocols import CarouselRepository
 from rag_backend.infrastructure.database.config import get_session
 from rag_backend.infrastructure.database.models.carousel import CarouselProjectModel
 
 from .deps import get_carousel_repo
+from .helpers import _merge_design_tokens_with_disk
 
 router = APIRouter()
 
@@ -81,15 +90,28 @@ async def create_carousel(
 async def list_carousels(
     user: Annotated[User | None, Depends(get_optional_user)],
     status_filter: Annotated[CarouselStatus | None, Query(alias="status")] = None,
+    public_only: Annotated[bool | None, Query(alias="public")] = None,
     limit: Annotated[int, Query(ge=1, le=100)] = 20,
     offset: Annotated[int, Query(ge=0)] = 0,
     repo: Annotated[CarouselRepository, Depends(get_carousel_repo)] = None,
 ) -> CarouselProjectListResponse:
-    """List all carousel projects. Publicly accessible for completed projects."""
+    """List carousel projects. Anonymous users only see published (is_public) items."""
+    force_public = user is None or public_only is True
+    owner_id: str | None = None
+    if user is not None and not user.is_admin() and not force_public:
+        owner_id = str(user.id)
     items = await repo.get_all_projects(
-        status=status_filter, limit=limit, offset=offset
+        status=status_filter,
+        public_only=force_public,
+        owner_id=owner_id,
+        limit=limit,
+        offset=offset,
     )
-    total = await repo.count(status=status_filter)
+    total = await repo.count(
+        status=status_filter,
+        public_only=force_public,
+        owner_id=owner_id,
+    )
     return CarouselProjectListResponse(
         items=[CarouselProjectResponse.model_validate(i) for i in items],
         total=total,
@@ -117,7 +139,97 @@ async def get_carousel(
     project = await repo.get_project_by_id(project_id)
     if project is None:
         raise HTTPException(status_code=404, detail=ERR_CAROUSEL_NOT_FOUND)
+    if project.output_dir:
+        project.design_tokens = _merge_design_tokens_with_disk(project)
     return CarouselProjectResponse.model_validate(project)
+
+
+@router.post(
+    "/{project_id}/publish",
+    responses={
+        401: {"description": ERR_NOT_AUTHENTICATED},
+        403: {"description": ERR_FORBIDDEN},
+        404: {"description": ERR_NOT_FOUND},
+    },
+)
+@limiter.limit(RATE_LIMIT_CAROUSEL_PUBLISH)
+async def publish_carousel(
+    request: Request,
+    project_id: UUID,
+    user: Annotated[User, Depends(require_editor_or_admin)],
+    repo: Annotated[CarouselRepository, Depends(get_carousel_repo)],
+    session: Annotated[AsyncSession, Depends(get_session)],
+) -> CarouselProjectResponse:
+    """Mark a carousel as publicly visible on the homepage and blog."""
+    await get_carousel_project_for_domain_user(session, project_id, user)
+    model = await session.get(CarouselProjectModel, str(project_id))
+    if model is None:
+        raise HTTPException(status_code=404, detail=ERR_CAROUSEL_NOT_FOUND)
+    if model.workflow_status != WORKFLOW_STATUS_APPROVED_FOR_PUBLISH:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=ERR_WORKFLOW_NOT_APPROVED_FOR_PUBLISH,
+        )
+    project = await repo.get_project_by_id(project_id)
+    if project is None:
+        raise HTTPException(status_code=404, detail=ERR_CAROUSEL_NOT_FOUND)
+    if project.status != CarouselStatus.COMPLETED:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=ERR_CAROUSEL_NOT_COMPLETED,
+        )
+    if not project.blog_markdown:
+        from rag_backend.application.services.carousel.editorial_distribution_constants import (
+            BLOG_LANG_ENGLISH,
+            BLOG_LANG_PORTUGUESE,
+            SLIDE_DRAFT_TEXT_KEY,
+            SLIDE_INDEX_KEY,
+        )
+        from rag_backend.application.services.carousel.editorial_distribution_pack import (
+            build_blog_markdown_en_from_translations,
+            build_blog_markdown_from_drafts,
+        )
+        from rag_backend.application.services.carousel.types import unpack_extras
+
+        slides = await repo.get_slides_by_project(project_id)
+        draft_payload = [
+            {
+                SLIDE_INDEX_KEY: slide.slide_number,
+                "title": slide.heading,
+                SLIDE_DRAFT_TEXT_KEY: slide.body,
+            }
+            for slide in slides
+        ]
+        if draft_payload:
+            translations_en: dict[int, dict[str, object]] = {}
+            for slide in slides:
+                slide_data = unpack_extras(slide)
+                if slide_data.translation_en:
+                    translations_en[slide.slide_number] = slide_data.translation_en
+            blog_pt = build_blog_markdown_from_drafts(
+                draft_payload,
+                title=project.title or project.topic,
+            )
+            blog_en = build_blog_markdown_en_from_translations(
+                draft_payload,
+                translations_en,
+                title=project.title_en or project.title or project.topic,
+            )
+            project.blog_markdown = blog_pt
+            project.blog_translations = {
+                BLOG_LANG_PORTUGUESE: blog_pt,
+                BLOG_LANG_ENGLISH: blog_en or blog_pt,
+            }
+            await repo.update_project(project)
+    project.is_public = True
+    project.current_phase = PHASE_PUBLISHED
+    updated = await repo.update_project(project)
+    model = await session.get(CarouselProjectModel, str(project_id))
+    if model is not None:
+        model.is_public = True
+        model.current_phase = PHASE_PUBLISHED
+        await session.commit()
+    return CarouselProjectResponse.model_validate(updated)
 
 
 @router.delete(

@@ -9,7 +9,7 @@ import { NotificationCenter } from "@/features/workflow/components/notification-
 import { DEFAULT_LOCALE } from "@/i18n/config";
 import { useAuth } from "@/hooks/use-auth";
 import { JSX } from "react";
-
+import { DASHBOARD_ROUTES } from "@/constants/dashboard-routes";
 interface HeaderProps {
   locale?: string;
 }
@@ -23,49 +23,49 @@ export function Header({ locale }: HeaderProps) {
   const editorLinks: JSX.Element | null = isEditor ? (
     <>
       <Link
-        href="/knowledge"
+        href={DASHBOARD_ROUTES.KNOWLEDGE}
         className="transition-colors hover:text-[var(--color-primary)]"
       >
         {t("nav.knowledgeBase")}
       </Link>
       <Link
-        href="/create"
+        href={DASHBOARD_ROUTES.CREATE}
         className="transition-colors hover:text-[var(--color-primary)]"
       >
         {t("nav.create")}
       </Link>
       <Link
-        href="/personas"
+        href={DASHBOARD_ROUTES.PERSONAS}
         className="transition-colors hover:text-[var(--color-primary)]"
       >
         {t("nav.personas")}
       </Link>
       <Link
-        href="/rubrics"
+        href={DASHBOARD_ROUTES.RUBRICS}
         className="transition-colors hover:text-[var(--color-primary)]"
       >
         {t("nav.rubrics")}
       </Link>
       <Link
-        href="/blog-posts"
+        href={DASHBOARD_ROUTES.BLOG_POSTS}
         className="transition-colors hover:text-[var(--color-primary)]"
       >
         {t("nav.blogPosts")}
       </Link>
       <Link
-        href="/workflow"
+        href={DASHBOARD_ROUTES.WORKFLOW}
         className="transition-colors hover:text-[var(--color-primary)]"
       >
         {t("nav.workflow")}
       </Link>
       <Link
-        href="/calendar"
+        href={DASHBOARD_ROUTES.CALENDAR}
         className="transition-colors hover:text-[var(--color-primary)]"
       >
         {t("nav.calendar")}
       </Link>
       <Link
-        href="/analytics"
+        href={DASHBOARD_ROUTES.ANALYTICS}
         className="transition-colors hover:text-[var(--color-primary)]"
       >
         {t("nav.analytics")}
@@ -86,12 +86,14 @@ export function Header({ locale }: HeaderProps) {
             </Link>
             <MobileNav />
             <nav className="hidden md:flex items-center gap-4 text-sm">
-              <Link
-                href="/chat"
-                className="transition-colors hover:text-[var(--color-primary)]"
-              >
-                {t("nav.chat")}
-              </Link>
+              {isAuthenticated && (
+                <Link
+                  href={DASHBOARD_ROUTES.CHAT}
+                  className="transition-colors hover:text-[var(--color-primary)]"
+                >
+                  {t("nav.chat")}
+                </Link>
+              )}
               {editorLinks}
               <Link
                 href="/blog"

@@ -1,5 +1,7 @@
 # Backend Blog/Content Pipeline Plan
 
+> **Status: Superseded** — See [Carousel Pipeline Consolidation Plan](../plans/carousel-pipeline-consolidation.md) and [ADR-007](../decisions/0007-consolidate-carousel-pipelines-under-deepagents.md). Legacy `CarouselAgent` / monolith graph paths are being retired in favor of the editorial workflow orchestrator.
+
 ## Overview
 
 The carousel content pipeline is implemented as a **sub-agent** (`CarouselAgent`) that the main `RAGAgent` delegates to when users request carousel/blog generation. The sub-agent executes a 7-phase workflow based on the `carousel-pipeline` skill located at `~/.claude/skills/carousel-pipeline/`.

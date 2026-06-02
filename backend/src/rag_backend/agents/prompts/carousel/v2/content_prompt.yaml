@@ -1,0 +1,202 @@
+---
+name: carousel_content
+version: "2.0.0"
+description: "Generate bilingual carousel slides + blog post from research context (Neon Shell v2.0)"
+
+template: |
+  Create a 7-slide Instagram carousel and a blog post in TWO languages.
+
+  Topic: {{ topic }}
+  Title: {{ title }}
+  Subtitle: {{ subtitle }}
+  Audience: {{ audience }}
+
+  Research context:
+  {{ research_context }}
+
+  Selected color theme (based on topic analysis):
+    Primary: {{ primary_color }}
+    Accent: {{ accent_color }}
+    Background: {{ background_color }}
+  The visual system uses these colors for headings, stats, code
+  pills, borders, and glows. Let this palette influence the mood
+  of your image prompts (e.g., warm orange/cyan for Anthropic,
+  cool blue/amber for Google, red/cyan for security).
+
+  Slide structure:
+  1. Intro: hook + hero image + optional TLDR strip
+  2. Summary: 3 snapshot cards telling the whole story at a glance
+  3-5. Content: deep information with stats/quotes
+  6. Closing: actionable takeaways AS A CHECKLIST
+  7. CTA: save + share
+
+  Return ONLY a JSON object with keys:
+  - slides: array of pt-BR slides
+      {number, type, heading, body, image_prompt,
+       features?, stats?, insight?, summary_points?, tldr_strip?}
+  - slides_en: array of EN slides MIRRORING `slides` exactly.
+      Same `number` ordering, same `type` per slide. Translate
+      `heading`, `body`, and any `features`/`stats`/`insight`
+      /`summary_points`/`tldr_strip` text fields (title, body,
+      label, detail, quote, attribution). Icons + stat numbers
+      stay identical. `image_prompt` is omitted — the image is shared.
+  - blog_pt: full blog post in pt-BR markdown
+  - blog_en: full blog post in English markdown
+  - blog_image_map: array of image references for the blog post.
+      Each entry: {slide_number: int, heading: str, alt: str}
+      where slide_number is 1-7 referencing the EXISTING carousel
+      slide images. The blog renderer inserts these images at the
+      corresponding H2 sections. DO NOT invent image URLs or filenames;
+      only reference slide_number 1-7. If a section has no relevant
+      image, omit it from the array. heading must match the blog's H2
+      text exactly (in the same language as the blog).
+  - title_pt, title_en, subtitle_pt, subtitle_en
+
+  Per-slide body format:
+  - Intro (slide 1): 'body' is a 2-3 sentence subtitle hook. No
+    bullet points, no markdown, no features array.
+    OPTIONAL: include `tldr_strip` — a single sentence (max 20 words)
+    summarizing the entire topic. Rendered as a compact banner below
+    the subtitle. Example:
+      "Código vazou com malware embutido: 2.3M downloads em 72h."
+   - Summary (slide 2): 'body' IS a subtitle/tagline (max 8 words)
+     displayed below the heading. Example: "O resumo em 3 pontos"
+     or "The 3 results that change everything".
+     Also provide `summary_points`: array of exactly 3 items
+     {icon, title, body} where:
+       - icon: one emoji
+       - title: 4-6 words, the headline of the finding
+       - body: 10-14 words, the key fact. Use **bold** on numbers
+         and tool names. Use `code` backticks for technical tokens.
+     These 3 items must map to the 3 narrative beats of slides 3-5.
+     They should read like a "story in 3 sentences" so that someone
+     who only sees slides 1 and 2 understands the entire topic.
+     The first 2 cards render side-by-side; the 3rd spans the full
+     width below them. Make card 3 the most impactful finding.
+     Example for a "Claude Code leak" topic:
+       body: "O resumo em 3 pontos"
+       1. {icon: "🎯", title: "Código vazou no npm", body: "Pacote publicado acidentalmente como público por 6h antes de ser removido"}
+       2. {icon: "🔍", title: "Malware embutido", body: "Scripts exfiltravam `~/.ssh` e credenciais de API para servidor remoto"}
+       3. {icon: "⚡", title: "2.3M downloads afetados", body: "Removido em 72h, mas cópias persistem em mirrors públicos"}
+  - Content (slides 3-5): 'body' is a dense paragraph (max 4
+    sentences). Use **word** for inline emphasis on key terms,
+    numbers, and tool names. Do NOT invent your own bullet
+    characters; use the structured fields below instead.
+    REQUIRED structured extras — each content slide MUST include
+    exactly ONE of the following (pick whichever fits best):
+      * `stats`: array of EXACTLY 3 cards {value, label, detail?} for
+        benchmark slides, metrics, growth numbers. `value` is
+        the big number ('80.2%', '+185%', '2150'). `label` is
+        the metric name. Optional `detail` is a small baseline
+        comparison like '(era 20.8%)' or '(vs Claude 4.6 53%)'.
+        Pick exactly 3 stats; fewer makes the grid look sparse.
+      * `features`: array of 2-4 items {icon, title, body} for
+        slides that naturally list things (architecture
+        components, sub-products, pillars). Each item renders
+        as its own boxed card with the emoji icon, the title
+        in white, and the body (backticks + bold allowed).
+      * `insight`: {quote, attribution} for a single pullquote
+        from a primary source (tweet, blog post, interview).
+        Renders as an italic card with accent-colored left
+        border. Use at most ONE per slide and only on slides
+        where an external voice strengthens the point.
+        IMPORTANT: the `slides` array is pt-BR. If the original
+        quote is in English, translate the `quote` text into
+        Portuguese for `slides`, and put the original English
+        text in `slides_en`. The `attribution` stays identical.
+    Slides 3-5 should average 1 structured extra each
+    (benchmarks slide → stats; architecture slide → features;
+    reaction slide → insight quote). Do NOT stack all three
+    on the same slide.
+  - Closing (slide 6): 'body' is a single intro sentence AND the
+    actionable takeaways MUST be returned as a `features` array of
+    EXACTLY 3 or 4 items (never more — the grid overflows), each
+    {icon, title, body}:
+      - icon: ONE emoji relevant to the item (📝 🏗️ ⚙️ 🧪 🗣️ 🚀 🔒 🧠)
+      - title: the action name, 2-5 words
+      - body: 1-2 sentences explaining how/why, with **bold** on
+        the key tool or concept
+    Do NOT cram actions into a single prose paragraph.
+  - CTA (slide 7): 'body' is 2-3 punchy sentences. No bullets.
+
+  Forbidden characters in ALL text (title, subtitle, headings,
+  bodies, features, blog): em dash (—) and en dash (-). These
+  are the #1 AI-writing tell. Use periods, commas, colons, or
+  parentheses instead. This ban applies to both pt-BR and EN.
+
+  Inline emphasis, two flavors:
+  - **bold** (double asterisks) for prose emphasis: key
+    phrases, numbers, stats, company/person names. Renders
+    as <strong> (white bold inside body, accent color inside
+    headings).
+  - `code` (backticks) for TECHNICAL TOKENS: package names
+    (`axios`, `moonshotai/Kimi-K2.6`), versions (`2.1.88`,
+    `v4.9`), file patterns (`*.map`, `.npmignore`), commands
+    (`npm publish`, `kimi-code`), config keys
+    (`temperature=1.0`, `top_p=0.9`), or env vars
+    (`ANTHROPIC_API_KEY`). Renders as a monospace pill in the
+    primary palette color. Use this instead of **bold** when
+    the term is a literal code/config token.
+  - Rule of thumb: if a reader would copy/paste it into a
+    terminal or config file, wrap it in backticks. Otherwise
+    use **bold**.
+
+  EVERY slide heading (title) must mark 1-2 key words with **...**
+  so the renderer paints them in the palette accent color. Pick
+  the word that carries the emotional punch or the specific
+  subject. Examples:
+    - 'Código do Claude Code **vazou**. O que descobrimos?'
+    - 'As **features escondidas** que ninguém deveria ver'
+    - 'O **impacto** e a reação da comunidade'
+    - 'O que isso **significa** pra devs'
+  Never highlight a whole heading; 1-2 words max. The rest stays
+  white so the highlight does its job.
+
+  Blog markdown rules (CRITICAL):
+  - Do NOT include the title as the first H1 (e.g. "# Title" or "# Title: Subtitle").
+    The frontend renders the title and subtitle separately in the page header.
+    Start the blog body directly with paragraphs or H2 sections.
+  - Do NOT wrap entire paragraphs in backticks. Use backticks ONLY for
+    inline technical tokens (package names, commands, config keys).
+  - Do NOT emit HTML tags (no <img>, <br>, <div>, etc.). Use pure Markdown only.
+  - Use H2 (##) for section headings and H3 (###) for subsections.
+
+  Other rules:
+  - pt-BR version: {{ language_name }}, engaging
+  - EN version: professional, direct, same depth and structure
+  - Each slide must have complete explanatory content
+  - Blog post should expand on carousel content
+
+  image_prompt rules (CRITICAL — the system wraps it with style
+  directives, so describe the SCENE ONLY):
+  - 1-2 sentences describing a concrete cyberpunk/sci-fi tech
+    scene. Example: 'two hooded figures at glowing terminals
+    watching a package registry map pulse with red alerts'.
+  - DO NOT specify style, colors, lighting, panel layouts, or
+    ratio — those are applied by the system.
+  - DO NOT request any text, labels, speech bubbles, signs,
+    or words to appear in the image.
+  - DO NOT use metaphorical/cultural settings (dojos, sensei,
+    crossroads, books). Use tech scenes only.
+  - Elements to favor: monitors, terminals, code streams,
+    neon cityscapes, robots, circuit boards, holograms,
+    servers, data pipelines.
+  - DO NOT name real-world brands, celebrities, CEOs, or
+    company logos in the image_prompt. Image generation APIs
+    block them. Use generic analogies:
+      * a ride-sharing app (not Uber)
+      * a tech CEO (not Elon Musk)
+      * an AI research lab (not OpenAI)
+      * a social network (not Facebook)
+      * a chip manufacturer (not NVIDIA)
+    If the topic is about a specific brand or person, describe
+    the scene conceptually without naming them.
+
+model:
+  temperature: 0.7
+  max_tokens: 4096
+
+metadata:
+  author: "content-team"
+  created_at: "2026-05-30"
+  tags: ["carousel", "content", "bilingual", "neon-shell-v2"]

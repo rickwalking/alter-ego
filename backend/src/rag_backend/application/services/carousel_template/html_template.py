@@ -1,14 +1,162 @@
-"""Full HTML carousel template with inline CSS."""
+"""Full HTML carousel template with Neon Shell v2.0 inline CSS."""
+
+import html as html_module
+from dataclasses import dataclass
 
 from rag_backend.application.services.carousel.types import SlideDict
+from rag_backend.application.services.carousel_template.neon_styles import (
+    get_neon_shell_css,
+)
 from rag_backend.application.services.carousel_template.slides import (
     _render_content_slide,
     _render_cta_slide,
     _render_intro_slide,
     _render_summary_slide,
 )
-from rag_backend.domain.constants import SLIDE_TYPE_INTRO, SLIDE_TYPE_SUMMARY
+from rag_backend.domain.constants import (
+    SLIDE_TYPE_CTA,
+    SLIDE_TYPE_INTRO,
+    SLIDE_TYPE_SUMMARY,
+)
 from rag_backend.domain.models import CarouselProject
+
+_FONTS_LINK = (
+    '<link rel="preconnect" href="https://fonts.googleapis.com">\n'
+    '<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900'
+    '&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">'
+)
+
+
+def _build_watermark_html(project: CarouselProject) -> str:
+    """Return creator watermark HTML if creator metadata is present."""
+    name = project.creator_name
+    if not name:
+        return ""
+    handle = project.creator_handle or ""
+    avatar = project.creator_avatar_url or ""
+    handle_text = f"@{handle}" if handle else ""
+    esc = html_module.escape
+    avatar_html = (
+        f'<div class="creator-watermark-avatar">'
+        f'<img src="{esc(avatar, quote=True)}" alt="{esc(name, quote=True)}" />'
+        f"</div>"
+        if avatar
+        else ""
+    )
+    return (
+        f'<div class="creator-watermark">'
+        f"{avatar_html}"
+        f'<div class="creator-watermark-text">'
+        f'<span class="creator-watermark-name">{esc(name, quote=True)}</span>'
+        f'<span class="creator-watermark-handle">{esc(handle_text, quote=True)}</span>'
+        f"</div></div>"
+    )
+
+
+def _build_slide_counter(total: int, current: int) -> str:
+    """Build slide counter dot navigation matching reference."""
+    dots = ""
+    for i in range(1, total + 1):
+        if i < current:
+            cls = "counter-dot past"
+        elif i == current:
+            cls = "counter-dot active"
+        else:
+            cls = "counter-dot"
+        dots += f'<span class="{cls}"></span>'
+    return (
+        f'<div class="slide-counter">'
+        f'<div class="counter-dots">{dots}</div>'
+        f'<span class="counter-label">{current}/{total}</span>'
+        f"</div>"
+    )
+
+
+def _build_action_bar() -> str:
+    """Build Instagram-style action bar with inline SVGs matching reference."""
+    heart = (
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+        'stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
+        '<path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3H14z"/>'
+        "</svg>"
+    )
+    comment = (
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+        'stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
+        '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>'
+        "</svg>"
+    )
+    share = (
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+        'stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
+        '<path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>'
+        '<polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/>'
+        "</svg>"
+    )
+    save = (
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+        'stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
+        '<path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>'
+        "</svg>"
+    )
+    return (
+        f'<div class="action-bar">'
+        f'<button class="action-btn" aria-label="Curtir">{heart}</button>'
+        f'<button class="action-btn" aria-label="Comentar">{comment}</button>'
+        f'<button class="action-btn" aria-label="Compartilhar">{share}</button>'
+        f'<button class="action-btn action-save" aria-label="Salvar">{save}</button>'
+        f"</div>"
+    )
+
+
+def _build_caption_html(project: CarouselProject) -> str:
+    """Build caption HTML if caption is present."""
+    caption = project.caption
+    if not caption:
+        return ""
+    esc = html_module.escape
+    hashtags = ""
+    # Extract hashtags from caption if present
+    words = caption.split()
+    hashtag_words = [w for w in words if w.startswith("#")]
+    if hashtag_words:
+        hashtags = f'<div class="caption-hashtags">{" ".join(hashtag_words)}</div>'
+    return (
+        f'<div class="caption">'
+        f"<strong>{esc(project.creator_name or 'pedromarins.ai', quote=True)}</strong> "
+        f"{esc(caption, quote=True)}{hashtags}"
+        f"</div>"
+    )
+
+
+@dataclass(frozen=True)
+class SlideWrapContext:
+    """Input bundle for wrapping a single slide."""
+
+    inner_html: str
+    slide_num: int
+    total_slides: int
+    watermark_html: str
+    include_action_bar: bool = False
+    caption_html: str = ""
+
+
+def _wrap_slide(ctx: SlideWrapContext) -> str:
+    """Wrap slide content in Neon Shell v2.0 structure."""
+    counter = _build_slide_counter(ctx.total_slides, ctx.slide_num)
+    action_bar = _build_action_bar() if ctx.include_action_bar else ""
+    return (
+        f'<div class="ig-post">'
+        f'<div class="ig-slide">'
+        f'<div class="ig-slide-inner">'
+        f"{ctx.inner_html}"
+        f"{ctx.watermark_html}"
+        f"</div>"
+        f"{counter}"
+        f"{action_bar}"
+        f"{ctx.caption_html}"
+        f"</div></div>"
+    )
 
 
 def build_carousel_html(
@@ -18,22 +166,35 @@ def build_carousel_html(
     design_overrides: str | None = None,
     language: str | None = None,
 ) -> str:
-    primary = theme["primary"]
-    accent = theme["accent"]
-    bg = theme["background"]
+    """Build full Neon Shell v2.0 HTML carousel."""
     lang = language or project.language
+    total_slides = len(slides)
+    watermark_html = _build_watermark_html(project)
+    caption_html = _build_caption_html(project)
 
     slides_html = ""
     for slide in slides:
         slide_type = slide["type"]
+        # Include action bar + caption on first and last slides only
+        is_first_or_last = slide["number"] in {"1", str(total_slides)}
         if slide_type == SLIDE_TYPE_INTRO:
-            slides_html += _render_intro_slide(slide, project, theme)
+            inner = _render_intro_slide(slide, project, theme)
         elif slide_type == SLIDE_TYPE_SUMMARY:
-            slides_html += _render_summary_slide(slide, theme)
-        elif slide_type == "cta":
-            slides_html += _render_cta_slide(slide, theme, lang)
+            inner = _render_summary_slide(slide, theme, total_slides)
+        elif slide_type == SLIDE_TYPE_CTA:
+            inner = _render_cta_slide(slide, theme, lang, total_slides)
         else:
-            slides_html += _render_content_slide(slide, theme)
+            inner = _render_content_slide(slide, theme, total_slides)
+        slides_html += _wrap_slide(
+            SlideWrapContext(
+                inner_html=inner,
+                slide_num=int(slide["number"]),
+                total_slides=total_slides,
+                watermark_html=watermark_html,
+                include_action_bar=is_first_or_last,
+                caption_html=caption_html if is_first_or_last else "",
+            ),
+        )
 
     if design_overrides:
         stripped = design_overrides.strip()
@@ -41,243 +202,36 @@ def build_carousel_html(
     else:
         override_block = ""
 
+    css = get_neon_shell_css(theme)
+
+    esc = html_module.escape
+    title_text = esc(project.title or project.topic, quote=True)
+    slide_count_text = esc(f"{total_slides} slides", quote=True)
+    lang_attr = esc(lang, quote=True)
+    niche_text = esc(project.niche, quote=True)
+
     return f"""<!DOCTYPE html>
-<html lang="{project.language}">
+<html class="dark" lang="{lang_attr}">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=1080">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{title_text} - Instagram Carousel</title>
+{_FONTS_LINK}
 <style>
-  * {{ margin: 0; padding: 0; box-sizing: border-box; }}
-  :root {{
-    --primary: {primary};
-    --accent: {accent};
-    --bg: {bg};
-    --text: #ffffff;
-    --text-60: rgba(255,255,255,0.63);
-    --text-48: rgba(255,255,255,0.48);
-    --text-45: rgba(255,255,255,0.45);
-    --text-06: rgba(255,255,255,0.06);
-  }}
-  body {{ background: #000; font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; }}
-  .slide {{
-    width: 1080px; height: 1350px; background: var(--bg);
-    position: relative; overflow: hidden; margin: 0 auto 20px;
-  }}{override_block}
-  .bg-glow {{ position: absolute; inset: 0; pointer-events: none; }}
-  .bg-glow::before {{
-    content: ''; position: absolute; width: 600px; height: 600px;
-    border-radius: 50%; top: -100px; right: -150px;
-    background: radial-gradient(circle, {primary}0D 0%, transparent 70%);
-  }}
-  .bg-glow::after {{
-    content: ''; position: absolute; width: 500px; height: 500px;
-    border-radius: 50%; bottom: -100px; left: -100px;
-    background: radial-gradient(circle, {accent}0D 0%, transparent 70%);
-  }}
-  .s1-content {{
-    position: relative; z-index: 1; display: flex; flex-direction: column;
-    height: 100%; padding: 70px 72px 60px;
-  }}
-  .s1-main {{ flex: 1; }}
-  .s1-badge {{
-    display: inline-flex; align-self: flex-start; padding: 8px 18px;
-    border: 1px solid {primary}4D; border-radius: 6px;
-    background: {primary}14; font-size: 16px; font-weight: 700;
-    font-family: 'Courier New', monospace; color: {primary};
-    text-transform: uppercase; letter-spacing: 3px; margin-bottom: 32px;
-  }}
-  .s1-hero-img {{
-    width: 100%; height: 380px; border-radius: 20px; overflow: hidden;
-    border: 1px solid {primary}33; margin-bottom: 40px; position: relative;
-  }}
-  .s1-hero-img img {{ width: 100%; height: 100%; object-fit: cover; display: block; }}
-  .s1-hero-img::after {{
-    content: ''; position: absolute; inset: 0;
-    background: linear-gradient(to bottom, transparent 40%, var(--bg) 100%);
-  }}
-  .s1-title {{
-    font-size: 52px; font-weight: 800; color: var(--text);
-    line-height: 1.15; margin-bottom: 20px;
-  }}
-  .s1-title strong {{ color: {accent}; font-weight: 800; }}
-  .s1-subtitle {{
-    font-size: 28px; font-weight: 400; color: var(--text-48); line-height: 1.5;
-  }}
-  .s1-subtitle strong {{ color: var(--text); font-weight: 600; }}
-  .tldr-strip {{
-    margin-top: 20px;
-    padding: 14px 18px;
-    border-radius: 10px;
-    border-left: 3px solid {accent};
-    background: {primary}14;
-    font-size: 22px;
-    font-weight: 500;
-    color: var(--text-60);
-    line-height: 1.4;
-  }}
-  .tldr-strip strong {{ color: var(--text); font-weight: 700; }}
-  .content-slide {{
-    padding: 70px 72px 60px; display: flex; flex-direction: column;
-  }}
-  .slide-num {{
-    font-size: 16px; font-weight: 700; font-family: 'Courier New', monospace;
-    color: {primary}; text-transform: uppercase; letter-spacing: 3px; margin-bottom: 16px;
-  }}
-  .slide-heading {{
-    font-size: 50px; font-weight: 800; color: var(--text);
-    line-height: 1.15; margin-bottom: 28px;
-  }}
-  .slide-heading strong {{ color: {accent}; font-weight: 800; }}
-  .hero-img {{
-    width: 100%; height: 310px; border-radius: 18px; overflow: hidden;
-    border: 1px solid {primary}33; margin-bottom: 28px;
-  }}
-  .hero-img img {{ width: 100%; height: 100%; object-fit: cover; display: block; }}
-  .slide-body {{ flex: 1; }}
-  .body-p {{
-    font-size: 30px; font-weight: 400; color: var(--text-60);
-    line-height: 1.5; margin-bottom: 20px;
-  }}
-  .body-p strong {{ color: var(--text); font-weight: 700; }}
-  .code-tag {{
-    display: inline-block;
-    padding: 2px 10px;
-    margin: 0 2px;
-    border-radius: 6px;
-    background: {primary}1F;
-    color: {primary};
-    font-family: 'Courier New', monospace;
-    font-size: 0.85em;
-    font-weight: 600;
-    letter-spacing: 0.3px;
-  }}
-  .feature-grid {{
-    display: flex; flex-direction: column; gap: 16px; margin-top: 8px;
-  }}
-  .feature-item {{
-    display: flex; gap: 20px; align-items: flex-start;
-    padding: 22px 24px; border-radius: 16px;
-    background: rgba(255,255,255,0.02);
-    border: 1px solid {primary}26;
-  }}
-  .feature-icon {{ font-size: 34px; line-height: 1; flex-shrink: 0; }}
-  .feature-text {{ flex: 1; }}
-  .feature-title {{
-    font-size: 28px; font-weight: 700; color: var(--text);
-    margin-bottom: 6px; line-height: 1.25;
-  }}
-  .feature-body {{
-    font-size: 24px; color: var(--text-60); line-height: 1.45;
-  }}
-  .feature-body strong {{ color: var(--text); font-weight: 700; }}
-  .feature-grid.cols-2 {{
-    display: grid; grid-template-columns: 1fr 1fr; gap: 14px;
-  }}
-  .summary-slide {{
-    padding: 70px 72px 60px; display: flex; flex-direction: column;
-  }}
-  .summary-bg {{
-    position: absolute; inset: 0; z-index: 0;
-    overflow: hidden;
-  }}
-  .summary-bg-img {{
-    position: absolute; inset: 0; width: 100%; height: 100%;
-    object-fit: cover; display: block;
-    filter: blur(6px) brightness(1.0);
-  }}
-  .summary-bg::after {{
-    content: ''; position: absolute; inset: 0;
-    background: linear-gradient(to bottom, {bg}99 0%, {bg}66 100%);
-  }}
-  .summary-slide > *:not(.summary-bg):not(.progress) {{ position: relative; z-index: 1; }}
-  .summary-subtitle {{
-    font-size: 24px; color: var(--text-45); margin-top: -16px;
-    margin-bottom: 24px; font-weight: 400;
-  }}
-  .summary-grid {{
-    display: grid; grid-template-columns: 1fr 1fr; gap: 14px;
-  }}
-  .summary-grid > .summary-item:nth-child(3) {{
-    grid-column: 1 / -1;
-  }}
-  .summary-item {{
-    display: flex; gap: 18px; align-items: flex-start;
-    padding: 28px 24px; border-radius: 16px;
-    background: rgba(8,12,18,0.88);
-    border: 1px solid {primary}45;
-    border-top: 3px solid {accent};
-    box-shadow: 0 8px 32px rgba(0,0,0,0.35);
-  }}
-  .summary-icon {{ font-size: 36px; line-height: 1; flex-shrink: 0; }}
-  .summary-text {{ flex: 1; }}
-  .summary-title {{
-    font-size: 30px; font-weight: 700; color: var(--text);
-    margin-bottom: 6px; line-height: 1.25;
-  }}
-  .summary-body {{
-    font-size: 24px; color: var(--text-60); line-height: 1.5;
-  }}
-  .summary-body strong {{ color: var(--text); font-weight: 700; }}
-  .stat-row {{
-    display: grid; grid-template-columns: repeat(3, 1fr);
-    gap: 16px; margin: 20px 0;
-  }}
-  .stat-card {{
-    background: rgba(255,255,255,0.03);
-    border: 1px solid {primary}26; border-radius: 16px;
-    padding: 24px 18px; text-align: center;
-  }}
-  .stat-number {{
-    font-size: 40px; font-weight: 900; color: {accent};
-    line-height: 1; margin-bottom: 8px;
-  }}
-  .stat-label {{
-    font-size: 20px; color: var(--text-60);
-    line-height: 1.3;
-  }}
-  .stat-detail {{
-    font-size: 18px; color: var(--text-45);
-    margin-top: 4px; line-height: 1.3;
-  }}
-  .insight-card {{
-    border-left: 3px solid {primary}; padding: 10px 24px;
-    margin: 20px 0; font-size: 26px; font-style: italic;
-    color: var(--text-60); line-height: 1.45;
-  }}
-  .insight-card strong {{ color: var(--text); font-weight: 600; font-style: italic; }}
-  .insight-attribution {{
-    display: block; font-size: 20px; font-style: normal;
-    color: var(--text-45); margin-top: 8px;
-  }}
-  .progress {{
-    position: absolute; bottom: 40px; left: 72px; right: 72px;
-    display: flex; gap: 8px;
-  }}
-  .progress .bar {{
-    flex: 1; height: 4px; border-radius: 2px; background: var(--text-06);
-  }}
-  .progress .bar.active {{ background: {primary}; }}
-  .cta-slide {{
-    display: flex; align-items: center; justify-content: center;
-    text-align: center; padding: 70px 72px;
-  }}
-  .cta-icon {{ font-size: 64px; margin-bottom: 32px; }}
-  .cta-title {{
-    font-size: 52px; font-weight: 800; color: var(--text); margin-bottom: 24px;
-  }}
-  .cta-title strong {{ color: {accent}; font-weight: 800; }}
-  .cta-body {{
-    font-size: 31px; color: var(--text-48); margin-bottom: 48px; line-height: 1.5;
-  }}
-  .cta-row {{ display: flex; gap: 24px; justify-content: center; }}
-  .cta-btn {{
-    padding: 18px 36px; border-radius: 12px; font-size: 24px; font-weight: 600;
-  }}
-  .cta-btn.primary {{ background: {primary}; color: #fff; }}
-  .cta-btn.secondary {{ border: 1px solid {primary}4D; color: {primary}; }}
+{css}
+{override_block}
 </style>
 </head>
 <body>
+<div class="grid-bg" aria-hidden="true">
+  <div class="grid-bg-inner"></div>
+</div>
+<div class="page-header">
+  <h1>{title_text}</h1>
+  <div class="sub">{niche_text} &middot; {slide_count_text}</div>
+</div>
+<div class="feed">
 {slides_html}
+</div>
 </body>
 </html>"""

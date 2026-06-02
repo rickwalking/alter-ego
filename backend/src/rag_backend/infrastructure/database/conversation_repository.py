@@ -1,10 +1,16 @@
 """PostgreSQL repository implementations for Conversation and Message."""
 
+from typing import TypeVar
 from uuid import UUID
 
-from sqlalchemy import desc, func, select
+from sqlalchemy import desc, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.sql import Select
 
+from rag_backend.domain.constants.conversation import (
+    CONVERSATION_METADATA_PROJECT_ID,
+    CONVERSATION_ORIGIN_FILTER_ALTER_EGO,
+)
 from rag_backend.domain.models import Conversation, Message
 from rag_backend.infrastructure.database.models import (
     ConversationModel,
@@ -12,6 +18,8 @@ from rag_backend.infrastructure.database.models import (
 )
 
 _ERR_CONVERSATION_NOT_FOUND = "Conversation with id {} not found"
+
+_SelectRow = TypeVar("_SelectRow", bound=tuple[object, ...])
 
 
 class PostgresConversationRepository:
@@ -47,29 +55,48 @@ class PostgresConversationRepository:
         )
         return [conv.to_entity() for conv in result.scalars().all()]
 
+    def _apply_origin_filter(
+        self, stmt: Select[_SelectRow], origin: str | None
+    ) -> Select[_SelectRow]:
+        if origin != CONVERSATION_ORIGIN_FILTER_ALTER_EGO:
+            return stmt
+        return stmt.where(
+            or_(
+                ConversationModel.conv_metadata.is_(None),
+                ConversationModel.conv_metadata[CONVERSATION_METADATA_PROJECT_ID].is_(
+                    None
+                ),
+            )
+        )
+
     async def get_by_user_id(
         self,
         user_id: UUID,
         limit: int = 100,
         offset: int = 0,
+        origin: str | None = None,
     ) -> list[Conversation]:
         """Get conversations owned by a user."""
-        result = await self._session.execute(
+        stmt = (
             select(ConversationModel)
             .where(ConversationModel.owner_id == str(user_id))
             .order_by(desc(ConversationModel.updated_at))
             .offset(offset)
             .limit(limit)
         )
+        stmt = self._apply_origin_filter(stmt, origin)
+        result = await self._session.execute(stmt)
         return [conv.to_entity() for conv in result.scalars().all()]
 
-    async def count_by_user_id(self, user_id: UUID) -> int:
+    async def count_by_user_id(self, user_id: UUID, origin: str | None = None) -> int:
         """Count conversations owned by a user."""
-        result = await self._session.execute(
+        stmt = (
             select(func.count())
             .select_from(ConversationModel)
             .where(ConversationModel.owner_id == str(user_id))
         )
+        stmt = self._apply_origin_filter(stmt, origin)
+        result = await self._session.execute(stmt)
         return result.scalar() or 0
 
     async def update(self, conversation: Conversation) -> Conversation:

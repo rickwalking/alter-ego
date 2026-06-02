@@ -24,7 +24,11 @@ ERR_BLOG_NOT_GENERATED = "Blog post not yet generated"
 ERR_DESIGN_NOT_GENERATED = "Design tokens not yet generated"
 ERR_IMAGE_NOT_FOUND = "Image file not found"
 ERR_OUTPUT_NOT_FOUND = "Output files not found"
+ERR_INSTAGRAM_PUBLIC_BASE_URL_NOT_CONFIGURED = (
+    "instagram_public_base_url_not_configured"
+)
 CAROUSEL_CACHE_HEADERS = {"Cache-Control": "public, max-age=31536000"}
+CAROUSEL_PREVIEW_CACHE_HEADERS = {"Cache-Control": "private, no-store"}
 
 # Media types
 MEDIA_TYPE_JPEG = "image/jpeg"

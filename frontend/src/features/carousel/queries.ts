@@ -1,7 +1,6 @@
 import { queryOptions, skipToken } from "@tanstack/react-query";
 import { z } from "zod";
 import { API_ENDPOINTS, DEFAULT_BLOG_LANGUAGE } from "@/constants/api";
-import { STATUS_POLL_INTERVAL } from "@/constants/create";
 import { apiCall } from "@/lib/api-client";
 import {
   carouselBlogI18nResponseSchema,
@@ -10,10 +9,8 @@ import {
   carouselProjectListResponseSchema,
   carouselProjectResponseSchema,
   carouselSlideResponseSchema,
-  carouselStatusResponseSchema,
   type CarouselProjectListResponse,
   type CarouselProjectResponse,
-  type CarouselStatusResponse,
 } from "@/schemas/carousel";
 
 type CarouselListFilters = {
@@ -25,7 +22,6 @@ export const carouselKeys = {
   list: (filters?: CarouselListFilters) =>
     filters ? (["carousels", filters] as const) : (["carousels"] as const),
   detail: (id: string | null) => ["carousel", id] as const,
-  status: (id: string | null) => ["carousel-status", id] as const,
   blog: (id: string | null, lang: string = DEFAULT_BLOG_LANGUAGE) =>
     ["carousel", id, "blog", lang] as const,
   blogWithDesign: (id: string | null, lang: string = DEFAULT_BLOG_LANGUAGE) =>
@@ -71,20 +67,6 @@ export function carouselProjectOptions(id: string | null) {
             carouselProjectResponseSchema,
           )
       : skipToken,
-  });
-}
-
-export function carouselStatusOptions(id: string | null) {
-  return queryOptions({
-    queryKey: carouselKeys.status(id),
-    queryFn: id
-      ? () =>
-          apiCall<CarouselStatusResponse>(
-            API_ENDPOINTS.CAROUSEL_STATUS(id),
-            carouselStatusResponseSchema,
-          )
-      : skipToken,
-    refetchInterval: STATUS_POLL_INTERVAL,
   });
 }
 

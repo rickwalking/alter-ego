@@ -214,8 +214,11 @@ describe("API Client Module", () => {
           } as Response),
         );
 
-        await expect(apiCall("/api/test", testSchema)).rejects.toThrow(ApiError);
-        expect(location.href).toBe("/login");
+        await expect(apiCall("/api/test", testSchema)).rejects.toThrow(
+          ApiError,
+        );
+        expect(location.href).toContain("/api/auth/logout");
+        expect(location.href).toContain("redirect=");
       });
     });
 
@@ -273,7 +276,9 @@ describe("API Client Module", () => {
           } as Response),
         );
 
-        await expect(apiCall("/api/test", testSchema)).rejects.toThrow(ApiError);
+        await expect(apiCall("/api/test", testSchema)).rejects.toThrow(
+          ApiError,
+        );
         expect(location.href).toBe("/403");
       });
     });
@@ -668,7 +673,9 @@ describe("API Client Module", () => {
           vi.fn().mockResolvedValue({ ok: true, status: 204 } as Response),
         );
 
-        await expect(apiCallNoContent("/api/documents/1")).resolves.toBeUndefined();
+        await expect(
+          apiCallNoContent("/api/documents/1"),
+        ).resolves.toBeUndefined();
       });
     });
 
@@ -694,7 +701,7 @@ describe("API Client Module", () => {
           message: "Session expired",
           code: "AUTH_EXPIRED",
         });
-        expect(location.href).toBe("/login");
+        expect(location.href).toContain("/api/auth/logout");
       });
 
       it("Then it should fall back to Unauthorized when the body is not JSON", async () => {
@@ -716,7 +723,7 @@ describe("API Client Module", () => {
           status: 401,
           message: "Unauthorized",
         });
-        expect(location.href).toBe("/login");
+        expect(location.href).toContain("/api/auth/logout");
       });
     });
 

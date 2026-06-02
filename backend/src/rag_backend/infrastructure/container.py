@@ -7,8 +7,10 @@ All dependencies are configured here and injected into the application layer.
 from dependency_injector import containers, providers
 
 from rag_backend.agents.alter_ego_agent import AlterEgoAgent
-from rag_backend.agents.carousel_orchestrator import CarouselAgent
 from rag_backend.agents.rag_agent import RAGAgent
+from rag_backend.application.services.carousel.refinement_service import (
+    CarouselRefinementService,
+)
 from rag_backend.application.services.conversation_service import ConversationService
 from rag_backend.application.services.document_pipeline import (
     DocumentProcessingPipeline,
@@ -195,16 +197,13 @@ class Container(containers.DeclarativeContainer):
         export_service=export_service,
     )
 
-    carousel_agent = providers.Factory(
-        CarouselAgent,
+    carousel_refinement = providers.Factory(
+        CarouselRefinementService,
         repository=carousel_repository,
         llm_service=llm_service,
-        research_tool=research_tool,
         image_registry=image_provider_registry,
         export_service=export_service,
-        linkedin_post_generator=linkedin_post_generator,
         pdf_slide_builder=pdf_slide_builder,
-        output_base_dir=settings.provided().carousel_output_dir,
     )
 
     # Alter-Ego Agent (public chat — NO carousel tools)
@@ -223,7 +222,7 @@ class Container(containers.DeclarativeContainer):
         retriever=retriever,
         message_repository=message_repository,
         document_repository=document_repository,
-        carousel_agent=carousel_agent,
+        carousel_refinement=carousel_refinement,
         carousel_repository=carousel_repository,
     )
 

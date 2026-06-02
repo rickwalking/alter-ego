@@ -78,10 +78,12 @@ class CarouselProjectModel(Base):
     # NEW: Workflow extension fields
     creative_brief = Column(Text, nullable=True)
     persona_id = Column(String(36), ForeignKey("persona_profiles.id"), nullable=True)
+    assigned_reviewer_id = Column(String(36), ForeignKey("users.id"), nullable=True)
     rubric_id = Column(String(36), ForeignKey("quality_rubrics.id"), nullable=True)
     instructions = Column(Text, nullable=True)
     current_phase = Column(String(50), default="brief")
     phase_status = Column(String(50), default="pending")
+    workflow_status = Column(String(50), default="", nullable=False, server_default="")
     lock_version = Column(Integer, default=1, nullable=False)
 
     created_at = Column(
@@ -154,6 +156,8 @@ class CarouselProjectModel(Base):
             instructions=self.instructions,
             current_phase=self.current_phase,
             phase_status=self.phase_status,
+            is_public=bool(self.is_public),
+            owner_id=self.owner_id,
             created_at=self.created_at,
             updated_at=self.updated_at,
         )
@@ -199,6 +203,8 @@ class CarouselProjectModel(Base):
             instructions=entity.instructions,
             current_phase=entity.current_phase,
             phase_status=entity.phase_status,
+            is_public=entity.is_public,
+            owner_id=entity.owner_id,
             created_at=entity.created_at,
             updated_at=entity.updated_at,
         )
@@ -231,6 +237,8 @@ class CarouselProjectModel(Base):
         self.instructions = entity.instructions
         self.current_phase = entity.current_phase
         self.phase_status = entity.phase_status
+        self.is_public = entity.is_public
+        self.owner_id = entity.owner_id
         self.updated_at = entity.updated_at
 
 

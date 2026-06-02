@@ -12,6 +12,8 @@ import {
   useSendMessage,
 } from "./use-chat";
 import { API_ENDPOINTS } from "@/constants/api";
+import { CONVERSATION_ORIGIN_FILTER_ALTER_EGO } from "@/constants/publish-chat";
+import { conversationListResponseSchema } from "@/schemas/chat";
 
 vi.mock("@/lib/api-client", () => ({
   apiCall: vi.fn(),
@@ -85,8 +87,8 @@ describe("useConversations", () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
     expect(mockApiCall).toHaveBeenCalledWith(
-      API_ENDPOINTS.CONVERSATIONS,
-      expect.anything(),
+      `${API_ENDPOINTS.CONVERSATIONS}?origin=${CONVERSATION_ORIGIN_FILTER_ALTER_EGO}`,
+      conversationListResponseSchema,
     );
     expect(result.current.data).toEqual([MOCK_CONVERSATION]);
     expect(queryClient.getQueryData(["conversations"])).toEqual([

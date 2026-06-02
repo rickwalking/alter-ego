@@ -5,8 +5,7 @@ from uuid import UUID
 from pinecone import Pinecone, ServerlessSpec
 
 from rag_backend.domain.constants.retry import PINECONE_MAX_ATTEMPTS
-from rag_backend.domain.models import DocumentChunk, SearchResult
-from rag_backend.domain.protocols.vector import HybridSearchParams
+from rag_backend.domain.models import DocumentChunk, HybridSearchParams, SearchResult
 from rag_backend.domain.retry import retry_sync
 from rag_backend.domain.types import StatsResponse
 from rag_backend.infrastructure.config.settings import Settings

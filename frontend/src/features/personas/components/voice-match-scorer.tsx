@@ -3,12 +3,12 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import {
-  Alert,
-  AlertDescription,
-  Badge,
-  Button,
-  Textarea,
-} from "@/components/ui";
+  NeonAlert,
+  NeonAlertDescription,
+} from "@/components/molecules/neon-alert";
+import { NeonBadge } from "@/components/atoms/neon-badge";
+import { NeonButton } from "@/components/atoms/neon-button";
+import { NeonTextarea } from "@/components/atoms/neon-textarea";
 import { VOICE_MATCH_MIN_SCORE } from "@/constants/blog-ai";
 import { API_ENDPOINTS, HTTP_METHODS } from "@/constants/api";
 import type { VoiceScoreResult } from "@/features/blog/types-ai";
@@ -52,25 +52,25 @@ export function VoiceMatchScorer({
   return (
     <div className="space-y-3 rounded-lg border p-4">
       <h3 className="font-semibold">{t("voiceScorerTitle")}</h3>
-      <Textarea
+      <NeonTextarea
         value={text}
         onChange={(event) => setText(event.target.value)}
         rows={4}
       />
-      <Button
+      <NeonButton
         disabled={loading || !text.trim()}
         onClick={() => void scoreText()}
       >
         {t("actions.scoreVoice")}
-      </Button>
+      </NeonButton>
       {error && (
-        <Alert variant="destructive">
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
+        <NeonAlert variant="destructive">
+          <NeonAlertDescription>{error}</NeonAlertDescription>
+        </NeonAlert>
       )}
       {result && (
         <div className="space-y-2">
-          <Badge
+          <NeonBadge
             variant={
               result.overall >= VOICE_MATCH_MIN_SCORE
                 ? "default"
@@ -78,7 +78,7 @@ export function VoiceMatchScorer({
             }
           >
             {t("voiceScore", { score: Math.round(result.overall) })}
-          </Badge>
+          </NeonBadge>
           <ul className="text-sm text-muted-foreground space-y-1">
             {result.suggestions.map((suggestion) => (
               <li key={suggestion}>{suggestion}</li>

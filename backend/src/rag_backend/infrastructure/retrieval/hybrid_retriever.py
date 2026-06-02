@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass, field
 
-from rag_backend.domain.models import RetrievalQuery, SearchResult
+from rag_backend.domain.models import HybridSearchParams, RetrievalQuery, SearchResult
 from rag_backend.domain.protocols import EmbeddingService, VectorStore
 
 
@@ -47,7 +47,7 @@ class HybridRetrieverWithRRF:
 
         all_results: list[SearchResult] = []
         for ns in namespaces:
-            raw = await self._vector_store.hybrid_search(
+            params = HybridSearchParams(
                 query=request.query,
                 dense_embedding=dense_embeddings[0],
                 sparse_embedding=sparse_embeddings[0],
@@ -55,6 +55,7 @@ class HybridRetrieverWithRRF:
                 alpha=request.alpha,
                 namespace=ns,
             )
+            raw = await self._vector_store.hybrid_search(params)
             all_results.extend(raw)
 
         ranked = self._apply_rrf(all_results, request.top_k * expand_factor)

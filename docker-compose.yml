@@ -31,6 +31,9 @@ services:
     env_file: ./backend/.env
     environment:
       DATABASE_URL: postgresql+asyncpg://rag_user:rag_password@postgres:5432/rag_db
+      LANGFUSE_SECRET_KEY: ${LANGFUSE_SECRET_KEY:-}
+      LANGFUSE_PUBLIC_KEY: ${LANGFUSE_PUBLIC_KEY:-}
+      LANGFUSE_BASE_URL: ${LANGFUSE_BASE_URL:-http://localhost:3001}
       LANGFUSE_HOST: ${LANGFUSE_HOST:-http://langfuse:3000}
     ports:
       - "127.0.0.1:8000:8000"
@@ -54,9 +57,11 @@ services:
       args:
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
     restart: unless-stopped
+    env_file: ./backend/.env
     environment:
       NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
       API_BASE_URL: http://backend:8000
+      AUTH_JWT_SECRET: ${SECRET_KEY:-}
     ports:
       - "127.0.0.1:3000:3000"
     depends_on:

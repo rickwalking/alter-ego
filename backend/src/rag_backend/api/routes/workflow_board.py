@@ -4,7 +4,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel, Field
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.api.dependencies.database import get_db
@@ -18,7 +18,10 @@ from rag_backend.domain.constants.carousel_workflow import (
     PHASE_FINAL_REVIEW,
     PHASE_IMAGES,
     PHASE_OUTLINE,
+    PHASE_PUBLISHED,
     PHASE_RESEARCH,
+    PHASE_STATUS_PENDING,
+    WORKFLOW_STATUS_APPROVED_FOR_PUBLISH,
 )
 from rag_backend.domain.constants.rate_limits import RATE_LIMIT_WORKFLOW_ENDPOINTS
 from rag_backend.domain.models.user import UserRole
@@ -34,6 +37,7 @@ KANBAN_PHASES = [
     PHASE_DESIGN,
     PHASE_IMAGES,
     PHASE_FINAL_REVIEW,
+    PHASE_PUBLISHED,
 ]
 
 
@@ -45,6 +49,7 @@ class KanbanCardResponse(BaseModel):
     topic: str
     current_phase: str
     phase_status: str
+    workflow_status: str | None = None
     updated_at: str | None = None
 
 
@@ -73,9 +78,16 @@ async def get_workflow_kanban(
     current_user: EditorUser,
 ) -> WorkflowKanbanResponse:
     """Return projects grouped by workflow phase (UI-018)."""
-    query = select(CarouselProjectModel)
+    query = select(CarouselProjectModel).where(
+        CarouselProjectModel.phase_status != PHASE_STATUS_PENDING,
+    )
     if current_user.role != UserRole.ADMIN.value:
-        query = query.where(CarouselProjectModel.owner_id == current_user.id)
+        query = query.where(
+            or_(
+                CarouselProjectModel.owner_id == current_user.id,
+                CarouselProjectModel.assigned_reviewer_id == current_user.id,
+            )
+        )
     result = await db.execute(query)
     projects = list(result.scalars().all())
 
@@ -84,15 +96,20 @@ async def get_workflow_kanban(
     }
     for project in projects:
         phase = project.current_phase or PHASE_BRIEF
-        if phase not in cards_by_phase:
-            cards_by_phase[phase] = []
-        cards_by_phase[phase].append(
+        if phase not in KANBAN_PHASES:
+            phase = PHASE_PUBLISHED if project.is_public else PHASE_FINAL_REVIEW
+        display_status = project.phase_status or PHASE_STATUS_PENDING
+        workflow_status = getattr(project, "workflow_status", None)
+        if workflow_status == WORKFLOW_STATUS_APPROVED_FOR_PUBLISH:
+            display_status = WORKFLOW_STATUS_APPROVED_FOR_PUBLISH
+        cards_by_phase.setdefault(phase, []).append(
             KanbanCardResponse(
                 id=str(project.id),
                 title=project.title or project.topic,
                 topic=project.topic,
                 current_phase=phase,
-                phase_status=project.phase_status or "pending",
+                phase_status=display_status,
+                workflow_status=str(workflow_status) if workflow_status else None,
                 updated_at=project.updated_at.isoformat()
                 if project.updated_at
                 else None,

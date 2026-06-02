@@ -50,6 +50,24 @@ describe("API_ENDPOINTS", () => {
     );
   });
 
+  it("generates CAROUSEL_PREVIEW_BLOG URL", () => {
+    expect(API_ENDPOINTS.CAROUSEL_PREVIEW_BLOG("id1", "pt")).toBe(
+      "/api/carousels/id1/preview/blog/pt",
+    );
+  });
+
+  it("generates CAROUSEL_PREVIEW_DESIGN URL", () => {
+    expect(API_ENDPOINTS.CAROUSEL_PREVIEW_DESIGN("id1", "en")).toBe(
+      "/api/carousels/id1/preview/design/en",
+    );
+  });
+
+  it("generates CAROUSEL_PREVIEW_IMAGE URL", () => {
+    expect(API_ENDPOINTS.CAROUSEL_PREVIEW_IMAGE("id1", "slide_1.jpg")).toBe(
+      "/api/carousels/id1/preview/images/slide_1.jpg",
+    );
+  });
+
   it("preserves DOCUMENTS endpoint", () => {
     expect(API_ENDPOINTS.DOCUMENTS).toBe("/api/documents");
   });
@@ -69,11 +87,15 @@ describe("ROUTE_PATHS", () => {
   });
 
   it("defines CHAT", () => {
-    expect(ROUTE_PATHS.CHAT).toBe("/chat");
+    expect(ROUTE_PATHS.CHAT).toBe("/dashboard/chat");
+  });
+
+  it("defines PUBLIC_CHAT", () => {
+    expect(ROUTE_PATHS.PUBLIC_CHAT).toBe("/chat");
   });
 
   it("defines KNOWLEDGE", () => {
-    expect(ROUTE_PATHS.KNOWLEDGE).toBe("/knowledge");
+    expect(ROUTE_PATHS.KNOWLEDGE).toBe("/dashboard/knowledge");
   });
 
   it("defines BLOG", () => {

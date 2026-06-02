@@ -163,6 +163,7 @@ describe("server-fetch", () => {
     });
 
     it("returns null on non-ok blog response", async () => {
+      // Scenario: Admin sees 404 on public blog page for draft carousel
       vi.spyOn(globalThis, "fetch").mockImplementation(
         (input: RequestInfo | URL) => {
           const url = String(input);

@@ -1,15 +1,27 @@
 """Generate carousel tool for the RAG agent."""
 
-from langchain_core.tools import tool
+from collections.abc import Awaitable, Callable
 
+from langchain_core.tools import BaseTool, tool
+
+from rag_backend.agents.input_sanitizer import sanitize_llm_input
 from rag_backend.domain.models import CarouselProject, CarouselTheme
-from rag_backend.domain.protocols import CarouselAgent, CarouselRepository
+from rag_backend.domain.protocols import CarouselRepository
+
+from .access import CarouselToolAccessContext
+
+WorkflowStartResult = str
+WorkflowStarter = Callable[
+    [str, str, str, str, list[str]], Awaitable[WorkflowStartResult]
+]
 
 
 def build_generate_carousel_tool(
-    carousel_agent: CarouselAgent,
     carousel_repository: CarouselRepository,
-) -> ...:
+    access: CarouselToolAccessContext,
+    *,
+    start_editorial_workflow: WorkflowStarter | None = None,
+) -> BaseTool:
     """Return the generate_carousel tool closure."""
 
     @tool
@@ -21,51 +33,44 @@ def build_generate_carousel_tool(
         language: str = "pt-BR",
         sources: list[str] | None = None,
     ) -> str:
-        """Generate an Instagram carousel and blog post with full 7-phase pipeline.
-
-        Creates research-backed carousel slides, bilingual blog content (pt-BR + en),
-        visual design tokens, images, and an Instagram caption.
+        """Create a carousel project and start the editorial workflow pipeline.
 
         Use when the user says "create a carousel", "create a social media post",
         "generate carousel slides", or "make an Instagram post".
-
-        Args:
-            topic: The main topic for the carousel content
-            audience: Target audience (e.g., "software developers, AI engineers")
-            niche: Content niche (e.g., "AI/Tech", "Cybersecurity")
-            theme: Visual theme. Options: cybersecurity, ai_competition,
-                   developer_skills, source_code, social_engineering, auto
-            language: Primary language (default: pt-BR for Brazilian Portuguese)
-            sources: Optional list of source URLs to research
         """
         theme_enum = CarouselTheme(theme)
+        safe_topic = sanitize_llm_input(topic)
+        safe_audience = sanitize_llm_input(audience)
+        safe_niche = sanitize_llm_input(niche)
         project = CarouselProject(
-            topic=topic,
-            audience=audience,
-            niche=niche,
+            topic=safe_topic,
+            audience=safe_audience,
+            niche=safe_niche,
             theme=theme_enum,
             language=language,
+            owner_id=access.owner_user_id,
         )
 
         created = await carousel_repository.create_project(project)
-        result = await carousel_agent.execute_pipeline(created.id, seed_urls=sources)
-
-        slides = await carousel_repository.get_slides_by_project(result.id)
+        source_urls = sources or []
+        if start_editorial_workflow is not None:
+            workflow_summary = await start_editorial_workflow(
+                str(created.id),
+                safe_topic,
+                safe_audience,
+                safe_topic,
+                source_urls,
+            )
+            return (
+                f"Carousel project created and editorial workflow started.\n"
+                f"Project ID: {created.id}\n"
+                f"{workflow_summary}"
+            )
         return (
-            f"Carousel generation complete!\n"
-            f"Project ID: {result.id}\n"
-            f"Status: {result.status.value}\n"
-            f"Title: {result.title or topic}\n"
-            f"Slides: {len(slides)}\n"
-            f"Blog available: {'Yes' if result.blog_markdown else 'No'}\n"
-            f"Caption available: {'Yes' if result.caption else 'No'}\n"
-            f"Design tokens: {'Yes' if result.design_tokens else 'No'}\n\n"
-            f"Access the carousel content via:\n"
-            f"  GET /api/carousels/{result.id}/blog (default pt-BR)\n"
-            f"  GET /api/carousels/{result.id}/blog/pt\n"
-            f"  GET /api/carousels/{result.id}/blog/en\n"
-            f"  GET /api/carousels/{result.id}/design\n"
-            f"  GET /api/carousels/{result.id}/slides"
+            f"Carousel project created.\n"
+            f"Project ID: {created.id}\n"
+            f"Start the editorial workflow via:\n"
+            f"  POST /api/carousels/{created.id}/workflow/start"
         )
 
     return generate_carousel

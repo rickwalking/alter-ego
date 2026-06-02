@@ -55,5 +55,16 @@ export interface EditorialWorkflowState {
   research_findings: Record<string, unknown>[];
   outline: Record<string, unknown>[];
   slide_drafts: Record<string, unknown>[];
+  image_assets?: string[];
+  design_applied?: boolean;
+  phase_progress?: Record<string, unknown> | null;
+  rubric_scores?: Record<string, unknown>;
+  caption?: string;
+  blog_markdown?: string;
+  linkedin_post_pt?: string;
+  linkedin_post_en?: string;
   status: string;
+  workflow_status?: string;
+  persona_scores?: Record<string, unknown>;
+  lock_version?: number;
 }

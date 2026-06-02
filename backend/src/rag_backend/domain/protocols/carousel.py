@@ -1,14 +1,22 @@
 """Protocols for carousel workflow services."""
 
-from collections.abc import AsyncIterator, Mapping
+from collections.abc import Mapping
+from dataclasses import dataclass
 from typing import Protocol
 from uuid import UUID
 
-from rag_backend.domain.models import (
-    CarouselProject,
-    ResearchSourceType,
-)
-from rag_backend.domain.types import PipelineEvent
+from rag_backend.domain.models import CarouselProject, ResearchSourceType
+
+
+@dataclass(frozen=True)
+class ExportConfig:
+    """Configuration for carousel slide export."""
+
+    width: int = 1080
+    height: int = 1350
+    css_overrides: str | None = None
+    quality: int = 95
+    hd: bool = False
 
 
 class ImageGenerationService(Protocol):
@@ -56,8 +64,7 @@ class CarouselExportService(Protocol):
         self,
         html_content: str,
         output_dir: str,
-        width: int = 1080,
-        height: int = 1350,
+        config: ExportConfig | None = None,
     ) -> list[str]: ...
 
 
@@ -71,31 +78,8 @@ class ResearchTool(Protocol):
     ) -> list[dict[str, str]]: ...
 
 
-class CarouselAgent(Protocol):
-    """Protocol for the carousel content generation sub-agent.
-
-    Orchestrates the full carousel creation pipeline from research to export.
-    """
-
-    async def execute_pipeline(
-        self,
-        project_id: UUID,
-        seed_urls: list[str] | None = None,
-    ) -> CarouselProject: ...
-
-    async def resume_pipeline(self, project_id: UUID) -> CarouselProject: ...
-
-    def stream_pipeline(
-        self,
-        project_id: UUID,
-        seed_urls: list[str] | None = None,
-    ) -> AsyncIterator[PipelineEvent]: ...
-
-    def start_pipeline(
-        self,
-        project_id: UUID,
-        seed_urls: list[str] | None = None,
-    ) -> None: ...
+class CarouselRefinementService(Protocol):
+    """Protocol for carousel refinement operations (copy, design, re-export)."""
 
     async def re_render_slides(self, project_id: UUID) -> CarouselProject: ...
 

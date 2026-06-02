@@ -1,12 +1,10 @@
 #!/usr/bin/env python3
-"""Targeted mutation testing for carousel pipeline changes.
-
-This script manually applies mutations to the two files we modified
-(carousel_agent.py and graph.py) and runs the relevant unit tests
-to verify that our tests kill the mutants.
+"""Targeted mutation testing for carousel editorial workflow modules.
 
 Run with: uv run python scripts/mutation_test.py
 """
+
+from __future__ import annotations
 
 import subprocess
 import sys
@@ -14,52 +12,49 @@ from pathlib import Path
 
 BACKEND_DIR = Path(__file__).parent.parent
 SRC_DIR = BACKEND_DIR / "src"
-TEST_FILE = BACKEND_DIR / "tests" / "unit" / "application" / "test_carousel_graph.py"
+TEST_FILE = (
+    BACKEND_DIR / "tests" / "unit" / "agents" / "test_carousel_workflow_phases.py"
+)
 
 MUTATIONS = [
-    # --- carousel_agent.py mutations ---
     {
-        "file": "rag_backend/application/services/carousel_agent.py",
-        "name": "stream_checkpoint: skip check (config is None)",
-        "find": "        if config is not None:\n            try:\n                snapshot = await graph.aget_state(config)\n                has_checkpoint = snapshot is not None and bool(snapshot.values)\n            except Exception:\n                has_checkpoint = False",
-        "replace": "        if config is None:\n            try:\n                snapshot = await graph.aget_state(config)\n                has_checkpoint = snapshot is not None and bool(snapshot.values)\n            except Exception:\n                has_checkpoint = False",
-        "tests_should_kill": ["test_stream_pipeline_resumes_from_checkpoint"],
+        "file": "rag_backend/application/services/carousel/workflow_sse_hub.py",
+        "name": "SSE hub: skip keepalive marker on idle timeout",
+        "find": "                    yield {SSE_EVENT_KEY: SSE_EVENT_KEEPALIVE}",
+        "replace": "                    continue",
+        "tests_should_kill": [
+            "test_mutation_keepalive_marker_is_distinct_from_progress"
+        ],
+        "test_file": "tests/unit/application/test_mutation_sse_workflow.py",
     },
     {
-        "file": "rag_backend/application/services/carousel_agent.py",
-        "name": "stream_checkpoint: force has_checkpoint=True always",
-        "find": "        has_checkpoint = False",
-        "replace": "        has_checkpoint = True",
-        "tests_should_kill": ["test_stream_pipeline_yields_progress_events"],
+        "file": "rag_backend/application/services/carousel/editorial_workflow_support.py",
+        "name": "SSE publish: drop review_required at human gate",
+        "find": "    if phase_status == PHASE_STATUS_AWAITING_HUMAN:",
+        "replace": "    if phase_status == PHASE_STATUS_FAILED:",
+        "tests_should_kill": ["test_mutation_review_required_emitted_at_human_gate"],
+        "test_file": "tests/unit/application/test_mutation_sse_workflow.py",
     },
     {
-        "file": "rag_backend/application/services/carousel_agent.py",
-        "name": "stream_checkpoint: swap ternary (always resume)",
-        "find": "            stream_input = None if has_checkpoint else initial_state",
-        "replace": "            stream_input = initial_state if has_checkpoint else None",
-        "tests_should_kill": ["test_stream_pipeline_resumes_from_checkpoint"],
-    },
-    # --- graph.py mutations ---
-    {
-        "file": "rag_backend/application/services/carousel/graph.py",
-        "name": "persist_slides: empty existing lookup",
-        "find": "        existing_by_number = {s.slide_number: s for s in existing_slides}",
-        "replace": "        existing_by_number = {}",
-        "tests_should_kill": ["test_persist_slides_is_idempotent_on_resume"],
+        "file": "rag_backend/agents/carousel_workflow_nodes.py",
+        "name": "review_updates: approve returns awaiting_human",
+        "find": '        return {"phase_status": PHASE_STATUS_APPROVED}',
+        "replace": '        return {"phase_status": PHASE_STATUS_AWAITING_HUMAN}',
+        "tests_should_kill": ["test_approve_returns_approved_status"],
     },
     {
-        "file": "rag_backend/application/services/carousel/graph.py",
-        "name": "persist_slides: invert existing check",
-        "find": "            if existing:",
-        "replace": "            if not existing:",
-        "tests_should_kill": ["test_persist_slides_is_idempotent_on_resume"],
+        "file": "rag_backend/agents/carousel_workflow_graph.py",
+        "name": "route_after_final_review: ignore send-back target",
+        "find": "        return target",
+        "replace": "        return _ROUTE_RETRY",
+        "tests_should_kill": ["test_route_after_final_review_send_back_to_content"],
     },
     {
-        "file": "rag_backend/application/services/carousel/graph.py",
-        "name": "persist_slides: skip update_slide call",
-        "find": "                await deps.repo.update_slide(updated)",
-        "replace": "                pass  # skipped update",
-        "tests_should_kill": ["test_persist_slides_is_idempotent_on_resume"],
+        "file": "rag_backend/application/services/carousel/refinement_service.py",
+        "name": "re_render: skip bilingual export",
+        "find": "        await self._phase6_bilingual_export(",
+        "replace": "        pass  # skipped export\n        # await self._phase6_bilingual_export(",
+        "tests_should_kill": ["test_re_render_writes_pdf_and_bumps_updated_at"],
     },
 ]
 
@@ -70,19 +65,26 @@ def apply_mutation(source: str, find: str, replace: str) -> str:
     return source.replace(find, replace, 1)
 
 
-def run_tests(test_filter: list[str]) -> tuple[int, str]:
+def run_tests(
+    test_filter: list[str],
+    extra_test_path: Path | None = None,
+    test_file: Path | None = None,
+) -> tuple[int, str]:
     """Run pytest with the given test filter. Returns (exit_code, output)."""
+    target = test_file or TEST_FILE
     cmd = [
         "uv",
         "run",
         "pytest",
-        str(TEST_FILE),
+        str(target),
         "-v",
         "--tb=short",
         "-x",
     ]
-    for t in test_filter:
-        cmd.extend(["-k", t])
+    if extra_test_path is not None:
+        cmd.append(str(extra_test_path))
+    for test_name in test_filter:
+        cmd.extend(["-k", test_name])
 
     result = subprocess.run(
         cmd,
@@ -100,8 +102,12 @@ def main() -> int:
     errors = 0
 
     print("=" * 60)
-    print("Targeted Mutation Tests — Carousel Pipeline")
+    print("Targeted Mutation Tests — Carousel Editorial Workflow")
     print("=" * 60)
+
+    re_render_tests = (
+        BACKEND_DIR / "tests" / "unit" / "application" / "test_re_render_slides.py"
+    )
 
     for mutation in MUTATIONS:
         file_path = SRC_DIR / mutation["file"]
@@ -109,17 +115,30 @@ def main() -> int:
 
         try:
             mutated = apply_mutation(original, mutation["find"], mutation["replace"])
-        except ValueError as e:
+        except ValueError as exc:
             print(f"\n🤔 {mutation['name']}")
-            print(f"   Could not apply mutation: {e}")
+            print(f"   Could not apply mutation: {exc}")
             errors += 1
             continue
 
-        # Write mutant
         file_path.write_text(mutated)
 
+        extra = (
+            re_render_tests
+            if mutation["file"].endswith("refinement_service.py")
+            else None
+        )
+        mutation_test_file = BACKEND_DIR / mutation.get(
+            "test_file",
+            "tests/unit/agents/test_carousel_workflow_phases.py",
+        )
+
         try:
-            exit_code, output = run_tests(mutation["tests_should_kill"])
+            exit_code, output = run_tests(
+                mutation["tests_should_kill"],
+                extra,
+                mutation_test_file,
+            )
             if exit_code != 0:
                 print(f"\n🎉 {mutation['name']}")
                 print("   KILLED — tests failed as expected")
@@ -129,12 +148,11 @@ def main() -> int:
                 print("   SURVIVED — tests passed despite mutation")
                 print(f"   Output: {output[:300]}...")
                 survived += 1
-        except Exception as e:
+        except Exception as exc:
             print(f"\n🙁 {mutation['name']}")
-            print(f"   ERROR running tests: {e}")
+            print(f"   ERROR running tests: {exc}")
             errors += 1
         finally:
-            # Restore original
             file_path.write_text(original)
 
     print("\n" + "=" * 60)

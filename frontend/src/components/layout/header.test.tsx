@@ -112,10 +112,10 @@ describe("Header Component", () => {
     });
 
     describe("When the user is anonymous", () => {
-      it("Then Chat and Blog links should be visible, others hidden", () => {
+      it("Then Blog is visible and Chat is hidden on the blog header", () => {
         render(<Header locale="en" />);
         expect(screen.getByText("Blog")).toBeInTheDocument();
-        expect(screen.getByText("Chat")).toBeInTheDocument();
+        expect(screen.queryByText("Chat")).not.toBeInTheDocument();
         expect(screen.queryByText("Knowledge Base")).not.toBeInTheDocument();
         expect(screen.queryByText("Create")).not.toBeInTheDocument();
         expect(screen.queryByText("Admin")).not.toBeInTheDocument();
@@ -149,6 +149,12 @@ describe("Header Component", () => {
         render(<Header locale="en" />);
         expect(screen.getByText("Logout")).toBeInTheDocument();
       });
+
+      it("Then the Chat link should link to /dashboard/chat", () => {
+        render(<Header locale="en" />);
+        const chatLink = screen.getByText("Chat").closest("a");
+        expect(chatLink).toHaveAttribute("href", "/dashboard/chat");
+      });
     });
 
     describe("When the user is an admin", () => {
@@ -165,16 +171,16 @@ describe("Header Component", () => {
         expect(screen.getByText("Admin")).toBeInTheDocument();
       });
 
-      it("Then the Chat link should link to /chat", () => {
+      it("Then the Chat link should link to /dashboard/chat when authenticated", () => {
         render(<Header locale="en" />);
         const chatLink = screen.getByText("Chat").closest("a");
-        expect(chatLink).toHaveAttribute("href", "/chat");
+        expect(chatLink).toHaveAttribute("href", "/dashboard/chat");
       });
 
-      it("Then the Knowledge Base link should link to /knowledge", () => {
+      it("Then the Knowledge Base link should link to /dashboard/knowledge", () => {
         render(<Header locale="en" />);
         const knowledgeLink = screen.getByText("Knowledge Base").closest("a");
-        expect(knowledgeLink).toHaveAttribute("href", "/knowledge");
+        expect(knowledgeLink).toHaveAttribute("href", "/dashboard/knowledge");
       });
     });
 

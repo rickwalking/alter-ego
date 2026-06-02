@@ -13,7 +13,7 @@ _CODE_RE = re.compile(r"`([^`\n]+?)`")
 
 
 def _render_inline(text: str) -> str:
-    escaped = html.escape(text, quote=False)
+    escaped = html.escape(text, quote=True)
     without_dashes = _EM_DASH_RE.sub(". ", escaped)
     with_code = _CODE_RE.sub(r'<span class="code-tag">\1</span>', without_dashes)
     return _BOLD_RE.sub(r"<strong>\1</strong>", with_code)
@@ -93,7 +93,7 @@ def _render_feature_grid(items: list[dict[str, str]], *, columns: int = 1) -> st
     )
     cards: list[str] = [
         '<div class="feature-item">'
-        f'<div class="feature-icon">{html.escape(item["icon"], quote=False)}</div>'
+        f'<div class="feature-icon">{html.escape(item["icon"], quote=True)}</div>'
         '<div class="feature-text">'
         f'<div class="feature-title">{_render_inline(item["title"])}</div>'
         f'<div class="feature-body">{_render_inline(item["body"])}</div>'

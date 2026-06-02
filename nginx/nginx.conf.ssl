@@ -148,6 +148,21 @@ http {
             proxy_set_header X-Forwarded-Host $host;
         }
 
+        # Backend API — long-running editorial workflow resume/stream
+        location ~ ^/api/carousels/[^/]+/workflow/(resume|stream)$ {
+            limit_req zone=api burst=20 nodelay;
+            proxy_read_timeout 300s;
+            proxy_send_timeout 300s;
+            proxy_pass http://backend;
+            proxy_http_version 1.1;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $real_scheme;
+            proxy_set_header X-Forwarded-Host $host;
+            proxy_buffering off;
+        }
+
         # Backend API
         location /api/ {
             limit_req zone=api burst=20 nodelay;

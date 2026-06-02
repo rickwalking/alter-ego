@@ -4,6 +4,10 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import type { CarouselProjectResponse } from "@/schemas/carousel";
 import { API_ENDPOINTS } from "@/constants/api";
+import {
+  appendCacheBuster,
+  slideUrlsForPublishPanel,
+} from "@/lib/carousel-media-url";
 import { CaptionEditor, countHashtags } from "./caption-editor";
 import { HorizontalCarouselViewer } from "./horizontal-carousel-viewer";
 
@@ -50,16 +54,22 @@ function slideUrlsFromProject(
     tokens?.images?.rendered_slides_pt ?? tokens?.images?.slides ?? [];
   const enSlides = tokens?.images?.rendered_slides_en ?? ptSlides;
   const slides = language === "en" ? enSlides : ptSlides;
-  const v = encodeURIComponent(project.updated_at);
-  return slides.map((path) => `${path}?v=${v}`);
+  return slideUrlsForPublishPanel(
+    project.id,
+    slides,
+    language,
+    project.updated_at,
+  );
 }
 
 function pdfUrl(
   project: CarouselProjectResponse,
   language: "pt" | "en",
 ): string {
-  const v = encodeURIComponent(project.updated_at);
-  return `${API_ENDPOINTS.CAROUSEL_PDF(project.id)}?lang=${language}&v=${v}`;
+  return appendCacheBuster(
+    `${API_ENDPOINTS.CAROUSEL_PDF(project.id)}?lang=${language}`,
+    project.updated_at,
+  );
 }
 
 function createEditorState(project: CarouselProjectResponse): EditorState {

@@ -2,7 +2,7 @@ Feature: Frontend Authentication and Route Guards
 
   Scenario: Unauthenticated user is redirected from dashboard
     Given I am not logged in
-    When I navigate to "/chat"
+    When I navigate to "/dashboard/chat"
     Then I should be redirected to "/login"
 
   Scenario: Unauthenticated user can read public blog
