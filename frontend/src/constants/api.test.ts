@@ -73,7 +73,7 @@ describe("API_ENDPOINTS", () => {
   });
 
   it("preserves CONVERSATIONS endpoint with trailing slash", () => {
-    expect(API_ENDPOINTS.CONVERSATIONS).toBe("/api/conversations");
+    expect(API_ENDPOINTS.CONVERSATIONS).toBe("/api/conversations/");
   });
 
   it("preserves SEARCH endpoint", () => {
