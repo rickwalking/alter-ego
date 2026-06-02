@@ -1083,7 +1083,7 @@ function HomePageContent({
                     boxShadow: `0 0 8px ${CYAN}`,
                   }}
                 />
-                About
+                {t("about.label")}
               </div>
               <h2
                 style={{
@@ -1094,7 +1094,8 @@ function HomePageContent({
                   color: TEXT,
                 }}
               >
-                Behind the <span style={{ color: MAGENTA }}>Code</span>
+                {t("about.titlePrefix")}
+                <span style={{ color: MAGENTA }}>{t("about.titleHighlight")}</span>
               </h2>
             </div>
 
@@ -1148,7 +1149,8 @@ function HomePageContent({
                     backdropFilter: "blur(8px)",
                   }}
                 >
-                  <span style={{ fontWeight: 700 }}>12+</span> yrs engineering
+                  <span style={{ fontWeight: 700 }}>{t("about.badgeYears")}</span>{" "}
+                  {t("about.badgeLabel")}
                 </div>
               </div>
               <div>
@@ -1160,7 +1162,7 @@ function HomePageContent({
                     letterSpacing: "-0.02em",
                   }}
                 >
-                  Hi, I&apos;m Pedro Marins 👋
+                  {t("about.greeting")}
                 </h3>
                 <p
                   style={{
@@ -1170,10 +1172,17 @@ function HomePageContent({
                     marginBottom: "16px",
                   }}
                 >
-                  I&apos;m a software engineer with over 12 years of experience
-                  building products across fintech, developer tools, and AI. I
-                  specialize in full-stack development, system architecture, and
-                  creating content that makes complex tech topics accessible.
+                  {t("about.paragraph1")}
+                </p>
+                <p
+                  style={{
+                    fontSize: "15px",
+                    color: TEXT_MUTED,
+                    lineHeight: 1.8,
+                    marginBottom: "16px",
+                  }}
+                >
+                  {t("about.paragraph2")}
                 </p>
                 <p
                   style={{
@@ -1183,22 +1192,35 @@ function HomePageContent({
                     marginBottom: "24px",
                   }}
                 >
-                  This project is my{" "}
-                  <strong style={{ color: TEXT }}>Alter-Ego</strong> — an AI
-                  system that knows my career, skills, and experience. It uses
-                  RAG (Retrieval-Augmented Generation) with a knowledge graph to
-                  answer questions about my work, generate carousels and blog
-                  posts, and maintain a consistent voice across all content.
+                  {t("about.paragraph3")}
                 </p>
-                <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
+                <p
+                  style={{
+                    fontSize: "15px",
+                    color: TEXT_MUTED,
+                    lineHeight: 1.8,
+                    marginBottom: "24px",
+                  }}
+                >
+                  {t("about.paragraph4")}
+                </p>
+                <div
+                  style={{
+                    display: "flex",
+                    gap: "12px",
+                    flexWrap: "wrap",
+                    marginBottom: "24px",
+                  }}
+                >
                   {[
                     "Python",
                     "TypeScript",
+                    "Angular",
                     "React",
-                    "FastAPI",
+                    "Node.js",
                     "LangChain",
                     "PostgreSQL",
-                    "Kubernetes",
+                    "AWS",
                     "AI/ML",
                   ].map((skill) => (
                     <span
@@ -1216,6 +1238,60 @@ function HomePageContent({
                     >
                       {skill}
                     </span>
+                  ))}
+                </div>
+                {/* Social Links */}
+                <div style={{ display: "flex", gap: "12px" }}>
+                  {[
+                    {
+                      label: t("about.socialLinkedIn"),
+                      href: "https://www.linkedin.com/in/pedro-marins-179971ba",
+                    },
+                    {
+                      label: t("about.socialGitHub"),
+                      href: "https://github.com/rickwalking",
+                    },
+                    {
+                      label: t("about.socialInstagram"),
+                      href: "https://www.instagram.com/pedromarins.ai",
+                    },
+                  ].map((link) => (
+                    <a
+                      key={link.label}
+                      href={link.href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "6px",
+                        padding: "8px 16px",
+                        borderRadius: "6px",
+                        fontSize: "13px",
+                        fontWeight: 600,
+                        textDecoration: "none",
+                        color: CYAN,
+                        background: "rgba(0,212,255,0.08)",
+                        border: `1px solid rgba(0,212,255,0.15)`,
+                        transition: "all 0.2s ease",
+                      }}
+                    >
+                      <svg
+                        width="14"
+                        height="14"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                        <polyline points="15 3 21 3 21 9" />
+                        <line x1="10" y1="14" x2="21" y2="3" />
+                      </svg>
+                      {link.label}
+                    </a>
                   ))}
                 </div>
               </div>

@@ -83,6 +83,21 @@
         "title": "Visual Carousels",
         "description": "Browse visually rich Instagram-style carousels that break down complex tech topics into beautiful, easy-to-digest slides."
       }
+    },
+    "about": {
+      "label": "About",
+      "titlePrefix": "Behind the ",
+      "titleHighlight": "Code",
+      "greeting": "Hi, I'm Pedro Marins 👋",
+      "paragraph1": "I'm an AI Solutions Architect and full stack engineer based in Rio de Janeiro, Brazil, with more than 8 years of experience designing and shipping production grade applications.",
+      "paragraph2": "I specialize in Angular (7 years), TypeScript, Python, and LLM orchestration with LangChain and LangGraph. My current focus is building RAG pipelines, multi agent systems, and AI native development workflows for enterprise clients.",
+      "paragraph3": "My background spans full stack development, system architecture, and technical leadership. I have led teams building Angular applications serving millions of users, built Node.js microservices on AWS, and implemented serverless architectures for US based clients.",
+      "paragraph4": "This project is my Alter Ego — an intelligent assistant powered by RAG that knows my entire career, skills, and projects. It answers questions about my work, generates content in my voice, and maintains consistency across everything I publish.",
+      "badgeYears": "8+",
+      "badgeLabel": "yrs engineering",
+      "socialLinkedIn": "LinkedIn",
+      "socialGitHub": "GitHub",
+      "socialInstagram": "Instagram"
     }
   },
   "chat": {

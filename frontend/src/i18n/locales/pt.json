@@ -83,6 +83,21 @@
         "title": "Carrosséis Visuais",
         "description": "Navegue por carrosséis visuais no estilo Instagram que quebram tópicos complexos de tecnologia em slides bonitos e fáceis de entender."
       }
+    },
+    "about": {
+      "label": "Sobre",
+      "titlePrefix": "Por Trás do ",
+      "titleHighlight": "Código",
+      "greeting": "Oi, eu sou o Pedro Marins 👋",
+      "paragraph1": "Sou Arquiteto de Soluções de IA e engenheiro full stack no Rio de Janeiro, Brasil, com mais de 8 anos de experiência projetando e entregando aplicações em produção.",
+      "paragraph2": "Especializo me em Angular (7 anos), TypeScript, Python e orquestração de LLMs com LangChain e LangGraph. Meu foco atual é construir pipelines RAG, sistemas multi agente e fluxos de desenvolvimento nativos de IA para clientes enterprise.",
+      "paragraph3": "Minha trajetória abrange desenvolvimento full stack, arquitetura de sistemas e liderança técnica. Já liderei equipes construindo aplicações Angular que atendiam milhões de usuários, construí microserviços Node.js na AWS e implementei arquiteturas serverless para clientes dos Estados Unidos.",
+      "paragraph4": "Este projeto é meu Alter Ego — um assistente inteligente baseado em RAG que conhece toda a minha carreira, habilidades e projetos. Ele responde perguntas sobre meu trabalho, gera conteúdo na minha voz e mantém consistência em tudo que publico.",
+      "badgeYears": "8+",
+      "badgeLabel": "anos de engenharia",
+      "socialLinkedIn": "LinkedIn",
+      "socialGitHub": "GitHub",
+      "socialInstagram": "Instagram"
     }
   },
   "chat": {
