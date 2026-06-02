@@ -1,0 +1,20 @@
+skeptical_reviewers:
+  - id: codex
+    label: OpenAI Codex CLI
+    command_hint: "codex exec (read-only) with prompts/cold-critic-system.md + blind plan packet"
+  - id: opencode
+    label: OpenCode
+    command_hint: "opencode run with plan-only prompt file"
+  - id: claude-code
+    label: Claude Code
+    command_hint: "claude -p with cold-critic-system.md; Read/Grep/Glob only"
+
+research_source_priority:
+  - repo_adrs_and_docs
+  - official_vendor_docs
+  - context7
+  - github
+  - engineering_articles
+  - reddit_gist_weak_signal
+
+max_research_rounds: 3

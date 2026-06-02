@@ -1,0 +1,37 @@
+name: Agent Ticket Hygiene
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.agent/**'
+      - 'scripts/agent_tasks/**'
+      - '.github/workflows/agent-ticket-hygiene.yml'
+  pull_request:
+    paths:
+      - '.agent/**'
+      - 'scripts/agent_tasks/**'
+      - '.github/workflows/agent-ticket-hygiene.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate-tickets:
+    name: agent / validate tickets
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: "0.6.x"
+
+      - name: Validate all tickets
+        run: uv run python scripts/agent_tasks/validate_all_tickets.py
+        working-directory: .
+
+      - name: Unit tests (agent_tasks)
+        run: uv run pytest tests/unit/agent_tasks/ -q
+        working-directory: backend
