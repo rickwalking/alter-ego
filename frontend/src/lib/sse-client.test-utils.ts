@@ -8,9 +8,9 @@
 /**
  * Create a mock ReadableStream reader that yields Uint8Array chunks.
  */
-export function createMockReader(
-  chunks: Uint8Array[],
-): { read: () => Promise<ReadableStreamReadResult<Uint8Array>> } {
+export function createMockReader(chunks: Uint8Array[]): {
+  read: () => Promise<ReadableStreamReadResult<Uint8Array>>;
+} {
   let index = 0;
   return {
     read: async () => {
@@ -27,14 +27,9 @@ export function createMockReader(
 /**
  * Create a mock Response for SSE streaming tests.
  */
-export function createSseResponse(
-  chunks: string[],
-  status = 200,
-): Response {
+export function createSseResponse(chunks: string[], status = 200): Response {
   const encoder = new TextEncoder();
-  const reader = createMockReader(
-    chunks.map((chunk) => encoder.encode(chunk)),
-  );
+  const reader = createMockReader(chunks.map((chunk) => encoder.encode(chunk)));
 
   return {
     ok: status >= 200 && status < 300,

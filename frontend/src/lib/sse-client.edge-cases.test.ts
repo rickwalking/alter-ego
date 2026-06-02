@@ -31,9 +31,7 @@ describe("streamSseEvents edge cases", () => {
   it("dispatches event even without id field", async () => {
     const mockFetch = vi.mocked(fetch);
     mockFetch.mockResolvedValue(
-      createSseResponse([
-        'data: {"type":"token","content":"NoId"}\n\n',
-      ]),
+      createSseResponse(['data: {"type":"token","content":"NoId"}\n\n']),
     );
 
     const events: SseEvent[] = [];
@@ -61,9 +59,7 @@ describe("streamSseEvents edge cases", () => {
   it("falls back to raw data when JSON parsing fails", async () => {
     const mockFetch = vi.mocked(fetch);
     mockFetch.mockResolvedValue(
-      createSseResponse([
-        "id: 1\ndata: not-valid-json\n\n",
-      ]),
+      createSseResponse(["id: 1\ndata: not-valid-json\n\n"]),
     );
 
     const events: SseEvent[] = [];
@@ -90,7 +86,7 @@ describe("streamSseEvents edge cases", () => {
     const mockFetch = vi.mocked(fetch);
     mockFetch.mockResolvedValue(
       createSseResponse([
-        "id: 1\r\ndata: {\"type\":\"token\",\"content\":\"CRLF\"}\r\n\r\n",
+        'id: 1\r\ndata: {"type":"token","content":"CRLF"}\r\n\r\n',
       ]),
     );
 
@@ -167,57 +163,51 @@ describe("streamSseEvents edge cases", () => {
   //   Then no error callback is called
   it("silently handles mid-stream abort signal", async () => {
     const abortController = new AbortController();
-    vi.mocked(fetch).mockImplementationOnce(
-      () => {
-        const encoder = new TextEncoder();
-        const chunks = [
-          encoder.encode(
-            'id: 1\ndata: {"type":"token","content":"Hello"}\n\n',
-          ),
-        ];
+    vi.mocked(fetch).mockImplementationOnce(() => {
+      const encoder = new TextEncoder();
+      const chunks = [
+        encoder.encode('id: 1\ndata: {"type":"token","content":"Hello"}\n\n'),
+      ];
 
-        return Promise.resolve({
-          ok: true,
-          status: 200,
-          headers: new Headers({ "content-type": "text/event-stream" }),
-          body: {
-            getReader: () => {
-              let index = 0;
-              let aborted = false;
-              const reader = {
-                read: async () => {
-                  if (index < chunks.length) {
-                    const value = chunks[index]!;
-                    index++;
-                    return { done: false, value };
-                  }
-                  // Hang until aborted
-                  await new Promise<void>((resolve) => {
-                    const onAbort = () => {
-                      aborted = true;
-                      resolve();
-                    };
-                    abortController.signal.addEventListener(
-                      "abort",
-                      onAbort,
-                      { once: true },
-                    );
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        headers: new Headers({ "content-type": "text/event-stream" }),
+        body: {
+          getReader: () => {
+            let index = 0;
+            let aborted = false;
+            const reader = {
+              read: async () => {
+                if (index < chunks.length) {
+                  const value = chunks[index]!;
+                  index++;
+                  return { done: false, value };
+                }
+                // Hang until aborted
+                await new Promise<void>((resolve) => {
+                  const onAbort = () => {
+                    aborted = true;
+                    resolve();
+                  };
+                  abortController.signal.addEventListener("abort", onAbort, {
+                    once: true,
                   });
-                  if (aborted) {
-                    throw new DOMException(
-                      "The operation was aborted",
-                      "AbortError",
-                    );
-                  }
-                  return { done: true, value: undefined };
-                },
-              };
-              return reader;
-            },
-          } as unknown as ReadableStream<Uint8Array>,
-        } as Response);
-      },
-    );
+                });
+                if (aborted) {
+                  throw new DOMException(
+                    "The operation was aborted",
+                    "AbortError",
+                  );
+                }
+                return { done: true, value: undefined };
+              },
+            };
+            return reader;
+          },
+        } as unknown as ReadableStream<Uint8Array>,
+      } as Response);
+    });
 
     const startedPromise = streamSseEvents({
       url: "/api/conversations/abc/chat/stream",

@@ -185,7 +185,7 @@ describe("streamSseEvents", () => {
   //   Then onError is called with the content type error
   it("calls onError on unexpected content type", async () => {
     const mockFetch = vi.mocked(fetch);
-    const response = createSseResponse(['data: {}\n\n']);
+    const response = createSseResponse(["data: {}\n\n"]);
     // Override content type
     response.headers.set("content-type", "application/json");
     mockFetch.mockResolvedValue(response);
@@ -288,9 +288,7 @@ describe("streamSseEvents", () => {
   it("includes Last-Event-ID header when provided", async () => {
     const mockFetch = vi.mocked(fetch);
     mockFetch.mockResolvedValue(
-      createSseResponse([
-        'id: 2\ndata: {"type":"complete","content":""}\n\n',
-      ]),
+      createSseResponse(['id: 2\ndata: {"type":"complete","content":""}\n\n']),
     );
 
     await streamSseEvents({

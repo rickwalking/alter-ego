@@ -89,10 +89,7 @@ function createParserState(): SseParserState {
  * Returns a parsed SseEvent if a blank-line delimiter completes an event,
  * or ``null`` otherwise.
  */
-function parseSseLine(
-  line: string,
-  state: SseParserState,
-): SseEvent | null {
+function parseSseLine(line: string, state: SseParserState): SseEvent | null {
   if (line.startsWith("id: ")) {
     state.currentId = line.slice(4);
     return null;
@@ -162,10 +159,7 @@ function flushEvent(state: SseParserState): SseEvent | null {
  * Handles ``\n\n`` delimiters that may span across chunk boundaries by
  * maintaining an internal buffer. Returns an array of parsed events.
  */
-function processChunk(
-  chunk: string,
-  state: SseParserState,
-): SseEvent[] {
+function processChunk(chunk: string, state: SseParserState): SseEvent[] {
   state.buffer += chunk;
 
   const events: SseEvent[] = [];
