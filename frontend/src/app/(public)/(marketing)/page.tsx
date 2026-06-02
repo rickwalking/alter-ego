@@ -1095,7 +1095,9 @@ function HomePageContent({
                 }}
               >
                 {t("about.titlePrefix")}
-                <span style={{ color: MAGENTA }}>{t("about.titleHighlight")}</span>
+                <span style={{ color: MAGENTA }}>
+                  {t("about.titleHighlight")}
+                </span>
               </h2>
             </div>
 
@@ -1149,7 +1151,9 @@ function HomePageContent({
                     backdropFilter: "blur(8px)",
                   }}
                 >
-                  <span style={{ fontWeight: 700 }}>{t("about.badgeYears")}</span>{" "}
+                  <span style={{ fontWeight: 700 }}>
+                    {t("about.badgeYears")}
+                  </span>{" "}
                   {t("about.badgeLabel")}
                 </div>
               </div>

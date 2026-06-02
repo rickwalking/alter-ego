@@ -45,6 +45,9 @@ from rag_backend.infrastructure.database.conversation_repository import (
     PostgresConversationRepository,
     PostgresMessageRepository,
 )
+from rag_backend.infrastructure.logging import get_logger
+
+logger = get_logger()
 
 router = APIRouter(prefix="/conversations", tags=["conversations"])
 
@@ -92,7 +95,8 @@ def _make_conversation_service(db: AsyncSession) -> ConversationService:
     include_in_schema=False,
 )
 async def create_conversation(
-    request: ConversationCreate,
+    body: ConversationCreate,
+    http_request: Request,
     response: Response,
     user: Annotated[User | None, Depends(get_optional_user)] = None,
     db: Annotated[AsyncSession, Depends(get_session)] = None,
@@ -109,13 +113,23 @@ async def create_conversation(
             detail="Dependencies not resolved",
         )
 
+    auth_header = http_request.headers.get("authorization", "")
+    cookie_keys = list(http_request.cookies.keys())
+    logger.info(
+        "create_conversation_called",
+        is_authenticated=user is not None,
+        has_auth_header=bool(auth_header),
+        cookie_keys=cookie_keys,
+        content_length=http_request.headers.get("content-length"),
+    )
+
     service = _make_conversation_service(db)
 
-    await validate_carousel_conversation_metadata(db, request.metadata, user)
+    await validate_carousel_conversation_metadata(db, body.metadata, user)
 
     conversation = await service.create_conversation(
-        title=request.title,
-        metadata=request.metadata,
+        title=body.title,
+        metadata=body.metadata,
         user_id=user.id if user else None,
     )
     await db.commit()
