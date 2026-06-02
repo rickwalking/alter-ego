@@ -82,6 +82,28 @@ jobs:
             set -e
             cd /opt/alter-ego
 
+            # Write SSL certificates from secrets (self-healing if certs are ever lost)
+            mkdir -p nginx/ssl
+            if [ -n "${{ secrets.DO_SSL_CERT }}" ]; then
+              printf '%s' '${{ secrets.DO_SSL_CERT }}' > nginx/ssl/cert.pem
+            fi
+            if [ -n "${{ secrets.DO_SSL_KEY }}" ]; then
+              printf '%s' '${{ secrets.DO_SSL_KEY }}' > nginx/ssl/key.pem
+            fi
+            chmod 600 nginx/ssl/key.pem
+
+            # Validate certificate files exist and are non-empty
+            if [ ! -s nginx/ssl/cert.pem ]; then
+              echo "ERROR: nginx/ssl/cert.pem is missing or empty."
+              echo "Please set the DO_SSL_CERT GitHub Secret."
+              exit 1
+            fi
+            if [ ! -s nginx/ssl/key.pem ]; then
+              echo "ERROR: nginx/ssl/key.pem is missing or empty."
+              echo "Please set the DO_SSL_KEY GitHub Secret."
+              exit 1
+            fi
+
             # Create/update environment file
             cat > .env << 'EOF'
             POSTGRES_USER=${{ secrets.POSTGRES_USER }}
