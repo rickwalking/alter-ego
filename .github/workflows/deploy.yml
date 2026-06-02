@@ -44,6 +44,32 @@ jobs:
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Sync code to server
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.DO_HOST }}
+          username: ${{ secrets.DO_USER }}
+          key: ${{ secrets.DO_SSH_KEY }}
+          source: "."
+          target: "/opt/alter-ego"
+          strip_components: 0
+          rm: true
+          exclude: |
+            **/node_modules/**
+            **/.venv/**
+            **/.next/**
+            **/__pycache__/**
+            **/*.pyc
+            **/.env*
+            **/.git/**
+            **/tests/**
+            **/coverage/**
+            **/docs/**
+            **/*.md
+
       - name: Deploy to DigitalOcean via SSH
         uses: appleboy/ssh-action@master
         with:
@@ -51,10 +77,8 @@ jobs:
           username: ${{ secrets.DO_USER }}
           key: ${{ secrets.DO_SSH_KEY }}
           script: |
+            set -e
             cd /opt/alter-ego
-
-            # Pull latest code
-            git pull origin main
 
             # Create/update environment file
             cat > .env << 'EOF'
