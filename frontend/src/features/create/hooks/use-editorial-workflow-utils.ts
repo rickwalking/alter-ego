@@ -36,6 +36,9 @@ export interface WorkflowEventPayload {
   persona_scores?: Record<string, unknown>;
   caption?: string;
   blog_markdown?: string;
+  linkedin_post_pt?: string;
+  linkedin_post_en?: string;
+  workflow_status?: string;
   status?: string;
   artifact_type?: string;
   data?: unknown;
@@ -196,6 +199,9 @@ export function mergeWorkflowState(
       persona_scores: payload.persona_scores ?? prev?.persona_scores,
       caption: payload.caption ?? prev?.caption,
       blog_markdown: payload.blog_markdown ?? prev?.blog_markdown,
+      linkedin_post_pt: payload.linkedin_post_pt ?? prev?.linkedin_post_pt,
+      linkedin_post_en: payload.linkedin_post_en ?? prev?.linkedin_post_en,
+      workflow_status: payload.workflow_status ?? prev?.workflow_status,
       status: payload.status ?? prev?.status ?? "draft",
     };
   }
@@ -220,6 +226,9 @@ export function mergeWorkflowState(
     persona_scores: payload.persona_scores ?? prev?.persona_scores,
     caption: payload.caption ?? prev?.caption,
     blog_markdown: payload.blog_markdown ?? prev?.blog_markdown,
+    linkedin_post_pt: payload.linkedin_post_pt ?? prev?.linkedin_post_pt,
+    linkedin_post_en: payload.linkedin_post_en ?? prev?.linkedin_post_en,
+    workflow_status: payload.workflow_status ?? prev?.workflow_status,
     status: payload.status ?? prev?.status ?? "draft",
   };
 }

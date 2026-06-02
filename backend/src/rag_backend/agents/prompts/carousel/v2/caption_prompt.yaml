@@ -1,0 +1,32 @@
+---
+name: carousel_caption
+version: "2.0.0"
+description: "Generate Instagram caption from slide headings (Neon Shell v2.0)"
+
+template: |
+  Generate an Instagram caption for this carousel.
+
+  Title: {{ title }}
+  Slides:
+  {% for num, heading in slide_headings %}
+  Slide {{ num }}: {{ heading }}
+  {% endfor %}
+
+  Structure:
+  1. Hook (1-2 lines with emoji)
+  2. Value promise
+  3. Comment question
+  4. Double CTA (save + share)
+  5. 12-18 hashtags mixing Portuguese and English
+
+  Style: Informal Brazilian Portuguese, engaging, use emojis.
+  NO em dashes (— or –). Use periods, commas, colons, or parentheses instead.
+
+model:
+  temperature: 0.7
+  max_tokens: 512
+
+metadata:
+  author: "content-team"
+  created_at: "2026-05-30"
+  tags: ["carousel", "caption", "instagram", "neon-shell-v2"]

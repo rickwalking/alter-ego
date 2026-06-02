@@ -87,11 +87,15 @@ describe("ROUTE_PATHS", () => {
   });
 
   it("defines CHAT", () => {
-    expect(ROUTE_PATHS.CHAT).toBe("/chat");
+    expect(ROUTE_PATHS.CHAT).toBe("/dashboard/chat");
+  });
+
+  it("defines PUBLIC_CHAT", () => {
+    expect(ROUTE_PATHS.PUBLIC_CHAT).toBe("/chat");
   });
 
   it("defines KNOWLEDGE", () => {
-    expect(ROUTE_PATHS.KNOWLEDGE).toBe("/knowledge");
+    expect(ROUTE_PATHS.KNOWLEDGE).toBe("/dashboard/knowledge");
   });
 
   it("defines BLOG", () => {

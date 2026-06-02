@@ -1,9 +1,10 @@
 "use client";
+import { NeonButton } from "@/components/atoms/neon-button";
+import { NeonInput } from "@/components/atoms/neon-input";
+import { NeonLabel } from "@/components/atoms/neon-label";
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { Button, Input } from "@/components/ui";
-import { Label } from "@/components/ui/label";
 import { WORKFLOW_API } from "@/constants/workflow";
 import { authenticatedFetch } from "@/lib/authenticated-fetch";
 import type { ReviewAssignmentPayload } from "@/features/workflow/types";
@@ -60,8 +61,8 @@ export function ReviewAssignmentPanel({
     <div className="space-y-3 rounded-md border p-4">
       <h3 className="font-medium text-sm">{t("title")}</h3>
       <div className="space-y-2">
-        <Label htmlFor="reviewer-id">{t("reviewerId")}</Label>
-        <Input
+        <NeonLabel htmlFor="reviewer-id">{t("reviewerId")}</NeonLabel>
+        <NeonInput
           id="reviewer-id"
           value={reviewerId}
           onChange={(e) => setReviewerId(e.target.value)}
@@ -69,8 +70,8 @@ export function ReviewAssignmentPanel({
         />
       </div>
       <div className="space-y-2">
-        <Label htmlFor="deadline-hours">{t("deadlineHours")}</Label>
-        <Input
+        <NeonLabel htmlFor="deadline-hours">{t("deadlineHours")}</NeonLabel>
+        <NeonInput
           id="deadline-hours"
           type="number"
           min={1}
@@ -78,12 +79,12 @@ export function ReviewAssignmentPanel({
           onChange={(e) => setDeadlineHours(e.target.value)}
         />
       </div>
-      <Button
+      <NeonButton
         onClick={() => void handleAssign()}
         disabled={submitting || !reviewerId.trim()}
       >
         {submitting ? t("assigning") : t("assignNotify")}
-      </Button>
+      </NeonButton>
       {message && <p className="text-sm text-muted-foreground">{message}</p>}
     </div>
   );

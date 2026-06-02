@@ -1,10 +1,22 @@
 """Protocols for carousel workflow services."""
 
 from collections.abc import Mapping
+from dataclasses import dataclass
 from typing import Protocol
 from uuid import UUID
 
 from rag_backend.domain.models import CarouselProject, ResearchSourceType
+
+
+@dataclass(frozen=True)
+class ExportConfig:
+    """Configuration for carousel slide export."""
+
+    width: int = 1080
+    height: int = 1350
+    css_overrides: str | None = None
+    quality: int = 95
+    hd: bool = False
 
 
 class ImageGenerationService(Protocol):
@@ -52,8 +64,7 @@ class CarouselExportService(Protocol):
         self,
         html_content: str,
         output_dir: str,
-        width: int = 1080,
-        height: int = 1350,
+        config: ExportConfig | None = None,
     ) -> list[str]: ...
 
 

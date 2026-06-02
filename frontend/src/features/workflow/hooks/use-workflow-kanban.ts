@@ -18,6 +18,7 @@ export type KanbanCard = {
   topic: string;
   current_phase: string;
   phase_status: string;
+  workflow_status?: string | null;
   updated_at: string | null;
 };
 

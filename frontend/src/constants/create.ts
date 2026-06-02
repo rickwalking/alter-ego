@@ -107,8 +107,8 @@ export const STATUS_POLL_INTERVAL = 2000;
  */
 export const STALLED_THRESHOLD_MS = 30_000;
 
-/** Navigation route for create page. */
-export const CREATE_ROUTE = "/create";
+/** Navigation route for create page (neon dashboard). */
+export const CREATE_ROUTE = "/dashboard/create";
 
-/** Route pattern for create workspace. */
-export const CREATE_WORKSPACE_ROUTE = (id: string) => `/create/${id}`;
+/** Route pattern for create workspace (neon dashboard). */
+export const CREATE_WORKSPACE_ROUTE = (id: string) => `/dashboard/create/${id}`;

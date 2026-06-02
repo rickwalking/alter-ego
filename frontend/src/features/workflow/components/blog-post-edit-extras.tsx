@@ -1,7 +1,10 @@
 "use client";
+import {
+  NeonAlert,
+  NeonAlertDescription,
+} from "@/components/molecules/neon-alert";
 
 import { useTranslations } from "next-intl";
-import { Alert, AlertDescription } from "@/components/ui";
 import { ReviewAssignmentPanel } from "@/features/workflow/components/review-assignment-panel";
 import { ScheduledPublishPicker } from "@/features/workflow/components/scheduled-publish-picker";
 import { VersionDiffView } from "@/features/workflow/components/version-diff-view";
@@ -34,11 +37,11 @@ export function BlogPostEditExtras({
   return (
     <div className="space-y-4 border-t pt-4">
       {isLockedByOther && activeLock && (
-        <Alert>
-          <AlertDescription>
+        <NeonAlert>
+          <NeonAlertDescription>
             {t("collaboration.lockedByOther", { name: activeLock.user_name })}
-          </AlertDescription>
-        </Alert>
+          </NeonAlertDescription>
+        </NeonAlert>
       )}
       <ReviewAssignmentPanel
         contentId={postId}

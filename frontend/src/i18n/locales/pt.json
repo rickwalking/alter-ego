@@ -40,16 +40,36 @@
   "home": {
     "hero": {
       "badge": "Conteúdo Tech",
+      "badgeVersion": "Alter-Ego v2.0",
+      "titleLine1": "Converse com meu",
+      "titleHighlight": "Alter-Ego",
       "title": "Converse com meu Alter-Ego",
       "highlight": "para me conhecer melhor",
-      "subtitle": "Converse com um assistente inteligente que sabe tudo sobre minha carreira, experiência e habilidades. Veja também meus posts e projetos."
+      "subtitle": "Converse com um assistente inteligente que sabe tudo sobre minha carreira, experiência e habilidades. Veja também meus posts e projetos.",
+      "exploreBlog": "Explorar Blog"
+    },
+    "stats": {
+      "years": "Anos de Engenharia",
+      "carousels": "Carrosséis Publicados",
+      "topics": "Tópicos Explorados"
+    },
+    "capabilities": {
+      "label": "Capacidades"
+    },
+    "terminal": {
+      "ready": "pronto. Pergunte o que quiser."
     },
     "posts": {
+      "titlePrefix": "Posts",
+      "titleHighlight": "Recentes",
       "title": "Posts Recentes",
+      "feedLabel": "Feed",
       "subtitle": "Carrosséis e posts de blog sobre tecnologia, engenharia de software e o futuro do desenvolvimento.",
       "viewAll": "Ver todos os posts"
     },
     "features": {
+      "titlePrefix": "O que Você Pode",
+      "titleHighlight": "Explorar",
       "title": "O que Você Pode Explorar",
       "chat": {
         "title": "Converse com Meu Alter-Ego",
@@ -82,7 +102,8 @@
     "sidebar": {
       "label": "Conversas",
       "empty": "Nenhuma conversa ainda",
-      "loading": "Carregando conversas"
+      "loading": "Carregando conversas",
+      "searchPlaceholder": "Buscar conversas..."
     }
   },
   "knowledge": {
@@ -222,6 +243,23 @@
     },
     "preview": {
       "viewBlog": "Ver Post do Blog"
+    },
+    "publishCta": "Abrir Publicação",
+    "futureStep": "Esta etapa ainda não foi alcançada. O fluxo está atualmente em {phase}.",
+    "startWorkflowHint": "Inicie o fluxo na aba Brief para executar esta fase.",
+    "stepHistory": {
+      "historicalHint": "Fase concluída: {phase}. Visualização somente leitura.",
+      "researchTitle": "{count} fontes de pesquisa",
+      "outlineTitle": "{count} slides no outline",
+      "contentTitle": "{count} rascunhos de conteúdo",
+      "imagesTitle": "{count} imagens geradas",
+      "designApplied": "design aplicado",
+      "reviewHint": "Durante a revisão final, use a aba Revisão para ver carrossel, blog e legenda.",
+      "publishEmpty": "Legenda e textos do LinkedIn aparecem após a fase de conteúdo.",
+      "publishCaptionLabel": "Legenda do Instagram",
+      "publishLinkedInLabel": "Post do LinkedIn (PT)",
+      "empty": "Ainda não há artefatos salvos para esta etapa.",
+      "untitledSlide": "Slide sem título"
     },
     "workspace": {
       "title": "Área de Trabalho do Carrossel",
@@ -421,6 +459,7 @@
     "awaitingFinalApproval": "Conclua a revisão final na área de criação antes de publicar no site público.",
     "publishToSite": "Publicar no site",
     "sitePublished": "O carrossel agora está público no blog.",
+    "sitePublishedLink": "Ver post público",
     "sitePublishFailed": "Não foi possível publicar no site público.",
     "carouselLabel": "Prévia do carrossel",
     "platformTabsLabel": "Escolha uma plataforma",
@@ -459,7 +498,8 @@
       "previousSlide": "Slide anterior",
       "nextSlide": "Próximo slide",
       "goToSlide": "Ir para slide {number}",
-      "downloadImages": "Baixar imagens"
+      "downloadImages": "Baixar imagens",
+      "downloadingImages": "Baixando..."
     }
   },
   "auth": {
@@ -472,6 +512,7 @@
     "signIn": "Entrar",
     "signingIn": "Entrando...",
     "loginError": "Email ou senha inválidos",
+    "sessionExpired": "Sua sessão expirou. Entre novamente.",
     "forbiddenTitle": "Acesso Negado",
     "forbiddenDescription": "Você não tem permissão para acessar esta página.",
     "goHome": "Ir para o Início",

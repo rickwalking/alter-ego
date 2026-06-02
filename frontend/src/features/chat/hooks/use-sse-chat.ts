@@ -10,6 +10,8 @@ import type { Message } from "@/schemas/chat";
 
 export interface UseSseChatOptions {
   conversationId?: string | null;
+  /** When false, do not load persisted messages (public ephemeral chat). */
+  enableHistory?: boolean;
 }
 
 export interface UseSseChatReturn {
@@ -54,6 +56,8 @@ export function useSseChat(options: UseSseChatOptions = {}): UseSseChatReturn {
 
   const conversationId = options.conversationId ?? null;
 
+  const loadHistory = options.enableHistory !== false;
+
   const finalizeStream = useCallback(
     (convId: string) => {
       if (finalizedRef.current) {
@@ -63,17 +67,24 @@ export function useSseChat(options: UseSseChatOptions = {}): UseSseChatReturn {
       setIsStreaming(false);
       streamingContentRef.current = "";
       streamingMsgIdRef.current = null;
+      if (!loadHistory) {
+        return;
+      }
       void queryClient
         .invalidateQueries({ queryKey: chatKeys.messages(convId) })
         .then(() => {
           setOptimisticMessages([]);
         });
     },
-    [queryClient],
+    [loadHistory, queryClient],
   );
-
-  const { data: historyMessages = [] } =
-    useConversationMessages(conversationId);
+  const { data: fetchedHistory = [] } = useConversationMessages(
+    loadHistory ? conversationId : null,
+  );
+  const historyMessages = useMemo(
+    () => (loadHistory ? fetchedHistory : []),
+    [loadHistory, fetchedHistory],
+  );
 
   const startNewChat = useCallback(() => {
     if (abortRef.current) {

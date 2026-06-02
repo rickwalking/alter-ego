@@ -1,5 +1,6 @@
 "use client";
 
+import { NeonSpinner } from "@/components/atoms/neon-spinner";
 import { CalendarSvgIcon } from "@/features/dashboard/calendar/components/svg-icon";
 import {
   CALENDAR_BTN_GHOST,
@@ -13,8 +14,17 @@ import {
   CALENDAR_VIEW_MODES,
   CALENDAR_WEEKDAY_HEADERS,
 } from "@/features/dashboard/calendar/constants";
-import { buildCalendarDays } from "@/features/dashboard/calendar/helpers";
+import {
+  buildCalendarDaysFromApi,
+  buildEmptyCalendarDays,
+} from "@/features/dashboard/calendar/helpers";
 import type { CalendarContentType } from "@/features/dashboard/calendar/types";
+import { useContentCalendar } from "@/features/workflow/hooks/use-content-calendar";
+import {
+  NEON_BORDER_FOCUS,
+  NEON_BORDER_SUBTLE,
+  NEON_RED,
+} from "@/constants/neon";
 
 const CONTENT_TYPE_ICON: Record<
   CalendarContentType,
@@ -27,7 +37,11 @@ const CONTENT_TYPE_ICON: Record<
 };
 
 export default function CalendarPage() {
-  const days = buildCalendarDays();
+  const { calendar, loading, error } = useContentCalendar();
+  const days =
+    calendar && calendar.items.length > 0
+      ? buildCalendarDaysFromApi(calendar.items)
+      : buildEmptyCalendarDays();
 
   return (
     <div
@@ -38,6 +52,16 @@ export default function CalendarPage() {
         minHeight: "100vh",
       }}
     >
+      {error && (
+        <p className="text-center py-4" style={{ color: NEON_RED }}>
+          {error}
+        </p>
+      )}
+      {loading && (
+        <div className="flex justify-center py-12">
+          <NeonSpinner size="lg" />
+        </div>
+      )}
       <div
         style={{
           height: 56,
@@ -50,6 +74,7 @@ export default function CalendarPage() {
           position: "sticky",
           top: 0,
           zIndex: 50,
+          opacity: loading ? 0.5 : 1,
         }}
       >
         <div style={{ ...CALENDAR_FLEX_CENTER, gap: 12 }}>
@@ -169,7 +194,7 @@ export default function CalendarPage() {
             background: CALENDAR_COLORS.cG,
             borderRadius: 8,
             overflow: "hidden",
-            border: "1px solid rgba(0,212,255,0.06)",
+            border: `1px solid ${NEON_BORDER_SUBTLE}`,
           }}
         >
           {CALENDAR_WEEKDAY_HEADERS.map((header) => (
@@ -225,7 +250,9 @@ export default function CalendarPage() {
                   background: cell.today
                     ? CALENDAR_COLORS.cD
                     : CALENDAR_COLORS.card,
-                  border: cell.today ? "1px solid rgba(0,212,255,0.2)" : "none",
+                  border: cell.today
+                    ? `1px solid ${NEON_BORDER_FOCUS}`
+                    : "none",
                   cursor: "pointer",
                   opacity: cell.cur ? 1 : 0.3,
                 }}

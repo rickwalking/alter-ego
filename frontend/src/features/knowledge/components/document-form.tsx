@@ -1,13 +1,13 @@
 "use client";
+import { NeonButton } from "@/components/atoms/neon-button";
+import { NeonInput } from "@/components/atoms/neon-input";
+import { NeonTextarea } from "@/components/atoms/neon-textarea";
+import { NeonLabel } from "@/components/atoms/neon-label";
+import { NeonBadge } from "@/components/atoms/neon-badge";
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { X } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
 import { type CreateDocumentRequest } from "@/schemas/knowledge";
 
 interface DocumentFormProps {
@@ -45,8 +45,8 @@ export function DocumentForm({ onSubmit, onCancel }: DocumentFormProps) {
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <div className="space-y-2">
-        <Label htmlFor="title">{t("form.title")}</Label>
-        <Input
+        <NeonLabel htmlFor="title">{t("form.title")}</NeonLabel>
+        <NeonInput
           id="title"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
@@ -56,8 +56,8 @@ export function DocumentForm({ onSubmit, onCancel }: DocumentFormProps) {
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="content">{t("form.content")}</Label>
-        <Textarea
+        <NeonLabel htmlFor="content">{t("form.content")}</NeonLabel>
+        <NeonTextarea
           id="content"
           value={content}
           onChange={(e) => setContent(e.target.value)}
@@ -68,9 +68,9 @@ export function DocumentForm({ onSubmit, onCancel }: DocumentFormProps) {
       </div>
 
       <div className="space-y-2">
-        <Label>{t("form.tags")}</Label>
+        <NeonLabel>{t("form.tags")}</NeonLabel>
         <div className="flex gap-2">
-          <Input
+          <NeonInput
             value={newTag}
             onChange={(e) => setNewTag(e.target.value)}
             placeholder={t("form.tagPlaceholder")}
@@ -81,14 +81,14 @@ export function DocumentForm({ onSubmit, onCancel }: DocumentFormProps) {
               }
             }}
           />
-          <Button type="button" onClick={handleAddTag} variant="secondary">
+          <NeonButton type="button" onClick={handleAddTag} variant="secondary">
             {t("form.addTag")}
-          </Button>
+          </NeonButton>
         </div>
         {tags.length > 0 && (
           <div className="flex flex-wrap gap-2 mt-2">
             {tags.map((tag) => (
-              <Badge key={tag} variant="secondary" className="gap-1">
+              <NeonBadge key={tag} variant="secondary" className="gap-1">
                 {tag}
                 <button
                   type="button"
@@ -97,17 +97,17 @@ export function DocumentForm({ onSubmit, onCancel }: DocumentFormProps) {
                 >
                   <X className="h-3 w-3" />
                 </button>
-              </Badge>
+              </NeonBadge>
             ))}
           </div>
         )}
       </div>
 
       <div className="flex justify-end gap-4">
-        <Button type="button" variant="outline" onClick={onCancel}>
+        <NeonButton type="button" variant="outline" onClick={onCancel}>
           {t("form.cancel")}
-        </Button>
-        <Button type="submit">{t("form.submit")}</Button>
+        </NeonButton>
+        <NeonButton type="submit">{t("form.submit")}</NeonButton>
       </div>
     </form>
   );

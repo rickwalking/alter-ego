@@ -1,11 +1,11 @@
 "use client";
+import { NeonButton } from "@/components/atoms/neon-button";
+import { NeonInput } from "@/components/atoms/neon-input";
+import { NeonLabel } from "@/components/atoms/neon-label";
 
 import { useState, useCallback, useRef } from "react";
 import { useTranslations } from "next-intl";
 import { Upload, X, FileText, CheckCircle, AlertCircle } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { useUploadDocument } from "../hooks/use-upload";
 
@@ -108,9 +108,9 @@ export function FileUpload({ onUploadComplete, onCancel }: FileUploadProps) {
         <p className="text-sm text-[var(--color-muted-foreground)] mt-1">
           {t("success.description")}
         </p>
-        <Button className="mt-4" onClick={onUploadComplete}>
+        <NeonButton className="mt-4" onClick={onUploadComplete}>
           {t("success.done")}
-        </Button>
+        </NeonButton>
       </div>
     );
   }
@@ -245,8 +245,8 @@ export function FileUpload({ onUploadComplete, onCancel }: FileUploadProps) {
       {selectedFile && (
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="upload-title">{t("fields.title")}</Label>
-            <Input
+            <NeonLabel htmlFor="upload-title">{t("fields.title")}</NeonLabel>
+            <NeonInput
               id="upload-title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
@@ -256,8 +256,8 @@ export function FileUpload({ onUploadComplete, onCancel }: FileUploadProps) {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="upload-tags">{t("fields.tags")}</Label>
-            <Input
+            <NeonLabel htmlFor="upload-tags">{t("fields.tags")}</NeonLabel>
+            <NeonInput
               id="upload-tags"
               value={tags}
               onChange={(e) => setTags(e.target.value)}
@@ -271,21 +271,21 @@ export function FileUpload({ onUploadComplete, onCancel }: FileUploadProps) {
       {/* Actions */}
       <div className="flex justify-end gap-3">
         {onCancel && (
-          <Button
+          <NeonButton
             type="button"
             variant="outline"
             onClick={onCancel}
             disabled={upload.isPending}
           >
             {t("cancel")}
-          </Button>
+          </NeonButton>
         )}
-        <Button
+        <NeonButton
           onClick={handleUpload}
           disabled={!selectedFile || !isFileTypeValid || upload.isPending}
         >
           {upload.isPending ? t("uploading") : t("uploadButton")}
-        </Button>
+        </NeonButton>
       </div>
     </div>
   );

@@ -2,14 +2,14 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
+import { NeonBadge } from "@/components/atoms/neon-badge";
+import { NeonButton } from "@/components/atoms/neon-button";
 import {
-  Badge,
-  Button,
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui";
+  NeonCard,
+  NeonCardContent,
+  NeonCardHeader,
+  NeonCardTitle,
+} from "@/components/molecules/neon-card";
 import { API_ENDPOINTS } from "@/constants/api";
 import { authenticatedFetch } from "@/lib/authenticated-fetch";
 
@@ -61,11 +61,11 @@ export function VersionHistorySidebar({
     typeof selected?.snapshot?.body === "string" ? selected.snapshot.body : "";
 
   return (
-    <Card>
-      <CardHeader className="pb-2">
-        <CardTitle className="text-base">{t("title")}</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-3">
+    <NeonCard>
+      <NeonCardHeader className="pb-2">
+        <NeonCardTitle className="text-base">{t("title")}</NeonCardTitle>
+      </NeonCardHeader>
+      <NeonCardContent className="space-y-3">
         {loading && (
           <p className="text-muted-foreground text-sm">{t("loading")}</p>
         )}
@@ -83,7 +83,7 @@ export function VersionHistorySidebar({
                 <span>
                   {t("versionLabel", { number: version.version_number })}
                 </span>
-                <Badge variant="outline">{version.title}</Badge>
+                <NeonBadge variant="outline">{version.title}</NeonBadge>
               </button>
             </li>
           ))}
@@ -99,16 +99,16 @@ export function VersionHistorySidebar({
               {currentBody.slice(0, 400)}
               {currentBody.length > 400 ? "…" : ""}
             </p>
-            <Button
+            <NeonButton
               size="sm"
               variant="outline"
               onClick={() => onRestore(selected)}
             >
               {t("restore")}
-            </Button>
+            </NeonButton>
           </div>
         )}
-      </CardContent>
-    </Card>
+      </NeonCardContent>
+    </NeonCard>
   );
 }

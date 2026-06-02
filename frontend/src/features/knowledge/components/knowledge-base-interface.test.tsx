@@ -55,17 +55,17 @@ vi.mock("@/components/layout", () => ({
   ),
 }));
 
-vi.mock("@/components/ui/card", () => ({
-  Card: ({ children }: { children: React.ReactNode }) => (
+vi.mock("@/components/molecules/neon-card", () => ({
+  NeonCard: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="card">{children}</div>
   ),
-  CardHeader: ({ children }: { children: React.ReactNode }) => (
+  NeonCardHeader: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="card-header">{children}</div>
   ),
-  CardContent: ({ children }: { children: React.ReactNode }) => (
+  NeonCardContent: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="card-content">{children}</div>
   ),
-  CardTitle: ({ children }: { children: React.ReactNode }) => (
+  NeonCardTitle: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="card-title">{children}</div>
   ),
 }));

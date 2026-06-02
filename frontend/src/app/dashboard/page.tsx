@@ -1,246 +1,67 @@
 "use client";
 
+import Link from "next/link";
 import { useTranslations } from "next-intl";
-import {
-  STAT_CARDS,
-  QUICK_ACTIONS,
-  RECENT_ACTIVITIES,
-  UPCOMING_SCHEDULE,
-} from "./constants";
+import { NeonSpinner } from "@/components/atoms/neon-spinner";
+import { NeonTopBar } from "@/components/organisms/neon-top-bar";
+import { NeonStatsGrid } from "@/components/organisms/neon-stats-grid";
+import { NeonActivityList } from "@/components/organisms/neon-activity-list";
+import { NeonCard } from "@/components/molecules/neon-card";
+import { QUICK_ACTIONS } from "./constants";
+import { TEXT, NEON_RED } from "@/constants/neon";
+import type { NeonBadgeVariant } from "@/schemas/neon-badge";
+import { useEditorialAnalytics } from "@/features/analytics/hooks/use-editorial-analytics";
 
-export default function DashboardPage() {
+const DOT_TO_BADGE: Record<string, NeonBadgeVariant> = {
+  "#22c55e": "green",
+  "#00d4ff": "cyan",
+  "#f59e0b": "amber",
+  "#ff2770": "magenta",
+  "#0ac5a8": "teal",
+};
+
+const PAGE_FONT_FAMILY = "Inter, system-ui, sans-serif";
+
+export default function DashboardPage(): React.ReactElement {
   const t = useTranslations("dashboard.overview");
+  const tAnalytics = useTranslations("dashboard.analytics");
+  const { data, loading, error } = useEditorialAnalytics();
 
-  return (
-    <div
-      className="flex-1 text-white relative"
-      style={{ fontFamily: "Inter, system-ui, sans-serif" }}
-    >
-      {/* Top Bar */}
+  if (loading) {
+    return (
       <div
-        style={{
-          height: "56px",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          padding: "0 32px",
-          borderBottom: "1px solid rgba(0,212,255,0.06)",
-          background: "rgba(6,10,18,0.6)",
-          backdropFilter: "blur(12px)",
-          position: "sticky",
-          top: 0,
-          zIndex: 30,
-        }}
+        className="flex-1 text-white relative"
+        style={{ fontFamily: PAGE_FONT_FAMILY }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-          <h1
-            style={{
-              fontSize: "16px",
-              fontWeight: 700,
-              color: "rgba(255,255,255,0.88)",
-              letterSpacing: "-0.02em",
-            }}
-          >
-            Dashboard
-          </h1>
-          <div
-            style={{
-              fontFamily: "'JetBrains Mono', ui-monospace, monospace",
-              fontSize: "11px",
-              color: "rgba(255,255,255,0.3)",
-            }}
-          >
-            / <span style={{ color: "rgba(255,255,255,0.55)" }}>overview</span>
-          </div>
+        <NeonTopBar title="Dashboard" breadcrumb={[{ label: "overview" }]} />
+        <div className="flex justify-center py-20">
+          <NeonSpinner size="lg" />
         </div>
       </div>
+    );
+  }
 
-      <div style={{ padding: "28px 32px" }}>
-        {/* Stats Grid — auto-fit, same as shell .stats-grid */}
-        <div
-          className="grid gap-4 mb-7"
-          style={{
-            gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-          }}
-        >
-          {STAT_CARDS.map((stat) => (
-            <StatCard key={stat.label} {...stat} />
-          ))}
-        </div>
-
-        {/* Quick Actions */}
-        <div className="mb-7">
-          <div className="flex items-center justify-between mb-4">
-            <h2
-              className="font-extrabold tracking-tight"
-              style={{
-                fontSize: 18,
-                color: "var(--text, rgba(255,255,255,0.88))",
-              }}
-            >
-              {t("quickActions.title")}
-            </h2>
-          </div>
-          <div
-            className="grid gap-4"
-            style={{ gridTemplateColumns: "repeat(3, 1fr)" }}
-          >
-            {QUICK_ACTIONS.map((action) => (
-              <QuickActionCard key={action.title} {...action} />
-            ))}
-          </div>
-        </div>
-
-        {/* Recent Activity + Upcoming Schedule */}
-        <div className="grid gap-5" style={{ gridTemplateColumns: "1fr 1fr" }}>
-          {/* Recent Activity */}
-          <div
-            className="overflow-hidden"
-            style={{
-              background: "#0d1324",
-              border: "1px solid rgba(255,255,255,0.06)",
-              borderRadius: 8,
-            }}
-          >
-            <div
-              className="flex items-center justify-between"
-              style={{
-                padding: "16px 20px",
-                borderBottom: "1px solid rgba(255,255,255,0.04)",
-              }}
-            >
-              <h3
-                style={{
-                  fontSize: 14,
-                  fontWeight: 700,
-                  color: "rgba(255,255,255,0.88)",
-                }}
-              >
-                {t("recentActivity.title")}
-              </h3>
-              <span
-                className="inline-flex items-center gap-[5px] font-mono font-semibold"
-                style={{
-                  padding: "3px 9px",
-                  borderRadius: 4,
-                  fontSize: 10,
-                  background: "rgba(0,212,255,0.12)",
-                  color: "#00d4ff",
-                  letterSpacing: "0.3px",
-                }}
-              >
-                <span
-                  className="rounded-full"
-                  style={{ width: 5, height: 5, background: "currentColor" }}
-                />
-                {t("recentActivity.live")}
-              </span>
-            </div>
-            <div style={{ padding: "8px 20px" }}>
-              {RECENT_ACTIVITIES.map((activity) => (
-                <ActivityItem key={activity.title} {...activity} />
-              ))}
-            </div>
-          </div>
-
-          {/* Upcoming Schedule */}
-          <div
-            className="overflow-hidden"
-            style={{
-              background: "#0d1324",
-              border: "1px solid rgba(255,255,255,0.06)",
-              borderRadius: 8,
-            }}
-          >
-            <div
-              className="flex items-center justify-between"
-              style={{
-                padding: "16px 20px",
-                borderBottom: "1px solid rgba(255,255,255,0.04)",
-              }}
-            >
-              <h3
-                style={{
-                  fontSize: 14,
-                  fontWeight: 700,
-                  color: "rgba(255,255,255,0.88)",
-                }}
-              >
-                {t("upcomingSchedule.title")}
-              </h3>
-              <button
-                type="button"
-                className="inline-flex items-center gap-2 font-semibold cursor-pointer transition-all duration-200"
-                style={{
-                  padding: "6px 12px",
-                  borderRadius: 6,
-                  fontSize: 12,
-                  lineHeight: 1,
-                  background: "transparent",
-                  color: "#00d4ff",
-                  border: "1px solid rgba(0,212,255,0.25)",
-                  fontFamily: "inherit",
-                }}
-              >
-                {t("upcomingSchedule.viewAll")}
-              </button>
-            </div>
-            <div style={{ padding: "8px 20px" }}>
-              {UPCOMING_SCHEDULE.map((item) => (
-                <ActivityItem key={item.title} {...item} />
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* ── Sub-components ── */
-
-interface StatCardProps {
-  label: string;
-  value: string;
-  change?: { value: string; trend: "up" | "down" };
-  icon: React.ReactNode;
-  iconBg: string;
-  iconColor: string;
-  valueColor: string;
-  valueGlow: string;
-}
-
-function StatCard({
-  label,
-  value,
-  change,
-  icon,
-  iconBg,
-  iconColor,
-  valueColor,
-  valueGlow,
-}: StatCardProps) {
-  return (
-    <div
-      className="transition-all duration-200"
-      style={{
-        background: "#0d1324",
-        border: "1px solid rgba(255,255,255,0.06)",
-        borderRadius: 8,
-        padding: 20,
-      }}
-    >
+  if (error || !data) {
+    return (
       <div
-        className="flex items-center justify-center"
-        style={{
-          width: 36,
-          height: 36,
-          borderRadius: 8,
-          background: iconBg,
-          color: iconColor,
-          marginBottom: 12,
-        }}
+        className="flex-1 text-white relative"
+        style={{ fontFamily: PAGE_FONT_FAMILY }}
       >
+        <NeonTopBar title="Dashboard" breadcrumb={[{ label: "overview" }]} />
+        <p className="text-center py-8" style={{ color: NEON_RED }}>
+          {error ?? tAnalytics("loadFailed")}
+        </p>
+      </div>
+    );
+  }
+
+  const { summary } = data;
+
+  const statCards = [
+    {
+      label: tAnalytics("totalPosts"),
+      value: String(summary.total_posts),
+      icon: (
         <svg
           width="18"
           height="18"
@@ -248,189 +69,165 @@ function StatCard({
           fill="none"
           stroke="currentColor"
           strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
         >
-          {icon}
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
         </svg>
-      </div>
-      <p
-        className="font-mono font-bold uppercase"
-        style={{
-          fontSize: 10,
-          letterSpacing: "2px",
-          color: "rgba(255,255,255,0.3)",
-          marginBottom: 8,
-        }}
-      >
-        {label}
-      </p>
-      <p
-        className="font-black leading-none tracking-tighter"
-        style={{
-          fontSize: 28,
-          color: valueColor,
-          textShadow: valueGlow,
-          letterSpacing: "-0.03em",
-        }}
-      >
-        {value}
-      </p>
-      {change && (
-        <p
-          className="font-mono"
-          style={{
-            fontSize: 11,
-            marginTop: 6,
-            color: change.trend === "up" ? "#22c55e" : "#ef4444",
-          }}
-        >
-          {change.value}
-        </p>
-      )}
-    </div>
-  );
-}
-
-interface QuickActionCardProps {
-  title: string;
-  description: string;
-  icon: React.ReactNode;
-  iconBg: string;
-  iconColor: string;
-}
-
-function QuickActionCard({
-  title,
-  description,
-  icon,
-  iconBg,
-  iconColor,
-}: QuickActionCardProps) {
-  return (
-    <button
-      type="button"
-      className="flex flex-col items-center text-center cursor-pointer transition-all duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#00d4ff]"
-      style={{
-        background: "#0d1324",
-        border: "1px solid rgba(255,255,255,0.06)",
-        borderRadius: 8,
-        padding: 20,
-        gap: 12,
-        fontFamily: "inherit",
-      }}
-      onMouseEnter={(e) => {
-        const el = e.currentTarget;
-        el.style.borderColor = "rgba(0,212,255,0.2)";
-        el.style.transform = "translateY(-2px)";
-        el.style.boxShadow = "0 0 20px rgba(0,212,255,0.04)";
-      }}
-      onMouseLeave={(e) => {
-        const el = e.currentTarget;
-        el.style.borderColor = "rgba(255,255,255,0.06)";
-        el.style.transform = "translateY(0)";
-        el.style.boxShadow = "none";
-      }}
-      onMouseDown={(e) => {
-        e.currentTarget.style.transform = "translateY(-1px)";
-      }}
-    >
-      <div
-        className="flex items-center justify-center"
-        style={{
-          width: 44,
-          height: 44,
-          borderRadius: 10,
-          background: iconBg,
-          color: iconColor,
-        }}
-      >
+      ),
+      iconBg: "rgba(0,212,255,0.12)",
+    },
+    {
+      label: tAnalytics("publishedWeek"),
+      value: String(summary.published_this_week),
+      icon: (
         <svg
-          width="22"
-          height="22"
+          width="18"
+          height="18"
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
           strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
         >
-          {icon}
+          <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
         </svg>
-      </div>
-      <h4
-        style={{
-          fontSize: 13,
-          fontWeight: 600,
-          color: "rgba(255,255,255,0.88)",
-        }}
-      >
-        {title}
-      </h4>
-      <p
-        style={{
-          fontSize: 11,
-          color: "rgba(255,255,255,0.3)",
-          lineHeight: 1.4,
-        }}
-      >
-        {description}
-      </p>
-    </button>
+      ),
+      iconBg: "rgba(34,197,94,0.12)",
+    },
+    {
+      label: tAnalytics("pendingReview"),
+      value: String(summary.pending_review),
+      icon: (
+        <svg
+          width="18"
+          height="18"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+        >
+          <circle cx="12" cy="12" r="10" />
+        </svg>
+      ),
+      iconBg: "rgba(245,158,11,0.12)",
+    },
+    {
+      label: tAnalytics("qualityScore"),
+      value: `${summary.quality_score_average}%`,
+      icon: (
+        <svg
+          width="18"
+          height="18"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+        >
+          <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+        </svg>
+      ),
+      iconBg: "rgba(255,39,112,0.12)",
+    },
+  ];
+
+  const statusActivities = Object.entries(summary.status_breakdown).map(
+    ([status, count], index) => ({
+      id: `status-${index}`,
+      title: status.replace(/_/g, " "),
+      description: `${count} items`,
+      time: "Live",
+      badgeVariant: (DOT_TO_BADGE["#00d4ff"] ?? "cyan") as NeonBadgeVariant,
+    }),
   );
-}
 
-interface ActivityItemProps {
-  dotColor: string;
-  title: string;
-  description: string;
-  time: string;
-}
-
-function ActivityItem({
-  dotColor,
-  title,
-  description,
-  time,
-}: ActivityItemProps) {
   return (
     <div
-      className="flex items-start"
-      style={{
-        gap: 12,
-        padding: "12px 0",
-        borderBottom: "1px solid rgba(255,255,255,0.03)",
-      }}
+      className="flex-1 text-white relative"
+      style={{ fontFamily: PAGE_FONT_FAMILY }}
     >
-      <span
-        className="rounded-full flex-shrink-0"
-        style={{
-          width: 8,
-          height: 8,
-          marginTop: 5,
-          background: dotColor,
-        }}
-      />
-      <div className="flex-1" style={{ minWidth: 0 }}>
-        <div
-          style={{
-            fontSize: 13,
-            fontWeight: 500,
-            color: "rgba(255,255,255,0.88)",
-          }}
-        >
-          {title}
+      <NeonTopBar title="Dashboard" breadcrumb={[{ label: "overview" }]} />
+
+      <div style={{ padding: "28px 32px" }}>
+        <div className="mb-7">
+          <NeonStatsGrid cards={statCards} />
         </div>
-        <div
-          style={{ fontSize: 12, color: "rgba(255,255,255,0.3)", marginTop: 2 }}
-        >
-          {description}
+
+        <div className="mb-7">
+          <h2
+            className="font-extrabold tracking-tight mb-4"
+            style={{ fontSize: 18, color: TEXT }}
+          >
+            {t("quickActions.title")}
+          </h2>
+          <div
+            className="grid gap-4"
+            style={{ gridTemplateColumns: "repeat(3, 1fr)" }}
+          >
+            {QUICK_ACTIONS.map((action) => (
+              <Link
+                key={action.title}
+                href={action.href}
+                className="block no-underline"
+              >
+                <NeonCard hover padding="md" className="text-center">
+                  <div
+                    className="flex items-center justify-center mx-auto mb-3"
+                    style={{
+                      width: 44,
+                      height: 44,
+                      borderRadius: 10,
+                      background: action.iconBg,
+                      color: action.iconColor,
+                    }}
+                  >
+                    <svg
+                      width="22"
+                      height="22"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      {action.icon}
+                    </svg>
+                  </div>
+                  <h4
+                    className="text-sm font-semibold mb-1"
+                    style={{ color: TEXT }}
+                  >
+                    {action.title}
+                  </h4>
+                  <p className="text-xs text-text-dim">{action.description}</p>
+                </NeonCard>
+              </Link>
+            ))}
+          </div>
         </div>
-        <div
-          className="font-mono"
-          style={{ fontSize: 10, color: "rgba(255,255,255,0.3)", marginTop: 4 }}
-        >
-          {time}
+
+        <div className="grid gap-5" style={{ gridTemplateColumns: "1fr 1fr" }}>
+          <NeonActivityList
+            title={t("recentActivity.title")}
+            activities={statusActivities}
+          />
+          <NeonActivityList
+            title={t("upcomingSchedule.title")}
+            activities={[
+              {
+                id: "drafts",
+                title: "Drafts",
+                description: `${summary.draft_count} in progress`,
+                time: "Today",
+                badgeVariant: "amber",
+              },
+              {
+                id: "velocity",
+                title: "Weekly velocity",
+                description: `${summary.content_velocity_per_week} posts/week`,
+                time: "Trend",
+                badgeVariant: "teal",
+              },
+            ]}
+          />
         </div>
       </div>
     </div>

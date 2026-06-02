@@ -4,16 +4,16 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { NeonButton } from "@/components/atoms/neon-button";
 import {
-  Button,
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  Input,
-  Spinner,
-  Textarea,
-} from "@/components/ui";
+  NeonCard,
+  NeonCardContent,
+  NeonCardHeader,
+  NeonCardTitle,
+} from "@/components/molecules/neon-card";
+import { NeonInput } from "@/components/atoms/neon-input";
+import { NeonSpinner } from "@/components/atoms/neon-spinner";
+import { NeonTextarea } from "@/components/atoms/neon-textarea";
 import { AiSuggestionPanel } from "@/features/blog/components/ai-suggestion-panel";
 import { RichTextEditor } from "@/features/blog/components/rich-text-editor";
 import {
@@ -86,7 +86,7 @@ export default function BlogPostEditPage() {
   if (loading && !post) {
     return (
       <div className="flex h-64 items-center justify-center">
-        <Spinner className="h-8 w-8" />
+        <NeonSpinner className="h-8 w-8" />
       </div>
     );
   }
@@ -96,9 +96,9 @@ export default function BlogPostEditPage() {
       <div className="container mx-auto py-8 px-4">
         <p>{t("notFound")}</p>
         <Link href={ROUTE_PATHS.BLOG_POSTS}>
-          <Button variant="outline" className="mt-4">
+          <NeonButton variant="outline" className="mt-4">
             {t("backToList")}
-          </Button>
+          </NeonButton>
         </Link>
       </div>
     );
@@ -109,26 +109,29 @@ export default function BlogPostEditPage() {
       <div className="mb-6 flex items-center justify-between gap-4">
         <h1 className="text-2xl font-bold">{t("editPost")}</h1>
         <div className="flex gap-2">
-          <Button
+          <NeonButton
             variant="outline"
             onClick={() => router.push(ROUTE_PATHS.BLOG_POSTS)}
           >
             {t("backToList")}
-          </Button>
-          <Button onClick={() => void handleSave()} disabled={saving}>
+          </NeonButton>
+          <NeonButton onClick={() => void handleSave()} disabled={saving}>
             {saving ? t("saving") : t("saveChanges")}
-          </Button>
+          </NeonButton>
         </div>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle>{post.title}</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <Input value={title} onChange={(e) => setTitle(e.target.value)} />
-            <Textarea
+        <NeonCard className="lg:col-span-2">
+          <NeonCardHeader>
+            <NeonCardTitle>{post.title}</NeonCardTitle>
+          </NeonCardHeader>
+          <NeonCardContent className="space-y-4">
+            <NeonInput
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+            />
+            <NeonTextarea
               value={excerpt}
               onChange={(e) => setExcerpt(e.target.value)}
               rows={2}
@@ -139,8 +142,8 @@ export default function BlogPostEditPage() {
               onSelectionChange={setSelectedText}
               placeholder={t("fields.content")}
             />
-          </CardContent>
-        </Card>
+          </NeonCardContent>
+        </NeonCard>
 
         <div className="space-y-4">
           <VersionHistorySidebar

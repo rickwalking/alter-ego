@@ -39,6 +39,9 @@ from rag_backend.domain.constants import (
 from rag_backend.domain.constants.carousel_workflow import PHASE_IMAGES
 from rag_backend.domain.models import CarouselProject
 from rag_backend.domain.protocols import CarouselRepository
+from rag_backend.infrastructure.logging import get_logger
+
+logger = get_logger()
 
 IMAGE_SLIDE_TYPES: frozenset[str] = frozenset({SLIDE_TYPE_INTRO, SLIDE_TYPE_CONTENT})
 
@@ -46,6 +49,33 @@ STATUS_PENDING = "pending"
 STATUS_IN_FLIGHT = "in_flight"
 STATUS_DONE = "done"
 STATUS_FAILED = "failed"
+
+_PNG_MAGIC = b"\x89PNG"
+
+
+def _ensure_jpeg_format(image_path: str) -> str:
+    """Convert PNG image data to JPEG if the file was saved with a .jpg extension.
+
+    Some providers (e.g. OpenAI DALL-E) return PNG bytes but the pipeline
+    hardcodes a .jpg path. Re-encode to JPEG so content-type and extension agree.
+    """
+    path = Path(image_path)
+    if not path.exists():
+        return image_path
+    with path.open("rb") as f:
+        header = f.read(4)
+    if header != _PNG_MAGIC:
+        return image_path
+    try:
+        from PIL import Image as PILImage
+
+        with PILImage.open(path) as img:
+            if img.mode in {"RGBA", "P"}:
+                img = img.convert("RGB")
+            img.save(path, "JPEG", quality=95)
+    except Exception:
+        logger.warning("Image conversion failed for %s; leaving as-is", path)
+    return image_path
 
 
 def filter_image_slides(slides: list[SlideData]) -> list[SlideData]:
@@ -125,6 +155,7 @@ async def run_images(
                 prompt=final_prompt,
                 output_path=image_path,
             )
+            _ensure_jpeg_format(image_path)
         except Exception:
             slide_status[index]["status"] = STATUS_FAILED
             await _publish_progress()
@@ -163,4 +194,5 @@ async def run_image_one(
         raw_prompt = sanitize_image_prompt(raw_prompt)
     final_prompt = provider.strategy.wrap(raw_prompt, theme)
     await provider.service.generate_image(prompt=final_prompt, output_path=image_path)
+    _ensure_jpeg_format(image_path)
     return image_path

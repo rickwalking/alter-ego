@@ -1,24 +1,65 @@
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
+import {
+  NeonGridBackground,
+  NeonScanlineOverlay,
+} from "@/components/organisms";
+import { BG_DEEP, CYAN_GRADIENT, TEXT, TEXT_MUTED } from "@/constants/neon";
+import { PUBLIC_ROUTE_PATHS } from "@/constants/public-routes";
 
-export default async function NotFound() {
+export default async function NotFound(): Promise<React.ReactElement> {
   const t = await getTranslations("notFound");
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
-      <h1 className="text-6xl font-bold text-[var(--color-primary)]">
-        {t("code")}
-      </h1>
-      <h2 className="mt-4 text-2xl font-semibold">{t("title")}</h2>
-      <p className="mt-2 text-[var(--color-muted-foreground)]">
-        {t("description")}
-      </p>
-      <Link
-        href="/"
-        className="mt-8 inline-flex items-center justify-center rounded-md bg-[var(--color-primary)] text-[var(--color-primary-foreground)] px-6 py-3 font-medium hover:bg-[var(--color-primary)]/90"
-      >
-        {t("goHome")}
-      </Link>
+    <div
+      className="relative flex min-h-screen flex-col items-center justify-center px-4 text-center"
+      style={{ background: BG_DEEP, color: TEXT }}
+    >
+      <NeonGridBackground />
+      <NeonScanlineOverlay />
+      <div style={{ position: "relative", zIndex: 1, maxWidth: "480px" }}>
+        <h1
+          style={{
+            fontSize: "clamp(40px, 8vw, 72px)",
+            fontWeight: 900,
+            letterSpacing: "-0.03em",
+            lineHeight: 1,
+            marginBottom: "16px",
+            background: CYAN_GRADIENT,
+            WebkitBackgroundClip: "text",
+            WebkitTextFillColor: "transparent",
+            backgroundClip: "text",
+          }}
+        >
+          {t("code")}
+        </h1>
+        <h2 style={{ fontSize: "22px", fontWeight: 700, marginBottom: "8px" }}>
+          {t("title")}
+        </h2>
+        <p
+          style={{ fontSize: "15px", color: TEXT_MUTED, marginBottom: "32px" }}
+        >
+          {t("description")}
+        </p>
+        <Link
+          href={PUBLIC_ROUTE_PATHS.HOME}
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "12px 28px",
+            borderRadius: "6px",
+            fontSize: "14px",
+            fontWeight: 600,
+            textDecoration: "none",
+            background: CYAN_GRADIENT,
+            color: BG_DEEP,
+            boxShadow: "0 0 20px rgba(0,212,255,0.15)",
+          }}
+        >
+          {t("goHome")}
+        </Link>
+      </div>
     </div>
   );
 }

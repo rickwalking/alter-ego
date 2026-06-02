@@ -3,12 +3,12 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import {
-  Alert,
-  AlertDescription,
-  Badge,
-  Button,
-  Textarea,
-} from "@/components/ui";
+  NeonAlert,
+  NeonAlertDescription,
+} from "@/components/molecules/neon-alert";
+import { NeonBadge } from "@/components/atoms/neon-badge";
+import { NeonButton } from "@/components/atoms/neon-button";
+import { NeonTextarea } from "@/components/atoms/neon-textarea";
 import { BLOG_AI_ACTIONS, VOICE_MATCH_MIN_SCORE } from "@/constants/blog-ai";
 import { useBlogAi } from "@/features/blog/hooks/use-blog-ai";
 import type { BlogAiSuggestResult } from "@/features/blog/types-ai";
@@ -61,60 +61,60 @@ export function AiSuggestionPanel({
       <div className="flex items-center justify-between">
         <h3 className="font-semibold">{t("aiPanelTitle")}</h3>
         {voiceScore !== null && (
-          <Badge
+          <NeonBadge
             variant={
               voiceScore >= VOICE_MATCH_MIN_SCORE ? "default" : "destructive"
             }
           >
             {t("voiceScore", { score: Math.round(voiceScore) })}
-          </Badge>
+          </NeonBadge>
         )}
       </div>
 
       {!selectedText.trim() && (
-        <Alert>
-          <AlertDescription>{t("selectTextHint")}</AlertDescription>
-        </Alert>
+        <NeonAlert>
+          <NeonAlertDescription>{t("selectTextHint")}</NeonAlertDescription>
+        </NeonAlert>
       )}
 
       {error && (
-        <Alert variant="destructive">
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
+        <NeonAlert variant="destructive">
+          <NeonAlertDescription>{error}</NeonAlertDescription>
+        </NeonAlert>
       )}
 
       <div className="flex flex-wrap gap-2">
-        <Button
+        <NeonButton
           size="sm"
           disabled={loading || !selectedText.trim()}
           onClick={() => void runSuggestion(BLOG_AI_ACTIONS.IMPROVE)}
         >
           {t("actions.improve")}
-        </Button>
-        <Button
+        </NeonButton>
+        <NeonButton
           size="sm"
           variant="outline"
           disabled={loading || !selectedText.trim()}
           onClick={() => void runSuggestion(BLOG_AI_ACTIONS.SHORTEN)}
         >
           {t("actions.shorten")}
-        </Button>
-        <Button
+        </NeonButton>
+        <NeonButton
           size="sm"
           variant="outline"
           disabled={loading || !selectedText.trim()}
           onClick={() => void runSuggestion(BLOG_AI_ACTIONS.ADD_OPINION)}
         >
           {t("actions.addOpinion")}
-        </Button>
-        <Button
+        </NeonButton>
+        <NeonButton
           size="sm"
           variant="secondary"
           disabled={loading || !selectedText.trim()}
           onClick={() => void runImprove()}
         >
           {t("actions.applyImprovement")}
-        </Button>
+        </NeonButton>
       </div>
 
       <div className="space-y-3">
@@ -124,15 +124,15 @@ export function AiSuggestionPanel({
             className="rounded-md bg-muted p-3 space-y-2"
           >
             <div className="flex items-center justify-between">
-              <Badge variant="secondary">{item.suggestion_type}</Badge>
-              <Button
+              <NeonBadge variant="secondary">{item.suggestion_type}</NeonBadge>
+              <NeonButton
                 size="sm"
                 onClick={() => onApplySuggestion(item.suggested_text)}
               >
                 {t("actions.apply")}
-              </Button>
+              </NeonButton>
             </div>
-            <Textarea value={item.suggested_text} readOnly rows={3} />
+            <NeonTextarea value={item.suggested_text} readOnly rows={3} />
             {item.explanation && (
               <p className="text-sm text-muted-foreground">
                 {item.explanation}

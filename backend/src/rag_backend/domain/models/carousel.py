@@ -122,6 +122,12 @@ class CarouselProject:
     phase_status: str = "pending"
     is_public: bool = False
     owner_id: str | None = None
+    # Creator watermark metadata
+    creator_name: str | None = None
+    creator_handle: str | None = None
+    creator_avatar_url: str | None = None
+    # Template version for A/B testing and rollback
+    template_version: str = "v2"
     created_at: datetime = field(default_factory=datetime.utcnow)
     updated_at: datetime = field(default_factory=datetime.utcnow)
 

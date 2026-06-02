@@ -1,17 +1,27 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-
-const CYAN = "#00d4ff";
-const CYAN_DIM = "rgba(0,212,255,0.12)";
-const TEXT = "rgba(255,255,255,0.88)";
-const TEXT_MUTED = "rgba(255,255,255,0.55)";
-const TEXT_DIM = "rgba(255,255,255,0.3)";
-const BG_DEEP = "#060a12";
-const BG_CARD = "#0d1324";
+import { NeonButton } from "@/components/atoms/neon-button";
+import { NeonInput } from "@/components/atoms/neon-input";
+import { NeonFormField } from "@/components/molecules/neon-form-field";
+import {
+  NeonGridBackground,
+  NeonScanlineOverlay,
+} from "@/components/organisms";
+import { AUTH_LOGIN_REDIRECT_PARAM } from "@/constants/auth";
+import {
+  BG_CARD,
+  BG_DEEP,
+  NEON_CYAN,
+  NEON_CYAN_DIM,
+  TEXT,
+  TEXT_DIM,
+  TEXT_MUTED,
+} from "@/constants/neon";
+import { sanitizeLoginRedirect } from "@/lib/auth-cookie";
 
 export default function LoginPage() {
   const t = useTranslations("auth");
@@ -20,6 +30,13 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("error") === "session_expired") {
+      setError(t("sessionExpired"));
+    }
+  }, [t]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,7 +56,11 @@ export default function LoginPage() {
         throw new Error(data.detail || t("loginError"));
       }
 
-      router.push("/dashboard/chat");
+      const params = new URLSearchParams(window.location.search);
+      const redirectTo = sanitizeLoginRedirect(
+        params.get(AUTH_LOGIN_REDIRECT_PARAM),
+      );
+      router.push(redirectTo);
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : t("loginError"));
@@ -57,31 +78,8 @@ export default function LoginPage() {
         fontFamily: "Inter, system-ui, sans-serif",
       }}
     >
-      {/* Grid Background */}
-      <div
-        className="fixed inset-0 pointer-events-none z-0"
-        aria-hidden="true"
-        style={{ perspective: "600px", overflow: "hidden" }}
-      >
-        <div
-          className="absolute inset-[-50%] w-[200%] h-[200%]"
-          style={{
-            backgroundImage: `linear-gradient(rgba(0, 212, 255, 0.025) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 212, 255, 0.025) 1px, transparent 1px)`,
-            backgroundSize: "60px 60px",
-            transform: "rotateX(60deg)",
-            animation: "grid-drift 20s linear infinite",
-          }}
-        />
-      </div>
-
-      {/* Scanline Overlay */}
-      <div
-        className="fixed inset-0 pointer-events-none z-50"
-        style={{
-          background:
-            "repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0, 212, 255, 0.012) 2px, rgba(0, 212, 255, 0.012) 4px)",
-        }}
-      />
+      <NeonGridBackground />
+      <NeonScanlineOverlay />
 
       {/* Header */}
       <header
@@ -119,7 +117,7 @@ export default function LoginPage() {
               style={{
                 width: "32px",
                 height: "32px",
-                border: `2px solid ${CYAN}`,
+                border: `2px solid ${NEON_CYAN}`,
                 borderRadius: "4px",
                 display: "flex",
                 alignItems: "center",
@@ -127,7 +125,7 @@ export default function LoginPage() {
                 fontFamily: "'JetBrains Mono', ui-monospace, monospace",
                 fontSize: "14px",
                 fontWeight: 700,
-                color: CYAN,
+                color: NEON_CYAN,
                 boxShadow: `0 0 12px rgba(0,212,255,0.15), inset 0 0 12px rgba(0,212,255,0.15)`,
               }}
             >
@@ -154,8 +152,8 @@ export default function LoginPage() {
                 fontWeight: 700,
                 textTransform: "uppercase",
                 letterSpacing: "2px",
-                color: CYAN,
-                background: CYAN_DIM,
+                color: NEON_CYAN,
+                background: NEON_CYAN_DIM,
                 border: `1px solid rgba(0,212,255,0.15)`,
                 marginBottom: "16px",
               }}
@@ -165,8 +163,8 @@ export default function LoginPage() {
                   width: "5px",
                   height: "5px",
                   borderRadius: "50%",
-                  background: CYAN,
-                  boxShadow: `0 0 6px ${CYAN}`,
+                  background: NEON_CYAN,
+                  boxShadow: `0 0 6px ${NEON_CYAN}`,
                 }}
               />
               Authentication
@@ -211,20 +209,8 @@ export default function LoginPage() {
               </div>
             )}
 
-            <div style={{ marginBottom: "20px" }}>
-              <label
-                htmlFor="email"
-                style={{
-                  display: "block",
-                  fontSize: "13px",
-                  fontWeight: 600,
-                  color: TEXT,
-                  marginBottom: "6px",
-                }}
-              >
-                {t("emailLabel")}
-              </label>
-              <input
+            <NeonFormField label={t("emailLabel")} name="email" required>
+              <NeonInput
                 id="email"
                 name="email"
                 type="email"
@@ -232,38 +218,16 @@ export default function LoginPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder={t("emailPlaceholder")}
-                style={{
-                  width: "100%",
-                  padding: "10px 14px",
-                  borderRadius: "6px",
-                  border: "1px solid rgba(255,255,255,0.08)",
-                  background: "rgba(6,10,18,0.45)",
-                  color: TEXT,
-                  fontSize: "14px",
-                  outline: "none",
-                  transition: "border-color 0.2s",
-                }}
-                onFocus={(e) => (e.target.style.borderColor = CYAN)}
-                onBlur={(e) =>
-                  (e.target.style.borderColor = "rgba(255,255,255,0.08)")
-                }
               />
-            </div>
+            </NeonFormField>
 
-            <div style={{ marginBottom: "24px" }}>
-              <label
-                htmlFor="password"
-                style={{
-                  display: "block",
-                  fontSize: "13px",
-                  fontWeight: 600,
-                  color: TEXT,
-                  marginBottom: "6px",
-                }}
-              >
-                {t("passwordLabel")}
-              </label>
-              <input
+            <NeonFormField
+              label={t("passwordLabel")}
+              name="password"
+              required
+              className="mb-6"
+            >
+              <NeonInput
                 id="password"
                 name="password"
                 type="password"
@@ -271,44 +235,17 @@ export default function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder={t("passwordPlaceholder")}
-                style={{
-                  width: "100%",
-                  padding: "10px 14px",
-                  borderRadius: "6px",
-                  border: "1px solid rgba(255,255,255,0.08)",
-                  background: "rgba(6,10,18,0.45)",
-                  color: TEXT,
-                  fontSize: "14px",
-                  outline: "none",
-                  transition: "border-color 0.2s",
-                }}
-                onFocus={(e) => (e.target.style.borderColor = CYAN)}
-                onBlur={(e) =>
-                  (e.target.style.borderColor = "rgba(255,255,255,0.08)")
-                }
               />
-            </div>
+            </NeonFormField>
 
-            <button
+            <NeonButton
               type="submit"
+              fullWidth
+              loading={isLoading}
               disabled={isLoading}
-              style={{
-                width: "100%",
-                padding: "12px",
-                borderRadius: "6px",
-                border: "none",
-                background: `linear-gradient(135deg, ${CYAN} 0%, #0090b0 100%)`,
-                color: BG_DEEP,
-                fontSize: "14px",
-                fontWeight: 700,
-                cursor: isLoading ? "not-allowed" : "pointer",
-                opacity: isLoading ? 0.6 : 1,
-                fontFamily: "inherit",
-                boxShadow: `0 0 16px rgba(0,212,255,0.15)`,
-              }}
             >
               {isLoading ? t("signingIn") : t("signIn")}
-            </button>
+            </NeonButton>
           </form>
         </div>
       </main>

@@ -209,6 +209,7 @@ with propagate_attributes(metadata={"project_id": project_id, "phase": "research
 - Workflow audit log must be queryable by project_id and date range
 
 See `docs/architecture/` for detailed architecture documents.
+See `docs/plans/frontend-legacy-removal.md` for v1.0 UI removal inventory and CI guards.
 See `docs/decisions/` for Architecture Decision Records.
 See `docs/architecture/langchain-deep-agents-guide.md` for agent implementation details.
 

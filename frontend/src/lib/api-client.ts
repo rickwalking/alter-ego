@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { AUTH_LOGIN_REDIRECT_PARAM } from "@/constants/auth";
+
 // API Response Schema
 export const apiResponseSchema = z.object({
   success: z.boolean(),
@@ -19,6 +21,16 @@ export const errorResponseSchema = z.object({
 
 export type ApiResponse = z.infer<typeof apiResponseSchema>;
 export type ErrorResponse = z.infer<typeof errorResponseSchema>;
+
+function redirectToLoginAfterUnauthorized(): void {
+  if (typeof window === "undefined") {
+    return;
+  }
+  const redirect = `${window.location.pathname}${window.location.search}`;
+  const params = new URLSearchParams();
+  params.set(AUTH_LOGIN_REDIRECT_PARAM, redirect);
+  window.location.href = `/api/auth/logout?${params.toString()}`;
+}
 
 export class ApiError extends Error {
   constructor(
@@ -47,9 +59,7 @@ export async function apiCall<T>(
 
   if (response.status === 401) {
     const errorData = await response.json().catch(() => null);
-    if (typeof window !== "undefined") {
-      window.location.href = "/login";
-    }
+    redirectToLoginAfterUnauthorized();
     throw new ApiError(
       401,
       errorData?.message || "Unauthorized",
@@ -129,9 +139,7 @@ export async function apiCallNoContent(
 
   if (response.status === 401) {
     const errorData = await response.json().catch(() => null);
-    if (typeof window !== "undefined") {
-      window.location.href = "/login";
-    }
+    redirectToLoginAfterUnauthorized();
     throw new ApiError(
       401,
       errorData?.message || "Unauthorized",

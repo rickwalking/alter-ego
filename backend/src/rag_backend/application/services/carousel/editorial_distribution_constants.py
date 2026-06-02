@@ -1,0 +1,28 @@
+"""Constants for editorial distribution pack (caption, blog, translations)."""
+
+from rag_backend.domain.constants.carousel_workflow import SLIDE_DRAFT_TEXT_KEY
+
+OUTLINE_LEGACY_HEADING_KEY = "heading"
+OUTLINE_LEGACY_BODY_KEY = "body"
+SLIDE_INDEX_KEY = "slide_index"
+JSON_SLIDES_EN_KEY = "slides_en"
+JSON_SLIDE_NUMBER_ALIAS_KEY = "number"
+OUTLINE_FIELD_SLIDE_TYPE = "slide_type"
+BLOG_LANG_PORTUGUESE = "pt"
+BLOG_LANG_ENGLISH = "en"
+DEFAULT_UNTITLED_SLIDE_LABEL = "Slide"
+CAPTION_FALLBACK_HEADINGS_PLACEHOLDER = "-"
+
+__all__ = [
+    "BLOG_LANG_ENGLISH",
+    "BLOG_LANG_PORTUGUESE",
+    "CAPTION_FALLBACK_HEADINGS_PLACEHOLDER",
+    "DEFAULT_UNTITLED_SLIDE_LABEL",
+    "JSON_SLIDES_EN_KEY",
+    "JSON_SLIDE_NUMBER_ALIAS_KEY",
+    "OUTLINE_FIELD_SLIDE_TYPE",
+    "OUTLINE_LEGACY_BODY_KEY",
+    "OUTLINE_LEGACY_HEADING_KEY",
+    "SLIDE_DRAFT_TEXT_KEY",
+    "SLIDE_INDEX_KEY",
+]

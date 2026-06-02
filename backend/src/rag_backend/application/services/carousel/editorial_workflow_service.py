@@ -42,17 +42,22 @@ from rag_backend.application.services.image_provider_registry import (
 from rag_backend.application.services.notification_service import NotificationService
 from rag_backend.application.services.workflow_event_service import WorkflowEventService
 from rag_backend.domain.constants.carousel_workflow import (
+    PHASE_IMAGES,
     PHASE_RESEARCH,
     PHASE_STATUS_FAILED,
     PHASE_STATUS_IN_PROGRESS,
+    REVIEW_ACTION_APPROVE,
     REVIEW_ACTION_REJECT,
     REVIEW_ACTION_REVISE,
     STRUCTURED_FEEDBACK_KEY,
     WORKFLOW_METADATA_EDITORIAL_7_PHASE,
+    WORKFLOW_STATE_LINKEDIN_POST_EN_KEY,
+    WORKFLOW_STATE_LINKEDIN_POST_PT_KEY,
     WORKFLOW_TRACE_PHASE_HUMAN_REVIEW,
     WORKFLOW_TRACE_PHASE_REVIEW,
 )
 from rag_backend.domain.constants.workflow_validation import CONTENT_TYPE_CAROUSEL
+from rag_backend.domain.models import CarouselStatus
 from rag_backend.domain.models.carousels import ReviewEventParams
 from rag_backend.domain.models.persona import PersonaProfile
 from rag_backend.infrastructure.database.models.carousel import CarouselProjectModel
@@ -177,12 +182,22 @@ class EditorialWorkflowService:
         project.current_phase = str(state.get("current_phase", project.current_phase))
         project.phase_status = str(state.get("phase_status", project.phase_status))
         if str(state.get("phase_status", "")) == PHASE_STATUS_FAILED:
-            from rag_backend.domain.models import CarouselStatus
-
             project.status = CarouselStatus.FAILED.value
         raw_workflow_status = state.get("workflow_status")
         if raw_workflow_status is not None:
             project.workflow_status = str(raw_workflow_status)
+        caption = state.get("caption")
+        if isinstance(caption, str) and caption.strip():
+            project.caption = caption
+        blog_markdown = state.get("blog_markdown")
+        if isinstance(blog_markdown, str) and blog_markdown.strip():
+            project.blog_markdown = blog_markdown
+        linkedin_pt = state.get(WORKFLOW_STATE_LINKEDIN_POST_PT_KEY)
+        if isinstance(linkedin_pt, str) and linkedin_pt.strip():
+            project.linkedin_post_pt = linkedin_pt
+        linkedin_en = state.get(WORKFLOW_STATE_LINKEDIN_POST_EN_KEY)
+        if isinstance(linkedin_en, str) and linkedin_en.strip():
+            project.linkedin_post_en = linkedin_en
         await db.flush()
 
     async def resume_workflow(
@@ -274,6 +289,17 @@ class EditorialWorkflowService:
         if persisted is not None:
             state = persisted
         await self._sync_project_phase(db, project_id, state)
+        if (
+            db is not None
+            and prior is not None
+            and str(prior.get("current_phase", "")) == PHASE_IMAGES
+            and action == REVIEW_ACTION_APPROVE
+        ):
+            from rag_backend.application.services.carousel.editorial_finalize import (
+                finalize_carousel_after_images_approval,
+            )
+
+            await finalize_carousel_after_images_approval(db, project_id)
         await emit_review_event(
             ReviewEventEmitRequest(
                 db=db,

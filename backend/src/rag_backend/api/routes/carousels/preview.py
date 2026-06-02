@@ -31,6 +31,10 @@ from rag_backend.api.schemas import (
     CarouselDesignResponse,
     CarouselDesignTypography,
 )
+from rag_backend.domain.constants import (
+    HD_SUBDIR_NAME,
+    SHARED_IMAGES_DIR_NAME,
+)
 from rag_backend.domain.constants.blog_language import (
     BLOG_LANGUAGE_EN,
     BLOG_LANGUAGE_PT,
@@ -215,7 +219,7 @@ async def preview_carousel_design(
 async def preview_carousel_image(
     request: Request,
     project_id: UUID,
-    filename: str,
+    filename: Annotated[str, FastPath(pattern=r"^[a-zA-Z0-9_\-\.]+$")],
     user: Annotated[User, Depends(require_authenticated_user)],
     repo: Annotated[CarouselRepository, Depends(get_carousel_repo)],
     db: Annotated[AsyncSession, Depends(get_db)],
@@ -231,10 +235,14 @@ async def preview_carousel_image(
     )
 
     lang_dir = Path(project.output_dir or "") / lang
-    image_path = _resolve_image_file(lang_dir, filename)
+    # Try HD first, then standard, then hero images
+    hd_dir = lang_dir / HD_SUBDIR_NAME
+    image_path = _resolve_image_file(hd_dir, filename)
+    if image_path is None:
+        image_path = _resolve_image_file(lang_dir, filename)
     if image_path is None:
         image_path = _resolve_image_file(
-            Path(project.output_dir or "") / "images",
+            Path(project.output_dir or "") / SHARED_IMAGES_DIR_NAME,
             filename,
         )
     if image_path is None:

@@ -1,7 +1,7 @@
 "use client";
+import { NeonInput } from "@/components/atoms/neon-input";
 
 import { useTranslations } from "next-intl";
-import { Input } from "@/components/ui";
 
 interface BlogPostFiltersProps {
   search: string;
@@ -29,7 +29,7 @@ export function BlogPostFilters({
 
   return (
     <div className="flex flex-col sm:flex-row gap-3 mb-6">
-      <Input
+      <NeonInput
         value={search}
         onChange={(e) => onSearchChange(e.target.value)}
         placeholder={t("searchPlaceholder")}

@@ -1,3 +1,16 @@
+import {
+  NEON_AMBER,
+  NEON_AMBER_DIM,
+  NEON_CYAN,
+  NEON_CYAN_DIM,
+  NEON_MAGENTA,
+  NEON_MAGENTA_DIM,
+  NEON_PURPLE,
+  NEON_RED,
+  NEON_TEAL,
+  NEON_TEAL_DIM,
+} from "@/constants/neon";
+
 export const BLOG_POST_STATUS_OPTIONS = [
   { value: "", label: "All Status" },
   { value: "published", label: "Published" },
@@ -17,17 +30,17 @@ export const BLOG_POST_BADGE_COLORS: Record<
   string,
   { bg: string; text: string }
 > = {
-  security: { bg: "rgba(255,39,112,0.12)", text: "#ff2770" },
-  ai: { bg: "rgba(10,197,168,0.12)", text: "#0ac5a8" },
-  architecture: { bg: "rgba(168,85,247,0.12)", text: "#a855f7" },
-  dev: { bg: "rgba(245,158,11,0.12)", text: "#f59e0b" },
-  magenta: { bg: "rgba(255,39,112,0.12)", text: "#ff2770" },
-  teal: { bg: "rgba(10,197,168,0.12)", text: "#0ac5a8" },
-  cyan: { bg: "rgba(0,212,255,0.12)", text: "#00d4ff" },
-  purple: { bg: "rgba(168,85,247,0.12)", text: "#a855f7" },
-  amber: { bg: "rgba(245,158,11,0.12)", text: "#f59e0b" },
-  red: { bg: "rgba(239,68,68,0.12)", text: "#ef4444" },
-  featured: { bg: "rgba(0,212,255,0.12)", text: "#00d4ff" },
+  security: { bg: NEON_MAGENTA_DIM, text: NEON_MAGENTA },
+  ai: { bg: NEON_TEAL_DIM, text: NEON_TEAL },
+  architecture: { bg: "rgba(168,85,247,0.12)", text: NEON_PURPLE },
+  dev: { bg: NEON_AMBER_DIM, text: NEON_AMBER },
+  magenta: { bg: NEON_MAGENTA_DIM, text: NEON_MAGENTA },
+  teal: { bg: NEON_TEAL_DIM, text: NEON_TEAL },
+  cyan: { bg: NEON_CYAN_DIM, text: NEON_CYAN },
+  purple: { bg: "rgba(168,85,247,0.12)", text: NEON_PURPLE },
+  amber: { bg: NEON_AMBER_DIM, text: NEON_AMBER },
+  red: { bg: "rgba(239,68,68,0.12)", text: NEON_RED },
+  featured: { bg: NEON_CYAN_DIM, text: NEON_CYAN },
 };
 
 export const BLOG_POST_BADGE_CLASS = "badge";

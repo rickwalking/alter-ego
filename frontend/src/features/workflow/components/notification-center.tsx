@@ -1,9 +1,10 @@
 "use client";
+import { NeonBadge } from "@/components/atoms/neon-badge";
+import { NeonButton } from "@/components/atoms/neon-button";
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Bell } from "lucide-react";
-import { Badge, Button } from "@/components/ui";
 import { useNotifications } from "@/features/workflow/hooks/use-notifications";
 
 export function NotificationCenter() {
@@ -13,7 +14,7 @@ export function NotificationCenter() {
 
   return (
     <div className="relative">
-      <Button
+      <NeonButton
         variant="ghost"
         size="icon"
         className="relative"
@@ -23,11 +24,11 @@ export function NotificationCenter() {
       >
         <Bell className="h-5 w-5" />
         {unreadCount > 0 && (
-          <Badge className="absolute -top-1 -right-1 h-5 min-w-5 px-1 text-xs">
+          <NeonBadge className="absolute -top-1 -right-1 h-5 min-w-5 px-1 text-xs">
             {unreadCount}
-          </Badge>
+          </NeonBadge>
         )}
-      </Button>
+      </NeonButton>
       {open && (
         <div className="absolute right-0 top-full mt-2 w-80 rounded-md border bg-background shadow-lg z-50">
           <div className="border-b px-4 py-3 font-medium text-sm">

@@ -1,0 +1,27 @@
+---
+name: carousel_title
+version: "2.0.0"
+description: "Optimize carousel title/subtitle based on research context (Neon Shell v2.0)"
+
+template: |
+  Optimize this carousel title for maximum scroll-stop power.
+
+  Topic: {{ topic }}
+  Audience: {{ audience }}
+  Niche: {{ niche }}
+
+  Research context:
+  {{ research_context }}
+
+  Return ONLY a JSON object with keys: title, subtitle
+  Title should be max 60 chars, provocative and specific.
+  NO em dashes (— or –) in the output.
+
+model:
+  temperature: 0.7
+  max_tokens: 512
+
+metadata:
+  author: "content-team"
+  created_at: "2026-05-30"
+  tags: ["carousel", "title", "optimization", "neon-shell-v2"]

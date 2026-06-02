@@ -2,15 +2,17 @@
 
 import { useTranslations } from "next-intl";
 import {
-  Alert,
-  AlertDescription,
-  Badge,
-  Button,
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui";
+  NeonAlert,
+  NeonAlertDescription,
+} from "@/components/molecules/neon-alert";
+import { NeonBadge } from "@/components/atoms/neon-badge";
+import { NeonButton } from "@/components/atoms/neon-button";
+import {
+  NeonCard,
+  NeonCardContent,
+  NeonCardHeader,
+  NeonCardTitle,
+} from "@/components/molecules/neon-card";
 import { useAccessibilityCheck } from "@/features/blog/hooks/use-accessibility-check";
 
 interface AccessibilityCheckerProps {
@@ -22,50 +24,50 @@ export function AccessibilityChecker({ postId }: AccessibilityCheckerProps) {
   const { result, loading, error, check } = useAccessibilityCheck(postId);
 
   return (
-    <Card>
-      <CardHeader className="pb-2">
+    <NeonCard>
+      <NeonCardHeader className="pb-2">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-sm">{t("title")}</CardTitle>
+          <NeonCardTitle className="text-sm">{t("title")}</NeonCardTitle>
           {postId && (
-            <Button
+            <NeonButton
               size="sm"
               variant="outline"
               onClick={() => void check()}
               disabled={loading}
             >
               {loading ? t("checking") : t("runCheck")}
-            </Button>
+            </NeonButton>
           )}
         </div>
-      </CardHeader>
-      <CardContent className="space-y-2">
+      </NeonCardHeader>
+      <NeonCardContent className="space-y-2">
         {error && (
-          <Alert variant="destructive">
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
+          <NeonAlert variant="destructive">
+            <NeonAlertDescription>{error}</NeonAlertDescription>
+          </NeonAlert>
         )}
         {result && (
           <>
-            <Badge variant={result.passed ? "default" : "destructive"}>
+            <NeonBadge variant={result.passed ? "default" : "destructive"}>
               {t("score", { score: result.overall_score })}
-            </Badge>
+            </NeonBadge>
             {result.issues.length === 0 && (
               <p className="text-sm text-green-700">{t("noIssues")}</p>
             )}
             {result.issues.map((issue) => (
-              <Alert
+              <NeonAlert
                 key={issue.code}
                 variant={issue.severity === "error" ? "destructive" : "default"}
               >
-                <AlertDescription>{issue.message}</AlertDescription>
-              </Alert>
+                <NeonAlertDescription>{issue.message}</NeonAlertDescription>
+              </NeonAlert>
             ))}
           </>
         )}
         {!result && !loading && (
           <p className="text-xs text-muted-foreground">{t("hint")}</p>
         )}
-      </CardContent>
-    </Card>
+      </NeonCardContent>
+    </NeonCard>
   );
 }

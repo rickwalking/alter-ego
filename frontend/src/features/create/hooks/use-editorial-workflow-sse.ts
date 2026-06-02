@@ -30,6 +30,7 @@ import {
 
 interface UseEditorialWorkflowSseParams {
   projectId: string;
+  sseEnabled: boolean;
   state: EditorialWorkflowState | null;
   transportMode: EditorialWorkflowTransportMode;
   setState: Dispatch<SetStateAction<EditorialWorkflowState | null>>;
@@ -41,6 +42,7 @@ interface UseEditorialWorkflowSseParams {
 
 export function useEditorialWorkflowSse({
   projectId,
+  sseEnabled,
   state,
   transportMode,
   setState,
@@ -114,7 +116,11 @@ export function useEditorialWorkflowSse({
     const delay = EDITORIAL_WORKFLOW_POLL_BACKOFF_MS[backoffIndex];
 
     pollTimeoutRef.current = window.setTimeout(() => {
-      void refreshState().finally(() => {
+      void refreshState().then((workflowState) => {
+        if (!workflowState) {
+          stopPollingFallback();
+          return;
+        }
         backoffIndexRef.current = Math.min(
           backoffIndexRef.current + 1,
           EDITORIAL_WORKFLOW_POLL_BACKOFF_MS.length - 1,
@@ -127,13 +133,21 @@ export function useEditorialWorkflowSse({
         }
       });
     }, delay);
-  }, [clearPollTimeout, refreshState]);
+  }, [clearPollTimeout, refreshState, stopPollingFallback]);
 
   useEffect(() => {
     schedulePollFallbackRef.current = schedulePollFallback;
   }, [schedulePollFallback]);
 
   useEffect(() => {
+    if (!sseEnabled) {
+      clearPollTimeout();
+      clearReconnectTimeout();
+      sourceRef.current?.close();
+      sourceRef.current = null;
+      return;
+    }
+
     if (typeof EventSource === "undefined") {
       enterPollingFallback();
       return;
@@ -239,6 +253,7 @@ export function useEditorialWorkflowSse({
     };
   }, [
     projectId,
+    sseEnabled,
     clearPollTimeout,
     clearReconnectTimeout,
     enterPollingFallback,

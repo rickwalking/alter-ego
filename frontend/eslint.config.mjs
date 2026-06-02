@@ -27,6 +27,10 @@ export default defineConfig([
     ".stryker-tmp/**",
     "coverage/**",
     "reports/**",
+    "scripts/**",
+    ".storybook/**",
+    "**/*.stories.tsx",
+    "**/*.stories.ts",
   ]),
   {
     plugins: {
@@ -124,9 +128,17 @@ export default defineConfig([
     },
   },
   {
-    files: ["src/app/(blog)/**/*.tsx"],
+    files: ["src/features/blog/components/public-post/**/*.tsx"],
     rules: {
       "@next/next/no-img-element": "off",
+    },
+  },
+  {
+    files: ["scripts/**/*.mjs"],
+    languageOptions: {
+      parserOptions: {
+        projectService: false,
+      },
     },
   },
   {

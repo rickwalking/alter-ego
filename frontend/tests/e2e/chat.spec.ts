@@ -21,7 +21,13 @@ test.describe('Chat Page', () => {
     await expect(page.getByRole('button', { name: /send/i })).toBeVisible();
   });
 
-  test('sidebar has new chat button', async ({ page }) => {
+  test('public chat has no conversation history sidebar', async ({ page }) => {
+    await page.goto('/chat');
+
+    await expect(page.getByPlaceholder(/search conversations/i)).not.toBeVisible();
+  });
+
+  test('header new chat button stays visible', async ({ page }) => {
     await page.goto('/chat');
 
     await expect(page.getByRole('button', { name: /new chat/i })).toBeVisible();
