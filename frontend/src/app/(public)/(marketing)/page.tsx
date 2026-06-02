@@ -1122,7 +1122,7 @@ function HomePageContent({
                   }}
                 >
                   <Image
-                    src="/about-pedro.png"
+                    src="/about-pedro.jpg"
                     alt="Pedro Marins"
                     width={360}
                     height={480}
