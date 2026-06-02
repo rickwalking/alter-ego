@@ -56,7 +56,9 @@ jobs:
           source: "."
           target: "/opt/alter-ego"
           strip_components: 0
-          rm: true
+          # Do NOT use rm: true — it would delete server-side files like
+          # nginx/ssl/cert.pem and nginx/ssl/key.pem (Cloudflare Origin
+          # Certificate) which are not tracked in git.
           exclude: |
             **/node_modules/**
             **/.venv/**
