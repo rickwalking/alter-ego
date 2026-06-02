@@ -78,6 +78,7 @@ All architecturally significant decisions are documented as ADRs in `docs/decisi
 - [ADR-005: Adopt Mutation Testing](docs/decisions/0005-adopt-mutation-testing.md)
 - [ADR-006: Use JSONB for Rich Content](docs/decisions/0006-use-jsonb-for-rich-content.md)
 - [ADR-007: Consolidate Carousel Pipelines Under DeepAgents](docs/decisions/0007-consolidate-carousel-pipelines-under-deepagents.md)
+- [ADR-008: Agentic Delivery Workflow](docs/decisions/0008-agentic-delivery-workflow.md)
 
 **ADR Lifecycle:** `proposed` → `accepted` → `deprecated` (superseded by newer ADR)
 **Format:** MADR 4.x | **Naming:** `NNNN-short-title.md` | **Review:** Annually
@@ -213,6 +214,15 @@ See `docs/plans/frontend-legacy-removal.md` for v1.0 UI removal inventory and CI
 See `docs/decisions/` for Architecture Decision Records.
 See `docs/architecture/langchain-deep-agents-guide.md` for agent implementation details.
 
+## Agentic Delivery
+
+Repo-backed tickets and board state live under `.agent/` (canonical memory; visual Kanban is optional). Work tiers **T0–T3** control how much pipeline to run — hotfixes skip planner/architect. See [agentic delivery overview](docs/plans/agentic-delivery-system.md) and [ADR-008](docs/decisions/0008-agentic-delivery-workflow.md).
+
+```bash
+uv run python scripts/agent_tasks/validate_all_tickets.py
+uv run python scripts/agent_tasks/render_board.py
+```
+
 ## Development Skills
 
 This project provides AI agent skills for development and quality assurance:
@@ -229,6 +239,16 @@ This project provides AI agent skills for development and quality assurance:
 **Dimensions**: Security (OWASP Top 10:2025), code quality (ruff, mypy, complexity), mutation testing (mutmut/StrykerJS), acceptance criteria validation, and orphan/unfinished code detection.
 **Location**: `skills/qa-agent/SKILL.md`
 **Reference**: `docs/guides/qa-checkpoints.md` — Full QA checkpoint reference
+
+### Delivery orchestration skills
+
+| Skill | Purpose |
+|-------|---------|
+| `/orchestrator-skill` | Ticket status, WIP, handoffs |
+| `/planner-skill` | Epic breakdown (T3) |
+| `/architect-skill` | Plan, validate, research, skeptical review, bugfix design |
+| `/ticket-writer-skill` | Create `.agent/tasks/` files |
+| `/release-manager-skill` | PR/release prep (no auto-merge) |
 
 ### Developer → QA Workflow
 
