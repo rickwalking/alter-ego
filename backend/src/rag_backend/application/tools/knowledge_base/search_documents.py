@@ -4,6 +4,9 @@ from langchain_core.tools import tool
 
 from rag_backend.domain.models import RetrievalQuery
 from rag_backend.domain.protocols import Retriever
+from rag_backend.infrastructure.logging import get_logger
+
+logger = get_logger()
 
 
 @tool
@@ -45,17 +48,28 @@ def build_search_documents_tool(
         Args:
             query: The search query string
         """
-        results = await retriever.retrieve(
-            RetrievalQuery(query=query, top_k=top_k, namespace_prefix=namespace_prefix)
+        query_obj = RetrievalQuery(
+            query=query,
+            top_k=top_k,
+            namespace_prefix=namespace_prefix,
         )
+        logger.info(
+            "search_documents_called",
+            query=query,
+            top_k=top_k,
+            namespace_prefix=namespace_prefix,
+        )
+        results = await retriever.retrieve(query_obj)
         if not results:
+            logger.info("search_documents_no_results", query=query)
             return "No relevant documents found."
+
+        logger.info("search_documents_found", query=query, count=len(results))
 
         formatted_results = []
         for i, result in enumerate(results, 1):
-            formatted_results.append(
-                f"[{i}] {result.content[:300]}... (Score: {result.score:.3f})"
-            )
+            snippet = result.content[:2000].strip()
+            formatted_results.append(f"[{i}] {snippet}... (Score: {result.score:.3f})")
 
         return "\n\n".join(formatted_results)
 

@@ -6,6 +6,9 @@ from rag_backend.domain.protocols import (
     DocumentRepository,
     VectorStore,
 )
+from rag_backend.infrastructure.logging import get_logger
+
+logger = get_logger()
 
 _ERR_DOCUMENT_NOT_FOUND = "Document with id {} not found"
 
@@ -39,6 +42,12 @@ class DocumentProcessingPipeline:
         Returns:
             The processed document with updated status
         """
+        logger.info(
+            "pipeline_process_start",
+            document_id=str(document.id),
+            title=document.title,
+            scope=document.scope.value,
+        )
         try:
             # Update status to processing
             document.update_status(DocumentStatus.PROCESSING)
@@ -48,9 +57,16 @@ class DocumentProcessingPipeline:
             chunks = await self._document_processor.process(document)
 
             if not chunks:
+                logger.warning("pipeline_no_chunks", document_id=str(document.id))
                 document.mark_failed("No chunks generated from document")
                 await self._document_repository.update(document)
                 return document
+
+            logger.info(
+                "pipeline_chunks_generated",
+                document_id=str(document.id),
+                chunk_count=len(chunks),
+            )
 
             # Store chunks in vector store under scope-based namespace
             namespace = document.scope.value
@@ -61,7 +77,18 @@ class DocumentProcessingPipeline:
             # Mark as completed
             document.mark_completed(chunk_count=len(chunks))
             await self._document_repository.update(document)
+
+            logger.info(
+                "pipeline_completed",
+                document_id=str(document.id),
+                chunk_count=len(chunks),
+                namespace=namespace,
+            )
         except Exception as e:
+            logger.exception(
+                "pipeline_failed",
+                document_id=str(document.id),
+            )
             # Mark as failed
             document.mark_failed(str(e))
             await self._document_repository.update(document)

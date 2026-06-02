@@ -116,36 +116,41 @@ class HybridRetrieverWithRRF:
     def _apply_rrf(self, results: list[SearchResult], top_k: int) -> list[SearchResult]:
         """Apply Reciprocal Rank Fusion to search results.
 
-        RRF combines multiple ranked lists by assigning scores based on rank:
-        score = 1 / (k + rank) where k is a constant (typically 60)
+        RRF combines results from multiple namespaces by assigning
+        scores based on rank: score = 1 / (k + rank) where k = 60.
+
+        Duplicate chunk_ids are removed (same chunk from multiple
+        namespaces), but multiple chunks from the same document are
+        preserved so the LLM has richer context.
         """
         if not results:
             return []
 
-        # Group results by document_id to handle duplicates
-        doc_scores: dict[str, _DocScore] = {}
+        # Deduplicate by chunk_id to remove cross-namespace duplicates
+        seen_chunks: set[str] = set()
+        unique_results: list[SearchResult] = []
+        for result in results:
+            chunk_key = str(result.chunk_id) if result.chunk_id else str(id(result))
+            if chunk_key not in seen_chunks:
+                seen_chunks.add(chunk_key)
+                unique_results.append(result)
 
-        for rank, result in enumerate(results, start=1):
-            doc_id = str(result.document_id)
+        if not unique_results:
+            return []
 
-            if doc_id not in doc_scores:
-                doc_scores[doc_id] = _DocScore(result=result)
-
-            # Calculate RRF score for this rank
+        # Calculate RRF score for each individual chunk
+        chunk_scores: list[tuple[SearchResult, float]] = []
+        for rank, result in enumerate(unique_results, start=1):
             rrf_score = 1.0 / (self.RRF_K + rank)
-            doc_scores[doc_id].rrf_score += rrf_score
-            doc_scores[doc_id].ranks.append(rank)
+            chunk_scores.append((result, rrf_score))
 
         # Sort by RRF score (descending)
-        sorted_docs = sorted(
-            doc_scores.items(), key=lambda x: x[1].rrf_score, reverse=True
-        )
+        chunk_scores.sort(key=lambda x: x[1], reverse=True)
 
-        # Create final results with RRF scores
+        # Assign final scores and ranks
         final_results = []
-        for i, (_doc_id, data) in enumerate(sorted_docs[:top_k], start=1):
-            result = data.result
-            result.score = data.rrf_score
+        for i, (result, rrf_score) in enumerate(chunk_scores[:top_k], start=1):
+            result.score = rrf_score
             result.rank = i
             final_results.append(result)
 

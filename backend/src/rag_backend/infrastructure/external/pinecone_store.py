@@ -9,6 +9,9 @@ from rag_backend.domain.models import DocumentChunk, HybridSearchParams, SearchR
 from rag_backend.domain.retry import retry_sync
 from rag_backend.domain.types import StatsResponse
 from rag_backend.infrastructure.config.settings import Settings
+from rag_backend.infrastructure.logging import get_logger
+
+logger = get_logger()
 
 
 class PineconeVectorStore:
@@ -23,10 +26,13 @@ class PineconeVectorStore:
     async def _get_index(self):
         """Get or create Pinecone index."""
         if self._index is None:
+            logger.info("pinecone_get_index_start", index_name=self._index_name)
             for attempt in retry_sync(attempts=PINECONE_MAX_ATTEMPTS):
                 with attempt:
                     existing_indexes = self._client.list_indexes()
-            if self._index_name not in [idx.name for idx in existing_indexes]:
+            index_names = [idx.name for idx in existing_indexes]
+            if self._index_name not in index_names:
+                logger.info("pinecone_create_index", index_name=self._index_name)
                 for attempt in retry_sync(attempts=PINECONE_MAX_ATTEMPTS):
                     with attempt:
                         self._client.create_index(
@@ -39,6 +45,7 @@ class PineconeVectorStore:
                             ),
                         )
             self._index = self._client.Index(self._index_name)
+            logger.info("pinecone_get_index_ok", index_name=self._index_name)
         return self._index
 
     async def upsert_chunks(
@@ -56,6 +63,13 @@ class PineconeVectorStore:
         """
         index = await self._get_index()
         ns = namespace if namespace is not None else str(document_id)
+
+        logger.info(
+            "pinecone_upsert_start",
+            document_id=str(document_id),
+            namespace=ns,
+            chunk_count=len(chunks),
+        )
 
         vectors = []
         for chunk in chunks:
@@ -86,6 +100,13 @@ class PineconeVectorStore:
             for attempt in retry_sync(attempts=PINECONE_MAX_ATTEMPTS):
                 with attempt:
                     index.upsert(vectors=batch, namespace=ns)
+
+        logger.info(
+            "pinecone_upsert_ok",
+            document_id=str(document_id),
+            namespace=ns,
+            vector_count=len(vectors),
+        )
 
     async def delete_by_document(
         self, document_id: UUID, namespace: str | None = None
@@ -138,6 +159,16 @@ class PineconeVectorStore:
         for attempt in retry_sync(attempts=PINECONE_MAX_ATTEMPTS):
             with attempt:
                 results = index.query(**query_params)
+
+        match_count = len(results.matches) if results else 0
+        logger.info(
+            "pinecone_hybrid_search",
+            query=params.query,
+            namespace=params.namespace,
+            top_k=params.top_k,
+            alpha=params.alpha,
+            match_count=match_count,
+        )
 
         search_results = []
         for i, match in enumerate(results.matches):
