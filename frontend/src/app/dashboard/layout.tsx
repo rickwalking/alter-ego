@@ -1,6 +1,9 @@
 "use client";
 
-import { NeonGridBackground, NeonScanlineOverlay } from "@/components/organisms";
+import {
+  NeonGridBackground,
+  NeonScanlineOverlay,
+} from "@/components/organisms";
 import { NeonSidebar } from "@/components/organisms/neon-sidebar";
 import {
   DASHBOARD_SIDEBAR_SECTIONS,
@@ -28,10 +31,7 @@ export default function DashboardLayout({
         }}
       >
         <div className="flex min-h-screen">
-          <NeonSidebar
-            sections={DASHBOARD_SIDEBAR_SECTIONS}
-            showUserFooter
-          />
+          <NeonSidebar sections={DASHBOARD_SIDEBAR_SECTIONS} showUserFooter />
 
           <div
             className="flex flex-1 flex-col min-h-screen"

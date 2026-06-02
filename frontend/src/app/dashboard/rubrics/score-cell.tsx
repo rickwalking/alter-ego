@@ -6,7 +6,10 @@ interface ScoreCellProps {
   level: ScoreLevel;
 }
 
-export function ScoreCell({ label, level }: ScoreCellProps): React.ReactElement {
+export function ScoreCell({
+  label,
+  level,
+}: ScoreCellProps): React.ReactElement {
   const { bg, color } = getScoreClass(level);
   return (
     <span

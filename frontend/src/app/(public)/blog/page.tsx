@@ -122,8 +122,9 @@ export default async function PublicBlogListPage() {
                 key={post.id}
                 id={post.id}
                 title={
-                  (locale === "en" ? post.title_en || post.title : post.title) ||
-                  post.topic
+                  (locale === "en"
+                    ? post.title_en || post.title
+                    : post.title) || post.topic
                 }
                 subtitle={subtitle}
                 niche={post.niche}

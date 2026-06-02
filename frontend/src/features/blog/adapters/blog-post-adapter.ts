@@ -23,9 +23,7 @@ export function mapProjectToBlogPostCard(
     project.design_tokens.images &&
     typeof project.design_tokens.images === "object" &&
     "hero" in project.design_tokens.images
-      ? String(
-          (project.design_tokens.images as { hero?: string }).hero ?? "",
-        )
+      ? String((project.design_tokens.images as { hero?: string }).hero ?? "")
       : undefined;
 
   return {

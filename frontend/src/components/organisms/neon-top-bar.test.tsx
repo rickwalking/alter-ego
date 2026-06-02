@@ -5,12 +5,11 @@ import { NeonTopBar } from "@/components/organisms/neon-top-bar";
 describe("NeonTopBar", () => {
   it("renders title and breadcrumb", () => {
     render(
-      <NeonTopBar
-        title="Dashboard"
-        breadcrumb={[{ label: "overview" }]}
-      />,
+      <NeonTopBar title="Dashboard" breadcrumb={[{ label: "overview" }]} />,
     );
-    expect(screen.getByRole("heading", { name: "Dashboard" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Dashboard" }),
+    ).toBeInTheDocument();
     expect(screen.getByText("overview")).toBeInTheDocument();
   });
 
@@ -21,6 +20,8 @@ describe("NeonTopBar", () => {
         actions={<button type="button">New Card</button>}
       />,
     );
-    expect(screen.getByRole("button", { name: "New Card" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "New Card" }),
+    ).toBeInTheDocument();
   });
 });

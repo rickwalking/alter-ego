@@ -138,3 +138,7 @@ export const DEFAULT_BLOG_LANGUAGE = BLOG_LANGUAGES.PORTUGUESE;
 /** Site URL used for SEO metadata and sitemap generation. */
 export const SITE_URL =
   process.env.NEXT_PUBLIC_SITE_URL ?? "https://alterego.app";
+
+/** Default backend URL for server-side API route proxies. */
+export const DEFAULT_BACKEND_URL =
+  process.env.API_BASE_URL ?? "http://localhost:8000";

@@ -1,4 +1,8 @@
-export { NeonButton, neonButtonVariants, type NeonButtonProps } from "./neon-button";
+export {
+  NeonButton,
+  neonButtonVariants,
+  type NeonButtonProps,
+} from "./neon-button";
 export { NeonInput, type NeonInputProps } from "./neon-input";
 export { NeonTextarea, type NeonTextareaProps } from "./neon-textarea";
 export { NeonSelect, type NeonSelectProps } from "./neon-select";

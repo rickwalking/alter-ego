@@ -10,4 +10,6 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-export const Default: Story = { args: { placeholder: "Search...", value: "", onChange: () => undefined } };
+export const Default: Story = {
+  args: { placeholder: "Search...", value: "", onChange: () => undefined },
+};

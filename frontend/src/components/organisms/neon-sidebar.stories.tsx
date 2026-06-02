@@ -11,4 +11,6 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 import { DASHBOARD_SIDEBAR_SECTIONS } from "./constants";
-export const Default: Story = { args: { sections: DASHBOARD_SIDEBAR_SECTIONS } };
+export const Default: Story = {
+  args: { sections: DASHBOARD_SIDEBAR_SECTIONS },
+};

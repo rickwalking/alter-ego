@@ -9,7 +9,9 @@ export interface NeonBreadcrumbProps {
   items: BreadcrumbItem[];
 }
 
-export function NeonBreadcrumb({ items }: NeonBreadcrumbProps): React.ReactElement {
+export function NeonBreadcrumb({
+  items,
+}: NeonBreadcrumbProps): React.ReactElement {
   return (
     <div
       style={{
@@ -21,7 +23,11 @@ export function NeonBreadcrumb({ items }: NeonBreadcrumbProps): React.ReactEleme
       {items.map((item, index) => (
         <span key={`${item.label}-${index}`}>
           {index > 0 && " / "}
-          <span style={{ color: index === items.length - 1 ? TEXT_MUTED : TEXT_DIM }}>
+          <span
+            style={{
+              color: index === items.length - 1 ? TEXT_MUTED : TEXT_DIM,
+            }}
+          >
             {item.label}
           </span>
         </span>

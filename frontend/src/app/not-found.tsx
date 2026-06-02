@@ -1,12 +1,10 @@
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
-import { NeonGridBackground, NeonScanlineOverlay } from "@/components/organisms";
 import {
-  BG_DEEP,
-  CYAN_GRADIENT,
-  TEXT,
-  TEXT_MUTED,
-} from "@/constants/neon";
+  NeonGridBackground,
+  NeonScanlineOverlay,
+} from "@/components/organisms";
+import { BG_DEEP, CYAN_GRADIENT, TEXT, TEXT_MUTED } from "@/constants/neon";
 import { PUBLIC_ROUTE_PATHS } from "@/constants/public-routes";
 
 export default async function NotFound(): Promise<React.ReactElement> {
@@ -38,7 +36,9 @@ export default async function NotFound(): Promise<React.ReactElement> {
         <h2 style={{ fontSize: "22px", fontWeight: 700, marginBottom: "8px" }}>
           {t("title")}
         </h2>
-        <p style={{ fontSize: "15px", color: TEXT_MUTED, marginBottom: "32px" }}>
+        <p
+          style={{ fontSize: "15px", color: TEXT_MUTED, marginBottom: "32px" }}
+        >
           {t("description")}
         </p>
         <Link

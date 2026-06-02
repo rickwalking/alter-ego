@@ -15,7 +15,8 @@ const neonSpinnerVariants = cva("animate-spin", {
 });
 
 export interface NeonSpinnerProps
-  extends SVGAttributes<SVGSVGElement>,
+  extends
+    SVGAttributes<SVGSVGElement>,
     VariantProps<typeof neonSpinnerVariants> {}
 
 export const NeonSpinner = forwardRef<SVGSVGElement, NeonSpinnerProps>(

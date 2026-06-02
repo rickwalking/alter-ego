@@ -30,15 +30,22 @@ describe("NeonSidebar", () => {
   it("renders navigation links from sections", () => {
     render(<NeonSidebar sections={DASHBOARD_SIDEBAR_SECTIONS} />);
     expect(screen.getByText("Alter Ego")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /dashboard/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: /dashboard/i }),
+    ).toBeInTheDocument();
   });
 
   it("hides user footer when showUserFooter is false", () => {
     render(
-      <NeonSidebar sections={DASHBOARD_SIDEBAR_SECTIONS} showUserFooter={false} />,
+      <NeonSidebar
+        sections={DASHBOARD_SIDEBAR_SECTIONS}
+        showUserFooter={false}
+      />,
     );
     expect(screen.queryByText("Test User")).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /logout/i })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /logout/i }),
+    ).not.toBeInTheDocument();
   });
 
   it("shows authenticated user footer when showUserFooter is true", () => {

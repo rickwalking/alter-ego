@@ -15,6 +15,7 @@ import {
   completedStepsBefore,
   type CreateStepId,
 } from "@/app/dashboard/create/step-ids";
+import { resolveStepState } from "@/app/dashboard/create/workspace/step-state-helpers";
 
 const CYAN = NEON_CYAN;
 const CYAN_DIM = NEON_CYAN_DIM;
@@ -28,29 +29,12 @@ export interface CreateProgressStepsProps {
   completedStepIds?: readonly CreateStepId[];
 }
 
-type StepVisualState = "active" | "done" | "pending";
-
-function resolveStepState(
-  stepId: CreateStepId,
-  activeStepId: CreateStepId,
-  completedStepIds: readonly CreateStepId[],
-): StepVisualState {
-  if (stepId === activeStepId) {
-    return "active";
-  }
-  if (completedStepIds.includes(stepId)) {
-    return "done";
-  }
-  return "pending";
-}
-
 export function CreateProgressSteps({
   activeStepId,
   onStepChange,
   completedStepIds,
 }: CreateProgressStepsProps): React.ReactElement {
-  const doneSteps =
-    completedStepIds ?? completedStepsBefore(activeStepId);
+  const doneSteps = completedStepIds ?? completedStepsBefore(activeStepId);
   return (
     <div
       role="tablist"

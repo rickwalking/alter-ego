@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import {
   DASHBOARD_CHAT_BORDER_LIGHT,
   DASHBOARD_CHAT_BORDER_SUBTLE,
@@ -24,6 +25,7 @@ export function ChatSidebar({
   activeConv,
   onSelectConversation,
 }: ChatSidebarProps): React.ReactElement {
+  const t = useTranslations("chat.sidebar");
   return (
     <div
       style={{
@@ -43,7 +45,7 @@ export function ChatSidebar({
       >
         <input
           type="search"
-          placeholder="Search conversations..."
+          placeholder={t("searchPlaceholder")}
           style={{
             width: "100%",
             padding: "8px 12px",
@@ -77,7 +79,9 @@ export function ChatSidebar({
               borderRadius: "6px",
               cursor: "pointer",
               background:
-                activeConv === conv.id ? DASHBOARD_CHAT_CYAN_DIM : "transparent",
+                activeConv === conv.id
+                  ? DASHBOARD_CHAT_CYAN_DIM
+                  : "transparent",
               transition: "background 0.2s",
             }}
           >

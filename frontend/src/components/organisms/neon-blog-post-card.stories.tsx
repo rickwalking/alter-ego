@@ -10,4 +10,6 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-export const Default: Story = { args: { id: "1", href: "/blog/1", title: "Post", createdAt: "2026-05-29" } };
+export const Default: Story = {
+  args: { id: "1", href: "/blog/1", title: "Post", createdAt: "2026-05-29" },
+};

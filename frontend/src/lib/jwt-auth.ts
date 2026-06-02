@@ -28,7 +28,9 @@ function padBase64Url(segment: string): string {
 }
 
 /** Fallback when JWT secret is not configured in the frontend runtime. */
-export function decodeJwtPayloadUnsafe(token: string): AccessTokenPayload | null {
+export function decodeJwtPayloadUnsafe(
+  token: string,
+): AccessTokenPayload | null {
   try {
     const segment = token.split(".")[1];
     if (!segment) {

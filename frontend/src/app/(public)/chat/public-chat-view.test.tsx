@@ -29,7 +29,9 @@ describe("PublicChatView", () => {
     expect(
       screen.queryByRole("complementary", { name: /conversations/i }),
     ).not.toBeInTheDocument();
-    expect(screen.queryByPlaceholderText(/search conversations/i)).not.toBeInTheDocument();
+    expect(
+      screen.queryByPlaceholderText(/search conversations/i),
+    ).not.toBeInTheDocument();
   });
 
   it("shows sign-in hint for ephemeral sessions", () => {

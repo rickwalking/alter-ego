@@ -32,7 +32,9 @@ export interface NeonDropdownProps {
   children: ReactNode;
 }
 
-export function NeonDropdown({ children }: NeonDropdownProps): React.ReactElement {
+export function NeonDropdown({
+  children,
+}: NeonDropdownProps): React.ReactElement {
   const [open, setOpen] = useState(false);
 
   return (
@@ -52,7 +54,11 @@ export function NeonDropdownTrigger({
   const { open, setOpen } = useNeonDropdown();
 
   return (
-    <NeonButton variant="ghost" onClick={() => setOpen(!open)} aria-expanded={open}>
+    <NeonButton
+      variant="ghost"
+      onClick={() => setOpen(!open)}
+      aria-expanded={open}
+    >
       {children}
     </NeonButton>
   );

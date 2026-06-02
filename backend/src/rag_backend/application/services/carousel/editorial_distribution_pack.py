@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from dataclasses import dataclass
 from typing import cast
 from uuid import UUID
 
@@ -55,6 +56,28 @@ from rag_backend.infrastructure.llm.json_utils import extract_json
 from rag_backend.infrastructure.monitoring_langfuse import get_langfuse_runnable_config
 
 BLOG_SECTION_HEADING_PREFIX = "## "
+
+
+@dataclass(frozen=True)
+class SlideDraftsContext:
+    """Input bundle for applying slide drafts to the database."""
+
+    db: AsyncSession
+    project_id: str
+    outline: list[dict[str, object]]
+    slide_drafts: list[dict[str, object]]
+    translations_en: dict[int, dict[str, object]]
+
+
+@dataclass(frozen=True)
+class DistributionBuildContext:
+    """Input bundle for building editorial distribution updates."""
+
+    db: AsyncSession
+    llm: BaseChatModel
+    project_id: str
+    outline: list[dict[str, object]]
+    slide_drafts: list[dict[str, object]]
 
 
 def _slide_heading(slide: dict[str, object]) -> str:
@@ -197,20 +220,16 @@ async def _generate_en_translations(
 
 
 async def apply_slide_drafts_to_database(
-    db: AsyncSession,
-    project_id: str,
-    outline: list[dict[str, object]],
-    slide_drafts: list[dict[str, object]],
-    translations_en: dict[int, dict[str, object]],
+    context: SlideDraftsContext,
 ) -> None:
     """Merge outline + drafts (+ EN) into persisted carousel slides."""
-    repo = PostgresCarouselRepository(session=db)
-    project = await repo.get_project_by_id(UUID(project_id))
+    repo = PostgresCarouselRepository(session=context.db)
+    project = await repo.get_project_by_id(UUID(context.project_id))
     if project is None:
         return
 
     drafts_by_index: dict[int, dict[str, object]] = {}
-    for draft in slide_drafts:
+    for draft in context.slide_drafts:
         if isinstance(draft, dict):
             drafts_by_index[int(draft.get(SLIDE_INDEX_KEY, 0))] = draft
 
@@ -222,7 +241,7 @@ async def apply_slide_drafts_to_database(
                 continue
             slide.heading = _slide_heading(draft)
             slide.body = _slide_body(draft)
-            en = translations_en.get(slide.slide_number)
+            en = context.translations_en.get(slide.slide_number)
             if en:
                 slide_data = SlideData(
                     slide_number=slide.slide_number,
@@ -237,7 +256,7 @@ async def apply_slide_drafts_to_database(
         await repo.update_project(project)
         return
 
-    for index, item in enumerate(outline[:MAX_SLIDES]):
+    for index, item in enumerate(context.outline[:MAX_SLIDES]):
         if not isinstance(item, dict):
             continue
         slide_number = int(item.get(OUTLINE_FIELD_SLIDE_INDEX, index + 1))
@@ -247,7 +266,7 @@ async def apply_slide_drafts_to_database(
         slide_type = str(
             item.get(OUTLINE_FIELD_SLIDE_TYPE, "") or canonical_slide_type(slide_number)
         )
-        en = translations_en.get(slide_number)
+        en = context.translations_en.get(slide_number)
         slide_data = SlideData(
             slide_number=slide_number,
             slide_type=slide_type,
@@ -270,39 +289,37 @@ async def apply_slide_drafts_to_database(
 
 
 async def build_editorial_distribution_updates(
-    db: AsyncSession,
-    llm: BaseChatModel,
-    project_id: str,
-    outline: list[dict[str, object]],
-    slide_drafts: list[dict[str, object]],
+    context: DistributionBuildContext,
     *,
     linkedin_generator: LinkedInPostGenerator | None = None,
 ) -> dict[str, object]:
     """Generate and persist distribution fields; return workflow state updates."""
-    repo = PostgresCarouselRepository(session=db)
-    project = await repo.get_project_by_id(UUID(project_id))
-    if project is None or not slide_drafts:
+    repo = PostgresCarouselRepository(session=context.db)
+    project = await repo.get_project_by_id(UUID(context.project_id))
+    if project is None or not context.slide_drafts:
         return {}
 
-    translations_en = await _generate_en_translations(llm, slide_drafts)
+    translations_en = await _generate_en_translations(context.llm, context.slide_drafts)
     await apply_slide_drafts_to_database(
-        db,
-        project_id,
-        outline,
-        slide_drafts,
-        translations_en,
+        SlideDraftsContext(
+            db=context.db,
+            project_id=context.project_id,
+            outline=context.outline,
+            slide_drafts=context.slide_drafts,
+            translations_en=translations_en,
+        ),
     )
 
-    project = await repo.get_project_by_id(UUID(project_id))
+    project = await repo.get_project_by_id(UUID(context.project_id))
     if project is None:
         return {}
 
     blog_pt = build_blog_markdown_from_drafts(
-        slide_drafts,
+        context.slide_drafts,
         title=project.title or project.topic,
     )
     blog_en = build_blog_markdown_en_from_translations(
-        slide_drafts,
+        context.slide_drafts,
         translations_en,
         title=project.title_en or project.title or project.topic,
     )
@@ -312,7 +329,7 @@ async def build_editorial_distribution_updates(
         BLOG_LANG_ENGLISH: blog_en or blog_pt,
     }
 
-    caption = await _generate_caption(llm, project, slide_drafts)
+    caption = await _generate_caption(context.llm, project, context.slide_drafts)
     project.caption = caption
 
     if linkedin_generator is not None and blog_pt.strip():
@@ -333,6 +350,8 @@ async def build_editorial_distribution_updates(
 
 
 __all__ = [
+    "DistributionBuildContext",
+    "SlideDraftsContext",
     "apply_slide_drafts_to_database",
     "build_blog_markdown_en_from_translations",
     "build_blog_markdown_from_drafts",

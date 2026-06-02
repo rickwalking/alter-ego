@@ -1,11 +1,6 @@
 "use client";
 
-import {
-  createContext,
-  useContext,
-  useState,
-  type ReactNode,
-} from "react";
+import { createContext, useContext, useState, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import { NeonBadge } from "@/components/atoms/neon-badge";
 
@@ -48,7 +43,9 @@ export interface NeonTabListProps {
   children: ReactNode;
 }
 
-export function NeonTabList({ children }: NeonTabListProps): React.ReactElement {
+export function NeonTabList({
+  children,
+}: NeonTabListProps): React.ReactElement {
   return (
     <div
       className="flex gap-1 border-b border-[var(--color-neon-card-border)] mb-4"

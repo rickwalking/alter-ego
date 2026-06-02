@@ -111,5 +111,4 @@ export const STALLED_THRESHOLD_MS = 30_000;
 export const CREATE_ROUTE = "/dashboard/create";
 
 /** Route pattern for create workspace (neon dashboard). */
-export const CREATE_WORKSPACE_ROUTE = (id: string) =>
-  `/dashboard/create/${id}`;
+export const CREATE_WORKSPACE_ROUTE = (id: string) => `/dashboard/create/${id}`;

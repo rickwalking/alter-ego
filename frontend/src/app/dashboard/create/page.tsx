@@ -40,7 +40,9 @@ export default function CreateCarouselPage(): React.ReactElement {
       const project = await createCarousel.mutateAsync(payload);
       router.push(DASHBOARD_ROUTES.CREATE_WORKSPACE(project.id));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to create carousel");
+      setError(
+        err instanceof Error ? err.message : "Failed to create carousel",
+      );
     }
   };
 
@@ -66,7 +68,9 @@ export default function CreateCarouselPage(): React.ReactElement {
             gap: "24px",
           }}
         >
-          <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+          <div
+            style={{ display: "flex", flexDirection: "column", gap: "24px" }}
+          >
             <CreateTopicSection form={form} onChange={handleChange} />
             <CreateTemplateSection form={form} onChange={handleChange} />
             <CreateThemeSection form={form} onChange={handleChange} />

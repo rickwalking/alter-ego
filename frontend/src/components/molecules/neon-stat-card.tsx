@@ -1,7 +1,13 @@
 import { type ReactNode } from "react";
 import { NeonCard } from "@/components/molecules/neon-card";
 import { NeonSkeleton } from "@/components/atoms/neon-skeleton";
-import { NEON_CYAN_DIM, NEON_GREEN, NEON_RED, TEXT, TEXT_MUTED } from "@/constants/neon";
+import {
+  NEON_CYAN_DIM,
+  NEON_GREEN,
+  NEON_RED,
+  TEXT,
+  TEXT_MUTED,
+} from "@/constants/neon";
 import type { StatCardTrend } from "@/schemas/neon-stat-card";
 
 export interface NeonStatCardComponentProps {

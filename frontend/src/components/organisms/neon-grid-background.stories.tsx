@@ -10,4 +10,10 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-export const Default: Story = { render: () => <div style={{ height: 200 }}><NeonGridBackground /></div> };
+export const Default: Story = {
+  render: () => (
+    <div style={{ height: 200 }}>
+      <NeonGridBackground />
+    </div>
+  ),
+};

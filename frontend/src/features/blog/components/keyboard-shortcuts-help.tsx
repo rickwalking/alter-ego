@@ -36,7 +36,11 @@ export function KeyboardShortcutsHelp({
               <kbd className="rounded border px-2 py-0.5 text-xs">{keys}</kbd>
             </div>
           ))}
-          <NeonButton className="mt-4 w-full" variant="outline" onClick={onClose}>
+          <NeonButton
+            className="mt-4 w-full"
+            variant="outline"
+            onClick={onClose}
+          >
             {t("close")}
           </NeonButton>
         </NeonCardContent>

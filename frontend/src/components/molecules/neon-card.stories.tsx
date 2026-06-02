@@ -10,4 +10,6 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-export const Default: Story = { args: { children: "Card content", title: "Card Title" } };
+export const Default: Story = {
+  args: { children: "Card content", title: "Card Title" },
+};

@@ -1,4 +1,7 @@
-import type { RubricData, RubricColorKey } from "@/features/dashboard/rubrics/types";
+import type {
+  RubricData,
+  RubricColorKey,
+} from "@/features/dashboard/rubrics/types";
 import type { NeonRubricCardProps } from "@/components/organisms/neon-rubric-card";
 import type { QualityRubric } from "@/features/rubrics/types";
 
@@ -10,7 +13,9 @@ export interface RubricSource {
   criteria: string[];
 }
 
-export function mapRubricToCardProps(rubric: RubricSource): NeonRubricCardProps {
+export function mapRubricToCardProps(
+  rubric: RubricSource,
+): NeonRubricCardProps {
   return {
     title: rubric.title,
     category: rubric.category,
@@ -20,7 +25,10 @@ export function mapRubricToCardProps(rubric: RubricSource): NeonRubricCardProps 
   };
 }
 
-const CONTENT_TYPE_BADGE: Record<string, { badge: string; color: RubricColorKey }> = {
+const CONTENT_TYPE_BADGE: Record<
+  string,
+  { badge: string; color: RubricColorKey }
+> = {
   carousel: { badge: "Carousel", color: "cyan" },
   blog_post: { badge: "Blog", color: "magenta" },
   blog: { badge: "Blog", color: "magenta" },

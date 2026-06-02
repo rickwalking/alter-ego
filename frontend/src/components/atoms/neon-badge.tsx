@@ -1,10 +1,7 @@
 import { forwardRef, type HTMLAttributes } from "react";
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
-import {
-  BADGE_COLORS,
-  type NeonBadgeVariant,
-} from "@/schemas/neon-badge";
+import { BADGE_COLORS, type NeonBadgeVariant } from "@/schemas/neon-badge";
 
 const neonBadgeVariants = cva(
   "inline-flex items-center gap-1.5 rounded-full font-semibold transition-colors",
@@ -23,11 +20,7 @@ const neonBadgeVariants = cva(
   },
 );
 
-type LegacyBadgeVariant =
-  | "default"
-  | "secondary"
-  | "destructive"
-  | "outline";
+type LegacyBadgeVariant = "default" | "secondary" | "destructive" | "outline";
 
 const LEGACY_BADGE_MAP: Record<LegacyBadgeVariant, NeonBadgeVariant> = {
   default: "cyan",
@@ -37,7 +30,8 @@ const LEGACY_BADGE_MAP: Record<LegacyBadgeVariant, NeonBadgeVariant> = {
 };
 
 export interface NeonBadgeProps
-  extends HTMLAttributes<HTMLSpanElement>,
+  extends
+    HTMLAttributes<HTMLSpanElement>,
     VariantProps<typeof neonBadgeVariants> {
   variant?: NeonBadgeVariant | LegacyBadgeVariant;
   dot?: boolean;
@@ -67,7 +61,10 @@ export const NeonBadge = forwardRef<HTMLSpanElement, NeonBadgeProps>(
     return (
       <span
         ref={ref}
-        className={cn(neonBadgeVariants({ size, outline: isOutline }), className)}
+        className={cn(
+          neonBadgeVariants({ size, outline: isOutline }),
+          className,
+        )}
         style={{
           background: isOutline ? "transparent" : colors.bg,
           color: colors.text,

@@ -550,7 +550,9 @@ function HomePageContent({
                 }}
               >
                 {t("features.titlePrefix")}{" "}
-                <span style={{ color: MAGENTA }}>{t("features.titleHighlight")}</span>
+                <span style={{ color: MAGENTA }}>
+                  {t("features.titleHighlight")}
+                </span>
               </h2>
             </div>
 
@@ -807,7 +809,9 @@ function HomePageContent({
                 }}
               >
                 {t("posts.titlePrefix")}{" "}
-                <span style={{ color: AMBER }}>{t("posts.titleHighlight")}</span>
+                <span style={{ color: AMBER }}>
+                  {t("posts.titleHighlight")}
+                </span>
               </h2>
               <p
                 style={{

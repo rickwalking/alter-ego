@@ -34,8 +34,11 @@ export default function DashboardCreatePublishPage(): React.ReactElement {
   const params = useParams<{ id: string }>();
   const projectId = params.id;
   const t = useTranslations("publish");
-  const { data: project, isLoading, refetch: refetchProject } =
-    useCarouselProject(projectId);
+  const {
+    data: project,
+    isLoading,
+    refetch: refetchProject,
+  } = useCarouselProject(projectId);
   const { refreshState, state: workflowState } =
     useEditorialWorkflow(projectId);
   const publishInstagram = usePublishInstagram();
@@ -51,10 +54,7 @@ export default function DashboardCreatePublishPage(): React.ReactElement {
   }, [refreshState]);
 
   useEffect(() => {
-    if (
-      workflowState?.caption &&
-      !project?.caption
-    ) {
+    if (workflowState?.caption && !project?.caption) {
       void refetchProject();
     }
   }, [workflowState?.caption, project?.caption, refetchProject]);
@@ -143,7 +143,10 @@ export default function DashboardCreatePublishPage(): React.ReactElement {
     );
   }
 
-  const publishProject = mergePublishProjectWithWorkflow(project, workflowState);
+  const publishProject = mergePublishProjectWithWorkflow(
+    project,
+    workflowState,
+  );
 
   return (
     <div
@@ -181,7 +184,11 @@ export default function DashboardCreatePublishPage(): React.ReactElement {
           </div>
           <Link
             href={`${DASHBOARD_ROUTES.CREATE_WORKSPACE(projectId)}?step=publish`}
-            style={{ fontSize: "13px", color: "#00d4ff", textDecoration: "none" }}
+            style={{
+              fontSize: "13px",
+              color: "#00d4ff",
+              textDecoration: "none",
+            }}
           >
             {t("backToWorkspace")}
           </Link>

@@ -160,8 +160,8 @@ class TestBilingualExport:
 
         # Each language calls export_slides twice (standard + HD)
         assert export.export_slides.await_count == 4
-        assert export.export_slides.call_args_list[1].kwargs["hd"] is True
-        assert export.export_slides.call_args_list[3].kwargs["hd"] is True
+        assert export.export_slides.call_args_list[1].kwargs["config"].hd is True
+        assert export.export_slides.call_args_list[3].kwargs["config"].hd is True
         assert pdf_builder.build.call_count == 2
         assert project.pdf_path is not None
         assert project.pdf_path_en is not None

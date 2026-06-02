@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { AUTH_LOGIN_REDIRECT_PARAM } from "@/constants/auth";
+import { DEFAULT_BACKEND_URL } from "@/constants/api";
 import { PUBLIC_ROUTE_PATHS } from "@/constants/public-routes";
-import { clearAccessTokenCookie, sanitizeLoginRedirect } from "@/lib/auth-cookie";
-
-const DEFAULT_BACKEND_URL = "http://localhost:8000";
+import {
+  clearAccessTokenCookie,
+  sanitizeLoginRedirect,
+} from "@/lib/auth-cookie";
 
 function resolveBackendUrl(): string {
   return (

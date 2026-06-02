@@ -31,7 +31,10 @@ export function MobileNav() {
             </Link>
           )}
           {isEditor && (
-            <Link href={DASHBOARD_ROUTES.KNOWLEDGE} onClick={() => setOpen(false)}>
+            <Link
+              href={DASHBOARD_ROUTES.KNOWLEDGE}
+              onClick={() => setOpen(false)}
+            >
               {t("knowledgeBase")}
             </Link>
           )}
@@ -44,32 +47,50 @@ export function MobileNav() {
             </Link>
           )}
           {isEditor && (
-            <Link href={DASHBOARD_ROUTES.PERSONAS} onClick={() => setOpen(false)}>
+            <Link
+              href={DASHBOARD_ROUTES.PERSONAS}
+              onClick={() => setOpen(false)}
+            >
               {t("personas")}
             </Link>
           )}
           {isEditor && (
-            <Link href={DASHBOARD_ROUTES.RUBRICS} onClick={() => setOpen(false)}>
+            <Link
+              href={DASHBOARD_ROUTES.RUBRICS}
+              onClick={() => setOpen(false)}
+            >
               {t("rubrics")}
             </Link>
           )}
           {isEditor && (
-            <Link href={DASHBOARD_ROUTES.BLOG_POSTS} onClick={() => setOpen(false)}>
+            <Link
+              href={DASHBOARD_ROUTES.BLOG_POSTS}
+              onClick={() => setOpen(false)}
+            >
               {t("blogPosts")}
             </Link>
           )}
           {isEditor && (
-            <Link href={DASHBOARD_ROUTES.WORKFLOW} onClick={() => setOpen(false)}>
+            <Link
+              href={DASHBOARD_ROUTES.WORKFLOW}
+              onClick={() => setOpen(false)}
+            >
               {t("workflow")}
             </Link>
           )}
           {isEditor && (
-            <Link href={DASHBOARD_ROUTES.CALENDAR} onClick={() => setOpen(false)}>
+            <Link
+              href={DASHBOARD_ROUTES.CALENDAR}
+              onClick={() => setOpen(false)}
+            >
               {t("calendar")}
             </Link>
           )}
           {isEditor && (
-            <Link href={DASHBOARD_ROUTES.ANALYTICS} onClick={() => setOpen(false)}>
+            <Link
+              href={DASHBOARD_ROUTES.ANALYTICS}
+              onClick={() => setOpen(false)}
+            >
               {t("analytics")}
             </Link>
           )}

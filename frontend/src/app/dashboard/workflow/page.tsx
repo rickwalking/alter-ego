@@ -33,7 +33,10 @@ export default function WorkflowBoardPage(): React.ReactElement {
   const { board, loading, error, refetch } = useWorkflowKanban();
 
   return (
-    <div className="flex-1 text-white relative" style={{ fontFamily: PAGE_FONT_FAMILY }}>
+    <div
+      className="flex-1 text-white relative"
+      style={{ fontFamily: PAGE_FONT_FAMILY }}
+    >
       <NeonTopBar
         title="Workflow Board"
         breadcrumb={[{ label: "pipeline" }]}

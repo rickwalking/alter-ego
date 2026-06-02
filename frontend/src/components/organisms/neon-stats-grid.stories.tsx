@@ -10,4 +10,6 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-export const Default: Story = { args: { cards: [{ label: "Posts", value: "12" }] } };
+export const Default: Story = {
+  args: { cards: [{ label: "Posts", value: "12" }] },
+};

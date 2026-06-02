@@ -19,9 +19,16 @@ export const WORKFLOW_AMBER = NEON_AMBER;
 export const WORKFLOW_PURPLE = NEON_PURPLE;
 export const WORKFLOW_GREEN = NEON_GREEN;
 
-export type ApprovalStatus = "pending" | "approved" | "rejected" | "awaiting_human";
+export type ApprovalStatus =
+  | "pending"
+  | "approved"
+  | "rejected"
+  | "awaiting_human";
 
-export const APPROVAL_STYLES: Record<ApprovalStatus, { bg: string; color: string }> = {
+export const APPROVAL_STYLES: Record<
+  ApprovalStatus,
+  { bg: string; color: string }
+> = {
   pending: { bg: NEON_AMBER_DIM, color: NEON_AMBER },
   approved: { bg: "rgba(34,197,94,0.12)", color: NEON_GREEN },
   rejected: { bg: "rgba(239,68,68,0.12)", color: NEON_RED },

@@ -10,4 +10,6 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-export const Default: Story = { args: { items: [{ label: "Home", href: "/" }, { label: "Dashboard" }] } };
+export const Default: Story = {
+  args: { items: [{ label: "Home", href: "/" }, { label: "Dashboard" }] },
+};

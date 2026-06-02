@@ -32,7 +32,8 @@ const neonCardVariants = cva(
 );
 
 export interface NeonCardProps
-  extends HTMLAttributes<HTMLDivElement>,
+  extends
+    HTMLAttributes<HTMLDivElement>,
     VariantProps<typeof neonCardVariants> {
   accent?: NeonCardAccent;
   title?: string;
@@ -71,13 +72,17 @@ export const NeonCard = forwardRef<HTMLDivElement, NeonCardProps>(
                 if (e.key === "Enter" || e.key === " ") {
                   e.preventDefault();
                   onClick(
-                    e as unknown as Parameters<MouseEventHandler<HTMLDivElement>>[0],
+                    e as unknown as Parameters<
+                      MouseEventHandler<HTMLDivElement>
+                    >[0],
                   );
                 }
               }
             : undefined
         }
-        className={cn(neonCardVariants({ hover: hover ?? !!onClick, padding, className }))}
+        className={cn(
+          neonCardVariants({ hover: hover ?? !!onClick, padding, className }),
+        )}
         style={{
           borderTopWidth: accentColor ? "2px" : undefined,
           borderTopColor: accentColor,

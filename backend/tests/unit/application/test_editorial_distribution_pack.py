@@ -12,6 +12,7 @@ from rag_backend.application.services.carousel.editorial_distribution_constants 
     OUTLINE_LEGACY_HEADING_KEY,
 )
 from rag_backend.application.services.carousel.editorial_distribution_pack import (
+    DistributionBuildContext,
     build_blog_markdown_en_from_translations,
     build_blog_markdown_from_drafts,
     build_editorial_distribution_updates,
@@ -102,11 +103,13 @@ async def test_build_editorial_distribution_updates_persists_fields() -> None:
         ),
     ):
         updates = await build_editorial_distribution_updates(
-            MagicMock(),
-            mock_llm,
-            str(project_id),
-            outline,
-            slide_drafts,
+            DistributionBuildContext(
+                db=MagicMock(),
+                llm=mock_llm,
+                project_id=str(project_id),
+                outline=outline,
+                slide_drafts=slide_drafts,
+            ),
             linkedin_generator=None,
         )
 

@@ -7,24 +7,34 @@ import { NeonButton, neonButtonVariants } from "@/components/atoms/neon-button";
 describe("NeonButton Component", () => {
   describe("neonButtonVariants", () => {
     it("applies primary gradient classes", () => {
-      expect(neonButtonVariants({ variant: "primary" })).toContain("from-neon-cyan");
+      expect(neonButtonVariants({ variant: "primary" })).toContain(
+        "from-neon-cyan",
+      );
     });
 
     it("applies secondary border classes", () => {
       expect(neonButtonVariants({ variant: "secondary" })).toContain("border");
-      expect(neonButtonVariants({ variant: "secondary" })).toContain("text-neon-cyan");
+      expect(neonButtonVariants({ variant: "secondary" })).toContain(
+        "text-neon-cyan",
+      );
     });
 
     it("applies ghost transparent classes", () => {
-      expect(neonButtonVariants({ variant: "ghost" })).toContain("bg-transparent");
+      expect(neonButtonVariants({ variant: "ghost" })).toContain(
+        "bg-transparent",
+      );
     });
 
     it("applies danger red gradient classes", () => {
-      expect(neonButtonVariants({ variant: "danger" })).toContain("from-neon-red");
+      expect(neonButtonVariants({ variant: "danger" })).toContain(
+        "from-neon-red",
+      );
     });
 
     it("applies link underline classes", () => {
-      expect(neonButtonVariants({ variant: "link" })).toContain("underline-offset-4");
+      expect(neonButtonVariants({ variant: "link" })).toContain(
+        "underline-offset-4",
+      );
     });
 
     it("applies size sm, md, lg, and icon classes", () => {
@@ -174,7 +184,9 @@ describe("NeonButton Component", () => {
 
       it("Then link variant should expose link styling", () => {
         render(<NeonButton variant="link">Learn more</NeonButton>);
-        expect(screen.getByRole("button").className).toMatch(/underline-offset-4/);
+        expect(screen.getByRole("button").className).toMatch(
+          /underline-offset-4/,
+        );
       });
 
       it("Then outline variant should match secondary border styling", () => {
@@ -196,7 +208,9 @@ describe("NeonButton Component", () => {
     describe("When icon props are provided", () => {
       it("Then left icon should render by default", () => {
         render(
-          <NeonButton icon={<span data-testid="left-icon">L</span>}>With Icon</NeonButton>,
+          <NeonButton icon={<span data-testid="left-icon">L</span>}>
+            With Icon
+          </NeonButton>,
         );
         expect(screen.getByTestId("left-icon")).toBeInTheDocument();
       });
@@ -224,7 +238,10 @@ describe("NeonButton Component", () => {
     describe("When not loading", () => {
       it("Then aria-busy should not be true", () => {
         render(<NeonButton>Idle</NeonButton>);
-        expect(screen.getByRole("button")).not.toHaveAttribute("aria-busy", "true");
+        expect(screen.getByRole("button")).not.toHaveAttribute(
+          "aria-busy",
+          "true",
+        );
       });
     });
   });

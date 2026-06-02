@@ -1,4 +1,9 @@
-import { NEON_CYAN, NEON_PROGRESS_GLOW, TEXT_DIM, TEXT_MUTED } from "@/constants/neon";
+import {
+  NEON_CYAN,
+  NEON_PROGRESS_GLOW,
+  TEXT_DIM,
+  TEXT_MUTED,
+} from "@/constants/neon";
 export interface NeonProgressBarComponentProps {
   value: number;
   max?: number;
@@ -15,7 +20,10 @@ export function NeonProgressBar({
   return (
     <div className="w-full space-y-2">
       {label && (
-        <div className="flex justify-between text-xs" style={{ color: TEXT_MUTED }}>
+        <div
+          className="flex justify-between text-xs"
+          style={{ color: TEXT_MUTED }}
+        >
           <span>{label}</span>
           <span style={{ color: TEXT_DIM }}>{Math.round(percent)}%</span>
         </div>

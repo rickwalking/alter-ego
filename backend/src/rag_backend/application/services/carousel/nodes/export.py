@@ -25,7 +25,7 @@ from rag_backend.domain.constants import (
     SHARED_IMAGES_DIR_NAME,
 )
 from rag_backend.domain.models import CarouselProject
-from rag_backend.domain.protocols import CarouselExportService
+from rag_backend.domain.protocols import CarouselExportService, ExportConfig
 from rag_backend.infrastructure.logging import get_logger
 
 logger = get_logger()
@@ -66,7 +66,7 @@ async def render_language(
         await export.export_slides(
             html_content=rewritten_html,
             output_dir=str(hd_dir),
-            hd=True,
+            config=ExportConfig(hd=True),
         )
     except Exception:
         logger.warning(

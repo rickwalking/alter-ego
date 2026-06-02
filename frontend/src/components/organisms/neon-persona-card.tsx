@@ -35,7 +35,11 @@ export function NeonPersonaCard({
           }}
         >
           {avatarUrl ? (
-            <img src={avatarUrl} alt="" className="w-full h-full rounded-full object-cover" />
+            <img
+              src={avatarUrl}
+              alt=""
+              className="w-full h-full rounded-full object-cover"
+            />
           ) : (
             name.charAt(0)
           )}

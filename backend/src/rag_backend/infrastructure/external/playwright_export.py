@@ -18,7 +18,7 @@ from rag_backend.domain.constants import (
     SLIDE_FILENAME_PREFIX,
     SLIDE_IMAGE_EXTENSION,
 )
-from rag_backend.domain.protocols import CarouselExportService
+from rag_backend.domain.protocols import CarouselExportService, ExportConfig
 from rag_backend.infrastructure.logging import get_logger
 
 logger = get_logger()
@@ -155,27 +155,19 @@ class PlaywrightExportService(CarouselExportService):
         self,
         html_content: str,
         output_dir: str,
-        *,
-        width: int = DEFAULT_WIDTH,
-        height: int = DEFAULT_HEIGHT,
-        css_overrides: str | None = None,
-        quality: int = DEFAULT_QUALITY,
-        hd: bool = False,
+        config: ExportConfig | None = None,
     ) -> list[str]:
         """Render HTML carousel and export individual slide images.
 
         Args:
             html_content: Self-contained HTML carousel string.
             output_dir: Directory for output files.
-            width: Slide width in pixels.
-            height: Slide height in pixels.
-            css_overrides: Optional extra CSS injected after defaults.
-            quality: JPEG quality (0-100).
-            hd: If True, export at 2x resolution with scaled fonts.
+            config: Optional export configuration overrides.
 
         Returns:
             List of paths to exported slide images.
         """
+        cfg = config or ExportConfig()
         output_path = Path(output_dir)
         output_path.mkdir(parents=True, exist_ok=True)
 
@@ -183,10 +175,10 @@ class PlaywrightExportService(CarouselExportService):
         html_file.write_text(html_content, encoding=ENCODING_UTF8)
 
         exported_paths: list[str] = []
-        scale = HD_SCALE_FACTOR if hd else 1
-        target_width = width * scale
-        target_height = height * scale
-        injection = _CSS_INJECTION_HD if hd else _CSS_INJECTION_BASE
+        scale = HD_SCALE_FACTOR if cfg.hd else 1
+        target_width = cfg.width * scale
+        target_height = cfg.height * scale
+        injection = _CSS_INJECTION_HD if cfg.hd else _CSS_INJECTION_BASE
 
         async with async_playwright() as p:
             browser = await p.chromium.launch()
@@ -204,10 +196,10 @@ class PlaywrightExportService(CarouselExportService):
 
             # Inject default + optional CSS overrides
             await page.evaluate(injection)
-            if css_overrides:
+            if cfg.css_overrides:
                 import json
 
-                safe_css = json.dumps(css_overrides)
+                safe_css = json.dumps(cfg.css_overrides)
                 override_js = (
                     "const s = document.createElement('style');"
                     f"s.textContent = {safe_css};"
@@ -227,7 +219,7 @@ class PlaywrightExportService(CarouselExportService):
                 await slide.screenshot(
                     path=slide_path,
                     type=IMAGE_FORMAT_JPEG_LOWER,
-                    quality=quality,
+                    quality=cfg.quality,
                 )
                 # Crop 1px border artifact
                 _crop_border_artifact(

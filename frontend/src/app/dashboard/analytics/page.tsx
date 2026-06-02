@@ -1,7 +1,12 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { NeonCard, NeonCardContent, NeonCardHeader, NeonCardTitle } from "@/components/molecules/neon-card";
+import {
+  NeonCard,
+  NeonCardContent,
+  NeonCardHeader,
+  NeonCardTitle,
+} from "@/components/molecules/neon-card";
 import { NeonSpinner } from "@/components/atoms/neon-spinner";
 import { NeonTopBar } from "@/components/organisms/neon-top-bar";
 import { NeonStatsGrid } from "@/components/organisms/neon-stats-grid";
@@ -66,7 +71,9 @@ export default function AnalyticsPage(): React.ReactElement {
 
         <NeonCard padding="md">
           <NeonCardHeader>
-            <NeonCardTitle className="text-base">{t("velocityTitle")}</NeonCardTitle>
+            <NeonCardTitle className="text-base">
+              {t("velocityTitle")}
+            </NeonCardTitle>
           </NeonCardHeader>
           <NeonCardContent>
             <div className="space-y-2">

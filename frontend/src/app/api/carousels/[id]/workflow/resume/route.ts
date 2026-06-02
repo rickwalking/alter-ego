@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { CONTENT_TYPES, HTTP_METHODS } from "@/constants/api";
-
-const DEFAULT_BACKEND_URL = "http://localhost:8000";
+import {
+  CONTENT_TYPES,
+  DEFAULT_BACKEND_URL,
+  HTTP_METHODS,
+} from "@/constants/api";
 
 /** Allow long-running LLM resume calls through the Next.js proxy. */
 export const maxDuration = 300;

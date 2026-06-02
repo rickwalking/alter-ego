@@ -2,10 +2,18 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
-import { NeonAlert, NeonAlertDescription } from "@/components/molecules/neon-alert";
+import {
+  NeonAlert,
+  NeonAlertDescription,
+} from "@/components/molecules/neon-alert";
 import { NeonBadge } from "@/components/atoms/neon-badge";
 import { NeonButton } from "@/components/atoms/neon-button";
-import { NeonCard, NeonCardContent, NeonCardHeader, NeonCardTitle } from "@/components/molecules/neon-card";
+import {
+  NeonCard,
+  NeonCardContent,
+  NeonCardHeader,
+  NeonCardTitle,
+} from "@/components/molecules/neon-card";
 import { CONTENT_SOURCE_TYPES } from "@/constants/blog-ai";
 import { API_ENDPOINTS, HTTP_METHODS } from "@/constants/api";
 import type { ContentSource } from "@/features/blog/types-ai";
@@ -214,7 +222,10 @@ export function CreateSourceMaterials({
                 ))}
               </ul>
             )}
-            <NeonButton size="sm" onClick={() => void extractKeyPoints(source.id)}>
+            <NeonButton
+              size="sm"
+              onClick={() => void extractKeyPoints(source.id)}
+            >
               {t("actions.extract")}
             </NeonButton>
           </div>

@@ -1,6 +1,7 @@
 """Full HTML carousel template with Neon Shell v2.0 inline CSS."""
 
 import html as html_module
+from dataclasses import dataclass
 
 from rag_backend.application.services.carousel.types import SlideDict
 from rag_backend.application.services.carousel_template.neon_styles import (
@@ -128,28 +129,32 @@ def _build_caption_html(project: CarouselProject) -> str:
     )
 
 
-def _wrap_slide(
-    inner_html: str,
-    slide_num: int,
-    total_slides: int,
-    watermark_html: str,
-    *,
-    include_action_bar: bool = False,
-    caption_html: str = "",
-) -> str:
+@dataclass(frozen=True)
+class SlideWrapContext:
+    """Input bundle for wrapping a single slide."""
+
+    inner_html: str
+    slide_num: int
+    total_slides: int
+    watermark_html: str
+    include_action_bar: bool = False
+    caption_html: str = ""
+
+
+def _wrap_slide(ctx: SlideWrapContext) -> str:
     """Wrap slide content in Neon Shell v2.0 structure."""
-    counter = _build_slide_counter(total_slides, slide_num)
-    action_bar = _build_action_bar() if include_action_bar else ""
+    counter = _build_slide_counter(ctx.total_slides, ctx.slide_num)
+    action_bar = _build_action_bar() if ctx.include_action_bar else ""
     return (
         f'<div class="ig-post">'
         f'<div class="ig-slide">'
         f'<div class="ig-slide-inner">'
-        f"{inner_html}"
-        f"{watermark_html}"
+        f"{ctx.inner_html}"
+        f"{ctx.watermark_html}"
         f"</div>"
         f"{counter}"
         f"{action_bar}"
-        f"{caption_html}"
+        f"{ctx.caption_html}"
         f"</div></div>"
     )
 
@@ -181,12 +186,14 @@ def build_carousel_html(
         else:
             inner = _render_content_slide(slide, theme, total_slides)
         slides_html += _wrap_slide(
-            inner,
-            int(slide["number"]),
-            total_slides,
-            watermark_html,
-            include_action_bar=is_first_or_last,
-            caption_html=caption_html if is_first_or_last else "",
+            SlideWrapContext(
+                inner_html=inner,
+                slide_num=int(slide["number"]),
+                total_slides=total_slides,
+                watermark_html=watermark_html,
+                include_action_bar=is_first_or_last,
+                caption_html=caption_html if is_first_or_last else "",
+            ),
         )
 
     if design_overrides:

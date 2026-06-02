@@ -1,4 +1,7 @@
-import { NeonGridBackground, NeonScanlineOverlay } from "@/components/organisms";
+import {
+  NeonGridBackground,
+  NeonScanlineOverlay,
+} from "@/components/organisms";
 import { BG_DEEP } from "@/constants/neon";
 
 export default function PublicLayout({

@@ -24,8 +24,7 @@ function extractRenderedSlides(
     | null
     | undefined;
   const rendered =
-    tokens?.images?.rendered_slides_pt ??
-    tokens?.images?.rendered_slides_en;
+    tokens?.images?.rendered_slides_pt ?? tokens?.images?.rendered_slides_en;
   if (rendered && rendered.length > 0) return rendered;
   const rawSlides = tokens?.images?.slides;
   if (rawSlides && rawSlides.length > 0) return rawSlides;

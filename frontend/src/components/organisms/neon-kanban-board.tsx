@@ -39,7 +39,10 @@ export function NeonKanbanBoard({
                 className="block no-underline"
               >
                 <NeonCard padding="sm" hover>
-                  <p className="text-sm font-semibold mb-1" style={{ color: TEXT }}>
+                  <p
+                    className="text-sm font-semibold mb-1"
+                    style={{ color: TEXT }}
+                  >
                     {card.title}
                   </p>
                   <p

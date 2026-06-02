@@ -35,7 +35,10 @@ from rag_backend.infrastructure.external.openai_embeddings import (  # type: ign
     OpenAIEmbeddings,
 )
 
-from .editorial_distribution_pack import build_editorial_distribution_updates
+from .editorial_distribution_pack import (
+    DistributionBuildContext,
+    build_editorial_distribution_updates,
+)
 from .editorial_workflow_generators import (
     SlideDraftGenerationParams,
     generate_outline,
@@ -160,11 +163,15 @@ class PhaseArtifactRunner:
 
             container = get_container()
             distribution = await build_editorial_distribution_updates(
-                self._db,
-                self._llm,
-                str(state.get("project_id", "")),
-                [slide for slide in outline if isinstance(slide, dict)],
-                [slide for slide in slide_drafts if isinstance(slide, dict)],
+                DistributionBuildContext(
+                    db=self._db,
+                    llm=self._llm,
+                    project_id=str(state.get("project_id", "")),
+                    outline=[slide for slide in outline if isinstance(slide, dict)],
+                    slide_drafts=[
+                        slide for slide in slide_drafts if isinstance(slide, dict)
+                    ],
+                ),
                 linkedin_generator=container.linkedin_post_generator(),
             )
             updates.update(distribution)

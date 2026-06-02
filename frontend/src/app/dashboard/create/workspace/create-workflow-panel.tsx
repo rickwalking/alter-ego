@@ -2,7 +2,10 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import { NeonAlert, NeonAlertDescription } from "@/components/molecules/neon-alert";
+import {
+  NeonAlert,
+  NeonAlertDescription,
+} from "@/components/molecules/neon-alert";
 import { NeonBadge } from "@/components/atoms/neon-badge";
 import { NeonButton } from "@/components/atoms/neon-button";
 import { NeonTextarea } from "@/components/atoms/neon-textarea";
@@ -185,7 +188,9 @@ export function CreateWorkflowPanel({
         <div className="flex items-center gap-2">
           {transportMode ===
             EDITORIAL_WORKFLOW_TRANSPORT_MODE.POLLING_FALLBACK && (
-            <NeonBadge variant="outline">{t("transport.pollingFallback")}</NeonBadge>
+            <NeonBadge variant="outline">
+              {t("transport.pollingFallback")}
+            </NeonBadge>
           )}
           {hasActiveWorkflow && (
             <NeonBadge variant="secondary">{state?.current_phase}</NeonBadge>
@@ -273,7 +278,10 @@ export function CreateWorkflowPanel({
           )}
           <div className="flex flex-col gap-2">
             {loading && (
-              <p className="text-xs" style={{ color: "rgba(255,255,255,0.55)" }}>
+              <p
+                className="text-xs"
+                style={{ color: "rgba(255,255,255,0.55)" }}
+              >
                 {t("actions.processing")}
               </p>
             )}

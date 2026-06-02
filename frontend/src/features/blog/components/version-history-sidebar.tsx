@@ -4,7 +4,12 @@ import { useCallback, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { NeonBadge } from "@/components/atoms/neon-badge";
 import { NeonButton } from "@/components/atoms/neon-button";
-import { NeonCard, NeonCardContent, NeonCardHeader, NeonCardTitle } from "@/components/molecules/neon-card";
+import {
+  NeonCard,
+  NeonCardContent,
+  NeonCardHeader,
+  NeonCardTitle,
+} from "@/components/molecules/neon-card";
 import { API_ENDPOINTS } from "@/constants/api";
 import { authenticatedFetch } from "@/lib/authenticated-fetch";
 

@@ -47,14 +47,14 @@ vi.mock("jszip", () => ({
 describe("HorizontalCarouselViewer", () => {
   const urls = ["/slide1.jpg", "/slide2.jpg"];
 
-beforeEach(() => {
-  vi.clearAllMocks();
-  mockFile.mockClear();
-  mockFolder.mockClear();
-  mockGenerateAsync.mockClear();
-  global.URL.createObjectURL = vi.fn().mockReturnValue("blob:test-url");
-  global.URL.revokeObjectURL = vi.fn();
-});
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockFile.mockClear();
+    mockFolder.mockClear();
+    mockGenerateAsync.mockClear();
+    global.URL.createObjectURL = vi.fn().mockReturnValue("blob:test-url");
+    global.URL.revokeObjectURL = vi.fn();
+  });
 
   // Scenario: Renders slides with 4:5 aspect ratio container
   it("renders slides with aspect-[4/5] container", () => {
@@ -97,14 +97,8 @@ beforeEach(() => {
     await waitFor(() => {
       expect(mockFile).toHaveBeenCalledTimes(2);
     });
-    expect(mockFile).toHaveBeenCalledWith(
-      "slide_1.jpg",
-      expect.any(Blob),
-    );
-    expect(mockFile).toHaveBeenCalledWith(
-      "slide_2.jpg",
-      expect.any(Blob),
-    );
+    expect(mockFile).toHaveBeenCalledWith("slide_1.jpg", expect.any(Blob));
+    expect(mockFile).toHaveBeenCalledWith("slide_2.jpg", expect.any(Blob));
   });
 
   // Scenario: Download button shows spinner and disabled state while downloading

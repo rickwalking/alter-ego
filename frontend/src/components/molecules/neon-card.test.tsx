@@ -88,9 +88,7 @@ describe("NeonCard Component", () => {
   describe("When padding prop is sm", () => {
     it("Then the card should have small padding class", () => {
       const { container } = render(
-        <NeonCard padding="sm">
-          Small padding
-        </NeonCard>,
+        <NeonCard padding="sm">Small padding</NeonCard>,
       );
       expect(container.firstChild).toHaveClass(CARD_PADDING_MAP.sm);
     });
@@ -99,9 +97,7 @@ describe("NeonCard Component", () => {
   describe("When padding prop is lg", () => {
     it("Then the card should have large padding class", () => {
       const { container } = render(
-        <NeonCard padding="lg">
-          Large padding
-        </NeonCard>,
+        <NeonCard padding="lg">Large padding</NeonCard>,
       );
       expect(container.firstChild).toHaveClass(CARD_PADDING_MAP.lg);
     });
@@ -112,9 +108,7 @@ describe("NeonCard Component", () => {
       "Then accent %s should set top border color",
       (accent) => {
         const { container } = render(
-          <NeonCard accent={accent}>
-            Accented
-          </NeonCard>,
+          <NeonCard accent={accent}>Accented</NeonCard>,
         );
         expect(container.firstChild).toHaveStyle({
           borderTopColor: CARD_ACCENT_COLORS[accent],
@@ -126,11 +120,7 @@ describe("NeonCard Component", () => {
 
   describe("When hover prop is true without onClick", () => {
     it("Then hover cursor class should be applied", () => {
-      const { container } = render(
-        <NeonCard hover>
-          Hover only
-        </NeonCard>,
-      );
+      const { container } = render(<NeonCard hover>Hover only</NeonCard>);
       expect(container.firstChild).toHaveClass("cursor-pointer");
     });
   });

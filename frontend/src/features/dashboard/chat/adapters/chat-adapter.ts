@@ -14,7 +14,11 @@ import type { Conversation, Message } from "@/schemas/chat";
 
 const AVATAR_PALETTE = [
   { avatar: "AE", bg: DASHBOARD_CHAT_CYAN_DIM, color: DASHBOARD_CHAT_CYAN },
-  { avatar: "KB", bg: DASHBOARD_CHAT_MAGENTA_DIM, color: DASHBOARD_CHAT_MAGENTA },
+  {
+    avatar: "KB",
+    bg: DASHBOARD_CHAT_MAGENTA_DIM,
+    color: DASHBOARD_CHAT_MAGENTA,
+  },
   { avatar: "WF", bg: DASHBOARD_CHAT_TEAL_DIM, color: DASHBOARD_CHAT_TEAL },
 ] as const;
 

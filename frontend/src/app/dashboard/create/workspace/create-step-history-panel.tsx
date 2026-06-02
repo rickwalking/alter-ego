@@ -89,7 +89,10 @@ export function CreateStepHistoryPanel({
               asString(record.draft_text) || asString(record.body) || "";
             return (
               <li key={`draft-${index}`}>
-                <p className="font-medium" style={{ color: "rgba(255,255,255,0.88)" }}>
+                <p
+                  className="font-medium"
+                  style={{ color: "rgba(255,255,255,0.88)" }}
+                >
                   {outlineTitle(record, untitled)}
                 </p>
                 {text ? (
@@ -113,7 +116,10 @@ export function CreateStepHistoryPanel({
     );
   }
 
-  if (viewStepId === CREATE_STEP_IDS.REVIEW && phase === EDITORIAL_PHASES.FINAL_REVIEW) {
+  if (
+    viewStepId === CREATE_STEP_IDS.REVIEW &&
+    phase === EDITORIAL_PHASES.FINAL_REVIEW
+  ) {
     return (
       <p className="text-sm" style={{ color: TEXT_DIM }}>
         {t("reviewHint")}
@@ -135,7 +141,10 @@ export function CreateStepHistoryPanel({
       <div className="space-y-2 text-sm" style={{ color: TEXT_DIM }}>
         {caption.trim() ? (
           <div>
-            <p className="font-medium" style={{ color: "rgba(255,255,255,0.88)" }}>
+            <p
+              className="font-medium"
+              style={{ color: "rgba(255,255,255,0.88)" }}
+            >
               {t("publishCaptionLabel")}
             </p>
             <p className="mt-1 whitespace-pre-wrap">{caption}</p>
@@ -143,7 +152,10 @@ export function CreateStepHistoryPanel({
         ) : null}
         {linkedinPt.trim() ? (
           <div>
-            <p className="font-medium" style={{ color: "rgba(255,255,255,0.88)" }}>
+            <p
+              className="font-medium"
+              style={{ color: "rgba(255,255,255,0.88)" }}
+            >
               {t("publishLinkedInLabel")}
             </p>
             <p className="mt-1 whitespace-pre-wrap">{linkedinPt}</p>

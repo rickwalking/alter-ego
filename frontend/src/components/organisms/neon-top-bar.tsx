@@ -1,5 +1,8 @@
 import { type ReactNode } from "react";
-import { NeonBreadcrumb, type BreadcrumbItem } from "@/components/organisms/neon-breadcrumb";
+import {
+  NeonBreadcrumb,
+  type BreadcrumbItem,
+} from "@/components/organisms/neon-breadcrumb";
 import { NEON_BG_HEADER, NEON_BORDER_SUBTLE, TEXT } from "@/constants/neon";
 
 export interface NeonTopBarProps {

@@ -76,13 +76,7 @@ export function DashboardChatView(): React.ReactElement {
 
     setInput("");
     await sendMessage(content, convId);
-  }, [
-    input,
-    isStreaming,
-    effectiveConvId,
-    createConversation,
-    sendMessage,
-  ]);
+  }, [input, isStreaming, effectiveConvId, createConversation, sendMessage]);
 
   const handleNewChat = useCallback(() => {
     setActiveConv(null);

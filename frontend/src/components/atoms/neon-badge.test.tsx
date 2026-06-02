@@ -53,7 +53,9 @@ describe("NeonBadge Component", () => {
           Live
         </NeonBadge>,
       );
-      expect(container.querySelector('[aria-hidden="true"]')).toBeInTheDocument();
+      expect(
+        container.querySelector('[aria-hidden="true"]'),
+      ).toBeInTheDocument();
     });
 
     it("Then the dot should use the variant text color", () => {
@@ -74,7 +76,9 @@ describe("NeonBadge Component", () => {
           Outline
         </NeonBadge>,
       );
-      expect(screen.getByText("Outline")).toHaveStyle({ background: "transparent" });
+      expect(screen.getByText("Outline")).toHaveStyle({
+        background: "transparent",
+      });
     });
 
     it("Then border color should match variant text", () => {
@@ -93,7 +97,9 @@ describe("NeonBadge Component", () => {
     // Scenario: Outline legacy maps to cyan outline styling
     it("Then the badge should render with transparent background", () => {
       render(<NeonBadge variant="outline">Outline</NeonBadge>);
-      expect(screen.getByText("Outline")).toHaveStyle({ background: "transparent" });
+      expect(screen.getByText("Outline")).toHaveStyle({
+        background: "transparent",
+      });
     });
   });
 
@@ -122,20 +128,12 @@ describe("NeonBadge Component", () => {
 
   describe("When size prop is set", () => {
     it("Then sm size should include compact padding classes", () => {
-      render(
-        <NeonBadge size="sm">
-          Small
-        </NeonBadge>,
-      );
+      render(<NeonBadge size="sm">Small</NeonBadge>);
       expect(screen.getByText("Small").className).toMatch(/text-\[10px\]/);
     });
 
     it("Then md size should include default text classes", () => {
-      render(
-        <NeonBadge size="md">
-          Medium
-        </NeonBadge>,
-      );
+      render(<NeonBadge size="md">Medium</NeonBadge>);
       expect(screen.getByText("Medium").className).toMatch(/text-xs/);
     });
   });

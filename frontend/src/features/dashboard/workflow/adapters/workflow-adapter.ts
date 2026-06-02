@@ -76,6 +76,8 @@ export function mapApiKanbanColumn(column: ApiKanbanColumn): KanbanColumn {
   };
 }
 
-export function mapApiWorkflowKanbanToNeon(board: WorkflowKanban): KanbanColumn[] {
+export function mapApiWorkflowKanbanToNeon(
+  board: WorkflowKanban,
+): KanbanColumn[] {
   return board.columns.map(mapApiKanbanColumn);
 }

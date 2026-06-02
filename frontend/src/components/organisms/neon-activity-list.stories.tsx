@@ -10,4 +10,11 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-export const Default: Story = { args: { title: "Recent", activities: [{ id: "1", title: "Published", time: "2h ago", badge: "live" }] } };
+export const Default: Story = {
+  args: {
+    title: "Recent",
+    activities: [
+      { id: "1", title: "Published", time: "2h ago", badge: "live" },
+    ],
+  },
+};

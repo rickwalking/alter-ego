@@ -123,7 +123,9 @@ export function RubricPanel({ rubric }: RubricPanelProps): React.ReactElement {
               >
                 {c.name}
               </div>
-              <div style={{ fontSize: 11, color: TEXT_MUTED }}>{c.description}</div>
+              <div style={{ fontSize: 11, color: TEXT_MUTED }}>
+                {c.description}
+              </div>
             </div>
             <div style={{ display: "flex", justifyContent: "center" }}>
               <ScoreCell label={c.excellent} level="excellent" />

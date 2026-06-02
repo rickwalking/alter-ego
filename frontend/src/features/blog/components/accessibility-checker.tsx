@@ -1,10 +1,18 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { NeonAlert, NeonAlertDescription } from "@/components/molecules/neon-alert";
+import {
+  NeonAlert,
+  NeonAlertDescription,
+} from "@/components/molecules/neon-alert";
 import { NeonBadge } from "@/components/atoms/neon-badge";
 import { NeonButton } from "@/components/atoms/neon-button";
-import { NeonCard, NeonCardContent, NeonCardHeader, NeonCardTitle } from "@/components/molecules/neon-card";
+import {
+  NeonCard,
+  NeonCardContent,
+  NeonCardHeader,
+  NeonCardTitle,
+} from "@/components/molecules/neon-card";
 import { useAccessibilityCheck } from "@/features/blog/hooks/use-accessibility-check";
 
 interface AccessibilityCheckerProps {

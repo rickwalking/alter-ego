@@ -1,8 +1,4 @@
-import {
-  forwardRef,
-  type ButtonHTMLAttributes,
-  type ReactNode,
-} from "react";
+import { forwardRef, type ButtonHTMLAttributes, type ReactNode } from "react";
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 import { NeonSpinner } from "@/components/atoms/neon-spinner";
@@ -20,8 +16,7 @@ const neonButtonVariants = cva(
           "border border-[color:var(--color-neon-cyan-border-30)] text-neon-cyan bg-transparent hover:bg-neon-cyan-dim",
         outline:
           "border border-[color:var(--color-neon-cyan-border-30)] text-neon-cyan bg-transparent hover:bg-neon-cyan-dim",
-        ghost:
-          "bg-transparent text-text-primary hover:bg-neon-cyan-dim",
+        ghost: "bg-transparent text-text-primary hover:bg-neon-cyan-dim",
         link: "bg-transparent text-neon-cyan underline-offset-4 hover:underline",
         danger:
           "bg-gradient-to-r from-neon-red to-[var(--color-neon-red-dark-end)] text-white shadow-[var(--shadow-neon-danger)]",
@@ -47,7 +42,8 @@ const neonButtonVariants = cva(
 );
 
 export interface NeonButtonProps
-  extends ButtonHTMLAttributes<HTMLButtonElement>,
+  extends
+    ButtonHTMLAttributes<HTMLButtonElement>,
     VariantProps<typeof neonButtonVariants> {
   loading?: boolean;
   icon?: ReactNode;
@@ -78,7 +74,9 @@ export const NeonButton = forwardRef<HTMLButtonElement, NeonButtonProps>(
         ref={ref}
         type={type}
         disabled={isDisabled}
-        className={cn(neonButtonVariants({ variant, size, fullWidth, className }))}
+        className={cn(
+          neonButtonVariants({ variant, size, fullWidth, className }),
+        )}
         aria-disabled={isDisabled}
         aria-busy={loading}
         {...props}

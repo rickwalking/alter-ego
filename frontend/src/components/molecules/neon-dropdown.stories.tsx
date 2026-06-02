@@ -10,4 +10,10 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-export const Default: Story = { render: () => <NeonDropdown><span>Menu</span></NeonDropdown> };
+export const Default: Story = {
+  render: () => (
+    <NeonDropdown>
+      <span>Menu</span>
+    </NeonDropdown>
+  ),
+};

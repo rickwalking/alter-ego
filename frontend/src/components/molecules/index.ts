@@ -9,7 +9,10 @@ export {
 } from "./neon-card";
 export { NeonFormField } from "./neon-form-field";
 export { NeonSearchBar, type NeonSearchBarProps } from "./neon-search-bar";
-export { NeonStatCard, type NeonStatCardComponentProps } from "./neon-stat-card";
+export {
+  NeonStatCard,
+  type NeonStatCardComponentProps,
+} from "./neon-stat-card";
 export { NeonProgressBar } from "./neon-progress-bar";
 export { NeonBadgeGroup, type NeonBadgeGroupProps } from "./neon-badge-group";
 export { NeonToast, type NeonToastProps } from "./neon-toast";

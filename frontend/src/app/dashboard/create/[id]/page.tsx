@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { useTranslations } from "next-intl";
 import { NeonTopBar } from "@/components/organisms/neon-top-bar";
 import { NeonSpinner } from "@/components/atoms/neon-spinner";
 import { BG_CARD, TEXT_DIM } from "@/constants/neon";
@@ -12,22 +11,16 @@ import { CreateWorkspaceSidebar } from "@/app/dashboard/create/create-workspace-
 import {
   CREATE_STEP_IDS,
   completedStepsBefore,
-  isFutureCreateStep,
   parseCreateStepId,
   resolveStepFromWorkflowPhase,
   type CreateStepId,
 } from "@/app/dashboard/create/step-ids";
-import {
-  CarouselPreview,
-  CreateDraftBlogPreview,
-  CreateMaterialsGate,
-  CreateSourceMaterials,
-  CreateWorkflowPanel,
-} from "@/app/dashboard/create/workspace";
 import { useCarouselProject } from "@/features/create/hooks";
 import { useEditorialWorkflow } from "@/features/create/hooks/use-editorial-workflow";
 import type { ContentSource } from "@/features/blog/types-ai";
 import type { CarouselProjectResponse } from "@/schemas/carousel";
+import { BriefStepContent } from "@/app/dashboard/create/workspace/brief-step-content";
+import { WorkflowStepContent } from "@/app/dashboard/create/workspace/workflow-step-content";
 
 const layoutGridStyle = {
   display: "grid",
@@ -41,151 +34,6 @@ const briefCardStyle = {
   borderRadius: "8px",
   padding: "20px",
 };
-
-function BriefStepContent({
-  project,
-  projectId,
-  sourceCount,
-  workflowStarted,
-  onStartWorkflow,
-  onSourcesChange,
-  editorialWorkflow,
-}: {
-  project: CarouselProjectResponse;
-  projectId: string;
-  sourceCount: number;
-  workflowStarted: boolean;
-  onStartWorkflow: (withMaterials: boolean) => Promise<void>;
-  onSourcesChange: (sources: ContentSource[]) => void;
-  editorialWorkflow: ReturnType<typeof useEditorialWorkflow>;
-}): React.ReactElement {
-  const showGate =
-    !workflowStarted && !editorialWorkflow.hasActiveWorkflow;
-
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
-      <div style={briefCardStyle}>
-        <h3 style={{ fontSize: "14px", fontWeight: 700, marginBottom: "12px" }}>
-          Topic & Brief
-        </h3>
-        <p style={{ fontSize: "15px", fontWeight: 600, margin: "0 0 8px" }}>
-          {project.topic}
-        </p>
-        <p style={{ fontSize: "13px", color: TEXT_DIM, margin: "0 0 12px" }}>
-          {project.audience}
-        </p>
-        <p style={{ fontSize: "13px", margin: 0, lineHeight: 1.5 }}>
-          {project.niche}
-        </p>
-      </div>
-
-      <CreateDraftBlogPreview projectId={projectId} />
-
-      <CreateSourceMaterials
-        projectId={projectId}
-        onSourcesChange={onSourcesChange}
-      />
-
-      {showGate && (
-        <CreateMaterialsGate
-          sourceCount={sourceCount}
-          loading={editorialWorkflow.loading}
-          onStartWithMaterials={() => void onStartWorkflow(true)}
-          onStartWithoutMaterials={() => void onStartWorkflow(false)}
-        />
-      )}
-
-      {workflowStarted && editorialWorkflow.loading && (
-        <p
-          style={{ fontSize: "13px", color: TEXT_DIM, margin: 0 }}
-          role="status"
-          data-testid="workflow-starting"
-        >
-          Starting editorial workflow…
-        </p>
-      )}
-
-      {editorialWorkflow.error && (
-        <p style={{ fontSize: "13px", color: "#f87171", margin: 0 }} role="alert">
-          {editorialWorkflow.error}
-        </p>
-      )}
-    </div>
-  );
-}
-
-function WorkflowStepContent({
-  project,
-  projectId,
-  activeStepId,
-  sources,
-  workflowStarted,
-  editorialWorkflow,
-  publishedProject,
-  onPublished,
-}: {
-  project: CarouselProjectResponse;
-  projectId: string;
-  activeStepId: CreateStepId;
-  sources: Array<{ title: string; content: string; source_type?: string }>;
-  workflowStarted: boolean;
-  editorialWorkflow: ReturnType<typeof useEditorialWorkflow>;
-  publishedProject: CarouselProjectResponse | null;
-  onPublished: (project: CarouselProjectResponse) => void;
-}): React.ReactElement {
-  const t = useTranslations("create");
-  const workflowStepId = resolveStepFromWorkflowPhase(
-    editorialWorkflow.state?.current_phase,
-  );
-  const showWorkflow =
-    workflowStarted || editorialWorkflow.hasActiveWorkflow;
-  const isFutureStep = isFutureCreateStep(activeStepId, workflowStepId);
-
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
-      {showWorkflow && isFutureStep ? (
-        <p
-          style={{
-            fontSize: "13px",
-            color: TEXT_DIM,
-            margin: 0,
-            padding: "12px 16px",
-            background: BG_CARD,
-            borderRadius: "8px",
-            border: "1px solid rgba(255,255,255,0.06)",
-          }}
-        >
-          {t("futureStep", {
-            phase: editorialWorkflow.state?.current_phase ?? "—",
-          })}
-        </p>
-      ) : null}
-
-      {showWorkflow && !isFutureStep ? (
-        <CreateWorkflowPanel
-          projectId={projectId}
-          topic={project.topic}
-          audience={project.audience}
-          brief={project.niche}
-          sources={sources}
-          autoStart={
-            workflowStarted && !editorialWorkflow.hasActiveWorkflow
-          }
-          onPublished={() => onPublished(project)}
-          workflow={editorialWorkflow}
-          viewStepId={activeStepId}
-          workflowStepId={workflowStepId}
-        />
-      ) : (
-        <p style={{ fontSize: "13px", color: TEXT_DIM }}>
-          {t("startWorkflowHint")}
-        </p>
-      )}
-
-      {publishedProject && <CarouselPreview project={publishedProject} />}
-    </div>
-  );
-}
 
 export default function CreateWorkspacePage(): React.ReactElement {
   const params = useParams<{ id: string }>();
@@ -206,7 +54,8 @@ export default function CreateWorkspacePage(): React.ReactElement {
   );
 
   const progressActiveStep =
-    editorialWorkflow.hasActiveWorkflow && activeStepId === CREATE_STEP_IDS.BRIEF
+    editorialWorkflow.hasActiveWorkflow &&
+    activeStepId === CREATE_STEP_IDS.BRIEF
       ? workflowStepId
       : activeStepId;
 
@@ -289,7 +138,10 @@ export default function CreateWorkspacePage(): React.ReactElement {
   if (isError || !project) {
     return (
       <div className="flex flex-1 flex-col p-7 text-white">
-        <NeonTopBar title="Create Carousel" breadcrumb={[{ label: "project" }]} />
+        <NeonTopBar
+          title="Create Carousel"
+          breadcrumb={[{ label: "project" }]}
+        />
         <p className="mt-6 text-red-400">Project not found.</p>
       </div>
     );
@@ -343,7 +195,8 @@ export default function CreateWorkspacePage(): React.ReactElement {
                     padding: "10px 16px",
                     borderRadius: "6px",
                     border: "none",
-                    background: "linear-gradient(135deg, #00d4ff 0%, #0090b0 100%)",
+                    background:
+                      "linear-gradient(135deg, #00d4ff 0%, #0090b0 100%)",
                     color: "#060a12",
                     fontWeight: 700,
                     fontSize: "13px",

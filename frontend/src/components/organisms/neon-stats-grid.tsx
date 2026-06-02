@@ -1,10 +1,15 @@
-import { NeonStatCard, type NeonStatCardComponentProps } from "@/components/molecules/neon-stat-card";
+import {
+  NeonStatCard,
+  type NeonStatCardComponentProps,
+} from "@/components/molecules/neon-stat-card";
 
 export interface NeonStatsGridProps {
   cards: NeonStatCardComponentProps[];
 }
 
-export function NeonStatsGrid({ cards }: NeonStatsGridProps): React.ReactElement {
+export function NeonStatsGrid({
+  cards,
+}: NeonStatsGridProps): React.ReactElement {
   return (
     <div
       className="grid gap-4"

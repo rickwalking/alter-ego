@@ -1,5 +1,10 @@
 "use client";
-import { NeonCard, NeonCardContent, NeonCardHeader, NeonCardTitle } from "@/components/molecules/neon-card";
+import {
+  NeonCard,
+  NeonCardContent,
+  NeonCardHeader,
+  NeonCardTitle,
+} from "@/components/molecules/neon-card";
 
 import { useState, useCallback } from "react";
 import { useTranslations } from "next-intl";

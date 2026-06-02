@@ -10,4 +10,6 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-export const Default: Story = { args: { title: "Voice", category: "Persona", score: 82, criteria: ["Tone"] } };
+export const Default: Story = {
+  args: { title: "Voice", category: "Persona", score: 82, criteria: ["Tone"] },
+};

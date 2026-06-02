@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { CONTENT_TYPES, HTTP_METHODS } from "@/constants/api";
+import {
+  CONTENT_TYPES,
+  DEFAULT_BACKEND_URL,
+  HTTP_METHODS,
+} from "@/constants/api";
 import { setAccessTokenCookie } from "@/lib/auth-cookie";
-
-const DEFAULT_BACKEND_URL = "http://localhost:8000";
 
 function resolveBackendUrl(): string {
   return (
@@ -30,8 +32,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   const backendResponse = await fetch(`${backendUrl}/api/auth/token`, {
     method: HTTP_METHODS.POST,
     headers: {
-      "Content-Type":
-        request.headers.get("content-type") ?? CONTENT_TYPES.JSON,
+      "Content-Type": request.headers.get("content-type") ?? CONTENT_TYPES.JSON,
     },
     body,
   });

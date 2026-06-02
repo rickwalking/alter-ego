@@ -5,7 +5,12 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { NeonButton } from "@/components/atoms/neon-button";
-import { NeonCard, NeonCardContent, NeonCardHeader, NeonCardTitle } from "@/components/molecules/neon-card";
+import {
+  NeonCard,
+  NeonCardContent,
+  NeonCardHeader,
+  NeonCardTitle,
+} from "@/components/molecules/neon-card";
 import { NeonInput } from "@/components/atoms/neon-input";
 import { NeonSpinner } from "@/components/atoms/neon-spinner";
 import { NeonTextarea } from "@/components/atoms/neon-textarea";
@@ -122,7 +127,10 @@ export default function BlogPostEditPage() {
             <NeonCardTitle>{post.title}</NeonCardTitle>
           </NeonCardHeader>
           <NeonCardContent className="space-y-4">
-            <NeonInput value={title} onChange={(e) => setTitle(e.target.value)} />
+            <NeonInput
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+            />
             <NeonTextarea
               value={excerpt}
               onChange={(e) => setExcerpt(e.target.value)}

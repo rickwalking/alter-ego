@@ -31,10 +31,7 @@ export function NeonRubricCard({
             {category}
           </NeonBadge>
         </div>
-        <span
-          className="text-2xl font-bold"
-          style={{ color: scoreColor }}
-        >
+        <span className="text-2xl font-bold" style={{ color: scoreColor }}>
           {score}
         </span>
       </div>

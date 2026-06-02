@@ -14,7 +14,8 @@ const neonSkeletonVariants = cva("animate-pulse rounded-md bg-bg-elevated", {
 });
 
 export interface NeonSkeletonProps
-  extends HTMLAttributes<HTMLDivElement>,
+  extends
+    HTMLAttributes<HTMLDivElement>,
     VariantProps<typeof neonSkeletonVariants> {
   width?: string | number;
   height?: string | number;

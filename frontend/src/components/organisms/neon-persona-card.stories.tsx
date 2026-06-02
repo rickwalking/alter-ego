@@ -10,4 +10,11 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-export const Default: Story = { args: { name: "Pedro", role: "Engineer", description: "RAG builder", skills: ["Python"] } };
+export const Default: Story = {
+  args: {
+    name: "Pedro",
+    role: "Engineer",
+    description: "RAG builder",
+    skills: ["Python"],
+  },
+};

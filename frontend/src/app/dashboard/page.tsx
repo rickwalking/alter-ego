@@ -29,7 +29,10 @@ export default function DashboardPage(): React.ReactElement {
 
   if (loading) {
     return (
-      <div className="flex-1 text-white relative" style={{ fontFamily: PAGE_FONT_FAMILY }}>
+      <div
+        className="flex-1 text-white relative"
+        style={{ fontFamily: PAGE_FONT_FAMILY }}
+      >
         <NeonTopBar title="Dashboard" breadcrumb={[{ label: "overview" }]} />
         <div className="flex justify-center py-20">
           <NeonSpinner size="lg" />
@@ -40,7 +43,10 @@ export default function DashboardPage(): React.ReactElement {
 
   if (error || !data) {
     return (
-      <div className="flex-1 text-white relative" style={{ fontFamily: PAGE_FONT_FAMILY }}>
+      <div
+        className="flex-1 text-white relative"
+        style={{ fontFamily: PAGE_FONT_FAMILY }}
+      >
         <NeonTopBar title="Dashboard" breadcrumb={[{ label: "overview" }]} />
         <p className="text-center py-8" style={{ color: NEON_RED }}>
           {error ?? tAnalytics("loadFailed")}
@@ -56,7 +62,14 @@ export default function DashboardPage(): React.ReactElement {
       label: tAnalytics("totalPosts"),
       value: String(summary.total_posts),
       icon: (
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <svg
+          width="18"
+          height="18"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+        >
           <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
         </svg>
       ),
@@ -66,7 +79,14 @@ export default function DashboardPage(): React.ReactElement {
       label: tAnalytics("publishedWeek"),
       value: String(summary.published_this_week),
       icon: (
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <svg
+          width="18"
+          height="18"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+        >
           <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
         </svg>
       ),
@@ -76,7 +96,14 @@ export default function DashboardPage(): React.ReactElement {
       label: tAnalytics("pendingReview"),
       value: String(summary.pending_review),
       icon: (
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <svg
+          width="18"
+          height="18"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+        >
           <circle cx="12" cy="12" r="10" />
         </svg>
       ),
@@ -86,7 +113,14 @@ export default function DashboardPage(): React.ReactElement {
       label: tAnalytics("qualityScore"),
       value: `${summary.quality_score_average}%`,
       icon: (
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <svg
+          width="18"
+          height="18"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+        >
           <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
         </svg>
       ),
@@ -128,36 +162,43 @@ export default function DashboardPage(): React.ReactElement {
             style={{ gridTemplateColumns: "repeat(3, 1fr)" }}
           >
             {QUICK_ACTIONS.map((action) => (
-              <Link key={action.title} href={action.href} className="block no-underline">
-              <NeonCard hover padding="md" className="text-center">
-                <div
-                  className="flex items-center justify-center mx-auto mb-3"
-                  style={{
-                    width: 44,
-                    height: 44,
-                    borderRadius: 10,
-                    background: action.iconBg,
-                    color: action.iconColor,
-                  }}
-                >
-                  <svg
-                    width="22"
-                    height="22"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
+              <Link
+                key={action.title}
+                href={action.href}
+                className="block no-underline"
+              >
+                <NeonCard hover padding="md" className="text-center">
+                  <div
+                    className="flex items-center justify-center mx-auto mb-3"
+                    style={{
+                      width: 44,
+                      height: 44,
+                      borderRadius: 10,
+                      background: action.iconBg,
+                      color: action.iconColor,
+                    }}
                   >
-                    {action.icon}
-                  </svg>
-                </div>
-                <h4 className="text-sm font-semibold mb-1" style={{ color: TEXT }}>
-                  {action.title}
-                </h4>
-                <p className="text-xs text-text-dim">{action.description}</p>
-              </NeonCard>
+                    <svg
+                      width="22"
+                      height="22"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      {action.icon}
+                    </svg>
+                  </div>
+                  <h4
+                    className="text-sm font-semibold mb-1"
+                    style={{ color: TEXT }}
+                  >
+                    {action.title}
+                  </h4>
+                  <p className="text-xs text-text-dim">{action.description}</p>
+                </NeonCard>
               </Link>
             ))}
           </div>

@@ -1,5 +1,8 @@
 "use client";
-import { NeonAlert, NeonAlertDescription } from "@/components/molecules/neon-alert";
+import {
+  NeonAlert,
+  NeonAlertDescription,
+} from "@/components/molecules/neon-alert";
 
 import { useTranslations } from "next-intl";
 import { ReviewAssignmentPanel } from "@/features/workflow/components/review-assignment-panel";

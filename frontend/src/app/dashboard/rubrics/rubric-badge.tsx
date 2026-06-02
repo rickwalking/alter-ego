@@ -6,7 +6,10 @@ interface RubricBadgeProps {
   color: RubricColorKey;
 }
 
-export function RubricBadge({ label, color }: RubricBadgeProps): React.ReactElement {
+export function RubricBadge({
+  label,
+  color,
+}: RubricBadgeProps): React.ReactElement {
   const c = getRubricColor(color);
   return (
     <span

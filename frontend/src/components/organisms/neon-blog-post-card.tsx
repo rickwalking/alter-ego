@@ -25,11 +25,7 @@ export function NeonBlogPostCard({
             className="mb-3 rounded-md overflow-hidden"
             style={{ height: featured ? 160 : 100 }}
           >
-            <img
-              src={imageUrl}
-              alt=""
-              className="w-full h-full object-cover"
-            />
+            <img src={imageUrl} alt="" className="w-full h-full object-cover" />
           </div>
         )}
         {niche && (
@@ -44,7 +40,10 @@ export function NeonBlogPostCard({
           {title}
         </h3>
         {subtitle && (
-          <p className="text-sm mt-1 line-clamp-2" style={{ color: TEXT_MUTED }}>
+          <p
+            className="text-sm mt-1 line-clamp-2"
+            style={{ color: TEXT_MUTED }}
+          >
             {subtitle}
           </p>
         )}

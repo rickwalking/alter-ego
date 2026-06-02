@@ -20,7 +20,11 @@ import {
 } from "@/features/dashboard/calendar/helpers";
 import type { CalendarContentType } from "@/features/dashboard/calendar/types";
 import { useContentCalendar } from "@/features/workflow/hooks/use-content-calendar";
-import { NEON_BORDER_FOCUS, NEON_BORDER_SUBTLE, NEON_RED } from "@/constants/neon";
+import {
+  NEON_BORDER_FOCUS,
+  NEON_BORDER_SUBTLE,
+  NEON_RED,
+} from "@/constants/neon";
 
 const CONTENT_TYPE_ICON: Record<
   CalendarContentType,
@@ -246,7 +250,9 @@ export default function CalendarPage() {
                   background: cell.today
                     ? CALENDAR_COLORS.cD
                     : CALENDAR_COLORS.card,
-                  border: cell.today ? `1px solid ${NEON_BORDER_FOCUS}` : "none",
+                  border: cell.today
+                    ? `1px solid ${NEON_BORDER_FOCUS}`
+                    : "none",
                   cursor: "pointer",
                   opacity: cell.cur ? 1 : 0.3,
                 }}

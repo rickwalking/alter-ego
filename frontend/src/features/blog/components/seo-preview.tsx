@@ -4,7 +4,12 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { NeonBadge } from "@/components/atoms/neon-badge";
 import { NeonButton } from "@/components/atoms/neon-button";
-import { NeonCard, NeonCardContent, NeonCardHeader, NeonCardTitle } from "@/components/molecules/neon-card";
+import {
+  NeonCard,
+  NeonCardContent,
+  NeonCardHeader,
+  NeonCardTitle,
+} from "@/components/molecules/neon-card";
 import {
   SEO_PREVIEW_GOOGLE,
   SEO_PREVIEW_LINKEDIN,
