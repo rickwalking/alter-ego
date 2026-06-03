@@ -1,6 +1,17 @@
 import { API_ENDPOINTS } from "@/constants/api";
 
 const SLIDE_FILENAME_PATTERN = /slide_\d+(?:\.jpg)?/;
+const PREVIEW_IMAGES_SEGMENT = "/preview/images/";
+const PUBLIC_IMAGES_SEGMENT = "/images/";
+
+/** Map owner-only preview URLs to public carousel image routes for marketing pages. */
+export function toPublicCarouselImageUrl(url: string): string {
+  const pathOnly = url.split("?")[0];
+  if (!pathOnly.includes(PREVIEW_IMAGES_SEGMENT)) {
+    return pathOnly;
+  }
+  return pathOnly.replace(PREVIEW_IMAGES_SEGMENT, PUBLIC_IMAGES_SEGMENT);
+}
 
 /** Append a cache-buster without breaking existing query strings. */
 export function appendCacheBuster(url: string, version: string): string {

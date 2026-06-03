@@ -216,6 +216,27 @@
     opacity: 0;
   }
 }
+@keyframes glitch-offset {
+  0% {
+    transform: translate(0);
+  }
+  20% {
+    transform: translate(-2px, 1px);
+  }
+  40% {
+    transform: translate(2px, -1px);
+  }
+  60% {
+    transform: translate(-1px, 2px);
+  }
+  80% {
+    transform: translate(1px, -2px);
+  }
+  100% {
+    transform: translate(0);
+  }
+}
+
 @keyframes particle-float {
   0% {
     opacity: 0;
@@ -230,6 +251,83 @@
   100% {
     opacity: 0;
     transform: translateY(-10vh) scale(1);
+  }
+}
+
+@layer components {
+  .hero-glitch {
+    position: relative;
+    display: inline-block;
+  }
+
+  .hero-glitch::before,
+  .hero-glitch::after {
+    content: attr(data-text);
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+  }
+
+  .hero-glitch::before {
+    color: var(--color-neon-magenta);
+    z-index: -1;
+    animation: glitch-offset 3s infinite linear alternate-reverse;
+  }
+
+  .hero-glitch::after {
+    color: var(--color-neon-cyan);
+    z-index: -1;
+    animation: glitch-offset 2.8s infinite linear alternate-reverse 0.3s;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .hero-glitch::before,
+    .hero-glitch::after {
+      animation: none;
+    }
+  }
+
+  .landing-cta-primary {
+    @apply inline-flex transform items-center gap-2.5 rounded-md border-0 bg-gradient-to-br from-neon-cyan to-[var(--color-neon-cyan-teal-end)] py-3.5 px-7 text-[15px] font-semibold text-bg-deep no-underline cursor-pointer font-[inherit] shadow-[0_0_20px_rgba(0,212,255,0.15)] transition-all duration-[250ms] ease-[cubic-bezier(0.25,1,0.5,1)] max-[600px]:py-3 max-[600px]:px-5 max-[600px]:text-sm;
+  }
+
+  .landing-cta-primary:hover,
+  .landing-cta-primary:active {
+    transform: translateY(-2px);
+    box-shadow: 0 0 30px rgba(0, 212, 255, 0.15);
+  }
+
+  .landing-cta-ghost {
+    @apply inline-flex transform items-center gap-2.5 rounded-md border border-[color:var(--color-neon-cyan-border-30)] bg-transparent py-3.5 px-7 text-[15px] font-semibold text-neon-cyan no-underline cursor-pointer font-[inherit] transition-all duration-[250ms] ease-[cubic-bezier(0.25,1,0.5,1)] max-[600px]:py-3 max-[600px]:px-5 max-[600px]:text-sm;
+  }
+
+  .landing-cta-ghost:hover,
+  .landing-cta-ghost:active {
+    transform: translateY(-2px);
+    @apply border-neon-cyan bg-neon-cyan-dim;
+  }
+
+  .landing-feature-secondary {
+    @apply transform;
+  }
+
+  .landing-feature-secondary:hover,
+  .landing-feature-secondary:active {
+    transform: translateY(-4px);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .landing-cta-primary:hover,
+    .landing-cta-primary:active,
+    .landing-cta-ghost:hover,
+    .landing-cta-ghost:active,
+    .landing-feature-secondary:hover,
+    .landing-feature-secondary:active {
+      transform: none;
+    }
   }
 }
 

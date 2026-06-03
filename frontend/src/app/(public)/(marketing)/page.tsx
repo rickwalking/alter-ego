@@ -9,18 +9,22 @@ import type { SupportedLocale } from "@/i18n/config";
 import type { CarouselProjectListResponse } from "@/schemas/carousel";
 import { ParticleBackground } from "@/components/particle-background";
 import { ScrollReveal } from "@/components/scroll-reveal";
+import {
+  BG_SURFACE,
+  NEON_AMBER,
+  NEON_CYAN,
+  NEON_MAGENTA,
+  NEON_PURPLE,
+  NEON_TEAL,
+  TEXT,
+  TEXT_DIM,
+  TEXT_MUTED,
+} from "@/constants/neon";
+import { toPublicCarouselImageUrl } from "@/lib/carousel-media-url";
+import { cn } from "@/lib/utils";
 
-const CYAN = "#00d4ff";
-const MAGENTA = "#ff2770";
-const TEAL = "#0ac5a8";
-const PURPLE = "#a855f7";
-const AMBER = "#f59e0b";
-const BG_DEEP = "#060a12";
-const BG_SURFACE = "#0a0f1e";
-const BG_CARD = "#0d1324";
-const TEXT = "rgba(255,255,255,0.88)";
-const TEXT_MUTED = "rgba(255,255,255,0.55)";
-const TEXT_DIM = "rgba(255,255,255,0.3)";
+const FEATURE_SECONDARY_BASE =
+  "landing-feature-secondary relative overflow-hidden rounded-xl border border-neon-card-border bg-bg-card p-9 min-w-0 transition-all duration-300 ease-[cubic-bezier(0.25,1,0.5,1)] before:content-[''] before:absolute before:top-0 before:inset-x-0 before:h-0.5 before:opacity-0 before:transition-opacity hover:before:opacity-100 hover:border-white/10";
 
 function truncateWords(text: string, maxWords: number): string {
   const cleaned = text.replace(/\*\*|\*|__|\`|\[|\]|\(|\)/g, "").trim();
@@ -76,28 +80,9 @@ function HomePageContent({
       <ParticleBackground />
 
       {/* Hero */}
-      <section
-        style={{
-          position: "relative",
-          zIndex: 1,
-          minHeight: "85vh",
-          display: "flex",
-          alignItems: "center",
-          padding: "60px 0",
-        }}
-      >
-        <div
-          className="mx-auto px-6"
-          style={{
-            maxWidth: "1200px",
-            width: "100%",
-            display: "grid",
-            gridTemplateColumns: "1fr 1fr",
-            gap: "60px",
-            alignItems: "center",
-          }}
-        >
-          <div>
+      <section className="relative z-[1] min-h-[85vh] flex items-center py-[60px] max-[600px]:min-h-0 max-[600px]:py-10">
+        <div className="max-w-[1200px] w-full mx-auto px-6 grid grid-cols-2 gap-[60px] items-center max-[900px]:grid-cols-1 max-[900px]:gap-10">
+          <div className="min-w-0">
             <div
               style={{
                 display: "inline-flex",
@@ -110,43 +95,33 @@ function HomePageContent({
                 fontWeight: 700,
                 textTransform: "uppercase",
                 letterSpacing: "3px",
-                color: CYAN,
+                color: NEON_CYAN,
                 background: "rgba(0,212,255,0.15)",
                 border: `1px solid rgba(0,212,255,0.2)`,
                 marginBottom: "24px",
               }}
             >
               <span
+                className="animate-[pulse-dot_2s_ease-in-out_infinite] motion-reduce:animate-none"
                 style={{
                   width: "6px",
                   height: "6px",
                   borderRadius: "50%",
-                  background: CYAN,
-                  boxShadow: `0 0 8px ${CYAN}`,
+                  background: NEON_CYAN,
+                  boxShadow: `0 0 8px ${NEON_CYAN}`,
                 }}
               />
               <span>{t("hero.badgeVersion")}</span>
             </div>
             <h1
-              style={{
-                fontSize: "clamp(40px, 6vw, 72px)",
-                fontWeight: 900,
-                lineHeight: 1.05,
-                letterSpacing: "-0.03em",
-                marginBottom: "20px",
-                color: TEXT,
-              }}
+              className="text-[clamp(40px,6vw,72px)] font-black leading-[1.05] tracking-[-0.03em] mb-5 text-text-primary break-words"
+              data-testid="hero-heading"
             >
-              {t("hero.titleLine1")}
+              <span className="hero-glitch" data-text={t("hero.titleLine1")}>
+                {t("hero.titleLine1")}
+              </span>
               <br />
-              <span
-                style={{
-                  background: `linear-gradient(135deg, ${CYAN} 0%, ${MAGENTA} 100%)`,
-                  WebkitBackgroundClip: "text",
-                  WebkitTextFillColor: "transparent",
-                  backgroundClip: "text",
-                }}
-              >
+              <span className="bg-gradient-to-br from-neon-cyan to-neon-magenta bg-clip-text text-transparent">
                 {t("hero.titleHighlight")}
               </span>
             </h1>
@@ -161,25 +136,11 @@ function HomePageContent({
             >
               {t("hero.subtitle")}
             </p>
-            <div style={{ display: "flex", gap: "16px", flexWrap: "wrap" }}>
+            <div className="flex gap-4 flex-wrap">
               <Link
                 href="/chat"
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "10px",
-                  padding: "14px 28px",
-                  borderRadius: "6px",
-                  fontSize: "15px",
-                  fontWeight: 600,
-                  textDecoration: "none",
-                  cursor: "pointer",
-                  border: "none",
-                  fontFamily: "inherit",
-                  background: `linear-gradient(135deg, ${CYAN} 0%, #0090b0 100%)`,
-                  color: BG_DEEP,
-                  boxShadow: `0 0 20px rgba(0,212,255,0.15)`,
-                }}
+                className="landing-cta-primary"
+                data-testid="cta-primary"
               >
                 <svg
                   width="16"
@@ -195,24 +156,7 @@ function HomePageContent({
                 </svg>
                 {tc("startChatting")}
               </Link>
-              <Link
-                href="/blog"
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "10px",
-                  padding: "14px 28px",
-                  borderRadius: "6px",
-                  fontSize: "15px",
-                  fontWeight: 600,
-                  textDecoration: "none",
-                  cursor: "pointer",
-                  fontFamily: "inherit",
-                  background: "transparent",
-                  color: CYAN,
-                  border: `1px solid rgba(0,212,255,0.3)`,
-                }}
-              >
+              <Link href="/blog" className="landing-cta-ghost">
                 <svg
                   width="16"
                   height="16"
@@ -232,12 +176,8 @@ function HomePageContent({
 
           {/* Terminal Visual */}
           <div
-            style={{
-              position: "relative",
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
-            }}
+            className="relative flex justify-center items-center min-w-0 max-[900px]:order-[-1]"
+            data-testid="hero-terminal"
           >
             <div
               style={{
@@ -262,9 +202,8 @@ function HomePageContent({
               }}
             />
             <div
+              className="w-full max-w-[480px] max-[900px]:max-w-full"
               style={{
-                width: "100%",
-                maxWidth: "480px",
                 background: "rgba(6,10,18,0.8)",
                 border: `1px solid rgba(0,212,255,0.15)`,
                 borderRadius: "8px",
@@ -334,9 +273,9 @@ function HomePageContent({
                     animationDelay: "0.2s",
                   }}
                 >
-                  <span style={{ color: TEAL }}>$</span>{" "}
-                  <span style={{ color: CYAN }}>./connect</span> --persona pedro
-                  --mode immersive
+                  <span style={{ color: NEON_TEAL }}>$</span>{" "}
+                  <span style={{ color: NEON_CYAN }}>./connect</span> --persona
+                  pedro --mode immersive
                 </div>
                 <div
                   style={{
@@ -359,7 +298,7 @@ function HomePageContent({
                   <span style={{ color: TEXT_DIM }}>
                     ▸ Loading knowledge graph...
                   </span>{" "}
-                  <span style={{ color: TEAL }}>✓ 2.4k nodes</span>
+                  <span style={{ color: NEON_TEAL }}>✓ 2.4k nodes</span>
                 </div>
                 <div
                   style={{
@@ -371,7 +310,7 @@ function HomePageContent({
                   <span style={{ color: TEXT_DIM }}>
                     ▸ Syncing experience vectors...
                   </span>{" "}
-                  <span style={{ color: TEAL }}>✓ 8 yrs</span>
+                  <span style={{ color: NEON_TEAL }}>✓ 8 yrs</span>
                 </div>
                 <div
                   style={{
@@ -380,8 +319,8 @@ function HomePageContent({
                     animationDelay: "2.6s",
                   }}
                 >
-                  <span style={{ color: MAGENTA }}>◆</span>{" "}
-                  <span style={{ color: CYAN }}>Alter-Ego</span>{" "}
+                  <span style={{ color: NEON_MAGENTA }}>◆</span>{" "}
+                  <span style={{ color: NEON_CYAN }}>Alter-Ego</span>{" "}
                   <span style={{ color: TEXT_DIM }}>{t("terminal.ready")}</span>
                 </div>
                 <div
@@ -391,13 +330,13 @@ function HomePageContent({
                     animationDelay: "3.2s",
                   }}
                 >
-                  <span style={{ color: TEAL }}>$</span>{" "}
+                  <span style={{ color: NEON_TEAL }}>$</span>{" "}
                   <span
                     style={{
                       display: "inline-block",
                       width: "8px",
                       height: "15px",
-                      background: CYAN,
+                      background: NEON_CYAN,
                       verticalAlign: "text-bottom",
                       animation: "blink-cursor 1s step-end infinite",
                       animationDelay: "3.8s",
@@ -416,30 +355,9 @@ function HomePageContent({
           className="mx-auto px-6"
           style={{ maxWidth: "1200px", position: "relative", zIndex: 1 }}
         >
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(3, 1fr)",
-              gap: "24px",
-              padding: "40px 48px",
-              borderTop: `1px solid rgba(0,212,255,0.08)`,
-              borderBottom: `1px solid rgba(0,212,255,0.08)`,
-              background: "rgba(0,212,255,0.02)",
-            }}
-          >
+          <div className="grid grid-cols-3 gap-6 py-10 px-12 border-t border-b border-[rgba(0,212,255,0.08)] bg-[rgba(0,212,255,0.02)] max-[900px]:grid-cols-1 max-[900px]:py-8 max-[900px]:px-6">
             <div style={{ textAlign: "center" }}>
-              <div
-                style={{
-                  fontSize: "36px",
-                  fontWeight: 900,
-                  letterSpacing: "-0.03em",
-                  background: `linear-gradient(135deg, ${CYAN} 0%, ${TEAL} 100%)`,
-                  WebkitBackgroundClip: "text",
-                  WebkitTextFillColor: "transparent",
-                  backgroundClip: "text",
-                  lineHeight: 1,
-                }}
-              >
+              <div className="text-4xl font-black tracking-[-0.03em] text-neon-cyan leading-none [text-shadow:0_0_20px_rgba(0,212,255,0.15)]">
                 8+
               </div>
               <div
@@ -454,18 +372,7 @@ function HomePageContent({
               </div>
             </div>
             <div style={{ textAlign: "center" }}>
-              <div
-                style={{
-                  fontSize: "36px",
-                  fontWeight: 900,
-                  letterSpacing: "-0.03em",
-                  background: `linear-gradient(135deg, ${CYAN} 0%, ${TEAL} 100%)`,
-                  WebkitBackgroundClip: "text",
-                  WebkitTextFillColor: "transparent",
-                  backgroundClip: "text",
-                  lineHeight: 1,
-                }}
-              >
+              <div className="text-4xl font-black tracking-[-0.03em] text-neon-cyan leading-none [text-shadow:0_0_20px_rgba(0,212,255,0.15)]">
                 50+
               </div>
               <div
@@ -480,18 +387,7 @@ function HomePageContent({
               </div>
             </div>
             <div style={{ textAlign: "center" }}>
-              <div
-                style={{
-                  fontSize: "36px",
-                  fontWeight: 900,
-                  letterSpacing: "-0.03em",
-                  background: `linear-gradient(135deg, ${CYAN} 0%, ${TEAL} 100%)`,
-                  WebkitBackgroundClip: "text",
-                  WebkitTextFillColor: "transparent",
-                  backgroundClip: "text",
-                  lineHeight: 1,
-                }}
-              >
+              <div className="text-4xl font-black tracking-[-0.03em] text-neon-cyan leading-none [text-shadow:0_0_20px_rgba(0,212,255,0.15)]">
                 ∞
               </div>
               <div
@@ -511,9 +407,7 @@ function HomePageContent({
 
       {/* Features */}
       <ScrollReveal delay={200}>
-        <section
-          style={{ position: "relative", zIndex: 1, padding: "0 0 100px 0" }}
-        >
+        <section className="relative z-[1] pb-[100px] max-[600px]:pb-[60px]">
           <div className="mx-auto px-6" style={{ maxWidth: "1200px" }}>
             <div style={{ marginBottom: "60px" }}>
               <div
@@ -526,7 +420,7 @@ function HomePageContent({
                   fontWeight: 700,
                   textTransform: "uppercase",
                   letterSpacing: "3px",
-                  color: CYAN,
+                  color: NEON_CYAN,
                   marginBottom: "12px",
                 }}
               >
@@ -534,8 +428,8 @@ function HomePageContent({
                   style={{
                     width: "24px",
                     height: "1px",
-                    background: CYAN,
-                    boxShadow: `0 0 8px ${CYAN}`,
+                    background: NEON_CYAN,
+                    boxShadow: `0 0 8px ${NEON_CYAN}`,
                   }}
                 />
                 {t("capabilities.label")}
@@ -550,40 +444,23 @@ function HomePageContent({
                 }}
               >
                 {t("features.titlePrefix")}{" "}
-                <span style={{ color: MAGENTA }}>
+                <span style={{ color: NEON_MAGENTA }}>
                   {t("features.titleHighlight")}
                 </span>
               </h2>
             </div>
 
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr",
-                gap: "24px",
-              }}
-            >
+            <div className="grid grid-cols-2 gap-6 min-w-0 max-[900px]:grid-cols-1">
               {/* Primary Feature */}
-              <div
-                style={{
-                  gridColumn: "1 / -1",
-                  display: "grid",
-                  gridTemplateColumns: "1fr 1fr",
-                  gap: 0,
-                  borderRadius: "12px",
-                  overflow: "hidden",
-                  border: `1px solid rgba(0,212,255,0.12)`,
-                  background: BG_SURFACE,
-                }}
-              >
+              <div className="col-span-2 grid grid-cols-2 gap-0 rounded-xl overflow-hidden border border-[rgba(0,212,255,0.12)] bg-bg-surface transition-all duration-300 ease-[cubic-bezier(0.25,1,0.5,1)] hover:border-[rgba(0,212,255,0.25)] hover:shadow-[0_0_30px_rgba(0,212,255,0.04)] max-[900px]:grid-cols-1">
                 <div
+                  className="min-h-[280px] max-[900px]:min-h-[160px] max-[900px]:p-8"
                   style={{
                     background: `linear-gradient(135deg, rgba(0,212,255,0.05) 0%, rgba(255,39,112,0.03) 100%)`,
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
                     padding: "48px",
-                    minHeight: "280px",
                   }}
                 >
                   <svg
@@ -630,8 +507,8 @@ function HomePageContent({
                         x2="80"
                         y2="80"
                       >
-                        <stop offset="0%" stopColor={CYAN} />
-                        <stop offset="100%" stopColor={MAGENTA} />
+                        <stop offset="0%" stopColor={NEON_CYAN} />
+                        <stop offset="100%" stopColor={NEON_MAGENTA} />
                       </linearGradient>
                     </defs>
                   </svg>
@@ -656,7 +533,7 @@ function HomePageContent({
                       borderRadius: "3px",
                       marginBottom: "16px",
                       fontWeight: 700,
-                      color: CYAN,
+                      color: NEON_CYAN,
                       background: "rgba(0,212,255,0.15)",
                       border: `1px solid rgba(0,212,255,0.15)`,
                     }}
@@ -691,25 +568,29 @@ function HomePageContent({
                   icon: "M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20M8 7h8M8 11h6",
                   title: t("features.blog.title"),
                   desc: t("features.blog.description"),
-                  accent: TEAL,
+                  accent: NEON_TEAL,
+                  accentClass: cn(
+                    FEATURE_SECONDARY_BASE,
+                    "before:bg-neon-teal before:shadow-[0_0_12px_var(--color-neon-teal)]",
+                  ),
                 },
                 {
                   icon: "M3 3h18v18H3zM8 8h8v8H8zM3 12h5M16 12h5M12 3v5M12 16v5",
                   title: t("features.carousels.title"),
                   desc: t("features.carousels.description"),
-                  accent: PURPLE,
+                  accent: NEON_PURPLE,
+                  accentClass: cn(
+                    FEATURE_SECONDARY_BASE,
+                    "before:bg-neon-purple before:shadow-[0_0_12px_var(--color-neon-purple)]",
+                  ),
                 },
-              ].map((feat) => (
+              ].map((feat, featIndex) => (
                 <div
                   key={feat.title}
-                  style={{
-                    borderRadius: "12px",
-                    border: `1px solid rgba(255,255,255,0.06)`,
-                    background: BG_CARD,
-                    padding: "36px",
-                    position: "relative",
-                    overflow: "hidden",
-                  }}
+                  className={feat.accentClass}
+                  data-testid={
+                    featIndex === 0 ? "feature-secondary-0" : undefined
+                  }
                 >
                   <div
                     style={{
@@ -770,9 +651,7 @@ function HomePageContent({
 
       {/* Latest Posts */}
       <ScrollReveal delay={100}>
-        <section
-          style={{ position: "relative", zIndex: 1, padding: "0 0 100px 0" }}
-        >
+        <section className="relative z-[1] pb-[100px] max-[600px]:pb-[60px]">
           <div className="mx-auto px-6" style={{ maxWidth: "1200px" }}>
             <div style={{ marginBottom: "60px" }}>
               <div
@@ -785,7 +664,7 @@ function HomePageContent({
                   fontWeight: 700,
                   textTransform: "uppercase",
                   letterSpacing: "3px",
-                  color: CYAN,
+                  color: NEON_CYAN,
                   marginBottom: "12px",
                 }}
               >
@@ -793,8 +672,8 @@ function HomePageContent({
                   style={{
                     width: "24px",
                     height: "1px",
-                    background: CYAN,
-                    boxShadow: `0 0 8px ${CYAN}`,
+                    background: NEON_CYAN,
+                    boxShadow: `0 0 8px ${NEON_CYAN}`,
                   }}
                 />
                 {t("posts.feedLabel")}
@@ -809,7 +688,7 @@ function HomePageContent({
                 }}
               >
                 {t("posts.titlePrefix")}{" "}
-                <span style={{ color: AMBER }}>
+                <span style={{ color: NEON_AMBER }}>
                   {t("posts.titleHighlight")}
                 </span>
               </h2>
@@ -839,33 +718,21 @@ function HomePageContent({
                 </p>
               </div>
             ) : (
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "1.3fr 0.7fr",
-                  gap: "24px",
-                }}
-              >
+              <div className="grid grid-cols-[1.3fr_0.7fr] gap-6 min-w-0 max-[900px]:grid-cols-1">
                 {data.items[0] &&
                   (() => {
                     const tokens = data.items[0].design_tokens as
                       | { images?: { hero?: string } }
                       | null
                       | undefined;
-                    const imageUrl = tokens?.images?.hero ?? "";
+                    const rawHero = tokens?.images?.hero ?? "";
+                    const imageUrl = rawHero
+                      ? toPublicCarouselImageUrl(rawHero)
+                      : "";
                     return (
                       <Link
                         href={`/blog/${data.items[0].id}`}
-                        style={{
-                          borderRadius: "12px",
-                          overflow: "hidden",
-                          border: `1px solid rgba(0,212,255,0.1)`,
-                          background: BG_SURFACE,
-                          display: "flex",
-                          flexDirection: "column",
-                          textDecoration: "none",
-                          color: "inherit",
-                        }}
+                        className="transform rounded-xl overflow-hidden border border-[rgba(0,212,255,0.1)] bg-bg-surface flex flex-col no-underline text-inherit transition-all duration-300 min-w-0 hover:border-[rgba(0,212,255,0.2)] hover:shadow-[0_0_30px_rgba(0,212,255,0.03)] hover:-translate-y-1 active:-translate-y-1 motion-reduce:hover:translate-y-0 motion-reduce:active:translate-y-0"
                       >
                         <div
                           style={{
@@ -925,7 +792,7 @@ function HomePageContent({
                               textTransform: "uppercase",
                               letterSpacing: "2px",
                               borderRadius: "3px",
-                              color: MAGENTA,
+                              color: NEON_MAGENTA,
                               background: "rgba(255,39,112,0.15)",
                               border: `1px solid rgba(255,39,112,0.15)`,
                               marginBottom: "12px",
@@ -997,15 +864,7 @@ function HomePageContent({
                     <Link
                       key={post.id}
                       href={`/blog/${post.id}`}
-                      style={{
-                        borderRadius: "8px",
-                        border: "1px solid rgba(255,255,255,0.06)",
-                        background: BG_CARD,
-                        padding: "20px",
-                        textDecoration: "none",
-                        color: "inherit",
-                        display: "block",
-                      }}
+                      className="rounded-lg border border-neon-card-border bg-bg-card p-5 no-underline text-inherit block transition-all duration-300 min-w-0 hover:border-white/10 hover:bg-bg-elevated"
                     >
                       <span
                         style={{
@@ -1014,7 +873,7 @@ function HomePageContent({
                           fontSize: "9px",
                           textTransform: "uppercase",
                           letterSpacing: "2px",
-                          color: TEAL,
+                          color: NEON_TEAL,
                           marginBottom: "6px",
                           display: "block",
                         }}
@@ -1058,7 +917,7 @@ function HomePageContent({
 
       {/* About Me */}
       <ScrollReveal delay={100}>
-        <section style={{ position: "relative", zIndex: 1, padding: "80px 0" }}>
+        <section className="relative z-[1] py-20 max-[600px]:py-0 max-[600px]:pb-[60px]">
           <div className="mx-auto px-6" style={{ maxWidth: "1200px" }}>
             <div style={{ marginBottom: "40px" }}>
               <div
@@ -1071,7 +930,7 @@ function HomePageContent({
                   fontWeight: 700,
                   textTransform: "uppercase",
                   letterSpacing: "3px",
-                  color: CYAN,
+                  color: NEON_CYAN,
                   marginBottom: "12px",
                 }}
               >
@@ -1079,8 +938,8 @@ function HomePageContent({
                   style={{
                     width: "24px",
                     height: "1px",
-                    background: CYAN,
-                    boxShadow: `0 0 8px ${CYAN}`,
+                    background: NEON_CYAN,
+                    boxShadow: `0 0 8px ${NEON_CYAN}`,
                   }}
                 />
                 {t("about.label")}
@@ -1095,20 +954,13 @@ function HomePageContent({
                 }}
               >
                 {t("about.titlePrefix")}
-                <span style={{ color: MAGENTA }}>
+                <span style={{ color: NEON_MAGENTA }}>
                   {t("about.titleHighlight")}
                 </span>
               </h2>
             </div>
 
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr",
-                gap: "48px",
-                alignItems: "center",
-              }}
-            >
+            <div className="grid grid-cols-2 gap-12 items-center min-w-0 max-[900px]:grid-cols-1">
               <div style={{ position: "relative" }}>
                 <div
                   style={{
@@ -1147,7 +999,7 @@ function HomePageContent({
                     border: `1px solid rgba(0,212,255,0.2)`,
                     fontFamily: "'JetBrains Mono', ui-monospace, monospace",
                     fontSize: "11px",
-                    color: CYAN,
+                    color: NEON_CYAN,
                     backdropFilter: "blur(8px)",
                   }}
                 >
@@ -1235,7 +1087,7 @@ function HomePageContent({
                         fontSize: "11px",
                         fontWeight: 600,
                         fontFamily: "'JetBrains Mono', ui-monospace, monospace",
-                        color: TEAL,
+                        color: NEON_TEAL,
                         background: "rgba(10,197,168,0.1)",
                         border: "1px solid rgba(10,197,168,0.15)",
                       }}
@@ -1265,20 +1117,7 @@ function HomePageContent({
                       href={link.href}
                       target="_blank"
                       rel="noopener noreferrer"
-                      style={{
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: "6px",
-                        padding: "8px 16px",
-                        borderRadius: "6px",
-                        fontSize: "13px",
-                        fontWeight: 600,
-                        textDecoration: "none",
-                        color: CYAN,
-                        background: "rgba(0,212,255,0.08)",
-                        border: `1px solid rgba(0,212,255,0.15)`,
-                        transition: "all 0.2s ease",
-                      }}
+                      className="inline-flex items-center gap-1.5 py-2 px-4 rounded-md text-[13px] font-semibold no-underline text-neon-cyan bg-[rgba(0,212,255,0.08)] border border-[rgba(0,212,255,0.15)] transition-all duration-[250ms] ease-[cubic-bezier(0.25,1,0.5,1)] hover:bg-neon-cyan-dim hover:border-neon-cyan hover:-translate-y-0.5 active:-translate-y-0.5 motion-reduce:hover:translate-y-0 motion-reduce:active:translate-y-0"
                     >
                       <svg
                         width="14"
@@ -1330,32 +1169,13 @@ function HomePageContent({
         </div>
       </footer>
 
-      {/* Animations */}
+      {/* Landing particle drift — distinct from globals.css particle-float used elsewhere */}
       <style>{`
-        @keyframes grid-drift {
-          0% { transform: rotateX(60deg) translateY(0); }
-          100% { transform: rotateX(60deg) translateY(60px); }
-        }
-        @keyframes terminal-type {
-          0% { opacity: 0; transform: translateX(-8px); }
-          100% { opacity: 1; transform: translateX(0); }
-        }
-        @keyframes ring-pulse {
-          0%, 100% { transform: scale(1); opacity: 0.5; }
-          50% { transform: scale(1.1); opacity: 1; }
-        }
-        @keyframes blink-cursor {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0; }
-        }
-        @keyframes particle-float {
+        @keyframes particle-float-landing {
           0% { transform: translateY(0) translateX(0); opacity: 0; }
           10% { opacity: 1; }
           90% { opacity: 1; }
           100% { transform: translateY(-100vh) translateX(100px); opacity: 0; }
-        }
-        @media (max-width: 768px) {
-          .container-posts { grid-template-columns: 1fr !important; }
         }
       `}</style>
     </>

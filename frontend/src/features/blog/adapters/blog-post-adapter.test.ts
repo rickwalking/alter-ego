@@ -36,4 +36,17 @@ describe("mapProjectToBlogPostCard", () => {
     const result = mapProjectToBlogPostCard(baseProject, "en");
     expect(result.href).toBe(`/blog/${baseProject.id}`);
   });
+
+  it("rewrites preview hero URLs to public image routes", () => {
+    const project: CarouselProjectResponse = {
+      ...baseProject,
+      design_tokens: {
+        images: {
+          hero: "/api/carousels/proj-1/preview/images/hero.jpg?lang=pt",
+        },
+      },
+    };
+    const result = mapProjectToBlogPostCard(project, "en");
+    expect(result.imageUrl).toBe("/api/carousels/proj-1/images/hero.jpg");
+  });
 });

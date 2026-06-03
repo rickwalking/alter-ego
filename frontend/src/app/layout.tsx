@@ -55,7 +55,10 @@ export default async function RootLayout({
     // against the `.dark` class on <html>, so setting it once here keeps
     // every dark-styled rule active without a toggle or provider.
     <html lang={locale} className="dark" suppressHydrationWarning>
-      <body className={`${inter.variable} font-sans antialiased`}>
+      <body
+        className={`${inter.variable} font-sans antialiased`}
+        suppressHydrationWarning
+      >
         <NextIntlClientProvider messages={messages}>
           <QueryProvider>{children}</QueryProvider>
         </NextIntlClientProvider>

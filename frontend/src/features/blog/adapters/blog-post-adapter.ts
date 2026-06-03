@@ -1,5 +1,6 @@
 import type { CarouselProjectResponse } from "@/schemas/carousel";
 import type { NeonBlogPostCardProps } from "@/schemas/neon-blog-post-card";
+import { toPublicCarouselImageUrl } from "@/lib/carousel-media-url";
 import { truncate } from "@/lib/utils";
 
 export function mapProjectToBlogPostCard(
@@ -16,7 +17,7 @@ export function mapProjectToBlogPostCard(
       ? project.subtitle_en || project.subtitle || project.topic
       : project.subtitle || project.topic;
 
-  const imageUrl =
+  const rawImageUrl =
     project.design_tokens &&
     typeof project.design_tokens === "object" &&
     "images" in project.design_tokens &&
@@ -25,6 +26,10 @@ export function mapProjectToBlogPostCard(
     "hero" in project.design_tokens.images
       ? String((project.design_tokens.images as { hero?: string }).hero ?? "")
       : undefined;
+
+  const imageUrl = rawImageUrl
+    ? toPublicCarouselImageUrl(rawImageUrl)
+    : undefined;
 
   return {
     id: project.id,

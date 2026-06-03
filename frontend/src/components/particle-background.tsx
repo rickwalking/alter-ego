@@ -21,7 +21,7 @@ export function ParticleBackground() {
       const size = 1 + Math.random() * 2;
       p.style.width = `${size}px`;
       p.style.height = `${size}px`;
-      p.style.animation = `particle-float ${6 + Math.random() * 6}s linear infinite`;
+      p.style.animation = `particle-float-landing ${6 + Math.random() * 6}s linear infinite`;
       p.style.animationDelay = `${Math.random() * 8}s`;
       p.style.opacity = String(0.3 + Math.random() * 0.4);
       container.appendChild(p);
