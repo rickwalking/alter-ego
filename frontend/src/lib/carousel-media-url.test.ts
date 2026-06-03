@@ -3,6 +3,7 @@ import {
   appendCacheBuster,
   slideUrlsForPublishPanel,
   toAuthenticatedPreviewSlideUrl,
+  toPublicCarouselImageUrl,
 } from "@/lib/carousel-media-url";
 
 describe("carousel-media-url", () => {
@@ -39,6 +40,17 @@ describe("carousel-media-url", () => {
         "en",
       ),
     ).toBe("/api/carousels/proj-1/preview/images/slide_2.jpg?lang=en");
+  });
+
+  it("rewrites authenticated preview URLs to public image routes", () => {
+    expect(
+      toPublicCarouselImageUrl(
+        "/api/carousels/proj-1/preview/images/hero.jpg?lang=pt",
+      ),
+    ).toBe("/api/carousels/proj-1/images/hero.jpg");
+    expect(
+      toPublicCarouselImageUrl("/api/carousels/proj-1/images/slide_1.jpg"),
+    ).toBe("/api/carousels/proj-1/images/slide_1.jpg");
   });
 
   it("builds publish panel slide URLs with preview routes and cache buster", () => {

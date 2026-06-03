@@ -1,6 +1,6 @@
 # Active Task
 
-Current active ticket: AE-0001
+Current active ticket: AE-0003 (Dev Complete — hand off to QA)
 
 ## Rules
 
