@@ -94,6 +94,7 @@ services:
     image: clickhouse/clickhouse-server:24.12-alpine
     volumes:
       - clickhouse_data:/var/lib/clickhouse
+      - ./clickhouse-config/docker_related_config.xml:/etc/clickhouse-server/config.d/docker_related_config.xml:ro
     environment:
       CLICKHOUSE_USER: langfuse
       CLICKHOUSE_PASSWORD: ${LANGFUSE_CLICKHOUSE_PASSWORD:-changeme}
@@ -106,8 +107,8 @@ services:
     deploy:
       resources:
         limits:
-          memory: 512M
-          cpus: "1.0"
+          memory: 1536M
+          cpus: "1.5"
     security_opt:
       - no-new-privileges:true
 

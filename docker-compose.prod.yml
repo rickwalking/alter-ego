@@ -130,6 +130,7 @@ services:
     image: clickhouse/clickhouse-server:24.12-alpine
     volumes:
       - clickhouse_data:/var/lib/clickhouse
+      - ./clickhouse-config/docker_related_config.xml:/etc/clickhouse-server/config.d/docker_related_config.xml:ro
     environment:
       CLICKHOUSE_USER: langfuse
       CLICKHOUSE_PASSWORD: ${LANGFUSE_CLICKHOUSE_PASSWORD:-changeme}
@@ -139,6 +140,11 @@ services:
         soft: 262144
         hard: 262144
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 1536M
+          cpus: "1.5"
     logging:
       driver: "json-file"
       options:
