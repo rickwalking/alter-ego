@@ -110,12 +110,19 @@ class TestGenerateCarouselTool:
 class TestContentStandardsEnforcement:
     """Scenarios: content standards enforced in generated artifacts."""
 
-    def test_render_inline_strips_em_dashes(self) -> None:
-        """Scenario: Generated slide content strips em dashes."""
+    def test_render_inline_preserves_em_dashes(self) -> None:
+        """Scenario: Generated slide content preserves em dashes."""
         rendered = _render_inline("First point — second point")
-        assert "—" not in rendered
+        assert "—" in rendered
         assert "First point" in rendered
         assert "second point" in rendered
+
+    def test_render_inline_converts_newlines_to_br(self) -> None:
+        """Scenario: Newlines in slide content become <br> tags."""
+        rendered = _render_inline("Line one\nLine two")
+        assert "<br>" in rendered
+        assert "Line one" in rendered
+        assert "Line two" in rendered
 
     def test_closing_slide_uses_structured_checklist_features(self) -> None:
         """Scenario: Closing slide uses structured checklist not prose wall."""

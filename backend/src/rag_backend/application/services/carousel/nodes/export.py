@@ -2,9 +2,10 @@
 
 Renders PT slides from the already-built HTML, and — when the slides
 carry `translation_en` payloads — re-runs phase 4 for EN and renders
-those too. Hero images live one directory up (`<output>/images/`) and
-are shared by both languages, so the HTML's `src="images/..."` is
-rewritten to `src="../images/..."` before handing it to Playwright.
+those too. Hero images live at `<output>/images/` and are shared by
+both languages.  Relative paths are rewritten so that standard exports
+(`<output>/<lang>/`) use `../images/...` and HD exports
+(`<output>/<lang>/hd/`) use `../../images/...`.
 """
 
 from __future__ import annotations
@@ -43,19 +44,21 @@ async def render_language(
     """Export a single language's slide JPGs + PDF into `<output>/<lang>/`."""
     lang_dir = output_dir / language
     lang_dir.mkdir(parents=True, exist_ok=True)
-    src_dq = f'src="{SHARED_IMAGES_DIR_NAME}/'
-    src_sq = f"src='{SHARED_IMAGES_DIR_NAME}/"
-    url_dq = f'url("{SHARED_IMAGES_DIR_NAME}/'
-    url_sq = f"url('{SHARED_IMAGES_DIR_NAME}/"
-    rewritten_html = (
-        html_content
-        .replace(src_dq, 'src="../images/')
-        .replace(src_sq, "src='../images/")
-        .replace(url_dq, 'url("../images/')
-        .replace(url_sq, "url('../images/")
-    )
+
+    def _rewrite_image_paths(html: str, prefix: str) -> str:
+        return (
+            html
+            .replace(f'src="{SHARED_IMAGES_DIR_NAME}/', f'src="{prefix}')
+            .replace(f"src='{SHARED_IMAGES_DIR_NAME}/", f"src='{prefix}")
+            .replace(f'url("{SHARED_IMAGES_DIR_NAME}/', f'url("{prefix}')
+            .replace(f"url('{SHARED_IMAGES_DIR_NAME}/", f"url('{prefix}")
+        )
+
+    standard_html = _rewrite_image_paths(html_content, "../images/")
+    hd_html = _rewrite_image_paths(html_content, "../../images/")
+
     slide_paths = await export.export_slides(
-        html_content=rewritten_html,
+        html_content=standard_html,
         output_dir=str(lang_dir),
     )
     # Export HD slides too (2160x2700 for archive/retina). Non-blocking:
@@ -64,7 +67,7 @@ async def render_language(
         hd_dir = lang_dir / HD_SUBDIR_NAME
         hd_dir.mkdir(parents=True, exist_ok=True)
         await export.export_slides(
-            html_content=rewritten_html,
+            html_content=hd_html,
             output_dir=str(hd_dir),
             config=ExportConfig(hd=True),
         )

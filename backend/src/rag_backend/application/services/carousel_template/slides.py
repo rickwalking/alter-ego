@@ -150,6 +150,25 @@ def _render_content_slide(
   </div>"""
 
 
+def _render_closing_slide(
+    slide: SlideDict, _theme: dict[str, str], total_slides: int = 6
+) -> str:
+    """Render closing slide with centered action items."""
+    heading = _render_inline(str(slide["heading"]))
+    body_raw = str(slide.get("body") or "").strip()
+    body_html = f'<p class="body-p">{_render_inline(body_raw)}</p>' if body_raw else ""
+
+    return f"""\
+  <div class="bg-glow"></div>
+  <div class="slide-content">
+    <div class="slide-number">0{slide["number"]} / {total_slides:02d}</div>
+    <h2 class="slide-heading">{heading}</h2>
+    <div class="slide-body">
+      {body_html}
+    </div>
+  </div>"""
+
+
 def _render_cta_slide(
     slide: SlideDict,
     _theme: dict[str, str],

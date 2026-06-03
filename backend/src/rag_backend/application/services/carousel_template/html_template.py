@@ -8,12 +8,14 @@ from rag_backend.application.services.carousel_template.neon_styles import (
     get_neon_shell_css,
 )
 from rag_backend.application.services.carousel_template.slides import (
+    _render_closing_slide,
     _render_content_slide,
     _render_cta_slide,
     _render_intro_slide,
     _render_summary_slide,
 )
 from rag_backend.domain.constants import (
+    SLIDE_TYPE_CLOSING,
     SLIDE_TYPE_CTA,
     SLIDE_TYPE_INTRO,
     SLIDE_TYPE_SUMMARY,
@@ -181,6 +183,8 @@ def build_carousel_html(
             inner = _render_intro_slide(slide, project, theme)
         elif slide_type == SLIDE_TYPE_SUMMARY:
             inner = _render_summary_slide(slide, theme, total_slides)
+        elif slide_type == SLIDE_TYPE_CLOSING:
+            inner = _render_closing_slide(slide, theme, total_slides)
         elif slide_type == SLIDE_TYPE_CTA:
             inner = _render_cta_slide(slide, theme, lang, total_slides)
         else:

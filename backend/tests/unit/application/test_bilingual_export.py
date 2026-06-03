@@ -211,11 +211,19 @@ class TestBilingualExport:
             export=export,
             pdf_builder=pdf_builder,
         )
-        rewritten_html = export.export_slides.await_args_list[0].kwargs["html_content"]
-        assert "../images/slide_1.jpg" in rewritten_html
-        assert 'src="images/slide_1' not in rewritten_html
-        assert "url('../images/slide_1.jpg')" in rewritten_html
-        assert "url('images/slide_1" not in rewritten_html
+        # Standard export uses ../images/
+        standard_html = export.export_slides.await_args_list[0].kwargs["html_content"]
+        assert "../images/slide_1.jpg" in standard_html
+        assert 'src="images/slide_1' not in standard_html
+        assert "url('../images/slide_1.jpg')" in standard_html
+        assert "url('images/slide_1" not in standard_html
+
+        # HD export uses ../../images/
+        hd_html = export.export_slides.await_args_list[1].kwargs["html_content"]
+        assert "../../images/slide_1.jpg" in hd_html
+        assert 'src="images/slide_1' not in hd_html
+        assert "url('../../images/slide_1.jpg')" in hd_html
+        assert "url('images/slide_1" not in hd_html
 
 
 def _slide(number: int, extras: dict[str, object] | None = None) -> CarouselSlide:

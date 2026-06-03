@@ -7,15 +7,15 @@ from rag_backend.application.services.carousel.types import SlideDict
 
 FEATURE_GRID_TWO_COLUMNS = 2
 
-_EM_DASH_RE = re.compile(r"\s*[—-]+\s*")
+_EM_DASH_RE = re.compile(r"\s*—\s*")
 _BOLD_RE = re.compile(r"\*\*(.+?)\*\*", re.DOTALL)
 _CODE_RE = re.compile(r"`([^`\n]+?)`")
 
 
 def _render_inline(text: str) -> str:
     escaped = html.escape(text, quote=True)
-    without_dashes = _EM_DASH_RE.sub(". ", escaped)
-    with_code = _CODE_RE.sub(r'<span class="code-tag">\1</span>', without_dashes)
+    with_breaks = escaped.replace("\n", "<br>")
+    with_code = _CODE_RE.sub(r'<span class="code-tag">\1</span>', with_breaks)
     return _BOLD_RE.sub(r"<strong>\1</strong>", with_code)
 
 
