@@ -123,8 +123,8 @@ async def upload_document(
     created_doc = await repo.create(document)
     await db.commit()
 
-    # Process through pipeline immediately
-    pipeline = container.document_pipeline(db_session=db)
+    # Process through pipeline immediately (inject request-scoped repo)
+    pipeline = container.document_pipeline(document_repository=repo)
     try:
         processed_doc = await pipeline.process_document(created_doc)
     except Exception as e:
@@ -294,8 +294,8 @@ async def get_document_status(
 
     assert_document_access(document, user)
 
-    # Get pipeline for estimation
-    pipeline = container.document_pipeline(db_session=db)
+    # Get pipeline for estimation (inject request-scoped repo)
+    pipeline = container.document_pipeline(document_repository=repo)
     estimates = pipeline.estimate_processing_time(document)
 
     return {
@@ -337,8 +337,7 @@ async def delete_document(
         )
 
     assert_document_access(document, user)
-    pipeline = container.document_pipeline(db_session=db)
-
+    pipeline = container.document_pipeline(document_repository=repo)
     success = await pipeline.delete_document(str(document_id))
     if not success:
         raise HTTPException(
@@ -376,8 +375,7 @@ async def reprocess_document(
         )
 
     assert_document_access(document, user)
-    pipeline = container.document_pipeline(db_session=db)
-
+    pipeline = container.document_pipeline(document_repository=repo)
     try:
         return await pipeline.reprocess_document(str(document_id))
     except ValueError as e:

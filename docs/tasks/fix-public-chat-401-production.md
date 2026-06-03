@@ -120,6 +120,15 @@ cd frontend && npm run typecheck && npm run lint
 
 ## SSE Streaming Fix — 2026-06-02
 
+### Production Verification
+
+Chat now works end-to-end in production:
+- ✅ Conversation creation: `POST /api/conversations/` → 201
+- ✅ SSE streaming: `POST /api/conversations/{id}/chat/stream` → 200 with `text/event-stream`
+- ✅ Streaming tokens appear incrementally in the UI (not batch)
+- ✅ No 401, no silent failures, no Pinecone errors
+- ✅ All API keys configured in `.env`
+
 ### Root Cause (SSE not streaming)
 
 After fixing the 401, conversation creation worked but SSE responses were still not reaching the frontend in real time. The `streamSseEvents` function used `response.text()` which waits for the **entire HTTP response body** before resolving. This meant:
