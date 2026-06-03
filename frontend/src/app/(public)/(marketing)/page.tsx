@@ -117,10 +117,7 @@ function HomePageContent({
               className="text-[clamp(40px,6vw,72px)] font-black leading-[1.05] tracking-[-0.03em] mb-5 text-text-primary break-words"
               data-testid="hero-heading"
             >
-              <span
-                className="hero-glitch"
-                data-text={t("hero.titleLine1")}
-              >
+              <span className="hero-glitch" data-text={t("hero.titleLine1")}>
                 {t("hero.titleLine1")}
               </span>
               <br />
@@ -277,8 +274,8 @@ function HomePageContent({
                   }}
                 >
                   <span style={{ color: NEON_TEAL }}>$</span>{" "}
-                  <span style={{ color: NEON_CYAN }}>./connect</span> --persona pedro
-                  --mode immersive
+                  <span style={{ color: NEON_CYAN }}>./connect</span> --persona
+                  pedro --mode immersive
                 </div>
                 <div
                   style={{
