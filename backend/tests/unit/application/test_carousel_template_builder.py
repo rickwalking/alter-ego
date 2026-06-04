@@ -141,7 +141,7 @@ class TestCarouselTemplateBuilder:
 
         assert "Intro" in html
         assert "Content" in html
-        assert "CTA" in html
+        assert "slide-closing" in html
         assert html.count('<div class="slide') >= 3
 
     def test_build_carousel_html_language_attribute(self, sample_project, sample_theme):
