@@ -109,12 +109,12 @@ class TestNeonShellHtml:
     def test_build_carousel_html_watermark_when_creator_set(
         self, sample_project, sample_theme
     ):
-        """Should render watermark when creator metadata is present."""
+        """Should render watermark inside hero-bg slides when creator metadata is present."""
         sample_project.creator_name = "Neon Shell"
         sample_project.creator_handle = "neonshell"
         sample_project.creator_avatar_url = "https://example.com/avatar.png"
         slides = [
-            {"number": "1", "type": "intro", "heading": "H", "body": "B"},
+            {"number": "2", "type": "content", "heading": "H", "body": "B"},
         ]
         html = CarouselTemplateBuilder.build_carousel_html(
             sample_project, slides, sample_theme
@@ -134,7 +134,7 @@ class TestNeonShellHtml:
         """Should omit watermark when no creator metadata."""
         sample_project.creator_name = None
         slides = [
-            {"number": "1", "type": "intro", "heading": "H", "body": "B"},
+            {"number": "2", "type": "content", "heading": "H", "body": "B"},
         ]
         html = CarouselTemplateBuilder.build_carousel_html(
             sample_project, slides, sample_theme

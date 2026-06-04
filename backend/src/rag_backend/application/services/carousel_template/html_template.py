@@ -141,18 +141,20 @@ class SlideWrapContext:
     watermark_html: str
     include_action_bar: bool = False
     caption_html: str = ""
+    include_watermark: bool = True
 
 
 def _wrap_slide(ctx: SlideWrapContext) -> str:
     """Wrap slide content in Neon Shell v2.0 structure."""
     counter = _build_slide_counter(ctx.total_slides, ctx.slide_num)
     action_bar = _build_action_bar() if ctx.include_action_bar else ""
+    watermark = ctx.watermark_html if ctx.include_watermark else ""
     return (
         f'<div class="ig-post">'
         f'<div class="ig-slide">'
         f'<div class="ig-slide-inner">'
         f"{ctx.inner_html}"
-        f"{ctx.watermark_html}"
+        f"{watermark}"
         f"</div>"
         f"{counter}"
         f"{action_bar}"
@@ -181,14 +183,25 @@ def build_carousel_html(
         is_first_or_last = slide["number"] in {"1", str(total_slides)}
         if slide_type == SLIDE_TYPE_INTRO:
             inner = _render_intro_slide(slide, project, theme)
+            include_watermark = False
         elif slide_type == SLIDE_TYPE_SUMMARY:
-            inner = _render_summary_slide(slide, theme, total_slides)
+            inner = _render_summary_slide(
+                slide, theme, total_slides, watermark_html=watermark_html
+            )
+            include_watermark = False
         elif slide_type == SLIDE_TYPE_CLOSING:
-            inner = _render_closing_slide(slide, theme, total_slides)
+            inner = _render_closing_slide(
+                slide, theme, total_slides, watermark_html=watermark_html
+            )
+            include_watermark = False
         elif slide_type == SLIDE_TYPE_CTA:
-            inner = _render_cta_slide(slide, theme, lang, total_slides)
+            inner = _render_cta_slide(slide, theme, lang, total_slides, project=project)
+            include_watermark = False
         else:
-            inner = _render_content_slide(slide, theme, total_slides)
+            inner = _render_content_slide(
+                slide, theme, total_slides, watermark_html=watermark_html
+            )
+            include_watermark = False
         slides_html += _wrap_slide(
             SlideWrapContext(
                 inner_html=inner,
@@ -197,6 +210,7 @@ def build_carousel_html(
                 watermark_html=watermark_html,
                 include_action_bar=is_first_or_last,
                 caption_html=caption_html if is_first_or_last else "",
+                include_watermark=include_watermark,
             ),
         )
 

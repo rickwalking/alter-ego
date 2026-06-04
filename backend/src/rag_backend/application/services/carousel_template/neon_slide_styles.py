@@ -504,6 +504,135 @@ def _get_neon_slide_css(theme: dict[str, str]) -> str:
     border-color: var(--primary);
     transform: translateY(-1px);
   }}
+
+  /* ── Hero-bg layout (background image + gradient + bottom text) ── */
+  .slide-hero-bg-img {{
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    overflow: hidden;
+  }}
+  .slide-hero-bg-img img {{
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center 30%;
+    display: block;
+  }}
+  .slide-hero-bg-gradient {{
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    background: linear-gradient(
+      180deg,
+      rgba(10,12,20,0.08) 0%,
+      rgba(10,12,20,0.35) 25%,
+      rgba(10,12,20,0.75) 50%,
+      var(--bg) 70%
+    );
+  }}
+  .slide-hero-content {{
+    position: absolute;
+    inset: 0;
+    z-index: 3;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    padding: 40px 36px 64px;
+  }}
+  .slide-hero-main {{
+    display: flex;
+    flex-direction: column;
+  }}
+  .slide-hero-main .creator-watermark {{
+    position: static;
+    align-self: flex-start;
+    margin-top: 8px;
+    bottom: auto;
+    left: auto;
+  }}
+  .slide-hero-number {{
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    color: var(--primary);
+    margin-bottom: 8px;
+  }}
+  .slide-hero-heading {{
+    font-family: var(--font-heading);
+    font-size: clamp(20px, 4.5vw, 28px);
+    font-weight: 800;
+    line-height: 1.15;
+    margin-bottom: 10px;
+  }}
+  .slide-hero-heading .highlight {{ color: var(--accent); }}
+  .slide-hero-heading strong {{ color: var(--accent); }}
+  .slide-hero-body {{
+    font-size: clamp(12px, 2.5vw, 15px);
+    font-weight: 400;
+    color: var(--text-60);
+    line-height: 1.55;
+  }}
+  .slide-hero-body strong {{ color: var(--accent); font-weight: 700; }}
+
+  /* ── Closing slide (centered) ── */
+  .slide-closing {{
+    text-align: center;
+    align-items: center;
+    justify-content: center;
+  }}
+  .slide-closing.slide-content {{
+    padding: 48px 36px 40px;
+  }}
+  .closing-avatar {{
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    overflow: hidden;
+    margin-bottom: 14px;
+    border: 2px solid var(--primary);
+    box-shadow: 0 0 16px var(--primary-dim);
+  }}
+  .closing-avatar img {{
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }}
+  .closing-name {{
+    font-family: var(--font-heading);
+    font-size: clamp(20px, 4vw, 24px);
+    font-weight: 800;
+    color: var(--text);
+  }}
+  .closing-handle {{
+    font-family: var(--font-mono);
+    font-size: clamp(12px, 2.2vw, 14px);
+    color: var(--text-60);
+    margin-bottom: 20px;
+  }}
+  .closing-website {{
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 24px;
+    border-radius: 6px;
+    background: linear-gradient(135deg, var(--primary) 0%, #7c3aed 100%);
+    color: #fff;
+    font-weight: 700;
+    text-decoration: none;
+    margin-bottom: 18px;
+    box-shadow: 0 0 20px var(--primary-dim);
+  }}
+  .closing-cta {{
+    font-family: var(--font-mono);
+    font-size: clamp(10px, 1.8vw, 12px);
+    color: var(--text-55);
+    letter-spacing: 1px;
+  }}
 """
 
 

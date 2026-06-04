@@ -118,8 +118,16 @@ document.head.appendChild(style);
 """
 
 
+_BORDER_ARTIFACT_MAX_PX = 5
+
+
 def _crop_border_artifact(path: str, target_width: int, target_height: int) -> None:
-    """Crop 1px border artifact from exported slide image."""
+    """Crop small border artifacts (up to 5px) from exported slide image edges.
+
+    Only applies when the image is within a few pixels of the target
+    dimensions.  Large mismatches are treated as a rendering bug and
+    logged rather than aggressively center-cropped.
+    """
     try:
         from PIL import Image as PILImage
 
@@ -127,11 +135,23 @@ def _crop_border_artifact(path: str, target_width: int, target_height: int) -> N
             w, h = img.size
             if w == target_width and h == target_height:
                 return
+            dw = w - target_width
+            dh = h - target_height
+            if abs(dw) > _BORDER_ARTIFACT_MAX_PX or abs(dh) > _BORDER_ARTIFACT_MAX_PX:
+                logger.warning(
+                    "screenshot_size_mismatch",
+                    path=path,
+                    actual_width=w,
+                    actual_height=h,
+                    target_width=target_width,
+                    target_height=target_height,
+                )
+                return
             crop_box = (
-                (w - target_width) // 2,
-                (h - target_height) // 2,
-                (w - target_width) // 2 + target_width,
-                (h - target_height) // 2 + target_height,
+                max(0, dw // 2),
+                max(0, dh // 2),
+                w - max(0, -dw // 2),
+                h - max(0, -dh // 2),
             )
             cropped = img.crop(crop_box)
             cropped.save(path, IMAGE_FORMAT_JPEG, quality=DEFAULT_QUALITY)
@@ -147,8 +167,8 @@ def _crop_border_artifact(path: str, target_width: int, target_height: int) -> N
 class PlaywrightExportService(CarouselExportService):
     """Playwright implementation for exporting carousel HTML to images.
 
-    Supports CSS injection for font clamp overrides, HD (2x) retina
-    export, and 1px border artifact cropping per the export guide.
+    Supports CSS injection for font clamp overrides and HD (2x) retina
+    export via deviceScaleFactor with CSS-pixel screenshots.
     """
 
     async def export_slides(
@@ -220,6 +240,7 @@ class PlaywrightExportService(CarouselExportService):
                     path=slide_path,
                     type=IMAGE_FORMAT_JPEG_LOWER,
                     quality=cfg.quality,
+                    scale="css",
                 )
                 # Crop 1px border artifact
                 _crop_border_artifact(

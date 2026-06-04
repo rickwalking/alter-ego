@@ -12,6 +12,7 @@ from rag_backend.application.services.carousel_template.prompts import (
     build_title_prompt,
 )
 from rag_backend.application.services.carousel_template.slides import (
+    _render_closing_slide,
     _render_content_slide,
     _render_cta_slide,
     _render_intro_slide,
@@ -28,6 +29,7 @@ class CarouselTemplateBuilder:
     _render_intro_slide = staticmethod(_render_intro_slide)
     _render_summary_slide = staticmethod(_render_summary_slide)
     _render_content_slide = staticmethod(_render_content_slide)
+    _render_closing_slide = staticmethod(_render_closing_slide)
     _render_cta_slide = staticmethod(_render_cta_slide)
 
 

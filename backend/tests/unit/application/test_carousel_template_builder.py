@@ -174,7 +174,7 @@ class TestCarouselTemplateBuilder:
     def test_build_carousel_html_content_slide_has_slide_number(
         self, sample_project, sample_theme
     ):
-        """Should render slide number on content slides."""
+        """Should render slide number on content slides using hero layout."""
         slides = [
             {"number": "2", "type": "content", "heading": "H", "body": "B"},
         ]
@@ -183,13 +183,14 @@ class TestCarouselTemplateBuilder:
             sample_project, slides, sample_theme
         )
 
-        assert "slide-number" in html
+        assert "slide-hero-number" in html
         assert "02 / 01" in html
+        assert "slide-hero-bg-img" in html
 
-    def test_build_carousel_html_cta_slide_has_buttons(
+    def test_build_carousel_html_cta_slide_has_closing_layout(
         self, sample_project, sample_theme
     ):
-        """Should render CTA buttons on cta slides."""
+        """Should render closing centered layout on cta slides."""
         slides = [
             {"number": "7", "type": "cta", "heading": "Save & Share", "body": "CTA"},
         ]
@@ -198,9 +199,9 @@ class TestCarouselTemplateBuilder:
             sample_project, slides, sample_theme
         )
 
-        assert "cta-btn primary" in html
-        assert "cta-btn secondary" in html
-        assert "Salvar" in html
+        assert "slide-closing" in html
+        assert "closing-name" in html
+        assert "Siga para mais conteúdo como esse" in html
 
     # Scenario: Design overrides are injected into HTML before </style>
     def test_build_carousel_html_injects_design_overrides(
