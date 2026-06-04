@@ -86,6 +86,12 @@ class CarouselProjectModel(Base):
     workflow_status = Column(String(50), default="", nullable=False, server_default="")
     lock_version = Column(Integer, default=1, nullable=False)
 
+    # Creator watermark metadata
+    creator_name = Column(String(100), nullable=True)
+    creator_handle = Column(String(100), nullable=True)
+    creator_avatar_url = Column(String(500), nullable=True)
+    creator_website = Column(String(500), nullable=True)
+
     created_at = Column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
@@ -158,6 +164,9 @@ class CarouselProjectModel(Base):
             phase_status=self.phase_status,
             is_public=bool(self.is_public),
             owner_id=self.owner_id,
+            creator_name=self.creator_name,
+            creator_handle=self.creator_handle,
+            creator_avatar_url=self.creator_avatar_url,
             created_at=self.created_at,
             updated_at=self.updated_at,
         )
@@ -205,6 +214,9 @@ class CarouselProjectModel(Base):
             phase_status=entity.phase_status,
             is_public=entity.is_public,
             owner_id=entity.owner_id,
+            creator_name=entity.creator_name,
+            creator_handle=entity.creator_handle,
+            creator_avatar_url=entity.creator_avatar_url,
             created_at=entity.created_at,
             updated_at=entity.updated_at,
         )
@@ -239,6 +251,9 @@ class CarouselProjectModel(Base):
         self.phase_status = entity.phase_status
         self.is_public = entity.is_public
         self.owner_id = entity.owner_id
+        self.creator_name = entity.creator_name
+        self.creator_handle = entity.creator_handle
+        self.creator_avatar_url = entity.creator_avatar_url
         self.updated_at = entity.updated_at
 
 
