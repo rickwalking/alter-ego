@@ -27,7 +27,10 @@ vi.mock("@/features/create/hooks", () => ({
   useRegenerateSlides: vi.fn(),
 }));
 
-import { useAvailableStrategies, useRegenerateSlides } from "@/features/create/hooks";
+import {
+  useAvailableStrategies,
+  useRegenerateSlides,
+} from "@/features/create/hooks";
 
 const mockStrategiesData = {
   strategies: [
@@ -127,7 +130,9 @@ it("shows error state with retry button when fetch fails", async () => {
     { wrapper: createWrapper() },
   );
 
-  expect(screen.getByText("Could not load layout options.")).toBeInTheDocument();
+  expect(
+    screen.getByText("Could not load layout options."),
+  ).toBeInTheDocument();
   const retryButton = screen.getByText("Retry");
   await userEvent.click(retryButton);
   expect(refetchMock).toHaveBeenCalledTimes(1);
@@ -175,7 +180,9 @@ it("highlights the template matching the project's slide_layout_strategy", () =>
     { wrapper: createWrapper() },
   );
 
-  const comparisonCard = screen.getByText("Comparison").closest("[role='button']");
+  const comparisonCard = screen
+    .getByText("Comparison")
+    .closest("[role='button']");
   expect(comparisonCard).toBeTruthy();
 });
 
@@ -305,5 +312,7 @@ it("shows success message after successful regeneration", async () => {
   const button = screen.getByText("Regenerate slides");
   await userEvent.click(button);
 
-  expect(screen.getByText("Slides regenerated with new layout.")).toBeInTheDocument();
+  expect(
+    screen.getByText("Slides regenerated with new layout."),
+  ).toBeInTheDocument();
 });

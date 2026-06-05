@@ -43,8 +43,12 @@ export function RegenerateStrategySection({
   projectId,
 }: RegenerateStrategySectionProps): React.ReactElement {
   const t = useTranslations("publish.regenerateStrategy");
-  const { data: strategiesData, isLoading, isError, refetch } =
-    useAvailableStrategies();
+  const {
+    data: strategiesData,
+    isLoading,
+    isError,
+    refetch,
+  } = useAvailableStrategies();
   const regenerate = useRegenerateSlides();
   const [selectedIndex, setSelectedIndex] = useState<number>(
     findTemplateIndex(project.slide_layout_strategy),

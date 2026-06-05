@@ -116,12 +116,42 @@ export interface CreateTemplate {
 }
 
 export const CREATE_TEMPLATES: readonly CreateTemplate[] = [
-  { icon: "📊", name: "Analysis", desc: "Deep dive with data", strategy: "stat_card_grid" },
-  { icon: "⚖️", name: "Comparison", desc: "Side by side", strategy: "feature_grid" },
-  { icon: "📚", name: "Tutorial", desc: "Step by step", strategy: "numbered_list" },
-  { icon: "📰", name: "News Flash", desc: "Quick update", strategy: "intro_hero" },
-  { icon: "🧠", name: "Deep Dive", desc: "Comprehensive", strategy: "insight_quote" },
-  { icon: "🎯", name: "Listicle", desc: "Top N format", strategy: "hero_content" },
+  {
+    icon: "📊",
+    name: "Analysis",
+    desc: "Deep dive with data",
+    strategy: "stat_card_grid",
+  },
+  {
+    icon: "⚖️",
+    name: "Comparison",
+    desc: "Side by side",
+    strategy: "feature_grid",
+  },
+  {
+    icon: "📚",
+    name: "Tutorial",
+    desc: "Step by step",
+    strategy: "numbered_list",
+  },
+  {
+    icon: "📰",
+    name: "News Flash",
+    desc: "Quick update",
+    strategy: "intro_hero",
+  },
+  {
+    icon: "🧠",
+    name: "Deep Dive",
+    desc: "Comprehensive",
+    strategy: "insight_quote",
+  },
+  {
+    icon: "🎯",
+    name: "Listicle",
+    desc: "Top N format",
+    strategy: "hero_content",
+  },
 ] as const;
 
 /** Navigation route for create page (neon dashboard). */

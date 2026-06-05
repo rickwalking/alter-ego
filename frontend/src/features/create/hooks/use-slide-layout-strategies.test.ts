@@ -2,7 +2,10 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createElement, type ReactNode } from "react";
-import { useAvailableStrategies, useRegenerateSlides } from "./use-slide-layout-strategies";
+import {
+  useAvailableStrategies,
+  useRegenerateSlides,
+} from "./use-slide-layout-strategies";
 import { API_ENDPOINTS } from "@/constants/api";
 
 vi.mock("@/lib/api-client", () => ({
@@ -108,7 +111,9 @@ describe("useRegenerateSlides", () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
     expect(mockApiCall).toHaveBeenCalledWith(
-      expect.stringContaining("/api/carousels/proj-123/strategy?name=feature_grid"),
+      expect.stringContaining(
+        "/api/carousels/proj-123/strategy?name=feature_grid",
+      ),
       expect.anything(),
       { method: "PUT" },
     );
@@ -144,9 +149,7 @@ describe("useRegenerateSlides", () => {
   });
 
   it("disables the button while mutation is in-flight", async () => {
-    mockApiCall.mockImplementationOnce(
-      () => new Promise(() => {}),
-    );
+    mockApiCall.mockImplementationOnce(() => new Promise(() => {}));
     const { result } = renderHook(() => useRegenerateSlides(), {
       wrapper: createWrapper(),
     });
