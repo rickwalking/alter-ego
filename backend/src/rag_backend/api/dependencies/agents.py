@@ -194,6 +194,7 @@ def build_rag_agent(
         image_registry=container.image_provider_registry(),
         export_service=container.export_service(),
         pdf_slide_builder=container.pdf_slide_builder(),
+        strategy_registry=container.strategy_registry(),
     )
     llm = container.llm_service().chat_model
     workflow_service = EditorialWorkflowService(

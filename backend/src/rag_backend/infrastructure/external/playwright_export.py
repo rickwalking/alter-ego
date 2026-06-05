@@ -60,6 +60,11 @@ style.textContent = `
   .body-p         { font-size: clamp(12px, 2.5vw, 30px) !important; }
   .s1-subtitle    { font-size: clamp(13px, 2.5vw, 28px) !important; }
   .s1-tldr        { font-size: clamp(11px, 2.2vw, 24px) !important; }
+  .slide-hero-heading { font-size: clamp(26px, 5.5vw, 56px) !important; }
+  .slide-hero-body    { font-size: clamp(13px, 2.5vw, 28px) !important; }
+  .closing-name   { font-size: clamp(26px, 5.5vw, 56px) !important; }
+  .closing-cta    { font-size: clamp(13px, 2.5vw, 28px) !important; }
+  .closing-handle { font-size: clamp(11px, 2.2vw, 24px) !important; }
   .cta-title      { font-size: clamp(20px, 4.5vw, 52px) !important; }
   .cta-body       { font-size: clamp(12px, 2.4vw, 30px) !important; }
   .feature-title  { font-size: clamp(11px, 2.2vw, 28px) !important; }
@@ -67,8 +72,9 @@ style.textContent = `
   .stat-number    { font-size: clamp(18px, 4vw, 42px) !important; }
   .insight-card   { font-size: clamp(11px, 2.2vw, 26px) !important; }
   /* Adjust padding for larger canvas */
-  .slide-content  { padding: 52px 40px 44px !important; }
-  .slide-1-content { padding: 44px 40px 68px !important; }
+  .slide-content      { padding: 52px 40px 44px !important; }
+  .slide-1-content    { padding: 44px 40px 68px !important; }
+  .slide-hero-content { padding: 44px 40px 68px !important; }
   /* Larger watermark for export */
   .creator-watermark       { padding: 10px 18px 10px 10px !important; gap: 12px !important; }
   .creator-watermark-avatar { width: 36px !important; height: 36px !important; border-width: 2px !important; }
@@ -101,14 +107,20 @@ style.textContent = `
   .body-p         { font-size: clamp(24px, 2.5vw, 60px) !important; }
   .s1-subtitle    { font-size: clamp(26px, 2.5vw, 56px) !important; }
   .s1-tldr        { font-size: clamp(22px, 2.2vw, 48px) !important; }
+  .slide-hero-heading { font-size: clamp(52px, 5.5vw, 112px) !important; }
+  .slide-hero-body    { font-size: clamp(26px, 2.5vw, 56px) !important; }
+  .closing-name   { font-size: clamp(52px, 5.5vw, 112px) !important; }
+  .closing-cta    { font-size: clamp(26px, 2.5vw, 56px) !important; }
+  .closing-handle { font-size: clamp(22px, 2.2vw, 48px) !important; }
   .cta-title      { font-size: clamp(40px, 4.5vw, 104px) !important; }
   .cta-body       { font-size: clamp(24px, 2.4vw, 60px) !important; }
   .feature-title  { font-size: clamp(22px, 2.2vw, 56px) !important; }
   .feature-body   { font-size: clamp(20px, 2vw, 48px) !important; }
   .stat-number    { font-size: clamp(36px, 4vw, 84px) !important; }
   .insight-card   { font-size: clamp(22px, 2.2vw, 52px) !important; }
-  .slide-content  { padding: 104px 80px 88px !important; }
-  .slide-1-content { padding: 88px 80px 136px !important; }
+  .slide-content      { padding: 104px 80px 88px !important; }
+  .slide-1-content    { padding: 88px 80px 136px !important; }
+  .slide-hero-content { padding: 88px 80px 136px !important; }
   .creator-watermark       { padding: 14px 24px 14px 14px !important; gap: 16px !important; }
   .creator-watermark-avatar { width: 48px !important; height: 48px !important; border-width: 3px !important; }
   .creator-watermark-name  { font-size: 20px !important; max-width: 200px !important; }

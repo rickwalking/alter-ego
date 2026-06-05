@@ -15,6 +15,9 @@ from rag_backend.application.services.carousel.theme_resolver import (
 )
 from rag_backend.application.services.carousel.types import SlideData, SlideDict
 from rag_backend.application.services.carousel_template import CarouselTemplateBuilder
+from rag_backend.application.services.carousel_template.strategies.registry import (
+    SlideLayoutRegistry,
+)
 from rag_backend.domain.constants import ENCODING_UTF8
 from rag_backend.domain.models import CarouselProject
 
@@ -40,6 +43,8 @@ def run_design(
     *,
     template: CarouselTemplateBuilder,
     language: str | None = None,
+    strategy_registry: SlideLayoutRegistry | None = None,
+    strategy_name: str | None = None,
 ) -> str:
     """Resolve theme, stamp design tokens on the project, and build HTML."""
     theme = resolve_theme(project)
@@ -69,5 +74,11 @@ def run_design(
     overrides = _read_design_overrides(project.output_dir)
 
     return template.build_carousel_html(
-        project, slide_dicts, theme, design_overrides=overrides, language=language
+        project,
+        slide_dicts,
+        theme,
+        design_overrides=overrides,
+        language=language,
+        strategy_registry=strategy_registry,
+        strategy_name=strategy_name,
     )

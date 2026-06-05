@@ -11,6 +11,9 @@ from rag_backend.agents.rag_agent import RAGAgent
 from rag_backend.application.services.carousel.refinement_service import (
     CarouselRefinementService,
 )
+from rag_backend.application.services.carousel_template.strategies.registry import (
+    bootstrap_strategies,
+)
 from rag_backend.application.services.conversation_service import ConversationService
 from rag_backend.application.services.document_pipeline import (
     DocumentProcessingPipeline,
@@ -197,6 +200,8 @@ class Container(containers.DeclarativeContainer):
         export_service=export_service,
     )
 
+    strategy_registry = providers.Singleton(bootstrap_strategies)
+
     carousel_refinement = providers.Factory(
         CarouselRefinementService,
         repository=carousel_repository,
@@ -204,6 +209,7 @@ class Container(containers.DeclarativeContainer):
         image_registry=image_provider_registry,
         export_service=export_service,
         pdf_slide_builder=pdf_slide_builder,
+        strategy_registry=strategy_registry,
     )
 
     # Alter-Ego Agent (public chat — NO carousel tools)

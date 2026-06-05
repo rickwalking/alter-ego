@@ -5,6 +5,7 @@ import {
 } from "@/constants/create";
 import type { CarouselCreateRequest } from "@/schemas/carousel";
 import type { CreateCarouselFormState } from "@/app/dashboard/create/types";
+import { CREATE_TEMPLATES } from "@/constants/create";
 
 function presetFromValue(value: string): { model: string; style: string } {
   const preset = IMAGE_PRESETS.find((p) => p.value === value);
@@ -15,11 +16,15 @@ function presetFromValue(value: string): { model: string; style: string } {
   return { model: fallback.model, style: fallback.style };
 }
 
+const _TEMPLATE_STRATEGY_FALLBACK = "hero_content";
+
 export function buildCarouselCreateRequest(
   form: CreateCarouselFormState,
 ): CarouselCreateRequest {
   const presetValue = form.imagePreset || DEFAULT_IMAGE_PRESET;
   const { model, style } = presetFromValue(presetValue);
+  const template = CREATE_TEMPLATES[form.selectedTemplate];
+  const strategy = template?.strategy ?? _TEMPLATE_STRATEGY_FALLBACK;
 
   return {
     topic: form.topic.trim(),
@@ -28,5 +33,6 @@ export function buildCarouselCreateRequest(
     theme: form.theme || CAROUSEL_THEMES.AUTO,
     image_model: model as CarouselCreateRequest["image_model"],
     image_style: style as CarouselCreateRequest["image_style"],
+    strategy,
   };
 }

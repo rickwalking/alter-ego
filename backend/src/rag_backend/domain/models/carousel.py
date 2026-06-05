@@ -128,6 +128,8 @@ class CarouselProject:
     creator_avatar_url: str | None = None
     # Template version for A/B testing and rollback
     template_version: str = "v2"
+    # Slide layout strategy for visual formatting
+    slide_layout_strategy: str | None = None
     created_at: datetime = field(default_factory=datetime.utcnow)
     updated_at: datetime = field(default_factory=datetime.utcnow)
 

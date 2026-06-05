@@ -91,6 +91,7 @@ class CarouselProjectModel(Base):
     creator_handle = Column(String(100), nullable=True)
     creator_avatar_url = Column(String(500), nullable=True)
     creator_website = Column(String(500), nullable=True)
+    slide_layout_strategy = Column(String(50), nullable=True)
 
     created_at = Column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
@@ -167,6 +168,7 @@ class CarouselProjectModel(Base):
             creator_name=self.creator_name,
             creator_handle=self.creator_handle,
             creator_avatar_url=self.creator_avatar_url,
+            slide_layout_strategy=self.slide_layout_strategy,
             created_at=self.created_at,
             updated_at=self.updated_at,
         )
@@ -217,6 +219,7 @@ class CarouselProjectModel(Base):
             creator_name=entity.creator_name,
             creator_handle=entity.creator_handle,
             creator_avatar_url=entity.creator_avatar_url,
+            slide_layout_strategy=entity.slide_layout_strategy,
             created_at=entity.created_at,
             updated_at=entity.updated_at,
         )
@@ -254,6 +257,7 @@ class CarouselProjectModel(Base):
         self.creator_name = entity.creator_name
         self.creator_handle = entity.creator_handle
         self.creator_avatar_url = entity.creator_avatar_url
+        self.slide_layout_strategy = entity.slide_layout_strategy
         self.updated_at = entity.updated_at
 
 

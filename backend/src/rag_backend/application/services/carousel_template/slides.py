@@ -66,8 +66,8 @@ def _render_summary_slide(
       <div class="slide-hero-number">0{slide["number"]} / {total_slides:02d}</div>
       <h2 class="slide-hero-heading">{heading}</h2>
       {body_html}
-      {watermark_html}
     </div>
+    {watermark_html}
   </div>"""
 
 
@@ -93,8 +93,8 @@ def _render_content_slide(
       <div class="slide-hero-number">0{slide["number"]} / {total_slides:02d}</div>
       <h2 class="slide-hero-heading">{heading}</h2>
       {body_html}
-      {watermark_html}
     </div>
+    {watermark_html}
   </div>"""
 
 
@@ -120,8 +120,8 @@ def _render_closing_slide(
       <div class="slide-hero-number">0{slide["number"]} / {total_slides:02d}</div>
       <h2 class="slide-hero-heading">{heading}</h2>
       {body_html}
-      {watermark_html}
     </div>
+    {watermark_html}
   </div>"""
 
 

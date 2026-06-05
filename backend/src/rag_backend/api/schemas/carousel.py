@@ -32,6 +32,7 @@ class CarouselProjectCreate(BaseModel):
     theme: str = Field(default="auto", max_length=30)
     image_model: str = Field(default=IMAGE_MODEL_DEFAULT, max_length=30)
     image_style: str = Field(default=IMAGE_STYLE_DEFAULT, max_length=30)
+    strategy: str | None = Field(None, max_length=50)
 
     @field_validator("image_model")
     @classmethod
@@ -123,6 +124,7 @@ class CarouselProjectResponse(BaseModel):
     creator_handle: str | None = None
     creator_avatar_url: str | None = None
     template_version: str | None = None
+    slide_layout_strategy: str | None = None
     is_public: bool = False
     current_phase: str | None = None
     phase_status: str | None = None

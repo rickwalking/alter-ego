@@ -18,6 +18,9 @@ from rag_backend.application.services.carousel.types import (
     slides_data_for_language,
 )
 from rag_backend.application.services.carousel_template import CarouselTemplateBuilder
+from rag_backend.application.services.carousel_template.strategies.registry import (
+    SlideLayoutRegistry,
+)
 from rag_backend.application.services.pdf_slide_builder import PdfSlideBuilder
 from rag_backend.domain.constants import (
     HD_SUBDIR_NAME,
@@ -108,6 +111,8 @@ async def run_bilingual_export(
     export: CarouselExportService,
     pdf_builder: PdfSlideBuilder | None,
     template: CarouselTemplateBuilder,
+    strategy_registry: SlideLayoutRegistry | None = None,
+    strategy_name: str | None = None,
 ) -> None:
     """Render PT slides, then EN slides when translations exist."""
     await render_language(
@@ -124,7 +129,14 @@ async def run_bilingual_export(
         return
 
     en_slides = slides_data_for_language(slides_data, LANGUAGE_EN)
-    en_html = run_design(project, en_slides, template=template, language=LANGUAGE_EN)
+    en_html = run_design(
+        project,
+        en_slides,
+        template=template,
+        language=LANGUAGE_EN,
+        strategy_registry=strategy_registry,
+        strategy_name=strategy_name,
+    )
     await render_language(
         project,
         LANGUAGE_EN,

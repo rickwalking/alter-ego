@@ -14,6 +14,7 @@ import { EDITORIAL_WORKFLOW_STATUS } from "@/constants/editorial-workflow";
 import { useCarouselProject } from "@/features/create/hooks";
 import { useEditorialWorkflow } from "@/features/create/hooks/use-editorial-workflow";
 import { PublishPanel } from "@/features/publish/components";
+import { RegenerateStrategySection } from "@/features/publish/components/regenerate-strategy-section";
 import { mergePublishProjectWithWorkflow } from "@/features/publish/lib/merge-publish-project";
 import { usePublishInstagram } from "@/features/publish/hooks";
 import { authenticatedFetch } from "@/lib/authenticated-fetch";
@@ -245,6 +246,10 @@ export default function DashboardCreatePublishPage(): React.ReactElement {
             isPublishingInstagram={publishInstagram.isPending}
             publishResult={publishResult}
           />
+        </div>
+
+        <div style={{ marginTop: "16px" }}>
+          <RegenerateStrategySection project={project} projectId={projectId} />
         </div>
       </div>
     </div>

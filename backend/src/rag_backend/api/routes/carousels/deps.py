@@ -6,6 +6,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from rag_backend.application.services.carousel.refinement_service import (
     CarouselRefinementService as CarouselRefinementServiceImpl,
 )
+from rag_backend.application.services.carousel_template.strategies.registry import (
+    SlideLayoutRegistry,
+)
 from rag_backend.domain.protocols import (
     CarouselRefinementService,
     CarouselRepository,
@@ -47,4 +50,12 @@ def get_carousel_refinement(
         image_registry=container.image_provider_registry(),
         export_service=container.export_service(),
         pdf_slide_builder=container.pdf_slide_builder(),
+        strategy_registry=container.strategy_registry(),
     )
+
+
+def get_strategy_registry() -> SlideLayoutRegistry:
+    from rag_backend.infrastructure.container import get_container
+
+    container = get_container()
+    return container.strategy_registry()

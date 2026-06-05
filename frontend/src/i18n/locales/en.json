@@ -515,6 +515,16 @@
       "goToSlide": "Go to slide {number}",
       "downloadImages": "Download images",
       "downloadingImages": "Downloading..."
+    },
+    "regenerateStrategy": {
+      "title": "Slide Layout",
+      "selectTemplate": "Select a template style for your slides:",
+      "loading": "Loading layout options…",
+      "regenerate": "Regenerate slides",
+      "regenerating": "Regenerating…",
+      "success": "Slides regenerated with new layout.",
+      "fetchError": "Could not load layout options.",
+      "retry": "Retry"
     }
   },
   "auth": {

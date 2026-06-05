@@ -71,6 +71,7 @@ async def finalize_carousel_after_images_approval(
         image_registry=container.image_provider_registry(),
         export_service=container.export_service(),
         pdf_slide_builder=container.pdf_slide_builder(),
+        strategy_registry=container.strategy_registry(),
     )
     await export_and_complete_carousel(db, refinement, project_id)
 

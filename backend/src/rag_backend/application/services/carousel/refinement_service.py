@@ -11,6 +11,9 @@ from rag_backend.application.services.carousel.nodes.export import run_bilingual
 from rag_backend.application.services.carousel.types import SlideData, unpack_extras
 from rag_backend.application.services.carousel_refinement import CarouselRefinementMixin
 from rag_backend.application.services.carousel_template import CarouselTemplateBuilder
+from rag_backend.application.services.carousel_template.strategies.registry import (
+    SlideLayoutRegistry,
+)
 from rag_backend.application.services.image_provider_registry import (
     ImageProviderRegistry,
 )
@@ -37,20 +40,29 @@ class CarouselRefinementService(CarouselRefinementMixin):
         image_registry: ImageProviderRegistry,
         export_service: CarouselExportService,
         pdf_slide_builder: PdfSlideBuilder | None = None,
+        strategy_registry: SlideLayoutRegistry | None = None,
     ) -> None:
         self._repo = repository
         self._llm = llm_service
         self._image_registry = image_registry
         self._export = export_service
         self._pdf_slide_builder = pdf_slide_builder
+        self._strategy_registry = strategy_registry
         self._template = CarouselTemplateBuilder()
 
     def _phase4_design(
         self,
         project: CarouselProject,
         slides: list[SlideData],
+        strategy_name: str | None = None,
     ) -> str:
-        return run_design(project, slides, template=self._template)
+        return run_design(
+            project,
+            slides,
+            template=self._template,
+            strategy_registry=self._strategy_registry,
+            strategy_name=strategy_name,
+        )
 
     async def _phase6_bilingual_export(
         self,
@@ -58,6 +70,7 @@ class CarouselRefinementService(CarouselRefinementMixin):
         slides_data: list[SlideData],
         pt_html: str,
         output_dir: Path,
+        strategy_name: str | None = None,
     ) -> None:
         await run_bilingual_export(
             project,
@@ -67,10 +80,20 @@ class CarouselRefinementService(CarouselRefinementMixin):
             export=self._export,
             pdf_builder=self._pdf_slide_builder,
             template=self._template,
+            strategy_registry=self._strategy_registry,
+            strategy_name=strategy_name,
         )
 
-    async def re_render_slides(self, project_id: UUID) -> CarouselProject:
-        """Re-export slide JPGs and PDF from persisted slide data."""
+    async def re_render_slides(
+        self,
+        project_id: UUID,
+        strategy: str | None = None,
+    ) -> CarouselProject:
+        """Re-export slide JPGs and PDF from persisted slide data.
+
+        When ``strategy`` is given, the project's ``slide_layout_strategy``
+        is updated and slides are regenerated with that strategy.
+        """
         project = await self._repo.get_project_by_id(project_id)
         if project is None:
             raise ValueError(_ERR_PROJECT_NOT_FOUND.format(project_id))
@@ -80,14 +103,20 @@ class CarouselRefinementService(CarouselRefinementMixin):
         if not slides:
             raise ValueError(_ERR_NO_SLIDES.format(project_id))
 
+        if strategy is not None:
+            project.slide_layout_strategy = strategy
+
         slides_data = [unpack_extras(slide) for slide in slides]
-        pt_html = self._phase4_design(project, slides_data)
+        pt_html = self._phase4_design(project, slides_data, strategy_name=strategy)
         await self._phase6_bilingual_export(
             project,
             slides_data,
             pt_html,
             Path(project.output_dir),
+            strategy_name=strategy,
         )
+        if strategy is not None:
+            await self._repo.update_project(project)
         project.updated_at = datetime.now(tz=UTC)
         return await self._repo.update_project(project)
 

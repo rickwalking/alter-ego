@@ -3,35 +3,27 @@
 from rag_backend.application.services.carousel_template.builder import (
     CarouselTemplateBuilder,
 )
+from rag_backend.application.services.carousel_template.css.styles import (
+    get_neon_shell_css,
+)
 from rag_backend.application.services.carousel_template.design import (
     THEME_PALETTES,
     generate_design_tokens,
 )
 from rag_backend.application.services.carousel_template.helpers import (
-    FEATURE_GRID_TWO_COLUMNS,
-    _feature_items,
-    _insight_quote,
-    _render_feature_grid,
     _render_inline,
-    _render_insight_card,
-    _render_stat_row,
-    _stat_items,
 )
-from rag_backend.application.services.carousel_template.neon_styles import (
-    get_neon_shell_css,
+from rag_backend.application.services.carousel_template.strategies.registry import (
+    SlideLayoutRegistry,
+    bootstrap_strategies,
 )
 
 __all__ = [
-    "FEATURE_GRID_TWO_COLUMNS",
     "THEME_PALETTES",
     "CarouselTemplateBuilder",
-    "_feature_items",
-    "_insight_quote",
-    "_render_feature_grid",
+    "SlideLayoutRegistry",
     "_render_inline",
-    "_render_insight_card",
-    "_render_stat_row",
-    "_stat_items",
+    "bootstrap_strategies",
     "generate_design_tokens",
     "get_neon_shell_css",
 ]
