@@ -87,10 +87,21 @@ All LLM invocations trace through Langfuse with `project_id`, `phase`, `agent_na
 | **Anti-patterns** | Symptom/root-cause/fix table from production failures |
 | **Operational rules** | User sources authoritative; fail loudly on JSON parse; bilingual storage in `blog_translations` |
 
+**Runtime vs delivery skill boundary** (AE-0029, AE-0030):
+
+Production runtime instructions live under `skills/runtime/` and are the only
+skills copied into the backend Docker image (`ALTER_EGO_RUNTIME_SKILLS_ROOT`).
+Repository delivery skills (`planner-skill`, `architect-skill`, `developer-skill`,
+`qa-agent`, and related orchestration skills) live under `skills/delivery/` and
+must not be loaded by deployed workflow code. Top-level `skills/*` compatibility
+symlinks may remain for local agent clients during migration, but application code
+resolves logical paths such as `carousel-pipeline/phases/content` from the runtime
+root.
+
 **Target skills layout** (refactor, not delete):
 
 ```
-skills/carousel-pipeline/
+skills/runtime/carousel-pipeline/
 ├── SKILL.md                 # Slim entry: purpose, triggers, phase routing (no full workflow dump)
 ├── bmad-skill-manifest.yaml # Updated manifest
 ├── _shared/                 # Canonical standards extracted from current monolith
@@ -116,7 +127,7 @@ skills/carousel-pipeline/
 
 | Layer | Role | Alignment rule |
 |-------|------|----------------|
-| `skills/carousel-pipeline/_shared/` | Human-readable canonical standards | Source of truth for behavior specs |
+| `skills/runtime/carousel-pipeline/_shared/` | Human-readable canonical standards | Source of truth for behavior specs |
 | `agents/prompts/carousel/` | Runtime Jinja2/YAML templates | Must reflect `_shared/` contracts; document mapping in each phase folder README |
 | Python agents + renderers | Execution and validation | Enforce contracts in code (JSON schema, em-dash strip, slide dimensions, token shapes) |
 

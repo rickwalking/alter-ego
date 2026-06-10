@@ -17,6 +17,7 @@ from rag_backend.domain.models import CarouselStatus, UserRole
 from tests.integration.carousel_consolidation.helpers import (
     auth_header,
     create_carousel,
+    create_minimal_carousel_artifacts,
     create_user,
     repo_root,
     set_carousel_status,
@@ -147,6 +148,7 @@ class TestPublishSeparation:
         """Scenario: Explicit publish sets is_public."""
         editor = await create_user("publish@example.com", UserRole.EDITOR)
         project_id = await create_carousel(editor, is_public=False)
+        await create_minimal_carousel_artifacts(project_id)
         await set_workflow_status(project_id, WORKFLOW_STATUS_APPROVED_FOR_PUBLISH)
         await set_carousel_status(project_id, CarouselStatus.COMPLETED)
         response = await client.post(

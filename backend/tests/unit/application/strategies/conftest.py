@@ -86,9 +86,21 @@ def slide_with_features():
         "body": "What makes us different",
         "stats": [],
         "features": [
-            {"icon": "⚡", "title": "Fast", "body": "Lightning speed processing"},
-            {"icon": "🔒", "title": "Secure", "body": "End-to-end encryption"},
-            {"icon": "☁️", "title": "Cloud", "body": "Auto-scaling infrastructure"},
+            {
+                "icon_name": "target",
+                "title": "Fast",
+                "body": "Lightning speed processing",
+            },
+            {
+                "icon_name": "shield-check",
+                "title": "Secure",
+                "body": "End-to-end encryption",
+            },
+            {
+                "icon_name": "chart-column",
+                "title": "Cloud",
+                "body": "Auto-scaling infrastructure",
+            },
         ],
         "insight": None,
         "summary_points": [],
@@ -141,7 +153,11 @@ def slide_with_overflow():
             for i in range(10)
         ],
         "features": [
-            {"icon": "🔹", "title": f"Feature {i}", "body": f"Body {i}"}
+            {
+                "icon_name": "target",
+                "title": f"Feature {i}",
+                "body": f"Body {i}",
+            }
             for i in range(10)
         ],
         "insight": None,

@@ -67,3 +67,5 @@ working-post-*.png
 *.py.bak
 mutmut-cache/
 backend/mutants/
+
+.impeccable/

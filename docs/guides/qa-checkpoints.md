@@ -192,7 +192,7 @@
 | Max branches per function | ruff PLR0912 | Max 10 |
 | Max statements per function | ruff PLR0915 | Max 40 |
 | Max nested blocks | ruff | Max 4 |
-| Max arguments per function | ruff PLR0913 | Max 5 |
+| Max arguments per function | ruff PLR0913 | Max 3; use Pydantic models for API/service boundary payloads |
 | Max return statements | ruff PLR0911 | Max 6 |
 | Max locals per function | ruff | Max 15 |
 

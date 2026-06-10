@@ -66,10 +66,10 @@ class TestGenerateDesignTokens:
         )
 
     def test_generate_design_tokens_swipe_text_pt(self, sample_project):
-        """Should use Portuguese swipe text for pt-BR language."""
+        """Should use global Swipe label for pt-BR language."""
         tokens = CarouselTemplateBuilder.generate_design_tokens(sample_project)
 
-        assert tokens["layout"]["swipe_text"] == "Deslize \u2192"
+        assert tokens["layout"]["swipe_text"] == "Swipe \u2192"
 
     def test_generate_design_tokens_swipe_text_en(self):
         """Should use English swipe text for en language."""

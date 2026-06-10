@@ -41,7 +41,8 @@ class TestExportAndCompleteCarousel:
         ):
             await export_and_complete_carousel(MagicMock(), MagicMock(), str(uuid4()))
 
-        repo.update_project.assert_not_called()
+        repo.update_project.assert_awaited_once()
+        assert project.status == CarouselStatus.FAILED
 
     async def test_completes_after_render(self) -> None:
         project = CarouselProject(
@@ -53,6 +54,7 @@ class TestExportAndCompleteCarousel:
         )
         repo = AsyncMock()
         repo.get_project_by_id = AsyncMock(return_value=project)
+        repo.get_slides_by_project = AsyncMock(return_value=[])
         refinement = AsyncMock()
         rendered = CarouselProject(
             topic="T",
@@ -68,10 +70,31 @@ class TestExportAndCompleteCarousel:
                 return_value=repo,
             ),
             patch(
-                "rag_backend.application.services.carousel.editorial_finalize._merge_design_tokens_with_disk",
+                "rag_backend.application.services.carousel.editorial_finalize.merge_design_tokens_with_disk",
                 return_value={"primary": "#000"},
             ),
+            patch(
+                "rag_backend.application.services.carousel.editorial_finalize.evaluate_carousel_artifacts",
+                return_value=MagicMock(ok=True, errors=()),
+            ),
+            patch(
+                "rag_backend.application.services.carousel.editorial_finalize.read_project_lock_version",
+                new=AsyncMock(return_value=2),
+            ),
+            patch(
+                "rag_backend.application.services.carousel.editorial_finalize.CarouselArtifactBuildService",
+            ) as mock_build_service,
         ):
+            build_result = MagicMock(
+                artifact_version="sha256-" + "a" * 64,
+                operation_id="op",
+                lock_version=3,
+                manifest_path=MagicMock(),
+                version_dir=MagicMock(),
+            )
+            mock_build_service.return_value.build_and_activate = AsyncMock(
+                return_value=build_result
+            )
             await export_and_complete_carousel(MagicMock(), refinement, str(project.id))
 
         assert rendered.status == CarouselStatus.COMPLETED
@@ -95,7 +118,8 @@ class TestExportAndCompleteCarousel:
         ):
             await export_and_complete_carousel(MagicMock(), refinement, str(project.id))
 
-        repo.update_project.assert_not_called()
+        repo.update_project.assert_awaited_once()
+        assert project.status == CarouselStatus.FAILED
 
 
 @pytest.mark.asyncio

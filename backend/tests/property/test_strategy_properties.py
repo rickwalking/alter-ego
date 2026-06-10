@@ -59,7 +59,7 @@ def test_any_text_input_produces_safe_html(strategy, slide_type, heading, body):
         "heading": heading,
         "body": body,
         "stats": [{"value": "X", "label": "Y", "detail": "Z"}],
-        "features": [{"icon": "⚡", "title": "T", "body": "B"}],
+        "features": [{"icon_name": "target", "title": "T", "body": "B"}],
         "insight": None,
         "summary_points": [],
         "tldr_strip": None,

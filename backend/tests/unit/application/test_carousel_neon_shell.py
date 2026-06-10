@@ -105,6 +105,8 @@ class TestNeonShellHtml:
         assert 'class="counter-dot past"' in html
         assert 'class="counter-label"' in html
         assert "1/2" in html
+        assert ".counter-dot {\n    width: 8px;" in html
+        assert ".counter-label {\n    font-family: var(--font-mono);\n    font-size: 13px;" in html
 
     def test_build_carousel_html_watermark_when_creator_set(
         self, sample_project, sample_theme
@@ -127,6 +129,8 @@ class TestNeonShellHtml:
         assert "Neon Shell" in html
         assert "@neonshell" in html
         assert "avatar.png" in html
+        assert ".creator-watermark-avatar {\n    width: 44px;" in html
+        assert ".creator-watermark-name {\n    font-size: 15px;" in html
 
     def test_build_carousel_html_omits_watermark_when_no_creator(
         self, sample_project, sample_theme

@@ -8,6 +8,9 @@ import pytest
 from rag_backend.application.services.carousel_template import (
     CarouselTemplateBuilder,
 )
+from rag_backend.application.services.carousel_template.strategies.registry import (
+    bootstrap_strategies,
+)
 
 
 @pytest.mark.unit
@@ -171,6 +174,27 @@ class TestCarouselTemplateBuilder:
         assert "AI Education" in html
         assert "s1-badge" in html
 
+    def test_build_carousel_html_intro_with_strategy_registry(
+        self, sample_project, sample_theme
+    ) -> None:
+        slides = [
+            {
+                "number": "1",
+                "type": "intro",
+                "heading": "Strategy intro",
+                "body": "Rendered through registry",
+            },
+        ]
+
+        html = CarouselTemplateBuilder.build_carousel_html(
+            sample_project,
+            slides,
+            sample_theme,
+            strategy_registry=bootstrap_strategies(),
+        )
+
+        assert "Strategy intro" in html
+
     def test_build_carousel_html_content_slide_has_slide_number(
         self, sample_project, sample_theme
     ):
@@ -201,7 +225,39 @@ class TestCarouselTemplateBuilder:
 
         assert "slide-closing" in html
         assert "closing-name" in html
+        assert "closing-card" in html
         assert "Siga para mais conteúdo como esse" in html
+
+    def test_build_carousel_html_cta_css_promotes_avatar(
+        self, sample_project, sample_theme
+    ):
+        """Closing slide CSS should make the avatar a primary brand element."""
+        slides = [
+            {"number": "7", "type": "cta", "heading": "Save & Share", "body": "CTA"},
+        ]
+
+        html = CarouselTemplateBuilder.build_carousel_html(
+            sample_project, slides, sample_theme
+        )
+
+        assert ".closing-card" in html
+        assert ".closing-avatar {\n    width: 112px;" in html
+        assert ".closing-name {\n    font-family: var(--font-heading);" in html
+
+    def test_build_carousel_html_reserves_hero_footer_space(
+        self, sample_project, sample_theme
+    ):
+        """Hero text should reserve room for watermark and swipe footer chrome."""
+        slides = [
+            {"number": "2", "type": "content", "heading": "H", "body": "B"},
+        ]
+
+        html = CarouselTemplateBuilder.build_carousel_html(
+            sample_project, slides, sample_theme
+        )
+
+        assert "padding: 40px 36px 96px;" in html
+        assert "max-height: calc(100% - 112px);" in html
 
     # Scenario: Design overrides are injected into HTML before </style>
     def test_build_carousel_html_injects_design_overrides(

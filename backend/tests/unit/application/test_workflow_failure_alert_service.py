@@ -17,7 +17,10 @@ from rag_backend.application.services.workflow_failure_alert_service import (
     WorkflowFailureAlertService,
 )
 from rag_backend.domain.constants.carousel import CAROUSEL_STATUS_FAILED
-from rag_backend.domain.constants.carousel_workflow import PHASE_RESEARCH
+from rag_backend.domain.constants.carousel_workflow import (
+    PHASE_RESEARCH,
+    PHASE_STATUS_IN_PROGRESS,
+)
 from rag_backend.domain.constants.workflow_alerts import (
     NOTIFICATION_TYPE_WORKFLOW_FAILURE,
 )
@@ -173,6 +176,52 @@ class TestWorkflowFailureAlertService:
                 created_at=now,
             )
         )
+        await session.commit()
+
+        count = await WorkflowFailureAlertService().check_and_alert(session)
+        await session.commit()
+
+        assert count >= 1
+
+    async def test_in_progress_excluded_from_stuck_alerts(
+        self, session: AsyncSession
+    ) -> None:
+        """AE-0026: Projects with phase_status in_progress are excluded from stuck detection."""
+        recent = datetime.now(UTC) - timedelta(minutes=5)
+        project = CarouselProjectModel(
+            id=str(uuid.uuid4()),
+            topic="Active resume",
+            audience="Devs",
+            niche="Tech",
+            status="draft",
+            current_phase=PHASE_RESEARCH,
+            phase_status=PHASE_STATUS_IN_PROGRESS,
+            updated_at=recent,
+            created_at=recent,
+        )
+        session.add(project)
+        await session.commit()
+
+        count = await WorkflowFailureAlertService().check_and_alert(session)
+        assert count == 0
+
+    async def test_stale_in_progress_alerts_after_ttl(
+        self, session: AsyncSession
+    ) -> None:
+        """AE-0026: Stale in_progress projects older than 30 min trigger stuck alert."""
+        stale = datetime.now(UTC) - timedelta(hours=1)
+        project = CarouselProjectModel(
+            id=str(uuid.uuid4()),
+            topic="Stuck resume",
+            audience="Devs",
+            niche="Tech",
+            status="draft",
+            current_phase=PHASE_RESEARCH,
+            phase_status=PHASE_STATUS_IN_PROGRESS,
+            updated_at=stale,
+            created_at=stale,
+        )
+        session.add(project)
         await session.commit()
 
         count = await WorkflowFailureAlertService().check_and_alert(session)

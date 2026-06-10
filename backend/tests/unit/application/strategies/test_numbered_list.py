@@ -67,4 +67,4 @@ class TestNumberedListStrategy:
     def test_mono_font_class_present(self, sample_project, slide_with_features):
         strategy = NumberedListStrategy()
         result = strategy.render(slide_with_features, sample_project, _PALETTE, 7, "pt")
-        assert "font-mono" in result
+        assert "numbered-step" in result

@@ -208,6 +208,77 @@ async def create_carousel(
         return str(created.id)
 
 
+async def create_minimal_carousel_artifacts(
+    project_id: str,
+    output_dir: str = "/tmp/test-carousel-output",
+    slide_count: int = 7,
+) -> str:
+    """Create minimal on-disk artifacts and DB slides for artifact health checks."""
+    from uuid import UUID
+
+    from rag_backend.domain.models import CarouselSlide
+    from rag_backend.infrastructure.database.carousel_repository import (
+        PostgresCarouselRepository,
+    )
+    from rag_backend.infrastructure.database.config import get_session_maker
+
+    # Create output directory structure with valid dummy files
+    out_path = Path(output_dir)
+    for lang in ("pt", "en"):
+        lang_dir = out_path / lang
+        lang_dir.mkdir(parents=True, exist_ok=True)
+        hd_dir = lang_dir / "hd"
+        hd_dir.mkdir(parents=True, exist_ok=True)
+    images_dir = out_path / "images"
+    images_dir.mkdir(parents=True, exist_ok=True)
+
+    import io
+
+    from PIL import Image
+
+    def _make_jpeg(width: int, height: int) -> bytes:
+        img = Image.new("RGB", (width, height), color="red")
+        buf = io.BytesIO()
+        img.save(buf, format="JPEG")
+        return buf.getvalue()
+
+    standard_bytes = _make_jpeg(1080, 1350)
+    hd_bytes = _make_jpeg(2160, 2700)
+
+    for i in range(1, slide_count + 1):
+        for lang in ("pt", "en"):
+            (out_path / lang / f"slide_{i}.jpg").write_bytes(standard_bytes)
+            (out_path / lang / "hd" / f"slide_{i}.jpg").write_bytes(hd_bytes)
+        (images_dir / f"slide_{i}.jpg").write_bytes(standard_bytes)
+
+    # Create minimal valid PDFs
+    from pypdf import PdfWriter
+
+    for lang in ("pt", "en"):
+        pdf_path = out_path / lang / "carousel.pdf"
+        writer = PdfWriter()
+        for _ in range(slide_count):
+            writer.add_blank_page(612, 792)
+        writer.write(str(pdf_path))
+
+    # Create slides in DB
+    session_maker = get_session_maker()
+    async with session_maker() as session:
+        repo = PostgresCarouselRepository(session)
+        for i in range(1, slide_count + 1):
+            slide = CarouselSlide(
+                project_id=UUID(project_id),
+                slide_number=i,
+                slide_type="content",
+                heading=f"Slide {i}",
+                body=f"Body {i}",
+                image_prompt=f"Prompt {i}",
+            )
+            await repo.create_slide(slide)
+        await session.commit()
+    return output_dir
+
+
 async def set_carousel_status(project_id: str, status: CarouselStatus) -> None:
     from rag_backend.infrastructure.database.config import get_session_maker
     from rag_backend.infrastructure.database.models.carousel import CarouselProjectModel

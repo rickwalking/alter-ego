@@ -57,13 +57,26 @@ class TestFeatureGridStrategy:
         strategy = FeatureGridStrategy()
         slide = dict(
             slide_with_features,
-            features=[{"icon": "✅", "title": "Good", "body": "Works"}, "invalid"],
+            features=[
+                {"icon_name": "target", "title": "Good", "body": "Works"},
+                "invalid",
+            ],
         )
         result = strategy.render(slide, sample_project, _PALETTE, 7, "pt")
         assert "Good" in result
 
-    def test_renders_icon(self, sample_project, slide_with_features):
+    def test_renders_lucide_svg_icons(self, sample_project, slide_with_features):
         strategy = FeatureGridStrategy()
         result = strategy.render(slide_with_features, sample_project, _PALETTE, 7, "pt")
-        assert "⚡" in result
-        assert "🔒" in result
+        assert result.count('<svg viewBox="0 0 24 24"') == 3
+        assert "⚡" not in result
+        assert "🔒" not in result
+
+    def test_rejects_legacy_emoji_icon(self, sample_project, slide_with_features):
+        strategy = FeatureGridStrategy()
+        slide = dict(
+            slide_with_features,
+            features=[{"icon": "⚡", "title": "Fast", "body": "Legacy emoji"}],
+        )
+        with pytest.raises(Exception, match="Lucide allowlist"):
+            strategy.render(slide, sample_project, _PALETTE, 7, "pt")

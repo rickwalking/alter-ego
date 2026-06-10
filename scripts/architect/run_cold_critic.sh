@@ -8,7 +8,7 @@ if [[ -z "$TICKET_ID" ]]; then
   exit 1
 fi
 PLAN="$ROOT/.agent/reports/${TICKET_ID}.arch-plan.md"
-PROMPT="$ROOT/skills/architect-skill/prompts/cold-critic-system.md"
+PROMPT="$ROOT/skills/delivery/architect-skill/prompts/cold-critic-system.md"
 OUT="$ROOT/.agent/reports/${TICKET_ID}.skeptical-review.md"
 if [[ ! -f "$PLAN" ]]; then
   echo "Missing arch plan: $PLAN" >&2
