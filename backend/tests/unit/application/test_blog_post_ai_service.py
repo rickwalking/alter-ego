@@ -10,7 +10,10 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from rag_backend.application.services.blog_post_ai_service import BlogPostAIService
+from rag_backend.application.services.blog_post_ai_service import (
+    BlogPostAIService,
+    LLMServiceProtocol,
+)
 from rag_backend.domain.constants.blog_ai import ERR_INVALID_AI_ACTION
 from rag_backend.domain.models.persona import PersonaProfile
 from rag_backend.infrastructure.database.models import PersonaProfileModel
@@ -366,3 +369,34 @@ class TestBlogPostAIService:
         """Given no image service, when generating image, then RuntimeError is raised."""
         with pytest.raises(RuntimeError, match="image service unavailable"):
             await service.generate_image("post-1", "A blog hero image")
+
+
+class TestLLMServiceProtocol:
+    """Tests for LLMServiceProtocol interface."""
+
+    @pytest.mark.asyncio
+    async def test_protocol_can_be_implemented(self) -> None:
+        """Given a concrete class implementing LLMServiceProtocol, when calling generate, then it works."""
+
+        class StubLLMService:
+            async def generate(
+                self,
+                messages: list[dict[str, str]],
+                temperature: float = 0.7,
+                max_tokens: int | None = None,
+            ) -> str:
+                return "test response"
+
+            @property
+            def chat_model(self) -> MagicMock:
+                return MagicMock()
+
+        service = StubLLMService()
+        result = await service.generate([{"role": "user", "content": "hello"}])
+        assert result == "test response"
+
+    def test_protocol_is_runtime_checkable(self) -> None:
+        """Given a runtime checkable protocol, when checking isinstance, then it works."""
+
+        assert hasattr(LLMServiceProtocol, "generate")
+        assert hasattr(LLMServiceProtocol, "chat_model")
