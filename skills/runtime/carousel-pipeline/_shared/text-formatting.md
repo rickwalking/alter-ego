@@ -8,7 +8,7 @@ Inline emphasis, heading highlights, and prose rules shared across outline, cont
 
 - Informal but professional tone
 - Engaging and direct
-- Use emojis sparingly
+- No decorative emoji on visible slide text (captions may use emoji sparingly)
 - Short paragraphs (2-4 sentences max)
 
 **English (en):**
@@ -66,6 +66,16 @@ Body text must pass through an inline renderer that:
 4. Converts `` `code` `` → `<span class="code-tag">code</span>`
 
 If `**bold**` appears literally on a slide, the renderer was treating body as plain text — fix the render path, not the LLM output alone.
+
+## Structured icons
+
+Structured slide items (`summary_points`, `features`, closing actions) use
+Lucide semantic `icon_name` values from the policy allowlist:
+
+`chart-column`, `book-open`, `newspaper`, `brain`, `target`, `eye`,
+`message-circle`, `shield-check`, `wrench`, `flask-conical`.
+
+Do not use emoji icons or arbitrary icon strings on visible slides.
 
 ## Caption and blog markdown
 

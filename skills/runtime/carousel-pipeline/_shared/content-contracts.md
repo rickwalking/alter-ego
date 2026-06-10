@@ -37,16 +37,19 @@ Alternate title shape (single-locale projects): `{title, subtitle}` or `{title_p
 
 **Parsing:** See [`critical-rules.md`](critical-rules.md) — fail loudly on parse failure; never stub.
 
-## Slide structure (6 slides)
+## Slide structure (7 slides)
 
 | # | Type | Content | Image |
 |---|------|---------|-------|
 | 1 | `intro` | Hook + thesis statement | Hero image |
-| 2 | `content` | Key insight #1 with data | Supporting visual |
-| 3 | `content` | Key insight #2 with quote | Supporting visual |
-| 4 | `content` | Key insight #3 with example | Supporting visual |
-| 5 | `closing` | Actionable takeaways | No image (checklist layout) |
-| 6 | `cta` | Save + share prompt | No image (CTA buttons) |
+| 2 | `summary` | One heading plus three compact narrative points | Supporting visual |
+| 3 | `content` | Key insight #1 with one structured extra | Supporting visual |
+| 4 | `content` | Key insight #2 with one structured extra | Supporting visual |
+| 5 | `content` | Key insight #3 with one structured extra | Supporting visual |
+| 6 | `closing` | Three or four concise actions | Supporting visual |
+| 7 | `cta` | Save + share prompt + creator identity | Creator avatar |
+
+Canonical values live in `contracts/hero_lower_third_v1.yaml`.
 
 ## Slide-type rendering contract
 
@@ -54,10 +57,10 @@ Alternate title shape (single-locale projects): `{title, subtitle}` or `{title_p
 |------|--------------------|-----------------------------------|
 | `intro` | Hook subtitle, 2-3 sentences | Bullet list, checklist |
 | `content` | Dense paragraph with `<strong>` highlights for key terms | Bullet-only slides (unless user asked) |
-| `closing` | **Checklist of 4-6 actionable items**, each with an emoji icon (📝 🏗️ ⚙️ 🧪 🗣️). Renders via `.check-grid` / `.check-item` or `.feature-grid`. | Paragraph prose (floats at top of empty slide) |
+| `closing` | **Checklist of 3-4 actionable items**, each with a Lucide `icon_name` (`chart-column`, `book-open`, `wrench`, `flask-conical`, etc.). Renders via `.check-grid` / `.check-item` or `.feature-grid`. | Paragraph prose (floats at top of empty slide) |
 | `cta` | Short punchy title + 2-3 sentence body + save/share buttons | Long essay |
 
-The content LLM must return `closing` slides as structured items (`features: [{icon, title, body}]`), not as one paragraph.
+The content LLM must return `closing` slides as structured items (`features: [{icon_name, title, body}]`), not as one paragraph.
 
 ## Structured extras (one per slide)
 
@@ -66,12 +69,14 @@ Each content slide's `body` can be followed by **one** structured extra — do n
 | Field | Shape | Renders as | Good fit for |
 |-------|-------|------------|--------------|
 | `stats` | `[{value, label, detail?}]` — exactly 3 items | 3-column grid: big accent-color number, muted label, optional baseline detail | benchmark slides, metrics, before/after numbers |
-| `features` | `[{icon, title, body}]` — 2-6 items | 1-column (2-3 items or closing) or 2-column (4+ items) grid of rounded cards | architecture pillars, product tiers, capability lists |
+| `features` | `[{icon_name, title, body}]` — 2-4 items | 1-column (2-3 items or closing) or 2-column (4 items) grid of rounded cards | architecture pillars, product tiers, capability lists |
 | `insight` | `{quote, attribution}` | Italic pullquote with primary-color left border + small attribution | Twitter/blog quotes, primary-source validations |
+
+**Lucide allowlist:** `chart-column`, `book-open`, `newspaper`, `brain`, `target`, `eye`, `message-circle`, `shield-check`, `wrench`, `flask-conical`. Use `icon_name`, not emoji or raw SVG.
 
 **Mapping:** Benchmarks slide → `stats`. Architecture slide → `features`. Reaction slide → `insight`.
 
-The content LLM must return `features: [{icon, title, body}]` on the closing slide (and optionally on content slides) so the renderer emits a structured list instead of a prose wall.
+The content LLM must return `features: [{icon_name, title, body}]` on the closing slide (and optionally on content slides) so the renderer emits a structured list instead of a prose wall.
 
 ## ResearchSource entity
 
