@@ -37,10 +37,10 @@ def _slide_missing(project: CarouselProject) -> bool:
     output_dir = project.output_dir
     if not output_dir:
         return True
-    pt_ok = _has_rendered_slides(output_dir, "pt")
+    pt_ok = _has_rendered_slides(project, "pt")
     if not pt_ok:
         return True
-    en_ok = _has_rendered_slides(output_dir, "en")
+    en_ok = _has_rendered_slides(project, "en")
     return not en_ok
 
 

@@ -33,6 +33,11 @@ from rag_backend.api.schemas import (
     CarouselDesignTypography,
     CarouselSlideResponse,
 )
+from rag_backend.application.services.carousel.artifact_path_resolver import (
+    resolve_shared_images_dir,
+    resolve_slide_image_path,
+)
+from rag_backend.domain.constants import SWIPE_TEXT_EN
 from rag_backend.domain.constants.rate_limits import RATE_LIMIT_CAROUSEL_PUBLISH
 from rag_backend.domain.models import User
 from rag_backend.domain.protocols import CarouselRepository
@@ -43,11 +48,11 @@ from .helpers import (
     _extract_first_paragraph,
     _extract_title_and_subtitle,
     _load_project_with_output,
-    _merge_design_tokens_with_disk,
     _resolve_image_file,
     _resolve_pdf_file,
     _safe_relative_file_path,
     assert_carousel_public,
+    merge_design_tokens_with_disk,
 )
 
 router = APIRouter()
@@ -189,14 +194,14 @@ async def get_carousel_design(
     theme_name = project.theme.value
 
     required_keys = ("colors", "typography", "images", "layout")
-    defaults = _merge_design_tokens_with_disk(project)
+    defaults = merge_design_tokens_with_disk(project)
     if not raw_tokens or not all(k in raw_tokens for k in required_keys):
         tokens: dict[str, object] = defaults
     else:
         tokens = defaults
 
     layout = dict(tokens["layout"])
-    layout["swipe_text"] = "Swipe \u2192" if lang == "en" else "Deslize \u2192"
+    layout["swipe_text"] = SWIPE_TEXT_EN
 
     return CarouselDesignResponse(
         colors=CarouselDesignColors(**tokens["colors"]),
@@ -229,9 +234,10 @@ async def get_carousel_image(
     """Serve a raw hero image (from <output>/images/)."""
     project = await _load_project_with_output(project_id, repo)
     assert_carousel_public(project)
-    image_path = _resolve_image_file(
-        Path(project.output_dir or "") / "images", filename
-    )
+    images_dir = resolve_shared_images_dir(project)
+    if images_dir is None:
+        raise HTTPException(status_code=404, detail=ERR_IMAGE_NOT_FOUND)
+    image_path = _resolve_image_file(images_dir, filename)
     if image_path is None:
         raise HTTPException(status_code=404, detail=ERR_IMAGE_NOT_FOUND)
     return FileResponse(
@@ -258,7 +264,12 @@ async def get_carousel_slide_image(
     """Serve a per-language rendered slide JPG (from <output>/<lang>/)."""
     project = await _load_project_with_output(project_id, repo)
     assert_carousel_public(project)
-    image_path = _resolve_image_file(Path(project.output_dir or "") / lang, filename)
+    image_path = resolve_slide_image_path(project, lang, filename)
+    if image_path is None:
+        image_path = _resolve_image_file(
+            Path(project.output_dir or "") / lang,
+            filename,
+        )
     if image_path is None:
         raise HTTPException(status_code=404, detail=f"Slide image not found for {lang}")
     return FileResponse(

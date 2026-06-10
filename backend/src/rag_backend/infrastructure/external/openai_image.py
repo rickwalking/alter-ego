@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import asyncio
 import base64
+from collections.abc import Mapping
 from pathlib import Path
 
 from openai import APIError, APIStatusError, OpenAI
@@ -41,6 +42,14 @@ HTTP_STATUS_FORBIDDEN = 403
 _ERR_GENERATION_FAILED = "OpenAI image generation failed: {}"
 _ERR_NO_RESPONSE_DATA = "OpenAI image response contained no data"
 _ERR_MISSING_B64_JSON = "OpenAI image response missing b64_json payload"
+_ERR_NOT_VERIFIED_DETAIL = "{} — {}"
+_ERR_DETAIL_FORMAT = ", ".join
+_ERROR_FIELD_CODE = "code"
+_ERROR_FIELD_MESSAGE = "message"
+_ERROR_FIELD_PARAM = "param"
+_ERROR_FIELD_TYPE = "type"
+_RESPONSE_FIELD_ERROR = "error"
+_REQUEST_ID_HEADER = "x-request-id"
 
 
 class OpenAIImageService(ImageGenerationService):
@@ -91,9 +100,13 @@ class OpenAIImageService(ImageGenerationService):
                 n=1,
             )
         except APIStatusError as exc:
+            detail = _openai_status_error_detail(exc)
+            detail_str = _ERR_DETAIL_FORMAT(f"{k}={v}" for k, v in detail.items())
             if exc.status_code == HTTP_STATUS_FORBIDDEN:
-                raise RuntimeError(_MSG_NOT_VERIFIED) from exc
-            raise RuntimeError(_ERR_GENERATION_FAILED.format(exc)) from exc
+                raise RuntimeError(
+                    _ERR_NOT_VERIFIED_DETAIL.format(_MSG_NOT_VERIFIED, detail_str)
+                ) from exc
+            raise RuntimeError(_ERR_GENERATION_FAILED.format(detail_str)) from exc
         except APIError as exc:
             raise RuntimeError(_ERR_GENERATION_FAILED.format(exc)) from exc
 
@@ -110,3 +123,37 @@ class OpenAIImageService(ImageGenerationService):
         output.parent.mkdir(parents=True, exist_ok=True)
         output.write_bytes(base64.b64decode(b64))
         return output_path
+
+
+def _openai_status_error_detail(exc: APIStatusError) -> dict[str, object]:
+    """Extract structured error fields from an OpenAI APIStatusError."""
+    response = exc.response
+    details: dict[str, object] = {"status": exc.status_code}
+    request_id = getattr(exc, "request_id", None) or response.headers.get(
+        _REQUEST_ID_HEADER
+    )
+    if request_id:
+        details["request_id"] = request_id
+    try:
+        payload = response.json()
+    except ValueError:
+        payload = None
+    if isinstance(payload, Mapping):
+        error_fields = _json_error_fields(payload)
+        details.update(error_fields)
+    if len(details) == 1:
+        details["message"] = str(exc)
+    return details
+
+
+def _json_error_fields(payload: Mapping[object, object]) -> dict[str, str]:
+    """Extract type, code, param, and message from the OpenAI error payload."""
+    raw_error = payload.get(_RESPONSE_FIELD_ERROR)
+    if not isinstance(raw_error, Mapping):
+        return {}
+    fields: dict[str, str] = {}
+    for key in (_ERROR_FIELD_TYPE, _ERROR_FIELD_CODE, _ERROR_FIELD_PARAM, _ERROR_FIELD_MESSAGE):
+        value = raw_error.get(key)
+        if isinstance(value, str) and value.strip():
+            fields[key] = value.strip()
+    return fields

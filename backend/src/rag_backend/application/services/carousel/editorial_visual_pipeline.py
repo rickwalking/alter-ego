@@ -23,11 +23,10 @@ from rag_backend.application.services.image_provider_registry import (
     ImageProviderRegistry,
 )
 from rag_backend.domain.models import CarouselSlide
+from rag_backend.infrastructure.config.settings import get_settings
 from rag_backend.infrastructure.database.carousel_repository import (
     PostgresCarouselRepository,
 )
-
-DEFAULT_OUTPUT_BASE = "./output/carousels"
 
 
 @dataclass(frozen=True)
@@ -132,7 +131,7 @@ async def generate_carousel_images(
     project = await repo.get_project_by_id(UUID(ctx.project_id))
     if project is None or not ctx.slides:
         return []
-    output_dir = Path(project.output_dir or f"{DEFAULT_OUTPUT_BASE}/{ctx.project_id}")
+    output_dir = _carousel_output_dir(project.output_dir, ctx.project_id)
     output_dir.mkdir(parents=True, exist_ok=True)
     if not project.output_dir:
         project.output_dir = str(output_dir)
@@ -164,6 +163,13 @@ async def _collect_generated_image_paths(
     if not images_dir.is_dir():
         return []
     return sorted(str(path) for path in images_dir.glob("slide_*.jpg"))
+
+
+def _carousel_output_dir(output_dir: str | None, project_id: str) -> Path:
+    if output_dir:
+        return Path(output_dir).resolve()
+    base_dir = Path(get_settings().carousel_output_dir).resolve()
+    return base_dir / project_id
 
 
 __all__ = [

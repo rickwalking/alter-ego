@@ -55,6 +55,12 @@ uv run ruff format src/          # Formatting
 - **Use `TypedDict` for structured dicts**, not `dict[str, Any]`
 - **Decision tree for dynamic data**: `Protocol` → `object` → `cast(T, value)` → `type: ignore[any]` (last resort, with justification comment)
 
+### Function Signatures
+- **Max 3 arguments per function** — Enforced by Ruff `PLR0913` with `max-args = 3`.
+- **Use Pydantic for grouped inputs that cross API or service boundaries** — Prefer explicit request/command models over long positional or keyword parameter lists.
+- **Use typed command/config objects for internal grouping** — Dataclasses, `TypedDict`, or small domain objects are acceptable when Pydantic validation is not needed.
+- **No arbitrary dict bundles** — Grouped inputs must have named fields and static typing.
+
 ### Constants
 - **No magic strings** — All string literals used in multiple places must be constants
 - **Constants live in `constants.py` files** — One per context/module

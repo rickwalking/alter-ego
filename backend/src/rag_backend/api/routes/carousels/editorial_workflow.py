@@ -86,7 +86,7 @@ async def get_editorial_workflow_state(
     """Return persisted workflow state for UI polling."""
     project = await get_carousel_project_for_workflow_user(db, project_id, current_user)
     service = build_editorial_workflow_service(request)
-    state = await service.get_workflow_state(str(project_id))
+    state = await service.get_workflow_state(str(project_id), db=db)
     if state is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

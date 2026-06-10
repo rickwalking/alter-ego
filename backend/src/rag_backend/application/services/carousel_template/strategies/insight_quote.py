@@ -1,12 +1,11 @@
-"""Insight quote strategy — accent-bordered quote card with attribution.
-
-Renders slides with an insight quote card (quote text + attribution name).
-Falls back to HeroContentStrategy when no insight data is available.
-"""
+"""Insight quote strategy — accent-bordered quote card with attribution."""
 
 from collections.abc import Mapping
 
 from rag_backend.application.services.carousel_template.helpers import _render_inline
+from rag_backend.application.services.carousel_template.lower_third_shell import (
+    render_lower_third_shell,
+)
 from rag_backend.application.services.carousel_template.strategies.hero_content import (
     HeroContentStrategy,
 )
@@ -50,20 +49,17 @@ class InsightQuoteStrategy:
             if attribution
             else ""
         )
-
-        return f"""\
-  <div class="slide-hero-bg-img">
-    <img src="images/slide_{slide["number"]}.jpg" alt="" />
-  </div>
-  <div class="slide-hero-bg-gradient"></div>
-  <div class="slide-hero-content">
-    <div class="slide-hero-main">
-      <div class="slide-hero-number">0{slide["number"]} / {total_slides:02d}</div>
-      <h2 class="slide-hero-heading">{heading}</h2>
-      {body_html}
-      <div class="insight-card">{quote}{attribution_html}</div>
-    </div>
-  </div>"""
+        slide_number = str(slide["number"])
+        copy_inner = (
+            f'<h2 class="slide-hero-heading">{heading}</h2>\n'
+            f"      {body_html}\n"
+            f'      <div class="insight-card">{quote}{attribution_html}</div>'
+        )
+        return render_lower_third_shell(
+            slide_number=slide_number,
+            total_slides=total_slides,
+            copy_inner_html=copy_inner,
+        )
 
 
 __all__ = ["InsightQuoteStrategy"]

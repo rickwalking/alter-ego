@@ -30,11 +30,21 @@ class EditorialWorkflowStartRequest(BaseModel):
     reviewer_id: str | None = None
 
 
+class LocalizedSlideReview(BaseModel):
+    """Bilingual slide copy exposed at content review."""
+
+    slide_index: int
+    slide_type: str
+    presentation_pt: dict[str, object] = Field(default_factory=dict)
+    presentation_en: dict[str, object] = Field(default_factory=dict)
+
+
 class EditorialStructuredFeedback(BaseModel):
     """Phase-specific structured feedback for workflow resume (CP-019)."""
 
     target_phase: str | None = None
     edited_text: str | None = None
+    edited_localized_slides: list[LocalizedSlideReview] | None = None
 
 
 class EditorialWorkflowResumeRequest(BaseModel):
@@ -54,6 +64,41 @@ class EditorialWorkflowResumeAcceptedResponse(BaseModel):
     current_phase: str
     phase_status: str
     lock_version: int
+
+
+class SlideValidationViolationResponse(BaseModel):
+    """One deterministic presentation validation violation."""
+
+    code: str
+    message: str
+    slide_index: int | None = None
+    locale: str | None = None
+    field: str | None = None
+
+
+class SlideValidationReportResponse(BaseModel):
+    """Aggregated presentation validation report for content review."""
+
+    validation_status: str
+    validated_at: str
+    blocking: bool
+    violations: list[SlideValidationViolationResponse] = Field(default_factory=list)
+
+
+class SlideImagePrompt(BaseModel):
+    """Image-generation prompt preview for one carousel slide."""
+
+    slide_index: int
+    title: str
+    image_prompt: str
+    rendered_image_prompt: str | None = None
+    image_generation_key: str | None = None
+    image_prompt_hash: str | None = None
+    image_provider: str | None = None
+    image_model: str | None = None
+    image_style: str | None = None
+    theme_name: str | None = None
+    theme_colors: dict[str, str] | None = None
 
 
 class EditorialWorkflowStateResponse(BaseModel):
@@ -79,6 +124,11 @@ class EditorialWorkflowStateResponse(BaseModel):
     rubric_scores: dict[str, object] = Field(default_factory=dict)
     phase_feedback: dict[str, list[str]] = Field(default_factory=dict)
     revision_count: dict[str, int] = Field(default_factory=dict)
+    error_message: str | None = None
+    slide_image_prompts: list[SlideImagePrompt] | None = None
+    presentation_policy_version: str | None = None
+    localized_slides: list[LocalizedSlideReview] = Field(default_factory=list)
+    presentation_validation: SlideValidationReportResponse | None = None
 
 
 __all__ = [
@@ -88,5 +138,9 @@ __all__ = [
     "EditorialWorkflowResumeRequest",
     "EditorialWorkflowStartRequest",
     "EditorialWorkflowStateResponse",
+    "LocalizedSlideReview",
     "ReviewAction",
+    "SlideImagePrompt",
+    "SlideValidationReportResponse",
+    "SlideValidationViolationResponse",
 ]

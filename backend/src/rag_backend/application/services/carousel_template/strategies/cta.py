@@ -1,9 +1,4 @@
-"""CTA centered strategy — centered avatar + name + handle + follow CTA.
-
-Wraps content in hero-bg image + gradient for visual continuity with slides 1-6
-(P1). On carousels with fewer than 7 slides, falls back to plain dark background
-to avoid forcing a hero-bg on a very short carousel.
-"""
+"""CTA centered strategy for the persistent Alter-Ego brand footer."""
 
 import html
 from collections.abc import Mapping
@@ -12,7 +7,17 @@ from rag_backend.domain.constants import LANGUAGE_EN
 from rag_backend.domain.models import CarouselProject
 
 _SLIDE_TYPE_CTA = "cta"
-_MIN_SLIDES_FOR_HERO_BG = 7
+_DEFAULT_CREATOR_NAME = "Pedro Marins"
+_DEFAULT_CREATOR_HANDLE = "pedromarins.ai"
+_DEFAULT_CREATOR_AVATAR = "images/about-pedro.jpg"
+_CREATOR_WEBSITE = "marinssolutions.com"
+_LINK_ICON = (
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+    'stroke-width="2" stroke-linecap="round" stroke-linejoin="round" '
+    'aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3'
+    'a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11'
+    'a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>'
+)
 
 
 class CtaCenteredStrategy:
@@ -30,45 +35,42 @@ class CtaCenteredStrategy:
         total_slides: int,
         language: str,
     ) -> str:
-        name = html.escape(project.creator_name or "", quote=True) if project else ""
-        handle = project.creator_handle or "" if project else ""
-        avatar = project.creator_avatar_url or "" if project else ""
-        handle_text = f"@{handle}" if handle else ""
-        handle_html = (
-            f'<div class="closing-handle">{html.escape(handle_text, quote=True)}</div>'
-            if handle_text
-            else ""
+        name = html.escape(
+            project.creator_name or _DEFAULT_CREATOR_NAME,
+            quote=True,
         )
-        avatar_html = (
-            f'<div class="closing-avatar">'
-            f'<img src="{html.escape(avatar, quote=True)}" alt="{name}" />'
-            f"</div>"
-            if avatar
-            else ""
-        )
+        handle = project.creator_handle or _DEFAULT_CREATOR_HANDLE
+        avatar = _resolve_creator_avatar_src(project)
+        handle_text = handle if handle.startswith("@") else f"@{handle}"
+        handle_html = html.escape(handle_text, quote=True)
+        avatar_url = html.escape(avatar, quote=True)
         if language == LANGUAGE_EN:
             cta_text = "Follow for more content like this"
         else:
             cta_text = "Siga para mais conteúdo como esse"
         slide_number = str(slide.get("number", ""))
-        inner = f"""\
+        return f"""\
   <div class="slide-content slide-closing">
-    <div class="slide-number">0{slide_number} / {total_slides:02d}</div>
-    {avatar_html}
-    <div class="closing-name">{name}</div>
-    {handle_html}
-    <div class="closing-cta">{cta_text}</div>
+    <div class="closing-card">
+      <div class="slide-number">0{slide_number} / {total_slides:02d}</div>
+      <div class="closing-avatar">
+        <img src="{avatar_url}" alt="{name}" />
+      </div>
+      <div class="closing-name">{name}</div>
+      <div class="closing-handle">{handle_html}</div>
+      <div class="closing-website">{_LINK_ICON}{_CREATOR_WEBSITE}</div>
+      <p class="closing-cta">{cta_text}</p>
+    </div>
   </div>"""
-        if total_slides >= _MIN_SLIDES_FOR_HERO_BG:
-            return f"""\
-  <div class="slide-hero-bg-img">
-    <img src="images/slide_{slide_number}.jpg" alt="" />
-  </div>
-  <div class="slide-hero-bg-gradient"></div>
-  <div class="slide-hero-content is-centered">
-    {inner.strip()}
-  </div>"""
-        return inner
+
+
+def _resolve_creator_avatar_src(project: CarouselProject) -> str:
+    """Prefer staged managed creator asset over legacy avatar URLs."""
+    if project.creator_asset_id is not None and project.creator_asset_staged_path:
+        return project.creator_asset_staged_path
+    if project.creator_avatar_url:
+        return project.creator_avatar_url
+    return _DEFAULT_CREATOR_AVATAR
 
 
 __all__ = ["CtaCenteredStrategy"]

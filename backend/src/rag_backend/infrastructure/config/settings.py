@@ -70,6 +70,7 @@ class Settings(BaseSettings):
     gemini_api_key: SecretStr = SecretStr("")
 
     carousel_output_dir: str = "./output/carousels"
+    carousel_creator_assets_dir: str = "./output/creator_assets"
     carousel_checkpoint_backend: str = "sqlite"
     carousel_checkpoint_sqlite_path: str = "./output/carousel_checkpoints.sqlite"
     carousel_checkpoint_postgres_url: str = ""

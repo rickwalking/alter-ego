@@ -7,9 +7,13 @@ from dataclasses import dataclass
 from rag_backend.agents.content_draft_agent import ContentDraftAgent
 from rag_backend.agents.outline_agent import OutlineAgent
 from rag_backend.agents.source_synthesis_agent import SourceSynthesisAgent
+from rag_backend.application.services.carousel.malformed_draft_normalizer import (
+    normalize_slide_draft,
+)
 from rag_backend.application.services.carousel.workflow_state import (
     CarouselWorkflowState,
 )
+from rag_backend.domain.constants.carousel import LANGUAGE_PT
 from rag_backend.domain.constants.carousel_workflow import SOURCE_TYPE_DOCUMENT
 from rag_backend.domain.models.persona import PersonaProfile
 
@@ -79,6 +83,11 @@ async def generate_slide_drafts(
             )
         )
     persona_context = "\n\n".join(persona_context_parts)
+    revision_notes = (
+        "\n".join(note for note in params.revision_notes if note.strip())
+        if params.revision_notes
+        else ""
+    )
     slide_drafts: list[dict[str, object]] = []
     for slide in params.outline:
         draft = await content_agent.draft_slide(
@@ -89,8 +98,10 @@ async def generate_slide_drafts(
             ],
             persona=params.persona,
             persona_context=persona_context,
+            locale=LANGUAGE_PT,
+            revision_notes=revision_notes,
         )
-        slide_drafts.append({**slide, **draft})
+        slide_drafts.append(normalize_slide_draft({**slide, **draft}))
     return slide_drafts
 
 

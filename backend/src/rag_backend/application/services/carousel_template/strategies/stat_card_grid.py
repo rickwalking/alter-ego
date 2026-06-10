@@ -1,13 +1,12 @@
-"""Stat card grid strategy — 3-column stat cards with value, label, detail.
-
-Renders slides with a heading, body, and a 3-column grid of stat cards.
-Falls back to HeroContentStrategy when no stats data is available.
-"""
+"""Stat card grid strategy — 3-column stat cards."""
 
 from collections.abc import Mapping
 
 from rag_backend.application.services.carousel.types import MAX_FEATURE_ITEMS
 from rag_backend.application.services.carousel_template.helpers import _render_inline
+from rag_backend.application.services.carousel_template.lower_third_shell import (
+    render_lower_third_shell,
+)
 from rag_backend.application.services.carousel_template.strategies.hero_content import (
     HeroContentStrategy,
 )
@@ -41,6 +40,7 @@ class StatCardGridStrategy:
         body_html = (
             f'<p class="body-p">{_render_inline(body_raw)}</p>' if body_raw else ""
         )
+        slide_number = str(slide["number"])
 
         cards_html = ""
         for stat in stats[:MAX_FEATURE_ITEMS]:
@@ -58,19 +58,16 @@ class StatCardGridStrategy:
                 f"</div>"
             )
 
-        return f"""\
-  <div class="slide-hero-bg-img">
-    <img src="images/slide_{slide["number"]}.jpg" alt="" />
-  </div>
-  <div class="slide-hero-bg-gradient"></div>
-  <div class="slide-hero-content">
-    <div class="slide-hero-main">
-      <div class="slide-hero-number">0{slide["number"]} / {total_slides:02d}</div>
-      <h2 class="slide-hero-heading">{heading}</h2>
-      {body_html}
-      <div class="stat-row">{cards_html}</div>
-    </div>
-  </div>"""
+        copy_inner = (
+            f'<h2 class="slide-hero-heading">{heading}</h2>\n'
+            f"      {body_html}\n"
+            f'      <div class="stat-row">{cards_html}</div>'
+        )
+        return render_lower_third_shell(
+            slide_number=slide_number,
+            total_slides=total_slides,
+            copy_inner_html=copy_inner,
+        )
 
 
 __all__ = ["StatCardGridStrategy"]

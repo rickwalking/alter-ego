@@ -171,13 +171,43 @@ class PhaseArtifactRunner:
                     slide_drafts=[
                         slide for slide in slide_drafts if isinstance(slide, dict)
                     ],
+                    research_summary=str(state.get("research_summary", "") or ""),
                 ),
                 linkedin_generator=container.linkedin_post_generator(),
             )
             updates.update(distribution)
         design_updates = await self._apply_content_design(state, outline)
         updates.update(design_updates)
+        updates.update(
+            await self._build_presentation_review_updates(
+                updates.get("slide_drafts") or state.get("slide_drafts") or [],
+                updates.get("translations_en"),
+            )
+        )
         return updates
+
+    @staticmethod
+    async def _build_presentation_review_updates(
+        slide_drafts: object,
+        translations_en: object,
+    ) -> dict[str, object]:
+        from rag_backend.application.services.carousel.presentation_review import (
+            build_presentation_review_updates_async,
+            deserialize_translations_en,
+        )
+
+        if not isinstance(slide_drafts, list):
+            return await build_presentation_review_updates_async([])
+        draft_dicts = [slide for slide in slide_drafts if isinstance(slide, dict)]
+        translations = (
+            deserialize_translations_en(translations_en)
+            if translations_en is not None
+            else None
+        )
+        return await build_presentation_review_updates_async(
+            draft_dicts,
+            translations_en=translations,
+        )
 
     async def _generate_content_drafts(
         self,

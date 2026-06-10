@@ -6,6 +6,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.domain.models import (
+    CarouselImageGeneration,
     CarouselProject,
     CarouselSlide,
     CarouselStatus,
@@ -13,9 +14,13 @@ from rag_backend.domain.models import (
 )
 from rag_backend.domain.protocols import CarouselRepository
 from rag_backend.infrastructure.database.models import (
+    CarouselImageGenerationModel,
     CarouselProjectModel,
     CarouselSlideModel,
     ResearchSourceModel,
+)
+from rag_backend.infrastructure.database.models.carousel_creator_asset import (
+    CarouselCreatorAssetModel,
 )
 
 _ERR_PROJECT_NOT_FOUND = "Carousel project {} not found"
@@ -46,7 +51,15 @@ class PostgresCarouselRepository(CarouselRepository):
         model = result.scalar_one_or_none()
         if model is None:
             return None
-        return model.to_entity()
+        entity = model.to_entity()
+        if model.creator_asset_id:
+            asset_model = await self._session.get(
+                CarouselCreatorAssetModel,
+                str(model.creator_asset_id),
+            )
+            if asset_model is not None:
+                entity.creator_asset_staged_path = asset_model.relative_path
+        return entity
 
     async def get_all_projects(
         self,
@@ -129,6 +142,38 @@ class PostgresCarouselRepository(CarouselRepository):
         if model is None:
             raise ValueError(_ERR_SLIDE_NOT_FOUND.format(slide.id))
         model.update_from_entity(slide)
+        await self._session.flush()
+        await self._session.commit()
+        await self._session.refresh(model)
+        return model.to_entity()
+
+    async def get_image_generation_by_key(
+        self,
+        generation_key: str,
+    ) -> CarouselImageGeneration | None:
+        """Get an image generation attempt by deterministic key."""
+        stmt = select(CarouselImageGenerationModel).where(
+            CarouselImageGenerationModel.generation_key == generation_key
+        )
+        result = await self._session.execute(stmt)
+        model = result.scalar_one_or_none()
+        return model.to_entity() if model is not None else None
+
+    async def upsert_image_generation(
+        self,
+        generation: CarouselImageGeneration,
+    ) -> CarouselImageGeneration:
+        """Create or update an image generation attempt by generation key."""
+        stmt = select(CarouselImageGenerationModel).where(
+            CarouselImageGenerationModel.generation_key == generation.generation_key
+        )
+        result = await self._session.execute(stmt)
+        model = result.scalar_one_or_none()
+        if model is None:
+            model = CarouselImageGenerationModel.from_entity(generation)
+            self._session.add(model)
+        else:
+            model.update_from_entity(generation)
         await self._session.flush()
         await self._session.commit()
         await self._session.refresh(model)

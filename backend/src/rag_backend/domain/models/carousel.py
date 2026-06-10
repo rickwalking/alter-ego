@@ -126,6 +126,12 @@ class CarouselProject:
     creator_name: str | None = None
     creator_handle: str | None = None
     creator_avatar_url: str | None = None
+    creator_website: str | None = None
+    creator_asset_id: UUID | None = None
+    creator_asset_staged_path: str | None = None
+    presentation_policy_version: str | None = None
+    presentation_policy_checksum: str | None = None
+    artifact_version: str | None = None
     # Template version for A/B testing and rollback
     template_version: str = "v2"
     # Slide layout strategy for visual formatting

@@ -1,4 +1,5 @@
 import re
+from collections.abc import Sequence
 from pathlib import Path
 from uuid import UUID
 
@@ -12,13 +13,30 @@ from rag_backend.api.constants import (
     ERR_IMAGE_NOT_FOUND,
     ERR_INSTAGRAM_PUBLIC_BASE_URL_NOT_CONFIGURED,
 )
-from rag_backend.api.dependencies.resource_access import assert_domain_owner_or_admin
-from rag_backend.domain.constants import BRAND_KEYWORDS, BRAND_PALETTES, CAROUSEL_THEMES
-from rag_backend.domain.constants.access_control import ERR_CAROUSEL_NOT_PUBLIC
-from rag_backend.domain.models import CarouselProject, User
+from rag_backend.api.routes.carousels.carousel_access import (  # noqa: F401 — re-exported for backward compatibility
+    assert_carousel_artifacts_healthy,
+    assert_carousel_project_access,
+    assert_carousel_public,
+    assert_carousel_public_or_editor,
+)
+from rag_backend.application.services.carousel.artifact_path_resolver import (
+    resolve_language_dir,
+    resolve_pdf_path,
+    resolve_shared_images_dir,
+)
+from rag_backend.application.services.carousel.types import slide_count_from_config
+from rag_backend.domain.constants import (
+    BRAND_KEYWORDS,
+    BRAND_PALETTES,
+    CAROUSEL_THEMES,
+    LANGUAGE_PT,
+    SWIPE_TEXT_EN,
+)
+from rag_backend.domain.models import CarouselProject
 from rag_backend.domain.protocols import CarouselRepository
 
 _SAFE_IMAGE_FILENAME = re.compile(r"^[a-zA-Z0-9_\-\.]+$")
+_SLIDE_IMAGE_FILENAME = re.compile(r"^slide_(\d+)\.jpg$")
 
 _JPEG_CACHE_HEADERS = CAROUSEL_CACHE_HEADERS
 _PREVIEW_JPEG_CACHE_HEADERS = CAROUSEL_PREVIEW_CACHE_HEADERS
@@ -31,7 +49,10 @@ def _pdf_path_for_language(project: CarouselProject, lang: str) -> str | None:
 
 
 def _resolve_pdf_file(project: CarouselProject, lang: str) -> Path | None:
-    """Resolve PDF path confined to the project output directory."""
+    """Resolve PDF path confined to the active artifact serving root."""
+    versioned = resolve_pdf_path(project, lang)
+    if versioned is not None:
+        return versioned
     raw_path = _pdf_path_for_language(project, lang)
     if not raw_path or not project.output_dir:
         return None
@@ -83,28 +104,69 @@ def _extract_title_and_subtitle(markdown: str) -> tuple[str | None, str | None]:
     return heading, None
 
 
-def _count_slide_images(output_dir: str | None) -> int:
+def _slide_image_numbers(output_dir: str | None, subdir: str) -> list[int]:
     if not output_dir:
-        return 0
-    base = Path(output_dir)
-    counts: list[int] = []
-    for subdir in ("images", "pt", "en"):
-        slide_dir = base / subdir
-        if slide_dir.is_dir():
-            counts.append(len(list(slide_dir.glob("slide_*.jpg"))))
-    return max(counts) if counts else 0
+        return []
+    slide_dir = Path(output_dir) / subdir
+    return _numbers_from_slide_dir(slide_dir)
+
+
+def _numbers_from_slide_dir(slide_dir: Path) -> list[int]:
+    if not slide_dir.is_dir():
+        return []
+    numbers: set[int] = set()
+    for path in slide_dir.glob("slide_*.jpg"):
+        match = _SLIDE_IMAGE_FILENAME.fullmatch(path.name)
+        if match and path.is_file():
+            numbers.add(int(match.group(1)))
+    return sorted(numbers)
+
+
+def _slide_image_numbers_for_project(
+    project: CarouselProject,
+    subdir: str,
+) -> list[int]:
+    if subdir in {"pt", "en"}:
+        language_dir = resolve_language_dir(project, subdir)
+        if language_dir is None:
+            return []
+        return _numbers_from_slide_dir(language_dir)
+    images_dir = resolve_shared_images_dir(project)
+    if images_dir is None:
+        return []
+    return _numbers_from_slide_dir(images_dir)
+
+
+def _count_slide_images(output_dir: str | None) -> int:
+    counts = [
+        len(_slide_image_numbers(output_dir, subdir))
+        for subdir in ("images", "pt", "en")
+    ]
+    return max(counts, default=0)
 
 
 def _preview_rendered_slide_urls(
     project_id: UUID,
-    slide_count: int,
+    slide_numbers: list[int],
     lang: str,
 ) -> list[str]:
     """Authenticated preview URLs for draft carousels (publish workspace)."""
     project_id_str = str(project_id)
     return [
         f"/api/carousels/{project_id_str}/preview/images/slide_{i}.jpg?lang={lang}"
-        for i in range(1, slide_count + 1)
+        for i in slide_numbers
+    ]
+
+
+def _public_rendered_slide_urls(
+    project_id: UUID,
+    slide_numbers: Sequence[int],
+    lang: str,
+) -> list[str]:
+    project_id_str = str(project_id)
+    return [
+        f"/api/carousels/{project_id_str}/slide-images/{lang}/slide_{i}.jpg"
+        for i in slide_numbers
     ]
 
 
@@ -115,46 +177,35 @@ def _apply_draft_preview_urls(
     """Use owner-scoped preview routes until the carousel is published publicly."""
     if project.is_public or not project.output_dir:
         return tokens
-    slide_count = _count_slide_images(project.output_dir)
-    if slide_count == 0:
+    raw_numbers = _slide_image_numbers_for_project(project, "images")
+    pt_numbers = _slide_image_numbers_for_project(project, "pt")
+    en_numbers = _slide_image_numbers_for_project(project, "en")
+    if not raw_numbers and not pt_numbers and not en_numbers:
         return tokens
     raw_images = tokens.get("images")
     if not isinstance(raw_images, dict):
         return tokens
     images = dict(raw_images)
 
-    has_rendered_pt = _has_rendered_slides(project.output_dir, "pt")
-    has_rendered_en = _has_rendered_slides(project.output_dir, "en")
-
-    if has_rendered_pt:
+    if pt_numbers:
         preview_pt = _preview_rendered_slide_urls(
             project.id,
-            slide_count,
+            pt_numbers,
             "pt",
         )
         images["rendered_slides_pt"] = preview_pt
         if preview_pt:
             images["hero"] = preview_pt[0]
-            hero_slot_count = min(4, len(preview_pt))
-            images["slides"] = preview_pt[:hero_slot_count]
+            images["slides"] = preview_pt
     else:
         images.pop("rendered_slides_pt", None)
-        # Fall back to raw images via the preview route so unpublished
-        # carousels can still show their AI-generated hero images.
-        preview_pt = _preview_rendered_slide_urls(
-            project.id,
-            slide_count,
-            "pt",
-        )
-        if preview_pt:
-            images["hero"] = preview_pt[0]
-            hero_slot_count = min(4, len(preview_pt))
-            images["slides"] = preview_pt[:hero_slot_count]
+        images["hero"] = ""
+        images["slides"] = []
 
-    if has_rendered_en:
+    if en_numbers:
         images["rendered_slides_en"] = _preview_rendered_slide_urls(
             project.id,
-            slide_count,
+            en_numbers,
             "en",
         )
     else:
@@ -162,7 +213,7 @@ def _apply_draft_preview_urls(
     return {**tokens, "images": images}
 
 
-def _merge_design_tokens_with_disk(
+def merge_design_tokens_with_disk(
     project: CarouselProject,
 ) -> dict[str, object]:
     """Refresh slide image paths from disk so publish/download include all slides."""
@@ -178,14 +229,16 @@ def _merge_design_tokens_with_disk(
         default_list = default_images.get(key)
         raw_list = raw_images.get(key)
         if isinstance(default_list, list):
-            if isinstance(raw_list, list) and len(raw_list) > len(default_list):
+            if key == "slides":
+                merged_images[key] = default_list
+            elif isinstance(raw_list, list) and len(raw_list) > len(default_list):
                 merged_images[key] = raw_list
             else:
                 merged_images[key] = default_list
         elif key == "rendered_slides_en":
             merged_images.pop("rendered_slides_en", None)
 
-    if project.output_dir and not _has_rendered_slides(project.output_dir, "en"):
+    if project.output_dir and not _has_rendered_slides(project, "en"):
         merged_images.pop("rendered_slides_en", None)
 
     merged = {
@@ -201,9 +254,11 @@ def _merge_design_tokens_with_disk(
     return _apply_draft_preview_urls(project, merged)
 
 
-def _has_rendered_slides(output_dir: str, lang: str) -> bool:
-    lang_dir = Path(output_dir) / lang
-    return lang_dir.is_dir() and len(list(lang_dir.glob("slide_*.jpg"))) > 0
+def _has_rendered_slides(project: CarouselProject, lang: str) -> bool:
+    language_dir = resolve_language_dir(project, lang)
+    if language_dir is None:
+        return False
+    return len(_numbers_from_slide_dir(language_dir)) > 0
 
 
 def _build_default_design_tokens(
@@ -224,15 +279,16 @@ def _build_default_design_tokens(
             "background": "#0a0e17",
         }
 
-    slide_count = _count_slide_images(project.output_dir)
+    pt_slide_numbers = _slide_image_numbers_for_project(project, "pt")
+    en_slide_numbers = _slide_image_numbers_for_project(project, "en")
+    slide_count = max(
+        len(pt_slide_numbers),
+        len(en_slide_numbers),
+    )
     if slide_count == 0:
-        slide_count = 4
+        slide_count = slide_count_from_config(project.slides_config)
 
-    project_id_str = str(project.id)
-    slide_paths = [
-        f"/api/carousels/{project_id_str}/images/slide_{i}.jpg"
-        for i in range(1, slide_count + 1)
-    ]
+    slide_paths = _public_rendered_slide_urls(project.id, pt_slide_numbers, "pt")
     hero_path = slide_paths[0] if slide_paths else ""
 
     colors = {
@@ -254,21 +310,18 @@ def _build_default_design_tokens(
         "hero": hero_path,
         "slides": slide_paths,
     }
-    output_dir = project.output_dir
-    if output_dir and _has_rendered_slides(output_dir, "pt"):
-        images["rendered_slides_pt"] = [
-            f"/api/carousels/{project_id_str}/slide-images/pt/slide_{i}.jpg"
-            for i in range(1, slide_count + 1)
-        ]
-    if output_dir and _has_rendered_slides(output_dir, "en"):
-        images["rendered_slides_en"] = [
-            f"/api/carousels/{project_id_str}/slide-images/en/slide_{i}.jpg"
-            for i in range(1, slide_count + 1)
-        ]
+    if pt_slide_numbers:
+        images["rendered_slides_pt"] = slide_paths
+    if en_slide_numbers:
+        images["rendered_slides_en"] = _public_rendered_slide_urls(
+            project.id,
+            en_slide_numbers,
+            "en",
+        )
     badge = project.niche.strip() if project.niche else "CARROSSEL"
     layout = {
         "badge_label": badge,
-        "swipe_text": "Deslize \u2192",
+        "swipe_text": SWIPE_TEXT_EN,
         "progress_segments": slide_count,
     }
 
@@ -330,43 +383,21 @@ async def _load_project_with_output(
     return project
 
 
-def assert_carousel_public(project: CarouselProject) -> None:
-    """Allow only published carousels on public media routes."""
-    if project.is_public:
-        return
-    raise HTTPException(status_code=404, detail=ERR_CAROUSEL_NOT_PUBLIC)
-
-
-def assert_carousel_project_access(
-    project: CarouselProject,
-    user: User,
-    *,
-    assigned_reviewer_id: str | None = None,
-) -> None:
-    """Allow project owners, admins, and assigned reviewers on preview routes."""
-    if user.is_admin():
-        return
-    if assigned_reviewer_id and str(user.id) == assigned_reviewer_id:
-        return
-    assert_domain_owner_or_admin(project.owner_id, user)
-
-
-def assert_carousel_public_or_editor(
-    project: CarouselProject,
-    user: User | None,
-) -> None:
-    """Deprecated: public routes must use assert_carousel_public only."""
-    _ = user
-    assert_carousel_public(project)
-
-
-def _build_public_image_urls(project_id: UUID, slides_count: int = 4) -> list[str]:
+def _build_public_image_urls(
+    project_id: UUID,
+    slide_numbers: Sequence[int] | int | None = None,
+    lang: str = LANGUAGE_PT,
+) -> list[str]:
     from rag_backend.infrastructure.config.settings import get_settings
 
     base = get_settings().carousel_public_base_url.rstrip("/")
     if not base:
         raise RuntimeError(ERR_INSTAGRAM_PUBLIC_BASE_URL_NOT_CONFIGURED)
+    if slide_numbers is None:
+        slide_numbers = range(1, 5)
+    if isinstance(slide_numbers, int):
+        slide_numbers = range(1, slide_numbers + 1)
     return [
-        f"{base}/api/carousels/{project_id}/images/slide_{i}.jpg"
-        for i in range(1, slides_count + 1)
+        f"{base}/api/carousels/{project_id}/slide-images/{lang}/slide_{i}.jpg"
+        for i in slide_numbers
     ]

@@ -18,6 +18,9 @@ from rag_backend.application.services.carousel.editorial_workflow_support import
     build_review_required_event,
     persist_phase_feedback,
 )
+from rag_backend.application.services.carousel.presentation_review import (
+    has_blocking_presentation_validation,
+)
 from rag_backend.application.services.carousel.workflow_sse_hub import (
     get_workflow_sse_hub,
 )
@@ -31,6 +34,7 @@ from rag_backend.application.services.notification_service import (
 from rag_backend.domain.constants.carousel_workflow import (
     DEFAULT_REVISION_CAP_PER_PHASE,
     ERR_PERSONA_SCORE_TOO_LOW,
+    ERR_PRESENTATION_VALIDATION_BLOCKED,
     ERR_REVISION_CAP_EXCEEDED,
     PERSONA_SCORE_OVERALL_KEY,
     PHASE_CONTENT,
@@ -83,6 +87,15 @@ def validate_content_approve_persona_score(prior: CarouselWorkflowState) -> None
     )
     if min_score < VOICE_MATCH_MIN_SCORE:
         raise ValueError(ERR_PERSONA_SCORE_TOO_LOW)
+
+
+def validate_content_approve_presentation(prior: CarouselWorkflowState) -> None:
+    """Reject content approval when blocking presentation violations exist."""
+    current_phase = str(prior.get("current_phase", ""))
+    if current_phase != PHASE_CONTENT:
+        return
+    if has_blocking_presentation_validation(prior):
+        raise ValueError(ERR_PRESENTATION_VALIDATION_BLOCKED)
 
 
 async def validate_revision_cap(
@@ -173,6 +186,7 @@ async def prepare_resume_workflow(
         return
     if action == REVIEW_ACTION_APPROVE:
         validate_content_approve_persona_score(prior)
+        validate_content_approve_presentation(prior)
     if action == REVIEW_ACTION_REVISE:
         await persist_phase_feedback(
             orchestrator.engine,
@@ -233,5 +247,6 @@ __all__ = [
     "record_feedback_correction",
     "stream_workflow_phase_updates",
     "validate_content_approve_persona_score",
+    "validate_content_approve_presentation",
     "validate_revision_cap",
 ]

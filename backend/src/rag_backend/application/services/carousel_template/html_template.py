@@ -182,10 +182,10 @@ def build_carousel_html(
             )  # type: ignore[arg-type]
             inner = strategy.render(
                 slide,
-                project=project,
-                _theme=theme,
-                total_slides=total_slides,
-                language=lang,
+                project,
+                theme,
+                total_slides,
+                lang,
             )
         elif slide_type == SLIDE_TYPE_INTRO:
             inner = _render_intro_slide(slide, project, theme)

@@ -15,7 +15,10 @@ from rag_backend.application.services.carousel.workflow_state import (
     CarouselWorkflowState,
     get_initial_carousel_state,
 )
-from rag_backend.domain.constants.carousel_workflow import PHASE_STATUS_AWAITING_HUMAN
+from rag_backend.domain.constants.carousel_workflow import (
+    PHASE_STATUS_AWAITING_HUMAN,
+    PHASE_STATUS_IN_PROGRESS,
+)
 
 _REVIEW_INTERRUPT_KEYS = (
     "outline",
@@ -113,6 +116,24 @@ class CarouselWorkflowEngine:
         config = self._run_config(project_id)
         payload = human_input or {}
         snapshot = await self._app.aget_state(config)
+        # Corrupted-checkpoint recovery: when aupdate_state() was called
+        # without as_node the pending interrupts may have been cleared while
+        # the checkpoint still shows pending_next and in_progress phase_status.
+        # Use Command(resume=payload) instead of ainvoke(None) to deliver the
+        # human input directly.
+        if snapshot is not None:
+            pending_next = getattr(snapshot, "next", ()) or ()
+            pending_interrupts = getattr(snapshot, "interrupts", ()) or ()
+            has_task_interrupt = any(
+                getattr(task, "interrupts", ()) for task in (getattr(snapshot, "tasks", ()) or ())
+            )
+            phase_status = str((snapshot.values or {}).get("phase_status", ""))
+            if pending_next and not pending_interrupts and not has_task_interrupt and phase_status == PHASE_STATUS_IN_PROGRESS:
+                result = await self._app.ainvoke(
+                    Command(resume=payload),
+                    config=config,
+                )
+                return cast(CarouselWorkflowState, result)
         if snapshot is not None and needs_gate_reopen(snapshot):
             phase = str((snapshot.values or {}).get("current_phase", ""))
             result = await self._app.ainvoke(
@@ -130,9 +151,22 @@ class CarouselWorkflowEngine:
         self,
         project_id: str,
         values: dict[str, object],
+        as_node: str | None = None,
     ) -> None:
-        """Patch workflow state before resuming from an interrupt."""
-        await self._app.aupdate_state(self._run_config(project_id), values)
+        """Patch workflow state before resuming from an interrupt.
+
+        When ``as_node`` is not provided and a pending interrupt exists, the
+        first node name from the checkpoint ``snapshot.next`` is used as the
+        default, preserving the pending interrupt context.
+        """
+        config = self._run_config(project_id)
+        if as_node is None:
+            snapshot = await self._app.aget_state(config)
+            if snapshot is not None:
+                pending_next = getattr(snapshot, "next", ()) or ()
+                if pending_next:
+                    as_node = str(pending_next[0])
+        await self._app.aupdate_state(config, values, as_node=as_node)
 
     async def get_state(self, project_id: str) -> CarouselWorkflowState | None:
         """Load persisted workflow state from checkpointer (WF-002)."""
@@ -156,7 +190,7 @@ class CarouselWorkflowEngine:
             task_name = str(getattr(pending_tasks[0], "name", ""))
             if task_name:
                 state["current_phase"] = task_name
-        if pending_interrupts or has_task_interrupt or pending_next:
+        if pending_interrupts or has_task_interrupt:
             state["phase_status"] = PHASE_STATUS_AWAITING_HUMAN
         self._merge_interrupt_review_payload(state, snapshot)
         return state

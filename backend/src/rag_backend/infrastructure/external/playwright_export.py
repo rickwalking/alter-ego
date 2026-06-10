@@ -9,6 +9,9 @@ from pathlib import Path
 
 from playwright.async_api import async_playwright
 
+from rag_backend.application.services.carousel.presentation_policy import (
+    load_presentation_policy,
+)
 from rag_backend.domain.constants import (
     CAROUSEL_HEIGHT,
     CAROUSEL_WIDTH,
@@ -18,7 +21,17 @@ from rag_backend.domain.constants import (
     SLIDE_FILENAME_PREFIX,
     SLIDE_IMAGE_EXTENSION,
 )
+from rag_backend.domain.constants.carousel_presentation import (
+    DEFAULT_PRESENTATION_POLICY_VERSION,
+)
+from rag_backend.domain.constants.playwright_geometry import (
+    ERR_SCREENSHOT_DIMENSION_MISMATCH,
+)
 from rag_backend.domain.protocols import CarouselExportService, ExportConfig
+from rag_backend.infrastructure.external.playwright_geometry import (
+    PlaywrightExportPreflightError,
+    run_export_preflight,
+)
 from rag_backend.infrastructure.logging import get_logger
 
 logger = get_logger()
@@ -56,15 +69,24 @@ style.textContent = `
   }
   /* Scale fonts for 1080px canvas */
   .s1-title       { font-size: clamp(26px, 5.5vw, 56px) !important; }
-  .slide-heading  { font-size: clamp(20px, 4.5vw, 50px) !important; }
-  .body-p         { font-size: clamp(12px, 2.5vw, 30px) !important; }
-  .s1-subtitle    { font-size: clamp(13px, 2.5vw, 28px) !important; }
-  .s1-tldr        { font-size: clamp(11px, 2.2vw, 24px) !important; }
-  .slide-hero-heading { font-size: clamp(26px, 5.5vw, 56px) !important; }
-  .slide-hero-body    { font-size: clamp(13px, 2.5vw, 28px) !important; }
-  .closing-name   { font-size: clamp(26px, 5.5vw, 56px) !important; }
-  .closing-cta    { font-size: clamp(13px, 2.5vw, 28px) !important; }
-  .closing-handle { font-size: clamp(11px, 2.2vw, 24px) !important; }
+  .slide-heading  { font-size: clamp(23px, 4.8vw, 56px) !important; }
+  .body-p         { font-size: clamp(13px, 2.7vw, 34px) !important; }
+  .s1-subtitle    { font-size: clamp(14px, 2.7vw, 32px) !important; }
+  .s1-tldr        { font-size: clamp(12px, 2.3vw, 28px) !important; }
+  .s1-swipe       { font-size: 26px !important; }
+  .slide-number,
+  .slide-hero-number { font-size: 26px !important; margin-bottom: 14px !important; }
+  .counter-label  { font-size: 22px !important; }
+  .counter-dot    { width: 14px !important; height: 14px !important; }
+  .counter-dot.active { width: 42px !important; border-radius: 7px !important; }
+  .slide-hero-heading { font-size: clamp(29px, 5.8vw, 64px) !important; }
+  .slide-hero-body    { font-size: clamp(13px, 2.45vw, 28px) !important; line-height: 1.52 !important; }
+  .closing-card   { width: min(100%, 720px) !important; padding: 48px 54px 56px !important; border-radius: 30px !important; }
+  .closing-avatar { width: 168px !important; height: 168px !important; border-width: 4px !important; margin-bottom: 28px !important; }
+  .closing-name   { font-size: clamp(36px, 5.5vw, 64px) !important; }
+  .closing-cta    { font-size: clamp(15px, 2.2vw, 26px) !important; }
+  .closing-handle { font-size: clamp(18px, 2.4vw, 30px) !important; }
+  .closing-website { font-size: clamp(18px, 2.5vw, 30px) !important; padding: 18px 42px !important; }
   .cta-title      { font-size: clamp(20px, 4.5vw, 52px) !important; }
   .cta-body       { font-size: clamp(12px, 2.4vw, 30px) !important; }
   .feature-title  { font-size: clamp(11px, 2.2vw, 28px) !important; }
@@ -74,12 +96,15 @@ style.textContent = `
   /* Adjust padding for larger canvas */
   .slide-content      { padding: 52px 40px 44px !important; }
   .slide-1-content    { padding: 44px 40px 68px !important; }
-  .slide-hero-content { padding: 44px 40px 68px !important; }
+  .slide-hero-content { padding: 44px 40px 160px !important; }
+  .slide-presentation { padding: 44px 40px 160px !important; }
+  .slide-hero-main,
+  .slide-presentation-copy { max-height: calc(100% - 190px) !important; }
   /* Larger watermark for export */
-  .creator-watermark       { padding: 10px 18px 10px 10px !important; gap: 12px !important; }
-  .creator-watermark-avatar { width: 36px !important; height: 36px !important; border-width: 2px !important; }
-  .creator-watermark-name  { font-size: 14px !important; max-width: 160px !important; }
-  .creator-watermark-handle { font-size: 12px !important; max-width: 160px !important; }
+  .creator-watermark       { padding: 16px 28px 16px 16px !important; gap: 18px !important; }
+  .creator-watermark-avatar { width: 72px !important; height: 72px !important; border-width: 3px !important; }
+  .creator-watermark-name  { font-size: 24px !important; max-width: 260px !important; }
+  .creator-watermark-handle { font-size: 18px !important; max-width: 260px !important; }
 `;
 document.head.appendChild(style);
 """
@@ -102,16 +127,25 @@ style.textContent = `
     max-height: 2700px !important;
     aspect-ratio: auto !important;
   }
-  .s1-title       { font-size: clamp(52px, 5.5vw, 112px) !important; }
-  .slide-heading  { font-size: clamp(40px, 4.5vw, 100px) !important; }
-  .body-p         { font-size: clamp(24px, 2.5vw, 60px) !important; }
-  .s1-subtitle    { font-size: clamp(26px, 2.5vw, 56px) !important; }
-  .s1-tldr        { font-size: clamp(22px, 2.2vw, 48px) !important; }
-  .slide-hero-heading { font-size: clamp(52px, 5.5vw, 112px) !important; }
-  .slide-hero-body    { font-size: clamp(26px, 2.5vw, 56px) !important; }
-  .closing-name   { font-size: clamp(52px, 5.5vw, 112px) !important; }
-  .closing-cta    { font-size: clamp(26px, 2.5vw, 56px) !important; }
-  .closing-handle { font-size: clamp(22px, 2.2vw, 48px) !important; }
+  .s1-title       { font-size: clamp(58px, 5.8vw, 126px) !important; }
+  .slide-heading  { font-size: clamp(46px, 4.8vw, 112px) !important; }
+  .body-p         { font-size: clamp(26px, 2.7vw, 68px) !important; }
+  .s1-subtitle    { font-size: clamp(28px, 2.7vw, 64px) !important; }
+  .s1-tldr        { font-size: clamp(24px, 2.3vw, 56px) !important; }
+  .s1-swipe       { font-size: 52px !important; }
+  .slide-number,
+  .slide-hero-number { font-size: 52px !important; margin-bottom: 28px !important; }
+  .counter-label  { font-size: 44px !important; }
+  .counter-dot    { width: 28px !important; height: 28px !important; }
+  .counter-dot.active { width: 84px !important; border-radius: 14px !important; }
+  .slide-hero-heading { font-size: clamp(58px, 5.8vw, 126px) !important; }
+  .slide-hero-body    { font-size: clamp(26px, 2.45vw, 56px) !important; line-height: 1.52 !important; }
+  .closing-card   { width: min(100%, 1440px) !important; padding: 96px 108px 112px !important; border-radius: 60px !important; }
+  .closing-avatar { width: 336px !important; height: 336px !important; border-width: 8px !important; margin-bottom: 56px !important; }
+  .closing-name   { font-size: clamp(72px, 5.5vw, 128px) !important; }
+  .closing-cta    { font-size: clamp(30px, 2.2vw, 52px) !important; }
+  .closing-handle { font-size: clamp(36px, 2.4vw, 60px) !important; }
+  .closing-website { font-size: clamp(36px, 2.5vw, 60px) !important; padding: 36px 84px !important; }
   .cta-title      { font-size: clamp(40px, 4.5vw, 104px) !important; }
   .cta-body       { font-size: clamp(24px, 2.4vw, 60px) !important; }
   .feature-title  { font-size: clamp(22px, 2.2vw, 56px) !important; }
@@ -120,11 +154,14 @@ style.textContent = `
   .insight-card   { font-size: clamp(22px, 2.2vw, 52px) !important; }
   .slide-content      { padding: 104px 80px 88px !important; }
   .slide-1-content    { padding: 88px 80px 136px !important; }
-  .slide-hero-content { padding: 88px 80px 136px !important; }
-  .creator-watermark       { padding: 14px 24px 14px 14px !important; gap: 16px !important; }
-  .creator-watermark-avatar { width: 48px !important; height: 48px !important; border-width: 3px !important; }
-  .creator-watermark-name  { font-size: 20px !important; max-width: 200px !important; }
-  .creator-watermark-handle { font-size: 14px !important; max-width: 200px !important; }
+  .slide-hero-content { padding: 88px 80px 320px !important; }
+  .slide-presentation { padding: 88px 80px 320px !important; }
+  .slide-hero-main,
+  .slide-presentation-copy { max-height: calc(100% - 380px) !important; }
+  .creator-watermark       { padding: 32px 56px 32px 32px !important; gap: 36px !important; }
+  .creator-watermark-avatar { width: 144px !important; height: 144px !important; border-width: 6px !important; }
+  .creator-watermark-name  { font-size: 48px !important; max-width: 520px !important; }
+  .creator-watermark-handle { font-size: 36px !important; max-width: 520px !important; }
 `;
 document.head.appendChild(style);
 """
@@ -136,35 +173,49 @@ _BORDER_ARTIFACT_MAX_PX = 5
 def _crop_border_artifact(path: str, target_width: int, target_height: int) -> None:
     """Crop small border artifacts (up to 5px) from exported slide image edges.
 
-    Only applies when the image is within a few pixels of the target
-    dimensions.  Large mismatches are treated as a rendering bug and
-    logged rather than aggressively center-cropped.
+    Uses an exact target box so odd-pixel excess is removed symmetrically.
+    Mismatches beyond the tolerated border artifact raise export errors.
     """
     try:
         from PIL import Image as PILImage
 
         with PILImage.open(path) as img:
-            w, h = img.size
-            if w == target_width and h == target_height:
-                return
-            dw = w - target_width
-            dh = h - target_height
-            if abs(dw) > _BORDER_ARTIFACT_MAX_PX or abs(dh) > _BORDER_ARTIFACT_MAX_PX:
-                logger.warning(
-                    "screenshot_size_mismatch",
-                    path=path,
-                    actual_width=w,
-                    actual_height=h,
-                    target_width=target_width,
-                    target_height=target_height,
-                )
-                return
-            crop_box = (
-                max(0, dw // 2),
-                max(0, dh // 2),
-                w - max(0, -dw // 2),
-                h - max(0, -dh // 2),
-            )
+            width, height = img.size
+    except Exception:
+        logger.warning(
+            "crop_border_artifact_failed",
+            path=path,
+            target_width=target_width,
+            target_height=target_height,
+        )
+        return
+
+    if width == target_width and height == target_height:
+        return
+
+    delta_width = width - target_width
+    delta_height = height - target_height
+    if (
+        abs(delta_width) > _BORDER_ARTIFACT_MAX_PX
+        or abs(delta_height) > _BORDER_ARTIFACT_MAX_PX
+    ):
+        raise PlaywrightExportPreflightError(
+            ERR_SCREENSHOT_DIMENSION_MISMATCH,
+        )
+
+    left = max(0, (width - target_width) // 2)
+    top = max(0, (height - target_height) // 2)
+    crop_box = (
+        left,
+        top,
+        left + target_width,
+        top + target_height,
+    )
+
+    try:
+        from PIL import Image as PILImage
+
+        with PILImage.open(path) as img:
             cropped = img.crop(crop_box)
             cropped.save(path, IMAGE_FORMAT_JPEG, quality=DEFAULT_QUALITY)
     except Exception:
@@ -224,7 +275,6 @@ class PlaywrightExportService(CarouselExportService):
 
             file_url = f"file://{html_file.absolute()}"
             await page.goto(file_url)
-            await page.wait_for_timeout(4000)
 
             # Inject default + optional CSS overrides
             await page.evaluate(injection)
@@ -238,6 +288,9 @@ class PlaywrightExportService(CarouselExportService):
                     "document.head.appendChild(s);"
                 )
                 await page.evaluate(override_js)
+
+            policy = load_presentation_policy(DEFAULT_PRESENTATION_POLICY_VERSION)
+            await run_export_preflight(page, policy, hd=cfg.hd)
 
             # Screenshot each .ig-slide-inner element
             slide_inners = await page.locator(".ig-slide-inner").all()

@@ -52,7 +52,7 @@ from .helpers import (
     _extract_first_paragraph,
     _extract_title_and_subtitle,
     _load_project_with_output,
-    _merge_design_tokens_with_disk,
+    merge_design_tokens_with_disk,
     _resolve_image_file,
     assert_carousel_project_access,
 )
@@ -188,7 +188,7 @@ async def preview_carousel_design(
     if project.design_tokens is None:
         raise HTTPException(status_code=404, detail=ERR_DESIGN_NOT_GENERATED)
 
-    tokens = _merge_design_tokens_with_disk(project)
+    tokens = merge_design_tokens_with_disk(project)
     layout = dict(tokens["layout"])
     layout["swipe_text"] = _swipe_text_for_language(lang)
 

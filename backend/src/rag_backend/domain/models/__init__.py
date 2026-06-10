@@ -13,6 +13,11 @@ from rag_backend.domain.models.carousel import (
     ResearchSource,
     ResearchSourceType,
 )
+from rag_backend.domain.models.carousel_artifact_build import CarouselArtifactBuild
+from rag_backend.domain.models.carousel_creator_asset import CarouselCreatorAsset
+from rag_backend.domain.models.carousel_image_generation import (
+    CarouselImageGeneration,
+)
 from rag_backend.domain.models.conversation import Conversation, Message, MessageRole
 from rag_backend.domain.models.documents import (
     Document,
@@ -40,6 +45,9 @@ from rag_backend.domain.models.source_comment import (
 from rag_backend.domain.models.user import User, UserRole
 
 __all__ = [
+    "CarouselArtifactBuild",
+    "CarouselCreatorAsset",
+    "CarouselImageGeneration",
     "CarouselProject",
     "CarouselSlide",
     "CarouselStatus",

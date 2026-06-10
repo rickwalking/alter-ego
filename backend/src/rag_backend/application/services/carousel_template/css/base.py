@@ -160,23 +160,23 @@ def _get_neon_base_css(theme: dict[str, str]) -> str:
     z-index: 10;
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 6px 12px 6px 6px;
-    background: rgba(6,10,18,0.7);
+    gap: 10px;
+    padding: 8px 16px 8px 8px;
+    background: rgba(6,10,18,0.82);
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
-    border: 1px solid rgba(255,255,255,0.06);
+    border: 1px solid {primary}26;
     border-radius: 100px;
     max-width: calc(100% - 32px);
   }}
   .creator-watermark-avatar {{
-    width: 24px;
-    height: 24px;
+    width: 44px;
+    height: 44px;
     border-radius: 50%;
     overflow: hidden;
     flex-shrink: 0;
-    border: 1.5px solid var(--primary);
-    box-shadow: 0 0 6px var(--primary-dim);
+    border: 2px solid var(--primary);
+    box-shadow: 0 0 14px var(--primary-dim);
   }}
   .creator-watermark-avatar img {{
     width: 100%;
@@ -190,24 +190,24 @@ def _get_neon_base_css(theme: dict[str, str]) -> str:
     min-width: 0;
   }}
   .creator-watermark-name {{
-    font-size: 11px;
+    font-size: 15px;
     font-weight: 700;
     color: var(--text);
     line-height: 1.2;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    max-width: 120px;
+    max-width: 180px;
   }}
   .creator-watermark-handle {{
-    font-size: 9px;
+    font-size: 12px;
     color: var(--text-60);
     font-family: var(--font-mono);
     line-height: 1.2;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    max-width: 120px;
+    max-width: 180px;
   }}
 
   .slide-counter {{
@@ -218,12 +218,12 @@ def _get_neon_base_css(theme: dict[str, str]) -> str:
   }}
   .counter-dots {{
     display: flex;
-    gap: 4px;
+    gap: 5px;
     min-width: 0;
   }}
   .counter-dot {{
-    width: 6px;
-    height: 6px;
+    width: 8px;
+    height: 8px;
     border-radius: 50%;
     background: rgba(255,255,255,0.18);
     transition: background 0.3s, width 0.3s, border-radius 0.3s, box-shadow 0.3s;
@@ -231,14 +231,14 @@ def _get_neon_base_css(theme: dict[str, str]) -> str:
   }}
   .counter-dot.active {{
     background: var(--primary);
-    box-shadow: 0 0 6px var(--primary-dim);
-    width: 16px;
-    border-radius: 3px;
+    box-shadow: 0 0 10px var(--primary-dim);
+    width: 24px;
+    border-radius: 4px;
   }}
   .counter-dot.past {{ background: {primary}40; }}
   .counter-label {{
     font-family: var(--font-mono);
-    font-size: 11px;
+    font-size: 13px;
     color: var(--text-55);
     flex-shrink: 0;
     overflow-wrap: break-word;

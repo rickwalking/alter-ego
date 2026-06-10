@@ -6,6 +6,15 @@ from rag_backend.infrastructure.database.models.carousel import (
     CarouselSlideModel,
     ResearchSourceModel,
 )
+from rag_backend.infrastructure.database.models.carousel_artifact_build import (
+    CarouselArtifactBuildModel,
+)
+from rag_backend.infrastructure.database.models.carousel_creator_asset import (
+    CarouselCreatorAssetModel,
+)
+from rag_backend.infrastructure.database.models.carousel_image_generation import (
+    CarouselImageGenerationModel,
+)
 from rag_backend.infrastructure.database.models.content_lock import ContentLockModel
 from rag_backend.infrastructure.database.models.conversation import (
     ConversationModel,
@@ -33,6 +42,9 @@ from rag_backend.infrastructure.database.models.workflow_audit_log import (
 
 __all__ = [
     "BlogPostModel",
+    "CarouselArtifactBuildModel",
+    "CarouselCreatorAssetModel",
+    "CarouselImageGenerationModel",
     "CarouselProjectModel",
     "CarouselSlideModel",
     "ContentLockModel",

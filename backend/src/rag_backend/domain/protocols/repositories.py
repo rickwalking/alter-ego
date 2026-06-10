@@ -2,6 +2,7 @@ from typing import Protocol
 from uuid import UUID
 
 from rag_backend.domain.models import (
+    CarouselImageGeneration,
     CarouselProject,
     CarouselSlide,
     CarouselStatus,
@@ -122,6 +123,14 @@ class CarouselRepository(Protocol):
     async def get_slides_by_project(self, project_id: UUID) -> list[CarouselSlide]: ...
 
     async def update_slide(self, slide: CarouselSlide) -> CarouselSlide: ...
+
+    async def get_image_generation_by_key(
+        self, generation_key: str
+    ) -> CarouselImageGeneration | None: ...
+
+    async def upsert_image_generation(
+        self, generation: CarouselImageGeneration
+    ) -> CarouselImageGeneration: ...
 
     async def delete_slides_by_project(self, project_id: UUID) -> bool: ...
 

@@ -11,6 +11,7 @@ from rag_backend.domain.constants.auth import ROLE_ADMIN
 from rag_backend.domain.constants.carousel import CAROUSEL_STATUS_FAILED
 from rag_backend.domain.constants.carousel_workflow import (
     PHASE_PUBLISHED,
+    PHASE_STATUS_IN_PROGRESS,
     PHASE_STATUS_REJECTED,
 )
 from rag_backend.domain.constants.notifications import (
@@ -21,6 +22,7 @@ from rag_backend.domain.constants.workflow_alerts import (
     ALERT_FAILURE_WINDOW_HOURS,
     ALERT_LOG_EVENT,
     ALERT_REASON_TRUNCATE_LENGTH,
+    ALERT_STALE_IN_PROGRESS_MINUTES,
     ALERT_STUCK_WORKFLOW_HOURS,
     ALERT_TYPE_CAROUSEL_FAILED,
     ALERT_TYPE_HIGH_FAILURE_RATE,
@@ -119,10 +121,19 @@ class WorkflowFailureAlertService:
             select(CarouselProjectModel).where(
                 CarouselProjectModel.current_phase != PHASE_PUBLISHED,
                 CarouselProjectModel.phase_status != PHASE_STATUS_REJECTED,
+                CarouselProjectModel.phase_status != PHASE_STATUS_IN_PROGRESS,
                 CarouselProjectModel.updated_at <= cutoff,
             )
         )
         stuck = list(result.scalars().all())
+        stale_cutoff = datetime.now(UTC) - timedelta(minutes=ALERT_STALE_IN_PROGRESS_MINUTES)
+        stale_result = await db.execute(
+            select(CarouselProjectModel).where(
+                CarouselProjectModel.phase_status == PHASE_STATUS_IN_PROGRESS,
+                CarouselProjectModel.updated_at <= stale_cutoff,
+            )
+        )
+        stuck.extend(stale_result.scalars().all())
         admin_ids = await self._admin_user_ids(db)
         count = 0
         for project in stuck:
