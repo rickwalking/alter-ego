@@ -48,13 +48,58 @@ export interface ContentSource {
   is_primary: boolean;
 }
 
+export interface SlideValidationViolation {
+  code: string;
+  message: string;
+  slide_index?: number | null;
+  locale?: string | null;
+  field?: string | null;
+}
+
+export interface SlideValidationReport {
+  validation_status: string;
+  validated_at: string;
+  blocking: boolean;
+  violations: SlideValidationViolation[];
+}
+
+export interface LocalizedSlideReview {
+  slide_index: number;
+  slide_type: string;
+  presentation_pt: Record<string, unknown>;
+  presentation_en: Record<string, unknown>;
+}
+
+export interface SlideImagePrompt {
+  slide_index: number;
+  title: string;
+  image_prompt: string;
+  rendered_image_prompt?: string | null;
+  image_generation_key?: string | null;
+  image_prompt_hash?: string | null;
+  image_provider?: string | null;
+  image_model?: string | null;
+  image_style?: string | null;
+  theme_name?: string | null;
+  theme_colors?: Record<string, string> | null;
+}
+
+export type WorkflowPhaseStatus =
+  | "pending"
+  | "in_progress"
+  | "awaiting_human"
+  | "approved"
+  | "rejected"
+  | "failed";
+
 export interface EditorialWorkflowState {
   project_id: string;
   current_phase: string;
-  phase_status: string;
+  phase_status: WorkflowPhaseStatus;
   research_findings: Record<string, unknown>[];
   outline: Record<string, unknown>[];
   slide_drafts: Record<string, unknown>[];
+  slide_image_prompts?: SlideImagePrompt[] | null;
   image_assets?: string[];
   design_applied?: boolean;
   phase_progress?: Record<string, unknown> | null;
@@ -67,4 +112,8 @@ export interface EditorialWorkflowState {
   workflow_status?: string;
   persona_scores?: Record<string, unknown>;
   lock_version?: number;
+  error_message?: string;
+  presentation_policy_version?: string | null;
+  localized_slides?: LocalizedSlideReview[];
+  presentation_validation?: SlideValidationReport | null;
 }

@@ -393,6 +393,11 @@
     "persona": {
       "belowThreshold": "Persona voice match is below the required threshold. Revise content before approving."
     },
+    "presentation": {
+      "blockedApproval": "Blocking presentation violations must be resolved before approving content.",
+      "editBudgetBlocked": "Edited copy exceeds the presentation field budgets. Shorten the highlighted fields before approving.",
+      "unsavedEdits": "Edited slide copy will be submitted with approval using the current workflow version."
+    },
     "publishReady": "Final review approved. Open the publish panel to release the carousel to the public site.",
     "gate": {
       "title": "Ready to start?",
@@ -414,6 +419,7 @@
       "title": "Generated artifacts",
       "outlineSlides": "{count, plural, one {# outline slide} other {# outline slides}}",
       "contentDrafts": "{count, plural, one {# content draft} other {# content drafts}}",
+      "imagePromptsReady": "{count} image prompts ready",
       "designApplied": "Design system applied",
       "ready": "Ready",
       "imagesGenerated": "{count, plural, one {# image generated} other {# images generated}}"
@@ -423,12 +429,27 @@
       "findingFallback": "Finding {index}",
       "outlineTitle": "Outline for review",
       "contentTitle": "Slide copy for review",
+      "localePt": "Portuguese",
+      "localeEn": "English",
+      "slideLabel": "Slide {index}",
+      "presentationPolicy": "Policy {version}",
+      "presentationBlocked": "Approval is blocked until all presentation violations are resolved.",
+      "violationsTitle": "Presentation violations",
       "designTitle": "Design review",
       "designReady": "Design tokens are applied. Approve to generate slide images.",
       "designPending": "Review the outline and content above, then approve to apply design and generate images.",
       "outlineSlides": "{count, plural, one {# slide in outline} other {# slides in outline}}",
       "imagesTitle": "Generated images",
+      "imagePromptsTitle": "Slide image prompts",
+      "imagePromptsCount": "{count} prompts",
+      "imagePromptForSlide": "Slide {index} image prompt",
+      "imagePromptTextareaLabel": "Image prompt for slide {index}",
       "untitledSlide": "Untitled slide",
+      "fieldBudget": "Budget: {usage}",
+      "headingLabel": "Heading",
+      "bodyLabel": "Body",
+      "structuredExtra": "Structured field: {field}",
+      "imagePromptsLink": "{count, plural, one {# image prompt is available in the Images step.} other {# image prompts are available in the Images step.}}",
       "emptyPhase": "No generated content is available for this phase yet. Try refreshing or re-approving the previous step.",
       "finalReview": {
         "title": "Final review",
@@ -445,6 +466,15 @@
         "captionEmpty": "No caption has been generated yet.",
         "qualityEmpty": "Quality scores are not available yet."
       }
+    },
+    "failed": {
+      "phaseLabel": "{phase} failed",
+      "genericLabel": "Workflow failed",
+      "description": "The workflow encountered an error during the {phase} phase and could not continue. You can retry from the beginning.",
+      "errorDetail": "Error details",
+      "retryButton": "Retry Workflow",
+      "retrying": "Restarting workflow…",
+      "goBack": "← Back to workspace"
     },
     "errors": {
       "startFailed": "Failed to start editorial workflow",

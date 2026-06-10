@@ -155,7 +155,8 @@ export function useEditorialWorkflow(projectId: string) {
     start,
     resume,
     refreshState,
-    approve: () => resume(EDITORIAL_REVIEW_ACTIONS.APPROVE),
+    approve: (options?: EditorialReviseOptions) =>
+      resume(EDITORIAL_REVIEW_ACTIONS.APPROVE, undefined, options),
     revise: (feedback: string, options?: EditorialReviseOptions) =>
       resume(EDITORIAL_REVIEW_ACTIONS.REVISE, feedback, options),
     awaitingHumanReview:

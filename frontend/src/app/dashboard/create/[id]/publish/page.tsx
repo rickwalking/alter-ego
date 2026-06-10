@@ -11,6 +11,8 @@ import { BG_CARD, TEXT_DIM } from "@/constants/neon";
 import { DASHBOARD_ROUTES } from "@/constants/dashboard-routes";
 import { API_ENDPOINTS, HTTP_METHODS, ROUTE_PATHS } from "@/constants/api";
 import { EDITORIAL_WORKFLOW_STATUS } from "@/constants/editorial-workflow";
+import { WORKFLOW_PHASE_STATUS } from "@/constants/workflow";
+import { WorkflowFailedCard } from "@/features/create/components/workflow-failed-card";
 import { useCarouselProject } from "@/features/create/hooks";
 import { useEditorialWorkflow } from "@/features/create/hooks/use-editorial-workflow";
 import { PublishPanel } from "@/features/publish/components";
@@ -195,7 +197,31 @@ export default function DashboardCreatePublishPage(): React.ReactElement {
           </Link>
         </div>
 
-        {!canPublishToSite && (
+        {!canPublishToSite && workflowState?.phase_status === WORKFLOW_PHASE_STATUS.FAILED && (
+          <div style={{ marginBottom: "16px" }}>
+            <WorkflowFailedCard
+              currentPhase={workflowState.current_phase}
+              errorMessage={workflowState.error_message}
+              onRetry={() => {
+                window.location.href = `${DASHBOARD_ROUTES.CREATE_WORKSPACE(projectId)}?step=outline`;
+              }}
+              isRetrying={false}
+            />
+            <Link
+              href={`${DASHBOARD_ROUTES.CREATE_WORKSPACE(projectId)}?step=outline`}
+              style={{
+                display: "inline-block",
+                marginTop: "12px",
+                fontSize: "13px",
+                color: "#00d4ff",
+                textDecoration: "none",
+              }}
+            >
+              {t("backToWorkspace")}
+            </Link>
+          </div>
+        )}
+        {!canPublishToSite && workflowState?.phase_status !== WORKFLOW_PHASE_STATUS.FAILED && (
           <p
             style={{
               ...panelStyle,

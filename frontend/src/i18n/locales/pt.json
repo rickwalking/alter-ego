@@ -393,6 +393,11 @@
     "persona": {
       "belowThreshold": "A correspondência de voz da persona está abaixo do limite exigido. Revise o conteúdo antes de aprovar."
     },
+    "presentation": {
+      "blockedApproval": "Resolva as violações de apresentação bloqueantes antes de aprovar o conteúdo.",
+      "editBudgetBlocked": "O texto editado excede os orçamentos de campo da apresentação. Encurte os campos destacados antes de aprovar.",
+      "unsavedEdits": "O texto editado dos slides será enviado na aprovação com a versão atual do workflow."
+    },
     "publishReady": "Revisão final aprovada. Abra o painel de publicação para liberar o carrossel no site público.",
     "gate": {
       "title": "Pronto para iniciar?",
@@ -414,6 +419,7 @@
       "title": "Artefatos gerados",
       "outlineSlides": "{count, plural, one {# slide no outline} other {# slides no outline}}",
       "contentDrafts": "{count, plural, one {# rascunho de conteúdo} other {# rascunhos de conteúdo}}",
+      "imagePromptsReady": "{count} prompts de imagem prontos",
       "designApplied": "Sistema de design aplicado",
       "ready": "Pronto",
       "imagesGenerated": "{count, plural, one {# imagem gerada} other {# imagens geradas}}"
@@ -423,12 +429,27 @@
       "findingFallback": "Achado {index}",
       "outlineTitle": "Outline para revisão",
       "contentTitle": "Textos dos slides para revisão",
+      "localePt": "Português",
+      "localeEn": "Inglês",
+      "slideLabel": "Slide {index}",
+      "presentationPolicy": "Política {version}",
+      "presentationBlocked": "A aprovação está bloqueada até que todas as violações de apresentação sejam resolvidas.",
+      "violationsTitle": "Violações de apresentação",
       "designTitle": "Revisão de design",
       "designReady": "Tokens de design aplicados. Aprove para gerar as imagens dos slides.",
       "designPending": "Revise o outline e o conteúdo acima, depois aprove para aplicar o design e gerar imagens.",
       "outlineSlides": "{count, plural, one {# slide no outline} other {# slides no outline}}",
       "imagesTitle": "Imagens geradas",
+      "imagePromptsTitle": "Prompts de imagem dos slides",
+      "imagePromptsCount": "{count} prompts",
+      "imagePromptForSlide": "Prompt de imagem do slide {index}",
+      "imagePromptTextareaLabel": "Prompt de imagem para o slide {index}",
       "untitledSlide": "Slide sem título",
+      "fieldBudget": "Orçamento: {usage}",
+      "headingLabel": "Título",
+      "bodyLabel": "Corpo",
+      "structuredExtra": "Campo estruturado: {field}",
+      "imagePromptsLink": "{count, plural, one {# prompt de imagem está disponível na etapa Imagens.} other {# prompts de imagem estão disponíveis na etapa Imagens.}}",
       "emptyPhase": "Nenhum conteúdo gerado está disponível para esta fase. Tente atualizar ou aprovar novamente a etapa anterior.",
       "finalReview": {
         "title": "Revisão final",
@@ -445,6 +466,15 @@
         "captionEmpty": "Nenhuma legenda foi gerada ainda.",
         "qualityEmpty": "Pontuações de qualidade ainda não estão disponíveis."
       }
+    },
+    "failed": {
+      "phaseLabel": "{phase} falhou",
+      "genericLabel": "Fluxo de trabalho falhou",
+      "description": "O fluxo de trabalho encontrou um erro durante a fase {phase} e não pôde continuar. Você pode tentar novamente do início.",
+      "errorDetail": "Detalhes do erro",
+      "retryButton": "Tentar Novamente",
+      "retrying": "Reiniciando fluxo…",
+      "goBack": "← Voltar ao workspace"
     },
     "errors": {
       "startFailed": "Falha ao iniciar o fluxo editorial",

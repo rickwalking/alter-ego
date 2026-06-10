@@ -1,9 +1,15 @@
 "use client";
 
 import { useTranslations } from "next-intl";
+import { ContentPhaseReview } from "@/app/dashboard/create/workspace/phase-review/content-phase-review";
 import { EDITORIAL_PHASES } from "@/constants/editorial-workflow";
 import { TEXT_DIM } from "@/constants/neon";
 import type { EditorialWorkflowState } from "@/features/blog/types-ai";
+import {
+  resolveLocalizedSlides,
+  resolveSlideDraftPreview,
+  resolveSlideDraftTitle,
+} from "@/features/create/lib/presentation-review-utils";
 import {
   CREATE_STEP_IDS,
   CREATE_STEP_TO_EDITORIAL_PHASE,
@@ -76,6 +82,11 @@ export function CreateStepHistoryPanel({
   }
 
   if (viewStepId === CREATE_STEP_IDS.CONTENT) {
+    const localizedSlides = resolveLocalizedSlides(state);
+    if (localizedSlides.length > 0) {
+      return <ContentPhaseReview state={state} editable={false} slides={localizedSlides} />;
+    }
+
     const drafts = state.slide_drafts ?? [];
     return (
       <div className="space-y-2 text-sm" style={{ color: TEXT_DIM }}>
@@ -85,15 +96,14 @@ export function CreateStepHistoryPanel({
         <ol className="list-decimal space-y-3 pl-5">
           {drafts.map((slide, index) => {
             const record = slide as Record<string, unknown>;
-            const text =
-              asString(record.draft_text) || asString(record.body) || "";
+            const text = resolveSlideDraftPreview(record);
             return (
               <li key={`draft-${index}`}>
                 <p
                   className="font-medium"
                   style={{ color: "rgba(255,255,255,0.88)" }}
                 >
-                  {outlineTitle(record, untitled)}
+                  {resolveSlideDraftTitle(record, untitled)}
                 </p>
                 {text ? (
                   <p className="mt-1 whitespace-pre-wrap">{text}</p>

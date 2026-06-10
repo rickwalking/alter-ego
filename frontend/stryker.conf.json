@@ -31,6 +31,7 @@
     "src/components/atoms/neon-button.tsx",
     "src/components/atoms/neon-badge.tsx",
     "src/components/molecules/neon-card.tsx",
+    "src/features/create/components/image-prompt-review.tsx",
     "src/features/dashboard/workflow/adapters/workflow-adapter.ts",
     "src/features/knowledge/adapters/document-adapter.ts",
     "src/features/blog/adapters/blog-post-adapter.ts"

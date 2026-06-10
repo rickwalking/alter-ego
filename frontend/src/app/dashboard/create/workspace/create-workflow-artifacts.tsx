@@ -23,9 +23,15 @@ export function CreateWorkflowArtifacts({
 
   const outlineCount = countItems(state.outline);
   const draftCount = countItems(state.slide_drafts);
+  const promptCount = state.slide_image_prompts?.length ?? 0;
   const imageCount = state.image_assets?.length ?? 0;
 
-  if (outlineCount === 0 && draftCount === 0 && imageCount === 0) {
+  if (
+    outlineCount === 0 &&
+    draftCount === 0 &&
+    promptCount === 0 &&
+    imageCount === 0
+  ) {
     return null;
   }
 
@@ -45,6 +51,9 @@ export function CreateWorkflowArtifacts({
           <li>{t("outlineSlides", { count: outlineCount })}</li>
         )}
         {draftCount > 0 && <li>{t("contentDrafts", { count: draftCount })}</li>}
+        {promptCount > 0 && (
+          <li>{t("imagePromptsReady", { count: promptCount })}</li>
+        )}
         {state.design_applied && (
           <li className="flex items-center gap-2">
             {t("designApplied")}

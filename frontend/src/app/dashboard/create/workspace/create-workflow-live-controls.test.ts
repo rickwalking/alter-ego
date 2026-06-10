@@ -19,7 +19,6 @@ describe("shouldShowLiveWorkflowControls", () => {
   it("shows controls only on the live workflow step at human gate", () => {
     expect(
       shouldShowLiveWorkflowControls(
-        EDITORIAL_PHASES.OUTLINE,
         baseState,
         CREATE_STEP_IDS.OUTLINE,
         CREATE_STEP_IDS.OUTLINE,
@@ -31,7 +30,6 @@ describe("shouldShowLiveWorkflowControls", () => {
   it("hides controls on historical steps", () => {
     expect(
       shouldShowLiveWorkflowControls(
-        EDITORIAL_PHASES.OUTLINE,
         { ...baseState, current_phase: EDITORIAL_PHASES.CONTENT },
         CREATE_STEP_IDS.OUTLINE,
         CREATE_STEP_IDS.CONTENT,
@@ -43,12 +41,22 @@ describe("shouldShowLiveWorkflowControls", () => {
   it("hides controls when not awaiting human review", () => {
     expect(
       shouldShowLiveWorkflowControls(
-        EDITORIAL_PHASES.OUTLINE,
         baseState,
         CREATE_STEP_IDS.OUTLINE,
         CREATE_STEP_IDS.OUTLINE,
         false,
       ),
     ).toBe(false);
+  });
+
+  it("shows controls when design phase maps to images tab", () => {
+    expect(
+      shouldShowLiveWorkflowControls(
+        { ...baseState, current_phase: EDITORIAL_PHASES.DESIGN },
+        CREATE_STEP_IDS.IMAGES,
+        CREATE_STEP_IDS.IMAGES,
+        true,
+      ),
+    ).toBe(true);
   });
 });

@@ -86,7 +86,10 @@ export const PERSONA_VOICE_MATCH_MIN_SCORE = 70;
 export const WORKFLOW_ARTIFACT_FIELD_MAP: Record<string, string> = {
   outline: "outline",
   slide_drafts: "slide_drafts",
+  slide_image_prompts: "slide_image_prompts",
   design_applied: "design_applied",
   image_assets: "image_assets",
   persona_scores: "persona_scores",
+  localized_slides: "localized_slides",
+  presentation_validation: "presentation_validation",
 } as const;

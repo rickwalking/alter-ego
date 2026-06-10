@@ -29,6 +29,7 @@ export interface WorkflowEventPayload {
   research_findings?: Record<string, unknown>[];
   outline?: Record<string, unknown>[];
   slide_drafts?: Record<string, unknown>[];
+  slide_image_prompts?: EditorialWorkflowState["slide_image_prompts"];
   image_assets?: string[];
   design_applied?: boolean;
   phase_progress?: Record<string, unknown> | null;
@@ -42,6 +43,9 @@ export interface WorkflowEventPayload {
   status?: string;
   artifact_type?: string;
   data?: unknown;
+  presentation_policy_version?: string | null;
+  localized_slides?: EditorialWorkflowState["localized_slides"];
+  presentation_validation?: EditorialWorkflowState["presentation_validation"];
 }
 
 export interface EditorialWorkflowResumeAcceptedResponse {
@@ -188,6 +192,8 @@ export function mergeWorkflowState(
       research_findings: payload.research_findings,
       outline: payload.outline,
       slide_drafts: payload.slide_drafts,
+      slide_image_prompts:
+        payload.slide_image_prompts ?? prev?.slide_image_prompts ?? null,
       image_assets: payload.image_assets ?? prev?.image_assets ?? [],
       design_applied: payload.design_applied ?? prev?.design_applied ?? false,
       phase_progress:
@@ -203,6 +209,11 @@ export function mergeWorkflowState(
       linkedin_post_en: payload.linkedin_post_en ?? prev?.linkedin_post_en,
       workflow_status: payload.workflow_status ?? prev?.workflow_status,
       status: payload.status ?? prev?.status ?? "draft",
+      presentation_policy_version:
+        payload.presentation_policy_version ?? prev?.presentation_policy_version,
+      localized_slides: payload.localized_slides ?? prev?.localized_slides,
+      presentation_validation:
+        payload.presentation_validation ?? prev?.presentation_validation,
     };
   }
 
@@ -210,11 +221,13 @@ export function mergeWorkflowState(
     project_id: projectId,
     current_phase:
       payload.phase ?? payload.current_phase ?? prev?.current_phase ?? "",
-    phase_status: payload.phase_status ?? prev?.phase_status ?? "",
+      phase_status: (payload.phase_status ?? prev?.phase_status ?? "") as import("@/features/blog/types-ai").WorkflowPhaseStatus,
     research_findings:
       payload.research_findings ?? prev?.research_findings ?? [],
     outline: payload.outline ?? prev?.outline ?? [],
     slide_drafts: payload.slide_drafts ?? prev?.slide_drafts ?? [],
+    slide_image_prompts:
+      payload.slide_image_prompts ?? prev?.slide_image_prompts ?? null,
     image_assets: payload.image_assets ?? prev?.image_assets ?? [],
     design_applied: payload.design_applied ?? prev?.design_applied ?? false,
     phase_progress:
@@ -230,6 +243,11 @@ export function mergeWorkflowState(
     linkedin_post_en: payload.linkedin_post_en ?? prev?.linkedin_post_en,
     workflow_status: payload.workflow_status ?? prev?.workflow_status,
     status: payload.status ?? prev?.status ?? "draft",
+    presentation_policy_version:
+      payload.presentation_policy_version ?? prev?.presentation_policy_version,
+    localized_slides: payload.localized_slides ?? prev?.localized_slides,
+    presentation_validation:
+      payload.presentation_validation ?? prev?.presentation_validation,
   };
 }
 
