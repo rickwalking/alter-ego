@@ -15,7 +15,7 @@ from rag_backend.application.services.carousel.artifact_manifest import (
     manifest_from_payload,
 )
 from rag_backend.application.services.carousel.artifact_path_resolver import (
-    resolve_artifact_serving_paths,
+    resolve_and_reconcile_serving_paths,
     resolve_manifest_path,
 )
 from rag_backend.application.services.carousel.image_validation import (
@@ -117,7 +117,7 @@ def evaluate_carousel_artifacts(
     request: CarouselArtifactHealthRequest,
 ) -> CarouselArtifactHealthReport:
     """Validate all files needed before final review, publish, or Instagram."""
-    serving_paths = resolve_artifact_serving_paths(request.project)
+    serving_paths = resolve_and_reconcile_serving_paths(request.project)
     output_dir = serving_paths.serving_root if serving_paths is not None else None
     expected = _expected_slide_numbers(request.slides)
     warnings: list[str] = []
@@ -155,9 +155,7 @@ def evaluate_carousel_artifacts(
     rendered_en = _slide_numbers(output_dir / LANGUAGE_EN)
     if _requires_english(request):
         errors.extend(_validate_language(output_dir, LANGUAGE_EN, expected))
-    raw_root = (
-        serving_paths.project_root if serving_paths is not None else output_dir
-    )
+    raw_root = serving_paths.project_root if serving_paths is not None else output_dir
     errors.extend(_validate_raw_images(request, raw_root))
     errors.extend(_validate_pdfs(request, output_dir, expected))
     if request.project.artifact_version:
@@ -190,7 +188,7 @@ def _report(report_input: ReportInput) -> CarouselArtifactHealthReport:
 
 
 def _resolved_output_dir(project: CarouselProject) -> Path | None:
-    serving_paths = resolve_artifact_serving_paths(project)
+    serving_paths = resolve_and_reconcile_serving_paths(project)
     if serving_paths is None:
         return None
     return serving_paths.serving_root
@@ -282,7 +280,9 @@ def _validate_raw_images(
         for slide in slide_data
         if slide.slide_type in IMAGE_SLIDE_TYPES and not slide.image_prompt
     ]
-    raw_slide_numbers = [slide.slide_number for slide in filter_image_slides(slide_data)]
+    raw_slide_numbers = [
+        slide.slide_number for slide in filter_image_slides(slide_data)
+    ]
     for slide_number in raw_slide_numbers:
         path = output_dir / SHARED_IMAGES_DIR_NAME / _slide_filename(slide_number)
         if not path.is_file():

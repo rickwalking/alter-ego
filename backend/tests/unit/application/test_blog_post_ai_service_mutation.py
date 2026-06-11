@@ -13,7 +13,10 @@ import pytest
 from rag_backend.application.services.blog_post_ai_service import (
     BlogAiTraceContext,
     BlogPostAIService,
+    _ImproveInput,
+    _SuggestInput,
 )
+from rag_backend.application.services.blog_workflow_observability import StartupParams
 from rag_backend.domain.constants.blog_ai import (
     ERR_IMAGE_GENERATION_FAILED,
     PROMPT_AI_IMPROVE,
@@ -72,9 +75,11 @@ class TestBlogPostAIServiceMutationKillers:
         with patch(
             "rag_backend.application.services.blog_post_ai_service.start_blog_workflow_trace"
         ) as mock_trace:
-            await service.suggest("text", action="improve")
+            await service.suggest(_SuggestInput("text", action="improve"))
 
-        mock_trace.assert_called_once_with("unknown", "system")
+        mock_trace.assert_called_once_with(
+            StartupParams(post_id="unknown", user_id="system")
+        )
 
     @pytest.mark.asyncio
     async def test_suggest_trace_with_empty_post_id(
@@ -85,9 +90,11 @@ class TestBlogPostAIServiceMutationKillers:
         with patch(
             "rag_backend.application.services.blog_post_ai_service.start_blog_workflow_trace"
         ) as mock_trace:
-            await service.suggest("text", action="improve", trace=trace)
+            await service.suggest(_SuggestInput("text", action="improve", trace=trace))
 
-        mock_trace.assert_called_once_with("unknown", "u1")
+        mock_trace.assert_called_once_with(
+            StartupParams(post_id="unknown", user_id="u1")
+        )
 
     @pytest.mark.asyncio
     async def test_suggest_uses_exact_blog_ai_propagate(
@@ -107,7 +114,7 @@ class TestBlogPostAIServiceMutationKillers:
                 __exit__=MagicMock(return_value=False),
             ),
         ) as mock_propagate:
-            await service.suggest("text", action="improve", trace=trace)
+            await service.suggest(_SuggestInput("text", action="improve", trace=trace))
 
         mock_propagate.assert_called_once_with("post-1", "ai_suggest")
 
@@ -121,7 +128,9 @@ class TestBlogPostAIServiceMutationKillers:
             "explanation": "ok",
         })
 
-        await service.suggest("draft text", action="improve", context="blog intro")
+        await service.suggest(
+            _SuggestInput("draft text", action="improve", context="blog intro")
+        )
 
         expected = PROMPT_AI_SUGGEST.format(
             action="improve",
@@ -141,7 +150,9 @@ class TestBlogPostAIServiceMutationKillers:
             "explanation": "ok",
         })
 
-        await service.suggest("draft text", action="improve", context=None)
+        await service.suggest(
+            _SuggestInput("draft text", action="improve", context=None)
+        )
 
         expected = PROMPT_AI_SUGGEST.format(
             action="improve",
@@ -161,7 +172,9 @@ class TestBlogPostAIServiceMutationKillers:
             "explanation": "ok",
         })
 
-        await service.suggest("Hello <World>", action="improve", context="CTX")
+        await service.suggest(
+            _SuggestInput("Hello <World>", action="improve", context="CTX")
+        )
 
         expected = PROMPT_AI_SUGGEST.format(
             action="improve",
@@ -181,7 +194,7 @@ class TestBlogPostAIServiceMutationKillers:
             "explanation": "ok",
         })
 
-        await service.suggest("draft", action="improve")
+        await service.suggest(_SuggestInput("draft", action="improve"))
 
         llm_service.generate.assert_awaited_once_with(
             messages=[
@@ -207,7 +220,7 @@ class TestBlogPostAIServiceMutationKillers:
             "explanation": "Clearer wording",
         })
 
-        result = await service.suggest("original", action="improve")
+        result = await service.suggest(_SuggestInput("original", action="improve"))
 
         assert result == {
             "original_text": "original",
@@ -223,7 +236,7 @@ class TestBlogPostAIServiceMutationKillers:
         """Given JSON without suggested_text, when suggesting, then raw is used."""
         llm_service.generate.return_value = json.dumps({"explanation": "only exp"})
 
-        result = await service.suggest("original", action="improve")
+        result = await service.suggest(_SuggestInput("original", action="improve"))
 
         assert result["suggested_text"] == json.dumps({"explanation": "only exp"})
 
@@ -236,7 +249,7 @@ class TestBlogPostAIServiceMutationKillers:
             "suggested_text": "Better text"
         })
 
-        result = await service.suggest("original", action="improve")
+        result = await service.suggest(_SuggestInput("original", action="improve"))
 
         assert result["explanation"] == ""
 
@@ -247,7 +260,7 @@ class TestBlogPostAIServiceMutationKillers:
         """Given JSON with int suggested_text, when suggesting, then str is applied."""
         llm_service.generate.return_value = json.dumps({"suggested_text": 42})
 
-        result = await service.suggest("original", action="improve")
+        result = await service.suggest(_SuggestInput("original", action="improve"))
 
         assert result["suggested_text"] == "42"
 
@@ -261,7 +274,7 @@ class TestBlogPostAIServiceMutationKillers:
             "explanation": 99,
         })
 
-        result = await service.suggest("original", action="improve")
+        result = await service.suggest(_SuggestInput("original", action="improve"))
 
         assert result["explanation"] == "99"
 
@@ -272,7 +285,7 @@ class TestBlogPostAIServiceMutationKillers:
         """Given non-JSON response, when suggesting, then exact fallback is used."""
         llm_service.generate.return_value = "plain rewrite text"
 
-        result = await service.suggest("original", action="improve")
+        result = await service.suggest(_SuggestInput("original", action="improve"))
 
         assert result["suggested_text"] == "plain rewrite text"
         assert result["explanation"] == "Suggested improve rewrite."
@@ -284,7 +297,7 @@ class TestBlogPostAIServiceMutationKillers:
         """Given non-JSON with whitespace, when suggesting, then strip is applied."""
         llm_service.generate.return_value = "  plain text  "
 
-        result = await service.suggest("original", action="improve")
+        result = await service.suggest(_SuggestInput("original", action="improve"))
 
         assert result["suggested_text"] == "plain text"
 
@@ -295,7 +308,7 @@ class TestBlogPostAIServiceMutationKillers:
         """Given shorten action and non-JSON, when suggesting, then exact explanation."""
         llm_service.generate.return_value = "raw"
 
-        result = await service.suggest("original", action="shorten")
+        result = await service.suggest(_SuggestInput("original", action="shorten"))
 
         assert result["explanation"] == "Suggested shorten rewrite."
 
@@ -309,7 +322,7 @@ class TestBlogPostAIServiceMutationKillers:
             "explanation": "ok",
         })
 
-        result = await service.suggest("Hello <World>", action="improve")
+        result = await service.suggest(_SuggestInput("Hello <World>", action="improve"))
 
         assert result["original_text"] == "hello world"
 
@@ -321,9 +334,13 @@ class TestBlogPostAIServiceMutationKillers:
         with patch(
             "rag_backend.application.services.blog_post_ai_service.start_blog_workflow_trace"
         ) as mock_trace:
-            await service.improve(db=AsyncMock(), text="text", action="improve")
+            await service.improve(
+                _ImproveInput(db=AsyncMock(), text="text", action="improve")
+            )
 
-        mock_trace.assert_called_once_with("unknown", "system")
+        mock_trace.assert_called_once_with(
+            StartupParams(post_id="unknown", user_id="system")
+        )
 
     @pytest.mark.asyncio
     async def test_improve_trace_with_empty_post_id(
@@ -335,13 +352,17 @@ class TestBlogPostAIServiceMutationKillers:
             "rag_backend.application.services.blog_post_ai_service.start_blog_workflow_trace"
         ) as mock_trace:
             await service.improve(
-                db=AsyncMock(),
-                text="text",
-                action="improve",
-                trace=trace,
+                _ImproveInput(
+                    db=AsyncMock(),
+                    text="text",
+                    action="improve",
+                    trace=trace,
+                )
             )
 
-        mock_trace.assert_called_once_with("unknown", "u1")
+        mock_trace.assert_called_once_with(
+            StartupParams(post_id="unknown", user_id="u1")
+        )
 
     @pytest.mark.asyncio
     async def test_improve_uses_exact_blog_ai_propagate(
@@ -359,10 +380,12 @@ class TestBlogPostAIServiceMutationKillers:
             ),
         ) as mock_propagate:
             await service.improve(
-                db=AsyncMock(),
-                text="text",
-                action="improve",
-                trace=trace,
+                _ImproveInput(
+                    db=AsyncMock(),
+                    text="text",
+                    action="improve",
+                    trace=trace,
+                )
             )
 
         mock_propagate.assert_called_once_with("post-1", "ai_improve")
@@ -375,10 +398,12 @@ class TestBlogPostAIServiceMutationKillers:
         llm_service.generate.return_value = "Improved paragraph"
 
         await service.improve(
-            db=AsyncMock(),
-            text="draft text",
-            action="expand",
-            context="section 2",
+            _ImproveInput(
+                db=AsyncMock(),
+                text="draft text",
+                action="expand",
+                context="section 2",
+            )
         )
 
         expected = PROMPT_AI_IMPROVE.format(
@@ -397,10 +422,12 @@ class TestBlogPostAIServiceMutationKillers:
         llm_service.generate.return_value = "Improved paragraph"
 
         await service.improve(
-            db=AsyncMock(),
-            text="draft text",
-            action="expand",
-            context=None,
+            _ImproveInput(
+                db=AsyncMock(),
+                text="draft text",
+                action="expand",
+                context=None,
+            )
         )
 
         expected = PROMPT_AI_IMPROVE.format(
@@ -419,10 +446,12 @@ class TestBlogPostAIServiceMutationKillers:
         llm_service.generate.return_value = "Improved paragraph"
 
         await service.improve(
-            db=AsyncMock(),
-            text="Hello <World>",
-            action="improve",
-            context="CTX",
+            _ImproveInput(
+                db=AsyncMock(),
+                text="Hello <World>",
+                action="improve",
+                context="CTX",
+            )
         )
 
         expected = PROMPT_AI_IMPROVE.format(
@@ -440,7 +469,9 @@ class TestBlogPostAIServiceMutationKillers:
         """Given inputs, when improving without persona, then exact LLM call is made."""
         llm_service.generate.return_value = "Improved paragraph"
 
-        await service.improve(db=AsyncMock(), text="draft", action="improve")
+        await service.improve(
+            _ImproveInput(db=AsyncMock(), text="draft", action="improve")
+        )
 
         llm_service.generate.assert_awaited_once_with(
             messages=[
@@ -463,7 +494,9 @@ class TestBlogPostAIServiceMutationKillers:
         """Given LLM output with whitespace, when improving, then strip is applied."""
         llm_service.generate.return_value = "  Improved paragraph  "
 
-        result = await service.improve(db=AsyncMock(), text="draft", action="improve")
+        result = await service.improve(
+            _ImproveInput(db=AsyncMock(), text="draft", action="improve")
+        )
 
         assert result["improved_text"] == "Improved paragraph"
 
@@ -474,7 +507,9 @@ class TestBlogPostAIServiceMutationKillers:
         """Given no persona, when improving, then exact dict is returned."""
         llm_service.generate.return_value = "Improved paragraph"
 
-        result = await service.improve(db=AsyncMock(), text="draft", action="shorten")
+        result = await service.improve(
+            _ImproveInput(db=AsyncMock(), text="draft", action="shorten")
+        )
 
         assert result == {
             "original_text": "draft",
@@ -499,10 +534,12 @@ class TestBlogPostAIServiceMutationKillers:
             return_value=mock_agent,
         ):
             result = await service.improve(
-                db=db,
-                text="draft",
-                action="improve",
-                persona_id="persona-1",
+                _ImproveInput(
+                    db=db,
+                    text="draft",
+                    action="improve",
+                    persona_id="persona-1",
+                )
             )
 
         assert result == {
@@ -528,10 +565,12 @@ class TestBlogPostAIServiceMutationKillers:
             return_value=mock_agent,
         ) as mock_agent_cls:
             await service.improve(
-                db=db,
-                text="draft",
-                action="improve",
-                persona_id="persona-1",
+                _ImproveInput(
+                    db=db,
+                    text="draft",
+                    action="improve",
+                    persona_id="persona-1",
+                )
             )
 
         mock_agent_cls.assert_called_once_with(
@@ -556,11 +595,13 @@ class TestBlogPostAIServiceMutationKillers:
             return_value=mock_agent,
         ):
             await service.improve(
-                db=db,
-                text="draft text",
-                action="improve",
-                persona_id="persona-1",
-                context="blog context",
+                _ImproveInput(
+                    db=db,
+                    text="draft text",
+                    action="improve",
+                    persona_id="persona-1",
+                    context="blog context",
+                )
             )
 
         mock_agent.enforce.assert_awaited_once_with(
@@ -585,10 +626,12 @@ class TestBlogPostAIServiceMutationKillers:
             return_value=mock_agent,
         ):
             await service.improve(
-                db=db,
-                text="draft",
-                action="improve",
-                persona_id="persona-1",
+                _ImproveInput(
+                    db=db,
+                    text="draft",
+                    action="improve",
+                    persona_id="persona-1",
+                )
             )
 
         llm_service.generate.assert_not_awaited()
@@ -601,9 +644,11 @@ class TestBlogPostAIServiceMutationKillers:
         llm_service.generate.return_value = "Improved paragraph"
 
         result = await service.improve(
-            db=AsyncMock(),
-            text="Hello <World>",
-            action="improve",
+            _ImproveInput(
+                db=AsyncMock(),
+                text="Hello <World>",
+                action="improve",
+            )
         )
 
         assert result["original_text"] == "hello world"
@@ -629,7 +674,9 @@ class TestBlogPostAIServiceMutationKillers:
         ):
             await service.generate_image("post-9", "prompt")
 
-        mock_trace.assert_called_once_with("post-9", "system")
+        mock_trace.assert_called_once_with(
+            StartupParams(post_id="post-9", user_id="system")
+        )
 
     @pytest.mark.asyncio
     async def test_generate_image_uses_exact_blog_ai_propagate(

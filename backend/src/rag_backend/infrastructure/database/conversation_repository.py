@@ -1,6 +1,6 @@
 """PostgreSQL repository implementations for Conversation and Message."""
 
-from typing import TypeVar
+from typing import TypedDict, TypeVar
 from uuid import UUID
 
 from sqlalchemy import desc, func, or_, select
@@ -20,6 +20,15 @@ from rag_backend.infrastructure.database.models import (
 _ERR_CONVERSATION_NOT_FOUND = "Conversation with id {} not found"
 
 _SelectRow = TypeVar("_SelectRow", bound=tuple[object, ...])
+
+
+class _UserQuery(TypedDict, total=False):
+    """Bundled query parameters for user conversation listing."""
+
+    user_id: UUID
+    limit: int
+    offset: int
+    origin: str | None
 
 
 class PostgresConversationRepository:
@@ -71,12 +80,13 @@ class PostgresConversationRepository:
 
     async def get_by_user_id(
         self,
-        user_id: UUID,
-        limit: int = 100,
-        offset: int = 0,
-        origin: str | None = None,
+        query: _UserQuery,
     ) -> list[Conversation]:
         """Get conversations owned by a user."""
+        user_id = query["user_id"]
+        limit = query.get("limit", 100)
+        offset = query.get("offset", 0)
+        origin = query.get("origin")
         stmt = (
             select(ConversationModel)
             .where(ConversationModel.owner_id == str(user_id))

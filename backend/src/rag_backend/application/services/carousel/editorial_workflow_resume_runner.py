@@ -32,6 +32,16 @@ _background_tasks: set[asyncio.Task[None]] = set()
 
 
 @dataclass(frozen=True)
+class _MarkFailedParams:
+    """Inputs for marking a background resume as failed."""
+
+    service: EditorialWorkflowService
+    project_id: str
+    message: str
+    recoverable: bool
+
+
+@dataclass(frozen=True)
 class BackgroundResumeParams:
     """Inputs required to resume a workflow in the background."""
 
@@ -64,7 +74,9 @@ async def _execute_background_resume(
     async with session_factory() as db:
         try:
             prior_state = await service.get_workflow_state(params.project_id)
-            prior_phase = str(prior_state.get("current_phase", "")) if prior_state else ""
+            prior_phase = (
+                str(prior_state.get("current_phase", "")) if prior_state else ""
+            )
 
             state = await service.resume_workflow(
                 ResumeWorkflowInput(
@@ -112,10 +124,12 @@ async def _execute_background_resume(
                     detail=detail,
                 )
             await _mark_background_resume_failed(
-                service,
-                params.project_id,
-                detail,
-                recoverable=detail != ERR_REVISION_CAP_EXCEEDED,
+                _MarkFailedParams(
+                    service=service,
+                    project_id=params.project_id,
+                    message=detail,
+                    recoverable=detail != ERR_REVISION_CAP_EXCEEDED,
+                ),
             )
         except Exception:
             await db.rollback()
@@ -124,10 +138,12 @@ async def _execute_background_resume(
                 project_id=params.project_id,
             )
             await _mark_background_resume_failed(
-                service,
-                params.project_id,
-                ERR_BACKGROUND_RESUME_FAILED,
-                recoverable=True,
+                _MarkFailedParams(
+                    service=service,
+                    project_id=params.project_id,
+                    message=ERR_BACKGROUND_RESUME_FAILED,
+                    recoverable=True,
+                ),
             )
 
 
@@ -155,7 +171,7 @@ def _detect_resume_stuck(
 async def _revert_background_resume_stuck(
     service: EditorialWorkflowService,
     project_id: str,
-    prior_phase: str,
+    _prior_phase: str,
 ) -> None:
     """Revert DB phase_status to awaiting_human and publish error SSE."""
     session_factory = get_session_maker()
@@ -172,22 +188,18 @@ async def _revert_background_resume_stuck(
 
 
 async def _mark_background_resume_failed(
-    service: EditorialWorkflowService,
-    project_id: str,
-    message: str,
-    *,
-    recoverable: bool,
+    params: _MarkFailedParams,
 ) -> None:
     session_factory = get_session_maker()
     async with session_factory() as db:
-        project = await db.get(CarouselProjectModel, project_id)
+        project = await db.get(CarouselProjectModel, params.project_id)
         if project is not None:
             project.phase_status = PHASE_STATUS_FAILED
             await db.commit()
-        await service.publish_resume_error_event(
-            project_id,
-            message=message,
-            recoverable=recoverable,
+        await params.service.publish_resume_error_event(
+            params.project_id,
+            message=params.message,
+            recoverable=params.recoverable,
         )
 
 

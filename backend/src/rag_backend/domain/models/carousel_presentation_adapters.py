@@ -15,6 +15,14 @@ from rag_backend.domain.models.carousel_presentation import SlideValidationViola
 
 _LEGACY_ICON_FIELD = "icon"
 _ICON_NAME_FIELD = "icon_name"
+_SUMMARY_POINTS_FIELD = "summary_points"
+_ACTIONS_FIELD = "actions"
+_STATS_FIELD = "stats"
+_INSIGHT_FIELD = "insight"
+_TLDR_STRIP_FIELD = "tldr_strip"
+_TRANSLATION_EN_FIELD = "translation_en"
+_FEATURES_FIELD = "features"
+_CONTENT_KIND_FIELD = "content_kind"
 
 
 def resolve_structured_item_icon_name(item: Mapping[str, object]) -> str | None:
@@ -61,6 +69,25 @@ def adapt_legacy_insight(insight: object) -> dict[str, str] | None:
     return adapt_legacy_structured_item(insight)
 
 
+def _adapt_extra_value(key: str, value: object) -> object | None:
+    """Adapt a single extra value for a given key, or None if the key is not handled."""
+    if key in {_FEATURES_FIELD, _SUMMARY_POINTS_FIELD, _STATS_FIELD}:
+        return adapt_legacy_structured_items(value)
+    if key == _INSIGHT_FIELD:
+        return adapt_legacy_insight(value)
+    if key == _TLDR_STRIP_FIELD and isinstance(value, str):
+        return value
+    return None
+
+
+def _read_translation_en(extras: Mapping[str, object]) -> dict[str, object] | None:
+    """Recursively read the translation_en nested extras, if present."""
+    translation_en = extras.get(_TRANSLATION_EN_FIELD)
+    if isinstance(translation_en, Mapping):
+        return read_legacy_slide_extras(translation_en)
+    return None
+
+
 def read_legacy_slide_extras(extras: Mapping[str, object] | None) -> dict[str, object]:
     """Build a compatibility view of slide extras without mutating persisted JSON."""
     if extras is None:
@@ -69,63 +96,53 @@ def read_legacy_slide_extras(extras: Mapping[str, object] | None) -> dict[str, o
     for key in LEGACY_STRUCTURED_EXTRA_KEYS:
         if key not in extras:
             continue
-        value = extras[key]
-        if key in {"features", "summary_points"}:
-            adapted = adapt_legacy_structured_items(value)
-            if adapted is not None:
-                view[key] = adapted
-            continue
-        if key == "stats":
-            adapted = adapt_legacy_structured_items(value)
-            if adapted is not None:
-                view[key] = adapted
-            continue
-        if key == "insight":
-            adapted = adapt_legacy_insight(value)
-            if adapted is not None:
-                view[key] = adapted
-            continue
-        if key == "tldr_strip" and isinstance(value, str):
-            view[key] = value
-    translation_en = extras.get("translation_en")
-    if isinstance(translation_en, Mapping):
-        view["translation_en"] = read_legacy_slide_extras(translation_en)
+        adapted = _adapt_extra_value(key, extras[key])
+        if adapted is not None:
+            view[key] = adapted
+    translation_view = _read_translation_en(extras)
+    if translation_view is not None:
+        view[_TRANSLATION_EN_FIELD] = translation_view
     return view
+
+
+def _count_list_field(payload: Mapping[str, object], field: str) -> int:
+    """Return the count of items in a list field, or 0 if not a list."""
+    value = payload.get(field)
+    return len(value) if isinstance(value, list) else 0
+
+
+def _content_kind_signature(payload: Mapping[str, object]) -> str | None:
+    """Return structural signature from content_kind field, or None."""
+    content_kind = payload.get(_CONTENT_KIND_FIELD)
+    if content_kind == CONTENT_KIND_FEATURES:
+        return f"{CONTENT_KIND_FEATURES}:{_count_list_field(payload, _FEATURES_FIELD)}"
+    if content_kind == CONTENT_KIND_STATS:
+        return f"{CONTENT_KIND_STATS}:{_count_list_field(payload, _STATS_FIELD)}"
+    if content_kind == CONTENT_KIND_INSIGHT:
+        return f"{CONTENT_KIND_INSIGHT}:1"
+    return None
 
 
 def structural_signature(payload: Mapping[str, object]) -> str:
     """Return a structural fingerprint used for PT/EN parity checks."""
-    if "summary_points" in payload:
-        points = payload.get("summary_points")
-        count = len(points) if isinstance(points, list) else 0
-        return f"summary_points:{count}"
-    if "actions" in payload:
-        actions = payload.get("actions")
-        count = len(actions) if isinstance(actions, list) else 0
-        return f"actions:{count}"
-    if "features" in payload:
-        features = payload.get("features")
-        count = len(features) if isinstance(features, list) else 0
-        return f"{CONTENT_KIND_FEATURES}:{count}"
-    if "stats" in payload:
-        stats = payload.get("stats")
-        count = len(stats) if isinstance(stats, list) else 0
-        return f"{CONTENT_KIND_STATS}:{count}"
-    if "insight" in payload:
-        return f"{CONTENT_KIND_INSIGHT}:1"
-    if "content_kind" in payload:
-        content_kind = payload.get("content_kind")
-        if content_kind == CONTENT_KIND_FEATURES:
-            features = payload.get("features")
-            count = len(features) if isinstance(features, list) else 0
-            return f"{CONTENT_KIND_FEATURES}:{count}"
-        if content_kind == CONTENT_KIND_STATS:
-            stats = payload.get("stats")
-            count = len(stats) if isinstance(stats, list) else 0
-            return f"{CONTENT_KIND_STATS}:{count}"
-        if content_kind == CONTENT_KIND_INSIGHT:
-            return f"{CONTENT_KIND_INSIGHT}:1"
-    tldr = payload.get("tldr_strip")
+    result: str | None = None
+    if _SUMMARY_POINTS_FIELD in payload:
+        result = f"summary_points:{_count_list_field(payload, _SUMMARY_POINTS_FIELD)}"
+    elif _ACTIONS_FIELD in payload:
+        result = f"actions:{_count_list_field(payload, _ACTIONS_FIELD)}"
+    elif _FEATURES_FIELD in payload:
+        result = (
+            f"{CONTENT_KIND_FEATURES}:{_count_list_field(payload, _FEATURES_FIELD)}"
+        )
+    elif _STATS_FIELD in payload:
+        result = f"{CONTENT_KIND_STATS}:{_count_list_field(payload, _STATS_FIELD)}"
+    elif _INSIGHT_FIELD in payload:
+        result = f"{CONTENT_KIND_INSIGHT}:1"
+    else:
+        result = _content_kind_signature(payload)
+    if result is not None:
+        return result
+    tldr = payload.get(_TLDR_STRIP_FIELD)
     if isinstance(tldr, str) and tldr.strip():
         return "intro:tldr"
     return "intro:plain"

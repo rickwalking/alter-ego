@@ -10,6 +10,7 @@ import asyncio
 import pytest
 
 from rag_backend.application.services.carousel.presentation_review_repair import (
+    LocaleRepairParams,
     attempt_locale_repair,
     repair_localized_slides,
     repair_localized_slides_sync,
@@ -31,12 +32,18 @@ class TestAttemptLocaleRepair:
         )
 
         policy = load_presentation_policy(DEFAULT_PRESENTATION_POLICY_VERSION)
-        payload = {"slide_type": "intro", "heading": "Valid Heading", "body": "Valid body"}
+        payload = {
+            "slide_type": "intro",
+            "heading": "Valid Heading",
+            "body": "Valid body",
+        }
         result = await attempt_locale_repair(
-            payload,
-            locale=LANGUAGE_PT,
-            policy=policy,
-            slide_index=1,
+            LocaleRepairParams(
+                payload=payload,
+                locale=LANGUAGE_PT,
+                policy=policy,
+                slide_index=1,
+            ),
         )
         assert result is None
 
@@ -50,10 +57,12 @@ class TestAttemptLocaleRepair:
         policy = load_presentation_policy(DEFAULT_PRESENTATION_POLICY_VERSION)
         payload = {"slide_type": "intro", "heading": "Hook 😀", "body": "Subtitle"}
         result = await attempt_locale_repair(
-            payload,
-            locale=LANGUAGE_PT,
-            policy=policy,
-            slide_index=1,
+            LocaleRepairParams(
+                payload=payload,
+                locale=LANGUAGE_PT,
+                policy=policy,
+                slide_index=1,
+            ),
         )
         assert result is not None
         assert "😀" not in str(result.get("heading"))
@@ -66,12 +75,18 @@ class TestAttemptLocaleRepair:
         )
 
         policy = load_presentation_policy(DEFAULT_PRESENTATION_POLICY_VERSION)
-        payload = {"slide_type": "intro", "heading": "lowercase heading", "body": "Body"}
+        payload = {
+            "slide_type": "intro",
+            "heading": "lowercase heading",
+            "body": "Body",
+        }
         result = await attempt_locale_repair(
-            payload,
-            locale=LANGUAGE_EN,
-            policy=policy,
-            slide_index=1,
+            LocaleRepairParams(
+                payload=payload,
+                locale=LANGUAGE_EN,
+                policy=policy,
+                slide_index=1,
+            ),
         )
         assert result is not None
         heading = str(result.get("heading"))
@@ -92,10 +107,12 @@ class TestAttemptLocaleRepair:
             "body": "x" * 500,
         }
         result = await attempt_locale_repair(
-            payload,
-            locale=LANGUAGE_PT,
-            policy=policy,
-            slide_index=1,
+            LocaleRepairParams(
+                payload=payload,
+                locale=LANGUAGE_PT,
+                policy=policy,
+                slide_index=1,
+            ),
         )
         assert result is None
 
@@ -109,10 +126,12 @@ class TestAttemptLocaleRepair:
         policy = load_presentation_policy(DEFAULT_PRESENTATION_POLICY_VERSION)
         payload = {"slide_type": "intro", "heading": "Hook 😀", "body": "Subtitle"}
         result = await attempt_locale_repair(
-            payload,
-            locale=LANGUAGE_PT,
-            policy=policy,
-            slide_index=None,
+            LocaleRepairParams(
+                payload=payload,
+                locale=LANGUAGE_PT,
+                policy=policy,
+                slide_index=None,
+            ),
         )
         assert result is not None
         assert "😀" not in str(result.get("heading"))

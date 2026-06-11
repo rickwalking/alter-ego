@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 from collections.abc import Mapping
+from dataclasses import dataclass
 
 from rag_backend.application.services.carousel.presentation_policy import (
     CarouselPresentationPolicy,
@@ -58,43 +59,57 @@ def first_cased_alpha(text: str) -> str | None:
     return None
 
 
+@dataclass(frozen=True)
+class ValidationFieldContext:
+    """Shared context for field-level validators."""
+
+    text: str = ""
+    field: str = ""
+    locale: str | None = None
+    slide_index: int | None = None
+    budget: TextBudget | None = None
+    too_long_code: str = ""
+    icon_name: str | None = None
+    allowlist: frozenset[str] = frozenset()
+    items: object = None
+    title_budget: TextBudget | None = None
+    body_budget: TextBudget | None = None
+    field_prefix: str = ""
+
+
 def validate_visible_field(
-    *,
-    text: str,
-    field: str,
-    locale: str | None,
-    slide_index: int | None,
+    ctx: ValidationFieldContext,
 ) -> list[SlideValidationViolation]:
     """Validate visible text fields for emoji, dash, and scaffold rules."""
     violations: list[SlideValidationViolation] = []
-    if contains_visible_emoji(text):
+    if contains_visible_emoji(ctx.text):
         violations.append(
             SlideValidationViolation(
                 code=VIOLATION_VISIBLE_EMOJI_FORBIDDEN,
                 message="Visible text must not contain decorative emoji",
-                slide_index=slide_index,
-                locale=locale,
-                field=field,
+                slide_index=ctx.slide_index,
+                locale=ctx.locale,
+                field=ctx.field,
             )
         )
-    if contains_forbidden_dash(text):
+    if contains_forbidden_dash(ctx.text):
         violations.append(
             SlideValidationViolation(
                 code=VIOLATION_DASH_PUNCTUATION_FORBIDDEN,
                 message="Visible text must not contain em dash or en dash",
-                slide_index=slide_index,
-                locale=locale,
-                field=field,
+                slide_index=ctx.slide_index,
+                locale=ctx.locale,
+                field=ctx.field,
             )
         )
-    if contains_drafting_scaffold(text):
+    if contains_drafting_scaffold(ctx.text):
         violations.append(
             SlideValidationViolation(
                 code=VIOLATION_DRAFTING_SCAFFOLD_PRESENT,
                 message="Visible text must not contain drafting scaffold labels",
-                slide_index=slide_index,
-                locale=locale,
-                field=field,
+                slide_index=ctx.slide_index,
+                locale=ctx.locale,
+                field=ctx.field,
             )
         )
     return violations
@@ -110,142 +125,137 @@ def count_rendered_lines(text: str) -> int:
 
 
 def validate_copy_budget(
-    *,
-    text: str,
-    field: str,
-    budget: TextBudget,
-    too_long_code: str,
-    locale: str | None,
-    slide_index: int | None,
+    ctx: ValidationFieldContext,
 ) -> SlideValidationViolation | None:
     """Validate character and optional line budgets for a field."""
-    if len(text) > budget.max_characters:
+    if ctx.budget is None:
+        msg = "budget is required for this validator"
+        raise ValueError(msg)
+    if len(ctx.text) > ctx.budget.max_characters:
         return SlideValidationViolation(
-            code=too_long_code,
+            code=ctx.too_long_code,
             message=(
-                f"{field} exceeds max {budget.max_characters} characters "
-                f"(got {len(text)})"
+                f"{ctx.field} exceeds max {ctx.budget.max_characters} characters "
+                f"(got {len(ctx.text)})"
             ),
-            slide_index=slide_index,
-            locale=locale,
-            field=field,
+            slide_index=ctx.slide_index,
+            locale=ctx.locale,
+            field=ctx.field,
         )
-    if budget.max_lines is not None:
-        line_count = count_rendered_lines(text)
-        if line_count > budget.max_lines:
+    if ctx.budget.max_lines is not None:
+        line_count = count_rendered_lines(ctx.text)
+        if line_count > ctx.budget.max_lines:
             return SlideValidationViolation(
                 code=VIOLATION_COPY_TOO_MANY_LINES,
                 message=(
-                    f"{field} exceeds max {budget.max_lines} rendered lines "
+                    f"{ctx.field} exceeds max {ctx.budget.max_lines} rendered lines "
                     f"(got {line_count})"
                 ),
-                slide_index=slide_index,
-                locale=locale,
-                field=field,
+                slide_index=ctx.slide_index,
+                locale=ctx.locale,
+                field=ctx.field,
             )
     return None
 
 
 def validate_icon_name(
-    *,
-    icon_name: str | None,
-    allowlist: frozenset[str],
-    field: str,
-    locale: str | None,
-    slide_index: int | None,
+    ctx: ValidationFieldContext,
 ) -> list[SlideValidationViolation]:
     """Validate structured Lucide icon_name markers."""
-    if icon_name is None or not icon_name.strip():
+    if ctx.icon_name is None or not ctx.icon_name.strip():
         return []
-    normalized = icon_name.strip()
+    normalized = ctx.icon_name.strip()
     violations: list[SlideValidationViolation] = []
     if contains_visible_emoji(normalized):
         violations.append(
             SlideValidationViolation(
                 code=VIOLATION_VISIBLE_EMOJI_FORBIDDEN,
                 message="Structured icon markers must not use emoji",
-                slide_index=slide_index,
-                locale=locale,
-                field=field,
+                slide_index=ctx.slide_index,
+                locale=ctx.locale,
+                field=ctx.field,
             )
         )
-    if normalized not in allowlist:
+    if normalized not in ctx.allowlist:
         violations.append(
             SlideValidationViolation(
                 code=VIOLATION_ICON_NAME_NOT_ALLOWLISTED,
                 message=f"icon_name {normalized!r} is not in the Lucide allowlist",
-                slide_index=slide_index,
-                locale=locale,
-                field=field,
+                slide_index=ctx.slide_index,
+                locale=ctx.locale,
+                field=ctx.field,
             )
         )
     return violations
 
 
 def validate_structured_items(
-    *,
-    items: object,
-    allowlist: frozenset[str],
-    title_budget: TextBudget | None,
-    body_budget: TextBudget | None,
-    locale: str | None,
-    slide_index: int | None,
-    field_prefix: str,
+    ctx: ValidationFieldContext,
 ) -> list[SlideValidationViolation]:
     """Validate structured feature/summary/action item lists."""
-    if not isinstance(items, list) or not items:
+    if not isinstance(ctx.items, list) or not ctx.items:
         return []
     violations: list[SlideValidationViolation] = []
-    for index, item in enumerate(items):
+    for index, item in enumerate(ctx.items):
         if not isinstance(item, Mapping):
             continue
         icon_name = resolve_structured_item_icon_name(item)
         violations.extend(
             validate_icon_name(
-                icon_name=icon_name,
-                allowlist=allowlist,
-                field=f"{field_prefix}[{index}].icon_name",
-                locale=locale,
-                slide_index=slide_index,
+                ValidationFieldContext(
+                    icon_name=icon_name,
+                    allowlist=ctx.allowlist,
+                    field=f"{ctx.field_prefix}[{index}].icon_name",
+                    locale=ctx.locale,
+                    slide_index=ctx.slide_index,
+                )
             )
         )
         title = str(item.get("title") or "")
         body = str(item.get("body") or "")
         violations.extend(
             validate_visible_field(
-                text=title,
-                field=f"{field_prefix}[{index}].title",
-                locale=locale,
-                slide_index=slide_index,
+                ValidationFieldContext(
+                    text=title,
+                    field=f"{ctx.field_prefix}[{index}].title",
+                    locale=ctx.locale,
+                    slide_index=ctx.slide_index,
+                )
             )
         )
         violations.extend(
             validate_visible_field(
-                text=body,
-                field=f"{field_prefix}[{index}].body",
-                locale=locale,
-                slide_index=slide_index,
+                ValidationFieldContext(
+                    text=body,
+                    field=f"{ctx.field_prefix}[{index}].body",
+                    locale=ctx.locale,
+                    slide_index=ctx.slide_index,
+                )
             )
         )
-        if title_budget is not None:
+        if ctx.title_budget is not None:
             budget_violation = validate_copy_budget(
-                text=title,
-                field=f"{field_prefix}[{index}].title",
-                budget=title_budget,
-                too_long_code=VIOLATION_HEADING_TOO_LONG,
-                locale=locale,
-                slide_index=slide_index,
+                ValidationFieldContext(
+                    text=title,
+                    field=f"{ctx.field_prefix}[{index}].title",
+                    budget=ctx.title_budget,
+                    too_long_code=VIOLATION_HEADING_TOO_LONG,
+                    locale=ctx.locale,
+                    slide_index=ctx.slide_index,
+                )
             )
             if budget_violation is not None:
                 violations.append(budget_violation)
-        if body_budget is not None:
+        if ctx.body_budget is not None:
             budget_violation = validate_copy_budget(
-                text=body,
-                field=f"{field_prefix}[{index}].body",
-                budget=body_budget,
-                too_long_code=VIOLATION_BODY_TOO_LONG,
-                locale=locale,
-                slide_index=slide_index,
+                ValidationFieldContext(
+                    text=body,
+                    field=f"{ctx.field_prefix}[{index}].body",
+                    budget=ctx.body_budget,
+                    too_long_code=VIOLATION_BODY_TOO_LONG,
+                    locale=ctx.locale,
+                    slide_index=ctx.slide_index,
+                )
             )
             if budget_violation is not None:
                 violations.append(budget_violation)
@@ -279,6 +289,7 @@ def body_budget_for_slide_type(
 
 
 __all__ = [
+    "ValidationFieldContext",
     "body_budget_for_slide_type",
     "contains_drafting_scaffold",
     "contains_forbidden_dash",

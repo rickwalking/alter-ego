@@ -6,6 +6,11 @@ import hashlib
 from dataclasses import dataclass
 from io import BytesIO
 
+from rag_backend.domain.constants.carousel import (
+    IMAGE_FORMAT_JPEG,
+    IMAGE_FORMAT_PNG,
+    IMAGE_FORMAT_WEBP,
+)
 from rag_backend.domain.constants.carousel_presentation import (
     CREATOR_ASSET_MEDIA_TYPE_WEBP,
 )
@@ -34,6 +39,8 @@ _PNG_MAGIC = b"\x89PNG\r\n\x1a\n"
 _WEBP_MAGIC_OFFSET = 8
 _WEBP_MIN_HEADER_LENGTH = 12
 _WEBP_MAGIC = b"WEBP"
+_WEBP_SAVE_QUALITY = 90
+_WEBP_SAVE_METHOD = 6
 
 
 class CreatorAssetValidationError(ValueError):
@@ -60,7 +67,9 @@ class CreatorAssetUpload:
     declared_mime: str
 
 
-def validate_and_normalize_creator_asset(upload: CreatorAssetUpload) -> NormalizedCreatorAsset:
+def validate_and_normalize_creator_asset(
+    upload: CreatorAssetUpload,
+) -> NormalizedCreatorAsset:
     """Validate upload bytes and normalize to single-frame sRGB WebP."""
     _validate_upload_size(upload.content)
     _validate_declared_mime(upload.declared_mime)
@@ -91,24 +100,24 @@ def _validate_magic_bytes(content: bytes, declared_mime: str) -> None:
 
 def _detect_format_from_magic(content: bytes) -> str | None:
     if content.startswith(_JPEG_MAGIC):
-        return "JPEG"
+        return IMAGE_FORMAT_JPEG
     if content.startswith(_PNG_MAGIC):
-        return "PNG"
+        return IMAGE_FORMAT_PNG
     if (
         len(content) >= _WEBP_MIN_HEADER_LENGTH
         and content[:4] == b"RIFF"
         and content[_WEBP_MAGIC_OFFSET:_WEBP_MIN_HEADER_LENGTH] == _WEBP_MAGIC
     ):
-        return "WEBP"
+        return IMAGE_FORMAT_WEBP
     return None
 
 
 def _mime_to_format(declared_mime: str) -> str:
     if declared_mime == CREATOR_ASSET_MIME_JPEG:
-        return "JPEG"
+        return IMAGE_FORMAT_JPEG
     if declared_mime == CREATOR_ASSET_MIME_PNG:
-        return "PNG"
-    return "WEBP"
+        return IMAGE_FORMAT_PNG
+    return IMAGE_FORMAT_WEBP
 
 
 def _reject_if_animated(image: object) -> None:
@@ -131,7 +140,9 @@ def _decode_and_normalize(content: bytes) -> NormalizedCreatorAsset:
     except CreatorAssetValidationError:
         raise
     except Image.DecompressionBombError:
-        raise CreatorAssetValidationError(ERR_CREATOR_ASSET_DECOMPRESSION_BOMB) from None
+        raise CreatorAssetValidationError(
+            ERR_CREATOR_ASSET_DECOMPRESSION_BOMB
+        ) from None
     except (OSError, ValueError):
         raise CreatorAssetValidationError(ERR_CREATOR_ASSET_TRUNCATED) from None
     except Exception:
@@ -139,7 +150,12 @@ def _decode_and_normalize(content: bytes) -> NormalizedCreatorAsset:
 
     buffer = BytesIO()
     try:
-        rgb.save(buffer, format="WEBP", quality=90, method=6)
+        rgb.save(
+            buffer,
+            format=IMAGE_FORMAT_WEBP,
+            quality=_WEBP_SAVE_QUALITY,
+            method=_WEBP_SAVE_METHOD,
+        )
     except (OSError, ValueError):
         raise CreatorAssetValidationError(ERR_CREATOR_ASSET_DECODE_FAILED) from None
 

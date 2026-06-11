@@ -17,6 +17,7 @@ from rag_backend.api.schemas.blog_post import (
 )
 from rag_backend.application.services.editorial_audit_service import (
     EditorialAuditService,
+    _AuditEntry,
 )
 from rag_backend.application.services.workflow_event_service import WorkflowEventService
 from rag_backend.domain.constants.blog_post import EditorialCommentStatus
@@ -66,7 +67,12 @@ async def add_blog_post_comment(
 
     db.add(comment)
     await _audit_service().log_comment_added(
-        db, str(post_id), current_user.id, str(comment.id)
+        db,
+        entry=_AuditEntry(
+            post_id=str(post_id),
+            user_id=current_user.id,
+            extra=str(comment.id),
+        ),
     )
     await db.commit()
     await db.refresh(comment)

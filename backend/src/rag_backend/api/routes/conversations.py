@@ -32,7 +32,11 @@ from rag_backend.api.schemas import (
     MessageListResponse,
     MessageSource,
 )
-from rag_backend.application.services.conversation_service import ConversationService
+from rag_backend.application.services.chat_stream_service import _ChatContext
+from rag_backend.application.services.conversation_service import (
+    ConversationService,
+    _ListQuery,
+)
 from rag_backend.domain.constants.conversation import (
     CONVERSATION_METADATA_PROJECT_ID,
 )
@@ -178,10 +182,7 @@ async def list_conversations(
     service = _make_conversation_service(db)
 
     conversations = await service.list_conversations(
-        limit=limit,
-        offset=offset,
-        user_id=user.id,
-        origin=origin,
+        query=_ListQuery(limit=limit, offset=offset, user_id=user.id, origin=origin),
     )
     total = await service.count_conversations_for_user(user.id, origin=origin)
 
@@ -388,9 +389,11 @@ async def chat(
     full_response = ""
 
     async for event in agent.chat(
-        message=body.content,
-        conversation_id=conversation_id,
-        stream=False,
+        _ChatContext(
+            message=body.content,
+            conversation_id=conversation_id,
+            stream=False,
+        ),
     ):
         if event["type"] == "complete":
             full_response = str(event["content"])

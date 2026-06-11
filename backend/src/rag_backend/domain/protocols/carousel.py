@@ -2,7 +2,7 @@
 
 from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Protocol
+from typing import Protocol, TypedDict
 from uuid import UUID
 
 from rag_backend.domain.models import CarouselProject, ResearchSourceType
@@ -103,6 +103,15 @@ class CarouselRefinementService(Protocol):
     ) -> CarouselProject: ...
 
 
+class _RenderOptions(TypedDict, total=False):
+    """Bundled render options for slide layout strategies."""
+
+    total_slides: int
+    """Total slide count for progress display."""
+    language: str
+    """Language code (pt, en) for localized text."""
+
+
 class SlideLayoutStrategy(Protocol):
     """Renders a single slide's inner HTML for a given layout format.
 
@@ -121,13 +130,13 @@ class SlideLayoutStrategy(Protocol):
     supported_slide_types: frozenset[str]
     """Slide types this strategy can render, e.g. {'content', 'summary'}."""
 
-    def render(
+    def render(  # noqa: PLR0913 — protocol boundary: slide, project, theme, options
         self,
         slide: Mapping[str, object],
         project: CarouselProject,
         theme: Mapping[str, str],
-        total_slides: int,
-        language: str,
+        *,
+        options: _RenderOptions | None = None,
     ) -> str:
         """Return inner HTML for a single slide.
 
@@ -136,7 +145,6 @@ class SlideLayoutStrategy(Protocol):
                 insight, summary_points, tldr_strip, number, type).
             project: Full project metadata (watermark, creator, niche...).
             theme: Design palette dict (primary, accent, background...).
-            total_slides: Total slide count for progress display.
-            language: Language code (pt, en) for localized text.
+            options: Bundled render options (total_slides, language, …).
         """
         ...

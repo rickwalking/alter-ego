@@ -8,7 +8,10 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from rag_backend.application.services.carousel.nodes.images import run_images
+from rag_backend.application.services.carousel.nodes.images import (
+    ImageGenerationConfig,
+    run_images,
+)
 from rag_backend.application.services.carousel.types import SlideData
 from rag_backend.application.services.image_provider_registry import (
     ImageProviderRegistry,
@@ -77,11 +80,13 @@ class TestParallelImageGeneration:
 
         slides = [_slide_data(i) for i in range(1, 5)]
         await run_images(
-            _project(tmp_path),
-            slides,
-            tmp_path,
-            repo=repo,
-            image_registry=registry,
+            ImageGenerationConfig(
+                project=_project(tmp_path),
+                slides=slides,
+                output_dir=tmp_path,
+                repo=repo,
+                image_registry=registry,
+            )
         )
 
         assert call_count == 4
@@ -110,11 +115,13 @@ class TestParallelImageGeneration:
         slides = [_slide_data(i) for i in range(1, 3)]
         project = _project(tmp_path)
         await run_images(
-            project,
-            slides,
-            tmp_path,
-            repo=repo,
-            image_registry=registry,
+            ImageGenerationConfig(
+                project=project,
+                slides=slides,
+                output_dir=tmp_path,
+                repo=repo,
+                image_registry=registry,
+            )
         )
 
         assert published_states[0] == ["pending", "pending"]
@@ -145,11 +152,13 @@ class TestParallelImageGeneration:
 
         slides = [_slide_data(1)]
         await run_images(
-            _project(tmp_path),
-            slides,
-            tmp_path,
-            repo=repo,
-            image_registry=registry,
+            ImageGenerationConfig(
+                project=_project(tmp_path),
+                slides=slides,
+                output_dir=tmp_path,
+                repo=repo,
+                image_registry=registry,
+            )
         )
 
         repo.update_slide.assert_awaited()
@@ -185,11 +194,13 @@ class TestParallelImageGeneration:
 
         with pytest.raises(RuntimeError, match="flaked"):
             await run_images(
-                project,
-                slides,
-                tmp_path,
-                repo=repo,
-                image_registry=registry,
+                ImageGenerationConfig(
+                    project=project,
+                    slides=slides,
+                    output_dir=tmp_path,
+                    repo=repo,
+                    image_registry=registry,
+                )
             )
 
         assert any("failed" in state for state in captured_states)
@@ -211,11 +222,13 @@ class TestParallelImageGeneration:
         ]
         project = _project(tmp_path)
         await run_images(
-            project,
-            slides,
-            tmp_path,
-            repo=repo,
-            image_registry=registry,
+            ImageGenerationConfig(
+                project=project,
+                slides=slides,
+                output_dir=tmp_path,
+                repo=repo,
+                image_registry=registry,
+            )
         )
 
         assert project.phase_progress is not None

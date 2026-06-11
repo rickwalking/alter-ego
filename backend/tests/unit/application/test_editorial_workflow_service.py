@@ -8,6 +8,7 @@ from uuid import uuid4
 import pytest
 
 from rag_backend.application.services.carousel.editorial_workflow_service import (
+    EditorialWorkflowConfig,
     EditorialWorkflowService,
 )
 from rag_backend.application.services.carousel.editorial_workflow_types import (
@@ -33,7 +34,7 @@ from rag_backend.infrastructure.database.models.carousel import CarouselProjectM
 @pytest.fixture
 def service() -> EditorialWorkflowService:
     llm = MagicMock()
-    return EditorialWorkflowService(llm=llm)
+    return EditorialWorkflowService(EditorialWorkflowConfig(llm=llm))
 
 
 class TestEditorialWorkflowServiceInit:
@@ -42,7 +43,7 @@ class TestEditorialWorkflowServiceInit:
     def test_init_with_llm_only(self) -> None:
         """Given only llm, when creating service, then orchestrator is created."""
         llm = MagicMock()
-        service = EditorialWorkflowService(llm=llm)
+        service = EditorialWorkflowService(EditorialWorkflowConfig(llm=llm))
         assert service._llm is llm
         assert service._orchestrator is not None
 
@@ -54,7 +55,7 @@ class TestEditorialWorkflowServiceInit:
     ) -> None:
         """Given llm, when creating service, then orchestrator receives llm."""
         llm = MagicMock()
-        EditorialWorkflowService(llm=llm)
+        EditorialWorkflowService(EditorialWorkflowConfig(llm=llm))
         assert mock_orchestrator.call_args.kwargs["llm"] is llm
 
     @patch(
@@ -66,14 +67,18 @@ class TestEditorialWorkflowServiceInit:
         """Given checkpointer, when creating service, then orchestrator receives checkpointer."""
         llm = MagicMock()
         checkpointer = MagicMock()
-        EditorialWorkflowService(llm=llm, checkpointer=checkpointer)
+        EditorialWorkflowService(
+            EditorialWorkflowConfig(llm=llm, checkpointer=checkpointer),
+        )
         assert mock_orchestrator.call_args.kwargs["checkpointer"] is checkpointer
 
     def test_init_with_event_service(self) -> None:
         """Given event_service, when creating service, then events is set."""
         llm = MagicMock()
         event_service = MagicMock()
-        service = EditorialWorkflowService(llm=llm, event_service=event_service)
+        service = EditorialWorkflowService(
+            EditorialWorkflowConfig(llm=llm, event_service=event_service),
+        )
         assert service._events is event_service
 
     def test_init_with_notification_service(self) -> None:
@@ -81,7 +86,7 @@ class TestEditorialWorkflowServiceInit:
         llm = MagicMock()
         notification_service = MagicMock()
         service = EditorialWorkflowService(
-            llm=llm, notification_service=notification_service
+            EditorialWorkflowConfig(llm=llm, notification_service=notification_service),
         )
         assert service._notifications is notification_service
 
@@ -89,7 +94,9 @@ class TestEditorialWorkflowServiceInit:
         """Given image_registry, when creating service, then orchestrator has registry."""
         llm = MagicMock()
         image_registry = MagicMock()
-        service = EditorialWorkflowService(llm=llm, image_registry=image_registry)
+        service = EditorialWorkflowService(
+            EditorialWorkflowConfig(llm=llm, image_registry=image_registry),
+        )
         assert service._orchestrator is not None
 
     @patch(
@@ -101,7 +108,9 @@ class TestEditorialWorkflowServiceInit:
         """Given image_registry, when creating service, then orchestrator receives image_registry."""
         llm = MagicMock()
         image_registry = MagicMock()
-        EditorialWorkflowService(llm=llm, image_registry=image_registry)
+        EditorialWorkflowService(
+            EditorialWorkflowConfig(llm=llm, image_registry=image_registry),
+        )
         assert mock_orchestrator.call_args.kwargs["image_registry"] is image_registry
 
 
@@ -428,9 +437,10 @@ class TestEditorialWorkflowServicePublishResumeErrorEvent:
             )
         mock_publish.assert_awaited_once()
         call_args = mock_publish.call_args
-        assert call_args[0][0] == "project-1"
-        assert call_args[0][1] == PHASE_RESEARCH
-        assert call_args[0][2] == "Test error"
+        params = call_args[0][0]
+        assert params.project_id == "project-1"
+        assert params.phase == PHASE_RESEARCH
+        assert call_args[0][1] == "Test error"
         assert call_args.kwargs["recoverable"] is True
 
     @pytest.mark.asyncio
@@ -449,7 +459,7 @@ class TestEditorialWorkflowServicePublishResumeErrorEvent:
             )
         mock_publish.assert_awaited_once()
         call_args = mock_publish.call_args
-        assert call_args[0][1] == ""
+        assert call_args[0][0].phase == ""
         assert call_args.kwargs["recoverable"] is False
 
     @pytest.mark.asyncio

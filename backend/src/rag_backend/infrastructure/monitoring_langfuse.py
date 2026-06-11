@@ -2,18 +2,64 @@
 
 from collections.abc import Generator
 from contextlib import contextmanager
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, TypedDict, cast
 from uuid import UUID
 
 from langchain_core.callbacks.base import BaseCallbackHandler
 from langfuse import Langfuse
 
+from rag_backend.domain.models.carousels import ReviewEventParams
 from rag_backend.infrastructure.langfuse_client import (
     get_langfuse_client,
 )
 
 if TYPE_CHECKING:
     from langchain_core.runnables import RunnableConfig
+
+
+class _TraceConfig(TypedDict, total=False):
+    """Bundled configuration for creating a trace or child trace."""
+
+    parent_trace_id: str
+    """Parent trace ID for child traces (create_child_trace)."""
+    name: str
+    """Trace name."""
+    project_id: UUID
+    """Project UUID (create_workflow_trace)."""
+    user_id: str
+    """User identifier (create_workflow_trace)."""
+    content_type: str
+    """Content type label (create_workflow_trace)."""
+    metadata: dict[str, object] | None
+    """Extra metadata attached to the trace."""
+    tags: list[str] | None
+    """Optional tags for the trace."""
+
+
+class _ScoreParams(TypedDict, total=False):
+    """Bundled parameters for add_quality_score."""
+
+    criterion: str
+    """Score criterion name."""
+    score: float
+    """Score value (0-100)."""
+    threshold: float
+    """Minimum passing threshold."""
+    passed: bool
+    """Whether the criterion passed."""
+
+
+class _ErrorParams(TypedDict, total=False):
+    """Bundled parameters for add_error_span."""
+
+    error_type: str
+    """Type of error."""
+    error_message: str
+    """Error message."""
+    retry_count: int
+    """Number of retries attempted."""
+    fallback_used: bool
+    """Whether fallback was used."""
 
 
 class LangfuseCallbackHandler:
@@ -145,24 +191,23 @@ class LangfuseCallbackHandler:
 
     def create_child_trace(
         self,
-        parent_trace_id: str,
-        name: str,
-        metadata: dict[str, object],
-        tags: list[str] | None = None,
+        *,
+        config: _TraceConfig,
     ) -> object:
         """Create a child trace linked to parent.
 
         Used for cross-trace visibility (e.g., blog post from carousel).
 
         Args:
-            parent_trace_id: ID of parent trace
-            name: Name of child trace
-            metadata: Trace metadata
-            tags: Optional tags
+            config: Bundled trace configuration (parent_trace_id, name, …).
 
         Returns:
             Child trace object
         """
+        parent_trace_id = config["parent_trace_id"]
+        name = config["name"]
+        metadata = config.get("metadata")
+        tags = config.get("tags")
         return self.client.trace(  # type: ignore[attr-defined]
             name=name,
             metadata={
@@ -217,16 +262,19 @@ def propagate_attributes(
 
 
 def create_workflow_trace(
-    project_id: UUID,
-    user_id: str,
-    content_type: str,
-    metadata: dict[str, object] | None = None,
+    *,
+    config: _TraceConfig,
 ) -> object:
     """Create a trace span for a workflow using Langfuse v3 SDK."""
     client = get_langfuse_client()
 
     if client is None:
         return None
+
+    project_id = config["project_id"]
+    user_id = config["user_id"]
+    content_type = config["content_type"]
+    metadata = config.get("metadata")
 
     return client.start_span(
         name=f"{content_type}_workflow_{project_id}",
@@ -242,23 +290,21 @@ def create_workflow_trace(
 
 def add_quality_score(
     trace: object,
-    criterion: str,
-    score: float,
-    threshold: float,
     *,
-    passed: bool,
+    params: _ScoreParams,
 ) -> None:
     """Add a quality score to a trace.
 
     Args:
         trace: LangFuse trace object
-        criterion: Criterion name
-        score: Score value (0-100)
-        threshold: Minimum passing threshold
-        passed: Whether criterion passed
+        params: Bundled score parameters (criterion, score, threshold, passed).
     """
     if trace is None:
         return
+    criterion = params["criterion"]
+    score = params["score"]
+    threshold = params["threshold"]
+    passed = params.get("passed", False)
     normalized_score = score / 100.0
 
     trace.score(  # type: ignore[attr-defined]
@@ -299,9 +345,6 @@ def add_voice_match_score(
     )
 
 
-from rag_backend.domain.models.carousels import ReviewEventParams
-
-
 def record_human_review(trace: object, *, params: ReviewEventParams) -> None:
     """Record a human review event.
 
@@ -327,23 +370,22 @@ def record_human_review(trace: object, *, params: ReviewEventParams) -> None:
 
 def add_error_span(
     trace: object,
-    error_type: str,
-    error_message: str,
-    retry_count: int = 0,
     *,
-    fallback_used: bool = False,
+    params: _ErrorParams,
 ) -> None:
     """Add an error span to a trace.
 
     Args:
         trace: LangFuse trace object
-        error_type: Type of error
-        error_message: Error message
-        retry_count: Number of retries attempted
-        fallback_used: Whether fallback was used
+        params: Bundled error parameters (error_type, error_message, …).
     """
     if trace is None:
         return
+
+    error_type = params["error_type"]
+    error_message = params["error_message"]
+    retry_count = params.get("retry_count", 0)
+    fallback_used = params.get("fallback_used", False)
 
     trace.span(  # type: ignore[attr-defined]
         name=f"error_{error_type}",

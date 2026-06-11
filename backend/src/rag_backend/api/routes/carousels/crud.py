@@ -26,6 +26,9 @@ from rag_backend.api.schemas import (
     CarouselProjectListResponse,
     CarouselProjectResponse,
 )
+from rag_backend.application.services.carousel.design_token_utils import (
+    merge_design_tokens_with_disk,
+)
 from rag_backend.domain.constants.carousel_workflow import (
     ERR_CAROUSEL_NOT_COMPLETED,
     ERR_WORKFLOW_NOT_APPROVED_FOR_PUBLISH,
@@ -35,11 +38,12 @@ from rag_backend.domain.constants.carousel_workflow import (
 from rag_backend.domain.constants.rate_limits import RATE_LIMIT_CAROUSEL_PUBLISH
 from rag_backend.domain.models import CarouselProject, CarouselStatus, User
 from rag_backend.domain.protocols import CarouselRepository
+from rag_backend.domain.protocols.repositories import _ProjectQuery
 from rag_backend.infrastructure.database.config import get_session
 from rag_backend.infrastructure.database.models.carousel import CarouselProjectModel
 
 from .deps import get_carousel_repo
-from .helpers import assert_carousel_artifacts_healthy, merge_design_tokens_with_disk
+from .helpers import assert_carousel_artifacts_healthy
 
 router = APIRouter()
 
@@ -101,11 +105,13 @@ async def list_carousels(
     if user is not None and not user.is_admin() and not force_public:
         owner_id = str(user.id)
     items = await repo.get_all_projects(
-        status=status_filter,
-        public_only=force_public,
-        owner_id=owner_id,
-        limit=limit,
-        offset=offset,
+        query=_ProjectQuery(
+            status=status_filter,
+            public_only=force_public,
+            owner_id=owner_id,
+            limit=limit,
+            offset=offset,
+        ),
     )
     total = await repo.count(
         status=status_filter,
@@ -182,16 +188,17 @@ async def publish_carousel(
     slides = await repo.get_slides_by_project(project_id)
     assert_carousel_artifacts_healthy(project, slides)
     if not project.blog_markdown:
+        from rag_backend.application.services.carousel.editorial_distribution_blog import (
+            BlogBuildContext,
+            build_blog_markdown_en_from_translations,
+            build_blog_markdown_from_drafts,
+        )
         from rag_backend.application.services.carousel.editorial_distribution_constants import (
             BLOG_LANG_ENGLISH,
             BLOG_LANG_PORTUGUESE,
             LONG_FORM_NOTES_KEY,
             SLIDE_DRAFT_TEXT_KEY,
             SLIDE_INDEX_KEY,
-        )
-        from rag_backend.application.services.carousel.editorial_distribution_pack import (
-            build_blog_markdown_en_from_translations,
-            build_blog_markdown_from_drafts,
         )
         from rag_backend.application.services.carousel.types import unpack_extras
 
@@ -211,13 +218,17 @@ async def publish_carousel(
                 translations_en[slide.slide_number] = slide_data.translation_en
         if draft_payload:
             blog_pt = build_blog_markdown_from_drafts(
-                draft_payload,
-                title=project.title or project.topic,
+                BlogBuildContext(
+                    slide_drafts=draft_payload,
+                    title=project.title or project.topic,
+                ),
             )
             blog_en = build_blog_markdown_en_from_translations(
-                draft_payload,
-                translations_en,
-                title=project.title_en or project.title or project.topic,
+                BlogBuildContext(
+                    slide_drafts=draft_payload,
+                    translations_en=translations_en,
+                    title=project.title_en or project.title or project.topic,
+                ),
             )
             project.blog_markdown = blog_pt
             project.blog_translations = {

@@ -3,11 +3,10 @@
 import { useCallback, useState } from "react";
 import { useTranslations } from "next-intl";
 import { NeonButton } from "@/components/atoms/neon-button";
-import { NeonSpinner } from "@/components/atoms/neon-spinner";
+import { Spinner } from "@/components/ui/spinner";
 import {
   BG_CARD,
   NEON_CYAN,
-  NEON_CYAN_DIM,
   TEXT,
   TEXT_DIM,
 } from "@/constants/neon";
@@ -16,27 +15,9 @@ import {
   useAvailableStrategies,
   useRegenerateSlides,
 } from "@/features/create/hooks";
-import type { CarouselProjectResponse } from "@/schemas/carousel";
-
-const CYAN = NEON_CYAN;
-const CYAN_DIM = NEON_CYAN_DIM;
-
-const sectionCardStyle = {
-  background: BG_CARD,
-  border: "1px solid rgba(255,255,255,0.06)",
-  borderRadius: "8px",
-  padding: "24px",
-};
-
-export interface RegenerateStrategySectionProps {
-  project: CarouselProjectResponse;
-  projectId: string;
-}
-
-function findTemplateIndex(strategy: string | null | undefined): number {
-  if (!strategy) return 0;
-  return CREATE_TEMPLATES.findIndex((t) => t.strategy === strategy);
-}
+import type { RegenerateStrategySectionProps } from "@/features/publish/types";
+import { CYAN, CYAN_DIM, SECTION_CARD_STYLE } from "@/features/publish/constants";
+import { findTemplateIndex } from "@/features/publish/utils";
 
 export function RegenerateStrategySection({
   project,
@@ -77,20 +58,15 @@ export function RegenerateStrategySection({
 
   if (isLoading) {
     return (
-      <div style={sectionCardStyle}>
-        <div className="flex items-center gap-2">
-          <NeonSpinner size="sm" />
-          <span className="text-sm" style={{ color: TEXT_DIM }}>
-            {t("loading")}
-          </span>
-        </div>
+      <div style={SECTION_CARD_STYLE}>
+        <Spinner size="sm" label={t("loading")} />
       </div>
     );
   }
 
   if (isError) {
     return (
-      <div style={sectionCardStyle}>
+      <div style={SECTION_CARD_STYLE}>
         <p className="text-sm" style={{ color: TEXT_DIM }}>
           {t("fetchError")}
         </p>
@@ -102,7 +78,7 @@ export function RegenerateStrategySection({
   }
 
   return (
-    <div style={sectionCardStyle}>
+    <div style={SECTION_CARD_STYLE}>
       <h3 className="text-sm font-semibold mb-1">{t("title")}</h3>
       <p className="text-xs mb-3" style={{ color: TEXT_DIM }}>
         {t("selectTemplate")}

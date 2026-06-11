@@ -30,6 +30,7 @@ from rag_backend.application.services.carousel.presentation_review import (
     serialize_translations_en,
 )
 from rag_backend.application.services.carousel.refinement_service import (
+    CarouselRefinementConfig,
     CarouselRefinementService,
 )
 from rag_backend.application.services.carousel.types import unpack_extras
@@ -209,12 +210,14 @@ async def _run(project_id: UUID) -> int:
         )
 
         refinement = CarouselRefinementService(
-            repository=repo,
-            llm_service=container.llm_service(),
-            image_registry=container.image_provider_registry(),
-            export_service=container.export_service(),
-            pdf_slide_builder=container.pdf_slide_builder(),
-            strategy_registry=container.strategy_registry(),
+            CarouselRefinementConfig(
+                repository=repo,
+                llm_service=container.llm_service(),
+                image_registry=container.image_provider_registry(),
+                export_service=container.export_service(),
+                pdf_slide_builder=container.pdf_slide_builder(),
+                strategy_registry=container.strategy_registry(),
+            )
         )
         updated = await refinement.re_render_slides(project_id)
         updated.status = CarouselStatus.COMPLETED

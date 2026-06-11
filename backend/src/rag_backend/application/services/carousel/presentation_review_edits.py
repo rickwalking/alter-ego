@@ -58,12 +58,55 @@ def merge_localized_slide_edits(
     return merged
 
 
+def _safe_str(value: object, default: str = "") -> str:
+    """Return value as string if not None, else default."""
+    if value is None:
+        return default
+    return str(value)
+
+
 def _locale_heading_body(payload: Mapping[str, object] | None) -> tuple[str, str]:
     if payload is None:
         return "", ""
-    heading = str(payload.get(OUTLINE_LEGACY_HEADING_KEY) or "")
-    body = str(payload.get(OUTLINE_LEGACY_BODY_KEY) or "")
+    heading = _safe_str(payload.get(OUTLINE_LEGACY_HEADING_KEY))
+    body = _safe_str(payload.get(OUTLINE_LEGACY_BODY_KEY))
     return heading, body
+
+
+def _apply_pt_edits(
+    updated: dict[str, object],
+    pt_payload: dict[str, object] | None,
+) -> dict[str, object]:
+    """Apply PT locale edits to the updated draft."""
+    if pt_payload is None:
+        heading = ""
+        body = ""
+    else:
+        heading = _safe_str(pt_payload.get(OUTLINE_LEGACY_HEADING_KEY))
+        body = _safe_str(pt_payload.get(OUTLINE_LEGACY_BODY_KEY))
+    if heading:
+        updated[OUTLINE_FIELD_TITLE] = heading
+        updated[OUTLINE_LEGACY_HEADING_KEY] = heading
+    if body:
+        updated[SLIDE_DRAFT_TEXT_KEY] = body
+        updated[OUTLINE_LEGACY_BODY_KEY] = body
+    if pt_payload is not None and as_dict(updated.get(PRESENTATION_PT_KEY)) is not None:
+        updated[PRESENTATION_PT_KEY] = dict(pt_payload)
+    return updated
+
+
+def _merge_one_draft(
+    draft: dict[str, object],
+    localized: dict[str, object],
+) -> dict[str, object]:
+    """Merge localized edits into a single draft."""
+    updated = dict(draft)
+    pt_payload = as_dict(localized.get(PRESENTATION_PT_KEY))
+    updated = _apply_pt_edits(updated, pt_payload)
+    en_payload = as_dict(localized.get(PRESENTATION_EN_KEY))
+    if en_payload is not None and as_dict(updated.get(PRESENTATION_EN_KEY)) is not None:
+        updated[PRESENTATION_EN_KEY] = dict(en_payload)
+    return updated
 
 
 def _apply_edits_to_drafts(
@@ -79,21 +122,7 @@ def _apply_edits_to_drafts(
         if localized is None:
             updated_drafts.append(dict(draft))
             continue
-        updated = dict(draft)
-        pt_payload = as_dict(localized.get(PRESENTATION_PT_KEY))
-        heading, body = _locale_heading_body(pt_payload)
-        if heading:
-            updated[OUTLINE_FIELD_TITLE] = heading
-            updated[OUTLINE_LEGACY_HEADING_KEY] = heading
-        if body:
-            updated[SLIDE_DRAFT_TEXT_KEY] = body
-            updated[OUTLINE_LEGACY_BODY_KEY] = body
-        if pt_payload is not None and as_dict(updated.get(PRESENTATION_PT_KEY)) is not None:
-            updated[PRESENTATION_PT_KEY] = dict(pt_payload)
-        en_payload = as_dict(localized.get(PRESENTATION_EN_KEY))
-        if en_payload is not None and as_dict(updated.get(PRESENTATION_EN_KEY)) is not None:
-            updated[PRESENTATION_EN_KEY] = dict(en_payload)
-        updated_drafts.append(updated)
+        updated_drafts.append(_merge_one_draft(draft, localized))
     return updated_drafts
 
 
@@ -108,7 +137,9 @@ def _apply_edits_to_translations(
         index: dict(payload) for index, payload in existing.items()
     }
     for index, localized in merged_by_index.items():
-        heading, body = _locale_heading_body(as_dict(localized.get(PRESENTATION_EN_KEY)))
+        heading, body = _locale_heading_body(
+            as_dict(localized.get(PRESENTATION_EN_KEY))
+        )
         if not heading and not body:
             continue
         entry = dict(result.get(index) or {})

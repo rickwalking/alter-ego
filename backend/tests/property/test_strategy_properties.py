@@ -19,7 +19,8 @@ from rag_backend.application.services.carousel_template.strategies.hero_content 
 from rag_backend.application.services.carousel_template.strategies.stat_card_grid import (
     StatCardGridStrategy,
 )
-from rag_backend.domain.models import CarouselProject, CarouselTheme
+from rag_backend.domain.models import CarouselProject
+from rag_backend.domain.protocols.carousel import CarouselTheme, _RenderOptions
 
 _PROJECT = CarouselProject(
     topic="Test",
@@ -64,7 +65,9 @@ def test_any_text_input_produces_safe_html(strategy, slide_type, heading, body):
         "summary_points": [],
         "tldr_strip": None,
     }
-    result = strategy.render(slide, _PROJECT, _THEME, 7, "pt")
+    result = strategy.render(
+        slide, _PROJECT, _THEME, options=_RenderOptions(total_slides=7, language="pt")
+    )
     assert isinstance(result, str)
     assert len(result) > 0
 
@@ -89,7 +92,9 @@ def test_any_theme_produces_output(primary, accent, background):
         "summary_points": [],
         "tldr_strip": None,
     }
-    result = strategy.render(slide, _PROJECT, theme, 7, "pt")
+    result = strategy.render(
+        slide, _PROJECT, theme, options=_RenderOptions(total_slides=7, language="pt")
+    )
     assert isinstance(result, str)
 
 
@@ -113,7 +118,9 @@ def test_any_slide_count_produces_output(total_slides, slide_number):
         "summary_points": [],
         "tldr_strip": None,
     }
-    result = strategy.render(slide, _PROJECT, _THEME, total_slides, "pt")
+    result = strategy.render(
+        slide, _PROJECT, _THEME, total_slides=total_slides, language="pt"
+    )
     assert isinstance(result, str)
     assert f"{slide_number:02d}" in result or str(slide_number) in result
 
@@ -135,5 +142,5 @@ def test_bilingual_rendering_produces_output(language):
         "summary_points": [],
         "tldr_strip": None,
     }
-    result = strategy.render(slide, _PROJECT, _THEME, 7, language)
+    result = strategy.render(slide, _PROJECT, _THEME, total_slides=7, language=language)
     assert isinstance(result, str)

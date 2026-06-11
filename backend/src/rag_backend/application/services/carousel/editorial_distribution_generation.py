@@ -74,11 +74,11 @@ async def _generate_caption(
     return str(response.content).strip()
 
 
-async def _generate_en_translations(
-    llm: BaseChatModel,
+def _build_translation_payload(
     slide_drafts: list[dict[str, object]],
-) -> dict[int, dict[str, object]]:
-    payload = []
+) -> list[dict[str, object]]:
+    """Build the list of slides to send for EN translation."""
+    payload: list[dict[str, object]] = []
     for slide in slide_drafts[:MAX_SLIDES]:
         if not isinstance(slide, dict):
             continue
@@ -88,19 +88,13 @@ async def _generate_en_translations(
             OUTLINE_LEGACY_HEADING_KEY: sanitize_llm_input(_slide_heading(slide)),
             OUTLINE_LEGACY_BODY_KEY: sanitize_llm_input(_slide_body(slide)),
         })
-    if not payload:
-        return {}
-    prompt = PROMPT_EDITORIAL_SLIDE_TRANSLATIONS.format(
-        slides_json=json.dumps(payload, ensure_ascii=False),
-    )
-    response = await llm.ainvoke(
-        [HumanMessage(content=prompt)],
-        get_langfuse_runnable_config(),
-    )
-    try:
-        data = cast(dict[str, object], extract_json(str(response.content)))
-    except (json.JSONDecodeError, TypeError) as exc:
-        raise ValueError(ERR_EN_TRANSLATION_PARSE_FAILED) from exc
+    return payload
+
+
+def _parse_translation_response(
+    data: dict[str, object],
+) -> dict[int, dict[str, object]]:
+    """Parse the LLM translation response into indexed translations."""
     raw_en = data.get(JSON_SLIDES_EN_KEY, [])
     if not isinstance(raw_en, list):
         raise TypeError(ERR_EN_TRANSLATION_PARSE_FAILED)
@@ -120,6 +114,27 @@ async def _generate_en_translations(
             translation[LONG_FORM_NOTES_KEY] = en_notes.strip()
         result[index] = translation
     return result
+
+
+async def _generate_en_translations(
+    llm: BaseChatModel,
+    slide_drafts: list[dict[str, object]],
+) -> dict[int, dict[str, object]]:
+    payload = _build_translation_payload(slide_drafts)
+    if not payload:
+        return {}
+    prompt = PROMPT_EDITORIAL_SLIDE_TRANSLATIONS.format(
+        slides_json=json.dumps(payload, ensure_ascii=False),
+    )
+    response = await llm.ainvoke(
+        [HumanMessage(content=prompt)],
+        get_langfuse_runnable_config(),
+    )
+    try:
+        data = cast(dict[str, object], extract_json(str(response.content)))
+    except (json.JSONDecodeError, TypeError) as exc:
+        raise ValueError(ERR_EN_TRANSLATION_PARSE_FAILED) from exc
+    return _parse_translation_response(data)
 
 
 __all__ = [

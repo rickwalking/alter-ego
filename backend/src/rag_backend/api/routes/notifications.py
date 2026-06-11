@@ -7,6 +7,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.api.dependencies.database import get_db
 from rag_backend.api.dependencies.resource_access import (
+    ContentAccessRequest,
+    ContentTarget,
     assert_content_owner_or_admin,
     assign_content_reviewer,
     validate_reviewer_user,
@@ -88,11 +90,18 @@ async def assign_reviewer(
 ) -> NotificationResponse:
     """Assign a reviewer and notify them (UI-022)."""
     await assert_content_owner_or_admin(
-        db, body.content_id, body.content_type, current_user
+        db,
+        ContentAccessRequest(
+            content_id=body.content_id,
+            content_type=body.content_type,
+            user=current_user,
+        ),
     )
     await validate_reviewer_user(db, body.reviewer_id)
     await assign_content_reviewer(
-        db, body.content_id, body.content_type, body.reviewer_id
+        db,
+        ContentTarget(content_id=body.content_id, content_type=body.content_type),
+        reviewer_id=body.reviewer_id,
     )
     service = _notification_service()
     notification = await service.create_review_request(

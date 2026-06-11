@@ -12,6 +12,7 @@ from rag_backend.application.services.carousel.presentation_policy import (
     load_presentation_policy,
 )
 from rag_backend.application.services.carousel.presentation_validation_fields import (
+    ValidationFieldContext,
     body_budget_for_slide_type,
     contains_drafting_scaffold,
     contains_forbidden_dash,
@@ -47,6 +48,18 @@ from rag_backend.domain.models.carousel_presentation_adapters import (
 REPAIR_TIMEOUT_SECONDS_DEFAULT = 60
 REPAIR_MAX_ATTEMPTS_PER_LOCALE = 1
 
+
+@dataclass
+class _ValidationCtx:
+    """Shared context for slide payload validation helpers."""
+
+    locale: str
+    slide_index: int | None
+    violations: list[SlideValidationViolation]
+    allowlist: frozenset[str]
+    policy: CarouselPresentationPolicy
+
+
 RepairFn = Callable[
     [Mapping[str, object], tuple[SlideValidationViolation, ...], str],
     Awaitable[Mapping[str, object] | None],
@@ -73,135 +86,188 @@ class BoundedRepairResult:
     timed_out: bool = False
 
 
-def validate_slide_payload(
+@dataclass(frozen=True)
+class ValidatePayloadCommand:
+    """Command to validate a single slide payload."""
+
+    payload: Mapping[str, object]
+    locale: str
+    policy: CarouselPresentationPolicy | None = None
+    slide_index: int | None = None
+
+
+@dataclass(frozen=True)
+class BoundedRepairCommand:
+    """Command for a single bounded repair attempt."""
+
+    request: BoundedRepairRequest
+    repair_fn: RepairFn | None = None
+    timeout_seconds: int = REPAIR_TIMEOUT_SECONDS_DEFAULT
+    policy: CarouselPresentationPolicy | None = None
+
+
+def _validate_en_heading_case(
+    heading: str,
+    policy: CarouselPresentationPolicy,
+    ctx: _ValidationCtx,
+) -> None:
+    """Validate that EN headings use sentence case."""
+    if ctx.locale != LANGUAGE_EN:
+        return
+    first_alpha = first_cased_alpha(heading)
+    allowlisted = heading.strip() in policy.intentional_lowercase_allowlist
+    if first_alpha is not None and first_alpha.islower() and not allowlisted:
+        ctx.violations.append(
+            SlideValidationViolation(
+                code=VIOLATION_HEADING_NOT_SENTENCE_CASE_EN,
+                message="English heading must start with an uppercase letter",
+                slide_index=ctx.slide_index,
+                locale=ctx.locale,
+                field="heading",
+            )
+        )
+
+
+def _validate_heading_not_in_body(
+    heading: str,
+    body: str,
+    ctx: _ValidationCtx,
+) -> None:
+    """Validate that body does not repeat heading text."""
+    normalized_heading = heading.strip().casefold()
+    normalized_body = body.strip().casefold()
+    if normalized_heading and normalized_heading in normalized_body:
+        ctx.violations.append(
+            SlideValidationViolation(
+                code=VIOLATION_HEADING_REPEATED_IN_BODY,
+                message="Body copy must not repeat the heading text",
+                slide_index=ctx.slide_index,
+                locale=ctx.locale,
+                field="body",
+            )
+        )
+
+
+def _validate_copy_budgets(
+    slide_type: str,
+    texts: tuple[str, str],
+    ctx: _ValidationCtx,
+) -> None:
+    """Validate heading and body copy budgets."""
+    heading, body = texts
+    heading_budget = heading_budget_for_slide_type(slide_type, ctx.policy)
+    if heading_budget is not None:
+        budget_violation = validate_copy_budget(
+            ValidationFieldContext(
+                text=heading,
+                field="heading",
+                budget=heading_budget,
+                too_long_code=VIOLATION_HEADING_TOO_LONG,
+                locale=ctx.locale,
+                slide_index=ctx.slide_index,
+            )
+        )
+        if budget_violation is not None:
+            ctx.violations.append(budget_violation)
+    body_budget = body_budget_for_slide_type(slide_type, ctx.policy)
+    if body_budget is not None:
+        budget_violation = validate_copy_budget(
+            ValidationFieldContext(
+                text=body,
+                field="body",
+                budget=body_budget,
+                too_long_code=VIOLATION_BODY_TOO_LONG,
+                locale=ctx.locale,
+                slide_index=ctx.slide_index,
+            )
+        )
+        if budget_violation is not None:
+            ctx.violations.append(budget_violation)
+
+
+def _validate_structured_sections(
     payload: Mapping[str, object],
-    *,
-    locale: str,
-    policy: CarouselPresentationPolicy | None = None,
-    slide_index: int | None = None,
+    policy: CarouselPresentationPolicy,
+    ctx: _ValidationCtx,
+) -> None:
+    """Validate all structured item sections (features, summary_points, actions)."""
+    sections: list[tuple[str, str, str]] = [
+        ("features", "feature_title", "feature_body"),
+        ("summary_points", "summary_point_title", "summary_point_body"),
+        ("actions", "closing_action_title", "closing_action_body"),
+    ]
+    for field, title_key, body_key in sections:
+        ctx.violations.extend(
+            validate_structured_items(
+                ValidationFieldContext(
+                    items=payload.get(field),
+                    allowlist=ctx.allowlist,
+                    title_budget=policy.copy_budgets.get(title_key),
+                    body_budget=policy.copy_budgets.get(body_key),
+                    locale=ctx.locale,
+                    slide_index=ctx.slide_index,
+                    field_prefix=field,
+                )
+            )
+        )
+
+
+def validate_slide_payload(
+    command: ValidatePayloadCommand,
 ) -> list[SlideValidationViolation]:
     """Validate one slide payload deterministically."""
-    active_policy = policy or load_presentation_policy(DEFAULT_PRESENTATION_POLICY_VERSION)
-    allowlist = frozenset(active_policy.lucide_icon_allowlist)
-    slide_type = str(payload.get("slide_type") or payload.get("type") or "")
-    heading = str(payload.get("heading") or "")
-    body = str(payload.get("body") or "")
+    active_policy = command.policy or load_presentation_policy(
+        DEFAULT_PRESENTATION_POLICY_VERSION
+    )
+    slide_type = str(
+        command.payload.get("slide_type") or command.payload.get("type") or ""
+    )
+    heading = str(command.payload.get("heading") or "")
+    body = str(command.payload.get("body") or "")
     violations: list[SlideValidationViolation] = []
+    ctx = _ValidationCtx(
+        locale=command.locale,
+        slide_index=command.slide_index,
+        violations=violations,
+        allowlist=frozenset(active_policy.lucide_icon_allowlist),
+        policy=active_policy,
+    )
 
     if not heading.strip():
         violations.append(
             SlideValidationViolation(
                 code=VIOLATION_HEADING_EMPTY,
                 message="Heading is required",
-                slide_index=slide_index,
-                locale=locale,
+                slide_index=command.slide_index,
+                locale=command.locale,
                 field="heading",
             )
         )
 
     violations.extend(
         validate_visible_field(
-            text=heading,
-            field="heading",
-            locale=locale,
-            slide_index=slide_index,
+            ValidationFieldContext(
+                text=heading,
+                field="heading",
+                locale=command.locale,
+                slide_index=command.slide_index,
+            )
         )
     )
     violations.extend(
         validate_visible_field(
-            text=body,
-            field="body",
-            locale=locale,
-            slide_index=slide_index,
-        )
-    )
-
-    if locale == LANGUAGE_EN:
-        first_alpha = first_cased_alpha(heading)
-        allowlisted = heading.strip() in active_policy.intentional_lowercase_allowlist
-        if first_alpha is not None and first_alpha.islower() and not allowlisted:
-            violations.append(
-                SlideValidationViolation(
-                    code=VIOLATION_HEADING_NOT_SENTENCE_CASE_EN,
-                    message="English heading must start with an uppercase letter",
-                    slide_index=slide_index,
-                    locale=locale,
-                    field="heading",
-                )
-            )
-
-    normalized_heading = heading.strip().casefold()
-    normalized_body = body.strip().casefold()
-    if normalized_heading and normalized_heading in normalized_body:
-        violations.append(
-            SlideValidationViolation(
-                code=VIOLATION_HEADING_REPEATED_IN_BODY,
-                message="Body copy must not repeat the heading text",
-                slide_index=slide_index,
-                locale=locale,
+            ValidationFieldContext(
+                text=body,
                 field="body",
+                locale=command.locale,
+                slide_index=command.slide_index,
             )
         )
-
-    heading_budget = heading_budget_for_slide_type(slide_type, active_policy)
-    if heading_budget is not None:
-        budget_violation = validate_copy_budget(
-            text=heading,
-            field="heading",
-            budget=heading_budget,
-            too_long_code=VIOLATION_HEADING_TOO_LONG,
-            locale=locale,
-            slide_index=slide_index,
-        )
-        if budget_violation is not None:
-            violations.append(budget_violation)
-
-    body_budget = body_budget_for_slide_type(slide_type, active_policy)
-    if body_budget is not None:
-        budget_violation = validate_copy_budget(
-            text=body,
-            field="body",
-            budget=body_budget,
-            too_long_code=VIOLATION_BODY_TOO_LONG,
-            locale=locale,
-            slide_index=slide_index,
-        )
-        if budget_violation is not None:
-            violations.append(budget_violation)
-
-    violations.extend(
-        validate_structured_items(
-            items=payload.get("features"),
-            allowlist=allowlist,
-            title_budget=active_policy.copy_budgets.get("feature_title"),
-            body_budget=active_policy.copy_budgets.get("feature_body"),
-            locale=locale,
-            slide_index=slide_index,
-            field_prefix="features",
-        )
     )
-    violations.extend(
-        validate_structured_items(
-            items=payload.get("summary_points"),
-            allowlist=allowlist,
-            title_budget=active_policy.copy_budgets.get("summary_point_title"),
-            body_budget=active_policy.copy_budgets.get("summary_point_body"),
-            locale=locale,
-            slide_index=slide_index,
-            field_prefix="summary_points",
-        )
-    )
-    violations.extend(
-        validate_structured_items(
-            items=payload.get("actions"),
-            allowlist=allowlist,
-            title_budget=active_policy.copy_budgets.get("closing_action_title"),
-            body_budget=active_policy.copy_budgets.get("closing_action_body"),
-            locale=locale,
-            slide_index=slide_index,
-            field_prefix="actions",
-        )
-    )
+    _validate_en_heading_case(heading, active_policy, ctx)
+    _validate_heading_not_in_body(heading, body, ctx)
+    _validate_copy_budgets(slide_type, (heading, body), ctx)
+    _validate_structured_sections(command.payload, active_policy, ctx)
     return violations
 
 
@@ -244,17 +310,13 @@ def build_validation_report(
 
 
 async def run_bounded_repair(
-    request: BoundedRepairRequest,
-    repair_fn: RepairFn | None = None,
-    *,
-    timeout_seconds: int = REPAIR_TIMEOUT_SECONDS_DEFAULT,
-    policy: CarouselPresentationPolicy | None = None,
+    command: BoundedRepairCommand,
 ) -> BoundedRepairResult:
     """Attempt at most one bounded repair for a locale, then revalidate."""
-    violations_before = tuple(request.violations)
-    if not violations_before or repair_fn is None:
+    violations_before = tuple(command.request.violations)
+    if not violations_before or command.repair_fn is None:
         return BoundedRepairResult(
-            payload=request.payload,
+            payload=command.request.payload,
             repair_attempted=False,
             violations_before=violations_before,
             violations_after=violations_before,
@@ -262,12 +324,14 @@ async def run_bounded_repair(
 
     try:
         repaired_payload = await asyncio.wait_for(
-            repair_fn(request.payload, violations_before, request.locale),
-            timeout=timeout_seconds,
+            command.repair_fn(
+                command.request.payload, violations_before, command.request.locale
+            ),
+            timeout=command.timeout_seconds,
         )
     except TimeoutError:
         return BoundedRepairResult(
-            payload=request.payload,
+            payload=command.request.payload,
             repair_attempted=True,
             violations_before=violations_before,
             violations_after=violations_before,
@@ -276,20 +340,22 @@ async def run_bounded_repair(
 
     if repaired_payload is None:
         return BoundedRepairResult(
-            payload=request.payload,
+            payload=command.request.payload,
             repair_attempted=True,
             violations_before=violations_before,
             violations_after=violations_before,
         )
 
-    slide_index_value = request.payload.get("slide_index")
+    slide_index_value = command.request.payload.get("slide_index")
     slide_index = slide_index_value if isinstance(slide_index_value, int) else None
     violations_after = tuple(
         validate_slide_payload(
-            repaired_payload,
-            locale=request.locale,
-            policy=policy,
-            slide_index=slide_index,
+            ValidatePayloadCommand(
+                repaired_payload,
+                locale=command.request.locale,
+                policy=command.policy,
+                slide_index=slide_index,
+            )
         )
     )
     return BoundedRepairResult(
@@ -303,8 +369,10 @@ async def run_bounded_repair(
 __all__ = [
     "REPAIR_MAX_ATTEMPTS_PER_LOCALE",
     "REPAIR_TIMEOUT_SECONDS_DEFAULT",
+    "BoundedRepairCommand",
     "BoundedRepairRequest",
     "BoundedRepairResult",
+    "ValidatePayloadCommand",
     "build_validation_report",
     "contains_drafting_scaffold",
     "contains_forbidden_dash",

@@ -8,6 +8,7 @@ from rag_backend.application.services.carousel_template.strategies.feature_grid 
 from rag_backend.application.services.carousel_template.strategies.hero_content import (
     HeroContentStrategy,
 )
+from rag_backend.domain.protocols.carousel import _RenderOptions
 
 
 @pytest.mark.unit
@@ -19,8 +20,7 @@ class TestLowerThirdShell:
             {"number": "3", "type": "content", "heading": "Heading", "body": "Body"},
             sample_project,
             sample_theme,
-            7,
-            "pt",
+            options=_RenderOptions(total_slides=7, language="pt"),
         )
         assert 'class="slide-artwork"' in result
         assert 'class="slide-overlay"' in result
@@ -45,8 +45,7 @@ class TestLowerThirdShell:
             },
             sample_project,
             sample_theme,
-            7,
-            "pt",
+            options=_RenderOptions(total_slides=7, language="pt"),
         )
         assert 'class="slide-presentation"' in result
         assert "<svg" in result

@@ -12,6 +12,7 @@ from rag_backend.application.services.carousel.editorial_workflow_support import
     SSE_EVENT_ARTIFACT,
     SSE_EVENT_PHASE_CHANGE,
     SSE_EVENT_REVIEW_REQUIRED,
+    PublishParams,
     publish_workflow_artifact,
     publish_workflow_sse_updates,
 )
@@ -181,10 +182,9 @@ class TestEditorialWorkflowStreamHttp:
 
         async def publish_outline_artifact() -> None:
             await publish_workflow_artifact(
-                project_id,
-                PHASE_OUTLINE,
-                WORKFLOW_ARTIFACT_TYPE_OUTLINE,
-                outline,
+                PublishParams(project_id=project_id, phase=PHASE_OUTLINE),
+                artifact_type=WORKFLOW_ARTIFACT_TYPE_OUTLINE,
+                data=outline,
             )
 
         events = await collect_hub_events_during(project_id, publish_outline_artifact)

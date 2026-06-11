@@ -8,28 +8,7 @@ import {
   FINAL_REVIEW_SEND_BACK_PHASES,
   type FinalReviewSendBackPhase,
 } from "@/constants/editorial-workflow";
-import type { LocalizedSlideReview } from "@/features/blog/types-ai";
-import type { EditorialWorkflowState } from "@/features/blog/types-ai";
-
-interface CreateWorkflowControlsProps {
-  state: EditorialWorkflowState | null;
-  showLiveControls: boolean;
-  loading: boolean;
-  feedback: string;
-  setFeedback: (value: string) => void;
-  feedbackError: string | null;
-  setFeedbackError: (value: string | null) => void;
-  sendBackTarget: FinalReviewSendBackPhase;
-  setSendBackTarget: (value: FinalReviewSendBackPhase) => void;
-  handleRevise: () => void;
-  approve: (options?: object) => void;
-  contentHasEdits: boolean;
-  contentSlides: LocalizedSlideReview[];
-  personaApproveBlocked: boolean;
-  presentationApproveBlocked: boolean;
-  editBudgetBlocked: boolean;
-  showPublishLink: boolean;
-}
+import type { CreateWorkflowControlsProps } from "@/features/create/types";
 
 export function CreateWorkflowControls({
   state,

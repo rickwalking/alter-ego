@@ -70,7 +70,7 @@ class TestExportAndCompleteCarousel:
                 return_value=repo,
             ),
             patch(
-                "rag_backend.application.services.carousel.editorial_finalize.merge_design_tokens_with_disk",
+                "rag_backend.application.services.carousel.design_token_utils.merge_design_tokens_with_disk",
                 return_value={"primary": "#000"},
             ),
             patch(

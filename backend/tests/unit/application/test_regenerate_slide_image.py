@@ -66,8 +66,8 @@ class TestRegenerateSlideImage:
         assert slide.extras.get("image_prompt") == "new futuristic scene"
         repo.update_slide.assert_awaited_once_with(slide)
         mock_run_image_one.assert_awaited_once()
-        slide_arg = mock_run_image_one.call_args.args[1]
-        assert slide_arg.image_prompt == "new futuristic scene"
+        config_arg = mock_run_image_one.call_args.args[0]
+        assert config_arg.slide.image_prompt == "new futuristic scene"
         assert export.export_slides.await_count >= 1
         pdf_builder.build.assert_called_once()
         assert result.id == project.id

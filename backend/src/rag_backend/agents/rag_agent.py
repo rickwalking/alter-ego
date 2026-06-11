@@ -10,6 +10,7 @@ from langchain_core.runnables.config import RunnableConfig
 from langchain_core.tools import BaseTool
 
 from rag_backend.agents.chat_streaming import extract_message_text, extract_stream_token
+from rag_backend.application.services.chat_stream_service import _ChatContext
 from rag_backend.application.tools import (
     build_list_documents_tool,
     build_refine_carousel_copy_tool,
@@ -151,32 +152,24 @@ class RAGAgent:
 
     async def chat(
         self,
-        message: str,
-        conversation_id: UUID,
-        *,
-        stream: bool = True,
-        persist_messages: bool = True,
+        ctx: _ChatContext,
     ) -> AsyncIterator[ChatEvent]:
         """Process a chat message with optional streaming.
 
         Args:
-            message: The user's message
-            conversation_id: The conversation ID
-            stream: Whether to stream the response
-            persist_messages: Whether to persist user/assistant messages to
-                the message repository. Set to False when the caller handles
-                persistence (e.g. WebSocket handler) to avoid session-flush
-                conflicts with tool side-effects.
+            ctx: Chat context with message, conversation_id, stream, and
+                persist_messages settings.
 
         Yields:
             Dictionary with 'type' and content:
             - type='token': Token text chunk
+            - type='error': Error message
             - type='tool_result': A tool finished (name + raw output)
             - type='sources': List of source documents
             - type='complete': Final complete message
         """
         history = await self._message_repository.get_by_conversation(
-            conversation_id, limit=10
+            ctx.conversation_id, limit=10
         )
 
         chat_history = []
@@ -186,32 +179,32 @@ class RAGAgent:
             elif msg.role == MessageRole.ASSISTANT:
                 chat_history.append(AIMessage(content=msg.content))
 
-        if persist_messages:
+        if ctx.persist_messages:
             user_message = Message(
                 role=MessageRole.USER,
-                content=message,
-                conversation_id=conversation_id,
+                content=ctx.message,
+                conversation_id=ctx.conversation_id,
             )
             await self._message_repository.create(user_message)
 
         sources = []
 
-        if stream:
+        if ctx.stream:
             async for event in self._chat_stream(
-                message,
-                conversation_id,
+                ctx.message,
+                ctx.conversation_id,
                 chat_history,
                 sources,
-                persist_messages,
+                ctx.persist_messages,
             ):
                 yield event
         else:
             async for event in self._chat_non_streaming(
-                message,
-                conversation_id,
+                ctx.message,
+                ctx.conversation_id,
                 chat_history,
                 sources,
-                persist_messages,
+                ctx.persist_messages,
             ):
                 yield event
 

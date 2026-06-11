@@ -4,33 +4,12 @@ import { useTranslations } from "next-intl";
 import { NeonButton } from "@/components/atoms/neon-button";
 import { NeonSpinner } from "@/components/atoms/neon-spinner";
 import {
-  BG_CARD,
-  NEON_RED,
-  TEXT,
-  TEXT_DIM,
-} from "@/constants/neon";
-
-const cardStyle = {
-  background: BG_CARD,
-  border: `1px solid ${NEON_RED}44`,
-  borderRadius: "8px",
-  padding: "24px",
-};
-
-const headerStyle = {
-  display: "flex",
-  alignItems: "center",
-  gap: "8px",
-  marginBottom: "12px",
-};
-
-const dotStyle = {
-  width: "10px",
-  height: "10px",
-  borderRadius: "50%",
-  background: NEON_RED,
-  flexShrink: 0 as const,
-};
+  FAILED_CARD_STYLE,
+  FAILED_CARD_HEADER_STYLE,
+  FAILED_CARD_DOT_STYLE,
+  FAILED_CARD_PHASE_LABEL_KEY,
+  FAILED_CARD_COLORS,
+} from "@/features/create/constants";
 
 export interface WorkflowFailedCardProps {
   currentPhase: string;
@@ -39,14 +18,7 @@ export interface WorkflowFailedCardProps {
   isRetrying: boolean;
 }
 
-const PHASE_LABEL_KEY: Record<string, string> = {
-  research: "sendBack.phases.research",
-  outline: "sendBack.phases.outline",
-  content: "sendBack.phases.content",
-  design: "sendBack.phases.design",
-  images: "sendBack.phases.images",
-  final_review: "review.finalReview.title",
-};
+const { NEON_RED, TEXT, TEXT_DIM } = FAILED_CARD_COLORS;
 
 export function WorkflowFailedCard({
   currentPhase,
@@ -56,13 +28,13 @@ export function WorkflowFailedCard({
 }: WorkflowFailedCardProps): React.ReactElement {
   const t = useTranslations("editorialWorkflow");
 
-  const phaseLabelKey = PHASE_LABEL_KEY[currentPhase];
+  const phaseLabelKey = FAILED_CARD_PHASE_LABEL_KEY[currentPhase];
   const phaseLabel = phaseLabelKey ? t(phaseLabelKey) : currentPhase;
 
   return (
-    <div style={cardStyle} role="alert">
-      <div style={headerStyle}>
-        <div style={dotStyle} />
+    <div style={FAILED_CARD_STYLE} role="alert">
+      <div style={FAILED_CARD_HEADER_STYLE}>
+        <div style={FAILED_CARD_DOT_STYLE} />
         <span style={{ color: NEON_RED, fontWeight: 700, fontSize: "15px" }}>
           {t("failed.genericLabel")}
         </span>

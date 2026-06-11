@@ -24,6 +24,7 @@ from rag_backend.api.schemas.blog_post import (
 from rag_backend.api.schemas.blog_post_list import BlogPostListParams
 from rag_backend.application.services.editorial_audit_service import (
     EditorialAuditService,
+    _AuditEntry,
 )
 from rag_backend.application.services.optimistic_lock_service import (
     OptimisticLockService,
@@ -78,7 +79,14 @@ async def create_blog_post(
     post.author_id = current_user.id
     db.add(post)
     await db.flush()
-    await _audit_service().log_created(db, str(post.id), current_user.id, post.title)
+    await _audit_service().log_created(
+        db,
+        entry=_AuditEntry(
+            post_id=str(post.id),
+            user_id=current_user.id,
+            extra=post.title,
+        ),
+    )
     await db.commit()
     await db.refresh(post)
     return post
@@ -182,7 +190,12 @@ async def update_blog_post(
             detail=ERR_BLOG_POST_NOT_FOUND.format(post_id=post_id),
         )
     await _audit_service().log_updated(
-        db, str(post_id), current_user.id, list(update_data.keys())
+        db,
+        entry=_AuditEntry(
+            post_id=str(post_id),
+            user_id=current_user.id,
+            extra=list(update_data.keys()),
+        ),
     )
     await db.commit()
     await db.refresh(post)
@@ -203,6 +216,12 @@ async def delete_blog_post(
 ) -> None:
     """Delete a blog post."""
     post = await get_blog_post_for_user(db, post_id, current_user)
-    await _audit_service().log_deleted(db, str(post_id), current_user.id)
+    await _audit_service().log_deleted(
+        db,
+        entry=_AuditEntry(
+            post_id=str(post_id),
+            user_id=current_user.id,
+        ),
+    )
     await db.delete(post)
     await db.commit()

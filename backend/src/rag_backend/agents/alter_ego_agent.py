@@ -15,6 +15,7 @@ from langchain_core.runnables.config import RunnableConfig
 from langchain_core.tools import BaseTool
 
 from rag_backend.agents.chat_streaming import extract_message_text, extract_stream_token
+from rag_backend.application.services.chat_stream_service import _ChatContext
 from rag_backend.application.tools.knowledge_base import (
     build_list_documents_tool,
     build_search_documents_tool,
@@ -109,11 +110,7 @@ class AlterEgoAgent:
 
     async def chat(
         self,
-        message: str,
-        conversation_id: UUID,
-        *,
-        stream: bool = True,
-        persist_messages: bool = True,
+        ctx: _ChatContext,
     ) -> AsyncIterator[ChatEvent]:
         """Process a chat message with optional streaming.
 
@@ -121,7 +118,7 @@ class AlterEgoAgent:
         can swap agents without changing their call sites.
         """
         history = await self._message_repository.get_by_conversation(
-            conversation_id, limit=10
+            ctx.conversation_id, limit=10
         )
 
         chat_history = []
@@ -131,28 +128,28 @@ class AlterEgoAgent:
             elif msg.role == MessageRole.ASSISTANT:
                 chat_history.append(AIMessage(content=msg.content))
 
-        if persist_messages:
+        if ctx.persist_messages:
             user_message = Message(
                 role=MessageRole.USER,
-                content=message,
-                conversation_id=conversation_id,
+                content=ctx.message,
+                conversation_id=ctx.conversation_id,
             )
             await self._message_repository.create(user_message)
 
-        if stream:
+        if ctx.stream:
             async for event in self._chat_stream(
-                message,
-                conversation_id,
+                ctx.message,
+                ctx.conversation_id,
                 chat_history,
-                persist_messages,
+                ctx.persist_messages,
             ):
                 yield event
         else:
             async for event in self._chat_non_streaming(
-                message,
-                conversation_id,
+                ctx.message,
+                ctx.conversation_id,
                 chat_history,
-                persist_messages,
+                ctx.persist_messages,
             ):
                 yield event
 

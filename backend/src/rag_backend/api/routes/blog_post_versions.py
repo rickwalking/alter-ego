@@ -16,6 +16,7 @@ from rag_backend.api.schemas.blog_post import (
 )
 from rag_backend.application.services.editorial_audit_service import (
     EditorialAuditService,
+    _AuditEntry,
 )
 from rag_backend.application.services.workflow_event_service import WorkflowEventService
 from rag_backend.domain.constants.access_control import ERR_BLOG_VERSION_NOT_FOUND
@@ -96,7 +97,12 @@ async def restore_blog_post_version(
     })
 
     await _audit_service().log_version_restored(
-        db, str(post_id), current_user.id, version_number
+        db,
+        entry=_AuditEntry(
+            post_id=str(post_id),
+            user_id=current_user.id,
+            extra=version_number,
+        ),
     )
     await db.commit()
     await db.refresh(post)

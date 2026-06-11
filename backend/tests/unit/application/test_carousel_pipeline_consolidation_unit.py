@@ -101,13 +101,13 @@ class TestGenerateCarouselTool:
             "theme": "ai_competition",
         })
 
-        project_id, topic, audience, brief, source_urls = starter.await_args.args
+        project_id, workflow_request = starter.await_args.args
         assert project_id == str(created.id)
-        assert "ignore previous instructions" not in topic
-        assert topic == ""
-        assert audience == "developers"
-        assert brief == topic
-        assert source_urls == []
+        assert "ignore previous instructions" not in workflow_request.topic
+        assert workflow_request.topic == ""
+        assert workflow_request.audience == "developers"
+        assert workflow_request.brief == workflow_request.topic
+        assert workflow_request.source_urls == []
 
 
 @pytest.mark.unit
@@ -195,7 +195,11 @@ class TestScrapeUrlSources:
             return_value="Scraped content from <b>article</b>"
         )
         sources: list[dict[str, str]] = [
-            {"title": "My Article", "content": "https://example.com/article", "source_type": SOURCE_TYPE_URL},
+            {
+                "title": "My Article",
+                "content": "https://example.com/article",
+                "source_type": SOURCE_TYPE_URL,
+            },
         ]
         result = await _scrape_url_sources(sources, mock_tool)
         mock_tool.scrape_url.assert_awaited_once_with("https://example.com/article")
@@ -205,7 +209,11 @@ class TestScrapeUrlSources:
         """Scenario: Non-URL sources pass through unchanged."""
         mock_tool = AsyncMock(spec=ResearchTool)
         sources: list[dict[str, str]] = [
-            {"title": "Document", "content": "Some pre-written text", "source_type": "document"},
+            {
+                "title": "Document",
+                "content": "Some pre-written text",
+                "source_type": "document",
+            },
         ]
         result = await _scrape_url_sources(sources, mock_tool)
         mock_tool.scrape_url.assert_not_called()
@@ -216,7 +224,11 @@ class TestScrapeUrlSources:
         mock_tool = AsyncMock(spec=ResearchTool)
         mock_tool.scrape_url = AsyncMock(side_effect=ConnectionError("Network error"))
         sources: list[dict[str, str]] = [
-            {"title": "My Article", "content": "https://example.com/article", "source_type": SOURCE_TYPE_URL},
+            {
+                "title": "My Article",
+                "content": "https://example.com/article",
+                "source_type": SOURCE_TYPE_URL,
+            },
         ]
         result = await _scrape_url_sources(sources, mock_tool)
         mock_tool.scrape_url.assert_awaited_once()
@@ -225,7 +237,11 @@ class TestScrapeUrlSources:
     async def test_research_tool_none_passthrough(self) -> None:
         """Scenario: ResearchTool is None falls back gracefully."""
         sources: list[dict[str, str]] = [
-            {"title": "My Article", "content": "https://example.com/article", "source_type": SOURCE_TYPE_URL},
+            {
+                "title": "My Article",
+                "content": "https://example.com/article",
+                "source_type": SOURCE_TYPE_URL,
+            },
         ]
         result = await _scrape_url_sources(sources, None)
         assert result[0]["content"] == "https://example.com/article"
@@ -236,7 +252,11 @@ class TestScrapeUrlSources:
         mock_tool.scrape_url = AsyncMock(return_value="Scraped text")
         sources: list[dict[str, str]] = [
             {"title": "Doc", "content": "Document text", "source_type": "document"},
-            {"title": "URL Source", "content": "https://example.com", "source_type": SOURCE_TYPE_URL},
+            {
+                "title": "URL Source",
+                "content": "https://example.com",
+                "source_type": SOURCE_TYPE_URL,
+            },
         ]
         result = await _scrape_url_sources(sources, mock_tool)
         mock_tool.scrape_url.assert_awaited_once_with("https://example.com")

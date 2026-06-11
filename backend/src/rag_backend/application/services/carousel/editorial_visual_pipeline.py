@@ -9,7 +9,10 @@ from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.application.services.carousel.nodes.design import run_design
-from rag_backend.application.services.carousel.nodes.images import run_images
+from rag_backend.application.services.carousel.nodes.images import (
+    ImageGenerationConfig,
+    run_images,
+)
 from rag_backend.application.services.carousel.outline_normalize import (
     canonical_slide_type,
 )
@@ -137,11 +140,13 @@ async def generate_carousel_images(
         project.output_dir = str(output_dir)
         await repo.update_project(project)
     await run_images(
-        project,
-        ctx.slides,
-        output_dir,
-        repo=repo,
-        image_registry=ctx.image_registry,
+        ImageGenerationConfig(
+            project=project,
+            slides=ctx.slides,
+            output_dir=output_dir,
+            repo=repo,
+            image_registry=ctx.image_registry,
+        )
     )
     return await _collect_generated_image_paths(repo, project.id, output_dir)
 

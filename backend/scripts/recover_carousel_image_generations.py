@@ -24,6 +24,8 @@ from pathlib import Path
 
 import asyncpg
 
+from rag_backend.domain.enums.run_mode import RunMode
+
 _DSN_ENV = "DATABASE_URL"
 _STATUS_SUCCEEDED = "succeeded"
 _STATUS_RECOVERED = "recovered"
@@ -31,6 +33,20 @@ _STATUS_FAILED = "failed"
 _DIR_CAROUSELS = "output/carousels"
 _MSG_DSN = "Set DATABASE_URL environment variable"
 _MSG_NO_PROJECTS = "No carousel projects found to process"
+_IMAGES_DIR_NAME = "images"
+
+_SLIDE_FILENAME_PREFIX = "slide_"
+_SLIDE_IMAGE_EXTENSION = ".jpg"
+_MIN_JPEG_BYTES = 1024
+
+# asyncpg Record column name constants
+_COL_ID = "id"
+_COL_OUTPUT_DIR = "output_dir"
+_COL_IMAGE_MODEL = "image_model"
+_COL_IMAGE_STYLE = "image_style"
+_COL_SLIDE_NUMBER = "slide_number"
+_COL_IMAGE_PATH = "image_path"
+_COL_GENERATION_KEY = "generation_key"
 
 
 async def _get_connection() -> asyncpg.Connection:
@@ -65,7 +81,7 @@ async def _existing_generation_keys(conn: asyncpg.Connection, project_id: str) -
         "SELECT generation_key FROM carousel_image_generations WHERE project_id = $1",
         project_id,
     )
-    return {row["generation_key"] for row in rows}
+    return {row[_COL_GENERATION_KEY] for row in rows}
 
 
 def _compute_sha256(path: Path) -> str | None:
@@ -77,7 +93,7 @@ def _compute_sha256(path: Path) -> str | None:
 def _is_valid_jpeg_file(path: Path) -> bool:
     if not path.is_file():
         return False
-    if path.stat().st_size < 1024:
+    if path.stat().st_size < _MIN_JPEG_BYTES:
         return False
     try:
         from PIL import Image
@@ -86,13 +102,13 @@ def _is_valid_jpeg_file(path: Path) -> bool:
             if img.format != "JPEG":
                 return False
             img.verify()
-        return True
     except Exception:
         return False
+    return True
 
 
 def _resolve_output_dir(project: asyncpg.Record) -> Path | None:
-    raw = project["output_dir"]
+    raw = project[_COL_OUTPUT_DIR]
     if not raw:
         return None
     path = Path(raw).resolve()
@@ -101,78 +117,97 @@ def _resolve_output_dir(project: asyncpg.Record) -> Path | None:
     return path
 
 
-async def recover_project(
+def _resolve_image_path(
+    image_path: str | None,
+    images_dir: Path,
+    slide: asyncpg.Record,
+) -> Path | None:
+    """Resolve the absolute path to a slide image file."""
+    if not image_path:
+        return None
+    abs_path = Path(image_path).resolve()
+    if abs_path.is_file():
+        return abs_path
+    if images_dir.is_dir():
+        candidate = images_dir / f"{_SLIDE_FILENAME_PREFIX}{slide[_COL_SLIDE_NUMBER]}{_SLIDE_IMAGE_EXTENSION}"
+        return candidate if candidate.is_file() else None
+    return None
+
+
+async def _process_slide(  # noqa: PLR0913, PLR0917
+    conn: asyncpg.Connection,
+    slide: asyncpg.Record,
+    images_dir: Path,
+    existing_keys: set[str],
+    output_dir: Path,  # noqa: ARG001
+    project: asyncpg.Record,
+    run_mode: RunMode,
+) -> tuple[int, int]:
+    """Process a single slide and return (recovered, skipped)."""
+    image_path = slide[_COL_IMAGE_PATH]
+    if not image_path:
+        return 0, 0
+
+    abs_path = _resolve_image_path(image_path, images_dir, slide)
+    if abs_path is None:
+        return 0, 1
+
+    if not _is_valid_jpeg_file(abs_path):
+        return 0, 1
+
+    generation_key = hashlib.sha256(
+        f"{project[_COL_IMAGE_MODEL]}:{project[_COL_IMAGE_STYLE]}:{abs_path}".encode()
+    ).hexdigest()
+
+    if generation_key in existing_keys:
+        return 0, 1
+
+    content_sha = _compute_sha256(abs_path)
+
+    if run_mode == RunMode.DRY_RUN:
+        print(f"  Would recover: slide {slide[_COL_SLIDE_NUMBER]} from {abs_path.name}")
+    else:
+        await conn.execute(
+            """INSERT INTO carousel_image_generations
+            (id, project_id, slide_id, slide_number, generation_key, status,
+             output_path, content_sha256, provider, model, style, error_json)
+            VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NULL)
+            ON CONFLICT (generation_key) DO NOTHING""",
+            project[_COL_ID],
+            slide[_COL_ID],
+            slide[_COL_SLIDE_NUMBER],
+            generation_key,
+            _STATUS_RECOVERED,
+            str(abs_path),
+            content_sha,
+            project[_COL_IMAGE_MODEL],
+            project[_COL_IMAGE_MODEL],
+            project[_COL_IMAGE_STYLE],
+        )
+
+    return 1, 0
+
+
+async def recover_project(  # noqa: PLR0913, PLR0917
     conn: asyncpg.Connection,
     project: asyncpg.Record,
     slides: list[asyncpg.Record],
-    dry_run: bool,
+    run_mode: RunMode,
 ) -> tuple[int, int]:
     output_dir = _resolve_output_dir(project)
     if output_dir is None:
-        print(f"  Skipping {project['id']}: no output_dir or directory not found")
+        print(f"  Skipping {project[_COL_ID]}: no output_dir or directory not found")
         return 0, 0
 
-    existing_keys = await _existing_generation_keys(conn, project["id"])
-    images_dir = output_dir / "images"
+    existing_keys = await _existing_generation_keys(conn, project[_COL_ID])
+    images_dir = output_dir / _IMAGES_DIR_NAME
     recovered = 0
     skipped = 0
 
     for slide in slides:
-        image_path = slide["image_path"]
-        if not image_path:
-            continue
-
-        abs_path = Path(image_path).resolve() if image_path else None
-        if abs_path is None or not abs_path.is_file():
-            if images_dir.is_dir():
-                candidate = images_dir / f"slide_{slide['slide_number']}.jpg"
-                if candidate.is_file():
-                    abs_path = candidate
-                else:
-                    skipped += 1
-                    continue
-            else:
-                skipped += 1
-                continue
-
-        if not _is_valid_jpeg_file(abs_path):
-            skipped += 1
-            continue
-
-        generation_key = hashlib.sha256(
-            f"{project['image_model']}:{project['image_style']}:{abs_path}".encode()
-        ).hexdigest()
-
-        if generation_key in existing_keys:
-            skipped += 1
-            continue
-
-        content_sha = _compute_sha256(abs_path)
-        metadata = slide["metadata"] or {}
-
-        if dry_run:
-            print(f"  Would recover: slide {slide['slide_number']} from {abs_path.name}")
-        else:
-            await conn.execute(
-                """INSERT INTO carousel_image_generations
-                (id, project_id, slide_id, slide_number, generation_key, status,
-                 output_path, content_sha256, provider, model, style, error_json)
-                VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NULL)
-                ON CONFLICT (generation_key) DO NOTHING""",
-                project["id"],
-                slide["id"],
-                slide["slide_number"],
-                generation_key,
-                _STATUS_RECOVERED,
-                str(abs_path),
-                content_sha,
-                project["image_model"],
-                project["image_model"],
-                project["image_style"],
-            )
-
-        recovered += 1
-        existing_keys.add(generation_key)
+        rec, skp = await _process_slide(conn, slide, images_dir, existing_keys, output_dir, project, run_mode)
+        recovered += rec
+        skipped += skp
 
     return recovered, skipped
 
@@ -189,6 +224,7 @@ async def main() -> None:
     parser.add_argument("--project-id", type=str, default=None, help="Limit to a single project UUID")
     args = parser.parse_args()
 
+    run_mode = RunMode.DRY_RUN if args.dry_run else RunMode.LIVE
     conn = await _get_connection()
 
     try:
@@ -196,7 +232,7 @@ async def main() -> None:
         if relatives:
             print("Projects with relative output_dir (need normalization):")
             for row in relatives:
-                print(f"  {row['id']}: {row['output_dir']}")
+                print(f"  {row[_COL_ID]}: {row[_COL_OUTPUT_DIR]}")
             print()
 
         projects = await _find_projects(conn, args.project_id)
@@ -207,9 +243,9 @@ async def main() -> None:
         total_recovered = 0
         total_skipped = 0
         for project in projects:
-            print(f"Processing project {project['id']}...")
-            slides = await _find_slides(conn, project["id"])
-            recovered, skipped = await recover_project(conn, project, slides, args.dry_run)
+            print(f"Processing project {project[_COL_ID]}...")
+            slides = await _find_slides(conn, project[_COL_ID])
+            recovered, skipped = await recover_project(conn, project, slides, run_mode)
             print(f"  Recovered: {recovered}, Skipped: {skipped}")
             total_recovered += recovered
             total_skipped += skipped

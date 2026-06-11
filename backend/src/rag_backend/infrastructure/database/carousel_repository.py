@@ -13,6 +13,7 @@ from rag_backend.domain.models import (
     ResearchSource,
 )
 from rag_backend.domain.protocols import CarouselRepository
+from rag_backend.domain.protocols.repositories import _ProjectQuery
 from rag_backend.infrastructure.database.models import (
     CarouselImageGenerationModel,
     CarouselProjectModel,
@@ -63,24 +64,22 @@ class PostgresCarouselRepository(CarouselRepository):
 
     async def get_all_projects(
         self,
-        status: CarouselStatus | None = None,
-        limit: int = 100,
-        offset: int = 0,
         *,
-        public_only: bool = False,
-        owner_id: str | None = None,
+        query: _ProjectQuery,
     ) -> list[CarouselProject]:
         """Get all carousel projects with optional filtering."""
         stmt = select(CarouselProjectModel).order_by(
             CarouselProjectModel.updated_at.desc()
         )
+        status = query.get("status")
         if status is not None:
             stmt = stmt.where(CarouselProjectModel.status == status.value)
-        if public_only:
+        if query.get("public_only"):
             stmt = stmt.where(CarouselProjectModel.is_public.is_(True))
+        owner_id = query.get("owner_id")
         if owner_id is not None:
             stmt = stmt.where(CarouselProjectModel.owner_id == owner_id)
-        stmt = stmt.limit(limit).offset(offset)
+        stmt = stmt.limit(query.get("limit", 100)).offset(query.get("offset", 0))
         result = await self._session.execute(stmt)
         models = result.scalars().all()
         return [model.to_entity() for model in models]

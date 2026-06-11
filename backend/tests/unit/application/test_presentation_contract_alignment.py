@@ -15,6 +15,7 @@ from rag_backend.domain.constants.presentation_policy import (
     PRESENTATION_POLICY_VERSION_HERO_LOWER_THIRD_V1,
 )
 
+
 def _repo_root() -> Path:
     """Resolve repo root for both normal and mutmut contexts."""
     test_file = Path(__file__).resolve()
@@ -33,8 +34,7 @@ def _repo_root() -> Path:
 
 REPO_ROOT = _repo_root()
 CONTRACT_YAML = (
-    REPO_ROOT
-    / "skills/runtime/carousel-pipeline/contracts/hero_lower_third_v1.yaml"
+    REPO_ROOT / "skills/runtime/carousel-pipeline/contracts/hero_lower_third_v1.yaml"
 )
 CONTENT_CONTRACTS = (
     REPO_ROOT / "skills/runtime/carousel-pipeline/_shared/content-contracts.md"
@@ -50,11 +50,15 @@ class TestPresentationContractAlignment:
 
     def test_yaml_slide_count_matches_typed_policy(self) -> None:
         raw = yaml.safe_load(CONTRACT_YAML.read_text(encoding="utf-8"))
-        policy = load_presentation_policy(PRESENTATION_POLICY_VERSION_HERO_LOWER_THIRD_V1)
+        policy = load_presentation_policy(
+            PRESENTATION_POLICY_VERSION_HERO_LOWER_THIRD_V1
+        )
         assert raw["slide_count"] == policy.slide_count
 
     def test_prompt_context_includes_policy_version_and_icons(self) -> None:
-        policy = load_presentation_policy(PRESENTATION_POLICY_VERSION_HERO_LOWER_THIRD_V1)
+        policy = load_presentation_policy(
+            PRESENTATION_POLICY_VERSION_HERO_LOWER_THIRD_V1
+        )
         context = render_presentation_policy_context(policy)
         assert policy.version in context
         for icon_name in policy.lucide_icon_allowlist:

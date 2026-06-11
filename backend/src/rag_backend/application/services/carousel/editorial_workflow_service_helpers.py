@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import AsyncIterator
 from dataclasses import dataclass
+from typing import TypedDict
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -11,6 +12,7 @@ from rag_backend.agents.carousel_editorial_orchestrator import (
     CarouselEditorialOrchestrator,
 )
 from rag_backend.application.services.carousel.editorial_workflow_support import (
+    EventParams,
     PhaseFeedbackPersistParams,
     build_phase_change_event,
     build_progress_event,
@@ -71,6 +73,16 @@ class FeedbackCorrectionContext:
     db: AsyncSession | None = None
 
 
+class ResumeContext(TypedDict):
+    """Context for preparing a workflow resume."""
+
+    orchestrator: CarouselEditorialOrchestrator
+    project_id: str
+    action: str
+    prior: CarouselWorkflowState | None
+    feedback: str | None
+
+
 def validate_content_approve_persona_score(prior: CarouselWorkflowState) -> None:
     """Reject content approval when persona voice match is below threshold."""
     current_phase = str(prior.get("current_phase", ""))
@@ -124,7 +136,7 @@ async def validate_revision_cap(
 
 
 async def record_feedback_correction(
-    orchestrator: CarouselEditorialOrchestrator,
+    _orchestrator: CarouselEditorialOrchestrator,
     ctx: FeedbackCorrectionContext,
 ) -> None:
     """Persist reviewer edits for feedback learning (CP-007)."""
@@ -175,25 +187,23 @@ def _feedback_corrected_text(
 
 
 async def prepare_resume_workflow(
-    orchestrator: CarouselEditorialOrchestrator,
-    project_id: str,
-    action: str,
-    prior: CarouselWorkflowState | None,
-    feedback: str | None,
+    context: ResumeContext,
 ) -> None:
     """Validate resume preconditions and persist revise feedback."""
+    prior = context["prior"]
     if prior is None:
         return
+    action = context["action"]
     if action == REVIEW_ACTION_APPROVE:
         validate_content_approve_persona_score(prior)
         validate_content_approve_presentation(prior)
     if action == REVIEW_ACTION_REVISE:
         await persist_phase_feedback(
-            orchestrator.engine,
+            context["orchestrator"].engine,
             PhaseFeedbackPersistParams(
-                project_id=project_id,
+                project_id=context["project_id"],
                 prior=prior,
-                feedback=feedback,
+                feedback=context["feedback"],
             ),
         )
 
@@ -229,10 +239,9 @@ async def stream_workflow_phase_updates(
     phase_status = str(state.get("phase_status", ""))
     if phase_status == PHASE_STATUS_AWAITING_HUMAN:
         yield build_review_required_event(
-            project_id,
-            current_phase,
-            phase_status,
-            build_review_gate_payload(state),
+            EventParams(project_id=project_id, phase=current_phase),
+            phase_status=phase_status,
+            gate_payload=build_review_gate_payload(state),
         )
 
     hub = get_workflow_sse_hub()
@@ -242,6 +251,7 @@ async def stream_workflow_phase_updates(
 
 __all__ = [
     "FeedbackCorrectionContext",
+    "ResumeContext",
     "RevisionCapValidationContext",
     "prepare_resume_workflow",
     "record_feedback_correction",

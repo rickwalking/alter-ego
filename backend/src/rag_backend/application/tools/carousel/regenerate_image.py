@@ -57,20 +57,19 @@ def build_regenerate_slide_image_tool(
 
         safe_instruction = sanitize_llm_input(instruction)
 
+        result = ERR_CAROUSEL_TOOL_UNEXPECTED
         try:
             await carousel_refinement.regenerate_slide_image(
                 project_uuid, slide_number, safe_instruction
             )
+            result = (
+                f"Regenerated image for slide {slide_number} on project "
+                f"{project_id}. Slides + PDF re-exported."
+            )
         except ValueError:
-            return _ERR_CANNOT_REGENERATE.format(slide_number=slide_number)
-        except (OSError, RuntimeError):
-            return ERR_CAROUSEL_TOOL_UNEXPECTED
+            result = _ERR_CANNOT_REGENERATE.format(slide_number=slide_number)
         except Exception:
-            return ERR_CAROUSEL_TOOL_UNEXPECTED
-
-        return (
-            f"Regenerated image for slide {slide_number} on project "
-            f"{project_id}. Slides + PDF re-exported."
-        )
+            result = ERR_CAROUSEL_TOOL_UNEXPECTED
+        return result
 
     return regenerate_slide_image

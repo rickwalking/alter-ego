@@ -10,7 +10,9 @@ from rag_backend.application.services.carousel.presentation_policy import (
     load_presentation_policy,
 )
 from rag_backend.application.services.carousel.presentation_validation import (
+    BoundedRepairCommand,
     BoundedRepairRequest,
+    ValidatePayloadCommand,
     build_validation_report,
     contains_forbidden_dash,
     contains_visible_emoji,
@@ -62,10 +64,16 @@ class TestValidateSlidePayload:
     def test_rejects_visible_emoji_in_heading(self, policy) -> None:
         """WHEN visible copy contains decorative emoji THEN visible_emoji_forbidden."""
         violations = validate_slide_payload(
-            {"slide_type": "content", "heading": "Key insight ✅", "body": "Detail"},
-            locale=LANGUAGE_PT,
-            policy=policy,
-            slide_index=3,
+            ValidatePayloadCommand(
+                {
+                    "slide_type": "content",
+                    "heading": "Key insight ✅",
+                    "body": "Detail",
+                },
+                locale=LANGUAGE_PT,
+                policy=policy,
+                slide_index=3,
+            )
         )
         codes = {violation.code for violation in violations}
         assert VIOLATION_VISIBLE_EMOJI_FORBIDDEN in codes
@@ -73,9 +81,11 @@ class TestValidateSlidePayload:
     def test_rejects_forbidden_dash_punctuation(self, policy) -> None:
         """WHEN visible copy contains em dash THEN dash_punctuation_forbidden."""
         violations = validate_slide_payload(
-            {"slide_type": "content", "heading": "One idea—two", "body": "Detail"},
-            locale=LANGUAGE_PT,
-            policy=policy,
+            ValidatePayloadCommand(
+                {"slide_type": "content", "heading": "One idea—two", "body": "Detail"},
+                locale=LANGUAGE_PT,
+                policy=policy,
+            )
         )
         codes = {violation.code for violation in violations}
         assert VIOLATION_DASH_PUNCTUATION_FORBIDDEN in codes
@@ -83,32 +93,44 @@ class TestValidateSlidePayload:
     def test_rejects_unsupported_icon_name(self, policy) -> None:
         """WHEN structured markers use unsupported Lucide names THEN reject."""
         violations = validate_slide_payload(
-            {
-                "slide_type": "content",
-                "heading": "Heading",
-                "body": "Body",
-                "features": [
-                    {"icon_name": "rocket-ship", "title": "Audit", "body": "Weekly"},
-                ],
-            },
-            locale=LANGUAGE_PT,
-            policy=policy,
+            ValidatePayloadCommand(
+                {
+                    "slide_type": "content",
+                    "heading": "Heading",
+                    "body": "Body",
+                    "features": [
+                        {
+                            "icon_name": "rocket-ship",
+                            "title": "Audit",
+                            "body": "Weekly",
+                        },
+                    ],
+                },
+                locale=LANGUAGE_PT,
+                policy=policy,
+            )
         )
         codes = {violation.code for violation in violations}
         assert VIOLATION_ICON_NAME_NOT_ALLOWLISTED in codes
 
     def test_accepts_allowlisted_icon_name(self, policy) -> None:
         violations = validate_slide_payload(
-            {
-                "slide_type": "content",
-                "heading": "Heading",
-                "body": "Body",
-                "features": [
-                    {"icon_name": "shield-check", "title": "Audit", "body": "Weekly"},
-                ],
-            },
-            locale=LANGUAGE_PT,
-            policy=policy,
+            ValidatePayloadCommand(
+                {
+                    "slide_type": "content",
+                    "heading": "Heading",
+                    "body": "Body",
+                    "features": [
+                        {
+                            "icon_name": "shield-check",
+                            "title": "Audit",
+                            "body": "Weekly",
+                        },
+                    ],
+                },
+                locale=LANGUAGE_PT,
+                policy=policy,
+            )
         )
         icon_codes = {
             violation.code
@@ -120,35 +142,45 @@ class TestValidateSlidePayload:
     def test_rejects_lowercase_english_heading(self, policy) -> None:
         """WHEN English headings start lowercase THEN heading_not_sentence_case_en."""
         violations = validate_slide_payload(
-            {"slide_type": "content", "heading": "machine learning basics", "body": ""},
-            locale=LANGUAGE_EN,
-            policy=policy,
+            ValidatePayloadCommand(
+                {
+                    "slide_type": "content",
+                    "heading": "machine learning basics",
+                    "body": "",
+                },
+                locale=LANGUAGE_EN,
+                policy=policy,
+            )
         )
         codes = {violation.code for violation in violations}
         assert VIOLATION_HEADING_NOT_SENTENCE_CASE_EN in codes
 
     def test_rejects_body_exceeding_max_lines_budget(self, policy) -> None:
         violations = validate_slide_payload(
-            {
-                "slide_type": "content",
-                "heading": "Heading",
-                "body": "\n".join(f"Line {line}" for line in range(1, 8)),
-            },
-            locale=LANGUAGE_PT,
-            policy=policy,
+            ValidatePayloadCommand(
+                {
+                    "slide_type": "content",
+                    "heading": "Heading",
+                    "body": "\n".join(f"Line {line}" for line in range(1, 8)),
+                },
+                locale=LANGUAGE_PT,
+                policy=policy,
+            )
         )
         codes = {violation.code for violation in violations}
         assert VIOLATION_COPY_TOO_MANY_LINES in codes
 
     def test_rejects_over_budget_body_copy(self, policy) -> None:
         violations = validate_slide_payload(
-            {
-                "slide_type": "content",
-                "heading": "Heading",
-                "body": "x" * 300,
-            },
-            locale=LANGUAGE_PT,
-            policy=policy,
+            ValidatePayloadCommand(
+                {
+                    "slide_type": "content",
+                    "heading": "Heading",
+                    "body": "x" * 300,
+                },
+                locale=LANGUAGE_PT,
+                policy=policy,
+            )
         )
         codes = {violation.code for violation in violations}
         assert VIOLATION_BODY_TOO_LONG in codes
@@ -192,7 +224,13 @@ class TestBoundedRepair:
             payload={"slide_type": "content", "heading": "Hi ✅", "body": ""},
             violations=violations,
         )
-        result = await run_bounded_repair(request, repair_fn=None, policy=policy)
+        result = await run_bounded_repair(
+            BoundedRepairCommand(
+                request=request,
+                repair_fn=None,
+                policy=policy,
+            )
+        )
 
         assert result.repair_attempted is False
         assert result.violations_after == violations
@@ -221,7 +259,13 @@ class TestBoundedRepair:
             payload={"slide_type": "content", "heading": "Hi ✅", "body": ""},
             violations=violations,
         )
-        result = await run_bounded_repair(request, repair_fn=_repair, policy=policy)
+        result = await run_bounded_repair(
+            BoundedRepairCommand(
+                request=request,
+                repair_fn=_repair,
+                policy=policy,
+            )
+        )
 
         assert result.repair_attempted is True
         assert result.violations_after == ()
@@ -248,10 +292,12 @@ class TestBoundedRepair:
             violations=violations,
         )
         result = await run_bounded_repair(
-            request,
-            repair_fn=_slow_repair,
-            timeout_seconds=0,
-            policy=policy,
+            BoundedRepairCommand(
+                request=request,
+                repair_fn=_slow_repair,
+                timeout_seconds=0,
+                policy=policy,
+            )
         )
 
         assert result.repair_attempted is True
@@ -267,13 +313,11 @@ class TestValidationReport:
         assert report.blocking is False
 
     def test_build_validation_report_invalid_when_violations_present(self) -> None:
-        report = build_validation_report(
-            [
-                SlideValidationViolation(
-                    code=VIOLATION_VISIBLE_EMOJI_FORBIDDEN,
-                    message="emoji",
-                )
-            ]
-        )
+        report = build_validation_report([
+            SlideValidationViolation(
+                code=VIOLATION_VISIBLE_EMOJI_FORBIDDEN,
+                message="emoji",
+            )
+        ])
         assert report.validation_status == VALIDATION_STATUS_INVALID
         assert report.blocking is True

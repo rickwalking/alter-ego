@@ -6,7 +6,6 @@ Feature: Delivery skills remain slash-only after folder migration
 from __future__ import annotations
 
 import pytest
-
 from scripts.validate_skill_boundary import validate_skill_boundary
 
 

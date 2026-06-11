@@ -264,8 +264,10 @@ class TestRegenerateSlideImage:
         assert slide.extras == {"stats": [{"v": "1"}], "image_prompt": "new prompt"}
         mixin._repo.update_slide.assert_awaited_once_with(slide)
         mock_run.assert_awaited_once()
-        _, kwargs = mock_run.call_args
-        assert kwargs["image_registry"] is mixin._image_registry
+        args, _ = mock_run.call_args
+        config = args[0] if args else None
+        assert config is not None, "run_image_one should receive ImageGenerationConfig"
+        assert config.image_registry is mixin._image_registry
         mixin.re_render_slides.assert_awaited_once_with(project.id)
 
     @pytest.mark.asyncio
@@ -285,9 +287,9 @@ class TestRegenerateSlideImage:
 
         captured_slide_data = None
 
-        async def _capture_run_image_one(_, slide_data, __, **___):
+        async def _capture_run_image_one(config, **___):
             nonlocal captured_slide_data
-            captured_slide_data = slide_data
+            captured_slide_data = config.slide
             return "/tmp/out/images/slide_3.jpg"
 
         with patch(

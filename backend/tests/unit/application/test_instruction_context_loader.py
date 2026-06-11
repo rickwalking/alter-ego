@@ -5,9 +5,9 @@ from __future__ import annotations
 import pytest
 
 from rag_backend.application.services.carousel.instruction_context_loader import (
+    INSTRUCTION_CONTEXT_MAX_CHARS,
     CarouselInstructionContextLoader,
     InstructionContextRequest,
-    INSTRUCTION_CONTEXT_MAX_CHARS,
 )
 from rag_backend.domain.constants.carousel import CAROUSEL_PROMPT_VERSION_V3
 from rag_backend.domain.constants.carousel_workflow import (
@@ -59,7 +59,10 @@ class TestInstructionContextLoader:
 
         assert result.slide_number == 6
         assert "Target slide 6 (closing)" in result.instruction
-        assert "content-contracts.md" in result.instruction or "Content contracts" in result.instruction
+        assert (
+            "content-contracts.md" in result.instruction
+            or "Content contracts" in result.instruction
+        )
         assert "Lucide icon allowlist" in result.instruction
 
     def test_instruction_context_is_bounded(self) -> None:

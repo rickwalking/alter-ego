@@ -7,6 +7,11 @@ from uuid import uuid4
 
 import pytest
 
+from rag_backend.application.services.carousel.editorial_distribution_blog import (
+    BlogBuildContext,
+    build_blog_markdown_en_from_translations,
+    build_blog_markdown_from_drafts,
+)
 from rag_backend.application.services.carousel.editorial_distribution_constants import (
     LONG_FORM_NOTES_KEY,
     OUTLINE_LEGACY_BODY_KEY,
@@ -14,8 +19,6 @@ from rag_backend.application.services.carousel.editorial_distribution_constants 
 )
 from rag_backend.application.services.carousel.editorial_distribution_pack import (
     DistributionBuildContext,
-    build_blog_markdown_en_from_translations,
-    build_blog_markdown_from_drafts,
     build_editorial_distribution_updates,
 )
 from rag_backend.domain.constants.carousel import CAROUSEL_SLIDES_CONFIG_SEVEN
@@ -38,7 +41,9 @@ class TestBuildBlogMarkdownFromDrafts:
                 LONG_FORM_NOTES_KEY: "Expanded deep dive for the blog.",
             },
         ]
-        markdown = build_blog_markdown_from_drafts(drafts, title="My Topic")
+        markdown = build_blog_markdown_from_drafts(
+            BlogBuildContext(slide_drafts=drafts, title="My Topic")
+        )
         assert "# My Topic" in markdown
         assert "## Intro" in markdown
         assert "Expanded hook for the blog." in markdown
@@ -47,7 +52,9 @@ class TestBuildBlogMarkdownFromDrafts:
 
     def test_skips_slides_without_body(self) -> None:
         drafts = [{"slide_index": 1, "title": "Empty", "draft_text": "   "}]
-        markdown = build_blog_markdown_from_drafts(drafts, title="T")
+        markdown = build_blog_markdown_from_drafts(
+            BlogBuildContext(slide_drafts=drafts, title="T")
+        )
         assert "## Empty" not in markdown
 
 
@@ -69,7 +76,11 @@ class TestBuildBlogMarkdownEn:
             }
         }
         markdown = build_blog_markdown_en_from_translations(
-            drafts, translations, title="EN Title"
+            BlogBuildContext(
+                slide_drafts=drafts,
+                translations_en=translations,
+                title="EN Title",
+            ),
         )
         assert "## EN Hook" in markdown
         assert "EN long-form notes." in markdown

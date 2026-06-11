@@ -61,7 +61,9 @@ _ERR_PROJECT_NOT_FOUND_AFTER_RENDER = "carousel project not found after render"
 _ERR_ARTIFACT_BUILD_FAILED = "artifact build failed"
 _ERR_UNEXPECTED_BUILD_RESULT = "artifact build returned an unexpected result"
 _ERR_VALIDATION_BLOCKED = "presentation validation failed in audit mode"
-_ERR_REPAIR_NOT_WIRED = "bounded repair is not available from this CLI; fix violations manually"
+_ERR_REPAIR_NOT_WIRED = (
+    "bounded repair is not available from this CLI; fix violations manually"
+)
 _MSG_LEGACY_AUDIT_SKIPPED = (
     "legacy_neon_v2 audit skipped presentation union validation; artifact health only"
 )
@@ -103,6 +105,26 @@ class RegenerationCommand:
     repair: bool
     render: bool
     target_policy_version: str
+
+
+@dataclass(frozen=True)
+class AuditContext:
+    """Parameters for auditing a legacy presentation."""
+
+    project: CarouselProject
+    slides: Sequence[CarouselSlide]
+    target_policy_version: str
+    validate_presentation: bool
+
+
+@dataclass(frozen=True)
+class RegeneratePresentationCommand:
+    """Parameters for regenerating a legacy presentation."""
+
+    db: AsyncSession
+    refinement: CarouselRefinementService
+    artifact_build: CarouselArtifactBuildService
+    command: RegenerationCommand
 
 
 def _slides_to_drafts(slides: Sequence[CarouselSlide]) -> list[dict[str, object]]:
@@ -149,19 +171,16 @@ def _validation_messages(report: dict[str, object]) -> tuple[str, ...]:
 
 
 def audit_legacy_presentation(
-    project: CarouselProject,
-    slides: Sequence[CarouselSlide],
-    *,
-    target_policy_version: str,
-    validate_presentation: bool,
+    context: AuditContext,
 ) -> RegenerationAuditReport:
     """Audit existing PT/EN copy and artifact health without mutating files."""
     current_policy = (
-        project.presentation_policy_version or LEGACY_PRESENTATION_POLICY_VERSION
+        context.project.presentation_policy_version
+        or LEGACY_PRESENTATION_POLICY_VERSION
     )
     notes: list[str] = []
     validation_report: dict[str, object]
-    if not validate_presentation:
+    if not context.validate_presentation:
         notes.append(_MSG_LEGACY_AUDIT_SKIPPED)
         validation_report = {
             "validation_status": VALIDATION_STATUS_VALID,
@@ -169,44 +188,42 @@ def audit_legacy_presentation(
             "violations": [],
         }
     else:
-        drafts = _slides_to_drafts(slides)
+        drafts = _slides_to_drafts(context.slides)
         localized = build_localized_slides(drafts)
         validation_report = validation_report_to_dict(
             validate_localized_slides(
                 localized,
-                policy_version=target_policy_version,
+                policy_version=context.target_policy_version,
             ),
         )
 
     health = evaluate_carousel_artifacts(
-        CarouselArtifactHealthRequest(project=project, slides=slides),
+        CarouselArtifactHealthRequest(project=context.project, slides=context.slides),
     )
     backup_path = None
-    if project.output_dir:
-        backup_path = Path(project.output_dir) / _ROLLBACK_DIR_NAME
+    if context.project.output_dir:
+        backup_path = Path(context.project.output_dir) / _ROLLBACK_DIR_NAME
 
     return RegenerationAuditReport(
-        project_id=str(project.id),
+        project_id=str(context.project.id),
         current_policy_version=current_policy,
-        target_policy_version=target_policy_version,
+        target_policy_version=context.target_policy_version,
         validation_status=str(validation_report.get("validation_status", "invalid")),
         blocking=bool(validation_report.get("blocking")),
         violation_messages=_validation_messages(validation_report),
         artifact_health_ok=health.ok,
         artifact_health_errors=health.errors,
-        prior_artifact_version=project.artifact_version,
+        prior_artifact_version=context.project.artifact_version,
         backup_path=backup_path,
         notes=tuple(notes),
     )
 
 
-async def regenerate_legacy_presentation(
+async def _load_project_and_slides(
     db: AsyncSession,
-    refinement: CarouselRefinementService,
-    artifact_build: CarouselArtifactBuildService,
     command: RegenerationCommand,
-) -> RegenerationResult:
-    """Audit, optionally repair, render, and promote a new artifact version."""
+) -> tuple[PostgresCarouselRepository, CarouselProject, list[CarouselSlide]]:
+    """Load and validate project existence, slides, and output directory."""
     repo = PostgresCarouselRepository(session=db)
     project = await repo.get_project_by_id(command.project_id)
     if project is None:
@@ -216,7 +233,15 @@ async def regenerate_legacy_presentation(
         raise ValueError(_ERR_NO_SLIDES)
     if not project.output_dir:
         raise ValueError(_ERR_NO_OUTPUT_DIR)
+    return repo, project, list(slides)
 
+
+def _validate_and_audit(
+    project: CarouselProject,
+    slides: list[CarouselSlide],
+    command: RegenerationCommand,
+) -> RegenerationAuditReport:
+    """Determine policy version, run audit, and raise on blocking violations."""
     current_policy = (
         project.presentation_policy_version or LEGACY_PRESENTATION_POLICY_VERSION
     )
@@ -224,27 +249,28 @@ async def regenerate_legacy_presentation(
         command.render or current_policy != LEGACY_PRESENTATION_POLICY_VERSION
     )
     audit = audit_legacy_presentation(
-        project,
-        slides,
-        target_policy_version=command.target_policy_version,
-        validate_presentation=validate_presentation,
+        AuditContext(
+            project=project,
+            slides=slides,
+            target_policy_version=command.target_policy_version,
+            validate_presentation=validate_presentation,
+        ),
     )
     if audit.blocking:
         if command.repair:
             raise ValueError(_ERR_REPAIR_NOT_WIRED)
         raise ValueError(_ERR_VALIDATION_BLOCKED)
+    return audit
 
-    if command.dry_run or not command.render:
-        return RegenerationResult(
-            audit=audit,
-            rendered=False,
-            artifact_version=project.artifact_version,
-            manifest_path=None,
-        )
 
+def _backup_and_rebuild_audit(
+    project: CarouselProject,
+    audit: RegenerationAuditReport,
+) -> tuple[Path, RegenerationAuditReport]:
+    """Create backup of output dir and rebuild audit report with backup path."""
     output_dir = Path(project.output_dir).resolve()
     backup_path = _backup_output_root(output_dir)
-    audit = RegenerationAuditReport(
+    rebuilt = RegenerationAuditReport(
         project_id=audit.project_id,
         current_policy_version=audit.current_policy_version,
         target_policy_version=audit.target_policy_version,
@@ -257,12 +283,19 @@ async def regenerate_legacy_presentation(
         backup_path=backup_path,
         notes=audit.notes,
     )
+    return backup_path, rebuilt
 
+
+async def _re_render_and_update_policy(
+    repo: PostgresCarouselRepository,
+    refinement: CarouselRefinementService,
+    command: RegenerationCommand,
+) -> CarouselProject:
+    """Re-render slides and update the project presentation policy version."""
     await refinement.re_render_slides(command.project_id)
     project = await repo.get_project_by_id(command.project_id)
     if project is None:
         raise ValueError(_ERR_PROJECT_NOT_FOUND_AFTER_RENDER)
-
     project.presentation_policy_version = command.target_policy_version
     if command.target_policy_version == PRESENTATION_POLICY_VERSION_HERO_LOWER_THIRD_V1:
         try:
@@ -271,13 +304,35 @@ async def regenerate_legacy_presentation(
         except PresentationPolicyError:
             project.presentation_policy_checksum = None
     await repo.update_project(project)
+    return project
 
-    lock_version = await read_project_lock_version(db, str(project.id))
-    build_result = await artifact_build.build_and_activate(
-        db,
+
+async def regenerate_legacy_presentation(
+    params: RegeneratePresentationCommand,
+) -> RegenerationResult:
+    """Audit, optionally repair, render, and promote a new artifact version."""
+    repo, project, slides = await _load_project_and_slides(params.db, params.command)
+    audit = _validate_and_audit(project, slides, params.command)
+
+    if params.command.dry_run or not params.command.render:
+        return RegenerationResult(
+            audit=audit,
+            rendered=False,
+            artifact_version=project.artifact_version,
+            manifest_path=None,
+        )
+
+    _backup_path, audit = _backup_and_rebuild_audit(project, audit)
+    project = await _re_render_and_update_policy(
+        repo, params.refinement, params.command
+    )
+
+    lock_version = await read_project_lock_version(params.db, str(project.id))
+    build_result = await params.artifact_build.build_and_activate(
+        params.db,
         ArtifactBuildRequest(
             project=project,
-            slides=await repo.get_slides_by_project(command.project_id),
+            slides=await repo.get_slides_by_project(params.command.project_id),
             source_lock_version=lock_version,
             prior_artifact_version=audit.prior_artifact_version,
         ),
@@ -287,8 +342,8 @@ async def regenerate_legacy_presentation(
         raise LegacyRegenerationError(detail)
     if not isinstance(build_result, ArtifactBuildResult):
         raise TypeError(_ERR_UNEXPECTED_BUILD_RESULT)
-
     await repo.update_project(project)
+
     return RegenerationResult(
         audit=audit,
         rendered=True,
@@ -303,7 +358,9 @@ def default_target_policy_version() -> str:
 
 
 __all__ = [
+    "AuditContext",
     "LegacyRegenerationError",
+    "RegeneratePresentationCommand",
     "RegenerationAuditReport",
     "RegenerationCommand",
     "RegenerationResult",

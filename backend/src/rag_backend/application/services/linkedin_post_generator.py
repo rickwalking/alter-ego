@@ -34,6 +34,16 @@ _LANG_PT = "pt"
 
 
 @dataclass(frozen=True)
+class _PromptInput:
+    """Input data for building a LinkedIn post prompt."""
+
+    blog: str
+    language: str
+    title: str
+    voice_examples: str
+
+
+@dataclass(frozen=True)
 class LinkedInPost:
     """Generated LinkedIn post in a single language."""
 
@@ -67,10 +77,12 @@ class LinkedInPostGenerator:
             raise ValueError(_ERR_NO_BLOG_CONTENT.format(project.id, language))
         samples = await self._style.get_samples()
         prompt = _build_prompt(
-            blog=blog,
-            language=language,
-            title=project.title or project.topic,
-            voice_examples=format_samples_for_prompt(samples, language),
+            _PromptInput(
+                blog=blog,
+                language=language,
+                title=project.title or project.topic,
+                voice_examples=format_samples_for_prompt(samples, language),
+            ),
         )
         text = await self._llm.generate(
             messages=[{"role": "user", "content": prompt}],
@@ -125,14 +137,11 @@ def _truncate_on_boundary(text: str, max_chars: int) -> str:
 
 
 def _build_prompt(
-    blog: str,
-    language: str,
-    title: str,
-    voice_examples: str,
+    input_data: _PromptInput,
 ) -> str:
     """Compose the LLM prompt for a single-language LinkedIn post."""
-    lang_name = "English" if language == _LANG_EN else "Portuguese"
-    voice_block = voice_examples or (
+    lang_name = "English" if input_data.language == _LANG_EN else "Portuguese"
+    voice_block = input_data.voice_examples or (
         "No voice samples available — use a direct, technical, "
         "conversational tone without corporate fluff."
     )
@@ -152,11 +161,11 @@ Hard rules:
 - No generic LinkedIn clichés ("Excited to share", "I am thrilled").
 - Use short paragraphs (1-3 sentences).
 
-Post topic: {title}
+Post topic: {input_data.title}
 
 Source blog ({lang_name}):
 <<<
-{blog}
+{input_data.blog}
 >>>
 
 Write the LinkedIn post now."""

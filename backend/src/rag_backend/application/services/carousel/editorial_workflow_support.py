@@ -7,6 +7,7 @@ from rag_backend.application.services.carousel.editorial_workflow_feedback impor
     read_checkpoint_phase,
 )
 from rag_backend.application.services.carousel.editorial_workflow_sse_build import (
+    EventParams,
     build_artifact_event,
     build_error_event,
     build_phase_change_event,
@@ -36,6 +37,7 @@ from rag_backend.application.services.carousel.editorial_workflow_sse_format imp
     format_sse_event,
 )
 from rag_backend.application.services.carousel.editorial_workflow_sse_publish import (
+    PublishParams,
     publish_workflow_artifact,
     publish_workflow_artifacts_from_updates,
     publish_workflow_error,
@@ -66,7 +68,9 @@ __all__ = [
     "WORKFLOW_SSE_KEEPALIVE_SECONDS",
     "WORKFLOW_SSE_MAX_SUBSCRIBERS_PER_PROJECT",
     "EditorialWorkflowStartInput",
+    "EventParams",
     "PhaseFeedbackPersistParams",
+    "PublishParams",
     "ResumeWorkflowInput",
     "ReviewEventEmitContext",
     "build_artifact_event",

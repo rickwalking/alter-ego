@@ -5,15 +5,18 @@ from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.api.dependencies import require_admin
+from rag_backend.application.services.carousel.design_token_utils import (
+    _has_rendered_slides,
+)
 from rag_backend.application.services.carousel_template.design import (
     generate_design_tokens,
 )
 from rag_backend.domain.models import CarouselProject, CarouselStatus, User
 from rag_backend.domain.protocols import CarouselRefinementService, CarouselRepository
+from rag_backend.domain.protocols.repositories import _ProjectQuery
 from rag_backend.infrastructure.database.config import get_session
 
 from .deps import get_carousel_refinement, get_carousel_repo
-from .helpers import _has_rendered_slides
 
 router = APIRouter(tags=["carousels-admin"])
 
@@ -56,7 +59,7 @@ async def refresh_design_tokens(
     session: Annotated[AsyncSession, Depends(get_session)],
 ) -> RefreshDesignTokensResponse:
     projects = await repo.get_all_projects(
-        status=CarouselStatus.COMPLETED, limit=1000, offset=0
+        query=_ProjectQuery(status=CarouselStatus.COMPLETED, limit=1000, offset=0),
     )
 
     updated = 0
@@ -94,7 +97,7 @@ async def render_missing_slides(
     refinement: Annotated[CarouselRefinementService, Depends(get_carousel_refinement)],
 ) -> RenderSlidesResponse:
     projects = await repo.get_all_projects(
-        status=CarouselStatus.COMPLETED, limit=1000, offset=0
+        query=_ProjectQuery(status=CarouselStatus.COMPLETED, limit=1000, offset=0),
     )
 
     updated = 0

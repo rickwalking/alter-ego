@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from datetime import UTC, datetime
 
 from rag_backend.application.services.carousel.editorial_distribution_constants import (
@@ -24,6 +24,7 @@ from rag_backend.application.services.carousel.presentation_review_repair import
     repair_localized_slides_sync,
 )
 from rag_backend.application.services.carousel.presentation_validation import (
+    ValidatePayloadCommand,
     build_validation_report,
     validate_bilingual_shape_parity,
     validate_slide_payload,
@@ -60,19 +61,23 @@ def validate_localized_slides(
         if presentation_pt is not None:
             violations.extend(
                 validate_slide_payload(
-                    presentation_pt,
-                    locale=LANGUAGE_PT,
-                    policy=policy,
-                    slide_index=slide_index,
+                    ValidatePayloadCommand(
+                        presentation_pt,
+                        locale=LANGUAGE_PT,
+                        policy=policy,
+                        slide_index=slide_index,
+                    )
                 )
             )
         if presentation_en is not None:
             violations.extend(
                 validate_slide_payload(
-                    presentation_en,
-                    locale=LANGUAGE_EN,
-                    policy=policy,
-                    slide_index=slide_index,
+                    ValidatePayloadCommand(
+                        presentation_en,
+                        locale=LANGUAGE_EN,
+                        policy=policy,
+                        slide_index=slide_index,
+                    )
                 )
             )
         if presentation_pt is not None and presentation_en is not None:
@@ -152,6 +157,25 @@ def _review_updates_for(
     return updates
 
 
+def _build_presentation_review_common(
+    localized_slides: list[dict[str, object]],
+    *,
+    resolved_policy: str,
+    translations_en: Mapping[int, dict[str, object]] | None,
+) -> dict[str, object]:
+    """Shared build logic for both sync and async review update builders.
+
+    Callers supply already-repaired localized slides so the sync/async
+    divergence (repair_localized_slides_sync vs repair_localized_slides)
+    is handled before this helper.
+    """
+    return _review_updates_for(
+        localized_slides,
+        resolved_policy=resolved_policy,
+        translations_en=translations_en,
+    )
+
+
 def build_presentation_review_updates(
     slide_drafts: list[dict[str, object]],
     *,
@@ -169,7 +193,7 @@ def build_presentation_review_updates(
         ),
         policy_version=resolved_policy,
     )
-    return _review_updates_for(
+    return _build_presentation_review_common(
         localized_slides,
         resolved_policy=resolved_policy,
         translations_en=translations_en,
@@ -193,7 +217,7 @@ async def build_presentation_review_updates_async(
         ),
         policy_version=resolved_policy,
     )
-    return _review_updates_for(
+    return _build_presentation_review_common(
         localized_slides,
         resolved_policy=resolved_policy,
         translations_en=translations_en,
@@ -205,35 +229,69 @@ def _state_policy_version(state: Mapping[str, object]) -> str | None:
     return str(raw) if raw else None
 
 
-def resolve_presentation_review_from_state(
+# Chain-of-Responsibility: resolvers are tried in registration order;
+# the first to return a non-None dict wins.  The terminal fallback
+# (no resolver matched) returns an empty review.
+
+_RESOLVERS: list[Callable[[Mapping[str, object]], dict[str, object] | None]] = []
+
+
+def _register_resolver(
+    func: Callable[[Mapping[str, object]], dict[str, object] | None],
+) -> Callable[[Mapping[str, object]], dict[str, object] | None]:
+    """Register a resolver function in the CoR chain."""
+    _RESOLVERS.append(func)
+    return func
+
+
+@_register_resolver
+def _resolve_from_validation(
     state: Mapping[str, object],
-) -> dict[str, object]:
-    """Ensure presentation review fields exist, deriving them from drafts when needed."""
-    localized = state.get(WORKFLOW_STATE_LOCALIZED_SLIDES_KEY)
+) -> dict[str, object] | None:
+    """Resolve review from existing presentation_validation."""
     validation = state.get(WORKFLOW_STATE_PRESENTATION_VALIDATION_KEY)
+    if not isinstance(validation, dict):
+        return None
+    localized = state.get(WORKFLOW_STATE_LOCALIZED_SLIDES_KEY)
     policy_version = _state_policy_version(state) or DEFAULT_PRESENTATION_POLICY_VERSION
-    if isinstance(validation, dict):
-        return {
-            WORKFLOW_STATE_LOCALIZED_SLIDES_KEY: (
-                localized if isinstance(localized, list) else []
-            ),
-            WORKFLOW_STATE_PRESENTATION_VALIDATION_KEY: validation,
-            WORKFLOW_STATE_PRESENTATION_POLICY_VERSION_KEY: policy_version,
-        }
-    if isinstance(localized, list):
-        return {
-            WORKFLOW_STATE_LOCALIZED_SLIDES_KEY: localized,
-            WORKFLOW_STATE_PRESENTATION_VALIDATION_KEY: validation_report_to_dict(
-                validate_localized_slides(
-                    [slide for slide in localized if isinstance(slide, dict)],
-                    policy_version=_state_policy_version(state),
-                )
-            ),
-            WORKFLOW_STATE_PRESENTATION_POLICY_VERSION_KEY: policy_version,
-        }
+    return {
+        WORKFLOW_STATE_LOCALIZED_SLIDES_KEY: (
+            localized if isinstance(localized, list) else []
+        ),
+        WORKFLOW_STATE_PRESENTATION_VALIDATION_KEY: validation,
+        WORKFLOW_STATE_PRESENTATION_POLICY_VERSION_KEY: policy_version,
+    }
+
+
+@_register_resolver
+def _resolve_from_localized_slides(
+    state: Mapping[str, object],
+) -> dict[str, object] | None:
+    """Resolve review by validating existing localized_slides."""
+    localized = state.get(WORKFLOW_STATE_LOCALIZED_SLIDES_KEY)
+    if not isinstance(localized, list):
+        return None
+    policy_version = _state_policy_version(state) or DEFAULT_PRESENTATION_POLICY_VERSION
+    return {
+        WORKFLOW_STATE_LOCALIZED_SLIDES_KEY: localized,
+        WORKFLOW_STATE_PRESENTATION_VALIDATION_KEY: validation_report_to_dict(
+            validate_localized_slides(
+                [slide for slide in localized if isinstance(slide, dict)],
+                policy_version=_state_policy_version(state),
+            )
+        ),
+        WORKFLOW_STATE_PRESENTATION_POLICY_VERSION_KEY: policy_version,
+    }
+
+
+@_register_resolver
+def _resolve_from_slide_drafts(
+    state: Mapping[str, object],
+) -> dict[str, object] | None:
+    """Resolve review by building from legacy slide_drafts."""
     slide_drafts = state.get("slide_drafts")
     if not isinstance(slide_drafts, list):
-        return build_presentation_review_updates([])
+        return None
     draft_dicts = [slide for slide in slide_drafts if isinstance(slide, dict)]
     translations = deserialize_translations_en(
         state.get(WORKFLOW_STATE_TRANSLATIONS_EN_KEY)
@@ -243,6 +301,24 @@ def resolve_presentation_review_from_state(
         translations_en=translations,
         policy_version=_state_policy_version(state),
     )
+
+
+def resolve_presentation_review_from_state(
+    state: Mapping[str, object],
+) -> dict[str, object]:
+    """Ensure presentation review fields exist via Chain-of-Responsibility.
+
+    Tries each registered resolver in order:
+      1. Existing presentation_validation (fast path)
+      2. Existing localized_slides (re-validate on read)
+      3. Legacy slide_drafts (build from scratch)
+    Falls back to an empty review when none match.
+    """
+    for resolver in _RESOLVERS:
+        result = resolver(state)
+        if result is not None:
+            return result
+    return build_presentation_review_updates([])
 
 
 def has_blocking_presentation_validation(state: Mapping[str, object]) -> bool:

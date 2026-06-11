@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import shutil
 from pathlib import Path
+from typing import TypedDict
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -44,6 +45,7 @@ from rag_backend.domain.models import CarouselProject
 from rag_backend.domain.models.carousel_artifact_build import CarouselArtifactBuild
 from rag_backend.infrastructure.database.carousel_artifact_build_repository import (
     PostgresCarouselArtifactBuildRepository,
+    _ActivateBuildParams,
 )
 from rag_backend.infrastructure.database.models.carousel import CarouselProjectModel
 from rag_backend.infrastructure.logging import get_logger
@@ -51,6 +53,15 @@ from rag_backend.infrastructure.logging import get_logger
 logger = get_logger()
 
 _PDF_FILENAME = "carousel.pdf"
+
+
+class ActivateExistingCommand(TypedDict):
+    db: AsyncSession
+    build_repo: PostgresCarouselArtifactBuildRepository
+    request: ArtifactBuildRequest
+    artifact_version: str
+    version_dir: Path
+    manifest_path: Path
 
 
 class CarouselArtifactBuildService:
@@ -85,12 +96,14 @@ class CarouselArtifactBuildService:
             manifest_path = version_dir / ARTIFACT_MANIFEST_FILENAME
             if manifest_path.is_file():
                 return await self._activate_existing(
-                    db,
-                    build_repo,
-                    request,
-                    artifact_version,
-                    version_dir,
-                    manifest_path,
+                    ActivateExistingCommand(
+                        db=db,
+                        build_repo=build_repo,
+                        request=request,
+                        artifact_version=artifact_version,
+                        version_dir=version_dir,
+                        manifest_path=manifest_path,
+                    ),
                 )
 
         staging_dir = project_root / ARTIFACT_STAGING_DIR / operation_id
@@ -114,10 +127,12 @@ class CarouselArtifactBuildService:
             await build_repo.upsert_build(build_record)
             write_current_index(project_root, artifact_version)
             lock_version = await build_repo.activate_build(
-                request.project.id,
-                artifact_version,
-                request.source_lock_version,
-                request.prior_artifact_version,
+                params=_ActivateBuildParams(
+                    project_id=request.project.id,
+                    artifact_version=artifact_version,
+                    source_lock_version=request.source_lock_version,
+                    prior_artifact_version=request.prior_artifact_version,
+                ),
             )
             await db.commit()
             request.project.artifact_version = artifact_version
@@ -156,43 +171,40 @@ class CarouselArtifactBuildService:
 
     async def _activate_existing(
         self,
-        db: AsyncSession,
-        build_repo: PostgresCarouselArtifactBuildRepository,
-        request: ArtifactBuildRequest,
-        artifact_version: str,
-        version_dir: Path,
-        manifest_path: Path,
+        command: ActivateExistingCommand,
     ) -> ArtifactBuildResult | ArtifactBuildFailure:
         operation_id = compute_operation_id(
-            str(request.project.id),
-            request.source_lock_version,
-            artifact_version,
+            str(command["request"].project.id),
+            command["request"].source_lock_version,
+            command["artifact_version"],
         )
         try:
-            lock_version = await build_repo.activate_build(
-                request.project.id,
-                artifact_version,
-                request.source_lock_version,
-                request.prior_artifact_version,
+            lock_version = await command["build_repo"].activate_build(
+                params=_ActivateBuildParams(
+                    project_id=command["request"].project.id,
+                    artifact_version=command["artifact_version"],
+                    source_lock_version=command["request"].source_lock_version,
+                    prior_artifact_version=command["request"].prior_artifact_version,
+                ),
             )
-            await db.commit()
-            request.project.artifact_version = artifact_version
+            await command["db"].commit()
+            command["request"].project.artifact_version = command["artifact_version"]
             return ArtifactBuildResult(
-                artifact_version=artifact_version,
+                artifact_version=command["artifact_version"],
                 operation_id=operation_id,
                 lock_version=lock_version,
-                manifest_path=manifest_path,
-                version_dir=version_dir,
+                manifest_path=command["manifest_path"],
+                version_dir=command["version_dir"],
             )
         except ValueError as exc:
-            await db.commit()
+            await command["db"].commit()
             if str(exc) == ERR_ARTIFACT_BUILD_CONFLICT:
                 return ArtifactBuildFailure(
-                    artifact_version=artifact_version,
+                    artifact_version=command["artifact_version"],
                     errors=(ERR_ARTIFACT_BUILD_CONFLICT,),
                 )
             return ArtifactBuildFailure(
-                artifact_version=artifact_version,
+                artifact_version=command["artifact_version"],
                 errors=(str(exc),),
             )
 

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import AsyncIterator
+from dataclasses import dataclass
 from uuid import UUID
 
 from langchain_core.language_models import BaseChatModel
@@ -19,6 +20,7 @@ from rag_backend.application.services.carousel.editorial_workflow_events import 
 )
 from rag_backend.application.services.carousel.editorial_workflow_service_helpers import (
     FeedbackCorrectionContext,
+    ResumeContext,
     RevisionCapValidationContext,
     prepare_resume_workflow,
     record_feedback_correction,
@@ -63,10 +65,22 @@ from rag_backend.domain.models import CarouselStatus
 from rag_backend.domain.models.carousels import ReviewEventParams
 from rag_backend.infrastructure.database.models.carousel import CarouselProjectModel
 from rag_backend.infrastructure.monitoring_langfuse import (
+    _TraceConfig,
     create_workflow_trace,
     propagate_attributes,
     record_human_review,
 )
+
+
+@dataclass
+class EditorialWorkflowConfig:
+    """Configuration bundle for EditorialWorkflowService."""
+
+    llm: BaseChatModel
+    checkpointer: object | None = None
+    event_service: WorkflowEventService | None = None
+    notification_service: NotificationService | None = None
+    image_registry: ImageProviderRegistry | None = None
 
 
 class EditorialWorkflowService:
@@ -74,20 +88,16 @@ class EditorialWorkflowService:
 
     def __init__(
         self,
-        llm: BaseChatModel,
-        checkpointer: object | None = None,
-        event_service: WorkflowEventService | None = None,
-        notification_service: NotificationService | None = None,
-        image_registry: ImageProviderRegistry | None = None,
+        config: EditorialWorkflowConfig,
     ) -> None:
-        self._llm = llm
+        self._llm = config.llm
         self._orchestrator = CarouselEditorialOrchestrator(
-            llm=llm,
-            checkpointer=checkpointer,
-            image_registry=image_registry,
+            llm=config.llm,
+            checkpointer=config.checkpointer,
+            image_registry=config.image_registry,
         )
-        self._events = event_service
-        self._notifications = notification_service or NotificationService()
+        self._events = config.event_service
+        self._notifications = config.notification_service or NotificationService()
 
     async def start_workflow(
         self,
@@ -101,10 +111,12 @@ class EditorialWorkflowService:
             return existing
 
         _trace = create_workflow_trace(
-            project_id=UUID(project_id),
-            user_id=workflow_input.user_id,
-            content_type=CONTENT_TYPE_CAROUSEL,
-            metadata={"workflow": WORKFLOW_METADATA_EDITORIAL_7_PHASE},
+            config=_TraceConfig(
+                project_id=UUID(project_id),
+                user_id=workflow_input.user_id,
+                content_type=CONTENT_TYPE_CAROUSEL,
+                metadata={"workflow": WORKFLOW_METADATA_EDITORIAL_7_PHASE},
+            ),
         )
 
         with propagate_attributes(
@@ -215,17 +227,21 @@ class EditorialWorkflowService:
                 ),
             )
         await prepare_resume_workflow(
-            self._orchestrator,
-            params.project_id,
-            params.action,
-            prior,
-            params.feedback,
+            ResumeContext(
+                orchestrator=self._orchestrator,
+                project_id=params.project_id,
+                action=params.action,
+                prior=prior,
+                feedback=params.feedback,
+            ),
         )
         trace = create_workflow_trace(
-            project_id=UUID(params.project_id),
-            user_id=params.reviewer_id,
-            content_type=CONTENT_TYPE_CAROUSEL,
-            metadata={"phase": WORKFLOW_TRACE_PHASE_HUMAN_REVIEW},
+            config=_TraceConfig(
+                project_id=UUID(params.project_id),
+                user_id=params.reviewer_id,
+                content_type=CONTENT_TYPE_CAROUSEL,
+                metadata={"phase": WORKFLOW_TRACE_PHASE_HUMAN_REVIEW},
+            ),
         )
         if trace is not None:
             record_human_review(
@@ -365,12 +381,12 @@ class EditorialWorkflowService:
         prior = await self.get_workflow_state(project_id)
         phase = str(prior.get("current_phase", "")) if prior else ""
         from rag_backend.application.services.carousel.editorial_workflow_support import (
+            PublishParams,
             publish_workflow_error,
         )
 
         await publish_workflow_error(
-            project_id,
-            phase,
+            PublishParams(project_id=project_id, phase=phase),
             message,
             recoverable=recoverable,
         )
@@ -390,4 +406,9 @@ class EditorialWorkflowService:
             yield event
 
 
-__all__ = ["EditorialWorkflowService", "EditorialWorkflowStartInput", "ReviewEventEmitContext"]
+__all__ = [
+    "EditorialWorkflowConfig",
+    "EditorialWorkflowService",
+    "EditorialWorkflowStartInput",
+    "ReviewEventEmitContext",
+]

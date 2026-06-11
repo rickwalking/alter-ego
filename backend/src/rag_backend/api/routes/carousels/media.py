@@ -37,6 +37,9 @@ from rag_backend.application.services.carousel.artifact_path_resolver import (
     resolve_shared_images_dir,
     resolve_slide_image_path,
 )
+from rag_backend.application.services.carousel.design_token_utils import (
+    merge_design_tokens_with_disk,
+)
 from rag_backend.domain.constants import SWIPE_TEXT_EN
 from rag_backend.domain.constants.rate_limits import RATE_LIMIT_CAROUSEL_PUBLISH
 from rag_backend.domain.models import User
@@ -52,7 +55,6 @@ from .helpers import (
     _resolve_pdf_file,
     _safe_relative_file_path,
     assert_carousel_public,
-    merge_design_tokens_with_disk,
 )
 
 router = APIRouter()

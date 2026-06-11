@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from datetime import datetime
-from typing import Annotated, Literal
+from typing import Annotated, Literal, TypedDict
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
@@ -19,6 +20,7 @@ from rag_backend.domain.constants.carousel_presentation import (
     CLOSING_ACTION_MAX,
     CLOSING_ACTION_MIN,
     CONTENT_KIND_FEATURES,
+    CONTENT_KIND_INSIGHT,
     CONTENT_KIND_STATS,
     ERR_ACTIONS_COUNT,
     ERR_BLOCKING_VALID_REPORT,
@@ -60,6 +62,52 @@ def _validate_lucide_icon_name(value: str) -> str:
     if normalized not in LUCIDE_ICON_ALLOWLIST:
         raise ValueError(ERR_ICON_NAME_NOT_ALLOWLISTED)
     return normalized
+
+
+class ContentKindValidationContext(TypedDict, total=False):
+    """Context passed to content-kind validators for structured field dispatch."""
+
+    features: list[FeatureItem] | None
+    stats: list[StatItem] | None
+    insight: InsightItem | None
+
+
+def _validate_features_content(ctx: ContentKindValidationContext) -> None:
+    """Validate features content kind."""
+    features = ctx.get("features")
+    if features is None:
+        raise ValueError(ERR_FEATURES_REQUIRED)
+    if not (FEATURE_ITEM_MIN <= len(features) <= FEATURE_ITEM_MAX):
+        raise ValueError(ERR_FEATURES_COUNT)
+    if ctx.get("stats") is not None or ctx.get("insight") is not None:
+        raise ValueError(ERR_FEATURES_FORBIDDEN_FIELDS)
+
+
+def _validate_stats_content(ctx: ContentKindValidationContext) -> None:
+    """Validate stats content kind."""
+    stats = ctx.get("stats")
+    if stats is None:
+        raise ValueError(ERR_STATS_REQUIRED)
+    if len(stats) != STAT_ITEM_COUNT:
+        raise ValueError(ERR_STATS_COUNT)
+    if ctx.get("features") is not None or ctx.get("insight") is not None:
+        raise ValueError(ERR_STATS_FORBIDDEN_FIELDS)
+
+
+def _validate_insight_content(ctx: ContentKindValidationContext) -> None:
+    """Validate insight content kind."""
+    insight = ctx.get("insight")
+    if insight is None:
+        raise ValueError(ERR_INSIGHT_REQUIRED)
+    if ctx.get("features") is not None or ctx.get("stats") is not None:
+        raise ValueError(ERR_INSIGHT_FORBIDDEN_FIELDS)
+
+
+_VALIDATORS: dict[str, Callable[[ContentKindValidationContext], None]] = {
+    CONTENT_KIND_FEATURES: _validate_features_content,
+    CONTENT_KIND_STATS: _validate_stats_content,
+    CONTENT_KIND_INSIGHT: _validate_insight_content,
+}
 
 
 class FeatureItem(BaseModel):
@@ -171,27 +219,14 @@ class ContentSlideCopy(BaseModel):
 
     @model_validator(mode="after")
     def _validate_selected_structured_field(self) -> ContentSlideCopy:
-        if self.content_kind == CONTENT_KIND_FEATURES:
-            if self.features is None:
-                raise ValueError(ERR_FEATURES_REQUIRED)
-            count = len(self.features)
-            if count < FEATURE_ITEM_MIN or count > FEATURE_ITEM_MAX:
-                raise ValueError(ERR_FEATURES_COUNT)
-            if self.stats is not None or self.insight is not None:
-                raise ValueError(ERR_FEATURES_FORBIDDEN_FIELDS)
-            return self
-        if self.content_kind == CONTENT_KIND_STATS:
-            if self.stats is None:
-                raise ValueError(ERR_STATS_REQUIRED)
-            if len(self.stats) != STAT_ITEM_COUNT:
-                raise ValueError(ERR_STATS_COUNT)
-            if self.features is not None or self.insight is not None:
-                raise ValueError(ERR_STATS_FORBIDDEN_FIELDS)
-            return self
-        if self.insight is None:
-            raise ValueError(ERR_INSIGHT_REQUIRED)
-        if self.features is not None or self.stats is not None:
-            raise ValueError(ERR_INSIGHT_FORBIDDEN_FIELDS)
+        """Validate that the correct structured field is set for the content kind."""
+        validator = _VALIDATORS.get(self.content_kind)
+        if validator is not None:
+            validator({
+                "features": self.features,
+                "stats": self.stats,
+                "insight": self.insight,
+            })
         return self
 
 

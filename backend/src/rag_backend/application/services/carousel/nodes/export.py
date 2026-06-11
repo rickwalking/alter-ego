@@ -10,6 +10,7 @@ both languages.  Relative paths are rewritten so that standard exports
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from pathlib import Path
 
 from rag_backend.application.services.carousel.nodes.design import run_design
@@ -35,17 +36,28 @@ from rag_backend.infrastructure.logging import get_logger
 logger = get_logger()
 
 
+@dataclass
+class BilingualExportConfig:
+    """Configuration for bilingual export operations."""
+
+    project: CarouselProject
+    slides_data: list[SlideData]
+    pt_html: str
+    output_dir: Path
+    export: CarouselExportService
+    pdf_builder: PdfSlideBuilder | None = None
+    template: CarouselTemplateBuilder | None = None
+    strategy_registry: SlideLayoutRegistry | None = None
+    strategy_name: str | None = None
+    language: str = ""
+    html_content: str = ""
+
+
 async def render_language(
-    project: CarouselProject,
-    language: str,
-    html_content: str,
-    output_dir: Path,
-    *,
-    export: CarouselExportService,
-    pdf_builder: PdfSlideBuilder | None,
+    config: BilingualExportConfig,
 ) -> None:
     """Export a single language's slide JPGs + PDF into `<output>/<lang>/`."""
-    lang_dir = output_dir / language
+    lang_dir = config.output_dir / config.language
     lang_dir.mkdir(parents=True, exist_ok=True)
 
     def _rewrite_image_paths(html: str, prefix: str) -> str:
@@ -57,10 +69,10 @@ async def render_language(
             .replace(f"url('{SHARED_IMAGES_DIR_NAME}/", f"url('{prefix}")
         )
 
-    standard_html = _rewrite_image_paths(html_content, "../images/")
-    hd_html = _rewrite_image_paths(html_content, "../../images/")
+    standard_html = _rewrite_image_paths(config.html_content, "../images/")
+    hd_html = _rewrite_image_paths(config.html_content, "../../images/")
 
-    slide_paths = await export.export_slides(
+    slide_paths = await config.export.export_slides(
         html_content=standard_html,
         output_dir=str(lang_dir),
     )
@@ -69,7 +81,7 @@ async def render_language(
     try:
         hd_dir = lang_dir / HD_SUBDIR_NAME
         hd_dir.mkdir(parents=True, exist_ok=True)
-        await export.export_slides(
+        await config.export.export_slides(
             html_content=hd_html,
             output_dir=str(hd_dir),
             config=ExportConfig(hd=True),
@@ -77,71 +89,74 @@ async def render_language(
     except Exception:
         logger.warning(
             "hd_export_failed",
-            project_id=str(project.id),
-            language=language,
+            project_id=str(config.project.id),
+            language=config.language,
             exc_info=True,
         )
-    if pdf_builder is None or not slide_paths:
+    if config.pdf_builder is None or not slide_paths:
         return
     try:
-        pdf_path = pdf_builder.build(
+        pdf_path = config.pdf_builder.build(
             slide_paths=slide_paths,
             output_dir=str(lang_dir),
         )
     except (ValueError, FileNotFoundError, OSError) as exc:
         logger.warning(
             "carousel_pdf_build_failed",
-            project_id=str(project.id),
-            language=language,
+            project_id=str(config.project.id),
+            language=config.language,
             error=str(exc),
         )
         return
-    if language == LANGUAGE_EN:
-        project.pdf_path_en = pdf_path
+    if config.language == LANGUAGE_EN:
+        config.project.pdf_path_en = pdf_path
     else:
-        project.pdf_path = pdf_path
+        config.project.pdf_path = pdf_path
 
 
 async def run_bilingual_export(
-    project: CarouselProject,
-    slides_data: list[SlideData],
-    pt_html: str,
-    output_dir: Path,
-    *,
-    export: CarouselExportService,
-    pdf_builder: PdfSlideBuilder | None,
-    template: CarouselTemplateBuilder,
-    strategy_registry: SlideLayoutRegistry | None = None,
-    strategy_name: str | None = None,
+    config: BilingualExportConfig,
 ) -> None:
     """Render PT slides, then EN slides when translations exist."""
-    await render_language(
-        project,
-        LANGUAGE_PT,
-        pt_html,
-        output_dir,
-        export=export,
-        pdf_builder=pdf_builder,
+    pt_config = BilingualExportConfig(
+        project=config.project,
+        slides_data=config.slides_data,
+        pt_html=config.pt_html,
+        output_dir=config.output_dir,
+        export=config.export,
+        pdf_builder=config.pdf_builder,
+        template=config.template,
+        strategy_registry=config.strategy_registry,
+        strategy_name=config.strategy_name,
+        language=LANGUAGE_PT,
+        html_content=config.pt_html,
     )
+    await render_language(pt_config)
 
-    en_available = any(s.translation_en for s in slides_data)
+    en_available = any(s.translation_en for s in config.slides_data)
     if not en_available:
         return
 
-    en_slides = slides_data_for_language(slides_data, LANGUAGE_EN)
+    en_slides = slides_data_for_language(config.slides_data, LANGUAGE_EN)
     en_html = run_design(
-        project,
+        config.project,
         en_slides,
-        template=template,
+        template=config.template,  # type: ignore[arg-type]
         language=LANGUAGE_EN,
-        strategy_registry=strategy_registry,
-        strategy_name=strategy_name,
+        strategy_registry=config.strategy_registry,
+        strategy_name=config.strategy_name,
     )
-    await render_language(
-        project,
-        LANGUAGE_EN,
-        en_html,
-        output_dir,
-        export=export,
-        pdf_builder=pdf_builder,
+    en_config = BilingualExportConfig(
+        project=config.project,
+        slides_data=config.slides_data,
+        pt_html=config.pt_html,
+        output_dir=config.output_dir,
+        export=config.export,
+        pdf_builder=config.pdf_builder,
+        template=config.template,
+        strategy_registry=config.strategy_registry,
+        strategy_name=config.strategy_name,
+        language=LANGUAGE_EN,
+        html_content=en_html,
     )
+    await render_language(en_config)

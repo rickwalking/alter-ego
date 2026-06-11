@@ -20,6 +20,7 @@ from rag_backend.api.routes.carousels.editorial_workflow_routes_validate import 
     validate_resume_workflow_gates,
 )
 from rag_backend.application.services.carousel.editorial_workflow_service import (
+    EditorialWorkflowConfig,
     EditorialWorkflowService,
 )
 from rag_backend.application.services.workflow_event_service import WorkflowEventService
@@ -37,10 +38,12 @@ def build_editorial_workflow_service(request: Request) -> EditorialWorkflowServi
     publisher = get_event_publisher(settings.redis_url or None)
     events = WorkflowEventService(publisher)
     return EditorialWorkflowService(
-        llm=llm,
-        checkpointer=checkpointer,
-        event_service=events,
-        image_registry=container.image_provider_registry(),
+        EditorialWorkflowConfig(
+            llm=llm,
+            checkpointer=checkpointer,
+            event_service=events,
+            image_registry=container.image_provider_registry(),
+        ),
     )
 
 

@@ -5,6 +5,8 @@ Gherkin: tests/features/carousel_slide_layout_strategies.feature
 
 import pytest
 
+from rag_backend.domain.protocols.carousel import _RenderOptions
+
 
 @pytest.mark.unit
 class TestSlideLayoutStrategyProtocol:
@@ -40,7 +42,12 @@ class TestSlideLayoutStrategyProtocol:
         for strategy in all_strategies:
             slide_type = next(iter(strategy.supported_slide_types))
             slide = dict(slide_with_stats, type=slide_type)
-            result = strategy.render(slide, sample_project, sample_theme, 7, "pt")
+            result = strategy.render(
+                slide,
+                sample_project,
+                sample_theme,
+                options=_RenderOptions(total_slides=7, language="pt"),
+            )
             assert isinstance(result, str)
             assert len(result) > 0
 
@@ -54,7 +61,12 @@ class TestSlideLayoutStrategyProtocol:
         for strategy in all_strategies:
             for slide_type in strategy.supported_slide_types:
                 slide = dict(slide_with_stats, type=slide_type)
-                result = strategy.render(slide, sample_project, sample_theme, 7, "pt")
+                result = strategy.render(
+                    slide,
+                    sample_project,
+                    sample_theme,
+                    options=_RenderOptions(total_slides=7, language="pt"),
+                )
                 assert isinstance(result, str)
 
     def test_render_with_empty_heading_does_not_crash(
@@ -67,7 +79,12 @@ class TestSlideLayoutStrategyProtocol:
         for strategy in all_strategies:
             slide_type = next(iter(strategy.supported_slide_types))
             slide = dict(slide_with_stats, heading="", type=slide_type)
-            result = strategy.render(slide, sample_project, sample_theme, 7, "pt")
+            result = strategy.render(
+                slide,
+                sample_project,
+                sample_theme,
+                options=_RenderOptions(total_slides=7, language="pt"),
+            )
             assert isinstance(result, str)
 
     def test_render_handles_language_parameter(
@@ -80,8 +97,18 @@ class TestSlideLayoutStrategyProtocol:
         for strategy in all_strategies:
             slide_type = next(iter(strategy.supported_slide_types))
             slide = dict(slide_with_stats, type=slide_type)
-            pt_result = strategy.render(slide, sample_project, sample_theme, 7, "pt")
-            en_result = strategy.render(slide, sample_project, sample_theme, 7, "en")
+            pt_result = strategy.render(
+                slide,
+                sample_project,
+                sample_theme,
+                options=_RenderOptions(total_slides=7, language="pt"),
+            )
+            en_result = strategy.render(
+                slide,
+                sample_project,
+                sample_theme,
+                options=_RenderOptions(total_slides=7, language="en"),
+            )
             assert isinstance(pt_result, str)
             assert isinstance(en_result, str)
 
@@ -95,7 +122,12 @@ class TestSlideLayoutStrategyProtocol:
         for strategy in all_strategies:
             slide_type = next(iter(strategy.supported_slide_types))
             slide = dict(slide_with_stats, type=slide_type)
-            result = strategy.render(slide, sample_project, sample_theme, 7, "pt")
+            result = strategy.render(
+                slide,
+                sample_project,
+                sample_theme,
+                options=_RenderOptions(total_slides=7, language="pt"),
+            )
             assert str(slide["number"]) in result
 
     def test_strategy_names_are_unique(self, all_strategies):
@@ -114,5 +146,10 @@ class TestSlideLayoutStrategyProtocol:
     ):
         for strategy in all_strategies:
             slide = {"number": "1", "type": "content"}
-            result = strategy.render(slide, sample_project, sample_theme, 7, "pt")
+            result = strategy.render(
+                slide,
+                sample_project,
+                sample_theme,
+                options=_RenderOptions(total_slides=7, language="pt"),
+            )
             assert isinstance(result, str)

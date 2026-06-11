@@ -9,6 +9,7 @@ from rag_backend.agents.input_sanitizer import sanitize_llm_input
 from rag_backend.infrastructure.database.persona_correction_repository import (
     PersonaCorrectionRecord,
     PersonaCorrectionRepository,
+    _CreateCorrectionParams,
 )
 from rag_backend.infrastructure.external.openai_embeddings import (  # type: ignore[attr-defined]
     OpenAIEmbeddings,
@@ -58,12 +59,14 @@ class FeedbackLearningLoop:
             original, corrected
         )
         await self._repository.create(
-            persona_id=persona_id,
-            original_text=original,
-            corrected_text=corrected,
-            context=context,
-            correction_type=correction_type,
-            project_id=project_id,
+            _CreateCorrectionParams(
+                persona_id=persona_id,
+                original_text=original,
+                corrected_text=corrected,
+                context=context,
+                correction_type=correction_type,
+                project_id=project_id,
+            )
         )
 
     async def get_relevant_examples(

@@ -61,22 +61,22 @@ def bootstrap_strategies() -> SlideLayoutRegistry:
     from rag_backend.application.services.carousel_template.strategies.cta import (
         CtaCenteredStrategy,
     )
-    from rag_backend.application.services.carousel_template.strategies.feature_grid import (
+    from rag_backend.application.services.carousel_template.strategies.feature_grid import (  # noqa: E501
         FeatureGridStrategy,
     )
-    from rag_backend.application.services.carousel_template.strategies.hero_content import (
+    from rag_backend.application.services.carousel_template.strategies.hero_content import (  # noqa: E501
         HeroContentStrategy,
     )
-    from rag_backend.application.services.carousel_template.strategies.insight_quote import (
+    from rag_backend.application.services.carousel_template.strategies.insight_quote import (  # noqa: E501
         InsightQuoteStrategy,
     )
     from rag_backend.application.services.carousel_template.strategies.intro import (
         IntroHeroStrategy,
     )
-    from rag_backend.application.services.carousel_template.strategies.numbered_list import (
+    from rag_backend.application.services.carousel_template.strategies.numbered_list import (  # noqa: E501
         NumberedListStrategy,
     )
-    from rag_backend.application.services.carousel_template.strategies.stat_card_grid import (
+    from rag_backend.application.services.carousel_template.strategies.stat_card_grid import (  # noqa: E501
         StatCardGridStrategy,
     )
 

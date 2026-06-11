@@ -45,7 +45,11 @@ def as_dict(value: object) -> dict[str, object] | None:
 
 def resolve_slide_index(slide: Mapping[str, object], fallback: int) -> int:
     """Resolve a positive slide index from known draft keys."""
-    raw = slide.get(SLIDE_INDEX_KEY) or slide.get(OUTLINE_FIELD_SLIDE_INDEX) or slide.get("number")
+    raw = (
+        slide.get(SLIDE_INDEX_KEY)
+        or slide.get(OUTLINE_FIELD_SLIDE_INDEX)
+        or slide.get("number")
+    )
     if isinstance(raw, int) and raw > 0:
         return raw
     if isinstance(raw, str) and raw.isdigit():
@@ -86,15 +90,16 @@ def _resolve_en_source(
         nested = as_dict(extras.get("translation_en"))
         if nested is not None:
             return nested
-    if translations_en is None:
-        return None
-    keyed = translations_en.get(slide_index)
-    if isinstance(keyed, Mapping):
-        return keyed
-    keyed_str = translations_en.get(str(slide_index))
-    if isinstance(keyed_str, Mapping):
-        return keyed_str
-    return None
+    result: Mapping[str, object] | None = None
+    if translations_en is not None:
+        keyed = translations_en.get(slide_index)
+        if isinstance(keyed, Mapping):
+            result = keyed
+        else:
+            keyed_str = translations_en.get(str(slide_index))
+            if isinstance(keyed_str, Mapping):
+                result = keyed_str
+    return result
 
 
 def _build_locale_payload(
@@ -137,9 +142,7 @@ def build_localized_slide(
 ) -> dict[str, object]:
     """Build one localized slide review record from a legacy or union draft."""
     normalized = (
-        normalize_slide_draft(dict(slide))
-        if isinstance(slide, dict)
-        else dict(slide)
+        normalize_slide_draft(dict(slide)) if isinstance(slide, dict) else dict(slide)
     )
     slide = normalized
     slide_type = resolve_slide_type(slide, slide_index)

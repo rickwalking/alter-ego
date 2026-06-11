@@ -14,6 +14,7 @@ from rag_backend.application.services.carousel.editorial_workflow_resume_runner 
     _detect_resume_stuck,
     _execute_background_resume,
     _mark_background_resume_failed,
+    _MarkFailedParams,
     _revert_background_resume_stuck,
     schedule_background_resume,
 )
@@ -180,9 +181,7 @@ class TestScheduleBackgroundResume:
                 "rag_backend.application.services.carousel.editorial_workflow_resume_runner._background_tasks",
                 mock_bg_tasks,
             ),
-            patch(
-                "asyncio.create_task", return_value=mock_task
-            ) as mock_create_task,
+            patch("asyncio.create_task", return_value=mock_task) as mock_create_task,
         ):
             schedule_background_resume(service, params)
 
@@ -191,9 +190,7 @@ class TestScheduleBackgroundResume:
             assert asyncio.iscoroutine(args[0])
             assert kwargs == {"name": f"workflow-resume-{params.project_id}"}
             assert mock_task in mock_bg_tasks
-            mock_task.add_done_callback.assert_called_once_with(
-                mock_bg_tasks.discard
-            )
+            mock_task.add_done_callback.assert_called_once_with(mock_bg_tasks.discard)
 
 
 @pytest.mark.unit
@@ -234,9 +231,7 @@ class TestExecuteBackgroundResume:
         ):
             await _execute_background_resume(service, params)
 
-            service.get_workflow_state.assert_awaited_once_with(
-                params.project_id
-            )
+            service.get_workflow_state.assert_awaited_once_with(params.project_id)
 
             service.resume_workflow.assert_awaited_once()
             actual_input = service.resume_workflow.await_args[0][0]
@@ -417,12 +412,8 @@ class TestExecuteBackgroundResume:
         ):
             await _execute_background_resume(service, params)
 
-            mock_detect.assert_called_once_with(
-                params, "research", new_state
-            )
-            mock_revert.assert_awaited_once_with(
-                service, params.project_id, "research"
-            )
+            mock_detect.assert_called_once_with(params, "research", new_state)
+            mock_revert.assert_awaited_once_with(service, params.project_id, "research")
             mock_logger.warning.assert_called_once_with(
                 "background_resume_stuck",
                 project_id=params.project_id,
@@ -472,10 +463,12 @@ class TestExecuteBackgroundResume:
             mock_db.rollback.assert_awaited_once()
             mock_resolve.assert_called_once_with(ERR_REVISION_CAP_EXCEEDED)
             mock_mark.assert_awaited_once_with(
-                service,
-                params.project_id,
-                ERR_REVISION_CAP_EXCEEDED,
-                recoverable=False,
+                _MarkFailedParams(
+                    service=service,
+                    project_id=params.project_id,
+                    message=ERR_REVISION_CAP_EXCEEDED,
+                    recoverable=False,
+                )
             )
             mock_logger.warning.assert_called_once_with(
                 "background_resume_validation_failed",
@@ -523,10 +516,12 @@ class TestExecuteBackgroundResume:
             mock_db.rollback.assert_awaited_once()
             mock_resolve.assert_called_once_with(ERR_PERSONA_SCORE_TOO_LOW)
             mock_mark.assert_awaited_once_with(
-                service,
-                params.project_id,
-                ERR_PERSONA_SCORE_TOO_LOW,
-                recoverable=True,
+                _MarkFailedParams(
+                    service=service,
+                    project_id=params.project_id,
+                    message=ERR_PERSONA_SCORE_TOO_LOW,
+                    recoverable=True,
+                )
             )
             mock_logger.warning.assert_called_once_with(
                 "background_resume_validation_failed",
@@ -570,10 +565,12 @@ class TestExecuteBackgroundResume:
             mock_db.rollback.assert_awaited_once()
             mock_resolve.assert_called_once_with("some error")
             mock_mark.assert_awaited_once_with(
-                service,
-                params.project_id,
-                ERR_BACKGROUND_RESUME_FAILED,
-                recoverable=True,
+                _MarkFailedParams(
+                    service=service,
+                    project_id=params.project_id,
+                    message=ERR_BACKGROUND_RESUME_FAILED,
+                    recoverable=True,
+                )
             )
             mock_logger.warning.assert_not_called()
 
@@ -608,10 +605,12 @@ class TestExecuteBackgroundResume:
 
             mock_db.rollback.assert_awaited_once()
             mock_mark.assert_awaited_once_with(
-                service,
-                params.project_id,
-                ERR_BACKGROUND_RESUME_FAILED,
-                recoverable=True,
+                _MarkFailedParams(
+                    service=service,
+                    project_id=params.project_id,
+                    message=ERR_BACKGROUND_RESUME_FAILED,
+                    recoverable=True,
+                )
             )
             mock_logger.exception.assert_called_once_with(
                 "background_resume_failed",
@@ -642,10 +641,12 @@ class TestMarkBackgroundResumeFailed:
             return_value=session_factory,
         ):
             await _mark_background_resume_failed(
-                service,
-                "proj-1",
-                ERR_BACKGROUND_RESUME_FAILED,
-                recoverable=True,
+                _MarkFailedParams(
+                    service=service,
+                    project_id="proj-1",
+                    message=ERR_BACKGROUND_RESUME_FAILED,
+                    recoverable=True,
+                )
             )
 
         assert project.phase_status == PHASE_STATUS_FAILED
@@ -674,10 +675,12 @@ class TestMarkBackgroundResumeFailed:
             return_value=session_factory,
         ):
             await _mark_background_resume_failed(
-                service,
-                "proj-1",
-                ERR_BACKGROUND_RESUME_FAILED,
-                recoverable=True,
+                _MarkFailedParams(
+                    service=service,
+                    project_id="proj-1",
+                    message=ERR_BACKGROUND_RESUME_FAILED,
+                    recoverable=True,
+                )
             )
 
         mock_db.get.assert_awaited_once_with(CarouselProjectModel, "proj-1")
@@ -707,10 +710,12 @@ class TestMarkBackgroundResumeFailed:
             return_value=session_factory,
         ):
             await _mark_background_resume_failed(
-                service,
-                "proj-1",
-                ERR_REVISION_CAP_EXCEEDED,
-                recoverable=False,
+                _MarkFailedParams(
+                    service=service,
+                    project_id="proj-1",
+                    message=ERR_REVISION_CAP_EXCEEDED,
+                    recoverable=False,
+                )
             )
 
         assert project.phase_status == PHASE_STATUS_FAILED

@@ -10,9 +10,11 @@ CONTENT_KIND_FEATURES = "features"
 CONTENT_KIND_STATS = "stats"
 CONTENT_KIND_INSIGHT = "insight"
 
-VALID_CONTENT_KINDS: frozenset[str] = frozenset(
-    {CONTENT_KIND_FEATURES, CONTENT_KIND_STATS, CONTENT_KIND_INSIGHT}
-)
+VALID_CONTENT_KINDS: frozenset[str] = frozenset({
+    CONTENT_KIND_FEATURES,
+    CONTENT_KIND_STATS,
+    CONTENT_KIND_INSIGHT,
+})
 
 SUMMARY_POINT_COUNT = 3
 STAT_ITEM_COUNT = 3
@@ -27,18 +29,26 @@ ERR_SUMMARY_POINT_COUNT = "summary_points must contain exactly 3 items"
 ERR_CONTENT_KIND_INVALID = "content_kind is invalid"
 ERR_FEATURES_REQUIRED = "features is required when content_kind is features"
 ERR_FEATURES_COUNT = "features item count is out of range"
-ERR_FEATURES_FORBIDDEN_FIELDS = "stats and insight are forbidden for content_kind features"
+ERR_FEATURES_FORBIDDEN_FIELDS = (
+    "stats and insight are forbidden for content_kind features"
+)
 ERR_STATS_REQUIRED = "stats is required when content_kind is stats"
 ERR_STATS_COUNT = "stats must contain exactly 3 items"
 ERR_STATS_FORBIDDEN_FIELDS = "features and insight are forbidden for content_kind stats"
 ERR_INSIGHT_REQUIRED = "insight is required when content_kind is insight"
-ERR_INSIGHT_FORBIDDEN_FIELDS = "features and stats are forbidden for content_kind insight"
+ERR_INSIGHT_FORBIDDEN_FIELDS = (
+    "features and stats are forbidden for content_kind insight"
+)
 ERR_ACTIONS_COUNT = "actions item count is out of range"
-ERR_LOCALE_SLIDE_TYPE_MISMATCH = "presentation_pt and presentation_en slide_type must match"
+ERR_LOCALE_SLIDE_TYPE_MISMATCH = (
+    "presentation_pt and presentation_en slide_type must match"
+)
 ERR_SLIDE_TYPE_MISMATCH = "slide_type must match presentation copy slide_type"
 ERR_SLIDE_COUNT = "slides must contain exactly 7 items"
 ERR_VALID_REPORT_HAS_VIOLATIONS = "valid reports must not contain violations"
-ERR_INVALID_REPORT_MISSING_VIOLATIONS = "invalid reports must contain at least one violation"
+ERR_INVALID_REPORT_MISSING_VIOLATIONS = (
+    "invalid reports must contain at least one violation"
+)
 ERR_BLOCKING_VALID_REPORT = "blocking cannot be true when validation_status is valid"
 
 VALIDATION_STATUS_VALID = "valid"
@@ -70,15 +80,13 @@ ARTIFACT_BUILD_STATUS_ACTIVE = "active"
 ARTIFACT_BUILD_STATUS_FAILED = "failed"
 ARTIFACT_BUILD_STATUS_SUPERSEDED = "superseded"
 
-VALID_ARTIFACT_BUILD_STATUSES: frozenset[str] = frozenset(
-    {
-        ARTIFACT_BUILD_STATUS_STAGING,
-        ARTIFACT_BUILD_STATUS_READY,
-        ARTIFACT_BUILD_STATUS_ACTIVE,
-        ARTIFACT_BUILD_STATUS_FAILED,
-        ARTIFACT_BUILD_STATUS_SUPERSEDED,
-    }
-)
+VALID_ARTIFACT_BUILD_STATUSES: frozenset[str] = frozenset({
+    ARTIFACT_BUILD_STATUS_STAGING,
+    ARTIFACT_BUILD_STATUS_READY,
+    ARTIFACT_BUILD_STATUS_ACTIVE,
+    ARTIFACT_BUILD_STATUS_FAILED,
+    ARTIFACT_BUILD_STATUS_SUPERSEDED,
+})
 
 CREATOR_ASSET_MEDIA_TYPE_WEBP = "image/webp"
 
@@ -90,20 +98,18 @@ LEGACY_STRUCTURED_EXTRA_KEYS: tuple[str, ...] = (
     "tldr_strip",
 )
 
-LUCIDE_ICON_ALLOWLIST: frozenset[str] = frozenset(
-    {
-        "book-open",
-        "brain",
-        "chart-column",
-        "eye",
-        "flask-conical",
-        "message-circle",
-        "newspaper",
-        "shield-check",
-        "target",
-        "wrench",
-    }
-)
+LUCIDE_ICON_ALLOWLIST: frozenset[str] = frozenset({
+    "book-open",
+    "brain",
+    "chart-column",
+    "eye",
+    "flask-conical",
+    "message-circle",
+    "newspaper",
+    "shield-check",
+    "target",
+    "wrench",
+})
 
 MIGRATION_DOWNGRADE_BLOCKED_MESSAGE = (
     "Cannot downgrade carousel presentation contract migration while projects "

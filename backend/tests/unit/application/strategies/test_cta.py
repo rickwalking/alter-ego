@@ -5,6 +5,7 @@ import pytest
 from rag_backend.application.services.carousel_template.strategies.cta import (
     CtaCenteredStrategy,
 )
+from rag_backend.domain.protocols.carousel import _RenderOptions
 
 
 @pytest.mark.unit
@@ -22,8 +23,7 @@ class TestCtaCenteredStrategy:
             {"number": "7", "type": "cta"},
             sample_project,
             sample_theme,
-            7,
-            "pt",
+            options=_RenderOptions(total_slides=7, language="pt"),
         )
 
         assert "Pedro Marins" in result
@@ -49,8 +49,7 @@ class TestCtaCenteredStrategy:
             {"number": "7", "type": "cta"},
             sample_project,
             sample_theme,
-            7,
-            "pt",
+            options=_RenderOptions(total_slides=7, language="pt"),
         )
 
         assert staged_path in result
@@ -69,8 +68,7 @@ class TestCtaCenteredStrategy:
             {"number": "7", "type": "cta"},
             sample_project,
             sample_theme,
-            7,
-            "en",
+            options=_RenderOptions(total_slides=7, language="en"),
         )
 
         assert "Follow for more content like this" in result

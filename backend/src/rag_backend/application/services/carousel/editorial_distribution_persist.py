@@ -24,7 +24,7 @@ from rag_backend.application.services.carousel.outline_normalize import (
 )
 from rag_backend.application.services.carousel.types import MAX_SLIDES, pack_extras
 from rag_backend.domain.constants.carousel import CAROUSEL_SLIDES_CONFIG_SEVEN
-from rag_backend.domain.models import CarouselSlide
+from rag_backend.domain.models import CarouselProject, CarouselSlide
 from rag_backend.infrastructure.database.carousel_repository import (
     PostgresCarouselRepository,
 )
@@ -41,52 +41,93 @@ class SlideDraftsContext:
     translations_en: dict[int, dict[str, object]]
 
 
+@dataclass(frozen=True)
+class _SlideDraftsState:
+    """Internal shared state for slide draft operations."""
+
+    repo: PostgresCarouselRepository
+    project: CarouselProject
+    drafts_by_index: dict[int, dict[str, object]]
+
+
+def _build_drafts_by_index(
+    slide_drafts: list[dict[str, object]],
+) -> dict[int, dict[str, object]]:
+    """Normalise slide drafts and index them by slide number."""
+    drafts_by_index: dict[int, dict[str, object]] = {}
+    for draft in slide_drafts:
+        if isinstance(draft, dict):
+            drafts_by_index[int(draft.get(SLIDE_INDEX_KEY, 0))] = normalize_slide_draft(
+                draft
+            )
+    return drafts_by_index
+
+
 async def apply_slide_drafts_to_database(
     context: SlideDraftsContext,
 ) -> None:
-    """Merge outline + drafts (+ EN) into persisted carousel slides."""
+    """Merge outline + drafts (+ EN) into persisted carousel slides.
+
+    Dispatches to update or create path based on whether slides already exist.
+    """
     repo = PostgresCarouselRepository(session=context.db)
     project = await repo.get_project_by_id(UUID(context.project_id))
     if project is None:
         return
 
-    drafts_by_index: dict[int, dict[str, object]] = {}
-    for draft in context.slide_drafts:
-        if isinstance(draft, dict):
-            drafts_by_index[int(draft.get(SLIDE_INDEX_KEY, 0))] = normalize_slide_draft(
-                draft
-            )
+    drafts_by_index = _build_drafts_by_index(context.slide_drafts)
+    state = _SlideDraftsState(
+        repo=repo,
+        project=project,
+        drafts_by_index=drafts_by_index,
+    )
 
     existing = await repo.get_slides_by_project(project.id)
     if existing:
-        for slide in existing:
-            draft = drafts_by_index.get(slide.slide_number)
-            if draft is None:
-                continue
-            slide_data = _slide_data_from_draft(
-                SlideDataFromDraftInput(
-                    draft=draft,
-                    slide_number=slide.slide_number,
-                    slide_type=slide.slide_type,
-                    translations_en=context.translations_en,
-                ),
-            )
-            slide.heading = slide_data.heading
-            slide.body = slide_data.body
-            slide.image_prompt = slide_data.image_prompt or ""
-            slide.extras = pack_extras(slide_data)
-            slide.metadata = {}
-            slide.image_path = None
-            await repo.update_slide(slide)
-        project.slides_config = CAROUSEL_SLIDES_CONFIG_SEVEN
-        await repo.update_project(project)
-        return
+        await _update_existing_slides(context, state, existing)
+    else:
+        await _create_new_slides(context, state)
 
+
+async def _update_existing_slides(
+    context: SlideDraftsContext,
+    state: _SlideDraftsState,
+    existing: list[CarouselSlide],
+) -> None:
+    """Update existing slides with new draft data."""
+    for slide in existing:
+        draft = state.drafts_by_index.get(slide.slide_number)
+        if draft is None:
+            continue
+        slide_data = _slide_data_from_draft(
+            SlideDataFromDraftInput(
+                draft=draft,
+                slide_number=slide.slide_number,
+                slide_type=slide.slide_type,
+                translations_en=context.translations_en,
+            ),
+        )
+        slide.heading = slide_data.heading
+        slide.body = slide_data.body
+        slide.image_prompt = slide_data.image_prompt or ""
+        slide.extras = pack_extras(slide_data)
+        slide.metadata = {}
+        slide.image_path = None
+        await state.repo.update_slide(slide)
+    state.project.slides_config = CAROUSEL_SLIDES_CONFIG_SEVEN
+    await state.repo.update_project(state.project)
+
+
+async def _create_new_slides(
+    context: SlideDraftsContext,
+    state: _SlideDraftsState,
+) -> None:
+    """Create new slides from draft data and outline."""
     for index, item in enumerate(context.outline[:MAX_SLIDES]):
         if not isinstance(item, dict):
             continue
         slide_number = int(item.get(OUTLINE_FIELD_SLIDE_INDEX, index + 1))
-        draft = drafts_by_index.get(slide_number, item)
+        draft = state.drafts_by_index.get(slide_number, item)
         slide_type = str(
             item.get(OUTLINE_FIELD_SLIDE_TYPE, "") or canonical_slide_type(slide_number)
         )
@@ -98,9 +139,9 @@ async def apply_slide_drafts_to_database(
                 translations_en=context.translations_en,
             ),
         )
-        await repo.create_slide(
+        await state.repo.create_slide(
             CarouselSlide(
-                project_id=project.id,
+                project_id=state.project.id,
                 slide_number=slide_number,
                 slide_type=slide_type,
                 heading=slide_data.heading,
@@ -109,8 +150,8 @@ async def apply_slide_drafts_to_database(
                 extras=pack_extras(slide_data),
             )
         )
-    project.slides_config = CAROUSEL_SLIDES_CONFIG_SEVEN
-    await repo.update_project(project)
+    state.project.slides_config = CAROUSEL_SLIDES_CONFIG_SEVEN
+    await state.repo.update_project(state.project)
 
 
 __all__ = [

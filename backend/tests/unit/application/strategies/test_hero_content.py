@@ -5,6 +5,7 @@ import pytest
 from rag_backend.application.services.carousel_template.strategies.hero_content import (
     HeroContentStrategy,
 )
+from rag_backend.domain.protocols.carousel import _RenderOptions
 
 
 @pytest.mark.unit
@@ -20,8 +21,7 @@ class TestHeroContentStrategy:
             {"number": "2", "type": "summary", "heading": "Resumo", "body": "Body"},
             sample_project,
             sample_theme,
-            7,
-            "pt",
+            options=_RenderOptions(total_slides=7, language="pt"),
         )
 
         assert "Swipe \u2192" in result
@@ -36,8 +36,7 @@ class TestHeroContentStrategy:
             {"number": "2", "type": "summary", "heading": "Summary", "body": "Body"},
             sample_project,
             sample_theme,
-            7,
-            "en",
+            options=_RenderOptions(total_slides=7, language="en"),
         )
 
         assert "Swipe \u2192" in result

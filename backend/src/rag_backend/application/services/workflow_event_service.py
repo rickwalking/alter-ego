@@ -71,6 +71,7 @@ class WorkflowEventService:
     async def list_for_aggregate(
         self,
         db: AsyncSession,
+        *,
         aggregate_type: str,
         aggregate_id: str,
         limit: int = 100,

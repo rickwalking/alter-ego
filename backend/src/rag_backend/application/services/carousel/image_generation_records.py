@@ -43,24 +43,29 @@ async def reuse_recorded_generation(
     repo: CarouselRepository,
     prompt: ImagePromptPackage,
 ) -> str | None:
+    if not hasattr(repo, "get_image_generation_by_key"):
+        logger.warning(
+            "Repository %s does not support get_image_generation_by_key",
+            type(repo).__name__,
+        )
+        return None
     try:
         record = await repo.get_image_generation_by_key(prompt.generation_key)
-    except (AttributeError, NotImplementedError):
+    except NotImplementedError:
         return None
-    if not isinstance(record, CarouselImageGeneration):
-        return None
-    if record.status not in {
-        GENERATION_STATUS_RECOVERED,
-        GENERATION_STATUS_REUSED,
-        GENERATION_STATUS_SUCCEEDED,
-    }:
-        return None
-    if not record.output_path:
+    if (
+        not isinstance(record, CarouselImageGeneration)
+        or record.status
+        not in {
+            GENERATION_STATUS_RECOVERED,
+            GENERATION_STATUS_REUSED,
+            GENERATION_STATUS_SUCCEEDED,
+        }
+        or not record.output_path
+    ):
         return None
     path = Path(record.output_path)
-    if not path.is_file():
-        return None
-    return str(path) if is_valid_jpeg(path) else None
+    return str(path) if (path.is_file() and is_valid_jpeg(path)) else None
 
 
 async def upsert_generation_record(

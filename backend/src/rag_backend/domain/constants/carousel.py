@@ -1,4 +1,6 @@
-"""Carousel pipeline constants — statuses, slide types, dimensions, languages, image presets."""
+"""Carousel pipeline constants —
+statuses, slide types, dimensions, languages, image presets.
+"""
 
 from rag_backend.domain.constants.carousel_themes import (
     BRAND_KEYWORDS,
@@ -109,6 +111,8 @@ SLIDE_FILENAME_PREFIX = "slide_"
 SLIDE_IMAGE_EXTENSION = ".jpg"
 IMAGE_FORMAT_JPEG = "JPEG"
 IMAGE_FORMAT_JPEG_LOWER = "jpeg"
+IMAGE_FORMAT_PNG = "PNG"
+IMAGE_FORMAT_WEBP = "WEBP"
 
 # Supported (model, style) combos
 SUPPORTED_IMAGE_COMBOS: set[tuple[str, str]] = {
@@ -142,6 +146,8 @@ __all__ = [
     "HD_SUBDIR_NAME",
     "IMAGE_FORMAT_JPEG",
     "IMAGE_FORMAT_JPEG_LOWER",
+    "IMAGE_FORMAT_PNG",
+    "IMAGE_FORMAT_WEBP",
     "IMAGE_MODEL_DEFAULT",
     "IMAGE_MODEL_GEMINI",
     "IMAGE_MODEL_OPENAI",

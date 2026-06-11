@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from typing import TypedDict
 from uuid import UUID
 
 from sqlalchemy import select, update
@@ -20,6 +21,15 @@ from rag_backend.infrastructure.database.models.carousel import CarouselProjectM
 from rag_backend.infrastructure.database.models.carousel_artifact_build import (
     CarouselArtifactBuildModel,
 )
+
+
+class _ActivateBuildParams(TypedDict, total=False):
+    """Bundled parameters for activate_build."""
+
+    project_id: UUID
+    artifact_version: str
+    source_lock_version: int
+    prior_artifact_version: str | None
 
 
 class PostgresCarouselArtifactBuildRepository:
@@ -94,12 +104,15 @@ class PostgresCarouselArtifactBuildRepository:
 
     async def activate_build(
         self,
-        project_id: UUID,
-        artifact_version: str,
-        source_lock_version: int,
-        prior_artifact_version: str | None,
+        *,
+        params: _ActivateBuildParams,
     ) -> int:
         """Compare-and-swap activation; returns the new lock_version."""
+        project_id = params["project_id"]
+        artifact_version = params["artifact_version"]
+        source_lock_version = params["source_lock_version"]
+        prior_artifact_version = params.get("prior_artifact_version")
+
         project = await self._session.get(CarouselProjectModel, str(project_id))
         if project is None:
             raise ValueError(ERR_ARTIFACT_BUILD_CONFLICT)

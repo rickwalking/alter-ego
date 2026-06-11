@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from rag_backend.api.routes.carousels.helpers import (
+from rag_backend.application.services.carousel.design_token_utils import (
     _count_slide_images,
     _preview_rendered_slide_urls,
     _slide_image_numbers,
@@ -170,9 +170,7 @@ class TestMergeDesignTokensWithDisk:
             f"/api/carousels/{project_id}/preview/images/slide_3.jpg?lang=pt",
         ]
 
-    def test_draft_project_does_not_use_raw_preview_urls(
-        self, tmp_path: Path
-    ) -> None:
+    def test_draft_project_does_not_use_raw_preview_urls(self, tmp_path: Path) -> None:
         from uuid import UUID
 
         from rag_backend.domain.models import CarouselProject, CarouselTheme

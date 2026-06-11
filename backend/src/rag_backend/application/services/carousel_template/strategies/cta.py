@@ -3,8 +3,11 @@
 import html
 from collections.abc import Mapping
 
+from typing_extensions import override
+
 from rag_backend.domain.constants import LANGUAGE_EN
 from rag_backend.domain.models import CarouselProject
+from rag_backend.domain.protocols.carousel import _RenderOptions
 
 _SLIDE_TYPE_CTA = "cta"
 _DEFAULT_CREATOR_NAME = "Pedro Marins"
@@ -27,14 +30,18 @@ class CtaCenteredStrategy:
     display_name = "CTA Centered"
     supported_slide_types = frozenset({_SLIDE_TYPE_CTA})
 
+    @override
     def render(
         self,
         slide: Mapping[str, object],
         project: CarouselProject,
         _theme: Mapping[str, str],
-        total_slides: int,
-        language: str,
+        *,
+        options: _RenderOptions | None = None,
     ) -> str:
+        opts = options or {}
+        total_slides: int = opts.get("total_slides", 0)  # type: ignore[assignment]
+        language: str = opts.get("language", "pt")  # type: ignore[assignment]
         name = html.escape(
             project.creator_name or _DEFAULT_CREATOR_NAME,
             quote=True,

@@ -11,6 +11,7 @@ from rag_backend.application.services.carousel.editorial_workflow_support import
 )
 from rag_backend.application.services.carousel.phase_artifact_runner import (
     PhaseArtifactRunner,
+    PhaseArtifactRunnerConfig,
 )
 from rag_backend.domain.constants.ai_agents import ERR_INVALID_JSON
 from rag_backend.domain.constants.carousel_workflow import (
@@ -25,15 +26,17 @@ from rag_backend.domain.constants.carousel_workflow import (
 async def test_invalid_content_json_marks_workflow_failed() -> None:
     """Scenario: Invalid content JSON fails loudly without stub slide."""
     runner = PhaseArtifactRunner(
-        outline_agent=MagicMock(),
-        content_agent=MagicMock(),
-        llm=MagicMock(),
-        workflow_input=EditorialWorkflowStartInput(
-            topic="Topic",
-            audience="Audience",
-            brief="Brief",
-            sources=[],
-        ),
+        PhaseArtifactRunnerConfig(
+            outline_agent=MagicMock(),
+            content_agent=MagicMock(),
+            llm=MagicMock(),
+            workflow_input=EditorialWorkflowStartInput(
+                topic="Topic",
+                audience="Audience",
+                brief="Brief",
+                sources=[],
+            ),
+        )
     )
     state = {
         "project_id": "project-1",
@@ -55,15 +58,17 @@ async def test_invalid_content_json_marks_workflow_failed() -> None:
 async def test_outline_artifact_publishes_sse_update() -> None:
     """Scenario: Generated outline artifacts publish incremental SSE updates."""
     runner = PhaseArtifactRunner(
-        outline_agent=MagicMock(),
-        content_agent=MagicMock(),
-        llm=MagicMock(),
-        workflow_input=EditorialWorkflowStartInput(
-            topic="Topic",
-            audience="Audience",
-            brief="Brief",
-            sources=[],
-        ),
+        PhaseArtifactRunnerConfig(
+            outline_agent=MagicMock(),
+            content_agent=MagicMock(),
+            llm=MagicMock(),
+            workflow_input=EditorialWorkflowStartInput(
+                topic="Topic",
+                audience="Audience",
+                brief="Brief",
+                sources=[],
+            ),
+        )
     )
     state = {
         "project_id": "project-1",

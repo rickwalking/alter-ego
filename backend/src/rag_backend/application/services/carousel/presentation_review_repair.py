@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 from collections.abc import Mapping
 from concurrent.futures import ThreadPoolExecutor
+from dataclasses import dataclass
 
 from rag_backend.application.services.carousel.localized_slide_builder import (
     PRESENTATION_EN_KEY,
@@ -19,7 +20,9 @@ from rag_backend.application.services.carousel.presentation_policy import (
     load_presentation_policy,
 )
 from rag_backend.application.services.carousel.presentation_validation import (
+    BoundedRepairCommand,
     BoundedRepairRequest,
+    ValidatePayloadCommand,
     run_bounded_repair,
     validate_slide_payload,
 )
@@ -28,6 +31,17 @@ from rag_backend.domain.constants.presentation_policy import (
     DEFAULT_PRESENTATION_POLICY_VERSION,
 )
 from rag_backend.domain.models.carousel_presentation import SlideValidationViolation
+
+
+@dataclass(frozen=True)
+class LocaleRepairParams:
+    """Parameters for attempting a locale repair."""
+
+    payload: Mapping[str, object]
+    locale: str
+    policy: CarouselPresentationPolicy
+    slide_index: int | None
+
 
 SLIDE_INDEX_KEY = "slide_index"
 
@@ -42,31 +56,31 @@ async def _async_deterministic_repair(
 
 
 async def attempt_locale_repair(
-    payload: Mapping[str, object],
-    *,
-    locale: str,
-    policy: CarouselPresentationPolicy,
-    slide_index: int | None,
+    params: LocaleRepairParams,
 ) -> dict[str, object] | None:
     """Run one bounded repair attempt for a locale payload."""
     violations = tuple(
         validate_slide_payload(
-            payload,
-            locale=locale,
-            policy=policy,
-            slide_index=slide_index,
+            ValidatePayloadCommand(
+                params.payload,
+                locale=params.locale,
+                policy=params.policy,
+                slide_index=params.slide_index,
+            )
         )
     )
     if not violations:
         return None
     repair_result = await run_bounded_repair(
-        BoundedRepairRequest(
-            locale=locale,
-            payload=payload,
-            violations=violations,
-        ),
-        repair_fn=_async_deterministic_repair,
-        policy=policy,
+        BoundedRepairCommand(
+            request=BoundedRepairRequest(
+                locale=params.locale,
+                payload=params.payload,
+                violations=violations,
+            ),
+            repair_fn=_async_deterministic_repair,
+            policy=params.policy,
+        )
     )
     if repair_result.violations_after:
         return None
@@ -94,10 +108,12 @@ async def repair_localized_slides(
             if payload is None:
                 continue
             repaired_payload = await attempt_locale_repair(
-                payload,
-                locale=locale,
-                policy=policy,
-                slide_index=slide_index,
+                LocaleRepairParams(
+                    payload=payload,
+                    locale=locale,
+                    policy=policy,
+                    slide_index=slide_index,
+                ),
             )
             if repaired_payload is not None:
                 repaired_slide[locale_key] = repaired_payload
@@ -139,6 +155,7 @@ def repair_localized_slides_sync(
 __all__ = [
     "PRESENTATION_EN_KEY",
     "PRESENTATION_PT_KEY",
+    "LocaleRepairParams",
     "attempt_locale_repair",
     "repair_localized_slides",
     "repair_localized_slides_sync",

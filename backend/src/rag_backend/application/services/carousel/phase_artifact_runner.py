@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+from typing import TypedDict
+
 from langchain_core.language_models import BaseChatModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -52,25 +55,36 @@ from .editorial_workflow_support import (
 from .outline_normalize import normalize_editorial_outline
 
 
+@dataclass
+class PhaseArtifactRunnerConfig:
+    outline_agent: OutlineAgent
+    content_agent: ContentDraftAgent
+    llm: BaseChatModel
+    image_registry: ImageProviderRegistry | None = None
+    db: AsyncSession | None = None
+    workflow_input: EditorialWorkflowStartInput | None = None
+
+
+class DistributionCheckParams(TypedDict):
+    state: CarouselWorkflowState
+    outline: object
+    slide_drafts: object
+    updates: dict[str, object]
+
+
 class PhaseArtifactRunner:
     """Generate phase artifacts inside LangGraph nodes before human gates."""
 
     def __init__(
         self,
-        *,
-        outline_agent: OutlineAgent,
-        content_agent: ContentDraftAgent,
-        llm: BaseChatModel,
-        image_registry: ImageProviderRegistry | None = None,
-        db: AsyncSession | None = None,
-        workflow_input: EditorialWorkflowStartInput | None = None,
+        config: PhaseArtifactRunnerConfig,
     ) -> None:
-        self._outline_agent = outline_agent
-        self._content_agent = content_agent
-        self._llm = llm
-        self._image_registry = image_registry
-        self._db = db
-        self._workflow_input = workflow_input
+        self._outline_agent = config.outline_agent
+        self._content_agent = config.content_agent
+        self._llm = config.llm
+        self._image_registry = config.image_registry
+        self._db = config.db
+        self._workflow_input = config.workflow_input
 
     def with_context(
         self,
@@ -80,13 +94,48 @@ class PhaseArtifactRunner:
     ) -> PhaseArtifactRunner:
         """Return a runner scoped to the current resume/request context."""
         return PhaseArtifactRunner(
-            outline_agent=self._outline_agent,
-            content_agent=self._content_agent,
-            llm=self._llm,
-            image_registry=self._image_registry,
-            db=db if db is not None else self._db,
-            workflow_input=workflow_input or self._workflow_input,
+            PhaseArtifactRunnerConfig(
+                outline_agent=self._outline_agent,
+                content_agent=self._content_agent,
+                llm=self._llm,
+                image_registry=self._image_registry,
+                db=db if db is not None else self._db,
+                workflow_input=workflow_input or self._workflow_input,
+            )
         )
+
+    def _normalize_outline_in_state(
+        self,
+        state: CarouselWorkflowState,
+    ) -> tuple[CarouselWorkflowState, dict[str, object]]:
+        """Normalize outline dicts in state if they differ from persisted format."""
+        updates: dict[str, object] = {}
+        raw_outline = state.get("outline")
+        if not isinstance(raw_outline, list):
+            return state, updates
+        outline_dicts = [slide for slide in raw_outline if isinstance(slide, dict)]
+        if not outline_dicts:
+            return state, updates
+        normalized_outline = normalize_editorial_outline(outline_dicts)
+        if len(normalized_outline) == len(outline_dicts):
+            return state, updates
+        updates["outline"] = normalized_outline
+        state = {**state, "outline": normalized_outline}  # type: ignore[arg-type]
+        return state, updates
+
+    async def _publish_phase_updates(
+        self,
+        state: CarouselWorkflowState,
+        phase: str,
+        updates: dict[str, object],
+    ) -> None:
+        """Publish phase artifact updates to the event stream if present."""
+        if not updates:
+            return
+        project_id = str(state.get("project_id", ""))
+        if not project_id:
+            return
+        await publish_workflow_artifacts_from_updates(project_id, phase, updates)
 
     async def ensure_for_phase(self, state: CarouselWorkflowState) -> dict[str, object]:
         """Build missing artifacts for the active workflow phase."""
@@ -94,15 +143,8 @@ class PhaseArtifactRunner:
         if self._workflow_input is None:
             return {}
         resolved = resolve_workflow_input(state, self._workflow_input)
-        updates: dict[str, object] = {}
-        raw_outline = state.get("outline")
-        if isinstance(raw_outline, list):
-            outline_dicts = [slide for slide in raw_outline if isinstance(slide, dict)]
-            if outline_dicts:
-                normalized_outline = normalize_editorial_outline(outline_dicts)
-                if len(normalized_outline) != len(outline_dicts):
-                    updates["outline"] = normalized_outline
-                    state = {**state, "outline": normalized_outline}
+        state, outline_updates = self._normalize_outline_in_state(state)
+        updates: dict[str, object] = {**outline_updates}
 
         if phase == PHASE_OUTLINE and not state.get("outline"):
             updates["outline"] = await generate_outline(self._outline_agent, resolved)
@@ -115,16 +157,59 @@ class PhaseArtifactRunner:
         elif phase == PHASE_IMAGES:
             updates.update(await self._ensure_image_artifacts(state))
 
-        if updates:
-            project_id = str(state.get("project_id", ""))
-            if project_id:
-                await publish_workflow_artifacts_from_updates(
-                    project_id,
-                    phase,
-                    updates,
-                )
-
+        await self._publish_phase_updates(state, phase, updates)
         return updates
+
+    async def _resolve_outline(
+        self,
+        pending: dict[str, object],
+        state: CarouselWorkflowState,
+    ) -> tuple[list[object], dict[str, object]]:
+        """Resolve and normalize the outline from pending/state."""
+        updates: dict[str, object] = {}
+        raw_outline = pending.get("outline") or state.get("outline") or []
+        outline: list[object] = raw_outline  # type: ignore[assignment]
+        if isinstance(raw_outline, list):
+            outline_dicts = [slide for slide in raw_outline if isinstance(slide, dict)]
+            if outline_dicts:
+                normalized_outline = normalize_editorial_outline(outline_dicts)
+                if len(normalized_outline) != len(outline_dicts):
+                    outline = normalized_outline
+                    updates["outline"] = normalized_outline
+        return outline, updates
+
+    async def _build_distribution_if_needed(
+        self,
+        state: CarouselWorkflowState,
+        outline: list[object],
+        config: tuple[object, dict[str, object]],
+    ) -> dict[str, object]:
+        """Build editorial distribution if conditions are met."""
+        slide_drafts, updates = config
+        if self._db is None:
+            return {}
+        if not self._should_build_distribution(
+            DistributionCheckParams(
+                state=state, outline=outline, slide_drafts=slide_drafts, updates=updates
+            )
+        ):
+            return {}
+        from rag_backend.infrastructure.container import get_container
+
+        container = get_container()
+        return await build_editorial_distribution_updates(
+            DistributionBuildContext(
+                db=self._db,
+                llm=self._llm,
+                project_id=str(state.get("project_id", "")),
+                outline=[slide for slide in outline if isinstance(slide, dict)],
+                slide_drafts=[
+                    slide for slide in slide_drafts if isinstance(slide, dict)
+                ],
+                research_summary=str(state.get("research_summary", "") or ""),
+            ),
+            linkedin_generator=container.linkedin_post_generator(),
+        )
 
     async def _ensure_content_artifacts(
         self,
@@ -133,15 +218,8 @@ class PhaseArtifactRunner:
         pending: dict[str, object],
     ) -> dict[str, object]:
         updates: dict[str, object] = {}
-        raw_outline = pending.get("outline") or state.get("outline") or []
-        outline: list[object] = raw_outline
-        if isinstance(raw_outline, list):
-            outline_dicts = [slide for slide in raw_outline if isinstance(slide, dict)]
-            if outline_dicts:
-                normalized_outline = normalize_editorial_outline(outline_dicts)
-                if len(normalized_outline) != len(outline_dicts):
-                    outline = normalized_outline
-                    updates["outline"] = normalized_outline
+        outline, outline_updates = await self._resolve_outline(pending, state)
+        updates.update(outline_updates)
         revision_notes = self._content_revision_notes(state)
         should_regenerate = not state.get("slide_drafts") or bool(revision_notes)
         if should_regenerate and isinstance(outline, list):
@@ -156,26 +234,10 @@ class PhaseArtifactRunner:
         slide_drafts = updates.get("slide_drafts") or state.get("slide_drafts") or []
         persona_updates = await self._score_content_drafts(resolved, slide_drafts)
         updates.update(persona_updates)
-        if self._db is not None and self._should_build_distribution(
-            state, outline, slide_drafts, updates
-        ):
-            from rag_backend.infrastructure.container import get_container
-
-            container = get_container()
-            distribution = await build_editorial_distribution_updates(
-                DistributionBuildContext(
-                    db=self._db,
-                    llm=self._llm,
-                    project_id=str(state.get("project_id", "")),
-                    outline=[slide for slide in outline if isinstance(slide, dict)],
-                    slide_drafts=[
-                        slide for slide in slide_drafts if isinstance(slide, dict)
-                    ],
-                    research_summary=str(state.get("research_summary", "") or ""),
-                ),
-                linkedin_generator=container.linkedin_post_generator(),
-            )
-            updates.update(distribution)
+        distribution = await self._build_distribution_if_needed(
+            state, outline, (slide_drafts, updates)
+        )
+        updates.update(distribution)
         design_updates = await self._apply_content_design(state, outline)
         updates.update(design_updates)
         updates.update(
@@ -274,21 +336,20 @@ class PhaseArtifactRunner:
 
     @staticmethod
     def _should_build_distribution(
-        state: CarouselWorkflowState,
-        outline: object,
-        slide_drafts: object,
-        updates: dict[str, object],
+        params: DistributionCheckParams,
     ) -> bool:
-        if not isinstance(outline, list) or not isinstance(slide_drafts, list):
+        if not isinstance(params["outline"], list) or not isinstance(
+            params["slide_drafts"], list
+        ):
             return False
-        if not slide_drafts:
+        if not params["slide_drafts"]:
             return False
-        drafts_were_generated = "slide_drafts" in updates
+        drafts_were_generated = "slide_drafts" in params["updates"]
         needs_distribution = (
-            not state.get("caption")
-            or not state.get("blog_markdown")
-            or not state.get("linkedin_post_pt")
-            or not state.get("linkedin_post_en")
+            not params["state"].get("caption")
+            or not params["state"].get("blog_markdown")
+            or not params["state"].get("linkedin_post_pt")
+            or not params["state"].get("linkedin_post_en")
         )
         return drafts_were_generated or needs_distribution
 

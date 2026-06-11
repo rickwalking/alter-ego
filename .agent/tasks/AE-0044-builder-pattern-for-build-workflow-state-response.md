@@ -1,0 +1,147 @@
+# AE-0044 — Builder Pattern for build_workflow_state_response
+
+Status: Intake
+Tier: T2
+Priority: Medium
+Type: Task
+Area: Backend
+Owner: Unassigned
+Agent Lane: architect → developer → qa
+Branch: feat/ae-0044-builder-workflow-state-response
+Kanban Card: AE-0044
+Created: 2026-06-10
+Updated: 2026-06-10
+
+## Goal
+
+Refactor `build_workflow_state_response` using a Field Descriptor Mapping pattern (lightweight Builder) to eliminate ~16 repetitions of `str(state.get(...))` / `list(state.get(...) or [])`. Add deprecation wrapper for the old function signature.
+
+## Problem
+
+PR #11 review comment: "very complex function. Let's think about the best architect solution. Maybe a Builder pattern. Create a plan to resolve this." The function has 62 lines, ~16 repeated field-mapping patterns, and each new field requires manual boilerplate.
+
+## Scope
+
+- Extract 5 pure field extractor functions: `_string_field(key)`, `_list_field(key)`, `_int_field(key)`, `_localized_reviews_field(key)`, `_validation_field(key)`
+- Define `_FIELD_MAPPING: list[tuple[str, Callable[[dict[str, object]], object]]]` with 12+ entries
+- `build_workflow_state_response` reduced to ~5 lines
+- Add `@deprecated` wrapper keeping the old function callable for 1 sprint
+- Inline `_string_list_map` and `_int_map` helpers into extractors
+- Add comprehensive unit tests for each extractor and the full mapping
+
+## Non-Goals
+
+- Changing the `EditorialWorkflowStateResponse` Pydantic model
+- Adding new fields to the response
+- Refactoring other response builder functions (handled separately)
+
+## Acceptance Criteria
+
+- [ ] 5 pure field extractor functions created and unit-tested
+- [ ] `_FIELD_MAPPING` defined as module-level constant with 12+ entries
+- [ ] `build_workflow_state_response` reduced to <= 10 lines
+- [ ] Old function signature kept as `@deprecated` wrapper with `warnings.warn(DeprecationWarning)`
+- [ ] All existing tests pass without modification (they call the old name)
+- [ ] `mypy strict` passes on modified file
+- [ ] Ruff `PLR0913` and `PLR0912` not violated
+- [ ] Mutation-killing tests for each extractor (null state, wrong types, all-fields-present)
+
+## Gherkin Scenarios
+
+```gherkin
+Feature: Field Descriptor Mapping
+
+  Scenario: build_workflow_state_response with full state
+    Given a workflow state dict with all fields populated
+    When build_workflow_state_response is called
+    Then all 12+ fields match the input values
+
+  Scenario: build_workflow_state_response with empty state
+    Given an empty workflow state dict
+    When build_workflow_state_response is called
+    Then string fields default to ""
+    And list fields default to []
+    And optional fields default to None
+
+  Scenario: deprecated wrapper
+    Given code that imports build_workflow_state_response
+    When the refactored version is called
+    Then a DeprecationWarning is issued
+```
+
+## Delta
+
+### MODIFIED
+
+- `api/routes/carousels/editorial_workflow_routes_response.py`
+
+### ADDED
+
+- 5 extractor functions (`_string_field`, `_list_field`, etc.)
+- `_FIELD_MAPPING` constant
+- Unit test file for extractors
+
+### REMOVED
+
+- `_string_list_map` and `_int_map` helpers (inlined into extractors)
+
+## Affected Areas
+
+- Backend: API response builder
+- Tests: New unit tests in `tests/unit/api/`
+- Docs: None
+- Observability: None
+
+## Dependencies
+
+- Blocks: None
+- Blocked by: AE-0041 (uses `STATE_FIELD_*` constants that AE-0041 creates)
+- Related: None
+
+## Implementation Plan
+
+1. Define 5 extractor functions as closures in `editorial_workflow_routes_response.py`
+2. Build `_FIELD_MAPPING` list with typed entries
+3. Refactor `build_workflow_state_response` to iterate over mapping
+4. Add `import warnings` and `@deprecated` wrapper
+5. Write unit tests for: null state, full state, wrong types, partial state
+6. Run mutation testing on the module
+7. Verify `ruff check` and `mypy strict`
+
+## QA Checklist
+
+- [ ] Security reviewed — no auth changes
+- [ ] Code quality reviewed — no `type: ignore`
+- [ ] Acceptance criteria validated
+- [ ] Edge cases tested — None values, type mismatches, missing keys
+- [ ] Orphan/unfinished code checked — old imports still work
+
+## Progress Log
+
+### 2026-06-10
+
+Ticket created.
+
+## Files Touched
+
+Pending.
+
+## Test Evidence
+
+Pending.
+
+## QA Report
+
+Pending.
+
+## Decision Log
+
+Pending.
+
+## Blockers
+
+None.
+
+## Final Summary
+
+Pending.

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 from rag_backend.application.services.carousel.editorial_workflow_sse_constants import (
     SSE_EVENT_ARTIFACT,
     SSE_EVENT_ERROR,
@@ -26,6 +28,14 @@ from rag_backend.domain.constants.carousel_workflow import (
     WORKFLOW_ARTIFACT_FIELD_TYPE,
     WORKFLOW_ERROR_KEY,
 )
+
+
+@dataclass(frozen=True)
+class EventParams:
+    """Bundled parameters for SSE event building."""
+
+    project_id: str
+    phase: str
 
 
 def build_workflow_event(event_type: str, **payload: object) -> dict[str, object]:
@@ -95,24 +105,23 @@ def build_review_gate_payload(state: CarouselWorkflowState) -> dict[str, object]
 
 
 def build_review_required_event(
-    project_id: str,
-    phase: str,
+    params: EventParams,
+    *,
     phase_status: str,
     gate_payload: dict[str, object],
 ) -> dict[str, object]:
     """Build a review_required SSE payload."""
     return build_workflow_event(
         SSE_EVENT_REVIEW_REQUIRED,
-        project_id=project_id,
-        phase=phase,
+        project_id=params.project_id,
+        phase=params.phase,
         phase_status=phase_status,
         **{SSE_PAYLOAD_FIELD_GATE: gate_payload},
     )
 
 
 def build_error_event(
-    project_id: str,
-    phase: str,
+    params: EventParams,
     message: str,
     *,
     recoverable: bool = False,
@@ -120,8 +129,8 @@ def build_error_event(
     """Build an error SSE payload."""
     return build_workflow_event(
         SSE_EVENT_ERROR,
-        project_id=project_id,
-        phase=phase,
+        project_id=params.project_id,
+        phase=params.phase,
         **{
             SSE_PAYLOAD_FIELD_MESSAGE: message,
             SSE_PAYLOAD_FIELD_RECOVERABLE: recoverable,
@@ -130,16 +139,16 @@ def build_error_event(
 
 
 def build_artifact_event(
-    project_id: str,
-    phase: str,
+    params: EventParams,
+    *,
     artifact_type: str,
     data: object,
 ) -> dict[str, object]:
     """Build an artifact SSE payload for incremental gate updates."""
     return build_workflow_event(
         SSE_EVENT_ARTIFACT,
-        project_id=project_id,
-        phase=phase,
+        project_id=params.project_id,
+        phase=params.phase,
         **{
             WORKFLOW_ARTIFACT_FIELD_TYPE: artifact_type,
             WORKFLOW_ARTIFACT_FIELD_DATA: data,
@@ -173,6 +182,7 @@ def resolve_background_resume_sse_error_message(detail: str) -> str:
 
 __all__ = [
     "CLIENT_SAFE_SSE_ERROR_MESSAGES",
+    "EventParams",
     "build_artifact_event",
     "build_error_event",
     "build_phase_change_event",

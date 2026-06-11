@@ -1,13 +1,34 @@
 """Conversation service with memory management."""
 
 from collections.abc import Awaitable, Callable
+from dataclasses import dataclass
 from uuid import UUID
 
 from rag_backend.domain.models import Conversation, Message, MessageRole
 from rag_backend.domain.protocols import ConversationRepository, MessageRepository
+from rag_backend.domain.protocols.repositories import _UserQuery
 
 MAX_TITLE_TOKENS = 100
 MAX_FALLBACK_TITLE_LENGTH = 50
+
+
+@dataclass(frozen=True)
+class _MessageData:
+    """Payload for adding a message to a conversation."""
+
+    role: MessageRole
+    content: str
+    sources: list[dict[str, object]] | None = None
+
+
+@dataclass(frozen=True)
+class _ListQuery:
+    """Query parameters for listing conversations."""
+
+    limit: int = 100
+    offset: int = 0
+    user_id: UUID | None = None
+    origin: str | None = None
 
 
 class ConversationService:
@@ -100,26 +121,23 @@ class ConversationService:
     async def add_message(
         self,
         conversation_id: UUID,
-        role: MessageRole,
-        content: str,
-        sources: list[dict[str, object]] | None = None,
+        *,
+        data: _MessageData,
     ) -> Message:
         """Add a message to a conversation.
 
         Args:
             conversation_id: The conversation UUID
-            role: Message role (user/assistant/system)
-            content: Message content
-            sources: Optional source documents
+            data: Message payload (role, content, sources)
 
         Returns:
             The created message
         """
         message = Message(
-            role=role,
-            content=content,
+            role=data.role,
+            content=data.content,
             conversation_id=conversation_id,
-            sources=sources or [],
+            sources=data.sources or [],
         )
 
         created_message = await self._message_repository.create(message)
@@ -145,20 +163,22 @@ class ConversationService:
 
     async def list_conversations(
         self,
-        limit: int = 100,
-        offset: int = 0,
-        user_id: UUID | None = None,
-        origin: str | None = None,
+        *,
+        query: _ListQuery,
     ) -> list[Conversation]:
         """List conversations, optionally filtered by owner and agent origin."""
-        if user_id is not None:
+        if query.user_id is not None:
             return await self._conversation_repository.get_by_user_id(
-                user_id=user_id,
-                limit=limit,
-                offset=offset,
-                origin=origin,
+                _UserQuery(
+                    user_id=query.user_id,
+                    limit=query.limit,
+                    offset=query.offset,
+                    origin=query.origin,
+                ),
             )
-        return await self._conversation_repository.get_all(limit=limit, offset=offset)
+        return await self._conversation_repository.get_all(
+            limit=query.limit, offset=query.offset
+        )
 
     async def count_conversations_for_user(
         self, user_id: UUID, origin: str | None = None

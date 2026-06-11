@@ -2,15 +2,19 @@
 
 from collections.abc import Mapping
 
+from typing_extensions import override
+
 from rag_backend.application.services.carousel.types import MAX_FEATURE_ITEMS
 from rag_backend.application.services.carousel_template.helpers import _render_inline
 from rag_backend.application.services.carousel_template.lower_third_shell import (
+    LowerThirdConfig,
     render_lower_third_shell,
 )
 from rag_backend.application.services.carousel_template.strategies.hero_content import (
     HeroContentStrategy,
 )
 from rag_backend.domain.models import CarouselProject
+from rag_backend.domain.protocols.carousel import _RenderOptions
 
 _SUPPORTED_TYPES = frozenset({"content"})
 _FALLBACK = HeroContentStrategy()
@@ -23,17 +27,20 @@ class NumberedListStrategy:
     display_name = "Numbered List"
     supported_slide_types = _SUPPORTED_TYPES
 
+    @override
     def render(
         self,
         slide: Mapping[str, object],
         project: CarouselProject,
         theme: Mapping[str, str],
-        total_slides: int,
-        language: str,
+        *,
+        options: _RenderOptions | None = None,
     ) -> str:
+        opts = options or {}
+        total_slides: int = opts.get("total_slides", 0)  # type: ignore[assignment]
         features = slide.get("features")
         if not features or not isinstance(features, list) or not features:
-            return _FALLBACK.render(slide, project, theme, total_slides, language)
+            return _FALLBACK.render(slide, project, theme, options=options)
 
         heading = _render_inline(str(slide.get("heading") or ""))
         body_raw = str(slide.get("body") or "").strip()
@@ -63,9 +70,11 @@ class NumberedListStrategy:
             f'      <div class="feature-grid">{steps_html}</div>'
         )
         return render_lower_third_shell(
-            slide_number=slide_number,
-            total_slides=total_slides,
-            copy_inner_html=copy_inner,
+            LowerThirdConfig(
+                slide_number=slide_number,
+                total_slides=total_slides,
+                copy_inner_html=copy_inner,
+            )
         )
 
 

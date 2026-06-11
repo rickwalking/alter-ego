@@ -26,7 +26,8 @@ def get_neon_slide_closing_css(theme: dict[str, str]) -> str:
     text-align: center;
     margin-inline: auto;
   }}
-  .cta-icon {{ font-size: clamp(32px, 7vw, 40px); margin-bottom: 14px; flex-shrink: 0; }}
+  .cta-icon {{ font-size: clamp(32px, 7vw, 40px);
+    margin-bottom: 14px; flex-shrink: 0; }}
   .cta-title {{
     font-family: var(--font-heading);
     font-size: clamp(20px, 4.5vw, 26px);

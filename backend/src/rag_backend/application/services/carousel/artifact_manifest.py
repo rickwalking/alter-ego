@@ -87,8 +87,12 @@ class CarouselArtifactManifest:
     en_source_hash: str
     raw_image_hashes: tuple[ArtifactRawImageEntry, ...] = field(default_factory=tuple)
     avatar_hash: str | None = None
-    standard_slides_pt: tuple[ArtifactSlideFileEntry, ...] = field(default_factory=tuple)
-    standard_slides_en: tuple[ArtifactSlideFileEntry, ...] = field(default_factory=tuple)
+    standard_slides_pt: tuple[ArtifactSlideFileEntry, ...] = field(
+        default_factory=tuple
+    )
+    standard_slides_en: tuple[ArtifactSlideFileEntry, ...] = field(
+        default_factory=tuple
+    )
     hd_slides_pt: tuple[ArtifactSlideFileEntry, ...] = field(default_factory=tuple)
     hd_slides_en: tuple[ArtifactSlideFileEntry, ...] = field(default_factory=tuple)
     pdfs: tuple[ArtifactPdfEntry, ...] = field(default_factory=tuple)
@@ -115,46 +119,10 @@ class CarouselArtifactManifest:
                 for entry in self.raw_image_hashes
             ],
             avatar_hash=self.avatar_hash,
-            standard_slides_pt=[
-                ArtifactSlideFileRecord(
-                    slide_number=entry.slide_number,
-                    relative_path=entry.relative_path,
-                    sha256=entry.sha256,
-                    width=entry.width,
-                    height=entry.height,
-                )
-                for entry in self.standard_slides_pt
-            ],
-            standard_slides_en=[
-                ArtifactSlideFileRecord(
-                    slide_number=entry.slide_number,
-                    relative_path=entry.relative_path,
-                    sha256=entry.sha256,
-                    width=entry.width,
-                    height=entry.height,
-                )
-                for entry in self.standard_slides_en
-            ],
-            hd_slides_pt=[
-                ArtifactSlideFileRecord(
-                    slide_number=entry.slide_number,
-                    relative_path=entry.relative_path,
-                    sha256=entry.sha256,
-                    width=entry.width,
-                    height=entry.height,
-                )
-                for entry in self.hd_slides_pt
-            ],
-            hd_slides_en=[
-                ArtifactSlideFileRecord(
-                    slide_number=entry.slide_number,
-                    relative_path=entry.relative_path,
-                    sha256=entry.sha256,
-                    width=entry.width,
-                    height=entry.height,
-                )
-                for entry in self.hd_slides_en
-            ],
+            standard_slides_pt=_slide_records(self.standard_slides_pt),
+            standard_slides_en=_slide_records(self.standard_slides_en),
+            hd_slides_pt=_slide_records(self.hd_slides_pt),
+            hd_slides_en=_slide_records(self.hd_slides_en),
             pdfs=[
                 ArtifactPdfRecord(
                     language=entry.language,
@@ -167,7 +135,9 @@ class CarouselArtifactManifest:
         )
 
 
-def manifest_from_payload(payload: CarouselArtifactManifestPayload) -> CarouselArtifactManifest:
+def manifest_from_payload(
+    payload: CarouselArtifactManifestPayload,
+) -> CarouselArtifactManifest:
     """Build a manifest dataclass from serialized JSON payload."""
     return CarouselArtifactManifest(
         project_id=str(payload["project_id"]),
@@ -204,6 +174,22 @@ def manifest_from_payload(payload: CarouselArtifactManifestPayload) -> CarouselA
             for entry in payload.get("pdfs", [])
         ),
     )
+
+
+def _slide_records(
+    entries: tuple[ArtifactSlideFileEntry, ...],
+) -> list[ArtifactSlideFileRecord]:
+    """Convert slide file entries to slide file records."""
+    return [
+        ArtifactSlideFileRecord(
+            slide_number=entry.slide_number,
+            relative_path=entry.relative_path,
+            sha256=entry.sha256,
+            width=entry.width,
+            height=entry.height,
+        )
+        for entry in entries
+    ]
 
 
 def _slide_entries(

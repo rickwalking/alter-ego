@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import re
-from collections.abc import Mapping
+from collections.abc import Mapping, Set
+from typing import TypedDict
 
 from rag_backend.domain.constants.carousel import LANGUAGE_EN
 from rag_backend.domain.constants.carousel_presentation import (
@@ -12,6 +13,16 @@ from rag_backend.domain.constants.carousel_presentation import (
     VIOLATION_VISIBLE_EMOJI_FORBIDDEN,
 )
 from rag_backend.domain.models.carousel_presentation import SlideValidationViolation
+
+
+class RepairFieldCommand(TypedDict):
+    """Parameters for repairing a single text field."""
+
+    payload: dict[str, object]
+    field: str
+    violations: Set[str]
+    locale: str
+
 
 _EM_DASH = "\u2014"
 _EN_DASH = "\u2013"
@@ -39,11 +50,12 @@ def _repair_heading_sentence_case_en(heading: str) -> str:
 
 
 def _repair_text_field(
-    payload: dict[str, object],
-    field: str,
-    violations: set[str],
-    locale: str,
+    command: RepairFieldCommand,
 ) -> None:
+    payload = command["payload"]
+    field = command["field"]
+    violations = command["violations"]
+    locale = command["locale"]
     raw = payload.get(field)
     if not isinstance(raw, str) or not raw:
         return
@@ -69,8 +81,16 @@ def deterministic_repair_slide_payload(
     """Apply deterministic repairs for supported violation codes."""
     repaired = dict(payload)
     codes = {violation.code for violation in violations}
-    _repair_text_field(repaired, "heading", codes, locale)
-    _repair_text_field(repaired, "body", codes, locale)
+    _repair_text_field(
+        RepairFieldCommand(
+            payload=repaired, field="heading", violations=codes, locale=locale
+        )
+    )
+    _repair_text_field(
+        RepairFieldCommand(
+            payload=repaired, field="body", violations=codes, locale=locale
+        )
+    )
     return repaired
 
 

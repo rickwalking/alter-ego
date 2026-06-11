@@ -9,6 +9,8 @@ from uuid import uuid4
 import pytest
 
 from rag_backend.application.services.carousel.refinement_service import (
+    BilingualExportParams,
+    CarouselRefinementConfig,
     CarouselRefinementService,
 )
 from rag_backend.application.services.carousel.types import (
@@ -116,11 +118,13 @@ def _agent_with_export_mock(
         gemini_service=image_service, openai_service=image_service
     )
     agent = CarouselRefinementService(
-        repository=repo,
-        llm_service=AsyncMock(),
-        image_registry=registry,
-        export_service=export,
-        pdf_slide_builder=pdf_builder,
+        CarouselRefinementConfig(
+            repository=repo,
+            llm_service=AsyncMock(),
+            image_registry=registry,
+            export_service=export,
+            pdf_slide_builder=pdf_builder,
+        )
     )
     return agent, export, pdf_builder
 
@@ -155,7 +159,13 @@ class TestBilingualExport:
             ),
         ]
         await agent._phase6_bilingual_export(
-            project, slides, "<html>pt</html>", tmp_path
+            BilingualExportParams(
+                project=project,
+                slides_data=slides,
+                pt_html="<html>pt</html>",
+                output_dir=tmp_path,
+                strategy_name=None,
+            )
         )
 
         # Each language calls export_slides twice (standard + HD)
@@ -179,7 +189,13 @@ class TestBilingualExport:
         )
         slides = [SlideData(1, "intro", "PT", "PT body")]
         await agent._phase6_bilingual_export(
-            project, slides, "<html>pt</html>", tmp_path
+            BilingualExportParams(
+                project=project,
+                slides_data=slides,
+                pt_html="<html>pt</html>",
+                output_dir=tmp_path,
+                strategy_name=None,
+            )
         )
 
         # PT-only: standard + HD = 2 calls
@@ -189,6 +205,7 @@ class TestBilingualExport:
 
     async def test_render_language_rewrites_image_paths(self, tmp_path: Path) -> None:
         from rag_backend.application.services.carousel.nodes.export import (
+            BilingualExportConfig,
             render_language,
         )
 
@@ -200,17 +217,20 @@ class TestBilingualExport:
             status=CarouselStatus.COMPLETED,
             output_dir=str(tmp_path),
         )
-        await render_language(
-            project,
-            "pt",
-            (
+        config = BilingualExportConfig(
+            project=project,
+            slides_data=[],
+            pt_html="",
+            output_dir=tmp_path,
+            export=export,
+            pdf_builder=pdf_builder,
+            language="pt",
+            html_content=(
                 '<img src="images/slide_1.jpg">'
                 "<style>.bg{background:url('images/slide_1.jpg')}</style>"
             ),
-            tmp_path,
-            export=export,
-            pdf_builder=pdf_builder,
         )
+        await render_language(config)
         # Standard export uses ../images/
         standard_html = export.export_slides.await_args_list[0].kwargs["html_content"]
         assert "../images/slide_1.jpg" in standard_html

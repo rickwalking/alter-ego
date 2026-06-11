@@ -27,6 +27,7 @@ from rag_backend.domain.constants import (
     SLIDE_TYPE_SUMMARY,
 )
 from rag_backend.domain.models import CarouselProject
+from rag_backend.domain.protocols.carousel import _RenderOptions
 
 _FONTS_LINK = (
     '<link rel="preconnect" href="https://fonts.googleapis.com">\n'
@@ -184,8 +185,7 @@ def build_carousel_html(
                 slide,
                 project,
                 theme,
-                total_slides,
-                lang,
+                options=_RenderOptions(total_slides=total_slides, language=lang),
             )
         elif slide_type == SLIDE_TYPE_INTRO:
             inner = _render_intro_slide(slide, project, theme)

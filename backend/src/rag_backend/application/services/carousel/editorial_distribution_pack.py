@@ -9,6 +9,7 @@ from langchain_core.language_models import BaseChatModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.application.services.carousel.editorial_distribution_blog import (
+    BlogBuildContext,
     build_blog_markdown_en_from_translations,
     build_blog_markdown_from_drafts,
 )
@@ -19,6 +20,9 @@ from rag_backend.application.services.carousel.editorial_distribution_constants 
 from rag_backend.application.services.carousel.editorial_distribution_generation import (
     _generate_caption,
     _generate_en_translations,
+)
+from rag_backend.application.services.carousel.editorial_distribution_persist import (
+    SlideDraftsContext as _SlideDraftsContext,
 )
 from rag_backend.application.services.carousel.editorial_distribution_persist import (
     apply_slide_drafts_to_database,
@@ -84,15 +88,19 @@ async def build_editorial_distribution_updates(
         "outline": context.outline,
     }
     blog_pt = build_blog_markdown_from_drafts(
-        context.slide_drafts,
-        title=blog_title,
-        **composition_kwargs,
+        BlogBuildContext(
+            slide_drafts=context.slide_drafts,
+            title=blog_title,
+            **composition_kwargs,
+        ),
     )
     blog_en = build_blog_markdown_en_from_translations(
-        context.slide_drafts,
-        translations_en,
-        title=blog_en_title,
-        **composition_kwargs,
+        BlogBuildContext(
+            slide_drafts=context.slide_drafts,
+            translations_en=translations_en,
+            title=blog_en_title,
+            **composition_kwargs,
+        ),
     )
     project.blog_markdown = blog_pt
     project.blog_translations = {
@@ -122,11 +130,7 @@ async def build_editorial_distribution_updates(
     }
 
 
-# Backward-compatible re-exports
-from rag_backend.application.services.carousel.editorial_distribution_persist import (
-    SlideDraftsContext as _SlideDraftsContext,
-)
-
+# Backward-compatible re-export
 SlideDraftsContext = _SlideDraftsContext
 
 

@@ -188,11 +188,17 @@ class TestEditorialWorkflowStream:
 
         session_maker = get_session_maker()
         async with session_maker() as session:
+            from rag_backend.application.services.carousel.editorial_workflow_service import (
+                EditorialWorkflowConfig,
+            )
+
             service = EditorialWorkflowService(
-                llm=AsyncMock(),
-                checkpointer=client.app.state.carousel_checkpointer,  # type: ignore[attr-defined]
-                event_service=AsyncMock(),
-                image_registry=None,
+                EditorialWorkflowConfig(
+                    llm=AsyncMock(),
+                    checkpointer=client.app.state.carousel_checkpointer,  # type: ignore[attr-defined]
+                    event_service=AsyncMock(),
+                    image_registry=None,
+                ),
             )
             events: list[dict[str, object]] = []
             async for payload in service.stream_phase_updates(
@@ -242,11 +248,17 @@ class TestEditorialWorkflowStream:
 
         session_maker = get_session_maker()
         async with session_maker() as session:
+            from rag_backend.application.services.carousel.editorial_workflow_service import (
+                EditorialWorkflowConfig,
+            )
+
             service = EditorialWorkflowService(
-                llm=AsyncMock(),
-                checkpointer=client.app.state.carousel_checkpointer,  # type: ignore[attr-defined]
-                event_service=AsyncMock(),
-                image_registry=None,
+                EditorialWorkflowConfig(
+                    llm=AsyncMock(),
+                    checkpointer=client.app.state.carousel_checkpointer,  # type: ignore[attr-defined]
+                    event_service=AsyncMock(),
+                    image_registry=None,
+                ),
             )
             events: list[dict[str, object]] = []
             async for payload in service.stream_phase_updates(project_id):
@@ -281,11 +293,17 @@ class TestEditorialWorkflowStream:
 
         session_maker = get_session_maker()
         async with session_maker() as session:
+            from rag_backend.application.services.carousel.editorial_workflow_service import (
+                EditorialWorkflowConfig,
+            )
+
             service = EditorialWorkflowService(
-                llm=AsyncMock(),
-                checkpointer=client.app.state.carousel_checkpointer,  # type: ignore[attr-defined]
-                event_service=AsyncMock(),
-                image_registry=None,
+                EditorialWorkflowConfig(
+                    llm=AsyncMock(),
+                    checkpointer=client.app.state.carousel_checkpointer,  # type: ignore[attr-defined]
+                    event_service=AsyncMock(),
+                    image_registry=None,
+                ),
             )
             events: list[dict[str, object]] = []
             async for payload in service.stream_phase_updates(project_id):

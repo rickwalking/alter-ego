@@ -14,6 +14,8 @@ from rag_backend.application.services.carousel.editorial_workflow_support import
     SSE_EVENT_PHASE_CHANGE,
     SSE_EVENT_PROGRESS,
     SSE_EVENT_REVIEW_REQUIRED,
+    EventParams,
+    PublishParams,
     build_artifact_event,
     build_progress_event,
     publish_workflow_artifact,
@@ -138,10 +140,9 @@ class TestWorkflowSsePublishHelpers:
             return_value=hub,
         ):
             await publish_workflow_artifact(
-                "project-1",
-                PHASE_RESEARCH,
-                WORKFLOW_ARTIFACT_TYPE_OUTLINE,
-                outline,
+                PublishParams(project_id="project-1", phase=PHASE_RESEARCH),
+                artifact_type=WORKFLOW_ARTIFACT_TYPE_OUTLINE,
+                data=outline,
             )
 
         event = hub.publish.await_args.args[1]
@@ -161,10 +162,9 @@ class TestWorkflowSsePublishHelpers:
 
     def test_build_artifact_event_shape(self) -> None:
         payload = build_artifact_event(
-            "project-1",
-            PHASE_RESEARCH,
-            WORKFLOW_ARTIFACT_TYPE_OUTLINE,
-            [{"title": "Intro"}],
+            EventParams(project_id="project-1", phase=PHASE_RESEARCH),
+            artifact_type=WORKFLOW_ARTIFACT_TYPE_OUTLINE,
+            data=[{"title": "Intro"}],
         )
         assert payload["event"] == SSE_EVENT_ARTIFACT
         assert payload["artifact_type"] == WORKFLOW_ARTIFACT_TYPE_OUTLINE

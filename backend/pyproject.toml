@@ -313,20 +313,20 @@ ignore-names = [
 "src/rag_backend/infrastructure/auth.py" = ["TRY300"]
 "src/rag_backend/infrastructure/langfuse_client.py" = ["TRY300"]
 "src/rag_backend/infrastructure/database/user_repository.py" = ["TRY003"]
-"src/rag_backend/infrastructure/database/carousel_repository.py" = ["FBT001", "FBT002"]
+"src/rag_backend/infrastructure/database/carousel_repository.py" = ["FBT001", "FBT002", "PLR0913",]  # TODO: AE-0048 — pre-existing, fix when touching
 "src/rag_backend/scripts/bootstrap_admin.py" = ["E501"]
 "scripts/**/*" = ["S404", "S603", "S108", "TRY003", "PLR0911", "E501"]
 "backend/scripts/**/*" = ["S404", "S603", "S108", "TRY003", "PLR0911", "E501"]
 "src/rag_backend/application/services/chat_stream_service.py" = ["FBT001", "SIM105"]
 "src/rag_backend/domain/retry.py" = ["SIM103"]
 # PLR091x: Complexity thresholds — some files need more flexibility
-"src/rag_backend/agents/alter_ego_agent.py" = ["PLR0914", "FBT001"]
-"src/rag_backend/agents/rag_agent.py" = ["PLR0914", "FBT001"]
+"src/rag_backend/agents/alter_ego_agent.py" = ["PLR0914", "FBT001", "PLR0913", "PLR0917"]
+"src/rag_backend/agents/rag_agent.py" = ["PLR0914", "FBT001", "PLR0913", "PLR0917"]
 "src/rag_backend/application/services/carousel/refinement_service.py" = ["PLR0913"]
 "src/rag_backend/application/services/carousel_refinement.py" = ["C901", "PLR0912", "PLR0913", "PLR0914"]
 "src/rag_backend/application/services/content_calendar_service.py" = ["PLR0912", "PLR0913"]
 "src/rag_backend/application/services/blog_post_service.py" = ["PLR0913"]
-"src/rag_backend/application/services/carousel/nodes/content/core.py" = ["PLR0912", "PLR0913"]
+"src/rag_backend/application/services/carousel/nodes/content/core.py" = ["PLR0912", "PLR0913", "C901", "PLR0914",]  # TODO: AE-0048 — pre-existing, fix when touching
 "src/rag_backend/application/services/editorial_analytics_service.py" = ["PLR0912", "PLR0913", "PLR0914"]
 "src/rag_backend/application/services/accessibility_check_service.py" = ["PLR0913", "PLR0912"]
 "src/rag_backend/application/services/persona_service.py" = ["PLR0913"]
@@ -336,36 +336,36 @@ ignore-names = [
 "src/rag_backend/infrastructure/retrieval/hybrid_retriever.py" = ["PLR0911", "PLR0913", "PLR0912"]
 "src/rag_backend/infrastructure/retrieval/document_processor.py" = ["PLR0912", "PLR0913"]
 "src/rag_backend/infrastructure/external/pinecone_store.py" = ["ARG002", "PLR0912", "PLR0913"]
-"src/rag_backend/agents/constants.py" = []
+"src/rag_backend/agents/constants.py" = ["E501",]  # TODO: AE-0048 — pre-existing, fix when touching
 "src/rag_backend/application/services/carousel_template/__init__.py" = []
-"src/rag_backend/application/services/carousel_template/slides.py" = ["PLR0913"]
-"src/rag_backend/application/services/carousel_template/html_template.py" = ["PLR0913"]
+"src/rag_backend/application/services/carousel_template/slides.py" = ["PLR0913", "PLR0917"]  # TODO: AE-0048 — pre-existing, fix when touching
+"src/rag_backend/application/services/carousel_template/html_template.py" = ["PLR0913", "E501", "PLR0912", "PLR0914", "PLR0917"]  # TODO: AE-0048 — pre-existing, fix when touching
 "src/rag_backend/application/services/image_style_strategies.py" = ["PLR0913"]
 "src/rag_backend/application/services/workflow_event_service.py" = ["PLR0913", "PLR0912"]
-"src/rag_backend/application/services/workflow_failure_alert_service.py" = ["PLR0913"]
-"src/rag_backend/application/services/notification_service.py" = ["PLR0913"]
+"src/rag_backend/application/services/workflow_failure_alert_service.py" = ["PLR0913", "E501",]  # TODO: AE-0048 — pre-existing, fix when touching
+"src/rag_backend/application/services/notification_service.py" = ["PLR0913", "PLR0917"]  # TODO: AE-0048 — pre-existing, fix when touching
 "src/rag_backend/application/services/optimistic_lock_service.py" = ["PLR0913"]
 "src/rag_backend/application/services/pdf_slide_builder.py" = ["PLR0913", "PLR0912"]
 "src/rag_backend/application/services/plagiarism_detection_service.py" = ["PLR0912", "PLR0913", "PLR1702"]
 "src/rag_backend/application/services/seo_analysis_service.py" = ["PLR0913"]
-"src/rag_backend/application/services/writing_style_profile.py" = ["PLR0913"]
-"src/rag_backend/application/tools/carousel/generate_carousel.py" = ["PLR0913"]
-"src/rag_backend/application/tools/carousel/refine_copy.py" = ["PLR0913", "RUF029"]
-"src/rag_backend/application/tools/carousel/refine_design.py" = ["PLR0912"]
+"src/rag_backend/application/services/writing_style_profile.py" = ["PLR0913", "PLR0917"]  # TODO: AE-0048 — pre-existing, fix when touching
+"src/rag_backend/application/tools/carousel/generate_carousel.py" = ["PLR0913", "PLR0917"]  # TODO: AE-0048 — pre-existing, fix when touching
+"src/rag_backend/application/tools/carousel/refine_copy.py" = ["PLR0913", "RUF029", "C901", "PLR0911", "PLR0917",]  # TODO: AE-0048 — pre-existing, fix when touching
+"src/rag_backend/application/tools/carousel/refine_design.py" = ["PLR0912", "PLR0911",]  # TODO: AE-0048 — pre-existing, fix when touching
 "src/rag_backend/application/workers/workflow_workers.py" = ["PLR0913"]
-"src/rag_backend/domain/constants/ai_agents.py" = []
+"src/rag_backend/domain/constants/ai_agents.py" = ["E501",]  # TODO: AE-0048 — pre-existing, fix when touching
 "src/rag_backend/domain/protocols/vector.py" = []
-"src/rag_backend/infrastructure/cache/ai_response_cache.py" = ["PLR0913"]
+"src/rag_backend/infrastructure/cache/ai_response_cache.py" = ["PLR0913", "PLR0917",]  # TODO: AE-0048 — pre-existing, fix when touching
 "src/rag_backend/infrastructure/database/blog_post_repository.py" = ["PLR0913"]
 "src/rag_backend/infrastructure/events/memory_event_publisher.py" = ["PLR0913"]
 "src/rag_backend/infrastructure/external/openai_llm.py" = ["PLR0913"]
-"src/rag_backend/infrastructure/external/playwright_export.py" = ["PLR0913"]
-"src/rag_backend/infrastructure/logging.py" = []
+"src/rag_backend/infrastructure/external/playwright_export.py" = ["PLR0913", "PLR0914",]  # TODO: AE-0048 — pre-existing, fix when touching
+"src/rag_backend/infrastructure/logging.py" = ["E501",]  # TODO: AE-0048 — pre-existing, fix when touching
 # RUF029: Functions declared async but don't await — remove where safe
 "src/rag_backend/api/dependencies/**/*.py" = ["RUF029"]
 "src/rag_backend/api/middleware/error_handler*.py" = ["RUF029"]
 "src/rag_backend/api/middleware/auth.py" = ["RUF029"]
-"src/rag_backend/application/services/carousel/nodes/design.py" = ["C901", "PLR0912"]
+"src/rag_backend/application/services/carousel/nodes/design.py" = ["C901", "PLR0912", "PLR0913",]  # TODO: AE-0048 — pre-existing, fix when touching
 "src/rag_backend/application/services/carousel/nodes/export.py" = ["PLR0917", "PLR0915"]
 "src/rag_backend/application/services/carousel/nodes/content/slides.py" = ["E402"]
 "src/rag_backend/application/services/carousel/theme_resolver.py" = ["C901", "PLR0912"]
@@ -374,7 +374,7 @@ ignore-names = [
 "src/rag_backend/domain/constants/plagiarism.py" = ["S105", "E501"]
 "src/rag_backend/domain/constants/input_sanitizer.py" = ["E501"]
 "src/rag_backend/domain/models/persona.py" = ["PLR2004", "E501"]
-"src/rag_backend/domain/models/rubric.py" = ["S105", "PLR0913", "FBT001", "E501"]
+"src/rag_backend/domain/models/rubric.py" = ["S105", "PLR0913", "FBT001", "E501", "PLR0917",]  # TODO: AE-0048 — pre-existing, fix when touching
 "src/rag_backend/domain/models/notification.py" = ["E501"]
 "src/rag_backend/domain/models/blog_post.py" = ["E501"]
 "src/rag_backend/domain/models/workflow_audit_log.py" = ["E501"]
@@ -386,13 +386,24 @@ ignore-names = [
 "src/rag_backend/agents/prompts/registry.py" = ["S105"]
 "src/rag_backend/api/schemas.py" = ["E501"]
 # Broad ignores for remaining style issues
-"src/rag_backend/agents/*.py" = ["PLR6301", ]
-"src/rag_backend/**/__init__.py" = ["E402"]
+"src/rag_backend/agents/*.py" = ["PLR6301", "PLR0913", "PLR0917", "E501", "PLR0914", ]
+# __init__.py files: E402 tolerated for re-exports
+"src/rag_backend/__init__.py" = ["E402"]
+"src/rag_backend/api/__init__.py" = ["E402"]
+"src/rag_backend/application/__init__.py" = ["E402"]
+"src/rag_backend/domain/__init__.py" = ["E402"]
+"src/rag_backend/infrastructure/__init__.py" = ["E402"]
+"src/rag_backend/agents/__init__.py" = ["E402"]
 "src/rag_backend/domain/constants/*.py" = ["E402"]
-# Broad ignore for remaining complexity issues
-"src/rag_backend/**" = ["C901", "PLR0911", "PLR0912", "PLR0913", "PLR0914", "PLR0915", "PLR0917", "PLR1702", "E402", "ARG001", "E501"]
+# AE-0048: Blanket ignores removed. CI guards enforce no new ones.
 "src/rag_backend/api/routes/*.py" = [
     "FAST001", "FAST002", "ARG001", "FBT001", "E501",
+    "PLR0913", "PLR0917",   # TODO: AE-0048 — pre-existing, fix when touching
+]
+"src/rag_backend/api/routes/carousels/*.py" = [
+    "FAST001", "FAST002", "ARG001", "FBT001", "E501",
+    "PLR0913", "PLR0917", "C901", "PLR0912", "PLR0911", "PLR0914",
+    # TODO: AE-0048 — pre-existing, fix when touching
 ]
 "src/rag_backend/api/app.py" = ["PLR0911", "FAST001", "RUF029"]
 "src/rag_backend/api/constants.py" = ["S105"]

@@ -12,6 +12,8 @@ from rag_backend.api.dependencies.carousel_access import (
     get_carousel_project_for_workflow_user,
 )
 from rag_backend.api.dependencies.resource_access import (
+    ContentAccessRequest,
+    ContentTarget,
     assert_content_access,
     assert_content_owner_or_admin,
     assert_owner_or_admin,
@@ -175,7 +177,12 @@ class TestAssertContentAccess:
         db.get = AsyncMock(return_value=post)
 
         await assert_content_access(
-            db, "post-1", CONTENT_TYPE_BLOG_POST, _user(UserRole.EDITOR, "reviewer-1")
+            db,
+            ContentAccessRequest(
+                content_id="post-1",
+                content_type=CONTENT_TYPE_BLOG_POST,
+                user=_user(UserRole.EDITOR, "reviewer-1"),
+            ),
         )
 
     async def test_denies_unrelated_editor(self) -> None:
@@ -185,7 +192,12 @@ class TestAssertContentAccess:
 
         with pytest.raises(HTTPException) as exc_info:
             await assert_content_access(
-                db, "post-1", CONTENT_TYPE_BLOG_POST, _user(UserRole.EDITOR, "other")
+                db,
+                ContentAccessRequest(
+                    content_id="post-1",
+                    content_type=CONTENT_TYPE_BLOG_POST,
+                    user=_user(UserRole.EDITOR, "other"),
+                ),
             )
 
         assert exc_info.value.status_code == 403
@@ -196,7 +208,12 @@ class TestAssertContentAccess:
         db.get = AsyncMock(return_value=project)
 
         await assert_content_access(
-            db, "project-1", CONTENT_TYPE_CAROUSEL, _user(UserRole.EDITOR, "reviewer-1")
+            db,
+            ContentAccessRequest(
+                content_id="project-1",
+                content_type=CONTENT_TYPE_CAROUSEL,
+                user=_user(UserRole.EDITOR, "reviewer-1"),
+            ),
         )
 
 
@@ -208,7 +225,12 @@ class TestAssertContentOwnerOrAdmin:
         db.get = AsyncMock(return_value=post)
 
         await assert_content_owner_or_admin(
-            db, "post-1", CONTENT_TYPE_BLOG_POST, _user(UserRole.EDITOR, "author-1")
+            db,
+            ContentAccessRequest(
+                content_id="post-1",
+                content_type=CONTENT_TYPE_BLOG_POST,
+                user=_user(UserRole.EDITOR, "author-1"),
+            ),
         )
 
     async def test_denies_assigned_reviewer(self) -> None:
@@ -219,9 +241,11 @@ class TestAssertContentOwnerOrAdmin:
         with pytest.raises(HTTPException) as exc_info:
             await assert_content_owner_or_admin(
                 db,
-                "post-1",
-                CONTENT_TYPE_BLOG_POST,
-                _user(UserRole.EDITOR, "reviewer-1"),
+                ContentAccessRequest(
+                    content_id="post-1",
+                    content_type=CONTENT_TYPE_BLOG_POST,
+                    user=_user(UserRole.EDITOR, "reviewer-1"),
+                ),
             )
 
         assert exc_info.value.status_code == 403
@@ -236,7 +260,9 @@ class TestAssignContentReviewer:
         db.flush = AsyncMock()
 
         await assign_content_reviewer(
-            db, "post-1", CONTENT_TYPE_BLOG_POST, "reviewer-1"
+            db,
+            ContentTarget(content_id="post-1", content_type=CONTENT_TYPE_BLOG_POST),
+            reviewer_id="reviewer-1",
         )
 
         assert post.reviewer_id == "reviewer-1"
@@ -248,7 +274,9 @@ class TestAssignContentReviewer:
 
         with pytest.raises(HTTPException) as exc_info:
             await assign_content_reviewer(
-                db, "post-1", CONTENT_TYPE_BLOG_POST, "author-1"
+                db,
+                ContentTarget(content_id="post-1", content_type=CONTENT_TYPE_BLOG_POST),
+                reviewer_id="author-1",
             )
 
         assert exc_info.value.status_code == 400
@@ -259,7 +287,11 @@ class TestAssignContentReviewer:
 
         with pytest.raises(HTTPException) as exc_info:
             await assign_content_reviewer(
-                db, "project-1", CONTENT_TYPE_CAROUSEL, "reviewer-1"
+                db,
+                ContentTarget(
+                    content_id="project-1", content_type=CONTENT_TYPE_CAROUSEL
+                ),
+                reviewer_id="reviewer-1",
             )
 
         assert exc_info.value.status_code == 400

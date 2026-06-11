@@ -28,7 +28,6 @@ from rag_backend.application.services.carousel.artifact_build_service import (
     CarouselArtifactBuildService,
 )
 from rag_backend.application.services.carousel.artifact_build_types import (
-    ArtifactBuildFailure,
     ArtifactBuildRequest,
     ArtifactBuildResult,
     ArtifactVersionInput,
@@ -40,7 +39,6 @@ from rag_backend.domain.constants import (
     HD_SUBDIR_NAME,
     LANGUAGE_EN,
     LANGUAGE_PT,
-    SHARED_IMAGES_DIR_NAME,
 )
 from rag_backend.domain.constants.artifact_build import (
     ARTIFACT_MANIFEST_FILENAME,
@@ -253,7 +251,9 @@ class TestCarouselArtifactBuildService:
         db = AsyncMock()
         build_repo = MagicMock()
         build_repo.get_by_project_and_version = AsyncMock(
-            return_value=MagicMock(project_id=project.id, artifact_version=artifact_version)
+            return_value=MagicMock(
+                project_id=project.id, artifact_version=artifact_version
+            )
         )
         build_repo.activate_build = AsyncMock(return_value=3)
 

@@ -6,6 +6,7 @@ from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 from rag_backend.application.services.carousel.refinement_service import (
+    CarouselRefinementConfig,
     CarouselRefinementService,
 )
 from rag_backend.application.services.image_provider_registry import (
@@ -45,10 +46,12 @@ def make_refinement_service_with_mocks() -> tuple[
         gemini_service=image_service, openai_service=image_service
     )
     agent = CarouselRefinementService(
-        repository=repo,
-        llm_service=AsyncMock(),
-        image_registry=registry,
-        export_service=export,
-        pdf_slide_builder=pdf_builder,
+        CarouselRefinementConfig(
+            repository=repo,
+            llm_service=AsyncMock(),
+            image_registry=registry,
+            export_service=export,
+            pdf_slide_builder=pdf_builder,
+        )
     )
     return agent, repo, export, pdf_builder

@@ -35,8 +35,51 @@ class ArtifactServingPaths:
     artifact_version: str | None
 
 
-def resolve_artifact_serving_paths(project: CarouselProject) -> ArtifactServingPaths | None:
-    """Resolve serving root from database artifact version with legacy fallback."""
+@dataclass(frozen=True)
+class _ArtifactPaths:
+    """Resolved base artifact paths shared by individual resolvers."""
+
+    project_root: Path
+    version_root: Path | None
+    images_dir: Path
+    manifest_path: Path
+    current_index_path: Path
+
+
+def _resolve_base(project: CarouselProject) -> _ArtifactPaths | None:
+    """Resolve base artifact paths. Returns None if output_dir is missing."""
+    if not project.output_dir:
+        return None
+    project_root = Path(project.output_dir).resolve()
+    version_root: Path | None = None
+    if project.artifact_version:
+        vr = project_root / ARTIFACT_VERSIONS_DIR / project.artifact_version
+        if vr.is_dir():
+            version_root = vr
+    images_dir = version_root / "images" if version_root else project_root / "images"
+    manifest_path = (
+        version_root / ARTIFACT_MANIFEST_FILENAME
+        if version_root
+        else project_root / ARTIFACT_MANIFEST_FILENAME
+    )
+    current_index_path = project_root / ARTIFACT_CURRENT_INDEX_FILENAME
+    return _ArtifactPaths(
+        project_root=project_root,
+        version_root=version_root,
+        images_dir=images_dir,
+        manifest_path=manifest_path,
+        current_index_path=current_index_path,
+    )
+
+
+def resolve_and_reconcile_serving_paths(
+    project: CarouselProject,
+) -> ArtifactServingPaths | None:
+    """Resolve serving root from database artifact version with legacy fallback.
+
+    This is the only resolver that reconciles the current index; individual
+    path resolvers call the lighter _resolve_base() instead.
+    """
     if not project.output_dir:
         return None
     reconcile_current_index(project)
@@ -60,10 +103,11 @@ def resolve_artifact_serving_paths(project: CarouselProject) -> ArtifactServingP
 
 def resolve_language_dir(project: CarouselProject, language: str) -> Path | None:
     """Return the directory containing rendered slides for a locale."""
-    paths = resolve_artifact_serving_paths(project)
+    paths = _resolve_base(project)
     if paths is None:
         return None
-    return paths.serving_root / language
+    serving_root = paths.version_root if paths.version_root else paths.project_root
+    return serving_root / language
 
 
 def resolve_hd_dir(project: CarouselProject, language: str) -> Path | None:
@@ -76,7 +120,7 @@ def resolve_hd_dir(project: CarouselProject, language: str) -> Path | None:
 
 def resolve_shared_images_dir(project: CarouselProject) -> Path | None:
     """Return the directory containing raw generated slide images."""
-    paths = resolve_artifact_serving_paths(project)
+    paths = _resolve_base(project)
     if paths is None:
         return None
     return paths.project_root / SHARED_IMAGES_DIR_NAME
@@ -84,18 +128,18 @@ def resolve_shared_images_dir(project: CarouselProject) -> Path | None:
 
 def resolve_manifest_path(project: CarouselProject) -> Path | None:
     """Return artifact-manifest.json for the active version when versioned."""
-    paths = resolve_artifact_serving_paths(project)
-    if paths is None or paths.legacy_mode:
+    paths = _resolve_base(project)
+    if paths is None or paths.version_root is None:
         return None
-    return paths.serving_root / ARTIFACT_MANIFEST_FILENAME
+    return paths.manifest_path
 
 
 def resolve_current_index_path(project: CarouselProject) -> Path | None:
     """Return current.json index path under the project root."""
-    paths = resolve_artifact_serving_paths(project)
+    paths = _resolve_base(project)
     if paths is None:
         return None
-    return paths.project_root / ARTIFACT_CURRENT_INDEX_FILENAME
+    return paths.current_index_path
 
 
 def resolve_pdf_path(project: CarouselProject, language: str) -> Path | None:
@@ -137,7 +181,7 @@ def supported_languages(project: CarouselProject) -> tuple[str, ...]:
 
 __all__ = [
     "ArtifactServingPaths",
-    "resolve_artifact_serving_paths",
+    "resolve_and_reconcile_serving_paths",
     "resolve_current_index_path",
     "resolve_hd_dir",
     "resolve_language_dir",

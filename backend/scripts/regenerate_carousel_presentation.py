@@ -31,12 +31,14 @@ from rag_backend.application.services.carousel.artifact_build_service import (
 )
 from rag_backend.application.services.carousel.legacy_presentation_regeneration import (
     LegacyRegenerationError,
+    RegeneratePresentationCommand,
     RegenerationCommand,
     RegenerationResult,
     default_target_policy_version,
     regenerate_legacy_presentation,
 )
 from rag_backend.application.services.carousel.refinement_service import (
+    CarouselRefinementConfig,
     CarouselRefinementService,
 )
 from rag_backend.infrastructure.config.settings import get_settings
@@ -108,18 +110,22 @@ async def _run(command: RegenerationCommand) -> int:
     try:
         async for session in get_session():
             refinement = CarouselRefinementService(
-                repository=PostgresCarouselRepository(session),
-                llm_service=container.llm_service(),
-                image_registry=container.image_provider_registry(),
-                export_service=container.export_service(),
-                pdf_slide_builder=container.pdf_slide_builder(),
-                strategy_registry=container.strategy_registry(),
+                CarouselRefinementConfig(
+                    repository=PostgresCarouselRepository(session),
+                    llm_service=container.llm_service(),
+                    image_registry=container.image_provider_registry(),
+                    export_service=container.export_service(),
+                    pdf_slide_builder=container.pdf_slide_builder(),
+                    strategy_registry=container.strategy_registry(),
+                )
             )
             result = await regenerate_legacy_presentation(
-                session,
-                refinement,
-                artifact_build,
-                command,
+                RegeneratePresentationCommand(
+                    db=session,
+                    refinement=refinement,
+                    artifact_build=artifact_build,
+                    command=command,
+                ),
             )
             _print_audit(command, result)
             return 0

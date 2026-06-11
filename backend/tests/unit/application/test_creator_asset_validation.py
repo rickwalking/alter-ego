@@ -13,7 +13,9 @@ from rag_backend.application.services.carousel.creator_asset_validation import (
     CreatorAssetValidationError,
     validate_and_normalize_creator_asset,
 )
-from rag_backend.domain.constants.carousel_presentation import CREATOR_ASSET_MEDIA_TYPE_WEBP
+from rag_backend.domain.constants.carousel_presentation import (
+    CREATOR_ASSET_MEDIA_TYPE_WEBP,
+)
 from rag_backend.domain.constants.creator_asset import (
     CREATOR_ASSET_MAX_BYTES,
     CREATOR_ASSET_MAX_DIMENSION,
@@ -89,7 +91,9 @@ class TestCreatorAssetValidationRejections:
         oversized = b"x" * (CREATOR_ASSET_MAX_BYTES + 1)
         with pytest.raises(CreatorAssetValidationError) as exc_info:
             validate_and_normalize_creator_asset(
-                CreatorAssetUpload(content=oversized, declared_mime=CREATOR_ASSET_MIME_PNG)
+                CreatorAssetUpload(
+                    content=oversized, declared_mime=CREATOR_ASSET_MIME_PNG
+                )
             )
         assert exc_info.value.code == ERR_CREATOR_ASSET_TOO_LARGE
 
@@ -103,7 +107,9 @@ class TestCreatorAssetValidationRejections:
     def test_rejects_magic_bytes_mismatch(self) -> None:
         with pytest.raises(CreatorAssetValidationError) as exc_info:
             validate_and_normalize_creator_asset(
-                CreatorAssetUpload(content=_make_png_bytes(), declared_mime=CREATOR_ASSET_MIME_JPEG)
+                CreatorAssetUpload(
+                    content=_make_png_bytes(), declared_mime=CREATOR_ASSET_MIME_JPEG
+                )
             )
         assert exc_info.value.code == ERR_CREATOR_ASSET_MAGIC_MISMATCH
 
@@ -136,9 +142,14 @@ class TestCreatorAssetValidationRejections:
         truncated = _make_jpeg_bytes()[:32]
         with pytest.raises(CreatorAssetValidationError) as exc_info:
             validate_and_normalize_creator_asset(
-                CreatorAssetUpload(content=truncated, declared_mime=CREATOR_ASSET_MIME_JPEG)
+                CreatorAssetUpload(
+                    content=truncated, declared_mime=CREATOR_ASSET_MIME_JPEG
+                )
             )
-        assert exc_info.value.code in {ERR_CREATOR_ASSET_TRUNCATED, ERR_CREATOR_ASSET_DECODE_FAILED}
+        assert exc_info.value.code in {
+            ERR_CREATOR_ASSET_TRUNCATED,
+            ERR_CREATOR_ASSET_DECODE_FAILED,
+        }
 
     def test_rejects_decompression_bomb(self) -> None:
         from PIL import Image
@@ -149,7 +160,9 @@ class TestCreatorAssetValidationRejections:
         Image.new("RGB", (width, height), color="white").save(buffer, format="PNG")
         with pytest.raises(CreatorAssetValidationError) as exc_info:
             validate_and_normalize_creator_asset(
-                CreatorAssetUpload(content=buffer.getvalue(), declared_mime=CREATOR_ASSET_MIME_PNG)
+                CreatorAssetUpload(
+                    content=buffer.getvalue(), declared_mime=CREATOR_ASSET_MIME_PNG
+                )
             )
         assert exc_info.value.code in {
             ERR_CREATOR_ASSET_DECOMPRESSION_BOMB,
@@ -161,7 +174,9 @@ class TestCreatorAssetValidationRejections:
 class TestCreatorAssetValidationSuccess:
     def test_normalizes_valid_png_to_webp(self) -> None:
         normalized = validate_and_normalize_creator_asset(
-            CreatorAssetUpload(content=_make_png_bytes(), declared_mime=CREATOR_ASSET_MIME_PNG)
+            CreatorAssetUpload(
+                content=_make_png_bytes(), declared_mime=CREATOR_ASSET_MIME_PNG
+            )
         )
         assert normalized.media_type == CREATOR_ASSET_MEDIA_TYPE_WEBP
         assert normalized.width == 64
@@ -173,13 +188,17 @@ class TestCreatorAssetValidationSuccess:
 
     def test_normalizes_valid_jpeg_to_webp(self) -> None:
         normalized = validate_and_normalize_creator_asset(
-            CreatorAssetUpload(content=_make_jpeg_bytes(), declared_mime=CREATOR_ASSET_MIME_JPEG)
+            CreatorAssetUpload(
+                content=_make_jpeg_bytes(), declared_mime=CREATOR_ASSET_MIME_JPEG
+            )
         )
         assert normalized.media_type == CREATOR_ASSET_MEDIA_TYPE_WEBP
         assert len(normalized.content_sha256) == 64
 
     def test_normalizes_valid_webp_input(self) -> None:
         normalized = validate_and_normalize_creator_asset(
-            CreatorAssetUpload(content=_make_webp_bytes(), declared_mime=CREATOR_ASSET_MIME_WEBP)
+            CreatorAssetUpload(
+                content=_make_webp_bytes(), declared_mime=CREATOR_ASSET_MIME_WEBP
+            )
         )
         assert normalized.media_type == CREATOR_ASSET_MEDIA_TYPE_WEBP

@@ -1,4 +1,6 @@
-"""Neon Shell v2.0 base slide shell CSS (artwork, overlay, intro, content, hero image)."""
+"""Neon Shell v2.0 base slide shell CSS
+(artwork, overlay, intro, content, hero image).
+"""
 
 from __future__ import annotations
 
