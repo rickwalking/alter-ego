@@ -58,9 +58,9 @@ for file in "${SRC_FILES[@]}"; do
         while IFS= read -r r; do
           start_line="${r%%:*}"
           count="${r##*:}"
-          if [ "$count" -eq 0 ]; then count=1; fi
+          if [ -z "$count" ] || [ "$count" -eq 0 ]; then count=1; fi
           end_line=$((start_line + count - 1))
-          if [ "$vline" -ge "$start_line" ] 2>/dev/null && [ "$vline" -le "$end_line" ] 2>/dev/null; then
+          if [ -n "$start_line" ] && [ "$vline" -ge "$start_line" ] 2>/dev/null && [ "$vline" -le "$end_line" ] 2>/dev/null; then
             in_diff=true
             break
           fi
