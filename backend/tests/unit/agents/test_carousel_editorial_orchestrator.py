@@ -37,15 +37,12 @@ class TestCarouselEditorialOrchestrator:
         llm = MagicMock()
         CarouselEditorialOrchestrator(llm=llm)
 
-        mock_runner_cls.assert_called_once_with(
-            outline_agent=mock_runner_cls.call_args.kwargs["outline_agent"],
-            content_agent=mock_runner_cls.call_args.kwargs["content_agent"],
-            llm=llm,
-            image_registry=None,
-        )
-        call_kwargs = mock_runner_cls.call_args.kwargs
-        assert call_kwargs["llm"] is llm
-        assert call_kwargs["image_registry"] is None
+        mock_runner_cls.assert_called_once()
+        config = mock_runner_cls.call_args[0][0]
+        assert config.outline_agent is not None
+        assert config.content_agent is not None
+        assert config.llm is llm
+        assert config.image_registry is None
 
     @patch("rag_backend.agents.carousel_editorial_orchestrator.SourceSynthesisAgent")
     @patch("rag_backend.agents.carousel_editorial_orchestrator.CarouselWorkflowEngine")
@@ -155,8 +152,8 @@ class TestCarouselEditorialOrchestrator:
         image_registry = MagicMock()
         CarouselEditorialOrchestrator(llm=llm, image_registry=image_registry)
 
-        call_kwargs = mock_runner_cls.call_args.kwargs
-        assert call_kwargs["image_registry"] is image_registry
+        config = mock_runner_cls.call_args[0][0]
+        assert config.image_registry is image_registry
 
     # ------------------------------------------------------------------
     # engine property

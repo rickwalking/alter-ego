@@ -120,7 +120,10 @@ def test_any_slide_count_produces_output(total_slides, slide_number):
         "tldr_strip": None,
     }
     result = strategy.render(
-        slide, _PROJECT, _THEME, total_slides=total_slides, language="pt"
+        slide,
+        _PROJECT,
+        _THEME,
+        options=_RenderOptions(total_slides=total_slides, language="pt"),
     )
     assert isinstance(result, str)
     assert f"{slide_number:02d}" in result or str(slide_number) in result
@@ -143,5 +146,10 @@ def test_bilingual_rendering_produces_output(language):
         "summary_points": [],
         "tldr_strip": None,
     }
-    result = strategy.render(slide, _PROJECT, _THEME, total_slides=7, language=language)
+    result = strategy.render(
+        slide,
+        _PROJECT,
+        _THEME,
+        options=_RenderOptions(total_slides=7, language=language),
+    )
     assert isinstance(result, str)

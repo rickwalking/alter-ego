@@ -2,6 +2,7 @@
 name: developer-skill
 description: "Implement task details from plans following project standards. Use when the user says 'develop this task', 'implement the plan', 'work on this ticket', 'start development', or after a plan has been created. Follows SDD (Spec-Driven Development): reads specs first, implements in increments, self-verifies. Never use for code review or QA validation."
 version: 1.1.0
+disable-model-invocation: true
 ---
 
 # Developer Skill

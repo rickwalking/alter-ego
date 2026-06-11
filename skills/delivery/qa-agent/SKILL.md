@@ -2,6 +2,7 @@
 name: qa-agent
 description: "Validate implementation quality across security, code quality, acceptance criteria, and completeness. Use when the user says 'run QA', 'validate the implementation', 'check my code', 'review this PR', 'run the checks', or after the Developer Skill completes. Runs parallel subagents for security audit, code quality, mutation testing, acceptance criteria validation, and orphan code detection. Never use for implementation or development."
 version: 1.1.0
+disable-model-invocation: true
 ---
 
 # QA Agent

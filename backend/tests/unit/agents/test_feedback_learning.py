@@ -337,7 +337,8 @@ class TestFeedbackLearningLoop:
         )
         mock_repository.create.assert_awaited_once()
         call_args = mock_repository.create.await_args
-        assert call_args[1]["persona_id"] == "123"
+        params = call_args[0][0]
+        assert params["persona_id"] == "123"
 
     async def test_record_correction_context_is_sanitized(
         self, loop: FeedbackLearningLoop, mock_repository: MagicMock
@@ -364,7 +365,8 @@ class TestFeedbackLearningLoop:
             _correction_type="tone",
         )
         call_args = mock_repository.create.await_args
-        assert call_args[1]["persona_id"] == "persona-1"
+        params = call_args[0][0]
+        assert params["persona_id"] == "persona-1"
 
     async def test_get_relevant_examples_with_non_string_persona_id(
         self, loop: FeedbackLearningLoop, mock_repository: MagicMock
@@ -450,7 +452,7 @@ class TestFeedbackLearningLoop:
             _correction_type="tone",
             project_id="project-1",
         )
-        kwargs = mock_repository.create.await_args[1]
+        kwargs = mock_repository.create.await_args[0][0]
         assert kwargs["persona_id"] == "persona-1"
         assert kwargs["original_text"] == "scriptalert1/script"
         assert kwargs["corrected_text"] == "bbold/b"
@@ -469,7 +471,7 @@ class TestFeedbackLearningLoop:
             _persona_id="persona-1",
             _correction_type=None,
         )
-        kwargs = mock_repository.create.await_args[1]
+        kwargs = mock_repository.create.await_args[0][0]
         assert kwargs["correction_type"] == "tone"
 
     async def test_record_correction_int_persona_id_converts_exact(
@@ -484,7 +486,7 @@ class TestFeedbackLearningLoop:
             _correction_type="tone",
             project_id="proj-1",
         )
-        kwargs = mock_repository.create.await_args[1]
+        kwargs = mock_repository.create.await_args[0][0]
         assert kwargs["persona_id"] == "123"
         assert kwargs["project_id"] == "proj-1"
 
@@ -499,7 +501,7 @@ class TestFeedbackLearningLoop:
             _persona_id="persona-1",
             _correction_type="tone",
         )
-        kwargs = mock_repository.create.await_args[1]
+        kwargs = mock_repository.create.await_args[0][0]
         assert kwargs["project_id"] is None
 
     async def test_get_relevant_examples_converts_int_persona_id_exact(

@@ -43,6 +43,9 @@ for file in "${SRC_FILES[@]}"; do
   fi
 
   # Run ruff on single file and capture violation lines
+  # NOTE: redirect ruff output to temp file to decouple its exit code from
+  # the while loop — ruff exits 1 when violations exist, which with
+  # set -eo pipefail would abort the loop before processing violations.
   uv run ruff check \
     --isolated \
     --target-version py311 \
@@ -50,28 +53,29 @@ for file in "${SRC_FILES[@]}"; do
     --config lint.pylint.max-args=3 \
     --config lint.pylint.max-branches=8 \
     --config lint.mccabe.max-complexity=10 \
-    "$file" 2>/dev/null | while IFS= read -r line; do
-      # Extract line number from ruff output (format: "file:line:col: code message")
-      if [[ "$line" =~ ^([^:]+):([0-9]+): ]]; then
-        vline="${BASH_REMATCH[2]}"
-        in_diff=false
-        while IFS= read -r r; do
-          start_line="${r%%:*}"
-          count="${r##*:}"
-          if [ -z "$count" ] || [ "$count" -eq 0 ]; then count=1; fi
-          end_line=$((start_line + count - 1))
-          if [ -n "$start_line" ] && [ "$vline" -ge "$start_line" ] 2>/dev/null && [ "$vline" -le "$end_line" ] 2>/dev/null; then
-            in_diff=true
-            break
-          fi
-        done <<< "$(echo "$changed" | tr ' ' '\n')"
-
-        if [ "$in_diff" = true ]; then
-          echo "$line"
-          EXIT_CODE=1
+    "$file" 2>/dev/null > "$TEMP_OUTPUT" || true
+  while IFS= read -r line; do
+    # Extract line number from ruff output (format: "file:line:col: code message")
+    if [[ "$line" =~ ^([^:]+):([0-9]+): ]]; then
+      vline="${BASH_REMATCH[2]}"
+      in_diff=false
+      while IFS= read -r r; do
+        start_line="${r%%:*}"
+        count="${r##*:}"
+        if [ -z "$count" ] || [ "$count" -eq 0 ]; then count=1; fi
+        end_line=$((start_line + count - 1))
+        if [ -n "$start_line" ] && [ "$vline" -ge "$start_line" ] 2>/dev/null && [ "$vline" -le "$end_line" ] 2>/dev/null; then
+          in_diff=true
+          break
         fi
+      done <<< "$(echo "$changed" | tr ' ' '\n')"
+
+      if [ "$in_diff" = true ]; then
+        echo "$line"
+        EXIT_CODE=1
       fi
-    done
+    fi
+  done < "$TEMP_OUTPUT"
 done
 
 rm -f "$TEMP_OUTPUT"
