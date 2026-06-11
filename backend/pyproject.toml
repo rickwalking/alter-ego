@@ -307,8 +307,6 @@ ignore-names = [
     "FBT001", "FBT002", "E402", "ERA001", "PLR6201", "ARG005", "PERF401", "B007",
 ]
 "**/__init__.py" = ["F401"]  # Re-exports are OK
-# PLR6301: Methods that could be static — style preference, not a bug
-"src/rag_backend/**/*.py" = ["PLR6301"]
 "src/rag_backend/infrastructure/config/settings.py" = ["S104"]
 "src/rag_backend/infrastructure/auth.py" = ["TRY300"]
 "src/rag_backend/infrastructure/langfuse_client.py" = ["TRY300"]
