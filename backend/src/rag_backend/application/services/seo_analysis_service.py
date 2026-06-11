@@ -133,10 +133,12 @@ class SeoAnalysisService:
             return 5
         return 0
 
-    def _issue(self, code: str, message: str) -> dict[str, str]:
+    @staticmethod
+    def _issue(code: str, message: str) -> dict[str, str]:
         return {"code": code, "message": message}
 
-    def _severity(self, score: int) -> str:
+    @staticmethod
+    def _severity(score: int) -> str:
         if score >= SEO_SCORE_PASS:
             return "pass"
         if score >= SEO_SCORE_WARN:

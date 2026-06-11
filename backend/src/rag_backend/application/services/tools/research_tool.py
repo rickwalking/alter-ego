@@ -7,7 +7,8 @@ from rag_backend.domain.protocols import ResearchTool
 class PlaywrightResearchTool(ResearchTool):
     """Playwright-based web research implementation."""
 
-    async def scrape_url(self, url: str) -> str:
+    @staticmethod
+    async def scrape_url(url: str) -> str:
         """Scrape and extract content from a URL."""
         from playwright.async_api import async_playwright
 
@@ -21,8 +22,9 @@ class PlaywrightResearchTool(ResearchTool):
             finally:
                 await browser.close()
 
+    @staticmethod
     async def search_web(
-        self, query: str, _source_types: list[ResearchSourceType]
+        query: str, _source_types: list[ResearchSourceType]
     ) -> list[dict[str, str]]:
         """Search the web via the `ddgs` library (DuckDuckGo + fallbacks).
 

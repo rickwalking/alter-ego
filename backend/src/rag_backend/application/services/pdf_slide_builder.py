@@ -30,7 +30,8 @@ _ERR_SLIDE_IMAGE_NOT_FOUND = "Slide image not found: {}"
 class PdfSlideBuilder:
     """Builds a multi-page PDF from a list of slide image files."""
 
-    def build(self, slide_paths: list[str], output_dir: str) -> str:
+    @staticmethod
+    def build(slide_paths: list[str], output_dir: str) -> str:
         """Write `carousel.pdf` into output_dir and return the path.
 
         Raises:

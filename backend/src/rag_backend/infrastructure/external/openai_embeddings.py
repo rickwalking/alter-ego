@@ -26,7 +26,8 @@ class OpenAIEmbeddingService:
         """Generate dense embeddings for texts using OpenAI."""
         return await self._embeddings.aembed_documents(texts)
 
-    async def embed_sparse(self, texts: list[str]) -> list[SparseEmbedding]:
+    @staticmethod
+    async def embed_sparse(texts: list[str]) -> list[SparseEmbedding]:
         """Generate sparse (BM25-like) embeddings for texts.
 
         For production, you would use Pinecone's BM25 encoder or

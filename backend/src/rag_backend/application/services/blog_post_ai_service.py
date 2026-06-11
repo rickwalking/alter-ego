@@ -203,8 +203,8 @@ class BlogPostAIService:
             "image_url": str(output_path),
         }
 
+    @staticmethod
     async def _load_persona(
-        self,
         db: AsyncSession,
         persona_id: str | None,
     ) -> PersonaProfile | None:

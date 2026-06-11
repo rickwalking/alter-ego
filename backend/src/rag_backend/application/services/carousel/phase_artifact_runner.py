@@ -104,8 +104,8 @@ class PhaseArtifactRunner:
             )
         )
 
+    @staticmethod
     def _normalize_outline_in_state(
-        self,
         state: CarouselWorkflowState,
     ) -> tuple[CarouselWorkflowState, dict[str, object]]:
         """Normalize outline dicts in state if they differ from persisted format."""
@@ -123,8 +123,8 @@ class PhaseArtifactRunner:
         state = {**state, "outline": normalized_outline}  # type: ignore[arg-type]
         return state, updates
 
+    @staticmethod
     async def _publish_phase_updates(
-        self,
         state: CarouselWorkflowState,
         phase: str,
         updates: dict[str, object],
@@ -160,8 +160,8 @@ class PhaseArtifactRunner:
         await self._publish_phase_updates(state, phase, updates)
         return updates
 
+    @staticmethod
     async def _resolve_outline(
-        self,
         pending: dict[str, object],
         state: CarouselWorkflowState,
     ) -> tuple[list[object], dict[str, object]]:

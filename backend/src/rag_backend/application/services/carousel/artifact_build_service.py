@@ -169,8 +169,8 @@ class CarouselArtifactBuildService:
             if staging_dir.exists():
                 shutil.rmtree(staging_dir, ignore_errors=True)
 
+    @staticmethod
     async def _activate_existing(
-        self,
         command: ActivateExistingCommand,
     ) -> ArtifactBuildResult | ArtifactBuildFailure:
         operation_id = compute_operation_id(

@@ -64,8 +64,9 @@ class PostgresConversationRepository:
         )
         return [conv.to_entity() for conv in result.scalars().all()]
 
+    @staticmethod
     def _apply_origin_filter(
-        self, stmt: Select[_SelectRow], origin: str | None
+        stmt: Select[_SelectRow], origin: str | None
     ) -> Select[_SelectRow]:
         if origin != CONVERSATION_ORIGIN_FILTER_ALTER_EGO:
             return stmt

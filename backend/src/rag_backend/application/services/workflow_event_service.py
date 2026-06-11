@@ -68,8 +68,8 @@ class WorkflowEventService:
         await db.flush()
         return event_id
 
+    @staticmethod
     async def list_for_aggregate(
-        self,
         db: AsyncSession,
         *,
         aggregate_type: str,

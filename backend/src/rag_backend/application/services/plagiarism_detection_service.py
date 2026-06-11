@@ -90,14 +90,16 @@ class PlagiarismDetectionService:
             max_similarity = max(max_similarity, similarity)
         return max(0.0, min(100.0, (1.0 - max_similarity) * 100))
 
-    def _severity_for_score(self, score: float) -> str:
+    @staticmethod
+    def _severity_for_score(score: float) -> str:
         if score >= PLAGIARISM_THRESHOLD_PASS:
             return SEVERITY_PASS
         if score >= PLAGIARISM_THRESHOLD_WARN:
             return SEVERITY_WARN
         return SEVERITY_FAIL
 
-    def _normalize(self, text: str) -> str:
+    @staticmethod
+    def _normalize(text: str) -> str:
         lowered = text.lower()
         return re.sub(r"\s+", " ", lowered).strip()
 
@@ -109,13 +111,15 @@ class PlagiarismDetectionService:
         overlap = len(content_ngrams & source_ngrams)
         return overlap / len(content_ngrams)
 
-    def _ngrams(self, text: str, size: int) -> set[str]:
+    @staticmethod
+    def _ngrams(text: str, size: int) -> set[str]:
         words = text.split()
         if len(words) < size:
             return set()
         return {" ".join(words[i : i + size]) for i in range(len(words) - size + 1)}
 
-    def _cosine_similarity(self, a: list[float], b: list[float]) -> float:
+    @staticmethod
+    def _cosine_similarity(a: list[float], b: list[float]) -> float:
         dot_product = sum(x * y for x, y in zip(a, b, strict=True))
         norm_a = sum(x * x for x in a) ** 0.5
         norm_b = sum(x * x for x in b) ** 0.5

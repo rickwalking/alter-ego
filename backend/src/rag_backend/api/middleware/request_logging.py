@@ -14,7 +14,8 @@ logger = get_logger()
 class RequestLoggingMiddleware(BaseHTTPMiddleware):
     """Log each request with method, path, status code, and duration."""
 
-    async def dispatch(self, request: Request, call_next):
+    @staticmethod
+    async def dispatch(request: Request, call_next):
         request_id = str(uuid.uuid4())
         request.state.request_id = request_id
 

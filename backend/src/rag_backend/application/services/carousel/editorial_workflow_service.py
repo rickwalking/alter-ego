@@ -180,8 +180,8 @@ class EditorialWorkflowService:
             project_id,
         )
 
+    @staticmethod
     async def _sync_project_phase(
-        self,
         db: AsyncSession | None,
         project_id: str,
         state: CarouselWorkflowState,

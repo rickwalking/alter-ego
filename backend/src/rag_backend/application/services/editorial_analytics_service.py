@@ -62,8 +62,9 @@ class EditorialAnalyticsService:
             "quality_score_average": self._estimate_quality_score(posts),
         }
 
+    @staticmethod
     async def get_velocity_by_week(
-        self, db: AsyncSession, weeks: int = 8, author_id: str | None = None
+        db: AsyncSession, weeks: int = 8, author_id: str | None = None
     ) -> list[dict[str, object]]:
         """Return weekly publish counts for charting."""
         query = select(BlogPostModel).where(BlogPostModel.published_at.isnot(None))
@@ -88,7 +89,8 @@ class EditorialAnalyticsService:
             })
         return buckets
 
-    def _estimate_quality_score(self, posts: list[BlogPostModel]) -> float:
+    @staticmethod
+    def _estimate_quality_score(posts: list[BlogPostModel]) -> float:
         if not posts:
             return 0.0
         scores: list[float] = []

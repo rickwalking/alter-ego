@@ -60,7 +60,8 @@ class HybridRetrieverWithRRF:
             return ranked[: request.top_k]
         return self._apply_filters(ranked, request.filters, request.top_k)
 
-    def _resolve_namespaces(self, namespace_prefix: str | None) -> list[str]:
+    @staticmethod
+    def _resolve_namespaces(namespace_prefix: str | None) -> list[str]:
         """Resolve a namespace prefix into concrete Pinecone namespace names.
 
         The Alter-Ego agent searches both ``personal`` and ``public``

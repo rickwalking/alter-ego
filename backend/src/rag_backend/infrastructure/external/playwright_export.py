@@ -234,8 +234,8 @@ class PlaywrightExportService(CarouselExportService):
     export via deviceScaleFactor with CSS-pixel screenshots.
     """
 
+    @staticmethod
     async def export_slides(
-        self,
         html_content: str,
         output_dir: str,
         config: ExportConfig | None = None,

@@ -39,7 +39,8 @@ class AiDisclosureService:
         updated["ai_disclosure_label"] = self.compute_label(updated)
         return updated
 
-    def compute_label(self, metadata: dict[str, object]) -> str:
+    @staticmethod
+    def compute_label(metadata: dict[str, object]) -> str:
         """Derive disclosure label from AI usage metadata."""
         actions = metadata.get("ai_actions", [])
         if not isinstance(actions, list) or not actions:
@@ -59,11 +60,13 @@ class AiDisclosureService:
             return AI_DISCLOSURE_HYBRID
         return AI_DISCLOSURE_ASSISTED
 
-    def requires_disclosure(self, label: str) -> bool:
+    @staticmethod
+    def requires_disclosure(label: str) -> bool:
         """Return True if label indicates AI involvement."""
         return label != AI_DISCLOSURE_NONE
 
-    def validate_for_publish(self, label: str | None) -> bool:
+    @staticmethod
+    def validate_for_publish(label: str | None) -> bool:
         """Disclosure labels must be set for AI-assisted content before publish."""
         if label is None or label == AI_DISCLOSURE_NONE:
             return True

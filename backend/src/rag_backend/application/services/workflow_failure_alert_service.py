@@ -54,8 +54,8 @@ class WorkflowFailureAlertService:
         alerts += await self._alert_high_failure_rate(db)
         return alerts
 
+    @staticmethod
     async def _has_recent_notification(
-        self,
         db: AsyncSession,
         *,
         content_id: str | None,
@@ -220,7 +220,8 @@ class WorkflowFailureAlertService:
             )
         return 1
 
-    async def _admin_user_ids(self, db: AsyncSession) -> list[str]:
+    @staticmethod
+    async def _admin_user_ids(db: AsyncSession) -> list[str]:
         result = await db.execute(
             select(UserModel.id).where(
                 UserModel.role == ROLE_ADMIN, UserModel.is_active.is_(True)

@@ -11,8 +11,8 @@ from rag_backend.infrastructure.database.models.blog_post import BlogPostModel
 class BlogPostRepository:
     """Data access for blog posts with optimized listing."""
 
+    @staticmethod
     async def list_summaries(
-        self,
         db: AsyncSession,
         *,
         status_filter: str | None = None,

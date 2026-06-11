@@ -76,7 +76,8 @@ class InstructionContextResult:
 class CarouselInstructionContextLoader:
     """Load phase skills, shared standards, and policy into one instruction string."""
 
-    def load(self, request: InstructionContextRequest) -> InstructionContextResult:
+    @staticmethod
+    def load(request: InstructionContextRequest) -> InstructionContextResult:
         """Build bounded instruction context for an editorial phase."""
         policy = load_presentation_policy(request.policy_version)
         sections = [

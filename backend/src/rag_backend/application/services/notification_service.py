@@ -87,8 +87,8 @@ class NotificationService:
         )
         return notification
 
+    @staticmethod
     async def create_revision_cap_escalation(
-        self,
         db: AsyncSession,
         params: RevisionCapEscalationParams,
     ) -> list[NotificationModel]:
@@ -126,8 +126,8 @@ class NotificationService:
             await db.flush()
         return notifications
 
+    @staticmethod
     async def list_for_user(
-        self,
         db: AsyncSession,
         user_id: str,
         *,
@@ -142,8 +142,8 @@ class NotificationService:
         result = await db.execute(query)
         return list(result.scalars().all())
 
+    @staticmethod
     async def mark_read(
-        self,
         db: AsyncSession,
         notification_id: str,
         user_id: str,
@@ -227,8 +227,8 @@ class NotificationService:
         )
         return notification
 
+    @staticmethod
     async def create_workflow_update(
-        self,
         db: AsyncSession,
         *,
         user_id: str,
@@ -252,8 +252,8 @@ class NotificationService:
         await db.flush()
         return notification
 
+    @staticmethod
     async def _send_email(
-        self,
         db: AsyncSession,
         user_id: str,
         subject: str,

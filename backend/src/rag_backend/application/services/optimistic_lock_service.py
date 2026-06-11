@@ -27,8 +27,8 @@ class CarouselVersionBumpParams:
 class OptimisticLockService:
     """Version checks and short-lived edit locks."""
 
+    @staticmethod
     async def check_version(
-        self,
         current_version: int,
         expected_version: int | None,
     ) -> None:
@@ -38,8 +38,8 @@ class OptimisticLockService:
         if expected_version != current_version:
             raise ValueError(ERR_VERSION_CONFLICT)
 
+    @staticmethod
     async def apply_versioned_update(
-        self,
         db: AsyncSession,
         *,
         post_id: str,
@@ -158,8 +158,8 @@ class OptimisticLockService:
             return None
         return lock
 
+    @staticmethod
     async def _get_lock(
-        self,
         db: AsyncSession,
         content_id: str,
         content_type: str,
@@ -172,7 +172,8 @@ class OptimisticLockService:
         )
         return result.scalar_one_or_none()
 
-    async def _expire_stale_locks(self, db: AsyncSession) -> None:
+    @staticmethod
+    async def _expire_stale_locks(db: AsyncSession) -> None:
         now = datetime.now(UTC)
         result = await db.execute(
             select(ContentLockModel).where(ContentLockModel.expires_at <= now)

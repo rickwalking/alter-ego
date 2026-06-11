@@ -14,8 +14,8 @@ from rag_backend.infrastructure.database.models.carousel import CarouselProjectM
 class ContentCalendarService:
     """Builds calendar entries from scheduled and published content."""
 
+    @staticmethod
     async def get_calendar(
-        self,
         db: AsyncSession,
         *,
         start: datetime,

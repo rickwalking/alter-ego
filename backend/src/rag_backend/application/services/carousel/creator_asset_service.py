@@ -177,15 +177,16 @@ class CreatorAssetService:
             StageCreatorAssetCommand(asset=asset, staging_root=output_root)
         )
 
-    def _assert_owner_or_admin(self, project: CarouselProject, user: User) -> None:
+    @staticmethod
+    def _assert_owner_or_admin(project: CarouselProject, user: User) -> None:
         if user.is_admin():
             return
         owner_id = project.owner_id
         if owner_id is None or str(user.id) != owner_id:
             raise CreatorAssetValidationError(ERR_CREATOR_ASSET_FORBIDDEN)
 
+    @staticmethod
     def _assert_asset_access(
-        self,
         asset: CarouselCreatorAsset,
         project: CarouselProject,
         user: User,
