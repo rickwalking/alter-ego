@@ -20,7 +20,10 @@ from rag_backend.api.middleware.rate_limiting import limiter
 from rag_backend.api.schemas.blog_post import BlogPostResponse
 from rag_backend.api.schemas.calendar import SchedulePublishRequest
 from rag_backend.application.services.ai_disclosure_service import AiDisclosureService
-from rag_backend.application.services.notification_service import NotificationService
+from rag_backend.application.services.notification_service import (
+    NotificationService,
+    _WorkflowUpdateParams,
+)
 from rag_backend.application.services.scheduled_publish_service import (
     ScheduledPublishService,
 )
@@ -197,12 +200,14 @@ async def reject_blog_post(
     if post.author_id:
         await NotificationService().create_workflow_update(
             db,
-            user_id=post.author_id,
-            notification_type=NOTIFICATION_TYPE_PHASE_REJECTED,
-            title=NOTIFICATION_TITLE_CHANGES_REQUESTED.format(title=post.title),
-            body=reason,
-            content_id=str(post.id),
-            content_type=CONTENT_TYPE_BLOG_POST,
+            _WorkflowUpdateParams(
+                user_id=post.author_id,
+                notification_type=NOTIFICATION_TYPE_PHASE_REJECTED,
+                title=NOTIFICATION_TITLE_CHANGES_REQUESTED.format(title=post.title),
+                body=reason,
+                content_id=str(post.id),
+                content_type=CONTENT_TYPE_BLOG_POST,
+            ),
         )
 
     await db.commit()

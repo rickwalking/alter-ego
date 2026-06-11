@@ -2,10 +2,23 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.infrastructure.database.models.blog_post import BlogPostModel
+
+
+@dataclass(frozen=True)
+class _BlogPostListQuery:
+    """Query filters for listing blog post summaries."""
+
+    status_filter: str | None = None
+    author_id: str | None = None
+    search: str | None = None
+    limit: int = 50
+    offset: int = 0
 
 
 class BlogPostRepository:
@@ -14,21 +27,16 @@ class BlogPostRepository:
     @staticmethod
     async def list_summaries(
         db: AsyncSession,
-        *,
-        status_filter: str | None = None,
-        author_id: str | None = None,
-        search: str | None = None,
-        limit: int = 50,
-        offset: int = 0,
+        query_params: _BlogPostListQuery = _BlogPostListQuery(),
     ) -> tuple[list[BlogPostModel], int]:
         """List blog posts without loading heavy content column when possible."""
         filters = []
-        if status_filter:
-            filters.append(BlogPostModel.status == status_filter)
-        if author_id:
-            filters.append(BlogPostModel.author_id == author_id)
-        if search:
-            pattern = f"%{search.lower()}%"
+        if query_params.status_filter:
+            filters.append(BlogPostModel.status == query_params.status_filter)
+        if query_params.author_id:
+            filters.append(BlogPostModel.author_id == query_params.author_id)
+        if query_params.search:
+            pattern = f"%{query_params.search.lower()}%"
             filters.append(
                 func.lower(BlogPostModel.title).like(pattern)
                 | func.lower(BlogPostModel.slug).like(pattern)
@@ -43,8 +51,8 @@ class BlogPostRepository:
         list_query = (
             list_query
             .order_by(BlogPostModel.updated_at.desc())
-            .limit(limit)
-            .offset(offset)
+            .limit(query_params.limit)
+            .offset(query_params.offset)
         )
 
         total_result = await db.execute(count_query)

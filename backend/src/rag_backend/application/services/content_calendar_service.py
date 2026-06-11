@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from datetime import UTC, datetime
 
 from sqlalchemy import or_, select
@@ -11,27 +12,33 @@ from rag_backend.infrastructure.database.models.blog_post import BlogPostModel
 from rag_backend.infrastructure.database.models.carousel import CarouselProjectModel
 
 
+@dataclass
+class _CalendarQuery:
+    """Inputs for querying the content calendar."""
+
+    start: datetime
+    end: datetime
+    author_id: str | None = None
+
+
 class ContentCalendarService:
     """Builds calendar entries from scheduled and published content."""
 
     @staticmethod
     async def get_calendar(
         db: AsyncSession,
-        *,
-        start: datetime,
-        end: datetime,
-        author_id: str | None = None,
+        params: _CalendarQuery,
     ) -> list[dict[str, object]]:
         """Return calendar items in the date range."""
         items: list[dict[str, object]] = []
         blog_query = select(BlogPostModel).where(
             or_(
-                BlogPostModel.scheduled_publish_at.between(start, end),
-                BlogPostModel.published_at.between(start, end),
+                BlogPostModel.scheduled_publish_at.between(params.start, params.end),
+                BlogPostModel.published_at.between(params.start, params.end),
             )
         )
-        if author_id:
-            blog_query = blog_query.where(BlogPostModel.author_id == author_id)
+        if params.author_id:
+            blog_query = blog_query.where(BlogPostModel.author_id == params.author_id)
         blog_result = await db.execute(blog_query)
         for post in blog_result.scalars().all():
             event_date = post.scheduled_publish_at or post.published_at
@@ -47,11 +54,11 @@ class ContentCalendarService:
             })
 
         carousel_query = select(CarouselProjectModel).where(
-            CarouselProjectModel.updated_at.between(start, end)
+            CarouselProjectModel.updated_at.between(params.start, params.end)
         )
-        if author_id:
+        if params.author_id:
             carousel_query = carousel_query.where(
-                CarouselProjectModel.owner_id == author_id
+                CarouselProjectModel.owner_id == params.author_id
             )
         carousel_result = await db.execute(carousel_query)
         items.extend(

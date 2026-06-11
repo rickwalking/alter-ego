@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from rag_backend.application.services.optimistic_lock_service import (
     CarouselVersionBumpParams,
     OptimisticLockService,
+    _VersionedUpdate,
 )
 from rag_backend.domain.constants.optimistic_locking import (
     ERR_LOCK_HELD_BY_OTHER,
@@ -43,9 +44,11 @@ async def test_apply_versioned_update_increments_lock(db_session: AsyncSession) 
     service = OptimisticLockService()
     await service.apply_versioned_update(
         db_session,
-        post_id=str(post.id),
-        expected_version=2,
-        values={"title": "Updated Title"},
+        _VersionedUpdate(
+            post_id=str(post.id),
+            expected_version=2,
+            values={"title": "Updated Title"},
+        ),
     )
     await db_session.refresh(post)
     assert post.title == "Updated Title"
@@ -69,9 +72,11 @@ async def test_apply_versioned_update_raises_on_stale_version(
     with pytest.raises(ValueError, match=ERR_VERSION_CONFLICT):
         await service.apply_versioned_update(
             db_session,
-            post_id=str(post.id),
-            expected_version=1,
-            values={"title": "Should Fail"},
+            _VersionedUpdate(
+                post_id=str(post.id),
+                expected_version=1,
+                values={"title": "Should Fail"},
+            ),
         )
 
 

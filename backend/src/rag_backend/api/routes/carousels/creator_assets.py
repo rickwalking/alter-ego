@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Annotated
 from uuid import UUID
@@ -49,6 +50,21 @@ from rag_backend.infrastructure.database.creator_asset_repository import (
 from .deps import get_carousel_repo
 
 router = APIRouter()
+
+
+@dataclass(frozen=True)
+class _CreatorAssetContext:
+    user: User
+    repo: CarouselRepository
+    service: CreatorAssetService
+
+
+def get_creator_asset_context(
+    user: Annotated[User, Depends(require_authenticated_user)],
+    repo: Annotated[CarouselRepository, Depends(get_carousel_repo)],
+    service: Annotated[CreatorAssetService, Depends(get_creator_asset_service)],
+) -> _CreatorAssetContext:
+    return _CreatorAssetContext(user=user, repo=repo, service=service)
 
 
 def _normalize_upload_mime(content_type: str | None) -> str:
@@ -104,17 +120,15 @@ async def upload_creator_asset(
     request: Request,
     project_id: UUID,
     file: UploadFile,
-    user: Annotated[User, Depends(require_authenticated_user)],
-    repo: Annotated[CarouselRepository, Depends(get_carousel_repo)],
-    service: Annotated[CreatorAssetService, Depends(get_creator_asset_service)],
+    ctx: Annotated[_CreatorAssetContext, Depends(get_creator_asset_context)],
 ) -> CreatorAssetResponse:
     """Upload and bind a managed creator branding asset to a carousel project."""
-    project = await repo.get_project_by_id(project_id)
+    project = await ctx.repo.get_project_by_id(project_id)
     if project is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=ERR_CAROUSEL_NOT_FOUND
         )
-    assert_domain_owner_or_admin(project.owner_id, user)
+    assert_domain_owner_or_admin(project.owner_id, ctx.user)
 
     raw_bytes = await file.read()
     if len(raw_bytes) > CREATOR_ASSET_MAX_BYTES:
@@ -124,10 +138,10 @@ async def upload_creator_asset(
         )
 
     try:
-        asset, _ = await service.upload_for_project(
+        asset, _ = await ctx.service.upload_for_project(
             CreatorAssetUploadCommand(
                 project=project,
-                user=user,
+                user=ctx.user,
                 content=raw_bytes,
                 declared_mime=_normalize_upload_mime(file.content_type),
             )
@@ -152,23 +166,21 @@ async def select_creator_asset(
     http_request: Request,
     project_id: UUID,
     request: CreatorAssetSelectRequest,
-    user: Annotated[User, Depends(require_authenticated_user)],
-    repo: Annotated[CarouselRepository, Depends(get_carousel_repo)],
-    service: Annotated[CreatorAssetService, Depends(get_creator_asset_service)],
+    ctx: Annotated[_CreatorAssetContext, Depends(get_creator_asset_context)],
 ) -> CreatorAssetResponse:
     """Select an existing managed creator asset for a carousel project."""
-    project = await repo.get_project_by_id(project_id)
+    project = await ctx.repo.get_project_by_id(project_id)
     if project is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=ERR_CAROUSEL_NOT_FOUND
         )
-    assert_domain_owner_or_admin(project.owner_id, user)
+    assert_domain_owner_or_admin(project.owner_id, ctx.user)
 
     try:
-        asset, _ = await service.select_for_project(
+        asset, _ = await ctx.service.select_for_project(
             CreatorAssetSelectCommand(
                 project=project,
-                user=user,
+                user=ctx.user,
                 creator_asset_id=request.creator_asset_id,
             )
         )

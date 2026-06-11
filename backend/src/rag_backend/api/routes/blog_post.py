@@ -28,6 +28,7 @@ from rag_backend.application.services.editorial_audit_service import (
 )
 from rag_backend.application.services.optimistic_lock_service import (
     OptimisticLockService,
+    _VersionedUpdate,
 )
 from rag_backend.application.services.workflow_event_service import WorkflowEventService
 from rag_backend.domain.constants.blog_ai import ERR_BLOG_POST_NOT_FOUND
@@ -41,7 +42,10 @@ from rag_backend.domain.constants.workflow_validation import (
 )
 from rag_backend.domain.models.user import UserRole
 from rag_backend.infrastructure.config.settings import get_settings
-from rag_backend.infrastructure.database.blog_post_repository import BlogPostRepository
+from rag_backend.infrastructure.database.blog_post_repository import (
+    BlogPostRepository,
+    _BlogPostListQuery,
+)
 from rag_backend.infrastructure.database.models import BlogPostModel
 from rag_backend.infrastructure.events.factory import get_event_publisher
 from rag_backend.infrastructure.telemetry.opentelemetry import start_span
@@ -113,11 +117,13 @@ async def list_blog_posts(
 
         posts, total = await repo.list_summaries(
             db,
-            status_filter=params.status,
-            author_id=filter_author,
-            search=params.search,
-            limit=params.limit,
-            offset=params.offset,
+            _BlogPostListQuery(
+                status_filter=params.status,
+                author_id=filter_author,
+                search=params.search,
+                limit=params.limit,
+                offset=params.offset,
+            ),
         )
 
         return BlogPostListResponse(
@@ -173,9 +179,11 @@ async def update_blog_post(
     try:
         await lock_service.apply_versioned_update(
             db,
-            post_id=str(post_id),
-            expected_version=if_match,
-            values=update_data,
+            _VersionedUpdate(
+                post_id=str(post_id),
+                expected_version=if_match,
+                values=update_data,
+            ),
         )
     except ValueError as exc:
         raise HTTPException(

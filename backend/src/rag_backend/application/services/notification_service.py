@@ -48,6 +48,26 @@ class RevisionCapEscalationParams:
     title: str
 
 
+@dataclass(frozen=True)
+class _UserNotificationsQuery:
+    """Query filters for listing user notifications."""
+
+    unread_only: bool = False
+    limit: int = 50
+
+
+@dataclass(frozen=True)
+class _WorkflowUpdateParams:
+    """Parameters for creating a workflow update notification."""
+
+    user_id: str
+    notification_type: str
+    title: str
+    body: str
+    content_id: str
+    content_type: str
+
+
 class NotificationService:
     """Creates and delivers in-app notifications with optional email."""
 
@@ -82,8 +102,8 @@ class NotificationService:
         notification.email_sent = await self._send_email(
             db,
             user_id,
-            EMAIL_SUBJECT_REVIEW_REQUEST.format(title=title),
-            body,
+            subject=EMAIL_SUBJECT_REVIEW_REQUEST.format(title=title),
+            body=body,
         )
         return notification
 
@@ -130,15 +150,15 @@ class NotificationService:
     async def list_for_user(
         db: AsyncSession,
         user_id: str,
-        *,
-        unread_only: bool = False,
-        limit: int = 50,
+        query_params: _UserNotificationsQuery = _UserNotificationsQuery(),
     ) -> list[NotificationModel]:
         """List notifications for a user."""
         query = select(NotificationModel).where(NotificationModel.user_id == user_id)
-        if unread_only:
+        if query_params.unread_only:
             query = query.where(NotificationModel.status == NOTIFICATION_STATUS_UNREAD)
-        query = query.order_by(NotificationModel.created_at.desc()).limit(limit)
+        query = query.order_by(NotificationModel.created_at.desc()).limit(
+            query_params.limit
+        )
         result = await db.execute(query)
         return list(result.scalars().all())
 
@@ -190,8 +210,8 @@ class NotificationService:
             await self._send_email(
                 db,
                 item.user_id,
-                EMAIL_SUBJECT_DEADLINE_REMINDER.format(title=item.title),
-                NOTIFICATION_BODY_DEADLINE_REMINDER,
+                subject=EMAIL_SUBJECT_DEADLINE_REMINDER.format(title=item.title),
+                body=NOTIFICATION_BODY_DEADLINE_REMINDER,
             )
             item.metadata_json = {**metadata, METADATA_KEY_REMINDER_SENT: True}
             sent += 1
@@ -222,31 +242,25 @@ class NotificationService:
         notification.email_sent = await self._send_email(
             db,
             user_id,
-            EMAIL_SUBJECT_SCHEDULED_PUBLISHED.format(title=title),
-            NOTIFICATION_BODY_SCHEDULED_PUBLISHED,
+            subject=EMAIL_SUBJECT_SCHEDULED_PUBLISHED.format(title=title),
+            body=NOTIFICATION_BODY_SCHEDULED_PUBLISHED,
         )
         return notification
 
     @staticmethod
     async def create_workflow_update(
         db: AsyncSession,
-        *,
-        user_id: str,
-        notification_type: str,
-        title: str,
-        body: str,
-        content_id: str,
-        content_type: str,
+        params: _WorkflowUpdateParams,
     ) -> NotificationModel:
         """Create an in-app workflow status notification."""
         notification = NotificationModel(
-            user_id=user_id,
-            notification_type=notification_type,
-            title=title,
-            body=body,
+            user_id=params.user_id,
+            notification_type=params.notification_type,
+            title=params.title,
+            body=params.body,
             status=NOTIFICATION_STATUS_UNREAD,
-            content_id=content_id,
-            content_type=content_type,
+            content_id=params.content_id,
+            content_type=params.content_type,
         )
         db.add(notification)
         await db.flush()
@@ -256,6 +270,7 @@ class NotificationService:
     async def _send_email(
         db: AsyncSession,
         user_id: str,
+        *,
         subject: str,
         body: str,
     ) -> bool:

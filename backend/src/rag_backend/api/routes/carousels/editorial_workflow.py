@@ -33,6 +33,9 @@ from rag_backend.api.routes.carousels.editorial_workflow_routes_support import (
     validate_resume_action,
     validate_resume_workflow_gates,
 )
+from rag_backend.api.routes.carousels.editorial_workflow_routes_validate import (
+    _ResumeGateContext,
+)
 from rag_backend.api.schemas.carousel_workflow import (
     EditorialWorkflowResumeAcceptedResponse,
     EditorialWorkflowResumeRequest,
@@ -199,9 +202,9 @@ async def resume_editorial_workflow(
     await validate_resume_workflow_gates(
         body,
         workflow_state,
-        db=db,
-        project_id=str(project_id),
-        project_title=project.topic,
+        ctx=_ResumeGateContext(
+            db=db, project_id=str(project_id), project_title=project.topic
+        ),
     )
     new_lock_version = await bump_resume_lock_version(
         db,

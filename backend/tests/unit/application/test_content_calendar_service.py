@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.application.services.content_calendar_service import (
     ContentCalendarService,
+    _CalendarQuery,
 )
 from rag_backend.domain.constants.blog_post import BlogPostStatus
 from rag_backend.infrastructure.database.models.blog_post import BlogPostModel
@@ -32,7 +33,9 @@ async def test_get_calendar_includes_scheduled_post(db_session: AsyncSession) ->
     service = ContentCalendarService()
     items = await service.get_calendar(
         db_session,
-        start=datetime.now(UTC) - timedelta(days=1),
-        end=datetime.now(UTC) + timedelta(days=10),
+        _CalendarQuery(
+            start=datetime.now(UTC) - timedelta(days=1),
+            end=datetime.now(UTC) + timedelta(days=10),
+        ),
     )
     assert any(item["id"] == str(post.id) for item in items)

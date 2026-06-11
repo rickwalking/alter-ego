@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -123,13 +125,20 @@ def ensure_resume_not_in_progress(
     )
 
 
+@dataclass(frozen=True)
+class _ResumeGateContext:
+    """Bundled context for resume workflow gate validation."""
+
+    db: AsyncSession
+    project_id: str
+    project_title: str
+
+
 async def validate_resume_workflow_gates(
     body: EditorialWorkflowResumeRequest,
     workflow_state: CarouselWorkflowState | None,
     *,
-    db: AsyncSession,
-    project_id: str,
-    project_title: str,
+    ctx: _ResumeGateContext,
 ) -> None:
     """Validate revision cap and persona score before accepting resume."""
     if workflow_state is None:
@@ -139,9 +148,9 @@ async def validate_resume_workflow_gates(
             await validate_revision_cap(
                 workflow_state,
                 RevisionCapValidationContext(
-                    project_id=project_id,
-                    project_title=project_title,
-                    db=db,
+                    project_id=ctx.project_id,
+                    project_title=ctx.project_title,
+                    db=ctx.db,
                     notifications=NotificationService(),
                 ),
             )

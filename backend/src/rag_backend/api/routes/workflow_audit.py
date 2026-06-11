@@ -22,7 +22,10 @@ from rag_backend.api.schemas.workflow_audit import (
 from rag_backend.application.services.optimistic_lock_service import (
     OptimisticLockService,
 )
-from rag_backend.application.services.workflow_event_service import WorkflowEventService
+from rag_backend.application.services.workflow_event_service import (
+    WorkflowEventService,
+    _AggregateQuery,
+)
 from rag_backend.domain.constants.access_control import ERR_INVALID_REQUEST
 from rag_backend.domain.constants.optimistic_locking import ERR_LOCK_HELD_BY_OTHER
 from rag_backend.domain.constants.rate_limits import RATE_LIMIT_WORKFLOW_ENDPOINTS
@@ -66,7 +69,11 @@ async def get_workflow_audit(
     )
     service = _event_service()
     entries = await service.list_for_aggregate(
-        db, aggregate_type=aggregate_type, aggregate_id=aggregate_id
+        db,
+        _AggregateQuery(
+            aggregate_type=aggregate_type,
+            aggregate_id=aggregate_id,
+        ),
     )
     return WorkflowAuditListResponse(
         items=[WorkflowAuditEntryResponse.model_validate(entry) for entry in entries],

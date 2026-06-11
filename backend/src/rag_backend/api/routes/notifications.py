@@ -20,7 +20,10 @@ from rag_backend.api.schemas.notifications import (
     NotificationResponse,
     ReviewAssignmentRequest,
 )
-from rag_backend.application.services.notification_service import NotificationService
+from rag_backend.application.services.notification_service import (
+    NotificationService,
+    _UserNotificationsQuery,
+)
 from rag_backend.domain.constants.notifications import ERR_NOTIFICATION_NOT_FOUND
 from rag_backend.domain.constants.rate_limits import RATE_LIMIT_WORKFLOW_ENDPOINTS
 
@@ -45,7 +48,9 @@ async def list_notifications(
 ) -> NotificationListResponse:
     """Return in-app notifications (UI-019)."""
     service = _notification_service()
-    items = await service.list_for_user(db, current_user.id, unread_only=unread_only)
+    items = await service.list_for_user(
+        db, current_user.id, _UserNotificationsQuery(unread_only=unread_only)
+    )
     return NotificationListResponse(
         items=[NotificationResponse.model_validate(item) for item in items],
         total=len(items),

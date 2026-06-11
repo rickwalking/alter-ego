@@ -24,6 +24,15 @@ class CarouselVersionBumpParams:
     expected_version: int | None
 
 
+@dataclass(frozen=True)
+class _VersionedUpdate:
+    """Inputs for apply_versioned_update."""
+
+    post_id: str
+    expected_version: int
+    values: dict[str, object]
+
+
 class OptimisticLockService:
     """Version checks and short-lived edit locks."""
 
@@ -41,22 +50,22 @@ class OptimisticLockService:
     @staticmethod
     async def apply_versioned_update(
         db: AsyncSession,
-        *,
-        post_id: str,
-        expected_version: int,
-        values: dict[str, object],
+        params: _VersionedUpdate,
     ) -> None:
         """Atomically apply blog post updates when lock_version matches."""
         from sqlalchemy import update
 
         from rag_backend.infrastructure.database.models.blog_post import BlogPostModel
 
-        assignment = {**values, "lock_version": expected_version + 1}
+        assignment = {
+            **params.values,
+            "lock_version": params.expected_version + 1,
+        }
         result = await db.execute(
             update(BlogPostModel)
             .where(
-                BlogPostModel.id == post_id,
-                BlogPostModel.lock_version == expected_version,
+                BlogPostModel.id == params.post_id,
+                BlogPostModel.lock_version == params.expected_version,
             )
             .values(**assignment)
         )
