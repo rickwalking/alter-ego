@@ -1,6 +1,6 @@
 # AE-0063 — Extract magic strings and simplify if chain in `carousel_presentation_adapters.py`
 
-Status: Intake
+Status: QA Complete
 Tier: T1
 Priority: High
 Type: Refactor

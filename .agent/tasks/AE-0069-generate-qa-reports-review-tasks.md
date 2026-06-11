@@ -1,6 +1,6 @@
 # AE-0069 — Generate QA reports for all Review-status tasks
 
-Status: Intake
+Status: QA Complete
 Tier: T1
 Priority: High
 Type: QA

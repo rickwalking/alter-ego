@@ -1,6 +1,6 @@
 # AE-0048 — Remove Blanket Ignores + Mypy Hardening
 
-Status: Intake
+Status: QA Complete
 Tier: T3
 Priority: High
 Type: Task

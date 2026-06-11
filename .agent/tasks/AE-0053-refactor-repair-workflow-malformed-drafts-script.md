@@ -1,6 +1,6 @@
 # AE-0053 — Refactor `repair_workflow_malformed_drafts.py` (magic strings, long functions, nested ifs)
 
-Status: Intake
+Status: QA Complete
 Tier: T2
 Priority: Medium
 Type: Refactor

@@ -1,6 +1,6 @@
 # AE-0052 — Refactor `regenerate_carousel_presentation.py` (if chain → dict dispatch)
 
-Status: Intake
+Status: QA Complete
 Tier: T1
 Priority: High
 Type: Refactor

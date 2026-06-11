@@ -1,6 +1,6 @@
 # AE-0059 — Split large function in `editorial_distribution_persist.py`
 
-Status: Intake
+Status: QA Complete
 Tier: T2
 Priority: Medium
 Type: Refactor

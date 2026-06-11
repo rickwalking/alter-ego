@@ -1,6 +1,6 @@
 # AE-0062 — Null-safe assignment in `presentation_review_edits.py`
 
-Status: Intake
+Status: QA Complete
 Tier: T1
 Priority: High
 Type: Refactor

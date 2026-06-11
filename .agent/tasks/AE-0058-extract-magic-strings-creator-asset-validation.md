@@ -1,6 +1,6 @@
 # AE-0058 — Extract magic strings in `creator_asset_validation.py`
 
-Status: Intake
+Status: QA Complete
 Tier: T1
 Priority: High
 Type: Refactor

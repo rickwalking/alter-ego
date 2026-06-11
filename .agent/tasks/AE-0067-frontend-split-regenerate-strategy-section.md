@@ -1,6 +1,6 @@
 # AE-0067 — Frontend: split constants, interfaces, utils from `regenerate-strategy-section.tsx`
 
-Status: Intake
+Status: QA Complete
 Tier: T1
 Priority: High
 Type: Refactor

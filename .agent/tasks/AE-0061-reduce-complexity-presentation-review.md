@@ -1,6 +1,6 @@
 # AE-0061 — Reduce complexity in `presentation_review.py`
 
-Status: Intake
+Status: QA Complete
 Tier: T2
 Priority: Medium
 Type: Refactor

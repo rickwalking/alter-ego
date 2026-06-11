@@ -1,6 +1,6 @@
 # AE-0055 — Flatten nested if statements in `artifact_path_resolver.py`
 
-Status: Intake
+Status: QA Complete
 Tier: T1
 Priority: High
 Type: Refactor

@@ -1,6 +1,6 @@
 # AE-0066 — Frontend: move constants in `workflow-failed-card.tsx` to constants file
 
-Status: Intake
+Status: QA Complete
 Tier: T1
 Priority: High
 Type: Refactor

@@ -1,6 +1,6 @@
 # AE-0060 — Flatten inner if statements in `image_generation_records.py`
 
-Status: Intake
+Status: QA Complete
 Tier: T1
 Priority: High
 Type: Refactor

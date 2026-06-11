@@ -1,6 +1,6 @@
 # AE-0054 — Move strategy classes in `strategies.py` to dedicated file
 
-Status: Intake
+Status: QA Complete
 Tier: T1
 Priority: High
 Type: Refactor
