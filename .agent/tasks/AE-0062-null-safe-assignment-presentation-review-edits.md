@@ -1,6 +1,6 @@
 # AE-0062 — Null-safe assignment in `presentation_review_edits.py`
 
-Status: QA Complete
+Status: Done
 Tier: T1
 Priority: High
 Type: Refactor
@@ -53,3 +53,7 @@ A value is assigned from a nullable source without checking for None first. If t
 - [ ] Acceptance criteria validated
 - [ ] Edge cases tested
 - [ ] Orphan/unfinished code checked
+
+## Final Summary
+
+Completed. See git log for implementation details.

@@ -1,6 +1,6 @@
 # AE-0048 — Remove Blanket Ignores + Mypy Hardening
 
-Status: QA Complete
+Status: Done
 Tier: T3
 Priority: High
 Type: Task
@@ -163,4 +163,4 @@ Blocked by: AE-0041, AE-0042, AE-0043, AE-0044, AE-0045, AE-0046, AE-0047
 
 ## Final Summary
 
-Pending.
+Completed. See git log for implementation details.

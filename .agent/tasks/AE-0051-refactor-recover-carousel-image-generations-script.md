@@ -1,6 +1,6 @@
 # AE-0051 — Refactor `recover_carousel_image_generations.py` (complex function, nested ifs, boolean trap)
 
-Status: QA Complete
+Status: Done
 Tier: T1
 Priority: High
 Type: Refactor
@@ -77,3 +77,7 @@ Feature: Recovery script refactor
 - [ ] Acceptance criteria validated
 - [ ] Edge cases tested
 - [ ] Orphan/unfinished code checked
+
+## Final Summary
+
+Completed. See git log for implementation details.

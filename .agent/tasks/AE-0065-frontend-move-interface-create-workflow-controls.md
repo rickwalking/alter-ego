@@ -1,6 +1,6 @@
 # AE-0065 — Frontend: move interface in `create-workflow-controls.tsx` to its own file
 
-Status: QA Complete
+Status: Done
 Tier: T1
 Priority: High
 Type: Refactor
@@ -52,3 +52,7 @@ A TypeScript interface is defined inline in a component file, mixing types with 
 - [ ] Acceptance criteria validated
 - [ ] Edge cases tested
 - [ ] Orphan/unfinished code checked
+
+## Final Summary
+
+Completed. See git log for implementation details.

@@ -1,6 +1,6 @@
 # AE-0066 — Frontend: move constants in `workflow-failed-card.tsx` to constants file
 
-Status: QA Complete
+Status: Done
 Tier: T1
 Priority: High
 Type: Refactor
@@ -51,3 +51,7 @@ Constants are defined inline in a component file. They should be in a dedicated 
 - [ ] Code quality reviewed
 - [ ] Acceptance criteria validated
 - [ ] Orphan/unfinished code checked
+
+## Final Summary
+
+Completed. See git log for implementation details.

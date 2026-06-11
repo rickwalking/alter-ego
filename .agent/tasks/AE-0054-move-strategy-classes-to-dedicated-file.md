@@ -1,6 +1,6 @@
 # AE-0054 — Move strategy classes in `strategies.py` to dedicated file
 
-Status: QA Complete
+Status: Done
 Tier: T1
 Priority: High
 Type: Refactor
@@ -55,3 +55,7 @@ Handler classes are co-located with route definitions, violating separation of c
 - [ ] Acceptance criteria validated
 - [ ] Edge cases tested
 - [ ] Orphan/unfinished code checked
+
+## Final Summary
+
+Completed. See git log for implementation details.

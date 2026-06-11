@@ -1,6 +1,6 @@
 # AE-0067 — Frontend: split constants, interfaces, utils from `regenerate-strategy-section.tsx`
 
-Status: QA Complete
+Status: Done
 Tier: T1
 Priority: High
 Type: Refactor
@@ -55,3 +55,7 @@ A component file contains inline constants, interfaces, and utility functions. T
 - [ ] Code quality reviewed
 - [ ] Acceptance criteria validated
 - [ ] Orphan/unfinished code checked
+
+## Final Summary
+
+Completed. See git log for implementation details.
