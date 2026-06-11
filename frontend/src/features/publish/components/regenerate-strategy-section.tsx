@@ -4,19 +4,18 @@ import { useCallback, useState } from "react";
 import { useTranslations } from "next-intl";
 import { NeonButton } from "@/components/atoms/neon-button";
 import { Spinner } from "@/components/ui/spinner";
-import {
-  BG_CARD,
-  NEON_CYAN,
-  TEXT,
-  TEXT_DIM,
-} from "@/constants/neon";
+import { BG_CARD, NEON_CYAN, TEXT, TEXT_DIM } from "@/constants/neon";
 import { CREATE_TEMPLATES } from "@/constants/create";
 import {
   useAvailableStrategies,
   useRegenerateSlides,
 } from "@/features/create/hooks";
 import type { RegenerateStrategySectionProps } from "@/features/publish/types";
-import { CYAN, CYAN_DIM, SECTION_CARD_STYLE } from "@/features/publish/constants";
+import {
+  CYAN,
+  CYAN_DIM,
+  SECTION_CARD_STYLE,
+} from "@/features/publish/constants";
 import { findTemplateIndex } from "@/features/publish/utils";
 
 export function RegenerateStrategySection({

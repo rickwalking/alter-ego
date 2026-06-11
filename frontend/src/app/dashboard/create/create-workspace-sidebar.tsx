@@ -2,7 +2,13 @@
 
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { BG_CARD, CYAN_GRADIENT, NEON_CYAN, NEON_RED, TEXT_DIM } from "@/constants/neon";
+import {
+  BG_CARD,
+  CYAN_GRADIENT,
+  NEON_CYAN,
+  NEON_RED,
+  TEXT_DIM,
+} from "@/constants/neon";
 import { DASHBOARD_ROUTES } from "@/constants/dashboard-routes";
 import { EDITORIAL_WORKFLOW_STATUS } from "@/constants/editorial-workflow";
 import { WORKFLOW_PHASE_STATUS } from "@/constants/workflow";

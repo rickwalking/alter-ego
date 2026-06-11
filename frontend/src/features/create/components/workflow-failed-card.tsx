@@ -68,13 +68,11 @@ export function WorkflowFailedCard({
           </pre>
         </>
       ) : null}
-      <NeonButton
-        size="sm"
-        disabled={isRetrying}
-        onClick={onRetry}
-      >
+      <NeonButton size="sm" disabled={isRetrying} onClick={onRetry}>
         {isRetrying ? (
-          <span style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+          <span
+            style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
+          >
             <NeonSpinner />
             {t("failed.retrying")}
           </span>

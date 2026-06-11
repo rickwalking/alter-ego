@@ -63,7 +63,9 @@ export function presentationHeading(
   return typeof heading === "string" && heading.trim() ? heading : fallback;
 }
 
-export function presentationBody(presentation: Record<string, unknown>): string {
+export function presentationBody(
+  presentation: Record<string, unknown>,
+): string {
   const body = presentation.body;
   return typeof body === "string" ? body : "";
 }
@@ -90,7 +92,9 @@ export function resolveSlideDraftTitle(
   return fallback;
 }
 
-export function resolveSlideDraftPreview(slide: Record<string, unknown>): string {
+export function resolveSlideDraftPreview(
+  slide: Record<string, unknown>,
+): string {
   const presentationPt = asRecord(slide.presentation_pt);
   if (presentationPt) {
     const heading = presentationHeading(presentationPt, "");
@@ -103,7 +107,11 @@ export function resolveSlideDraftPreview(slide: Record<string, unknown>): string
     }
   }
   const draftText = slide.draft_text;
-  if (typeof draftText === "string" && draftText.trim() && !draftText.trim().startsWith("{")) {
+  if (
+    typeof draftText === "string" &&
+    draftText.trim() &&
+    !draftText.trim().startsWith("{")
+  ) {
     return draftText;
   }
   const body = slide.body;
@@ -141,7 +149,9 @@ export function formatBudgetUsage(
   }
   const lineCount = value.trim() ? value.split(/\r?\n/).length : 0;
   const lineSuffix =
-    budget.maxLines !== undefined ? ` · ${lineCount}/${budget.maxLines} lines` : "";
+    budget.maxLines !== undefined
+      ? ` · ${lineCount}/${budget.maxLines} lines`
+      : "";
   return `${value.length}/${budget.maxCharacters} chars${lineSuffix}`;
 }
 
@@ -167,10 +177,7 @@ export function localizedSlidesHaveBudgetViolations(
   policyVersion?: string | null,
 ): boolean {
   return slides.some((slide) => {
-    const headingBudget = resolveHeadingBudget(
-      slide.slide_type,
-      policyVersion,
-    );
+    const headingBudget = resolveHeadingBudget(slide.slide_type, policyVersion);
     const bodyBudget = resolveBodyBudget(slide.slide_type, policyVersion);
     const ptHeading = presentationHeading(slide.presentation_pt, "");
     const ptBody = presentationBody(slide.presentation_pt);
@@ -263,7 +270,8 @@ export function applySlideCopyEdit(
 }
 
 function localeCopySignature(presentation: Record<string, unknown>): string {
-  const heading = typeof presentation.heading === "string" ? presentation.heading : "";
+  const heading =
+    typeof presentation.heading === "string" ? presentation.heading : "";
   const body = typeof presentation.body === "string" ? presentation.body : "";
   return `${heading}\u0000${body}`;
 }
@@ -294,13 +302,14 @@ function localizedSlidesLookMalformed(slides: LocalizedSlideReview[]): boolean {
     const body = presentationBody(slide.presentation_pt);
     const heading = presentationHeading(slide.presentation_pt, "");
     return (
-      body.trim().startsWith("{") ||
-      (body.includes("'pt'") && !heading.trim())
+      body.trim().startsWith("{") || (body.includes("'pt'") && !heading.trim())
     );
   });
 }
 
-function hasStructuredPresentation(value: unknown): value is Record<string, unknown> {
+function hasStructuredPresentation(
+  value: unknown,
+): value is Record<string, unknown> {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     return false;
   }

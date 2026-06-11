@@ -102,7 +102,8 @@ export function CreateWorkflowControls({
             disabled={loading || !showLiveControls || approveBlocked}
             onClick={() => {
               const approveOptions =
-                state?.current_phase === EDITORIAL_PHASES.CONTENT && contentHasEdits
+                state?.current_phase === EDITORIAL_PHASES.CONTENT &&
+                contentHasEdits
                   ? { editedLocalizedSlides: contentSlides }
                   : undefined;
               void approve(approveOptions);

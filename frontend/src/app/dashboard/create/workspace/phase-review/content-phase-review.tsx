@@ -106,7 +106,9 @@ export function ContentPhaseReview({
 
       {approvalBlocked ? (
         <NeonAlert variant="destructive">
-          <NeonAlertDescription>{t("presentationBlocked")}</NeonAlertDescription>
+          <NeonAlertDescription>
+            {t("presentationBlocked")}
+          </NeonAlertDescription>
         </NeonAlert>
       ) : null}
 
@@ -153,7 +155,10 @@ export function ContentPhaseReview({
             const body = presentationBody(presentation);
             const structuredExtras = listStructuredExtras(presentation);
             const iconNames = listPresentationIconNames(presentation);
-            const headingBudgetLabel = formatBudgetUsage(heading, headingBudget);
+            const headingBudgetLabel = formatBudgetUsage(
+              heading,
+              headingBudget,
+            );
             const bodyBudgetLabel = formatBudgetUsage(body, bodyBudget);
             const headingOverBudget = isBudgetExceeded(heading, headingBudget);
             const bodyOverBudget = isBudgetExceeded(body, bodyBudget);
@@ -186,7 +191,9 @@ export function ContentPhaseReview({
                     />
                   </div>
                 ) : (
-                  <p className="font-medium text-[var(--color-text)]">{heading}</p>
+                  <p className="font-medium text-[var(--color-text)]">
+                    {heading}
+                  </p>
                 )}
                 {headingBudgetLabel ? (
                   <p

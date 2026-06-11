@@ -84,7 +84,13 @@ export function CreateStepHistoryPanel({
   if (viewStepId === CREATE_STEP_IDS.CONTENT) {
     const localizedSlides = resolveLocalizedSlides(state);
     if (localizedSlides.length > 0) {
-      return <ContentPhaseReview state={state} editable={false} slides={localizedSlides} />;
+      return (
+        <ContentPhaseReview
+          state={state}
+          editable={false}
+          slides={localizedSlides}
+        />
+      );
     }
 
     const drafts = state.slide_drafts ?? [];

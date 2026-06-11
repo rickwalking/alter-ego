@@ -20,9 +20,9 @@ export function PresentationIconPreview({
   className,
 }: PresentationIconPreviewProps): React.ReactElement {
   const componentName = toLucideComponentName(iconName);
-  const Icon = LucideIcons[
-    componentName as keyof typeof LucideIcons
-  ] as LucideIcons.LucideIcon | undefined;
+  const Icon = LucideIcons[componentName as keyof typeof LucideIcons] as
+    | LucideIcons.LucideIcon
+    | undefined;
 
   if (!Icon) {
     return (
@@ -32,5 +32,7 @@ export function PresentationIconPreview({
     );
   }
 
-  return <Icon className={className} aria-hidden data-testid="presentation-icon" />;
+  return (
+    <Icon className={className} aria-hidden data-testid="presentation-icon" />
+  );
 }

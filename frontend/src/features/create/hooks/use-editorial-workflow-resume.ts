@@ -199,7 +199,8 @@ export function useEditorialWorkflowResume({
                   ? {
                       ...prev,
                       lock_version: accepted.lock_version,
-                      phase_status: accepted.phase_status as import("@/features/blog/types-ai").WorkflowPhaseStatus,
+                      phase_status:
+                        accepted.phase_status as import("@/features/blog/types-ai").WorkflowPhaseStatus,
                     }
                   : prev;
             workflowStateRef.current = next;

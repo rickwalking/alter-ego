@@ -54,8 +54,8 @@ describe("ImagePromptReview", () => {
   it("leaves prompt textareas enabled when readOnly is false", () => {
     render(<ImagePromptReview prompts={[prompts[0]]} readOnly={false} />);
 
-    expect(screen.getByLabelText("Image prompt for slide 1")).not.toHaveAttribute(
-      "readonly",
-    );
+    expect(
+      screen.getByLabelText("Image prompt for slide 1"),
+    ).not.toHaveAttribute("readonly");
   });
 });

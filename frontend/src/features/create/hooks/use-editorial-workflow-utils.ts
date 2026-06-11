@@ -210,7 +210,8 @@ export function mergeWorkflowState(
       workflow_status: payload.workflow_status ?? prev?.workflow_status,
       status: payload.status ?? prev?.status ?? "draft",
       presentation_policy_version:
-        payload.presentation_policy_version ?? prev?.presentation_policy_version,
+        payload.presentation_policy_version ??
+        prev?.presentation_policy_version,
       localized_slides: payload.localized_slides ?? prev?.localized_slides,
       presentation_validation:
         payload.presentation_validation ?? prev?.presentation_validation,
@@ -221,7 +222,9 @@ export function mergeWorkflowState(
     project_id: projectId,
     current_phase:
       payload.phase ?? payload.current_phase ?? prev?.current_phase ?? "",
-      phase_status: (payload.phase_status ?? prev?.phase_status ?? "") as import("@/features/blog/types-ai").WorkflowPhaseStatus,
+    phase_status: (payload.phase_status ??
+      prev?.phase_status ??
+      "") as import("@/features/blog/types-ai").WorkflowPhaseStatus,
     research_findings:
       payload.research_findings ?? prev?.research_findings ?? [],
     outline: payload.outline ?? prev?.outline ?? [],

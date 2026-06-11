@@ -143,7 +143,11 @@ describe("presentation review utils", () => {
       {
         slide_index: 1,
         slide_type: "intro",
-        presentation_pt: { slide_type: "intro", heading: "Antigo", body: "Corpo" },
+        presentation_pt: {
+          slide_type: "intro",
+          heading: "Antigo",
+          body: "Corpo",
+        },
         presentation_en: { slide_type: "intro", heading: "Old", body: "Body" },
       },
     ];
@@ -210,9 +214,9 @@ describe("presentation review utils", () => {
     ];
 
     expect(resolveBodyBudget("cta", "hero_lower_third_v1")).toBeNull();
-    expect(localizedSlidesHaveBudgetViolations(slides, "hero_lower_third_v1")).toBe(
-      false,
-    );
+    expect(
+      localizedSlidesHaveBudgetViolations(slides, "hero_lower_third_v1"),
+    ).toBe(false);
   });
 
   it("flags budget violations in edited localized slides", () => {
@@ -228,8 +232,8 @@ describe("presentation review utils", () => {
     ];
 
     expect(isBudgetExceeded(oversized, budget)).toBe(true);
-    expect(localizedSlidesHaveBudgetViolations(slides, "hero_lower_third_v1")).toBe(
-      true,
-    );
+    expect(
+      localizedSlidesHaveBudgetViolations(slides, "hero_lower_third_v1"),
+    ).toBe(true);
   });
 });
