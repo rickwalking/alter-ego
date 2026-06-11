@@ -1,0 +1,54 @@
+# AE-0064 — Extract magic strings in `presentation_validation_fields.py`
+
+Status: Intake
+Tier: T1
+Priority: High
+Type: Refactor
+Area: Backend
+Owner: Unassigned
+Agent Lane: architect → developer → qa → release
+Branch: TBD
+Kanban Card: TBD
+Created: 2026-06-11
+Updated: 2026-06-11
+
+## Goal
+
+Fix PR #11 comment #20: "magic strings" in `backend/src/rag_backend/application/services/carousel/presentation_validation_fields.py` (line 270).
+
+## Problem
+
+Inline string literals are used directly in field validation logic instead of named constants.
+
+## Scope
+
+- Extract all inline string literals in `presentation_validation_fields.py` to module-level or domain constants
+- Use descriptive constant names following `UPPER_SNAKE_CASE`
+
+## Non-Goals
+
+- Do not change validation logic or error messages
+
+## Acceptance Criteria
+
+- [ ] No magic strings in function bodies
+- [ ] All string literals extracted to named constants
+- [ ] ruff check, mypy, pytest pass
+
+## Affected Areas
+
+- Backend: `application/services/carousel/presentation_validation_fields.py`
+
+## Dependencies
+
+- Blocks: None
+- Blocked by: None
+- Related: None
+
+## QA Checklist
+
+- [ ] Security reviewed
+- [ ] Code quality reviewed
+- [ ] Acceptance criteria validated
+- [ ] Edge cases tested
+- [ ] Orphan/unfinished code checked
