@@ -62,10 +62,31 @@ _RESULT_POLICY_VERSION = "policy_version"
 _RESULT_VALIDATION = "validation"
 _VALIDATION_BLOCKING = "blocking"
 _VALIDATION_VIOLATIONS = "violations"
-_DEFAULT_AS_NODE = "content"
+_DEFAULT_AS_NODE: str = SLIDE_TYPE_CONTENT
+_ERR_NO_SLIDE_DRAFTS = "Workflow state has no slide_drafts to repair"
 
 
-def repair_slide_drafts(slide_drafts: list[dict[str, object]]) -> list[dict[str, object]]:  # noqa: PLR0914
+def _extract_string(value: object) -> str | None:
+    """Return stripped string if non-empty, otherwise None."""
+    if isinstance(value, str) and value.strip():
+        return value.strip()
+    return None
+
+
+def _extract_validation_metrics(
+    review_updates: dict[str, object],
+) -> tuple[bool, int, object]:
+    """Extract blocking, violation_count, and raw validation from review updates."""
+    validation = review_updates.get(_REVIEW_PRESENTATION_VALIDATION)
+    if not isinstance(validation, dict):
+        return False, 0, None
+    blocking = validation.get(_VALIDATION_BLOCKING) is True
+    violations = validation.get(_VALIDATION_VIOLATIONS)
+    violation_count = len(violations) if isinstance(violations, list) else 0
+    return blocking, violation_count, validation
+
+
+def repair_slide_drafts(slide_drafts: list[dict[str, object]]) -> list[dict[str, object]]:
     """Normalize malformed draft_text blobs into presentation_pt/en payloads."""
     repaired: list[dict[str, object]] = []
     for slide in slide_drafts:
@@ -80,12 +101,11 @@ def repair_slide_drafts(slide_drafts: list[dict[str, object]]) -> list[dict[str,
 
         pt_data = _as_mapping(parsed.get(_LANG_PT_KEY)) or {}
         en_data = _as_mapping(parsed.get(_LANG_EN_KEY)) or {}
-        tldr_strip = slide.get(_TLDR_STRIP_FIELD)
-        tldr_value = str(tldr_strip).strip() if isinstance(tldr_strip, str) and tldr_strip.strip() else None
+        tldr_value = _extract_string(slide.get(_TLDR_STRIP_FIELD))
         image_prompt = parsed.get(_IMAGE_PROMPT_FIELD)
         if not isinstance(image_prompt, str):
             image_prompt = pt_data.get(_IMAGE_PROMPT_FIELD) or en_data.get(_IMAGE_PROMPT_FIELD)
-        image_prompt_value = str(image_prompt).strip() if isinstance(image_prompt, str) and image_prompt.strip() else None
+        image_prompt_value = _extract_string(image_prompt)
 
         presentation_pt = build_locale_presentation(
             slide_type,
@@ -142,8 +162,7 @@ async def repair_workflow(project_id: str, *, dry_run: bool = False) -> dict[str
 
         raw_drafts = state.get(_STATE_SLIDE_DRAFTS)
         if not isinstance(raw_drafts, list):
-            msg = "Workflow state has no slide_drafts to repair"
-            raise TypeError(msg)
+            raise TypeError(_ERR_NO_SLIDE_DRAFTS)
 
         draft_dicts = [slide for slide in raw_drafts if isinstance(slide, dict)]
         repaired_drafts = normalize_slide_drafts(draft_dicts)
@@ -155,13 +174,7 @@ async def repair_workflow(project_id: str, *, dry_run: bool = False) -> dict[str
             policy_version=DEFAULT_PRESENTATION_POLICY_VERSION,
         )
 
-        validation = review_updates.get(_REVIEW_PRESENTATION_VALIDATION)
-        blocking = False
-        violation_count = 0
-        if isinstance(validation, dict):
-            blocking = validation.get(_VALIDATION_BLOCKING) is True
-            violations = validation.get(_VALIDATION_VIOLATIONS)
-            violation_count = len(violations) if isinstance(violations, list) else 0
+        blocking, violation_count, validation = _extract_validation_metrics(review_updates)
 
         result = {
             _RESULT_PROJECT_ID: project_id,

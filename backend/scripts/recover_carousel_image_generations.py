@@ -20,6 +20,7 @@ import asyncio
 import hashlib
 import os
 import sys
+from dataclasses import dataclass
 from pathlib import Path
 
 import asyncpg
@@ -47,6 +48,36 @@ _COL_IMAGE_STYLE = "image_style"
 _COL_SLIDE_NUMBER = "slide_number"
 _COL_IMAGE_PATH = "image_path"
 _COL_GENERATION_KEY = "generation_key"
+
+
+@dataclass
+class _RecoverProjectOptions:
+    """Command object for recovering a single project's image generations.
+
+    Bundles all parameters for recover_project() to keep it at 1 argument
+    (instead of 4) and follow the command object pattern.
+    """
+
+    conn: asyncpg.Connection
+    project: asyncpg.Record
+    slides: list[asyncpg.Record]
+    run_mode: RunMode
+
+
+@dataclass
+class _SlideProcessingContext:
+    """Command object bundling context for processing carousel slides.
+
+    Replaces scattered individual parameters (previously run_mode, project,
+    images_dir, existing_keys were passed separately) with a single command
+    object that enforces the 'no boolean parameter' pattern.
+    """
+
+    conn: asyncpg.Connection
+    images_dir: Path
+    existing_keys: set[str]
+    project: asyncpg.Record
+    run_mode: RunMode
 
 
 async def _get_connection() -> asyncpg.Connection:
@@ -134,21 +165,16 @@ def _resolve_image_path(
     return None
 
 
-async def _process_slide(  # noqa: PLR0913, PLR0917
-    conn: asyncpg.Connection,
+async def _process_slide(
     slide: asyncpg.Record,
-    images_dir: Path,
-    existing_keys: set[str],
-    output_dir: Path,  # noqa: ARG001
-    project: asyncpg.Record,
-    run_mode: RunMode,
+    ctx: _SlideProcessingContext,
 ) -> tuple[int, int]:
     """Process a single slide and return (recovered, skipped)."""
     image_path = slide[_COL_IMAGE_PATH]
     if not image_path:
         return 0, 0
 
-    abs_path = _resolve_image_path(image_path, images_dir, slide)
+    abs_path = _resolve_image_path(image_path, ctx.images_dir, slide)
     if abs_path is None:
         return 0, 1
 
@@ -156,60 +182,72 @@ async def _process_slide(  # noqa: PLR0913, PLR0917
         return 0, 1
 
     generation_key = hashlib.sha256(
-        f"{project[_COL_IMAGE_MODEL]}:{project[_COL_IMAGE_STYLE]}:{abs_path}".encode()
+        f"{ctx.project[_COL_IMAGE_MODEL]}:{ctx.project[_COL_IMAGE_STYLE]}:{abs_path}".encode()
     ).hexdigest()
 
-    if generation_key in existing_keys:
+    if generation_key in ctx.existing_keys:
         return 0, 1
 
     content_sha = _compute_sha256(abs_path)
 
-    if run_mode == RunMode.DRY_RUN:
+    if ctx.run_mode == RunMode.DRY_RUN:
         print(f"  Would recover: slide {slide[_COL_SLIDE_NUMBER]} from {abs_path.name}")
-    else:
-        await conn.execute(
-            """INSERT INTO carousel_image_generations
-            (id, project_id, slide_id, slide_number, generation_key, status,
-             output_path, content_sha256, provider, model, style, error_json)
-            VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NULL)
-            ON CONFLICT (generation_key) DO NOTHING""",
-            project[_COL_ID],
-            slide[_COL_ID],
-            slide[_COL_SLIDE_NUMBER],
-            generation_key,
-            _STATUS_RECOVERED,
-            str(abs_path),
-            content_sha,
-            project[_COL_IMAGE_MODEL],
-            project[_COL_IMAGE_MODEL],
-            project[_COL_IMAGE_STYLE],
-        )
+        return 1, 0
+
+    await ctx.conn.execute(
+        """INSERT INTO carousel_image_generations
+        (id, project_id, slide_id, slide_number, generation_key, status,
+         output_path, content_sha256, provider, model, style, error_json)
+        VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NULL)
+        ON CONFLICT (generation_key) DO NOTHING""",
+        ctx.project[_COL_ID],
+        slide[_COL_ID],
+        slide[_COL_SLIDE_NUMBER],
+        generation_key,
+        _STATUS_RECOVERED,
+        str(abs_path),
+        content_sha,
+        ctx.project[_COL_IMAGE_MODEL],
+        ctx.project[_COL_IMAGE_MODEL],
+        ctx.project[_COL_IMAGE_STYLE],
+    )
 
     return 1, 0
 
 
-async def recover_project(  # noqa: PLR0913, PLR0917
-    conn: asyncpg.Connection,
-    project: asyncpg.Record,
+async def _process_project_slides(
     slides: list[asyncpg.Record],
-    run_mode: RunMode,
+    ctx: _SlideProcessingContext,
 ) -> tuple[int, int]:
-    output_dir = _resolve_output_dir(project)
-    if output_dir is None:
-        print(f"  Skipping {project[_COL_ID]}: no output_dir or directory not found")
-        return 0, 0
-
-    existing_keys = await _existing_generation_keys(conn, project[_COL_ID])
-    images_dir = output_dir / _IMAGES_DIR_NAME
+    """Iterate over slides and accumulate recovery stats."""
     recovered = 0
     skipped = 0
 
     for slide in slides:
-        rec, skp = await _process_slide(conn, slide, images_dir, existing_keys, output_dir, project, run_mode)
+        rec, skp = await _process_slide(slide, ctx)
         recovered += rec
         skipped += skp
 
     return recovered, skipped
+
+
+async def recover_project(opts: _RecoverProjectOptions) -> tuple[int, int]:
+    output_dir = _resolve_output_dir(opts.project)
+    if output_dir is None:
+        print(f"  Skipping {opts.project[_COL_ID]}: no output_dir or directory not found")
+        return 0, 0
+
+    existing_keys = await _existing_generation_keys(opts.conn, opts.project[_COL_ID])
+    images_dir = output_dir / _IMAGES_DIR_NAME
+
+    ctx = _SlideProcessingContext(
+        conn=opts.conn,
+        images_dir=images_dir,
+        existing_keys=existing_keys,
+        project=opts.project,
+        run_mode=opts.run_mode,
+    )
+    return await _process_project_slides(opts.slides, ctx)
 
 
 async def report_relative_dirs(conn: asyncpg.Connection) -> list[asyncpg.Record]:
@@ -245,7 +283,13 @@ async def main() -> None:
         for project in projects:
             print(f"Processing project {project[_COL_ID]}...")
             slides = await _find_slides(conn, project[_COL_ID])
-            recovered, skipped = await recover_project(conn, project, slides, run_mode)
+            opts = _RecoverProjectOptions(
+                conn=conn,
+                project=project,
+                slides=slides,
+                run_mode=run_mode,
+            )
+            recovered, skipped = await recover_project(opts)
             print(f"  Recovered: {recovered}, Skipped: {skipped}")
             total_recovered += recovered
             total_skipped += skipped

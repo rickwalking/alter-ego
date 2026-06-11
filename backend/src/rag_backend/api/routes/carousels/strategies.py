@@ -2,9 +2,13 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from pydantic import BaseModel
 
 from rag_backend.api.dependencies import require_authenticated_user
+from rag_backend.application.services.carousel.strategy_handlers import (
+    ApplyStrategyResponse,
+    StrategyInfo,
+    StrategyListResponse,
+)
 from rag_backend.application.services.carousel_template.strategies.registry import (
     SlideLayoutRegistry,
 )
@@ -26,29 +30,14 @@ _STRATEGY_NAME_MAX_LENGTH = 50
 router = APIRouter(tags=["carousels-strategies"])
 
 
-class _StrategyInfo(BaseModel):
-    name: str
-    display_name: str
-
-
-class _StrategyListResponse(BaseModel):
-    strategies: list[_StrategyInfo]
-
-
-class _ApplyStrategyResponse(BaseModel):
-    project_id: UUID
-    strategy: str
-    message: str
-
-
 @router.get("/strategies")
 async def list_strategies(
     registry: Annotated[SlideLayoutRegistry, Depends(get_strategy_registry)],
-) -> _StrategyListResponse:
+) -> StrategyListResponse:
     raw = registry.list()
-    return _StrategyListResponse(
+    return StrategyListResponse(
         strategies=[
-            _StrategyInfo(name=r["name"], display_name=r["display_name"]) for r in raw
+            StrategyInfo(name=r["name"], display_name=r["display_name"]) for r in raw
         ]
     )
 
@@ -68,7 +57,7 @@ async def apply_strategy(
     refinement: Annotated[CarouselRefinementService, Depends(get_carousel_refinement)],
     repo: Annotated[CarouselRepository, Depends(get_carousel_repo)],
     registry: Annotated[SlideLayoutRegistry, Depends(get_strategy_registry)],
-) -> _ApplyStrategyResponse:
+) -> ApplyStrategyResponse:
     try:
         registry.get(name)
     except LookupError:
@@ -97,7 +86,7 @@ async def apply_strategy(
         strategy=name,
     )
 
-    return _ApplyStrategyResponse(
+    return ApplyStrategyResponse(
         project_id=project_id,
         strategy=name,
         message=_MSG_STRATEGY_APPLIED,

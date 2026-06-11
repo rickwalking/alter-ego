@@ -39,6 +39,7 @@ _PNG_MAGIC = b"\x89PNG\r\n\x1a\n"
 _WEBP_MAGIC_OFFSET = 8
 _WEBP_MIN_HEADER_LENGTH = 12
 _WEBP_MAGIC = b"WEBP"
+_RIFF_MAGIC = b"RIFF"
 _WEBP_SAVE_QUALITY = 90
 _WEBP_SAVE_METHOD = 6
 
@@ -105,7 +106,7 @@ def _detect_format_from_magic(content: bytes) -> str | None:
         return IMAGE_FORMAT_PNG
     if (
         len(content) >= _WEBP_MIN_HEADER_LENGTH
-        and content[:4] == b"RIFF"
+        and content[:4] == _RIFF_MAGIC
         and content[_WEBP_MAGIC_OFFSET:_WEBP_MIN_HEADER_LENGTH] == _WEBP_MAGIC
     ):
         return IMAGE_FORMAT_WEBP

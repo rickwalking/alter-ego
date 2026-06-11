@@ -17,6 +17,7 @@ from rag_backend.application.services.carousel.localized_slide_builder import (
     resolve_policy_version,
 )
 from rag_backend.application.services.carousel.presentation_policy import (
+    CarouselPresentationPolicy,
     load_presentation_policy,
 )
 from rag_backend.application.services.carousel.presentation_review_repair import (
@@ -44,6 +45,49 @@ WORKFLOW_STATE_PRESENTATION_POLICY_VERSION_KEY = "presentation_policy_version"
 WORKFLOW_STATE_TRANSLATIONS_EN_KEY = "translations_en"
 
 
+def _validate_single_slide(
+    slide: dict[str, object],
+    policy: CarouselPresentationPolicy,
+) -> list[SlideValidationViolation]:
+    """Validate PT and EN locales of one slide, including bilingual parity."""
+    slide_index_value = slide.get(SLIDE_INDEX_KEY)
+    slide_index = slide_index_value if isinstance(slide_index_value, int) else None
+    presentation_pt = as_dict(slide.get(PRESENTATION_PT_KEY))
+    presentation_en = as_dict(slide.get(PRESENTATION_EN_KEY))
+    violations: list[SlideValidationViolation] = []
+    if presentation_pt is not None:
+        violations.extend(
+            validate_slide_payload(
+                ValidatePayloadCommand(
+                    presentation_pt,
+                    locale=LANGUAGE_PT,
+                    policy=policy,
+                    slide_index=slide_index,
+                )
+            )
+        )
+    if presentation_en is not None:
+        violations.extend(
+            validate_slide_payload(
+                ValidatePayloadCommand(
+                    presentation_en,
+                    locale=LANGUAGE_EN,
+                    policy=policy,
+                    slide_index=slide_index,
+                )
+            )
+        )
+    if presentation_pt is not None and presentation_en is not None:
+        parity = validate_bilingual_shape_parity(
+            presentation_pt,
+            presentation_en,
+            slide_index=slide_index,
+        )
+        if parity is not None:
+            violations.append(parity)
+    return violations
+
+
 def validate_localized_slides(
     localized_slides: list[dict[str, object]],
     *,
@@ -54,40 +98,7 @@ def validate_localized_slides(
     policy = load_presentation_policy(active_version)
     violations: list[SlideValidationViolation] = []
     for slide in localized_slides:
-        slide_index_value = slide.get(SLIDE_INDEX_KEY)
-        slide_index = slide_index_value if isinstance(slide_index_value, int) else None
-        presentation_pt = as_dict(slide.get(PRESENTATION_PT_KEY))
-        presentation_en = as_dict(slide.get(PRESENTATION_EN_KEY))
-        if presentation_pt is not None:
-            violations.extend(
-                validate_slide_payload(
-                    ValidatePayloadCommand(
-                        presentation_pt,
-                        locale=LANGUAGE_PT,
-                        policy=policy,
-                        slide_index=slide_index,
-                    )
-                )
-            )
-        if presentation_en is not None:
-            violations.extend(
-                validate_slide_payload(
-                    ValidatePayloadCommand(
-                        presentation_en,
-                        locale=LANGUAGE_EN,
-                        policy=policy,
-                        slide_index=slide_index,
-                    )
-                )
-            )
-        if presentation_pt is not None and presentation_en is not None:
-            parity = validate_bilingual_shape_parity(
-                presentation_pt,
-                presentation_en,
-                slide_index=slide_index,
-            )
-            if parity is not None:
-                violations.append(parity)
+        violations.extend(_validate_single_slide(slide, policy))
     return build_validation_report(violations, blocking=True)
 
 

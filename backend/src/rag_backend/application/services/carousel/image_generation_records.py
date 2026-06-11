@@ -103,9 +103,8 @@ def _generation_record(
 ) -> CarouselImageGeneration:
     error_json: dict[str, object] | None = None
     if record_input.error_message:
-        error_json = {"message": record_input.error_message}
-        if record_input.error_details:
-            error_json.update(record_input.error_details)
+        details = record_input.error_details or {}
+        error_json = {"message": record_input.error_message, **details}
     return CarouselImageGeneration(
         project_id=record_input.project.id,
         slide_id=record_input.slide.id,

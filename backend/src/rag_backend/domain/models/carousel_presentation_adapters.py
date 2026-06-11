@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 
 from rag_backend.domain.constants.carousel_presentation import (
     CONTENT_KIND_FEATURES,
@@ -23,6 +23,13 @@ _TLDR_STRIP_FIELD = "tldr_strip"
 _TRANSLATION_EN_FIELD = "translation_en"
 _FEATURES_FIELD = "features"
 _CONTENT_KIND_FIELD = "content_kind"
+
+# Structural signature constants
+_STRUCTURAL_SIG_SUMMARY_POINTS = "summary_points"
+_STRUCTURAL_SIG_ACTIONS = "actions"
+_STRUCTURAL_SIG_INTRO_TLDR = "intro:tldr"
+_STRUCTURAL_SIG_INTRO_PLAIN = "intro:plain"
+_STRUCTURAL_SIG_INSIGHT_COUNT = "1"
 
 
 def resolve_structured_item_icon_name(item: Mapping[str, object]) -> str | None:
@@ -69,15 +76,21 @@ def adapt_legacy_insight(insight: object) -> dict[str, str] | None:
     return adapt_legacy_structured_item(insight)
 
 
+_ADAPT_EXTRA_HANDLERS: dict[str, Callable[[object], object | None]] = {
+    _FEATURES_FIELD: lambda v: adapt_legacy_structured_items(v),
+    _SUMMARY_POINTS_FIELD: lambda v: adapt_legacy_structured_items(v),
+    _STATS_FIELD: lambda v: adapt_legacy_structured_items(v),
+    _INSIGHT_FIELD: lambda v: adapt_legacy_insight(v),
+    _TLDR_STRIP_FIELD: lambda v: v if isinstance(v, str) else None,
+}
+
+
 def _adapt_extra_value(key: str, value: object) -> object | None:
     """Adapt a single extra value for a given key, or None if the key is not handled."""
-    if key in {_FEATURES_FIELD, _SUMMARY_POINTS_FIELD, _STATS_FIELD}:
-        return adapt_legacy_structured_items(value)
-    if key == _INSIGHT_FIELD:
-        return adapt_legacy_insight(value)
-    if key == _TLDR_STRIP_FIELD and isinstance(value, str):
-        return value
-    return None
+    handler = _ADAPT_EXTRA_HANDLERS.get(key)
+    if handler is None:
+        return None
+    return handler(value)
 
 
 def _read_translation_en(extras: Mapping[str, object]) -> dict[str, object] | None:
@@ -111,41 +124,67 @@ def _count_list_field(payload: Mapping[str, object], field: str) -> int:
     return len(value) if isinstance(value, list) else 0
 
 
+_KIND_SIGNATURE_HANDLERS: dict[str, Callable[[Mapping[str, object]], str]] = {
+    CONTENT_KIND_FEATURES: lambda p: (
+        f"{CONTENT_KIND_FEATURES}:{_count_list_field(p, _FEATURES_FIELD)}"
+    ),
+    CONTENT_KIND_STATS: lambda p: (
+        f"{CONTENT_KIND_STATS}:{_count_list_field(p, _STATS_FIELD)}"
+    ),
+    CONTENT_KIND_INSIGHT: lambda _: (
+        f"{CONTENT_KIND_INSIGHT}:{_STRUCTURAL_SIG_INSIGHT_COUNT}"
+    ),
+}
+
+
 def _content_kind_signature(payload: Mapping[str, object]) -> str | None:
     """Return structural signature from content_kind field, or None."""
     content_kind = payload.get(_CONTENT_KIND_FIELD)
-    if content_kind == CONTENT_KIND_FEATURES:
-        return f"{CONTENT_KIND_FEATURES}:{_count_list_field(payload, _FEATURES_FIELD)}"
-    if content_kind == CONTENT_KIND_STATS:
-        return f"{CONTENT_KIND_STATS}:{_count_list_field(payload, _STATS_FIELD)}"
-    if content_kind == CONTENT_KIND_INSIGHT:
-        return f"{CONTENT_KIND_INSIGHT}:1"
-    return None
+    handler = _KIND_SIGNATURE_HANDLERS.get(content_kind)
+    if handler is None:
+        return None
+    return handler(payload)
+
+
+_FIELD_SIGNATURE_HANDLERS: list[tuple[str, Callable[[Mapping[str, object]], str]]] = [
+    (
+        _SUMMARY_POINTS_FIELD,
+        lambda p: (
+            f"{_STRUCTURAL_SIG_SUMMARY_POINTS}:"
+            f"{_count_list_field(p, _SUMMARY_POINTS_FIELD)}"
+        ),
+    ),
+    (
+        _ACTIONS_FIELD,
+        lambda p: f"{_STRUCTURAL_SIG_ACTIONS}:{_count_list_field(p, _ACTIONS_FIELD)}",
+    ),
+    (
+        _FEATURES_FIELD,
+        lambda p: f"{CONTENT_KIND_FEATURES}:{_count_list_field(p, _FEATURES_FIELD)}",
+    ),
+    (
+        _STATS_FIELD,
+        lambda p: f"{CONTENT_KIND_STATS}:{_count_list_field(p, _STATS_FIELD)}",
+    ),
+    (
+        _INSIGHT_FIELD,
+        lambda _: f"{CONTENT_KIND_INSIGHT}:{_STRUCTURAL_SIG_INSIGHT_COUNT}",
+    ),
+]
 
 
 def structural_signature(payload: Mapping[str, object]) -> str:
     """Return a structural fingerprint used for PT/EN parity checks."""
-    result: str | None = None
-    if _SUMMARY_POINTS_FIELD in payload:
-        result = f"summary_points:{_count_list_field(payload, _SUMMARY_POINTS_FIELD)}"
-    elif _ACTIONS_FIELD in payload:
-        result = f"actions:{_count_list_field(payload, _ACTIONS_FIELD)}"
-    elif _FEATURES_FIELD in payload:
-        result = (
-            f"{CONTENT_KIND_FEATURES}:{_count_list_field(payload, _FEATURES_FIELD)}"
-        )
-    elif _STATS_FIELD in payload:
-        result = f"{CONTENT_KIND_STATS}:{_count_list_field(payload, _STATS_FIELD)}"
-    elif _INSIGHT_FIELD in payload:
-        result = f"{CONTENT_KIND_INSIGHT}:1"
-    else:
-        result = _content_kind_signature(payload)
+    for field, handler in _FIELD_SIGNATURE_HANDLERS:
+        if field in payload:
+            return handler(payload)
+    result = _content_kind_signature(payload)
     if result is not None:
         return result
     tldr = payload.get(_TLDR_STRIP_FIELD)
     if isinstance(tldr, str) and tldr.strip():
-        return "intro:tldr"
-    return "intro:plain"
+        return _STRUCTURAL_SIG_INTRO_TLDR
+    return _STRUCTURAL_SIG_INTRO_PLAIN
 
 
 def detect_translation_shape_mismatch(

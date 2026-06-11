@@ -35,6 +35,22 @@ _DRAFTING_SCAFFOLD_PATTERN = re.compile(
     flags=re.IGNORECASE,
 )
 
+# Slide type identifiers
+_SLIDE_TYPE_INTRO = "intro"
+_SLIDE_TYPE_SUMMARY = "summary"
+_SLIDE_TYPE_CONTENT = "content"
+
+# Budget key identifiers
+_BUDGET_KEY_INTRO_HEADING = "intro_heading"
+_BUDGET_KEY_SUMMARY_HEADING = "summary_heading"
+_BUDGET_KEY_CONTENT_HEADING = "content_heading"
+_BUDGET_KEY_CONTENT_BODY = "content_body"
+_BUDGET_KEY_INTRO_SUBTITLE = "intro_subtitle"
+
+# Structured item field identifiers
+_ITEM_FIELD_TITLE = "title"
+_ITEM_FIELD_BODY = "body"
+
 
 def contains_visible_emoji(text: str) -> bool:
     """Return True when visible copy includes decorative emoji."""
@@ -211,8 +227,8 @@ def validate_structured_items(
                 )
             )
         )
-        title = str(item.get("title") or "")
-        body = str(item.get("body") or "")
+        title = str(item.get(_ITEM_FIELD_TITLE) or "")
+        body = str(item.get(_ITEM_FIELD_BODY) or "")
         violations.extend(
             validate_visible_field(
                 ValidationFieldContext(
@@ -267,13 +283,13 @@ def heading_budget_for_slide_type(
     policy: CarouselPresentationPolicy,
 ) -> TextBudget | None:
     """Resolve heading budget for a slide type."""
-    if slide_type == "intro":
-        return policy.copy_budgets.get("intro_heading")
-    if slide_type == "summary":
-        return policy.copy_budgets.get("summary_heading")
-    if slide_type == "content":
-        return policy.copy_budgets.get("content_heading")
-    return policy.copy_budgets.get("content_heading")
+    if slide_type == _SLIDE_TYPE_INTRO:
+        return policy.copy_budgets.get(_BUDGET_KEY_INTRO_HEADING)
+    if slide_type == _SLIDE_TYPE_SUMMARY:
+        return policy.copy_budgets.get(_BUDGET_KEY_SUMMARY_HEADING)
+    if slide_type == _SLIDE_TYPE_CONTENT:
+        return policy.copy_budgets.get(_BUDGET_KEY_CONTENT_HEADING)
+    return policy.copy_budgets.get(_BUDGET_KEY_CONTENT_HEADING)
 
 
 def body_budget_for_slide_type(
@@ -281,10 +297,10 @@ def body_budget_for_slide_type(
     policy: CarouselPresentationPolicy,
 ) -> TextBudget | None:
     """Resolve body budget for a slide type."""
-    if slide_type == "content":
-        return policy.copy_budgets.get("content_body")
-    if slide_type == "intro":
-        return policy.copy_budgets.get("intro_subtitle")
+    if slide_type == _SLIDE_TYPE_CONTENT:
+        return policy.copy_budgets.get(_BUDGET_KEY_CONTENT_BODY)
+    if slide_type == _SLIDE_TYPE_INTRO:
+        return policy.copy_budgets.get(_BUDGET_KEY_INTRO_SUBTITLE)
     return None
 
 

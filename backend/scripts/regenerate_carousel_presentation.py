@@ -91,10 +91,14 @@ def _print_audit(command: RegenerationCommand, result: RegenerationResult) -> No
     for error in audit.artifact_health_errors:
         print(f"artifact_error={error}")
     if command.render and not command.dry_run:
-        print(f"rendered={result.rendered}")
-        print(f"artifact_version={result.artifact_version}")
+        render_fields: list[tuple[str, object]] = [
+            ("rendered", result.rendered),
+            ("artifact_version", result.artifact_version),
+        ]
         if result.manifest_path is not None:
-            print(f"manifest_path={result.manifest_path}")
+            render_fields.append(("manifest_path", result.manifest_path))
+        for label, value in render_fields:
+            print(f"{label}={value}")
 
 
 async def _run(command: RegenerationCommand) -> int:

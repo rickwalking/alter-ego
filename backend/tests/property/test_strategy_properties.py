@@ -20,7 +20,8 @@ from rag_backend.application.services.carousel_template.strategies.stat_card_gri
     StatCardGridStrategy,
 )
 from rag_backend.domain.models import CarouselProject
-from rag_backend.domain.protocols.carousel import CarouselTheme, _RenderOptions
+from rag_backend.domain.models.carousel import CarouselTheme
+from rag_backend.domain.protocols.carousel import _RenderOptions
 
 _PROJECT = CarouselProject(
     topic="Test",

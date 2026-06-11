@@ -68,8 +68,8 @@ def _safe_str(value: object, default: str = "") -> str:
 def _locale_heading_body(payload: Mapping[str, object] | None) -> tuple[str, str]:
     if payload is None:
         return "", ""
-    heading = _safe_str(payload.get(OUTLINE_LEGACY_HEADING_KEY))
-    body = _safe_str(payload.get(OUTLINE_LEGACY_BODY_KEY))
+    heading = str(payload.get(OUTLINE_LEGACY_HEADING_KEY, ""))
+    body = str(payload.get(OUTLINE_LEGACY_BODY_KEY, ""))
     return heading, body
 
 

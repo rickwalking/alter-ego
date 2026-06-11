@@ -54,8 +54,7 @@ def _resolve_base(project: CarouselProject) -> _ArtifactPaths | None:
     version_root: Path | None = None
     if project.artifact_version:
         vr = project_root / ARTIFACT_VERSIONS_DIR / project.artifact_version
-        if vr.is_dir():
-            version_root = vr
+        version_root = vr if vr.is_dir() else None
     images_dir = version_root / "images" if version_root else project_root / "images"
     manifest_path = (
         version_root / ARTIFACT_MANIFEST_FILENAME
@@ -84,19 +83,14 @@ def resolve_and_reconcile_serving_paths(
         return None
     reconcile_current_index(project)
     project_root = Path(project.output_dir).resolve()
+    version_root: Path | None = None
     if project.artifact_version:
-        version_root = project_root / ARTIFACT_VERSIONS_DIR / project.artifact_version
-        if version_root.is_dir():
-            return ArtifactServingPaths(
-                project_root=project_root,
-                serving_root=version_root,
-                legacy_mode=False,
-                artifact_version=project.artifact_version,
-            )
+        vr = project_root / ARTIFACT_VERSIONS_DIR / project.artifact_version
+        version_root = vr if vr.is_dir() else None
     return ArtifactServingPaths(
         project_root=project_root,
-        serving_root=project_root,
-        legacy_mode=True,
+        serving_root=version_root or project_root,
+        legacy_mode=version_root is None,
         artifact_version=project.artifact_version,
     )
 

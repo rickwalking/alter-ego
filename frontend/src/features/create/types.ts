@@ -21,3 +21,10 @@ export interface CreateWorkflowControlsProps {
   editBudgetBlocked: boolean;
   showPublishLink: boolean;
 }
+
+export interface WorkflowFailedCardProps {
+  currentPhase: string;
+  errorMessage: string | null | undefined;
+  onRetry: () => void;
+  isRetrying: boolean;
+}

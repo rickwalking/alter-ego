@@ -44,13 +44,6 @@ from uuid import uuid4
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from rag_backend.api.constants import (
-    ERR_EMPTY_MESSAGE,
-    SSE_EVENT_COMPLETE,
-    SSE_EVENT_ERROR,
-    SSE_EVENT_TOKEN,
-    SSE_EVENT_TOOL_RESULT,
-)
 from rag_backend.application.services.chat_stream_service import (
     _ChatContext,
     _format_sse_event,
@@ -58,6 +51,13 @@ from rag_backend.application.services.chat_stream_service import (
     _sanitize_chunk,
     _StreamConfig,
     stream_chat_response,
+)
+from rag_backend.domain.constants.chat_stream import (
+    ERR_EMPTY_MESSAGE,
+    SSE_EVENT_COMPLETE,
+    SSE_EVENT_ERROR,
+    SSE_EVENT_TOKEN,
+    SSE_EVENT_TOOL_RESULT,
 )
 from rag_backend.domain.models import Conversation, MessageRole
 
