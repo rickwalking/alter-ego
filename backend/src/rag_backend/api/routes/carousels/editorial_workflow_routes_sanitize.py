@@ -32,18 +32,12 @@ def _sanitize_edited_slides(
     sanitized: list[dict[str, object]] = []
     for slide in edited_slides:
         payload = slide.model_dump()
-        sanitized.append(
-            {
-                "slide_index": payload["slide_index"],
-                "slide_type": sanitize_llm_input(str(payload["slide_type"])),
-                "presentation_pt": _sanitize_payload_strings(
-                    payload["presentation_pt"]
-                ),
-                "presentation_en": _sanitize_payload_strings(
-                    payload["presentation_en"]
-                ),
-            }
-        )
+        sanitized.append({
+            "slide_index": payload["slide_index"],
+            "slide_type": sanitize_llm_input(str(payload["slide_type"])),
+            "presentation_pt": _sanitize_payload_strings(payload["presentation_pt"]),
+            "presentation_en": _sanitize_payload_strings(payload["presentation_en"]),
+        })
     return sanitized
 
 

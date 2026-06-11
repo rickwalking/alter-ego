@@ -171,7 +171,9 @@ def unpack_extras(slide: CarouselSlide) -> SlideData:
     translation_en = extras.get("translation_en") if isinstance(extras, dict) else None
     summary_points = extras.get("summary_points") if isinstance(extras, dict) else None
     tldr_strip = extras.get("tldr_strip") if isinstance(extras, dict) else None
-    long_form_notes = extras.get("long_form_notes") if isinstance(extras, dict) else None
+    long_form_notes = (
+        extras.get("long_form_notes") if isinstance(extras, dict) else None
+    )
     image_prompt = slide.image_prompt or (
         extras.get("image_prompt") if isinstance(extras, dict) else None
     )

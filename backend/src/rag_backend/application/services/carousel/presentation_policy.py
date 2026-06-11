@@ -77,7 +77,9 @@ def render_presentation_policy_context(policy: CarouselPresentationPolicy) -> st
         )
         for slide in policy.slides
     ]
-    rule_lines = [f"- {rule.rule_id}: {rule.summary}" for rule in policy.visible_text.rules]
+    rule_lines = [
+        f"- {rule.rule_id}: {rule.summary}" for rule in policy.visible_text.rules
+    ]
     budget_lines = [
         _format_budget(field_name, budget)
         for field_name, budget in sorted(policy.copy_budgets.items())
@@ -135,7 +137,9 @@ def _parse_policy_document(
     geometry = _parse_geometry(document.get("geometry"))
     lucide_icons = _parse_str_tuple(document.get("lucide_icon_allowlist"))
     fonts = _parse_fonts(document.get("fonts"))
-    lowercase_allowlist = _parse_str_tuple(document.get("intentional_lowercase_allowlist"))
+    lowercase_allowlist = _parse_str_tuple(
+        document.get("intentional_lowercase_allowlist")
+    )
 
     if len(slides) != slide_count:
         raise PresentationPolicyError(ERR_PRESENTATION_POLICY_INVALID)

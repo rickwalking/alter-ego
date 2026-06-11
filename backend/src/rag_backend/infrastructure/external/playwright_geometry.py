@@ -111,7 +111,9 @@ def _font_specs(fonts: FontPolicy) -> list[dict[str, str]]:
     ]
 
 
-def _parse_violations(raw_items: list[dict[str, object]]) -> tuple[GeometryViolation, ...]:
+def _parse_violations(
+    raw_items: list[dict[str, object]],
+) -> tuple[GeometryViolation, ...]:
     parsed: list[GeometryViolation] = []
     for item in raw_items:
         slide_raw = item.get("slide_number")
@@ -132,8 +134,12 @@ def _parse_slide_reports(
 ) -> tuple[SlideGeometryReport, ...]:
     reports: list[SlideGeometryReport] = []
     for item in raw_items:
-        violations = _parse_violations(cast(list[dict[str, object]], item.get("violations", [])))
-        warnings = _parse_violations(cast(list[dict[str, object]], item.get("warnings", [])))
+        violations = _parse_violations(
+            cast(list[dict[str, object]], item.get("violations", []))
+        )
+        warnings = _parse_violations(
+            cast(list[dict[str, object]], item.get("warnings", []))
+        )
         reports.append(
             SlideGeometryReport(
                 slide_number=int(item["slide_number"]),
@@ -146,7 +152,9 @@ def _parse_slide_reports(
     return tuple(reports)
 
 
-def _parse_image_reports(raw_items: list[dict[str, object]]) -> tuple[ImageDecodeReport, ...]:
+def _parse_image_reports(
+    raw_items: list[dict[str, object]],
+) -> tuple[ImageDecodeReport, ...]:
     reports: list[ImageDecodeReport] = []
     for item in raw_items:
         slide_raw = item.get("slide_number")
@@ -165,7 +173,9 @@ def _parse_image_reports(raw_items: list[dict[str, object]]) -> tuple[ImageDecod
     return tuple(reports)
 
 
-def _geometry_params(policy: CarouselPresentationPolicy, *, hd: bool) -> dict[str, object]:
+def _geometry_params(
+    policy: CarouselPresentationPolicy, *, hd: bool
+) -> dict[str, object]:
     geometry = policy.geometry
     footer_gap = geometry.footer_gap_hd if hd else geometry.footer_gap_standard
     tolerance = geometry.tolerance_hd if hd else geometry.tolerance_standard
@@ -249,19 +259,28 @@ async def evaluate_geometry(
     policy: CarouselPresentationPolicy,
     *,
     hd: bool,
-) -> tuple[bool, tuple[SlideGeometryReport, ...], tuple[GeometryViolation, ...], tuple[GeometryViolation, ...]]:
+) -> tuple[
+    bool,
+    tuple[SlideGeometryReport, ...],
+    tuple[GeometryViolation, ...],
+    tuple[GeometryViolation, ...],
+]:
     """Evaluate lower-third geometry predicates for contract-marked slides."""
     raw = await page.evaluate(GEOMETRY_EVAL_SCRIPT, _geometry_params(policy, hd=hd))
     skipped = bool(raw.get("skipped", False))
     slide_reports = _parse_slide_reports(
         cast(list[dict[str, object]], raw.get("slideReports", []))
     )
-    violations = _parse_violations(cast(list[dict[str, object]], raw.get("violations", [])))
+    violations = _parse_violations(
+        cast(list[dict[str, object]], raw.get("violations", []))
+    )
     warnings = _parse_violations(cast(list[dict[str, object]], raw.get("warnings", [])))
     return skipped, slide_reports, violations, warnings
 
 
-def _image_violations(reports: tuple[ImageDecodeReport, ...]) -> tuple[GeometryViolation, ...]:
+def _image_violations(
+    reports: tuple[ImageDecodeReport, ...],
+) -> tuple[GeometryViolation, ...]:
     violations: list[GeometryViolation] = []
     for report in reports:
         if report.decoded:
@@ -290,7 +309,12 @@ async def run_export_preflight(
     image_reports = await decode_required_images(page, policy.geometry.selectors)
     image_violations = _image_violations(image_reports)
 
-    geometry_skipped, slide_reports, geometry_violations, warnings = await evaluate_geometry(
+    (
+        geometry_skipped,
+        slide_reports,
+        geometry_violations,
+        warnings,
+    ) = await evaluate_geometry(
         page,
         policy,
         hd=hd,

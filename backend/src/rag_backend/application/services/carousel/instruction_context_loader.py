@@ -91,19 +91,19 @@ class CarouselInstructionContextLoader:
         slide_block = _slide_block(request.slide_number, policy)
         if slide_block:
             sections.extend([SECTION_SLIDE, slide_block])
-        sections.extend(
-            [
-                SECTION_PERSONA,
-                request.persona_context.strip() or "Default professional voice.",
-                SECTION_REVISION,
-                request.revision_notes.strip() or "None.",
-            ]
-        )
+        sections.extend([
+            SECTION_PERSONA,
+            request.persona_context.strip() or "Default professional voice.",
+            SECTION_REVISION,
+            request.revision_notes.strip() or "None.",
+        ])
         phase_skill, shared_files = _phase_resources(request.phase)
         sections.extend([SECTION_PHASE_SKILL, phase_skill])
         for shared_path in shared_files:
             sections.extend([SECTION_SHARED, read_runtime_shared_markdown(shared_path)])
-        instruction = _bound_instruction("\n\n".join(section.strip() for section in sections if section))
+        instruction = _bound_instruction(
+            "\n\n".join(section.strip() for section in sections if section)
+        )
         return InstructionContextResult(
             instruction=instruction,
             checksum=_instruction_checksum(instruction),

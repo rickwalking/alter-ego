@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from typing import Annotated
 from uuid import UUID
 
@@ -12,7 +13,7 @@ from rag_backend.application.services.carousel.strategy_handlers import (
 from rag_backend.application.services.carousel_template.strategies.registry import (
     SlideLayoutRegistry,
 )
-from rag_backend.domain.models import CarouselStatus, User
+from rag_backend.domain.models import CarouselStatus
 from rag_backend.domain.protocols import CarouselRefinementService, CarouselRepository
 from rag_backend.infrastructure.logging import get_logger
 
@@ -27,7 +28,28 @@ _MSG_STRATEGY_APPLIED = "Slides re-rendered with new strategy"
 _STRATEGY_NAME_MIN_LENGTH = 1
 _STRATEGY_NAME_MAX_LENGTH = 50
 
-router = APIRouter(tags=["carousels-strategies"])
+router = APIRouter(
+    tags=["carousels-strategies"],
+    dependencies=[Depends(require_authenticated_user)],
+)
+
+
+@dataclass
+class _ApplyStrategyContext:
+    """Bundle apply_strategy dependencies (max 3 route args)."""
+
+    refinement: CarouselRefinementService
+    repo: CarouselRepository
+    registry: SlideLayoutRegistry
+
+
+def _resolve_strategy_context(
+    refinement: Annotated[CarouselRefinementService, Depends(get_carousel_refinement)],
+    repo: Annotated[CarouselRepository, Depends(get_carousel_repo)],
+    registry: Annotated[SlideLayoutRegistry, Depends(get_strategy_registry)],
+) -> _ApplyStrategyContext:
+    """Resolve strategy dependencies into a single context object."""
+    return _ApplyStrategyContext(refinement=refinement, repo=repo, registry=registry)
 
 
 @router.get("/strategies")
@@ -53,20 +75,17 @@ async def apply_strategy(
             description="Strategy name to apply",
         ),
     ],
-    _user: Annotated[User, Depends(require_authenticated_user)],
-    refinement: Annotated[CarouselRefinementService, Depends(get_carousel_refinement)],
-    repo: Annotated[CarouselRepository, Depends(get_carousel_repo)],
-    registry: Annotated[SlideLayoutRegistry, Depends(get_strategy_registry)],
+    ctx: Annotated[_ApplyStrategyContext, Depends(_resolve_strategy_context)],
 ) -> ApplyStrategyResponse:
     try:
-        registry.get(name)
+        ctx.registry.get(name)
     except LookupError:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=_ERR_STRATEGY_NOT_FOUND.format(name),
         ) from None
 
-    project = await repo.get_project_by_id(project_id)
+    project = await ctx.repo.get_project_by_id(project_id)
     if project is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -78,7 +97,7 @@ async def apply_strategy(
             detail=_ERR_PROJECT_NOT_COMPLETED,
         )
 
-    await refinement.re_render_slides(project_id, strategy=name)
+    await ctx.refinement.re_render_slides(project_id, strategy=name)
 
     logger.info(
         "strategy_applied",

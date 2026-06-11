@@ -152,7 +152,12 @@ def _json_error_fields(payload: Mapping[object, object]) -> dict[str, str]:
     if not isinstance(raw_error, Mapping):
         return {}
     fields: dict[str, str] = {}
-    for key in (_ERROR_FIELD_TYPE, _ERROR_FIELD_CODE, _ERROR_FIELD_PARAM, _ERROR_FIELD_MESSAGE):
+    for key in (
+        _ERROR_FIELD_TYPE,
+        _ERROR_FIELD_CODE,
+        _ERROR_FIELD_PARAM,
+        _ERROR_FIELD_MESSAGE,
+    ):
         value = raw_error.get(key)
         if isinstance(value, str) and value.strip():
             fields[key] = value.strip()

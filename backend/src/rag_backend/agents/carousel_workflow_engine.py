@@ -125,10 +125,16 @@ class CarouselWorkflowEngine:
             pending_next = getattr(snapshot, "next", ()) or ()
             pending_interrupts = getattr(snapshot, "interrupts", ()) or ()
             has_task_interrupt = any(
-                getattr(task, "interrupts", ()) for task in (getattr(snapshot, "tasks", ()) or ())
+                getattr(task, "interrupts", ())
+                for task in (getattr(snapshot, "tasks", ()) or ())
             )
             phase_status = str((snapshot.values or {}).get("phase_status", ""))
-            if pending_next and not pending_interrupts and not has_task_interrupt and phase_status == PHASE_STATUS_IN_PROGRESS:
+            if (
+                pending_next
+                and not pending_interrupts
+                and not has_task_interrupt
+                and phase_status == PHASE_STATUS_IN_PROGRESS
+            ):
                 result = await self._app.ainvoke(
                     Command(resume=payload),
                     config=config,

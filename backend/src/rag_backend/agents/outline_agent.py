@@ -70,7 +70,9 @@ class OutlineAgent:
                 "locale": "pt",
                 "phase": PHASE_OUTLINE,
                 "slide_count": policy.slide_count,
-                "presentation_policy_context": render_presentation_policy_context(policy),
+                "presentation_policy_context": render_presentation_policy_context(
+                    policy
+                ),
                 "persona_context": "",
                 "revision_notes": "",
             },

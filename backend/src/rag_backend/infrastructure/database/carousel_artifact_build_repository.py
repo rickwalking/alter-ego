@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-from typing import TypedDict
+from typing import TypedDict, cast
 from uuid import UUID
 
-from sqlalchemy import select, update
+from sqlalchemy import CursorResult, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.domain.constants.artifact_build import ERR_ARTIFACT_BUILD_CONFLICT
@@ -136,7 +136,7 @@ class PostgresCarouselArtifactBuildRepository:
                 lock_version=new_lock,
             )
         )
-        if project_result.rowcount != 1:
+        if cast(CursorResult[object], project_result).rowcount != 1:
             raise ValueError(ERR_ARTIFACT_BUILD_CONFLICT)
 
         if prior_artifact_version and prior_artifact_version != artifact_version:
@@ -159,7 +159,7 @@ class PostgresCarouselArtifactBuildRepository:
             )
             .values(status=ARTIFACT_BUILD_STATUS_ACTIVE)
         )
-        if build_result.rowcount != 1:
+        if cast(CursorResult[object], build_result).rowcount != 1:
             raise ValueError(ERR_ARTIFACT_BUILD_CONFLICT)
         await self._session.flush()
         return new_lock

@@ -67,13 +67,11 @@ def render_image_prompt_package(
         raw_prompt = sanitize_image_prompt(raw_prompt)
     theme = request.theme or resolve_theme(request.project)
     rendered_prompt = _strategy_for_project(request.project).wrap(raw_prompt, theme)
-    generation_key = sha256_parts(
-        (
-            request.project.image_model,
-            request.project.image_style,
-            rendered_prompt,
-        )
-    )
+    generation_key = sha256_parts((
+        request.project.image_model,
+        request.project.image_style,
+        rendered_prompt,
+    ))
     prompt_hash = sha256_parts((rendered_prompt,))
     return ImagePromptPackage(
         raw_prompt=raw_prompt,

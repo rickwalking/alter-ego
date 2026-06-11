@@ -140,6 +140,8 @@ _KIND_SIGNATURE_HANDLERS: dict[str, Callable[[Mapping[str, object]], str]] = {
 def _content_kind_signature(payload: Mapping[str, object]) -> str | None:
     """Return structural signature from content_kind field, or None."""
     content_kind = payload.get(_CONTENT_KIND_FIELD)
+    if not isinstance(content_kind, str):
+        return None
     handler = _KIND_SIGNATURE_HANDLERS.get(content_kind)
     if handler is None:
         return None

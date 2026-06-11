@@ -111,7 +111,9 @@ async def upload_creator_asset(
     """Upload and bind a managed creator branding asset to a carousel project."""
     project = await repo.get_project_by_id(project_id)
     if project is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERR_CAROUSEL_NOT_FOUND)
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=ERR_CAROUSEL_NOT_FOUND
+        )
     assert_domain_owner_or_admin(project.owner_id, user)
 
     raw_bytes = await file.read()
@@ -157,7 +159,9 @@ async def select_creator_asset(
     """Select an existing managed creator asset for a carousel project."""
     project = await repo.get_project_by_id(project_id)
     if project is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERR_CAROUSEL_NOT_FOUND)
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=ERR_CAROUSEL_NOT_FOUND
+        )
     assert_domain_owner_or_admin(project.owner_id, user)
 
     try:

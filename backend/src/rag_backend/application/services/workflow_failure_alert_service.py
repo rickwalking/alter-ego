@@ -126,7 +126,9 @@ class WorkflowFailureAlertService:
             )
         )
         stuck = list(result.scalars().all())
-        stale_cutoff = datetime.now(UTC) - timedelta(minutes=ALERT_STALE_IN_PROGRESS_MINUTES)
+        stale_cutoff = datetime.now(UTC) - timedelta(
+            minutes=ALERT_STALE_IN_PROGRESS_MINUTES
+        )
         stale_result = await db.execute(
             select(CarouselProjectModel).where(
                 CarouselProjectModel.phase_status == PHASE_STATUS_IN_PROGRESS,

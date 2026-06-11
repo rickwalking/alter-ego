@@ -74,7 +74,9 @@ class ContentDraftAgent:
                 "key_points": ", ".join(safe_points),
                 "locale": locale,
                 "phase": PHASE_CONTENT,
-                "presentation_policy_context": render_presentation_policy_context(policy),
+                "presentation_policy_context": render_presentation_policy_context(
+                    policy
+                ),
                 "persona_context": persona_context or "Default professional voice.",
                 "revision_notes": revision_notes or "None.",
             },

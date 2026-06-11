@@ -33,13 +33,11 @@ def _parse_structured_items(
     for item in raw_items[:MAX_FEATURE_ITEMS]:
         if not isinstance(item, dict):
             continue
-        parsed.append(
-            {
-                _ICON_NAME_FIELD: _resolve_icon_name(item, default_icon_name),
-                "title": str(item.get("title") or ""),
-                "body": str(item.get("body") or ""),
-            }
-        )
+        parsed.append({
+            _ICON_NAME_FIELD: _resolve_icon_name(item, default_icon_name),
+            "title": str(item.get("title") or ""),
+            "body": str(item.get("body") or ""),
+        })
     return parsed or None
 
 
