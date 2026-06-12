@@ -1,6 +1,6 @@
 # AE-0044 — Builder Pattern for build_workflow_state_response
 
-Status: Intake
+Status: In Development
 Tier: T2
 Priority: Medium
 Type: Task
@@ -150,6 +150,20 @@ Pending.
 ## QA Report
 
 Pending.
+
+## High Risk Areas
+
+<!-- AE-0050 safeguard tagging — feeds architect-skill skeptical-review trigger -->
+
+- Risk level: **MEDIUM**
+- Reason: API response builder change (`build_workflow_state_response` →
+  `build_editorial_workflow_state_response`) on the editorial workflow HTTP
+  surface still consumed by the open PR #11 workflow.
+- Affected high-risk surfaces: carousel workflow (editorial state response),
+  event emission (phase progress / status fields surfaced in the response),
+  artifact paths (image assets surfaced via the sanitized state).
+- Mitigation: typed `@deprecated` wrapper `build_workflow_state_response`
+  retained for the AE-0050 migration window (see AE-0050 wrapper inventory).
 
 ## Decision Log
 

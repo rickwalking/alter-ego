@@ -1,6 +1,6 @@
 # AE-0045 — Strategy and Chain-of-Responsibility for Presentation Logic
 
-Status: Intake
+Status: In Development
 Tier: T2
 Priority: Medium
 Type: Task
@@ -198,6 +198,22 @@ Pending.
 ## QA Report
 
 Pending.
+
+## High Risk Areas
+
+<!-- AE-0050 safeguard tagging — feeds architect-skill skeptical-review trigger -->
+
+- Risk level: **MEDIUM**
+- Reason: presentation logic change — `resolve_presentation_review_from_state`
+  refactored to Chain-of-Responsibility and the review-update builders share
+  `_build_presentation_review_common`. Drives blocking presentation validation
+  that gates content approval.
+- Affected high-risk surfaces: carousel workflow (presentation review +
+  validation gate), event emission (validation status feeds phase events),
+  artifact paths (localized slides reference rendered slide images).
+- Mitigation: public signatures unchanged (no wrapper needed); added pattern
+  test coverage; source refactor entangled in commit `59980df` (see AE-0050
+  rollback ledger).
 
 ## Decision Log
 

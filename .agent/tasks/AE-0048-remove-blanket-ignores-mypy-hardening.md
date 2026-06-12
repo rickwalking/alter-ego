@@ -152,6 +152,20 @@ Pending.
 
 Pending.
 
+## High Risk Areas
+
+<!-- AE-0050 safeguard tagging — feeds architect-skill skeptical-review trigger -->
+
+- Risk level: **HIGH**
+- Reason: CI breakage risk — removing blanket ruff/mypy ignores can turn the
+  backend quality gate red across many modules at once, blocking all merges.
+- Affected high-risk surfaces: carousel workflow (largest concentration of
+  previously-ignored modules), event emission (workflow event services),
+  artifact paths (carousel artifact resolvers/manifest).
+- Mitigation: incremental one-rule-per-commit approach; rollback plan documented
+  above. Note this commit (`59980df`) also carries the AE-0045/0046 source
+  refactor — see AE-0050 rollback ledger for the entanglement caveat.
+
 ## Decision Log
 
 - Rollback procedure documented: revert the PR if CI red > 4h

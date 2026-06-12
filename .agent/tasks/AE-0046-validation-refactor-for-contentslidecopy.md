@@ -1,6 +1,6 @@
 # AE-0046 — Validation Refactor for ContentSlideCopy
 
-Status: Intake
+Status: In Development
 Tier: T2
 Priority: Medium
 Type: Task
