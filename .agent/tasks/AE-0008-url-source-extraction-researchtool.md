@@ -1,6 +1,6 @@
 # AE-0008 — Wire ResearchTool URL Scraping into Editorial Workflow
 
-Status: Intake
+Status: Dev Complete
 Tier: T2
 Priority: High
 Type: Bugfix
@@ -215,11 +215,15 @@ Ticket created from architect research.
 
 ## Files Touched
 
-Pending.
+- backend/.../api/dependencies/agents.py (structlog graceful-degradation logging)
+  (sanitize_web_content + _scrape_url_sources + wiring + 21 tests pre-existed in base)
 
 ## Test Evidence
 
-Pending.
+```
+mypy strict: Success (389); ruff: clean
+targeted: 21 passed; full suite: 1651 passed, 2 skipped
+```
 
 ## QA Report
 

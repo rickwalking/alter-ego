@@ -1,6 +1,6 @@
 # AE-0009 — Frontend Workflow Error Feedback & Retry
 
-Status: Intake
+Status: Dev Complete
 Tier: T2
 Priority: High
 Type: Feature
@@ -257,11 +257,16 @@ Ticket created.
 
 ## Files Touched
 
-Pending.
+- backend: editorial_workflow_routes_response.py, workflow_state_fields.py, +8 builder tests
+- frontend: app/dashboard/create/[id]/page.tsx, features/blog/types-ai.ts, +2 test files
+  (failed-card/publish/sidebar/i18n/hook pre-existed in base)
 
 ## Test Evidence
 
-Pending.
+```
+frontend: typecheck clean, lint clean, 816 passed (73 files)
+backend: mypy Success (389), ruff clean, 1659 passed, 2 skipped
+```
 
 ## QA Report
 
