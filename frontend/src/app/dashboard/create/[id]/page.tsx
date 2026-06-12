@@ -149,7 +149,14 @@ export default function CreateWorkspacePage(): React.ReactElement {
             `${DASHBOARD_ROUTES.CREATE_WORKSPACE(projectId)}?step=${CREATE_STEP_IDS.OUTLINE}`,
           ),
       })(),
-    [editorialWorkflow.start, mappedSources, project, projectId, retrying, router],
+    [
+      editorialWorkflow.start,
+      mappedSources,
+      project,
+      projectId,
+      retrying,
+      router,
+    ],
   );
 
   if (isLoading) {

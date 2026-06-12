@@ -83,7 +83,11 @@ describe("SSE event-name inventory contract", () => {
   // Scenario: Drifted frontend constant is caught in CI
   it("SSE_EVENT_TYPE matches the frozen inventory", () => {
     const expected = inventory.frontend[CHAT_KEY].constants;
-    const mismatches = diffConstants("SSE_EVENT_TYPE", SSE_EVENT_TYPE, expected);
+    const mismatches = diffConstants(
+      "SSE_EVENT_TYPE",
+      SSE_EVENT_TYPE,
+      expected,
+    );
     expect(
       mismatches,
       `SSE event-name drift (frozen until Phase 8). Update docs/architecture/sse-event-inventory.{json,md} and the backend constants in the same PR if intentional. Mismatches: ${mismatches.join("; ")}`,
@@ -91,11 +95,13 @@ describe("SSE event-name inventory contract", () => {
   });
 
   it("inventory lists no frontend constant absent from the maps", () => {
-    const liveMaps: Record<string, Readonly<Record<string, string>> | undefined> =
-      {
-        [EDITORIAL_KEY]: EDITORIAL_WORKFLOW_SSE_EVENTS,
-        [CHAT_KEY]: SSE_EVENT_TYPE,
-      };
+    const liveMaps: Record<
+      string,
+      Readonly<Record<string, string>> | undefined
+    > = {
+      [EDITORIAL_KEY]: EDITORIAL_WORKFLOW_SSE_EVENTS,
+      [CHAT_KEY]: SSE_EVENT_TYPE,
+    };
     const missing: string[] = [];
     for (const [moduleKey, entry] of Object.entries(inventory.frontend)) {
       const live = liveMaps[moduleKey];

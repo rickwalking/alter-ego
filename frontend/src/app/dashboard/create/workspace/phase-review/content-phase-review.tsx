@@ -175,7 +175,8 @@ export function ContentPhaseReview({
             const heading = presentationHeading(presentation, untitledSlide);
             const body = presentationBody(presentation);
             const structuredExtras = listStructuredExtras(presentation);
-            const structuredItems = listPresentationStructuredItems(presentation);
+            const structuredItems =
+              listPresentationStructuredItems(presentation);
             const iconNames = listPresentationIconNames(presentation);
             const headingBudgetLabel = formatBudgetUsage(
               heading,

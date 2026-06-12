@@ -9,8 +9,7 @@ import { PublishFailedNotice } from "./publish-failed-notice";
 //   the awaitingFinalApproval message. The failed branch is extracted into
 //   PublishFailedNotice so it can be tested without the full page harness.
 describe("PublishFailedNotice (publish page failed state)", () => {
-  const WORKSPACE_HREF =
-    "/dashboard/create/project-1/workspace?step=outline";
+  const WORKSPACE_HREF = "/dashboard/create/project-1/workspace?step=outline";
 
   // Scenario: Failed phase shows error card on the publish page
   //   Given the editorial workflow has phase_status "failed"
@@ -41,9 +40,7 @@ describe("PublishFailedNotice (publish page failed state)", () => {
     expect(backLink).toHaveAttribute("href", WORKSPACE_HREF);
 
     // The awaitingFinalApproval branch is NOT rendered in the failed state.
-    expect(
-      screen.queryByText(/Complete final review/),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByText(/Complete final review/)).not.toBeInTheDocument();
   });
 
   // Scenario: Retry from the publish failed card navigates back to workspace
@@ -70,9 +67,7 @@ describe("PublishFailedNotice (publish page failed state)", () => {
       />,
     );
 
-    await user.click(
-      screen.getByRole("button", { name: "Retry Workflow" }),
-    );
+    await user.click(screen.getByRole("button", { name: "Retry Workflow" }));
 
     expect(assignMock).toHaveBeenCalledWith(WORKSPACE_HREF);
 

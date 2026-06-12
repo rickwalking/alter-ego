@@ -6,9 +6,7 @@ import { createRetryWorkflowHandler } from "./create-retry-handler";
 //   error card by resetting `retrying` to false without navigating.
 describe("createRetryWorkflowHandler", () => {
   const project = { topic: "AI", audience: "Devs", niche: "Security" };
-  const sources = [
-    { title: "Doc", content: "text", source_type: "document" },
-  ];
+  const sources = [{ title: "Doc", content: "text", source_type: "document" }];
 
   // Scenario: Retry FAILURE resets retrying and keeps the error card (F-3)
   //   Given a failed workflow

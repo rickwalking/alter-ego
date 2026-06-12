@@ -15,7 +15,10 @@ type StartWorkflow = (input: {
 
 export interface RetryWorkflowHandlerDeps {
   /** Project inputs; nullish when the project has not loaded yet. */
-  project: { topic: string; audience: string; niche: string } | null | undefined;
+  project:
+    | { topic: string; audience: string; niche: string }
+    | null
+    | undefined;
   /** Current in-flight guard value (true while a retry is running). */
   retrying: boolean;
   /** Toggles the in-flight guard / button disabled state. */
@@ -42,8 +45,14 @@ export function createRetryWorkflowHandler(
   deps: RetryWorkflowHandlerDeps,
 ): () => Promise<void> {
   return async (): Promise<void> => {
-    const { project, retrying, setRetrying, start, sources, navigateOnSuccess } =
-      deps;
+    const {
+      project,
+      retrying,
+      setRetrying,
+      start,
+      sources,
+      navigateOnSuccess,
+    } = deps;
     if (!project || retrying) return;
     setRetrying(true);
     try {
