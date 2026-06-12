@@ -1091,6 +1091,16 @@ The total is **preliminary, ±25%**, until the Phase 0 frontend baseline
 re-measurement is published; the estimate is then re-issued with a
 confidence range (round-2 review finding 6).
 
+> **Superseded by baseline 2026-06 (AE-0077):** the re-measurement
+> (`.agent/reports/modularization-baseline-2026-06.md`,
+> `scripts/metrics/baseline_loc.sh`) found frontend production code is
+> 300 files / 25,403 lines (the research's 41,638 figure included tests
+> and stories — a classification omission, not a measurement error) and
+> the five plan-named features total 6,119 production lines. Phase 7's
+> 1-2 week sizing is confirmed. **Revised estimate: 11-21
+> engineer-weeks, confidence ±15%.** The ±25% bracket above is retained
+> as round-2 review-closure evidence.
+
 Approximate effort composition across the total: design/ADR/guardrails
 ~25%, testing and verification ~35%, behavior moves ~30%, cleanup ~10%.
 Testing is deliberately the largest share and is protected by the

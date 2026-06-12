@@ -80,6 +80,12 @@ The investigation included:
 > frontend baseline must be re-measured with a documented methodology
 > (Phase 0 deliverable in the options report) before estimates are
 > re-confirmed.
+>
+> **Resolved (AE-0077, baseline 2026-06):** see
+> `.agent/reports/modularization-baseline-2026-06.md`. The original
+> figures match the all-classes count (prod+tests+stories = 407 files /
+> 41,836 lines) — a classification omission, not a measurement error.
+> Production: 300 files / 25,403 lines.
 
 The carousel/editorial surface is already a large subsystem:
 
@@ -96,6 +102,8 @@ The carousel/editorial surface is already a large subsystem:
 > five frontend features did not reproduce; non-test lines measure roughly
 > 6,100 (create 2,093, blog 2,064, publish 1,077, workflow 752, carousel
 > 133). The `carousel` feature folder is a thin query layer only.
+> **Resolved (AE-0077):** production figure confirmed at 6,119 lines —
+> see `.agent/reports/modularization-baseline-2026-06.md`.
 
 `CarouselProject` or its persistence/API vocabulary appears in 69 backend
 source files and carousel API vocabulary appears in 55 frontend files. This

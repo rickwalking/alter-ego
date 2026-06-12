@@ -1,6 +1,6 @@
 # AE-0077 — Re-measure frontend baseline and re-publish the estimate
 
-Status: Ready
+Status: Dev Complete
 Tier: T2
 Priority: Medium
 Type: Docs
@@ -48,18 +48,18 @@ feature lines) did not reproduce on 2026-06-12 (~305 non-test files /
 
 ## Acceptance Criteria
 
-- [ ] `.agent/reports/modularization-baseline-2026-06.md` exists with
+- [x] `.agent/reports/modularization-baseline-2026-06.md` exists with
       every number traceable to a copy-pasteable command
-- [ ] Running the documented commands twice yields identical output
+- [x] Running the documented commands twice yields identical output
       (deterministic; no timestamps in the measured output)
-- [ ] Production, test, and story code are counted separately with the
+- [x] Production, test, and story code are counted separately with the
       classification rules written down
-- [ ] Per-feature totals exist for all `frontend/src/features/*` children
-- [ ] `domain-modularization.options.md` effort section cites the new
+- [x] Per-feature totals exist for all `frontend/src/features/*` children
+- [x] `domain-modularization.options.md` effort section cites the new
       baseline and states the revised estimate with an explicit confidence
       range via an appended superseded-note (the original ±25% bracket
       text remains in place as review-trail evidence)
-- [ ] The research report's correction callouts link to the new baseline
+- [x] The research report's correction callouts link to the new baseline
       file
 
 ## Gherkin Scenarios
@@ -122,13 +122,28 @@ Not applicable — measurement and documentation only; no runtime behavior.
 
 Ticket created by planner.
 
+### 2026-06-12 (development)
+
+Implemented on docs/ae-0077-frontend-baseline. Script deterministic
+(verified by double-run diff).
+
 ## Files Touched
 
-Pending.
+- `scripts/metrics/baseline_loc.sh` (new, executable)
+- `.agent/reports/modularization-baseline-2026-06.md` (new)
+- `.agent/reports/domain-modularization.options.md` (superseded-note appended; revised estimate 11-21 ew ±15%)
+- `.agent/reports/domain-modularization.research.md` (correction callouts link the baseline)
 
 ## Test Evidence
 
-Pending.
+```bash
+./scripts/metrics/baseline_loc.sh  # run twice, diff -q → byte-identical
+```
+
+Frontend prod 300 files / 25,403 lines; tests 74/15,867; stories 33/566;
+five features 6,119 prod lines; backend 368/44,756; carousel services
+72/12,405. Discrepancy root-caused: research counted all classes
+(407/41,836 ≈ its 406/41,638).
 
 ## QA Report
 
@@ -144,4 +159,8 @@ None.
 
 ## Final Summary
 
-Pending.
+Reproducible baseline published with documented classification rules;
+original research numbers reconciled as a classification omission
+(tests+stories included), not a measurement error. Estimate re-issued:
+11-21 engineer-weeks at ±15% confidence; the ±25% bracket retained as
+review-trail evidence. Phase 7 sizing confirmed.
