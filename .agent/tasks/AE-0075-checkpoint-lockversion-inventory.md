@@ -1,6 +1,6 @@
 # AE-0075 — Checkpoint and lock_version inventory with serialization confirmation
 
-Status: Dev Complete
+Status: Review
 Tier: T2
 Priority: High
 Type: Research
@@ -146,11 +146,11 @@ Feature: Checkpoint fixture portability
 
 ## QA Checklist
 
-- [ ] Security reviewed
-- [ ] Code quality reviewed
-- [ ] Acceptance criteria validated
-- [ ] Edge cases tested
-- [ ] Orphan/unfinished code checked
+- [x] Security reviewed (fixture/report audit; PASS 100/100)
+- [x] Code quality reviewed (ruff clean; scripts robust)
+- [x] Acceptance criteria validated (all verified independently)
+- [x] Edge cases tested (reproducibility, scanner blind spots)
+- [x] Orphan/unfinished code checked (all artifacts accounted for)
 
 ## Progress Log
 
@@ -187,7 +187,10 @@ Verdict line in report: Serialization: PORTABLE.
 
 ## QA Report
 
-Pending.
+`.agent/reports/wave1.qa.md` — wave-level external OpenCode QA
+(CrofAI/kimi-k2.6): round 1 WARN 90/100 (A-), zero blockers, all ACs for
+AE-0075 verified independently; round 2 confirmation after fix commit
+716dba5: **PASS**. Status moved to Review per protocol.
 
 ## Decision Log
 
