@@ -195,6 +195,10 @@ jobs:
       - name: Check import architecture
         run: uv run lint-imports
 
+      - name: Ratchet non-import boundaries (get_container, .commit)
+        working-directory: .
+        run: python3 scripts/metrics/import_baseline.py --check
+
   docstrings:
     name: backend / Docstrings
     runs-on: ubuntu-latest

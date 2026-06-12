@@ -1,8 +1,15 @@
+# GENERATED — do not edit ignore lists by hand.
+# Regenerate: uv run python scripts/metrics/import_baseline.py --emit-importlinter \
+#   > backend/.importlinter   (run from repo root)
+# Static layer contracts below are hand-maintained; the per-contract
+# ignore_imports blocks are the generated AE-0082 baseline exception
+# list (existing violations grandfathered; any NEW pair breaks CI).
+
 [importlinter]
 root_package = rag_backend
 include_external_packages = false
 
-# Contract 1: Domain must not import application, infrastructure, or API
+# Contract: Domain must not import application, infrastructure, or API
 [importlinter:contract:domain-independence]
 name = Domain layer must not depend on outer layers
 type = forbidden
@@ -13,24 +20,7 @@ forbidden_modules =
     rag_backend.infrastructure
     rag_backend.api
 
-# Contract 2: Application must not import infrastructure or API
-[importlinter:contract:application-independence]
-name = Application layer must not depend on infrastructure or API
-type = forbidden
-source_modules =
-    rag_backend.application
-forbidden_modules =
-    rag_backend.infrastructure
-    rag_backend.api
-# Logging is a cross-cutting concern; the application layer and agent
-# orchestrators use the infrastructure logger via a thin wrapper. This
-# is an accepted exception in Clean Architecture for observability.
-ignore_imports =
-    rag_backend.application.** -> rag_backend.infrastructure.logging
-    rag_backend.application.** -> rag_backend.infrastructure.**
-    rag_backend.application.** -> rag_backend.agents.**
-
-# Contract 3: Infrastructure must not import API
+# Contract: Infrastructure must not import API
 [importlinter:contract:infrastructure-independence]
 name = Infrastructure layer must not depend on API
 type = forbidden
@@ -39,10 +29,7 @@ source_modules =
 forbidden_modules =
     rag_backend.api
 
-# Contract 4: API may import all layers (top of the dependency chain)
-# This is implicitly allowed by not having a contract against it.
-
-# Contract 5: Domain layer must be acyclic internally
+# Contract: Domain layer must be acyclic internally
 [importlinter:contract:domain-acyclic]
 name = Domain layer must have no internal import cycles
 type = layers
@@ -51,3 +38,244 @@ layers =
     protocols
     models
     constants
+
+# Contract: module internals are private (import via the facade only)
+# AE-0081 §7c stub; real modules replace _template per §7a.
+[importlinter:contract:template-public-facade]
+name = _template internals are private (import via the facade only)
+type = forbidden
+source_modules =
+    rag_backend.api
+    rag_backend.application
+    rag_backend.domain
+    rag_backend.infrastructure
+forbidden_modules =
+    rag_backend.modules._template.domain
+    rag_backend.modules._template.application
+    rag_backend.modules._template.infrastructure
+    rag_backend.modules._template.api
+    rag_backend.modules._template.bootstrap
+    rag_backend.modules._template.constants
+
+# Contract: Application layer must not depend on infrastructure (grandfathered baseline only)
+# ignore_imports below = generated AE-0082 baseline exception list
+# (Import Linter's own direct-edge view; any NEW edge breaks CI).
+[importlinter:contract:application-no-infrastructure]
+name = Application layer must not depend on infrastructure (grandfathered baseline only)
+type = forbidden
+allow_indirect_imports = true
+source_modules =
+    rag_backend.application
+forbidden_modules =
+    rag_backend.infrastructure
+ignore_imports =
+    rag_backend.application.services.blog_post_ai_service -> rag_backend.infrastructure.database.models
+    rag_backend.application.services.blog_workflow_observability -> rag_backend.infrastructure.monitoring_langfuse
+    rag_backend.application.services.carousel.artifact_build_service -> rag_backend.infrastructure.database.carousel_artifact_build_repository
+    rag_backend.application.services.carousel.artifact_build_service -> rag_backend.infrastructure.database.models.carousel
+    rag_backend.application.services.carousel.artifact_build_service -> rag_backend.infrastructure.logging
+    rag_backend.application.services.carousel.creator_asset_service -> rag_backend.infrastructure.database.creator_asset_repository
+    rag_backend.application.services.carousel.editorial_distribution_generation -> rag_backend.infrastructure.monitoring_langfuse
+    rag_backend.application.services.carousel.editorial_distribution_pack -> rag_backend.infrastructure.database.carousel_repository
+    rag_backend.application.services.carousel.editorial_distribution_persist -> rag_backend.infrastructure.database.carousel_repository
+    rag_backend.application.services.carousel.editorial_finalize -> rag_backend.infrastructure.container
+    rag_backend.application.services.carousel.editorial_finalize -> rag_backend.infrastructure.database.carousel_repository
+    rag_backend.application.services.carousel.editorial_finalize -> rag_backend.infrastructure.logging
+    rag_backend.application.services.carousel.editorial_visual_pipeline -> rag_backend.infrastructure.database.carousel_repository
+    rag_backend.application.services.carousel.editorial_workflow_resume_runner -> rag_backend.infrastructure.database.config
+    rag_backend.application.services.carousel.editorial_workflow_resume_runner -> rag_backend.infrastructure.database.models.carousel
+    rag_backend.application.services.carousel.editorial_workflow_resume_runner -> rag_backend.infrastructure.logging
+    rag_backend.application.services.carousel.editorial_workflow_service -> rag_backend.infrastructure.database.models.carousel
+    rag_backend.application.services.carousel.editorial_workflow_service -> rag_backend.infrastructure.monitoring_langfuse
+    rag_backend.application.services.carousel.editorial_workflow_service_helpers -> rag_backend.infrastructure.external.openai_embeddings
+    rag_backend.application.services.carousel.image_generation_records -> rag_backend.infrastructure.logging
+    rag_backend.application.services.carousel.legacy_presentation_regeneration -> rag_backend.infrastructure.database.carousel_repository
+    rag_backend.application.services.carousel.nodes.content -> rag_backend.infrastructure.logging
+    rag_backend.application.services.carousel.nodes.content.core -> rag_backend.infrastructure.logging
+    rag_backend.application.services.carousel.nodes.export -> rag_backend.infrastructure.logging
+    rag_backend.application.services.carousel.nodes.images -> rag_backend.infrastructure.external.openai_image
+    rag_backend.application.services.carousel.nodes.images -> rag_backend.infrastructure.logging
+    rag_backend.application.services.carousel.phase_artifact_runner -> rag_backend.infrastructure.container
+    rag_backend.application.services.carousel.phase_artifact_runner -> rag_backend.infrastructure.external.openai_embeddings
+    rag_backend.application.services.carousel_refinement -> rag_backend.infrastructure.logging
+    rag_backend.application.services.chat_stream_service -> rag_backend.infrastructure.database.conversation_repository
+    rag_backend.application.services.content_calendar_service -> rag_backend.infrastructure.database.models.blog_post
+    rag_backend.application.services.content_calendar_service -> rag_backend.infrastructure.database.models.carousel
+    rag_backend.application.services.document_pipeline -> rag_backend.infrastructure.logging
+    rag_backend.application.services.editorial_analytics_service -> rag_backend.infrastructure.database.models.blog_post
+    rag_backend.application.services.embedding_adapter -> rag_backend.infrastructure.external.openai_embeddings
+    rag_backend.application.services.linkedin_post_generator -> rag_backend.infrastructure.logging
+    rag_backend.application.services.notification_service -> rag_backend.infrastructure.database.models.notification
+    rag_backend.application.services.notification_service -> rag_backend.infrastructure.database.models.user
+    rag_backend.application.services.notification_service -> rag_backend.infrastructure.logging
+    rag_backend.application.services.optimistic_lock_service -> rag_backend.infrastructure.database.models.blog_post
+    rag_backend.application.services.optimistic_lock_service -> rag_backend.infrastructure.database.models.carousel
+    rag_backend.application.services.optimistic_lock_service -> rag_backend.infrastructure.database.models.content_lock
+    rag_backend.application.services.pdf_slide_builder -> rag_backend.infrastructure.logging
+    rag_backend.application.services.phase5_migration_service -> rag_backend.infrastructure.database.models.carousel
+    rag_backend.application.services.phase5_migration_service -> rag_backend.infrastructure.database.models.persona_rubric
+    rag_backend.application.services.quality_evaluation_service -> rag_backend.infrastructure.container
+    rag_backend.application.services.quality_evaluation_service -> rag_backend.infrastructure.monitoring_langfuse
+    rag_backend.application.services.scheduled_publish_service -> rag_backend.infrastructure.database.models.blog_post
+    rag_backend.application.services.scheduled_publish_service -> rag_backend.infrastructure.logging
+    rag_backend.application.services.workflow_event_service -> rag_backend.infrastructure.database.models.workflow_audit_log
+    rag_backend.application.services.workflow_event_service -> rag_backend.infrastructure.logging
+    rag_backend.application.services.workflow_failure_alert_service -> rag_backend.infrastructure.database.models.carousel
+    rag_backend.application.services.workflow_failure_alert_service -> rag_backend.infrastructure.database.models.notification
+    rag_backend.application.services.workflow_failure_alert_service -> rag_backend.infrastructure.database.models.user
+    rag_backend.application.services.workflow_failure_alert_service -> rag_backend.infrastructure.logging
+    rag_backend.application.services.writing_style_profile -> rag_backend.infrastructure.logging
+    rag_backend.application.tools.knowledge_base.search_documents -> rag_backend.infrastructure.logging
+
+# Contract: Application layer must not depend on agents (grandfathered baseline only)
+# ignore_imports below = generated AE-0082 baseline exception list
+# (Import Linter's own direct-edge view; any NEW edge breaks CI).
+[importlinter:contract:application-no-agents]
+name = Application layer must not depend on agents (grandfathered baseline only)
+type = forbidden
+allow_indirect_imports = true
+source_modules =
+    rag_backend.application
+forbidden_modules =
+    rag_backend.agents
+ignore_imports =
+    rag_backend.application.services.blog_post_ai_service -> rag_backend.agents.input_sanitizer
+    rag_backend.application.services.blog_post_ai_service -> rag_backend.agents.persona_agent
+    rag_backend.application.services.carousel.editorial_distribution_generation -> rag_backend.agents.input_sanitizer
+    rag_backend.application.services.carousel.editorial_workflow_feedback -> rag_backend.agents.carousel_workflow
+    rag_backend.application.services.carousel.editorial_workflow_generators -> rag_backend.agents.content_draft_agent
+    rag_backend.application.services.carousel.editorial_workflow_generators -> rag_backend.agents.outline_agent
+    rag_backend.application.services.carousel.editorial_workflow_generators -> rag_backend.agents.source_synthesis_agent
+    rag_backend.application.services.carousel.editorial_workflow_service -> rag_backend.agents.carousel_editorial_orchestrator
+    rag_backend.application.services.carousel.editorial_workflow_service_helpers -> rag_backend.agents.carousel_editorial_orchestrator
+    rag_backend.application.services.carousel.editorial_workflow_service_helpers -> rag_backend.agents.feedback_learning
+    rag_backend.application.services.carousel.phase_artifact_runner -> rag_backend.agents.content_draft_agent
+    rag_backend.application.services.carousel.phase_artifact_runner -> rag_backend.agents.feedback_learning
+    rag_backend.application.services.carousel.phase_artifact_runner -> rag_backend.agents.outline_agent
+    rag_backend.application.services.carousel.phase_artifact_runner -> rag_backend.agents.persona_agent
+    rag_backend.application.services.carousel_refinement -> rag_backend.agents.prompts.registry
+    rag_backend.application.services.carousel_template.prompts -> rag_backend.agents.prompts.registry
+    rag_backend.application.services.quality_evaluation_service -> rag_backend.agents.quality_agent
+    rag_backend.application.services.rag_agent -> rag_backend.agents.rag_agent
+    rag_backend.application.tools.carousel.generate_carousel -> rag_backend.agents.input_sanitizer
+    rag_backend.application.tools.carousel.refine_copy -> rag_backend.agents.input_sanitizer
+    rag_backend.application.tools.carousel.refine_copy -> rag_backend.agents.prompts.registry
+    rag_backend.application.tools.carousel.refine_design -> rag_backend.agents.input_sanitizer
+    rag_backend.application.tools.carousel.regenerate_image -> rag_backend.agents.input_sanitizer
+
+# Contract: Agents must not depend on application (grandfathered baseline only)
+# ignore_imports below = generated AE-0082 baseline exception list
+# (Import Linter's own direct-edge view; any NEW edge breaks CI).
+[importlinter:contract:agents-no-application]
+name = Agents must not depend on application (grandfathered baseline only)
+type = forbidden
+allow_indirect_imports = true
+source_modules =
+    rag_backend.agents
+forbidden_modules =
+    rag_backend.application
+ignore_imports =
+    rag_backend.agents.alter_ego_agent -> rag_backend.application.services.chat_stream_service
+    rag_backend.agents.alter_ego_agent -> rag_backend.application.tools.knowledge_base
+    rag_backend.agents.carousel_editorial_orchestrator -> rag_backend.application.services.carousel.editorial_workflow_generators
+    rag_backend.agents.carousel_editorial_orchestrator -> rag_backend.application.services.carousel.editorial_workflow_support
+    rag_backend.agents.carousel_editorial_orchestrator -> rag_backend.application.services.carousel.phase_artifact_runner
+    rag_backend.agents.carousel_editorial_orchestrator -> rag_backend.application.services.carousel.workflow_state
+    rag_backend.agents.carousel_editorial_orchestrator -> rag_backend.application.services.image_provider_registry
+    rag_backend.agents.carousel_workflow_engine -> rag_backend.application.services.carousel.phase_artifact_runner
+    rag_backend.agents.carousel_workflow_engine -> rag_backend.application.services.carousel.workflow_state
+    rag_backend.agents.carousel_workflow_graph -> rag_backend.application.services.carousel.workflow_state
+    rag_backend.agents.carousel_workflow_nodes -> rag_backend.application.services.carousel.phase_artifact_runner
+    rag_backend.agents.carousel_workflow_nodes -> rag_backend.application.services.carousel.presentation_review_edits
+    rag_backend.agents.carousel_workflow_nodes -> rag_backend.application.services.carousel.workflow_state
+    rag_backend.agents.content_draft_agent -> rag_backend.application.services.carousel.instruction_context_loader
+    rag_backend.agents.content_draft_agent -> rag_backend.application.services.carousel.presentation_policy
+    rag_backend.agents.outline_agent -> rag_backend.application.services.carousel.instruction_context_loader
+    rag_backend.agents.outline_agent -> rag_backend.application.services.carousel.outline_normalize
+    rag_backend.agents.outline_agent -> rag_backend.application.services.carousel.presentation_policy
+    rag_backend.agents.rag_agent -> rag_backend.application.services.chat_stream_service
+    rag_backend.agents.rag_agent -> rag_backend.application.tools
+    rag_backend.agents.rag_agent -> rag_backend.application.tools.carousel.access
+    rag_backend.agents.rag_agent -> rag_backend.application.tools.carousel.generate_carousel
+
+# Contract: API must not depend on infrastructure (grandfathered baseline only)
+# ignore_imports below = generated AE-0082 baseline exception list
+# (Import Linter's own direct-edge view; any NEW edge breaks CI).
+[importlinter:contract:api-no-infrastructure]
+name = API must not depend on infrastructure (grandfathered baseline only)
+type = forbidden
+allow_indirect_imports = true
+source_modules =
+    rag_backend.api
+forbidden_modules =
+    rag_backend.infrastructure
+ignore_imports =
+    rag_backend.api.dependencies.agents -> rag_backend.infrastructure.container
+    rag_backend.api.dependencies.agents -> rag_backend.infrastructure.database.carousel_repository
+    rag_backend.api.dependencies.agents -> rag_backend.infrastructure.database.conversation_repository
+    rag_backend.api.dependencies.agents -> rag_backend.infrastructure.database.document_repository
+    rag_backend.api.dependencies.agents -> rag_backend.infrastructure.logging
+    rag_backend.api.dependencies.auth -> rag_backend.infrastructure.database.config
+    rag_backend.api.dependencies.auth -> rag_backend.infrastructure.database.user_repository
+    rag_backend.api.dependencies.carousel_access -> rag_backend.infrastructure.database.models
+    rag_backend.api.dependencies.carousel_access -> rag_backend.infrastructure.database.models.carousel
+    rag_backend.api.dependencies.carousel_access -> rag_backend.infrastructure.database.models.source_comment
+    rag_backend.api.dependencies.database -> rag_backend.infrastructure.database.config
+    rag_backend.api.dependencies.resource_access -> rag_backend.infrastructure.database.models
+    rag_backend.api.dependencies.resource_access -> rag_backend.infrastructure.database.models.carousel
+    rag_backend.api.dependencies.roles -> rag_backend.infrastructure.database.models
+    rag_backend.api.middleware.auth -> rag_backend.infrastructure.auth
+    rag_backend.api.middleware.error_handlers -> rag_backend.infrastructure.logging
+    rag_backend.api.middleware.request_logging -> rag_backend.infrastructure.logging
+    rag_backend.api.routes.admin -> rag_backend.infrastructure.auth
+    rag_backend.api.routes.admin -> rag_backend.infrastructure.database.config
+    rag_backend.api.routes.admin -> rag_backend.infrastructure.database.user_repository
+    rag_backend.api.routes.admin_migration -> rag_backend.infrastructure.logging
+    rag_backend.api.routes.auth -> rag_backend.infrastructure.auth
+    rag_backend.api.routes.auth -> rag_backend.infrastructure.database.config
+    rag_backend.api.routes.auth -> rag_backend.infrastructure.database.user_repository
+    rag_backend.api.routes.blog_post -> rag_backend.infrastructure.database.blog_post_repository
+    rag_backend.api.routes.blog_post -> rag_backend.infrastructure.database.models
+    rag_backend.api.routes.blog_post_ai -> rag_backend.infrastructure.container
+    rag_backend.api.routes.blog_post_comments -> rag_backend.infrastructure.database.models.source_comment
+    rag_backend.api.routes.blog_post_quality -> rag_backend.infrastructure.container
+    rag_backend.api.routes.blog_post_quality -> rag_backend.infrastructure.external.openai_embeddings
+    rag_backend.api.routes.blog_post_workflow -> rag_backend.infrastructure.database.config
+    rag_backend.api.routes.carousels.admin -> rag_backend.infrastructure.database.config
+    rag_backend.api.routes.carousels.creator_assets -> rag_backend.infrastructure.database.carousel_repository
+    rag_backend.api.routes.carousels.creator_assets -> rag_backend.infrastructure.database.config
+    rag_backend.api.routes.carousels.creator_assets -> rag_backend.infrastructure.database.creator_asset_repository
+    rag_backend.api.routes.carousels.crud -> rag_backend.infrastructure.database.config
+    rag_backend.api.routes.carousels.crud -> rag_backend.infrastructure.database.models.carousel
+    rag_backend.api.routes.carousels.deps -> rag_backend.infrastructure.container
+    rag_backend.api.routes.carousels.deps -> rag_backend.infrastructure.database.carousel_repository
+    rag_backend.api.routes.carousels.deps -> rag_backend.infrastructure.database.config
+    rag_backend.api.routes.carousels.editorial_workflow -> rag_backend.infrastructure.database.models.carousel
+    rag_backend.api.routes.carousels.editorial_workflow_routes_support -> rag_backend.infrastructure.container
+    rag_backend.api.routes.carousels.editorial_workflow_routes_validate -> rag_backend.infrastructure.database.models
+    rag_backend.api.routes.carousels.editorial_workflow_routes_validate -> rag_backend.infrastructure.database.models.carousel
+    rag_backend.api.routes.carousels.editorial_workflow_routes_validate -> rag_backend.infrastructure.database.models.user
+    rag_backend.api.routes.carousels.preview -> rag_backend.infrastructure.database.models.carousel
+    rag_backend.api.routes.carousels.publishing -> rag_backend.infrastructure.database.models.carousel
+    rag_backend.api.routes.carousels.strategies -> rag_backend.infrastructure.logging
+    rag_backend.api.routes.chat_stream -> rag_backend.infrastructure.container
+    rag_backend.api.routes.chat_stream -> rag_backend.infrastructure.database.config
+    rag_backend.api.routes.chat_stream -> rag_backend.infrastructure.database.conversation_repository
+    rag_backend.api.routes.conversations -> rag_backend.infrastructure.auth
+    rag_backend.api.routes.conversations -> rag_backend.infrastructure.container
+    rag_backend.api.routes.conversations -> rag_backend.infrastructure.database.config
+    rag_backend.api.routes.conversations -> rag_backend.infrastructure.database.conversation_repository
+    rag_backend.api.routes.conversations -> rag_backend.infrastructure.logging
+    rag_backend.api.routes.documents -> rag_backend.infrastructure.container
+    rag_backend.api.routes.documents -> rag_backend.infrastructure.database.config
+    rag_backend.api.routes.documents -> rag_backend.infrastructure.database.document_repository
+    rag_backend.api.routes.documents -> rag_backend.infrastructure.retrieval.document_processor
+    rag_backend.api.routes.personas -> rag_backend.infrastructure.container
+    rag_backend.api.routes.personas -> rag_backend.infrastructure.database.models
+    rag_backend.api.routes.rubrics -> rag_backend.infrastructure.container
+    rag_backend.api.routes.rubrics -> rag_backend.infrastructure.database.models
+    rag_backend.api.routes.search -> rag_backend.infrastructure.container
+    rag_backend.api.routes.search -> rag_backend.infrastructure.database.config
+    rag_backend.api.routes.sources -> rag_backend.infrastructure.container
+    rag_backend.api.routes.sources -> rag_backend.infrastructure.database.models.source_comment
+    rag_backend.api.routes.workflow_board -> rag_backend.infrastructure.database.models.carousel

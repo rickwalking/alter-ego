@@ -9,6 +9,31 @@ appendix at the bottom is the Phase 1 initial exception list.
 later runs on HEAD will legitimately differ as code lands (drift, not
 non-determinism).
 
+## Consumed by AE-0082 (import boundary ratchet)
+
+The numbers below are the single source of truth (this artifact, commit
+`716dba5`) that AE-0082 pins to. They are mirrored as the `BASELINE_*`
+constants in `scripts/metrics/import_baseline.py`, which exposes three modes:
+
+| Command (run from repo root) | Purpose |
+|------------------------------|---------|
+| `python3 scripts/metrics/import_baseline.py` | Regenerate **this report** (default; stdlib-only, byte-identical on a fixed tree). |
+| `uv run python scripts/metrics/import_baseline.py --emit-importlinter > backend/.importlinter` | Regenerate `backend/.importlinter`: static layer contracts + the **generated baseline exception list** (grandfathers existing violations; any NEW import edge breaks CI). Run from `backend/` (needs the import-linter + grimp env). |
+| `python3 scripts/metrics/import_baseline.py --check` | **Ratchet** the current tree against the numbers below, field-exact, for all six categories. Exit 1 if any value rises. Wired into CI (`backend / Architecture`) and pre-commit. |
+
+The four import categories are ratcheted by `lint-imports` itself (each
+forbidden contract grandfathers exactly the current edges via
+`ignore_imports`, `allow_indirect_imports = true`, no wildcards). The two
+categories Import Linter cannot express — `get_container()` locator sites and
+adapter `.commit()` sites — are ratcheted by `--check`. `--check` compares
+runtime unique-module-pairs, type-checking-only pairs, the locator count, and
+the commit count; counts may only stay equal or decrease.
+
+> Drift note: `api -> infrastructure` legitimately ratcheted **down** from 98
+> to 92 unique runtime pairs after AE-0080 turned `api/app.py` into a
+> re-export shim (its 7 infra imports moved to `bootstrap/`). The `--check`
+> ceiling stays pinned to the AE-0078 numbers below, so the decrease passes.
+
 Two category classes (per the ticket's distinction):
 
 - **wildcard-hidden** — declared forbidden by `backend/.importlinter`
