@@ -58,8 +58,34 @@ The final report must include:
 |------|------|
 | **full** (default) | T2/T3 — all five subagents |
 | **lite** | T1 — security (if high-risk area), AC validation, lint/tests evidence; skip mutation/orphan unless scope warrants |
+| **external** | Any tier when independence matters: the implementation was authored in the same session/agent as the QA would be, or the human requests an outside check |
+| **wave** | Several related tickets completed together — one external run covering the set, with per-ticket AC validation |
 
 Read ticket `Tier:` from `.agent/tasks/`.
+
+## External QA orchestration (OpenCode / Codex / Cursor)
+
+The QA dimensions can be executed by an **external LLM CLI session**
+instead of same-session subagents — eliminating self-review bias when
+the developer and QA would otherwise share a context. Orchestrate it
+automatically:
+
+1. Build the prompt per `references/external-qa.md` (mandatory: skill
+   pointer, commit-pinned scope, read-only + verification-commands
+   allowance, accepted-gaps context, tool-call budget, and the final
+   `QA_VERDICT: PASS|WARN|FAIL` line requirement).
+2. Run `scripts/qa/run_external_qa.sh <prompt> <out> [tool]` — it
+   handles tool fallback (opencode → codex → cursor-agent), the
+   OpenCode hang-at-init recovery, ANSI stripping, and verdict
+   extraction (exit 0/10/20 = PASS/WARN/FAIL).
+3. Loop per the verdict: FAIL → fix → full re-run; WARN → fix
+   actionable findings → short confirmation round; PASS → archive with
+   provenance, write per-ticket `.agent/reports/AE-####.qa.md` files
+   (required by `validate_all_tickets.py` before Review), move
+   ticket(s) to Review.
+
+Reviewer priority and prompt requirements: `config.yaml`. Full runbook
+incl. live progress monitoring: `references/external-qa.md`.
 
 ## Agentic Ticket QA Protocol
 
@@ -210,6 +236,9 @@ Once all five subagents complete, produce the consolidated report:
 
 ## References
 
+- `references/external-qa.md` — External QA orchestration runbook
+- `config.yaml` — External reviewer priority and prompt requirements
+- `scripts/qa/run_external_qa.sh` — Orchestrator (repo root `scripts/qa/`)
 - `docs/guides/qa-checkpoints.md` — Full QA checkpoint reference
 - `docs/decisions/0005-adopt-mutation-testing.md` — Mutation testing thresholds
 - `docs/guides/architectural-quality-enforcement.md` — Code quality tooling
