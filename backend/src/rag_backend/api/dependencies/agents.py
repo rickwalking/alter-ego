@@ -10,7 +10,6 @@ retriever, external services) from the container.
 
 from __future__ import annotations
 
-import logging
 import re
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -61,8 +60,9 @@ from rag_backend.infrastructure.database.conversation_repository import (
 from rag_backend.infrastructure.database.document_repository import (
     PostgresDocumentRepository,
 )
+from rag_backend.infrastructure.logging import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger()
 
 ProjectAccessVerifier = Callable[
     [CarouselProject, CarouselToolAccessContext], str | None
@@ -194,8 +194,9 @@ async def _scrape_url_sources(
         try:
             scraped = await research_tool.scrape_url(content)
             item["content"] = sanitize_web_content(scraped)
-        except Exception:
-            logger.warning("Failed to scrape URL '%s'", content)
+        except Exception as exc:
+            # Graceful degradation: keep the original URL content, log for visibility.
+            logger.warning("url_scrape_failed", url=content, error=str(exc))
     return sources
 
 

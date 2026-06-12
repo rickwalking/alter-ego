@@ -30,6 +30,7 @@ from rag_backend.domain.constants.workflow_state_fields import (
     STATE_FIELD_CAPTION,
     STATE_FIELD_CURRENT_PHASE,
     STATE_FIELD_DESIGN_APPLIED,
+    STATE_FIELD_ERROR_MESSAGE,
     STATE_FIELD_IMAGE_ASSETS,
     STATE_FIELD_LINKEDIN_POST_EN,
     STATE_FIELD_LINKEDIN_POST_PT,
@@ -59,6 +60,7 @@ from rag_backend.domain.constants.workflow_state_fields import (
     STATE_FIELD_VIOLATION_LOCALE,
     STATE_FIELD_VIOLATION_MESSAGE,
     STATE_FIELD_VIOLATIONS,
+    STATE_FIELD_WORKFLOW_ERROR,
     STATE_FIELD_WORKFLOW_STATUS,
 )
 
@@ -204,6 +206,17 @@ def _policy_version_field(state: dict[str, object]) -> str | None:
     return str(raw) if raw is not None else None
 
 
+def _error_message_field(state: dict[str, object]) -> str | None:
+    """Extract the persisted failure message (AE-0009).
+
+    Additive, optional response field. Raw state stores the message under
+    ``workflow_error``; an explicit ``error_message`` key is also honored as a
+    fallback. Returns ``None`` (field omitted by default) when no error is set.
+    """
+    raw = state.get(STATE_FIELD_WORKFLOW_ERROR) or state.get(STATE_FIELD_ERROR_MESSAGE)
+    return str(raw) if raw else None
+
+
 # ── Field mapping ─────────────────────────────────────────────────────────────
 
 _FIELD_MAPPING: list[tuple[str, StateExtractor]] = [
@@ -234,6 +247,7 @@ _FIELD_MAPPING: list[tuple[str, StateExtractor]] = [
     ),
     (STATE_FIELD_STATUS, _status_field),
     (STATE_FIELD_PRESENTATION_POLICY_VERSION, _policy_version_field),
+    (STATE_FIELD_ERROR_MESSAGE, _error_message_field),
 ]
 
 

@@ -1,5 +1,7 @@
 /** Types for blog AI assistance. */
 
+import type { WORKFLOW_PHASE_STATUS } from "@/constants/workflow";
+
 export interface BlogAiSuggestResult {
   original_text: string;
   suggested_text: string;
@@ -84,13 +86,12 @@ export interface SlideImagePrompt {
   theme_colors?: Record<string, string> | null;
 }
 
+// AE-0009: derive the status union from the WORKFLOW_PHASE_STATUS const so the
+// literals stay in sync with the source of truth. Follow-up (AE-0071): migrate
+// to the glossary's status families (phase_status vs build_status vs
+// review_status vs publication_status) once that lands.
 export type WorkflowPhaseStatus =
-  | "pending"
-  | "in_progress"
-  | "awaiting_human"
-  | "approved"
-  | "rejected"
-  | "failed";
+  (typeof WORKFLOW_PHASE_STATUS)[keyof typeof WORKFLOW_PHASE_STATUS];
 
 export interface EditorialWorkflowState {
   project_id: string;

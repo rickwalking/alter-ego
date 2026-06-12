@@ -29,6 +29,11 @@ STATE_FIELD_PRESENTATION_POLICY_VERSION = "presentation_policy_version"
 STATE_FIELD_LOCALIZED_SLIDES = "localized_slides"
 STATE_FIELD_PRESENTATION_VALIDATION = "presentation_validation"
 STATE_FIELD_LOCK_VERSION = "lock_version"
+# Response field carrying the persisted failure message (AE-0009). The raw
+# state stores the message under ``workflow_error`` (WORKFLOW_ERROR_KEY); this
+# names the additive, optional response field surfaced to clients.
+STATE_FIELD_ERROR_MESSAGE = "error_message"
+STATE_FIELD_WORKFLOW_ERROR = "workflow_error"
 
 STATE_DEFAULT_STATUS = "draft"
 
@@ -57,6 +62,7 @@ __all__ = [
     "STATE_FIELD_CAPTION",
     "STATE_FIELD_CURRENT_PHASE",
     "STATE_FIELD_DESIGN_APPLIED",
+    "STATE_FIELD_ERROR_MESSAGE",
     "STATE_FIELD_IMAGE_ASSETS",
     "STATE_FIELD_LINKEDIN_POST_EN",
     "STATE_FIELD_LINKEDIN_POST_PT",
@@ -86,5 +92,6 @@ __all__ = [
     "STATE_FIELD_VIOLATION_FIELD",
     "STATE_FIELD_VIOLATION_LOCALE",
     "STATE_FIELD_VIOLATION_MESSAGE",
+    "STATE_FIELD_WORKFLOW_ERROR",
     "STATE_FIELD_WORKFLOW_STATUS",
 ]

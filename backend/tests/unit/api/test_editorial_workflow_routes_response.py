@@ -20,6 +20,7 @@ from rag_backend.api.routes.carousels.editorial_workflow_routes_response import 
     _FIELD_MAPPING,
     _bool_field,
     _dict_field,
+    _error_message_field,
     _int_field,
     _int_map_field,
     _list_field,
@@ -303,6 +304,43 @@ class TestStatusAndPolicyFields:
         assert _policy_version_field({"presentation_policy_version": 2}) == "2"
 
 
+# ── _error_message_field (AE-0009) ───────────────────────────────────────────
+
+
+class TestErrorMessageField:
+    """AE-0009 backend: error_message included when present, omitted when absent.
+
+    Feature: Workflow Error Feedback & Retry
+    Scenario: Error message persists across page refresh
+      Given the editorial workflow has phase_status "failed"
+      And error_message is stored in the workflow state
+      When the user refreshes the page
+      Then the error card is still displayed
+      And the error message matches the stored error_message
+    """
+
+    def test_missing_returns_none(self) -> None:
+        assert _error_message_field({}) is None
+
+    def test_blank_workflow_error_returns_none(self) -> None:
+        assert _error_message_field({"workflow_error": ""}) is None
+
+    def test_workflow_error_key_used(self) -> None:
+        assert (
+            _error_message_field({"workflow_error": "Invalid JSON"}) == "Invalid JSON"
+        )
+
+    def test_error_message_fallback_key_used(self) -> None:
+        assert _error_message_field({"error_message": "boom"}) == "boom"
+
+    def test_workflow_error_preferred_over_error_message(self) -> None:
+        state = {"workflow_error": "primary", "error_message": "fallback"}
+        assert _error_message_field(state) == "primary"
+
+    def test_non_string_coerced(self) -> None:
+        assert _error_message_field({"workflow_error": 500}) == "500"
+
+
 # ── _FIELD_MAPPING ──────────────────────────────────────────────────────────
 
 
@@ -372,6 +410,21 @@ class TestBuilder:
         state = {STATE_FIELD_PHASE_PROGRESS: "notadict"}
         response = build_editorial_workflow_state_response(state)
         assert response.phase_progress is None
+
+    def test_error_message_omitted_when_absent(self) -> None:
+        # AE-0009: error_message is None on healthy (non-failed) states.
+        response = build_editorial_workflow_state_response({})
+        assert response.error_message is None
+
+    def test_error_message_surfaced_from_workflow_error(self) -> None:
+        # AE-0009 Scenario: Error message persists across page refresh.
+        state = {
+            STATE_FIELD_PROJECT_ID: "p",
+            "phase_status": "failed",
+            "workflow_error": "Invalid JSON response from LLM",
+        }
+        response = build_editorial_workflow_state_response(state)
+        assert response.error_message == "Invalid JSON response from LLM"
 
 
 # ── deprecated wrapper ──────────────────────────────────────────────────────

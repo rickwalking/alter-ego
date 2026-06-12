@@ -131,7 +131,11 @@ export default function CreateWorkspacePage(): React.ReactElement {
     editorialWorkflow.state?.phase_status === WORKFLOW_PHASE_STATUS.FAILED;
 
   const handleRetryWorkflow = useCallback(async (): Promise<void> => {
-    if (!project) return;
+    // Idempotent retry (AE-0009): duplicate clicks must trigger a single
+    // restart. The `retrying` guard short-circuits in-flight clicks before the
+    // button's disabled state propagates — previews the AE-0073 concurrency
+    // contract intent (one restart per failure).
+    if (!project || retrying) return;
     setRetrying(true);
     try {
       await editorialWorkflow.start({
@@ -147,7 +151,7 @@ export default function CreateWorkspacePage(): React.ReactElement {
     } catch {
       setRetrying(false);
     }
-  }, [editorialWorkflow, mappedSources, project, projectId, router]);
+  }, [editorialWorkflow, mappedSources, project, projectId, retrying, router]);
 
   if (isLoading) {
     return (
