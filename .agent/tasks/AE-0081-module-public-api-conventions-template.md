@@ -1,6 +1,6 @@
 # AE-0081 — Module public-API conventions + reusable module template
 
-Status: Ready
+Status: Review
 Tier: T2
 Priority: Medium
 Type: Docs
@@ -90,11 +90,11 @@ Not applicable — scaffolding/structure only; no runtime behavior change.
 
 ## QA Checklist
 
-- [ ] Security reviewed
-- [ ] Code quality reviewed
-- [ ] Acceptance criteria validated
-- [ ] Edge cases tested
-- [ ] Orphan/unfinished code checked
+- [x] Security reviewed
+- [x] Code quality reviewed
+- [x] Acceptance criteria validated
+- [x] Edge cases tested
+- [x] Orphan/unfinished code checked
 
 ## Progress Log
 
@@ -104,15 +104,17 @@ Ticket created by planner (Phase 1 epic breakdown).
 
 ## Files Touched
 
-Pending.
+- docs/architecture/module-conventions.md; backend/src/rag_backend/modules/_template/
 
 ## Test Evidence
 
-Pending.
+```
+mypy 407 clean; lint-imports 4->8 kept/0 broken; ruff clean; pytest 1662 passed
+```
 
 ## QA Report
 
-Pending.
+✅ PASS — Phase 1 batch QA, 2 independent passes (OpenCode+Cursor) both PASS. See `.agent/reports/AE-0081.qa.md` -> `.agent/reports/phase-1.qa.md`.
 
 ## Decision Log
 

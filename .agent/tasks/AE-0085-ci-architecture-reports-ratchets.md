@@ -1,6 +1,6 @@
 # AE-0085 — CI architecture reports + violation ratchets
 
-Status: Ready
+Status: Review
 Tier: T2
 Priority: Medium
 Type: Task
@@ -102,11 +102,11 @@ Feature: Architecture ratchet
 
 ## QA Checklist
 
-- [ ] Security reviewed
-- [ ] Code quality reviewed
-- [ ] Acceptance criteria validated
-- [ ] Edge cases tested
-- [ ] Orphan/unfinished code checked
+- [x] Security reviewed
+- [x] Code quality reviewed
+- [x] Acceptance criteria validated
+- [x] Edge cases tested
+- [x] Orphan/unfinished code checked
 
 ## Progress Log
 
@@ -116,15 +116,17 @@ Ticket created by planner (Phase 1 epic breakdown).
 
 ## Files Touched
 
-Pending.
+- scripts/metrics/import_baseline.py (--summary); .github/workflows/backend-quality-gates.yml; docs/guides/qa-checkpoints.md
 
 ## Test Evidence
 
-Pending.
+```
+--summary report matches baseline; FAIL path demoed; yaml parses; pytest 1662
+```
 
 ## QA Report
 
-Pending.
+✅ PASS — Phase 1 batch QA, 2 independent passes (OpenCode+Cursor) both PASS. See `.agent/reports/AE-0085.qa.md` -> `.agent/reports/phase-1.qa.md`.
 
 ## Decision Log
 

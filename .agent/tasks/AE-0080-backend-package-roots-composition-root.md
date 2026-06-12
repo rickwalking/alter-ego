@@ -1,6 +1,6 @@
 # AE-0080 — Package roots + composition-root scaffolding (bootstrap/modules/platform/legacy)
 
-Status: Ready
+Status: Review
 Tier: T2
 Priority: High
 Type: Task
@@ -96,11 +96,11 @@ Not applicable — scaffolding/structure only; no runtime behavior change.
 
 ## QA Checklist
 
-- [ ] Security reviewed
-- [ ] Code quality reviewed
-- [ ] Acceptance criteria validated
-- [ ] Edge cases tested
-- [ ] Orphan/unfinished code checked
+- [x] Security reviewed
+- [x] Code quality reviewed
+- [x] Acceptance criteria validated
+- [x] Edge cases tested
+- [x] Orphan/unfinished code checked
 
 ## Progress Log
 
@@ -110,15 +110,17 @@ Ticket created by planner (Phase 1 epic breakdown).
 
 ## Files Touched
 
-Pending.
+- bootstrap/modules/platform/legacy roots; bootstrap/app_factory.py; api/app.py shim; main.py; tests/snapshots/openapi_routes.json + test_route_snapshot.py; import_baseline.py CONTAINER_ALLOWED
 
 ## Test Evidence
 
-Pending.
+```
+lint-imports 8/0; mypy 407; pytest 1662 passed; route snapshot pass
+```
 
 ## QA Report
 
-Pending.
+✅ PASS — Phase 1 batch QA, 2 independent passes (OpenCode+Cursor) both PASS. See `.agent/reports/AE-0080.qa.md` -> `.agent/reports/phase-1.qa.md`.
 
 ## Decision Log
 

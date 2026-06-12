@@ -1,6 +1,6 @@
 # AE-0084 — Fresh-database `alembic upgrade head` CI job
 
-Status: Ready
+Status: Blocked
 Tier: T2
 Priority: Medium
 Type: Task
@@ -88,7 +88,7 @@ Feature: Migrations apply from scratch
 ## Dependencies
 
 - Blocks: none
-- Blocked by: none
+- Blocked by: AE-0086 (chain must be self-contained before the fresh-DB gate can pass)
 - Related: AE-0049
 
 ## Implementation Plan
@@ -129,7 +129,7 @@ Pending.
 
 ## Blockers
 
-None.
+Blocked by AE-0086: `alembic upgrade head` fails from empty DB (base tables created via create_all, not migrations). Job + docs implemented and committed; AC3 (clean chain passes) cannot be met until AE-0086 lands.
 
 ## Final Summary
 

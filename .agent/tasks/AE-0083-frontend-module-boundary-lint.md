@@ -1,6 +1,6 @@
 # AE-0083 — Frontend module-boundary lint rules
 
-Status: Ready
+Status: Review
 Tier: T2
 Priority: Medium
 Type: Task
@@ -101,11 +101,11 @@ Feature: Frontend feature boundaries
 
 ## QA Checklist
 
-- [ ] Security reviewed
-- [ ] Code quality reviewed
-- [ ] Acceptance criteria validated
-- [ ] Edge cases tested
-- [ ] Orphan/unfinished code checked
+- [x] Security reviewed
+- [x] Code quality reviewed
+- [x] Acceptance criteria validated
+- [x] Edge cases tested
+- [x] Orphan/unfinished code checked
 
 ## Progress Log
 
@@ -115,15 +115,17 @@ Ticket created by planner (Phase 1 epic breakdown).
 
 ## Files Touched
 
-Pending.
+- frontend/scripts/feature-boundary*.mjs + check/generate; feature-boundary-baseline.json (23); eslint.config.mjs; package.json
 
 ## Test Evidence
 
-Pending.
+```
+npm run lint OK (23 grandfathered, 0 new); typecheck clean; new-violation + app/** guard demonstrated
+```
 
 ## QA Report
 
-Pending.
+✅ PASS — Phase 1 batch QA, 2 independent passes (OpenCode+Cursor) both PASS. See `.agent/reports/AE-0083.qa.md` -> `.agent/reports/phase-1.qa.md`.
 
 ## Decision Log
 

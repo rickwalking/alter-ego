@@ -1,0 +1,146 @@
+# AE-0086 — Baseline initial Alembic migration (self-contained chain)
+
+Status: Ready
+Tier: T2
+Priority: High
+Type: Task
+Area: Backend
+Owner: Unassigned
+Agent Lane: architect → developer → qa → release
+Branch: feat/ae-0086-baseline-migration
+Kanban Card: TBD
+Created: 2026-06-12
+Updated: 2026-06-12
+
+## Goal
+
+Make the Alembic migration chain self-contained so `alembic upgrade head` succeeds from
+an empty database, unblocking the AE-0084 fresh-DB CI gate.
+
+## Problem
+
+Discovered by AE-0084: the base schema (`users`, `projects`, …) is created at startup via
+`Base.metadata.create_all` (`infrastructure/database/config.py:37`), NOT by a migration. The
+existing migrations `0001`-`0011` assume those tables pre-exist (e.g. `0001` does
+`op.add_column('projects', …)` and FKs to `projects.id`/`users.id`). So `alembic upgrade head`
+from empty fails at `0001` (`relation "projects" does not exist`). The chain has never been
+validated from scratch.
+
+## Scope
+
+Architect decides the approach (record in the Decision Log), then implement:
+- **Option A — baseline migration:** add `0000_initial` (down_revision=None) creating the
+  pre-`0001` base schema; set `0001.down_revision = 0000`. Keep startup `create_all` or switch
+  to migrations (decide).
+- **Option B — squash + stamp:** make Alembic the single source (one baseline from current
+  models), replace startup `create_all` with `alembic upgrade head`, stamp existing dev DBs.
+Either way the chain MUST round-trip on an empty DB.
+
+## Non-Goals
+
+- No table/column renames or data reshaping (that is Phase 4+ migrate-in-place).
+- No new domain behavior.
+
+## Modularization Alignment (2026-06-12)
+
+Pre-Phase-1 prerequisite surfaced by the AE-0084 gate. Self-contained migrations underpin the
+Phase 4+ migrate-in-place reversible-path discipline (`docs/architecture/phase-0-risk-register.md`
+F1) and the drain-before-migrate windows. Keep it data-preserving for existing dev stores.
+
+## Acceptance Criteria
+
+- [ ] WHEN `alembic upgrade head` runs against an EMPTY database THE chain SHALL apply cleanly with no errors
+- [ ] WHEN `alembic downgrade base` runs after `upgrade head` on a fresh DB THE round-trip SHALL succeed
+- [ ] WHEN an existing dev database (already create_all'd) is migrated THE approach SHALL not lose data (documented stamp/upgrade path)
+- [ ] THE resulting schema after `upgrade head` SHALL match `Base.metadata` (no autogenerate diff)
+- [ ] WHEN `uv run pytest` runs THE full suite SHALL pass
+- [ ] THE chosen approach (A or B) SHALL be recorded in the Decision Log with rationale
+- [ ] THE AE-0084 fresh-DB CI job SHALL pass once this lands
+
+## Gherkin Scenarios
+
+```gherkin
+Feature: Self-contained migration chain
+  Scenario: upgrade from empty
+    Given an empty database
+    When alembic upgrade head runs
+    Then all revisions apply and the schema matches Base.metadata
+
+  Scenario: round-trip
+    Given a freshly upgraded database
+    When alembic downgrade base runs
+    Then all revisions reverse without error
+```
+
+## Delta
+
+### ADDED
+- Baseline migration (Option A) or squashed baseline (Option B)
+
+### MODIFIED
+- Possibly `infrastructure/database/config.py` startup (create_all -> upgrade head) per decision
+- `0001` down_revision (Option A)
+
+### REMOVED
+- None
+
+## Affected Areas
+
+- Backend: alembic migrations + possibly startup bootstrap
+- Database: schema creation path (no data reshape)
+- API: none
+- Tests: migration round-trip; existing suite
+- Docs: migration/runbook note
+- Deployment: startup migration behavior if Option B
+
+## Dependencies
+
+- Blocks: AE-0084 (fresh-DB CI gate cannot pass until the chain is self-contained)
+- Blocked by: none (architect decision required first)
+- Related: AE-0084, phase-0-risk-register F1
+
+## Implementation Plan
+
+1. Architect: choose Option A vs B; record rationale.
+2. Implement the baseline; wire down_revision / startup as decided.
+3. Verify upgrade head + downgrade base round-trip on a scratch empty DB.
+4. Verify no autogenerate diff vs Base.metadata; run full suite.
+5. Confirm AE-0084 job green.
+
+## QA Checklist
+
+- [ ] Security reviewed
+- [ ] Code quality reviewed
+- [ ] Acceptance criteria validated
+- [ ] Edge cases tested
+- [ ] Orphan/unfinished code checked
+
+## Progress Log
+
+### 2026-06-12
+
+Created from AE-0084 discovery (chain not self-contained).
+
+## Files Touched
+
+Pending.
+
+## Test Evidence
+
+Pending.
+
+## QA Report
+
+Pending.
+
+## Decision Log
+
+Pending — architect to choose Option A (baseline migration) vs B (squash + stamp).
+
+## Blockers
+
+None (architect decision pending).
+
+## Final Summary
+
+Pending.

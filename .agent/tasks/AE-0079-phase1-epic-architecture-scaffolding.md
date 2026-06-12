@@ -1,6 +1,6 @@
 # AE-0079 — Phase 1 epic: architecture scaffolding without moving behavior
 
-Status: Ready
+Status: In Development
 Tier: T3
 Priority: High
 Type: Epic
