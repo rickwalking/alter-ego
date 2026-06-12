@@ -1,6 +1,6 @@
 # AE-0068 — Frontend: create reusable Spinner component with React Suspense
 
-Status: Dev Complete
+Status: Review
 Tier: T2
 Priority: Medium
 Type: Feature
@@ -91,10 +91,10 @@ Feature: Spinner component
 
 ## QA Checklist
 
-- [ ] Code quality reviewed
-- [ ] Acceptance criteria validated
-- [ ] Edge cases tested
-- [ ] Orphan/unfinished code checked
+- [x] Code quality reviewed
+- [x] Acceptance criteria validated
+- [x] Edge cases tested
+- [x] Orphan/unfinished code checked
 
 ## Files Touched
 
@@ -112,9 +112,7 @@ neon-spinner consolidated tests: 15 passed
 
 ## QA Report
 
-Pending.
-
-## Progress Log
+✅ PASS — Wave 5 batch QA, 2 independent passes both PASS (F-1/F-3 fixed). See `.agent/reports/AE-0068.qa.md` → `.agent/reports/wave-5.qa.md`.Progress Log
 
 ### 2026-06-12
 

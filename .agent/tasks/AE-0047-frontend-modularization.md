@@ -1,6 +1,6 @@
 # AE-0047 — Frontend Modularization
 
-Status: Dev Complete
+Status: Review
 Tier: T2
 Priority: Medium
 Type: Task
@@ -152,9 +152,9 @@ Feature: Component Imports
 
 ## QA Checklist
 
-- [ ] Code quality reviewed — no inline constants/types
-- [ ] Acceptance criteria validated
-- [ ] Edge cases tested — spinner in loading vs loaded state, Suspense fallback
+- [x] Code quality reviewed — no inline constants/types
+- [x] Acceptance criteria validated
+- [x] Edge cases tested — spinner in loading vs loaded state, Suspense fallback
 - [ ] Accessibility checked — aria-label, role="status"
 
 ## Progress Log
@@ -177,9 +177,7 @@ spinner tests: 11/11 passed
 
 ## QA Report
 
-Pending.
-
-## Decision Log
+✅ PASS — Wave 5 batch QA, 2 independent passes both PASS (F-1/F-3 fixed). See `.agent/reports/AE-0047.qa.md` → `.agent/reports/wave-5.qa.md`.Decision Log
 
 Pending.
 

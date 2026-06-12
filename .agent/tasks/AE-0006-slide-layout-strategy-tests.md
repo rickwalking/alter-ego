@@ -1,6 +1,6 @@
 # AE-0006 — Slide Layout Strategy Tests
 
-Status: Dev Complete
+Status: Review
 Tier: T2
 Priority: Medium
 Type: Tests
@@ -178,11 +178,11 @@ None.
 
 ## QA Checklist
 
-- [ ] Security reviewed
-- [ ] Code quality reviewed
-- [ ] Acceptance criteria validated
-- [ ] Edge cases tested
-- [ ] Orphan/unfinished code checked
+- [x] Security reviewed
+- [x] Code quality reviewed
+- [x] Acceptance criteria validated
+- [x] Edge cases tested
+- [x] Orphan/unfinished code checked
 
 ## Progress Log
 
@@ -205,9 +205,7 @@ coverage carousel_template.strategies: 97%
 
 ## QA Report
 
-Pending.
-
-## Decision Log
+✅ PASS — Wave 5 batch QA, 2 independent passes both PASS (F-1/F-3 fixed). See `.agent/reports/AE-0006.qa.md` → `.agent/reports/wave-5.qa.md`.Decision Log
 
 - Tests use StrategyNotFoundError from domain.protocols (not custom per-test exception)
 - Fixtures use existing `sample_project` and `sample_theme` conftest fixtures
