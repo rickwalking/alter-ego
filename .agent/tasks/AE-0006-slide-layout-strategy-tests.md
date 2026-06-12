@@ -1,6 +1,6 @@
 # AE-0006 — Slide Layout Strategy Tests
 
-Status: Intake
+Status: Dev Complete
 Tier: T2
 Priority: Medium
 Type: Tests
@@ -192,16 +192,15 @@ Ticket created.
 
 ## Files Touched
 
-Pending.
+- backend/tests/integration/test_strategy_endpoints.py (+2: 409, 200)
+  (most strategy tests pre-existed)
 
 ## Test Evidence
 
-```bash
-cd backend
-uv run pytest tests/unit/application/strategies/ -v --tb=short
-uv run pytest tests/integration/test_strategy_endpoints.py -v --tb=short
-uv run pytest tests/property/ -v --tb=short
-uv run pytest --cov=rag_backend.application.services.carousel_template.strategies
+```
+targeted strategy suite: 95 passed (+2)
+full suite: 1651 passed, 2 skipped
+coverage carousel_template.strategies: 97%
 ```
 
 ## QA Report

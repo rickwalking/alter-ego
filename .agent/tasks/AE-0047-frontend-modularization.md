@@ -1,6 +1,6 @@
 # AE-0047 — Frontend Modularization
 
-Status: Intake
+Status: Dev Complete
 Tier: T2
 Priority: Medium
 Type: Task
@@ -165,11 +165,15 @@ Ticket created.
 
 ## Files Touched
 
-Pending.
+- frontend/src/components/ui/spinner.test.tsx (11 tests; later relocated by AE-0068)
+  (modularization extraction pre-existed in base)
 
 ## Test Evidence
 
-Pending.
+```
+typecheck: clean; lint: 0 errors
+spinner tests: 11/11 passed
+```
 
 ## QA Report
 

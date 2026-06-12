@@ -1,6 +1,6 @@
 # AE-0068 — Frontend: create reusable Spinner component with React Suspense
 
-Status: Intake
+Status: Dev Complete
 Tier: T2
 Priority: Medium
 Type: Feature
@@ -95,3 +95,27 @@ Feature: Spinner component
 - [ ] Acceptance criteria validated
 - [ ] Edge cases tested
 - [ ] Orphan/unfinished code checked
+
+## Files Touched
+
+- atoms/neon-spinner.tsx (+ labeled Spinner wrapper), atoms/index.ts
+- features/publish/.../regenerate-strategy-section.tsx (import + Suspense)
+- atoms/neon-spinner.test.tsx (new, 15); DELETED ui/spinner.tsx + test
+
+## Test Evidence
+
+```
+typecheck: clean; lint: 0 errors
+full frontend suite: 807 passed (71 files)
+neon-spinner consolidated tests: 15 passed
+```
+
+## QA Report
+
+Pending.
+
+## Progress Log
+
+### 2026-06-12
+
+Consolidated spinners to atoms per 2026-06-12 alignment; Suspense boundary wired.
