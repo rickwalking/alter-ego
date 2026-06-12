@@ -55,6 +55,22 @@ Tool notes:
    record and move on" (one retry max), and **always end with the
    consolidated report + a final line `QA_VERDICT: PASS|WARN|FAIL`**,
    even if dimensions are INCONCLUSIVE.
+7. **Wave mode only** — also emit a JSON findings block so the
+   developer-skill loop can fingerprint findings and detect plateaus:
+
+   ```json
+   { "verdict": "PASS|WARN|FAIL", "wave_id": "wave-2", "iteration": 2,
+     "findings": [ {"id":"F-101","severity":"critical","ticket":"AE-0072",
+                    "file":"src/...","line":42,"problem":"...","fix":"..."} ],
+     "summary": {"critical":0,"warning":1,"minor":3} }
+   ```
+
+   `run_external_qa.sh` extracts the last valid block to
+   `<output>.findings.json`. PASS ⇔ zero `critical` (FAIL-severity)
+   findings; WARN/minor are non-blocking. If omitted, the loop falls
+   back to text findings. Loop thresholds and the convergence
+   pseudocode live in `developer-skill/references/wave-loop.md`;
+   thresholds in `config.yaml` `wave_loop`.
 
 ## Verdict loop (run until quality is satisfied)
 

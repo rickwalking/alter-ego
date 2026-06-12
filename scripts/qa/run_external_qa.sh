@@ -8,6 +8,9 @@
 #     "stream providerID" in seconds; hung runs never do
 #   - one automatic retry on a hung launch
 #   - ANSI stripping and QA_VERDICT extraction from the output
+#   - optional JSON findings block extraction -> <output>.findings.json
+#     (used by developer-skill wave mode for fingerprint/plateau detection;
+#     absence is harmless — the loop falls back to text findings)
 #
 # Usage:
 #   scripts/qa/run_external_qa.sh <prompt-file> <output-file> [tool]
@@ -41,6 +44,30 @@ strip_ansi() { sed -e 's/\x1b\[[0-9;]*m//g' "$1" > "$1.clean" && mv "$1.clean" "
 
 extract_verdict() {
   grep -oE "QA_VERDICT: *(PASS|WARN|FAIL)" "$OUTPUT_FILE" | tail -1 | grep -oE "PASS|WARN|FAIL" || true
+}
+
+# Wave-loop fingerprint/plateau detection (developer-skill wave mode) consumes a
+# JSON findings block when present. Extract the last fenced ```json ... ``` block
+# that parses and contains a "findings" key; write it to <output>.findings.json.
+# Best-effort: absence is fine — the loop falls back to text findings.
+extract_findings_json() {
+  command -v python3 >/dev/null 2>&1 || return 0
+  python3 - "$OUTPUT_FILE" "$OUTPUT_FILE.findings.json" <<'PY' 2>/dev/null || true
+import json, re, sys
+src, dst = sys.argv[1], sys.argv[2]
+text = open(src, encoding="utf-8", errors="replace").read()
+blocks = re.findall(r"```(?:json)?\s*(\{.*?\})\s*```", text, re.DOTALL)
+chosen = None
+for b in blocks:
+    try:
+        obj = json.loads(b)
+    except Exception:
+        continue
+    if isinstance(obj, dict) and "findings" in obj:
+        chosen = obj
+if chosen is not None:
+    json.dump(chosen, open(dst, "w", encoding="utf-8"), indent=2)
+PY
 }
 
 run_opencode() { # one attempt; returns 0 if the run streamed, 3 if hung
@@ -97,6 +124,7 @@ main() {
   esac
 
   strip_ansi "$OUTPUT_FILE"
+  extract_findings_json
   local verdict
   verdict=$(extract_verdict)
   case "$verdict" in

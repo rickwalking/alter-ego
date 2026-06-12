@@ -1,7 +1,7 @@
 ---
 name: qa-agent
-description: "Validate implementation quality across security, code quality, acceptance criteria, and completeness. Use when the user says 'run QA', 'validate the implementation', 'check my code', 'review this PR', 'run the checks', or after the Developer Skill completes. Runs parallel subagents for security audit, code quality, mutation testing, acceptance criteria validation, and orphan code detection. Never use for implementation or development."
-version: 1.1.0
+description: "Validate implementation quality across security, code quality, acceptance criteria, and completeness. Use when the user says 'run QA', 'validate the implementation', 'check my code', 'review this PR', 'run the checks', or after the Developer Skill completes. Builds a shared research pack once, then runs parallel subagents for security audit, code quality, mutation testing, acceptance criteria validation, and orphan code detection. Never use for implementation or development."
+version: 1.2.0
 disable-model-invocation: true
 ---
 
@@ -117,9 +117,34 @@ incl. live progress monitoring: `references/external-qa.md`.
 4. Identify the scope of changes (changed files, new files, modified tests)
 5. If the scope is unclear, ask the user
 
+### Phase 1.5: Build the QA Research Pack (shared context)
+
+**Before launching the 5 reviewers, build a shared research pack once** so the
+subagents skip independent codebase exploration (exploration is the dominant
+token cost). Full protocol: `references/qa-research-pack.md`.
+
+1. Run a **dedicated read-only explorer subagent** (`Explore` agent type) over
+   the change scope. Its model is selectable via `config.yaml`
+   `research_pack.model` (default cheap/fast, overridable to any provider — not
+   locked to Anthropic).
+2. It writes `.agent/reports/AE-####.qa-research.md` (or
+   `.agent/reports/<wave-id>.qa-research.md` for waves) using the 10-section,
+   role-tagged template, stamped with the commit SHA + diff range.
+3. **Staleness**: if the diff later moves (fix round), regenerate the pack (or
+   the affected sections) before re-running QA.
+
 ### Phase 2: Launch Parallel Subagents
 
-Launch **five subagents simultaneously** in a single message. Each receives the scope of changes and writes to its dedicated section.
+Launch **five subagents simultaneously** in a single message. Inject the
+**research pack as a shared (cacheable) prefix** to each, plus a short brief
+naming the sections that matter to it (routing table in
+`references/qa-research-pack.md`). Each subagent:
+
+- reads only its assigned pack sections — **does NOT re-explore the codebase**;
+- **re-verifies §10 UNKNOWNS** in its dimension and confirms any fact against
+  live code before raising a finding (the pack is a map, not a verdict — this
+  preserves independent verification and defeats the shared blind spot);
+- writes to its dedicated report section.
 
 #### Subagent 1 — Security Audit
 **Scope**: OWASP Top 10 2025 + dependency + secret scanning
@@ -236,6 +261,7 @@ Once all five subagents complete, produce the consolidated report:
 
 ## References
 
+- `references/qa-research-pack.md` — Shared research-pack pattern (Phase 1.5)
 - `references/external-qa.md` — External QA orchestration runbook
 - `config.yaml` — External reviewer priority and prompt requirements
 - `scripts/qa/run_external_qa.sh` — Orchestrator (repo root `scripts/qa/`)
