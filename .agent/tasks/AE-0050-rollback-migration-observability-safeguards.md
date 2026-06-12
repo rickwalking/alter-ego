@@ -1,6 +1,6 @@
 # AE-0050 — Rollback, Migration, and Observability Safeguards
 
-Status: Dev Complete
+Status: Review
 Tier: T2
 Priority: Medium
 Type: Task
@@ -156,11 +156,11 @@ Feature: Langfuse Trace Preservation
 
 ## QA Checklist
 
-- [ ] Security reviewed — no auth changes
-- [ ] Code quality reviewed — no type: ignore added
-- [ ] Acceptance criteria validated
-- [ ] Edge cases tested — old function called with new-style args, deprecation warning not raised in test mode
-- [ ] Orphan/unfinished code checked — no dead wrappers
+- [x] Security reviewed — no auth changes
+- [x] Code quality reviewed — no type: ignore added
+- [x] Acceptance criteria validated
+- [x] Edge cases tested — old function called with new-style args, deprecation warning not raised in test mode
+- [x] Orphan/unfinished code checked — no dead wrappers
 
 ## Progress Log
 
@@ -267,7 +267,7 @@ validate_ticket 0044/0045/0048/0050: OK
 
 ## QA Report
 
-Pending.
+✅ PASS — Wave 4 batch QA, 2 independent passes both PASS (1 round-1 warning adjudicated false-positive). See `.agent/reports/AE-0050.qa.md` → `.agent/reports/wave-4.qa.md`.
 
 ## Decision Log
 

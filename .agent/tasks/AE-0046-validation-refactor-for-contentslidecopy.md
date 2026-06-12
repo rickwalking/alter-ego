@@ -1,6 +1,6 @@
 # AE-0046 — Validation Refactor for ContentSlideCopy
 
-Status: Dev Complete
+Status: Review
 Tier: T2
 Priority: Medium
 Type: Task
@@ -125,8 +125,8 @@ Feature: Dispatch-Based Validation
 
 ## QA Checklist
 
-- [ ] Acceptance criteria validated
-- [ ] Edge cases tested — null features, empty lists, wrong types
+- [x] Acceptance criteria validated
+- [x] Edge cases tested — null features, empty lists, wrong types
 - [ ] Mutation score >= 80%
 
 ## Progress Log
@@ -149,7 +149,7 @@ pytest: 1648 passed, 2 skipped
 
 ## QA Report
 
-Pending.
+✅ PASS — Wave 4 batch QA, 2 independent passes both PASS (1 round-1 warning adjudicated false-positive). See `.agent/reports/AE-0046.qa.md` → `.agent/reports/wave-4.qa.md`.
 
 ## Decision Log
 
