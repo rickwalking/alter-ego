@@ -1,6 +1,6 @@
 # AE-0050 — Rollback, Migration, and Observability Safeguards
 
-Status: In Development
+Status: Dev Complete
 Tier: T2
 Priority: Medium
 Type: Task
@@ -254,23 +254,16 @@ Notes:
 
 ## Files Touched
 
-- `backend/tests/unit/application/test_editorial_workflow_service.py` — added
-  `TestEditorialWorkflowServiceLangfuseTraceMetadata` (Langfuse metadata spy
-  test) + imports.
-- `.agent/tasks/AE-0044-builder-pattern-for-build-workflow-state-response.md` —
-  `## High Risk Areas` section.
-- `.agent/tasks/AE-0045-strategy-and-chain-of-responsibility-for-presentation-logic.md`
-  — `## High Risk Areas` section.
-- `.agent/tasks/AE-0048-remove-blanket-ignores-mypy-hardening.md` —
-  `## High Risk Areas` section.
-- `.agent/tasks/AE-0050-rollback-migration-observability-safeguards.md` — this
-  inventory, audit, rollback ledger, and progress.
+- tests/unit/application/test_editorial_workflow_service.py (Langfuse metadata test)
+- .agent/tasks/AE-0044/0045/0048 (high_risk_areas), AE-0050 (inventory/ledger)
 
 ## Test Evidence
 
-- `uv run pytest tests/unit/application/test_editorial_workflow_service.py::TestEditorialWorkflowServiceLangfuseTraceMetadata`
-  → 1 passed.
-- Full backend suite, ruff, and mypy results recorded in the dev report.
+```
+mypy strict: Success (389); ruff: clean
+pytest: 1649 passed, 2 skipped
+validate_ticket 0044/0045/0048/0050: OK
+```
 
 ## QA Report
 

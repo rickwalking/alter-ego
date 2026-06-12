@@ -1,6 +1,6 @@
 # AE-0046 — Validation Refactor for ContentSlideCopy
 
-Status: In Development
+Status: Dev Complete
 Tier: T2
 Priority: Medium
 Type: Task
@@ -137,11 +137,15 @@ Ticket created.
 
 ## Files Touched
 
-Pending.
+- (production refactor pre-existing in base)
+- tests/unit/domain/test_content_kind_validators.py (new, 22)
 
 ## Test Evidence
 
-Pending.
+```
+mypy strict: Success (389); ruff: clean
+pytest: 1648 passed, 2 skipped
+```
 
 ## QA Report
 

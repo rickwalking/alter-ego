@@ -1,6 +1,6 @@
 # AE-0045 — Strategy and Chain-of-Responsibility for Presentation Logic
 
-Status: In Development
+Status: Dev Complete
 Tier: T2
 Priority: Medium
 Type: Task
@@ -189,11 +189,16 @@ Ticket created.
 
 ## Files Touched
 
-Pending.
+- (production refactor pre-existing in base)
+- tests/unit/application/test_malformed_draft_builders.py (new, 18)
+- tests/unit/application/test_presentation_review.py (resolver/parity tests)
 
 ## Test Evidence
 
-Pending.
+```
+mypy strict: Success (389); ruff: clean
+pytest: 1648 passed, 2 skipped
+```
 
 ## QA Report
 

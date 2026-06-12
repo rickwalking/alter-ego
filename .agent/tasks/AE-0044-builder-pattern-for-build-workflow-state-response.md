@@ -1,6 +1,6 @@
 # AE-0044 — Builder Pattern for build_workflow_state_response
 
-Status: In Development
+Status: Dev Complete
 Tier: T2
 Priority: Medium
 Type: Task
@@ -141,11 +141,17 @@ Ticket created.
 
 ## Files Touched
 
-Pending.
+- editorial_workflow_routes_response.py (builder+extractors+wrapper)
+- editorial_workflow_routes_support.py, editorial_workflow.py (call sites)
+- tests/unit/api/test_editorial_workflow_routes_response.py (new, 51 tests)
 
 ## Test Evidence
 
-Pending.
+```
+mypy strict: Success (389); ruff: clean
+pytest: 1648 passed, 2 skipped
+golden snapshot: output byte-identical pre/post
+```
 
 ## QA Report
 
