@@ -52,7 +52,7 @@ class TestStrategyListEndpoint:
             assert "name" in strategy
             assert "display_name" in strategy
 
-    async def test_list_returns_seven_strategies(self, client: AsyncClient):
+    async def test_list_returns_eight_strategies(self, client: AsyncClient):
         response = await client.get("/api/carousels/strategies")
         data = response.json()
         assert len(data["strategies"]) == 8

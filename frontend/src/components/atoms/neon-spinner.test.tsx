@@ -90,6 +90,13 @@ describe("Spinner (labeled wrapper)", () => {
         "Loading strategies",
       );
     });
+
+    // Regression guard (QA F-3): the inner SVG must be aria-hidden so the
+    // labeled wrapper is the SINGLE status live region, not two nested ones.
+    it("Then there is exactly one status region (inner svg is aria-hidden)", () => {
+      render(<Spinner label="Loading strategies" />);
+      expect(screen.getAllByRole("status")).toHaveLength(1);
+    });
   });
 
   // Scenario: Spinner supports size variants
