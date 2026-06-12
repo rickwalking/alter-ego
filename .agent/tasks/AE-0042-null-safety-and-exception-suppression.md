@@ -46,6 +46,20 @@ PR #11 review flagged:
 - Adding new database migrations
 - Touching frontend
 
+## Modularization Alignment (2026-06-12)
+
+Wave A — architecture-neutral debt; execute first. Alignment:
+
+- The Pydantic conversion of `CarouselArtifactManifestPayload` becomes a
+  future `carousel_presentation` domain value object (Phase 5); define it
+  module-local next to the manifest code, not in a shared models dump.
+- **Absorbs AE-0057**: PR #11 comment #10 (unsafe property access at
+  `artifact_manifest.py:171`) is fully covered by this ticket's
+  manifest_from_payload conversion. AE-0057 is reduced to a verification
+  step and closes as duplicate when this merges.
+- Logged suppression warnings must keep Langfuse-compatible context
+  fields where present (AE-0050 verifies).
+
 ## Acceptance Criteria
 
 - [ ] `CarouselArtifactManifestPayload` converted to Pydantic `BaseModel` with typed fields and validators

@@ -36,6 +36,25 @@ PR #11 introduced ~227 Python files. Review found 23 code quality issues and 7 C
 - i18n changes beyond moving constants to dedicated files
 - Custom Kanban web UI or auto-merge
 
+## Modularization Alignment (2026-06-12)
+
+Sequencing against the domain modularization plan (2026-06-12 scan;
+see `.agent/reports/domain-modularization.options.md` and the Phase 0 epic AE-0070):
+
+- **Wave A (now, parallel with Phase 0 / AE-0070-0078):** AE-0041,
+  AE-0042 (absorbs AE-0057), AE-0043, AE-0006, AE-0047 (spinner scope
+  moved to AE-0068), AE-0068, AE-0049.
+- **Wave B (after AE-0041):** AE-0044, AE-0045, AE-0046 — each carries a
+  Modularization Alignment section steering its output into the shape
+  Phases 4-5 lift directly (editorial inbound adapter; carousel
+  presentation module). AE-0050 runs alongside Wave B.
+- **Hard rule (plan):** all Wave A/B carousel-file work merges before
+  any Phase 4-5 physical file movement; deprecation windows (AE-0050)
+  close before Phase 4.
+- Dedupes recorded: AE-0057 superseded by AE-0042; AE-0047 spinner →
+  AE-0068 (two spinner implementations already exist and need
+  consolidation, not a third).
+
 ## Acceptance Criteria
 
 - [ ] All 10 sub-tickets created with full AC and Gherkin scenarios

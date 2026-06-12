@@ -37,6 +37,21 @@ URL extraction code was removed in commit `18607ea` during the carousel pipeline
 - Re-introducing `seed_urls` as a first-class workflow input field
 - Frontend changes
 
+## Modularization Alignment (2026-06-12)
+
+Product bugfix (not debt) — schedule freely, but wire it the
+target-architecture way so Phase 3 doesn't redo it:
+
+- Inject `ResearchTool` through `build_rag_agent()` parameters
+  (constructor injection); do NOT call `get_container()` from
+  application/service code — AE-0078 baselines those violations and new
+  ones are regressions.
+- `_scrape_url_sources()` should be a pure async helper with the tool as
+  an argument — it becomes a `ResearchProvider` port implementation in
+  the plan's port list.
+- `sanitize_web_content()` belongs with input sanitization (future
+  knowledge/conversation boundary); keep it free of agent imports.
+
 ## Acceptance Criteria
 
 - [ ] `sanitize_web_content()` created in `input_sanitizer.py` — strips HTML tags + injection patterns only (no lowercasing, no paren-stripping, no length truncation)

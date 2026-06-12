@@ -46,6 +46,20 @@ PR #11 review flagged 7 instances of magic strings, 6 instances of deeply nested
 - Refactoring the dispatch logic itself (handled in AE-0045)
 - Touching frontend code
 
+## Modularization Alignment (2026-06-12)
+
+Wave A — architecture-neutral debt; execute first (plan rule: cleanup
+before structure change). The touched files are future
+`carousel_presentation` internals (Phase 5). Rules from the plan:
+
+- Keep extracted constants **context-local** to the carousel files; do
+  not create new global constants/helper modules that Phase 5 would
+  immediately relocate (plan "Avoid" list).
+- This ticket unblocks AE-0044/0045/0046 and must merge before any
+  Phase 4-5 file movement (plan sequencing rule).
+- No cross-layer imports may be added; AE-0078 baselines current
+  violations and new ones will be visible.
+
 ## Acceptance Criteria
 
 - [ ] All magic strings in scope replaced with named constants from `domain.constants.*` or new constants files

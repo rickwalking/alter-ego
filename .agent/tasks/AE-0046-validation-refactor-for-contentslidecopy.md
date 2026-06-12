@@ -34,6 +34,21 @@ PR #11 comment on `carousel_presentation.py`: "This is a if hell. So many inner 
 - Refactoring other validators in the same file
 - Adding new content_kind values
 
+## Modularization Alignment (2026-06-12)
+
+Wave B (after AE-0041) — pre-builds target architecture. Per the plan,
+`ContentSlideCopy` validation **belongs to the carousel_presentation
+domain** (Phase 5):
+
+- The `_VALIDATORS` dispatch and `ContentKindValidationContext` stay
+  module-local to the presentation models.
+- The shared `_validate_lucide_icon_name` extraction must live inside
+  the presentation models package (module-level function), NOT in a
+  global shared/validation module — the plan forbids shared-kernel
+  dumping grounds.
+- Pure validation functions with no vendor imports — Phase 5 then moves
+  files, not logic.
+
 ## Acceptance Criteria
 
 - [ ] 3 independent validator functions created, each tested in isolation

@@ -31,6 +31,22 @@ Loading states are handled inline without a shared spinner component. This leads
 
 - Do not change the existing layout or behavior outside of spinner replacement
 
+## Modularization Alignment (2026-06-12)
+
+Scope correction from the 2026-06-12 scan: **two spinner components
+already exist** — `src/components/ui/spinner.tsx` and
+`src/components/atoms/neon-spinner.tsx` (with stories). This ticket is
+now a **consolidation**, not a creation:
+
+- Pick the survivor: `components/atoms/neon-spinner.tsx` (plan rule:
+  generic, domain-neutral components live in atoms; a parallel `ui/`
+  taxonomy fragments atomic design).
+- Fold `ui/spinner.tsx` capabilities (size/label/aria) into the atom,
+  migrate its usages, delete the duplicate.
+- Wire Suspense boundaries in `regenerate-strategy-section.tsx` per the
+  original PR comment.
+- AE-0047's spinner section is deleted and defers here (single owner).
+
 ## Acceptance Criteria
 
 - [ ] `<Spinner>` component exists in `src/components/ui/`

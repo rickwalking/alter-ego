@@ -40,12 +40,10 @@ PR #11 review flagged 4 frontend issues:
 - Utils → `features/publish/utils.ts`
 - Component stays in `regenerate-strategy-section.tsx`
 
-### Create Reusable Spinner
-- Create `components/ui/spinner.tsx` with variants (size: sm/md/lg, color, optional label)
-- Add `aria-label` and `role="status"` for accessibility
-- Add i18n support for spinner label
-- Replace inline loading states with `<Spinner />` in `regenerate-strategy-section.tsx`
-- Wrap relevant sections in `<Suspense fallback={<Spinner />}>`
+### Reusable Spinner — removed from scope
+
+Deferred to AE-0068 (consolidation of the two existing spinner
+implementations). See Modularization Alignment.
 
 ## Non-Goals
 
@@ -53,6 +51,22 @@ PR #11 review flagged 4 frontend issues:
 - Adding new features or changing behavior
 - Modifying backend code
 - Creating a full design system
+
+## Modularization Alignment (2026-06-12)
+
+Wave A — execute first; co-location moves match the plan's frontend
+direction (module-owned types/constants/utils). Alignment:
+
+- Use the **current** `features/create` and `features/publish` paths;
+  Phase 7 renames feature folders to bounded-context names later — these
+  moves make that rename cheaper, so do not invent new folder names now.
+- **Spinner section removed — deferred to AE-0068** (see below): two
+  spinner implementations already exist (`components/ui/spinner.tsx`,
+  `components/atoms/neon-spinner.tsx`); creating a third was stale scope.
+  AE-0068 owns consolidation.
+- Keep moved types/constants domain-local to their feature; nothing new
+  in global `components/` or `lib/` (plan: atomic folders stay
+  domain-neutral, business code lives in features/modules).
 
 ## Acceptance Criteria
 

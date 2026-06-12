@@ -71,6 +71,26 @@ Per `CLAUDE.md` requirements, tag these as high risk:
 - Adding new Langfuse tracing beyond what already exists
 - Creating an automated rollback script
 
+## Modularization Alignment (2026-06-12)
+
+Runs alongside Wave B — its deprecation-wrapper inventory covers
+AE-0043/0044/0045 signature changes. Alignment:
+
+- Wrapper windows must close **before Phase 4 starts** so compatibility
+  facades never wrap deprecated functions (one indirection, not two).
+- Type the wrappers properly (mirror the new signature); the `*args:
+  object` example in Scope violates the no-`object` rule — implement
+  with explicit parameters.
+- The rollback-procedure docs should adopt the plan's side-effect and
+  compatibility ledger format (see "Rollout and Rollback"), so Phase 1+
+  slices reuse the same template.
+- Langfuse metadata verification (project_id, phase, agent_name,
+  user_id, content_type) doubles as the plan's operational-equivalence
+  groundwork; record the verified list in the ticket.
+- `high_risk_areas` tags feed the architect-skill skeptical-review
+  trigger — include the carousel workflow, event emission, and artifact
+  paths.
+
 ## Acceptance Criteria
 
 - [ ] All changed public functions have `@deprecated` wrappers with `DeprecationWarning`

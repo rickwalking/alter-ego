@@ -51,6 +51,23 @@ When a workflow phase fails mid-execution (phase_status: "failed"), the user see
 - Modifying the resume/approve flow when phase_status is failed
 - Changing `isWorkflowReady()` behavior
 
+## Modularization Alignment (2026-06-12)
+
+Product feature (not debt) — schedule freely, with two compatibility
+rules from the modularization plan:
+
+- `error_message` on the workflow state response must be **additive and
+  optional** — response-schema stability is a standing migration
+  invariant, and AE-0076 freezes SSE event names (additive payload
+  fields are allowed; renames are not).
+- The `phase_status` type tightening should use the glossary's status
+  families once AE-0071 lands (`phase_status` vs `build_status` vs
+  `review_status` vs `publication_status`); if this ships first, keep
+  current literals and note the follow-up.
+- Retry semantics must be idempotent (duplicate retry clicks → one
+  restart): this previews the plan's concurrency contract (AE-0073) —
+  reference it in the implementation.
+
 ## Acceptance Criteria
 
 ### Backend

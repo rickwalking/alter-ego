@@ -35,6 +35,23 @@ PR #11 review comment: "very complex function. Let's think about the best archit
 - Adding new fields to the response
 - Refactoring other response builder functions (handled separately)
 
+## Modularization Alignment (2026-06-12)
+
+Wave B (after AE-0041) — pre-builds target architecture. Per the plan's
+AE-0040 interaction table, this work **belongs to the editorial inbound
+HTTP adapter / response mapping** (Phase 4):
+
+- Keep the field extractors pure and colocated with the route response
+  module so Phase 4 lifts the whole unit into
+  `modules/editorial/adapters/inbound/http/`.
+- `_FIELD_MAPPING` is transport mapping, not domain logic — no imports
+  from ORM models or services inside extractors.
+- If AE-0071's glossary has landed, use its status-family names in new
+  identifiers (`phase_status` etc.); otherwise keep current names and
+  leave renames to Phase 4.
+- The deprecated old signature is removed per AE-0050's window — before
+  Phase 4 starts, so the facade never wraps a deprecated function.
+
 ## Acceptance Criteria
 
 - [ ] 5 pure field extractor functions created and unit-tested

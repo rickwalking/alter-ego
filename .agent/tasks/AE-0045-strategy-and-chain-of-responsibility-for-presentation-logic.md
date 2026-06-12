@@ -75,6 +75,21 @@ async def build_presentation_review_updates_async(...):
 - Moving code between modules (in-function refactoring only)
 - Changing tests beyond adding new ones
 
+## Modularization Alignment (2026-06-12)
+
+Wave B (after AE-0041) — pre-builds target architecture. Per the plan,
+this work **belongs to carousel_presentation** (Phase 5):
+
+- Colocate `_BUILDERS` and `_RESOLVERS` dispatch tables with the
+  presentation code they serve; they become module-internal policy when
+  Phase 5 extracts the module.
+- `resolve_presentation_review_from_state` chain is future presentation
+  domain policy — keep it free of FastAPI/SQLAlchemy imports now so the
+  later move is a file move, not a refactor.
+- Do not generalize the dispatch into a framework: the plan defers any
+  generic `ContentFormatProducer` abstraction until a second format
+  needs it.
+
 ## Acceptance Criteria
 
 - [ ] `_build_locale_presentation` replaced with dispatch table (5 pure builder functions + dict)

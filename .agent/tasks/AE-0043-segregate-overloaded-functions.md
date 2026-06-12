@@ -45,6 +45,20 @@ PR #11 review flagged:
 - Architectural pattern changes (Strategy/Builder handled in AE-0044, AE-0045)
 - Performance optimization beyond deduplication
 
+## Modularization Alignment (2026-06-12)
+
+Wave A — architecture-neutral debt; execute first. Alignment:
+
+- `artifact_path_resolver.py` and `artifact_manifest.py` are future
+  `carousel_presentation` outbound/persistence adapter code (Phase 5);
+  keep extracted helpers (`_resolve_base`, `_slide_records`) module-local.
+- The `resolve_artifact_serving_paths` rename requires the AE-0050
+  deprecation wrapper (1-sprint window) so Phase 5 lifts one name, not two.
+- The update/create split in `apply_slide_drafts_to_database` previews
+  the repository-method shape the plan's UnitOfWork work expects; do not
+  add commits inside these helpers (transaction ownership stays with the
+  caller, per the plan's transaction policy).
+
 ## Acceptance Criteria
 
 - [ ] `apply_slide_drafts_to_database` refactored into 3 focused functions

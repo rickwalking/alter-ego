@@ -39,6 +39,19 @@ The 7 strategy implementations (intro_hero, hero_content, stat_card_grid, featur
 - E2E tests (in frontend test suite)
 - Benchmarking strategy rendering performance
 
+## Modularization Alignment (2026-06-12)
+
+Wave A — write these tests BEFORE Phase 5 moves the strategy code: the
+plan requires behavior tests before any traffic/structure change, and
+this suite is exactly that protection for the layout strategies.
+
+- Write under the current paths; the tests move with the module in
+  Phase 5 (path churn is acceptable, lost coverage is not).
+- The Gherkin feature file also closes part of the plan's known gap
+  (only five .feature files exist repo-wide).
+- Property tests should pin the strategy registry's public contract —
+  that contract becomes the module's `public.py` surface in Phase 5.
+
 ## Acceptance Criteria
 
 - [ ] Gherkin `.feature` file covers 10 scenarios (selection, fallback, persistence, orthogonality, error)

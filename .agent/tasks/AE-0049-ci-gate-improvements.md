@@ -48,6 +48,20 @@ PR #11 had 7 CI gate failures — all advisory. None blocked the PR. Mutation te
 - Reconfiguring the CI pipeline structure
 - Touching deployment CI/CD
 
+## Modularization Alignment (2026-06-12)
+
+Wave A — execute first; this is the plan's "CI hardening before or
+during Phase 1" item. Alignment:
+
+- Strict-diff and diff-cover blocking are prerequisites for the Phase 1
+  module-boundary ratchets; land them before Phase 1 scaffolding.
+- Do NOT touch `backend/.importlinter` here — AE-0078 records the
+  violation baseline first, and Phase 1 replaces the wildcards with a
+  generated exception list. Changing contracts now would invalidate the
+  baseline.
+- Mutation-testing elevation aligns with ADR-005 and the plan's
+  testing-protection rule (phase delayed, testing never descoped).
+
 ## Acceptance Criteria
 
 - [ ] Mutation testing blocks PR if score < 75%
