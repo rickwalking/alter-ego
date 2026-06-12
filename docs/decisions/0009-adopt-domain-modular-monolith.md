@@ -166,7 +166,7 @@ Scope-delta line items (rough engineer-weeks, ew):
 | Net | approximately −1 to +0 ew |
 
 Revised totals: **11-21 engineer-weeks**; calendar realistically **8-14
-months** at the owner's ~5-10 h/week pace, one serial ticket lane, small
+months**, at the owner's ~5-10 h/week pace, one serial ticket lane, small
 PRs, CI gates substituting for review depth (interview decision 11).
 
 **Phase-3 / month-6 go/no-go.** At the Phase 3 exit gate or month 6,

@@ -61,6 +61,34 @@ def _actual_values(
 _BACKEND_SECTION = _load_artifact()
 _MODULE_KEYS = [_EDITORIAL_KEY, _CHAT_KEY, _WORKFLOW_KEY]
 
+# Names matching these per-module rules are event-name constants and therefore
+# in scope for the freeze. Anything else in a module (payload-field names,
+# interval/config constants, consumer-group names) is intentionally NOT frozen.
+_STREAM_NAME = "STREAM_CONTENT_EVENTS"
+
+
+def _is_frozen_event_name(module_key: str, name: str) -> bool:
+    """True if ``name`` is an event-name constant the inventory must freeze."""
+    if module_key in (_EDITORIAL_KEY, _CHAT_KEY):
+        return name.startswith("SSE_EVENT_")
+    return name.startswith("EVENT_TYPE_") or name == _STREAM_NAME
+
+
+def _live_frozen_names(module_key: str) -> set[str]:
+    """Collect live module attributes that are in-scope event-name constants."""
+    module_map = {
+        _EDITORIAL_KEY: editorial,
+        _CHAT_KEY: chat_stream,
+        _WORKFLOW_KEY: workflow_events,
+    }
+    module = module_map[module_key]
+    return {
+        name
+        for name in dir(module)
+        if _is_frozen_event_name(module_key, name)
+        and isinstance(getattr(module, name), str)
+    }
+
 
 class TestSseEventInventoryContract:
     """Backend SSE/event constants are frozen against the inventory."""
@@ -113,4 +141,21 @@ class TestSseEventInventoryContract:
         assert not missing, (
             f"Inventory lists constants not defined in {module_key}: "
             f"{', '.join(missing)}"
+        )
+
+    @pytest.mark.parametrize("module_key", _MODULE_KEYS)
+    def test_no_unfrozen_event_constants(self, module_key: str) -> None:
+        """Scenario: A new event added to a module is caught in CI.
+
+        Reverse direction (module -> artifact): a new ``SSE_EVENT_*`` /
+        ``EVENT_TYPE_*`` constant added to a module without updating the
+        inventory must fail the freeze, not slip through silently.
+        """
+        frozen = set(_BACKEND_SECTION[module_key]["constants"].keys())
+        live = _live_frozen_names(module_key)
+        unfrozen = sorted(live - frozen)
+        assert not unfrozen, (
+            f"Event-name constants in {module_key} are not in the frozen "
+            "inventory (add them to docs/architecture/sse-event-inventory.json "
+            f"and .md, plus the frontend maps, in the same PR): {unfrozen}"
         )
