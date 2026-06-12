@@ -23,7 +23,7 @@ from rag_backend.api.dependencies.roles import EditorUser
 from rag_backend.api.middleware.rate_limiting import limiter
 from rag_backend.api.routes.carousels.editorial_workflow_routes_support import (
     build_editorial_workflow_service,
-    build_workflow_state_response,
+    build_editorial_workflow_state_response,
     bump_resume_lock_version,
     ensure_resume_not_in_progress,
     ensure_resume_reviewer_access,
@@ -98,7 +98,7 @@ async def get_editorial_workflow_state(
     project_progress = (
         project.phase_progress if isinstance(project.phase_progress, dict) else None
     )
-    return build_workflow_state_response(
+    return build_editorial_workflow_state_response(
         dict(state),
         phase_progress=project_progress,
         lock_version=int(project.lock_version or 1),
@@ -163,7 +163,7 @@ async def start_editorial_workflow(
         if project is not None and isinstance(project.phase_progress, dict)
         else None
     )
-    return build_workflow_state_response(
+    return build_editorial_workflow_state_response(
         dict(state),
         phase_progress=project_progress,
         lock_version=int(project.lock_version or 1) if project is not None else 1,
