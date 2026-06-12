@@ -38,7 +38,8 @@ Phase 1 of the approved modularization plan (`.agent/reports/domain-modularizati
 ## Acceptance Criteria
 
 - [ ] WHEN `npm run lint` runs THE config SHALL flag a NEW cross-feature internal import as an error
-- [ ] WHEN an existing (baselined) cross-feature import is present THE lint SHALL NOT newly fail the build
+- [ ] WHEN an existing (baselined) cross-feature import is present THE lint SHALL NOT newly fail the build, using a COMMITTED, reproducibly-generated baseline/allowlist (documented generation command — not hand-edited)
+- [ ] THE cross-feature violation count SHALL be recorded in the committed baseline and the lint SHALL fail if the count rises above it
 - [ ] WHEN a new cross-feature import is added and then removed THE error SHALL appear then clear (demonstrated)
 - [ ] THE existing `app/**` import guard SHALL remain enforced
 - [ ] WHEN `npm run lint` and `npm run typecheck` run THE checks SHALL pass on the current tree

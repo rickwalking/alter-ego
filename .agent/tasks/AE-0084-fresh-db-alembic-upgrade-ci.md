@@ -37,7 +37,8 @@ Phase 1 of the approved modularization plan (`.agent/reports/domain-modularizati
 
 ## Acceptance Criteria
 
-- [ ] WHEN backend CI runs THE pipeline SHALL run `alembic upgrade head` against a fresh database and fail if any migration errors
+- [ ] WHEN backend CI runs THE pipeline SHALL run `alembic upgrade head` against a fresh database within a bounded timeout and fail if any migration errors or the step times out
+- [ ] WHEN `alembic downgrade base` is run after `upgrade head` on the fresh DB THE round-trip SHALL succeed (catches non-reversible revisions early — supports Phase 4+ reversible-path discipline)
 - [ ] WHEN the migration chain is clean THE job SHALL pass
 - [ ] WHEN a deliberately broken revision is present THE job SHALL fail (demonstrated locally / in a scratch test)
 - [ ] THE job SHALL live in the existing backend CI workflow (no deployment CI changes, minimal new workflow files)

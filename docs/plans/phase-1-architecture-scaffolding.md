@@ -28,7 +28,7 @@ authz-at-execution) apply yet — they are Phase 4+ obligations.
 | **AE-0079** | Phase 1 epic: architecture scaffolding | T3 | Cross-cutting | — (tracks 0080-0085) |
 | **AE-0080** | Package roots + composition-root scaffolding (`bootstrap/`, `modules/`, `platform/`, `legacy/`) | T2 | Backend | — |
 | **AE-0081** | Module public-API conventions + reusable module template | T2 | Docs/Backend | — |
-| **AE-0082** | Import Linter exact contracts + generated baseline exception list (replace wildcards) | T2 | Backend | AE-0080 (+ AE-0078 baseline) |
+| **AE-0082** | Import Linter exact contracts + generated baseline exception list (all 6 categories) | T2 | Backend | AE-0080, AE-0081 (+ AE-0078 baseline) |
 | **AE-0083** | Frontend module-boundary lint rules | T2 | Frontend | — |
 | **AE-0084** | Fresh-database `alembic upgrade head` CI job | T2 | CI/DevOps | — |
 | **AE-0085** | CI architecture reports + violation ratchets | T2 | CI/DevOps | AE-0082 |
@@ -36,7 +36,7 @@ authz-at-execution) apply yet — they are Phase 4+ obligations.
 ## Suggested order (waves)
 
 - **Wave A (parallel, disjoint files):** AE-0080 (backend roots), AE-0081 (docs/conventions), AE-0083 (frontend lint), AE-0084 (alembic CI job).
-- **Wave B:** AE-0082 (needs the package roots from AE-0080 + the AE-0078 baseline).
+- **Wave B:** AE-0082 (needs the AE-0080 package roots, the AE-0081 conventions, and the AE-0078 baseline).
 - **Wave C:** AE-0085 (ratchets/reports consume the AE-0082 contracts + baseline).
 
 ## Risks & guardrails

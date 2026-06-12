@@ -41,6 +41,9 @@ Phase 1 of the approved modularization plan (`.agent/reports/domain-modularizati
 - [ ] WHEN the template is referenced THE skeleton module SHALL exist and follow the convention
 - [ ] WHEN the conventions are checked against AE-0071 THE context names SHALL resolve against the glossary with no conflicts
 - [ ] THE doc SHALL state the Import Linter contract shape that AE-0082 will enforce
+- [ ] WHEN `MYPYPATH=src uv run mypy -p rag_backend` runs THE skeleton template module SHALL type-check cleanly
+- [ ] WHEN `uv run lint-imports` runs THE skeleton template SHALL satisfy the public-facade contract (no internal cross-module import)
+- [ ] THE conventions doc SHALL provide the minimum stub AE-0082 contracts reference before they finalize (resolves the 0081->0082 ordering)
 
 ## Gherkin Scenarios
 

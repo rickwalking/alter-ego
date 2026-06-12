@@ -42,6 +42,7 @@ Phase 1 of the approved modularization plan (`.agent/reports/domain-modularizati
 - [ ] WHEN new code introduces a global-layer import violation THE CI ratchet (AE-0082/0085) SHALL fail it
 - [ ] THE Import Linter wildcard exemptions SHALL be replaced by a generated baseline exception list (AE-0082)
 - [ ] THE fresh-DB `alembic upgrade head` CI job SHALL be green (AE-0084)
+- [ ] EVERY code-touching child (AE-0080, AE-0082, AE-0083) SHALL carry an explicit no-behavior-change AC (route-snapshot equality and/or unchanged test suite); the epic SHALL NOT close while any child lacks it
 
 ## Gherkin Scenarios
 

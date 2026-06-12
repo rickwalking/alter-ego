@@ -25,6 +25,8 @@ Today `backend/.importlinter` uses wildcard ignores that hide all violations (AE
 - Generate the baseline exception list from `scripts/metrics/import_baseline.py` (AE-0078) — documented, reproducible command; not hand-curated.
 - Replace wildcard exemptions in `backend/.importlinter` with exact contracts: layered (domain < application < infrastructure/api), modules independent (cross-module only via public facade per AE-0081), and no container/service-locator access from application code.
 - Ensure `lint-imports` passes on the current tree with the generated exceptions (existing violations grandfathered).
+- Cover **all six AE-0078 baseline categories**, not just import module-pairs: the four import layer/module-pair categories PLUS `get_container()` service-locator sites (baseline=26) and adapter `.commit()` sites (baseline=9). Where Import Linter cannot express a category (locator, commit), add a complementary `import_baseline.py`-based check so every category is ratcheted.
+- Commit canonical baseline numbers in a single source-of-truth artifact recording, per section: runtime unique-module-pairs, type-checking-only pairs, `get_container()` hits, `.commit()` hits — pinned to the committed AE-0078 artifact (reference its path/commit; AE-0078 is in Review, may not merge before Wave B).
 
 ## Non-Goals
 
@@ -38,10 +40,12 @@ Phase 1 of the approved modularization plan (`.agent/reports/domain-modularizati
 ## Acceptance Criteria
 
 - [ ] WHEN `uv run lint-imports` runs THE contracts SHALL pass with the generated baseline exception list AND no wildcard exemptions SHALL remain in `backend/.importlinter`
-- [ ] WHEN a NEW cross-layer or container-from-application import is introduced THE contract SHALL fail (demonstrated by a temporary violation reverted in the same PR)
-- [ ] WHEN the exception list is regenerated THE command SHALL be documented and reproducible from `scripts/metrics/import_baseline.py`
+- [ ] WHEN a NEW cross-layer or cross-module (non-facade) import is introduced THE contract SHALL fail (demonstrated by a temporary violation reverted in the same PR)
+- [ ] WHEN a NEW `get_container()` call is added in application/domain code THE category check SHALL fail (ratchet covers locator sites, baseline=26)
+- [ ] WHEN a NEW adapter `.commit()` is added THE category check SHALL fail (ratchet covers commit sites, baseline=9)
+- [ ] THE comparison SHALL be field-exact per the AE-0078 artifact: per section, runtime unique-module-pairs, type-checking-only pairs, `get_container()` hits, and `.commit()` hits are each compared; counts may only stay equal or decrease, never increase
+- [ ] WHEN the baseline is regenerated THE command SHALL be documented and reproducible from `scripts/metrics/import_baseline.py`, reading the committed canonical numbers (pinned to the AE-0078 artifact)
 - [ ] WHEN `uv run pytest` runs THE suite SHALL pass
-- [ ] THE generated exception count SHALL equal the AE-0078 recorded baseline (no silent new grandfathering)
 
 ## Gherkin Scenarios
 
@@ -88,7 +92,7 @@ Feature: Import boundaries are ratcheted
 ## Dependencies
 
 - Blocks: AE-0085 (ratchet/report consumes these contracts)
-- Blocked by: AE-0080; AE-0078 (baseline, in Review)
+- Blocked by: AE-0080 (package roots); AE-0081 (conventions inform contract shape); AE-0078 (baseline — pin to its committed artifact since it is in Review)
 - Related: AE-0081, AE-0049
 
 ## Implementation Plan

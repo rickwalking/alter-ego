@@ -25,6 +25,7 @@ The target architecture needs physical package roots before any module can be ca
 - Create `backend/src/rag_backend/{bootstrap,modules,platform,legacy}/` with `__init__.py` and a module docstring/README stating each root's purpose (bootstrap=composition root; modules=bounded contexts; platform=shared technical; legacy=pre-migration coordinators).
 - Move composition-root responsibilities (container assembly, app/DI wiring) into `bootstrap/` — wiring only, not business logic.
 - Update imports/entrypoints so the app starts identically; keep all routes unchanged.
+- Update `scripts/metrics/import_baseline.py` `CONTAINER_ALLOWED` (currently `api/app.py`, `api/dependencies/`) to the new `bootstrap/` composition-root paths, so the AE-0078 baseline and AE-0082 contracts stay consistent after the move.
 
 ## Non-Goals
 
@@ -39,9 +40,10 @@ Phase 1 of the approved modularization plan (`.agent/reports/domain-modularizati
 ## Acceptance Criteria
 
 - [ ] WHEN the backend is imported THE roots `bootstrap/`, `modules/`, `platform/`, `legacy/` SHALL exist, each with a documented purpose
-- [ ] WHEN composition-root wiring is relocated THE `git diff` SHALL show only moves/wiring, not changed business logic
+- [ ] WHEN composition-root wiring is relocated THE domain/application/infrastructure business logic SHALL be unchanged (verified by the full suite passing AND the route snapshot below, not by visual diff alone)
 - [ ] WHEN `uv run pytest` runs THE full suite SHALL pass unchanged
-- [ ] WHEN the app boots THE OpenAPI schema / routes SHALL be byte-identical to pre-change
+- [ ] WHEN the app boots THE sorted OpenAPI paths+methods SHALL equal a committed pre-change snapshot (deterministic route-equality check)
+- [ ] WHEN `CONTAINER_ALLOWED` is updated to the bootstrap paths THE regenerated AE-0078 baseline SHALL show no NEW container-locator violations from the move (count unchanged)
 - [ ] WHEN `MYPYPATH=src uv run mypy -p rag_backend` runs THE type check SHALL pass
 - [ ] WHEN `uv run lint-imports` runs THE existing contracts SHALL still pass (no new violations)
 

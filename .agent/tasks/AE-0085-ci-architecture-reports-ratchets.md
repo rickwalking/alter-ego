@@ -37,11 +37,12 @@ Phase 1 of the approved modularization plan (`.agent/reports/domain-modularizati
 
 ## Acceptance Criteria
 
-- [ ] WHEN CI runs THE pipeline SHALL emit an architecture report comparing current import violations to the committed baseline
-- [ ] WHEN the import-violation count exceeds the baseline THE ratchet SHALL fail the build
-- [ ] WHEN violations are at or below baseline THE ratchet SHALL pass
-- [ ] WHEN violations are retired below baseline THE process SHALL allow ratcheting the baseline down (documented)
-- [ ] THE ratchet SHALL consume the AE-0082 generated baseline (single source of truth)
+- [ ] WHEN CI runs THE pipeline SHALL emit an architecture report comparing ALL SIX AE-0078 categories (four import layer/module-pair categories + `get_container()` sites + adapter `.commit()` sites) to the committed baseline
+- [ ] WHEN ANY category count exceeds its baseline THE ratchet SHALL fail the build (per-category, not a single global total)
+- [ ] WHEN all category counts are at or below baseline THE ratchet SHALL pass
+- [ ] WHEN violations are retired below baseline THE process SHALL allow ratcheting the baseline down (documented command)
+- [ ] THE ratchet SHALL consume the AE-0082 single-source-of-truth baseline (no second hand-maintained number)
+- [ ] WHEN the report runs on the current tree THE counts SHALL match the AE-0078 recorded numbers (regression guard for the report itself)
 
 ## Gherkin Scenarios
 
