@@ -1,6 +1,6 @@
 # AE-0076 — Freeze SSE event-name inventory and add CI contract test
 
-Status: Dev Complete
+Status: Review
 Tier: T2
 Priority: Medium
 Type: Feature
@@ -165,11 +165,11 @@ Feature: SSE event names are frozen during the migration
 
 ## QA Checklist
 
-- [ ] Security reviewed
-- [ ] Code quality reviewed
-- [ ] Acceptance criteria validated
-- [ ] Edge cases tested
-- [ ] Orphan/unfinished code checked
+- [x] Security reviewed
+- [x] Code quality reviewed
+- [x] Acceptance criteria validated
+- [x] Edge cases tested
+- [x] Orphan/unfinished code checked
 
 ## Progress Log
 
@@ -200,7 +200,7 @@ documented in the inventory. All 8 ACs self-checked PASS (see dev-summary).
 
 ## QA Report
 
-Pending.
+✅ PASS — Wave 2 batch QA, 2 independent passes both PASS. See `.agent/reports/AE-0076.qa.md` → `.agent/reports/wave-2.qa.md`.
 
 ## Decision Log
 

@@ -1,6 +1,6 @@
 # AE-0072 — Draft ADR-0009: adopt domain modular monolith
 
-Status: Dev Complete
+Status: Review
 Tier: T2
 Priority: High
 Type: Docs
@@ -143,11 +143,11 @@ Not applicable — documentation only; no runtime behavior changes.
 
 ## QA Checklist
 
-- [ ] Security reviewed
-- [ ] Code quality reviewed
-- [ ] Acceptance criteria validated
-- [ ] Edge cases tested
-- [ ] Orphan/unfinished code checked
+- [x] Security reviewed
+- [x] Code quality reviewed
+- [x] Acceptance criteria validated
+- [x] Edge cases tested
+- [x] Orphan/unfinished code checked
 
 ## Progress Log
 
@@ -168,7 +168,7 @@ self-checked PASS (see dev-summary).
 
 ## QA Report
 
-Pending.
+✅ PASS — Wave 2 batch QA, 2 independent passes both PASS. See `.agent/reports/AE-0072.qa.md` → `.agent/reports/wave-2.qa.md`.
 
 ## Decision Log
 

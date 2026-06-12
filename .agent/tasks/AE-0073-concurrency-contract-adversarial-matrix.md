@@ -1,6 +1,6 @@
 # AE-0073 — Concurrency contract draft and adversarial test matrix skeleton
 
-Status: Dev Complete
+Status: Review
 Tier: T2
 Priority: Medium
 Type: Docs
@@ -109,11 +109,11 @@ executable in Phase 2.5 tickets.
 
 ## QA Checklist
 
-- [ ] Security reviewed
-- [ ] Code quality reviewed
-- [ ] Acceptance criteria validated
-- [ ] Edge cases tested
-- [ ] Orphan/unfinished code checked
+- [x] Security reviewed
+- [x] Code quality reviewed
+- [x] Acceptance criteria validated
+- [x] Edge cases tested
+- [x] Orphan/unfinished code checked
 
 ## Progress Log
 
@@ -134,7 +134,7 @@ verbatim; 80/80 Phase 2-8 (incl 2.5) cells marked; no forbidden glossary terms; 
 
 ## QA Report
 
-Pending.
+✅ PASS — Wave 2 batch QA, 2 independent passes both PASS. See `.agent/reports/AE-0073.qa.md` → `.agent/reports/wave-2.qa.md`.
 
 ## Decision Log
 
