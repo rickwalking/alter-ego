@@ -23,9 +23,7 @@ jobs:
           node-version: "22"
 
       - name: Install uv
-        run: |
-          curl -LsSf https://astral.sh/uv/install.sh | sh
-          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+        uses: astral-sh/setup-uv@v5
 
       - name: Run backend tests
         working-directory: backend
@@ -117,8 +115,22 @@ jobs:
             GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}
             LANGFUSE_SECRET_KEY=${{ secrets.LANGFUSE_SECRET_KEY }}
             LANGFUSE_PUBLIC_KEY=${{ secrets.LANGFUSE_PUBLIC_KEY }}
+            LANGFUSE_SALT=${{ secrets.LANGFUSE_SALT }}
+            LANGFUSE_NEXTAUTH_SECRET=${{ secrets.LANGFUSE_NEXTAUTH_SECRET }}
+            LANGFUSE_ENCRYPTION_KEY=${{ secrets.LANGFUSE_ENCRYPTION_KEY }}
+            LANGFUSE_CLICKHOUSE_PASSWORD=${{ secrets.LANGFUSE_CLICKHOUSE_PASSWORD }}
+            WRITING_STYLE_URLS=${{ secrets.WRITING_STYLE_URLS }}
             ALLOWED_ORIGINS=https://marinssolutions.com
             EOF
+
+            # Langfuse env must never be blank — a blank SALT/ENCRYPTION_KEY
+            # invalidates all API keys and encrypted data on container recreate.
+            for var in LANGFUSE_SALT LANGFUSE_NEXTAUTH_SECRET LANGFUSE_ENCRYPTION_KEY LANGFUSE_CLICKHOUSE_PASSWORD LANGFUSE_SECRET_KEY LANGFUSE_PUBLIC_KEY; do
+              if ! grep -q "^${var}=..*" .env; then
+                echo "ERROR: ${var} is empty. Set the ${var} GitHub Secret before deploying."
+                exit 1
+              fi
+            done
 
             # Deploy with Docker Compose (server caches layers automatically)
             docker compose -f docker-compose.prod.yml down
