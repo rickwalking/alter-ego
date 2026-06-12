@@ -454,10 +454,69 @@ def render_check() -> tuple[str, int]:
     return "\n".join(lines) + "\n", (1 if failed else 0)
 
 
+def render_summary() -> tuple[str, int]:
+    """Human-readable Markdown architecture report (AE-0085).
+
+    Renders a GitHub-flavoured Markdown table comparing all six AE-0078
+    categories on the CURRENT tree to the committed baseline ceilings, with a
+    per-row status (OK / ratcheted down / FAIL). It consumes the same
+    ``collect_metrics()`` + ``BASELINE_*`` single source of truth as the
+    ``--check`` ratchet, so the report and the gate never disagree. The exit
+    code mirrors ``--check`` (1 if any category rose above baseline), making
+    this mode safe to use as the enforcing step too if desired.
+
+    Designed to be written to ``$GITHUB_STEP_SUMMARY`` and/or uploaded as a CI
+    artifact so reviewers see architecture health every run, not just
+    pass/fail.
+    """
+    categories, locator, commits = collect_metrics()
+    failed = False
+    rows: list[tuple[str, int, int]] = []
+    for key, (rt_ceil, tc_ceil) in BASELINE_PAIR_CEILING.items():
+        m = categories[key]
+        rows.append((f"{key} — runtime pairs", len(m.runtime), rt_ceil))
+        rows.append((f"{key} — type-checking pairs", len(m.type_checking), tc_ceil))
+    rows.append(("get_container() locator sites", locator, BASELINE_GET_CONTAINER))
+    rows.append((".commit() adapter sites", commits, BASELINE_COMMIT_SITES))
+
+    out: list[str] = []
+    out.append("## Architecture report — import-boundary ratchet (AE-0085)")
+    out.append("")
+    out.append(f"Baseline: `{BASELINE_ARTIFACT}` @ `{BASELINE_COMMIT}` (AE-0078).")
+    out.append(
+        "Per-category ratchet: each count may stay equal or decrease, never rise. "
+        "Enforced by `scripts/metrics/import_baseline.py --check` (AE-0082)."
+    )
+    out.append("")
+    out.append("| Category | Current | Baseline | Status |")
+    out.append("| --- | ---: | ---: | --- |")
+    for label, current, ceiling in rows:
+        if current > ceiling:
+            failed = True
+            status = "FAIL — rose above baseline"
+        elif current < ceiling:
+            status = "OK (ratcheted down)"
+        else:
+            status = "OK"
+        out.append(f"| {label} | {current} | {ceiling} | {status} |")
+    out.append("")
+    out.append(
+        "**RESULT: FAIL — a category rose above baseline.**"
+        if failed
+        else "**RESULT: PASS — all categories at or below baseline.**"
+    )
+    out.append("")
+    return "\n".join(out) + "\n", (1 if failed else 0)
+
+
 def main() -> int:
     arg = sys.argv[1] if len(sys.argv) > 1 else ""
     if arg == "--check":
         report, code = render_check()
+        sys.stdout.write(report)
+        return code
+    if arg == "--summary":
+        report, code = render_summary()
         sys.stdout.write(report)
         return code
     if arg == "--emit-importlinter":

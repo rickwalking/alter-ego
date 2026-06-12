@@ -211,6 +211,17 @@
 | Import boundaries respected | import-linter / pytest-archon | Zero violations |
 | No circular dependencies | grimp | Zero |
 | Layer isolation (domain to infrastructure) | import-linter layers | Zero violations |
+| Per-category import-violation ratchet | `import_baseline.py --check` (AE-0082) | No category above committed baseline |
+| Architecture health report | `import_baseline.py --summary` (AE-0085) | Per-category counts vs baseline (Step Summary + artifact) |
+
+The modularization ratchet (AE-0078 → AE-0082 → AE-0085) tracks **six**
+categories against a single committed baseline
+(`.agent/reports/import-violations-baseline.md`): the four import
+layer/module-pair categories (`application -> infrastructure`,
+`application -> agents`, `agents -> application`, `api -> infrastructure`),
+the `get_container()` locator sites, and the adapter `.commit()` sites. Each
+count may stay equal or decrease, never rise. See
+[Architecture ratchet and baseline-down procedure](#architecture-ratchet-and-baseline-down-procedure).
 
 ### Documentation
 
@@ -420,12 +431,74 @@ See [CI Quality Gates Guide](./ci-quality-gates.md) for workflow names, branch p
 | backend / Strict Diff | ruff `--select PLR0913,C901,PLR0912,PLR0911,PLR0914,PLR1702` on changed lines | **CI failure (blocking)** — thresholds below |
 | backend / Type Check | mypy | CI failure |
 | backend / Architecture | import-linter | CI failure |
+| backend / Architecture | `import_baseline.py --check` (AE-0082 ratchet) | **CI failure (blocking)** if any of the six categories rises above the committed baseline |
+| backend / Architecture | `import_baseline.py --summary` (AE-0085 report) | Non-blocking — writes the per-category report to the GitHub Step Summary and uploads it as the `architecture-report` artifact |
 | backend / Docstrings | interrogate ≥80% | CI failure |
 | backend / Security | bandit + pip-audit | CI failure |
 | backend / Test & Coverage | pytest + diff-cover ≥75% | CI failure (blocking) |
 | backend / Migrations (fresh DB) | `alembic upgrade head` + `downgrade base` round-trip on a fresh Postgres | **CI failure (blocking — AE-0084)** — fails on any migration error, non-reversible revision, or 5-min timeout |
 | backend / Dead Code | vulture | CI failure |
 | backend / Mutation (blocking ≥75%) | mutmut + `scripts/ci/mutation-score-gate.sh` | **CI failure (blocking — AE-0049)** if mutation score < 75% |
+
+### Architecture ratchet and baseline-down procedure
+
+The `backend / Architecture` job enforces the modularization import boundaries
+through a **single source of truth**: the committed baseline at
+`.agent/reports/import-violations-baseline.md` (AE-0078), mirrored as the
+`BASELINE_*` constants in `scripts/metrics/import_baseline.py`. Three pieces
+work together (no second hand-maintained number):
+
+| Mode | What it does | Where it runs |
+|------|--------------|---------------|
+| `import_baseline.py` (no args) | Regenerates the baseline report (stdlib-only, byte-identical on a fixed tree). | Manual / baseline-down |
+| `import_baseline.py --check` | **Ratchet (enforcing).** Compares the current tree to the baseline field-exact for all six categories; exit 1 if any rises. | CI `backend / Architecture` + pre-commit |
+| `import_baseline.py --summary` | **Report (non-blocking).** Markdown table of the six categories (current vs baseline) → GitHub Step Summary + `architecture-report` artifact. | CI `backend / Architecture` |
+| `lint-imports` (`--emit-importlinter` regenerates `backend/.importlinter`) | The four import categories are also ratcheted by Import Linter's grandfathered `ignore_imports` lists (any NEW edge breaks CI). | CI `backend / Architecture` |
+
+The report and the ratchet consume the same `collect_metrics()` +
+`BASELINE_*` values, so they can never disagree: `--summary`'s verdict mirrors
+`--check`'s exit code. When a PR raises any category above its baseline the
+ratchet fails the build and the report shows the offending row as
+`FAIL — rose above baseline`.
+
+#### Ratcheting the baseline DOWN (after retiring violations)
+
+When refactoring removes import violations (e.g. a service stops importing
+infrastructure), the current counts drop below the baseline. `--check` still
+**passes** (counts may decrease), and `--summary` shows the row as
+`OK (ratcheted down)`. To lock in the improvement so the retired violations
+can never return, ratchet the baseline down:
+
+1. **Regenerate the baseline report** from repo root:
+   ```bash
+   python3 scripts/metrics/import_baseline.py > .agent/reports/import-violations-baseline.md
+   ```
+   (The committed report has a hand-written preamble above the
+   `# Import-violation baseline (generated ...)` marker; preserve it — only the
+   generated body below the marker changes. Re-paste the generated output under
+   the existing preamble rather than overwriting the whole file.)
+2. **Update the `BASELINE_*` constants** in
+   `scripts/metrics/import_baseline.py` to the new (lower) numbers shown by
+   `python3 scripts/metrics/import_baseline.py --summary`:
+   `BASELINE_PAIR_CEILING` (runtime + type-checking pairs per category),
+   `BASELINE_GET_CONTAINER`, and `BASELINE_COMMIT_SITES`. Also bump
+   `BASELINE_COMMIT` to the commit that re-pins the artifact.
+3. **Regenerate `backend/.importlinter`** so the grandfathered edge list drops
+   the retired edges (run from `backend/`, needs the import-linter env):
+   ```bash
+   cd backend && uv run python ../scripts/metrics/import_baseline.py --emit-importlinter > .importlinter
+   ```
+4. **Verify** the ratchet still passes against the new baseline and the report
+   matches:
+   ```bash
+   python3 scripts/metrics/import_baseline.py --check    # exit 0
+   python3 scripts/metrics/import_baseline.py --summary  # all rows OK
+   ```
+5. Commit the baseline report, the updated constants, and `.importlinter`
+   together in one change.
+
+> **Never ratchet UP.** The baseline only ever decreases. Adding a new
+> violation must be fixed, not baselined.
 
 ### Frontend Quality Gates (`Frontend Quality Gates` workflow)
 

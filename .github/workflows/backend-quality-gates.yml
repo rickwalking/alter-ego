@@ -195,6 +195,25 @@ jobs:
       - name: Check import architecture
         run: uv run lint-imports
 
+      - name: Architecture report (AE-0085, per-category vs baseline)
+        # Non-blocking REPORT: surfaces all six AE-0078 categories (current
+        # vs committed baseline) in the GitHub Step Summary and as an
+        # artifact so reviewers see architecture health every run. Reuses the
+        # AE-0082 single-source-of-truth baseline. The ENFORCING step is the
+        # ratchet below; this `--summary` mirrors its verdict but never gates.
+        if: always()
+        working-directory: .
+        run: |
+          python3 scripts/metrics/import_baseline.py --summary | tee architecture-report.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload architecture report artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: architecture-report
+          path: architecture-report.md
+          if-no-files-found: warn
+
       - name: Ratchet non-import boundaries (get_container, .commit)
         working-directory: .
         run: python3 scripts/metrics/import_baseline.py --check
