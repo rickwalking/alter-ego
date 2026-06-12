@@ -1,6 +1,6 @@
 # AE-0009 — Frontend Workflow Error Feedback & Retry
 
-Status: Dev Complete
+Status: Review
 Tier: T2
 Priority: High
 Type: Feature
@@ -243,11 +243,11 @@ None.
 
 ## QA Checklist
 
-- [ ] Security reviewed
-- [ ] Code quality reviewed
-- [ ] Acceptance criteria validated
-- [ ] Edge cases tested
-- [ ] Orphan/unfinished code checked
+- [x] Security reviewed
+- [x] Code quality reviewed
+- [x] Acceptance criteria validated
+- [x] Edge cases tested
+- [x] Orphan/unfinished code checked
 
 ## Progress Log
 
@@ -270,9 +270,7 @@ backend: mypy Success (389), ruff clean, 1659 passed, 2 skipped
 
 ## QA Report
 
-Pending.
-
-## Decision Log
+✅ PASS — Product batch QA (Cursor), WARN→fix→confirmation PASS. See `.agent/reports/AE-0009.qa.md` → `.agent/reports/product-ae0008-ae0009.qa.md`.Decision Log
 
 Pending.
 

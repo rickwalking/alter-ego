@@ -1,6 +1,6 @@
 # AE-0008 — Wire ResearchTool URL Scraping into Editorial Workflow
 
-Status: Dev Complete
+Status: Review
 Tier: T2
 Priority: High
 Type: Bugfix
@@ -201,11 +201,11 @@ None.
 
 ## QA Checklist
 
-- [ ] Security reviewed
-- [ ] Code quality reviewed
-- [ ] Acceptance criteria validated
-- [ ] Edge cases tested
-- [ ] Orphan/unfinished code checked
+- [x] Security reviewed
+- [x] Code quality reviewed
+- [x] Acceptance criteria validated
+- [x] Edge cases tested
+- [x] Orphan/unfinished code checked
 
 ## Progress Log
 
@@ -227,9 +227,7 @@ targeted: 21 passed; full suite: 1651 passed, 2 skipped
 
 ## QA Report
 
-Pending.
-
-## Decision Log
+✅ PASS — Product batch QA (Cursor), WARN→fix→confirmation PASS. See `.agent/reports/AE-0008.qa.md` → `.agent/reports/product-ae0008-ae0009.qa.md`.Decision Log
 
 Pending.
 
