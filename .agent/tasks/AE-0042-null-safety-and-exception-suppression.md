@@ -1,6 +1,6 @@
 # AE-0042 — Null-Safety and Exception Suppression
 
-Status: Dev Complete
+Status: Review
 Tier: T2
 Priority: High
 Type: Task
@@ -134,11 +134,11 @@ Feature: No Exception Suppression
 
 ## QA Checklist
 
-- [ ] Security reviewed — no auth changes
-- [ ] Code quality reviewed — no new type: ignore
-- [ ] Acceptance criteria validated
-- [ ] Edge cases tested — None payloads, missing fields, empty lists
-- [ ] Orphan/unfinished code checked
+- [x] Security reviewed — no auth changes
+- [x] Code quality reviewed — no new type: ignore
+- [x] Acceptance criteria validated
+- [x] Edge cases tested — None payloads, missing fields, empty lists
+- [x] Orphan/unfinished code checked
 
 ## Progress Log
 
@@ -161,7 +161,7 @@ pytest: 1535 passed, 2 skipped (+19 tests)
 
 ## QA Report
 
-Pending.
+✅ PASS — Wave 3 batch QA, 2 independent passes both PASS. See `.agent/reports/AE-0042.qa.md` → `.agent/reports/wave-3.qa.md`.
 
 ## Decision Log
 

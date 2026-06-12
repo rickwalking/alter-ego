@@ -1,6 +1,6 @@
 # AE-0049 — CI Gate Improvements
 
-Status: Dev Complete
+Status: Review
 Tier: T2
 Priority: Medium
 Type: Task
@@ -135,10 +135,10 @@ Feature: CI Gates
 
 ## QA Checklist
 
-- [ ] Security reviewed — CI only, no code changes
-- [ ] Acceptance criteria validated
-- [ ] Edge cases tested — empty diff, first commit on branch, fork PRs
-- [ ] Orphan/unfinished code checked
+- [x] Security reviewed — CI only, no code changes
+- [x] Acceptance criteria validated
+- [x] Edge cases tested — empty diff, first commit on branch, fork PRs
+- [x] Orphan/unfinished code checked
 
 ## Progress Log
 
@@ -162,7 +162,7 @@ pytest: 1547 passed, 2 skipped
 
 ## QA Report
 
-Pending.
+✅ PASS — Wave 3 batch QA, 2 independent passes both PASS. See `.agent/reports/AE-0049.qa.md` → `.agent/reports/wave-3.qa.md`.
 
 ## Decision Log
 

@@ -1,6 +1,6 @@
 # AE-0043 — Segregate Overloaded Functions
 
-Status: Dev Complete
+Status: Review
 Tier: T2
 Priority: Medium
 Type: Task
@@ -135,10 +135,10 @@ Feature: Path Resolver Dedup
 
 ## QA Checklist
 
-- [ ] Code quality reviewed — no nested ifs >2 depth
-- [ ] Acceptance criteria validated
-- [ ] Edge cases tested — empty slides, missing output_dir
-- [ ] Orphan/unfinished code checked — old function names still callable
+- [x] Code quality reviewed — no nested ifs >2 depth
+- [x] Acceptance criteria validated
+- [x] Edge cases tested — empty slides, missing output_dir
+- [x] Orphan/unfinished code checked — old function names still callable
 
 ## Progress Log
 
@@ -161,7 +161,7 @@ coverage: artifact_manifest 96%, artifact_path_resolver 73%, editorial_distribut
 
 ## QA Report
 
-Pending.
+✅ PASS — Wave 3 batch QA, 2 independent passes both PASS. See `.agent/reports/AE-0043.qa.md` → `.agent/reports/wave-3.qa.md`.
 
 ## Decision Log
 
