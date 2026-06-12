@@ -1,6 +1,6 @@
 # AE-0078 — Record import-violation and public-contract baseline
 
-Status: Ready
+Status: Dev Complete
 Tier: T2
 Priority: Medium
 Type: Research
@@ -50,24 +50,24 @@ not lint-imports).
 
 ## Acceptance Criteria
 
-- [ ] `.agent/reports/import-violations-baseline.md` exists with one
+- [x] `.agent/reports/import-violations-baseline.md` exists with one
       section per category listed in Scope
-- [ ] Every section has a total count and a file-level listing generated
+- [x] Every section has a total count and a file-level listing generated
       by a copy-pasteable command (lint-imports debug output, `rg`, or a
       small script — command included in the report)
-- [ ] `get_container()` call sites outside `api/app.py` and
+- [x] `get_container()` call sites outside `api/app.py` and
       `api/dependencies/` are individually listed
-- [ ] Repository adapters that call `.commit()` internally are
+- [x] Repository adapters that call `.commit()` internally are
       individually listed
-- [ ] Running the documented commands twice yields identical results
-- [ ] The report distinguishes wildcard-hidden violations
+- [x] Running the documented commands twice yields identical results
+- [x] The report distinguishes wildcard-hidden violations
       (application→infrastructure, application→agents) from
       currently-allowed-but-target-forbidden imports (api→infrastructure,
       agents→application)
-- [ ] WHEN Phase 1 later replaces the wildcard ignores THE baseline file
+- [x] WHEN Phase 1 later replaces the wildcard ignores THE baseline file
       SHALL be usable as the initial exception list (machine-readable
       appendix: one `module -> module` pair per line)
-- [ ] CI behavior is unchanged (`git diff` shows no workflow or
+- [x] CI behavior is unchanged (`git diff` shows no workflow or
       `.importlinter` modifications)
 
 ## Gherkin Scenarios
@@ -128,13 +128,32 @@ Not applicable — measurement and documentation only; no runtime behavior.
 
 Ticket created by planner.
 
+### 2026-06-12 (development)
+
+Implemented on docs/ae-0078-import-baseline via committed stdlib
+scanner (regex import scan, same signal as lint-imports sans wildcards).
+
 ## Files Touched
 
-Pending.
+- `scripts/metrics/import_baseline.py` (new generator, stdlib-only)
+- `.agent/reports/import-violations-baseline.md` (new report)
+- No `.importlinter`, workflow, or production-code changes (verified:
+  `git diff --stat -- backend/.importlinter .github/` is empty)
 
 ## Test Evidence
 
-Pending.
+```bash
+python3 scripts/metrics/import_baseline.py > a
+python3 scripts/metrics/import_baseline.py > b
+diff -q a b   # byte-identical
+```
+
+Counts: application→infrastructure 66 lines / 63 pairs (wildcard-hidden);
+application→agents 26 / 23 (wildcard-hidden); agents→application 22 / 22
+(no contract today); api→infrastructure 101 / 98 (contract-4-allowed);
+get_container() outside api/app.py + api/dependencies/: 26 sites;
+.commit() inside infrastructure/database adapters: 9 sites. Violations
+grew since the research scan (58→66, 20→26) — ratchet justification.
 
 ## QA Report
 
@@ -150,4 +169,8 @@ None.
 
 ## Final Summary
 
-Pending.
+Baseline recorded with a committed deterministic generator; wildcard-
+hidden vs target-forbidden categories separated; de-facto public
+contracts captured (top-20 imported symbols per category); machine-
+readable module-pair appendix ready as Phase 1's initial exception
+list. CI untouched.
