@@ -78,9 +78,9 @@ class TestSlideLayoutRegistry:
         strategy = registry.find_for_slide("cta")
         assert strategy.strategy_name == "cta_centered"
 
-    def test_bootstrap_registers_all_seven(self, registry):
+    def test_bootstrap_registers_all_eight(self, registry):
         result = registry.list()
-        assert len(result) == 7
+        assert len(result) == 8
 
     def test_bootstrap_has_all_strategy_names(self, registry):
         names = {r["name"] for r in registry.list()}
@@ -92,5 +92,32 @@ class TestSlideLayoutRegistry:
             "feature_grid",
             "insight_quote",
             "numbered_list",
+            "summary_grid",
         }
         assert names == expected
+
+    def test_find_for_slide_uses_summary_grid_when_points_present(self, registry):
+        slide = {
+            "number": "2",
+            "type": "summary",
+            "heading": "Overview",
+            "body": "",
+            "summary_points": [
+                {"icon_name": "target", "title": "One", "body": "First"},
+            ],
+        }
+        strategy = registry.find_for_slide("summary", slide=slide)
+        assert strategy.strategy_name == "summary_grid"
+
+    def test_find_for_slide_uses_feature_grid_when_features_present(self, registry):
+        slide = {
+            "number": "3",
+            "type": "content",
+            "heading": "Details",
+            "body": "Body",
+            "features": [
+                {"icon_name": "target", "title": "Fast", "body": "Quick"},
+            ],
+        }
+        strategy = registry.find_for_slide("content", slide=slide)
+        assert strategy.strategy_name == "feature_grid"

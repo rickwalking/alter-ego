@@ -170,7 +170,7 @@ class TestMergeDesignTokensWithDisk:
             f"/api/carousels/{project_id}/preview/images/slide_3.jpg?lang=pt",
         ]
 
-    def test_draft_project_does_not_use_raw_preview_urls(self, tmp_path: Path) -> None:
+    def test_draft_project_falls_back_to_raw_preview_urls(self, tmp_path: Path) -> None:
         from uuid import UUID
 
         from rag_backend.domain.models import CarouselProject, CarouselTheme
@@ -192,5 +192,13 @@ class TestMergeDesignTokensWithDisk:
 
         merged = merge_design_tokens_with_disk(project)
 
-        assert merged["images"]["slides"] == []
-        assert merged["images"]["hero"] == ""
+        rendered_pt = merged["images"]["rendered_slides_pt"]
+        assert isinstance(rendered_pt, list)
+        assert rendered_pt == [
+            f"/api/carousels/{project_id}/preview/images/slide_1.jpg?lang=pt",
+            f"/api/carousels/{project_id}/preview/images/slide_3.jpg?lang=pt",
+            f"/api/carousels/{project_id}/preview/images/slide_4.jpg?lang=pt",
+            f"/api/carousels/{project_id}/preview/images/slide_5.jpg?lang=pt",
+        ]
+        assert merged["images"]["hero"] == rendered_pt[0]
+        assert merged["images"]["slides"] == rendered_pt

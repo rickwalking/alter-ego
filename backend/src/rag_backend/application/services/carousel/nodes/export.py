@@ -13,6 +13,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
+from rag_backend.application.services.carousel.carousel_export_assets import (
+    prepare_carousel_export_assets,
+)
 from rag_backend.application.services.carousel.nodes.design import run_design
 from rag_backend.application.services.carousel.types import (
     SlideData,
@@ -59,6 +62,8 @@ async def render_language(
     """Export a single language's slide JPGs + PDF into `<output>/<lang>/`."""
     lang_dir = config.output_dir / config.language
     lang_dir.mkdir(parents=True, exist_ok=True)
+    if config.language == LANGUAGE_PT:
+        prepare_carousel_export_assets(config.output_dir)
 
     def _rewrite_image_paths(html: str, prefix: str) -> str:
         return (

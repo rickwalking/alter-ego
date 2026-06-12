@@ -105,6 +105,7 @@ class CarouselProject:
     blog_translations: dict[str, str] | None = None
     blog_image_map: list[dict[str, str | int]] | None = None
     caption: str | None = None
+    caption_en: str | None = None
     linkedin_post_pt: str | None = None
     linkedin_post_en: str | None = None
     design_tokens: DesignTokens | None = None

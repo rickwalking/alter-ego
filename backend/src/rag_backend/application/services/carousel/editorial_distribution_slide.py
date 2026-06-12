@@ -92,12 +92,27 @@ def _slide_data_from_draft(
     body = _slide_body(input.draft)
     structured_pt = _structured_from_presentation(presentation_pt)
     translation_en = input.translations_en.get(input.slide_number)
-    if translation_en is None and presentation_en is not None:
-        translation_en = {
-            "heading": str(presentation_en.get("heading") or ""),
-            "body": str(presentation_en.get("body") or ""),
-            **_structured_from_presentation(presentation_en),
-        }
+    if presentation_en is not None:
+        structured_en = _structured_from_presentation(presentation_en)
+        if translation_en is None:
+            translation_en = {
+                "heading": str(presentation_en.get("heading") or ""),
+                "body": str(presentation_en.get("body") or ""),
+                **structured_en,
+            }
+        elif structured_en:
+            translation_en = {
+                **translation_en,
+                **structured_en,
+                "heading": str(
+                    translation_en.get("heading")
+                    or presentation_en.get("heading")
+                    or ""
+                ),
+                "body": str(
+                    translation_en.get("body") or presentation_en.get("body") or ""
+                ),
+            }
     return SlideData(
         slide_number=input.slide_number,
         slide_type=input.slide_type,

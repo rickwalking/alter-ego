@@ -33,6 +33,10 @@ from rag_backend.application.services.carousel.malformed_draft_builders import (
 from rag_backend.application.services.carousel.malformed_draft_normalizer import (
     normalize_slide_drafts,
 )
+from rag_backend.application.services.carousel.workflow_state_sanitize import (
+    SanitizeWorkflowStateCommand,
+    sanitize_workflow_state_artifacts,
+)
 from rag_backend.application.services.carousel.presentation_review import (
     build_presentation_review_updates,
     serialize_translations_en,
@@ -48,6 +52,7 @@ from rag_backend.domain.constants.presentation_policy import (
 from rag_backend.infrastructure.config.settings import get_settings
 
 # Workflow state key constants
+_STATE_OUTLINE = "outline"
 _STATE_SLIDE_DRAFTS = "slide_drafts"
 _STATE_CURRENT_PHASE = "current_phase"
 _REVIEW_PRESENTATION_VALIDATION = "presentation_validation"
@@ -167,6 +172,25 @@ async def repair_workflow(project_id: str, *, dry_run: bool = False) -> dict[str
         draft_dicts = [slide for slide in raw_drafts if isinstance(slide, dict)]
         repaired_drafts = normalize_slide_drafts(draft_dicts)
         polish_repaired_slides(repaired_drafts)
+        sanitized_state = sanitize_workflow_state_artifacts(
+            SanitizeWorkflowStateCommand(
+                state={
+                    _STATE_OUTLINE: state.get(_STATE_OUTLINE) or [],
+                    _STATE_SLIDE_DRAFTS: repaired_drafts,
+                },
+                rebuild_validation=False,
+            ),
+        )
+        repaired_drafts = [
+            slide
+            for slide in sanitized_state.get(_STATE_SLIDE_DRAFTS) or []
+            if isinstance(slide, dict)
+        ]
+        sanitized_outline = [
+            slide
+            for slide in sanitized_state.get(_STATE_OUTLINE) or []
+            if isinstance(slide, dict)
+        ]
         translations_en = _translations_from_slides(repaired_drafts)
         review_updates = build_presentation_review_updates(
             repaired_drafts,
@@ -190,6 +214,7 @@ async def repair_workflow(project_id: str, *, dry_run: bool = False) -> dict[str
 
         updates: dict[str, object] = {
             _STATE_SLIDE_DRAFTS: repaired_drafts,
+            _STATE_OUTLINE: sanitized_outline,
             **review_updates,
             _REVIEW_TRANSLATIONS_EN: serialize_translations_en(translations_en),
             _REVIEW_PRESENTATION_POLICY_VERSION: DEFAULT_PRESENTATION_POLICY_VERSION,

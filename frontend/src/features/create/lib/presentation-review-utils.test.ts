@@ -9,9 +9,11 @@ import {
   hasBlockingPresentationViolations,
   isBudgetExceeded,
   listPresentationIconNames,
+  listPresentationStructuredItems,
   listPresentationViolations,
   listStructuredExtras,
   localizedSlidesHaveBudgetViolations,
+  resolvePresentationPreviewText,
   resolveBodyBudget,
   resolveHeadingBudget,
   resolveLocalizedSlides,
@@ -125,10 +127,30 @@ describe("presentation review utils", () => {
       features: [{ icon_name: "brain", title: "Signal", body: "Detail" }],
     };
 
-    expect(listStructuredExtras(presentation)).toEqual([
-      { key: "features", value: presentation.features },
-    ]);
+    expect(listStructuredExtras(presentation)).toEqual([]);
+    expect(listPresentationStructuredItems(presentation)).toEqual(
+      presentation.features,
+    );
     expect(listPresentationIconNames(presentation)).toEqual(["brain"]);
+  });
+
+  it("builds preview text from body and structured items", () => {
+    const presentation = {
+      slide_type: "summary",
+      heading: "Summary",
+      body: "",
+      summary_points: [
+        {
+          icon_name: "book-open",
+          title: "Origin",
+          body: "Where the term comes from.",
+        },
+      ],
+    };
+
+    expect(resolvePresentationPreviewText(presentation)).toBe(
+      "• Origin: Where the term comes from.",
+    );
   });
 
   it("formats heading budget usage for hero_lower_third_v1", () => {

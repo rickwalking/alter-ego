@@ -118,11 +118,11 @@ def get_creator_asset_service(
 @limiter.limit(RATE_LIMIT_CAROUSEL_PUBLISH)
 async def upload_creator_asset(
     request: Request,
-    project_id: UUID,
     file: UploadFile,
     ctx: Annotated[_CreatorAssetContext, Depends(get_creator_asset_context)],
 ) -> CreatorAssetResponse:
     """Upload and bind a managed creator branding asset to a carousel project."""
+    project_id = UUID(request.path_params["project_id"])
     project = await ctx.repo.get_project_by_id(project_id)
     if project is None:
         raise HTTPException(
@@ -164,11 +164,11 @@ async def upload_creator_asset(
 @limiter.limit(RATE_LIMIT_CAROUSEL_PUBLISH)
 async def select_creator_asset(
     http_request: Request,
-    project_id: UUID,
     request: CreatorAssetSelectRequest,
     ctx: Annotated[_CreatorAssetContext, Depends(get_creator_asset_context)],
 ) -> CreatorAssetResponse:
     """Select an existing managed creator asset for a carousel project."""
+    project_id = UUID(http_request.path_params["project_id"])
     project = await ctx.repo.get_project_by_id(project_id)
     if project is None:
         raise HTTPException(

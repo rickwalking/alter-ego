@@ -117,7 +117,11 @@ class PhaseArtifactRunner:
         if not outline_dicts:
             return state, updates
         normalized_outline = normalize_editorial_outline(outline_dicts)
-        if len(normalized_outline) == len(outline_dicts):
+        from rag_backend.application.services.carousel.workflow_state_sanitize import (
+            workflow_artifacts_differ,
+        )
+
+        if not workflow_artifacts_differ(outline_dicts, normalized_outline):
             return state, updates
         updates["outline"] = normalized_outline
         state = {**state, "outline": normalized_outline}  # type: ignore[arg-type]
@@ -172,8 +176,12 @@ class PhaseArtifactRunner:
         if isinstance(raw_outline, list):
             outline_dicts = [slide for slide in raw_outline if isinstance(slide, dict)]
             if outline_dicts:
+                from rag_backend.application.services.carousel.workflow_state_sanitize import (
+                    workflow_artifacts_differ,
+                )
+
                 normalized_outline = normalize_editorial_outline(outline_dicts)
-                if len(normalized_outline) != len(outline_dicts):
+                if workflow_artifacts_differ(outline_dicts, normalized_outline):
                     outline = normalized_outline
                     updates["outline"] = normalized_outline
         return outline, updates
@@ -240,9 +248,31 @@ class PhaseArtifactRunner:
         updates.update(distribution)
         design_updates = await self._apply_content_design(state, outline)
         updates.update(design_updates)
+        from rag_backend.application.services.carousel.workflow_state_sanitize import (
+            SanitizeWorkflowStateCommand,
+            sanitize_workflow_state_artifacts,
+        )
+
+        sanitized_state = sanitize_workflow_state_artifacts(
+            SanitizeWorkflowStateCommand(
+                state={
+                    **state,
+                    **updates,
+                    "outline": updates.get("outline") or state.get("outline") or [],
+                    "slide_drafts": updates.get("slide_drafts")
+                    or state.get("slide_drafts")
+                    or [],
+                },
+                rebuild_validation=False,
+            ),
+        )
+        if isinstance(sanitized_state.get("outline"), list):
+            updates["outline"] = sanitized_state["outline"]
+        if isinstance(sanitized_state.get("slide_drafts"), list):
+            updates["slide_drafts"] = sanitized_state["slide_drafts"]
         updates.update(
             await self._build_presentation_review_updates(
-                updates.get("slide_drafts") or state.get("slide_drafts") or [],
+                sanitized_state.get("slide_drafts") or [],
                 updates.get("translations_en"),
             )
         )

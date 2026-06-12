@@ -5,6 +5,9 @@ from __future__ import annotations
 import html
 from dataclasses import dataclass
 
+from rag_backend.application.services.carousel_template.helpers import (
+    _plain_text_for_attribute,
+)
 from rag_backend.application.services.carousel_template.slide_number import (
     normalize_slide_number,
 )
@@ -13,7 +16,7 @@ from rag_backend.application.services.carousel_template.slide_number import (
 def render_slide_artwork(slide_number: str | int, *, alt: str = "") -> str:
     """Render the full-bleed artwork region for a slide."""
     safe_number = normalize_slide_number(slide_number)
-    safe_alt = html.escape(alt, quote=True)
+    safe_alt = html.escape(_plain_text_for_attribute(alt), quote=True)
     return (
         f'  <div class="slide-artwork">\n'
         f'    <img src="images/slide_{safe_number}.jpg" alt="{safe_alt}" />\n'

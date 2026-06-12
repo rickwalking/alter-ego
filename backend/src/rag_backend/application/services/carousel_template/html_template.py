@@ -100,9 +100,15 @@ def _build_action_bar() -> str:
     )
 
 
-def _build_caption_html(project: CarouselProject) -> str:
+def _build_caption_html(
+    project: CarouselProject, *, language: str | None = None
+) -> str:
     """Build caption HTML if caption is present."""
+    from rag_backend.domain.constants import LANGUAGE_EN
+
     caption = project.caption
+    if language == LANGUAGE_EN and project.caption_en:
+        caption = project.caption_en
     if not caption:
         return ""
     esc = html_module.escape
@@ -169,7 +175,7 @@ def build_carousel_html(
     lang = language or project.language
     total_slides = len(slides)
     watermark_html = _build_watermark_html(project)
-    caption_html = _build_caption_html(project)
+    caption_html = _build_caption_html(project, language=lang)
 
     slides_html = ""
     for slide in slides:
@@ -179,7 +185,9 @@ def build_carousel_html(
         if strategy_registry is not None:
             effective_strategy = strategy_name or project.slide_layout_strategy
             strategy = strategy_registry.find_for_slide(
-                slide_type, preferred=effective_strategy
+                slide_type,
+                preferred=effective_strategy,
+                slide=slide,
             )  # type: ignore[arg-type]
             inner = strategy.render(
                 slide,

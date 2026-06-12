@@ -68,6 +68,14 @@ class _WorkflowUpdateParams:
     content_type: str
 
 
+@dataclass(frozen=True)
+class _EmailRecipient:
+    """Recipient and session for email dispatch."""
+
+    db: AsyncSession
+    user_id: str
+
+
 class NotificationService:
     """Creates and delivers in-app notifications with optional email."""
 
@@ -100,8 +108,7 @@ class NotificationService:
         db.add(notification)
         await db.flush()
         notification.email_sent = await self._send_email(
-            db,
-            user_id,
+            _EmailRecipient(db=db, user_id=user_id),
             subject=EMAIL_SUBJECT_REVIEW_REQUEST.format(title=title),
             body=body,
         )
@@ -208,8 +215,7 @@ class NotificationService:
             )
             db.add(reminder)
             await self._send_email(
-                db,
-                item.user_id,
+                _EmailRecipient(db=db, user_id=item.user_id),
                 subject=EMAIL_SUBJECT_DEADLINE_REMINDER.format(title=item.title),
                 body=NOTIFICATION_BODY_DEADLINE_REMINDER,
             )
@@ -240,8 +246,7 @@ class NotificationService:
         db.add(notification)
         await db.flush()
         notification.email_sent = await self._send_email(
-            db,
-            user_id,
+            _EmailRecipient(db=db, user_id=user_id),
             subject=EMAIL_SUBJECT_SCHEDULED_PUBLISHED.format(title=title),
             body=NOTIFICATION_BODY_SCHEDULED_PUBLISHED,
         )
@@ -268,21 +273,21 @@ class NotificationService:
 
     @staticmethod
     async def _send_email(
-        db: AsyncSession,
-        user_id: str,
+        recipient: _EmailRecipient,
         *,
         subject: str,
         body: str,
     ) -> bool:
         """Log email delivery attempt; returns True when dispatched."""
-        user = await db.get(UserModel, user_id)
+        db = recipient.db
+        user = await db.get(UserModel, recipient.user_id)
         if user is None:
             return False
         logger.info(
             "email_notification",
             to=user.email,
             subject=subject,
-            body_preview=body[:120],
+            body=body,
         )
         return True
 

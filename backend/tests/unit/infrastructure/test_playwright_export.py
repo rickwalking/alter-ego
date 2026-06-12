@@ -9,6 +9,8 @@ import pytest
 
 from rag_backend.domain.protocols import ExportConfig
 from rag_backend.infrastructure.external.playwright_export import (
+    _CSS_INJECTION_BASE,
+    _CSS_INJECTION_HD,
     PlaywrightExportService,
     _crop_border_artifact,
 )
@@ -167,8 +169,12 @@ class TestPlaywrightExportService:
         injection = mock_page.evaluate.await_args_list[0].args[0]
         assert ".s1-swipe       { font-size: 26px !important; }" in injection
         assert ".counter-label  { font-size: 22px !important; }" in injection
-        assert ".slide-hero-content { padding: 44px 40px 160px !important; }" in injection
-        assert ".slide-presentation { padding: 44px 40px 160px !important; }" in injection
+        assert (
+            ".slide-hero-content { padding: 44px 40px 160px !important; }" in injection
+        )
+        assert (
+            ".slide-presentation { padding: 44px 40px 160px !important; }" in injection
+        )
         assert (
             ".slide-hero-main,\n"
             "  .slide-presentation-copy { max-height: calc(100% - 190px) !important; }"
@@ -218,6 +224,15 @@ class TestPlaywrightExportService:
             )
 
         assert len(result) == 1
+
+
+@pytest.mark.unit
+class TestExportCssInjection:
+    def test_includes_summary_grid_font_scaling(self) -> None:
+        assert ".summary-title" in _CSS_INJECTION_BASE
+        assert ".summary-body" in _CSS_INJECTION_BASE
+        assert ".summary-title" in _CSS_INJECTION_HD
+        assert ".summary-body" in _CSS_INJECTION_HD
 
 
 @pytest.mark.unit

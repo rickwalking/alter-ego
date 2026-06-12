@@ -91,6 +91,10 @@ style.textContent = `
   .cta-body       { font-size: clamp(12px, 2.4vw, 30px) !important; }
   .feature-title  { font-size: clamp(11px, 2.2vw, 28px) !important; }
   .feature-body   { font-size: clamp(10px, 2vw, 24px) !important; }
+  .summary-title  { font-size: clamp(11px, 2.2vw, 28px) !important; }
+  .summary-body   { font-size: clamp(10px, 2vw, 24px) !important; }
+  .summary-item .summary-icon { width: 32px !important; height: 32px !important; }
+  .summary-item .summary-icon svg { width: 24px !important; height: 24px !important; }
   .stat-number    { font-size: clamp(18px, 4vw, 42px) !important; }
   .insight-card   { font-size: clamp(11px, 2.2vw, 26px) !important; }
   /* Adjust padding for larger canvas */
@@ -150,6 +154,10 @@ style.textContent = `
   .cta-body       { font-size: clamp(24px, 2.4vw, 60px) !important; }
   .feature-title  { font-size: clamp(22px, 2.2vw, 56px) !important; }
   .feature-body   { font-size: clamp(20px, 2vw, 48px) !important; }
+  .summary-title  { font-size: clamp(22px, 2.2vw, 56px) !important; }
+  .summary-body   { font-size: clamp(20px, 2vw, 48px) !important; }
+  .summary-item .summary-icon { width: 64px !important; height: 64px !important; }
+  .summary-item .summary-icon svg { width: 48px !important; height: 48px !important; }
   .stat-number    { font-size: clamp(36px, 4vw, 84px) !important; }
   .insight-card   { font-size: clamp(22px, 2.2vw, 52px) !important; }
   .slide-content      { padding: 104px 80px 88px !important; }

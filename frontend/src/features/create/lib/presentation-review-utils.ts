@@ -17,6 +17,18 @@ export const PRESENTATION_STRUCTURED_EXTRA_KEYS = [
   "creator_website",
 ] as const;
 
+export const PRESENTATION_STRUCTURED_ITEM_LIST_KEYS = [
+  "summary_points",
+  "features",
+  "actions",
+] as const;
+
+export interface PresentationStructuredItem {
+  icon_name?: string;
+  title?: string;
+  body?: string;
+}
+
 export interface PresentationFieldBudget {
   maxCharacters: number;
   maxLines?: number;
@@ -97,11 +109,11 @@ export function resolveSlideDraftPreview(
 ): string {
   const presentationPt = asRecord(slide.presentation_pt);
   if (presentationPt) {
-    const heading = presentationHeading(presentationPt, "");
-    const body = presentationBody(presentationPt);
-    if (body.trim() && !body.trim().startsWith("{")) {
-      return body;
+    const preview = resolvePresentationPreviewText(presentationPt);
+    if (preview.trim()) {
+      return preview;
     }
+    const heading = presentationHeading(presentationPt, "");
     if (heading.trim()) {
       return heading;
     }
@@ -192,12 +204,77 @@ export function localizedSlidesHaveBudgetViolations(
   });
 }
 
+export function isPresentationStructuredItem(
+  value: unknown,
+): value is PresentationStructuredItem {
+  return Boolean(value && typeof value === "object" && !Array.isArray(value));
+}
+
+export function isPresentationStructuredItemList(
+  value: unknown,
+): value is PresentationStructuredItem[] {
+  return (
+    Array.isArray(value) &&
+    value.length > 0 &&
+    value.every(isPresentationStructuredItem)
+  );
+}
+
+export function listPresentationStructuredItems(
+  presentation: Record<string, unknown>,
+): PresentationStructuredItem[] {
+  for (const key of PRESENTATION_STRUCTURED_ITEM_LIST_KEYS) {
+    const value = presentation[key];
+    if (isPresentationStructuredItemList(value)) {
+      return value;
+    }
+  }
+  return [];
+}
+
+export function resolvePresentationPreviewText(
+  presentation: Record<string, unknown>,
+): string {
+  const parts: string[] = [];
+  const body = presentationBody(presentation);
+  if (body.trim() && !body.trim().startsWith("{")) {
+    parts.push(body.trim());
+  }
+  for (const item of listPresentationStructuredItems(presentation)) {
+    const title = typeof item.title === "string" ? item.title.trim() : "";
+    const itemBody = typeof item.body === "string" ? item.body.trim() : "";
+    if (title && itemBody) {
+      parts.push(`• ${title}: ${itemBody}`);
+    } else if (title) {
+      parts.push(`• ${title}`);
+    } else if (itemBody) {
+      parts.push(`• ${itemBody}`);
+    }
+  }
+  const tldr = presentation.tldr_strip;
+  if (typeof tldr === "string" && tldr.trim()) {
+    parts.push(tldr.trim());
+  }
+  return parts.join("\n");
+}
+
 export function listStructuredExtras(
   presentation: Record<string, unknown>,
 ): Array<{ key: string; value: unknown }> {
   return PRESENTATION_STRUCTURED_EXTRA_KEYS.flatMap((key) => {
     const value = presentation[key];
     if (value === undefined || value === null) {
+      return [];
+    }
+    if (
+      PRESENTATION_STRUCTURED_ITEM_LIST_KEYS.includes(
+        key as (typeof PRESENTATION_STRUCTURED_ITEM_LIST_KEYS)[number],
+      ) &&
+      isPresentationStructuredItemList(value)
+    ) {
+      return [];
+    }
+    if (key === "content_kind") {
       return [];
     }
     return [{ key, value }];

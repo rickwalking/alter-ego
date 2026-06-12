@@ -12,12 +12,15 @@ import type {
   LocalizedSlideReview,
 } from "@/features/blog/types-ai";
 import { PresentationIconPreview } from "@/features/create/components/presentation-icon-preview";
+import { PresentationStructuredItems } from "@/features/create/components/presentation-structured-items";
 import {
   applySlideCopyEdit,
   formatBudgetUsage,
   hasBlockingPresentationViolations,
   isBudgetExceeded,
+  isPresentationStructuredItemList,
   listPresentationIconNames,
+  listPresentationStructuredItems,
   listPresentationViolations,
   listStructuredExtras,
   presentationBody,
@@ -41,6 +44,24 @@ function formatStructuredValue(value: unknown): string {
     return value;
   }
   return JSON.stringify(value, null, 2);
+}
+
+function renderStructuredExtraValue(value: unknown): React.ReactNode {
+  if (isPresentationStructuredItemList(value)) {
+    return <PresentationStructuredItems items={value} />;
+  }
+  if (typeof value === "string" && value.trim()) {
+    return (
+      <p className="whitespace-pre-wrap text-[var(--color-text-muted)] text-xs">
+        {value}
+      </p>
+    );
+  }
+  return (
+    <pre className="whitespace-pre-wrap font-mono text-[var(--color-text-muted)] text-xs">
+      {formatStructuredValue(value)}
+    </pre>
+  );
 }
 
 export function ContentPhaseReview({
@@ -154,6 +175,7 @@ export function ContentPhaseReview({
             const heading = presentationHeading(presentation, untitledSlide);
             const body = presentationBody(presentation);
             const structuredExtras = listStructuredExtras(presentation);
+            const structuredItems = listPresentationStructuredItems(presentation);
             const iconNames = listPresentationIconNames(presentation);
             const headingBudgetLabel = formatBudgetUsage(
               heading,
@@ -262,6 +284,9 @@ export function ContentPhaseReview({
                     ))}
                   </div>
                 ) : null}
+                {structuredItems.length > 0 ? (
+                  <PresentationStructuredItems items={structuredItems} />
+                ) : null}
                 {structuredExtras.length > 0 ? (
                   <div className="space-y-1 pt-1">
                     {structuredExtras.map((extra) => (
@@ -269,9 +294,7 @@ export function ContentPhaseReview({
                         <p className="font-medium text-[var(--color-text-muted)] text-xs">
                           {t("structuredExtra", { field: extra.key })}
                         </p>
-                        <pre className="whitespace-pre-wrap font-mono text-[var(--color-text-muted)] text-xs">
-                          {formatStructuredValue(extra.value)}
-                        </pre>
+                        {renderStructuredExtraValue(extra.value)}
                       </div>
                     ))}
                   </div>

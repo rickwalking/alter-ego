@@ -138,11 +138,13 @@ def get_neon_slide_component_css(theme: dict[str, str]) -> str:
   }}
   .summary-item .summary-text {{ flex: 1; min-width: 0; }}
   .summary-item .summary-title {{
-    font-size: clamp(12px, 2.4vw, 14px);
+    font-size: clamp(11px, 2.2vw, 13px);
     font-weight: 700;
     color: var(--text);
-    margin-bottom: 2px;
+    margin-bottom: 1px;
     line-height: 1.3;
+    overflow-wrap: break-word;
+    word-break: break-word;
   }}
   .summary-item .summary-body {{
     font-size: clamp(10px, 2vw, 12px);

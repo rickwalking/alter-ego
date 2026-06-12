@@ -8,6 +8,9 @@ from pathlib import Path
 from typing import TypedDict
 from uuid import UUID
 
+from rag_backend.application.services.carousel.carousel_export_assets import (
+    prepare_carousel_export_assets,
+)
 from rag_backend.application.services.carousel.nodes.design import run_design
 from rag_backend.application.services.carousel.nodes.export import (
     BilingualExportConfig,
@@ -122,6 +125,8 @@ class CarouselRefinementService(CarouselRefinementMixin):
         if strategy is not None:
             project.slide_layout_strategy = strategy
 
+        output_dir = Path(project.output_dir)
+        prepare_carousel_export_assets(output_dir)
         slides_data = [unpack_extras(slide) for slide in slides]
         pt_html = self._phase4_design(project, slides_data, strategy_name=strategy)
         await self._phase6_bilingual_export(
@@ -129,7 +134,7 @@ class CarouselRefinementService(CarouselRefinementMixin):
                 project=project,
                 slides_data=slides_data,
                 pt_html=pt_html,
-                output_dir=Path(project.output_dir),
+                output_dir=output_dir,
                 strategy_name=strategy,
             )
         )

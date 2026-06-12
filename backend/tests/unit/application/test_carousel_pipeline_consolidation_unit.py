@@ -128,6 +128,24 @@ class TestContentStandardsEnforcement:
         assert "Line one" in rendered
         assert "Line two" in rendered
 
+    def test_render_inline_converts_existing_strong_tags(self) -> None:
+        """Scenario: Pre-rendered <strong> tags become styled bold, not escaped text."""
+        rendered = _render_inline(
+            "O <strong>harness</strong> é o ecossistema completo."
+        )
+        assert "<strong>harness</strong>" in rendered
+        assert "&lt;strong&gt;" not in rendered
+
+    def test_plain_text_for_attribute_strips_markup(self) -> None:
+        from rag_backend.application.services.carousel_template.helpers import (
+            _plain_text_for_attribute,
+        )
+
+        plain = _plain_text_for_attribute(
+            "O que você vai <strong>aprender</strong> aqui"
+        )
+        assert plain == "O que você vai aprender aqui"
+
     def test_closing_slide_uses_structured_checklist_features(self) -> None:
         """Scenario: Closing slide uses structured checklist not prose wall."""
         slide = SlideData(

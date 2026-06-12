@@ -61,6 +61,7 @@ class CarouselProjectModel(Base):
     blog_markdown = Column(Text, nullable=True)
     blog_translations = Column(JSON, nullable=True)
     caption = Column(Text, nullable=True)
+    caption_en = Column(Text, nullable=True)
     linkedin_post_pt = Column(Text, nullable=True)
     linkedin_post_en = Column(Text, nullable=True)
     design_tokens = Column(
@@ -155,6 +156,7 @@ class CarouselProjectModel(Base):
             blog_markdown=self.blog_markdown,
             blog_translations=self.blog_translations,
             caption=self.caption,
+            caption_en=self.caption_en,
             linkedin_post_pt=self.linkedin_post_pt,
             linkedin_post_en=self.linkedin_post_en,
             design_tokens=self.design_tokens,
@@ -213,6 +215,7 @@ class CarouselProjectModel(Base):
             blog_markdown=entity.blog_markdown,
             blog_translations=entity.blog_translations,
             caption=entity.caption,
+            caption_en=entity.caption_en,
             linkedin_post_pt=entity.linkedin_post_pt,
             linkedin_post_en=entity.linkedin_post_en,
             design_tokens=entity.design_tokens,
@@ -258,6 +261,7 @@ class CarouselProjectModel(Base):
         self.blog_markdown = entity.blog_markdown
         self.blog_translations = entity.blog_translations
         self.caption = entity.caption
+        self.caption_en = entity.caption_en
         self.linkedin_post_pt = entity.linkedin_post_pt
         self.linkedin_post_en = entity.linkedin_post_en
         self.design_tokens = entity.design_tokens

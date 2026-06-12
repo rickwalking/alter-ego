@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import re
 from collections.abc import Sequence
+from dataclasses import dataclass
 from pathlib import Path
 from uuid import UUID
 
@@ -93,6 +94,42 @@ def _public_rendered_slide_urls(
     ]
 
 
+@dataclass(frozen=True)
+class _PreviewSlideNumbers:
+    """Slide numbers for PT and fallback raw preview."""
+
+    pt: list[int]
+    raw: list[int]
+    project_id: UUID
+
+
+def _apply_preview_pt_urls(
+    images: dict[str, object],
+    numbers: _PreviewSlideNumbers,
+) -> dict[str, object]:
+    """Set rendered-slide URLs for PT (or fallback raw) into image dict."""
+    if numbers.pt:
+        preview_pt = _preview_rendered_slide_urls(numbers.project_id, numbers.pt, "pt")
+        images["rendered_slides_pt"] = preview_pt
+        if preview_pt:
+            images["hero"] = preview_pt[0]
+            images["slides"] = preview_pt
+    elif numbers.raw:
+        preview_pt = _preview_rendered_slide_urls(
+            numbers.project_id,
+            numbers.raw,
+            "pt",
+        )
+        images["rendered_slides_pt"] = preview_pt
+        images["hero"] = preview_pt[0] if preview_pt else ""
+        images["slides"] = preview_pt
+    else:
+        images.pop("rendered_slides_pt", None)
+        images["hero"] = ""
+        images["slides"] = []
+    return images
+
+
 def _apply_draft_preview_urls(
     project: CarouselProject,
     tokens: dict[str, object],
@@ -110,20 +147,10 @@ def _apply_draft_preview_urls(
         return tokens
     images = dict(raw_images)
 
-    if pt_numbers:
-        preview_pt = _preview_rendered_slide_urls(
-            project.id,
-            pt_numbers,
-            "pt",
-        )
-        images["rendered_slides_pt"] = preview_pt
-        if preview_pt:
-            images["hero"] = preview_pt[0]
-            images["slides"] = preview_pt
-    else:
-        images.pop("rendered_slides_pt", None)
-        images["hero"] = ""
-        images["slides"] = []
+    images = _apply_preview_pt_urls(
+        images,
+        _PreviewSlideNumbers(pt=pt_numbers, raw=raw_numbers, project_id=project.id),
+    )
 
     if en_numbers:
         images["rendered_slides_en"] = _preview_rendered_slide_urls(

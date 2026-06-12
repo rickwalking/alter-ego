@@ -27,6 +27,9 @@ from rag_backend.application.services.carousel_template.strategies.numbered_list
 from rag_backend.application.services.carousel_template.strategies.stat_card_grid import (  # noqa: E501
     StatCardGridStrategy,
 )
+from rag_backend.application.services.carousel_template.strategies.summary_grid import (
+    SummaryGridStrategy,
+)
 
 __all__ = [
     "CtaCenteredStrategy",
@@ -36,4 +39,5 @@ __all__ = [
     "IntroHeroStrategy",
     "NumberedListStrategy",
     "StatCardGridStrategy",
+    "SummaryGridStrategy",
 ]

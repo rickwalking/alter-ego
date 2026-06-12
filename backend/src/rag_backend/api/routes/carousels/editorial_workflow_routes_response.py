@@ -10,6 +10,10 @@ from rag_backend.api.schemas.carousel_workflow import (
     SlideValidationReportResponse,
     SlideValidationViolationResponse,
 )
+from rag_backend.application.services.carousel.workflow_state_sanitize import (
+    SanitizeWorkflowStateCommand,
+    sanitize_workflow_state_artifacts,
+)
 
 # State field keys
 _STATE_PROJECT_ID = "project_id"
@@ -152,6 +156,9 @@ def build_workflow_state_response(
     lock_version: int = 1,
 ) -> EditorialWorkflowStateResponse:
     """Build a typed API response from a raw workflow state dictionary."""
+    state = sanitize_workflow_state_artifacts(
+        SanitizeWorkflowStateCommand(state=state),
+    )
     kwargs: dict[str, object] = {}
     for field_name, extractor in _FIELD_MAPPING:
         kwargs[field_name] = extractor(state)
