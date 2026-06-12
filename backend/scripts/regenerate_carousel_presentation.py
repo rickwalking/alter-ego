@@ -24,6 +24,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import sys
+from collections.abc import Callable
 from uuid import UUID
 
 from rag_backend.application.services.carousel.artifact_build_service import (
@@ -32,6 +33,7 @@ from rag_backend.application.services.carousel.artifact_build_service import (
 from rag_backend.application.services.carousel.legacy_presentation_regeneration import (
     LegacyRegenerationError,
     RegeneratePresentationCommand,
+    RegenerationAuditReport,
     RegenerationCommand,
     RegenerationResult,
     default_target_policy_version,
@@ -50,6 +52,30 @@ from rag_backend.infrastructure.database.config import close_db, get_session, in
 from rag_backend.infrastructure.logging import get_logger, setup_logging
 
 logger = get_logger()
+
+# Audit output labels
+_LABEL_PROJECT_ID = "project_id"
+_LABEL_CURRENT_POLICY = "current_policy"
+_LABEL_TARGET_POLICY = "target_policy"
+_LABEL_VALIDATION_STATUS = "validation_status"
+_LABEL_ARTIFACT_HEALTH_OK = "artifact_health_ok"
+_LABEL_PRIOR_ARTIFACT_VERSION = "prior_artifact_version"
+_LABEL_ROLLBACK_ROOT = "rollback_root"
+_LABEL_NOTE = "note"
+_LABEL_VIOLATION = "violation"
+_LABEL_ARTIFACT_ERROR = "artifact_error"
+_LABEL_RENDERED = "rendered"
+_LABEL_ARTIFACT_VERSION = "artifact_version"
+_LABEL_MANIFEST_PATH = "manifest_path"
+
+# Always-printed scalar audit fields, mapped to their accessors.
+_AUDIT_FIELDS: tuple[tuple[str, Callable[[RegenerationAuditReport], object]], ...] = (
+    (_LABEL_PROJECT_ID, lambda a: a.project_id),
+    (_LABEL_CURRENT_POLICY, lambda a: a.current_policy_version),
+    (_LABEL_TARGET_POLICY, lambda a: a.target_policy_version),
+    (_LABEL_VALIDATION_STATUS, lambda a: a.validation_status),
+    (_LABEL_ARTIFACT_HEALTH_OK, lambda a: a.artifact_health_ok),
+)
 
 
 def _parse_args() -> RegenerationCommand:
@@ -73,32 +99,33 @@ def _parse_args() -> RegenerationCommand:
     )
 
 
+def _print_render_fields(result: RegenerationResult) -> None:
+    render_fields: list[tuple[str, object]] = [
+        (_LABEL_RENDERED, result.rendered),
+        (_LABEL_ARTIFACT_VERSION, result.artifact_version),
+    ]
+    if result.manifest_path is not None:
+        render_fields.append((_LABEL_MANIFEST_PATH, result.manifest_path))
+    for label, value in render_fields:
+        print(f"{label}={value}")
+
+
 def _print_audit(command: RegenerationCommand, result: RegenerationResult) -> None:
     audit = result.audit
-    print(f"project_id={audit.project_id}")
-    print(f"current_policy={audit.current_policy_version}")
-    print(f"target_policy={audit.target_policy_version}")
-    print(f"validation_status={audit.validation_status}")
-    print(f"artifact_health_ok={audit.artifact_health_ok}")
+    for label, accessor in _AUDIT_FIELDS:
+        print(f"{label}={accessor(audit)}")
     if audit.prior_artifact_version:
-        print(f"prior_artifact_version={audit.prior_artifact_version}")
+        print(f"{_LABEL_PRIOR_ARTIFACT_VERSION}={audit.prior_artifact_version}")
     if audit.backup_path is not None:
-        print(f"rollback_root={audit.backup_path}")
+        print(f"{_LABEL_ROLLBACK_ROOT}={audit.backup_path}")
     for note in audit.notes:
-        print(f"note={note}")
+        print(f"{_LABEL_NOTE}={note}")
     for message in audit.violation_messages:
-        print(f"violation={message}")
+        print(f"{_LABEL_VIOLATION}={message}")
     for error in audit.artifact_health_errors:
-        print(f"artifact_error={error}")
+        print(f"{_LABEL_ARTIFACT_ERROR}={error}")
     if command.render and not command.dry_run:
-        render_fields: list[tuple[str, object]] = [
-            ("rendered", result.rendered),
-            ("artifact_version", result.artifact_version),
-        ]
-        if result.manifest_path is not None:
-            render_fields.append(("manifest_path", result.manifest_path))
-        for label, value in render_fields:
-            print(f"{label}={value}")
+        _print_render_fields(result)
 
 
 async def _run(command: RegenerationCommand) -> int:

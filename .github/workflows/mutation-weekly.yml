@@ -1,0 +1,61 @@
+name: Mutation (Weekly)
+
+# Weekly full mutation-testing run for the backend (ADR-005 Phase 4).
+# Complements the per-PR blocking gate in backend-quality-gates.yml by
+# running the full suite on a schedule and failing if the score regresses
+# below the 75% threshold (AE-0049).
+
+on:
+  schedule:
+    # Mondays at 04:00 UTC
+    - cron: '0 4 * * 1'
+  workflow_dispatch: {}
+
+concurrency:
+  group: mutation-weekly
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    working-directory: backend
+
+jobs:
+  mutation:
+    name: backend / Mutation (weekly ≥75%)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: "0.6.x"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: uv sync --locked
+
+      - name: Run mutation tests and enforce score ≥75%
+        working-directory: .
+        run: bash scripts/ci/mutation-score-gate.sh 75
+        env:
+          SECRET_KEY: test-secret-key-for-ci-tests!!
+          ANON_SECRET_KEY: test-anon-secret-for-ci-tests!
+
+      - name: Show mutation results
+        if: always()
+        run: uv run mutmut results
+
+      - name: Upload mutation stats
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mutmut-cicd-stats
+          path: backend/mutants/mutmut-cicd-stats.json

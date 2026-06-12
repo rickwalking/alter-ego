@@ -54,10 +54,21 @@ jobs:
         run: uv run ruff check src/
 
       - name: Ruff diff check (changed files only)
+        # Blocking (AE-0049): fails if changed Python files contain ruff
+        # violations. Guards against empty diffs, the first commit on a
+        # branch, and fork PRs where origin/main may be unavailable.
         run: |
-          git fetch origin main
-          uv run ruff check --diff $(git diff --name-only origin/main... -- '*.py') || true
-        # Non-blocking advisory for now; will be made blocking after baseline
+          if ! git fetch origin main --depth=1 2>/dev/null; then
+            echo "origin/main unavailable (fork PR / first commit) — skipping ruff diff check."
+            exit 0
+          fi
+          mapfile -t CHANGED < <(git diff --name-only origin/main...HEAD -- '*.py' 2>/dev/null)
+          if ((${#CHANGED[@]} == 0)); then
+            echo "No changed Python files — skipping ruff diff check."
+            exit 0
+          fi
+          echo "Running ruff --diff on ${#CHANGED[@]} changed file(s)."
+          uv run ruff check --diff "${CHANGED[@]}"
 
       - name: Ruff review comments (PR)
         if: github.event_name == 'pull_request' && failure()
@@ -126,7 +137,7 @@ jobs:
           mapfile -t files < <(bash scripts/ci/changed-backend-files.sh)
           if ((${#files[@]})); then
             cd backend
-            bash ../scripts/ci/ruff-reviewdog.sh check --select PLR0913,C901,PLR0912 "${files[@]}"
+            bash ../scripts/ci/ruff-reviewdog.sh check --select PLR0913,C901,PLR0912,PLR0911,PLR0914,PLR1702 "${files[@]}"
           fi
 
       - name: Post PR summary on failure
@@ -138,7 +149,7 @@ jobs:
         run: |
           bash scripts/ci/post-pr-quality-comment.sh \
             "Backend" "Strict Diff" \
-            "Changed files exceed max-args (3), cyclomatic complexity, or branch limits."
+            "Changed lines exceed a strict threshold: max-args=3, max-complexity=10, max-branches=8, max-returns=5, max-locals=12, or max-nested-blocks=4."
 
   type-check:
     name: backend / Type Check
@@ -282,8 +293,16 @@ jobs:
           SECRET_KEY: test-secret-key-for-ci-tests!!
           ANON_SECRET_KEY: test-anon-secret-for-ci-tests!
 
-      - name: Enforce diff coverage ≥75% (phase 1-5 pivot baseline)
-        run: uv run diff-cover coverage.xml --compare-branch=origin/main --fail-under=75
+      - name: Enforce diff coverage ≥75% (blocking — AE-0049)
+        # Blocking: fails the PR if diff coverage on changed lines < 75%.
+        # Guards fork PRs / first commit where origin/main is unavailable;
+        # diff-cover on an empty diff reports 100% and passes.
+        run: |
+          if ! git fetch origin main --depth=1 2>/dev/null; then
+            echo "origin/main unavailable (fork PR / first commit) — skipping diff coverage gate."
+            exit 0
+          fi
+          uv run diff-cover coverage.xml --compare-branch=origin/main --fail-under=75
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
@@ -303,11 +322,10 @@ jobs:
             "Backend" "Test & Coverage" \
             "Tests failed or diff coverage is below 75%."
 
-  mutation-advisory:
-    name: backend / Mutation (advisory)
+  mutation:
+    name: backend / Mutation (blocking ≥75%)
     needs: [test]
     runs-on: ubuntu-latest
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
 
@@ -324,8 +342,9 @@ jobs:
       - name: Install dependencies
         run: uv sync --locked
 
-      - name: Run mutation tests
-        run: uv run mutmut run
+      - name: Run mutation tests and enforce score ≥75% (blocking — AE-0049)
+        working-directory: .
+        run: bash scripts/ci/mutation-score-gate.sh 75
         env:
           SECRET_KEY: test-secret-key-for-ci-tests!!
           ANON_SECRET_KEY: test-anon-secret-for-ci-tests!
@@ -334,16 +353,16 @@ jobs:
         if: always()
         run: uv run mutmut results
 
-      - name: Post PR mutation summary
-        if: always() && github.event_name == 'pull_request'
+      - name: Post PR mutation summary on failure
+        if: failure() && github.event_name == 'pull_request'
         working-directory: .
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_EVENT_PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number }}
         run: |
           bash scripts/ci/post-pr-quality-comment.sh \
-            "Backend" "Mutation (advisory)" \
-            "Mutation testing completed (non-blocking). Review \`mutmut results\` in workflow logs."
+            "Backend" "Mutation (blocking ≥75%)" \
+            "Mutation score dropped below the 75% threshold. Review \`mutmut results\` and strengthen the failing tests."
 
   dead-code:
     name: backend / Dead Code

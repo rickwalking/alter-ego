@@ -14,48 +14,44 @@ from rag_backend.application.services.carousel.workflow_state_sanitize import (
     SanitizeWorkflowStateCommand,
     sanitize_workflow_state_artifacts,
 )
-
-# State field keys
-_STATE_PROJECT_ID = "project_id"
-_STATE_CURRENT_PHASE = "current_phase"
-_STATE_PHASE_STATUS = "phase_status"
-_STATE_RESEARCH_FINDINGS = "research_findings"
-_STATE_OUTLINE = "outline"
-_STATE_SLIDE_DRAFTS = "slide_drafts"
-_STATE_IMAGE_ASSETS = "image_assets"
-_STATE_DESIGN_APPLIED = "design_applied"
-_STATE_PHASE_PROGRESS = "phase_progress"
-_STATE_STATUS = "status"
-_STATE_WORKFLOW_STATUS = "workflow_status"
-_STATE_CAPTION = "caption"
-_STATE_BLOG_MARKDOWN = "blog_markdown"
-_STATE_LINKEDIN_POST_PT = "linkedin_post_pt"
-_STATE_LINKEDIN_POST_EN = "linkedin_post_en"
-_STATE_PERSONA_SCORES = "persona_scores"
-_STATE_RUBRIC_SCORES = "rubric_scores"
-_STATE_PHASE_FEEDBACK = "phase_feedback"
-_STATE_REVISION_COUNT = "revision_count"
-_STATE_PRESENTATION_POLICY_VERSION = "presentation_policy_version"
-
-# Localized slide review keys
-_REVIEW_SLIDE_INDEX = "slide_index"
-_REVIEW_SLIDE_TYPE = "slide_type"
-_REVIEW_PRESENTATION_PT = "presentation_pt"
-_REVIEW_PRESENTATION_EN = "presentation_en"
-
-# Validation report keys
-_REPORT_VALIDATION_STATUS = "validation_status"
-_REPORT_VALIDATED_AT = "validated_at"
-_REPORT_BLOCKING = "blocking"
-_REPORT_VIOLATIONS = "violations"
-
-# Violation item keys
-_VIOLATION_CODE = "code"
-_VIOLATION_MESSAGE = "message"
-_VIOLATION_SLIDE_INDEX = "slide_index"
-_VIOLATION_LOCALE = "locale"
-_VIOLATION_FIELD = "field"
-
+from rag_backend.domain.constants.workflow_state_fields import (
+    STATE_DEFAULT_STATUS,
+    STATE_FIELD_BLOCKING,
+    STATE_FIELD_BLOG_MARKDOWN,
+    STATE_FIELD_CAPTION,
+    STATE_FIELD_CURRENT_PHASE,
+    STATE_FIELD_DESIGN_APPLIED,
+    STATE_FIELD_IMAGE_ASSETS,
+    STATE_FIELD_LINKEDIN_POST_EN,
+    STATE_FIELD_LINKEDIN_POST_PT,
+    STATE_FIELD_LOCALIZED_SLIDES,
+    STATE_FIELD_LOCK_VERSION,
+    STATE_FIELD_OUTLINE,
+    STATE_FIELD_PERSONA_SCORES,
+    STATE_FIELD_PHASE_FEEDBACK,
+    STATE_FIELD_PHASE_PROGRESS,
+    STATE_FIELD_PHASE_STATUS,
+    STATE_FIELD_PRESENTATION_EN,
+    STATE_FIELD_PRESENTATION_POLICY_VERSION,
+    STATE_FIELD_PRESENTATION_PT,
+    STATE_FIELD_PRESENTATION_VALIDATION,
+    STATE_FIELD_PROJECT_ID,
+    STATE_FIELD_RESEARCH_FINDINGS,
+    STATE_FIELD_REVISION_COUNT,
+    STATE_FIELD_RUBRIC_SCORES,
+    STATE_FIELD_SLIDE_DRAFTS,
+    STATE_FIELD_SLIDE_INDEX,
+    STATE_FIELD_SLIDE_TYPE,
+    STATE_FIELD_STATUS,
+    STATE_FIELD_VALIDATED_AT,
+    STATE_FIELD_VALIDATION_STATUS,
+    STATE_FIELD_VIOLATION_CODE,
+    STATE_FIELD_VIOLATION_FIELD,
+    STATE_FIELD_VIOLATION_LOCALE,
+    STATE_FIELD_VIOLATION_MESSAGE,
+    STATE_FIELD_VIOLATIONS,
+    STATE_FIELD_WORKFLOW_STATUS,
+)
 
 # ── Field extractors ──────────────────────────────────────────────────────────
 
@@ -128,21 +124,21 @@ def _dict_field(key: str) -> Callable[[dict[str, object]], dict[str, object]]:
 # ── Field mapping ─────────────────────────────────────────────────────────────
 
 _FIELD_MAPPING: list[tuple[str, Callable[[dict[str, object]], object]]] = [
-    ("project_id", _string_field(_STATE_PROJECT_ID)),
-    ("current_phase", _string_field(_STATE_CURRENT_PHASE)),
-    ("phase_status", _string_field(_STATE_PHASE_STATUS)),
-    ("research_findings", _list_field(_STATE_RESEARCH_FINDINGS)),
-    ("outline", _list_field(_STATE_OUTLINE)),
-    ("slide_drafts", _list_field(_STATE_SLIDE_DRAFTS)),
-    ("image_assets", _list_field(_STATE_IMAGE_ASSETS)),
-    ("design_applied", _bool_field(_STATE_DESIGN_APPLIED)),
-    ("workflow_status", _string_field(_STATE_WORKFLOW_STATUS)),
-    ("persona_scores", _dict_field(_STATE_PERSONA_SCORES)),
-    ("caption", _string_field(_STATE_CAPTION)),
-    ("blog_markdown", _string_field(_STATE_BLOG_MARKDOWN)),
-    ("linkedin_post_pt", _string_field(_STATE_LINKEDIN_POST_PT)),
-    ("linkedin_post_en", _string_field(_STATE_LINKEDIN_POST_EN)),
-    ("rubric_scores", _dict_field(_STATE_RUBRIC_SCORES)),
+    (STATE_FIELD_PROJECT_ID, _string_field(STATE_FIELD_PROJECT_ID)),
+    (STATE_FIELD_CURRENT_PHASE, _string_field(STATE_FIELD_CURRENT_PHASE)),
+    (STATE_FIELD_PHASE_STATUS, _string_field(STATE_FIELD_PHASE_STATUS)),
+    (STATE_FIELD_RESEARCH_FINDINGS, _list_field(STATE_FIELD_RESEARCH_FINDINGS)),
+    (STATE_FIELD_OUTLINE, _list_field(STATE_FIELD_OUTLINE)),
+    (STATE_FIELD_SLIDE_DRAFTS, _list_field(STATE_FIELD_SLIDE_DRAFTS)),
+    (STATE_FIELD_IMAGE_ASSETS, _list_field(STATE_FIELD_IMAGE_ASSETS)),
+    (STATE_FIELD_DESIGN_APPLIED, _bool_field(STATE_FIELD_DESIGN_APPLIED)),
+    (STATE_FIELD_WORKFLOW_STATUS, _string_field(STATE_FIELD_WORKFLOW_STATUS)),
+    (STATE_FIELD_PERSONA_SCORES, _dict_field(STATE_FIELD_PERSONA_SCORES)),
+    (STATE_FIELD_CAPTION, _string_field(STATE_FIELD_CAPTION)),
+    (STATE_FIELD_BLOG_MARKDOWN, _string_field(STATE_FIELD_BLOG_MARKDOWN)),
+    (STATE_FIELD_LINKEDIN_POST_PT, _string_field(STATE_FIELD_LINKEDIN_POST_PT)),
+    (STATE_FIELD_LINKEDIN_POST_EN, _string_field(STATE_FIELD_LINKEDIN_POST_EN)),
+    (STATE_FIELD_RUBRIC_SCORES, _dict_field(STATE_FIELD_RUBRIC_SCORES)),
 ]
 
 
@@ -162,24 +158,30 @@ def build_workflow_state_response(
     kwargs: dict[str, object] = {}
     for field_name, extractor in _FIELD_MAPPING:
         kwargs[field_name] = extractor(state)
-    kwargs["localized_slides"] = _localized_slide_reviews(
-        state.get("localized_slides"),
+    kwargs[STATE_FIELD_LOCALIZED_SLIDES] = _localized_slide_reviews(
+        state.get(STATE_FIELD_LOCALIZED_SLIDES),
     )
-    kwargs["presentation_validation"] = _presentation_validation_response(
-        state.get("presentation_validation"),
+    kwargs[STATE_FIELD_PRESENTATION_VALIDATION] = _presentation_validation_response(
+        state.get(STATE_FIELD_PRESENTATION_VALIDATION),
     )
-    kwargs["phase_feedback"] = _string_list_map(state.get(_STATE_PHASE_FEEDBACK))
-    kwargs["revision_count"] = _int_map(state.get(_STATE_REVISION_COUNT))
+    kwargs[STATE_FIELD_PHASE_FEEDBACK] = _string_list_map(
+        state.get(STATE_FIELD_PHASE_FEEDBACK)
+    )
+    kwargs[STATE_FIELD_REVISION_COUNT] = _int_map(state.get(STATE_FIELD_REVISION_COUNT))
     raw_progress = (
         phase_progress
         if phase_progress is not None
-        else state.get(_STATE_PHASE_PROGRESS)
+        else state.get(STATE_FIELD_PHASE_PROGRESS)
     )
-    kwargs["phase_progress"] = raw_progress if isinstance(raw_progress, dict) else None
-    kwargs["status"] = str(state.get(_STATE_STATUS, "draft"))
-    kwargs["lock_version"] = lock_version
-    raw_policy = state.get(_STATE_PRESENTATION_POLICY_VERSION)
-    kwargs["presentation_policy_version"] = (
+    kwargs[STATE_FIELD_PHASE_PROGRESS] = (
+        raw_progress if isinstance(raw_progress, dict) else None
+    )
+    kwargs[STATE_FIELD_STATUS] = str(
+        state.get(STATE_FIELD_STATUS, STATE_DEFAULT_STATUS)
+    )
+    kwargs[STATE_FIELD_LOCK_VERSION] = lock_version
+    raw_policy = state.get(STATE_FIELD_PRESENTATION_POLICY_VERSION)
+    kwargs[STATE_FIELD_PRESENTATION_POLICY_VERSION] = (
         str(raw_policy) if raw_policy is not None else None
     )
     return EditorialWorkflowStateResponse(**kwargs)
@@ -195,10 +197,10 @@ def _localized_slide_reviews(raw: object) -> list[LocalizedSlideReview]:
     for item in raw:
         if not isinstance(item, dict):
             continue
-        slide_index = item.get(_REVIEW_SLIDE_INDEX)
-        slide_type = item.get(_REVIEW_SLIDE_TYPE)
-        presentation_pt = item.get(_REVIEW_PRESENTATION_PT)
-        presentation_en = item.get(_REVIEW_PRESENTATION_EN)
+        slide_index = item.get(STATE_FIELD_SLIDE_INDEX)
+        slide_type = item.get(STATE_FIELD_SLIDE_TYPE)
+        presentation_pt = item.get(STATE_FIELD_PRESENTATION_PT)
+        presentation_en = item.get(STATE_FIELD_PRESENTATION_EN)
         if not isinstance(slide_index, int) or not isinstance(slide_type, str):
             continue
         reviews.append(
@@ -221,28 +223,28 @@ def _presentation_validation_response(
 ) -> SlideValidationReportResponse | None:
     if not isinstance(raw, dict):
         return None
-    validation_status = raw.get(_REPORT_VALIDATION_STATUS)
-    validated_at = raw.get(_REPORT_VALIDATED_AT)
-    blocking = raw.get(_REPORT_BLOCKING)
+    validation_status = raw.get(STATE_FIELD_VALIDATION_STATUS)
+    validated_at = raw.get(STATE_FIELD_VALIDATED_AT)
+    blocking = raw.get(STATE_FIELD_BLOCKING)
     if (
         not isinstance(validation_status, str)
         or validated_at is None
         or not isinstance(blocking, bool)
     ):
         return None
-    violations_raw = raw.get(_REPORT_VIOLATIONS)
+    violations_raw = raw.get(STATE_FIELD_VIOLATIONS)
     violations: list[SlideValidationViolationResponse] = []
     if isinstance(violations_raw, list):
         for item in violations_raw:
             if not isinstance(item, dict):
                 continue
-            code = item.get(_VIOLATION_CODE)
-            message = item.get(_VIOLATION_MESSAGE)
+            code = item.get(STATE_FIELD_VIOLATION_CODE)
+            message = item.get(STATE_FIELD_VIOLATION_MESSAGE)
             if not isinstance(code, str) or not isinstance(message, str):
                 continue
-            slide_index = item.get(_VIOLATION_SLIDE_INDEX)
-            locale = item.get(_VIOLATION_LOCALE)
-            field = item.get(_VIOLATION_FIELD)
+            slide_index = item.get(STATE_FIELD_SLIDE_INDEX)
+            locale = item.get(STATE_FIELD_VIOLATION_LOCALE)
+            field = item.get(STATE_FIELD_VIOLATION_FIELD)
             violations.append(
                 SlideValidationViolationResponse(
                     code=code,
