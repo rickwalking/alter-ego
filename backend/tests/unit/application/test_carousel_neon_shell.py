@@ -106,7 +106,10 @@ class TestNeonShellHtml:
         assert 'class="counter-label"' in html
         assert "1/2" in html
         assert ".counter-dot {\n    width: 8px;" in html
-        assert ".counter-label {\n    font-family: var(--font-mono);\n    font-size: 13px;" in html
+        assert (
+            ".counter-label {\n    font-family: var(--font-mono);\n    font-size: 13px;"
+            in html
+        )
 
     def test_build_carousel_html_watermark_when_creator_set(
         self, sample_project, sample_theme

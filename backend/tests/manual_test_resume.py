@@ -1,4 +1,5 @@
 """Test slide persistence and retrieval across sessions."""
+
 import asyncio
 import os
 
@@ -26,7 +27,10 @@ async def main():
         print(f"Project: {project.id}")
 
         from sqlalchemy import delete
-        await db1.execute(delete(CarouselSlideModel).where(CarouselSlideModel.project_id == pid))
+
+        await db1.execute(
+            delete(CarouselSlideModel).where(CarouselSlideModel.project_id == pid)
+        )
         await db1.commit()
 
         for i in range(3):
@@ -45,9 +49,12 @@ async def main():
 
     async with factory() as db2:
         slides = await ensure_slides_from_outline(
-            db2, pid,
-            [{"slide_index": 1, "title": "Test", "key_points": ["Point 1"]},
-             {"slide_index": 2, "title": "Slide 2", "key_points": ["Point 2"]}]
+            db2,
+            pid,
+            [
+                {"slide_index": 1, "title": "Test", "key_points": ["Point 1"]},
+                {"slide_index": 2, "title": "Slide 2", "key_points": ["Point 2"]},
+            ],
         )
         print(f"Session 2: ensure_slides_from_outline returned {len(slides)} slides")
         for s in slides:

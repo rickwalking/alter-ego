@@ -87,7 +87,12 @@ def _make_project(**overrides: object) -> CarouselProject:
     return CarouselProject(**defaults)
 
 
-def _make_slide(slide_number: int = 1, slide_type: str = SLIDE_TYPE_CONTENT, project_id: uuid4 | None = None, **extras: object) -> CarouselSlide:
+def _make_slide(
+    slide_number: int = 1,
+    slide_type: str = SLIDE_TYPE_CONTENT,
+    project_id: uuid4 | None = None,
+    **extras: object,
+) -> CarouselSlide:
     pid = project_id or uuid4()
     return CarouselSlide(
         project_id=pid,
@@ -124,7 +129,9 @@ class TestEvaluateCarouselArtifacts:
     def test_cta_excluded_from_raw_image_validation(self) -> None:
         project = _make_project(generate_images=True)
         slides = [
-            _make_slide(slide_number=1, slide_type=SLIDE_TYPE_INTRO, image_prompt="scene 1"),
+            _make_slide(
+                slide_number=1, slide_type=SLIDE_TYPE_INTRO, image_prompt="scene 1"
+            ),
             _make_slide(slide_number=7, slide_type=SLIDE_TYPE_CTA),
         ]
         request = CarouselArtifactHealthRequest(project=project, slides=slides)
@@ -140,7 +147,9 @@ class TestValidateJpeg:
 
         file_path = tmp_path / "slide_1.jpg"
         PILImage.new("RGB", (1080, 1350)).save(file_path, format="JPEG")
-        check = JpegCheck(path=file_path, label=str(file_path), expected_dimensions=None)
+        check = JpegCheck(
+            path=file_path, label=str(file_path), expected_dimensions=None
+        )
         result = _validate_jpeg(check)
         assert result == []
 
@@ -191,7 +200,9 @@ class TestValidatePdfs:
         project = _make_project()
         slides = [_make_slide()]
         request = CarouselArtifactHealthRequest(project=project, slides=slides)
-        check = PdfCheck(path=Path("/nonexistent/path.pdf"), label="pt", expected_pages=7)
+        check = PdfCheck(
+            path=Path("/nonexistent/path.pdf"), label="pt", expected_pages=7
+        )
         result = _validate_pdf(check)
         assert any("missing" in e.lower() for e in result)
 
@@ -304,7 +315,9 @@ class TestExpectedSlideNumbers:
 @pytest.mark.unit
 class TestDimensionErrors:
     def test_no_errors_when_none_expected(self) -> None:
-        check = JpegCheck(path=Path("/tmp/test.jpg"), label="test", expected_dimensions=None)
+        check = JpegCheck(
+            path=Path("/tmp/test.jpg"), label="test", expected_dimensions=None
+        )
         result = _dimension_errors(check, ImageDimensions(100, 200))
         assert result == []
 
@@ -367,8 +380,12 @@ class TestNumberFromPath:
 @pytest.mark.unit
 class TestValidateRenderedSlide:
     def test_missing_file_returns_error(self, tmp_path: Path) -> None:
-        path = tmp_path / LANGUAGE_PT / f"{SLIDE_FILENAME_PREFIX}1{SLIDE_IMAGE_EXTENSION}"
-        result = _validate_rendered_slide(path, LANGUAGE_PT, ImageDimensions(1080, 1350))
+        path = (
+            tmp_path / LANGUAGE_PT / f"{SLIDE_FILENAME_PREFIX}1{SLIDE_IMAGE_EXTENSION}"
+        )
+        result = _validate_rendered_slide(
+            path, LANGUAGE_PT, ImageDimensions(1080, 1350)
+        )
         assert len(result) == 1
         assert "missing" in result[0].lower()
 
@@ -388,7 +405,12 @@ class TestValidateRenderedSlide:
 @pytest.mark.unit
 class TestValidateHdSlide:
     def test_missing_file_returns_error(self, tmp_path: Path) -> None:
-        path = tmp_path / LANGUAGE_PT / HD_SUBDIR_NAME / f"{SLIDE_FILENAME_PREFIX}1{SLIDE_IMAGE_EXTENSION}"
+        path = (
+            tmp_path
+            / LANGUAGE_PT
+            / HD_SUBDIR_NAME
+            / f"{SLIDE_FILENAME_PREFIX}1{SLIDE_IMAGE_EXTENSION}"
+        )
         result = _validate_hd_slide(path, LANGUAGE_PT, ImageDimensions(2160, 2700))
         assert len(result) == 1
         assert "hd" in result[0].lower()
@@ -400,9 +422,7 @@ class TestValidateHdSlide:
         hd_dir.mkdir(parents=True)
         file_path = hd_dir / f"{SLIDE_FILENAME_PREFIX}1{SLIDE_IMAGE_EXTENSION}"
         PILImage.new("RGB", (2160, 2700)).save(file_path, format="JPEG")
-        result = _validate_hd_slide(
-            file_path, LANGUAGE_PT, ImageDimensions(2160, 2700)
-        )
+        result = _validate_hd_slide(file_path, LANGUAGE_PT, ImageDimensions(2160, 2700))
         assert result == []
 
 
@@ -412,7 +432,9 @@ class TestValidateLanguage:
         pt_dir = tmp_path / LANGUAGE_PT
         pt_dir.mkdir()
         errors = _validate_language(tmp_path, LANGUAGE_PT, (1, 2))
-        standard_missing = [e for e in errors if "rendered slide missing" in e and "HD" not in e]
+        standard_missing = [
+            e for e in errors if "rendered slide missing" in e and "HD" not in e
+        ]
         hd_missing = [e for e in errors if "HD" in e]
         assert len(standard_missing) == 2
         assert len(hd_missing) == 2
@@ -426,10 +448,12 @@ class TestValidateLanguage:
         hd_dir.mkdir()
         for i in (1, 2):
             PILImage.new("RGB", (1080, 1350)).save(
-                pt_dir / f"{SLIDE_FILENAME_PREFIX}{i}{SLIDE_IMAGE_EXTENSION}", format="JPEG"
+                pt_dir / f"{SLIDE_FILENAME_PREFIX}{i}{SLIDE_IMAGE_EXTENSION}",
+                format="JPEG",
             )
             PILImage.new("RGB", (2160, 2700)).save(
-                hd_dir / f"{SLIDE_FILENAME_PREFIX}{i}{SLIDE_IMAGE_EXTENSION}", format="JPEG"
+                hd_dir / f"{SLIDE_FILENAME_PREFIX}{i}{SLIDE_IMAGE_EXTENSION}",
+                format="JPEG",
             )
         errors = _validate_language(tmp_path, LANGUAGE_PT, (1, 2))
         assert errors == []
@@ -439,21 +463,27 @@ class TestValidateLanguage:
 class TestValidateRawImages:
     def test_skips_when_generate_images_false(self) -> None:
         project = _make_project(generate_images=False)
-        slide = _make_slide(slide_number=1, slide_type=SLIDE_TYPE_CONTENT, image_prompt="scene")
+        slide = _make_slide(
+            slide_number=1, slide_type=SLIDE_TYPE_CONTENT, image_prompt="scene"
+        )
         request = CarouselArtifactHealthRequest(project=project, slides=[slide])
         result = _validate_raw_images(request, Path("/tmp"))
         assert result == []
 
     def test_flags_missing_image_prompt(self, tmp_path: Path) -> None:
         project = _make_project(output_dir=str(tmp_path), generate_images=True)
-        slide = _make_slide(slide_number=1, slide_type=SLIDE_TYPE_CONTENT, image_prompt="")
+        slide = _make_slide(
+            slide_number=1, slide_type=SLIDE_TYPE_CONTENT, image_prompt=""
+        )
         request = CarouselArtifactHealthRequest(project=project, slides=[slide])
         result = _validate_raw_images(request, tmp_path)
         assert any("prompt" in e.lower() for e in result)
 
     def test_flags_missing_raw_file(self, tmp_path: Path) -> None:
         project = _make_project(output_dir=str(tmp_path), generate_images=True)
-        slide = _make_slide(slide_number=1, slide_type=SLIDE_TYPE_INTRO, image_prompt="scene")
+        slide = _make_slide(
+            slide_number=1, slide_type=SLIDE_TYPE_INTRO, image_prompt="scene"
+        )
         request = CarouselArtifactHealthRequest(project=project, slides=[slide])
         result = _validate_raw_images(request, tmp_path)
         assert any("raw" in e.lower() for e in result)
@@ -462,11 +492,14 @@ class TestValidateRawImages:
         from PIL import Image as PILImage
 
         project = _make_project(output_dir=str(tmp_path), generate_images=True)
-        slide = _make_slide(slide_number=1, slide_type=SLIDE_TYPE_INTRO, image_prompt="scene")
+        slide = _make_slide(
+            slide_number=1, slide_type=SLIDE_TYPE_INTRO, image_prompt="scene"
+        )
         shared_dir = tmp_path / SHARED_IMAGES_DIR_NAME
         shared_dir.mkdir()
         PILImage.new("RGB", (1080, 1350)).save(
-            shared_dir / f"{SLIDE_FILENAME_PREFIX}1{SLIDE_IMAGE_EXTENSION}", format="JPEG"
+            shared_dir / f"{SLIDE_FILENAME_PREFIX}1{SLIDE_IMAGE_EXTENSION}",
+            format="JPEG",
         )
         request = CarouselArtifactHealthRequest(project=project, slides=[slide])
         result = _validate_raw_images(request, tmp_path)
@@ -488,7 +521,9 @@ class TestPdfCheck:
         assert check.expected_pages == 7
 
     def test_pdf_path_for_en_language_uses_en_path(self) -> None:
-        project = _make_project(pdf_path="/tmp/carousel.pdf", pdf_path_en="/tmp/carousel_en.pdf")
+        project = _make_project(
+            pdf_path="/tmp/carousel.pdf", pdf_path_en="/tmp/carousel_en.pdf"
+        )
         request = PdfCheckRequest(
             project=project,
             output_dir=Path("/tmp"),
@@ -567,10 +602,12 @@ class TestEvaluateIntegration:
         hd_dir.mkdir()
         for i in range(1, 4):
             PILImage.new("RGB", (1080, 1350)).save(
-                pt_dir / f"{SLIDE_FILENAME_PREFIX}{i}{SLIDE_IMAGE_EXTENSION}", format="JPEG"
+                pt_dir / f"{SLIDE_FILENAME_PREFIX}{i}{SLIDE_IMAGE_EXTENSION}",
+                format="JPEG",
             )
             PILImage.new("RGB", (2160, 2700)).save(
-                hd_dir / f"{SLIDE_FILENAME_PREFIX}{i}{SLIDE_IMAGE_EXTENSION}", format="JPEG"
+                hd_dir / f"{SLIDE_FILENAME_PREFIX}{i}{SLIDE_IMAGE_EXTENSION}",
+                format="JPEG",
             )
         slides = [
             _make_slide(slide_number=i, slide_type=SLIDE_TYPE_CONTENT)

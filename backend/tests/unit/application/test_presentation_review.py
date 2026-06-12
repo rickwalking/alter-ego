@@ -45,23 +45,21 @@ class TestPresentationReview:
 
     def test_flags_blocking_violations_for_invalid_copy(self) -> None:
         """WHEN visible copy violates a blocking rule THEN approval is blocked."""
-        updates = build_presentation_review_updates(
-            [
-                {
-                    "slide_index": 3,
-                    "slide_type": "content",
-                    "title": "Key insight",
-                    "draft_text": "Detail",
-                    "features": [
-                        {
-                            "icon_name": "rocket-ship",
-                            "title": "Audit",
-                            "body": "Weekly",
-                        }
-                    ],
-                }
-            ]
-        )
+        updates = build_presentation_review_updates([
+            {
+                "slide_index": 3,
+                "slide_type": "content",
+                "title": "Key insight",
+                "draft_text": "Detail",
+                "features": [
+                    {
+                        "icon_name": "rocket-ship",
+                        "title": "Audit",
+                        "body": "Weekly",
+                    }
+                ],
+            }
+        ])
         validation = updates["presentation_validation"]
         assert validation["blocking"] is True
         codes = {item["code"] for item in validation["violations"]}
@@ -70,17 +68,15 @@ class TestPresentationReview:
 
     def test_resolves_review_fields_from_slide_drafts_when_missing(self) -> None:
         """WHEN workflow state lacks review fields THEN they are derived on read."""
-        resolved = resolve_presentation_review_from_state(
-            {
-                "slide_drafts": [
-                    {
-                        "slide_index": 1,
-                        "slide_type": "intro",
-                        "title": "Hook",
-                        "draft_text": "Subtitle",
-                    }
-                ]
-            }
-        )
+        resolved = resolve_presentation_review_from_state({
+            "slide_drafts": [
+                {
+                    "slide_index": 1,
+                    "slide_type": "intro",
+                    "title": "Hook",
+                    "draft_text": "Subtitle",
+                }
+            ]
+        })
         assert len(resolved["localized_slides"]) == 1
         assert "presentation_validation" in resolved

@@ -110,15 +110,21 @@ def _upload_command(owner_id: str, content: bytes) -> CreatorAssetUploadCommand:
 @pytest.mark.unit
 class TestCreatorAssetPerOwnerDedup:
     @pytest.mark.asyncio
-    async def test_same_owner_reupload_returns_existing_asset(self, tmp_path: Path) -> None:
+    async def test_same_owner_reupload_returns_existing_asset(
+        self, tmp_path: Path
+    ) -> None:
         """Re-uploading identical content for one owner must not create a new row."""
         asset_repo = _FakeAssetRepo()
         service = _make_service(asset_repo, tmp_path)
         owner_id = str(uuid4())
         content = _make_png_bytes()
 
-        first_asset, _ = await service.upload_for_project(_upload_command(owner_id, content))
-        second_asset, _ = await service.upload_for_project(_upload_command(owner_id, content))
+        first_asset, _ = await service.upload_for_project(
+            _upload_command(owner_id, content)
+        )
+        second_asset, _ = await service.upload_for_project(
+            _upload_command(owner_id, content)
+        )
 
         assert second_asset.id == first_asset.id
         assert asset_repo.create_calls == 1

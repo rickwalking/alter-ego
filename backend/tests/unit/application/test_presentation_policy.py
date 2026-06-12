@@ -20,7 +20,9 @@ class TestPresentationPolicy:
 
     def test_load_hero_lower_third_v1_exposes_slide_contract(self) -> None:
         """WHEN hero_lower_third_v1 loads THEN slide count and types are available."""
-        policy = load_presentation_policy(PRESENTATION_POLICY_VERSION_HERO_LOWER_THIRD_V1)
+        policy = load_presentation_policy(
+            PRESENTATION_POLICY_VERSION_HERO_LOWER_THIRD_V1
+        )
 
         assert policy.version == PRESENTATION_POLICY_VERSION_HERO_LOWER_THIRD_V1
         assert policy.slide_count == 7
@@ -38,7 +40,9 @@ class TestPresentationPolicy:
 
     def test_load_hero_lower_third_v1_exposes_copy_budgets(self) -> None:
         """WHEN hero_lower_third_v1 loads THEN copy budgets are typed."""
-        policy = load_presentation_policy(PRESENTATION_POLICY_VERSION_HERO_LOWER_THIRD_V1)
+        policy = load_presentation_policy(
+            PRESENTATION_POLICY_VERSION_HERO_LOWER_THIRD_V1
+        )
 
         assert policy.copy_budgets["intro_heading"].max_characters == 72
         assert policy.copy_budgets["intro_heading"].max_lines == 3
@@ -47,7 +51,9 @@ class TestPresentationPolicy:
 
     def test_load_hero_lower_third_v1_exposes_visible_text_rules(self) -> None:
         """WHEN hero_lower_third_v1 loads THEN visible-text rule IDs are exposed."""
-        policy = load_presentation_policy(PRESENTATION_POLICY_VERSION_HERO_LOWER_THIRD_V1)
+        policy = load_presentation_policy(
+            PRESENTATION_POLICY_VERSION_HERO_LOWER_THIRD_V1
+        )
 
         rule_ids = {rule.rule_id for rule in policy.visible_text.rules}
         assert "visible_emoji_forbidden" in rule_ids
@@ -56,7 +62,9 @@ class TestPresentationPolicy:
 
     def test_load_hero_lower_third_v1_exposes_geometry_and_icons(self) -> None:
         """WHEN hero_lower_third_v1 loads THEN geometry ratios and icons are exposed."""
-        policy = load_presentation_policy(PRESENTATION_POLICY_VERSION_HERO_LOWER_THIRD_V1)
+        policy = load_presentation_policy(
+            PRESENTATION_POLICY_VERSION_HERO_LOWER_THIRD_V1
+        )
 
         intro = policy.slides[0]
         assert intro.copy_start_ratio == 0.55
@@ -78,7 +86,9 @@ class TestPresentationPolicy:
 
     def test_render_presentation_policy_context_includes_canonical_values(self) -> None:
         """WHEN prompt context renders THEN policy version and allowlist remain aligned."""
-        policy = load_presentation_policy(PRESENTATION_POLICY_VERSION_HERO_LOWER_THIRD_V1)
+        policy = load_presentation_policy(
+            PRESENTATION_POLICY_VERSION_HERO_LOWER_THIRD_V1
+        )
         context = render_presentation_policy_context(policy)
 
         assert PRESENTATION_POLICY_VERSION_HERO_LOWER_THIRD_V1 in context

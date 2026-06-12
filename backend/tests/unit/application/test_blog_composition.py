@@ -73,7 +73,9 @@ class TestBlogComposition:
                 LONG_FORM_NOTES_KEY: "EN long-form notes.",
             }
         }
-        markdown = build_blog_markdown_en_from_long_form_notes(composition, translations)
+        markdown = build_blog_markdown_en_from_long_form_notes(
+            composition, translations
+        )
         assert "## EN Hook" in markdown
         assert "EN long-form notes." in markdown
         assert "Notas PT." not in markdown

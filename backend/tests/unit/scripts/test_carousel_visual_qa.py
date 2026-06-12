@@ -124,13 +124,11 @@ def test_expectations_from_manifest_payload_uses_hd_dimensions() -> None:
 
 @pytest.mark.unit
 def test_expectations_from_workflow_state_uses_localized_slides() -> None:
-    expectations = expectations_from_workflow_state(
-        {
-            "localized_slides": [{"slide_index": index} for index in range(1, 8)],
-            "presentation_policy_version": "hero_lower_third_v1",
-            "artifact_version": "sha256-" + ("c" * 64),
-        }
-    )
+    expectations = expectations_from_workflow_state({
+        "localized_slides": [{"slide_index": index} for index in range(1, 8)],
+        "presentation_policy_version": "hero_lower_third_v1",
+        "artifact_version": "sha256-" + ("c" * 64),
+    })
 
     assert expectations is not None
     assert expectations.slide_count == 7

@@ -30,7 +30,7 @@ class TestStrategyListEndpoint:
     async def test_list_returns_seven_strategies(self, client: AsyncClient):
         response = await client.get("/api/carousels/strategies")
         data = response.json()
-        assert len(data["strategies"]) == 7
+        assert len(data["strategies"]) == 8
 
 
 @pytest.mark.integration

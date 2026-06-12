@@ -85,7 +85,9 @@ class TestFeatureItemValidation:
         assert item.icon_name == "chart-column"
 
     def test_rejects_unknown_icon_name(self) -> None:
-        with pytest.raises(ValidationError, match="icon_name is not in the Lucide allowlist"):
+        with pytest.raises(
+            ValidationError, match="icon_name is not in the Lucide allowlist"
+        ):
             FeatureItem(icon_name="rocket-ship", title="Metric", body="Detail")
 
     def test_rejects_extra_fields(self) -> None:
@@ -245,22 +247,22 @@ class TestLegacyPresentationAdapters:
         assert resolve_structured_item_icon_name({"icon": "🎯"}) == "🎯"
 
     def test_adapt_legacy_structured_item_exposes_icon_name_view(self) -> None:
-        adapted = adapt_legacy_structured_item(
-            {"icon": "🎯", "title": "Point one", "body": "Detail"}
-        )
+        adapted = adapt_legacy_structured_item({
+            "icon": "🎯",
+            "title": "Point one",
+            "body": "Detail",
+        })
         assert adapted["icon_name"] == "🎯"
         assert "icon" not in adapted
         assert adapted["title"] == "Point one"
 
     def test_read_legacy_slide_extras_preserves_translation_en(self) -> None:
-        view = read_legacy_slide_extras(
-            {
-                "features": [{"icon": "✅", "title": "Audit", "body": "Weekly"}],
-                "translation_en": {
-                    "features": [{"icon": "✅", "title": "Audit EN", "body": "Weekly EN"}]
-                },
-            }
-        )
+        view = read_legacy_slide_extras({
+            "features": [{"icon": "✅", "title": "Audit", "body": "Weekly"}],
+            "translation_en": {
+                "features": [{"icon": "✅", "title": "Audit EN", "body": "Weekly EN"}]
+            },
+        })
         features = view["features"]
         assert isinstance(features, list)
         assert features[0]["icon_name"] == "✅"

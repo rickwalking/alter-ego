@@ -63,7 +63,11 @@ class TestCheckFonts:
     ) -> None:
         # Scenario: export preflight rejects fallback fonts
         mock_page.evaluate.return_value = [
-            {"family": "heading", "available": False, "error_code": VIOLATION_FONT_UNAVAILABLE},
+            {
+                "family": "heading",
+                "available": False,
+                "error_code": VIOLATION_FONT_UNAVAILABLE,
+            },
             {"family": "body", "available": True, "error_code": None},
             {"family": "badge", "available": True, "error_code": None},
         ]

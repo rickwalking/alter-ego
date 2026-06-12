@@ -32,17 +32,19 @@ class TestIconRegistry:
 
     def test_rejects_legacy_emoji_icon(self) -> None:
         with pytest.raises(UnknownLucideIconError, match="Lucide allowlist"):
-            render_structured_item_icon({"icon": "⚡", "title": "Fast", "body": "Speed"})
+            render_structured_item_icon({
+                "icon": "⚡",
+                "title": "Fast",
+                "body": "Speed",
+            })
 
     def test_prefers_icon_name_over_legacy_icon(self) -> None:
-        result = render_structured_item_icon(
-            {
-                "icon_name": "target",
-                "icon": "⚡",
-                "title": "Focus",
-                "body": "Precision",
-            }
-        )
+        result = render_structured_item_icon({
+            "icon_name": "target",
+            "icon": "⚡",
+            "title": "Focus",
+            "body": "Precision",
+        })
         assert "<circle" in result
         assert "⚡" not in result
 

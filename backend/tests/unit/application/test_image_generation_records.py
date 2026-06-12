@@ -62,7 +62,9 @@ def _make_project(**overrides: object) -> CarouselProject:
     return CarouselProject(**defaults)
 
 
-def _make_slide(slide_number: int = 1, project_id: uuid4 | None = None) -> CarouselSlide:
+def _make_slide(
+    slide_number: int = 1, project_id: uuid4 | None = None
+) -> CarouselSlide:
     pid = project_id or uuid4()
     return CarouselSlide(
         project_id=pid,
@@ -181,7 +183,11 @@ class TestGenerationRecord:
             prompt=prompt,
             status=GENERATION_STATUS_FAILED,
             error_message="model not found",
-            error_details={"status": 400, "type": "invalid_request_error", "code": "model_not_found"},
+            error_details={
+                "status": 400,
+                "type": "invalid_request_error",
+                "code": "model_not_found",
+            },
         )
         record = _generation_record(input_data)
         assert record.error_json is not None
