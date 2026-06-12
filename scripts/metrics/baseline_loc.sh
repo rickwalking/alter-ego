@@ -9,6 +9,12 @@
 #
 # LOC = physical lines (wc -l). Output is sorted and contains no
 # timestamps, so two runs on the same tree are byte-identical.
+#
+# Snapshot semantics: this reports the CURRENT working tree. A committed
+# baseline report reflects the tree at its commit; later runs on HEAD
+# will legitimately differ as code lands — that is drift, not
+# non-determinism. To reproduce a committed baseline exactly, check out
+# the commit that produced it.
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 
