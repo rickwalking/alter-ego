@@ -13,6 +13,7 @@
 #   Then I receive SSE token events and tool_result events
 """
 
+from collections.abc import AsyncIterator
 from datetime import UTC, datetime, timedelta
 from unittest.mock import MagicMock
 
@@ -21,6 +22,7 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 
 from rag_backend.api.app import create_app
+from rag_backend.application.services.chat_stream_service import _ChatContext
 
 _TEST_JWT_SECRET = "test-secret-key-for-integration-tests"
 _TEST_JWT_ALGORITHM = "HS256"
@@ -131,7 +133,7 @@ async def test_user(client):
 def mock_agent():
     """Return a mock agent that yields a single token and then completes."""
 
-    async def _mock_chat(*, message: str, conversation_id, stream, persist_messages):
+    async def _mock_chat(ctx: _ChatContext) -> AsyncIterator[dict[str, object]]:
         yield {"type": "token", "content": "Hello"}
         yield {"type": "complete"}
 

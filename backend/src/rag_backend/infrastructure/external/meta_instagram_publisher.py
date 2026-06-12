@@ -92,7 +92,8 @@ class MetaInstagramPublisher(SocialPublisher):
         if not self._token or not self._ig_user_id:
             raise RuntimeError(ERR_INSTAGRAM_CREDENTIALS_NOT_CONFIGURED)
 
-    def _validate_images(self, image_urls: list[str]) -> None:
+    @staticmethod
+    def _validate_images(image_urls: list[str]) -> None:
         if len(image_urls) < MIN_IMAGE_BATCH or len(image_urls) > _MAX_CAROUSEL_ITEMS:
             raise RuntimeError(ERR_INSTAGRAM_IMAGE_COUNT_INVALID)
 

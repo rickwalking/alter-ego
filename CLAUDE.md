@@ -27,6 +27,7 @@ alter-ego/
 ### Code Quality
 - **No magic strings** — Extract all string literals to named constants
 - **No `any` / `Any` / `object` types** — Use explicit, specific types
+- **Backend functions accept max 3 arguments** — Use Pydantic models for API/service boundary payloads and typed command/config objects for internal grouping
 - **Early returns preferred** — Avoid nested `if` statements; use guard clauses
 - **Max 400 lines per file** — Split large files into focused modules
 - **Constants in dedicated files** — Each context/module gets its own `constants` file
@@ -231,13 +232,13 @@ This project provides AI agent skills for development and quality assurance:
 **Purpose**: Implement task details from plans following SDD (Spec-Driven Development).
 **When to use**: After a plan/task is created, invoke the Developer Skill to implement acceptance criteria incrementally.
 **Standards**: Always reads `CLAUDE.md` and `AGENTS.md` first. Self-verifies via lint, type check, and tests.
-**Location**: `skills/developer-skill/SKILL.md`
+**Location**: `skills/delivery/developer-skill/SKILL.md`
 
 ### `/qa-agent`
 **Purpose**: Validate implementation quality across security, code quality, acceptance criteria, and completeness.
 **When to use**: After the Developer Skill completes, invoke the QA Agent to run parallel validation subagents.
 **Dimensions**: Security (OWASP Top 10:2025), code quality (ruff, mypy, complexity), mutation testing (mutmut/StrykerJS), acceptance criteria validation, and orphan/unfinished code detection.
-**Location**: `skills/qa-agent/SKILL.md`
+**Location**: `skills/delivery/qa-agent/SKILL.md`
 **Reference**: `docs/guides/qa-checkpoints.md` — Full QA checkpoint reference
 
 ### Delivery orchestration skills

@@ -1,7 +1,8 @@
-from typing import Protocol
+from typing import Protocol, TypedDict
 from uuid import UUID
 
 from rag_backend.domain.models import (
+    CarouselImageGeneration,
     CarouselProject,
     CarouselSlide,
     CarouselStatus,
@@ -53,6 +54,15 @@ class DocumentRepository(Protocol):
     async def count(self, status: DocumentStatus | None = None) -> int: ...
 
 
+class _UserQuery(TypedDict, total=False):
+    """Bundled query parameters for user conversation listing."""
+
+    user_id: UUID
+    limit: int
+    offset: int
+    origin: str | None
+
+
 class ConversationRepository(Protocol):
     """Protocol for conversation persistence operations."""
 
@@ -66,9 +76,7 @@ class ConversationRepository(Protocol):
 
     async def get_by_user_id(
         self,
-        user_id: UUID,
-        limit: int = 100,
-        offset: int = 0,
+        query: _UserQuery,
     ) -> list[Conversation]:
         """Return conversations owned by the given user."""
         ...
@@ -96,6 +104,16 @@ class MessageRepository(Protocol):
     ) -> list[Message]: ...
 
 
+class _ProjectQuery(TypedDict, total=False):
+    """Bundled query parameters for carousel project listing."""
+
+    status: CarouselStatus | None
+    limit: int
+    offset: int
+    public_only: bool
+    owner_id: str | None
+
+
 class CarouselRepository(Protocol):
     """Protocol for carousel project persistence operations."""
 
@@ -105,12 +123,8 @@ class CarouselRepository(Protocol):
 
     async def get_all_projects(
         self,
-        status: CarouselStatus | None = None,
-        limit: int = 100,
-        offset: int = 0,
         *,
-        public_only: bool = False,
-        owner_id: str | None = None,
+        query: _ProjectQuery,
     ) -> list[CarouselProject]: ...
 
     async def update_project(self, project: CarouselProject) -> CarouselProject: ...
@@ -122,6 +136,14 @@ class CarouselRepository(Protocol):
     async def get_slides_by_project(self, project_id: UUID) -> list[CarouselSlide]: ...
 
     async def update_slide(self, slide: CarouselSlide) -> CarouselSlide: ...
+
+    async def get_image_generation_by_key(
+        self, generation_key: str
+    ) -> CarouselImageGeneration | None: ...
+
+    async def upsert_image_generation(
+        self, generation: CarouselImageGeneration
+    ) -> CarouselImageGeneration: ...
 
     async def delete_slides_by_project(self, project_id: UUID) -> bool: ...
 

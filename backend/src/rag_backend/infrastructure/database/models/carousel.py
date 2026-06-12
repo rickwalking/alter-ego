@@ -61,6 +61,7 @@ class CarouselProjectModel(Base):
     blog_markdown = Column(Text, nullable=True)
     blog_translations = Column(JSON, nullable=True)
     caption = Column(Text, nullable=True)
+    caption_en = Column(Text, nullable=True)
     linkedin_post_pt = Column(Text, nullable=True)
     linkedin_post_en = Column(Text, nullable=True)
     design_tokens = Column(
@@ -85,6 +86,21 @@ class CarouselProjectModel(Base):
     phase_status = Column(String(50), default="pending")
     workflow_status = Column(String(50), default="", nullable=False, server_default="")
     lock_version = Column(Integer, default=1, nullable=False)
+
+    # Creator watermark metadata
+    creator_name = Column(String(100), nullable=True)
+    creator_handle = Column(String(100), nullable=True)
+    creator_avatar_url = Column(String(500), nullable=True)
+    creator_website = Column(String(500), nullable=True)
+    creator_asset_id = Column(
+        String(36),
+        ForeignKey("carousel_creator_assets.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    presentation_policy_version = Column(String(64), nullable=True)
+    presentation_policy_checksum = Column(String(80), nullable=True)
+    artifact_version = Column(String(80), nullable=True)
+    slide_layout_strategy = Column(String(50), nullable=True)
 
     created_at = Column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
@@ -140,6 +156,7 @@ class CarouselProjectModel(Base):
             blog_markdown=self.blog_markdown,
             blog_translations=self.blog_translations,
             caption=self.caption,
+            caption_en=self.caption_en,
             linkedin_post_pt=self.linkedin_post_pt,
             linkedin_post_en=self.linkedin_post_en,
             design_tokens=self.design_tokens,
@@ -158,6 +175,17 @@ class CarouselProjectModel(Base):
             phase_status=self.phase_status,
             is_public=bool(self.is_public),
             owner_id=self.owner_id,
+            creator_name=self.creator_name,
+            creator_handle=self.creator_handle,
+            creator_avatar_url=self.creator_avatar_url,
+            creator_website=self.creator_website,
+            creator_asset_id=UUID(self.creator_asset_id)
+            if self.creator_asset_id
+            else None,
+            presentation_policy_version=self.presentation_policy_version,
+            presentation_policy_checksum=self.presentation_policy_checksum,
+            artifact_version=self.artifact_version,
+            slide_layout_strategy=self.slide_layout_strategy,
             created_at=self.created_at,
             updated_at=self.updated_at,
         )
@@ -187,6 +215,7 @@ class CarouselProjectModel(Base):
             blog_markdown=entity.blog_markdown,
             blog_translations=entity.blog_translations,
             caption=entity.caption,
+            caption_en=entity.caption_en,
             linkedin_post_pt=entity.linkedin_post_pt,
             linkedin_post_en=entity.linkedin_post_en,
             design_tokens=entity.design_tokens,
@@ -205,6 +234,17 @@ class CarouselProjectModel(Base):
             phase_status=entity.phase_status,
             is_public=entity.is_public,
             owner_id=entity.owner_id,
+            creator_name=entity.creator_name,
+            creator_handle=entity.creator_handle,
+            creator_avatar_url=entity.creator_avatar_url,
+            creator_website=entity.creator_website,
+            creator_asset_id=str(entity.creator_asset_id)
+            if entity.creator_asset_id
+            else None,
+            presentation_policy_version=entity.presentation_policy_version,
+            presentation_policy_checksum=entity.presentation_policy_checksum,
+            artifact_version=entity.artifact_version,
+            slide_layout_strategy=entity.slide_layout_strategy,
             created_at=entity.created_at,
             updated_at=entity.updated_at,
         )
@@ -221,6 +261,7 @@ class CarouselProjectModel(Base):
         self.blog_markdown = entity.blog_markdown
         self.blog_translations = entity.blog_translations
         self.caption = entity.caption
+        self.caption_en = entity.caption_en
         self.linkedin_post_pt = entity.linkedin_post_pt
         self.linkedin_post_en = entity.linkedin_post_en
         self.design_tokens = entity.design_tokens
@@ -239,6 +280,17 @@ class CarouselProjectModel(Base):
         self.phase_status = entity.phase_status
         self.is_public = entity.is_public
         self.owner_id = entity.owner_id
+        self.creator_name = entity.creator_name
+        self.creator_handle = entity.creator_handle
+        self.creator_avatar_url = entity.creator_avatar_url
+        self.creator_website = entity.creator_website
+        self.creator_asset_id = (
+            str(entity.creator_asset_id) if entity.creator_asset_id else None
+        )
+        self.presentation_policy_version = entity.presentation_policy_version
+        self.presentation_policy_checksum = entity.presentation_policy_checksum
+        self.artifact_version = entity.artifact_version
+        self.slide_layout_strategy = entity.slide_layout_strategy
         self.updated_at = entity.updated_at
 
 

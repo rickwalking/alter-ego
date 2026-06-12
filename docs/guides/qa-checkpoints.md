@@ -192,7 +192,7 @@
 | Max branches per function | ruff PLR0912 | Max 10 |
 | Max statements per function | ruff PLR0915 | Max 40 |
 | Max nested blocks | ruff | Max 4 |
-| Max arguments per function | ruff PLR0913 | Max 5 |
+| Max arguments per function | ruff PLR0913 | Max 3; use Pydantic models for API/service boundary payloads |
 | Max return statements | ruff PLR0911 | Max 6 |
 | Max locals per function | ruff | Max 15 |
 
@@ -414,6 +414,8 @@ See [CI Quality Gates Guide](./ci-quality-gates.md) for workflow names, branch p
 | Job | Tool | Enforcement |
 |-----|------|-------------|
 | backend / Lint & Format | ruff check + format | CI failure + reviewdog inline (PR) |
+| backend / Lint & Format | ruff diff check (changed files only) | CI advisory (non-blocking); will become blocking after baseline |
+| backend / Lint & Format | Blanket ignore guard (`grep` on `pyproject.toml`) | CI failure — blocks `"src/rag_backend/**"` in per-file-ignores |
 | backend / Strict Diff | ruff `--select PLR0913,C901,PLR0912` on changed files | CI failure |
 | backend / Type Check | mypy | CI failure |
 | backend / Architecture | import-linter | CI failure |
@@ -454,6 +456,7 @@ See [CI Quality Gates Guide](./ci-quality-gates.md) for workflow names, branch p
 | Gate | Tool | Enforcement |
 |------|------|-------------|
 | Lint | ruff check / eslint | CI failure |
+| Blanket ignore guard | grep on `pyproject.toml` | CI failure — blocks `"src/rag_backend/**"` |
 | Type check | mypy / tsc --noEmit | CI failure |
 | Unit tests | pytest / vitest | CI failure |
 | Diff coverage | diff-cover ≥75% (backend) | CI failure |
@@ -468,6 +471,14 @@ See [CI Quality Gates Guide](./ci-quality-gates.md) for workflow names, branch p
 | Strict diff lint | ruff PLR0913/C901, eslint changed | CI failure on changed files |
 | Dead code | vulture | CI failure |
 | Architecture boundaries | import-linter | CI failure |
+
+### CI Hardening Gates (Backend)
+
+| Gate | Tool | Enforcement | Description |
+|------|------|-------------|-------------|
+| Ruff blanket ignore guard | grep on `pyproject.toml` | CI failure | Blocks any `"src/rag_backend/**"` entry in `ruff.lint.per-file-ignores`. Prevents re-introduction of directory-wide ignore patterns that mask lint violations across the entire backend. |
+| diff-cover gate | diff-cover `--fail-under=75` | CI failure | Enforces ≥75% diff coverage on changed lines. Ensures new/changed code is tested. Blocking in the `backend / Test & Coverage` job. |
+| Mutation gate (advisory) | mutmut | CI advisory (non-blocking) | Mutation score thresholds: business logic ≥50% (break), ≥70% (low), ≥80% (high). Runs in the `backend / Mutation (advisory)` job. Not blocking, but PR summary comment is posted with results. |
 
 ### Nightly / Weekly Gates
 

@@ -37,7 +37,7 @@ from rag_backend.domain.protocols import (
 from rag_backend.infrastructure.database.models.carousel import CarouselProjectModel
 
 from .deps import get_carousel_repo, get_instagram_publisher
-from .helpers import _build_public_image_urls
+from .helpers import _build_public_image_urls, assert_carousel_artifacts_healthy
 
 router = APIRouter()
 
@@ -106,9 +106,12 @@ async def publish_to_instagram(
             status_code=409,
             detail=ERR_CAROUSEL_NOT_COMPLETED,
         )
+    slides = await repo.get_slides_by_project(project_id)
+    assert_carousel_artifacts_healthy(project, slides)
+    slide_numbers = [slide.slide_number for slide in slides]
 
     try:
-        image_urls = _build_public_image_urls(project_id)
+        image_urls = _build_public_image_urls(project_id, slide_numbers)
     except RuntimeError as exc:
         if str(exc) == ERR_INSTAGRAM_PUBLIC_BASE_URL_NOT_CONFIGURED:
             raise HTTPException(

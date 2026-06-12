@@ -215,12 +215,14 @@ class Phase5MigrationService:
 
         return report
 
-    async def _load_projects(self, db: AsyncSession) -> list[CarouselProjectModel]:
+    @staticmethod
+    async def _load_projects(db: AsyncSession) -> list[CarouselProjectModel]:
         result = await db.execute(select(CarouselProjectModel))
         return list(result.scalars().all())
 
+    @staticmethod
     def _migrate_creative_brief(
-        self, project: CarouselProjectModel, report: Phase5MigrationReport
+        project: CarouselProjectModel, report: Phase5MigrationReport
     ) -> None:
         if project.creative_brief:
             return
@@ -230,8 +232,9 @@ class Phase5MigrationService:
         project.creative_brief = brief
         report.creative_briefs_updated += 1
 
+    @staticmethod
     def _backfill_workflow_state(
-        self, project: CarouselProjectModel, report: Phase5MigrationReport
+        project: CarouselProjectModel, report: Phase5MigrationReport
     ) -> None:
         if (
             project.current_phase
@@ -249,8 +252,8 @@ class Phase5MigrationService:
         project.phase_status = phase_status
         report.workflow_states_updated += 1
 
+    @staticmethod
     async def _ensure_default_persona(
-        self,
         db: AsyncSession,
         projects: list[CarouselProjectModel],
         report: Phase5MigrationReport,
@@ -285,8 +288,9 @@ class Phase5MigrationService:
         report.persona_id = str(persona.id)
         return str(persona.id)
 
+    @staticmethod
     async def _ensure_default_rubric(
-        self, db: AsyncSession, report: Phase5MigrationReport
+        db: AsyncSession, report: Phase5MigrationReport
     ) -> str | None:
         existing = await db.execute(
             select(QualityRubricModel).where(QualityRubricModel.is_default.is_(True))

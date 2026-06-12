@@ -12,6 +12,8 @@ from rag_backend.domain.protocols.carousel import (
     ImageGenerationService,
     ImageStyleStrategy,
     ResearchTool,
+    SlideLayoutStrategy,
+    StrategyNotFoundError,
 )
 from rag_backend.domain.protocols.repositories import (
     CarouselRepository,
@@ -40,7 +42,9 @@ __all__ = [
     "PublishResult",
     "ResearchTool",
     "Retriever",
+    "SlideLayoutStrategy",
     "SocialPublisher",
+    "StrategyNotFoundError",
     "UserRepository",
     "VectorStore",
 ]

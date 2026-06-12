@@ -1,5 +1,6 @@
 """PostgreSQL repository implementations using SQLAlchemy."""
 
+from typing import TypedDict
 from uuid import UUID
 
 from sqlalchemy import desc, func, select
@@ -9,6 +10,15 @@ from rag_backend.domain.models import Document, DocumentStatus
 from rag_backend.infrastructure.database.models import DocumentModel
 
 _ERR_DOCUMENT_NOT_FOUND = "Document with id {} not found"
+
+
+class _OwnerQuery(TypedDict, total=False):
+    """Bundled query parameters for document owner listing."""
+
+    owner_id: UUID
+    status: DocumentStatus | None
+    limit: int
+    offset: int
 
 
 class PostgresDocumentRepository:
@@ -49,21 +59,20 @@ class PostgresDocumentRepository:
 
     async def get_all_for_owner(
         self,
-        owner_id: UUID,
-        status: DocumentStatus | None = None,
-        limit: int = 100,
-        offset: int = 0,
+        query: _OwnerQuery,
     ) -> list[Document]:
         """Get documents owned by a user."""
-        query = select(DocumentModel).where(DocumentModel.owner_id == str(owner_id))
+        owner_id = query["owner_id"]
+        status = query.get("status")
+        limit = query.get("limit", 100)
+        offset = query.get("offset", 0)
+        stmt = select(DocumentModel).where(DocumentModel.owner_id == str(owner_id))
 
         if status:
-            query = query.where(DocumentModel.status == status.value)
+            stmt = stmt.where(DocumentModel.status == status.value)
 
-        query = (
-            query.order_by(desc(DocumentModel.updated_at)).offset(offset).limit(limit)
-        )
-        result = await self._session.execute(query)
+        stmt = stmt.order_by(desc(DocumentModel.updated_at)).offset(offset).limit(limit)
+        result = await self._session.execute(stmt)
         return [doc.to_entity() for doc in result.scalars().all()]
 
     async def count_for_owner(

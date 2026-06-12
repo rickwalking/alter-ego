@@ -1,6 +1,7 @@
 """Carousel design tokens and theme palettes."""
 
 from rag_backend.application.services.carousel.types import slide_count_from_config
+from rag_backend.application.services.carousel_template.constants import SWIPE_TEXT
 from rag_backend.domain.models import CarouselProject, DesignTokens
 
 THEME_PALETTES: dict[str, dict[str, str]] = {
@@ -42,7 +43,6 @@ def generate_design_tokens(project: CarouselProject) -> DesignTokens:
     accent = theme["accent"]
     bg = theme["background"]
     slide_count = slide_count_from_config(project.slides_config)
-    swipe_text = "Deslize \u2192" if project.language == "pt-BR" else "Swipe \u2192"
 
     return DesignTokens(
         colors={
@@ -78,7 +78,7 @@ def generate_design_tokens(project: CarouselProject) -> DesignTokens:
         },
         layout={
             "badge_label": project.niche,
-            "swipe_text": swipe_text,
+            "swipe_text": SWIPE_TEXT,
             "progress_segments": slide_count,
         },
     )

@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from rag_backend.agents.input_sanitizer import sanitize_llm_input
 from rag_backend.agents.persona_agent import PersonaAgent
 from rag_backend.application.services.blog_workflow_observability import (
+    StartupParams,
     blog_ai_propagate,
     start_blog_workflow_trace,
 )
@@ -35,6 +36,28 @@ class BlogAiTraceContext:
 
     post_id: str = ""
     user_id: str = "system"
+
+
+@dataclass
+class _SuggestInput:
+    """Bundled input for BlogPostAIService.suggest()."""
+
+    text: str
+    action: str
+    context: str | None = None
+    trace: BlogAiTraceContext | None = None
+
+
+@dataclass
+class _ImproveInput:
+    """Bundled input for BlogPostAIService.improve()."""
+
+    db: AsyncSession
+    text: str
+    action: str
+    context: str | None = None
+    persona_id: str | None = None
+    trace: BlogAiTraceContext | None = None
 
 
 class LLMServiceProtocol(Protocol):
@@ -64,25 +87,24 @@ class BlogPostAIService:
 
     async def suggest(
         self,
-        text: str,
-        action: str,
-        context: str | None = None,
-        *,
-        trace: BlogAiTraceContext | None = None,
+        input_data: _SuggestInput,
     ) -> dict[str, str]:
         """Generate an AI suggestion for blog text."""
-        if action not in VALID_AI_ACTIONS:
+        if input_data.action not in VALID_AI_ACTIONS:
             raise ValueError(ERR_INVALID_AI_ACTION)
 
-        trace_context = trace or BlogAiTraceContext()
+        trace_context = input_data.trace or BlogAiTraceContext()
         start_blog_workflow_trace(
-            trace_context.post_id or "unknown", trace_context.user_id
+            StartupParams(
+                post_id=trace_context.post_id or "unknown",
+                user_id=trace_context.user_id,
+            )
         )
-        safe_text = sanitize_llm_input(text)
-        safe_context = sanitize_llm_input(context or "")
+        safe_text = sanitize_llm_input(input_data.text)
+        safe_context = sanitize_llm_input(input_data.context or "")
         with blog_ai_propagate(trace_context.post_id or "unknown", "ai_suggest"):
             prompt = PROMPT_AI_SUGGEST.format(
-                action=action,
+                action=input_data.action,
                 context=safe_context,
                 text=safe_text,
             )
@@ -96,49 +118,46 @@ class BlogPostAIService:
             explanation = str(data.get("explanation", ""))
         except json.JSONDecodeError:
             suggested = raw.strip()
-            explanation = f"Suggested {action} rewrite."
+            explanation = f"Suggested {input_data.action} rewrite."
 
         return {
             "original_text": safe_text,
             "suggested_text": suggested,
-            "suggestion_type": action,
+            "suggestion_type": input_data.action,
             "explanation": explanation,
         }
 
     async def improve(
         self,
-        db: AsyncSession,
-        text: str,
-        action: str,
-        context: str | None = None,
-        persona_id: str | None = None,
-        *,
-        trace: BlogAiTraceContext | None = None,
+        input_data: _ImproveInput,
     ) -> dict[str, str]:
         """Improve selected blog text, optionally enforcing a persona voice."""
-        if action not in VALID_AI_ACTIONS:
+        if input_data.action not in VALID_AI_ACTIONS:
             raise ValueError(ERR_INVALID_AI_ACTION)
 
-        trace_context = trace or BlogAiTraceContext()
+        trace_context = input_data.trace or BlogAiTraceContext()
         start_blog_workflow_trace(
-            trace_context.post_id or "unknown", trace_context.user_id
+            StartupParams(
+                post_id=trace_context.post_id or "unknown",
+                user_id=trace_context.user_id,
+            )
         )
-        safe_text = sanitize_llm_input(text)
-        safe_context = sanitize_llm_input(context or "")
+        safe_text = sanitize_llm_input(input_data.text)
+        safe_context = sanitize_llm_input(input_data.context or "")
 
         with blog_ai_propagate(trace_context.post_id or "unknown", "ai_improve"):
-            persona = await self._load_persona(db, persona_id)
+            persona = await self._load_persona(input_data.db, input_data.persona_id)
             if persona is not None:
                 agent = PersonaAgent(persona=persona, llm=self._llm_service.chat_model)
                 improved = await agent.enforce(safe_text, context=safe_context)
                 return {
                     "original_text": safe_text,
                     "improved_text": improved,
-                    "action": action,
+                    "action": input_data.action,
                 }
 
             prompt = PROMPT_AI_IMPROVE.format(
-                action=action,
+                action=input_data.action,
                 context=safe_context,
                 text=safe_text,
             )
@@ -149,7 +168,7 @@ class BlogPostAIService:
         return {
             "original_text": safe_text,
             "improved_text": improved.strip(),
-            "action": action,
+            "action": input_data.action,
         }
 
     async def generate_image(
@@ -165,7 +184,7 @@ class BlogPostAIService:
                 ERR_IMAGE_GENERATION_FAILED.format(reason="image service unavailable")
             )
 
-        start_blog_workflow_trace(post_id, user_id)
+        start_blog_workflow_trace(StartupParams(post_id=post_id, user_id=user_id))
         safe_prompt = sanitize_llm_input(prompt)
         output_dir = self._output_dir / post_id
         output_dir.mkdir(parents=True, exist_ok=True)
@@ -184,8 +203,8 @@ class BlogPostAIService:
             "image_url": str(output_path),
         }
 
+    @staticmethod
     async def _load_persona(
-        self,
         db: AsyncSession,
         persona_id: str | None,
     ) -> PersonaProfile | None:

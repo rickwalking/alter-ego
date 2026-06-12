@@ -88,6 +88,7 @@ export const carouselProjectResponseSchema = z.object({
   creator_handle: z.string().nullable().optional(),
   creator_avatar_url: z.string().nullable().optional(),
   template_version: z.string().nullable().optional(),
+  slide_layout_strategy: z.string().nullable().optional(),
   created_at: z.string(),
   updated_at: z.string(),
 });
@@ -132,6 +133,7 @@ export const carouselCreateRequestSchema = z
     image_style: z
       .enum(["comic_neon", "cinematic", "hyperreal", "neo_anime"])
       .default("comic_neon"),
+    strategy: z.string().max(50).optional(),
   })
   .refine(
     (data) =>

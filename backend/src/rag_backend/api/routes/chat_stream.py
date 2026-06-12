@@ -37,7 +37,10 @@ from rag_backend.api.dependencies.carousel_access import (
 )
 from rag_backend.api.middleware.rate_limiting import limiter
 from rag_backend.api.schemas import ChatRequest, ErrorResponse
-from rag_backend.application.services.chat_stream_service import stream_chat_response
+from rag_backend.application.services.chat_stream_service import (
+    _StreamConfig,
+    stream_chat_response,
+)
 from rag_backend.application.services.conversation_service import ConversationService
 from rag_backend.domain.constants.conversation import CONVERSATION_METADATA_PROJECT_ID
 from rag_backend.domain.models import User
@@ -115,13 +118,14 @@ async def chat_stream(
     last_event_id = _parse_last_event_id(request)
 
     async def event_generator() -> AsyncIterator[str]:
-        async for event in stream_chat_response(
+        config = _StreamConfig(
             conversation_id=conversation_id,
             content=body.content,
             db=db,
             agent_builder=lambda: build_alter_ego_agent(db, get_container()),
             last_event_id=last_event_id,
-        ):
+        )
+        async for event in stream_chat_response(config):
             yield event
 
     return StreamingResponse(
@@ -186,7 +190,7 @@ async def publish_chat_stream(
     last_event_id = _parse_last_event_id(request)
 
     async def event_generator() -> AsyncIterator[str]:
-        async for event in stream_chat_response(
+        config = _StreamConfig(
             conversation_id=conversation_id,
             content=body.content,
             db=db,
@@ -201,7 +205,8 @@ async def publish_chat_stream(
                 ),
             ),
             last_event_id=last_event_id,
-        ):
+        )
+        async for event in stream_chat_response(config):
             yield event
 
     return StreamingResponse(

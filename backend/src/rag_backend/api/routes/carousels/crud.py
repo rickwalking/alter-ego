@@ -26,6 +26,9 @@ from rag_backend.api.schemas import (
     CarouselProjectListResponse,
     CarouselProjectResponse,
 )
+from rag_backend.application.services.carousel.design_token_utils import (
+    merge_design_tokens_with_disk,
+)
 from rag_backend.domain.constants.carousel_workflow import (
     ERR_CAROUSEL_NOT_COMPLETED,
     ERR_WORKFLOW_NOT_APPROVED_FOR_PUBLISH,
@@ -35,11 +38,12 @@ from rag_backend.domain.constants.carousel_workflow import (
 from rag_backend.domain.constants.rate_limits import RATE_LIMIT_CAROUSEL_PUBLISH
 from rag_backend.domain.models import CarouselProject, CarouselStatus, User
 from rag_backend.domain.protocols import CarouselRepository
+from rag_backend.domain.protocols.repositories import _ProjectQuery
 from rag_backend.infrastructure.database.config import get_session
 from rag_backend.infrastructure.database.models.carousel import CarouselProjectModel
 
 from .deps import get_carousel_repo
-from .helpers import _merge_design_tokens_with_disk
+from .helpers import assert_carousel_artifacts_healthy
 
 router = APIRouter()
 
@@ -101,11 +105,13 @@ async def list_carousels(
     if user is not None and not user.is_admin() and not force_public:
         owner_id = str(user.id)
     items = await repo.get_all_projects(
-        status=status_filter,
-        public_only=force_public,
-        owner_id=owner_id,
-        limit=limit,
-        offset=offset,
+        query=_ProjectQuery(
+            status=status_filter,
+            public_only=force_public,
+            owner_id=owner_id,
+            limit=limit,
+            offset=offset,
+        ),
     )
     total = await repo.count(
         status=status_filter,
@@ -140,7 +146,7 @@ async def get_carousel(
     if project is None:
         raise HTTPException(status_code=404, detail=ERR_CAROUSEL_NOT_FOUND)
     if project.output_dir:
-        project.design_tokens = _merge_design_tokens_with_disk(project)
+        project.design_tokens = merge_design_tokens_with_disk(project)
     return CarouselProjectResponse.model_validate(project)
 
 
@@ -150,6 +156,7 @@ async def get_carousel(
         401: {"description": ERR_NOT_AUTHENTICATED},
         403: {"description": ERR_FORBIDDEN},
         404: {"description": ERR_NOT_FOUND},
+        409: {"description": "Carousel artifacts incomplete"},
     },
 )
 @limiter.limit(RATE_LIMIT_CAROUSEL_PUBLISH)
@@ -178,42 +185,50 @@ async def publish_carousel(
             status_code=status.HTTP_409_CONFLICT,
             detail=ERR_CAROUSEL_NOT_COMPLETED,
         )
+    slides = await repo.get_slides_by_project(project_id)
+    assert_carousel_artifacts_healthy(project, slides)
     if not project.blog_markdown:
-        from rag_backend.application.services.carousel.editorial_distribution_constants import (
-            BLOG_LANG_ENGLISH,
-            BLOG_LANG_PORTUGUESE,
-            SLIDE_DRAFT_TEXT_KEY,
-            SLIDE_INDEX_KEY,
-        )
-        from rag_backend.application.services.carousel.editorial_distribution_pack import (
+        from rag_backend.application.services.carousel.editorial_distribution_blog import (
+            BlogBuildContext,
             build_blog_markdown_en_from_translations,
             build_blog_markdown_from_drafts,
         )
+        from rag_backend.application.services.carousel.editorial_distribution_constants import (
+            BLOG_LANG_ENGLISH,
+            BLOG_LANG_PORTUGUESE,
+            LONG_FORM_NOTES_KEY,
+            SLIDE_DRAFT_TEXT_KEY,
+            SLIDE_INDEX_KEY,
+        )
         from rag_backend.application.services.carousel.types import unpack_extras
 
-        slides = await repo.get_slides_by_project(project_id)
-        draft_payload = [
-            {
+        draft_payload: list[dict[str, object]] = []
+        translations_en: dict[int, dict[str, object]] = {}
+        for slide in slides:
+            slide_data = unpack_extras(slide)
+            draft_entry: dict[str, object] = {
                 SLIDE_INDEX_KEY: slide.slide_number,
                 "title": slide.heading,
                 SLIDE_DRAFT_TEXT_KEY: slide.body,
             }
-            for slide in slides
-        ]
+            if slide_data.long_form_notes:
+                draft_entry[LONG_FORM_NOTES_KEY] = slide_data.long_form_notes
+            draft_payload.append(draft_entry)
+            if slide_data.translation_en:
+                translations_en[slide.slide_number] = slide_data.translation_en
         if draft_payload:
-            translations_en: dict[int, dict[str, object]] = {}
-            for slide in slides:
-                slide_data = unpack_extras(slide)
-                if slide_data.translation_en:
-                    translations_en[slide.slide_number] = slide_data.translation_en
             blog_pt = build_blog_markdown_from_drafts(
-                draft_payload,
-                title=project.title or project.topic,
+                BlogBuildContext(
+                    slide_drafts=draft_payload,
+                    title=project.title or project.topic,
+                ),
             )
             blog_en = build_blog_markdown_en_from_translations(
-                draft_payload,
-                translations_en,
-                title=project.title_en or project.title or project.topic,
+                BlogBuildContext(
+                    slide_drafts=draft_payload,
+                    translations_en=translations_en,
+                    title=project.title_en or project.title or project.topic,
+                ),
             )
             project.blog_markdown = blog_pt
             project.blog_translations = {

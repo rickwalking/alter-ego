@@ -297,8 +297,8 @@ class TestRunContentSummaryAndTldr:
                     "heading": "Resumo",
                     "body": "",
                     "summary_points": [
-                        {"icon": "🎯", "title": "T1", "body": "B1"},
-                        {"icon": "🔍", "title": "T2", "body": "B2"},
+                        {"icon_name": "target", "title": "T1", "body": "B1"},
+                        {"icon_name": "eye", "title": "T2", "body": "B2"},
                     ],
                 },
             ],
@@ -315,7 +315,7 @@ class TestRunContentSummaryAndTldr:
         assert summary_slide is not None
         assert summary_slide.summary_points is not None
         assert len(summary_slide.summary_points) == 2
-        assert summary_slide.summary_points[0]["icon"] == "🎯"
+        assert summary_slide.summary_points[0]["icon_name"] == "target"
         assert summary_slide.summary_points[0]["title"] == "T1"
 
     async def test_parses_tldr_strip_on_intro_slide(self):

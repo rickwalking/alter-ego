@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import TypedDict
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -22,6 +23,17 @@ class PersonaCorrectionRecord:
     correction_type: str
 
 
+class _CreateCorrectionParams(TypedDict, total=False):
+    """Bundled parameters for creating a persona correction."""
+
+    persona_id: str
+    original_text: str
+    corrected_text: str
+    context: str
+    correction_type: str
+    project_id: str | None
+
+
 class PersonaCorrectionRepository:
     """Postgres-backed storage for FeedbackLearningLoop."""
 
@@ -30,21 +42,15 @@ class PersonaCorrectionRepository:
 
     async def create(
         self,
-        *,
-        persona_id: str,
-        original_text: str,
-        corrected_text: str,
-        context: str,
-        correction_type: str,
-        project_id: str | None = None,
+        params: _CreateCorrectionParams,
     ) -> None:
         row = PersonaCorrectionModel(
-            persona_id=persona_id,
-            project_id=project_id,
-            original_text=original_text,
-            corrected_text=corrected_text,
-            context=context,
-            correction_type=correction_type,
+            persona_id=params["persona_id"],
+            project_id=params.get("project_id"),
+            original_text=params["original_text"],
+            corrected_text=params["corrected_text"],
+            context=params["context"],
+            correction_type=params["correction_type"],
         )
         self._session.add(row)
         await self._session.flush()

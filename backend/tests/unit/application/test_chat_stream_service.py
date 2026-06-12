@@ -39,23 +39,25 @@ import contextlib
 import json
 from collections.abc import AsyncIterator
 from unittest.mock import AsyncMock, MagicMock, patch
-from uuid import UUID, uuid4
+from uuid import uuid4
 
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from rag_backend.api.constants import (
+from rag_backend.application.services.chat_stream_service import (
+    _ChatContext,
+    _format_sse_event,
+    _keep_alive_task,
+    _sanitize_chunk,
+    _StreamConfig,
+    stream_chat_response,
+)
+from rag_backend.domain.constants.chat_stream import (
     ERR_EMPTY_MESSAGE,
     SSE_EVENT_COMPLETE,
     SSE_EVENT_ERROR,
     SSE_EVENT_TOKEN,
     SSE_EVENT_TOOL_RESULT,
-)
-from rag_backend.application.services.chat_stream_service import (
-    _format_sse_event,
-    _keep_alive_task,
-    _sanitize_chunk,
-    stream_chat_response,
 )
 from rag_backend.domain.models import Conversation, MessageRole
 
@@ -88,14 +90,7 @@ class MockAgent:
         self.chunks = chunks or []
         self.error = error
 
-    async def chat(
-        self,
-        *,
-        message: str,
-        conversation_id: UUID,
-        stream: bool,
-        persist_messages: bool,
-    ) -> AsyncIterator[dict]:
+    async def chat(self, ctx: _ChatContext) -> AsyncIterator[dict]:
         if self.error:
             raise self.error
         for chunk in self.chunks:
@@ -120,10 +115,12 @@ class TestStreamChatResponse:
         """Given empty content, when streaming, then yields error event."""
         events = []
         async for event in stream_chat_response(
-            conversation_id=uuid4(),
-            content="",
-            db=mock_db,
-            agent_builder=lambda: MockAgent(),
+            _StreamConfig(
+                conversation_id=uuid4(),
+                content="",
+                db=mock_db,
+                agent_builder=lambda: MockAgent(),
+            ),
         ):
             events.append(event)
 
@@ -138,10 +135,12 @@ class TestStreamChatResponse:
         """Given whitespace-only content, when streaming, then yields error event."""
         events = []
         async for event in stream_chat_response(
-            conversation_id=uuid4(),
-            content="   ",
-            db=mock_db,
-            agent_builder=lambda: MockAgent(),
+            _StreamConfig(
+                conversation_id=uuid4(),
+                content="   ",
+                db=mock_db,
+                agent_builder=lambda: MockAgent(),
+            ),
         ):
             events.append(event)
 
@@ -171,10 +170,12 @@ class TestStreamChatResponse:
 
             events = []
             async for event in stream_chat_response(
-                conversation_id=conv_id,
-                content="Hello",
-                db=mock_db,
-                agent_builder=lambda: MockAgent(),
+                _StreamConfig(
+                    conversation_id=conv_id,
+                    content="Hello",
+                    db=mock_db,
+                    agent_builder=lambda: MockAgent(),
+                ),
             ):
                 events.append(event)
 
@@ -216,10 +217,12 @@ class TestStreamChatResponse:
 
             events = []
             async for event in stream_chat_response(
-                conversation_id=conv_id,
-                content="Hi",
-                db=mock_db,
-                agent_builder=lambda: agent,
+                _StreamConfig(
+                    conversation_id=conv_id,
+                    content="Hi",
+                    db=mock_db,
+                    agent_builder=lambda: agent,
+                ),
             ):
                 # Skip keep-alive pings
                 if not event.startswith(": ping"):
@@ -267,10 +270,12 @@ class TestStreamChatResponse:
 
             events = []
             async for event in stream_chat_response(
-                conversation_id=mock_conversation.id,
-                content="Hi",
-                db=mock_db,
-                agent_builder=lambda: agent,
+                _StreamConfig(
+                    conversation_id=mock_conversation.id,
+                    content="Hi",
+                    db=mock_db,
+                    agent_builder=lambda: agent,
+                ),
             ):
                 if not event.startswith(": ping"):
                     events.append(event)
@@ -321,10 +326,12 @@ class TestStreamChatResponse:
 
             events = []
             async for event in stream_chat_response(
-                conversation_id=mock_conversation.id,
-                content="Run tool",
-                db=mock_db,
-                agent_builder=lambda: agent,
+                _StreamConfig(
+                    conversation_id=mock_conversation.id,
+                    content="Run tool",
+                    db=mock_db,
+                    agent_builder=lambda: agent,
+                ),
             ):
                 if not event.startswith(": ping"):
                     events.append(event)

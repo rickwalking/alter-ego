@@ -15,8 +15,10 @@ import {
   resolveStepFromWorkflowPhase,
   type CreateStepId,
 } from "@/app/dashboard/create/step-ids";
+import { WorkflowFailedCard } from "@/features/create/components/workflow-failed-card";
 import { useCarouselProject } from "@/features/create/hooks";
 import { useEditorialWorkflow } from "@/features/create/hooks/use-editorial-workflow";
+import { WORKFLOW_PHASE_STATUS } from "@/constants/workflow";
 import type { ContentSource } from "@/features/blog/types-ai";
 import type { CarouselProjectResponse } from "@/schemas/carousel";
 import { BriefStepContent } from "@/app/dashboard/create/workspace/brief-step-content";
@@ -46,6 +48,7 @@ export default function CreateWorkspacePage(): React.ReactElement {
   const editorialWorkflow = useEditorialWorkflow(projectId);
   const [projectSources, setProjectSources] = useState<ContentSource[]>([]);
   const [workflowStarted, setWorkflowStarted] = useState(false);
+  const [retrying, setRetrying] = useState(false);
   const [publishedProject, setPublishedProject] =
     useState<CarouselProjectResponse | null>(null);
 
@@ -124,6 +127,28 @@ export default function CreateWorkspacePage(): React.ReactElement {
     [editorialWorkflow, mappedSources, project, projectId, router],
   );
 
+  const isFailed =
+    editorialWorkflow.state?.phase_status === WORKFLOW_PHASE_STATUS.FAILED;
+
+  const handleRetryWorkflow = useCallback(async (): Promise<void> => {
+    if (!project) return;
+    setRetrying(true);
+    try {
+      await editorialWorkflow.start({
+        topic: project.topic,
+        audience: project.audience,
+        brief: project.niche,
+        sources: mappedSources,
+      });
+      setRetrying(false);
+      router.push(
+        `${DASHBOARD_ROUTES.CREATE_WORKSPACE(projectId)}?step=${CREATE_STEP_IDS.OUTLINE}`,
+      );
+    } catch {
+      setRetrying(false);
+    }
+  }, [editorialWorkflow, mappedSources, project, projectId, router]);
+
   if (isLoading) {
     return (
       <div
@@ -180,7 +205,14 @@ export default function CreateWorkspacePage(): React.ReactElement {
             id={`create-step-${activeStepId}`}
             aria-labelledby={`create-tab-${activeStepId}`}
           >
-            {isPublishStep ? (
+            {isFailed ? (
+              <WorkflowFailedCard
+                currentPhase={editorialWorkflow.state?.current_phase ?? ""}
+                errorMessage={editorialWorkflow.state?.error_message}
+                onRetry={handleRetryWorkflow}
+                isRetrying={retrying}
+              />
+            ) : isPublishStep ? (
               <div style={briefCardStyle}>
                 <p style={{ fontSize: "13px", color: TEXT_DIM, marginTop: 0 }}>
                   Final approval and distribution live on the Publish screen.

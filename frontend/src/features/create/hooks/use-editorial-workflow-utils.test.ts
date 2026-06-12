@@ -496,6 +496,39 @@ describe("useEditorialWorkflow utils", () => {
     expect(payload.slide_drafts).toEqual([{ draft_text: "Slide 1" }]);
   });
 
+  it("maps and preserves slide image prompt artifacts", () => {
+    const slideImagePrompts = [
+      {
+        slide_index: 1,
+        title: "AI security hook",
+        image_prompt: "Cybersecurity analyst reviewing AI risk dashboard",
+      },
+    ];
+    const payload = resolveWorkflowEventPayload({
+      event: EDITORIAL_WORKFLOW_SSE_EVENTS.ARTIFACT,
+      artifact_type: "slide_image_prompts",
+      data: slideImagePrompts,
+    });
+
+    expect(payload.slide_image_prompts).toEqual(slideImagePrompts);
+
+    const previous: EditorialWorkflowState = {
+      project_id: "project-1",
+      current_phase: EDITORIAL_PHASES.IMAGES,
+      phase_status: WORKFLOW_PHASE_STATUS.AWAITING_HUMAN,
+      research_findings: [],
+      outline: [],
+      slide_drafts: [],
+      slide_image_prompts: slideImagePrompts,
+      status: "draft",
+    };
+    const merged = mergeWorkflowState("project-1", previous, {
+      phase_status: WORKFLOW_PHASE_STATUS.IN_PROGRESS,
+    });
+
+    expect(merged.slide_image_prompts).toEqual(slideImagePrompts);
+  });
+
   it("returns validation detail arrays without messages as fallback", async () => {
     await expect(
       readApiError(

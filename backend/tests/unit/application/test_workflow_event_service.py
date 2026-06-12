@@ -8,7 +8,10 @@ from __future__ import annotations
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from rag_backend.application.services.workflow_event_service import WorkflowEventService
+from rag_backend.application.services.workflow_event_service import (
+    WorkflowEventService,
+    _AggregateQuery,
+)
 from rag_backend.domain.constants.workflow_events import (
     AGGREGATE_TYPE_PROJECT,
     EVENT_TYPE_PROJECT_PHASE_CHANGED,
@@ -44,7 +47,11 @@ async def test_emit_publishes_and_persists_audit(db_session: AsyncSession) -> No
     assert events[0][1]["event_id"] == event_id
 
     entries = await service.list_for_aggregate(
-        db_session, AGGREGATE_TYPE_PROJECT, "project-1"
+        db_session,
+        _AggregateQuery(
+            aggregate_type=AGGREGATE_TYPE_PROJECT,
+            aggregate_id="project-1",
+        ),
     )
     assert len(entries) == 1
     assert entries[0].event_type == EVENT_TYPE_PROJECT_PHASE_CHANGED

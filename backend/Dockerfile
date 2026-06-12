@@ -13,8 +13,14 @@ RUN mkdir -p src/rag_backend && touch src/rag_backend/__init__.py README.md
 RUN uv sync --frozen --no-dev
 
 COPY backend/src/ src/
+COPY frontend/public/about-pedro.jpg assets/about-pedro.jpg
+COPY backend/alembic/ alembic/
+COPY backend/alembic.ini ./
+COPY skills/runtime/ /app/skills/runtime/
 COPY README.md ./
 RUN uv sync --frozen --no-dev
+
+ENV ALTER_EGO_RUNTIME_SKILLS_ROOT=/app/skills/runtime
 
 ENV PLAYWRIGHT_BROWSERS_PATH=/app/ms-playwright
 

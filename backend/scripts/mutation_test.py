@@ -52,8 +52,8 @@ MUTATIONS = [
     {
         "file": "rag_backend/application/services/carousel/refinement_service.py",
         "name": "re_render: skip bilingual export",
-        "find": "        await self._phase6_bilingual_export(",
-        "replace": "        pass  # skipped export\n        # await self._phase6_bilingual_export(",
+        "find": "        await self._phase6_bilingual_export(BilingualExportParams(",
+        "replace": "        pass  # skipped export\n        # await self._phase6_bilingual_export(BilingualExportParams(",
         "tests_should_kill": ["test_re_render_writes_pdf_and_bumps_updated_at"],
     },
 ]

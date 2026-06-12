@@ -10,9 +10,8 @@ import {
   type FinalReviewTab,
 } from "@/constants/editorial-workflow";
 import type { EditorialWorkflowState } from "@/features/blog/types-ai";
+import { ContentPhaseReview } from "@/app/dashboard/create/workspace/phase-review/content-phase-review";
 import {
-  draftText,
-  outlineTitle,
   resolveBlogMarkdown,
   resolveCaption,
   resolveRubricScores,
@@ -31,9 +30,7 @@ export function CreateFinalReviewTabs({
   projectId,
   state,
 }: FinalReviewTabsProps): React.JSX.Element {
-  const tReview = useTranslations("editorialWorkflow.review");
   const t = useTranslations("editorialWorkflow.review.finalReview");
-  const untitledSlide = tReview("untitledSlide");
   const [activeTab, setActiveTab] = useState<FinalReviewTab>(
     FINAL_REVIEW_TABS.CAROUSEL,
   );
@@ -106,33 +103,7 @@ export function CreateFinalReviewTabs({
       </div>
       <div role="tabpanel">
         {activeTab === FINAL_REVIEW_TABS.CAROUSEL && (
-          <div className="space-y-3">
-            {state.outline.length > 0 ? (
-              <ol className="list-decimal space-y-2 pl-4">
-                {state.outline.map((slide, index) => {
-                  const title = outlineTitle(slide, untitledSlide);
-                  const draft = state.slide_drafts[index];
-                  const text = draft ? draftText(draft) : "";
-                  return (
-                    <li key={`${index}-${title}`} className="space-y-1">
-                      <p className="font-medium text-[var(--color-text)]">
-                        {title}
-                      </p>
-                      {text ? (
-                        <p className="line-clamp-4 whitespace-pre-wrap text-[var(--color-text-muted)] text-xs">
-                          {text}
-                        </p>
-                      ) : null}
-                    </li>
-                  );
-                })}
-              </ol>
-            ) : (
-              <p className="text-[var(--color-text-muted)]">
-                {t("carouselEmpty")}
-              </p>
-            )}
-          </div>
+          <ContentPhaseReview state={state} editable={false} />
         )}
         {activeTab === FINAL_REVIEW_TABS.BLOG && (
           <div className="space-y-2">

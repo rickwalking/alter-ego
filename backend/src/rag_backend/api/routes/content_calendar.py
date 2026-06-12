@@ -16,6 +16,7 @@ from rag_backend.api.schemas.calendar import (
 )
 from rag_backend.application.services.content_calendar_service import (
     ContentCalendarService,
+    _CalendarQuery,
 )
 from rag_backend.domain.constants.rate_limits import RATE_LIMIT_WORKFLOW_ENDPOINTS
 from rag_backend.domain.constants.workflow_validation import (
@@ -65,9 +66,11 @@ async def get_content_calendar(
     service = ContentCalendarService()
     items = await service.get_calendar(
         db,
-        start=range_start,
-        end=range_end,
-        author_id=author_filter,
+        _CalendarQuery(
+            start=range_start,
+            end=range_end,
+            author_id=author_filter,
+        ),
     )
     return ContentCalendarResponse(
         items=[CalendarItemResponse.model_validate(item) for item in items],

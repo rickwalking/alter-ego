@@ -1,4 +1,8 @@
 import type { EditorialWorkflowState } from "@/features/blog/types-ai";
+import {
+  asRecord,
+  resolvePresentationPreviewText,
+} from "@/features/create/lib/presentation-review-utils";
 
 export function asString(value: unknown): string {
   return typeof value === "string" ? value : "";
@@ -12,6 +16,13 @@ export function outlineTitle(
 }
 
 export function draftText(slide: Record<string, unknown>): string {
+  const presentationPt = asRecord(slide.presentation_pt);
+  if (presentationPt) {
+    const preview = resolvePresentationPreviewText(presentationPt);
+    if (preview.trim()) {
+      return preview;
+    }
+  }
   return asString(slide.draft_text) || asString(slide.body) || "";
 }
 

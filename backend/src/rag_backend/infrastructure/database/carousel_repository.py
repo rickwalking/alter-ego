@@ -6,16 +6,22 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.domain.models import (
+    CarouselImageGeneration,
     CarouselProject,
     CarouselSlide,
     CarouselStatus,
     ResearchSource,
 )
 from rag_backend.domain.protocols import CarouselRepository
+from rag_backend.domain.protocols.repositories import _ProjectQuery
 from rag_backend.infrastructure.database.models import (
+    CarouselImageGenerationModel,
     CarouselProjectModel,
     CarouselSlideModel,
     ResearchSourceModel,
+)
+from rag_backend.infrastructure.database.models.carousel_creator_asset import (
+    CarouselCreatorAssetModel,
 )
 
 _ERR_PROJECT_NOT_FOUND = "Carousel project {} not found"
@@ -46,28 +52,34 @@ class PostgresCarouselRepository(CarouselRepository):
         model = result.scalar_one_or_none()
         if model is None:
             return None
-        return model.to_entity()
+        entity = model.to_entity()
+        if model.creator_asset_id:
+            asset_model = await self._session.get(
+                CarouselCreatorAssetModel,
+                str(model.creator_asset_id),
+            )
+            if asset_model is not None:
+                entity.creator_asset_staged_path = asset_model.relative_path
+        return entity
 
     async def get_all_projects(
         self,
-        status: CarouselStatus | None = None,
-        limit: int = 100,
-        offset: int = 0,
         *,
-        public_only: bool = False,
-        owner_id: str | None = None,
+        query: _ProjectQuery,
     ) -> list[CarouselProject]:
         """Get all carousel projects with optional filtering."""
         stmt = select(CarouselProjectModel).order_by(
             CarouselProjectModel.updated_at.desc()
         )
+        status = query.get("status")
         if status is not None:
             stmt = stmt.where(CarouselProjectModel.status == status.value)
-        if public_only:
+        if query.get("public_only"):
             stmt = stmt.where(CarouselProjectModel.is_public.is_(True))
+        owner_id = query.get("owner_id")
         if owner_id is not None:
             stmt = stmt.where(CarouselProjectModel.owner_id == owner_id)
-        stmt = stmt.limit(limit).offset(offset)
+        stmt = stmt.limit(query.get("limit", 100)).offset(query.get("offset", 0))
         result = await self._session.execute(stmt)
         models = result.scalars().all()
         return [model.to_entity() for model in models]
@@ -129,6 +141,38 @@ class PostgresCarouselRepository(CarouselRepository):
         if model is None:
             raise ValueError(_ERR_SLIDE_NOT_FOUND.format(slide.id))
         model.update_from_entity(slide)
+        await self._session.flush()
+        await self._session.commit()
+        await self._session.refresh(model)
+        return model.to_entity()
+
+    async def get_image_generation_by_key(
+        self,
+        generation_key: str,
+    ) -> CarouselImageGeneration | None:
+        """Get an image generation attempt by deterministic key."""
+        stmt = select(CarouselImageGenerationModel).where(
+            CarouselImageGenerationModel.generation_key == generation_key
+        )
+        result = await self._session.execute(stmt)
+        model = result.scalar_one_or_none()
+        return model.to_entity() if model is not None else None
+
+    async def upsert_image_generation(
+        self,
+        generation: CarouselImageGeneration,
+    ) -> CarouselImageGeneration:
+        """Create or update an image generation attempt by generation key."""
+        stmt = select(CarouselImageGenerationModel).where(
+            CarouselImageGenerationModel.generation_key == generation.generation_key
+        )
+        result = await self._session.execute(stmt)
+        model = result.scalar_one_or_none()
+        if model is None:
+            model = CarouselImageGenerationModel.from_entity(generation)
+            self._session.add(model)
+        else:
+            model.update_from_entity(generation)
         await self._session.flush()
         await self._session.commit()
         await self._session.refresh(model)

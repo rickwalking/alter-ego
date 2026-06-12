@@ -14,7 +14,16 @@ import pytest
 from fastapi import HTTPException
 from starlette.requests import Request
 
-from rag_backend.api.routes.carousels.preview import preview_carousel_image
+from rag_backend.api.routes.carousels.preview import (
+    _resolve_blog_preview_titles,
+    _swipe_text_for_language,
+    preview_carousel_image,
+)
+from rag_backend.domain.constants.blog_language import (
+    BLOG_LANGUAGE_EN,
+    CAROUSEL_SWIPE_TEXT_EN,
+    CAROUSEL_SWIPE_TEXT_PT,
+)
 from rag_backend.domain.models import CarouselProject, User
 from rag_backend.domain.models.user import UserRole
 
@@ -179,3 +188,103 @@ class TestPreviewCarouselImageFallback:
             patched_resolve=[safe_file, None, None],
         )
         assert response.path == str(safe_file)
+
+
+class TestResolveBlogPreviewTitles:
+    """Unit tests for _resolve_blog_preview_titles."""
+
+    def _make_project(self, **kwargs: object) -> MagicMock:
+        project = MagicMock()
+        project.title = kwargs.get("title", "Default Title")
+        project.title_en = kwargs.get("title_en")
+        project.subtitle = kwargs.get("subtitle")
+        project.subtitle_en = kwargs.get("subtitle_en")
+        project.topic = kwargs.get("topic", "Default Topic")
+        return project
+
+    def test_en_with_translated_title(self) -> None:
+        """Given English lang with translated title, when resolving, then translated title is used."""
+        project = self._make_project(title="PT Title", title_en="EN Title")
+        title, subtitle = _resolve_blog_preview_titles("en", "# Translated", project)
+        assert title == "Translated"
+        assert subtitle is None
+
+    def test_en_with_title_en_fallback(self) -> None:
+        """Given English lang with no translation, when resolving, then title_en is used."""
+        project = self._make_project(title="PT Title", title_en="EN Title")
+        title, subtitle = _resolve_blog_preview_titles("en", "Body", project)
+        assert title == "EN Title"
+
+    def test_en_with_title_fallback(self) -> None:
+        """Given English lang with no title_en, when resolving, then title is used."""
+        project = self._make_project(title="PT Title")
+        title, subtitle = _resolve_blog_preview_titles("en", "Body", project)
+        assert title == "PT Title"
+
+    def test_en_with_topic_fallback(self) -> None:
+        """Given English lang with no title, when resolving, then topic is used."""
+        project = self._make_project(title=None, topic="Topic")
+        title, subtitle = _resolve_blog_preview_titles("en", "Body", project)
+        assert title == "Topic"
+
+    def test_en_with_subtitle_en_fallback(self) -> None:
+        """Given English lang with subtitle_en, when resolving, then subtitle_en is used."""
+        project = self._make_project(subtitle_en="EN Subtitle")
+        title, subtitle = _resolve_blog_preview_titles("en", "Body", project)
+        assert subtitle == "EN Subtitle"
+
+    def test_en_with_first_paragraph_fallback(self) -> None:
+        """Given English lang with no subtitle_en, when resolving, then first paragraph is used."""
+        project = self._make_project()
+        title, subtitle = _resolve_blog_preview_titles("en", "First paragraph", project)
+        assert subtitle == "First paragraph"
+
+    def test_en_with_subtitle_fallback(self) -> None:
+        """Given English lang with no first paragraph, when resolving, then subtitle is used."""
+        project = self._make_project(subtitle="Subtitle")
+        title, subtitle = _resolve_blog_preview_titles("en", "# Title", project)
+        assert subtitle == "Subtitle"
+
+    def test_pt_with_translated_title(self) -> None:
+        """Given PT lang with translated title, when resolving, then translated title is used."""
+        project = self._make_project(title="PT Title")
+        title, subtitle = _resolve_blog_preview_titles("pt", "# Translated", project)
+        assert title == "Translated"
+        assert subtitle is None
+
+    def test_pt_with_title_fallback(self) -> None:
+        """Given PT lang with no translation, when resolving, then title is used."""
+        project = self._make_project(title="PT Title")
+        title, subtitle = _resolve_blog_preview_titles("pt", "Body", project)
+        assert title == "PT Title"
+
+    def test_pt_with_topic_fallback(self) -> None:
+        """Given PT lang with no title, when resolving, then topic is used."""
+        project = self._make_project(title=None, topic="Topic")
+        title, subtitle = _resolve_blog_preview_titles("pt", "Body", project)
+        assert title == "Topic"
+
+    def test_pt_with_subtitle_fallback(self) -> None:
+        """Given PT lang with no translated subtitle, when resolving, then subtitle is used."""
+        project = self._make_project(subtitle="Subtitle")
+        title, subtitle = _resolve_blog_preview_titles("pt", "# Title", project)
+        assert subtitle == "Subtitle"
+
+
+class TestSwipeTextForLanguage:
+    """Unit tests for _swipe_text_for_language."""
+
+    def test_returns_english_text_for_en(self) -> None:
+        """Given English language code, when getting swipe text, then English text is returned."""
+        result = _swipe_text_for_language(BLOG_LANGUAGE_EN)
+        assert result == CAROUSEL_SWIPE_TEXT_EN
+
+    def test_returns_portuguese_text_for_other(self) -> None:
+        """Given non-English language code, when getting swipe text, then Portuguese text is returned."""
+        result = _swipe_text_for_language("pt")
+        assert result == CAROUSEL_SWIPE_TEXT_PT
+
+    def test_returns_portuguese_text_for_es(self) -> None:
+        """Given Spanish language code, when getting swipe text, then Portuguese text is returned."""
+        result = _swipe_text_for_language("es")
+        assert result == CAROUSEL_SWIPE_TEXT_PT

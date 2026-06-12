@@ -1,6 +1,10 @@
 # Active Task
 
-Current active ticket: AE-0003 (Dev Complete — hand off to QA)
+QA complete for AE-0028 epic (AE-0029 … AE-0039).
+
+Report: `.agent/reports/AE-0028.qa.md` — **68/100, Needs Fixes**.
+
+Next: fix slide-image path traversal blocker, then AE-0039 E2E release evidence.
 
 ## Rules
 

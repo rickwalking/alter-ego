@@ -4,12 +4,14 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from rag_backend.domain.constants.runtime_skills import carousel_pipeline_root
+
 SUBAGENT_RESEARCH_SYNTHESIZER = "research_synthesizer"
 SUBAGENT_OUTLINE_PLANNER = "outline_planner"
 SUBAGENT_CONTENT_DRAFTER = "content_drafter"
 SUBAGENT_CAPTION_WRITER = "caption_writer"
 
-SKILL_ROOT = "skills/carousel-pipeline"
+SKILL_ROOT = carousel_pipeline_root()
 
 
 @dataclass(frozen=True)

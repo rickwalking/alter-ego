@@ -8,6 +8,9 @@ from typing import TYPE_CHECKING, cast
 from langchain_core.runnables import RunnableConfig
 from langgraph.types import interrupt
 
+from rag_backend.application.services.carousel.presentation_review_edits import (
+    apply_localized_slide_edits,
+)
 from rag_backend.application.services.carousel.workflow_state import (
     CarouselWorkflowState,
 )
@@ -33,6 +36,7 @@ from rag_backend.domain.constants.carousel_workflow import (
     REVIEW_ACTION_REJECT,
     REVIEW_ACTION_REVISE,
     SEND_BACK_TARGET_PHASE_KEY,
+    STRUCTURED_FEEDBACK_EDITED_SLIDES_KEY,
     STRUCTURED_FEEDBACK_KEY,
     STRUCTURED_FEEDBACK_TARGET_PHASE_KEY,
     WORKFLOW_STATUS_APPROVED_FOR_PUBLISH,
@@ -72,13 +76,40 @@ def artifact_runner_from_config(
     return cast("PhaseArtifactRunner", runner)
 
 
-def review_updates_from_response(review: dict[str, object]) -> dict[str, object]:
+def _edited_slide_updates(
+    review: dict[str, object],
+    state: CarouselWorkflowState | None,
+    phase: str | None,
+) -> dict[str, object]:
+    """Apply content-phase reviewer slide edits to workflow state updates."""
+    if phase != PHASE_CONTENT or state is None:
+        return {}
+    structured = review.get(STRUCTURED_FEEDBACK_KEY)
+    if not isinstance(structured, dict):
+        return {}
+    edited = structured.get(STRUCTURED_FEEDBACK_EDITED_SLIDES_KEY)
+    if not isinstance(edited, list) or not edited:
+        return {}
+    edited_dicts = [slide for slide in edited if isinstance(slide, dict)]
+    return apply_localized_slide_edits(state, edited_dicts)
+
+
+def review_updates_from_response(
+    review: dict[str, object],
+    *,
+    state: CarouselWorkflowState | None = None,
+    phase: str | None = None,
+) -> dict[str, object]:
     action = review.get("action")
+    edit_updates = _edited_slide_updates(review, state, phase)
     if action == REVIEW_ACTION_APPROVE:
-        return {"phase_status": PHASE_STATUS_APPROVED}
+        return {**edit_updates, "phase_status": PHASE_STATUS_APPROVED}
     if action not in {REVIEW_ACTION_REVISE, REVIEW_ACTION_REJECT}:
         return {"phase_status": PHASE_STATUS_AWAITING_HUMAN}
-    updates: dict[str, object] = {"phase_status": PHASE_STATUS_AWAITING_HUMAN}
+    updates: dict[str, object] = {
+        **edit_updates,
+        "phase_status": PHASE_STATUS_AWAITING_HUMAN,
+    }
     structured = review.get(STRUCTURED_FEEDBACK_KEY)
     if isinstance(structured, dict):
         target = structured.get(STRUCTURED_FEEDBACK_TARGET_PHASE_KEY)
@@ -103,7 +134,7 @@ def await_human_review(
     })
     if not isinstance(review, dict):
         return {"phase_status": PHASE_STATUS_AWAITING_HUMAN}
-    return review_updates_from_response(review)
+    return review_updates_from_response(review, state=state, phase=phase)
 
 
 async def ensure_artifacts(

@@ -23,6 +23,7 @@ from rag_backend.api.schemas import (
 from rag_backend.domain.models import Document, DocumentScope, DocumentStatus, User
 from rag_backend.infrastructure.container import get_container
 from rag_backend.infrastructure.database.config import get_session
+from rag_backend.infrastructure.database.document_repository import _OwnerQuery
 from rag_backend.infrastructure.retrieval.document_processor import load_file_content
 
 router = APIRouter(prefix="/documents", tags=["documents"])
@@ -222,10 +223,12 @@ async def list_documents(
         total = await repo.count(status=status)
     else:
         documents = await repo.get_all_for_owner(
-            owner_id=user.id,
-            status=status,
-            limit=limit,
-            offset=offset,
+            _OwnerQuery(
+                owner_id=user.id,
+                status=status,
+                limit=limit,
+                offset=offset,
+            )
         )
         total = await repo.count_for_owner(owner_id=user.id, status=status)
 

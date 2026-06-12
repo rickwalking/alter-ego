@@ -14,7 +14,8 @@ _MEMORY_EVENTS: list[tuple[str, dict[str, object], str]] = []
 class MemoryEventPublisher:
     """Stores events in process memory (test/dev fallback)."""
 
-    async def publish(self, stream: str, event: dict[str, object]) -> str:
+    @staticmethod
+    async def publish(stream: str, event: dict[str, object]) -> str:
         entry_id = str(uuid.uuid4())
         _MEMORY_EVENTS.append((stream, event, entry_id))
         logger.info(
@@ -24,7 +25,8 @@ class MemoryEventPublisher:
         )
         return entry_id
 
-    async def close(self) -> None:
+    @staticmethod
+    async def close() -> None:
         return None
 
 

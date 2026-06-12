@@ -66,10 +66,10 @@ class TestGenerateDesignTokens:
         )
 
     def test_generate_design_tokens_swipe_text_pt(self, sample_project):
-        """Should use Portuguese swipe text for pt-BR language."""
+        """Should use global Swipe label for pt-BR language."""
         tokens = CarouselTemplateBuilder.generate_design_tokens(sample_project)
 
-        assert tokens["layout"]["swipe_text"] == "Deslize \u2192"
+        assert tokens["layout"]["swipe_text"] == "Swipe \u2192"
 
     def test_generate_design_tokens_swipe_text_en(self):
         """Should use English swipe text for en language."""
@@ -171,25 +171,16 @@ class TestGenerateDesignTokens:
             assert "accent" in theme, f"Theme {theme_name} missing accent"
             assert "background" in theme, f"Theme {theme_name} missing background"
 
-    def test_build_carousel_html_summary_slide_has_points(
+    def test_build_carousel_html_summary_slide_has_hero_layout(
         self, sample_project, sample_theme
     ):
-        """Should render summary slide with summary_points cards."""
+        """Should render summary slide with hero-bg layout."""
         slides = [
             {
                 "number": "2",
                 "type": "summary",
                 "heading": "Resumo em 30 segundos",
-                "body": "",
-                "summary_points": [
-                    {"icon": "🎯", "title": "Código vazou", "body": "Publicado por 6h"},
-                    {
-                        "icon": "🔍",
-                        "title": "Malware embutido",
-                        "body": "Exfiltrou dados",
-                    },
-                    {"icon": "⚡", "title": "2.3M afetados", "body": "Removido em 72h"},
-                ],
+                "body": "Summary body text",
             },
         ]
 
@@ -197,17 +188,17 @@ class TestGenerateDesignTokens:
             sample_project, slides, sample_theme
         )
 
-        assert "summary-grid" in html
-        assert "summary-item" in html
-        assert "🎯" in html
-        assert "Código vazou" in html
-        assert "Publicado por 6h" in html
+        assert "slide-hero-bg-img" in html
+        assert "slide-hero-bg-gradient" in html
+        assert "slide-hero-content" in html
+        assert "Resumo em 30 segundos" in html
+        assert "Summary body text" in html
         assert "02" in html
 
-    def test_build_carousel_html_summary_slide_without_points(
+    def test_build_carousel_html_summary_slide_without_body(
         self, sample_project, sample_theme
     ):
-        """Should render summary slide without cards when no summary_points."""
+        """Should render summary slide without body paragraph when body is empty."""
         slides = [
             {"number": "2", "type": "summary", "heading": "Resumo", "body": ""},
         ]
@@ -216,7 +207,7 @@ class TestGenerateDesignTokens:
             sample_project, slides, sample_theme
         )
 
-        assert 'class="summary-item">' not in html
+        assert '<p class="slide-hero-body">' not in html
 
     def test_build_carousel_html_intro_with_tldr(self, sample_project, sample_theme):
         """Should render s1-tldr on intro slide when present."""

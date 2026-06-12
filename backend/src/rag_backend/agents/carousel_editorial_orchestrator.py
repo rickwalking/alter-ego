@@ -17,6 +17,7 @@ from rag_backend.application.services.carousel.editorial_workflow_support import
 )
 from rag_backend.application.services.carousel.phase_artifact_runner import (
     PhaseArtifactRunner,
+    PhaseArtifactRunnerConfig,
 )
 from rag_backend.application.services.carousel.workflow_state import (
     CarouselWorkflowState,
@@ -37,10 +38,12 @@ class CarouselEditorialOrchestrator:
     ) -> None:
         self._llm = llm
         self._artifact_runner = PhaseArtifactRunner(
-            outline_agent=OutlineAgent(llm=llm),
-            content_agent=ContentDraftAgent(llm=llm),
-            llm=llm,
-            image_registry=image_registry,
+            PhaseArtifactRunnerConfig(
+                outline_agent=OutlineAgent(llm=llm),
+                content_agent=ContentDraftAgent(llm=llm),
+                llm=llm,
+                image_registry=image_registry,
+            )
         )
         self._engine = CarouselWorkflowEngine(
             checkpointer=checkpointer,

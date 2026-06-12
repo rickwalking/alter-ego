@@ -4,7 +4,10 @@ import pytest
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
-from rag_backend.infrastructure.database.blog_post_repository import BlogPostRepository
+from rag_backend.infrastructure.database.blog_post_repository import (
+    BlogPostRepository,
+    _BlogPostListQuery,
+)
 from rag_backend.infrastructure.database.config import Base
 from rag_backend.infrastructure.database.models.blog_post import BlogPostModel
 
@@ -41,7 +44,7 @@ async def test_list_summaries_with_search(db_session: AsyncSession) -> None:
     await db_session.commit()
 
     posts, total = await repo.list_summaries(
-        db_session, search="security", limit=10, offset=0
+        db_session, _BlogPostListQuery(search="security", limit=10, offset=0)
     )
     assert total == 1
     assert posts[0].title == "AI Security"

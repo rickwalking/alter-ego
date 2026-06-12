@@ -2,10 +2,14 @@
 
 from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Protocol
+from typing import Protocol, TypedDict
 from uuid import UUID
 
 from rag_backend.domain.models import CarouselProject, ResearchSourceType
+
+
+class StrategyNotFoundError(LookupError):
+    """Raised when a strategy name is not found in the registry."""
 
 
 @dataclass(frozen=True)
@@ -81,7 +85,9 @@ class ResearchTool(Protocol):
 class CarouselRefinementService(Protocol):
     """Protocol for carousel refinement operations (copy, design, re-export)."""
 
-    async def re_render_slides(self, project_id: UUID) -> CarouselProject: ...
+    async def re_render_slides(
+        self, project_id: UUID, strategy: str | None = None
+    ) -> CarouselProject: ...
 
     async def regenerate_slide_image(
         self,
@@ -95,3 +101,50 @@ class CarouselRefinementService(Protocol):
         project_id: UUID,
         instruction: str,
     ) -> CarouselProject: ...
+
+
+class _RenderOptions(TypedDict, total=False):
+    """Bundled render options for slide layout strategies."""
+
+    total_slides: int
+    """Total slide count for progress display."""
+    language: str
+    """Language code (pt, en) for localized text."""
+
+
+class SlideLayoutStrategy(Protocol):
+    """Renders a single slide's inner HTML for a given layout format.
+
+    Each strategy produces the content *inside* the ig-slide wrapper
+    (heading, body, structured cards). The outer shell (action bar,
+    counter, caption) is applied by the builder. Strategy implementations
+    are stateless singletons registered at container bootstrap.
+    """
+
+    strategy_name: str
+    """Unique key used in the API and registry, e.g. 'stat_card_grid'."""
+
+    display_name: str
+    """Human-readable label, e.g. 'Stat Card Grid'."""
+
+    supported_slide_types: frozenset[str]
+    """Slide types this strategy can render, e.g. {'content', 'summary'}."""
+
+    def render(  # noqa: PLR0913 — protocol boundary: slide, project, theme, options
+        self,
+        slide: Mapping[str, object],
+        project: CarouselProject,
+        theme: Mapping[str, str],
+        *,
+        options: _RenderOptions | None = None,
+    ) -> str:
+        """Return inner HTML for a single slide.
+
+        Args:
+            slide: Structured slide data (heading, body, features, stats,
+                insight, summary_points, tldr_strip, number, type).
+            project: Full project metadata (watermark, creator, niche...).
+            theme: Design palette dict (primary, accent, background...).
+            options: Bundled render options (total_slides, language, …).
+        """
+        ...

@@ -93,11 +93,13 @@ class AccessibilityCheckService:
             "issues": issues,
         }
 
-    def _has_alt_for_featured(self, content: dict[str, object]) -> bool:
+    @staticmethod
+    def _has_alt_for_featured(content: dict[str, object]) -> bool:
         alt = content.get("featured_image_alt")
         return isinstance(alt, str) and bool(alt.strip())
 
-    def _has_headings(self, body: str) -> bool:
+    @staticmethod
+    def _has_headings(body: str) -> bool:
         lines = body.split("\n")
         return any(line.startswith("#") for line in lines)
 
@@ -125,7 +127,8 @@ class AccessibilityCheckService:
         darker = min(fg_lum, bg_lum)
         return (lighter + 0.05) / (darker + 0.05)
 
-    def _relative_luminance(self, hex_color: str) -> float:
+    @staticmethod
+    def _relative_luminance(hex_color: str) -> float:
         hex_color = hex_color.lstrip("#")
         if len(hex_color) != HEX_COLOR_LENGTH:
             return 0.5
@@ -138,10 +141,12 @@ class AccessibilityCheckService:
 
         return 0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b)
 
-    def _issue(self, code: str, message: str, severity: str) -> dict[str, str]:
+    @staticmethod
+    def _issue(code: str, message: str, severity: str) -> dict[str, str]:
         return {"code": code, "message": message, "severity": severity}
 
-    def _severity(self, score: int) -> str:
+    @staticmethod
+    def _severity(score: int) -> str:
         if score >= A11Y_SCORE_PASS:
             return "pass"
         if score >= A11Y_SCORE_WARN:

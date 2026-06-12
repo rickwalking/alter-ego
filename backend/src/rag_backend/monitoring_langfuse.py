@@ -2,6 +2,7 @@
 
 import os
 
+from langchain_core.callbacks import BaseCallbackHandler
 from langfuse import Langfuse
 from langfuse.langchain import CallbackHandler
 
@@ -52,7 +53,9 @@ def init_langfuse(
     return handler
 
 
-def merge_callbacks(callbacks: list | None = None) -> list:
+def merge_callbacks(
+    callbacks: list[BaseCallbackHandler] | None = None,
+) -> list[BaseCallbackHandler]:
     handler = get_langfuse_handler()
     if handler is None:
         return callbacks or []

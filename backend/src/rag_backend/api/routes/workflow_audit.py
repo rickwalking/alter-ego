@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.api.dependencies.database import get_db
 from rag_backend.api.dependencies.resource_access import (
+    ContentAccessRequest,
     assert_audit_aggregate_access,
     assert_content_access,
 )
@@ -21,7 +22,10 @@ from rag_backend.api.schemas.workflow_audit import (
 from rag_backend.application.services.optimistic_lock_service import (
     OptimisticLockService,
 )
-from rag_backend.application.services.workflow_event_service import WorkflowEventService
+from rag_backend.application.services.workflow_event_service import (
+    WorkflowEventService,
+    _AggregateQuery,
+)
 from rag_backend.domain.constants.access_control import ERR_INVALID_REQUEST
 from rag_backend.domain.constants.optimistic_locking import ERR_LOCK_HELD_BY_OTHER
 from rag_backend.domain.constants.rate_limits import RATE_LIMIT_WORKFLOW_ENDPOINTS
@@ -55,9 +59,22 @@ async def get_workflow_audit(
     current_user: EditorUser,
 ) -> WorkflowAuditListResponse:
     """Return event-sourced audit trail for an aggregate (WF-004)."""
-    await assert_audit_aggregate_access(db, aggregate_type, aggregate_id, current_user)
+    await assert_audit_aggregate_access(
+        db,
+        ContentAccessRequest(
+            content_id=aggregate_id,
+            content_type=aggregate_type,
+            user=current_user,
+        ),
+    )
     service = _event_service()
-    entries = await service.list_for_aggregate(db, aggregate_type, aggregate_id)
+    entries = await service.list_for_aggregate(
+        db,
+        _AggregateQuery(
+            aggregate_type=aggregate_type,
+            aggregate_id=aggregate_id,
+        ),
+    )
     return WorkflowAuditListResponse(
         items=[WorkflowAuditEntryResponse.model_validate(entry) for entry in entries],
         total=len(entries),
@@ -78,7 +95,14 @@ async def acquire_content_lock(
     current_user: EditorUser,
 ) -> ContentLockResponse:
     """Acquire collaborative edit lock (UI-021)."""
-    await assert_content_access(db, content_id, body.content_type, current_user)
+    await assert_content_access(
+        db,
+        ContentAccessRequest(
+            content_id=content_id,
+            content_type=body.content_type,
+            user=current_user,
+        ),
+    )
     service = _lock_service()
     try:
         lock = await service.acquire_lock(
@@ -123,7 +147,14 @@ async def release_content_lock(
     current_user: EditorUser,
 ) -> None:
     """Release collaborative edit lock."""
-    await assert_content_access(db, content_id, content_type, current_user)
+    await assert_content_access(
+        db,
+        ContentAccessRequest(
+            content_id=content_id,
+            content_type=content_type,
+            user=current_user,
+        ),
+    )
     service = _lock_service()
     await service.release_lock(
         db,
@@ -148,7 +179,14 @@ async def get_content_lock(
     current_user: EditorUser,
 ) -> ContentLockResponse | None:
     """Return active lock if another user is editing."""
-    await assert_content_access(db, content_id, content_type, current_user)
+    await assert_content_access(
+        db,
+        ContentAccessRequest(
+            content_id=content_id,
+            content_type=content_type,
+            user=current_user,
+        ),
+    )
     service = _lock_service()
     lock = await service.get_active_lock(db, content_id, content_type)
     if lock is None:

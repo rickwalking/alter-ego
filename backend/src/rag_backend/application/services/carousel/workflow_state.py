@@ -46,6 +46,10 @@ class CarouselWorkflowState(TypedDict, total=False):
     persona_scores: dict[str, object]
     send_back_target_phase: str
     workflow_error: str
+    presentation_policy_version: str
+    localized_slides: list[dict[str, object]]
+    presentation_validation: dict[str, object]
+    translations_en: dict[str, object]
 
 
 def get_initial_carousel_state(

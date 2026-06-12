@@ -15,6 +15,7 @@ from rag_backend.application.services.carousel.editorial_workflow_support import
     SSE_EVENT_KEEPALIVE,
     SSE_EVENT_PROGRESS,
     SSE_EVENT_REVIEW_REQUIRED,
+    EventParams,
     build_progress_event,
     build_review_required_event,
     publish_workflow_sse_updates,
@@ -80,9 +81,8 @@ class TestWorkflowSseMutationResilience:
     def test_mutation_review_required_includes_gate_payload(self) -> None:
         """Kills mutants that omit gate payload."""
         event = build_review_required_event(
-            "project-1",
-            PHASE_RESEARCH,
-            PHASE_STATUS_AWAITING_HUMAN,
-            {"current_phase": PHASE_RESEARCH, "outline": []},
+            EventParams(project_id="project-1", phase=PHASE_RESEARCH),
+            phase_status=PHASE_STATUS_AWAITING_HUMAN,
+            gate_payload={"current_phase": PHASE_RESEARCH, "outline": []},
         )
         assert isinstance(event.get("gate_payload"), dict)

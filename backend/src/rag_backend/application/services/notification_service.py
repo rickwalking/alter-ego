@@ -48,6 +48,34 @@ class RevisionCapEscalationParams:
     title: str
 
 
+@dataclass(frozen=True)
+class _UserNotificationsQuery:
+    """Query filters for listing user notifications."""
+
+    unread_only: bool = False
+    limit: int = 50
+
+
+@dataclass(frozen=True)
+class _WorkflowUpdateParams:
+    """Parameters for creating a workflow update notification."""
+
+    user_id: str
+    notification_type: str
+    title: str
+    body: str
+    content_id: str
+    content_type: str
+
+
+@dataclass(frozen=True)
+class _EmailRecipient:
+    """Recipient and session for email dispatch."""
+
+    db: AsyncSession
+    user_id: str
+
+
 class NotificationService:
     """Creates and delivers in-app notifications with optional email."""
 
@@ -80,15 +108,14 @@ class NotificationService:
         db.add(notification)
         await db.flush()
         notification.email_sent = await self._send_email(
-            db,
-            user_id,
-            EMAIL_SUBJECT_REVIEW_REQUEST.format(title=title),
-            body,
+            _EmailRecipient(db=db, user_id=user_id),
+            subject=EMAIL_SUBJECT_REVIEW_REQUEST.format(title=title),
+            body=body,
         )
         return notification
 
+    @staticmethod
     async def create_revision_cap_escalation(
-        self,
         db: AsyncSession,
         params: RevisionCapEscalationParams,
     ) -> list[NotificationModel]:
@@ -126,24 +153,24 @@ class NotificationService:
             await db.flush()
         return notifications
 
+    @staticmethod
     async def list_for_user(
-        self,
         db: AsyncSession,
         user_id: str,
-        *,
-        unread_only: bool = False,
-        limit: int = 50,
+        query_params: _UserNotificationsQuery = _UserNotificationsQuery(),
     ) -> list[NotificationModel]:
         """List notifications for a user."""
         query = select(NotificationModel).where(NotificationModel.user_id == user_id)
-        if unread_only:
+        if query_params.unread_only:
             query = query.where(NotificationModel.status == NOTIFICATION_STATUS_UNREAD)
-        query = query.order_by(NotificationModel.created_at.desc()).limit(limit)
+        query = query.order_by(NotificationModel.created_at.desc()).limit(
+            query_params.limit
+        )
         result = await db.execute(query)
         return list(result.scalars().all())
 
+    @staticmethod
     async def mark_read(
-        self,
         db: AsyncSession,
         notification_id: str,
         user_id: str,
@@ -188,10 +215,9 @@ class NotificationService:
             )
             db.add(reminder)
             await self._send_email(
-                db,
-                item.user_id,
-                EMAIL_SUBJECT_DEADLINE_REMINDER.format(title=item.title),
-                NOTIFICATION_BODY_DEADLINE_REMINDER,
+                _EmailRecipient(db=db, user_id=item.user_id),
+                subject=EMAIL_SUBJECT_DEADLINE_REMINDER.format(title=item.title),
+                body=NOTIFICATION_BODY_DEADLINE_REMINDER,
             )
             item.metadata_json = {**metadata, METADATA_KEY_REMINDER_SENT: True}
             sent += 1
@@ -220,54 +246,48 @@ class NotificationService:
         db.add(notification)
         await db.flush()
         notification.email_sent = await self._send_email(
-            db,
-            user_id,
-            EMAIL_SUBJECT_SCHEDULED_PUBLISHED.format(title=title),
-            NOTIFICATION_BODY_SCHEDULED_PUBLISHED,
+            _EmailRecipient(db=db, user_id=user_id),
+            subject=EMAIL_SUBJECT_SCHEDULED_PUBLISHED.format(title=title),
+            body=NOTIFICATION_BODY_SCHEDULED_PUBLISHED,
         )
         return notification
 
+    @staticmethod
     async def create_workflow_update(
-        self,
         db: AsyncSession,
-        *,
-        user_id: str,
-        notification_type: str,
-        title: str,
-        body: str,
-        content_id: str,
-        content_type: str,
+        params: _WorkflowUpdateParams,
     ) -> NotificationModel:
         """Create an in-app workflow status notification."""
         notification = NotificationModel(
-            user_id=user_id,
-            notification_type=notification_type,
-            title=title,
-            body=body,
+            user_id=params.user_id,
+            notification_type=params.notification_type,
+            title=params.title,
+            body=params.body,
             status=NOTIFICATION_STATUS_UNREAD,
-            content_id=content_id,
-            content_type=content_type,
+            content_id=params.content_id,
+            content_type=params.content_type,
         )
         db.add(notification)
         await db.flush()
         return notification
 
+    @staticmethod
     async def _send_email(
-        self,
-        db: AsyncSession,
-        user_id: str,
+        recipient: _EmailRecipient,
+        *,
         subject: str,
         body: str,
     ) -> bool:
         """Log email delivery attempt; returns True when dispatched."""
-        user = await db.get(UserModel, user_id)
+        db = recipient.db
+        user = await db.get(UserModel, recipient.user_id)
         if user is None:
             return False
         logger.info(
             "email_notification",
             to=user.email,
             subject=subject,
-            body_preview=body[:120],
+            body=body,
         )
         return True
 

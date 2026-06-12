@@ -6,7 +6,10 @@ from dataclasses import dataclass
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from rag_backend.application.services.notification_service import NotificationService
+from rag_backend.application.services.notification_service import (
+    NotificationService,
+    _WorkflowUpdateParams,
+)
 from rag_backend.application.services.workflow_event_service import WorkflowEventService
 from rag_backend.domain.constants.carousel_workflow import REVIEW_ACTION_APPROVE
 from rag_backend.domain.constants.notifications import (
@@ -118,12 +121,14 @@ async def emit_review_event(request: ReviewEventEmitRequest) -> None:
     )
     await request.notification_service.create_workflow_update(
         request.db,
-        user_id=ctx.reviewer_id,
-        notification_type=notif_type,
-        title=f"Phase {ctx.action}: {new_phase}",
-        body=ctx.feedback or "",
-        content_id=ctx.project_id,
-        content_type=CONTENT_TYPE_CAROUSEL,
+        _WorkflowUpdateParams(
+            user_id=ctx.reviewer_id,
+            notification_type=notif_type,
+            title=f"Phase {ctx.action}: {new_phase}",
+            body=ctx.feedback or "",
+            content_id=ctx.project_id,
+            content_type=CONTENT_TYPE_CAROUSEL,
+        ),
     )
 
 

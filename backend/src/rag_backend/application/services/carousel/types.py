@@ -31,6 +31,7 @@ EXTRAS_FIELDS: tuple[str, ...] = (
     "translation_en",
     "summary_points",
     "tldr_strip",
+    "long_form_notes",
 )
 
 # (image_model, image_style) → human-readable preset name, surfaced in
@@ -87,6 +88,8 @@ class SlideData:
     # One-sentence TLDR strip rendered on the intro slide (slide 1) below
     # the subtitle. None when the intro has no strip.
     tldr_strip: str | None = None
+    # Extended notes for blog composition, separate from constrained slide copy.
+    long_form_notes: str | None = None
 
 
 def slide_count_from_config(slides_config: str) -> int:
@@ -168,6 +171,9 @@ def unpack_extras(slide: CarouselSlide) -> SlideData:
     translation_en = extras.get("translation_en") if isinstance(extras, dict) else None
     summary_points = extras.get("summary_points") if isinstance(extras, dict) else None
     tldr_strip = extras.get("tldr_strip") if isinstance(extras, dict) else None
+    long_form_notes = (
+        extras.get("long_form_notes") if isinstance(extras, dict) else None
+    )
     image_prompt = slide.image_prompt or (
         extras.get("image_prompt") if isinstance(extras, dict) else None
     )
@@ -183,6 +189,7 @@ def unpack_extras(slide: CarouselSlide) -> SlideData:
         translation_en=(translation_en if isinstance(translation_en, dict) else None),
         summary_points=summary_points if isinstance(summary_points, list) else None,
         tldr_strip=str(tldr_strip) if tldr_strip else None,
+        long_form_notes=str(long_form_notes) if long_form_notes else None,
     )
 
 

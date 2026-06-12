@@ -9,7 +9,11 @@ from dependency_injector import containers, providers
 from rag_backend.agents.alter_ego_agent import AlterEgoAgent
 from rag_backend.agents.rag_agent import RAGAgent
 from rag_backend.application.services.carousel.refinement_service import (
+    CarouselRefinementConfig,
     CarouselRefinementService,
+)
+from rag_backend.application.services.carousel_template.strategies.registry import (
+    bootstrap_strategies,
 )
 from rag_backend.application.services.conversation_service import ConversationService
 from rag_backend.application.services.document_pipeline import (
@@ -60,6 +64,13 @@ from rag_backend.infrastructure.retrieval.document_processor import (
     RecursiveDocumentProcessor,
 )
 from rag_backend.infrastructure.retrieval.hybrid_retriever import HybridRetrieverWithRRF
+
+
+def _build_carousel_refinement_service(
+    config: CarouselRefinementConfig,
+) -> CarouselRefinementService:
+    """Build CarouselRefinementService from a config dataclass."""
+    return CarouselRefinementService(config=config)
 
 
 class Container(containers.DeclarativeContainer):
@@ -197,13 +208,21 @@ class Container(containers.DeclarativeContainer):
         export_service=export_service,
     )
 
-    carousel_refinement = providers.Factory(
-        CarouselRefinementService,
+    strategy_registry = providers.Singleton(bootstrap_strategies)
+
+    carousel_refinement_config = providers.Factory(
+        CarouselRefinementConfig,
         repository=carousel_repository,
         llm_service=llm_service,
         image_registry=image_provider_registry,
         export_service=export_service,
         pdf_slide_builder=pdf_slide_builder,
+        strategy_registry=strategy_registry,
+    )
+
+    carousel_refinement = providers.Factory(
+        _build_carousel_refinement_service,
+        carousel_refinement_config,
     )
 
     # Alter-Ego Agent (public chat — NO carousel tools)

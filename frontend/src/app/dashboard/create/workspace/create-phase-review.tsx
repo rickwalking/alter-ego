@@ -1,7 +1,10 @@
 "use client";
 
 import { EDITORIAL_PHASES } from "@/constants/editorial-workflow";
-import type { EditorialWorkflowState } from "@/features/blog/types-ai";
+import type {
+  EditorialWorkflowState,
+  LocalizedSlideReview,
+} from "@/features/blog/types-ai";
 import { ResearchPhaseReview } from "./phase-review/research-phase-review";
 import { OutlinePhaseReview } from "./phase-review/outline-phase-review";
 import { ContentPhaseReview } from "./phase-review/content-phase-review";
@@ -12,11 +15,17 @@ import { FinalReviewPhaseReview } from "./phase-review/final-review-phase-review
 interface EditorialPhaseReviewProps {
   projectId: string;
   state: EditorialWorkflowState;
+  contentSlides?: LocalizedSlideReview[];
+  onContentSlidesChange?: (slides: LocalizedSlideReview[]) => void;
+  contentEditable?: boolean;
 }
 
 export function CreatePhaseReview({
   projectId,
   state,
+  contentSlides,
+  onContentSlidesChange,
+  contentEditable = false,
 }: EditorialPhaseReviewProps): React.JSX.Element | null {
   const phase = state.current_phase;
 
@@ -26,7 +35,14 @@ export function CreatePhaseReview({
     case EDITORIAL_PHASES.OUTLINE:
       return <OutlinePhaseReview state={state} />;
     case EDITORIAL_PHASES.CONTENT:
-      return <ContentPhaseReview state={state} />;
+      return (
+        <ContentPhaseReview
+          state={state}
+          editable={contentEditable}
+          slides={contentSlides}
+          onSlidesChange={onContentSlidesChange}
+        />
+      );
     case EDITORIAL_PHASES.DESIGN:
       return <DesignPhaseReview state={state} />;
     case EDITORIAL_PHASES.IMAGES:

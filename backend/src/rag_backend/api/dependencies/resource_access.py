@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+from typing import TypedDict
 from uuid import UUID
 
 from fastapi import HTTPException, status
@@ -34,6 +36,22 @@ from rag_backend.domain.models import Conversation, Document, User
 from rag_backend.domain.models.user import UserRole
 from rag_backend.infrastructure.database.models import BlogPostModel, UserModel
 from rag_backend.infrastructure.database.models.carousel import CarouselProjectModel
+
+
+class ContentAccessRequest(TypedDict):
+    """Bundled parameters for content access assertions."""
+
+    content_id: str
+    content_type: str
+    user: UserModel
+
+
+@dataclass(frozen=True)
+class ContentTarget:
+    """Bundled content identifier for reviewer assignment."""
+
+    content_id: str
+    content_type: str
 
 
 def _user_is_admin(user: UserModel) -> bool:
@@ -192,11 +210,12 @@ def _user_is_assigned_reviewer(reviewer_id: str | None, user: UserModel) -> bool
 
 async def assert_content_owner_or_admin(
     db: AsyncSession,
-    content_id: str,
-    content_type: str,
-    user: UserModel,
+    request: ContentAccessRequest,
 ) -> None:
     """Verify the user owns the content or is an admin (not assigned reviewers)."""
+    content_id = request["content_id"]
+    content_type = request["content_type"]
+    user = request["user"]
     if content_type == CONTENT_TYPE_BLOG_POST:
         post = await db.get(BlogPostModel, content_id)
         if post is None:
@@ -223,11 +242,12 @@ async def assert_content_owner_or_admin(
 
 async def assert_content_access(
     db: AsyncSession,
-    content_id: str,
-    content_type: str,
-    user: UserModel,
+    request: ContentAccessRequest,
 ) -> None:
     """Verify the user may access workflow content (blog post or carousel)."""
+    content_id = request["content_id"]
+    content_type = request["content_type"]
+    user = request["user"]
     if content_type == CONTENT_TYPE_BLOG_POST:
         post = await db.get(BlogPostModel, content_id)
         if post is None:
@@ -235,38 +255,39 @@ async def assert_content_access(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=ERR_BLOG_POST_NOT_FOUND.format(post_id=content_id),
             )
-        if _user_is_admin(user):
-            return
-        if _user_is_assigned_reviewer(post.reviewer_id, user):
-            return
-        assert_owner_or_admin(post.author_id, user)
-        return
-    if content_type == CONTENT_TYPE_CAROUSEL:
+        if not _user_is_admin(user) and not _user_is_assigned_reviewer(
+            post.reviewer_id, user
+        ):
+            assert_owner_or_admin(post.author_id, user)
+    elif content_type == CONTENT_TYPE_CAROUSEL:
         project = await db.get(CarouselProjectModel, content_id)
         if project is None:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=ERR_CAROUSEL_NOT_FOUND,
             )
-        if _user_is_admin(user):
-            return
-        if _user_is_assigned_reviewer(project.assigned_reviewer_id, user):
-            return
-        assert_owner_or_admin(project.owner_id, user)
-        return
-    raise HTTPException(
-        status_code=status.HTTP_400_BAD_REQUEST,
-        detail=ERR_INVALID_CONTENT_TYPE,
-    )
+        if not _user_is_admin(user) and not _user_is_assigned_reviewer(
+            project.assigned_reviewer_id, user
+        ):
+            assert_owner_or_admin(project.owner_id, user)
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERR_INVALID_CONTENT_TYPE,
+        )
 
 
 async def assert_audit_aggregate_access(
     db: AsyncSession,
-    aggregate_type: str,
-    aggregate_id: str,
-    user: UserModel,
+    request: ContentAccessRequest,
 ) -> None:
-    """Verify the user may read audit logs for an aggregate."""
+    """Verify the user may read audit logs for an aggregate.
+
+    The caller passes aggregate_type as ``content_type`` and
+    aggregate_id as ``content_id`` in the request.
+    """
+    aggregate_type = request["content_type"]
+    aggregate_id = request["content_id"]
     if aggregate_type == AGGREGATE_TYPE_BLOG_POST:
         content_type = CONTENT_TYPE_BLOG_POST
     elif aggregate_type == AGGREGATE_TYPE_PROJECT:
@@ -276,26 +297,33 @@ async def assert_audit_aggregate_access(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=ERR_INVALID_CONTENT_TYPE,
         )
-    await assert_content_access(db, aggregate_id, content_type, user)
+    await assert_content_access(
+        db,
+        ContentAccessRequest(
+            content_id=aggregate_id,
+            content_type=content_type,
+            user=request["user"],
+        ),
+    )
 
 
 async def assign_content_reviewer(
     db: AsyncSession,
-    content_id: str,
-    content_type: str,
+    target: ContentTarget,
+    *,
     reviewer_id: str,
 ) -> None:
     """Persist reviewer assignment on supported content types."""
-    if content_type != CONTENT_TYPE_BLOG_POST:
+    if target.content_type != CONTENT_TYPE_BLOG_POST:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=ERR_REVIEWER_ASSIGNMENT_UNSUPPORTED,
         )
-    post = await db.get(BlogPostModel, content_id)
+    post = await db.get(BlogPostModel, target.content_id)
     if post is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=ERR_BLOG_POST_NOT_FOUND.format(post_id=content_id),
+            detail=ERR_BLOG_POST_NOT_FOUND.format(post_id=target.content_id),
         )
     if post.author_id and post.author_id == reviewer_id:
         raise HTTPException(
@@ -307,6 +335,8 @@ async def assign_content_reviewer(
 
 
 __all__ = [
+    "ContentAccessRequest",
+    "ContentTarget",
     "assert_audit_aggregate_access",
     "assert_blog_post_reviewer_or_admin",
     "assert_blog_post_status",

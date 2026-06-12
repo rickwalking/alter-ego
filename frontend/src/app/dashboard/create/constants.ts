@@ -10,11 +10,5 @@ export const CREATE_STEPS = [
   { num: 7, id: CREATE_STEP_IDS.PUBLISH, label: "Publish" },
 ] as const;
 
-export const CREATE_TEMPLATES = [
-  { icon: "📊", name: "Analysis", desc: "Deep dive with data" },
-  { icon: "⚖️", name: "Comparison", desc: "Side by side" },
-  { icon: "📚", name: "Tutorial", desc: "Step by step" },
-  { icon: "📰", name: "News Flash", desc: "Quick update" },
-  { icon: "🧠", name: "Deep Dive", desc: "Comprehensive" },
-  { icon: "🎯", name: "Listicle", desc: "Top N format" },
-] as const;
+export { CREATE_TEMPLATES } from "@/constants/create";
+export type { CreateTemplate } from "@/constants/create";

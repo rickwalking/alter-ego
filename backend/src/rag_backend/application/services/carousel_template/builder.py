@@ -11,24 +11,16 @@ from rag_backend.application.services.carousel_template.prompts import (
     build_content_prompt,
     build_title_prompt,
 )
-from rag_backend.application.services.carousel_template.slides import (
-    _render_content_slide,
-    _render_cta_slide,
-    _render_intro_slide,
-    _render_summary_slide,
-)
 
 
 class CarouselTemplateBuilder:
+    """Facade for carousel HTML template generation and prompt building."""
+
     build_title_prompt = staticmethod(build_title_prompt)
     build_content_prompt = staticmethod(build_content_prompt)
     build_caption_prompt = staticmethod(build_caption_prompt)
     build_carousel_html = staticmethod(build_carousel_html)
     generate_design_tokens = staticmethod(generate_design_tokens)
-    _render_intro_slide = staticmethod(_render_intro_slide)
-    _render_summary_slide = staticmethod(_render_summary_slide)
-    _render_content_slide = staticmethod(_render_content_slide)
-    _render_cta_slide = staticmethod(_render_cta_slide)
 
 
 __all__ = ["CarouselTemplateBuilder"]

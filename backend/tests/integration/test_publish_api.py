@@ -132,11 +132,19 @@ async def _seed_completed_project(client: AsyncClient) -> str:
         proj = await repo.get_project_by_id(UUID(project_id))
         assert proj is not None
         proj.status = CarouselStatus.COMPLETED
+        proj.output_dir = "/tmp/test-carousel-output"
         await repo.update_project(proj)
         model = await session.get(CarouselProjectModel, project_id)
         if model is not None:
             model.workflow_status = WORKFLOW_STATUS_APPROVED_FOR_PUBLISH
             await session.commit()
+
+    # Create minimal artifacts so artifact health checks pass
+    from tests.integration.carousel_consolidation.helpers import (
+        create_minimal_carousel_artifacts,
+    )
+
+    await create_minimal_carousel_artifacts(project_id)
     return project_id
 
 

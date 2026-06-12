@@ -1,6 +1,7 @@
+import os
 from logging.config import fileConfig
 
-from sqlalchemy import engine_from_config, pool
+from sqlalchemy import create_engine, pool
 
 from alembic import context
 
@@ -18,57 +19,22 @@ target_metadata = None
 
 
 def get_target_metadata():
-    """Get target metadata from all models."""
-    from rag_backend.infrastructure.database.models.blog_post import (
-        BlogPostModel,
-        BlogPostModelError,
-        BlogPostStatus,
-    )
-    from rag_backend.infrastructure.database.models.carousel import (
-        CarouselProjectModel,
-        CarouselSlideModel,
-        ResearchSourceModel,
-    )
-    from rag_backend.infrastructure.database.models.conversation import (
-        ConversationModel,
-        MessageModel,
-    )
-    from rag_backend.infrastructure.database.models.document import DocumentModel
-    from rag_backend.infrastructure.database.models.persona_rubric import (
-        PersonaProfileModel,
-        QualityRubricModel,
-        RubricEvaluationScoreModel,
-    )
-    from rag_backend.infrastructure.database.models.source_comment import (
-        ContentSourceModel,
-        ContentVersionModel,
-        EditorialCommentModel,
-    )
-    from rag_backend.infrastructure.database.models.user import UserModel
+    """Get target metadata from all registered ORM models."""
+    import rag_backend.infrastructure.database.models  # noqa: F401
+    from rag_backend.infrastructure.database.config import Base
 
-    models = [
-        BlogPostModel,
-        BlogPostStatus,
-        BlogPostModelError,
-        CarouselProjectModel,
-        CarouselSlideModel,
-        ResearchSourceModel,
-        PersonaProfileModel,
-        QualityRubricModel,
-        RubricEvaluationScoreModel,
-        ContentSourceModel,
-        ContentVersionModel,
-        EditorialCommentModel,
-        ConversationModel,
-        MessageModel,
-        DocumentModel,
-        UserModel,
-    ]
-
-    return {m.__table__.name: m.__table__ for m in models if hasattr(m, '__table__')}
+    return Base.metadata
 
 
 target_metadata = get_target_metadata()
+
+
+def migration_database_url() -> str:
+    """Resolve a sync SQLAlchemy URL for Alembic from DATABASE_URL."""
+    url = os.environ.get("DATABASE_URL") or config.get_main_option("sqlalchemy.url")
+    if url.startswith("postgresql+asyncpg://"):
+        return url.replace("postgresql+asyncpg://", "postgresql+psycopg://", 1)
+    return url
 
 
 # other values from the config, defined by the needs of env.py,
@@ -79,7 +45,7 @@ target_metadata = get_target_metadata()
 
 def run_migrations_offline() -> None:
     """Run migrations in 'offline' mode."""
-    url = config.get_main_option("sqlalchemy.url")
+    url = migration_database_url()
     context.configure(
         url=url,
         target_metadata=target_metadata,
@@ -93,11 +59,7 @@ def run_migrations_offline() -> None:
 
 def run_migrations_online() -> None:
     """Run migrations in 'online' mode."""
-    connectable = engine_from_config(
-        config.get_section(config.config_ini_section, {}),
-        prefix="sqlalchemy.",
-        poolclass=pool.NullPool,
-    )
+    connectable = create_engine(migration_database_url(), poolclass=pool.NullPool)
 
     with connectable.connect() as connection:
         context.configure(

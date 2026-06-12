@@ -105,6 +105,7 @@ class CarouselProject:
     blog_translations: dict[str, str] | None = None
     blog_image_map: list[dict[str, str | int]] | None = None
     caption: str | None = None
+    caption_en: str | None = None
     linkedin_post_pt: str | None = None
     linkedin_post_en: str | None = None
     design_tokens: DesignTokens | None = None
@@ -126,8 +127,16 @@ class CarouselProject:
     creator_name: str | None = None
     creator_handle: str | None = None
     creator_avatar_url: str | None = None
+    creator_website: str | None = None
+    creator_asset_id: UUID | None = None
+    creator_asset_staged_path: str | None = None
+    presentation_policy_version: str | None = None
+    presentation_policy_checksum: str | None = None
+    artifact_version: str | None = None
     # Template version for A/B testing and rollback
     template_version: str = "v2"
+    # Slide layout strategy for visual formatting
+    slide_layout_strategy: str | None = None
     created_at: datetime = field(default_factory=datetime.utcnow)
     updated_at: datetime = field(default_factory=datetime.utcnow)
 

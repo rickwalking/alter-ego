@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from pathlib import Path
-from unittest.mock import patch
 
 import pytest
 
@@ -22,9 +21,11 @@ class TestEnsureJpegFormat:
         missing = str(tmp_path / "missing.jpg")
         assert _ensure_jpeg_format(missing) == missing
 
-    def test_returns_unchanged_when_not_png_header(self, tmp_path: Path) -> None:
+    def test_accepts_existing_jpeg(self, tmp_path: Path) -> None:
+        from PIL import Image as PILImage
+
         file_path = tmp_path / "already.jpg"
-        file_path.write_text("not a png")
+        PILImage.new("RGB", (10, 10), color="blue").save(file_path, format="JPEG")
         assert _ensure_jpeg_format(str(file_path)) == str(file_path)
 
     def test_converts_png_to_jpeg(self, tmp_path: Path) -> None:
@@ -52,18 +53,19 @@ class TestEnsureJpegFormat:
             assert converted.format == "JPEG"
             assert converted.mode == "RGB"
 
-    def test_leaves_file_unchanged_on_conversion_error(self, tmp_path: Path) -> None:
+    def test_rejects_invalid_image_data(self, tmp_path: Path) -> None:
+        invalid_path = tmp_path / "test.jpg"
+        invalid_path.write_bytes(b"img")
+
+        with pytest.raises(RuntimeError, match="not a valid JPEG"):
+            _ensure_jpeg_format(str(invalid_path))
+
+    def test_rejects_invalid_png_data(self, tmp_path: Path) -> None:
         png_path = tmp_path / "test.jpg"
         png_path.write_bytes(b"\x89PNG\r\n\x1a\ninvalid")
 
-        with patch(
-            "rag_backend.application.services.carousel.nodes.images.logger"
-        ) as mock_logger:
-            result = _ensure_jpeg_format(str(png_path))
-
-        assert result == str(png_path)
-        assert png_path.exists()
-        mock_logger.warning.assert_called_once()
+        with pytest.raises(RuntimeError, match="not a valid JPEG"):
+            _ensure_jpeg_format(str(png_path))
 
 
 @pytest.mark.unit
@@ -81,15 +83,16 @@ class TestFilterImageSlides:
         assert result[0].slide_number == 1
         assert result[1].slide_number == 3
 
-    def test_excludes_non_image_slide_types(self) -> None:
+    def test_includes_editorial_slides_and_excludes_final_cta(self) -> None:
         slides = [
             SlideData(1, "intro", "H", "B", image_prompt="scene 1"),
             SlideData(2, "summary", "H2", "B2", image_prompt="scene 2"),
-            SlideData(3, "cta", "H3", "B3", image_prompt="scene 3"),
+            SlideData(3, "content", "H3", "B3", image_prompt="scene 3"),
+            SlideData(4, "closing", "H4", "B4", image_prompt="scene 4"),
+            SlideData(5, "cta", "H5", "B5", image_prompt="scene 5"),
         ]
         result = filter_image_slides(slides)
-        assert len(result) == 1
-        assert result[0].slide_number == 1
+        assert [slide.slide_number for slide in result] == [1, 2, 3, 4]
 
     def test_returns_empty_when_no_prompts(self) -> None:
         slides = [

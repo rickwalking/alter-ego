@@ -10,8 +10,8 @@ from starlette.responses import Response
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     """Add security headers to all responses."""
 
+    @staticmethod
     async def dispatch(
-        self,
         request: Request,
         call_next: Callable[[Request], Awaitable[Response]],
     ) -> Response:

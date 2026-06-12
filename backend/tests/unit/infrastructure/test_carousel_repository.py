@@ -82,7 +82,7 @@ class TestPostgresCarouselRepository:
 
     async def test_get_all_projects_empty(self, carousel_repository):
         """Should return empty list when no projects exist."""
-        projects = await carousel_repository.get_all_projects()
+        projects = await carousel_repository.get_all_projects(query={})
 
         assert projects == []
 
@@ -92,7 +92,7 @@ class TestPostgresCarouselRepository:
         """Should return all created projects."""
         await carousel_repository.create_project(sample_carousel_project)
 
-        projects = await carousel_repository.get_all_projects()
+        projects = await carousel_repository.get_all_projects(query={})
 
         assert len(projects) == 1
         assert projects[0].topic == sample_carousel_project.topic
@@ -113,7 +113,7 @@ class TestPostgresCarouselRepository:
         await carousel_repository.create_project(project2)
 
         completed = await carousel_repository.get_all_projects(
-            status=CarouselStatus.COMPLETED
+            query={"status": CarouselStatus.COMPLETED},
         )
 
         assert len(completed) == 1

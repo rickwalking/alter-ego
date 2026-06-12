@@ -11,6 +11,8 @@ from rag_backend.domain.constants.persona import VOICE_MATCH_MIN_SCORE
 from rag_backend.domain.models.rubric import QualityRubric
 from rag_backend.infrastructure.container import get_container
 from rag_backend.infrastructure.monitoring_langfuse import (
+    _ScoreParams,
+    _TraceConfig,
     add_quality_score,
     add_voice_match_score,
     create_workflow_trace,
@@ -51,10 +53,12 @@ class QualityEvaluationService:
         trace = None
         if project_id is not None:
             trace = create_workflow_trace(
-                project_id=project_id,
-                user_id=user_id,
-                content_type=content_type,
-                metadata={"phase": "quality_check"},
+                config=_TraceConfig(
+                    project_id=project_id,
+                    user_id=user_id,
+                    content_type=content_type,
+                    metadata={"phase": "quality_check"},
+                ),
             )
 
         overall = float(result.get("overall_score", 0))
@@ -63,17 +67,21 @@ class QualityEvaluationService:
         if trace is not None:
             add_quality_score(
                 trace=trace,
-                criterion="overall",
-                score=overall,
-                threshold=VOICE_MATCH_MIN_SCORE,
-                passed=passed,
+                params=_ScoreParams(
+                    criterion="overall",
+                    score=overall,
+                    threshold=VOICE_MATCH_MIN_SCORE,
+                    passed=passed,
+                ),
             )
             add_quality_score(
                 trace=trace,
-                criterion="originality",
-                score=originality_score,
-                threshold=VOICE_MATCH_MIN_SCORE,
-                passed=originality_score >= VOICE_MATCH_MIN_SCORE,
+                params=_ScoreParams(
+                    criterion="originality",
+                    score=originality_score,
+                    threshold=VOICE_MATCH_MIN_SCORE,
+                    passed=originality_score >= VOICE_MATCH_MIN_SCORE,
+                ),
             )
             criteria_scores = result.get("criteria_scores", {})
             if isinstance(criteria_scores, dict):
@@ -81,10 +89,12 @@ class QualityEvaluationService:
                     if isinstance(data, dict):
                         add_quality_score(
                             trace=trace,
-                            criterion=str(name),
-                            score=float(data.get("score", 0)),
-                            threshold=VOICE_MATCH_MIN_SCORE,
-                            passed=bool(data.get("passed", False)),
+                            params=_ScoreParams(
+                                criterion=str(name),
+                                score=float(data.get("score", 0)),
+                                threshold=VOICE_MATCH_MIN_SCORE,
+                                passed=bool(data.get("passed", False)),
+                            ),
                         )
 
         return result
@@ -92,10 +102,10 @@ class QualityEvaluationService:
     async def evaluate_voice_and_quality(
         self,
         rubric: QualityRubric,
+        *,
         content: str,
         voice_score: float,
         sources: list[str] | None = None,
-        *,
         project_id: UUID | None = None,
     ) -> dict[str, object]:
         """Combine rubric evaluation with voice match score on trace."""
@@ -107,10 +117,12 @@ class QualityEvaluationService:
         )
         if project_id is not None:
             trace = create_workflow_trace(
-                project_id=project_id,
-                user_id="system",
-                content_type="carousel",
-                metadata={"phase": "voice_check"},
+                config=_TraceConfig(
+                    project_id=project_id,
+                    user_id="system",
+                    content_type="carousel",
+                    metadata={"phase": "voice_check"},
+                ),
             )
             add_voice_match_score(trace=trace, score=voice_score)
         evaluation["voice_match_score"] = voice_score

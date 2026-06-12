@@ -9,13 +9,21 @@ from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import BaseMessage, HumanMessage
 
 from rag_backend.agents.input_sanitizer import sanitize_llm_input
+from rag_backend.agents.prompts.registry import render_prompt
+from rag_backend.application.services.carousel.instruction_context_loader import (
+    CarouselInstructionContextLoader,
+    InstructionContextRequest,
+)
 from rag_backend.application.services.carousel.outline_normalize import (
     normalize_editorial_outline,
 )
-from rag_backend.domain.constants.ai_agents import (
-    ERR_INVALID_JSON,
-    PROMPT_OUTLINE_GENERATION,
+from rag_backend.application.services.carousel.presentation_policy import (
+    load_presentation_policy,
+    render_presentation_policy_context,
 )
+from rag_backend.domain.constants.ai_agents import ERR_INVALID_JSON
+from rag_backend.domain.constants.carousel import CAROUSEL_PROMPT_VERSION_V3
+from rag_backend.domain.constants.carousel_workflow import PHASE_OUTLINE
 from rag_backend.infrastructure.cache.ai_response_cache import get_ai_response_cache
 from rag_backend.infrastructure.llm.json_utils import extract_json
 from rag_backend.infrastructure.monitoring_langfuse import get_langfuse_runnable_config
@@ -28,6 +36,7 @@ class OutlineAgent:
         self.llm = llm
         self.model_id = model_id
         self._cache = get_ai_response_cache()
+        self._instruction_loader = CarouselInstructionContextLoader()
 
     async def generate_outline(
         self,
@@ -42,19 +51,41 @@ class OutlineAgent:
         brief = sanitize_llm_input(brief)
         safe_sources = "\n".join(sanitize_llm_input(s) for s in sources)
 
-        prompt = PROMPT_OUTLINE_GENERATION.format(
-            topic=topic,
-            audience=audience,
-            brief=brief,
-            sources=safe_sources or "None",
+        instruction = self._instruction_loader.load(
+            InstructionContextRequest(
+                phase=PHASE_OUTLINE,
+                locale="pt",
+                prompt_version=CAROUSEL_PROMPT_VERSION_V3,
+            )
         )
-        cached = self._cache.get(prompt, self.model_id)
+        policy = load_presentation_policy(instruction.policy_version)
+        prompt_text, _ = render_prompt(
+            "carousel",
+            "outline",
+            variables={
+                "topic": topic,
+                "audience": audience,
+                "brief": brief,
+                "sources": safe_sources or "None",
+                "locale": "pt",
+                "phase": PHASE_OUTLINE,
+                "slide_count": policy.slide_count,
+                "presentation_policy_context": render_presentation_policy_context(
+                    policy
+                ),
+                "persona_context": "",
+                "revision_notes": "",
+            },
+            version=CAROUSEL_PROMPT_VERSION_V3,
+        )
+        full_prompt = f"{instruction.instruction}\n\n{prompt_text}"
+        cached = self._cache.get(full_prompt, self.model_id)
         raw = cached
         if raw is None:
-            messages: list[BaseMessage] = [HumanMessage(content=prompt)]
+            messages: list[BaseMessage] = [HumanMessage(content=full_prompt)]
             response = await self.llm.ainvoke(messages, get_langfuse_runnable_config())
             raw = cast(str, response.content)
-            self._cache.set(prompt, self.model_id, raw)
+            self._cache.set(full_prompt, self.model_id, raw)
 
         return self._parse_outline(raw)
 

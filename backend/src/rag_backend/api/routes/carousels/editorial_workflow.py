@@ -33,6 +33,9 @@ from rag_backend.api.routes.carousels.editorial_workflow_routes_support import (
     validate_resume_action,
     validate_resume_workflow_gates,
 )
+from rag_backend.api.routes.carousels.editorial_workflow_routes_validate import (
+    _ResumeGateContext,
+)
 from rag_backend.api.schemas.carousel_workflow import (
     EditorialWorkflowResumeAcceptedResponse,
     EditorialWorkflowResumeRequest,
@@ -86,7 +89,7 @@ async def get_editorial_workflow_state(
     """Return persisted workflow state for UI polling."""
     project = await get_carousel_project_for_workflow_user(db, project_id, current_user)
     service = build_editorial_workflow_service(request)
-    state = await service.get_workflow_state(str(project_id))
+    state = await service.get_workflow_state(str(project_id), db=db)
     if state is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -199,9 +202,9 @@ async def resume_editorial_workflow(
     await validate_resume_workflow_gates(
         body,
         workflow_state,
-        db=db,
-        project_id=str(project_id),
-        project_title=project.topic,
+        ctx=_ResumeGateContext(
+            db=db, project_id=str(project_id), project_title=project.topic
+        ),
     )
     new_lock_version = await bump_resume_lock_version(
         db,

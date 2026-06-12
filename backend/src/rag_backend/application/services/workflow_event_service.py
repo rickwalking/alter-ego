@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import uuid
+from dataclasses import dataclass
 from datetime import UTC, datetime
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -22,6 +23,15 @@ from rag_backend.domain.protocols.event_publisher import EventPublisherProtocol
 from rag_backend.infrastructure.database.models.workflow_audit_log import (
     WorkflowAuditLogModel,
 )
+
+
+@dataclass(frozen=True)
+class _AggregateQuery:
+    """Query filters for listing audit events for an aggregate."""
+
+    aggregate_type: str
+    aggregate_id: str
+    limit: int = 100
 
 
 class WorkflowEventService:
@@ -68,12 +78,10 @@ class WorkflowEventService:
         await db.flush()
         return event_id
 
+    @staticmethod
     async def list_for_aggregate(
-        self,
         db: AsyncSession,
-        aggregate_type: str,
-        aggregate_id: str,
-        limit: int = 100,
+        query_params: _AggregateQuery,
     ) -> list[WorkflowAuditLogModel]:
         """Query audit log for a specific aggregate."""
         from sqlalchemy import select
@@ -81,11 +89,11 @@ class WorkflowEventService:
         result = await db.execute(
             select(WorkflowAuditLogModel)
             .where(
-                WorkflowAuditLogModel.aggregate_type == aggregate_type,
-                WorkflowAuditLogModel.aggregate_id == aggregate_id,
+                WorkflowAuditLogModel.aggregate_type == query_params.aggregate_type,
+                WorkflowAuditLogModel.aggregate_id == query_params.aggregate_id,
             )
             .order_by(WorkflowAuditLogModel.created_at.desc())
-            .limit(limit)
+            .limit(query_params.limit)
         )
         return list(result.scalars().all())
 

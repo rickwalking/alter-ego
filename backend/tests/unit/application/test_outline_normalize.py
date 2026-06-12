@@ -49,6 +49,44 @@ class TestNormalizeEditorialOutline:
         result = normalize_editorial_outline(raw)
         assert result[0].get("tldr_strip") == "One-line summary."
 
+    def test_resolves_bilingual_title_dict_to_portuguese(self) -> None:
+        raw = [
+            {
+                "slide_index": 1,
+                "title": {
+                    "pt": "O que é **harness** na IA?",
+                    "en": "What is **harness** in AI?",
+                },
+                "key_points": [],
+            }
+        ]
+        result = normalize_editorial_outline(raw)
+        assert result[0]["title"] == "O que é **harness** na IA?"
+
+    def test_resolves_stringified_bilingual_title(self) -> None:
+        raw = [
+            {
+                "slide_index": 1,
+                "title": "{'pt': 'Hook PT', 'en': 'Hook EN'}",
+                "key_points": [{"pt": "Ponto A", "en": "Point A"}],
+            }
+        ]
+        result = normalize_editorial_outline(raw)
+        assert result[0]["title"] == "Hook PT"
+        assert result[0]["key_points"] == ["Ponto A"]
+
+    def test_strips_dash_punctuation_from_outline_copy(self) -> None:
+        raw = [
+            {
+                "slide_index": 1,
+                "title": "Ideia\u2014outra ideia",
+                "key_points": ["Um ponto - outro ponto"],
+            }
+        ]
+        result = normalize_editorial_outline(raw)
+        assert result[0]["title"] == "Ideia, outra ideia"
+        assert result[0]["key_points"] == ["Um ponto, outro ponto"]
+
 
 class TestCanonicalSlideType:
     def test_maps_all_seven_positions(self) -> None:

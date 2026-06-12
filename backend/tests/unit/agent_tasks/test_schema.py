@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 from scripts.agent_tasks.constants import (
-    STATUS_IN_DEVELOPMENT,
+    STATUS_DEV_COMPLETE,
     STATUS_READY,
     STATUS_REVIEW,
     TASKS_DIR,
@@ -141,10 +141,10 @@ def test_validate_all_real_repo() -> None:
         assert errors == [], f"{ticket.ticket_id}: {errors}"
 
 
-def test_ae_0001_in_development_valid() -> None:
+def test_ae_0001_dev_complete_valid() -> None:
     path = TASKS_DIR / "AE-0001-agentic-delivery-system.md"
     ticket = parse_ticket(path)
     assert ticket is not None
-    assert ticket.status == STATUS_IN_DEVELOPMENT
-    errors = can_transition(ticket, STATUS_IN_DEVELOPMENT)
+    assert ticket.status == STATUS_DEV_COMPLETE
+    errors = validate_ticket_file(ticket)
     assert errors == []

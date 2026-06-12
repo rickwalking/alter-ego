@@ -24,9 +24,11 @@ from rag_backend.api.schemas.blog_post import (
 from rag_backend.api.schemas.blog_post_list import BlogPostListParams
 from rag_backend.application.services.editorial_audit_service import (
     EditorialAuditService,
+    _AuditEntry,
 )
 from rag_backend.application.services.optimistic_lock_service import (
     OptimisticLockService,
+    _VersionedUpdate,
 )
 from rag_backend.application.services.workflow_event_service import WorkflowEventService
 from rag_backend.domain.constants.blog_ai import ERR_BLOG_POST_NOT_FOUND
@@ -40,7 +42,10 @@ from rag_backend.domain.constants.workflow_validation import (
 )
 from rag_backend.domain.models.user import UserRole
 from rag_backend.infrastructure.config.settings import get_settings
-from rag_backend.infrastructure.database.blog_post_repository import BlogPostRepository
+from rag_backend.infrastructure.database.blog_post_repository import (
+    BlogPostRepository,
+    _BlogPostListQuery,
+)
 from rag_backend.infrastructure.database.models import BlogPostModel
 from rag_backend.infrastructure.events.factory import get_event_publisher
 from rag_backend.infrastructure.telemetry.opentelemetry import start_span
@@ -78,7 +83,14 @@ async def create_blog_post(
     post.author_id = current_user.id
     db.add(post)
     await db.flush()
-    await _audit_service().log_created(db, str(post.id), current_user.id, post.title)
+    await _audit_service().log_created(
+        db,
+        entry=_AuditEntry(
+            post_id=str(post.id),
+            user_id=current_user.id,
+            extra=post.title,
+        ),
+    )
     await db.commit()
     await db.refresh(post)
     return post
@@ -105,11 +117,13 @@ async def list_blog_posts(
 
         posts, total = await repo.list_summaries(
             db,
-            status_filter=params.status,
-            author_id=filter_author,
-            search=params.search,
-            limit=params.limit,
-            offset=params.offset,
+            _BlogPostListQuery(
+                status_filter=params.status,
+                author_id=filter_author,
+                search=params.search,
+                limit=params.limit,
+                offset=params.offset,
+            ),
         )
 
         return BlogPostListResponse(
@@ -165,9 +179,11 @@ async def update_blog_post(
     try:
         await lock_service.apply_versioned_update(
             db,
-            post_id=str(post_id),
-            expected_version=if_match,
-            values=update_data,
+            _VersionedUpdate(
+                post_id=str(post_id),
+                expected_version=if_match,
+                values=update_data,
+            ),
         )
     except ValueError as exc:
         raise HTTPException(
@@ -182,7 +198,12 @@ async def update_blog_post(
             detail=ERR_BLOG_POST_NOT_FOUND.format(post_id=post_id),
         )
     await _audit_service().log_updated(
-        db, str(post_id), current_user.id, list(update_data.keys())
+        db,
+        entry=_AuditEntry(
+            post_id=str(post_id),
+            user_id=current_user.id,
+            extra=list(update_data.keys()),
+        ),
     )
     await db.commit()
     await db.refresh(post)
@@ -203,6 +224,12 @@ async def delete_blog_post(
 ) -> None:
     """Delete a blog post."""
     post = await get_blog_post_for_user(db, post_id, current_user)
-    await _audit_service().log_deleted(db, str(post_id), current_user.id)
+    await _audit_service().log_deleted(
+        db,
+        entry=_AuditEntry(
+            post_id=str(post_id),
+            user_id=current_user.id,
+        ),
+    )
     await db.delete(post)
     await db.commit()

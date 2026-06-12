@@ -25,7 +25,8 @@ class AIResponseCache:
         self._default_ttl = default_ttl_seconds
         self._store: dict[str, CacheEntry] = {}
 
-    def _make_key(self, prompt: str, model_id: str, scope: str = "global") -> str:
+    @staticmethod
+    def _make_key(prompt: str, model_id: str, scope: str = "global") -> str:
         return hashlib.sha256(f"{scope}:{model_id}:{prompt}".encode()).hexdigest()
 
     def get(self, prompt: str, model_id: str, scope: str = "global") -> str | None:

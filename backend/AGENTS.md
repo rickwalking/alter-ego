@@ -14,6 +14,7 @@ This document provides general guidelines for AI agents working on the Python ba
 - **No bare generics** — `disallow_any_generics = true`. Always parameterize `dict`, `list`, `Callable`, etc. (e.g., `dict[str, object]`, `list[int]`).
 - **Use `Protocol` for interfaces** — Define contracts, not implementations
 - **All functions have explicit return types** — No implicit `None` returns
+- **Max 3 arguments per function** — Use Pydantic models for API/service boundary payloads and typed command/config objects for internal grouping.
 - **Use `TypedDict` for structured dictionaries** — Never `dict[str, Any]`
 - **Decision tree for dynamic data**: `Protocol` → `object` → `cast(T, value)` → `type: ignore[any]` (last resort, with justification comment)
 
@@ -183,6 +184,7 @@ Before submitting code:
 - [ ] No bare generics (`disallow_any_generics`) — `dict`, `list`, `Callable` are parameterized
 - [ ] No unused imports/variables (`ruff --select F401,F841`)
 - [ ] No magic strings — all extracted to constants
+- [ ] No function has more than 3 arguments; grouped inputs use Pydantic or typed command/config objects
 - [ ] Functions have explicit return types
 - [ ] Early returns used instead of nested ifs
 - [ ] No files over 400 lines

@@ -6,7 +6,11 @@ from rag_backend.application.services.carousel.editorial_distribution_constants 
     OUTLINE_LEGACY_HEADING_KEY,
 )
 from rag_backend.application.services.carousel.types import MAX_SLIDES
+from rag_backend.application.services.carousel.visible_copy_sanitize import (
+    sanitize_visible_copy,
+)
 from rag_backend.domain.constants.carousel import (
+    LANGUAGE_PT,
     SLIDE_TYPE_CLOSING,
     SLIDE_TYPE_CONTENT,
     SLIDE_TYPE_CTA,
@@ -48,16 +52,18 @@ def normalize_editorial_outline(
         if not isinstance(item, dict):
             continue
         slide_number = index + 1
-        title = str(
+        title = sanitize_visible_copy(
             item.get(OUTLINE_FIELD_TITLE, "")
-            or item.get(OUTLINE_LEGACY_HEADING_KEY, "")
+            or item.get(OUTLINE_LEGACY_HEADING_KEY, ""),
+            locale=LANGUAGE_PT,
         )
         raw_points = item.get(OUTLINE_FIELD_KEY_POINTS, [])
-        key_points = [
-            str(point)
-            for point in raw_points
-            if isinstance(point, (str, int, float)) and str(point).strip()
-        ]
+        key_points: list[str] = []
+        if isinstance(raw_points, list):
+            for point in raw_points:
+                cleaned = sanitize_visible_copy(point, locale=LANGUAGE_PT)
+                if cleaned:
+                    key_points.append(cleaned)
         slide: dict[str, object] = {
             OUTLINE_FIELD_SLIDE_INDEX: slide_number,
             OUTLINE_FIELD_TITLE: title,
@@ -65,8 +71,10 @@ def normalize_editorial_outline(
             OUTLINE_FIELD_SLIDE_TYPE: canonical_slide_type(slide_number),
         }
         tldr = item.get(OUTLINE_FIELD_TLDR)
-        if slide_number == 1 and isinstance(tldr, str) and tldr.strip():
-            slide[OUTLINE_FIELD_TLDR] = tldr.strip()
+        if slide_number == 1:
+            cleaned_tldr = sanitize_visible_copy(tldr, locale=LANGUAGE_PT)
+            if cleaned_tldr:
+                slide[OUTLINE_FIELD_TLDR] = cleaned_tldr
         normalized.append(slide)
     return normalized
 

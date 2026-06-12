@@ -11,6 +11,9 @@ from rag_backend.domain.models.carousels import ReviewEventParams
 from rag_backend.infrastructure.langfuse_client import init_langfuse
 from rag_backend.infrastructure.monitoring_langfuse import (
     LangfuseCallbackHandler,
+    _ErrorParams,
+    _ScoreParams,
+    _TraceConfig,
     add_error_span,
     add_quality_score,
     add_voice_match_score,
@@ -146,9 +149,11 @@ class TestLangfuseCallbackHandler:
     ) -> None:
         """Given parent trace, when creating child trace, then child is linked."""
         handler.create_child_trace(
-            parent_trace_id="parent123",
-            name="child_trace",
-            metadata={"key": "value"},
+            config=_TraceConfig(
+                parent_trace_id="parent123",
+                name="child_trace",
+                metadata={"key": "value"},
+            ),
         )
 
         mock_client.trace.assert_called_once()
@@ -165,9 +170,11 @@ class TestTraceFunctions:
         mock_get_client.return_value = None
 
         result = create_workflow_trace(
-            project_id=MagicMock(),
-            user_id="user123",
-            content_type="carousel",
+            config=_TraceConfig(
+                project_id=MagicMock(),
+                user_id="user123",
+                content_type="carousel",
+            ),
         )
 
         assert result is None
@@ -183,9 +190,11 @@ class TestTraceFunctions:
         mock_get_client.return_value = mock_client
 
         result = create_workflow_trace(
-            project_id=MagicMock(),
-            user_id="user123",
-            content_type="carousel",
+            config=_TraceConfig(
+                project_id=MagicMock(),
+                user_id="user123",
+                content_type="carousel",
+            ),
         )
 
         assert result is mock_span
@@ -198,10 +207,12 @@ class TestTraceFunctions:
         """Given None trace, when adding score, then no exception is raised."""
         add_quality_score(
             trace=None,
-            criterion="tone",
-            score=85.0,
-            threshold=70.0,
-            passed=True,
+            params=_ScoreParams(
+                criterion="tone",
+                score=85.0,
+                threshold=70.0,
+                passed=True,
+            ),
         )
 
     @patch("rag_backend.infrastructure.langfuse_client.get_langfuse_client")
@@ -236,6 +247,8 @@ class TestTraceFunctions:
         """Given None trace, when adding error, then no exception is raised."""
         add_error_span(
             trace=None,
-            error_type="test_error",
-            error_message="test message",
+            params=_ErrorParams(
+                error_type="test_error",
+                error_message="test message",
+            ),
         )

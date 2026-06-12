@@ -4,21 +4,30 @@ import html as html_module
 from dataclasses import dataclass
 
 from rag_backend.application.services.carousel.types import SlideDict
-from rag_backend.application.services.carousel_template.neon_styles import (
+from rag_backend.application.services.carousel_template.css.styles import (
     get_neon_shell_css,
 )
+from rag_backend.application.services.carousel_template.helpers import (
+    _build_watermark_html,
+)
 from rag_backend.application.services.carousel_template.slides import (
+    _render_closing_slide,
     _render_content_slide,
     _render_cta_slide,
     _render_intro_slide,
     _render_summary_slide,
 )
+from rag_backend.application.services.carousel_template.strategies.registry import (
+    SlideLayoutRegistry,
+)
 from rag_backend.domain.constants import (
+    SLIDE_TYPE_CLOSING,
     SLIDE_TYPE_CTA,
     SLIDE_TYPE_INTRO,
     SLIDE_TYPE_SUMMARY,
 )
 from rag_backend.domain.models import CarouselProject
+from rag_backend.domain.protocols.carousel import _RenderOptions
 
 _FONTS_LINK = (
     '<link rel="preconnect" href="https://fonts.googleapis.com">\n'
@@ -26,31 +35,13 @@ _FONTS_LINK = (
     '&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">'
 )
 
+_FIRST_SLIDE_NUMBER = "1"
 
-def _build_watermark_html(project: CarouselProject) -> str:
-    """Return creator watermark HTML if creator metadata is present."""
-    name = project.creator_name
-    if not name:
-        return ""
-    handle = project.creator_handle or ""
-    avatar = project.creator_avatar_url or ""
-    handle_text = f"@{handle}" if handle else ""
-    esc = html_module.escape
-    avatar_html = (
-        f'<div class="creator-watermark-avatar">'
-        f'<img src="{esc(avatar, quote=True)}" alt="{esc(name, quote=True)}" />'
-        f"</div>"
-        if avatar
-        else ""
-    )
-    return (
-        f'<div class="creator-watermark">'
-        f"{avatar_html}"
-        f'<div class="creator-watermark-text">'
-        f'<span class="creator-watermark-name">{esc(name, quote=True)}</span>'
-        f'<span class="creator-watermark-handle">{esc(handle_text, quote=True)}</span>'
-        f"</div></div>"
-    )
+
+__all__ = [
+    "_wrap_slide",
+    "build_carousel_html",
+]
 
 
 def _build_slide_counter(total: int, current: int) -> str:
@@ -109,14 +100,19 @@ def _build_action_bar() -> str:
     )
 
 
-def _build_caption_html(project: CarouselProject) -> str:
+def _build_caption_html(
+    project: CarouselProject, *, language: str | None = None
+) -> str:
     """Build caption HTML if caption is present."""
+    from rag_backend.domain.constants import LANGUAGE_EN
+
     caption = project.caption
+    if language == LANGUAGE_EN and project.caption_en:
+        caption = project.caption_en
     if not caption:
         return ""
     esc = html_module.escape
     hashtags = ""
-    # Extract hashtags from caption if present
     words = caption.split()
     hashtag_words = [w for w in words if w.startswith("#")]
     if hashtag_words:
@@ -139,18 +135,20 @@ class SlideWrapContext:
     watermark_html: str
     include_action_bar: bool = False
     caption_html: str = ""
+    include_watermark: bool = True
 
 
 def _wrap_slide(ctx: SlideWrapContext) -> str:
     """Wrap slide content in Neon Shell v2.0 structure."""
     counter = _build_slide_counter(ctx.total_slides, ctx.slide_num)
     action_bar = _build_action_bar() if ctx.include_action_bar else ""
+    watermark = ctx.watermark_html if ctx.include_watermark else ""
     return (
         f'<div class="ig-post">'
         f'<div class="ig-slide">'
         f'<div class="ig-slide-inner">'
         f"{ctx.inner_html}"
-        f"{ctx.watermark_html}"
+        f"{watermark}"
         f"</div>"
         f"{counter}"
         f"{action_bar}"
@@ -165,26 +163,55 @@ def build_carousel_html(
     theme: dict[str, str],
     design_overrides: str | None = None,
     language: str | None = None,
+    strategy_registry: SlideLayoutRegistry | None = None,
+    strategy_name: str | None = None,
 ) -> str:
-    """Build full Neon Shell v2.0 HTML carousel."""
+    """Build full Neon Shell v2.0 HTML carousel.
+
+    When ``strategy_registry`` is provided, uses it to dispatch slide
+    rendering to the appropriate SlideLayoutStrategy. Falls back to the
+    legacy ``_render_*_slide`` functions when no registry is given.
+    """
     lang = language or project.language
     total_slides = len(slides)
     watermark_html = _build_watermark_html(project)
-    caption_html = _build_caption_html(project)
+    caption_html = _build_caption_html(project, language=lang)
 
     slides_html = ""
     for slide in slides:
         slide_type = slide["type"]
-        # Include action bar + caption on first and last slides only
-        is_first_or_last = slide["number"] in {"1", str(total_slides)}
-        if slide_type == SLIDE_TYPE_INTRO:
+        is_first_or_last = slide["number"] in {_FIRST_SLIDE_NUMBER, str(total_slides)}
+
+        if strategy_registry is not None:
+            effective_strategy = strategy_name or project.slide_layout_strategy
+            strategy = strategy_registry.find_for_slide(
+                slide_type,
+                preferred=effective_strategy,
+                slide=slide,
+            )  # type: ignore[arg-type]
+            inner = strategy.render(
+                slide,
+                project,
+                theme,
+                options=_RenderOptions(total_slides=total_slides, language=lang),
+            )
+        elif slide_type == SLIDE_TYPE_INTRO:
             inner = _render_intro_slide(slide, project, theme)
         elif slide_type == SLIDE_TYPE_SUMMARY:
-            inner = _render_summary_slide(slide, theme, total_slides)
+            inner = _render_summary_slide(
+                slide, theme, total_slides, watermark_html=watermark_html
+            )
+        elif slide_type == SLIDE_TYPE_CLOSING:
+            inner = _render_closing_slide(
+                slide, theme, total_slides, watermark_html=watermark_html
+            )
         elif slide_type == SLIDE_TYPE_CTA:
-            inner = _render_cta_slide(slide, theme, lang, total_slides)
+            inner = _render_cta_slide(slide, theme, lang, total_slides, project=project)
         else:
-            inner = _render_content_slide(slide, theme, total_slides)
+            inner = _render_content_slide(
+                slide, theme, total_slides, watermark_html=watermark_html
+            )
+
         slides_html += _wrap_slide(
             SlideWrapContext(
                 inner_html=inner,
@@ -193,6 +220,7 @@ def build_carousel_html(
                 watermark_html=watermark_html,
                 include_action_bar=is_first_or_last,
                 caption_html=caption_html if is_first_or_last else "",
+                include_watermark=False,
             ),
         )
 

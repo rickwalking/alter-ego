@@ -10,7 +10,13 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from rag_backend.application.services.blog_post_ai_service import BlogPostAIService
+from rag_backend.application.services.blog_post_ai_service import (
+    BlogPostAIService,
+    LLMServiceProtocol,
+    _ImproveInput,
+    _SuggestInput,
+)
+from rag_backend.application.services.blog_workflow_observability import StartupParams
 from rag_backend.domain.constants.blog_ai import ERR_INVALID_AI_ACTION
 from rag_backend.domain.models.persona import PersonaProfile
 from rag_backend.infrastructure.database.models import PersonaProfileModel
@@ -62,7 +68,7 @@ class TestBlogPostAIService:
         self, service: BlogPostAIService, llm_service: AsyncMock
     ) -> None:
         """Given valid LLM JSON, when suggesting, then structured response is returned."""
-        result = await service.suggest("original", action="improve")
+        result = await service.suggest(_SuggestInput("original", action="improve"))
 
         assert result["suggested_text"] == "Better text"
         assert result["explanation"] == "Clearer wording"
@@ -76,9 +82,11 @@ class TestBlogPostAIService:
         with patch(
             "rag_backend.application.services.blog_post_ai_service.start_blog_workflow_trace"
         ) as mock_trace:
-            await service.suggest("original", action="improve")
+            await service.suggest(_SuggestInput("original", action="improve"))
 
-        mock_trace.assert_called_once_with("unknown", "system")
+        mock_trace.assert_called_once_with(
+            StartupParams(post_id="unknown", user_id="system")
+        )
 
     @pytest.mark.asyncio
     async def test_suggest_starts_trace_with_custom_context(
@@ -87,15 +95,20 @@ class TestBlogPostAIService:
         """Given trace context, when suggesting, then custom metadata is forwarded."""
         from rag_backend.application.services.blog_post_ai_service import (
             BlogAiTraceContext,
+            _SuggestInput,
         )
 
         trace = BlogAiTraceContext(post_id="post-42", user_id="editor-1")
         with patch(
             "rag_backend.application.services.blog_post_ai_service.start_blog_workflow_trace"
         ) as mock_trace:
-            await service.suggest("original", action="improve", trace=trace)
+            await service.suggest(
+                _SuggestInput("original", action="improve", trace=trace)
+            )
 
-        mock_trace.assert_called_once_with("post-42", "editor-1")
+        mock_trace.assert_called_once_with(
+            StartupParams(post_id="post-42", user_id="editor-1")
+        )
 
     @pytest.mark.asyncio
     async def test_suggest_builds_prompt_with_action_and_text(
@@ -103,9 +116,11 @@ class TestBlogPostAIService:
     ) -> None:
         """Given text and action, when suggesting, then prompt includes all inputs."""
         await service.suggest(
-            "hello world",
-            action="shorten",
-            context="blog intro",
+            _SuggestInput(
+                "hello world",
+                action="shorten",
+                context="blog intro",
+            )
         )
 
         prompt = llm_service.generate.call_args.kwargs["messages"][0]["content"]
@@ -120,7 +135,7 @@ class TestBlogPostAIService:
         """Given non-JSON LLM output, when suggesting, then raw text is returned."""
         llm_service.generate.return_value = "plain rewrite text"
 
-        result = await service.suggest("original", action="improve")
+        result = await service.suggest(_SuggestInput("original", action="improve"))
 
         assert result["suggested_text"] == "plain rewrite text"
         assert "improve" in result["explanation"]
@@ -134,6 +149,7 @@ class TestBlogPostAIService:
         """Given trace context, when improving, then trace metadata is forwarded."""
         from rag_backend.application.services.blog_post_ai_service import (
             BlogAiTraceContext,
+            _ImproveInput,
         )
 
         trace = BlogAiTraceContext(post_id="post-77", user_id="editor-2")
@@ -141,13 +157,17 @@ class TestBlogPostAIService:
             "rag_backend.application.services.blog_post_ai_service.start_blog_workflow_trace"
         ) as mock_trace:
             await service.improve(
-                db=AsyncMock(),
-                text="draft",
-                action="shorten",
-                trace=trace,
+                _ImproveInput(
+                    db=AsyncMock(),
+                    text="draft",
+                    action="shorten",
+                    trace=trace,
+                )
             )
 
-        mock_trace.assert_called_once_with("post-77", "editor-2")
+        mock_trace.assert_called_once_with(
+            StartupParams(post_id="post-77", user_id="editor-2")
+        )
 
     @pytest.mark.asyncio
     async def test_improve_rejects_invalid_action(
@@ -155,7 +175,9 @@ class TestBlogPostAIService:
     ) -> None:
         """Given invalid action, when improving, then ValueError is raised."""
         with pytest.raises(ValueError, match=ERR_INVALID_AI_ACTION):
-            await service.improve(db=AsyncMock(), text="text", action="invalid")
+            await service.improve(
+                _ImproveInput(db=AsyncMock(), text="text", action="invalid")
+            )
 
     @pytest.mark.asyncio
     async def test_suggest_rejects_invalid_action(
@@ -163,7 +185,7 @@ class TestBlogPostAIService:
     ) -> None:
         """Given invalid action, when suggesting, then ValueError is raised."""
         with pytest.raises(ValueError, match=ERR_INVALID_AI_ACTION):
-            await service.suggest("text", action="invalid")
+            await service.suggest(_SuggestInput("text", action="invalid"))
 
     @pytest.mark.asyncio
     async def test_improve_without_persona_uses_llm(
@@ -173,9 +195,11 @@ class TestBlogPostAIService:
         llm_service.generate.return_value = "Improved paragraph"
 
         result = await service.improve(
-            db=AsyncMock(),
-            text="draft",
-            action="shorten",
+            _ImproveInput(
+                db=AsyncMock(),
+                text="draft",
+                action="shorten",
+            )
         )
 
         assert result["improved_text"] == "Improved paragraph"
@@ -189,10 +213,12 @@ class TestBlogPostAIService:
         llm_service.generate.return_value = "Improved paragraph"
 
         await service.improve(
-            db=AsyncMock(),
-            text="draft text",
-            action="expand",
-            context="section 2",
+            _ImproveInput(
+                db=AsyncMock(),
+                text="draft text",
+                action="expand",
+                context="section 2",
+            )
         )
 
         prompt = llm_service.generate.call_args.kwargs["messages"][0]["content"]
@@ -287,10 +313,12 @@ class TestBlogPostAIService:
             return_value=mock_agent,
         ):
             result = await service.improve(
-                db=db,
-                text="draft",
-                action="improve",
-                persona_id="persona-1",
+                _ImproveInput(
+                    db=db,
+                    text="draft",
+                    action="improve",
+                    persona_id="persona-1",
+                )
             )
 
         assert result["improved_text"] == "Pedro-style text"
@@ -337,7 +365,9 @@ class TestBlogPostAIService:
         ) as mock_trace:
             await service.generate_image("post-9", "prompt", user_id="editor-3")
 
-        mock_trace.assert_called_once_with("post-9", "editor-3")
+        mock_trace.assert_called_once_with(
+            StartupParams(post_id="post-9", user_id="editor-3")
+        )
 
     @pytest.mark.asyncio
     async def test_generate_image_wraps_service_errors(
@@ -366,3 +396,34 @@ class TestBlogPostAIService:
         """Given no image service, when generating image, then RuntimeError is raised."""
         with pytest.raises(RuntimeError, match="image service unavailable"):
             await service.generate_image("post-1", "A blog hero image")
+
+
+class TestLLMServiceProtocol:
+    """Tests for LLMServiceProtocol interface."""
+
+    @pytest.mark.asyncio
+    async def test_protocol_can_be_implemented(self) -> None:
+        """Given a concrete class implementing LLMServiceProtocol, when calling generate, then it works."""
+
+        class StubLLMService:
+            async def generate(
+                self,
+                messages: list[dict[str, str]],
+                temperature: float = 0.7,
+                max_tokens: int | None = None,
+            ) -> str:
+                return "test response"
+
+            @property
+            def chat_model(self) -> MagicMock:
+                return MagicMock()
+
+        service = StubLLMService()
+        result = await service.generate([{"role": "user", "content": "hello"}])
+        assert result == "test response"
+
+    def test_protocol_is_runtime_checkable(self) -> None:
+        """Given a runtime checkable protocol, when checking isinstance, then it works."""
+
+        assert hasattr(LLMServiceProtocol, "generate")
+        assert hasattr(LLMServiceProtocol, "chat_model")

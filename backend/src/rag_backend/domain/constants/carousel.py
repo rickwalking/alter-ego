@@ -1,4 +1,6 @@
-"""Carousel pipeline constants — statuses, slide types, dimensions, languages, image presets."""
+"""Carousel pipeline constants —
+statuses, slide types, dimensions, languages, image presets.
+"""
 
 from rag_backend.domain.constants.carousel_themes import (
     BRAND_KEYWORDS,
@@ -50,6 +52,7 @@ CAROUSEL_SLIDES_CONFIG_SEVEN = "7_slides"
 # Template versions
 TEMPLATE_VERSION_V1 = "v1"
 TEMPLATE_VERSION_V2 = "v2"
+CAROUSEL_PROMPT_VERSION_V3 = "v3"
 DEFAULT_TEMPLATE_VERSION = TEMPLATE_VERSION_V2
 DEFAULT_CAROUSEL_PROMPT_VERSION = "v2"
 
@@ -58,7 +61,7 @@ LANGUAGE_PT = "pt"
 LANGUAGE_EN = "en"
 
 # Swipe text
-SWIPE_TEXT_PT = "Deslize \u2192"
+SWIPE_TEXT_PT = "Swipe \u2192"
 SWIPE_TEXT_EN = "Swipe \u2192"
 
 # Research source types
@@ -108,6 +111,8 @@ SLIDE_FILENAME_PREFIX = "slide_"
 SLIDE_IMAGE_EXTENSION = ".jpg"
 IMAGE_FORMAT_JPEG = "JPEG"
 IMAGE_FORMAT_JPEG_LOWER = "jpeg"
+IMAGE_FORMAT_PNG = "PNG"
+IMAGE_FORMAT_WEBP = "WEBP"
 
 # Supported (model, style) combos
 SUPPORTED_IMAGE_COMBOS: set[tuple[str, str]] = {
@@ -124,6 +129,7 @@ __all__ = [
     "CAROUSEL_DEFAULT_LANGUAGE",
     "CAROUSEL_DEFAULT_SLIDES_CONFIG",
     "CAROUSEL_HEIGHT",
+    "CAROUSEL_PROMPT_VERSION_V3",
     "CAROUSEL_SLIDES_CONFIG_SEVEN",
     "CAROUSEL_STATUS_COMPLETED",
     "CAROUSEL_STATUS_DESIGNING",
@@ -140,6 +146,8 @@ __all__ = [
     "HD_SUBDIR_NAME",
     "IMAGE_FORMAT_JPEG",
     "IMAGE_FORMAT_JPEG_LOWER",
+    "IMAGE_FORMAT_PNG",
+    "IMAGE_FORMAT_WEBP",
     "IMAGE_MODEL_DEFAULT",
     "IMAGE_MODEL_GEMINI",
     "IMAGE_MODEL_OPENAI",

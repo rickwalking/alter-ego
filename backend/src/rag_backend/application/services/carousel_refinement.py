@@ -9,7 +9,10 @@ from pathlib import Path
 from uuid import UUID
 
 from rag_backend.application.services.carousel.nodes.design import OVERRIDES_FILENAME
-from rag_backend.application.services.carousel.nodes.images import run_image_one
+from rag_backend.application.services.carousel.nodes.images import (
+    ImageGenerationConfig,
+    run_image_one,
+)
 from rag_backend.application.services.carousel.types import unpack_extras
 from rag_backend.domain.constants import ENCODING_UTF8
 from rag_backend.domain.models import CarouselProject
@@ -183,10 +186,12 @@ class CarouselRefinementMixin:
         # Regenerate the image file
         output_dir = Path(project.output_dir)
         await run_image_one(
-            project,
-            slide_data,
-            output_dir,
-            image_registry=self._image_registry,
+            ImageGenerationConfig(
+                project=project,
+                slide=slide_data,
+                output_dir=output_dir,
+                image_registry=self._image_registry,
+            )
         )
 
         # Re-export HTML + PDF so the new image is baked in

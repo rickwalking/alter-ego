@@ -7,6 +7,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.api.dependencies.database import get_db
 from rag_backend.api.dependencies.resource_access import (
+    ContentAccessRequest,
+    ContentTarget,
     assert_content_owner_or_admin,
     assign_content_reviewer,
     validate_reviewer_user,
@@ -18,7 +20,10 @@ from rag_backend.api.schemas.notifications import (
     NotificationResponse,
     ReviewAssignmentRequest,
 )
-from rag_backend.application.services.notification_service import NotificationService
+from rag_backend.application.services.notification_service import (
+    NotificationService,
+    _UserNotificationsQuery,
+)
 from rag_backend.domain.constants.notifications import ERR_NOTIFICATION_NOT_FOUND
 from rag_backend.domain.constants.rate_limits import RATE_LIMIT_WORKFLOW_ENDPOINTS
 
@@ -43,7 +48,9 @@ async def list_notifications(
 ) -> NotificationListResponse:
     """Return in-app notifications (UI-019)."""
     service = _notification_service()
-    items = await service.list_for_user(db, current_user.id, unread_only=unread_only)
+    items = await service.list_for_user(
+        db, current_user.id, _UserNotificationsQuery(unread_only=unread_only)
+    )
     return NotificationListResponse(
         items=[NotificationResponse.model_validate(item) for item in items],
         total=len(items),
@@ -88,11 +95,18 @@ async def assign_reviewer(
 ) -> NotificationResponse:
     """Assign a reviewer and notify them (UI-022)."""
     await assert_content_owner_or_admin(
-        db, body.content_id, body.content_type, current_user
+        db,
+        ContentAccessRequest(
+            content_id=body.content_id,
+            content_type=body.content_type,
+            user=current_user,
+        ),
     )
     await validate_reviewer_user(db, body.reviewer_id)
     await assign_content_reviewer(
-        db, body.content_id, body.content_type, body.reviewer_id
+        db,
+        ContentTarget(content_id=body.content_id, content_type=body.content_type),
+        reviewer_id=body.reviewer_id,
     )
     service = _notification_service()
     notification = await service.create_review_request(

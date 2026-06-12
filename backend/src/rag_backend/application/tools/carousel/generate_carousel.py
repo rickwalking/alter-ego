@@ -1,6 +1,9 @@
 """Generate carousel tool for the RAG agent."""
 
+from __future__ import annotations
+
 from collections.abc import Awaitable, Callable
+from dataclasses import dataclass
 
 from langchain_core.tools import BaseTool, tool
 
@@ -10,10 +13,21 @@ from rag_backend.domain.protocols import CarouselRepository
 
 from .access import CarouselToolAccessContext
 
+
+@dataclass
+class SubagentWorkflowStartRequest:
+    """Inputs for starting an editorial workflow from the RAG subagent."""
+
+    topic: str
+    audience: str
+    brief: str
+    source_urls: list[str]
+
+
 WorkflowStartResult = str
-WorkflowStarter = Callable[
-    [str, str, str, str, list[str]], Awaitable[WorkflowStartResult]
-]
+# Type alias uses string to avoid circular import via agents.py at module level
+# The actual import happens lazily inside build_generate_carousel_tool
+WorkflowStarter = Callable[..., Awaitable[WorkflowStartResult]]
 
 
 def build_generate_carousel_tool(
@@ -56,10 +70,12 @@ def build_generate_carousel_tool(
         if start_editorial_workflow is not None:
             workflow_summary = await start_editorial_workflow(
                 str(created.id),
-                safe_topic,
-                safe_audience,
-                safe_topic,
-                source_urls,
+                SubagentWorkflowStartRequest(
+                    topic=safe_topic,
+                    audience=safe_audience,
+                    brief=safe_topic,
+                    source_urls=source_urls,
+                ),
             )
             return (
                 f"Carousel project created and editorial workflow started.\n"

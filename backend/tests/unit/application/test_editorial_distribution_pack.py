@@ -7,14 +7,18 @@ from uuid import uuid4
 
 import pytest
 
+from rag_backend.application.services.carousel.editorial_distribution_blog import (
+    BlogBuildContext,
+    build_blog_markdown_en_from_translations,
+    build_blog_markdown_from_drafts,
+)
 from rag_backend.application.services.carousel.editorial_distribution_constants import (
+    LONG_FORM_NOTES_KEY,
     OUTLINE_LEGACY_BODY_KEY,
     OUTLINE_LEGACY_HEADING_KEY,
 )
 from rag_backend.application.services.carousel.editorial_distribution_pack import (
     DistributionBuildContext,
-    build_blog_markdown_en_from_translations,
-    build_blog_markdown_from_drafts,
     build_editorial_distribution_updates,
 )
 from rag_backend.domain.constants.carousel import CAROUSEL_SLIDES_CONFIG_SEVEN
@@ -28,39 +32,58 @@ class TestBuildBlogMarkdownFromDrafts:
                 "slide_index": 1,
                 "title": "Intro",
                 "draft_text": "Hook body.",
+                LONG_FORM_NOTES_KEY: "Expanded hook for the blog.",
             },
             {
                 "slide_index": 2,
                 "title": "Deep dive",
                 "draft_text": "Main insight.",
+                LONG_FORM_NOTES_KEY: "Expanded deep dive for the blog.",
             },
         ]
-        markdown = build_blog_markdown_from_drafts(drafts, title="My Topic")
+        markdown = build_blog_markdown_from_drafts(
+            BlogBuildContext(slide_drafts=drafts, title="My Topic")
+        )
         assert "# My Topic" in markdown
         assert "## Intro" in markdown
-        assert "Hook body." in markdown
+        assert "Expanded hook for the blog." in markdown
         assert "## Deep dive" in markdown
+        assert "Hook body." not in markdown
 
     def test_skips_slides_without_body(self) -> None:
         drafts = [{"slide_index": 1, "title": "Empty", "draft_text": "   "}]
-        markdown = build_blog_markdown_from_drafts(drafts, title="T")
+        markdown = build_blog_markdown_from_drafts(
+            BlogBuildContext(slide_drafts=drafts, title="T")
+        )
         assert "## Empty" not in markdown
 
 
 class TestBuildBlogMarkdownEn:
     def test_uses_en_translation_body(self) -> None:
-        drafts = [{"slide_index": 1, "title": "PT Hook", "draft_text": "Corpo PT."}]
+        drafts = [
+            {
+                "slide_index": 1,
+                "title": "PT Hook",
+                "draft_text": "Corpo PT.",
+                LONG_FORM_NOTES_KEY: "Notas PT.",
+            }
+        ]
         translations = {
             1: {
                 OUTLINE_LEGACY_HEADING_KEY: "EN Hook",
                 OUTLINE_LEGACY_BODY_KEY: "EN body.",
+                LONG_FORM_NOTES_KEY: "EN long-form notes.",
             }
         }
         markdown = build_blog_markdown_en_from_translations(
-            drafts, translations, title="EN Title"
+            BlogBuildContext(
+                slide_drafts=drafts,
+                translations_en=translations,
+                title="EN Title",
+            ),
         )
         assert "## EN Hook" in markdown
-        assert "EN body." in markdown
+        assert "EN long-form notes." in markdown
         assert "Corpo PT." not in markdown
 
 
@@ -77,7 +100,12 @@ async def test_build_editorial_distribution_updates_persists_fields() -> None:
         output_dir=f"/tmp/{project_id}",
     )
     slide_drafts = [
-        {"slide_index": 1, "title": "Hook", "draft_text": "Body one."},
+        {
+            "slide_index": 1,
+            "title": "Hook",
+            "draft_text": "Body one.",
+            LONG_FORM_NOTES_KEY: "Long-form blog notes.",
+        },
     ]
     outline = [
         {"slide_index": 1, "title": "Hook", "key_points": [], "slide_type": "intro"}
@@ -95,6 +123,10 @@ async def test_build_editorial_distribution_updates_persists_fields() -> None:
     with (
         patch(
             "rag_backend.application.services.carousel.editorial_distribution_pack.PostgresCarouselRepository",
+            return_value=mock_repo,
+        ),
+        patch(
+            "rag_backend.application.services.carousel.editorial_distribution_persist.PostgresCarouselRepository",
             return_value=mock_repo,
         ),
         patch(

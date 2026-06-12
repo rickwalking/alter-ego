@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import AsyncIterator
+from dataclasses import dataclass
 from uuid import UUID
 
 from langchain_core.language_models import BaseChatModel
@@ -19,6 +20,7 @@ from rag_backend.application.services.carousel.editorial_workflow_events import 
 )
 from rag_backend.application.services.carousel.editorial_workflow_service_helpers import (
     FeedbackCorrectionContext,
+    ResumeContext,
     RevisionCapValidationContext,
     prepare_resume_workflow,
     record_feedback_correction,
@@ -27,6 +29,7 @@ from rag_backend.application.services.carousel.editorial_workflow_service_helper
 )
 from rag_backend.application.services.carousel.editorial_workflow_support import (
     EditorialWorkflowStartInput,
+    ResumeWorkflowInput,
     ReviewEventEmitContext,
     publish_workflow_sse_updates,
 )
@@ -44,6 +47,7 @@ from rag_backend.application.services.workflow_event_service import WorkflowEven
 from rag_backend.domain.constants.carousel_workflow import (
     PHASE_IMAGES,
     PHASE_RESEARCH,
+    PHASE_STATUS_AWAITING_HUMAN,
     PHASE_STATUS_FAILED,
     PHASE_STATUS_IN_PROGRESS,
     REVIEW_ACTION_APPROVE,
@@ -59,13 +63,24 @@ from rag_backend.domain.constants.carousel_workflow import (
 from rag_backend.domain.constants.workflow_validation import CONTENT_TYPE_CAROUSEL
 from rag_backend.domain.models import CarouselStatus
 from rag_backend.domain.models.carousels import ReviewEventParams
-from rag_backend.domain.models.persona import PersonaProfile
 from rag_backend.infrastructure.database.models.carousel import CarouselProjectModel
 from rag_backend.infrastructure.monitoring_langfuse import (
+    _TraceConfig,
     create_workflow_trace,
     propagate_attributes,
     record_human_review,
 )
+
+
+@dataclass
+class EditorialWorkflowConfig:
+    """Configuration bundle for EditorialWorkflowService."""
+
+    llm: BaseChatModel
+    checkpointer: object | None = None
+    event_service: WorkflowEventService | None = None
+    notification_service: NotificationService | None = None
+    image_registry: ImageProviderRegistry | None = None
 
 
 class EditorialWorkflowService:
@@ -73,20 +88,16 @@ class EditorialWorkflowService:
 
     def __init__(
         self,
-        llm: BaseChatModel,
-        checkpointer: object | None = None,
-        event_service: WorkflowEventService | None = None,
-        notification_service: NotificationService | None = None,
-        image_registry: ImageProviderRegistry | None = None,
+        config: EditorialWorkflowConfig,
     ) -> None:
-        self._llm = llm
+        self._llm = config.llm
         self._orchestrator = CarouselEditorialOrchestrator(
-            llm=llm,
-            checkpointer=checkpointer,
-            image_registry=image_registry,
+            llm=config.llm,
+            checkpointer=config.checkpointer,
+            image_registry=config.image_registry,
         )
-        self._events = event_service
-        self._notifications = notification_service or NotificationService()
+        self._events = config.event_service
+        self._notifications = config.notification_service or NotificationService()
 
     async def start_workflow(
         self,
@@ -100,10 +111,12 @@ class EditorialWorkflowService:
             return existing
 
         _trace = create_workflow_trace(
-            project_id=UUID(project_id),
-            user_id=workflow_input.user_id,
-            content_type=CONTENT_TYPE_CAROUSEL,
-            metadata={"workflow": WORKFLOW_METADATA_EDITORIAL_7_PHASE},
+            config=_TraceConfig(
+                project_id=UUID(project_id),
+                user_id=workflow_input.user_id,
+                content_type=CONTENT_TYPE_CAROUSEL,
+                metadata={"workflow": WORKFLOW_METADATA_EDITORIAL_7_PHASE},
+            ),
         )
 
         with propagate_attributes(
@@ -167,8 +180,8 @@ class EditorialWorkflowService:
             project_id,
         )
 
+    @staticmethod
     async def _sync_project_phase(
-        self,
         db: AsyncSession | None,
         project_id: str,
         state: CarouselWorkflowState,
@@ -186,65 +199,59 @@ class EditorialWorkflowService:
         raw_workflow_status = state.get("workflow_status")
         if raw_workflow_status is not None:
             project.workflow_status = str(raw_workflow_status)
-        caption = state.get("caption")
-        if isinstance(caption, str) and caption.strip():
-            project.caption = caption
-        blog_markdown = state.get("blog_markdown")
-        if isinstance(blog_markdown, str) and blog_markdown.strip():
-            project.blog_markdown = blog_markdown
-        linkedin_pt = state.get(WORKFLOW_STATE_LINKEDIN_POST_PT_KEY)
-        if isinstance(linkedin_pt, str) and linkedin_pt.strip():
-            project.linkedin_post_pt = linkedin_pt
-        linkedin_en = state.get(WORKFLOW_STATE_LINKEDIN_POST_EN_KEY)
-        if isinstance(linkedin_en, str) and linkedin_en.strip():
-            project.linkedin_post_en = linkedin_en
+        for attr, key in [
+            ("caption", "caption"),
+            ("blog_markdown", "blog_markdown"),
+            ("linkedin_post_pt", WORKFLOW_STATE_LINKEDIN_POST_PT_KEY),
+            ("linkedin_post_en", WORKFLOW_STATE_LINKEDIN_POST_EN_KEY),
+        ]:
+            val = state.get(key)
+            if isinstance(val, str) and val.strip():
+                setattr(project, attr, val)
         await db.flush()
 
     async def resume_workflow(
         self,
-        project_id: str,
-        action: str,
-        reviewer_id: str,
-        feedback: str | None = None,
-        db: AsyncSession | None = None,
-        persona: PersonaProfile | None = None,
-        project_title: str = "",
-        structured_feedback: dict[str, object] | None = None,
+        params: ResumeWorkflowInput,
     ) -> CarouselWorkflowState:
         """Resume workflow after human review."""
-        prior = await self._orchestrator.get_state(project_id)
-        if action == REVIEW_ACTION_REVISE and prior is not None:
+        prior = await self._orchestrator.get_state(params.project_id)
+        if params.action == REVIEW_ACTION_REVISE and prior is not None:
             await validate_revision_cap(
                 prior,
                 RevisionCapValidationContext(
-                    project_id=project_id,
-                    project_title=project_title,
-                    db=db,
+                    project_id=params.project_id,
+                    project_title=params.project_title,
+                    db=params.db,
                     notifications=self._notifications,
                 ),
             )
         await prepare_resume_workflow(
-            self._orchestrator,
-            project_id,
-            action,
-            prior,
-            feedback,
+            ResumeContext(
+                orchestrator=self._orchestrator,
+                project_id=params.project_id,
+                action=params.action,
+                prior=prior,
+                feedback=params.feedback,
+            ),
         )
         trace = create_workflow_trace(
-            project_id=UUID(project_id),
-            user_id=reviewer_id,
-            content_type=CONTENT_TYPE_CAROUSEL,
-            metadata={"phase": WORKFLOW_TRACE_PHASE_HUMAN_REVIEW},
+            config=_TraceConfig(
+                project_id=UUID(params.project_id),
+                user_id=params.reviewer_id,
+                content_type=CONTENT_TYPE_CAROUSEL,
+                metadata={"phase": WORKFLOW_TRACE_PHASE_HUMAN_REVIEW},
+            ),
         )
         if trace is not None:
             record_human_review(
                 trace=trace,
                 params=ReviewEventParams(
                     phase=WORKFLOW_TRACE_PHASE_REVIEW,
-                    action=action,
-                    reviewer_id=reviewer_id,
+                    action=params.action,
+                    reviewer_id=params.reviewer_id,
                     time_to_respond=None,
-                    feedback=feedback,
+                    feedback=params.feedback,
                 ),
             )
         workflow_input = EditorialWorkflowStartInput(
@@ -252,79 +259,89 @@ class EditorialWorkflowService:
             audience="",
             brief="",
             sources=[],
-            persona=persona,
-            user_id=reviewer_id,
+            persona=params.persona,
+            user_id=params.reviewer_id,
         )
         graph_action = (
             REVIEW_ACTION_REJECT
-            if action in {REVIEW_ACTION_REVISE, REVIEW_ACTION_REJECT}
-            else action
+            if params.action in {REVIEW_ACTION_REVISE, REVIEW_ACTION_REJECT}
+            else params.action
         )
-        if action == REVIEW_ACTION_REVISE and prior is not None:
+        if params.action == REVIEW_ACTION_REVISE and prior is not None:
             await record_feedback_correction(
                 self._orchestrator,
                 FeedbackCorrectionContext(
-                    project_id=project_id,
+                    project_id=params.project_id,
                     prior=prior,
-                    feedback=feedback,
-                    persona=persona,
-                    structured_feedback=structured_feedback,
-                    db=db,
+                    feedback=params.feedback,
+                    persona=params.persona,
+                    structured_feedback=params.structured_feedback,
+                    db=params.db,
                 ),
             )
         human_input: dict[str, object] = {
             "action": graph_action,
-            "reviewer_id": reviewer_id,
-            "feedback": feedback,
+            "reviewer_id": params.reviewer_id,
+            "feedback": params.feedback,
         }
-        if structured_feedback:
-            human_input[STRUCTURED_FEEDBACK_KEY] = structured_feedback
+        if params.structured_feedback:
+            human_input[STRUCTURED_FEEDBACK_KEY] = params.structured_feedback
         state = await self._orchestrator.resume(
-            project_id,
+            params.project_id,
             human_input,
-            db=db,
+            db=params.db,
             workflow_input=workflow_input,
         )
-        persisted = await self._orchestrator.get_state(project_id)
+        persisted = await self._orchestrator.get_state(params.project_id)
         if persisted is not None:
             state = persisted
-        await self._sync_project_phase(db, project_id, state)
+        await self._sync_project_phase(params.db, params.project_id, state)
         if (
-            db is not None
+            params.db is not None
             and prior is not None
             and str(prior.get("current_phase", "")) == PHASE_IMAGES
-            and action == REVIEW_ACTION_APPROVE
+            and params.action == REVIEW_ACTION_APPROVE
         ):
             from rag_backend.application.services.carousel.editorial_finalize import (
                 finalize_carousel_after_images_approval,
             )
 
-            await finalize_carousel_after_images_approval(db, project_id)
+            await finalize_carousel_after_images_approval(params.db, params.project_id)
         await emit_review_event(
             ReviewEventEmitRequest(
-                db=db,
+                db=params.db,
                 event_service=self._events,
                 notification_service=self._notifications,
                 context=ReviewEventEmitContext(
-                    project_id=project_id,
-                    action=action,
-                    reviewer_id=reviewer_id,
-                    feedback=feedback,
+                    project_id=params.project_id,
+                    action=params.action,
+                    reviewer_id=params.reviewer_id,
+                    feedback=params.feedback,
                     prior=prior,
                     state=state,
                 ),
             ),
         )
-        await publish_workflow_sse_updates(project_id, state)
+        await publish_workflow_sse_updates(params.project_id, state)
         return state
 
-    async def get_workflow_state(self, project_id: str) -> CarouselWorkflowState | None:
-        """Load persisted workflow state from checkpointer (WF-002)."""
+    async def get_workflow_state(
+        self,
+        project_id: str,
+        db: AsyncSession | None = None,
+    ) -> CarouselWorkflowState | None:
+        """Load workflow state from checkpointer; merge DB phase_status when DB says in_progress."""
         state = await self._orchestrator.get_state(project_id)
-        if state is None:
+        if state is None or not str(state.get("current_phase", "")).strip():
             return None
-        if not str(state.get("current_phase", "")).strip():
-            return None
+        if db is not None:
+            project = await db.get(CarouselProjectModel, project_id)
+            if (
+                project is not None
+                and str(project.phase_status) == PHASE_STATUS_IN_PROGRESS
+                and str(state.get("phase_status", "")) == PHASE_STATUS_AWAITING_HUMAN
+            ):
+                state["phase_status"] = PHASE_STATUS_IN_PROGRESS
         return state
 
     async def mark_resume_in_progress(
@@ -341,10 +358,6 @@ class EditorialWorkflowService:
             "current_phase": current_phase,
             "phase_status": PHASE_STATUS_IN_PROGRESS,
         }
-        await self._orchestrator.update_state(
-            project_id,
-            {"phase_status": PHASE_STATUS_IN_PROGRESS},
-        )
         await self._sync_project_phase(db, project_id, in_progress_state)
         from rag_backend.application.services.carousel.editorial_workflow_support import (
             publish_workflow_phase_change,
@@ -368,12 +381,12 @@ class EditorialWorkflowService:
         prior = await self.get_workflow_state(project_id)
         phase = str(prior.get("current_phase", "")) if prior else ""
         from rag_backend.application.services.carousel.editorial_workflow_support import (
+            PublishParams,
             publish_workflow_error,
         )
 
         await publish_workflow_error(
-            project_id,
-            phase,
+            PublishParams(project_id=project_id, phase=phase),
             message,
             recoverable=recoverable,
         )
@@ -394,6 +407,7 @@ class EditorialWorkflowService:
 
 
 __all__ = [
+    "EditorialWorkflowConfig",
     "EditorialWorkflowService",
     "EditorialWorkflowStartInput",
     "ReviewEventEmitContext",

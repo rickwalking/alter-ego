@@ -26,7 +26,7 @@ A persistent brand footer slide appended to every carousel. Displays the creator
 │     @pedromarins.ai              │
 │                                  │
 │   ┌──────────────────────┐       │
-│   │  marrinssolutions.com │       │
+│   │  marinssolutions.com  │       │
 │   └──────────────────────┘       │
 │                                  │
 │   Siga para mais conteúdo        │
@@ -44,42 +44,53 @@ A persistent brand footer slide appended to every carousel. Displays the creator
   align-items: center;
   justify-content: center;
 }
-.slide-closing.slide-content { padding: 48px 36px 40px; }
+.slide-closing.slide-content { padding: 48px 48px 40px; }
+
+.closing-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: min(100%, 460px);
+  padding: 28px 30px 32px;
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(6,10,18,0.88), rgba(6,10,18,0.64));
+  border: 1px solid color-mix(in srgb, var(--primary), transparent 80%);
+}
 
 .closing-avatar {
-  width: 72px; height: 72px; border-radius: 50%;
-  overflow: hidden; margin-bottom: 14px;
-  border: 2px solid var(--primary);
-  box-shadow: 0 0 16px var(--primary-dim);
+  width: 112px; height: 112px; border-radius: 50%;
+  overflow: hidden; margin-bottom: 18px;
+  border: 3px solid var(--primary);
+  box-shadow: 0 0 28px var(--primary-dim);
 }
 .closing-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
 
 .closing-name {
   font-family: var(--font-heading);
-  font-size: clamp(20px, 4vw, 24px);
-  font-weight: 800;
+  font-size: clamp(30px, 6vw, 44px);
+  font-weight: 900;
   color: var(--text);
-  line-height: 1.2;
-  margin-bottom: 2px;
+  line-height: 1.05;
+  margin-bottom: 6px;
 }
 
 .closing-handle {
   font-family: var(--font-mono);
-  font-size: clamp(12px, 2.2vw, 14px);
+  font-size: clamp(16px, 2.8vw, 20px);
   color: var(--text-60);
-  margin-bottom: 20px;
+  margin-bottom: 18px;
 }
 
 .closing-website {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 10px 24px;
+  padding: 11px 24px;
   border-radius: 6px;
   background: linear-gradient(135deg, var(--primary) 0%, #7c3aed 100%);
   color: #fff;
   font-family: var(--font-heading);
-  font-size: clamp(13px, 2.4vw, 15px);
+  font-size: clamp(16px, 2.6vw, 20px);
   font-weight: 700;
   text-decoration: none;
   margin-bottom: 18px;
@@ -89,7 +100,7 @@ A persistent brand footer slide appended to every carousel. Displays the creator
 
 .closing-cta {
   font-family: var(--font-mono);
-  font-size: clamp(10px, 1.8vw, 12px);
+  font-size: clamp(13px, 2vw, 16px);
   color: var(--text-55);
   letter-spacing: 1px;
 }
@@ -103,17 +114,19 @@ A persistent brand footer slide appended to every carousel. Displays the creator
     <div class="ig-slide-inner">
       <div class="bg-glow"></div>
       <div class="slide-content slide-closing">
-        <div class="slide-number">N/N</div>
-        <div class="closing-avatar">
-          <img src="../images/about-pedro.png" alt="Pedro Marins" />
+        <div class="closing-card">
+          <div class="slide-number">N/N</div>
+          <div class="closing-avatar">
+            <img src="../images/about-pedro.png" alt="Pedro Marins" />
+          </div>
+          <div class="closing-name">Pedro Marins</div>
+          <div class="closing-handle">@pedromarins.ai</div>
+          <div class="closing-website">
+            <svg><!-- link icon --></svg>
+            marinssolutions.com
+          </div>
+          <p class="closing-cta">Siga para mais conteudo como esse</p>
         </div>
-        <div class="closing-name">Pedro Marins</div>
-        <div class="closing-handle">@pedromarins.ai</div>
-        <div class="closing-website">
-          <svg><!-- link icon --></svg>
-          marrinssolutions.com
-        </div>
-        <p class="closing-cta">Siga para mais conteudo como esse</p>
       </div>
       <div class="creator-watermark">...</div>
     </div>
@@ -134,10 +147,12 @@ A persistent brand footer slide appended to every carousel. Displays the creator
 When exporting via Playwright at 1080x1350, inject these clamp overrides:
 
 ```css
-.closing-name     { font-size: clamp(22px, 4.5vw, 52px) !important; }
-.closing-handle   { font-size: clamp(14px, 2.5vw, 30px) !important; }
-.closing-website  { font-size: clamp(15px, 2.8vw, 34px) !important; padding: 14px 32px !important; }
-.closing-cta      { font-size: clamp(12px, 2.2vw, 26px) !important; }
+.closing-card     { width: min(100%, 720px) !important; padding: 48px 54px 56px !important; }
+.closing-avatar   { width: 168px !important; height: 168px !important; }
+.closing-name     { font-size: clamp(36px, 5.5vw, 64px) !important; }
+.closing-handle   { font-size: clamp(18px, 2.4vw, 30px) !important; }
+.closing-website  { font-size: clamp(18px, 2.5vw, 30px) !important; padding: 18px 42px !important; }
+.closing-cta      { font-size: clamp(15px, 2.2vw, 26px) !important; }
 ```
 
 ## Agent Refactoring Todos

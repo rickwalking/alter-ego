@@ -2,9 +2,16 @@
 
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { BG_CARD, CYAN_GRADIENT, NEON_CYAN, TEXT_DIM } from "@/constants/neon";
+import {
+  BG_CARD,
+  CYAN_GRADIENT,
+  NEON_CYAN,
+  NEON_RED,
+  TEXT_DIM,
+} from "@/constants/neon";
 import { DASHBOARD_ROUTES } from "@/constants/dashboard-routes";
 import { EDITORIAL_WORKFLOW_STATUS } from "@/constants/editorial-workflow";
+import { WORKFLOW_PHASE_STATUS } from "@/constants/workflow";
 import type { CarouselProjectResponse } from "@/schemas/carousel";
 import type { EditorialWorkflowState } from "@/features/blog/types-ai";
 import { CREATE_STEP_IDS } from "@/app/dashboard/create/step-ids";
@@ -87,9 +94,29 @@ export function CreateWorkspaceSidebar({
           </h3>
           <p style={{ fontSize: "12px", color: TEXT_DIM, margin: 0 }}>
             Active phase:{" "}
-            <span style={{ color: NEON_CYAN, fontWeight: 600 }}>
+            <span
+              style={{
+                color:
+                  workflowState.phase_status === WORKFLOW_PHASE_STATUS.FAILED
+                    ? NEON_RED
+                    : NEON_CYAN,
+                fontWeight: 600,
+              }}
+            >
               {workflowState.current_phase}
             </span>
+            {workflowState.phase_status === WORKFLOW_PHASE_STATUS.FAILED && (
+              <span
+                style={{
+                  color: NEON_RED,
+                  fontWeight: 700,
+                  fontSize: "11px",
+                  marginLeft: "6px",
+                }}
+              >
+                (failed)
+              </span>
+            )}
           </p>
         </div>
       )}

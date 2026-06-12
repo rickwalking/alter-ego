@@ -24,9 +24,12 @@ from rag_backend.application.services.asset_cdn_service import AssetCdnService
 from rag_backend.application.services.blog_post_ai_service import (
     BlogAiTraceContext,
     BlogPostAIService,
+    _ImproveInput,
+    _SuggestInput,
 )
 from rag_backend.application.services.editorial_audit_service import (
     EditorialAuditService,
+    _AuditEntry,
 )
 from rag_backend.application.services.workflow_event_service import WorkflowEventService
 from rag_backend.domain.constants import IMAGE_MODEL_OPENAI, IMAGE_STYLE_CINEMATIC
@@ -74,7 +77,14 @@ async def _record_ai_action(
     updated = _disclosure_service().record_action(metadata, action)
     post.ai_generation_metadata = updated  # type: ignore[attr-defined]
     post.ai_disclosure_label = updated.get("ai_disclosure_label", "none")  # type: ignore[attr-defined]
-    await _audit_service().log_ai_action(db, str(post_id), user_id, action)
+    await _audit_service().log_ai_action(
+        db,
+        entry=_AuditEntry(
+            post_id=str(post_id),
+            user_id=user_id,
+            extra=action,
+        ),
+    )
 
 
 def _build_ai_service() -> BlogPostAIService:
@@ -107,10 +117,12 @@ async def ai_suggest(
     service = _build_ai_service()
     try:
         result = await service.suggest(
-            text=body.text,
-            action=body.suggestion_type,
-            context=body.context,
-            trace=BlogAiTraceContext(post_id=str(post_id), user_id=current_user.id),
+            _SuggestInput(
+                text=body.text,
+                action=body.suggestion_type,
+                context=body.context,
+                trace=BlogAiTraceContext(post_id=str(post_id), user_id=current_user.id),
+            )
         )
     except ValueError:
         raise HTTPException(
@@ -144,12 +156,14 @@ async def ai_improve(
     service = _build_ai_service()
     try:
         result = await service.improve(
-            db=db,
-            text=body.text,
-            action=body.action,
-            context=body.context,
-            persona_id=body.persona_id,
-            trace=BlogAiTraceContext(post_id=str(post_id), user_id=current_user.id),
+            _ImproveInput(
+                db=db,
+                text=body.text,
+                action=body.action,
+                context=body.context,
+                persona_id=body.persona_id,
+                trace=BlogAiTraceContext(post_id=str(post_id), user_id=current_user.id),
+            )
         )
     except ValueError:
         raise HTTPException(

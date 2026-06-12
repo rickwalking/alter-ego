@@ -12,7 +12,10 @@ import {
   type EditorialWorkflowTransportMode,
 } from "@/constants/editorial-workflow";
 import { WORKFLOW_PHASE_STATUS } from "@/constants/workflow";
-import type { EditorialWorkflowState } from "@/features/blog/types-ai";
+import type {
+  EditorialWorkflowState,
+  LocalizedSlideReview,
+} from "@/features/blog/types-ai";
 import { authenticatedFetch } from "@/lib/authenticated-fetch";
 import { resolveClientApiUrl } from "@/lib/client-api-url";
 import {
@@ -29,6 +32,7 @@ import {
 export interface EditorialReviseOptions {
   targetPhase?: string;
   editedText?: string;
+  editedLocalizedSlides?: LocalizedSlideReview[];
 }
 
 interface UseEditorialWorkflowResumeParams {
@@ -138,6 +142,7 @@ export function useEditorialWorkflowResume({
           structured_feedback?: {
             target_phase?: string;
             edited_text?: string;
+            edited_localized_slides?: LocalizedSlideReview[];
           };
         } = {
           action,
@@ -146,13 +151,21 @@ export function useEditorialWorkflowResume({
         if (feedback !== undefined) {
           payload.feedback = feedback;
         }
-        if (options?.targetPhase || options?.editedText) {
+        if (
+          options?.targetPhase ||
+          options?.editedText ||
+          options?.editedLocalizedSlides?.length
+        ) {
           payload.structured_feedback = {};
           if (options.targetPhase) {
             payload.structured_feedback.target_phase = options.targetPhase;
           }
           if (options.editedText) {
             payload.structured_feedback.edited_text = options.editedText;
+          }
+          if (options.editedLocalizedSlides?.length) {
+            payload.structured_feedback.edited_localized_slides =
+              options.editedLocalizedSlides;
           }
         }
 
@@ -186,7 +199,8 @@ export function useEditorialWorkflowResume({
                   ? {
                       ...prev,
                       lock_version: accepted.lock_version,
-                      phase_status: accepted.phase_status,
+                      phase_status:
+                        accepted.phase_status as import("@/features/blog/types-ai").WorkflowPhaseStatus,
                     }
                   : prev;
             workflowStateRef.current = next;
