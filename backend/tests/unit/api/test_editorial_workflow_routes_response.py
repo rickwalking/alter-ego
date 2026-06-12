@@ -37,6 +37,11 @@ from rag_backend.api.schemas.carousel_workflow import (
     LocalizedSlideReview,
     SlideValidationReportResponse,
 )
+from rag_backend.domain.constants.ai_agents import ERR_INVALID_JSON
+from rag_backend.domain.constants.carousel_workflow import (
+    ERR_PERSONA_SCORE_TOO_LOW,
+    ERR_WORKFLOW_PHASE_FAILED,
+)
 from rag_backend.domain.constants.workflow_state_fields import (
     STATE_DEFAULT_STATUS,
     STATE_FIELD_PHASE_PROGRESS,
@@ -317,6 +322,11 @@ class TestErrorMessageField:
       When the user refreshes the page
       Then the error card is still displayed
       And the error message matches the stored error_message
+
+    QA F-1 (AE-0009): error_message MUST be the SAME client-safe string the SSE
+    path emits. Raw persisted ``workflow_error`` values that are not on the
+    ``CLIENT_SAFE_SSE_ERROR_MESSAGES`` allowlist must collapse to the generic
+    phase-failed message (no raw internal error / traceback / secret leakage).
     """
 
     def test_missing_returns_none(self) -> None:
@@ -325,20 +335,42 @@ class TestErrorMessageField:
     def test_blank_workflow_error_returns_none(self) -> None:
         assert _error_message_field({"workflow_error": ""}) is None
 
-    def test_workflow_error_key_used(self) -> None:
+    def test_allowlisted_error_passes_through(self) -> None:
+        # ERR_INVALID_JSON is on the SSE client-safe allowlist.
         assert (
-            _error_message_field({"workflow_error": "Invalid JSON"}) == "Invalid JSON"
+            _error_message_field({"workflow_error": ERR_INVALID_JSON})
+            == ERR_INVALID_JSON
         )
 
-    def test_error_message_fallback_key_used(self) -> None:
-        assert _error_message_field({"error_message": "boom"}) == "boom"
+    def test_non_allowlisted_raw_error_mapped_to_safe_message(self) -> None:
+        # F-1: a raw internal error (with secrets/traceback) must NOT leak;
+        # it collapses to the generic client-safe phase-failed message.
+        raw_internal = (
+            "Traceback: psycopg2.OperationalError password=hunter2 at db.py:42"
+        )
+        result = _error_message_field({"workflow_error": raw_internal})
+        assert result == ERR_WORKFLOW_PHASE_FAILED
+        assert "hunter2" not in (result or "")
+
+    def test_error_message_fallback_key_mapped_to_safe_message(self) -> None:
+        # Fallback key honored for presence, but still sanitized.
+        assert _error_message_field({"error_message": "boom"}) == (
+            ERR_WORKFLOW_PHASE_FAILED
+        )
 
     def test_workflow_error_preferred_over_error_message(self) -> None:
-        state = {"workflow_error": "primary", "error_message": "fallback"}
-        assert _error_message_field(state) == "primary"
+        # Allowlisted primary passes through over a (different) fallback.
+        state = {
+            "workflow_error": ERR_PERSONA_SCORE_TOO_LOW,
+            "error_message": ERR_INVALID_JSON,
+        }
+        assert _error_message_field(state) == ERR_PERSONA_SCORE_TOO_LOW
 
-    def test_non_string_coerced(self) -> None:
-        assert _error_message_field({"workflow_error": 500}) == "500"
+    def test_non_string_mapped_to_safe_message(self) -> None:
+        # Non-string raw error is present but not allowlisted -> safe message.
+        assert _error_message_field({"workflow_error": 500}) == (
+            ERR_WORKFLOW_PHASE_FAILED
+        )
 
 
 # ── _FIELD_MAPPING ──────────────────────────────────────────────────────────

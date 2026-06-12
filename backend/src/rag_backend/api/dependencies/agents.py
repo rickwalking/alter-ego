@@ -176,8 +176,12 @@ async def _scrape_url_sources(
 ) -> list[dict[str, str]]:
     """Scrape URL-type sources, replacing content with scraped text.
 
-    Matches sources by source_type=="url" OR by content starting with
-    http:// or https:// (handles RAG agent notes that embed URLs).
+    Intentional superset matching: a source is treated as scrapeable when
+    ``source_type == "url"`` OR when its ``content`` is a bare http(s) URL
+    matching ``_URL_PATTERN`` (anchored, no surrounding text). The second
+    branch handles RAG agent notes that embed a raw URL without setting
+    ``source_type``. Plain-text/document sources (whose ``content`` is not a
+    bare URL) are NOT scraped, even when ``research_tool`` is available.
 
     Graceful degradation: if scraping fails or research_tool is None,
     the original content (URL string) is preserved.

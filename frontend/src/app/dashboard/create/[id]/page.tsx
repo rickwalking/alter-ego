@@ -23,6 +23,7 @@ import type { ContentSource } from "@/features/blog/types-ai";
 import type { CarouselProjectResponse } from "@/schemas/carousel";
 import { BriefStepContent } from "@/app/dashboard/create/workspace/brief-step-content";
 import { WorkflowStepContent } from "@/app/dashboard/create/workspace/workflow-step-content";
+import { createRetryWorkflowHandler } from "@/app/dashboard/create/[id]/create-retry-handler";
 
 const layoutGridStyle = {
   display: "grid",
@@ -130,28 +131,26 @@ export default function CreateWorkspacePage(): React.ReactElement {
   const isFailed =
     editorialWorkflow.state?.phase_status === WORKFLOW_PHASE_STATUS.FAILED;
 
-  const handleRetryWorkflow = useCallback(async (): Promise<void> => {
-    // Idempotent retry (AE-0009): duplicate clicks must trigger a single
-    // restart. The `retrying` guard short-circuits in-flight clicks before the
-    // button's disabled state propagates — previews the AE-0073 concurrency
-    // contract intent (one restart per failure).
-    if (!project || retrying) return;
-    setRetrying(true);
-    try {
-      await editorialWorkflow.start({
-        topic: project.topic,
-        audience: project.audience,
-        brief: project.niche,
+  // Idempotent retry (AE-0009): duplicate clicks must trigger a single
+  // restart. The `retrying` guard short-circuits in-flight clicks before the
+  // button's disabled state propagates — previews the AE-0073 concurrency
+  // contract intent (one restart per failure). On failure, `retrying` resets so
+  // the button re-enables and the error card stays. See create-retry-handler.ts.
+  const handleRetryWorkflow = useCallback(
+    (): Promise<void> =>
+      createRetryWorkflowHandler({
+        project,
+        retrying,
+        setRetrying,
+        start: editorialWorkflow.start,
         sources: mappedSources,
-      });
-      setRetrying(false);
-      router.push(
-        `${DASHBOARD_ROUTES.CREATE_WORKSPACE(projectId)}?step=${CREATE_STEP_IDS.OUTLINE}`,
-      );
-    } catch {
-      setRetrying(false);
-    }
-  }, [editorialWorkflow, mappedSources, project, projectId, retrying, router]);
+        navigateOnSuccess: () =>
+          router.push(
+            `${DASHBOARD_ROUTES.CREATE_WORKSPACE(projectId)}?step=${CREATE_STEP_IDS.OUTLINE}`,
+          ),
+      })(),
+    [editorialWorkflow.start, mappedSources, project, projectId, retrying, router],
+  );
 
   if (isLoading) {
     return (

@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import warnings
 from collections.abc import Callable
+from typing import cast
 
 from typing_extensions import deprecated
 
@@ -18,6 +19,12 @@ from rag_backend.api.schemas.carousel_workflow import (
     LocalizedSlideReview,
     SlideValidationReportResponse,
     SlideValidationViolationResponse,
+)
+from rag_backend.application.services.carousel.editorial_workflow_sse_build import (
+    resolve_workflow_sse_error_message,
+)
+from rag_backend.application.services.carousel.workflow_state import (
+    CarouselWorkflowState,
 )
 from rag_backend.application.services.carousel.workflow_state_sanitize import (
     SanitizeWorkflowStateCommand,
@@ -207,14 +214,23 @@ def _policy_version_field(state: dict[str, object]) -> str | None:
 
 
 def _error_message_field(state: dict[str, object]) -> str | None:
-    """Extract the persisted failure message (AE-0009).
+    """Extract a client-safe failure message (AE-0009).
 
     Additive, optional response field. Raw state stores the message under
     ``workflow_error``; an explicit ``error_message`` key is also honored as a
     fallback. Returns ``None`` (field omitted by default) when no error is set.
+
+    The state-response ``error_message`` MUST surface the SAME client-safe
+    string the SSE path emits, so we reuse
+    :func:`resolve_workflow_sse_error_message` (and its
+    ``CLIENT_SAFE_SSE_ERROR_MESSAGES`` allowlist). This prevents leaking raw
+    internal errors, tracebacks, or secrets persisted in ``workflow_error``:
+    non-allowlisted values collapse to the generic phase-failed message.
     """
     raw = state.get(STATE_FIELD_WORKFLOW_ERROR) or state.get(STATE_FIELD_ERROR_MESSAGE)
-    return str(raw) if raw else None
+    if not raw:
+        return None
+    return resolve_workflow_sse_error_message(cast(CarouselWorkflowState, state))
 
 
 # ── Field mapping ─────────────────────────────────────────────────────────────
