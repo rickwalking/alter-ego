@@ -1,0 +1,68 @@
+{
+  "description": "Frozen source-of-truth inventory of SSE event names and Redis stream event types. Consumed by the backend contract test (backend/tests/unit/test_sse_event_inventory_contract.py) and the frontend contract test (frontend/src/lib/sse-event-inventory.contract.test.ts). DO NOT edit any value here without updating docs/architecture/sse-event-inventory.md, both backend constant modules, and both frontend constant maps in the same PR. Names are string-frozen for the entire migration (frozen until Phase 8).",
+  "frozen_until_phase": 8,
+  "backend": {
+    "application/services/carousel/editorial_workflow_sse_constants.py": {
+      "layer": "application",
+      "constants": {
+        "SSE_EVENT_PHASE_CHANGE": "phase_change",
+        "SSE_EVENT_PROGRESS": "progress",
+        "SSE_EVENT_REVIEW_REQUIRED": "review_required",
+        "SSE_EVENT_ERROR": "error",
+        "SSE_EVENT_ARTIFACT": "artifact",
+        "SSE_EVENT_KEEPALIVE": "_keepalive"
+      }
+    },
+    "domain/constants/chat_stream.py": {
+      "layer": "domain",
+      "constants": {
+        "SSE_EVENT_TOKEN": "token",
+        "SSE_EVENT_SOURCES": "sources",
+        "SSE_EVENT_COMPLETE": "complete",
+        "SSE_EVENT_ERROR": "error",
+        "SSE_EVENT_TOOL_RESULT": "tool_result"
+      }
+    },
+    "domain/constants/workflow_events.py": {
+      "layer": "domain",
+      "constants": {
+        "STREAM_CONTENT_EVENTS": "content.events",
+        "EVENT_TYPE_PROJECT_PHASE_CHANGED": "content.project.phase_changed",
+        "EVENT_TYPE_PROJECT_REVIEW_REQUESTED": "content.project.review.requested",
+        "EVENT_TYPE_PROJECT_REVIEW_COMPLETED": "content.project.review.completed",
+        "EVENT_TYPE_BLOGPOST_STATUS_CHANGED": "content.blogpost.status.changed",
+        "EVENT_TYPE_BLOGPOST_SCHEDULED": "content.blogpost.scheduled",
+        "EVENT_TYPE_BLOGPOST_PUBLISHED": "content.blogpost.published",
+        "EVENT_TYPE_BLOGPOST_CREATED": "content.blogpost.created",
+        "EVENT_TYPE_BLOGPOST_UPDATED": "content.blogpost.updated",
+        "EVENT_TYPE_BLOGPOST_DELETED": "content.blogpost.deleted",
+        "EVENT_TYPE_BLOGPOST_COMMENT_ADDED": "content.blogpost.comment.added",
+        "EVENT_TYPE_BLOGPOST_VERSION_RESTORED": "content.blogpost.version.restored",
+        "EVENT_TYPE_BLOGPOST_AI_ACTION": "content.blogpost.ai.action",
+        "EVENT_TYPE_NOTIFICATION_CREATED": "content.notification.created"
+      }
+    }
+  },
+  "frontend": {
+    "src/constants/editorial-workflow.ts": {
+      "map": "EDITORIAL_WORKFLOW_SSE_EVENTS",
+      "constants": {
+        "PHASE_CHANGED": "phase_change",
+        "PROGRESS": "progress",
+        "REVIEW_REQUIRED": "review_required",
+        "ERROR": "error",
+        "ARTIFACT": "artifact"
+      }
+    },
+    "src/lib/sse-client.ts": {
+      "map": "SSE_EVENT_TYPE",
+      "constants": {
+        "TOKEN": "token",
+        "COMPLETE": "complete",
+        "ERROR": "error",
+        "SOURCES": "sources",
+        "TOOL_RESULT": "tool_result"
+      }
+    }
+  }
+}

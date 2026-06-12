@@ -1,6 +1,6 @@
 # AE-0072 — Draft ADR-0009: adopt domain modular monolith
 
-Status: Ready
+Status: Dev Complete
 Tier: T2
 Priority: High
 Type: Docs
@@ -157,11 +157,14 @@ Ticket created by planner.
 
 ## Files Touched
 
-Pending.
+- docs/decisions/0009-adopt-domain-modular-monolith.md (new)
+- CLAUDE.md (ADR index +1 line)
 
 ## Test Evidence
 
-Pending.
+Docs-only ticket; no runtime tests. Verified: CLAUDE.md ADR index now links
+ADR-0009; all glossary terms used resolve against domain-glossary.md; all 10 ACs
+self-checked PASS (see dev-summary).
 
 ## QA Report
 

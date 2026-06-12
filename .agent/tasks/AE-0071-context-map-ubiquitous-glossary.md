@@ -1,6 +1,6 @@
 # AE-0071 — Context map and ubiquitous glossary
 
-Status: Ready
+Status: Dev Complete
 Tier: T2
 Priority: High
 Type: Docs
@@ -129,11 +129,13 @@ Ticket created by planner.
 
 ## Files Touched
 
-Pending.
+- docs/architecture/domain-glossary.md (new)
 
 ## Test Evidence
 
-Pending.
+Docs-only ticket; no runtime tests. `rg -c "useBlogPosts" frontend/src` re-run and
+the citation in the glossary naming-collision appendix matches live output (6 files).
+Term-uniqueness self-check passed; all 7 ACs self-checked PASS (see dev-summary).
 
 ## QA Report
 

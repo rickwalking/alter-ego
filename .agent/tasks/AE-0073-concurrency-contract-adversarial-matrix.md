@@ -1,6 +1,6 @@
 # AE-0073 — Concurrency contract draft and adversarial test matrix skeleton
 
-Status: Ready
+Status: Dev Complete
 Tier: T2
 Priority: Medium
 Type: Docs
@@ -123,11 +123,14 @@ Ticket created by planner.
 
 ## Files Touched
 
-Pending.
+- docs/architecture/concurrency-contract.md (new)
+- docs/architecture/adversarial-test-matrix.md (new)
 
 ## Test Evidence
 
-Pending.
+Docs-only ticket; no runtime tests. Verified: all 10 adversarial categories quoted
+verbatim; 80/80 Phase 2-8 (incl 2.5) cells marked; no forbidden glossary terms; all
+5 ACs self-checked PASS (see dev-summary).
 
 ## QA Report
 

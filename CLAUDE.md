@@ -80,6 +80,7 @@ All architecturally significant decisions are documented as ADRs in `docs/decisi
 - [ADR-006: Use JSONB for Rich Content](docs/decisions/0006-use-jsonb-for-rich-content.md)
 - [ADR-007: Consolidate Carousel Pipelines Under DeepAgents](docs/decisions/0007-consolidate-carousel-pipelines-under-deepagents.md)
 - [ADR-008: Agentic Delivery Workflow](docs/decisions/0008-agentic-delivery-workflow.md)
+- [ADR-009: Adopt Domain Modular Monolith](docs/decisions/0009-adopt-domain-modular-monolith.md)
 
 **ADR Lifecycle:** `proposed` → `accepted` → `deprecated` (superseded by newer ADR)
 **Format:** MADR 4.x | **Naming:** `NNNN-short-title.md` | **Review:** Annually

@@ -1,6 +1,6 @@
 # AE-0076 — Freeze SSE event-name inventory and add CI contract test
 
-Status: Ready
+Status: Dev Complete
 Tier: T2
 Priority: Medium
 Type: Feature
@@ -179,11 +179,24 @@ Ticket created by planner.
 
 ## Files Touched
 
-Pending.
+- docs/architecture/sse-event-inventory.md (new)
+- docs/architecture/sse-event-inventory.json (new, source of truth)
+- backend/tests/unit/test_sse_event_inventory_contract.py (new)
+- backend/tests/features/sse_event_inventory.feature (new)
+- frontend/src/lib/sse-event-inventory.contract.test.ts (new)
+- frontend/tests/features/sse-event-inventory.feature (new)
 
 ## Test Evidence
 
-Pending.
+```bash
+$ cd backend && uv run pytest tests/unit/test_sse_event_inventory_contract.py -q
+7 passed in 0.07s
+$ cd frontend && npx vitest run src/lib/sse-event-inventory.contract.test.ts
+Test Files 1 passed (1)   Tests 3 passed (3)
+```
+Drift verified both sides (mutate constant -> test fails naming it -> reverted).
+rg evidence: streaming routes/services use constants only; agent-layer chat literals
+documented in the inventory. All 8 ACs self-checked PASS (see dev-summary).
 
 ## QA Report
 
