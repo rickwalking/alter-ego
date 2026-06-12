@@ -11,7 +11,7 @@ Categories:
     application -> infrastructure, application -> agents
   target-forbidden (allowed or uncovered today, forbidden post-move):
     agents -> application, api -> infrastructure
-  service-locator: get_container( outside api/app.py + api/dependencies/
+  service-locator: get_container( outside bootstrap/ + api/dependencies/
   repo-commit: .commit( inside infrastructure/database adapters
 """
 
@@ -35,7 +35,11 @@ CATEGORIES = [
     ("api -> infrastructure", "api", "rag_backend.infrastructure", "target-forbidden (allowed by contract 4)"),
 ]
 
-CONTAINER_ALLOWED = ("api/app.py", "api/dependencies/")
+# Composition-root paths allowed to resolve the DI container (AE-0080):
+# bootstrap/ is the relocated composition root (ADR-0009 §9); api/dependencies/
+# holds the request-scoped DI providers at the HTTP edge. The old api/app.py is
+# now a thin re-export shim and no longer holds composition-root wiring.
+CONTAINER_ALLOWED = ("bootstrap/", "api/dependencies/")
 
 
 def module_of(path: Path) -> str:

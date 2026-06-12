@@ -138,7 +138,9 @@ ignore_errors = true
 
 [[tool.mypy.overrides]]
 module = [
-    "rag_backend.api.app",
+    # AE-0080: composition-root app factory relocated from api.app to
+    # bootstrap.app_factory (byte-identical wiring); overrides moved with it.
+    "rag_backend.bootstrap.app_factory",
 ]
 disable_error_code = ["type-var", "return-value", "arg-type", "type-arg", "import-not-found"]
 
@@ -404,7 +406,9 @@ ignore-names = [
     "PLR0913", "PLR0917", "C901", "PLR0912", "PLR0911", "PLR0914",
     # TODO: AE-0048 — pre-existing, fix when touching
 ]
-"src/rag_backend/api/app.py" = ["PLR0911", "FAST001", "RUF029"]
+# AE-0080: composition-root app factory relocated from api/app.py to
+# bootstrap/app_factory.py (byte-identical wiring); ignores moved with it.
+"src/rag_backend/bootstrap/app_factory.py" = ["PLR0911", "FAST001", "RUF029"]
 "src/rag_backend/api/constants.py" = ["S105"]
 "src/rag_backend/api/routes/documents.py" = ["PLR0913", "FBT002", "E501"]
 "src/rag_backend/infrastructure/database/models/*.py" = ["E501"]

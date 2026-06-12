@@ -2,7 +2,7 @@
 
 import uvicorn
 
-from rag_backend.api.app import create_app
+from rag_backend.bootstrap.app_factory import create_app
 from rag_backend.infrastructure.config.settings import get_settings
 
 app = create_app()

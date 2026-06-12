@@ -111,6 +111,18 @@ export default defineConfig([
     },
   },
   {
+    // Module-boundary guards.
+    //
+    // 1. `app/**` guard (below): features/components/lib must not import App
+    //    Router pages.
+    // 2. Cross-feature INTERNAL imports (`features/A/**` importing
+    //    `features/B/**`, B != A) are forbidden by the ratchet in
+    //    `scripts/check-feature-boundaries.mjs`, run via `npm run lint`
+    //    (and `lint:all`). Existing violations are grandfathered in
+    //    `scripts/feature-boundary-baseline.json`; NEW ones fail the build.
+    //    The ratchet lives in a script (not `no-restricted-imports`) because it
+    //    must grandfather a committed baseline and ratchet the count down — see
+    //    AE-0083, mirrors the backend ratchet AE-0082.
     files: ["src/features/**", "src/components/**", "src/lib/**"],
     rules: {
       "no-restricted-imports": [

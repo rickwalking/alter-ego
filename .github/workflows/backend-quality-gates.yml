@@ -322,6 +322,67 @@ jobs:
             "Backend" "Test & Coverage" \
             "Tests failed or diff coverage is below 75%."
 
+  migrations:
+    name: backend / Migrations (fresh DB)
+    # AE-0084: Provisions a FRESH Postgres and runs `alembic upgrade head`
+    # from an empty DB, then a `downgrade base` round-trip. Fails on any
+    # migration error or timeout, catching broken/out-of-order or
+    # non-reversible revisions before they land (Phase 4+ reversible-path
+    # discipline).
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: rag_migrations
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: "0.6.x"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: uv sync --locked
+
+      - name: alembic upgrade head (fresh DB, bounded)
+        timeout-minutes: 5
+        env:
+          DATABASE_URL: postgresql+asyncpg://test:test@localhost:5432/rag_migrations
+        run: uv run alembic upgrade head
+
+      - name: alembic downgrade base round-trip (bounded)
+        timeout-minutes: 5
+        env:
+          DATABASE_URL: postgresql+asyncpg://test:test@localhost:5432/rag_migrations
+        run: uv run alembic downgrade base
+
+      - name: Post PR summary on failure
+        if: failure() && github.event_name == 'pull_request'
+        working-directory: .
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_EVENT_PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          bash scripts/ci/post-pr-quality-comment.sh \
+            "Backend" "Migrations (fresh DB)" \
+            "alembic upgrade head or downgrade base failed on a fresh database. A migration revision is broken, out of order, or non-reversible."
+
   mutation:
     name: backend / Mutation (blocking ≥75%)
     needs: [test]

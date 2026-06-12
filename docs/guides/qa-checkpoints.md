@@ -423,6 +423,7 @@ See [CI Quality Gates Guide](./ci-quality-gates.md) for workflow names, branch p
 | backend / Docstrings | interrogate ≥80% | CI failure |
 | backend / Security | bandit + pip-audit | CI failure |
 | backend / Test & Coverage | pytest + diff-cover ≥75% | CI failure (blocking) |
+| backend / Migrations (fresh DB) | `alembic upgrade head` + `downgrade base` round-trip on a fresh Postgres | **CI failure (blocking — AE-0084)** — fails on any migration error, non-reversible revision, or 5-min timeout |
 | backend / Dead Code | vulture | CI failure |
 | backend / Mutation (blocking ≥75%) | mutmut + `scripts/ci/mutation-score-gate.sh` | **CI failure (blocking — AE-0049)** if mutation score < 75% |
 
@@ -489,6 +490,22 @@ crashing when `origin/main` is unavailable).
 | Strict Diff | `scripts/ci/ruff-strict-changed.sh` → `ruff --select PLR0913,C901,PLR0912,PLR0911,PLR0914,PLR1702` on **changed lines only** | max-args=3, max-complexity=10, max-branches=8, max-returns=5, max-locals=12, max-nested-blocks=4 | CI failure (blocking) | In the `backend / Strict Diff` job. Violations on pre-existing untouched lines are ignored — only changed lines fail. |
 | diff-cover gate | `diff-cover coverage.xml --compare-branch=origin/main --fail-under=75` | ≥75% diff coverage | CI failure (blocking) | Enforces ≥75% coverage on changed lines. In the `backend / Test & Coverage` job. |
 | Mutation gate | `scripts/ci/mutation-score-gate.sh 75` (mutmut + `export-cicd-stats`) | mutation score ≥75% | CI failure (blocking) | Score = `killed / (killed + survived + timeout + suspicious)`. Baseline ≈80.2%. In the `backend / Mutation (blocking ≥75%)` job. Per ADR-005 the 75% floor is below the business-logic "Low" (70%) buffer applied to the whole mutated set as a starting threshold. |
+
+### Fresh-DB Migration Gate (Backend) — AE-0084
+
+The `backend / Migrations (fresh DB)` job guards the Alembic migration chain.
+It provisions an **ephemeral, empty** `postgres:16-alpine` service (no app
+state, no prior migrations) and runs the full chain from scratch.
+
+| Step | Command | Bound | Enforcement |
+|------|---------|-------|-------------|
+| Forward chain | `uv run alembic upgrade head` | `timeout-minutes: 5` | CI failure on any revision error or timeout |
+| Reversible round-trip | `uv run alembic downgrade base` | `timeout-minutes: 5` | CI failure if any revision is non-reversible (missing/broken `downgrade()`) |
+
+- The job lives in `Backend Quality Gates` (`.github/workflows/backend-quality-gates.yml`) — no new standalone workflow, no deployment CI changes.
+- `DATABASE_URL` uses the `postgresql+asyncpg://` scheme; `alembic/env.py` rewrites it to `postgresql+psycopg://` for the sync migration engine.
+- A clean chain passes; a broken or out-of-order revision (e.g. a `upgrade()` that errors on an empty DB) fails the forward step, and a non-reversible revision fails the round-trip.
+- Underpins Phase 4+ migrate-in-place windows (reversible-path discipline) per the domain modularization plan.
 
 ### Nightly / Weekly Gates
 
