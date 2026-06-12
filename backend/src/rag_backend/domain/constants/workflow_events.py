@@ -36,6 +36,9 @@ EVENT_FIELD_VERSION = "version"
 EVENT_FIELD_PAYLOAD = "payload"
 EVENT_FIELD_METADATA = "metadata"
 
+# Session-info key holding events queued for post-commit publish (AE-0074)
+SESSION_INFO_PENDING_EVENTS = "pending_workflow_events"
+
 __all__ = [
     "AGGREGATE_TYPE_BLOG_POST",
     "AGGREGATE_TYPE_PROJECT",
@@ -66,5 +69,6 @@ __all__ = [
     "EVENT_TYPE_PROJECT_PHASE_CHANGED",
     "EVENT_TYPE_PROJECT_REVIEW_COMPLETED",
     "EVENT_TYPE_PROJECT_REVIEW_REQUESTED",
+    "SESSION_INFO_PENDING_EVENTS",
     "STREAM_CONTENT_EVENTS",
 ]
