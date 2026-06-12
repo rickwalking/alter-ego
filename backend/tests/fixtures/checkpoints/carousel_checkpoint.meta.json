@@ -1,0 +1,15 @@
+{
+  "serde_type": "msgpack",
+  "source": "dev sqlite store output/carousel_checkpoints.sqlite, latest checkpoint, thread id withheld",
+  "captured": "2026-06-12",
+  "sanitization": "strings >40 chars replaced with REDACTED-<len>-CHARS, structure preserved",
+  "top_level_keys": [
+    "channel_values",
+    "channel_versions",
+    "id",
+    "ts",
+    "updated_channels",
+    "v",
+    "versions_seen"
+  ]
+}

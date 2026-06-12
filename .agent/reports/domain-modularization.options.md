@@ -187,6 +187,13 @@ Two findings were stronger than the research stated:
    research's "the ORM adds optimistic locking" overstates reality. Phase 2.5
    must implement expected-version enforcement before it can exercise
    conflict behavior.
+   > **Corrected by AE-0075 (2026-06-12 inventory):** this finding was
+   > itself wrong — `application/services/optimistic_lock_service.py`
+   > performs atomic compare-and-increment on both tables and is in
+   > active use (values up to 18 in dev data). Coverage is **partial**
+   > (three route callers; workers and other carousel routes bypass it).
+   > Phase 2.5 scope shrinks accordingly: extend coverage, don't build.
+   > See `docs/architecture/checkpoint-inventory.md`.
 4. **The AE-0040 interaction table was stale.** AE-0058 through AE-0067 are
    already DONE and merged; the live blockers are AE-0044/0045/0046 (Intake,
    blocked by AE-0041), which touch the same carousel service files as
@@ -861,10 +868,11 @@ Core deliverables (mandatory regardless of track):
   is deleted — under the finish-or-restart policy the old-to-new resume
   path never executes in production, so a replay test proves nothing the
   inventory does not.
-- Implement expected-version enforcement for the legacy `lock_version`
-  column (it exists since migration 0002 but no application code checks it
-  today), then exercise conflict behavior against it. This is new scope, not
-  a test of an existing mechanism.
+- Extend `optimistic_lock_service` expected-version enforcement to all
+  write paths (AE-0075 found it exists with partial coverage — three
+  route callers; workers and remaining carousel routes bypass it), then
+  exercise conflict behavior per the AE-0073 contract. Reduced from
+  "implement from scratch" by the AE-0075 inventory.
   **Rollout strategy (round-3 review finding 1):** enforcement is
   **test/CI-only during Phase 2.5** — no production write path changes
   behavior, preserving the "no production write redirection" rule.

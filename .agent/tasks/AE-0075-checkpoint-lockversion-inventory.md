@@ -1,6 +1,6 @@
 # AE-0075 — Checkpoint and lock_version inventory with serialization confirmation
 
-Status: Ready
+Status: Dev Complete
 Tier: T2
 Priority: High
 Type: Research
@@ -57,33 +57,33 @@ operating-context statement (AE-0072) also needs the live checkpoint count.
 
 ## Acceptance Criteria
 
-- [ ] `docs/architecture/checkpoint-inventory.md` exists and records the
+- [x] `docs/architecture/checkpoint-inventory.md` exists and records the
       backend per environment, checkpoint/thread counts, capture date,
       and a per-live-workflow finish-cost estimate (phases remaining)
-- [ ] At least one sanitized checkpoint fixture exists under
+- [x] At least one sanitized checkpoint fixture exists under
       `backend/tests/fixtures/checkpoints/` and is loaded by a test
-- [ ] WHEN the fixture is deserialized in a test environment that imports
+- [x] WHEN the fixture is deserialized in a test environment that imports
       no `rag_backend.agents` or `rag_backend.application` modules THE
       payload SHALL deserialize successfully, OR the report SHALL name
       every class-path-dependent entry
-- [ ] The report contains an explicit verdict line: `Serialization:
+- [x] The report contains an explicit verdict line: `Serialization:
       PORTABLE` or `Serialization: CLASS-PATH-DEPENDENT`. **Escalation
       downgraded (2026-06-12 interview, migrate-in-place track):** a
       CLASS-PATH-DEPENDENT verdict no longer blocks Phase 2.5 — the
       recorded policy is finish-or-restart for in-flight workflows; the
       verdict instead determines whether restarts are required around
       package moves
-- [ ] The `lock_version` distribution for `carousel_projects` and
+- [x] The `lock_version` distribution for `carousel_projects` and
       `blog_posts` is recorded with row counts and query text
-- [ ] WHEN the verdict is CLASS-PATH-DEPENDENT THE epic AE-0070 Blockers
+- [x] WHEN the verdict is CLASS-PATH-DEPENDENT THE epic AE-0070 Blockers
       section SHALL be updated and AE-0072 notified before its
       operating-context section is finalized
-- [ ] No fixture contains unsanitized user content (manual check recorded
+- [x] No fixture contains unsanitized user content (manual check recorded
       in Test Evidence)
-- [ ] WHEN no persisted checkpoint exists in any reachable store THE
+- [x] WHEN no persisted checkpoint exists in any reachable store THE
       report SHALL record that fact and the fixture SHALL be produced
       from a documented dev workflow run with its provenance noted
-- [ ] The portability test enforces the no-project-imports condition
+- [x] The portability test enforces the no-project-imports condition
       mechanically (subprocess with a restricted environment or an
       import-hook assertion), not by convention
 
@@ -158,13 +158,32 @@ Feature: Checkpoint fixture portability
 
 Ticket created by planner.
 
+### 2026-06-12 (development)
+
+Implemented on docs/ae-0075-checkpoint-inventory. Checkpoints found in
+dev sqlite store (not postgres); fixture captured from latest thread.
+
 ## Files Touched
 
-Pending.
+- `docs/architecture/checkpoint-inventory.md` (new report)
+- `backend/tests/fixtures/checkpoints/carousel_checkpoint.msgpack.bin` + `.meta.json` (new fixture)
+- `backend/tests/features/checkpoint_fixture_portability.feature` (new)
+- `backend/tests/unit/test_checkpoint_fixture_portability.py` (new, 3 tests)
+- `.agent/reports/domain-modularization.options.md` (lock_version correction)
 
 ## Test Evidence
 
-Pending.
+```bash
+uv run pytest tests/unit/test_checkpoint_fixture_portability.py -q  # 3 passed
+uv run ruff check tests/unit/test_checkpoint_fixture_portability.py # clean
+```
+
+Store: sqlite 6,918 checkpoints / 67,705 writes / 1,636 threads; postgres
+has no checkpoint tables. Blob scan: 0 class-path markers anywhere.
+Subprocess decode asserts no rag_backend in sys.modules (mechanical).
+lock_version: carousel 1:23..18:1 (39 rows); blog_posts empty. Fixture
+manually scanned: no emails/URLs/credentials (strings scan).
+Verdict line in report: Serialization: PORTABLE.
 
 ## QA Report
 
@@ -172,7 +191,15 @@ Pending.
 
 ## Decision Log
 
-Pending.
+- Verdict PORTABLE → no escalation; finish-or-restart stands on
+  convenience, not necessity.
+- MAJOR CORRECTION surfaced: optimistic_lock_service.py EXISTS and is
+  active (partial coverage, 3 route callers). The plan's "dead column"
+  verification finding was wrong; plan annotated, Phase 2.5 scope
+  reduced to coverage extension. AE-0072/AE-0073 consume this via the
+  inventory report.
+- Drain cost: ~23 workflows with any finish cost, each 1-2 approval
+  clicks; full drain under an hour or restart-preferred for stale ones.
 
 ## Blockers
 
@@ -180,4 +207,8 @@ None.
 
 ## Final Summary
 
-Pending.
+Inventory complete with PORTABLE verdict, sanitized fixture +
+mechanical portability tests, lock_version distributions, live-workflow
+finish costs, and one major plan correction (optimistic locking exists
+with partial coverage). Both Phase 2.5 preconditions this ticket gates
+are now evidence-backed.
