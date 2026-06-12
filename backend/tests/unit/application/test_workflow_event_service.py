@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
+from structlog.testing import capture_logs
 
 from rag_backend.application.services.workflow_event_service import (
     WorkflowEventService,
@@ -24,6 +25,7 @@ from rag_backend.domain.constants.workflow_events import (
     EVENT_FIELD_TIMESTAMP,
     EVENT_FIELD_VERSION,
     EVENT_TYPE_PROJECT_PHASE_CHANGED,
+    SESSION_INFO_PENDING_EVENTS,
     STREAM_CONTENT_EVENTS,
 )
 from rag_backend.infrastructure.events.memory_event_publisher import (
@@ -107,6 +109,8 @@ async def test_rollback_publishes_nothing(db_session: AsyncSession) -> None:
     await drain_pending_publishes()
 
     assert get_memory_events() == []
+    # The rollback listener must clear the queue, not merely skip publish
+    assert SESSION_INFO_PENDING_EVENTS not in db_session.sync_session.info
     entries = await service.list_for_aggregate(
         db_session,
         _AggregateQuery(
@@ -138,12 +142,18 @@ async def test_publish_failure_after_commit_does_not_raise(
 ) -> None:
     """Scenario: Publish failure after commit does not break the request."""
     service = WorkflowEventService(_FailingPublisher())
-    await _emit_phase_change(service, db_session)
+    event_id = await _emit_phase_change(service, db_session)
 
     await db_session.commit()
-    await drain_pending_publishes()  # must swallow the transport failure
+    with capture_logs() as logs:
+        await drain_pending_publishes()  # must swallow the transport failure
 
     assert get_memory_events() == []
+    failures = [
+        entry for entry in logs if entry["event"] == "workflow_event_publish_failed"
+    ]
+    assert len(failures) == 1
+    assert failures[0]["event_id"] == event_id  # failure logged with event ID
     entries = await service.list_for_aggregate(
         db_session,
         _AggregateQuery(
@@ -152,6 +162,20 @@ async def test_publish_failure_after_commit_does_not_raise(
         ),
     )
     assert len(entries) == 1  # audit row survives a failed publish
+
+
+@pytest.mark.asyncio
+async def test_second_commit_does_not_republish(db_session: AsyncSession) -> None:
+    """Scenario: Event published only after commit (no duplicate on re-commit)."""
+    service = WorkflowEventService(MemoryEventPublisher())
+    await _emit_phase_change(service, db_session)
+
+    await db_session.commit()
+    await drain_pending_publishes()
+    await db_session.commit()  # a later, event-free commit on the same session
+    await drain_pending_publishes()
+
+    assert len(get_memory_events()) == 1  # queue was drained, not re-read
 
 
 @pytest.mark.asyncio

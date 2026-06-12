@@ -140,10 +140,11 @@ def _schedule_publish(pending: list[_PendingPublish]) -> None:
     """Run the post-commit publish as a tracked background task."""
     try:
         loop = asyncio.get_running_loop()
-    except RuntimeError:
-        logger.exception(
+    except RuntimeError as exc:
+        logger.warning(
             "workflow_event_publish_no_loop",
             dropped_events=len(pending),
+            error=str(exc),
         )
         return
     task = loop.create_task(_publish_events(pending))

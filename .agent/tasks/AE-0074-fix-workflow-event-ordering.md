@@ -1,6 +1,6 @@
 # AE-0074 — Fix workflow event ordering: persist and commit before Redis publish
 
-Status: Dev Complete
+Status: Review
 Tier: T2
 Priority: High
 Type: Bugfix
@@ -152,11 +152,11 @@ Feature: Workflow event emission is consistent with the database
 
 ## QA Checklist
 
-- [ ] Security reviewed
-- [ ] Code quality reviewed
-- [ ] Acceptance criteria validated
-- [ ] Edge cases tested
-- [ ] Orphan/unfinished code checked
+- [x] Security reviewed (OWASP lens; 0 blockers; log-leak suggestion fixed)
+- [x] Code quality reviewed (no new violations; pre-existing debt separated)
+- [x] Acceptance criteria validated (9/9 after fix round)
+- [x] Edge cases tested (stale queue, double commit, publish failure, log content)
+- [x] Orphan/unfinished code checked (accepted gaps documented)
 
 ## Progress Log
 
@@ -199,8 +199,10 @@ emit() call sites verified UNCHANGED (session-hook design needs none):
 ## Test Evidence
 
 ```bash
-uv run pytest -q                       # 1502 passed, 2 skipped
-uv run pytest tests/unit/application/test_workflow_event_service.py -q  # 6 passed
+uv run pytest -q                       # 1502 passed, 2 skipped (pre-QA run)
+uv run pytest tests/unit/application/test_workflow_event_service.py -q
+# 5 passed at dev complete (the original "6" was a reporting error QA
+# caught); 6 passed after the QA fix round added the duplicate-commit test
 cd src && uv run mypy rag_backend/ --explicit-package-bases  # clean, 367 files
 uv run ruff check src/ tests/          # All checks passed
 # Migration on dev Postgres (rag_db, 237 audit rows), offline SQL via docker exec:
@@ -211,9 +213,17 @@ uv run ruff check src/ tests/          # All checks passed
 
 Module coverage 96% (only the no-running-loop guard uncovered).
 
+QA fix round (post-review): rollback test asserts the session queue is
+cleared; publish-failure test asserts the structured log carries the
+event ID (capture_logs); duplicate-commit test proves drain-not-re-read;
+`logger.exception` → `logger.warning` in the no-loop guard.
+
 ## QA Report
 
-Pending.
+`.agent/reports/AE-0074.qa.md` — external OpenCode QA session
+(kimi-k2.6, read-only), verdict **WARN, 81/100 (B), zero blockers**;
+all actionable findings fixed same day (see post-QA addendum in the
+report). Status moved to Review per protocol (warnings only).
 
 ## Decision Log
 
