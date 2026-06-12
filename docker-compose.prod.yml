@@ -131,6 +131,7 @@ services:
     volumes:
       - clickhouse_data:/var/lib/clickhouse
       - ./clickhouse-config/docker_related_config.xml:/etc/clickhouse-server/config.d/docker_related_config.xml:ro
+      - ./clickhouse-config/low-memory.xml:/etc/clickhouse-server/config.d/low-memory.xml:ro
     environment:
       CLICKHOUSE_USER: langfuse
       CLICKHOUSE_PASSWORD: ${LANGFUSE_CLICKHOUSE_PASSWORD:-changeme}
@@ -151,8 +152,44 @@ services:
         max-size: "10m"
         max-file: "3"
 
+  minio:
+    image: minio/minio@sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e
+    command: server /data
+    environment:
+      MINIO_ROOT_USER: langfuse
+      MINIO_ROOT_PASSWORD: ${LANGFUSE_MINIO_PASSWORD:-changeme}
+    volumes:
+      - minio_data:/data
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  minio-init:
+    image: minio/minio@sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e
+    entrypoint:
+      - sh
+      - -c
+      - |
+        until mc alias set local http://minio:9000 langfuse "$$MINIO_ROOT_PASSWORD" 2>/dev/null; do sleep 2; done
+        mc mb -p local/langfuse-events
+    environment:
+      MINIO_ROOT_PASSWORD: ${LANGFUSE_MINIO_PASSWORD:-changeme}
+    depends_on:
+      minio:
+        condition: service_started
+    restart: "no"
+
   langfuse:
-    image: langfuse/langfuse:3
+    # Pinned: the floating :3 tag broke prod on 2026-06-12 when a new release
+    # changed ingestion requirements. Bump web + worker together, deliberately.
+    image: langfuse/langfuse:3.185
     ports:
       - "127.0.0.1:3001:3000"
     environment:
@@ -172,18 +209,68 @@ services:
       LANGFUSE_DEFAULT_PROJECT_ID: ${LANGFUSE_DEFAULT_PROJECT_ID:-default}
       LANGFUSE_DEFAULT_PROJECT_NAME: ${LANGFUSE_DEFAULT_PROJECT_NAME:-alter-ego}
       REDIS_CONNECTION_STRING: redis://redis:6379
-      LANGFUSE_S3_EVENT_UPLOAD_BUCKET: "none"
+      LANGFUSE_S3_EVENT_UPLOAD_BUCKET: langfuse-events
+      LANGFUSE_S3_EVENT_UPLOAD_REGION: us-east-1
+      LANGFUSE_S3_EVENT_UPLOAD_ACCESS_KEY_ID: langfuse
+      LANGFUSE_S3_EVENT_UPLOAD_SECRET_ACCESS_KEY: ${LANGFUSE_MINIO_PASSWORD:-changeme}
+      LANGFUSE_S3_EVENT_UPLOAD_ENDPOINT: http://minio:9000
+      LANGFUSE_S3_EVENT_UPLOAD_FORCE_PATH_STYLE: "true"
       TELEMETRY_ENABLED: "false"
     depends_on:
       postgres:
         condition: service_healthy
       langfuse-db-init:
         condition: service_completed_successfully
+      minio-init:
+        condition: service_completed_successfully
       clickhouse:
         condition: service_started
       redis:
         condition: service_started
     restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  langfuse-worker:
+    # Required: the worker consumes the Redis ingestion queue and writes traces
+    # to ClickHouse. Without it, ingested events never become visible traces.
+    image: langfuse/langfuse-worker:3.185
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-rag_user}:${POSTGRES_PASSWORD:-rag_password}@postgres:5432/langfuse
+      SALT: ${LANGFUSE_SALT:-}
+      ENCRYPTION_KEY: ${LANGFUSE_ENCRYPTION_KEY:-}
+      CLICKHOUSE_URL: http://clickhouse:8123
+      CLICKHOUSE_MIGRATION_URL: clickhouse://langfuse:${LANGFUSE_CLICKHOUSE_PASSWORD:-changeme}@clickhouse:9000
+      CLICKHOUSE_USER: langfuse
+      CLICKHOUSE_PASSWORD: ${LANGFUSE_CLICKHOUSE_PASSWORD:-changeme}
+      CLICKHOUSE_CLUSTER_ENABLED: "false"
+      REDIS_CONNECTION_STRING: redis://redis:6379
+      LANGFUSE_S3_EVENT_UPLOAD_BUCKET: langfuse-events
+      LANGFUSE_S3_EVENT_UPLOAD_REGION: us-east-1
+      LANGFUSE_S3_EVENT_UPLOAD_ACCESS_KEY_ID: langfuse
+      LANGFUSE_S3_EVENT_UPLOAD_SECRET_ACCESS_KEY: ${LANGFUSE_MINIO_PASSWORD:-changeme}
+      LANGFUSE_S3_EVENT_UPLOAD_ENDPOINT: http://minio:9000
+      LANGFUSE_S3_EVENT_UPLOAD_FORCE_PATH_STYLE: "true"
+      TELEMETRY_ENABLED: "false"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      langfuse-db-init:
+        condition: service_completed_successfully
+      minio-init:
+        condition: service_completed_successfully
+      clickhouse:
+        condition: service_started
+      redis:
+        condition: service_started
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 768M
     logging:
       driver: "json-file"
       options:
@@ -197,3 +284,4 @@ volumes:
   certbot_data:
   certbot_www:
   carousel_output:
+  minio_data:

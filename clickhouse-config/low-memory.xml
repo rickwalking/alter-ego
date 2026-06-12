@@ -1,0 +1,24 @@
+<clickhouse>
+    <!-- Disable ClickHouse self-instrumentation logs: on this constrained host
+         system.text_log alone grew to 10GB / 180M rows in 9 days and caused
+         constant merge + memory pressure (inserts and UI queries OOMed against
+         the 1.5G container limit). Langfuse does not need these tables. -->
+    <text_log remove="1"/>
+    <metric_log remove="1"/>
+    <asynchronous_metric_log remove="1"/>
+    <trace_log remove="1"/>
+    <query_thread_log remove="1"/>
+    <processors_profile_log remove="1"/>
+    <error_log remove="1"/>
+    <query_metric_log remove="1"/>
+    <latency_log remove="1"/>
+    <part_log remove="1"/>
+    <opentelemetry_span_log remove="1"/>
+    <!-- Small caches: total Langfuse data is tiny; defaults assume multi-GB hosts.
+         Do NOT set background_pool_size below 8 — it trips the MergeTree
+         sanityCheck and crash-loops the server. -->
+    <mark_cache_size>67108864</mark_cache_size>
+    <index_mark_cache_size>16777216</index_mark_cache_size>
+    <uncompressed_cache_size>0</uncompressed_cache_size>
+    <max_server_memory_usage_to_ram_ratio>0.8</max_server_memory_usage_to_ram_ratio>
+</clickhouse>

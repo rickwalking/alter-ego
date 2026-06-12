@@ -119,13 +119,14 @@ jobs:
             LANGFUSE_NEXTAUTH_SECRET=${{ secrets.LANGFUSE_NEXTAUTH_SECRET }}
             LANGFUSE_ENCRYPTION_KEY=${{ secrets.LANGFUSE_ENCRYPTION_KEY }}
             LANGFUSE_CLICKHOUSE_PASSWORD=${{ secrets.LANGFUSE_CLICKHOUSE_PASSWORD }}
+            LANGFUSE_MINIO_PASSWORD=${{ secrets.LANGFUSE_MINIO_PASSWORD }}
             WRITING_STYLE_URLS=${{ secrets.WRITING_STYLE_URLS }}
             ALLOWED_ORIGINS=https://marinssolutions.com
             EOF
 
             # Langfuse env must never be blank — a blank SALT/ENCRYPTION_KEY
             # invalidates all API keys and encrypted data on container recreate.
-            for var in LANGFUSE_SALT LANGFUSE_NEXTAUTH_SECRET LANGFUSE_ENCRYPTION_KEY LANGFUSE_CLICKHOUSE_PASSWORD LANGFUSE_SECRET_KEY LANGFUSE_PUBLIC_KEY; do
+            for var in LANGFUSE_SALT LANGFUSE_NEXTAUTH_SECRET LANGFUSE_ENCRYPTION_KEY LANGFUSE_CLICKHOUSE_PASSWORD LANGFUSE_MINIO_PASSWORD LANGFUSE_SECRET_KEY LANGFUSE_PUBLIC_KEY; do
               if ! grep -q "^${var}=..*" .env; then
                 echo "ERROR: ${var} is empty. Set the ${var} GitHub Secret before deploying."
                 exit 1
