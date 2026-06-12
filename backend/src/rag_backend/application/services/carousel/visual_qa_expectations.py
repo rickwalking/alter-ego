@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import cast
 
 from rag_backend.application.services.carousel.artifact_manifest import (
     CarouselArtifactManifestPayload,
@@ -88,7 +87,7 @@ def expectations_from_manifest_payload(
 ) -> VisualQaExpectations:
     """Build expectations from artifact-manifest.json payload."""
     manifest = manifest_from_payload(
-        cast(CarouselArtifactManifestPayload, payload),
+        CarouselArtifactManifestPayload.model_validate(payload),
     )
     slide_count = len(manifest.expected_slide_numbers)
     width: int

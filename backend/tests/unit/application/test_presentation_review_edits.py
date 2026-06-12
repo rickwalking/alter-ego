@@ -3,6 +3,9 @@
 Feature: Versioned carousel presentation contract
 Scenario: Reviewer edits are merged, re-validated, and propagated to drafts
 Scenario: Invalid edits keep approval blocked
+
+Feature: Null-safe draft edits (see features/carousel_null_safety.feature)
+Scenario: Nullable locale values are guarded before assignment
 """
 
 from __future__ import annotations
@@ -15,6 +18,9 @@ from rag_backend.application.services.carousel.presentation_review import (
     WORKFLOW_STATE_TRANSLATIONS_EN_KEY,
 )
 from rag_backend.application.services.carousel.presentation_review_edits import (
+    _apply_edits_to_drafts,
+    _locale_heading_body,
+    _safe_str,
     apply_localized_slide_edits,
     edited_slides_block_approval,
     merge_localized_slide_edits,
@@ -150,3 +156,47 @@ class TestEditedSlidesBlockApproval:
             )
             is True
         )
+
+
+@pytest.mark.unit
+class TestSafeStr:
+    def test_none_returns_default(self) -> None:
+        assert _safe_str(None) == ""
+
+    def test_none_returns_custom_default(self) -> None:
+        assert _safe_str(None, "fallback") == "fallback"
+
+    def test_value_is_stringified(self) -> None:
+        assert _safe_str(42) == "42"
+        assert _safe_str("text") == "text"
+
+
+@pytest.mark.unit
+class TestLocaleHeadingBody:
+    def test_none_payload_returns_empty_strings(self) -> None:
+        assert _locale_heading_body(None) == ("", "")
+
+    def test_explicit_none_values_do_not_become_literal_none(self) -> None:
+        # Guard clause: a None value must not stringify to "None".
+        payload: dict[str, object] = {"heading": None, "body": None}
+        assert _locale_heading_body(payload) == ("", "")
+
+    def test_present_values_are_returned(self) -> None:
+        payload: dict[str, object] = {"heading": "H", "body": "B"}
+        assert _locale_heading_body(payload) == ("H", "B")
+
+
+@pytest.mark.unit
+class TestApplyEditsToDrafts:
+    def test_non_dict_drafts_are_skipped(self) -> None:
+        # Guard clause: only dict drafts are processed.
+        drafts: list[dict[str, object]] = [{"slide_index": 1, "title": "Keep"}]
+        result = _apply_edits_to_drafts(drafts, {})
+        assert result == [{"slide_index": 1, "title": "Keep"}]
+
+    def test_missing_localized_entry_copies_draft_unchanged(self) -> None:
+        # Guard clause: localized is None -> draft copied as-is.
+        drafts: list[dict[str, object]] = [{"slide_index": 5, "title": "Untouched"}]
+        result = _apply_edits_to_drafts(drafts, {})
+        assert result[0]["title"] == "Untouched"
+        assert result[0] is not drafts[0]  # defensive copy
