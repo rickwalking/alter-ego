@@ -1,6 +1,6 @@
 # AE-0042 — Null-Safety and Exception Suppression
 
-Status: Intake
+Status: Dev Complete
 Tier: T2
 Priority: High
 Type: Task
@@ -148,11 +148,16 @@ Ticket created.
 
 ## Files Touched
 
-Pending.
+- artifact_manifest.py, presentation_review_edits.py, image_generation_records.py
+- call-sites: artifact_health.py, visual_qa_expectations.py, artifact_build_support.py
+- tests: test_artifact_manifest_null_safety.py (new) + 2 updated + carousel_null_safety.feature
 
 ## Test Evidence
 
-Pending.
+```
+mypy strict: Success, 0 issues (389 files)
+pytest: 1535 passed, 2 skipped (+19 tests)
+```
 
 ## QA Report
 

@@ -1,6 +1,6 @@
 # AE-0049 — CI Gate Improvements
 
-Status: Intake
+Status: Dev Complete
 Tier: T2
 Priority: Medium
 Type: Task
@@ -148,11 +148,17 @@ Ticket created.
 
 ## Files Touched
 
-Pending.
+- .github/workflows/backend-quality-gates.yml, mutation-weekly.yml (new)
+- scripts/ci/ruff-strict-changed.sh, mutation-score-gate.sh (new)
+- docs/guides/qa-checkpoints.md
 
 ## Test Evidence
 
-Pending.
+```
+yaml.safe_load: all 5 workflows parse; bash -n clean
+pytest: 1547 passed, 2 skipped
+.importlinter: untouched (AE-0078 baseline)
+```
 
 ## QA Report
 

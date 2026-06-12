@@ -1,6 +1,6 @@
 # AE-0043 — Segregate Overloaded Functions
 
-Status: Intake
+Status: Dev Complete
 Tier: T2
 Priority: Medium
 Type: Task
@@ -148,11 +148,16 @@ Ticket created.
 
 ## Files Touched
 
-Pending.
+- artifact_path_resolver.py (deprecation alias)
+- tests: test_artifact_path_resolver.py (new, 12 tests)
 
 ## Test Evidence
 
-Pending.
+```
+mypy strict: Success, 0 issues (389 files)
+pytest: 1547 passed, 2 skipped (+12 tests)
+coverage: artifact_manifest 96%, artifact_path_resolver 73%, editorial_distribution_persist 76%
+```
 
 ## QA Report
 

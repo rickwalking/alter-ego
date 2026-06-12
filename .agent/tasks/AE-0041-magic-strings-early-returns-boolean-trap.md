@@ -1,6 +1,6 @@
 # AE-0041 — Magic Strings, Early Returns, Boolean Trap
 
-Status: Intake
+Status: Dev Complete
 Tier: T2
 Priority: High
 Type: Task
@@ -162,11 +162,17 @@ Ticket created.
 
 ## Files Touched
 
-Pending.
+- domain/constants/creator_asset.py, workflow_state_fields.py (new)
+- creator_asset_validation.py, editorial_workflow_routes_response.py
+- scripts/regenerate_carousel_presentation.py, repair_workflow_malformed_drafts.py
 
 ## Test Evidence
 
-Pending.
+```
+ruff S,ERA,FBT: All checks passed
+mypy strict: Success, 0 issues (389 files)
+pytest: 1547 passed, 2 skipped
+```
 
 ## QA Report
 
