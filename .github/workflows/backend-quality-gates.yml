@@ -389,6 +389,29 @@ jobs:
           DATABASE_URL: postgresql+asyncpg://test:test@localhost:5432/rag_migrations
         run: uv run alembic upgrade head
 
+      - name: alembic schema-drift check (autogenerate must be empty)
+        # AE-0086: after upgrade head the DB schema must equal Base.metadata, so
+        # autogenerate produces NO operations. A non-empty diff means a model
+        # changed without regenerating the baseline (the create_all-vs-baseline
+        # drift guard). Fails the gate and prints the offending ops.
+        timeout-minutes: 5
+        env:
+          DATABASE_URL: postgresql+asyncpg://test:test@localhost:5432/rag_migrations
+        run: |
+          before=$(ls alembic/versions/*.py 2>/dev/null | sort)
+          uv run alembic revision --autogenerate -m _driftcheck >/dev/null
+          new=$(comm -13 <(printf '%s\n' "$before") <(ls alembic/versions/*.py | sort))
+          if [ -z "$new" ]; then
+            echo "::error::drift check could not generate a revision"; exit 1
+          fi
+          if grep -Eq '^\s*op\.' "$new"; then
+            echo "::error::Schema drift: models differ from the alembic baseline. Regenerate the baseline (AE-0086 procedure in backend/alembic/README.md)."
+            grep -E '^\s*op\.' "$new" || true
+            rm -f "$new"; exit 1
+          fi
+          rm -f "$new"
+          echo "OK: autogenerate diff is empty (baseline == Base.metadata)"
+
       - name: alembic downgrade base round-trip (bounded)
         timeout-minutes: 5
         env:

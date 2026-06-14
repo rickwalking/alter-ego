@@ -566,6 +566,8 @@ crashing when `origin/main` is unavailable).
 
 ### Fresh-DB Migration Gate (Backend) — AE-0084
 
+- **Schema-drift check (AE-0086):** after `upgrade head`, CI runs `alembic revision --autogenerate` and fails if the diff is non-empty — enforcing that the squashed baseline stays equal to `Base.metadata` while startup still uses `create_all`. A broken/out-of-order/non-reversible revision fails the gate inherently (non-zero alembic exit); regenerate the baseline per `backend/alembic/README.md`.
+
 The `backend / Migrations (fresh DB)` job guards the Alembic migration chain.
 It provisions an **ephemeral, empty** `postgres:16-alpine` service (no app
 state, no prior migrations) and runs the full chain from scratch.
