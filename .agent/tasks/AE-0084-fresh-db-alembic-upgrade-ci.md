@@ -1,6 +1,6 @@
 # AE-0084 — Fresh-database `alembic upgrade head` CI job
 
-Status: Dev Complete
+Status: Review
 Tier: T2
 Priority: Medium
 Type: Task
@@ -99,11 +99,11 @@ Feature: Migrations apply from scratch
 
 ## QA Checklist
 
-- [ ] Security reviewed
-- [ ] Code quality reviewed
-- [ ] Acceptance criteria validated
-- [ ] Edge cases tested
-- [ ] Orphan/unfinished code checked
+- [x] Security reviewed
+- [x] Code quality reviewed
+- [x] Acceptance criteria validated
+- [x] Edge cases tested
+- [x] Orphan/unfinished code checked
 
 ## Progress Log
 
@@ -124,7 +124,7 @@ fresh DB upgrade head + downgrade base exit 0 (post AE-0086); yaml parses; pytes
 
 ## QA Report
 
-Pending.
+✅ PASS — Phase 1 migration QA (WARN→fix→PASS, 2 passes). See `.agent/reports/AE-0084.qa.md` -> `.agent/reports/phase-1-migration.qa.md`.
 
 ## Decision Log
 

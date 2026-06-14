@@ -1,6 +1,6 @@
 # AE-0086 — Baseline initial Alembic migration (self-contained chain)
 
-Status: Dev Complete
+Status: Review
 Tier: T2
 Priority: High
 Type: Task
@@ -109,11 +109,11 @@ Feature: Self-contained migration chain
 
 ## QA Checklist
 
-- [ ] Security reviewed
-- [ ] Code quality reviewed
-- [ ] Acceptance criteria validated
-- [ ] Edge cases tested
-- [ ] Orphan/unfinished code checked
+- [x] Security reviewed
+- [x] Code quality reviewed
+- [x] Acceptance criteria validated
+- [x] Edge cases tested
+- [x] Orphan/unfinished code checked
 
 ## Progress Log
 
@@ -135,7 +135,7 @@ alembic heads: single head; fresh DB upgrade head + downgrade base exit 0; empty
 
 ## QA Report
 
-Pending.
+✅ PASS — Phase 1 migration QA (WARN→fix→PASS, 2 passes). See `.agent/reports/AE-0086.qa.md` -> `.agent/reports/phase-1-migration.qa.md`.
 
 ## Decision Log
 

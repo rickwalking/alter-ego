@@ -49,3 +49,17 @@ DATABASE_URL=... uv run alembic revision --autogenerate -m "describe change"
 
 Review the generated file (FK-dependent table order, server defaults, indexes), then
 `alembic upgrade head`. A fresh-DB `upgrade head` + `downgrade base` round-trip must stay green.
+
+## Regenerating the baseline (after a model change)
+
+The squashed baseline must equal `Base.metadata`. The CI migrations job enforces this
+(schema-drift check: a non-empty `alembic revision --autogenerate` after `upgrade head`
+fails the gate). When you intentionally change a model:
+
+1. Spin a fresh empty Postgres and point `DATABASE_URL` at it.
+2. `cd backend && uv run alembic upgrade head` (builds the current baseline schema).
+3. `uv run alembic revision --autogenerate -m "<change>"` — this emits ONLY the delta.
+4. Either keep that delta as a new incremental migration on top of the baseline, OR (for a
+   pre-production reset) regenerate a fresh single baseline from an empty DB and re-archive.
+5. Verify: `upgrade head` + `downgrade base` round-trip clean AND a second autogenerate is empty.
+6. Existing dev DBs: `alembic stamp head` (schema already matches via startup `create_all`).
