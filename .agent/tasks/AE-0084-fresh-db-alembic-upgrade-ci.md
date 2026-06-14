@@ -1,6 +1,6 @@
 # AE-0084 — Fresh-database `alembic upgrade head` CI job
 
-Status: Blocked
+Status: Dev Complete
 Tier: T2
 Priority: Medium
 Type: Task
@@ -88,7 +88,7 @@ Feature: Migrations apply from scratch
 ## Dependencies
 
 - Blocks: none
-- Blocked by: AE-0086 (chain must be self-contained before the fresh-DB gate can pass)
+- Blocked by: none (AE-0086 landed — chain self-contained)
 - Related: AE-0049
 
 ## Implementation Plan
@@ -113,11 +113,14 @@ Ticket created by planner (Phase 1 epic breakdown).
 
 ## Files Touched
 
-Pending.
+- .github/workflows/backend-quality-gates.yml (migrations job)
+- docs/guides/qa-checkpoints.md
 
 ## Test Evidence
 
-Pending.
+```
+fresh DB upgrade head + downgrade base exit 0 (post AE-0086); yaml parses; pytest 1662
+```
 
 ## QA Report
 
@@ -129,7 +132,7 @@ Pending.
 
 ## Blockers
 
-Blocked by AE-0086: `alembic upgrade head` fails from empty DB (base tables created via create_all, not migrations). Job + docs implemented and committed; AC3 (clean chain passes) cannot be met until AE-0086 lands.
+None (resolved by AE-0086).
 
 ## Final Summary
 
