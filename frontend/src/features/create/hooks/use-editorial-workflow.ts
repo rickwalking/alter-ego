@@ -11,7 +11,6 @@ import {
 import { WORKFLOW_PHASE_STATUS } from "@/constants/workflow";
 import type { EditorialWorkflowState } from "@/features/blog/types-ai";
 import { authenticatedFetch } from "@/lib/authenticated-fetch";
-import { resolveClientApiUrl } from "@/lib/client-api-url";
 import {
   appendUniquePhase,
   readApiError,
@@ -47,7 +46,7 @@ export function useEditorialWorkflow(projectId: string) {
     useCallback(async (): Promise<EditorialWorkflowState | null> => {
       try {
         const response = await authenticatedFetch(
-          resolveClientApiUrl(API_ENDPOINTS.CAROUSEL_WORKFLOW_STATE(projectId)),
+          API_ENDPOINTS.CAROUSEL_WORKFLOW_STATE(projectId),
         );
         if (response.status === HTTP_STATUS.NOT_FOUND) {
           return null;
