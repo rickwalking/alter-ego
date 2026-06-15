@@ -49,10 +49,6 @@ from rag_backend.application.services.carousel.types import (
     short_scene,
     style_display_name,
 )
-from rag_backend.application.services.image_provider_registry import (
-    ImageProvider,
-    ImageProviderRegistry,
-)
 from rag_backend.domain.constants import (
     CAROUSEL_STATUS_GENERATING_IMAGES,
     SLIDE_TYPE_CLOSING,
@@ -67,6 +63,10 @@ from rag_backend.infrastructure.external.openai_image import (
     _openai_status_error_detail,
 )
 from rag_backend.infrastructure.logging import get_logger
+from rag_backend.modules.presentation import (
+    ImageProvider,
+    ImageProviderPort,
+)
 
 logger = get_logger()
 
@@ -95,7 +95,7 @@ class ImageGenerationConfig:
     slide: SlideData | None = None
     output_dir: Path | None = None
     repo: CarouselRepository | None = None
-    image_registry: ImageProviderRegistry | None = None
+    image_registry: ImageProviderPort | None = None
 
 
 @dataclass(frozen=True)

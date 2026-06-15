@@ -1,6 +1,6 @@
 # AE-0119 — Image-provider ports + adapters (registry + OpenAI/Gemini behind ports)
 
-Status: Ready
+Status: Dev Complete
 Tier: T2
 Priority: High
 Type: Task
@@ -101,9 +101,11 @@ Not applicable — behavior-preserving port extraction; verified by registry/ada
 
 Ticket created by planner (Phase 5 breakdown).
 
+Dev Complete (Wave B). ImageGenerationService/ImageProviderPort + OpenAI/Gemini adapters (vendor SDK stays in infrastructure); registry behavior unchanged; nodes/images.py typed against the port; 22 fake-provider tests. mypy 494, lint-imports 16/0, check-integrity 0 blockers, 811 regression tests pass; no new suppressions.
+
 ## Files Touched
 
-Pending.
+modules/presentation/domain/ports.py, modules/presentation/infrastructure/image_provider_adapters.py (new), modules/presentation/{public,__init__,infrastructure/__init__}.py, application/services/image_provider_registry.py (docstring), application/services/carousel/nodes/images.py (typed to port), tests/unit/modules/presentation/test_image_provider_ports.py
 
 ## Test Evidence
 

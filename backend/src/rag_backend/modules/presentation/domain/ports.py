@@ -9,6 +9,15 @@ The presentation ports are:
   (slide budgets, geometry, fonts) the renderer/validator enforces.
 * ``SlideValidationPort`` — validating per-slide presentation copy against the
   active policy and returning a structured validation report.
+* ``ImageGenerationService`` / ``ImageStyleStrategy`` — the per-vendor image
+  generation + style-wrapping contracts (re-exported, object-identity shims from
+  the shared ``domain.protocols``; see below). The concrete vendor adapters
+  (OpenAI / Gemini) implement ``ImageGenerationService``; vendor SDK imports stay
+  in the adapter/infrastructure layer.
+* ``ImageProviderPort`` — the image-provider registry contract: resolve an
+  ``(image_model, image_style)`` preset to a configured :class:`ImageProvider`
+  (a service + style-strategy pair). The application layer (carousel image
+  nodes) depends only on this port, never on a concrete vendor SDK.
 
 Per backend/CLAUDE.md, interfaces are :class:`typing.Protocol`, never ABCs, and
 they are fully typed (no ``Any``). These Protocols let the presentation
@@ -32,6 +41,11 @@ from __future__ import annotations
 
 from typing import Protocol, runtime_checkable
 
+from rag_backend.application.services.image_provider_registry import ImageProvider
+from rag_backend.domain.protocols.carousel import (
+    ImageGenerationService,
+    ImageStyleStrategy,
+)
 from rag_backend.domain.protocols.repositories import CarouselRepository
 from rag_backend.modules.presentation.domain.models import (
     CarouselPresentationPolicy,
@@ -70,8 +84,32 @@ class SlideValidationPort(Protocol):
         ...
 
 
+@runtime_checkable
+class ImageProviderPort(Protocol):
+    """Resolve an ``(image_model, image_style)`` preset to an image provider.
+
+    The image-provider registry contract: the single source of truth for which
+    ``(model, style)`` combinations are supported and which configured
+    :class:`ImageProvider` (vendor service + style strategy) backs each. The
+    presentation application layer (the carousel image nodes) depends only on
+    this port — never on a concrete vendor SDK — so the OpenAI / Gemini adapters
+    can be swapped without touching the pipeline. The concrete implementation
+    (``ImageProviderRegistry``) preserves the exact resolve behavior, the
+    supported combos, and the prompt-package metadata.
+    """
+
+    def resolve(self, model: str, style: str) -> ImageProvider:
+        """Return the configured provider for the preset, or raise on an
+        unsupported / unregistered ``(model, style)`` combo."""
+        ...
+
+
 __all__ = [
     "CarouselRepository",
+    "ImageGenerationService",
+    "ImageProvider",
+    "ImageProviderPort",
+    "ImageStyleStrategy",
     "PresentationPolicyPort",
     "SlideValidationPort",
 ]

@@ -25,6 +25,13 @@ The facade exposes:
   object-identity shim);
 * ``PresentationPolicyPort`` / ``SlideValidationPort`` — the presentation
   provider ports (new Protocols);
+* ``ImageGenerationService`` / ``ImageStyleStrategy`` / ``ImageProvider`` /
+  ``ImageProviderPort`` — the image-generation ports + value object (AE-0119):
+  the per-vendor generation/style contracts (re-exported object-identity shims),
+  the provider value object, and the registry contract; the concrete vendor
+  adapters (``OpenAIImageService`` / ``GeminiImageService``) and the
+  ``ImageProviderRegistry`` implement them. Vendor SDK imports stay in the
+  adapter layer;
 * ``PresentationWriteOwner`` / ``PresentationPersistenceAcl`` /
   ``PresentationProjectView`` — the AE-0118 presentation persistence seam: the
   single writer of the presentation columns + slide rows (and the owner of the
@@ -69,10 +76,17 @@ from rag_backend.modules.presentation.domain.models import (
 )
 from rag_backend.modules.presentation.domain.ports import (
     CarouselRepository,
+    ImageGenerationService,
+    ImageProvider,
+    ImageProviderPort,
+    ImageStyleStrategy,
     PresentationPolicyPort,
     SlideValidationPort,
 )
 from rag_backend.modules.presentation.infrastructure import (
+    GeminiImageService,
+    ImageProviderRegistry,
+    OpenAIImageService,
     PresentationPersistenceAcl,
     PresentationProjectView,
     PresentationWriteOwner,
@@ -87,7 +101,14 @@ __all__ = [
     "DesignPolicy",
     "DesignTokens",
     "FontPolicy",
+    "GeminiImageService",
     "GeometryBudget",
+    "ImageGenerationService",
+    "ImageProvider",
+    "ImageProviderPort",
+    "ImageProviderRegistry",
+    "ImageStyleStrategy",
+    "OpenAIImageService",
     "PresentationAdapters",
     "PresentationModule",
     "PresentationPersistenceAcl",

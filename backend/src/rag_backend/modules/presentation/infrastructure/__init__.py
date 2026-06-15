@@ -14,10 +14,23 @@ persistence seam:
 
 The generic carousel persistence adapter is NOT relocated; it remains at its
 legacy location and is supplied to the module's ``bootstrap_module`` by the
-inbound edge as the re-exported ``CarouselRepository`` port. The presentation
-policy loader / slide-validation adapter arrive in AE-0119.
+inbound edge as the re-exported ``CarouselRepository`` port.
+
+As of AE-0119 this layer also holds the image-provider adapters
+(:class:`OpenAIImageService` / :class:`GeminiImageService`, implementing the
+``ImageGenerationService`` port, and :class:`ImageProviderRegistry`, implementing
+the ``ImageProviderPort`` registry contract). These are re-exported from their
+legacy locations (object-identity shims); the vendor SDK imports stay inside the
+wrapped ``infrastructure.external.*`` classes, never in the presentation
+application/domain layers.
 """
 
+from rag_backend.modules.presentation.infrastructure.image_provider_adapters import (
+    GeminiImageService,
+    ImageProvider,
+    ImageProviderRegistry,
+    OpenAIImageService,
+)
 from rag_backend.modules.presentation.infrastructure.presentation_acl import (
     PresentationPersistenceAcl,
     PresentationProjectView,
@@ -27,6 +40,10 @@ from rag_backend.modules.presentation.infrastructure.presentation_write_owner im
 )
 
 __all__ = [
+    "GeminiImageService",
+    "ImageProvider",
+    "ImageProviderRegistry",
+    "OpenAIImageService",
     "PresentationPersistenceAcl",
     "PresentationProjectView",
     "PresentationWriteOwner",

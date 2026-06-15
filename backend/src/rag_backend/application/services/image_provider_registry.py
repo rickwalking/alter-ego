@@ -52,6 +52,14 @@ class ImageProviderRegistry:
     so the registry constructs them internally — one per supported combo.
     A combo outside `SUPPORTED_IMAGE_COMBOS` raises `ValueError`; API
     validation should have caught it first, but we defend in depth.
+
+    This class is the concrete implementation of the presentation module's
+    ``ImageProviderPort`` (``rag_backend.modules.presentation.domain.ports``):
+    it structurally satisfies that Protocol via :meth:`resolve`, so the
+    presentation application layer can depend on the port while keeping this
+    registry the single source of truth for the supported combos. The
+    relationship is structural (Protocol) rather than nominal to avoid an
+    import cycle — the port re-exports :class:`ImageProvider` from here.
     """
 
     def __init__(
