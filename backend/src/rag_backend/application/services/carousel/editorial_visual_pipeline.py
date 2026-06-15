@@ -8,6 +8,9 @@ from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from rag_backend.application.services.carousel.editorial_progress_reporter import (
+    EditorialProgressReporter,
+)
 from rag_backend.application.services.carousel.nodes.design import run_design
 from rag_backend.application.services.carousel.nodes.images import (
     ImageGenerationConfig,
@@ -146,6 +149,10 @@ async def generate_carousel_images(
             output_dir=output_dir,
             repo=repo,
             image_registry=ctx.image_registry,
+            # AE-0121: editorial owns the workflow ``phase_progress`` write + SSE;
+            # the presentation image node reports progress through this callback
+            # instead of writing workflow state itself.
+            progress_port=EditorialProgressReporter(repo, project),
         )
     )
     return await _collect_generated_image_paths(repo, project.id, output_dir)

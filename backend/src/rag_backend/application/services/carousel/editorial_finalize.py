@@ -8,10 +8,6 @@ from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.application.services.carousel.artifact_build_service import (
-    ArtifactBuildFailure,
-    ArtifactBuildRequest,
-    CarouselArtifactBuildService,
-    read_project_lock_version,
     update_project_pdf_paths,
 )
 from rag_backend.application.services.carousel.artifact_health import (
@@ -32,11 +28,17 @@ from rag_backend.infrastructure.database.carousel_repository import (
     PostgresCarouselRepository,
 )
 from rag_backend.infrastructure.logging import get_logger
+from rag_backend.modules.presentation import (
+    ArtifactActivation,
+    CarouselArtifactBuildAdapter,
+)
 
 logger = get_logger()
 
 _ERR_PROJECT_MISSING = "carousel project not found during finalize"
 _ERR_OUTPUT_DIR_MISSING = "carousel output_dir missing during finalize"
+# Defensive: a successful (no-errors) build path must yield an activation result.
+_ERR_BUILD_RESULT_MISSING = "artifact build returned no activation despite no errors"
 
 
 @dataclass(frozen=True)
@@ -133,31 +135,29 @@ async def _try_build_artifacts(
     db: AsyncSession,
     repo: PostgresCarouselRepository,
     target: _BuildTarget,
-) -> tuple[tuple[str, ...], CarouselArtifactHealthReport | None, object | None]:
-    source_lock_version = await read_project_lock_version(db, target.project_id)
-    slides = await repo.get_slides_by_project(UUID(target.project_id))
-    build_result = await CarouselArtifactBuildService().build_and_activate(
-        db,
-        ArtifactBuildRequest(
-            project=target.updated,
-            slides=slides,
-            source_lock_version=source_lock_version,
-            prior_artifact_version=target.updated.artifact_version,
-        ),
-    )
-    if not isinstance(build_result, ArtifactBuildFailure):
-        return (), None, build_result
-    if ERR_ARTIFACT_BUILD_CONFLICT not in build_result.errors:
-        error_message = format_artifact_health_errors(build_result.errors)
+) -> tuple[
+    tuple[str, ...], CarouselArtifactHealthReport | None, ArtifactActivation | None
+]:
+    # AE-0121: the artifact build/activation is a PRESENTATION operation invoked
+    # through the presentation public facade (editorial → presentation). The
+    # adapter delegates UNCHANGED to CarouselArtifactBuildService.build_and_activate,
+    # so the compound artifact_version ↔ lock_version CAS, the source-lock-version
+    # read, and the slide load are byte-identical to the legacy direct call.
+    adapter = CarouselArtifactBuildAdapter(db, repo)
+    activation = await adapter.build_and_activate(target.project_id)
+    if activation.ok:
+        return (), None, activation
+    if ERR_ARTIFACT_BUILD_CONFLICT not in activation.errors:
+        error_message = format_artifact_health_errors(activation.errors)
         target.updated.mark_failed(error_message)
         await repo.update_project(target.updated)
     else:
         logger.warning(
             "editorial_finalize_artifact_conflict",
             project_id=target.project_id,
-            artifact_version=build_result.artifact_version,
+            artifact_version=activation.artifact_version,
         )
-    return build_result.errors, None, None
+    return activation.errors, None, None
 
 
 async def export_and_complete_carousel(
@@ -179,7 +179,7 @@ async def export_and_complete_carousel(
     if not errors:
         errors, artifact_report = await _verify_artifacts(repo, project_id, updated)
 
-    build_result: object | None = None
+    build_result: ArtifactActivation | None = None
     if not errors:
         errors, artifact_report, build_result = await _try_build_artifacts(
             db,
@@ -194,7 +194,9 @@ async def export_and_complete_carousel(
             artifact_report=artifact_report,
         )
 
-    updated.artifact_version = build_result.artifact_version  # type: ignore[union-attr]
+    if build_result is None:
+        raise RuntimeError(_ERR_BUILD_RESULT_MISSING)
+    updated.artifact_version = build_result.artifact_version
     update_project_pdf_paths(updated)
     # AE-0107 boundary: the terminal-finalization write persists the WO fields
     # (status/error_message) ATOMICALLY with the deferred Phase-5 presentation

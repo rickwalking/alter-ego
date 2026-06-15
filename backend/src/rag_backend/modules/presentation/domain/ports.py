@@ -39,6 +39,7 @@ layer also exposes it as its own port. This mirrors
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from typing import Protocol, runtime_checkable
 
 from rag_backend.application.services.image_provider_registry import ImageProvider
@@ -47,6 +48,12 @@ from rag_backend.domain.protocols.carousel import (
     ImageStyleStrategy,
 )
 from rag_backend.domain.protocols.repositories import CarouselRepository
+from rag_backend.modules.presentation.domain.contracts import (
+    ArtifactActivation,
+    ProducedArtifact,
+    ProduceFormat,
+    ProgressSnapshot,
+)
 from rag_backend.modules.presentation.domain.models import (
     CarouselPresentationPolicy,
     SlideValidationReport,
@@ -104,12 +111,108 @@ class ImageProviderPort(Protocol):
         ...
 
 
+@runtime_checkable
+class WorkflowProgressPort(Protocol):
+    """Report an image-generation progress snapshot BACK to editorial (callback).
+
+    This is the presentation → editorial **callback port** (AE-0121). The image
+    node generates images (a presentation concern) but ``phase_progress`` is a
+    WORKFLOW-owned column (AE-0105 §2.3) — presentation must NOT write it. Instead
+    the node hands a :class:`ProgressSnapshot` to this port; the EDITORIAL side
+    implements it and performs the byte-identical ``phase_progress`` persist + SSE
+    emission. The Protocol is defined HERE (in presentation) so the presentation
+    image node depends only on its own port — never on an editorial internal — and
+    the dependency direction stays editorial → presentation (no cycle).
+    """
+
+    async def report_progress(self, snapshot: ProgressSnapshot) -> None:
+        """Persist the workflow ``phase_progress`` + publish it to the SSE stream."""
+        ...
+
+
+@runtime_checkable
+class ContentFormatProducer(Protocol):
+    """Produce a renderable presentation artifact for a project (extension point).
+
+    The presentation-specific format boundary (AE-0121): a producer declares the
+    ``format_name`` it owns and produces a :class:`ProducedArtifact` from a
+    :class:`ProduceFormat` command. This is intentionally NOT a generic
+    multi-format framework — carousel is the only producer today; a second format
+    would add a second producer implementing this same Protocol, not a new
+    abstraction layer. The concrete carousel producer delegates to the unchanged
+    bilingual re-render so the rendered slides/PDFs stay byte-identical.
+    """
+
+    @property
+    def format_name(self) -> str:
+        """The format this producer owns (e.g. ``"carousel"``)."""
+        ...
+
+    async def produce(self, command: ProduceFormat) -> ProducedArtifact:
+        """Render the project's slides + PDFs and return the artifact pointers."""
+        ...
+
+
+@runtime_checkable
+class ArtifactBuildPort(Protocol):
+    """Build + activate a project's output artifact (the activation CAS surface).
+
+    Fronts the finalize → artifact-build call. The concrete adapter delegates
+    UNCHANGED to ``CarouselArtifactBuildService.build_and_activate``, preserving
+    the compound ``artifact_version`` ↔ ``lock_version`` compare-and-swap, the
+    PDF-path stamping, and the design-token merge exactly (AE-0115 §3). It
+    reports the outcome as an :class:`ArtifactActivation`.
+    """
+
+    async def build_and_activate(self, project_id: str) -> ArtifactActivation:
+        """Stage → manifest → promote → run the activation CAS; report the outcome."""
+        ...
+
+
+@runtime_checkable
+class PresentationReviewPort(Protocol):
+    """Apply reviewer slide-copy edits to workflow state with re-validation.
+
+    Fronts the presentation review/validation step the workflow content-review
+    gate runs. The concrete adapter delegates UNCHANGED to
+    ``apply_localized_slide_edits`` / ``edited_slides_block_approval`` so the
+    re-validation behavior + the returned state-update shape stay byte-identical.
+    The editorial workflow nodes call this through the facade port instead of
+    importing the presentation review service directly (carousel = presentation
+    only for every presentation path).
+    """
+
+    def apply_slide_edits(
+        self,
+        state: Mapping[str, object],
+        edited_slides: list[dict[str, object]],
+    ) -> dict[str, object]:
+        """Apply edits and return the re-validated workflow-state updates."""
+        ...
+
+    def edits_block_approval(
+        self,
+        state: Mapping[str, object],
+        edited_slides: list[dict[str, object]],
+    ) -> bool:
+        """Whether edited slides still carry blocking presentation violations."""
+        ...
+
+
 __all__ = [
+    "ArtifactActivation",
+    "ArtifactBuildPort",
     "CarouselRepository",
+    "ContentFormatProducer",
     "ImageGenerationService",
     "ImageProvider",
     "ImageProviderPort",
     "ImageStyleStrategy",
     "PresentationPolicyPort",
+    "PresentationReviewPort",
+    "ProduceFormat",
+    "ProducedArtifact",
+    "ProgressSnapshot",
     "SlideValidationPort",
+    "WorkflowProgressPort",
 ]

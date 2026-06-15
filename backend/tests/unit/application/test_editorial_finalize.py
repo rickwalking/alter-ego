@@ -64,6 +64,12 @@ class TestExportAndCompleteCarousel:
         )
         refinement.re_render_slides = AsyncMock(return_value=rendered)
 
+        # AE-0121: the artifact build/activation is invoked through the presentation
+        # CarouselArtifactBuildAdapter (editorial → presentation). Patch that
+        # adapter to return a successful ArtifactActivation; the activation CAS
+        # itself is exercised by the adapter's own tests + the safety net.
+        from rag_backend.modules.presentation import ArtifactActivation
+
         with (
             patch(
                 "rag_backend.application.services.carousel.editorial_finalize.PostgresCarouselRepository",
@@ -78,22 +84,13 @@ class TestExportAndCompleteCarousel:
                 return_value=MagicMock(ok=True, errors=()),
             ),
             patch(
-                "rag_backend.application.services.carousel.editorial_finalize.read_project_lock_version",
-                new=AsyncMock(return_value=2),
-            ),
-            patch(
-                "rag_backend.application.services.carousel.editorial_finalize.CarouselArtifactBuildService",
-            ) as mock_build_service,
+                "rag_backend.application.services.carousel.editorial_finalize.CarouselArtifactBuildAdapter",
+            ) as mock_build_adapter,
         ):
-            build_result = MagicMock(
-                artifact_version="sha256-" + "a" * 64,
-                operation_id="op",
-                lock_version=3,
-                manifest_path=MagicMock(),
-                version_dir=MagicMock(),
-            )
-            mock_build_service.return_value.build_and_activate = AsyncMock(
-                return_value=build_result
+            mock_build_adapter.return_value.build_and_activate = AsyncMock(
+                return_value=ArtifactActivation(
+                    ok=True, artifact_version="sha256-" + "a" * 64
+                )
             )
             await export_and_complete_carousel(MagicMock(), refinement, str(project.id))
 

@@ -62,6 +62,12 @@ from rag_backend.modules.presentation.bootstrap import (
     PresentationModule,
     bootstrap_module,
 )
+from rag_backend.modules.presentation.domain.contracts import (
+    ArtifactActivation,
+    ProducedArtifact,
+    ProduceFormat,
+    ProgressSnapshot,
+)
 from rag_backend.modules.presentation.domain.models import (
     CarouselPresentationPolicy,
     CarouselProject,
@@ -82,28 +88,43 @@ from rag_backend.modules.presentation.domain.models import (
     VisibleTextRule,
 )
 from rag_backend.modules.presentation.domain.ports import (
+    ArtifactBuildPort,
     CarouselRepository,
+    ContentFormatProducer,
     ImageGenerationService,
     ImageProvider,
     ImageProviderPort,
     ImageStyleStrategy,
     PresentationPolicyPort,
+    PresentationReviewPort,
     SlideValidationPort,
+    WorkflowProgressPort,
 )
 from rag_backend.modules.presentation.infrastructure import (
+    CarouselArtifactBuildAdapter,
+    CarouselFormatProducer,
     GeminiImageService,
     ImageProviderRegistry,
     OpenAIImageService,
     PresentationPersistenceAcl,
     PresentationProjectView,
+    PresentationReviewAdapter,
     PresentationWriteOwner,
+    ProgressReporter,
+    WorkflowProgressCallback,
+    apply_localized_slide_edits_via_port,
 )
 
 __all__ = [
+    "ArtifactActivation",
+    "ArtifactBuildPort",
+    "CarouselArtifactBuildAdapter",
+    "CarouselFormatProducer",
     "CarouselPresentationPolicy",
     "CarouselProject",
     "CarouselRepository",
     "CarouselSlide",
+    "ContentFormatProducer",
     "ContentSlideCopy",
     "CreatorAssetResult",
     "DesignPolicy",
@@ -128,8 +149,14 @@ __all__ = [
     "PresentationPorts",
     "PresentationProject",
     "PresentationProjectView",
+    "PresentationReviewAdapter",
+    "PresentationReviewPort",
     "PresentationService",
     "PresentationWriteOwner",
+    "ProduceFormat",
+    "ProducedArtifact",
+    "ProgressReporter",
+    "ProgressSnapshot",
     "SlideMissingPredicate",
     "SlideTypePolicy",
     "SlideValidationPort",
@@ -139,5 +166,8 @@ __all__ = [
     "TextBudget",
     "VisibleTextPolicy",
     "VisibleTextRule",
+    "WorkflowProgressCallback",
+    "WorkflowProgressPort",
+    "apply_localized_slide_edits_via_port",
     "bootstrap_module",
 ]

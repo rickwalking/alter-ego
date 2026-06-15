@@ -25,6 +25,15 @@ wrapped ``infrastructure.external.*`` classes, never in the presentation
 application/domain layers.
 """
 
+from rag_backend.modules.presentation.infrastructure.editorial_workflow_ports import (
+    CAROUSEL_FORMAT_NAME,
+    CarouselArtifactBuildAdapter,
+    CarouselFormatProducer,
+    PresentationReviewAdapter,
+    ProgressReporter,
+    WorkflowProgressCallback,
+    apply_localized_slide_edits_via_port,
+)
 from rag_backend.modules.presentation.infrastructure.image_provider_adapters import (
     GeminiImageService,
     ImageProvider,
@@ -40,11 +49,18 @@ from rag_backend.modules.presentation.infrastructure.presentation_write_owner im
 )
 
 __all__ = [
+    "CAROUSEL_FORMAT_NAME",
+    "CarouselArtifactBuildAdapter",
+    "CarouselFormatProducer",
     "GeminiImageService",
     "ImageProvider",
     "ImageProviderRegistry",
     "OpenAIImageService",
     "PresentationPersistenceAcl",
     "PresentationProjectView",
+    "PresentationReviewAdapter",
     "PresentationWriteOwner",
+    "ProgressReporter",
+    "WorkflowProgressCallback",
+    "apply_localized_slide_edits_via_port",
 ]
