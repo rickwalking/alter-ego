@@ -1,6 +1,6 @@
 # AE-0117 — modules/presentation skeleton + facade + domain + re-exported ports
 
-Status: Ready
+Status: Dev Complete
 Tier: T2
 Priority: High
 Type: Task
@@ -103,9 +103,11 @@ Not applicable — behavior-preserving scaffolding; verified by mypy/lint-import
 
 Ticket created by planner (Phase 5 breakdown).
 
+Dev Complete (Wave A). modules/presentation skeleton + public.py facade + bootstrap.py (manual DI, no get_container); PresentationProject view/DesignPolicy/SlideView domain + object-identity re-exports of presentation policy types, ContentSlideCopy/SlideValidation, CarouselSlide, CarouselRepository; reuses platform UoW. mypy 491, lint-imports clean, 11 unit tests; object-identity verified. Wave A: 21+11 tests pass; mypy 491, integrity 0 blockers, no suppressions.
+
 ## Files Touched
 
-Pending.
+backend/src/rag_backend/modules/presentation/** (+public.py/bootstrap.py/constants.py/domain), tests/unit/modules/presentation/*
 
 ## Test Evidence
 
