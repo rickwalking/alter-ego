@@ -1,6 +1,6 @@
 # AE-0108 — modules/editorial skeleton + facade + EditorialProject/EditorialWorkflow + status language + ports
 
-Status: Dev Complete
+Status: Review
 Tier: T2
 Priority: High
 Type: Task
@@ -114,7 +114,7 @@ Pending.
 
 ## QA Report
 
-Pending.
+Phase 4 Wave A batch QA — converged PASS in 2 independent rounds (0 critical/0 warning; 1 minor diff-range false-positive). See `.agent/reports/phase-4-wave-a.qa.md`.
 
 ## Decision Log
 
