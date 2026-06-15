@@ -8,12 +8,14 @@ directly mutates the WO ORM columns (``status``, ``error_message``,
 ``assigned_reviewer_id`` + the workflow-synced distribution copy) and the
 **sole** caller of the ``lock_version`` resume compare-and-swap.
 
-It is a focused application-layer service (the legacy single-writer adapter for
-the WO carousel columns); no editorial routes are added in this phase (AE-0110).
-All other workflow writers (the start/resume routes via the editorial workflow
-service, the editorial workflow service phase sync, the background resume runner)
-route their WO writes through this owner, which commits through the platform Unit
-of Work (``SqlAlchemyUnitOfWork``) — the single committer (ADR-0009 §9).
+It is the write side of the legacy-carousel ACL — it lives in the editorial
+module's infrastructure layer (alongside the AE-0109 ``LegacyCarouselAcl``) and
+is exposed upward only through the editorial module's public facade. No editorial
+routes are added in this phase (AE-0110). All other workflow writers (the
+start/resume routes via the editorial workflow service, the editorial workflow
+service phase sync, the background resume runner) route their WO writes through
+this owner (via the facade), which commits through the platform Unit of Work
+(``SqlAlchemyUnitOfWork``) — the single committer (ADR-0009 §9).
 
 Behavior-preserving: the WO column values written here are byte-identical to the
 pre-AE-0107 scattered writers; only the *ownership* and the *commit boundary* are

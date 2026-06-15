@@ -78,6 +78,13 @@ from rag_backend.modules.editorial.domain.status import (
     REVIEW_ACTIONS,
     WORKFLOW_STATUS_APPROVED_FOR_PUBLISH,
 )
+from rag_backend.modules.editorial.infrastructure.carousel_project_write_owner import (
+    CarouselProjectWriteOwner,
+)
+from rag_backend.modules.editorial.infrastructure.legacy_carousel_acl import (
+    EditorialProjectView,
+    LegacyCarouselAcl,
+)
 
 __all__ = [
     "CAROUSEL_EDITORIAL_WORKFLOW_STATUS_DRAFT",
@@ -113,6 +120,7 @@ __all__ = [
     "REVIEW_ACTION_REVISE",
     "WORKFLOW_STATUS_APPROVED_FOR_PUBLISH",
     "CarouselProject",
+    "CarouselProjectWriteOwner",
     "CarouselRepository",
     "CarouselSlide",
     "CarouselStatus",
@@ -120,8 +128,10 @@ __all__ = [
     "EditorialAdapters",
     "EditorialModule",
     "EditorialProject",
+    "EditorialProjectView",
     "EditorialService",
     "EditorialWorkflow",
+    "LegacyCarouselAcl",
     "ResearchSource",
     "ResearchSourceType",
     "bootstrap_module",

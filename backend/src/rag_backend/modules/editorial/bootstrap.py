@@ -27,6 +27,9 @@ from typing import Protocol
 
 from rag_backend.modules.editorial.application.service import EditorialService
 from rag_backend.modules.editorial.domain.ports import CarouselRepository
+from rag_backend.modules.editorial.infrastructure.legacy_carousel_acl import (
+    LegacyCarouselAcl,
+)
 from rag_backend.platform.database import UnitOfWork
 
 
@@ -50,20 +53,24 @@ class EditorialAdapters:
 
     repository: CarouselRepository
     unit_of_work: UnitOfWork
+    legacy_carousel_acl: LegacyCarouselAcl | None = None
 
 
 @dataclass(frozen=True)
 class EditorialModule:
     """Public collaborators returned by :func:`bootstrap_module`.
 
-    Bundles the editorial application service and the request-scoped Unit of Work
-    so the inbound edge can resolve editorial operations and the single commit
-    boundary through the module facade (no behavior change; later phases move the
-    carousel editorial workflow routes behind handlers that commit via this UoW).
+    Bundles the editorial application service, the request-scoped Unit of Work,
+    and the legacy carousel anti-corruption layer (AE-0109) so the inbound edge
+    can resolve editorial operations, the single commit boundary, and the legacy
+    persistence seam through the module facade (no behavior change; later phases
+    move the carousel editorial workflow routes behind handlers that read/write
+    through the ACL and commit via this UoW).
     """
 
     service: EditorialService
     unit_of_work: UnitOfWork
+    legacy_carousel_acl: LegacyCarouselAcl | None = None
 
 
 def bootstrap_module(
@@ -83,4 +90,5 @@ def bootstrap_module(
     return EditorialModule(
         service=service,
         unit_of_work=adapters.unit_of_work,
+        legacy_carousel_acl=adapters.legacy_carousel_acl,
     )

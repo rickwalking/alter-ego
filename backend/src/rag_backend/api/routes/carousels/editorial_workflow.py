@@ -42,9 +42,6 @@ from rag_backend.api.schemas.carousel_workflow import (
     EditorialWorkflowStartRequest,
     EditorialWorkflowStateResponse,
 )
-from rag_backend.application.services.carousel.carousel_project_write_owner import (
-    CarouselProjectWriteOwner,
-)
 from rag_backend.application.services.carousel.editorial_workflow_resume_runner import (
     BackgroundResumeParams,
     schedule_background_resume,
@@ -72,6 +69,7 @@ from rag_backend.domain.constants.rate_limits import (
 )
 from rag_backend.domain.constants.workflow_validation import ERR_SELF_REVIEW
 from rag_backend.infrastructure.database.models.carousel import CarouselProjectModel
+from rag_backend.modules.editorial.public import CarouselProjectWriteOwner
 
 router = APIRouter(
     tags=["carousel_editorial_workflow"], dependencies=[RequireEditorialWorkflow]

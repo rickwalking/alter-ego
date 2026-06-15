@@ -192,7 +192,6 @@ ignore_imports =
     rag_backend.application.services.carousel.artifact_build_service -> rag_backend.infrastructure.database.carousel_artifact_build_repository
     rag_backend.application.services.carousel.artifact_build_service -> rag_backend.infrastructure.database.models.carousel
     rag_backend.application.services.carousel.artifact_build_service -> rag_backend.infrastructure.logging
-    rag_backend.application.services.carousel.carousel_project_write_owner -> rag_backend.infrastructure.database.models.carousel
     rag_backend.application.services.carousel.creator_asset_service -> rag_backend.infrastructure.database.creator_asset_repository
     rag_backend.application.services.carousel.editorial_distribution_generation -> rag_backend.infrastructure.monitoring_langfuse
     rag_backend.application.services.carousel.editorial_distribution_pack -> rag_backend.infrastructure.database.carousel_repository

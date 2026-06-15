@@ -5,9 +5,6 @@ from __future__ import annotations
 import asyncio
 from dataclasses import dataclass
 
-from rag_backend.application.services.carousel.carousel_project_write_owner import (
-    CarouselProjectWriteOwner,
-)
 from rag_backend.application.services.carousel.editorial_workflow_service import (
     EditorialWorkflowService,
 )
@@ -27,6 +24,7 @@ from rag_backend.domain.constants.carousel_workflow import (
 )
 from rag_backend.infrastructure.database.config import get_session_maker
 from rag_backend.infrastructure.logging import get_logger
+from rag_backend.modules.editorial.public import CarouselProjectWriteOwner
 
 logger = get_logger()
 

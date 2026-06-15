@@ -12,9 +12,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from rag_backend.agents.carousel_editorial_orchestrator import (
     CarouselEditorialOrchestrator,
 )
-from rag_backend.application.services.carousel.carousel_project_write_owner import (
-    CarouselProjectWriteOwner,
-)
 from rag_backend.application.services.carousel.editorial_workflow_events import (
     PhaseEventEmitContext,
     ReviewEventEmitRequest,
@@ -69,6 +66,7 @@ from rag_backend.infrastructure.monitoring_langfuse import (
     propagate_attributes,
     record_human_review,
 )
+from rag_backend.modules.editorial.public import CarouselProjectWriteOwner
 
 
 @dataclass

@@ -12,9 +12,6 @@ from rag_backend.api.routes.carousels.editorial_workflow_routes_sanitize import 
     sanitize_structured_feedback,
 )
 from rag_backend.api.schemas.carousel_workflow import EditorialWorkflowResumeRequest
-from rag_backend.application.services.carousel.carousel_project_write_owner import (
-    CarouselProjectWriteOwner,
-)
 from rag_backend.application.services.carousel.editorial_workflow_service import (
     EditorialWorkflowService,
 )
@@ -56,6 +53,7 @@ from rag_backend.domain.models.persona import PersonaProfile
 from rag_backend.infrastructure.database.models import PersonaProfileModel
 from rag_backend.infrastructure.database.models.carousel import CarouselProjectModel
 from rag_backend.infrastructure.database.models.user import UserModel
+from rag_backend.modules.editorial.public import CarouselProjectWriteOwner
 
 
 async def load_persona(
