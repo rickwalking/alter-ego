@@ -28,9 +28,11 @@ from typing import Protocol
 from rag_backend.modules.knowledge.application.service import (
     DocumentPipelinePort,
     KnowledgeService,
+    KnowledgeServiceDeps,
     RetrieverPort,
 )
 from rag_backend.modules.knowledge.domain.ports import DocumentRepository
+from rag_backend.platform.database import UnitOfWork
 
 
 class PlatformServices(Protocol):
@@ -45,12 +47,15 @@ class KnowledgeAdapters:
     """Pre-constructed, request-scoped collaborators for the knowledge module.
 
     Built at the inbound edge (the api adapter / legacy route) from the existing
-    infrastructure so the module wires to them without relocation (AE-0089).
+    infrastructure so the module wires to them without relocation (AE-0089). The
+    ``unit_of_work`` wraps that same request's ``AsyncSession`` and is the single
+    transaction owner the application service commits through (ADR-0009 §9).
     """
 
     repository: DocumentRepository
     pipeline: DocumentPipelinePort
     retriever: RetrieverPort
+    unit_of_work: UnitOfWork
 
 
 def bootstrap_module(
@@ -69,5 +74,8 @@ def bootstrap_module(
     return KnowledgeService(
         repository=adapters.repository,
         pipeline=adapters.pipeline,
-        retriever=adapters.retriever,
+        deps=KnowledgeServiceDeps(
+            retriever=adapters.retriever,
+            unit_of_work=adapters.unit_of_work,
+        ),
     )

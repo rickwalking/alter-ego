@@ -18,6 +18,7 @@ inbound (api) edge and the request-scoped repository is injected by
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import Protocol, cast
 
 from rag_backend.modules.knowledge.api.views import (
@@ -41,6 +42,7 @@ from rag_backend.modules.knowledge.domain.models import (
     SearchResult,
 )
 from rag_backend.modules.knowledge.domain.ports import DocumentRepository
+from rag_backend.platform.database import UnitOfWork
 
 _ESTIMATED_CHUNKS_KEY = "estimated_chunks"
 _TOTAL_TIME_KEY = "total_time_seconds"
@@ -77,29 +79,59 @@ class RetrieverPort(Protocol):
     async def retrieve(self, request: RetrievalQuery) -> list[SearchResult]: ...
 
 
+@dataclass(frozen=True)
+class KnowledgeServiceDeps:
+    """Collaborators grouped to keep the service constructor at ≤3 arguments.
+
+    Bundles the retrieval adapter and the request-scoped Unit of Work so the
+    repository and pipeline stay explicit while the constructor honours the
+    backend/CLAUDE.md 3-argument limit.
+    """
+
+    retriever: RetrieverPort
+    unit_of_work: UnitOfWork
+
+
 class KnowledgeService:
-    """Use-case entry point for the knowledge bounded context."""
+    """Use-case entry point for the knowledge bounded context.
+
+    Write use cases (``create``/``ingest``/``delete``/``reprocess``) run under
+    the injected request-scoped Unit of Work, which is the **single commit
+    owner** (ADR-0009): repositories only flush, and this service commits once
+    via the UoW at the end of a successful write, or rolls back with no partial
+    writes if it raises. Read use cases do not commit.
+    """
 
     def __init__(
         self,
         repository: DocumentRepository,
         pipeline: DocumentPipelinePort,
-        retriever: RetrieverPort,
+        deps: KnowledgeServiceDeps,
     ) -> None:
         self._repository = repository
         self._pipeline = pipeline
-        self._retriever = retriever
+        self._retriever = deps.retriever
+        self._unit_of_work = deps.unit_of_work
 
     async def create(self, command: CreateDocumentCommand) -> KnowledgeDocumentView:
-        """Create a document without immediate processing."""
-        created = await self._repository.create(self._build_document(command))
-        return self._to_view(created)
+        """Create a document without immediate processing (committed once)."""
+        async with self._unit_of_work:
+            created = await self._repository.create(self._build_document(command))
+            view = self._to_view(created)
+        return view
 
     async def ingest(self, command: IngestDocumentCommand) -> KnowledgeDocumentView:
-        """Create a document and run it through the full pipeline."""
-        created = await self._repository.create(self._build_document(command))
-        processed = await self._pipeline.process_document(created)
-        return self._to_view(processed)
+        """Create a document and run the full pipeline (committed once).
+
+        The create and the pipeline run inside one Unit of Work: if the pipeline
+        raises (e.g. during embedding), the UoW rolls back and no partial
+        document or chunks are persisted (Gherkin: failed ingest rolls back).
+        """
+        async with self._unit_of_work:
+            created = await self._repository.create(self._build_document(command))
+            processed = await self._pipeline.process_document(created)
+            view = self._to_view(processed)
+        return view
 
     async def list_documents(
         self, query: ListDocumentsQuery
@@ -137,15 +169,19 @@ class KnowledgeService:
         )
 
     async def delete(self, command: DeleteDocumentCommand) -> bool:
-        """Delete a document and its vectors."""
-        return await self._pipeline.delete_document(str(command.document_id))
+        """Delete a document and its vectors (committed once)."""
+        async with self._unit_of_work:
+            deleted = await self._pipeline.delete_document(str(command.document_id))
+        return deleted
 
     async def reprocess(
         self, command: ReprocessDocumentCommand
     ) -> KnowledgeDocumentView:
-        """Re-run the pipeline for an existing document."""
-        document = await self._pipeline.reprocess_document(str(command.document_id))
-        return self._to_view(document)
+        """Re-run the pipeline for an existing document (committed once)."""
+        async with self._unit_of_work:
+            document = await self._pipeline.reprocess_document(str(command.document_id))
+            view = self._to_view(document)
+        return view
 
     async def search(self, query: SearchQuery) -> list[SearchResultView]:
         """Hybrid-search the knowledge base."""
