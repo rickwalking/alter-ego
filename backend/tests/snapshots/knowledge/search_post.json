@@ -1,0 +1,29 @@
+{
+  "body": {
+    "query": "artificial intelligence",
+    "results": [
+      {
+        "content": "Artificial intelligence is the simulation of human intelligence by machines.",
+        "document_id": "<uuid>",
+        "document_title": "AI Overview",
+        "metadata": {
+          "title": "AI Overview"
+        },
+        "rank": 1,
+        "score": "<number>"
+      },
+      {
+        "content": "Machine learning is a subset of artificial intelligence.",
+        "document_id": "<uuid>",
+        "document_title": "ML Basics",
+        "metadata": {
+          "title": "ML Basics"
+        },
+        "rank": 2,
+        "score": "<number>"
+      }
+    ],
+    "total": 2
+  },
+  "status_code": 200
+}

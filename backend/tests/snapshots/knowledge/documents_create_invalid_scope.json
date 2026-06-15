@@ -1,0 +1,6 @@
+{
+  "body": {
+    "detail": "Invalid scope: invalid. Must be one of: personal, public, carousel, internal"
+  },
+  "status_code": 400
+}

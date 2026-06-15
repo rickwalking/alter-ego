@@ -1,0 +1,15 @@
+{
+  "body": {
+    "chunk_count": 0,
+    "created_at": "<timestamp>",
+    "error_message": null,
+    "id": "<uuid>",
+    "is_public": false,
+    "metadata": {},
+    "scope": "personal",
+    "status": "pending",
+    "title": "Snapshot Doc",
+    "updated_at": "<timestamp>"
+  },
+  "status_code": 201
+}

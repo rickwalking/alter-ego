@@ -1,15 +1,45 @@
 ---
 name: qa-agent
-description: "Validate implementation quality across security, code quality, acceptance criteria, and completeness. Use when the user says 'run QA', 'validate the implementation', 'check my code', 'review this PR', 'run the checks', or after the Developer Skill completes. Builds a shared research pack once, then runs parallel subagents for security audit, code quality, mutation testing, acceptance criteria validation, and orphan code detection. Never use for implementation or development."
-version: 1.2.0
+description: "Quality guardian. Reproduces every CI quality gate locally (the single source of truth) and validates security, code quality, mutation, acceptance criteria, completeness, and integrity/anti-gaming. Use when the user says 'run QA', 'validate the implementation', 'check my code', 'review this PR', 'run the checks', or after the Developer Skill completes. Only returns PASS when everything CI will run is genuinely green. Never use for implementation or development."
+version: 2.0.0
 disable-model-invocation: true
 ---
 
-# QA Agent
+# QA Agent — Quality Guardian
 
 ## Purpose
 
-Validate implementations against defined quality standards. Launches **parallel subagents** across five dimensions: security, code quality, mutation testing, acceptance criteria, and orphan code detection. Produces a consolidated QA report with PASS/FAIL/WARN per dimension, severity-graded findings, and an overall quality score.
+Be the **guardian of quality**, not the developer's friend. The QA Agent
+**reproduces every CI quality gate locally** via the single-source-of-truth
+runner `scripts/ci/gates.sh` (the exact script CI runs), then layers
+**adversarial review** across six dimensions: security, code quality, mutation
+testing, acceptance criteria, orphan code, and **integrity / anti-gaming**.
+
+It produces a consolidated report with PASS/FAIL/WARN per dimension and an
+overall verdict — and it **only returns PASS when every gate CI will run is
+genuinely green and no net-new gate-gaming is present**. If a gate cannot be run
+locally it is INCONCLUSIVE, and **INCONCLUSIVE is never PASS**.
+
+> **Why this skill exists:** historically QA went green while the PR then failed
+> CI, because the checklist had drifted from the real gates and there was no
+> sensor for developers gaming the gates (suppressions, loosened thresholds,
+> prohibited imports). Running `gates.sh` makes drift structurally impossible;
+> `check-integrity.sh` makes gaming visible. See `docs/guides/qa-checkpoints.md`.
+
+## The guardian stance (read first)
+
+- **No bias toward shipping.** Approving broken work is the failure mode to
+  avoid, not blocking good work. When in doubt, do NOT pass.
+- **Gates are the spine, not an opinion.** A failing gate is a 🔴 Blocker. Period.
+- **Zero tolerance for net-new gaming.** New `# noqa` / `# type: ignore` /
+  `# nosec` / `# pragma: no cover` / `eslint-disable` / `@ts-ignore`, new
+  per-file-ignores, new `ignore_errors` mypy overrides, lowered thresholds,
+  skipped/`xfail` tests, or prohibited cross-layer imports — each bounces the
+  ticket back to the developer to fix properly. Do not negotiate them away.
+- **Do not accept the developer's "accepted gaps" at face value.** Independently
+  confirm each claimed gap is not actually a gate the PR will fail on.
+- **Never PASS on an INCONCLUSIVE gate.** State plainly: "CI will verify X; I
+  could not run it locally because <reason>" and withhold PASS.
 
 ## Prerequisites
 
@@ -47,19 +77,36 @@ Before running, verify:
 
 ### 5. Report Format
 The final report must include:
-- **Overall Score**: Numeric (0-100) with letter grade (A-F)
+- **Gate Reproduction table**: every gate from `gates.sh` with PASS/FAIL/SKIP
+- **Overall Verdict**: PASS / WARN / FAIL / INCONCLUSIVE (see verdict policy)
 - **Per-Dimension Results**: PASS/FAIL/WARN with score breakdown
 - **Findings List**: Sorted by severity (blockers first)
 - **Summary**: Top 3 risks and recommended next steps
+
+### 6. Verdict Policy (non-negotiable)
+**PASS if and only if** all three hold:
+1. Every gate `gates.sh` could run is **PASS** (zero FAIL).
+2. The Integrity dimension has **zero net-new blockers**.
+3. No **material** gate is SKIP/INCONCLUSIVE. (A skipped Postgres-only gate —
+   `test`, `diff-cover`, `migrations` — is material; the verdict drops to
+   **INCONCLUSIVE** and you must say which gate CI will decide.)
+
+- Any gate FAIL ⇒ overall **FAIL**.
+- Net-new integrity blocker ⇒ overall **FAIL** (bounce to developer).
+- Only-WARN findings with all gates green ⇒ **WARN** (may proceed with notes).
+- Never "round up" INCONCLUSIVE or SKIP to PASS.
 
 ## QA modes
 
 | Mode | When |
 |------|------|
-| **full** (default) | T2/T3 — all five subagents |
-| **lite** | T1 — security (if high-risk area), AC validation, lint/tests evidence; skip mutation/orphan unless scope warrants |
+| **full** (default) | T2/T3 — Phase 0 gates + all six subagents |
+| **lite** | T1 — **still runs Phase 0 gates + the Integrity subagent (never skippable)** plus AC validation and security if high-risk; may skip the deep manual OWASP pass and full mutation only |
 | **external** | Any tier when independence matters: the implementation was authored in the same session/agent as the QA would be, or the human requests an outside check |
 | **wave** | Several related tickets completed together — one external run covering the set, with per-ticket AC validation |
+
+**The deterministic gates (Phase 0) and Integrity dimension run in every mode.**
+Modes only scale the depth of the *manual, judgment-based* dimensions.
 
 Read ticket `Tier:` from `.agent/tasks/`.
 
@@ -97,8 +144,12 @@ incl. live progress monitoring: `references/external-qa.md`.
 
 **During QA:**
 
-1. Run QA dimensions per mode above.
+1. **Phase 0 first** — run `scripts/ci/gates.sh` for the changed scope and record
+   the Gate Reproduction table. Then run QA dimensions per mode above.
 2. Link findings to file:line.
+3. Apply the verdict policy (Critical Rule 6): a gate FAIL or net-new integrity
+   blocker ⇒ `Needs Fixes`; a material SKIP/INCONCLUSIVE ⇒ `Blocked` (CI to
+   decide); all green ⇒ `Review`.
 
 **After QA:**
 
@@ -108,6 +159,38 @@ incl. live progress monitoring: `references/external-qa.md`.
 4. `uv run python scripts/agent_tasks/render_board.py`
 
 ## Workflow
+
+### Phase 0: Gate Reproduction (mandatory — the spine of the verdict)
+
+**Run the SAME gates CI runs, locally, before anything else.** This is what
+makes a green QA mean a green CI.
+
+```bash
+# Fast subset first (no services, no slow gates) — quick triage:
+bash scripts/ci/gates.sh backend  --changed-only
+bash scripts/ci/gates.sh frontend --changed-only
+
+# Then the full run where feasible (needs Postgres for test/diff-cover/migrations;
+# mutation is slow but REQUIRED for the verdict — do not skip it as "too slow"):
+bash scripts/ci/gates.sh backend
+bash scripts/ci/gates.sh frontend
+```
+
+1. Parse the `GATES_JSON:` summary line from each run. Record every gate's
+   status (PASS / FAIL / SKIP) into the **Gate Reproduction table**.
+2. **Any FAIL is a 🔴 Blocker** — capture the exact tool output; that is what CI
+   will print. Do not paraphrase it away.
+3. **Any SKIP is INCONCLUSIVE** — note *why* (e.g. "no Postgres locally") and
+   that CI will decide it. A material skip blocks a PASS verdict (Rule 6).
+4. If Postgres is available locally, set `DATABASE_URL` so `test`, `diff-cover`,
+   and `migrations` actually run instead of skipping. Prefer running them.
+5. Only after Phase 0 establishes the gate baseline do you launch the dimension
+   subagents — they add adversarial depth on top of the gates, never replace them.
+
+> Gate definitions live in `scripts/ci/gates.sh`; thresholds are mutation **≥75%**
+> and diff-cover **≥75% on changed lines** (NOT a global 90% — that is an
+> aspirational target, not the gate). Never re-document thresholds here; the
+> script is the source of truth.
 
 ### Phase 1: Context Loading
 
@@ -119,7 +202,7 @@ incl. live progress monitoring: `references/external-qa.md`.
 
 ### Phase 1.5: Build the QA Research Pack (shared context)
 
-**Before launching the 5 reviewers, build a shared research pack once** so the
+**Before launching the reviewers, build a shared research pack once** so the
 subagents skip independent codebase exploration (exploration is the dominant
 token cost). Full protocol: `references/qa-research-pack.md`.
 
@@ -135,9 +218,10 @@ token cost). Full protocol: `references/qa-research-pack.md`.
 
 ### Phase 2: Launch Parallel Subagents
 
-Launch **five subagents simultaneously** in a single message. Inject the
-**research pack as a shared (cacheable) prefix** to each, plus a short brief
-naming the sections that matter to it (routing table in
+Launch **six subagents simultaneously** in a single message. They run *after*
+Phase 0 and add adversarial depth on top of the deterministic gates — they do
+not replace them. Inject the **research pack as a shared (cacheable) prefix** to
+each, plus a short brief naming the sections that matter to it (routing table in
 `references/qa-research-pack.md`). Each subagent:
 
 - reads only its assigned pack sections — **does NOT re-explore the codebase**;
@@ -164,40 +248,44 @@ Checklist:
 Tools: `pip audit` / `npm audit`, `bandit` (Python), `semgrep`, `truffleHog` / `gitleaks` (secrets), manual code inspection
 
 #### Subagent 2 — Code Quality
-**Scope**: Lint rules, type safety, complexity, architecture, file size
+**Scope**: confirm the Phase 0 quality gates and add review the gates can't see.
 
-Checklist:
-- [ ] **Lint passes**: `ruff check` (backend) / `eslint` (frontend) — zero warnings
-- [ ] **Type check passes**: `mypy --strict` (backend) / `tsc --noEmit` (frontend)
-- [ ] **No `Any`/`object` types** — Explicit types everywhere
-- [ ] **No magic strings** — All string literals in named constants
-- [ ] **Early returns** — No deeply nested `if` statements
-- [ ] **Max 400 lines per file** — Any file exceeding this limit
-- [ ] **Cyclomatic complexity** — ruff C90: max-complexity = 10; xenon: max-absolute B
-- [ ] **Cognitive complexity** — ruff PLR: max-branches 10, max-statements 40, max-nested-blocks 4
-- [ ] **Dead code** — `ruff ERA001` (commented-out code), `dead` or `vulture` (unused definitions)
-- [ ] **Architecture boundaries** — `import-linter` or `pytest-archon` contracts respected
+The Phase 0 gates already ran `format`, `lint`, `strict-diff`, `type`, `imports`,
+`arch-ratchet`, `docstrings`, `dead-code`. **Do not re-run them blindly — read
+their Phase 0 results.** This subagent's job is the *judgment* layer on top:
+- [ ] **Confirm** the Phase 0 lint/type/complexity/architecture gates are PASS;
+      surface any FAIL with the exact tool output as a 🔴 Blocker.
+- [ ] **No `Any`/`object` types** — explicit types everywhere (gates miss intent)
+- [ ] **No magic strings** — string literals extracted to named constants
+- [ ] **Early returns** — no deeply nested `if` ladders
+- [ ] **Max 400 lines per file / max 20-line functions** — flag violations
+- [ ] **Architecture boundaries** — `lint-imports` + the `import_baseline.py`
+      ratchet (Phase 0 `imports` / `arch-ratchet`) respected; DDD layering and
+      facade-only module access honored
 - [ ] **No secrets in code** — API keys, tokens, passwords hardcoded
 
 #### Subagent 3 — Mutation Testing
 **Scope**: Test quality via mutation score
 
 Checklist:
-- [ ] **Backend**: Run `mutmut` on changed modules — target 70%+ mutation score
-- [ ] **Frontend**: Run `StrykerJS` on changed components — target 70%+ mutation score (business logic), 50%+ (UI components)
-- [ ] **Compare against ADR-005 thresholds**:
-  - Business Logic: Break 50% | Low 70% | High 80%
-  - API Routes: Break 40% | Low 60% | High 75%
-  - UI Components: Break 30% | Low 50% | High 65%
-- [ ] **Report surviving mutants** — List top 5 most concerning survivors with file/line
-- [ ] **Check for equivalent mutants** — Flag any that are clearly equivalent (no test can kill them)
+- [ ] **Backend**: the Phase 0 `mutation` gate enforces **≥75% (blocking)** via
+      `mutation-score-gate.sh`. Confirm it PASSED; if it SKIPPED (too slow / not
+      run), the verdict is INCONCLUSIVE — say so, do not assume pass.
+- [ ] **Frontend**: Stryker is **advisory** (non-blocking) in CI — report the
+      score, never block on it alone.
+- [ ] **Report surviving mutants** — list the top 5 most concerning survivors
+      with file/line; these are weak assertions to flag even when the gate passes.
+- [ ] **Check for equivalent mutants** — flag clearly-equivalent ones.
 
-Note: Mutation testing is slow. Run on changed modules only (incremental). If full suite is requested, warn about time.
+> The backend mutation threshold is **75%**, not 70%. The number lives in
+> `gates.sh` / `mutation-score-gate.sh`; never hardcode a different one here.
+> Mutation is slow but it is a blocking gate — do not skip it as "too slow" and
+> then return PASS.
 
-#### Subagent 4 — Acceptance Criteria Validation
-**Scope**: Verify each criterion from the plan/spec is satisfied
+#### Subagent 4 — Acceptance Criteria & Gherkin Coverage
+**Scope**: every criterion is satisfied AND the `.feature` specs are complete.
 
-Checklist:
+Criteria checklist:
 - [ ] Load acceptance criteria from the plan/spec file
 - [ ] For each criterion:
   - [ ] Is there a test covering it? (Gherkin scenario or test function)
@@ -206,6 +294,22 @@ Checklist:
 - [ ] **Flag any criterion without a test** — Missing test coverage for acceptance criteria
 - [ ] **Flag any criterion with a failing test**
 - [ ] **Flag any implemented behavior not in the criteria** (scope creep)
+
+Gherkin completeness (adversarial — do NOT just confirm existing scenarios pass):
+- [ ] Open the relevant `tests/features/*.feature` files for the changed scope.
+- [ ] Per CLAUDE.md, scenarios must cover **happy path + edge cases + failures**.
+      For each behavior, ask *"what is NOT covered?"* and list concrete missing
+      scenarios:
+  - [ ] **Edge cases** — boundaries (empty/null/zero/max), pagination limits,
+        Unicode/whitespace, duplicates, concurrent/idempotent paths.
+  - [ ] **Failure paths** — invalid input (422), unauthorized (401/403), not
+        found (404), conflict (409), upstream/dependency failure, timeout.
+  - [ ] **Authorization variants** — owner vs other-user vs anonymous, public
+        vs private (especially for the new scope/is_public work).
+- [ ] **Flag each missing edge/failure scenario** as a finding (🟠 Warning by
+      default; 🔴 Blocker when an untested failure path is security- or
+      data-integrity-relevant). A passing happy-path suite with no negative
+      scenarios is a coverage gap, not a pass.
 
 #### Subagent 5 — Orphan & Unfinished Code Detection
 **Scope**: Dead code, TODOs, stubs, incomplete implementations
@@ -220,14 +324,64 @@ Checklist:
 - [ ] **Dead event handlers** — Event listeners registered but never triggered
 - [ ] **Unused route handlers** — API endpoints defined but not consumed
 
+#### Subagent 6 — Integrity / Anti-Gaming (the guardian sensor)
+**Scope**: detect attempts to make CI green by gaming the gates rather than
+meeting them. **Diff-scoped ratchet** — only NET-NEW gaming in this PR is
+blocking; pre-existing debt is reported, never gated.
+
+Run the scanner (the same one CI's `integrity` job runs):
+```bash
+bash scripts/ci/check-integrity.sh backend
+bash scripts/ci/check-integrity.sh frontend
+```
+
+Treat every 🔴 BLOCKER it prints as a ticket-bouncing finding — **zero
+tolerance**, no negotiation:
+- [ ] **New suppressions** — `# noqa`, `# type: ignore`, `# nosec`,
+      `# pragma: no cover`, `eslint-disable`, `@ts-ignore`, `@ts-expect-error`,
+      `@ts-nocheck`, `prettier-ignore` added in source files.
+- [ ] **New skipped/weakened tests** — `@pytest.mark.skip` / `xfail`,
+      `pytest.skip(`, bare `assert True`, `.skip(` / `.only(` / `xit(`.
+- [ ] **Loosened rules** — new `per-file-ignores`, new `ignore_errors` /
+      `disable_error_code` mypy overrides, threshold decreases (coverage /
+      mutation `fail_under`), raised complexity/arg budgets, raised
+      `BASELINE_*` ceilings in `import_baseline.py`, files removed from
+      `paths_to_mutate`.
+- [ ] **Prohibited DDD imports** — net-new cross-layer imports (domain→outer,
+      application→infrastructure/agents, agents→application/api, infra→api),
+      `get_container(` outside `bootstrap/` + `api/dependencies/`, `.commit(` in
+      `infrastructure/database` adapters, module internals imported past the facade.
+
+Then add adversarial review the scanner can't do:
+- [ ] **Coverage gaming** — tests that assert nothing, over-mock the unit under
+      test, or are tautological (`assert x == x`) just to cover lines.
+- [ ] **Apparatus edits** — the scanner WARNs when `.github/workflows/*`,
+      `scripts/ci/*`, `.importlinter`, `import_baseline.py`, eslint/tsconfig/
+      stryker config changed. **You must confirm the ticket explicitly justifies
+      each such edit**; an unjustified gate-config change is a 🔴 Blocker.
+- [ ] **Escape-hatch audit** — every `integrity-ok: <reason>` marker is a
+      deliberate, auditable suppression. Verify the reason is legitimate; an
+      empty or hand-wavy reason is a Blocker.
+
 ### Phase 3: Synthesis — Consolidated QA Report
 
-Once all five subagents complete, produce the consolidated report:
+Once Phase 0 and all six subagents complete, produce the consolidated report:
 
 ```markdown
 # QA Validation Report
 
-## Overall Score: XX/100 (Grade X)
+## Overall Verdict: PASS / WARN / FAIL / INCONCLUSIVE
+(Apply Critical Rule 6. A single gate FAIL or net-new integrity blocker ⇒ FAIL.
+A material SKIP ⇒ INCONCLUSIVE. Never round up.)
+
+## Gate Reproduction (scripts/ci/gates.sh — source of truth)
+| Gate | Status | Notes |
+|------|--------|-------|
+| backend:lint / type / strict-diff / imports / arch-ratchet / … | PASS/FAIL/SKIP | exact tool output on FAIL; reason on SKIP |
+| backend:test / diff-cover / mutation / migrations | PASS/FAIL/SKIP | SKIP = INCONCLUSIVE (CI will decide) |
+| frontend:lint / typecheck / test / … | PASS/FAIL/SKIP | |
+
+## Overall Score: XX/100 (Grade X)   ← secondary to the verdict above
 
 ### Per-Dimension Results
 | Dimension | Status | Score | Details |
@@ -237,6 +391,7 @@ Once all five subagents complete, produce the consolidated report:
 | Mutation Testing | ✅ / 🟠 / ❌ | X/100 | n findings |
 | Acceptance Criteria | ✅ / 🟠 / ❌ | X/100 | n of m criteria met |
 | Orphan/Unfinished Code | ✅ / 🟠 / ❌ | X/100 | n findings |
+| Integrity / Anti-Gaming | ✅ / 🟠 / ❌ | X/100 | n net-new blockers, n warns |
 
 ### 🔴 Blocker Findings
 1. **Title** — File:Line — Description — Reference
@@ -261,6 +416,8 @@ Once all five subagents complete, produce the consolidated report:
 
 ## References
 
+- `scripts/ci/gates.sh` — **single source of truth** for every CI gate (Phase 0)
+- `scripts/ci/check-integrity.sh` — diff-scoped anti-gaming scanner (Subagent 6)
 - `references/qa-research-pack.md` — Shared research-pack pattern (Phase 1.5)
 - `references/external-qa.md` — External QA orchestration runbook
 - `config.yaml` — External reviewer priority and prompt requirements

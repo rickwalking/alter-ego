@@ -1,7 +1,7 @@
 ---
 name: developer-skill
-description: "Implement task details from plans following project standards. Use when the user says 'develop this task', 'implement the plan', 'work on this ticket', 'start development', 'do the wave', or after a plan has been created. Follows SDD (Spec-Driven Development): reads specs first, implements in increments, self-verifies. Supports wave mode: implement a group of tickets then loop with automated external QA until convergence. Never use for code review or QA validation."
-version: 1.2.0
+description: "Implement task details from plans following project standards. Use when the user says 'develop this task', 'implement the plan', 'work on this ticket', 'start development', 'do the wave', or after a plan has been created. Follows SDD (Spec-Driven Development): reads specs first, implements in increments, self-verifies, and reproduces the CI gates (scripts/ci/gates.sh) + anti-gaming scan green before handing off. Supports wave mode: implement a group of tickets then loop with automated external QA until convergence. Never use for code review or QA validation."
+version: 1.3.0
 disable-model-invocation: true
 ---
 
@@ -44,6 +44,20 @@ After implementing each criterion, run:
 - **File size**: No files over 400 lines (per CLAUDE.md rule)
 - **No magic strings**: All string literals extracted to named constants
 
+**Before handing off to QA, reproduce the CI gates and the integrity scan — and
+be green:**
+```bash
+bash scripts/ci/gates.sh backend --changed-only   # (or frontend / full run)
+bash scripts/ci/check-integrity.sh backend        # net-new gaming → fix it
+```
+QA runs these same scripts and **will not pass** a failing gate. **Do not** make
+CI green by gaming it — no new `# noqa` / `# type: ignore` / `# nosec` /
+`# pragma: no cover` / `eslint-disable`, no new per-file-ignores or `ignore_errors`
+overrides, no lowered thresholds, no skipped tests, no imports across DDD layers.
+If a gate is genuinely wrong, raise it as a finding for human review (and, only
+with explicit ticket justification, mark the line `# integrity-ok: <reason>`) —
+never suppress silently.
+
 ### 5. Ask for Guidance When
 - Acceptance criteria are ambiguous or contradictory
 - The spec references a technology/pattern you're unsure about
@@ -84,10 +98,20 @@ Read `Tier:` from `.agent/tasks/` ticket (default T2 if absent).
 
 **After coding:**
 
-1. Status → `Dev Complete` via `move_ticket.py`.
-2. Write `.agent/reports/AE-####.dev-summary.md` (see template below). Create the `.agent/reports/` directory if it does not exist.
-3. `uv run python scripts/agent_tasks/render_board.py`
-4. Hand off to `/qa-agent`.
+1. **Gate precondition (hard) — reproduce CI before claiming done:**
+   ```bash
+   bash scripts/ci/gates.sh <scope>            # PASS, or SKIP only where a service is absent
+   bash scripts/ci/check-integrity.sh <scope>  # zero net-new blockers
+   ```
+   Do **not** advance to `Dev Complete` while any gate FAILs or the integrity
+   scan reports a net-new blocker. Fix the underlying issue — never suppress,
+   skip, loosen a threshold, or import across a DDD layer to go green. Capture
+   the `GATES_JSON:` line and the integrity result for the dev-summary.
+2. Status → `Dev Complete` via `move_ticket.py` (only once step 1 is green).
+3. Write `.agent/reports/AE-####.dev-summary.md` (see template below), including
+   the Gate Reproduction + Integrity evidence. Create `.agent/reports/` if absent.
+4. `uv run python scripts/agent_tasks/render_board.py`
+5. Hand off to `/qa-agent`.
 
 ### Developer completion report template
 
@@ -106,6 +130,17 @@ Status: Dev Complete
 \`\`\`bash
 ...
 \`\`\`
+
+### Gate Reproduction (scripts/ci/gates.sh)
+Paste the `GATES_JSON:` summary line(s). Every gate PASS, or SKIP only where a
+service is genuinely unavailable locally (name which, and that CI will run it).
+\`\`\`
+GATES_JSON: {"pass":N,"fail":0,"skip":M,"results":[...]}
+\`\`\`
+
+### Integrity (scripts/ci/check-integrity.sh)
+Net-new blockers: 0. (List any `integrity-ok:` markers used and their ticket
+justification, or "none".)
 
 ### Deviations
 None.
@@ -126,14 +161,16 @@ automated `dev → QA → fix → re-QA` loop. Full protocol: `references/wave-l
 1. **Order** — topologically sort the wave by `Blocked-by`/`Blocks` (cycle → escalate).
 2. **Implement** — run the SDD loop per ticket in dependency order; implement the
    **whole wave before QA** so integration issues surface.
-3. **QA** — one **batch** external pass over the wave (`scripts/qa/run_external_qa.sh`),
+3. **Reproduce gates** — run `gates.sh` + `check-integrity.sh` over the wave and
+   make them green **before** paying for external QA (Step 2.5 in the runbook).
+4. **QA** — one **batch** external pass over the wave (`scripts/qa/run_external_qa.sh`),
    findings tagged per ticket; build the prompt per `qa-agent/references/external-qa.md`.
-4. **Loop** — read `QA_VERDICT`:
+5. **Loop** — read `QA_VERDICT`:
    - **FAIL** → fix blockers → regenerate research pack if files moved → full re-QA.
      **Pause for the human on the FIRST FAIL of each wave.**
    - **WARN** → fix actionable findings → verify-only confirmation round.
    - **PASS** → require ≥ 2 total passes, then a confirmation round → done.
-5. **Safeguards** — MIN 2 passes, MAX 5 iterations, escalate on repeated-finding
+6. **Safeguards** — MIN 2 passes, MAX 5 iterations, escalate on repeated-finding
    fingerprint or findings-count plateau. (Thresholds in `qa-agent/config.yaml`.)
 
 For a single ticket, use the default single-ticket SDD flow below.
@@ -162,18 +199,22 @@ For each acceptance criterion:
 
 ### Phase 3: Final Verification
 
-1. Run full test suite: `pytest` (backend) / `npm test` (frontend)
-2. Run lint + type check on the entire changed scope
-3. Verify no files exceed 400 lines
-4. Verify no magic strings were introduced
-5. Report completion with:
+1. **Reproduce the CI gates**: `bash scripts/ci/gates.sh <scope>` — every gate
+   must be PASS (or SKIP only where a service is genuinely unavailable locally).
+2. **Run the integrity scan**: `bash scripts/ci/check-integrity.sh <scope>` —
+   zero net-new blockers. Fix the underlying issue; never suppress to go green.
+3. Verify no files exceed 400 lines and no magic strings were introduced.
+4. Report completion with:
    - List of acceptance criteria implemented
    - Any deviations from the original plan (with justification)
    - Any uncovered issues discovered during implementation
-   - Suggestion to run `/qa` for full validation
+   - Confirmation that `gates.sh` + `check-integrity.sh` are green
+   - Suggestion to run `/qa-agent` for full validation
 
 ## References
 
+- `scripts/ci/gates.sh` — reproduce the CI quality gates locally (run before QA)
+- `scripts/ci/check-integrity.sh` — anti-gaming scan (run before QA)
 - `references/wave-loop.md` — Wave mode: batch dev + automated external QA loop
 - `CLAUDE.md` — Root project standards
 - `docs/decisions/` — Architecture Decision Records

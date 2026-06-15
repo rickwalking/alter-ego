@@ -1,0 +1,10 @@
+{
+  "body": {
+    "chunk_count": 0,
+    "estimated_chunks": 1,
+    "estimated_time_seconds": 0.12,
+    "id": "<uuid>",
+    "status": "completed"
+  },
+  "status_code": 200
+}

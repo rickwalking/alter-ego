@@ -271,7 +271,12 @@ def render_importlinter(ignores: dict[str, list[tuple[str, str]]] | None = None)
     )
     out.append("[importlinter]")
     out.append("root_package = rag_backend")
-    out.append("include_external_packages = false")
+    # External packages must be in the graph so the knowledge exit-gate contract
+    # (AE-0095) can forbid sqlalchemy/fastapi/pinecone in the module's
+    # application/domain layers. Enabling this leaves every existing internal-only
+    # contract KEPT (they target rag_backend.* modules, unaffected by the wider
+    # graph) — verified by lint-imports.
+    out.append("include_external_packages = true")
 
     # Static global layer contracts (hand-maintained, unchanged from AE-0049).
     out.append(
@@ -330,6 +335,69 @@ def render_importlinter(ignores: dict[str, list[tuple[str, str]]] | None = None)
         "    rag_backend.modules._template.constants"
     )
 
+    # Knowledge module exit-gate (AE-0095). The knowledge bounded context lives
+    # under rag_backend.modules.knowledge, OUTSIDE rag_backend.application, so the
+    # global application-no-infrastructure contract does not cover it. These two
+    # hand-maintained module contracts lock the Phase-2 exit gate and are the
+    # reusable template every later phase copies (see
+    # docs/architecture/module-conventions.md §7a / §9a).
+    #
+    # Contract A — application/domain isolation: the module's inner layers must
+    # not import frameworks (sqlalchemy/fastapi), the vendor SDK (pinecone), or
+    # the global DI container. allow_indirect_imports keeps this a per-edge gate
+    # (indirect chains via infrastructure are owned by their own contracts).
+    out.append(
+        "\n# Contract: Knowledge module application/domain exit-gate (AE-0095)\n"
+        "# The knowledge inner layers must stay free of frameworks, the vendor\n"
+        "# SDK, and the global container. Currently clean (AE-0089/0092/0093):\n"
+        "# no ignore_imports — any NEW such import breaks CI.\n"
+        "[importlinter:contract:knowledge-application-isolation]\n"
+        "name = Knowledge application/domain must not import frameworks, vendors, "
+        "or the global container\n"
+        "type = forbidden\n"
+        "allow_indirect_imports = true\n"
+        "unmatched_ignore_imports_alerting = none\n"
+        "source_modules =\n"
+        "    rag_backend.modules.knowledge.application\n"
+        "    rag_backend.modules.knowledge.domain\n"
+        "forbidden_modules =\n"
+        "    sqlalchemy\n"
+        "    fastapi\n"
+        "    pinecone\n"
+        "    rag_backend.infrastructure.container"
+    )
+
+    # Contract B — public-facade: cross-module callers (agents, api, other
+    # layers) may import ONLY rag_backend.modules.knowledge (the facade); never
+    # its internals. Mirrors module-conventions §7a. The one legitimate legacy
+    # internal edge (api/routes/documents -> domain.commands.MetadataValue) is
+    # grandfathered; agents/routes otherwise go through the facade.
+    out.append(
+        "\n# Contract: knowledge internals are private (import via the facade only)\n"
+        "# AE-0095 — mirrors module-conventions §7a; the proven Phase-2 pattern.\n"
+        "[importlinter:contract:knowledge-public-facade]\n"
+        "name = knowledge internals are private (import via the facade only)\n"
+        "type = forbidden\n"
+        "allow_indirect_imports = true\n"
+        "unmatched_ignore_imports_alerting = none\n"
+        "source_modules =\n"
+        "    rag_backend.api\n"
+        "    rag_backend.agents\n"
+        "    rag_backend.application\n"
+        "    rag_backend.domain\n"
+        "    rag_backend.infrastructure\n"
+        "forbidden_modules =\n"
+        "    rag_backend.modules.knowledge.domain\n"
+        "    rag_backend.modules.knowledge.application\n"
+        "    rag_backend.modules.knowledge.infrastructure\n"
+        "    rag_backend.modules.knowledge.api\n"
+        "    rag_backend.modules.knowledge.bootstrap\n"
+        "    rag_backend.modules.knowledge.constants\n"
+        "ignore_imports =\n"
+        "    rag_backend.api.routes.documents -> "
+        "rag_backend.modules.knowledge.domain.commands"
+    )
+
     # Generated forbidden contracts (exact baseline exception lists, no wildcards).
     for cid, cname, _key, source, targets in _FORBIDDEN_CONTRACTS:
         block = [
@@ -343,6 +411,12 @@ def render_importlinter(ignores: dict[str, list[tuple[str, str]]] | None = None)
             # api -> application -> infrastructure are owned by their own
             # direct-edge contract, so this stays a per-edge ratchet.
             "allow_indirect_imports = true",
+            # Tolerate baseline ignore entries that don't resolve to a direct
+            # edge in a given grimp environment (CI's fresh graph may not
+            # surface every edge the generator saw). This does NOT weaken
+            # enforcement: a NEW forbidden edge absent from the ignore list
+            # still breaks the contract.
+            "unmatched_ignore_imports_alerting = none",
             "source_modules =",
             f"    {source}",
             "forbidden_modules =",

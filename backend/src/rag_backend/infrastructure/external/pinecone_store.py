@@ -19,23 +19,35 @@ class PineconeVectorStore:
 
     def __init__(self, settings: Settings) -> None:
         self._settings = settings
-        self._client = Pinecone(api_key=settings.pinecone_api_key.get_secret_value())
+        # The Pinecone client is built lazily on first real index access so that
+        # merely resolving this provider (DI wiring, tests that stub the store)
+        # never requires a live PINECONE_API_KEY. Production behavior is
+        # unchanged: the client is created the first time a vector op runs.
+        self._client: Pinecone | None = None
         self._index_name = settings.pinecone_index_name
         self._index = None
+
+    def _get_client(self) -> Pinecone:
+        if self._client is None:
+            self._client = Pinecone(
+                api_key=self._settings.pinecone_api_key.get_secret_value()
+            )
+        return self._client
 
     async def _get_index(self):
         """Get or create Pinecone index."""
         if self._index is None:
+            client = self._get_client()
             logger.info("pinecone_get_index_start", index_name=self._index_name)
             for attempt in retry_sync(attempts=PINECONE_MAX_ATTEMPTS):
                 with attempt:
-                    existing_indexes = self._client.list_indexes()
+                    existing_indexes = client.list_indexes()
             index_names = [idx.name for idx in existing_indexes]
             if self._index_name not in index_names:
                 logger.info("pinecone_create_index", index_name=self._index_name)
                 for attempt in retry_sync(attempts=PINECONE_MAX_ATTEMPTS):
                     with attempt:
-                        self._client.create_index(
+                        client.create_index(
                             name=self._index_name,
                             dimension=3072,
                             metric="dotproduct",
@@ -44,7 +56,7 @@ class PineconeVectorStore:
                                 region=self._settings.pinecone_environment,
                             ),
                         )
-            self._index = self._client.Index(self._index_name)
+            self._index = client.Index(self._index_name)
             logger.info("pinecone_get_index_ok", index_name=self._index_name)
         return self._index
 

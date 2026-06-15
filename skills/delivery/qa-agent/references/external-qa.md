@@ -42,19 +42,39 @@ Tool notes:
    implementation commit hash(es) (`git show <sha>`).
 3. Read-only declaration, with verification commands explicitly
    allowed (scripts, pytest, ruff — they don't modify tracked files).
+3a. **Phase 0 — Gate Reproduction (mandatory, the verdict spine).** The
+   external reviewer MUST run the single-source-of-truth gate runner and
+   the anti-gaming scanner itself, not trust the dev summary:
+
+   ```bash
+   bash scripts/ci/gates.sh backend            # and/or frontend, per scope
+   bash scripts/ci/check-integrity.sh backend  # and/or frontend
+   ```
+
+   Parse each `GATES_JSON:` line. Any gate FAIL ⇒ overall FAIL. Any SKIP
+   (e.g. no Postgres in the sandbox) is INCONCLUSIVE — report it as
+   "CI will decide" and never count it as PASS. Any net-new integrity
+   blocker ⇒ FAIL. This makes the external verdict match CI exactly and
+   is the primary bias defense: the gates are mechanical, not a judgment
+   the model can be lenient about.
 4. Per-dimension instructions, including independent re-verification
    of every claim in the dev summary (re-run scripts, re-execute
-   tests, diff against committed numbers). For measurement/docs
-   tickets, replace the mutation dimension with
-   **accuracy/reproducibility**; for code tickets, request analytical
-   mutation analysis (survivors + the missing assertion that kills
-   each) instead of running mutmut.
+   tests, diff against committed numbers). Include the **Integrity /
+   anti-gaming** and **Gherkin edge-case completeness** dimensions
+   (Subagents 6 and 4). For measurement/docs tickets, replace the
+   mutation dimension with **accuracy/reproducibility**; for code
+   tickets, request analytical mutation analysis (survivors + the
+   missing assertion that kills each) instead of running mutmut.
 5. Context section: accepted gaps and owner decisions that are NOT
    findings (cite the ticket Decision Log).
-6. Resilience rules: tool-call budget (10-20), "could not verify →
-   record and move on" (one retry max), and **always end with the
-   consolidated report + a final line `QA_VERDICT: PASS|WARN|FAIL`**,
-   even if dimensions are INCONCLUSIVE.
+6. Resilience rules: tool-call budget **25-35** (Phase 0 gate
+   reproduction + integrity scan need their own calls on top of the
+   per-dimension review; do NOT starve the gates to save budget — they
+   are the verdict spine), "could not verify → record and move on" (one
+   retry max), and **always end with the consolidated report + a final
+   line `QA_VERDICT: PASS|WARN|FAIL`**, even if dimensions are
+   INCONCLUSIVE. A FAIL from any gate or net-new integrity blocker
+   overrides a model's inclination to PASS.
 7. **Wave mode only** — also emit a JSON findings block so the
    developer-skill loop can fingerprint findings and detect plateaus:
 

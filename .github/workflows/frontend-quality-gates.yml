@@ -44,8 +44,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # Gate definitions live in scripts/ci/gates.sh (single source of truth);
+      # the /qa-agent skill runs the SAME script, so local QA and CI cannot drift.
       - name: Run ESLint (errors only, repo-wide)
-        run: npm run lint
+        working-directory: .
+        run: bash scripts/ci/gates.sh frontend:lint
 
       - name: Setup reviewdog
         if: github.event_name == 'pull_request' && failure()
@@ -90,7 +93,8 @@ jobs:
         run: npm ci
 
       - name: Strict ESLint on changed files
-        run: npm run lint:changed
+        working-directory: .
+        run: bash scripts/ci/gates.sh frontend:lint-changed
 
       - name: Post PR summary on failure
         if: failure() && github.event_name == 'pull_request'
@@ -120,7 +124,8 @@ jobs:
         run: npm ci
 
       - name: Run TypeScript type check
-        run: npm run typecheck
+        working-directory: .
+        run: bash scripts/ci/gates.sh frontend:typecheck
 
   legacy-guard:
     name: frontend / Legacy guard
@@ -139,7 +144,8 @@ jobs:
         run: npm ci
 
       - name: Forbid legacy v1 imports in dashboard app
-        run: npm run check:legacy
+        working-directory: .
+        run: bash scripts/ci/gates.sh frontend:legacy-guard
 
       - name: Post PR summary on failure
         if: failure() && github.event_name == 'pull_request'
@@ -169,7 +175,8 @@ jobs:
         run: npm ci
 
       - name: Verify Phase 1 scheduled deletions are complete
-        run: npm run check:legacy-inventory
+        working-directory: .
+        run: bash scripts/ci/gates.sh frontend:legacy-inventory
 
       - name: Post PR summary on failure
         if: failure() && github.event_name == 'pull_request'
@@ -199,7 +206,8 @@ jobs:
         run: npm ci
 
       - name: Run tests
-        run: npm run test -- --run
+        working-directory: .
+        run: bash scripts/ci/gates.sh frontend:test
 
       - name: Post PR summary on failure
         if: failure() && github.event_name == 'pull_request'
@@ -229,7 +237,8 @@ jobs:
         run: npm ci
 
       - name: Audit dependencies (high severity)
-        run: npm audit --audit-level=high
+        working-directory: .
+        run: bash scripts/ci/gates.sh frontend:security
 
   format-check:
     name: frontend / Format
@@ -248,7 +257,8 @@ jobs:
         run: npm ci
 
       - name: Check Prettier formatting
-        run: npx prettier --check "src/**/*.{ts,tsx,json,css,md}"
+        working-directory: .
+        run: bash scripts/ci/gates.sh frontend:format
 
   mutation-advisory:
     name: frontend / Mutation (advisory)
@@ -269,7 +279,8 @@ jobs:
         run: npm ci
 
       - name: Run mutation tests (Stryker)
-        run: npm run test:mutate
+        working-directory: .
+        run: bash scripts/ci/gates.sh frontend:mutation
 
       - name: Post PR mutation summary
         if: always() && github.event_name == 'pull_request'
@@ -281,3 +292,31 @@ jobs:
           bash scripts/ci/post-pr-quality-comment.sh \
             "Frontend" "Mutation (advisory)" \
             "Stryker mutation testing completed (non-blocking). Review the Stryker report in workflow logs."
+
+  integrity:
+    name: frontend / Integrity (anti-gaming)
+    # Diff-scoped ratchet for the frontend tree: blocks NET-NEW suppressions
+    # (eslint-disable / @ts-ignore / @ts-expect-error / @ts-nocheck /
+    # prettier-ignore), skipped or focused tests (.skip / .only / xit), and
+    # threshold loosening. Pre-existing debt is never gated. Definition lives in
+    # scripts/ci/check-integrity.sh (also run by /qa-agent).
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run integrity scan (net-new gaming → fail)
+        working-directory: .
+        run: bash scripts/ci/gates.sh frontend:integrity
+
+      - name: Post PR summary on failure
+        if: failure() && github.event_name == 'pull_request'
+        working-directory: .
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_EVENT_PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          bash scripts/ci/post-pr-quality-comment.sh \
+            "Frontend" "Integrity (anti-gaming)" \
+            "New eslint-disable/@ts-ignore suppressions, skipped/focused tests, or loosened thresholds were introduced. Fix the underlying issue instead of bypassing the gate."

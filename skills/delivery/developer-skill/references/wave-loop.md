@@ -26,6 +26,21 @@ each ticket in dependency order. Implement the **entire wave before QA** so the
 external pass can catch cross-ticket integration issues. Update each ticket's
 Progress Log and move to `Dev Complete`; write per-ticket dev-summaries.
 
+## Step 2.5 — Reproduce the gates locally (before paying for external QA)
+
+External QA is an expensive round (a second LLM). Do not spend it on a failure a
+deterministic gate would have caught. Over the whole wave's changed scope:
+
+```bash
+bash scripts/ci/gates.sh backend        # and/or frontend
+bash scripts/ci/check-integrity.sh backend
+```
+
+Every gate must be PASS (SKIP only where a service is genuinely unavailable) and
+the integrity scan must report **zero net-new blockers**. Fix any failure
+properly — never suppress, skip, loosen a threshold, or cross a DDD layer to go
+green. Only enter the external QA loop once the gates are green.
+
 ## Step 3 — External QA (batch, tagged by ticket)
 
 One QA pass over the whole wave (cheaper, catches integration issues), with
@@ -51,6 +66,7 @@ first_fail_seen = False
 
 wave = topo_sort(tickets)
 dev_implement(wave)                       # whole wave first
+reproduce_gates_or_fix(wave)             # Step 2.5: gates.sh + check-integrity.sh green BEFORE paying for external QA
 
 for i in range(1, MAX_ITERATIONS + 1):
     qa = run_external_qa(wave)            # external model + fresh context

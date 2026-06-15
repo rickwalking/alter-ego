@@ -1,10 +1,15 @@
-"""Search documents tool for the RAG agent."""
+"""Search documents tool for the RAG agent.
+
+The bound tool resolves hybrid search through the knowledge module's public
+facade (:class:`KnowledgeSearchPort`) rather than reaching past the module to a
+raw retriever, so agent retrieval goes through the same search path as
+``/api/search`` (AE-0093). Result formatting is unchanged.
+"""
 
 from langchain_core.tools import BaseTool, tool
 
-from rag_backend.domain.models import RetrievalQuery
-from rag_backend.domain.protocols import Retriever
 from rag_backend.infrastructure.logging import get_logger
+from rag_backend.modules.knowledge import KnowledgeSearchPort, SearchQuery
 
 logger = get_logger()
 
@@ -25,15 +30,19 @@ async def search_documents(query: str) -> str:
 
 
 def build_search_documents_tool(
-    retriever: Retriever, *, top_k: int = 5, namespace_prefix: str | None = None
+    search: KnowledgeSearchPort,
+    *,
+    top_k: int = 5,
+    namespace_prefix: str | None = None,
 ) -> "BaseTool":
     """Return a bound search_documents tool closure.
 
-    Captures the retriever dependency so the tool can be used
-    without passing it at call time.
+    Captures the knowledge search facade so the tool can be used without passing
+    it at call time. Search resolves through the module's public facade
+    (:class:`KnowledgeSearchPort`).
 
     Args:
-        retriever: Hybrid retriever instance
+        search: Knowledge search facade (the public search port)
         top_k: Number of results to return
         namespace_prefix: Optional namespace filter for scoped search
     """
@@ -48,7 +57,7 @@ def build_search_documents_tool(
         Args:
             query: The search query string
         """
-        query_obj = RetrievalQuery(
+        search_query = SearchQuery(
             query=query,
             top_k=top_k,
             namespace_prefix=namespace_prefix,
@@ -59,7 +68,7 @@ def build_search_documents_tool(
             top_k=top_k,
             namespace_prefix=namespace_prefix,
         )
-        results = await retriever.retrieve(query_obj)
+        results = await search.search(search_query)
         if not results:
             logger.info("search_documents_no_results", query=query)
             return "No relevant documents found."

@@ -4,7 +4,7 @@ from uuid import uuid4
 
 import pytest
 
-from rag_backend.domain.models import Document, DocumentStatus
+from rag_backend.domain.models import Document, DocumentScope, DocumentStatus
 
 
 @pytest.mark.unit
@@ -82,6 +82,46 @@ class TestPostgresDocumentRepository:
         assert updated.title == "Updated Title"
         assert updated.status == DocumentStatus.COMPLETED
         assert updated.chunk_count == 10
+
+    async def test_scope_and_is_public_round_trip(self, document_repository):
+        """Should persist non-default scope and is_public across reload.
+
+        Scenario: scope and is_public round-trip (AE-0090
+        full-field document persistence Gherkin) — given a document with
+        scope INTERNAL and is_public false, when saved and reloaded, then
+        scope is INTERNAL and is_public is false.
+        """
+        document = Document(
+            content="internal note",
+            title="Internal",
+            scope=DocumentScope.INTERNAL,
+            is_public=False,
+        )
+
+        created = await document_repository.create(document)
+        reloaded = await document_repository.get_by_id(created.id)
+
+        assert reloaded is not None
+        assert reloaded.scope == DocumentScope.INTERNAL
+        assert reloaded.is_public is False
+
+    async def test_scope_and_is_public_update_round_trip(
+        self, document_repository, sample_document
+    ):
+        """Should persist scope/is_public changes via update_from_entity."""
+        created = await document_repository.create(sample_document)
+        assert created.scope == DocumentScope.PERSONAL
+        assert created.is_public is False
+
+        created.scope = DocumentScope.PUBLIC
+        created.is_public = True
+        created.mark_completed(chunk_count=3)
+        await document_repository.update(created)
+
+        reloaded = await document_repository.get_by_id(created.id)
+        assert reloaded is not None
+        assert reloaded.scope == DocumentScope.PUBLIC
+        assert reloaded.is_public is True
 
     async def test_update_nonexistent_document(
         self, document_repository, sample_document

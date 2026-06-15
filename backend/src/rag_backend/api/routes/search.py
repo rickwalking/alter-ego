@@ -1,12 +1,21 @@
-"""Search API routes."""
+"""Search API routes — thin HTTP adapter over the knowledge facade.
+
+The endpoints parse the HTTP request into a knowledge :class:`SearchQuery`,
+delegate to the request-scoped :class:`KnowledgeService` facade (resolved via the
+``get_knowledge_service`` DI provider at the edge — the route never resolves the
+DI container itself), and map the returned ``SearchResultView`` list back onto
+the HTTP response. Hybrid-search semantics (RRF, namespaces, ``alpha``/``top_k``) live
+behind the facade and are unchanged; the response stays byte-identical to the
+pre-refactor route (AE-0093).
+"""
 
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.api.constants import ERR_NOT_AUTHENTICATED
 from rag_backend.api.dependencies import require_authenticated_user
+from rag_backend.api.dependencies.knowledge import get_knowledge_service
 from rag_backend.api.schemas import (
     ErrorResponse,
     SearchRequest,
@@ -14,10 +23,33 @@ from rag_backend.api.schemas import (
     SearchResultResponse,
 )
 from rag_backend.domain.models import User
-from rag_backend.infrastructure.container import get_container
-from rag_backend.infrastructure.database.config import get_session
+from rag_backend.modules.knowledge import (
+    KnowledgeService,
+    SearchQuery,
+    SearchResultView,
+)
 
 router = APIRouter(prefix="/search", tags=["search"])
+
+_DEFAULT_DOCUMENT_TITLE = "Untitled"
+_TITLE_METADATA_KEY = "title"
+
+
+def _to_result_response(result: SearchResultView) -> SearchResultResponse:
+    """Map a knowledge ``SearchResultView`` onto the HTTP response shape.
+
+    Derives ``document_title`` from the result metadata exactly like the
+    pre-refactor route (``metadata.get("title", "Untitled")``).
+    """
+    title = result.metadata.get(_TITLE_METADATA_KEY, _DEFAULT_DOCUMENT_TITLE)
+    return SearchResultResponse(
+        content=result.content,
+        document_id=result.document_id,
+        document_title=str(title),
+        score=result.score,
+        rank=result.rank,
+        metadata=dict(result.metadata),
+    )
 
 
 @router.post(
@@ -32,7 +64,7 @@ router = APIRouter(prefix="/search", tags=["search"])
 async def search_documents(
     request: SearchRequest,
     user: Annotated[User, Depends(require_authenticated_user)],
-    _db: Annotated[AsyncSession, Depends(get_session)],
+    service: Annotated[KnowledgeService, Depends(get_knowledge_service)],
 ):
     """Search for relevant documents using hybrid search.
 
@@ -45,44 +77,26 @@ async def search_documents(
     Returns:
         List of search results ranked by relevance
     """
-    container = get_container()
-    retriever = container.retriever()
-
     try:
-        from rag_backend.domain.models import RetrievalQuery
-
-        results = await retriever.retrieve(
-            RetrievalQuery(
+        results = await service.search(
+            SearchQuery(
                 query=request.query,
                 top_k=request.top_k,
                 alpha=request.alpha,
             )
         )
-
-        # Format results
-        formatted_results = [
-            SearchResultResponse(
-                content=result.content,
-                document_id=result.document_id,
-                document_title=result.metadata.get("title", "Untitled"),
-                score=result.score,
-                rank=result.rank,
-                metadata=result.metadata,
-            )
-            for result in results
-        ]
-
-        return {
-            "query": request.query,
-            "results": formatted_results,
-            "total": len(formatted_results),
-        }
-
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Search failed: {e!s}",
         ) from e
+
+    formatted_results = [_to_result_response(result) for result in results]
+    return {
+        "query": request.query,
+        "results": formatted_results,
+        "total": len(formatted_results),
+    }
 
 
 @router.get(
@@ -96,6 +110,7 @@ async def search_documents(
 )
 async def search_documents_get(
     user: Annotated[User, Depends(require_authenticated_user)],
+    service: Annotated[KnowledgeService, Depends(get_knowledge_service)],
     query: Annotated[
         str, Query(min_length=1, max_length=1000, description="Search query")
     ],
@@ -106,7 +121,6 @@ async def search_documents_get(
         float,
         Query(ge=0.0, le=1.0, description="Hybrid search balance (0=BM25, 1=semantic)"),
     ] = 0.5,
-    db: AsyncSession = Depends(get_session),
 ):
     """Search for relevant documents using GET request.
 
@@ -114,4 +128,4 @@ async def search_documents_get(
     Use POST for more complex search scenarios.
     """
     request = SearchRequest(query=query, top_k=top_k, alpha=alpha)
-    return await search_documents(request, user, db)
+    return await search_documents(request, user, service)

@@ -243,6 +243,12 @@ count may stay equal or decrease, never rise. See
 
 ## 3. Mutation Testing Thresholds
 
+> **CI gate (blocking):** the backend `mutation` gate fails the PR below an
+> **aggregate 75%** score (`scripts/ci/mutation-score-gate.sh`, run via
+> `gates.sh backend:mutation`). The per-module figures below are ADR-005 design
+> *targets* for prioritizing where to strengthen tests — they are not separate
+> CI thresholds. QA must use **75%** as the pass/fail line, never 70%.
+
 ### Backend (mutmut)
 
 | Module Type | Break (Fail) | Low (Warn) | High (Target) |
@@ -402,7 +408,23 @@ Exceptions require documented justification in an ADR or docs/decisions/.
 
 ## 7. CI/CD Quality Gates
 
-CI runs a **deterministic subset** of the full QA agent checklist. Use `/qa-agent` locally for acceptance-criteria validation, deep security review, and architecture judgment before merge.
+Every gate below is defined **once**, in `scripts/ci/gates.sh` — the single
+source of truth. Both CI and the `/qa-agent` skill invoke that script, so a green
+local QA run means a green CI run (they cannot drift). `/qa-agent` runs
+`gates.sh` in **Phase 0** and only adds judgment-based dimensions (acceptance
+criteria, deep security, architecture, integrity) on top.
+
+```bash
+# Reproduce CI locally (the QA agent does this automatically in Phase 0):
+bash scripts/ci/gates.sh backend            # all backend gates
+bash scripts/ci/gates.sh frontend           # all frontend gates
+bash scripts/ci/gates.sh backend:mutation   # one gate by name
+bash scripts/ci/gates.sh backend --changed-only   # fast subset (no DB / no slow)
+```
+
+Gates needing Postgres (`test`, `diff-cover`, `migrations`) or that are slow
+(`mutation`) report **SKIPPED** when they can't run locally — SKIPPED is
+**INCONCLUSIVE, never PASS**. Set `DATABASE_URL` to run the DB-dependent gates.
 
 See [CI Quality Gates Guide](./ci-quality-gates.md) for workflow names, branch protection, and rollout policy.
 
@@ -419,6 +441,7 @@ See [CI Quality Gates Guide](./ci-quality-gates.md) for workflow names, branch p
 | Dead code | vulture | — | Orphan routes, TODO sweep |
 | Complexity (new code) | Strict Diff (PLR0913/C901/PLR0912/PLR0911/PLR0914/PLR1702), eslint changed | — | — |
 | Mutation testing | mutmut ≥75% (backend) | Stryker (frontend) | Deep mutation analysis |
+| Integrity / anti-gaming | `check-integrity.sh` (net-new suppressions, skipped tests, loosened thresholds, prohibited imports) | apparatus-edit / coverage-omit warnings | Escape-hatch audit, coverage-gaming review |
 | Acceptance criteria | — | — | Plan/spec mapping |
 
 ### Backend Quality Gates (`Backend Quality Gates` workflow)
@@ -439,6 +462,7 @@ See [CI Quality Gates Guide](./ci-quality-gates.md) for workflow names, branch p
 | backend / Migrations (fresh DB) | `alembic upgrade head` + `downgrade base` round-trip on a fresh Postgres | **CI failure (blocking — AE-0084)** — fails on any migration error, non-reversible revision, or 5-min timeout |
 | backend / Dead Code | vulture | CI failure |
 | backend / Mutation (blocking ≥75%) | mutmut + `scripts/ci/mutation-score-gate.sh` | **CI failure (blocking — AE-0049)** if mutation score < 75% |
+| backend / Integrity (anti-gaming) | `scripts/ci/check-integrity.sh backend` | **CI failure (blocking)** on net-new suppressions, skipped/weakened tests, loosened thresholds, raised baselines, or prohibited DDD imports (diff-scoped; pre-existing debt never gated) |
 
 ### Architecture ratchet and baseline-down procedure
 
@@ -513,6 +537,7 @@ can never return, ratchet the baseline down:
 | frontend / Mutation (advisory) | Stryker | Non-blocking; PR summary comment |
 | frontend / Legacy guard | `npm run check:legacy` | CI failure — no v1 imports in `src/app/dashboard` |
 | frontend / Legacy inventory | `npm run check:legacy-inventory` | Advisory until Phase 1 complete ([plan](../plans/frontend-legacy-removal.md)) |
+| frontend / Integrity (anti-gaming) | `scripts/ci/check-integrity.sh frontend` | **CI failure (blocking)** on net-new `eslint-disable`/`@ts-ignore` suppressions, skipped/focused tests, or loosened thresholds (diff-scoped) |
 
 ### Frontend legacy removal (neon shell)
 

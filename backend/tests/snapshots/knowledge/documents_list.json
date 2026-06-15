@@ -1,0 +1,22 @@
+{
+  "body": {
+    "items": [
+      {
+        "chunk_count": 0,
+        "created_at": "<timestamp>",
+        "error_message": null,
+        "id": "<uuid>",
+        "is_public": false,
+        "metadata": {},
+        "scope": "personal",
+        "status": "pending",
+        "title": "Listed Doc",
+        "updated_at": "<timestamp>"
+      }
+    ],
+    "limit": 20,
+    "offset": 0,
+    "total": 1
+  },
+  "status_code": 200
+}

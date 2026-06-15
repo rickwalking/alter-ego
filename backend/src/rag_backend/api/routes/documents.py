@@ -1,17 +1,25 @@
-"""Document API routes."""
+"""Document API routes — thin HTTP adapters over the knowledge facade.
+
+Each endpoint parses the HTTP request into a knowledge command/query, delegates
+to the request-scoped :class:`KnowledgeService` facade (resolved via the
+``get_knowledge_service`` DI provider at the edge — never the global DI container
+here), and maps the returned view back onto the HTTP response/status. Document
+writes commit through the facade's Unit of Work (the single commit owner); the
+routes never call ``db.commit()`` (AE-0091/0092).
+"""
 
 from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, status
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.api.constants import ERR_FORBIDDEN, ERR_NOT_AUTHENTICATED
 from rag_backend.api.dependencies import (
     require_authenticated_user,
     require_editor_or_admin,
 )
-from rag_backend.api.dependencies.resource_access import assert_document_access
+from rag_backend.api.dependencies.knowledge import get_knowledge_service
+from rag_backend.api.dependencies.resource_access import assert_domain_owner_or_admin
 from rag_backend.api.schemas import (
     DocumentCreate,
     DocumentListResponse,
@@ -21,12 +29,36 @@ from rag_backend.api.schemas import (
     ErrorResponse,
 )
 from rag_backend.domain.models import Document, DocumentScope, DocumentStatus, User
-from rag_backend.infrastructure.container import get_container
-from rag_backend.infrastructure.database.config import get_session
-from rag_backend.infrastructure.database.document_repository import _OwnerQuery
+from rag_backend.infrastructure.config.settings import Settings, get_settings
 from rag_backend.infrastructure.retrieval.document_processor import load_file_content
+from rag_backend.modules.knowledge import (
+    CreateDocumentCommand,
+    DeleteDocumentCommand,
+    DocumentStatusQuery,
+    GetDocumentQuery,
+    IngestDocumentCommand,
+    KnowledgeDocumentView,
+    KnowledgeService,
+    ListDocumentsQuery,
+    ReprocessDocumentCommand,
+)
+from rag_backend.modules.knowledge.domain.commands import MetadataValue
 
 router = APIRouter(prefix="/documents", tags=["documents"])
+
+_DETAIL_NOT_FOUND = "Document with id {document_id} not found"
+
+
+def _parse_scope(scope: str) -> DocumentScope:
+    """Map a scope string to the enum, raising 400 on an unknown value."""
+    try:
+        return DocumentScope(scope)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid scope: {scope}. Must be one of: "
+            f"{', '.join(s.value for s in DocumentScope)}",
+        ) from None
 
 
 @router.post(
@@ -45,72 +77,24 @@ router = APIRouter(prefix="/documents", tags=["documents"])
 )
 async def upload_document(
     file: UploadFile,
+    service: Annotated[KnowledgeService, Depends(get_knowledge_service)],
+    user: Annotated[User, Depends(require_editor_or_admin)],
+    settings: Annotated[Settings, Depends(get_settings)],
     title: str | None = None,
     tags: str | None = None,
     scope: str = "personal",
     is_public: bool = False,
-    user: Annotated[User, Depends(require_editor_or_admin)] = None,
-    db: AsyncSession = Depends(get_session),
 ):
     """Upload a document file and process it immediately.
 
     Accepts PDF, TXT, MD files. The document is processed through the
     full pipeline (chunking + embedding) before returning.
     """
-    container = get_container()
-    settings = container.settings()
+    content = await _read_upload_content(file, settings)
+    metadata = _build_upload_metadata(file, tags)
+    doc_scope = _parse_scope(scope)
 
-    # Read file content
-    raw_bytes = await file.read()
-
-    # Check file size
-    max_bytes = settings.max_upload_size_mb * 1024 * 1024
-    if len(raw_bytes) > max_bytes:
-        raise HTTPException(
-            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-            detail=f"File too large. Maximum size is {settings.max_upload_size_mb}MB",
-        )
-
-    if not raw_bytes:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Uploaded file is empty",
-        )
-
-    # Extract text based on file type
-    try:
-        content = load_file_content(raw_bytes, file.filename or "unknown")
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Failed to read file content: {e!s}",
-        ) from e
-
-    if not content.strip():
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="No text content could be extracted from the file",
-        )
-
-    # Build metadata
-    metadata: dict[str, object] = {
-        "filename": file.filename,
-        "content_type": file.content_type,
-    }
-    if tags:
-        metadata["tags"] = [t.strip() for t in tags.split(",") if t.strip()]
-
-    # Validate scope
-    try:
-        doc_scope = DocumentScope(scope)
-    except ValueError:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Invalid scope: {scope}. Must be one of: {', '.join(s.value for s in DocumentScope)}",
-        ) from None
-
-    # Create document entity
-    document = Document(
+    command = IngestDocumentCommand(
         title=title or file.filename or "Untitled",
         content=content,
         metadata=metadata,
@@ -118,23 +102,56 @@ async def upload_document(
         is_public=is_public,
         owner_id=user.id if user else None,
     )
-
-    # Save to database
-    repo = container.document_repository(session=db)
-    created_doc = await repo.create(document)
-    await db.commit()
-
-    # Process through pipeline immediately (inject request-scoped repo)
-    pipeline = container.document_pipeline(document_repository=repo)
     try:
-        processed_doc = await pipeline.process_document(created_doc)
+        return await service.ingest(command)
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to process document: {e!s}",
         ) from e
 
-    return processed_doc
+
+async def _read_upload_content(file: UploadFile, settings: Settings) -> str:
+    """Validate the upload (size/empty/type) and extract its text content."""
+    raw_bytes = await file.read()
+
+    max_bytes = settings.max_upload_size_mb * 1024 * 1024
+    if len(raw_bytes) > max_bytes:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail=f"File too large. Maximum size is {settings.max_upload_size_mb}MB",
+        )
+    if not raw_bytes:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Uploaded file is empty",
+        )
+    try:
+        content = load_file_content(raw_bytes, file.filename or "unknown")
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Failed to read file content: {e!s}",
+        ) from e
+    if not content.strip():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No text content could be extracted from the file",
+        )
+    return content
+
+
+def _build_upload_metadata(
+    file: UploadFile, tags: str | None
+) -> dict[str, MetadataValue]:
+    """Build the document metadata from the upload's filename/content-type/tags."""
+    metadata: dict[str, MetadataValue] = {
+        "filename": file.filename or "",
+        "content_type": file.content_type or "",
+    }
+    if tags:
+        metadata["tags"] = ",".join(t.strip() for t in tags.split(",") if t.strip())
+    return metadata
 
 
 @router.post(
@@ -152,44 +169,23 @@ async def upload_document(
 async def create_document(
     request: DocumentCreate,
     user: Annotated[User, Depends(require_editor_or_admin)],
-    db: Annotated[AsyncSession, Depends(get_session)],
+    service: Annotated[KnowledgeService, Depends(get_knowledge_service)],
 ):
     """Create a new document and start processing.
 
     The document will be queued for processing (chunking and embedding generation).
     Check the status field to track progress.
     """
-    container = get_container()
-
-    # Validate scope
-    try:
-        doc_scope = DocumentScope(request.scope)
-    except ValueError:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Invalid scope: {request.scope}. Must be one of: {', '.join(s.value for s in DocumentScope)}",
-        ) from None
-
-    # Create document entity
-    document = Document(
+    doc_scope = _parse_scope(request.scope)
+    command = CreateDocumentCommand(
         title=request.title,
         content=request.content,
-        metadata=request.metadata,
+        metadata=_to_metadata(request.metadata),
         scope=doc_scope,
         is_public=request.is_public,
         owner_id=user.id,
     )
-
-    # Save to database
-    repo = container.document_repository(session=db)
-    created_doc = await repo.create(document)
-    await db.commit()
-
-    # Start async processing (in production, this would be a background task)
-    # For now, we'll return immediately with pending status
-    # The actual processing would be triggered by a background job
-
-    return created_doc
+    return await service.create(command)
 
 
 @router.get(
@@ -202,6 +198,7 @@ async def create_document(
 )
 async def list_documents(
     user: Annotated[User, Depends(require_authenticated_user)],
+    service: Annotated[KnowledgeService, Depends(get_knowledge_service)],
     status: Annotated[
         DocumentStatus | None, Query(description="Filter by status")
     ] = None,
@@ -209,32 +206,23 @@ async def list_documents(
         int, Query(ge=1, le=100, description="Number of items to return")
     ] = 20,
     offset: Annotated[int, Query(ge=0, description="Number of items to skip")] = 0,
-    db: AsyncSession = Depends(get_session),
 ):
     """List all documents with optional filtering.
 
     Documents are ordered by updated_at in descending order.
     """
-    container = get_container()
-    repo = container.document_repository(session=db)
-
-    if user.is_admin():
-        documents = await repo.get_all(status=status, limit=limit, offset=offset)
-        total = await repo.count(status=status)
-    else:
-        documents = await repo.get_all_for_owner(
-            _OwnerQuery(
-                owner_id=user.id,
-                status=status,
-                limit=limit,
-                offset=offset,
-            )
+    page = await service.list_with_total(
+        ListDocumentsQuery(
+            status=status,
+            limit=limit,
+            offset=offset,
+            owner_id=user.id,
+            is_admin=user.is_admin(),
         )
-        total = await repo.count_for_owner(owner_id=user.id, status=status)
-
+    )
     return {
-        "items": documents,
-        "total": total,
+        "items": page.items,
+        "total": page.total,
         "limit": limit,
         "offset": offset,
     }
@@ -253,20 +241,16 @@ async def list_documents(
 async def get_document(
     document_id: UUID,
     user: Annotated[User, Depends(require_authenticated_user)],
-    db: Annotated[AsyncSession, Depends(get_session)],
+    service: Annotated[KnowledgeService, Depends(get_knowledge_service)],
 ):
     """Get a single document by ID."""
-    container = get_container()
-    repo = container.document_repository(session=db)
-
-    document = await repo.get_by_id(document_id)
+    document = await service.get(GetDocumentQuery(document_id=document_id))
     if not document:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Document with id {document_id} not found",
+            detail=_DETAIL_NOT_FOUND.format(document_id=document_id),
         )
-
-    assert_document_access(document, user)
+    _assert_view_access(document, user)
     return document
 
 
@@ -282,32 +266,24 @@ async def get_document(
 async def get_document_status(
     document_id: UUID,
     user: Annotated[User, Depends(require_authenticated_user)],
-    db: Annotated[AsyncSession, Depends(get_session)],
+    service: Annotated[KnowledgeService, Depends(get_knowledge_service)],
 ):
     """Get document processing status and estimates."""
-    container = get_container()
-    repo = container.document_repository(session=db)
-
-    document = await repo.get_by_id(document_id)
+    document = await service.get(GetDocumentQuery(document_id=document_id))
     if not document:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Document with id {document_id} not found",
+            detail=_DETAIL_NOT_FOUND.format(document_id=document_id),
         )
+    _assert_view_access(document, user)
 
-    assert_document_access(document, user)
-
-    # Get pipeline for estimation (inject request-scoped repo)
-    pipeline = container.document_pipeline(document_repository=repo)
-    estimates = pipeline.estimate_processing_time(document)
-
-    return {
-        "id": document.id,
-        "status": document.status.value,
-        "chunk_count": document.chunk_count,
-        "estimated_chunks": estimates["estimated_chunks"],
-        "estimated_time_seconds": estimates["total_time_seconds"],
-    }
+    estimate = await service.status(DocumentStatusQuery(document_id=document_id))
+    if estimate is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=_DETAIL_NOT_FOUND.format(document_id=document_id),
+        )
+    return estimate
 
 
 @router.delete(
@@ -323,29 +299,26 @@ async def get_document_status(
 async def delete_document(
     document_id: UUID,
     user: Annotated[User, Depends(require_authenticated_user)],
-    db: Annotated[AsyncSession, Depends(get_session)],
+    service: Annotated[KnowledgeService, Depends(get_knowledge_service)],
 ):
     """Delete a document and all its associated data.
 
     This will remove the document from the database and delete all
     associated vectors from the vector store.
     """
-    container = get_container()
-    repo = container.document_repository(session=db)
-    document = await repo.get_by_id(document_id)
+    document = await service.get(GetDocumentQuery(document_id=document_id))
     if not document:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Document with id {document_id} not found",
+            detail=_DETAIL_NOT_FOUND.format(document_id=document_id),
         )
+    _assert_view_access(document, user)
 
-    assert_document_access(document, user)
-    pipeline = container.document_pipeline(document_repository=repo)
-    success = await pipeline.delete_document(str(document_id))
+    success = await service.delete(DeleteDocumentCommand(document_id=document_id))
     if not success:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Document with id {document_id} not found",
+            detail=_DETAIL_NOT_FOUND.format(document_id=document_id),
         )
 
 
@@ -362,27 +335,50 @@ async def delete_document(
 async def reprocess_document(
     document_id: UUID,
     user: Annotated[User, Depends(require_authenticated_user)],
-    db: Annotated[AsyncSession, Depends(get_session)],
+    service: Annotated[KnowledgeService, Depends(get_knowledge_service)],
 ):
     """Reprocess a document.
 
     This will delete existing vectors and regenerate chunks and embeddings.
     """
-    container = get_container()
-    repo = container.document_repository(session=db)
-    document = await repo.get_by_id(document_id)
+    document = await service.get(GetDocumentQuery(document_id=document_id))
     if not document:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Document with id {document_id} not found",
+            detail=_DETAIL_NOT_FOUND.format(document_id=document_id),
         )
-
-    assert_document_access(document, user)
-    pipeline = container.document_pipeline(document_repository=repo)
+    _assert_view_access(document, user)
     try:
-        return await pipeline.reprocess_document(str(document_id))
+        return await service.reprocess(
+            ReprocessDocumentCommand(document_id=document_id)
+        )
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=str(e),
         ) from e
+
+
+def _assert_view_access(document: KnowledgeDocumentView, user: User) -> None:
+    """Enforce the legacy owner-or-admin document access check on a view.
+
+    Keys off the document's ``owner_id`` exactly like the pre-refactor route's
+    ``assert_document_access`` (ownership ignores ``is_public``), preserving the
+    safety net's 403 semantics.
+    """
+    assert_domain_owner_or_admin(document.owner_id, user)
+
+
+def _to_metadata(metadata: dict[str, object]) -> dict[str, MetadataValue]:
+    """Coerce request metadata to the boundary-safe scalar value type."""
+    result: dict[str, MetadataValue] = {}
+    for key, value in metadata.items():
+        if isinstance(value, str | int | float | bool):
+            result[key] = value
+        else:
+            result[key] = str(value)
+    return result
+
+
+# Re-exported for backwards compatibility with callers importing the entity here.
+__all__ = ["Document", "router"]
