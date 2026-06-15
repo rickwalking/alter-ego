@@ -128,16 +128,28 @@ class IdEnv:
 
 
 @pytest_asyncio.fixture
-async def id_env(tmp_path: object) -> AsyncGenerator[IdEnv, None]:
+async def id_env(
+    tmp_path: object, monkeypatch: pytest.MonkeyPatch
+) -> AsyncGenerator[IdEnv, None]:
     """Shared file-backed DB + app with an admin + editor and client helpers."""
     from pathlib import Path
 
     import rag_backend.infrastructure.database.config as db_config
     from rag_backend.api.app import create_app
+    from rag_backend.infrastructure.config.settings import get_settings
     from rag_backend.infrastructure.database.config import close_db
 
     os.environ["SECRET_KEY"] = TEST_SECRET
     os.environ["ANON_SECRET_KEY"] = ANON_SECRET
+    # Pin DEBUG so the cookie `secure` attribute is deterministic across
+    # environments. ``settings.debug`` defaults to False (the production / CI
+    # value), but an ambient local ``DEBUG=true`` would otherwise drop the
+    # ``secure`` flag and make the committed snapshot environment-dependent.
+    # We assert the production behavior (anon_token Secure=true). monkeypatch
+    # auto-reverts the env at test end; clear the settings cache so the app
+    # picks up the pinned value.
+    monkeypatch.setenv("DEBUG", "false")
+    get_settings.cache_clear()
 
     assert isinstance(tmp_path, Path)
     db_path = str(tmp_path / "id_env.db")

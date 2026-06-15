@@ -12,6 +12,7 @@
       "max-age": "3600",
       "path": "/",
       "samesite": "strict",
+      "secure": true,
       "value": "<jwt>"
     }
   },
