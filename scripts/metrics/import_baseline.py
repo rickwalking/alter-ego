@@ -42,10 +42,16 @@ BASELINE_PAIR_CEILING: dict[str, tuple[int, int]] = {
     "application -> infrastructure": (63, 0),
     "application -> agents": (23, 0),
     "agents -> application": (20, 2),
-    "api -> infrastructure": (98, 0),
+    # Ratcheted down 98 -> 82 by AE-0099/0101/0102 (auth/admin/conversation/
+    # chat-stream routes moved behind identity/conversation facades; per-edge
+    # infra imports removed).
+    "api -> infrastructure": (82, 0),
 }
 # Non-import categories Import Linter cannot express.
-BASELINE_GET_CONTAINER = 26
+# Ratcheted down 26 -> 14 by Phase 3 (AE-0099/0101/0102 resolve user/conversation
+# collaborators + chat-agent construction via the module facades at the DI edge,
+# not get_container()).
+BASELINE_GET_CONTAINER = 14
 BASELINE_COMMIT_SITES = 9
 
 IMPORT_RE = re.compile(
@@ -397,6 +403,64 @@ def render_importlinter(ignores: dict[str, list[tuple[str, str]]] | None = None)
         "    rag_backend.api.routes.documents -> "
         "rag_backend.modules.knowledge.domain.commands"
     )
+
+    # Phase 3 exit gate (AE-0103) — identity + conversation, mirroring the
+    # proven Phase-2 knowledge pair above. Both modules are currently clean
+    # (AE-0098..0102): application/domain layers are framework/vendor/container/
+    # Postgres-free and every cross-module caller goes through the facade root,
+    # so neither contract needs an ignore_imports block — any NEW such edge
+    # breaks CI. See docs/architecture/module-conventions.md §7a / §9a.
+    for module in ("identity", "conversation"):
+        # Contract A — application/domain isolation: inner layers must not import
+        # frameworks (sqlalchemy/fastapi), the global DI container, or ANY
+        # infrastructure (which is where the concrete Postgres repositories live)
+        # — they depend only on ports, the platform UoW, and other facades.
+        out.append(
+            f"\n# Contract: {module.capitalize()} module application/domain "
+            "exit-gate (AE-0103)\n"
+            f"# The {module} inner layers must stay free of frameworks, the global\n"
+            "# container, and concrete infrastructure (incl. Postgres repos).\n"
+            "# Currently clean — no ignore_imports; any NEW such import breaks CI.\n"
+            f"[importlinter:contract:{module}-application-isolation]\n"
+            f"name = {module.capitalize()} application/domain must not import "
+            "frameworks, the global container, or infrastructure\n"
+            "type = forbidden\n"
+            "allow_indirect_imports = true\n"
+            "unmatched_ignore_imports_alerting = none\n"
+            "source_modules =\n"
+            f"    rag_backend.modules.{module}.application\n"
+            f"    rag_backend.modules.{module}.domain\n"
+            "forbidden_modules =\n"
+            "    sqlalchemy\n"
+            "    fastapi\n"
+            "    rag_backend.infrastructure"
+        )
+        # Contract B — public-facade: cross-module / cross-layer callers may
+        # import ONLY rag_backend.modules.<module> (the facade root); never its
+        # internals. Mirrors module-conventions §7a.
+        out.append(
+            f"\n# Contract: {module} internals are private "
+            "(import via the facade only)\n"
+            "# AE-0103 — mirrors module-conventions §7a; the proven Phase-2 pattern.\n"
+            f"[importlinter:contract:{module}-public-facade]\n"
+            f"name = {module} internals are private (import via the facade only)\n"
+            "type = forbidden\n"
+            "allow_indirect_imports = true\n"
+            "unmatched_ignore_imports_alerting = none\n"
+            "source_modules =\n"
+            "    rag_backend.api\n"
+            "    rag_backend.agents\n"
+            "    rag_backend.application\n"
+            "    rag_backend.domain\n"
+            "    rag_backend.infrastructure\n"
+            "forbidden_modules =\n"
+            f"    rag_backend.modules.{module}.domain\n"
+            f"    rag_backend.modules.{module}.application\n"
+            f"    rag_backend.modules.{module}.infrastructure\n"
+            f"    rag_backend.modules.{module}.api\n"
+            f"    rag_backend.modules.{module}.bootstrap\n"
+            f"    rag_backend.modules.{module}.constants"
+        )
 
     # Generated forbidden contracts (exact baseline exception lists, no wildcards).
     for cid, cname, _key, source, targets in _FORBIDDEN_CONTRACTS:

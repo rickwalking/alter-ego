@@ -1,6 +1,6 @@
 # AE-0103 — Identity + Conversation import contracts + exit gate + baseline ratchet
 
-Status: Ready
+Status: Dev Complete
 Tier: T2
 Priority: High
 Type: Task
@@ -111,9 +111,11 @@ Feature: Identity/Conversation boundaries enforced
 
 Ticket created by planner (Phase 3 breakdown).
 
+Dev Complete (Wave D). 4 import contracts (identity/conversation × isolation+facade), baseline ratcheted down (api->infra 98→82, get_container 26→14), module-conventions §10 worked examples. lint-imports 14/0, --check PASS, violations demonstrated+reverted, integrity 0 blockers.
+
 ## Files Touched
 
-Pending.
+scripts/metrics/import_baseline.py (contracts + baseline constants), backend/.importlinter (regenerated), docs/architecture/module-conventions.md (§10)
 
 ## Test Evidence
 
