@@ -1,6 +1,6 @@
 # AE-0108 — modules/editorial skeleton + facade + EditorialProject/EditorialWorkflow + status language + ports
 
-Status: Ready
+Status: Dev Complete
 Tier: T2
 Priority: High
 Type: Task
@@ -102,9 +102,11 @@ Not applicable — behavior-preserving scaffolding; verified by mypy/lint-import
 
 Ticket created by planner (Phase 4 breakdown).
 
+Dev Complete (Wave A). modules/editorial skeleton + facade + bootstrap (manual DI, no get_container); EditorialProject/EditorialWorkflow domain entities + status value objects re-exporting carousel_workflow constants (object-identity, no new strings); CarouselRepository + entity shims; reuses platform UoW. mypy 474, lint-imports 14/0, 11 unit tests. Wave A combined 47 passed; mypy 474, lint-imports 14/0, integrity 0 blockers.
+
 ## Files Touched
 
-Pending.
+backend/src/rag_backend/modules/editorial/** (+public.py/bootstrap.py/constants.py/domain/status.py), tests/unit/modules/editorial/*
 
 ## Test Evidence
 
