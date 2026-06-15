@@ -1,6 +1,6 @@
 # AE-0107 — legacy.carousel_project single write owner for workflow-owned fields
 
-Status: Dev Complete
+Status: Review
 Tier: T2
 Priority: High
 Type: Task
@@ -114,7 +114,7 @@ Pending.
 
 ## QA Report
 
-Pending.
+Phase 4 Wave B batch QA — round 1 surfaced the finalize/W1 atomic-terminal-write boundary (documented deferral, byte-identical-justified); round 2 PASS (0 critical/warning/minor). See `.agent/reports/phase-4-wave-b.qa.md`.
 
 ## Decision Log
 
