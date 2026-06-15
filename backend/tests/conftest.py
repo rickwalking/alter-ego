@@ -27,6 +27,21 @@ from rag_backend.infrastructure.database.document_repository import (
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
 
 
+def pytest_addoption(parser: pytest.Parser) -> None:
+    """Register the Knowledge golden-snapshot capture flag (AE-0088).
+
+    When ``--snapshot-update`` is passed, the Knowledge safety-net snapshot
+    tests rewrite the committed golden snapshots from current behavior instead
+    of asserting against them.
+    """
+    parser.addoption(
+        "--snapshot-update",
+        action="store_true",
+        default=False,
+        help="Capture/refresh Knowledge golden snapshots from current behavior.",
+    )
+
+
 @pytest.fixture(scope="session")
 def event_loop():
     """Create an instance of the default event loop for the test session."""

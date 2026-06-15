@@ -4,6 +4,7 @@ import uuid
 
 from sqlalchemy import (
     JSON,
+    Boolean,
     Column,
     DateTime,
     ForeignKey,
@@ -18,7 +19,7 @@ from sqlalchemy.orm import relationship
 from rag_backend.domain.models import (
     Document as DocumentEntity,
 )
-from rag_backend.domain.models import DocumentStatus
+from rag_backend.domain.models import DocumentScope, DocumentStatus
 from rag_backend.infrastructure.database.config import Base
 
 
@@ -35,6 +36,18 @@ class DocumentModel(Base):
     status = Column(String(20), default=DocumentStatus.PENDING.value, nullable=False)
     error_message = Column(Text, nullable=True)
     chunk_count = Column(Integer, default=0, nullable=False)
+    scope = Column(
+        String(20),
+        default=DocumentScope.PERSONAL.value,
+        server_default=DocumentScope.PERSONAL.value,
+        nullable=False,
+    )
+    is_public = Column(
+        Boolean,
+        default=False,
+        server_default=func.false(),
+        nullable=False,
+    )
     created_at = Column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
@@ -66,7 +79,9 @@ class DocumentModel(Base):
             status=DocumentStatus(self.status),
             error_message=self.error_message,
             chunk_count=self.chunk_count,
+            scope=DocumentScope(self.scope),
             owner_id=UUID(self.owner_id) if self.owner_id else None,
+            is_public=self.is_public,
             created_at=self.created_at,
             updated_at=self.updated_at,
         )
@@ -83,6 +98,8 @@ class DocumentModel(Base):
             status=entity.status.value,
             error_message=entity.error_message,
             chunk_count=entity.chunk_count,
+            scope=entity.scope.value,
+            is_public=entity.is_public,
             created_at=entity.created_at,
             updated_at=entity.updated_at,
         )
@@ -95,4 +112,6 @@ class DocumentModel(Base):
         self.status = entity.status.value
         self.error_message = entity.error_message
         self.chunk_count = entity.chunk_count
+        self.scope = entity.scope.value
+        self.is_public = entity.is_public
         self.updated_at = entity.updated_at

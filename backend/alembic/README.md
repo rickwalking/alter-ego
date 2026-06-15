@@ -7,6 +7,18 @@ The active chain starts from a **single squashed baseline** —
 creates the entire current schema exactly as defined by `Base.metadata`
 (`infrastructure/database/models`).
 
+### Additive migrations on top of the baseline
+
+- `a1b2c3d4e5f6_add_documents_scope_is_public.py` (AE-0090, `down_revision =
+  63eaefa67b8c`) — current **head**. Adds `documents.scope`
+  (`String(20)`, `server_default='personal'`, NOT NULL) and `documents.is_public`
+  (`Boolean`, `server_default=false`, NOT NULL). Additive and data-preserving: the
+  server defaults backfill existing rows, no separate UPDATE needed. The `Document`
+  entity already carried these fields; the baseline simply never persisted them.
+
+The squashed baseline plus these additive revisions still equals `Base.metadata`,
+so the autogenerate-drift check (below) stays empty.
+
 The previous incremental migrations `0001`–`0011` were never runnable from an empty
 database: the base tables (`users`, `projects`, …) were created at startup by
 `Base.metadata.create_all`, so `0001` (which does `op.add_column('projects', …)`) failed

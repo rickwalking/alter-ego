@@ -1,0 +1,9 @@
+{
+  "body": {
+    "items": [],
+    "limit": 20,
+    "offset": 0,
+    "total": 0
+  },
+  "status_code": 200
+}
