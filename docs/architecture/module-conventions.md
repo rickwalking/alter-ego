@@ -281,6 +281,44 @@ internals, and the template's own facade (`public.py` / `__init__`) is the
 only public entry point. When AE-0082 lands, real modules replace `_template`
 with their context name following §7a.
 
+### 7d. Application/domain exit-gate contract (`forbidden`, one per module) — AE-0095
+
+A real module's **inner layers** (`application`, `domain`) SHALL stay free of
+frameworks, vendor SDKs, and the global DI container. Modules live under
+`rag_backend.modules.<context>`, which is **outside** `rag_backend.application`,
+so the global `application-no-infrastructure` contract does **not** cover them —
+each module needs its own exit-gate contract:
+
+```ini
+[importlinter:contract:<context>-application-isolation]
+name = <context> application/domain must not import frameworks, vendors, or the global container
+type = forbidden
+allow_indirect_imports = true
+unmatched_ignore_imports_alerting = none
+source_modules =
+    rag_backend.modules.<context>.application
+    rag_backend.modules.<context>.domain
+forbidden_modules =
+    sqlalchemy
+    fastapi
+    pinecone
+    rag_backend.infrastructure.container
+```
+
+Notes:
+
+- The top-level `[importlinter]` block sets `include_external_packages = true`
+  so external forbidden targets (`sqlalchemy`, `fastapi`, `pinecone`) are in the
+  graph. This is required by Import Linter whenever any contract forbids an
+  external package; it leaves every internal-only contract unaffected (all stay
+  KEPT).
+- `allow_indirect_imports = true` keeps this a **per-edge** gate: only a *direct*
+  forbidden import in the module's inner layers breaks it. Indirect chains
+  (`application -> ... -> infrastructure.container`) are owned by their own
+  direct-edge contracts.
+- A clean module (the goal) carries **no `ignore_imports`** here — any new
+  framework/vendor/container import in the inner layers breaks CI immediately.
+
 ---
 
 ## 8. Checklist for a new module
@@ -295,8 +333,88 @@ with their context name following §7a.
    injection).
 6. Supply `ActorContext` and call the context-owned authorization policy in
    every inbound adapter.
-7. Add the §7a public-facade contract (and optionally §7b layers) to
-   `.importlinter` (AE-0082).
+7. Add the §7a public-facade contract, the §7d application/domain exit-gate
+   contract (and optionally §7b layers) to `.importlinter`. Author them in the
+   generator `scripts/metrics/import_baseline.py` (`render_importlinter`) so
+   `--emit-importlinter` regeneration stays stable, then regenerate the file.
 8. Verify: `MYPYPATH=src uv run mypy -p rag_backend`,
    `uv run ruff check src/rag_backend/modules/`, `uv run lint-imports`,
+   `uv run python ../scripts/metrics/import_baseline.py --check`,
    `uv run pytest`.
+
+---
+
+## 9. Worked example — the `knowledge` module (reusable Phase-2 template)
+
+The **`knowledge`** bounded context is the first real module to complete the
+full convention end-to-end (Phases 2a–2d: AE-0089/0092/0093/0095). It is the
+proven pattern Phases 3–8 copy verbatim. Source:
+`backend/src/rag_backend/modules/knowledge/`.
+
+### 9a. Layout (matches §2 exactly)
+
+```
+modules/knowledge/
+├── __init__.py            # re-exports public.py (the public API)
+├── public.py              # PUBLIC FACADE — KnowledgeService, commands/queries,
+│                          #   view DTOs, KnowledgeSearchPort, bootstrap_module
+├── bootstrap.py           # bootstrap_module(...) -> KnowledgeAdapters (manual DI)
+├── constants.py
+├── domain/                # models.py, ports.py, commands.py (no outward imports)
+├── application/           # service.py (use cases + UoW boundary), search_port.py
+├── infrastructure/        # adapters implementing domain ports
+└── api/                   # views.py — boundary-safe DTOs
+```
+
+### 9b. Facade in practice (§3)
+
+Cross-module callers import **only** the facade — verified across the agent and
+API edges:
+
+```python
+# agents/rag_agent.py, agents/alter_ego_agent.py, api/routes/search.py,
+# api/dependencies/{agents,knowledge}.py, application/tools/knowledge_base/...
+from rag_backend.modules.knowledge import KnowledgeService, KnowledgeSearchPort, SearchQuery
+```
+
+The `KnowledgeSearchPort` (in `application/search_port.py`, re-exported from the
+facade) is the boundary-safe hybrid-search contract: inbound adapters depend on
+it instead of wiring a raw retriever that would bypass the module.
+
+### 9c. The two enforcing contracts (§7a + §7d)
+
+`backend/.importlinter` carries both knowledge contracts, generated from
+`render_importlinter` in `scripts/metrics/import_baseline.py`:
+
+- **`knowledge-application-isolation`** (§7d) — `application`/`domain` forbidden
+  from importing `sqlalchemy`, `fastapi`, `pinecone`, and
+  `infrastructure.container`. The inner layers are clean, so it carries **no
+  `ignore_imports`**: a new framework/vendor/container import fails CI at once.
+- **`knowledge-public-facade`** (§7a) — `api`/`agents`/`application`/`domain`/
+  `infrastructure` forbidden from importing knowledge internals
+  (`domain`/`application`/`infrastructure`/`api`/`bootstrap`/`constants`). The
+  one legacy internal edge (`api.routes.documents -> domain.commands` for the
+  `MetadataValue` type) is grandfathered via `ignore_imports`; everything else
+  goes through the facade.
+
+Both use `allow_indirect_imports = true` (per-edge gate) and
+`unmatched_ignore_imports_alerting = none` (robust against grimp graph
+granularity differences without weakening enforcement — a NEW edge still
+breaks).
+
+### 9d. Ratchet effect (AE-0082 baseline)
+
+Routing the agent/route edges through the facade and dropping the global
+container from the module path **ratcheted the AE-0082 baseline DOWN**
+(`api -> infrastructure` and `get_container()` locator counts both fell);
+`import_baseline.py --check` stays PASS because counts may only decrease. Later
+phases inherit this: every module they extract cleanly lowers the ceilings
+further, never raises them.
+
+### 9e. Copy this for Phases 3–8
+
+For each new module: add a `<context>-public-facade` (§7a) and a
+`<context>-application-isolation` (§7d) contract to `render_importlinter`,
+regenerate `.importlinter`, and confirm both are KEPT with no (or only
+explicitly grandfathered) ignores — the knowledge contracts are the literal
+template.
