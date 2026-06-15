@@ -1,6 +1,6 @@
 # AE-0126 — modules/publishing skeleton + facade + domain (BlogPost/Publication/DistributionChannel/PublishingSchedule) + ports
 
-Status: Ready
+Status: Dev Complete
 Tier: T2
 Priority: High
 Type: Task
@@ -103,9 +103,11 @@ Not applicable — behavior-preserving scaffolding; verified by mypy/lint-import
 
 Ticket created by planner (Phase 6 breakdown).
 
+Dev Complete (Wave A). modules/publishing skeleton + public.py facade + bootstrap (manual DI, no get_container); BlogPost/Publication/DistributionChannel/PublishingSchedule/ReleaseState domain (origin deferred to AE-0127); object-identity re-exports of BlogPostRepository/CarouselRepository/BlogPostStatus/CarouselProject; reuses platform UoW. mypy 511, lint-imports 19/0, 15 unit tests; .importlinter untouched (AE-0132). Wave A 46 tests pass; mypy 511, integrity 0 blockers, no suppressions.
+
 ## Files Touched
 
-Pending.
+backend/src/rag_backend/modules/publishing/** (+public.py/bootstrap.py/constants.py/domain), tests/unit/modules/publishing/*
 
 ## Test Evidence
 
