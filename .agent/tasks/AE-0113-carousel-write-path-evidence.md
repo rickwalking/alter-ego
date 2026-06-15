@@ -1,6 +1,6 @@
 # AE-0113 — Carousel write-path authorization evidence + scaled-down rollback drill
 
-Status: Ready
+Status: Dev Complete
 Tier: T2
 Priority: High
 Type: Task
@@ -108,9 +108,11 @@ Feature: Carousel write-path authorization parity (representative)
 
 Ticket created during Phase 4 architect validation round 1 (resolves blocker F1).
 
+Dev Complete (Wave A). Write-path authz evidence + scaled-down rollback drill: 14 three-entry-point (HTTP/agent-tool/worker) authorization contract tests asserting identical allow/deny + parity cross-check; scaled-down rollback drill doc (DB restore + trace-correlated smoke, scope-limited per ADR-0009 §2) + 3 runnable smoke tests + restore helper script. 17 tests pass. Wave A combined 47 passed; mypy 474, lint-imports 14/0, integrity 0 blockers.
+
 ## Files Touched
 
-Pending.
+tests/integration/test_carousel_write_path_authz.py, tests/integration/test_carousel_rollback_smoke.py, scripts/carousel_rollback_drill.py, docs/architecture/carousel-rollback-drill.md
 
 ## Test Evidence
 
