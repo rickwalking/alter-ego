@@ -1,6 +1,6 @@
 # AE-0111 — Source/assignments/review/optimistic-locking behind editorial ports; split approval from public release
 
-Status: Dev Complete
+Status: Review
 Tier: T2
 Priority: High
 Type: Task
@@ -113,7 +113,7 @@ Pending.
 
 ## QA Report
 
-Pending.
+Phase 4 Wave D QA — converged PASS in 2 independent rounds (0 findings). See `.agent/reports/phase-4-wave-d.qa.md`.
 
 ## Decision Log
 
