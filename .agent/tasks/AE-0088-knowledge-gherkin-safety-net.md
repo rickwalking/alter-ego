@@ -14,7 +14,7 @@ Updated: 2026-06-15
 
 ## Goal
 
-Audit and extend the existing `documents.feature` (20) and `search.feature` (11) Gherkin so they form a complete behavioral safety net for the Knowledge extraction, then record a green baseline run.
+Audit and extend the existing `documents.feature` (~16) and `search.feature` (11) Gherkin (and cross-reference the existing `document_scope.feature` rather than duplicating its scope scenarios) so they form a complete behavioral safety net for the Knowledge extraction, then record a green baseline run.
 
 ## Problem
 
@@ -25,7 +25,8 @@ The Phase 2 spec assumed no document/search Gherkin existed; in fact both files 
 - Review `backend/tests/features/documents.feature` + `search.feature` against the live `/api/documents` and `/api/search` behavior; list coverage gaps.
 - Add scenarios for: document scope (PERSONAL/PUBLIC/CAROUSEL/INTERNAL) + `is_public` access control, owner-vs-admin listing, not-found/validation/permission error paths, hybrid-search alpha/top_k bounds.
 - Ensure the .feature scenarios are backed by executing tests (reference scenario in test comments).
-- Record a green baseline run as the pre-refactor reference.
+- Capture COMMITTED response golden snapshots for each `/api/documents` and `/api/search` endpoint (e.g. `backend/tests/snapshots/knowledge/<endpoint>.json`) on a green pre-refactor run, with a helper to diff live responses against them — this is the enforceable byte-identical baseline that AE-0092/0093 check against.
+- Record a green baseline run as the pre-refactor reference; cross-reference (do not duplicate) `document_scope.feature` for scope/access-control coverage.
 
 ## Non-Goals
 
@@ -42,6 +43,7 @@ Phase 2 of the modularization plan (`.agent/reports/domain-modularization.option
 - [ ] WHEN the document+search test suite runs on current (pre-refactor) code THE scenarios SHALL pass (green baseline recorded in Test Evidence)
 - [ ] EACH added scenario SHALL be backed by an executing test referencing it (no orphan scenarios)
 - [ ] THE scenarios SHALL assert the /api/documents and /api/search status codes + response shape (the contract later slices must preserve)
+- [ ] THE committed response snapshots (`backend/tests/snapshots/knowledge/*.json`) SHALL be captured for every /api/documents + /api/search endpoint with a diff helper — the enforceable byte-identical baseline AE-0092/0093 check against
 - [ ] WHEN `uv run pytest` runs the knowledge feature tests THE suite SHALL pass with no production code modified
 
 ## Gherkin Scenarios

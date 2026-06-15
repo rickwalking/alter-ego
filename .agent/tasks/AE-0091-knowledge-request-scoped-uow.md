@@ -26,6 +26,7 @@ Today routes call `get_container()` and `await db.commit()` directly and reposit
 - Route knowledge write commands (create/upload/delete/reprocess) through the UoW; commit once at the request boundary.
 - Remove `.commit()` from knowledge routes/handlers business logic; repositories do not own transactions (ADR-0009).
 - Scope to knowledge writes only (pilot); do not refactor the whole app's session handling.
+- This ticket delivers the UoW PRIMITIVE (wrapping the existing request `AsyncSession` as the single commit owner); per-route delegation/commit removal is owned by AE-0092 (avoid double-commit — UoW is the sole committer).
 
 ## Non-Goals
 

@@ -23,7 +23,7 @@ The `Document` entity carries `scope`/`is_public` but `DocumentModel` and the AE
 ## Scope
 
 - Add `scope` + `is_public` columns to `DocumentModel` with full `to_entity`/`from_entity`/`update_from_entity` mapping.
-- Add an additive Alembic migration (`down_revision = 63eaefa67b8c`) creating the columns (nullable or defaulted; data-preserving for existing rows).
+- Add an additive Alembic migration (`down_revision = 63eaefa67b8c`): `scope` `String(20)` `server_default='personal'` NOT NULL, `is_public` `Boolean` `server_default=false` NOT NULL (data-preserving backfill).
 - Keep the schema equal to `Base.metadata` so the AE-0084 empty-autogenerate-diff drift check passes.
 - Document the existing-dev-DB path (upgrade head).
 

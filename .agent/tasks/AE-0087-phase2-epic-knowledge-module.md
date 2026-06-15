@@ -41,7 +41,7 @@ Phase 2 of the modularization plan (`.agent/reports/domain-modularization.option
 - [ ] WHEN all of AE-0088-0095 reach Review with QA pass THE epic SHALL be complete
 - [ ] THE knowledge application layer SHALL NOT import SQLAlchemy, FastAPI, Pinecone, or the global container (AE-0095 contract)
 - [ ] WHEN the document+search Gherkin safety net runs THE scenarios SHALL pass before and after the refactor
-- [ ] WHEN /api/documents and /api/search are called THE responses SHALL be byte-identical to pre-Phase-2
+- [ ] WHEN /api/documents and /api/search are called THE responses SHALL diff to ZERO against the committed AE-0088 pre-refactor snapshots (enforceable byte-identical guarantee)
 - [ ] THE module template SHALL be documented and reusable (proven by the knowledge module)
 
 ## Gherkin Scenarios

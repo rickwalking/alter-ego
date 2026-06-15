@@ -39,7 +39,8 @@ Phase 2 of the modularization plan (`.agent/reports/domain-modularization.option
 
 ## Acceptance Criteria
 
-- [ ] WHEN /api/search (POST and GET) is called THE response SHALL be byte-identical to pre-refactor
+- [ ] WHEN /api/search (POST and GET) is called THE response SHALL diff to ZERO against the committed AE-0088 search snapshots
+- [ ] THE alter_ego_agent / rag_agent retrieval tests SHALL pass unchanged after redirecting wiring through the facade
 - [ ] THE agent search tool / conversation search SHALL resolve through the knowledge public facade (not a module-bypassing retriever wiring)
 - [ ] WHEN an agent performs retrieval THE results + behavior SHALL be unchanged (agent tests + search Gherkin pass)
 - [ ] THE knowledge application search path SHALL NOT import SQLAlchemy or Pinecone
@@ -65,6 +66,7 @@ Feature: Search unchanged behind the module
 ### MODIFIED
 
 - api/routes/search.py (delegate via facade)
+- api/dependencies/agents.py (retriever/document-repo wiring for alter_ego/rag agents → resolve via knowledge facade)
 - application/tools/knowledge_base/search_documents.py + agent wiring (resolve via facade)
 
 ### REMOVED
@@ -86,7 +88,7 @@ Feature: Search unchanged behind the module
 ## Dependencies
 
 - Blocks: AE-0095
-- Blocked by: AE-0089, AE-0091
+- Blocked by: AE-0088 (snapshot safety net), AE-0089, AE-0091
 - Related: AE-0088
 
 ## Implementation Plan

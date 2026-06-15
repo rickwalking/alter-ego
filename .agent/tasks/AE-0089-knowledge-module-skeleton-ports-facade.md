@@ -24,7 +24,9 @@ Documents/search logic is spread across `application/services`, `domain/models`,
 
 - Create `modules/knowledge/{domain,application,infrastructure,api}` + `public.py` facade + `bootstrap.py` + `constants.py` per `module-conventions.md`.
 - Define `KnowledgeDocument` aggregate (from the existing `Document` entity) and typed command/query objects (ingest/create/list/get/status/delete/reprocess/search).
-- Place the five ports (DocumentRepository, VectorStore, EmbeddingService, Retriever, DocumentProcessor) in the module domain (relocate from `domain/protocols`, or re-export, behind the facade).
+- Move ONLY the knowledge-specific ports into `modules/knowledge/domain/ports.py` and add **re-export shims at the legacy `domain/protocols/*` paths** so the ~50+ existing non-knowledge callers (agents, carousel, conversation, container) import unchanged. Do NOT split shared protocol files in a breaking way.
+- Infrastructure adapters (`document_repository`, `hybrid_retriever`, `pinecone_store`, `openai_embeddings`) and `document_pipeline` are NOT physically relocated in Phase 2 — the module's `bootstrap.py` wires to the existing adapters (physical move deferred to a later phase).
+- `KnowledgeDocument` re-exports/wraps the existing `Document` entity so `domain/models/documents.py` callers keep working.
 - Expose the knowledge operations via `public.py`; wire construction in `bootstrap.py` (manual constructor injection — no `get_container()` in the module).
 - No route/search behavior change yet (that is AE-0092/0093).
 
@@ -33,6 +35,7 @@ Documents/search logic is spread across `application/services`, `domain/models`,
 - No moving the HTTP routes yet (AE-0092/0093).
 - No renames of public API/DB.
 - No new behavior.
+- NO physical relocation of shared infra adapters or shared domain protocol files used by other contexts (re-export/wire instead; physical move is a later phase).
 
 ## Modularization Alignment (2026-06-15)
 
@@ -45,7 +48,8 @@ Phase 2 of the modularization plan (`.agent/reports/domain-modularization.option
 - [ ] THE five ports SHALL be exposed via the module domain and reachable only through the facade for cross-module use
 - [ ] THE facade SHALL expose ingest/create/list/get/status/delete/reprocess/search operations
 - [ ] WHEN `MYPYPATH=src uv run mypy -p rag_backend` runs THE module SHALL type-check cleanly
-- [ ] WHEN `uv run lint-imports` runs THE module SHALL satisfy the public-facade contract (no internal cross-module import)
+- [ ] WHEN `uv run lint-imports` runs THERE SHALL be NO NEW import violations (the dedicated knowledge-public-facade contract is added in AE-0095)
+- [ ] WHEN existing callers `import rag_backend.domain.protocols...DocumentRepository/Retriever/etc.` THE imports SHALL keep resolving via re-export shims (no breakage; verified by the full suite)
 - [ ] WHEN `uv run pytest` runs THE full suite SHALL pass (no behavior change)
 
 ## Gherkin Scenarios

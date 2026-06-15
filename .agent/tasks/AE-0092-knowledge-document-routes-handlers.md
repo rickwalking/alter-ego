@@ -24,7 +24,7 @@ Document routes today contain business logic and call `get_container()` directly
 
 - For each endpoint (upload, create, list, get, status, delete, reprocess) add/route to a knowledge application handler invoked via `public.py`; routes only adapt HTTP <-> command/query.
 - Resolve the knowledge facade at the HTTP edge (DI), not via `get_container()` inside handlers.
-- Document writes go through the AE-0091 UoW.
+- Document writes go through the AE-0091 UoW as the SINGLE commit owner (routes no longer call .commit()).
 - Preserve status codes, response schemas, access control exactly.
 
 ## Non-Goals
@@ -40,7 +40,7 @@ Phase 2 of the modularization plan (`.agent/reports/domain-modularization.option
 ## Acceptance Criteria
 
 - [ ] EACH /api/documents endpoint SHALL delegate to a knowledge application handler via the public facade
-- [ ] WHEN any /api/documents endpoint is called THE response status + body SHALL be byte-identical to pre-refactor (AE-0088 + response assertions pass)
+- [ ] WHEN any /api/documents endpoint is called THE response SHALL diff to ZERO against the committed AE-0088 snapshots (merge gated on snapshot diff = 0)
 - [ ] Knowledge document handlers SHALL NOT call `get_container()` (resolved via facade/DI at the edge)
 - [ ] Document write endpoints SHALL persist via the AE-0091 UoW
 - [ ] WHEN `uv run lint-imports` runs THE knowledge module SHALL stay contract-clean
@@ -86,7 +86,7 @@ Feature: Document endpoints unchanged after extraction
 ## Dependencies
 
 - Blocks: AE-0095
-- Blocked by: AE-0089, AE-0090, AE-0091
+- Blocked by: AE-0088 (snapshot safety net first), AE-0089, AE-0090, AE-0091
 - Related: AE-0088
 
 ## Implementation Plan

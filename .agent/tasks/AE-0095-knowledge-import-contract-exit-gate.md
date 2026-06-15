@@ -23,6 +23,7 @@ The exit gate requires the new module's application layer to be free of framewor
 ## Scope
 
 - Add an Import Linter contract: `modules.knowledge.application` (and domain) forbidden from importing `sqlalchemy`, `fastapi`, Pinecone SDK, and `infrastructure.container`/`get_container`.
+- ALSO add the knowledge-public-facade contract (mirror module-conventions §7a / `_template`): cross-module callers (agents, api, other modules) import ONLY `rag_backend.modules.knowledge`, not internals.
 - Regenerate the AE-0082 baseline so the cleaned knowledge module ratchets DOWN (never up); keep `--check` green.
 - Update `docs/architecture/module-conventions.md` with the knowledge module as the worked example / reusable template.
 - Confirm the exit-gate contract via a demonstrated new-violation failure.
@@ -40,6 +41,7 @@ Phase 2 of the modularization plan (`.agent/reports/domain-modularization.option
 
 - [ ] AN Import Linter contract SHALL forbid the knowledge application/domain layer from importing SQLAlchemy, FastAPI, Pinecone, or the global container; `lint-imports` passes (kept)
 - [ ] WHEN new knowledge app code imports a forbidden dependency THE contract SHALL fail (demonstrated, reverted)
+- [ ] THE knowledge-public-facade contract SHALL forbid cross-module imports of knowledge internals (agents/api import only the facade); demonstrated by a reverted internal-import violation
 - [ ] THE AE-0082 baseline/`--check` SHALL be updated so knowledge counts ratchet down, not up (still PASS)
 - [ ] `docs/architecture/module-conventions.md` SHALL document the knowledge module as the reusable template
 - [ ] mypy strict + full suite + all Phase-1 ratchets green

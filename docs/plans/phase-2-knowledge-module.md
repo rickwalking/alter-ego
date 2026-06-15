@@ -15,8 +15,7 @@ proves the reusable module template.
 
 ## Reality vs. the original spec (from a 2026-06-15 code scan)
 
-- **Gherkin already exists** (`tests/features/documents.feature` 20 scenarios, `search.feature`
-  11). The spec's "write them first — none exist" is stale → **audit & extend** them as the
+- **Gherkin already exists** (`documents.feature` ~16 scenarios, `search.feature` 11, plus `document_scope.feature`). The spec's "write them first — none exist" is stale → **audit & extend** them as the
   safety net (scope/access-control gaps) instead of writing from scratch.
 - **Domain models + all 5 protocols already exist** in `domain/` (`Document`, `DocumentChunk`,
   `SearchResult`, `RetrievalQuery`; `DocumentRepository`, `VectorStore`, `EmbeddingService`,
