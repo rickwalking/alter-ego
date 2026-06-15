@@ -1,0 +1,11 @@
+{
+  "body": {
+    "items": [],
+    "limit": 20,
+    "offset": 0,
+    "total": 0
+  },
+  "cookies": {},
+  "headers": {},
+  "status_code": 200
+}

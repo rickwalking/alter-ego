@@ -418,3 +418,54 @@ For each new module: add a `<context>-public-facade` (§7a) and a
 regenerate `.importlinter`, and confirm both are KEPT with no (or only
 explicitly grandfathered) ignores — the knowledge contracts are the literal
 template.
+
+## 10. Worked examples — the `identity` & `conversation` modules (Phase 3)
+
+Phase 3 (AE-0096–0103) applied the §9 template twice more, behavior-preserving
+(byte-identical cookies, HS256 JWT, bcrypt, SSE event payloads/framing/keep-alive/
+`Last-Event-ID`/`X-Agent-Origin`):
+
+### 10a. `identity` (auth/admin/users/roles)
+- **Layout** (§2): `modules/identity/{domain,application,infrastructure,api}` +
+  `public.py` + `bootstrap.py` + `constants.py`.
+- **Services** (AE-0098): `UserService` / `AuthenticationService` / `PasswordService`
+  in the application layer — they **delegate all JWT/bcrypt to the unchanged
+  `infrastructure/auth.py`** (the single crypto source) rather than reimplementing it.
+- **Shims**: `UserRepository` port + `User`/`UserRole` are **re-exported** from the
+  shared `domain/protocols` / `domain/models` (object identity preserved — ~50
+  callers unbroken), exactly as knowledge did.
+- **Routes** (AE-0099): `auth.py` + `admin.py` are thin adapters delegating to the
+  facade via the `get_identity_service` DI edge; they no longer import
+  `get_container` / a concrete user repository or call `db.commit()` (the platform
+  UoW is the single committer).
+- `api/middleware/auth.py`, `infrastructure/auth.py`, and
+  `api/dependencies/resource_access.py` deliberately **stay at root** — shared,
+  cross-domain authz; `resource_access.py`'s `UserModel` import is a recorded,
+  grandfathered exception (out of Phase 3 scope to relocate), not a gate hole.
+
+### 10b. `conversation` (chat/messages/streaming)
+- **Layout** (§2) + facade, as above.
+- **`ChatAgentFactory` port** (AE-0100): chat-agent construction becomes an adapter
+  behind a conversation/application contract; `LegacyChatAgentFactory` wraps the
+  existing `build_alter_ego_agent` / `build_rag_agent` with identical
+  `metadata.project_id` → AlterEgo/RAG routing and knowledge-facade wiring.
+- **Routes** (AE-0101) + **SSE streaming** (AE-0102) delegate via the facade; the
+  streaming application layer (`application/streaming.py`) imports only ports — no
+  concrete Postgres repository, no `get_container`. The SSE wire is still owned by
+  the unchanged `stream_chat_response`; a module-level `build_alter_ego_agent`
+  seam in `api/routes/chat_stream.py` is preserved so the byte-identical safety
+  net can substitute a deterministic mock agent.
+
+### 10c. The four enforcing contracts (§7a + §7d) — AE-0103
+`backend/.importlinter` now carries, generated from `render_importlinter`:
+`identity-application-isolation`, `identity-public-facade`,
+`conversation-application-isolation`, `conversation-public-facade`. Both modules
+are clean → **no `ignore_imports`** on any of the four; a NEW framework/container/
+infrastructure import in an inner layer, or a NEW cross-module import of an
+internal, breaks CI (demonstrated and reverted during AE-0103).
+
+### 10d. Ratchet effect (AE-0082 baseline) — AE-0103
+Moving the auth/admin/conversation/chat-stream edges behind the facades ratcheted
+the baseline **down again**: `api -> infrastructure` 98 → 82 and the
+`get_container()` locator count 26 → 14. `import_baseline.py --check` stays PASS
+(counts may only decrease).

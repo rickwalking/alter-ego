@@ -1,0 +1,21 @@
+{
+  "body": {
+    "created_at": "<timestamp>",
+    "id": "<uuid>",
+    "metadata": {},
+    "title": "Anon snap",
+    "updated_at": "<timestamp>"
+  },
+  "cookies": {
+    "anon_token": {
+      "httponly": true,
+      "max-age": "3600",
+      "path": "/",
+      "samesite": "strict",
+      "secure": true,
+      "value": "<jwt>"
+    }
+  },
+  "headers": {},
+  "status_code": 201
+}

@@ -1,7 +1,19 @@
-"""Admin API routes for user management."""
+"""Admin API routes for user management — thin adapters over the identity facade.
 
-import secrets
-import string
+Each endpoint parses the HTTP request into an identity admin command, delegates
+to the request-scoped :class:`IdentityServices` facade (resolved via the
+``get_identity_service`` DI provider at the edge — never the global DI container
+or a concrete user repository here), and maps the handler's view/typed errors
+back onto the HTTP response/status. User writes commit through the facade's Unit
+of Work (the single commit owner, ADR-0009 §9); these routes never call
+``db.commit()``.
+
+Status codes, response shapes, bcrypt, and the last-admin / self-delete guards
+are byte-identical to the pre-refactor routes (AE-0099): bcrypt still comes from
+the UNCHANGED ``infrastructure.auth`` via the identity adapters, and the legacy
+HTTP messages are formatted here from the handler's typed domain errors.
+"""
+
 from typing import Annotated
 from uuid import UUID
 
@@ -9,13 +21,24 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, EmailStr, Field
 
 from rag_backend.api.dependencies import require_admin
+from rag_backend.api.dependencies.identity import get_identity_service
 from rag_backend.api.middleware.rate_limiting import limiter
 from rag_backend.domain.constants import MIN_PASSWORD_LENGTH
 from rag_backend.domain.constants.auth import VALID_ROLES
-from rag_backend.domain.models import User, UserRole
-from rag_backend.infrastructure.auth import hash_password
-from rag_backend.infrastructure.database.config import get_session
-from rag_backend.infrastructure.database.user_repository import PostgresUserRepository
+from rag_backend.modules.identity import (
+    CreateUserInput,
+    DeleteUserInput,
+    IdentityServices,
+    InvalidRoleError,
+    LastAdminError,
+    SelfDeleteError,
+    UpdateUserInput,
+    User,
+    UserAlreadyExistsError,
+    UserListView,
+    UserNotFoundError,
+    UserView,
+)
 
 router = APIRouter(prefix="/admin/users", tags=["admin"])
 
@@ -68,41 +91,40 @@ class ResetPasswordResponse(BaseModel):
     temp_password: str
 
 
-def _generate_secure_password(length: int = 16) -> str:
-    """Generate a cryptographically secure random password.
-
-    Ensures at least one uppercase, one lowercase, one digit, and one special character.
-    """
-    alphabet = string.ascii_letters + string.digits + "!@#$%^&*"
-    while True:
-        password = "".join(secrets.choice(alphabet) for _ in range(length))
-        if (
-            any(c.isupper() for c in password)
-            and any(c.islower() for c in password)
-            and any(c.isdigit() for c in password)
-            and any(c in "!@#$%^&*" for c in password)
-        ):
-            return password
+def _invalid_role(exc: InvalidRoleError) -> HTTPException:
+    """Map an invalid-role domain error to the legacy 422 response."""
+    return HTTPException(
+        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        detail=f"Invalid role: {exc.role}. Must be one of {sorted(VALID_ROLES)}",
+    )
 
 
-def _validate_role(role: str) -> UserRole:
-    """Validate role string and return UserRole enum.
+def _not_found(user_id: UUID) -> HTTPException:
+    """Map a missing-user domain error to the legacy 404 response."""
+    return HTTPException(
+        status_code=status.HTTP_404_NOT_FOUND,
+        detail=f"User with id {user_id} not found",
+    )
 
-    Args:
-        role: Role string to validate.
 
-    Returns:
-        UserRole enum value.
+def _to_response(view: UserView) -> UserResponse:
+    """Map an identity user view onto the legacy user response shape."""
+    return UserResponse(
+        id=str(view.id),
+        email=view.email,
+        full_name=view.full_name,
+        role=view.role,
+        is_active=view.is_active,
+        created_at=view.created_at.isoformat(),
+    )
 
-    Raises:
-        HTTPException: If role is invalid.
-    """
-    if role not in VALID_ROLES:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=f"Invalid role: {role}. Must be one of {sorted(VALID_ROLES)}",
-        )
-    return UserRole(role)
+
+def _to_list_response(listing: UserListView) -> UserListResponse:
+    """Map an identity user-list view onto the legacy list response shape."""
+    return UserListResponse(
+        items=[_to_response(item) for item in listing.items],
+        total=listing.total,
+    )
 
 
 @router.get(
@@ -116,35 +138,10 @@ def _validate_role(role: str) -> UserRole:
 async def list_users(
     request: Request,
     admin: Annotated[User, Depends(require_admin)],
+    service: Annotated[IdentityServices, Depends(get_identity_service)],
 ) -> UserListResponse:
     """List all users. Admin only."""
-    from sqlalchemy.ext.asyncio import AsyncSession
-
-    session: AsyncSession
-    async for session in get_session():
-        repo = PostgresUserRepository(session)
-        users = await repo.get_all(limit=1000)
-        total = await repo.count()
-
-        return UserListResponse(
-            items=[
-                UserResponse(
-                    id=str(u.id),
-                    email=u.email,
-                    full_name=u.full_name,
-                    role=u.role.value,
-                    is_active=u.is_active,
-                    created_at=u.created_at.isoformat(),
-                )
-                for u in users
-            ],
-            total=total,
-        )
-
-    raise HTTPException(
-        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        detail="Failed to list users",
-    )
+    return _to_list_response(await service.admin.list_users())
 
 
 @router.post(
@@ -161,53 +158,33 @@ async def create_user(
     request: Request,
     body: CreateUserRequest,
     admin: Annotated[User, Depends(require_admin)],
+    service: Annotated[IdentityServices, Depends(get_identity_service)],
 ) -> CreateUserResponse:
     """Create a new user. Admin only.
 
     If password is not provided, a secure temporary password is generated.
     """
-    from sqlalchemy.ext.asyncio import AsyncSession
-
-    role = _validate_role(body.role)
-    temp_password: str | None = None
-
-    if body.password:
-        password = body.password
-    else:
-        temp_password = _generate_secure_password()
-        password = temp_password
-
-    session: AsyncSession
-    async for session in get_session():
-        repo = PostgresUserRepository(session)
-
-        existing = await repo.get_by_email(body.email)
-        if existing is not None:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail=f"User with email {body.email} already exists",
+    try:
+        created = await service.admin.create(
+            CreateUserInput(
+                email=body.email,
+                full_name=body.full_name,
+                role=body.role,
+                password=body.password,
             )
-
-        user = User(
-            email=body.email,
-            full_name=body.full_name,
-            hashed_password=hash_password(password),
-            role=role,
-            is_active=True,
         )
+    except InvalidRoleError as exc:
+        raise _invalid_role(exc) from exc
+    except UserAlreadyExistsError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"User with email {body.email} already exists",
+        ) from exc
 
-        created = await repo.create(user)
-        await session.commit()
-
-        return CreateUserResponse(
-            id=str(created.id),
-            email=created.email,
-            temp_password=temp_password,
-        )
-
-    raise HTTPException(
-        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        detail="Failed to create user",
+    return CreateUserResponse(
+        id=str(created.id),
+        email=created.email,
+        temp_password=created.temp_password,
     )
 
 
@@ -226,57 +203,28 @@ async def update_user(
     user_id: UUID,
     body: UpdateUserRequest,
     admin: Annotated[User, Depends(require_admin)],
+    service: Annotated[IdentityServices, Depends(get_identity_service)],
 ) -> UserResponse:
     """Update a user. Admin only."""
-    from sqlalchemy.ext.asyncio import AsyncSession
-
-    session: AsyncSession
-    async for session in get_session():
-        repo = PostgresUserRepository(session)
-
-        user = await repo.get_by_id(user_id)
-        if user is None:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"User with id {user_id} not found",
+    try:
+        updated = await service.admin.update(
+            UpdateUserInput(
+                user_id=user_id,
+                role=body.role,
+                is_active=body.is_active,
             )
-
-        if body.role is not None:
-            new_role = _validate_role(body.role)
-
-            # Prevent demoting the last admin
-            if user.role == UserRole.ADMIN and new_role != UserRole.ADMIN:
-                admin_count = await repo.count_by_role(UserRole.ADMIN)
-                if admin_count <= 1:
-                    raise HTTPException(
-                        status_code=status.HTTP_409_CONFLICT,
-                        detail="Cannot demote the last admin",
-                    )
-
-            user.set_role(new_role)
-
-        if body.is_active is not None:
-            if body.is_active:
-                user.activate()
-            else:
-                user.deactivate()
-
-        updated = await repo.update(user)
-        await session.commit()
-
-        return UserResponse(
-            id=str(updated.id),
-            email=updated.email,
-            full_name=updated.full_name,
-            role=updated.role.value,
-            is_active=updated.is_active,
-            created_at=updated.created_at.isoformat(),
         )
+    except InvalidRoleError as exc:
+        raise _invalid_role(exc) from exc
+    except UserNotFoundError as exc:
+        raise _not_found(user_id) from exc
+    except LastAdminError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Cannot demote the last admin",
+        ) from exc
 
-    raise HTTPException(
-        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        detail="Failed to update user",
-    )
+    return _to_response(updated)
 
 
 @router.delete(
@@ -293,45 +241,25 @@ async def delete_user(
     request: Request,
     user_id: UUID,
     admin: Annotated[User, Depends(require_admin)],
+    service: Annotated[IdentityServices, Depends(get_identity_service)],
 ) -> None:
     """Delete a user. Admin only."""
-    from sqlalchemy.ext.asyncio import AsyncSession
-
-    # Prevent self-deletion
-    if user_id == admin.id:
+    try:
+        await service.admin.delete(
+            DeleteUserInput(user_id=user_id, requested_by=admin.id)
+        )
+    except SelfDeleteError as exc:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="Cannot delete your own account",
-        )
-
-    session: AsyncSession
-    async for session in get_session():
-        repo = PostgresUserRepository(session)
-
-        user = await repo.get_by_id(user_id)
-        if user is None:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"User with id {user_id} not found",
-            )
-
-        # Prevent deleting the last admin
-        if user.role == UserRole.ADMIN:
-            admin_count = await repo.count_by_role(UserRole.ADMIN)
-            if admin_count <= 1:
-                raise HTTPException(
-                    status_code=status.HTTP_409_CONFLICT,
-                    detail="Cannot delete the last admin",
-                )
-
-        await repo.delete(user_id)
-        await session.commit()
-        return
-
-    raise HTTPException(
-        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        detail="Failed to delete user",
-    )
+        ) from exc
+    except UserNotFoundError as exc:
+        raise _not_found(user_id) from exc
+    except LastAdminError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Cannot delete the last admin",
+        ) from exc
 
 
 @router.post(
@@ -347,32 +275,15 @@ async def reset_password(
     request: Request,
     user_id: UUID,
     admin: Annotated[User, Depends(require_admin)],
+    service: Annotated[IdentityServices, Depends(get_identity_service)],
 ) -> ResetPasswordResponse:
     """Reset a user's password. Admin only.
 
     Generates a new temporary password for the user.
     """
-    from sqlalchemy.ext.asyncio import AsyncSession
+    try:
+        temp_password = await service.admin.reset_password(user_id)
+    except UserNotFoundError as exc:
+        raise _not_found(user_id) from exc
 
-    session: AsyncSession
-    async for session in get_session():
-        repo = PostgresUserRepository(session)
-
-        user = await repo.get_by_id(user_id)
-        if user is None:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"User with id {user_id} not found",
-            )
-
-        temp_password = _generate_secure_password()
-        user.hashed_password = hash_password(temp_password)
-        await repo.update(user)
-        await session.commit()
-
-        return ResetPasswordResponse(temp_password=temp_password)
-
-    raise HTTPException(
-        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        detail="Failed to reset password",
-    )
+    return ResetPasswordResponse(temp_password=temp_password)

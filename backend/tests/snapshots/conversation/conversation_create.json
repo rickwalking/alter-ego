@@ -1,0 +1,12 @@
+{
+  "body": {
+    "created_at": "<timestamp>",
+    "id": "<uuid>",
+    "metadata": {},
+    "title": "Snap conv",
+    "updated_at": "<timestamp>"
+  },
+  "cookies": {},
+  "headers": {},
+  "status_code": 201
+}

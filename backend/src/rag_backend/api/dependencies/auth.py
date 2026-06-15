@@ -13,6 +13,20 @@ from rag_backend.infrastructure.database.config import get_session
 from rag_backend.infrastructure.database.user_repository import PostgresUserRepository
 
 
+async def get_request_session(
+    db: Annotated[AsyncSession, Depends(get_session)],
+) -> AsyncSession:
+    """Expose the per-request session to edge providers (e.g. the identity facade).
+
+    ``Depends(get_session)`` is cached per request by FastAPI, so the session
+    returned here is the SAME object :func:`get_user_repo` binds its repository
+    to. The identity DI provider uses this to enlist that one session in the
+    platform Unit of Work, keeping repository flushes and the UoW commit in a
+    single transaction without importing ``infrastructure.database.config``.
+    """
+    return db
+
+
 async def get_user_repo(
     db: Annotated[AsyncSession, Depends(get_session)],
 ) -> PostgresUserRepository:
@@ -154,6 +168,7 @@ async def get_optional_user(
 
 __all__ = [
     "get_optional_user",
+    "get_request_session",
     "get_user_repo",
     "require_admin",
     "require_authenticated_user",

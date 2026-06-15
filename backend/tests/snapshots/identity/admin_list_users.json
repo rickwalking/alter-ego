@@ -1,0 +1,26 @@
+{
+  "body": {
+    "items": [
+      {
+        "created_at": "<timestamp>",
+        "email": "id-editor@integration.example.com",
+        "full_name": "Id-Editor",
+        "id": "<uuid>",
+        "is_active": true,
+        "role": "editor"
+      },
+      {
+        "created_at": "<timestamp>",
+        "email": "id-admin@integration.example.com",
+        "full_name": "Id-Admin",
+        "id": "<uuid>",
+        "is_active": true,
+        "role": "admin"
+      }
+    ],
+    "total": 2
+  },
+  "cookies": {},
+  "headers": {},
+  "status_code": 200
+}
