@@ -1,6 +1,6 @@
 # AE-0099 — Auth + admin routes behind identity handlers (byte-identical cookies/JWT)
 
-Status: Ready
+Status: Dev Complete
 Tier: T2
 Priority: High
 Type: Task
@@ -108,9 +108,11 @@ Feature: Auth endpoints unchanged after extraction
 
 Ticket created by planner (Phase 3 breakdown).
 
+Dev Complete (Wave B). auth+admin routes → identity handlers via facade; byte-identical (AE-0097 diff=0); UoW single committer; arch-ratchet improved (api->infra 98→83, get_container 26→16). mypy 460, lint-imports 10/0, integrity 0 blockers.
+
 ## Files Touched
 
-Pending.
+api/routes/auth.py, api/routes/admin.py, api/dependencies/auth.py, api/dependencies/identity.py, modules/identity/application/{auth_handlers,admin_handlers}.py, modules/identity/{bootstrap,public,constants}.py, tests/unit/modules/identity/test_identity_handlers.py
 
 ## Test Evidence
 

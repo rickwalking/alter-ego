@@ -26,6 +26,14 @@ from dataclasses import dataclass
 from typing import Protocol
 
 from rag_backend.infrastructure.config.settings import Settings
+from rag_backend.modules.identity.application.admin_handlers import (
+    AdminUserDeps,
+    AdminUserHandler,
+)
+from rag_backend.modules.identity.application.auth_handlers import (
+    AuthCommandDeps,
+    AuthCommandHandler,
+)
 from rag_backend.modules.identity.application.authentication_service import (
     AuthenticationDeps,
     AuthenticationService,
@@ -68,11 +76,19 @@ class IdentityAdapters:
 
 @dataclass(frozen=True)
 class IdentityServices:
-    """The identity module's public application services (the wired result)."""
+    """The identity module's public application services (the wired result).
+
+    ``auth`` and ``admin`` are the AE-0099 inbound-adapter handlers the
+    ``/api/auth`` and ``/api/admin/users`` routes delegate to; the lower-level
+    ``users``/``authentication``/``passwords`` services remain exposed for direct
+    cross-module use and underpin the handlers.
+    """
 
     users: UserService
     authentication: AuthenticationService
     passwords: PasswordService
+    auth: AuthCommandHandler
+    admin: AdminUserHandler
 
 
 def bootstrap_module(
@@ -102,10 +118,27 @@ def bootstrap_module(
         repository=adapters.repository,
         deps=AuthenticationDeps(passwords=passwords, tokens=tokens),
     )
+    auth = AuthCommandHandler(
+        repository=adapters.repository,
+        authentication=authentication,
+        deps=AuthCommandDeps(
+            passwords=passwords,
+            unit_of_work=adapters.unit_of_work,
+        ),
+    )
+    admin = AdminUserHandler(
+        repository=adapters.repository,
+        deps=AdminUserDeps(
+            passwords=passwords,
+            unit_of_work=adapters.unit_of_work,
+        ),
+    )
     return IdentityServices(
         users=users,
         authentication=authentication,
         passwords=passwords,
+        auth=auth,
+        admin=admin,
     )
 
 

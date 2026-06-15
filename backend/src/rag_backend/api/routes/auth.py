@@ -1,4 +1,16 @@
-"""Authentication API routes."""
+"""Authentication API routes — thin HTTP adapters over the identity facade.
+
+Each endpoint parses the HTTP request into an identity command, delegates to the
+request-scoped :class:`IdentityServices` facade (resolved via the
+``get_identity_service`` DI provider at the edge — never the global DI container
+or a concrete user repository here), and maps the result back onto the HTTP
+response/status. User writes commit through the facade's Unit of Work (the
+single commit owner, ADR-0009 §9); these routes never call ``db.commit()``.
+
+Cookies (``access_token`` attributes), the HS256 JWT payload, bcrypt, and status
+codes are byte-identical to the pre-refactor routes: the JWT/bcrypt still come
+from the UNCHANGED ``infrastructure.auth`` via the identity adapters (AE-0099).
+"""
 
 from typing import Annotated
 
@@ -7,17 +19,19 @@ from pydantic import BaseModel, EmailStr, Field
 
 from rag_backend.api.constants import ERR_NOT_AUTHENTICATED
 from rag_backend.api.dependencies import require_authenticated_user
+from rag_backend.api.dependencies.identity import get_identity_service
 from rag_backend.api.middleware.rate_limiting import limiter
 from rag_backend.domain.constants import COOKIE_ACCESS_TOKEN, MIN_PASSWORD_LENGTH
-from rag_backend.domain.models import User
-from rag_backend.infrastructure.auth import (
-    create_access_token,
-    hash_password,
-    verify_password,
-)
 from rag_backend.infrastructure.config.settings import Settings, get_settings
-from rag_backend.infrastructure.database.config import get_session
-from rag_backend.infrastructure.database.user_repository import PostgresUserRepository
+from rag_backend.modules.identity import (
+    ChangePasswordCommand,
+    CurrentPasswordIncorrectError,
+    IdentityServices,
+    InactiveUserError,
+    InvalidCredentialsError,
+    LoginCommand,
+    User,
+)
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -75,47 +89,32 @@ async def login(
     body: LoginRequest,
     response: Response,
     settings: Annotated[Settings, Depends(get_settings)],
+    service: Annotated[IdentityServices, Depends(get_identity_service)],
 ) -> TokenResponse:
     """Authenticate user and return JWT access token.
 
     Sets the token as an HttpOnly cookie for browser clients.
     """
-    from sqlalchemy.ext.asyncio import AsyncSession
-
-    session: AsyncSession
-    async for session in get_session():
-        repo = PostgresUserRepository(session)
-        user = await repo.get_by_email(body.email)
-
-        if user is None or not verify_password(body.password, user.hashed_password):
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid email or password",
-            )
-
-        if not user.is_active:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="User account is deactivated",
-            )
-
-        token = create_access_token(settings, user)
-
-        response.set_cookie(
-            key=COOKIE_ACCESS_TOKEN,
-            value=token,
-            httponly=True,
-            secure=_auth_cookie_secure(request, settings),
-            samesite="strict",
-            max_age=settings.access_token_expire_minutes * 60,
+    try:
+        token_view = await service.auth.login(
+            LoginCommand(email=body.email, password=body.password)
         )
+    except (InvalidCredentialsError, InactiveUserError) as exc:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=str(exc),
+        ) from exc
 
-        return TokenResponse(access_token=token)
-
-    raise HTTPException(
-        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        detail="Failed to create session",
+    response.set_cookie(
+        key=COOKIE_ACCESS_TOKEN,
+        value=token_view.access_token,
+        httponly=True,
+        secure=_auth_cookie_secure(request, settings),
+        samesite="strict",
+        max_age=settings.access_token_expire_minutes * 60,
     )
+
+    return TokenResponse(access_token=token_view.access_token)
 
 
 @router.post(
@@ -167,25 +166,19 @@ async def get_me(
 async def change_password(
     request: ChangePasswordRequest,
     user: Annotated[User, Depends(require_authenticated_user)],
+    service: Annotated[IdentityServices, Depends(get_identity_service)],
 ) -> None:
     """Change the authenticated user's password."""
-    if not verify_password(request.current_password, user.hashed_password):
+    try:
+        await service.auth.change_password(
+            ChangePasswordCommand(
+                user_id=user.id,
+                current_password=request.current_password,
+                new_password=request.new_password,
+            )
+        )
+    except CurrentPasswordIncorrectError as exc:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Current password is incorrect",
-        )
-
-    from sqlalchemy.ext.asyncio import AsyncSession
-
-    session: AsyncSession
-    async for session in get_session():
-        repo = PostgresUserRepository(session)
-        user.hashed_password = hash_password(request.new_password)
-        await repo.update(user)
-        await session.commit()
-        return
-
-    raise HTTPException(
-        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        detail="Failed to update password",
-    )
+        ) from exc
