@@ -1,6 +1,6 @@
 # AE-0114 — Phase 5 epic: Extract Carousel Presentation
 
-Status: Ready
+Status: Review
 Tier: T3
 Priority: High
 Type: Epic
@@ -87,6 +87,8 @@ Not applicable — epic tracker; behavior verified by child tickets (esp. the AE
 3. Wave C: AE-0120 (gate on AE-0045/0046 merge).
 4. Wave D: AE-0121.
 5. Wave E: AE-0122.
+
+Epic complete — all children AE-0115..0122 implemented, QA-PASSED (2 rounds/wave), in Review. Carousel presentation extracted into modules/presentation behind a facade + ACL; editorial→presentation acyclic port; byte-identical (both safety nets 40/40 incl. FileResponse digests); image providers behind ports; exit gate CI-enforced (19 import contracts incl. presentation-no-editorial; baseline ratcheted api->infra 98→79, get_container 26→14, agents->application 20→19). Newly-disclosed CVEs remediated. Awaiting Phase 5 PR merge.
 
 ## QA Checklist
 

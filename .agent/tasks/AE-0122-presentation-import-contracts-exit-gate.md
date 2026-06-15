@@ -1,6 +1,6 @@
 # AE-0122 — Presentation import contracts + exit gate + baseline ratchet + docs
 
-Status: Dev Complete
+Status: Review
 Tier: T2
 Priority: High
 Type: Task
@@ -113,7 +113,7 @@ Pending.
 
 ## QA Report
 
-Pending.
+Phase 5 Wave E / exit-gate QA — round 1 FAIL caught an orphaned-stash incident (AE-0121 source mods not committed) + newly-disclosed CVEs; both fixed; re-QA + confirmation (executed probes) PASS. See `.agent/reports/phase-5-wave-e.qa.md`.
 
 ## Decision Log
 
