@@ -39,6 +39,7 @@ Phase 5 of the modularization plan (§Phase 5). **Behavior-preserving** — pres
 ## Acceptance Criteria
 
 - [ ] Import Linter contracts SHALL isolate presentation.application/domain (no frameworks/get_container/infrastructure; carousel/slide ORM only via the presentation ACL) and enforce the public facade; lint-imports KEEPS them
+- [ ] THE presentation-application-isolation contract SHALL name `modules.presentation.infrastructure.<presentation_acl_module>` as the ONLY allowed carousel/slide-ORM import path (explicit, documented exception in render_importlinter — parity with AE-0112's legacy_carousel_acl naming)
 - [ ] A contract/assertion SHALL enforce that presentation imports no editorial internals (editorial→presentation direction)
 - [ ] WHEN new code violates either boundary THE contract SHALL fail (demonstrated, reverted)
 - [ ] THE AE-0082 baseline/--check SHALL ratchet DOWN or hold and stay PASS

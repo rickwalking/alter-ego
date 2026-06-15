@@ -25,6 +25,7 @@ Artifact build/export/design are presentation operations still invoked directly 
 - Define presentation ports for artifact build/activation, export/rendering, and design; the editorial workflow (finalize + the design/images/export nodes) invokes them via the presentation public facade — dependency direction editorial→presentation only (presentation imports no editorial internals).
 - Replace the nodes/images.py direct phase_progress write with a presentation→editorial callback port (presentation reports progress; editorial owns workflow state).
 - Add the ContentFormatProducer Protocol (format_name + async produce(ProduceFormat) -> ProducedArtifact) as a PRESENTATION-SPECIFIC boundary — do NOT build a generic format framework (only carousel today).
+- Move the presentation POLICY/VALIDATION/REVIEW services (presentation_policy*, presentation_review*, presentation_validation*, visible_copy_sanitize, presentation_review_edits) behind presentation contracts, and repoint carousel_workflow_nodes (which imports presentation_review_edits) to call them via the editorial→presentation port — so the exit gate 'carousel = presentation only' holds for every presentation path, not just the design/images/export nodes.
 - Preserve the artifact_version↔lock_version CAS + artifact URLs + checkpoints EXACTLY (AE-0116 diff=0).
 
 ## Non-Goals
@@ -43,6 +44,7 @@ Phase 5 of the modularization plan (§Phase 5). **Behavior-preserving** — pres
 - [ ] THE nodes/images.py phase_progress write SHALL become a presentation→editorial callback port (presentation does not write workflow state directly)
 - [ ] A ContentFormatProducer Protocol SHALL be defined as a presentation-specific boundary (no generic format framework)
 - [ ] THE artifact_version↔lock_version CAS, artifact URLs, and LangGraph checkpoints SHALL be preserved exactly
+- [ ] THE presentation policy/validation/review services SHALL be behind presentation contracts and carousel_workflow_nodes SHALL invoke them via the editorial→presentation port (no direct presentation-internal call from the workflow nodes)
 - [ ] WHEN gates.sh + mypy + lint-imports + pytest + the AE-0116 safety net run THEY SHALL pass (diff=0)
 
 ## Gherkin Scenarios
@@ -78,7 +80,7 @@ Not applicable — behavior-preserving extraction; verified by the AE-0116 safet
 ## Dependencies
 
 - Blocks: AE-0122
-- Blocked by: AE-0118, AE-0119, AE-0120
+- Blocked by: AE-0118, AE-0119, AE-0120 (soft-gate: AE-0045/0046 merged — they refactored presentation_review/carousel_presentation; build on them, do not re-refactor)
 - Related: AE-0110, AE-0111, AE-0114
 
 ## Implementation Plan
@@ -119,7 +121,9 @@ Pending.
 
 ## Blockers
 
-None.
+SOFT GATE (Wave D): AE-0045 (presentation_review Chain-of-Responsibility) + AE-0046 (carousel_presentation
+validators) are PASS QA / in Review and touch the same presentation surface this ticket moves — they MUST merge
+before the presentation policy/validation/review file movement here, or this ticket owns their current state (no re-refactor).
 
 ## Final Summary
 

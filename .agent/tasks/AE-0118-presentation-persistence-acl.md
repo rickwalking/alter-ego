@@ -44,6 +44,8 @@ Phase 5 of the modularization plan (§Phase 5). **Behavior-preserving** — pres
 - [ ] ALL writes to the presentation columns + slide rows SHALL go through the presentation owner (no scattered direct ORM mutation of those); writes commit via the platform UoW
 - [ ] THE artifact_version↔lock_version activation CAS SHALL be preserved exactly (pairing atomic; coordinated with the AE-0107 owner; concurrent behavior unchanged)
 - [ ] WHEN the AE-0116 safety net runs THE presentation responses + artifact URLs + FileResponse bytes SHALL diff to ZERO
+- [ ] A concurrency test SHALL assert that a presentation artifact activate_build and an editorial resume lock bump run against the shared lock_version WITHOUT clobbering each other (the artifact_version↔lock_version pairing stays atomic; serialized through the coordinated owners)
+- [ ] THE presentation ACL/owner contract tests SHALL assert authorization parity on the presentation WRITE entry points (HTTP at minimum: design-token refresh, render-slides, creator-asset, strategy apply) — extending the ADR-0009 write-path evidence (AE-0113 covered the workflow paths; no new epic evidence ticket needed)
 - [ ] WHEN gates.sh + mypy + lint-imports + pytest run THEY SHALL pass with no behavior change
 
 ## Gherkin Scenarios

@@ -63,7 +63,7 @@ not extract distribution.
 | **AE-0118** | Presentation persistence: single writer/ACL for presentation columns + slide rows; preserve artifact_version↔lock_version CAS pairing | T2 | Backend | AE-0115, AE-0116, AE-0117 |
 | **AE-0119** | Image-provider ports + adapters (ImageProviderRegistry + OpenAI/Gemini behind ImageProviderPort / ImageGenerationService) | T2 | Backend | AE-0117 |
 | **AE-0120** | Presentation routes (media/preview/slides/strategies/design/creator-assets) behind presentation handlers via facade (byte-identical) | T2 | Backend | AE-0116, AE-0117, AE-0118, AE-0119 |
-| **AE-0121** | Artifact build + export/rendering + design behind presentation contracts; editorial workflow invokes presentation via a PORT (design/images/export + finalize artifact build); phase_progress callback; ContentFormatProducer extension point | T2 | Backend | AE-0118, AE-0119, AE-0120 |
+| **AE-0121** | Artifact build + export/rendering + design + policy/validation/review behind presentation contracts; editorial workflow invokes presentation via a PORT (design/images/export + finalize artifact build; carousel_workflow_nodes repointed); phase_progress callback; ContentFormatProducer extension point | T2 | Backend | AE-0118, AE-0119, AE-0120 (+ AE-0045/0046 merge) |
 | **AE-0122** | Presentation import contracts + exit gate + baseline ratchet + docs | T2 | Backend/CI | AE-0120, AE-0121 |
 
 ## Suggested order (waves)
@@ -71,7 +71,7 @@ not extract distribution.
 - **Wave A (parallel):** AE-0115 (field map), AE-0116 (safety net), AE-0117 (presentation skeleton).
 - **Wave B (parallel):** AE-0118 (presentation persistence/ACL — needs 0115/0116/0117), AE-0119 (image-provider ports — needs 0117).
 - **Wave C:** AE-0120 (presentation routes behind handlers — needs 0116/0117/0118/0119). *Gate: AE-0045/0046 merged.*
-- **Wave D:** AE-0121 (artifact/export/design behind contracts + editorial→presentation port + ContentFormatProducer — needs 0118/0119/0120).
+- **Wave D:** AE-0121 (artifact/export/design + presentation policy/validation/review behind contracts; carousel_workflow_nodes repointed via the editorial→presentation port + ContentFormatProducer — needs 0118/0119/0120). *Gate: AE-0045/0046 merged.*
 - **Wave E:** AE-0122 (import contracts + exit gate + ratchet — needs 0120/0121).
 
 ## Risks & guardrails

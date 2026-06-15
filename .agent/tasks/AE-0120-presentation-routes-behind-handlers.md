@@ -25,6 +25,7 @@ Presentation routes construct services/repos directly and read/write the carouse
 - Each presentation endpoint delegates to a presentation handler via the facade, resolved by a get_presentation_service edge DI provider (mirror api/dependencies/editorial.py); routes import no carousel/slide ORM and no get_container; writes via the platform UoW + the AE-0118 owner.
 - Preserve the response schemas, FileResponse content-type/headers/bytes, artifact URL strings, status codes, and access checks (resource_access/creator-asset) EXACTLY.
 - Presentation application code imports no concrete Postgres repo (port/facade only).
+- THE crud.py project-GET design-token merge (merge_design_tokens_with_disk, response-only) is handled per the AE-0115 classification — either left as a documented deferred read or delegated to the presentation facade (no behavior change either way).
 
 ## Non-Goals
 

@@ -26,6 +26,8 @@ Phase 5 redirects presentation reads/writes and moves the design/image/export op
 - Document the artifact_version↔lock_version compare-and-swap pairing (carousel_artifact_build_repository.activate_build) and its shared use with the editorial AE-0107 resume CAS — the constraint AE-0118/0121 must preserve.
 - Map the editorial→presentation coupling points: editorial_finalize artifact build call, the design/images/export workflow nodes, and the nodes/images.py phase_progress write (the presentation→editorial callback boundary).
 - Confirm the distribution columns (blog/caption/linkedin) are OUT of Phase 5 (Phase 6) and the publish/is_public path stays.
+- Document the SHARED lock_version owner hierarchy: the editorial AE-0107 CarouselProjectWriteOwner (resume CAS) and the presentation artifact activate_build CAS both bump lock_version — specify how the presentation owner coordinates (single shared CAS primitive / serialization) so AE-0118 can implement + test it without clobber.
+- Classify the crud.py project GET presentation read (merge_design_tokens_with_disk, response-only merge): presentation-owned read — either deferred-with-rationale or served via the presentation facade in AE-0120.
 
 ## Non-Goals
 

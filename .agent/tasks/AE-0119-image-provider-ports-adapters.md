@@ -77,7 +77,7 @@ Not applicable — behavior-preserving port extraction; verified by registry/ada
 
 ## Dependencies
 
-- Blocks: AE-0121
+- Blocks: AE-0120, AE-0121
 - Blocked by: AE-0117
 - Related: AE-0114, AE-0119
 
