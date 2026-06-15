@@ -11,6 +11,8 @@ Covers the four AE-0130 behaviors:
 
 from __future__ import annotations
 
+from unittest.mock import AsyncMock, MagicMock
+
 import pytest
 import pytest_asyncio
 from sqlalchemy import delete, select
@@ -31,13 +33,16 @@ from rag_backend.domain.constants.workflow_events import (
     STREAM_CONTENT_EVENTS,
 )
 from rag_backend.infrastructure.database.models.event_outbox import EventOutboxModel
+from rag_backend.infrastructure.events import outbox_dispatch
 from rag_backend.infrastructure.events.memory_event_publisher import (
     MemoryEventPublisher,
     clear_memory_events,
     get_memory_events,
 )
 from rag_backend.infrastructure.events.outbox_relay import (
+    _DEFAULT_BATCH_SIZE,
     OutboxRelay,
+    OutboxRelayResult,
     outbox_stream_event,
 )
 
@@ -235,3 +240,61 @@ async def test_outbox_stream_event_round_trip(db_session: AsyncSession) -> None:
     assert rebuilt[EVENT_FIELD_EVENT_ID] == event_id
     assert rebuilt[EVENT_FIELD_PAYLOAD] == _PAYLOAD
     assert rebuilt[EVENT_FIELD_TIMESTAMP] == row.event_timestamp
+
+
+def _patch_relay_loop(
+    monkeypatch: pytest.MonkeyPatch, results: list[OutboxRelayResult]
+) -> AsyncMock:
+    """Patch relay_after_commit's session maker + OutboxRelay to a scripted relay.
+
+    Returns the ``run_once`` AsyncMock so the test can assert how many passes the
+    drain loop made before terminating.
+    """
+    session = AsyncMock()
+    cm = AsyncMock()
+    cm.__aenter__.return_value = session
+    cm.__aexit__.return_value = None
+    monkeypatch.setattr(
+        "rag_backend.infrastructure.database.config.get_session_maker",
+        lambda: MagicMock(return_value=cm),
+    )
+    run_once = AsyncMock(side_effect=results)
+    monkeypatch.setattr(
+        outbox_dispatch, "OutboxRelay", lambda _publisher: MagicMock(run_once=run_once)
+    )
+    return run_once
+
+
+# Scenario: the drain loop keeps going past a full batch until the backlog clears.
+@pytest.mark.asyncio
+async def test_relay_after_commit_drains_multiple_batches(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A full batch is followed by another pass; a non-full batch stops the loop."""
+    run_once = _patch_relay_loop(
+        monkeypatch,
+        [
+            OutboxRelayResult(published=_DEFAULT_BATCH_SIZE, failed=0),  # full -> more
+            OutboxRelayResult(published=3, failed=0),  # non-full -> drained
+        ],
+    )
+
+    await outbox_dispatch.relay_after_commit(MemoryEventPublisher())
+
+    assert run_once.await_count == 2  # looped once more, then stopped
+
+
+# Scenario: an all-failed full batch stops the loop (no infinite spin on outage).
+@pytest.mark.asyncio
+async def test_relay_after_commit_stops_on_no_progress(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A full batch with zero successes terminates immediately (published==0)."""
+    run_once = _patch_relay_loop(
+        monkeypatch,
+        [OutboxRelayResult(published=0, failed=_DEFAULT_BATCH_SIZE)],
+    )
+
+    await outbox_dispatch.relay_after_commit(MemoryEventPublisher())
+
+    assert run_once.await_count == 1  # no forward progress -> no second pass

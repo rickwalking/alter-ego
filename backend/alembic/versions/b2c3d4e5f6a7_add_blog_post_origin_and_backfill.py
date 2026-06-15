@@ -35,6 +35,13 @@ rows is undone automatically by dropping the column (it never mutated those rows
 data), so pre-existing blog posts are preserved. This restores the pre-migration
 ``blog_posts`` schema + data exactly.
 
+  *Discriminator assumption:* the ``carousel-{project_id}`` slug scheme is invented
+  by this migration's step-3 insert; pre-existing blog posts use their own slugs,
+  so ``slug LIKE 'carousel-%'`` selects exactly the inserted rows. The only
+  theoretical collision is a pre-existing project-linked post whose slug was
+  *manually* set to ``carousel-{its_project_id}`` before this migration — an
+  accepted, negligible risk (that scheme is not used elsewhere).
+
 Cross-dialect: the backfill runs through SQLAlchemy Core against lightweight table
 projections (no ORM), so it applies identically on SQLite (tests) and Postgres
 (prod). The new ``origin`` column is mirrored in ``BlogPostModel`` so the
