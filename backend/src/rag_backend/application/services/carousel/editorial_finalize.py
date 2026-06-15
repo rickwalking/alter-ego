@@ -196,6 +196,14 @@ async def export_and_complete_carousel(
 
     updated.artifact_version = build_result.artifact_version  # type: ignore[union-attr]
     update_project_pdf_paths(updated)
+    # AE-0107 boundary: the terminal-finalization write persists the WO fields
+    # (status/error_message) ATOMICALLY with the deferred Phase-5 presentation
+    # columns (design_tokens/pdf_path/artifact_version) in this single
+    # repo.update_project commit. Splitting status out to CarouselProjectWriteOwner
+    # would break that atomicity (two commits) — so this terminal write stays on the
+    # legacy W1 persistence path per the AE-0105 field map until Phase 5 extracts
+    # presentation. AE-0107 owns the workflow-PHASE writes (sync_phase/assign_reviewer/
+    # set_phase_status/resume-lock), not this atomic terminal artifact write.
     updated.update_status(CarouselStatus.COMPLETED)
     if updated.output_dir:
         updated.design_tokens = merge_design_tokens_with_disk(updated)

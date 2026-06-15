@@ -32,6 +32,7 @@ Five places write carousel_projects today; independent module write ownership (a
 - No editorial module yet (AE-0108/0110).
 - No change to presentation/CRUD writers.
 - No schema change; no lock-semantics change.
+- OUT OF SCOPE (deferred, per the AE-0105 map): the atomic terminal-finalization write (`editorial_finalize` → `repo.update_project`, which persists the WO fields status/error_message TOGETHER with the deferred Phase-5 presentation columns design_tokens/pdf_path/artifact_version in ONE commit) and the generic `CarouselRepository.update_project` (W1, `update_from_entity`) remain on the legacy full-entity persistence path — splitting their WO-field writes out would break the single-commit atomicity (byte-identical). AE-0107 owns the workflow-PHASE writes (sync_phase, assign_reviewer, set_phase_status, resume lock CAS).
 
 ## Modularization Alignment (2026-06-15)
 
