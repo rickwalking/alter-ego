@@ -21,6 +21,7 @@ from rag_backend.infrastructure.database.models.conversation import (
     MessageModel,
 )
 from rag_backend.infrastructure.database.models.document import DocumentModel
+from rag_backend.infrastructure.database.models.event_outbox import EventOutboxModel
 from rag_backend.infrastructure.database.models.notification import NotificationModel
 from rag_backend.infrastructure.database.models.persona_correction import (
     PersonaCorrectionModel,
@@ -53,6 +54,7 @@ __all__ = [
     "ConversationModel",
     "DocumentModel",
     "EditorialCommentModel",
+    "EventOutboxModel",
     "MessageModel",
     "NotificationModel",
     "PersonaCorrectionModel",

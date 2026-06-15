@@ -1,6 +1,6 @@
 # AE-0130 — Transactional outbox (additive) for release/workflow events — durable at-least-once relay
 
-Status: Ready
+Status: Dev Complete
 Tier: T2
 Priority: High
 Type: Task
@@ -112,9 +112,11 @@ Feature: Transactional outbox (representative)
 
 Ticket created by planner (Phase 6 breakdown).
 
+Dev Complete (Wave B). event_outbox table + migration c3d4e5f6a7b8 + OutboxRelay (single durable path, no double delivery, idempotent at-least-once, atomic with state change, payload identical); mypy 514, check-integrity 0 blockers, 417 regression pass.
+
 ## Files Touched
 
-Pending.
+infrastructure/database/models/event_outbox.py (new), infrastructure/events/{outbox_relay,outbox_dispatch}.py (new), infrastructure/database/models/{__init__,workflow_audit_log}.py, application/services/workflow_event_service.py, alembic/versions/c3d4e5f6a7b8_add_event_outbox.py, tests/unit/infrastructure/test_outbox_relay.py
 
 ## Test Evidence
 

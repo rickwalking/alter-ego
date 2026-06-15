@@ -1,18 +1,26 @@
-"""Unit tests for WorkflowEventService post-commit publishing (AE-0074).
+"""Unit tests for WorkflowEventService via the transactional outbox (AE-0130).
 
-Gherkin: tests/features/workflow_event_ordering.feature
+Gherkin: tests/features/workflow_event_ordering.feature,
+         tests/features/transactional_outbox.feature
+
+``emit`` writes the audit + outbox rows in the same transaction; the relay is the
+sole Redis publisher (selecting unpublished rows, publishing, marking them). These
+tests drive the relay explicitly against the connection-bound test session (the
+after-commit listener relays against a fresh session, which is exercised by the
+file-backed publishing safety net instead).
 """
 
 from __future__ import annotations
 
 import pytest
-from sqlalchemy.ext.asyncio import AsyncSession
+import pytest_asyncio
+from sqlalchemy import delete, select
+from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 from structlog.testing import capture_logs
 
 from rag_backend.application.services.workflow_event_service import (
     WorkflowEventService,
     _AggregateQuery,
-    drain_pending_publishes,
 )
 from rag_backend.domain.constants.workflow_events import (
     AGGREGATE_TYPE_PROJECT,
@@ -25,14 +33,15 @@ from rag_backend.domain.constants.workflow_events import (
     EVENT_FIELD_TIMESTAMP,
     EVENT_FIELD_VERSION,
     EVENT_TYPE_PROJECT_PHASE_CHANGED,
-    SESSION_INFO_PENDING_EVENTS,
     STREAM_CONTENT_EVENTS,
 )
+from rag_backend.infrastructure.database.models.event_outbox import EventOutboxModel
 from rag_backend.infrastructure.events.memory_event_publisher import (
     MemoryEventPublisher,
     clear_memory_events,
     get_memory_events,
 )
+from rag_backend.infrastructure.events.outbox_relay import OutboxRelay
 
 _EXPECTED_EVENT_FIELDS = {
     EVENT_FIELD_EVENT_ID,
@@ -61,6 +70,15 @@ def _clear_events() -> None:
     clear_memory_events()
 
 
+@pytest_asyncio.fixture(autouse=True)
+async def _clear_outbox(test_engine: AsyncEngine) -> None:
+    """Clear outbox rows committed by other tests on the shared in-memory engine."""
+    maker = async_sessionmaker(test_engine, class_=AsyncSession)
+    async with maker() as session:
+        await session.execute(delete(EventOutboxModel))
+        await session.commit()
+
+
 async def _emit_phase_change(service: WorkflowEventService, db: AsyncSession) -> str:
     return await service.emit(
         db,
@@ -72,16 +90,20 @@ async def _emit_phase_change(service: WorkflowEventService, db: AsyncSession) ->
     )
 
 
+async def _outbox_rows(db: AsyncSession) -> list[EventOutboxModel]:
+    result = await db.execute(select(EventOutboxModel))
+    return list(result.scalars().all())
+
+
 @pytest.mark.asyncio
-async def test_emit_publishes_only_after_commit(db_session: AsyncSession) -> None:
-    """Scenario: Event published only after commit."""
+async def test_emit_does_not_publish_before_relay(db_session: AsyncSession) -> None:
+    """Scenario: Event published only via the relay, not by emit itself."""
     service = WorkflowEventService(MemoryEventPublisher())
     event_id = await _emit_phase_change(service, db_session)
 
-    assert get_memory_events() == []  # nothing on the stream before commit
+    assert get_memory_events() == []  # emit never publishes directly
 
-    await db_session.commit()
-    await drain_pending_publishes()
+    await OutboxRelay(MemoryEventPublisher()).run_once(db_session)
 
     events = get_memory_events()
     assert len(events) == 1
@@ -100,17 +122,14 @@ async def test_emit_publishes_only_after_commit(db_session: AsyncSession) -> Non
 
 
 @pytest.mark.asyncio
-async def test_rollback_publishes_nothing(db_session: AsyncSession) -> None:
-    """Scenario: Rolled-back transaction publishes nothing."""
+async def test_rollback_discards_audit_and_outbox(db_session: AsyncSession) -> None:
+    """Scenario: Rolled-back transaction persists nothing (audit + outbox)."""
     service = WorkflowEventService(MemoryEventPublisher())
     await _emit_phase_change(service, db_session)
 
     await db_session.rollback()
-    await drain_pending_publishes()
 
-    assert get_memory_events() == []
-    # The rollback listener must clear the queue, not merely skip publish
-    assert SESSION_INFO_PENDING_EVENTS not in db_session.sync_session.info
+    assert await _outbox_rows(db_session) == []
     entries = await service.list_for_aggregate(
         db_session,
         _AggregateQuery(
@@ -122,38 +141,28 @@ async def test_rollback_publishes_nothing(db_session: AsyncSession) -> None:
 
 
 @pytest.mark.asyncio
-async def test_commit_after_rollback_does_not_publish_stale_events(
-    db_session: AsyncSession,
-) -> None:
-    """Scenario: Rolled-back transaction publishes nothing (stale-queue edge)."""
+async def test_failed_relay_keeps_audit_and_outbox(db_session: AsyncSession) -> None:
+    """Scenario: Publish failure does not destroy the durable rows (replayable)."""
     service = WorkflowEventService(MemoryEventPublisher())
-    await _emit_phase_change(service, db_session)
-    await db_session.rollback()
-
-    await db_session.commit()  # a later, unrelated commit on the same session
-    await drain_pending_publishes()
-
-    assert get_memory_events() == []
-
-
-@pytest.mark.asyncio
-async def test_publish_failure_after_commit_does_not_raise(
-    db_session: AsyncSession,
-) -> None:
-    """Scenario: Publish failure after commit does not break the request."""
-    service = WorkflowEventService(_FailingPublisher())
     event_id = await _emit_phase_change(service, db_session)
 
-    await db_session.commit()
     with capture_logs() as logs:
-        await drain_pending_publishes()  # must swallow the transport failure
+        result = await OutboxRelay(_FailingPublisher()).run_once(db_session)
 
+    assert result.failed == 1
     assert get_memory_events() == []
     failures = [
-        entry for entry in logs if entry["event"] == "workflow_event_publish_failed"
+        entry for entry in logs if entry["event"] == "outbox_relay_publish_failed"
     ]
     assert len(failures) == 1
-    assert failures[0]["event_id"] == event_id  # failure logged with event ID
+    assert failures[0]["event_id"] == event_id
+
+    rows = await _outbox_rows(db_session)
+    assert len(rows) == 1  # outbox row survives a failed publish -> replayable
+    unpublished = await db_session.execute(
+        select(EventOutboxModel).where(EventOutboxModel.published_at.is_(None))
+    )
+    assert len(list(unpublished.scalars().all())) == 1  # still unpublished
     entries = await service.list_for_aggregate(
         db_session,
         _AggregateQuery(
@@ -165,26 +174,24 @@ async def test_publish_failure_after_commit_does_not_raise(
 
 
 @pytest.mark.asyncio
-async def test_second_commit_does_not_republish(db_session: AsyncSession) -> None:
-    """Scenario: Event published only after commit (no duplicate on re-commit)."""
+async def test_relay_rerun_does_not_republish(db_session: AsyncSession) -> None:
+    """Scenario: No duplicate delivery when the relay runs again."""
     service = WorkflowEventService(MemoryEventPublisher())
     await _emit_phase_change(service, db_session)
+    relay = OutboxRelay(MemoryEventPublisher())
 
-    await db_session.commit()
-    await drain_pending_publishes()
-    await db_session.commit()  # a later, event-free commit on the same session
-    await drain_pending_publishes()
+    await relay.run_once(db_session)
+    await relay.run_once(db_session)  # a later, no-op relay pass
 
-    assert len(get_memory_events()) == 1  # queue was drained, not re-read
+    assert len(get_memory_events()) == 1  # marked rows are not re-selected
 
 
 @pytest.mark.asyncio
 async def test_event_payload_shape_is_unchanged(db_session: AsyncSession) -> None:
-    """Scenario: Event published only after commit (payload-shape fixture)."""
+    """Scenario: Relayed payload matches the legacy stream_event shape + values."""
     service = WorkflowEventService(MemoryEventPublisher())
     event_id = await _emit_phase_change(service, db_session)
-    await db_session.commit()
-    await drain_pending_publishes()
+    await OutboxRelay(MemoryEventPublisher()).run_once(db_session)
 
     stream, stream_event, _entry = get_memory_events()[0]
     assert stream == STREAM_CONTENT_EVENTS

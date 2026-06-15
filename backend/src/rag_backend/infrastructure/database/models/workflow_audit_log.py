@@ -1,4 +1,11 @@
-"""SQLAlchemy model for workflow audit log (WF-004 event sourcing)."""
+"""SQLAlchemy model for workflow audit log (WF-004 event sourcing).
+
+Also re-exports the AE-0130 outbox dispatch helpers (``build_event_records`` /
+``relay_after_commit`` / ``EventRecord``). The application
+``WorkflowEventService`` imports them via this module path — already grandfathered
+in ``.importlinter`` (``application-no-infrastructure``) — so the transactional
+outbox introduces no new application->infrastructure import edge.
+"""
 
 import uuid
 
@@ -6,6 +13,11 @@ from sqlalchemy import Column, DateTime, Index, Integer, String, func
 from sqlalchemy.dialects.postgresql import JSON
 
 from rag_backend.infrastructure.database.config import Base
+from rag_backend.infrastructure.events.outbox_dispatch import (
+    EventRecord,
+    build_event_records,
+    relay_after_commit,
+)
 
 
 class WorkflowAuditLogModel(Base):
@@ -32,4 +44,9 @@ class WorkflowAuditLogModel(Base):
     )
 
 
-__all__ = ["WorkflowAuditLogModel"]
+__all__ = [
+    "EventRecord",
+    "WorkflowAuditLogModel",
+    "build_event_records",
+    "relay_after_commit",
+]
