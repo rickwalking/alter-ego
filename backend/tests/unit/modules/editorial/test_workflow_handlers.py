@@ -307,7 +307,7 @@ class TestEditorialWorkflowHandlerProviderGuard:
     """The edge provider rejects a module bootstrapped without the carousel ACL.
 
     Covers the ``acl is None`` guard in ``get_editorial_workflow_handlers`` so the
-    branch is exercised by tests (no ``# pragma: no cover``).
+    branch is exercised by a real test rather than excluded from coverage.
     """
 
     def test_raises_runtime_error_when_acl_missing(self) -> None:
