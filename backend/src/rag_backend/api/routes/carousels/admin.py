@@ -15,6 +15,10 @@ from rag_backend.domain.models import CarouselProject, CarouselStatus, User
 from rag_backend.domain.protocols import CarouselRefinementService, CarouselRepository
 from rag_backend.domain.protocols.repositories import _ProjectQuery
 from rag_backend.infrastructure.database.config import get_session
+from rag_backend.modules.presentation.public import (
+    PresentationPersistenceAcl,
+    PresentationWriteOwner,
+)
 
 from .deps import get_carousel_refinement, get_carousel_repo
 
@@ -62,20 +66,30 @@ async def refresh_design_tokens(
         query=_ProjectQuery(status=CarouselStatus.COMPLETED, limit=1000, offset=0),
     )
 
+    # Route the design-token write through the presentation single-writer/ACL
+    # (AE-0118): the owner stamps ``design_tokens`` (flush only) and is the single
+    # committer for the presentation column, replacing the scattered
+    # ``repo.update_project`` + ``session.commit()`` here. Behavior-preserving:
+    # the same projects are updated and committed; only ownership/commit boundary
+    # are consolidated.
+    presentation = PresentationPersistenceAcl(session, PresentationWriteOwner(session))
+
     updated = 0
     failed = 0
     errors: list[str] = []
 
     for project in projects:
         try:
-            project.design_tokens = generate_design_tokens(project)
-            await repo.update_project(project)
+            await presentation.refresh_design_tokens(
+                project,
+                generate_design_tokens(project),
+            )
             updated += 1
         except Exception as exc:
             failed += 1
             errors.append(f"{project.id}: {exc}")
 
-    await session.commit()
+    await presentation.commit()
 
     return RefreshDesignTokensResponse(
         total=len(projects),

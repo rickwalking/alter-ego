@@ -1,6 +1,6 @@
 # AE-0118 — Presentation persistence: single writer/ACL for presentation columns + slide rows (preserve artifact_version↔lock_version CAS)
 
-Status: Ready
+Status: Dev Complete
 Tier: T2
 Priority: High
 Type: Task
@@ -104,9 +104,11 @@ Not applicable — behavior-preserving extraction; verified by the AE-0116 safet
 
 Ticket created by planner (Phase 5 breakdown).
 
+Dev Complete (Wave B). PresentationWriteOwner + PresentationPersistenceAcl (sole presentation ORM importers); admin refresh routed through the owner; artifact_version↔lock_version CAS preserved + no-clobber tested; write-path authz parity (extends AE-0113). Editorial-invoked writers deferred to AE-0121's port (documented). mypy 493, lint-imports 16/0, check-integrity 0 blockers, 919 regression tests pass.
+
 ## Files Touched
 
-Pending.
+modules/presentation/infrastructure/{presentation_acl,presentation_write_owner}.py (new), modules/presentation/{public,infrastructure/__init__}.py, api/routes/carousels/admin.py, tests/unit/modules/presentation/test_presentation_write_owner.py, tests/integration/test_presentation_write_path_authz.py, tests/features/presentation_persistence_acl.feature
 
 ## Test Evidence
 

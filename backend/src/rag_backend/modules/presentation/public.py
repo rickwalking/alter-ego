@@ -25,6 +25,12 @@ The facade exposes:
   object-identity shim);
 * ``PresentationPolicyPort`` / ``SlideValidationPort`` — the presentation
   provider ports (new Protocols);
+* ``PresentationWriteOwner`` / ``PresentationPersistenceAcl`` /
+  ``PresentationProjectView`` — the AE-0118 presentation persistence seam: the
+  single writer of the presentation columns + slide rows (and the owner of the
+  ``artifact_version`` ↔ ``lock_version`` compound CAS delegation), the
+  read/write ACL over it, and its concurrency-token view. Editorial / global
+  callers reach presentation persistence ONLY through these facade symbols;
 * ``PresentationAdapters`` / ``PresentationModule`` / ``bootstrap_module`` — the
   composition root (manual constructor injection).
 
@@ -66,6 +72,11 @@ from rag_backend.modules.presentation.domain.ports import (
     PresentationPolicyPort,
     SlideValidationPort,
 )
+from rag_backend.modules.presentation.infrastructure import (
+    PresentationPersistenceAcl,
+    PresentationProjectView,
+    PresentationWriteOwner,
+)
 
 __all__ = [
     "CarouselPresentationPolicy",
@@ -79,11 +90,14 @@ __all__ = [
     "GeometryBudget",
     "PresentationAdapters",
     "PresentationModule",
+    "PresentationPersistenceAcl",
     "PresentationPolicyError",
     "PresentationPolicyPort",
     "PresentationPorts",
     "PresentationProject",
+    "PresentationProjectView",
     "PresentationService",
+    "PresentationWriteOwner",
     "SlideTypePolicy",
     "SlideValidationPort",
     "SlideValidationReport",
