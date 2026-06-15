@@ -1,6 +1,6 @@
 # AE-0105 — carousel-project-field-ownership.md — column/invariant/owner/concurrency map
 
-Status: Ready
+Status: Dev Complete
 Tier: T2
 Priority: High
 Type: Docs
@@ -101,9 +101,11 @@ Not applicable — documentation deliverable; correctness verified by AE-0107/01
 
 Ticket created by planner (Phase 4 breakdown).
 
+Dev Complete (Wave A). Authored docs/architecture/carousel-project-field-ownership.md — 53 columns mapped (each: type/invariant/writer file:line/owning context/concurrency), 8+ writer surfaces, 12 workflow-owned vs 41 deferred, 13 multi-writer columns flagged (lock_version + artifact_version dual-CAS, current_phase authority overlap, phase_status background-session write). Single-write-owner rule + legacy↔editorial consistency documented. Wave A combined 47 passed; mypy 474, lint-imports 14/0, integrity 0 blockers.
+
 ## Files Touched
 
-Pending.
+docs/architecture/carousel-project-field-ownership.md
 
 ## Test Evidence
 
