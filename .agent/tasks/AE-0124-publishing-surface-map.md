@@ -1,6 +1,6 @@
 # AE-0124 — Publishing/blog/distribution surface + ownership map + migration/outbox/behavior risk analysis
 
-Status: Ready
+Status: Dev Complete
 Tier: T2
 Priority: High
 Type: Docs
@@ -102,9 +102,11 @@ Not applicable — documentation deliverable.
 
 Ticket created by planner (Phase 6 breakdown).
 
+Dev Complete (Wave A). docs/architecture/publishing-surface-ownership.md — 32 BlogPost columns + 6 carousel-embedded distribution columns mapped (8 writer surfaces, file:line); additive migration plan (origin + backfill, no drop, reversible); outbox single-durable-path design; behavior analysis (auto-publish conflation + behavior-preserving release + deferred cutover/drop AE-0133); SEO documented as read-only scorer (no optimizer) → deferred. Wave A 46 tests pass; mypy 511, integrity 0 blockers, no suppressions.
+
 ## Files Touched
 
-Pending.
+docs/architecture/publishing-surface-ownership.md
 
 ## Test Evidence
 
