@@ -1,6 +1,6 @@
 # AE-0097 — Identity + Conversation Gherkin safety nets + response/SSE snapshots
 
-Status: Dev Complete
+Status: Review
 Tier: T2
 Priority: High
 Type: Tests
@@ -125,7 +125,7 @@ Pending.
 
 ## QA Report
 
-Pending.
+Phase 3 Wave A batch QA — converged PASS in 2 independent rounds (0 findings). See `.agent/reports/phase-3-wave-a.qa.md`.
 
 ## Decision Log
 
