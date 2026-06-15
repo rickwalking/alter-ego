@@ -105,7 +105,7 @@ Dev Complete (Wave B). CarouselProjectWriteOwner consolidates all workflow-owned
 
 ## Files Touched
 
-application/services/carousel/carousel_project_write_owner.py (new), editorial_workflow_service.py, editorial_workflow_resume_runner.py, api/routes/carousels/editorial_workflow.py, editorial_workflow_routes_validate.py, backend/.importlinter (net-neutral regen)
+modules/editorial/infrastructure/carousel_project_write_owner.py (relocated from application — resolves DDD blocker), infrastructure/database/models/carousel.py (9 WO columns → Mapped[]), editorial_workflow_service.py, editorial_workflow_resume_runner.py, api/routes/carousels/editorial_workflow.py, editorial_workflow_routes_validate.py, backend/.importlinter (net-neutral regen)
 
 ## Test Evidence
 

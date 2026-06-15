@@ -1,6 +1,6 @@
 # AE-0109 — Legacy carousel ACL (compatibility adapter: legacy persistence ↔ editorial concepts)
 
-Status: Ready
+Status: Dev Complete
 Tier: T2
 Priority: High
 Type: Task
@@ -101,9 +101,11 @@ Not applicable — behavior-preserving adapter; verified by the AE-0106 safety n
 
 Ticket created by planner (Phase 4 breakdown).
 
+Dev Complete (Wave B). LegacyCarouselAcl = single CarouselProjectModel↔editorial translator; writes via the AE-0107 owner (co-located in editorial infra); lock_version+checkpoints preserved. 22 editorial tests, 720 carousel-suite pass, mypy 476, integrity 0 blockers.
+
 ## Files Touched
 
-Pending.
+modules/editorial/infrastructure/legacy_carousel_acl.py (new), modules/editorial/infrastructure/carousel_project_write_owner.py (AE-0107 owner relocated here), modules/editorial/{bootstrap,public,__init__}.py, modules/editorial/infrastructure/__init__.py, tests/unit/modules/editorial/test_legacy_carousel_acl.py
 
 ## Test Evidence
 
