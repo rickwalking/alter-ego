@@ -1,3 +1,42 @@
+# =========================================================================
+# Phase 0 — Gate Reproduction (the verdict spine). The QA agent runs the SAME
+# script CI runs, so a green QA means a green CI. Definitions live in the
+# script, NOT here — this block only tells the agent how to invoke and read it.
+# =========================================================================
+gates:
+  runner: scripts/ci/gates.sh
+  invoke:
+    fast: "bash scripts/ci/gates.sh <scope> --changed-only"   # no services / no slow
+    full: "bash scripts/ci/gates.sh <scope>"                  # everything (preferred)
+  scopes: [backend, frontend]
+  summary_line: "GATES_JSON:"        # parse this line for per-gate status
+  exit_codes: { "0": PASS, "1": FAIL, "77": SKIPPED }
+  # Gates that need a service or are slow; if they SKIP locally the verdict is
+  # INCONCLUSIVE (never PASS). Set DATABASE_URL to run the DB-dependent ones.
+  service_dependent: [backend:test, backend:diff-cover, backend:migrations]
+  slow: [backend:mutation]
+  # Thresholds are defined in the script — do NOT duplicate values here. For
+  # reference only: backend mutation ≥75% (blocking), diff-cover ≥75% on changed
+  # lines (blocking), interrogate ≥80%, frontend Stryker advisory.
+
+# =========================================================================
+# Integrity / anti-gaming (Subagent 6). Diff-scoped ratchet: NET-NEW only.
+# =========================================================================
+integrity:
+  scanner: scripts/ci/check-integrity.sh
+  invoke: "bash scripts/ci/check-integrity.sh <scope>"
+  policy: block-net-new-report-existing   # pre-existing debt never gates
+  zero_tolerance: true                    # net-new blockers bounce the ticket
+  escape_hatch: "integrity-ok: <reason>"  # auditable per-line downgrade; QA reviews each
+  blocks:                                 # → 🔴 Blocker when net-new
+    - suppressions            # noqa / type:ignore / nosec / pragma:no-cover / eslint-disable / ts-ignore
+    - skipped_or_weak_tests   # pytest skip|xfail / .skip|.only / assert True
+    - loosened_rules          # new per-file-ignores / ignore_errors / threshold decrease / raised baseline
+    - prohibited_ddd_imports  # cross-layer imports / get_container / adapter .commit / past-facade
+  warns:                                  # → 🟠 Warning, QA confirms ticket justifies
+    - apparatus_edits         # .github/workflows, scripts/ci, .importlinter, import_baseline, eslint/tsconfig/stryker
+    - coverage_omit_additions
+
 external_qa_reviewers:
   - id: opencode
     label: OpenCode (CrofAI / kimi-k2.6 or configured default)
@@ -41,7 +80,11 @@ wave_loop:
 # PASS (or confirmation PASS) -> ticket(s) to Review.
 prompt_requirements:
   - read-only on the working tree; verification commands allowed
-  - explicit tool-call budget (10-20)
+  - "Phase 0 (mandatory): reviewer runs scripts/ci/gates.sh + check-integrity.sh
+    itself and parses GATES_JSON — a gate FAIL or net-new integrity blocker forces
+    FAIL; a SKIP is INCONCLUSIVE, never PASS (primary bias defense)"
+  - include the Integrity/anti-gaming and Gherkin edge-case dimensions
+  - explicit tool-call budget (25-35; do not starve the gates to save budget)
   - on command failure: record "could not verify" and move on (one retry max)
   - must always end with the report and the QA_VERDICT line, even if
     dimensions are INCONCLUSIVE
