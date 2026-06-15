@@ -83,6 +83,6 @@ def get_editorial_workflow_handlers(
     the ``build_editorial_workflow_service`` monkeypatch seam).
     """
     acl = module.legacy_carousel_acl
-    if acl is None:  # pragma: no cover - the edge provider always wires the ACL
+    if acl is None:
         raise RuntimeError(_ERR_MODULE_WITHOUT_ACL)
     return EditorialWorkflowHandlers(acl=acl)

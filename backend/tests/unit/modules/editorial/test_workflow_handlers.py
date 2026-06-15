@@ -301,3 +301,28 @@ class TestStreamPhaseUpdates:
         ]
         assert [event["event"] for event in events] == ["phase_change", "progress"]
         assert events[1]["phase_progress"] == {"percent": 10}
+
+
+class TestEditorialWorkflowHandlerProviderGuard:
+    """The edge provider rejects a module bootstrapped without the carousel ACL.
+
+    Covers the ``acl is None`` guard in ``get_editorial_workflow_handlers`` so the
+    branch is exercised by tests (no ``# pragma: no cover``).
+    """
+
+    def test_raises_runtime_error_when_acl_missing(self) -> None:
+        from unittest.mock import MagicMock
+
+        from rag_backend.api.dependencies.editorial import (
+            _ERR_MODULE_WITHOUT_ACL,
+            get_editorial_workflow_handlers,
+        )
+        from rag_backend.modules.editorial.bootstrap import EditorialModule
+
+        module = EditorialModule(
+            service=MagicMock(),
+            unit_of_work=MagicMock(),
+            legacy_carousel_acl=None,
+        )
+        with pytest.raises(RuntimeError, match=_ERR_MODULE_WITHOUT_ACL):
+            get_editorial_workflow_handlers(module=module)
