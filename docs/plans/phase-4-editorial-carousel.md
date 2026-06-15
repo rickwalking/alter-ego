@@ -49,7 +49,7 @@ mandatory before any editorial write redirection.
 
 | ID | Title | Tier | Area | Blocked by |
 |----|-------|------|------|------------|
-| **AE-0104** | Phase 4 epic: EditorialProject facade over CarouselProject | T3 | Cross-cutting | — (tracks 0105-0112) |
+| **AE-0104** | Phase 4 epic: EditorialProject facade over CarouselProject | T3 | Cross-cutting | — (tracks 0105-0113) |
 | **AE-0105** | `carousel-project-field-ownership.md` — column/invariant/owner/concurrency map | T2 | Docs/Arch | — |
 | **AE-0106** | Carousel workflow Gherkin safety net + API/SSE byte-identical snapshots | T2 | Tests | — |
 | **AE-0107** | `legacy.carousel_project` single write owner for workflow-owned fields | T2 | Backend | AE-0105, AE-0106, AE-0113 |
