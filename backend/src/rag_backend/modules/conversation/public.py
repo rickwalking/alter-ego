@@ -47,6 +47,12 @@ from rag_backend.modules.conversation.application.handlers import (
     LlmGenerate,
 )
 from rag_backend.modules.conversation.application.service import ConversationService
+from rag_backend.modules.conversation.application.streaming import (
+    ChatAgentBuilder,
+    ConversationStreamHandler,
+    StreamChatCommand,
+    StreamChatRunner,
+)
 from rag_backend.modules.conversation.bootstrap import (
     ConversationAdapters,
     ConversationModule,
@@ -64,8 +70,12 @@ from rag_backend.modules.conversation.domain.ports import (
 from rag_backend.modules.conversation.infrastructure.chat_agent_factory import (
     LegacyChatAgentFactory,
 )
+from rag_backend.modules.conversation.infrastructure.stream_runner import (
+    LegacyStreamChatRunner,
+)
 
 __all__ = [
+    "ChatAgentBuilder",
     "ChatAgentFactory",
     "ChatCommand",
     "ChatResult",
@@ -78,16 +88,20 @@ __all__ = [
     "ConversationPage",
     "ConversationRepository",
     "ConversationService",
+    "ConversationStreamHandler",
     "CreateConversationCommand",
     "DeleteConversationCommand",
     "GenerateTitleCommand",
     "GetConversationQuery",
     "GetMessagesQuery",
     "LegacyChatAgentFactory",
+    "LegacyStreamChatRunner",
     "ListConversationsQuery",
     "LlmGenerate",
     "Message",
     "MessageRepository",
     "MessageRole",
+    "StreamChatCommand",
+    "StreamChatRunner",
     "bootstrap_module",
 ]

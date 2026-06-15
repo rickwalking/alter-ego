@@ -1,6 +1,6 @@
 # AE-0102 — SSE streaming behind conversation via ChatAgentFactory (byte-identical SSE)
 
-Status: Ready
+Status: Dev Complete
 Tier: T2
 Priority: High
 Type: Task
@@ -108,9 +108,11 @@ Feature: SSE streaming unchanged behind the module
 
 Ticket created by planner (Phase 3 breakdown).
 
+Dev Complete (Wave C). chat_stream.py SSE endpoints → conversation facade + ChatAgentFactory; byte-identical SSE (AE-0097 46/46); module-level monkeypatch seam preserved; mypy 462, lint-imports 10/0, integrity 0 blockers.
+
 ## Files Touched
 
-Pending.
+api/routes/chat_stream.py, api/dependencies/conversation.py, modules/conversation/application/streaming.py, modules/conversation/infrastructure/stream_runner.py, modules/conversation/{public,__init__}.py
 
 ## Test Evidence
 

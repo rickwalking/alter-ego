@@ -24,7 +24,9 @@ from rag_backend.modules.conversation import (
     ConversationAdapters,
     ConversationHandlers,
     ConversationModule,
+    ConversationStreamHandler,
     LegacyChatAgentFactory,
+    LegacyStreamChatRunner,
     LlmGenerate,
     bootstrap_module,
 )
@@ -85,6 +87,21 @@ def get_legacy_chat_agent_factory(
     the routing + knowledge-facade wiring identical to the legacy chat path.
     """
     return LegacyChatAgentFactory(db, get_container())
+
+
+def get_conversation_stream_handler(
+    db: AsyncSession = Depends(get_session),
+) -> ConversationStreamHandler:
+    """Build the request-scoped SSE streaming handler for the current request.
+
+    Binds the request ``AsyncSession`` into the ``StreamChatRunner`` adapter (the
+    legacy ``stream_chat_response`` wrapper) at the edge, so the conversation
+    streaming application code never reaches a concrete Postgres repository or the
+    global container (AE-0102 AC). Mirrors ``get_conversation_handlers`` and
+    ``get_knowledge_service``: container/session resolution stays here in
+    ``api/dependencies/``, never inside the module's application code.
+    """
+    return ConversationStreamHandler(LegacyStreamChatRunner(db))
 
 
 def get_conversation_title_generator() -> LlmGenerate:
