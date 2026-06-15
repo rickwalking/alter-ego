@@ -5,6 +5,9 @@ from __future__ import annotations
 import asyncio
 from dataclasses import dataclass
 
+from rag_backend.application.services.carousel.carousel_project_write_owner import (
+    CarouselProjectWriteOwner,
+)
 from rag_backend.application.services.carousel.editorial_workflow_service import (
     EditorialWorkflowService,
 )
@@ -23,7 +26,6 @@ from rag_backend.domain.constants.carousel_workflow import (
     REVIEW_ACTION_APPROVE,
 )
 from rag_backend.infrastructure.database.config import get_session_maker
-from rag_backend.infrastructure.database.models.carousel import CarouselProjectModel
 from rag_backend.infrastructure.logging import get_logger
 
 logger = get_logger()
@@ -109,7 +111,7 @@ async def _execute_background_resume(
                 )
                 return
 
-            await db.commit()
+            await CarouselProjectWriteOwner(db).commit()
             await publish_workflow_sse_updates(params.project_id, state)
         except ValueError as exc:
             await db.rollback()
@@ -176,10 +178,10 @@ async def _revert_background_resume_stuck(
     """Revert DB phase_status to awaiting_human and publish error SSE."""
     session_factory = get_session_maker()
     async with session_factory() as db:
-        project = await db.get(CarouselProjectModel, project_id)
-        if project is not None:
-            project.phase_status = PHASE_STATUS_AWAITING_HUMAN
-            await db.commit()
+        await CarouselProjectWriteOwner(db).set_phase_status_and_commit(
+            project_id,
+            PHASE_STATUS_AWAITING_HUMAN,
+        )
         await service.publish_resume_error_event(
             project_id,
             message=ERR_BACKGROUND_RESUME_STUCK,
@@ -192,10 +194,10 @@ async def _mark_background_resume_failed(
 ) -> None:
     session_factory = get_session_maker()
     async with session_factory() as db:
-        project = await db.get(CarouselProjectModel, params.project_id)
-        if project is not None:
-            project.phase_status = PHASE_STATUS_FAILED
-            await db.commit()
+        await CarouselProjectWriteOwner(db).set_phase_status_and_commit(
+            params.project_id,
+            PHASE_STATUS_FAILED,
+        )
         await params.service.publish_resume_error_event(
             params.project_id,
             message=params.message,

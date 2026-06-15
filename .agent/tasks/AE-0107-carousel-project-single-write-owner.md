@@ -1,6 +1,6 @@
 # AE-0107 — legacy.carousel_project single write owner for workflow-owned fields
 
-Status: Ready
+Status: Dev Complete
 Tier: T2
 Priority: High
 Type: Task
@@ -101,9 +101,11 @@ Not applicable — behavior-preserving extraction; verified by the AE-0106 safet
 
 Ticket created by planner (Phase 4 breakdown).
 
+Dev Complete (Wave B). CarouselProjectWriteOwner consolidates all workflow-owned writes; AE-0106 diff=0; lock_version dual-CAS preserved; .importlinter net-neutral regen. 689 carousel/workflow tests pass; gate spine 14 PASS/0 FAIL/3 SKIP; integrity 0 blockers.
+
 ## Files Touched
 
-Pending.
+application/services/carousel/carousel_project_write_owner.py (new), editorial_workflow_service.py, editorial_workflow_resume_runner.py, api/routes/carousels/editorial_workflow.py, editorial_workflow_routes_validate.py, backend/.importlinter (net-neutral regen)
 
 ## Test Evidence
 

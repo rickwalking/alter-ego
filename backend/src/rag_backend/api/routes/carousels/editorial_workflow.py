@@ -42,6 +42,9 @@ from rag_backend.api.schemas.carousel_workflow import (
     EditorialWorkflowStartRequest,
     EditorialWorkflowStateResponse,
 )
+from rag_backend.application.services.carousel.carousel_project_write_owner import (
+    CarouselProjectWriteOwner,
+)
 from rag_backend.application.services.carousel.editorial_workflow_resume_runner import (
     BackgroundResumeParams,
     schedule_background_resume,
@@ -156,7 +159,7 @@ async def start_editorial_workflow(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=ERR_INVALID_REQUEST,
         ) from None
-    await db.commit()
+    await CarouselProjectWriteOwner(db).commit()
     project = await db.get(CarouselProjectModel, str(project_id))
     project_progress = (
         project.phase_progress
@@ -213,7 +216,7 @@ async def resume_editorial_workflow(
     )
     await ensure_structured_feedback_allowed(service, str(project_id), body)
     current_phase = await service.mark_resume_in_progress(str(project_id), db=db)
-    await db.commit()
+    await CarouselProjectWriteOwner(db).commit()
     schedule_background_resume(
         service,
         BackgroundResumeParams(

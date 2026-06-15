@@ -12,6 +12,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from rag_backend.agents.carousel_editorial_orchestrator import (
     CarouselEditorialOrchestrator,
 )
+from rag_backend.application.services.carousel.carousel_project_write_owner import (
+    CarouselProjectWriteOwner,
+)
 from rag_backend.application.services.carousel.editorial_workflow_events import (
     PhaseEventEmitContext,
     ReviewEventEmitRequest,
@@ -48,20 +51,16 @@ from rag_backend.domain.constants.carousel_workflow import (
     PHASE_IMAGES,
     PHASE_RESEARCH,
     PHASE_STATUS_AWAITING_HUMAN,
-    PHASE_STATUS_FAILED,
     PHASE_STATUS_IN_PROGRESS,
     REVIEW_ACTION_APPROVE,
     REVIEW_ACTION_REJECT,
     REVIEW_ACTION_REVISE,
     STRUCTURED_FEEDBACK_KEY,
     WORKFLOW_METADATA_EDITORIAL_7_PHASE,
-    WORKFLOW_STATE_LINKEDIN_POST_EN_KEY,
-    WORKFLOW_STATE_LINKEDIN_POST_PT_KEY,
     WORKFLOW_TRACE_PHASE_HUMAN_REVIEW,
     WORKFLOW_TRACE_PHASE_REVIEW,
 )
 from rag_backend.domain.constants.workflow_validation import CONTENT_TYPE_CAROUSEL
-from rag_backend.domain.models import CarouselStatus
 from rag_backend.domain.models.carousels import ReviewEventParams
 from rag_backend.infrastructure.database.models.carousel import CarouselProjectModel
 from rag_backend.infrastructure.monitoring_langfuse import (
@@ -146,9 +145,10 @@ class EditorialWorkflowService:
                 {"assigned_reviewer_id": workflow_input.reviewer_id},
             )
             if db is not None:
-                project = await db.get(CarouselProjectModel, project_id)
-                if project is not None:
-                    project.assigned_reviewer_id = workflow_input.reviewer_id
+                await CarouselProjectWriteOwner(db).assign_reviewer(
+                    project_id,
+                    workflow_input.reviewer_id,
+                )
             assigned_state = await self._orchestrator.get_state(project_id)
             if assigned_state is not None:
                 state = assigned_state
@@ -186,29 +186,15 @@ class EditorialWorkflowService:
         project_id: str,
         state: CarouselWorkflowState,
     ) -> None:
-        """Keep carousel project row in sync with workflow state for the Kanban board."""
+        """Keep carousel project row in sync with workflow state for the Kanban board.
+
+        Routes the workflow-owned phase columns through the single write owner
+        (AE-0107); the owner only ``flush``\\es, so the commit stays with the
+        caller (the route's UoW commit or the background runner).
+        """
         if db is None:
             return
-        project = await db.get(CarouselProjectModel, project_id)
-        if project is None:
-            return
-        project.current_phase = str(state.get("current_phase", project.current_phase))
-        project.phase_status = str(state.get("phase_status", project.phase_status))
-        if str(state.get("phase_status", "")) == PHASE_STATUS_FAILED:
-            project.status = CarouselStatus.FAILED.value
-        raw_workflow_status = state.get("workflow_status")
-        if raw_workflow_status is not None:
-            project.workflow_status = str(raw_workflow_status)
-        for attr, key in [
-            ("caption", "caption"),
-            ("blog_markdown", "blog_markdown"),
-            ("linkedin_post_pt", WORKFLOW_STATE_LINKEDIN_POST_PT_KEY),
-            ("linkedin_post_en", WORKFLOW_STATE_LINKEDIN_POST_EN_KEY),
-        ]:
-            val = state.get(key)
-            if isinstance(val, str) and val.strip():
-                setattr(project, attr, val)
-        await db.flush()
+        await CarouselProjectWriteOwner(db).sync_phase(project_id, state)
 
     async def resume_workflow(
         self,
