@@ -12,9 +12,7 @@ adapter swaps stay safe (Phase 2 module pilot, AE-0094).
 
 The Postgres adapter runs against the SQLite in-memory database used across the
 backend test suite (per ``backend/CLAUDE.md`` — "Use SQLite in-memory for
-database tests"), so it is always available in CI; no skip is required. If the
-shared ``db_session`` fixture cannot connect, the Postgres parametrization is
-skip-marked while the fake parametrization always runs.
+database tests"), so it is always available in CI; no skip is required.
 
 Scenarios reference the AE-0090 full-field document persistence behavior for the
 scope/is_public round-trip and the AE-0088 Knowledge safety-net behaviors.
@@ -24,7 +22,6 @@ from typing import Protocol, TypedDict
 from uuid import UUID, uuid4
 
 import pytest
-from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.domain.models import Document, DocumentScope, DocumentStatus
@@ -38,7 +35,6 @@ from rag_backend.infrastructure.database.document_repository import (
 _FAKE = "fake"
 _POSTGRES = "postgres"
 _ERR_NOT_FOUND_FRAGMENT = "not found"
-_SKIP_NO_DB = "No database session available for the Postgres adapter."
 
 _DEFAULT_LIMIT = 100
 _DEFAULT_OFFSET = 0
@@ -230,10 +226,9 @@ def repo(request: pytest.FixtureRequest) -> DocumentRepositoryContract:
     if request.param == _FAKE:
         return FakeDocumentRepository()
 
-    try:
-        db_session = request.getfixturevalue("db_session")
-    except SQLAlchemyError as exc:  # pragma: no cover - defensive skip path
-        pytest.skip(f"{_SKIP_NO_DB} ({exc})")
+    # SQLite in-memory db_session is always available (backend/CLAUDE.md), so the
+    # Postgres-port adapter always runs — no skip path.
+    db_session = request.getfixturevalue("db_session")
     return _build_postgres_repo(db_session)
 
 
