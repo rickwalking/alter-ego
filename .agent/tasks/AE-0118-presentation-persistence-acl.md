@@ -1,6 +1,6 @@
 # AE-0118 — Presentation persistence: single writer/ACL for presentation columns + slide rows (preserve artifact_version↔lock_version CAS)
 
-Status: Dev Complete
+Status: Review
 Tier: T2
 Priority: High
 Type: Task
@@ -116,7 +116,7 @@ Pending.
 
 ## QA Report
 
-Pending.
+Phase 5 Wave B batch QA — converged PASS in 2 independent rounds (0 critical/warning; 2 benign info notes). See `.agent/reports/phase-5-wave-b.qa.md`.
 
 ## Decision Log
 

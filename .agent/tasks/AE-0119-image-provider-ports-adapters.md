@@ -1,6 +1,6 @@
 # AE-0119 — Image-provider ports + adapters (registry + OpenAI/Gemini behind ports)
 
-Status: Dev Complete
+Status: Review
 Tier: T2
 Priority: High
 Type: Task
@@ -113,7 +113,7 @@ Pending.
 
 ## QA Report
 
-Pending.
+Phase 5 Wave B batch QA — converged PASS in 2 independent rounds (0 critical/warning; 2 benign info notes). See `.agent/reports/phase-5-wave-b.qa.md`.
 
 ## Decision Log
 
