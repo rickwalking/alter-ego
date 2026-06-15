@@ -61,6 +61,12 @@ from rag_backend.infrastructure.database.document_repository import (
     PostgresDocumentRepository,
 )
 from rag_backend.infrastructure.logging import get_logger
+from rag_backend.modules.knowledge import (
+    KnowledgeAdapters,
+    KnowledgeService,
+    bootstrap_module,
+)
+from rag_backend.platform.database import SqlAlchemyUnitOfWork
 
 logger = get_logger()
 
@@ -122,6 +128,26 @@ def build_agent_for_conversation(
     )
 
 
+def _build_knowledge_search(db: AsyncSession, container: Container) -> KnowledgeService:
+    """Build the request-scoped knowledge facade for agent retrieval.
+
+    Agents resolve hybrid search through the module's public facade (AE-0093),
+    matching ``get_knowledge_service`` so the agent search tool and
+    ``/api/search`` share the same search path. The facade is search-only here
+    (no write use case runs), so its repository/pipeline/UoW are constructed but
+    only the ``search`` operation is exercised.
+    """
+    repository = container.document_repository(session=db)
+    pipeline = container.document_pipeline(document_repository=repository)
+    adapters = KnowledgeAdapters(
+        repository=repository,
+        pipeline=pipeline,
+        retriever=container.retriever(),
+        unit_of_work=SqlAlchemyUnitOfWork(db),
+    )
+    return bootstrap_module(platform=container, adapters=adapters)
+
+
 def build_alter_ego_agent(db: AsyncSession, container: Container) -> AlterEgoAgent:
     """Build an AlterEgoAgent bound to the given per-request session.
 
@@ -133,6 +159,7 @@ def build_alter_ego_agent(db: AsyncSession, container: Container) -> AlterEgoAge
         retriever=container.retriever(),
         message_repository=PostgresMessageRepository(db),
         document_repository=PostgresDocumentRepository(db),
+        knowledge_search=_build_knowledge_search(db, container),
     )
 
 
@@ -362,6 +389,7 @@ def build_rag_agent(
         retriever=container.retriever(),
         message_repository=PostgresMessageRepository(db),
         document_repository=PostgresDocumentRepository(db),
+        knowledge_search=_build_knowledge_search(db, container),
         carousel_refinement=carousel_refinement,
         carousel_repository=carousel_repo,
         editorial_subagent=editorial_subagent,

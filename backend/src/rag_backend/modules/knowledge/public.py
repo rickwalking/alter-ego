@@ -28,6 +28,10 @@ from rag_backend.modules.knowledge.api.views import (
     KnowledgeDocumentView,
     SearchResultView,
 )
+from rag_backend.modules.knowledge.application.search_port import (
+    KnowledgeSearchPort,
+    RetrieverSearchAdapter,
+)
 from rag_backend.modules.knowledge.application.service import KnowledgeService
 from rag_backend.modules.knowledge.bootstrap import (
     KnowledgeAdapters,
@@ -56,9 +60,11 @@ __all__ = [
     "KnowledgeDocument",
     "KnowledgeDocumentListView",
     "KnowledgeDocumentView",
+    "KnowledgeSearchPort",
     "KnowledgeService",
     "ListDocumentsQuery",
     "ReprocessDocumentCommand",
+    "RetrieverSearchAdapter",
     "SearchQuery",
     "SearchResultView",
     "bootstrap_module",

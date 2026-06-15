@@ -36,6 +36,10 @@ from rag_backend.domain.protocols import (
 from rag_backend.domain.retry import retry_async
 from rag_backend.domain.types import ChatEvent
 from rag_backend.infrastructure.config.settings import Settings
+from rag_backend.modules.knowledge import (
+    KnowledgeSearchPort,
+    RetrieverSearchAdapter,
+)
 from rag_backend.monitoring_langfuse import get_langfuse_handler
 
 _ALTER_EGO_FALLBACK_PROMPT = (
@@ -64,11 +68,17 @@ class AlterEgoAgent:
         retriever: Retriever,
         message_repository: MessageRepository,
         document_repository: DocumentRepository,
+        knowledge_search: KnowledgeSearchPort | None = None,
     ) -> None:
         self._settings = settings
         self._retriever = retriever
         self._message_repository = message_repository
         self._document_repository = document_repository
+        self._knowledge_search: KnowledgeSearchPort = (
+            knowledge_search
+            if knowledge_search is not None
+            else RetrieverSearchAdapter(retriever)
+        )
 
         self._llm = ChatAnthropic(
             api_key=settings.anthropic_api_key,
@@ -98,7 +108,7 @@ class AlterEgoAgent:
         """Assemble Alter-Ego tools — personal docs ONLY."""
         return [
             build_search_documents_tool(
-                self._retriever,
+                self._knowledge_search,
                 top_k=10,
                 namespace_prefix="personal",
             ),
