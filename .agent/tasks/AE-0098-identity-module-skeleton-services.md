@@ -1,6 +1,6 @@
 # AE-0098 — modules/identity skeleton + facade + UserService/AuthenticationService + ports
 
-Status: Ready
+Status: Dev Complete
 Tier: T2
 Priority: High
 Type: Task
@@ -107,9 +107,11 @@ Not applicable — behavior-preserving extraction; no runtime behavior change (v
 
 Ticket created by planner (Phase 3 breakdown).
 
+Dev Complete (Wave A). Created modules/identity: UserService/AuthenticationService/PasswordService (delegate JWT/bcrypt to unchanged infrastructure/auth.py), object-identity UserRepository+User/UserRole shims, role-deps via facade, fake+sqlite contract suite. repositories.py untouched (A is B verified). Gate spine 14 PASS/0 FAIL/3 SKIP(DB→CI), integrity 0 blockers, mypy/lint-imports green.
+
 ## Files Touched
 
-Pending.
+backend/src/rag_backend/modules/identity/** (+public.py/bootstrap.py/constants.py), tests/unit/modules/identity/*, tests/unit/infrastructure/test_user_repository_contract.py
 
 ## Test Evidence
 
