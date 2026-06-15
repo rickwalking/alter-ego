@@ -1,6 +1,6 @@
 # AE-0115 — Presentation field/surface ownership map (extends AE-0105)
 
-Status: Ready
+Status: Dev Complete
 Tier: T2
 Priority: High
 Type: Docs
@@ -102,9 +102,11 @@ Not applicable — documentation deliverable; correctness verified by AE-0118/01
 
 Ticket created by planner (Phase 5 breakdown).
 
+Dev Complete (Wave A). Authored docs/architecture/presentation-surface-ownership.md — 23 presentation carousel_projects columns + 13 slide columns mapped (writers file:line, owned vs deferred); artifact_version↔lock_version compound CAS pairing + shared-owner coordination documented (§3); editorial↔presentation call boundary (finalize artifact build, design/images/export nodes, phase_progress callback) mapped (§5); 14 multi-writer fields flagged; crud GET design-token merge classified as facade-served (AE-0120); distribution + is_public confirmed OUT (Phase 6). Wave A: 21+11 tests pass; mypy 491, integrity 0 blockers, no suppressions.
+
 ## Files Touched
 
-Pending.
+docs/architecture/presentation-surface-ownership.md
 
 ## Test Evidence
 
