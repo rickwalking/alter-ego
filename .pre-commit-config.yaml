@@ -38,6 +38,13 @@ repos:
         pass_filenames: false
         files: ^backend/src/.*\.py$
 
+      - id: import-boundary-ratchet
+        name: Ratchet non-import boundaries (get_container, .commit)
+        entry: python3 scripts/metrics/import_baseline.py --check
+        language: system
+        pass_filenames: false
+        files: ^backend/src/.*\.py$
+
   # Dead code: vulture (backend only)
   - repo: local
     hooks:

@@ -17,7 +17,6 @@ import type {
   LocalizedSlideReview,
 } from "@/features/blog/types-ai";
 import { authenticatedFetch } from "@/lib/authenticated-fetch";
-import { resolveClientApiUrl } from "@/lib/client-api-url";
 import {
   appendUniquePhase,
   isResumeAcceptedResponse,
@@ -172,9 +171,7 @@ export function useEditorialWorkflowResume({
         let response: Response;
         try {
           response = await authenticatedFetch(
-            resolveClientApiUrl(
-              API_ENDPOINTS.CAROUSEL_WORKFLOW_RESUME(projectId),
-            ),
+            API_ENDPOINTS.CAROUSEL_WORKFLOW_RESUME(projectId),
             {
               method: HTTP_METHODS.POST,
               body: JSON.stringify(payload),

@@ -9,7 +9,6 @@ import {
   type SetStateAction,
 } from "react";
 import { API_ENDPOINTS } from "@/constants/api";
-import { resolveClientApiUrl } from "@/lib/client-api-url";
 import {
   EDITORIAL_WORKFLOW_POLL_BACKOFF_MS,
   EDITORIAL_WORKFLOW_SSE_EVENTS,
@@ -202,7 +201,7 @@ export function useEditorialWorkflowSse({
       clearReconnectTimeout();
 
       const source = new EventSource(
-        resolveClientApiUrl(API_ENDPOINTS.CAROUSEL_WORKFLOW_STREAM(projectId)),
+        API_ENDPOINTS.CAROUSEL_WORKFLOW_STREAM(projectId),
         { withCredentials: true },
       );
       sourceRef.current = source;

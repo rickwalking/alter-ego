@@ -106,7 +106,11 @@ afterEach(() => {
 });
 
 describe("useEditorialWorkflowResume", () => {
-  it("prefixes resume requests with NEXT_PUBLIC_API_URL", async () => {
+  // Regression (c858abd): the resume call must use the bare /api endpoint
+  // path, NOT a NEXT_PUBLIC_API_URL-prefixed URL. The path already starts
+  // with /api and nginx routes /api/* to the backend; prefixing produced
+  // /api/api/... and a 404 right after approving the research phase.
+  it("posts resume to the bare /api endpoint path (no NEXT_PUBLIC_API_URL prefix)", async () => {
     mockAuthenticatedFetch.mockResolvedValue({
       ok: true,
       status: HTTP_STATUS.OK,
@@ -125,8 +129,12 @@ describe("useEditorialWorkflowResume", () => {
     });
 
     expect(mockAuthenticatedFetch).toHaveBeenCalledWith(
-      "http://localhost:8000/api/carousels/project-1/workflow/resume",
+      "/api/carousels/project-1/workflow/resume",
       expect.objectContaining({ method: HTTP_METHODS.POST }),
+    );
+    expect(mockAuthenticatedFetch).not.toHaveBeenCalledWith(
+      "http://localhost:8000/api/carousels/project-1/workflow/resume",
+      expect.anything(),
     );
   });
 
@@ -231,8 +239,7 @@ describe("useEditorialWorkflowResume", () => {
 
     mockAuthenticatedFetch.mockImplementation(async (url, init) => {
       if (
-        url ===
-          "http://localhost:8000/api/carousels/project-1/workflow/resume" &&
+        url === "/api/carousels/project-1/workflow/resume" &&
         init?.method === HTTP_METHODS.POST
       ) {
         const body = JSON.parse(String(init.body)) as {

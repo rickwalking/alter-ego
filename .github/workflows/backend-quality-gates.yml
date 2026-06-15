@@ -195,6 +195,29 @@ jobs:
       - name: Check import architecture
         run: uv run lint-imports
 
+      - name: Architecture report (AE-0085, per-category vs baseline)
+        # Non-blocking REPORT: surfaces all six AE-0078 categories (current
+        # vs committed baseline) in the GitHub Step Summary and as an
+        # artifact so reviewers see architecture health every run. Reuses the
+        # AE-0082 single-source-of-truth baseline. The ENFORCING step is the
+        # ratchet below; this `--summary` mirrors its verdict but never gates.
+        if: always()
+        working-directory: .
+        run: |
+          python3 scripts/metrics/import_baseline.py --summary | tee architecture-report.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload architecture report artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: architecture-report
+          path: architecture-report.md
+          if-no-files-found: warn
+
+      - name: Ratchet non-import boundaries (get_container, .commit)
+        working-directory: .
+        run: python3 scripts/metrics/import_baseline.py --check
+
   docstrings:
     name: backend / Docstrings
     runs-on: ubuntu-latest
@@ -321,6 +344,90 @@ jobs:
           bash scripts/ci/post-pr-quality-comment.sh \
             "Backend" "Test & Coverage" \
             "Tests failed or diff coverage is below 75%."
+
+  migrations:
+    name: backend / Migrations (fresh DB)
+    # AE-0084: Provisions a FRESH Postgres and runs `alembic upgrade head`
+    # from an empty DB, then a `downgrade base` round-trip. Fails on any
+    # migration error or timeout, catching broken/out-of-order or
+    # non-reversible revisions before they land (Phase 4+ reversible-path
+    # discipline).
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: rag_migrations
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: "0.6.x"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: uv sync --locked
+
+      - name: alembic upgrade head (fresh DB, bounded)
+        timeout-minutes: 5
+        env:
+          DATABASE_URL: postgresql+asyncpg://test:test@localhost:5432/rag_migrations
+        run: uv run alembic upgrade head
+
+      - name: alembic schema-drift check (autogenerate must be empty)
+        # AE-0086: after upgrade head the DB schema must equal Base.metadata, so
+        # autogenerate produces NO operations. A non-empty diff means a model
+        # changed without regenerating the baseline (the create_all-vs-baseline
+        # drift guard). Fails the gate and prints the offending ops.
+        timeout-minutes: 5
+        env:
+          DATABASE_URL: postgresql+asyncpg://test:test@localhost:5432/rag_migrations
+        run: |
+          before=$(ls alembic/versions/*.py 2>/dev/null | sort)
+          uv run alembic revision --autogenerate -m _driftcheck >/dev/null
+          new=$(comm -13 <(printf '%s\n' "$before") <(ls alembic/versions/*.py | sort))
+          if [ -z "$new" ]; then
+            echo "::error::drift check could not generate a revision"; exit 1
+          fi
+          if grep -Eq '^\s*op\.' "$new"; then
+            echo "::error::Schema drift: models differ from the alembic baseline. Regenerate the baseline (AE-0086 procedure in backend/alembic/README.md)."
+            grep -E '^\s*op\.' "$new" || true
+            rm -f "$new"; exit 1
+          fi
+          rm -f "$new"
+          echo "OK: autogenerate diff is empty (baseline == Base.metadata)"
+
+      - name: alembic downgrade base round-trip (bounded)
+        timeout-minutes: 5
+        env:
+          DATABASE_URL: postgresql+asyncpg://test:test@localhost:5432/rag_migrations
+        run: uv run alembic downgrade base
+
+      - name: Post PR summary on failure
+        if: failure() && github.event_name == 'pull_request'
+        working-directory: .
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_EVENT_PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          bash scripts/ci/post-pr-quality-comment.sh \
+            "Backend" "Migrations (fresh DB)" \
+            "alembic upgrade head or downgrade base failed on a fresh database. A migration revision is broken, out of order, or non-reversible."
 
   mutation:
     name: backend / Mutation (blocking ≥75%)

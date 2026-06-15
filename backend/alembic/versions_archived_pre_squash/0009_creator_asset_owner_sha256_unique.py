@@ -1,6 +1,5 @@
 """Scope creator asset uniqueness to owner plus content hash."""
 
-import sqlalchemy as sa
 
 from alembic import op
 

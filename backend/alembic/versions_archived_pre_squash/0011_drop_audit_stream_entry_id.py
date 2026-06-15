@@ -7,6 +7,7 @@ audit-to-stream linkage.
 """
 
 import sqlalchemy as sa
+
 from alembic import op
 
 revision = "0011_drop_audit_stream_entry_id"
