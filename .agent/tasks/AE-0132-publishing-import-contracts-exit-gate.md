@@ -25,7 +25,7 @@ The publishing boundary + the acyclic direction must be CI-enforced, and the def
 - Add contracts via render_importlinter: publishing-application-isolation (application/domain forbidden from frameworks/get_container/infrastructure — carousel/blog ORM only via the publishing ACL) + publishing-public-facade + publishing-no-editorial-presentation (publishing imports no editorial/presentation internals). Name the publishing ACL as the only allowed carousel/blog-ORM path.
 - Regenerate .importlinter; ratchet the AE-0082 baseline DOWN (api->infra / get_container) or hold; --check PASS; demonstrate+revert violations.
 - Update module-conventions.md §13 with publishing as a worked example + the additive-migration/outbox patterns + the checkpoint-drain re-affirmation.
-- Document the DEFERRED follow-up: the auto-publish behavior cutover (approval≠release becomes two user actions) + the destructive embedded-column drop (drain-gated, post-migration-window), with the AE-0111 contract split already in place.
+- Reframe the FULL roadmap Phase-6 exit gate (auto-publish never-auto-publishes + embedded-column drop) as a post-Phase-6 follow-up tracked by **AE-0133** (Backlog): the auto-publish behavior cutover (approval≠release becomes two user actions; needs Phase-7 frontend) + the destructive, drain-gated embedded-column drop (post-migration-window), with the AE-0111 contract split + the AE-0127 additive backfill already in place. module-conventions §13 records this.
 
 ## Non-Goals
 
@@ -40,10 +40,11 @@ Phase 6 of the modularization plan (§Phase 6). **Behavior-preserving + additive
 ## Acceptance Criteria
 
 - [ ] Import Linter contracts SHALL isolate publishing.application/domain (no frameworks/get_container/infrastructure; carousel/blog ORM only via the publishing ACL), enforce the public facade, and forbid publishing importing editorial/presentation internals; lint-imports KEEPS them
+- [ ] THE publishing-application-isolation contract SHALL name `modules.publishing.infrastructure.<publishing_acl_module>` as the ONLY allowed carousel/blog-ORM import path (explicit, documented exception in render_importlinter — parity with AE-0112/0122)
 - [ ] WHEN new code violates any boundary THE contract SHALL fail (demonstrated, reverted)
 - [ ] THE AE-0082 baseline/--check SHALL ratchet DOWN or hold and stay PASS
 - [ ] module-conventions.md SHALL document publishing as a worked example incl. the additive-migration + outbox patterns
-- [ ] THE deferred auto-publish cutover + embedded-column drop SHALL be explicitly documented as a consent-gated follow-up; gates.sh + check-integrity + full suite green
+- [ ] THE deferred auto-publish cutover + embedded-column drop SHALL be documented as a consent-gated follow-up tracked by AE-0133 (Intake); module-conventions §13 reframes the full roadmap exit gate as post-Phase-6; gates.sh + check-integrity + full suite green
 
 ## Gherkin Scenarios
 

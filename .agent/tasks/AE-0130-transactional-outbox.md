@@ -24,7 +24,7 @@ workflow_event_service publishes to Redis on after_commit; if the publish fails 
 
 - Add an outbox table (event_id, type, aggregate_id, payload, created_at, published_at, attempts) written in the SAME UoW transaction as the state change (transactional).
 - Add a relay (worker/poller) that publishes unpublished outbox rows to the existing Redis stream at-least-once, marks published, idempotent (stable event_id; consumers dedupe).
-- Keep the existing after-commit publish path working (additive — do not remove it); event payloads IDENTICAL to today.
+- Route the existing emit through the outbox as the SINGLE durable publish path: the after_commit listener writes the outbox row in-transaction (instead of publishing to Redis directly); the relay is the sole Redis publisher. This avoids DOUBLE delivery while keeping event payloads IDENTICAL to today. (If a transitional overlap is unavoidable, it is bounded + consumer-idempotent — documented in AE-0124.)
 - Idempotency: same event processed twice → same result; the relay is safe to re-run.
 
 ## Non-Goals
@@ -41,7 +41,7 @@ Phase 6 of the modularization plan (§Phase 6). **Behavior-preserving + additive
 
 - [ ] AN outbox table SHALL be written in the same transaction (UoW) as the state change (additive Alembic migration, reversible)
 - [ ] A relay SHALL publish unpublished outbox rows to Redis at-least-once and mark them published, idempotently (stable event_id)
-- [ ] THE existing after-commit publish path SHALL keep working (additive); event payloads SHALL be identical to today
+- [ ] THE outbox SHALL be the single durable publish path (emit writes the outbox in-txn; the relay is the sole Redis publisher) with event payloads identical to today and NO double delivery (relay dedupe tested)
 - [ ] WHEN the relay re-runs THE same event SHALL not produce a different result (idempotent; at-least-once)
 - [ ] WHEN gates.sh + mypy + lint-imports + pytest run THEY SHALL pass; the AE-0125 safety net green
 

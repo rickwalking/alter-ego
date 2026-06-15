@@ -67,7 +67,7 @@ Not applicable — additive migration; verified by the AE-0125 safety net + the 
 
 - Backend: publishing module
 - Frontend: none (Phase 7)
-- Database: additive migration (origin+backfill; outbox table); NO destructive drop
+- Database: additive migration (add origin column + backfill blog_posts); NO destructive drop
 - API: none yet
 - Tests: contract/behavior tests
 - Docs: references conventions

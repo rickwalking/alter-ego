@@ -78,7 +78,7 @@ Not applicable — behavior-preserving extraction; verified by the AE-0125 safet
 ## Dependencies
 
 - Blocks: AE-0132
-- Blocked by: AE-0125, AE-0126, AE-0127, AE-0128
+- Blocked by: AE-0125, AE-0126, AE-0127, AE-0128, AE-0129 (calendar/board projections may surface distribution fields)
 - Related: AE-0120, AE-0123
 
 ## Implementation Plan

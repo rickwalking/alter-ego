@@ -28,7 +28,7 @@ Distribution (captions, Instagram publish, LinkedIn) is scattered across carouse
 
 ## Non-Goals
 
-- No new channels/SEO behavior.
+- No new channels/SEO behavior (no SEO optimizer exists today; out of scope).
 - No embedded-column drop.
 - No distribution-payload change.
 

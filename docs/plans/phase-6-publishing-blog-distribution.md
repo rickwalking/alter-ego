@@ -39,7 +39,7 @@ checkpoint-drain-gated migration inside a behind-facade phase, Phase 6 is scoped
 - The **destructive drop** of the embedded carousel columns (`blog_markdown`/`blog_translations`/`caption*`/
   `linkedin_post_*`) — a later, drain-gated, post-migration-window step once `blog_posts` is the confirmed writer.
 
-This keeps Phase 6 byte-identical + additive + reversible; AE-0132 documents the deferrals + the cutover plan.
+This keeps Phase 6 byte-identical + additive + reversible; AE-0132 documents the deferrals + reframes the full roadmap exit gate as post-Phase-6, tracked by **AE-0133** (Intake follow-up). Outbox: the emit routes through the outbox as the SINGLE durable publish path (no double delivery). SEO has no code today (deferred).
 
 ## Reality vs. spec (2026-06-15 code scan)
 
@@ -66,10 +66,10 @@ This keeps Phase 6 byte-identical + additive + reversible; AE-0132 documents the
 | **AE-0125** | Byte-identical safety net (blog/publish/distribution/calendar/board/analytics responses + public carousel /blog) + Gherkin | T2 | Tests | — |
 | **AE-0126** | `modules/publishing/` skeleton + facade + bootstrap + domain (BlogPost aggregate, Publication projection, DistributionChannel, PublishingSchedule) + re-exported ports | T2 | Backend | — |
 | **AE-0127** | `BlogPost.origin` field + ADDITIVE migration (backfill blog_posts from carousel blog; no column drop) | T2 | Backend/DB | AE-0124, AE-0126 |
-| **AE-0128** | Visibility + scheduling behind publishing ports; carousel publish routed through the release command (behavior-preserving) | T2 | Backend | AE-0125, AE-0126 |
+| **AE-0128** | Visibility + scheduling behind publishing ports (incl. standalone blog publish/unpublish/schedule); carousel publish via the release command (behavior-preserving) | T2 | Backend | AE-0125, AE-0126 |
 | **AE-0129** | Distribution behind ports (captions/Instagram/LinkedIn channel-delivery adapters) — behavior-preserving | T2 | Backend | AE-0125, AE-0126 |
 | **AE-0130** | Transactional outbox (additive) for release/workflow events — durable at-least-once relay | T2 | Backend | AE-0126 |
-| **AE-0131** | Public read-model projections (public /blog + calendar/board/analytics) — byte-identical output; blog routes behind facade | T2 | Backend | AE-0125, AE-0126, AE-0127, AE-0128 |
+| **AE-0131** | Public read-model projections (public /blog + calendar/board/analytics) — byte-identical output; blog routes behind facade | T2 | Backend | AE-0125, AE-0126, AE-0127, AE-0128, AE-0129 |
 | **AE-0132** | Publishing import contracts + exit gate + baseline ratchet + deferred-cutover docs | T2 | Backend/CI | AE-0128, AE-0129, AE-0130, AE-0131 |
 
 ## Suggested order (waves)

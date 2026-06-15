@@ -25,6 +25,8 @@ Phase 6 spans a dual blog representation, scattered distribution/visibility, and
 - Map BlogPostModel columns (+ the missing origin) + the carousel-embedded blog/caption/linkedin columns to writers/readers (file:line).
 - Specify the ADDITIVE migration: add origin (backfill 'carousel' for project-linked, 'standalone' else), backfill blog_posts rows from carousel blog_markdown/translations; NO column drop; reversible; fresh-DB upgrade + empty-autogenerate-diff drift must hold.
 - Specify the additive transactional outbox (table + relay; at-least-once; idempotent) alongside the existing after-commit publish; identical payloads.
+- During the migration window the embedded carousel columns REMAIN the authoritative read source (the AE-0127 backfill is one-time; ongoing carousel writes still land in the embedded columns until the deferred cutover/drop) — AE-0131 projections read them as the fallback. Document this dual-source window + the duplicate-delivery window for the outbox (AE-0130).
+- Mark SEO as NOT PRESENT in the codebase today (BlogPost has meta fields but no optimizer) — deferred, out of Phase 6 scope.
 - Behavior analysis: document the crud.py auto-publish conflation, what AE-0128 routes through the release command behavior-preservingly, and the DEFERRED auto-publish cutover + column drop (with the AE-0111 contract split already in place).
 
 ## Non-Goals

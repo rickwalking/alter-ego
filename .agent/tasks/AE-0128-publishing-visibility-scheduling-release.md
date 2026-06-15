@@ -25,6 +25,7 @@ Visibility (is_public) + scheduling are set directly in carousel/blog routes/ser
 - Define publishing ports for release (set public visibility) + scheduling; back them with adapters via a publishing ACL/owner (in modules/publishing/infrastructure — the only publishing code touching the carousel/blog ORM for these writes).
 - Route crud.py publish_carousel's is_public write through the publishing release command — IDENTICAL behavior (still sets is_public=True under the same preconditions); no auto-publish change.
 - Move the BlogPost scheduled_publish_service behind the publishing facade (behavior-preserving).
+- Route the STANDALONE blog visibility routes (blog_post_workflow.py publish/unpublish/schedule) through the publishing visibility/schedule ports (behavior-preserving; diff=0).
 - Commit via the platform UoW; routes stop writing is_public/schedule directly.
 
 ## Non-Goals
@@ -43,6 +44,7 @@ Phase 6 of the modularization plan (§Phase 6). **Behavior-preserving + additive
 - [ ] THE carousel publish flow SHALL route through the publishing release command with IDENTICAL behavior (same preconditions, still sets is_public; no auto-publish change)
 - [ ] THE publishing ACL/owner SHALL be the only publishing code importing the carousel/blog ORM for these writes; publishing application/domain import no ORM
 - [ ] WHEN the AE-0125 safety net runs THE publish/visibility responses SHALL diff to ZERO
+- [ ] THE standalone blog publish/unpublish/schedule routes (blog_post_workflow.py) SHALL route through the publishing visibility/schedule ports with diff=0 against the AE-0125 snapshots
 - [ ] WHEN gates.sh + mypy + lint-imports + pytest run THEY SHALL pass with no behavior change
 
 ## Gherkin Scenarios

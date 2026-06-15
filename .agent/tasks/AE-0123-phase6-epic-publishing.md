@@ -14,7 +14,7 @@ Updated: 2026-06-15
 
 ## Goal
 
-Extract a publishing bounded context (public visibility + scheduling, the one BlogPost aggregate with origin, distribution, public read-model projections, transactional outbox) behind a facade; editorial/presentation invoke publishing via a port. Tracks AE-0124..0132. Scope = behavior-preserving + additive-only; auto-publish cutover + embedded-column drop DEFERRED.
+Extract a publishing bounded context (public visibility + scheduling, the one BlogPost aggregate with origin, distribution, public read-model projections, transactional outbox) behind a facade; editorial/presentation invoke publishing via a port. Tracks AE-0124..0132; the deferred auto-publish cutover + column drop are tracked separately by AE-0133 (Intake). Scope = behavior-preserving + additive-only; auto-publish cutover + embedded-column drop DEFERRED.
 
 ## Problem
 
