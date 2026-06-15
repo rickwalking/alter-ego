@@ -1,6 +1,6 @@
 # AE-0116 — Presentation byte-identical safety net (responses + FileResponse bytes + artifact URLs)
 
-Status: Ready
+Status: Review
 Tier: T2
 Priority: High
 Type: Tests
@@ -114,9 +114,11 @@ Feature: Presentation safety net (representative)
 
 Ticket created by planner (Phase 5 breakdown).
 
+Dev Complete (Wave A). Presentation byte-identical safety net (tests-only): 21 tests. TRUE golden JSON snapshots (design/blog/blog-i18n/slides/strategies/creator-asset, volatile normalized); FileResponse content-type+headers+sha256-digest assertions for pdf/images/slide-images + download path strings (fixed on-disk fixture bytes); deterministic image stub (no live provider); DEBUG + base-url pinned for local/CI determinism; falsifiability guards. No src/ change; no suppressions (cast for the DesignTokens fixture, not # type: ignore). Wave A: 21+11 tests pass; mypy 491, integrity 0 blockers, no suppressions.
+
 ## Files Touched
 
-Pending.
+backend/tests/integration/test_presentation_safety_net.py, tests/snapshots/presentation/*, tests/features/carousel_presentation_safety_net.feature
 
 ## Test Evidence
 
@@ -124,7 +126,7 @@ Pending.
 
 ## QA Report
 
-Pending.
+Phase 5 Wave A batch QA — converged PASS in 2 independent rounds (0 findings). See `.agent/reports/phase-5-wave-a.qa.md`.
 
 ## Decision Log
 

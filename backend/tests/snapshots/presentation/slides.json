@@ -1,0 +1,37 @@
+{
+  "body": [
+    {
+      "body": "Body 1",
+      "created_at": "<timestamp>",
+      "heading": "Slide 1",
+      "id": "<uuid>",
+      "image_path": null,
+      "slide_number": 1,
+      "slide_type": "content",
+      "updated_at": "<timestamp>"
+    },
+    {
+      "body": "Body 2",
+      "created_at": "<timestamp>",
+      "heading": "Slide 2",
+      "id": "<uuid>",
+      "image_path": null,
+      "slide_number": 2,
+      "slide_type": "content",
+      "updated_at": "<timestamp>"
+    },
+    {
+      "body": "Body 3",
+      "created_at": "<timestamp>",
+      "heading": "Slide 3",
+      "id": "<uuid>",
+      "image_path": null,
+      "slide_number": 3,
+      "slide_type": "content",
+      "updated_at": "<timestamp>"
+    }
+  ],
+  "cookies": {},
+  "headers": {},
+  "status_code": 200
+}

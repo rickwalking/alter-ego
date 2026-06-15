@@ -1,6 +1,6 @@
 # AE-0117 — modules/presentation skeleton + facade + domain + re-exported ports
 
-Status: Dev Complete
+Status: Review
 Tier: T2
 Priority: High
 Type: Task
@@ -115,7 +115,7 @@ Pending.
 
 ## QA Report
 
-Pending.
+Phase 5 Wave A batch QA — converged PASS in 2 independent rounds (0 findings). See `.agent/reports/phase-5-wave-a.qa.md`.
 
 ## Decision Log
 

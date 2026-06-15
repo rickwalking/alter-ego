@@ -1,0 +1,17 @@
+{
+  "body": {
+    "content_sha256": "<sha256>",
+    "created_at": "<timestamp>",
+    "height": 128,
+    "id": "<uuid>",
+    "media_type": "image/webp",
+    "owner_id": "<uuid>",
+    "relative_path": "<derived-path>",
+    "staged_relative_path": "<derived-path>",
+    "updated_at": "<timestamp>",
+    "width": 256
+  },
+  "cookies": {},
+  "headers": {},
+  "status_code": 201
+}

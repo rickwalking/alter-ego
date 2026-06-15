@@ -1,6 +1,6 @@
 # AE-0115 — Presentation field/surface ownership map (extends AE-0105)
 
-Status: Dev Complete
+Status: Review
 Tier: T2
 Priority: High
 Type: Docs
@@ -114,7 +114,7 @@ Pending.
 
 ## QA Report
 
-Pending.
+Phase 5 Wave A batch QA — converged PASS in 2 independent rounds (0 findings). See `.agent/reports/phase-5-wave-a.qa.md`.
 
 ## Decision Log
 
