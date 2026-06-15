@@ -1,0 +1,54 @@
+{
+  "body": {
+    "blog_markdown": "# Fixture blog\n\nDeterministic blog body for the snapshot.",
+    "caption": "Fixture caption for the snapshot.",
+    "current_phase": "content",
+    "design_applied": true,
+    "error_message": null,
+    "image_assets": [
+      "/media/carousel/fixture/slide-1.png",
+      "/media/carousel/fixture/slide-2.png"
+    ],
+    "linkedin_post_en": "",
+    "linkedin_post_pt": "",
+    "localized_slides": [],
+    "lock_version": 1,
+    "outline": [],
+    "persona_scores": {
+      "slide-0": {
+        "overall": 88
+      }
+    },
+    "phase_feedback": {
+      "content": [
+        "looks good"
+      ]
+    },
+    "phase_progress": {
+      "percent": 42,
+      "step": "drafting"
+    },
+    "phase_status": "awaiting_human",
+    "presentation_policy_version": null,
+    "presentation_validation": null,
+    "project_id": "<uuid>",
+    "research_findings": [
+      {
+        "finding": "fixture finding"
+      }
+    ],
+    "revision_count": {
+      "content": 1
+    },
+    "rubric_scores": {
+      "clarity": 9
+    },
+    "slide_drafts": [],
+    "slide_image_prompts": null,
+    "status": "draft",
+    "workflow_status": "running"
+  },
+  "cookies": {},
+  "headers": {},
+  "status_code": 200
+}

@@ -1,4 +1,19 @@
-"""Carousel editorial workflow API routes (AI-004, UI-016 backend)."""
+"""Carousel editorial workflow API routes (AI-004, UI-016 backend).
+
+Thin HTTP/SSE adapters (AE-0110). Each endpoint parses + access-checks the
+request at the edge, resolves the editorial workflow ENGINE through the
+module-level ``build_editorial_workflow_service`` seam (kept module-level so the
+AE-0106 safety-net stub still overrides it), delegates the engine orchestration +
+the workflow-owned commit to the editorial :class:`EditorialWorkflowHandlers`
+(via the editorial facade), and maps the result to the response. The routes no
+longer import the carousel ORM, never resolve the global container, and never
+call ``db.commit()`` directly — the WO writes commit through the AE-0107 single
+write owner via the platform Unit of Work, inside the handlers.
+
+The LangGraph checkpoint identifiers (``thread_id == project_id``), the
+``CarouselWorkflowState`` schema, and the interrupt payloads are unchanged: the
+handlers WRAP the existing engine built here, they do not replace it.
+"""
 
 from __future__ import annotations
 
@@ -17,6 +32,7 @@ from rag_backend.api.dependencies.carousel_access import (
     get_carousel_project_for_workflow_user,
 )
 from rag_backend.api.dependencies.database import get_db
+from rag_backend.api.dependencies.editorial import get_editorial_workflow_handlers
 from rag_backend.api.dependencies.feature_flags import RequireEditorialWorkflow
 from rag_backend.api.dependencies.resource_access import validate_reviewer_user
 from rag_backend.api.dependencies.roles import EditorUser
@@ -68,11 +84,18 @@ from rag_backend.domain.constants.rate_limits import (
     RATE_LIMIT_SSE_STREAM,
 )
 from rag_backend.domain.constants.workflow_validation import ERR_SELF_REVIEW
-from rag_backend.infrastructure.database.models.carousel import CarouselProjectModel
+from rag_backend.modules.editorial import (
+    EditorialWorkflowHandlers,
+    StartWorkflowCommand,
+)
 
 router = APIRouter(
     tags=["carousel_editorial_workflow"], dependencies=[RequireEditorialWorkflow]
 )
+
+EditorialWorkflowHandlersDep = Annotated[
+    EditorialWorkflowHandlers, Depends(get_editorial_workflow_handlers)
+]
 
 
 @router.get(
@@ -85,23 +108,21 @@ async def get_editorial_workflow_state(
     request: Request,
     db: Annotated[AsyncSession, Depends(get_db)],
     current_user: EditorUser,
+    handlers: EditorialWorkflowHandlersDep,
 ) -> EditorialWorkflowStateResponse:
     """Return persisted workflow state for UI polling."""
-    project = await get_carousel_project_for_workflow_user(db, project_id, current_user)
-    service = build_editorial_workflow_service(request)
-    state = await service.get_workflow_state(str(project_id), db=db)
-    if state is None:
+    await get_carousel_project_for_workflow_user(db, project_id, current_user)
+    engine = build_editorial_workflow_service(request)
+    view = await handlers.get_state(engine, str(project_id))
+    if view is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=ERR_INVALID_REQUEST,
         )
-    project_progress = (
-        project.phase_progress if isinstance(project.phase_progress, dict) else None
-    )
     return build_editorial_workflow_state_response(
-        dict(state),
-        phase_progress=project_progress,
-        lock_version=int(project.lock_version or 1),
+        dict(view.state),
+        phase_progress=view.phase_progress,
+        lock_version=view.lock_version,
     )
 
 
@@ -117,6 +138,7 @@ async def start_editorial_workflow(
     body: EditorialWorkflowStartRequest,
     db: Annotated[AsyncSession, Depends(get_db)],
     current_user: EditorUser,
+    handlers: EditorialWorkflowHandlersDep,
 ) -> EditorialWorkflowStateResponse:
     """Run AI synthesis, outline, and draft phases then pause at human gates."""
     await get_carousel_project_for_user(db, project_id, current_user)
@@ -127,7 +149,7 @@ async def start_editorial_workflow(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=ERR_SELF_REVIEW,
             )
-    service = build_editorial_workflow_service(request)
+    engine = build_editorial_workflow_service(request)
     persona = await load_persona(db, body.persona_id)
     sanitized_sources = [
         {
@@ -138,35 +160,30 @@ async def start_editorial_workflow(
         for source in body.sources
     ]
     try:
-        state = await service.start_workflow(
-            project_id=str(project_id),
-            workflow_input=EditorialWorkflowStartInput(
-                topic=sanitize_llm_input(body.topic),
-                audience=sanitize_llm_input(body.audience),
-                brief=sanitize_llm_input(body.brief),
-                sources=sanitized_sources,
-                persona=persona,
-                user_id=current_user.id,
-                reviewer_id=body.reviewer_id,
+        view = await handlers.start(
+            engine,
+            StartWorkflowCommand(
+                project_id=str(project_id),
+                workflow_input=EditorialWorkflowStartInput(
+                    topic=sanitize_llm_input(body.topic),
+                    audience=sanitize_llm_input(body.audience),
+                    brief=sanitize_llm_input(body.brief),
+                    sources=sanitized_sources,
+                    persona=persona,
+                    user_id=current_user.id,
+                    reviewer_id=body.reviewer_id,
+                ),
             ),
-            db=db,
         )
     except ValueError:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=ERR_INVALID_REQUEST,
         ) from None
-    await db.commit()
-    project = await db.get(CarouselProjectModel, str(project_id))
-    project_progress = (
-        project.phase_progress
-        if project is not None and isinstance(project.phase_progress, dict)
-        else None
-    )
     return build_editorial_workflow_state_response(
-        dict(state),
-        phase_progress=project_progress,
-        lock_version=int(project.lock_version or 1) if project is not None else 1,
+        dict(view.state),
+        phase_progress=view.phase_progress,
+        lock_version=view.lock_version,
     )
 
 
@@ -191,13 +208,14 @@ async def resume_editorial_workflow(
     body: EditorialWorkflowResumeRequest,
     db: Annotated[AsyncSession, Depends(get_db)],
     current_user: EditorUser,
+    handlers: EditorialWorkflowHandlersDep,
 ) -> JSONResponse:
     """Accept human review and resume workflow asynchronously (RW-010)."""
     project = await get_carousel_project_for_workflow_user(db, project_id, current_user)
     safe_feedback = validate_resume_action(body)
     ensure_resume_reviewer_access(project, current_user)
-    service = build_editorial_workflow_service(request)
-    workflow_state = await service.get_workflow_state(str(project_id))
+    engine = build_editorial_workflow_service(request)
+    workflow_state = await engine.get_workflow_state(str(project_id))
     ensure_resume_not_in_progress(project, workflow_state)
     await validate_resume_workflow_gates(
         body,
@@ -211,11 +229,10 @@ async def resume_editorial_workflow(
         str(project_id),
         body.expected_version,
     )
-    await ensure_structured_feedback_allowed(service, str(project_id), body)
-    current_phase = await service.mark_resume_in_progress(str(project_id), db=db)
-    await db.commit()
+    await ensure_structured_feedback_allowed(engine, str(project_id), body)
+    current_phase = await handlers.mark_resume_in_progress(engine, str(project_id))
     schedule_background_resume(
-        service,
+        engine,
         BackgroundResumeParams(
             project_id=str(project_id),
             action=body.action,
@@ -248,6 +265,7 @@ async def stream_editorial_workflow(
     request: Request,
     db: Annotated[AsyncSession, Depends(get_db)],
     current_user: EditorUser,
+    handlers: EditorialWorkflowHandlersDep,
 ) -> StreamingResponse:
     """SSE stream of the current workflow phase for UI-016."""
     project = await get_carousel_project_for_workflow_user(
@@ -264,12 +282,13 @@ async def stream_editorial_workflow(
     phase_progress = (
         project.phase_progress if isinstance(project.phase_progress, dict) else None
     )
-    service = build_editorial_workflow_service(request)
+    engine = build_editorial_workflow_service(request)
 
     async def event_generator() -> AsyncIterator[str]:
         event_id = 0
         try:
-            async for payload in service.stream_phase_updates(
+            async for payload in handlers.stream_phase_updates(
+                engine,
                 str(project_id),
                 phase_progress=phase_progress,
             ):

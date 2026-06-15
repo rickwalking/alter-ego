@@ -28,10 +28,6 @@ from rag_backend.application.services.carousel.workflow_state import (
     CarouselWorkflowState,
 )
 from rag_backend.application.services.notification_service import NotificationService
-from rag_backend.application.services.optimistic_lock_service import (
-    CarouselVersionBumpParams,
-    OptimisticLockService,
-)
 from rag_backend.domain.constants.access_control import ERR_INVALID_REQUEST
 from rag_backend.domain.constants.carousel_workflow import (
     ERR_EDITED_SLIDES_CONTENT_ONLY,
@@ -57,6 +53,7 @@ from rag_backend.domain.models.persona import PersonaProfile
 from rag_backend.infrastructure.database.models import PersonaProfileModel
 from rag_backend.infrastructure.database.models.carousel import CarouselProjectModel
 from rag_backend.infrastructure.database.models.user import UserModel
+from rag_backend.modules.editorial.public import CarouselProjectWriteOwner
 
 
 async def load_persona(
@@ -210,15 +207,17 @@ async def bump_resume_lock_version(
     project_id: str,
     expected_version: int,
 ) -> int:
-    """Validate optimistic lock and return the new lock version."""
-    lock_service = OptimisticLockService()
+    """Validate optimistic lock via the single write owner and return new version.
+
+    Routes the resume ``lock_version`` compare-and-swap through the AE-0107 write
+    owner (which delegates UNCHANGED to ``bump_carousel_version``) so the WO
+    concurrency-token bump has a single owner. The 409/400 HTTP mapping is
+    preserved byte-identically.
+    """
     try:
-        return await lock_service.bump_carousel_version(
-            db,
-            CarouselVersionBumpParams(
-                project_id=project_id,
-                expected_version=expected_version,
-            ),
+        return await CarouselProjectWriteOwner(db).bump_resume_lock_version(
+            project_id,
+            expected_version,
         )
     except ValueError as exc:
         if str(exc) == ERR_VERSION_CONFLICT:

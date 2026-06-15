@@ -14,7 +14,7 @@ from sqlalchemy import (
     Text,
     func,
 )
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from rag_backend.domain.models import (
     CarouselProject as CarouselProjectEntity,
@@ -58,18 +58,20 @@ class CarouselProjectModel(Base):
     primary_color = Column(String(20), nullable=True)
     accent_color = Column(String(20), nullable=True)
     background_color = Column(String(20), nullable=True)
-    blog_markdown = Column(Text, nullable=True)
+    blog_markdown: Mapped[str | None] = mapped_column(Text, nullable=True)
     blog_translations = Column(JSON, nullable=True)
-    caption = Column(Text, nullable=True)
+    caption: Mapped[str | None] = mapped_column(Text, nullable=True)
     caption_en = Column(Text, nullable=True)
-    linkedin_post_pt = Column(Text, nullable=True)
-    linkedin_post_en = Column(Text, nullable=True)
+    linkedin_post_pt: Mapped[str | None] = mapped_column(Text, nullable=True)
+    linkedin_post_en: Mapped[str | None] = mapped_column(Text, nullable=True)
     design_tokens = Column(
         JSON,
         nullable=True,
         comment="Complete visual design: colors, typography, images, layout",
     )
-    status = Column(String(30), nullable=False, default=CarouselStatus.PENDING.value)
+    status: Mapped[str] = mapped_column(
+        String(30), nullable=False, default=CarouselStatus.PENDING.value
+    )
     error_message = Column(Text, nullable=True)
     output_dir = Column(String(500), nullable=True)
     pdf_path = Column(String(500), nullable=True)
@@ -79,12 +81,16 @@ class CarouselProjectModel(Base):
     # NEW: Workflow extension fields
     creative_brief = Column(Text, nullable=True)
     persona_id = Column(String(36), ForeignKey("persona_profiles.id"), nullable=True)
-    assigned_reviewer_id = Column(String(36), ForeignKey("users.id"), nullable=True)
+    assigned_reviewer_id: Mapped[str | None] = mapped_column(
+        String(36), ForeignKey("users.id"), nullable=True
+    )
     rubric_id = Column(String(36), ForeignKey("quality_rubrics.id"), nullable=True)
     instructions = Column(Text, nullable=True)
-    current_phase = Column(String(50), default="brief")
-    phase_status = Column(String(50), default="pending")
-    workflow_status = Column(String(50), default="", nullable=False, server_default="")
+    current_phase: Mapped[str | None] = mapped_column(String(50), default="brief")
+    phase_status: Mapped[str | None] = mapped_column(String(50), default="pending")
+    workflow_status: Mapped[str] = mapped_column(
+        String(50), nullable=False, default="", server_default=""
+    )
     lock_version = Column(Integer, default=1, nullable=False)
 
     # Creator watermark metadata
