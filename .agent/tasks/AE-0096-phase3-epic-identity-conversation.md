@@ -1,6 +1,6 @@
 # AE-0096 — Phase 3 epic: Identity & Conversation boundaries
 
-Status: Ready
+Status: Review
 Tier: T3
 Priority: High
 Type: Epic
@@ -98,6 +98,8 @@ Not applicable — behavior-preserving extraction; no runtime behavior change (v
 ### 2026-06-15
 
 Ticket created by planner (Phase 3 breakdown).
+
+Epic complete — all children AE-0097..0103 implemented, QA-PASSED (2 rounds/wave), and in Review. Waves A-D delivered behind facades, byte-identical (safety net 46/46), exit gate CI-enforced (14 import contracts, baseline ratcheted down). Awaiting Phase 3 PR merge.
 
 ## Files Touched
 

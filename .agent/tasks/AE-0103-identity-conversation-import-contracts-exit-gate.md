@@ -1,6 +1,6 @@
 # AE-0103 — Identity + Conversation import contracts + exit gate + baseline ratchet
 
-Status: Dev Complete
+Status: Review
 Tier: T2
 Priority: High
 Type: Task
@@ -123,7 +123,7 @@ Pending.
 
 ## QA Report
 
-Pending.
+Phase 3 Wave D / exit-gate QA — converged PASS in 2 independent rounds (0 findings; round 2 via cursor fallback). See `.agent/reports/phase-3-wave-d.qa.md`.
 
 ## Decision Log
 
