@@ -20,14 +20,12 @@ from rag_backend.api.dependencies import (
 from rag_backend.api.dependencies.carousel_access import (
     get_carousel_project_for_domain_user,
 )
+from rag_backend.api.dependencies.presentation import get_presentation_handlers
 from rag_backend.api.middleware.rate_limiting import limiter
 from rag_backend.api.schemas import (
     CarouselProjectCreate,
     CarouselProjectListResponse,
     CarouselProjectResponse,
-)
-from rag_backend.application.services.carousel.design_token_utils import (
-    merge_design_tokens_with_disk,
 )
 from rag_backend.domain.constants.carousel_workflow import (
     ERR_CAROUSEL_NOT_COMPLETED,
@@ -41,6 +39,7 @@ from rag_backend.domain.protocols import CarouselRepository
 from rag_backend.domain.protocols.repositories import _ProjectQuery
 from rag_backend.infrastructure.database.config import get_session
 from rag_backend.infrastructure.database.models.carousel import CarouselProjectModel
+from rag_backend.modules.presentation import PresentationHandlers
 
 from .deps import get_carousel_repo
 from .helpers import assert_carousel_artifacts_healthy
@@ -139,6 +138,7 @@ async def get_carousel(
     user: Annotated[User, Depends(require_authenticated_user)],
     repo: Annotated[CarouselRepository, Depends(get_carousel_repo)],
     session: Annotated[AsyncSession, Depends(get_session)],
+    handlers: Annotated[PresentationHandlers, Depends(get_presentation_handlers)],
 ) -> CarouselProjectResponse:
     """Get a carousel project by ID."""
     await get_carousel_project_for_domain_user(session, project_id, user)
@@ -146,7 +146,7 @@ async def get_carousel(
     if project is None:
         raise HTTPException(status_code=404, detail=ERR_CAROUSEL_NOT_FOUND)
     if project.output_dir:
-        project.design_tokens = merge_design_tokens_with_disk(project)
+        project.design_tokens = handlers.merge_design_tokens(project)
     return CarouselProjectResponse.model_validate(project)
 
 

@@ -1,4 +1,15 @@
-"""Authenticated preview routes for draft carousel content."""
+"""Authenticated preview routes for draft carousel content.
+
+Thin HTTP adapters (AE-0120). Each endpoint reads the project + the assigned
+reviewer id through the presentation :class:`PresentationHandlers` (via the
+presentation facade), applies the preview access check at the edge
+(``assert_carousel_project_access``), and builds the response / FileResponse. The
+design-token merge is reached through the handler (the AE-0115 §6 presentation
+read); the routes no longer construct the carousel repository or import the
+carousel ORM.
+"""
+
+from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
@@ -8,11 +19,11 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 from fastapi.params import Path as FastPath
 from fastapi.responses import FileResponse
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.api.constants import (
     CAROUSEL_PREVIEW_CACHE_HEADERS,
     ERR_CAROUSEL_NOT_FOUND,
+    ERR_CAROUSEL_NOT_GENERATED,
     ERR_DESIGN_NOT_GENERATED,
     ERR_FORBIDDEN,
     ERR_IMAGE_NOT_FOUND,
@@ -21,7 +32,7 @@ from rag_backend.api.constants import (
     MEDIA_TYPE_JPEG,
 )
 from rag_backend.api.dependencies import require_authenticated_user
-from rag_backend.api.dependencies.database import get_db
+from rag_backend.api.dependencies.presentation import get_presentation_handlers
 from rag_backend.api.middleware.rate_limiting import limiter
 from rag_backend.api.schemas import (
     CarouselBlogI18nResponse,
@@ -30,9 +41,6 @@ from rag_backend.api.schemas import (
     CarouselDesignLayout,
     CarouselDesignResponse,
     CarouselDesignTypography,
-)
-from rag_backend.application.services.carousel.design_token_utils import (
-    merge_design_tokens_with_disk,
 )
 from rag_backend.domain.constants import (
     HD_SUBDIR_NAME,
@@ -46,20 +54,21 @@ from rag_backend.domain.constants.blog_language import (
 )
 from rag_backend.domain.constants.rate_limits import RATE_LIMIT_CAROUSEL_PUBLISH
 from rag_backend.domain.models import CarouselProject, User
-from rag_backend.domain.protocols import CarouselRepository
-from rag_backend.infrastructure.database.models.carousel import CarouselProjectModel
+from rag_backend.modules.presentation import PresentationHandlers
 
-from .deps import get_carousel_repo
 from .helpers import (
     _PREVIEW_JPEG_CACHE_HEADERS,
     _extract_first_paragraph,
     _extract_title_and_subtitle,
-    _load_project_with_output,
     _resolve_image_file,
     assert_carousel_project_access,
 )
 
 router = APIRouter()
+
+PresentationHandlersDep = Annotated[
+    PresentationHandlers, Depends(get_presentation_handlers)
+]
 
 
 @dataclass(frozen=True)
@@ -68,25 +77,31 @@ class PreviewAccessContext:
 
     project_id: UUID
     user: User
-    repo: CarouselRepository
-    db: AsyncSession
-
-
-async def _assigned_reviewer_id(
-    db: AsyncSession,
-    project_id: UUID,
-) -> str | None:
-    model = await db.get(CarouselProjectModel, str(project_id))
-    if model is None:
-        return None
-    return model.assigned_reviewer_id
+    handlers: PresentationHandlers
 
 
 async def _load_accessible_project(ctx: PreviewAccessContext) -> CarouselProject:
-    project = await ctx.repo.get_project_by_id(ctx.project_id)
+    project = await ctx.handlers.get_project(ctx.project_id)
     if project is None:
         raise HTTPException(status_code=404, detail=ERR_CAROUSEL_NOT_FOUND)
-    assigned_reviewer_id = await _assigned_reviewer_id(ctx.db, ctx.project_id)
+    assigned_reviewer_id = await ctx.handlers.get_assigned_reviewer_id(ctx.project_id)
+    assert_carousel_project_access(
+        project,
+        ctx.user,
+        assigned_reviewer_id=assigned_reviewer_id,
+    )
+    return project
+
+
+async def _load_accessible_project_with_output(
+    ctx: PreviewAccessContext,
+) -> CarouselProject:
+    project = await ctx.handlers.get_project(ctx.project_id)
+    if project is None:
+        raise HTTPException(status_code=404, detail=ERR_CAROUSEL_NOT_FOUND)
+    if project.output_dir is None:
+        raise HTTPException(status_code=404, detail=ERR_CAROUSEL_NOT_GENERATED)
+    assigned_reviewer_id = await ctx.handlers.get_assigned_reviewer_id(ctx.project_id)
     assert_carousel_project_access(
         project,
         ctx.user,
@@ -135,12 +150,11 @@ async def preview_carousel_blog(
     project_id: UUID,
     lang: Annotated[str, FastPath(pattern="^(pt|en)$")],
     user: Annotated[User, Depends(require_authenticated_user)],
-    repo: Annotated[CarouselRepository, Depends(get_carousel_repo)],
-    db: Annotated[AsyncSession, Depends(get_db)],
+    handlers: PresentationHandlersDep,
     response: Response,
 ) -> CarouselBlogI18nResponse:
     """Preview draft blog content for authenticated project owners."""
-    ctx = PreviewAccessContext(project_id=project_id, user=user, repo=repo, db=db)
+    ctx = PreviewAccessContext(project_id=project_id, user=user, handlers=handlers)
     project = await _load_accessible_project(ctx)
     response.headers.update(CAROUSEL_PREVIEW_CACHE_HEADERS)
 
@@ -179,18 +193,17 @@ async def preview_carousel_design(
     project_id: UUID,
     lang: Annotated[str, FastPath(pattern="^(pt|en)$")],
     user: Annotated[User, Depends(require_authenticated_user)],
-    repo: Annotated[CarouselRepository, Depends(get_carousel_repo)],
-    db: Annotated[AsyncSession, Depends(get_db)],
+    handlers: PresentationHandlersDep,
     response: Response,
 ) -> CarouselDesignResponse:
     """Preview draft design tokens for authenticated project owners."""
-    ctx = PreviewAccessContext(project_id=project_id, user=user, repo=repo, db=db)
+    ctx = PreviewAccessContext(project_id=project_id, user=user, handlers=handlers)
     project = await _load_accessible_project(ctx)
     response.headers.update(CAROUSEL_PREVIEW_CACHE_HEADERS)
     if project.design_tokens is None:
         raise HTTPException(status_code=404, detail=ERR_DESIGN_NOT_GENERATED)
 
-    tokens = merge_design_tokens_with_disk(project)
+    tokens = handlers.merge_design_tokens(project)
     layout = dict(tokens["layout"])
     layout["swipe_text"] = _swipe_text_for_language(lang)
 
@@ -223,18 +236,12 @@ async def preview_carousel_image(
     project_id: UUID,
     filename: Annotated[str, FastPath(pattern=r"^[a-zA-Z0-9_\-\.]+$")],
     user: Annotated[User, Depends(require_authenticated_user)],
-    repo: Annotated[CarouselRepository, Depends(get_carousel_repo)],
-    db: Annotated[AsyncSession, Depends(get_db)],
+    handlers: PresentationHandlersDep,
     lang: Annotated[str, Query(pattern="^(pt|en)$")] = BLOG_LANGUAGE_PT,
 ) -> FileResponse:
     """Preview draft slide or hero images for authenticated project owners."""
-    project = await _load_project_with_output(project_id, repo)
-    assigned_reviewer_id = await _assigned_reviewer_id(db, project_id)
-    assert_carousel_project_access(
-        project,
-        user,
-        assigned_reviewer_id=assigned_reviewer_id,
-    )
+    ctx = PreviewAccessContext(project_id=project_id, user=user, handlers=handlers)
+    project = await _load_accessible_project_with_output(ctx)
 
     lang_dir = Path(project.output_dir or "") / lang
     # Try HD first, then standard, then hero images

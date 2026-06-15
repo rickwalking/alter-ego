@@ -1,6 +1,6 @@
 # AE-0120 — Presentation routes behind presentation handlers via facade (byte-identical)
 
-Status: Ready
+Status: Dev Complete
 Tier: T2
 Priority: High
 Type: Task
@@ -102,9 +102,11 @@ Not applicable — behavior-preserving extraction; verified by the AE-0116 safet
 
 Ticket created by planner (Phase 5 breakdown).
 
+Dev Complete (Wave C). media/preview/strategies/admin/creator-asset routes → PresentationHandlers via facade + api/dependencies/presentation.py edge provider; byte-identical (AE-0116 21/21 incl. FileResponse digests); no route ORM/commit; mypy 496, lint-imports 16/0, api->infra ratcheted 81→79, check-integrity 0 blockers, 763 regression tests pass.
+
 ## Files Touched
 
-Pending.
+api/routes/carousels/{media,preview,strategies,admin,creator_assets,crud}.py, api/dependencies/presentation.py (new), modules/presentation/application/handlers.py (new), modules/presentation/{bootstrap,public,__init__,infrastructure/presentation_acl}.py, tests/unit/api/test_preview_carousel_image.py
 
 ## Test Evidence
 

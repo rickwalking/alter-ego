@@ -27,6 +27,10 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Protocol
 
+from rag_backend.modules.presentation.application.handlers import (
+    PresentationCollaborators,
+    PresentationHandlers,
+)
 from rag_backend.modules.presentation.application.service import (
     PresentationPorts,
     PresentationService,
@@ -35,6 +39,9 @@ from rag_backend.modules.presentation.domain.ports import (
     CarouselRepository,
     PresentationPolicyPort,
     SlideValidationPort,
+)
+from rag_backend.modules.presentation.infrastructure.presentation_acl import (
+    PresentationPersistenceAcl,
 )
 from rag_backend.platform.database import UnitOfWork
 
@@ -61,21 +68,26 @@ class PresentationAdapters:
     unit_of_work: UnitOfWork
     policy: PresentationPolicyPort | None = None
     slide_validation: SlideValidationPort | None = None
+    persistence_acl: PresentationPersistenceAcl | None = None
+    handler_collaborators: PresentationCollaborators | None = None
 
 
 @dataclass(frozen=True)
 class PresentationModule:
     """Public collaborators returned by :func:`bootstrap_module`.
 
-    Bundles the presentation application service and the request-scoped Unit of
-    Work so the inbound edge can resolve presentation operations and the single
-    commit boundary through the module facade (no behavior change; later phases
-    move the carousel presentation routes behind handlers that read/validate
-    through the ports and commit via this UoW).
+    Bundles the presentation application service, the request-scoped Unit of Work,
+    and (AE-0120) the presentation persistence ACL + the request-scoped
+    :class:`PresentationHandlers` so the inbound edge can resolve presentation
+    operations + the thin presentation route adapters through the module facade
+    (no behavior change). The ACL/handlers are optional so the scaffolding wiring
+    (service-only) keeps working; the AE-0120 edge provider always supplies them.
     """
 
     service: PresentationService
     unit_of_work: UnitOfWork
+    persistence_acl: PresentationPersistenceAcl | None = None
+    handlers: PresentationHandlers | None = None
 
 
 def bootstrap_module(
@@ -98,10 +110,30 @@ def bootstrap_module(
             slide_validation=adapters.slide_validation,
         ),
     )
+    handlers = _build_handlers(adapters)
     return PresentationModule(
         service=service,
         unit_of_work=adapters.unit_of_work,
+        persistence_acl=adapters.persistence_acl,
+        handlers=handlers,
     )
+
+
+def _build_handlers(
+    adapters: PresentationAdapters,
+) -> PresentationHandlers | None:
+    """Build the AE-0120 presentation handlers when the ACL + collaborators wired.
+
+    Returns ``None`` for the scaffolding wiring (no ACL/collaborators) so the
+    service-only bootstrap keeps working; the AE-0120 edge provider always
+    supplies both, yielding the request-scoped handlers the thin routes delegate
+    to.
+    """
+    acl = adapters.persistence_acl
+    collaborators = adapters.handler_collaborators
+    if acl is None or collaborators is None:
+        return None
+    return PresentationHandlers(acl=acl, collaborators=collaborators)
 
 
 __all__ = [

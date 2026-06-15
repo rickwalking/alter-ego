@@ -126,6 +126,22 @@ class PresentationPersistenceAcl:
             return None
         return self.to_presentation(model)
 
+    async def load_assigned_reviewer_id(
+        self,
+        project_id: str,
+    ) -> str | None:
+        """Read the row's ``assigned_reviewer_id`` for the preview access check.
+
+        The preview routes admit the assigned reviewer in addition to the
+        owner/admin; the id is read here (the single ORM seam) so the thin route
+        adapter never touches the carousel model. Byte-identical to the legacy
+        preview ``_assigned_reviewer_id`` read (``None`` when the row is absent).
+        """
+        model = await self._session.get(CarouselProjectModel, project_id)
+        if model is None:
+            return None
+        return model.assigned_reviewer_id
+
     # --- Write side: presentation intents -> single write owner ---------------
     async def refresh_design_tokens(
         self,

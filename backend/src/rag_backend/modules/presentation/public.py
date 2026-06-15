@@ -46,6 +46,13 @@ Consumers SHALL NOT import internals such as
 ``rag_backend.modules.presentation.domain.models`` directly.
 """
 
+from rag_backend.modules.presentation.application.handlers import (
+    CreatorAssetResult,
+    PresentationBulkResult,
+    PresentationCollaborators,
+    PresentationHandlers,
+    SlideMissingPredicate,
+)
 from rag_backend.modules.presentation.application.service import (
     PresentationPorts,
     PresentationService,
@@ -98,6 +105,7 @@ __all__ = [
     "CarouselRepository",
     "CarouselSlide",
     "ContentSlideCopy",
+    "CreatorAssetResult",
     "DesignPolicy",
     "DesignTokens",
     "FontPolicy",
@@ -110,6 +118,9 @@ __all__ = [
     "ImageStyleStrategy",
     "OpenAIImageService",
     "PresentationAdapters",
+    "PresentationBulkResult",
+    "PresentationCollaborators",
+    "PresentationHandlers",
     "PresentationModule",
     "PresentationPersistenceAcl",
     "PresentationPolicyError",
@@ -119,6 +130,7 @@ __all__ = [
     "PresentationProjectView",
     "PresentationService",
     "PresentationWriteOwner",
+    "SlideMissingPredicate",
     "SlideTypePolicy",
     "SlideValidationPort",
     "SlideValidationReport",
