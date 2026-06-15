@@ -29,6 +29,23 @@ Consumers SHALL NOT import internals such as
 from rag_backend.modules.conversation.application.agent_factory_port import (
     ChatAgentFactory,
 )
+from rag_backend.modules.conversation.application.commands import (
+    ChatCommand,
+    ChatResult,
+    ChatSource,
+    ConversationPage,
+    CreateConversationCommand,
+    DeleteConversationCommand,
+    GenerateTitleCommand,
+    GetConversationQuery,
+    GetMessagesQuery,
+    ListConversationsQuery,
+)
+from rag_backend.modules.conversation.application.handlers import (
+    ConversationHandlers,
+    ConversationLimitReachedError,
+    LlmGenerate,
+)
 from rag_backend.modules.conversation.application.service import ConversationService
 from rag_backend.modules.conversation.bootstrap import (
     ConversationAdapters,
@@ -50,12 +67,25 @@ from rag_backend.modules.conversation.infrastructure.chat_agent_factory import (
 
 __all__ = [
     "ChatAgentFactory",
+    "ChatCommand",
+    "ChatResult",
+    "ChatSource",
     "Conversation",
     "ConversationAdapters",
+    "ConversationHandlers",
+    "ConversationLimitReachedError",
     "ConversationModule",
+    "ConversationPage",
     "ConversationRepository",
     "ConversationService",
+    "CreateConversationCommand",
+    "DeleteConversationCommand",
+    "GenerateTitleCommand",
+    "GetConversationQuery",
+    "GetMessagesQuery",
     "LegacyChatAgentFactory",
+    "ListConversationsQuery",
+    "LlmGenerate",
     "Message",
     "MessageRepository",
     "MessageRole",

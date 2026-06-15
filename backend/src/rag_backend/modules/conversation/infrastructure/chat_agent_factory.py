@@ -46,6 +46,21 @@ class LegacyChatAgentFactory:
         self._db = db
         self._container = container
 
+    @property
+    def session(self) -> AsyncSession:
+        """The request-scoped session bound into this factory."""
+        return self._db
+
+    @property
+    def container(self) -> Container:
+        """The request-scoped DI container bound into this factory.
+
+        Exposed so the inbound chat adapter can reuse the same container when it
+        routes agent construction through its monkeypatch-friendly builder seam
+        (AE-0101), keeping the routing + knowledge-facade wiring identical.
+        """
+        return self._container
+
     def build_for_conversation(
         self, conversation: Conversation
     ) -> AlterEgoAgent | RAGAgent:

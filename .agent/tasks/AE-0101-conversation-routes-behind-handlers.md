@@ -1,6 +1,6 @@
 # AE-0101 — Conversation routes (CRUD + non-streaming chat) behind handlers
 
-Status: Ready
+Status: Dev Complete
 Tier: T2
 Priority: High
 Type: Task
@@ -107,9 +107,11 @@ Feature: Conversation endpoints unchanged after extraction
 
 Ticket created by planner (Phase 3 breakdown).
 
+Dev Complete (Wave B). /api/conversations → conversation handlers via facade; byte-identical (AE-0097 diff=0); UoW single committer; SSE untouched (AE-0102). mypy 460, lint-imports 10/0, integrity 0 blockers.
+
 ## Files Touched
 
-Pending.
+api/routes/conversations.py, api/dependencies/conversation.py, modules/conversation/application/{commands,handlers}.py, modules/conversation/{bootstrap,public}.py, modules/conversation/infrastructure/chat_agent_factory.py, tests/unit/modules/conversation/test_conversation_handlers.py
 
 ## Test Evidence
 

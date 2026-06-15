@@ -67,13 +67,16 @@ class ConversationAdapters:
 class ConversationModule:
     """Public collaborators returned by :func:`bootstrap_module`.
 
-    Bundles the conversation application service and the chat agent factory so the
-    inbound edge can resolve both conversation operations and agent construction
-    through the module facade (no behavior change; AE-0101/0102 move the routes).
+    Bundles the conversation application service, the chat agent factory, and the
+    request-scoped Unit of Work so the inbound edge can resolve conversation
+    operations, agent construction, and the single commit boundary through the
+    module facade (no behavior change; AE-0101 moves the CRUD/chat routes behind
+    handlers that commit via this UoW).
     """
 
     service: ConversationService
     agent_factory: ChatAgentFactory
+    unit_of_work: UnitOfWork
 
 
 def bootstrap_module(
@@ -97,4 +100,5 @@ def bootstrap_module(
     return ConversationModule(
         service=service,
         agent_factory=adapters.agent_factory,
+        unit_of_work=adapters.unit_of_work,
     )
