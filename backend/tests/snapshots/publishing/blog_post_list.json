@@ -1,0 +1,35 @@
+{
+  "body": {
+    "items": [
+      {
+        "author_id": "<uuid>",
+        "comment_count": 0,
+        "created_at": "<timestamp>",
+        "excerpt": "Deterministic excerpt.",
+        "featured_image_url": null,
+        "id": "<uuid>",
+        "keywords": [
+          "fixture",
+          "snapshot"
+        ],
+        "like_count": 0,
+        "lock_version": 1,
+        "meta_description": null,
+        "meta_title": null,
+        "published_at": null,
+        "share_count": 0,
+        "slug": "fixture-blog-post",
+        "status": "draft",
+        "title": "Fixture Blog Post",
+        "updated_at": "<timestamp>",
+        "view_count": 0
+      }
+    ],
+    "limit": 50,
+    "offset": 0,
+    "total": 1
+  },
+  "cookies": {},
+  "headers": {},
+  "status_code": 200
+}

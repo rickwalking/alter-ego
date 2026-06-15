@@ -1,0 +1,15 @@
+{
+  "body": {
+    "available_languages": [
+      "pt",
+      "en"
+    ],
+    "language": "en",
+    "markdown": "# Fixture Title EN: Fixture Subtitle EN\n\nDeterministic body.",
+    "subtitle": "Fixture Subtitle EN",
+    "title": "Fixture Title EN"
+  },
+  "cookies": {},
+  "headers": {},
+  "status_code": 200
+}

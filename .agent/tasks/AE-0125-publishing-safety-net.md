@@ -1,6 +1,6 @@
 # AE-0125 — Publishing byte-identical safety net (blog/publish/distribution/calendar/board/analytics) + Gherkin
 
-Status: Ready
+Status: Dev Complete
 Tier: T2
 Priority: High
 Type: Tests
@@ -113,9 +113,11 @@ Feature: Publishing safety net (representative)
 
 Ticket created by planner (Phase 6 breakdown).
 
+Dev Complete (Wave A). Publishing byte-identical safety net (tests-only): 31 tests. Golden snapshots for blog CRUD + public carousel /blog(+lang) + publish-instagram/caption + carousel publish (is_public flow) + calendar + board + analytics; deterministic channel/LLM stubs (no live key); DEBUG pinned; falsifiability guards. No src/ change; no suppressions (cast where needed). Wave A 46 tests pass; mypy 511, integrity 0 blockers, no suppressions.
+
 ## Files Touched
 
-Pending.
+backend/tests/integration/test_publishing_safety_net.py, tests/snapshots/publishing/*, tests/features/carousel_publishing_safety_net.feature
 
 ## Test Evidence
 

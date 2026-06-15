@@ -1,0 +1,72 @@
+{
+  "body": {
+    "accent_color": null,
+    "audience": "Fixture audience",
+    "background_color": null,
+    "blog_markdown": "# Fixture Title: Fixture Subtitle\n\nDeterministic blog body.",
+    "blog_translations": {
+      "en": "# Fixture Title EN: Fixture Subtitle EN\n\nDeterministic body.",
+      "pt": "# Fixture Title: Fixture Subtitle\n\nDeterministic blog body."
+    },
+    "caption": "Deterministic fixture caption for the snapshot.",
+    "created_at": "<timestamp>",
+    "creator_avatar_url": null,
+    "creator_handle": null,
+    "creator_name": null,
+    "current_phase": "published",
+    "design_tokens": {
+      "colors": {
+        "accent": "#f59e0b",
+        "bg": "#0a0e17",
+        "border": "#1e293b",
+        "glow": "#f59e0b",
+        "primary": "#3b82f6",
+        "text": "#e2e8f0",
+        "text_dim": "#64748b",
+        "text_muted": "#94a3b8"
+      },
+      "images": {
+        "hero": "",
+        "slides": []
+      },
+      "layout": {
+        "badge_label": "FIXTURE",
+        "progress_segments": 3,
+        "swipe_text": "Swipe"
+      },
+      "typography": {
+        "font_family_badge": "JetBrains Mono, monospace",
+        "font_family_body": "Inter, system-ui, sans-serif",
+        "font_family_heading": "Inter, system-ui, sans-serif"
+      }
+    },
+    "error_message": null,
+    "id": "<uuid>",
+    "image_model": "gemini",
+    "image_style": "comic_neon",
+    "is_public": true,
+    "linkedin_post_en": null,
+    "linkedin_post_pt": null,
+    "niche": "FIXTURE",
+    "output_dir": "/fixture/carousel-output",
+    "pdf_path": "/fixture/carousel-output/pt/carousel.pdf",
+    "pdf_path_en": "/fixture/carousel-output/en/carousel.pdf",
+    "phase_status": "awaiting_human",
+    "primary_color": null,
+    "research_sources": [],
+    "slide_layout_strategy": null,
+    "slides": [],
+    "status": "completed",
+    "subtitle": "Fixture Subtitle",
+    "subtitle_en": null,
+    "template_version": "v2",
+    "theme": "ai_competition",
+    "title": "Fixture Title",
+    "title_en": null,
+    "topic": "Fixture topic",
+    "updated_at": "<timestamp>"
+  },
+  "cookies": {},
+  "headers": {},
+  "status_code": 200
+}

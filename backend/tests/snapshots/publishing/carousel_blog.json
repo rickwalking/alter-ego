@@ -1,0 +1,10 @@
+{
+  "body": {
+    "markdown": "# Fixture Title: Fixture Subtitle\n\nDeterministic blog body.",
+    "subtitle": "Fixture Subtitle",
+    "title": "Fixture Title"
+  },
+  "cookies": {},
+  "headers": {},
+  "status_code": 200
+}

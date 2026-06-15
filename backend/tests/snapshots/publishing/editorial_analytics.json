@@ -1,0 +1,54 @@
+{
+  "body": {
+    "summary": {
+      "average_views": 0,
+      "content_velocity_per_week": 0,
+      "draft_count": 1,
+      "pending_review": 0,
+      "published_this_month": 0,
+      "published_this_week": 0,
+      "quality_score_average": 0.0,
+      "status_breakdown": {
+        "draft": 1
+      },
+      "total_posts": 1
+    },
+    "velocity_by_week": [
+      {
+        "published_count": 0,
+        "week_start": "<date>"
+      },
+      {
+        "published_count": 0,
+        "week_start": "<date>"
+      },
+      {
+        "published_count": 0,
+        "week_start": "<date>"
+      },
+      {
+        "published_count": 0,
+        "week_start": "<date>"
+      },
+      {
+        "published_count": 0,
+        "week_start": "<date>"
+      },
+      {
+        "published_count": 0,
+        "week_start": "<date>"
+      },
+      {
+        "published_count": 0,
+        "week_start": "<date>"
+      },
+      {
+        "published_count": 0,
+        "week_start": "<date>"
+      }
+    ]
+  },
+  "cookies": {},
+  "headers": {},
+  "status_code": 200
+}
