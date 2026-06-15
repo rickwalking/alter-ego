@@ -1,6 +1,6 @@
 # AE-0130 — Transactional outbox (additive) for release/workflow events — durable at-least-once relay
 
-Status: Dev Complete
+Status: Review
 Tier: T2
 Priority: High
 Type: Task

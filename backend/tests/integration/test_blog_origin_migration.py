@@ -1,6 +1,7 @@
 """Migration tests for AE-0127 blog_post origin backfill (upgrade + downgrade).
 
-Gherkin: tests/features/transactional_outbox.feature (publishing additive slice).
+Gherkin not applicable — this is a schema-migration safety net (DDL/data-movement),
+not a behavioral scenario.
 
 These tests run the REAL alembic migration ``b2c3d4e5f6a7`` against a temp SQLite
 database and prove the additive backfill is reversible WITHOUT DATA LOSS:
