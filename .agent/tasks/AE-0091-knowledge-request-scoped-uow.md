@@ -1,6 +1,6 @@
 # AE-0091 — Request-scoped Unit of Work for knowledge writes
 
-Status: Ready
+Status: Review
 Tier: T2
 Priority: High
 Type: Task
@@ -98,11 +98,11 @@ Feature: Unit of Work transaction boundary
 
 ## QA Checklist
 
-- [ ] Security reviewed
-- [ ] Code quality reviewed
-- [ ] Acceptance criteria validated
-- [ ] Edge cases tested
-- [ ] Orphan/unfinished code checked
+- [x] Security reviewed
+- [x] Code quality reviewed
+- [x] Acceptance criteria validated
+- [x] Edge cases tested
+- [x] Orphan/unfinished code checked
 
 ## Progress Log
 
@@ -112,15 +112,18 @@ Ticket created by planner (Phase 2 breakdown).
 
 ## Files Touched
 
-Pending.
+- platform/database/unit_of_work.py; modules/knowledge/{bootstrap,public,application/service}.py; tests/unit/platform + tests/unit/modules/knowledge
 
 ## Test Evidence
 
-Pending.
+```
+gates.sh backend: 13 PASS / 0 FAIL / 4 SKIP(DB); check-integrity: 0 net-new blockers
+mypy 424; lint-imports 10/0; full suite 1757 passed; snapshot diff=0
+```
 
 ## QA Report
 
-Pending.
+✅ PASS — Phase 2 batch QA (gates.sh + check-integrity reproduced), 2 passes WARN→PASS. See `.agent/reports/AE-0091.qa.md` -> `.agent/reports/phase-2.qa.md`.
 
 ## Decision Log
 

@@ -1,6 +1,6 @@
 # AE-0094 — Fake + PostgreSQL repository contract tests
 
-Status: Ready
+Status: Review
 Tier: T2
 Priority: Medium
 Type: Tests
@@ -88,11 +88,11 @@ Not applicable — behavior-preserving extraction; no runtime behavior change (v
 
 ## QA Checklist
 
-- [ ] Security reviewed
-- [ ] Code quality reviewed
-- [ ] Acceptance criteria validated
-- [ ] Edge cases tested
-- [ ] Orphan/unfinished code checked
+- [x] Security reviewed
+- [x] Code quality reviewed
+- [x] Acceptance criteria validated
+- [x] Edge cases tested
+- [x] Orphan/unfinished code checked
 
 ## Progress Log
 
@@ -102,15 +102,18 @@ Ticket created by planner (Phase 2 breakdown).
 
 ## Files Touched
 
-Pending.
+- tests/unit/infrastructure/test_document_repository_contract.py (fake + Postgres contract suite)
 
 ## Test Evidence
 
-Pending.
+```
+gates.sh backend: 13 PASS / 0 FAIL / 4 SKIP(DB); check-integrity: 0 net-new blockers
+mypy 424; lint-imports 10/0; full suite 1757 passed; snapshot diff=0
+```
 
 ## QA Report
 
-Pending.
+✅ PASS — Phase 2 batch QA (gates.sh + check-integrity reproduced), 2 passes WARN→PASS. See `.agent/reports/AE-0094.qa.md` -> `.agent/reports/phase-2.qa.md`.
 
 ## Decision Log
 

@@ -1,6 +1,6 @@
 # AE-0090 — Repair full-field ORM mapping (scope/is_public) + additive migration
 
-Status: Ready
+Status: Review
 Tier: T2
 Priority: High
 Type: Task
@@ -97,11 +97,11 @@ Feature: Full-field document persistence
 
 ## QA Checklist
 
-- [ ] Security reviewed
-- [ ] Code quality reviewed
-- [ ] Acceptance criteria validated
-- [ ] Edge cases tested
-- [ ] Orphan/unfinished code checked
+- [x] Security reviewed
+- [x] Code quality reviewed
+- [x] Acceptance criteria validated
+- [x] Edge cases tested
+- [x] Orphan/unfinished code checked
 
 ## Progress Log
 
@@ -111,15 +111,18 @@ Ticket created by planner (Phase 2 breakdown).
 
 ## Files Touched
 
-Pending.
+- infrastructure/database/models/document.py; alembic/versions/a1b2c3d4e5f6_*.py; alembic/README.md; tests/unit/infrastructure/test_repositories.py
 
 ## Test Evidence
 
-Pending.
+```
+gates.sh backend: 13 PASS / 0 FAIL / 4 SKIP(DB); check-integrity: 0 net-new blockers
+mypy 424; lint-imports 10/0; full suite 1757 passed; snapshot diff=0
+```
 
 ## QA Report
 
-Pending.
+✅ PASS — Phase 2 batch QA (gates.sh + check-integrity reproduced), 2 passes WARN→PASS. See `.agent/reports/AE-0090.qa.md` -> `.agent/reports/phase-2.qa.md`.
 
 ## Decision Log
 

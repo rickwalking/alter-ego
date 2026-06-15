@@ -1,6 +1,6 @@
 # AE-0087 — Phase 2 epic: pilot the Knowledge module
 
-Status: Ready
+Status: Review
 Tier: T3
 Priority: High
 Type: Epic

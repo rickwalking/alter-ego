@@ -1,6 +1,6 @@
 # AE-0088 — Document + search Gherkin safety net (audit & extend)
 
-Status: Ready
+Status: Review
 Tier: T2
 Priority: High
 Type: Tests
@@ -104,11 +104,11 @@ Feature: Knowledge safety net (representative additions)
 
 ## QA Checklist
 
-- [ ] Security reviewed
-- [ ] Code quality reviewed
-- [ ] Acceptance criteria validated
-- [ ] Edge cases tested
-- [ ] Orphan/unfinished code checked
+- [x] Security reviewed
+- [x] Code quality reviewed
+- [x] Acceptance criteria validated
+- [x] Edge cases tested
+- [x] Orphan/unfinished code checked
 
 ## Progress Log
 
@@ -118,15 +118,18 @@ Ticket created by planner (Phase 2 breakdown).
 
 ## Files Touched
 
-Pending.
+- tests/features/{documents,search}.feature; tests/integration/test_knowledge_safety_net.py; tests/snapshots/knowledge/* + _snapshot.py
 
 ## Test Evidence
 
-Pending.
+```
+gates.sh backend: 13 PASS / 0 FAIL / 4 SKIP(DB); check-integrity: 0 net-new blockers
+mypy 424; lint-imports 10/0; full suite 1757 passed; snapshot diff=0
+```
 
 ## QA Report
 
-Pending.
+✅ PASS — Phase 2 batch QA (gates.sh + check-integrity reproduced), 2 passes WARN→PASS. See `.agent/reports/AE-0088.qa.md` -> `.agent/reports/phase-2.qa.md`.
 
 ## Decision Log
 
