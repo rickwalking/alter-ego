@@ -1067,12 +1067,15 @@ describe("useEditorialWorkflow", () => {
     });
   });
 
-  it("prefixes workflow state refresh with NEXT_PUBLIC_API_URL", async () => {
+  // Regression (c858abd): the workflow/state call must NOT be wrapped in
+  // resolveClientApiUrl. The endpoint path already starts with /api, and in
+  // production nginx routes /api/* straight to the backend; prefixing it with
+  // NEXT_PUBLIC_API_URL produced /api/api/... and a 404. So even when
+  // NEXT_PUBLIC_API_URL is set, refresh must use the bare endpoint path.
+  it("refreshes workflow state via the bare /api endpoint path (no NEXT_PUBLIC_API_URL prefix)", async () => {
     vi.stubEnv("NEXT_PUBLIC_API_URL", "http://localhost:8000");
     mockAuthenticatedFetch.mockImplementation(async (url) => {
-      if (
-        url === "http://localhost:8000/api/carousels/project-1/workflow/state"
-      ) {
+      if (url === API_ENDPOINTS.CAROUSEL_WORKFLOW_STATE("project-1")) {
         return {
           ok: true,
           json: async () => baseState,
@@ -1088,9 +1091,13 @@ describe("useEditorialWorkflow", () => {
 
     await waitFor(() => {
       expect(mockAuthenticatedFetch).toHaveBeenCalledWith(
-        "http://localhost:8000/api/carousels/project-1/workflow/state",
+        API_ENDPOINTS.CAROUSEL_WORKFLOW_STATE("project-1"),
       );
     });
+
+    expect(mockAuthenticatedFetch).not.toHaveBeenCalledWith(
+      "http://localhost:8000/api/carousels/project-1/workflow/state",
+    );
   });
 
   it("surfaces start failures from the API", async () => {

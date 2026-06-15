@@ -129,7 +129,11 @@ afterEach(() => {
 });
 
 describe("useEditorialWorkflowSse", () => {
-  it("opens SSE with NEXT_PUBLIC_API_URL and credentials", async () => {
+  // Regression (c858abd): the SSE stream opens against the bare /api endpoint
+  // path, NOT a NEXT_PUBLIC_API_URL-prefixed URL. The path already starts
+  // with /api and nginx routes /api/* to the backend; prefixing produced
+  // /api/api/... and broke live progress streaming.
+  it("opens SSE on the bare /api endpoint path with credentials", async () => {
     renderSseHook();
 
     await waitFor(() => {
@@ -137,7 +141,7 @@ describe("useEditorialWorkflowSse", () => {
     });
 
     expect(MockEventSource.instances[0]?.url).toBe(
-      "http://localhost:8000/api/carousels/project-1/workflow/stream",
+      "/api/carousels/project-1/workflow/stream",
     );
   });
 

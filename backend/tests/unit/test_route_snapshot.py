@@ -27,9 +27,37 @@ SNAPSHOT_PATH = (
     Path(__file__).resolve().parents[1] / "snapshots" / "openapi_routes.json"
 )
 
+# FastAPI auto-mounts these framework routes (interactive docs + OpenAPI
+# schema) and toggles them via settings, so they are present in some
+# environments (local) and absent in others (CI/test profile disables docs).
+# They are framework-owned, not APPLICATION routes, so the snapshot guard
+# must exclude them from BOTH sides to stay environment-independent.
+_FRAMEWORK_ROUTE_PATHS = frozenset({
+    "/docs",
+    "/docs/oauth2-redirect",
+    "/redoc",
+    "/openapi.json",
+})
+
+
+def _is_framework_path(path: str) -> bool:
+    """True for FastAPI auto-docs / OpenAPI-schema framework routes."""
+    return path in _FRAMEWORK_ROUTE_PATHS or path.startswith("/openapi")
+
+
+def _filter_framework_routes(entries: list[str]) -> list[str]:
+    """Drop framework 'METHOD /path' entries, keeping only app routes."""
+    kept: list[str] = []
+    for entry in entries:
+        _, _, path = entry.partition(" ")
+        if _is_framework_path(path):
+            continue
+        kept.append(entry)
+    return kept
+
 
 def _extract_routes(app: FastAPI) -> list[str]:
-    """Return the sorted, de-duplicated 'METHOD /path' route inventory."""
+    """Return the sorted, de-duplicated app-only 'METHOD /path' inventory."""
     entries: list[str] = []
     for route in app.routes:
         path = getattr(route, "path", None)
@@ -40,7 +68,7 @@ def _extract_routes(app: FastAPI) -> list[str]:
             entries.extend(f"{method} {path}" for method in sorted(methods))
         else:
             entries.append(f"WEBSOCKET {path}")
-    return sorted(set(entries))
+    return sorted(set(_filter_framework_routes(entries)))
 
 
 def test_app_routes_match_committed_snapshot() -> None:
@@ -51,7 +79,7 @@ def test_app_routes_match_committed_snapshot() -> None:
     if os.environ.get("REGEN_ROUTE_SNAPSHOT") == "1":
         SNAPSHOT_PATH.write_text(json.dumps(actual, indent=2) + "\n")
 
-    expected = json.loads(SNAPSHOT_PATH.read_text())
+    expected = _filter_framework_routes(json.loads(SNAPSHOT_PATH.read_text()))
 
     missing = sorted(set(expected) - set(actual))
     added = sorted(set(actual) - set(expected))

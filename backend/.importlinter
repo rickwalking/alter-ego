@@ -64,6 +64,11 @@ forbidden_modules =
 name = Application layer must not depend on infrastructure (grandfathered baseline only)
 type = forbidden
 allow_indirect_imports = true
+# Tolerate baseline ignore entries that don't resolve to a direct edge in a
+# given grimp environment (CI's fresh graph may not surface every edge the
+# generator saw). This does NOT weaken enforcement: a NEW forbidden edge not
+# in the ignore list still breaks the contract.
+unmatched_ignore_imports_alerting = none
 source_modules =
     rag_backend.application
 forbidden_modules =
@@ -134,6 +139,9 @@ ignore_imports =
 name = Application layer must not depend on agents (grandfathered baseline only)
 type = forbidden
 allow_indirect_imports = true
+# See application-no-infrastructure: tolerate unmatched baseline ignores
+# without allowing NEW forbidden edges.
+unmatched_ignore_imports_alerting = none
 source_modules =
     rag_backend.application
 forbidden_modules =
@@ -170,6 +178,9 @@ ignore_imports =
 name = Agents must not depend on application (grandfathered baseline only)
 type = forbidden
 allow_indirect_imports = true
+# See application-no-infrastructure: tolerate unmatched baseline ignores
+# without allowing NEW forbidden edges.
+unmatched_ignore_imports_alerting = none
 source_modules =
     rag_backend.agents
 forbidden_modules =
@@ -205,6 +216,9 @@ ignore_imports =
 name = API must not depend on infrastructure (grandfathered baseline only)
 type = forbidden
 allow_indirect_imports = true
+# See application-no-infrastructure: tolerate unmatched baseline ignores
+# without allowing NEW forbidden edges.
+unmatched_ignore_imports_alerting = none
 source_modules =
     rag_backend.api
 forbidden_modules =
