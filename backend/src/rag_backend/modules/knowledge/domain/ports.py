@@ -23,7 +23,10 @@ exposes them as its own ports. Per backend/CLAUDE.md, interfaces are
 from __future__ import annotations
 
 from rag_backend.domain.protocols.ai import DocumentProcessor
-from rag_backend.domain.protocols.repositories import DocumentRepository
+from rag_backend.domain.protocols.repositories import (
+    DocumentRepository,
+    OwnerDocumentQuery,
+)
 from rag_backend.domain.protocols.vector import (
     EmbeddingService,
     Retriever,
@@ -34,6 +37,7 @@ __all__ = [
     "DocumentProcessor",
     "DocumentRepository",
     "EmbeddingService",
+    "OwnerDocumentQuery",
     "Retriever",
     "VectorStore",
 ]

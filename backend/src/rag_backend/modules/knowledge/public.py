@@ -24,6 +24,7 @@ Consumers SHALL NOT import internals such as
 
 from rag_backend.modules.knowledge.api.views import (
     DocumentStatusView,
+    KnowledgeDocumentListView,
     KnowledgeDocumentView,
     SearchResultView,
 )
@@ -53,6 +54,7 @@ __all__ = [
     "IngestDocumentCommand",
     "KnowledgeAdapters",
     "KnowledgeDocument",
+    "KnowledgeDocumentListView",
     "KnowledgeDocumentView",
     "KnowledgeService",
     "ListDocumentsQuery",

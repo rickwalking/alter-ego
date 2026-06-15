@@ -1,24 +1,20 @@
 """PostgreSQL repository implementations using SQLAlchemy."""
 
-from typing import TypedDict
 from uuid import UUID
 
 from sqlalchemy import desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.domain.models import Document, DocumentStatus
+from rag_backend.domain.protocols.repositories import OwnerDocumentQuery
 from rag_backend.infrastructure.database.models import DocumentModel
 
 _ERR_DOCUMENT_NOT_FOUND = "Document with id {} not found"
 
-
-class _OwnerQuery(TypedDict, total=False):
-    """Bundled query parameters for document owner listing."""
-
-    owner_id: UUID
-    status: DocumentStatus | None
-    limit: int
-    offset: int
+# Backward-compatible alias: the owner-listing query now lives on the
+# ``DocumentRepository`` protocol so the domain layer can type it without
+# importing infrastructure. Re-exported here under the legacy name.
+_OwnerQuery = OwnerDocumentQuery
 
 
 class PostgresDocumentRepository:

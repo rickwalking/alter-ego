@@ -56,11 +56,19 @@ class IngestDocumentCommand:
 
 @dataclass(frozen=True)
 class ListDocumentsQuery:
-    """List knowledge documents with optional status filter and paging."""
+    """List knowledge documents with optional status filter and paging.
+
+    Access scope is expressed by ``owner_id`` + ``is_admin``: an admin query
+    (``is_admin=True``) lists across all owners; otherwise the listing is
+    restricted to ``owner_id``. Both default to the unrestricted/admin-less
+    case so existing callers keep their behavior.
+    """
 
     status: DocumentStatus | None = None
     limit: int = 100
     offset: int = 0
+    owner_id: UUID | None = None
+    is_admin: bool = False
 
 
 @dataclass(frozen=True)

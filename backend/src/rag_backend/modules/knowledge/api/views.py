@@ -38,6 +38,19 @@ class KnowledgeDocumentView:
 
 
 @dataclass(frozen=True)
+class KnowledgeDocumentListView:
+    """Boundary-safe page of knowledge documents plus the matching total.
+
+    ``items`` is the requested page; ``total`` is the full count for the same
+    filter (used by callers for pagination). Mirrors the legacy list endpoint's
+    ``items``/``total`` contract.
+    """
+
+    items: list[KnowledgeDocumentView]
+    total: int
+
+
+@dataclass(frozen=True)
 class DocumentStatusView:
     """Boundary-safe processing status + estimates for a document."""
 
@@ -62,6 +75,7 @@ class SearchResultView:
 
 __all__ = [
     "DocumentStatusView",
+    "KnowledgeDocumentListView",
     "KnowledgeDocumentView",
     "SearchResultView",
 ]

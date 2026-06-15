@@ -36,6 +36,20 @@ class UserRepository(Protocol):
     async def count_by_role(self, role: UserRole) -> int: ...
 
 
+class OwnerDocumentQuery(TypedDict, total=False):
+    """Bundled query parameters for owner-scoped document listing.
+
+    Structurally identical to the infrastructure ``_OwnerQuery`` so the concrete
+    repository satisfies :class:`DocumentRepository` without the domain layer
+    importing infrastructure.
+    """
+
+    owner_id: UUID
+    status: DocumentStatus | None
+    limit: int
+    offset: int
+
+
 class DocumentRepository(Protocol):
     """Protocol for document persistence operations."""
 
@@ -47,11 +61,17 @@ class DocumentRepository(Protocol):
         self, status: DocumentStatus | None = None, limit: int = 100, offset: int = 0
     ) -> list[Document]: ...
 
+    async def get_all_for_owner(self, query: OwnerDocumentQuery) -> list[Document]: ...
+
     async def update(self, document: Document) -> Document: ...
 
     async def delete(self, document_id: UUID) -> bool: ...
 
     async def count(self, status: DocumentStatus | None = None) -> int: ...
+
+    async def count_for_owner(
+        self, owner_id: UUID, status: DocumentStatus | None = None
+    ) -> int: ...
 
 
 class _UserQuery(TypedDict, total=False):

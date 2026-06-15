@@ -20,9 +20,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Protocol, cast
+from uuid import UUID
 
 from rag_backend.modules.knowledge.api.views import (
     DocumentStatusView,
+    KnowledgeDocumentListView,
     KnowledgeDocumentView,
     SearchResultView,
 )
@@ -41,11 +43,15 @@ from rag_backend.modules.knowledge.domain.models import (
     RetrievalQuery,
     SearchResult,
 )
-from rag_backend.modules.knowledge.domain.ports import DocumentRepository
+from rag_backend.modules.knowledge.domain.ports import (
+    DocumentRepository,
+    OwnerDocumentQuery,
+)
 from rag_backend.platform.database import UnitOfWork
 
 _ESTIMATED_CHUNKS_KEY = "estimated_chunks"
 _TOTAL_TIME_KEY = "total_time_seconds"
+_OWNER_ID_REQUIRED = "owner_id is required for a non-admin document listing"
 
 
 class DocumentPipelinePort(Protocol):
@@ -146,6 +152,55 @@ class KnowledgeService:
             status=query.status, limit=query.limit, offset=query.offset
         )
         return [self._to_view(document) for document in documents]
+
+    async def list_with_total(
+        self, query: ListDocumentsQuery
+    ) -> KnowledgeDocumentListView:
+        """List a page of documents plus the matching total, scoped by access.
+
+        Admin queries (``is_admin=True``) list across all owners; otherwise the
+        listing is restricted to ``owner_id``. Mirrors the legacy
+        ``/api/documents`` listing (owner-vs-admin split + ``total``) exactly.
+        """
+        if query.is_admin:
+            return await self._list_all(query)
+        return await self._list_for_owner(query)
+
+    async def _list_all(self, query: ListDocumentsQuery) -> KnowledgeDocumentListView:
+        documents = await self._repository.get_all(
+            status=query.status, limit=query.limit, offset=query.offset
+        )
+        total = await self._repository.count(status=query.status)
+        return KnowledgeDocumentListView(
+            items=[self._to_view(document) for document in documents],
+            total=total,
+        )
+
+    async def _list_for_owner(
+        self, query: ListDocumentsQuery
+    ) -> KnowledgeDocumentListView:
+        owner_id = self._require_owner_id(query.owner_id)
+        documents = await self._repository.get_all_for_owner(
+            OwnerDocumentQuery(
+                owner_id=owner_id,
+                status=query.status,
+                limit=query.limit,
+                offset=query.offset,
+            )
+        )
+        total = await self._repository.count_for_owner(
+            owner_id=owner_id, status=query.status
+        )
+        return KnowledgeDocumentListView(
+            items=[self._to_view(document) for document in documents],
+            total=total,
+        )
+
+    @staticmethod
+    def _require_owner_id(owner_id: UUID | None) -> UUID:
+        if owner_id is None:
+            raise ValueError(_OWNER_ID_REQUIRED)
+        return owner_id
 
     async def get(self, query: GetDocumentQuery) -> KnowledgeDocumentView | None:
         """Fetch a single document by id, or ``None`` if absent."""

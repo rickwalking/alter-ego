@@ -235,6 +235,8 @@ ignore_imports =
     rag_backend.api.dependencies.carousel_access -> rag_backend.infrastructure.database.models.carousel
     rag_backend.api.dependencies.carousel_access -> rag_backend.infrastructure.database.models.source_comment
     rag_backend.api.dependencies.database -> rag_backend.infrastructure.database.config
+    rag_backend.api.dependencies.knowledge -> rag_backend.infrastructure.container
+    rag_backend.api.dependencies.knowledge -> rag_backend.infrastructure.database.config
     rag_backend.api.dependencies.resource_access -> rag_backend.infrastructure.database.models
     rag_backend.api.dependencies.resource_access -> rag_backend.infrastructure.database.models.carousel
     rag_backend.api.dependencies.roles -> rag_backend.infrastructure.database.models
@@ -280,9 +282,7 @@ ignore_imports =
     rag_backend.api.routes.conversations -> rag_backend.infrastructure.database.config
     rag_backend.api.routes.conversations -> rag_backend.infrastructure.database.conversation_repository
     rag_backend.api.routes.conversations -> rag_backend.infrastructure.logging
-    rag_backend.api.routes.documents -> rag_backend.infrastructure.container
-    rag_backend.api.routes.documents -> rag_backend.infrastructure.database.config
-    rag_backend.api.routes.documents -> rag_backend.infrastructure.database.document_repository
+    rag_backend.api.routes.documents -> rag_backend.infrastructure.config.settings
     rag_backend.api.routes.documents -> rag_backend.infrastructure.retrieval.document_processor
     rag_backend.api.routes.personas -> rag_backend.infrastructure.container
     rag_backend.api.routes.personas -> rag_backend.infrastructure.database.models
