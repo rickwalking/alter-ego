@@ -43,6 +43,7 @@ Phase 4 of the modularization plan (§Phase 4). **Behavior-preserving** — the 
 - [ ] THE committed workflow snapshots (state/start/resume) SHALL be true byte-identical baselines with a diff helper, volatile fields normalized deterministically
 - [ ] THE SSE workflow-stream snapshot SHALL be captured via a DETERMINISTIC mock and assert event TYPES in order + `id:`/`data:` framing + keep-alive + Last-Event-ID (NOT a raw byte diff of phase/LLM content) — falsifiable by a reordered/renamed event
 - [ ] THE test fixture SHALL pin environment-sensitive settings so snapshots are identical local vs CI
+- [ ] THE workflow state snapshots SHALL include artifact URL fields (pdf/blog/design/image paths) as byte-identical baselines
 - [ ] WHEN `uv run pytest` runs THE safety-net suite SHALL pass with NO production code modified (green baseline recorded)
 
 ## Gherkin Scenarios

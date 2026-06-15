@@ -78,7 +78,7 @@ Not applicable — behavior-preserving extraction; verified by the AE-0106 safet
 ## Dependencies
 
 - Blocks: AE-0110
-- Blocked by: AE-0105, AE-0106
+- Blocked by: AE-0105, AE-0106, AE-0113
 - Related: AE-0104, ADR-0009
 
 ## Implementation Plan

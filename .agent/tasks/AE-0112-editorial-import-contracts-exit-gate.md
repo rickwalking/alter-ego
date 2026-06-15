@@ -29,7 +29,7 @@ The editorial boundary must be CI-enforced (building on AE-0095/0103) and the ch
 
 ## Non-Goals
 
-- No weakening of existing contracts.
+- No weakening of existing contracts. Any shared cross-cutting import (e.g. resource_access authz) follows the AE-0103 grandfathered-exception pattern (documented, not a gate hole).
 - No behavior change (CI/docs only).
 
 ## Modularization Alignment (2026-06-15)
@@ -39,6 +39,7 @@ Phase 4 of the modularization plan (§Phase 4). **Behavior-preserving** — the 
 ## Acceptance Criteria
 
 - [ ] Import Linter contracts SHALL isolate editorial.application/domain (no frameworks/get_container/infrastructure, carousel ORM only via the ACL) and enforce the public facade; lint-imports KEEPS them
+- [ ] THE editorial-application-isolation contract SHALL name `modules.editorial.infrastructure.legacy_carousel_acl` as the ONLY allowed carousel-ORM import path (explicit, documented exception in render_importlinter)
 - [ ] WHEN new code violates either boundary THE contract SHALL fail (demonstrated, reverted)
 - [ ] THE AE-0082 baseline/--check SHALL ratchet DOWN or hold and stay PASS
 - [ ] THE checkpoint-drain rule SHALL be documented as an exit-gate criterion (no schema migration while a checkpoint references the old shape)

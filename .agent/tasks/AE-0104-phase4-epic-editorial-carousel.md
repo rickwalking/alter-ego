@@ -14,7 +14,7 @@ Updated: 2026-06-15
 
 ## Goal
 
-Introduce an `editorial` bounded context (EditorialProject/EditorialWorkflow + status language) behind a public facade, with a legacy carousel ACL as the single translator between `carousel_projects` persistence and editorial concepts; route workflow start/state/resume through editorial handlers; move source material/assignments/review/optimistic-locking behind ports; separate approval from public release. Tracks AE-0105..0112.
+Introduce an `editorial` bounded context (EditorialProject/EditorialWorkflow + status language) behind a public facade, with a legacy carousel ACL as the single translator between `carousel_projects` persistence and editorial concepts; route workflow start/state/resume through editorial handlers; move source material/assignments/review/optimistic-locking behind ports; separate approval from public release. Tracks AE-0105..0113.
 
 ## Problem
 
@@ -25,6 +25,7 @@ The carousel workflow logic is the `CarouselProject` god object — five writers
 - Track and integrate children AE-0105 (field-ownership map), AE-0106 (safety net), AE-0107 (single write owner), AE-0108 (editorial skeleton), AE-0109 (legacy ACL), AE-0110 (workflow routes behind handlers), AE-0111 (ports + approval≠release), AE-0112 (import contracts + exit gate).
 - Own ONLY the workflow slice (editorial_workflow* routes/services + workflow-owned carousel_projects fields + checkpoints). Presentation/CRUD/media/publishing/strategies/creator-assets stay (Phase 5+).
 - Enforce the epic exit gate below before closing.
+- Phase 2.5 was skipped: its scaled-down contingent exit-gate items (DB restore drill + trace-correlated smoke) are delivered here as AE-0113; the full-track items (three-entry-point authz contract tests) are AE-0113 per ADR-0009 lines 108-117.
 
 ## Non-Goals
 
@@ -38,10 +39,11 @@ Phase 4 of the modularization plan (§Phase 4). **Behavior-preserving** — the 
 
 ## Acceptance Criteria
 
-- [ ] THE epic SHALL be Done only when AE-0105..0112 are all Done/merged
+- [ ] THE epic SHALL be Done only when AE-0105..0113 are all Done/merged
 - [ ] THE existing carousel workflow API + SSE behavior SHALL remain byte-identical (AE-0106 snapshots diff=0)
 - [ ] Editorial handlers SHALL NOT import carousel ORM models directly; the legacy ACL SHALL be the only legacy-persistence translator
 - [ ] THE LangGraph checkpoint identifiers + schemas + `lock_version` semantics SHALL be unchanged
+- [ ] THE ADR-0009 Phase-4 deferred evidence (three-entry-point authorization contract tests + scaled-down rollback drill, AE-0113) SHALL be complete BEFORE any carousel write path is redirected (AE-0107)
 - [ ] WHEN any schema-modifying migration is introduced THE checkpoint-drain rule SHALL be satisfied first (no migration while a checkpoint references the old shape)
 - [ ] THE editorial-application-isolation + editorial-public-facade import contracts SHALL be KEPT and the AE-0082 baseline ratcheted down or held; gates.sh + check-integrity green
 
@@ -79,7 +81,7 @@ Not applicable — epic tracker; behavior verified by child tickets (esp. the AE
 
 - Blocks: —
 - Blocked by: None (tracks AE-0105-0112)
-- Related: AE-0103, AE-0081, ADR-0009
+- Related: AE-0103, AE-0081, ADR-0009 (lines 108-117)
 
 ## Implementation Plan
 

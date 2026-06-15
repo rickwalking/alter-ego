@@ -78,7 +78,7 @@ Not applicable — behavior-preserving adapter; verified by the AE-0106 safety n
 ## Dependencies
 
 - Blocks: AE-0110
-- Blocked by: AE-0105, AE-0108
+- Blocked by: AE-0105, AE-0106, AE-0107, AE-0108
 - Related: AE-0104, ADR-0009
 
 ## Implementation Plan

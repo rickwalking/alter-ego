@@ -42,6 +42,7 @@ Phase 4 of the modularization plan (§Phase 4). **Behavior-preserving** — the 
 - [ ] THE document SHALL classify each writer as workflow-owned (Phase 4 / AE-0107) or deferred (Phase 5+) with rationale
 - [ ] THE document SHALL name `lock_version` as the optimistic-lock concurrency token and where it is bumped
 - [ ] THE document SHALL state the single-write-owner rule and the legacy-row↔editorial consistency relationship
+- [ ] THE map SHALL flag every column written by MORE THAN ONE writer today (the consolidation edge cases AE-0107 must resolve)
 - [ ] WHEN AE-0107 and AE-0109 are planned THE map SHALL be sufficient to scope which fields move behind editorial ports (no unmapped column)
 
 ## Gherkin Scenarios

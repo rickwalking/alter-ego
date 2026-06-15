@@ -52,16 +52,17 @@ mandatory before any editorial write redirection.
 | **AE-0104** | Phase 4 epic: EditorialProject facade over CarouselProject | T3 | Cross-cutting | — (tracks 0105-0112) |
 | **AE-0105** | `carousel-project-field-ownership.md` — column/invariant/owner/concurrency map | T2 | Docs/Arch | — |
 | **AE-0106** | Carousel workflow Gherkin safety net + API/SSE byte-identical snapshots | T2 | Tests | — |
-| **AE-0107** | `legacy.carousel_project` single write owner for workflow-owned fields | T2 | Backend | AE-0105, AE-0106 |
+| **AE-0107** | `legacy.carousel_project` single write owner for workflow-owned fields | T2 | Backend | AE-0105, AE-0106, AE-0113 |
 | **AE-0108** | `modules/editorial/` skeleton + facade + EditorialProject/EditorialWorkflow + status language + re-exported ports | T2 | Backend | — |
-| **AE-0109** | Legacy carousel ACL (compatibility adapter: legacy persistence ↔ editorial concepts) | T2 | Backend | AE-0105, AE-0108 |
+| **AE-0109** | Legacy carousel ACL (compatibility adapter: legacy persistence ↔ editorial concepts) | T2 | Backend | AE-0105, AE-0106, AE-0107, AE-0108 |
 | **AE-0110** | Workflow start/state/resume routes behind editorial handlers (byte-identical API + SSE; checkpoints stable) | T2 | Backend | AE-0106, AE-0107, AE-0108, AE-0109 |
 | **AE-0111** | Move source material, assignments, review decisions, optimistic locking behind editorial ports; split approval from public release | T2 | Backend | AE-0110 |
 | **AE-0112** | Editorial import contracts + exit gate + baseline ratchet + checkpoint-drain rule + docs | T2 | Backend/CI | AE-0110, AE-0111 |
+| **AE-0113** | Carousel write-path authorization evidence (3 entry points) + scaled-down rollback drill | T2 | Backend/Tests | — |
 
 ## Suggested order (waves)
 
-- **Wave A (parallel):** AE-0105 (field-ownership map), AE-0106 (safety net), AE-0108 (editorial skeleton + domain + status language).
+- **Wave A (parallel):** AE-0105 (field-ownership map), AE-0106 (safety net), AE-0108 (editorial skeleton + domain + status language), AE-0113 (write-path authz evidence + scaled-down rollback drill — ADR-0009 deferred evidence, MUST complete before AE-0107).
 - **Wave B (parallel):** AE-0107 (single write owner — needs 0105/0106), AE-0109 (legacy ACL — needs 0105/0108).
 - **Wave C:** AE-0110 (workflow routes behind editorial handlers — needs 0106/0107/0108/0109). *Gate: AE-0041/0044/0045/0046 merged.*
 - **Wave D:** AE-0111 (source/assignments/review/optimistic-lock behind ports; approval≠release — needs 0110).
@@ -88,6 +89,8 @@ mandatory before any editorial write redirection.
 
 ## Epic exit gate (from the plan)
 
+- ADR-0009 Phase-4 deferred evidence complete BEFORE any write redirection: three-entry-point authorization
+  contract tests + scaled-down rollback drill (AE-0113) (ADR-0009 lines 108-117).
 - Existing carousel workflow API + SSE behavior byte-identical (AE-0106 snapshots diff=0).
 - Editorial handlers do NOT import carousel ORM models directly.
 - The compatibility adapter (ACL) is the ONLY module translating legacy project persistence into editorial concepts.

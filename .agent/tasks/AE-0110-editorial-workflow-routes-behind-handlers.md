@@ -80,7 +80,7 @@ Not applicable — behavior-preserving extraction; verified by the AE-0106 safet
 
 - Blocks: AE-0111, AE-0112
 - Blocked by: AE-0106, AE-0107, AE-0108, AE-0109
-- Related: AE-0044, AE-0104
+- Related: AE-0044, AE-0045, AE-0046, AE-0041, AE-0104
 
 ## Implementation Plan
 
@@ -120,7 +120,10 @@ Pending.
 
 ## Blockers
 
-None.
+HARD GATE (Wave C): AE-0041, AE-0044, AE-0045, AE-0046 (PASS QA, in Review) touch the same
+carousel workflow files (esp. `editorial_workflow_routes_response.py`, the AE-0044 response mapper this
+ticket builds on). They MUST be merged before AE-0110 redirects the workflow routes, or this ticket must
+explicitly own the current state of those files to avoid double-refactoring.
 
 ## Final Summary
 
