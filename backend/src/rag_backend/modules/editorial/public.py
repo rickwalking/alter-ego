@@ -28,6 +28,12 @@ Consumers SHALL NOT import internals such as
 """
 
 from rag_backend.modules.editorial.application.service import EditorialService
+from rag_backend.modules.editorial.application.workflow_handlers import (
+    EditorialWorkflowHandlers,
+    StartWorkflowCommand,
+    WorkflowEngine,
+    WorkflowStateView,
+)
 from rag_backend.modules.editorial.bootstrap import (
     EditorialAdapters,
     EditorialModule,
@@ -131,8 +137,12 @@ __all__ = [
     "EditorialProjectView",
     "EditorialService",
     "EditorialWorkflow",
+    "EditorialWorkflowHandlers",
     "LegacyCarouselAcl",
     "ResearchSource",
     "ResearchSourceType",
+    "StartWorkflowCommand",
+    "WorkflowEngine",
+    "WorkflowStateView",
     "bootstrap_module",
 ]

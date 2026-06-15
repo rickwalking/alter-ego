@@ -36,6 +36,7 @@ CAS.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -50,6 +51,14 @@ from rag_backend.modules.editorial.domain.models import (
 from rag_backend.modules.editorial.infrastructure.carousel_project_write_owner import (
     CarouselProjectWriteOwner,
 )
+
+if TYPE_CHECKING:
+    from rag_backend.application.services.carousel.editorial_workflow_types import (
+        EditorialWorkflowStartInput,
+    )
+    from rag_backend.modules.editorial.application.workflow_handlers import (
+        WorkflowEngine,
+    )
 
 # Default optimistic-lock token for a row whose ``lock_version`` is unset, kept
 # identical to the legacy reads (``int(model.lock_version or 1)``) so the token
@@ -129,6 +138,51 @@ class LegacyCarouselAcl:
         if model is None:
             return None
         return self.to_editorial(model)
+
+    # --- Engine binding: run the wrapped engine over the bound session --------
+    async def get_workflow_state_with_session(
+        self,
+        engine: WorkflowEngine,
+        project_id: str,
+    ) -> CarouselWorkflowState | None:
+        """Read engine state with the request session bound (in_progress merge).
+
+        The ACL is the only seam allowed to hand the engine the request session,
+        so the engine's ``db``-says-in_progress merge stays byte-identical while
+        the route/handler never touch the raw ``AsyncSession``. The LangGraph
+        checkpoint key (``thread_id == project_id``) is passed through unchanged.
+        """
+        return await engine.get_workflow_state(project_id, db=self._session)
+
+    async def start_workflow_with_session(
+        self,
+        engine: WorkflowEngine,
+        project_id: str,
+        workflow_input: EditorialWorkflowStartInput,
+    ) -> CarouselWorkflowState:
+        """Run the engine start use case with the request session bound.
+
+        Binding the session here keeps the engine's reviewer-assignment + phase
+        sync staging through the AE-0107 owner exactly as before; the commit is
+        owned by the caller via :meth:`commit`.
+        """
+        return await engine.start_workflow(
+            project_id,
+            workflow_input,
+            db=self._session,
+        )
+
+    async def mark_resume_in_progress_with_session(
+        self,
+        engine: WorkflowEngine,
+        project_id: str,
+    ) -> str:
+        """Flip the engine to in_progress with the request session bound.
+
+        The engine stages the phase-status sync through the AE-0107 owner; the
+        commit is owned by the caller via :meth:`commit`.
+        """
+        return await engine.mark_resume_in_progress(project_id, db=self._session)
 
     # --- Write side: editorial intents -> AE-0107 owner -----------------------
     async def assign_reviewer(self, project_id: str, reviewer_id: str) -> None:

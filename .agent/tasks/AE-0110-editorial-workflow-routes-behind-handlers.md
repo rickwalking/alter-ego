@@ -1,6 +1,6 @@
 # AE-0110 — Workflow start/state/resume routes behind editorial handlers (byte-identical API + SSE)
 
-Status: Ready
+Status: Dev Complete
 Tier: T2
 Priority: High
 Type: Task
@@ -102,9 +102,11 @@ Not applicable — behavior-preserving extraction; verified by the AE-0106 safet
 
 Ticket created by planner (Phase 4 breakdown).
 
+Dev Complete (Wave C). editorial_workflow.py thin adapters via EditorialWorkflowHandlers + api/dependencies/editorial.py edge provider; byte-identical (AE-0106 19/19); checkpoints stable; no route commit; mypy 478, lint-imports 14/0, ratchet api->infra 82→81, check-integrity 0 blockers, 726 carousel tests pass.
+
 ## Files Touched
 
-Pending.
+api/routes/carousels/editorial_workflow.py, api/dependencies/editorial.py (new), modules/editorial/application/workflow_handlers.py (new), modules/editorial/infrastructure/legacy_carousel_acl.py, modules/editorial/{public,__init__}.py, tests/unit/modules/editorial/test_workflow_handlers.py
 
 ## Test Evidence
 

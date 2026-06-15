@@ -70,9 +70,13 @@ from rag_backend.modules.editorial.public import (
     EditorialProjectView,
     EditorialService,
     EditorialWorkflow,
+    EditorialWorkflowHandlers,
     LegacyCarouselAcl,
     ResearchSource,
     ResearchSourceType,
+    StartWorkflowCommand,
+    WorkflowEngine,
+    WorkflowStateView,
     bootstrap_module,
 )
 
@@ -121,8 +125,12 @@ __all__ = [
     "EditorialProjectView",
     "EditorialService",
     "EditorialWorkflow",
+    "EditorialWorkflowHandlers",
     "LegacyCarouselAcl",
     "ResearchSource",
     "ResearchSourceType",
+    "StartWorkflowCommand",
+    "WorkflowEngine",
+    "WorkflowStateView",
     "bootstrap_module",
 ]
