@@ -27,9 +27,13 @@ Steps (upgrade):
    row (``origin='carousel'``, ``project_id`` set). **Idempotent** — guarded by a
    per-project ``WHERE NOT EXISTS`` check, so re-running inserts no duplicate.
 
-The migration is **reversible**: ``downgrade`` deletes the ``origin='carousel'``
-rows this migration created (those with a ``project_id``) and drops the ``origin``
-column, restoring the pre-migration ``blog_posts`` schema + data.
+The migration is **reversible without data loss**: ``downgrade`` deletes ONLY the
+rows this migration *inserted* in step 3 — identified by their generated
+``carousel-{project_id}`` slug (``slug LIKE 'carousel-%'``) — and then drops the
+``origin`` column. The step-2 re-classification of *pre-existing* project-linked
+rows is undone automatically by dropping the column (it never mutated those rows'
+data), so pre-existing blog posts are preserved. This restores the pre-migration
+``blog_posts`` schema + data exactly.
 
 Cross-dialect: the backfill runs through SQLAlchemy Core against lightweight table
 projections (no ORM), so it applies identically on SQLite (tests) and Postgres
@@ -189,12 +193,19 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    """Delete the backfilled carousel rows, then drop the additive origin column."""
+    """Delete ONLY the step-3 backfill-inserted rows, then drop the origin column.
+
+    The inserted rows are uniquely identified by the ``carousel-{project_id}`` slug
+    that step 3 assigns. Pre-existing project-linked rows (merely re-labelled in
+    step 2) keep their own slugs and are NOT deleted — dropping the column undoes
+    their re-classification without touching their data (no data loss).
+    """
     bind = op.get_bind()
     bind.execute(
         sa.delete(_blog_posts).where(
             _blog_posts.c.origin == _ORIGIN_CAROUSEL,
             _blog_posts.c.project_id.isnot(None),
+            _blog_posts.c.slug.like(f"{_BLOG_SLUG_PREFIX}%"),
         )
     )
     op.drop_column("blog_posts", "origin")

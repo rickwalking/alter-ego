@@ -170,6 +170,29 @@ class TestDomainValueObjects:
         assert unscheduled.is_scheduled is False
 
 
+class TestOriginCoercion:
+    """Scenario: BlogPost.origin coerces raw column values (AE-0127)."""
+
+    def test_coerce_valid_origin_values(self) -> None:
+        from rag_backend.domain.constants.blog_post import BlogPostOrigin
+        from rag_backend.modules.publishing.domain.models import _coerce_origin
+
+        assert _coerce_origin("carousel") is BlogPostOrigin.CAROUSEL
+        assert _coerce_origin("standalone") is BlogPostOrigin.STANDALONE
+
+    def test_coerce_none_defaults_to_standalone(self) -> None:
+        from rag_backend.domain.constants.blog_post import BlogPostOrigin
+        from rag_backend.modules.publishing.domain.models import _coerce_origin
+
+        assert _coerce_origin(None) is BlogPostOrigin.STANDALONE
+
+    def test_coerce_unknown_defaults_to_standalone(self) -> None:
+        from rag_backend.domain.constants.blog_post import BlogPostOrigin
+        from rag_backend.modules.publishing.domain.models import _coerce_origin
+
+        assert _coerce_origin("not-a-real-origin") is BlogPostOrigin.STANDALONE
+
+
 class TestBootstrapWiring:
     """Scenario: bootstrap wires the module via manual DI (no global container)."""
 
