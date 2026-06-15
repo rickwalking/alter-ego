@@ -43,6 +43,7 @@ Phase 3 of the modularization plan (§Phase 3). **Behavior-preserving** — cook
 - [ ] modules/identity SHALL exist per conventions with public.py facade + bootstrap.py (manual DI, no get_container)
 - [ ] UserService/AuthenticationService/PasswordService SHALL be typed (no Any) and delegate JWT/bcrypt to the unchanged infrastructure/auth.py
 - [ ] THE UserRepository port SHALL be re-exported (existing domain.protocols imports keep resolving); User/UserRole re-exported
+- [ ] WHEN lint-imports + pytest run after the shim THE existing callers of UserRepository SHALL still resolve (CI-verified; object-identity shim)
 - [ ] THE role-check dependencies SHALL be reachable via the identity facade
 - [ ] A fake + Postgres UserRepository contract suite SHALL pass (behavior matches)
 - [ ] WHEN mypy/lint-imports/pytest run THEY SHALL pass with no new violations and no behavior change

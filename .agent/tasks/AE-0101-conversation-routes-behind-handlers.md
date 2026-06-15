@@ -41,7 +41,7 @@ Phase 3 of the modularization plan (§Phase 3). **Behavior-preserving** — cook
 - [ ] EACH /api/conversations endpoint SHALL delegate via the conversation facade
 - [ ] WHEN any /api/conversations endpoint is called THE response (incl. anon_token Set-Cookie + X-Agent-Origin) SHALL diff to ZERO against the AE-0097 snapshots
 - [ ] THE conversation application code SHALL NOT import a concrete Postgres repository (port/facade only)
-- [ ] Conversation write endpoints SHALL persist via the platform UoW
+- [ ] Conversation write endpoints SHALL persist via the platform UoW; routes SHALL NOT call `db.commit()`/`session.commit()` directly (UoW is the single committer)
 - [ ] WHEN gates.sh + mypy + lint-imports + pytest run THEY SHALL pass; AE-0097 safety net green
 
 ## Gherkin Scenarios

@@ -41,6 +41,7 @@ Phase 3 of the modularization plan (§Phase 3). **Behavior-preserving** — cook
 
 - [ ] modules/conversation SHALL exist per conventions with public.py facade + bootstrap.py (manual DI)
 - [ ] Conversation/Message + ConversationRepository/MessageRepository ports SHALL be re-exported (existing callers unbroken)
+- [ ] WHEN lint-imports + pytest run after the shims THE existing callers of those ports SHALL still resolve (CI-verified; object-identity shims)
 - [ ] A `ChatAgentFactory` port SHALL be defined and the concrete factory SHALL wrap existing agent construction with identical routing (metadata.project_id) + knowledge-facade wiring
 - [ ] THE module SHALL reuse the platform/database UoW and the Phase-2 knowledge facade (no duplication)
 - [ ] WHEN mypy/lint-imports/pytest run THEY SHALL pass; no behavior change (agent tests green)

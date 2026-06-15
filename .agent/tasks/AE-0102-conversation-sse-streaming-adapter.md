@@ -39,7 +39,7 @@ Phase 3 of the modularization plan (§Phase 3). **Behavior-preserving** — cook
 ## Acceptance Criteria
 
 - [ ] BOTH SSE endpoints SHALL delegate via the conversation facade + ChatAgentFactory
-- [ ] WHEN a chat stream runs THE SSE event types/order/framing/keep-alive/Last-Event-ID/X-Agent-Origin SHALL diff to ZERO against the AE-0097 SSE snapshot
+- [ ] WHEN a chat stream runs (deterministic mock agent) THE SSE event TYPES in order + `id:`/`data:` framing FORMAT + Last-Event-ID + X-Agent-Origin SHALL match the AE-0097 SSE snapshot (type/format assertion, not raw-byte diff of LLM tokens; keep-alive interleaving ignored)
 - [ ] THE AlterEgo/RAG routing (metadata.project_id) + knowledge retrieval behavior SHALL be unchanged (agent + stream tests green)
 - [ ] THE conversation streaming application code SHALL NOT import a concrete Postgres repository or get_container
 - [ ] WHEN gates.sh + mypy + lint-imports + pytest run THEY SHALL pass
@@ -85,7 +85,7 @@ Feature: SSE streaming unchanged behind the module
 ## Dependencies
 
 - Blocks: AE-0103
-- Blocked by: AE-0101
+- Blocked by: AE-0100 (facade + ChatAgentFactory); soft-after AE-0101 (both touch the conversation facade — serialized to avoid churn; may parallelize if file scopes stay disjoint)
 - Related: AE-0093, AE-0076
 
 ## Implementation Plan

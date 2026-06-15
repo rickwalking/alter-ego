@@ -41,7 +41,7 @@ Phase 3 of the modularization plan (§Phase 3). **Behavior-preserving** — cook
 - [ ] EACH auth/admin endpoint SHALL delegate to an identity handler via the facade
 - [ ] WHEN any auth/admin endpoint is called THE response (incl. Set-Cookie attributes + JWT payload) SHALL diff to ZERO against the AE-0097 snapshots
 - [ ] THE auth/admin routes SHALL NOT import PostgresUserRepository or get_container (resolved via facade/DI)
-- [ ] User write endpoints SHALL persist via the platform UoW
+- [ ] User write endpoints SHALL persist via the platform UoW; routes SHALL NOT call `db.commit()`/`session.commit()` directly (UoW is the single committer; ratchets api->infrastructure down)
 - [ ] WHEN gates.sh + mypy + lint-imports + pytest run THEY SHALL pass; AE-0097 safety net green
 
 ## Gherkin Scenarios

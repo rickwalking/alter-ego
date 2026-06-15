@@ -24,7 +24,7 @@ Phase 3 moves auth/admin/conversation/streaming behind facades; without an enfor
 
 - Audit/extend `auth.feature`, `admin.feature`, `conversations.feature` (+ any chat/anonymous_chat) for login/logout/me/change-password, admin user CRUD + role assignment, conversation CRUD + non-stream chat + generate-title.
 - Capture committed response snapshots for /api auth/admin/conversations endpoints — INCLUDING Set-Cookie attributes (access_token, anon_token: httponly/secure/samesite/max_age) and headers (X-Agent-Origin).
-- Capture an SSE-stream snapshot for both chat/stream endpoints: event types + order (token/sources/complete/error/tool_result), `id:`/`data:` framing, keep-alive ping, Last-Event-ID resume behavior.
+- Capture an SSE-stream snapshot for both chat/stream endpoints USING A DETERMINISTIC MOCK/STUB AGENT (fixed token sequence — LLM content/event-ids/keep-alive timing are non-deterministic, so do NOT byte-diff a live stream): assert event TYPES in order (token/sources/complete/error/tool_result), the `id:`/`data:` framing FORMAT, and Last-Event-ID resume — extract events and ignore keep-alive interleaving (or cap keep-alive after mock output). HTTP responses + cookies (access_token/anon_token attrs) + JWT shape ARE deterministic and remain a true byte-identical snapshot.
 - Record a green baseline; each scenario backed by an executing test.
 
 ## Non-Goals
@@ -39,7 +39,8 @@ Phase 3 of the modularization plan (§Phase 3). **Behavior-preserving** — cook
 
 - [ ] THE auth/admin/conversation Gherkin SHALL cover login/logout/me/change-password, admin user CRUD + role assignment, conversation CRUD + non-stream chat
 - [ ] THE committed snapshots SHALL capture every relevant /api response INCLUDING Set-Cookie attributes (access_token, anon_token) and X-Agent-Origin, with a diff helper
-- [ ] THE SSE-stream snapshot SHALL capture event types + order, id/data framing, keep-alive ping, and Last-Event-ID behavior for both stream endpoints
+- [ ] THE SSE-stream snapshot SHALL be captured via a DETERMINISTIC mock agent and assert event TYPES in order + `id:`/`data:` framing FORMAT + Last-Event-ID resume (NOT a raw byte diff of LLM content; keep-alive interleaving ignored) — falsifiable by a reordered/renamed event
+- [ ] THE HTTP response + cookie (access_token/anon_token attributes) + HS256 JWT-shape snapshots SHALL be true byte-identical (deterministic) baselines
 - [ ] EACH added scenario SHALL be backed by an executing test (no orphan scenarios)
 - [ ] WHEN `uv run pytest` runs THE safety-net suite SHALL pass with NO production code modified (green baseline recorded)
 

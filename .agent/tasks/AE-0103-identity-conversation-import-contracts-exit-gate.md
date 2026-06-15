@@ -23,6 +23,7 @@ The exit gate requires the new modules' boundaries to be CI-enforced (building o
 ## Scope
 
 - Add contracts: `modules.conversation.application` forbidden from importing concrete Postgres repositories (and sqlalchemy/get_container); `modules.identity.application/domain` isolated from framework/vendor/container; identity persistence not importable by unrelated routes.
+- `api/dependencies/resource_access.py` is a SHARED cross-domain authz module that imports `UserModel`; record it as a grandfathered `.importlinter` exception (accepted, documented) — it is not a gate hole, and is out of Phase 3 scope to relocate.
 - Add public-facade contracts for identity + conversation (cross-module callers use the facade only).
 - Regenerate the AE-0082 baseline so both modules ratchet DOWN (never up); `--check` stays PASS.
 - Update `docs/architecture/module-conventions.md` with identity + conversation as worked examples.
