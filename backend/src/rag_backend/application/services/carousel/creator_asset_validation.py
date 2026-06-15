@@ -16,11 +16,17 @@ from rag_backend.domain.constants.carousel_presentation import (
 )
 from rag_backend.domain.constants.creator_asset import (
     ALLOWED_CREATOR_ASSET_MIME_TYPES,
+    CREATOR_ASSET_JPEG_MAGIC,
     CREATOR_ASSET_MAX_BYTES,
     CREATOR_ASSET_MAX_DIMENSION,
     CREATOR_ASSET_MAX_PIXELS,
     CREATOR_ASSET_MIME_JPEG,
     CREATOR_ASSET_MIME_PNG,
+    CREATOR_ASSET_PNG_MAGIC,
+    CREATOR_ASSET_RIFF_MAGIC,
+    CREATOR_ASSET_WEBP_MAGIC,
+    CREATOR_ASSET_WEBP_MAGIC_OFFSET,
+    CREATOR_ASSET_WEBP_MIN_HEADER_LENGTH,
     ERR_CREATOR_ASSET_ANIMATED,
     ERR_CREATOR_ASSET_DECODE_FAILED,
     ERR_CREATOR_ASSET_DECOMPRESSION_BOMB,
@@ -34,12 +40,6 @@ from rag_backend.domain.constants.creator_asset import (
     build_staged_creator_asset_relative_path,
 )
 
-_JPEG_MAGIC = b"\xff\xd8\xff"
-_PNG_MAGIC = b"\x89PNG\r\n\x1a\n"
-_WEBP_MAGIC_OFFSET = 8
-_WEBP_MIN_HEADER_LENGTH = 12
-_WEBP_MAGIC = b"WEBP"
-_RIFF_MAGIC = b"RIFF"
 _WEBP_SAVE_QUALITY = 90
 _WEBP_SAVE_METHOD = 6
 
@@ -100,14 +100,18 @@ def _validate_magic_bytes(content: bytes, declared_mime: str) -> None:
 
 
 def _detect_format_from_magic(content: bytes) -> str | None:
-    if content.startswith(_JPEG_MAGIC):
+    if content.startswith(CREATOR_ASSET_JPEG_MAGIC):
         return IMAGE_FORMAT_JPEG
-    if content.startswith(_PNG_MAGIC):
+    if content.startswith(CREATOR_ASSET_PNG_MAGIC):
         return IMAGE_FORMAT_PNG
+    riff_len = len(CREATOR_ASSET_RIFF_MAGIC)
     if (
-        len(content) >= _WEBP_MIN_HEADER_LENGTH
-        and content[:4] == _RIFF_MAGIC
-        and content[_WEBP_MAGIC_OFFSET:_WEBP_MIN_HEADER_LENGTH] == _WEBP_MAGIC
+        len(content) >= CREATOR_ASSET_WEBP_MIN_HEADER_LENGTH
+        and content[:riff_len] == CREATOR_ASSET_RIFF_MAGIC
+        and content[
+            CREATOR_ASSET_WEBP_MAGIC_OFFSET:CREATOR_ASSET_WEBP_MIN_HEADER_LENGTH
+        ]
+        == CREATOR_ASSET_WEBP_MAGIC
     ):
         return IMAGE_FORMAT_WEBP
     return None

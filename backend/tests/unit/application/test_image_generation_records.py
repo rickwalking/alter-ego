@@ -24,14 +24,23 @@ Feature: Image generation idempotency
     Given a valid image file
     When a generation record is created with an image path
     Then content_sha256 is populated
+
+Feature: No Exception Suppression (see features/carousel_null_safety.feature)
+
+  Scenario: repository without get_image_generation_by_key
+    Given a repository that lacks get_image_generation_by_key
+    When reuse_recorded_generation is called
+    Then it returns None and logs a warning
 """
 
 from __future__ import annotations
 
 from pathlib import Path
+from typing import cast
 from uuid import uuid4
 
 import pytest
+from structlog.testing import capture_logs
 
 from rag_backend.application.services.carousel.image_generation_records import (
     GENERATION_STATUS_FAILED,
@@ -42,6 +51,7 @@ from rag_backend.application.services.carousel.image_generation_records import (
     _generation_record,
     _record_content_sha,
     file_sha256,
+    reuse_recorded_generation,
 )
 from rag_backend.application.services.carousel.image_prompt_package import (
     ImagePromptPackage,
@@ -50,6 +60,7 @@ from rag_backend.domain.models import (
     CarouselProject,
     CarouselSlide,
 )
+from rag_backend.domain.protocols import CarouselRepository
 
 
 def _make_project(**overrides: object) -> CarouselProject:
@@ -266,3 +277,50 @@ class TestGenerationRecord:
         )
         record = _generation_record(input_data)
         assert record.status == GENERATION_STATUS_REUSED
+
+
+class _RepoWithoutLookup:
+    """Fake repository that does not implement get_image_generation_by_key."""
+
+
+class _RepoNotImplemented:
+    """Fake repository whose lookup raises NotImplementedError."""
+
+    async def get_image_generation_by_key(self, generation_key: str) -> None:
+        raise NotImplementedError
+
+
+@pytest.mark.unit
+class TestReuseRecordedGeneration:
+    @pytest.mark.asyncio
+    async def test_missing_method_returns_none_and_warns(self) -> None:
+        # Scenario: repository without get_image_generation_by_key
+        repo = cast(CarouselRepository, _RepoWithoutLookup())
+        prompt = _make_prompt()
+        with capture_logs() as logs:
+            result = await reuse_recorded_generation(repo, prompt)
+        assert result is None
+        warnings = [
+            entry
+            for entry in logs
+            if entry["event"] == "carousel_image_generation_lookup_unsupported"
+        ]
+        assert len(warnings) == 1
+        assert warnings[0]["log_level"] == "warning"
+        assert warnings[0]["generation_key"] == prompt.generation_key
+
+    @pytest.mark.asyncio
+    async def test_not_implemented_returns_none_and_warns(self) -> None:
+        # Scenario: lookup raises NotImplementedError (suppressed but logged)
+        repo = cast(CarouselRepository, _RepoNotImplemented())
+        prompt = _make_prompt()
+        with capture_logs() as logs:
+            result = await reuse_recorded_generation(repo, prompt)
+        assert result is None
+        warnings = [
+            entry
+            for entry in logs
+            if entry["event"] == "carousel_image_generation_lookup_not_implemented"
+        ]
+        assert len(warnings) == 1
+        assert warnings[0]["generation_key"] == prompt.generation_key

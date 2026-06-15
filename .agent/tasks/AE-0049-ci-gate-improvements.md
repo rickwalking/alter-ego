@@ -1,6 +1,6 @@
 # AE-0049 — CI Gate Improvements
 
-Status: Intake
+Status: Review
 Tier: T2
 Priority: Medium
 Type: Task
@@ -47,6 +47,20 @@ PR #11 had 7 CI gate failures — all advisory. None blocked the PR. Mutation te
 - Adding new lint rules beyond those already configured
 - Reconfiguring the CI pipeline structure
 - Touching deployment CI/CD
+
+## Modularization Alignment (2026-06-12)
+
+Wave A — execute first; this is the plan's "CI hardening before or
+during Phase 1" item. Alignment:
+
+- Strict-diff and diff-cover blocking are prerequisites for the Phase 1
+  module-boundary ratchets; land them before Phase 1 scaffolding.
+- Do NOT touch `backend/.importlinter` here — AE-0078 records the
+  violation baseline first, and Phase 1 replaces the wildcards with a
+  generated exception list. Changing contracts now would invalidate the
+  baseline.
+- Mutation-testing elevation aligns with ADR-005 and the plan's
+  testing-protection rule (phase delayed, testing never descoped).
 
 ## Acceptance Criteria
 
@@ -121,10 +135,10 @@ Feature: CI Gates
 
 ## QA Checklist
 
-- [ ] Security reviewed — CI only, no code changes
-- [ ] Acceptance criteria validated
-- [ ] Edge cases tested — empty diff, first commit on branch, fork PRs
-- [ ] Orphan/unfinished code checked
+- [x] Security reviewed — CI only, no code changes
+- [x] Acceptance criteria validated
+- [x] Edge cases tested — empty diff, first commit on branch, fork PRs
+- [x] Orphan/unfinished code checked
 
 ## Progress Log
 
@@ -134,15 +148,21 @@ Ticket created.
 
 ## Files Touched
 
-Pending.
+- .github/workflows/backend-quality-gates.yml, mutation-weekly.yml (new)
+- scripts/ci/ruff-strict-changed.sh, mutation-score-gate.sh (new)
+- docs/guides/qa-checkpoints.md
 
 ## Test Evidence
 
-Pending.
+```
+yaml.safe_load: all 5 workflows parse; bash -n clean
+pytest: 1547 passed, 2 skipped
+.importlinter: untouched (AE-0078 baseline)
+```
 
 ## QA Report
 
-Pending.
+✅ PASS — Wave 3 batch QA, 2 independent passes both PASS. See `.agent/reports/AE-0049.qa.md` → `.agent/reports/wave-3.qa.md`.
 
 ## Decision Log
 

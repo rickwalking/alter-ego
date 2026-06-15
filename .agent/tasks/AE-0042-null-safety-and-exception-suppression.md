@@ -1,6 +1,6 @@
 # AE-0042 — Null-Safety and Exception Suppression
 
-Status: Intake
+Status: Review
 Tier: T2
 Priority: High
 Type: Task
@@ -45,6 +45,20 @@ PR #11 review flagged:
 - Changing the public API of `manifest_from_payload` (return type stays `CarouselArtifactManifest`)
 - Adding new database migrations
 - Touching frontend
+
+## Modularization Alignment (2026-06-12)
+
+Wave A — architecture-neutral debt; execute first. Alignment:
+
+- The Pydantic conversion of `CarouselArtifactManifestPayload` becomes a
+  future `carousel_presentation` domain value object (Phase 5); define it
+  module-local next to the manifest code, not in a shared models dump.
+- **Absorbs AE-0057**: PR #11 comment #10 (unsafe property access at
+  `artifact_manifest.py:171`) is fully covered by this ticket's
+  manifest_from_payload conversion. AE-0057 is reduced to a verification
+  step and closes as duplicate when this merges.
+- Logged suppression warnings must keep Langfuse-compatible context
+  fields where present (AE-0050 verifies).
 
 ## Acceptance Criteria
 
@@ -120,11 +134,11 @@ Feature: No Exception Suppression
 
 ## QA Checklist
 
-- [ ] Security reviewed — no auth changes
-- [ ] Code quality reviewed — no new type: ignore
-- [ ] Acceptance criteria validated
-- [ ] Edge cases tested — None payloads, missing fields, empty lists
-- [ ] Orphan/unfinished code checked
+- [x] Security reviewed — no auth changes
+- [x] Code quality reviewed — no new type: ignore
+- [x] Acceptance criteria validated
+- [x] Edge cases tested — None payloads, missing fields, empty lists
+- [x] Orphan/unfinished code checked
 
 ## Progress Log
 
@@ -134,15 +148,20 @@ Ticket created.
 
 ## Files Touched
 
-Pending.
+- artifact_manifest.py, presentation_review_edits.py, image_generation_records.py
+- call-sites: artifact_health.py, visual_qa_expectations.py, artifact_build_support.py
+- tests: test_artifact_manifest_null_safety.py (new) + 2 updated + carousel_null_safety.feature
 
 ## Test Evidence
 
-Pending.
+```
+mypy strict: Success, 0 issues (389 files)
+pytest: 1535 passed, 2 skipped (+19 tests)
+```
 
 ## QA Report
 
-Pending.
+✅ PASS — Wave 3 batch QA, 2 independent passes both PASS. See `.agent/reports/AE-0042.qa.md` → `.agent/reports/wave-3.qa.md`.
 
 ## Decision Log
 

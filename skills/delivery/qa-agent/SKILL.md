@@ -1,7 +1,7 @@
 ---
 name: qa-agent
-description: "Validate implementation quality across security, code quality, acceptance criteria, and completeness. Use when the user says 'run QA', 'validate the implementation', 'check my code', 'review this PR', 'run the checks', or after the Developer Skill completes. Runs parallel subagents for security audit, code quality, mutation testing, acceptance criteria validation, and orphan code detection. Never use for implementation or development."
-version: 1.1.0
+description: "Validate implementation quality across security, code quality, acceptance criteria, and completeness. Use when the user says 'run QA', 'validate the implementation', 'check my code', 'review this PR', 'run the checks', or after the Developer Skill completes. Builds a shared research pack once, then runs parallel subagents for security audit, code quality, mutation testing, acceptance criteria validation, and orphan code detection. Never use for implementation or development."
+version: 1.2.0
 disable-model-invocation: true
 ---
 
@@ -58,8 +58,34 @@ The final report must include:
 |------|------|
 | **full** (default) | T2/T3 — all five subagents |
 | **lite** | T1 — security (if high-risk area), AC validation, lint/tests evidence; skip mutation/orphan unless scope warrants |
+| **external** | Any tier when independence matters: the implementation was authored in the same session/agent as the QA would be, or the human requests an outside check |
+| **wave** | Several related tickets completed together — one external run covering the set, with per-ticket AC validation |
 
 Read ticket `Tier:` from `.agent/tasks/`.
+
+## External QA orchestration (OpenCode / Codex / Cursor)
+
+The QA dimensions can be executed by an **external LLM CLI session**
+instead of same-session subagents — eliminating self-review bias when
+the developer and QA would otherwise share a context. Orchestrate it
+automatically:
+
+1. Build the prompt per `references/external-qa.md` (mandatory: skill
+   pointer, commit-pinned scope, read-only + verification-commands
+   allowance, accepted-gaps context, tool-call budget, and the final
+   `QA_VERDICT: PASS|WARN|FAIL` line requirement).
+2. Run `scripts/qa/run_external_qa.sh <prompt> <out> [tool]` — it
+   handles tool fallback (opencode → codex → cursor-agent), the
+   OpenCode hang-at-init recovery, ANSI stripping, and verdict
+   extraction (exit 0/10/20 = PASS/WARN/FAIL).
+3. Loop per the verdict: FAIL → fix → full re-run; WARN → fix
+   actionable findings → short confirmation round; PASS → archive with
+   provenance, write per-ticket `.agent/reports/AE-####.qa.md` files
+   (required by `validate_all_tickets.py` before Review), move
+   ticket(s) to Review.
+
+Reviewer priority and prompt requirements: `config.yaml`. Full runbook
+incl. live progress monitoring: `references/external-qa.md`.
 
 ## Agentic Ticket QA Protocol
 
@@ -91,9 +117,34 @@ Read ticket `Tier:` from `.agent/tasks/`.
 4. Identify the scope of changes (changed files, new files, modified tests)
 5. If the scope is unclear, ask the user
 
+### Phase 1.5: Build the QA Research Pack (shared context)
+
+**Before launching the 5 reviewers, build a shared research pack once** so the
+subagents skip independent codebase exploration (exploration is the dominant
+token cost). Full protocol: `references/qa-research-pack.md`.
+
+1. Run a **dedicated read-only explorer subagent** (`Explore` agent type) over
+   the change scope. Its model is selectable via `config.yaml`
+   `research_pack.model` (default cheap/fast, overridable to any provider — not
+   locked to Anthropic).
+2. It writes `.agent/reports/AE-####.qa-research.md` (or
+   `.agent/reports/<wave-id>.qa-research.md` for waves) using the 10-section,
+   role-tagged template, stamped with the commit SHA + diff range.
+3. **Staleness**: if the diff later moves (fix round), regenerate the pack (or
+   the affected sections) before re-running QA.
+
 ### Phase 2: Launch Parallel Subagents
 
-Launch **five subagents simultaneously** in a single message. Each receives the scope of changes and writes to its dedicated section.
+Launch **five subagents simultaneously** in a single message. Inject the
+**research pack as a shared (cacheable) prefix** to each, plus a short brief
+naming the sections that matter to it (routing table in
+`references/qa-research-pack.md`). Each subagent:
+
+- reads only its assigned pack sections — **does NOT re-explore the codebase**;
+- **re-verifies §10 UNKNOWNS** in its dimension and confirms any fact against
+  live code before raising a finding (the pack is a map, not a verdict — this
+  preserves independent verification and defeats the shared blind spot);
+- writes to its dedicated report section.
 
 #### Subagent 1 — Security Audit
 **Scope**: OWASP Top 10 2025 + dependency + secret scanning
@@ -210,6 +261,10 @@ Once all five subagents complete, produce the consolidated report:
 
 ## References
 
+- `references/qa-research-pack.md` — Shared research-pack pattern (Phase 1.5)
+- `references/external-qa.md` — External QA orchestration runbook
+- `config.yaml` — External reviewer priority and prompt requirements
+- `scripts/qa/run_external_qa.sh` — Orchestrator (repo root `scripts/qa/`)
 - `docs/guides/qa-checkpoints.md` — Full QA checkpoint reference
 - `docs/decisions/0005-adopt-mutation-testing.md` — Mutation testing thresholds
 - `docs/guides/architectural-quality-enforcement.md` — Code quality tooling

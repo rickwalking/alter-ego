@@ -1,6 +1,6 @@
 # AE-0068 — Frontend: create reusable Spinner component with React Suspense
 
-Status: Intake
+Status: Review
 Tier: T2
 Priority: Medium
 Type: Feature
@@ -30,6 +30,22 @@ Loading states are handled inline without a shared spinner component. This leads
 ## Non-Goals
 
 - Do not change the existing layout or behavior outside of spinner replacement
+
+## Modularization Alignment (2026-06-12)
+
+Scope correction from the 2026-06-12 scan: **two spinner components
+already exist** — `src/components/ui/spinner.tsx` and
+`src/components/atoms/neon-spinner.tsx` (with stories). This ticket is
+now a **consolidation**, not a creation:
+
+- Pick the survivor: `components/atoms/neon-spinner.tsx` (plan rule:
+  generic, domain-neutral components live in atoms; a parallel `ui/`
+  taxonomy fragments atomic design).
+- Fold `ui/spinner.tsx` capabilities (size/label/aria) into the atom,
+  migrate its usages, delete the duplicate.
+- Wire Suspense boundaries in `regenerate-strategy-section.tsx` per the
+  original PR comment.
+- AE-0047's spinner section is deleted and defers here (single owner).
 
 ## Acceptance Criteria
 
@@ -75,7 +91,29 @@ Feature: Spinner component
 
 ## QA Checklist
 
-- [ ] Code quality reviewed
-- [ ] Acceptance criteria validated
-- [ ] Edge cases tested
-- [ ] Orphan/unfinished code checked
+- [x] Code quality reviewed
+- [x] Acceptance criteria validated
+- [x] Edge cases tested
+- [x] Orphan/unfinished code checked
+
+## Files Touched
+
+- atoms/neon-spinner.tsx (+ labeled Spinner wrapper), atoms/index.ts
+- features/publish/.../regenerate-strategy-section.tsx (import + Suspense)
+- atoms/neon-spinner.test.tsx (new, 15); DELETED ui/spinner.tsx + test
+
+## Test Evidence
+
+```
+typecheck: clean; lint: 0 errors
+full frontend suite: 807 passed (71 files)
+neon-spinner consolidated tests: 15 passed
+```
+
+## QA Report
+
+✅ PASS — Wave 5 batch QA, 2 independent passes both PASS (F-1/F-3 fixed). See `.agent/reports/AE-0068.qa.md` → `.agent/reports/wave-5.qa.md`.Progress Log
+
+### 2026-06-12
+
+Consolidated spinners to atoms per 2026-06-12 alignment; Suspense boundary wired.

@@ -1,7 +1,7 @@
 ---
 name: developer-skill
-description: "Implement task details from plans following project standards. Use when the user says 'develop this task', 'implement the plan', 'work on this ticket', 'start development', or after a plan has been created. Follows SDD (Spec-Driven Development): reads specs first, implements in increments, self-verifies. Never use for code review or QA validation."
-version: 1.1.0
+description: "Implement task details from plans following project standards. Use when the user says 'develop this task', 'implement the plan', 'work on this ticket', 'start development', 'do the wave', or after a plan has been created. Follows SDD (Spec-Driven Development): reads specs first, implements in increments, self-verifies. Supports wave mode: implement a group of tickets then loop with automated external QA until convergence. Never use for code review or QA validation."
+version: 1.2.0
 disable-model-invocation: true
 ---
 
@@ -117,6 +117,27 @@ None.
 Run QA Agent for AE-####.
 ```
 
+## Wave mode (batch tickets + automated external QA loop)
+
+When given a **group of related tickets** (a "wave"), or when the user says
+"do the wave" / "complete the wave, QA, fix, re-QA until ready", run the
+automated `dev → QA → fix → re-QA` loop. Full protocol: `references/wave-loop.md`.
+
+1. **Order** — topologically sort the wave by `Blocked-by`/`Blocks` (cycle → escalate).
+2. **Implement** — run the SDD loop per ticket in dependency order; implement the
+   **whole wave before QA** so integration issues surface.
+3. **QA** — one **batch** external pass over the wave (`scripts/qa/run_external_qa.sh`),
+   findings tagged per ticket; build the prompt per `qa-agent/references/external-qa.md`.
+4. **Loop** — read `QA_VERDICT`:
+   - **FAIL** → fix blockers → regenerate research pack if files moved → full re-QA.
+     **Pause for the human on the FIRST FAIL of each wave.**
+   - **WARN** → fix actionable findings → verify-only confirmation round.
+   - **PASS** → require ≥ 2 total passes, then a confirmation round → done.
+5. **Safeguards** — MIN 2 passes, MAX 5 iterations, escalate on repeated-finding
+   fingerprint or findings-count plateau. (Thresholds in `qa-agent/config.yaml`.)
+
+For a single ticket, use the default single-ticket SDD flow below.
+
 ## Workflow
 
 ### Phase 1: Context Loading
@@ -153,6 +174,7 @@ For each acceptance criterion:
 
 ## References
 
+- `references/wave-loop.md` — Wave mode: batch dev + automated external QA loop
 - `CLAUDE.md` — Root project standards
 - `docs/decisions/` — Architecture Decision Records
 - `docs/guides/` — Development guides (testing, styling, validation)

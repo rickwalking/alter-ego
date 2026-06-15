@@ -1,6 +1,6 @@
 # AE-0041 — Magic Strings, Early Returns, Boolean Trap
 
-Status: Intake
+Status: Review
 Tier: T2
 Priority: High
 Type: Task
@@ -45,6 +45,20 @@ PR #11 review flagged 7 instances of magic strings, 6 instances of deeply nested
 - Changing function signatures beyond the boolean→enum replacement
 - Refactoring the dispatch logic itself (handled in AE-0045)
 - Touching frontend code
+
+## Modularization Alignment (2026-06-12)
+
+Wave A — architecture-neutral debt; execute first (plan rule: cleanup
+before structure change). The touched files are future
+`carousel_presentation` internals (Phase 5). Rules from the plan:
+
+- Keep extracted constants **context-local** to the carousel files; do
+  not create new global constants/helper modules that Phase 5 would
+  immediately relocate (plan "Avoid" list).
+- This ticket unblocks AE-0044/0045/0046 and must merge before any
+  Phase 4-5 file movement (plan sequencing rule).
+- No cross-layer imports may be added; AE-0078 baselines current
+  violations and new ones will be visible.
 
 ## Acceptance Criteria
 
@@ -134,11 +148,11 @@ Feature: Early Returns
 
 ## QA Checklist
 
-- [ ] Security reviewed — no auth/permission changes
-- [ ] Code quality reviewed — ruff passes without blanket ignore
-- [ ] Acceptance criteria validated
-- [ ] Edge cases tested — empty strings, None values, unknown enums
-- [ ] Orphan/unfinished code checked — no dead constants or duplicate constants
+- [x] Security reviewed — no auth/permission changes
+- [x] Code quality reviewed — ruff passes without blanket ignore
+- [x] Acceptance criteria validated
+- [x] Edge cases tested — empty strings, None values, unknown enums
+- [x] Orphan/unfinished code checked — no dead constants or duplicate constants
 
 ## Progress Log
 
@@ -148,15 +162,21 @@ Ticket created.
 
 ## Files Touched
 
-Pending.
+- domain/constants/creator_asset.py, workflow_state_fields.py (new)
+- creator_asset_validation.py, editorial_workflow_routes_response.py
+- scripts/regenerate_carousel_presentation.py, repair_workflow_malformed_drafts.py
 
 ## Test Evidence
 
-Pending.
+```
+ruff S,ERA,FBT: All checks passed
+mypy strict: Success, 0 issues (389 files)
+pytest: 1547 passed, 2 skipped
+```
 
 ## QA Report
 
-Pending.
+✅ PASS — Wave 3 batch QA, 2 independent passes both PASS. See `.agent/reports/AE-0041.qa.md` → `.agent/reports/wave-3.qa.md`.
 
 ## Decision Log
 

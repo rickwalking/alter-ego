@@ -12,6 +12,7 @@ from rag_backend.application.services.carousel.editorial_workflow_service import
     EditorialWorkflowService,
 )
 from rag_backend.application.services.carousel.editorial_workflow_types import (
+    EditorialWorkflowStartInput,
     ResumeWorkflowInput,
 )
 from rag_backend.domain.constants.carousel_workflow import (
@@ -27,6 +28,7 @@ from rag_backend.domain.constants.carousel_workflow import (
     REVIEW_ACTION_REVISE,
 )
 from rag_backend.domain.constants.persona import VOICE_MATCH_MIN_SCORE
+from rag_backend.domain.constants.workflow_validation import CONTENT_TYPE_CAROUSEL
 from rag_backend.domain.models import CarouselStatus
 from rag_backend.infrastructure.database.models.carousel import CarouselProjectModel
 
@@ -767,3 +769,80 @@ class TestGetWorkflowStateDBMerge:
 
         assert state is not None
         assert state["phase_status"] == PHASE_STATUS_AWAITING_HUMAN
+
+
+class TestEditorialWorkflowServiceLangfuseTraceMetadata:
+    """AE-0050: Langfuse trace metadata is preserved after the wave-3/4 refactors.
+
+    Scenario (see Gherkin "Langfuse Trace Preservation"): a refactored editorial
+    workflow operation with a Langfuse callback must still propagate the required
+    trace metadata fields. start_workflow wires two Langfuse surfaces:
+      - create_workflow_trace -> project_id, user_id, content_type, content metadata
+      - propagate_attributes  -> project_id, phase
+    The agent_name field is supplied at the agent/orchestrator layer (rag_agent /
+    alter_ego_agent), outside this service, so it is asserted on the trace name
+    instead of as a metadata key here.
+    """
+
+    @pytest.mark.asyncio
+    @patch(
+        "rag_backend.application.services.carousel.editorial_workflow_service.publish_workflow_sse_updates",
+        new_callable=AsyncMock,
+    )
+    @patch(
+        "rag_backend.application.services.carousel.editorial_workflow_service.emit_phase_event",
+        new_callable=AsyncMock,
+    )
+    @patch(
+        "rag_backend.application.services.carousel.editorial_workflow_service.propagate_attributes"
+    )
+    @patch(
+        "rag_backend.application.services.carousel.editorial_workflow_service.create_workflow_trace",
+        return_value=None,
+    )
+    async def test_start_workflow_propagates_langfuse_metadata(
+        self,
+        mock_create_trace: MagicMock,
+        mock_propagate: MagicMock,
+        _emit_phase: AsyncMock,
+        _publish_sse: AsyncMock,
+        service: EditorialWorkflowService,
+    ) -> None:
+        """Given a Langfuse callback, when start_workflow runs with project_id,
+        phase, user_id and content_type, then the trace and span carry them all."""
+        # propagate_attributes is a context manager; make the patch behave like one.
+        mock_propagate.return_value.__enter__ = MagicMock(return_value=None)
+        mock_propagate.return_value.__exit__ = MagicMock(return_value=False)
+
+        project_id = str(uuid4())
+        service._orchestrator.get_state = AsyncMock(return_value=None)
+        service._orchestrator.synthesize_research = AsyncMock(return_value={})
+        service._orchestrator.start = AsyncMock(
+            return_value={
+                "current_phase": PHASE_RESEARCH,
+                "phase_status": PHASE_STATUS_AWAITING_HUMAN,
+            }
+        )
+        service._events = None
+
+        await service.start_workflow(
+            project_id=project_id,
+            workflow_input=EditorialWorkflowStartInput(
+                topic="AI",
+                audience="devs",
+                brief="brief",
+                sources=[],
+                user_id="pedro-user-id",
+            ),
+        )
+
+        # create_workflow_trace metadata: project_id, user_id, content_type.
+        trace_config = mock_create_trace.call_args.kwargs["config"]
+        assert str(trace_config["project_id"]) == project_id
+        assert trace_config["user_id"] == "pedro-user-id"
+        assert trace_config["content_type"] == CONTENT_TYPE_CAROUSEL
+
+        # propagate_attributes metadata: project_id + phase.
+        span_metadata = mock_propagate.call_args.kwargs["metadata"]
+        assert span_metadata["project_id"] == project_id
+        assert span_metadata["phase"] == PHASE_RESEARCH

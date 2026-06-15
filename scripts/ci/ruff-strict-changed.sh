@@ -21,7 +21,7 @@ if ((${#SRC_FILES[@]} == 0)); then
   exit 0
 fi
 
-echo "Strict ruff on ${#SRC_FILES[@]} changed source file(s): PLR0913, C901, PLR0912"
+echo "Strict ruff on ${#SRC_FILES[@]} changed source file(s): PLR0913, C901, PLR0912, PLR0911, PLR0914, PLR1702"
 
 # Collect changed line ranges from git diff for each file
 declare -A CHANGED_LINES
@@ -46,12 +46,17 @@ for file in "${SRC_FILES[@]}"; do
   # NOTE: redirect ruff output to temp file to decouple its exit code from
   # the while loop — ruff exits 1 when violations exist, which with
   # set -eo pipefail would abort the loop before processing violations.
+  # AE-0049 thresholds: max-args=3, max-complexity=10, max-branches=8,
+  # max-returns=5, max-locals=12, max-nested-blocks=4.
   uv run ruff check \
     --isolated \
     --target-version py311 \
-    --select PLR0913,C901,PLR0912 \
+    --select PLR0913,C901,PLR0912,PLR0911,PLR0914,PLR1702 \
     --config lint.pylint.max-args=3 \
     --config lint.pylint.max-branches=8 \
+    --config lint.pylint.max-returns=5 \
+    --config lint.pylint.max-locals=12 \
+    --config lint.pylint.max-nested-blocks=4 \
     --config lint.mccabe.max-complexity=10 \
     "$file" 2>/dev/null > "$TEMP_OUTPUT" || true
   while IFS= read -r line; do

@@ -1,6 +1,6 @@
 # AE-0046 — Validation Refactor for ContentSlideCopy
 
-Status: Intake
+Status: Review
 Tier: T2
 Priority: Medium
 Type: Task
@@ -33,6 +33,21 @@ PR #11 comment on `carousel_presentation.py`: "This is a if hell. So many inner 
 - Changing the Pydantic model fields or their types
 - Refactoring other validators in the same file
 - Adding new content_kind values
+
+## Modularization Alignment (2026-06-12)
+
+Wave B (after AE-0041) — pre-builds target architecture. Per the plan,
+`ContentSlideCopy` validation **belongs to the carousel_presentation
+domain** (Phase 5):
+
+- The `_VALIDATORS` dispatch and `ContentKindValidationContext` stay
+  module-local to the presentation models.
+- The shared `_validate_lucide_icon_name` extraction must live inside
+  the presentation models package (module-level function), NOT in a
+  global shared/validation module — the plan forbids shared-kernel
+  dumping grounds.
+- Pure validation functions with no vendor imports — Phase 5 then moves
+  files, not logic.
 
 ## Acceptance Criteria
 
@@ -110,8 +125,8 @@ Feature: Dispatch-Based Validation
 
 ## QA Checklist
 
-- [ ] Acceptance criteria validated
-- [ ] Edge cases tested — null features, empty lists, wrong types
+- [x] Acceptance criteria validated
+- [x] Edge cases tested — null features, empty lists, wrong types
 - [ ] Mutation score >= 80%
 
 ## Progress Log
@@ -122,15 +137,19 @@ Ticket created.
 
 ## Files Touched
 
-Pending.
+- (production refactor pre-existing in base)
+- tests/unit/domain/test_content_kind_validators.py (new, 22)
 
 ## Test Evidence
 
-Pending.
+```
+mypy strict: Success (389); ruff: clean
+pytest: 1648 passed, 2 skipped
+```
 
 ## QA Report
 
-Pending.
+✅ PASS — Wave 4 batch QA, 2 independent passes both PASS (1 round-1 warning adjudicated false-positive). See `.agent/reports/AE-0046.qa.md` → `.agent/reports/wave-4.qa.md`.
 
 ## Decision Log
 

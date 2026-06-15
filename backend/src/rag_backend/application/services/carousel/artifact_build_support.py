@@ -219,7 +219,11 @@ def promote_staging(staging_dir: Path, version_dir: Path) -> bool:
 
 def write_manifest(path: Path, manifest: CarouselArtifactManifest) -> None:
     path.write_text(
-        json.dumps(manifest.to_payload(), indent=2, sort_keys=True),
+        json.dumps(
+            manifest.to_payload().model_dump(mode="json"),
+            indent=2,
+            sort_keys=True,
+        ),
         encoding="utf-8",
     )
 

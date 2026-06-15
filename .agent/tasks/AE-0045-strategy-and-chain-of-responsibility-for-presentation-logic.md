@@ -1,6 +1,6 @@
 # AE-0045 — Strategy and Chain-of-Responsibility for Presentation Logic
 
-Status: Intake
+Status: Review
 Tier: T2
 Priority: Medium
 Type: Task
@@ -74,6 +74,21 @@ async def build_presentation_review_updates_async(...):
 - Changing the return types of any function
 - Moving code between modules (in-function refactoring only)
 - Changing tests beyond adding new ones
+
+## Modularization Alignment (2026-06-12)
+
+Wave B (after AE-0041) — pre-builds target architecture. Per the plan,
+this work **belongs to carousel_presentation** (Phase 5):
+
+- Colocate `_BUILDERS` and `_RESOLVERS` dispatch tables with the
+  presentation code they serve; they become module-internal policy when
+  Phase 5 extracts the module.
+- `resolve_presentation_review_from_state` chain is future presentation
+  domain policy — keep it free of FastAPI/SQLAlchemy imports now so the
+  later move is a file move, not a refactor.
+- Do not generalize the dispatch into a framework: the plan defers any
+  generic `ContentFormatProducer` abstraction until a second format
+  needs it.
 
 ## Acceptance Criteria
 
@@ -160,11 +175,11 @@ Feature: Async/Sync Parity
 
 ## QA Checklist
 
-- [ ] Security reviewed — no auth changes
-- [ ] Code quality reviewed — no magic strings
-- [ ] Acceptance criteria validated
-- [ ] Edge cases tested — unknown slide_type, empty state, all resolvers None
-- [ ] Orphan/unfinished code checked — old function still callable as deprecated
+- [x] Security reviewed — no auth changes
+- [x] Code quality reviewed — no magic strings
+- [x] Acceptance criteria validated
+- [x] Edge cases tested — unknown slide_type, empty state, all resolvers None
+- [x] Orphan/unfinished code checked — old function still callable as deprecated
 
 ## Progress Log
 
@@ -174,15 +189,36 @@ Ticket created.
 
 ## Files Touched
 
-Pending.
+- (production refactor pre-existing in base)
+- tests/unit/application/test_malformed_draft_builders.py (new, 18)
+- tests/unit/application/test_presentation_review.py (resolver/parity tests)
 
 ## Test Evidence
 
-Pending.
+```
+mypy strict: Success (389); ruff: clean
+pytest: 1648 passed, 2 skipped
+```
 
 ## QA Report
 
-Pending.
+✅ PASS — Wave 4 batch QA, 2 independent passes both PASS (1 round-1 warning adjudicated false-positive). See `.agent/reports/AE-0045.qa.md` → `.agent/reports/wave-4.qa.md`.
+
+## High Risk Areas
+
+<!-- AE-0050 safeguard tagging — feeds architect-skill skeptical-review trigger -->
+
+- Risk level: **MEDIUM**
+- Reason: presentation logic change — `resolve_presentation_review_from_state`
+  refactored to Chain-of-Responsibility and the review-update builders share
+  `_build_presentation_review_common`. Drives blocking presentation validation
+  that gates content approval.
+- Affected high-risk surfaces: carousel workflow (presentation review +
+  validation gate), event emission (validation status feeds phase events),
+  artifact paths (localized slides reference rendered slide images).
+- Mitigation: public signatures unchanged (no wrapper needed); added pattern
+  test coverage; source refactor entangled in commit `59980df` (see AE-0050
+  rollback ledger).
 
 ## Decision Log
 

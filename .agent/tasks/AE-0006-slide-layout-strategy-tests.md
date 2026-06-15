@@ -1,6 +1,6 @@
 # AE-0006 — Slide Layout Strategy Tests
 
-Status: Intake
+Status: Review
 Tier: T2
 Priority: Medium
 Type: Tests
@@ -38,6 +38,19 @@ The 7 strategy implementations (intro_hero, hero_content, stat_card_grid, featur
 - Mutation testing (weeks away per CLAUDE.md)
 - E2E tests (in frontend test suite)
 - Benchmarking strategy rendering performance
+
+## Modularization Alignment (2026-06-12)
+
+Wave A — write these tests BEFORE Phase 5 moves the strategy code: the
+plan requires behavior tests before any traffic/structure change, and
+this suite is exactly that protection for the layout strategies.
+
+- Write under the current paths; the tests move with the module in
+  Phase 5 (path churn is acceptable, lost coverage is not).
+- The Gherkin feature file also closes part of the plan's known gap
+  (only five .feature files exist repo-wide).
+- Property tests should pin the strategy registry's public contract —
+  that contract becomes the module's `public.py` surface in Phase 5.
 
 ## Acceptance Criteria
 
@@ -165,11 +178,11 @@ None.
 
 ## QA Checklist
 
-- [ ] Security reviewed
-- [ ] Code quality reviewed
-- [ ] Acceptance criteria validated
-- [ ] Edge cases tested
-- [ ] Orphan/unfinished code checked
+- [x] Security reviewed
+- [x] Code quality reviewed
+- [x] Acceptance criteria validated
+- [x] Edge cases tested
+- [x] Orphan/unfinished code checked
 
 ## Progress Log
 
@@ -179,23 +192,20 @@ Ticket created.
 
 ## Files Touched
 
-Pending.
+- backend/tests/integration/test_strategy_endpoints.py (+2: 409, 200)
+  (most strategy tests pre-existed)
 
 ## Test Evidence
 
-```bash
-cd backend
-uv run pytest tests/unit/application/strategies/ -v --tb=short
-uv run pytest tests/integration/test_strategy_endpoints.py -v --tb=short
-uv run pytest tests/property/ -v --tb=short
-uv run pytest --cov=rag_backend.application.services.carousel_template.strategies
+```
+targeted strategy suite: 95 passed (+2)
+full suite: 1651 passed, 2 skipped
+coverage carousel_template.strategies: 97%
 ```
 
 ## QA Report
 
-Pending.
-
-## Decision Log
+✅ PASS — Wave 5 batch QA, 2 independent passes both PASS (F-1/F-3 fixed). See `.agent/reports/AE-0006.qa.md` → `.agent/reports/wave-5.qa.md`.Decision Log
 
 - Tests use StrategyNotFoundError from domain.protocols (not custom per-test exception)
 - Fixtures use existing `sample_project` and `sample_theme` conftest fixtures

@@ -1,6 +1,6 @@
 # AE-0008 — Wire ResearchTool URL Scraping into Editorial Workflow
 
-Status: Intake
+Status: Review
 Tier: T2
 Priority: High
 Type: Bugfix
@@ -36,6 +36,21 @@ URL extraction code was removed in commit `18607ea` during the carousel pipeline
 - Adding search_web() fallback (DDG) to the carousel workflow (out of scope)
 - Re-introducing `seed_urls` as a first-class workflow input field
 - Frontend changes
+
+## Modularization Alignment (2026-06-12)
+
+Product bugfix (not debt) — schedule freely, but wire it the
+target-architecture way so Phase 3 doesn't redo it:
+
+- Inject `ResearchTool` through `build_rag_agent()` parameters
+  (constructor injection); do NOT call `get_container()` from
+  application/service code — AE-0078 baselines those violations and new
+  ones are regressions.
+- `_scrape_url_sources()` should be a pure async helper with the tool as
+  an argument — it becomes a `ResearchProvider` port implementation in
+  the plan's port list.
+- `sanitize_web_content()` belongs with input sanitization (future
+  knowledge/conversation boundary); keep it free of agent imports.
 
 ## Acceptance Criteria
 
@@ -186,11 +201,11 @@ None.
 
 ## QA Checklist
 
-- [ ] Security reviewed
-- [ ] Code quality reviewed
-- [ ] Acceptance criteria validated
-- [ ] Edge cases tested
-- [ ] Orphan/unfinished code checked
+- [x] Security reviewed
+- [x] Code quality reviewed
+- [x] Acceptance criteria validated
+- [x] Edge cases tested
+- [x] Orphan/unfinished code checked
 
 ## Progress Log
 
@@ -200,17 +215,19 @@ Ticket created from architect research.
 
 ## Files Touched
 
-Pending.
+- backend/.../api/dependencies/agents.py (structlog graceful-degradation logging)
+  (sanitize_web_content + _scrape_url_sources + wiring + 21 tests pre-existed in base)
 
 ## Test Evidence
 
-Pending.
+```
+mypy strict: Success (389); ruff: clean
+targeted: 21 passed; full suite: 1651 passed, 2 skipped
+```
 
 ## QA Report
 
-Pending.
-
-## Decision Log
+✅ PASS — Product batch QA (Cursor), WARN→fix→confirmation PASS. See `.agent/reports/AE-0008.qa.md` → `.agent/reports/product-ae0008-ae0009.qa.md`.Decision Log
 
 Pending.
 

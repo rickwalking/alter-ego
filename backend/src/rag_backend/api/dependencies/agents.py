@@ -10,7 +10,6 @@ retriever, external services) from the container.
 
 from __future__ import annotations
 
-import logging
 import re
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -61,8 +60,9 @@ from rag_backend.infrastructure.database.conversation_repository import (
 from rag_backend.infrastructure.database.document_repository import (
     PostgresDocumentRepository,
 )
+from rag_backend.infrastructure.logging import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger()
 
 ProjectAccessVerifier = Callable[
     [CarouselProject, CarouselToolAccessContext], str | None
@@ -176,8 +176,12 @@ async def _scrape_url_sources(
 ) -> list[dict[str, str]]:
     """Scrape URL-type sources, replacing content with scraped text.
 
-    Matches sources by source_type=="url" OR by content starting with
-    http:// or https:// (handles RAG agent notes that embed URLs).
+    Intentional superset matching: a source is treated as scrapeable when
+    ``source_type == "url"`` OR when its ``content`` is a bare http(s) URL
+    matching ``_URL_PATTERN`` (anchored, no surrounding text). The second
+    branch handles RAG agent notes that embed a raw URL without setting
+    ``source_type``. Plain-text/document sources (whose ``content`` is not a
+    bare URL) are NOT scraped, even when ``research_tool`` is available.
 
     Graceful degradation: if scraping fails or research_tool is None,
     the original content (URL string) is preserved.
@@ -194,8 +198,9 @@ async def _scrape_url_sources(
         try:
             scraped = await research_tool.scrape_url(content)
             item["content"] = sanitize_web_content(scraped)
-        except Exception:
-            logger.warning("Failed to scrape URL '%s'", content)
+        except Exception as exc:
+            # Graceful degradation: keep the original URL content, log for visibility.
+            logger.warning("url_scrape_failed", url=content, error=str(exc))
     return sources
 
 

@@ -400,13 +400,14 @@ See [CI Quality Gates Guide](./ci-quality-gates.md) for workflow names, branch p
 | Dimension | CI (blocking) | CI (advisory) | Full `/qa-agent` only |
 |-----------|---------------|---------------|------------------------|
 | Lint & format | ruff, eslint | — | — |
+| Lint (changed files) | ruff `--diff` on changed files (backend), eslint changed | — | — |
 | Types | mypy, tsc | — | — |
 | Tests & coverage | pytest, vitest, diff-cover ≥75% | — | — |
 | Architecture | import-linter | — | Scope / ADR compliance |
 | Security | bandit, pip-audit, npm audit (high) | — | IDOR, authz logic |
 | Dead code | vulture | — | Orphan routes, TODO sweep |
-| Complexity (new code) | diff-scoped PLR0913/C901, eslint changed | — | — |
-| Mutation testing | — | mutmut, Stryker | Deep mutation analysis |
+| Complexity (new code) | Strict Diff (PLR0913/C901/PLR0912/PLR0911/PLR0914/PLR1702), eslint changed | — | — |
+| Mutation testing | mutmut ≥75% (backend) | Stryker (frontend) | Deep mutation analysis |
 | Acceptance criteria | — | — | Plan/spec mapping |
 
 ### Backend Quality Gates (`Backend Quality Gates` workflow)
@@ -414,16 +415,16 @@ See [CI Quality Gates Guide](./ci-quality-gates.md) for workflow names, branch p
 | Job | Tool | Enforcement |
 |-----|------|-------------|
 | backend / Lint & Format | ruff check + format | CI failure + reviewdog inline (PR) |
-| backend / Lint & Format | ruff diff check (changed files only) | CI advisory (non-blocking); will become blocking after baseline |
+| backend / Lint & Format | ruff diff check (changed files only) | **CI failure (blocking — AE-0049)** — fails if changed `.py` files contain ruff violations |
 | backend / Lint & Format | Blanket ignore guard (`grep` on `pyproject.toml`) | CI failure — blocks `"src/rag_backend/**"` in per-file-ignores |
-| backend / Strict Diff | ruff `--select PLR0913,C901,PLR0912` on changed files | CI failure |
+| backend / Strict Diff | ruff `--select PLR0913,C901,PLR0912,PLR0911,PLR0914,PLR1702` on changed lines | **CI failure (blocking)** — thresholds below |
 | backend / Type Check | mypy | CI failure |
 | backend / Architecture | import-linter | CI failure |
 | backend / Docstrings | interrogate ≥80% | CI failure |
 | backend / Security | bandit + pip-audit | CI failure |
-| backend / Test & Coverage | pytest + diff-cover ≥75% | CI failure |
+| backend / Test & Coverage | pytest + diff-cover ≥75% | CI failure (blocking) |
 | backend / Dead Code | vulture | CI failure |
-| backend / Mutation (advisory) | mutmut | Non-blocking; PR summary comment |
+| backend / Mutation (blocking ≥75%) | mutmut + `scripts/ci/mutation-score-gate.sh` | **CI failure (blocking — AE-0049)** if mutation score < 75% |
 
 ### Frontend Quality Gates (`Frontend Quality Gates` workflow)
 
@@ -467,28 +468,38 @@ See [CI Quality Gates Guide](./ci-quality-gates.md) for workflow names, branch p
 
 | Gate | Tool | Enforcement |
 |------|------|-------------|
-| Mutation tests | mutmut / stryker | CI advisory job |
-| Strict diff lint | ruff PLR0913/C901, eslint changed | CI failure on changed files |
+| Mutation tests (backend) | mutmut ≥75% | **CI failure (blocking — AE-0049)** |
+| Mutation tests (frontend) | stryker | CI advisory job |
+| Strict diff lint (backend) | ruff PLR0913/C901/PLR0912/PLR0911/PLR0914/PLR1702 on changed lines | CI failure on changed lines |
+| Strict diff lint (frontend) | eslint changed | CI failure on changed files |
 | Dead code | vulture | CI failure |
 | Architecture boundaries | import-linter | CI failure |
 
-### CI Hardening Gates (Backend)
+### CI Hardening Gates (Backend) — AE-0049
 
-| Gate | Tool | Enforcement | Description |
-|------|------|-------------|-------------|
-| Ruff blanket ignore guard | grep on `pyproject.toml` | CI failure | Blocks any `"src/rag_backend/**"` entry in `ruff.lint.per-file-ignores`. Prevents re-introduction of directory-wide ignore patterns that mask lint violations across the entire backend. |
-| diff-cover gate | diff-cover `--fail-under=75` | CI failure | Enforces ≥75% diff coverage on changed lines. Ensures new/changed code is tested. Blocking in the `backend / Test & Coverage` job. |
-| Mutation gate (advisory) | mutmut | CI advisory (non-blocking) | Mutation score thresholds: business logic ≥50% (break), ≥70% (low), ≥80% (high). Runs in the `backend / Mutation (advisory)` job. Not blocking, but PR summary comment is posted with results. |
+These four gates are **blocking** (a PR cannot merge if any fails). All are
+robust to empty diffs, the first commit on a branch, and fork PRs (the
+`git diff`/`git fetch` calls are guarded so the step skips cleanly rather than
+crashing when `origin/main` is unavailable).
+
+| Gate | Tool / Command | Threshold | Enforcement | Notes |
+|------|----------------|-----------|-------------|-------|
+| Ruff blanket ignore guard | grep on `pyproject.toml` | n/a | CI failure | Blocks any `"src/rag_backend/**"` entry in `ruff.lint.per-file-ignores`. Prevents re-introduction of directory-wide ignore patterns that mask lint violations. |
+| Ruff `--diff` (changed files) | `ruff check --diff` on `git diff --name-only origin/main...HEAD -- '*.py'` | zero new violations | CI failure (blocking) | Fast PR-only feedback: fails if changed `.py` files contain ruff violations. In the `backend / Lint & Format` job. |
+| Strict Diff | `scripts/ci/ruff-strict-changed.sh` → `ruff --select PLR0913,C901,PLR0912,PLR0911,PLR0914,PLR1702` on **changed lines only** | max-args=3, max-complexity=10, max-branches=8, max-returns=5, max-locals=12, max-nested-blocks=4 | CI failure (blocking) | In the `backend / Strict Diff` job. Violations on pre-existing untouched lines are ignored — only changed lines fail. |
+| diff-cover gate | `diff-cover coverage.xml --compare-branch=origin/main --fail-under=75` | ≥75% diff coverage | CI failure (blocking) | Enforces ≥75% coverage on changed lines. In the `backend / Test & Coverage` job. |
+| Mutation gate | `scripts/ci/mutation-score-gate.sh 75` (mutmut + `export-cicd-stats`) | mutation score ≥75% | CI failure (blocking) | Score = `killed / (killed + survived + timeout + suspicious)`. Baseline ≈80.2%. In the `backend / Mutation (blocking ≥75%)` job. Per ADR-005 the 75% floor is below the business-logic "Low" (70%) buffer applied to the whole mutated set as a starting threshold. |
 
 ### Nightly / Weekly Gates
 
-| Gate | Tool | Cadence |
-|------|------|---------|
-| Full mutation suite | mutmut / stryker | Weekly |
-| Full vulnerability scan | pip audit / npm audit | Daily (PR: high severity) |
-| Dependency freshness | pip list --outdated | Weekly |
-| Dead code sweep | vulture | Weekly |
-| Maintainability index | radon mi | Weekly |
+| Gate | Tool | Cadence | Workflow |
+|------|------|---------|----------|
+| Full mutation suite (backend) | mutmut ≥75% | Weekly (Mon 04:00 UTC) + `workflow_dispatch` | `.github/workflows/mutation-weekly.yml` (ADR-005 Phase 4) |
+| Full mutation suite (frontend) | stryker | Weekly | — |
+| Full vulnerability scan | pip audit / npm audit | Daily (PR: high severity) | — |
+| Dependency freshness | pip list --outdated | Weekly | — |
+| Dead code sweep | vulture | Weekly | — |
+| Maintainability index | radon mi | Weekly | — |
 
 ---
 

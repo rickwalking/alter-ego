@@ -1,6 +1,6 @@
 # AE-0044 — Builder Pattern for build_workflow_state_response
 
-Status: Intake
+Status: Review
 Tier: T2
 Priority: Medium
 Type: Task
@@ -34,6 +34,23 @@ PR #11 review comment: "very complex function. Let's think about the best archit
 - Changing the `EditorialWorkflowStateResponse` Pydantic model
 - Adding new fields to the response
 - Refactoring other response builder functions (handled separately)
+
+## Modularization Alignment (2026-06-12)
+
+Wave B (after AE-0041) — pre-builds target architecture. Per the plan's
+AE-0040 interaction table, this work **belongs to the editorial inbound
+HTTP adapter / response mapping** (Phase 4):
+
+- Keep the field extractors pure and colocated with the route response
+  module so Phase 4 lifts the whole unit into
+  `modules/editorial/adapters/inbound/http/`.
+- `_FIELD_MAPPING` is transport mapping, not domain logic — no imports
+  from ORM models or services inside extractors.
+- If AE-0071's glossary has landed, use its status-family names in new
+  identifiers (`phase_status` etc.); otherwise keep current names and
+  leave renames to Phase 4.
+- The deprecated old signature is removed per AE-0050's window — before
+  Phase 4 starts, so the facade never wraps a deprecated function.
 
 ## Acceptance Criteria
 
@@ -110,11 +127,11 @@ Feature: Field Descriptor Mapping
 
 ## QA Checklist
 
-- [ ] Security reviewed — no auth changes
-- [ ] Code quality reviewed — no `type: ignore`
-- [ ] Acceptance criteria validated
-- [ ] Edge cases tested — None values, type mismatches, missing keys
-- [ ] Orphan/unfinished code checked — old imports still work
+- [x] Security reviewed — no auth changes
+- [x] Code quality reviewed — no `type: ignore`
+- [x] Acceptance criteria validated
+- [x] Edge cases tested — None values, type mismatches, missing keys
+- [x] Orphan/unfinished code checked — old imports still work
 
 ## Progress Log
 
@@ -124,15 +141,35 @@ Ticket created.
 
 ## Files Touched
 
-Pending.
+- editorial_workflow_routes_response.py (builder+extractors+wrapper)
+- editorial_workflow_routes_support.py, editorial_workflow.py (call sites)
+- tests/unit/api/test_editorial_workflow_routes_response.py (new, 51 tests)
 
 ## Test Evidence
 
-Pending.
+```
+mypy strict: Success (389); ruff: clean
+pytest: 1648 passed, 2 skipped
+golden snapshot: output byte-identical pre/post
+```
 
 ## QA Report
 
-Pending.
+✅ PASS — Wave 4 batch QA, 2 independent passes both PASS (1 round-1 warning adjudicated false-positive). See `.agent/reports/AE-0044.qa.md` → `.agent/reports/wave-4.qa.md`.
+
+## High Risk Areas
+
+<!-- AE-0050 safeguard tagging — feeds architect-skill skeptical-review trigger -->
+
+- Risk level: **MEDIUM**
+- Reason: API response builder change (`build_workflow_state_response` →
+  `build_editorial_workflow_state_response`) on the editorial workflow HTTP
+  surface still consumed by the open PR #11 workflow.
+- Affected high-risk surfaces: carousel workflow (editorial state response),
+  event emission (phase progress / status fields surfaced in the response),
+  artifact paths (image assets surfaced via the sanitized state).
+- Mitigation: typed `@deprecated` wrapper `build_workflow_state_response`
+  retained for the AE-0050 migration window (see AE-0050 wrapper inventory).
 
 ## Decision Log
 

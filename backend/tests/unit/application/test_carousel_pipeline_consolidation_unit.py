@@ -9,6 +9,7 @@ from unittest.mock import AsyncMock
 from uuid import uuid4
 
 import pytest
+from structlog.testing import capture_logs
 
 from rag_backend.agents.input_sanitizer import sanitize_web_content
 from rag_backend.api.dependencies.agents import _scrape_url_sources
@@ -238,7 +239,12 @@ class TestScrapeUrlSources:
         assert result[0]["content"] == "Some pre-written text"
 
     async def test_graceful_degradation_on_failure(self) -> None:
-        """Scenario: URL scraping fails gracefully."""
+        """Scenario: URL scraping fails gracefully.
+
+        QA F-4 (AE-0008): when scrape_url raises, the original URL content is
+        retained AND a structured warning with the ``url_scrape_failed`` event
+        is emitted for observability.
+        """
         mock_tool = AsyncMock(spec=ResearchTool)
         mock_tool.scrape_url = AsyncMock(side_effect=ConnectionError("Network error"))
         sources: list[dict[str, str]] = [
@@ -248,9 +254,17 @@ class TestScrapeUrlSources:
                 "source_type": SOURCE_TYPE_URL,
             },
         ]
-        result = await _scrape_url_sources(sources, mock_tool)
+        with capture_logs() as logs:
+            result = await _scrape_url_sources(sources, mock_tool)
         mock_tool.scrape_url.assert_awaited_once()
+        # Original URL content is retained on failure.
         assert result[0]["content"] == "https://example.com/article"
+        # Graceful-degradation warning is logged with the failed URL + error.
+        warnings = [entry for entry in logs if entry["event"] == "url_scrape_failed"]
+        assert len(warnings) == 1
+        assert warnings[0]["log_level"] == "warning"
+        assert warnings[0]["url"] == "https://example.com/article"
+        assert "Network error" in warnings[0]["error"]
 
     async def test_research_tool_none_passthrough(self) -> None:
         """Scenario: ResearchTool is None falls back gracefully."""
@@ -289,3 +303,32 @@ class TestScrapeUrlSources:
         ]
         result = await _scrape_url_sources(sources, mock_tool)
         mock_tool.scrape_url.assert_not_called()
+
+    async def test_bare_url_without_source_type_is_scraped(self) -> None:
+        """Scenario: Bare URL content is scraped even without source_type=='url'.
+
+        QA F-5 (AE-0008): documents the intentional superset behavior. A source
+        whose ``content`` is a bare http(s) URL gets scraped even when its
+        ``source_type`` is not ``url`` (e.g. a RAG agent note embedding a URL),
+        while a plain-text document source is left untouched.
+        """
+        mock_tool = AsyncMock(spec=ResearchTool)
+        mock_tool.scrape_url = AsyncMock(return_value="Scraped note body")
+        sources: list[dict[str, str]] = [
+            {
+                "title": "Agent note",
+                "content": "https://example.com/embedded",
+                "source_type": "note",
+            },
+            {
+                "title": "Plain doc",
+                "content": "Just some prose, not a URL",
+                "source_type": "document",
+            },
+        ]
+        result = await _scrape_url_sources(sources, mock_tool)
+        # Superset branch: bare URL scraped despite source_type != "url".
+        mock_tool.scrape_url.assert_awaited_once_with("https://example.com/embedded")
+        assert result[0]["content"] == "Scraped note body"
+        # Plain-text document source is NOT scraped.
+        assert result[1]["content"] == "Just some prose, not a URL"

@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
+from dataclasses import dataclass
 from typing import cast
 
 from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
@@ -33,13 +34,13 @@ from rag_backend.application.services.carousel.malformed_draft_builders import (
 from rag_backend.application.services.carousel.malformed_draft_normalizer import (
     normalize_slide_drafts,
 )
-from rag_backend.application.services.carousel.workflow_state_sanitize import (
-    SanitizeWorkflowStateCommand,
-    sanitize_workflow_state_artifacts,
-)
 from rag_backend.application.services.carousel.presentation_review import (
     build_presentation_review_updates,
     serialize_translations_en,
+)
+from rag_backend.application.services.carousel.workflow_state_sanitize import (
+    SanitizeWorkflowStateCommand,
+    sanitize_workflow_state_artifacts,
 )
 from rag_backend.domain.constants.carousel import (
     SLIDE_TYPE_CONTENT,
@@ -91,57 +92,87 @@ def _extract_validation_metrics(
     return blocking, violation_count, validation
 
 
-def repair_slide_drafts(slide_drafts: list[dict[str, object]]) -> list[dict[str, object]]:
+def _resolve_image_prompt(
+    parsed: dict[str, object],
+    pt_data: dict[str, object],
+    en_data: dict[str, object],
+) -> str | None:
+    """Resolve a usable image prompt from the parsed blob or locale data."""
+    image_prompt = parsed.get(_IMAGE_PROMPT_FIELD)
+    if not isinstance(image_prompt, str):
+        image_prompt = pt_data.get(_IMAGE_PROMPT_FIELD) or en_data.get(
+            _IMAGE_PROMPT_FIELD
+        )
+    return _extract_string(image_prompt)
+
+
+@dataclass
+class _SlideRepairInput:
+    """Bundled inputs for repairing a single malformed slide."""
+
+    slide: dict[str, object]
+    parsed: dict[str, object]
+    slide_index: int
+
+
+def _polish_slide(repair_input: _SlideRepairInput) -> dict[str, object]:
+    """Repair a single malformed slide into presentation_pt/en payloads."""
+    slide = repair_input.slide
+    parsed = repair_input.parsed
+    slide_type = str(slide.get(_SLIDE_TYPE_FIELD) or SLIDE_TYPE_CONTENT)
+    pt_data = _as_mapping(parsed.get(_LANG_PT_KEY)) or {}
+    en_data = _as_mapping(parsed.get(_LANG_EN_KEY)) or {}
+    tldr_value = _extract_string(slide.get(_TLDR_STRIP_FIELD))
+    image_prompt_value = _resolve_image_prompt(parsed, pt_data, en_data)
+    presentation_pt = build_locale_presentation(
+        slide_type,
+        pt_data,
+        tldr_strip=tldr_value if slide_type == SLIDE_TYPE_INTRO else None,
+        icon_offset=0,
+    )
+    presentation_en = build_locale_presentation(slide_type, en_data, icon_offset=0)
+    updated = dict(slide)
+    updated.update({
+        _SLIDE_INDEX_FIELD: repair_input.slide_index,
+        _SLIDE_TYPE_FIELD: slide_type,
+        _TITLE_FIELD: presentation_pt.get(_HEADING_FIELD, ""),
+        _PRESENTATION_PT_FIELD: presentation_pt,
+        _PRESENTATION_EN_FIELD: presentation_en,
+        _DRAFT_TEXT_FIELD: str(presentation_pt.get(_BODY_FIELD) or ""),
+        _POLICY_VERSION_FIELD: str(
+            slide.get(_POLICY_VERSION_FIELD) or DEFAULT_PRESENTATION_POLICY_VERSION
+        ),
+    })
+    if image_prompt_value:
+        updated[_IMAGE_PROMPT_FIELD] = image_prompt_value
+    return updated
+
+
+def repair_slide_drafts(
+    slide_drafts: list[dict[str, object]],
+) -> list[dict[str, object]]:
     """Normalize malformed draft_text blobs into presentation_pt/en payloads."""
     repaired: list[dict[str, object]] = []
     for slide in slide_drafts:
         if not isinstance(slide, dict):
             continue
-        slide_type = str(slide.get(_SLIDE_TYPE_FIELD) or SLIDE_TYPE_CONTENT)
         slide_index = int(slide.get(_SLIDE_INDEX_FIELD) or len(repaired) + 1)
         parsed = _parse_draft_blob(slide.get(_DRAFT_TEXT_FIELD))
         if parsed is None:
             repaired.append(dict(slide))
             continue
-
-        pt_data = _as_mapping(parsed.get(_LANG_PT_KEY)) or {}
-        en_data = _as_mapping(parsed.get(_LANG_EN_KEY)) or {}
-        tldr_value = _extract_string(slide.get(_TLDR_STRIP_FIELD))
-        image_prompt = parsed.get(_IMAGE_PROMPT_FIELD)
-        if not isinstance(image_prompt, str):
-            image_prompt = pt_data.get(_IMAGE_PROMPT_FIELD) or en_data.get(_IMAGE_PROMPT_FIELD)
-        image_prompt_value = _extract_string(image_prompt)
-
-        presentation_pt = build_locale_presentation(
-            slide_type,
-            pt_data,
-            tldr_strip=tldr_value if slide_type == SLIDE_TYPE_INTRO else None,
-            icon_offset=0,
+        repaired.append(
+            _polish_slide(
+                _SlideRepairInput(slide=slide, parsed=parsed, slide_index=slide_index)
+            )
         )
-        presentation_en = build_locale_presentation(
-            slide_type,
-            en_data,
-            icon_offset=0,
-        )
-
-        updated = dict(slide)
-        updated.update({
-            _SLIDE_INDEX_FIELD: slide_index,
-            _SLIDE_TYPE_FIELD: slide_type,
-            _TITLE_FIELD: presentation_pt.get(_HEADING_FIELD, ""),
-            _PRESENTATION_PT_FIELD: presentation_pt,
-            _PRESENTATION_EN_FIELD: presentation_en,
-            _DRAFT_TEXT_FIELD: str(presentation_pt.get(_BODY_FIELD) or ""),
-            _POLICY_VERSION_FIELD: str(slide.get(_POLICY_VERSION_FIELD) or DEFAULT_PRESENTATION_POLICY_VERSION),
-        })
-        if image_prompt_value:
-            updated[_IMAGE_PROMPT_FIELD] = image_prompt_value
-        repaired.append(updated)
     polish_repaired_slides(repaired)
     return repaired
 
 
-def _translations_from_slides(slides: list[dict[str, object]]) -> dict[int, dict[str, object]]:
+def _translations_from_slides(
+    slides: list[dict[str, object]],
+) -> dict[int, dict[str, object]]:
     """Extract English translations from repaired slide presentations."""
     translations: dict[int, dict[str, object]] = {}
     for slide in slides:
@@ -156,10 +187,14 @@ def _translations_from_slides(slides: list[dict[str, object]]) -> dict[int, dict
     return translations
 
 
-async def repair_workflow(project_id: str, *, dry_run: bool = False) -> dict[str, object]:  # noqa: PLR0914
+async def repair_workflow(  # noqa: PLR0914
+    project_id: str, *, dry_run: bool = False
+) -> dict[str, object]:
     """Load workflow state, repair slide drafts, and update state."""
     settings = get_settings()
-    async with AsyncSqliteSaver.from_conn_string(settings.carousel_checkpoint_sqlite_path) as checkpointer:
+    async with AsyncSqliteSaver.from_conn_string(
+        settings.carousel_checkpoint_sqlite_path
+    ) as checkpointer:
         engine = CarouselWorkflowEngine(checkpointer=checkpointer)
         state = await engine.get_state(project_id)
         if state is None:
@@ -198,14 +233,18 @@ async def repair_workflow(project_id: str, *, dry_run: bool = False) -> dict[str
             policy_version=DEFAULT_PRESENTATION_POLICY_VERSION,
         )
 
-        blocking, violation_count, validation = _extract_validation_metrics(review_updates)
+        blocking, violation_count, validation = _extract_validation_metrics(
+            review_updates
+        )
 
         result = {
             _RESULT_PROJECT_ID: project_id,
             _RESULT_SLIDE_COUNT: len(repaired_drafts),
             _RESULT_BLOCKING: blocking,
             _RESULT_VIOLATION_COUNT: violation_count,
-            _RESULT_POLICY_VERSION: review_updates.get(_REVIEW_PRESENTATION_POLICY_VERSION),
+            _RESULT_POLICY_VERSION: review_updates.get(
+                _REVIEW_PRESENTATION_POLICY_VERSION
+            ),
         }
 
         if dry_run:
@@ -236,7 +275,9 @@ def _parse_args() -> argparse.Namespace:
 def main() -> int:
     """Entry point for the repair workflow script."""
     args = _parse_args()
-    result = asyncio.run(repair_workflow(str(args.project_id), dry_run=bool(args.dry_run)))
+    result = asyncio.run(
+        repair_workflow(str(args.project_id), dry_run=bool(args.dry_run))
+    )
     print(json.dumps(result, indent=2))
     if cast(bool, result.get(_RESULT_BLOCKING)):
         return 1

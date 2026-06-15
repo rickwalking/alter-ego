@@ -1,6 +1,6 @@
 # AE-0043 — Segregate Overloaded Functions
 
-Status: Intake
+Status: Review
 Tier: T2
 Priority: Medium
 Type: Task
@@ -44,6 +44,20 @@ PR #11 review flagged:
 - Changing the public API contracts (return types stay identical)
 - Architectural pattern changes (Strategy/Builder handled in AE-0044, AE-0045)
 - Performance optimization beyond deduplication
+
+## Modularization Alignment (2026-06-12)
+
+Wave A — architecture-neutral debt; execute first. Alignment:
+
+- `artifact_path_resolver.py` and `artifact_manifest.py` are future
+  `carousel_presentation` outbound/persistence adapter code (Phase 5);
+  keep extracted helpers (`_resolve_base`, `_slide_records`) module-local.
+- The `resolve_artifact_serving_paths` rename requires the AE-0050
+  deprecation wrapper (1-sprint window) so Phase 5 lifts one name, not two.
+- The update/create split in `apply_slide_drafts_to_database` previews
+  the repository-method shape the plan's UnitOfWork work expects; do not
+  add commits inside these helpers (transaction ownership stays with the
+  caller, per the plan's transaction policy).
 
 ## Acceptance Criteria
 
@@ -121,10 +135,10 @@ Feature: Path Resolver Dedup
 
 ## QA Checklist
 
-- [ ] Code quality reviewed — no nested ifs >2 depth
-- [ ] Acceptance criteria validated
-- [ ] Edge cases tested — empty slides, missing output_dir
-- [ ] Orphan/unfinished code checked — old function names still callable
+- [x] Code quality reviewed — no nested ifs >2 depth
+- [x] Acceptance criteria validated
+- [x] Edge cases tested — empty slides, missing output_dir
+- [x] Orphan/unfinished code checked — old function names still callable
 
 ## Progress Log
 
@@ -134,15 +148,20 @@ Ticket created.
 
 ## Files Touched
 
-Pending.
+- artifact_path_resolver.py (deprecation alias)
+- tests: test_artifact_path_resolver.py (new, 12 tests)
 
 ## Test Evidence
 
-Pending.
+```
+mypy strict: Success, 0 issues (389 files)
+pytest: 1547 passed, 2 skipped (+12 tests)
+coverage: artifact_manifest 96%, artifact_path_resolver 73%, editorial_distribution_persist 76%
+```
 
 ## QA Report
 
-Pending.
+✅ PASS — Wave 3 batch QA, 2 independent passes both PASS. See `.agent/reports/AE-0043.qa.md` → `.agent/reports/wave-3.qa.md`.
 
 ## Decision Log
 

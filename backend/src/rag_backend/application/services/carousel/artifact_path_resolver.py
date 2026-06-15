@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import warnings
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -23,6 +24,11 @@ from rag_backend.domain.constants.artifact_build import (
     ARTIFACT_VERSIONS_DIR,
 )
 from rag_backend.domain.models import CarouselProject
+
+_DEPRECATED_RESOLVE_MSG = (
+    "resolve_artifact_serving_paths is deprecated; "
+    "use resolve_and_reconcile_serving_paths instead."
+)
 
 
 @dataclass(frozen=True)
@@ -93,6 +99,19 @@ def resolve_and_reconcile_serving_paths(
         legacy_mode=version_root is None,
         artifact_version=project.artifact_version,
     )
+
+
+def resolve_artifact_serving_paths(
+    project: CarouselProject,
+) -> ArtifactServingPaths | None:
+    """Deprecated alias for :func:`resolve_and_reconcile_serving_paths`.
+
+    Kept callable during the AE-0050 migration window so external callers do
+    not break. New code must use ``resolve_and_reconcile_serving_paths`` to make
+    the ``reconcile_current_index`` side effect explicit.
+    """
+    warnings.warn(_DEPRECATED_RESOLVE_MSG, DeprecationWarning, stacklevel=2)
+    return resolve_and_reconcile_serving_paths(project)
 
 
 def resolve_language_dir(project: CarouselProject, language: str) -> Path | None:
@@ -176,6 +195,7 @@ def supported_languages(project: CarouselProject) -> tuple[str, ...]:
 __all__ = [
     "ArtifactServingPaths",
     "resolve_and_reconcile_serving_paths",
+    "resolve_artifact_serving_paths",
     "resolve_current_index_path",
     "resolve_hd_dir",
     "resolve_language_dir",

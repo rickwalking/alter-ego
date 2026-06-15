@@ -5,7 +5,7 @@ from __future__ import annotations
 from fastapi import Request
 
 from rag_backend.api.routes.carousels.editorial_workflow_routes_response import (
-    build_workflow_state_response,
+    build_editorial_workflow_state_response,
 )
 from rag_backend.api.routes.carousels.editorial_workflow_routes_sanitize import (
     sanitize_structured_feedback,
@@ -49,7 +49,7 @@ def build_editorial_workflow_service(request: Request) -> EditorialWorkflowServi
 
 __all__ = [
     "build_editorial_workflow_service",
-    "build_workflow_state_response",
+    "build_editorial_workflow_state_response",
     "bump_resume_lock_version",
     "ensure_resume_not_in_progress",
     "ensure_resume_reviewer_access",

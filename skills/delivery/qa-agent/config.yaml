@@ -1,0 +1,48 @@
+external_qa_reviewers:
+  - id: opencode
+    label: OpenCode (CrofAI / kimi-k2.6 or configured default)
+    command_hint: "scripts/qa/run_external_qa.sh <prompt> <out> opencode — plan (read-only) agent with repo access; clean-kill + stream health check handled by the script"
+  - id: codex
+    label: OpenAI Codex CLI
+    command_hint: "scripts/qa/run_external_qa.sh <prompt> <out> codex — read-only sandbox at repo root; subject to usage limits"
+  - id: cursor
+    label: Cursor Agent CLI
+    command_hint: "scripts/qa/run_external_qa.sh <prompt> <out> cursor — print mode; verify availability before relying on it"
+
+# Shared research pack (Phase 1.5): a dedicated read-only explorer subagent
+# builds .agent/reports/<scope>.qa-research.md ONCE; the 5 reviewers read their
+# assigned sections instead of re-exploring. See references/qa-research-pack.md.
+research_pack:
+  # Explorer model is SELECTABLE — not locked to Anthropic. Default cheap/fast;
+  # override per run if a stronger explorer is warranted.
+  model: default-fast
+  agent_type: Explore        # read-only; cannot edit the tree
+  output: ".agent/reports/<scope>.qa-research.md"
+  regenerate_if: "diff range or commit SHA changes (staleness guard)"
+
+# Verdict contract: every external QA prompt MUST require a final line
+# `QA_VERDICT: PASS|WARN|FAIL`. The orchestrator maps it to exit codes
+# 0/10/20 (2 = verdict missing, 3 = launch failed after retry). Prompts SHOULD
+# also emit a JSON findings block (verdict, findings[] with ticket+severity,
+# summary) for fingerprint/plateau detection — see references/wave-loop.md.
+
+# Wave dev->QA->fix loop convergence thresholds (developer-skill wave mode).
+wave_loop:
+  min_iterations: 2          # never trust a single QA pass (round1≈50%, round2≈25% of gains)
+  max_iterations: 5          # hard cap; past ~5-6 rounds review adds noise
+  pause_on_first_fail: true  # human checks the loop once per wave
+  escalate_on_repeat_finding: true   # same fingerprint twice -> looping can't fix it
+  escalate_on_plateau: true          # findings count not dropping between rounds
+  confirmation_round: changed_files_only  # final verify-only pass after PASS
+  qa_granularity: batch_tagged_by_ticket  # one pass over the wave, findings tagged per ticket
+
+# Loop policy: FAIL -> fix -> full re-run; WARN -> fix actionable
+# findings -> short confirmation round verifying only the fixes;
+# PASS (or confirmation PASS) -> ticket(s) to Review.
+prompt_requirements:
+  - read-only on the working tree; verification commands allowed
+  - explicit tool-call budget (10-20)
+  - on command failure: record "could not verify" and move on (one retry max)
+  - must always end with the report and the QA_VERDICT line, even if
+    dimensions are INCONCLUSIVE
+  - context section listing accepted gaps/decisions that are NOT findings

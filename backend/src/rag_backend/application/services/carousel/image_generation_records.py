@@ -45,13 +45,19 @@ async def reuse_recorded_generation(
 ) -> str | None:
     if not hasattr(repo, "get_image_generation_by_key"):
         logger.warning(
-            "Repository %s does not support get_image_generation_by_key",
-            type(repo).__name__,
+            "carousel_image_generation_lookup_unsupported",
+            repository=type(repo).__name__,
+            generation_key=prompt.generation_key,
         )
         return None
     try:
         record = await repo.get_image_generation_by_key(prompt.generation_key)
     except NotImplementedError:
+        logger.warning(
+            "carousel_image_generation_lookup_not_implemented",
+            repository=type(repo).__name__,
+            generation_key=prompt.generation_key,
+        )
         return None
     if (
         not isinstance(record, CarouselImageGeneration)

@@ -1,6 +1,6 @@
 # AE-0009 — Frontend Workflow Error Feedback & Retry
 
-Status: Intake
+Status: Review
 Tier: T2
 Priority: High
 Type: Feature
@@ -50,6 +50,23 @@ When a workflow phase fails mid-execution (phase_status: "failed"), the user see
 - Auto-retry — user must click the button (no automatic retry loop)
 - Modifying the resume/approve flow when phase_status is failed
 - Changing `isWorkflowReady()` behavior
+
+## Modularization Alignment (2026-06-12)
+
+Product feature (not debt) — schedule freely, with two compatibility
+rules from the modularization plan:
+
+- `error_message` on the workflow state response must be **additive and
+  optional** — response-schema stability is a standing migration
+  invariant, and AE-0076 freezes SSE event names (additive payload
+  fields are allowed; renames are not).
+- The `phase_status` type tightening should use the glossary's status
+  families once AE-0071 lands (`phase_status` vs `build_status` vs
+  `review_status` vs `publication_status`); if this ships first, keep
+  current literals and note the follow-up.
+- Retry semantics must be idempotent (duplicate retry clicks → one
+  restart): this previews the plan's concurrency contract (AE-0073) —
+  reference it in the implementation.
 
 ## Acceptance Criteria
 
@@ -226,11 +243,11 @@ None.
 
 ## QA Checklist
 
-- [ ] Security reviewed
-- [ ] Code quality reviewed
-- [ ] Acceptance criteria validated
-- [ ] Edge cases tested
-- [ ] Orphan/unfinished code checked
+- [x] Security reviewed
+- [x] Code quality reviewed
+- [x] Acceptance criteria validated
+- [x] Edge cases tested
+- [x] Orphan/unfinished code checked
 
 ## Progress Log
 
@@ -240,17 +257,20 @@ Ticket created.
 
 ## Files Touched
 
-Pending.
+- backend: editorial_workflow_routes_response.py, workflow_state_fields.py, +8 builder tests
+- frontend: app/dashboard/create/[id]/page.tsx, features/blog/types-ai.ts, +2 test files
+  (failed-card/publish/sidebar/i18n/hook pre-existed in base)
 
 ## Test Evidence
 
-Pending.
+```
+frontend: typecheck clean, lint clean, 816 passed (73 files)
+backend: mypy Success (389), ruff clean, 1659 passed, 2 skipped
+```
 
 ## QA Report
 
-Pending.
-
-## Decision Log
+✅ PASS — Product batch QA (Cursor), WARN→fix→confirmation PASS. See `.agent/reports/AE-0009.qa.md` → `.agent/reports/product-ae0008-ae0009.qa.md`.Decision Log
 
 Pending.
 

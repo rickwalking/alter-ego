@@ -204,8 +204,8 @@ def _validate_manifest(project: CarouselProject) -> list[str]:
         return [ERR_ARTIFACT_MANIFEST_INVALID]
     if not isinstance(payload, dict):
         return [ERR_ARTIFACT_MANIFEST_INVALID]
-    typed_payload: CarouselArtifactManifestPayload = payload  # type: ignore[assignment]
     try:
+        typed_payload = CarouselArtifactManifestPayload.model_validate(payload)
         manifest = manifest_from_payload(typed_payload)
     except (KeyError, TypeError, ValueError):
         return [ERR_ARTIFACT_MANIFEST_INVALID]
