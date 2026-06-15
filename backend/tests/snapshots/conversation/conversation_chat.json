@@ -1,0 +1,19 @@
+{
+  "body": {
+    "content": "",
+    "conversation_id": "<uuid>",
+    "sources": [
+      {
+        "content": "fixture",
+        "document_id": "<uuid>",
+        "document_title": "Fixture Source",
+        "score": 0.5
+      }
+    ]
+  },
+  "cookies": {},
+  "headers": {
+    "x-agent-origin": "alter-ego"
+  },
+  "status_code": 200
+}

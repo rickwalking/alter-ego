@@ -1,0 +1,8 @@
+{
+  "body": {
+    "detail": "Not authenticated"
+  },
+  "cookies": {},
+  "headers": {},
+  "status_code": 401
+}

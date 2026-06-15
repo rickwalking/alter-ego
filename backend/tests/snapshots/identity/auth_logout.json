@@ -1,0 +1,14 @@
+{
+  "body": null,
+  "cookies": {
+    "access_token": {
+      "httponly": true,
+      "max-age": "0",
+      "path": "/",
+      "samesite": "strict",
+      "value": "<jwt>"
+    }
+  },
+  "headers": {},
+  "status_code": 204
+}

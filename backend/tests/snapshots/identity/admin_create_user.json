@@ -1,0 +1,10 @@
+{
+  "body": {
+    "email": "snap-create@integration.example.com",
+    "id": "<uuid>",
+    "temp_password": "<temp-password>"
+  },
+  "cookies": {},
+  "headers": {},
+  "status_code": 201
+}

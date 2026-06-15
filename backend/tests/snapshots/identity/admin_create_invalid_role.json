@@ -1,0 +1,8 @@
+{
+  "body": {
+    "detail": "Invalid role: wizard. Must be one of ['admin', 'editor']"
+  },
+  "cookies": {},
+  "headers": {},
+  "status_code": 422
+}

@@ -1,6 +1,6 @@
 # AE-0097 — Identity + Conversation Gherkin safety nets + response/SSE snapshots
 
-Status: Ready
+Status: Dev Complete
 Tier: T2
 Priority: High
 Type: Tests
@@ -113,9 +113,11 @@ Feature: Identity/Conversation safety net (representative)
 
 Ticket created by planner (Phase 3 breakdown).
 
+Dev Complete (Wave A). Implemented byte-identical safety net: 46 tests green (HTTP+cookie+JWT byte-identical snapshots; SSE asserted via deterministic mock agent — event types/order + id:/data: framing + Last-Event-ID, keep-alive ignored). No src/ changed. Gate spine 14 PASS/0 FAIL/3 SKIP(DB→CI), integrity 0 blockers, mypy/lint-imports green.
+
 ## Files Touched
 
-Pending.
+backend/tests/integration/test_identity_conversation_safety_net.py, tests/snapshots/identity/*, tests/snapshots/conversation/*, tests/features/{auth,admin,conversations}.feature
 
 ## Test Evidence
 

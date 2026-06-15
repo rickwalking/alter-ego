@@ -1,0 +1,8 @@
+{
+  "body": {
+    "detail": "Invalid email or password"
+  },
+  "cookies": {},
+  "headers": {},
+  "status_code": 401
+}

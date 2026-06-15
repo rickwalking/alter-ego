@@ -1,0 +1,17 @@
+{
+  "body": {
+    "access_token": "<temp-password>",
+    "token_type": "bearer"
+  },
+  "cookies": {
+    "access_token": {
+      "httponly": true,
+      "max-age": "3600",
+      "path": "/",
+      "samesite": "strict",
+      "value": "<jwt>"
+    }
+  },
+  "headers": {},
+  "status_code": 200
+}

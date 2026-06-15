@@ -1,0 +1,11 @@
+{
+  "body": {
+    "email": "id-admin@integration.example.com",
+    "full_name": "Id-Admin",
+    "id": "<uuid>",
+    "role": "admin"
+  },
+  "cookies": {},
+  "headers": {},
+  "status_code": 200
+}
