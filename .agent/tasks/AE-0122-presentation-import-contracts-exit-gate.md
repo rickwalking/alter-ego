@@ -1,6 +1,6 @@
 # AE-0122 — Presentation import contracts + exit gate + baseline ratchet + docs
 
-Status: Ready
+Status: Dev Complete
 Tier: T2
 Priority: High
 Type: Task
@@ -101,9 +101,11 @@ Not applicable — CI/docs deliverable; falsifiability demonstrated by a reverte
 
 Ticket created by planner (Phase 5 breakdown).
 
+Dev Complete (Wave E). 3 presentation contracts (isolation/public-facade/no-editorial; zero ignores; violations demonstrated+reverted); baseline ratcheted api->infra 81→79 + agents->application 20→19; module-conventions §12. lint-imports 19/0, --check PASS, mypy 499, integrity 0 blockers.
+
 ## Files Touched
 
-Pending.
+scripts/metrics/import_baseline.py (presentation contracts + acyclic no-editorial contract + baseline api->infra 81→79/agents->application 20→19), backend/.importlinter (regenerated, 19 contracts), docs/architecture/module-conventions.md (§12)
 
 ## Test Evidence
 

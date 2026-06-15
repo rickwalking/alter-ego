@@ -41,11 +41,14 @@ BASELINE_COMMIT = "716dba5"
 BASELINE_PAIR_CEILING: dict[str, tuple[int, int]] = {
     "application -> infrastructure": (63, 0),
     "application -> agents": (23, 0),
-    "agents -> application": (20, 2),
+    # Ratcheted down 20 -> 19 by AE-0121 (carousel_workflow_nodes review-edits moved
+    # behind the presentation facade port — direct presentation_review_edits import removed).
+    "agents -> application": (19, 2),
     # Ratcheted down 98 -> 82 by AE-0099/0101/0102 (auth/admin/conversation/
-    # chat-stream routes moved behind identity/conversation facades) and 82 -> 81
-    # by AE-0110 (editorial workflow routes moved behind the editorial facade).
-    "api -> infrastructure": (81, 0),
+    # chat-stream routes moved behind identity/conversation facades), 82 -> 81 by
+    # AE-0110 (editorial workflow routes), and 81 -> 79 by AE-0120 (presentation
+    # routes moved behind the presentation facade).
+    "api -> infrastructure": (79, 0),
 }
 # Non-import categories Import Linter cannot express.
 # Ratcheted down 26 -> 14 by Phase 3 (AE-0099/0101/0102 resolve user/conversation
@@ -405,15 +408,16 @@ def render_importlinter(ignores: dict[str, list[tuple[str, str]]] | None = None)
     )
 
     # Phase 3 exit gate (AE-0103) — identity + conversation; Phase 4 exit gate
-    # (AE-0112) — editorial. Each mirrors the proven Phase-2 knowledge pair above.
-    # All are currently clean (AE-0098..0111): application/domain layers are
-    # framework/vendor/container/Postgres-free and every cross-module caller goes
-    # through the facade root, so no contract needs an ignore_imports block — any
-    # NEW such edge breaks CI. The editorial ACL (editorial/infrastructure) is the
-    # only editorial code importing the carousel ORM; the isolation contract scopes
-    # to editorial.application/domain, so the ACL is intentionally not a source.
-    # See docs/architecture/module-conventions.md §7a / §9a / §11.
-    for module in ("identity", "conversation", "editorial"):
+    # (AE-0112) — editorial; Phase 5 exit gate (AE-0122) — presentation. Each
+    # mirrors the proven Phase-2 knowledge pair above. All are currently clean
+    # (AE-0098..0121): application/domain layers are framework/vendor/container/
+    # Postgres-free and every cross-module caller goes through the facade root, so
+    # no contract needs an ignore_imports block — any NEW such edge breaks CI. The
+    # editorial/presentation ACLs (in each module's infrastructure) are the only
+    # module code importing the carousel/slide ORM; the isolation contract scopes
+    # to <module>.application/domain, so the ACL is intentionally not a source.
+    # See docs/architecture/module-conventions.md §7a / §9a / §11 / §12.
+    for module in ("identity", "conversation", "editorial", "presentation"):
         # Contract A — application/domain isolation: inner layers must not import
         # frameworks (sqlalchemy/fastapi), the global DI container, or ANY
         # infrastructure (which is where the concrete Postgres repositories live)
@@ -464,6 +468,27 @@ def render_importlinter(ignores: dict[str, list[tuple[str, str]]] | None = None)
             f"    rag_backend.modules.{module}.bootstrap\n"
             f"    rag_backend.modules.{module}.constants"
         )
+
+    # Phase 5 acyclic-direction contract (AE-0122): the presentation module is
+    # invoked BY editorial (editorial -> presentation via the facade), so
+    # presentation MUST NOT import the editorial module. Locks the dependency
+    # direction and prevents a module-level cycle (AE-0121 introduced the
+    # editorial->presentation port + the presentation->editorial callback port,
+    # the callback Protocol owned by presentation).
+    out.append(
+        "\n# Contract: presentation must not import the editorial module "
+        "(editorial -> presentation only)\n"
+        "# AE-0122 — locks the acyclic module direction.\n"
+        "[importlinter:contract:presentation-no-editorial]\n"
+        "name = presentation must not import editorial (editorial -> presentation only)\n"
+        "type = forbidden\n"
+        "allow_indirect_imports = true\n"
+        "unmatched_ignore_imports_alerting = none\n"
+        "source_modules =\n"
+        "    rag_backend.modules.presentation\n"
+        "forbidden_modules =\n"
+        "    rag_backend.modules.editorial"
+    )
 
     # Generated forbidden contracts (exact baseline exception lists, no wildcards).
     for cid, cname, _key, source, targets in _FORBIDDEN_CONTRACTS:
