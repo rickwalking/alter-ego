@@ -1,6 +1,6 @@
 # AE-0121 — Artifact build/export/design behind presentation contracts; editorial→presentation port; ContentFormatProducer
 
-Status: Ready
+Status: Review
 Tier: T2
 Priority: High
 Type: Task
@@ -103,9 +103,11 @@ Not applicable — behavior-preserving extraction; verified by the AE-0116 safet
 
 Ticket created by planner (Phase 5 breakdown).
 
+Dev Complete (Wave D). Artifact/export/design + policy/validation/review behind presentation contracts; editorial invokes presentation via facade (acyclic); phase_progress→callback port; ContentFormatProducer; CAS+checkpoints preserved. Both safety nets 40/40 diff=0; mypy 499, lint-imports 16/0, agents->application 20→19, check-integrity 0 blockers, 1126 regression tests pass.
+
 ## Files Touched
 
-Pending.
+modules/presentation/domain/{contracts,ports}.py, modules/presentation/infrastructure/editorial_workflow_ports.py (new), modules/presentation/{public,__init__,infrastructure/__init__}.py, application/services/carousel/{editorial_finalize,editorial_visual_pipeline,editorial_progress_reporter}.py, application/services/carousel/nodes/images.py, agents/carousel_workflow_nodes.py, tests (presentation ports + finalize + phase5_parallel)
 
 ## Test Evidence
 
@@ -113,7 +115,7 @@ Pending.
 
 ## QA Report
 
-Pending.
+Phase 5 Wave D QA — converged PASS in 2 independent rounds (0 findings). See `.agent/reports/phase-5-wave-d.qa.md`.
 
 ## Decision Log
 
