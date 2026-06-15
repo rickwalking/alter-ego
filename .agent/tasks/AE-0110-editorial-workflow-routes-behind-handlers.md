@@ -1,6 +1,6 @@
 # AE-0110 — Workflow start/state/resume routes behind editorial handlers (byte-identical API + SSE)
 
-Status: Dev Complete
+Status: Review
 Tier: T2
 Priority: High
 Type: Task
@@ -114,7 +114,7 @@ Pending.
 
 ## QA Report
 
-Pending.
+Phase 4 Wave C QA — round 1 caught a stray # pragma (fixed: removed + guard tested); re-QA + confirmation both PASS (0 findings). See `.agent/reports/phase-4-wave-c.qa.md`.
 
 ## Decision Log
 
