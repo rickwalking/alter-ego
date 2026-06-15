@@ -1,6 +1,6 @@
 # AE-0104 — Phase 4 epic: EditorialProject facade over CarouselProject
 
-Status: Ready
+Status: Review
 Tier: T3
 Priority: High
 Type: Epic
@@ -90,6 +90,8 @@ Not applicable — epic tracker; behavior verified by child tickets (esp. the AE
 3. Wave C: AE-0110 (gate on AE-0041/0044/0045/0046 merge).
 4. Wave D: AE-0111.
 5. Wave E: AE-0112.
+
+Epic complete — all children AE-0105..0113 implemented, QA-PASSED (2 rounds/wave), in Review. Editorial workflow slice extracted behind facade + ACL; byte-identical (safety net 19/19); single write owner + Mapped[] typing (no overrides); exit gate CI-enforced (16 import contracts, baseline ratcheted api->infra 98→81, get_container 26→14); ADR-0009 deferred evidence (AE-0113) delivered. Awaiting Phase 4 PR merge.
 
 ## QA Checklist
 

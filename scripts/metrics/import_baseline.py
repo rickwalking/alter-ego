@@ -43,9 +43,9 @@ BASELINE_PAIR_CEILING: dict[str, tuple[int, int]] = {
     "application -> agents": (23, 0),
     "agents -> application": (20, 2),
     # Ratcheted down 98 -> 82 by AE-0099/0101/0102 (auth/admin/conversation/
-    # chat-stream routes moved behind identity/conversation facades; per-edge
-    # infra imports removed).
-    "api -> infrastructure": (82, 0),
+    # chat-stream routes moved behind identity/conversation facades) and 82 -> 81
+    # by AE-0110 (editorial workflow routes moved behind the editorial facade).
+    "api -> infrastructure": (81, 0),
 }
 # Non-import categories Import Linter cannot express.
 # Ratcheted down 26 -> 14 by Phase 3 (AE-0099/0101/0102 resolve user/conversation
@@ -404,13 +404,16 @@ def render_importlinter(ignores: dict[str, list[tuple[str, str]]] | None = None)
         "rag_backend.modules.knowledge.domain.commands"
     )
 
-    # Phase 3 exit gate (AE-0103) — identity + conversation, mirroring the
-    # proven Phase-2 knowledge pair above. Both modules are currently clean
-    # (AE-0098..0102): application/domain layers are framework/vendor/container/
-    # Postgres-free and every cross-module caller goes through the facade root,
-    # so neither contract needs an ignore_imports block — any NEW such edge
-    # breaks CI. See docs/architecture/module-conventions.md §7a / §9a.
-    for module in ("identity", "conversation"):
+    # Phase 3 exit gate (AE-0103) — identity + conversation; Phase 4 exit gate
+    # (AE-0112) — editorial. Each mirrors the proven Phase-2 knowledge pair above.
+    # All are currently clean (AE-0098..0111): application/domain layers are
+    # framework/vendor/container/Postgres-free and every cross-module caller goes
+    # through the facade root, so no contract needs an ignore_imports block — any
+    # NEW such edge breaks CI. The editorial ACL (editorial/infrastructure) is the
+    # only editorial code importing the carousel ORM; the isolation contract scopes
+    # to editorial.application/domain, so the ACL is intentionally not a source.
+    # See docs/architecture/module-conventions.md §7a / §9a / §11.
+    for module in ("identity", "conversation", "editorial"):
         # Contract A — application/domain isolation: inner layers must not import
         # frameworks (sqlalchemy/fastapi), the global DI container, or ANY
         # infrastructure (which is where the concrete Postgres repositories live)

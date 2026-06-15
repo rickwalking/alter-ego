@@ -174,6 +174,44 @@ forbidden_modules =
     rag_backend.modules.conversation.bootstrap
     rag_backend.modules.conversation.constants
 
+# Contract: Editorial module application/domain exit-gate (AE-0103)
+# The editorial inner layers must stay free of frameworks, the global
+# container, and concrete infrastructure (incl. Postgres repos).
+# Currently clean — no ignore_imports; any NEW such import breaks CI.
+[importlinter:contract:editorial-application-isolation]
+name = Editorial application/domain must not import frameworks, the global container, or infrastructure
+type = forbidden
+allow_indirect_imports = true
+unmatched_ignore_imports_alerting = none
+source_modules =
+    rag_backend.modules.editorial.application
+    rag_backend.modules.editorial.domain
+forbidden_modules =
+    sqlalchemy
+    fastapi
+    rag_backend.infrastructure
+
+# Contract: editorial internals are private (import via the facade only)
+# AE-0103 — mirrors module-conventions §7a; the proven Phase-2 pattern.
+[importlinter:contract:editorial-public-facade]
+name = editorial internals are private (import via the facade only)
+type = forbidden
+allow_indirect_imports = true
+unmatched_ignore_imports_alerting = none
+source_modules =
+    rag_backend.api
+    rag_backend.agents
+    rag_backend.application
+    rag_backend.domain
+    rag_backend.infrastructure
+forbidden_modules =
+    rag_backend.modules.editorial.domain
+    rag_backend.modules.editorial.application
+    rag_backend.modules.editorial.infrastructure
+    rag_backend.modules.editorial.api
+    rag_backend.modules.editorial.bootstrap
+    rag_backend.modules.editorial.constants
+
 # Contract: Application layer must not depend on infrastructure (grandfathered baseline only)
 # ignore_imports below = generated AE-0082 baseline exception list
 # (Import Linter's own direct-edge view; any NEW edge breaks CI).
@@ -365,7 +403,6 @@ ignore_imports =
     rag_backend.api.routes.carousels.deps -> rag_backend.infrastructure.container
     rag_backend.api.routes.carousels.deps -> rag_backend.infrastructure.database.carousel_repository
     rag_backend.api.routes.carousels.deps -> rag_backend.infrastructure.database.config
-    rag_backend.api.routes.carousels.editorial_workflow -> rag_backend.infrastructure.database.models.carousel
     rag_backend.api.routes.carousels.editorial_workflow_routes_support -> rag_backend.infrastructure.container
     rag_backend.api.routes.carousels.editorial_workflow_routes_validate -> rag_backend.infrastructure.database.models
     rag_backend.api.routes.carousels.editorial_workflow_routes_validate -> rag_backend.infrastructure.database.models.carousel

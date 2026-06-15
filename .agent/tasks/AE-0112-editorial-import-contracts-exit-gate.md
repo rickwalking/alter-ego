@@ -1,6 +1,6 @@
 # AE-0112 — Editorial import contracts + exit gate + baseline ratchet + checkpoint-drain rule
 
-Status: Ready
+Status: Review
 Tier: T2
 Priority: High
 Type: Task
@@ -101,9 +101,11 @@ Not applicable — CI/docs deliverable; falsifiability demonstrated by a reverte
 
 Ticket created by planner (Phase 4 breakdown).
 
+Dev Complete (Wave E). editorial-application-isolation + editorial-public-facade contracts (zero ignores; violations demonstrated+reverted); baseline ratcheted down api->infra 82→81; module-conventions §11 + checkpoint-drain rule. lint-imports 16/0, --check PASS, mypy 480, integrity 0 blockers.
+
 ## Files Touched
 
-Pending.
+scripts/metrics/import_baseline.py (editorial contracts + api->infra baseline 82→81), backend/.importlinter (regenerated, 16 contracts), docs/architecture/module-conventions.md (§11)
 
 ## Test Evidence
 
@@ -111,7 +113,7 @@ Pending.
 
 ## QA Report
 
-Pending.
+Phase 4 Wave E / exit-gate QA — converged PASS in 2 independent rounds (round 2 executed the inject+revert falsifiability check; 0 findings). See `.agent/reports/phase-4-wave-e.qa.md`.
 
 ## Decision Log
 
