@@ -1,6 +1,6 @@
 # AE-0106 — Carousel workflow Gherkin safety net + API/SSE byte-identical snapshots
 
-Status: Ready
+Status: Dev Complete
 Tier: T2
 Priority: High
 Type: Tests
@@ -116,9 +116,11 @@ Feature: Carousel workflow safety net (representative)
 
 Ticket created by planner (Phase 4 breakdown).
 
+Dev Complete (Wave A). Carousel workflow byte-identical safety net (tests-only, no src/): 19 tests. State/start/resume true byte-identical snapshots (volatile normalized, artifact URL fields incl.); SSE via deterministic mock asserting event types/order + id:/data: framing + keep-alive + Last-Event-ID (falsifiable); DEBUG pinned for local/CI determinism; monkeypatch seam on the module-level workflow-service builder. Wave A combined 47 passed; mypy 474, lint-imports 14/0, integrity 0 blockers.
+
 ## Files Touched
 
-Pending.
+tests/integration/test_carousel_workflow_safety_net.py, tests/snapshots/editorial/*, tests/features/carousel_editorial_workflow_safety_net.feature
 
 ## Test Evidence
 

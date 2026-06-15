@@ -1,0 +1,12 @@
+{
+  "body": {
+    "accepted": true,
+    "current_phase": "content",
+    "lock_version": 2,
+    "phase_status": "in_progress",
+    "project_id": "<uuid>"
+  },
+  "cookies": {},
+  "headers": {},
+  "status_code": 202
+}
