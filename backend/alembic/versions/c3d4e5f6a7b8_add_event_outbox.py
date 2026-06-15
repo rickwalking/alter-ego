@@ -47,6 +47,7 @@ def upgrade() -> None:
         sa.Column("version", sa.Integer(), nullable=False),
         sa.Column("payload", JSON(), nullable=False),
         sa.Column("metadata", JSON(), nullable=False),
+        sa.Column("event_timestamp", sa.String(length=64), nullable=False),
         sa.Column(
             "created_at",
             sa.DateTime(timezone=True),
@@ -54,7 +55,9 @@ def upgrade() -> None:
             nullable=False,
         ),
         sa.Column("published_at", sa.DateTime(timezone=True), nullable=True),
-        sa.Column("attempts", sa.Integer(), nullable=False),
+        sa.Column(
+            "attempts", sa.Integer(), nullable=False, server_default="0"
+        ),
         sa.UniqueConstraint("event_id"),
     )
     op.create_index("idx_outbox_unpublished", _TABLE, ["published_at"])

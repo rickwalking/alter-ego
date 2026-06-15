@@ -48,15 +48,16 @@ def outbox_stream_event(row: EventOutboxModel) -> dict[str, object]:
     """Rebuild the byte-identical ``stream_event`` payload from an outbox row.
 
     Mirrors the dict ``WorkflowEventService.emit`` stored, so the relay publishes
-    exactly what the legacy after-commit path published.
+    exactly what the legacy after-commit path published. The ``timestamp`` is the
+    verbatim ``event_timestamp`` string captured at emit (tz-aware, dialect-proof),
+    not a re-serialization of the DB ``created_at`` (which SQLite returns naive).
     """
-    timestamp = row.created_at.isoformat() if row.created_at is not None else ""
     return {
         EVENT_FIELD_EVENT_ID: row.event_id,
         EVENT_FIELD_EVENT_TYPE: row.event_type,
         EVENT_FIELD_AGGREGATE_ID: row.aggregate_id,
         EVENT_FIELD_AGGREGATE_TYPE: row.aggregate_type,
-        EVENT_FIELD_TIMESTAMP: timestamp,
+        EVENT_FIELD_TIMESTAMP: row.event_timestamp,
         EVENT_FIELD_VERSION: row.version,
         EVENT_FIELD_PAYLOAD: row.payload,
         EVENT_FIELD_METADATA: row.metadata_json,
@@ -101,11 +102,16 @@ class OutboxRelay:
     async def _unpublished_rows(
         db: AsyncSession, batch_size: int
     ) -> list[EventOutboxModel]:
+        # FOR UPDATE SKIP LOCKED claims each unpublished row so concurrent relay
+        # passes (e.g. overlapping after-commit drains) never select the same row
+        # and double-publish before published_at commits. SQLAlchemy renders no
+        # locking clause on SQLite (tests), where it is a harmless no-op.
         result = await db.execute(
             select(EventOutboxModel)
             .where(EventOutboxModel.published_at.is_(None))
             .order_by(EventOutboxModel.created_at)
             .limit(batch_size)
+            .with_for_update(skip_locked=True)
         )
         return list(result.scalars().all())
 

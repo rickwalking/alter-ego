@@ -196,7 +196,10 @@ async def test_relayed_payload_is_identical(db_session: AsyncSession) -> None:
     """The relayed event has the exact field set + values emit produced."""
     event_id = await _emit(db_session)
     rows = await _all_outbox(db_session)
-    expected_timestamp = rows[0].created_at.isoformat()
+    expected_timestamp = rows[0].event_timestamp
+    # Parity with the legacy path: tz-aware ISO string (datetime.now(UTC).isoformat()),
+    # dialect-proof — SQLite would strip the offset from a created_at round-trip.
+    assert expected_timestamp.endswith("+00:00")
 
     await OutboxRelay(MemoryEventPublisher()).run_once(db_session)
 
@@ -231,4 +234,4 @@ async def test_outbox_stream_event_round_trip(db_session: AsyncSession) -> None:
     rebuilt = outbox_stream_event(row)
     assert rebuilt[EVENT_FIELD_EVENT_ID] == event_id
     assert rebuilt[EVENT_FIELD_PAYLOAD] == _PAYLOAD
-    assert rebuilt[EVENT_FIELD_TIMESTAMP] == row.created_at.isoformat()
+    assert rebuilt[EVENT_FIELD_TIMESTAMP] == row.event_timestamp

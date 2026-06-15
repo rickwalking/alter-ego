@@ -23,7 +23,10 @@ from typing import TYPE_CHECKING
 
 from rag_backend.domain.protocols.event_publisher import EventPublisherProtocol
 from rag_backend.infrastructure.database.models.event_outbox import EventOutboxModel
-from rag_backend.infrastructure.events.outbox_relay import OutboxRelay
+from rag_backend.infrastructure.events.outbox_relay import (
+    _DEFAULT_BATCH_SIZE,
+    OutboxRelay,
+)
 from rag_backend.infrastructure.logging import get_logger
 
 if TYPE_CHECKING:
@@ -53,9 +56,12 @@ def build_event_records(
 ) -> tuple[WorkflowAuditLogModel, EventOutboxModel]:
     """Build the audit + outbox ORM rows for one emitted event.
 
-    Both rows carry the same ``event_id``; the outbox ``created_at`` is pinned to
-    ``emitted_at`` so the relay reproduces the byte-identical ``stream_event``
-    timestamp the legacy after-commit publisher emitted.
+    Both rows carry the same ``event_id``. The outbox ``event_timestamp`` stores
+    the exact ``emitted_at.isoformat()`` string (tz-aware, ``+00:00``) so the relay
+    republishes the byte-identical ``stream_event`` timestamp the legacy
+    after-commit publisher emitted — independent of DB dialect (SQLite would
+    otherwise strip tzinfo from a ``DateTime`` round-trip). ``created_at`` remains
+    the DB-side ordering timestamp.
     """
     from rag_backend.infrastructure.database.models.workflow_audit_log import (
         WorkflowAuditLogModel,
@@ -78,6 +84,7 @@ def build_event_records(
         version=record.version,
         payload=record.payload,
         metadata_json=record.metadata,
+        event_timestamp=record.emitted_at.isoformat(),
         created_at=record.emitted_at,
         attempts=0,
     )
@@ -85,18 +92,28 @@ def build_event_records(
 
 
 async def relay_after_commit(publisher: EventPublisherProtocol) -> None:
-    """Run one relay pass against a fresh session (the sole Redis publisher).
+    """Drain the outbox against a fresh session (the sole Redis publisher).
 
-    Failures are logged, never raised — unpublished rows are retried on the next
-    relay pass (at-least-once).
+    Runs relay batches until the backlog is exhausted — a backlog larger than one
+    batch (e.g. >100 stuck rows) is fully drained here instead of waiting for the
+    next ``emit`` to trigger another pass. The loop stops when a batch is not full
+    (nothing left) or makes no forward progress (every row failed), so a persistent
+    transport outage cannot spin: those rows are retried on the next emit's drain.
+    Failures are logged, never raised — unpublished rows are retried later
+    (at-least-once).
     """
     from rag_backend.infrastructure.database.config import get_session_maker
 
     session_maker = get_session_maker()
+    relay = OutboxRelay(publisher)
     try:
         async with session_maker() as session:
-            await OutboxRelay(publisher).run_once(session)
-            await session.commit()
+            while True:
+                result = await relay.run_once(session)
+                await session.commit()
+                processed = result.published + result.failed
+                if processed < _DEFAULT_BATCH_SIZE or result.published == 0:
+                    break
     except Exception as exc:  # transport/session failure must not propagate
         logger.warning("outbox_relay_pass_failed", error=str(exc))
 

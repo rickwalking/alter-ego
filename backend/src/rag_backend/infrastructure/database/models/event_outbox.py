@@ -10,7 +10,9 @@ published. ``event_id`` is stable, so re-processing is idempotent / at-least-onc
 (consumers dedupe).
 
 The stored ``payload`` is the byte-identical ``stream_event`` dict the legacy
-after-commit publisher emitted, so consumers observe no change.
+after-commit publisher emitted, so consumers observe no change. The event
+``timestamp`` is stored verbatim as ``event_timestamp`` (the exact ISO string the
+legacy path produced) so the relay reproduces it byte-identically across dialects.
 """
 
 import uuid
@@ -34,11 +36,17 @@ class EventOutboxModel(Base):
     version = Column(Integer, nullable=False, default=1)
     payload = Column(JSON, nullable=False, default=dict)
     metadata_json = Column("metadata", JSON, nullable=False, default=dict)
+    # The exact ISO-8601 timestamp string the legacy after-commit publisher put in
+    # the stream_event ``timestamp`` field (``datetime.now(UTC).isoformat()``,
+    # tz-aware with a ``+00:00`` offset). Stored verbatim at emit time so the relay
+    # republishes a byte-identical payload regardless of DB dialect (SQLite strips
+    # tzinfo from DateTime round-trips; this string is immune to that).
+    event_timestamp = Column(String(64), nullable=False)
     created_at = Column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
     published_at = Column(DateTime(timezone=True), nullable=True)
-    attempts = Column(Integer, nullable=False, default=0)
+    attempts = Column(Integer, nullable=False, server_default="0", default=0)
 
     __table_args__ = (
         Index("idx_outbox_unpublished", "published_at"),
