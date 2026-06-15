@@ -27,7 +27,10 @@ Consumers SHALL NOT import internals such as
 ``rag_backend.modules.editorial.domain.models`` directly.
 """
 
-from rag_backend.modules.editorial.application.service import EditorialService
+from rag_backend.modules.editorial.application.service import (
+    EditorialPorts,
+    EditorialService,
+)
 from rag_backend.modules.editorial.application.workflow_handlers import (
     EditorialWorkflowHandlers,
     StartWorkflowCommand,
@@ -49,7 +52,19 @@ from rag_backend.modules.editorial.domain.models import (
     ResearchSource,
     ResearchSourceType,
 )
-from rag_backend.modules.editorial.domain.ports import CarouselRepository
+from rag_backend.modules.editorial.domain.ports import (
+    ApprovalPort,
+    CarouselRepository,
+    OptimisticLockingPort,
+    PublicReleasePort,
+    ReviewDecisionPort,
+    ReviewerAssignmentPort,
+    SourceMaterialPort,
+)
+from rag_backend.modules.editorial.domain.release import (
+    ApprovalState,
+    PublicReleaseState,
+)
 from rag_backend.modules.editorial.domain.status import (
     CAROUSEL_EDITORIAL_WORKFLOW_STATUS_DRAFT,
     CAROUSEL_WORKFLOW_PHASES,
@@ -86,6 +101,16 @@ from rag_backend.modules.editorial.domain.status import (
 )
 from rag_backend.modules.editorial.infrastructure.carousel_project_write_owner import (
     CarouselProjectWriteOwner,
+)
+from rag_backend.modules.editorial.infrastructure.editorial_port_adapters import (
+    AclApprovalAdapter,
+    AclOptimisticLockingAdapter,
+    AclPublicReleaseAdapter,
+    AclReviewerAssignmentAdapter,
+    EngineReviewDecisionAdapter,
+    EngineSourceMaterialAdapter,
+    ReviewWorkflowEngine,
+    SourceSynthesisEngine,
 )
 from rag_backend.modules.editorial.infrastructure.legacy_carousel_acl import (
     EditorialProjectView,
@@ -125,6 +150,12 @@ __all__ = [
     "REVIEW_ACTION_REJECT",
     "REVIEW_ACTION_REVISE",
     "WORKFLOW_STATUS_APPROVED_FOR_PUBLISH",
+    "AclApprovalAdapter",
+    "AclOptimisticLockingAdapter",
+    "AclPublicReleaseAdapter",
+    "AclReviewerAssignmentAdapter",
+    "ApprovalPort",
+    "ApprovalState",
     "CarouselProject",
     "CarouselProjectWriteOwner",
     "CarouselRepository",
@@ -133,14 +164,25 @@ __all__ = [
     "CarouselTheme",
     "EditorialAdapters",
     "EditorialModule",
+    "EditorialPorts",
     "EditorialProject",
     "EditorialProjectView",
     "EditorialService",
     "EditorialWorkflow",
     "EditorialWorkflowHandlers",
+    "EngineReviewDecisionAdapter",
+    "EngineSourceMaterialAdapter",
     "LegacyCarouselAcl",
+    "OptimisticLockingPort",
+    "PublicReleasePort",
+    "PublicReleaseState",
     "ResearchSource",
     "ResearchSourceType",
+    "ReviewDecisionPort",
+    "ReviewWorkflowEngine",
+    "ReviewerAssignmentPort",
+    "SourceMaterialPort",
+    "SourceSynthesisEngine",
     "StartWorkflowCommand",
     "WorkflowEngine",
     "WorkflowStateView",

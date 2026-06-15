@@ -25,8 +25,17 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Protocol
 
-from rag_backend.modules.editorial.application.service import EditorialService
+from rag_backend.modules.editorial.application.service import (
+    EditorialPorts,
+    EditorialService,
+)
 from rag_backend.modules.editorial.domain.ports import CarouselRepository
+from rag_backend.modules.editorial.infrastructure.editorial_port_adapters import (
+    AclApprovalAdapter,
+    AclOptimisticLockingAdapter,
+    AclPublicReleaseAdapter,
+    AclReviewerAssignmentAdapter,
+)
 from rag_backend.modules.editorial.infrastructure.legacy_carousel_acl import (
     LegacyCarouselAcl,
 )
@@ -86,9 +95,33 @@ def bootstrap_module(
     the application service via the constructor.
     """
     _ = platform  # real modules construct adapters from platform services
-    service = EditorialService(repository=adapters.repository)
+    service = EditorialService(
+        repository=adapters.repository,
+        ports=_build_ports(adapters.legacy_carousel_acl),
+    )
     return EditorialModule(
         service=service,
         unit_of_work=adapters.unit_of_work,
         legacy_carousel_acl=adapters.legacy_carousel_acl,
+    )
+
+
+def _build_ports(acl: LegacyCarouselAcl | None) -> EditorialPorts:
+    """Build the ACL-backed editorial ports, when the ACL is available (AE-0111).
+
+    The reviewer-assignment, optimistic-locking, approval-read, and
+    public-release-read ports are all backed by the AE-0109 carousel ACL (→ the
+    AE-0107 single write owner). The engine-backed source-material and
+    review-decision ports are constructed per request at the inbound edge (the
+    engine is injected per call via the ``build_editorial_workflow_service``
+    seam), so they are not wired here. When no ACL is supplied (the AE-0108
+    scaffolding bootstrap) the service stays repository-only.
+    """
+    if acl is None:
+        return EditorialPorts()
+    return EditorialPorts(
+        reviewer_assignment=AclReviewerAssignmentAdapter(acl),
+        optimistic_locking=AclOptimisticLockingAdapter(acl),
+        approval=AclApprovalAdapter(acl),
+        public_release=AclPublicReleaseAdapter(acl),
     )

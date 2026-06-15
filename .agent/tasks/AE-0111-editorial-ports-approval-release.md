@@ -1,6 +1,6 @@
 # AE-0111 — Source/assignments/review/optimistic-locking behind editorial ports; split approval from public release
 
-Status: Ready
+Status: Dev Complete
 Tier: T2
 Priority: High
 Type: Task
@@ -101,9 +101,11 @@ Not applicable — behavior-preserving extraction; verified by the AE-0106 safet
 
 Ticket created by planner (Phase 4 breakdown).
 
+Dev Complete (Wave D). 6 editorial ports + adapters (source/assignments/review/locking + approval/release); approval≠release contract split; lock_version preserved; editorial app imports no carousel ORM. mypy 480, lint-imports 14/0, safety net 19/19, check-integrity 0 blockers, 801 regression tests pass.
+
 ## Files Touched
 
-Pending.
+modules/editorial/domain/{ports,release}.py, modules/editorial/infrastructure/editorial_port_adapters.py (new), modules/editorial/application/service.py, modules/editorial/{bootstrap,public,__init__}.py, tests/unit/modules/editorial/test_editorial_ports.py
 
 ## Test Evidence
 
