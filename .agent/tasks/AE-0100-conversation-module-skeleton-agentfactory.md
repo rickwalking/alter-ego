@@ -1,6 +1,6 @@
 # AE-0100 — modules/conversation skeleton + facade + repo ports + ChatAgentFactory port
 
-Status: Ready
+Status: Dev Complete
 Tier: T2
 Priority: High
 Type: Task
@@ -104,9 +104,11 @@ Not applicable — behavior-preserving extraction; no runtime behavior change (v
 
 Ticket created by planner (Phase 3 breakdown).
 
+Dev Complete (Wave A). Created modules/conversation: object-identity Conversation/Message + repo-port shims, ChatAgentFactory port + LegacyChatAgentFactory wrapping build_agent_for_conversation (identical project_id routing + knowledge-facade wiring), reuses platform UoW + existing ConversationService. repositories.py untouched. Gate spine 14 PASS/0 FAIL/3 SKIP(DB→CI), integrity 0 blockers, mypy/lint-imports green.
+
 ## Files Touched
 
-Pending.
+backend/src/rag_backend/modules/conversation/** (+public.py/bootstrap.py/constants.py), tests/unit/modules/conversation/*, tests/features/conversation_module.feature
 
 ## Test Evidence
 
