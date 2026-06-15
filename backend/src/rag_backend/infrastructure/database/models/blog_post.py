@@ -14,6 +14,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import relationship
 
+from rag_backend.domain.constants.blog_post import BlogPostOrigin
 from rag_backend.infrastructure.database.config import Base
 
 
@@ -27,6 +28,13 @@ class BlogPostModel(Base):
         String(36),
         ForeignKey("carousel_projects.id", ondelete="SET NULL"),
         nullable=True,
+    )
+    # Provenance (AE-0127): 'standalone' (hand-authored) vs 'carousel' (derived).
+    origin = Column(
+        String(20),
+        default=BlogPostOrigin.STANDALONE.value,
+        server_default=BlogPostOrigin.STANDALONE.value,
+        nullable=False,
     )
     title = Column(String(255), nullable=False)
     slug = Column(String(255), unique=True, nullable=False)
@@ -101,6 +109,7 @@ class BlogPostModel(Base):
         return {
             "id": self.id,
             "project_id": self.project_id,
+            "origin": self.origin,
             "title": self.title,
             "slug": self.slug,
             "status": self.status,
@@ -139,6 +148,7 @@ class BlogPostModel(Base):
         return cls(
             id=entity.get("id", str(uuid.uuid4())),
             project_id=entity.get("project_id"),
+            origin=entity.get("origin", BlogPostOrigin.STANDALONE.value),
             title=entity.get("title", ""),
             slug=entity.get("slug", ""),
             status=entity.get("status", "draft"),

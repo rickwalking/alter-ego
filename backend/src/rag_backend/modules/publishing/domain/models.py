@@ -25,10 +25,9 @@ attributes type as ``Column[T]`` under mypy; :meth:`BlogPost.from_model` reads
 them through explicit :func:`typing.cast` (no ``Any``) — the only seam that
 touches the ORM column shapes.
 
-**AE-0127 forward note.** The additive ``origin`` field (carousel-derived vs.
-native blog) is intentionally NOT defined here — AE-0127 adds it via an additive
-migration + backfill. :class:`BlogPost` is shaped so AE-0127 can add an
-``origin`` field/property without restructuring this view.
+**AE-0127.** The additive ``origin`` field (:class:`BlogPostOrigin` —
+carousel-derived vs. native blog) is now part of this view, read from the
+canonical ``blog_posts.origin`` column added by the additive AE-0127 migration.
 """
 
 from __future__ import annotations
@@ -39,7 +38,7 @@ from enum import StrEnum
 from typing import cast
 from uuid import UUID
 
-from rag_backend.domain.constants.blog_post import BlogPostStatus
+from rag_backend.domain.constants.blog_post import BlogPostOrigin, BlogPostStatus
 from rag_backend.domain.models.carousel import CarouselProject
 from rag_backend.infrastructure.database.models.blog_post import BlogPostModel
 from rag_backend.modules.publishing.domain.release import (
@@ -53,11 +52,11 @@ class BlogPost:
     """The publishing aggregate VIEW over a single ``blog_posts`` row.
 
     A typed, immutable read model exposing the publishing-relevant fields of a
-    blog post — identity, slug/title, workflow status, the scheduled publish
-    instant, and the optimistic ``lock_version``. It wraps the canonical
-    :class:`BlogPostModel` (re-exported, identical object) without owning the blog
-    ORM or its editorial authoring; it only projects the fields the release +
-    distribution paths read. The ``origin`` field is deferred to AE-0127.
+    blog post — identity, slug/title, workflow status, provenance
+    (:class:`BlogPostOrigin`), the scheduled publish instant, and the optimistic
+    ``lock_version``. It wraps the canonical :class:`BlogPostModel` (re-exported,
+    identical object) without owning the blog ORM or its editorial authoring; it
+    only projects the fields the release + distribution paths read.
     """
 
     id: str
@@ -65,6 +64,7 @@ class BlogPost:
     title: str
     status: BlogPostStatus
     lock_version: int
+    origin: BlogPostOrigin = BlogPostOrigin.STANDALONE
     project_id: str | None = None
     scheduled_publish_at: datetime | None = None
     published_at: datetime | None = None
@@ -89,6 +89,7 @@ class BlogPost:
             title=cast(str, model.title),
             status=_coerce_status(cast("str | None", model.status)),
             lock_version=cast(int, model.lock_version),
+            origin=_coerce_origin(cast("str | None", model.origin)),
             project_id=cast("str | None", model.project_id),
             scheduled_publish_at=cast("datetime | None", model.scheduled_publish_at),
             published_at=cast("datetime | None", model.published_at),
@@ -103,6 +104,16 @@ def _coerce_status(status: str | None) -> BlogPostStatus:
         return BlogPostStatus(status)
     except ValueError:
         return BlogPostStatus.DRAFT
+
+
+def _coerce_origin(origin: str | None) -> BlogPostOrigin:
+    """Coerce a raw origin string into the canonical enum (default STANDALONE)."""
+    if origin is None:
+        return BlogPostOrigin.STANDALONE
+    try:
+        return BlogPostOrigin(origin)
+    except ValueError:
+        return BlogPostOrigin.STANDALONE
 
 
 @dataclass(frozen=True)
@@ -186,6 +197,7 @@ class PublishingSchedule:
 __all__ = [
     "BlogPost",
     "BlogPostModel",
+    "BlogPostOrigin",
     "BlogPostStatus",
     "CarouselProject",
     "DistributionChannel",

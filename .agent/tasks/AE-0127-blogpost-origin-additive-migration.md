@@ -1,6 +1,6 @@
 # AE-0127 — BlogPost.origin field + ADDITIVE migration (backfill blog_posts from carousel blog; no column drop)
 
-Status: Ready
+Status: Dev Complete
 Tier: T2
 Priority: High
 Type: Task
@@ -101,9 +101,11 @@ Not applicable — additive migration; verified by the AE-0125 safety net + the 
 
 Ticket created by planner (Phase 6 breakdown).
 
+Dev Complete (Wave B). origin field + additive backfill migration b2c3d4e5f6a7 (reversible, empty-diff, idempotent, no drop); blog reads byte-identical; mypy 511, check-integrity 0 blockers, 722 regression pass.
+
 ## Files Touched
 
-Pending.
+infrastructure/database/models/blog_post.py, domain/constants/blog_post.py (BlogPostOrigin), modules/publishing/domain/models.py, alembic/versions/b2c3d4e5f6a7_add_blog_post_origin_and_backfill.py
 
 ## Test Evidence
 
