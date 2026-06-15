@@ -1,6 +1,6 @@
 # AE-0124 — Publishing/blog/distribution surface + ownership map + migration/outbox/behavior risk analysis
 
-Status: Dev Complete
+Status: Review
 Tier: T2
 Priority: High
 Type: Docs
@@ -114,7 +114,7 @@ Pending.
 
 ## QA Report
 
-Pending.
+Phase 6 Wave A batch QA — converged PASS in 2 independent rounds (0 findings). See `.agent/reports/phase-6-wave-a.qa.md`.
 
 ## Decision Log
 

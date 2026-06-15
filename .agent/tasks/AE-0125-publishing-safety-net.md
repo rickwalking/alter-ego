@@ -1,6 +1,6 @@
 # AE-0125 — Publishing byte-identical safety net (blog/publish/distribution/calendar/board/analytics) + Gherkin
 
-Status: Dev Complete
+Status: Review
 Tier: T2
 Priority: High
 Type: Tests
@@ -125,7 +125,7 @@ Pending.
 
 ## QA Report
 
-Pending.
+Phase 6 Wave A batch QA — converged PASS in 2 independent rounds (0 findings). See `.agent/reports/phase-6-wave-a.qa.md`.
 
 ## Decision Log
 
