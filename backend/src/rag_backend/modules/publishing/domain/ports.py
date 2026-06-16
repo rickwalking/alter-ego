@@ -77,13 +77,13 @@ class DistributionPublisher(Protocol):
     :class:`DistributionResult` value object — and primitives, so neither the
     application nor the domain layer touches a vendor/LLM SDK. The concrete
     adapter (the channel publisher in ``infrastructure``) wraps the Meta Instagram
-    vendor adapter + the persisted LinkedIn/caption copy; the vendor SDK imports
-    stay confined there.
+    vendor adapter + the persisted caption copy; the vendor SDK imports stay
+    confined there.
 
     Behavior-preserving: ``publish_instagram`` forwards the EXACT caption +
-    image-url payload to the vendor publisher and maps its result one-to-one; the
-    read methods project the already-persisted caption / LinkedIn copy (no LLM
-    call), identical to the pre-AE-0129 route reads.
+    image-url payload to the vendor publisher and maps its result one-to-one;
+    ``caption_for`` projects the already-persisted caption (no LLM call), identical
+    to the pre-AE-0129 route read.
     """
 
     async def publish_instagram(
@@ -104,17 +104,6 @@ class DistributionPublisher(Protocol):
 
         Projects the already-persisted caption from the :class:`Publication` view;
         no LLM call — identical to the legacy ``project.caption or ""`` read.
-        """
-        ...
-
-    def linkedin_posts_for(
-        self,
-        publication: Publication,
-    ) -> tuple[str | None, str | None]:
-        """Return the release's persisted ``(pt, en)`` LinkedIn post copy.
-
-        Projects the already-persisted LinkedIn copy from the
-        :class:`Publication` view; no LLM call.
         """
         ...
 

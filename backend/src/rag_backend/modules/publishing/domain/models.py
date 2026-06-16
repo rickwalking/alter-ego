@@ -151,16 +151,6 @@ class Publication:
         """The persisted social caption of the underlying carousel, when set."""
         return self.project.caption
 
-    @property
-    def linkedin_post_pt(self) -> str | None:
-        """The persisted Portuguese LinkedIn post text, when set."""
-        return self.project.linkedin_post_pt
-
-    @property
-    def linkedin_post_en(self) -> str | None:
-        """The persisted English LinkedIn post text, when set."""
-        return self.project.linkedin_post_en
-
 
 @dataclass(frozen=True)
 class DistributionResult:

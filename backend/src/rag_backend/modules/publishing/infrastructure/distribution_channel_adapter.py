@@ -69,12 +69,5 @@ class ChannelDistributionPublisher:
         """Project the persisted social caption (empty string if unset)."""
         return publication.caption or ""
 
-    @staticmethod
-    def linkedin_posts_for(
-        publication: Publication,
-    ) -> tuple[str | None, str | None]:
-        """Project the persisted ``(pt, en)`` LinkedIn post copy."""
-        return publication.linkedin_post_pt, publication.linkedin_post_en
-
 
 __all__ = ["ChannelDistributionPublisher"]

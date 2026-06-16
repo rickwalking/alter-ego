@@ -127,13 +127,6 @@ class PublishingService:
         """
         return self._require_distribution_port().caption_for(publication)
 
-    async def read_linkedin_posts(
-        self,
-        publication: Publication,
-    ) -> tuple[str | None, str | None]:
-        """Return the publication's persisted ``(pt, en)`` LinkedIn copy (no LLM)."""
-        return self._require_distribution_port().linkedin_posts_for(publication)
-
     async def publish_instagram(
         self,
         caption: str,

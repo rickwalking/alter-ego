@@ -15,7 +15,9 @@ typed :class:`PublishingAdapters` bundle so the function keeps to a single group
 argument (backend/CLAUDE.md ≤3 args). AE-0128 wires the carousel-release,
 blog-visibility, and blog-schedule ports (backed by the ACL) into the service so
 the carousel publish flow + the standalone blog publish/unpublish/schedule routes
-+ the scheduled-publish worker route through the publishing facade. The additive
+route through the publishing facade. (The background scheduled-publish worker in
+``workflow_workers.py`` still constructs ``ScheduledPublishService`` directly — a
+later worker-edge pass; the schedule port is the route-facing seam.) The additive
 outbox arrives in AE-0130.
 
 The ``PlatformServices`` protocol is a local placeholder (as in the reference
@@ -85,9 +87,9 @@ class PublishingModule:
     Bundles the publishing application service and the request-scoped Unit of
     Work so the inbound edge can resolve publishing operations and the single
     commit boundary through the module facade (no behavior change). The carousel
-    publish flow + the standalone blog publish/unpublish/schedule routes + the
-    scheduled-publish worker resolve their writes through ``service`` (over the
-    AE-0128 release/visibility/schedule ports) and commit via this UoW.
+    publish flow + the standalone blog publish/unpublish/schedule routes resolve
+    their writes through ``service`` (over the AE-0128 release/visibility/schedule
+    ports) and commit via this UoW.
     """
 
     service: PublishingService
