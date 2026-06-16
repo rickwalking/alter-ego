@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 /**
- * Enforce frontend feature module boundaries (AE-0083) — the cross-feature
- * import ratchet that mirrors the backend ratchet (AE-0082).
+ * Enforce frontend feature/module boundaries — the cross-context import ratchet
+ * that mirrors the backend ratchet (AE-0082). AE-0083 (features) + AE-0136
+ * (modules public contract + app consumer).
  *
  * Run as part of:
  *   npm run lint            # eslint + this check
@@ -9,10 +10,15 @@
  *
  * Rules:
  *   - A file in `features/A/**` MUST NOT import `@/features/B/...` (B != A).
+ *   - A file in `modules/A/**` MUST NOT reach past another module's public
+ *     contract: `@/modules/B/<internal>` is forbidden; the barrel `@/modules/B`
+ *     is allowed; a module may import its own internals.
+ *   - A file in `app/**` (a consumer) may import a module's public contract
+ *     only: `@/modules/B/<internal>` from `app/` is forbidden.
  *   - Shared layers (components/, lib/, constants/, i18n/, schemas/) and a
- *     feature's own files are always allowed (never inspected).
+ *     context's own files are always allowed (never inspected).
  *   - Existing violations listed in the committed baseline are grandfathered.
- *   - Any NEW cross-feature import errors and fails the build.
+ *   - Any NEW cross-context import errors and fails the build.
  *   - If the total violation count rises above the baseline `count`, fail.
  *
  * Regenerate the baseline with: npm run boundaries:baseline
@@ -58,33 +64,37 @@ function main() {
   const errors = [];
 
   for (const violation of newViolations) {
+    const reason =
+      violation.layer === "modules" || violation.layer === "app"
+        ? `${violation.from} must not reach past the public contract of module "${violation.to}" ` +
+          `(import the barrel "@/modules/${violation.to}" instead of an internal path)`
+        : `feature "${violation.from}" must not import internals of feature "${violation.to}" ` +
+          `(use a shared layer: components/, lib/, constants/, i18n/, schemas/)`;
     errors.push(
-      `NEW cross-feature import: ${violation.file} imports "${violation.specifier}" ` +
-        `(feature "${violation.from}" must not import internals of feature "${violation.to}"). ` +
-        `Use a shared layer (components/, lib/, constants/, i18n/, schemas/) instead.`,
+      `NEW cross-context import: ${violation.file} imports "${violation.specifier}" (${reason}).`,
     );
   }
 
   if (distinctCount > baselineCount) {
     errors.push(
-      `Cross-feature import count rose to ${distinctCount} (baseline ceiling ${baselineCount}). ` +
-        `New cross-feature imports are not allowed.`,
+      `Cross-context import count rose to ${distinctCount} (baseline ceiling ${baselineCount}). ` +
+        `New cross-context imports are not allowed.`,
     );
   }
 
   if (errors.length > 0) {
-    process.stderr.write("\nFeature boundary check FAILED:\n");
+    process.stderr.write("\nFeature/module boundary check FAILED:\n");
     for (const error of errors) {
       process.stderr.write(`  - ${error}\n`);
     }
     process.stderr.write(
-      `\nNew cross-feature imports must be removed (do NOT add to the baseline). ${REGEN_HINT}\n`,
+      `\nNew cross-context imports must be removed (do NOT add to the baseline). ${REGEN_HINT}\n`,
     );
     process.exit(1);
   }
 
   process.stdout.write(
-    `Feature boundary check OK: ${distinctCount} grandfathered cross-feature relationship(s), ` +
+    `Feature/module boundary check OK: ${distinctCount} grandfathered cross-context relationship(s), ` +
       `baseline ceiling ${baselineCount}, 0 new.\n`,
   );
 }

@@ -25,6 +25,9 @@ find src -type f \( -name "*.ts" -o -name "*.tsx" \) \
 - **Non-test production files:** 306
 - **Non-test production LOC:** 25,793
 
+> Measured pre-AE-0136. AE-0136 added the `modules/_example` public-API anchor (`src/modules/_example/index.ts`),
+> a single non-feature scaffolding file (+1 file / +16 LOC → 307 files / 25,809 LOC post-scaffolding).
+
 | `src/` area | non-test LOC |
 |---|---:|
 | app | 10,409 |
