@@ -1,13 +1,13 @@
 # AE-0163 — Backend: make blog_posts the single writer + remove embedded-column read fallback (de-risk the drop)
 
-Status: Ready
+Status: Dev Complete
 Tier: T2
 Priority: High
 Type: Task
 Area: Backend
-Owner: Unassigned
+Owner: developer
 Agent Lane: planner → architect → developer → qa → release
-Branch: feat/ae-0163-consolidate-blog-writers-remove-fallback
+Branch: feat/phase-8-legacy-removal
 Kanban Card: TBD
 Created: 2026-06-16
 Updated: 2026-06-16
@@ -36,10 +36,10 @@ See `docs/plans/phase-8-legacy-removal.md`.
 
 ## Acceptance Criteria
 
-- [ ] blog_posts (origin='carousel') SHALL be the single writer; the embedded-column writers retired/redirected (no remaining embedded-column writes)
-- [ ] The carousel-blog read path + 404 gate SHALL source body/title/subtitle/404 from the backfill row (no embedded fallback), gated by a backfill-completeness check
-- [ ] The AE-0125 safety net SHALL diff to ZERO (byte-identical /blog + projections) incl. the HTTP backfill-row parity test
-- [ ] gates.sh + check-integrity green; no destructive change (additive-only)
+- [x] blog_posts (origin='carousel') SHALL be the single writer; the embedded-column writers retired/redirected (no remaining embedded-column writes)
+- [x] The carousel-blog read path + 404 gate SHALL source body/title/subtitle/404 from the backfill row (no embedded fallback), gated by a backfill-completeness check
+- [x] The AE-0125 safety net SHALL diff to ZERO (byte-identical /blog + projections) incl. the HTTP backfill-row parity test
+- [x] gates.sh + check-integrity green; no destructive change (additive-only)
 
 ## Gherkin Scenarios
 
@@ -67,19 +67,33 @@ Ticket created by planner (Phase 8 architect-validation round-1 fix).
 
 ## Files Touched
 
-Pending.
+- NEW `backend/src/rag_backend/infrastructure/database/carousel_blog_dual_write.py` — `sync_carousel_blog_post(session, project)`: idempotent upsert of the `origin='carousel'` blog_posts row in the AE-0127 shape; no-op when `blog_markdown` is None; flush-only (shares caller's transaction).
+- `backend/src/rag_backend/infrastructure/database/carousel_repository.py` — `create_project`/`update_project` call `sync_carousel_blog_post` after flush, before commit (the single write chokepoint redirecting all embedded writers).
+- `backend/src/rag_backend/modules/publishing/infrastructure/read_projection_helpers.py` — `resolve_blog_body(row)` sources body SOLELY from the backfill row (dropped the embedded_markdown fallback param).
+- `backend/src/rag_backend/modules/publishing/infrastructure/publishing_read_acl.py` — `project_carousel_blog` 404 gate now keys on the backfill row's presence (removed the `project.blog_markdown is None` embedded gate).
+- `backend/src/rag_backend/infrastructure/database/models/blog_post.py` — `title`/`content` converted to SQLAlchemy 2.0 `Mapped[]`.
+- `backend/src/rag_backend/modules/publishing/domain/models.py` — read `model.title` directly (now typed via Mapped[]).
+- NEW `backend/alembic/versions/d4e5f6a7b8c9_topup_carousel_blog_backfill.py` — additive, data-only, idempotent top-up backfill (closes the AE-0127 residual gap: any non-null-`blog_markdown` carousel lacking a carousel-origin row); reversible via the AE-0127 downgrade chain.
+- `backend/tests/integration/test_publishing_safety_net.py`, `backend/tests/unit/modules/publishing/test_publishing_read_projection.py` — updated to the backfill-row source of truth.
 
 ## Test Evidence
 
-Pending.
+- `ruff check src/` — All checks passed.
+- arch-ratchet `import_baseline.py --check` — PASS (application→infra 61/61, all pairs unchanged).
+- mypy `rag_backend/ --explicit-package-bases` — Success, 492 source files.
+- `lint-imports` — 22 contracts kept, 0 broken.
+- `pytest test_publishing_safety_net.py test_publishing_read_projection.py` — 51 passed (AE-0125 safety net diff=0).
+- `check-integrity.sh backend` — 0 blockers (2 warnings are prior AE-0158/0159 gate edits, justified by those tickets).
+- Alembic — upgrade head → downgrade -1 → re-upgrade head all OK (new revision `d4e5f6a7b8c9` chains off `c3d4e5f6a7b8`); no schema change ⇒ autogenerate drift stays empty.
 
 ## QA Report
 
-Pending.
+Pending (Phase 8 end-of-phase QA on the full branch).
 
 ## Decision Log
 
-Pending.
+- Dual-write (not write-cutover) chosen for the transition: the embedded columns are still WRITTEN (additive) but no longer the READ source of truth — keeps output byte-identical while making `blog_posts` the read source, satisfying AE-0162's "single writer of truth" precondition without a destructive change here.
+- 404 gate moved from `project.blog_markdown is None` to the backfill row's presence; the top-up migration guarantees no body-bearing carousel lacks a row, so the legacy 200/404 boundary is preserved.
 
 ## Blockers
 
@@ -87,4 +101,4 @@ None.
 
 ## Final Summary
 
-Pending.
+Behavior-preserving predecessor to the deferred destructive drop (AE-0162) landed: `blog_posts` (origin='carousel') is now the read source of truth via an idempotent dual-write chokepoint in the carousel repository, the embedded-column read fallback + 404 gate were removed, and a top-up backfill closes the AE-0127 residual gap. AE-0125 safety net diffs to zero; additive-only DB. AE-0162 (the drop) remains Intake / consent + drain-gated.
