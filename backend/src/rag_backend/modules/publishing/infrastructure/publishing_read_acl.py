@@ -123,7 +123,8 @@ class PublishingReadAcl:
         if project.blog_markdown is None:
             return None
         row = await self._carousel_blog_row(str(project.id))
-        markdown = resolve_blog_body(row, project.blog_markdown)
+        row_content = cast("object", row.content) if row is not None else None
+        markdown = resolve_blog_body(row_content, project.blog_markdown)
         if markdown is None:
             return None
         row_title = cast("str | None", row.title) if row is not None else None
