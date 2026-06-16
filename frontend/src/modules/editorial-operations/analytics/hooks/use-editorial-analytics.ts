@@ -5,10 +5,7 @@ import { authenticatedFetch } from "@/lib/authenticated-fetch";
 import { API_ENDPOINTS } from "@/constants/api";
 import type { EditorialAnalytics } from "./types";
 
-export type {
-  EditorialAnalytics,
-  EditorialAnalyticsSummary,
-} from "./types";
+export type { EditorialAnalytics, EditorialAnalyticsSummary } from "./types";
 
 export function useEditorialAnalytics() {
   const [data, setData] = useState<EditorialAnalytics | null>(null);
