@@ -160,6 +160,10 @@ gate_backend_mutation() { bash "$SCRIPT_DIR/mutation-score-gate.sh" 75; }
 # =============================================================================
 gate_frontend_lint()            { cd "$REPO_ROOT/frontend" && npm run lint; }
 gate_frontend_lint_changed()    { cd "$REPO_ROOT/frontend" && npm run lint:changed; }
+# Component-type-location ratchet (AE-0144). Also runs inside `npm run lint`;
+# registered standalone so CI and /qa-agent can invoke it directly and report it
+# as its own gate (mirrors how boundaries/url/circular live under lint).
+gate_frontend_component_types() { cd "$REPO_ROOT/frontend" && npm run lint:component-types; }
 gate_frontend_typecheck()       { cd "$REPO_ROOT/frontend" && npm run typecheck; }
 gate_frontend_legacy_guard()    { cd "$REPO_ROOT/frontend" && npm run check:legacy; }
 gate_frontend_legacy_inventory() { cd "$REPO_ROOT/frontend" && npm run check:legacy-inventory; }
@@ -199,6 +203,7 @@ BACKEND_GATES=(
 FRONTEND_GATES=(
   lint:gate_frontend_lint
   lint-changed:gate_frontend_lint_changed
+  component-types:gate_frontend_component_types
   typecheck:gate_frontend_typecheck
   legacy-guard:gate_frontend_legacy_guard
   legacy-inventory:gate_frontend_legacy_inventory

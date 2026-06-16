@@ -14,6 +14,12 @@ This document provides general guidelines for AI agents working on the Next.js f
 - **Explicit return types** — All functions must declare return types
 - **Props interfaces** — Every component must have a defined props interface
 - **Use `type` for object shapes, `interface` for extendable contracts**
+- **Component-type location (AE-0144, enforced)** — Inside `src/modules/**`, a
+  component (`*.tsx`) or hook (`use-*.ts`) file MUST NOT declare object-shape
+  types (`interface Foo {}` / `type Foo = {}`) inline; put them in a colocated
+  `types.ts`. Gated by `npm run lint:component-types` (in `npm run lint` +
+  `gates.sh frontend:component-types`) with a down-only baseline. See
+  [`src/modules/README.md`](src/modules/README.md#component-type-location-convention-ae-0144).
 
 ### 2. No Magic Strings
 - Extract all string literals to named constants

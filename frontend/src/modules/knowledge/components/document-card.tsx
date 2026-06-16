@@ -8,13 +8,8 @@ import {
 import { NeonBadge } from "@/components/atoms/neon-badge";
 
 import { FileText, Trash2 } from "lucide-react";
-import { type Document } from "@/schemas/knowledge";
 import { formatDate } from "@/lib/utils";
-
-interface DocumentCardProps {
-  document: Document;
-  onDelete?: () => void;
-}
+import { type DocumentCardProps } from "./types";
 
 export function DocumentCard({ document, onDelete }: DocumentCardProps) {
   const meta = document.metadata as Record<string, unknown> | undefined;

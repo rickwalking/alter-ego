@@ -8,12 +8,7 @@ import { NeonBadge } from "@/components/atoms/neon-badge";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { X } from "lucide-react";
-import { type CreateDocumentRequest } from "@/schemas/knowledge";
-
-interface DocumentFormProps {
-  onSubmit: (data: CreateDocumentRequest) => void;
-  onCancel: () => void;
-}
+import { type DocumentFormProps } from "./types";
 
 export function DocumentForm({ onSubmit, onCancel }: DocumentFormProps) {
   const t = useTranslations("knowledge");

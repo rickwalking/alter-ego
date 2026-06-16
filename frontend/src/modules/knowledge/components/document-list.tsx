@@ -5,16 +5,8 @@ import { NeonButton } from "@/components/atoms/neon-button";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Search, Plus, Upload } from "lucide-react";
-import { type Document } from "@/schemas/knowledge";
 import { DocumentCard } from "./document-card";
-
-interface DocumentListProps {
-  documents: Document[];
-  isLoading?: boolean;
-  onCreateNew: () => void;
-  onUploadNew: () => void;
-  onDeleteDocument: (id: string) => void;
-}
+import { type DocumentListProps } from "./types";
 
 export function DocumentList({
   documents,

@@ -8,11 +8,7 @@ import { useTranslations } from "next-intl";
 import { Upload, X, FileText, CheckCircle, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useUploadDocument } from "../hooks/use-upload";
-
-interface FileUploadProps {
-  onUploadComplete?: () => void;
-  onCancel?: () => void;
-}
+import { type FileUploadProps } from "./types";
 
 export function FileUpload({ onUploadComplete, onCancel }: FileUploadProps) {
   const t = useTranslations("knowledge.upload");

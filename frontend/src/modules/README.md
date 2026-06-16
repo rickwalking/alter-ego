@@ -58,6 +58,61 @@ fail immediately (there are none today, and none should ever be added).
 Regenerate the baseline (only ever to ratchet DOWN) with
 `npm run boundaries:baseline`.
 
+## Component-type-location convention (AE-0144)
+
+A second down-only ratchet enforces **where component/hook types live** — the
+"13x class" from the PR #21 review, where a reviewer left the same comment
+("move this interface to an external file") 13 times because nothing in the lint
+gate caught inline type declarations.
+
+### The convention
+
+Inside `src/modules/**`, a **component** (`*.tsx`) or **hook** (`use-*.ts`) file
+MUST NOT declare object-shape TypeScript types inline. They belong in a
+colocated `types.ts` — the pattern the codebase already follows in
+`modules/publishing/blog/types.ts`, `modules/quality/types.ts`,
+`modules/persona/types.ts`, and `modules/knowledge/components/types.ts`.
+
+```ts
+// ❌ forbidden — inline in the component/hook file
+interface DocumentCardProps {
+  document: Document;
+}
+
+// ✅ allowed — colocated types.ts, imported by the component
+// document-card.tsx
+import { type DocumentCardProps } from "./types";
+```
+
+**In scope (a violation):** a non-trivial object-shape declaration —
+`interface Foo { ... }` or `type Foo = { ... }` — declared inline in a governed
+component/hook file.
+
+**Out of scope (never flagged):** trivial type aliases that are not object
+shapes (`type ViewMode = "list" | "create";`, `type Resp = z.infer<...>;`); the
+colocated `types.ts` / `types-*.ts` destination files; non-component/non-hook
+module files (`constants.ts`, `queries.ts`, `adapters/*.ts`, `lib/*.ts`); test,
+spec, and Storybook files; and the design-system Zod prop schemas in
+`src/schemas/neon-*.ts` (a separate, legitimate prop pattern).
+
+### Enforcement
+
+`scripts/check-component-type-location.mjs` (run via
+`npm run lint:component-types`, part of `npm run lint`) enforces this against the
+committed baseline `scripts/component-type-location-baseline.json`. It is also
+registered as the standalone gate `frontend:component-types` in
+`scripts/ci/gates.sh`, so CI (via the `frontend:lint` job) and `/qa-agent` both
+run it from a single source of truth.
+
+The ratchet is **down-only**: the grandfathered inline-declaration count may stay
+equal or shrink, never grow. A NEW inline declaration (a file/kind/name not in
+the baseline) fails immediately, and the total count may never rise above the
+baseline ceiling. The baseline was ratcheted from 61 down to **57** by moving the
+four `knowledge` component prop types into `components/types.ts`.
+
+Regenerate the baseline (only ever to ratchet DOWN) with
+`npm run component-types:baseline`.
+
 ## Identity context — deferred to Phase 8 (AE-0139)
 
 The glossary lists an `identity` bounded context, but there is **no
