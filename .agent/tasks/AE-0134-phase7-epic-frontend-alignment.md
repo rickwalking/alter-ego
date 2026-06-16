@@ -1,6 +1,6 @@
 # AE-0134 — Phase 7 epic: Align the frontend to bounded contexts
 
-Status: Ready
+Status: Review
 Tier: T3
 Priority: High
 Type: Task

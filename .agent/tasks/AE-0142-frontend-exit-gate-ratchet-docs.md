@@ -1,6 +1,6 @@
 # AE-0142 — Frontend module-boundary exit gate + ratchet down + docs
 
-Status: Ready
+Status: Review
 Tier: T2
 Priority: High
 Type: Task

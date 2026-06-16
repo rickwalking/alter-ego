@@ -5,10 +5,18 @@ the backend domain glossary (`docs/architecture/domain-glossary.md`: `knowledge`
 `identity`, `conversation`, `editorial`, `editorial-operations`,
 `carousel-presentation`, `persona`, `quality`, `publishing`).
 
-This directory is the target layer. **AE-0136 only scaffolds it** — no real
-feature has been moved yet. `_example/` is a non-feature anchor that gives the
-boundary checker a concrete `modules/<context>/index.ts` barrel to scan during
-the migration window; later tickets (AE-0137…AE-0139) migrate features in.
+**Status: Phase 7 complete (AE-0142 exit gate).** All eight feature-backed
+contexts have been migrated into this layer behind public contracts —
+`publishing` (AE-0137), `editorial` + `editorial-operations` (AE-0138),
+`carousel-presentation` + `persona` + `quality` + `conversation` + `knowledge`
+(AE-0139) — and business components were re-homed out of the global atomic
+folders (AE-0140). The cross-context boundary count has been ratcheted from the
+Phase-7-start baseline of 23 down to **0**. `identity` remains a documented
+deferral (see below). `_example/` is a retained non-feature anchor for the
+boundary checker. Legacy `@/features/*` paths still resolve via thin re-export
+shims; their removal (and exhaustive component re-homing, route-page thinning,
+and frontend `identity` consolidation) is a consent-gated **Phase 8** follow-up
+(ticket AE-0143).
 
 ## The convention
 
