@@ -260,14 +260,13 @@ jobs:
         working-directory: .
         run: bash scripts/ci/gates.sh frontend:format
 
-  schema-drift-advisory:
-    name: frontend / Schema drift (advisory)
-    # AE-0141: reports OpenAPI<->Zod drift against docs/architecture/openapi.json
-    # (committed by backend/scripts/export_openapi.py). Advisory/non-blocking so
-    # it does not gate on pre-existing drift; flip the script to --strict once
-    # drift reaches 0 (see docs/frontend/phase-7-baseline.md).
+  schema-drift:
+    name: frontend / Schema drift
+    # AE-0141: checks OpenAPI<->Zod drift against docs/architecture/openapi.json
+    # (committed by backend/scripts/export_openapi.py). BLOCKING (AE-0157): drift
+    # was reconciled to 0 and the npm script runs with --strict, so any new
+    # OpenAPI<->Zod divergence fails the job.
     runs-on: ubuntu-latest
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
 
@@ -281,7 +280,7 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Report OpenAPI <-> Zod schema drift
+      - name: Check OpenAPI <-> Zod schema drift
         working-directory: .
         run: bash scripts/ci/gates.sh frontend:schema-drift
 

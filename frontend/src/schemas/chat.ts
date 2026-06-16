@@ -11,7 +11,7 @@ export const messageSchema = z.object({
   id: z.string(),
   role: z.enum(["user", "assistant", "system"]),
   content: z.string(),
-  sources: z.unknown(),
+  sources: z.unknown().optional(),
   created_at: z.string(),
 });
 
@@ -41,7 +41,7 @@ export const chatRequestSchema = z.object({
 
 export const chatResponseSchema = z.object({
   content: z.string(),
-  sources: z.unknown(),
+  sources: z.unknown().optional(),
   conversation_id: z.string(),
 });
 

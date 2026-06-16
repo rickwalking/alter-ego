@@ -173,8 +173,8 @@ gate_frontend_format()          { cd "$REPO_ROOT/frontend" && npx prettier --che
 gate_frontend_integrity()       { bash "$SCRIPT_DIR/check-integrity.sh" frontend; }
 # Advisory in CI (continue-on-error); reported but never blocks.
 gate_frontend_mutation()        { cd "$REPO_ROOT/frontend" && { npm run test:mutate || echo "ADVISORY: Stryker findings above (non-blocking, mirrors CI)."; }; }
-# OpenAPI<->Zod schema-drift (AE-0141). Advisory: prints drift, exits 0 on
-# pre-existing drift so it never blocks. Flip to --strict once drift reaches 0.
+# OpenAPI<->Zod schema-drift (AE-0141). BLOCKING (AE-0157): drift reconciled to
+# 0; the npm script runs with --strict so any new drift exits non-zero.
 gate_frontend_schema_drift()    { cd "$REPO_ROOT/frontend" && npm run check:schema-drift; }
 
 # =============================================================================
