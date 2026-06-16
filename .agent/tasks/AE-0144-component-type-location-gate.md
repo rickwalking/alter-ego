@@ -1,6 +1,6 @@
 # AE-0144 — Component-type-location gate with baseline ratchet (the 13x class)
 
-Status: Ready
+Status: Review
 Tier: T2
 Priority: High
 Type: Task
