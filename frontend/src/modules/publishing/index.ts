@@ -62,6 +62,12 @@ export { useEditorShortcuts } from "./blog/hooks/use-editor-shortcuts";
 /* --- blog: adapters --- */
 export { mapProjectToBlogPostCard } from "./blog/adapters/blog-post-adapter";
 
+/* --- blog: listing components --- */
+export {
+  NeonBlogPostCard,
+  type NeonBlogPostCardComponentProps,
+} from "./blog/components/listing/neon-blog-post-card";
+
 /* --- blog: components --- */
 export { AccessibilityChecker } from "./blog/components/accessibility-checker";
 export { AiSuggestionPanel } from "./blog/components/ai-suggestion-panel";

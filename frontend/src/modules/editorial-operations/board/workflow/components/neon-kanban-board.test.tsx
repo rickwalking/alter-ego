@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
-import { NeonKanbanBoard } from "@/components/organisms/neon-kanban-board";
+import { NeonKanbanBoard } from "@/modules/editorial-operations";
 
 // Feature: NeonKanbanBoard Component
 describe("NeonKanbanBoard Component", () => {

@@ -2,8 +2,7 @@ import type {
   RubricData,
   RubricColorKey,
 } from "@/modules/editorial-operations/board/rubrics/types";
-import type { NeonRubricCardProps } from "@/components/organisms/neon-rubric-card";
-import type { QualityRubric } from "@/modules/quality";
+import type { NeonRubricCardProps, QualityRubric } from "@/modules/quality";
 
 export interface RubricSource {
   title: string;

@@ -6,8 +6,7 @@ import { NeonSpinner } from "@/components/atoms/neon-spinner";
 import { NeonTopBar } from "@/components/organisms/neon-top-bar";
 import { NEON_RED } from "@/constants/neon";
 import { mapPersonaProfileToCardProps } from "@/modules/editorial-operations";
-import { usePersonas } from "@/modules/persona";
-import { NeonPersonaCard } from "@/components/organisms/neon-persona-card";
+import { NeonPersonaCard, usePersonas } from "@/modules/persona";
 import { CreatePersonaCard } from "@/app/dashboard/personas/create-persona-card";
 import { PersonasEmptyState } from "@/app/dashboard/personas/personas-empty-state";
 

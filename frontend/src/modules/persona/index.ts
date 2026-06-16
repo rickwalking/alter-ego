@@ -25,3 +25,7 @@ export { usePersonas } from "./hooks/use-personas";
 
 /* --- components --- */
 export { VoiceMatchScorer } from "./components/voice-match-scorer";
+export {
+  NeonPersonaCard,
+  type NeonPersonaCardProps,
+} from "./components/neon-persona-card";

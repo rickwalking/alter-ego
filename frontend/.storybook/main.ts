@@ -6,6 +6,9 @@ const config: StorybookConfig = {
     "../src/components/atoms/**/*.stories.@(ts|tsx)",
     "../src/components/molecules/**/*.stories.@(ts|tsx)",
     "../src/components/organisms/**/*.stories.@(ts|tsx)",
+    // AE-0140: business components re-homed into bounded-context modules keep
+    // their co-located stories — discover them in their new module homes.
+    "../src/modules/**/*.stories.@(ts|tsx)",
   ],
   addons: ["@storybook/addon-a11y"],
   framework: {

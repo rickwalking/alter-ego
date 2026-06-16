@@ -46,6 +46,10 @@ export * from "./board/rubrics/adapters/rubric-adapter";
 /* --- board: workflow --- */
 export * from "./board/workflow/constants";
 export * from "./board/workflow/adapters/workflow-adapter";
+export {
+  NeonKanbanBoard,
+  type NeonKanbanBoardProps,
+} from "./board/workflow/components/neon-kanban-board";
 
 /* --- analytics --- */
 export * from "./analytics/hooks/use-editorial-analytics";
