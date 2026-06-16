@@ -1,23 +1,29 @@
-from dataclasses import dataclass
+"""Carousel slide-layout strategy routes.
+
+Thin HTTP adapters (AE-0120). The list + apply endpoints delegate their data
+operations to the presentation :class:`PresentationHandlers` (via the
+presentation facade): listing reads the strategy registry behind the handler, and
+applying validates the strategy + project status at the edge then runs the
+refinement re-render through the handler. The route no longer constructs the
+refinement service / repository / registry directly.
+"""
+
+from __future__ import annotations
+
 from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from rag_backend.api.dependencies import require_authenticated_user
+from rag_backend.api.dependencies.presentation import get_presentation_handlers
 from rag_backend.application.services.carousel.strategy_handlers import (
     ApplyStrategyResponse,
-    StrategyInfo,
     StrategyListResponse,
 )
-from rag_backend.application.services.carousel_template.strategies.registry import (
-    SlideLayoutRegistry,
-)
 from rag_backend.domain.models import CarouselStatus
-from rag_backend.domain.protocols import CarouselRefinementService, CarouselRepository
 from rag_backend.infrastructure.logging import get_logger
-
-from .deps import get_carousel_refinement, get_carousel_repo, get_strategy_registry
+from rag_backend.modules.presentation import PresentationHandlers
 
 logger = get_logger()
 
@@ -34,34 +40,11 @@ router = APIRouter(
 )
 
 
-@dataclass
-class _ApplyStrategyContext:
-    """Bundle apply_strategy dependencies (max 3 route args)."""
-
-    refinement: CarouselRefinementService
-    repo: CarouselRepository
-    registry: SlideLayoutRegistry
-
-
-def _resolve_strategy_context(
-    refinement: Annotated[CarouselRefinementService, Depends(get_carousel_refinement)],
-    repo: Annotated[CarouselRepository, Depends(get_carousel_repo)],
-    registry: Annotated[SlideLayoutRegistry, Depends(get_strategy_registry)],
-) -> _ApplyStrategyContext:
-    """Resolve strategy dependencies into a single context object."""
-    return _ApplyStrategyContext(refinement=refinement, repo=repo, registry=registry)
-
-
 @router.get("/strategies")
 async def list_strategies(
-    registry: Annotated[SlideLayoutRegistry, Depends(get_strategy_registry)],
+    handlers: Annotated[PresentationHandlers, Depends(get_presentation_handlers)],
 ) -> StrategyListResponse:
-    raw = registry.list()
-    return StrategyListResponse(
-        strategies=[
-            StrategyInfo(name=r["name"], display_name=r["display_name"]) for r in raw
-        ]
-    )
+    return handlers.list_strategies()
 
 
 @router.put("/{project_id}/strategy")
@@ -75,17 +58,15 @@ async def apply_strategy(
             description="Strategy name to apply",
         ),
     ],
-    ctx: Annotated[_ApplyStrategyContext, Depends(_resolve_strategy_context)],
+    handlers: Annotated[PresentationHandlers, Depends(get_presentation_handlers)],
 ) -> ApplyStrategyResponse:
-    try:
-        ctx.registry.get(name)
-    except LookupError:
+    if not handlers.strategy_exists(name):
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=_ERR_STRATEGY_NOT_FOUND.format(name),
-        ) from None
+        )
 
-    project = await ctx.repo.get_project_by_id(project_id)
+    project = await handlers.get_project(project_id)
     if project is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -97,7 +78,7 @@ async def apply_strategy(
             detail=_ERR_PROJECT_NOT_COMPLETED,
         )
 
-    await ctx.refinement.re_render_slides(project_id, strategy=name)
+    await handlers.apply_strategy(project_id, name)
 
     logger.info(
         "strategy_applied",

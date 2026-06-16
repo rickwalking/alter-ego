@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from contextlib import ExitStack
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
@@ -67,22 +67,14 @@ class TestPreviewCarouselImageFallback:
             hashed_password="hash",
         )
         request = _mock_request()
-        repo = MagicMock()
-        db = MagicMock()
+        # The AE-0120 thin route reads the project + assigned-reviewer id through
+        # the presentation handlers; the serving fallback (HD → standard → hero on
+        # ``_resolve_image_file``) and access check stay at the route edge.
+        handlers = MagicMock()
+        handlers.get_project = AsyncMock(return_value=project)
+        handlers.get_assigned_reviewer_id = AsyncMock(return_value=None)
 
         with ExitStack() as stack:
-            stack.enter_context(
-                patch(
-                    "rag_backend.api.routes.carousels.preview._load_project_with_output",
-                    return_value=project,
-                )
-            )
-            stack.enter_context(
-                patch(
-                    "rag_backend.api.routes.carousels.preview._assigned_reviewer_id",
-                    return_value=None,
-                )
-            )
             stack.enter_context(
                 patch(
                     "rag_backend.api.routes.carousels.preview.assert_carousel_project_access",
@@ -102,8 +94,7 @@ class TestPreviewCarouselImageFallback:
                 project_id=project.id,
                 filename=filename,
                 user=user,
-                repo=repo,
-                db=db,
+                handlers=handlers,
                 lang=lang,
             )
             return response, mock_resolve

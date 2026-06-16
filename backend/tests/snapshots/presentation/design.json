@@ -1,0 +1,47 @@
+{
+  "body": {
+    "colors": {
+      "accent": "#f59e0b",
+      "bg": "#0a0e17",
+      "border": "#1e293b",
+      "glow": "#f59e0b",
+      "primary": "#3b82f6",
+      "text": "#e2e8f0",
+      "text_dim": "#64748b",
+      "text_muted": "#94a3b8"
+    },
+    "images": {
+      "blog_image_map": null,
+      "hero": "",
+      "rendered_slides_en": [
+        "/api/carousels/<uuid>/slide-images/en/slide_1.jpg",
+        "/api/carousels/<uuid>/slide-images/en/slide_2.jpg",
+        "/api/carousels/<uuid>/slide-images/en/slide_3.jpg"
+      ],
+      "rendered_slides_pt": [
+        "/api/carousels/<uuid>/slide-images/pt/slide_1.jpg",
+        "/api/carousels/<uuid>/slide-images/pt/slide_2.jpg",
+        "/api/carousels/<uuid>/slide-images/pt/slide_3.jpg"
+      ],
+      "slides": [
+        "/api/carousels/<uuid>/slide-images/pt/slide_1.jpg",
+        "/api/carousels/<uuid>/slide-images/pt/slide_2.jpg",
+        "/api/carousels/<uuid>/slide-images/pt/slide_3.jpg"
+      ]
+    },
+    "layout": {
+      "badge_label": "FIXTURE",
+      "progress_segments": 3,
+      "swipe_text": "Swipe \u2192"
+    },
+    "theme_name": "ai_competition",
+    "typography": {
+      "font_family_badge": "JetBrains Mono, monospace",
+      "font_family_body": "Inter, system-ui, sans-serif",
+      "font_family_heading": "Inter, system-ui, sans-serif"
+    }
+  },
+  "cookies": {},
+  "headers": {},
+  "status_code": 200
+}

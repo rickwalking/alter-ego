@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 from pathlib import Path
+from typing import TYPE_CHECKING
 from unittest.mock import AsyncMock
 
 import pytest
@@ -17,6 +18,11 @@ from rag_backend.application.services.image_provider_registry import (
     ImageProviderRegistry,
 )
 from rag_backend.domain.models import CarouselProject, CarouselStatus
+
+if TYPE_CHECKING:
+    from collections.abc import Awaitable, Callable
+
+    from rag_backend.modules.presentation import ProgressSnapshot
 
 
 def _project(tmp_path: Path) -> CarouselProject:
@@ -37,6 +43,21 @@ def _slide_data(n: int) -> SlideData:
         body=f"B{n}",
         image_prompt=f"Scene for slide {n}",
     )
+
+
+def _statuses(snapshot: ProgressSnapshot) -> list[str]:
+    """Extract per-slide status strings from a reported progress snapshot."""
+    return [str(slide["status"]) for slide in snapshot.slides]
+
+
+class _CallbackPort:
+    """Adapts an async reporter callable to the WorkflowProgressPort protocol."""
+
+    def __init__(self, reporter: Callable[[ProgressSnapshot], Awaitable[None]]) -> None:
+        self._reporter = reporter
+
+    async def report_progress(self, snapshot: ProgressSnapshot) -> None:
+        await self._reporter(snapshot)
 
 
 def _registry_with_image_service(
@@ -237,3 +258,78 @@ class TestParallelImageGeneration:
         entry = slide_entries[0]
         assert entry["number"] == 1
         assert "neon cityscape" in str(entry["scene"])
+
+
+@pytest.mark.unit
+class TestProgressCallbackPort:
+    """AE-0121: the image node reports progress via the presentation→editorial
+    callback port when injected (editorial owns the phase_progress write)."""
+
+    async def test_callback_receives_snapshots_and_repo_progress_write_skipped(
+        self, tmp_path: Path
+    ) -> None:
+        """With a progress port, progress goes through the callback, not the repo.
+
+        The node must NOT write ``phase_progress`` via ``repo.update_project`` when
+        editorial owns it — and the reported snapshots reproduce the legacy
+        ``phase_progress`` payload exactly (same status lifecycle).
+        """
+        received: list[ProgressSnapshot] = []
+
+        async def reporter(snapshot: ProgressSnapshot) -> None:
+            received.append(snapshot)
+
+        image_service = AsyncMock()
+        image_service.generate_image = AsyncMock(
+            side_effect=lambda prompt, output_path: output_path
+        )
+        registry, repo = _registry_with_image_service(image_service)
+
+        slides = [_slide_data(i) for i in range(1, 3)]
+        project = _project(tmp_path)
+        await run_images(
+            ImageGenerationConfig(
+                project=project,
+                slides=slides,
+                output_dir=tmp_path,
+                repo=repo,
+                image_registry=registry,
+                progress_port=_CallbackPort(reporter),
+            )
+        )
+
+        # The repo NEVER persisted progress (presentation does not write state).
+        repo.update_project.assert_not_called()
+        # The callback received the lifecycle snapshots (pending → … → done).
+        assert received
+        assert _statuses(received[0]) == ["pending", "pending"]
+        assert _statuses(received[-1]) == ["done", "done"]
+        # The dict phase value is the legacy generating_images value.
+        assert received[0].phase == "generating_images"
+        assert received[0].sse_phase == "images"
+
+    async def test_no_callback_preserves_legacy_in_node_write(
+        self, tmp_path: Path
+    ) -> None:
+        """Without a progress port, the node still writes phase_progress (legacy)."""
+        image_service = AsyncMock()
+        image_service.generate_image = AsyncMock(
+            side_effect=lambda prompt, output_path: output_path
+        )
+        registry, repo = _registry_with_image_service(image_service)
+
+        slides = [_slide_data(1)]
+        project = _project(tmp_path)
+        await run_images(
+            ImageGenerationConfig(
+                project=project,
+                slides=slides,
+                output_dir=tmp_path,
+                repo=repo,
+                image_registry=registry,
+            )
+        )
+
+        repo.update_project.assert_awaited()
+        assert project.phase_progress is not None
+        assert project.phase_progress["phase"] == "generating_images"

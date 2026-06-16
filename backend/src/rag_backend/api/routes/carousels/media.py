@@ -1,3 +1,16 @@
+"""Carousel media + serving routes (pdf / blog / design / images / slides).
+
+Thin HTTP adapters (AE-0120). Each endpoint reads the project/slides through the
+presentation :class:`PresentationHandlers` (via the presentation facade), applies
+the access check at the edge (``assert_domain_owner_or_admin`` /
+``assert_carousel_public``), and builds the FileResponse / response schema. The
+design-token merge is reached through the handler (the AE-0115 §6 presentation
+read) instead of importing the merge utility directly; the routes no longer
+construct the carousel repository.
+"""
+
+from __future__ import annotations
+
 from pathlib import Path
 from typing import Annotated
 from uuid import UUID
@@ -21,6 +34,7 @@ from rag_backend.api.constants import (
     MEDIA_TYPE_PDF,
 )
 from rag_backend.api.dependencies import require_authenticated_user
+from rag_backend.api.dependencies.presentation import get_presentation_handlers
 from rag_backend.api.dependencies.resource_access import assert_domain_owner_or_admin
 from rag_backend.api.middleware.rate_limiting import limiter
 from rag_backend.api.schemas import (
@@ -37,20 +51,15 @@ from rag_backend.application.services.carousel.artifact_path_resolver import (
     resolve_shared_images_dir,
     resolve_slide_image_path,
 )
-from rag_backend.application.services.carousel.design_token_utils import (
-    merge_design_tokens_with_disk,
-)
 from rag_backend.domain.constants import SWIPE_TEXT_EN
 from rag_backend.domain.constants.rate_limits import RATE_LIMIT_CAROUSEL_PUBLISH
-from rag_backend.domain.models import User
-from rag_backend.domain.protocols import CarouselRepository
+from rag_backend.domain.models import CarouselProject, User
+from rag_backend.modules.presentation import PresentationHandlers
 
-from .deps import get_carousel_repo
 from .helpers import (
     _JPEG_CACHE_HEADERS,
     _extract_first_paragraph,
     _extract_title_and_subtitle,
-    _load_project_with_output,
     _resolve_image_file,
     _resolve_pdf_file,
     _safe_relative_file_path,
@@ -58,6 +67,30 @@ from .helpers import (
 )
 
 router = APIRouter()
+
+PresentationHandlersDep = Annotated[
+    PresentationHandlers, Depends(get_presentation_handlers)
+]
+
+
+async def _load_project_or_404(
+    handlers: PresentationHandlers,
+    project_id: UUID,
+) -> CarouselProject:
+    project = await handlers.get_project(project_id)
+    if project is None:
+        raise HTTPException(status_code=404, detail=ERR_CAROUSEL_NOT_FOUND)
+    return project
+
+
+async def _load_project_with_output(
+    handlers: PresentationHandlers,
+    project_id: UUID,
+) -> CarouselProject:
+    project = await _load_project_or_404(handlers, project_id)
+    if project.output_dir is None:
+        raise HTTPException(status_code=404, detail=ERR_CAROUSEL_NOT_GENERATED)
+    return project
 
 
 @router.get(
@@ -73,13 +106,11 @@ async def get_carousel_pdf(
     request: Request,
     project_id: UUID,
     user: Annotated[User, Depends(require_authenticated_user)],
-    repo: Annotated[CarouselRepository, Depends(get_carousel_repo)],
+    handlers: PresentationHandlersDep,
     lang: Annotated[str, Query(pattern="^(pt|en)$")] = "pt",
 ) -> FileResponse:
     """Stream the carousel.pdf file for LinkedIn document posting."""
-    project = await repo.get_project_by_id(project_id)
-    if project is None:
-        raise HTTPException(status_code=404, detail=ERR_CAROUSEL_NOT_FOUND)
+    project = await _load_project_or_404(handlers, project_id)
     assert_domain_owner_or_admin(project.owner_id, user)
     pdf_file = _resolve_pdf_file(project, lang)
     if pdf_file is None:
@@ -101,12 +132,10 @@ async def get_carousel_pdf(
 async def get_carousel_blog(
     request: Request,
     project_id: UUID,
-    repo: Annotated[CarouselRepository, Depends(get_carousel_repo)],
+    handlers: PresentationHandlersDep,
 ) -> CarouselBlogResponse:
     """Get the generated blog post for a carousel (default pt-BR)."""
-    project = await repo.get_project_by_id(project_id)
-    if project is None:
-        raise HTTPException(status_code=404, detail=ERR_CAROUSEL_NOT_FOUND)
+    project = await _load_project_or_404(handlers, project_id)
     assert_carousel_public(project)
     if project.blog_markdown is None:
         raise HTTPException(status_code=404, detail=ERR_BLOG_NOT_GENERATED)
@@ -128,13 +157,11 @@ async def get_carousel_blog_i18n(
     request: Request,
     project_id: UUID,
     lang: Annotated[str, FastPath(pattern="^(pt|en)$")],
-    repo: Annotated[CarouselRepository, Depends(get_carousel_repo)],
+    handlers: PresentationHandlersDep,
 ) -> CarouselBlogI18nResponse:
     """Get the generated blog post in a specific language."""
 
-    project = await repo.get_project_by_id(project_id)
-    if project is None:
-        raise HTTPException(status_code=404, detail=ERR_CAROUSEL_NOT_FOUND)
+    project = await _load_project_or_404(handlers, project_id)
     assert_carousel_public(project)
 
     blog_content = project.get_blog(lang)
@@ -181,13 +208,11 @@ async def get_carousel_blog_i18n(
 async def get_carousel_design(
     request: Request,
     project_id: UUID,
-    repo: Annotated[CarouselRepository, Depends(get_carousel_repo)],
+    handlers: PresentationHandlersDep,
     lang: Annotated[str, Query(pattern="^(pt|en)$")] = "pt",
 ) -> CarouselDesignResponse:
     """Get the visual design tokens for a carousel."""
-    project = await repo.get_project_by_id(project_id)
-    if project is None:
-        raise HTTPException(status_code=404, detail=ERR_CAROUSEL_NOT_FOUND)
+    project = await _load_project_or_404(handlers, project_id)
     assert_carousel_public(project)
     if project.design_tokens is None:
         raise HTTPException(status_code=404, detail=ERR_DESIGN_NOT_GENERATED)
@@ -196,7 +221,7 @@ async def get_carousel_design(
     theme_name = project.theme.value
 
     required_keys = ("colors", "typography", "images", "layout")
-    defaults = merge_design_tokens_with_disk(project)
+    defaults = handlers.merge_design_tokens(project)
     if not raw_tokens or not all(k in raw_tokens for k in required_keys):
         tokens: dict[str, object] = defaults
     else:
@@ -231,10 +256,10 @@ async def get_carousel_image(
     request: Request,
     project_id: UUID,
     filename: str,
-    repo: Annotated[CarouselRepository, Depends(get_carousel_repo)],
+    handlers: PresentationHandlersDep,
 ) -> FileResponse:
     """Serve a raw hero image (from <output>/images/)."""
-    project = await _load_project_with_output(project_id, repo)
+    project = await _load_project_with_output(handlers, project_id)
     assert_carousel_public(project)
     images_dir = resolve_shared_images_dir(project)
     if images_dir is None:
@@ -261,10 +286,10 @@ async def get_carousel_slide_image(
     project_id: UUID,
     lang: Annotated[str, FastPath(pattern="^(pt|en)$")],
     filename: str,
-    repo: Annotated[CarouselRepository, Depends(get_carousel_repo)],
+    handlers: PresentationHandlersDep,
 ) -> FileResponse:
     """Serve a per-language rendered slide JPG (from <output>/<lang>/)."""
-    project = await _load_project_with_output(project_id, repo)
+    project = await _load_project_with_output(handlers, project_id)
     assert_carousel_public(project)
     image_path = resolve_slide_image_path(project, lang, filename)
     if image_path is None:
@@ -293,14 +318,12 @@ async def get_carousel_slides(
     request: Request,
     project_id: UUID,
     user: Annotated[User, Depends(require_authenticated_user)],
-    repo: Annotated[CarouselRepository, Depends(get_carousel_repo)],
+    handlers: PresentationHandlersDep,
 ) -> list[CarouselSlideResponse]:
     """Get all slides for a carousel project."""
-    project = await repo.get_project_by_id(project_id)
-    if project is None:
-        raise HTTPException(status_code=404, detail=ERR_CAROUSEL_NOT_FOUND)
+    project = await _load_project_or_404(handlers, project_id)
     assert_domain_owner_or_admin(project.owner_id, user)
-    slides = await repo.get_slides_by_project(project_id)
+    slides = await handlers.get_slides(project_id)
     return [CarouselSlideResponse.model_validate(s) for s in slides]
 
 
@@ -317,12 +340,10 @@ async def download_carousel(
     request: Request,
     project_id: UUID,
     user: Annotated[User, Depends(require_authenticated_user)],
-    repo: Annotated[CarouselRepository, Depends(get_carousel_repo)],
+    handlers: PresentationHandlersDep,
 ) -> dict[str, list[str]]:
     """Get download info for carousel files."""
-    project = await repo.get_project_by_id(project_id)
-    if project is None:
-        raise HTTPException(status_code=404, detail=ERR_CAROUSEL_NOT_FOUND)
+    project = await _load_project_or_404(handlers, project_id)
     assert_domain_owner_or_admin(project.owner_id, user)
     if project.output_dir is None:
         raise HTTPException(status_code=404, detail=ERR_CAROUSEL_NOT_GENERATED)

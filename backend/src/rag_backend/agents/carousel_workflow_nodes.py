@@ -8,9 +8,6 @@ from typing import TYPE_CHECKING, cast
 from langchain_core.runnables import RunnableConfig
 from langgraph.types import interrupt
 
-from rag_backend.application.services.carousel.presentation_review_edits import (
-    apply_localized_slide_edits,
-)
 from rag_backend.application.services.carousel.workflow_state import (
     CarouselWorkflowState,
 )
@@ -40,6 +37,9 @@ from rag_backend.domain.constants.carousel_workflow import (
     STRUCTURED_FEEDBACK_KEY,
     STRUCTURED_FEEDBACK_TARGET_PHASE_KEY,
     WORKFLOW_STATUS_APPROVED_FOR_PUBLISH,
+)
+from rag_backend.modules.presentation import (
+    apply_localized_slide_edits_via_port,
 )
 
 if TYPE_CHECKING:
@@ -91,7 +91,7 @@ def _edited_slide_updates(
     if not isinstance(edited, list) or not edited:
         return {}
     edited_dicts = [slide for slide in edited if isinstance(slide, dict)]
-    return apply_localized_slide_edits(state, edited_dicts)
+    return apply_localized_slide_edits_via_port(state, edited_dicts)
 
 
 def review_updates_from_response(

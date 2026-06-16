@@ -1,0 +1,41 @@
+{
+  "body": {
+    "strategies": [
+      {
+        "display_name": "Intro Hero",
+        "name": "intro_hero"
+      },
+      {
+        "display_name": "Hero Content",
+        "name": "hero_content"
+      },
+      {
+        "display_name": "CTA Centered",
+        "name": "cta_centered"
+      },
+      {
+        "display_name": "Stat Card Grid",
+        "name": "stat_card_grid"
+      },
+      {
+        "display_name": "Feature Card Grid",
+        "name": "feature_grid"
+      },
+      {
+        "display_name": "Insight Quote",
+        "name": "insight_quote"
+      },
+      {
+        "display_name": "Numbered List",
+        "name": "numbered_list"
+      },
+      {
+        "display_name": "Summary Card Grid",
+        "name": "summary_grid"
+      }
+    ]
+  },
+  "cookies": {},
+  "headers": {},
+  "status_code": 200
+}

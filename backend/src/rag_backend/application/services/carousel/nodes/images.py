@@ -49,10 +49,6 @@ from rag_backend.application.services.carousel.types import (
     short_scene,
     style_display_name,
 )
-from rag_backend.application.services.image_provider_registry import (
-    ImageProvider,
-    ImageProviderRegistry,
-)
 from rag_backend.domain.constants import (
     CAROUSEL_STATUS_GENERATING_IMAGES,
     SLIDE_TYPE_CLOSING,
@@ -67,6 +63,12 @@ from rag_backend.infrastructure.external.openai_image import (
     _openai_status_error_detail,
 )
 from rag_backend.infrastructure.logging import get_logger
+from rag_backend.modules.presentation import (
+    ImageProvider,
+    ImageProviderPort,
+    ProgressSnapshot,
+    WorkflowProgressPort,
+)
 
 logger = get_logger()
 
@@ -95,7 +97,13 @@ class ImageGenerationConfig:
     slide: SlideData | None = None
     output_dir: Path | None = None
     repo: CarouselRepository | None = None
-    image_registry: ImageProviderRegistry | None = None
+    image_registry: ImageProviderPort | None = None
+    # AE-0121: presentation→editorial progress CALLBACK port. When the editorial
+    # workflow injects it, the image node reports progress through it and editorial
+    # owns the workflow-state ``phase_progress`` write + SSE. When absent (direct
+    # callers / unit tests), the node falls back to the legacy in-node write so
+    # behavior is byte-identical.
+    progress_port: WorkflowProgressPort | None = None
 
 
 @dataclass(frozen=True)
@@ -335,6 +343,7 @@ class _ImageRunContext:
     done_count: int
     progress_lock: asyncio.Lock
     mutable_project: CarouselProject
+    progress_port: WorkflowProgressPort | None
 
 
 async def _build_image_run_context(
@@ -372,21 +381,44 @@ async def _build_image_run_context(
         done_count=0,
         progress_lock=asyncio.Lock(),
         mutable_project=project,
+        progress_port=config.progress_port,
+    )
+
+
+def _build_progress_snapshot(ctx: _ImageRunContext) -> ProgressSnapshot:
+    """Build the progress snapshot (the byte-identical ``phase_progress`` payload).
+
+    The fields map one-to-one onto the dict the legacy in-node write persisted, so
+    whichever path consumes it — the editorial callback or the legacy in-node
+    write — produces the identical ``phase_progress`` column + SSE payload.
+    """
+    return ProgressSnapshot(
+        project_id=str(ctx.mutable_project.id),
+        phase=CAROUSEL_STATUS_GENERATING_IMAGES,
+        sse_phase=PHASE_IMAGES,
+        label=(f"Generating {ctx.total} slide images in parallel — {ctx.style_label}"),
+        current=ctx.done_count,
+        total=ctx.total,
+        slides=tuple(dict(s) for s in ctx.slide_status),
     )
 
 
 async def _publish_progress_state(ctx: _ImageRunContext) -> None:
-    """Publish progress snapshot to project and SSE stream."""
+    """Report the progress snapshot via the callback port, or write it in-node.
+
+    AE-0121: when the editorial workflow injected a :class:`WorkflowProgressPort`,
+    the presentation image node reports a :class:`ProgressSnapshot` through it and
+    EDITORIAL owns the workflow-state ``phase_progress`` write + SSE emission
+    (presentation does not write workflow state). When no port is injected (direct
+    callers / unit tests), the node falls back to the byte-identical legacy in-node
+    write so behavior is preserved exactly.
+    """
     async with ctx.progress_lock:
-        ctx.mutable_project.phase_progress = {
-            "phase": CAROUSEL_STATUS_GENERATING_IMAGES,
-            "label": (
-                f"Generating {ctx.total} slide images in parallel — {ctx.style_label}"
-            ),
-            "current": ctx.done_count,
-            "total": ctx.total,
-            "slides": [dict(s) for s in ctx.slide_status],
-        }
+        snapshot = _build_progress_snapshot(ctx)
+        if ctx.progress_port is not None:
+            await ctx.progress_port.report_progress(snapshot)
+            return
+        ctx.mutable_project.phase_progress = snapshot.as_phase_progress()
         ctx.mutable_project = await ctx.repo.update_project(ctx.mutable_project)
         await publish_workflow_progress(
             str(ctx.mutable_project.id),
