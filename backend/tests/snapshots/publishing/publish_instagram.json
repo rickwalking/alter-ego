@@ -1,0 +1,10 @@
+{
+  "body": {
+    "error_message": null,
+    "ig_post_id": "IG_FIXTURE_POST_ID",
+    "status": "published"
+  },
+  "cookies": {},
+  "headers": {},
+  "status_code": 200
+}

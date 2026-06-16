@@ -21,6 +21,10 @@ from rag_backend.api.dependencies.carousel_access import (
     get_carousel_project_for_domain_user,
 )
 from rag_backend.api.dependencies.presentation import get_presentation_handlers
+from rag_backend.api.dependencies.publishing import (
+    PublishingComposition,
+    build_publishing_module,
+)
 from rag_backend.api.middleware.rate_limiting import limiter
 from rag_backend.api.schemas import (
     CarouselProjectCreate,
@@ -30,7 +34,6 @@ from rag_backend.api.schemas import (
 from rag_backend.domain.constants.carousel_workflow import (
     ERR_CAROUSEL_NOT_COMPLETED,
     ERR_WORKFLOW_NOT_APPROVED_FOR_PUBLISH,
-    PHASE_PUBLISHED,
     WORKFLOW_STATUS_APPROVED_FOR_PUBLISH,
 )
 from rag_backend.domain.constants.rate_limits import RATE_LIMIT_CAROUSEL_PUBLISH
@@ -40,11 +43,33 @@ from rag_backend.domain.protocols.repositories import _ProjectQuery
 from rag_backend.infrastructure.database.config import get_session
 from rag_backend.infrastructure.database.models.carousel import CarouselProjectModel
 from rag_backend.modules.presentation import PresentationHandlers
+from rag_backend.modules.publishing import (
+    CarouselReleaseCommand,
+    PublishingModule,
+)
 
 from .deps import get_carousel_repo
 from .helpers import assert_carousel_artifacts_healthy
 
 router = APIRouter()
+
+
+def get_publishing_module_for_carousel(
+    repo: Annotated[CarouselRepository, Depends(get_carousel_repo)],
+    session: Annotated[AsyncSession, Depends(get_session)],
+) -> PublishingModule:
+    """Build the request-scoped publishing facade for the carousel publish edge.
+
+    Binds the facade to the SAME ``get_session`` session + carousel repository the
+    publish route already uses, so the release write + the single commit share one
+    transaction (ADR-0009 §9). No scheduler is wired (the carousel release path
+    never schedules). Resolving the infra collaborators here keeps the shared
+    ``api/dependencies/publishing`` edge free of any new ``api -> infrastructure``
+    import (the grandfathered baseline only).
+    """
+    return build_publishing_module(
+        PublishingComposition(session=session, carousel_repository=repo),
+    )
 
 
 @router.post(
@@ -166,6 +191,9 @@ async def publish_carousel(
     user: Annotated[User, Depends(require_editor_or_admin)],
     repo: Annotated[CarouselRepository, Depends(get_carousel_repo)],
     session: Annotated[AsyncSession, Depends(get_session)],
+    publishing: Annotated[
+        PublishingModule, Depends(get_publishing_module_for_carousel)
+    ],
 ) -> CarouselProjectResponse:
     """Mark a carousel as publicly visible on the homepage and blog."""
     await get_carousel_project_for_domain_user(session, project_id, user)
@@ -236,14 +264,9 @@ async def publish_carousel(
                 BLOG_LANG_ENGLISH: blog_en or blog_pt,
             }
             await repo.update_project(project)
-    project.is_public = True
-    project.current_phase = PHASE_PUBLISHED
-    updated = await repo.update_project(project)
-    model = await session.get(CarouselProjectModel, str(project_id))
-    if model is not None:
-        model.is_public = True
-        model.current_phase = PHASE_PUBLISHED
-        await session.commit()
+    updated = await publishing.service.release_carousel(
+        CarouselReleaseCommand(project=project, project_id=str(project_id)),
+    )
     return CarouselProjectResponse.model_validate(updated)
 
 

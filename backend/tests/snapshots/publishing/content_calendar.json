@@ -1,0 +1,22 @@
+{
+  "body": {
+    "end": "<timestamp>",
+    "items": [
+      {
+        "content_type": "blog_post",
+        "event_date": "<timestamp>",
+        "id": "<uuid>",
+        "is_scheduled": true,
+        "phase": null,
+        "phase_status": null,
+        "status": "scheduled",
+        "title": "Calendar Fixture Post"
+      }
+    ],
+    "start": "<timestamp>",
+    "total": 1
+  },
+  "cookies": {},
+  "headers": {},
+  "status_code": 200
+}

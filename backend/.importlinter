@@ -250,6 +250,50 @@ forbidden_modules =
     rag_backend.modules.presentation.bootstrap
     rag_backend.modules.presentation.constants
 
+# Contract: Publishing module application/domain exit-gate (AE-0103)
+# The publishing inner layers must stay free of frameworks, the global
+# container, and concrete infrastructure (incl. Postgres repos).
+# The only ignore_imports are the object-identity re-export shims
+# in the domain layer (AE-0126 re-export-not-relocation); every
+# OTHER carousel/blog-ORM import must go through the publishing
+# ACL modules. Any NEW infrastructure import breaks CI.
+[importlinter:contract:publishing-application-isolation]
+name = Publishing application/domain must not import frameworks, the global container, or infrastructure
+type = forbidden
+allow_indirect_imports = true
+unmatched_ignore_imports_alerting = none
+source_modules =
+    rag_backend.modules.publishing.application
+    rag_backend.modules.publishing.domain
+forbidden_modules =
+    sqlalchemy
+    fastapi
+    rag_backend.infrastructure
+ignore_imports =
+    rag_backend.modules.publishing.domain.ports -> rag_backend.infrastructure.database.blog_post_repository
+    rag_backend.modules.publishing.domain.models -> rag_backend.infrastructure.database.models.blog_post
+
+# Contract: publishing internals are private (import via the facade only)
+# AE-0103 — mirrors module-conventions §7a; the proven Phase-2 pattern.
+[importlinter:contract:publishing-public-facade]
+name = publishing internals are private (import via the facade only)
+type = forbidden
+allow_indirect_imports = true
+unmatched_ignore_imports_alerting = none
+source_modules =
+    rag_backend.api
+    rag_backend.agents
+    rag_backend.application
+    rag_backend.domain
+    rag_backend.infrastructure
+forbidden_modules =
+    rag_backend.modules.publishing.domain
+    rag_backend.modules.publishing.application
+    rag_backend.modules.publishing.infrastructure
+    rag_backend.modules.publishing.api
+    rag_backend.modules.publishing.bootstrap
+    rag_backend.modules.publishing.constants
+
 # Contract: presentation must not import the editorial module (editorial -> presentation only)
 # AE-0122 — locks the acyclic module direction.
 [importlinter:contract:presentation-no-editorial]
@@ -261,6 +305,20 @@ source_modules =
     rag_backend.modules.presentation
 forbidden_modules =
     rag_backend.modules.editorial
+
+# Contract: publishing must not import the editorial or presentation modules
+# (editorial/presentation -> publishing only)
+# AE-0132 — locks the acyclic module direction.
+[importlinter:contract:publishing-no-editorial-presentation]
+name = publishing must not import editorial or presentation (editorial/presentation -> publishing only)
+type = forbidden
+allow_indirect_imports = true
+unmatched_ignore_imports_alerting = none
+source_modules =
+    rag_backend.modules.publishing
+forbidden_modules =
+    rag_backend.modules.editorial
+    rag_backend.modules.presentation
 
 # Contract: Application layer must not depend on infrastructure (grandfathered baseline only)
 # ignore_imports below = generated AE-0082 baseline exception list
@@ -436,8 +494,6 @@ ignore_imports =
     rag_backend.api.middleware.error_handlers -> rag_backend.infrastructure.logging
     rag_backend.api.middleware.request_logging -> rag_backend.infrastructure.logging
     rag_backend.api.routes.admin_migration -> rag_backend.infrastructure.logging
-    rag_backend.api.routes.blog_post -> rag_backend.infrastructure.database.blog_post_repository
-    rag_backend.api.routes.blog_post -> rag_backend.infrastructure.database.models
     rag_backend.api.routes.blog_post_ai -> rag_backend.infrastructure.container
     rag_backend.api.routes.blog_post_comments -> rag_backend.infrastructure.database.models.source_comment
     rag_backend.api.routes.blog_post_quality -> rag_backend.infrastructure.container
@@ -469,4 +525,3 @@ ignore_imports =
     rag_backend.api.routes.rubrics -> rag_backend.infrastructure.database.models
     rag_backend.api.routes.sources -> rag_backend.infrastructure.container
     rag_backend.api.routes.sources -> rag_backend.infrastructure.database.models.source_comment
-    rag_backend.api.routes.workflow_board -> rag_backend.infrastructure.database.models.carousel

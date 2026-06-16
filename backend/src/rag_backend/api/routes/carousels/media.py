@@ -18,6 +18,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.params import Path as FastPath
 from fastapi.responses import FileResponse
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.api.constants import (
     ERR_BLOG_NOT_GENERATED,
@@ -34,7 +35,12 @@ from rag_backend.api.constants import (
     MEDIA_TYPE_PDF,
 )
 from rag_backend.api.dependencies import require_authenticated_user
+from rag_backend.api.dependencies.database import get_db
 from rag_backend.api.dependencies.presentation import get_presentation_handlers
+from rag_backend.api.dependencies.publishing import (
+    PublishingComposition,
+    build_publishing_module,
+)
 from rag_backend.api.dependencies.resource_access import assert_domain_owner_or_admin
 from rag_backend.api.middleware.rate_limiting import limiter
 from rag_backend.api.schemas import (
@@ -55,11 +61,14 @@ from rag_backend.domain.constants import SWIPE_TEXT_EN
 from rag_backend.domain.constants.rate_limits import RATE_LIMIT_CAROUSEL_PUBLISH
 from rag_backend.domain.models import CarouselProject, User
 from rag_backend.modules.presentation import PresentationHandlers
+from rag_backend.modules.publishing import (
+    CarouselRepository,
+    PublishingModule,
+)
 
+from .deps import get_carousel_repo
 from .helpers import (
     _JPEG_CACHE_HEADERS,
-    _extract_first_paragraph,
-    _extract_title_and_subtitle,
     _resolve_image_file,
     _resolve_pdf_file,
     _safe_relative_file_path,
@@ -71,6 +80,25 @@ router = APIRouter()
 PresentationHandlersDep = Annotated[
     PresentationHandlers, Depends(get_presentation_handlers)
 ]
+
+
+def get_publishing_module_for_blog_read(
+    repo: Annotated[CarouselRepository, Depends(get_carousel_repo)],
+    session: Annotated[AsyncSession, Depends(get_db)],
+) -> PublishingModule:
+    """Build the request-scoped publishing facade for the carousel-blog read edge.
+
+    Binds the read projection port to the request session (the sole carousel/blog
+    ORM read seam → the AE-0127 ``origin='carousel'`` backfill lookup with the
+    embedded-column fallback). The carousel repository is resolved via the
+    grandfathered ``get_carousel_repo`` edge so this route adds no new
+    ``api -> infrastructure`` import.
+    """
+    return build_publishing_module(
+        PublishingComposition(
+            session=session, carousel_repository=repo, with_read=True
+        ),
+    )
 
 
 async def _load_project_or_404(
@@ -133,16 +161,20 @@ async def get_carousel_blog(
     request: Request,
     project_id: UUID,
     handlers: PresentationHandlersDep,
+    publishing: Annotated[
+        PublishingModule, Depends(get_publishing_module_for_blog_read)
+    ],
 ) -> CarouselBlogResponse:
     """Get the generated blog post for a carousel (default pt-BR)."""
     project = await _load_project_or_404(handlers, project_id)
     assert_carousel_public(project)
-    if project.blog_markdown is None:
+    projection = await publishing.service.project_carousel_blog(project)
+    if projection is None:
         raise HTTPException(status_code=404, detail=ERR_BLOG_NOT_GENERATED)
     return CarouselBlogResponse(
-        markdown=project.blog_markdown,
-        title=project.title or project.topic,
-        subtitle=project.subtitle,
+        markdown=projection.markdown,
+        title=projection.title,
+        subtitle=projection.subtitle,
     )
 
 
@@ -158,14 +190,17 @@ async def get_carousel_blog_i18n(
     project_id: UUID,
     lang: Annotated[str, FastPath(pattern="^(pt|en)$")],
     handlers: PresentationHandlersDep,
+    publishing: Annotated[
+        PublishingModule, Depends(get_publishing_module_for_blog_read)
+    ],
 ) -> CarouselBlogI18nResponse:
     """Get the generated blog post in a specific language."""
 
     project = await _load_project_or_404(handlers, project_id)
     assert_carousel_public(project)
 
-    blog_content = project.get_blog(lang)
-    if blog_content is None:
+    projection = await publishing.service.project_carousel_blog_i18n(project, lang)
+    if projection is None:
         raise HTTPException(
             status_code=404,
             detail=f"Blog post not available in '{lang}'",
@@ -174,26 +209,12 @@ async def get_carousel_blog_i18n(
             },
         )
 
-    translated_title, translated_subtitle = _extract_title_and_subtitle(blog_content)
-
-    if lang == "en":
-        title = translated_title or project.title_en or project.title or project.topic
-        subtitle = (
-            translated_subtitle
-            or project.subtitle_en
-            or _extract_first_paragraph(blog_content)
-            or project.subtitle
-        )
-    else:
-        title = translated_title or project.title or project.topic
-        subtitle = translated_subtitle or project.subtitle
-
     return CarouselBlogI18nResponse(
-        markdown=blog_content,
-        title=title,
-        subtitle=subtitle,
-        language=lang,
-        available_languages=project.get_available_languages(),
+        markdown=projection.markdown,
+        title=projection.title,
+        subtitle=projection.subtitle,
+        language=projection.language,
+        available_languages=projection.available_languages,
     )
 
 

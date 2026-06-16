@@ -7,6 +7,10 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.api.dependencies.database import get_db
+from rag_backend.api.dependencies.publishing import (
+    PublishingComposition,
+    build_publishing_module,
+)
 from rag_backend.api.dependencies.resource_access import (
     get_blog_post_for_read,
     get_blog_post_for_user,
@@ -14,6 +18,7 @@ from rag_backend.api.dependencies.resource_access import (
 )
 from rag_backend.api.dependencies.roles import EditorUser
 from rag_backend.api.middleware.rate_limiting import limiter
+from rag_backend.api.routes.carousels.deps import get_carousel_repo
 from rag_backend.api.schemas.blog_post import (
     BlogPostCreate,
     BlogPostListResponse,
@@ -42,15 +47,33 @@ from rag_backend.domain.constants.workflow_validation import (
 )
 from rag_backend.domain.models.user import UserRole
 from rag_backend.infrastructure.config.settings import get_settings
-from rag_backend.infrastructure.database.blog_post_repository import (
-    BlogPostRepository,
-    _BlogPostListQuery,
-)
-from rag_backend.infrastructure.database.models import BlogPostModel
 from rag_backend.infrastructure.events.factory import get_event_publisher
 from rag_backend.infrastructure.telemetry.opentelemetry import start_span
+from rag_backend.modules.publishing import (
+    BlogListQuery,
+    CarouselRepository,
+    PublishingModule,
+)
 
 router = APIRouter(tags=["blog_posts"])
+
+
+def get_publishing_module_for_blog(
+    repo: Annotated[CarouselRepository, Depends(get_carousel_repo)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> PublishingModule:
+    """Build the request-scoped publishing facade for the blog-CRUD edge (AE-0131).
+
+    Binds the read/blog-CRUD ports to the SAME ``get_db`` session the blog routes
+    already use (so the staged row, the audit/lock writes, and the single commit
+    share one transaction). The carousel repository is resolved via the
+    grandfathered ``get_carousel_repo`` edge so this route adds no new
+    ``api -> infrastructure`` import; the read ACL (the sole blog ORM seam) backs
+    ``new_post``/``get_post``/``list_summaries``.
+    """
+    return build_publishing_module(
+        PublishingComposition(session=db, carousel_repository=repo, with_read=True),
+    )
 
 
 def _user_is_admin(user: EditorUser) -> bool:
@@ -76,10 +99,11 @@ async def create_blog_post(
     data: BlogPostCreate,
     db: Annotated[AsyncSession, Depends(get_db)],
     current_user: EditorUser,
+    publishing: Annotated[PublishingModule, Depends(get_publishing_module_for_blog)],
 ) -> BlogPostResponse:
     """Create a new blog post."""
     payload = data.model_dump(exclude={"author_id"})
-    post = BlogPostModel.from_entity(payload)
+    post = publishing.service.new_blog_post(payload)
     post.author_id = current_user.id
     db.add(post)
     await db.flush()
@@ -104,20 +128,18 @@ async def create_blog_post(
 @limiter.limit(RATE_LIMIT_WORKFLOW_ENDPOINTS)
 async def list_blog_posts(
     request: Request,
-    db: Annotated[AsyncSession, Depends(get_db)],
     current_user: EditorUser,
     params: Annotated[BlogPostListParams, Depends()],
+    publishing: Annotated[PublishingModule, Depends(get_publishing_module_for_blog)],
 ) -> BlogPostListResponse:
     """List blog posts visible to the caller with pagination and search."""
     with start_span("blog_post.list"):
-        repo = BlogPostRepository()
         filter_author = (
             params.author_id if _user_is_admin(current_user) else current_user.id
         )
 
-        posts, total = await repo.list_summaries(
-            db,
-            _BlogPostListQuery(
+        posts, total = await publishing.service.list_blog_summaries(
+            BlogListQuery(
                 status_filter=params.status,
                 author_id=filter_author,
                 search=params.search,
@@ -162,6 +184,7 @@ async def update_blog_post(
     data: BlogPostUpdate,
     db: Annotated[AsyncSession, Depends(get_db)],
     current_user: EditorUser,
+    publishing: Annotated[PublishingModule, Depends(get_publishing_module_for_blog)],
     if_match: Annotated[int | None, Header(alias=HTTP_HEADER_IF_MATCH)] = None,
 ) -> BlogPostResponse:
     """Update a blog post with optimistic locking (WF-005)."""
@@ -191,7 +214,7 @@ async def update_blog_post(
             detail=ERR_VERSION_CONFLICT,
         ) from exc
 
-    post = await db.get(BlogPostModel, str(post_id))
+    post = await publishing.service.get_blog_post(str(post_id))
     if post is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

@@ -1,0 +1,49 @@
+{
+  "body": {
+    "ai_disclosure_label": "none",
+    "ai_generation_metadata": {},
+    "ai_suggestions": [],
+    "approved_at": null,
+    "author_id": "<uuid>",
+    "canonical_url": null,
+    "citations": [],
+    "comment_count": 0,
+    "content": {
+      "blocks": [
+        {
+          "text": "Deterministic blog post body.",
+          "type": "paragraph"
+        }
+      ]
+    },
+    "created_at": "<timestamp>",
+    "editor_comments": [],
+    "excerpt": "Deterministic excerpt.",
+    "featured_image_url": null,
+    "id": "<uuid>",
+    "keywords": [
+      "fixture",
+      "snapshot"
+    ],
+    "like_count": 0,
+    "lock_version": 1,
+    "meta_description": null,
+    "meta_title": null,
+    "project_id": null,
+    "published_at": null,
+    "reviewer_id": null,
+    "scheduled_publish_at": null,
+    "share_count": 0,
+    "slug": "fixture-blog-post",
+    "sources": [],
+    "status": "draft",
+    "submitted_for_review_at": null,
+    "title": "Fixture Blog Post",
+    "updated_at": "<timestamp>",
+    "version_history": [],
+    "view_count": 0
+  },
+  "cookies": {},
+  "headers": {},
+  "status_code": 200
+}

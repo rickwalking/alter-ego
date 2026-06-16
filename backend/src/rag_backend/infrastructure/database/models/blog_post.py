@@ -1,6 +1,7 @@
 """SQLAlchemy ORM model for BlogPost entity."""
 
 import uuid
+from datetime import datetime
 
 from sqlalchemy import (
     JSON,
@@ -12,8 +13,9 @@ from sqlalchemy import (
     String,
     func,
 )
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from rag_backend.domain.constants.blog_post import BlogPostOrigin
 from rag_backend.infrastructure.database.config import Base
 
 
@@ -28,9 +30,19 @@ class BlogPostModel(Base):
         ForeignKey("carousel_projects.id", ondelete="SET NULL"),
         nullable=True,
     )
+    # Provenance (AE-0127): 'standalone' (hand-authored) vs 'carousel' (derived).
+    origin = Column(
+        String(20),
+        default=BlogPostOrigin.STANDALONE.value,
+        server_default=BlogPostOrigin.STANDALONE.value,
+        nullable=False,
+    )
     title = Column(String(255), nullable=False)
     slug = Column(String(255), unique=True, nullable=False)
-    status = Column(String(50), default="draft", nullable=False)
+    # Workflow status — written by the publishing visibility port (AE-0128);
+    # SQLAlchemy 2.0 ``Mapped[...]`` so the instance attribute types as ``str``
+    # for the byte-identical status writes (no mypy override).
+    status: Mapped[str] = mapped_column(String(50), default="draft", nullable=False)
 
     # Content
     content = Column(JSON, default=dict, nullable=False)
@@ -74,10 +86,19 @@ class BlogPostModel(Base):
         onupdate=func.now(),
         nullable=False,
     )
-    submitted_for_review_at = Column(DateTime(timezone=True), nullable=True)
+    # Visibility/schedule timestamps written by the publishing visibility +
+    # schedule ports (AE-0128); SQLAlchemy 2.0 ``Mapped[...]`` so the instance
+    # attributes type as ``datetime | None`` for the byte-identical writes.
+    submitted_for_review_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     approved_at = Column(DateTime(timezone=True), nullable=True)
-    published_at = Column(DateTime(timezone=True), nullable=True)
-    scheduled_publish_at = Column(DateTime(timezone=True), nullable=True)
+    published_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    scheduled_publish_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     lock_version = Column(Integer, default=1, nullable=False)
 
     __table_args__ = (
@@ -101,6 +122,7 @@ class BlogPostModel(Base):
         return {
             "id": self.id,
             "project_id": self.project_id,
+            "origin": self.origin,
             "title": self.title,
             "slug": self.slug,
             "status": self.status,
@@ -139,6 +161,7 @@ class BlogPostModel(Base):
         return cls(
             id=entity.get("id", str(uuid.uuid4())),
             project_id=entity.get("project_id"),
+            origin=entity.get("origin", BlogPostOrigin.STANDALONE.value),
             title=entity.get("title", ""),
             slug=entity.get("slug", ""),
             status=entity.get("status", "draft"),

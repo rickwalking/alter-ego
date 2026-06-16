@@ -8,6 +8,10 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.api.dependencies.database import get_db
+from rag_backend.api.dependencies.publishing import (
+    PublishingComposition,
+    build_publishing_module,
+)
 from rag_backend.api.dependencies.resource_access import (
     assert_blog_post_reviewer_or_admin,
     assert_blog_post_status,
@@ -17,6 +21,7 @@ from rag_backend.api.dependencies.resource_access import (
 )
 from rag_backend.api.dependencies.roles import EditorUser
 from rag_backend.api.middleware.rate_limiting import limiter
+from rag_backend.api.routes.carousels.deps import get_carousel_repo
 from rag_backend.api.schemas.blog_post import BlogPostResponse
 from rag_backend.api.schemas.calendar import SchedulePublishRequest
 from rag_backend.application.services.ai_disclosure_service import AiDisclosureService
@@ -52,9 +57,11 @@ from rag_backend.domain.constants.workflow_validation import (
     NOTIFICATION_TITLE_CHANGES_REQUESTED,
     WORKFLOW_REJECT_COMMENT_PREFIX,
 )
+from rag_backend.domain.protocols import CarouselRepository
 from rag_backend.infrastructure.config.settings import get_settings
 from rag_backend.infrastructure.database.config import get_session_maker
 from rag_backend.infrastructure.events.factory import get_event_publisher
+from rag_backend.modules.publishing import PublishingModule
 
 router = APIRouter(tags=["blog_post_workflow"])
 
@@ -65,10 +72,40 @@ def _event_service() -> WorkflowEventService:
 
 
 def _scheduler() -> ScheduledPublishService:
+    """Build the scheduled-publish service exactly as the legacy route did.
+
+    Byte-identical to the pre-AE-0128 ``_scheduler`` helper — the same session
+    maker, the same Redis-backed workflow-event service, and the same notification
+    service — so the schedule write + the due-post sweep are unchanged.
+    """
     return ScheduledPublishService(
         get_session_maker(),
         _event_service(),
         NotificationService(),
+    )
+
+
+def get_publishing_module_for_blog(
+    db: Annotated[AsyncSession, Depends(get_db)],
+    repo: Annotated[CarouselRepository, Depends(get_carousel_repo)],
+) -> PublishingModule:
+    """Build the request-scoped publishing facade for the blog workflow edge.
+
+    Binds the facade to the SAME ``get_db`` session the blog publish/unpublish/
+    schedule routes already use, so the visibility/schedule writes flush into that
+    transaction and the route owns the single commit (unchanged). The carousel
+    repository is resolved through the existing ``get_carousel_repo`` dependency (an
+    api→api edge, mirroring ``crud.py``; no service-locator), and the scheduler is
+    built exactly as the legacy route did — keeping the shared
+    ``api/dependencies/publishing`` edge free of any new ``api -> infrastructure``
+    import (the grandfathered baseline only).
+    """
+    return build_publishing_module(
+        PublishingComposition(
+            session=db,
+            carousel_repository=repo,
+            scheduler=_scheduler(),
+        ),
     )
 
 
@@ -226,6 +263,7 @@ async def publish_blog_post(
     post_id: UUID,
     db: Annotated[AsyncSession, Depends(get_db)],
     current_user: EditorUser,
+    publishing: Annotated[PublishingModule, Depends(get_publishing_module_for_blog)],
 ) -> BlogPostResponse:
     """Publish an approved blog post (author or admin only)."""
     post = await get_blog_post_for_user(db, post_id, current_user)
@@ -246,9 +284,7 @@ async def publish_blog_post(
 
     old_status = post.status
 
-    post.status = BlogPostStatus.PUBLISHED.value
-    post.published_at = datetime.now(UTC)
-    post.scheduled_publish_at = None
+    await publishing.service.publish_blog(post)
 
     await _emit_status_change(
         db, str(post.id), old_status, post.status, current_user.id
@@ -270,6 +306,7 @@ async def schedule_blog_post(
     body: SchedulePublishRequest,
     db: Annotated[AsyncSession, Depends(get_db)],
     current_user: EditorUser,
+    publishing: Annotated[PublishingModule, Depends(get_publishing_module_for_blog)],
 ) -> BlogPostResponse:
     """Schedule an approved post for future publication (SCHED-001, UI-024)."""
     post = await get_blog_post_for_user(db, post_id, current_user)
@@ -283,7 +320,7 @@ async def schedule_blog_post(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=ERR_SCHEDULE_IN_PAST,
         )
-    await _scheduler().schedule_post(db, post, scheduled_at)
+    await publishing.service.schedule_blog(post, scheduled_at)
     await db.commit()
     await db.refresh(post)
     return post
@@ -300,15 +337,14 @@ async def unpublish_blog_post(
     post_id: UUID,
     db: Annotated[AsyncSession, Depends(get_db)],
     current_user: EditorUser,
+    publishing: Annotated[PublishingModule, Depends(get_publishing_module_for_blog)],
 ) -> BlogPostResponse:
     """Unpublish a blog post."""
     post = await get_blog_post_for_user(db, post_id, current_user)
     assert_blog_post_status(post, BlogPostStatus.PUBLISHED)
     old_status = post.status
 
-    post.status = BlogPostStatus.DRAFT.value
-    post.published_at = None
-    post.submitted_for_review_at = None
+    await publishing.service.unpublish_blog(post)
 
     await _emit_status_change(
         db, str(post.id), old_status, post.status, current_user.id

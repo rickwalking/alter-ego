@@ -1,0 +1,51 @@
+{
+  "body": {
+    "columns": [
+      {
+        "cards": [],
+        "phase": "brief"
+      },
+      {
+        "cards": [],
+        "phase": "research"
+      },
+      {
+        "cards": [],
+        "phase": "outline"
+      },
+      {
+        "cards": [
+          {
+            "current_phase": "content",
+            "id": "<uuid>",
+            "phase_status": "approved_for_publish",
+            "title": "Fixture Title",
+            "topic": "Fixture topic",
+            "updated_at": "<timestamp>",
+            "workflow_status": "approved_for_publish"
+          }
+        ],
+        "phase": "content"
+      },
+      {
+        "cards": [],
+        "phase": "design"
+      },
+      {
+        "cards": [],
+        "phase": "images"
+      },
+      {
+        "cards": [],
+        "phase": "final_review"
+      },
+      {
+        "cards": [],
+        "phase": "published"
+      }
+    ]
+  },
+  "cookies": {},
+  "headers": {},
+  "status_code": 200
+}

@@ -1,44 +1,54 @@
-"""Workflow Kanban board API (UI-018)."""
+"""Workflow Kanban board API (UI-018).
+
+Thin HTTP adapter (AE-0131). The phase-column aggregation reads the carousel
+rows through the publishing facade's read projection (the sole carousel/blog ORM
+read seam behind the :class:`PublishingReadPort`); this route imports no carousel
+ORM. The admin/owner-or-reviewer scope is resolved at the edge and passed to the
+projection as the ``author_id`` filter, then the projection columns are mapped
+one-to-one onto the existing ``WorkflowKanbanResponse`` schema (byte-identical).
+"""
 
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel, Field
-from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.api.dependencies.database import get_db
 from rag_backend.api.dependencies.feature_flags import RequireWorkflowBoard
+from rag_backend.api.dependencies.publishing import (
+    PublishingComposition,
+    build_publishing_module,
+)
 from rag_backend.api.dependencies.roles import EditorUser
 from rag_backend.api.middleware.rate_limiting import limiter
-from rag_backend.domain.constants.carousel_workflow import (
-    PHASE_BRIEF,
-    PHASE_CONTENT,
-    PHASE_DESIGN,
-    PHASE_FINAL_REVIEW,
-    PHASE_IMAGES,
-    PHASE_OUTLINE,
-    PHASE_PUBLISHED,
-    PHASE_RESEARCH,
-    PHASE_STATUS_PENDING,
-    WORKFLOW_STATUS_APPROVED_FOR_PUBLISH,
-)
+from rag_backend.api.routes.carousels.deps import get_carousel_repo
 from rag_backend.domain.constants.rate_limits import RATE_LIMIT_WORKFLOW_ENDPOINTS
 from rag_backend.domain.models.user import UserRole
-from rag_backend.infrastructure.database.models.carousel import CarouselProjectModel
+from rag_backend.modules.publishing import (
+    BOARD_PHASES,
+    BoardColumn,
+    BoardQuery,
+    CarouselRepository,
+    PublishingModule,
+)
 
 router = APIRouter(tags=["workflow_board"], dependencies=[RequireWorkflowBoard])
 
-KANBAN_PHASES = [
-    PHASE_BRIEF,
-    PHASE_RESEARCH,
-    PHASE_OUTLINE,
-    PHASE_CONTENT,
-    PHASE_DESIGN,
-    PHASE_IMAGES,
-    PHASE_FINAL_REVIEW,
-    PHASE_PUBLISHED,
-]
+# Re-exported (object-identity) from the publishing facade so the legacy
+# ``KANBAN_PHASES`` symbol keeps resolving for existing importers; the column
+# ordering is owned by the publishing module (single source of truth).
+KANBAN_PHASES = BOARD_PHASES
+
+
+def _get_publishing_module(
+    repo: Annotated[CarouselRepository, Depends(get_carousel_repo)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> PublishingModule:
+    """Build the request-scoped publishing facade for the workflow-board edge."""
+    return build_publishing_module(
+        PublishingComposition(session=db, carousel_repository=repo, with_read=True),
+    )
 
 
 class KanbanCardResponse(BaseModel):
@@ -66,6 +76,25 @@ class WorkflowKanbanResponse(BaseModel):
     columns: list[KanbanColumnResponse]
 
 
+def _to_column_response(column: BoardColumn) -> KanbanColumnResponse:
+    """Map a board projection column one-to-one onto the legacy response schema."""
+    return KanbanColumnResponse(
+        phase=column.phase,
+        cards=[
+            KanbanCardResponse(
+                id=card.id,
+                title=card.title,
+                topic=card.topic,
+                current_phase=card.current_phase,
+                phase_status=card.phase_status,
+                workflow_status=card.workflow_status,
+                updated_at=card.updated_at,
+            )
+            for card in column.cards
+        ],
+    )
+
+
 @router.get(
     "/workflow-board",
     response_model=WorkflowKanbanResponse,
@@ -74,53 +103,19 @@ class WorkflowKanbanResponse(BaseModel):
 @limiter.limit(RATE_LIMIT_WORKFLOW_ENDPOINTS)
 async def get_workflow_kanban(
     request: Request,
-    db: Annotated[AsyncSession, Depends(get_db)],
     current_user: EditorUser,
+    publishing: Annotated[PublishingModule, Depends(_get_publishing_module)],
 ) -> WorkflowKanbanResponse:
     """Return projects grouped by workflow phase (UI-018)."""
-    query = select(CarouselProjectModel).where(
-        CarouselProjectModel.phase_status != PHASE_STATUS_PENDING,
+    author_filter = (
+        None if current_user.role == UserRole.ADMIN.value else current_user.id
     )
-    if current_user.role != UserRole.ADMIN.value:
-        query = query.where(
-            or_(
-                CarouselProjectModel.owner_id == current_user.id,
-                CarouselProjectModel.assigned_reviewer_id == current_user.id,
-            )
-        )
-    result = await db.execute(query)
-    projects = list(result.scalars().all())
-
-    cards_by_phase: dict[str, list[KanbanCardResponse]] = {
-        phase: [] for phase in KANBAN_PHASES
-    }
-    for project in projects:
-        phase = project.current_phase or PHASE_BRIEF
-        if phase not in KANBAN_PHASES:
-            phase = PHASE_PUBLISHED if project.is_public else PHASE_FINAL_REVIEW
-        display_status = project.phase_status or PHASE_STATUS_PENDING
-        workflow_status = getattr(project, "workflow_status", None)
-        if workflow_status == WORKFLOW_STATUS_APPROVED_FOR_PUBLISH:
-            display_status = WORKFLOW_STATUS_APPROVED_FOR_PUBLISH
-        cards_by_phase.setdefault(phase, []).append(
-            KanbanCardResponse(
-                id=str(project.id),
-                title=project.title or project.topic,
-                topic=project.topic,
-                current_phase=phase,
-                phase_status=display_status,
-                workflow_status=str(workflow_status) if workflow_status else None,
-                updated_at=project.updated_at.isoformat()
-                if project.updated_at
-                else None,
-            )
-        )
-
-    columns = [
-        KanbanColumnResponse(phase=phase, cards=cards_by_phase.get(phase, []))
-        for phase in KANBAN_PHASES
-    ]
-    return WorkflowKanbanResponse(columns=columns)
+    projection = await publishing.service.project_board(
+        BoardQuery(author_id=author_filter),
+    )
+    return WorkflowKanbanResponse(
+        columns=[_to_column_response(column) for column in projection.columns],
+    )
 
 
 __all__ = ["router"]
