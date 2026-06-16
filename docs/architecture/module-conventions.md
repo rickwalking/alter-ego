@@ -569,3 +569,95 @@ and `agents -> application` 20 → 19 (carousel_workflow_nodes review-edits via 
 As in §11f: no schema-modifying migration may run while a live LangGraph checkpoint references the old
 shape. Phase 5 needed no migration; the rule remains an exit-gate criterion for later carousel/editorial/
 presentation schema changes.
+
+## 13. Worked example — the `publishing` module (Phase 6: behavior-preserving + additive publish/blog/distribution)
+
+Phase 6 (AE-0123..0132) extracted the carousel/blog **publish + distribution + read-model** slice into
+`modules/publishing/`, **behavior-preserving and additive-only** (the carousel publish/release flow, the
+standalone blog publish/unpublish/schedule routes, the Instagram distribution + caption read, and the
+public carousel `/blog`, content-calendar, workflow-board, and editorial-analytics read surfaces all stay
+byte-identical). It is the template for a slice that is **invoked BY** the already-extracted editorial and
+presentation contexts (publishing is downstream of approval), and for landing the additive halves of a
+larger exit gate while explicitly deferring its behavior-changing / destructive halves.
+
+### 13a. Two ACL/owner seams — writes and reads (AE-0128 / AE-0131)
+The publishing context touches the legacy carousel/blog ORM through **exactly two** infrastructure modules,
+the only publishing code allowed to import that ORM:
+- **`legacy_publishing_acl.py`** (the WRITE owner) backs `CarouselReleasePort` (the `is_public=True` /
+  `current_phase=published` public-release write, byte-identical to `crud.py:publish_carousel`, committed
+  once via the platform UoW), `BlogVisibilityPort` (publish/unpublish status writes, flush-only — the route
+  owns the event + commit), and `BlogSchedulePort` (the schedule write + the due-post sweep, delegating
+  unchanged to `ScheduledPublishService`).
+- **`publishing_read_acl.py`** (the READ owner) backs `PublishingReadPort` (the carousel-blog projection,
+  content-calendar, workflow-board, editorial-analytics) and `BlogPostCrudPort` (the blog-post persistence
+  rows). Every method returns a boundary-safe projection value object — never the ORM, never `Any`.
+
+The publishing `application`/`domain` layers depend only on these ports (plus the platform UoW and other
+facades); they import no carousel/blog ORM directly. As in §11b/§12b the owner/ACL live in
+`modules/publishing/infrastructure` precisely so they may import the ORM without an
+`application→infrastructure` violation, and callers reach them through the publishing **public facade**.
+
+### 13b. Object-identity re-export shims (AE-0126 constraint) — the one documented isolation exception
+`domain/ports.py` re-exports `CarouselRepository` (from `rag_backend.domain.protocols.repositories`) and
+`BlogPostRepository`, and `domain/models.py` re-exports `BlogPostModel` (both from
+`rag_backend.infrastructure.database…`). Physically relocating those definitions would break the carousel
+routes / workflow engine / blog routes that still import the legacy paths, so this phase **re-exports**
+them in place — the legacy import paths keep resolving to the IDENTICAL objects, mirroring
+`modules.editorial.domain.ports` / `modules.presentation.domain.ports`. Because `BlogPostRepository` and
+`BlogPostModel` live under `rag_backend.infrastructure`, the two re-export edges
+(`publishing.domain.ports → infrastructure.database.blog_post_repository` and
+`publishing.domain.models → infrastructure.database.models.blog_post`) are the **only two
+`ignore_imports` across all module isolation gates** — an explicit, documented exception in
+`render_importlinter`. Every OTHER carousel/blog-ORM import in publishing must go through the two ACL
+modules above; any NEW infrastructure import in the inner layers breaks CI.
+
+### 13c. Additive migration + transactional outbox (AE-0127 / AE-0130)
+- **AE-0127** adds `BlogPost.origin` and **backfills** `origin='carousel'` rows for carousel blogs — purely
+  ADDITIVE (a new column + a backfill; **no embedded carousel column is dropped**). The carousel-blog read
+  projection reads the backfill row when present and falls back **per-field** to the embedded carousel
+  columns (`blog_markdown` / `title or topic` / `subtitle`), and the 404 gate still keys on the EXACT legacy
+  `blog_markdown is None` signal, so the response is byte-identical and a backfill row can never flip a
+  legacy 404 into a 200.
+- **AE-0130** adds a transactional **outbox** ALONGSIDE the existing after-commit publish (additive — the
+  legacy publish path is unchanged); the outbox row is staged in the same transaction as the state write so
+  delivery is idempotent and at-least-once without changing observed behavior.
+
+### 13d. Read-model projections (AE-0131)
+The public/editor READ surfaces are served by `PublishingReadPort` projections (`CarouselBlogProjection`,
+`CalendarProjection`, `BoardProjection`, `AnalyticsProjection`) that replicate the legacy `media.py` blog
+routes, `ContentCalendarService`, the `workflow_board` route, and `EditorialAnalyticsService`
+field-for-field. The thin HTTP routes map each projection one-to-one onto the existing response schemas.
+
+### 13e. The three enforcing contracts + ratchet (AE-0132)
+`publishing-application-isolation` (§7d) + `publishing-public-facade` (§7a) + **`publishing-no-editorial-
+presentation`** (the acyclic-direction contract — publishing is invoked BY editorial/presentation via the
+facade, so it must import neither's internals), generated by `render_importlinter`. The isolation contract
+carries the only two `ignore_imports` (the §13b re-export shims); the other two are clean. All three were
+demonstrated by a reverted violation. Baseline ratcheted: `application -> infrastructure` 63 → 62 and
+`api -> infrastructure` 79 → 76 (blog/publish/distribution/board/calendar/analytics reads + writes moved
+behind the publishing facade/ACL). Total contracts 19 → 22.
+
+### 13f. Checkpoint-drain rule (re-affirmed)
+As in §11f / §12f: no schema-modifying migration may run while a live LangGraph checkpoint references the
+old shape. **Phase 6's migration is additive (AE-0127: add `origin` + backfill, no drop) ⇒ no drain was
+needed.** The rule remains the binding exit-gate criterion for the deferred destructive drop (§13g).
+
+### 13g. Deferred, consent-gated exit-gate halves — tracked by AE-0133
+The *full* roadmap Phase-6 exit gate also names two items that are **behavior-changing / destructive**, so
+they are deliberately deferred out of this behind-facade phase and tracked as a post-Phase-6, consent-gated
+follow-up in **AE-0133** (Intake):
+1. **Auto-publish behavior cutover.** Editorial approval and public release become two **distinct user
+   actions** (approval never auto-publishes). The approval≠release *contract* is already split (AE-0111,
+   §11d) and the publishing release command exists; the actual behavior cutover needs the **Phase-7
+   frontend** and is a real behavior change — so its safety net must be updated to assert the NEW behavior,
+   under explicit owner consent. Not done here.
+2. **Destructive embedded-column drop.** A migration dropping the embedded carousel
+   `blog_markdown` / `blog_translations` / `caption*` / `linkedin_post_*` columns from `carousel_projects`,
+   **gated by the §13f checkpoint-drain rule** (every live LangGraph checkpoint finished on pre-migration
+   code or restarted with documented consent) AND by `blog_posts` being the confirmed single writer (no
+   remaining embedded-column writers), once the migration window has elapsed. The AE-0111 contract split and
+   the AE-0127 additive backfill are already in place; only the destructive drop remains. Not done here.
+
+Landing the additive halves now (behind the import contracts) while deferring the behavior-changing /
+destructive halves to a consent-gated ticket is the deliberate Phase-6 strategy — additive isolation first,
+cutover and destructive cleanup later with owner consent.

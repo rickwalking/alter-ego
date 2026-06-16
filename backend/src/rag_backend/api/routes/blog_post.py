@@ -99,9 +99,7 @@ async def create_blog_post(
     data: BlogPostCreate,
     db: Annotated[AsyncSession, Depends(get_db)],
     current_user: EditorUser,
-    publishing: Annotated[
-        PublishingModule, Depends(get_publishing_module_for_blog)
-    ],
+    publishing: Annotated[PublishingModule, Depends(get_publishing_module_for_blog)],
 ) -> BlogPostResponse:
     """Create a new blog post."""
     payload = data.model_dump(exclude={"author_id"})
@@ -132,9 +130,7 @@ async def list_blog_posts(
     request: Request,
     current_user: EditorUser,
     params: Annotated[BlogPostListParams, Depends()],
-    publishing: Annotated[
-        PublishingModule, Depends(get_publishing_module_for_blog)
-    ],
+    publishing: Annotated[PublishingModule, Depends(get_publishing_module_for_blog)],
 ) -> BlogPostListResponse:
     """List blog posts visible to the caller with pagination and search."""
     with start_span("blog_post.list"):
@@ -188,9 +184,7 @@ async def update_blog_post(
     data: BlogPostUpdate,
     db: Annotated[AsyncSession, Depends(get_db)],
     current_user: EditorUser,
-    publishing: Annotated[
-        PublishingModule, Depends(get_publishing_module_for_blog)
-    ],
+    publishing: Annotated[PublishingModule, Depends(get_publishing_module_for_blog)],
     if_match: Annotated[int | None, Header(alias=HTTP_HEADER_IF_MATCH)] = None,
 ) -> BlogPostResponse:
     """Update a blog post with optimistic locking (WF-005)."""

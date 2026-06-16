@@ -116,9 +116,7 @@ class TestDistributionService:
         stub = _StubSocialPublisher()
         service = PublishingService(
             carousel_repository=AsyncMock(spec=CarouselRepository),
-            ports=PublishingPorts(
-                distribution=ChannelDistributionPublisher(stub)
-            ),
+            ports=PublishingPorts(distribution=ChannelDistributionPublisher(stub)),
         )
 
         result = await service.publish_instagram(_CAPTION, _IMAGE_URLS)
