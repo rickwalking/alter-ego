@@ -1,6 +1,6 @@
 # AE-0153 — Frontend: remove @/features/* re-export shims + delete src/features/ + drop _example anchor
 
-Status: Ready
+Status: Review
 Tier: T1
 Priority: High
 Type: Task
