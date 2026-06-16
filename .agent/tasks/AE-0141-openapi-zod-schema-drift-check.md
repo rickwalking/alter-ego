@@ -1,6 +1,6 @@
 # AE-0141 — OpenAPI/Zod schema-drift check (frontend <-> backend)
 
-Status: Ready
+Status: Review
 Tier: T2
 Priority: High
 Type: Task
