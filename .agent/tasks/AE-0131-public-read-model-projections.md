@@ -1,6 +1,6 @@
 # AE-0131 — Public read-model projections (public /blog + calendar/board/analytics) — byte-identical output; blog routes behind facade
 
-Status: Ready
+Status: Review
 Tier: T2
 Priority: High
 Type: Task
