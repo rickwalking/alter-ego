@@ -1,6 +1,6 @@
 # AE-0159 — Backend: shrink .importlinter ignore_imports exceptions; delete dead global layer files
 
-Status: Ready
+Status: Dev Complete
 Tier: T2
 Priority: High
 Type: Task
