@@ -79,6 +79,12 @@ export const CALENDAR_VIEW_MODES = ["Month", "Week", "Day"] as const;
 
 export const CALENDAR_TODAY = 28;
 
+/** Trailing days of the previous month shown before the 1st in the grid. */
+export const CALENDAR_LEADING_DAYS = [27, 28, 29, 30] as const;
+
+/** Highest day-of-month rendered in the static demo month grid. */
+export const CALENDAR_LAST_DAY = 31;
+
 export const CALENDAR_BTN_GHOST: CSSProperties = {
   display: "inline-flex",
   alignItems: "center",

@@ -1,5 +1,8 @@
 import type { NeonPersonaCardProps, PersonaProfile } from "@/modules/persona";
 
+/** Max expertise areas surfaced as skills on a persona card. */
+const MAX_PERSONA_SKILLS = 6;
+
 export interface PersonaSource {
   name: string;
   role: string;
@@ -32,6 +35,6 @@ export function mapPersonaProfileToCardProps(
     name: profile.name,
     role: profile.expertise_areas[0] ?? "Persona",
     description,
-    skills: profile.expertise_areas.slice(0, 6),
+    skills: profile.expertise_areas.slice(0, MAX_PERSONA_SKILLS),
   };
 }

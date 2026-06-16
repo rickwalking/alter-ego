@@ -10,6 +10,11 @@ import type {
   DashboardChatMessage,
   DashboardConversation,
 } from "@/modules/editorial-operations/board/chat/types";
+import {
+  MS_PER_MINUTE,
+  MINUTES_PER_HOUR,
+  HOURS_PER_DAY,
+} from "@/constants/time";
 import type { Conversation, Message } from "@/schemas/chat";
 
 const AVATAR_PALETTE = [
@@ -25,11 +30,11 @@ const AVATAR_PALETTE = [
 function formatRelativeTime(iso: string): string {
   const date = new Date(iso);
   const diffMs = Date.now() - date.getTime();
-  const diffMins = Math.floor(diffMs / 60_000);
+  const diffMins = Math.floor(diffMs / MS_PER_MINUTE);
   if (diffMins < 1) return "Just now";
-  if (diffMins < 60) return `${diffMins}m ago`;
-  const diffHours = Math.floor(diffMins / 60);
-  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffMins < MINUTES_PER_HOUR) return `${diffMins}m ago`;
+  const diffHours = Math.floor(diffMins / MINUTES_PER_HOUR);
+  if (diffHours < HOURS_PER_DAY) return `${diffHours}h ago`;
   return date.toLocaleDateString();
 }
 

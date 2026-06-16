@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { HTTP_STATUS } from "@/constants/api";
 import { AUTH_LOGIN_REDIRECT_PARAM } from "@/constants/auth";
 
 // API Response Schema
@@ -57,22 +58,26 @@ export async function apiCall<T>(
     },
   });
 
-  if (response.status === 401) {
+  if (response.status === HTTP_STATUS.UNAUTHORIZED) {
     const errorData = await response.json().catch(() => null);
     redirectToLoginAfterUnauthorized();
     throw new ApiError(
-      401,
+      HTTP_STATUS.UNAUTHORIZED,
       errorData?.message || "Unauthorized",
       errorData?.code,
     );
   }
 
-  if (response.status === 403) {
+  if (response.status === HTTP_STATUS.FORBIDDEN) {
     const errorData = await response.json().catch(() => null);
     if (typeof window !== "undefined") {
       window.location.href = "/403";
     }
-    throw new ApiError(403, errorData?.message || "Forbidden", errorData?.code);
+    throw new ApiError(
+      HTTP_STATUS.FORBIDDEN,
+      errorData?.message || "Forbidden",
+      errorData?.code,
+    );
   }
 
   if (!response.ok) {
@@ -93,17 +98,20 @@ export async function apiCall<T>(
       const errorResult = errorResponseSchema.safeParse(json);
       if (errorResult.success) {
         throw new ApiError(
-          400,
+          HTTP_STATUS.BAD_REQUEST,
           errorResult.data.error.message,
           errorResult.data.error.code,
         );
       }
-      throw new ApiError(400, "API request failed");
+      throw new ApiError(HTTP_STATUS.BAD_REQUEST, "API request failed");
     }
     const dataResult = schema.safeParse(responseResult.data.data);
     if (!dataResult.success) {
       console.error("Data validation failed:", dataResult.error.issues);
-      throw new ApiError(500, "Invalid data from API");
+      throw new ApiError(
+        HTTP_STATUS.INTERNAL_SERVER_ERROR,
+        "Invalid data from API",
+      );
     }
     return dataResult.data;
   }
@@ -112,7 +120,10 @@ export async function apiCall<T>(
   const dataResult = schema.safeParse(json);
   if (!dataResult.success) {
     console.error("Data validation failed:", dataResult.error.issues);
-    throw new ApiError(500, "Invalid data from API");
+    throw new ApiError(
+      HTTP_STATUS.INTERNAL_SERVER_ERROR,
+      "Invalid data from API",
+    );
   }
   return dataResult.data;
 }
@@ -137,22 +148,26 @@ export async function apiCallNoContent(
     },
   });
 
-  if (response.status === 401) {
+  if (response.status === HTTP_STATUS.UNAUTHORIZED) {
     const errorData = await response.json().catch(() => null);
     redirectToLoginAfterUnauthorized();
     throw new ApiError(
-      401,
+      HTTP_STATUS.UNAUTHORIZED,
       errorData?.message || "Unauthorized",
       errorData?.code,
     );
   }
 
-  if (response.status === 403) {
+  if (response.status === HTTP_STATUS.FORBIDDEN) {
     const errorData = await response.json().catch(() => null);
     if (typeof window !== "undefined") {
       window.location.href = "/403";
     }
-    throw new ApiError(403, errorData?.message || "Forbidden", errorData?.code);
+    throw new ApiError(
+      HTTP_STATUS.FORBIDDEN,
+      errorData?.message || "Forbidden",
+      errorData?.code,
+    );
   }
 
   if (!response.ok) {

@@ -1,21 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { AUTH_LOGIN_REDIRECT_PARAM } from "@/constants/auth";
-import { DEFAULT_BACKEND_URL } from "@/constants/api";
+import { resolveBackendUrl } from "@/constants/api";
 import { PUBLIC_ROUTE_PATHS } from "@/constants/public-routes";
 import {
   clearAccessTokenCookie,
   sanitizeLoginRedirect,
 } from "@/lib/auth-cookie";
-
-function resolveBackendUrl(): string {
-  return (
-    process.env.API_BASE_URL ??
-    (process.env.NODE_ENV === "production"
-      ? "http://backend:8000"
-      : DEFAULT_BACKEND_URL)
-  );
-}
 
 /**
  * Clear session cookie and send the user to login.

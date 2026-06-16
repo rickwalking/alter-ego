@@ -1,4 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { HTTP_STATUS } from "@/constants/api";
 import { ApiError } from "@/lib/api-client";
 import {
   documentUploadResponseSchema,
@@ -36,7 +37,10 @@ export function useUploadDocument() {
         });
 
         xhr.addEventListener("load", () => {
-          if (xhr.status >= 200 && xhr.status < 300) {
+          if (
+            xhr.status >= HTTP_STATUS.OK &&
+            xhr.status < HTTP_STATUS.MULTIPLE_CHOICES
+          ) {
             try {
               const json = JSON.parse(xhr.responseText);
               const result = documentUploadResponseSchema.safeParse(json);

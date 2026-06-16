@@ -3,6 +3,9 @@ import type { NeonBlogPostCardProps } from "@/schemas/neon-blog-post-card";
 import { toPublicCarouselImageUrl } from "@/lib/carousel-media-url";
 import { truncate } from "@/lib/utils";
 
+/** Max characters for a blog post card subtitle before truncation. */
+const SUBTITLE_MAX_LENGTH = 120;
+
 export function mapProjectToBlogPostCard(
   project: CarouselProjectResponse,
   locale: string,
@@ -34,7 +37,7 @@ export function mapProjectToBlogPostCard(
   return {
     id: project.id,
     title,
-    subtitle: truncate(subtitleRaw ?? "", 120),
+    subtitle: truncate(subtitleRaw ?? "", SUBTITLE_MAX_LENGTH),
     niche: project.niche ?? undefined,
     imageUrl: imageUrl || undefined,
     createdAt: project.created_at,

@@ -3,6 +3,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { HTTP_STATUS } from "@/constants/api";
 import { WORKFLOW_API, LOCK_POLL_INTERVAL_MS } from "@/constants/workflow";
 import { useAuth } from "@/hooks/use-auth";
 import { authenticatedFetch } from "@/lib/authenticated-fetch";
@@ -33,7 +34,10 @@ export function useCollaborativeEdit(contentId: string, contentType: string) {
     const response = await authenticatedFetch(
       `${WORKFLOW_API.CONTENT_LOCK(contentId)}?content_type=${contentType}`,
     );
-    if (response.status === 404 || response.status === 204) {
+    if (
+      response.status === HTTP_STATUS.NOT_FOUND ||
+      response.status === HTTP_STATUS.NO_CONTENT
+    ) {
       applyLockState(null);
       return;
     }
@@ -53,7 +57,7 @@ export function useCollaborativeEdit(contentId: string, contentType: string) {
         body: JSON.stringify({ content_type: contentType }),
       },
     );
-    if (response.status === 409) {
+    if (response.status === HTTP_STATUS.CONFLICT) {
       await refreshLock();
       return false;
     }
@@ -89,7 +93,7 @@ export function useCollaborativeEdit(contentId: string, contentType: string) {
       if (cancelled) {
         return;
       }
-      if (response.status === 409) {
+      if (response.status === HTTP_STATUS.CONFLICT) {
         await refreshLock();
         return;
       }

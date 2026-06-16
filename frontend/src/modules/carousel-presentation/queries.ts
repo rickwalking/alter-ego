@@ -1,6 +1,7 @@
 import { queryOptions, skipToken } from "@tanstack/react-query";
 import { z } from "zod";
 import { API_ENDPOINTS, DEFAULT_BLOG_LANGUAGE } from "@/constants/api";
+import { MS_PER_MINUTE } from "@/constants/time";
 import { apiCall } from "@/lib/api-client";
 import {
   carouselBlogI18nResponseSchema,
@@ -12,6 +13,10 @@ import {
   type CarouselProjectListResponse,
   type CarouselProjectResponse,
 } from "@/schemas/carousel";
+
+/** Stale time for published carousel content (rarely changes once exported). */
+const CAROUSEL_STALE_TIME_MINUTES = 15;
+const CAROUSEL_STALE_TIME_MS = MS_PER_MINUTE * CAROUSEL_STALE_TIME_MINUTES;
 
 type CarouselListFilters = {
   status?: string;
@@ -83,7 +88,7 @@ export function carouselBlogOptions(
             carouselBlogI18nResponseSchema,
           )
       : skipToken,
-    staleTime: 1000 * 60 * 15,
+    staleTime: CAROUSEL_STALE_TIME_MS,
   });
 }
 
@@ -100,7 +105,7 @@ export function carouselBlogWithDesignOptions(
             carouselBlogWithDesignResponseSchema,
           )
       : skipToken,
-    staleTime: 1000 * 60 * 15,
+    staleTime: CAROUSEL_STALE_TIME_MS,
   });
 }
 
@@ -114,7 +119,7 @@ export function carouselDesignOptions(id: string | null) {
             carouselDesignResponseSchema,
           )
       : skipToken,
-    staleTime: 1000 * 60 * 15,
+    staleTime: CAROUSEL_STALE_TIME_MS,
   });
 }
 
@@ -128,6 +133,6 @@ export function carouselSlidesOptions(id: string | null) {
             z.array(carouselSlideResponseSchema),
           )
       : skipToken,
-    staleTime: 1000 * 60 * 15,
+    staleTime: CAROUSEL_STALE_TIME_MS,
   });
 }

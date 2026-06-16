@@ -2,19 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 
 import {
   CONTENT_TYPES,
-  DEFAULT_BACKEND_URL,
   HTTP_METHODS,
+  resolveBackendUrl,
 } from "@/constants/api";
 import { setAccessTokenCookie } from "@/lib/auth-cookie";
-
-function resolveBackendUrl(): string {
-  return (
-    process.env.API_BASE_URL ??
-    (process.env.NODE_ENV === "production"
-      ? "http://backend:8000"
-      : DEFAULT_BACKEND_URL)
-  );
-}
 
 interface TokenPayload {
   access_token?: string;

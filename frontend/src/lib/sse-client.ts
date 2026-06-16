@@ -35,6 +35,14 @@ const METHOD_POST = "POST";
 /** Credentials mode for including cookies in requests. */
 const CREDENTIALS_INCLUDE = "include";
 
+/** SSE field prefixes (value starts after the prefix length). */
+const SSE_FIELD_ID = "id: ";
+const SSE_FIELD_EVENT = "event: ";
+const SSE_FIELD_DATA = "data: ";
+
+/** Byte length of a CRLF-style blank-line event delimiter (``\n\r\n``). */
+const SSE_DELIMITER_LENGTH_CRLF = 3;
+
 /**
  * Parsed SSE event.
  */
@@ -90,16 +98,16 @@ function createParserState(): SseParserState {
  * or ``null`` otherwise.
  */
 function parseSseLine(line: string, state: SseParserState): SseEvent | null {
-  if (line.startsWith("id: ")) {
-    state.currentId = line.slice(4);
+  if (line.startsWith(SSE_FIELD_ID)) {
+    state.currentId = line.slice(SSE_FIELD_ID.length);
     return null;
   }
-  if (line.startsWith("event: ")) {
-    state.currentEvent = line.slice(7) as SseEventType;
+  if (line.startsWith(SSE_FIELD_EVENT)) {
+    state.currentEvent = line.slice(SSE_FIELD_EVENT.length) as SseEventType;
     return null;
   }
-  if (line.startsWith("data: ")) {
-    state.currentData += line.slice(6);
+  if (line.startsWith(SSE_FIELD_DATA)) {
+    state.currentData += line.slice(SSE_FIELD_DATA.length);
     return null;
   }
   // Comment lines (starting with :) are ignored (keep-alive pings)
@@ -232,7 +240,7 @@ function findDelimiterLength(buffer: string, pos: number): number {
     buffer[pos + 1] === "\r" &&
     buffer[pos + 2] === "\n"
   ) {
-    return 3; // \n\r\n
+    return SSE_DELIMITER_LENGTH_CRLF; // \n\r\n
   }
   return 2; // default
 }

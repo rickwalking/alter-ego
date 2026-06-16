@@ -1,13 +1,16 @@
 import { z } from "zod";
-import { API_ENDPOINTS } from "@/constants/api";
+import {
+  API_ENDPOINTS,
+  DEFAULT_BACKEND_URL,
+  PRODUCTION_BACKEND_URL,
+} from "@/constants/api";
+import { SERVER_FETCH } from "@/constants/server-fetch";
 import {
   carouselBlogI18nResponseSchema,
   carouselBlogWithDesignResponseSchema,
   carouselDesignResponseSchema,
   carouselProjectListResponseSchema,
 } from "@/schemas/carousel";
-
-const DEFAULT_BASE_URL = "http://localhost:8000";
 
 function getBaseUrl(): string {
   // Server-side in Docker: explicit override
@@ -16,9 +19,9 @@ function getBaseUrl(): string {
   }
   const envUrl = process.env.NEXT_PUBLIC_API_URL;
   if (typeof window === "undefined" && envUrl?.startsWith("/")) {
-    return "http://backend:8000";
+    return PRODUCTION_BACKEND_URL;
   }
-  return envUrl || DEFAULT_BASE_URL;
+  return envUrl || DEFAULT_BACKEND_URL;
 }
 
 async function validatedFetch<T>(
@@ -56,7 +59,7 @@ async function validatedFetch<T>(
 }
 
 export async function fetchCompletedProjects(
-  limit: number = 20,
+  limit: number = SERVER_FETCH.DEFAULT_PROJECT_LIMIT,
 ): Promise<z.infer<typeof carouselProjectListResponseSchema>> {
   const result = await validatedFetch(
     `${API_ENDPOINTS.CAROUSELS}?public=true&limit=${limit}`,
@@ -101,6 +104,6 @@ export async function fetchBlogWithDesignCombined(
   return validatedFetch(
     `${API_ENDPOINTS.CAROUSEL_BLOG_LANG(id, lang)}?include_design=true`,
     carouselBlogWithDesignResponseSchema,
-    { revalidate: 3600 },
+    { revalidate: SERVER_FETCH.BLOG_REVALIDATE_SECONDS },
   );
 }

@@ -8,9 +8,14 @@ import {
 import { z } from "zod";
 import { apiCall } from "@/lib/api-client";
 import { API_ENDPOINTS, HTTP_METHODS } from "@/constants/api";
+import { MS_PER_MINUTE } from "@/constants/time";
 import { carouselKeys } from "@/modules/carousel-presentation";
 
 const STRATEGIES_QUERY_KEY = ["available-strategies"] as const;
+
+/** Layout strategies change rarely; cache for 30 minutes. */
+const STRATEGIES_STALE_TIME_MINUTES = 30;
+const STRATEGIES_STALE_TIME_MS = MS_PER_MINUTE * STRATEGIES_STALE_TIME_MINUTES;
 
 const strategyInfoSchema = z.object({
   name: z.string(),
@@ -43,7 +48,7 @@ export function useAvailableStrategies(): UseQueryResult<StrategyListResponse> {
         { method: HTTP_METHODS.GET },
       );
     },
-    staleTime: 1000 * 60 * 30,
+    staleTime: STRATEGIES_STALE_TIME_MS,
   });
 }
 

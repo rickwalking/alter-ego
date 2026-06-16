@@ -1,6 +1,10 @@
 import { parseISO } from "date-fns";
 import type { CalendarItem } from "@/modules/editorial";
-import { CALENDAR_TODAY } from "./constants";
+import {
+  CALENDAR_TODAY,
+  CALENDAR_LEADING_DAYS,
+  CALENDAR_LAST_DAY,
+} from "./constants";
 import type { CalendarContentType, CalendarDay, CalendarEvent } from "./types";
 
 function mapContentType(raw: string): CalendarContentType {
@@ -27,10 +31,10 @@ function mapCalendarItemToEvent(item: CalendarItem): CalendarEvent {
 
 function buildMonthGridShell(): CalendarDay[] {
   const days: CalendarDay[] = [];
-  for (const day of [27, 28, 29, 30]) {
+  for (const day of CALENDAR_LEADING_DAYS) {
     days.push({ day, cur: false, today: false, events: [] });
   }
-  for (let day = 1; day <= 31; day += 1) {
+  for (let day = 1; day <= CALENDAR_LAST_DAY; day += 1) {
     days.push({
       day,
       cur: true,

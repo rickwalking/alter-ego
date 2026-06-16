@@ -9,7 +9,7 @@ import {
 } from "@/modules/conversation";
 import { ApiError } from "@/lib/api-client";
 import { streamSseEvents, SSE_EVENT_TYPE } from "@/lib/sse-client";
-import { API_ENDPOINTS } from "@/constants/api";
+import { API_ENDPOINTS, HTTP_STATUS } from "@/constants/api";
 import type { Message } from "@/schemas/chat";
 import {
   PUBLISH_CHAT_STORAGE_KEY,
@@ -88,7 +88,8 @@ export function usePublishChat(projectId: string): UsePublishChatReturn {
     if (!conversationId || !projectId) return;
 
     const isNotFound =
-      historyError instanceof ApiError && historyError.status === 404;
+      historyError instanceof ApiError &&
+      historyError.status === HTTP_STATUS.NOT_FOUND;
 
     const metadataProjectId =
       conversation?.metadata &&
