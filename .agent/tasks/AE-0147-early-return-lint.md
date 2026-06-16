@@ -1,6 +1,6 @@
 # AE-0147 — Early-return / guard-clause lint rule
 
-Status: Ready
+Status: Review
 Tier: T1
 Priority: High
 Type: Task

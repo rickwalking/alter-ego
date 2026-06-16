@@ -65,6 +65,11 @@ export default defineConfig([
       ],
       complexity: ["warn", 10],
       "max-depth": ["warn", 4],
+      // Early-return / guard-clause enforcement (AE-0147). Both are
+      // auto-fixable and behavior-preserving; errors so they gate under
+      // `eslint --quiet` (which suppresses warnings).
+      "no-else-return": ["error", { allowElseIf: false }],
+      "no-lonely-if": "error",
       "max-params": ["warn", 3],
       "max-statements": ["warn", 25],
       "sonarjs/cognitive-complexity": ["warn", 15],
