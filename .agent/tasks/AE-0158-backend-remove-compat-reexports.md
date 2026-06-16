@@ -1,6 +1,6 @@
 # AE-0158 — Backend: remove dead compatibility re-exports/shims; ratchet import baselines down
 
-Status: Dev Complete
+Status: Review
 Tier: T2
 Priority: High
 Type: Task

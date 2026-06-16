@@ -1,6 +1,6 @@
 # AE-0163 — Backend: make blog_posts the single writer + remove embedded-column read fallback (de-risk the drop)
 
-Status: Dev Complete
+Status: Review
 Tier: T2
 Priority: High
 Type: Task

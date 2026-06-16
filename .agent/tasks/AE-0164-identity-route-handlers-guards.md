@@ -1,6 +1,6 @@
 # AE-0164 — Frontend: relocate auth route handlers + guards behind the identity contract
 
-Status: Dev Complete
+Status: Review
 Tier: T2
 Priority: High
 Type: Task

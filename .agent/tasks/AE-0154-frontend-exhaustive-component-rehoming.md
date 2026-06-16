@@ -1,6 +1,6 @@
 # AE-0154 — Frontend: exhaustive business-component re-homing; ratchet component-type-location down
 
-Status: Dev Complete
+Status: Review
 Tier: T2
 Priority: High
 Type: Task

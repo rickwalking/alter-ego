@@ -1,6 +1,6 @@
 # AE-0165 — Frontend: auth e2e safety net (login/logout/refresh/guard) — precondition for identity
 
-Status: Dev Complete
+Status: Review
 Tier: T2
 Priority: High
 Type: Task

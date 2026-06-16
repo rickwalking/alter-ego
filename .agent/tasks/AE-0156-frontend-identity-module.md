@@ -1,6 +1,6 @@
 # AE-0156 — Frontend: modules/identity — consolidate auth/session behind a public contract
 
-Status: Dev Complete
+Status: Review
 Tier: T2
 Priority: High
 Type: Task

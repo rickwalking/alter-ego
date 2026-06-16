@@ -1,6 +1,6 @@
 # AE-0157 — Reconcile OpenAPI/Zod schema drifts to 0 + flip the drift check to blocking
 
-Status: Dev Complete
+Status: Review
 Tier: T2
 Priority: High
 Type: Task

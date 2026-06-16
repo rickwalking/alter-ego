@@ -1,6 +1,6 @@
 # AE-0155 — Frontend: route-page thinning (app pages -> thin composition)
 
-Status: Dev Complete
+Status: Review
 Tier: T2
 Priority: High
 Type: Task
