@@ -1,6 +1,6 @@
 # AE-0132 — Publishing import contracts + exit gate + baseline ratchet + deferred-cutover docs
 
-Status: Ready
+Status: Review
 Tier: T2
 Priority: High
 Type: Task
