@@ -131,7 +131,7 @@ for f, ln, text in added:
 
 # ----- 3. config / threshold loosening -------------------------------------
 CONFIG_HINT = ("pyproject.toml", ".coveragerc", "setup.cfg", "stryker.conf",
-               "tsconfig", "eslint.config", ".importlinter")
+               "tsconfig", "eslint.config", ".importlinter", ".jscpd")
 def is_config(p): return any(h in p for h in CONFIG_HINT)
 
 # Direction-aware threshold gaming, detected by pairing removed/added lines.
@@ -141,6 +141,9 @@ LOWER_IS_GAMING = [r"fail[_-]under", r"--fail-under"]
 HIGHER_IS_GAMING = [
     r"max-complexity", r"max-args", r"max-branches", r"max-returns",
     r"max-locals", r"max-nested-blocks", r"BASELINE_\w+",
+    # jscpd duplication ceiling (AE-0149): higher % = more duplication tolerated.
+    # The threshold may only ratchet DOWN; raising it re-permits duplication.
+    r'"threshold"',
 ]
 # Net-new rule disabling — always a BLOCKER (escape hatch downgrades to WARN).
 LOOSEN_KEYS = [
