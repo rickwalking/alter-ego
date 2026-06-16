@@ -3,8 +3,14 @@
  * generator, so both compute violations identically.
  *
  * Covers, during the Phase 7 feature -> module migration window (AE-0136):
- *   - the legacy `features` layer cross-feature rule (AE-0083): a file in
- *     `features/A/**` must not import `@/features/B/...` internals (B != A);
+ *   - the legacy `features` barrel-less rule (AE-0083, broadened in AE-0138):
+ *     `features` has NO public barrel, so ANY consumer (a `features/A/**` file,
+ *     a `modules/<m>/**` file, or `app/`) importing `@/features/B/<anything>`
+ *     of a DIFFERENT context B is a cross-context edge. A `features/A/**` file
+ *     importing its OWN context A is allowed; a `modules` file importing
+ *     `@/features/B` is ALWAYS cross-context (a module never owns a feature
+ *     context). This closes the blind spot where former feature->feature edges
+ *     "disappeared" merely because the source moved into `modules/`.
  *   - the `modules` public-contract rule: ANY consumer (a feature, `app/`, or
  *     ANOTHER module) must import a module's barrel (`@/modules/<m>` or
  *     `@/modules/<m>/index`), never a deep internal `@/modules/<m>/<internal>`;
@@ -150,6 +156,19 @@ function publicContractLayers() {
 }
 
 /**
+ * Owner layers with NO public barrel (today: `features`). Any import of one of
+ * these layers' contexts from a file that does not OWN that context (a foreign
+ * feature, a module, or `app/`) is a cross-context edge — there is no barrel to
+ * target, so EVERY such import counts. Consulted for every consumer, mirroring
+ * `publicContractLayers()`.
+ *
+ * @returns {import("./feature-boundary.config.mjs").OwnerLayer[]}
+ */
+function barrelLessLayers() {
+  return OWNER_LAYERS.filter((layer) => !layer.publicContract);
+}
+
+/**
  * Collect public-contract violations for one consuming file: any deep internal
  * import (`<prefix><ctx>/<internal>`) of a public-contract layer, except a file
  * reaching into its OWN module.
@@ -186,24 +205,37 @@ function publicContractViolations(relPath, from, ownLayerName, specifiers) {
 }
 
 /**
- * Collect legacy cross-feature violations for one file in a NON-public-contract
- * owner layer: any `<prefix><other>/...` import of a different context.
+ * Collect barrel-less cross-context violations for one consuming file: any
+ * `<prefix><ctx>/...` import of a barrel-less owner layer (today: `features`),
+ * EXCEPT a file reaching into its OWN context of that same layer.
  *
- * @param {import("./feature-boundary.config.mjs").OwnerLayer} layer
- * @param {string} relPath
- * @param {string} from owning context of the file
+ * Applies to every consumer — a foreign feature, a `modules/<m>` file, and
+ * `app/` — because barrel-less layers expose no public surface, so ANY deep
+ * import of another context is cross-context.
+ *
+ * @param {string} relPath importing file (ROOT-relative POSIX)
+ * @param {string} from importing file's owning context (or consumer name)
+ * @param {string|null} ownLayerName owner layer the file belongs to, or null
  * @param {string[]} specifiers
  * @returns {Violation[]}
  */
-function crossContextViolations(layer, relPath, from, specifiers) {
+function barrelLessViolations(relPath, from, ownLayerName, specifiers) {
   /** @type {Violation[]} */
   const violations = [];
-  for (const specifier of specifiers) {
-    if (!specifier.startsWith(layer.importPrefix)) {
-      continue;
-    }
-    const to = contextOfImport(specifier, layer);
-    if (to && to !== from) {
+  for (const layer of barrelLessLayers()) {
+    for (const specifier of specifiers) {
+      if (!specifier.startsWith(layer.importPrefix)) {
+        continue;
+      }
+      const to = contextOfImport(specifier, layer);
+      if (!to) {
+        continue;
+      }
+      // A file may reach into its OWN context of this same layer.
+      const isOwnContext = ownLayerName === layer.name && to === from;
+      if (isOwnContext) {
+        continue;
+      }
       violations.push({ file: relPath, from, to, specifier });
     }
   }
@@ -234,16 +266,16 @@ export function scanCrossFeatureImports() {
         ...publicContractViolations(relPath, from, layer.name, specifiers),
       );
 
-      // Legacy cross-feature rule only for non-public-contract owner layers.
-      if (!layer.publicContract) {
-        violations.push(
-          ...crossContextViolations(layer, relPath, from, specifiers),
-        );
-      }
+      // Barrel-less rule (features): ANY consumer importing a foreign feature
+      // context is cross-context — including a `modules/<m>` file (it never
+      // owns a feature context), closing the migration blind spot.
+      violations.push(
+        ...barrelLessViolations(relPath, from, layer.name, specifiers),
+      );
     }
   }
 
-  // The app consumer owns no context: only the public-contract rule applies.
+  // The app consumer owns no context: every owner-layer rule applies to it.
   if (existsSync(APP_CONSUMER.dir)) {
     for (const absPath of walkSourceFiles(APP_CONSUMER.dir)) {
       const relPath = toRelativePosix(absPath);
@@ -255,6 +287,7 @@ export function scanCrossFeatureImports() {
           null,
           specifiers,
         ),
+        ...barrelLessViolations(relPath, APP_CONSUMER.name, null, specifiers),
       );
     }
   }
