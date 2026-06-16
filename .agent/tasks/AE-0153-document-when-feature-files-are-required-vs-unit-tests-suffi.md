@@ -40,9 +40,19 @@ an explicit scope so the signal is actionable, without loosening any gate.
 
 ## Acceptance Criteria
 
-- [ ] CLAUDE.md + both AGENTS.md name the two cases explicitly.
+- [ ] CLAUDE.md + both AGENTS.md name the two cases explicitly, **with concrete
+      examples** of each (so "pure refactor" / "CI-config" can't be stretched to
+      smuggle behavior changes past `.feature` coverage).
+- [ ] The "unit-tests-suffice" path **requires documented evidence in the ticket**:
+      (a) an explicit "no public/user-visible behavior change" assertion, (b) the
+      gate's seeded-violation test (for CI/config tickets), (c) the affected gates
+      listed, and (d) reviewer/QA sign-off on the no-`.feature` classification.
+      (Skeptical-review: prevents the policy becoming a loophole.)
+- [ ] A **tie-break authority** is named for when author and QA disagree on whether
+      a ticket is behavior-changing (defaults to "require `.feature` when in doubt").
 - [ ] `docs/guides/qa-checkpoints.md` references the rule.
-- [ ] No gate, threshold, or check is loosened (ratchet HOLD/UP).
+- [ ] No gate, threshold, or check is loosened (ratchet HOLD/UP) — this only
+      removes ambiguity; it never waives required coverage.
 
 ## Repro Steps
 
@@ -64,6 +74,14 @@ None.
 ### 2026-06-16 HH:mm
 
 Ticket created.
+
+### 2026-06-16 — Skeptical review resolved
+
+External cold critic (`.agent/reports/AE-0152-0155.skeptical-review.md`) flagged
+this as a potential loophole (behavior-changing work mislabeled refactor/config to
+skip `.feature`). **Accepted** — ACs now require concrete examples, documented
+no-behavior-change evidence + reviewer sign-off for the unit-tests path, and a
+named tie-break authority (default: require `.feature` when in doubt).
 
 ## Files Touched
 

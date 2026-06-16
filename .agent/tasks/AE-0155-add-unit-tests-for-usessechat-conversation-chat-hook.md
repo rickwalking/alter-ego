@@ -36,21 +36,32 @@ flagged by QA.
 ## Scope
 
 - Add `frontend/src/modules/conversation/hooks/use-sse-chat.test.ts` (renderHook +
-  mocked `streamSseEvents` / `useConversationMessages` / QueryClient, mirroring
-  `use-publish-chat.test.ts`).
+  a **controllable fake async SSE stream** (resolve events on demand) and a **real
+  `QueryClient`** — mock only the network seam, not the behavior under test, to
+  avoid locking in implementation details).
 - Cover happy path (send → tokens → complete → history invalidation), the
   ephemeral `enableHistory: false` path, error/onError, SOURCES merge, dedupe in
   `mergeMessages`, `startNewChat`, and the send-guard edge cases.
+- **Race / lifecycle cases (the highest-risk paths — skeptical review):**
+  overlapping/double `sendMessage`, abort-before-complete, unmount-before-complete,
+  history arriving DURING an optimistic stream, `finalizedRef` idempotency
+  (COMPLETE + onComplete both firing), and query-invalidation ordering.
 
 ## Non-Goals
 
 - Do not refactor `useSseChat` itself (behavior is correct; this is test-only).
 - Do not change the shared `useChatStream` hook.
+- Do not write pure branch-coverage tests that over-mock and assert nothing
+  meaningful — race/lifecycle correctness is the goal, not a coverage number.
 
 ## Acceptance Criteria
 
 - [ ] `use-sse-chat.test.ts` exists and covers happy path, ephemeral path,
       error path, SOURCES merge, message dedupe, startNewChat, and send guards.
+- [ ] **Race/lifecycle cases covered** with a controllable fake stream + real
+      QueryClient: overlapping sends, abort-before-complete,
+      unmount-before-complete, mid-stream history arrival, `finalizedRef`
+      idempotency. Tests assert observable state, not internal call counts.
 - [ ] Tests pass; `frontend:test` gate green.
 - [ ] No production behavior change.
 
@@ -77,6 +88,14 @@ None.
 ### 2026-06-16 HH:mm
 
 Ticket created.
+
+### 2026-06-16 — Skeptical review resolved
+
+External cold critic (`.agent/reports/AE-0152-0155.skeptical-review.md`) warned the
+tests could over-mock and miss the real risk (concurrency/lifecycle). **Accepted** —
+scope/ACs now mandate a controllable fake stream + real QueryClient and explicit
+race cases (overlapping sends, abort/unmount-before-complete, mid-stream history,
+finalizedRef idempotency), asserting observable state rather than call counts.
 
 ## Files Touched
 

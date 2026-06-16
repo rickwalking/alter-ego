@@ -61,10 +61,23 @@ DOWN, exactly like the jscpd threshold and the component-type baseline.
 ## Acceptance Criteria
 
 - [ ] `bash scripts/ci/gates.sh frontend:dead-code` passes at the grandfathered baseline.
+- [ ] **Baseline is keyed by finding IDENTITY, not total count** — each grandfathered
+      entry is `{rule, file, symbol}` (not just a number). A replace-same-count
+      churn (remove one old unused export, add one new) is REJECTED. (Skeptical
+      review BLOCKER.) Tests must cover add / remove / replace-same-count / rename /
+      allowlist-scope.
+- [ ] **Net-new findings in PR-changed files BLOCK from day one**; the full-tree
+      sweep stays advisory only for pre-existing grandfathered debt. (Avoids the
+      "advisory normalizes drift" gap — fresh dead code cannot merge while the gate
+      is "advisory".)
 - [ ] **The gate FAILS on a seeded net-new unused export** (prove enforcement).
 - [ ] Next.js/Storybook/Vitest entrypoints are NOT false-flagged.
-- [ ] Baseline count can only **decrease** (raising it flagged by `check-integrity.sh`).
-- [ ] Gate runs in CI (advisory first) and is documented in AGENTS.md + qa-checkpoints.
+- [ ] The grandfathered baseline set can only **shrink** (re-adding a removed
+      identity or raising the count is flagged by `check-integrity.sh`).
+- [ ] Gate runs in CI and is documented in AGENTS.md + qa-checkpoints, including an
+      **operating-model note**: runtime budget (target seconds added to CI), gate
+      owner, and the explicit event that flips the full-tree sweep from advisory to
+      blocking (e.g. "grandfathered count reaches 0", or a dated deadline).
 
 ## Gherkin Scenarios
 
@@ -120,6 +133,11 @@ Feature: Frontend dead-export gate
 - Related: AE-0149 (jscpd gate — same baseline-ratchet + single-source-of-truth
   pattern to reuse), AE-0150 (the refactor whose orphaned constants motivated this).
   Source: `.agent/reports/kaizen-AE-0149-0151.plan.md` (P1).
+- **Blocked by: AE-0154** — the duplication refactor moves exports / creates shared
+  primitives / changes barrel behavior, which churns knip results. Run AE-0154
+  first, THEN snapshot the knip baseline, so the baseline doesn't immediately go
+  stale. (Skeptical-review sequencing finding; the changed-file-only blocking above
+  also makes AE-0152 robust to that churn.)
 
 ## Implementation Plan
 
@@ -153,7 +171,12 @@ Pending.
 
 ## Decision Log
 
-Pending.
+- 2026-06-16 — Skeptical review (`.agent/reports/AE-0152-0155.skeptical-review.md`,
+  external cold critic): **BLOCKER accepted** — baseline keyed by `{rule,file,symbol}`
+  identity, not count (replace-same-count must fail); ACs updated. **WARN accepted** —
+  changed-file findings block from day one (full-tree sweep advisory until flip);
+  added operating-model AC (runtime budget, owner, flip criterion). **WARN accepted** —
+  sequenced after AE-0154 to avoid baseline churn.
 
 ## Blockers
 
