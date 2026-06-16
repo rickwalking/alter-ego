@@ -37,10 +37,10 @@ Phase 7 of the modularization plan (§Phase 7 "Align the frontend"). **Behavior-
 reorganization: App Router URLs unchanged, the green gates (typecheck + eslint + lint:boundaries + 822 Vitest
 tests + check:legacy) stay green per ticket, and the feature/module-boundary ratchet only goes DOWN. Features
 migrate into `frontend/src/modules/<context>` sharing the backend glossary (knowledge/identity/conversation/
-editorial/presentation/publishing + editorial-operations/persona-quality), each behind a public contract;
+editorial/carousel-presentation/publishing + editorial-operations/persona/quality), each behind a public contract;
 re-export shims keep `@/` paths resolving during migration (object-identity, mirroring backend AE-0126).
 ZERO gate-gaming (no new eslint-disable/@ts-ignore/@ts-expect-error/skipped tests/lowered thresholds/baseline
-additions). Precondition: Phase 6 (PR #20) merged. See `docs/plans/phase-7-frontend-alignment.md`.
+additions). Soft precondition: Phase 6 (PR #20) merging only finalizes glossary naming; this frontend-only work reads the committed glossary doc and does not hard-block on the backend merge. See `docs/plans/phase-7-frontend-alignment.md`.
 
 ## Acceptance Criteria
 
@@ -57,7 +57,7 @@ Not applicable — behavior-preserving reorganization; verified by the green-gat
 ## Dependencies
 
 - Blocks: AE-0140, AE-0142
-- Blocked by: AE-0136
+- Blocked by: AE-0136, AE-0137
 - Related: AE-0134
 
 ## QA Checklist

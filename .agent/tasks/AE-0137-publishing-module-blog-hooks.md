@@ -37,17 +37,17 @@ Phase 7 of the modularization plan (§Phase 7 "Align the frontend"). **Behavior-
 reorganization: App Router URLs unchanged, the green gates (typecheck + eslint + lint:boundaries + 822 Vitest
 tests + check:legacy) stay green per ticket, and the feature/module-boundary ratchet only goes DOWN. Features
 migrate into `frontend/src/modules/<context>` sharing the backend glossary (knowledge/identity/conversation/
-editorial/presentation/publishing + editorial-operations/persona-quality), each behind a public contract;
+editorial/carousel-presentation/publishing + editorial-operations/persona/quality), each behind a public contract;
 re-export shims keep `@/` paths resolving during migration (object-identity, mirroring backend AE-0126).
 ZERO gate-gaming (no new eslint-disable/@ts-ignore/@ts-expect-error/skipped tests/lowered thresholds/baseline
-additions). Precondition: Phase 6 (PR #20) merged. See `docs/plans/phase-7-frontend-alignment.md`.
+additions). Soft precondition: Phase 6 (PR #20) merging only finalizes glossary naming; this frontend-only work reads the committed glossary doc and does not hard-block on the backend merge. See `docs/plans/phase-7-frontend-alignment.md`.
 
 ## Acceptance Criteria
 
 - [ ] modules/publishing SHALL own blog + distribution + scheduling behind a public contract; cross-context imports go through it
-- [ ] The two blog hooks SHALL be unambiguously named (CarouselArticle vs BlogPost) with consumers updated; re-export shims keep old paths resolving
+- [ ] The carousel-derived hook (use-carousel-blog.ts `useBlogPosts`, currently the one re-exported via features/blog/hooks/index.ts) SHALL be renamed to `useCarouselArticles`; the first-class hook (use-blog-posts.ts `useBlogPosts`, imported directly by app/dashboard/blog-posts/*) keeps `useBlogPosts`. Every consumer's resolved hook SHALL be unchanged; re-export shims keep old paths resolving
 - [ ] App Router /blog + dashboard blog routes SHALL render byte-identically (URLs + UI unchanged)
-- [ ] The boundary ratchet SHALL ratchet DOWN or hold; typecheck/eslint/test green
+- [ ] The boundary ratchet SHALL ratchet DOWN or hold; typecheck/eslint/test/build green
 
 ## Gherkin Scenarios
 

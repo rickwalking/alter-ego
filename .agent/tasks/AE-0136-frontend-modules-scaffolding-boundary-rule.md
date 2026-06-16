@@ -14,7 +14,7 @@ Updated: 2026-06-16
 
 ## Goal
 
-Introduce frontend/src/modules/<context>/ with a public-contract (barrel) convention and a module-boundary lint rule that extends the existing feature-boundary ratchet to enforce 'feature/module internals reachable only via the public contract'. No feature is moved yet (scaffolding + rule only).
+Introduce frontend/src/modules/<context>/ with a public-contract (barrel) convention and REFACTOR the existing feature-boundary checker to enforce module public contracts. Today scripts/feature-boundary.config.mjs hardcodes src/features + @/features/ and feature-boundary-scan.mjs derives the owner via split('/')[2] and only walks src/features — so modules/ + @/modules/* imports are invisible, and the app/ layer (which imports features 175+ times) is unmonitored. Parameterize the root dir / import prefix / owner-segment to cover BOTH features/ and modules/ during migration AND treat app/ as a consumer limited to module public contracts. Also add a new App-Router URL-inventory script (enumerate page.tsx/route.ts + their segment exports for pre/post diffing) and wire `npm run build` + a circular-import check (madge) as per-migration gates. No feature is moved yet (scaffolding + tooling only).
 
 ## Problem
 
@@ -37,17 +37,18 @@ Phase 7 of the modularization plan (§Phase 7 "Align the frontend"). **Behavior-
 reorganization: App Router URLs unchanged, the green gates (typecheck + eslint + lint:boundaries + 822 Vitest
 tests + check:legacy) stay green per ticket, and the feature/module-boundary ratchet only goes DOWN. Features
 migrate into `frontend/src/modules/<context>` sharing the backend glossary (knowledge/identity/conversation/
-editorial/presentation/publishing + editorial-operations/persona-quality), each behind a public contract;
+editorial/carousel-presentation/publishing + editorial-operations/persona/quality), each behind a public contract;
 re-export shims keep `@/` paths resolving during migration (object-identity, mirroring backend AE-0126).
 ZERO gate-gaming (no new eslint-disable/@ts-ignore/@ts-expect-error/skipped tests/lowered thresholds/baseline
-additions). Precondition: Phase 6 (PR #20) merged. See `docs/plans/phase-7-frontend-alignment.md`.
+additions). Soft precondition: Phase 6 (PR #20) merging only finalizes glossary naming; this frontend-only work reads the committed glossary doc and does not hard-block on the backend merge. See `docs/plans/phase-7-frontend-alignment.md`.
 
 ## Acceptance Criteria
 
 - [ ] A documented modules/<context>/index.ts public-contract convention SHALL exist (the only cross-module import surface)
-- [ ] The boundary checker SHALL enforce module public contracts AND keep the feature-boundary ratchet (ceiling unchanged or lower; 0 new)
-- [ ] A demonstrated+reverted violation SHALL prove the rule fails on an internal cross-module import
-- [ ] typecheck + eslint + test stay green
+- [ ] The boundary checker SHALL be parameterized to scan BOTH src/features and src/modules, treat src/app as a consumer limited to module public contracts, and keep the ratchet (ceiling unchanged or lower; 0 new)
+- [ ] A demonstrated+reverted violation SHALL prove the rule fails on an internal cross-module import (a @/modules/<m>/<internal> import from another module/app)
+- [ ] A URL-inventory script SHALL enumerate App-Router page.tsx/route.ts + segment exports for pre/post diffing, and `npm run build` + a circular-import (madge) check SHALL be runnable as gates
+- [ ] typecheck + eslint + test + build stay green
 
 ## Gherkin Scenarios
 

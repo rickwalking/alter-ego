@@ -3,11 +3,16 @@
 **Planner output.** Source: `.agent/reports/domain-modularization.options.md` §"Phase 7: Align the frontend"
 (lines 1040-1059), the Target Frontend Tree (lines 554-606), the Module Contract Rules (lines 608+), and the
 round-2 corrections (frontend baseline does not reproduce → re-measure first; two `useBlogPosts()` hooks →
-the `CarouselArticle` vs `BlogPost` split is mandatory). Builds on merged backend Phases 0-6 (the accepted
-context glossary: `knowledge, identity, conversation, editorial, presentation, publishing`). **Precondition:
-Phase 6 (PR #20) merged** (glossary final). Reuses the existing frontend feature-boundary ratchet
+the `CarouselArticle` vs `BlogPost` split is mandatory). Aligns to the accepted 9-context glossary in
+`docs/architecture/domain-glossary.md` (`knowledge, identity, conversation, editorial, editorial-operations,
+carousel-presentation, persona, quality, publishing`) — note `persona` and `quality` are TWO contexts and
+`persona_quality` is explicitly forbidden by the glossary. **Soft precondition:** Phase 6 (PR #20) merging only
+finalizes glossary *naming*; Phase 7 is frontend-only and reads the already-committed glossary doc, so it does
+NOT hard-block on the backend merge. Reuses the existing frontend feature-boundary ratchet
 (`scripts/check-feature-boundaries.mjs`, baseline 23) as the down-only enforcement mechanism — the analog of
-the backend AE-0082 import baseline.
+the backend AE-0082 import baseline. NOTE (AE-0136): that checker today only scans `src/features` / `@/features/*`
+imports; covering `modules/` and the `app/` consumer layer (which imports features 175+ times and is currently
+unmonitored) is explicit work in AE-0136.
 
 ## Goal
 
@@ -55,10 +60,15 @@ net IS: `typecheck` (tsc strict, clean) + `lint` (eslint, clean) + `lint:boundar
   workflow 752, chat 426, rubrics 146, persona 144, carousel 133, personas 91, analytics 50.
 - **Existing enforcement:** `scripts/check-feature-boundaries.mjs` + `scripts/feature-boundary-baseline.json`
   (23 edges, format `src/features/X/file::Y`); `npm run check:legacy` (v1 removal guard). NO module layer yet.
-- **Persona/personas duplication** (144 + 91 LOC) → consolidate under `persona-quality`.
+- **Persona/personas duplication** (144 + 91 LOC) → consolidate under `persona` (rubrics → `quality`).
 - **Two `useBlogPosts()`** under `features/blog/hooks/` (carousel-article vs blog-post).
 
 ## Target context mapping (feature → module)
+
+Alignment is to the **accepted glossary** in `docs/architecture/domain-glossary.md` (the 9-context map), NOT the
+current backend module *directories* (the backend tree currently has only 6 of 9). Per the glossary, `persona`
+and `quality` are **two separate contexts** (`quality` depends on `persona` one-way, via persona's public
+contract) — `persona_quality` is explicitly **forbidden** (glossary §"Avoid").
 
 | Current feature(s) | Target module |
 |---|---|
@@ -66,10 +76,11 @@ net IS: `typecheck` (tsc strict, clean) + `lint` (eslint, clean) + `lint:boundar
 | carousel | **carousel-presentation** (preview / review / refinement) |
 | create, workflow | **editorial** (workspace / workflow / sources) |
 | dashboard, analytics | **editorial-operations** (board / analytics) |
-| persona, personas, rubrics | **persona-quality** |
+| persona, personas | **persona** (consolidate the persona/personas duplication) |
+| rubrics | **quality** (owns quality rubrics; depends on `persona` via its public contract) |
 | chat | **conversation** |
 | knowledge | **knowledge** |
-| (auth/session) | **identity** |
+| (auth/session) | **identity** — NOTE: there is no `features/auth`; auth/session lives in `lib/` + `app/`. Phase 7 does NOT relocate it (route-adjacent, risky); `identity` frontend consolidation is **deferred to Phase 8**. The AE-0139 identity slice is documentation-only. |
 
 ## Ticket breakdown
 
@@ -77,26 +88,36 @@ net IS: `typecheck` (tsc strict, clean) + `lint` (eslint, clean) + `lint:boundar
 |----|-------|------|------|------------|
 | **AE-0134** | Phase 7 epic: Align the frontend to bounded contexts | T3 | Cross-cutting | — (tracks 0135-0142) |
 | **AE-0135** | Documented frontend baseline (file/LOC methodology + green-gate snapshot) + context-mapping doc | T2 | Frontend/Docs | — |
-| **AE-0136** | `modules/` scaffolding + public-contract convention + module-boundary lint rule (extends the feature-boundary ratchet) | T2 | Frontend/CI | AE-0135 |
-| **AE-0137** | Disambiguate `useBlogPosts` (CarouselArticle vs BlogPost) + publishing module (blog/distribution/scheduling) behind a public contract | T2 | Frontend | AE-0136 |
-| **AE-0138** | editorial + editorial-operations modules (create/workflow → editorial; dashboard/analytics → editorial-operations) behind contracts | T2 | Frontend | AE-0136 |
-| **AE-0139** | carousel-presentation + persona-quality + conversation + knowledge + identity modules behind contracts | T2 | Frontend | AE-0136 |
+| **AE-0136** | `modules/` scaffolding + public-contract convention + boundary-checker refactor (parameterize root/prefix/owner-segment to cover `modules/` AND `app/` consumers) + URL-inventory script + `build`/circular-import gates | T2 | Frontend/CI | AE-0135 |
+| **AE-0137** | Disambiguate `useBlogPosts`→`useCarouselArticles` (CarouselArticle) vs `useBlogPosts` (BlogPost) + publishing module (blog/distribution/scheduling) behind a public contract | T2 | Frontend | AE-0136 |
+| **AE-0138** | editorial + editorial-operations modules (create/workflow → editorial; dashboard/analytics → editorial-operations) behind contracts | T2 | Frontend | AE-0136, AE-0137 |
+| **AE-0139** | carousel-presentation + persona + quality + conversation + knowledge modules behind contracts (+ identity docs-only note) | T2 | Frontend | AE-0136, AE-0138 |
 | **AE-0140** | Co-locate API/Zod/query contracts per module; move business components out of global atomic folders | T2 | Frontend | AE-0137, AE-0138, AE-0139 |
-| **AE-0141** | OpenAPI/Zod schema-drift check (frontend ↔ backend) — advisory→blocking | T2 | Frontend/CI | AE-0140 |
+| **AE-0141** | OpenAPI/Zod schema-drift check (frontend ↔ backend) — incl. exporting the backend OpenAPI spec to a committed artifact (read-only `app.openapi()` dump script); advisory→blocking | T2 | Frontend/CI | AE-0140 |
 | **AE-0142** | Frontend module-boundary exit gate + ratchet down + glossary/convention docs + deferred follow-up (Phase 8) | T2 | Frontend/CI | AE-0137, AE-0138, AE-0139, AE-0140, AE-0141 |
 
 ## Suggested order (waves)
 
-- **Wave A:** AE-0135 (baseline+map), AE-0136 (scaffolding + boundary rule).
-- **Wave B (parallel by context):** AE-0137 (publishing), AE-0138 (editorial/-operations), AE-0139 (the rest).
+- **Wave A:** AE-0135 (baseline+map), AE-0136 (scaffolding + checker refactor + URL-inventory + build/circular gates).
+- **Wave B (SERIAL — not parallel):** AE-0137 (publishing) → AE-0138 (editorial/-operations) → AE-0139 (the rest).
+  These are sequenced, not parallel: all three rewrite `app/` page imports and all regenerate the shared
+  `feature-boundary-baseline.json`, and they share real cross-edges (`create→blog` ×8, `publish→create` ×2,
+  `dashboard→blog`) — running them concurrently collides on `app/` + the baseline JSON and forces churn.
 - **Wave C:** AE-0140 (contract co-location + component re-homing — needs the modules).
-- **Wave D:** AE-0141 (schema-drift check).
+- **Wave D:** AE-0141 (export backend OpenAPI artifact + schema-drift check).
 - **Wave E:** AE-0142 (exit gate + ratchet + docs).
 
 ## Risks & guardrails
 
 - **Behavior-preserving.** Keep all App Router URLs; route pages keep rendering the same components/data. The
   822 Vitest tests + typecheck + eslint + `check:legacy` stay green per ticket; no snapshot/test deleted.
+- **Stronger safety net (no byte-identical HTTP net exists).** tsc/eslint/Vitest miss RSC/`'use client'`
+  boundaries, route segment config (`export const dynamic` exists in the public `/blog` pages — must survive),
+  `next/dynamic`, barrel-induced circular imports (module `index.ts` consolidation is a classic cycle source),
+  and bundle/tree-shaking regressions. So every migration ticket ALSO runs **`npm run build`** + a
+  **circular-import check** (madge), and a new **App-Router URL-inventory script** (AE-0136 deliverable —
+  enumerates `page.tsx`/`route.ts` + their segment exports, diffed pre/post) asserts URLs + segment config are
+  unchanged. The boundary checker is extended to cover the **`app/` consumer layer** (today unmonitored).
 - **Down-only ratchet.** `check-feature-boundaries` ceiling never rises; each context migration replaces
   cross-feature imports with public-contract imports and ratchets the count DOWN (or holds).
 - **Re-export shims** keep `@/features/...` and `@/components/...` paths resolving during migration (object-

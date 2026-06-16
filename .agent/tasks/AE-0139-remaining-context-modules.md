@@ -1,4 +1,4 @@
-# AE-0139 — carousel-presentation + persona-quality + conversation + knowledge + identity modules
+# AE-0139 — carousel-presentation + persona + quality + conversation + knowledge modules (+ identity docs note)
 
 Status: Ready
 Tier: T2
@@ -14,7 +14,7 @@ Updated: 2026-06-16
 
 ## Goal
 
-Migrate the remaining features into their modules: carousel->carousel-presentation (preview/review/refinement); persona+personas+rubrics->persona-quality (consolidating the persona/personas duplication); chat->conversation; knowledge->knowledge; auth/session->identity - each behind a public contract.
+Migrate the remaining features into their modules per the ACCEPTED glossary (persona and quality are TWO contexts; persona_quality is forbidden): carousel->carousel-presentation (preview/review/refinement); persona+personas->persona (consolidating the persona/personas duplication); rubrics->quality (owns quality rubrics; depends on persona ONLY via persona's public contract); chat->conversation; knowledge->knowledge - each behind a public contract. IDENTITY: there is no features/auth — auth/session lives in lib/ + app/; this ticket does NOT relocate it (route-adjacent, risky), it only adds a docs note that frontend identity consolidation is deferred to Phase 8.
 
 ## Problem
 
@@ -37,17 +37,18 @@ Phase 7 of the modularization plan (§Phase 7 "Align the frontend"). **Behavior-
 reorganization: App Router URLs unchanged, the green gates (typecheck + eslint + lint:boundaries + 822 Vitest
 tests + check:legacy) stay green per ticket, and the feature/module-boundary ratchet only goes DOWN. Features
 migrate into `frontend/src/modules/<context>` sharing the backend glossary (knowledge/identity/conversation/
-editorial/presentation/publishing + editorial-operations/persona-quality), each behind a public contract;
+editorial/carousel-presentation/publishing + editorial-operations/persona/quality), each behind a public contract;
 re-export shims keep `@/` paths resolving during migration (object-identity, mirroring backend AE-0126).
 ZERO gate-gaming (no new eslint-disable/@ts-ignore/@ts-expect-error/skipped tests/lowered thresholds/baseline
-additions). Precondition: Phase 6 (PR #20) merged. See `docs/plans/phase-7-frontend-alignment.md`.
+additions). Soft precondition: Phase 6 (PR #20) merging only finalizes glossary naming; this frontend-only work reads the committed glossary doc and does not hard-block on the backend merge. See `docs/plans/phase-7-frontend-alignment.md`.
 
 ## Acceptance Criteria
 
-- [ ] Each remaining feature SHALL live under its target module behind a public contract
-- [ ] persona + personas SHALL be consolidated under persona-quality (no duplicate)
+- [ ] carousel->carousel-presentation, chat->conversation, knowledge->knowledge SHALL live under their module behind a public contract
+- [ ] persona + personas SHALL be consolidated under the `persona` module (no duplicate); rubrics SHALL live under the separate `quality` module, depending on persona only via persona's public contract (NO persona_quality module — glossary-forbidden)
+- [ ] identity SHALL be a docs-only note (auth/session stays in lib/+app/; consolidation deferred to Phase 8) — no code move
 - [ ] App Router URLs + UI unchanged; re-export shims keep old paths resolving
-- [ ] The boundary ratchet SHALL ratchet DOWN or hold; typecheck/eslint/test green
+- [ ] The boundary ratchet SHALL ratchet DOWN or hold; typecheck/eslint/test/build green
 
 ## Gherkin Scenarios
 
@@ -57,7 +58,7 @@ Not applicable — behavior-preserving reorganization; verified by the green-gat
 ## Dependencies
 
 - Blocks: AE-0140, AE-0142
-- Blocked by: AE-0136
+- Blocked by: AE-0136, AE-0138
 - Related: AE-0134
 
 ## QA Checklist
