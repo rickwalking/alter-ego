@@ -4,7 +4,7 @@ import { EDITORIAL_PHASES } from "@/constants/editorial-workflow";
 import type {
   EditorialWorkflowState,
   LocalizedSlideReview,
-} from "@/features/blog/types-ai";
+} from "@/modules/publishing";
 import { ResearchPhaseReview } from "./phase-review/research-phase-review";
 import { OutlinePhaseReview } from "./phase-review/outline-phase-review";
 import { ContentPhaseReview } from "./phase-review/content-phase-review";

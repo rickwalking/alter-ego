@@ -1,6 +1,6 @@
 import type { FinalReviewSendBackPhase } from "@/constants/editorial-workflow";
-import type { LocalizedSlideReview } from "@/features/blog/types-ai";
-import type { EditorialWorkflowState } from "@/features/blog/types-ai";
+import type { LocalizedSlideReview } from "@/modules/publishing";
+import type { EditorialWorkflowState } from "@/modules/publishing";
 
 export interface CreateWorkflowControlsProps {
   state: EditorialWorkflowState | null;
@@ -20,11 +20,4 @@ export interface CreateWorkflowControlsProps {
   presentationApproveBlocked: boolean;
   editBudgetBlocked: boolean;
   showPublishLink: boolean;
-}
-
-export interface WorkflowFailedCardProps {
-  currentPhase: string;
-  errorMessage: string | null | undefined;
-  onRetry: () => void;
-  isRetrying: boolean;
 }

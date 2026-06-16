@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { CreateStepHistoryPanel } from "./create-step-history-panel";
 import { CREATE_STEP_IDS } from "@/app/dashboard/create/step-ids";
-import type { EditorialWorkflowState } from "@/features/blog/types-ai";
+import type { EditorialWorkflowState } from "@/modules/publishing";
 
 vi.mock("next-intl", () => ({
   useTranslations: () => (key: string, values?: Record<string, unknown>) => {

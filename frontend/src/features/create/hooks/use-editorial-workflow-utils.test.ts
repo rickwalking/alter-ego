@@ -6,7 +6,7 @@ import {
 } from "@/constants/editorial-workflow";
 import { HTTP_STATUS } from "@/constants/api";
 import { WORKFLOW_PHASE_STATUS } from "@/constants/workflow";
-import type { EditorialWorkflowState } from "@/features/blog/types-ai";
+import type { EditorialWorkflowState } from "@/modules/publishing";
 import {
   appendUniquePhase,
   hasPhaseArtifacts,

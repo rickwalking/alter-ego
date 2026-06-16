@@ -2,7 +2,7 @@ import type {
   EditorialWorkflowState,
   LocalizedSlideReview,
   SlideValidationViolation,
-} from "@/features/blog/types-ai";
+} from "@/modules/publishing";
 
 export const PRESENTATION_STRUCTURED_EXTRA_KEYS = [
   "features",

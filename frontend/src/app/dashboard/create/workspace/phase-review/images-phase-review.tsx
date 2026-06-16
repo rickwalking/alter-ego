@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import type { EditorialWorkflowState } from "@/features/blog/types-ai";
+import type { EditorialWorkflowState } from "@/modules/publishing";
 
 export interface ImagesPhaseReviewProps {
   state: EditorialWorkflowState;

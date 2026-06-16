@@ -27,7 +27,7 @@ import {
   type CreateStepId,
 } from "@/app/dashboard/create/step-ids";
 import { shouldShowLiveWorkflowControls } from "@/app/dashboard/create/workspace/create-workflow-live-controls";
-import type { LocalizedSlideReview } from "@/features/blog/types-ai";
+import type { LocalizedSlideReview } from "@/modules/publishing";
 import {
   hasBlockingPresentationViolations,
   localizedSlidesHaveBudgetViolations,

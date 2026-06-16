@@ -5,12 +5,12 @@ import { createElement, type ReactNode } from "react";
 import {
   useCarouselProject,
   useCarouselProjects,
-  useBlogPosts,
+  useCarouselBlogPosts,
   useCarouselBlog,
   useCarouselBlogWithDesign,
   useCarouselDesign,
   useCarouselSlides,
-} from "@/features/blog/hooks/use-carousel-blog";
+} from "@/modules/publishing/blog/hooks/use-carousel-blog";
 import { API_ENDPOINTS, DEFAULT_BLOG_LANGUAGE } from "@/constants/api";
 
 vi.mock("@/lib/api-client", () => ({
@@ -179,7 +179,7 @@ describe("useCarouselProjects", () => {
   });
 });
 
-describe("useBlogPosts", () => {
+describe("useCarouselBlogPosts", () => {
   it("fetches completed carousel projects", async () => {
     const mockResponse = {
       items: [MOCK_PROJECT],
@@ -188,7 +188,7 @@ describe("useBlogPosts", () => {
       offset: 0,
     };
     mockApiCall.mockResolvedValueOnce(mockResponse);
-    const { result } = renderHook(() => useBlogPosts(), {
+    const { result } = renderHook(() => useCarouselBlogPosts(), {
       wrapper: createWrapper(),
     });
 

@@ -9,7 +9,7 @@ import {
   EDITORIAL_WORKFLOW_TRANSPORT_MODE,
 } from "@/constants/editorial-workflow";
 import { WORKFLOW_PHASE_STATUS } from "@/constants/workflow";
-import type { EditorialWorkflowState } from "@/features/blog/types-ai";
+import type { EditorialWorkflowState } from "@/modules/publishing";
 import type { useEditorialWorkflow } from "@/features/create/hooks/use-editorial-workflow";
 import { CreateWorkflowPanel } from "./create-workflow-panel";
 

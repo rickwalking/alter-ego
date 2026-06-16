@@ -19,7 +19,7 @@ import { WorkflowFailedCard } from "@/features/create/components/workflow-failed
 import { useCarouselProject } from "@/features/create/hooks";
 import { useEditorialWorkflow } from "@/features/create/hooks/use-editorial-workflow";
 import { WORKFLOW_PHASE_STATUS } from "@/constants/workflow";
-import type { ContentSource } from "@/features/blog/types-ai";
+import type { ContentSource } from "@/modules/publishing";
 import type { CarouselProjectResponse } from "@/schemas/carousel";
 import { BriefStepContent } from "@/app/dashboard/create/workspace/brief-step-content";
 import { WorkflowStepContent } from "@/app/dashboard/create/workspace/workflow-step-content";

@@ -14,11 +14,13 @@ import { EDITORIAL_WORKFLOW_STATUS } from "@/constants/editorial-workflow";
 import { WORKFLOW_PHASE_STATUS } from "@/constants/workflow";
 import { useCarouselProject } from "@/features/create/hooks";
 import { useEditorialWorkflow } from "@/features/create/hooks/use-editorial-workflow";
-import { PublishPanel } from "@/features/publish/components";
-import { PublishFailedNotice } from "@/features/publish/components/publish-failed-notice";
-import { RegenerateStrategySection } from "@/features/publish/components/regenerate-strategy-section";
-import { mergePublishProjectWithWorkflow } from "@/features/publish/lib/merge-publish-project";
-import { usePublishInstagram } from "@/features/publish/hooks";
+import {
+  PublishPanel,
+  PublishFailedNotice,
+  RegenerateStrategySection,
+  mergePublishProjectWithWorkflow,
+  usePublishInstagram,
+} from "@/modules/publishing";
 import { authenticatedFetch } from "@/lib/authenticated-fetch";
 
 type PublishResult = {

@@ -11,7 +11,7 @@ import { NeonButton } from "@/components/atoms/neon-button";
 import { NeonTextarea } from "@/components/atoms/neon-textarea";
 import { VOICE_MATCH_MIN_SCORE } from "@/constants/blog-ai";
 import { API_ENDPOINTS, HTTP_METHODS } from "@/constants/api";
-import type { VoiceScoreResult } from "@/features/blog/types-ai";
+import type { VoiceScoreResult } from "@/modules/publishing";
 import { authenticatedFetch } from "@/lib/authenticated-fetch";
 
 interface VoiceMatchScorerProps {

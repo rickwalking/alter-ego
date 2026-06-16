@@ -14,13 +14,13 @@ import {
 import { NeonInput } from "@/components/atoms/neon-input";
 import { NeonSpinner } from "@/components/atoms/neon-spinner";
 import { NeonTextarea } from "@/components/atoms/neon-textarea";
-import { AiSuggestionPanel } from "@/features/blog/components/ai-suggestion-panel";
-import { RichTextEditor } from "@/features/blog/components/rich-text-editor";
 import {
+  AiSuggestionPanel,
+  RichTextEditor,
   VersionHistorySidebar,
   type BlogPostVersion,
-} from "@/features/blog/components/version-history-sidebar";
-import { useBlogPosts } from "@/features/blog/hooks/use-blog-posts";
+  useBlogPosts,
+} from "@/modules/publishing";
 import { ROUTE_PATHS } from "@/constants/api";
 
 export default function BlogPostEditPage() {

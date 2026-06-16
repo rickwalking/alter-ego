@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { EDITORIAL_PHASES } from "@/constants/editorial-workflow";
 import { WORKFLOW_PHASE_STATUS } from "@/constants/workflow";
-import type { EditorialWorkflowState } from "@/features/blog/types-ai";
-import type { LocalizedSlideReview } from "@/features/blog/types-ai";
+import type { EditorialWorkflowState } from "@/modules/publishing";
+import type { LocalizedSlideReview } from "@/modules/publishing";
 import {
   applySlideCopyEdit,
   formatBudgetUsage,

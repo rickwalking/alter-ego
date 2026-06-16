@@ -13,7 +13,7 @@ import { DASHBOARD_ROUTES } from "@/constants/dashboard-routes";
 import { EDITORIAL_WORKFLOW_STATUS } from "@/constants/editorial-workflow";
 import { WORKFLOW_PHASE_STATUS } from "@/constants/workflow";
 import type { CarouselProjectResponse } from "@/schemas/carousel";
-import type { EditorialWorkflowState } from "@/features/blog/types-ai";
+import type { EditorialWorkflowState } from "@/modules/publishing";
 import { CREATE_STEP_IDS } from "@/app/dashboard/create/step-ids";
 import { CreateWorkflowArtifacts } from "@/app/dashboard/create/workspace/create-workflow-artifacts";
 import { ProjectSummaryCard } from "@/app/dashboard/create/workspace/project-summary-card";

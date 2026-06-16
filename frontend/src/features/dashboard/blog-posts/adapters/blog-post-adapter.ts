@@ -1,4 +1,4 @@
-import type { BlogPost } from "@/features/blog/types";
+import type { BlogPost } from "@/modules/publishing";
 import type { DashboardBlogPost } from "@/features/dashboard/blog-posts/types";
 
 export function mapBlogPostToDashboard(post: BlogPost): DashboardBlogPost {

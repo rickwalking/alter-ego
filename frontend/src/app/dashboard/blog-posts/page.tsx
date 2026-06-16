@@ -16,7 +16,7 @@ import {
 } from "@/features/dashboard/blog-posts/helpers";
 import { DASHBOARD_ROUTES } from "@/constants/dashboard-routes";
 import { mapBlogPostToDashboard } from "@/features/dashboard/blog-posts/adapters/blog-post-adapter";
-import { useBlogPosts } from "@/features/blog/hooks/use-blog-posts";
+import { useBlogPosts } from "@/modules/publishing";
 import { NeonSpinner } from "@/components/atoms/neon-spinner";
 import { NEON_RED } from "@/constants/neon";
 import {

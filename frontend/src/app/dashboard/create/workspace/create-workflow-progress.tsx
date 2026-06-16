@@ -4,7 +4,7 @@ import { useTranslations } from "next-intl";
 import { CarouselProgress } from "@/app/dashboard/create/workspace/create-carousel-progress";
 import { EDITORIAL_TO_PIPELINE_PHASE } from "@/constants/editorial-workflow";
 import { WORKFLOW_PHASE_STATUS } from "@/constants/workflow";
-import type { EditorialWorkflowState } from "@/features/blog/types-ai";
+import type { EditorialWorkflowState } from "@/modules/publishing";
 import type { CarouselPhaseProgress } from "@/schemas/carousel";
 
 interface EditorialWorkflowProgressProps {

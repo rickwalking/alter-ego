@@ -5,10 +5,12 @@ import { designTokensToCssVars } from "@/constants/blog";
 import { fetchBlogWithDesign } from "@/lib/server-fetch";
 import { DEFAULT_LOCALE, SUPPORTED_LOCALES } from "@/i18n/config";
 import type { SupportedLocale } from "@/i18n/config";
-import { BackLink } from "@/features/blog/components/public-post/back-link";
-import { BlogPostContent } from "@/features/blog/components/public-post/blog-post-content";
-import { BlogPostHeader } from "@/features/blog/components/public-post/blog-post-header";
-import { BlogPostHero } from "@/features/blog/components/public-post/blog-post-hero";
+import {
+  BackLink,
+  BlogPostContent,
+  BlogPostHeader,
+  BlogPostHero,
+} from "@/modules/publishing";
 
 export const dynamic = "force-dynamic";
 

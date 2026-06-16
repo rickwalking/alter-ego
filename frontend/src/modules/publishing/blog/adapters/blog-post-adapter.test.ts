@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { mapProjectToBlogPostCard } from "@/features/blog/adapters/blog-post-adapter";
+import { mapProjectToBlogPostCard } from "@/modules/publishing/blog/adapters/blog-post-adapter";
 import type { CarouselProjectResponse } from "@/schemas/carousel";
 
 describe("mapProjectToBlogPostCard", () => {

@@ -15,7 +15,7 @@ import { WORKFLOW_PHASE_STATUS } from "@/constants/workflow";
 import type {
   EditorialWorkflowState,
   LocalizedSlideReview,
-} from "@/features/blog/types-ai";
+} from "@/modules/publishing";
 import { authenticatedFetch } from "@/lib/authenticated-fetch";
 import {
   appendUniquePhase,
@@ -197,7 +197,7 @@ export function useEditorialWorkflowResume({
                       ...prev,
                       lock_version: accepted.lock_version,
                       phase_status:
-                        accepted.phase_status as import("@/features/blog/types-ai").WorkflowPhaseStatus,
+                        accepted.phase_status as import("@/modules/publishing").WorkflowPhaseStatus,
                     }
                   : prev;
             workflowStateRef.current = next;

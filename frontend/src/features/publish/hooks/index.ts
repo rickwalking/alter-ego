@@ -1,4 +1,7 @@
-export { usePublishInstagram } from "./use-publish";
-export type { InstagramPublishResponse } from "./use-publish";
-export { usePublishChat } from "./use-publish-chat";
-export type { UsePublishChatReturn } from "./use-publish-chat";
+/**
+ * Re-export shim (AE-0137): forwards to the publishing public contract.
+ * The implementation moved to `src/modules/publishing/**`. Import
+ * `@/modules/publishing` directly in new code; this shim keeps the legacy
+ * `@/features/publish/hooks` path resolving during the migration window.
+ */
+export * from "@/modules/publishing";

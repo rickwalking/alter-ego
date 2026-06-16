@@ -16,7 +16,7 @@ import {
 } from "@/components/molecules/neon-card";
 import { CONTENT_SOURCE_TYPES } from "@/constants/blog-ai";
 import { API_ENDPOINTS, HTTP_METHODS } from "@/constants/api";
-import type { ContentSource } from "@/features/blog/types-ai";
+import type { ContentSource } from "@/modules/publishing";
 import { authenticatedFetch } from "@/lib/authenticated-fetch";
 
 interface CreateSourceMaterialsProps {

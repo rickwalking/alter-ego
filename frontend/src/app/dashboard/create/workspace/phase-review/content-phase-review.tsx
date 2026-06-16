@@ -10,7 +10,7 @@ import {
 import type {
   EditorialWorkflowState,
   LocalizedSlideReview,
-} from "@/features/blog/types-ai";
+} from "@/modules/publishing";
 import { PresentationIconPreview } from "@/features/create/components/presentation-icon-preview";
 import { PresentationStructuredItems } from "@/features/create/components/presentation-structured-items";
 import {

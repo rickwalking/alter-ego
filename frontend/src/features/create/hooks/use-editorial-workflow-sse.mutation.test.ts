@@ -11,7 +11,7 @@ import {
 } from "@/constants/editorial-workflow";
 import type { EditorialWorkflowTransportMode } from "@/constants/editorial-workflow";
 import { WORKFLOW_PHASE_STATUS } from "@/constants/workflow";
-import type { EditorialWorkflowState } from "@/features/blog/types-ai";
+import type { EditorialWorkflowState } from "@/modules/publishing";
 import { useEditorialWorkflowSse } from "./use-editorial-workflow-sse";
 
 class MockEventSource {

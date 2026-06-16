@@ -1,7 +1,7 @@
 "use client";
 
 import { CreateFinalReviewTabs } from "../create-final-review-tabs";
-import type { EditorialWorkflowState } from "@/features/blog/types-ai";
+import type { EditorialWorkflowState } from "@/modules/publishing";
 
 export interface FinalReviewPhaseReviewProps {
   projectId: string;

@@ -10,7 +10,7 @@ import {
 } from "@/constants/editorial-workflow";
 import { HTTP_STATUS } from "@/constants/api";
 import { WORKFLOW_PHASE_STATUS } from "@/constants/workflow";
-import type { EditorialWorkflowState } from "@/features/blog/types-ai";
+import type { EditorialWorkflowState } from "@/modules/publishing";
 
 export interface WorkflowEventPayload {
   event?: string;
@@ -224,7 +224,7 @@ export function mergeWorkflowState(
       payload.phase ?? payload.current_phase ?? prev?.current_phase ?? "",
     phase_status: (payload.phase_status ??
       prev?.phase_status ??
-      "") as import("@/features/blog/types-ai").WorkflowPhaseStatus,
+      "") as import("@/modules/publishing").WorkflowPhaseStatus,
     research_findings:
       payload.research_findings ?? prev?.research_findings ?? [],
     outline: payload.outline ?? prev?.outline ?? [],

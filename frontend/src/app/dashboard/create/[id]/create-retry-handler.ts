@@ -1,4 +1,4 @@
-import type { EditorialWorkflowState } from "@/features/blog/types-ai";
+import type { EditorialWorkflowState } from "@/modules/publishing";
 
 type WorkflowSource = {
   title: string;

@@ -1,33 +1,7 @@
-import type { CarouselDesignResponse } from "@/schemas/carousel";
-
-interface BlogPostHeroProps {
-  imageUrl: string;
-  title: string;
-  design: CarouselDesignResponse;
-}
-
-export function BlogPostHero({ imageUrl, title, design }: BlogPostHeroProps) {
-  const { colors } = design;
-
-  return (
-    <div
-      className="relative mb-10 h-72 w-full overflow-hidden rounded-2xl md:h-96"
-      style={{
-        border: `1px solid ${colors.primary}33`,
-        boxShadow: `0 0 60px ${colors.primary}1F, 0 20px 40px rgba(0,0,0,0.4)`,
-      }}
-    >
-      <img
-        src={imageUrl}
-        alt={title}
-        className="absolute inset-0 h-full w-full object-cover"
-      />
-      <div
-        className="absolute inset-0"
-        style={{
-          background: `linear-gradient(to bottom, transparent 40%, ${colors.bg} 100%)`,
-        }}
-      />
-    </div>
-  );
-}
+/**
+ * Re-export shim (AE-0137): forwards to the publishing public contract.
+ * The implementation moved to `src/modules/publishing/**`. Import
+ * `@/modules/publishing` directly in new code; this shim keeps the legacy
+ * `@/features/blog/components/public-post/blog-post-hero` path resolving during the migration window.
+ */
+export * from "@/modules/publishing";

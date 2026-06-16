@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { CreateWorkspaceSidebar } from "./create-workspace-sidebar";
 import { WORKFLOW_PHASE_STATUS } from "@/constants/workflow";
 import type { CarouselProjectResponse } from "@/schemas/carousel";
-import type { EditorialWorkflowState } from "@/features/blog/types-ai";
+import type { EditorialWorkflowState } from "@/modules/publishing";
 
 const project = {
   topic: "AI safety",

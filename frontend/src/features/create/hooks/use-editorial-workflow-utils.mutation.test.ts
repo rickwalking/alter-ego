@@ -12,7 +12,7 @@ import {
   EDITORIAL_WORKFLOW_TRANSPORT_MODE,
 } from "@/constants/editorial-workflow";
 import { WORKFLOW_PHASE_STATUS } from "@/constants/workflow";
-import type { EditorialWorkflowState } from "@/features/blog/types-ai";
+import type { EditorialWorkflowState } from "@/modules/publishing";
 import {
   appendUniquePhase,
   hasPhaseArtifacts,
