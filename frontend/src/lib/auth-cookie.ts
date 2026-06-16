@@ -1,10 +1,11 @@
 import type { NextRequest, NextResponse } from "next/server";
 
 import { COOKIE_ACCESS_TOKEN } from "@/constants/middleware";
+import { SECONDS_PER_HOUR } from "@/constants/time";
 
 export { COOKIE_ACCESS_TOKEN };
 
-const DEFAULT_TOKEN_MAX_AGE_SEC = 60 * 60;
+const DEFAULT_TOKEN_MAX_AGE_SEC = SECONDS_PER_HOUR;
 
 /** Whether the incoming request used HTTPS (directly or via proxy). */
 export function isSecureRequest(request: NextRequest): boolean {

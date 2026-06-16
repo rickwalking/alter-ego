@@ -528,8 +528,9 @@ can never return, ratchet the baseline down:
 
 | Job | Tool | Enforcement |
 |-----|------|-------------|
-| frontend / Lint | eslint `--quiet` (repo-wide errors) | CI failure |
+| frontend / Lint | eslint `--quiet` (repo-wide errors) + boundaries + url:check + circular + component-types | CI failure |
 | frontend / Lint (changed) | eslint `--max-warnings=0` on diff | CI failure |
+| frontend / Component types (AE-0144) | `gates.sh frontend:component-types` (`npm run lint:component-types`) | CI failure — no NEW inline `interface`/`type {...}` in `modules/**` components/hooks; down-only baseline ratchet ([convention](../../frontend/src/modules/README.md#component-type-location-convention-ae-0144)) |
 | frontend / Type Check | tsc --noEmit | CI failure |
 | frontend / Test | vitest | CI failure |
 | frontend / Format | prettier --check | CI failure |

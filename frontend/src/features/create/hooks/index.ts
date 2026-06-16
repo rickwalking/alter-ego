@@ -1,10 +1,7 @@
-export {
-  useCreateCarousel,
-  useCarouselProject,
-  useDeleteCarousel,
-} from "./use-carousel";
-
-export {
-  useAvailableStrategies,
-  useRegenerateSlides,
-} from "./use-slide-layout-strategies";
+/**
+ * Re-export shim (AE-0138): forwards to the editorial public contract.
+ * The implementation moved to `src/modules/editorial/**`. Import
+ * `@/modules/editorial` directly in new code; this shim keeps the legacy
+ * `@/features/create/hooks/index` path resolving during the migration window.
+ */
+export * from "@/modules/editorial";

@@ -8,7 +8,7 @@ import {
   DASHBOARD_CHAT_BORDER_SUBTLE,
   DASHBOARD_CHAT_CYAN,
   DASHBOARD_CHAT_TEXT,
-} from "@/features/dashboard/chat/constants";
+} from "@/modules/editorial-operations";
 
 export interface ChatComposerProps {
   value: string;

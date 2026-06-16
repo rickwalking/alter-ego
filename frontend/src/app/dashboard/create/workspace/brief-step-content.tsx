@@ -4,9 +4,9 @@ import { BG_CARD, TEXT_DIM } from "@/constants/neon";
 import { CreateDraftBlogPreview } from "./create-draft-blog-preview";
 import { CreateMaterialsGate } from "./create-materials-gate";
 import { CreateSourceMaterials } from "./create-source-materials";
-import type { ContentSource } from "@/features/blog/types-ai";
+import type { ContentSource } from "@/modules/publishing";
 import type { CarouselProjectResponse } from "@/schemas/carousel";
-import type { useEditorialWorkflow } from "@/features/create/hooks/use-editorial-workflow";
+import type { useEditorialWorkflow } from "@/modules/editorial";
 
 export interface BriefStepContentProps {
   project: CarouselProjectResponse;

@@ -4,12 +4,12 @@ import { useTranslations } from "next-intl";
 import { ContentPhaseReview } from "@/app/dashboard/create/workspace/phase-review/content-phase-review";
 import { EDITORIAL_PHASES } from "@/constants/editorial-workflow";
 import { TEXT_DIM } from "@/constants/neon";
-import type { EditorialWorkflowState } from "@/features/blog/types-ai";
+import type { EditorialWorkflowState } from "@/modules/publishing";
 import {
   resolveLocalizedSlides,
   resolveSlideDraftPreview,
   resolveSlideDraftTitle,
-} from "@/features/create/lib/presentation-review-utils";
+} from "@/modules/editorial";
 import {
   CREATE_STEP_IDS,
   CREATE_STEP_TO_EDITORIAL_PHASE,

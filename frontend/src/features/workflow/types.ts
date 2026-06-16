@@ -1,35 +1,16 @@
-/** Notification types for the notification center. */
-
-export type NotificationItem = {
-  id: string;
-  user_id: string;
-  notification_type: string;
-  title: string;
-  body: string | null;
-  status: string;
-  content_id: string | null;
-  content_type: string | null;
-  deadline_at: string | null;
-  created_at: string;
-};
-
-export type NotificationListResponse = {
-  items: NotificationItem[];
-  total: number;
-};
-
-export type ReviewAssignmentPayload = {
-  reviewer_id: string;
-  content_id: string;
-  content_type: string;
-  title: string;
-  deadline_hours?: number;
-};
-
-export type ContentLock = {
-  content_id: string;
-  content_type: string;
-  user_id: string;
-  user_name: string;
-  expires_at: string;
-};
+/**
+ * Re-export shim (AE-0138): forwards to the editorial public contract.
+ * The implementation moved to `src/modules/editorial/**`. Import
+ * `@/modules/editorial` directly in new code; this shim keeps the legacy
+ * `@/features/workflow/types` path resolving during the migration window.
+ *
+ * Surface is honest: it re-exports exactly the editorial barrel's PUBLIC API.
+ * `NotificationItem` / `NotificationListResponse` live in
+ * `editorial/workflow/types` and are intentionally NOT on the barrel — they are
+ * module-internal (consumed only by `use-notifications`) and were never imported
+ * cross-context via this legacy path (verified: no `@/features/workflow`
+ * consumer outside this folder). A deep `@/modules/editorial/<internal>` import
+ * here would violate the module public-contract boundary, so it is avoided; if
+ * an internal type ever needs cross-context reach, add it to the barrel.
+ */
+export * from "@/modules/editorial";

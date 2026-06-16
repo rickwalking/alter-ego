@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { CREATE_STEP_IDS } from "@/app/dashboard/create/step-ids";
 import { EDITORIAL_PHASES } from "@/constants/editorial-workflow";
 import { WORKFLOW_PHASE_STATUS } from "@/constants/workflow";
-import type { EditorialWorkflowState } from "@/features/blog/types-ai";
+import type { EditorialWorkflowState } from "@/modules/publishing";
 import { shouldShowLiveWorkflowControls } from "./create-workflow-live-controls";
 
 const baseState: EditorialWorkflowState = {

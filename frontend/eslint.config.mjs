@@ -65,6 +65,11 @@ export default defineConfig([
       ],
       complexity: ["warn", 10],
       "max-depth": ["warn", 4],
+      // Early-return / guard-clause enforcement (AE-0147). Both are
+      // auto-fixable and behavior-preserving; errors so they gate under
+      // `eslint --quiet` (which suppresses warnings).
+      "no-else-return": ["error", { allowElseIf: false }],
+      "no-lonely-if": "error",
       "max-params": ["warn", 3],
       "max-statements": ["warn", 25],
       "sonarjs/cognitive-complexity": ["warn", 15],
@@ -154,13 +159,62 @@ export default defineConfig([
     },
   },
   {
-    files: ["**/*.test.ts", "**/*.test.tsx", "tests/**"],
+    // No magic numbers (AE-0145). Error so it gates under `eslint --quiet`.
+    // HTTP status codes live in `HTTP_STATUS` and the API base URL in
+    // `constants/api`; other recurring literals are extracted to named
+    // constants. The rule is scoped to the application *logic* layer (`.ts`
+    // in lib / modules / app / hooks). It deliberately excludes:
+    //   - `src/constants/**` — the named-literal layer itself (the place the
+    //     rule pushes numbers *into*; flagging it is circular);
+    //   - `src/schemas/**` — Zod validation bounds (`.max(500)`, `.min(...)`)
+    //     are self-documenting at the call site;
+    //   - `**/*.tsx` — presentational components, where literals are design
+    //     tokens / SVG geometry / animation timings (Tailwind-equivalent).
+    // `ignore` keeps the universally-meaningful small set; array indexes /
+    // default params are exempt structurally.
+    files: ["src/lib/**/*.ts", "src/modules/**/*.ts", "src/app/**/*.ts"],
+    ignores: [
+      "src/constants/**",
+      "src/schemas/**",
+      // Module-local constants files are part of the named-literal layer too.
+      "**/constants.ts",
+      "**/constants/**",
+      // Next.js route segment config exports (e.g. `maxDuration`) must be
+      // statically-analyzable literals; they cannot reference constants.
+      "**/route.ts",
+      "**/*.test.ts",
+      "**/*.test-utils.ts",
+    ],
+    rules: {
+      "no-magic-numbers": [
+        "error",
+        {
+          ignore: [-1, 0, 1, 2, 100],
+          ignoreArrayIndexes: true,
+          ignoreDefaultValues: true,
+          enforceConst: true,
+          ignoreEnums: true,
+        },
+      ],
+    },
+  },
+  {
+    files: [
+      "**/*.test.ts",
+      "**/*.test.tsx",
+      "**/*.test-utils.ts",
+      "**/*.test-utils.tsx",
+      "tests/**",
+      "src/test/**",
+    ],
     rules: {
       "max-lines-per-function": "off",
       "max-lines": "off",
       complexity: "off",
       "max-statements": "off",
       "sonarjs/cognitive-complexity": "off",
+      // Test fixtures legitimately use literal status codes / sizes.
+      "no-magic-numbers": "off",
     },
   },
 ]);

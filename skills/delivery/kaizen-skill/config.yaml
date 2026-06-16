@@ -1,0 +1,79 @@
+# Kaizen skill — continuous-improvement harness configuration.
+# The skill turns recurring quality signal into systemic enforcement, gated by a
+# human approval step, then auto-emits tickets. See SKILL.md.
+
+# THE INVARIANT (enforced in Phase 3 synthesis): proposals may only ratchet the
+# quality bar UP or HOLD it. Any proposal that loosens a threshold, adds a
+# suppression/ignore, weakens or removes a gate is rejected and recorded.
+ratchet:
+  direction: up-or-hold-only
+  reject_if: [threshold_decrease, new_suppression, gate_removed, ignore_added]
+
+# Phase 1 shared research pack (reused from qa-agent). Explorer model is
+# selectable and NOT locked to a provider; default cheap/fast.
+research_pack:
+  model: default-fast
+  agent_type: Explore                 # read-only; cannot edit the tree
+  output: ".agent/reports/kaizen-<id>.research.md"
+  pattern: "skills/delivery/qa-agent/references/qa-research-pack.md"
+
+# Phase 0 signal sources. Each is gathered, then CLUSTERED into failure classes
+# ranked by frequency × severity. Commands in references/signal-sources.md.
+signal_sources:
+  ci_failures:        "gh run list/view — quality-gate job logs"
+  qa_reports:         ".agent/reports/*.qa.md — recurring blockers/warnings"
+  reviewer_comments:  "CodeRabbit / gh pr view --comments"
+  integrity_markers:  "scripts/ci/check-integrity.sh history; every integrity-ok:/noqa/type-ignore/nosec marker"
+  debt_markers:       "TODO AE-#### ; pyproject per-file-ignores ; mypy ignore_errors overrides"
+
+# Phase 2 analysis subagents (run in parallel over the shared pack).
+analysis:
+  root_cause_research:
+    web_research: true                # WebSearch/WebFetch allowed for best-practice fixes
+    method: "5-whys → systemic enforcement (not a one-off patch)"
+  rule_doc_mapper:
+    targets:
+      - CLAUDE.md
+      - backend/CLAUDE.md
+      - backend/AGENTS.md
+      - frontend/CLAUDE.md
+      - frontend/AGENTS.md
+      - backend/pyproject.toml          # ruff/mypy/coverage/mutmut gate config
+      - frontend/eslint.config.mjs
+      - backend/.importlinter
+      - scripts/ci/gates.sh             # add a new gate
+      - scripts/ci/check-integrity.sh   # add a new anti-gaming pattern
+      - docs/decisions/                 # ADR when architecturally significant
+      - docs/guides/
+
+# Phase 4 approval gate: nothing is created before explicit human approval.
+approval:
+  required: true
+  granularity: plan                     # approve the plan (subset allowed); then auto-emit
+
+# Phase 5 emission via ticket-writer-skill (never duplicate create_ticket.py).
+emission:
+  type: Quality
+  via: ticket-writer-skill
+  acceptance_must_include: "the new gate/rule FAILS on a seeded violation (prove enforcement works)"
+  link_back: ".agent/reports/kaizen-<id>.plan.md"
+
+# Trigger modes.
+modes:
+  incident: "/kaizen-skill AE-#### | <PR#>"
+  sweep:    "/kaizen-skill sweep"        # schedule weekly (schedule skill / GH Actions cron)
+
+# External execution (cost offload) — invoke with `/kaizen-skill <scope> external`.
+# Phases 0-2 (signal + research pack + analysis) run on a cheaper external LLM;
+# the main session keeps the trusted steps. Runbook: references/external-kaizen.md.
+external:
+  runner: scripts/kaizen/run_external_kaizen.sh
+  shared_mechanics: scripts/lib/external_agent.sh   # also used by run_external_qa.sh
+  reviewers: [opencode, codex, cursor]              # tool fallback order
+  phases_external: [0, 1, 2]                         # signal, research pack, analysis
+  phases_local:    [3, 3.5, 4, 5]                    # synthesis, RE-VALIDATION, approval, emission
+  output_contract: "full plan report + final fenced KAIZEN_JSON block (proposals[].ratchet required)"
+  proposals_json: "<output>.proposals.json"          # extracted by the runner
+  # NON-NEGOTIABLE: the main session re-validates the ratchet invariant on every
+  # returned proposal. The external model's self-assessment is advisory only.
+  revalidate_invariant_locally: true

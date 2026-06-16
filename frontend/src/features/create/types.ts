@@ -1,30 +1,7 @@
-import type { FinalReviewSendBackPhase } from "@/constants/editorial-workflow";
-import type { LocalizedSlideReview } from "@/features/blog/types-ai";
-import type { EditorialWorkflowState } from "@/features/blog/types-ai";
-
-export interface CreateWorkflowControlsProps {
-  state: EditorialWorkflowState | null;
-  showLiveControls: boolean;
-  loading: boolean;
-  feedback: string;
-  setFeedback: (value: string) => void;
-  feedbackError: string | null;
-  setFeedbackError: (value: string | null) => void;
-  sendBackTarget: FinalReviewSendBackPhase;
-  setSendBackTarget: (value: FinalReviewSendBackPhase) => void;
-  handleRevise: () => void;
-  approve: (options?: object) => void;
-  contentHasEdits: boolean;
-  contentSlides: LocalizedSlideReview[];
-  personaApproveBlocked: boolean;
-  presentationApproveBlocked: boolean;
-  editBudgetBlocked: boolean;
-  showPublishLink: boolean;
-}
-
-export interface WorkflowFailedCardProps {
-  currentPhase: string;
-  errorMessage: string | null | undefined;
-  onRetry: () => void;
-  isRetrying: boolean;
-}
+/**
+ * Re-export shim (AE-0138): forwards to the editorial public contract.
+ * The implementation moved to `src/modules/editorial/**`. Import
+ * `@/modules/editorial` directly in new code; this shim keeps the legacy
+ * `@/features/create/types` path resolving during the migration window.
+ */
+export * from "@/modules/editorial";

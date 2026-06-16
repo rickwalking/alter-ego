@@ -6,11 +6,16 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint --quiet && npm run lint:boundaries",
+    "lint": "eslint --quiet && npm run lint:boundaries && npm run url:check && npm run lint:circular && npm run lint:component-types",
     "lint:all": "eslint --max-warnings=0 && npm run lint:boundaries",
     "lint:boundaries": "node scripts/check-feature-boundaries.mjs",
+    "lint:circular": "node scripts/check-circular-imports.mjs",
+    "lint:component-types": "node scripts/check-component-type-location.mjs",
+    "url:inventory": "node scripts/url-inventory.mjs",
+    "url:check": "node scripts/url-inventory.mjs --check",
     "lint:changed": "node ../scripts/ci/eslint-changed.mjs",
     "boundaries:baseline": "node scripts/generate-feature-boundary-baseline.mjs",
+    "component-types:baseline": "node scripts/generate-component-type-location-baseline.mjs",
     "test": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:ui": "vitest --ui",
@@ -22,6 +27,7 @@
     "typecheck": "tsc --noEmit",
     "check:legacy": "node scripts/check-legacy-usage.mjs",
     "check:legacy-inventory": "node scripts/check-legacy-usage.mjs --inventory",
+    "check:schema-drift": "node scripts/check-schema-drift.mjs",
     "prepare": "husky"
   },
   "lint-staged": {
@@ -107,6 +113,7 @@
     "vitest": "^4.1.8"
   },
   "overrides": {
-    "esbuild": "^0.28.1"
+    "esbuild": "^0.28.1",
+    "vite": "^7.3.5"
   }
 }

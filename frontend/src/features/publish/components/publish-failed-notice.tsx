@@ -1,50 +1,7 @@
-"use client";
-
-import Link from "next/link";
-import { useTranslations } from "next-intl";
-import { WorkflowFailedCard } from "@/features/create/components/workflow-failed-card";
-
-const BACK_LINK_STYLE = {
-  display: "inline-block",
-  marginTop: "12px",
-  fontSize: "13px",
-  color: "#00d4ff",
-  textDecoration: "none",
-} as const;
-
-export interface PublishFailedNoticeProps {
-  currentPhase: string;
-  errorMessage: string | null | undefined;
-  workspaceHref: string;
-}
-
 /**
- * Failed-state notice for the publish page (AE-0009, AC#19).
- *
- * When the editorial workflow's ``phase_status`` is ``failed``, the publish
- * page renders this notice instead of the "awaiting final approval" message.
- * It surfaces the {@link WorkflowFailedCard} (error message + retry) plus a
- * "Back to workspace" link so the user can recover from the publish screen.
+ * Re-export shim (AE-0137): forwards to the publishing public contract.
+ * The implementation moved to `src/modules/publishing/**`. Import
+ * `@/modules/publishing` directly in new code; this shim keeps the legacy
+ * `@/features/publish/components/publish-failed-notice` path resolving during the migration window.
  */
-export function PublishFailedNotice({
-  currentPhase,
-  errorMessage,
-  workspaceHref,
-}: PublishFailedNoticeProps): React.ReactElement {
-  const t = useTranslations("publish");
-  return (
-    <div style={{ marginBottom: "16px" }}>
-      <WorkflowFailedCard
-        currentPhase={currentPhase}
-        errorMessage={errorMessage}
-        onRetry={() => {
-          window.location.href = workspaceHref;
-        }}
-        isRetrying={false}
-      />
-      <Link href={workspaceHref} style={BACK_LINK_STYLE}>
-        {t("backToWorkspace")}
-      </Link>
-    </div>
-  );
-}
+export * from "@/modules/publishing";

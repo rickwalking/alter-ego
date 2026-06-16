@@ -27,15 +27,15 @@ import {
   type CreateStepId,
 } from "@/app/dashboard/create/step-ids";
 import { shouldShowLiveWorkflowControls } from "@/app/dashboard/create/workspace/create-workflow-live-controls";
-import type { LocalizedSlideReview } from "@/features/blog/types-ai";
+import type { LocalizedSlideReview } from "@/modules/publishing";
 import {
   hasBlockingPresentationViolations,
   localizedSlidesHaveBudgetViolations,
   resolveLocalizedSlides,
   slidesHaveCopyChanges,
-} from "@/features/create/lib/presentation-review-utils";
-import { ImagePromptReview } from "@/features/create/components/image-prompt-review";
-import type { useEditorialWorkflow } from "@/features/create/hooks/use-editorial-workflow";
+} from "@/modules/editorial";
+import { ImagePromptReview } from "@/modules/editorial";
+import type { useEditorialWorkflow } from "@/modules/editorial";
 
 type CreateWorkflowApi = ReturnType<typeof useEditorialWorkflow>;
 

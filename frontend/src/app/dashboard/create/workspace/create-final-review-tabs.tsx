@@ -9,7 +9,7 @@ import {
   FINAL_REVIEW_TABS,
   type FinalReviewTab,
 } from "@/constants/editorial-workflow";
-import type { EditorialWorkflowState } from "@/features/blog/types-ai";
+import type { EditorialWorkflowState } from "@/modules/publishing";
 import { ContentPhaseReview } from "@/app/dashboard/create/workspace/phase-review/content-phase-review";
 import {
   resolveBlogMarkdown,

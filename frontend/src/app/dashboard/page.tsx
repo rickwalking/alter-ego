@@ -10,7 +10,7 @@ import { NeonCard } from "@/components/molecules/neon-card";
 import { QUICK_ACTIONS } from "./constants";
 import { TEXT, NEON_RED } from "@/constants/neon";
 import type { NeonBadgeVariant } from "@/schemas/neon-badge";
-import { useEditorialAnalytics } from "@/features/analytics/hooks/use-editorial-analytics";
+import { useEditorialAnalytics } from "@/modules/editorial-operations";
 
 const DOT_TO_BADGE: Record<string, NeonBadgeVariant> = {
   "#22c55e": "green",

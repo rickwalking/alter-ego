@@ -17,7 +17,7 @@ import {
   TEXT,
   TEXT_MUTED,
 } from "@/constants/neon";
-import { useEditorialAnalytics } from "@/features/analytics/hooks/use-editorial-analytics";
+import { useEditorialAnalytics } from "@/modules/editorial-operations";
 
 export default function AnalyticsPage(): React.ReactElement {
   const t = useTranslations("dashboard.analytics");

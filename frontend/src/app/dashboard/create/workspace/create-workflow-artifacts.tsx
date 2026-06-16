@@ -2,7 +2,7 @@
 import { NeonBadge } from "@/components/atoms/neon-badge";
 
 import { useTranslations } from "next-intl";
-import type { EditorialWorkflowState } from "@/features/blog/types-ai";
+import type { EditorialWorkflowState } from "@/modules/publishing";
 
 interface CreateWorkflowArtifactsProps {
   state: EditorialWorkflowState | null;

@@ -1,6 +1,23 @@
 import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
 
+import {
+  MS_PER_SECOND,
+  SECONDS_PER_MINUTE,
+  SECONDS_PER_HOUR,
+  SECONDS_PER_DAY,
+  SECONDS_PER_WEEK,
+} from "@/constants/time";
+
+/** Characters of the "..." ellipsis appended by `truncate`. */
+const ELLIPSIS_LENGTH = 3;
+
+/** Radix for base-36 random-suffix generation in the `generateId` fallback. */
+const BASE36_RADIX = 36;
+/** Slice bounds for the base-36 fractional suffix ("0." prefix dropped). */
+const BASE36_SUFFIX_START = 2;
+const BASE36_SUFFIX_END = 9;
+
 /**
  * Merge Tailwind CSS classes with proper precedence
  * Combines clsx for conditional classes and tailwind-merge for deduplication
@@ -27,12 +44,15 @@ export function formatDate(date: Date | string | number): string {
 export function formatRelativeTime(date: Date | string | number): string {
   const now = new Date();
   const then = new Date(date);
-  const seconds = Math.floor((now.getTime() - then.getTime()) / 1000);
+  const seconds = Math.floor((now.getTime() - then.getTime()) / MS_PER_SECOND);
 
-  if (seconds < 60) return "just now";
-  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
-  if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
-  if (seconds < 604800) return `${Math.floor(seconds / 86400)}d ago`;
+  if (seconds < SECONDS_PER_MINUTE) return "just now";
+  if (seconds < SECONDS_PER_HOUR)
+    return `${Math.floor(seconds / SECONDS_PER_MINUTE)}m ago`;
+  if (seconds < SECONDS_PER_DAY)
+    return `${Math.floor(seconds / SECONDS_PER_HOUR)}h ago`;
+  if (seconds < SECONDS_PER_WEEK)
+    return `${Math.floor(seconds / SECONDS_PER_DAY)}d ago`;
 
   return formatDate(date);
 }
@@ -42,7 +62,7 @@ export function formatRelativeTime(date: Date | string | number): string {
  */
 export function truncate(str: string, maxLength: number): string {
   if (str.length <= maxLength) return str;
-  return str.slice(0, maxLength - 3) + "...";
+  return str.slice(0, maxLength - ELLIPSIS_LENGTH) + "...";
 }
 
 /**
@@ -53,7 +73,9 @@ export function generateId(): string {
     return crypto.randomUUID();
   }
   // Fallback for environments without crypto.randomUUID
-  return `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+  return `${Date.now()}-${Math.random()
+    .toString(BASE36_RADIX)
+    .substring(BASE36_SUFFIX_START, BASE36_SUFFIX_END)}`;
 }
 
 /**

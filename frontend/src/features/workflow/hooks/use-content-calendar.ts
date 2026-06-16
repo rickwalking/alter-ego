@@ -1,64 +1,7 @@
-"use client";
-
 /**
- * Hook for content calendar (UI-020).
+ * Re-export shim (AE-0138): forwards to the editorial public contract.
+ * The implementation moved to `src/modules/editorial/**`. Import
+ * `@/modules/editorial` directly in new code; this shim keeps the legacy
+ * `@/features/workflow/hooks/use-content-calendar` path resolving during the migration window.
  */
-
-import { useCallback, useEffect, useState } from "react";
-import { useTranslations } from "next-intl";
-import { WORKFLOW_API } from "@/constants/workflow";
-import { authenticatedFetch } from "@/lib/authenticated-fetch";
-
-export type CalendarItem = {
-  id: string;
-  content_type: string;
-  title: string;
-  status: string;
-  event_date: string;
-  is_scheduled?: boolean;
-  phase?: string;
-  phase_status?: string;
-};
-
-export type ContentCalendar = {
-  items: CalendarItem[];
-  start: string;
-  end: string;
-  total: number;
-};
-
-export function useContentCalendar(start?: string, end?: string) {
-  const t = useTranslations("workflow.errors");
-  const [calendar, setCalendar] = useState<ContentCalendar | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const fetchCalendar = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const params = new URLSearchParams();
-      if (start) params.set("start", start);
-      if (end) params.set("end", end);
-      const query = params.toString() ? `?${params.toString()}` : "";
-      const response = await authenticatedFetch(
-        `${WORKFLOW_API.CONTENT_CALENDAR}${query}`,
-      );
-      if (!response.ok) {
-        throw new Error(t("loadCalendarFailed"));
-      }
-      const data = (await response.json()) as ContentCalendar;
-      setCalendar(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : t("unknown"));
-    } finally {
-      setLoading(false);
-    }
-  }, [start, end, t]);
-
-  useEffect(() => {
-    void fetchCalendar();
-  }, [fetchCalendar]);
-
-  return { calendar, loading, error, refetch: fetchCalendar };
-}
+export * from "@/modules/editorial";

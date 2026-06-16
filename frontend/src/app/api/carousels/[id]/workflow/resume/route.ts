@@ -1,21 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
   CONTENT_TYPES,
-  DEFAULT_BACKEND_URL,
   HTTP_METHODS,
+  resolveBackendUrl,
 } from "@/constants/api";
 
-/** Allow long-running LLM resume calls through the Next.js proxy. */
+// Allow long-running LLM resume calls through the Next.js proxy.
+// Next.js route segment config must be a statically-analyzable literal
+// (it cannot reference an imported constant), so this 300s value stays inline.
 export const maxDuration = 300;
-
-function resolveBackendUrl(): string {
-  return (
-    process.env.API_BASE_URL ??
-    (process.env.NODE_ENV === "production"
-      ? "http://backend:8000"
-      : DEFAULT_BACKEND_URL)
-  );
-}
 
 export async function POST(
   request: NextRequest,

@@ -5,11 +5,13 @@ import { useTranslations } from "next-intl";
 import { DASHBOARD_ROUTES } from "@/constants/dashboard-routes";
 import { NeonButton } from "@/components/atoms/neon-button";
 import { NeonSpinner } from "@/components/atoms/neon-spinner";
-import { NeonKanbanBoard } from "@/components/organisms/neon-kanban-board";
 import { NeonTopBar } from "@/components/organisms/neon-top-bar";
 import { NEON_RED } from "@/constants/neon";
-import { mapApiWorkflowKanbanToNeon } from "@/features/dashboard/workflow/adapters/workflow-adapter";
-import { useWorkflowKanban } from "@/features/workflow/hooks/use-workflow-kanban";
+import {
+  NeonKanbanBoard,
+  mapApiWorkflowKanbanToNeon,
+} from "@/modules/editorial-operations";
+import { useWorkflowKanban } from "@/modules/editorial";
 
 const NEW_CARD_ICON = (
   <svg

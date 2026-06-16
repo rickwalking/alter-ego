@@ -1,51 +1,7 @@
-import { useQuery } from "@tanstack/react-query";
-import {
-  carouselBlogOptions,
-  carouselBlogWithDesignOptions,
-  carouselDesignOptions,
-  carouselProjectOptions,
-  carouselProjectsOptions,
-  carouselSlidesOptions,
-} from "@/features/carousel/queries";
-import { DEFAULT_BLOG_LANGUAGE } from "@/constants/api";
-
-/** Fetch a single carousel project by ID. */
-export function useCarouselProject(id: string) {
-  return useQuery(carouselProjectOptions(id));
-}
-
-/** Fetch all carousel projects with optional status and limit filters. */
-export function useCarouselProjects(status?: string, limit?: number) {
-  return useQuery(carouselProjectsOptions(status, limit));
-}
-
-/** Fetch completed carousel projects for blog listing. */
-export function useBlogPosts(limit?: number) {
-  return useQuery(carouselProjectsOptions("completed", limit));
-}
-
-/** Fetch blog content in a specific language. */
-export function useCarouselBlog(
-  id: string,
-  lang: string = DEFAULT_BLOG_LANGUAGE,
-) {
-  return useQuery(carouselBlogOptions(id, lang));
-}
-
-/** Fetch blog content with design tokens. */
-export function useCarouselBlogWithDesign(
-  id: string,
-  lang: string = DEFAULT_BLOG_LANGUAGE,
-) {
-  return useQuery(carouselBlogWithDesignOptions(id, lang));
-}
-
-/** Fetch design tokens for a carousel. */
-export function useCarouselDesign(id: string) {
-  return useQuery(carouselDesignOptions(id));
-}
-
-/** Fetch slides for a carousel. */
-export function useCarouselSlides(id: string) {
-  return useQuery(carouselSlidesOptions(id));
-}
+/**
+ * Re-export shim (AE-0137): forwards to the publishing public contract.
+ * The implementation moved to `src/modules/publishing/**`. Import
+ * `@/modules/publishing` directly in new code; this shim keeps the legacy
+ * `@/features/blog/hooks/use-carousel-blog` path resolving during the migration window.
+ */
+export * from "@/modules/publishing";

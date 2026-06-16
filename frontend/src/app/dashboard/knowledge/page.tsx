@@ -2,7 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import { NeonTopBar } from "@/components/organisms/neon-top-bar";
-import { KnowledgeBaseInterface } from "@/features/knowledge/components";
+import { KnowledgeBaseInterface } from "@/modules/knowledge";
 
 export default function KnowledgePage(): React.ReactElement {
   const t = useTranslations("knowledge");

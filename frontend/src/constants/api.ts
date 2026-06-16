@@ -1,3 +1,6 @@
+/** Client-side API base path (the Next.js BFF route prefix). */
+export const API_BASE = "/api";
+
 /** API endpoint paths. */
 export const API_ENDPOINTS = {
   AUTH_LOGIN: "/api/auth/token",
@@ -110,12 +113,18 @@ export const HTTP_METHODS = {
 /** Common HTTP status codes used by API clients. */
 export const HTTP_STATUS = {
   OK: 200,
+  CREATED: 201,
   ACCEPTED: 202,
+  NO_CONTENT: 204,
+  /** First redirect status; marks the exclusive upper bound of the 2xx range. */
+  MULTIPLE_CHOICES: 300,
   BAD_REQUEST: 400,
+  UNAUTHORIZED: 401,
   FORBIDDEN: 403,
   NOT_FOUND: 404,
   CONFLICT: 409,
   UNPROCESSABLE_ENTITY: 422,
+  TOO_MANY_REQUESTS: 429,
   INTERNAL_SERVER_ERROR: 500,
   BAD_GATEWAY: 502,
   SERVICE_UNAVAILABLE: 503,
@@ -144,3 +153,28 @@ export const SITE_URL =
 /** Default backend URL for server-side API route proxies. */
 export const DEFAULT_BACKEND_URL =
   process.env.API_BASE_URL ?? "http://localhost:8000";
+
+/**
+ * In-cluster backend URL used when running inside Docker / production and no
+ * explicit `API_BASE_URL` override is provided.
+ */
+export const PRODUCTION_BACKEND_URL = "http://backend:8000";
+
+/** Production Node environment name. */
+const PRODUCTION_NODE_ENV = "production";
+
+/**
+ * Resolve the backend base URL for server-side API route proxies (BFF).
+ *
+ * Prefers an explicit `API_BASE_URL` override, then falls back to the
+ * in-cluster URL in production and the default (localhost) URL in dev.
+ * Centralizes the previously duplicated `resolveBackendUrl()` helpers.
+ */
+export function resolveBackendUrl(): string {
+  return (
+    process.env.API_BASE_URL ??
+    (process.env.NODE_ENV === PRODUCTION_NODE_ENV
+      ? PRODUCTION_BACKEND_URL
+      : DEFAULT_BACKEND_URL)
+  );
+}

@@ -11,8 +11,8 @@ import {
   DASHBOARD_CHAT_MONO_FONT,
   DASHBOARD_CHAT_TEXT,
   DASHBOARD_CHAT_TEXT_DIM,
-} from "@/features/dashboard/chat/constants";
-import type { DashboardConversation } from "@/features/dashboard/chat/types";
+} from "@/modules/editorial-operations";
+import type { DashboardConversation } from "@/modules/editorial-operations";
 
 export interface ChatSidebarProps {
   conversations: DashboardConversation[];

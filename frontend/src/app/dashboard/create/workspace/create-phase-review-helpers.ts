@@ -1,8 +1,5 @@
-import type { EditorialWorkflowState } from "@/features/blog/types-ai";
-import {
-  asRecord,
-  resolvePresentationPreviewText,
-} from "@/features/create/lib/presentation-review-utils";
+import type { EditorialWorkflowState } from "@/modules/publishing";
+import { asRecord, resolvePresentationPreviewText } from "@/modules/editorial";
 
 export function asString(value: unknown): string {
   return typeof value === "string" ? value : "";

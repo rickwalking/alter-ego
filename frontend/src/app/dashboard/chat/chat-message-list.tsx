@@ -10,8 +10,8 @@ import {
   DASHBOARD_CHAT_TEXT_DIM,
   DASHBOARD_CHAT_TEXT_MUTED,
   DASHBOARD_CHAT_TYPING_LABEL,
-} from "@/features/dashboard/chat/constants";
-import type { DashboardChatMessage } from "@/features/dashboard/chat/types";
+} from "@/modules/editorial-operations";
+import type { DashboardChatMessage } from "@/modules/editorial-operations";
 
 export interface ChatMessageListProps {
   messages: DashboardChatMessage[];

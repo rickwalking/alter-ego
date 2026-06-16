@@ -160,6 +160,10 @@ gate_backend_mutation() { bash "$SCRIPT_DIR/mutation-score-gate.sh" 75; }
 # =============================================================================
 gate_frontend_lint()            { cd "$REPO_ROOT/frontend" && npm run lint; }
 gate_frontend_lint_changed()    { cd "$REPO_ROOT/frontend" && npm run lint:changed; }
+# Component-type-location ratchet (AE-0144). Also runs inside `npm run lint`;
+# registered standalone so CI and /qa-agent can invoke it directly and report it
+# as its own gate (mirrors how boundaries/url/circular live under lint).
+gate_frontend_component_types() { cd "$REPO_ROOT/frontend" && npm run lint:component-types; }
 gate_frontend_typecheck()       { cd "$REPO_ROOT/frontend" && npm run typecheck; }
 gate_frontend_legacy_guard()    { cd "$REPO_ROOT/frontend" && npm run check:legacy; }
 gate_frontend_legacy_inventory() { cd "$REPO_ROOT/frontend" && npm run check:legacy-inventory; }
@@ -169,6 +173,9 @@ gate_frontend_format()          { cd "$REPO_ROOT/frontend" && npx prettier --che
 gate_frontend_integrity()       { bash "$SCRIPT_DIR/check-integrity.sh" frontend; }
 # Advisory in CI (continue-on-error); reported but never blocks.
 gate_frontend_mutation()        { cd "$REPO_ROOT/frontend" && { npm run test:mutate || echo "ADVISORY: Stryker findings above (non-blocking, mirrors CI)."; }; }
+# OpenAPI<->Zod schema-drift (AE-0141). Advisory: prints drift, exits 0 on
+# pre-existing drift so it never blocks. Flip to --strict once drift reaches 0.
+gate_frontend_schema_drift()    { cd "$REPO_ROOT/frontend" && npm run check:schema-drift; }
 
 # =============================================================================
 # Gate registries (ordered). Name -> function.
@@ -196,6 +203,7 @@ BACKEND_GATES=(
 FRONTEND_GATES=(
   lint:gate_frontend_lint
   lint-changed:gate_frontend_lint_changed
+  component-types:gate_frontend_component_types
   typecheck:gate_frontend_typecheck
   legacy-guard:gate_frontend_legacy_guard
   legacy-inventory:gate_frontend_legacy_inventory
@@ -203,6 +211,7 @@ FRONTEND_GATES=(
   security:gate_frontend_security
   integrity:gate_frontend_integrity
   test:gate_frontend_test
+  schema-drift:gate_frontend_schema_drift
   mutation:gate_frontend_mutation
 )
 

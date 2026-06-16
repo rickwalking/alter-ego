@@ -1,6 +1,10 @@
 import { jwtVerify } from "jose";
 
 import { JWT_TYPE_AUTH } from "@/constants/jwt";
+import { MS_PER_SECOND } from "@/constants/time";
+
+/** Base64 encodes data in 4-character groups; padding restores that width. */
+const BASE64_GROUP_SIZE = 4;
 export interface AccessTokenPayload {
   sub: string;
   email: string;
@@ -20,11 +24,11 @@ function resolveJwtSecret(): Uint8Array | null {
 
 function padBase64Url(segment: string): string {
   const padded = segment.replace(/-/g, "+").replace(/_/g, "/");
-  const remainder = padded.length % 4;
+  const remainder = padded.length % BASE64_GROUP_SIZE;
   if (remainder === 0) {
     return padded;
   }
-  return padded + "=".repeat(4 - remainder);
+  return padded + "=".repeat(BASE64_GROUP_SIZE - remainder);
 }
 
 /** Fallback when JWT secret is not configured in the frontend runtime. */
@@ -38,7 +42,10 @@ export function decodeJwtPayloadUnsafe(
     }
     const json = atob(padBase64Url(segment));
     const payload = JSON.parse(json) as AccessTokenPayload;
-    if (typeof payload.exp !== "number" || payload.exp * 1000 <= Date.now()) {
+    if (
+      typeof payload.exp !== "number" ||
+      payload.exp * MS_PER_SECOND <= Date.now()
+    ) {
       return null;
     }
     if (payload.type !== JWT_TYPE_AUTH || typeof payload.role !== "string") {

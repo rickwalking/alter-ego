@@ -2,7 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import { draftText, outlineTitle } from "../create-phase-review-helpers";
-import type { EditorialWorkflowState } from "@/features/blog/types-ai";
+import type { EditorialWorkflowState } from "@/modules/publishing";
 
 export interface DesignPhaseReviewProps {
   state: EditorialWorkflowState;

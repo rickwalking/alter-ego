@@ -10,7 +10,7 @@ import {
   RUBRIC_ROW_BORDER,
   RUBRIC_TABLE_HEADER_BG,
   type RubricData,
-} from "@/features/dashboard/rubrics/types";
+} from "@/modules/editorial-operations";
 import { RubricBadge } from "@/app/dashboard/rubrics/rubric-badge";
 import { RubricStatusBadge } from "@/app/dashboard/rubrics/rubric-status-badge";
 import { ScoreCell } from "@/app/dashboard/rubrics/score-cell";

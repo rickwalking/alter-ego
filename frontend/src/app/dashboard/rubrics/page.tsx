@@ -5,8 +5,8 @@ import { NeonSpinner } from "@/components/atoms/neon-spinner";
 import { NeonTopBar } from "@/components/organisms/neon-top-bar";
 import { NEON_RED } from "@/constants/neon";
 import { RubricPanel } from "@/app/dashboard/rubrics/rubric-panel";
-import { mapQualityRubricToPanelData } from "@/features/dashboard/rubrics/adapters/rubric-adapter";
-import { useRubrics } from "@/features/rubrics/hooks/use-rubrics";
+import { mapQualityRubricToPanelData } from "@/modules/editorial-operations";
+import { useRubrics } from "@/modules/quality";
 
 const PAGE_FONT_FAMILY = "Inter, system-ui, sans-serif";
 const PAGE_CONTENT_PADDING = "24px 32px";

@@ -5,18 +5,18 @@ import { useRouter } from "next/navigation";
 import { NeonButton } from "@/components/atoms/neon-button";
 import { NeonSearchBar } from "@/components/molecules/neon-search-bar";
 import { NeonTopBar } from "@/components/organisms/neon-top-bar";
-import { BlogPostBadge } from "@/features/dashboard/blog-posts/components/badge";
+import { BlogPostBadge } from "@/modules/editorial-operations";
 import {
   BLOG_POST_CATEGORY_OPTIONS,
   BLOG_POST_STATUS_OPTIONS,
-} from "@/features/dashboard/blog-posts/constants";
+} from "@/modules/editorial-operations";
 import {
   filterBlogPosts,
   formatBlogPostDate,
-} from "@/features/dashboard/blog-posts/helpers";
+} from "@/modules/editorial-operations";
 import { DASHBOARD_ROUTES } from "@/constants/dashboard-routes";
-import { mapBlogPostToDashboard } from "@/features/dashboard/blog-posts/adapters/blog-post-adapter";
-import { useBlogPosts } from "@/features/blog/hooks/use-blog-posts";
+import { mapBlogPostToDashboard } from "@/modules/editorial-operations";
+import { useBlogPosts } from "@/modules/publishing";
 import { NeonSpinner } from "@/components/atoms/neon-spinner";
 import { NEON_RED } from "@/constants/neon";
 import {

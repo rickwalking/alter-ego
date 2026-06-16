@@ -8,7 +8,7 @@ import {
   FINAL_REVIEW_SEND_BACK_PHASES,
   type FinalReviewSendBackPhase,
 } from "@/constants/editorial-workflow";
-import type { CreateWorkflowControlsProps } from "@/features/create/types";
+import type { CreateWorkflowControlsProps } from "@/modules/editorial";
 
 export function CreateWorkflowControls({
   state,

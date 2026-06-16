@@ -1,16 +1,7 @@
-export interface DashboardBlogPost {
-  id: string;
-  title: string;
-  excerpt: string;
-  date: string;
-  views: number;
-  comments: number;
-  category: string;
-  featured: boolean;
-}
-
-export interface BlogPostFilters {
-  search: string;
-  statusFilter: string;
-  categoryFilter: string;
-}
+/**
+ * Re-export shim (AE-0138): forwards to the editorial-operations public contract.
+ * The implementation moved to `src/modules/editorial-operations/**`. Import
+ * `@/modules/editorial-operations` directly in new code; this shim keeps the legacy
+ * `@/features/dashboard/blog-posts/types` path resolving during the migration window.
+ */
+export * from "@/modules/editorial-operations";

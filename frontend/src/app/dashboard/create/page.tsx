@@ -16,7 +16,7 @@ import {
   INITIAL_CREATE_FORM_STATE,
   type CreateCarouselFormState,
 } from "@/app/dashboard/create/types";
-import { useCreateCarousel } from "@/features/create/hooks";
+import { useCreateCarousel } from "@/modules/editorial";
 import { DASHBOARD_ROUTES } from "@/constants/dashboard-routes";
 import { DEFAULT_IMAGE_PRESET } from "@/constants/create";
 

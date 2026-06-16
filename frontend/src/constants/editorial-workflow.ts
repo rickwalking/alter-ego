@@ -1,3 +1,5 @@
+import { HTTP_STATUS } from "@/constants/api";
+
 /** Maps editorial workflow phases to legacy pipeline phase keys for progress UI. */
 export const EDITORIAL_TO_PIPELINE_PHASE: Record<string, string> = {
   research: "researching",
@@ -48,7 +50,10 @@ export const EDITORIAL_WORKFLOW_RESUME_POLL_MAX_ATTEMPTS = 60;
 
 /** HTTP statuses that indicate a definitive resume rejection (not transport timeout). */
 export const EDITORIAL_WORKFLOW_RESUME_CLIENT_ERROR_STATUSES = [
-  400, 403, 409, 422,
+  HTTP_STATUS.BAD_REQUEST,
+  HTTP_STATUS.FORBIDDEN,
+  HTTP_STATUS.CONFLICT,
+  HTTP_STATUS.UNPROCESSABLE_ENTITY,
 ] as const;
 
 /** Phases editors can send final review back to (CP-019). */

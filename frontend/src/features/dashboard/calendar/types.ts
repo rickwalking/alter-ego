@@ -1,34 +1,7 @@
-export type CalendarContentType =
-  | "carousel"
-  | "blog"
-  | "meeting"
-  | "management";
-
-export type CalendarStatusType =
-  | "published"
-  | "approved"
-  | "in_progress"
-  | "awaiting_human";
-
-export interface CalendarEvent {
-  title: string;
-  contentType: CalendarContentType;
-  status?: CalendarStatusType;
-}
-
-export interface CalendarDay {
-  day: number;
-  cur: boolean;
-  today: boolean;
-  events: CalendarEvent[];
-}
-
-export type CalendarIconName =
-  | "left"
-  | "right"
-  | "plus"
-  | "sync"
-  | "grid"
-  | "file"
-  | "cal"
-  | "user";
+/**
+ * Re-export shim (AE-0138): forwards to the editorial-operations public contract.
+ * The implementation moved to `src/modules/editorial-operations/**`. Import
+ * `@/modules/editorial-operations` directly in new code; this shim keeps the legacy
+ * `@/features/dashboard/calendar/types` path resolving during the migration window.
+ */
+export * from "@/modules/editorial-operations";

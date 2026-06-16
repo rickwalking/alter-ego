@@ -1,6 +1,6 @@
 import type { CreateStepId } from "@/app/dashboard/create/step-ids";
 import { EDITORIAL_PHASE_TO_STEP } from "@/app/dashboard/create/step-ids";
-import type { EditorialWorkflowState } from "@/features/blog/types-ai";
+import type { EditorialWorkflowState } from "@/modules/publishing";
 
 /** True when approve/revise controls should show for the active workflow gate. */
 export function shouldShowLiveWorkflowControls(
