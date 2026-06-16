@@ -1,6 +1,7 @@
 """SQLAlchemy ORM model for BlogPost entity."""
 
 import uuid
+from datetime import datetime
 
 from sqlalchemy import (
     JSON,
@@ -12,7 +13,7 @@ from sqlalchemy import (
     String,
     func,
 )
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from rag_backend.domain.constants.blog_post import BlogPostOrigin
 from rag_backend.infrastructure.database.config import Base
@@ -38,7 +39,10 @@ class BlogPostModel(Base):
     )
     title = Column(String(255), nullable=False)
     slug = Column(String(255), unique=True, nullable=False)
-    status = Column(String(50), default="draft", nullable=False)
+    # Workflow status — written by the publishing visibility port (AE-0128);
+    # SQLAlchemy 2.0 ``Mapped[...]`` so the instance attribute types as ``str``
+    # for the byte-identical status writes (no mypy override).
+    status: Mapped[str] = mapped_column(String(50), default="draft", nullable=False)
 
     # Content
     content = Column(JSON, default=dict, nullable=False)
@@ -82,10 +86,19 @@ class BlogPostModel(Base):
         onupdate=func.now(),
         nullable=False,
     )
-    submitted_for_review_at = Column(DateTime(timezone=True), nullable=True)
+    # Visibility/schedule timestamps written by the publishing visibility +
+    # schedule ports (AE-0128); SQLAlchemy 2.0 ``Mapped[...]`` so the instance
+    # attributes type as ``datetime | None`` for the byte-identical writes.
+    submitted_for_review_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     approved_at = Column(DateTime(timezone=True), nullable=True)
-    published_at = Column(DateTime(timezone=True), nullable=True)
-    scheduled_publish_at = Column(DateTime(timezone=True), nullable=True)
+    published_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    scheduled_publish_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     lock_version = Column(Integer, default=1, nullable=False)
 
     __table_args__ = (

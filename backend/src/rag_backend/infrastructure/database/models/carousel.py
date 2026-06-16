@@ -36,7 +36,10 @@ class CarouselProjectModel(Base):
 
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     owner_id = Column(String(36), ForeignKey("users.id"), nullable=True)
-    is_public = Column(Boolean, default=False, nullable=False)
+    # Public-release (visibility) flag — written by the publishing release port
+    # (AE-0128); SQLAlchemy 2.0 ``Mapped[...]`` so the instance attribute types as
+    # ``bool`` for the byte-identical ``is_public=True`` release write.
+    is_public: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     topic = Column(String(500), nullable=False)
     audience = Column(String(500), nullable=False)
     niche = Column(String(200), nullable=False)

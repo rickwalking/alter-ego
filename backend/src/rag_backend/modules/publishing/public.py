@@ -21,6 +21,11 @@ The facade exposes:
   identical objects, so existing callers keep resolving;
 * ``BlogPostRepository`` / ``CarouselRepository`` — the blog + carousel
   persistence ports (re-exported, object-identity shims);
+* ``CarouselReleasePort`` / ``BlogVisibilityPort`` / ``BlogSchedulePort`` — the
+  release/visibility/schedule write ports (AE-0128);
+* ``CarouselReleaseCommand`` — the carousel public-release command DTO (AE-0128);
+* ``LegacyPublishingAcl`` — the sole carousel/blog ORM seam (AE-0128), wired at
+  the inbound edge into the module's ``PublishingAdapters``;
 * ``PublishingAdapters`` / ``PublishingModule`` / ``bootstrap_module`` — the
   composition root (manual constructor injection).
 
@@ -29,6 +34,10 @@ Consumers SHALL NOT import internals such as
 ``rag_backend.modules.publishing.domain.models`` directly.
 """
 
+from rag_backend.modules.publishing.application.release_command import (
+    CarouselReleaseCommand,
+    CarouselReleaseHandler,
+)
 from rag_backend.modules.publishing.application.service import (
     PublishingPorts,
     PublishingService,
@@ -52,18 +61,38 @@ from rag_backend.modules.publishing.domain.models import (
 )
 from rag_backend.modules.publishing.domain.ports import (
     BlogPostRepository,
+    BlogSchedulePort,
+    BlogVisibilityPort,
+    CarouselReleasePort,
     CarouselRepository,
+)
+from rag_backend.modules.publishing.infrastructure.legacy_publishing_acl import (
+    LegacyPublishingAcl,
+)
+from rag_backend.modules.publishing.infrastructure.publishing_port_adapters import (
+    AclBlogScheduleAdapter,
+    AclBlogVisibilityAdapter,
+    AclCarouselReleaseAdapter,
 )
 
 __all__ = [
+    "AclBlogScheduleAdapter",
+    "AclBlogVisibilityAdapter",
+    "AclCarouselReleaseAdapter",
     "BlogPost",
     "BlogPostModel",
     "BlogPostRepository",
     "BlogPostStatus",
+    "BlogSchedulePort",
+    "BlogVisibilityPort",
     "CarouselProject",
+    "CarouselReleaseCommand",
+    "CarouselReleaseHandler",
+    "CarouselReleasePort",
     "CarouselRepository",
     "DistributionChannel",
     "DistributionChannelKind",
+    "LegacyPublishingAcl",
     "Publication",
     "PublishingAdapters",
     "PublishingModule",

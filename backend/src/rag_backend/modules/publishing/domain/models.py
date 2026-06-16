@@ -91,8 +91,8 @@ class BlogPost:
             lock_version=cast(int, model.lock_version),
             origin=_coerce_origin(cast("str | None", model.origin)),
             project_id=cast("str | None", model.project_id),
-            scheduled_publish_at=cast("datetime | None", model.scheduled_publish_at),
-            published_at=cast("datetime | None", model.published_at),
+            scheduled_publish_at=model.scheduled_publish_at,
+            published_at=model.published_at,
         )
 
 
