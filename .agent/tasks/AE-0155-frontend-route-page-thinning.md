@@ -1,13 +1,13 @@
 # AE-0155 — Frontend: route-page thinning (app pages -> thin composition)
 
-Status: Ready
+Status: Dev Complete
 Tier: T2
 Priority: High
 Type: Task
 Area: Frontend
-Owner: Unassigned
+Owner: developer
 Agent Lane: planner → architect → developer → qa → release
-Branch: feat/ae-0155-frontend-route-page-thinning
+Branch: feat/phase-8-legacy-removal
 Kanban Card: TBD
 Created: 2026-06-16
 Updated: 2026-06-16
@@ -38,9 +38,9 @@ destructive column drop) is consent-gated + drain-gated (ADR-0008). See `docs/pl
 
 ## Acceptance Criteria
 
-- [ ] Targeted route pages SHALL become thin composition over module hooks (no inline data logic)
-- [ ] App Router URLs + segment config unchanged (url:check 26); rendered output byte-identical
-- [ ] typecheck + lint + 822 tests + build green; boundary 0
+- [x] Targeted route pages SHALL become thin composition over module hooks (no inline data logic)
+- [x] App Router URLs + segment config unchanged (url:check 26); rendered output byte-identical
+- [x] typecheck + lint + 822 tests + build green; boundary 0
 
 ## Gherkin Scenarios
 
@@ -68,19 +68,32 @@ Ticket created by planner (Phase 8 breakdown).
 
 ## Files Touched
 
-Pending.
+- NEW `frontend/src/modules/publishing/blog/hooks/use-blog-post-editor.ts` — `useBlogPostEditor(postId)`: encapsulates the blog-post editor composition (load via `useBlogPosts`, mirror editable fields into local state, `handleSave`/`handleRestore`). `"use client"`.
+- `frontend/src/modules/publishing/blog/hooks/types.ts` — added `UseBlogPostEditorResult` (return type colocated, keeps component-type-location at 0).
+- `frontend/src/modules/publishing/index.ts` — barrel exports `useBlogPostEditor` + `UseBlogPostEditorResult`.
+- `frontend/src/app/dashboard/blog-posts/[id]/edit/page.tsx` — thinned: removed the inline `useState`×6 / `useEffect`×2 / `handleSave` / `handleRestore`; the page now destructures the hook and renders. Rendered output + behavior byte-identical.
 
 ## Test Evidence
 
-Pending.
+- `npm run typecheck` — clean.
+- `npm run lint` — clean: boundary OK (0/0/0 new), URL inventory OK (**26 routes unchanged**), circular OK (0 cycles), component-type-location OK (0/0/0).
+- `npm run test` — 75 files, 823 passed.
+- `npm run build` — succeeded (added the required `"use client"` to the new hook — it is reachable from a Server Component via the publishing barrel; caught by the production build).
+- `npm run check:legacy` — passed; `npm run test:e2e:auth` — 7 passed.
+- `check-integrity.sh frontend` — PASS, 0 blockers / 0 warnings.
 
 ## QA Report
 
-Pending.
+Pending (Phase 8 end-of-phase QA on the full branch).
 
 ## Decision Log
 
-Pending.
+- **Conservative scope (per the ticket):** thinned the clearest, lowest-risk offender — the blog-post edit page — extracting its data/composition logic into a colocated module hook. Output byte-identical.
+- **Deliberately SKIPPED (thinning would risk behavior or isn't data-logic):**
+  - `app/dashboard/create/[id]/page.tsx` — already delegates to extracted helpers + module hooks; the remaining state is workflow/SSE-intertwined (retry handler, phase resolution) → higher risk, out of "safe extractions only".
+  - `app/dashboard/blog-posts/page.tsx` — its logic is light and the extraction would require widening another module's contract (`DashboardBlogPost` is not exported from the `editorial-operations` barrel) + cross-module coupling; the page is otherwise heavy presentational JSX, not data logic.
+  - `app/(public)/(marketing)/page.tsx` (1210 lines) — static landing markup, no data logic.
+- **`"use client"` on the new hook:** required because the publishing barrel is also imported by Server Components; the hook uses `useState`/`useEffect`. Caught by the production build (not by tsc/vitest), reinforcing that `npm run build` is part of the gate.
 
 ## Blockers
 
@@ -88,4 +101,4 @@ None.
 
 ## Final Summary
 
-Pending.
+Route-page thinning (conservative): extracted the blog-post edit page's inline editor state/effects/handlers into a new `useBlogPostEditor` module hook (publishing), leaving the route page as thin composition over the contract — behavior + rendered output byte-identical. Other candidate pages were deliberately left (workflow/SSE risk, cross-module-contract cost, or static markup) and documented. App Router URLs unchanged (26); typecheck, lint (boundary 0 / circular 0 / component-types 0), 823 tests, build, check:legacy, and the AE-0165 auth e2e all green.

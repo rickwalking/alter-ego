@@ -38,7 +38,11 @@ export type {
 
 /* --- blog: hooks --- */
 export { useBlogPosts } from "./blog/hooks/use-blog-posts";
-export type { BlogPostFilters } from "./blog/hooks/types";
+export { useBlogPostEditor } from "./blog/hooks/use-blog-post-editor";
+export type {
+  BlogPostFilters,
+  UseBlogPostEditorResult,
+} from "./blog/hooks/types";
 export {
   useCarouselProject,
   useCarouselProjects,

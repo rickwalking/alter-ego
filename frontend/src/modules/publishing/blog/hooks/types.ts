@@ -6,6 +6,11 @@
  * live here rather than inline in the `use-*.ts` hook files.
  */
 
+import type { Dispatch, SetStateAction } from "react";
+
+import type { BlogPostVersion } from "../components/types";
+import type { BlogPost } from "../types";
+
 export interface AccessibilityIssue {
   code: string;
   message: string;
@@ -44,4 +49,20 @@ export interface SeoAnalysisResult {
   severity: string;
   issues: Array<{ code: string; message: string }>;
   suggestions: string[];
+}
+
+export interface UseBlogPostEditorResult {
+  post: BlogPost | undefined;
+  loading: boolean;
+  saving: boolean;
+  title: string;
+  setTitle: Dispatch<SetStateAction<string>>;
+  excerpt: string;
+  setExcerpt: Dispatch<SetStateAction<string>>;
+  bodyText: string;
+  setBodyText: Dispatch<SetStateAction<string>>;
+  selectedText: string;
+  setSelectedText: Dispatch<SetStateAction<string>>;
+  handleSave: () => Promise<void>;
+  handleRestore: (version: BlogPostVersion) => void;
 }
