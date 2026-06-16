@@ -201,6 +201,27 @@ class TestCarouselBlogProjection:
         assert projection.subtitle == "Embedded Subtitle"  # empty excerpt -> embedded
 
     @pytest.mark.asyncio
+    async def test_backfill_row_cannot_flip_legacy_404(
+        self, db_session: AsyncSession
+    ) -> None:
+        """Scenario: the 404 gate keys on project.blog_markdown (legacy signal) —
+        a backfill row with a body must NOT turn a legacy 404 into a 200."""
+        project = _carousel_entity()
+        project.blog_markdown = None  # legacy would 404 regardless of any row
+        db_session.add(
+            BlogPostModel.from_entity({
+                "project_id": str(project.id),
+                "origin": BlogPostOrigin.CAROUSEL.value,
+                "title": "Orphan Backfill",
+                "slug": f"carousel-{project.id}",
+                "content": {"markdown": "ORPHAN BODY"},
+            })
+        )
+        await db_session.commit()
+        acl = PublishingReadAcl(db_session)
+        assert await acl.project_carousel_blog(project) is None  # still 404
+
+    @pytest.mark.asyncio
     async def test_absent_blog_returns_none(self, db_session: AsyncSession) -> None:
         """Scenario: no blog body anywhere maps to ``None`` (the legacy 404)."""
         project = _carousel_entity()

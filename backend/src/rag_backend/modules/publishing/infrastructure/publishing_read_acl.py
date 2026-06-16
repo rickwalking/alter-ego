@@ -113,7 +113,15 @@ class PublishingReadAcl:
         ``title or topic`` / ``subtitle``), so the response is byte-identical to
         the legacy ``media.py:get_carousel_blog``. Returns ``None`` when no blog
         body exists (the route maps that to the legacy 404).
+
+        The 404 gate keys on ``project.blog_markdown is None`` — the EXACT legacy
+        signal — unconditionally (not on the resolved body), so a backfill row can
+        never flip a legacy 404 into a 200. AE-0127 only backfills rows where
+        ``blog_markdown`` was non-null, so this also keeps the row-present path
+        byte-identical.
         """
+        if project.blog_markdown is None:
+            return None
         row = await self._carousel_blog_row(str(project.id))
         markdown = resolve_blog_body(row, project.blog_markdown)
         if markdown is None:
