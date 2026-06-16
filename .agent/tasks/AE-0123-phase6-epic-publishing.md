@@ -1,6 +1,6 @@
 # AE-0123 — Phase 6 epic: Separate Publishing, Blog, and Distribution
 
-Status: Ready
+Status: Review
 Tier: T3
 Priority: High
 Type: Epic
