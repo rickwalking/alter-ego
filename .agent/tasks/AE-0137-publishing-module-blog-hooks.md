@@ -1,6 +1,6 @@
 # AE-0137 — Disambiguate useBlogPosts + publishing module behind a public contract
 
-Status: Ready
+Status: Review
 Tier: T2
 Priority: High
 Type: Task
