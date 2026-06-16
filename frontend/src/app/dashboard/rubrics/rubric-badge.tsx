@@ -1,5 +1,5 @@
 import { dimColor, getRubricColor } from "@/app/dashboard/rubrics/helpers";
-import type { RubricColorKey } from "@/features/dashboard/rubrics/types";
+import type { RubricColorKey } from "@/modules/editorial-operations";
 
 interface RubricBadgeProps {
   label: string;

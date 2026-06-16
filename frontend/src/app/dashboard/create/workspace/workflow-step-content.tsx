@@ -10,7 +10,7 @@ import {
   type CreateStepId,
 } from "@/app/dashboard/create/step-ids";
 import type { CarouselProjectResponse } from "@/schemas/carousel";
-import type { useEditorialWorkflow } from "@/features/create/hooks/use-editorial-workflow";
+import type { useEditorialWorkflow } from "@/modules/editorial";
 
 export interface WorkflowStepContentProps {
   project: CarouselProjectResponse;

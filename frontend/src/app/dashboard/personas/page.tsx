@@ -5,7 +5,7 @@ import { NeonSearchBar } from "@/components/molecules/neon-search-bar";
 import { NeonSpinner } from "@/components/atoms/neon-spinner";
 import { NeonTopBar } from "@/components/organisms/neon-top-bar";
 import { NEON_RED } from "@/constants/neon";
-import { mapPersonaProfileToCardProps } from "@/features/dashboard/personas/adapters/persona-adapter";
+import { mapPersonaProfileToCardProps } from "@/modules/editorial-operations";
 import { usePersonas } from "@/features/persona/hooks/use-personas";
 import { NeonPersonaCard } from "@/components/organisms/neon-persona-card";
 import { CreatePersonaCard } from "@/app/dashboard/personas/create-persona-card";

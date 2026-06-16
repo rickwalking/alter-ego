@@ -1,13 +1,7 @@
-/** Collaborative lock helpers (UI-021). */
-
-import type { ContentLock } from "../types";
-
-export function isLockedByAnotherUser(
-  lock: ContentLock | null,
-  currentUserId: string | null,
-): boolean {
-  if (!lock || !currentUserId) {
-    return false;
-  }
-  return lock.user_id !== currentUserId;
-}
+/**
+ * Re-export shim (AE-0138): forwards to the editorial public contract.
+ * The implementation moved to `src/modules/editorial/**`. Import
+ * `@/modules/editorial` directly in new code; this shim keeps the legacy
+ * `@/features/workflow/utils/collaborative-lock` path resolving during the migration window.
+ */
+export * from "@/modules/editorial";

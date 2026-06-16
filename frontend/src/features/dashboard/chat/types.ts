@@ -1,18 +1,7 @@
-export type DashboardChatRole = "assistant" | "user";
-
-export interface DashboardConversation {
-  id: string;
-  name: string;
-  preview: string;
-  time: string;
-  unread: boolean;
-  avatar: string;
-  bg: string;
-  color: string;
-}
-
-export interface DashboardChatMessage {
-  role: DashboardChatRole;
-  text: string;
-  time: string;
-}
+/**
+ * Re-export shim (AE-0138): forwards to the editorial-operations public contract.
+ * The implementation moved to `src/modules/editorial-operations/**`. Import
+ * `@/modules/editorial-operations` directly in new code; this shim keeps the legacy
+ * `@/features/dashboard/chat/types` path resolving during the migration window.
+ */
+export * from "@/modules/editorial-operations";

@@ -1,5 +1,5 @@
 import { NeonSkeleton } from "@/components/atoms/neon-skeleton";
-import { DASHBOARD_CHAT_BG_DEEP } from "@/features/dashboard/chat/constants";
+import { DASHBOARD_CHAT_BG_DEEP } from "@/modules/editorial-operations";
 
 export default function ChatLoading() {
   return (

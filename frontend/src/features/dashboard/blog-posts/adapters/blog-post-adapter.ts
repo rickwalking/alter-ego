@@ -1,15 +1,7 @@
-import type { BlogPost } from "@/modules/publishing";
-import type { DashboardBlogPost } from "@/features/dashboard/blog-posts/types";
-
-export function mapBlogPostToDashboard(post: BlogPost): DashboardBlogPost {
-  return {
-    id: post.id,
-    title: post.title,
-    excerpt: post.excerpt ?? "",
-    date: post.published_at ?? post.updated_at ?? post.created_at,
-    views: post.view_count,
-    comments: post.comment_count,
-    category: post.status,
-    featured: post.status === "published",
-  };
-}
+/**
+ * Re-export shim (AE-0138): forwards to the editorial-operations public contract.
+ * The implementation moved to `src/modules/editorial-operations/**`. Import
+ * `@/modules/editorial-operations` directly in new code; this shim keeps the legacy
+ * `@/features/dashboard/blog-posts/adapters/blog-post-adapter` path resolving during the migration window.
+ */
+export * from "@/modules/editorial-operations";

@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import { Container } from "./container";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { MobileNav } from "@/components/layout/mobile-nav";
-import { NotificationCenter } from "@/features/workflow/components/notification-center";
+import { NotificationCenter } from "@/modules/editorial";
 import { DEFAULT_LOCALE } from "@/i18n/config";
 import { useAuth } from "@/hooks/use-auth";
 import { JSX } from "react";

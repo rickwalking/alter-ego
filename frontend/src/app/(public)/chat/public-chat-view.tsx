@@ -9,12 +9,12 @@ import {
   CONVERSATION_METADATA_AGENT_ORIGIN,
 } from "@/constants/publish-chat";
 import { PUBLIC_ROUTE_PATHS } from "@/constants/public-routes";
-import { mapMessageToDashboard } from "@/features/dashboard/chat/adapters/chat-adapter";
+import { mapMessageToDashboard } from "@/modules/editorial-operations";
 import {
   DASHBOARD_CHAT_BG_DEEP,
   DASHBOARD_CHAT_BG_OVERLAY_LIGHT,
   DASHBOARD_CHAT_TEXT_MUTED,
-} from "@/features/dashboard/chat/constants";
+} from "@/modules/editorial-operations";
 import { ChatComposer } from "@/app/dashboard/chat/chat-composer";
 import { ChatHeader } from "@/app/dashboard/chat/chat-header";
 import { ChatMessageList } from "@/app/dashboard/chat/chat-message-list";

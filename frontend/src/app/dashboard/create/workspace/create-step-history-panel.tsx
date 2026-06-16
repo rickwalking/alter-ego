@@ -9,7 +9,7 @@ import {
   resolveLocalizedSlides,
   resolveSlideDraftPreview,
   resolveSlideDraftTitle,
-} from "@/features/create/lib/presentation-review-utils";
+} from "@/modules/editorial";
 import {
   CREATE_STEP_IDS,
   CREATE_STEP_TO_EDITORIAL_PHASE,

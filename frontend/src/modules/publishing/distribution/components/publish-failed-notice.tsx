@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { WorkflowFailedCard } from "@/features/create/components/workflow-failed-card";
+import { WorkflowFailedCard } from "@/modules/editorial";
 
 const BACK_LINK_STYLE = {
   display: "inline-block",

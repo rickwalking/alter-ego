@@ -55,7 +55,7 @@ vi.mock("next-intl", () => ({
 
 const mockMutateAsync = vi.fn();
 
-vi.mock("@/features/create/hooks", () => ({
+vi.mock("@/modules/editorial", () => ({
   useDeleteCarousel: () => ({
     mutateAsync: mockMutateAsync,
     isPending: false,

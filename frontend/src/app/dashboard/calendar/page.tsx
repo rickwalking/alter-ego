@@ -1,7 +1,7 @@
 "use client";
 
 import { NeonSpinner } from "@/components/atoms/neon-spinner";
-import { CalendarSvgIcon } from "@/features/dashboard/calendar/components/svg-icon";
+import { CalendarSvgIcon } from "@/modules/editorial-operations";
 import {
   CALENDAR_BTN_GHOST,
   CALENDAR_COLORS,
@@ -13,13 +13,13 @@ import {
   CALENDAR_STATUS_META,
   CALENDAR_VIEW_MODES,
   CALENDAR_WEEKDAY_HEADERS,
-} from "@/features/dashboard/calendar/constants";
+} from "@/modules/editorial-operations";
 import {
   buildCalendarDaysFromApi,
   buildEmptyCalendarDays,
-} from "@/features/dashboard/calendar/helpers";
-import type { CalendarContentType } from "@/features/dashboard/calendar/types";
-import { useContentCalendar } from "@/features/workflow/hooks/use-content-calendar";
+} from "@/modules/editorial-operations";
+import type { CalendarContentType } from "@/modules/editorial-operations";
+import { useContentCalendar } from "@/modules/editorial";
 import {
   NEON_BORDER_FOCUS,
   NEON_BORDER_SUBTLE,

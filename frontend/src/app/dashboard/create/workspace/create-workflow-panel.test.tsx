@@ -10,7 +10,7 @@ import {
 } from "@/constants/editorial-workflow";
 import { WORKFLOW_PHASE_STATUS } from "@/constants/workflow";
 import type { EditorialWorkflowState } from "@/modules/publishing";
-import type { useEditorialWorkflow } from "@/features/create/hooks/use-editorial-workflow";
+import type { useEditorialWorkflow } from "@/modules/editorial";
 import { CreateWorkflowPanel } from "./create-workflow-panel";
 
 const stateWithPrompts: EditorialWorkflowState = {

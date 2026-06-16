@@ -12,8 +12,8 @@ import { DASHBOARD_ROUTES } from "@/constants/dashboard-routes";
 import { API_ENDPOINTS, HTTP_METHODS, ROUTE_PATHS } from "@/constants/api";
 import { EDITORIAL_WORKFLOW_STATUS } from "@/constants/editorial-workflow";
 import { WORKFLOW_PHASE_STATUS } from "@/constants/workflow";
-import { useCarouselProject } from "@/features/create/hooks";
-import { useEditorialWorkflow } from "@/features/create/hooks/use-editorial-workflow";
+import { useCarouselProject } from "@/modules/editorial";
+import { useEditorialWorkflow } from "@/modules/editorial";
 import {
   PublishPanel,
   PublishFailedNotice,

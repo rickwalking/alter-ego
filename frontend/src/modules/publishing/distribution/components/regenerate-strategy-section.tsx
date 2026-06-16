@@ -9,7 +9,7 @@ import { CREATE_TEMPLATES } from "@/constants/create";
 import {
   useAvailableStrategies,
   useRegenerateSlides,
-} from "@/features/create/hooks";
+} from "@/modules/editorial";
 import type { RegenerateStrategySectionProps } from "@/modules/publishing/distribution/types";
 import {
   CYAN,

@@ -2,7 +2,7 @@ import type { EditorialWorkflowState } from "@/modules/publishing";
 import {
   asRecord,
   resolvePresentationPreviewText,
-} from "@/features/create/lib/presentation-review-utils";
+} from "@/modules/editorial";
 
 export function asString(value: unknown): string {
   return typeof value === "string" ? value : "";

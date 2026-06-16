@@ -11,8 +11,8 @@ import type {
   EditorialWorkflowState,
   LocalizedSlideReview,
 } from "@/modules/publishing";
-import { PresentationIconPreview } from "@/features/create/components/presentation-icon-preview";
-import { PresentationStructuredItems } from "@/features/create/components/presentation-structured-items";
+import { PresentationIconPreview } from "@/modules/editorial";
+import { PresentationStructuredItems } from "@/modules/editorial";
 import {
   applySlideCopyEdit,
   formatBudgetUsage,
@@ -30,7 +30,7 @@ import {
   resolveLocalizedSlides,
   type EditableCopyField,
   type PresentationLocaleKey,
-} from "@/features/create/lib/presentation-review-utils";
+} from "@/modules/editorial";
 
 export interface ContentPhaseReviewProps {
   state: EditorialWorkflowState;

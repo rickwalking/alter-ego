@@ -13,11 +13,11 @@ import {
 import {
   mapConversationToDashboard,
   mapMessageToDashboard,
-} from "@/features/dashboard/chat/adapters/chat-adapter";
+} from "@/modules/editorial-operations";
 import {
   DASHBOARD_CHAT_BG_DEEP,
   DASHBOARD_CHAT_BG_OVERLAY_LIGHT,
-} from "@/features/dashboard/chat/constants";
+} from "@/modules/editorial-operations";
 import { ChatComposer } from "@/app/dashboard/chat/chat-composer";
 import { ChatHeader } from "@/app/dashboard/chat/chat-header";
 import { ChatMessageList } from "@/app/dashboard/chat/chat-message-list";

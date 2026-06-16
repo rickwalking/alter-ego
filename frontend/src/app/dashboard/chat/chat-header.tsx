@@ -6,7 +6,7 @@ import {
   DASHBOARD_CHAT_MONO_FONT,
   DASHBOARD_CHAT_TEXT_DIM,
   DASHBOARD_CHAT_TEXT_MUTED,
-} from "@/features/dashboard/chat/constants";
+} from "@/modules/editorial-operations";
 
 export interface ChatHeaderProps {
   onNewChat?: () => void;

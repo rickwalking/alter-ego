@@ -1,7 +1,7 @@
 import {
   RUBRIC_COLORS,
   type RubricColorKey,
-} from "@/features/dashboard/rubrics/types";
+} from "@/modules/editorial-operations";
 
 export type ScoreLevel = "excellent" | "good" | "poor";
 

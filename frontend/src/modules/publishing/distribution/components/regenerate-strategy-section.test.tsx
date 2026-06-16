@@ -22,7 +22,7 @@ vi.mock("next-intl", () => ({
   }),
 }));
 
-vi.mock("@/features/create/hooks", () => ({
+vi.mock("@/modules/editorial", () => ({
   useAvailableStrategies: vi.fn(),
   useRegenerateSlides: vi.fn(),
 }));
@@ -30,7 +30,7 @@ vi.mock("@/features/create/hooks", () => ({
 import {
   useAvailableStrategies,
   useRegenerateSlides,
-} from "@/features/create/hooks";
+} from "@/modules/editorial";
 
 const mockStrategiesData = {
   strategies: [

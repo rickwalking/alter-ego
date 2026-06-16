@@ -15,9 +15,9 @@ import {
   resolveStepFromWorkflowPhase,
   type CreateStepId,
 } from "@/app/dashboard/create/step-ids";
-import { WorkflowFailedCard } from "@/features/create/components/workflow-failed-card";
-import { useCarouselProject } from "@/features/create/hooks";
-import { useEditorialWorkflow } from "@/features/create/hooks/use-editorial-workflow";
+import { WorkflowFailedCard } from "@/modules/editorial";
+import { useCarouselProject } from "@/modules/editorial";
+import { useEditorialWorkflow } from "@/modules/editorial";
 import { WORKFLOW_PHASE_STATUS } from "@/constants/workflow";
 import type { ContentSource } from "@/modules/publishing";
 import type { CarouselProjectResponse } from "@/schemas/carousel";

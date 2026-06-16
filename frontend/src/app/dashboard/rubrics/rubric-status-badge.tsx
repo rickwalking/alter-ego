@@ -1,4 +1,4 @@
-import { RUBRIC_COLORS } from "@/features/dashboard/rubrics/types";
+import { RUBRIC_COLORS } from "@/modules/editorial-operations";
 import { dimColor } from "@/app/dashboard/rubrics/helpers";
 
 interface RubricStatusBadgeProps {
