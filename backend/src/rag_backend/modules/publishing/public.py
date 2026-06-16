@@ -54,6 +54,7 @@ from rag_backend.modules.publishing.domain.models import (
     CarouselProject,
     DistributionChannel,
     DistributionChannelKind,
+    DistributionResult,
     Publication,
     PublishingSchedule,
     ReleasePhase,
@@ -65,6 +66,10 @@ from rag_backend.modules.publishing.domain.ports import (
     BlogVisibilityPort,
     CarouselReleasePort,
     CarouselRepository,
+    DistributionPublisher,
+)
+from rag_backend.modules.publishing.infrastructure.distribution_channel_adapter import (
+    ChannelDistributionPublisher,
 )
 from rag_backend.modules.publishing.infrastructure.legacy_publishing_acl import (
     LegacyPublishingAcl,
@@ -90,8 +95,11 @@ __all__ = [
     "CarouselReleaseHandler",
     "CarouselReleasePort",
     "CarouselRepository",
+    "ChannelDistributionPublisher",
     "DistributionChannel",
     "DistributionChannelKind",
+    "DistributionPublisher",
+    "DistributionResult",
     "LegacyPublishingAcl",
     "Publication",
     "PublishingAdapters",

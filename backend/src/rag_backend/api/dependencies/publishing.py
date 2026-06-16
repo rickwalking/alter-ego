@@ -31,6 +31,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from rag_backend.modules.publishing import (
+    ChannelDistributionPublisher,
     LegacyPublishingAcl,
     PublishingAdapters,
     PublishingModule,
@@ -44,6 +45,7 @@ if TYPE_CHECKING:
     from rag_backend.application.services.scheduled_publish_service import (
         ScheduledPublishService,
     )
+    from rag_backend.domain.protocols import SocialPublisher
     from rag_backend.modules.publishing import CarouselRepository
 
 
@@ -61,6 +63,7 @@ class PublishingComposition:
     session: AsyncSession
     carousel_repository: CarouselRepository
     scheduler: ScheduledPublishService | None = None
+    social_publisher: SocialPublisher | None = None
 
 
 def build_publishing_module(
@@ -83,8 +86,29 @@ def build_publishing_module(
         carousel_repository=composition.carousel_repository,
         unit_of_work=SqlAlchemyUnitOfWork(composition.session),
         publishing_acl=acl,
+        distribution_publisher=_build_distribution_publisher(
+            composition.social_publisher
+        ),
     )
     return bootstrap_module(platform=_PLATFORM_PLACEHOLDER, adapters=adapters)
+
+
+def _build_distribution_publisher(
+    social_publisher: SocialPublisher | None,
+) -> ChannelDistributionPublisher | None:
+    """Wrap the route-resolved social publisher in the AE-0129 channel adapter.
+
+    The Meta Instagram vendor adapter (the ``SocialPublisher``) is resolved by the
+    calling route (which carries the grandfathered ``get_instagram_publisher`` edge,
+    keeping this edge module free of any new locator/infra import) and wrapped here
+    in the publishing :class:`ChannelDistributionPublisher` so the distribution
+    routes drive Instagram + the persisted caption/LinkedIn reads through the
+    publishing facade + the distribution port. Absent (the carousel/blog release
+    edges that never distribute), the distribution port stays unwired.
+    """
+    if social_publisher is None:
+        return None
+    return ChannelDistributionPublisher(social_publisher)
 
 
 # Placeholder for the not-yet-built shared platform substrate. The publishing

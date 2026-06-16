@@ -37,6 +37,7 @@ from rag_backend.modules.publishing.application.service import (
 from rag_backend.modules.publishing.domain.ports import (
     BlogPostRepository,
     CarouselRepository,
+    DistributionPublisher,
 )
 from rag_backend.modules.publishing.infrastructure.legacy_publishing_acl import (
     LegacyPublishingAcl,
@@ -74,6 +75,7 @@ class PublishingAdapters:
     unit_of_work: UnitOfWork
     blog_repository: BlogPostRepository | None = None
     publishing_acl: LegacyPublishingAcl | None = None
+    distribution_publisher: DistributionPublisher | None = None
 
 
 @dataclass(frozen=True)
@@ -108,7 +110,7 @@ def bootstrap_module(
     _ = platform  # real modules construct adapters from platform services
     service = PublishingService(
         carousel_repository=adapters.carousel_repository,
-        ports=_build_ports(adapters.blog_repository, adapters.publishing_acl),
+        ports=_build_ports(adapters),
     )
     return PublishingModule(
         service=service,
@@ -116,24 +118,29 @@ def bootstrap_module(
     )
 
 
-def _build_ports(
-    blog_repository: BlogPostRepository | None,
-    acl: LegacyPublishingAcl | None,
-) -> PublishingPorts:
-    """Build the ACL-backed publishing ports, when the ACL is available (AE-0128).
+def _build_ports(adapters: PublishingAdapters) -> PublishingPorts:
+    """Build the publishing ports from the request-scoped adapters bundle.
 
     The carousel-release, blog-visibility, and blog-schedule ports are all backed
     by the AE-0128 :class:`LegacyPublishingAcl` (the sole carousel/blog ORM seam →
-    the byte-identical legacy writes). When no ACL is supplied (the AE-0126
-    scaffolding bootstrap) the service stays carousel-repository-only.
+    the byte-identical legacy writes). The AE-0129 distribution port is wired from
+    the request's channel publisher when supplied (the channel/LLM SDK stays in its
+    adapter). When no ACL is supplied (the AE-0126 scaffolding bootstrap) the
+    service stays carousel-repository-only; the distribution port is wired
+    independently so the distribution edge does not require the ACL.
     """
+    acl = adapters.publishing_acl
     if acl is None:
-        return PublishingPorts(blog_repository=blog_repository)
+        return PublishingPorts(
+            blog_repository=adapters.blog_repository,
+            distribution=adapters.distribution_publisher,
+        )
     return PublishingPorts(
-        blog_repository=blog_repository,
+        blog_repository=adapters.blog_repository,
         carousel_release=AclCarouselReleaseAdapter(acl),
         blog_visibility=AclBlogVisibilityAdapter(acl),
         blog_schedule=AclBlogScheduleAdapter(acl),
+        distribution=adapters.distribution_publisher,
     )
 
 

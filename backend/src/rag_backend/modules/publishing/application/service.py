@@ -39,13 +39,17 @@ from rag_backend.modules.publishing.application.release_command import (
     CarouselReleaseCommand,
     CarouselReleaseHandler,
 )
-from rag_backend.modules.publishing.domain.models import Publication
+from rag_backend.modules.publishing.domain.models import (
+    DistributionResult,
+    Publication,
+)
 from rag_backend.modules.publishing.domain.ports import (
     BlogPostRepository,
     BlogSchedulePort,
     BlogVisibilityPort,
     CarouselReleasePort,
     CarouselRepository,
+    DistributionPublisher,
 )
 
 # Programmer-error sentinels for a use case invoked without its required port; the
@@ -54,6 +58,9 @@ from rag_backend.modules.publishing.domain.ports import (
 _ERR_NO_RELEASE_PORT = "publishing service invoked without the carousel release port"
 _ERR_NO_VISIBILITY_PORT = "publishing service invoked without the blog visibility port"
 _ERR_NO_SCHEDULE_PORT = "publishing service invoked without the blog schedule port"
+_ERR_NO_DISTRIBUTION_PORT = (
+    "publishing service invoked without the distribution publisher port"
+)
 
 
 @dataclass(frozen=True)
@@ -72,6 +79,7 @@ class PublishingPorts:
     carousel_release: CarouselReleasePort | None = None
     blog_visibility: BlogVisibilityPort | None = None
     blog_schedule: BlogSchedulePort | None = None
+    distribution: DistributionPublisher | None = None
 
 
 class PublishingService:
@@ -110,6 +118,36 @@ class PublishingService:
             raise RuntimeError(_ERR_NO_RELEASE_PORT)
         return await CarouselReleaseHandler(port).release(command)
 
+    async def read_caption(self, publication: Publication) -> str:
+        """Return the publication's persisted social caption (no LLM call).
+
+        Byte-identical to the legacy ``project.caption or ""`` route read —
+        forwards to the distribution port, which projects the persisted caption
+        from the :class:`Publication` view.
+        """
+        return self._require_distribution_port().caption_for(publication)
+
+    async def read_linkedin_posts(
+        self,
+        publication: Publication,
+    ) -> tuple[str | None, str | None]:
+        """Return the publication's persisted ``(pt, en)`` LinkedIn copy (no LLM)."""
+        return self._require_distribution_port().linkedin_posts_for(publication)
+
+    async def publish_instagram(
+        self,
+        caption: str,
+        image_urls: list[str],
+    ) -> DistributionResult:
+        """Distribute the carousel slides to Instagram via the distribution port.
+
+        Byte-identical to the legacy ``publisher.publish_instagram`` call — the
+        same caption + public image URLs are forwarded to the channel adapter and
+        the vendor outcome is returned as a :class:`DistributionResult`.
+        """
+        port = self._require_distribution_port()
+        return await port.publish_instagram(caption, image_urls)
+
     async def publish_blog(self, post: object) -> None:
         """Publish a standalone blog post (visibility-status write; flush only)."""
         port = self._require_visibility_port()
@@ -140,6 +178,12 @@ class PublishingService:
         port = self._ports.blog_schedule
         if port is None:
             raise RuntimeError(_ERR_NO_SCHEDULE_PORT)
+        return port
+
+    def _require_distribution_port(self) -> DistributionPublisher:
+        port = self._ports.distribution
+        if port is None:
+            raise RuntimeError(_ERR_NO_DISTRIBUTION_PORT)
         return port
 
 

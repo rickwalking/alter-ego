@@ -20,6 +20,12 @@ The publishing ports are:
 * ``BlogSchedulePort`` — the scheduling write contract for a standalone blog post
   (AE-0128). The standalone blog schedule route + the scheduled-publish worker
   drive their schedule writes through this port (adapter: the ACL/owner).
+* ``DistributionPublisher`` — the channel-delivery + distribution-read contract
+  (AE-0129). The ``publish-instagram`` route distributes the carousel slides to
+  Instagram and the ``generate-caption`` route reads the persisted caption through
+  this port; its adapter (the channel publisher in infrastructure) wraps the Meta
+  Instagram vendor adapter + the persisted caption/LinkedIn copy, so the vendor/LLM
+  SDK imports stay out of the publishing application/domain layers.
 
 Per backend/CLAUDE.md, interfaces are :class:`typing.Protocol`, never ABCs, and
 they are fully typed (no ``Any``). These Protocols let the publishing
@@ -56,6 +62,61 @@ from rag_backend.domain.protocols.repositories import CarouselRepository
 from rag_backend.infrastructure.database.blog_post_repository import (
     BlogPostRepository,
 )
+from rag_backend.modules.publishing.domain.models import (
+    DistributionResult,
+    Publication,
+)
+
+
+class DistributionPublisher(Protocol):
+    """Channel-delivery + distribution-read contract for a release (AE-0129).
+
+    The single seam through which the publishing context distributes a release to
+    its outbound channels and reads its persisted per-channel copy. It speaks only
+    in the publishing context's own types — the :class:`Publication` view and the
+    :class:`DistributionResult` value object — and primitives, so neither the
+    application nor the domain layer touches a vendor/LLM SDK. The concrete
+    adapter (the channel publisher in ``infrastructure``) wraps the Meta Instagram
+    vendor adapter + the persisted LinkedIn/caption copy; the vendor SDK imports
+    stay confined there.
+
+    Behavior-preserving: ``publish_instagram`` forwards the EXACT caption +
+    image-url payload to the vendor publisher and maps its result one-to-one; the
+    read methods project the already-persisted caption / LinkedIn copy (no LLM
+    call), identical to the pre-AE-0129 route reads.
+    """
+
+    async def publish_instagram(
+        self,
+        caption: str,
+        image_urls: list[str],
+    ) -> DistributionResult:
+        """Distribute the carousel slides to Instagram; return the channel result.
+
+        Forwards the caption + the public image URLs to the channel adapter
+        (byte-identical vendor payload) and maps the vendor outcome into a
+        :class:`DistributionResult`.
+        """
+        ...
+
+    def caption_for(self, publication: Publication) -> str:
+        """Return the release's persisted social caption (empty string if unset).
+
+        Projects the already-persisted caption from the :class:`Publication` view;
+        no LLM call — identical to the legacy ``project.caption or ""`` read.
+        """
+        ...
+
+    def linkedin_posts_for(
+        self,
+        publication: Publication,
+    ) -> tuple[str | None, str | None]:
+        """Return the release's persisted ``(pt, en)`` LinkedIn post copy.
+
+        Projects the already-persisted LinkedIn copy from the
+        :class:`Publication` view; no LLM call.
+        """
+        ...
 
 
 class CarouselReleasePort(Protocol):
@@ -126,4 +187,5 @@ __all__ = [
     "BlogVisibilityPort",
     "CarouselReleasePort",
     "CarouselRepository",
+    "DistributionPublisher",
 ]

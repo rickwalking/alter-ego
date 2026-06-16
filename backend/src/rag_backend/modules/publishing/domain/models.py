@@ -146,6 +146,38 @@ class Publication:
         """The carousel project's display title, when set."""
         return self.project.title
 
+    @property
+    def caption(self) -> str | None:
+        """The persisted social caption of the underlying carousel, when set."""
+        return self.project.caption
+
+    @property
+    def linkedin_post_pt(self) -> str | None:
+        """The persisted Portuguese LinkedIn post text, when set."""
+        return self.project.linkedin_post_pt
+
+    @property
+    def linkedin_post_en(self) -> str | None:
+        """The persisted English LinkedIn post text, when set."""
+        return self.project.linkedin_post_en
+
+
+@dataclass(frozen=True)
+class DistributionResult:
+    """Outcome of a channel-delivery call (AE-0129).
+
+    The publishing context's own value object for the result of distributing a
+    release to an outbound channel (e.g. the Instagram carousel publish). It
+    mirrors the vendor-neutral ``status`` / ``post_id`` / ``error_message`` shape
+    the channel routes already serialize, so the ``publish/instagram`` response is
+    byte-identical. The concrete channel adapter (the Meta publisher behind the
+    distribution port) maps the vendor result into this value object.
+    """
+
+    status: str
+    post_id: str | None = None
+    error_message: str | None = None
+
 
 class DistributionChannelKind(StrEnum):
     """The kind of outbound channel a release can be distributed to.
@@ -202,6 +234,7 @@ __all__ = [
     "CarouselProject",
     "DistributionChannel",
     "DistributionChannelKind",
+    "DistributionResult",
     "Publication",
     "PublishingSchedule",
     "ReleasePhase",

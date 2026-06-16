@@ -13,6 +13,10 @@ from rag_backend.api.constants import (
 )
 from rag_backend.api.dependencies import require_editor_or_admin
 from rag_backend.api.dependencies.database import get_db
+from rag_backend.api.dependencies.publishing import (
+    PublishingComposition,
+    build_publishing_module,
+)
 from rag_backend.api.dependencies.resource_access import assert_domain_owner_or_admin
 from rag_backend.api.middleware.rate_limiting import limiter
 from rag_backend.api.schemas import (
@@ -35,11 +39,36 @@ from rag_backend.domain.protocols import (
     SocialPublisher,
 )
 from rag_backend.infrastructure.database.models.carousel import CarouselProjectModel
+from rag_backend.modules.publishing import Publication, PublishingModule
 
 from .deps import get_carousel_repo, get_instagram_publisher
 from .helpers import _build_public_image_urls, assert_carousel_artifacts_healthy
 
 router = APIRouter()
+
+
+def get_publishing_module_for_distribution(
+    repo: Annotated[CarouselRepository, Depends(get_carousel_repo)],
+    publisher: Annotated[SocialPublisher, Depends(get_instagram_publisher)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> PublishingModule:
+    """Build the request-scoped publishing facade for the distribution edge.
+
+    Resolves the carousel repository + the Meta Instagram vendor adapter (via the
+    grandfathered ``get_instagram_publisher`` edge, so this route adds no new
+    locator/infra coupling) and the request session here at the HTTP edge, then
+    hands them to ``build_publishing_module`` (the shared edge composer). The
+    distribution port is backed by the channel adapter wrapping that publisher, so
+    ``publish-instagram`` + ``generate-caption`` route through the facade with the
+    byte-identical channel payload + persisted-caption read.
+    """
+    return build_publishing_module(
+        PublishingComposition(
+            session=db,
+            carousel_repository=repo,
+            social_publisher=publisher,
+        ),
+    )
 
 
 @router.post(
@@ -56,14 +85,18 @@ async def generate_caption(
     project_id: UUID,
     user: Annotated[User, Depends(require_editor_or_admin)],
     repo: Annotated[CarouselRepository, Depends(get_carousel_repo)],
+    publishing: Annotated[
+        PublishingModule, Depends(get_publishing_module_for_distribution)
+    ],
 ) -> CarouselCaptionResponse:
     """Return caption from project state; does not run legacy pipeline."""
     project = await repo.get_project_by_id(project_id)
     if project is None:
         raise HTTPException(status_code=404, detail=ERR_CAROUSEL_NOT_FOUND)
     assert_domain_owner_or_admin(project.owner_id, user)
+    caption = await publishing.service.read_caption(Publication(project=project))
     return CarouselCaptionResponse(
-        caption=project.caption or "",
+        caption=caption,
         hashtags=[],
     )
 
@@ -85,7 +118,9 @@ async def publish_to_instagram(
     body: InstagramPublishRequest,
     user: Annotated[User, Depends(require_editor_or_admin)],
     repo: Annotated[CarouselRepository, Depends(get_carousel_repo)],
-    publisher: Annotated[SocialPublisher, Depends(get_instagram_publisher)],
+    publishing: Annotated[
+        PublishingModule, Depends(get_publishing_module_for_distribution)
+    ],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> InstagramPublishResponse:
     """Publish the carousel's slides to Instagram with the provided caption."""
@@ -123,7 +158,7 @@ async def publish_to_instagram(
             detail=ERR_INSTAGRAM_PUBLIC_BASE_URL_NOT_CONFIGURED,
         ) from None
 
-    result = await publisher.publish_instagram(body.caption, image_urls)
+    result = await publishing.service.publish_instagram(body.caption, image_urls)
     return InstagramPublishResponse(
         status=result.status,
         ig_post_id=result.post_id,
