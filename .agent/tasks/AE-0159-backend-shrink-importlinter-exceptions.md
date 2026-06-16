@@ -38,10 +38,10 @@ destructive column drop) is consent-gated + drain-gated (ADR-0008). See `docs/pl
 
 ## Acceptance Criteria
 
-- [ ] Each removable .importlinter ignore_imports exception SHALL be deleted (violation verified gone); count strictly decreases
-- [ ] Dead global layer files (zero importers) SHALL be removed
-- [ ] .importlinter SHALL be regenerated via render_importlinter (not hand-edited); lint-imports KEEPS all contracts (incl. the per-module identity/conversation/knowledge facade contracts) at the reduced ignore count
-- [ ] arch-ratchet (import_baseline.py --check) + gates.sh + check-integrity green
+- [x] Each removable .importlinter ignore_imports exception SHALL be deleted (violation verified gone); count strictly decreases
+- [x] Dead global layer files (zero importers) SHALL be removed
+- [x] .importlinter SHALL be regenerated via render_importlinter (not hand-edited); lint-imports KEEPS all contracts (incl. the per-module identity/conversation/knowledge facade contracts) at the reduced ignore count
+- [x] arch-ratchet (import_baseline.py --check) + gates.sh + check-integrity green
 
 ## Gherkin Scenarios
 
@@ -69,19 +69,19 @@ Ticket created by planner (Phase 8 breakdown).
 
 ## Files Touched
 
-Pending.
+See `.agent/reports/AE-0159.dev-summary.md` (canonical dev record). Summary: shrank `.importlinter` `ignore_imports` exact exceptions as violations reached zero; deleted dead global layer files (`application/services/carousel/legacy_presentation_regeneration.py`, the 4 carousel_template/neon_* shims, `infrastructure/external/openai_llm.py`, `domain/enums/`); ratcheted the `application→infrastructure` baseline to its true floor.
 
 ## Test Evidence
 
-Pending.
+See `.agent/reports/AE-0159.dev-summary.md`. Re-verified at end-of-phase QA: arch-ratchet `import_baseline.py --check` PASS, lint-imports keeps all contracts at the reduced ignore count, gates.sh backend + check-integrity 0 blockers green.
 
 ## QA Report
 
-Pending.
+End-of-phase QA (branch-wide): QA_VERDICT PASS; `.importlinter` regenerated (not hand-edited); deleted files confirmed zero real importers; ignore count strictly decreased.
 
 ## Decision Log
 
-Pending.
+See `.agent/reports/AE-0159.dev-summary.md`.
 
 ## Blockers
 
@@ -89,4 +89,4 @@ None.
 
 ## Final Summary
 
-Pending.
+Shrank the `.importlinter` exact `ignore_imports` exceptions and removed dead global layer files as their violations reached zero. Canonical evidence in `.agent/reports/AE-0159.dev-summary.md`; behavior-preserving, verified green at end-of-phase QA.

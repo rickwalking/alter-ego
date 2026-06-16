@@ -7,8 +7,8 @@
  * behavior-preserving pass. This barrel is the ONLY import surface for
  * cross-context and `app/` consumers; everything else under
  * `modules/identity/**` is internal. Thin re-export shims remain at the old
- * paths (`@/lib/jwt-auth`, `@/lib/auth-cookie`, `@/hooks/use-auth`) as a safety
- * net only.
+ * paths (`@/lib/jwt-auth`, `@/lib/auth-cookie`) as a safety net only (the
+ * `@/hooks/use-auth` shim was removed in AE-0154/QA cleanup — no importers).
  *
  * AE-0164 adds the route-level guard surface (role constants + route-class
  * predicates + the access-token cookie name + the static-asset matcher) used by
