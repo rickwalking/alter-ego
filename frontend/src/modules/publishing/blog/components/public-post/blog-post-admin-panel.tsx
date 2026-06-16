@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useDeleteCarousel } from "@/modules/editorial";
-import { useAuth } from "@/hooks/use-auth";
+import { useAuth } from "@/modules/identity";
 import { ROUTE_PATHS } from "@/constants/api";
 import type { CarouselDesignResponse } from "@/schemas/carousel";
 

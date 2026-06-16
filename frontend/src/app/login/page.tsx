@@ -21,7 +21,7 @@ import {
   TEXT_DIM,
   TEXT_MUTED,
 } from "@/constants/neon";
-import { sanitizeLoginRedirect } from "@/lib/auth-cookie";
+import { sanitizeLoginRedirect } from "@/modules/identity";
 
 export default function LoginPage() {
   const t = useTranslations("auth");

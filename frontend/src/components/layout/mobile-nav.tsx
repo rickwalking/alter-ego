@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { ROUTE_PATHS } from "@/constants/api";
 import { DASHBOARD_ROUTES } from "@/constants/dashboard-routes";
-import { useAuth } from "@/hooks/use-auth";
+import { useAuth } from "@/modules/identity";
 
 export function MobileNav() {
   const t = useTranslations("common.nav");

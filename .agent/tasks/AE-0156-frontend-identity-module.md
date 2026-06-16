@@ -1,13 +1,13 @@
 # AE-0156 — Frontend: modules/identity — consolidate auth/session behind a public contract
 
-Status: Ready
+Status: Dev Complete
 Tier: T2
 Priority: High
 Type: Task
 Area: Frontend
-Owner: Unassigned
+Owner: developer
 Agent Lane: planner → architect → developer → qa → release
-Branch: feat/ae-0156-frontend-identity-module
+Branch: feat/phase-8-legacy-removal
 Kanban Card: TBD
 Created: 2026-06-16
 Updated: 2026-06-16
@@ -39,10 +39,10 @@ destructive column drop) is consent-gated + drain-gated (ADR-0008). See `docs/pl
 
 ## Acceptance Criteria
 
-- [ ] modules/identity SHALL own the auth-SPECIFIC client lib (jwt-auth, auth-cookie, login/session client) behind a public contract; consumers import @/modules/identity; re-export shims keep old lib/ auth paths resolving
-- [ ] authenticated-fetch / server-fetch (app-wide HTTP client) SHALL remain in lib/ (NOT moved into identity)
-- [ ] Auth behavior byte-identical; the AE-0165 auth e2e SHALL pass; App Router URLs unchanged
-- [ ] typecheck + lint (boundary 0/0) + 822 unit tests + build + check:legacy green
+- [x] modules/identity SHALL own the auth-SPECIFIC client lib (jwt-auth, auth-cookie, login/session client) behind a public contract; consumers import @/modules/identity; re-export shims keep old lib/ auth paths resolving
+- [x] authenticated-fetch / server-fetch (app-wide HTTP client) SHALL remain in lib/ (NOT moved into identity)
+- [x] Auth behavior byte-identical; the AE-0165 auth e2e SHALL pass; App Router URLs unchanged
+- [x] typecheck + lint (boundary 0/0) + 822 unit tests + build + check:legacy green
 
 ## Gherkin Scenarios
 
@@ -70,19 +70,32 @@ Ticket created by planner (Phase 8 breakdown).
 
 ## Files Touched
 
-Pending.
+- NEW `frontend/src/modules/identity/` — `index.ts` (public barrel), `types.ts` (`AccessTokenPayload`, `AuthUser`, `UseAuthResult` extracted), `lib/jwt-auth.ts`, `lib/auth-cookie.ts`, `hooks/use-auth.ts` (moved implementations).
+- Shims (re-export from `@/modules/identity`): `frontend/src/lib/jwt-auth.ts`, `frontend/src/lib/auth-cookie.ts`, `frontend/src/hooks/use-auth.ts`.
+- Consumers repointed to the `@/modules/identity` barrel: `src/middleware.ts`, `src/app/login/page.tsx`, `src/app/api/auth/token/route.ts`, `src/app/api/auth/logout/route.ts`, `src/modules/publishing/blog/components/public-post/blog-post-admin-panel.tsx`, `src/modules/editorial/workflow/hooks/use-collaborative-edit.ts` (the two cross-module ones are boundary-required), `src/components/admin/admin-sidebar.tsx`, `src/components/organisms/neon-sidebar.tsx`, `src/components/layout/header.tsx`, `src/components/layout/mobile-nav.tsx`.
+- Test `vi.mock` targets repointed (`@/hooks/use-auth` → `@/modules/identity`): `neon-sidebar.test.tsx`, `layout/header.test.tsx`, `blog-post-admin-panel.test.tsx`. The two lib unit tests stay on the old paths and now validate the shims.
+- UNTOUCHED (by design): `src/lib/authenticated-fetch.ts`, `src/lib/server-fetch.ts` (app-wide HTTP client).
 
 ## Test Evidence
 
-Pending.
+- `npm run typecheck` — clean.
+- `npm run lint` — clean: boundary OK (0/0/0 new), URL inventory OK (26), circular OK (0 cycles / 327 modules), component-type-location OK (57/57, 0 new).
+- `npm run test` — 823 passed.
+- `npm run check:legacy` — passed.
+- `npm run build` — succeeded.
+- `npm run test:e2e:auth` — **7 passed** (the AE-0165 baseline proves byte-identical auth behavior post-relocation).
+- `check-integrity.sh frontend` — PASS, 0 blockers / 0 warnings.
 
 ## QA Report
 
-Pending.
+Pending (Phase 8 end-of-phase QA on the full branch).
 
 ## Decision Log
 
-Pending.
+- **Barrel-only cross-module imports:** the two cross-module hook consumers (publishing, editorial) and the `app/` consumers import the `@/modules/identity` barrel, never a deep internal — keeping the feature-boundary ratchet at 0.
+- **Hook types extracted to `types.ts`:** moving `use-auth.ts` under `src/modules/**` subjects it to the component-type-location ratchet, so `AuthUser`/`UseAuthResult` (and `AccessTokenPayload`) were moved to a colocated `types.ts` (no new inline declarations).
+- **Test mocks repointed:** components now import `useAuth` via the barrel, so the 3 `vi.mock("@/hooks/use-auth")` calls were repointed to `@/modules/identity` to keep intercepting (no tests weakened/skipped/deleted).
+- **HTTP client stays in lib/:** `authenticated-fetch`/`server-fetch` are app-wide platform infra (used by most modules), not auth-specific — explicitly NOT moved (AE-0164/later does NOT move them either).
 
 ## Blockers
 
@@ -90,4 +103,4 @@ None.
 
 ## Final Summary
 
-Pending.
+Created `modules/identity` (SLICE 1) owning the auth-SPECIFIC client lib — JWT verify/decode, the access-token cookie helpers, login-redirect sanitization, and the `useAuth` session hook — behind a public barrel, with re-export shims at the old `lib/`/`hooks/` paths and consumers routed through `@/modules/identity`. The app-wide HTTP client stays in `lib/`. Behavior is byte-identical: the AE-0165 auth e2e (7 specs) plus 823 unit tests, boundary 0, build, and check:legacy all pass. AE-0164 (route handlers/guards) is the next identity slice.
