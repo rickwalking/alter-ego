@@ -84,3 +84,18 @@ The following tempting "fixes" were considered and **rejected by construction** 
 
 ## Sequencing recommendation (for the approval gate)
 T1 quick wins first: **P2** (use-client lint), **P3** (hook/format), **P4** (dev-summary scaffold), **P6** (gitignore guard). Then T2: **P1** (build gate), **P5** (worktree isolation). Each ticket's AC must include "the gate FAILS on a seeded violation".
+
+## Phase 4 — Human approval (2026-06-16)
+Owner approved **ALL 6** proposals, with two scope expansions:
+- **P2 broadened** → not just the use-client rule: audit ESLint severities and promote `warn`→`error` for most rules; add code-enforcement rules (best-practice `useEffect`, ban raw `fetch`/effect-data-fetching → force TanStack Query).
+- **P1 broadened** → add the build gate AND group CI into **frontend/backend quality-gate categories** (keep `gates.sh` as the QA-phase source of truth). Owner asked if feasible — yes (per-area workflow files and/or `<area> / <gate>` job naming; presentation/orchestration only).
+
+## Phase 5 — Tickets created (Intake, Quality)
+- **AE-0166** — Harden ESLint: warnings→errors + use-client / useEffect / TanStack-Query rules (T2, frontend) [P2, broadened]
+- **AE-0167** — CI build gate + group quality gates into frontend/backend categories (T2, Cross-cutting) [P1, broadened]
+- **AE-0168** — Repair husky pre-commit + `--no-verify` policy (T1, Cross-cutting) [P3]
+- **AE-0169** — Auto-scaffold dev-summary on Dev Complete transition (T1, Cross-cutting) [P4]
+- **AE-0170** — Worktree isolation + HEAD-detach guard for external runs (T2, Cross-cutting) [P5]
+- **AE-0171** — check-integrity pre-flight: build-output dirs must be gitignored (T1, Cross-cutting) [P6]
+
+All 6 are ratchet UP/HOLD; each AC requires the new gate to FAIL on a seeded violation. Status Intake — ready for the planner/architect → developer → qa pipeline when scheduled.
