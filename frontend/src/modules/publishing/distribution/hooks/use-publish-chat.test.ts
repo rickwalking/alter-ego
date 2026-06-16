@@ -6,13 +6,15 @@ import { createElement, type ReactNode } from "react";
 import {
   PUBLISH_CHAT_STORAGE_KEY,
   CONVERSATION_METADATA_PROJECT_ID,
-  MESSAGE_ROLE_ASSISTANT,
-  MESSAGE_ROLE_USER,
   OPTIMISTIC_MESSAGE_ID_PREFIX,
   STREAM_MESSAGE_ID_PREFIX,
 } from "@/constants/publish-chat";
 import { ApiError } from "@/lib/api-client";
 import type { Message } from "@/schemas/chat";
+
+// Message-role literals (mirror the @/schemas/chat role enum) used by assertions.
+const MESSAGE_ROLE_USER = "user";
+const MESSAGE_ROLE_ASSISTANT = "assistant";
 
 // Feature: Publish Page Chat Persistence
 // As a carousel author
