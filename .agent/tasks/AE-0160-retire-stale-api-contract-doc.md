@@ -1,6 +1,6 @@
 # AE-0160 — Retire stale hand-maintained API-contract doc sections (defer to generated OpenAPI)
 
-Status: Ready
+Status: Dev Complete
 Tier: T1
 Priority: High
 Type: Task
