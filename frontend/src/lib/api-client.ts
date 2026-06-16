@@ -44,22 +44,43 @@ export class ApiError extends Error {
   }
 }
 
-export async function apiCall<T>(
+interface ApiErrorBody {
+  message?: string;
+  code?: string;
+}
+
+const FORBIDDEN_REDIRECT_PATH = "/403";
+const JSON_CONTENT_TYPE = "application/json";
+
+async function parseErrorBody(
+  response: Response,
+): Promise<ApiErrorBody | null> {
+  return (await response.json().catch(() => null)) as ApiErrorBody | null;
+}
+
+/** Issue a credentialed JSON fetch (shared by apiCall + apiCallNoContent). */
+function fetchWithCredentials(
   url: string,
-  schema: z.ZodSchema<T>,
   options?: RequestInit,
-): Promise<T> {
-  const response = await fetch(url, {
+): Promise<Response> {
+  return fetch(url, {
     ...options,
     credentials: "include",
     headers: {
-      "Content-Type": "application/json",
+      "Content-Type": JSON_CONTENT_TYPE,
       ...options?.headers,
     },
   });
+}
 
+/**
+ * Map non-OK HTTP statuses to `ApiError`, threading the 401 login redirect and
+ * the 403 page redirect. Returns normally when the response is OK; the caller
+ * then parses the body (or skips it, for No Content responses).
+ */
+async function throwIfErrorResponse(response: Response): Promise<void> {
   if (response.status === HTTP_STATUS.UNAUTHORIZED) {
-    const errorData = await response.json().catch(() => null);
+    const errorData = await parseErrorBody(response);
     redirectToLoginAfterUnauthorized();
     throw new ApiError(
       HTTP_STATUS.UNAUTHORIZED,
@@ -69,9 +90,9 @@ export async function apiCall<T>(
   }
 
   if (response.status === HTTP_STATUS.FORBIDDEN) {
-    const errorData = await response.json().catch(() => null);
+    const errorData = await parseErrorBody(response);
     if (typeof window !== "undefined") {
-      window.location.href = "/403";
+      window.location.href = FORBIDDEN_REDIRECT_PATH;
     }
     throw new ApiError(
       HTTP_STATUS.FORBIDDEN,
@@ -81,13 +102,22 @@ export async function apiCall<T>(
   }
 
   if (!response.ok) {
-    const errorData = await response.json().catch(() => null);
+    const errorData = await parseErrorBody(response);
     throw new ApiError(
       response.status,
       errorData?.message || `HTTP error! status: ${response.status}`,
       errorData?.code,
     );
   }
+}
+
+export async function apiCall<T>(
+  url: string,
+  schema: z.ZodSchema<T>,
+  options?: RequestInit,
+): Promise<T> {
+  const response = await fetchWithCredentials(url, options);
+  await throwIfErrorResponse(response);
 
   const json = await response.json();
 
@@ -139,43 +169,6 @@ export async function apiCallNoContent(
   url: string,
   options?: RequestInit,
 ): Promise<void> {
-  const response = await fetch(url, {
-    ...options,
-    credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      ...options?.headers,
-    },
-  });
-
-  if (response.status === HTTP_STATUS.UNAUTHORIZED) {
-    const errorData = await response.json().catch(() => null);
-    redirectToLoginAfterUnauthorized();
-    throw new ApiError(
-      HTTP_STATUS.UNAUTHORIZED,
-      errorData?.message || "Unauthorized",
-      errorData?.code,
-    );
-  }
-
-  if (response.status === HTTP_STATUS.FORBIDDEN) {
-    const errorData = await response.json().catch(() => null);
-    if (typeof window !== "undefined") {
-      window.location.href = "/403";
-    }
-    throw new ApiError(
-      HTTP_STATUS.FORBIDDEN,
-      errorData?.message || "Forbidden",
-      errorData?.code,
-    );
-  }
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => null);
-    throw new ApiError(
-      response.status,
-      errorData?.message || `HTTP error! status: ${response.status}`,
-      errorData?.code,
-    );
-  }
+  const response = await fetchWithCredentials(url, options);
+  await throwIfErrorResponse(response);
 }

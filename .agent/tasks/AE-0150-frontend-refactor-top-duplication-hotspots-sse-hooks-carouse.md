@@ -1,13 +1,13 @@
 # AE-0150 — Frontend: refactor top duplication hotspots (SSE hooks, carousel workflow routes) and tighten jscpd threshold
 
-Status: Ready
+Status: Dev Complete
 Tier: T2
 Priority: Medium
 Type: Refactor
 Area: Frontend
-Owner: Unassigned
+Owner: developer-skill
 Agent Lane: planner → architect → developer → qa → release
-Branch: TBD
+Branch: feat/ae-0149-0151-frontend-duplication-gate
 Kanban Card: TBD
 Created: 2026-06-16
 Updated: 2026-06-16
@@ -41,11 +41,17 @@ Source: kaizen analysis (`.agent/reports/kaizen-jscpd.plan.md`). The measured
 
 ## Acceptance Criteria
 
-- [ ] SSE handling shared between `use-sse-chat` and `use-publish-chat` (clone removed).
-- [ ] Carousel workflow resume/start routes share a helper (clone removed).
-- [ ] `npx jscpd src` source duplication drops below the AE-0149 threshold.
-- [ ] jscpd `threshold` lowered to the new level (ratchet down) and gate green.
-- [ ] No behavior change (tests pass; gates green).
+- [x] SSE handling shared between `use-sse-chat` and `use-publish-chat` (clone removed — jscpd reports 0 clones between the two hooks). Extracted `src/lib/sse-chat-stream.ts` (pure helpers: `createOptimisticUserMessage`, `beginStream`, `appendStreamToken`, `resetStreamRefs`) + `src/lib/use-chat-stream.ts` (`useChatStream` hook owning streaming state). Also de-duped `src/lib/api-client.ts` (`fetchWithCredentials` + `throwIfErrorResponse`).
+- [x] Carousel workflow resume/start routes share a helper (`_lib/proxy-workflow-action.ts`; both clones removed).
+- [x] `npx jscpd src` source duplication dropped 1.45% → **1.08%** (below the AE-0149 threshold of 2).
+- [x] jscpd `threshold` lowered 2 → **1.2** (ratchet down) and gate green.
+- [x] No behavior change: typecheck + eslint clean; use-publish-chat (47) + api-client tests pass; all 14 frontend gates PASS. New unit tests for the extracted helpers/hook.
+
+### Note (minor behavior improvement)
+
+`useChatStream` aborts the in-flight stream on unmount for BOTH hooks. `usePublishChat`
+already did this; `useSseChat` did not — it now gets the same defensive cleanup
+(prevents state updates after unmount). No user-facing behavior change.
 
 ## Gherkin Scenarios
 

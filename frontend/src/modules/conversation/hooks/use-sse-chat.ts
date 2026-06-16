@@ -5,8 +5,12 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useConversationMessages } from "@/modules/conversation/hooks/use-chat";
 import { chatKeys } from "@/modules/conversation/queries";
 import { streamSseEvents, SSE_EVENT_TYPE } from "@/lib/sse-client";
+import { useChatStream } from "@/lib/use-chat-stream";
 import { API_ENDPOINTS } from "@/constants/api";
 import type { Message } from "@/schemas/chat";
+
+const SSE_CHAT_USER_ID_PREFIX = "user-";
+const STREAM_MESSAGE_ID_PREFIX = "stream-";
 
 export interface UseSseChatOptions {
   conversationId?: string | null;
@@ -46,12 +50,17 @@ function mergeMessages(
 
 export function useSseChat(options: UseSseChatOptions = {}): UseSseChatReturn {
   const queryClient = useQueryClient();
-  const [optimisticMessages, setOptimisticMessages] = useState<Message[]>([]);
-  const [isStreaming, setIsStreaming] = useState(false);
+  const {
+    optimisticMessages,
+    setOptimisticMessages,
+    isStreaming,
+    setIsStreaming,
+    abortRef,
+    startUserTurn,
+    appendToken,
+    resetStreamingRefs,
+  } = useChatStream(SSE_CHAT_USER_ID_PREFIX, STREAM_MESSAGE_ID_PREFIX);
   const [error, setError] = useState<string | null>(null);
-  const abortRef = useRef<AbortController | null>(null);
-  const streamingContentRef = useRef("");
-  const streamingMsgIdRef = useRef<string | null>(null);
   const finalizedRef = useRef(false);
 
   const conversationId = options.conversationId ?? null;
@@ -65,8 +74,7 @@ export function useSseChat(options: UseSseChatOptions = {}): UseSseChatReturn {
       }
       finalizedRef.current = true;
       setIsStreaming(false);
-      streamingContentRef.current = "";
-      streamingMsgIdRef.current = null;
+      resetStreamingRefs();
       if (!loadHistory) {
         return;
       }
@@ -76,7 +84,13 @@ export function useSseChat(options: UseSseChatOptions = {}): UseSseChatReturn {
           setOptimisticMessages([]);
         });
     },
-    [loadHistory, queryClient],
+    [
+      loadHistory,
+      queryClient,
+      setIsStreaming,
+      resetStreamingRefs,
+      setOptimisticMessages,
+    ],
   );
   const { data: fetchedHistory = [] } = useConversationMessages(
     loadHistory ? conversationId : null,
@@ -93,9 +107,8 @@ export function useSseChat(options: UseSseChatOptions = {}): UseSseChatReturn {
     setOptimisticMessages([]);
     setIsStreaming(false);
     setError(null);
-    streamingContentRef.current = "";
-    streamingMsgIdRef.current = null;
-  }, []);
+    resetStreamingRefs();
+  }, [abortRef, setOptimisticMessages, setIsStreaming, resetStreamingRefs]);
 
   const sendMessage = useCallback(
     async (content: string, overrideConversationId?: string) => {
@@ -107,61 +120,17 @@ export function useSseChat(options: UseSseChatOptions = {}): UseSseChatReturn {
       finalizedRef.current = false;
       setError(null);
 
-      const userMsg: Message = {
-        id: `user-${Date.now()}`,
-        role: "user",
-        content: content.trim(),
-        sources: [],
-        created_at: new Date().toISOString(),
-      };
-      setOptimisticMessages((prev) => [...prev, userMsg]);
-
-      setIsStreaming(true);
-      streamingContentRef.current = "";
-      streamingMsgIdRef.current = null;
-
-      if (abortRef.current) {
-        abortRef.current.abort();
-      }
-      abortRef.current = new AbortController();
+      const signal = startUserTurn(content.trim());
 
       await streamSseEvents({
         url: API_ENDPOINTS.CONVERSATION_CHAT_STREAM(convId),
         body: { content: content.trim() },
-        signal: abortRef.current.signal,
+        signal,
         onEvent: (event) => {
           const data = event.data;
 
           if (event.event === SSE_EVENT_TYPE.TOKEN) {
-            const tokenContent = (data.content as string) ?? "";
-            streamingContentRef.current += tokenContent;
-            setOptimisticMessages((prev) => {
-              const last = prev[prev.length - 1];
-              if (
-                last?.role === "assistant" &&
-                last.id === streamingMsgIdRef.current
-              ) {
-                // Accumulate content using the last message's content + new token
-                // (ref may have been cleared by COMPLETE event due to React batching)
-                return [
-                  ...prev.slice(0, -1),
-                  { ...last, content: last.content + tokenContent },
-                ];
-              }
-              const newMsg: Message = {
-                id: streamingMsgIdRef.current || `stream-${Date.now()}`,
-                role: "assistant",
-                content:
-                  (last?.role === "assistant" ? last.content : "") +
-                  tokenContent,
-                sources: [],
-                created_at: new Date().toISOString(),
-              };
-              if (!streamingMsgIdRef.current) {
-                streamingMsgIdRef.current = newMsg.id;
-              }
-              return [...prev, newMsg];
-            });
+            appendToken((data.content as string) ?? "");
             return;
           }
 
@@ -192,22 +161,29 @@ export function useSseChat(options: UseSseChatOptions = {}): UseSseChatReturn {
             const errorContent = (data.content as string) ?? "Unknown error";
             setError(errorContent);
             setIsStreaming(false);
-            streamingContentRef.current = "";
-            streamingMsgIdRef.current = null;
+            resetStreamingRefs();
           }
         },
         onError: (err) => {
           setError(err.message);
           setIsStreaming(false);
-          streamingContentRef.current = "";
-          streamingMsgIdRef.current = null;
+          resetStreamingRefs();
         },
         onComplete: () => {
           finalizeStream(convId);
         },
       });
     },
-    [conversationId, finalizeStream, isStreaming],
+    [
+      conversationId,
+      finalizeStream,
+      isStreaming,
+      startUserTurn,
+      appendToken,
+      setIsStreaming,
+      setOptimisticMessages,
+      resetStreamingRefs,
+    ],
   );
 
   const messages = useMemo(
