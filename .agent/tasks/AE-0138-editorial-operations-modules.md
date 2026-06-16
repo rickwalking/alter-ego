@@ -1,6 +1,6 @@
 # AE-0138 — editorial + editorial-operations modules behind contracts
 
-Status: Ready
+Status: Review
 Tier: T2
 Priority: High
 Type: Task
