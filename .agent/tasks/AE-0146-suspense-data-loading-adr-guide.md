@@ -1,6 +1,6 @@
 # AE-0146 — Suspense data-loading ADR + guide
 
-Status: Ready
+Status: Review
 Tier: T2
 Priority: High
 Type: Task
