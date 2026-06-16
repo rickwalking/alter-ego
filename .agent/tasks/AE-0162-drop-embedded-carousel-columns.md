@@ -22,12 +22,13 @@ AE-0127 added BlogPost.origin + an additive backfill but deliberately did NOT dr
 
 ## Scope
 
-Confirm blog_posts is the single writer (no remaining embedded-column writers); satisfy the checkpoint-drain rule (every live LangGraph checkpoint finished on pre-migration code or restarted with documented consent); author a reversible-by-backup destructive Alembic migration dropping the embedded columns; fresh-DB upgrade + drift check + downgrade verified. Consent-gated + drain-gated.
+PRECONDITION (AE-0163 must be DONE): the embedded-column read fallback is removed and blog_posts is the single writer — this ticket only DROPS the columns once nothing reads/writes them. Then: verify no live carousel_workflow LangGraph checkpoint state carries blog_markdown/caption/linkedin_post_* keys (a resumed checkpoint would re-write dropped columns); satisfy the checkpoint-drain rule; verify the prod carousel_projects shape matches the migration's expected pre-state (prod is create_all-bootstrapped, no Alembic — see memory prod-db-schema-drift); author a reversible-by-backup destructive Alembic migration dropping the embedded columns; fresh-DB upgrade + drift check + downgrade verified. Consent-gated + drain-gated.
 
 ## Non-Goals
 
-- Not executed without explicit owner consent + satisfied checkpoint-drain.
-- No drop while a live checkpoint references the old shape.
+- Not executed without explicit owner consent + satisfied checkpoint-drain + AE-0163 done.
+- No drop while a live checkpoint references the old shape, or while any code still reads/writes the embedded columns.
+- Not before the merged Phases 0-7 have been observed in production (roadmap: "after production observation").
 
 ## Modularization Alignment (2026-06-16)
 
@@ -38,19 +39,19 @@ destructive column drop) is consent-gated + drain-gated (ADR-0008). See `docs/pl
 
 ## Acceptance Criteria
 
-- [ ] A destructive migration SHALL drop the embedded columns, GATED by checkpoint-drain + confirmation blog_posts is the single writer
-- [ ] The migration SHALL be reversible-by-backup; fresh-DB upgrade + empty-autogenerate-drift + downgrade verified
-- [ ] Explicit owner consent + checkpoint-drain SHALL be satisfied first; gates.sh + check-integrity green
+- [ ] AE-0163 SHALL be DONE first: no code reads the embedded columns (fallback removed) and no code writes them (blog_posts is the single writer)
+- [ ] No live carousel_workflow checkpoint state SHALL carry blog_markdown/caption/linkedin_post_* keys (verified) — a resumed checkpoint must not re-write dropped columns
+- [ ] A destructive migration SHALL drop the embedded columns, reversible-by-backup; fresh-DB upgrade + empty-autogenerate-drift + downgrade verified; prod pre-state shape verified before drop
+- [ ] Explicit owner consent + checkpoint-drain SHALL be satisfied first, after production observation of Phases 0-7; gates.sh + check-integrity green
 
 ## Gherkin Scenarios
 
-Not applicable — legacy-removal cleanup; verified by the green-gate safety net (and, for the Class-B behavior
-change, by the updated AE-0125 safety net asserting the new approval≠release flow).
+Not applicable — destructive migration; verified by the AE-0163 byte-identical reads (post-fallback-removal) + fresh-DB upgrade/downgrade/drift tests + the checkpoint-drain gate.
 
 ## Dependencies
 
 - Blocks: —
-- Blocked by: AE-0161
+- Blocked by: AE-0163 (+ consent + checkpoint-drain)
 - Related: AE-0152
 
 ## QA Checklist

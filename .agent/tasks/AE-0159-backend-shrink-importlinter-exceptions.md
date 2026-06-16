@@ -40,12 +40,12 @@ destructive column drop) is consent-gated + drain-gated (ADR-0008). See `docs/pl
 
 - [ ] Each removable .importlinter ignore_imports exception SHALL be deleted (violation verified gone); count strictly decreases
 - [ ] Dead global layer files (zero importers) SHALL be removed
-- [ ] lint-imports KEEPS all contracts with fewer ignores; gates.sh + check-integrity green
+- [ ] .importlinter SHALL be regenerated via render_importlinter (not hand-edited); lint-imports KEEPS all contracts (incl. the per-module identity/conversation/knowledge facade contracts) at the reduced ignore count
+- [ ] arch-ratchet (import_baseline.py --check) + gates.sh + check-integrity green
 
 ## Gherkin Scenarios
 
-Not applicable — legacy-removal cleanup; verified by the green-gate safety net (and, for the Class-B behavior
-change, by the updated AE-0125 safety net asserting the new approval≠release flow).
+Not applicable — legacy-removal cleanup; verified by the green-gate safety net (back-end gates.sh + check-integrity + arch-ratchet; front-end typecheck/lint/boundaries/url/circular/tests/build).
 
 ## Dependencies
 

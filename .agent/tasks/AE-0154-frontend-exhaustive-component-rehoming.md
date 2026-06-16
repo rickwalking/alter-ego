@@ -44,8 +44,7 @@ destructive column drop) is consent-gated + drain-gated (ADR-0008). See `docs/pl
 
 ## Gherkin Scenarios
 
-Not applicable — legacy-removal cleanup; verified by the green-gate safety net (and, for the Class-B behavior
-change, by the updated AE-0125 safety net asserting the new approval≠release flow).
+Not applicable — legacy-removal cleanup; verified by the green-gate safety net (back-end gates.sh + check-integrity + arch-ratchet; front-end typecheck/lint/boundaries/url/circular/tests/build).
 
 ## Dependencies
 

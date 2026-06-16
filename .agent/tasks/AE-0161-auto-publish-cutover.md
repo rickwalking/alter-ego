@@ -27,6 +27,7 @@ Make the publishing release command opt-in (not auto-triggered by approval); upd
 ## Non-Goals
 
 - Not executed without explicit owner consent (Intake until scheduled).
+- Not before the merged Phases 0-7 have been observed in production (roadmap: "after production observation").
 - No destructive migration here (that is AE-0162).
 
 ## Modularization Alignment (2026-06-16)
@@ -44,13 +45,12 @@ destructive column drop) is consent-gated + drain-gated (ADR-0008). See `docs/pl
 
 ## Gherkin Scenarios
 
-Not applicable — legacy-removal cleanup; verified by the green-gate safety net (and, for the Class-B behavior
-change, by the updated AE-0125 safety net asserting the new approval≠release flow).
+Defined when scheduled — the cutover CHANGES behavior; scenarios assert the new approval≠release flow and the AE-0125 safety net is updated to the new behavior.
 
 ## Dependencies
 
-- Blocks: AE-0162
-- Blocked by: AE-0156
+- Blocks: —
+- Blocked by: — (consent-gated; Phases 6/7 merged)
 - Related: AE-0152
 
 ## QA Checklist

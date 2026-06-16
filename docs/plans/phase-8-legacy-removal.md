@@ -61,19 +61,28 @@ value" (roadmap); no evidence it does, so it is explicitly NOT in Phase 8.
 
 | ID | Title | Tier | Class | Area | Blocked by |
 |----|-------|------|------|------|------------|
-| **AE-0152** | Phase 8 epic: Remove legacy layers and adapters | T3 | — | Cross-cutting | — (tracks 0153-0162) |
+| **AE-0152** | Phase 8 epic: Remove legacy layers and adapters | T3 | — | Cross-cutting | — (tracks 0153-0165) |
 | **AE-0153** | Frontend: remove `@/features/*` re-export shims + delete `src/features/` + drop `_example` anchor | T1 | A | Frontend | — |
 | **AE-0154** | Frontend: exhaustive business-component re-homing; ratchet component-type-location baseline down (→0 target) | T2 | A | Frontend | AE-0153 |
 | **AE-0155** | Frontend: route-page thinning (`app/**/page.tsx` → thin composition over module hooks) | T2 | A | Frontend | AE-0153 |
-| **AE-0156** | Frontend: `modules/identity` — consolidate auth/session from `lib/`+`app/` behind a public contract | T2 | A | Frontend | AE-0153 |
-| **AE-0157** | Reconcile the 24 OpenAPI/Zod schema drifts to 0 + flip the schema-drift check to blocking | T2 | A | Frontend/CI | AE-0156 |
+| **AE-0165** | Frontend: auth e2e safety net (login/logout/refresh/guard) — precondition for identity | T2 | A | Frontend/Tests | — |
+| **AE-0156** | Frontend: `modules/identity` SLICE 1 — auth-specific client lib behind a contract (HTTP client stays in lib/) | T2 | A | Frontend | AE-0153, AE-0165 |
+| **AE-0164** | Frontend: `modules/identity` SLICE 2 — relocate auth route handlers + guards behind the contract | T2 | A | Frontend | AE-0156 |
+| **AE-0157** | Reconcile the 24 OpenAPI/Zod schema drifts to 0 + flip the schema-drift check to blocking | T2 | A | Frontend/CI | AE-0153 |
 | **AE-0158** | Backend: remove dead compatibility re-exports/shims; ratchet import baselines (application/api→infra) down | T2 | A | Backend | — |
 | **AE-0159** | Backend: shrink `.importlinter` exact `ignore_imports` exceptions as violations reach zero; delete dead global layer files | T2 | A | Backend/CI | AE-0158 |
 | **AE-0160** | Retire stale hand-maintained API-contract doc sections (defer to generated OpenAPI from AE-0141) | T1 | A | Docs | AE-0158 |
-| **AE-0161** | Backend: auto-publish cutover — approval ≠ release as two distinct user actions (BEHAVIOR CHANGE) | T2 | B | Backend/Frontend | AE-0156 |
-| **AE-0162** | Backend: drop embedded carousel blog/distribution columns (DESTRUCTIVE, drain-gated migration) | T2 | B | Backend/DB | AE-0161 |
+| **AE-0163** | Backend: make `blog_posts` the single writer + remove embedded-column read fallback (de-risk the drop) | T2 | A | Backend | — |
+| **AE-0161** | Backend: auto-publish cutover — approval ≠ release as two distinct user actions (BEHAVIOR CHANGE) | T2 | B | Backend/Frontend | — (consent) |
+| **AE-0162** | Backend: drop embedded carousel blog/distribution columns (DESTRUCTIVE, drain-gated migration) | T2 | B | Backend/DB | AE-0163 (+consent+drain) |
 
-(AE-0133 → superseded by AE-0161 + AE-0162; AE-0143 → superseded by AE-0153-0157. Both updated to point here.)
+(AE-0133 → superseded by AE-0161 + AE-0162; AE-0143 → superseded by AE-0153-0157.
+**Round-1 architect fixes:** AE-0163 added as the behavior-preserving de-risking PREDECESSOR to the destructive
+drop — the embedded columns are still LIVE READS (per-field fallback + the `blog_markdown` 404 gate) with 4+
+writers, so AE-0162 can't drop them until AE-0163 makes `blog_posts` the sole writer and removes the read
+fallback. AE-0156 (identity) split into SLICE 1 (auth client lib — the shared `authenticated-fetch`/`server-fetch`
+HTTP client STAYS in `lib/`) + AE-0164 (route handlers/guards), gated on the new AE-0165 auth e2e. AE-0157's
+spurious `→AE-0156` dependency removed.)
 
 ## Risks & guardrails
 
@@ -81,11 +90,15 @@ value" (roadmap); no evidence it does, so it is explicitly NOT in Phase 8.
   are gated on "no remaining importer" (grep/typecheck/lint:boundaries proof) — never delete a path with a live
   consumer. Re-export-shim removal must follow a clean importer-zero check.
 - **Class B is consent-gated + reversible.** AE-0161 updates the safety net to the NEW approval≠release behavior
-  (it is the one place behavior changes); AE-0162 is reversible-by-backup, drain-gated (checkpoint-drain rule),
-  and only after confirming `blog_posts` is the single writer (no embedded-column writers remain). Neither starts
-  without explicit owner consent (Status: Intake).
-- **Identity (AE-0156) is route-adjacent** (auth guards + sign-in pages) — highest-risk Class-A slice; keep App
-  Router URLs + auth behavior byte-identical, lean on e2e/route smoke.
+  (it is the one place behavior changes). AE-0162 (the destructive drop) is reversible-by-backup, drain-gated, and
+  blocked by **AE-0163** — a behavior-preserving Class-A predecessor that makes `blog_posts` the SOLE writer AND
+  removes the embedded-column READ fallback (today `resolve_blog_body` + the `blog_markdown` 404 gate still read
+  the columns, and 4+ writers remain — so they cannot be dropped until AE-0163 lands). Neither AE-0161 nor AE-0162
+  starts without explicit owner consent (Status: Intake), after production observation of Phases 0-7.
+- **Identity is route-adjacent** and was split (architect round 1): AE-0156 moves only the auth-SPECIFIC client
+  lib (the shared `authenticated-fetch`/`server-fetch` HTTP client STAYS in `lib/`), AE-0164 relocates the route
+  handlers/guards — both gated on the **AE-0165** auth e2e (login/logout/refresh/guard) added so byte-identical
+  auth behavior is actually provable.
 - **Exit-gate enforcement.** Removing an `ignore_imports` exception or ratcheting a baseline must keep
   `lint-imports` / `import_baseline.py --check` / `lint:boundaries` green at the new lower number.
 - **No "big-bang."** Vertical slices, merged independently; the destructive drop (AE-0162) goes last, alone.
@@ -101,15 +114,18 @@ value" (roadmap); no evidence it does, so it is explicitly NOT in Phase 8.
 
 ## Suggested order (waves)
 
-- **Wave A (frontend cleanup, parallel-safe-ish):** AE-0153 first (unblocks the rest) → then AE-0154 / AE-0155 /
-  AE-0156 (serialize if they collide on `app/` or barrels) → AE-0157 (needs identity settled).
-- **Wave B (backend cleanup):** AE-0158 → AE-0159 → AE-0160 (can run alongside Wave A; disjoint trees).
-- **Wave C (consent-gated, LAST, only on explicit go-ahead):** AE-0161 (cutover; needs the frontend) → AE-0162
-  (destructive drop; drain-gated, alone).
+- **Wave A (frontend cleanup, SERIALIZED on the `app/`-touching slices):** AE-0153 first (unblocks the rest);
+  AE-0157 (schema-drift → blocking) can run anytime after AE-0153 (independent of identity). The `app/`-touching
+  slices serialize to avoid the Phase-7 collision: AE-0165 (auth e2e) → AE-0156 (identity slice 1) → AE-0164
+  (identity slice 2) → then AE-0154 ∥ AE-0155 (re-homing / route thinning).
+- **Wave B (backend cleanup, alongside Wave A — disjoint trees):** AE-0158 → AE-0159 → AE-0160; AE-0163
+  (writer-consolidation, behavior-preserving) runs here too (de-risks the Class-B drop).
+- **Wave C (consent-gated, LAST, only on explicit go-ahead, after production observation):** AE-0161 (cutover —
+  independent) and AE-0162 (destructive drop — blocked by AE-0163, drain-gated, alone).
 
 ## Handoff
 
-→ `/architect-skill` validate loop (confirm AE-0152-0162 Ready/Intake split is right; SCRUTINIZE: is the
+→ `/architect-skill` validate loop (confirm AE-0152-0165 Ready/Intake split is right; SCRUTINIZE: is the
 Class-A/Class-B risk partition correct; are the deletion-safety preconditions sufficient; does AE-0156 identity
 belong in Phase 8 or is it its own mini-phase; is AE-0162's drain-gate spec complete?), then execute Wave A/B
 (Class A) with the developer + QA loop; hold Wave C (Class B) for explicit owner consent.
