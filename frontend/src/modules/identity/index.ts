@@ -10,6 +10,11 @@
  * paths (`@/lib/jwt-auth`, `@/lib/auth-cookie`, `@/hooks/use-auth`) as a safety
  * net only.
  *
+ * AE-0164 adds the route-level guard surface (role constants + route-class
+ * predicates + the access-token cookie name + the static-asset matcher) used by
+ * `middleware.ts` and the admin route group, with a shim at
+ * `@/constants/middleware`.
+ *
  * NOTE: `lib/authenticated-fetch` and `lib/server-fetch` are the app-wide HTTP
  * client (not auth-specific) and intentionally stay in `lib/`.
  *
@@ -28,8 +33,24 @@ export {
   clearAccessTokenCookie,
   sanitizeLoginRedirect,
   isSecureRequest,
-  COOKIE_ACCESS_TOKEN,
 } from "./lib/auth-cookie";
+
+/* --- route-level guards (AE-0164) --- */
+export {
+  ROLES,
+  PUBLIC_ROUTES,
+  COOKIE_ACCESS_TOKEN,
+  STATIC_FILE_PATTERN,
+  isPublicRoute,
+  isPublicChatRoute,
+  isAuthRoute,
+  isAdminRoute,
+  isDashboardRoute,
+  isLegacyEditorRoute,
+  isEditorDashboardRoute,
+  isEditorRoute,
+  isStaticAsset,
+} from "./guards";
 
 /* --- hooks --- */
 export { useAuth } from "./hooks/use-auth";

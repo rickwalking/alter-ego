@@ -1,7 +1,8 @@
 import type { NextRequest, NextResponse } from "next/server";
 
-import { COOKIE_ACCESS_TOKEN } from "@/constants/middleware";
 import { SECONDS_PER_HOUR } from "@/constants/time";
+
+import { COOKIE_ACCESS_TOKEN } from "../guards";
 
 export { COOKIE_ACCESS_TOKEN };
 
