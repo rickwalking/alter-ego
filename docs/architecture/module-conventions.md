@@ -581,8 +581,11 @@ presentation contexts (publishing is downstream of approval), and for landing th
 larger exit gate while explicitly deferring its behavior-changing / destructive halves.
 
 ### 13a. Two ACL/owner seams — writes and reads (AE-0128 / AE-0131)
-The publishing context touches the legacy carousel/blog ORM through **exactly two** infrastructure modules,
-the only publishing code allowed to import that ORM:
+The publishing context **accesses** (queries / mutates) the legacy carousel/blog ORM through **exactly two**
+infrastructure modules — the only publishing code that touches the database for it. (A third infrastructure
+module, `read_projection_helpers.py`, is a stateless markdown helper the read ACL delegates body extraction
+to; it imports the `BlogPostModel` *type* only to annotate the row the ACL hands it and performs no ORM access
+of its own.) The two ACL seams:
 - **`legacy_publishing_acl.py`** (the WRITE owner) backs `CarouselReleasePort` (the `is_public=True` /
   `current_phase=published` public-release write, byte-identical to `crud.py:publish_carousel`, committed
   once via the platform UoW), `BlogVisibilityPort` (publish/unpublish status writes, flush-only — the route

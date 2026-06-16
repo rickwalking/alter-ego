@@ -17,6 +17,8 @@ from __future__ import annotations
 
 from typing import cast
 
+from rag_backend.infrastructure.database.models.blog_post import BlogPostModel
+
 # Title/subtitle heading separator — identical to the legacy helper.
 _TITLE_SUBTITLE_SEPARATOR = ":"
 _FIRST_PARAGRAPH_MAX_LEN = 200
@@ -60,25 +62,27 @@ def extract_first_paragraph(markdown: str) -> str | None:
 
 
 def resolve_blog_body(
-    row_content: object,
+    row: BlogPostModel | None,
     embedded_markdown: str | None,
 ) -> str | None:
     """Resolve the carousel-blog markdown (AE-0127 backfill, embedded fallback).
 
-    Prefers the ``origin='carousel'`` backfill row's rendered body (the row's JSON
-    ``content``, passed in by the read ACL — this helper stays ORM-free) when it
-    carries one, falling back to the embedded carousel ``blog_markdown`` column so
-    the response stays byte-identical. Returns ``None`` when neither provides a body
+    Prefers the ``origin='carousel'`` backfill row's rendered body when it carries
+    one, falling back to the embedded carousel ``blog_markdown`` column so the
+    response stays byte-identical. Returns ``None`` when neither provides a body
     (the route maps that to the legacy 404).
     """
-    body = _body_from_content(row_content)
+    body = _body_from_row(row)
     if body is not None:
         return body
     return embedded_markdown
 
 
-def _body_from_content(content: object) -> str | None:
-    """Extract a rendered markdown body from a backfill row's JSON ``content``."""
+def _body_from_row(row: BlogPostModel | None) -> str | None:
+    """Extract a rendered markdown body from a backfill row's JSON content."""
+    if row is None:
+        return None
+    content = cast("object", row.content)
     if not isinstance(content, dict):
         return None
     typed_content = cast("dict[str, object]", content)

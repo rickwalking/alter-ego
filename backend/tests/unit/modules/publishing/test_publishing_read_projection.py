@@ -118,13 +118,19 @@ class TestReadProjectionHelpers:
         assert extract_first_paragraph("# H\n\nFirst para\n\nSecond") == "First para"
 
     def test_resolve_blog_body_prefers_backfill_row(self) -> None:
-        """Scenario: a backfill row's content body overrides the embedded markdown."""
-        assert resolve_blog_body({"markdown": "ROW BODY"}, "EMBEDDED") == "ROW BODY"
+        """Scenario: a backfill row with a body overrides the embedded markdown."""
+        row = BlogPostModel.from_entity({
+            "title": "Row",
+            "slug": "row",
+            "content": {"markdown": "ROW BODY"},
+        })
+        assert resolve_blog_body(row, "EMBEDDED") == "ROW BODY"
 
     def test_resolve_blog_body_falls_back_to_embedded(self) -> None:
         """Scenario: an absent/empty backfill body falls back to embedded."""
         assert resolve_blog_body(None, "EMBEDDED") == "EMBEDDED"
-        assert resolve_blog_body({}, "EMBEDDED") == "EMBEDDED"
+        row = BlogPostModel.from_entity({"title": "R", "slug": "r", "content": {}})
+        assert resolve_blog_body(row, "EMBEDDED") == "EMBEDDED"
 
 
 # ==============================================================================
