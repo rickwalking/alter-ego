@@ -474,6 +474,52 @@ class TestPublicCarouselBlog:
         assert body["language"] == "en"
         assert body["available_languages"] == ["pt", "en"]
 
+    @pytest.mark.asyncio
+    async def test_blog_with_ae0127_backfill_row_is_byte_identical(
+        self, pub_env: PubEnv
+    ) -> None:
+        """Scenario: the AE-0127 backfill row (the production path) yields the
+        byte-identical /blog response as the embedded-only read.
+
+        The golden snapshots cover the embedded path; in production AE-0127 also
+        creates an ``origin='carousel'`` blog_posts row, and the projection prefers
+        it. This proves that prefer-the-row path returns exactly the embedded read.
+        """
+        from rag_backend.domain.constants.blog_post import BlogPostOrigin
+        from rag_backend.infrastructure.database.config import get_session_maker
+        from rag_backend.infrastructure.database.models import BlogPostModel
+
+        project_id = await pub_env.seed_carousel(
+            is_public=True, approved_for_publish=False
+        )
+        async with pub_env.client_for(pub_env.owner) as client:
+            embedded = await client.get(f"/api/carousels/{project_id}/blog")
+        assert embedded.status_code == 200
+
+        # Insert the AE-0127-shaped backfill row (title=title-or-topic, excerpt
+        # NULL, content.markdown=blog_markdown) exactly as the migration does.
+        session_maker = get_session_maker()
+        async with session_maker() as session:
+            session.add(
+                BlogPostModel.from_entity({
+                    "project_id": project_id,
+                    "origin": BlogPostOrigin.CAROUSEL.value,
+                    "title": FIXTURE_TITLE,
+                    "slug": f"carousel-{project_id}",
+                    "status": "published",
+                    "content": {
+                        "markdown": FIXTURE_BLOG_PT,
+                        "translations": {"pt": FIXTURE_BLOG_PT, "en": FIXTURE_BLOG_EN},
+                    },
+                })
+            )
+            await session.commit()
+
+        async with pub_env.client_for(pub_env.owner) as client:
+            with_row = await client.get(f"/api/carousels/{project_id}/blog")
+        assert with_row.status_code == 200
+        assert with_row.json() == embedded.json()  # byte-identical via the row path
+
 
 # ==============================================================================
 # Distribution: caption + publish/instagram (deterministic channel stub)
