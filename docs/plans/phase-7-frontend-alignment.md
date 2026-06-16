@@ -3,7 +3,7 @@
 **Planner output.** Source: `.agent/reports/domain-modularization.options.md` §"Phase 7: Align the frontend"
 (lines 1040-1059), the Target Frontend Tree (lines 554-606), the Module Contract Rules (lines 608+), and the
 round-2 corrections (frontend baseline does not reproduce → re-measure first; two `useBlogPosts()` hooks →
-the `CarouselArticle` vs `BlogPost` split is mandatory). Aligns to the accepted 9-context glossary in
+the carousel-origin vs first-class `BlogPost` hook split is mandatory). Aligns to the accepted 9-context glossary in
 `docs/architecture/domain-glossary.md` (`knowledge, identity, conversation, editorial, editorial-operations,
 carousel-presentation, persona, quality, publishing`) — note `persona` and `quality` are TWO contexts and
 `persona_quality` is explicitly forbidden by the glossary. **Soft precondition:** Phase 6 (PR #20) merging only
@@ -37,8 +37,11 @@ net IS: `typecheck` (tsc strict, clean) + `lint` (eslint, clean) + `lint:boundar
   lint rule extending the existing feature-boundary ratchet); migrate features → modules **by bounded context**,
   each behind its contract, keeping `@/` import paths resolvable (re-export shims where a path must keep working,
   mirroring the backend object-identity shims).
-- Disambiguate the two `useBlogPosts()` hooks: `use-carousel-blog.ts` (carousel-derived **CarouselArticle**)
-  vs `use-blog-posts.ts` (first-class **BlogPost**) — align names to the backend `BlogPost.origin` split.
+- Disambiguate the two `useBlogPosts()` hooks: `use-carousel-blog.ts` (carousel-origin blog posts —
+  **BlogPost, origin=carousel**) → `useCarouselBlogPosts`, vs `use-blog-posts.ts` (first-class **BlogPost**) →
+  keeps `useBlogPosts` — names aligned to the backend `BlogPost.origin` split. NOTE: the glossary REJECTS
+  `CarouselArticle`; the canonical term is `BlogPost (origin = carousel)`. Phase 7 keeps both hooks
+  (behavior-preserving); collapsing to a single representation is deferred (Phase 8).
 - Co-locate API/Zod/query contracts per module; move clearly-owned business components (`BlogPostCard`,
   `PersonaCard`, the workflow board) out of `components/atoms|molecules|organisms` into their module.
 - Add an **OpenAPI/Zod schema-drift check** (frontend Zod schemas vs the backend OpenAPI) as an advisory→blocking CI gate.
@@ -89,7 +92,7 @@ contract) — `persona_quality` is explicitly **forbidden** (glossary §"Avoid")
 | **AE-0134** | Phase 7 epic: Align the frontend to bounded contexts | T3 | Cross-cutting | — (tracks 0135-0142) |
 | **AE-0135** | Documented frontend baseline (file/LOC methodology + green-gate snapshot) + context-mapping doc | T2 | Frontend/Docs | — |
 | **AE-0136** | `modules/` scaffolding + public-contract convention + boundary-checker refactor (parameterize root/prefix/owner-segment to cover `modules/` AND `app/` consumers) + URL-inventory script + `build`/circular-import gates | T2 | Frontend/CI | AE-0135 |
-| **AE-0137** | Disambiguate `useBlogPosts`→`useCarouselArticles` (CarouselArticle) vs `useBlogPosts` (BlogPost) + publishing module (blog/distribution/scheduling) behind a public contract | T2 | Frontend | AE-0136 |
+| **AE-0137** | Disambiguate `useBlogPosts`→`useCarouselBlogPosts` (BlogPost origin=carousel) vs `useBlogPosts` (first-class BlogPost) + publishing module (blog/distribution/scheduling) behind a public contract | T2 | Frontend | AE-0136 |
 | **AE-0138** | editorial + editorial-operations modules (create/workflow → editorial; dashboard/analytics → editorial-operations) behind contracts | T2 | Frontend | AE-0136, AE-0137 |
 | **AE-0139** | carousel-presentation + persona + quality + conversation + knowledge modules behind contracts (+ identity docs-only note) | T2 | Frontend | AE-0136, AE-0138 |
 | **AE-0140** | Co-locate API/Zod/query contracts per module; move business components out of global atomic folders | T2 | Frontend | AE-0137, AE-0138, AE-0139 |
@@ -131,7 +134,7 @@ contract) — `persona_quality` is explicitly **forbidden** (glossary §"Avoid")
 - Features reorganized under `modules/<context>` sharing the backend glossary; feature internals reachable only
   via each module's public contract (enforced by the module-boundary lint rule).
 - Route pages are thin composition components; App Router URLs unchanged.
-- The two blog hooks disambiguated (CarouselArticle vs BlogPost); persona/personas consolidated.
+- The two blog hooks disambiguated (`useCarouselBlogPosts` for origin=carousel vs `useBlogPosts` first-class); persona/personas consolidated.
 - API/Zod/query contracts co-located per module; business components out of the global atomic folders.
 - OpenAPI/Zod schema-drift check in CI.
 - `typecheck` + `lint` + `lint:boundaries` (ratcheted down) + `test` (822+) + `check:legacy` green.

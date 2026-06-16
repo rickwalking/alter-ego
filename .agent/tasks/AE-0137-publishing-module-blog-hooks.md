@@ -14,7 +14,7 @@ Updated: 2026-06-16
 
 ## Goal
 
-Migrate features/blog + features/publish into modules/publishing (blog/distribution/scheduling) behind a public contract, and disambiguate the two useBlogPosts() hooks: use-carousel-blog (carousel-derived CarouselArticle) vs use-blog-posts (first-class BlogPost), aligning names to the backend BlogPost.origin split.
+Migrate features/blog + features/publish into modules/publishing (blog/distribution/scheduling) behind a public contract, and disambiguate the two useBlogPosts() hooks: use-carousel-blog (carousel-origin blog posts = BlogPost origin=carousel) vs use-blog-posts (first-class BlogPost), aligning names to the backend BlogPost.origin split. NOTE: the glossary REJECTS the name CarouselArticle; the canonical term is BlogPost (origin = carousel). Phase 7 keeps BOTH hooks (behavior-preserving); collapsing to a single representation is deferred (Phase 8).
 
 ## Problem
 
@@ -45,7 +45,7 @@ additions). Soft precondition: Phase 6 (PR #20) merging only finalizes glossary 
 ## Acceptance Criteria
 
 - [ ] modules/publishing SHALL own blog + distribution + scheduling behind a public contract; cross-context imports go through it
-- [ ] The carousel-derived hook (use-carousel-blog.ts `useBlogPosts`, currently the one re-exported via features/blog/hooks/index.ts) SHALL be renamed to `useCarouselArticles`; the first-class hook (use-blog-posts.ts `useBlogPosts`, imported directly by app/dashboard/blog-posts/*) keeps `useBlogPosts`. Every consumer's resolved hook SHALL be unchanged; re-export shims keep old paths resolving
+- [ ] The carousel-derived hook (use-carousel-blog.ts `useBlogPosts`, currently the one re-exported via features/blog/hooks/index.ts) SHALL be renamed to `useCarouselBlogPosts` (BlogPost origin=carousel — the glossary-rejected name CarouselArticle is NOT used); the first-class hook (use-blog-posts.ts `useBlogPosts`, imported directly by app/dashboard/blog-posts/*) keeps `useBlogPosts`. Every consumer's resolved hook SHALL be unchanged; re-export shims keep old paths resolving
 - [ ] App Router /blog + dashboard blog routes SHALL render byte-identically (URLs + UI unchanged)
 - [ ] The boundary ratchet SHALL ratchet DOWN or hold; typecheck/eslint/test/build green
 
@@ -56,7 +56,7 @@ Not applicable — behavior-preserving reorganization; verified by the green-gat
 
 ## Dependencies
 
-- Blocks: AE-0140, AE-0142
+- Blocks: AE-0138, AE-0140, AE-0142
 - Blocked by: AE-0136
 - Related: AE-0134
 
