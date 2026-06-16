@@ -1,0 +1,115 @@
+# Phase 8 — Remove Legacy Layers and Adapters (epic plan)
+
+**Planner output.** Source: `.agent/reports/domain-modularization.options.md` §"Phase 8: Remove legacy layers and
+adapters" (lines 1061-1079) + the two consent-gated deferral records created during Phases 6/7: **AE-0133**
+(backend — auto-publish cutover + destructive column drop) and **AE-0143** (frontend — shim removal, re-homing,
+route thinning, identity module, schema-drift blocking). **Precondition: Phases 0-7 merged** (PRs #15-#21 — all
+merged). This is the final roadmap phase: the modularization is functionally complete; Phase 8 removes the
+temporary compatibility scaffolding (shims, re-exports, exact import-linter exceptions, grandfathered baselines)
+and executes the two deliberately-deferred behavior/destructive changes — **with explicit owner consent and,
+per the roadmap, after production observation.**
+
+## Goal
+
+Drive the temporary migration scaffolding to zero: delete the `@/features/*` and backend re-export shims, remove
+global layer files whose ownership has fully moved into modules, shrink the exact Import-Linter `ignore_imports`
+exceptions (currently 35) and the grandfathered import baselines as violations reach zero, retire stale
+hand-maintained API-contract docs (now that OpenAPI is generated), and — consent-gated — execute the auto-publish
+cutover (approval ≠ release) and the destructive drop of the embedded carousel blog/distribution columns.
+
+## ⚠️ Scope decision (CRITICAL — read before validating)
+
+Phase 8 has **two risk classes**; they must NOT be conflated:
+
+**Class A — SAFE cleanup (behavior-preserving, no consent gate beyond normal review).** Removing dead
+shims/re-exports/anchors, re-homing components, thinning route pages, shrinking import exceptions/baselines as
+they reach zero, retiring stale docs. These are byte-identical / no-runtime-change and hold the existing green
+gates (backend gates.sh 14/0/3 + check-integrity + arch-ratchet; frontend typecheck/lint/boundaries 0/url 26/
+circular 0/822 tests/build/component-types ratchet). The boundary/exception ratchets only go DOWN.
+
+**Class B — CONSENT-GATED (behavior change + destructive).** (1) the **auto-publish cutover** (approval and
+public release become two distinct user actions — a real behavior change; the AE-0125 safety net is *updated to
+the new behavior*) and (2) the **destructive Alembic migration** dropping `blog_markdown`/`blog_translations`/
+`caption*`/`linkedin_post_*` from `carousel_projects` — **drain-gated** (every live LangGraph checkpoint finished
+on pre-migration code or restarted with documented consent) and only after `blog_posts` is the confirmed single
+writer. These STAY **Intake** until the owner explicitly schedules them (ADR-0008); they are reversible-by-backup
+and must not run while a live checkpoint references the old shape.
+
+**IN (this plan):** break Phase 8 into vertical slices (one ticket ≈ one branch), Class A as `Ready` (after
+architect validation), Class B as `Intake` (consent-gated). Replace the two broad umbrella tickets AE-0133/0143
+with focused slices that carry the real acceptance criteria; AE-0133/0143 become tracking records pointing here.
+
+**DEFERRED / OUT:** splitting persistence tables for independent ownership — only "if it provides measurable
+value" (roadmap); no evidence it does, so it is explicitly NOT in Phase 8.
+
+## Reality vs. spec (2026-06-16 scan)
+
+- **Frontend:** 12 `src/features/*` dirs remain as **re-export shims** (Phase 7 left them for compatibility);
+  feature/module boundary baseline = **0**; component-type-location baseline = **57** (down-only ratchet, can
+  shrink toward 0); a `modules/_example` anchor remains; the OpenAPI/Zod schema-drift check is **advisory** with
+  **24 pre-existing drifts**; auth/session lives in `lib/` + `app/` (no `modules/identity` yet).
+- **Backend:** `.importlinter` carries **35 `ignore_imports`** exact exceptions; import baselines grandfather
+  `application→infra` (62), `api→infra` (76), `get_container` (14), `.commit()` sites — all down-only; legacy
+  ACL/owner facades + some global `application/domain/infrastructure` files may now be dead post-extraction.
+- **API docs:** `docs/architecture/API_CONTRACT.md` is hand-maintained; AE-0141 now generates
+  `docs/architecture/openapi.json` from the app, making hand-kept sections stale/duplicative.
+- **Deferred (Class B):** the auto-publish cutover (AE-0133) + the embedded-column drop (AE-0133) — both still
+  pending; the approval≠release contract (AE-0111) + the additive `BlogPost.origin` backfill (AE-0127) are
+  already in place as preconditions.
+
+## Ticket breakdown
+
+| ID | Title | Tier | Class | Area | Blocked by |
+|----|-------|------|------|------|------------|
+| **AE-0152** | Phase 8 epic: Remove legacy layers and adapters | T3 | — | Cross-cutting | — (tracks 0153-0162) |
+| **AE-0153** | Frontend: remove `@/features/*` re-export shims + delete `src/features/` + drop `_example` anchor | T1 | A | Frontend | — |
+| **AE-0154** | Frontend: exhaustive business-component re-homing; ratchet component-type-location baseline down (→0 target) | T2 | A | Frontend | AE-0153 |
+| **AE-0155** | Frontend: route-page thinning (`app/**/page.tsx` → thin composition over module hooks) | T2 | A | Frontend | AE-0153 |
+| **AE-0156** | Frontend: `modules/identity` — consolidate auth/session from `lib/`+`app/` behind a public contract | T2 | A | Frontend | AE-0153 |
+| **AE-0157** | Reconcile the 24 OpenAPI/Zod schema drifts to 0 + flip the schema-drift check to blocking | T2 | A | Frontend/CI | AE-0156 |
+| **AE-0158** | Backend: remove dead compatibility re-exports/shims; ratchet import baselines (application/api→infra) down | T2 | A | Backend | — |
+| **AE-0159** | Backend: shrink `.importlinter` exact `ignore_imports` exceptions as violations reach zero; delete dead global layer files | T2 | A | Backend/CI | AE-0158 |
+| **AE-0160** | Retire stale hand-maintained API-contract doc sections (defer to generated OpenAPI from AE-0141) | T1 | A | Docs | AE-0158 |
+| **AE-0161** | Backend: auto-publish cutover — approval ≠ release as two distinct user actions (BEHAVIOR CHANGE) | T2 | B | Backend/Frontend | AE-0156 |
+| **AE-0162** | Backend: drop embedded carousel blog/distribution columns (DESTRUCTIVE, drain-gated migration) | T2 | B | Backend/DB | AE-0161 |
+
+(AE-0133 → superseded by AE-0161 + AE-0162; AE-0143 → superseded by AE-0153-0157. Both updated to point here.)
+
+## Risks & guardrails
+
+- **Class A is behavior-preserving.** Each cleanup ticket holds the green gates + ratchets down-only; deletions
+  are gated on "no remaining importer" (grep/typecheck/lint:boundaries proof) — never delete a path with a live
+  consumer. Re-export-shim removal must follow a clean importer-zero check.
+- **Class B is consent-gated + reversible.** AE-0161 updates the safety net to the NEW approval≠release behavior
+  (it is the one place behavior changes); AE-0162 is reversible-by-backup, drain-gated (checkpoint-drain rule),
+  and only after confirming `blog_posts` is the single writer (no embedded-column writers remain). Neither starts
+  without explicit owner consent (Status: Intake).
+- **Identity (AE-0156) is route-adjacent** (auth guards + sign-in pages) — highest-risk Class-A slice; keep App
+  Router URLs + auth behavior byte-identical, lean on e2e/route smoke.
+- **Exit-gate enforcement.** Removing an `ignore_imports` exception or ratcheting a baseline must keep
+  `lint-imports` / `import_baseline.py --check` / `lint:boundaries` green at the new lower number.
+- **No "big-bang."** Vertical slices, merged independently; the destructive drop (AE-0162) goes last, alone.
+
+## Epic exit gate (roadmap Phase 8)
+
+- No production import uses legacy module paths (`src/features/*` deleted; backend re-export shims gone).
+- Architecture rules pass **without broad ignores**: `.importlinter` exact exceptions shrunk to the minimum
+  (AE-0126 object-identity shims only, or zero); import baselines at their true floor; frontend boundary 0 +
+  component-type-location ratcheted toward 0; schema-drift check blocking at drift 0.
+- Migration + rollback proven for the destructive drop (Class B), executed only with consent + checkpoint-drain.
+- Stale hand-maintained API-contract sections retired in favor of generated OpenAPI.
+
+## Suggested order (waves)
+
+- **Wave A (frontend cleanup, parallel-safe-ish):** AE-0153 first (unblocks the rest) → then AE-0154 / AE-0155 /
+  AE-0156 (serialize if they collide on `app/` or barrels) → AE-0157 (needs identity settled).
+- **Wave B (backend cleanup):** AE-0158 → AE-0159 → AE-0160 (can run alongside Wave A; disjoint trees).
+- **Wave C (consent-gated, LAST, only on explicit go-ahead):** AE-0161 (cutover; needs the frontend) → AE-0162
+  (destructive drop; drain-gated, alone).
+
+## Handoff
+
+→ `/architect-skill` validate loop (confirm AE-0152-0162 Ready/Intake split is right; SCRUTINIZE: is the
+Class-A/Class-B risk partition correct; are the deletion-safety preconditions sufficient; does AE-0156 identity
+belong in Phase 8 or is it its own mini-phase; is AE-0162's drain-gate spec complete?), then execute Wave A/B
+(Class A) with the developer + QA loop; hold Wave C (Class B) for explicit owner consent.
