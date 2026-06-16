@@ -56,7 +56,7 @@ Not applicable — behavior-preserving reorganization; verified by the green-gat
 
 ## Dependencies
 
-- Blocks: AE-0142
+- Blocks: AE-0141, AE-0142
 - Blocked by: AE-0137, AE-0138, AE-0139
 - Related: AE-0134
 
