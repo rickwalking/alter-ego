@@ -6,14 +6,13 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { authenticatedFetch } from "@/lib/authenticated-fetch";
+import { API_BASE } from "@/constants/api";
 import { HTTP_HEADER_IF_MATCH } from "@/constants/workflow";
 import type {
   BlogPost,
   BlogPostCreatePayload,
   BlogPostUpdatePayload,
 } from "../types";
-
-const API_BASE = "/api";
 
 export interface BlogPostFilters {
   status?: string;

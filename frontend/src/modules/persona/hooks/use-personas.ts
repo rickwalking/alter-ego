@@ -4,13 +4,12 @@
 
 import { useState, useEffect } from "react";
 import { authenticatedFetch } from "@/lib/authenticated-fetch";
+import { API_BASE } from "@/constants/api";
 import type {
   PersonaProfile,
   PersonaCreatePayload,
   PersonaUpdatePayload,
 } from "@/modules/persona/types";
-
-const API_BASE = "/api";
 
 export function usePersonas() {
   const [personas, setPersonas] = useState<PersonaProfile[]>([]);

@@ -1,3 +1,6 @@
+/** Client-side API base path (the Next.js BFF route prefix). */
+export const API_BASE = "/api";
+
 /** API endpoint paths. */
 export const API_ENDPOINTS = {
   AUTH_LOGIN: "/api/auth/token",

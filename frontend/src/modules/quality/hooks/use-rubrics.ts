@@ -4,13 +4,12 @@
 
 import { useState, useEffect } from "react";
 import { authenticatedFetch } from "@/lib/authenticated-fetch";
+import { API_BASE } from "@/constants/api";
 import type {
   QualityRubric,
   QualityRubricCreatePayload,
   QualityRubricUpdatePayload,
 } from "@/modules/quality/types";
-
-const API_BASE = "/api";
 
 export function useRubrics() {
   const [rubrics, setRubrics] = useState<QualityRubric[]>([]);
