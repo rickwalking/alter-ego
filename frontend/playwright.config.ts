@@ -24,7 +24,18 @@ export default defineConfig({
         storageState: 'tests/e2e/.auth/admin.json',
       },
       dependencies: ['setup'],
-      testIgnore: /auth\.setup\.ts/,
+      // Exclude the real-login setup AND the backend-free auth baseline (AE-0165):
+      // auth-baseline runs in its own project with no storageState / no setup.
+      testIgnore: [/auth\.setup\.ts/, /auth-baseline\.spec\.ts/],
+    },
+    {
+      // AE-0165: deterministic, backend-free auth baseline. No storageState and
+      // no `setup` dependency, so it never triggers the real-backend admin login.
+      name: 'auth-baseline',
+      testMatch: /auth-baseline\.spec\.ts/,
+      use: {
+        ...devices['Desktop Chrome'],
+      },
     },
   ],
   webServer: process.env.PLAYWRIGHT_SKIP_WEBSERVER
