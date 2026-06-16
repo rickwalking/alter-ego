@@ -35,6 +35,7 @@ from rag_backend.modules.publishing import (
     LegacyPublishingAcl,
     PublishingAdapters,
     PublishingModule,
+    PublishingReadAcl,
     bootstrap_module,
 )
 from rag_backend.platform.database import SqlAlchemyUnitOfWork
@@ -57,13 +58,17 @@ class PublishingComposition:
     scheduled-publish service — all resolved by the calling route module (which
     carries the grandfathered infra imports) so this edge module stays free of any
     new ``api -> infrastructure`` import. Kept to a single grouped argument
-    (backend/CLAUDE.md ≤3 args).
+    (backend/CLAUDE.md ≤3 args). ``with_read`` (AE-0131) requests the read
+    projection + blog-CRUD ports backed by the read ACL bound to the same session
+    (the carousel-blog/calendar/board/analytics + blog-CRUD routes set it; the
+    write edges leave it ``False``).
     """
 
     session: AsyncSession
     carousel_repository: CarouselRepository
     scheduler: ScheduledPublishService | None = None
     social_publisher: SocialPublisher | None = None
+    with_read: bool = False
 
 
 def build_publishing_module(
@@ -89,8 +94,25 @@ def build_publishing_module(
         distribution_publisher=_build_distribution_publisher(
             composition.social_publisher
         ),
+        read_acl=_build_read_acl(composition),
     )
     return bootstrap_module(platform=_PLATFORM_PLACEHOLDER, adapters=adapters)
+
+
+def _build_read_acl(
+    composition: PublishingComposition,
+) -> PublishingReadAcl | None:
+    """Build the AE-0131 read ACL bound to the request session when reads are needed.
+
+    The carousel-blog/calendar/board/analytics + blog-CRUD read routes set
+    ``with_read`` so the read + blog-CRUD ports are wired to the read ACL — the
+    sole carousel/blog ORM read seam — bound to the EXACT same request session the
+    route already uses. The write edges leave ``with_read`` ``False`` so the read
+    ports stay unwired there.
+    """
+    if not composition.with_read:
+        return None
+    return PublishingReadAcl(composition.session)
 
 
 def _build_distribution_publisher(

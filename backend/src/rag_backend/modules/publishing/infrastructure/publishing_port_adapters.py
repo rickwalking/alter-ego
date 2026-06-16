@@ -18,8 +18,24 @@ from __future__ import annotations
 
 from datetime import datetime
 
+from rag_backend.domain.models import CarouselProject
+from rag_backend.modules.publishing.domain.models import BlogPostModel
+from rag_backend.modules.publishing.domain.projections import (
+    AnalyticsProjection,
+    AnalyticsQuery,
+    BlogListQuery,
+    BoardProjection,
+    BoardQuery,
+    CalendarProjection,
+    CalendarQuery,
+    CarouselBlogI18nProjection,
+    CarouselBlogProjection,
+)
 from rag_backend.modules.publishing.infrastructure.legacy_publishing_acl import (
     LegacyPublishingAcl,
+)
+from rag_backend.modules.publishing.infrastructure.publishing_read_acl import (
+    PublishingReadAcl,
 )
 
 
@@ -76,8 +92,77 @@ class AclBlogScheduleAdapter:
         return await self._acl.process_due_posts()
 
 
+class AclPublishingReadAdapter:
+    """:class:`PublishingReadPort` backed by the publishing read ACL (AE-0131).
+
+    Forwards the carousel-blog (+lang), content-calendar, workflow-board, and
+    editorial-analytics projections to the read ACL — the sole carousel/blog ORM
+    read seam — which returns the byte-identical legacy reads as projection value
+    objects.
+    """
+
+    def __init__(self, acl: PublishingReadAcl) -> None:
+        self._acl = acl
+
+    async def project_carousel_blog(
+        self,
+        project: CarouselProject,
+    ) -> CarouselBlogProjection | None:
+        """Project the public carousel blog (default pt-BR) via the read ACL."""
+        return await self._acl.project_carousel_blog(project)
+
+    async def project_carousel_blog_i18n(
+        self,
+        project: CarouselProject,
+        language: str,
+    ) -> CarouselBlogI18nProjection | None:
+        """Project the localized carousel blog via the read ACL."""
+        return await self._acl.project_carousel_blog_i18n(project, language)
+
+    async def project_calendar(self, query: CalendarQuery) -> CalendarProjection:
+        """Project the content-calendar entries via the read ACL."""
+        return await self._acl.project_calendar(query)
+
+    async def project_board(self, query: BoardQuery) -> BoardProjection:
+        """Project the workflow-board phase columns via the read ACL."""
+        return await self._acl.project_board(query)
+
+    async def project_analytics(self, query: AnalyticsQuery) -> AnalyticsProjection:
+        """Project the editorial-analytics summary + velocity via the read ACL."""
+        return await self._acl.project_analytics(query)
+
+
+class AclBlogPostCrudAdapter:
+    """:class:`BlogPostCrudPort` backed by the publishing read ACL (AE-0131).
+
+    Forwards the blog-post CRUD persistence-row reads/builds to the read ACL (the
+    sole blog ORM seam) so the thin blog routes import no blog ORM/repository; the
+    route keeps the access checks + audit/event/lock orchestration + the commit.
+    """
+
+    def __init__(self, acl: PublishingReadAcl) -> None:
+        self._acl = acl
+
+    def new_post(self, payload: dict[str, object]) -> BlogPostModel:
+        """Build an unsaved blog row from the create payload via the read ACL."""
+        return self._acl.new_post(payload)
+
+    async def get_post(self, post_id: str) -> BlogPostModel | None:
+        """Load a blog row by id via the read ACL, or ``None``."""
+        return await self._acl.get_post(post_id)
+
+    async def list_summaries(
+        self,
+        query: BlogListQuery,
+    ) -> tuple[list[BlogPostModel], int]:
+        """List blog summaries + total count via the read ACL."""
+        return await self._acl.list_summaries(query)
+
+
 __all__ = [
+    "AclBlogPostCrudAdapter",
     "AclBlogScheduleAdapter",
     "AclBlogVisibilityAdapter",
     "AclCarouselReleaseAdapter",
+    "AclPublishingReadAdapter",
 ]

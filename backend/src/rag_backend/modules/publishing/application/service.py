@@ -40,16 +40,31 @@ from rag_backend.modules.publishing.application.release_command import (
     CarouselReleaseHandler,
 )
 from rag_backend.modules.publishing.domain.models import (
+    BlogPostModel,
+    CarouselProject,
     DistributionResult,
     Publication,
 )
 from rag_backend.modules.publishing.domain.ports import (
+    BlogPostCrudPort,
     BlogPostRepository,
     BlogSchedulePort,
     BlogVisibilityPort,
     CarouselReleasePort,
     CarouselRepository,
     DistributionPublisher,
+    PublishingReadPort,
+)
+from rag_backend.modules.publishing.domain.projections import (
+    AnalyticsProjection,
+    AnalyticsQuery,
+    BlogListQuery,
+    BoardProjection,
+    BoardQuery,
+    CalendarProjection,
+    CalendarQuery,
+    CarouselBlogI18nProjection,
+    CarouselBlogProjection,
 )
 
 # Programmer-error sentinels for a use case invoked without its required port; the
@@ -61,6 +76,8 @@ _ERR_NO_SCHEDULE_PORT = "publishing service invoked without the blog schedule po
 _ERR_NO_DISTRIBUTION_PORT = (
     "publishing service invoked without the distribution publisher port"
 )
+_ERR_NO_READ_PORT = "publishing service invoked without the read projection port"
+_ERR_NO_CRUD_PORT = "publishing service invoked without the blog CRUD port"
 
 
 @dataclass(frozen=True)
@@ -80,6 +97,8 @@ class PublishingPorts:
     blog_visibility: BlogVisibilityPort | None = None
     blog_schedule: BlogSchedulePort | None = None
     distribution: DistributionPublisher | None = None
+    read: PublishingReadPort | None = None
+    blog_crud: BlogPostCrudPort | None = None
 
 
 class PublishingService:
@@ -160,6 +179,61 @@ class PublishingService:
         """Publish all blog posts whose scheduled time has passed; return count."""
         port = self._require_schedule_port()
         return await port.process_due_posts()
+
+    async def project_carousel_blog(
+        self,
+        project: CarouselProject,
+    ) -> CarouselBlogProjection | None:
+        """Project the public carousel blog (default pt-BR), or ``None`` if absent."""
+        return await self._require_read_port().project_carousel_blog(project)
+
+    async def project_carousel_blog_i18n(
+        self,
+        project: CarouselProject,
+        language: str,
+    ) -> CarouselBlogI18nProjection | None:
+        """Project the localized carousel blog, ``None`` if absent in ``language``."""
+        port = self._require_read_port()
+        return await port.project_carousel_blog_i18n(project, language)
+
+    async def project_calendar(self, query: CalendarQuery) -> CalendarProjection:
+        """Project the content-calendar entries in the query's date range."""
+        return await self._require_read_port().project_calendar(query)
+
+    async def project_board(self, query: BoardQuery) -> BoardProjection:
+        """Project the workflow-board phase columns for the caller's scope."""
+        return await self._require_read_port().project_board(query)
+
+    async def project_analytics(self, query: AnalyticsQuery) -> AnalyticsProjection:
+        """Project the editorial-analytics summary + weekly velocity."""
+        return await self._require_read_port().project_analytics(query)
+
+    def new_blog_post(self, payload: dict[str, object]) -> BlogPostModel:
+        """Build an unsaved blog row from the create payload (no session write)."""
+        return self._require_crud_port().new_post(payload)
+
+    async def get_blog_post(self, post_id: str) -> BlogPostModel | None:
+        """Load a blog row by id through the request session, or ``None``."""
+        return await self._require_crud_port().get_post(post_id)
+
+    async def list_blog_summaries(
+        self,
+        query: BlogListQuery,
+    ) -> tuple[list[BlogPostModel], int]:
+        """List blog summaries + the total count (legacy ``list_summaries``)."""
+        return await self._require_crud_port().list_summaries(query)
+
+    def _require_read_port(self) -> PublishingReadPort:
+        port = self._ports.read
+        if port is None:
+            raise RuntimeError(_ERR_NO_READ_PORT)
+        return port
+
+    def _require_crud_port(self) -> BlogPostCrudPort:
+        port = self._ports.blog_crud
+        if port is None:
+            raise RuntimeError(_ERR_NO_CRUD_PORT)
+        return port
 
     def _require_visibility_port(self) -> BlogVisibilityPort:
         port = self._ports.blog_visibility

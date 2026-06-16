@@ -58,13 +58,26 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Protocol
 
+from rag_backend.domain.models.carousel import CarouselProject
 from rag_backend.domain.protocols.repositories import CarouselRepository
 from rag_backend.infrastructure.database.blog_post_repository import (
     BlogPostRepository,
 )
 from rag_backend.modules.publishing.domain.models import (
+    BlogPostModel,
     DistributionResult,
     Publication,
+)
+from rag_backend.modules.publishing.domain.projections import (
+    AnalyticsProjection,
+    AnalyticsQuery,
+    BlogListQuery,
+    BoardProjection,
+    BoardQuery,
+    CalendarProjection,
+    CalendarQuery,
+    CarouselBlogI18nProjection,
+    CarouselBlogProjection,
 )
 
 
@@ -105,6 +118,84 @@ class DistributionPublisher(Protocol):
         Projects the already-persisted caption from the :class:`Publication` view;
         no LLM call — identical to the legacy ``project.caption or ""`` read.
         """
+        ...
+
+
+class PublishingReadPort(Protocol):
+    """Read-model projection contract for the public/editor READ surfaces (AE-0131).
+
+    The single seam through which the publishing context serves the public carousel
+    ``/blog`` (+lang), the content-calendar, the workflow-board, and the
+    editorial-analytics dashboard. It returns the publishing context's own
+    boundary-safe projection value objects (never the ORM, never ``Any``); the
+    concrete adapter (the read-side ACL in ``infrastructure``) is the ONLY
+    publishing code that touches the carousel/blog ORM for these reads.
+
+    Behavior-preserving + additive (AE-0131): the carousel-blog projection reads
+    the ``blog_posts`` ``origin='carousel'`` rows (AE-0127 backfill) when present,
+    falling back per-field to the embedded carousel columns so the response is
+    byte-identical; the calendar/board/analytics projections aggregate exactly the
+    same rows the legacy route/services read.
+    """
+
+    async def project_carousel_blog(
+        self,
+        project: CarouselProject,
+    ) -> CarouselBlogProjection | None:
+        """Project the public carousel blog (default pt-BR), or ``None`` if absent.
+
+        Returns ``None`` when the carousel has no generated blog body (the route
+        maps that to the legacy 404); the ``project`` is already access-checked at
+        the edge.
+        """
+        ...
+
+    async def project_carousel_blog_i18n(
+        self,
+        project: CarouselProject,
+        language: str,
+    ) -> CarouselBlogI18nProjection | None:
+        """Project the localized carousel blog, ``None`` if absent in ``language``."""
+        ...
+
+    async def project_calendar(self, query: CalendarQuery) -> CalendarProjection:
+        """Project the content-calendar entries in the query's date range."""
+        ...
+
+    async def project_board(self, query: BoardQuery) -> BoardProjection:
+        """Project the workflow-board phase columns for the caller's scope."""
+        ...
+
+    async def project_analytics(self, query: AnalyticsQuery) -> AnalyticsProjection:
+        """Project the editorial-analytics summary + weekly velocity."""
+        ...
+
+
+class BlogPostCrudPort(Protocol):
+    """Blog-post CRUD persistence-row contract for the thin blog routes (AE-0131).
+
+    The seam through which the blog-post CRUD routes obtain their persistence rows
+    so the routes themselves import no blog ORM/repository. The concrete adapter
+    (the read-side ACL in ``infrastructure``) owns the blog ORM; the route keeps
+    the access checks, audit/event/lock orchestration, and the single commit at the
+    edge (byte-identical). ``new_post``/``get_post`` return the canonical
+    :class:`BlogPostModel` (re-exported, identical object) the route stages in its
+    own session and serializes via the response model.
+    """
+
+    def new_post(self, payload: dict[str, object]) -> BlogPostModel:
+        """Build an unsaved blog row from the create payload (no session write)."""
+        ...
+
+    async def get_post(self, post_id: str) -> BlogPostModel | None:
+        """Load a blog row by id through the request session, or ``None``."""
+        ...
+
+    async def list_summaries(
+        self,
+        query: BlogListQuery,
+    ) -> tuple[list[BlogPostModel], int]:
+        """List blog summaries + the total count (legacy ``list_summaries``)."""
         ...
 
 
@@ -171,10 +262,12 @@ class BlogSchedulePort(Protocol):
 
 
 __all__ = [
+    "BlogPostCrudPort",
     "BlogPostRepository",
     "BlogSchedulePort",
     "BlogVisibilityPort",
     "CarouselReleasePort",
     "CarouselRepository",
     "DistributionPublisher",
+    "PublishingReadPort",
 ]

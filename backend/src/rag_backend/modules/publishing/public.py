@@ -47,6 +47,7 @@ from rag_backend.modules.publishing.bootstrap import (
     PublishingModule,
     bootstrap_module,
 )
+from rag_backend.modules.publishing.constants import BOARD_PHASES
 from rag_backend.modules.publishing.domain.models import (
     BlogPost,
     BlogPostModel,
@@ -61,12 +62,30 @@ from rag_backend.modules.publishing.domain.models import (
     ReleaseState,
 )
 from rag_backend.modules.publishing.domain.ports import (
+    BlogPostCrudPort,
     BlogPostRepository,
     BlogSchedulePort,
     BlogVisibilityPort,
     CarouselReleasePort,
     CarouselRepository,
     DistributionPublisher,
+    PublishingReadPort,
+)
+from rag_backend.modules.publishing.domain.projections import (
+    AnalyticsProjection,
+    AnalyticsQuery,
+    AnalyticsSummary,
+    AnalyticsVelocityWeek,
+    BlogListQuery,
+    BoardCard,
+    BoardColumn,
+    BoardProjection,
+    BoardQuery,
+    CalendarItem,
+    CalendarProjection,
+    CalendarQuery,
+    CarouselBlogI18nProjection,
+    CarouselBlogProjection,
 )
 from rag_backend.modules.publishing.infrastructure.distribution_channel_adapter import (
     ChannelDistributionPublisher,
@@ -75,21 +94,44 @@ from rag_backend.modules.publishing.infrastructure.legacy_publishing_acl import 
     LegacyPublishingAcl,
 )
 from rag_backend.modules.publishing.infrastructure.publishing_port_adapters import (
+    AclBlogPostCrudAdapter,
     AclBlogScheduleAdapter,
     AclBlogVisibilityAdapter,
     AclCarouselReleaseAdapter,
+    AclPublishingReadAdapter,
+)
+from rag_backend.modules.publishing.infrastructure.publishing_read_acl import (
+    PublishingReadAcl,
 )
 
 __all__ = [
+    "BOARD_PHASES",
+    "AclBlogPostCrudAdapter",
     "AclBlogScheduleAdapter",
     "AclBlogVisibilityAdapter",
     "AclCarouselReleaseAdapter",
+    "AclPublishingReadAdapter",
+    "AnalyticsProjection",
+    "AnalyticsQuery",
+    "AnalyticsSummary",
+    "AnalyticsVelocityWeek",
+    "BlogListQuery",
     "BlogPost",
+    "BlogPostCrudPort",
     "BlogPostModel",
     "BlogPostRepository",
     "BlogPostStatus",
     "BlogSchedulePort",
     "BlogVisibilityPort",
+    "BoardCard",
+    "BoardColumn",
+    "BoardProjection",
+    "BoardQuery",
+    "CalendarItem",
+    "CalendarProjection",
+    "CalendarQuery",
+    "CarouselBlogI18nProjection",
+    "CarouselBlogProjection",
     "CarouselProject",
     "CarouselReleaseCommand",
     "CarouselReleaseHandler",
@@ -105,6 +147,8 @@ __all__ = [
     "PublishingAdapters",
     "PublishingModule",
     "PublishingPorts",
+    "PublishingReadAcl",
+    "PublishingReadPort",
     "PublishingSchedule",
     "PublishingService",
     "ReleasePhase",

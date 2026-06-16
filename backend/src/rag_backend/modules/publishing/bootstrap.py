@@ -45,9 +45,14 @@ from rag_backend.modules.publishing.infrastructure.legacy_publishing_acl import 
     LegacyPublishingAcl,
 )
 from rag_backend.modules.publishing.infrastructure.publishing_port_adapters import (
+    AclBlogPostCrudAdapter,
     AclBlogScheduleAdapter,
     AclBlogVisibilityAdapter,
     AclCarouselReleaseAdapter,
+    AclPublishingReadAdapter,
+)
+from rag_backend.modules.publishing.infrastructure.publishing_read_acl import (
+    PublishingReadAcl,
 )
 from rag_backend.platform.database import UnitOfWork
 
@@ -78,6 +83,7 @@ class PublishingAdapters:
     blog_repository: BlogPostRepository | None = None
     publishing_acl: LegacyPublishingAcl | None = None
     distribution_publisher: DistributionPublisher | None = None
+    read_acl: PublishingReadAcl | None = None
 
 
 @dataclass(frozen=True)
@@ -131,11 +137,14 @@ def _build_ports(adapters: PublishingAdapters) -> PublishingPorts:
     service stays carousel-repository-only; the distribution port is wired
     independently so the distribution edge does not require the ACL.
     """
+    read_adapters = _build_read_ports(adapters.read_acl)
     acl = adapters.publishing_acl
     if acl is None:
         return PublishingPorts(
             blog_repository=adapters.blog_repository,
             distribution=adapters.distribution_publisher,
+            read=read_adapters[0],
+            blog_crud=read_adapters[1],
         )
     return PublishingPorts(
         blog_repository=adapters.blog_repository,
@@ -143,7 +152,24 @@ def _build_ports(adapters: PublishingAdapters) -> PublishingPorts:
         blog_visibility=AclBlogVisibilityAdapter(acl),
         blog_schedule=AclBlogScheduleAdapter(acl),
         distribution=adapters.distribution_publisher,
+        read=read_adapters[0],
+        blog_crud=read_adapters[1],
     )
+
+
+def _build_read_ports(
+    read_acl: PublishingReadAcl | None,
+) -> tuple[AclPublishingReadAdapter | None, AclBlogPostCrudAdapter | None]:
+    """Build the AE-0131 read + blog-CRUD ports from the read ACL (the ORM read seam).
+
+    The read edge (the carousel-blog/calendar/board/analytics + blog-CRUD routes)
+    supplies the :class:`PublishingReadAcl`; the write edges (carousel/blog
+    release) do not, so the read ports stay unwired there. Wired independently of
+    the write ACL so neither edge requires the other's seam.
+    """
+    if read_acl is None:
+        return None, None
+    return AclPublishingReadAdapter(read_acl), AclBlogPostCrudAdapter(read_acl)
 
 
 __all__ = [
