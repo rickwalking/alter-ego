@@ -22,13 +22,7 @@ import {
   TOOL_REFINE_CAROUSEL_COPY,
 } from "@/constants/publish-chat";
 import { carouselKeys } from "@/modules/carousel-presentation";
-
-export interface UsePublishChatReturn {
-  conversationId: string | null;
-  messages: Message[];
-  isStreaming: boolean;
-  sendMessage: (content: string) => void;
-}
+import type { UsePublishChatReturn } from "./types";
 
 function readStoredConversationId(projectId: string): string | null {
   if (typeof window === "undefined") return null;

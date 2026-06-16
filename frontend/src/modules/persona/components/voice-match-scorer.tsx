@@ -13,10 +13,7 @@ import { VOICE_MATCH_MIN_SCORE } from "@/constants/blog-ai";
 import { API_ENDPOINTS, HTTP_METHODS } from "@/constants/api";
 import type { VoiceScoreResult } from "@/modules/publishing";
 import { authenticatedFetch } from "@/lib/authenticated-fetch";
-
-interface VoiceMatchScorerProps {
-  personaId: string;
-}
+import type { VoiceMatchScorerProps } from "./types";
 
 export function VoiceMatchScorer({
   personaId,

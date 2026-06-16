@@ -1,11 +1,7 @@
 "use client";
 
 import * as LucideIcons from "lucide-react";
-
-export interface PresentationIconPreviewProps {
-  iconName: string;
-  className?: string;
-}
+import type { PresentationIconPreviewProps } from "./types";
 
 function toLucideComponentName(iconName: string): string {
   return iconName

@@ -7,12 +7,7 @@ import { useTranslations } from "next-intl";
 import { useDeleteCarousel } from "@/modules/editorial";
 import { useAuth } from "@/modules/identity";
 import { ROUTE_PATHS } from "@/constants/api";
-import type { CarouselDesignResponse } from "@/schemas/carousel";
-
-interface BlogPostAdminPanelProps {
-  projectId: string;
-  design: CarouselDesignResponse;
-}
+import type { BlogPostAdminPanelProps } from "./types";
 
 export function BlogPostAdminPanel({
   projectId,

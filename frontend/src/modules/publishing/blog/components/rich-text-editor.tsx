@@ -4,14 +4,7 @@ import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import { useEffect } from "react";
 import { cn } from "@/lib/utils";
-
-export interface RichTextEditorProps {
-  value: string;
-  onChange: (value: string) => void;
-  onSelectionChange?: (selectedText: string) => void;
-  className?: string;
-  placeholder?: string;
-}
+import type { RichTextEditorProps } from "./types";
 
 export function RichTextEditor({
   value,

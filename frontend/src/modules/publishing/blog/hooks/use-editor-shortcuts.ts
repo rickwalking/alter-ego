@@ -7,13 +7,7 @@ import {
   SHORTCUT_SAVE,
   SHORTCUT_SUBMIT_REVIEW,
 } from "@/constants/editor-shortcuts";
-
-interface EditorShortcutHandlers {
-  onSave?: () => void;
-  onSubmitReview?: () => void;
-  onAiSuggest?: () => void;
-  onShowHelp?: () => void;
-}
+import type { EditorShortcutHandlers } from "./types";
 
 function matchShortcut(event: KeyboardEvent, combo: string): boolean {
   const mod = event.metaKey || event.ctrlKey;

@@ -1,16 +1,8 @@
 /** Resume/approve/revise actions for editorial workflow hook. */
 
-import {
-  useCallback,
-  type Dispatch,
-  type RefObject,
-  type SetStateAction,
-} from "react";
+import { useCallback } from "react";
 import { API_ENDPOINTS, HTTP_METHODS, HTTP_STATUS } from "@/constants/api";
-import {
-  EDITORIAL_WORKFLOW_TRANSPORT_MODE,
-  type EditorialWorkflowTransportMode,
-} from "@/constants/editorial-workflow";
+import { EDITORIAL_WORKFLOW_TRANSPORT_MODE } from "@/constants/editorial-workflow";
 import { WORKFLOW_PHASE_STATUS } from "@/constants/workflow";
 import type {
   EditorialWorkflowState,
@@ -25,29 +17,14 @@ import {
   isWorkflowReady,
   readApiError,
   waitUntilWorkflowReadyWithTransport,
-  type EditorialWorkflowResumeAcceptedResponse,
 } from "./use-editorial-workflow-utils";
+import type {
+  EditorialReviseOptions,
+  EditorialWorkflowResumeAcceptedResponse,
+  UseEditorialWorkflowResumeParams,
+} from "./types";
 
-export interface EditorialReviseOptions {
-  targetPhase?: string;
-  editedText?: string;
-  editedLocalizedSlides?: LocalizedSlideReview[];
-}
-
-interface UseEditorialWorkflowResumeParams {
-  projectId: string;
-  lockVersion: number | undefined;
-  translateError: (key: string) => string;
-  workflowStateRef: RefObject<EditorialWorkflowState | null>;
-  transportModeRef: RefObject<EditorialWorkflowTransportMode | null>;
-  refreshState: () => Promise<EditorialWorkflowState | null>;
-  setState: Dispatch<SetStateAction<EditorialWorkflowState | null>>;
-  setPhaseEvents: Dispatch<SetStateAction<string[]>>;
-  setLoading: Dispatch<SetStateAction<boolean>>;
-  setError: Dispatch<SetStateAction<string | null>>;
-  enterPollingFallback: () => void;
-  stopPollingFallback: () => void;
-}
+export type { EditorialReviseOptions } from "./types";
 
 export function useEditorialWorkflowResume({
   projectId,

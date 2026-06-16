@@ -1,11 +1,4 @@
-import type { CarouselDesignResponse } from "@/schemas/carousel";
-
-interface BlogPostHeaderProps {
-  title: string;
-  subtitle?: string;
-  badge: string;
-  design: CarouselDesignResponse;
-}
+import type { BlogPostHeaderProps } from "./types";
 
 export function BlogPostHeader({
   title,

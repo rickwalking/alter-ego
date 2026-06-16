@@ -1,11 +1,6 @@
 "use client";
 
-type VersionDiffViewProps = {
-  leftLabel: string;
-  rightLabel: string;
-  leftText: string;
-  rightText: string;
-};
+import type { VersionDiffViewProps } from "./types";
 
 function computeLineDiff(
   left: string,

@@ -14,10 +14,7 @@ import {
   NeonCardTitle,
 } from "@/components/molecules/neon-card";
 import { useAccessibilityCheck } from "@/modules/publishing/blog/hooks/use-accessibility-check";
-
-interface AccessibilityCheckerProps {
-  postId: string | null;
-}
+import type { AccessibilityCheckerProps } from "./types";
 
 export function AccessibilityChecker({ postId }: AccessibilityCheckerProps) {
   const t = useTranslations("blogEditorial.accessibility");

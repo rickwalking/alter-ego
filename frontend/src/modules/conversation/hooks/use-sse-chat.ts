@@ -7,24 +7,9 @@ import { chatKeys } from "@/modules/conversation/queries";
 import { streamSseEvents, SSE_EVENT_TYPE } from "@/lib/sse-client";
 import { API_ENDPOINTS } from "@/constants/api";
 import type { Message } from "@/schemas/chat";
+import type { UseSseChatOptions, UseSseChatReturn } from "./types";
 
-export interface UseSseChatOptions {
-  conversationId?: string | null;
-  /** When false, do not load persisted messages (public ephemeral chat). */
-  enableHistory?: boolean;
-}
-
-export interface UseSseChatReturn {
-  conversationId: string | null;
-  messages: Message[];
-  isStreaming: boolean;
-  error: string | null;
-  sendMessage: (
-    content: string,
-    overrideConversationId?: string,
-  ) => Promise<void>;
-  startNewChat: () => void;
-}
+export type { UseSseChatOptions, UseSseChatReturn } from "./types";
 
 function mergeMessages(
   historyMessages: Message[],

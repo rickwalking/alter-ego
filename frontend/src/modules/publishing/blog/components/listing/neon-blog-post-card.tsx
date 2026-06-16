@@ -2,11 +2,7 @@ import Link from "next/link";
 import { NeonBadge } from "@/components/atoms/neon-badge";
 import { NeonCard } from "@/components/molecules/neon-card";
 import { TEXT, TEXT_MUTED, TEXT_DIM } from "@/constants/neon";
-import type { NeonBlogPostCardProps } from "@/schemas/neon-blog-post-card";
-
-export interface NeonBlogPostCardComponentProps extends NeonBlogPostCardProps {
-  featured?: boolean;
-}
+import type { NeonBlogPostCardComponentProps } from "./types";
 
 export function NeonBlogPostCard({
   title,

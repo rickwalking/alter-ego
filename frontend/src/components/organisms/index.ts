@@ -6,19 +6,6 @@ export {
   NeonActivityList,
   type NeonActivityListProps,
 } from "./neon-activity-list";
-export {
-  NeonKanbanBoard,
-  type NeonKanbanBoardProps,
-} from "./neon-kanban-board";
-export {
-  NeonPersonaCard,
-  type NeonPersonaCardProps,
-} from "./neon-persona-card";
-export { NeonRubricCard, type NeonRubricCardProps } from "./neon-rubric-card";
-export {
-  NeonBlogPostCard,
-  type NeonBlogPostCardComponentProps,
-} from "./neon-blog-post-card";
 export { NeonPagination, type NeonPaginationProps } from "./neon-pagination";
 export { NeonGridBackground } from "./neon-grid-background";
 export { NeonScanlineOverlay } from "./neon-scanline-overlay";

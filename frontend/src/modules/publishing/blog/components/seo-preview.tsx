@@ -18,16 +18,7 @@ import {
 } from "@/constants/seo";
 import { useSeoAnalysis } from "@/modules/publishing/blog/hooks/use-seo-analysis";
 import { SITE_URL } from "@/constants/api";
-
-interface SeoPreviewProps {
-  postId: string | null;
-  title: string;
-  slug: string;
-  metaTitle?: string;
-  metaDescription?: string;
-  excerpt?: string;
-  featuredImageUrl?: string | null;
-}
+import type { SeoPreviewProps } from "./types";
 
 export function SeoPreview({
   postId,

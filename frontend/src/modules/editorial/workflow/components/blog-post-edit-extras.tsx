@@ -10,15 +10,7 @@ import { ScheduledPublishPicker } from "@/modules/editorial/workflow/components/
 import { VersionDiffView } from "@/modules/editorial/workflow/components/version-diff-view";
 import { useCollaborativeEdit } from "@/modules/editorial/workflow/hooks/use-collaborative-edit";
 import { LOCK_CONTENT_TYPE_BLOG } from "@/constants/workflow";
-
-type BlogPostEditExtrasProps = {
-  postId: string;
-  title: string;
-  status: string;
-  bodyText: string;
-  previousBodyText?: string;
-  onScheduled?: () => void;
-};
+import type { BlogPostEditExtrasProps } from "./types";
 
 export function BlogPostEditExtras({
   postId,

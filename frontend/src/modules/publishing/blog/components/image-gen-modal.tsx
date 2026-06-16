@@ -9,13 +9,7 @@ import { NeonInput } from "@/components/atoms/neon-input";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { useBlogAi } from "@/modules/publishing/blog/hooks/use-blog-ai";
-
-interface ImageGenModalProps {
-  postId: string;
-  open: boolean;
-  onClose: () => void;
-  onImageGenerated: (imageUrl: string) => void;
-}
+import type { ImageGenModalProps } from "./types";
 
 export function ImageGenModal({
   postId,

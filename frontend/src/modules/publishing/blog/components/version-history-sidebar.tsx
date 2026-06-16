@@ -12,20 +12,7 @@ import {
 } from "@/components/molecules/neon-card";
 import { API_ENDPOINTS } from "@/constants/api";
 import { authenticatedFetch } from "@/lib/authenticated-fetch";
-
-export interface BlogPostVersion {
-  version_number: number;
-  title: string;
-  excerpt?: string;
-  snapshot?: Record<string, unknown>;
-  created_at?: string;
-}
-
-interface VersionHistorySidebarProps {
-  postId: string;
-  currentBody: string;
-  onRestore: (version: BlogPostVersion) => void;
-}
+import type { BlogPostVersion, VersionHistorySidebarProps } from "./types";
 
 export function VersionHistorySidebar({
   postId,

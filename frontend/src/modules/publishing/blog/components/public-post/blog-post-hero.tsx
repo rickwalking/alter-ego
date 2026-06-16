@@ -1,10 +1,4 @@
-import type { CarouselDesignResponse } from "@/schemas/carousel";
-
-interface BlogPostHeroProps {
-  imageUrl: string;
-  title: string;
-  design: CarouselDesignResponse;
-}
+import type { BlogPostHeroProps } from "./types";
 
 export function BlogPostHero({ imageUrl, title, design }: BlogPostHeroProps) {
   const { colors } = design;

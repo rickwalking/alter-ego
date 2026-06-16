@@ -10,6 +10,7 @@ import {
 } from "@/lib/carousel-media-url";
 import { CaptionEditor, countHashtags } from "./caption-editor";
 import { HorizontalCarouselViewer } from "./horizontal-carousel-viewer";
+import type { EditorState, PublishPanelProps } from "./types";
 
 const IG_MAX_CHARS = 2200;
 const IG_MAX_HASHTAGS = 30;
@@ -18,20 +19,6 @@ const LINKEDIN_COMPOSE_URL = "https://www.linkedin.com/feed/?shareActive=true";
 
 type LanguageTab = "pt" | "en";
 type ActiveTab = "instagram" | "linkedin";
-
-interface EditorState {
-  seed: string;
-  caption: string;
-  linkedinPt: string;
-  linkedinEn: string;
-}
-
-interface PublishPanelProps {
-  project: CarouselProjectResponse;
-  onPublishInstagram?: (caption: string) => Promise<void>;
-  isPublishingInstagram?: boolean;
-  publishResult?: { status: "idle" | "success" | "error"; message?: string };
-}
 
 function slideUrlsFromProject(
   project: CarouselProjectResponse,

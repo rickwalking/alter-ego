@@ -13,13 +13,7 @@ import type {
   BlogPostCreatePayload,
   BlogPostUpdatePayload,
 } from "../types";
-
-export interface BlogPostFilters {
-  status?: string;
-  search?: string;
-  limit?: number;
-  offset?: number;
-}
+import type { BlogPostFilters } from "./types";
 
 export function useBlogPosts(initialFilters: BlogPostFilters = {}) {
   const [posts, setPosts] = useState<BlogPost[]>([]);

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { cookies } from "next/headers";
-import { NeonBlogPostCard } from "@/components/organisms/neon-blog-post-card";
+import { NeonBlogPostCard } from "@/modules/publishing";
 import { BG_DEEP, TEXT, TEXT_MUTED } from "@/constants/neon";
 import { PUBLIC_ROUTE_PATHS } from "@/constants/public-routes";
 import { fetchCompletedProjects } from "@/lib/server-fetch";
