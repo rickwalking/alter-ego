@@ -1,12 +1,12 @@
 # AE-0151 — Frontend: advisory jscpd test-duplication report (non-blocking)
 
-Status: Ready
+Status: Dev Complete
 Tier: T1
 Priority: Low
 Type: Task
 Area: Frontend/CI
-Owner: Unassigned
-Branch: TBD
+Owner: developer-skill
+Branch: feat/ae-0149-0151-frontend-duplication-gate
 Created: 2026-06-16
 Updated: 2026-06-16
 
@@ -37,9 +37,9 @@ visibility — as advisory only, like `frontend / Mutation (advisory)`.
 
 ## Acceptance Criteria
 
-- [ ] Advisory job runs jscpd over test files and posts a PR summary.
-- [ ] Job never fails the PR (continue-on-error).
-- [ ] Documented as advisory in `docs/guides/qa-checkpoints.md`.
+- [x] Advisory job runs jscpd over test files and posts a PR summary (`frontend / Duplication (tests, advisory)` job; `.jscpd.tests.json` scopes to `**/*.{test,spec}.{ts,tsx}`; `npm run lint:dup:tests` → `gates.sh frontend:duplication-tests`). Measured: ~12.7% test-file duplication (the boilerplate signal).
+- [x] Job never fails the PR (`continue-on-error: true`; gate echoes ADVISORY and exits 0).
+- [x] Documented as advisory in `docs/guides/qa-checkpoints.md` (and `frontend/AGENTS.md`).
 
 ## Repro Steps
 
