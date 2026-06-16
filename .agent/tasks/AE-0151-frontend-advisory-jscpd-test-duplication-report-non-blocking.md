@@ -1,6 +1,6 @@
 # AE-0151 — Frontend: advisory jscpd test-duplication report (non-blocking)
 
-Status: Dev Complete
+Status: Review
 Tier: T1
 Priority: Low
 Type: Task
@@ -71,7 +71,7 @@ Pending.
 
 ## QA Report
 
-Pending.
+PASS (wave QA) — see [AE-0149-0151.qa.md](../reports/AE-0149-0151.qa.md). 14/14 frontend gates green; integrity 0 net-new blockers; all ACs verified MET; 0 blocker findings.
 
 ## Blockers
 

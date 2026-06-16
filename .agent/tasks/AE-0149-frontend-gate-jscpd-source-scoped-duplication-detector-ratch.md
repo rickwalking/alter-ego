@@ -1,6 +1,6 @@
 # AE-0149 — Frontend gate: jscpd source-scoped duplication detector (ratchet-down threshold)
 
-Status: Dev Complete
+Status: Review
 Tier: T2
 Priority: High
 Type: Task
@@ -133,7 +133,7 @@ Pending.
 
 ## QA Report
 
-Pending.
+PASS (wave QA) — see [AE-0149-0151.qa.md](../reports/AE-0149-0151.qa.md). 14/14 frontend gates green; integrity 0 net-new blockers; all ACs verified MET; 0 blocker findings.
 
 ## Decision Log
 
