@@ -1,6 +1,6 @@
 # AE-0136 — modules/ scaffolding + public-contract convention + module-boundary lint rule
 
-Status: Ready
+Status: Review
 Tier: T2
 Priority: High
 Type: Task

@@ -1,6 +1,6 @@
 # AE-0135 — Documented frontend baseline + context-mapping doc
 
-Status: Ready
+Status: Review
 Tier: T2
 Priority: High
 Type: Task
