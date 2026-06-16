@@ -176,6 +176,31 @@ class TestCarouselBlogProjection:
         assert projection.subtitle == "Backfill Subtitle"
 
     @pytest.mark.asyncio
+    async def test_backfill_body_with_empty_title_falls_back_per_field(
+        self, db_session: AsyncSession
+    ) -> None:
+        """Scenario: a backfill row supplies the body but empty title/excerpt fall
+        back per-field to the embedded carousel title/subtitle (byte-identical)."""
+        project = _carousel_entity()
+        db_session.add(
+            BlogPostModel.from_entity({
+                "project_id": str(project.id),
+                "origin": BlogPostOrigin.CAROUSEL.value,
+                "title": "",
+                "slug": f"backfill-{project.id}",
+                "excerpt": "",
+                "content": {"markdown": "BACKFILL BODY"},
+            })
+        )
+        await db_session.commit()
+        acl = PublishingReadAcl(db_session)
+        projection = await acl.project_carousel_blog(project)
+        assert projection is not None
+        assert projection.markdown == "BACKFILL BODY"  # body from the row
+        assert projection.title == "Embedded Title"  # empty row title -> embedded
+        assert projection.subtitle == "Embedded Subtitle"  # empty excerpt -> embedded
+
+    @pytest.mark.asyncio
     async def test_absent_blog_returns_none(self, db_session: AsyncSession) -> None:
         """Scenario: no blog body anywhere maps to ``None`` (the legacy 404)."""
         project = _carousel_entity()
