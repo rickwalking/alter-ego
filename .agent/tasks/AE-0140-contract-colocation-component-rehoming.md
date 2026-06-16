@@ -1,6 +1,6 @@
 # AE-0140 — Co-locate API/Zod/query contracts per module; re-home business components
 
-Status: Ready
+Status: Review
 Tier: T2
 Priority: High
 Type: Task
