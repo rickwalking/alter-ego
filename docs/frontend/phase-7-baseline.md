@@ -66,9 +66,11 @@ All green at baseline (2026-06-16); every Phase 7 ticket must keep them green:
 | Unit tests | `npm run test` (Vitest) | 75 files, **822 passing** |
 | Legacy guard | `npm run check:legacy` | pass (no v1 imports) |
 
-Phase 7 ADDS (AE-0136): an App-Router URL-inventory check, `npm run build`, and a circular-import (madge)
-check to this safety net — because tsc/eslint/Vitest miss RSC/`'use client'` boundaries, route segment config
-(`export const dynamic` in the public `/blog` pages), `next/dynamic`, and barrel-induced circular imports.
+Phase 7 ADDS (AE-0136): an App-Router URL-inventory check (`npm run url:check`) and a **dependency-free**
+circular-import check (`npm run lint:circular`, Tarjan SCC — not madge), both chained into `npm run lint` so
+they gate; plus `npm run build` run as a per-migration-ticket gate (not chained into `lint` because it is slow).
+These cover what tsc/eslint/Vitest miss: RSC/`'use client'` boundaries, route segment config (`export const
+dynamic` in the public `/blog` pages), `next/dynamic`, and barrel-induced circular imports.
 
 ## Feature → module context map (accepted glossary)
 
