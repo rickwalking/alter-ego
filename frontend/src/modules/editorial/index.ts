@@ -100,10 +100,7 @@ export {
 } from "./workspace/lib/presentation-review-utils";
 
 /* --- workflow: types --- */
-export type {
-  ReviewAssignmentPayload,
-  ContentLock,
-} from "./workflow/types";
+export type { ReviewAssignmentPayload, ContentLock } from "./workflow/types";
 
 /* --- workflow: hooks --- */
 export {
@@ -118,9 +115,7 @@ export {
   type WorkflowKanban,
 } from "./workflow/hooks/use-workflow-kanban";
 export { useNotifications } from "./workflow/hooks/use-notifications";
-export {
-  useCollaborativeEdit,
-} from "./workflow/hooks/use-collaborative-edit";
+export { useCollaborativeEdit } from "./workflow/hooks/use-collaborative-edit";
 
 /* --- workflow: components --- */
 export { NotificationCenter } from "./workflow/components/notification-center";

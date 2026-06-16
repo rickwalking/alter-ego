@@ -1,8 +1,5 @@
 import type { EditorialWorkflowState } from "@/modules/publishing";
-import {
-  asRecord,
-  resolvePresentationPreviewText,
-} from "@/modules/editorial";
+import { asRecord, resolvePresentationPreviewText } from "@/modules/editorial";
 
 export function asString(value: unknown): string {
   return typeof value === "string" ? value : "";

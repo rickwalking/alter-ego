@@ -37,7 +37,10 @@ export type {
 } from "./blog/types-ai";
 
 /* --- blog: hooks --- */
-export { useBlogPosts, type BlogPostFilters } from "./blog/hooks/use-blog-posts";
+export {
+  useBlogPosts,
+  type BlogPostFilters,
+} from "./blog/hooks/use-blog-posts";
 export {
   useCarouselProject,
   useCarouselProjects,

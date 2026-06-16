@@ -11,11 +11,7 @@
  */
 
 /* --- query options / keys --- */
-export {
-  documentKeys,
-  documentsOptions,
-  documentOptions,
-} from "./queries";
+export { documentKeys, documentsOptions, documentOptions } from "./queries";
 
 /* --- hooks --- */
 export {

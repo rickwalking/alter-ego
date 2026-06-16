@@ -90,6 +90,59 @@ forbidden. `CarouselArticle` is a rejected term — the canonical concept is `Bl
 | knowledge | **knowledge** | |
 | (auth/session) | **identity** | no `features/auth`; auth/session stays in `lib/` + `app/` — frontend identity consolidation **deferred to Phase 8** |
 
+## OpenAPI ↔ Zod schema-drift check (AE-0141)
+
+Phase 7 adds a schema-drift check that compares the frontend domain Zod schemas against the **actual** backend
+OpenAPI contract, so divergence between what the API returns and what the UI validates surfaces in CI instead of
+at runtime.
+
+**Two parts:**
+
+1. **Read-only OpenAPI exporter** — `backend/scripts/export_openapi.py` builds the app via the canonical
+   `create_app()` and writes `app.openapi()` to the committed artifact `docs/architecture/openapi.json`
+   (stable, `sort_keys` JSON). It is a generator, not a behavior change: it only reads the schema FastAPI already
+   builds and alters no route/schema/response. It runs with **no live keys** — `create_app()` uses lazy external
+   clients (Pinecone/OpenAI build on first use, not at construction), so `app.openapi()` (which walks routes +
+   Pydantic models only) needs no network/DB/secrets. The same keyless `create_app()` path is exercised by
+   `backend/tests/unit/test_route_snapshot.py`.
+
+   ```bash
+   uv run python backend/scripts/export_openapi.py            # regenerate the artifact
+   uv run python backend/scripts/export_openapi.py --check    # fail if the artifact is stale
+   ```
+
+2. **Frontend drift checker** — `frontend/scripts/check-schema-drift.mjs` (npm `check:schema-drift`) loads the
+   artifact, parses a **curated mapping** of frontend Zod schemas (`src/schemas/{chat,knowledge,carousel}.ts`)
+   to their OpenAPI component counterparts, and reports drift.
+
+**What's compared** (per mapped schema): field presence (frontend-extra fields the API no longer declares;
+API fields — required vs optional — the frontend omits), coarse type (`string`/`number`/`boolean`/`array`/
+`object`), and nullability/optionality (handling the Pydantic `anyOf [T, null]` encoding). `z.unknown()`,
+nested-schema refs, and `.refine()`-wrapped composites are treated as opaque (no false type assertions). The
+mapping deliberately excludes design-system `neon-*` prop schemas (not API DTOs).
+
+**Advisory → blocking path.** The checker is **advisory-first**: it prints a report and exits 0 even when drift
+exists, so it can be wired into CI without gating on pre-existing drift. It is registered as the
+`schema-drift` frontend gate in `scripts/ci/gates.sh` and runs in the **non-blocking**
+`frontend / Schema drift (advisory)` job (`continue-on-error: true`), mirroring the mutation-advisory pattern.
+Pass `--strict` to make it exit 1 on drift; flip CI to that once the report reaches 0.
+
+**Drift recorded at introduction (2026-06-16, advisory baseline).** 24 findings across the mapped schemas — all
+**pre-existing**, none introduced by this ticket:
+
+| Mapped schema | Drift |
+|---|---|
+| `messageSchema` → `MessageResponse` | `sources` nullable in API, required in Zod |
+| `chatResponseSchema` → `ChatResponse` | `sources` nullable in API, required in Zod |
+| `documentSchema` → `DocumentResponse` | missing API fields `is_public`, `scope` |
+| `createDocumentRequestSchema` → `DocumentCreate` | unmodeled optional `is_public`, `scope` |
+| `documentUploadResponseSchema` → `DocumentUploadResponse` | missing API fields `is_public`, `scope` |
+| `carouselProjectResponseSchema` → `CarouselProjectResponse` | missing required `accent_color`, `background_color`, `primary_color`; unmodeled `current_phase`, `error_message`, `image_model`, `image_style`, `is_public`, `output_dir`, `phase_status`, `research_sources`, `slides` |
+| `carouselSlideResponseSchema` → `CarouselSlideResponse` | frontend-extra `project_id`, `image_prompt`; unmodeled API `image_path`; missing required `updated_at` |
+
+Reconciling this drift (and then flipping the gate to `--strict`) is follow-up work — `AE-0141` only delivers the
+mechanism + the advisory baseline.
+
 ## Migration discipline
 
 - App Router URLs unchanged; route pages stay thin composition components.

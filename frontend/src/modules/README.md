@@ -39,8 +39,8 @@ layers and treats `app/` as a consumer:
 | Layer            | Owner attribution            | Rule                                                                            |
 | ---------------- | ---------------------------- | ------------------------------------------------------------------------------- |
 | `src/features/X` | `@/features/X`               | a feature must not import another feature's internals (legacy ratchet, AE-0083) |
-| `src/modules/X`  | `@/modules/X`                | a module must not import another module's **internal** (`@/modules/Y/<deep>`)    |
-| `src/app`        | consumer (no owning context) | may import a module's **public contract** only — never `@/modules/Y/<deep>`      |
+| `src/modules/X`  | `@/modules/X`                | a module must not import another module's **internal** (`@/modules/Y/<deep>`)   |
+| `src/app`        | consumer (no owning context) | may import a module's **public contract** only — never `@/modules/Y/<deep>`     |
 
 The ratchet is **down-only**: the grandfathered cross-boundary count
 (`scripts/feature-boundary-baseline.json`) may stay equal or shrink, never grow.
