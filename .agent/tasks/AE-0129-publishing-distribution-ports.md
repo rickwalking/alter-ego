@@ -1,6 +1,6 @@
 # AE-0129 — Distribution behind ports (captions/Instagram/LinkedIn channel-delivery) — behavior-preserving
 
-Status: Ready
+Status: Review
 Tier: T2
 Priority: High
 Type: Task

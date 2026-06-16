@@ -24,8 +24,8 @@ The publishing ports are:
   (AE-0129). The ``publish-instagram`` route distributes the carousel slides to
   Instagram and the ``generate-caption`` route reads the persisted caption through
   this port; its adapter (the channel publisher in infrastructure) wraps the Meta
-  Instagram vendor adapter + the persisted caption/LinkedIn copy, so the vendor/LLM
-  SDK imports stay out of the publishing application/domain layers.
+  Instagram vendor adapter + the persisted caption copy, so the vendor/LLM SDK
+  imports stay out of the publishing application/domain layers.
 
 Per backend/CLAUDE.md, interfaces are :class:`typing.Protocol`, never ABCs, and
 they are fully typed (no ``Any``). These Protocols let the publishing

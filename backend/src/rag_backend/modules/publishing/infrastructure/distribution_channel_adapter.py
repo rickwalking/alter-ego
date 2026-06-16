@@ -14,8 +14,8 @@ public image URLs the route built to the vendor publisher and maps the vendor
 ``PublishResult`` one-to-one into the publishing
 :class:`~rag_backend.modules.publishing.domain.models.DistributionResult` — the
 ``status`` / ``post_id`` / ``error_message`` values are untouched, so the
-``publish/instagram`` response is byte-identical. The read methods project the
-already-persisted caption / LinkedIn copy from the
+``publish/instagram`` response is byte-identical. ``caption_for`` projects the
+already-persisted caption from the
 :class:`~rag_backend.modules.publishing.domain.models.Publication` view (no LLM
 call), identical to the legacy ``project.caption or ""`` route read. Mirrors the
 presentation image-provider adapter pattern (AE-0119).
@@ -38,9 +38,9 @@ class ChannelDistributionPublisher:
     """:class:`DistributionPublisher` backed by the Meta vendor + persisted copy.
 
     Wraps the injected social (Instagram) vendor adapter for channel delivery and
-    projects the persisted caption / LinkedIn copy for the distribution reads. The
-    vendor SDK lives in the wrapped adapter's module, so this seam — and the
-    publishing inner layers behind it — stay SDK-free.
+    projects the persisted caption for the distribution read. The vendor SDK lives
+    in the wrapped adapter's module, so this seam — and the publishing inner layers
+    behind it — stay SDK-free.
     """
 
     def __init__(self, social_publisher: SocialPublisher) -> None:

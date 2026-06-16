@@ -1,6 +1,6 @@
 # AE-0128 — Visibility + scheduling behind publishing ports; carousel publish via the release command (behavior-preserving)
 
-Status: Ready
+Status: Review
 Tier: T2
 Priority: High
 Type: Task
