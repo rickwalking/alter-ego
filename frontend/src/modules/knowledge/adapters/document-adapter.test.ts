@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { mapDocumentToCardProps } from "@/features/knowledge/adapters/document-adapter";
+import { mapDocumentToCardProps } from "@/modules/knowledge/adapters/document-adapter";
 import type { Document } from "@/schemas/knowledge";
 
 describe("mapDocumentToCardProps", () => {

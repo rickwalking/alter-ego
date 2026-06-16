@@ -8,7 +8,7 @@ import {
   carouselProjectOptions,
   carouselProjectsOptions,
   carouselSlidesOptions,
-} from "@/features/carousel/queries";
+} from "@/modules/carousel-presentation";
 import { DEFAULT_BLOG_LANGUAGE } from "@/constants/api";
 
 /** Fetch a single carousel project by ID. */

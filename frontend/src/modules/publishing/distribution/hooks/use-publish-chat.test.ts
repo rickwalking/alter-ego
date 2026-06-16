@@ -33,7 +33,7 @@ vi.mock("@tanstack/react-query", async () => {
   };
 });
 
-vi.mock("@/features/chat/hooks/use-chat", () => ({
+vi.mock("@/modules/conversation", () => ({
   useCreateConversation: vi.fn(),
   useConversationMessages: vi.fn(),
   useConversation: vi.fn(),
@@ -45,7 +45,7 @@ import {
   useCreateConversation,
   useConversationMessages,
   useConversation,
-} from "@/features/chat/hooks/use-chat";
+} from "@/modules/conversation";
 import { streamSseEvents } from "@/lib/sse-client";
 import { usePublishChat } from "./use-publish-chat";
 

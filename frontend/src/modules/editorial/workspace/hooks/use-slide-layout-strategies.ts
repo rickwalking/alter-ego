@@ -8,7 +8,7 @@ import {
 import { z } from "zod";
 import { apiCall } from "@/lib/api-client";
 import { API_ENDPOINTS, HTTP_METHODS } from "@/constants/api";
-import { carouselKeys } from "@/features/carousel/queries";
+import { carouselKeys } from "@/modules/carousel-presentation";
 
 const STRATEGIES_QUERY_KEY = ["available-strategies"] as const;
 

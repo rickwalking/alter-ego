@@ -2,13 +2,10 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { PublicChatView } from "@/app/(public)/chat/public-chat-view";
 
-vi.mock("@/features/chat/hooks/use-chat", () => ({
+vi.mock("@/modules/conversation", () => ({
   useCreateConversation: () => ({
     mutateAsync: vi.fn().mockResolvedValue({ id: "conv-1" }),
   }),
-}));
-
-vi.mock("@/features/chat/hooks/use-sse-chat", () => ({
   useSseChat: () => ({
     messages: [],
     isStreaming: false,

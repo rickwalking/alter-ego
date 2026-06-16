@@ -1,22 +1,7 @@
-import type { Document } from "@/schemas/knowledge";
-import type { NeonBadgeVariant } from "@/schemas/neon-badge";
-import type { NeonCardAccent } from "@/schemas/neon-card";
-
-const STATUS_BADGE_MAP: Record<string, NeonBadgeVariant> = {
-  completed: "green",
-  processing: "amber",
-  pending: "cyan",
-  failed: "red",
-};
-
-export function mapDocumentToCardProps(doc: Document): {
-  accent: NeonCardAccent;
-  badgeVariant: NeonBadgeVariant;
-  badgeText: string;
-} {
-  return {
-    accent: "cyan",
-    badgeVariant: STATUS_BADGE_MAP[doc.status] ?? "amber",
-    badgeText: doc.status,
-  };
-}
+/**
+ * Re-export shim (AE-0139): forwards to the knowledge public contract.
+ * The implementation moved to `src/modules/knowledge/**`. Import
+ * `@/modules/knowledge` directly in new code; this shim keeps the legacy
+ * `@/features/knowledge/adapters/document-adapter` path resolving during the migration window.
+ */
+export * from "@/modules/knowledge";

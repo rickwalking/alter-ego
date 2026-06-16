@@ -1,5 +1,5 @@
 import type { NeonPersonaCardProps } from "@/components/organisms/neon-persona-card";
-import type { PersonaProfile } from "@/features/persona/types";
+import type { PersonaProfile } from "@/modules/persona";
 
 export interface PersonaSource {
   name: string;

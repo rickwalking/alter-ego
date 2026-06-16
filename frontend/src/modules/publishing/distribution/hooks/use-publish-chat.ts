@@ -6,7 +6,7 @@ import {
   useCreateConversation,
   useConversationMessages,
   useConversation,
-} from "@/features/chat/hooks/use-chat";
+} from "@/modules/conversation";
 import { ApiError } from "@/lib/api-client";
 import { streamSseEvents, SSE_EVENT_TYPE } from "@/lib/sse-client";
 import { API_ENDPOINTS } from "@/constants/api";
@@ -21,7 +21,7 @@ import {
   CONVERSATION_METADATA_PROJECT_ID,
   TOOL_REFINE_CAROUSEL_COPY,
 } from "@/constants/publish-chat";
-import { carouselKeys } from "@/features/carousel/queries";
+import { carouselKeys } from "@/modules/carousel-presentation";
 
 export interface UsePublishChatReturn {
   conversationId: string | null;

@@ -49,3 +49,13 @@ fail immediately (there are none today, and none should ever be added).
 
 Regenerate the baseline (only ever to ratchet DOWN) with
 `npm run boundaries:baseline`.
+
+## Identity context — deferred to Phase 8 (AE-0139)
+
+The glossary lists an `identity` bounded context, but there is **no
+`features/auth`** to migrate: frontend auth/session lives in `lib/` (the
+authenticated fetch / session helpers) and `app/` (route-level guards and
+sign-in pages), both of which are route-adjacent and risky to relocate in a
+behavior-preserving pass. AE-0139 therefore makes identity a **docs-only**
+note: no `modules/identity/` is created and no code moves. Frontend identity
+consolidation into a dedicated module is **deferred to Phase 8**.

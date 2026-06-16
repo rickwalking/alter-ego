@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { useCallback, useMemo, useState } from "react";
-import { useCreateConversation } from "@/features/chat/hooks/use-chat";
-import { useSseChat } from "@/features/chat/hooks/use-sse-chat";
+import { useCreateConversation } from "@/modules/conversation";
+import { useSseChat } from "@/modules/conversation";
 import {
   AGENT_ORIGIN_ALTER_EGO,
   CONVERSATION_METADATA_AGENT_ORIGIN,

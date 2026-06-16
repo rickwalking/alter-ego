@@ -10,7 +10,7 @@ import {
 import {
   carouselKeys,
   carouselProjectOptions,
-} from "@/features/carousel/queries";
+} from "@/modules/carousel-presentation";
 
 /** Create a new carousel project and return the created project. */
 export function useCreateCarousel() {

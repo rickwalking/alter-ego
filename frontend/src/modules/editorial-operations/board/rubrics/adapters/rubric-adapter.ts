@@ -3,7 +3,7 @@ import type {
   RubricColorKey,
 } from "@/modules/editorial-operations/board/rubrics/types";
 import type { NeonRubricCardProps } from "@/components/organisms/neon-rubric-card";
-import type { QualityRubric } from "@/features/rubrics/types";
+import type { QualityRubric } from "@/modules/quality";
 
 export interface RubricSource {
   title: string;

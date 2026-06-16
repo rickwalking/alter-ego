@@ -6,7 +6,7 @@ import { NeonTopBar } from "@/components/organisms/neon-top-bar";
 import { NEON_RED } from "@/constants/neon";
 import { RubricPanel } from "@/app/dashboard/rubrics/rubric-panel";
 import { mapQualityRubricToPanelData } from "@/modules/editorial-operations";
-import { useRubrics } from "@/features/rubrics/hooks/use-rubrics";
+import { useRubrics } from "@/modules/quality";
 
 const PAGE_FONT_FAMILY = "Inter, system-ui, sans-serif";
 const PAGE_CONTENT_PADDING = "24px 32px";
