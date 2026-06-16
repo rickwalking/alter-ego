@@ -1,6 +1,6 @@
 # AE-0139 — carousel-presentation + persona + quality + conversation + knowledge modules (+ identity docs note)
 
-Status: Ready
+Status: Review
 Tier: T2
 Priority: High
 Type: Task
