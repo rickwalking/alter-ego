@@ -88,6 +88,21 @@ enforcements* (all ratchet UP/HOLD) grouped into **Class B** at the owner's dire
 post-PR-#23 follow-up work — not behavior-change/destructive like AE-0161/0162, and they carry no
 consent/drain gate (the Class-B grouping here means "deferred Phase-8 follow-up", scheduled separately).
 
+> **CORRECTION 2026-06-17 (architect research + cold-critic skeptical review).**
+> The claim below that "AE-0163 makes `blog_posts` the **sole writer**" of the
+> embedded columns is **inaccurate**. AE-0163's implementation
+> (`carousel_blog_dual_write.py`) only consolidated the blog **body**
+> (`blog_markdown`/`blog_translations`) into `blog_posts.content`. The four
+> distribution columns (`caption`, `caption_en`, `linkedin_post_pt`,
+> `linkedin_post_en`) were **never given a canonical home or backfill** and remain
+> the sole source, still read AND written. The destructive drop is therefore SPLIT:
+> **AE-0162** = blog columns only (Low priority; gated on retiring the remaining
+> blog writers incl. the dual-write's self-read of `blog_markdown`); **AE-0204** =
+> add a `blog_posts.distribution` JSONB home for caption/LinkedIn (the real
+> blocker); **AE-0205** = drop the distribution columns (blocked by AE-0204);
+> **AE-0206** = delete the write-dead `caption_en`. See those tickets for the
+> validated plan.
+
 (AE-0133 → superseded by AE-0161 + AE-0162; AE-0143 → superseded by AE-0153-0157.
 **Round-1 architect fixes:** AE-0163 added as the behavior-preserving de-risking PREDECESSOR to the destructive
 drop — the embedded columns are still LIVE READS (per-field fallback + the `blog_markdown` 404 gate) with 4+

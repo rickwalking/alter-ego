@@ -1,6 +1,6 @@
 # AE-0133 — Follow-up: auto-publish cutover + embedded carousel-column drop (post-Phase-6)
 
-Status: Intake
+Status: Cancelled
 Tier: T2
 Priority: Medium
 Type: Task
@@ -119,4 +119,4 @@ Deferred by design — requires owner consent (behavior/destructive change) + Ph
 
 ## Final Summary
 
-Pending.
+Cancelled — superseded tracker, no independent work. The auto-publish-cutover half is ALREADY implemented in main (approval != release; see AE-0161). The column-drop half is restructured (2026-06-17) into AE-0162 (blog slice) + AE-0204 (distribution home) + AE-0205 (distribution drop) + AE-0206 (caption_en delete). Nothing to execute here.

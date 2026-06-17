@@ -1,6 +1,6 @@
 # AE-0143 — Phase 8 frontend cleanup follow-up (consent-gated)
 
-Status: Intake
+Status: Done
 Tier: T2
 Priority: Medium
 Type: Task
@@ -99,4 +99,4 @@ None.
 
 ## Final Summary
 
-Pending.
+FULLY DONE in main (verified by architect 2026-06-17). All six scoped items shipped via the Phase-8 slices (AE-0153-0157 + AE-0164): `src/features/` removed (zero `@/features` importers); domain components re-homed with only `Neon*` kept atomic (component-type-location baseline count = 0); route pages thinned; `modules/identity` behind a contract; schema-drift check is blocking with drift = 0; `modules/_example` removed; cross-context boundary count = 0. No residual work; the kept `lib/` HTTP clients (authenticated-fetch/server-fetch) are by design, not pending.
