@@ -2,6 +2,8 @@
 # =============================================================================
 # gates.sh — single source of truth for every quality gate.
 #
+# The CI Gate aggregator (.github/workflows/ci-gate.yml, AE-0203) also calls this
+# for changed scopes and is the single required check on main (path-filter-safe).
 # Both CI (.github/workflows/*-quality-gates.yml) and the /qa-agent skill invoke
 # THIS script. A gate is defined exactly once here, so the local QA verdict and
 # the PR verdict cannot drift (the AE QA-guardian fix). Adding a gate to CI means

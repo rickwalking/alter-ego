@@ -155,6 +155,34 @@ Feature: main requires green CI to merge
 
 Emitted by kaizen production-readiness re-check (main-no-branch-protection finding).
 
+### 2026-06-17 — Phase 2 implemented (ci-gate aggregator)
+
+Added `.github/workflows/ci-gate.yml` — the always-running aggregator that
+resolves the path-filter deadlock. Additive only (existing gate workflows
+untouched).
+
+- `on: pull_request` with NO `paths:` filter → the `ci-gate` job runs on EVERY PR.
+- `detect` job (dorny/paths-filter@v3) exposes `backend` / `frontend` / `agent`
+  outputs scoped to: backend (`backend/**`, `scripts/ci/**`, `scripts/metrics/**`),
+  frontend (`frontend/**`, `scripts/ci/**`), agent (`.agent/**`,
+  `scripts/agent_tasks/**`).
+- `backend-gate` / `frontend-gate` / `agent-gate` run only when their scope is
+  touched (`if: needs.detect.outputs.<scope> == 'true'`); they mirror the existing
+  gate setups (postgres:16-alpine service + uv/py3.12 + `gates.sh backend`;
+  node 22 + `npm ci` + `gates.sh frontend`; `validate_all_tickets.py`).
+- `ci-gate` (the single required check, context `CI Gate / ci-gate`):
+  `needs: [detect, backend-gate, frontend-gate, agent-gate]`, `if: always()`.
+  Fails only if a needed gate is `failure`/`cancelled`; treats `skipped`
+  (not-applicable scope) and `success` as pass — so a docs-only PR (all gates
+  skipped) still goes green and never deadlocks.
+
+Validation: `yaml.safe_load` OK; confirmed no `paths:` under `on.pull_request`;
+confirmed `ci-gate` has `if: always()` and needs all gate jobs.
+
+Required-check flip (adding `CI Gate / ci-gate` as the single required status
+check on `main` via branch protection) is PENDING live verification — deferred to
+the live/admin step per task instructions (do NOT change branch protection here).
+
 ## Files Touched
 
 Pending.
