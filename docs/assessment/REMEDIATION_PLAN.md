@@ -1,5 +1,7 @@
 # Remediation Plan — Alter-Ego Assessment
 
+> Status: Superseded — historical record
+
 > Generated: 2026-05-04
 > Based on codebase audit across backend, frontend, and infrastructure.
 > Each item includes: action, affected files, test/Gherkin requirement, and risk if deferred.

@@ -278,7 +278,9 @@ export function CreateWorkflowPanel({
           sendBackTarget={sendBackTarget}
           setSendBackTarget={setSendBackTarget}
           handleRevise={handleRevise}
-          approve={approve}
+          approve={(options) => {
+            void approve(options);
+          }}
           contentHasEdits={contentHasEdits}
           contentSlides={contentSlides}
           personaApproveBlocked={personaApproveBlocked}

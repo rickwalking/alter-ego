@@ -1,5 +1,7 @@
 # Backend Implementation Plan - Agentic RAG
 
+> Status: Superseded — historical record
+
 ## Overview
 
 This plan outlines the step-by-step implementation of the Agentic RAG backend using Python, FastAPI, LangChain, and Pinecone hybrid search.

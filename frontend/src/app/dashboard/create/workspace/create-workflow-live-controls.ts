@@ -2,7 +2,7 @@ import type { CreateStepId } from "@/app/dashboard/create/step-ids";
 import { EDITORIAL_PHASE_TO_STEP } from "@/app/dashboard/create/step-ids";
 import type { EditorialWorkflowState } from "@/modules/publishing";
 
-export interface LiveWorkflowControlsInput {
+export interface ShouldShowLiveWorkflowControlsOptions {
   state: EditorialWorkflowState | null | undefined;
   viewStepId: CreateStepId;
   workflowStepId: CreateStepId;
@@ -15,7 +15,7 @@ export function shouldShowLiveWorkflowControls({
   viewStepId,
   workflowStepId,
   awaitingHumanReview,
-}: LiveWorkflowControlsInput): boolean {
+}: ShouldShowLiveWorkflowControlsOptions): boolean {
   const isLiveStep =
     state?.current_phase !== undefined &&
     EDITORIAL_PHASE_TO_STEP[state.current_phase] === viewStepId &&

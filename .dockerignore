@@ -1,0 +1,47 @@
+# Root .dockerignore (AE-0189)
+#
+# The backend image builds with `context: .` (repo root), so this root-level
+# .dockerignore is the one that actually trims the build context. backend/.dockerignore
+# is ineffective for that build because the context is the repo root, not backend/.
+# The frontend image uses `context: ./frontend`, so it is governed by
+# frontend/.dockerignore and is unaffected by the patterns below.
+#
+# Goal: keep the backend build context small (it was uploading ~1.2GB incl.
+# frontend/node_modules). Do NOT exclude anything the backend Dockerfile COPYs:
+#   - backend/pyproject.toml, backend/uv.lock
+#   - backend/src/
+#   - backend/alembic/, backend/alembic.ini
+#   - skills/runtime/
+#   - frontend/public/about-pedro.jpg  (runtime asset; *.png is excluded but this is .jpg)
+#   - README.md
+
+# Frontend build artifacts (never needed by the backend image)
+frontend/node_modules
+frontend/.next
+
+# Virtualenvs / Python caches
+**/.venv
+**/__pycache__
+**/*.pyc
+.pytest_cache
+.mypy_cache
+.ruff_cache
+
+# Node modules anywhere
+**/node_modules
+
+# VCS
+.git
+
+# Images (about-pedro.jpg is a .jpg and is intentionally NOT matched here)
+*.png
+
+# Docs and scratch dirs
+docs/
+tmp/
+
+# Backend tests are not needed at runtime
+backend/tests/
+
+# Env files (never bake secrets into an image)
+.env*

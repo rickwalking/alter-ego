@@ -1,6 +1,6 @@
 # Agentic Delivery System — Implementation Plan
 
-**Status:** Proposed
+**Status:** Implemented — the orchestration layer (repo-backed tickets under `.agent/`, role skills, validation scripts, and CI guards) described here is built and in use.
 **Source:** [alter_ego_agentic_delivery_system_plan.md](./alter_ego_agentic_delivery_system_plan.md)
 **Audience:** Humans and coding agents implementing the system in this repository
 **Last updated:** 2026-06-02 (architect-skill modes expanded)

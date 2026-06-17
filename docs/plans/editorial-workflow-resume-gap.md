@@ -1,5 +1,7 @@
 # Editorial Workflow Resume Gap — Plan
 
+> Status: Superseded — historical record
+
 **Status:** Accepted
 **Date:** 2026-05-24
 **Last validated:** 2026-05-28

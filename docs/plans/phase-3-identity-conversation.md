@@ -1,5 +1,7 @@
 # Phase 3 — Extract Identity & Conversation boundaries (epic plan)
 
+**Status: Done** — shipped.
+
 **Planner output.** Source: `.agent/reports/domain-modularization.options.md` §"Phase 3". Builds on
 Phase 2 (PR #16): reuses the AE-0081 module conventions, the `modules/_template`, the Phase-2
 `platform/database` Unit of Work, the AE-0093 consumer-owned `KnowledgeSearchPort`, and the

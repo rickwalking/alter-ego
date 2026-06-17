@@ -1,5 +1,7 @@
 # HD Carousel Export — Implementation Plan
 
+> Status: Superseded — historical record
+
 **Date:** 2026-06-01
 **Status:** Partially implemented (backend changes done, manual re-exports done)
 

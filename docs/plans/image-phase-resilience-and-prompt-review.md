@@ -1,5 +1,7 @@
 # Image Phase Resilience and Prompt Review Epic
 
+> Status: Superseded — historical record
+
 Status: Intake
 Tier: T3
 Source Plan: `.agent/reports/AE-0010.arch-plan.md`

@@ -38,7 +38,7 @@ export interface BlogPostHeroProps {
   design: CarouselDesignResponse;
 }
 
-export interface ResolveSlideImageInput {
+export interface ResolveSlideImageOptions {
   sectionMarkdown: string;
   design: CarouselDesignResponse;
   slideImages: string[];

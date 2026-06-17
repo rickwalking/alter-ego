@@ -1,8 +1,10 @@
-# Alter-Ego Security & Admin Panel Implementation Plan
+# Alter-Ego Security & Admin Panel Reference
+
+> **Status: Implemented.** Authentication, RBAC (Admin/Editor), admin-panel-only user management, and visitor restrictions described here are shipped and live. This document now serves as the current security reference for these mechanisms (not a forward-looking plan).
 
 ## Executive Summary
 
-This document outlines the complete security hardening plan for Alter-Ego, implementing authentication, RBAC with Admin/Editor roles, admin-panel-only user management, and visitor restrictions.
+This document describes the security model for Alter-Ego: authentication, RBAC with Admin/Editor roles, admin-panel-only user management, and visitor restrictions.
 
 ---
 

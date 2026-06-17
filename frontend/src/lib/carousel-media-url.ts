@@ -40,7 +40,7 @@ export function toAuthenticatedPreviewSlideUrl(
   return `${API_ENDPOINTS.CAROUSEL_PREVIEW_IMAGE(projectId, filename)}?lang=${language}`;
 }
 
-export interface PublishPanelSlideUrlsInput {
+export interface SlideUrlsForPublishPanelOptions {
   projectId: string;
   paths: string[];
   language: "pt" | "en";
@@ -52,7 +52,7 @@ export function slideUrlsForPublishPanel({
   paths,
   language,
   updatedAt,
-}: PublishPanelSlideUrlsInput): string[] {
+}: SlideUrlsForPublishPanelOptions): string[] {
   return paths.map((path) =>
     appendCacheBuster(
       toAuthenticatedPreviewSlideUrl(path, projectId, language),

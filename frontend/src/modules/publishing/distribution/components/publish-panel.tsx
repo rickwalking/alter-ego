@@ -198,7 +198,9 @@ export function PublishPanel({
             <div className="flex flex-wrap gap-2">
               <button
                 type="button"
-                onClick={() => copyToClipboard(editor.caption)}
+                onClick={() => {
+                  void copyToClipboard(editor.caption);
+                }}
                 className="rounded-md border border-[var(--color-border)] px-3 py-1.5 text-sm hover:bg-[var(--color-background)]"
               >
                 {t("instagram.copyCaption")}
@@ -206,7 +208,9 @@ export function PublishPanel({
               {onPublishInstagram && (
                 <button
                   type="button"
-                  onClick={() => onPublishInstagram(editor.caption)}
+                  onClick={() => {
+                    void onPublishInstagram(editor.caption);
+                  }}
                   disabled={
                     isPublishingInstagram ||
                     editor.caption.length === 0 ||
@@ -269,7 +273,9 @@ export function PublishPanel({
             <div className="flex flex-wrap gap-2">
               <button
                 type="button"
-                onClick={() => copyToClipboard(activeLinkedInText)}
+                onClick={() => {
+                  void copyToClipboard(activeLinkedInText);
+                }}
                 className="rounded-md border border-[var(--color-border)] px-3 py-1.5 text-sm hover:bg-[var(--color-background)]"
               >
                 {t("linkedin.copyPost")}

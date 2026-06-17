@@ -140,7 +140,9 @@ def _validate_dockerfile(errors: list[str]) -> None:
         errors.append("Missing backend/Dockerfile")
         return
     content = dockerfile.read_text(encoding="utf-8")
-    if "COPY skills/runtime/" not in content:
+    # Tolerate COPY flags (e.g. `COPY --chown=user:user skills/runtime/ ...`),
+    # which the multi-stage runtime image uses to avoid a duplicate chown layer.
+    if not re.search(r"COPY\s+(?:--\S+\s+)*skills/runtime/", content):
         errors.append("backend/Dockerfile must COPY skills/runtime/")
     if "skills/delivery" in content:
         errors.append("backend/Dockerfile must not COPY skills/delivery")

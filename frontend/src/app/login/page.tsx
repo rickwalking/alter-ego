@@ -185,7 +185,9 @@ export default function LoginPage() {
           </div>
 
           <form
-            onSubmit={handleSubmit}
+            onSubmit={(e) => {
+              void handleSubmit(e);
+            }}
             style={{
               background: BG_CARD,
               border: "1px solid rgba(255,255,255,0.06)",

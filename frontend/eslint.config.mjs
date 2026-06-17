@@ -11,15 +11,30 @@ import sonarjs from "eslint-plugin-sonarjs";
 // error would require mass refactoring of pre-existing violations (counts
 // measured 2026-06-17):
 //   no-unnecessary-condition (69), prefer-nullish-coalescing (50),
-//   no-floating-promises (17), no-misused-promises (15), no-non-null-assertion
-//   (7), no-img-element (8), and the size/complexity rules below. They are paid
-//   down opportunistically, never blanket-ignored, and the severities only ever
-//   ratchet UP (warn→error), never down.
+//   and the size/complexity rules below. They are paid down opportunistically,
+//   never blanket-ignored, and the severities only ever ratchet UP (warn→error),
+//   never down.
+//
+// Promoted to error (count driven to 0 in production `src`):
+//   no-non-null-assertion (AE-0199), no-floating-promises +
+//   no-misused-promises (AE-0200), max-params (AE-0201).
+//
+// no-img-element (AE-0202): 8 -> 1. Six prod `<img>` migrated to next/image;
+//   one remains at warn — `image-gen-modal.tsx` previews a freshly generated
+//   image whose dimensions are backend-configurable and unknown to the
+//   frontend, so neither explicit width/height nor a fixed-aspect `fill`
+//   container is behavior-preserving. Left as `<img>` + rule kept at `warn`
+//   until a known size is surfaced.
 const typeCheckedRules = {
   "@typescript-eslint/no-explicit-any": "error",
-  "@typescript-eslint/no-non-null-assertion": "warn",
-  "@typescript-eslint/no-floating-promises": "warn",
-  "@typescript-eslint/no-misused-promises": "warn",
+  // AE-0199: all pre-existing findings were in tests -> production `src` clean,
+  // promoted to error. The test-file override below turns it back off (`!` is
+  // idiomatic for known-present fixtures in tests).
+  "@typescript-eslint/no-non-null-assertion": "error",
+  // AE-0200: floating promises voided / async handlers wrapped -> 0 findings,
+  // promoted to error (behavior-preserving fixes only).
+  "@typescript-eslint/no-floating-promises": "error",
+  "@typescript-eslint/no-misused-promises": "error",
   "@typescript-eslint/prefer-nullish-coalescing": "warn",
   // Zero pre-existing violations after AE-0166 cleanup -> promoted to error.
   "@typescript-eslint/prefer-optional-chain": "error",
@@ -82,7 +97,9 @@ export default defineConfig([
       // `eslint --quiet` (which suppresses warnings).
       "no-else-return": ["error", { allowElseIf: false }],
       "no-lonely-if": "error",
-      "max-params": ["warn", 3],
+      // AE-0201: refactored 4-arg sites to typed options objects (CLAUDE.md
+      // <=3 args) -> 0 findings, promoted to error.
+      "max-params": ["error", 3],
       "max-statements": ["warn", 25],
       "sonarjs/cognitive-complexity": ["warn", 15],
       "@tanstack/query/exhaustive-deps": "error",
@@ -203,12 +220,6 @@ export default defineConfig([
     },
   },
   {
-    files: ["src/features/blog/components/public-post/**/*.tsx"],
-    rules: {
-      "@next/next/no-img-element": "off",
-    },
-  },
-  {
     files: ["scripts/**/*.mjs"],
     languageOptions: {
       parserOptions: {
@@ -273,6 +284,9 @@ export default defineConfig([
       "sonarjs/cognitive-complexity": "off",
       // Test fixtures legitimately use literal status codes / sizes.
       "no-magic-numbers": "off",
+      // AE-0199: `!` is idiomatic in tests for known-present fixtures; the rule
+      // is error in production `src` but off here.
+      "@typescript-eslint/no-non-null-assertion": "off",
     },
   },
 ]);

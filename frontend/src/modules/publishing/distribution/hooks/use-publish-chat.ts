@@ -123,7 +123,7 @@ export function usePublishChat(projectId: string): UsePublishChatReturn {
 
       const payload = buildContextPrefix(projectId) + content.trim();
 
-      streamSseEvents({
+      void streamSseEvents({
         url: API_ENDPOINTS.CONVERSATION_PUBLISH_CHAT_STREAM(conversationId),
         body: { content: payload },
         signal,
@@ -133,7 +133,7 @@ export function usePublishChat(projectId: string): UsePublishChatReturn {
           if (event.event === SSE_EVENT_TYPE.TOOL_RESULT) {
             const tool = data.tool as string | undefined;
             if (tool === TOOL_REFINE_CAROUSEL_COPY) {
-              queryClient.invalidateQueries({
+              void queryClient.invalidateQueries({
                 queryKey: carouselKeys.detail(projectId),
               });
             }

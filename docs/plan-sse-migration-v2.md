@@ -1,5 +1,7 @@
 # Plan: Complete WebSocket-to-SSE Migration & Chat Endpoint Separation
 
+> Status: Superseded — historical record
+
 ## Status: ✅ APPROVED — Adjustments applied. Implementation in progress.
 
 ---

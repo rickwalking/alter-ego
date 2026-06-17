@@ -80,7 +80,9 @@ export function ChangePasswordDialog({
                 {password}
               </code>
               <button
-                onClick={() => navigator.clipboard.writeText(password)}
+                onClick={() => {
+                  void navigator.clipboard.writeText(password);
+                }}
                 className="text-xs text-primary hover:text-primary-900"
               >
                 {t("copy")}
@@ -90,7 +92,12 @@ export function ChangePasswordDialog({
         )}
 
         {!success && (
-          <form onSubmit={handleSubmit} className="mt-4">
+          <form
+            onSubmit={(e) => {
+              void handleSubmit(e);
+            }}
+            className="mt-4"
+          >
             <p className="text-sm text-gray-600">
               {t("resetPasswordDescription")}
             </p>

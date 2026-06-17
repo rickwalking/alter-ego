@@ -1,5 +1,7 @@
 # Carousel Editorial Workflow & Publish Fixes
 
+> Status: Superseded — historical record
+
 ## Context
 
 End-to-end editorial carousel runs produced 10 slides instead of the canonical 7, empty publish captions, EN slides without text overlay, broken `/blog/{id}` after site publish, stale create-workspace tabs, missing i18n for publish CTA, and workflow board cards dropping after `published` phase.

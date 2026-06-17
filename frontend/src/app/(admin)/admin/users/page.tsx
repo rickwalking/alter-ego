@@ -44,12 +44,12 @@ export default function UsersPage() {
   };
 
   useEffect(() => {
-    fetchUsers();
+    void fetchUsers();
   }, []);
 
   const handleUserCreated = () => {
     setIsCreateOpen(false);
-    fetchUsers();
+    void fetchUsers();
   };
 
   return (
@@ -80,7 +80,12 @@ export default function UsersPage() {
       {isLoading ? (
         <div className="py-8 text-center text-gray-500">{t("loading")}</div>
       ) : (
-        <UserTable users={users} onRefresh={fetchUsers} />
+        <UserTable
+          users={users}
+          onRefresh={() => {
+            void fetchUsers();
+          }}
+        />
       )}
 
       {isCreateOpen && (

@@ -38,7 +38,13 @@ Before running, verify the following exist:
 
 ### 4. Self-Verification Before Completion
 After implementing each criterion, run:
-- **Lint**: `ruff check` (backend) / `eslint` (frontend)
+- **Lint (run the FULL gate, not bare eslint/ruff)**: `bash scripts/ci/gates.sh
+  backend:lint` / `bash scripts/ci/gates.sh frontend:lint`. ⚠️ The frontend gate
+  is `npm run lint`, which chains `eslint && lint:boundaries && url:check &&
+  lint:circular && lint:component-types && lint:use-client && lint:dup`. Bare
+  `npx eslint` / `eslint --quiet` is **NOT** a substitute — it skips those chained
+  checks and passes code the CI gate fails (e.g. inline component types,
+  boundary/circular violations, duplication).
 - **Type check**: `mypy --strict` (backend) / `tsc --noEmit` (frontend)
 - **Tests**: `pytest` (backend) / `npm test` (frontend) — all must pass
 - **File size**: No files over 400 lines (per CLAUDE.md rule)

@@ -1,5 +1,7 @@
 # Alter-Ego Agentic Delivery System Plan
 
+> Status: Superseded — historical record
+
 **Project:** Alter-Ego
 **Purpose:** Implementation context for building a persistent, visual, multi-agent delivery workflow using Kanban, repo-backed tickets, plans, QA reports, and agent skills.
 **Intended use:** Inject this file as context into Claude Code, OpenCode, Codex, Cline, or another coding agent before implementation.

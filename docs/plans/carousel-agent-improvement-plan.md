@@ -1,5 +1,7 @@
 # Carousel Agent Improvement Plan — Neon Shell v2.0 Alignment
 
+> Status: Superseded — historical record
+
 **Date:** 2026-05-30
 **Author:** Plan synthesis from codebase audit and rebranding session analysis
 **Status:** Draft / Proposed

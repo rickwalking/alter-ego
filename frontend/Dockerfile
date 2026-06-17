@@ -1,9 +1,12 @@
+# syntax=docker/dockerfile:1
 FROM node:22-alpine AS deps
 
 WORKDIR /app
 
 COPY package.json package-lock.json ./
-RUN npm ci --ignore-scripts
+# BuildKit cache mount (AE-0192): persists the npm cache across builds so
+# repeated `npm ci` runs (e.g. droplet rebuilds) skip re-downloading packages.
+RUN --mount=type=cache,target=/root/.npm npm ci --ignore-scripts
 
 FROM node:22-alpine AS builder
 

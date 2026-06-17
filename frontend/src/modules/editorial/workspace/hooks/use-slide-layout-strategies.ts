@@ -73,7 +73,7 @@ export function useRegenerateSlides(): UseMutationResult<
       });
     },
     onSuccess: (_data, { projectId }) => {
-      queryClient.invalidateQueries({
+      void queryClient.invalidateQueries({
         queryKey: carouselKeys.detail(projectId),
       });
     },
