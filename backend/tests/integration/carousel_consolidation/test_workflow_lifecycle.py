@@ -297,19 +297,56 @@ class TestEditorialWorkflowLifecycle:
     async def test_caption_endpoint_returns_stored_caption_without_pipeline(
         self, client: AsyncClient
     ) -> None:
-        """Scenario: Caption endpoint does not run full legacy pipeline."""
+        """Scenario: Caption endpoint does not run full legacy pipeline.
+
+        AE-0204: the caption is sourced from the canonical ``blog_posts.distribution``
+        home, so the stored caption is seeded on the project's ``origin='carousel'``
+        blog row (not the embedded carousel column).
+        """
+        import uuid as _uuid
+
+        from sqlalchemy import select
+
+        from rag_backend.domain.constants.blog_post import BlogPostOrigin
         from rag_backend.infrastructure.database.config import get_session_maker
-        from rag_backend.infrastructure.database.models.carousel import (
-            CarouselProjectModel,
-        )
+        from rag_backend.infrastructure.database.models.blog_post import BlogPostModel
 
         editor = await create_user("caption@example.com", UserRole.EDITOR)
         project_id = await create_carousel(editor, is_public=False)
+        distribution = {
+            "caption": "Stored workflow caption",
+            "linkedin_post_pt": None,
+            "linkedin_post_en": None,
+        }
         session_maker = get_session_maker()
         async with session_maker() as session:
-            model = await session.get(CarouselProjectModel, project_id)
-            assert model is not None
-            model.caption = "Stored workflow caption"
+            existing = (
+                (
+                    await session.execute(
+                        select(BlogPostModel).where(
+                            BlogPostModel.project_id == project_id,
+                            BlogPostModel.origin == BlogPostOrigin.CAROUSEL.value,
+                        )
+                    )
+                )
+                .scalars()
+                .first()
+            )
+            if existing is not None:
+                existing.distribution = distribution
+            else:
+                session.add(
+                    BlogPostModel.from_entity({
+                        "id": str(_uuid.uuid4()),
+                        "project_id": project_id,
+                        "origin": BlogPostOrigin.CAROUSEL.value,
+                        "title": "t",
+                        "slug": f"carousel-{project_id}",
+                        "status": "published",
+                        "content": {"markdown": "# body"},
+                        "distribution": distribution,
+                    })
+                )
             await session.commit()
 
         response = await client.post(

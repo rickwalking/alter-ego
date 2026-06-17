@@ -221,7 +221,11 @@ class TestWriteDelegation:
         assert model.current_phase == PHASE_DESIGN
         assert model.phase_status == PHASE_STATUS_IN_PROGRESS
         assert model.workflow_status == WORKFLOW_STATUS_APPROVED_FOR_PUBLISH
-        assert model.caption == _CAPTION
+        # AE-0204: caption is NOT synced onto the embedded column anymore — it has a
+        # canonical home (blog_posts.distribution); the checkpoint sync is decoupled.
+        # ``caption`` stays in ``state`` to prove the sync intentionally ignores it.
+        assert model.caption is None
+        # blog_markdown remains synced (AE-0163's domain).
         assert model.blog_markdown == _BLOG
 
     @pytest.mark.asyncio
