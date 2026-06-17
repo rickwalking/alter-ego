@@ -507,13 +507,17 @@ class TestPublicCarouselBlog:
         session_maker = get_session_maker()
         async with session_maker() as session:
             rows = (
-                await session.execute(
-                    select(BlogPostModel).where(
-                        BlogPostModel.project_id == project_id,
-                        BlogPostModel.origin == BlogPostOrigin.CAROUSEL.value,
+                (
+                    await session.execute(
+                        select(BlogPostModel).where(
+                            BlogPostModel.project_id == project_id,
+                            BlogPostModel.origin == BlogPostOrigin.CAROUSEL.value,
+                        )
                     )
                 )
-            ).scalars().all()
+                .scalars()
+                .all()
+            )
         assert len(rows) == 1
         row = rows[0]
         assert row.slug == f"carousel-{project_id}"
@@ -603,9 +607,7 @@ class TestDistributionCanonicalHome:
     """The 3 distribution fields source from ``blog_posts.distribution`` (AE-0204)."""
 
     @pytest.mark.asyncio
-    async def test_dual_write_populates_canonical_home(
-        self, pub_env: PubEnv
-    ) -> None:
+    async def test_dual_write_populates_canonical_home(self, pub_env: PubEnv) -> None:
         """Scenario: the carousel dual-write mirrors caption + LinkedIn into the home.
 
         Given a carousel with caption + LinkedIn posts, the carousel-blog write
@@ -648,13 +650,17 @@ class TestDistributionCanonicalHome:
 
         async with session_maker() as session:
             row = (
-                await session.execute(
-                    select(BlogPostModel).where(
-                        BlogPostModel.project_id == project_id,
-                        BlogPostModel.origin == BlogPostOrigin.CAROUSEL.value,
+                (
+                    await session.execute(
+                        select(BlogPostModel).where(
+                            BlogPostModel.project_id == project_id,
+                            BlogPostModel.origin == BlogPostOrigin.CAROUSEL.value,
+                        )
                     )
                 )
-            ).scalars().one()
+                .scalars()
+                .one()
+            )
             assert row.distribution[DISTRIBUTION_CAPTION_KEY] == FIXTURE_CAPTION
             assert (
                 row.distribution[DISTRIBUTION_LINKEDIN_POST_PT_KEY]

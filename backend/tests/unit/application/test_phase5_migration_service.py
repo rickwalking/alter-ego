@@ -126,7 +126,9 @@ class TestPhase5MigrationService:
         session.add(project)
         await session.commit()
 
-        report = await Phase5MigrationService().run(session, _reader(session), dry_run=False)
+        report = await Phase5MigrationService().run(
+            session, _reader(session), dry_run=False
+        )
 
         await session.refresh(project)
         assert report.creative_briefs_updated == 1
@@ -139,7 +141,9 @@ class TestPhase5MigrationService:
         session.add(project)
         await session.commit()
 
-        report = await Phase5MigrationService().run(session, _reader(session), dry_run=False)
+        report = await Phase5MigrationService().run(
+            session, _reader(session), dry_run=False
+        )
 
         await session.refresh(project)
         assert report.workflow_states_updated >= 1
@@ -200,7 +204,9 @@ class TestPhase5MigrationService:
         session.add(project)
         await session.commit()
 
-        report = await Phase5MigrationService().run(session, _reader(session), dry_run=True)
+        report = await Phase5MigrationService().run(
+            session, _reader(session), dry_run=True
+        )
 
         await session.refresh(project)
         assert report.dry_run is True

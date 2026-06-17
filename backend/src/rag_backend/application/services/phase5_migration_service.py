@@ -236,7 +236,9 @@ class Phase5MigrationService:
 
         persona_id = await self._ensure_default_persona(
             _PersonaSeedContext(
-                db=db, projects=projects, report=report,
+                db=db,
+                projects=projects,
+                report=report,
                 read_distribution=read_distribution,
             )
         )
@@ -311,9 +313,7 @@ class Phase5MigrationService:
             ctx.report.persona_id = str(found.id)
             return str(found.id)
 
-        samples = await _collect_writing_samples(
-            ctx.projects, ctx.read_distribution
-        )
+        samples = await _collect_writing_samples(ctx.projects, ctx.read_distribution)
         if not samples:
             ctx.report.errors.append(ERR_NO_WRITING_SAMPLES)
             return None

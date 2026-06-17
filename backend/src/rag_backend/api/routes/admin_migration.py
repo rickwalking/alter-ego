@@ -9,12 +9,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from rag_backend.api.dependencies.database import get_db
 from rag_backend.api.dependencies.roles import AdminUser
 from rag_backend.api.middleware.rate_limiting import limiter
+from rag_backend.api.routes.carousels.deps import get_carousel_repo
 from rag_backend.application.services.phase5_migration_service import (
     Phase5MigrationReport,
     Phase5MigrationService,
 )
 from rag_backend.domain.constants.rate_limits import RATE_LIMIT_ADMIN_MIGRATION
-from rag_backend.infrastructure.database.distribution_home import read_distribution
+from rag_backend.domain.protocols import CarouselRepository
 from rag_backend.infrastructure.logging import get_logger
 
 router = APIRouter(prefix="/admin/migration", tags=["admin"])
@@ -58,6 +59,7 @@ def _to_response(report: Phase5MigrationReport) -> Phase5MigrationResponse:
 async def run_phase5_migration(
     request: Request,
     db: Annotated[AsyncSession, Depends(get_db)],
+    repo: Annotated[CarouselRepository, Depends(get_carousel_repo)],
     admin: AdminUser,
     dry_run: bool = Query(
         default=False, description="Preview changes without committing"
@@ -65,12 +67,10 @@ async def run_phase5_migration(
 ) -> Phase5MigrationResponse:
     """Migrate legacy carousel projects to editorial workflow schema."""
     service = Phase5MigrationService()
-
-    async def _read_distribution(project_id: str) -> dict[str, str | None] | None:
-        """Bind the request session to the canonical-home reader (AE-0204)."""
-        return await read_distribution(db, project_id)
-
-    report = await service.run(db, _read_distribution, dry_run=dry_run)
+    # AE-0204: the carousel repository owns the canonical-home read; pass its
+    # bound reader as the DistributionReader so this route adds no new
+    # api->infrastructure import (the repo is resolved via the carousels edge).
+    report = await service.run(db, repo.read_distribution, dry_run=dry_run)
     logger.info(
         "phase5_migration_completed",
         admin_id=str(admin.id),

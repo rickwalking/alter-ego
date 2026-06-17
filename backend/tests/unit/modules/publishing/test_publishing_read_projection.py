@@ -176,9 +176,7 @@ class TestCarouselBlogProjection:
         assert await acl.project_carousel_blog(_carousel_entity()) is None
 
     @pytest.mark.asyncio
-    async def test_row_supplies_body_and_title(
-        self, db_session: AsyncSession
-    ) -> None:
+    async def test_row_supplies_body_and_title(self, db_session: AsyncSession) -> None:
         """Scenario: the origin='carousel' row supplies the body + title/subtitle."""
         project = _carousel_entity()
         self._add_carousel_row(

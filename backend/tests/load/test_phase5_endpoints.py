@@ -81,8 +81,7 @@ def _seed_projects(count: int) -> list[object]:
                 "content": {"markdown": "# body"},
                 "distribution": {
                     "caption": (
-                        f"Sample caption {index} for load testing migration "
-                        "throughput."
+                        f"Sample caption {index} for load testing migration throughput."
                     ),
                     "linkedin_post_pt": None,
                     "linkedin_post_en": None,

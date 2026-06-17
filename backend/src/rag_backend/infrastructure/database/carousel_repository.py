@@ -73,6 +73,16 @@ class PostgresCarouselRepository(CarouselRepository):
         await self._overlay_distribution(entity)
         return entity
 
+    async def read_distribution(self, project_id: str) -> dict[str, str | None] | None:
+        """Read the canonical distribution payload for a project (AE-0204).
+
+        The single read seam over ``blog_posts.distribution``; exposed on the
+        repository so outer layers (e.g. the phase-5 migration via the admin edge)
+        can source caption/LinkedIn from the canonical home without importing the
+        infrastructure accessor directly.
+        """
+        return await read_distribution(self._session, project_id)
+
     async def _overlay_distribution(self, entity: CarouselProject) -> None:
         """Source the distribution copy from the canonical home (AE-0204).
 
