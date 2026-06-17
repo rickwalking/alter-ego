@@ -8,12 +8,6 @@ export function PUBLISH_CHAT_STORAGE_KEY(projectId: string): string {
   return `${PUBLISH_CHAT_STORAGE_KEY_PREFIX}:${projectId}`;
 }
 
-/** Message role: user. */
-export const MESSAGE_ROLE_USER = "user";
-
-/** Message role: assistant. */
-export const MESSAGE_ROLE_ASSISTANT = "assistant";
-
 /** Prefix for optimistic user message IDs. */
 export const OPTIMISTIC_MESSAGE_ID_PREFIX = "opt-";
 

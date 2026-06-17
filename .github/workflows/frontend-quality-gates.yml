@@ -127,6 +127,42 @@ jobs:
         working-directory: .
         run: bash scripts/ci/gates.sh frontend:typecheck
 
+  duplication:
+    name: frontend / Duplication
+    # AE-0149: source-scoped copy-paste detection (jscpd). Blocks NEW source
+    # duplication above the ratchet-down threshold in frontend/.jscpd.json.
+    # Test/spec/story files are excluded by design (advisory only — see the
+    # frontend / Duplication (tests, advisory) job). Definition lives in
+    # scripts/ci/gates.sh (also run by /qa-agent), so CI and local QA cannot drift.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Detect source duplication (jscpd)
+        working-directory: .
+        run: bash scripts/ci/gates.sh frontend:duplication
+
+      - name: Post PR summary on failure
+        if: failure() && github.event_name == 'pull_request'
+        working-directory: .
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_EVENT_PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          bash scripts/ci/post-pr-quality-comment.sh \
+            "Frontend" "Duplication" \
+            "New source copy-paste duplication exceeds the jscpd threshold (frontend/.jscpd.json). Extract the shared logic instead of duplicating; the threshold may only ratchet DOWN."
+
   legacy-guard:
     name: frontend / Legacy guard
     runs-on: ubuntu-latest
@@ -331,6 +367,42 @@ jobs:
       - name: Check OpenAPI <-> Zod schema drift
         working-directory: .
         run: bash scripts/ci/gates.sh frontend:schema-drift
+
+  duplication-tests-advisory:
+    name: frontend / Duplication (tests, advisory)
+    # AE-0151: surfaces test-file copy-paste duplication (jscpd over *.test.* /
+    # *.spec.*). Non-blocking by design — test boilerplate is acceptable and is
+    # excluded from the blocking frontend / Duplication gate (AE-0149); this job
+    # only reports the signal without forcing harmful test-DRYing.
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Report test-file duplication (jscpd)
+        working-directory: .
+        run: bash scripts/ci/gates.sh frontend:duplication-tests
+
+      - name: Post PR duplication (tests) summary
+        if: always() && github.event_name == 'pull_request'
+        working-directory: .
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_EVENT_PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          bash scripts/ci/post-pr-quality-comment.sh \
+            "Frontend" "Duplication (tests, advisory)" \
+            "jscpd scanned test-file duplication (non-blocking). Acceptable test boilerplate is not gated; review the jscpd report in workflow logs for egregious cases worth extracting into shared fixtures."
 
   mutation-advisory:
     name: frontend / Mutation (advisory)

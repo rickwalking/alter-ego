@@ -1,0 +1,510 @@
+OpenAI Codex v0.139.0
+--------
+workdir: /home/pmarins/projects/alter-ego-dup-gate
+model: gpt-5.5
+provider: openai
+approval: never
+sandbox: read-only
+reasoning effort: xhigh
+reasoning summaries: none
+session id: 019ed23c-82ba-7f03-b750-4b16da42cbca
+--------
+user
+ROLE
+You are an adversarial architecture reviewer (devil's advocate). You are NOT the author.
+Your job is to find material risks, false assumptions, and gaps — not to validate the plan.
+
+LIMITS
+- Do NOT say "looks good", "solid plan", or equivalent unless zero material findings exist.
+- You MUST produce at least 3 material concerns. If fewer exist, state what evidence is missing to review properly.
+- Challenge the STRONGEST version of the plan, not a strawman.
+- Distinguish "bad idea" vs "incomplete because …" (prefer the latter).
+- No implementation code. No scope expansion unless tied to a stated risk.
+- Cite uncertainty explicitly; do not invent project facts not in the packet.
+
+LENSES (apply each briefly)
+- Security / abuse
+- Data integrity & migration
+- Operational failure (deploy, rollback, observability)
+- Concurrency / consistency
+- Cost & complexity
+- Testability & missing edge cases
+
+OUTPUT (mandatory markdown)
+# Cold Critic Review
+
+## Verdict
+BLOCK | WARN | PROCEED_WITH_CAUTION
+
+## Findings
+### [BLOCKER|WARN|INFO] <title>
+- Assumption: ...
+- Risk: ...
+- Impact: ...
+- Suggested mitigation: ...
+- Open question for author: ...
+
+## Missing evidence
+- ...
+
+## Residual risks if plan proceeds unchanged
+- ...
+
+=== BLIND PACKET: PROPOSED WORK ITEMS FOR A FULL-STACK RAG APP (Next.js 16 / React 19 frontend, FastAPI backend) ===
+
+Context you may rely on: the frontend already enforces, via a single-source-of-truth runner (scripts/ci/gates.sh) mirrored by CI: eslint, tsc, prettier, vitest, a feature-boundary baseline-ratchet, a component-type-location baseline-ratchet, a circular-import check, advisory Stryker mutation, and a NEW source-scoped jscpd copy-paste gate (threshold currently 1.2%, ratchet-down-only, test files excluded). The backend has a vulture dead-code gate; the frontend has none. Review the FOUR proposed work items below.
+
+----------------------------------------------------------------------
+# AE-0152 — Frontend dead-export / unused-code gate (knip, baseline-ratchet)
+
+Status: Intake
+Tier: T2
+Priority: High
+Type: Quality
+Area: Frontend/CI
+Owner: Unassigned
+Agent Lane: planner → architect → developer → qa → release
+Branch: TBD
+Kanban Card: TBD
+Created: 2026-06-16
+Updated: 2026-06-16
+
+## Goal
+
+A frontend dead-export / unused-code detector (knip), wired into the
+single-source-of-truth runner as a **baseline-ratchet** gate (advisory first,
+then blocking), so net-new orphaned exports/files are caught automatically.
+
+## Problem
+
+The frontend has **no** unused-export/dead-code detector. ESLint
+`no-unused-vars` sees unused locals/imports but never cross-file *exports*. The
+backend has `vulture` (`scripts/ci/gates.sh` `gate_backend_dead_code`); the
+frontend has no equivalent — an asymmetry. In AE-0150, `MESSAGE_ROLE_USER` /
+`MESSAGE_ROLE_ASSISTANT` in `frontend/src/constants/publish-chat.ts` became
+production-orphaned after a refactor and were caught **manually by QA**, not by
+any gate.
+
+Research (kaizen): **knip** is the 2025/2026 standard (ts-prune archived → knip;
+`eslint import/no-unused-modules` false-positives on `@/*` absolute imports + the
+29 barrel files and bloats lint time). knip's Next.js plugin understands
+app-router entrypoints (`page/layout/route.tsx`), so it won't flag framework
+files. A first run will surface dozens–100+ findings (barrel re-exports,
+public-API constants, shared types) → must grandfather a baseline and ratchet
+DOWN, exactly like the jscpd threshold and the component-type baseline.
+
+## Scope
+
+- Add `knip` devDependency + `frontend/knip.json` (Next.js + Storybook + Vitest
+  entrypoints; `exports`/`files` as `warn`).
+- `frontend/scripts/check-dead-code.mjs` + `generate-dead-code-baseline.mjs` +
+  `dead-code-baseline.json` — reuse the `check-component-type-location.mjs`
+  baseline-ratchet pattern (grandfather current count + allowlist; block only
+  NET-NEW; DOWN-only). Scripts: `lint:dead-code`, `dead-code:baseline`.
+- `gate_frontend_dead_code` in `scripts/ci/gates.sh` + register `dead-code` in
+  `FRONTEND_GATES`; `frontend / Dead code` CI job, **advisory
+  (`continue-on-error: true`) for the introductory wave** (mirror jscpd
+  test-advisory / mutation), flip to blocking in a follow-up.
+- Register the baseline in `scripts/ci/check-integrity.sh` so a raised count is
+  flagged as loosening (like `BASELINE_*` / jscpd `"threshold"`).
+- Document in `frontend/AGENTS.md` + `docs/guides/qa-checkpoints.md`.
+
+## Non-Goals
+
+- Removing all currently-grandfathered dead code (separate refactor tickets).
+- Per-file coverage gate or zero-tolerance (would be too noisy on barrels/public API).
+
+## Acceptance Criteria
+
+- [ ] `bash scripts/ci/gates.sh frontend:dead-code` passes at the grandfathered baseline.
+- [ ] **The gate FAILS on a seeded net-new unused export** (prove enforcement).
+- [ ] Next.js/Storybook/Vitest entrypoints are NOT false-flagged.
+- [ ] Baseline count can only **decrease** (raising it flagged by `check-integrity.sh`).
+- [ ] Gate runs in CI (advisory first) and is documented in AGENTS.md + qa-checkpoints.
+
+
+----------------------------------------------------------------------
+# AE-0153 — Document when .feature files are required vs unit-tests-suffice
+
+Status: Intake
+Tier: T1
+Priority: Low
+Type: Task
+Area: Cross-cutting
+Owner: Unassigned
+Branch: TBD
+Created: 2026-06-16
+Updated: 2026-06-16
+
+## Goal
+
+Clarify the "Gherkin-first" testing standard so it states when a `.feature` file
+is required versus when focused unit tests suffice — removing a recurring,
+non-actionable QA warning.
+
+## Problem
+
+CLAUDE.md mandates a "Gherkin-first approach" but is silent on pure-refactor and
+CI/config tickets. AE-0150 (refactor) and AE-0151 (CI-config) shipped with no
+`.feature` file — fully covered by unit tests + the gate's own seeded-violation
+test — yet QA flags "missing .feature" on every such ticket. The standard needs
+an explicit scope so the signal is actionable, without loosening any gate.
+
+## Scope
+
+- `CLAUDE.md` (Testing) + `frontend/AGENTS.md` + `backend/AGENTS.md`: state two
+  cases — behavior-changing feature/bugfix tickets require `.feature` scenarios
+  (happy + edge + failure); pure refactors and CI/config tickets may substitute
+  focused unit tests + the gate's seeded-violation test, cited in the ticket.
+- `docs/guides/qa-checkpoints.md`: reference the clarified rule so QA applies it.
+
+## Non-Goals
+
+- Do not refactor unrelated code
+- Loosening any gate or coverage threshold (documentation/scoping change only).
+
+## Acceptance Criteria
+
+- [ ] CLAUDE.md + both AGENTS.md name the two cases explicitly.
+- [ ] `docs/guides/qa-checkpoints.md` references the rule.
+- [ ] No gate, threshold, or check is loosened (ratchet HOLD/UP).
+
+## Repro Steps
+
+1. Review the AE-0150 / AE-0151 QA report: "missing .feature" raised despite full
+   unit-test coverage — a non-actionable warning under the current wording.
+
+
+----------------------------------------------------------------------
+# AE-0154 — Refactor remaining frontend duplication hotspots + ratchet jscpd toward ~1%
+
+Status: Intake
+Tier: T2
+Priority: Medium
+Type: Refactor
+Area: Frontend
+Owner: Unassigned
+Agent Lane: planner → architect → developer → qa → release
+Branch: TBD
+Kanban Card: TBD
+Created: 2026-06-16
+Updated: 2026-06-16
+
+## Goal
+
+Pay down the remaining frontend source-duplication clones (the hotspots AE-0150
+left as out-of-scope) so the jscpd `threshold` in `frontend/.jscpd.json` can
+ratchet further DOWN, toward ~1%.
+
+## Problem
+
+AE-0150 de-duped the top 3 named hotspots (SSE hooks, carousel routes,
+api-client), dropping source duplication 1.45% → **1.08%** and ratcheting the
+jscpd threshold 2 → 1.2. Per AE-0150's non-goal ("do not over-DRY; readability
+wins"), the remaining clones were intentionally left. They are now the next
+tranche of debt. Current `npx jscpd src`: **26 clones, 1.08% (350 dup lines)**.
+
+Remaining clones (from `frontend/reports/jscpd/jscpd-report.json`):
+- `create-theme-section.tsx` ~ `create-topic-section.tsx` ~ `create-template-section.tsx`
+  (27L/20L/19L — the dashboard "create workspace" section components share structure).
+- `app/dashboard/personas/page.tsx` ~ `app/dashboard/rubrics/page.tsx` (24L — list-page scaffold).
+- `components/admin/create-user-dialog.tsx` ~ `edit-user-dialog.tsx` (17L + 16L — user dialog form).
+- `app/dashboard/chat/error.tsx` ~ `knowledge/error.tsx` (18L — route error boundary).
+- `modules/.../use-editorial-workflow-utils.ts` self-clone (27L).
+- `accessibility-checker.tsx` ~ `seo-preview.tsx` (15L); `login/page.tsx` ~ `public-header.tsx`
+  ~ `neon-sidebar.tsx` (15L/14L); `blog-post-admin-panel.tsx` self-clone (13L).
+
+## Scope
+
+- Refactor the clones above into shared components/hooks/utils **where it
+  genuinely improves clarity** (e.g. a shared create-workspace section primitive,
+  a shared list-page scaffold, a shared user-dialog form, a shared route-error
+  boundary).
+- Lower the jscpd `threshold` in `frontend/.jscpd.json` to the new measured level
+  (ratchet DOWN, toward ~1%).
+
+## Non-Goals
+
+- Over-DRYing: do not couple unrelated code just to cut clones (readability wins).
+- Test-file duplication (advisory only — AE-0151).
+
+## Acceptance Criteria
+
+- [ ] The targeted source clones are removed (shared extraction; jscpd confirms).
+- [ ] `npx jscpd src` source duplication drops below the current 1.08% level.
+- [ ] jscpd `threshold` lowered to the new level (ratchet down) and the
+      `frontend:duplication` gate is green.
+- [ ] No behavior change (tests pass; all frontend gates green).
+
+
+----------------------------------------------------------------------
+# AE-0155 — Add unit tests for useSseChat (conversation chat hook)
+
+Status: Intake
+Tier: T1
+Priority: Medium
+Type: Task
+Area: Frontend
+Owner: Unassigned
+Branch: TBD
+Created: 2026-06-16
+Updated: 2026-06-16
+
+## Goal
+
+Add a dedicated test suite for the `useSseChat` conversation chat hook
+(`frontend/src/modules/conversation/hooks/use-sse-chat.ts`), covering the logic
+unique to it that the shared hook tests don't exercise.
+
+## Problem
+
+`useSseChat` has **no dedicated test file** (pre-existing gap). The AE-0150
+refactor moved the streaming primitives into the shared, tested `useChatStream`
+hook, but `useSseChat`'s own behavior is still untested:
+- `mergeMessages` (dedupe of history vs optimistic by `role:content`),
+- `finalizeStream` (idempotent via `finalizedRef`; query invalidation +
+  optimistic clear; the `enableHistory: false` ephemeral path),
+- `startNewChat` (abort + clear),
+- the SOURCES / COMPLETE / ERROR event branches and `error` state,
+- the `overrideConversationId` send path and the no-convId / empty-content guards.
+
+This is the one consumer of the new shared hook without its own integration test;
+`usePublishChat` has a 47-test suite. Closing this removes the residual risk
+flagged by QA.
+
+## Scope
+
+- Add `frontend/src/modules/conversation/hooks/use-sse-chat.test.ts` (renderHook +
+  mocked `streamSseEvents` / `useConversationMessages` / QueryClient, mirroring
+  `use-publish-chat.test.ts`).
+- Cover happy path (send → tokens → complete → history invalidation), the
+  ephemeral `enableHistory: false` path, error/onError, SOURCES merge, dedupe in
+  `mergeMessages`, `startNewChat`, and the send-guard edge cases.
+
+## Non-Goals
+
+- Do not refactor `useSseChat` itself (behavior is correct; this is test-only).
+- Do not change the shared `useChatStream` hook.
+
+## Acceptance Criteria
+
+- [ ] `use-sse-chat.test.ts` exists and covers happy path, ephemeral path,
+      error path, SOURCES merge, message dedupe, startNewChat, and send guards.
+- [ ] Tests pass; `frontend:test` gate green.
+- [ ] No production behavior change.
+
+## Repro Steps
+
+1. `find frontend/src/modules/conversation -name 'use-sse-chat.test.*'` → no match
+   (the hook is untested; only the shared `useChatStream` and `usePublishChat` are).
+
+
+----------------------------------------------------------------------
+
+TASK: Apply the Cold Critic protocol above to this SET of four proposals. Treat them as a portfolio — also critique their INTERACTION (gate proliferation, sequencing, redundancy, whether they collectively move the needle or add maintenance cost). Produce the mandatory markdown output. Be specific and adversarial; at least 3 material findings.
+
+deprecated: `[features].web_search_request` is deprecated because web search is enabled by default.
+Set `web_search` to `"live"`, `"cached"`, or `"disabled"` at the top level (or under a profile) in config.toml if you want to override it.
+codex
+I’ll use `architect-skill` in skeptical/review mode because this is a portfolio-level architecture critique rather than implementation work. I’m reading its instructions first, then I’ll answer only from the supplied packet and call out uncertainty where evidence is missing.
+exec
+/usr/bin/zsh -lc 'cat /home/pmarins/projects/alter-ego-dup-gate/skills/delivery/architect-skill/SKILL.md' in /home/pmarins/projects/alter-ego-dup-gate
+ succeeded in 0ms:
+---
+name: architect-skill
+description: "Architecture hub: technical plans, ADR checks, optional validate/research/skeptical/bugfix modes. Use before implementation on T2/T3, high-risk areas, or when trade-offs need evidence. Read-only on production code unless explicitly switched to developer."
+disable-model-invocation: true
+version: 1.0.0
+---
+
+# Architect Skill
+
+## Purpose
+
+Validate technical approach and produce durable plan artifacts before development.
+
+## Modes
+
+| Mode | Invoke | Output |
+|------|--------|--------|
+| **plan** (default) | `/architect-skill` | `.agent/reports/AE-####.arch-plan.md` |
+| **validate** | `/architect-skill validate` | `.agent/reports/AE-####.plan-validation.md` |
+| **research** | `/architect-skill research "<question>"` | `.research.md`, `.options.md` |
+| **skeptical** | `/architect-skill skeptical` | `.skeptical-review.md` (external LLM) |
+| **bugfix** | `/architect-skill bugfix <paths>` | `.bugfix-design.md` |
+
+Read mode details in `references/`.
+
+## Tier routing
+
+| Tier | Typical chain |
+|------|----------------|
+| T0 | Skip |
+| T1 | `bugfix` only if root cause unclear |
+| T2 | `plan` → optional `research` → `validate` |
+| T3 | `plan` → `research` → `validate` → `skeptical` if high-risk |
+
+## Core plan mode (default)
+
+1. Read `CLAUDE.md`, relevant `AGENTS.md`, `docs/decisions/`, `docs/architecture/`.
+2. Read ticket and any `docs/plans/*.md`.
+3. Decide ADR required: yes/no; draft ADR path if yes.
+4. Write `.agent/reports/AE-####.arch-plan.md`: modules, API contracts, data model, testing, rollout/rollback.
+5. Update ticket `Decision Log`; handoff to ticket-writer or developer.
+
+## Critical rules
+
+- Do not edit production source in architect modes.
+- Do not skip ADR check for architecturally significant changes.
+- Research subagents are **read-only** (no parallel writes).
+- Skeptical review uses **blind packet** — see `references/skeptical-reviewer.md`.
+
+## Skeptical (cross-LLM)
+
+1. Export plan-only markdown (no author voice).
+2. Human runs external CLI (Codex, OpenCode, Claude Code) with `prompts/cold-critic-system.md`.
+3. Save external output to `.agent/reports/AE-####.skeptical-review.md`.
+4. Resolve or waive each BLOCKER in ticket `Decision Log`.
+
+Optional: `scripts/architect/run_cold_critic.sh` (helper).
+
+## Research
+
+Launch parallel read-only subagents (official docs, GitHub, repo ADRs, web). Max 3 rounds. See `references/researcher-protocol.md`.
+
+## Bugfix helper
+
+Scope + non-goals required. Propose 2–3 approaches with tests/edge cases; no code edits. Hand off to `/developer-skill`.
+
+## Validate
+
+Pre-dev gate: AC quality, Gherkin gaps, risks, ADR fit. FAIL blocks Ready without human waiver.
+
+## References
+
+- `references/skeptical-reviewer.md`
+- `references/researcher-protocol.md`
+- `references/bugfix-helper.md`
+- `references/plan-validator.md`
+- `config.yaml`
+- `docs/guides/agentic-team-operating-model.md`
+
+codex
+The skill’s routing points to the skeptical-reviewer reference for this mode, so I’m reading that next. I’m not inspecting repo files because the packet is explicitly blind and the task asks for critique of the proposals as given.
+exec
+/usr/bin/zsh -lc 'cat /home/pmarins/projects/alter-ego-dup-gate/skills/delivery/architect-skill/references/skeptical-reviewer.md' in /home/pmarins/projects/alter-ego-dup-gate
+ succeeded in 0ms:
+# Skeptical Reviewer (Cold Critic)
+
+## Why external LLM
+
+Same-session models agree with their own plans (self-preference bias). Use a **separate** CLI session with plan-only input.
+
+## Blind packet
+
+Include only:
+
+- `.agent/reports/AE-####.arch-plan.md` or `docs/plans/<plan>.md`
+- ADR IDs referenced (not full prose unless needed)
+
+Exclude: chat history, author name, implementation diffs.
+
+## Steps
+
+1. Copy packet to temp file.
+2. Run reviewer with `../prompts/cold-critic-system.md` as system prompt.
+3. Paste result into `.agent/reports/AE-####.skeptical-review.md`.
+4. Primary architect resolves findings in ticket `Decision Log`.
+
+## Trigger when
+
+- Plan "feels done" (comfort = trigger)
+- T3 or `high_risk_areas` in `.agent/config.yaml`
+- Human requests
+
+## Config
+
+See `../config.yaml` for CLI hints per tool.
+
+codex
+# Cold Critic Review
+
+## Verdict
+WARN
+
+## Findings
+
+### [BLOCKER] AE-0152 baseline-ratchet is underspecified for “net-new” enforcement
+- Assumption: A grandfathered count plus allowlist can reliably block net-new dead exports/files.
+- Risk: A count-only ratchet can miss replacement churn: one old unused export removed, one new unused export added, total count unchanged. Broad allowlists can also hide new issues under existing patterns.
+- Impact: The gate may create confidence without actually enforcing the claimed invariant.
+- Suggested mitigation: Baseline findings by stable identity: rule type, file path, export/file name, and normalized reason. Require tests for add, remove, replace-same-count, rename, and allowlist scope.
+- Open question for author: Is the proposed baseline keyed by findings, or only by total count?
+
+### [WARN] Gate proliferation lacks an operating model
+- Assumption: Adding knip while ratcheting jscpd will remain low-friction because both mirror existing gates.
+- Risk: The frontend already has many gates. Another CI job, baseline file, integrity rule, advisory mode, docs, seeded tests, and threshold ratchet adds maintenance load and failure triage cost.
+- Impact: Developers may learn to ignore advisory failures, or spend time debugging tool noise instead of product defects.
+- Suggested mitigation: Define a gate budget: runtime target, owner, advisory expiry date, escalation rule, and “what failure means” runbook.
+- Open question for author: Who owns false positives and dependency/tool drift after the introductory wave?
+
+### [WARN] Advisory-first CI can normalize drift instead of preventing it
+- Assumption: `continue-on-error: true` is safe during introduction.
+- Risk: New unused exports can merge while the job is advisory. If the baseline cannot be raised, CI may stay noisy; if it can be refreshed, the ratchet principle is weakened.
+- Impact: The project may accumulate fresh debt exactly while claiming the new gate prevents it.
+- Suggested mitigation: Keep the first discovery advisory, but make net-new findings blocking after a short fixed window, or block only files changed in the PR from day one.
+- Open question for author: What exact event flips AE-0152 from advisory to blocking?
+
+### [WARN] AE-0154 risks metric-chasing and harmful coupling
+- Assumption: Remaining jscpd clones are good extraction candidates.
+- Risk: Several examples sound structurally similar but semantically separate: route error boundaries, dashboard pages, login/header/sidebar markup, admin create/edit dialogs. Extracting them mainly to lower a percentage can couple unrelated behavior.
+- Impact: Future changes become harder, tests become less local, and Next.js server/client boundaries may be accidentally changed.
+- Suggested mitigation: Require per-hotspot justification: shared concept, expected future shared evolution, server/client compatibility, and tests. Allow explicit waivers for readable duplication.
+- Open question for author: Which listed clones are semantically shared, not merely syntactically similar?
+
+### [WARN] Sequencing between AE-0152 and AE-0154 is not defined
+- Assumption: Dead-code and duplication ratchets can be implemented independently.
+- Risk: Duplication refactors can create new shared primitives, move exports, alter barrel behavior, and change knip results. Knip baseline timing before or after AE-0154 matters.
+- Impact: Baselines may churn immediately, producing noisy reviews and unclear accountability.
+- Suggested mitigation: Sequence deliberately: either run AE-0154 first, then snapshot knip, or implement AE-0152 with changed-file-only enforcement until refactor churn settles.
+- Open question for author: Which ticket establishes the authoritative frontend quality baseline?
+
+### [WARN] AE-0153 may turn testing policy into a loophole
+- Assumption: “Pure refactor” and “CI/config” are easy to classify.
+- Risk: Behavior-changing work can be labeled as refactor/config to avoid `.feature` scenarios. CI/config changes can still affect user-visible release safety.
+- Impact: QA warnings may disappear, but the ambiguity moves upstream into ticket classification.
+- Suggested mitigation: Add explicit examples and required evidence: no public behavior change, seeded violation test, affected gates, and reviewer sign-off for no `.feature`.
+- Open question for author: Who decides whether a ticket is behavior-changing when the author and QA disagree?
+
+### [WARN] AE-0155’s proposed tests may over-mock the risky behavior
+- Assumption: Mocking `streamSseEvents`, `useConversationMessages`, and QueryClient is enough to cover `useSseChat`.
+- Risk: The highest-risk paths are concurrency and lifecycle behavior: abort during stream, double send, unmount, stale history merge, React 19 scheduling, `finalizedRef` idempotency, and query invalidation ordering.
+- Impact: Tests may lock in implementation details while missing the regressions users would see.
+- Suggested mitigation: Use a real QueryClient where possible and a controllable fake async stream. Add race-oriented cases, not only branch coverage.
+- Open question for author: Will tests cover overlapping sends, abort-before-complete, unmount-before-complete, and history arriving during an optimistic stream?
+
+### [INFO] Security and abuse posture is mostly absent from the portfolio
+- Assumption: These are quality/debt items, not security work.
+- Risk: For a full-stack RAG app, unused code, duplication, and hook tests do not address tenant isolation, prompt injection, source leakage, auth boundaries, or unsafe document exposure.
+- Impact: The portfolio may be mistaken for broad hardening when it is mainly maintainability work.
+- Suggested mitigation: Label the portfolio honestly as frontend quality/testability debt, and do not count it as reducing RAG security risk.
+- Open question for author: Are there separate security/abuse work items, or is this portfolio expected to cover that risk?
+
+## Missing evidence
+- Current runtime cost of each frontend gate and projected knip runtime.
+- Existing baseline-ratchet implementation details: count-only vs identity-based.
+- Actual knip first-run output and false-positive categories.
+- CI workflow topology and whether advisory jobs block branch protection.
+- Current docs authority model across `CLAUDE.md`, `AGENTS.md`, and QA guides.
+- Test harness details for React 19 hooks, timers, QueryClient, and SSE mocks.
+- Evidence that each AE-0154 clone is semantically safe to extract.
+
+## Residual risks if plan proceeds unchanged
+- New dead exports may still slip through via baseline churn or broad allowlists.
+- CI may become slower and noisier without a clear owner or expiry for advisory gates.
+- jscpd improvements may reduce a metric while increasing coupling.
+- Testing-policy docs may reduce QA noise by weakening classification discipline.
+- `useSseChat` tests may miss concurrency bugs despite increasing test count.
+- The portfolio may consume quality bandwidth while leaving RAG-specific security and abuse risks untouched.
+tokens used
+13,921

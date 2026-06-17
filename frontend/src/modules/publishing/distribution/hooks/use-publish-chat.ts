@@ -9,12 +9,10 @@ import {
 } from "@/modules/conversation";
 import { ApiError } from "@/lib/api-client";
 import { streamSseEvents, SSE_EVENT_TYPE } from "@/lib/sse-client";
+import { useChatStream } from "@/lib/use-chat-stream";
 import { API_ENDPOINTS, HTTP_STATUS } from "@/constants/api";
-import type { Message } from "@/schemas/chat";
 import {
   PUBLISH_CHAT_STORAGE_KEY,
-  MESSAGE_ROLE_USER,
-  MESSAGE_ROLE_ASSISTANT,
   OPTIMISTIC_MESSAGE_ID_PREFIX,
   STREAM_MESSAGE_ID_PREFIX,
   CONVERSATION_TITLE_PREFIX,
@@ -43,11 +41,14 @@ export function usePublishChat(projectId: string): UsePublishChatReturn {
   const [conversationId, setConversationId] = useState<string | null>(() =>
     readStoredConversationId(projectId),
   );
-  const [optimisticMessages, setOptimisticMessages] = useState<Message[]>([]);
-  const [isStreaming, setIsStreaming] = useState(false);
-  const abortRef = useRef<AbortController | null>(null);
-  const streamingContentRef = useRef("");
-  const streamingMsgIdRef = useRef<string | null>(null);
+  const {
+    optimisticMessages,
+    isStreaming,
+    setIsStreaming,
+    startUserTurn,
+    appendToken,
+    resetStreamingRefs,
+  } = useChatStream(OPTIMISTIC_MESSAGE_ID_PREFIX, STREAM_MESSAGE_ID_PREFIX);
   const creatingRef = useRef(false);
 
   const { data: historyMessages = [], error: historyError } =
@@ -118,30 +119,14 @@ export function usePublishChat(projectId: string): UsePublishChatReturn {
         return;
       }
 
-      const userMsg: Message = {
-        id: `${OPTIMISTIC_MESSAGE_ID_PREFIX}${Date.now()}`,
-        role: MESSAGE_ROLE_USER,
-        content: content.trim(),
-        sources: [],
-        created_at: new Date().toISOString(),
-      };
-      setOptimisticMessages((prev) => [...prev, userMsg]);
-
-      setIsStreaming(true);
-      streamingContentRef.current = "";
-      streamingMsgIdRef.current = null;
-
-      if (abortRef.current) {
-        abortRef.current.abort();
-      }
-      abortRef.current = new AbortController();
+      const signal = startUserTurn(content.trim());
 
       const payload = buildContextPrefix(projectId) + content.trim();
 
       streamSseEvents({
         url: API_ENDPOINTS.CONVERSATION_PUBLISH_CHAT_STREAM(conversationId),
         body: { content: payload },
-        signal: abortRef.current.signal,
+        signal,
         onEvent: (event) => {
           const data = event.data;
 
@@ -156,72 +141,41 @@ export function usePublishChat(projectId: string): UsePublishChatReturn {
           }
 
           if (event.event === SSE_EVENT_TYPE.TOKEN) {
-            const tokenContent = (data.content as string) ?? "";
-            streamingContentRef.current += tokenContent;
-            setOptimisticMessages((prev) => {
-              const last = prev[prev.length - 1];
-              if (
-                last?.role === MESSAGE_ROLE_ASSISTANT &&
-                last.id === streamingMsgIdRef.current
-              ) {
-                // Accumulate content using the last message's content + new token
-                // (ref may have been cleared by COMPLETE event due to React batching)
-                return [
-                  ...prev.slice(0, -1),
-                  { ...last, content: last.content + tokenContent },
-                ];
-              }
-              const newMsg: Message = {
-                id:
-                  streamingMsgIdRef.current ||
-                  `${STREAM_MESSAGE_ID_PREFIX}${Date.now()}`,
-                role: MESSAGE_ROLE_ASSISTANT,
-                content: streamingContentRef.current,
-                sources: [],
-                created_at: new Date().toISOString(),
-              };
-              if (!streamingMsgIdRef.current) {
-                streamingMsgIdRef.current = newMsg.id;
-              }
-              return [...prev, newMsg];
-            });
+            appendToken((data.content as string) ?? "");
             return;
           }
 
           if (event.event === SSE_EVENT_TYPE.COMPLETE) {
             setIsStreaming(false);
-            streamingContentRef.current = "";
-            streamingMsgIdRef.current = null;
+            resetStreamingRefs();
             return;
           }
 
           if (event.event === SSE_EVENT_TYPE.ERROR) {
             setIsStreaming(false);
-            streamingContentRef.current = "";
-            streamingMsgIdRef.current = null;
+            resetStreamingRefs();
           }
         },
         onError: () => {
           setIsStreaming(false);
-          streamingContentRef.current = "";
-          streamingMsgIdRef.current = null;
+          resetStreamingRefs();
         },
         onComplete: () => {
           setIsStreaming(false);
         },
       });
     },
-    [conversationId, projectId, isStreaming, queryClient],
+    [
+      conversationId,
+      projectId,
+      isStreaming,
+      queryClient,
+      startUserTurn,
+      appendToken,
+      setIsStreaming,
+      resetStreamingRefs,
+    ],
   );
-
-  // Cleanup abort controller on unmount.
-  useLayoutEffect(() => {
-    return () => {
-      if (abortRef.current) {
-        abortRef.current.abort();
-      }
-    };
-  }, []);
 
   const messages = useMemo(
     () => [...historyMessages, ...optimisticMessages],

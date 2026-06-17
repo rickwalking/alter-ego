@@ -531,11 +531,13 @@ can never return, ratchet the baseline down:
 | frontend / Lint | eslint `--quiet` (repo-wide errors) + boundaries + url:check + circular + component-types | CI failure |
 | frontend / Lint (changed) | eslint `--max-warnings=0` on diff | CI failure |
 | frontend / Component types (AE-0144) | `gates.sh frontend:component-types` (`npm run lint:component-types`) | CI failure — no NEW inline `interface`/`type {...}` in `modules/**` components/hooks; down-only baseline ratchet ([convention](../../frontend/src/modules/README.md#component-type-location-convention-ae-0144)) |
+| frontend / Duplication (AE-0149) | `gates.sh frontend:duplication` (`npm run lint:dup`, jscpd) | CI failure — NEW source copy-paste duplication above the `frontend/.jscpd.json` threshold; test/spec/story files excluded; threshold may only ratchet DOWN (raising it flagged by `check-integrity.sh`) |
 | frontend / Type Check | tsc --noEmit | CI failure |
 | frontend / Test | vitest | CI failure |
 | frontend / Format | prettier --check | CI failure |
 | frontend / Security | npm audit --audit-level=high | CI failure |
 | frontend / Mutation (advisory) | Stryker | Non-blocking; PR summary comment |
+| frontend / Duplication (tests, advisory) (AE-0151) | `gates.sh frontend:duplication-tests` (`npm run lint:dup:tests`, jscpd over `*.test.*`/`*.spec.*`) | Non-blocking (`continue-on-error`); PR summary comment. Surfaces test-boilerplate duplication without forcing harmful test-DRYing |
 | frontend / Legacy guard | `npm run check:legacy` | CI failure — no v1 imports in `src/app/dashboard` |
 | frontend / Legacy inventory | `npm run check:legacy-inventory` | Advisory until Phase 1 complete ([plan](../plans/frontend-legacy-removal.md)) |
 | frontend / Integrity (anti-gaming) | `scripts/ci/check-integrity.sh frontend` | **CI failure (blocking)** on net-new `eslint-disable`/`@ts-ignore` suppressions, skipped/focused tests, or loosened thresholds (diff-scoped) |

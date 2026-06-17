@@ -165,6 +165,14 @@ gate_frontend_lint_changed()    { cd "$REPO_ROOT/frontend" && npm run lint:chang
 # as its own gate (mirrors how boundaries/url/circular live under lint).
 gate_frontend_component_types() { cd "$REPO_ROOT/frontend" && npm run lint:component-types; }
 gate_frontend_typecheck()       { cd "$REPO_ROOT/frontend" && npm run typecheck; }
+# Source-scoped copy-paste detection (AE-0149). Also runs inside `npm run lint`;
+# registered standalone so CI and /qa-agent can invoke it directly. Threshold
+# lives in frontend/.jscpd.json and may only ratchet DOWN (raising it is flagged
+# by check-integrity.sh). Test/spec/story files are excluded by design — egregious
+# test duplication is advisory only (AE-0151, gate_frontend_duplication_tests).
+gate_frontend_duplication()     { cd "$REPO_ROOT/frontend" && npm run lint:dup; }
+# Advisory in CI (continue-on-error); reports test-file duplication, never blocks.
+gate_frontend_duplication_tests() { cd "$REPO_ROOT/frontend" && { npm run lint:dup:tests || echo "ADVISORY: jscpd test-duplication findings above (non-blocking, mirrors CI)."; }; }
 gate_frontend_legacy_guard()    { cd "$REPO_ROOT/frontend" && npm run check:legacy; }
 gate_frontend_legacy_inventory() { cd "$REPO_ROOT/frontend" && npm run check:legacy-inventory; }
 gate_frontend_test()            { cd "$REPO_ROOT/frontend" && npm run test -- --run; }
@@ -204,6 +212,7 @@ FRONTEND_GATES=(
   lint:gate_frontend_lint
   lint-changed:gate_frontend_lint_changed
   component-types:gate_frontend_component_types
+  duplication:gate_frontend_duplication
   typecheck:gate_frontend_typecheck
   legacy-guard:gate_frontend_legacy_guard
   legacy-inventory:gate_frontend_legacy_inventory
@@ -212,6 +221,7 @@ FRONTEND_GATES=(
   integrity:gate_frontend_integrity
   test:gate_frontend_test
   schema-drift:gate_frontend_schema_drift
+  duplication-tests:gate_frontend_duplication_tests
   mutation:gate_frontend_mutation
 )
 
