@@ -11,8 +11,51 @@ from pathlib import Path
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
-from scripts.agent_tasks.constants import ALL_STATUSES, BOARD_COLUMNS, BOARD_PATH, TASKS_DIR
-from scripts.agent_tasks.schema import can_transition, parse_ticket
+from scripts.agent_tasks.constants import (
+    ALL_STATUSES,
+    BOARD_COLUMNS,
+    BOARD_PATH,
+    REPORT_DEV_SUFFIX,
+    REPORTS_DIR,
+    STATUS_DEV_COMPLETE,
+    TASKS_DIR,
+)
+from scripts.agent_tasks.schema import Ticket, can_transition, parse_ticket
+
+# Scaffold for the dev-summary the validator (schema.py) requires at Dev Complete
+# / Review. Created on the Dev Complete transition (AE-0169) so the requirement
+# can't be silently missed. This does NOT loosen the validator — it only makes
+# compliance the default; the developer still fills it in.
+DEV_SUMMARY_TEMPLATE = """## Developer Completion Report
+Ticket: __TICKET_ID__
+Status: Dev Complete
+
+> SCAFFOLD (auto-created by move_ticket.py on the Dev Complete transition, AE-0169).
+> Fill this in before moving the ticket to Review — replace every placeholder.
+
+### Summary
+<one paragraph: what was implemented>
+
+### Acceptance Criteria Implemented
+- [ ] <criterion> — <evidence>
+
+### Files Changed
+- <path> — <what changed>
+
+### Tests Run / Gate Reproduction
+```
+<paste the GATES_JSON summary line; every gate PASS or a justified SKIP>
+```
+
+### Integrity (scripts/ci/check-integrity.sh)
+Net-new blockers: 0.
+
+### Deviations
+None.
+
+### QA Outcome
+Pending — run /qa-agent.
+"""
 
 
 def find_ticket_path(ticket_id: str) -> Path | None:
@@ -20,6 +63,20 @@ def find_ticket_path(ticket_id: str) -> Path | None:
     if not matches:
         return None
     return matches[0]
+
+
+def scaffold_dev_summary(ticket: Ticket) -> Path | None:
+    """Create .agent/reports/<id>.dev-summary.md from a template if it is absent.
+
+    Never overwrites an existing report. Returns the path when created, else None.
+    """
+    REPORTS_DIR.mkdir(parents=True, exist_ok=True)
+    report = REPORTS_DIR / f"{ticket.ticket_id}{REPORT_DEV_SUFFIX}"
+    if report.exists():
+        return None
+    body = DEV_SUMMARY_TEMPLATE.replace("__TICKET_ID__", ticket.ticket_id)
+    report.write_text(body, encoding="utf-8")
+    return report
 
 
 def update_board(board_path: Path, ticket_id: str, new_status: str) -> None:
@@ -82,6 +139,13 @@ def main() -> int:
     path.write_text(content, encoding="utf-8")
     update_board(BOARD_PATH, args.ticket_id, args.status)
     print(f"{args.ticket_id} → {args.status}")
+
+    if args.status == STATUS_DEV_COMPLETE:
+        created = scaffold_dev_summary(ticket)
+        if created is not None:
+            rel = created.relative_to(_REPO_ROOT)
+            print(f"Scaffolded dev-summary: {rel} — fill it in before Review.")
+
     return 0
 
 
