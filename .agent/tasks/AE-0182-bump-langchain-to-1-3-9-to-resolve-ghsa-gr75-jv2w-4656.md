@@ -1,6 +1,6 @@
 # AE-0182 — Bump langchain to 1.3.9 to resolve GHSA-gr75-jv2w-4656
 
-Status: Dev Complete
+Status: Done
 Tier: T2
 Priority: High
 Type: Security

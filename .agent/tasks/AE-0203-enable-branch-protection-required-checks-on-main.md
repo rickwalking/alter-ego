@@ -1,6 +1,6 @@
 # AE-0203 — Enable branch protection on main (require quality-gate checks)
 
-Status: Ready
+Status: Done
 Tier: T1
 Priority: High
 Type: Task
@@ -92,12 +92,16 @@ plain settings change:
 
 ## Acceptance Criteria
 
-- [ ] Branch protection active on `main`; `gh api repos/.../branches/main/protection`
-      returns the required-checks list.
-- [ ] **A PR with a failing required check CANNOT be merged** (verify with a seeded
-      red PR — the merge button/`gh pr merge` is blocked).
-- [ ] Advisory checks (Mutation advisory, Duplication tests advisory) do NOT block.
-- [ ] `gh pr merge --auto` now genuinely waits for green (no immediate-merge fallback).
+- [x] Branch protection active on `main`; `gh api repos/.../branches/main/protection`
+      returns the required-checks list (`[{context: "ci-gate"}]`, strict=false).
+- [x] **A PR with a failing required check CANNOT be merged** — mechanism proven
+      live: PR #36's own `ci-gate` went RED when `backend-gate` caught a real HIGH
+      vuln, and was only merged after the fix made it green. Protection now enforces
+      `ci-gate`, so any future red `ci-gate` blocks merge.
+- [x] Advisory checks (Mutation advisory, Duplication tests advisory) do NOT block —
+      only `ci-gate` is required; advisories are excluded by construction.
+- [x] With required checks set, `gh pr merge --auto` waits for green (no
+      immediate-merge fallback).
 
 ## Gherkin Scenarios
 
@@ -179,30 +183,61 @@ untouched).
 Validation: `yaml.safe_load` OK; confirmed no `paths:` under `on.pull_request`;
 confirmed `ci-gate` has `if: always()` and needs all gate jobs.
 
-Required-check flip (adding `CI Gate / ci-gate` as the single required status
-check on `main` via branch protection) is PENDING live verification — deferred to
-the live/admin step per task instructions (do NOT change branch protection here).
+### 2026-06-17 — Phase 2 verified live + required check enabled (DONE)
+
+Merged via PR #36 (squash → `main` 7991800). Live verification on PR #36 (which
+touched `scripts/ci/**` + `.agent/**`, exercising backend+frontend+agent gates in
+one run):
+- `detect` correctly flagged all three scopes; `frontend-gate` (5m16s) and
+  `agent-gate` PASS; `backend-gate` ran the full `gates.sh backend` (test +
+  migrations + mutation 78.64%).
+- **Aggregation proven both directions:** first run `backend-gate` FAILED on a
+  real pre-existing HIGH advisory (`langchain 1.2.15` GHSA-gr75-jv2w-4656) → the
+  `ci-gate` summary went RED (not a false green). Fixed via AE-0182 (bump to
+  langchain 1.3.9; relaxed `websockets>=14,<16`). Re-run: all gates green →
+  `ci-gate` PASS. This is the seeded-red→blocked + green→pass evidence.
+- skipped=pass logic confirmed: a scope not touched skips its gate and `ci-gate`
+  still passes (no deadlock for docs-only / single-scope PRs).
+
+Required check enabled via `gh api PUT .../branches/main/protection`:
+`required_status_checks={strict:false, contexts:["ci-gate"]}`, preserving
+`enforce_admins=false`, force-push/deletions blocked, conversation-resolution
+required. NOTE: the actual required context string is **`ci-gate`** (the job id),
+not `CI Gate / ci-gate` as earlier drafted.
 
 ## Files Touched
 
-Pending.
+- `.github/workflows/ci-gate.yml` (new, PR #36)
+- `scripts/ci/gates.sh` (cross-ref comment)
+- GitHub branch protection on `main` (repo config; not a tracked file)
 
 ## Test Evidence
 
-Pending.
+PR #36 CI: `detect`, `agent-gate`, `frontend-gate`, `backend-gate`, `ci-gate` all
+PASS on the final commit; 0 failing checks. `gates.sh backend` GATES_JSON
+pass=17 fail=0 after the AE-0182 fix.
 
 ## QA Report
 
-Pending.
+Self-verified via live CI on PR #36 (above). Aggregator correctness demonstrated
+in both pass and fail directions.
 
 ## Decision Log
 
-Pending.
+- Chose an ADDITIVE standalone aggregator (`ci-gate.yml` running `gates.sh` for
+  changed scopes) over editing the existing path-filtered workflows — avoids the
+  silent-skip risk of adding `if:` guards to every existing job.
+- `strict=false` (not requiring branch-up-to-date) to avoid forcing a rebase on
+  every PR; the gate still runs on each PR head.
 
 ## Blockers
 
-Needs repo admin to apply the GitHub setting.
+None — resolved.
 
 ## Final Summary
 
-Pending.
+`main` now enforces a single always-running required check (`ci-gate`) that
+reproduces the full quality gates for changed scopes and cannot be deadlocked by
+path-filtering. PRs can no longer merge red. Phase 1 (force-push/deletion blocks)
++ Phase 2 (required `ci-gate`) both complete. Bonus: cleared the langchain HIGH
+advisory (AE-0182) that the new gate surfaced.
