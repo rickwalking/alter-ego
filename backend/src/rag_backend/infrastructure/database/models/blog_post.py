@@ -37,15 +37,20 @@ class BlogPostModel(Base):
         server_default=BlogPostOrigin.STANDALONE.value,
         nullable=False,
     )
-    title = Column(String(255), nullable=False)
+    # SQLAlchemy 2.0 ``Mapped[...]`` so the instance attribute types as ``str``
+    # for the AE-0163 carousel-blog dual-write (no mypy override).
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
     slug = Column(String(255), unique=True, nullable=False)
     # Workflow status — written by the publishing visibility port (AE-0128);
     # SQLAlchemy 2.0 ``Mapped[...]`` so the instance attribute types as ``str``
     # for the byte-identical status writes (no mypy override).
     status: Mapped[str] = mapped_column(String(50), default="draft", nullable=False)
 
-    # Content
-    content = Column(JSON, default=dict, nullable=False)
+    # Content — SQLAlchemy 2.0 ``Mapped[...]`` so the instance attribute types as a
+    # JSON object for the AE-0163 carousel-blog dual-write (no mypy override).
+    content: Mapped[dict[str, object]] = mapped_column(
+        JSON, default=dict, nullable=False
+    )
     excerpt = Column(String(500), nullable=True)
     featured_image_url = Column(String(500), nullable=True)
 

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { useAuth } from "@/hooks/use-auth";
+import { useAuth } from "@/modules/identity";
 
 export function AdminSidebar() {
   const t = useTranslations("admin");

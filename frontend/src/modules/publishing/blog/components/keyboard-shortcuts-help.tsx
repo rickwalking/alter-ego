@@ -9,11 +9,7 @@ import {
   NeonCardHeader,
   NeonCardTitle,
 } from "@/components/molecules/neon-card";
-
-interface KeyboardShortcutsHelpProps {
-  open: boolean;
-  onClose: () => void;
-}
+import type { KeyboardShortcutsHelpProps } from "./types";
 
 export function KeyboardShortcutsHelp({
   open,

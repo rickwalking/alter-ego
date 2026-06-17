@@ -3,14 +3,7 @@
 import { useCallback, useState } from "react";
 import { authenticatedFetch } from "@/lib/authenticated-fetch";
 import { API_ENDPOINTS } from "@/constants/api";
-
-export interface SeoAnalysisResult {
-  overall_score: number;
-  passed: boolean;
-  severity: string;
-  issues: Array<{ code: string; message: string }>;
-  suggestions: string[];
-}
+import type { SeoAnalysisResult } from "./types";
 
 export function useSeoAnalysis(postId: string | null) {
   const [result, setResult] = useState<SeoAnalysisResult | null>(null);

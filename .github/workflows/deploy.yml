@@ -45,6 +45,25 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Prune stale tracked source on server (scp does not delete removed files)
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.DO_HOST }}
+          username: ${{ secrets.DO_USER }}
+          key: ${{ secrets.DO_SSH_KEY }}
+          script: |
+            set -e
+            # appleboy/scp-action OVERLAYS files but never deletes ones removed in
+            # git. A file deleted or moved in a PR (e.g. a relocated component)
+            # therefore lingers on the server and breaks the Docker build —
+            # exactly what failed after the Phase 8 refactor. Wipe the git-tracked
+            # build-context source trees so the scp below lands a clean tree.
+            # Untracked server state (nginx/ssl certs, .env, docker volumes) lives
+            # OUTSIDE these dirs and is preserved.
+            rm -rf /opt/alter-ego/frontend/src \
+                   /opt/alter-ego/frontend/scripts \
+                   /opt/alter-ego/backend/src
+
       - name: Sync code to server
         uses: appleboy/scp-action@master
         with:
@@ -56,19 +75,10 @@ jobs:
           strip_components: 0
           # Do NOT use rm: true — it would delete server-side files like
           # nginx/ssl/cert.pem and nginx/ssl/key.pem (Cloudflare Origin
-          # Certificate) which are not tracked in git.
-          exclude: |
-            **/node_modules/**
-            **/.venv/**
-            **/.next/**
-            **/__pycache__/**
-            **/*.pyc
-            **/.env*
-            **/.git/**
-            **/tests/**
-            **/coverage/**
-            **/docs/**
-            **/*.md
+          # Certificate) which are not tracked in git. scp-action has no `exclude`
+          # input (it is silently ignored), so stale-file pruning is handled by
+          # the "Prune stale tracked source" step above instead. The deploy
+          # checkout has no node_modules/.venv/.next to copy.
 
       - name: Deploy to DigitalOcean via SSH
         uses: appleboy/ssh-action@master

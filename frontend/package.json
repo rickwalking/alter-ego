@@ -22,6 +22,7 @@
     "test:coverage": "vitest run --coverage",
     "test:ui": "vitest --ui",
     "test:e2e": "playwright test",
+    "test:e2e:auth": "playwright test --project=auth-baseline",
     "test:e2e:ui": "playwright test --ui",
     "test:mutate": "stryker run",
     "storybook": "storybook dev -p 6006",
@@ -29,7 +30,7 @@
     "typecheck": "tsc --noEmit",
     "check:legacy": "node scripts/check-legacy-usage.mjs",
     "check:legacy-inventory": "node scripts/check-legacy-usage.mjs --inventory",
-    "check:schema-drift": "node scripts/check-schema-drift.mjs",
+    "check:schema-drift": "node scripts/check-schema-drift.mjs --strict",
     "prepare": "husky"
   },
   "lint-staged": {

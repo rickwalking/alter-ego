@@ -2,13 +2,7 @@
 import { NeonInput } from "@/components/atoms/neon-input";
 
 import { useTranslations } from "next-intl";
-
-interface BlogPostFiltersProps {
-  search: string;
-  status: string;
-  onSearchChange: (value: string) => void;
-  onStatusChange: (value: string) => void;
-}
+import type { BlogPostFiltersProps } from "./types";
 
 const STATUS_OPTIONS = [
   "",

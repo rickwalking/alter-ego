@@ -91,7 +91,7 @@ Pending.
 
 ## Decision Log
 
-Pending.
+Superseded by Phase 8 slices AE-0153 (shim/_example removal) + AE-0154 (component re-homing) + AE-0155 (route-page thinning) + AE-0156 (identity module) + AE-0157 (schema-drift blocking) — see docs/plans/phase-8-legacy-removal.md. This record remains the origin/deferral reference.
 
 ## Blockers
 

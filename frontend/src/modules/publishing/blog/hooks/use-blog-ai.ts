@@ -11,11 +11,7 @@ import type {
   BlogGenerateImageResult,
   VoiceScoreResult,
 } from "@/modules/publishing/blog/types-ai";
-
-interface UseBlogAiState {
-  loading: boolean;
-  error: string | null;
-}
+import type { UseBlogAiState } from "./types";
 
 export function useBlogAi(postId: string | null) {
   const [state, setState] = useState<UseBlogAiState>({

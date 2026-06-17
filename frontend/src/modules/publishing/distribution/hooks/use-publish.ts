@@ -5,6 +5,7 @@ import { z } from "zod";
 import { apiCall } from "@/lib/api-client";
 import { API_ENDPOINTS } from "@/constants/api";
 import { carouselKeys } from "@/modules/carousel-presentation";
+import type { InstagramPublishPayload } from "./types";
 
 const instagramPublishResponseSchema = z.object({
   status: z.enum(["queued", "published", "failed"]),
@@ -15,11 +16,6 @@ const instagramPublishResponseSchema = z.object({
 export type InstagramPublishResponse = z.infer<
   typeof instagramPublishResponseSchema
 >;
-
-interface InstagramPublishPayload {
-  projectId: string;
-  caption: string;
-}
 
 export function usePublishInstagram() {
   const queryClient = useQueryClient();

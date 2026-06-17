@@ -69,7 +69,7 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: mockPush, refresh: mockRefresh }),
 }));
 
-vi.mock("@/hooks/use-auth", () => ({
+vi.mock("@/modules/identity", () => ({
   useAuth: () => ({
     user: { id: "1", email: "admin@test.com" },
     isAdmin: true,

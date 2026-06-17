@@ -7,7 +7,7 @@ import { LanguageSwitcher } from "@/components/language-switcher";
 import { MobileNav } from "@/components/layout/mobile-nav";
 import { NotificationCenter } from "@/modules/editorial";
 import { DEFAULT_LOCALE } from "@/i18n/config";
-import { useAuth } from "@/hooks/use-auth";
+import { useAuth } from "@/modules/identity";
 import { JSX } from "react";
 import { DASHBOARD_ROUTES } from "@/constants/dashboard-routes";
 interface HeaderProps {

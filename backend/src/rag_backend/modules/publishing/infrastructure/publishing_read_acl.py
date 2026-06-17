@@ -12,10 +12,11 @@ Everything it returns is byte-identical to the pre-AE-0131 scattered
 route/service reads — only the *ownership* of the read is consolidated here. It
 backs two publishing domain ports:
 
-* :class:`PublishingReadPort` — the carousel-blog projection (with the AE-0127
-  ``origin='carousel'`` backfill read, falling back per-field to the embedded
-  carousel columns), the content-calendar, the workflow-board, and the
-  editorial-analytics projections — replicating the legacy ``media.py`` blog
+* :class:`PublishingReadPort` — the carousel-blog projection (sourcing the body +
+  404 signal SOLELY from the AE-0127/AE-0163 ``origin='carousel'`` ``blog_posts``
+  row; the embedded carousel columns are no longer read), the content-calendar, the
+  workflow-board, and the editorial-analytics projections — replicating the legacy
+  ``media.py`` blog
   routes, the :class:`ContentCalendarService`, the ``workflow_board`` route, and
   the :class:`EditorialAnalyticsService` field-for-field.
 * :class:`BlogPostCrudPort` — the blog-post CRUD persistence rows
@@ -23,10 +24,13 @@ backs two publishing domain ports:
   blog ORM/repository; the routes keep the access checks + audit/event/lock
   orchestration + the single commit (unchanged).
 
-Behavior-preserving (AE-0131): no read here changes a field, a filter, an
-ordering, a default, or a 404 condition relative to the legacy paths. The
-carousel-blog projection reads the backfill row when present and falls back
-per-field so the response is unchanged (no embedded column is dropped).
+Behavior-preserving (AE-0131 / AE-0163): no read here changes a field, a filter,
+an ordering, a default, or a 404 condition relative to the legacy paths. The
+carousel-blog projection sources the body + the 404 signal from the canonical
+``origin='carousel'`` ``blog_posts`` row (AE-0127 backfill + AE-0163 dual-write,
+which together guarantee the row is present iff the legacy embedded column was
+non-null) so the response is byte-identical while the embedded column becomes
+WRITE-dead for the deferred AE-0162 drop.
 """
 
 from __future__ import annotations
@@ -108,22 +112,26 @@ class PublishingReadAcl:
     ) -> CarouselBlogProjection | None:
         """Project the public carousel blog (default pt-BR), or ``None`` if absent.
 
-        Reads the AE-0127 ``origin='carousel'`` backfill row when present and
-        falls back per-field to the embedded carousel columns (``blog_markdown`` /
-        ``title or topic`` / ``subtitle``), so the response is byte-identical to
-        the legacy ``media.py:get_carousel_blog``. Returns ``None`` when no blog
-        body exists (the route maps that to the legacy 404).
+        Sources the body + the 404 signal SOLELY from the canonical
+        ``origin='carousel'`` ``blog_posts`` row (AE-0163) — the embedded
+        ``carousel_projects.blog_markdown`` column is no longer read. Returns
+        ``None`` (the legacy 404) when the row is absent or carries no body.
 
-        The 404 gate keys on ``project.blog_markdown is None`` — the EXACT legacy
-        signal — unconditionally (not on the resolved body), so a backfill row can
-        never flip a legacy 404 into a 200. AE-0127 only backfills rows where
-        ``blog_markdown`` was non-null, so this also keeps the row-present path
-        byte-identical.
+        The row is guaranteed present whenever the legacy embedded column was
+        non-null: AE-0127 backfilled every pre-existing public/completed carousel
+        and AE-0163 makes the carousel repository dual-write the row on every blog
+        write (and only for non-null ``blog_markdown``). So the row's presence
+        equals the legacy ``blog_markdown is None`` 404 signal, and the body equals
+        the embedded body — the response is byte-identical to the legacy
+        ``media.py:get_carousel_blog`` (AE-0125 safety net).
+
+        Title/subtitle resolution is unchanged: the row's ``title`` (``title or
+        topic``) with the ``project.title``/``project.topic`` fallback, and the
+        row's ``excerpt`` (NULL in the AE-0127/AE-0163 shape) with the
+        ``project.subtitle`` fallback — byte-identical to the legacy resolution.
         """
-        if project.blog_markdown is None:
-            return None
         row = await self._carousel_blog_row(str(project.id))
-        markdown = resolve_blog_body(row, project.blog_markdown)
+        markdown = resolve_blog_body(row)
         if markdown is None:
             return None
         row_title = cast("str | None", row.title) if row is not None else None

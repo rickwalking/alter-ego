@@ -66,6 +66,9 @@ const VALID_PROJECT = {
   subtitle: "Understanding Google's Latest Model",
   theme: "ai_competition",
   status: "completed",
+  primary_color: "#00e5ff",
+  accent_color: "#ff007a",
+  background_color: "#0a0a0f",
   blog_markdown: "# Content",
   caption: "Check this out!",
   created_at: "2026-04-20T00:00:00Z",
@@ -74,13 +77,13 @@ const VALID_PROJECT = {
 
 const VALID_SLIDE = {
   id: "slide-1",
-  project_id: "abc-123",
   slide_number: 1,
   slide_type: "content",
   heading: "Slide Title",
   body: "Slide body text",
-  image_prompt: null,
+  image_path: null,
   created_at: "2026-04-20T00:00:00Z",
+  updated_at: "2026-04-20T00:00:00Z",
 };
 
 function omitKey<T extends Record<string, unknown>, K extends keyof T>(
@@ -414,11 +417,18 @@ describe("Carousel Slide Response Schema", () => {
     expect(result.success).toBe(true);
   });
 
-  it("accepts null image_prompt", () => {
+  it("accepts null image_path", () => {
     const result = carouselSlideResponseSchema.safeParse({
       ...VALID_SLIDE,
-      image_prompt: null,
+      image_path: null,
     });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts missing optional image_path", () => {
+    const result = carouselSlideResponseSchema.safeParse(
+      omitKey(VALID_SLIDE, "image_path"),
+    );
     expect(result.success).toBe(true);
   });
 

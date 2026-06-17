@@ -11,50 +11,15 @@ import {
 import { HTTP_STATUS } from "@/constants/api";
 import { WORKFLOW_PHASE_STATUS } from "@/constants/workflow";
 import type { EditorialWorkflowState } from "@/modules/editorial/workspace/types-ai";
+import type {
+  EditorialWorkflowResumeAcceptedResponse,
+  WorkflowEventPayload,
+} from "./types";
 
-export interface WorkflowEventPayload {
-  event?: string;
-  phase?: string;
-  phase_status?: string;
-  project_id?: string;
-  current_phase?: string;
-  current?: number;
-  total?: number;
-  slides?: Record<string, unknown>[];
-  label?: string;
-  message?: string;
-  percent?: number;
-  recoverable?: boolean;
-  gate_payload?: Record<string, unknown> | null;
-  research_findings?: Record<string, unknown>[];
-  outline?: Record<string, unknown>[];
-  slide_drafts?: Record<string, unknown>[];
-  slide_image_prompts?: EditorialWorkflowState["slide_image_prompts"];
-  image_assets?: string[];
-  design_applied?: boolean;
-  phase_progress?: Record<string, unknown> | null;
-  rubric_scores?: Record<string, unknown>;
-  persona_scores?: Record<string, unknown>;
-  caption?: string;
-  blog_markdown?: string;
-  linkedin_post_pt?: string;
-  linkedin_post_en?: string;
-  workflow_status?: string;
-  status?: string;
-  artifact_type?: string;
-  data?: unknown;
-  presentation_policy_version?: string | null;
-  localized_slides?: EditorialWorkflowState["localized_slides"];
-  presentation_validation?: EditorialWorkflowState["presentation_validation"];
-}
-
-export interface EditorialWorkflowResumeAcceptedResponse {
-  accepted: boolean;
-  project_id: string;
-  current_phase: string;
-  phase_status: string;
-  lock_version: number;
-}
+export type {
+  EditorialWorkflowResumeAcceptedResponse,
+  WorkflowEventPayload,
+} from "./types";
 
 export async function readApiError(
   response: Response,

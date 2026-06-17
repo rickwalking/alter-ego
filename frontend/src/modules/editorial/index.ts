@@ -49,22 +49,16 @@ export {
 } from "./workspace/hooks/use-editorial-workflow";
 
 /* --- workspace: components --- */
-export {
-  ImagePromptReview,
-  type ImagePromptReviewProps,
-} from "./workspace/components/image-prompt-review";
-export {
-  PresentationIconPreview,
-  type PresentationIconPreviewProps,
-} from "./workspace/components/presentation-icon-preview";
-export {
-  PresentationStructuredItems,
-  type PresentationStructuredItemsProps,
-} from "./workspace/components/presentation-structured-items";
-export {
-  WorkflowFailedCard,
-  type WorkflowFailedCardProps,
-} from "./workspace/components/workflow-failed-card";
+export { ImagePromptReview } from "./workspace/components/image-prompt-review";
+export { PresentationIconPreview } from "./workspace/components/presentation-icon-preview";
+export { PresentationStructuredItems } from "./workspace/components/presentation-structured-items";
+export { WorkflowFailedCard } from "./workspace/components/workflow-failed-card";
+export type {
+  ImagePromptReviewProps,
+  PresentationIconPreviewProps,
+  PresentationStructuredItemsProps,
+  WorkflowFailedCardProps,
+} from "./workspace/components/types";
 
 /* --- workspace: presentation review utilities --- */
 export {
@@ -103,17 +97,15 @@ export {
 export type { ReviewAssignmentPayload, ContentLock } from "./workflow/types";
 
 /* --- workflow: hooks --- */
-export {
-  useContentCalendar,
-  type CalendarItem,
-  type ContentCalendar,
-} from "./workflow/hooks/use-content-calendar";
-export {
-  useWorkflowKanban,
-  type KanbanCard,
-  type KanbanColumn,
-  type WorkflowKanban,
-} from "./workflow/hooks/use-workflow-kanban";
+export { useContentCalendar } from "./workflow/hooks/use-content-calendar";
+export { useWorkflowKanban } from "./workflow/hooks/use-workflow-kanban";
+export type {
+  CalendarItem,
+  ContentCalendar,
+  KanbanCard,
+  KanbanColumn,
+  WorkflowKanban,
+} from "./workflow/hooks/types";
 export { useNotifications } from "./workflow/hooks/use-notifications";
 export { useCollaborativeEdit } from "./workflow/hooks/use-collaborative-edit";
 

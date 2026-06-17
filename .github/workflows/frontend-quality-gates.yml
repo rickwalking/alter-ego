@@ -256,6 +256,54 @@ jobs:
             "Frontend" "Test" \
             "Vitest suite failed."
 
+  e2e-auth-baseline:
+    name: frontend / E2E auth baseline
+    # AE-0165: deterministic, backend-free Playwright safety net that pins the
+    # CURRENT frontend auth behavior (middleware guards, login, logout, role
+    # gating) so the later identity-module relocation (AE-0156/0164) can be
+    # proven byte-identical. The `auth-baseline` Playwright project boots its own
+    # `npm run dev` webServer and mocks all /api/auth/* + /api/admin/* calls, so
+    # NO backend or external API keys are required. BLOCKING (not advisory): the
+    # specs are deterministic, so any auth-behavior drift must fail the job.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Run auth baseline E2E (auth-baseline project)
+        run: npm run test:e2e:auth
+
+      - name: Upload Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-e2e-auth-baseline-report
+          path: frontend/playwright-report
+          retention-days: 7
+
+      - name: Post PR summary on failure
+        if: failure() && github.event_name == 'pull_request'
+        working-directory: .
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_EVENT_PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          bash scripts/ci/post-pr-quality-comment.sh \
+            "Frontend" "E2E auth baseline" \
+            "The auth baseline safety net (AE-0165) failed: current frontend auth behavior changed. If intentional, update tests/e2e/auth-baseline.spec.ts."
+
   security:
     name: frontend / Security
     runs-on: ubuntu-latest
@@ -296,14 +344,13 @@ jobs:
         working-directory: .
         run: bash scripts/ci/gates.sh frontend:format
 
-  schema-drift-advisory:
-    name: frontend / Schema drift (advisory)
-    # AE-0141: reports OpenAPI<->Zod drift against docs/architecture/openapi.json
-    # (committed by backend/scripts/export_openapi.py). Advisory/non-blocking so
-    # it does not gate on pre-existing drift; flip the script to --strict once
-    # drift reaches 0 (see docs/frontend/phase-7-baseline.md).
+  schema-drift:
+    name: frontend / Schema drift
+    # AE-0141: checks OpenAPI<->Zod drift against docs/architecture/openapi.json
+    # (committed by backend/scripts/export_openapi.py). BLOCKING (AE-0157): drift
+    # was reconciled to 0 and the npm script runs with --strict, so any new
+    # OpenAPI<->Zod divergence fails the job.
     runs-on: ubuntu-latest
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
 
@@ -317,7 +364,7 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Report OpenAPI <-> Zod schema drift
+      - name: Check OpenAPI <-> Zod schema drift
         working-directory: .
         run: bash scripts/ci/gates.sh frontend:schema-drift
 

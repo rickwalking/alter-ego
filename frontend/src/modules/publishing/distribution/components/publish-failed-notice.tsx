@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { WorkflowFailedCard } from "@/modules/editorial";
+import type { PublishFailedNoticeProps } from "./types";
 
 const BACK_LINK_STYLE = {
   display: "inline-block",
@@ -11,12 +12,6 @@ const BACK_LINK_STYLE = {
   color: "#00d4ff",
   textDecoration: "none",
 } as const;
-
-export interface PublishFailedNoticeProps {
-  currentPhase: string;
-  errorMessage: string | null | undefined;
-  workspaceHref: string;
-}
 
 /**
  * Failed-state notice for the publish page (AE-0009, AC#19).

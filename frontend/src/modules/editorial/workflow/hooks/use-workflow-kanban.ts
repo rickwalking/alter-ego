@@ -11,25 +11,7 @@ import {
   WORKFLOW_BOARD_POLL_INTERVAL_MS,
 } from "@/constants/workflow";
 import { authenticatedFetch } from "@/lib/authenticated-fetch";
-
-export type KanbanCard = {
-  id: string;
-  title: string;
-  topic: string;
-  current_phase: string;
-  phase_status: string;
-  workflow_status?: string | null;
-  updated_at: string | null;
-};
-
-export type KanbanColumn = {
-  phase: string;
-  cards: KanbanCard[];
-};
-
-export type WorkflowKanban = {
-  columns: KanbanColumn[];
-};
+import type { WorkflowKanban } from "./types";
 
 export function useWorkflowKanban() {
   const t = useTranslations("workflow.errors");

@@ -478,13 +478,18 @@ class TestPublicCarouselBlog:
     async def test_blog_with_ae0127_backfill_row_is_byte_identical(
         self, pub_env: PubEnv
     ) -> None:
-        """Scenario: the AE-0127 backfill row (the production path) yields the
-        byte-identical /blog response as the embedded-only read.
+        """Scenario: the ``origin='carousel'`` row (the production path) yields the
+        byte-identical /blog response captured by the embedded golden snapshot.
 
-        The golden snapshots cover the embedded path; in production AE-0127 also
-        creates an ``origin='carousel'`` blog_posts row, and the projection prefers
-        it. This proves that prefer-the-row path returns exactly the embedded read.
+        Post-AE-0163 the carousel repository dual-writes the canonical
+        ``origin='carousel'`` blog_posts row on every blog write (the same shape as
+        the AE-0127 backfill), so ``seed_carousel`` already creates it and the read
+        path sources the body + 404 signal SOLELY from that row. This proves the
+        row-path response is byte-identical to the embedded golden snapshot
+        (``carousel_blog``) — the de-risking guarantee for the AE-0162 drop.
         """
+        from sqlalchemy import select
+
         from rag_backend.domain.constants.blog_post import BlogPostOrigin
         from rag_backend.infrastructure.database.config import get_session_maker
         from rag_backend.infrastructure.database.models import BlogPostModel
@@ -492,33 +497,30 @@ class TestPublicCarouselBlog:
         project_id = await pub_env.seed_carousel(
             is_public=True, approved_for_publish=False
         )
-        async with pub_env.client_for(pub_env.owner) as client:
-            embedded = await client.get(f"/api/carousels/{project_id}/blog")
-        assert embedded.status_code == 200
 
-        # Insert the AE-0127-shaped backfill row (title=title-or-topic, excerpt
-        # NULL, content.markdown=blog_markdown) exactly as the migration does.
+        # The AE-0163 dual-write created exactly one carousel-origin row on seed.
         session_maker = get_session_maker()
         async with session_maker() as session:
-            session.add(
-                BlogPostModel.from_entity({
-                    "project_id": project_id,
-                    "origin": BlogPostOrigin.CAROUSEL.value,
-                    "title": FIXTURE_TITLE,
-                    "slug": f"carousel-{project_id}",
-                    "status": "published",
-                    "content": {
-                        "markdown": FIXTURE_BLOG_PT,
-                        "translations": {"pt": FIXTURE_BLOG_PT, "en": FIXTURE_BLOG_EN},
-                    },
-                })
-            )
-            await session.commit()
+            rows = (
+                await session.execute(
+                    select(BlogPostModel).where(
+                        BlogPostModel.project_id == project_id,
+                        BlogPostModel.origin == BlogPostOrigin.CAROUSEL.value,
+                    )
+                )
+            ).scalars().all()
+        assert len(rows) == 1
+        row = rows[0]
+        assert row.slug == f"carousel-{project_id}"
+        assert row.title == FIXTURE_TITLE
+        assert row.excerpt is None  # AE-0127 row shape preserved (excerpt NULL)
+        assert row.content["markdown"] == FIXTURE_BLOG_PT
 
         async with pub_env.client_for(pub_env.owner) as client:
             with_row = await client.get(f"/api/carousels/{project_id}/blog")
         assert with_row.status_code == 200
-        assert with_row.json() == embedded.json()  # byte-identical via the row path
+        # Byte-identical via the row path to the committed embedded golden snapshot.
+        assert publishing_snapshot.diff_snapshot("carousel_blog", with_row) == []
 
 
 # ==============================================================================

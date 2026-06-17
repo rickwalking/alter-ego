@@ -11,7 +11,7 @@ vi.mock("next-intl", () => ({
   useTranslations: () => (key: string) => key,
 }));
 
-vi.mock("@/hooks/use-auth", () => ({
+vi.mock("@/modules/identity", () => ({
   useAuth: () => ({
     user: {
       id: "user-1",

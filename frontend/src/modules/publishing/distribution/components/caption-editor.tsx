@@ -1,13 +1,6 @@
 "use client";
 
-interface CaptionEditorProps {
-  value: string;
-  onChange: (value: string) => void;
-  maxChars: number;
-  placeholder: string;
-  ariaLabel: string;
-  helpText?: string;
-}
+import type { CaptionEditorProps } from "./types";
 
 /**
  * Textarea with live character counter. Counter turns red when the

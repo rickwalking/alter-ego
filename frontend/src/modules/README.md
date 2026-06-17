@@ -12,11 +12,11 @@ contexts have been migrated into this layer behind public contracts —
 (AE-0139) — and business components were re-homed out of the global atomic
 folders (AE-0140). The cross-context boundary count has been ratcheted from the
 Phase-7-start baseline of 23 down to **0**. `identity` remains a documented
-deferral (see below). `_example/` is a retained non-feature anchor for the
-boundary checker. Legacy `@/features/*` paths still resolve via thin re-export
-shims; their removal (and exhaustive component re-homing, route-page thinning,
-and frontend `identity` consolidation) is a consent-gated **Phase 8** follow-up
-(ticket AE-0143).
+deferral (see below). The legacy `src/features/*` re-export shims and the
+`_example/` boundary anchor were removed in Phase 8 (AE-0153); all consumers now
+import `@/modules/<context>` directly. Remaining Phase 8 follow-ups (exhaustive
+component re-homing, route-page thinning, and frontend `identity` consolidation)
+are tracked under their own tickets.
 
 ## The convention
 
@@ -41,14 +41,14 @@ import { PublishingPanel } from "@/modules/publishing/components/publishing-pane
 ## Enforcement
 
 `scripts/check-feature-boundaries.mjs` (run via `npm run lint:boundaries`, part
-of `npm run lint`) enforces this. During the migration window it scans BOTH
-layers and treats `app/` as a consumer:
+of `npm run lint`) enforces this. It scans the `modules` layer and treats `app/`
+as a consumer (the legacy `features` layer was removed in Phase 8 / AE-0153, so
+its `existsSync`-guarded scan is now a no-op):
 
-| Layer            | Owner attribution            | Rule                                                                            |
-| ---------------- | ---------------------------- | ------------------------------------------------------------------------------- |
-| `src/features/X` | `@/features/X`               | a feature must not import another feature's internals (legacy ratchet, AE-0083) |
-| `src/modules/X`  | `@/modules/X`                | a module must not import another module's **internal** (`@/modules/Y/<deep>`)   |
-| `src/app`        | consumer (no owning context) | may import a module's **public contract** only — never `@/modules/Y/<deep>`     |
+| Layer           | Owner attribution            | Rule                                                                          |
+| --------------- | ---------------------------- | ----------------------------------------------------------------------------- |
+| `src/modules/X` | `@/modules/X`                | a module must not import another module's **internal** (`@/modules/Y/<deep>`) |
+| `src/app`       | consumer (no owning context) | may import a module's **public contract** only — never `@/modules/Y/<deep>`   |
 
 The ratchet is **down-only**: the grandfathered cross-boundary count
 (`scripts/feature-boundary-baseline.json`) may stay equal or shrink, never grow.

@@ -12,13 +12,7 @@ import { NeonTextarea } from "@/components/atoms/neon-textarea";
 import { BLOG_AI_ACTIONS, VOICE_MATCH_MIN_SCORE } from "@/constants/blog-ai";
 import { useBlogAi } from "@/modules/publishing/blog/hooks/use-blog-ai";
 import type { BlogAiSuggestResult } from "@/modules/publishing/blog/types-ai";
-
-interface AiSuggestionPanelProps {
-  postId: string;
-  selectedText: string;
-  onApplySuggestion: (text: string) => void;
-  personaId?: string;
-}
+import type { AiSuggestionPanelProps } from "./types";
 
 export function AiSuggestionPanel({
   postId,

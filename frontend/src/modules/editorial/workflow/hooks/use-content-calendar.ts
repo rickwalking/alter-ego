@@ -8,24 +8,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { WORKFLOW_API } from "@/constants/workflow";
 import { authenticatedFetch } from "@/lib/authenticated-fetch";
-
-export type CalendarItem = {
-  id: string;
-  content_type: string;
-  title: string;
-  status: string;
-  event_date: string;
-  is_scheduled?: boolean;
-  phase?: string;
-  phase_status?: string;
-};
-
-export type ContentCalendar = {
-  items: CalendarItem[];
-  start: string;
-  end: string;
-  total: number;
-};
+import type { ContentCalendar } from "./types";
 
 export function useContentCalendar(start?: string, end?: string) {
   const t = useTranslations("workflow.errors");

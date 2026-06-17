@@ -111,7 +111,7 @@ Pending.
 
 ## Decision Log
 
-Pending.
+Superseded by Phase 8 slices AE-0161 (auto-publish cutover) + AE-0162 (embedded-column drop) — see docs/plans/phase-8-legacy-removal.md. This record remains the origin/deferral reference.
 
 ## Blockers
 

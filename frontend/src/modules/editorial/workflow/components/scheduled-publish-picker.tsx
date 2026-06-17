@@ -7,11 +7,7 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { WORKFLOW_API } from "@/constants/workflow";
 import { authenticatedFetch } from "@/lib/authenticated-fetch";
-
-type ScheduledPublishPickerProps = {
-  postId: string;
-  onScheduled?: () => void;
-};
+import type { ScheduledPublishPickerProps } from "./types";
 
 export function ScheduledPublishPicker({
   postId,

@@ -11,7 +11,6 @@ import { ApiError } from "@/lib/api-client";
 import { streamSseEvents, SSE_EVENT_TYPE } from "@/lib/sse-client";
 import { useChatStream } from "@/lib/use-chat-stream";
 import { API_ENDPOINTS, HTTP_STATUS } from "@/constants/api";
-import type { Message } from "@/schemas/chat";
 import {
   PUBLISH_CHAT_STORAGE_KEY,
   OPTIMISTIC_MESSAGE_ID_PREFIX,
@@ -21,13 +20,7 @@ import {
   TOOL_REFINE_CAROUSEL_COPY,
 } from "@/constants/publish-chat";
 import { carouselKeys } from "@/modules/carousel-presentation";
-
-export interface UsePublishChatReturn {
-  conversationId: string | null;
-  messages: Message[];
-  isStreaming: boolean;
-  sendMessage: (content: string) => void;
-}
+import type { UsePublishChatReturn } from "./types";
 
 function readStoredConversationId(projectId: string): string | null {
   if (typeof window === "undefined") return null;

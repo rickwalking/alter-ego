@@ -86,7 +86,7 @@ class BlogPost:
         return cls(
             id=cast(str, model.id),
             slug=cast(str, model.slug),
-            title=cast(str, model.title),
+            title=model.title,
             status=_coerce_status(cast("str | None", model.status)),
             lock_version=cast(int, model.lock_version),
             origin=_coerce_origin(cast("str | None", model.origin)),

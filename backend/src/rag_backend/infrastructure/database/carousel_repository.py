@@ -14,6 +14,9 @@ from rag_backend.domain.models import (
 )
 from rag_backend.domain.protocols import CarouselRepository
 from rag_backend.domain.protocols.repositories import _ProjectQuery
+from rag_backend.infrastructure.database.carousel_blog_dual_write import (
+    sync_carousel_blog_post,
+)
 from rag_backend.infrastructure.database.models import (
     CarouselImageGenerationModel,
     CarouselProjectModel,
@@ -39,6 +42,7 @@ class PostgresCarouselRepository(CarouselRepository):
         model = CarouselProjectModel.from_entity(project)
         self._session.add(model)
         await self._session.flush()
+        await sync_carousel_blog_post(self._session, project)
         await self._session.commit()
         await self._session.refresh(model)
         return model.to_entity()
@@ -95,6 +99,7 @@ class PostgresCarouselRepository(CarouselRepository):
             raise ValueError(_ERR_PROJECT_NOT_FOUND.format(project.id))
         model.update_from_entity(project)
         await self._session.flush()
+        await sync_carousel_blog_post(self._session, project)
         await self._session.commit()
         await self._session.refresh(model)
         return model.to_entity()

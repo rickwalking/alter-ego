@@ -80,13 +80,13 @@ const MOCK_BLOG_WITH_DESIGN = {
 
 const MOCK_SLIDE = {
   id: "slide-1",
-  project_id: "abc-123",
   slide_number: 1,
   slide_type: "content",
   heading: "Introduction",
   body: "Slide body",
-  image_prompt: null,
+  image_path: null,
   created_at: "2026-04-20T00:00:00Z",
+  updated_at: "2026-04-20T00:00:00Z",
 };
 
 function createWrapper() {

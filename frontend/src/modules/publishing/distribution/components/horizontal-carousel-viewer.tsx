@@ -5,11 +5,7 @@ import { useState, useCallback } from "react";
 import { useTranslations } from "next-intl";
 import { ChevronLeft, ChevronRight, Download, Loader } from "lucide-react";
 import JSZip from "jszip";
-
-interface HorizontalCarouselViewerProps {
-  slideUrls: string[];
-  alt: string;
-}
+import type { HorizontalCarouselViewerProps } from "./types";
 
 /**
  * Instagram-style carousel viewer. Horizontal snap-scroll on desktop
