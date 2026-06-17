@@ -1,4 +1,4 @@
-# AE-0154 — Refactor remaining frontend duplication hotspots + ratchet jscpd toward ~1%
+# AE-0174 — Refactor remaining frontend duplication hotspots + ratchet jscpd toward ~1%
 
 Status: Review
 Tier: T2
@@ -121,8 +121,8 @@ Feature: Reduce remaining frontend source duplication
 - Blocked by:
 - Related: AE-0149 (the gate + ratchet), AE-0150 (first hotspot tranche; this is
   its follow-on). The kaizen-jscpd plan anticipated ratcheting "toward ~1%".
-- **Blocks: AE-0152** — this refactor moves exports / creates shared primitives /
-  changes barrel behavior; do it first so AE-0152's knip baseline is snapshotted
+- **Blocks: AE-0172** — this refactor moves exports / creates shared primitives /
+  changes barrel behavior; do it first so AE-0172's knip baseline is snapshotted
   on the settled tree (skeptical-review sequencing finding).
 
 ## Implementation Plan
@@ -153,15 +153,15 @@ Pending.
 
 ## QA Report
 
-PASS (wave QA) — see [AE-0152-0155.qa.md](../reports/AE-0152-0155.qa.md). 15/15 frontend gates green; integrity 0 net-new blockers; all ACs MET; 0 blocker findings.
+PASS (wave QA) — see [AE-0172-0175.qa.md](../reports/AE-0172-0175.qa.md). 15/15 frontend gates green; integrity 0 net-new blockers; all ACs MET; 0 blocker findings.
 
 ## Decision Log
 
-- 2026-06-16 — Skeptical review (`.agent/reports/AE-0152-0155.skeptical-review.md`,
+- 2026-06-16 — Skeptical review (`.agent/reports/AE-0172-0175.skeptical-review.md`,
   external cold critic): **WARN accepted** — guard against metric-chasing/harmful
   coupling: require per-clone semantic justification, allow explicit
   readable-duplication waivers, and preserve server/client boundaries (ACs added).
-  **WARN accepted** — sequenced before AE-0152 (this refactor churns knip results).
+  **WARN accepted** — sequenced before AE-0172 (this refactor churns knip results).
 
 - 2026-06-16 — **Extract/waive decisions (per-clone):**
 

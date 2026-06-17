@@ -239,6 +239,20 @@ count may stay equal or decrease, never rise. See
 | TypeScript camelCase | eslint naming rules | Pass |
 | Constants UPPER_SNAKE_CASE | Manual | Pass |
 
+### Kaizen review heuristics (Phase 8 Class B QA wave)
+
+Reusable adversarial-review checks distilled from the AE-0166..0171 QA wave
+(`.agent/reports/phase-8-class-b.qa-wave.md`). The first two are review reminders;
+the rest are tracked as tickets.
+
+| Heuristic | What to check | Source |
+|-----------|---------------|--------|
+| **Diff-warning granularity (K4)** | A diff-scoped lint gate that claims to block `warn`-level rules on changed files cannot do so at file granularity without forcing refactors of pre-existing warnings in any touched file. Verify the *claim* matches the *gate*: if `lint:changed` runs `eslint --quiet`, warnings are surfaced, NOT gated. Don't document enforcement a gate doesn't perform. | finding H2 |
+| **Guard verification surface (K5)** | A guard/safety check must verify *everything* its docstring claims. The worktree guard claimed "cannot mutate the primary working tree" but checked only HEAD/branch until a porcelain tripwire was added. For each protective claim, point to the test that exercises it. | finding L2 |
+| Same-key rule override (K1) | See **AE-0179** — ESLint flat config replaces (not merges) same-key rules across overlapping `files` blocks. | finding H1 |
+| Rule-fires regression test (K2) | See **AE-0180** — a rule added/promoted must ship a test proving it ERRORS on a seeded violation, not just that the tree passes. | acceptance finding |
+| Existence-only gates (K3) | See **AE-0181** — gates that pass on mere artifact existence (reports, sections) must check content/attribution. | finding M1 |
+
 ---
 
 ## 3. Mutation Testing Thresholds
@@ -325,7 +339,7 @@ runner = "pytest"
 | Implementation satisfies criterion | Manual inspection of code behavior |
 | No scope creep | Verify no behavior exists that is not in the criteria |
 
-### When a `.feature` file is required (AE-0153)
+### When a `.feature` file is required (AE-0173)
 
 Do **not** flag "missing `.feature`" as a finding for tickets that legitimately
 don't need one. Apply this rule (full text in root `CLAUDE.md` → Testing):

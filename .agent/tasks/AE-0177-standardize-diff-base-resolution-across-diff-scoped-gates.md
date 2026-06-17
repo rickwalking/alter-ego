@@ -1,4 +1,4 @@
-# AE-0157 — Standardize diff-base resolution across diff-scoped gates
+# AE-0177 — Standardize diff-base resolution across diff-scoped gates
 
 Status: Intake
 Tier: T1
@@ -18,10 +18,10 @@ degrades a gate to a no-op.
 
 ## Problem
 
-Source: kaizen `.agent/reports/kaizen-AE-0152-0155.plan.md` (failure class #2).
+Source: kaizen `.agent/reports/kaizen-AE-0172-0175.plan.md` (failure class #2).
 Diff-scoped gates hand-roll `git diff BASE...HEAD` (merge-base form). On a stacked
 branch or when `origin/main` has diverged, that fails with `fatal: no merge base`
-and the gate silently degrades. AE-0152's `check-dead-code.mjs` hit exactly this
+and the gate silently degrades. AE-0172's `check-dead-code.mjs` hit exactly this
 and got a two-ref fallback (`BASE...HEAD` → `BASE HEAD` → advisory), but
 `scripts/ci/eslint-changed.mjs` (`lint:changed`) and `scripts/ci/check-integrity.sh`
 do NOT have that fallback — so they can silently no-op on the same branch shapes.

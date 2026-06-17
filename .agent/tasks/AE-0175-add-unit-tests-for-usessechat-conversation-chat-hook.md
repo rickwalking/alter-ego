@@ -1,4 +1,4 @@
-# AE-0155 — Add unit tests for useSseChat (conversation chat hook)
+# AE-0175 — Add unit tests for useSseChat (conversation chat hook)
 
 Status: Review
 Tier: T1
@@ -91,7 +91,7 @@ Ticket created.
 
 ### 2026-06-16 — Skeptical review resolved
 
-External cold critic (`.agent/reports/AE-0152-0155.skeptical-review.md`) warned the
+External cold critic (`.agent/reports/AE-0172-0175.skeptical-review.md`) warned the
 tests could over-mock and miss the real risk (concurrency/lifecycle). **Accepted** —
 scope/ACs now mandate a controllable fake stream + real QueryClient and explicit
 race cases (overlapping sends, abort/unmount-before-complete, mid-stream history,
@@ -107,7 +107,7 @@ Pending.
 
 ## QA Report
 
-PASS (wave QA) — see [AE-0152-0155.qa.md](../reports/AE-0152-0155.qa.md). 15/15 frontend gates green; integrity 0 net-new blockers; all ACs MET; 0 blocker findings.
+PASS (wave QA) — see [AE-0172-0175.qa.md](../reports/AE-0172-0175.qa.md). 15/15 frontend gates green; integrity 0 net-new blockers; all ACs MET; 0 blocker findings.
 
 ## Blockers
 
