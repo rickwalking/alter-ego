@@ -1,6 +1,6 @@
 # AE-0190 — Backend Dockerfile: convert to multi-stage (copy .venv, drop uv/pip from runtime)
 
-Status: Ready
+Status: Done
 Tier: T2
 Priority: High
 Type: Refactor
@@ -92,4 +92,5 @@ Pending.
 ## Blockers
 None.
 ## Final Summary
-Pending.
+
+backend/Dockerfile converted to multi-stage (builder→runtime, copies .venv, drops uv/pip from runtime). Verified (2 FROM stages).

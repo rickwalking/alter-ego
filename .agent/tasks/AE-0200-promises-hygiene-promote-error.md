@@ -1,6 +1,6 @@
 # AE-0200 — Frontend: promises-hygiene — fix floating/misused promises then promote to error
 
-Status: Ready
+Status: Done
 Tier: T2
 Priority: High
 Type: Refactor
@@ -87,4 +87,5 @@ Pending.
 ## Blockers
 None.
 ## Final Summary
-Pending.
+
+Promises-hygiene fixed; `no-floating-promises` + `no-misused-promises` promoted to error. Verified in main.

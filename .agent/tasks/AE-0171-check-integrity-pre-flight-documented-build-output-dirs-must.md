@@ -1,6 +1,6 @@
 # AE-0171 — check-integrity pre-flight: documented build-output dirs must be gitignored
 
-Status: Dev Complete
+Status: Done
 Tier: T1
 Class: B
 Priority: Medium
@@ -78,3 +78,7 @@ Pending.
 ## Blockers
 
 None.
+
+## Final Summary
+
+check-integrity.sh preflight ensures documented build-output dirs are gitignored (anti-false-positive). Verified in main.

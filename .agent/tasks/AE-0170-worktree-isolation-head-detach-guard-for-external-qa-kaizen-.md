@@ -1,6 +1,6 @@
 # AE-0170 — Worktree isolation + HEAD-detach guard for external QA/kaizen runs
 
-Status: Dev Complete
+Status: Done
 Tier: T2
 Class: B
 Priority: High
@@ -128,4 +128,4 @@ None.
 
 ## Final Summary
 
-Pending.
+Worktree isolation + HEAD-detach guard implemented in scripts/lib/external_agent.sh for external QA/kaizen runs. Verified in main.

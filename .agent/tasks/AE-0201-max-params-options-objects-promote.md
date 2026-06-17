@@ -1,6 +1,6 @@
 # AE-0201 — Frontend: max-params -> options objects (2 sites) then promote to error
 
-Status: Ready
+Status: Done
 Tier: T1
 Priority: Low
 Type: Refactor
@@ -85,4 +85,5 @@ Pending.
 ## Blockers
 None.
 ## Final Summary
-Pending.
+
+max-params sites converted to options objects and `max-params` promoted to error (3). Verified in main.

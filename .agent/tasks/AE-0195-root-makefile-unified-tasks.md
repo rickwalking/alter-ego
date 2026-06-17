@@ -1,6 +1,6 @@
 # AE-0195 — Add root Makefile for unified build/test/lint (polyglot task runner)
 
-Status: Ready
+Status: Done
 Tier: T2
 Priority: Medium
 Type: Task
@@ -89,4 +89,5 @@ Pending.
 ## Blockers
 None.
 ## Final Summary
-Pending.
+
+Root Makefile added with unified be-/fe- build/test/lint targets (polyglot task runner). Verified present.

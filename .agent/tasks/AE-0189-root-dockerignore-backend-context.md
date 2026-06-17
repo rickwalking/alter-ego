@@ -1,6 +1,6 @@
 # AE-0189 — Add root .dockerignore to fix backend build context (1.2GB upload)
 
-Status: Ready
+Status: Done
 Tier: T1
 Priority: High
 Type: Task
@@ -91,4 +91,5 @@ Pending.
 ## Blockers
 None.
 ## Final Summary
-Pending.
+
+Root .dockerignore added — fixes the oversized backend build context. Verified present in main.

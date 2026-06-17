@@ -26,23 +26,12 @@ Visual Kanban is for orchestration. This file is durable board state (regenerate
 - AE-0145
 - AE-0146
 - AE-0147
-- AE-0148
 - AE-0152
 - AE-0187
 - AE-0188
-- AE-0189
-- AE-0190
-- AE-0191
-- AE-0192
-- AE-0193
-- AE-0194
-- AE-0195
 - AE-0196
 - AE-0197
 - AE-0198
-- AE-0199
-- AE-0200
-- AE-0201
 - AE-0202
 
 ## Planning
@@ -64,12 +53,6 @@ Visual Kanban is for orchestration. This file is durable board state (regenerate
 - AE-0034
 - AE-0039
 - AE-0160
-- AE-0166
-- AE-0167
-- AE-0168
-- AE-0169
-- AE-0170
-- AE-0171
 
 ## QA Running
 
@@ -242,7 +225,24 @@ Visual Kanban is for orchestration. This file is durable board state (regenerate
 - AE-0066
 - AE-0067
 - AE-0069
+- AE-0148
+- AE-0166
+- AE-0167
+- AE-0168
+- AE-0169
+- AE-0170
+- AE-0171
 - AE-0182
+- AE-0189
+- AE-0190
+- AE-0191
+- AE-0192
+- AE-0193
+- AE-0194
+- AE-0195
+- AE-0199
+- AE-0200
+- AE-0201
 - AE-0203
 
 ## Cancelled
