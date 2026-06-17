@@ -27,7 +27,5 @@ export type {
 export { useRubrics } from "./hooks/use-rubrics";
 
 /* --- components --- */
-export {
-  NeonRubricCard,
-  type NeonRubricCardProps,
-} from "./components/neon-rubric-card";
+export { NeonRubricCard } from "./components/neon-rubric-card";
+export type { NeonRubricCardProps } from "./components/types";

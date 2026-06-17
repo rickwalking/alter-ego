@@ -7,14 +7,7 @@ import {
   TEXT,
   TEXT_MUTED,
 } from "@/constants/neon";
-
-export interface NeonPersonaCardProps {
-  name: string;
-  role: string;
-  description: string;
-  skills: string[];
-  avatarUrl?: string;
-}
+import type { NeonPersonaCardProps } from "./types";
 
 export function NeonPersonaCard({
   name,

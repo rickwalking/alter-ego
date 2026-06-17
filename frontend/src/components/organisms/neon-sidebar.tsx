@@ -20,7 +20,7 @@ import {
   TEXT_MUTED,
 } from "@/constants/neon";
 import type { SidebarSection } from "@/schemas/neon-sidebar";
-import { useAuth } from "@/hooks/use-auth";
+import { useAuth } from "@/modules/identity";
 import { SIDEBAR_WIDTH_PX } from "@/components/organisms/constants";
 
 export interface NeonSidebarProps {

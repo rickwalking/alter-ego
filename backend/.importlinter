@@ -352,7 +352,6 @@ ignore_imports =
     rag_backend.application.services.carousel.editorial_workflow_service -> rag_backend.infrastructure.monitoring_langfuse
     rag_backend.application.services.carousel.editorial_workflow_service_helpers -> rag_backend.infrastructure.external.openai_embeddings
     rag_backend.application.services.carousel.image_generation_records -> rag_backend.infrastructure.logging
-    rag_backend.application.services.carousel.legacy_presentation_regeneration -> rag_backend.infrastructure.database.carousel_repository
     rag_backend.application.services.carousel.nodes.content.core -> rag_backend.infrastructure.logging
     rag_backend.application.services.carousel.nodes.export -> rag_backend.infrastructure.logging
     rag_backend.application.services.carousel.nodes.images -> rag_backend.infrastructure.external.openai_image
@@ -419,7 +418,6 @@ ignore_imports =
     rag_backend.application.services.carousel_refinement -> rag_backend.agents.prompts.registry
     rag_backend.application.services.carousel_template.prompts -> rag_backend.agents.prompts.registry
     rag_backend.application.services.quality_evaluation_service -> rag_backend.agents.quality_agent
-    rag_backend.application.services.rag_agent -> rag_backend.agents.rag_agent
     rag_backend.application.tools.carousel.generate_carousel -> rag_backend.agents.input_sanitizer
     rag_backend.application.tools.carousel.refine_copy -> rag_backend.agents.input_sanitizer
     rag_backend.application.tools.carousel.refine_copy -> rag_backend.agents.prompts.registry

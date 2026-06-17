@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -18,8 +17,7 @@ import {
   AiSuggestionPanel,
   RichTextEditor,
   VersionHistorySidebar,
-  type BlogPostVersion,
-  useBlogPosts,
+  useBlogPostEditor,
 } from "@/modules/publishing";
 import { ROUTE_PATHS } from "@/constants/api";
 
@@ -28,60 +26,21 @@ export default function BlogPostEditPage() {
   const postId = params.id;
   const router = useRouter();
   const t = useTranslations("dashboard.blogPosts");
-  const { posts, loading, update, refetch } = useBlogPosts();
-  const [title, setTitle] = useState("");
-  const [excerpt, setExcerpt] = useState("");
-  const [bodyText, setBodyText] = useState("");
-  const [selectedText, setSelectedText] = useState("");
-  const [lockVersion, setLockVersion] = useState(1);
-  const [saving, setSaving] = useState(false);
-
-  const post = posts.find((item) => item.id === postId);
-
-  useEffect(() => {
-    void refetch();
-  }, [refetch]);
-
-  useEffect(() => {
-    if (!post) {
-      return;
-    }
-    setTitle(post.title);
-    setExcerpt(post.excerpt ?? "");
-    const body =
-      typeof post.content?.body === "string" ? post.content.body : "";
-    setBodyText(body);
-    setLockVersion(post.lock_version ?? 1);
-  }, [post]);
-
-  const handleSave = async () => {
-    if (!postId) {
-      return;
-    }
-    setSaving(true);
-    try {
-      await update(
-        postId,
-        {
-          title,
-          excerpt,
-          content: { body: bodyText },
-        },
-        lockVersion,
-      );
-      await refetch();
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleRestore = (version: BlogPostVersion) => {
-    setTitle(version.title);
-    setExcerpt(version.excerpt ?? "");
-    const body =
-      typeof version.snapshot?.body === "string" ? version.snapshot.body : "";
-    setBodyText(body);
-  };
+  const {
+    post,
+    loading,
+    saving,
+    title,
+    setTitle,
+    excerpt,
+    setExcerpt,
+    bodyText,
+    setBodyText,
+    setSelectedText,
+    selectedText,
+    handleSave,
+    handleRestore,
+  } = useBlogPostEditor(postId);
 
   if (loading && !post) {
     return (

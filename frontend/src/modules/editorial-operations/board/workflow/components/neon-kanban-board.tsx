@@ -3,11 +3,9 @@ import { NeonBadge } from "@/components/atoms/neon-badge";
 import { NeonCard } from "@/components/molecules/neon-card";
 import { DASHBOARD_ROUTES } from "@/constants/dashboard-routes";
 import { TEXT, TEXT_DIM, TEXT_MUTED } from "@/constants/neon";
-import type { KanbanColumn } from "@/schemas/neon-kanban";
+import type { NeonKanbanBoardProps } from "./types";
 
-export interface NeonKanbanBoardProps {
-  columns: KanbanColumn[];
-}
+export type { NeonKanbanBoardProps } from "./types";
 
 export function NeonKanbanBoard({
   columns,

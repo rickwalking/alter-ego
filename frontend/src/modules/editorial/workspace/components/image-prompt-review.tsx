@@ -3,12 +3,7 @@
 import { useTranslations } from "next-intl";
 import { NeonBadge } from "@/components/atoms/neon-badge";
 import { NeonTextarea } from "@/components/atoms/neon-textarea";
-import type { SlideImagePrompt } from "@/modules/editorial/workspace/types-ai";
-
-export interface ImagePromptReviewProps {
-  prompts: SlideImagePrompt[] | null | undefined;
-  readOnly?: boolean;
-}
+import type { ImagePromptReviewProps } from "./types";
 
 export function ImagePromptReview({
   prompts,

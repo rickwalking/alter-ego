@@ -76,6 +76,18 @@ export const carouselProjectResponseSchema = z.object({
   subtitle_en: z.string().nullable().optional(),
   theme: z.string(),
   status: z.string(),
+  image_model: z.string().optional(),
+  image_style: z.string().optional(),
+  primary_color: z.string().nullable(),
+  accent_color: z.string().nullable(),
+  background_color: z.string().nullable(),
+  is_public: z.boolean().optional(),
+  current_phase: z.string().nullable().optional(),
+  phase_status: z.string().nullable().optional(),
+  error_message: z.string().nullable().optional(),
+  output_dir: z.string().nullable().optional(),
+  research_sources: z.array(z.unknown()).optional(),
+  slides: z.array(z.unknown()).optional(),
   blog_markdown: z.string().nullable(),
   blog_translations: z.record(z.string(), z.string()).nullable().optional(),
   caption: z.string().nullable(),
@@ -102,13 +114,13 @@ export const carouselProjectListResponseSchema = z.object({
 
 export const carouselSlideResponseSchema = z.object({
   id: z.string(),
-  project_id: z.string(),
   slide_number: z.number(),
   slide_type: z.string(),
   heading: z.string(),
   body: z.string(),
-  image_prompt: z.string().nullable(),
+  image_path: z.string().nullable().optional(),
   created_at: z.string(),
+  updated_at: z.string(),
 });
 
 /**

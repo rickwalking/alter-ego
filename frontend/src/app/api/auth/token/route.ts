@@ -5,7 +5,7 @@ import {
   HTTP_METHODS,
   resolveBackendUrl,
 } from "@/constants/api";
-import { setAccessTokenCookie } from "@/lib/auth-cookie";
+import { setAccessTokenCookie } from "@/modules/identity";
 
 interface TokenPayload {
   access_token?: string;

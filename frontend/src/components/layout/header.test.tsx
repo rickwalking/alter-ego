@@ -47,7 +47,7 @@ vi.mock("next/link", () => ({
 }));
 
 const mockUseAuth = vi.fn();
-vi.mock("@/hooks/use-auth", () => ({
+vi.mock("@/modules/identity", () => ({
   useAuth: () => mockUseAuth(),
 }));
 

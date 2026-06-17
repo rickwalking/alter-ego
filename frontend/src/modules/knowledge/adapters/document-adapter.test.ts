@@ -7,6 +7,8 @@ describe("mapDocumentToCardProps", () => {
     id: "doc-1",
     title: "Test Doc",
     status: "completed",
+    scope: "personal",
+    is_public: false,
     metadata: {},
     chunk_count: 5,
     created_at: "2026-01-01T00:00:00Z",

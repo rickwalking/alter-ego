@@ -1,13 +1,6 @@
 /** SSE subscription and polling fallback for editorial workflow. */
 
-import {
-  useCallback,
-  useEffect,
-  useRef,
-  type Dispatch,
-  type RefObject,
-  type SetStateAction,
-} from "react";
+import { useCallback, useEffect, useRef, type RefObject } from "react";
 import { API_ENDPOINTS } from "@/constants/api";
 import {
   EDITORIAL_WORKFLOW_POLL_BACKOFF_MS,
@@ -24,20 +17,11 @@ import {
   parseWorkflowEvent,
   resolveWorkflowEventPayload,
   shouldPollWorkflowState,
-  type WorkflowEventPayload,
 } from "./use-editorial-workflow-utils";
-
-interface UseEditorialWorkflowSseParams {
-  projectId: string;
-  sseEnabled: boolean;
-  state: EditorialWorkflowState | null;
-  transportMode: EditorialWorkflowTransportMode;
-  setState: Dispatch<SetStateAction<EditorialWorkflowState | null>>;
-  setPhaseEvents: Dispatch<SetStateAction<string[]>>;
-  setTransportMode: Dispatch<SetStateAction<EditorialWorkflowTransportMode>>;
-  setError: Dispatch<SetStateAction<string | null>>;
-  refreshState: () => Promise<EditorialWorkflowState | null>;
-}
+import type {
+  UseEditorialWorkflowSseParams,
+  WorkflowEventPayload,
+} from "./types";
 
 export function useEditorialWorkflowSse({
   projectId,

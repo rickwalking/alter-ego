@@ -6,10 +6,11 @@ workflow-board, the editorial-analytics, and the blog-post CRUD persistence rows
 — behind the publishing read port + the read ACL (the sole carousel/blog ORM
 read seam):
 
-* the carousel-blog projection falls back per-field to the embedded carousel
-  columns AND prefers the AE-0127 ``origin='carousel'`` backfill row when present
-  (no embedded column dropped; byte-identical fields), and maps absence to
-  ``None`` (the route's legacy 404);
+* the carousel-blog projection sources the body + the 404 signal SOLELY from the
+  AE-0127/AE-0163 ``origin='carousel'`` ``blog_posts`` row (the embedded carousel
+  ``blog_markdown`` column is no longer read), resolving title/subtitle from the
+  row with the project title/topic/subtitle fallback (byte-identical fields), and
+  maps an absent/body-less row to ``None`` (the route's legacy 404);
 * the localized projection reproduces the legacy en/pt title/subtitle fallback
   chain and the ``available_languages`` list;
 * the calendar/board/analytics projections aggregate exactly the legacy rows with
@@ -117,55 +118,75 @@ class TestReadProjectionHelpers:
         """Scenario: the first non-heading paragraph is returned, truncated."""
         assert extract_first_paragraph("# H\n\nFirst para\n\nSecond") == "First para"
 
-    def test_resolve_blog_body_prefers_backfill_row(self) -> None:
-        """Scenario: a backfill row with a body overrides the embedded markdown."""
+    def test_resolve_blog_body_sources_from_row(self) -> None:
+        """Scenario: the body is sourced from the origin='carousel' row (AE-0163)."""
         row = BlogPostModel.from_entity({
             "title": "Row",
             "slug": "row",
             "content": {"markdown": "ROW BODY"},
         })
-        assert resolve_blog_body(row, "EMBEDDED") == "ROW BODY"
+        assert resolve_blog_body(row) == "ROW BODY"
 
-    def test_resolve_blog_body_falls_back_to_embedded(self) -> None:
-        """Scenario: an absent/empty backfill body falls back to embedded."""
-        assert resolve_blog_body(None, "EMBEDDED") == "EMBEDDED"
+    def test_resolve_blog_body_none_when_no_row_or_body(self) -> None:
+        """Scenario: an absent row or empty body yields None (AE-0163, no fallback).
+
+        The embedded ``blog_markdown`` column is no longer read; the body comes
+        solely from the dual-write/backfill row.
+        """
+        assert resolve_blog_body(None) is None
         row = BlogPostModel.from_entity({"title": "R", "slug": "r", "content": {}})
-        assert resolve_blog_body(row, "EMBEDDED") == "EMBEDDED"
+        assert resolve_blog_body(row) is None
 
 
 # ==============================================================================
-# Carousel-blog projection (embedded fallback + AE-0127 backfill)
+# Carousel-blog projection (AE-0163: sourced solely from the origin='carousel' row)
 # ==============================================================================
 class TestCarouselBlogProjection:
     """The carousel-blog projection mirrors the legacy media-route fields."""
 
-    @pytest.mark.asyncio
-    async def test_default_uses_embedded_columns(
-        self, db_session: AsyncSession
+    @staticmethod
+    def _add_carousel_row(
+        session: AsyncSession,
+        project: CarouselProject,
+        *,
+        title: str,
+        excerpt: str | None,
+        markdown: str,
     ) -> None:
-        """Scenario: with no backfill row, the embedded columns are used."""
-        acl = PublishingReadAcl(db_session)
-        projection = await acl.project_carousel_blog(_carousel_entity())
-        assert projection is not None
-        assert projection.markdown == _BLOG_PT
-        assert projection.title == "Embedded Title"
-        assert projection.subtitle == "Embedded Subtitle"
-
-    @pytest.mark.asyncio
-    async def test_backfill_row_overrides_per_field(
-        self, db_session: AsyncSession
-    ) -> None:
-        """Scenario: an origin='carousel' backfill row overrides title/body."""
-        project = _carousel_entity()
-        db_session.add(
+        """Insert the canonical origin='carousel' row (AE-0127/AE-0163 shape)."""
+        session.add(
             BlogPostModel.from_entity({
                 "project_id": str(project.id),
                 "origin": BlogPostOrigin.CAROUSEL.value,
-                "title": "Backfill Title",
-                "slug": f"backfill-{project.id}",
-                "excerpt": "Backfill Subtitle",
-                "content": {"markdown": "BACKFILL BODY"},
+                "title": title,
+                "slug": f"carousel-{project.id}",
+                "excerpt": excerpt,
+                "content": {"markdown": markdown},
             })
+        )
+
+    @pytest.mark.asyncio
+    async def test_no_row_returns_none(self, db_session: AsyncSession) -> None:
+        """Scenario: with no origin='carousel' row, the projection is None (404).
+
+        The embedded ``blog_markdown`` column is no longer read (AE-0163); the body
+        + 404 signal come solely from the dual-write/backfill row.
+        """
+        acl = PublishingReadAcl(db_session)
+        assert await acl.project_carousel_blog(_carousel_entity()) is None
+
+    @pytest.mark.asyncio
+    async def test_row_supplies_body_and_title(
+        self, db_session: AsyncSession
+    ) -> None:
+        """Scenario: the origin='carousel' row supplies the body + title/subtitle."""
+        project = _carousel_entity()
+        self._add_carousel_row(
+            db_session,
+            project,
+            title="Backfill Title",
+            excerpt="Backfill Subtitle",
+            markdown="BACKFILL BODY",
         )
         await db_session.commit()
         acl = PublishingReadAcl(db_session)
@@ -176,57 +197,43 @@ class TestCarouselBlogProjection:
         assert projection.subtitle == "Backfill Subtitle"
 
     @pytest.mark.asyncio
-    async def test_backfill_body_with_empty_title_falls_back_per_field(
+    async def test_row_empty_title_excerpt_falls_back_to_project(
         self, db_session: AsyncSession
     ) -> None:
-        """Scenario: a backfill row supplies the body but empty title/excerpt fall
-        back per-field to the embedded carousel title/subtitle (byte-identical)."""
+        """Scenario: the row supplies the body; empty title/excerpt fall back to the
+        project title/subtitle (the AE-0127 row shape — excerpt NULL — preserved)."""
         project = _carousel_entity()
-        db_session.add(
-            BlogPostModel.from_entity({
-                "project_id": str(project.id),
-                "origin": BlogPostOrigin.CAROUSEL.value,
-                "title": "",
-                "slug": f"backfill-{project.id}",
-                "excerpt": "",
-                "content": {"markdown": "BACKFILL BODY"},
-            })
+        self._add_carousel_row(
+            db_session,
+            project,
+            title="",
+            excerpt="",
+            markdown="BACKFILL BODY",
         )
         await db_session.commit()
         acl = PublishingReadAcl(db_session)
         projection = await acl.project_carousel_blog(project)
         assert projection is not None
         assert projection.markdown == "BACKFILL BODY"  # body from the row
-        assert projection.title == "Embedded Title"  # empty row title -> embedded
-        assert projection.subtitle == "Embedded Subtitle"  # empty excerpt -> embedded
+        assert projection.title == "Embedded Title"  # empty row title -> project
+        assert projection.subtitle == "Embedded Subtitle"  # empty excerpt -> project
 
     @pytest.mark.asyncio
-    async def test_backfill_row_cannot_flip_legacy_404(
+    async def test_row_without_body_returns_none(
         self, db_session: AsyncSession
     ) -> None:
-        """Scenario: the 404 gate keys on project.blog_markdown (legacy signal) —
-        a backfill row with a body must NOT turn a legacy 404 into a 200."""
+        """Scenario: a row with no rendered body maps to ``None`` (the legacy 404)."""
         project = _carousel_entity()
-        project.blog_markdown = None  # legacy would 404 regardless of any row
         db_session.add(
             BlogPostModel.from_entity({
                 "project_id": str(project.id),
                 "origin": BlogPostOrigin.CAROUSEL.value,
-                "title": "Orphan Backfill",
+                "title": "Bodyless",
                 "slug": f"carousel-{project.id}",
-                "content": {"markdown": "ORPHAN BODY"},
+                "content": {},
             })
         )
         await db_session.commit()
-        acl = PublishingReadAcl(db_session)
-        assert await acl.project_carousel_blog(project) is None  # still 404
-
-    @pytest.mark.asyncio
-    async def test_absent_blog_returns_none(self, db_session: AsyncSession) -> None:
-        """Scenario: no blog body anywhere maps to ``None`` (the legacy 404)."""
-        project = _carousel_entity()
-        project.blog_markdown = None
-        project.blog_translations = None
         acl = PublishingReadAcl(db_session)
         assert await acl.project_carousel_blog(project) is None
 
@@ -381,6 +388,17 @@ class TestBlogCrudPortAndService:
         self, db_session: AsyncSession
     ) -> None:
         """Scenario: the service routes projections + CRUD through wired ports."""
+        project = _carousel_entity()
+        db_session.add(
+            BlogPostModel.from_entity({
+                "project_id": str(project.id),
+                "origin": BlogPostOrigin.CAROUSEL.value,
+                "title": "Embedded Title",
+                "slug": f"carousel-{project.id}",
+                "content": {"markdown": _BLOG_PT},
+            })
+        )
+        await db_session.commit()
         acl = PublishingReadAcl(db_session)
         service = PublishingService(
             carousel_repository=MagicMock(spec=CarouselRepository),
@@ -389,7 +407,7 @@ class TestBlogCrudPortAndService:
                 blog_crud=AclBlogPostCrudAdapter(acl),
             ),
         )
-        projection = await service.project_carousel_blog(_carousel_entity())
+        projection = await service.project_carousel_blog(project)
         assert projection is not None
         assert projection.markdown == _BLOG_PT
         post = service.new_blog_post({"title": "S", "slug": "s", "content": {}})

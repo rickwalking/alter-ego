@@ -1,10 +1,6 @@
 import type { ReactNode } from "react";
 import type { CalendarIconName } from "../types";
-
-interface CalendarSvgIconProps {
-  name: CalendarIconName;
-  size?: number;
-}
+import type { CalendarSvgIconProps } from "./types";
 
 const ICON_CHILDREN: Record<CalendarIconName, ReactNode> = {
   left: <polyline points="15 18 9 12 15 6" />,

@@ -1,14 +1,7 @@
 import { NeonBadge } from "@/components/atoms/neon-badge";
 import { NeonCard } from "@/components/molecules/neon-card";
 import { NEON_CYAN, NEON_GREEN, TEXT, TEXT_MUTED } from "@/constants/neon";
-
-export interface NeonRubricCardProps {
-  title: string;
-  category: string;
-  score: number;
-  maxScore?: number;
-  criteria: string[];
-}
+import type { NeonRubricCardProps } from "./types";
 
 export function NeonRubricCard({
   title,

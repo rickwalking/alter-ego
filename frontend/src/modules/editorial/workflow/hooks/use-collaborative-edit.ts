@@ -5,7 +5,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { HTTP_STATUS } from "@/constants/api";
 import { WORKFLOW_API, LOCK_POLL_INTERVAL_MS } from "@/constants/workflow";
-import { useAuth } from "@/hooks/use-auth";
+import { useAuth } from "@/modules/identity";
 import { authenticatedFetch } from "@/lib/authenticated-fetch";
 import { isLockedByAnotherUser } from "@/modules/editorial/workflow/utils/collaborative-lock";
 import type { ContentLock } from "@/modules/editorial/workflow/types";

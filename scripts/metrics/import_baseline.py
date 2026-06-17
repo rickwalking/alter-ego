@@ -42,8 +42,12 @@ BASELINE_PAIR_CEILING: dict[str, tuple[int, int]] = {
     # Ratcheted down 63 -> 62 by AE-0123..0131 (publishing/blog/distribution reads
     # + writes moved behind the publishing module ACL; one application->infra edge
     # retired), held at 62 by the AE-0132 exit gate.
-    "application -> infrastructure": (62, 0),
-    "application -> agents": (23, 0),
+    "application -> infrastructure": (61, 0),
+    # Ratcheted down 23 -> 22 by AE-0158 (Phase 8 legacy removal): the dead
+    # application/services/rag_agent.py compatibility re-export shim — sole
+    # remaining application->agents edge from that file, zero importers — was
+    # deleted (RAGAgent lives at agents.rag_agent; all callers import it there).
+    "application -> agents": (22, 0),
     # Ratcheted down 20 -> 19 by AE-0121 (carousel_workflow_nodes review-edits moved
     # behind the presentation facade port — direct presentation_review_edits import removed).
     "agents -> application": (19, 2),

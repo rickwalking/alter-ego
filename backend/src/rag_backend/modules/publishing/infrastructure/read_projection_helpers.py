@@ -7,15 +7,17 @@ projection produces the same title/subtitle resolution. They live in the
 publishing infrastructure (not imported from ``api``) so the read ACL stays
 within the module's own seam (no ``infrastructure -> api`` import).
 
-``resolve_blog_body`` is the AE-0127 backfill resolution: it prefers the
-``origin='carousel'`` blog row's body when present and falls back to the embedded
-carousel ``blog_markdown`` column, so the response is byte-identical (no embedded
-column is dropped).
+``resolve_blog_body`` sources the carousel-blog markdown SOLELY from the
+``origin='carousel'`` ``blog_posts`` row (AE-0163). The embedded
+``carousel_projects.blog_markdown`` column is no longer read: AE-0163 makes the
+carousel repository dual-write the canonical row on every blog write, and AE-0127
+backfilled every pre-existing public/completed carousel, so the row is always
+present whenever the legacy embedded column was non-null — the response stays
+byte-identical (AE-0125 safety net) and the column is now WRITE-dead, ready for the
+AE-0162 drop.
 """
 
 from __future__ import annotations
-
-from typing import cast
 
 from rag_backend.infrastructure.database.models.blog_post import BlogPostModel
 
@@ -61,33 +63,30 @@ def extract_first_paragraph(markdown: str) -> str | None:
     return " ".join(paragraphs)[:_FIRST_PARAGRAPH_MAX_LEN]
 
 
-def resolve_blog_body(
-    row: BlogPostModel | None,
-    embedded_markdown: str | None,
-) -> str | None:
-    """Resolve the carousel-blog markdown (AE-0127 backfill, embedded fallback).
+def resolve_blog_body(row: BlogPostModel | None) -> str | None:
+    """Resolve the carousel-blog markdown from the ``origin='carousel'`` row (AE-0163).
 
-    Prefers the ``origin='carousel'`` backfill row's rendered body when it carries
-    one, falling back to the embedded carousel ``blog_markdown`` column so the
-    response stays byte-identical. Returns ``None`` when neither provides a body
-    (the route maps that to the legacy 404).
+    Sources the rendered body SOLELY from the canonical backfill/dual-write row;
+    the embedded ``carousel_projects.blog_markdown`` column is no longer read.
+    Returns ``None`` when the row is absent or carries no body (the route maps that
+    to the legacy 404). The row is guaranteed present whenever the legacy embedded
+    column was non-null (AE-0127 backfill + AE-0163 dual-write), so the response
+    stays byte-identical.
     """
-    body = _body_from_row(row)
-    if body is not None:
-        return body
-    return embedded_markdown
+    return _body_from_row(row)
 
 
 def _body_from_row(row: BlogPostModel | None) -> str | None:
-    """Extract a rendered markdown body from a backfill row's JSON content."""
+    """Extract a rendered markdown body from a backfill row's JSON content.
+
+    ``content`` is a JSON object (``dict[str, object]``) by construction — the
+    AE-0127 backfill, the AE-0163 dual-write, and ``from_entity`` all store a dict.
+    Returns the first non-empty string body key, or ``None`` (the legacy 404).
+    """
     if row is None:
         return None
-    content = cast("object", row.content)
-    if not isinstance(content, dict):
-        return None
-    typed_content = cast("dict[str, object]", content)
     for key in _BODY_CONTENT_KEYS:
-        value = typed_content.get(key)
+        value = row.content.get(key)
         if isinstance(value, str) and value:
             return value
     return None

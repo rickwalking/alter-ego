@@ -10,15 +10,9 @@ import {
   FAILED_CARD_PHASE_LABEL_KEY,
   FAILED_CARD_COLORS,
 } from "@/modules/editorial/workspace/constants";
+import type { WorkflowFailedCardProps } from "./types";
 
 const { NEON_RED, TEXT, TEXT_DIM } = FAILED_CARD_COLORS;
-
-export interface WorkflowFailedCardProps {
-  currentPhase: string;
-  errorMessage: string | null | undefined;
-  onRetry: () => void;
-  isRetrying: boolean;
-}
 
 export function WorkflowFailedCard({
   currentPhase,

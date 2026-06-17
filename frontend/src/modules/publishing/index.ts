@@ -37,10 +37,12 @@ export type {
 } from "./blog/types-ai";
 
 /* --- blog: hooks --- */
-export {
-  useBlogPosts,
-  type BlogPostFilters,
-} from "./blog/hooks/use-blog-posts";
+export { useBlogPosts } from "./blog/hooks/use-blog-posts";
+export { useBlogPostEditor } from "./blog/hooks/use-blog-post-editor";
+export type {
+  BlogPostFilters,
+  UseBlogPostEditorResult,
+} from "./blog/hooks/types";
 export {
   useCarouselProject,
   useCarouselProjects,
@@ -51,25 +53,21 @@ export {
   useCarouselSlides,
 } from "./blog/hooks/use-carousel-blog";
 export { useBlogAi } from "./blog/hooks/use-blog-ai";
-export {
-  useAccessibilityCheck,
-  type AccessibilityIssue,
-  type AccessibilityResult,
-} from "./blog/hooks/use-accessibility-check";
-export {
-  useSeoAnalysis,
-  type SeoAnalysisResult,
-} from "./blog/hooks/use-seo-analysis";
+export { useAccessibilityCheck } from "./blog/hooks/use-accessibility-check";
+export type {
+  AccessibilityIssue,
+  AccessibilityResult,
+} from "./blog/hooks/types";
+export { useSeoAnalysis } from "./blog/hooks/use-seo-analysis";
+export type { SeoAnalysisResult } from "./blog/hooks/types";
 export { useEditorShortcuts } from "./blog/hooks/use-editor-shortcuts";
 
 /* --- blog: adapters --- */
 export { mapProjectToBlogPostCard } from "./blog/adapters/blog-post-adapter";
 
 /* --- blog: listing components --- */
-export {
-  NeonBlogPostCard,
-  type NeonBlogPostCardComponentProps,
-} from "./blog/components/listing/neon-blog-post-card";
+export { NeonBlogPostCard } from "./blog/components/listing/neon-blog-post-card";
+export type { NeonBlogPostCardComponentProps } from "./blog/components/listing/types";
 
 /* --- blog: components --- */
 export { AccessibilityChecker } from "./blog/components/accessibility-checker";
@@ -77,15 +75,11 @@ export { AiSuggestionPanel } from "./blog/components/ai-suggestion-panel";
 export { BlogPostFilters as BlogPostFiltersPanel } from "./blog/components/blog-post-filters";
 export { ImageGenModal } from "./blog/components/image-gen-modal";
 export { KeyboardShortcutsHelp } from "./blog/components/keyboard-shortcuts-help";
-export {
-  RichTextEditor,
-  type RichTextEditorProps,
-} from "./blog/components/rich-text-editor";
+export { RichTextEditor } from "./blog/components/rich-text-editor";
+export type { RichTextEditorProps } from "./blog/components/types";
 export { SeoPreview } from "./blog/components/seo-preview";
-export {
-  VersionHistorySidebar,
-  type BlogPostVersion,
-} from "./blog/components/version-history-sidebar";
+export { VersionHistorySidebar } from "./blog/components/version-history-sidebar";
+export type { BlogPostVersion } from "./blog/components/types";
 
 /* --- blog: public-post components --- */
 export { BackLink } from "./blog/components/public-post/back-link";
@@ -103,10 +97,8 @@ export {
   usePublishInstagram,
   type InstagramPublishResponse,
 } from "./distribution/hooks/use-publish";
-export {
-  usePublishChat,
-  type UsePublishChatReturn,
-} from "./distribution/hooks/use-publish-chat";
+export { usePublishChat } from "./distribution/hooks/use-publish-chat";
+export type { UsePublishChatReturn } from "./distribution/hooks/types";
 
 /* --- distribution: components --- */
 export { PublishPanel } from "./distribution/components/publish-panel";

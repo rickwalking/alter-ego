@@ -1,18 +1,7 @@
 import ReactMarkdown from "react-markdown";
 import { isSafeMarkdownHref } from "@/lib/safe-markdown-href";
 import type { CarouselDesignResponse } from "@/schemas/carousel";
-
-interface BlogPostContentProps {
-  markdown: string;
-  design: CarouselDesignResponse;
-  slideImages: string[];
-}
-
-interface SectionProps {
-  markdown: string;
-  design: CarouselDesignResponse;
-  slideImage: string | null;
-}
+import type { BlogPostContentProps, SectionProps } from "./types";
 
 function Section({ markdown, design, slideImage }: SectionProps) {
   const { colors, typography } = design;

@@ -6,7 +6,7 @@ import { PUBLIC_ROUTE_PATHS } from "@/constants/public-routes";
 import {
   clearAccessTokenCookie,
   sanitizeLoginRedirect,
-} from "@/lib/auth-cookie";
+} from "@/modules/identity";
 
 /**
  * Clear session cookie and send the user to login.

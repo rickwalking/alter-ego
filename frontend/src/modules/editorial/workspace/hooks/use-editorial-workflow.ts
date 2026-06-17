@@ -20,14 +20,7 @@ import {
   type EditorialReviseOptions,
 } from "./use-editorial-workflow-resume";
 import { useEditorialWorkflowSse } from "./use-editorial-workflow-sse";
-
-interface StartWorkflowInput {
-  topic: string;
-  audience: string;
-  brief: string;
-  sources: Array<{ title: string; content: string; source_type?: string }>;
-  personaId?: string;
-}
+import type { StartWorkflowInput } from "./types";
 
 export type { EditorialReviseOptions };
 

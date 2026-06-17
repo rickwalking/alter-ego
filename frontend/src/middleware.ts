@@ -14,9 +14,9 @@ import {
   isStaticAsset,
   COOKIE_ACCESS_TOKEN,
   ROLES,
-} from "@/constants/middleware";
-import { clearAccessTokenCookie } from "@/lib/auth-cookie";
-import { verifyAccessToken } from "@/lib/jwt-auth";
+  clearAccessTokenCookie,
+  verifyAccessToken,
+} from "@/modules/identity";
 
 function loginRedirectUrl(request: NextRequest, returnPath?: string): URL {
   const loginUrl = new URL(PUBLIC_ROUTE_PATHS.LOGIN, request.url);

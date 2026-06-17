@@ -8,13 +8,7 @@ import { useTranslations } from "next-intl";
 import { WORKFLOW_API } from "@/constants/workflow";
 import { authenticatedFetch } from "@/lib/authenticated-fetch";
 import type { ReviewAssignmentPayload } from "@/modules/editorial/workflow/types";
-
-type ReviewAssignmentPanelProps = {
-  contentId: string;
-  contentType: string;
-  title: string;
-  onAssigned?: () => void;
-};
+import type { ReviewAssignmentPanelProps } from "./types";
 
 export function ReviewAssignmentPanel({
   contentId,

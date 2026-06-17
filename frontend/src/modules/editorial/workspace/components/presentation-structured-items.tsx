@@ -1,12 +1,7 @@
 "use client";
 
 import { PresentationIconPreview } from "@/modules/editorial/workspace/components/presentation-icon-preview";
-import type { PresentationStructuredItem } from "@/modules/editorial/workspace/lib/presentation-review-utils";
-
-export interface PresentationStructuredItemsProps {
-  items: PresentationStructuredItem[];
-  className?: string;
-}
+import type { PresentationStructuredItemsProps } from "./types";
 
 export function PresentationStructuredItems({
   items,
