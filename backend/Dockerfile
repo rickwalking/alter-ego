@@ -61,13 +61,17 @@ COPY --from=builder --chown=fastapi:fastapi /app/.venv /app/.venv
 # browser tree (~1GB) is chowned to the runtime user inside this same RUN, so it
 # is owned where it is created (no duplicating chown layer afterwards).
 # `curl`/`libpq5` are kept (healthcheck + libpq runtime for psycopg/asyncpg).
-# NOTE (future option): `playwright install chromium-headless-shell` is a much
-# smaller download, but visual carousel export correctness can't be verified in
-# this environment, so we ship full `chromium` for now. Revisit once a visual
-# export check exists on the droplet.
+# AE-0191 (architect-validated): install ONLY the headless shell, not the full
+# headed Chromium. Since Playwright v1.49 `install chromium` downloads BOTH the
+# headed build AND chromium-headless-shell, and headless launches auto-use the
+# shell. This app launches Chromium ONLY headless (playwright_export.py,
+# research_tool.py) and never calls page.pdf() (PDFs are built by img2pdf from
+# JPEGs), so the headed build is dead weight (~60-90MB). The apt `--with-deps`
+# libs are shared and unchanged. VERIFY on staging: one carousel export renders
+# pixel-identical (fonts/gradients/2x) before relying on this in prod.
 RUN apt-get update \
     && apt-get install -y --no-install-recommends curl libpq5 \
-    && playwright install --with-deps chromium \
+    && playwright install --with-deps --only-shell \
     && chown -R fastapi:fastapi /app/ms-playwright \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*

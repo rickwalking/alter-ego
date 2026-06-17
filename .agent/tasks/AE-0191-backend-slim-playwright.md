@@ -91,3 +91,12 @@ Pending.
 None.
 ## Final Summary
 Pending.
+
+
+### 2026-06-17 (architect validation — user's 'Playwright CLI' idea)
+Validated: the literal 'use the CLI' framing is a misconception, but the instinct is right.
+Real lever = `playwright install --with-deps --only-shell` (chromium-headless-shell, not full headed).
+Basis: since Playwright v1.49 `install chromium` ships BOTH builds and headless auto-uses the shell;
+this app is 100% headless + builds PDFs via img2pdf (no page.pdf()), so the headed binary is dead weight
+(~60-90MB). Applied the one-line change. Risk Low. REMAINING (this ticket's open AC): pixel-diff a
+carousel export on staging before prod. Bigger ~1GB win (sidecar/connect_over_cdp) deferred as a future T3.
