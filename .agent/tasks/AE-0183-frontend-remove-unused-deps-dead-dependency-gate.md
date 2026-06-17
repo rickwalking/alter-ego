@@ -102,7 +102,9 @@ Pending.
 
 ## QA Report
 
-Pending.
+Implemented + QA PASS (2026-06-17, dev→QA loop, branch kaizen/frontend-debt-capture):
+eslint errors 0, depcheck unused 0, no raw fetch in hooks (seeded rule fires on fetch / allows refetch),
+max-lines-per-function 116→42, tsc clean, 884 tests pass, zero suppressions.
 
 ## Final Summary
 
