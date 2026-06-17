@@ -362,7 +362,7 @@ export function slidesHaveCopyChanges(
   }
   return original.some((slide, index) => {
     const counterpart = edited[index];
-    if (!counterpart || slide.slide_index !== counterpart.slide_index) {
+    if (slide.slide_index !== counterpart?.slide_index) {
       return true;
     }
     return (

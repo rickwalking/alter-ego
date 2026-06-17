@@ -1,14 +1,14 @@
 # AE-0166 — Harden ESLint: warnings to errors + enforce use-client, useEffect best-practice, and TanStack-Query-over-fetch rules
 
-Status: Intake
+Status: Dev Complete
 Tier: T2
 Class: B
 Priority: High
 Type: Quality
 Area: frontend
-Owner: Unassigned
+Owner: developer-skill
 Agent Lane: planner → architect → developer → qa → release
-Branch: TBD
+Branch: chore/phase-8-class-b
 Kanban Card: TBD
 Created: 2026-06-16
 Updated: 2026-06-16
@@ -37,11 +37,11 @@ Failure classes from the kaizen sweep:
 
 ## Acceptance Criteria
 
-- [ ] ESLint rule severities audited; warnings promoted to `error` except documented, justified exceptions; `npm run lint` (eslint --quiet) still gates and passes.
-- [ ] A static rule flags client-only React API usage without `"use client"` in `src/modules/**`/`src/components/**`; it ERRORS on a SEEDED violation (a hook using `useState` without the directive) and passes on the real tree.
-- [ ] A rule bans data-fetching `useEffect` + raw `fetch` in components/hooks (steering to TanStack Query); ERRORS on a seeded violation.
-- [ ] `react-hooks/exhaustive-deps` (and related) set to `error`; repo is clean or violations are fixed (not ignored).
-- [ ] typecheck + full `npm run lint` + 823 tests + build green; no new suppressions introduced (check-integrity clean).
+- [x] ESLint severities audited (per-rule counts measured); promoted to `error`: `prefer-optional-chain` (fixed the 1), `no-console` (0), and `useEffect`+`fetch` (0). Kept at `warn` with a DOCUMENTED justification in `eslint.config.mjs` (promotion needs mass refactoring of pre-existing violations; diff-scoped `lint:changed` shrinks them): no-unnecessary-condition (69), prefer-nullish-coalescing (50), no-floating-promises (17), no-misused-promises (15), no-non-null-assertion (7), no-img-element (8), size/complexity rules. `npm run lint` (eslint --quiet) gates and PASSES.
+- [x] Static `use-client` check (`scripts/check-use-client.mjs`, chained into `npm run lint`) flags a `.tsx` component using client-only hooks without `"use client"`; ERRORS on a seeded violation, PASSES on the real tree (171 files). Fixed 2 real violations (`create-carousel-{preview,progress}.tsx`). Tests: `src/scripts/use-client.test.ts`.
+- [x] Data-fetching anti-patterns: `fetch` inside `useEffect` → **error** (0 violations, seeded-verified); raw `fetch()` in `src/modules`/`src/components` → **warn** (advisory steering — a 12-violation backlog incl. admin dialogs/use-auth exists; API route handlers + lib excluded; `lint:changed` blocks NEW occurrences). Honest deviation from "error" for raw-fetch.
+- [x] `react-hooks/exhaustive-deps` already `error`; repo clean (0 violations).
+- [x] typecheck + `npm run lint` + 881 tests + `frontend:build` green; no new suppressions (check-integrity clean). Also fixed a typecheck error in the AE-0171 test (`NodeJS.ProcessEnv` → `Record<string,string>`) that vitest masked.
 
 ## Gherkin Scenarios
 
@@ -110,7 +110,7 @@ Pending.
 
 ## Test Evidence
 
-Pending.
+npm run lint PASS (eslint --quiet + use-client + boundaries/circular/component-types/dup); typecheck PASS; 881 vitest pass; frontend:build PASS. Seeded: console.log + fetch-in-useEffect -> ERROR; use-client missing -> ERROR; raw fetch in component -> WARN.
 
 ## QA Report
 

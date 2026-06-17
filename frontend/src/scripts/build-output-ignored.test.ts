@@ -16,7 +16,7 @@ const SCRIPT = join(
   "check-build-output-ignored.sh",
 );
 
-function runCheck(env: NodeJS.ProcessEnv = {}): {
+function runCheck(env: Record<string, string> = {}): {
   status: number;
   output: string;
 } {

@@ -4,13 +4,24 @@ import nextTs from "eslint-config-next/typescript";
 import pluginQuery from "@tanstack/eslint-plugin-query";
 import sonarjs from "eslint-plugin-sonarjs";
 
+// AE-0166 — severity policy. `error` rules gate under `eslint --quiet`; `warn`
+// rules are surfaced and enforced diff-scoped by `lint:changed`
+// (`--max-warnings=0` on changed files), so NEW code cannot add them while the
+// pre-existing backlog is paid down. Rules kept at `warn` are JUSTIFIED
+// exceptions — promoting them to a global error would require mass refactoring of
+// pre-existing violations (counts measured 2026-06-17):
+//   no-unnecessary-condition (69), prefer-nullish-coalescing (50),
+//   no-floating-promises (17), no-misused-promises (15), no-non-null-assertion
+//   (7), no-img-element (8), and the size/complexity rules below. They shrink via
+//   the diff-scoped gate, never blanket-ignored.
 const typeCheckedRules = {
   "@typescript-eslint/no-explicit-any": "error",
   "@typescript-eslint/no-non-null-assertion": "warn",
   "@typescript-eslint/no-floating-promises": "warn",
   "@typescript-eslint/no-misused-promises": "warn",
   "@typescript-eslint/prefer-nullish-coalescing": "warn",
-  "@typescript-eslint/prefer-optional-chain": "warn",
+  // Zero pre-existing violations after AE-0166 cleanup -> promoted to error.
+  "@typescript-eslint/prefer-optional-chain": "error",
   "@typescript-eslint/no-unnecessary-condition": "warn",
 };
 
@@ -74,15 +85,38 @@ export default defineConfig([
       "max-statements": ["warn", 25],
       "sonarjs/cognitive-complexity": ["warn", 15],
       "@tanstack/query/exhaustive-deps": "error",
-      "no-console": ["warn", { allow: ["warn", "error"] }],
+      // AE-0166: 0 pre-existing violations -> error.
+      "no-console": ["error", { allow: ["warn", "error"] }],
       "@next/next/no-img-element": "warn",
+      // Data-fetching anti-patterns (AE-0166; frontend/CLAUDE.md "NEVER use
+      // useEffect for Data Fetching"). fetch-in-useEffect ERRORS (0 pre-existing
+      // violations); steer to TanStack Query / a Server Component / authenticated-fetch.
       "no-restricted-syntax": [
-        "warn",
+        "error",
         {
           selector:
             "CallExpression[callee.name='useEffect'] CallExpression[callee.name='fetch']",
           message:
-            "Avoid fetch() inside useEffect — prefer TanStack Query or a Server Component.",
+            "Do not fetch() inside useEffect — use TanStack Query, a Server Component, or authenticated-fetch.",
+        },
+      ],
+    },
+  },
+  {
+    // AE-0166: raw fetch() in client component/hook code is a data-fetching
+    // anti-pattern (use TanStack Query / authenticated-fetch). `warn` because a
+    // pre-existing backlog exists (admin dialogs, use-auth, etc.) — diff-scoped
+    // `lint:changed` blocks NEW occurrences. API route handlers (app/api/**, the
+    // backend proxies) and lib/** legitimately call fetch and are excluded.
+    files: ["src/modules/**/*.{ts,tsx}", "src/components/**/*.{ts,tsx}"],
+    ignores: ["**/*.test.*", "**/*.spec.*", "**/*.stories.*"],
+    rules: {
+      "no-restricted-syntax": [
+        "warn",
+        {
+          selector: "CallExpression[callee.name='fetch']",
+          message:
+            "Avoid raw fetch() in components/hooks — use TanStack Query or authenticated-fetch (frontend/CLAUDE.md).",
         },
       ],
     },
