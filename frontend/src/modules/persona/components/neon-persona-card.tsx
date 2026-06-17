@@ -1,13 +1,17 @@
+import Image from "next/image";
 import { NeonBadge } from "@/components/atoms/neon-badge";
 import { NeonCard } from "@/components/molecules/neon-card";
 import {
+  NEON_BORDER_FOCUS,
   NEON_CYAN,
   NEON_CYAN_DIM,
-  NEON_PERSONA_AVATAR_BORDER,
   TEXT,
   TEXT_MUTED,
 } from "@/constants/neon";
 import type { NeonPersonaCardProps } from "./types";
+
+/** Avatar square dimensions (px) matching the w-12 h-12 container. */
+const PERSONA_AVATAR_SIZE = 48;
 
 export function NeonPersonaCard({
   name,
@@ -24,14 +28,17 @@ export function NeonPersonaCard({
           style={{
             background: NEON_CYAN_DIM,
             color: NEON_CYAN,
-            border: `1px solid ${NEON_PERSONA_AVATAR_BORDER}`,
+            border: `1px solid ${NEON_BORDER_FOCUS}`,
           }}
         >
           {avatarUrl ? (
-            <img
+            <Image
               src={avatarUrl}
               alt=""
+              width={PERSONA_AVATAR_SIZE}
+              height={PERSONA_AVATAR_SIZE}
               className="w-full h-full rounded-full object-cover"
+              unoptimized
             />
           ) : (
             name.charAt(0)

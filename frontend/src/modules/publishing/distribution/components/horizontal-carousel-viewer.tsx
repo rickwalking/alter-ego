@@ -174,7 +174,9 @@ export function HorizontalCarouselViewer({
 
         <button
           type="button"
-          onClick={downloadAll}
+          onClick={() => {
+            void downloadAll();
+          }}
           disabled={isDownloading}
           className="inline-flex items-center gap-1.5 rounded-md border border-[var(--color-border)] px-3 py-1.5 text-sm hover:bg-[var(--color-background)] disabled:opacity-50"
         >

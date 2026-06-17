@@ -72,4 +72,5 @@ export const NEON_RED_DARK_END = "#dc2626";
 export const NEON_PROGRESS_GLOW = "0 0 12px rgba(0,212,255,0.3)";
 export const NEON_SIDEBAR_LOGO_SHADOW =
   "0 0 12px rgba(0,212,255,0.12), inset 0 0 12px rgba(0,212,255,0.12)";
-export const NEON_PERSONA_AVATAR_BORDER = NEON_BORDER_FOCUS;
+// Persona avatar reuses the focus border (single source of truth:
+// NEON_BORDER_FOCUS). Import that directly rather than a duplicate-value alias.

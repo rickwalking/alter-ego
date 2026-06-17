@@ -72,7 +72,12 @@ describe("resolveSlideImage", () => {
     const slideImages = design.images.slides;
     const markdown = "## The Architecture\n\nSome content here.";
 
-    const result = resolveSlideImage(markdown, design, slideImages, 2);
+    const result = resolveSlideImage({
+      sectionMarkdown: markdown,
+      design,
+      slideImages,
+      sectionIndex: 2,
+    });
 
     expect(result).toBe("/api/carousels/1/images/slide_3");
   });
@@ -84,7 +89,12 @@ describe("resolveSlideImage", () => {
     const slideImages = design.images.slides;
     const markdown = "## The Architecture\n\nSome content here.";
 
-    const result = resolveSlideImage(markdown, design, slideImages, 1);
+    const result = resolveSlideImage({
+      sectionMarkdown: markdown,
+      design,
+      slideImages,
+      sectionIndex: 1,
+    });
 
     expect(result).toBeNull();
   });
@@ -96,7 +106,12 @@ describe("resolveSlideImage", () => {
     const slideImages = design.images.slides;
     const markdown = "## The Architecture\n\nSome content here.";
 
-    const result = resolveSlideImage(markdown, design, slideImages, 1);
+    const result = resolveSlideImage({
+      sectionMarkdown: markdown,
+      design,
+      slideImages,
+      sectionIndex: 1,
+    });
 
     expect(result).toBeNull();
   });
@@ -107,7 +122,12 @@ describe("resolveSlideImage", () => {
     // First section after intro (index 1) gets slide_2 (first content slide)
     const markdown = "## Some Section\n\nContent.";
 
-    const result = resolveSlideImage(markdown, design, slideImages, 1);
+    const result = resolveSlideImage({
+      sectionMarkdown: markdown,
+      design,
+      slideImages,
+      sectionIndex: 1,
+    });
 
     expect(result).toBe("/api/carousels/1/images/slide_2");
   });
@@ -117,7 +137,12 @@ describe("resolveSlideImage", () => {
     const slideImages = design.images.slides;
     const markdown = "## Intro Section\n\nContent.";
 
-    const result = resolveSlideImage(markdown, design, slideImages, 0);
+    const result = resolveSlideImage({
+      sectionMarkdown: markdown,
+      design,
+      slideImages,
+      sectionIndex: 0,
+    });
 
     expect(result).toBeNull();
   });
@@ -129,7 +154,12 @@ describe("resolveSlideImage", () => {
     const slideImages = design.images.slides;
     const markdown = "Just a paragraph without heading.";
 
-    const result = resolveSlideImage(markdown, design, slideImages, 1);
+    const result = resolveSlideImage({
+      sectionMarkdown: markdown,
+      design,
+      slideImages,
+      sectionIndex: 1,
+    });
 
     expect(result).toBeNull();
   });

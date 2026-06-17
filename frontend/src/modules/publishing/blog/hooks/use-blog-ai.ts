@@ -13,6 +13,13 @@ import type {
 } from "@/modules/publishing/blog/types-ai";
 import type { UseBlogAiState } from "./types";
 
+export interface BlogAiImproveParams {
+  text: string;
+  action: string;
+  context?: string;
+  personaId?: string;
+}
+
 export function useBlogAi(postId: string | null) {
   const [state, setState] = useState<UseBlogAiState>({
     loading: false,
@@ -58,12 +65,12 @@ export function useBlogAi(postId: string | null) {
   );
 
   const improve = useCallback(
-    async (
-      text: string,
-      action: string,
-      context?: string,
-      personaId?: string,
-    ): Promise<BlogAiImproveResult> => {
+    async ({
+      text,
+      action,
+      context,
+      personaId,
+    }: BlogAiImproveParams): Promise<BlogAiImproveResult> => {
       if (!postId) {
         throw new Error("Post ID is required");
       }

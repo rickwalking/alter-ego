@@ -219,7 +219,9 @@ export default function CreateWorkspacePage(): React.ReactElement {
               <WorkflowFailedCard
                 currentPhase={editorialWorkflow.state?.current_phase ?? ""}
                 errorMessage={editorialWorkflow.state?.error_message}
-                onRetry={handleRetryWorkflow}
+                onRetry={() => {
+                  void handleRetryWorkflow();
+                }}
                 isRetrying={retrying}
               />
             ) : isPublishStep ? (

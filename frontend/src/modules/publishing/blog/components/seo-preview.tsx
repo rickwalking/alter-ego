@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { NeonBadge } from "@/components/atoms/neon-badge";
@@ -89,11 +90,16 @@ export function SeoPreview({
         {platform === SEO_PREVIEW_TWITTER && (
           <div className="rounded border p-3 space-y-2">
             {featuredImageUrl && (
-              <img
-                src={featuredImageUrl}
-                alt=""
-                className="w-full h-32 object-cover rounded"
-              />
+              <div className="relative h-32 w-full">
+                <Image
+                  src={featuredImageUrl}
+                  alt=""
+                  fill
+                  sizes="(max-width: 768px) 100vw, 400px"
+                  className="object-cover rounded"
+                  unoptimized
+                />
+              </div>
             )}
             <p className="font-medium truncate">{displayTitle}</p>
             <p className="text-sm text-muted-foreground line-clamp-2">

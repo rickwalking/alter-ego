@@ -28,20 +28,23 @@ export function useAuth(): UseAuthResult {
   }, []);
 
   useEffect(() => {
-    fetchUser();
+    void fetchUser();
   }, [fetchUser]);
 
-  const logout = useCallback(async () => {
-    try {
-      await fetch("/api/auth/logout", {
-        method: "POST",
-        credentials: "include",
-      });
-    } catch {
-      // Ignore network errors; still redirect
-    }
-    setUser(null);
-    window.location.href = "/login";
+  const logout = useCallback(() => {
+    const run = async (): Promise<void> => {
+      try {
+        await fetch("/api/auth/logout", {
+          method: "POST",
+          credentials: "include",
+        });
+      } catch {
+        // Ignore network errors; still redirect
+      }
+      setUser(null);
+      window.location.href = "/login";
+    };
+    void run();
   }, []);
 
   return {

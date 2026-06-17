@@ -28,8 +28,8 @@ import {
   resolveBodyBudget,
   resolveHeadingBudget,
   resolveLocalizedSlides,
-  type EditableCopyField,
   type PresentationLocaleKey,
+  type SlideCopyEdit,
 } from "@/modules/editorial";
 
 export interface ContentPhaseReviewProps {
@@ -79,23 +79,11 @@ export function ContentPhaseReview({
   const promptCount = state.slide_image_prompts?.length ?? 0;
   const canEdit = editable && onSlidesChange !== undefined;
 
-  const handleCopyChange = (
-    slideIndex: number,
-    locale: PresentationLocaleKey,
-    field: EditableCopyField,
-    value: string,
-  ): void => {
+  const handleCopyChange = (edit: SlideCopyEdit): void => {
     if (!onSlidesChange) {
       return;
     }
-    onSlidesChange(
-      applySlideCopyEdit(localizedSlides, {
-        slideIndex,
-        locale,
-        field,
-        value,
-      }),
-    );
+    onSlidesChange(applySlideCopyEdit(localizedSlides, edit));
   };
 
   if (localizedSlides.length === 0) {
@@ -204,12 +192,12 @@ export function ContentPhaseReview({
                       value={heading}
                       rows={2}
                       onChange={(event) => {
-                        handleCopyChange(
-                          slide.slide_index,
-                          localeKey,
-                          "heading",
-                          event.target.value,
-                        );
+                        handleCopyChange({
+                          slideIndex: slide.slide_index,
+                          locale: localeKey,
+                          field: "heading",
+                          value: event.target.value,
+                        });
                       }}
                     />
                   </div>
@@ -242,12 +230,12 @@ export function ContentPhaseReview({
                       value={body}
                       rows={4}
                       onChange={(event) => {
-                        handleCopyChange(
-                          slide.slide_index,
-                          localeKey,
-                          "body",
-                          event.target.value,
-                        );
+                        handleCopyChange({
+                          slideIndex: slide.slide_index,
+                          locale: localeKey,
+                          field: "body",
+                          value: event.target.value,
+                        });
                       }}
                     />
                   </div>

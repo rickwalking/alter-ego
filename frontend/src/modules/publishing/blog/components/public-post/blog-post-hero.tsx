@@ -1,3 +1,4 @@
+import Image from "next/image";
 import type { BlogPostHeroProps } from "./types";
 
 export function BlogPostHero({ imageUrl, title, design }: BlogPostHeroProps) {
@@ -11,10 +12,13 @@ export function BlogPostHero({ imageUrl, title, design }: BlogPostHeroProps) {
         boxShadow: `0 0 60px ${colors.primary}1F, 0 20px 40px rgba(0,0,0,0.4)`,
       }}
     >
-      <img
+      <Image
         src={imageUrl}
         alt={title}
-        className="absolute inset-0 h-full w-full object-cover"
+        fill
+        sizes="(max-width: 768px) 100vw, 768px"
+        className="object-cover"
+        unoptimized
       />
       <div
         className="absolute inset-0"
