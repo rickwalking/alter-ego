@@ -32,6 +32,10 @@ TICKET_ID_PATTERN = re.compile(r"^# (AE-\d{4}) —", re.MULTILINE)
 STATUS_PATTERN = re.compile(r"^Status:\s*(.+)$", re.MULTILINE)
 TIER_PATTERN = re.compile(r"^Tier:\s*(T[0-3])$", re.MULTILINE)
 
+# A QA report with fewer than this many non-empty lines is treated as an
+# empty/placeholder file rather than a real report (AE-0181 content check).
+_MIN_REPORT_CONTENT_LINES = 3
+
 
 @dataclass(frozen=True)
 class Ticket:
@@ -136,10 +140,15 @@ def can_transition(ticket: Ticket, new_status: str) -> list[str]:
         dev_report = REPORTS_DIR / f"{ticket.ticket_id}{REPORT_DEV_SUFFIX}"
         qa_report = REPORTS_DIR / f"{ticket.ticket_id}{REPORT_QA_SUFFIX}"
         errors.extend(
-            _dev_report_errors(dev_report, f"Missing dev summary: {dev_report}")
+            _dev_report_errors(
+                dev_report, ticket.ticket_id, f"Missing dev summary: {dev_report}"
+            )
         )
-        if not qa_report.exists():
-            errors.append(f"Missing QA report: {qa_report}")
+        errors.extend(
+            _qa_report_errors(
+                qa_report, ticket.ticket_id, f"Missing QA report: {qa_report}"
+            )
+        )
 
     if new_status == STATUS_DONE:
         if not ticket.section_has_content(SECTION_FINAL_SUMMARY):
@@ -167,6 +176,7 @@ def validate_ticket_file(ticket: Ticket) -> list[str]:
         errors.extend(
             _dev_report_errors(
                 dev_report,
+                ticket.ticket_id,
                 f"Status Dev Complete but no dev summary at {dev_report.name}",
             )
         )
@@ -174,19 +184,67 @@ def validate_ticket_file(ticket: Ticket) -> list[str]:
     return errors
 
 
-def _dev_report_errors(report: Path, missing_msg: str) -> list[str]:
+def _dev_report_errors(report: Path, ticket_id: str, missing_msg: str) -> list[str]:
     """Validate the dev-summary file backing a Dev Complete / Review transition.
 
-    The file must exist AND not still be the auto-scaffold (AE-0169): existence
-    alone never satisfies the gate — the developer must replace the placeholder.
-    Returns at most one error message; encapsulated here to keep can_transition /
-    validate_ticket_file from branching on each sub-condition.
+    The file must exist, NOT still be the auto-scaffold (AE-0169), AND be
+    attributed to THIS ticket (AE-0181) — existence alone never satisfies the
+    gate, and a report written for a different ticket of the same ID must not be
+    freeloaded. Returns at most one error; encapsulated here to keep
+    can_transition / validate_ticket_file from branching on each sub-condition.
     """
     if not report.exists():
         return [missing_msg]
     if _is_unfilled_scaffold(report):
         return [f"Dev summary is still an unfilled scaffold: {report.name}"]
+    if not _report_attributed_to(report, ticket_id):
+        return [
+            f"Dev summary {report.name} is not attributed to {ticket_id} "
+            f"(its body never names the ticket — possible report freeload, AE-0181)."
+        ]
     return []
+
+
+def _qa_report_errors(report: Path, ticket_id: str, missing_msg: str) -> list[str]:
+    """Validate the QA report backing a Review transition (AE-0181).
+
+    Previously gated on existence alone, which let a Review ticket freeload on a
+    QA report written for a *different* ticket sharing the same AE-#### id (the
+    AE-0145..0148 collisions). Now the report must exist, carry non-trivial
+    content (not an empty/placeholder file), AND name this ticket in its body.
+    """
+    if not report.exists():
+        return [missing_msg]
+    if not _has_meaningful_content(report):
+        return [f"QA report is empty or a placeholder: {report.name}"]
+    if not _report_attributed_to(report, ticket_id):
+        return [
+            f"QA report {report.name} is not attributed to {ticket_id} "
+            f"(its body never names the ticket — possible report freeload, AE-0181)."
+        ]
+    return []
+
+
+def _report_attributed_to(report: Path, ticket_id: str) -> bool:
+    """True if the report body names `ticket_id`, binding it to exactly this ticket.
+
+    Stops a Review/Dev-Complete ticket from satisfying its report gate with a
+    report authored for another ticket that happens to share the AE-#### id.
+    """
+    try:
+        return ticket_id in report.read_text(encoding="utf-8")
+    except OSError:
+        return False
+
+
+def _has_meaningful_content(report: Path) -> bool:
+    """True if the report carries more than an empty/whitespace-only placeholder."""
+    try:
+        text = report.read_text(encoding="utf-8")
+    except OSError:
+        return False
+    non_empty = [ln.strip() for ln in text.splitlines() if ln.strip()]
+    return len(non_empty) >= _MIN_REPORT_CONTENT_LINES
 
 
 def _is_unfilled_scaffold(report: Path) -> bool:
