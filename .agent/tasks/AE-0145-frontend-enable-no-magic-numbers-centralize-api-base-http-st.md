@@ -1,6 +1,6 @@
 # AE-0145 — Frontend: enable no-magic-numbers + centralize API_BASE/HTTP_STATUS literals
 
-Status: Ready
+Status: Done
 Tier: T2
 Priority: High
 Type: Refactor
@@ -138,4 +138,4 @@ None.
 
 ## Final Summary
 
-Pending.
+DONE — verified in main. Client `API_BASE`/`HTTP_STATUS` literals centralized in `frontend/src/constants/api.ts` (with `api.test.ts`); no-magic-numbers enforcement in place. Landed in main; phase-7 branch superseded.
