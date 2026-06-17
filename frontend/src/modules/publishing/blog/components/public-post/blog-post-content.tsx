@@ -5,8 +5,11 @@ import {
   CAROUSEL_SLIDE_WIDTH,
 } from "@/constants/blog";
 import { isSafeMarkdownHref } from "@/lib/safe-markdown-href";
-import type { CarouselDesignResponse } from "@/schemas/carousel";
-import type { BlogPostContentProps, SectionProps } from "./types";
+import type {
+  BlogPostContentProps,
+  ResolveSlideImageOptions,
+  SectionProps,
+} from "./types";
 
 function Section({ markdown, design, slideImage }: SectionProps) {
   const { colors, typography } = design;
@@ -199,13 +202,6 @@ function Section({ markdown, design, slideImage }: SectionProps) {
 export function extractH2Heading(markdown: string): string | null {
   const match = markdown.match(/^##\s+(.+)$/m);
   return match ? match[1].trim() : null;
-}
-
-export interface ResolveSlideImageOptions {
-  sectionMarkdown: string;
-  design: CarouselDesignResponse;
-  slideImages: string[];
-  sectionIndex: number;
 }
 
 export function resolveSlideImage({

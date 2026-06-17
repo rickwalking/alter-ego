@@ -11,14 +11,7 @@ import type {
   BlogGenerateImageResult,
   VoiceScoreResult,
 } from "@/modules/publishing/blog/types-ai";
-import type { UseBlogAiState } from "./types";
-
-export interface BlogAiImproveParams {
-  text: string;
-  action: string;
-  context?: string;
-  personaId?: string;
-}
+import type { BlogAiImproveParams, UseBlogAiState } from "./types";
 
 export function useBlogAi(postId: string | null) {
   const [state, setState] = useState<UseBlogAiState>({

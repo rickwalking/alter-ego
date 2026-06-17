@@ -66,3 +66,10 @@ export interface UseBlogPostEditorResult {
   handleSave: () => Promise<void>;
   handleRestore: (version: BlogPostVersion) => void;
 }
+
+export interface BlogAiImproveParams {
+  text: string;
+  action: string;
+  context?: string;
+  personaId?: string;
+}

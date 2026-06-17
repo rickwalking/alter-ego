@@ -171,8 +171,8 @@ export function NeonSidebar({
           }}
         >
           <Image
-            src="/about-pedro.png"
-            alt=""
+            src="/about-pedro.jpg"
+            alt="Pedro"
             width={SIDEBAR_AVATAR_SIZE}
             height={SIDEBAR_AVATAR_SIZE}
             style={{

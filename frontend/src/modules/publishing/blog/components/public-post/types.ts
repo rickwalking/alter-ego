@@ -37,3 +37,10 @@ export interface BlogPostHeroProps {
   title: string;
   design: CarouselDesignResponse;
 }
+
+export interface ResolveSlideImageOptions {
+  sectionMarkdown: string;
+  design: CarouselDesignResponse;
+  slideImages: string[];
+  sectionIndex: number;
+}
