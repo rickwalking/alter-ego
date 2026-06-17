@@ -4,7 +4,6 @@ import { WORKFLOW_PHASE_STATUS } from "@/constants/workflow";
 import type { EditorialWorkflowState } from "@/modules/editorial";
 import type { LocalizedSlideReview } from "@/modules/editorial";
 import {
-  applySlideCopyEdit,
   formatBudgetUsage,
   hasBlockingPresentationViolations,
   isBudgetExceeded,
@@ -16,9 +15,12 @@ import {
   resolvePresentationPreviewText,
   resolveBodyBudget,
   resolveHeadingBudget,
+} from "./presentation-review-utils";
+import {
+  applySlideCopyEdit,
   resolveLocalizedSlides,
   slidesHaveCopyChanges,
-} from "./presentation-review-utils";
+} from "./presentation-slide-resolution";
 
 const baseState: EditorialWorkflowState = {
   project_id: "project-1",

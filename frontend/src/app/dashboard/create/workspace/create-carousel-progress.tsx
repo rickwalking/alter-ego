@@ -1,3 +1,5 @@
+"use client";
+
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import {
@@ -49,46 +51,89 @@ function resolvePipelinePhaseLabel(
   return translate(`progress.phases.${currentPhase}`);
 }
 
-export function CarouselProgress({
+function CompleteCard() {
+  const t = useTranslations("create");
+  return (
+    <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] p-4">
+      <div className="flex items-center gap-2 text-[var(--color-primary)]">
+        <CheckIcon />
+        <span className="font-medium">{t("progress.complete")}</span>
+      </div>
+    </div>
+  );
+}
+
+function ErrorCard({ errorMessage }: { errorMessage?: string | null }) {
+  const t = useTranslations("create");
+  return (
+    <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-4">
+      <div className="flex items-start gap-2 text-destructive">
+        <ErrorIcon />
+        <div className="flex-1 space-y-1">
+          <span className="font-medium">{t("progress.failed")}</span>
+          {errorMessage ? (
+            <p className="break-words font-mono text-destructive/80 text-xs">
+              {errorMessage}
+            </p>
+          ) : null}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ProgressHeader({
+  phaseLabel,
+  stalledSeconds,
+}: {
+  phaseLabel: string;
+  stalledSeconds: number;
+}) {
+  const t = useTranslations("create");
+  return (
+    <div className="flex items-start justify-between gap-3 border-b border-[var(--color-border)] pb-3">
+      <div className="flex items-center gap-2">
+        <Spinner />
+        <div className="flex flex-col">
+          <span className="text-[var(--color-text-muted)] text-xs uppercase tracking-wide">
+            {t("progress.currentlyProcessing")}
+          </span>
+          <span className="font-medium text-[var(--color-primary)] text-sm">
+            {phaseLabel}
+          </span>
+        </div>
+      </div>
+      <span className="text-[var(--color-text-muted)] text-xs tabular-nums">
+        {formatElapsed(stalledSeconds)}
+      </span>
+    </div>
+  );
+}
+
+function StalledWarning({ stalledSeconds }: { stalledSeconds: number }) {
+  const t = useTranslations("create");
+  return (
+    <div className="flex items-start gap-2 rounded-md border border-warning/30 bg-warning/10 p-2 text-warning-foreground text-xs">
+      <WarningIcon />
+      <span>
+        {t("progress.stalled", { seconds: Math.floor(stalledSeconds) })}
+      </span>
+    </div>
+  );
+}
+
+function ActiveProgress({
   currentPhase,
   isComplete,
-  hasError,
-  updatedAt,
-  errorMessage,
+  stalledSeconds,
   phaseProgress,
-}: CarouselProgressProps) {
+}: {
+  currentPhase: string;
+  isComplete: boolean;
+  stalledSeconds: number;
+  phaseProgress?: PhaseProgress | null;
+}) {
   const t = useTranslations("create");
-  const stalledSeconds = useStalledSeconds(updatedAt, isComplete || hasError);
-
-  if (isComplete) {
-    return (
-      <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] p-4">
-        <div className="flex items-center gap-2 text-[var(--color-primary)]">
-          <CheckIcon />
-          <span className="font-medium">{t("progress.complete")}</span>
-        </div>
-      </div>
-    );
-  }
-
-  if (hasError) {
-    return (
-      <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-4">
-        <div className="flex items-start gap-2 text-destructive">
-          <ErrorIcon />
-          <div className="flex-1 space-y-1">
-            <span className="font-medium">{t("progress.failed")}</span>
-            {errorMessage ? (
-              <p className="break-words font-mono text-destructive/80 text-xs">
-                {errorMessage}
-              </p>
-            ) : null}
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   const currentIndex = PHASE_ORDER.indexOf(
     currentPhase && PHASE_ORDER.includes(currentPhase) ? currentPhase : "",
   );
@@ -97,31 +142,9 @@ export function CarouselProgress({
 
   return (
     <div className="space-y-3 rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] p-4">
-      <div className="flex items-start justify-between gap-3 border-b border-[var(--color-border)] pb-3">
-        <div className="flex items-center gap-2">
-          <Spinner />
-          <div className="flex flex-col">
-            <span className="text-[var(--color-text-muted)] text-xs uppercase tracking-wide">
-              {t("progress.currentlyProcessing")}
-            </span>
-            <span className="font-medium text-[var(--color-primary)] text-sm">
-              {phaseLabel}
-            </span>
-          </div>
-        </div>
-        <span className="text-[var(--color-text-muted)] text-xs tabular-nums">
-          {formatElapsed(stalledSeconds)}
-        </span>
-      </div>
+      <ProgressHeader phaseLabel={phaseLabel} stalledSeconds={stalledSeconds} />
 
-      {isStalled ? (
-        <div className="flex items-start gap-2 rounded-md border border-warning/30 bg-warning/10 p-2 text-warning-foreground text-xs">
-          <WarningIcon />
-          <span>
-            {t("progress.stalled", { seconds: Math.floor(stalledSeconds) })}
-          </span>
-        </div>
-      ) : null}
+      {isStalled ? <StalledWarning stalledSeconds={stalledSeconds} /> : null}
 
       {phaseProgress ? (
         <PhaseProgressDetail
@@ -145,6 +168,29 @@ export function CarouselProgress({
         ))}
       </div>
     </div>
+  );
+}
+
+export function CarouselProgress({
+  currentPhase,
+  isComplete,
+  hasError,
+  updatedAt,
+  errorMessage,
+  phaseProgress,
+}: CarouselProgressProps) {
+  const stalledSeconds = useStalledSeconds(updatedAt, isComplete || hasError);
+
+  if (isComplete) return <CompleteCard />;
+  if (hasError) return <ErrorCard errorMessage={errorMessage} />;
+
+  return (
+    <ActiveProgress
+      currentPhase={currentPhase}
+      isComplete={isComplete}
+      stalledSeconds={stalledSeconds}
+      phaseProgress={phaseProgress}
+    />
   );
 }
 

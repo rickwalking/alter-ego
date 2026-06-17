@@ -270,7 +270,9 @@ Before submitting code:
 - [ ] All tests pass
 - [ ] No TypeScript errors
 - [ ] No ESLint warnings
-- [ ] Code formatted with Prettier
+- [ ] Code formatted with Prettier (let the pre-commit hook do this — avoid
+      `git commit --no-verify`; see the `--no-verify` policy in root `CLAUDE.md` →
+      Git & Commits, AE-0168)
 - [ ] Components have prop types
 - [ ] Functions have return types
 - [ ] No hardcoded text (use i18n)

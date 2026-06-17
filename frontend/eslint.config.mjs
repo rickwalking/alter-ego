@@ -4,13 +4,25 @@ import nextTs from "eslint-config-next/typescript";
 import pluginQuery from "@tanstack/eslint-plugin-query";
 import sonarjs from "eslint-plugin-sonarjs";
 
+// AE-0166 — severity policy. `error` rules GATE the build (the `lint` gate runs
+// `eslint --quiet`, which fails on errors only). `warn` rules are advisory: a
+// tracked backlog, SURFACED on changed files by `lint:changed` (which drops
+// `--quiet`) as a paydown nudge, but NOT gating — promoting them to a global
+// error would require mass refactoring of pre-existing violations (counts
+// measured 2026-06-17):
+//   no-unnecessary-condition (69), prefer-nullish-coalescing (50),
+//   no-floating-promises (17), no-misused-promises (15), no-non-null-assertion
+//   (7), no-img-element (8), and the size/complexity rules below. They are paid
+//   down opportunistically, never blanket-ignored, and the severities only ever
+//   ratchet UP (warn→error), never down.
 const typeCheckedRules = {
   "@typescript-eslint/no-explicit-any": "error",
   "@typescript-eslint/no-non-null-assertion": "warn",
   "@typescript-eslint/no-floating-promises": "warn",
   "@typescript-eslint/no-misused-promises": "warn",
   "@typescript-eslint/prefer-nullish-coalescing": "warn",
-  "@typescript-eslint/prefer-optional-chain": "warn",
+  // Zero pre-existing violations after AE-0166 cleanup -> promoted to error.
+  "@typescript-eslint/prefer-optional-chain": "error",
   "@typescript-eslint/no-unnecessary-condition": "warn",
 };
 
@@ -74,15 +86,27 @@ export default defineConfig([
       "max-statements": ["warn", 25],
       "sonarjs/cognitive-complexity": ["warn", 15],
       "@tanstack/query/exhaustive-deps": "error",
-      "no-console": ["warn", { allow: ["warn", "error"] }],
+      // AE-0166: 0 pre-existing violations -> error.
+      "no-console": ["error", { allow: ["warn", "error"] }],
       "@next/next/no-img-element": "warn",
+      // Data-fetching anti-pattern (AE-0166; frontend/CLAUDE.md "NEVER use
+      // useEffect for Data Fetching"). fetch-in-useEffect ERRORS everywhere (0
+      // pre-existing violations); steer to TanStack Query / a Server Component /
+      // authenticated-fetch. A regression test (src/scripts/eslint-fetch-rule.test.ts)
+      // proves it fires. NOTE: this is the single global `no-restricted-syntax`
+      // rule on purpose — ESLint flat config does NOT merge `no-restricted-syntax`
+      // across config objects (a later object's value REPLACES it). A broader
+      // raw-fetch `warn` in a scoped block was removed because it silently
+      // downgraded THIS error in src/modules + src/components; the stronger guard
+      // wins. Broad raw-fetch steering, if wanted, needs a separate mechanism
+      // (e.g. a ratchet script), not a colliding `no-restricted-syntax`.
       "no-restricted-syntax": [
-        "warn",
+        "error",
         {
           selector:
             "CallExpression[callee.name='useEffect'] CallExpression[callee.name='fetch']",
           message:
-            "Avoid fetch() inside useEffect — prefer TanStack Query or a Server Component.",
+            "Do not fetch() inside useEffect — use TanStack Query, a Server Component, or authenticated-fetch.",
         },
       ],
     },

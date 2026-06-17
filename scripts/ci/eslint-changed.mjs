@@ -28,10 +28,16 @@ if (files.length === 0) {
   process.exit(0);
 }
 
-const result = spawnSync(
-  "npx",
-  ["eslint", "--quiet", ...files],
-  { cwd: frontendDir, stdio: "inherit", shell: false },
-);
+// Diff-scoped lint. `error`-level rules GATE (non-zero exit fails CI). `warn`
+// rules are SURFACED here (no `--quiet`, unlike the full-repo `lint` gate) as a
+// paydown nudge on the exact files a PR touches, but are NOT gating — a strict
+// `--max-warnings=0` would force unrelated refactors of pre-existing warnings in
+// any file you so much as add a line to. See the severity policy in
+// frontend/eslint.config.mjs (AE-0166).
+const result = spawnSync("npx", ["eslint", ...files], {
+  cwd: frontendDir,
+  stdio: "inherit",
+  shell: false,
+});
 
 process.exit(result.status ?? 1);

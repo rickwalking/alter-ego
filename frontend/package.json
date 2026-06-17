@@ -6,8 +6,9 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint --quiet && npm run lint:boundaries && npm run url:check && npm run lint:circular && npm run lint:component-types && npm run lint:dup",
+    "lint": "eslint --quiet && npm run lint:boundaries && npm run url:check && npm run lint:circular && npm run lint:component-types && npm run lint:use-client && npm run lint:dup",
     "lint:all": "eslint --max-warnings=0 && npm run lint:boundaries",
+    "lint:use-client": "node scripts/check-use-client.mjs",
     "lint:dup": "jscpd src",
     "lint:dup:tests": "jscpd src --config .jscpd.tests.json",
     "lint:dead-code": "node scripts/check-dead-code.mjs",
@@ -33,7 +34,7 @@
     "check:legacy": "node scripts/check-legacy-usage.mjs",
     "check:legacy-inventory": "node scripts/check-legacy-usage.mjs --inventory",
     "check:schema-drift": "node scripts/check-schema-drift.mjs --strict",
-    "prepare": "husky"
+    "prepare": "husky; git config core.hooksPath .husky 2>/dev/null || true"
   },
   "lint-staged": {
     "*.{ts,tsx}": [

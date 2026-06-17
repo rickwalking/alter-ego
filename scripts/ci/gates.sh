@@ -41,7 +41,7 @@ readonly EXIT_FAIL=1
 readonly EXIT_SKIP=77
 
 # Gates skipped by --changed-only: need a service (DB) or are slow / whole-repo.
-CHANGED_ONLY_SKIP=" test diff-cover migrations mutation "
+CHANGED_ONLY_SKIP=" test diff-cover migrations mutation build "
 
 # -----------------------------------------------------------------------------
 # Result accumulation
@@ -178,6 +178,10 @@ gate_frontend_lint_changed()    { cd "$REPO_ROOT/frontend" && npm run lint:chang
 # as its own gate (mirrors how boundaries/url/circular live under lint).
 gate_frontend_component_types() { cd "$REPO_ROOT/frontend" && npm run lint:component-types; }
 gate_frontend_typecheck()       { cd "$REPO_ROOT/frontend" && npm run typecheck; }
+# Production build (AE-0167). Catches build-only breakage that tsc/lint/test miss
+# — e.g. a client-only hook in an RSC-reachable file without "use client" (AE-0155),
+# which only `next build` flags. Slow; skipped by --changed-only.
+gate_frontend_build()           { cd "$REPO_ROOT/frontend" && npm run build; }
 # Source-scoped copy-paste detection (AE-0149). Also runs inside `npm run lint`;
 # registered standalone so CI and /qa-agent can invoke it directly. Threshold
 # lives in frontend/.jscpd.json and may only ratchet DOWN (raising it is flagged
@@ -233,6 +237,7 @@ FRONTEND_GATES=(
   duplication:gate_frontend_duplication
   dead-code:gate_frontend_dead_code
   typecheck:gate_frontend_typecheck
+  build:gate_frontend_build
   legacy-guard:gate_frontend_legacy_guard
   legacy-inventory:gate_frontend_legacy_inventory
   format:gate_frontend_format

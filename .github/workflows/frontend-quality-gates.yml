@@ -127,6 +127,40 @@ jobs:
         working-directory: .
         run: bash scripts/ci/gates.sh frontend:typecheck
 
+  build:
+    name: frontend / Build
+    # AE-0167: production `next build`. Catches build-only breakage that
+    # tsc/lint/test miss (e.g. a client-only hook without "use client", AE-0155).
+    # Definition lives in scripts/ci/gates.sh (also run by /qa-agent).
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Production build (next build)
+        working-directory: .
+        run: bash scripts/ci/gates.sh frontend:build
+
+      - name: Post PR summary on failure
+        if: failure() && github.event_name == 'pull_request'
+        working-directory: .
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_EVENT_PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          bash scripts/ci/post-pr-quality-comment.sh \
+            "Frontend" "Build" \
+            "\`next build\` failed — a build-only error (e.g. a client-only hook without \"use client\") that tsc/lint/test do not catch. Run \`cd frontend && npm run build\` locally."
+
   duplication:
     name: frontend / Duplication
     # AE-0149: source-scoped copy-paste detection (jscpd). Blocks NEW source

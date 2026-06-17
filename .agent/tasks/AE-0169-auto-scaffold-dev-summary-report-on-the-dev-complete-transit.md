@@ -1,13 +1,13 @@
 # AE-0169 — Auto-scaffold dev-summary report on the Dev Complete transition
 
-Status: Intake
+Status: Dev Complete
 Tier: T1
 Class: B
 Priority: Medium
 Type: Quality
 Area: Cross-cutting
-Owner: Unassigned
-Branch: TBD
+Owner: developer-skill
+Branch: chore/phase-8-class-b
 Created: 2026-06-16
 Updated: 2026-06-16
 
@@ -32,9 +32,9 @@ Auto-scaffold the required `.agent/reports/<id>.dev-summary.md` when a ticket tr
 
 ## Acceptance Criteria
 
-- [ ] Moving a ticket to Dev Complete creates `.agent/reports/<id>.dev-summary.md` (template) when missing; existing files are never overwritten.
-- [ ] `schema.py` validation rules unchanged; `validate_all_tickets.py` still enforces presence.
-- [ ] Verified: a fresh ticket → Dev Complete produces a valid dev-summary skeleton and passes validation.
+- [x] Moving a ticket to Dev Complete creates `.agent/reports/<id>.dev-summary.md` (template) when missing; existing files are never overwritten. Implemented `scaffold_dev_summary()` in `move_ticket.py`, called on the `Dev Complete` transition.
+- [x] `schema.py` validation rules unchanged (only `move_ticket.py` touched) — the validator still enforces presence; this only makes compliance the default.
+- [x] Verified: unit tests `backend/tests/unit/agent_tasks/test_move_ticket.py` (creates template w/ required sections + ticket id; never overwrites). **Dogfooded:** this ticket's own `AE-0169.dev-summary.md` was scaffolded by `move_ticket.py AE-0169 --status "Dev Complete"`.
 
 ## Repro Steps
 
@@ -63,7 +63,11 @@ Pending.
 
 ## Test Evidence
 
-Pending.
+`uv run pytest tests/unit/agent_tasks/ -q` (from `backend/`) → 9 passed, 1 skipped,
+including the 3 new `test_move_ticket.py` cases (creates template with required
+sections + ticket id; never overwrites an existing report; template placeholder
+substituted). Dogfood: `move_ticket.py AE-0169 --status "Dev Complete"` scaffolded
+`.agent/reports/AE-0169.dev-summary.md`.
 
 ## QA Report
 
