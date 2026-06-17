@@ -37,6 +37,30 @@ This document provides general guidelines for AI agents working on the Next.js f
   non-blocking `frontend / Duplication (tests, advisory)` job (AE-0151).
 - Run it locally: `cd frontend && npm run lint:dup`.
 
+### 1c. No Dead Exports (AE-0152, enforced)
+
+- **knip dead-export gate** — exported symbols/types that nothing imports are
+  flagged. A NEW unused export in a file you changed **fails the build**. Delete
+  it, or wire it up; do not leave orphaned exports (ESLint only sees unused
+  locals, not cross-file exports).
+- **Scope:** unused **exports/types** only (`--include exports,types,nsExports,
+nsTypes`) — the orphaned-constant class. Unused-**file** detection is out of
+  scope for now (noisier; a possible future advisory).
+- Gated by `npm run lint:dead-code` (`gates.sh frontend:dead-code` + the
+  `frontend / Dead code` CI job). Identity-keyed baseline lives in
+  `frontend/scripts/dead-code-baseline.json` (`type|file|symbol`).
+- **Day-one blocking is changed-file-scoped:** net-new findings in PR-changed
+  files block; pre-existing/unchanged-file findings are **advisory** (the
+  grandfathered debt) until the full-tree flip.
+- The baseline is **down-only** — raising its `count` is flagged by
+  `scripts/ci/check-integrity.sh`. Regenerate (only to ratchet DOWN, after
+  removing dead code) with `npm run dead-code:baseline`.
+- **Operating model:** the gate adds a `knip` run to CI (~seconds; owned by the
+  frontend quality-gates workflow). **Flip to full-tree blocking** (set
+  `DEAD_CODE_FULL_TREE_BLOCKING=1` in the gate) once the grandfathered `count`
+  reaches 0 — at that point there is no advisory debt left to defer.
+- Run it locally: `cd frontend && npm run lint:dead-code`.
+
 ### 2. No Magic Strings
 
 - Extract all string literals to named constants
@@ -62,7 +86,11 @@ This document provides general guidelines for AI agents working on the Next.js f
 ### 5. Testing is Non-Negotiable
 
 - **90%+ branch coverage** — Focus on branches, not lines
-- **Gherkin scenarios first** — Write `.feature` files before tests
+- **Gherkin scenarios first** — Write `.feature` files before tests, for
+  **behavior-changing** work. **Pure refactors and CI/config/tooling tickets** may
+  substitute focused unit tests + the gate's seeded-violation test, provided the
+  ticket documents no-behavior-change + reviewer sign-off (AE-0153; full rule in
+  root `CLAUDE.md` → Testing). Default to requiring a `.feature` when in doubt.
 - **Test behavior, not implementation**
 - **Mock external dependencies with MSW**
 

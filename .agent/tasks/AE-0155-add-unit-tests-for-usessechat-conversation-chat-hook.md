@@ -1,12 +1,12 @@
 # AE-0155 — Add unit tests for useSseChat (conversation chat hook)
 
-Status: Intake
+Status: Review
 Tier: T1
 Priority: Medium
 Type: Task
 Area: Frontend
-Owner: Unassigned
-Branch: TBD
+Owner: developer-skill
+Branch: feat/ae-0152-0155-frontend-quality-epic
 Created: 2026-06-16
 Updated: 2026-06-16
 
@@ -56,14 +56,14 @@ flagged by QA.
 
 ## Acceptance Criteria
 
-- [ ] `use-sse-chat.test.ts` exists and covers happy path, ephemeral path,
+- [x] `use-sse-chat.test.ts` exists and covers happy path, ephemeral path,
       error path, SOURCES merge, message dedupe, startNewChat, and send guards.
-- [ ] **Race/lifecycle cases covered** with a controllable fake stream + real
+- [x] **Race/lifecycle cases covered** with a controllable fake stream + real
       QueryClient: overlapping sends, abort-before-complete,
       unmount-before-complete, mid-stream history arrival, `finalizedRef`
       idempotency. Tests assert observable state, not internal call counts.
-- [ ] Tests pass; `frontend:test` gate green.
-- [ ] No production behavior change.
+- [x] Tests pass; `frontend:test` gate green.
+- [x] No production behavior change.
 
 ## Repro Steps
 
@@ -107,7 +107,7 @@ Pending.
 
 ## QA Report
 
-Pending.
+PASS (wave QA) — see [AE-0152-0155.qa.md](../reports/AE-0152-0155.qa.md). 15/15 frontend gates green; integrity 0 net-new blockers; all ACs MET; 0 blocker findings.
 
 ## Blockers
 

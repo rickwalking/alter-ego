@@ -10,25 +10,10 @@ import {
 import { CREATE_TEMPLATES } from "@/app/dashboard/create/constants";
 import type { CreateCarouselFormState } from "@/app/dashboard/create/types";
 import { SectionNumber } from "./section-number";
+import { sectionCardStyle, sectionHeaderStyle } from "./section-styles";
 
 const CYAN = NEON_CYAN;
 const CYAN_DIM = NEON_CYAN_DIM;
-
-const sectionCardStyle = {
-  background: BG_CARD,
-  border: "1px solid rgba(255,255,255,0.06)",
-  borderRadius: "8px",
-  padding: "24px",
-};
-
-const sectionHeaderStyle = {
-  fontSize: "14px",
-  fontWeight: 700,
-  marginBottom: "12px",
-  display: "flex",
-  alignItems: "center",
-  gap: "8px",
-};
 
 export interface CreateTemplateSectionProps {
   form: CreateCarouselFormState;

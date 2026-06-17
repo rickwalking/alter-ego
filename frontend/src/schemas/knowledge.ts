@@ -28,6 +28,9 @@ export const createDocumentRequestSchema = z.object({
   metadata: z.record(z.unknown()).optional(),
 });
 
+// Kept as an explicit z.object literal (not aliased to documentSchema) because
+// the OpenAPI<->Zod schema-drift gate (AE-0141) statically introspects mapped
+// schemas and cannot resolve an alias. Mirrors documentSchema's shape.
 export const documentUploadResponseSchema = z.object({
   id: z.string(),
   title: z.string(),

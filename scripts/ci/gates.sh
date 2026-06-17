@@ -132,6 +132,19 @@ gate_backend_diff_cover() {
   cd "$REPO_ROOT"
   git fetch origin main --depth=1 2>/dev/null || { echo "origin/main unavailable."; return "$EXIT_SKIP"; }
   [[ -f "$REPO_ROOT/backend/coverage.xml" ]] || { echo "coverage.xml absent — run the 'test' gate first."; return "$EXIT_SKIP"; }
+  # diff-cover compares `${BASE_REF}...HEAD` (merge-base). On a branch based on an
+  # OLDER main, the shallow `--depth=1` fetch above may not contain the merge-base,
+  # which makes diff-cover crash on its internal `git diff` rather than report. Try
+  # to deepen so the merge-base is present; if it still cannot be computed (truly
+  # disjoint history), SKIP (inconclusive) instead of crashing. (See AE-0157.)
+  if ! git merge-base "${BASE_REF}" HEAD >/dev/null 2>&1; then
+    git fetch origin main --deepen=200 2>/dev/null || true
+    git fetch --unshallow 2>/dev/null || true
+  fi
+  if ! git merge-base "${BASE_REF}" HEAD >/dev/null 2>&1; then
+    echo "No merge-base with ${BASE_REF} (diverged/old base) — diff-cover inconclusive."
+    return "$EXIT_SKIP"
+  fi
   cd "$REPO_ROOT/backend" && uv run diff-cover coverage.xml --compare-branch="${BASE_REF}" --fail-under=75
 }
 
@@ -171,6 +184,11 @@ gate_frontend_typecheck()       { cd "$REPO_ROOT/frontend" && npm run typecheck;
 # by check-integrity.sh). Test/spec/story files are excluded by design — egregious
 # test duplication is advisory only (AE-0151, gate_frontend_duplication_tests).
 gate_frontend_duplication()     { cd "$REPO_ROOT/frontend" && npm run lint:dup; }
+# Dead-export ratchet (AE-0152): knip-based, identity-keyed baseline. Blocks
+# NET-NEW unused exports in PR-changed files (day one); pre-existing/unchanged-file
+# findings are advisory until the full-tree flip. Baseline is down-only (raising
+# its count is flagged by check-integrity.sh). Needs git history for the diff.
+gate_frontend_dead_code()       { cd "$REPO_ROOT/frontend" && npm run lint:dead-code; }
 # Advisory in CI (continue-on-error); reports test-file duplication, never blocks.
 gate_frontend_duplication_tests() { cd "$REPO_ROOT/frontend" && { npm run lint:dup:tests || echo "ADVISORY: jscpd test-duplication findings above (non-blocking, mirrors CI)."; }; }
 gate_frontend_legacy_guard()    { cd "$REPO_ROOT/frontend" && npm run check:legacy; }
@@ -213,6 +231,7 @@ FRONTEND_GATES=(
   lint-changed:gate_frontend_lint_changed
   component-types:gate_frontend_component_types
   duplication:gate_frontend_duplication
+  dead-code:gate_frontend_dead_code
   typecheck:gate_frontend_typecheck
   legacy-guard:gate_frontend_legacy_guard
   legacy-inventory:gate_frontend_legacy_inventory

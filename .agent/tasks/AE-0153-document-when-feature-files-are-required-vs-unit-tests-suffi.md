@@ -1,12 +1,12 @@
 # AE-0153 — Document when .feature files are required vs unit-tests-suffice
 
-Status: Intake
+Status: Review
 Tier: T1
 Priority: Low
 Type: Task
 Area: Cross-cutting
-Owner: Unassigned
-Branch: TBD
+Owner: developer-skill
+Branch: feat/ae-0152-0155-frontend-quality-epic
 Created: 2026-06-16
 Updated: 2026-06-16
 
@@ -40,18 +40,18 @@ an explicit scope so the signal is actionable, without loosening any gate.
 
 ## Acceptance Criteria
 
-- [ ] CLAUDE.md + both AGENTS.md name the two cases explicitly, **with concrete
+- [x] CLAUDE.md + both AGENTS.md name the two cases explicitly, **with concrete
       examples** of each (so "pure refactor" / "CI-config" can't be stretched to
       smuggle behavior changes past `.feature` coverage).
-- [ ] The "unit-tests-suffice" path **requires documented evidence in the ticket**:
+- [x] The "unit-tests-suffice" path **requires documented evidence in the ticket**:
       (a) an explicit "no public/user-visible behavior change" assertion, (b) the
       gate's seeded-violation test (for CI/config tickets), (c) the affected gates
       listed, and (d) reviewer/QA sign-off on the no-`.feature` classification.
       (Skeptical-review: prevents the policy becoming a loophole.)
-- [ ] A **tie-break authority** is named for when author and QA disagree on whether
+- [x] A **tie-break authority** is named for when author and QA disagree on whether
       a ticket is behavior-changing (defaults to "require `.feature` when in doubt").
-- [ ] `docs/guides/qa-checkpoints.md` references the rule.
-- [ ] No gate, threshold, or check is loosened (ratchet HOLD/UP) — this only
+- [x] `docs/guides/qa-checkpoints.md` references the rule.
+- [x] No gate, threshold, or check is loosened (ratchet HOLD/UP) — this only
       removes ambiguity; it never waives required coverage.
 
 ## Repro Steps
@@ -93,7 +93,7 @@ Pending.
 
 ## QA Report
 
-Pending.
+PASS (wave QA) — see [AE-0152-0155.qa.md](../reports/AE-0152-0155.qa.md). 15/15 frontend gates green; integrity 0 net-new blockers; all ACs MET; 0 blocker findings.
 
 ## Blockers
 

@@ -56,14 +56,11 @@ export const carouselBlogI18nResponseSchema = z.object({
   available_languages: z.array(z.string()),
 });
 
-export const carouselBlogWithDesignResponseSchema = z.object({
-  markdown: z.string(),
-  title: z.string(),
-  subtitle: z.string().nullable(),
-  language: z.string(),
-  available_languages: z.array(z.string()),
-  design: carouselDesignResponseSchema,
-});
+// Same shape as the i18n response plus a design block (AE-0154 dedup).
+export const carouselBlogWithDesignResponseSchema =
+  carouselBlogI18nResponseSchema.extend({
+    design: carouselDesignResponseSchema,
+  });
 
 export const carouselProjectResponseSchema = z.object({
   id: z.string(),

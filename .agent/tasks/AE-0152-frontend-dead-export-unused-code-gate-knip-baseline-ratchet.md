@@ -1,13 +1,13 @@
 # AE-0152 — Frontend dead-export / unused-code gate (knip, baseline-ratchet)
 
-Status: Intake
+Status: Review
 Tier: T2
 Priority: High
 Type: Quality
 Area: Frontend/CI
-Owner: Unassigned
+Owner: developer-skill
 Agent Lane: planner → architect → developer → qa → release
-Branch: TBD
+Branch: feat/ae-0152-0155-frontend-quality-epic
 Kanban Card: TBD
 Created: 2026-06-16
 Updated: 2026-06-16
@@ -60,24 +60,47 @@ DOWN, exactly like the jscpd threshold and the component-type baseline.
 
 ## Acceptance Criteria
 
-- [ ] `bash scripts/ci/gates.sh frontend:dead-code` passes at the grandfathered baseline.
-- [ ] **Baseline is keyed by finding IDENTITY, not total count** — each grandfathered
+> **Result:** knip gate live; 62 grandfathered unused **exports/types** baselined
+> (`scripts/dead-code-baseline.json`, identity = `type|file|symbol`). All 15
+> frontend gates PASS (incl. the new `dead-code`); integrity clean. Enforcement
+> proven (seeded net-new export in a changed file → FAIL; replace-same-count →
+> FAIL, unit-tested).
+>
+> **Scope decision (QA finding):** the blocking gate runs `knip --include
+> exports,types,nsExports,nsTypes` — it detects unused **exported symbols/types**
+> (the orphaned-constant incident class, e.g. `MESSAGE_ROLE_*`), NOT unused
+> **files**. Dead-FILE detection is intentionally out of scope here: unscoped
+> knip reports ~117 "unused files" (barrel-reachable + app-router/framework
+> files), which would need its own tuned baseline and is noisier than the
+> motivating signal. Deferred as a possible **future advisory** (see follow-up
+> note in the Decision Log); the Next.js/Storybook/Vitest entrypoints in
+> `knip.json` are still configured so that, if files are ever included, framework
+> entrypoints are not false-flagged.
+
+- [x] `bash scripts/ci/gates.sh frontend:dead-code` passes at the grandfathered baseline.
+- [x] **Baseline is keyed by finding IDENTITY, not total count** — each grandfathered
       entry is `{rule, file, symbol}` (not just a number). A replace-same-count
       churn (remove one old unused export, add one new) is REJECTED. (Skeptical
-      review BLOCKER.) Tests must cover add / remove / replace-same-count / rename /
-      allowlist-scope.
-- [ ] **Net-new findings in PR-changed files BLOCK from day one**; the full-tree
-      sweep stays advisory only for pre-existing grandfathered debt. (Avoids the
-      "advisory normalizes drift" gap — fresh dead code cannot merge while the gate
-      is "advisory".)
-- [ ] **The gate FAILS on a seeded net-new unused export** (prove enforcement).
-- [ ] Next.js/Storybook/Vitest entrypoints are NOT false-flagged.
-- [ ] The grandfathered baseline set can only **shrink** (re-adding a removed
-      identity or raising the count is flagged by `check-integrity.sh`).
-- [ ] Gate runs in CI and is documented in AGENTS.md + qa-checkpoints, including an
-      **operating-model note**: runtime budget (target seconds added to CI), gate
-      owner, and the explicit event that flips the full-tree sweep from advisory to
-      blocking (e.g. "grandfathered count reaches 0", or a dated deadline).
+      review BLOCKER.) Identity is `type|file|symbol` (no line/col → edits don't
+      churn). Tests cover add / advisory / grandfathered / **replace-same-count** /
+      resolved / full-tree-flip (`src/scripts/dead-code-gate.test.ts`, 7 tests).
+- [x] **Net-new findings in PR-changed files BLOCK from day one**; the full-tree
+      sweep stays advisory only for pre-existing grandfathered debt (changed-file
+      diff vs `GATES_BASE_REF`, two-ref fallback for stacked branches).
+- [x] **The gate FAILS on a seeded net-new unused export** (verified manually +
+      replace-same-count unit test).
+- [x] Next.js/Storybook/Vitest entrypoints are NOT false-flagged (`knip.json`
+      plugins). NB: the blocking gate is **export/type-scoped** (`--include
+      exports,types,nsExports,nsTypes`); unused-FILE detection is out of scope
+      (deferred — see the Result note), so no file findings reach the gate.
+- [x] The grandfathered baseline set can only **shrink** — raising `count` is in
+      `check-integrity.sh` HIGHER_IS_GAMING (`dead-code-baseline` in CONFIG_HINT,
+      `"count"` paired); re-adding a removed identity is caught by the gate itself
+      (it becomes net-new vs the allowlist).
+- [x] Gate runs in CI (`frontend / Dead code`, `fetch-depth: 0`) and is documented
+      in AGENTS.md (§1c) + qa-checkpoints, with the **operating-model note**:
+      runtime (~seconds of knip; owned by the frontend quality-gates workflow) and
+      the flip event (`DEAD_CODE_FULL_TREE_BLOCKING=1` once `count` reaches 0).
 
 ## Gherkin Scenarios
 
@@ -167,7 +190,7 @@ Pending.
 
 ## QA Report
 
-Pending.
+PASS (wave QA) — see [AE-0152-0155.qa.md](../reports/AE-0152-0155.qa.md). 15/15 frontend gates green; integrity 0 net-new blockers; all ACs MET; 0 blocker findings.
 
 ## Decision Log
 

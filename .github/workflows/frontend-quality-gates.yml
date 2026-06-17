@@ -163,6 +163,44 @@ jobs:
             "Frontend" "Duplication" \
             "New source copy-paste duplication exceeds the jscpd threshold (frontend/.jscpd.json). Extract the shared logic instead of duplicating; the threshold may only ratchet DOWN."
 
+  dead-code:
+    name: frontend / Dead code
+    # AE-0152: knip-based dead-export gate with an identity-keyed, down-only
+    # baseline. Blocks NET-NEW unused exports in PR-changed files (day-one
+    # changed-file blocking); pre-existing/unchanged-file findings are advisory
+    # until the full-tree flip. Definition in scripts/ci/gates.sh. fetch-depth: 0
+    # is required so the changed-file diff (vs the base ref) resolves.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Detect new dead exports (knip)
+        working-directory: .
+        run: bash scripts/ci/gates.sh frontend:dead-code
+
+      - name: Post PR summary on failure
+        if: failure() && github.event_name == 'pull_request'
+        working-directory: .
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_EVENT_PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          bash scripts/ci/post-pr-quality-comment.sh \
+            "Frontend" "Dead code" \
+            "A changed file introduces an exported symbol nothing imports (dead code). Delete it or wire it up — do not grandfather it into the baseline (it is down-only)."
+
   legacy-guard:
     name: frontend / Legacy guard
     runs-on: ubuntu-latest
