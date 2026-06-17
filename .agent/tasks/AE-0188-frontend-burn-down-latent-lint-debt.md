@@ -88,7 +88,11 @@ Feature: Lint-debt burn-down + lock-in
 
 ### 2026-06-17 00:00
 
-Captured from kaizen frontend-debt analysis (renumbered to free IDs; AE-0172..0182 owned by PR #29).
+Captured from kaizen frontend-debt analysis (renumbered; AE-0172..0182 owned by PR #29).
+
+### 2026-06-17 (execution)
+
+; Ph3 lock-in pending a rule reaching 0.
 
 ## Files Touched
 

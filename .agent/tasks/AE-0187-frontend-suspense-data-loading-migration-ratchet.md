@@ -90,7 +90,11 @@ Feature: Suspense migration ratchet
 
 ### 2026-06-17 00:00
 
-Captured from kaizen frontend-debt analysis (renumbered to free IDs; AE-0172..0182 owned by PR #29).
+Captured from kaizen frontend-debt analysis (renumbered; AE-0172..0182 owned by PR #29).
+
+### 2026-06-17 (execution)
+
+AE-0187: increment shipped — pattern guide + grandfather baseline (25 data-fetch/22 mutation/21 wrapper) + 1 exemplar migration (useDocuments→useSuspenseQuery). REMAINING: 24 migrations + AST ratchet rule.
 
 ## Files Touched
 

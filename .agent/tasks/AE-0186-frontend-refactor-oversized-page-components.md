@@ -1,6 +1,6 @@
 # AE-0186 — Frontend: refactor oversized page components (HomePageContent, CalendarPage, BlogPostsPage)
 
-Status: Ready
+Status: Review
 Tier: T3
 Priority: High
 Type: Refactor
