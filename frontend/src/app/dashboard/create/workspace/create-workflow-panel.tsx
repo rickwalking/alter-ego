@@ -179,12 +179,12 @@ export function CreateWorkflowPanel({
     state?.current_phase !== undefined &&
     EDITORIAL_PHASE_TO_STEP[state.current_phase] === viewStepId &&
     viewStepId === workflowStepId;
-  const showLiveControls = shouldShowLiveWorkflowControls(
+  const showLiveControls = shouldShowLiveWorkflowControls({
     state,
     viewStepId,
     workflowStepId,
     awaitingHumanReview,
-  );
+  });
   const contentEditable =
     state?.current_phase === EDITORIAL_PHASES.CONTENT && showLiveControls;
   const showPhaseReview =

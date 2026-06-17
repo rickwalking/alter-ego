@@ -9,15 +9,22 @@ import {
 } from "@/constants/editor-shortcuts";
 import type { EditorShortcutHandlers } from "./types";
 
+const SHORTCUT_MATCHERS: Record<string, (event: KeyboardEvent) => boolean> = {
+  [SHORTCUT_SAVE]: (event) => event.key.toLowerCase() === "s",
+  [SHORTCUT_SUBMIT_REVIEW]: (event) =>
+    event.shiftKey && event.key.toLowerCase() === "r",
+  [SHORTCUT_AI_SUGGEST]: (event) =>
+    event.shiftKey && event.key.toLowerCase() === "a",
+  [SHORTCUT_HELP]: (event) => event.key === "/",
+};
+
 function matchShortcut(event: KeyboardEvent, combo: string): boolean {
   const mod = event.metaKey || event.ctrlKey;
-  if (combo === SHORTCUT_SAVE) return mod && event.key.toLowerCase() === "s";
-  if (combo === SHORTCUT_SUBMIT_REVIEW)
-    return mod && event.shiftKey && event.key.toLowerCase() === "r";
-  if (combo === SHORTCUT_AI_SUGGEST)
-    return mod && event.shiftKey && event.key.toLowerCase() === "a";
-  if (combo === SHORTCUT_HELP) return mod && event.key === "/";
-  return false;
+  if (!mod) return false;
+  const matcher = SHORTCUT_MATCHERS[combo] as
+    | ((event: KeyboardEvent) => boolean)
+    | undefined;
+  return matcher ? matcher(event) : false;
 }
 
 export function useEditorShortcuts(
@@ -27,25 +34,20 @@ export function useEditorShortcuts(
   useEffect(() => {
     if (!enabled) return;
 
+    const shortcutHandlers: Array<[string, (() => void) | undefined]> = [
+      [SHORTCUT_SAVE, handlers.onSave],
+      [SHORTCUT_SUBMIT_REVIEW, handlers.onSubmitReview],
+      [SHORTCUT_AI_SUGGEST, handlers.onAiSuggest],
+      [SHORTCUT_HELP, handlers.onShowHelp],
+    ];
+
     const onKeyDown = (event: KeyboardEvent) => {
-      if (matchShortcut(event, SHORTCUT_SAVE) && handlers.onSave) {
-        event.preventDefault();
-        handlers.onSave();
-      } else if (
-        matchShortcut(event, SHORTCUT_SUBMIT_REVIEW) &&
-        handlers.onSubmitReview
-      ) {
-        event.preventDefault();
-        handlers.onSubmitReview();
-      } else if (
-        matchShortcut(event, SHORTCUT_AI_SUGGEST) &&
-        handlers.onAiSuggest
-      ) {
-        event.preventDefault();
-        handlers.onAiSuggest();
-      } else if (matchShortcut(event, SHORTCUT_HELP) && handlers.onShowHelp) {
-        event.preventDefault();
-        handlers.onShowHelp();
+      for (const [combo, handler] of shortcutHandlers) {
+        if (matchShortcut(event, combo) && handler) {
+          event.preventDefault();
+          handler();
+          return;
+        }
       }
     };
 

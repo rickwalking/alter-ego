@@ -18,45 +18,45 @@ const baseState: EditorialWorkflowState = {
 describe("shouldShowLiveWorkflowControls", () => {
   it("shows controls only on the live workflow step at human gate", () => {
     expect(
-      shouldShowLiveWorkflowControls(
-        baseState,
-        CREATE_STEP_IDS.OUTLINE,
-        CREATE_STEP_IDS.OUTLINE,
-        true,
-      ),
+      shouldShowLiveWorkflowControls({
+        state: baseState,
+        viewStepId: CREATE_STEP_IDS.OUTLINE,
+        workflowStepId: CREATE_STEP_IDS.OUTLINE,
+        awaitingHumanReview: true,
+      }),
     ).toBe(true);
   });
 
   it("hides controls on historical steps", () => {
     expect(
-      shouldShowLiveWorkflowControls(
-        { ...baseState, current_phase: EDITORIAL_PHASES.CONTENT },
-        CREATE_STEP_IDS.OUTLINE,
-        CREATE_STEP_IDS.CONTENT,
-        true,
-      ),
+      shouldShowLiveWorkflowControls({
+        state: { ...baseState, current_phase: EDITORIAL_PHASES.CONTENT },
+        viewStepId: CREATE_STEP_IDS.OUTLINE,
+        workflowStepId: CREATE_STEP_IDS.CONTENT,
+        awaitingHumanReview: true,
+      }),
     ).toBe(false);
   });
 
   it("hides controls when not awaiting human review", () => {
     expect(
-      shouldShowLiveWorkflowControls(
-        baseState,
-        CREATE_STEP_IDS.OUTLINE,
-        CREATE_STEP_IDS.OUTLINE,
-        false,
-      ),
+      shouldShowLiveWorkflowControls({
+        state: baseState,
+        viewStepId: CREATE_STEP_IDS.OUTLINE,
+        workflowStepId: CREATE_STEP_IDS.OUTLINE,
+        awaitingHumanReview: false,
+      }),
     ).toBe(false);
   });
 
   it("shows controls when design phase maps to images tab", () => {
     expect(
-      shouldShowLiveWorkflowControls(
-        { ...baseState, current_phase: EDITORIAL_PHASES.DESIGN },
-        CREATE_STEP_IDS.IMAGES,
-        CREATE_STEP_IDS.IMAGES,
-        true,
-      ),
+      shouldShowLiveWorkflowControls({
+        state: { ...baseState, current_phase: EDITORIAL_PHASES.DESIGN },
+        viewStepId: CREATE_STEP_IDS.IMAGES,
+        workflowStepId: CREATE_STEP_IDS.IMAGES,
+        awaitingHumanReview: true,
+      }),
     ).toBe(true);
   });
 });

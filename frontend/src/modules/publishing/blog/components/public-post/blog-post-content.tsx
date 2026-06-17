@@ -187,12 +187,19 @@ export function extractH2Heading(markdown: string): string | null {
   return match ? match[1].trim() : null;
 }
 
-export function resolveSlideImage(
-  sectionMarkdown: string,
-  design: CarouselDesignResponse,
-  slideImages: string[],
-  sectionIndex: number,
-): string | null {
+export interface ResolveSlideImageInput {
+  sectionMarkdown: string;
+  design: CarouselDesignResponse;
+  slideImages: string[];
+  sectionIndex: number;
+}
+
+export function resolveSlideImage({
+  sectionMarkdown,
+  design,
+  slideImages,
+  sectionIndex,
+}: ResolveSlideImageInput): string | null {
   const heading = extractH2Heading(sectionMarkdown);
   if (!heading) {
     return null;
@@ -251,7 +258,12 @@ export function BlogPostContent({
         const slideImage =
           index === 0
             ? null
-            : resolveSlideImage(section, design, slideImages, index);
+            : resolveSlideImage({
+                sectionMarkdown: section,
+                design,
+                slideImages,
+                sectionIndex: index,
+              });
 
         return (
           <Section

@@ -55,12 +55,12 @@ describe("carousel-media-url", () => {
 
   it("builds publish panel slide URLs with preview routes and cache buster", () => {
     expect(
-      slideUrlsForPublishPanel(
-        "proj-1",
-        ["/api/carousels/proj-1/preview/images/slide_1.jpg?lang=pt"],
-        "pt",
-        "2026-04-20T00:00:00Z",
-      ),
+      slideUrlsForPublishPanel({
+        projectId: "proj-1",
+        paths: ["/api/carousels/proj-1/preview/images/slide_1.jpg?lang=pt"],
+        language: "pt",
+        updatedAt: "2026-04-20T00:00:00Z",
+      }),
     ).toEqual([
       "/api/carousels/proj-1/preview/images/slide_1.jpg?lang=pt&v=2026-04-20T00%3A00%3A00Z",
     ]);

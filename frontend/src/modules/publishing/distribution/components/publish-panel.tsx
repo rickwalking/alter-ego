@@ -41,12 +41,12 @@ function slideUrlsFromProject(
     tokens?.images?.rendered_slides_pt ?? tokens?.images?.slides ?? [];
   const enSlides = tokens?.images?.rendered_slides_en ?? ptSlides;
   const slides = language === "en" ? enSlides : ptSlides;
-  return slideUrlsForPublishPanel(
-    project.id,
-    slides,
+  return slideUrlsForPublishPanel({
+    projectId: project.id,
+    paths: slides,
     language,
-    project.updated_at,
-  );
+    updatedAt: project.updated_at,
+  });
 }
 
 function pdfUrl(
