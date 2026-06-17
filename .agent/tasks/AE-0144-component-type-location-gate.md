@@ -1,6 +1,6 @@
 # AE-0144 — Component-type-location gate with baseline ratchet (the 13x class)
 
-Status: Review
+Status: Done
 Tier: T2
 Priority: High
 Type: Task
@@ -88,4 +88,4 @@ None.
 
 ## Final Summary
 
-Pending.
+DONE — verified in main. The component-type-location gate is live: `frontend/scripts/check-component-type-location.mjs` + scan/config/baseline scripts, wired as `lint:component-types` in the `npm run lint` chain, with a down-only baseline ratchet. Shipped via the phase-7 frontend work that landed in main; the `feat/phase-7-frontend-alignment` branch is superseded.

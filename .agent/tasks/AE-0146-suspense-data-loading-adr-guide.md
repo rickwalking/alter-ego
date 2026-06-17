@@ -1,6 +1,6 @@
 # AE-0146 — Suspense data-loading ADR + guide
 
-Status: Review
+Status: Done
 Tier: T2
 Priority: High
 Type: Task
@@ -88,4 +88,4 @@ None.
 
 ## Final Summary
 
-Pending.
+DONE — verified in main. Suspense data-loading ADR shipped as `docs/decisions/0010-suspense-data-loading.md` (Server Components + TanStack Query + React 19 `use()`), with the guide + QA checklist. Landed in main; phase-7 branch superseded.

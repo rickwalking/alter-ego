@@ -1,6 +1,6 @@
 # AE-0147 — Early-return / guard-clause lint rule
 
-Status: Review
+Status: Done
 Tier: T1
 Priority: High
 Type: Task
@@ -88,4 +88,4 @@ None.
 
 ## Final Summary
 
-Pending.
+DONE — verified in main. Early-return lint enforced: `no-else-return` + `no-lonely-if` active in `frontend/eslint.config.mjs`. Landed in main; phase-7 branch superseded.
