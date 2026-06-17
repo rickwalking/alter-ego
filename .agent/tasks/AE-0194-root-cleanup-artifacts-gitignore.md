@@ -1,6 +1,6 @@
 # AE-0194 — Root cleanup: remove committed screenshots/snapshots/tmp + fix .gitignore
 
-Status: Ready
+Status: Done
 Tier: T1
 Priority: Low
 Type: Task
@@ -89,4 +89,5 @@ Pending.
 ## Blockers
 None.
 ## Final Summary
-Pending.
+
+Repo root is free of committed screenshots/snapshots/tmp — all 72 tracked images are legitimate frontend public/src assets; .gitignore updated. Verified in main.

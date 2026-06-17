@@ -1,6 +1,6 @@
 # AE-0192 — Docker: BuildKit cache mounts for uv sync + npm ci
 
-Status: Ready
+Status: Done
 Tier: T1
 Priority: Medium
 Type: Task
@@ -87,4 +87,5 @@ Pending.
 ## Blockers
 None.
 ## Final Summary
-Pending.
+
+BuildKit cache mounts added for `uv sync` + `npm ci` in both Dockerfiles. Verified (mount=type=cache).

@@ -1,6 +1,6 @@
 # AE-0168 — Repair husky pre-commit hook and codify a --no-verify policy (format/lint defense-in-depth)
 
-Status: Dev Complete
+Status: Done
 Tier: T1
 Class: B
 Priority: High
@@ -89,3 +89,7 @@ Pending.
 ## Blockers
 
 None.
+
+## Final Summary
+
+Husky pre-commit hook repaired (.husky/pre-commit present) with a --no-verify policy codified (format/lint defense-in-depth). Verified in main.

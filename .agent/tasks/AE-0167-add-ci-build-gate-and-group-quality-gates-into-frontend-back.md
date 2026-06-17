@@ -1,6 +1,6 @@
 # AE-0167 — Add CI build gate and group quality gates into frontend/backend categories (keep gates.sh)
 
-Status: Dev Complete
+Status: Done
 Tier: T2
 Class: B
 Priority: High
@@ -123,4 +123,4 @@ None.
 
 ## Final Summary
 
-Pending.
+CI build gate added and quality gates grouped into frontend/backend categories; gates.sh retained as SSOT (frontend / Build job present). Verified in main.

@@ -1,6 +1,6 @@
 # AE-0199 — Frontend lint: promote no-non-null-assertion to error (zero-churn ratchet)
 
-Status: Ready
+Status: Done
 Tier: T1
 Priority: Medium
 Type: Task
@@ -86,4 +86,5 @@ Pending.
 ## Blockers
 None.
 ## Final Summary
-Pending.
+
+`@typescript-eslint/no-non-null-assertion` promoted to error in frontend/eslint.config.mjs (zero-churn ratchet). Verified in main.

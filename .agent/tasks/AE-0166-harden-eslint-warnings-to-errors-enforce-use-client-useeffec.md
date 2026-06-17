@@ -1,6 +1,6 @@
 # AE-0166 — Harden ESLint: warnings to errors + enforce use-client, useEffect best-practice, and TanStack-Query-over-fetch rules
 
-Status: Dev Complete
+Status: Done
 Tier: T2
 Class: B
 Priority: High
@@ -126,4 +126,4 @@ None.
 
 ## Final Summary
 
-Pending.
+ESLint hardened — warnings promoted to errors; use-client, useEffect best-practice, and TanStack-Query-over-fetch rules enforced in frontend/eslint.config.mjs (shipped #27). Verified in main.

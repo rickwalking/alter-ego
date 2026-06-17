@@ -1,6 +1,6 @@
 # AE-0169 — Auto-scaffold dev-summary report on the Dev Complete transition
 
-Status: Dev Complete
+Status: Done
 Tier: T1
 Class: B
 Priority: Medium
@@ -76,3 +76,7 @@ Pending.
 ## Blockers
 
 None.
+
+## Final Summary
+
+move_ticket.py auto-scaffolds the dev-summary on the Dev Complete transition; schema sentinel prevents unfilled scaffolds. Verified in main.

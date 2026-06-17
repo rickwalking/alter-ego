@@ -1,6 +1,6 @@
 # AE-0193 — Delete stray backend/main.py uv-init stub
 
-Status: Ready
+Status: Done
 Tier: T1
 Priority: Low
 Type: Task
@@ -87,4 +87,5 @@ Pending.
 ## Blockers
 None.
 ## Final Summary
-Pending.
+
+Stray backend/main.py uv-init stub deleted. Verified absent in main.
