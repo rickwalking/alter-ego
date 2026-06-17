@@ -5,6 +5,18 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+BASE_REF="${GATES_BASE_REF:-origin/main}"
+# shellcheck source=scripts/lib/diff_base.sh
+source "$ROOT/scripts/lib/diff_base.sh"
+
+# Resolve the diff range once via the shared 3-tier fallback (AE-0177) instead of
+# hard-coding `origin/main...HEAD`. On a stacked branch with no merge base this
+# falls back to the two-ref form (BASE HEAD); if neither resolves, the resolver
+# warns and we degrade to advisory (skip) rather than silently passing.
+if ! DIFF_RANGE="$(resolve_diff_base "$BASE_REF")"; then
+  echo "Strict diff ruff: diff base unresolved — degrading to advisory (skip)."
+  exit 0
+fi
 
 cd "$ROOT/backend"
 
@@ -51,8 +63,10 @@ echo "Strict ruff on ${#SRC_FILES[@]} changed source file(s): PLR0913, C901, PLR
 declare -A CHANGED_LINES
 for file in "${SRC_FILES[@]}"; do
   key=$(echo "$file" | tr / _)
-  # Get added lines from the diff (unified=0 to skip context)
-  CHANGED_LINES["$key"]=$(git diff -U0 origin/main...HEAD -- "$file" 2>/dev/null | grep -E '^@@' | sed 's/^@@ -[0-9,]* +\([0-9]*\),\?\([0-9]*\) @@.*/\1:\2/')
+  # Get added lines from the diff (unified=0 to skip context). $DIFF_RANGE comes
+  # from the shared resolver (merge-base or two-ref form) — see AE-0177.
+  # shellcheck disable=SC2086 # $DIFF_RANGE word-splits into one or two refs.
+  CHANGED_LINES["$key"]=$(git diff -U0 $DIFF_RANGE -- "$file" 2>/dev/null | grep -E '^@@' | sed 's/^@@ -[0-9,]* +\([0-9]*\),\?\([0-9]*\) @@.*/\1:\2/')
 done
 
 # Run ruff on each file and filter violations to only those on changed lines

@@ -1,6 +1,6 @@
 # AE-0177 — Standardize diff-base resolution across diff-scoped gates
 
-Status: Intake
+Status: In Development
 Tier: T1
 Priority: Medium
 Type: Quality
