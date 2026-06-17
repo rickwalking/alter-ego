@@ -1,6 +1,6 @@
 # AE-0179 — ESLint flat-config: guard against same-key rule override across overlapping blocks
 
-Status: Intake
+Status: Dev Complete
 Tier: T2
 Priority: Medium
 Type: Quality
@@ -46,11 +46,15 @@ See `.agent/reports/phase-8-class-b.qa-wave.md` (finding H1).
 
 ## Acceptance Criteria
 
-- [ ] A check detects a duplicate rule key across overlapping flat-config objects
-      and FAILS (non-zero) on a seeded violation; passes on the real config.
-- [ ] Allow-list mechanism (comment-tagged) for intentional, justified re-declares.
-- [ ] Wired into `npm run lint`; documented in `frontend/CLAUDE.md`.
-- [ ] Tests cover: seeded duplicate → fail; real config → pass; allow-listed → pass.
+- [x] A check (`scripts/check-eslint-rule-overrides.mjs`) detects a duplicate rule
+      key across **overlapping** local flat-config objects and FAILS (exit 1) on a
+      seeded violation; passes on the real config. Overlap-aware via micromatch
+      probe paths (preset spreads excluded by reference).
+- [x] Allow-list mechanism (`eslint-rule-override-allowlist.json`, rule→justification)
+      for intentional, justified re-declares; seeded with the 7 current ones.
+- [x] Wired into `npm run lint` (`lint:eslint-overrides`); documented in `frontend/CLAUDE.md`.
+- [x] Tests cover: seeded duplicate → fail; real config → pass; allow-listed → pass
+      (`src/scripts/eslint-rule-overrides.test.ts`, dogfoods AE-0180).
 
 ## Gherkin Scenarios
 
@@ -115,11 +119,24 @@ Ticket created.
 
 ## Files Touched
 
-Pending.
+- `frontend/scripts/check-eslint-rule-overrides.mjs` (new) — overlap-aware guard.
+- `frontend/eslint-rule-override-allowlist.json` (new) — seeded allow-list (7 rules).
+- `frontend/package.json` — `lint:eslint-overrides` + chained into `lint`.
+- `frontend/src/scripts/eslint-rule-overrides.test.ts` (new) — rule-fires tests.
+- `frontend/CLAUDE.md` — replace-not-merge gotcha + guard docs.
 
 ## Test Evidence
 
-Pending.
+```bash
+$ npx vitest run src/scripts/eslint-rule-overrides.test.ts
+Test Files 1 passed | Tests 3 passed
+# real config -> PASS (7 allow-listed re-declares, 0 unlisted);
+# seeded global-error + scoped-warn no-restricted-syntax (unlisted) -> FAILED exit 1;
+# same seeded duplicate once allow-listed -> PASS.
+
+$ bash scripts/ci/gates.sh frontend:lint   -> PASS (full chain incl. lint:eslint-overrides)
+$ bash scripts/ci/check-integrity.sh frontend  -> 0 blockers
+```
 
 ## QA Report
 
@@ -127,7 +144,12 @@ Pending.
 
 ## Decision Log
 
-Pending.
+- Overlap-aware via a representative micromatch probe-path set rather than parsing
+  globs symbolically (robust, uses the real config as source of truth).
+- Preset spreads (eslint-config-next) excluded by reference identity: overriding a
+  preset is the intended flat-config mechanism, not the footgun.
+- Allow-list keyed by rule name (down-only intent): a NEW unlisted overlapping
+  duplicate fails; the 7 current intentional re-declares are documented.
 
 ## Blockers
 

@@ -197,6 +197,12 @@ gate_frontend_duplication()     { cd "$REPO_ROOT/frontend" && npm run lint:dup; 
 gate_frontend_dead_code()       { cd "$REPO_ROOT/frontend" && npm run lint:dead-code; }
 # Advisory in CI (continue-on-error); reports test-file duplication, never blocks.
 gate_frontend_duplication_tests() { cd "$REPO_ROOT/frontend" && { npm run lint:dup:tests || echo "ADVISORY: jscpd test-duplication findings above (non-blocking, mirrors CI)."; }; }
+# Advisory dead-FILE report (AE-0178): knip file scope surfaces unused files
+# (the class the blocking export-scoped dead-code gate, AE-0152, does NOT cover).
+# Too noisy to block (barrel-reachable / framework files); ALWAYS non-blocking —
+# `|| echo ADVISORY` swallows knip's non-zero exit so the gate can only PASS.
+# Mirrors the duplication-tests / mutation advisory idiom above.
+gate_frontend_dead_files() { cd "$REPO_ROOT/frontend" && { npm run lint:dead-files || echo "ADVISORY: knip dead-file findings above (non-blocking, advisory report only)."; }; }
 gate_frontend_legacy_guard()    { cd "$REPO_ROOT/frontend" && npm run check:legacy; }
 gate_frontend_legacy_inventory() { cd "$REPO_ROOT/frontend" && npm run check:legacy-inventory; }
 gate_frontend_test()            { cd "$REPO_ROOT/frontend" && npm run test -- --run; }
@@ -248,6 +254,7 @@ FRONTEND_GATES=(
   test:gate_frontend_test
   schema-drift:gate_frontend_schema_drift
   duplication-tests:gate_frontend_duplication_tests
+  dead-files:gate_frontend_dead_files
   mutation:gate_frontend_mutation
 )
 

@@ -132,6 +132,113 @@ pytest
     assert len(errors) >= 2
 
 
+def _review_ticket(tmp_path: Path) -> Path:
+    content = """# AE-9996 — Test
+
+Status: Dev Complete
+Tier: T2
+
+## Goal
+g
+
+## Problem
+p
+
+## Scope
+s
+
+## Non-Goals
+n
+
+## Acceptance Criteria
+- [x] done
+
+## Test Evidence
+```bash
+pytest
+```
+"""
+    path = tmp_path / "AE-9996-test.md"
+    path.write_text(content, encoding="utf-8")
+    return path
+
+
+# AE-0181 — Feature: existence-only QA-report gate hardened to content + attribution
+#   Scenario: a real, attributed QA report satisfies the Review gate
+def test_review_passes_with_attributed_qa_report(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    ticket = parse_ticket(_review_ticket(tmp_path))
+    assert ticket is not None
+    reports = tmp_path / "reports"
+    reports.mkdir()
+    monkeypatch.setattr("scripts.agent_tasks.schema.REPORTS_DIR", reports)
+    (reports / "AE-9996.dev-summary.md").write_text(
+        "# Dev Summary\nTicket: AE-9996\nReal content here.\n", encoding="utf-8"
+    )
+    (reports / "AE-9996.qa.md").write_text(
+        "# QA Validation Report — AE-9996\n\n## Overall Score: 90\nReal QA content.\n",
+        encoding="utf-8",
+    )
+    assert can_transition(ticket, STATUS_REVIEW) == []
+
+
+#   Scenario: an EMPTY/placeholder QA report must NOT vacuously pass
+def test_review_fails_on_empty_qa_report(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    ticket = parse_ticket(_review_ticket(tmp_path))
+    assert ticket is not None
+    reports = tmp_path / "reports"
+    reports.mkdir()
+    monkeypatch.setattr("scripts.agent_tasks.schema.REPORTS_DIR", reports)
+    (reports / "AE-9996.dev-summary.md").write_text(
+        "# Dev Summary\nTicket: AE-9996\nReal content.\n", encoding="utf-8"
+    )
+    (reports / "AE-9996.qa.md").write_text("\n\n", encoding="utf-8")  # empty
+    errors = can_transition(ticket, STATUS_REVIEW)
+    assert any("empty or a placeholder" in e for e in errors)
+
+
+#   Scenario: a QA report authored for ANOTHER ticket (same slot) must not freeload
+def test_review_fails_on_unattributed_qa_report(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    ticket = parse_ticket(_review_ticket(tmp_path))
+    assert ticket is not None
+    reports = tmp_path / "reports"
+    reports.mkdir()
+    monkeypatch.setattr("scripts.agent_tasks.schema.REPORTS_DIR", reports)
+    (reports / "AE-9996.dev-summary.md").write_text(
+        "# Dev Summary\nTicket: AE-9996\nReal content.\n", encoding="utf-8"
+    )
+    # Report content names a DIFFERENT ticket — it must not satisfy AE-9996.
+    (reports / "AE-9996.qa.md").write_text(
+        "# QA Validation Report — AE-1234\n\n## Overall Score: 90\nQA for 1234.\n",
+        encoding="utf-8",
+    )
+    errors = can_transition(ticket, STATUS_REVIEW)
+    assert any("not attributed to AE-9996" in e for e in errors)
+
+
+#   Scenario: a dev-summary authored for ANOTHER ticket must not freeload either
+def test_dev_complete_fails_on_unattributed_dev_summary(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    ticket = parse_ticket(_review_ticket(tmp_path))
+    assert ticket is not None
+    reports = tmp_path / "reports"
+    reports.mkdir()
+    monkeypatch.setattr("scripts.agent_tasks.schema.REPORTS_DIR", reports)
+    # Dev-summary body names a different ticket (no "AE-9996").
+    (reports / "AE-9996.dev-summary.md").write_text(
+        "# Dev Summary\nTicket: AE-1234\nWork for a different ticket.\n",
+        encoding="utf-8",
+    )
+    errors = validate_ticket_file(ticket)
+    assert any("not attributed to AE-9996" in e for e in errors)
+
+
 def test_validate_all_real_repo() -> None:
     tickets = load_tickets(TASKS_DIR)
     for ticket in tickets:

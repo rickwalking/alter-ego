@@ -29,6 +29,8 @@ set -uo pipefail
 SCOPE="${1:-all}"
 BASE_REF="${GATES_BASE_REF:-origin/main}"
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+# shellcheck source=scripts/lib/diff_base.sh
+source "$REPO_ROOT/scripts/lib/diff_base.sh"
 cd "$REPO_ROOT"
 git fetch origin main --depth=1 2>/dev/null || true
 
@@ -48,8 +50,20 @@ fi
 
 DIFF_FILE="$(mktemp)"; NAMES_FILE="$(mktemp)"
 trap 'rm -f "$DIFF_FILE" "$NAMES_FILE"' EXIT
-git diff "${BASE_REF}...HEAD" -U0 -- "${PATHSPEC[@]}" 2>/dev/null > "$DIFF_FILE"
-git diff --name-only "${BASE_REF}...HEAD" -- "${PATHSPEC[@]}" 2>/dev/null > "$NAMES_FILE"
+# Resolve the diff range via the shared 3-tier fallback (AE-0177) instead of the
+# bare merge-base form with a `2>/dev/null` swallow. On a stacked branch with no
+# merge base this falls back to the two-ref form; if neither resolves the
+# resolver warns and the scan degrades to advisory (empty diff = nothing net-new
+# to flag) rather than silently passing on a swallowed `fatal: no merge base`.
+if RANGE="$(resolve_diff_base "$BASE_REF")"; then
+  # shellcheck disable=SC2086 # $RANGE word-splits into one or two refs by design.
+  git diff $RANGE -U0 -- "${PATHSPEC[@]}" > "$DIFF_FILE" 2>/dev/null || true
+  # shellcheck disable=SC2086
+  git diff --name-only $RANGE -- "${PATHSPEC[@]}" > "$NAMES_FILE" 2>/dev/null || true
+else
+  echo "Integrity scan: diff base unresolved — ADVISORY this run (no net-new diff to scan)." >&2
+  : > "$DIFF_FILE"; : > "$NAMES_FILE"
+fi
 
 DIFF_FILE="$DIFF_FILE" NAMES_FILE="$NAMES_FILE" BASE_REF="$BASE_REF" python3 - <<'PY'
 import os, re, sys

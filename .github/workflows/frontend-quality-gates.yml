@@ -476,6 +476,43 @@ jobs:
             "Frontend" "Duplication (tests, advisory)" \
             "jscpd scanned test-file duplication (non-blocking). Acceptable test boilerplate is not gated; review the jscpd report in workflow logs for egregious cases worth extracting into shared fixtures."
 
+  dead-files-advisory:
+    name: frontend / Dead files (advisory)
+    # AE-0178: surfaces unused FILES (knip --include files) — the class the
+    # blocking export-scoped dead-code gate (AE-0152) does NOT cover. Non-blocking
+    # by design — knip's file scope reports barrel-reachable / framework files too
+    # noisy to block on; this job only reports the signal (mirrors the
+    # duplication-tests advisory). Do not delete reported files reflexively.
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Report dead files (knip, file scope)
+        working-directory: .
+        run: bash scripts/ci/gates.sh frontend:dead-files
+
+      - name: Post PR dead-files summary
+        if: always() && github.event_name == 'pull_request'
+        working-directory: .
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_EVENT_PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          bash scripts/ci/post-pr-quality-comment.sh \
+            "Frontend" "Dead files (advisory)" \
+            "knip scanned for unused FILES (non-blocking). Complements the blocking export-scoped dead-code gate; barrel-reachable / framework files are noisy, so review the knip report in workflow logs for genuinely orphaned files worth removing."
+
   mutation-advisory:
     name: frontend / Mutation (advisory)
     needs: [test]

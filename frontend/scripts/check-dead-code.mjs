@@ -58,6 +58,12 @@ function gitDiffNames(range) {
  * Prefers the merge-base (`BASE...HEAD`); falls back to a direct two-ref diff
  * (`BASE HEAD`) when there is no merge base (e.g. a stacked branch whose base
  * ref has diverged), so the gate still works off a stacked PR.
+ *
+ * This is the canonical REFERENCE implementation of the 3-tier fallback. The
+ * shared bash port `scripts/lib/diff_base.sh` (AE-0177) mirrors this logic for
+ * the bash gates (check-integrity, changed-{frontend,backend}-files, ruff-strict);
+ * keep the two in parity. Kept in JS here to avoid a node->bash shell-out on the
+ * hot dead-code path.
  */
 function changedFrontendFiles() {
   try {

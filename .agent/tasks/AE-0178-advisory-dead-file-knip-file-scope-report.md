@@ -1,6 +1,6 @@
 # AE-0178 — Advisory dead-file (knip file-scope) report
 
-Status: Intake
+Status: Dev Complete
 Tier: T1
 Priority: Low
 Type: Task
@@ -41,10 +41,13 @@ app-router/framework files — too noisy to block, but worth visibility (like th
 
 ## Acceptance Criteria
 
-- [ ] Advisory job runs knip over file scope and posts a PR summary.
-- [ ] Job never fails the PR (`continue-on-error`).
-- [ ] Documented as advisory in `docs/guides/qa-checkpoints.md` (next to the
-      blocking dead-code gate and the duplication-tests advisory).
+- [x] Advisory job runs knip over file scope and posts a PR summary
+      (`frontend / Dead files (advisory)` in frontend-quality-gates.yml; runs
+      `gates.sh frontend:dead-files`; posts via post-pr-quality-comment.sh).
+- [x] Job never fails the PR — `continue-on-error: true` AND the gate itself is
+      non-blocking (`|| echo ADVISORY` swallows knip's non-zero exit → always PASS).
+- [x] Documented as advisory in `docs/guides/qa-checkpoints.md` (Orphaned Files
+      section, next to the blocking dead-code gate and duplication-tests advisory).
 
 ## Repro Steps
 
@@ -69,11 +72,24 @@ Ticket created.
 
 ## Files Touched
 
-Pending.
+- `frontend/package.json` — `lint:dead-files` script (`knip --include files`).
+- `scripts/ci/gates.sh` — `gate_frontend_dead_files` (advisory, `|| echo ADVISORY`) + FRONTEND_GATES registration.
+- `.github/workflows/frontend-quality-gates.yml` — `dead-files-advisory` job (continue-on-error).
+- `docs/guides/qa-checkpoints.md` — advisory documentation.
 
 ## Test Evidence
 
-Pending.
+```bash
+$ bash scripts/ci/gates.sh frontend:dead-files
+>>> frontend:dead-files: PASS
+GATES_JSON: {"pass":1,"fail":0,"skip":0,...}
+# knip reports ~21 unused files; the gate still PASSes (advisory, never blocks).
+
+$ bash scripts/ci/check-integrity.sh frontend
+PASS: no net-new gaming detected.
+```
+No rule-fires test required (AE-0180): this gate is ADVISORY-only — it has no
+failing path to seed-test (it can only PASS by design).
 
 ## QA Report
 
