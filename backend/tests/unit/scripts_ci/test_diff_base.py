@@ -15,23 +15,31 @@ and the exit code (0 = resolved, 1 = advisory).
 
 from __future__ import annotations
 
-import subprocess
+import shutil
+import subprocess  # noqa: S404  # integrity-ok: AE-0177 — a test for a bash gate resolver must invoke a subprocess (mirrors test_checkpoint_fixture_portability.py)
 from pathlib import Path
-
-import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[4]
 RESOLVER = REPO_ROOT / "scripts" / "lib" / "diff_base.sh"
+# Resolve interpreters to absolute paths so the test never relies on a partial
+# executable name (S607); all arguments below are fixed/test-controlled (S603).
+GIT = shutil.which("git") or "git"
+BASH = shutil.which("bash") or "bash"
 
 
-def _git(repo: Path, *args: str) -> None:
-    subprocess.run(
-        ["git", *args],
+def _git_out(repo: Path, *args: str) -> str:
+    result = subprocess.run(  # noqa: S603  # integrity-ok: AE-0177 — fixed `git` path, test-controlled args in a throwaway repo
+        [GIT, *args],
         cwd=repo,
         check=True,
         capture_output=True,
         text=True,
     )
+    return result.stdout
+
+
+def _git(repo: Path, *args: str) -> None:
+    _git_out(repo, *args)
 
 
 def _init_repo(repo: Path) -> None:
@@ -44,8 +52,8 @@ def _init_repo(repo: Path) -> None:
 def _resolve(repo: Path, base_ref: str) -> subprocess.CompletedProcess[str]:
     """Source the resolver and call resolve_diff_base in `repo`."""
     script = f'source "{RESOLVER}"; resolve_diff_base "{base_ref}"'
-    return subprocess.run(
-        ["bash", "-c", script],
+    return subprocess.run(  # noqa: S603  # integrity-ok: AE-0177 — fixed `bash` path, test-controlled script in a throwaway repo
+        [BASH, "-c", script],
         cwd=repo,
         capture_output=True,
         text=True,
@@ -85,13 +93,7 @@ def test_falls_back_to_two_ref_when_no_merge_base(tmp_path: Path) -> None:
     # merge base with the orphan-rooted HEAD.
     base = "master"
     # git's default branch may be 'main' or 'master' depending on version/config.
-    branches = subprocess.run(
-        ["git", "branch", "--format=%(refname:short)"],
-        cwd=repo,
-        check=True,
-        capture_output=True,
-        text=True,
-    ).stdout.split()
+    branches = _git_out(repo, "branch", "--format=%(refname:short)").split()
     if "master" not in branches and "main" in branches:
         base = "main"
 
