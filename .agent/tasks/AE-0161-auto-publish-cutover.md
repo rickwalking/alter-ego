@@ -2,6 +2,7 @@
 
 Status: Intake
 Tier: T2
+Class: B
 Priority: High
 Type: Task
 Area: Backend/Frontend

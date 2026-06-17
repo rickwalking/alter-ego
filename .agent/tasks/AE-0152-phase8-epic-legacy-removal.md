@@ -22,7 +22,7 @@ Phases 0-7 left compatibility scaffolding (frontend @/features shims, backend re
 
 ## Scope
 
-Coordinate the Phase 8 vertical slices: Class A (safe cleanup) AE-0153..0160 + AE-0163 (writer consolidation) + AE-0164 (identity slice 2) + AE-0165 (auth e2e) + Class B (consent-gated) AE-0161..0162. Supersedes the umbrella deferral records AE-0133 (->0161/0162) and AE-0143 (->0153-0157).
+Coordinate the Phase 8 vertical slices: Class A (safe cleanup) AE-0153..0160 + AE-0163 (writer consolidation) + AE-0164 (identity slice 2) + AE-0165 (auth e2e) + Class B AE-0161..0162 (consent-gated behavior/destructive) and AE-0166..0171 (kaizen-originated quality enforcements, owner-grouped into Class B as deferred post-PR-#23 follow-ups; ratchet UP/HOLD, no consent/drain gate). Supersedes the umbrella deferral records AE-0133 (->0161/0162) and AE-0143 (->0153-0157).
 
 ## Non-Goals
 
@@ -39,7 +39,7 @@ destructive column drop) is consent-gated + drain-gated (ADR-0008). See `docs/pl
 ## Acceptance Criteria
 
 - [ ] All Class-A sub-tickets (AE-0153..0160, AE-0163, AE-0164, AE-0165) SHALL reach Review behavior-preservingly with green gates
-- [ ] Class-B sub-tickets (AE-0161/0162) SHALL remain Intake until explicit owner consent
+- [ ] Class-B sub-tickets (AE-0161/0162 consent-gated; AE-0166..0171 kaizen follow-ups) SHALL remain Intake until scheduled (AE-0161/0162 additionally require explicit owner consent + drain)
 - [ ] At epic close: no production import uses legacy module paths; architecture rules pass without broad ignores; the destructive drop (if executed) is proven reversible + drain-gated
 
 ## Gherkin Scenarios
@@ -48,7 +48,7 @@ Not applicable — legacy-removal cleanup; verified by the green-gate safety net
 
 ## Dependencies
 
-- Blocks: AE-0153..AE-0165
+- Blocks: AE-0153..AE-0171
 - Blocked by: —
 - Related: AE-0152
 
