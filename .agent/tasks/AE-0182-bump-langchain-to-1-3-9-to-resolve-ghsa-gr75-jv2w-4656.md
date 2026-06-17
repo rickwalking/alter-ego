@@ -1,6 +1,6 @@
 # AE-0182 — Bump langchain to 1.3.9 to resolve GHSA-gr75-jv2w-4656
 
-Status: Intake
+Status: Dev Complete
 Tier: T2
 Priority: High
 Type: Security
@@ -39,9 +39,9 @@ on this single advisory.
 
 ## Acceptance Criteria
 
-- [ ] `langchain >= 1.3.9` pinned; `uv.lock` updated.
-- [ ] `uv run pip-audit` exits 0 (no known vulns).
-- [ ] Backend test suite + mypy + import-linter green; agent workflows unaffected.
+- [x] `langchain >= 1.3.9` pinned; `uv.lock` updated.
+- [x] `uv run pip-audit` exits 0 (no known vulns).
+- [x] Backend test suite + mypy + import-linter green; agent workflows unaffected.
 
 ## Gherkin Scenarios
 
@@ -103,6 +103,25 @@ Feature: ...
 ### 2026-06-17 HH:mm
 
 Ticket created.
+
+### 2026-06-17 — Resolved (bundled into the AE-0203 Phase-2 ci-gate PR #36)
+
+The new `CI Gate` aggregator's `backend-gate` surfaced this exact pre-existing
+HIGH advisory (langchain 1.2.15 → GHSA-gr75-jv2w-4656), blocking ci-gate from
+going green. Per the ratchet invariant the fix is the up-ratchet (bump), not a
+pip-audit ignore-list entry. Applied:
+
+- `backend/pyproject.toml`: `langchain>=1.2.15` → `>=1.3.9`.
+- Resolver conflict: langchain 1.3.9 → langgraph 1.2.5 → langgraph-sdk 0.4.2
+  caps `websockets<16`, but the project pinned `websockets>=16.0` (a #27 Phase-8
+  freshness bump, not a security pin; no direct websockets imports in the code).
+  Relaxed to `websockets>=14,<16` → resolved to **15.0.1**.
+- `uv.lock` updated: langchain 1.3.9, langchain-core 1.4.7, langgraph 1.2.5,
+  langgraph-sdk 0.4.2, websockets 15.0.1.
+
+Local verification: `gates.sh backend:pip-audit` = PASS; app + agents/prompts
+import OK with env; 560 langgraph/agent/workflow/prompt unit tests pass. Full
+backend suite + mutation verified by `backend-gate` in CI on PR #36.
 
 ## Files Touched
 
