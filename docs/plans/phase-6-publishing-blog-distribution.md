@@ -1,5 +1,7 @@
 # Phase 6 — Separate Publishing, Blog, and Distribution (epic plan)
 
+**Status: Done** — shipped.
+
 **Planner output.** Source: `.agent/reports/domain-modularization.options.md` §"Phase 6" (lines 1024-1050),
 the BlogPost decision (lines 299-303), and the `publishing` module-table row (line 465). Builds on merged
 Phases 0-5 (`modules/{knowledge,identity,conversation,editorial,presentation}` live). **Precondition: Phase 5

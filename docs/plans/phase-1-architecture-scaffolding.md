@@ -1,5 +1,7 @@
 # Phase 1 — Architecture Scaffolding Without Moving Behavior (epic plan)
 
+**Status: Done** — shipped (PR #15).
+
 **Planner output** (planner-skill). Source plan:
 `.agent/reports/domain-modularization.options.md` §"Phase 1". Gate: the
 migrate-in-place delta review cleared Phase 1 to start

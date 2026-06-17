@@ -1,5 +1,7 @@
 # Phase 5 — Extract Carousel Presentation (epic plan)
 
+**Status: Done** — shipped (PR #19).
+
 **Planner output.** Source: `.agent/reports/domain-modularization.options.md` §"Phase 5" (lines 989-1024).
 Builds on merged Phases 0-4 (`modules/{knowledge,identity,conversation,editorial}` live; the editorial module
 owns the carousel WORKFLOW slice behind a facade + `LegacyCarouselAcl` + `CarouselProjectWriteOwner`).

@@ -1,5 +1,7 @@
 # Phase 4 — EditorialProject facade over CarouselProject (epic plan)
 
+**Status: Done** — shipped (PR #18).
+
 **Planner output.** Source: `.agent/reports/domain-modularization.options.md` §"Phase 4" (lines 959-989),
 preconditions (108-120) and the sequencing rule (1150-1180). Builds on merged Phases 0-3
 (`modules/knowledge`, `modules/identity`, `modules/conversation` are live): reuses the AE-0081 module

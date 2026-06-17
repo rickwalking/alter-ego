@@ -1,5 +1,7 @@
 # RAG System Frontend - Comprehensive Project Proposal
 
+> Status: Superseded — historical record
+
 ## Project Overview
 
 This document outlines the standards, architecture, and best practices for building a modern React-based frontend for your RAG (Retrieval-Augmented Generation) system about yourself. The goal is to create a beautiful, accessible, and performant SSR application.

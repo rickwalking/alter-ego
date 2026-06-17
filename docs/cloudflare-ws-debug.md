@@ -1,5 +1,7 @@
 # WebSocket Debug: Cloudflare HTTP/2 + Double-Accept
 
+> Status: Superseded — historical record (resolved; WS replaced by SSE per docs/plan-sse-migration-v2.md)
+
 ## Symptoms
 
 - Publish page `GET /create/{id}/publish` returns `500` in browser (CF cache)

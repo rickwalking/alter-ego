@@ -1,5 +1,7 @@
 # AE-0040 Series Rollback Plan
 
+> Status: Superseded — historical record
+
 ## Scope
 
 This document covers rollback strategy for the AE-0041 through AE-0049 ticket
