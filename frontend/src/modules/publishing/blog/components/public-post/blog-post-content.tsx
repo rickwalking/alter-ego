@@ -1,9 +1,6 @@
 import Image from "next/image";
 import ReactMarkdown from "react-markdown";
-import {
-  CAROUSEL_SLIDE_HEIGHT,
-  CAROUSEL_SLIDE_WIDTH,
-} from "@/constants/blog";
+import { CAROUSEL_SLIDE_HEIGHT, CAROUSEL_SLIDE_WIDTH } from "@/constants/blog";
 import { isSafeMarkdownHref } from "@/lib/safe-markdown-href";
 import type {
   BlogPostContentProps,
