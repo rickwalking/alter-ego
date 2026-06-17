@@ -51,6 +51,15 @@ alter-ego/
   - **Tie-break** — if author and QA disagree on whether a ticket is
     behavior-changing, **default to requiring a `.feature`**; QA (the quality
     guardian) is the deciding authority.
+- **Rule-fires regression test (mandatory for any static-analysis rule; AE-0180)** —
+  any ticket that **adds or promotes** a static-analysis rule (ESLint, ruff, or a
+  custom `scripts/` checker) MUST ship a test that proves the rule **FIRES on a
+  seeded violation** (asserts a non-zero exit or `severity === 2`), not merely
+  that the current tree passes. "Passes on the real tree" proves nothing about
+  whether the rule catches its target. Exemplars:
+  `frontend/src/scripts/use-client.test.ts`,
+  `frontend/src/scripts/eslint-fetch-rule.test.ts`. See
+  [`docs/guides/qa-checkpoints.md` → Rule-fires regression test](docs/guides/qa-checkpoints.md#rule-fires-regression-test-standard-ae-0180).
 - **Test behavior, not implementation**
 - **Mock external dependencies**
 - **Mutation testing** — Weekly `mutmut` (backend) and Stryker (frontend) runs to validate assertion quality

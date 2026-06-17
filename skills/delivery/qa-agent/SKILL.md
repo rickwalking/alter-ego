@@ -261,6 +261,14 @@ their Phase 0 results.** This subagent's job is the *judgment* layer on top:
       `eslint --quiet`** — it skips the chained checks and will green-light code
       CI fails (this let inline component types slip past QA on 2026-06-17).
       Always reproduce via `gates.sh frontend:lint`.
+- [ ] **Rule-fires regression test (AE-0180)** — if the diff **adds or promotes**
+      any static-analysis rule (an ESLint rule, a ruff selection, or a custom
+      `scripts/` checker), confirm it ships a test that proves the rule **FIRES on
+      a seeded violation** (non-zero exit / `severity === 2`), not just that the
+      tree passes. A rule-add/promote with no seeded-violation test is a 🔴 Blocker
+      — the enforcement claim is unverified. Exemplars:
+      `frontend/src/scripts/use-client.test.ts`, `eslint-fetch-rule.test.ts`. Full
+      standard: `docs/guides/qa-checkpoints.md` → Rule-fires regression test.
 - [ ] **No `Any`/`object` types** — explicit types everywhere (gates miss intent)
 - [ ] **No magic strings** — string literals extracted to named constants
 - [ ] **Early returns** — no deeply nested `if` ladders

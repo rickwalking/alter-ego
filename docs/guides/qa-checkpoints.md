@@ -173,6 +173,39 @@
 | No unused variables | ruff check --select F841 src/ | Zero |
 | No commented-out code | ruff check --select ERA001 src/ | Zero |
 
+### Rule-fires regression test standard (AE-0180)
+
+**Any ticket that adds or promotes a static-analysis rule MUST ship a test that
+proves the rule FIRES on a seeded violation** — not merely that the current tree
+passes. This applies to:
+
+- new/promoted **ESLint** rules (e.g. `warn` → `error`),
+- new/promoted **ruff** selections,
+- any **custom `scripts/` checker** (e.g. `frontend/scripts/check-*.mjs`,
+  `scripts/ci/*.sh`, `scripts/lib/*.sh`).
+
+**Why:** "passes on the real tree" proves the rule does not *currently* trip — it
+proves nothing about whether the rule actually catches the thing it targets. A
+silently-neutered rule (e.g. AE-0166 finding H1, where a same-key flat-config
+override downgraded an `error` to nothing) passes a green tree while enforcing
+nothing. Only a seeded-violation test detects that.
+
+**Contract:** the test seeds a known-bad probe and asserts the rule rejects it —
+a **non-zero exit** for CLI checkers, or `severity === 2` for an ESLint message.
+A passing test for the real config/tree SHOULD accompany it (both directions).
+
+**Exemplars (copy these patterns):**
+
+| Pattern | File | Asserts |
+|---------|------|---------|
+| Custom `.mjs`/`.sh` checker | `frontend/src/scripts/use-client.test.ts` | seeded bad component → non-zero exit; real tree → exit 0 |
+| ESLint rule severity | `frontend/src/scripts/eslint-fetch-rule.test.ts` | seeded `fetch()`-in-`useEffect` probe → a `no-restricted-syntax` message with `severity === 2` |
+| Bash resolver / gate helper | `backend/tests/unit/scripts_ci/test_diff_base.py` | drives the bash helper in a throwaway repo; asserts the advisory/fallback paths |
+
+**QA enforcement:** the code-quality dimension treats a rule-add/promote without a
+rule-fires test as a finding — the claim "this rule is enforced" is *unverified*
+until a test exercises it.
+
 ### Type Checking
 
 | Checkpoint | Command | Threshold |
@@ -250,7 +283,7 @@ the rest are tracked as tickets.
 | **Diff-warning granularity (K4)** | A diff-scoped lint gate that claims to block `warn`-level rules on changed files cannot do so at file granularity without forcing refactors of pre-existing warnings in any touched file. Verify the *claim* matches the *gate*: if `lint:changed` runs `eslint --quiet`, warnings are surfaced, NOT gated. Don't document enforcement a gate doesn't perform. | finding H2 |
 | **Guard verification surface (K5)** | A guard/safety check must verify *everything* its docstring claims. The worktree guard claimed "cannot mutate the primary working tree" but checked only HEAD/branch until a porcelain tripwire was added. For each protective claim, point to the test that exercises it. | finding L2 |
 | Same-key rule override (K1) | See **AE-0179** — ESLint flat config replaces (not merges) same-key rules across overlapping `files` blocks. | finding H1 |
-| Rule-fires regression test (K2) | See **AE-0180** — a rule added/promoted must ship a test proving it ERRORS on a seeded violation, not just that the tree passes. | acceptance finding |
+| Rule-fires regression test (K2) | A rule added/promoted must ship a test proving it ERRORS on a seeded violation, not just that the tree passes — now a standing standard, see [Rule-fires regression test standard (AE-0180)](#rule-fires-regression-test-standard-ae-0180). | acceptance finding |
 | Existence-only gates (K3) | See **AE-0181** — gates that pass on mere artifact existence (reports, sections) must check content/attribution. | finding M1 |
 
 ---

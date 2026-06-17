@@ -28,12 +28,12 @@ frontend/
 
 ### Component Import Conventions
 
-| Layer | Import path | Example |
-|-------|-------------|---------|
-| Atoms | `@/components/atoms/neon-button` | `NeonButton` |
-| Molecules | `@/components/molecules/neon-card` | `NeonCard`, `NeonCardHeader` |
-| Organisms | `@/components/organisms/neon-sidebar` | `NeonSidebar` |
-| Barrel | `@/components/atoms` (optional) | Re-export from `index.ts` |
+| Layer     | Import path                           | Example                      |
+| --------- | ------------------------------------- | ---------------------------- |
+| Atoms     | `@/components/atoms/neon-button`      | `NeonButton`                 |
+| Molecules | `@/components/molecules/neon-card`    | `NeonCard`, `NeonCardHeader` |
+| Organisms | `@/components/organisms/neon-sidebar` | `NeonSidebar`                |
+| Barrel    | `@/components/atoms` (optional)       | Re-export from `index.ts`    |
 
 - **Do not** import from `@/components/ui` — shadcn layer removed; use `Neon*` components directly.
 - **Do not** use `../` for cross-folder imports — use `@/` path alias.
@@ -41,19 +41,19 @@ frontend/
 
 ## Tech Stack
 
-| Category | Technology |
-|----------|-----------|
-| Framework | Next.js 16 (App Router) |
-| React | React 19 |
-| Language | TypeScript 5 (strict) |
-| Styling | Tailwind CSS v4 + CSS variables in `globals.css` `@theme` |
-| State | TanStack Query v5 |
-| Forms | React Hook Form + Zod |
-| Testing | Vitest + RTL (unit), Playwright (E2E), StrykerJS (mutation) |
-| Visual docs | Storybook 9 (`npm run storybook`) |
-| UI Primitives | Custom Neon design system (CVA + compound components) |
-| i18n | next-intl |
-| Animation | Framer Motion |
+| Category      | Technology                                                  |
+| ------------- | ----------------------------------------------------------- |
+| Framework     | Next.js 16 (App Router)                                     |
+| React         | React 19                                                    |
+| Language      | TypeScript 5 (strict)                                       |
+| Styling       | Tailwind CSS v4 + CSS variables in `globals.css` `@theme`   |
+| State         | TanStack Query v5                                           |
+| Forms         | React Hook Form + Zod                                       |
+| Testing       | Vitest + RTL (unit), Playwright (E2E), StrykerJS (mutation) |
+| Visual docs   | Storybook 9 (`npm run storybook`)                           |
+| UI Primitives | Custom Neon design system (CVA + compound components)       |
+| i18n          | next-intl                                                   |
+| Animation     | Framer Motion                                               |
 
 ## Legacy v1.0 removal
 
@@ -83,6 +83,7 @@ npm run build-storybook          # Static Storybook build
 ## Code Rules
 
 ### TypeScript Strict Mode
+
 - **No `any` types** — Use explicit, specific types
 - **No `object` types** — Use `Record<string, unknown>` or specific interfaces
 - **All functions must have explicit return types**
@@ -90,6 +91,7 @@ npm run build-storybook          # Static Storybook build
 - **Props interfaces defined for all components**
 
 ### Constants
+
 - **No magic strings** — Extract all string literals to named constants
 - **Neon tokens** — Colors, borders, shadows in `src/constants/neon.ts` and `globals.css` `@theme`
 - **Constants in `src/constants/`** — One file per domain
@@ -97,12 +99,14 @@ npm run build-storybook          # Static Storybook build
 - Example: `API_ENDPOINTS.CHAT`, `NEON_CYAN`, `BG_CARD`
 
 ### i18n
+
 - **No hardcoded text in components** — All user-facing strings use i18n
 - **Translation files in `src/i18n/locales/`**
 - **Use `useTranslations` hook** for client components
 - **Use `getTranslations` for server components**
 
 ### Component Architecture
+
 - **Atomic design** — atoms → molecules → organisms; pages compose organisms
 - **Server Components by default** — Add `'use client'` only when needed
 - **Max 400 lines per file** — Split large pages into subcomponents (see `dashboard/chat/`, `dashboard/rubrics/`)
@@ -113,11 +117,13 @@ npm run build-storybook          # Static Storybook build
 - **Compound components for complex UI patterns**
 
 ### NEVER use useEffect for Data Fetching
+
 - Use Server Components for initial data
 - Use TanStack Query for client-side data
 - Use React 19 `use()` hook with Suspense
 
 ### File Organization
+
 - **Constants in `src/constants/`** — Separate files per domain
 - **Zod schemas in `src/schemas/`** — `neon-*.ts` for design system props
 - **Tests co-located with components** — `*.test.tsx` next to source (excluded from `tsc` via stories pattern)
@@ -125,10 +131,17 @@ npm run build-storybook          # Static Storybook build
 - **Storybook stories** — `*.stories.tsx` co-located; excluded from ESLint and `tsc`
 
 ### Testing
+
 - **90%+ branch coverage** — Project target; neon components should have strong unit tests
 - **Gherkin-first** — Write `.feature` files before implementing tests
   - See `tests/features/neon-*.feature` for design system scenarios
   - Tests must reference Gherkin scenarios in comments
+- **Rule-fires regression test (AE-0180)** — adding or promoting any ESLint rule
+  or custom `scripts/` checker requires a test proving it **errors on a seeded
+  violation** (assert non-zero exit / `severity === 2`), not just that the tree
+  passes. Exemplars: `src/scripts/use-client.test.ts`,
+  `src/scripts/eslint-fetch-rule.test.ts`. Full standard:
+  [`../docs/guides/qa-checkpoints.md` → Rule-fires regression test](../docs/guides/qa-checkpoints.md#rule-fires-regression-test-standard-ae-0180).
 - **Test behavior, not implementation**
 - **Use MSW for API mocking**
 - **Mutation testing (StrykerJS)** — ADR-005 thresholds in `stryker.conf.json`:
@@ -138,16 +151,19 @@ npm run build-storybook          # Static Storybook build
   - Run scoped: `npx stryker run --mutate "src/components/atoms/neon-button.tsx"`
 
 ### Styling
+
 - **Tailwind CSS utility classes** — Prefer theme tokens (`text-neon-cyan`, `bg-bg-card`)
 - **CSS variables** — Shared shadows/borders in `globals.css`; reference via `var(--shadow-neon-button)`
 - **`cn()` utility** for conditional classes
 - **Dark mode** — Neon shell is dark-first via `@theme` tokens
 
 ### Control Flow
+
 - **Early returns** — Use guard clauses, avoid nested `if` statements
 - **Complex conditionals** — Use object maps instead of switch/if chains
 
 ### Workflow UI Patterns
+
 - **Approval gates** — Show clear action buttons (Approve / Request Changes / Reject)
 - **Phase indicators** — Visual progress through workflow stages
 - **Timeout warnings** — Show countdown for human review deadlines
@@ -157,6 +173,7 @@ npm run build-storybook          # Static Storybook build
 - **Source attribution** — Show which sources were used for each content section
 
 ### Accessibility
+
 - **WCAG 2.1 AA compliance**
 - **All interactive elements keyboard accessible**
 - **ARIA labels where needed**
@@ -166,6 +183,7 @@ npm run build-storybook          # Static Storybook build
 ## Architecture Decision Records
 
 See `../docs/decisions/` for all ADRs:
+
 - [ADR-001: Adopt MADR for ADRs](../docs/decisions/0001-adopt-madr-for-adrs.md)
 - [ADR-003: Implement Persona-Driven AI Content](../docs/decisions/0003-implement-persona-driven-ai-content.md)
 - [ADR-004: Adopt Event-Driven Architecture](../docs/decisions/0004-adopt-event-driven-architecture.md)

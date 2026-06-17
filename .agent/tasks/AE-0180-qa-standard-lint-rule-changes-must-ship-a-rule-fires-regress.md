@@ -1,6 +1,6 @@
 # AE-0180 — QA standard: lint-rule changes must ship a rule-fires regression test
 
-Status: Intake
+Status: Dev Complete
 Tier: T2
 Priority: Medium
 Type: Quality
@@ -44,9 +44,12 @@ catches the thing it targets.
 
 ## Acceptance Criteria
 
-- [ ] `docs/guides/qa-checkpoints.md` documents the rule-fires-test requirement.
-- [ ] QA agent code-quality checklist includes it.
-- [ ] Linked from `CLAUDE.md`/`frontend/CLAUDE.md` testing section.
+- [x] `docs/guides/qa-checkpoints.md` documents the rule-fires-test requirement
+      (new "Rule-fires regression test standard (AE-0180)" section under Code Quality,
+      with exemplar table; K2 heuristic row now links to it instead of forward-ref).
+- [x] QA agent code-quality checklist includes it (Subagent 2 — Code Quality, new
+      rule-fires checklist item marking a rule-add-without-test as a 🔴 Blocker).
+- [x] Linked from root `CLAUDE.md` and `frontend/CLAUDE.md` testing sections.
 
 ## Gherkin Scenarios
 
@@ -111,11 +114,22 @@ Ticket created.
 
 ## Files Touched
 
-Pending.
+- `docs/guides/qa-checkpoints.md` — new "Rule-fires regression test standard (AE-0180)"
+  section + K2 heuristic row now links to it.
+- `skills/delivery/qa-agent/SKILL.md` — Subagent 2 (Code Quality) rule-fires checklist item.
+- `CLAUDE.md` / `frontend/CLAUDE.md` — testing-section bullets linking the standard.
 
 ## Test Evidence
 
-Pending.
+Docs/process ticket — no behavior change, no gate added (per AE-0153 the
+CI/config/tooling unit-test substitution does not apply because there is no new
+rule or gate here; this codifies the *standard* for other tickets). Verification:
+
+```bash
+$ grep -n "rule-fires-regression-test-standard-ae-0180" CLAUDE.md frontend/CLAUDE.md  # both link the anchor
+$ grep -n "## Rule-fires regression test standard (AE-0180)" docs/guides/qa-checkpoints.md  # section present
+```
+The standard is dogfooded by AE-0179's tests (seeded-violation + allow-list pass).
 
 ## QA Report
 
@@ -123,7 +137,9 @@ Pending.
 
 ## Decision Log
 
-Pending.
+- No gate change: process/standard codification, not a new checker. Per AE-0153,
+  a docs-only ticket with no user-visible behavior change substitutes link/anchor
+  verification for a `.feature`.
 
 ## Blockers
 
