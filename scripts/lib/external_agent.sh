@@ -99,16 +99,20 @@ ext_run() {
 # ext_run_guarded <tool> <prompt-file> <output-file>  (AE-0170)
 #   Runs the external (non-sandboxed) CLI inside a throwaway, DETACHED git
 #   worktree so it cannot mutate the primary working tree or move the working
-#   branch, and ABORTS (restoring) if the primary repo's HEAD/branch moved during
-#   the run (the rogue-detach / off-branch-commit incident). The worktree is
-#   auto-cleaned. The external run's /tmp <output-file> stays authoritative.
+#   branch, and ABORTS if the primary repo's HEAD, branch, OR working-tree status
+#   changed during the run (the rogue-detach / off-branch-commit incident). HEAD
+#   and branch are restored on a trip; a working-tree change is reported and trips
+#   the guard but is NOT auto-reverted (it could be the operator's legitimate
+#   uncommitted work). The worktree is auto-cleaned. The external run's /tmp
+#   <output-file> stays authoritative.
 #   Returns: ext_run's rc, 3 on worktree-setup failure, or 4 on a tripped guard.
 ext_run_guarded() {
   local tool="$1" prompt_file="$2" output_file="$3"
   local primary="$EXT_REPO_ROOT"
-  local head_before branch_before
+  local head_before branch_before status_before
   head_before="$(git -C "$primary" rev-parse HEAD 2>/dev/null)"
   branch_before="$(git -C "$primary" rev-parse --abbrev-ref HEAD 2>/dev/null)"
+  status_before="$(git -C "$primary" status --porcelain 2>/dev/null)"
 
   local wt
   wt="$(mktemp -d "${TMPDIR:-/tmp}/ext-wt.XXXXXX")"
@@ -130,17 +134,24 @@ ext_run_guarded() {
   git -C "$primary" worktree remove --force "$wt" 2>/dev/null || rm -rf "$wt"
   git -C "$primary" worktree prune 2>/dev/null || true
 
-  # Guard: the PRIMARY repo's HEAD + branch must be exactly as before.
-  local head_after branch_after
+  # Guard: the PRIMARY repo's HEAD, branch, and working-tree status must be
+  # exactly as before.
+  local head_after branch_after status_after
   head_after="$(git -C "$primary" rev-parse HEAD 2>/dev/null)"
   branch_after="$(git -C "$primary" rev-parse --abbrev-ref HEAD 2>/dev/null)"
+  status_after="$(git -C "$primary" status --porcelain 2>/dev/null)"
   if [ "$head_after" != "$head_before" ] || [ "$branch_after" != "$branch_before" ]; then
-    echo "FATAL: primary git state changed during the external run (AE-0170 guard):" >&2
+    echo "FATAL: primary git HEAD/branch changed during the external run (AE-0170 guard):" >&2
     echo "  before=${branch_before}@${head_before}  after=${branch_after}@${head_after}" >&2
     if [ "$branch_before" != "HEAD" ]; then
       git -C "$primary" checkout --quiet --force "$branch_before" 2>/dev/null || true
     fi
     git -C "$primary" reset --hard --quiet "$head_before" 2>/dev/null || true
+    return 4
+  fi
+  if [ "$status_after" != "$status_before" ]; then
+    echo "FATAL: primary working tree changed during the external run (AE-0170 guard)." >&2
+    echo "  Inspect with 'git -C \"$primary\" status'; not auto-reverted." >&2
     return 4
   fi
   return "$rc"

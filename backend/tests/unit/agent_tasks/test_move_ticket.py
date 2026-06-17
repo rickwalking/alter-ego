@@ -3,9 +3,13 @@
 from pathlib import Path
 
 import pytest
-from scripts.agent_tasks import move_ticket
-from scripts.agent_tasks.constants import REPORT_DEV_SUFFIX, TASKS_DIR
-from scripts.agent_tasks.schema import parse_ticket
+from scripts.agent_tasks import move_ticket, schema
+from scripts.agent_tasks.constants import (
+    REPORT_DEV_SUFFIX,
+    STATUS_REVIEW,
+    TASKS_DIR,
+)
+from scripts.agent_tasks.schema import can_transition, parse_ticket
 
 
 def _a_ticket():
@@ -49,6 +53,39 @@ def test_scaffold_dev_summary_never_overwrites(
 
     assert result is None
     assert report.read_text(encoding="utf-8") == "HAND-WRITTEN — do not clobber"
+
+
+def test_unfilled_scaffold_is_rejected_at_review(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # AE-0166 QA fix: an auto-scaffolded (unfilled) dev-summary must NOT satisfy
+    # the Review gate just by existing — the developer has to replace it.
+    monkeypatch.setattr(move_ticket, "REPORTS_DIR", tmp_path)
+    monkeypatch.setattr(schema, "REPORTS_DIR", tmp_path)
+    ticket = _a_ticket()
+    qa_report = tmp_path / f"{ticket.ticket_id}.qa.md"
+    qa_report.write_text("qa", encoding="utf-8")
+
+    move_ticket.scaffold_dev_summary(ticket)
+    errors = can_transition(ticket, STATUS_REVIEW)
+
+    assert any("unfilled scaffold" in e for e in errors), errors
+
+
+def test_filled_dev_summary_passes_scaffold_check(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(schema, "REPORTS_DIR", tmp_path)
+    ticket = _a_ticket()
+    (tmp_path / f"{ticket.ticket_id}{REPORT_DEV_SUFFIX}").write_text(
+        "## Developer Completion Report\nReal, hand-written content.\n",
+        encoding="utf-8",
+    )
+    (tmp_path / f"{ticket.ticket_id}.qa.md").write_text("qa", encoding="utf-8")
+
+    errors = can_transition(ticket, STATUS_REVIEW)
+
+    assert not any("scaffold" in e for e in errors), errors
 
 
 def test_template_has_no_unfilled_format_placeholders() -> None:

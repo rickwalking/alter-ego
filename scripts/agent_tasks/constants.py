@@ -80,3 +80,9 @@ HOTFIX_MIN_SECTIONS = (
 
 REPORT_DEV_SUFFIX = ".dev-summary.md"
 REPORT_QA_SUFFIX = ".qa.md"
+
+# Sentinel embedded in the auto-scaffolded dev-summary (move_ticket.py, AE-0169).
+# Its presence means the report is still an unfilled placeholder, so the
+# Dev Complete / Review gates reject it (AE-0166 QA fix — existence alone is not
+# enough; the developer must replace the scaffold).
+DEV_SUMMARY_SCAFFOLD_MARKER = "> SCAFFOLD"

@@ -9,7 +9,10 @@ set -uo pipefail
 
 LIB="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/external_agent.sh"
 PRIMARY="$(mktemp -d "${TMPDIR:-/tmp}/ext-guard-primary.XXXXXX")"
-trap 'rm -rf "$PRIMARY"' EXIT
+# Output lives OUTSIDE the repo (as in real runs: /tmp), so the run's own product
+# does not register as a primary working-tree change.
+out="$(mktemp "${TMPDIR:-/tmp}/ext-guard-out.XXXXXX")"
+trap 'rm -rf "$PRIMARY" "$out" "$out".wt.log' EXIT
 
 git -C "$PRIMARY" init -q -b main
 git -C "$PRIMARY" config user.email t@t.dev
@@ -21,7 +24,6 @@ echo two >> "$PRIMARY/f"; git -C "$PRIMARY" commit -qam two
 . "$LIB"
 EXT_REPO_ROOT="$PRIMARY"
 HEAD0="$(git -C "$PRIMARY" rev-parse HEAD)"
-out="$PRIMARY/out"
 
 fail() { echo "GUARD-CHECK FAIL: $1" >&2; exit 1; }
 
@@ -42,4 +44,11 @@ ext_run_guarded fake /dev/null "$out"; rc=$?
 [ "$(git -C "$PRIMARY" rev-parse HEAD)" = "$HEAD0" ] || fail "primary HEAD not restored"
 git -C "$PRIMARY" worktree list | grep -q "ext-wt" && fail "worktree leaked after rogue run"
 
-echo "external_agent guard-check OK (isolation + detach-detect/restore + cleanup)."
+# --- C) rogue primary working-tree write: guard trips (rc 4) via porcelain -----
+# Simulates a tool that ignores EXT_REPO_ROOT and writes into the primary tree.
+ext_run() { echo rogue >> "$PRIMARY/f"; echo out > "$3"; return 0; }
+ext_run_guarded fake /dev/null "$out"; rc=$?
+[ "$rc" = 4 ] || fail "rogue working-tree write not caught (rc=$rc, expected 4)"
+git -C "$PRIMARY" checkout -q -- f  # not auto-reverted by the guard; tidy up here
+
+echo "external_agent guard-check OK (isolation + detach + worktree-write detect + cleanup)."

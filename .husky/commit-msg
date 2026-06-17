@@ -1,8 +1,8 @@
 #!/usr/bin/env sh
-# commitlint lives in frontend/node_modules; the config (.commitlintrc.json) is
-# at the repo root, found via commitlint's upward config search. Put the frontend
-# bin dir on PATH and resolve the commit-message file to an absolute path before
-# changing directory (AE-0168).
+# commitlint and its config (frontend/.commitlintrc.json) both live under
+# frontend/, so the @commitlint/config-conventional preset resolves from
+# frontend/node_modules. Put the frontend bin dir on PATH and resolve the
+# commit-message file to an absolute path before changing directory (AE-0168).
 root="$(git rev-parse --show-toplevel)"
 msg="$1"
 case "$msg" in

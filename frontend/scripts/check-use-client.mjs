@@ -20,6 +20,16 @@ const HOOK_RE =
   /\b(useState|useEffect|useLayoutEffect|useReducer|useRef|useContext|useImperativeHandle|useTransition|useDeferredValue|useSyncExternalStore)\s*\(/;
 const DIRECTIVE_RE = /^\s*["']use client["']/;
 
+// Strip block + line comments so a hook name mentioned only in a comment is not
+// a false positive, and a `"use client"` directive preceded by a leading
+// license/JSDoc block (legal per Next.js) is still recognized. String-literal
+// `//` (e.g. in URLs) is left alone via the leading-boundary group.
+function stripComments(src) {
+  return src
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(/(^|[^:'"`])\/\/.*$/gm, "$1");
+}
+
 function walk(dir) {
   const out = [];
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
@@ -27,10 +37,7 @@ function walk(dir) {
     const p = join(dir, entry.name);
     if (entry.isDirectory()) {
       out.push(...walk(p));
-    } else if (
-      p.endsWith(".tsx") &&
-      !/\.(test|spec|stories)\.tsx$/.test(p)
-    ) {
+    } else if (p.endsWith(".tsx") && !/\.(test|spec|stories)\.tsx$/.test(p)) {
       out.push(p);
     }
   }
@@ -40,11 +47,12 @@ function walk(dir) {
 const files = walk(ROOT);
 const violations = [];
 for (const file of files) {
-  const content = readFileSync(file, "utf8");
-  if (!HOOK_RE.test(content)) continue;
-  // The directive must be in the module prologue (first few lines).
-  const head = content.split("\n").slice(0, 3).join("\n");
-  if (!DIRECTIVE_RE.test(head)) violations.push(file);
+  const code = stripComments(readFileSync(file, "utf8"));
+  if (!HOOK_RE.test(code)) continue;
+  // The directive must be the first statement, but comments/blank lines may
+  // precede it — stripComments() turned those into whitespace, so the directive
+  // is now the first non-blank content if present.
+  if (!DIRECTIVE_RE.test(code.replace(/^\s+/, ""))) violations.push(file);
 }
 
 if (violations.length > 0) {

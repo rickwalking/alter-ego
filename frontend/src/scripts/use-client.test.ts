@@ -62,6 +62,26 @@ describe("use-client static check (AE-0166)", () => {
     expect(status, output).toBe(0);
   });
 
+  it("passes when the directive follows a leading comment block (M2 fix)", () => {
+    writeFileSync(
+      join(dir, "licensed.tsx"),
+      `/**\n * @file licensed component\n */\n"use client";\n` +
+        `import { useState } from "react";\nexport function C(){ const [x]=useState(0); return null; }\n`,
+    );
+    const { status, output } = run(dir);
+    expect(status, output).toBe(0);
+  });
+
+  it("does not flag a hook name that appears only in a comment (L1 fix)", () => {
+    writeFileSync(
+      join(dir, "commented.tsx"),
+      `// historically this used useState before refactor\n` +
+        `export function Pure(){ return null; }\n`,
+    );
+    const { status, output } = run(dir);
+    expect(status, output).toBe(0);
+  });
+
   it("ignores non-component files (a hook .ts module is not flagged)", () => {
     mkdirSync(join(dir, "hooks"));
     writeFileSync(

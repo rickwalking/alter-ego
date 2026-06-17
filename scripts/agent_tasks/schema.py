@@ -8,6 +8,7 @@ from pathlib import Path
 
 from scripts.agent_tasks.constants import (
     ALL_STATUSES,
+    DEV_SUMMARY_SCAFFOLD_MARKER,
     FIELD_STATUS,
     FIELD_TIER,
     HOTFIX_MIN_SECTIONS,
@@ -134,8 +135,9 @@ def can_transition(ticket: Ticket, new_status: str) -> list[str]:
     if new_status == STATUS_REVIEW:
         dev_report = REPORTS_DIR / f"{ticket.ticket_id}{REPORT_DEV_SUFFIX}"
         qa_report = REPORTS_DIR / f"{ticket.ticket_id}{REPORT_QA_SUFFIX}"
-        if not dev_report.exists():
-            errors.append(f"Missing dev summary: {dev_report}")
+        errors.extend(
+            _dev_report_errors(dev_report, f"Missing dev summary: {dev_report}")
+        )
         if not qa_report.exists():
             errors.append(f"Missing QA report: {qa_report}")
 
@@ -162,9 +164,34 @@ def validate_ticket_file(ticket: Ticket) -> list[str]:
 
     if ticket.status == STATUS_DEV_COMPLETE:
         dev_report = REPORTS_DIR / f"{ticket.ticket_id}{REPORT_DEV_SUFFIX}"
-        if not dev_report.exists():
-            errors.append(
-                f"Status Dev Complete but no dev summary at {dev_report.name}"
+        errors.extend(
+            _dev_report_errors(
+                dev_report,
+                f"Status Dev Complete but no dev summary at {dev_report.name}",
             )
+        )
 
     return errors
+
+
+def _dev_report_errors(report: Path, missing_msg: str) -> list[str]:
+    """Validate the dev-summary file backing a Dev Complete / Review transition.
+
+    The file must exist AND not still be the auto-scaffold (AE-0169): existence
+    alone never satisfies the gate — the developer must replace the placeholder.
+    Returns at most one error message; encapsulated here to keep can_transition /
+    validate_ticket_file from branching on each sub-condition.
+    """
+    if not report.exists():
+        return [missing_msg]
+    if _is_unfilled_scaffold(report):
+        return [f"Dev summary is still an unfilled scaffold: {report.name}"]
+    return []
+
+
+def _is_unfilled_scaffold(report: Path) -> bool:
+    """True if the dev-summary still carries the auto-scaffold sentinel (AE-0169)."""
+    try:
+        return DEV_SUMMARY_SCAFFOLD_MARKER in report.read_text(encoding="utf-8")
+    except OSError:
+        return False
