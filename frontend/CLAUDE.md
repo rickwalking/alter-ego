@@ -157,6 +157,24 @@ npm run build-storybook          # Static Storybook build
 - **`cn()` utility** for conditional classes
 - **Dark mode** — Neon shell is dark-first via `@theme` tokens
 
+### ESLint flat-config (replace-not-merge footgun, AE-0179)
+
+- **Flat config REPLACES same-key rules, it does NOT merge them.** When two config
+  objects both set the same rule key (e.g. `no-restricted-syntax`) and both match a
+  file, the **later** object's value wins outright — arrays are not concatenated.
+  A scoped `warn` block can therefore silently neuter a global `error` for exactly
+  the files it targets (this happened in AE-0166, finding H1).
+- **Guard:** `npm run lint:eslint-overrides`
+  (`scripts/check-eslint-rule-overrides.mjs`, part of `npm run lint`) fails if any
+  rule key is declared in more than one **overlapping** local config object,
+  unless it is listed in `eslint-rule-override-allowlist.json` with a
+  justification. Intentional re-declares (the test-file disables, the hooks block
+  re-asserting the fetch guard) are allow-listed; a NEW unlisted collision fails.
+- **If you must re-declare a rule across overlapping scopes**, add it to the
+  allow-list with a reason — that is a deliberate, reviewed decision, not a silent
+  one. Prefer a single declaration where possible. Rule-fires test:
+  `src/scripts/eslint-rule-overrides.test.ts`.
+
 ### Control Flow
 
 - **Early returns** — Use guard clauses, avoid nested `if` statements

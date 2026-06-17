@@ -1,0 +1,13 @@
+{
+  "$comment": "AE-0179 allow-list. A rule key listed here MAY be declared in more than one LOCAL flat-config object whose `files` globs overlap. Every entry is an INTENTIONAL, justified re-declare. Adding a key here is a deliberate, reviewed decision (it re-permits the replace-not-merge footgun for that rule) — the guard fails on any overlapping duplicate NOT listed here. Remove entries when the overlap goes away; never add one to silence a real collision.",
+  "allow": {
+    "max-lines": "Scoped size ceilings (global 400, page/component 200) + the test-file block turns it off — deliberate per-scope tightening (AE-0185).",
+    "max-lines-per-function": "Scoped function-size ceilings (global 50, JSX 150, lib/helpers 30) + test-file off — deliberate per-scope tightening (AE-0185).",
+    "max-statements": "Scoped statement ceilings (global 25, lib/hooks 20) + test-file off — deliberate per-scope tightening.",
+    "complexity": "Scoped complexity ceilings (global 10, hooks 8) + test-file off — deliberate per-scope tightening.",
+    "sonarjs/cognitive-complexity": "Global 15 + test-file off — deliberate test exemption.",
+    "no-magic-numbers": "Logic-layer error + test-file off — test fixtures legitimately use literals.",
+    "@typescript-eslint/no-non-null-assertion": "Production `src` error + test-file off — `!` is idiomatic for known-present fixtures in tests (AE-0199).",
+    "no-restricted-syntax": "Global fetch-in-useEffect error is INTENTIONALLY re-declared in the hooks block (flat config REPLACES, not merges; the hooks block re-asserts it AND adds the bare-fetch guard) — see eslint.config.mjs AE-0166/AE-0184 notes."
+  }
+}
