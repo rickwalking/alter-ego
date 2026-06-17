@@ -325,6 +325,21 @@ runner = "pytest"
 | Implementation satisfies criterion | Manual inspection of code behavior |
 | No scope creep | Verify no behavior exists that is not in the criteria |
 
+### When a `.feature` file is required (AE-0153)
+
+Do **not** flag "missing `.feature`" as a finding for tickets that legitimately
+don't need one. Apply this rule (full text in root `CLAUDE.md` → Testing):
+
+| Ticket kind | `.feature` required? | QA expectation |
+|-------------|----------------------|----------------|
+| Behavior-changing feature / bugfix | **Yes** | `.feature` covering happy + edge + failure |
+| Pure refactor (no observable behavior change) | No | Focused unit tests; ticket asserts no-behavior-change + reviewer sign-off |
+| CI / config / tooling (new gate, lint rule, script, workflow) | No | Unit tests **+ the gate's seeded-violation test**; ticket lists affected gates + sign-off |
+
+**Tie-break:** if author and QA disagree on whether a ticket is behavior-changing,
+**default to requiring a `.feature`** — QA is the deciding authority. A pure
+refactor/CI ticket that documents the evidence above is **PASS**, not a warning.
+
 ### Gherkin Mapping Convention
 
 ```python
@@ -532,6 +547,7 @@ can never return, ratchet the baseline down:
 | frontend / Lint (changed) | eslint `--max-warnings=0` on diff | CI failure |
 | frontend / Component types (AE-0144) | `gates.sh frontend:component-types` (`npm run lint:component-types`) | CI failure — no NEW inline `interface`/`type {...}` in `modules/**` components/hooks; down-only baseline ratchet ([convention](../../frontend/src/modules/README.md#component-type-location-convention-ae-0144)) |
 | frontend / Duplication (AE-0149) | `gates.sh frontend:duplication` (`npm run lint:dup`, jscpd) | CI failure — NEW source copy-paste duplication above the `frontend/.jscpd.json` threshold; test/spec/story files excluded; threshold may only ratchet DOWN (raising it flagged by `check-integrity.sh`) |
+| frontend / Dead code (AE-0152) | `gates.sh frontend:dead-code` (`npm run lint:dead-code`, knip) | CI failure — NEW unused export in a **changed** file (dead code). Identity-keyed baseline (`type\|file\|symbol`) in `frontend/scripts/dead-code-baseline.json`; pre-existing/unchanged-file findings are advisory until the full-tree flip; baseline `count` is down-only (raising it flagged by `check-integrity.sh`) |
 | frontend / Type Check | tsc --noEmit | CI failure |
 | frontend / Test | vitest | CI failure |
 | frontend / Format | prettier --check | CI failure |

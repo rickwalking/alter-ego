@@ -31,7 +31,11 @@ This document provides general guidelines for AI agents working on the Python ba
 
 ### 4. Testing is Non-Negotiable
 - **90%+ branch coverage** — Focus on branches, not lines
-- **Gherkin scenarios first** — Write `.feature` files before tests
+- **Gherkin scenarios first** — Write `.feature` files before tests, for
+  **behavior-changing** work. **Pure refactors and CI/config/tooling tickets** may
+  substitute focused unit tests + the gate's seeded-violation test, provided the
+  ticket documents no-behavior-change + reviewer sign-off (AE-0153; full rule in
+  root `CLAUDE.md` → Testing). Default to requiring a `.feature` when in doubt.
 - **Test behavior, not implementation**
 - **Mock external dependencies**
 

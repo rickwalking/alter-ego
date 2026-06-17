@@ -37,6 +37,20 @@ alter-ego/
 - **Gherkin-first approach** — Write `.feature` files with scenarios before implementing tests
   - Cover happy paths, edge cases, and failures
   - Tests should reference Gherkin scenarios in comments
+- **When a `.feature` file is required vs when unit tests suffice (AE-0153):**
+  - **Required** — any **behavior-changing** feature or bugfix ticket (new/changed
+    user-visible behavior, API contract, workflow, or business rule). Write
+    `.feature` scenarios covering happy + edge + failure first.
+  - **Unit tests suffice** — **pure refactors** (no public/observable behavior
+    change) and **CI/config/tooling** tickets (a new gate, lint rule, script, or
+    workflow). These substitute focused unit tests **plus** the gate's own
+    seeded-violation test. To use this path, the ticket MUST document: (a) an
+    explicit "no public/user-visible behavior change" assertion, (b) the
+    seeded-violation test (for CI/config work), (c) the affected gates, and
+    (d) reviewer/QA sign-off on the no-`.feature` classification.
+  - **Tie-break** — if author and QA disagree on whether a ticket is
+    behavior-changing, **default to requiring a `.feature`**; QA (the quality
+    guardian) is the deciding authority.
 - **Test behavior, not implementation**
 - **Mock external dependencies**
 - **Mutation testing** — Weekly `mutmut` (backend) and Stryker (frontend) runs to validate assertion quality

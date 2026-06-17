@@ -3,7 +3,7 @@
   "format": ["typescript", "tsx"],
   "minTokens": 50,
   "minLines": 5,
-  "threshold": 1.2,
+  "threshold": 0.8,
   "absolute": false,
   "gitignore": true,
   "reporters": ["console", "json"],
