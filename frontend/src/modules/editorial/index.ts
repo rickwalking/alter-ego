@@ -83,15 +83,19 @@ export {
   listPresentationIconNames,
   hasBlockingPresentationViolations,
   listPresentationViolations,
+  type PresentationStructuredItem,
+  type PresentationFieldBudget,
+} from "./workspace/lib/presentation-review-utils";
+
+/* --- workspace: localized slide resolution + copy editing --- */
+export {
   applySlideCopyEdit,
   slidesHaveCopyChanges,
   resolveLocalizedSlides,
-  type PresentationStructuredItem,
-  type PresentationFieldBudget,
   type PresentationLocaleKey,
   type EditableCopyField,
   type SlideCopyEdit,
-} from "./workspace/lib/presentation-review-utils";
+} from "./workspace/lib/presentation-slide-resolution";
 
 /* --- workflow: types --- */
 export type { ReviewAssignmentPayload, ContentLock } from "./workflow/types";
