@@ -10,7 +10,6 @@ import { type DocumentListProps } from "./types";
 
 export function DocumentList({
   documents,
-  isLoading,
   onCreateNew,
   onUploadNew,
   onDeleteDocument,
@@ -27,19 +26,6 @@ export function DocumentList({
       tags.some((tag) => tag.toLowerCase().includes(searchQuery.toLowerCase()))
     );
   });
-
-  if (isLoading) {
-    return (
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {[1, 2, 3].map((i) => (
-          <div
-            key={i}
-            className="h-40 animate-pulse rounded-lg bg-[var(--color-muted)]"
-          />
-        ))}
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-6">

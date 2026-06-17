@@ -1,56 +1,27 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { NeonButton } from "@/components/atoms/neon-button";
 import { NeonSearchBar } from "@/components/molecules/neon-search-bar";
 import { NeonTopBar } from "@/components/organisms/neon-top-bar";
-import { BlogPostBadge } from "@/modules/editorial-operations";
-import {
-  BLOG_POST_CATEGORY_OPTIONS,
-  BLOG_POST_STATUS_OPTIONS,
-} from "@/modules/editorial-operations";
-import {
-  filterBlogPosts,
-  formatBlogPostDate,
-} from "@/modules/editorial-operations";
-import { DASHBOARD_ROUTES } from "@/constants/dashboard-routes";
+import { filterBlogPosts } from "@/modules/editorial-operations";
 import { mapBlogPostToDashboard } from "@/modules/editorial-operations";
 import { useBlogPosts } from "@/modules/publishing";
 import { NeonSpinner } from "@/components/atoms/neon-spinner";
 import { NEON_RED } from "@/constants/neon";
+import { BlogPostsFilters } from "@/app/dashboard/blog-posts/blog-posts-filters";
 import {
-  BG_CARD,
-  NEON_BORDER_STRONG,
-  NEON_CARD_BORDER,
-  NEON_CARD_HOVER_BORDER,
-  NEON_GRADIENT_CARD,
-  NEON_GRADIENT_FEATURED,
-  NEON_INPUT_BG,
-  TEXT_DIM,
-} from "@/constants/neon";
+  FeaturedBlogPost,
+  RegularBlogPosts,
+} from "@/app/dashboard/blog-posts/blog-posts-grid";
+import { useNewBlogPost } from "@/app/dashboard/blog-posts/use-new-blog-post";
 
-export default function BlogPostsPage() {
-  const router = useRouter();
+export default function BlogPostsPage(): React.ReactElement {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
-  const [creating, setCreating] = useState(false);
   const { posts, loading, error, create } = useBlogPosts();
-
-  const handleNewPost = async (): Promise<void> => {
-    setCreating(true);
-    try {
-      const post = await create({
-        title: "Untitled draft",
-        content: { blocks: [] },
-        excerpt: "",
-      });
-      router.push(DASHBOARD_ROUTES.BLOG_POST_EDIT(post.id));
-    } catch {
-      setCreating(false);
-    }
-  };
+  const { creating, handleNewPost } = useNewBlogPost(create);
 
   const dashboardPosts = posts.map(mapBlogPostToDashboard);
 
@@ -117,149 +88,16 @@ export default function BlogPostsPage() {
         )}
         {!loading && !error && (
           <>
-            {/* Filters */}
-            <div className="flex items-center justify-between flex-wrap gap-3">
-              <div className="flex gap-2">
-                <select
-                  style={{
-                    padding: "6px 30px 6px 10px",
-                    fontSize: "12px",
-                    border: `1px solid ${NEON_BORDER_STRONG}`,
-                    background: NEON_INPUT_BG,
-                    color: "white",
-                    borderRadius: "4px",
-                    fontFamily: "'JetBrains Mono', ui-monospace, monospace",
-                    outline: "none",
-                  }}
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                >
-                  {BLOG_POST_STATUS_OPTIONS.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
-                <select
-                  style={{
-                    padding: "6px 30px 6px 10px",
-                    fontSize: "12px",
-                    border: `1px solid ${NEON_BORDER_STRONG}`,
-                    background: NEON_INPUT_BG,
-                    color: "white",
-                    borderRadius: "4px",
-                    fontFamily: "'JetBrains Mono', ui-monospace, monospace",
-                    outline: "none",
-                  }}
-                  value={categoryFilter}
-                  onChange={(e) => setCategoryFilter(e.target.value)}
-                >
-                  {BLOG_POST_CATEGORY_OPTIONS.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <span
-                style={{
-                  fontFamily: "'JetBrains Mono', ui-monospace, monospace",
-                  fontSize: "11px",
-                  color: TEXT_DIM,
-                }}
-              >
-                24 posts
-              </span>
-            </div>
+            <BlogPostsFilters
+              statusFilter={statusFilter}
+              categoryFilter={categoryFilter}
+              onStatusFilterChange={setStatusFilter}
+              onCategoryFilterChange={setCategoryFilter}
+            />
 
             <div className="grid gap-4">
-              {featuredPost && (
-                <div
-                  className="grid grid-cols-2 gap-0"
-                  style={{ gridTemplateColumns: "1fr 1fr" }}
-                >
-                  <div
-                    className="relative overflow-hidden transition-all duration-250"
-                    style={{
-                      height: "240px",
-                      background: NEON_GRADIENT_FEATURED,
-                    }}
-                  />
-                  <div className="p-6 flex flex-col justify-center">
-                    <div className="flex gap-1.5 mb-2.5">
-                      <BlogPostBadge color="magenta">Security</BlogPostBadge>
-                      <BlogPostBadge color="cyan">Featured</BlogPostBadge>
-                    </div>
-                    <h3 className="text-[20px] font-bold leading-tight mb-2">
-                      {featuredPost.title}
-                    </h3>
-                    <p className="text-[13px] leading-relaxed text-[rgba(255,255,255,0.88)] line-clamp-3">
-                      {featuredPost.excerpt}
-                    </p>
-                    <div className="flex items-center justify-between mt-3 pt-3 border-t border-[rgba(255,255,255,0.04)]">
-                      <span className="font-mono text-[10px] text-[rgba(255,255,255,0.3)]">
-                        {formatBlogPostDate(featuredPost.date)}
-                      </span>
-                      <div className="flex gap-1.5 font-mono text-[10px] text-[rgba(255,255,255,0.3)]">
-                        <span>👁 {featuredPost.views.toLocaleString()}</span>
-                        <span>💬 {featuredPost.comments}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              <div
-                className="grid grid-cols-2 gap-4"
-                style={{ gridTemplateColumns: "1fr 1fr" }}
-              >
-                {regularPosts.map((post) => (
-                  <div
-                    key={post.id}
-                    className="rounded p-[16px] overflow-hidden transition-all duration-250 cursor-pointer hover:-translate-y-0.5 active:translate-y-[-2px]"
-                    style={{
-                      background: BG_CARD,
-                      border: `1px solid ${NEON_CARD_BORDER}`,
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.borderColor =
-                        NEON_CARD_HOVER_BORDER;
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.borderColor = NEON_CARD_BORDER;
-                    }}
-                  >
-                    <div
-                      className="w-full h-[160px] mb-4 transition-all duration-250"
-                      style={{
-                        background: NEON_GRADIENT_CARD,
-                      }}
-                    />
-                    <div>
-                      {post.category && (
-                        <BlogPostBadge color={post.category.toLowerCase()}>
-                          {post.category}
-                        </BlogPostBadge>
-                      )}
-                      <h3 className="text-[15px] font-bold leading-snug mb-1.5">
-                        {post.title}
-                      </h3>
-                      <p className="text-[12px] leading-relaxed text-[rgba(255,255,255,0.55)] line-clamp-2">
-                        {post.excerpt}
-                      </p>
-                      <div className="flex items-center justify-between mt-3 pt-3 border-t border-[rgba(255,255,255,0.04)]">
-                        <span className="font-mono text-[10px] text-[rgba(255,255,255,0.3)]">
-                          {formatBlogPostDate(post.date)}
-                        </span>
-                        <div className="flex gap-1.5 font-mono text-[10px] text-[rgba(255,255,255,0.3)]">
-                          <span>👁 {post.views.toLocaleString()}</span>
-                          <span>💬 {post.comments}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
+              {featuredPost && <FeaturedBlogPost post={featuredPost} />}
+              <RegularBlogPosts posts={regularPosts} />
             </div>
           </>
         )}

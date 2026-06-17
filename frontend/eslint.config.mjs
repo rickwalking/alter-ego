@@ -129,7 +129,19 @@ export default defineConfig([
     },
   },
   {
-    files: ["src/app/**/page.tsx"],
+    // AE-0185 — JSX-calibrated function-size ceiling for React components.
+    // A page/component render function is mostly declarative JSX, not control
+    // flow; the logic limits (30 for lib/helpers, the global 50, and the hook
+    // limits below) do not translate. 150 keeps a real ceiling — genuinely huge
+    // components (e.g. HomePageContent ~1210 lines) are STILL flagged — while no
+    // longer punishing legitimate ~41-150 line presentational components.
+    files: ["src/app/**/page.tsx", "src/**/*.tsx"],
+    ignores: [
+      "src/lib/**/*.tsx",
+      "src/**/hooks/**/*.tsx",
+      "**/*.test.tsx",
+      "**/*.test-utils.tsx",
+    ],
     rules: {
       // Warn globally; diff-scoped CI (lint:changed) enforces with --max-warnings=0.
       "max-lines": [
@@ -138,7 +150,7 @@ export default defineConfig([
       ],
       "max-lines-per-function": [
         "warn",
-        { max: 40, skipBlankLines: true, skipComments: true, IIFEs: true },
+        { max: 150, skipBlankLines: true, skipComments: true, IIFEs: true },
       ],
     },
   },
@@ -154,6 +166,28 @@ export default defineConfig([
     rules: {
       "max-statements": ["warn", 20],
       complexity: ["warn", 8],
+      // AE-0184 — hooks must not perform raw data fetching: route through
+      // TanStack Query (or the shared api-client). The bare-`fetch`
+      // CallExpression selector matches `fetch(...)` (Identifier callee named
+      // `fetch`) only — it does NOT flag `refetch()` (a different callee name)
+      // nor `window.fetch(...)` (MemberExpression callee). NOTE: ESLint flat
+      // config REPLACES `no-restricted-syntax` per matched file rather than
+      // merging it, so the global fetch-in-useEffect guard is re-declared here
+      // to keep it in force for hook files.
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector: "CallExpression > Identifier.callee[name='fetch']",
+          message:
+            "Hooks must use TanStack Query (or the api-client), not raw fetch.",
+        },
+        {
+          selector:
+            "CallExpression[callee.name='useEffect'] CallExpression[callee.name='fetch']",
+          message:
+            "Do not fetch() inside useEffect — use TanStack Query, a Server Component, or authenticated-fetch.",
+        },
+      ],
     },
   },
   {

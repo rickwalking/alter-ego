@@ -1,4 +1,9 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  useQuery,
+  useSuspenseQuery,
+  useMutation,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { apiCall, apiCallNoContent } from "@/lib/api-client";
 import { API_ENDPOINTS, HTTP_METHODS } from "@/constants/api";
 import {
@@ -12,8 +17,14 @@ import {
   documentsOptions,
 } from "@/modules/knowledge/queries";
 
+/**
+ * Suspense-oriented document list read (ADR-010). Suspends until data resolves
+ * and throws on error, so the consumer pairs it with a `<Suspense>` boundary
+ * (loading) and the route-level `error.tsx` boundary (error). `data` is always
+ * defined — no `isLoading` branch in the consumer.
+ */
 export function useDocuments() {
-  return useQuery(documentsOptions());
+  return useSuspenseQuery(documentsOptions());
 }
 
 export function useDocument(id: string | null) {

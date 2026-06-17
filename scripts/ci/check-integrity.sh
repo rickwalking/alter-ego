@@ -149,6 +149,10 @@ LOWER_IS_GAMING = [r"fail[_-]under", r"--fail-under"]
 HIGHER_IS_GAMING = [
     r"max-complexity", r"max-args", r"max-branches", r"max-returns",
     r"max-locals", r"max-nested-blocks", r"BASELINE_\w+",
+    # ESLint function-size ceiling (AE-0185): higher max = larger functions
+    # tolerated. The threshold may only ratchet DOWN; raising it re-permits
+    # oversized functions/components.
+    r"max-lines-per-function",
     # jscpd duplication ceiling (AE-0149): higher % = more duplication tolerated.
     # The threshold may only ratchet DOWN; raising it re-permits duplication.
     r'"threshold"',

@@ -6,7 +6,7 @@ import {
   NeonCardTitle,
 } from "@/components/molecules/neon-card";
 
-import { useState, useCallback } from "react";
+import { Suspense, useState, useCallback } from "react";
 import { useTranslations } from "next-intl";
 import { Container } from "@/components/layout";
 import {
@@ -15,16 +15,50 @@ import {
   useDeleteDocument,
 } from "../hooks/use-documents";
 import { DocumentList } from "./document-list";
+import { DocumentListSkeleton } from "./document-list-skeleton";
 import { DocumentForm } from "./document-form";
 import { FileUpload } from "./file-upload";
 import { type Document, type CreateDocumentRequest } from "@/schemas/knowledge";
+import { type DocumentListSectionProps } from "./types";
 
 type ViewMode = "list" | "create" | "upload";
+
+/**
+ * Data-bound list subtree (ADR-010). Reads documents via the Suspense query
+ * (`useDocuments`); the parent's `<Suspense>` renders the skeleton while it
+ * loads and the route-level `error.tsx` boundary handles fetch errors. No
+ * `isLoading` branch lives here.
+ */
+function DocumentListSection({
+  onCreateNew,
+  onUploadNew,
+  onDeleteDocument,
+}: DocumentListSectionProps) {
+  const { data: documents } = useDocuments();
+
+  const adaptedDocuments: Document[] = documents.map((doc) => {
+    const meta = doc.metadata as Record<string, unknown> | undefined;
+    return {
+      ...doc,
+      tags: (meta?.tags as string[]) ?? [],
+      createdAt: doc.created_at,
+      updatedAt: doc.updated_at,
+    };
+  });
+
+  return (
+    <DocumentList
+      documents={adaptedDocuments}
+      onCreateNew={onCreateNew}
+      onUploadNew={onUploadNew}
+      onDeleteDocument={onDeleteDocument}
+    />
+  );
+}
 
 export function KnowledgeBaseInterface() {
   const t = useTranslations("knowledge");
   const [viewMode, setViewMode] = useState<ViewMode>("list");
-  const { data: documents = [], isLoading } = useDocuments();
   const createDocument = useCreateDocument();
   const deleteDocument = useDeleteDocument();
 
@@ -62,16 +96,6 @@ export function KnowledgeBaseInterface() {
     [deleteDocument],
   );
 
-  const adaptedDocuments: Document[] = documents.map((doc) => {
-    const meta = doc.metadata as Record<string, unknown> | undefined;
-    return {
-      ...doc,
-      tags: (meta?.tags as string[]) ?? [],
-      createdAt: doc.created_at,
-      updatedAt: doc.updated_at,
-    };
-  });
-
   return (
     <Container className="py-8">
       <div className="mb-8">
@@ -82,13 +106,13 @@ export function KnowledgeBaseInterface() {
       </div>
 
       {viewMode === "list" ? (
-        <DocumentList
-          documents={adaptedDocuments}
-          isLoading={isLoading}
-          onCreateNew={handleCreateNew}
-          onUploadNew={handleUploadNew}
-          onDeleteDocument={handleDelete}
-        />
+        <Suspense fallback={<DocumentListSkeleton />}>
+          <DocumentListSection
+            onCreateNew={handleCreateNew}
+            onUploadNew={handleUploadNew}
+            onDeleteDocument={handleDelete}
+          />
+        </Suspense>
       ) : viewMode === "create" ? (
         <NeonCard>
           <NeonCardHeader>

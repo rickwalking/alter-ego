@@ -89,6 +89,37 @@ Express them with **boundaries**, not effect-driven flags:
 - Error → an error boundary (`fallback`) around the Suspense boundary.
 - No `const [loading, setLoading] = useState(...)` toggled inside a `useEffect`.
 
+## When manual `isLoading` is still acceptable
+
+Suspense governs **data loading** (initial/refetchable reads). It does **not**
+replace per-action pending flags. A manual loading flag is fine — and preferred —
+for **local mutations / submissions**, because the state is owned by the action,
+not by a data dependency the boundary can suspend on:
+
+- `useMutation().isPending` to disable a submit button / show an inline spinner
+  (create / update / delete / publish).
+- A `const [isSubmitting, setIsSubmitting] = useState(false)` toggled around a
+  user-triggered handler (e.g. login submit, "Generate preview" button) that
+  isn't a `useQuery`.
+
+These are **class (b)** in the AE-0187 baseline and are NOT migration targets.
+
+```tsx
+// ✅ OK — mutation pending flag drives the button, not a data fetch
+const createDocument = useCreateDocument();
+<NeonButton disabled={createDocument.isPending} onClick={handleSubmit}>
+  {createDocument.isPending ? t("saving") : t("save")}
+</NeonButton>;
+```
+
+What is NOT acceptable is using a manual flag for the **initial data read**:
+
+```tsx
+// ❌ NOT acceptable — initial data load via manual flag; use useSuspenseQuery + <Suspense>
+const { data, isLoading } = useQuery(documentsOptions());
+if (isLoading) return <Skeleton />; // ← move to a <Suspense fallback>
+```
+
 ## Anti-patterns (rejected — see `minimizing-useeffect-guide.md`)
 
 ```tsx

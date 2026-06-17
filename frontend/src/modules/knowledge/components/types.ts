@@ -15,7 +15,17 @@ export interface DocumentCardProps {
 
 export interface DocumentListProps {
   documents: Document[];
-  isLoading?: boolean;
+  onCreateNew: () => void;
+  onUploadNew: () => void;
+  onDeleteDocument: (id: string) => void;
+}
+
+/**
+ * Props for the Suspense-bound list section (ADR-010). It owns the document
+ * read internally (via `useDocuments`), so callers pass only the action
+ * handlers — no `documents`/`isLoading` are threaded through.
+ */
+export interface DocumentListSectionProps {
   onCreateNew: () => void;
   onUploadNew: () => void;
   onDeleteDocument: (id: string) => void;

@@ -61,7 +61,7 @@ describe("DocumentCard Component", () => {
       it("Then the FileText icon should be visible", () => {
         render(<DocumentCard document={mockDocument} />);
         const card =
-          screen.getByText("Test Document").closest('[class*="card"]') ||
+          screen.getByText("Test Document").closest('[class*="card"]') ??
           screen.getByText("Test Document").parentElement?.parentElement;
         expect(card).toBeInTheDocument();
       });
