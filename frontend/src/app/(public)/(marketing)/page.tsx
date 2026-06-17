@@ -53,7 +53,5 @@ export default async function HomePage() {
 
   const data: CarouselProjectListResponse = await fetchCompletedProjects(5);
 
-  return (
-    <HomePageContent t={t} tc={tc} tb={tb} data={data} locale={locale} />
-  );
+  return <HomePageContent t={t} tc={tc} tb={tb} data={data} locale={locale} />;
 }

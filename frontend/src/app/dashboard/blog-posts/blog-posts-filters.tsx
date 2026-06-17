@@ -4,11 +4,7 @@ import {
   BLOG_POST_CATEGORY_OPTIONS,
   BLOG_POST_STATUS_OPTIONS,
 } from "@/modules/editorial-operations";
-import {
-  NEON_BORDER_STRONG,
-  NEON_INPUT_BG,
-  TEXT_DIM,
-} from "@/constants/neon";
+import { NEON_BORDER_STRONG, NEON_INPUT_BG, TEXT_DIM } from "@/constants/neon";
 import type { BlogPostsFiltersProps } from "@/app/dashboard/blog-posts/types";
 
 const SELECT_STYLE = {

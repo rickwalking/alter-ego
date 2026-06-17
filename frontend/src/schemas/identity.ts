@@ -13,5 +13,3 @@ export const authUserSchema = z.object({
   full_name: z.string(),
   role: z.string(),
 });
-
-export type AuthUserSchema = z.infer<typeof authUserSchema>;

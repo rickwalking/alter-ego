@@ -12,9 +12,7 @@ const STAT_LABEL_STYLE = {
   fontWeight: 500,
 } as const;
 
-export function MarketingStats({
-  t,
-}: MarketingStatsProps): React.ReactElement {
+export function MarketingStats({ t }: MarketingStatsProps): React.ReactElement {
   return (
     <ScrollReveal>
       <div

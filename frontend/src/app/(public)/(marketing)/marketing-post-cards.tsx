@@ -11,7 +11,10 @@ import { toPublicCarouselImageUrl } from "@/lib/carousel-media-url";
 import { truncateWords } from "@/app/(public)/(marketing)/marketing-helpers";
 import type { MarketingPostProps } from "@/app/(public)/(marketing)/types";
 
-function localizedTitle(post: MarketingPostProps["post"], locale: string): string {
+function localizedTitle(
+  post: MarketingPostProps["post"],
+  locale: string,
+): string {
   return locale === "en"
     ? post.title_en || post.title || post.topic
     : post.title || post.topic;

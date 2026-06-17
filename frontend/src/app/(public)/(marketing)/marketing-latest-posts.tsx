@@ -10,9 +10,7 @@ import type {
   MarketingLatestPostsProps,
 } from "@/app/(public)/(marketing)/types";
 
-function LatestPostsHeader({
-  t,
-}: LatestPostsHeaderProps): React.ReactElement {
+function LatestPostsHeader({ t }: LatestPostsHeaderProps): React.ReactElement {
   return (
     <div style={{ marginBottom: "60px" }}>
       <MarketingSectionEyebrow label={t("posts.feedLabel")} />

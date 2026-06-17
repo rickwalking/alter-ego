@@ -79,10 +79,7 @@ function CalendarDayEvent({
           color: CALENDAR_COLORS.tD,
         }}
       >
-        <CalendarSvgIcon
-          name={CONTENT_TYPE_ICON[event.contentType]}
-          size={9}
-        />{" "}
+        <CalendarSvgIcon name={CONTENT_TYPE_ICON[event.contentType]} size={9} />{" "}
         {contentMeta.l}
       </div>
       {event.status && (
