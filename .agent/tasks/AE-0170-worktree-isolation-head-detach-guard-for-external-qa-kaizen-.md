@@ -1,14 +1,14 @@
 # AE-0170 — Worktree isolation + HEAD-detach guard for external QA/kaizen runs
 
-Status: Intake
+Status: Dev Complete
 Tier: T2
 Class: B
 Priority: High
 Type: Quality
 Area: Cross-cutting
-Owner: Unassigned
+Owner: developer-skill
 Agent Lane: planner → architect → developer → qa → release
-Branch: TBD
+Branch: chore/phase-8-class-b
 Kanban Card: TBD
 Created: 2026-06-16
 Updated: 2026-06-16
@@ -34,9 +34,16 @@ External (cursor/opencode) QA tooling is non-sandboxed: it has created rogue fil
 
 ## Acceptance Criteria
 
-- [ ] External QA/kaizen runs execute in an isolated worktree; the primary branch HEAD + working tree are provably unchanged after a run.
-- [ ] A HEAD-detach or branch-move by the external tool is detected and the run aborts with the repo restored (verified on a SEEDED detach/rogue-write).
-- [ ] `run_external_qa.sh` / `run_external_kaizen.sh` still produce valid `/tmp` output; worktree auto-cleaned.
+- [x] External QA/kaizen runs execute in an isolated worktree; the primary branch HEAD + working tree are provably unchanged after a run. Added `ext_run_guarded()` to `scripts/lib/external_agent.sh` (throwaway DETACHED worktree; CLI runs with cwd/repo-root = worktree).
+- [x] A HEAD-detach or branch-move by the external tool is detected and the run aborts (rc 4) with the repo restored — verified on a SEEDED detach (`scripts/lib/external_agent_guard_check.sh` + `frontend/src/scripts/external-guard.test.ts`).
+- [x] `run_external_qa.sh` / `run_external_kaizen.sh` now call `ext_run_guarded`; `/tmp` `<output-file>` stays authoritative; worktree auto-cleaned (`--force` + prune).
+
+## Test Evidence
+
+`bash scripts/lib/external_agent_guard_check.sh` → "guard-check OK" (clean run: rc 0,
+primary unchanged, worktree cleaned; rogue detach: rc 4, restored to main@HEAD0,
+worktree cleaned). `npx vitest run src/scripts/external-guard.test.ts` → 1 passed.
+Uses temp repos — the working repo is never touched.
 
 ## Gherkin Scenarios
 

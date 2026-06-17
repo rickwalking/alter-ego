@@ -55,7 +55,7 @@ main() {
   tool=$(ext_pick_tool "$TOOL")
   [ "$tool" = "none" ] && { echo "ERROR: no external kaizen CLI found (opencode/codex/cursor-agent)" >&2; exit 3; }
 
-  ext_run "$tool" "$PROMPT_FILE" "$OUTPUT_FILE" || exit 3
+  ext_run_guarded "$tool" "$PROMPT_FILE" "$OUTPUT_FILE" || exit 3
 
   ext_strip_ansi "$OUTPUT_FILE"
   if extract_proposals_json; then
