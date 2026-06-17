@@ -255,6 +255,12 @@ The Phase 0 gates already ran `format`, `lint`, `strict-diff`, `type`, `imports`
 their Phase 0 results.** This subagent's job is the *judgment* layer on top:
 - [ ] **Confirm** the Phase 0 lint/type/complexity/architecture gates are PASS;
       surface any FAIL with the exact tool output as a 🔴 Blocker.
+      ⚠️ The frontend `lint` gate is the FULL `npm run lint` chain (eslint +
+      `lint:boundaries` + `lint:circular` + `lint:component-types` +
+      `lint:use-client` + `lint:dup`). **Never substitute bare `npx eslint` /
+      `eslint --quiet`** — it skips the chained checks and will green-light code
+      CI fails (this let inline component types slip past QA on 2026-06-17).
+      Always reproduce via `gates.sh frontend:lint`.
 - [ ] **No `Any`/`object` types** — explicit types everywhere (gates miss intent)
 - [ ] **No magic strings** — string literals extracted to named constants
 - [ ] **Early returns** — no deeply nested `if` ladders
