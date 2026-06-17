@@ -72,6 +72,18 @@ alter-ego/
 - Conventional commit messages
 - One logical change per commit
 - No secrets or API keys committed
+- **Pre-commit hooks must run; `--no-verify` policy (AE-0168):** a normal
+  `git commit` runs `.husky/pre-commit` (prettier/eslint via `lint-staged`) and
+  `.husky/commit-msg` (commitlint). The hooks `cd frontend` and unset the git
+  worktree env so they are reliable from the repo root AND inside a worktree.
+  `core.hooksPath` is set to a **relative** `.husky` by `frontend` `prepare`
+  (run `cd frontend && npm install` once after cloning).
+  - **Do NOT use `git commit --no-verify` routinely** — it bypasses formatting
+    and lets unformatted code reach the (still-blocking) `frontend:format` CI gate.
+  - `--no-verify` is acceptable ONLY for: non-interactive automation/CI commits,
+    or a documented hook-environment failure — and only when the equivalent gates
+    (`bash scripts/ci/gates.sh frontend`) have been reproduced green by hand. State
+    the reason when you use it.
 
 ## Sub-Project Rules
 

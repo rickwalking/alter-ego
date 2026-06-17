@@ -1,1 +1,18 @@
-npx lint-staged
+#!/usr/bin/env sh
+# The husky hooks run from the repo root (core.hooksPath), but lint-staged and
+# the formatters (eslint/prettier) live in frontend/node_modules with config in
+# frontend/package.json + frontend/eslint.config.mjs. Run from frontend so the
+# eslint flat config + local binaries resolve (AE-0168).
+#
+# git exports GIT_DIR/GIT_WORK_TREE/GIT_INDEX_FILE when invoking a hook; inside a
+# git worktree those point at the worktree gitdir and make lint-staged resolve
+# the wrong top-level (tasks then spawn from the wrong cwd -> eslint ENOENT).
+# Unset them so lint-staged re-resolves the repo from the frontend cwd — reliable
+# from the repo root AND inside a worktree.
+root="$(git rev-parse --show-toplevel)"
+[ -x "$root/frontend/node_modules/.bin/lint-staged" ] || {
+  echo "pre-commit: frontend deps not installed — run 'cd frontend && npm install'." >&2
+  exit 1
+}
+unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_PREFIX
+cd "$root/frontend" && exec npx --no -- lint-staged

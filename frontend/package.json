@@ -33,7 +33,7 @@
     "check:legacy": "node scripts/check-legacy-usage.mjs",
     "check:legacy-inventory": "node scripts/check-legacy-usage.mjs --inventory",
     "check:schema-drift": "node scripts/check-schema-drift.mjs --strict",
-    "prepare": "husky"
+    "prepare": "husky; git config core.hooksPath .husky 2>/dev/null || true"
   },
   "lint-staged": {
     "*.{ts,tsx}": [

@@ -1,1 +1,17 @@
-npx --no -- commitlint --edit "$1"
+#!/usr/bin/env sh
+# commitlint lives in frontend/node_modules; the config (.commitlintrc.json) is
+# at the repo root, found via commitlint's upward config search. Put the frontend
+# bin dir on PATH and resolve the commit-message file to an absolute path before
+# changing directory (AE-0168).
+root="$(git rev-parse --show-toplevel)"
+msg="$1"
+case "$msg" in
+  /*) ;;                 # already absolute
+  *) msg="$root/$msg" ;; # relative to the repo root where git runs the hook
+esac
+[ -x "$root/frontend/node_modules/.bin/commitlint" ] || {
+  echo "commit-msg: frontend deps not installed — skipping commitlint." >&2
+  exit 0
+}
+export PATH="$root/frontend/node_modules/.bin:$PATH"
+cd "$root/frontend" && commitlint --edit "$msg"
