@@ -64,9 +64,9 @@ Defined when scheduled — the cutover CHANGES behavior; scenarios assert the ne
 
 ## Progress Log
 
-### 2026-06-16
+### 2026-06-17 — Re-baselined (architect research + cold-critic review)
 
-Ticket created by planner (Phase 8 breakdown).
+Premise is STALE: approval != release is **already implemented** in main — `final_review_phase()` sets `workflow_status=approved_for_publish` (no publish), and release is a separate `POST /api/carousels/{id}/publish` gated on that status, with a distinct frontend 'Publish to Site' action (`handlePublishToSite`). No auto-publish to cut over. **Residual scope** = add a NEGATIVE safety-net assertion (approval ALONE does not set `is_public`/emit release). Optional terminal release-state or `carousel.released` event would be a behavior-observable addition needing an ADR + owner decision — out of scope unless requested.
 
 ## Files Touched
 
