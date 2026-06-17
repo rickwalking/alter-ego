@@ -2,6 +2,7 @@
 
 Status: Intake
 Tier: T1
+Class: B
 Priority: High
 Type: Quality
 Area: Cross-cutting

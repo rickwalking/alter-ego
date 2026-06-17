@@ -61,7 +61,7 @@ value" (roadmap); no evidence it does, so it is explicitly NOT in Phase 8.
 
 | ID | Title | Tier | Class | Area | Blocked by |
 |----|-------|------|------|------|------------|
-| **AE-0152** | Phase 8 epic: Remove legacy layers and adapters | T3 | — | Cross-cutting | — (tracks 0153-0165) |
+| **AE-0152** | Phase 8 epic: Remove legacy layers and adapters | T3 | — | Cross-cutting | — (tracks 0153-0171) |
 | **AE-0153** | Frontend: remove `@/features/*` re-export shims + delete `src/features/` + drop `_example` anchor | T1 | A | Frontend | — |
 | **AE-0154** | Frontend: exhaustive business-component re-homing; ratchet component-type-location baseline down (→0 target) | T2 | A | Frontend | AE-0153 |
 | **AE-0155** | Frontend: route-page thinning (`app/**/page.tsx` → thin composition over module hooks) | T2 | A | Frontend | AE-0153 |
@@ -75,6 +75,18 @@ value" (roadmap); no evidence it does, so it is explicitly NOT in Phase 8.
 | **AE-0163** | Backend: make `blog_posts` the single writer + remove embedded-column read fallback (de-risk the drop) | T2 | A | Backend | — |
 | **AE-0161** | Backend: auto-publish cutover — approval ≠ release as two distinct user actions (BEHAVIOR CHANGE) | T2 | B | Backend/Frontend | — (consent) |
 | **AE-0162** | Backend: drop embedded carousel blog/distribution columns (DESTRUCTIVE, drain-gated migration) | T2 | B | Backend/DB | AE-0163 (+consent+drain) |
+| **AE-0166** | Harden ESLint: warnings→errors + use-client / useEffect / TanStack-Query-over-fetch rules | T2 | B | Frontend | — (kaizen) |
+| **AE-0167** | CI build gate (`next build`) + group quality gates into frontend/backend categories (keep gates.sh) | T2 | B | Cross-cutting | — (kaizen) |
+| **AE-0168** | Repair husky pre-commit + codify `--no-verify` policy (format/lint defense-in-depth) | T1 | B | Cross-cutting | — (kaizen) |
+| **AE-0169** | Auto-scaffold dev-summary report on the Dev Complete transition | T1 | B | Cross-cutting | — (kaizen) |
+| **AE-0170** | Worktree isolation + HEAD-detach guard for external QA/kaizen runs | T2 | B | Cross-cutting | — (kaizen) |
+| **AE-0171** | check-integrity pre-flight: documented build-output dirs must be gitignored | T1 | B | Cross-cutting | — (kaizen) |
+
+**Kaizen-originated Class-B follow-ups (AE-0166–0171):** emitted by the Phase 8 end-of-phase kaizen sweep
+(`.agent/reports/kaizen-sweep-2026-06-16.*`, owner-approved). They are continuous-improvement *quality
+enforcements* (all ratchet UP/HOLD) grouped into **Class B** at the owner's direction as deferred,
+post-PR-#23 follow-up work — not behavior-change/destructive like AE-0161/0162, and they carry no
+consent/drain gate (the Class-B grouping here means "deferred Phase-8 follow-up", scheduled separately).
 
 (AE-0133 → superseded by AE-0161 + AE-0162; AE-0143 → superseded by AE-0153-0157.
 **Round-1 architect fixes:** AE-0163 added as the behavior-preserving de-risking PREDECESSOR to the destructive
