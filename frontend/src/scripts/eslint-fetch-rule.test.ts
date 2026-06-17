@@ -22,6 +22,7 @@ const PROBE_DIR = join(
 const PROBE = join(PROBE_DIR, "probe.tsx");
 const NO_RESTRICTED_SYNTAX = "no-restricted-syntax";
 const SEVERITY_ERROR = 2;
+const ESLINT_SUBPROCESS_TIMEOUT_MS = 60_000;
 
 interface EslintMessage {
   ruleId: string | null;
@@ -57,21 +58,27 @@ describe("fetch-in-useEffect is an ESLint error (AE-0166)", () => {
   beforeEach(() => mkdirSync(PROBE_DIR, { recursive: true }));
   afterEach(() => rmSync(PROBE_DIR, { recursive: true, force: true }));
 
-  it("ERRORS on fetch() inside useEffect within src/modules", () => {
-    writeFileSync(
-      PROBE,
-      `"use client";\nimport { useEffect } from "react";\n` +
-        `export function Probe(): null {\n` +
-        `  useEffect(() => {\n    void fetch("/api/x");\n  }, []);\n` +
-        `  return null;\n}\n`,
-    );
-    const { exitCode, results } = lintProbe();
-    const restricted = results
-      .flatMap((r) => r.messages)
-      .filter((m) => m.ruleId === NO_RESTRICTED_SYNTAX);
+  // A cold `npx eslint` with projectService type-checking takes ~11s on CI
+  // runners, so this subprocess test needs a generous timeout.
+  it(
+    "ERRORS on fetch() inside useEffect within src/modules",
+    () => {
+      writeFileSync(
+        PROBE,
+        `"use client";\nimport { useEffect } from "react";\n` +
+          `export function Probe(): null {\n` +
+          `  useEffect(() => {\n    void fetch("/api/x");\n  }, []);\n` +
+          `  return null;\n}\n`,
+      );
+      const { exitCode, results } = lintProbe();
+      const restricted = results
+        .flatMap((r) => r.messages)
+        .filter((m) => m.ruleId === NO_RESTRICTED_SYNTAX);
 
-    expect(exitCode).not.toBe(0);
-    expect(restricted.length).toBeGreaterThan(0);
-    expect(restricted.every((m) => m.severity === SEVERITY_ERROR)).toBe(true);
-  });
+      expect(exitCode).not.toBe(0);
+      expect(restricted.length).toBeGreaterThan(0);
+      expect(restricted.every((m) => m.severity === SEVERITY_ERROR)).toBe(true);
+    },
+    ESLINT_SUBPROCESS_TIMEOUT_MS,
+  );
 });
