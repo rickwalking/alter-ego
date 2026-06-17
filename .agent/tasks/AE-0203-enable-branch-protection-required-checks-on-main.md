@@ -26,6 +26,35 @@ was still pending. Every gate built (gates.sh, integrity, mutation, etc.) is
 undermined if PRs can merge red. This is the single biggest production-readiness
 gap remaining after the docker/lint/docs sweeps.
 
+
+## CRITICAL implementation finding (2026-06-17)
+
+All three gate workflows are **path-filtered** (`backend-quality-gates` on
+`backend/**`, `frontend-quality-gates` on `frontend/**`, `agent-ticket-hygiene`
+on `.agent/**`). GitHub blocks a PR on any REQUIRED check that does not run, so
+naively requiring the gate checks would **permanently deadlock** path-scoped PRs
+(a frontend-only PR would wait forever on backend checks). There is NO single
+existing check that runs on every PR.
+
+**Therefore the required-checks part needs an always-running aggregator**, not a
+plain settings change:
+- Add `.github/workflows/ci-gate.yml` triggered on ALL `pull_request`s (no path
+  filter) with one `ci-gate` job that resolves green when the relevant
+  path-filtered gates passed OR were correctly skipped (e.g. via the
+  changed-paths + wait-for-checks / `re-actors/alls-green` pattern, treating
+  skipped-by-path as pass).
+- Require ONLY `ci-gate` as the protected check.
+- Validate: frontend-only, backend-only, and docs-only PRs all reach a green
+  `ci-gate` without hanging; a real gate failure makes `ci-gate` red.
+
+## Phasing / Status
+
+- **Phase 1 (DONE 2026-06-17):** safe protection applied via `gh api` — block
+  force-pushes + deletions on `main`, require conversation resolution, no required
+  status checks (so nothing deadlocks). Verified live.
+- **Phase 2 (this ticket's remaining work):** the `ci-gate` aggregator above, then
+  add it as the single required status check (the actual "no merging red CI" goal).
+
 ## Scope
 
 - Enable GitHub branch protection on `main` (Settings → Branches, or `gh api`):
