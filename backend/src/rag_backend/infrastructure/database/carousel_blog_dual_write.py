@@ -29,6 +29,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.domain.constants.blog_post import BlogPostOrigin, BlogPostStatus
 from rag_backend.domain.models import CarouselProject
+from rag_backend.infrastructure.database.distribution_home import build_distribution
 from rag_backend.infrastructure.database.models.blog_post import BlogPostModel
 
 # Generated slug scheme — identical to the AE-0127 backfill migration so the
@@ -76,9 +77,15 @@ async def sync_carousel_blog_post(
     row = await _existing_carousel_row(session, str(project.id))
     title = _carousel_blog_title(project)
     content = _carousel_blog_content(project)
+    # AE-0204: mirror the distribution copy (caption + LinkedIn posts) into the
+    # canonical ``blog_posts.distribution`` home on the same row, in the same
+    # transaction, so the canonical home stays the source of truth every reader
+    # consumes (the embedded carousel columns are retained but read-dead).
+    distribution = build_distribution(project)
     if row is not None:
         row.title = title
         row.content = content
+        row.distribution = distribution
         await session.flush()
         return
 
@@ -91,6 +98,7 @@ async def sync_carousel_blog_post(
             "slug": f"{_BLOG_SLUG_PREFIX}{project.id}",
             "status": BlogPostStatus.PUBLISHED.value,
             "content": content,
+            "distribution": distribution,
         })
     )
     await session.flush()

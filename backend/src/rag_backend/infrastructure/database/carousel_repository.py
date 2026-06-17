@@ -17,6 +17,12 @@ from rag_backend.domain.protocols.repositories import _ProjectQuery
 from rag_backend.infrastructure.database.carousel_blog_dual_write import (
     sync_carousel_blog_post,
 )
+from rag_backend.infrastructure.database.distribution_home import (
+    DISTRIBUTION_CAPTION_KEY,
+    DISTRIBUTION_LINKEDIN_POST_EN_KEY,
+    DISTRIBUTION_LINKEDIN_POST_PT_KEY,
+    read_distribution,
+)
 from rag_backend.infrastructure.database.models import (
     CarouselImageGenerationModel,
     CarouselProjectModel,
@@ -64,7 +70,26 @@ class PostgresCarouselRepository(CarouselRepository):
             )
             if asset_model is not None:
                 entity.creator_asset_staged_path = asset_model.relative_path
+        await self._overlay_distribution(entity)
         return entity
+
+    async def _overlay_distribution(self, entity: CarouselProject) -> None:
+        """Source the distribution copy from the canonical home (AE-0204).
+
+        Overlays ``caption`` / ``linkedin_post_pt`` / ``linkedin_post_en`` on a
+        freshly-loaded carousel entity from the canonical
+        ``blog_posts.distribution`` home so every reader that consumes a project
+        loaded through this repository sources those three fields from the
+        canonical home — the embedded ORM columns are read-dead. When no
+        carousel-origin row exists yet (no canonical home), the entity keeps its
+        ORM-mapped defaults so behavior is byte-identical for un-backfilled rows.
+        """
+        distribution = await read_distribution(self._session, str(entity.id))
+        if distribution is None:
+            return
+        entity.caption = distribution[DISTRIBUTION_CAPTION_KEY]
+        entity.linkedin_post_pt = distribution[DISTRIBUTION_LINKEDIN_POST_PT_KEY]
+        entity.linkedin_post_en = distribution[DISTRIBUTION_LINKEDIN_POST_EN_KEY]
 
     async def get_all_projects(
         self,
