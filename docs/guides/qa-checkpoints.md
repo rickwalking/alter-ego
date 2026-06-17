@@ -549,6 +549,7 @@ can never return, ratchet the baseline down:
 | frontend / Duplication (AE-0149) | `gates.sh frontend:duplication` (`npm run lint:dup`, jscpd) | CI failure — NEW source copy-paste duplication above the `frontend/.jscpd.json` threshold; test/spec/story files excluded; threshold may only ratchet DOWN (raising it flagged by `check-integrity.sh`) |
 | frontend / Dead code (AE-0152) | `gates.sh frontend:dead-code` (`npm run lint:dead-code`, knip) | CI failure — NEW unused export in a **changed** file (dead code). Identity-keyed baseline (`type\|file\|symbol`) in `frontend/scripts/dead-code-baseline.json`; pre-existing/unchanged-file findings are advisory until the full-tree flip; baseline `count` is down-only (raising it flagged by `check-integrity.sh`) |
 | frontend / Type Check | tsc --noEmit | CI failure |
+| frontend / Build (AE-0167) | `gates.sh frontend:build` (`next build`) | CI failure — catches build-only breakage that tsc/lint/test miss (e.g. a client-only hook without `"use client"`). Slow; skipped by `--changed-only`. CI jobs are grouped by area via the `frontend-quality-gates.yml` / `backend-quality-gates.yml` workflows + `<area> / <gate>` job names; `gates.sh` stays the single source of truth. |
 | frontend / Test | vitest | CI failure |
 | frontend / Format | prettier --check | CI failure |
 | frontend / Security | npm audit --audit-level=high | CI failure |

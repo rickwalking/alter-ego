@@ -1,14 +1,14 @@
 # AE-0167 — Add CI build gate and group quality gates into frontend/backend categories (keep gates.sh)
 
-Status: Intake
+Status: Dev Complete
 Tier: T2
 Class: B
 Priority: High
 Type: Quality
 Area: Cross-cutting
-Owner: Unassigned
+Owner: developer-skill
 Agent Lane: planner → architect → developer → qa → release
-Branch: TBD
+Branch: chore/phase-8-class-b
 Kanban Card: TBD
 Created: 2026-06-16
 Updated: 2026-06-16
@@ -35,10 +35,10 @@ Add a CI **build gate** (no build runs in CI today) and reorganize the gate set 
 
 ## Acceptance Criteria
 
-- [ ] `gates.sh frontend:build` runs `npm run build` and FAILS on a seeded build-only break (e.g. a hook missing `"use client"`); passes on the real tree.
-- [ ] The build gate runs as a blocking CI job on PRs.
-- [ ] CI jobs grouped into frontend/backend categories (workflow files and/or `<area> / <gate>` naming) with no gate dropped; `gates.sh` unchanged as source of truth.
-- [ ] Full gate suite green; `/qa-agent` still calls the same script.
+- [x] `gates.sh frontend:build` runs `npm run build` and FAILS on a seeded build-only break (a server-component route using `useState` without `"use client"` → `next build` error "...mark the file with the 'use client' directive"); PASSES on the real tree.
+- [x] The build gate runs as a blocking CI job on PRs (`frontend / Build` in `frontend-quality-gates.yml`).
+- [x] CI jobs grouped into frontend/backend categories — ALREADY via the two per-area workflow files (`frontend-quality-gates.yml`, `backend-quality-gates.yml`) + `<area> / <gate>` job names; the new build job follows the same convention. No gate dropped; `gates.sh` only gained the `build` gate (definitions unchanged).
+- [x] `gates.sh` stays canonical (`/qa-agent` calls the same script); `build` added to `--changed-only` skip (slow/whole-tree).
 
 ## Gherkin Scenarios
 
@@ -107,7 +107,7 @@ Pending.
 
 ## Test Evidence
 
-Pending.
+Seeded a server-component route using useState without "use client" -> `gates.sh frontend:build` FAIL ("...mark the file with the 'use client' directive"). Clean tree -> `frontend:build` PASS. tsc/lint unaffected.
 
 ## QA Report
 
