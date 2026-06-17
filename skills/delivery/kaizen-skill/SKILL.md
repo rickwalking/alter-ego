@@ -127,9 +127,22 @@ patterns `check-integrity.sh` blocks). The external model's self-assessment is
 advisory; this local check is authoritative. (Local runs do this inline in
 Phase 3.)
 
+### Phase 3.6 — External skeptical validation (standard, before approval)
+Run the emitted plan + draft tickets through the architect **cold critic**
+(`/architect-skill skeptical` → `scripts/lib/external_agent.sh`) as a STANDARD
+step. A same-session review rubber-stamps its own analysis; the external critic
+does not. Proven value (2026-06-17): it caught two factual errors kaizen had
+shipped — a substring-grep false positive (`fetch(` matched `refetch(`) and a
+wrong "gate today" claim (`lint:changed` uses `--quiet`, so warn-rules are
+unenforced). Feed it a **blind packet** (plan + ticket specs, no author voice)
+with `prompts/cold-critic-system.md`; **verify each finding against live code**
+(advisory, not authoritative); resolve/waive each in the ticket `Decision Log`.
+Skip only for T0/T1 trivia.
+
 ### Phase 4 — Human Approval Gate (mandatory)
-Present the ranked plan and **stop for explicit approval**. The human may accept
-all, a subset, or defer items. Nothing is created before approval.
+Present the ranked plan (with the Phase 3.6 findings + resolutions) and **stop for
+explicit approval**. The human may accept all, a subset, or defer items. Nothing
+is created before approval.
 
 ### Phase 5 — Task Emission (orchestrator → ticket-writer)
 For each **approved** proposal, call `ticket-writer-skill` to create a ticket:

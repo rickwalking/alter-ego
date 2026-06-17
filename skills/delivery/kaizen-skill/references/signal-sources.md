@@ -4,6 +4,23 @@ The collector subagent gathers from every source below, then **clusters into
 failure classes** (recurring patterns), not a flat list of incidents. Rank
 classes by `frequency × severity` and record example `file:line` refs for each.
 
+## 0. Measurement rigor (read first — false signal poisons every downstream ticket)
+
+Two mistakes shipped false facts in real kaizen tickets (2026-06-17); both were
+only caught by the Phase-3.6 external skeptical. Do NOT repeat them:
+
+- **Word-boundary / AST patterns, never bare substrings.** `grep 'fetch('`
+  matches `refetch(` → a false count. Use `grep -E '\bfetch\('` (or AST). The
+  same applies to `isLoading`, `loading`, etc. — they are overloaded.
+- **Verify "gate today / enforced" claims against the actual gate script** — never
+  assume. Read `scripts/ci/gates.sh`, `scripts/ci/eslint-changed.mjs`,
+  `backend/pyproject.toml`. Example trap: `lint:changed` runs `eslint --quiet`, so
+  warn-level rules have **zero** CI enforcement despite "showing" in a full lint.
+- **Triage tool output — detectors have false positives.** depcheck flags
+  config-only devDeps (tailwindcss, eslint plugins, commitlint) as "unused";
+  confirm before proposing removal.
+- Every failure-class row must cite a reproducible command + real `file:line`.
+
 ## 1. CI failures (the gates that actually broke)
 
 ```bash
