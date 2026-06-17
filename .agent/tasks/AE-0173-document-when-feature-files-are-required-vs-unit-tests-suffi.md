@@ -1,4 +1,4 @@
-# AE-0153 — Document when .feature files are required vs unit-tests-suffice
+# AE-0173 — Document when .feature files are required vs unit-tests-suffice
 
 Status: Review
 Tier: T1
@@ -77,7 +77,7 @@ Ticket created.
 
 ### 2026-06-16 — Skeptical review resolved
 
-External cold critic (`.agent/reports/AE-0152-0155.skeptical-review.md`) flagged
+External cold critic (`.agent/reports/AE-0172-0175.skeptical-review.md`) flagged
 this as a potential loophole (behavior-changing work mislabeled refactor/config to
 skip `.feature`). **Accepted** — ACs now require concrete examples, documented
 no-behavior-change evidence + reviewer sign-off for the unit-tests path, and a
@@ -93,7 +93,7 @@ Pending.
 
 ## QA Report
 
-PASS (wave QA) — see [AE-0152-0155.qa.md](../reports/AE-0152-0155.qa.md). 15/15 frontend gates green; integrity 0 net-new blockers; all ACs MET; 0 blocker findings.
+PASS (wave QA) — see [AE-0172-0175.qa.md](../reports/AE-0172-0175.qa.md). 15/15 frontend gates green; integrity 0 net-new blockers; all ACs MET; 0 blocker findings.
 
 ## Blockers
 

@@ -1,6 +1,11 @@
-# AE-0156 — Fix husky/lint-staged pre-commit hook for the frontend/ layout
+# AE-0176 — Fix husky/lint-staged pre-commit hook for the frontend/ layout
 
-Status: Intake
+> **CANCELLED — superseded by AE-0168** (Phase 8 Class B), which repaired the
+> husky pre-commit/commit-msg hooks (worktree `GIT_DIR` unset, absolute msg path,
+> frontend-scoped commitlint config) and codified the `--no-verify` policy. This
+> ticket (renumbered from the AE-0156 ID collision) is closed as a duplicate.
+
+Status: Cancelled
 Tier: T2
 Priority: High
 Type: Quality
@@ -20,11 +25,11 @@ need `--no-verify` and the local format/lint safety net is restored.
 
 ## Problem
 
-Source: kaizen `.agent/reports/kaizen-AE-0152-0155.plan.md` (failure class #1).
+Source: kaizen `.agent/reports/kaizen-AE-0172-0175.plan.md` (failure class #1).
 `.husky/pre-commit` runs `npx lint-staged` from the **repo root**, but the
 lint-staged config AND `eslint`/`prettier` live in `frontend/package.json` /
 `frontend/node_modules`. So the hook `ENOENT`s on any commit touching frontend
-files, and **every commit across AE-0152..0155 and PR #22 used `--no-verify`**,
+files, and **every commit across AE-0172..0175 and PR #22 used `--no-verify`**,
 silently bypassing the format/lint-fix safety net (the wave-QA integrity agent
 even observed the hook fire mid-run and leave a staged edit). The gates were
 reproduced manually instead, but the local pre-commit net is currently dead.
