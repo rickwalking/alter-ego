@@ -1,6 +1,6 @@
 # AE-0183 — Frontend: remove unused v1/shadcn deps + dead-dependency gate
 
-Status: Ready
+Status: Review
 Tier: T2
 Priority: Medium
 Type: Task

@@ -1,6 +1,6 @@
 # AE-0185 — Frontend: calibrate max-lines-per-function for JSX (ratchet-down, not exempt)
 
-Status: Ready
+Status: Review
 Tier: T2
 Priority: High
 Type: Task

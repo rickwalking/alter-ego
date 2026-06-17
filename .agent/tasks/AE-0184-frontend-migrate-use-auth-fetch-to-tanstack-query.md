@@ -1,6 +1,6 @@
 # AE-0184 — Frontend: migrate use-auth fetch->TanStack Query + forbid fetch in hooks
 
-Status: Ready
+Status: Review
 Tier: T2
 Priority: Medium
 Type: Refactor
