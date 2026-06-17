@@ -39,6 +39,13 @@ case "$SCOPE" in
   *) echo "Usage: check-integrity.sh [backend|frontend|all]" >&2; exit 2 ;;
 esac
 
+# AE-0171 pre-flight: every documented build/coverage output must be gitignored,
+# so a stray artifact never breaks eslint/QA. Fails integrity if one is missing.
+if ! bash "$(dirname "${BASH_SOURCE[0]}")/check-build-output-ignored.sh"; then
+  echo "FAIL: a documented build output is not gitignored (AE-0171)." >&2
+  exit 1
+fi
+
 DIFF_FILE="$(mktemp)"; NAMES_FILE="$(mktemp)"
 trap 'rm -f "$DIFF_FILE" "$NAMES_FILE"' EXIT
 git diff "${BASE_REF}...HEAD" -U0 -- "${PATHSPEC[@]}" 2>/dev/null > "$DIFF_FILE"

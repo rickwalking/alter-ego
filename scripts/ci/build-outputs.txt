@@ -1,0 +1,15 @@
+# AE-0171 — documented build/coverage output paths that MUST be gitignored, so
+# build artifacts never pollute lint/QA (the storybook-static eslint-parse
+# incident). Each line: <repo-relative path>   # <command that produces it>.
+#
+# Adding a new build/coverage command? Add its output dir/file HERE and to the
+# appropriate .gitignore — the check-build-output-ignored.sh pre-flight enforces it.
+frontend/.next               # cd frontend && npm run build
+frontend/storybook-static    # cd frontend && npm run build-storybook
+frontend/coverage            # cd frontend && npm run test:coverage
+frontend/playwright-report   # cd frontend && npm run test:e2e
+frontend/reports             # cd frontend && npm run lint:dup / test:mutate
+frontend/.stryker-tmp        # cd frontend && npm run test:mutate
+backend/coverage.xml         # cd backend && uv run pytest --cov-report=xml
+backend/.coverage            # pytest-cov data file
+backend/htmlcov              # cd backend && uv run pytest --cov-report=html
