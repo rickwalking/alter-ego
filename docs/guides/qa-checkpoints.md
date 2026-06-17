@@ -435,6 +435,16 @@ async def test_create_document_valid(self, client):
 | Unused CSS classes | PurgeCSS or manual |
 | Unused dependencies | pip list / npm ls vs. actual imports |
 
+**Frontend dead-FILE report (AE-0178) — ADVISORY, non-blocking.**
+`gates.sh frontend:dead-files` (`npm run lint:dead-files`, knip `--include files`)
+surfaces unused **files** — the class the blocking export-scoped dead-code gate
+(`frontend:dead-code`, AE-0152) does NOT cover. It is **advisory only**: knip's
+file scope reports framework/barrel-reachable files that are too noisy to block
+on, so the gate swallows knip's non-zero exit (`|| echo ADVISORY`) and can only
+ever PASS — exactly like `frontend:duplication-tests` (AE-0151) and
+`frontend:mutation`. Treat its output as a paydown nudge, never a blocker; do not
+delete the reported files reflexively.
+
 ---
 
 ## 6. Dependency Security

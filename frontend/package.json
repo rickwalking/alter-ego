@@ -12,6 +12,7 @@
     "lint:dup": "jscpd src",
     "lint:dup:tests": "jscpd src --config .jscpd.tests.json",
     "lint:dead-code": "node scripts/check-dead-code.mjs",
+    "lint:dead-files": "knip --include files --no-config-hints",
     "dead-code:baseline": "node scripts/generate-dead-code-baseline.mjs",
     "lint:boundaries": "node scripts/check-feature-boundaries.mjs",
     "lint:circular": "node scripts/check-circular-imports.mjs",
