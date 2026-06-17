@@ -18,8 +18,11 @@ import rag_backend.infrastructure.database.config as db_config
 from rag_backend.application.services.phase5_migration_service import (
     Phase5MigrationService,
 )
+from rag_backend.domain.constants.blog_post import BlogPostOrigin
 from rag_backend.domain.constants.carousel import CAROUSEL_STATUS_COMPLETED
 from rag_backend.infrastructure.database.config import Base
+from rag_backend.infrastructure.database.distribution_home import read_distribution
+from rag_backend.infrastructure.database.models.blog_post import BlogPostModel
 from rag_backend.infrastructure.database.models.carousel import CarouselProjectModel
 
 
@@ -35,13 +38,23 @@ async def session() -> AsyncSession:
     await engine.dispose()
 
 
-def _seed_projects(count: int) -> list[CarouselProjectModel]:
+def _reader(db: AsyncSession):
+    """Bind the canonical-home reader to the test session (AE-0204 DI)."""
+
+    async def _read(project_id: str) -> dict[str, str | None] | None:
+        return await read_distribution(db, project_id)
+
+    return _read
+
+
+def _seed_projects(count: int) -> list[object]:
     now = datetime.now(UTC)
-    projects: list[CarouselProjectModel] = []
+    rows: list[object] = []
     for index in range(count):
-        projects.append(
+        project_id = str(uuid.uuid4())
+        rows.append(
             CarouselProjectModel(
-                id=str(uuid.uuid4()),
+                id=project_id,
                 topic=f"Topic {index}",
                 audience="Developers",
                 niche="Tech",
@@ -52,12 +65,31 @@ def _seed_projects(count: int) -> list[CarouselProjectModel]:
                 theme="auto",
                 image_style="comic_neon",
                 status=CAROUSEL_STATUS_COMPLETED,
-                caption=f"Sample caption {index} for load testing migration throughput.",
                 created_at=now,
                 updated_at=now,
             )
         )
-    return projects
+        # AE-0204: the caption sample lives in the canonical distribution home.
+        rows.append(
+            BlogPostModel.from_entity({
+                "id": str(uuid.uuid4()),
+                "project_id": project_id,
+                "origin": BlogPostOrigin.CAROUSEL.value,
+                "title": f"Title {index}",
+                "slug": f"carousel-{project_id}",
+                "status": "published",
+                "content": {"markdown": "# body"},
+                "distribution": {
+                    "caption": (
+                        f"Sample caption {index} for load testing migration "
+                        "throughput."
+                    ),
+                    "linkedin_post_pt": None,
+                    "linkedin_post_en": None,
+                },
+            })
+        )
+    return rows
 
 
 @pytest.mark.asyncio
@@ -68,7 +100,9 @@ async def test_migration_handles_batch_load(session: AsyncSession) -> None:
     await session.commit()
 
     start = time.perf_counter()
-    report = await Phase5MigrationService().run(session, dry_run=False)
+    report = await Phase5MigrationService().run(
+        session, _reader(session), dry_run=False
+    )
     elapsed = time.perf_counter() - start
 
     assert report.creative_briefs_updated == batch_size

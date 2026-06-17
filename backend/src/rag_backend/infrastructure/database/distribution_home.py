@@ -34,20 +34,13 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.domain.constants.blog_post import BlogPostOrigin
+from rag_backend.domain.constants.distribution import (
+    DISTRIBUTION_CAPTION_KEY,
+    DISTRIBUTION_LINKEDIN_POST_EN_KEY,
+    DISTRIBUTION_LINKEDIN_POST_PT_KEY,
+)
 from rag_backend.domain.models import CarouselProject
 from rag_backend.infrastructure.database.models.blog_post import BlogPostModel
-
-# Canonical ``blog_posts.distribution`` JSON keys — the single source of these
-# field names for both the dual-write mirror and every reader.
-DISTRIBUTION_CAPTION_KEY = "caption"
-DISTRIBUTION_LINKEDIN_POST_PT_KEY = "linkedin_post_pt"
-DISTRIBUTION_LINKEDIN_POST_EN_KEY = "linkedin_post_en"
-
-DISTRIBUTION_KEYS: tuple[str, str, str] = (
-    DISTRIBUTION_CAPTION_KEY,
-    DISTRIBUTION_LINKEDIN_POST_PT_KEY,
-    DISTRIBUTION_LINKEDIN_POST_EN_KEY,
-)
 
 
 def build_distribution(project: CarouselProject) -> dict[str, object]:
@@ -133,7 +126,6 @@ async def read_distribution(
 
 __all__ = [
     "DISTRIBUTION_CAPTION_KEY",
-    "DISTRIBUTION_KEYS",
     "DISTRIBUTION_LINKEDIN_POST_EN_KEY",
     "DISTRIBUTION_LINKEDIN_POST_PT_KEY",
     "build_distribution",

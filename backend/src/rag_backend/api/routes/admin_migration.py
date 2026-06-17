@@ -14,6 +14,7 @@ from rag_backend.application.services.phase5_migration_service import (
     Phase5MigrationService,
 )
 from rag_backend.domain.constants.rate_limits import RATE_LIMIT_ADMIN_MIGRATION
+from rag_backend.infrastructure.database.distribution_home import read_distribution
 from rag_backend.infrastructure.logging import get_logger
 
 router = APIRouter(prefix="/admin/migration", tags=["admin"])
@@ -64,7 +65,12 @@ async def run_phase5_migration(
 ) -> Phase5MigrationResponse:
     """Migrate legacy carousel projects to editorial workflow schema."""
     service = Phase5MigrationService()
-    report = await service.run(db, dry_run=dry_run)
+
+    async def _read_distribution(project_id: str) -> dict[str, str | None] | None:
+        """Bind the request session to the canonical-home reader (AE-0204)."""
+        return await read_distribution(db, project_id)
+
+    report = await service.run(db, _read_distribution, dry_run=dry_run)
     logger.info(
         "phase5_migration_completed",
         admin_id=str(admin.id),

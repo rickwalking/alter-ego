@@ -5,6 +5,11 @@ from uuid import UUID
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from rag_backend.domain.constants.distribution import (
+    DISTRIBUTION_CAPTION_KEY,
+    DISTRIBUTION_LINKEDIN_POST_EN_KEY,
+    DISTRIBUTION_LINKEDIN_POST_PT_KEY,
+)
 from rag_backend.domain.models import (
     CarouselImageGeneration,
     CarouselProject,
@@ -17,12 +22,7 @@ from rag_backend.domain.protocols.repositories import _ProjectQuery
 from rag_backend.infrastructure.database.carousel_blog_dual_write import (
     sync_carousel_blog_post,
 )
-from rag_backend.infrastructure.database.distribution_home import (
-    DISTRIBUTION_CAPTION_KEY,
-    DISTRIBUTION_LINKEDIN_POST_EN_KEY,
-    DISTRIBUTION_LINKEDIN_POST_PT_KEY,
-    read_distribution,
-)
+from rag_backend.infrastructure.database.distribution_home import read_distribution
 from rag_backend.infrastructure.database.models import (
     CarouselImageGenerationModel,
     CarouselProjectModel,

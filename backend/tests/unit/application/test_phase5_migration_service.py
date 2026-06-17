@@ -16,6 +16,7 @@ from rag_backend.application.services.phase5_migration_service import (
     Phase5MigrationService,
     build_creative_brief,
 )
+from rag_backend.domain.constants.blog_post import BlogPostOrigin
 from rag_backend.domain.constants.carousel import (
     CAROUSEL_STATUS_COMPLETED,
     CAROUSEL_STATUS_RESEARCHING,
@@ -29,6 +30,8 @@ from rag_backend.domain.constants.migration import (
     DEFAULT_RUBRIC_NAME,
 )
 from rag_backend.infrastructure.database.config import Base
+from rag_backend.infrastructure.database.distribution_home import read_distribution
+from rag_backend.infrastructure.database.models.blog_post import BlogPostModel
 from rag_backend.infrastructure.database.models.carousel import CarouselProjectModel
 from rag_backend.infrastructure.database.models.persona_rubric import (
     PersonaProfileModel,
@@ -46,6 +49,41 @@ async def session() -> AsyncSession:
     async with factory() as db:
         yield db
     await engine.dispose()
+
+
+def _reader(db: AsyncSession):
+    """Bind the canonical-home reader to the test session (AE-0204 DI)."""
+
+    async def _read(project_id: str) -> dict[str, str | None] | None:
+        return await read_distribution(db, project_id)
+
+    return _read
+
+
+async def _seed_distribution(
+    db: AsyncSession, project: CarouselProjectModel, *, caption: str
+) -> None:
+    """Seed the carousel-origin blog row + its distribution (the canonical home).
+
+    AE-0204: the persona writing samples are now sourced from the canonical home,
+    so tests seed it explicitly instead of relying on the embedded caption column.
+    """
+    db.add(
+        BlogPostModel.from_entity({
+            "id": str(uuid.uuid4()),
+            "project_id": project.id,
+            "origin": BlogPostOrigin.CAROUSEL.value,
+            "title": "t",
+            "slug": f"carousel-{project.id}",
+            "status": "published",
+            "content": {"markdown": "# body"},
+            "distribution": {
+                "caption": caption,
+                "linkedin_post_pt": None,
+                "linkedin_post_en": None,
+            },
+        })
+    )
 
 
 def _project(**overrides: object) -> CarouselProjectModel:
@@ -88,7 +126,7 @@ class TestPhase5MigrationService:
         session.add(project)
         await session.commit()
 
-        report = await Phase5MigrationService().run(session, dry_run=False)
+        report = await Phase5MigrationService().run(session, _reader(session), dry_run=False)
 
         await session.refresh(project)
         assert report.creative_briefs_updated == 1
@@ -101,7 +139,7 @@ class TestPhase5MigrationService:
         session.add(project)
         await session.commit()
 
-        report = await Phase5MigrationService().run(session, dry_run=False)
+        report = await Phase5MigrationService().run(session, _reader(session), dry_run=False)
 
         await session.refresh(project)
         assert report.workflow_states_updated >= 1
@@ -114,13 +152,18 @@ class TestPhase5MigrationService:
     ) -> None:
         completed = _project(
             status=CAROUSEL_STATUS_COMPLETED,
-            caption="Hook readers with a bold opening.",
             blog_markdown="Deep dive into agent orchestration patterns.",
         )
         session.add(completed)
+        # AE-0204: the caption sample is sourced from the canonical home.
+        await _seed_distribution(
+            session, completed, caption="Hook readers with a bold opening."
+        )
         await session.commit()
 
-        report = await Phase5MigrationService().run(session, dry_run=False)
+        report = await Phase5MigrationService().run(
+            session, _reader(session), dry_run=False
+        )
 
         assert report.persona_created is True
         assert report.persona_id is not None
@@ -128,17 +171,21 @@ class TestPhase5MigrationService:
         assert persona is not None
         assert persona.name == DEFAULT_PERSONA_NAME
         assert len(persona.writing_samples) >= 1
+        # The caption sample came from the canonical home (AE-0204).
+        assert "Hook readers with a bold opening." in persona.writing_samples
 
     # Scenario: MIG-003
     async def test_creates_default_rubric(self, session: AsyncSession) -> None:
-        completed = _project(
-            status=CAROUSEL_STATUS_COMPLETED,
-            caption="Sample caption for rubric seed.",
-        )
+        completed = _project(status=CAROUSEL_STATUS_COMPLETED)
         session.add(completed)
+        await _seed_distribution(
+            session, completed, caption="Sample caption for rubric seed."
+        )
         await session.commit()
 
-        report = await Phase5MigrationService().run(session, dry_run=False)
+        report = await Phase5MigrationService().run(
+            session, _reader(session), dry_run=False
+        )
 
         assert report.rubric_created is True
         assert report.rubric_id is not None
@@ -153,7 +200,7 @@ class TestPhase5MigrationService:
         session.add(project)
         await session.commit()
 
-        report = await Phase5MigrationService().run(session, dry_run=True)
+        report = await Phase5MigrationService().run(session, _reader(session), dry_run=True)
 
         await session.refresh(project)
         assert report.dry_run is True
@@ -162,13 +209,14 @@ class TestPhase5MigrationService:
     async def test_links_persona_and_rubric_to_projects(
         self, session: AsyncSession
     ) -> None:
-        project = _project(
-            status=CAROUSEL_STATUS_COMPLETED, caption="Linked sample text."
-        )
+        project = _project(status=CAROUSEL_STATUS_COMPLETED)
         session.add(project)
+        await _seed_distribution(session, project, caption="Linked sample text.")
         await session.commit()
 
-        report = await Phase5MigrationService().run(session, dry_run=False)
+        report = await Phase5MigrationService().run(
+            session, _reader(session), dry_run=False
+        )
 
         await session.refresh(project)
         assert project.persona_id == report.persona_id
