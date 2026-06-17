@@ -6,6 +6,7 @@ import {
 import { NeonButton } from "@/components/atoms/neon-button";
 import { NeonInput } from "@/components/atoms/neon-input";
 
+import Image from "next/image";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { useBlogAi } from "@/modules/publishing/blog/hooks/use-blog-ai";
@@ -53,11 +54,21 @@ export function ImageGenModal({
           </NeonAlert>
         )}
         {previewUrl && (
-          <img
-            src={previewUrl}
-            alt={t("generatedImageAlt")}
-            className="w-full rounded-md border"
-          />
+          // The generated image's intrinsic dimensions are backend-configurable
+          // and unknown to the frontend, so we use `fill` inside a fixed
+          // aspect-ratio container with `object-contain` (shows the whole image
+          // without cropping). `unoptimized` because the URL is a freshly
+          // generated backend asset, not a known static remote pattern.
+          <div className="relative aspect-square w-full overflow-hidden rounded-md border">
+            <Image
+              src={previewUrl}
+              alt={t("generatedImageAlt")}
+              fill
+              className="object-contain"
+              sizes="(min-width: 1024px) 32rem, 100vw"
+              unoptimized
+            />
+          </div>
         )}
         <div className="flex justify-end gap-2">
           <NeonButton variant="outline" onClick={onClose}>

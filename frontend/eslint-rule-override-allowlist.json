@@ -8,6 +8,7 @@
     "sonarjs/cognitive-complexity": "Global 15 + test-file off — deliberate test exemption.",
     "no-magic-numbers": "Logic-layer error + test-file off — test fixtures legitimately use literals.",
     "@typescript-eslint/no-non-null-assertion": "Production `src` error + test-file off — `!` is idiomatic for known-present fixtures in tests (AE-0199).",
+    "@next/next/no-img-element": "Production `src` error + test-file off — tests mock next/image with a plain `<img>` so component tests skip Next's Image runtime (AE-0202).",
     "no-restricted-syntax": "Global fetch-in-useEffect error is INTENTIONALLY re-declared in the hooks block (flat config REPLACES, not merges; the hooks block re-asserts it AND adds the bare-fetch guard) — see eslint.config.mjs AE-0166/AE-0184 notes."
   }
 }

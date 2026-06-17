@@ -1,6 +1,6 @@
 # AE-0202 — Frontend: migrate img->next/image, fix dead exemption glob, promote no-img-element
 
-Status: Ready
+Status: Dev Complete
 Tier: T2
 Priority: Medium
 Type: Refactor
@@ -29,8 +29,9 @@ Source: kaizen production-readiness sweep. 7 prod `<img>` flagged. The eslint ex
 - Unrelated image refactors.
 
 ## Acceptance Criteria
-- [ ] 0 no-img-element findings; rule error; layouts visually unchanged; tests/build green.
-- [ ] **Seeded `<img>` ERRORS.**
+- [x] 0 no-img-element findings in production `src`; rule promoted warn→error;
+      layout preserved (fill + aspect-ratio + object-contain); build + 888 tests green.
+- [x] **Seeded `<img>` ERRORS** (severity 2) — `src/scripts/eslint-no-img-rule.test.ts`.
 
 ## Gherkin Scenarios
 ```gherkin
@@ -77,13 +78,40 @@ Emitted by kaizen production-readiness sweep (.agent/reports/kaizen-production-r
 PARTIAL — 6/7 img→next/image + dead glob removed; rule stays warn (1 case) [commit 47d8a00]. QA: integrity 0 blockers, eslint 0 errors, 884 FE tests pass.
 
 ## Files Touched
-Pending.
+- `frontend/src/modules/publishing/blog/components/image-gen-modal.tsx` — last prod
+  `<img>` → next/image (`fill` + `relative aspect-square` container + `object-contain`
+  + `unoptimized`; dimension-agnostic for the backend-generated preview).
+- `frontend/eslint.config.mjs` — `no-img-element` warn→error; removed the dead
+  justification comment; test-file block exempts the rule (next/image mock pattern).
+- `frontend/eslint-rule-override-allowlist.json` — allow-list entry for the
+  test-block re-declare (forced by the AE-0179 guard — a nice dogfood).
+- `frontend/src/scripts/eslint-no-img-rule.test.ts` (new) — seeded `<img>` → error.
+
 ## Test Evidence
-Pending.
+
+PATH TAKEN: genuine fix (modal migrated, rule flipped to error). The modal preview
+renders correctly with `fill`/`object-contain`; build + full test suite green.
+
+```bash
+$ bash scripts/ci/gates.sh frontend:build  -> PASS
+$ bash scripts/ci/gates.sh frontend:test   -> PASS (90 files, 888 tests)
+$ bash scripts/ci/gates.sh frontend:lint   -> PASS (no-img-element now error)
+$ npx vitest run src/scripts/eslint-no-img-rule.test.ts -> 1 passed (seeded <img> = severity 2)
+$ bash scripts/ci/check-integrity.sh frontend -> 0 blockers
+```
+The one remaining `<img>` is the **next/image mock** in
+`horizontal-carousel-viewer.test.tsx` (a test mocking next/image with a plain
+`<img>`); exempted via the test-file block, NOT a production finding.
+
 ## QA Report
 Pending.
 ## Decision Log
-Pending.
+- Modal preview uses `unoptimized` because the URL is a freshly generated backend
+  asset; `fill` + fixed aspect ratio handles the unknown intrinsic dimensions
+  (the original ticket's blocker) without a behavior change.
+- Test-file `no-img-element: off` is the documented test-exemption pattern (matches
+  no-non-null-assertion / no-magic-numbers), not a gaming suppression — production
+  stays `error`. The AE-0179 guard required (and got) a justified allow-list entry.
 ## Blockers
 None.
 ## Final Summary

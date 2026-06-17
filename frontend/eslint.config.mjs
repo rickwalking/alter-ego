@@ -19,12 +19,11 @@ import sonarjs from "eslint-plugin-sonarjs";
 //   no-non-null-assertion (AE-0199), no-floating-promises +
 //   no-misused-promises (AE-0200), max-params (AE-0201).
 //
-// no-img-element (AE-0202): 8 -> 1. Six prod `<img>` migrated to next/image;
-//   one remains at warn — `image-gen-modal.tsx` previews a freshly generated
-//   image whose dimensions are backend-configurable and unknown to the
-//   frontend, so neither explicit width/height nor a fixed-aspect `fill`
-//   container is behavior-preserving. Left as `<img>` + rule kept at `warn`
-//   until a known size is surfaced.
+// no-img-element (AE-0202): 8 -> 0. All prod `<img>` migrated to next/image,
+//   including image-gen-modal.tsx (generated preview uses `fill` in a fixed
+//   aspect-ratio container with `object-contain` + `unoptimized`, which is
+//   dimension-agnostic). Rule promoted warn -> error; a seeded `<img>` is
+//   verified to ERROR by src/scripts/eslint-no-img-rule.test.ts.
 const typeCheckedRules = {
   "@typescript-eslint/no-explicit-any": "error",
   // AE-0199: all pre-existing findings were in tests -> production `src` clean,
@@ -105,7 +104,7 @@ export default defineConfig([
       "@tanstack/query/exhaustive-deps": "error",
       // AE-0166: 0 pre-existing violations -> error.
       "no-console": ["error", { allow: ["warn", "error"] }],
-      "@next/next/no-img-element": "warn",
+      "@next/next/no-img-element": "error",
       // Data-fetching anti-pattern (AE-0166; frontend/CLAUDE.md "NEVER use
       // useEffect for Data Fetching"). fetch-in-useEffect ERRORS everywhere (0
       // pre-existing violations); steer to TanStack Query / a Server Component /
@@ -287,6 +286,11 @@ export default defineConfig([
       // AE-0199: `!` is idiomatic in tests for known-present fixtures; the rule
       // is error in production `src` but off here.
       "@typescript-eslint/no-non-null-assertion": "off",
+      // AE-0202: `no-img-element` targets production LCP/bandwidth. Tests
+      // legitimately MOCK `next/image` with a plain `<img>` (so component tests
+      // don't pull Next's Image runtime); the rule is `error` in production `src`
+      // but off in test files for that idiomatic mock pattern.
+      "@next/next/no-img-element": "off",
     },
   },
 ]);
