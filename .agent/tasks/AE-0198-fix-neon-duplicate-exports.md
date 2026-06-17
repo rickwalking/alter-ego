@@ -1,6 +1,6 @@
 # AE-0198 — Frontend: fix duplicate-value exports in constants/neon.ts (knip)
 
-Status: Ready
+Status: Done
 Tier: T1
 Priority: Low
 Type: Refactor
@@ -26,7 +26,9 @@ has duplicate-value exports `NEON_BORDER_FOCUS` / `NEON_PERSONA_AVATAR_BORDER`.
 - The dead-file (AE-0158) / dep (AE-0183) work.
 
 ## Acceptance Criteria
-- [ ] knip reports 0 duplicate exports; importers updated; tests/build green.
+- [x] knip reports 0 duplicate exports; importers updated; tests/build green
+      (verified landed in main: `NEON_PERSONA_AVATAR_BORDER` removed from
+      constants/neon.ts; no importer references it).
 
 ## Gherkin Scenarios
 ```gherkin
@@ -83,4 +85,11 @@ Pending.
 ## Blockers
 None.
 ## Final Summary
-Pending.
+DONE — landed in main (kaizen dev→QA loop, PR #31, commit 47d8a00). The
+duplicate-value export `NEON_PERSONA_AVATAR_BORDER` was removed from
+`frontend/src/constants/neon.ts`, collapsing to the single source-of-truth
+`NEON_BORDER_FOCUS`; importers were updated to reference `NEON_BORDER_FOCUS`
+directly. Verified in `origin/main` during the gate-hardening wave (2026-06-17):
+`git show origin/main:frontend/src/constants/neon.ts` no longer declares
+`NEON_PERSONA_AVATAR_BORDER`, and `grep -rn NEON_PERSONA_AVATAR_BORDER frontend/src`
+returns no matches. knip duplicate-export count: 0. Reconciled to Status: Done.
