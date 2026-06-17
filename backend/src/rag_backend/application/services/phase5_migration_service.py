@@ -59,6 +59,12 @@ from rag_backend.domain.constants.migration import (
 )
 from rag_backend.domain.constants.persona import DEFAULT_TONE_ATTRIBUTES
 from rag_backend.domain.models.rubric import EvaluationMethod, ScoringScale
+from rag_backend.infrastructure.database.distribution_home import (
+    DISTRIBUTION_CAPTION_KEY,
+    DISTRIBUTION_LINKEDIN_POST_EN_KEY,
+    DISTRIBUTION_LINKEDIN_POST_PT_KEY,
+    read_distribution,
+)
 from rag_backend.infrastructure.database.models.carousel import CarouselProjectModel
 from rag_backend.infrastructure.database.models.persona_rubric import (
     PersonaProfileModel,
@@ -160,16 +166,26 @@ def _default_rubric_criteria() -> list[dict[str, object]]:
     ]
 
 
-def _collect_writing_samples(projects: list[CarouselProjectModel]) -> list[str]:
-    """Extract writing samples from completed carousel outputs (MIG-002)."""
+async def _collect_writing_samples(
+    db: AsyncSession,
+    projects: list[CarouselProjectModel],
+) -> list[str]:
+    """Extract writing samples from completed carousel outputs (MIG-002).
+
+    AE-0204: the caption + LinkedIn post samples are sourced from the canonical
+    ``blog_posts.distribution`` home (via :func:`read_distribution`), NOT from the
+    embedded ``carousel_projects`` columns. ``blog_markdown`` is still read from the
+    project row (its canonical-home migration is AE-0163's domain, out of scope).
+    """
     samples: list[str] = []
     for project in projects:
         if project.status != CAROUSEL_STATUS_COMPLETED:
             continue
+        distribution = await read_distribution(db, str(project.id)) or {}
         for candidate in (
-            project.caption,
-            project.linkedin_post_pt,
-            project.linkedin_post_en,
+            distribution.get(DISTRIBUTION_CAPTION_KEY),
+            distribution.get(DISTRIBUTION_LINKEDIN_POST_PT_KEY),
+            distribution.get(DISTRIBUTION_LINKEDIN_POST_EN_KEY),
             project.blog_markdown,
         ):
             if not candidate or not candidate.strip():
@@ -268,7 +284,7 @@ class Phase5MigrationService:
             report.persona_id = str(found.id)
             return str(found.id)
 
-        samples = _collect_writing_samples(projects)
+        samples = await _collect_writing_samples(db, projects)
         if not samples:
             report.errors.append(ERR_NO_WRITING_SAMPLES)
             return None
