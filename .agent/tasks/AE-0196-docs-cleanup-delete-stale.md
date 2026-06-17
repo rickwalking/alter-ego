@@ -75,6 +75,9 @@ Feature: Docs hygiene
 ### 2026-06-17 00:00
 Emitted by kaizen production-readiness sweep (.agent/reports/kaizen-production-readiness.plan.md).
 
+### 2026-06-17 (executed, dev→QA loop, PR #31)
+DONE — 9 docs deleted; phase-1..6 Status: Done [commit 18b329d]. QA: integrity 0 blockers, eslint 0 errors, 884 FE tests pass.
+
 ## Files Touched
 Pending.
 ## Test Evidence

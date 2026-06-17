@@ -72,6 +72,9 @@ Feature: No non-null assertions in prod
 ### 2026-06-17 00:00
 Emitted by kaizen production-readiness sweep (.agent/reports/kaizen-production-readiness.plan.md).
 
+### 2026-06-17 (executed, dev→QA loop, PR #31)
+DONE — no-non-null-assertion promoted to error [commit 47d8a00]. QA: integrity 0 blockers, eslint 0 errors, 884 FE tests pass.
+
 ## Files Touched
 Pending.
 ## Test Evidence
