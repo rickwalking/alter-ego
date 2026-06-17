@@ -1,0 +1,168 @@
+name: CI Gate
+
+# AE-0203 Phase 2: a single ALWAYS-running aggregator check.
+#
+# The existing gate workflows (backend-quality-gates, frontend-quality-gates,
+# agent-ticket-hygiene) are PATH-FILTERED, so none of them runs on every PR.
+# GitHub blocks a PR on any REQUIRED check that does not run, so requiring those
+# path-scoped checks would permanently deadlock scope-limited PRs. This workflow
+# has NO `paths:` filter on `pull_request`, so the `ci-gate` job runs on EVERY
+# PR and is the single required status check for `main`.
+#
+# Skipped == pass: a gate job whose scope a PR does not touch is `skipped`, which
+# `ci-gate` treats as success. A docs-only PR skips all gates and still goes
+# green (never deadlocks); a real gate `failure`/`cancelled` makes `ci-gate` red.
+#
+# This file is ADDITIVE — it does not modify the existing gate workflows.
+
+on:
+  pull_request:
+
+concurrency:
+  group: ci-gate-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  detect:
+    name: detect
+    runs-on: ubuntu-latest
+    outputs:
+      backend: ${{ steps.filter.outputs.backend }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+      agent: ${{ steps.filter.outputs.agent }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Detect changed paths
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            backend:
+              - 'backend/**'
+              - 'scripts/ci/**'
+              - 'scripts/metrics/**'
+            frontend:
+              - 'frontend/**'
+              - 'scripts/ci/**'
+            agent:
+              - '.agent/**'
+              - 'scripts/agent_tasks/**'
+
+  backend-gate:
+    name: backend-gate
+    needs: detect
+    if: needs.detect.outputs.backend == 'true'
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: rag_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: "0.6.x"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        working-directory: backend
+        run: uv sync --locked
+
+      - name: Run backend gates
+        working-directory: .
+        run: bash scripts/ci/gates.sh backend
+        env:
+          GATES_REQUIRE_ALL: "1"
+          DATABASE_URL: postgresql+asyncpg://test:test@localhost:5432/rag_test
+          SECRET_KEY: test-secret-key-for-ci-tests!!
+          ANON_SECRET_KEY: test-anon-secret-for-ci-tests!
+
+  frontend-gate:
+    name: frontend-gate
+    needs: detect
+    if: needs.detect.outputs.frontend == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Run frontend gates
+        working-directory: .
+        run: bash scripts/ci/gates.sh frontend
+        env:
+          GATES_REQUIRE_ALL: "1"
+
+  agent-gate:
+    name: agent-gate
+    needs: detect
+    if: needs.detect.outputs.agent == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: "0.6.x"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Validate agent tickets
+        run: uv run python scripts/agent_tasks/validate_all_tickets.py
+
+  ci-gate:
+    # THE required status check for `main` (context: "CI Gate / ci-gate").
+    # Runs on every PR (if: always()) regardless of which gates were skipped.
+    name: ci-gate
+    needs: [detect, backend-gate, frontend-gate, agent-gate]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Aggregate gate results (skipped = not-applicable scope = pass)
+        if: always()
+        run: |
+          results='${{ needs.backend-gate.result }} ${{ needs.frontend-gate.result }} ${{ needs.agent-gate.result }}'
+          echo "results: $results"
+          for r in $results; do
+            if [ "$r" = "failure" ] || [ "$r" = "cancelled" ]; then
+              echo "::error::a required gate failed"; exit 1
+            fi
+          done
+          echo "All applicable gates passed (skipped = not-applicable scope)."
