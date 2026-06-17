@@ -5,6 +5,7 @@ export const API_BASE = "/api";
 export const API_ENDPOINTS = {
   AUTH_LOGIN: "/api/auth/token",
   AUTH_ME: "/api/auth/me",
+  AUTH_LOGOUT: "/api/auth/logout",
   AUTH_CHANGE_PASSWORD: "/api/auth/change-password",
   ADMIN_USERS: "/api/admin/users",
   ADMIN_USER_BY_ID: (id: string) => `/api/admin/users/${id}`,
