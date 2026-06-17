@@ -37,7 +37,7 @@ export function useCreateDocument() {
           ? [document, ...previous.filter((item) => item.id !== document.id)]
           : previous,
       );
-      queryClient.invalidateQueries({ queryKey: documentKeys.list() });
+      void queryClient.invalidateQueries({ queryKey: documentKeys.list() });
     },
   });
 }
@@ -56,7 +56,7 @@ export function useDeleteDocument() {
         previous?.filter((document) => document.id !== id),
       );
       queryClient.removeQueries({ queryKey: documentKeys.detail(id) });
-      queryClient.invalidateQueries({ queryKey: documentKeys.list() });
+      void queryClient.invalidateQueries({ queryKey: documentKeys.list() });
     },
   });
 }
@@ -77,7 +77,7 @@ export function useReprocessDocument() {
       queryClient.setQueryData<Document[]>(documentKeys.list(), (previous) =>
         previous?.map((item) => (item.id === document.id ? document : item)),
       );
-      queryClient.invalidateQueries({ queryKey: documentKeys.list() });
+      void queryClient.invalidateQueries({ queryKey: documentKeys.list() });
     },
   });
 }

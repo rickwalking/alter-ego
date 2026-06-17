@@ -70,7 +70,12 @@ export function EditUserDialog({
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="mt-4 space-y-4">
+        <form
+          onSubmit={(e) => {
+            void handleSubmit(e);
+          }}
+          className="mt-4 space-y-4"
+        >
           <div>
             <label className="block text-sm font-medium text-gray-700">
               {t("roleLabel")}

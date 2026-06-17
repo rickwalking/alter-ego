@@ -1,5 +1,7 @@
 # Epic: AE-0040 — PR #11 Code Quality and Architecture Refactoring
 
+> Status: Superseded — historical record
+
 > **Tier:** T3
 > **Area:** Cross-cutting (Backend + Frontend)
 > **Status:** Active — Partially Implemented (AE-0048 merged; 14 subtickets still open)

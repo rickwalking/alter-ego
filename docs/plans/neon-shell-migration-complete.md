@@ -1,5 +1,7 @@
 # Neon Shell Migration: Complete Plan with Atomic Design Architecture
 
+> Status: Superseded — historical record
+
 **Status**: Draft
 **Branch**: `design-implementation`
 **Last Updated**: 2026-05-28

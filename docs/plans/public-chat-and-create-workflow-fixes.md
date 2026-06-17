@@ -1,5 +1,7 @@
 # Public Chat & Create Workflow Fixes
 
+> Status: Superseded — historical record
+
 **Status:** `accepted`
 **Branch:** `design-implementation`
 

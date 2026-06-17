@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { NeonBadge } from "@/components/atoms/neon-badge";
 import { NeonCard } from "@/components/molecules/neon-card";
@@ -18,10 +19,17 @@ export function NeonBlogPostCard({
       <NeonCard hover padding={featured ? "lg" : "md"}>
         {imageUrl && (
           <div
-            className="mb-3 rounded-md overflow-hidden"
+            className="relative mb-3 rounded-md overflow-hidden"
             style={{ height: featured ? 160 : 100 }}
           >
-            <img src={imageUrl} alt="" className="w-full h-full object-cover" />
+            <Image
+              src={imageUrl}
+              alt=""
+              fill
+              sizes="(max-width: 768px) 100vw, 400px"
+              className="object-cover"
+              unoptimized
+            />
           </div>
         )}
         {niche && (

@@ -34,7 +34,7 @@ export function useCreateCarousel() {
             ? [project, ...previous.filter((item) => item.id !== project.id)]
             : previous,
       );
-      queryClient.invalidateQueries({ queryKey: carouselKeys.list() });
+      void queryClient.invalidateQueries({ queryKey: carouselKeys.list() });
     },
     onError: (error) => {
       console.error("Failed to create carousel:", error);
@@ -59,7 +59,7 @@ export function useDeleteCarousel() {
     },
     onSuccess: (_data, projectId) => {
       queryClient.removeQueries({ queryKey: carouselKeys.detail(projectId) });
-      queryClient.invalidateQueries({ queryKey: carouselKeys.list() });
+      void queryClient.invalidateQueries({ queryKey: carouselKeys.list() });
     },
     onError: (error) => {
       console.error("Failed to delete carousel:", error);

@@ -1,7 +1,12 @@
+import Image from "next/image";
 import ReactMarkdown from "react-markdown";
+import { CAROUSEL_SLIDE_HEIGHT, CAROUSEL_SLIDE_WIDTH } from "@/constants/blog";
 import { isSafeMarkdownHref } from "@/lib/safe-markdown-href";
-import type { CarouselDesignResponse } from "@/schemas/carousel";
-import type { BlogPostContentProps, SectionProps } from "./types";
+import type {
+  BlogPostContentProps,
+  ResolveSlideImageOptions,
+  SectionProps,
+} from "./types";
 
 function Section({ markdown, design, slideImage }: SectionProps) {
   const { colors, typography } = design;
@@ -175,7 +180,16 @@ function Section({ markdown, design, slideImage }: SectionProps) {
             boxShadow: `0 0 30px ${colors.primary}0D`,
           }}
         >
-          <img src={slideImage} alt="" className="h-auto w-full object-cover" />
+          <Image
+            src={slideImage}
+            alt=""
+            width={CAROUSEL_SLIDE_WIDTH}
+            height={CAROUSEL_SLIDE_HEIGHT}
+            sizes="(max-width: 768px) 100vw, 768px"
+            className="h-auto w-full object-cover"
+            style={{ height: "auto" }}
+            unoptimized
+          />
         </div>
       )}
     </>
@@ -187,12 +201,12 @@ export function extractH2Heading(markdown: string): string | null {
   return match ? match[1].trim() : null;
 }
 
-export function resolveSlideImage(
-  sectionMarkdown: string,
-  design: CarouselDesignResponse,
-  slideImages: string[],
-  sectionIndex: number,
-): string | null {
+export function resolveSlideImage({
+  sectionMarkdown,
+  design,
+  slideImages,
+  sectionIndex,
+}: ResolveSlideImageOptions): string | null {
   const heading = extractH2Heading(sectionMarkdown);
   if (!heading) {
     return null;
@@ -251,7 +265,12 @@ export function BlogPostContent({
         const slideImage =
           index === 0
             ? null
-            : resolveSlideImage(section, design, slideImages, index);
+            : resolveSlideImage({
+                sectionMarkdown: section,
+                design,
+                slideImages,
+                sectionIndex: index,
+              });
 
         return (
           <Section

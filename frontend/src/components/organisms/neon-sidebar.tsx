@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -21,7 +22,10 @@ import {
 } from "@/constants/neon";
 import type { SidebarSection } from "@/schemas/neon-sidebar";
 import { useAuth } from "@/modules/identity";
-import { SIDEBAR_WIDTH_PX } from "@/components/organisms/constants";
+import {
+  SIDEBAR_AVATAR_SIZE,
+  SIDEBAR_WIDTH_PX,
+} from "@/components/organisms/constants";
 
 export interface NeonSidebarProps {
   sections: SidebarSection[];
@@ -166,12 +170,12 @@ export function NeonSidebar({
             gap: "10px",
           }}
         >
-          <img
-            src="/about-pedro.png"
-            alt=""
+          <Image
+            src="/about-pedro.jpg"
+            alt="Pedro"
+            width={SIDEBAR_AVATAR_SIZE}
+            height={SIDEBAR_AVATAR_SIZE}
             style={{
-              width: "28px",
-              height: "28px",
               borderRadius: "50%",
               border: `1px solid ${NEON_BORDER_STRONG}`,
               objectFit: "cover",

@@ -40,12 +40,19 @@ export function toAuthenticatedPreviewSlideUrl(
   return `${API_ENDPOINTS.CAROUSEL_PREVIEW_IMAGE(projectId, filename)}?lang=${language}`;
 }
 
-export function slideUrlsForPublishPanel(
-  projectId: string,
-  paths: string[],
-  language: "pt" | "en",
-  updatedAt: string,
-): string[] {
+export interface SlideUrlsForPublishPanelOptions {
+  projectId: string;
+  paths: string[];
+  language: "pt" | "en";
+  updatedAt: string;
+}
+
+export function slideUrlsForPublishPanel({
+  projectId,
+  paths,
+  language,
+  updatedAt,
+}: SlideUrlsForPublishPanelOptions): string[] {
   return paths.map((path) =>
     appendCacheBuster(
       toAuthenticatedPreviewSlideUrl(path, projectId, language),

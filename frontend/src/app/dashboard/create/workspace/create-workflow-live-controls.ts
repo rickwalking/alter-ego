@@ -2,13 +2,20 @@ import type { CreateStepId } from "@/app/dashboard/create/step-ids";
 import { EDITORIAL_PHASE_TO_STEP } from "@/app/dashboard/create/step-ids";
 import type { EditorialWorkflowState } from "@/modules/publishing";
 
+export interface ShouldShowLiveWorkflowControlsOptions {
+  state: EditorialWorkflowState | null | undefined;
+  viewStepId: CreateStepId;
+  workflowStepId: CreateStepId;
+  awaitingHumanReview: boolean;
+}
+
 /** True when approve/revise controls should show for the active workflow gate. */
-export function shouldShowLiveWorkflowControls(
-  state: EditorialWorkflowState | null | undefined,
-  viewStepId: CreateStepId,
-  workflowStepId: CreateStepId,
-  awaitingHumanReview: boolean,
-): boolean {
+export function shouldShowLiveWorkflowControls({
+  state,
+  viewStepId,
+  workflowStepId,
+  awaitingHumanReview,
+}: ShouldShowLiveWorkflowControlsOptions): boolean {
   const isLiveStep =
     state?.current_phase !== undefined &&
     EDITORIAL_PHASE_TO_STEP[state.current_phase] === viewStepId &&

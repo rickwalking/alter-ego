@@ -142,7 +142,9 @@ export function BlogPostAdminPanel({
               </button>
               <button
                 type="button"
-                onClick={handleDelete}
+                onClick={() => {
+                  void handleDelete();
+                }}
                 disabled={deleteMutation.isPending}
                 className="rounded-md px-4 py-2 text-sm font-medium transition-opacity hover:opacity-80 disabled:opacity-50"
                 style={{

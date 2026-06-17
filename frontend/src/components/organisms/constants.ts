@@ -76,3 +76,5 @@ export const DASHBOARD_SIDEBAR_SECTIONS: SidebarSection[] = [
 
 export const LOGOUT_PATH = "/login";
 export const SIDEBAR_WIDTH_PX = 240;
+/** Footer avatar dimensions (square) for the sidebar user block. */
+export const SIDEBAR_AVATAR_SIZE = 28;

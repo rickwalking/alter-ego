@@ -1,5 +1,7 @@
 # Agentic Architecture Refactoring Plan
 
+> Status: Superseded — historical record
+
 > **Scope:** `rag_backend.application.services` — RAGAgent, CarouselAgent, LangGraph pipeline
 > **Last updated:** 2026-04-24
 > **Status:** ✅ All 5 phases implemented and deployed

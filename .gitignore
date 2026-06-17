@@ -69,3 +69,14 @@ mutmut-cache/
 backend/mutants/
 
 .impeccable/
+
+# AE-0194: debug/verification artifacts (kaizen production-readiness)
+carousel-*.png
+*-check.png
+slide-*-check.png
+tmp/
+# Playwright MCP a11y snapshot dumps (extensionless)
+/login-page
+/login-form*
+/langfuse-*
+/create-page

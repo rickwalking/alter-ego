@@ -77,3 +77,12 @@ export const ROUTE_PATHS = {
   BLOG: "/blog",
   HOME: "/",
 } as const;
+
+/**
+ * Carousel slide intrinsic dimensions (px). The carousel design template
+ * renders every slide at a fixed 1080x1350 (see backend
+ * `agents/prompts/_shared/variables.yaml`), so embedded slide images in blog
+ * posts have a known aspect ratio for next/image responsive sizing.
+ */
+export const CAROUSEL_SLIDE_WIDTH = 1080;
+export const CAROUSEL_SLIDE_HEIGHT = 1350;

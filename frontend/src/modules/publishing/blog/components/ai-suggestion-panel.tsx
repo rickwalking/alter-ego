@@ -41,12 +41,11 @@ export function AiSuggestionPanel({
     if (!selectedText.trim()) {
       return;
     }
-    const result = await improve(
-      selectedText,
-      BLOG_AI_ACTIONS.IMPROVE,
-      undefined,
+    const result = await improve({
+      text: selectedText,
+      action: BLOG_AI_ACTIONS.IMPROVE,
       personaId,
-    );
+    });
     onApplySuggestion(result.improved_text);
   };
 

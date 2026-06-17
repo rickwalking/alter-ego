@@ -1,5 +1,7 @@
 # Phase 2 — Pilot the Knowledge Module (epic plan)
 
+**Status: Done** — shipped (PR #16).
+
 **Planner output** (planner-skill). Source: `.agent/reports/domain-modularization.options.md`
 §"Phase 2: Pilot the Knowledge module". Builds on Phase 1 (PR #15): uses the AE-0081
 module conventions + `modules/_template/`, the AE-0082 import contracts/ratchet, and the
