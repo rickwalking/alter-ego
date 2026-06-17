@@ -1,4 +1,4 @@
-# AE-0152 — Frontend dead-export / unused-code gate (knip, baseline-ratchet)
+# AE-0172 — Frontend dead-export / unused-code gate (knip, baseline-ratchet)
 
 Status: Review
 Tier: T2
@@ -156,11 +156,11 @@ Feature: Frontend dead-export gate
 - Related: AE-0149 (jscpd gate — same baseline-ratchet + single-source-of-truth
   pattern to reuse), AE-0150 (the refactor whose orphaned constants motivated this).
   Source: `.agent/reports/kaizen-AE-0149-0151.plan.md` (P1).
-- **Blocked by: AE-0154** — the duplication refactor moves exports / creates shared
-  primitives / changes barrel behavior, which churns knip results. Run AE-0154
+- **Blocked by: AE-0174** — the duplication refactor moves exports / creates shared
+  primitives / changes barrel behavior, which churns knip results. Run AE-0174
   first, THEN snapshot the knip baseline, so the baseline doesn't immediately go
   stale. (Skeptical-review sequencing finding; the changed-file-only blocking above
-  also makes AE-0152 robust to that churn.)
+  also makes AE-0172 robust to that churn.)
 
 ## Implementation Plan
 
@@ -190,16 +190,16 @@ Pending.
 
 ## QA Report
 
-PASS (wave QA) — see [AE-0152-0155.qa.md](../reports/AE-0152-0155.qa.md). 15/15 frontend gates green; integrity 0 net-new blockers; all ACs MET; 0 blocker findings.
+PASS (wave QA) — see [AE-0172-0175.qa.md](../reports/AE-0172-0175.qa.md). 15/15 frontend gates green; integrity 0 net-new blockers; all ACs MET; 0 blocker findings.
 
 ## Decision Log
 
-- 2026-06-16 — Skeptical review (`.agent/reports/AE-0152-0155.skeptical-review.md`,
+- 2026-06-16 — Skeptical review (`.agent/reports/AE-0172-0175.skeptical-review.md`,
   external cold critic): **BLOCKER accepted** — baseline keyed by `{rule,file,symbol}`
   identity, not count (replace-same-count must fail); ACs updated. **WARN accepted** —
   changed-file findings block from day one (full-tree sweep advisory until flip);
   added operating-model AC (runtime budget, owner, flip criterion). **WARN accepted** —
-  sequenced after AE-0154 to avoid baseline churn.
+  sequenced after AE-0174 to avoid baseline churn.
 
 ## Blockers
 

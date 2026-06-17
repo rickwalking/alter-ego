@@ -1,4 +1,4 @@
-# AE-0158 — Advisory dead-file (knip file-scope) report
+# AE-0178 — Advisory dead-file (knip file-scope) report
 
 Status: Intake
 Tier: T1
@@ -14,12 +14,12 @@ Updated: 2026-06-16
 
 A non-blocking `frontend / Dead files (advisory)` report (knip file scope) that
 surfaces unused files without forcing risky deletions — complementing the
-blocking export-scoped dead-code gate (AE-0152).
+blocking export-scoped dead-code gate (AE-0172).
 
 ## Problem
 
-Source: kaizen `.agent/reports/kaizen-AE-0152-0155.plan.md` (failure class #3) +
-the AE-0152 QA finding. The AE-0152 blocking gate is **export/type-scoped**
+Source: kaizen `.agent/reports/kaizen-AE-0172-0175.plan.md` (failure class #3) +
+the AE-0172 QA finding. The AE-0172 blocking gate is **export/type-scoped**
 (`--include exports,types,...`); unused **files** are not surfaced anywhere.
 Unscoped `knip` reports ~117 "unused files" — mostly barrel-reachable or
 app-router/framework files — too noisy to block, but worth visibility (like the
