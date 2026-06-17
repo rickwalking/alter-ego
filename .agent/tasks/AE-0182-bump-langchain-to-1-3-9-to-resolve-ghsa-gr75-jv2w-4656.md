@@ -1,6 +1,6 @@
 # AE-0182 — Bump langchain to 1.3.9 to resolve GHSA-gr75-jv2w-4656
 
-Status: Dev Complete
+Status: Done
 Tier: T2
 Priority: High
 Type: Security
@@ -145,4 +145,10 @@ None.
 
 ## Final Summary
 
-Pending.
+Cleared the HIGH `pip-audit` advisory GHSA-gr75-jv2w-4656 by bumping
+`langchain` 1.2.15 → 1.3.9 (uv.lock: langchain-core 1.4.7, langgraph 1.2.5,
+langgraph-sdk 0.4.2). Resolver required relaxing `websockets>=16.0` → `>=14,<16`
+(→ 15.0.1; transitive-only, no direct imports). Verified: `pip-audit` PASS,
+560 agent/langgraph unit tests pass, full backend suite + mutation green via
+`backend-gate` on PR #36. Bundled into PR #36 (merged) because the new `ci-gate`
+required check was blocked until this advisory cleared.
