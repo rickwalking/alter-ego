@@ -207,10 +207,18 @@ class TestEditorialWorkflowServiceSyncProjectPhase:
         assert project.workflow_status == "existing"
 
     @pytest.mark.asyncio
-    async def test_updates_caption(self, service: EditorialWorkflowService) -> None:
-        """Given caption in state, when syncing, then caption is updated."""
+    async def test_does_not_write_caption_to_embedded_column(
+        self, service: EditorialWorkflowService
+    ) -> None:
+        """AE-0204: the checkpoint sync no longer writes the embedded caption column.
+
+        Caption has a canonical home (``blog_posts.distribution``); the checkpoint
+        sync is decoupled so a resumed checkpoint cannot resurrect an embedded-column
+        write. The embedded ``project.caption`` is left UNCHANGED by the sync.
+        """
         db = AsyncMock()
         project = MagicMock()
+        project.caption = "pre-existing"
         db.get = AsyncMock(return_value=project)
         state: dict[str, object] = {
             "current_phase": "research",
@@ -218,28 +226,17 @@ class TestEditorialWorkflowServiceSyncProjectPhase:
             "caption": "Test caption",
         }
         await service._sync_project_phase(db, "project-1", state)
-        assert project.caption == "Test caption"
-
-    @pytest.mark.asyncio
-    async def test_skips_empty_caption(self, service: EditorialWorkflowService) -> None:
-        """Given empty caption, when syncing, then caption is not updated."""
-        db = AsyncMock()
-        project = MagicMock()
-        project.caption = "existing"
-        db.get = AsyncMock(return_value=project)
-        state: dict[str, object] = {
-            "current_phase": "research",
-            "phase_status": "in_progress",
-            "caption": "",
-        }
-        await service._sync_project_phase(db, "project-1", state)
-        assert project.caption == "existing"
+        assert project.caption == "pre-existing"
 
     @pytest.mark.asyncio
     async def test_updates_blog_markdown(
         self, service: EditorialWorkflowService
     ) -> None:
-        """Given blog_markdown in state, when syncing, then blog_markdown is updated."""
+        """Given blog_markdown in state, when syncing, then blog_markdown is updated.
+
+        ``blog_markdown`` remains synced (AE-0163's domain) — only the AE-0204
+        distribution fields were removed from the checkpoint sync.
+        """
         db = AsyncMock()
         project = MagicMock()
         db.get = AsyncMock(return_value=project)
@@ -252,12 +249,18 @@ class TestEditorialWorkflowServiceSyncProjectPhase:
         assert project.blog_markdown == "# Test"
 
     @pytest.mark.asyncio
-    async def test_updates_linkedin_posts(
+    async def test_does_not_write_linkedin_posts_to_embedded_columns(
         self, service: EditorialWorkflowService
     ) -> None:
-        """Given linkedin posts in state, when syncing, then linkedin posts are updated."""
+        """AE-0204: the checkpoint sync no longer writes the embedded LinkedIn columns.
+
+        LinkedIn posts have a canonical home (``blog_posts.distribution``); the
+        decoupled sync leaves the embedded columns UNCHANGED.
+        """
         db = AsyncMock()
         project = MagicMock()
+        project.linkedin_post_pt = "pre-existing-pt"
+        project.linkedin_post_en = "pre-existing-en"
         db.get = AsyncMock(return_value=project)
         state: dict[str, object] = {
             "current_phase": "research",
@@ -266,8 +269,8 @@ class TestEditorialWorkflowServiceSyncProjectPhase:
             "linkedin_post_en": "EN post",
         }
         await service._sync_project_phase(db, "project-1", state)
-        assert project.linkedin_post_pt == "PT post"
-        assert project.linkedin_post_en == "EN post"
+        assert project.linkedin_post_pt == "pre-existing-pt"
+        assert project.linkedin_post_en == "pre-existing-en"
 
 
 class TestEditorialWorkflowServiceGetState:

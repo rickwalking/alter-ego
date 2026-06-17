@@ -1,6 +1,6 @@
 # AE-0204 — Canonical distribution home for caption/LinkedIn (blog_posts.distribution JSONB)
 
-Status: Intake
+Status: Dev Complete
 Tier: T3
 Priority: High
 Type: Refactor
@@ -60,18 +60,20 @@ the columns = silent data loss + broken IG/LinkedIn publish.
 
 ## Acceptance Criteria
 
-- [ ] `blog_posts.distribution` JSONB added via additive Alembic migration.
-- [ ] Backfill copies `caption`/`linkedin_post_pt`/`linkedin_post_en` for all
-      `origin='carousel'` rows; verified non-lossy.
-- [ ] All readers source these three fields from `blog_posts.distribution`; a
-      word-boundary grep shows **no** application read of the embedded
+- [x] `blog_posts.distribution` JSONB added via additive Alembic migration
+      (`e5f6a7b8c9d0`, off head `d4e5f6a7b8c9`).
+- [x] Backfill copies `caption`/`linkedin_post_pt`/`linkedin_post_en` for all
+      `origin='carousel'` rows; verified non-lossy (data + migration tests).
+- [x] All readers source these three fields from `blog_posts.distribution` (via the
+      carousel-repository read overlay + an injected `DistributionReader` for
+      phase5); word-boundary grep shows **no** application read of the embedded
       `caption`/`linkedin_post_*` columns remains.
-- [ ] Checkpoint resume no longer writes the embedded columns (sync decoupled).
-- [ ] AE-0125 publishing safety net diff = 0.
-- [ ] A seeded test fails if a reader still sources from the embedded column
-      (rule-fires, per AE-0180).
-- [ ] ADR added (distribution ownership is architecturally significant per
-      CLAUDE.md / ADR-0009).
+- [x] Checkpoint resume no longer writes the embedded columns (sync decoupled:
+      caption/linkedin removed from `_DISTRIBUTION_SYNC_FIELDS`).
+- [x] AE-0125 publishing safety net diff = 0.
+- [x] A seeded test fails if a reader still sources from the embedded column
+      (rule-fires, AE-0180) — `test_caption_route_reads_from_home_not_embedded_column`.
+- [x] ADR added (ADR-011, accepted) + listed in root `CLAUDE.md`.
 
 ## Gherkin Scenarios
 
@@ -135,19 +137,63 @@ Feature: ...
 
 Ticket created.
 
+### 2026-06-17 — Developer (Dev Complete)
+
+Implemented the canonical distribution home end-to-end:
+- Added `blog_posts.distribution` JSONB + additive migration `e5f6a7b8c9d0` with a
+  carousel-origin backfill; migration round-trips clean (upgrade head → empty
+  drift → downgrade -1 → re-upgrade; `downgrade base` passes).
+- Added a single shared accessor (`distribution_home.py`) + domain key constants and
+  a `DistributionReader` Protocol.
+- Dual-write at the carousel-blog chokepoint; read via the carousel-repository
+  overlay (single seam) so all entity readers source the home; phase5 reads via an
+  injected reader (no new app/api→infra import — ratchet stayed flat).
+- Decoupled the LangGraph checkpoint sync (removed caption/linkedin from
+  `_DISTRIBUTION_SYNC_FIELDS`).
+- Added accessor/migration/rule-fires/safety-net tests; updated impacted tests.
+- ADR-011 added + linked in root CLAUDE.md.
+
+All 17 backend gates PASS (DB gates ran locally); integrity 0 net-new blockers;
+validate_all_tickets OK. See `.agent/reports/AE-0204.dev-summary.md`.
+
 ## Files Touched
 
-Pending.
+See `.agent/reports/AE-0204.dev-summary.md` → "Files Changed". Key:
+`blog_post.py` (column), `distribution_home.py` (NEW), `domain/constants/distribution.py`
+(NEW), `carousel_blog_dual_write.py`, `carousel_repository.py`,
+`carousel_project_write_owner.py`, `phase5_migration_service.py`, `admin_migration.py`,
+`protocols/repositories.py`, `alembic/versions/e5f6a7b8c9d0_*.py`,
+`docs/decisions/0011-canonical-distribution-home.md`, `CLAUDE.md`.
 
 ## Test Evidence
 
-Pending.
+```
+GATES_JSON: {"pass":17,"fail":0,"skip":0,...}  (format,lint,lint-diff,blanket-ignore,
+strict-diff,type,imports,arch-ratchet,docstrings,dead-code,bandit,pip-audit,
+integrity,test,diff-cover,migrations,mutation — all PASS)
+```
+- integrity: 0 net-new blockers.
+- New tests: `tests/unit/infrastructure/test_distribution_home.py`,
+  `tests/integration/test_distribution_home_migration.py`,
+  `tests/integration/test_publishing_safety_net.py::TestDistributionCanonicalHome`
+  (dual-write population + AE-0180 rule-fires).
+- Migration: upgrade/downgrade/re-upgrade round-trip + backfill correctness verified
+  against postgres + sqlite.
 
 ## QA Report
 
-Pending.
+Pending QA Agent.
 
 ## Decision Log
+
+- **Dual-write (reversible) over single-write**: writers keep the embedded columns;
+  the carousel-blog chokepoint mirrors into `blog_posts.distribution` (source of
+  truth for reads). Embedded columns read-dead → AE-0205 drop is data-loss-free.
+- **JSON-on-`blog_posts` over a new `carousel_distribution` table** (ADR-011):
+  matches the `content` JSONB pattern; publishing ACL reads the row it already loads.
+- **Reader injection for phase5**: `DistributionReader` Protocol in domain + the
+  carousel repo's bound reader injected at the admin edge, to keep the app/api→infra
+  import ratchet flat (no suppressions/loosening).
 
 Pending.
 

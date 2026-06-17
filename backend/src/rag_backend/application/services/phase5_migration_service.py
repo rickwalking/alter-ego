@@ -31,6 +31,12 @@ from rag_backend.domain.constants.carousel_workflow import (
     PHASE_STATUS_PENDING,
     PHASE_STATUS_REJECTED,
 )
+from rag_backend.domain.constants.distribution import (
+    DISTRIBUTION_CAPTION_KEY,
+    DISTRIBUTION_LINKEDIN_POST_EN_KEY,
+    DISTRIBUTION_LINKEDIN_POST_PT_KEY,
+    DistributionReader,
+)
 from rag_backend.domain.constants.migration import (
     BRIEF_FIELD_AUDIENCE,
     BRIEF_FIELD_IMAGE_STYLE,
@@ -90,6 +96,21 @@ class Phase5MigrationReport:
     projects_linked: int = 0
     dry_run: bool = False
     errors: list[str] = field(default_factory=list)
+
+
+@dataclass(frozen=True)
+class _PersonaSeedContext:
+    """Inputs for the default-persona seed (grouped to keep the ≤3-arg rule).
+
+    Carries the session, the loaded projects, the run report, and the AE-0204
+    injected canonical-home :class:`DistributionReader` used to source the
+    persona's caption/LinkedIn writing samples.
+    """
+
+    db: AsyncSession
+    projects: list[CarouselProjectModel]
+    report: Phase5MigrationReport
+    read_distribution: DistributionReader
 
 
 def build_creative_brief(project: CarouselProjectModel) -> str:
@@ -160,16 +181,28 @@ def _default_rubric_criteria() -> list[dict[str, object]]:
     ]
 
 
-def _collect_writing_samples(projects: list[CarouselProjectModel]) -> list[str]:
-    """Extract writing samples from completed carousel outputs (MIG-002)."""
+async def _collect_writing_samples(
+    projects: list[CarouselProjectModel],
+    read_distribution: DistributionReader,
+) -> list[str]:
+    """Extract writing samples from completed carousel outputs (MIG-002).
+
+    AE-0204: the caption + LinkedIn post samples are sourced from the canonical
+    ``blog_posts.distribution`` home (via the injected :class:`DistributionReader`),
+    NOT from the embedded ``carousel_projects`` columns. The reader is injected at
+    the inbound edge so this application service does not import the infrastructure
+    accessor (ADR-009 layering). ``blog_markdown`` is still read from the project row
+    (its canonical-home migration is AE-0163's domain, out of scope).
+    """
     samples: list[str] = []
     for project in projects:
         if project.status != CAROUSEL_STATUS_COMPLETED:
             continue
+        distribution = await read_distribution(str(project.id)) or {}
         for candidate in (
-            project.caption,
-            project.linkedin_post_pt,
-            project.linkedin_post_en,
+            distribution.get(DISTRIBUTION_CAPTION_KEY),
+            distribution.get(DISTRIBUTION_LINKEDIN_POST_PT_KEY),
+            distribution.get(DISTRIBUTION_LINKEDIN_POST_EN_KEY),
             project.blog_markdown,
         ):
             if not candidate or not candidate.strip():
@@ -186,13 +219,29 @@ class Phase5MigrationService:
     """Migrates legacy carousel projects to the editorial workflow schema."""
 
     async def run(
-        self, db: AsyncSession, *, dry_run: bool = False
+        self,
+        db: AsyncSession,
+        read_distribution: DistributionReader,
+        *,
+        dry_run: bool = False,
     ) -> Phase5MigrationReport:
-        """Execute all Phase 5 migration steps."""
+        """Execute all Phase 5 migration steps.
+
+        ``read_distribution`` (AE-0204) is the injected canonical-home reader the
+        persona-sample collection uses to source caption/LinkedIn samples from
+        ``blog_posts.distribution`` instead of the embedded carousel columns.
+        """
         report = Phase5MigrationReport(dry_run=dry_run)
         projects = await self._load_projects(db)
 
-        persona_id = await self._ensure_default_persona(db, projects, report)
+        persona_id = await self._ensure_default_persona(
+            _PersonaSeedContext(
+                db=db,
+                projects=projects,
+                report=report,
+                read_distribution=read_distribution,
+            )
+        )
         rubric_id = await self._ensure_default_rubric(db, report)
 
         for project in projects:
@@ -253,24 +302,20 @@ class Phase5MigrationService:
         report.workflow_states_updated += 1
 
     @staticmethod
-    async def _ensure_default_persona(
-        db: AsyncSession,
-        projects: list[CarouselProjectModel],
-        report: Phase5MigrationReport,
-    ) -> str | None:
-        existing = await db.execute(
+    async def _ensure_default_persona(ctx: _PersonaSeedContext) -> str | None:
+        existing = await ctx.db.execute(
             select(PersonaProfileModel).where(
                 PersonaProfileModel.name == DEFAULT_PERSONA_NAME
             )
         )
         found = existing.scalar_one_or_none()
         if found:
-            report.persona_id = str(found.id)
+            ctx.report.persona_id = str(found.id)
             return str(found.id)
 
-        samples = _collect_writing_samples(projects)
+        samples = await _collect_writing_samples(ctx.projects, ctx.read_distribution)
         if not samples:
-            report.errors.append(ERR_NO_WRITING_SAMPLES)
+            ctx.report.errors.append(ERR_NO_WRITING_SAMPLES)
             return None
 
         persona = PersonaProfileModel(
@@ -282,10 +327,10 @@ class Phase5MigrationService:
             preferred_phrases=[],
             expertise_areas=list(DEFAULT_PERSONA_EXPERTISE),
         )
-        db.add(persona)
-        await db.flush()
-        report.persona_created = True
-        report.persona_id = str(persona.id)
+        ctx.db.add(persona)
+        await ctx.db.flush()
+        ctx.report.persona_created = True
+        ctx.report.persona_id = str(persona.id)
         return str(persona.id)
 
     @staticmethod

@@ -38,21 +38,24 @@ from rag_backend.application.services.optimistic_lock_service import (
 )
 from rag_backend.domain.constants.carousel_workflow import (
     PHASE_STATUS_FAILED,
-    WORKFLOW_STATE_LINKEDIN_POST_EN_KEY,
-    WORKFLOW_STATE_LINKEDIN_POST_PT_KEY,
 )
 from rag_backend.domain.models import CarouselStatus
 from rag_backend.infrastructure.database.models.carousel import CarouselProjectModel
 from rag_backend.platform.database import SqlAlchemyUnitOfWork
 
-# Workflow-state keys synced onto the legacy row's distribution columns. Pairs of
-# (ORM column attribute, workflow-state key), kept identical to the pre-AE-0107
-# ``_sync_project_phase`` body so the synced values stay byte-for-byte unchanged.
+# Workflow-state keys synced onto the legacy row from the LangGraph checkpoint.
+# Pairs of (ORM column attribute, workflow-state key).
+#
+# AE-0204 decouple: ``caption`` / ``linkedin_post_pt`` / ``linkedin_post_en`` were
+# REMOVED from this checkpoint sync. Those three distribution fields now have a
+# canonical home (``blog_posts.distribution``) written by the carousel-blog
+# dual-write chokepoint; the checkpoint sync must NOT keep the embedded carousel
+# columns current as a second source of truth, else a resumed ``AsyncPostgresSaver``
+# checkpoint would resurrect embedded-column writes for fields the canonical home
+# already owns. Only ``blog_markdown`` (AE-0163's domain — its canonical home is the
+# carousel-origin ``blog_posts`` row written by the same dual-write) remains synced.
 _DISTRIBUTION_SYNC_FIELDS: tuple[tuple[str, str], ...] = (
-    ("caption", "caption"),
     ("blog_markdown", "blog_markdown"),
-    ("linkedin_post_pt", WORKFLOW_STATE_LINKEDIN_POST_PT_KEY),
-    ("linkedin_post_en", WORKFLOW_STATE_LINKEDIN_POST_EN_KEY),
 )
 
 

@@ -51,6 +51,15 @@ class BlogPostModel(Base):
     content: Mapped[dict[str, object]] = mapped_column(
         JSON, default=dict, nullable=False
     )
+    # Distribution copy (AE-0204) — the canonical home for the Instagram caption +
+    # LinkedIn posts of an ``origin='carousel'`` post. Mirrors the ``content`` JSONB
+    # pattern (ADR-0006). Shape: ``{"caption": str|None, "linkedin_post_pt": str|None,
+    # "linkedin_post_en": str|None}``. Populated by the AE-0204 backfill + the
+    # carousel-blog dual-write mirror; the embedded ``carousel_projects`` columns are
+    # retained (drop is AE-0205) but have ZERO application readers for these 3 fields.
+    distribution: Mapped[dict[str, object]] = mapped_column(
+        JSON, default=dict, nullable=False
+    )
     excerpt = Column(String(500), nullable=True)
     featured_image_url = Column(String(500), nullable=True)
 
@@ -132,6 +141,7 @@ class BlogPostModel(Base):
             "slug": self.slug,
             "status": self.status,
             "content": self.content,
+            "distribution": self.distribution,
             "excerpt": self.excerpt,
             "featured_image_url": self.featured_image_url,
             "author_id": self.author_id,
@@ -171,6 +181,7 @@ class BlogPostModel(Base):
             slug=entity.get("slug", ""),
             status=entity.get("status", "draft"),
             content=entity.get("content", {}),
+            distribution=entity.get("distribution", {}),
             excerpt=entity.get("excerpt"),
             featured_image_url=entity.get("featured_image_url"),
             author_id=entity.get("author_id"),

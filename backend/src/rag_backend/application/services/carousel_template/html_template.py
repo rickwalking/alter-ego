@@ -103,7 +103,14 @@ def _build_action_bar() -> str:
 def _build_caption_html(
     project: CarouselProject, *, language: str | None = None
 ) -> str:
-    """Build caption HTML if caption is present."""
+    """Build caption HTML if caption is present.
+
+    AE-0204: ``project.caption`` is sourced from the canonical
+    ``blog_posts.distribution`` home — the carousel repository overlays it onto the
+    entity on load, so this render reads the canonical caption (not the embedded
+    ``carousel_projects.caption`` column). ``project.caption_en`` is intentionally
+    left on the embedded column (write-dead; AE-0206 owns its migration).
+    """
     from rag_backend.domain.constants import LANGUAGE_EN
 
     caption = project.caption

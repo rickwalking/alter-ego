@@ -141,6 +141,10 @@ class CarouselRepository(Protocol):
 
     async def get_project_by_id(self, project_id: UUID) -> CarouselProject | None: ...
 
+    async def read_distribution(
+        self, project_id: str
+    ) -> dict[str, str | None] | None: ...
+
     async def get_all_projects(
         self,
         *,

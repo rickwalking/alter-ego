@@ -148,7 +148,13 @@ class Publication:
 
     @property
     def caption(self) -> str | None:
-        """The persisted social caption of the underlying carousel, when set."""
+        """The persisted social caption of the underlying carousel, when set.
+
+        AE-0204: the wrapped :class:`CarouselProject` is loaded through the carousel
+        repository, which overlays ``caption`` from the canonical
+        ``blog_posts.distribution`` home — so this read sources the caption from the
+        canonical home, not the embedded ``carousel_projects.caption`` column.
+        """
         return self.project.caption
 
 
