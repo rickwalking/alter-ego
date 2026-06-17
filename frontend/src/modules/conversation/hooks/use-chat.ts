@@ -45,7 +45,9 @@ export function useCreateConversation() {
               ]
             : previous,
       );
-      queryClient.invalidateQueries({ queryKey: chatKeys.conversations() });
+      void queryClient.invalidateQueries({
+        queryKey: chatKeys.conversations(),
+      });
     },
     onError: (error) => {
       console.error("Failed to create conversation:", error);
@@ -59,10 +61,12 @@ export function useSendMessage() {
   return useMutation({
     mutationFn: sendConversationMessage,
     onSuccess: (_, { conversationId }) => {
-      queryClient.invalidateQueries({
+      void queryClient.invalidateQueries({
         queryKey: chatKeys.messages(conversationId),
       });
-      queryClient.invalidateQueries({ queryKey: chatKeys.conversations() });
+      void queryClient.invalidateQueries({
+        queryKey: chatKeys.conversations(),
+      });
     },
     onError: (error) => {
       console.error("Failed to send message:", error);
@@ -93,7 +97,9 @@ export function useDeleteConversation() {
       queryClient.removeQueries({
         queryKey: chatKeys.messages(conversationId),
       });
-      queryClient.invalidateQueries({ queryKey: chatKeys.conversations() });
+      void queryClient.invalidateQueries({
+        queryKey: chatKeys.conversations(),
+      });
     },
     onError: (error) => {
       console.error("Failed to delete conversation:", error);

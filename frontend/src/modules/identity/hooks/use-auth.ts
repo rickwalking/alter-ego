@@ -28,10 +28,10 @@ export function useAuth(): UseAuthResult {
   }, []);
 
   useEffect(() => {
-    fetchUser();
+    void fetchUser();
   }, [fetchUser]);
 
-  const logout = useCallback(async () => {
+  const performLogout = useCallback(async () => {
     try {
       await fetch("/api/auth/logout", {
         method: "POST",
@@ -43,6 +43,10 @@ export function useAuth(): UseAuthResult {
     setUser(null);
     window.location.href = "/login";
   }, []);
+
+  const logout = useCallback(() => {
+    void performLogout();
+  }, [performLogout]);
 
   return {
     user,

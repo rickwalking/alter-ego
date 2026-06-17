@@ -34,7 +34,7 @@ export function usePublishInstagram() {
       );
     },
     onSuccess: (_data, variables) => {
-      queryClient.invalidateQueries({
+      void queryClient.invalidateQueries({
         queryKey: carouselKeys.detail(variables.projectId),
       });
     },

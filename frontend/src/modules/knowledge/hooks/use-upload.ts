@@ -74,7 +74,7 @@ export function useUploadDocument() {
           ? [document, ...previous.filter((item) => item.id !== document.id)]
           : previous,
       );
-      queryClient.invalidateQueries({ queryKey: documentKeys.list() });
+      void queryClient.invalidateQueries({ queryKey: documentKeys.list() });
     },
   });
 }
