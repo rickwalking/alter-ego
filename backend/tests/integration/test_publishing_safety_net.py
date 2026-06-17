@@ -89,6 +89,11 @@ FIXTURE_SUBTITLE = "Fixture Subtitle"
 FIXTURE_BLOG_PT = "# Fixture Title: Fixture Subtitle\n\nDeterministic blog body."
 FIXTURE_BLOG_EN = "# Fixture Title EN: Fixture Subtitle EN\n\nDeterministic body."
 FIXTURE_CAPTION = "Deterministic fixture caption for the snapshot."
+# AE-0204: LinkedIn fixtures + a poison value used to prove readers source the
+# canonical ``blog_posts.distribution`` home, never the embedded carousel column.
+_FIXTURE_LINKEDIN_PT = "Deterministic LinkedIn post (PT) for the home."
+_FIXTURE_LINKEDIN_EN = "Deterministic LinkedIn post (EN) for the home."
+_POISON_CAPTION = "POISON-EMBEDDED-CAPTION-MUST-NOT-BE-READ"
 SLIDE_COUNT: Final = 3
 
 # A STABLE output_dir string (the publish/caption JSON surfaces it). The
@@ -588,6 +593,114 @@ class TestDistribution:
         finally:
             _reset_publisher()
         assert resp.status_code == 403
+
+
+# ==============================================================================
+# AE-0204: caption + LinkedIn are served from the canonical distribution home
+# (blog_posts.distribution), NOT the embedded carousel columns.
+# ==============================================================================
+class TestDistributionCanonicalHome:
+    """The 3 distribution fields source from ``blog_posts.distribution`` (AE-0204)."""
+
+    @pytest.mark.asyncio
+    async def test_dual_write_populates_canonical_home(
+        self, pub_env: PubEnv
+    ) -> None:
+        """Scenario: the carousel dual-write mirrors caption + LinkedIn into the home.
+
+        Given a carousel with caption + LinkedIn posts, the carousel-blog write
+        chokepoint mirrors all three into the canonical ``blog_posts.distribution``
+        column on the ``origin='carousel'`` row — byte-identical to the embedded
+        values — so the row becomes the source of truth every reader consumes.
+        """
+        from sqlalchemy import select
+
+        from rag_backend.domain.constants.blog_post import BlogPostOrigin
+        from rag_backend.infrastructure.database.config import get_session_maker
+        from rag_backend.infrastructure.database.distribution_home import (
+            DISTRIBUTION_CAPTION_KEY,
+            DISTRIBUTION_LINKEDIN_POST_EN_KEY,
+            DISTRIBUTION_LINKEDIN_POST_PT_KEY,
+        )
+        from rag_backend.infrastructure.database.models import BlogPostModel
+
+        project_id = await pub_env.seed_carousel(
+            is_public=True, approved_for_publish=False
+        )
+
+        from uuid import UUID
+
+        from rag_backend.infrastructure.database.carousel_repository import (
+            PostgresCarouselRepository,
+        )
+
+        session_maker = get_session_maker()
+        # A writer (refine_copy / editorial_distribution_pack pattern): load the
+        # entity, set the LinkedIn posts on it, and persist via the repository so
+        # the dual-write chokepoint mirrors them into the canonical home.
+        async with session_maker() as session:
+            repo = PostgresCarouselRepository(session)
+            project = await repo.get_project_by_id(UUID(project_id))
+            assert project is not None
+            project.linkedin_post_pt = _FIXTURE_LINKEDIN_PT
+            project.linkedin_post_en = _FIXTURE_LINKEDIN_EN
+            await repo.update_project(project)
+
+        async with session_maker() as session:
+            row = (
+                await session.execute(
+                    select(BlogPostModel).where(
+                        BlogPostModel.project_id == project_id,
+                        BlogPostModel.origin == BlogPostOrigin.CAROUSEL.value,
+                    )
+                )
+            ).scalars().one()
+            assert row.distribution[DISTRIBUTION_CAPTION_KEY] == FIXTURE_CAPTION
+            assert (
+                row.distribution[DISTRIBUTION_LINKEDIN_POST_PT_KEY]
+                == _FIXTURE_LINKEDIN_PT
+            )
+            assert (
+                row.distribution[DISTRIBUTION_LINKEDIN_POST_EN_KEY]
+                == _FIXTURE_LINKEDIN_EN
+            )
+
+    @pytest.mark.asyncio
+    async def test_caption_route_reads_from_home_not_embedded_column(
+        self, pub_env: PubEnv
+    ) -> None:
+        """Rule-fires (AE-0180): the caption read sources the HOME, not the column.
+
+        Seed a carousel, then DESYNC the embedded ``carousel_projects.caption``
+        column to a poison value while leaving the canonical
+        ``blog_posts.distribution`` home holding the real caption. The caption route
+        must still return the canonical caption — proving no reader sources the
+        field from the embedded column. This test FAILS if a reader regresses to the
+        embedded column.
+        """
+        from rag_backend.infrastructure.database.config import get_session_maker
+        from rag_backend.infrastructure.database.models.carousel import (
+            CarouselProjectModel,
+        )
+
+        project_id = await pub_env.seed_carousel(
+            is_public=True, approved_for_publish=True
+        )
+
+        # Desync: poison the embedded column ONLY (the home keeps FIXTURE_CAPTION).
+        session_maker = get_session_maker()
+        async with session_maker() as session:
+            model = await session.get(CarouselProjectModel, project_id)
+            assert model is not None
+            model.caption = _POISON_CAPTION
+            await session.commit()
+
+        async with pub_env.client_for(pub_env.owner) as client:
+            resp = await client.post(f"/api/carousels/{project_id}/caption")
+        assert resp.status_code == 200
+        # The canonical home wins — the poison embedded value is never read.
+        assert resp.json()["caption"] == FIXTURE_CAPTION
+        assert resp.json()["caption"] != _POISON_CAPTION
 
 
 # ==============================================================================
