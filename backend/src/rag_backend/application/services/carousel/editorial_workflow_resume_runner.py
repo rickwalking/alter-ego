@@ -131,6 +131,26 @@ async def _execute_background_resume(
                     recoverable=detail != ERR_REVISION_CAP_EXCEEDED,
                 ),
             )
+        except asyncio.CancelledError:
+            # AE-0209: a cancelled background task (e.g. shutdown/kill) must not
+            # leave the workflow holding the in_progress lock. ``CancelledError``
+            # is a BaseException, so the generic ``except Exception`` below never
+            # catches it — release the lock (mark failed/recoverable) then
+            # re-raise to honor cooperative cancellation.
+            await db.rollback()
+            logger.warning(
+                "background_resume_cancelled",
+                project_id=params.project_id,
+            )
+            await _mark_background_resume_failed(
+                _MarkFailedParams(
+                    service=service,
+                    project_id=params.project_id,
+                    message=ERR_BACKGROUND_RESUME_FAILED,
+                    recoverable=True,
+                ),
+            )
+            raise
         except Exception:
             await db.rollback()
             logger.exception(

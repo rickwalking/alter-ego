@@ -71,6 +71,12 @@ class Settings(BaseSettings):
 
     carousel_output_dir: str = "./output/carousels"
     carousel_creator_assets_dir: str = "./output/creator_assets"
+    # AE-0208: cap concurrent image-provider calls at/below the documented
+    # per-minute org cap (OpenAI gpt-image org limit is 5/min) so a multi-slide
+    # carousel does not blow past it and 429. App-level retry attempts honor the
+    # provider's ``retry-after`` so a transient 429 is survived, not fatal.
+    carousel_image_concurrency: int = 5
+    carousel_image_max_attempts: int = 5
     carousel_checkpoint_backend: str = "sqlite"
     carousel_checkpoint_sqlite_path: str = "./output/carousel_checkpoints.sqlite"
     carousel_checkpoint_postgres_url: str = ""
