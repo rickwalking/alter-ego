@@ -17,10 +17,15 @@ from rag_backend.application.services.carousel.types import SlideData
 from rag_backend.application.services.image_provider_registry import (
     ImageProviderRegistry,
 )
-from rag_backend.domain.models import CarouselProject, CarouselStatus
+from rag_backend.domain.models import (
+    CarouselProject,
+    CarouselSlide,
+    CarouselStatus,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
+    from uuid import UUID
 
     from rag_backend.modules.presentation import ProgressSnapshot
 
@@ -153,8 +158,6 @@ class TestParallelImageGeneration:
         """Successful generation writes image_path back to slide rows."""
         from uuid import uuid4
 
-        from rag_backend.domain.models import CarouselSlide
-
         image_service = AsyncMock()
         image_service.generate_image = AsyncMock(
             side_effect=lambda prompt, output_path: output_path
@@ -189,7 +192,12 @@ class TestParallelImageGeneration:
     async def test_failure_marks_slide_failed_and_propagates(
         self, tmp_path: Path
     ) -> None:
-        """One slide failing marks its slot 'failed' and raises."""
+        """One slide failing marks its slot 'failed' and surfaces an error.
+
+        AE-0209: the batch no longer cancels siblings — the failure is reported
+        as an aggregate after the rest of the batch runs, with the original
+        provider error chained as the cause.
+        """
         captured_states: list[list[str]] = []
 
         async def flaky(prompt: str, output_path: str) -> str:
@@ -213,7 +221,7 @@ class TestParallelImageGeneration:
         slides = [_slide_data(i) for i in range(1, 3)]
         project = _project(tmp_path)
 
-        with pytest.raises(RuntimeError, match="flaked"):
+        with pytest.raises(RuntimeError) as exc_info:
             await run_images(
                 ImageGenerationConfig(
                     project=project,
@@ -224,6 +232,8 @@ class TestParallelImageGeneration:
                 )
             )
 
+        assert isinstance(exc_info.value.__cause__, RuntimeError)
+        assert "flaked" in str(exc_info.value.__cause__)
         assert any("failed" in state for state in captured_states)
 
     async def test_slide_scene_snippet_populated(self, tmp_path: Path) -> None:
@@ -258,6 +268,235 @@ class TestParallelImageGeneration:
         entry = slide_entries[0]
         assert entry["number"] == 1
         assert "neon cityscape" in str(entry["scene"])
+
+
+class _FakeResponse:
+    """Minimal stand-in for an httpx.Response carrying a retry-after header."""
+
+    def __init__(self, headers: dict[str, str]) -> None:
+        self.headers = headers
+        self.status_code = 429
+
+
+class _FakeRateLimitError(Exception):
+    """Provider-shaped 429 with a retry-after header (no live SDK needed)."""
+
+    def __init__(self, retry_after: str) -> None:
+        super().__init__("Rate limit reached for gpt-image")
+        self.status_code = 429
+        self.response = _FakeResponse({"retry-after": retry_after})
+
+
+@pytest.mark.unit
+class TestRateLimitAwareGeneration:
+    """AE-0208: a provider 429 is survived by honoring retry-after."""
+
+    async def test_429_then_success_completes_phase(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # Scenario: Given a provider that 429s once then succeeds, when the
+        # images phase runs, then the runner waits >= the stated retry-after
+        # and the phase completes instead of aborting.
+        attempts = 0
+
+        async def flaky(prompt: str, output_path: str) -> str:
+            nonlocal attempts
+            attempts += 1
+            if attempts == 1:
+                raise _FakeRateLimitError("12")
+            return output_path
+
+        image_service = AsyncMock()
+        image_service.generate_image = AsyncMock(side_effect=flaky)
+        registry, repo = _registry_with_image_service(image_service)
+
+        slept: list[float] = []
+
+        async def fake_sleep(seconds: float) -> None:
+            slept.append(seconds)
+
+        from rag_backend.application.services.carousel import image_rate_limit
+
+        monkeypatch.setattr(image_rate_limit.asyncio, "sleep", fake_sleep)
+
+        slides = [_slide_data(1)]
+        project = _project(tmp_path)
+        await run_images(
+            ImageGenerationConfig(
+                project=project,
+                slides=slides,
+                output_dir=tmp_path,
+                repo=repo,
+                image_registry=registry,
+                max_attempts=3,
+            )
+        )
+
+        assert attempts == 2  # one 429, one success
+        assert slept  # the runner waited
+        assert slept[0] >= 12.0  # honored the stated retry-after
+
+    async def test_concurrency_capped_to_config(self, tmp_path: Path) -> None:
+        # Scenario: Given a concurrency cap of 2, when many slides generate,
+        # then no more than 2 provider calls are ever in flight at once.
+        max_concurrent = 0
+        in_flight = 0
+        lock = asyncio.Lock()
+
+        async def slow(prompt: str, output_path: str) -> str:
+            nonlocal max_concurrent, in_flight
+            async with lock:
+                in_flight += 1
+                max_concurrent = max(max_concurrent, in_flight)
+            await asyncio.sleep(0.02)
+            async with lock:
+                in_flight -= 1
+            return output_path
+
+        image_service = AsyncMock()
+        image_service.generate_image = AsyncMock(side_effect=slow)
+        registry, repo = _registry_with_image_service(image_service)
+
+        slides = [_slide_data(i) for i in range(1, 6)]
+        await run_images(
+            ImageGenerationConfig(
+                project=_project(tmp_path),
+                slides=slides,
+                output_dir=tmp_path,
+                repo=repo,
+                image_registry=registry,
+                concurrency=2,
+            )
+        )
+
+        assert max_concurrent <= 2
+
+
+@pytest.mark.unit
+class TestPartialCommitAndReentry:
+    """AE-0209: a single-slide failure persists siblings; re-run completes."""
+
+    @staticmethod
+    def _slide_entity(project_id: UUID, n: int) -> CarouselSlide:
+        return CarouselSlide(
+            project_id=project_id,
+            slide_number=n,
+            slide_type="content" if n > 1 else "intro",
+            heading=f"H{n}",
+            body=f"B{n}",
+            image_prompt=f"Scene for slide {n}",
+        )
+
+    async def test_sibling_persists_on_single_slide_failure(
+        self, tmp_path: Path
+    ) -> None:
+        # Scenario: Given slide 2 fails, when the batch runs, then slide 1's
+        # image_path is still written back to its slide row (partial commit)
+        # and an aggregate error is surfaced.
+        project = _project(tmp_path)
+        entities = [self._slide_entity(project.id, i) for i in range(1, 3)]
+
+        async def flaky(prompt: str, output_path: str) -> str:
+            if "slide 2" in prompt:
+                raise RuntimeError("OpenAI flaked")
+            return output_path
+
+        image_service = AsyncMock()
+        image_service.generate_image = AsyncMock(side_effect=flaky)
+        registry, repo = _registry_with_image_service(image_service)
+        repo.get_slides_by_project = AsyncMock(return_value=entities)
+
+        updated_slides: list[CarouselSlide] = []
+
+        async def _capture_slide(slide: CarouselSlide) -> CarouselSlide:
+            updated_slides.append(slide)
+            return slide
+
+        repo.update_slide = AsyncMock(side_effect=_capture_slide)
+
+        slides = [_slide_data(i) for i in range(1, 3)]
+        with pytest.raises(RuntimeError):
+            await run_images(
+                ImageGenerationConfig(
+                    project=project,
+                    slides=slides,
+                    output_dir=tmp_path,
+                    repo=repo,
+                    image_registry=registry,
+                )
+            )
+
+        committed = {s.slide_number for s in updated_slides}
+        assert 1 in committed  # the good slide was persisted despite slide 2 failing
+
+    async def test_rerun_regenerates_only_missing_and_completes(
+        self, tmp_path: Path
+    ) -> None:
+        # Scenario: Given slide 1 already has an image on disk + a matching
+        # generation key, when the phase re-runs, then slide 1 is reused (not
+        # regenerated) and the phase completes.
+        project = _project(tmp_path)
+        slide1 = self._slide_entity(project.id, 1)
+        slide2 = self._slide_entity(project.id, 2)
+
+        # Pre-seed slide 1 as already generated: a real JPEG on disk + the
+        # generation key that the prompt package will resolve to.
+        from rag_backend.application.services.carousel.image_prompt_package import (
+            METADATA_GENERATION_KEY,
+            ImagePromptPackageRequest,
+            render_image_prompt_package,
+        )
+        from rag_backend.application.services.carousel.theme_resolver import (
+            resolve_theme,
+        )
+
+        images_dir = tmp_path / "images"
+        images_dir.mkdir(parents=True, exist_ok=True)
+        existing = images_dir / "slide_1.jpg"
+        from PIL import Image as PILImage
+
+        PILImage.new("RGB", (4, 4)).save(existing, "JPEG")
+        prompt1 = render_image_prompt_package(
+            ImagePromptPackageRequest(
+                project=project,
+                slide=_slide_data(1),
+                theme=resolve_theme(project),
+            )
+        )
+        slide1.image_path = str(existing)
+        slide1.metadata = {METADATA_GENERATION_KEY: prompt1.generation_key}
+
+        generated_for: list[str] = []
+
+        async def generate(prompt: str, output_path: str) -> str:
+            generated_for.append(output_path)
+            from PIL import Image as Inner
+
+            Inner.new("RGB", (4, 4)).save(output_path, "JPEG")
+            return output_path
+
+        image_service = AsyncMock()
+        image_service.generate_image = AsyncMock(side_effect=generate)
+        registry, repo = _registry_with_image_service(image_service)
+        repo.get_slides_by_project = AsyncMock(return_value=[slide1, slide2])
+        # The record-lookup reuse path returns no usable record (AsyncMock is
+        # not a CarouselImageGeneration), so reuse falls to the on-disk legacy
+        # path keyed by generation_key — exactly the re-entry path under test.
+
+        slides = [_slide_data(1), _slide_data(2)]
+        await run_images(
+            ImageGenerationConfig(
+                project=project,
+                slides=slides,
+                output_dir=tmp_path,
+                repo=repo,
+                image_registry=registry,
+            )
+        )
+
+        # Only the missing slide (2) was generated; slide 1 was reused.
+        assert all("slide_1.jpg" not in path for path in generated_for)
+        assert any("slide_2.jpg" in path for path in generated_for)
 
 
 @pytest.mark.unit

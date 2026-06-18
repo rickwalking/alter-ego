@@ -617,6 +617,55 @@ class TestExecuteBackgroundResume:
                 project_id=params.project_id,
             )
 
+    @pytest.mark.asyncio
+    async def test_cancellation_releases_lock_and_reraises(self) -> None:
+        """AE-0209: a cancelled background task releases the in_progress lock.
+
+        CancelledError is a BaseException, so the generic ``except Exception``
+        never catches it — the dedicated handler must mark the workflow failed
+        (releasing the lock) and re-raise to honor cooperative cancellation.
+        """
+        params = _make_params()
+        service = MagicMock()
+        mock_db = AsyncMock()
+        mock_db.rollback = AsyncMock()
+        session_factory = _make_session_factory(mock_db)
+
+        service.get_workflow_state = AsyncMock(
+            return_value={"current_phase": "research"}
+        )
+        service.resume_workflow = AsyncMock(side_effect=asyncio.CancelledError())
+
+        with (
+            patch(
+                "rag_backend.application.services.carousel.editorial_workflow_resume_runner.get_session_maker",
+                return_value=session_factory,
+            ),
+            patch(
+                "rag_backend.application.services.carousel.editorial_workflow_resume_runner._mark_background_resume_failed",
+                new_callable=AsyncMock,
+            ) as mock_mark,
+            patch(
+                "rag_backend.application.services.carousel.editorial_workflow_resume_runner.logger",
+            ) as mock_logger,
+        ):
+            with pytest.raises(asyncio.CancelledError):
+                await _execute_background_resume(service, params)
+
+            mock_db.rollback.assert_awaited_once()
+            mock_mark.assert_awaited_once_with(
+                _MarkFailedParams(
+                    service=service,
+                    project_id=params.project_id,
+                    message=ERR_BACKGROUND_RESUME_FAILED,
+                    recoverable=True,
+                )
+            )
+            mock_logger.warning.assert_called_once_with(
+                "background_resume_cancelled",
+                project_id=params.project_id,
+            )
+
 
 @pytest.mark.unit
 class TestMarkBackgroundResumeFailed:

@@ -20,6 +20,13 @@ from pathlib import Path
 from rag_backend.application.services.carousel.editorial_workflow_support import (
     publish_workflow_progress,
 )
+from rag_backend.application.services.carousel.image_generation_constants import (
+    DEFAULT_IMAGE_CONCURRENCY,
+    DEFAULT_IMAGE_MAX_ATTEMPTS,
+    ERR_IMAGE_BATCH_PARTIAL,
+    LOG_IMAGE_BATCH_PARTIAL_FAILURE,
+    LOG_IMAGE_RATE_LIMITED,
+)
 from rag_backend.application.services.carousel.image_generation_records import (
     GENERATION_STATUS_FAILED,
     GENERATION_STATUS_RECOVERED,
@@ -42,6 +49,12 @@ from rag_backend.application.services.carousel.image_prompt_package import (
     ImagePromptPackage,
     ImagePromptPackageRequest,
     render_image_prompt_package,
+)
+from rag_backend.application.services.carousel.image_rate_limit import (
+    RetryEvent,
+    RetryOptions,
+    build_image_semaphore,
+    generate_with_retry_after,
 )
 from rag_backend.application.services.carousel.theme_resolver import resolve_theme
 from rag_backend.application.services.carousel.types import (
@@ -104,6 +117,11 @@ class ImageGenerationConfig:
     # callers / unit tests), the node falls back to the legacy in-node write so
     # behavior is byte-identical.
     progress_port: WorkflowProgressPort | None = None
+    # AE-0208: provider-rate-limit controls. When None, the run resolves them
+    # from settings (org cap of 5/min → concurrency 5; 5 retry-after-honoring
+    # attempts). Tests inject small values for fast, deterministic coverage.
+    concurrency: int | None = None
+    max_attempts: int | None = None
 
 
 @dataclass(frozen=True)
@@ -312,6 +330,30 @@ async def _persist_slide_image(ctx: _PersistContext) -> None:
         )
 
 
+def _make_retry_logger(
+    project: CarouselProject,
+    slide: SlideData,
+) -> Callable[[RetryEvent], None]:
+    """Build an ``on_retry`` callback that logs a provider rate-limit retry.
+
+    AE-0208: keeps the (infrastructure-aware) logging in the image node while the
+    retry helper itself stays infrastructure-free.
+    """
+
+    def _log(event: RetryEvent) -> None:
+        logger.warning(
+            LOG_IMAGE_RATE_LIMITED,
+            project_id=str(project.id),
+            slide_number=slide.slide_number,
+            attempt=event.attempt,
+            max_attempts=event.max_attempts,
+            wait_seconds=event.wait_seconds,
+            retry_after=event.retry_after,
+        )
+
+    return _log
+
+
 def _log_reuse(
     project: CarouselProject,
     slide: SlideData,
@@ -344,6 +386,32 @@ class _ImageRunContext:
     progress_lock: asyncio.Lock
     mutable_project: CarouselProject
     progress_port: WorkflowProgressPort | None
+    semaphore: asyncio.Semaphore
+    max_attempts: int
+
+
+def _resolve_rate_limit_settings(
+    config: ImageGenerationConfig,
+) -> tuple[int, int]:
+    """Resolve (concurrency, max_attempts) for the run.
+
+    AE-0208: caps concurrent provider calls at the documented per-minute org cap
+    and bounds the retry-after-honoring attempt budget. Explicit config values
+    win (the infrastructure-aware editorial pipeline injects the settings-backed
+    values; tests inject small, fast values). When absent, the application-layer
+    defaults apply so direct callers stay capped without reaching infrastructure.
+    """
+    concurrency = (
+        config.concurrency
+        if config.concurrency is not None
+        else DEFAULT_IMAGE_CONCURRENCY
+    )
+    max_attempts = (
+        config.max_attempts
+        if config.max_attempts is not None
+        else DEFAULT_IMAGE_MAX_ATTEMPTS
+    )
+    return concurrency, max_attempts
 
 
 async def _build_image_run_context(
@@ -367,6 +435,8 @@ async def _build_image_run_context(
     db_slides = await config.repo.get_slides_by_project(project.id)  # type: ignore[union-attr]
     slides_by_number = {s.slide_number: s for s in db_slides}
 
+    concurrency, max_attempts = _resolve_rate_limit_settings(config)
+
     return _ImageRunContext(
         project=project,
         repo=config.repo,  # type: ignore[arg-type]
@@ -382,6 +452,8 @@ async def _build_image_run_context(
         progress_lock=asyncio.Lock(),
         mutable_project=project,
         progress_port=config.progress_port,
+        semaphore=build_image_semaphore(concurrency),
+        max_attempts=max_attempts,
     )
 
 
@@ -461,7 +533,14 @@ async def _run_one_image(
     )
     if reused_path is None:
         try:
-            await _generate_new_image(ctx.provider, prompt, image_path)
+            async with ctx.semaphore:
+                await generate_with_retry_after(
+                    lambda: _generate_new_image(ctx.provider, prompt, image_path),
+                    RetryOptions(
+                        max_attempts=ctx.max_attempts,
+                        on_retry=_make_retry_logger(ctx.project, slide),
+                    ),
+                )
         except Exception as exc:
             await _handle_generation_error(
                 exc,
@@ -518,9 +597,42 @@ async def run_images(
     ctx = await _build_image_run_context(config)
 
     await _publish_progress_state(ctx)
-    await asyncio.gather(*[
-        _run_one_image(i, s, ctx) for i, s in enumerate(ctx.slides_with_images)
-    ])
+    # AE-0209: per-slide partial commit. ``return_exceptions=True`` lets every
+    # slide run to completion instead of one failure cancelling its siblings;
+    # each ``_run_one_image`` commits its own slide on success, so successful
+    # images persist to workflow state even when another slide fails. The phase
+    # is idempotent on re-run (reused by ``prompt_hash`` / generation_key), so a
+    # retry regenerates only the still-missing slides and completes.
+    results = await asyncio.gather(
+        *[_run_one_image(i, s, ctx) for i, s in enumerate(ctx.slides_with_images)],
+        return_exceptions=True,
+    )
+    _raise_on_batch_failures(results, ctx.total)
+
+
+def _raise_on_batch_failures(
+    results: list[BaseException | None],
+    total: int,
+) -> None:
+    """Re-raise after a batch if any slide failed (successes already committed).
+
+    ``CancelledError`` is propagated immediately so a cancelled batch is never
+    masked as a recoverable partial failure. Otherwise the first slide exception
+    is chained onto an aggregate error that records how many slides failed.
+    """
+    failures = [r for r in results if isinstance(r, BaseException)]
+    if not failures:
+        return
+    for failure in failures:
+        if isinstance(failure, asyncio.CancelledError):
+            raise failure
+    logger.error(
+        LOG_IMAGE_BATCH_PARTIAL_FAILURE,
+        failed=len(failures),
+        total=total,
+    )
+    message = ERR_IMAGE_BATCH_PARTIAL.format(failed=len(failures), total=total)
+    raise RuntimeError(message) from failures[0]
 
 
 async def run_image_one(
