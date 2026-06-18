@@ -16,6 +16,7 @@ Exit codes: 0 = no drift, 1 = drift detected, 2 = misconfiguration (no URL).
 
 from __future__ import annotations
 
+import importlib
 import os
 import sys
 
@@ -24,6 +25,7 @@ from sqlalchemy import create_engine
 from rag_backend.infrastructure.database.config import Base
 from rag_backend.infrastructure.database.schema_drift import check_schema_drift
 
+_MODELS_PACKAGE = "rag_backend.infrastructure.database.models"
 _DATABASE_URL_ENV = "DATABASE_URL"
 _ASYNCPG_PREFIX = "postgresql+asyncpg://"
 _PSYCOPG_PREFIX = "postgresql+psycopg://"
@@ -51,8 +53,9 @@ def to_sync_url(database_url: str) -> str:
 
 def main() -> int:
     """Run the drift check against ``DATABASE_URL``; return the process exit code."""
-    # Import the models package so every table is registered on ``Base.metadata``.
-    import rag_backend.infrastructure.database.models  # noqa: F401
+    # Import the models package for its side effect: every table registers on
+    # ``Base.metadata``. importlib (not a bare ``import``) avoids an unused-import.
+    importlib.import_module(_MODELS_PACKAGE)
 
     database_url = os.environ.get(_DATABASE_URL_ENV)
     if not database_url:
