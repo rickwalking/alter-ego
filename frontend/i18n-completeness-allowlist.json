@@ -1,0 +1,4 @@
+{
+  "$comment": "AE-0214 allow-list for check-i18n-completeness.mjs. A FULL dotted key listed here (namespace.path) is exempted from the every-locale-must-contain-it check. Use ONLY for a legitimate statically-resolvable reference that is intentionally absent from some locales (none expected — most dynamic cases are skipped automatically because the key is not a string literal). Adding a key here is a deliberate, reviewed decision; never add one to silence a genuinely missing translation.",
+  "allow": {}
+}
