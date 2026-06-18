@@ -1,12 +1,12 @@
 # AE-0220 — Serialize prod deploys with a concurrency group in deploy.yml
 
-Status: Intake
+Status: Dev Complete
 Tier: T1
 Priority: High
 Type: Quality
 Area: CI/DevOps
-Owner: Unassigned
-Branch: TBD
+Owner: Agent
+Branch: feat/dev-wave-ae0220-0227
 Created: 2026-06-18
 Updated: 2026-06-18
 Source: kaizen session-2026-06-18b (P1, class FC4) — `.agent/reports/kaizen-session-2026-06-18b.plan.md`
@@ -45,11 +45,18 @@ image swap, or overlapping migration steps — the same blast radius behind AE-0
 
 ## Acceptance Criteria
 
-- [ ] `deploy.yml` has a top-level `concurrency: { group: prod-deploy, cancel-in-progress: false }`.
-- [ ] The workflow still parses (`actionlint` or equivalent passes; no YAML error).
-- [ ] Decision Log documents the `cancel-in-progress: false` choice (queue, never
+- [x] `deploy.yml` has a top-level `concurrency: { group: prod-deploy, cancel-in-progress: false }`.
+- [x] The workflow still parses (PyYAML safe_load OK; `concurrency` block asserted; actionlint not installed locally, CI will lint).
+- [x] Decision Log documents the `cancel-in-progress: false` choice (queue, never
       cancel an in-flight prod deploy).
-- [ ] No other `deploy.yml` behavior changed (diff is the concurrency block only).
+- [x] No other `deploy.yml` behavior changed (diff is the concurrency block + its comment only).
+
+## Decision Log
+
+- **cancel-in-progress: false (queue, do not cancel).** A prod deploy that has
+  begun mutating the droplet (server `.env` rewrite from Secrets + image swap)
+  must run to completion; cancelling mid-flight could leave a half-applied state.
+  Queuing the next run behind it is the safe single-flight behavior.
 
 ## Classification (AE-0153 / AE-0180)
 
@@ -78,13 +85,23 @@ None.
 
 Ticket created from kaizen session-2026-06-18b (P1).
 
+### 2026-06-18 — Dev Complete
+
+Added the `concurrency` block (group `prod-deploy`, `cancel-in-progress: false`)
+after the `on:` triggers in `deploy.yml`. Verified the workflow still parses.
+
 ## Files Touched
 
-Pending.
+- `.github/workflows/deploy.yml` — added top-level `concurrency` block + comment.
 
 ## Test Evidence
 
-Pending.
+```
+$ python3 -c "import yaml; d=yaml.safe_load(open('.github/workflows/deploy.yml')); print(d['concurrency'])"
+{'group': 'prod-deploy', 'cancel-in-progress': False}
+```
+actionlint is not installed locally; the GitHub Actions runner validates the
+workflow on push. No other keys changed (diff is the concurrency block only).
 
 ## QA Report
 

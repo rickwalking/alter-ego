@@ -5,6 +5,13 @@ on:
     branches: [main]
   workflow_dispatch:
 
+# Serialize production deploys: only one deploy runs against the droplet at a
+# time. cancel-in-progress is false so an in-flight deploy (which mutates the
+# server .env + swaps the image) always finishes; the next one queues behind it.
+concurrency:
+  group: prod-deploy
+  cancel-in-progress: false
+
 jobs:
   test:
     runs-on: ubuntu-latest
