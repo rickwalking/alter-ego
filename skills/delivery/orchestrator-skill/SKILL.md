@@ -1,7 +1,6 @@
 ---
 name: orchestrator-skill
 description: "Manage agentic delivery workflow: ticket status, BOARD.md, WIP limits, handoffs, and tier routing. Use when coordinating multiple agents, moving tickets, detecting blockers, or enforcing transition guards. Never implements production code."
-disable-model-invocation: true
 version: 1.0.0
 ---
 

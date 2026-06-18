@@ -2,7 +2,6 @@
 name: kaizen-skill
 description: "Continuous-improvement / retrospective harness. Turns recurring quality signal (CI failures, QA reports, code-reviewer comments, integrity warnings, debt markers) into systemic fixes: root-cause analysis, external best-practice research, and concrete rule/gate/doc/lint enforcement — proposed, approved by a human, then auto-emitted as tickets. Use when the user says 'run kaizen', 'retro on AE-####', 'why does this keep failing', 'improve our rules', or on a schedule. Evolves the project's quality bar UP over time. Never use to implement feature code or to loosen a gate."
 version: 1.0.0
-disable-model-invocation: true
 ---
 
 # Kaizen Skill — feedback → systemic enforcement
