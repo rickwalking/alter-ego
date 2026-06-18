@@ -11,6 +11,9 @@ from contextlib import suppress
 from dataclasses import dataclass
 from typing import TypedDict
 
+from rag_backend.application.services.carousel.presentation_copy_repair import (
+    repair_text_sentence_case_en,
+)
 from rag_backend.domain.models import CarouselSlide
 
 # Hard cap on closing/content slide feature cards. The .feature-grid CSS
@@ -214,12 +217,18 @@ def slides_data_for_language(slides: list[SlideData], language: str) -> list[Sli
         en_insight = en.get("insight") if isinstance(en, dict) else None
         en_summary_points = en.get("summary_points") if isinstance(en, dict) else None
         en_tldr_strip = en.get("tldr_strip") if isinstance(en, dict) else None
+        # AE-0211: the `translation_en` payload is the EN render source. Apply
+        # the deterministic EN sentence-case repair here so all-lowercase EN
+        # headings/bodies cannot reach the renderer even when the localized_slides
+        # repair path was bypassed (dual-representation gap).
+        en_heading = repair_text_sentence_case_en(str(en.get("heading") or sd.heading))
+        en_body = repair_text_sentence_case_en(str(en.get("body") or sd.body))
         swapped.append(
             SlideData(
                 slide_number=sd.slide_number,
                 slide_type=sd.slide_type,
-                heading=str(en.get("heading") or sd.heading),
-                body=str(en.get("body") or sd.body),
+                heading=en_heading,
+                body=en_body,
                 image_prompt=sd.image_prompt,
                 features=en_features if isinstance(en_features, list) else sd.features,
                 stats=en_stats if isinstance(en_stats, list) else sd.stats,

@@ -74,6 +74,52 @@ class TestSlidesDataForLanguage:
         en_slides = slides_data_for_language([slide], "en")
         assert en_slides[0].heading == "PT"
 
+    # AE-0211 regression: a lowercase EN render-source (translation_en) heading
+    # and body must be sentence-cased before the renderer consumes them. The
+    # localized_slides repair path was bypassed in prod (project b5b61790), so
+    # the render source itself must guarantee sentence case.
+    def test_en_render_source_lowercase_heading_is_sentence_cased(self) -> None:
+        slide = SlideData(
+            1,
+            "intro",
+            "PT heading",
+            "PT body",
+            translation_en={
+                "heading": "all lowercase en heading",
+                "body": "all lowercase en body",
+            },
+        )
+        en_slides = slides_data_for_language([slide], "en")
+        assert en_slides[0].heading == "All lowercase en heading"
+        assert en_slides[0].body == "All lowercase en body"
+
+    def test_en_render_source_skips_leading_html_tag_when_casing(self) -> None:
+        slide = SlideData(
+            1,
+            "intro",
+            "PT heading",
+            "PT body",
+            translation_en={
+                "heading": "<b>insight</b> for builders",
+                "body": "<span>plain</span> body",
+            },
+        )
+        en_slides = slides_data_for_language([slide], "en")
+        assert en_slides[0].heading == "<b>Insight</b> for builders"
+        assert en_slides[0].body == "<span>Plain</span> body"
+
+    def test_en_render_source_preserves_already_sentence_cased(self) -> None:
+        slide = SlideData(
+            1,
+            "intro",
+            "PT heading",
+            "PT body",
+            translation_en={"heading": "Already cased", "body": "Already cased body"},
+        )
+        en_slides = slides_data_for_language([slide], "en")
+        assert en_slides[0].heading == "Already cased"
+        assert en_slides[0].body == "Already cased body"
+
 
 def _agent_with_export_mock(
     tmp_path: Path,

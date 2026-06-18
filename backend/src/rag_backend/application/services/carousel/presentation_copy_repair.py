@@ -49,6 +49,38 @@ def _repair_heading_sentence_case_en(heading: str) -> str:
     return "".join(chars)
 
 
+# Matches a single HTML tag (e.g. ``<b>``, ``</span>``, ``<br/>``) so the
+# sentence-case repair can skip over markup and uppercase the first *visible*
+# letter instead of a character inside a tag name.
+_HTML_TAG_PATTERN = re.compile(r"<[^>]+>")
+
+
+def repair_text_sentence_case_en(text: str) -> str:
+    """Uppercase the first visible letter of EN render-source copy.
+
+    Skips leading HTML tags so headings/bodies wrapped in markup
+    (e.g. ``<b>insight</b>``) are sentence-cased on the first visible
+    letter rather than a character inside the tag. Idempotent: already
+    sentence-cased text is returned unchanged.
+    """
+    if not text:
+        return text
+    index = 0
+    length = len(text)
+    while index < length:
+        tag_match = _HTML_TAG_PATTERN.match(text, index)
+        if tag_match is not None:
+            index = tag_match.end()
+            continue
+        char = text[index]
+        if char.isalpha():
+            if char.islower():
+                return text[:index] + char.upper() + text[index + 1 :]
+            return text
+        index += 1
+    return text
+
+
 def _repair_text_field(
     command: RepairFieldCommand,
 ) -> None:
@@ -94,4 +126,7 @@ def deterministic_repair_slide_payload(
     return repaired
 
 
-__all__ = ["deterministic_repair_slide_payload"]
+__all__ = [
+    "deterministic_repair_slide_payload",
+    "repair_text_sentence_case_en",
+]
