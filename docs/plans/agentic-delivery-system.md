@@ -16,7 +16,7 @@ Persistent, tiered, multi-agent delivery for Alter-Ego.
 | Artifact | Path |
 |----------|------|
 | Tickets | `.agent/tasks/AE-####.md` |
-| Board | `.agent/BOARD.md` |
+| Board (generated, gitignored — `make board`) | `.agent/BOARD.md` |
 | Dev / QA reports | `.agent/reports/` |
 | Plans | `docs/plans/` |
 | ADRs | `docs/decisions/` |

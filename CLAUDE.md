@@ -268,11 +268,11 @@ See `docs/architecture/langchain-deep-agents-guide.md` for agent implementation 
 
 ## Agentic Delivery
 
-Repo-backed tickets and board state live under `.agent/` (canonical memory; visual Kanban is optional). Work tiers **T0–T3** control how much pipeline to run — hotfixes skip planner/architect. See [agentic delivery overview](docs/plans/agentic-delivery-system.md) and [ADR-008](docs/decisions/0008-agentic-delivery-workflow.md).
+Repo-backed tickets live under `.agent/tasks/` (canonical memory; visual Kanban is optional). `.agent/BOARD.md` is a generated, gitignored view — regenerate it with `make board`, never commit it (AE-0223). Work tiers **T0–T3** control how much pipeline to run — hotfixes skip planner/architect. See [agentic delivery overview](docs/plans/agentic-delivery-system.md) and [ADR-008](docs/decisions/0008-agentic-delivery-workflow.md).
 
 ```bash
 uv run python scripts/agent_tasks/validate_all_tickets.py
-uv run python scripts/agent_tasks/render_board.py
+make board   # regenerate the local BOARD.md view (not committed)
 ```
 
 ## Development Skills

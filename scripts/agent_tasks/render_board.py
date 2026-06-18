@@ -23,8 +23,8 @@ def main() -> int:
     lines = [
         "# Agentic Delivery Board",
         "",
-        "Visual Kanban is for orchestration. This file is durable board state "
-        "(regenerate with `render_board.py`).",
+        "Generated view of `.agent/tasks/` (the canonical state) — NOT committed "
+        "(gitignored). Regenerate locally with `make board` (or `render_board.py`).",
         "",
     ]
     for column in BOARD_COLUMNS:

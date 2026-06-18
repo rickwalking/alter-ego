@@ -1,6 +1,9 @@
 # Kanban Agent Workflow
 
-Visual boards (Cline Kanban, Vibe Kanban, etc.) orchestrate work; **`.agent/BOARD.md` and ticket files are canonical**.
+Visual boards (Cline Kanban, Vibe Kanban, etc.) orchestrate work; **the ticket
+files in `.agent/tasks/` are the canonical state**. `.agent/BOARD.md` is a
+**generated, gitignored view** of those tickets — regenerate it locally with
+`make board`; never hand-edit or commit it (AE-0223).
 
 ## Card convention
 
@@ -23,8 +26,10 @@ Lane: planner → architect → developer → qa → release
 
 ## Sync board from tickets
 
+The board is generated, not committed — regenerate the local view on demand:
+
 ```bash
-uv run python scripts/agent_tasks/render_board.py
+make board   # or: uv run python scripts/agent_tasks/render_board.py
 ```
 
 ## Auto-commit policy

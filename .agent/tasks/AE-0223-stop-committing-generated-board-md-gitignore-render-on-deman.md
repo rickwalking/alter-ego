@@ -1,12 +1,12 @@
 # AE-0223 — Stop committing generated BOARD.md; gitignore + render on demand
 
-Status: Intake
+Status: In Development
 Tier: T1
 Priority: Medium
 Type: Quality
 Area: Agent Workflow
-Owner: Unassigned
-Branch: TBD
+Owner: Agent
+Branch: feat/dev-wave-ae0220-0227
 Created: 2026-06-18
 Updated: 2026-06-18
 Source: kaizen session-2026-06-18b (P2, class FC3) — `.agent/reports/kaizen-session-2026-06-18b.plan.md`
@@ -52,12 +52,15 @@ committed at all.
 
 ## Acceptance Criteria
 
-- [ ] `.agent/BOARD.md` is no longer tracked (`git ls-files .agent/BOARD.md` empty)
-      and is listed in `.gitignore`.
-- [ ] A documented one-step render command exists and regenerates the board locally.
-- [ ] All references to a committed `BOARD.md` in `skills/`, `docs/`, `CLAUDE.md`,
-      `AGENTS.md` are updated (board is local/generated; tickets are canonical).
-- [ ] `validate_all_tickets.py` still passes; no CI job depends on a committed `BOARD.md`.
+- [x] `.agent/BOARD.md` is no longer tracked (`git rm --cached`) and is listed in `.gitignore`.
+- [x] A documented one-step render command exists (`make board`) and regenerates the board locally.
+- [x] Operational references to a committed `BOARD.md` updated (CLAUDE.md, operator
+      overview, kanban guide, orchestrator-skill, ADR-0008, render_board header).
+      **Deviation:** the two historical planning docs
+      (`docs/plans/alter_ego_agentic_delivery_system_plan.md`,
+      `agentic-delivery-system-implementation-plan.md`) are left as design records
+      (~25 woven refs; not operational guidance) — flagged for QA.
+- [x] `validate_all_tickets.py` still passes; no CI job depends on a committed `BOARD.md` (grep clean).
 
 ## Classification (AE-0153 / AE-0180)
 
@@ -98,13 +101,34 @@ None.
 Ticket created from kaizen session-2026-06-18b (P2), re-scoped after the Phase 3.6
 cold-critic BLOCKED the original freshness-gate design.
 
+### 2026-06-18 — implemented
+
+`git rm --cached .agent/BOARD.md`; added `.agent/BOARD.md` to `.gitignore`; added a
+`make board` target; updated render_board header + operational docs. Historical
+plan docs left as records (deviation, see ACs).
+
 ## Files Touched
 
-Pending.
+- `.gitignore` — ignore `.agent/BOARD.md`.
+- `Makefile` — `board` target (regenerate locally).
+- `scripts/agent_tasks/render_board.py` — header now says generated/not-committed.
+- `CLAUDE.md`, `docs/plans/agentic-delivery-system.md`,
+  `docs/guides/kanban-agent-workflow.md`,
+  `docs/decisions/0008-agentic-delivery-workflow.md`,
+  `skills/delivery/orchestrator-skill/SKILL.md` — board described as generated view.
+- `.agent/BOARD.md` — removed from the index (kept on disk, now ignored).
 
 ## Test Evidence
 
-Pending.
+```
+$ git rm --cached .agent/BOARD.md && git check-ignore .agent/BOARD.md
+.agent/BOARD.md
+$ make board   # regenerates the local view
+Wrote .../.agent/BOARD.md
+$ git status --short .agent/BOARD.md   # D (index removal); working file ignored
+$ grep -rIn "BOARD.md" scripts/ci/ .github/workflows/   # none — no CI dependency
+$ uv run python scripts/agent_tasks/validate_all_tickets.py   # All 222 ticket(s) OK
+```
 
 ## QA Report
 
