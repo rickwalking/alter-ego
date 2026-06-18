@@ -138,10 +138,10 @@ export const carouselCreateRequestSchema = z
     audience: z.string().min(1).max(500),
     niche: z.string().min(1).max(200),
     theme: z.string().max(30).default("auto"),
-    image_model: z.enum(["gemini", "openai"]).default("gemini"),
+    image_model: z.enum(["gemini", "openai"]).default("openai"),
     image_style: z
       .enum(["comic_neon", "cinematic", "hyperreal", "neo_anime"])
-      .default("comic_neon"),
+      .default("neo_anime"),
     strategy: z.string().max(50).optional(),
   })
   .refine(

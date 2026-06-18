@@ -110,8 +110,8 @@ class TestImagePresetValidation:
         response = await client.post("/api/carousels", json=payload)
         assert response.status_code == 201
         body = response.json()
-        assert body["image_model"] == "gemini"
-        assert body["image_style"] == "comic_neon"
+        assert body["image_model"] == "openai"
+        assert body["image_style"] == "neo_anime"
 
     @pytest.mark.asyncio
     async def test_openai_hyperreal_preset_accepted(self, client):

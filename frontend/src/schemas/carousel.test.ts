@@ -447,10 +447,10 @@ describe("Carousel Create Request Schema — image_model/image_style", () => {
     niche: "N",
   };
 
-  it("defaults to gemini + comic_neon when omitted", () => {
+  it("defaults to openai + neo_anime when omitted", () => {
     const result = carouselCreateRequestSchema.parse(BASE);
-    expect(result.image_model).toBe("gemini");
-    expect(result.image_style).toBe("comic_neon");
+    expect(result.image_model).toBe("openai");
+    expect(result.image_style).toBe("neo_anime");
   });
 
   it("accepts supported openai + hyperreal combo", () => {

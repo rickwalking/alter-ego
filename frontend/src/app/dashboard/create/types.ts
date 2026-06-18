@@ -14,6 +14,6 @@ export const INITIAL_CREATE_FORM_STATE: CreateCarouselFormState = {
   audience: "",
   niche: "",
   theme: "auto",
-  imagePreset: "gemini__comic_neon",
+  imagePreset: "openai__neo_anime",
   selectedTemplate: 0,
 };
