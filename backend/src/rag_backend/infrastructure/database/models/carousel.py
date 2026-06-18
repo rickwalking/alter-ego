@@ -75,7 +75,8 @@ class CarouselProjectModel(Base):
     status: Mapped[str] = mapped_column(
         String(30), nullable=False, default=CarouselStatus.PENDING.value
     )
-    error_message = Column(Text, nullable=True)
+    # AE-0210: ``Mapped[...]`` so the auto-reject write types as ``str | None``.
+    error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
     output_dir = Column(String(500), nullable=True)
     pdf_path = Column(String(500), nullable=True)
     pdf_path_en = Column(String(500), nullable=True)

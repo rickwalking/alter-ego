@@ -24,6 +24,7 @@ from rag_backend.domain.protocols.repositories import (
 )
 from rag_backend.domain.protocols.social import PublishResult, SocialPublisher
 from rag_backend.domain.protocols.vector import EmbeddingService, Retriever, VectorStore
+from rag_backend.domain.protocols.workflow_timeout import StuckWorkflowAutoRejector
 
 __all__ = [
     "Agent",
@@ -45,6 +46,7 @@ __all__ = [
     "SlideLayoutStrategy",
     "SocialPublisher",
     "StrategyNotFoundError",
+    "StuckWorkflowAutoRejector",
     "UserRepository",
     "VectorStore",
 ]

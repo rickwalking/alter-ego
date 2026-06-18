@@ -51,6 +51,9 @@ from rag_backend.application.workers.workflow_workers import run_workflow_worker
 from rag_backend.infrastructure.config.settings import Settings, get_settings
 from rag_backend.infrastructure.container import container
 from rag_backend.infrastructure.database.config import close_db, init_db
+from rag_backend.infrastructure.database.workflow_timeout_repository import (
+    WorkflowTimeoutRepository,
+)
 from rag_backend.infrastructure.langfuse_client import init_langfuse
 from rag_backend.infrastructure.logging import get_logger, setup_logging
 from rag_backend.infrastructure.monitoring import init_langsmith
@@ -105,7 +108,9 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     async with AsyncExitStack() as stack:
         app.state.carousel_checkpointer = await _build_checkpointer(settings, stack)
         worker_stop = asyncio.Event()
-        worker_task = asyncio.create_task(run_workflow_workers(settings, worker_stop))
+        worker_task = asyncio.create_task(
+            run_workflow_workers(settings, worker_stop, WorkflowTimeoutRepository)
+        )
         app.state.workflow_worker_stop = worker_stop
         app.state.workflow_worker_task = worker_task
 

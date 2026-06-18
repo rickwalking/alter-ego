@@ -93,6 +93,9 @@ class Settings(BaseSettings):
 
     redis_url: str = ""
     workflow_worker_interval_seconds: int = 60
+    # AE-0210: auto-reject workflows stuck past this threshold (never-stuck rule).
+    workflow_auto_reject_enabled: bool = True
+    workflow_stuck_timeout_hours: int = 72
 
     feature_flag_editorial_workflow: bool = True
     feature_flag_quality_checks: bool = True
