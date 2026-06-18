@@ -100,9 +100,10 @@ VALID_IMAGE_STYLES: set[str] = {
     IMAGE_STYLE_NEO_ANIME,
 }
 
-# Default combo
-IMAGE_MODEL_DEFAULT = IMAGE_MODEL_GEMINI
-IMAGE_STYLE_DEFAULT = IMAGE_STYLE_COMIC_NEON
+# Default combo. OpenAI (not Gemini): prod has OPENAI_API_KEY but no GEMINI_API_KEY,
+# so the default preset must use a provider with a configured key (AE-0215 guard).
+IMAGE_MODEL_DEFAULT = IMAGE_MODEL_OPENAI
+IMAGE_STYLE_DEFAULT = IMAGE_STYLE_NEO_ANIME
 
 # Export constants
 HD_SUBDIR_NAME = "hd"

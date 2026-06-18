@@ -28,14 +28,14 @@ from rag_backend.infrastructure.config.settings import Settings
 _CHECKPOINT_BACKEND_MEMORY = "memory"
 _CHECKPOINT_BACKEND_DISABLED = "disabled"
 _CHECKPOINT_BACKEND_POSTGRES = "postgres"
-_GEMINI_KEY = "gemini-test-key"  # default provider (IMAGE_MODEL_DEFAULT=gemini)
+_DEFAULT_PROVIDER_KEY = "openai-test-key"  # default provider (IMAGE_MODEL_DEFAULT=openai)
 
 
 def _settings(
     *,
     environment: str,
     checkpoint_backend: str = _CHECKPOINT_BACKEND_POSTGRES,
-    gemini_key: str = _GEMINI_KEY,
+    default_provider_key: str = _DEFAULT_PROVIDER_KEY,
 ) -> Settings:
     """Build a Settings object for the given environment.
 
@@ -45,7 +45,7 @@ def _settings(
     return Settings(
         environment=environment,
         carousel_checkpoint_backend=checkpoint_backend,
-        gemini_api_key=SecretStr(gemini_key),
+        openai_api_key=SecretStr(default_provider_key),
     )
 
 
@@ -105,20 +105,20 @@ def test_staging_is_production_like_for_checkpointer() -> None:
 
 # Scenario: Production rejects a missing default image-provider key
 def test_prod_missing_default_image_key_raises() -> None:
-    settings = _settings(environment=ENVIRONMENT_PRODUCTION, gemini_key="")
+    settings = _settings(environment=ENVIRONMENT_PRODUCTION, default_provider_key="")
     with pytest.raises(StartupValidationError):
         validate_default_image_provider_key(settings)
 
 
 # Scenario: Production accepts a present default image-provider key
 def test_prod_present_default_image_key_passes() -> None:
-    settings = _settings(environment=ENVIRONMENT_PRODUCTION, gemini_key=_GEMINI_KEY)
+    settings = _settings(environment=ENVIRONMENT_PRODUCTION, default_provider_key=_DEFAULT_PROVIDER_KEY)
     assert validate_default_image_provider_key(settings) is True
 
 
 # Scenario: Development tolerates a missing default image-provider key
 def test_dev_missing_default_image_key_warns_not_raises() -> None:
-    settings = _settings(environment=ENVIRONMENT_DEVELOPMENT, gemini_key="")
+    settings = _settings(environment=ENVIRONMENT_DEVELOPMENT, default_provider_key="")
     assert validate_default_image_provider_key(settings) is False
 
 
@@ -129,7 +129,7 @@ def test_run_startup_validations_prod_all_good() -> None:
     settings = _settings(
         environment=ENVIRONMENT_PRODUCTION,
         checkpoint_backend=_CHECKPOINT_BACKEND_POSTGRES,
-        gemini_key=_GEMINI_KEY,
+        default_provider_key=_DEFAULT_PROVIDER_KEY,
     )
     result = run_startup_validations(settings)
     assert result.checkpoint_durable is True
@@ -140,7 +140,7 @@ def test_run_startup_validations_prod_memory_backend_raises() -> None:
     settings = _settings(
         environment=ENVIRONMENT_PRODUCTION,
         checkpoint_backend=_CHECKPOINT_BACKEND_MEMORY,
-        gemini_key=_GEMINI_KEY,
+        default_provider_key=_DEFAULT_PROVIDER_KEY,
     )
     with pytest.raises(StartupValidationError):
         run_startup_validations(settings)
@@ -150,7 +150,7 @@ def test_run_startup_validations_prod_missing_image_key_raises() -> None:
     settings = _settings(
         environment=ENVIRONMENT_PRODUCTION,
         checkpoint_backend=_CHECKPOINT_BACKEND_POSTGRES,
-        gemini_key="",
+        default_provider_key="",
     )
     with pytest.raises(StartupValidationError):
         run_startup_validations(settings)
@@ -160,7 +160,7 @@ def test_run_startup_validations_dev_degraded_reports_flags() -> None:
     settings = _settings(
         environment=ENVIRONMENT_DEVELOPMENT,
         checkpoint_backend=_CHECKPOINT_BACKEND_MEMORY,
-        gemini_key="",
+        default_provider_key="",
     )
     result = run_startup_validations(settings)
     assert result.checkpoint_durable is False

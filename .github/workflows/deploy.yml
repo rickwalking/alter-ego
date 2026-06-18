@@ -132,6 +132,9 @@ jobs:
             LANGFUSE_MINIO_PASSWORD=${{ secrets.LANGFUSE_MINIO_PASSWORD }}
             WRITING_STYLE_URLS=${{ secrets.WRITING_STYLE_URLS }}
             ALLOWED_ORIGINS=https://marinssolutions.com
+            ENVIRONMENT=production
+            CAROUSEL_CHECKPOINT_BACKEND=postgres
+            CAROUSEL_CHECKPOINT_POSTGRES_URL=postgresql://${{ secrets.POSTGRES_USER }}:${{ secrets.POSTGRES_PASSWORD }}@postgres:5432/${{ secrets.POSTGRES_DB }}
             EOF
 
             # Langfuse env must never be blank — a blank SALT/ENCRYPTION_KEY
