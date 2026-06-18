@@ -1,6 +1,6 @@
 # AE-0212 — Emit traceback for workflow_workers_error (call-site exc_info)
 
-Status: Dev Complete
+Status: Done
 Tier: T1
 Priority: Medium
 Type: Bug
@@ -100,3 +100,7 @@ Pending.
 ## Blockers
 
 None.
+
+## Final Summary
+
+Shipped in PR #44. `workflow_workers.py` call site now passes `exc_info=True` so the recurring error logs a traceback (global structlog config was already correct). Seeded test renders the worker error through the real `format_exc_info` pipeline.

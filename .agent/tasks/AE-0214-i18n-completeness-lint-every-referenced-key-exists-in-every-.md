@@ -1,6 +1,6 @@
 # AE-0214 — i18n completeness lint (every referenced key exists in every locale)
 
-Status: Dev Complete
+Status: Done
 Tier: T1
 Priority: Low
 Type: Quality
@@ -98,3 +98,7 @@ Pending.
 ## Blockers
 
 None.
+
+## Final Summary
+
+Shipped in PR #45. New `check-i18n-completeness.mjs` wired into `npm run lint` as `lint:i18n`; surfaced + filled 2 latent gaps (preview keys wrong namespace; entire `admin` namespace, 49 keys, missing from both locales). 6 seeded cases.

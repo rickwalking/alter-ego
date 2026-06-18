@@ -1,6 +1,6 @@
 # AE-0208 — Provider-rate-limit-aware image generation (concurrency cap + retry-after)
 
-Status: Dev Complete
+Status: Done
 Tier: T2
 Priority: High
 Type: Bug
@@ -135,4 +135,4 @@ None.
 
 ## Final Summary
 
-Pending.
+Shipped in PR #46. Image-gen concurrency capped (`carousel_image_concurrency`) via semaphore + 429 `retry-after` honored. Seeded tests: 429-then-success completes the phase; concurrency ≤ cap. Verified full backend gates incl. mutation 78.92%.

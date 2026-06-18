@@ -1,6 +1,6 @@
 # AE-0210 — Enforce never-stuck workflows: timeout auto-reject + backlog cleanup
 
-Status: Dev Complete
+Status: Done
 Tier: T2
 Priority: High
 Type: Bug
@@ -162,4 +162,4 @@ None.
 
 ## Final Summary
 
-Pending.
+Shipped in PR #44. Worker auto-rejects workflows idle past `workflow_stuck_timeout_hours` (default 72) → terminal `rejected`/`failed` + event (CLAUDE.md never-stuck rule); auto-reject query in infrastructure behind a domain protocol (import ratchet flat). Seeded tests for the timeout transitions. Backlog cleanup is an ops sweep on next tick.
