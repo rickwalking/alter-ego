@@ -1,6 +1,6 @@
 # AE-0222 — Make invalid-status error self-documenting and document ticket lifecycle
 
-Status: Dev Complete
+Status: Review
 Tier: T1
 Priority: Low
 Type: Quality

@@ -1,6 +1,6 @@
 # AE-0226 — Frontend lint: enforce early returns (no-else-return)
 
-Status: Dev Complete
+Status: Review
 Tier: T1
 Priority: Medium
 Type: Task

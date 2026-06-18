@@ -1,6 +1,6 @@
 # AE-0225 — Frontend data-loading pattern: React Suspense ADR + guide + QA checklist
 
-Status: Dev Complete
+Status: Review
 Tier: T2
 Priority: Medium
 Type: Docs

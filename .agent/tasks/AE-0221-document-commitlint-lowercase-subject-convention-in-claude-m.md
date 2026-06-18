@@ -1,6 +1,6 @@
 # AE-0221 — Document commitlint lowercase-subject convention in CLAUDE.md
 
-Status: Dev Complete
+Status: Review
 Tier: T1
 Priority: Low
 Type: Quality
