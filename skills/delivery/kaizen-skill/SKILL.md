@@ -37,6 +37,38 @@ time. Synthesis (Phase 3) drops any down-ratchet proposal and records why.
 |------|--------|------|
 | **incident** (default) | `/kaizen-skill AE-####` or `/kaizen-skill <PR#>` | one ticket/PR/failure produced a finding worth generalizing |
 | **sweep** | `/kaizen-skill sweep` | scheduled (weekly) — aggregate accumulated signal across the repo for patterns |
+| **session** | `/kaizen-skill session` | mine accumulated **session learnings** (the smart-handoff loop) — propose improvements from what sessions actually discovered, not just CI/QA artifacts |
+
+### `session` mode — close the handoff → improvement loop
+
+The smart-handoff workflow (AE-0216) records each session's distilled learnings
+(problems + root causes, landmines, decisions) to
+`.agent/handoff/learnings-log.jsonl`. `session` mode treats that log as a
+**first-class Phase-0 signal source**: it reads every record newer than the
+watermark `.agent/handoff/.kaizen-watermark`, clusters them into improvement
+classes, and runs the SAME pipeline (research → map → synthesis → skeptical →
+**approval** → emission). It is autonomously invocable (a fresh session is nudged
+to run it by the SessionStart hook, or schedule it as a routine), but — like
+every mode — **it creates nothing without explicit human approval** (Phase 4).
+
+A learning maps to enforcement the kaizen way:
+- a `problem` with `status: open|workaround` → a bugfix ticket or a new gate/lint
+  rule / `check-integrity.sh` pattern that prevents the class;
+- a `landmine` → a `CLAUDE.md` / `AGENTS.md` / `docs/` guard so the next session
+  cannot step on it;
+- a recurring `decision` → an ADR in `docs/decisions/`;
+- a repeated friction (tooling, false signal) → a doc or script fix.
+
+After emission (or if the user defers all), **advance the watermark** to the
+newest processed record so the same learnings are not re-proposed:
+```bash
+# newest created_at in the log becomes the watermark
+tail -n 1 .agent/handoff/learnings-log.jsonl \
+  | python3 -c "import json,sys;print(json.load(sys.stdin)['created_at'])" \
+  > .agent/handoff/.kaizen-watermark
+```
+The ratchet invariant still governs: a learning never justifies *loosening* a
+gate — the fix is always a stronger rule, doc, or test.
 
 Scheduling: run `sweep` weekly via the `schedule` skill (cloud routine) or a
 GitHub Actions `schedule:` workflow. Suggested cadence: weekly, off-hours.

@@ -102,3 +102,38 @@ Window: <range> | Sources: CI, QA, reviewers, integrity, debt
 - **sweep**: widen to the last N days / last M PRs (default 7 days) and prefer
   classes that appear in **≥2 incidents** — single occurrences are usually
   better handled by a normal bugfix ticket, not a rule change.
+
+## 6. Session learnings (smart-handoff loop, AE-0216) — `session` mode
+
+The `/handoff` skill distils each session into
+`.agent/handoff/learnings-log.jsonl` (one JSON record per session: `mission`,
+`problems[]` with `root_cause`/`solution`/`status`, `landmines[]`,
+`decisions[]`). This is **lived signal** — what sessions actually discovered —
+complementing the artifact signals above.
+
+```bash
+# Read only records newer than the watermark (what kaizen has not yet processed).
+WM="$(cat .agent/handoff/.kaizen-watermark 2>/dev/null || echo '')"
+python3 - "$WM" <<'PY'
+import json, sys
+wm = sys.argv[1]
+for line in open(".agent/handoff/learnings-log.jsonl", encoding="utf-8"):
+    line = line.strip()
+    if not line:
+        continue
+    rec = json.loads(line)
+    if not wm or str(rec.get("created_at", "")) > wm:
+        print(json.dumps(rec, ensure_ascii=False))
+PY
+```
+
+Clustering rules specific to this source:
+- A `problem` with `status: open|workaround` is a **recurring-class candidate** —
+  ask "what gate/lint/check/doc stops this whole class?", not "patch this one".
+- A `landmine` is a **guard candidate** → `CLAUDE.md` / `AGENTS.md` / `docs/`
+  (or a `check-integrity.sh` pattern) so the next session can't repeat it.
+- A recurring `decision` across sessions is an **ADR candidate**.
+- Apply the same measurement rigor (section 0): verify each learning against live
+  code before proposing — a session note can be stale or wrong.
+- Prefer classes appearing in **≥2 sessions**; a one-off is usually a bugfix
+  ticket, not a rule change. The ratchet invariant still holds (UP/HOLD only).
