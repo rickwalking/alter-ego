@@ -1,6 +1,6 @@
 # AE-0208 — Provider-rate-limit-aware image generation (concurrency cap + retry-after)
 
-Status: Intake
+Status: In Development
 Tier: T2
 Priority: High
 Type: Bug
@@ -99,13 +99,27 @@ Feature: ...
 
 Ticket created.
 
+### 2026-06-18 — Developer (worktree feat/kz-images)
+
+Implemented concurrency cap + retry-after. New `image_rate_limit.py`
+(`build_image_semaphore`, `generate_with_retry_after`) and
+`image_generation_constants.py`; new settings `carousel_image_concurrency=5`,
+`carousel_image_max_attempts=5`. Wired the semaphore + retry into
+`_run_one_image`. Seeded tests added. ruff/mypy clean. See
+`.agent/reports/AE-0208.dev-summary.md`.
+
 ## Files Touched
 
-Pending.
+- backend/src/rag_backend/infrastructure/config/settings.py
+- backend/src/rag_backend/application/services/carousel/image_rate_limit.py (new)
+- backend/src/rag_backend/application/services/carousel/image_generation_constants.py (new)
+- backend/src/rag_backend/application/services/carousel/nodes/images.py
+- backend/tests/unit/application/test_phase5_parallel.py
 
 ## Test Evidence
 
-Pending.
+`uv run pytest tests/unit/application/test_phase5_parallel.py` — 11 passed.
+Seeded: `test_429_then_success_completes_phase`, `test_concurrency_capped_to_config`.
 
 ## QA Report
 

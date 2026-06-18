@@ -142,6 +142,7 @@ async def generate_carousel_images(
     if not project.output_dir:
         project.output_dir = str(output_dir)
         await repo.update_project(project)
+    settings = get_settings()
     await run_images(
         ImageGenerationConfig(
             project=project,
@@ -153,6 +154,11 @@ async def generate_carousel_images(
             # the presentation image node reports progress through this callback
             # instead of writing workflow state itself.
             progress_port=EditorialProgressReporter(repo, project),
+            # AE-0208: inject the settings-backed provider-rate-limit controls
+            # here (infrastructure-aware caller) so the image node stays free of
+            # infrastructure imports.
+            concurrency=settings.carousel_image_concurrency,
+            max_attempts=settings.carousel_image_max_attempts,
         )
     )
     return await _collect_generated_image_paths(repo, project.id, output_dir)
