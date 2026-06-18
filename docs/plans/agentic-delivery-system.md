@@ -34,6 +34,22 @@ Persistent, tiered, multi-agent delivery for Alter-Ego.
 | `qa-agent` | Post-dev validation |
 | `release-manager-skill` | PR / release prep |
 
+## Ticket status lifecycle
+
+Every ticket's `Status:` must be one of these values (enforced by
+`scripts/agent_tasks/schema.py`; an invalid value is rejected with the full list):
+
+```
+Intake → Shaping → Ready → Planning → In Development → Dev Complete
+       → QA Running → Needs Fixes → Blocked → Review → Ready to Merge → Done
+       (Cancelled)
+```
+
+- **New tickets enter at `Intake`** — not `Todo` (which is not a valid status).
+- **`Ready` is T0-only** as an entry state; for T1–T3 a ticket reaches `Ready`
+  only once its required sections + acceptance criteria are present.
+- `Review` requires a dev-summary and a QA report under `.agent/reports/`.
+
 ## Detailed plan
 
 [agentic-delivery-system-implementation-plan.md](./agentic-delivery-system-implementation-plan.md)

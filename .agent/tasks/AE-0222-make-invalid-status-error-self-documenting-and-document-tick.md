@@ -1,12 +1,12 @@
 # AE-0222 — Make invalid-status error self-documenting and document ticket lifecycle
 
-Status: Intake
+Status: In Development
 Tier: T1
 Priority: Low
 Type: Quality
 Area: Agent Workflow
-Owner: Unassigned
-Branch: TBD
+Owner: Agent
+Branch: feat/dev-wave-ae0220-0227
 Created: 2026-06-18
 Updated: 2026-06-18
 Source: kaizen session-2026-06-18b (P4, class FC1) — `.agent/reports/kaizen-session-2026-06-18b.plan.md`
@@ -40,12 +40,13 @@ read `constants.py` to discover `Intake`.
 
 ## Acceptance Criteria
 
-- [ ] Both `Invalid status:` messages in `schema.py` include the full valid set
-      and the `Intake` entry-state note.
-- [ ] `docs/plans/agentic-delivery-system.md` documents the status lifecycle.
-- [ ] **Unit test**: assert the invalid-status error string contains the valid
-      options (and `Intake`) — proves the hint is present, not just absent-of-crash.
-- [ ] `validate_all_tickets.py` still passes on the existing tree; mypy + ruff clean.
+- [x] Both `Invalid status:` messages in `schema.py` include the full valid set
+      and the `Intake` entry-state note (via shared `_invalid_status_message`).
+- [x] `docs/plans/agentic-delivery-system.md` documents the status lifecycle.
+- [x] **Unit test**: asserts the invalid-status error string contains the valid
+      options (and `Intake`) — `test_invalid_status_message_is_self_documenting`
+      + `test_can_transition_to_unknown_status_is_self_documenting`.
+- [x] `validate_all_tickets.py` still passes (All 222 OK); mypy clean on schema.py.
 
 ## Classification (AE-0153 / AE-0180)
 
@@ -74,13 +75,28 @@ None.
 
 Ticket created from kaizen session-2026-06-18b (P4).
 
+### 2026-06-18 — implemented
+
+Added `_invalid_status_message()` helper in schema.py used by both `Invalid
+status:` sites; documented the lifecycle in agentic-delivery-system.md; added two
+unit tests. Status held at In Development pending the wave gate run.
+
 ## Files Touched
 
-Pending.
+- `scripts/agent_tasks/schema.py` — `_invalid_status_message()` + both call sites; import `STATUS_INTAKE`.
+- `docs/plans/agentic-delivery-system.md` — Ticket status lifecycle section.
+- `backend/tests/unit/agent_tasks/test_schema.py` — 2 self-documenting-error tests.
 
 ## Test Evidence
 
-Pending.
+```
+$ uv run pytest tests/unit/agent_tasks/test_schema.py -q
+12 passed, 1 skipped
+$ uv run python -c "from scripts.agent_tasks.schema import _invalid_status_message; print(_invalid_status_message('Todo'))"
+Invalid status: Todo. Valid statuses: Intake, Shaping, Ready, ... Done, Cancelled. New tickets enter at 'Intake' ('Ready' is T0-only).
+$ uv run mypy ../scripts/agent_tasks/schema.py  → Success
+$ uv run python scripts/agent_tasks/validate_all_tickets.py  → All 222 ticket(s) OK
+```
 
 ## QA Report
 

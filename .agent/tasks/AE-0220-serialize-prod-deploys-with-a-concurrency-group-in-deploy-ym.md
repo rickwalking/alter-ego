@@ -1,6 +1,6 @@
 # AE-0220 — Serialize prod deploys with a concurrency group in deploy.yml
 
-Status: Dev Complete
+Status: In Development
 Tier: T1
 Priority: High
 Type: Quality

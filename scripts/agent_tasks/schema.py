@@ -24,6 +24,7 @@ from scripts.agent_tasks.constants import (
     STATUS_DEV_COMPLETE,
     STATUS_DONE,
     STATUS_IN_DEVELOPMENT,
+    STATUS_INTAKE,
     STATUS_READY,
     STATUS_REVIEW,
 )
@@ -35,6 +36,19 @@ TIER_PATTERN = re.compile(r"^Tier:\s*(T[0-3])$", re.MULTILINE)
 # A QA report with fewer than this many non-empty lines is treated as an
 # empty/placeholder file rather than a real report (AE-0181 content check).
 _MIN_REPORT_CONTENT_LINES = 3
+
+
+def _invalid_status_message(value: str) -> str:
+    """Self-documenting error for an unknown ticket status (AE-0222).
+
+    Lists every valid status and names the entry state so an author who guesses
+    a wrong value (e.g. ``Todo``) sees the fix without reading ``constants.py``.
+    """
+    valid = ", ".join(ALL_STATUSES)
+    return (
+        f"Invalid status: {value}. Valid statuses: {valid}. "
+        f"New tickets enter at '{STATUS_INTAKE}' ('{STATUS_READY}' is T0-only)."
+    )
 
 
 @dataclass(frozen=True)
@@ -107,7 +121,7 @@ def load_tickets(tasks_dir: Path) -> list[Ticket]:
 def can_transition(ticket: Ticket, new_status: str) -> list[str]:
     errors: list[str] = []
     if new_status not in ALL_STATUSES:
-        errors.append(f"Invalid status: {new_status}")
+        errors.append(_invalid_status_message(new_status))
         return errors
 
     if new_status == STATUS_READY and ticket.tier != "T0":
@@ -160,7 +174,7 @@ def can_transition(ticket: Ticket, new_status: str) -> list[str]:
 def validate_ticket_file(ticket: Ticket) -> list[str]:
     errors: list[str] = []
     if ticket.status not in ALL_STATUSES:
-        errors.append(f"Invalid status: {ticket.status}")
+        errors.append(_invalid_status_message(ticket.status))
 
     if ticket.status in (STATUS_READY, STATUS_IN_DEVELOPMENT):
         errors.extend(can_transition(ticket, ticket.status))
