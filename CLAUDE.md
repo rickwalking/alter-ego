@@ -118,6 +118,7 @@ All architecturally significant decisions are documented as ADRs in `docs/decisi
 - [ADR-009: Adopt Domain Modular Monolith](docs/decisions/0009-adopt-domain-modular-monolith.md)
 - [ADR-010: Suspense-based data loading (Server Components + TanStack Query + React 19 use())](docs/decisions/0010-suspense-data-loading.md)
 - [ADR-011: Canonical Distribution Home for Caption + LinkedIn (blog_posts.distribution JSONB)](docs/decisions/0011-canonical-distribution-home.md)
+- [ADR-012: Production uses Alembic Migrations on Deploy (no create_all)](docs/decisions/0012-prod-migrations-on-deploy.md)
 
 **ADR Lifecycle:** `proposed` → `accepted` → `deprecated` (superseded by newer ADR)
 **Format:** MADR 4.x | **Naming:** `NNNN-short-title.md` | **Review:** Annually

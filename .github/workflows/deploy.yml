@@ -146,7 +146,38 @@ jobs:
             # Deploy with Docker Compose (server caches layers automatically)
             docker compose -f docker-compose.prod.yml down
             docker compose -f docker-compose.prod.yml pull
-            docker compose -f docker-compose.prod.yml up -d --build
+            # Build images first so the migration one-shot below uses the freshly
+            # built backend image (and the app start that follows is cache-warm).
+            docker compose -f docker-compose.prod.yml build
+
+            # --- Database migrations (AE-0207) --------------------------------
+            # Prod used to bootstrap via SQLAlchemy create_all, which NEVER ALTERs
+            # an existing table — so every model column added later silently 500'd
+            # prod (caught live: caption_en, origin, distribution). Run Alembic
+            # migrations to head BEFORE the app serves traffic, then assert the
+            # live schema actually matches the mapped ORM columns. Both steps run
+            # against the running Postgres only; the app containers are not up yet.
+            # NOTE: a one-time operator reconcile (alembic stamp of the existing
+            # drifted prod DB) is required ONCE before the first migrated deploy —
+            # see docs/deployment/prod-migration-reconcile.md.
+            docker compose -f docker-compose.prod.yml up -d postgres
+            echo "--- Waiting for Postgres to be healthy ---"
+            for _ in $(seq 1 30); do
+              if docker compose -f docker-compose.prod.yml exec -T postgres pg_isready -U "${{ secrets.POSTGRES_USER }}" >/dev/null 2>&1; then
+                break
+              fi
+              sleep 2
+            done
+
+            echo "--- Running Alembic migrations (upgrade head) ---"
+            docker compose -f docker-compose.prod.yml run --rm --no-deps backend alembic upgrade head
+
+            echo "--- Verifying live schema matches mapped ORM columns (drift gate) ---"
+            docker compose -f docker-compose.prod.yml run --rm --no-deps backend \
+              python -m rag_backend.infrastructure.database.check_drift_cli
+
+            # Bring up the full stack only after migrations + drift check pass.
+            docker compose -f docker-compose.prod.yml up -d
 
             # Wait for services to start
             sleep 10
