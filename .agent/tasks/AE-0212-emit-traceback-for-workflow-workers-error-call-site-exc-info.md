@@ -1,6 +1,6 @@
 # AE-0212 — Emit traceback for workflow_workers_error (call-site exc_info)
 
-Status: In Development
+Status: Dev Complete
 Tier: T1
 Priority: Medium
 Type: Bug
