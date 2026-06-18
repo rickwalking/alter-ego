@@ -27,3 +27,22 @@ Feature: Composition-root startup hardening
     And CAROUSEL_CHECKPOINT_BACKEND is memory
     When startup validations run
     Then the checkpointer guard warns instead of failing
+
+  # AE-0215 — validate default image-provider key at startup
+  Scenario: Production rejects a missing default image-provider key
+    Given the environment is production
+    And the default image provider key is empty
+    When startup validations run
+    Then startup fails with a missing-image-provider-key error
+
+  Scenario: Production accepts a present default image-provider key
+    Given the environment is production
+    And the default image provider key is configured
+    When startup validations run
+    Then the image-provider guard passes
+
+  Scenario: Development tolerates a missing default image-provider key
+    Given the environment is development
+    And the default image provider key is empty
+    When startup validations run
+    Then the image-provider guard warns instead of failing

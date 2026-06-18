@@ -1,6 +1,6 @@
 # AE-0215 — Validate default image-provider key at startup
 
-Status: Intake
+Status: Dev Complete
 Tier: T1
 Priority: Medium
 Type: Quality
@@ -31,18 +31,20 @@ Source: Kaizen prod sweep `.agent/reports/kaizen-prod-2026-06-18.plan.md` (live 
 
 ## Acceptance Criteria
 
-- [ ] Startup validation covers the default image-provider key (fail-fast or preset disabled).
-- [ ] Test proves the default-preset provider key is validated.
+- [x] Startup validation covers the default image-provider key (fail-fast or preset disabled). (Code: `bootstrap/startup_validation.py::validate_default_image_provider_key` — fail-fast in production-like env; warns + treats preset as disabled in dev/test.)
+- [x] Test proves the default-preset provider key is validated. (`tests/unit/bootstrap/test_startup_validation.py`.)
 
 ## Repro Steps
 
-1. ...
+1. Run with `ENVIRONMENT=production` and empty `GEMINI_API_KEY` (default image
+   provider is gemini): startup now raises `StartupValidationError` instead of
+   failing later at image generation.
 
 ## Affected Areas
 
-- [ ] Backend
+- [x] Backend
 - [ ] Frontend
-- [ ] Tests
+- [x] Tests
 
 ## Dependencies
 
@@ -56,13 +58,37 @@ Source: Kaizen prod sweep `.agent/reports/kaizen-prod-2026-06-18.plan.md` (live 
 
 Ticket created.
 
+### 2026-06-18 dev
+
+Added `validate_default_image_provider_key` to the composition-root startup
+hardening module (shared with AE-0213). Default provider (`gemini`) key must be
+present in production-like environments or startup fails fast; dev/test warns and
+treats the default preset as disabled. Seeded tests pass. See
+`.agent/reports/AE-0215.dev-summary.md`.
+
 ## Files Touched
 
-Pending.
+- `backend/src/rag_backend/bootstrap/startup_validation.py`
+- `backend/.env.example`
+- `backend/tests/features/startup_hardening.feature`
+- `backend/tests/unit/bootstrap/test_startup_validation.py`
 
 ## Test Evidence
 
-Pending.
+```bash
+uv run pytest tests/unit/bootstrap/ -q
+# 12 passed
+```
+
+Seeded tests (AE-0215 portion):
+- `test_prod_missing_default_image_key_raises` — prod + empty gemini key → raise.
+- `test_prod_present_default_image_key_passes` — prod + key present → pass.
+- `test_dev_missing_default_image_key_warns_not_raises` — dev + empty key → warn.
+- `test_run_startup_validations_prod_missing_image_key_raises` — runner fails fast.
+
+Gates: full backend run `GATES_JSON: {"pass":14,"fail":0,"skip":3,...}` (DB gates
+SKIP locally; test/diff-cover verified PASS with DATABASE_URL set; migrations SKIP
+— no models touched). Integrity: 0 net-new blockers. arch-ratchet PASS.
 
 ## QA Report
 
