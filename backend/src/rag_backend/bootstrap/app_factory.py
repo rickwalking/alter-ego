@@ -48,6 +48,7 @@ from rag_backend.api.routes import (
 )
 from rag_backend.api.schemas import HealthCheckResponse, HealthResponse
 from rag_backend.application.workers.workflow_workers import run_workflow_workers
+from rag_backend.bootstrap.startup_validation import run_startup_validations
 from rag_backend.infrastructure.config.settings import Settings, get_settings
 from rag_backend.infrastructure.container import container
 from rag_backend.infrastructure.database.config import close_db, init_db
@@ -92,6 +93,12 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         logger.info("langfuse_initialized", host=settings.langfuse_host)
 
     logger.info("application_startup", version=settings.app_version)
+
+    # Composition-root startup hardening (AE-0213 durable checkpointer,
+    # AE-0215 default image-provider key). Fails fast in production-like
+    # environments; warns in dev/test. Run before wiring/DB so a
+    # misconfigured prod deploy surfaces immediately.
+    run_startup_validations(settings)
 
     await init_db(
         settings.database_url,
