@@ -1,6 +1,6 @@
 # AE-0209 — Per-slide partial-commit and idempotent re-entry for the images phase
 
-Status: Intake
+Status: Dev Complete
 Tier: T2
 Priority: High
 Type: Bug
@@ -100,13 +100,30 @@ Feature: ...
 
 Ticket created.
 
+### 2026-06-18 — Developer (worktree feat/kz-images)
+
+Implemented per-slide partial commit (`gather(return_exceptions=True)` +
+`_raise_on_batch_failures`) so a single slide failure no longer cancels
+siblings; successful images persist. Re-entry already idempotent via
+prompt_hash/generation_key — verified by seeded re-run test. Added a
+cancellation-safe lock-release handler in the resume runner (did NOT change
+`_mark_background_resume_failed`). ruff/mypy clean. See
+`.agent/reports/AE-0209.dev-summary.md`.
+
 ## Files Touched
 
-Pending.
+- backend/src/rag_backend/application/services/carousel/nodes/images.py
+- backend/src/rag_backend/application/services/carousel/image_generation_constants.py (new)
+- backend/src/rag_backend/application/services/carousel/editorial_workflow_resume_runner.py
+- backend/tests/unit/application/test_phase5_parallel.py
+- backend/tests/unit/application/test_editorial_workflow_resume_runner.py
 
 ## Test Evidence
 
-Pending.
+`uv run pytest tests/unit/application/test_phase5_parallel.py tests/unit/application/test_editorial_workflow_resume_runner.py` — passed.
+Seeded: `test_sibling_persists_on_single_slide_failure`,
+`test_rerun_regenerates_only_missing_and_completes`,
+`test_cancellation_releases_lock_and_reraises`.
 
 ## QA Report
 

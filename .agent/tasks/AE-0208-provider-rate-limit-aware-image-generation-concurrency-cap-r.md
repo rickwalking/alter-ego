@@ -1,6 +1,6 @@
 # AE-0208 — Provider-rate-limit-aware image generation (concurrency cap + retry-after)
 
-Status: In Development
+Status: Dev Complete
 Tier: T2
 Priority: High
 Type: Bug
