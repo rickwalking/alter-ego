@@ -10,6 +10,9 @@ Visual Kanban is for orchestration. This file is durable board state (regenerate
 - AE-0162
 - AE-0205
 - AE-0206
+- AE-0217
+- AE-0218
+- AE-0219
 
 ## Shaping
 
