@@ -1,6 +1,6 @@
 # AE-0209 — Per-slide partial-commit and idempotent re-entry for the images phase
 
-Status: Dev Complete
+Status: Done
 Tier: T2
 Priority: High
 Type: Bug
@@ -139,4 +139,4 @@ None.
 
 ## Final Summary
 
-Pending.
+Shipped in PR #46. `asyncio.gather(return_exceptions=True)` + per-slide commit so one slide's failure no longer discards the batch; re-entry idempotent via `prompt_hash`; resume runner releases the lock on cancellation. Seeded tests: sibling-persists-on-failure, re-run-only-missing, cancellation-releases-lock.

@@ -1,6 +1,6 @@
 # AE-0213 — Durable LangGraph checkpointer in prod (postgres) + startup guard
 
-Status: Dev Complete
+Status: Done
 Tier: T2
 Priority: Medium
 Type: DevOps
@@ -148,4 +148,4 @@ None.
 
 ## Final Summary
 
-Pending.
+Shipped in PR #48. Startup guard (`bootstrap/startup_validation.py`) fail-fasts when `CAROUSEL_CHECKPOINT_BACKEND` is non-durable in a production-like env; warns in dev. Added `Settings.environment`/`is_production_like`. Seeded tests. Operator action pending: set prod `CAROUSEL_CHECKPOINT_BACKEND=postgres` + url + `ENVIRONMENT=production`.

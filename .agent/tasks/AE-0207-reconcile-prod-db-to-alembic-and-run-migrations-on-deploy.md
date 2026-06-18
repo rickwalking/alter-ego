@@ -1,6 +1,6 @@
 # AE-0207 — Reconcile prod DB to Alembic and run migrations on deploy
 
-Status: Dev Complete
+Status: Done
 Tier: T3
 Priority: Critical
 Type: DevOps
@@ -178,4 +178,4 @@ None.
 
 ## Final Summary
 
-Pending.
+Shipped in PR #47. Deploy now runs `alembic upgrade head` + a schema-vs-models **drift gate** before serving traffic; ADR-0012 + a one-time prod reconcile runbook (`docs/deployment/prod-migration-reconcile.md`). Seeded tests: drift fails-on-missing-column / passes-on-match; empty-DB upgrade + downgrade round-trip. Operator action pending: one-time `alembic stamp`/reconcile on prod.

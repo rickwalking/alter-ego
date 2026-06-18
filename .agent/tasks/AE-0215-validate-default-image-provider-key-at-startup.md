@@ -1,6 +1,6 @@
 # AE-0215 — Validate default image-provider key at startup
 
-Status: Dev Complete
+Status: Done
 Tier: T1
 Priority: Medium
 Type: Quality
@@ -97,3 +97,7 @@ Pending.
 ## Blockers
 
 None.
+
+## Final Summary
+
+Shipped in PR #48. Startup validation of the default image-provider key (default gemini→`GEMINI_API_KEY`): fail-fast in prod, warn + treat preset disabled in dev. Seeded tests. Operator action pending: set prod `GEMINI_API_KEY` (or change the default preset) + `ENVIRONMENT=production`.

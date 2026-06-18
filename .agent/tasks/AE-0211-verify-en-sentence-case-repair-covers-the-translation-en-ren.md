@@ -1,6 +1,6 @@
 # AE-0211 — Verify EN sentence-case repair covers the translation_en render source + regression test
 
-Status: Dev Complete
+Status: Done
 Tier: T1
 Priority: Medium
 Type: Quality
@@ -95,3 +95,7 @@ Pending.
 ## Blockers
 
 None.
+
+## Final Summary
+
+Shipped in PR #45. The EN render path read `extras.translation_en` verbatim with no repair (real dual-representation gap); added an HTML-aware idempotent `repair_text_sentence_case_en()` applied to EN heading+body at the point of consumption. 3 seeded tests (negative control confirmed).
