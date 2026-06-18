@@ -80,3 +80,10 @@ tmp/
 /login-form*
 /langfuse-*
 /create-page
+
+# AE-0216: smart session handoff — ephemeral working state (keep README only)
+.agent/handoff/HANDOFF-latest.*
+.agent/handoff/.consumed
+.agent/handoff/.reminder
+.agent/handoff/learnings-log.jsonl
+.agent/handoff/.kaizen-watermark

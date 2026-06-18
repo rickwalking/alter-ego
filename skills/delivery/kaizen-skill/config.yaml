@@ -25,6 +25,7 @@ signal_sources:
   reviewer_comments:  "CodeRabbit / gh pr view --comments"
   integrity_markers:  "scripts/ci/check-integrity.sh history; every integrity-ok:/noqa/type-ignore/nosec marker"
   debt_markers:       "TODO AE-#### ; pyproject per-file-ignores ; mypy ignore_errors overrides"
+  session_learnings:  ".agent/handoff/learnings-log.jsonl since .kaizen-watermark — problems/root-causes/landmines/decisions from the smart-handoff loop (AE-0216)"
 
 # Phase 2 analysis subagents (run in parallel over the shared pack).
 analysis:
@@ -62,6 +63,17 @@ emission:
 modes:
   incident: "/kaizen-skill AE-#### | <PR#>"
   sweep:    "/kaizen-skill sweep"        # schedule weekly (schedule skill / GH Actions cron)
+  session:  "/kaizen-skill session"      # mine .agent/handoff/learnings-log.jsonl (smart-handoff loop)
+
+# session mode (AE-0216): close the handoff -> improvement loop.
+session:
+  signal:    ".agent/handoff/learnings-log.jsonl"
+  watermark: ".agent/handoff/.kaizen-watermark"   # created_at of newest processed record
+  autonomous_triggers:
+    - "SessionStart hook nudges a fresh session when pending learnings exist (scripts/handoff/inject_handoff.py)"
+    - "schedule skill / GH Actions cron running `/kaizen-skill session` off-hours"
+  approval_still_required: true          # propose autonomously; create nothing without sign-off
+  advance_watermark_after: true          # bump watermark to newest processed record post-emission/defer
 
 # External execution (cost offload) — invoke with `/kaizen-skill <scope> external`.
 # Phases 0-2 (signal + research pack + analysis) run on a cheaper external LLM;
