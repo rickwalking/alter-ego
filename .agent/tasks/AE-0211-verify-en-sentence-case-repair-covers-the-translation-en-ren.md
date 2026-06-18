@@ -1,12 +1,12 @@
 # AE-0211 — Verify EN sentence-case repair covers the translation_en render source + regression test
 
-Status: Intake
+Status: Dev Complete
 Tier: T1
 Priority: Medium
 Type: Quality
 Area: backend
 Owner: Unassigned
-Branch: TBD
+Branch: feat/kz-content
 Created: 2026-06-18
 Updated: 2026-06-18
 
@@ -31,18 +31,20 @@ Source: Kaizen prod sweep `.agent/reports/kaizen-prod-2026-06-18.plan.md` (live 
 
 ## Acceptance Criteria
 
-- [ ] EN render-source (`translation_en`) headings/bodies are guaranteed sentence-cased before render.
-- [ ] Regression test fails on a seeded lowercase `translation_en` heading.
+- [x] EN render-source (`translation_en`) headings/bodies are guaranteed sentence-cased before render.
+- [x] Regression test fails on a seeded lowercase `translation_en` heading.
 
 ## Repro Steps
 
-1. ...
+1. A persisted slide carries `extras.translation_en.heading = "all lowercase en heading"`.
+2. The EN export path calls `slides_data_for_language(slides, "en")`, which read the heading/body verbatim from `translation_en` and handed them to `run_design` — no sentence-case repair (the existing repair only touched `localized_slides`).
+3. The rendered EN slide showed an all-lowercase heading/body (prod project b5b61790).
 
 ## Affected Areas
 
-- [ ] Backend
+- [x] Backend
 - [ ] Frontend
-- [ ] Tests
+- [x] Tests
 
 ## Dependencies
 
@@ -52,17 +54,39 @@ Source: Kaizen prod sweep `.agent/reports/kaizen-prod-2026-06-18.plan.md` (live 
 
 ## Progress Log
 
-### 2026-06-18 HH:mm
+### 2026-06-18
 
-Ticket created.
+- Ticket created.
+- Confirmed the gap is REAL: `slides_data_for_language(slides, "en")` in `types.py` reads `translation_en.heading`/`body` verbatim and feeds them to `run_design` (export.py) with no EN sentence-case repair. The existing `deterministic_repair_slide_payload` / `repair_localized_slides` only operate on `localized_slides`, a separate representation — so the render source was never sentence-cased.
+- Added an HTML-tag-aware `repair_text_sentence_case_en()` to `presentation_copy_repair.py` and applied it to the EN heading AND body inside `slides_data_for_language` (the point of consumption), guaranteeing the render source is sentence-cased before render. Idempotent for already-cased text.
+- Seeded regression tests; verified they fail without the fix and pass with it.
 
 ## Files Touched
 
-Pending.
+- `backend/src/rag_backend/application/services/carousel/presentation_copy_repair.py` — add `repair_text_sentence_case_en()` (HTML-tag-aware, idempotent) + export.
+- `backend/src/rag_backend/application/services/carousel/types.py` — apply the repair to EN heading/body in `slides_data_for_language`.
+- `backend/tests/unit/application/test_bilingual_export.py` — seeded regression tests.
 
 ## Test Evidence
 
-Pending.
+```
+uv run pytest tests/unit/application/test_bilingual_export.py tests/unit/application/test_presentation_validation.py -q
+30 passed
+```
+
+Negative control (revert the repair calls) → seeded tests FAIL:
+```
+test_en_render_source_lowercase_heading_is_sentence_cased FAILED
+test_en_render_source_skips_leading_html_tag_when_casing FAILED
+```
+
+Gate reproduction:
+```
+GATES_JSON: {"pass":14,"fail":0,"skip":3,"results":[...]}
+```
+SKIP=3 (`test`, `diff-cover`, `migrations`) — Postgres-dependent, `DATABASE_URL` unset locally; CI runs them with a live DB service. The AE-0211 unit tests are DB-free and pass via direct pytest.
+
+Integrity (`scripts/ci/check-integrity.sh backend`): 0 net-new blockers, 0 warnings.
 
 ## QA Report
 
