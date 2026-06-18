@@ -1,6 +1,6 @@
 # AE-0223 — Stop committing generated BOARD.md; gitignore + render on demand
 
-Status: In Development
+Status: Dev Complete
 Tier: T1
 Priority: Medium
 Type: Quality

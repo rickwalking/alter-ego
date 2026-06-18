@@ -1,6 +1,6 @@
 # AE-0225 — Frontend data-loading pattern: React Suspense ADR + guide + QA checklist
 
-Status: In Development
+Status: Dev Complete
 Tier: T2
 Priority: Medium
 Type: Docs
@@ -133,14 +133,6 @@ $ sed -n '/## Status/,/Accepted/p' docs/decisions/0010-suspense-data-loading.md 
 $ grep -nE "✅|❌" docs/guides/suspense-data-loading-guide.md → good/bad examples present
 ```
 Docs-only; no code/gate impact (the migration is tracked separately in AE-0187).
-
-## Files Touched
-
-Pending.
-
-## Test Evidence
-
-Pending.
 
 ## QA Report
 
