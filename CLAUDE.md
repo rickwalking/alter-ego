@@ -79,6 +79,12 @@ alter-ego/
 
 ### Git & Commits
 - Conventional commit messages
+- **Commit subjects must be all-lowercase (commitlint `subject-case`).** The
+  `commit-msg` hook extends `@commitlint/config-conventional`, whose `subject-case`
+  rule rejects upper/start/pascal/sentence case. Keep the **entire** subject
+  lowercase — **including ticket IDs** (e.g. `move ae-0216 ticket to review`, not
+  `AE-0216 → Review`). This is a hard gate, not a style preference; do **not**
+  relax the rule to allow uppercase.
 - One logical change per commit
 - No secrets or API keys committed
 - **⚠️ Pushing/merging to `main` AUTO-DEPLOYS PRODUCTION.** Any commit that lands

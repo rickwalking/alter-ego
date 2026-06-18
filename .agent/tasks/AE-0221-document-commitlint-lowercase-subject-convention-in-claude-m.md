@@ -1,12 +1,12 @@
 # AE-0221 — Document commitlint lowercase-subject convention in CLAUDE.md
 
-Status: Intake
+Status: Dev Complete
 Tier: T1
 Priority: Low
 Type: Quality
 Area: Docs
-Owner: Unassigned
-Branch: TBD
+Owner: Agent
+Branch: feat/dev-wave-ae0220-0227
 Created: 2026-06-18
 Updated: 2026-06-18
 Source: kaizen session-2026-06-18b (P3, class FC2) — `.agent/reports/kaizen-session-2026-06-18b.plan.md`
@@ -40,9 +40,9 @@ memory/handoff landmines, not in `CLAUDE.md` where authors look.
 
 ## Acceptance Criteria
 
-- [ ] `CLAUDE.md` Git & Commits section states the lowercase-subject convention
-      with a concrete ticket-id example.
-- [ ] commitlint config is **unchanged** (no rule weakened).
+- [x] `CLAUDE.md` Git & Commits section states the lowercase-subject convention
+      with a concrete ticket-id example (`move ae-0216 ticket to review`).
+- [x] commitlint config is **unchanged** (no rule weakened) — `frontend/.commitlintrc.json` untouched.
 
 ## Classification (AE-0153 / AE-0180)
 
@@ -70,13 +70,23 @@ None.
 
 Ticket created from kaizen session-2026-06-18b (P3).
 
+### 2026-06-18 — Dev Complete
+
+Added the lowercase-subject convention bullet to CLAUDE.md → Git & Commits, with
+the ticket-id example. commitlint config left untouched.
+
 ## Files Touched
 
-Pending.
+- `CLAUDE.md` — Git & Commits: added the `subject-case` lowercase convention bullet.
 
 ## Test Evidence
 
-Pending.
+```
+$ grep -n "all-lowercase (commitlint" CLAUDE.md
+82:- **Commit subjects must be all-lowercase (commitlint `subject-case`).** ...
+$ git diff --name-only -- frontend/.commitlintrc.json   # empty: config unchanged
+```
+Docs-only change; commitlint still enforces the rule (this commit's own subject is lowercase).
 
 ## QA Report
 
