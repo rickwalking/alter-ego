@@ -1,6 +1,6 @@
-# AE-0148 — Fix the failing npm-audit high vuln (frontend Security gate)
+# AE-0227 — Fix the failing npm-audit high vuln (frontend Security gate)
 
-Status: Review
+Status: Ready
 Tier: T1
 Priority: High
 Type: Task
@@ -8,9 +8,9 @@ Area: Frontend/CI
 Owner: Unassigned
 Agent Lane: planner → architect → developer → qa → release
 Branch: feat/ae-0148-fix-npm-audit-high-vuln
-Kanban Card: TBD
+Kanban Card: AE-0227
 Created: 2026-06-16
-Updated: 2026-06-16
+Updated: 2026-06-18
 
 ## Goal
 
@@ -65,6 +65,14 @@ Not applicable — lint/CI/docs/dependency fix; verified by the green-gate safet
 ### 2026-06-16
 
 Ticket created from PR #21 review.
+
+### 2026-06-18
+
+Renumbered from **AE-0148** to resolve the duplicate-ID collision (AE-0181 dup
+warning): AE-0148 is the *Done* same-work twin; this pending ticket kept its own card.
+Demoted Review → Ready (no dev/QA reports under this twin). Re-verify the
+npm-audit HIGH advisory is still open before working — the Done twin may have
+already resolved it.
 
 ## Files Touched
 

@@ -1,4 +1,4 @@
-# AE-0146 — Frontend data-loading pattern: React Suspense ADR + guide + QA checklist
+# AE-0225 — Frontend data-loading pattern: React Suspense ADR + guide + QA checklist
 
 Status: Ready
 Tier: T2
@@ -8,9 +8,9 @@ Area: Docs/Arch
 Owner: Unassigned
 Agent Lane: planner → architect → developer → qa → release
 Branch: TBD
-Kanban Card: TBD
+Kanban Card: AE-0225
 Created: 2026-06-16
-Updated: 2026-06-16
+Updated: 2026-06-18
 
 ## Goal
 
@@ -105,6 +105,13 @@ Feature: Documented data-loading standard
 ### 2026-06-16 HH:mm
 
 Ticket created.
+
+### 2026-06-18
+
+Renumbered from **AE-0146** to resolve the duplicate-ID collision (AE-0181 dup
+warning): AE-0146 is the *Done* same-work twin; this pending (Ready) ticket kept
+its own card. Suspense data-loading is **not** complete — components still use the
+manual loading pattern (see also the AE-0187 migration ratchet). No content change.
 
 ## Files Touched
 

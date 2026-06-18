@@ -1,4 +1,4 @@
-# AE-0147 — Frontend lint: enforce early returns (no-else-return)
+# AE-0226 — Frontend lint: enforce early returns (no-else-return)
 
 Status: Ready
 Tier: T1
@@ -7,8 +7,9 @@ Type: Task
 Area: Frontend/CI
 Owner: Unassigned
 Branch: TBD
+Kanban Card: AE-0226
 Created: 2026-06-16
-Updated: 2026-06-16
+Updated: 2026-06-18
 
 ## Goal
 
@@ -28,7 +29,7 @@ unenforced.
 - Enable `no-else-return` (+ consider `sonarjs/prefer-immediate-return`) in
   `frontend/eslint.config.mjs`.
 - Fix `use-upload.ts` to use guard clauses.
-- (May be merged into AE-0145's PR.)
+- (May be merged into the AE-0224 no-magic-numbers PR.)
 
 ## Non-Goals
 
@@ -60,6 +61,12 @@ None.
 ### 2026-06-16 HH:mm
 
 Ticket created.
+
+### 2026-06-18
+
+Renumbered from **AE-0147** to resolve the duplicate-ID collision (AE-0181 dup
+warning): AE-0147 is the *Done* same-work twin; this pending (Ready) ticket kept
+its own card. No content change — still open frontend lint work.
 
 ## Files Touched
 
