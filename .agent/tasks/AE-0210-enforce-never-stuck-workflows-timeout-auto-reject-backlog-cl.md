@@ -1,6 +1,6 @@
 # AE-0210 — Enforce never-stuck workflows: timeout auto-reject + backlog cleanup
 
-Status: Intake
+Status: In Development
 Tier: T2
 Priority: High
 Type: Bug
@@ -35,9 +35,9 @@ CLAUDE.md mandates "Auto-reject after timeout; never leave workflows stuck." But
 
 ## Acceptance Criteria
 
-- [ ] A past-timeout workflow is auto-rejected/cancelled (no longer `pending`).
-- [ ] The existing 14+ stuck workflows are cleaned up.
-- [ ] Seeded timeout test passes.
+- [x] A past-timeout workflow is auto-rejected/cancelled (no longer `pending`).
+- [~] The existing 14+ stuck workflows are cleaned up. — Deferred to ops: per ticket scope ("Do NOT run any cleanup against prod"), the one-time backlog cleanup is an ops action. The worker auto-reject will sweep them on the next tick once deployed (their `updated_at` is far past the 72h timeout).
+- [x] Seeded timeout test passes.
 
 ## Gherkin Scenarios
 
@@ -100,13 +100,53 @@ Feature: ...
 
 Ticket created.
 
+### 2026-06-18 — In Development (worktree feat/kz-workers)
+
+Implemented timeout auto-reject. A workflow is stuck when it is not yet
+`published`, sits in a non-terminal pending-like phase status (`pending` or
+`awaiting_human`; `in_progress` is excluded as it may be actively resuming), and
+its `updated_at` is past the configurable timeout. Each match is transitioned to
+the terminal `phase_status=rejected` + `status=failed`, records an
+`error_message`, logs `workflow_auto_rejected`, and emits the existing
+`content.project.phase_changed` event via the transactional outbox.
+
+Architecture: to respect the import-boundary ratchet (no net-new
+application→infrastructure edge), the ORM query/transition lives in a new
+infrastructure repository `WorkflowTimeoutRepository` implementing a new domain
+protocol `StuckWorkflowAutoRejector`. The worker depends only on the protocol +
+an injected factory (`AutoRejectorFactory`); the composition root
+(`bootstrap/app_factory.py`) wires the concrete repo. Threshold + enable flag are
+Settings (`workflow_stuck_timeout_hours=72`, `workflow_auto_reject_enabled=True`).
+
+NOTE (ops): the existing prod backlog (14 workflows stuck at brief/pending since
+2026-04-28) is NOT cleaned up by this change directly; the worker will auto-reject
+them on the next tick after deploy (they are far past the 72h window). No prod
+mutation was run from this work.
+
+### 2026-06-18 — Dev Complete
+
+Status → Dev Complete.
+
 ## Files Touched
 
-Pending.
+- `backend/src/rag_backend/domain/protocols/workflow_timeout.py` (new protocol)
+- `backend/src/rag_backend/domain/protocols/__init__.py` (export)
+- `backend/src/rag_backend/domain/constants/workflow_timeout.py` (new constants)
+- `backend/src/rag_backend/infrastructure/database/workflow_timeout_repository.py` (new repo)
+- `backend/src/rag_backend/infrastructure/database/models/carousel.py` (`error_message` → `Mapped[str | None]`)
+- `backend/src/rag_backend/infrastructure/config/settings.py` (timeout + enable settings)
+- `backend/src/rag_backend/application/workers/workflow_workers.py` (auto-reject tick + factory param)
+- `backend/src/rag_backend/bootstrap/app_factory.py` (wire repo into worker)
+- `backend/tests/unit/infrastructure/test_workflow_timeout_repository.py` (seeded tests)
+- `backend/tests/features/workflow_never_stuck.feature` (Gherkin)
 
 ## Test Evidence
 
-Pending.
+```bash
+uv run pytest tests/unit/infrastructure/test_workflow_timeout_repository.py -q   # 5 passed
+# Covers: past-timeout pending -> rejected + event; within-window untouched;
+# in_progress not rejected; awaiting_human rejected; published not rejected.
+```
 
 ## QA Report
 
