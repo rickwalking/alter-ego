@@ -1,6 +1,6 @@
 # AE-0207 — Reconcile prod DB to Alembic and run migrations on deploy
 
-Status: Done
+Status: In Development
 Tier: T3
 Priority: Critical
 Type: DevOps
@@ -130,6 +130,10 @@ Feature: Production schema stays in lockstep with the ORM models
 - [ ] Orphan/unfinished code checked
 
 ## Progress Log
+
+### 2026-06-18 — REOPENED (deploy automation reverted; took prod down)
+
+Merging this ticket auto-deployed `alembic upgrade head` to prod and **took prod down (521)**: prod had no `alembic_version` (never stamped) AND the alembic chain has **two heads** (`0011_drop_audit_stream_entry_id` + `e5f6a7b8c9d0`) → `upgrade head` errors 'Multiple heads'; the deploy aborted (`set -e`) before the app stack came up. Recovered manually: added missing `documents.scope`/`is_public` columns (more create_all drift), brought the stack up on create_all bootstrap. The migrate-on-deploy + drift steps are REVERTED from `deploy.yml` (detector/CLI, gates.sh gate, ADR-0012, runbook REMAIN). Re-enable ONLY after, IN ORDER: (1) merge the two alembic heads (an `alembic merge` revision); (2) the one-time prod `alembic stamp` reconcile; (3) re-add the deploy step + verify on a real deploy. Do NOT merge the re-enable until prod is stamped (it auto-deploys).
 
 ### 2026-06-18
 

@@ -169,14 +169,16 @@ jobs:
               sleep 2
             done
 
-            echo "--- Running Alembic migrations (upgrade head) ---"
-            docker compose -f docker-compose.prod.yml run --rm --no-deps backend alembic upgrade head
+            # DISABLED (AE-0207 rework): migrate-on-deploy + drift gate removed.
+            # The alembic chain has TWO heads (0011_drop_audit_stream_entry_id +
+            # e5f6a7b8c9d0) so `alembic upgrade head` errors, and prod was never
+            # stamped — this TOOK PROD DOWN on 2026-06-18 (deploy aborted before
+            # the app stack came up). Re-enable ONLY after the two heads are merged
+            # AND the one-time prod `alembic stamp` reconcile is done
+            # (docs/deployment/prod-migration-reconcile.md). Prod uses create_all
+            # bootstrap until then.
 
-            echo "--- Verifying live schema matches mapped ORM columns (drift gate) ---"
-            docker compose -f docker-compose.prod.yml run --rm --no-deps backend \
-              python -m rag_backend.infrastructure.database.check_drift_cli
-
-            # Bring up the full stack only after migrations + drift check pass.
+            # Bring up the full stack.
             docker compose -f docker-compose.prod.yml up -d
 
             # Wait for services to start
