@@ -1,12 +1,12 @@
 # AE-0226 — Frontend lint: enforce early returns (no-else-return)
 
-Status: Ready
+Status: In Development
 Tier: T1
 Priority: Medium
 Type: Task
 Area: Frontend/CI
-Owner: Unassigned
-Branch: TBD
+Owner: Agent
+Branch: feat/dev-wave-ae0220-0227
 Kanban Card: AE-0226
 Created: 2026-06-16
 Updated: 2026-06-18
@@ -39,8 +39,8 @@ unenforced.
 
 ## Acceptance Criteria
 
-- [ ] `no-else-return` enabled; `npm run lint:changed` fails on a seeded `else { return }`.
-- [ ] `use-upload.ts` uses early returns; gate green.
+- [x] `no-else-return` enabled (error, `allowElseIf:false`) + `no-lonely-if` (AE-0147); rule-fires test `src/scripts/eslint-no-else-return-rule.test.ts` proves it ERRORS (severity 2) on a seeded `else { return }`.
+- [x] `use-upload.ts` uses early returns; gate green (0 no-else-return/no-lonely-if findings).
 
 ## Repro Steps
 
@@ -67,6 +67,24 @@ Ticket created.
 Renumbered from **AE-0147** to resolve the duplicate-ID collision (AE-0181 dup
 warning): AE-0147 is the *Done* same-work twin; this pending (Ready) ticket kept
 its own card. No content change — still open frontend lint work.
+
+### 2026-06-18 — implemented
+
+The rule (`no-else-return` + `no-lonely-if` as error) and the `use-upload.ts`
+guard-clause fix were already shipped by the Done twin AE-0147 (0 findings today).
+The genuine gap was the **AE-0180 rule-fires test**, now added. No production-code
+change (would be redundant). Status held at In Development pending the wave gate.
+
+## Files Touched
+
+- `src/scripts/eslint-no-else-return-rule.test.ts` — new rule-fires regression test.
+
+## Test Evidence
+
+```
+$ npx vitest run src/scripts/eslint-no-else-return-rule.test.ts        → 1 passed
+$ npx eslint src/modules/knowledge/hooks/use-upload.ts (no-else-return) → 0 findings
+```
 
 ## Files Touched
 
