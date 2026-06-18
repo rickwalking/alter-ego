@@ -256,6 +256,22 @@ the `get_container()` locator sites, and the adapter `.commit()` sites. Each
 count may stay equal or decrease, never rise. See
 [Architecture ratchet and baseline-down procedure](#architecture-ratchet-and-baseline-down-procedure).
 
+### Frontend data-loading pattern (Suspense)
+
+Per [ADR-010](../decisions/0010-suspense-data-loading.md) and the
+[Suspense data-loading guide](./suspense-data-loading-guide.md), initial data
+loads use Server Components + TanStack Query + React 19 `use()`/`<Suspense>` —
+not a manual `useState`/`useEffect` loading flag.
+
+| Checkpoint | Tool | Threshold |
+|------------|------|-----------|
+| Initial data load via Suspense (not manual `isLoading` flag) | Review vs the guide's decision tree | Suspense where it fits |
+| No `useEffect`-driven data fetching | ESLint `no-restricted-syntax` + review | Zero new |
+| Mutation pending flags (not initial-load flags) | Review | Allowed only for mutations |
+
+When a component introduces a manual loading state where Suspense fits, QA cites
+the guide as the standard rather than an ad-hoc opinion.
+
 ### Documentation
 
 | Checkpoint | Tool | Threshold |
