@@ -1,13 +1,13 @@
 # AE-0227 — Fix the failing npm-audit high vuln (frontend Security gate)
 
-Status: Ready
+Status: Done
 Tier: T1
 Priority: High
 Type: Task
 Area: Frontend/CI
-Owner: Unassigned
+Owner: Agent
 Agent Lane: planner → architect → developer → qa → release
-Branch: feat/ae-0148-fix-npm-audit-high-vuln
+Branch: feat/dev-wave-ae0220-0227
 Kanban Card: AE-0227
 Created: 2026-06-16
 Updated: 2026-06-18
@@ -38,9 +38,9 @@ format) and the boundary ratchet (down-only). See `docs/plans/phase-7-frontend-a
 
 ## Acceptance Criteria
 
-- [ ] npm audit --audit-level=high SHALL exit 0 (no HIGH/CRITICAL)
-- [ ] The fix SHALL be minimal/non-breaking (no major dependency upgrade unless unavoidable + justified)
-- [ ] package-lock.json updated; typecheck + lint + Vitest 822 + build stay green
+- [x] npm audit --audit-level=high SHALL exit 0 (no HIGH/CRITICAL) — **verified: exit 0, 0 high / 0 critical (7 moderate only).**
+- [x] The fix SHALL be minimal/non-breaking — **N/A: no code change needed; the vite HIGH advisory was already resolved (superseded by the Done twin AE-0148).**
+- [x] package-lock.json updated; gates stay green — **N/A: no dependency change in this ticket; lockfile untouched.**
 
 ## Gherkin Scenarios
 
@@ -96,4 +96,16 @@ None.
 
 ## Final Summary
 
-Pending.
+No code change required. On re-verification (2026-06-18) the frontend Security
+gate (`npm audit --audit-level=high`) **exits 0** — 0 high / 0 critical (only 7
+moderate `next`-transitive advisories via storybook/vercel-analytics, which the
+gate does not block). The original vite HIGH advisory that AE-0148 targeted is
+already resolved in the current lockfile. This ticket is the renumbered pending
+twin of the Done AE-0148; the work it described is complete, so it is closed Done
+with evidence rather than fabricating a redundant fix.
+
+Evidence:
+```
+$ npm audit --audit-level=high; echo $?        → 0
+vulnerabilities: {high: 0, critical: 0, moderate: 7}
+```
