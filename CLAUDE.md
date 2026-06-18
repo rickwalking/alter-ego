@@ -81,6 +81,12 @@ alter-ego/
 - Conventional commit messages
 - One logical change per commit
 - No secrets or API keys committed
+- **⚠️ Pushing/merging to `main` AUTO-DEPLOYS PRODUCTION.** Any commit that lands
+  on `main` triggers `.github/workflows/deploy.yml` → a full prod redeploy on the
+  DigitalOcean droplet (~12-min blip; the deploy also rewrites the server `.env`
+  from GitHub Secrets). **Never push `main` directly — always branch + PR**, and
+  only merge when you are ready for a live deploy (not mid-incident, not with an
+  unreconciled Alembic head). This gap caused the AE-0207 outage.
 - **Pre-commit hooks must run; `--no-verify` policy (AE-0168):** a normal
   `git commit` runs `.husky/pre-commit` (prettier/eslint via `lint-staged`) and
   `.husky/commit-msg` (commitlint). The hooks `cd frontend` and unset the git
