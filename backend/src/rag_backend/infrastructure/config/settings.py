@@ -6,6 +6,10 @@ from pydantic import AliasChoices, Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from rag_backend.domain.constants import ENCODING_UTF8
+from rag_backend.infrastructure.config.constants import (
+    ENVIRONMENT_DEVELOPMENT,
+    NON_PRODUCTION_ENVIRONMENTS,
+)
 
 
 class Settings(BaseSettings):
@@ -20,6 +24,10 @@ class Settings(BaseSettings):
     app_name: str = "RAG Backend"
     app_version: str = "0.1.0"
     debug: bool = False
+    # Deployment environment. Drives startup hardening checks (durable
+    # checkpointer, image-provider keys). Local/test default keeps dev ergonomic;
+    # prod/staging deploys must set ENVIRONMENT=production.
+    environment: str = ENVIRONMENT_DEVELOPMENT
     allowed_origins: str = "*"
 
     database_url: str = "postgresql+asyncpg://user:password@localhost/rag_db"
@@ -108,6 +116,16 @@ class Settings(BaseSettings):
     feature_flag_workflow_board: bool = True
     feature_flag_content_calendar: bool = True
     workflow_alerts_enabled: bool = True
+
+    @property
+    def is_production_like(self) -> bool:
+        """True when running outside the dev/test environments.
+
+        Startup hardening guards (durable checkpointer, image-provider keys)
+        treat staging and production as production-like and tolerate ephemeral
+        configuration only in development/test.
+        """
+        return self.environment.strip().lower() not in NON_PRODUCTION_ENVIRONMENTS
 
     @property
     def feature_flags(self) -> dict[str, bool]:
