@@ -69,7 +69,10 @@ async def run_workflow_workers(
                     auto_rejected=auto_rejected,
                 )
         except Exception:
-            logger.exception("workflow_workers_error")
+            # AE-0212: bind exc_info explicitly so format_exc_info renders the
+            # traceback. The bare BoundLogger.exception() call emitted no
+            # exception field in production.
+            logger.exception("workflow_workers_error", exc_info=True)
         try:
             await asyncio.wait_for(stop_event.wait(), timeout=interval)
         except TimeoutError:
