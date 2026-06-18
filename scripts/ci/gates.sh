@@ -43,7 +43,7 @@ readonly EXIT_FAIL=1
 readonly EXIT_SKIP=77
 
 # Gates skipped by --changed-only: need a service (DB) or are slow / whole-repo.
-CHANGED_ONLY_SKIP=" test diff-cover migrations mutation build "
+CHANGED_ONLY_SKIP=" test diff-cover migrations schema-drift mutation build "
 
 # -----------------------------------------------------------------------------
 # Result accumulation
@@ -168,6 +168,18 @@ gate_backend_migrations() {
   uv run alembic downgrade base
 }
 
+# Schema-vs-models drift (AE-0207). Upgrades a live DB to head, then fails if any
+# mapped ORM column is absent from the connected schema (information_schema). This
+# is the exact-class detector for the prod failures (a model column with no
+# migration / not applied) that `create_all`-bootstrapped prod silently 500s on.
+# Postgres-dependent: SKIPs locally without DATABASE_URL (CI sets the service).
+gate_backend_schema_drift() {
+  postgres_available || { echo "DATABASE_URL not set — schema-drift gate needs a live DB."; return "$EXIT_SKIP"; }
+  cd "$REPO_ROOT/backend"
+  uv run alembic upgrade head || return "$EXIT_FAIL"
+  uv run python -m rag_backend.infrastructure.database.check_drift_cli
+}
+
 gate_backend_mutation() { bash "$SCRIPT_DIR/mutation-score-gate.sh" 75; }
 
 # =============================================================================
@@ -235,6 +247,7 @@ BACKEND_GATES=(
   test:gate_backend_test
   diff-cover:gate_backend_diff_cover
   migrations:gate_backend_migrations
+  schema-drift:gate_backend_schema_drift
   mutation:gate_backend_mutation
 )
 
