@@ -275,6 +275,26 @@ uv run python scripts/agent_tasks/validate_all_tickets.py
 make board   # regenerate the local BOARD.md view (not committed)
 ```
 
+### Gate-run loop discipline (AE-0259)
+
+Before declaring a ticket **Dev Complete**, the delivery loop MUST run the **full**
+`gates.sh <scope>` + `check-integrity.sh <scope>` + `/qa-agent` — and prove it,
+not assert it:
+
+- **Run the full gate set via the capture wrapper:**
+  `bash scripts/ci/gate-capture.sh <scope>`. It runs the full `gates.sh`, writes
+  the output to `.agent/reports/.gates-capture-<scope>.log`, and exits with the
+  **gate's** real code. Paste the `GATES_JSON:` line it echoes into the
+  `.dev-summary.md` (and the `.qa.md` for Review) — the move-time guard
+  (`move_ticket.py` → `can_transition`) requires it: missing block or `fail>0`
+  BLOCKS; `skip>0` is a WARNING (AE-0258).
+- **Never pipe a gate to `tail`/`head`.** The pipe returns the pipe's exit (e.g.
+  `tail` = 0), masking a non-zero gate (this misread a red PR as green). Capture
+  the exit to a file (the wrapper does this) instead.
+- **Never declare green** on a gate **subset**, a delegated agent's **self-report**,
+  or by **deferring to CI**. `gates.sh <scope> --changed-only` is fine for fast
+  iteration, but the **Dev Complete declaration** must be based on a **full** run.
+
 ## Development Skills
 
 This project provides AI agent skills for development and quality assurance:

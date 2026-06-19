@@ -92,3 +92,8 @@ tmp/
 # Not committed — regenerate locally with `make board`. Avoids the regressed-board
 # class where a branch-off-main re-render drops cards for tickets on other branches.
 .agent/BOARD.md
+
+# AE-0259: deterministic gate-capture logs (scripts/ci/gate-capture.sh output).
+# Ephemeral local run artifacts — the GATES_JSON line is pasted into the
+# committed dev-summary / qa report, not the raw log.
+.agent/reports/.gates-capture-*.log
