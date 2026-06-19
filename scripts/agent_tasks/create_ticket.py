@@ -50,7 +50,7 @@ def _git_max_ticket_num(tasks_dir: Path) -> int:
     if git is None:
         return 0
     try:
-        result = subprocess.run(  # noqa: S603 — fixed git path, fixed args
+        result = subprocess.run(
             [git, "-C", str(tasks_dir), "rev-list", "--all", "--objects"],
             capture_output=True,
             text=True,

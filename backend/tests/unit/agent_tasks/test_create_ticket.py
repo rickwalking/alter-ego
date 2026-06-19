@@ -9,7 +9,7 @@ BOARD_PATH/TASKS_DIR to `tmp_path` so they never touch the real `.agent/` tree.
 from __future__ import annotations
 
 import shutil
-import subprocess
+import subprocess  # noqa: S404  # integrity-ok: AE-0238 — test drives git in a throwaway repo (mirrors test_diff_base.py)
 from pathlib import Path
 
 import pytest
@@ -27,7 +27,7 @@ def _seed_ticket(tasks_dir: Path, ticket_id: str, status: str = "Intake") -> Non
 
 
 def _git(repo: Path, *args: str) -> str:
-    return subprocess.run(  # noqa: S603 — fixed git path, test-controlled args, throwaway repo
+    return subprocess.run(  # noqa: S603  # integrity-ok: AE-0238 — fixed git path, test-controlled args, throwaway repo
         [_GIT, "-C", str(repo), *args],
         check=True,
         capture_output=True,

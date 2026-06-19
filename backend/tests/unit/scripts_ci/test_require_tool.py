@@ -16,6 +16,7 @@ prove the wiring reports SKIP locally and FAIL under GATES_REQUIRE_ALL=1.
 
 from __future__ import annotations
 
+import os
 import shutil
 import subprocess  # noqa: S404  # integrity-ok: AE-0239 — a test for a bash preflight must invoke a subprocess (mirrors test_diff_base.py)
 from pathlib import Path
@@ -64,8 +65,6 @@ def test_require_tool_passes_when_binary_present(tmp_path: Path) -> None:
 # Integration: the real dead-files gate reports SKIP (not a swallowed PASS) when
 # knip is hidden, and FAIL under GATES_REQUIRE_ALL=1 (CI must have the tool).
 def test_dead_files_gate_skips_when_knip_hidden(tmp_path: Path) -> None:
-    import os
-
     env = {**os.environ, "FRONTEND_BIN_DIR": str(tmp_path)}
     result = _run(f'bash "{GATES}" frontend:dead-files', env=env)
 
