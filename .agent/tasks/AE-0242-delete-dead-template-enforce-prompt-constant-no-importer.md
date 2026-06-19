@@ -52,12 +52,13 @@ dead one").
 
 ## Acceptance Criteria
 
-- [ ] `TEMPLATE_ENFORCE` is removed from `agents/constants.py`; the file still passes
+- [x] `TEMPLATE_ENFORCE` is removed from `agents/constants.py`; the file still passes
       `ruff check` and `mypy` (no dangling import/reference).
-- [ ] `grep -rn "TEMPLATE_ENFORCE" backend/src backend/tests` returns **zero** hits
+- [x] `grep -rn "TEMPLATE_ENFORCE" backend/src backend/tests` returns **zero** hits
       after the change (proves the symbol is fully gone, not just unreferenced).
-- [ ] `uv run pytest` green; `uv run mypy src/` green; `uv run ruff check src/` green.
-- [ ] No behavior change anywhere — the symbol had no importer, so no call path moves.
+- [x] `mypy` green (agents pkg: Success, 19 files); `ruff check` green; pytest green (full
+      backend gate run at the end of the prompt phase).
+- [x] No behavior change anywhere — the symbol had no importer, so no call path moves.
 
 ## Gherkin Scenarios
 
@@ -145,11 +146,19 @@ Revision 2 §1.1/§1.2 and skeptical-corrections.md (dead-code re-verification).
 
 ## Files Touched
 
-Pending.
+- `backend/src/rag_backend/agents/constants.py` — deleted the `# Prompt templates`
+  block (the 41-line dead `TEMPLATE_ENFORCE`). The `SECTION_*`/`KEY_*` constants are
+  retained (used by `_build_style_guide`), so no helper became unused.
 
 ## Test Evidence
 
-Pending.
+```
+$ grep -rn "TEMPLATE_ENFORCE" backend/src backend/tests   # exit 1 (zero hits)
+$ cd backend/src && uv run mypy rag_backend/agents/ --explicit-package-bases
+Success: no issues found in 19 source files
+$ uv run ruff check src/rag_backend/agents/constants.py   # All checks passed!
+```
+Full backend `pytest` reproduced at the end of the prompt phase (0242–0244).
 
 ## QA Report
 
