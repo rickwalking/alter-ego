@@ -66,6 +66,10 @@ def test_require_tool_passes_when_binary_present(tmp_path: Path) -> None:
 # knip is hidden, and FAIL under GATES_REQUIRE_ALL=1 (CI must have the tool).
 def test_dead_files_gate_skips_when_knip_hidden(tmp_path: Path) -> None:
     env = {**os.environ, "FRONTEND_BIN_DIR": str(tmp_path)}
+    # SKIP semantics only hold when GATES_REQUIRE_ALL is unset; CI sets it to 1
+    # (which upgrades SKIP -> FAIL), so drop it here to test the local behavior
+    # deterministically. The FAIL-under-CI behavior is asserted explicitly below.
+    env.pop("GATES_REQUIRE_ALL", None)
     result = _run(f'bash "{GATES}" frontend:dead-files', env=env)
 
     assert ">>> frontend:dead-files: SKIP" in result.stdout, result.stdout
