@@ -1,6 +1,6 @@
 # AE-0258 — require machine-readable gate proof (gates_json) in dev-summary and qa report
 
-Status: Dev Complete
+Status: Review
 Tier: T2
 Priority: High
 Type: Quality
