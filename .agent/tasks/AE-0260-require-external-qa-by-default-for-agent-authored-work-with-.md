@@ -1,6 +1,6 @@
 # AE-0260 — require external qa by default for agent-authored work with declared mode field
 
-Status: In Development
+Status: Dev Complete
 Tier: T1
 Priority: Medium
 Type: Quality
@@ -105,6 +105,14 @@ Feature: agent-authored work defaults to external QA with a declared mode
   extends AE-0258's evidence block.
 - Missing-evidence #4 "external toolchain unavailable" — accepted; `mode: self-fallback`
   with a reason is an allowed path.
+
+## Test Evidence
+
+`backend/tests/unit/agent_tasks/test_gate_proof.py` (rule-fires, all pass):
+`test_review_blocked_without_mode`, `test_review_blocked_on_invalid_mode`,
+`test_self_fallback_mode_accepted`. The `mode:` field is checked in `can_transition`
+(Review); SKILL.md + config.yaml make external QA the default for agent-authored work.
+Full gates `PASS=19/FAIL=0/SKIP=0`.
 
 ## Blockers
 

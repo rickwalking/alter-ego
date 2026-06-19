@@ -1,6 +1,6 @@
 # AE-0259 — ship gate-capture wrapper and codify full-gate loop discipline (no pipe-masked exits)
 
-Status: In Development
+Status: Dev Complete
 Tier: T1
 Priority: High
 Type: Quality
@@ -98,6 +98,13 @@ Feature: gate runs cannot be pipe-masked
 - INFO P2.2 "'no subset' conflicts with --changed-only fast loop" — accepted; the rule
   permits `--changed-only` for iteration and requires a full run only at the Dev Complete
   declaration.
+
+## Test Evidence
+
+`backend/tests/unit/scripts_ci/test_gate_capture.py` (3, all pass) incl.
+`test_wrapper_surfaces_failing_gate_exit` — a stubbed failing gate makes `gate-capture.sh`
+exit **2** (the gate's real code, not a pipe's 0) and writes the gitignored log. `bash -n`
+clean; smoke `gate-capture.sh backend:lint` exits 0. Full gates `PASS=19/FAIL=0/SKIP=0`.
 
 ## Blockers
 
