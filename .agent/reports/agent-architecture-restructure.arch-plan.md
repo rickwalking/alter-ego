@@ -6,7 +6,22 @@
 **Repo:** alter-ego
 **Scope:** prompt consolidation, runtime-skills relocation, `AGENTS.md` semantics, subagent taxonomy, a reusable Deep Agents harness (memory/middleware/checkpointer/store), the improvement loop, a runtime QA subagent, and a per-agent modular package layout — reconciled with Clean Architecture (ADR-009) and the DeepAgents consolidation (ADR-007).
 
-> Dependency facts (pinned): `deepagents >= 0.5.3`, `langgraph == 1.2.5` (`backend/uv.lock`). DeepAgents `create_deep_agent` supports kwargs `model, tools, system_prompt, subagents, middleware, checkpointer, store, interrupt_on, permissions, memory` (memory = auto-loaded `AGENTS.md` files). Sources cited at the bottom.
+> Dependency facts (pinned): `deepagents >= 0.5.3`, `langgraph == 1.2.5` (`backend/uv.lock`). DeepAgents `create_deep_agent` supports kwargs `model, tools, system_prompt, subagents, middleware, checkpointer, store, interrupt_on, permissions, memory` (memory = auto-loaded `AGENTS.md` files). **The `checkpointer=` kwarg acceptance MUST be build-time verified** (see Revision 2 §B1). Sources cited at the bottom.
+
+---
+
+## Revision 2 — post-skeptical (2026-06-18)
+
+External cold-critic verdict was **BLOCK**; five current-state premises were re-verified against live code and the corrections are folded in below. Status of each prior BLOCK finding → revised:
+
+| # | BLOCK finding | Prior plan claim | Revised status |
+|---|---|---|---|
+| 1 | **Current-state facts wrong** | `skills/runtime/` "empty container"; both chat agents "stateless"; "5 hardcoded prompts"; `carousel_orchestrator/` "stale .pyc" | **CORRECTED.** `skills/runtime/` has **20 files** incl. `_shared/` standards cross-referenced by phase skills. Chat agents are **already stateful** — they persist every message to `message_repository` and rebuild history from Postgres. Hardcoded prompts = **4 active + 1 dead** (`TEMPLATE_ENFORCE`, `constants.py:39`, no importer → **delete**). `carousel_orchestrator/` dir **exists but is empty** (no source). Counts/estimates in §0/§1/§3 adjusted. |
+| 2 | **Source-of-truth was "open"** | Open-decision #2 (defer to P3) | **PROMOTED TO BLOCKER gating P3/B1.** Resolve the source-of-truth ADR FIRST. The checkpointer must **REPLACE** `message_repository` persistence (or a documented one-way sync) — **never dual-write** (AE-0163 class). Build-time check that `create_deep_agent` (graph.py:218) accepts `checkpointer=`; else use the documented alternative. See §5.3 + §9 sequencing. |
+| 3 | **P2 skills move under-scoped** | "drop root symlinks" one-liner | **PRECONDITION ADDED.** Audit `_shared/` cross-refs + every load path and produce a **skill→file dependency graph BEFORE moving anything** (a wrong move = prod `FileNotFoundError` on auto-deploy). Confirm repo-root symlinks aren't consumed by prod (code resolves `get_runtime_skills_filesystem_root()`); if dead, drop them. See §2.3. |
+| 4 | **B2/B3 split-brain** | informal "skills here, tools there" | **FORMAL skill/tool contract.** skill = what the agent reads (lives in the agent package); tool = a LangChain `@tool` adapter delegating to an `application/` service via Protocol. Single-agent adapters MAY live in the agent package; `application/tools/` keeps only genuinely shared tools. See §8.3. |
+| 5 | **Runtime QA (B6) blocking risk** | "flag-gated / sampled" | **Best-effort / non-blocking, every-generation.** Report to a side table; a Playwright crash/timeout must NOT fail the user's generation; revisit sampled cadence after a baseline week; scope the report contents (LLM-scored reviewer doubles per-gen cost). See §7.2. |
+| — | **DeepSeek** | (was advisory/optional in feasibility note) | **RETAINED as a COMMITTED first-class part of the plan via ADR-019 (tiered model selection).** Execution detail corrected: deterministic phase→model map (NOT `.with_fallbacks` as the tier boundary); primary/fallback Langfuse tag; A/B parity check vs the ≥70 persona gate before committing each phase. Pilot sourced via opencode Zen "Go" gateway; **production sourcing is an OPEN DECISION** (Zen vs direct DeepSeek API). See §13 + ADR-019 + Open-decision #2. |
 
 ---
 
@@ -14,11 +29,11 @@
 
 | Concern | Verdict |
 |---|---|
-| 1. Hardcoded prompts | **5 true violations** (worst: `agents/constants.py:39` `TEMPLATE_ENFORCE`, 41 lines). `quality_agent.py` is 100% off-registry. |
-| 2. skills/ root org | `carousel-pipeline`, `carousel-refinement`, `knowledge-base` are **ALL STILL USED** at runtime. `runtime` standalone skill **does not exist** (container dir only). They *do* belong in the repo but should be cleanly fenced from delivery skills. |
+| 1. Hardcoded prompts | **4 active violations + 1 dead** (worst active: `linkedin_post_generator.py` / `persona_agent.py` / `quality_agent.py`). `agents/constants.py:39` `TEMPLATE_ENFORCE` (41 lines) has **no importer → delete it** (do not migrate). `quality_agent.py` is 100% off-registry. |
+| 2. skills/ root org | `carousel-pipeline`, `carousel-refinement`, `knowledge-base` are **ALL STILL USED** at runtime. `skills/runtime/` is **NOT empty — it holds 20 files** (5 phase `SKILL.md` + 6 `_shared/*.md` + contracts/manifest), with `_shared/` standards **cross-referenced by the phase skills** (relocation coupling). `runtime` standalone skill **does not exist** (container dir only). They *do* belong in the repo but should be cleanly fenced from delivery skills. |
 | 3. `agents/AGENTS.md` | A persona/identity doc that **is NOT loaded by any code** (`grep` → 0 hits). It is a *latent* DeepAgents `memory=` file, not a wired system prompt. |
 | 4. Subagent delegation | Two parallel mechanisms today; the DeepAgents `task`/subagent path is **half-wired** (specs carry `skills` but no `tools`/`runnable`/`model`). |
-| 5. Harness | **No shared harness.** Checkpointer is centralized in `bootstrap/app_factory.py` but only the carousel engine consumes it; both Deep Agents run with **no checkpointer/store/middleware**. |
+| 5. Harness | **No shared harness.** Checkpointer is centralized in `bootstrap/app_factory.py` but only the carousel engine consumes it; both Deep Agents run with **no checkpointer/store/middleware**. **NOTE:** the two chat agents are **NOT stateless** — they already persist every message to `message_repository` and rebuild history from Postgres, so adding a checkpointer creates a **second write path (AE-0163 dual-write hazard)** that the source-of-truth ADR must resolve FIRST. |
 | 6. Improvement loop | Delivery-side loop exists (`/handoff` → `learnings-log.jsonl` → `/kaizen-skill session`). **No runtime/product equivalent.** |
 | 7. Runtime QA | Does not exist. Playwright is present but only for **export geometry**, not QA of generated artifacts. |
 | 8. Target structure | Per-agent packages are feasible *inside* `application/` but **conflict with Clean Architecture** if they hold infra; resolve via a thin agent-composition layer + the harness. |
@@ -39,15 +54,17 @@
 - `application/services/carousel/carousel_refinement.py:74,99` → `render_prompt("refinement", …)`
 - `application/tools/carousel/refine_copy.py:180` → `render_prompt("refinement","copy_rewrite")`
 
-**Hardcoded-prompt VIOLATIONS (5 true positives):**
+**Hardcoded-prompt findings: 4 ACTIVE violations to remediate + 1 DEAD to delete.**
 
-| # | File:line | Name | Lines | Severity |
+| # | File:line | Name | Lines | Action |
 |---|---|---|---|---|
-| 1 | `agents/constants.py:39` | `TEMPLATE_ENFORCE` (persona rewrite system prompt, full `{placeholders}`) | 41 | **Critical** |
-| 2 | `application/services/linkedin_post_generator.py:148` | `_build_prompt()` f-string (LinkedIn rules: 300-char, no em-dash, hashtags) | 24 | **Critical** |
-| 3 | `agents/persona_agent.py:88` | `_build_style_guide()` f-string (tone/sentence/phrase rules) | 21 | **Critical** |
-| 4 | `agents/quality_agent.py:53` | `_build_evaluation_prompt()` (rubric eval → JSON) | 17 | High |
-| 5 | `agents/quality_agent.py:141` | `generate_improvement_suggestions()` f-string | 9 | High |
+| 1 | `agents/constants.py:39` | `TEMPLATE_ENFORCE` (persona rewrite system prompt, full `{placeholders}`) | 41 | **DELETE — dead code, no importer** (re-verified: `grep -rn TEMPLATE_ENFORCE src/` → 0 importers). Do **not** migrate it to the registry. |
+| 2 | `application/services/linkedin_post_generator.py:148` | `_build_prompt()` f-string (LinkedIn rules: 300-char, no em-dash, hashtags) | 24 | **Critical** — migrate to registry |
+| 3 | `agents/persona_agent.py:88` | `_build_style_guide()` f-string (tone/sentence/phrase rules) | 21 | **Critical** — migrate to registry |
+| 4 | `agents/quality_agent.py:53` | `_build_evaluation_prompt()` (rubric eval → JSON) | 17 | High — migrate to registry |
+| 5 | `agents/quality_agent.py:141` | `generate_improvement_suggestions()` f-string | 9 | High — migrate to registry |
+
+> **Corrected count (Revision 2):** the prior "5 true violations" framing was wrong. `TEMPLATE_ENFORCE` is **dead** (no importer) → it is **deleted, not migrated**. So P1 migrates **4 active** prompts (#2–#5) and **deletes 1** (#1). The persona-enforce registry file is therefore sourced from `persona_agent.py:_build_style_guide` (#3), NOT from the dead `TEMPLATE_ENFORCE`.
 
 **Legit fallbacks (NOT violations):** `rag_agent.py:59` `_FALLBACK_SYSTEM_PROMPT`, `alter_ego_agent.py:45` `_ALTER_EGO_FALLBACK_PROMPT`, `infrastructure/llm/json_utils.py:18` `_JSON_REPAIR_PROMPT` (utility). These are guarded fallbacks paired with a registry call — keep, but cap length (a 9-line persona fallback drifts from `v3`; trim to a one-liner pointer like the RAG fallback).
 
@@ -55,16 +72,16 @@
 
 ### 1.2 Target
 
-Move all 5 into the registry. Proposed new prompt files:
+Move the **4 active** prompts into the registry and **delete the dead one**. Proposed new prompt files:
 
 ```
-agents/prompts/persona/v1/enforce.yaml          # from TEMPLATE_ENFORCE  (#1, #3 merge)
+agents/prompts/persona/v1/enforce.yaml          # from persona_agent.py:_build_style_guide (#3)
 agents/prompts/quality/v1/evaluate.yaml          # from _build_evaluation_prompt (#4)
 agents/prompts/quality/v1/improve_suggestions.yaml  # (#5)
 agents/prompts/distribution/v1/linkedin_post.yaml   # from linkedin_post_generator (#2)
 ```
 
-`persona_agent.py:_build_style_guide` and `constants.py:TEMPLATE_ENFORCE` are the same conceptual prompt rendered two ways → consolidate into **one** `persona/v1/enforce.yaml` with Jinja2 vars (`persona_name`, `tone_*`, `forbidden_phrases`, `writing_samples`, …). Keep a 1-line fallback constant for registry-unavailable.
+**Corrected (Revision 2):** `constants.py:TEMPLATE_ENFORCE` (#1) is **dead code** — re-verified to have **no importer** — so it is **deleted outright**, not merged. The persona-enforce registry file (`persona/v1/enforce.yaml`) is sourced **only** from the live `persona_agent.py:_build_style_guide` (#3), rendered with Jinja2 vars (`persona_name`, `tone_*`, `forbidden_phrases`, `writing_samples`, …). Keep a 1-line fallback constant for registry-unavailable. (Sanity-check at implementation that nothing referenced `TEMPLATE_ENFORCE` indirectly before deleting; the grep says no.)
 
 **Decision/trade-off:** the `_shared/variables.yaml` + per-domain READMEs already exist; reuse rather than invent. Persona/quality prompts must stay in sync with `skills/runtime/carousel-pipeline/_shared/` (ADR-007 three-layer alignment) — add a doc-link in each new prompt folder README.
 
@@ -93,6 +110,23 @@ The ADR-007 boundary is already correct in principle: delivery skills under `ski
 - **Option B (more aggressive):** co-locate runtime skills **with their agent package** (e.g. `backend/.../carousel_agent/skills/`) per concern 8, and point `ALTER_EGO_RUNTIME_SKILLS_ROOT` there. Bigger Docker/CI churn; do later.
 
 **Trade-off:** the root symlinks today double as the Claude-Code `/carousel-pipeline` slash-command surface (memory: *skill slash-command registration*). If you remove them, confirm no human workflow invokes `/carousel-pipeline` as a slash command. Production code does **not** depend on the symlinks (it uses `runtime_skills.py`), so prod is unaffected — only the CI `validate_skill_boundary.py` assertion about symlinks must be updated in lockstep.
+
+### 2.3 Precondition (BLOCKER for P2): skill→file dependency graph BEFORE any move
+
+> **Revision 2 — corrected current state:** `skills/runtime/` is **NOT empty**. `find skills/runtime -type f` = **20 files**: 5 phase `SKILL.md` + 6 `_shared/*.md` standards + contracts/manifest. The phase skills **cross-reference the `_shared/*.md` standards by relative path**, so the runtime skills are a coupled tree, not loose files. The human decision (decisions.md #2) is to **co-locate** these into their owning agent package — a higher-touch move than "drop symlinks". Because **prod auto-deploys** (CLAUDE.md), a wrong/incomplete move is a production `FileNotFoundError` at request time.
+
+**Mandatory precondition AC — before moving a single file, produce a skill→file dependency graph that audits ALL of:**
+
+1. `_shared/` cross-references *inside* the skill markdown (every relative link/`@include` between a phase `SKILL.md` and a `_shared/*.md`) — moving a phase skill without its `_shared` siblings breaks the reference.
+2. `application/services/carousel/phase_subagents.py` (loads phase-skill paths).
+3. `application/services/.../instruction_context_loader.py` (`:101` skill-context load).
+4. `domain/constants/runtime_skills.py` (path constants + `get_runtime_skills_filesystem_root()`).
+5. **Dockerfile** copy path(s) into `/app/skills/runtime` (the prod resolution root).
+6. The **CI skill-path gate** (`scripts/validate_skill_boundary.py` + any skill-path check).
+
+**Then:** every relocation ticket must update **all six** in lockstep, and the move is verified by (a) building the Docker image and resolving each skill path inside it, and (b) running the CI skill-path gate green — not just a passing local tree.
+
+**Repo-root symlinks:** confirmed **NOT consumed by any prod path** — prod resolves skills via `get_runtime_skills_filesystem_root()` (code), never the root symlinks. They are therefore **dead for production**; drop them (after the `/carousel-pipeline` slash-command check, Open-decision #3) and do **not** let their layout shape the co-located target tree.
 
 ---
 
@@ -129,11 +163,11 @@ agents/
 ├── input_sanitizer.py              # text sanitation
 ├── chat_streaming.py               # token extraction helpers
 ├── constants.py                    # KEY_*, thresholds + TEMPLATE_ENFORCE (violation)
-├── carousel_orchestrator/          # ORPHAN: only stale .pyc; source deleted per ADR-007 §6
+├── carousel_orchestrator/          # ORPHAN: dir exists but EMPTY (no source); source removed per ADR-007 §6
 └── prompts/                        # registry + alter_ego/ carousel/ rag/ refinement/ _shared/
 ```
 
-**Action:** delete the orphan `agents/carousel_orchestrator/` dir (only `.pyc`; source removed by ADR-007 legacy-removal). Quick T1 cleanup.
+**Action:** delete the orphan `agents/carousel_orchestrator/` dir (it **exists but is empty** — no source; source removed by ADR-007 legacy-removal). Quick T1 cleanup.
 
 ---
 
@@ -185,7 +219,7 @@ Deterministic, non-negotiable steps (design tokens, PDF export, DB sync, persona
 | Middleware (LangGraph) | none (`before_model`/`after_model`/`AgentMiddleware` → 0 hits); only FastAPI HTTP middleware | **absent** ✗ |
 | Interrupts | `carousel_workflow_nodes.py:129` `interrupt(...)`; `Command(resume=…)` `engine.py:139,151` | carousel-only, robust ✓ |
 
-**Narrative:** there is **no shared agent harness**. Persistence exists for the carousel graph only; the two Deep Agents are stateless across turns (history is re-fetched from the message repo each call and replayed — `rag_agent.py:181-198`). No long-term memory/store, no summarization middleware (so long chats grow unbounded into the model window), no HITL middleware on the Deep Agents.
+**Narrative:** there is **no shared agent harness**. LangGraph-checkpoint persistence exists for the carousel graph only. **Correction (Revision 2): the two chat Deep Agents are NOT stateless.** They **already persist every message to `message_repository`** (`rag_agent.py:198,277,315`; `alter_ego_agent.py:147,223,261`) and **rebuild history from Postgres each turn** (`rag_agent.py:181`, `alter_ego_agent.py:130`). What they lack is a *LangGraph checkpointer/store/middleware* — not state. This matters: adding a checkpointer keyed by `thread_id=conversation_id` introduces a **SECOND durable write path** alongside the existing `message_repository`, i.e. the **AE-0163 dual-write hazard**. That is why the source-of-truth decision is now a **BLOCKER gating this phase** (§5.3), not an afterthought. They also lack long-term memory/store and summarization middleware (so long chats grow unbounded into the model window) and HITL middleware.
 
 ### 5.2 Target harness (`agents/harness/` shared package)
 
@@ -209,7 +243,22 @@ agents/harness/
 
 **Capability grounding:** DeepAgents `create_deep_agent` accepts `checkpointer`, `store`, `middleware`, `memory` kwargs; LangGraph 1.2 ships `SummarizationMiddleware` (threshold-triggered history compression) and `HumanInTheLoopMiddleware` (`interrupt_on` tool gating). The harness just *presets* these. (Sources below.)
 
-**Trade-off / risk:** giving the chat Deep Agents a checkpointer changes persistence semantics (now there are TWO sources of truth: the message repo *and* the LangGraph checkpoint). Pick one as canonical (recommend: checkpoint for in-flight thread state, message repo for durable history/audit) and document it as an ADR. Don't dual-write blindly (memory: *AE-0163 dual-write* hazard).
+**Trade-off / risk:** giving the chat Deep Agents a checkpointer changes persistence semantics (now there are TWO durable write paths: the existing `message_repository` *and* the LangGraph checkpoint). This is resolved in §5.3 as a **blocking precondition**, not a free choice made during implementation.
+
+### 5.3 BLOCKER — source-of-truth ADR gates the harness (P3/B1)
+
+> **Revision 2:** what was "Open-decision #2 (defer to P3)" is now a **hard sequencing BLOCKER**. The harness (P3) MUST NOT wire a chat-agent checkpointer until the source-of-truth ADR is **accepted**.
+
+**Rule (sequence): ADR (source-of-truth) → harness. Never harness-then-ADR.**
+
+The ADR MUST decide: **is the LangGraph checkpoint or `message_repository` canonical?** The only two acceptable outcomes:
+
+1. **Checkpointer REPLACES `message_repository` persistence** for in-flight thread state — the chat agents stop their manual `message_repository.create(...)` writes and history is rebuilt from the checkpoint. (Durable audit/history may still be derived, but via a documented one-way sync, not a parallel write.)
+2. **A documented one-way sync** (checkpoint → message_repository, OR message_repository → checkpoint) with a single writer.
+
+**Forbidden:** dual-write (both paths writing independently). That is the exact AE-0163 failure class (data divergence + breakage) called out in project memory.
+
+**Build-time capability check (mandatory before B1):** verify that `deepagents.create_deep_agent` (the call at `graph.py:218`) **actually accepts a `checkpointer=` kwarg** at the pinned version (`deepagents>=0.5.3`). If it does **not**, B1 needs an alternative integration — compile the underlying graph with `.compile(checkpointer=…)` directly (as the carousel engine already does, `carousel_workflow_engine.py:47`), or pin/patch the library — documented in the ADR's "consequences". Do **not** assume the kwarg exists.
 
 ---
 
@@ -244,7 +293,17 @@ A harness subagent that, after a carousel renders, **drives Playwright MCP** to 
 - **Boundary:** keep strictly separate from `skills/delivery/qa-agent` (that validates *code*; this validates *generated artifacts*). Name it `qa_reviewer` / `impeccable` to avoid confusion.
 - **Wiring:** runs as a final deterministic node OR a `task`-delegated subagent after `final-review`. Recommend a node (deterministic trigger) that *internally* may call the LLM for the qualitative report.
 
-**Trade-off:** Playwright-in-prod for QA adds runtime cost + a browser dependency on the hot path. Gate it behind a flag (QA-on-demand or sampled), not every generation.
+### 7.3 Best-effort / non-blocking contract (Revision 2)
+
+The human decision (decisions.md #4) is **every generation** — that is retained — **but it is BEST-EFFORT and MUST NOT block the user's generation.** Hard requirements:
+
+- **Non-blocking:** runs **after** the generation completes and the artifact is delivered to the user; the QA report **attaches post-generation** (to a side table / async channel), it is **never** on the critical path of the response.
+- **Crash-safe:** a Playwright crash, hang, or timeout (droplet Chromium has precedent — see the `InMemorySaver` fallback at `app_factory.py:167`) **MUST be swallowed** — the generation is already done and succeeds regardless. Wrap the QA node in a guard that records a "QA-unavailable" marker and moves on. **A QA failure can never fail a generation.**
+- **Side-table reporting:** write the structured report to a **dedicated side table** (e.g. `carousel_qa_reports`, keyed by `project_id`) + the §6 `runtime-learnings-log.jsonl`. Do not mutate the carousel record's success state.
+- **Report scope (decide explicitly):** at minimum **screenshot + DOM snapshot + rule-checks** (design-system/anti-patterns/caption-rules). An **LLM-scored** qualitative reviewer is *optional* and **roughly doubles per-generation cost** (a second model pass per carousel) — call it out in the ADR and gate it separately from the cheap screenshot/DOM/rule pass.
+- **Cadence revisit:** ship "every generation" first to gather a baseline, then **reconsider sampled cadence after a baseline week** if cost/latency/volume warrant — captured as a follow-up review, not a blocker.
+
+**Why not flag-gated/sampled up front:** the human chose every-generation for full signal; the safety comes from the non-blocking + crash-safe contract above, not from skipping generations.
 
 ---
 
@@ -284,22 +343,41 @@ agents/
 
 **Conflict to flag:** literally moving `application/tools/` or services into `agents/<agent>/tools/` would invert dependencies (agents would contain infra-touching code) and violate ADR-009 + the 400-line/3-arg rules' spirit. **Do not** do that. The per-agent package is an *orchestration façade*, not a vertical slice that owns persistence.
 
+### 8.3 FORMAL skill/tool contract (Revision 2 — resolves the B2/B3 split-brain)
+
+The "skills co-located in the agent package but tools in `application/`" split was informal and ambiguous. Make it a **rule**:
+
+- **Skill = what the agent READS.** Markdown instruction/standards context (phase `SKILL.md`, `_shared/*.md`). It is *content*, has no Python imports, and **lives in the agent package** it belongs to (decisions.md #2 co-location).
+- **Tool = a LangChain `@tool` ADAPTER.** A thin function that **delegates to an `application/` service via a Protocol** — it owns **no** business logic and **no** infra. The service (and its infra dependencies) stay in `application/` / `infrastructure/`, preserving Clean Architecture (ADR-009).
+- **Placement rule for tool adapters:**
+  - A tool adapter used by **exactly one agent** MAY live **in that agent's package** (e.g. `carousel_agent/tools/…`) — it's a thin façade over an `application/` service, so it does not import infra.
+  - `application/tools/` keeps **only genuinely shared tools** (used by ≥2 agents, e.g. the `knowledge_base` search/list tools on both RAG + AlterEgo).
+- **Invariant:** no matter where the *adapter* lives, the **business logic + infra stay in `application/`/`infrastructure/` behind a Protocol**. The agent package never contains persistence, network, or DB code — only orchestration, prompts, skills (content), and thin tool adapters.
+
+This is the explicit ruling that prevents the per-agent packages from drifting into vertical slices that own infra.
+
 ---
 
 ## 9. Migration sequence (phased, low-risk) + effort tiers
 
 | Phase | Work | Tier | Risk |
 |---|---|---|---|
-| **P0** | Delete orphan `agents/carousel_orchestrator/` (stale `.pyc`). Decide `AGENTS.md` promote/demote. | T1 | none |
-| **P1** | Prompt consolidation: move 5 hardcoded prompts → registry (`persona/`, `quality/`, `distribution/`); trim fallbacks; add anti-hardcoded-prompt checker + **rule-fires test** (AE-0180). | T2 | low (pure refactor, behavior-preserving; needs char-for-char prompt parity tests) |
-| **P2** | Skills relocation: drop root carousel/knowledge symlinks (Option A), make `skills/` root delivery-only, update `validate_skill_boundary.py` + CI in lockstep. | T2 | low-med (CI gate + slash-command surface) |
-| **P3** | Harness extraction: create `agents/harness/`; move `_build_checkpointer` + interrupt helpers; add store/memory/middleware presets; `build_deep_agent()` builder. Carousel engine + Deep Agents consume harness. | T3 | med (touches bootstrap + both agents; needs ADR) |
+| **P0** | Delete orphan `agents/carousel_orchestrator/` (**empty dir, no source**). Decide `AGENTS.md` promote/demote (decisions.md #3 → wire as per-agent `memory=`). | T1 | none |
+| **P1** | Prompt consolidation: migrate **4 active** hardcoded prompts → registry (`persona/`, `quality/`, `distribution/`); **DELETE the dead `TEMPLATE_ENFORCE`**; trim fallbacks; add anti-hardcoded-prompt checker + **rule-fires test** (AE-0180). | T2 | low (behavior-preserving; needs char-for-char golden-output parity tests) |
+| **P2** | Skills relocation (**co-locate**, decisions.md #2): **FIRST** produce the skill→file dependency graph (§2.3 precondition — `_shared/` cross-refs + all 6 load paths); then move runtime skills into their agent package and update `runtime_skills.py`, `phase_subagents.py`, `instruction_context_loader.py`, Dockerfile `/app/skills/runtime`, CI skill-path gate **in lockstep**; drop dead root symlinks; make root `skills/` delivery-only. Verify by Docker-image path resolution + green CI gate. | T2 | **med** (higher-touch than prior "drop symlinks"; prod auto-deploys → a wrong move = `FileNotFoundError`) |
+| **ADR-019** | **DeepSeek tiered model pilot (committed)** — lands **after P1**. Deterministic phase→model map; pilot `SourceSynthesisAgent` (research) via opencode Zen "Go"; A/B parity check vs ≥70 persona gate before committing; Langfuse primary/fallback tag; integration-test JSON/tool-calling through the chosen endpoint. Keep Claude on content/caption/persona. See §13. | T2 | low-med (additive wiring + settings + parity tests; no graph topology change) |
+| **source-of-truth ADR** | **BLOCKER gating P3.** Decide checkpoint-vs-`message_repository` canonical (replace, or one-way sync — **never dual-write**); build-time check `create_deep_agent` accepts `checkpointer=`. Must be **accepted before P3 begins**. See §5.3. | T1 (decision) | — (gates P3) |
+| **P3** | Harness extraction: create `agents/harness/`; move `_build_checkpointer` + interrupt helpers; add store/memory/middleware presets; `build_deep_agent()` builder. Carousel engine + Deep Agents consume harness. **Chat-agent checkpointer wiring only after the source-of-truth ADR is accepted.** | T3 | med (touches bootstrap + both agents; **gated on source-of-truth ADR**) |
 | **P4** | Subagent taxonomy: wrap `PlaywrightResearchTool` as `@tool`; give `researcher` URL-nav; align subagent specs to DeepAgents `tools`/`prompt` fields. | T3 | med |
-| **P5** | Per-agent packages: introduce `alter_ego_agent/`, `carousel_agent/`, `shared/` façades (imports only; no infra moves). | T2 | med (import churn; many call sites) |
-| **P6** | Runtime QA subagent (`qa_reviewer` + Playwright MCP + report tool), flag-gated. | T3 | med |
+| **P5** | Per-agent façade packages: introduce `alter_ego_agent/`, `carousel_agent/`, `shared/` (orchestration + prompts + skills + thin tool adapters per §8.3; **no infra moves**); per-agent `memory=` AGENTS.md. | T2 | med (import churn; many call sites) |
+| **P6** | Runtime QA subagent (`qa_reviewer` + Playwright MCP + report tool), **every-generation but best-effort/non-blocking** (§7.3): side-table report, crash-safe, revisit sampled cadence after a baseline week. | T3 | med |
 | **P7** | Runtime improvement loop: `runtime-learnings-log.jsonl` + kaizen runtime mode; wire QA report → run summary. | T2 | low |
 
-Sequence rationale: **P1/P2 first** (independent, high-value, low-risk, no ADR) → **P3 harness** (unlocks P4/P6) → packages last (P5) since they're pure reorganization that benefits from the harness existing.
+**Sequence rationale (Revision 2):**
+- **P1 (prompts) + corrected P2 (skills co-location) first** — high-value, low-ADR; P2 is now gated on its own dependency-graph precondition (§2.3).
+- **ADR-019 DeepSeek pilot lands right after P1** — P1 moves `quality_agent`'s prompt to the registry, so you don't bake a cheap model onto a hardcoded prompt; the pilot is additive and does not block the restructure.
+- **P3 harness is BLOCKED on the source-of-truth ADR** — resolve checkpoint-vs-`message_repository` **before** wiring any chat-agent checkpointer (no dual-write). The harness then unlocks P4/P6.
+- **Packages last (P5)** — pure reorganization that benefits from the harness existing.
 
 ---
 
@@ -307,35 +385,79 @@ Sequence rationale: **P1/P2 first** (independent, high-value, low-risk, no ADR) 
 
 | ADR | Title | One-line rationale |
 |---|---|---|
-| ADR-013 | All agent prompts loaded via the registry (no inline prompts) | Promote the CLAUDE.md standard to an enforced, gated decision; persona/quality/distribution move to `.yaml`. |
-| ADR-014 | Shared Deep Agents harness (checkpointer + store + memory + middleware) | One composition surface for all agents; defines canonical persistence source (checkpoint vs message repo). |
+| ADR-013 | All agent prompts loaded via the registry (no inline prompts) | Promote the CLAUDE.md standard to an enforced, gated decision; persona/quality/distribution move to `.yaml`; the dead `TEMPLATE_ENFORCE` is deleted, not migrated. |
+| **ADR-014a** | **Source-of-truth for chat-agent persistence (checkpoint vs `message_repository`)** — **BLOCKER, accept BEFORE the harness (P3)** | Decides which is canonical; checkpointer must **replace** `message_repository` writes (or a documented one-way sync); **dual-write is forbidden** (AE-0163 class). Includes the build-time `checkpointer=` capability check. |
+| ADR-014 | Shared Deep Agents harness (checkpointer + store + memory + middleware) | One composition surface for all agents; **consumes the ADR-014a source-of-truth decision** — does not re-open it. |
 | ADR-015 | Subagent taxonomy + URL-navigation tool for carousel creation | Per-job isolated-context subagents; `researcher` gets web/URL tools. |
-| ADR-016 | Per-agent orchestration packages over Clean Architecture | Agent packages are façades; tools/services stay in `application/`; codifies the non-conflict rule. |
-| ADR-017 | Runtime product-QA subagent + runtime kaizen loop (distinct from delivery QA/kaizen) | Playwright-MCP QA of generated carousels feeds a separate runtime-learnings loop. |
-| ADR-018 (optional) | Skills layout: runtime skills resolved by code, root `skills/` is delivery-only | Removes symlink intermixing; updates the boundary CI gate. |
+| ADR-016 | Per-agent orchestration packages over Clean Architecture + **formal skill/tool contract** | Agent packages are façades; skill = content the agent reads (in the package); tool = `@tool` adapter delegating to an `application/` service via Protocol; single-agent adapters MAY co-locate, shared tools stay in `application/tools/` (§8.3). |
+| ADR-017 | Runtime product-QA subagent + runtime kaizen loop (distinct from delivery QA/kaizen) | Playwright-MCP QA of generated carousels, **every-generation but best-effort/non-blocking** (side table, crash-safe), feeds a separate runtime-learnings loop. |
+| ADR-018 | Skills layout: runtime skills **co-located in agent packages**, resolved by code; root `skills/` is delivery-only | Removes symlink intermixing; requires the skill→file dependency graph + lockstep loader/Docker/CI updates (§2.3). |
+| **ADR-019** | **Tiered model selection — DeepSeek for research/scoring, Claude for voice (COMMITTED)** | Deterministic phase→model map; pilot `SourceSynthesisAgent` (research) on DeepSeek, candidate `QualityAgent` (scoring); Claude stays on content/caption/persona; pilot sourced via opencode Zen "Go", **production sourcing is an Open decision**; A/B parity vs ≥70 persona gate before committing each phase. See §13. |
 
 ---
 
 ## 11. Open decisions for the human
 
-1. **`AGENTS.md` — promote or demote?** Wire it as a DeepAgents `memory=` file (real runtime context, must dedupe vs `rag/v1/system.md`) **or** move it to `docs/architecture/` as a design doc. Today it's neither (unwired). *(My lean: per-agent `memory` file in the new package layout.)*
-2. **Canonical persistence for chat Deep Agents** once they get a checkpointer: LangGraph checkpoint vs the existing message repository — which is source of truth, and do we stop manual history replay? (Dual-write is the AE-0163 hazard.)
-3. **Skills relocation aggressiveness:** Option A (drop root symlinks, code-resolves runtime skills — recommended) vs Option B (co-locate skills inside the agent package, bigger Docker/CI churn). Also: is `/carousel-pipeline` used as a human slash command? If yes, A removes it.
-4. **Runtime QA cost posture:** Playwright-MCP QA on every generation vs sampled/on-demand (browser on the hot path = latency + cost).
-5. **Per-agent package scope:** strict façade (imports only — recommended, preserves Clean Arch) vs the user's literal vertical slice (`tools/` inside the agent package, which violates ADR-009). Need an explicit ruling so P5 doesn't drift.
-6. **Persona/quality prompt consolidation:** merge `TEMPLATE_ENFORCE` + `_build_style_guide` into one `persona/v1/enforce.yaml` (they're the same prompt rendered twice) — confirm no behavioral divergence between the two today.
+> **Revision 2:** several prior "open decisions" are now **resolved** (decisions.md) or **promoted to blocking ADRs** (source-of-truth → ADR-014a; per-agent scope → façade; AGENTS.md → per-agent `memory=`; runtime QA → every-generation best-effort). They are noted below as resolved. The genuinely still-open item is **production DeepSeek sourcing**.
+
+1. **[OPEN] Production DeepSeek sourcing (ADR-019).** Pilot/dev uses the **opencode Zen "Go"** gateway (`https://opencode.ai/zen/go/v1`, `deepseek-v4-flash`/`-pro`) — the user has this subscription. **Production sourcing is undecided:** opencode Zen (pending a **ToS / SLA / data-residency** review) **vs** direct DeepSeek API (`https://api.deepseek.com`). Decide before promoting the pilot to prod. Either way, **MUST integration-test JSON/structured-output + tool-calling through the chosen endpoint** — `source_synthesis_agent.py:55-68` hard-fails `ERR_INVALID_JSON` with no graceful degrade.
+2. **[OPEN] `/carousel-pipeline` as a human slash command?** Confirm whether any human/slash-command entrypoint references the runtime skills before relocating (decisions.md #2); if yes, keep a shim or update the command registration.
+3. *(RESOLVED → ADR-014a, blocking)* Canonical persistence for chat Deep Agents — checkpoint vs `message_repository`. Now a **BLOCKER** that must be accepted before the harness (P3); checkpointer **replaces** the repo write or a **one-way sync** — never dual-write. See §5.3.
+4. *(RESOLVED — decisions.md #3)* `AGENTS.md` → **wire as a per-agent `memory=` file** in the new package layout (registry-loadable `.md` under each agent's `prompts/`), deduped vs the system prompt.
+5. *(RESOLVED — decisions.md #2)* Skills relocation → **co-locate** in agent packages (higher-touch); gated on the §2.3 dependency-graph precondition + lockstep Docker/CI updates.
+6. *(RESOLVED — decisions.md #4)* Runtime QA → **every generation, best-effort/non-blocking** (§7.3): side-table report, crash-safe, revisit sampled cadence after a baseline week.
+7. *(RESOLVED — decisions.md #1)* Per-agent package scope → **strict façade** (orchestration + prompts + skills + thin tool adapters; no infra moves); formalized as the §8.3 skill/tool contract.
+8. *(RESOLVED by Revision 2 fact-check)* Persona/quality prompt consolidation → `TEMPLATE_ENFORCE` is **dead (no importer) → deleted**; `persona/v1/enforce.yaml` is sourced **only** from the live `_build_style_guide`. No merge of two live prompts.
 
 ---
 
 ## 12. Skeptical self-check (where this could be wrong / over-engineered)
 
+> **Revision 2 — residual risks after the BLOCK mitigations.** The five BLOCK findings are now mitigated in-plan: (1) current-state facts corrected (20-file `skills/runtime/`, stateful chat agents, 4+1 prompts, empty orphan dir); (2) source-of-truth promoted to a blocking ADR gating P3 (no dual-write); (3) P2 gated on a skill→file dependency graph; (4) formal skill/tool contract; (5) runtime QA best-effort/non-blocking. The residual risks below remain.
+
+- **Source-of-truth ADR could stall P3.** Making P3 hard-gated on ADR-014a is correct (dual-write is the AE-0163 trap) but means the harness can't ship until that decision lands. Mitigation: the harness's *non-chat* pieces (relocating `_build_checkpointer`, interrupt helpers, carousel-engine consumption) are **unblocked** — only the chat-agent checkpointer wiring waits. Split P3 so the unblocked work isn't held hostage.
+- **`create_deep_agent` may not accept `checkpointer=`.** The plan now mandates a build-time check; if it fails, fall back to compiling the underlying graph with `.compile(checkpointer=…)` (as the carousel engine already does). Don't discover this at runtime.
+- **Co-located skills move is the highest-risk physical change.** A wrong move = prod `FileNotFoundError` on auto-deploy. The §2.3 dependency-graph precondition + Docker-image path-resolution verification are the guard; do not skip them under time pressure.
 - **Harness may be premature for 2 agents.** A full `harness/` package (8 modules) for two Deep Agents + one carousel graph risks gold-plating. Counter: checkpointer is *already* centralized; the harness mostly *relocates* + adds 2 presets (summarization, store). Keep it minimal — resist building `agent_factory`/`BootstrapHarness` abstractions nobody consumes yet.
 - **Subagent taxonomy vs ADR-007's "deterministic nodes."** ADR-007 deliberately made phases *deterministic LangGraph nodes*, not autonomous subagents. Converting them to `task`-delegated subagents could regress the determinism/HITL guarantees. **Mitigation:** only `researcher` (needs URL nav) and `qa_reviewer` (qualitative) become true subagents; the rest stay nodes. Don't over-agentify.
-- **Checkpointer for chat may add more state-sync bugs than it solves.** Manual history replay is simple and auditable. If long-context isn't a real pain yet, just add `SummarizationMiddleware` and skip the chat checkpointer (defer Open-decision #2).
+- **Checkpointer for chat may add more state-sync bugs than it solves.** The chat agents are **already stateful** via `message_repository` (corrected) — manual history replay is simple and auditable. If long-context isn't a real pain yet, just add `SummarizationMiddleware` and **skip the chat checkpointer entirely**, sidestepping the source-of-truth ADR (ADR-014a) for now. Adding a second write path must clear a real need, not just "the harness supports it."
 - **Prompt extraction parity risk.** Moving f-string prompts to Jinja2 YAML can silently change whitespace/ordering → drift in model output. Mandate **golden-output parity tests** (render == old f-string) before/after, or it's a behavior change masquerading as a refactor.
 - **Removing root symlinks could break a human's `/carousel-pipeline` muscle memory** (memory: slash-command registration needs a symlink). Verify before P2.
 - **`runtime-learnings-log.jsonl` may never accumulate enough signal** to justify a second kaizen channel for a single-user product. Could start as a manual review of QA reports; formalize the loop only if volume warrants.
 - **AGENTS.md promotion could double-instruct** the model (system prompt + memory file overlap) → token waste + contradictory steering. Dedupe is mandatory if promoted.
+- **DeepSeek voice/quality regression** if it creeps onto content/caption/persona phases (voice-match <70 fails the persona gate = product failure). Mitigation: hard architectural boundary — DeepSeek confined to research/scoring by *where it is injected*; the A/B parity check vs the ≥70 gate must precede committing each phase (§13).
+- **DeepSeek endpoint structured-output fidelity** through the chosen gateway is unverified (`source_synthesis_agent.py:55-68` hard-fails `ERR_INVALID_JSON`). The mandated integration test for JSON/tool-calling through the endpoint is the guard; do not commit a phase to DeepSeek without it.
+- **opencode Zen gateway for production is a governance unknown** (ToS/SLA/data-residency for routing user content through a third-party gateway) — kept as an explicit Open decision (#1), not silently mandated.
+
+---
+
+## 13. Tiered model selection — DeepSeek (COMMITTED via ADR-019)
+
+> **Revision 2:** DeepSeek is a **committed, first-class part of this plan** — not optional, not deferred. The user explicitly wants it retained. It lands as **ADR-019** (proposed → accepted with the pilot), sequenced **after P1** (so we don't bake a cheap model onto a hardcoded prompt) and wired through the **P3 harness config** (`harness/config.py` `DeepAgentConfig` carries a per-role model map). The carousel exposes exactly one model seam (`carousel_editorial_orchestrator.py:42-52` ← `container.llm_service().chat_model`), so per-phase selection is additive wiring, not a rewrite.
+
+### 13.1 Corrected execution detail
+
+- **Deterministic phase→model map, chosen BEFORE invocation** — a static map (phase → primary model) resolved at orchestrator construction. **Do NOT use `.with_fallbacks([claude])` as the tier boundary.** A silent fallback makes cost + quality **unmonitorable** (you pay DeepSeek *and* Claude on every degradation) and yields a **circular quality signal** (Claude grading Claude). A separate **explicit error/escalation path** on DeepSeek failure is fine — but it is logged and counted, not the invisible tier mechanism.
+- **Langfuse tagging:** every call tagged with `model_provider` and a **primary/fallback** flag, so cost attribution and the actual fallback rate are observable. A high fallback rate means DeepSeek isn't earning its place.
+- **A/B quality-parity check vs the ≥70 persona gate MUST precede committing each phase.** Before a phase is switched to DeepSeek in prod, run a documented A/B comparing DeepSeek vs Claude output on that phase against the persona/quality bar; commit only if parity holds.
+
+### 13.2 Phase placement (which phases get DeepSeek)
+
+| Phase / agent | Model | Status |
+|---|---|---|
+| `SourceSynthesisAgent` (research/extraction) | **DeepSeek** | **COMMITTED pilot** (token-heavy, low-voice; "Research / Data extraction" tier) |
+| `QualityAgent` (rubric/scoring) | **DeepSeek** | **Candidate** — pilot after P1 fixes its hardcoded prompt (don't bake a cheap model onto an off-registry prompt) |
+| `ContentDraftAgent` (slide copy) | **Claude Sonnet** | **KEEP** — voice surface |
+| caption / LinkedIn export | **Claude Sonnet** | **KEEP** — voice + platform rules |
+| Persona enforce + persona **gate** | **Claude Sonnet** | **KEEP** — never offload the thing that guards voice |
+
+> Pin `deepseek-chat`-class models (the reasoner has **no** tool-calling/structured-output). The recommended carousel phases parse JSON via prompt + `extract_json` (no `bind_tools`/`with_structured_output`), which lowers tool-calling risk but raises JSON-parse-failure surface → integration-test it.
+
+### 13.3 Endpoint sourcing
+
+- **Pilot / dev (KEEP):** opencode **Zen "Go"** gateway — `https://opencode.ai/zen/go/v1`, models `deepseek-v4-flash` (research) / `deepseek-v4-pro` (scoring), driven via `ChatOpenAI(base_url=…)` (the user holds this subscription). Langfuse tracing is unaffected.
+- **Production sourcing = OPEN DECISION** (Open-decision #1): opencode Zen (pending a **ToS / SLA / data-residency** review for routing user content through a third-party gateway) **vs** direct DeepSeek API (`https://api.deepseek.com`). Do **not** mandate one here.
+- **MUST integration-test** JSON/structured-output **and** tool-calling through whichever endpoint is chosen — `source_synthesis_agent.py:55-68` hard-fails `ERR_INVALID_JSON` with no graceful degrade. (Model IDs `deepseek-v4-*` are post-cutoff; re-confirm at implementation.)
 
 ---
 
