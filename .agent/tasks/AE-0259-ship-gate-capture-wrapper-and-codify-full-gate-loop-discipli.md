@@ -1,6 +1,6 @@
 # AE-0259 — ship gate-capture wrapper and codify full-gate loop discipline (no pipe-masked exits)
 
-Status: Intake
+Status: In Development
 Tier: T1
 Priority: High
 Type: Quality

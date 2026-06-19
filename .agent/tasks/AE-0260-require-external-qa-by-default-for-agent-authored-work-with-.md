@@ -1,6 +1,6 @@
 # AE-0260 — require external qa by default for agent-authored work with declared mode field
 
-Status: Intake
+Status: In Development
 Tier: T1
 Priority: Medium
 Type: Quality
