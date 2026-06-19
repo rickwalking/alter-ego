@@ -1,6 +1,6 @@
 # AE-0241 — Decide and document barrel-import policy (knip entry vs barrel imports)
 
-Status: Intake
+Status: Dev Complete
 Tier: T1
 Priority: Low
 Type: Quality

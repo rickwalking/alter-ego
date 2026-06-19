@@ -1,6 +1,6 @@
 # AE-0240 — Delete verified-dead frontend files surfaced by knip
 
-Status: Intake
+Status: Dev Complete
 Tier: T2
 Priority: Medium
 Type: Quality

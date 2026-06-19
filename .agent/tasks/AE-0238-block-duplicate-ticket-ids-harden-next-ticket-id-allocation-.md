@@ -1,6 +1,6 @@
 # AE-0238 — Block duplicate ticket IDs + harden next_ticket_id allocation across git refs
 
-Status: Intake
+Status: Dev Complete
 Tier: T2
 Priority: High
 Type: Quality

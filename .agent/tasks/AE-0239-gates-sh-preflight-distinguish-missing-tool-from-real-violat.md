@@ -1,6 +1,6 @@
 # AE-0239 — gates.sh preflight: distinguish missing tool from real violation (SKIP not FAIL)
 
-Status: Intake
+Status: Dev Complete
 Tier: T1
 Priority: Medium
 Type: Quality

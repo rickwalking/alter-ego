@@ -1,6 +1,6 @@
 # AE-0237 — Board-mutating ticket tooling: regenerate-or-noop when BOARD.md absent + unit tests
 
-Status: Intake
+Status: Dev Complete
 Tier: T2
 Priority: High
 Type: Quality
