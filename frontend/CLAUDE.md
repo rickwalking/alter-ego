@@ -37,6 +37,12 @@ frontend/
 
 - **Do not** import from `@/components/ui` — shadcn layer removed; use `Neon*` components directly.
 - **Do not** use `../` for cross-folder imports — use `@/` path alias.
+- **Barrel-import policy (AE-0241):** the top-level module barrel
+  `@/modules/<context>` is the required public contract; **every other barrel**
+  (design-system `@/components/{atoms,molecules}`, module layer sub-barrels,
+  co-located feature `index.ts`) is **optional sugar** — concrete paths are the
+  convention. Full decision + `knip.json` `entry` config:
+  [`src/modules/README.md` → Barrel-import policy](src/modules/README.md#barrel-import-policy-ae-0241).
 - **Presentation components** must not call `useQuery` or `fetch` — data flows via props from feature hooks/pages.
 
 ## Tech Stack

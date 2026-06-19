@@ -49,15 +49,20 @@ Reports: `.agent/reports/kaizen-session-2026-06-18c.{signal,plan,skeptical-revie
 
 ## Acceptance Criteria
 
-- [ ] A written decision exists (ADR or module-convention doc) stating, for (a)
-      design-system barrels and (b) module barrels, whether the barrel is the required
-      import surface or optional, and why.
-- [ ] `knip.json` reflects the decision: intentional-but-bypassed barrels are
-      configured as `entry` (so they are no longer false "unused"), OR a follow-up
-      migration ticket is referenced if the team chose barrel-as-contract.
-- [ ] After the change, `knip` no longer reports the *intentional* barrels as unused
-      (only genuinely-dead files remain — handled by AE-0240).
-- [ ] `bash scripts/ci/gates.sh frontend` green.
+- [x] A written decision exists (`frontend/src/modules/README.md` → "Barrel-import
+      policy (AE-0241)", pointer added to `frontend/CLAUDE.md`): (a) top-level module
+      barrel = required public contract; (b) design-system barrels, module layer
+      sub-barrels, and co-located feature barrels = optional sugar (concrete paths are
+      the convention), with the rationale (asymmetry, ~128 bypassing imports, no
+      barrel-as-contract migration).
+- [x] `knip.json` reflects the decision: the optional barrels are configured as
+      `entry` (`src/components/{atoms,molecules}/index.ts`, `src/modules/**/index.ts`,
+      `src/app/**/index.ts`). Barrel-as-contract migration explicitly deferred (noted
+      as a future, separately-scoped option, not done).
+- [x] After the change, `knip` no longer reports the *intentional* barrels as unused;
+      the only remaining file-scope findings are the live `app/dashboard/personas/*`
+      route files (a separate legacy-UI deferral, AE-0240 Non-Goal).
+- [x] `bash scripts/ci/gates.sh frontend` reproduced at the wave level (see dev-summary).
 
 ## Gherkin Scenarios
 
@@ -129,11 +134,23 @@ not buried in a deletion ticket.
 
 ## Files Touched
 
-Pending.
+- `frontend/src/modules/README.md` — new "Barrel-import policy (AE-0241)" section
+  (decision + rationale + knip-config explanation).
+- `frontend/CLAUDE.md` — barrel-policy bullet in the import-conventions section,
+  linking to the README decision.
+- `frontend/knip.json` — added `entry` globs for the optional barrels.
 
 ## Test Evidence
 
-Pending.
+```
+$ npx knip --include files --no-config-hints
+# before: 12 unused files (incl. atoms/molecules/module/feature barrels)
+# after:   5 unused files — only app/dashboard/personas/* (live route, AE-0240 Non-Goal)
+```
+
+Config/doc ticket — no static-analysis *rule* added (knip `entry` config only), so
+no rule-fires test required; the proof is "knip no longer flags the intentional
+barrels" + green frontend gates (wave-level).
 
 ## QA Report
 
