@@ -154,6 +154,12 @@ Implemented (developer-skill wave). Dup-id check now blocking; `next_ticket_id`
 unions local glob + `git rev-list --all --objects`; residual window documented.
 27 passed; real-tree validate green.
 
+### 2026-06-18 — wave QA round 1 fix (F-1, minor)
+
+External QA flagged that the dup-id test pinned only exit 0-vs-nonzero (a
+`len(dupes)*k` mutant would survive). Added `test_blocking_duplicate_ids_returns_exact_count`
+(asserts the exact dup-id count) + a stdout assertion on the remediation message.
+
 ## Files Touched
 
 - `scripts/agent_tasks/validate_all_tickets.py` — `_warn_duplicate_ids` →

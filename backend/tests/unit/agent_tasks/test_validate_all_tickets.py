@@ -25,7 +25,7 @@ def _write_ticket(tasks_dir: Path, filename: str, ticket_id: str) -> None:
 
 
 def test_duplicate_ids_fail_with_no_other_errors(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     _write_ticket(tmp_path, "AE-0500-one.md", "AE-0500")
     _write_ticket(tmp_path, "AE-0500-two.md", "AE-0500")
@@ -39,6 +39,30 @@ def test_duplicate_ids_fail_with_no_other_errors(
     )
 
     assert validate_all_tickets.main() == 1
+    # Pin the actionable remediation message (not just the exit code).
+    out = capsys.readouterr().out
+    assert "duplicate ticket IDs" in out
+    assert "AE-0500 claimed by 2 files" in out
+
+
+def test_blocking_duplicate_ids_returns_exact_count(tmp_path: Path) -> None:
+    # F-1 (wave QA): pin the EXACT count, not just 0-vs-nonzero — kills a
+    # `len(dupes) * k` mutant that the exit-code-only assertion lets survive.
+    _write_ticket(tmp_path, "AE-0500-one.md", "AE-0500")
+    _write_ticket(tmp_path, "AE-0500-two.md", "AE-0500")
+    _write_ticket(tmp_path, "AE-0501-uniq.md", "AE-0501")
+
+    tickets = load_tickets(tmp_path)
+    # Exactly ONE id (AE-0500) is duplicated, regardless of how many files share it.
+    assert validate_all_tickets._blocking_duplicate_ids(tickets) == 1
+
+
+def test_blocking_duplicate_ids_zero_when_unique(tmp_path: Path) -> None:
+    _write_ticket(tmp_path, "AE-0500-one.md", "AE-0500")
+    _write_ticket(tmp_path, "AE-0501-two.md", "AE-0501")
+
+    tickets = load_tickets(tmp_path)
+    assert validate_all_tickets._blocking_duplicate_ids(tickets) == 0
 
 
 def test_unique_ids_pass(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
