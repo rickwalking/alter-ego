@@ -1,6 +1,6 @@
 # AE-0245 — Precondition audit: skill-to-file dependency graph for runtime skills relocation
 
-Status: Intake
+Status: Dev Complete
 Tier: T1
 Priority: High
 Type: Quality

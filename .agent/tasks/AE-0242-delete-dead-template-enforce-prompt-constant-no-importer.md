@@ -1,6 +1,6 @@
 # AE-0242 — Delete dead TEMPLATE_ENFORCE prompt constant (no importer)
 
-Status: Intake
+Status: Dev Complete
 Tier: T1
 Priority: Medium
 Type: Refactor

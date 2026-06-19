@@ -1,6 +1,6 @@
 # AE-0247 — Implement ADR-0013 chat-persistence resolution (no chat checkpointer; assert guard)
 
-Status: Intake
+Status: Dev Complete
 Tier: T2
 Priority: High
 Type: Feature

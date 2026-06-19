@@ -1,6 +1,6 @@
 # AE-0244 — Anti-hardcoded-prompt checker plus rule-fires regression test
 
-Status: Intake
+Status: Dev Complete
 Tier: T1
 Priority: Medium
 Type: Quality

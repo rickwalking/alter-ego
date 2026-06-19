@@ -1,6 +1,6 @@
 # AE-0243 — Migrate 4 active hardcoded prompts to the registry (linkedin/persona/quality)
 
-Status: Intake
+Status: Dev Complete
 Tier: T2
 Priority: High
 Type: Refactor
