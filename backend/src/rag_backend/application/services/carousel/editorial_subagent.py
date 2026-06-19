@@ -89,12 +89,11 @@ def build_editorial_carousel_subagent(
     graph.add_edge(START, "request")
     graph.add_edge("request", END)
 
+    phase_specs = build_phase_subagent_specs()
     return {
         "name": EDITORIAL_SUBAGENT_NAME,
         "description": EDITORIAL_SUBAGENT_DESCRIPTION,
-        "skills": build_phase_subagent_specs()[0]["skills"]
-        if build_phase_subagent_specs()
-        else [],
+        "prompt": phase_specs[0]["prompt"] if phase_specs else "",
         "runnable": graph.compile(),
     }
 

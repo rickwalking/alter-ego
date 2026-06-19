@@ -10,15 +10,11 @@ import asyncio
 from collections.abc import AsyncIterator
 from contextlib import AsyncExitStack, asynccontextmanager
 from datetime import datetime
-from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from langgraph.checkpoint.base import BaseCheckpointSaver
-from langgraph.checkpoint.memory import InMemorySaver
-from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
-from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
 
+from rag_backend.agents.harness import build_checkpointer
 from rag_backend.api.middleware.error_handlers import add_error_handlers
 from rag_backend.api.middleware.rate_limiting import setup_rate_limiting
 from rag_backend.api.middleware.request_logging import RequestLoggingMiddleware
@@ -113,7 +109,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     # backend is selected via `settings.carousel_checkpoint_backend`:
     # sqlite (dev), postgres (prod), memory (ephemeral), disabled (no resume).
     async with AsyncExitStack() as stack:
-        app.state.carousel_checkpointer = await _build_checkpointer(settings, stack)
+        app.state.carousel_checkpointer = await build_checkpointer(settings, stack)
         worker_stop = asyncio.Event()
         worker_task = asyncio.create_task(
             run_workflow_workers(settings, worker_stop, WorkflowTimeoutRepository)
@@ -128,47 +124,6 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
     logger.info("application_shutdown")
     await close_db()
-
-
-async def _build_checkpointer(
-    settings: Settings, stack: AsyncExitStack
-) -> BaseCheckpointSaver | None:
-    """Construct the configured checkpointer, registering cleanup on the stack."""
-    backend = settings.carousel_checkpoint_backend.lower()
-
-    if backend == "disabled":
-        return None
-    if backend == "memory":
-        return InMemorySaver()
-    if backend == "postgres":
-        if not settings.carousel_checkpoint_postgres_url:
-            logger.warning(
-                "carousel_checkpoint_postgres_missing_url",
-                hint="set carousel_checkpoint_postgres_url or switch backend",
-            )
-            return None
-        saver_pg = await stack.enter_async_context(
-            AsyncPostgresSaver.from_conn_string(
-                settings.carousel_checkpoint_postgres_url
-            )
-        )
-        await saver_pg.setup()  # idempotent DDL for checkpoint tables
-        return saver_pg
-    if not settings.carousel_checkpoint_sqlite_path:
-        return InMemorySaver()
-    try:
-        Path(settings.carousel_checkpoint_sqlite_path).parent.mkdir(
-            parents=True, exist_ok=True
-        )
-        return await stack.enter_async_context(
-            AsyncSqliteSaver.from_conn_string(settings.carousel_checkpoint_sqlite_path)
-        )
-    except Exception:
-        logger.warning(
-            "carousel_checkpoint_sqlite_fallback",
-            hint="sqlite path not available, using memory",
-        )
-        return InMemorySaver()
 
 
 async def _check_database(checks: dict[str, dict[str, str | int]]) -> None:

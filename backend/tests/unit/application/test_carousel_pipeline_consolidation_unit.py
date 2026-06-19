@@ -32,16 +32,17 @@ from rag_backend.domain.protocols import ResearchTool
 class TestCarouselSkillsProgressiveDisclosure:
     """Scenario: RAG parent agent does not load full carousel pipeline skill."""
 
-    def test_editorial_subagent_skills_exclude_monolithic_bundle(self) -> None:
+    def test_editorial_subagent_prompt_excludes_monolithic_bundle(self) -> None:
+        # AE-0249: subagent specs use the DeepAgents prompt field (the
+        # skill references are embedded in the prompt, not a bespoke
+        # ``skills`` key). The monolithic SKILL.md bundle stays excluded.
         subagent = build_editorial_carousel_subagent(AsyncMock())
-        skills = subagent["skills"]
-        assert isinstance(skills, list)
-        assert skills
-        assert SKILL_ROOT not in skills
-        assert f"{SKILL_ROOT}/SKILL.md" not in skills
-        for skill in skills:
-            assert isinstance(skill, str)
-            assert skill.startswith(f"{SKILL_ROOT}/")
+        assert "skills" not in subagent
+        prompt = subagent["prompt"]
+        assert isinstance(prompt, str)
+        assert prompt
+        assert f"{SKILL_ROOT}/phases/" in prompt
+        assert f"\n- {SKILL_ROOT}/SKILL.md" not in prompt
 
 
 @pytest.mark.unit

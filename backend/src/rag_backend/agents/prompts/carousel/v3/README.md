@@ -15,7 +15,7 @@ Both templates expect `presentation_policy_context` to be generated at runtime b
 
 Do not duplicate slide counts, copy budgets, geometry ratios, or Lucide allowlist
 values in these templates. The canonical source is
-`skills/runtime/carousel-pipeline/contracts/hero_lower_third_v1.yaml`.
+`backend/src/rag_backend/agents/skills/carousel-pipeline/contracts/hero_lower_third_v1.yaml`.
 
 ## Usage
 

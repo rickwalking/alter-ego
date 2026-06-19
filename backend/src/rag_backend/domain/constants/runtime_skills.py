@@ -6,39 +6,36 @@ import os
 from pathlib import Path
 
 ENV_RUNTIME_SKILLS_ROOT = "ALTER_EGO_RUNTIME_SKILLS_ROOT"
+# Logical addressing prefix used by resolve_runtime_skill_path() and stripped by the
+# read helpers below. It is NOT a filesystem path — the runtime skills physically
+# live inside the backend package (AE-0246); see get_runtime_skills_filesystem_root.
 DEFAULT_RUNTIME_SKILLS_ROOT = "skills/runtime"
 CAROUSEL_PIPELINE_SKILL_ID = "carousel-pipeline"
-RUNTIME_PIPELINE_MARKER = Path("skills") / "runtime" / "carousel-pipeline"
 PHASE_SKILL_FILENAME = "SKILL.md"
+
+# AE-0246: runtime skills are co-located inside the backend package at
+# rag_backend/agents/skills/, so they ship with `COPY backend/src/ src/` and resolve
+# package-relative (no repo-root discovery, identical local and in-image). This file
+# is rag_backend/domain/constants/runtime_skills.py -> parents[2] == rag_backend.
+_PACKAGE_SKILLS_ROOT = Path(__file__).resolve().parents[2] / "agents" / "skills"
 
 
 def get_runtime_skills_root() -> str:
-    """Return configured runtime skills root or repository default."""
-    return os.environ.get(ENV_RUNTIME_SKILLS_ROOT, DEFAULT_RUNTIME_SKILLS_ROOT)
-
-
-def find_repository_root(start: Path | None = None) -> Path:
-    """Locate repository root by walking parents for the runtime pipeline marker."""
-    candidates = [start] if start is not None else []
-    candidates.extend(Path(__file__).resolve().parents)
-    candidates.extend(Path.cwd().parents)
-    seen: set[Path] = set()
-    for candidate in candidates:
-        if candidate in seen:
-            continue
-        seen.add(candidate)
-        if (candidate / RUNTIME_PIPELINE_MARKER).is_dir():
-            return candidate
-    msg = "Could not locate repository root for runtime skills"
-    raise FileNotFoundError(msg)
+    """Return the logical runtime-skills addressing prefix."""
+    return DEFAULT_RUNTIME_SKILLS_ROOT
 
 
 def get_runtime_skills_filesystem_root() -> Path:
-    """Return filesystem path to the runtime skills root."""
-    configured = Path(get_runtime_skills_root())
-    if configured.is_absolute():
-        return configured
-    return find_repository_root() / configured
+    """Return filesystem path to the co-located runtime skills root.
+
+    Package-relative by default (AE-0246). An ABSOLUTE
+    ``ALTER_EGO_RUNTIME_SKILLS_ROOT`` override still wins (tests / custom layouts);
+    a relative or unset value falls back to the packaged location.
+    """
+    override = os.environ.get(ENV_RUNTIME_SKILLS_ROOT)
+    if override and Path(override).is_absolute():
+        return Path(override)
+    return _PACKAGE_SKILLS_ROOT
 
 
 def resolve_runtime_skill_path(skill_id: str, *parts: str) -> str:

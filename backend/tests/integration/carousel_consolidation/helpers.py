@@ -23,19 +23,6 @@ from rag_backend.domain.models import (
 
 TEST_SECRET = "test-secret-for-carousel-consolidation-tests!!"
 
-_SKILLS_CONTENT_CONTRACTS = (
-    Path("skills") / "carousel-pipeline" / "_shared" / "content-contracts.md"
-)
-
-
-def repo_root() -> Path:
-    """Resolve repository root regardless of pytest or mutmut working directory."""
-    for parent in Path(__file__).resolve().parents:
-        if (parent / _SKILLS_CONTENT_CONTRACTS).is_file():
-            return parent
-    msg = "Could not locate repository root from carousel consolidation tests"
-    raise RuntimeError(msg)
-
 
 def parse_sse_events(text: str) -> list[dict[str, object]]:
     """Parse raw SSE response text into event dicts."""

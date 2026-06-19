@@ -13,6 +13,16 @@ SUBAGENT_CAPTION_WRITER = "caption_writer"
 
 SKILL_ROOT = carousel_pipeline_root()
 
+# DeepAgents subagent spec field names (the standard tools/prompt/model surface).
+# AE-0249 aligns these phase specs to the DeepAgents fields; the half-wired
+# ``skills``-only key is replaced by a ``prompt`` carrying the skill references.
+SPEC_FIELD_NAME = "name"
+SPEC_FIELD_DESCRIPTION = "description"
+SPEC_FIELD_PROMPT = "prompt"
+SPEC_FIELD_TOOLS = "tools"
+
+PROMPT_SKILL_CONTEXT_HEADER = "Read the following skill context before acting:"
+
 
 @dataclass(frozen=True)
 class PhaseSubagentSpec:
@@ -22,6 +32,15 @@ class PhaseSubagentSpec:
     description: str
     phase_skill: str
     shared_standards: tuple[str, ...]
+
+    def skill_references(self) -> tuple[str, ...]:
+        """Return the skill markdown references this phase reads."""
+        return (self.phase_skill, *self.shared_standards)
+
+    def prompt(self) -> str:
+        """Render the DeepAgents ``prompt`` from this phase's skill references."""
+        references = "\n".join(f"- {ref}" for ref in self.skill_references())
+        return f"{self.description}\n\n{PROMPT_SKILL_CONTEXT_HEADER}\n{references}"
 
 
 PHASE_SUBAGENT_REGISTRY: tuple[PhaseSubagentSpec, ...] = (
@@ -63,12 +82,18 @@ PHASE_SUBAGENT_REGISTRY: tuple[PhaseSubagentSpec, ...] = (
 
 
 def build_phase_subagent_specs() -> list[dict[str, object]]:
-    """Return subagent metadata for DeepAgents registration."""
+    """Return DeepAgents-aligned subagent specs (tools/prompt fields).
+
+    AE-0249: emits the standard DeepAgents ``name``/``description``/``prompt``/
+    ``tools`` fields. ``tools`` is empty here because these deterministic phases
+    run as raw LangGraph nodes (ADR-007), not tool-wielding subagents.
+    """
     return [
         {
-            "name": spec.name,
-            "description": spec.description,
-            "skills": [spec.phase_skill, *spec.shared_standards],
+            SPEC_FIELD_NAME: spec.name,
+            SPEC_FIELD_DESCRIPTION: spec.description,
+            SPEC_FIELD_PROMPT: spec.prompt(),
+            SPEC_FIELD_TOOLS: [],
         }
         for spec in PHASE_SUBAGENT_REGISTRY
     ]

@@ -1,6 +1,6 @@
 # AE-0249 — Subagent taxonomy plus URL-navigation researcher (wrap PlaywrightResearchTool as a tool)
 
-Status: Intake
+Status: Review
 Tier: T2
 Priority: High
 Type: Feature
@@ -58,16 +58,16 @@ ADR-0015; ADR-007.
 
 ## Acceptance Criteria
 
-- [ ] `scrape_url` and `search_web` are exposed as LangChain `@tool` adapters that
+- [x] `scrape_url` and `search_web` are exposed as LangChain `@tool` adapters that
       delegate to `PlaywrightResearchTool` via a Protocol (no business logic in the
       adapter).
-- [ ] A `researcher` subagent runs in isolated context with those tools + the research
+- [x] A `researcher` subagent runs in isolated context with those tools + the research
       skill context; given a URL it browses the page and returns synthesized sources.
-- [ ] Subagent specs use the DeepAgents `tools`/`prompt`/`model` fields (the
+- [x] Subagent specs use the DeepAgents `tools`/`prompt`/`model` fields (the
       half-wired `skills`-only specs are aligned).
-- [ ] Deterministic phases remain LangGraph nodes (a test asserts they are not
+- [x] Deterministic phases remain LangGraph nodes (a test asserts they are not
       `task`-delegated subagents) — ADR-007 determinism preserved.
-- [ ] Backend `pytest`/`mypy`/`ruff` green; a research-with-URL integration test passes
+- [x] Backend `pytest`/`mypy`/`ruff` green; a research-with-URL integration test passes
       (Playwright mocked/stubbed where keys/browser are unavailable in CI).
 
 ## Gherkin Scenarios
@@ -157,13 +157,39 @@ Feature: A researcher subagent can browse a URL during carousel creation
 Created from the agent-architecture-restructure epic (RES-10). Only `researcher`
 becomes a true subagent; deterministic phases stay LangGraph nodes (ADR-007).
 
+### 2026-06-19 — Dev (developer-skill)
+
+Implemented on `feat/agent-harness-ae0248` (stacks on AE-0248). The two web-research
+@tool adapters and the `researcher` subagent live in the **agents** package and
+depend on the `ResearchTool` **Protocol** (`domain/protocols/carousel.py`); DI
+injects the concrete `PlaywrightResearchTool` (`application/`). No new
+`agents -> application` edge — `lint-imports` stays **22 kept / 0 broken**. Phase
+subagent specs aligned to DeepAgents `name`/`description`/`prompt`/`tools` fields
+(the half-wired `skills`-only key removed). Deterministic phases stay LangGraph
+nodes; a test asserts they are not task-delegated subagents. `.feature` added.
+
 ## Files Touched
 
-Pending.
+ADDED:
+- `src/rag_backend/agents/tools/__init__.py`, `constants.py`, `research_tools.py`
+- `src/rag_backend/agents/subagents/__init__.py`, `constants.py`, `researcher.py`
+- `tests/features/researcher_subagent_url_navigation.feature`
+- `tests/unit/agents/test_researcher_subagent.py`
+- `tests/integration/carousel_consolidation/test_researcher_url_navigation.py`
+
+MODIFIED:
+- `src/rag_backend/application/services/carousel/phase_subagents.py` (DeepAgents fields)
+- `src/rag_backend/application/services/carousel/editorial_subagent.py` (prompt field)
+- `tests/unit/application/test_carousel_pipeline_consolidation_unit.py` (assert prompt)
 
 ## Test Evidence
 
-Pending.
+- `ruff check src/ tests/` → All checks passed.
+- `mypy rag_backend/ --explicit-package-bases` → 0 issues (518 files).
+- `lint-imports` → 22 kept, 0 broken (no new agents→application edge).
+- `pytest tests/unit/agents tests/integration/carousel_consolidation
+  tests/unit/application/test_carousel_pipeline_consolidation_unit.py` → 368 passed.
+- `GATES_REQUIRE_ALL=1 check-integrity.sh backend` → 0 blockers, 0 warnings.
 
 ## QA Report
 
