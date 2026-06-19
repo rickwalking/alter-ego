@@ -9,7 +9,9 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SKILLS_DIR = REPO_ROOT / "skills"
-RUNTIME_DIR = SKILLS_DIR / "runtime"
+# AE-0246: runtime skills are co-located inside the backend package (they ship with
+# the source, not via a separate Dockerfile COPY); root skills/ is delivery-only.
+RUNTIME_DIR = REPO_ROOT / "backend" / "src" / "rag_backend" / "agents" / "skills"
 DELIVERY_DIR = SKILLS_DIR / "delivery"
 
 REQUIRED_DELIVERY_COMMANDS = (
@@ -21,12 +23,6 @@ REQUIRED_DELIVERY_COMMANDS = (
     "orchestrator-skill",
     "release-manager-skill",
 )
-
-RUNTIME_COMPATIBILITY_LINKS = frozenset({
-    "carousel-pipeline",
-    "carousel-refinement",
-    "knowledge-base",
-})
 
 ARCHITECT_MODES = ("validate", "research", "skeptical", "bugfix")
 
@@ -129,13 +125,6 @@ def _validate_compatibility_links(errors: list[str]) -> None:
             errors.append(
                 f"Delivery compatibility link must resolve under delivery/: {entry}",
             )
-        if (
-            entry.name in RUNTIME_COMPATIBILITY_LINKS
-            and RUNTIME_DIR not in target.parents
-        ):
-            errors.append(
-                f"Runtime compatibility link must resolve under runtime/: {entry}",
-            )
 
 
 def _validate_dockerfile(errors: list[str]) -> None:
@@ -144,10 +133,11 @@ def _validate_dockerfile(errors: list[str]) -> None:
         errors.append("Missing backend/Dockerfile")
         return
     content = dockerfile.read_text(encoding="utf-8")
-    # Tolerate COPY flags (e.g. `COPY --chown=user:user skills/runtime/ ...`),
-    # which the multi-stage runtime image uses to avoid a duplicate chown layer.
-    if not re.search(r"COPY\s+(?:--\S+\s+)*skills/runtime/", content):
-        errors.append("backend/Dockerfile must COPY skills/runtime/")
+    # AE-0246: runtime skills ship inside the backend package (via `COPY backend/src/`),
+    # not a separate `COPY skills/runtime/`. The image must still copy the source and
+    # must never copy the delivery skills.
+    if not re.search(r"COPY\s+(?:--\S+\s+)*backend/src/", content):
+        errors.append("backend/Dockerfile must COPY backend/src/")
     if "skills/delivery" in content:
         errors.append("backend/Dockerfile must not COPY skills/delivery")
 

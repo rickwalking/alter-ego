@@ -39,7 +39,6 @@ WORKDIR /app
 # PLAYWRIGHT_BROWSERS_PATH must be identical in the layer that installs the
 # browser and at runtime, so the app finds Chromium at the same location.
 ENV PLAYWRIGHT_BROWSERS_PATH=/app/ms-playwright \
-    ALTER_EGO_RUNTIME_SKILLS_ROOT=/app/skills/runtime \
     PYTHONUNBUFFERED=1 \
     PYTHONPATH=/app/src \
     PATH=/app/.venv/bin:$PATH
@@ -81,8 +80,10 @@ RUN apt-get update \
 COPY --chown=fastapi:fastapi backend/src/ src/
 COPY --chown=fastapi:fastapi frontend/public/about-pedro.jpg assets/about-pedro.jpg
 COPY --chown=fastapi:fastapi backend/alembic/ alembic/
+# Runtime skills (AE-0246) ship inside the backend package at
+# rag_backend/agents/skills/, so they arrive via `COPY backend/src/ src/` above —
+# no separate copy + no ALTER_EGO_RUNTIME_SKILLS_ROOT env needed.
 COPY --chown=fastapi:fastapi backend/alembic.ini ./
-COPY --chown=fastapi:fastapi skills/runtime/ /app/skills/runtime/
 COPY --chown=fastapi:fastapi README.md ./
 
 USER fastapi

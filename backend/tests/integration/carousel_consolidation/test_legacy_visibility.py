@@ -13,13 +13,15 @@ from rag_backend.domain.constants.carousel_workflow import (
     ERR_WORKFLOW_NOT_APPROVED_FOR_PUBLISH,
     WORKFLOW_STATUS_APPROVED_FOR_PUBLISH,
 )
+from rag_backend.domain.constants.runtime_skills import (
+    get_runtime_skills_filesystem_root,
+)
 from rag_backend.domain.models import CarouselStatus, UserRole
 from tests.integration.carousel_consolidation.helpers import (
     auth_header,
     create_carousel,
     create_minimal_carousel_artifacts,
     create_user,
-    repo_root,
     set_carousel_status,
     set_workflow_status,
 )
@@ -196,17 +198,16 @@ class TestCarouselSkillsMigration:
     """Scenario: Shared standards files exist after migration (CP-001)."""
 
     def test_shared_standards_files_exist(self) -> None:
-        root = repo_root()
-        shared = root / "skills" / "carousel-pipeline" / "_shared"
-        phases = root / "skills" / "carousel-pipeline" / "phases"
+        pipeline = get_runtime_skills_filesystem_root() / "carousel-pipeline"
+        shared = pipeline / "_shared"
+        phases = pipeline / "phases"
         assert (shared / "content-contracts.md").is_file()
         assert (shared / "anti-patterns.md").is_file()
         assert (phases / "content" / "SKILL.md").is_file()
 
     def test_content_contracts_mentions_slide_types(self) -> None:
         text = (
-            repo_root()
-            / "skills"
+            get_runtime_skills_filesystem_root()
             / "carousel-pipeline"
             / "_shared"
             / "content-contracts.md"
@@ -218,13 +219,9 @@ class TestCarouselSkillsMigration:
 
     def test_shared_standards_preserve_design_and_image_rules(self) -> None:
         """Scenario: Monolithic workflow content is preserved in shared standards."""
-        root = repo_root()
-        design_text = (
-            root / "skills" / "carousel-pipeline" / "_shared" / "design-system.md"
-        ).read_text(encoding="utf-8")
-        image_text = (
-            root / "skills" / "carousel-pipeline" / "_shared" / "image-generation.md"
-        ).read_text(encoding="utf-8")
+        shared = get_runtime_skills_filesystem_root() / "carousel-pipeline" / "_shared"
+        design_text = (shared / "design-system.md").read_text(encoding="utf-8")
+        image_text = (shared / "image-generation.md").read_text(encoding="utf-8")
         assert "1080" in design_text
         assert "1350" in design_text
         assert "scene" in image_text.lower()
