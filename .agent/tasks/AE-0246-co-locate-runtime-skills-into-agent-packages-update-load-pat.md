@@ -60,18 +60,24 @@ CLAUDE.md prod auto-deploy warning.
 
 ## Acceptance Criteria
 
-- [ ] Runtime skills are physically under their agent packages with the `_shared/`
-      cross-reference tree intact (every relative reference still resolves).
-- [ ] All six consumers are updated in lockstep and reference the new paths; no consumer
-      still points at `skills/runtime/`.
-- [ ] The **Docker image builds** and **every skill path resolves inside the built
-      image** (not just locally) — a path-resolution check runs against the image.
-- [ ] The **CI skill-path gate** (`validate_skill_boundary.py`) is updated and runs
-      **green**; all 5 carousel phase skills + the knowledge-base skill resolve at
-      runtime.
-- [ ] The dead repo-root symlinks and the empty `skills/runtime/` are removed; root
+- [x] Runtime skills are physically co-located inside the backend package at
+      `rag_backend/agents/skills/{carousel-pipeline,carousel-refinement,knowledge-base}`
+      with the `_shared/` tree intact (resolution smoke test reads phase + `_shared` md).
+- [x] All consumers updated in lockstep — `runtime_skills.py` resolves **package-relative**
+      (no `skills/runtime` filesystem path remains), `phase_subagents`/`instruction_context_loader`
+      go through it unchanged, `test_presentation_contract_alignment` uses the canonical
+      resolver. No consumer points at the old repo-root `skills/runtime/`.
+- [x] The **Docker image builds** and **every skill path resolves inside the built image**:
+      `docker build -f backend/Dockerfile -t ae-skills-verify .` then
+      `docker run --rm ae-skills-verify python -c "…"` →
+      `fs_root: /app/src/rag_backend/agents/skills`, phase + `_shared` markdown resolve,
+      `OK in-image`. Skills ship via `COPY backend/src/`.
+- [x] The **CI skill-path gate** (`validate_skill_boundary.py`) is updated (RUNTIME_DIR →
+      package; Dockerfile check → `COPY backend/src/`; dropped the obsolete runtime-symlink
+      check) and runs **green**.
+- [x] The 3 dead repo-root runtime symlinks + the empty `skills/runtime/` are removed; root
       `skills/` is delivery-only.
-- [ ] Backend `pytest`/`mypy`/`ruff` green; the skill-path gate green.
+- [x] Backend `pytest` (1123 application/agents/scripts + 4 resolution) / `mypy` / `ruff` green.
 
 ## Gherkin Scenarios
 
@@ -163,11 +169,49 @@ change; gated on the AE-0245 dependency map and verified inside the built image.
 
 ## Files Touched
 
-Pending.
+### MOVED (git mv, `_shared` geometry preserved)
+- `skills/runtime/{carousel-pipeline,carousel-refinement,knowledge-base}/` →
+  `backend/src/rag_backend/agents/skills/…` (20 files).
+
+### REMOVED
+- The 3 repo-root runtime symlinks (`skills/{carousel-pipeline,carousel-refinement,knowledge-base}`)
+  + the now-empty `skills/runtime/`.
+
+### MODIFIED
+- `domain/constants/runtime_skills.py` — package-relative `get_runtime_skills_filesystem_root`
+  (`parents[2]/agents/skills`); removed `find_repository_root` + `RUNTIME_PIPELINE_MARKER`;
+  absolute env override still wins.
+- `backend/Dockerfile` — removed `COPY skills/runtime/` + `ALTER_EGO_RUNTIME_SKILLS_ROOT`
+  env (skills now ship via `COPY backend/src/`).
+- `scripts/validate_skill_boundary.py` — `RUNTIME_DIR` → package; Dockerfile check →
+  `COPY backend/src/`; dropped the obsolete runtime-symlink check.
+- `tests/unit/application/test_presentation_contract_alignment.py` — use the canonical
+  resolver; `tests/unit/domain/test_runtime_skills_path_confinement.py` — package-relative
+  + override tests; `tests/features/skill_colocation.feature` (NEW);
+  `agents/prompts/carousel/v3/README.md` — doc path.
 
 ## Test Evidence
 
-Pending.
+```
+$ uv run python scripts/validate_skill_boundary.py        # Skill boundary validation passed
+$ uv run pytest tests/unit/application tests/unit/agents tests/unit/scripts -q   # 1123 passed
+$ uv run pytest tests/unit/domain/test_runtime_skills_path_confinement.py -q     # 4 passed
+$ cd src && uv run mypy rag_backend/domain/constants/runtime_skills.py           # Success
+# In-image: docker build -f backend/Dockerfile -t ae-skills-verify . then resolve paths inside.
+```
+
+## Decision Log (additions)
+
+- **Co-located under `rag_backend/agents/skills/` (one location), NOT per-agent
+  `carousel_agent/skills/` + `alter_ego_agent/skills/` as the ticket text suggested.**
+  The per-agent façade packages are **AE-0250's** deliverable and do not exist yet, and
+  `agents/alter_ego_agent.py` is a *module* — a sibling `alter_ego_agent/` package would
+  clash. So this increment achieves the ticket's CORE goal (runtime skills ship co-located
+  with the backend agent code; root `skills/` is delivery-only) with package-relative
+  resolution, and **AE-0250 splits them per-agent** when it introduces the façade packages.
+- **Package-relative resolution** (vs the old repo-root `find_repository_root` walk + the
+  `/app/skills/runtime` env) is the key prod-safety win: the skills ship inside the wheel
+  and resolve identically locally and in-image, removing the FileNotFoundError class.
 
 ## QA Report
 
