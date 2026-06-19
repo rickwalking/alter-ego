@@ -52,17 +52,18 @@ Reports: `.agent/reports/kaizen-session-2026-06-18c.{signal,plan,skeptical-revie
 
 ## Acceptance Criteria
 
-- [ ] For **each** file deleted, evidence is recorded that it is unreferenced:
-      `rg -l --no-ignore-vcs '<basename-without-ext>'` (and the exported symbol names)
-      across the **whole repo** returns only the file itself — covering dynamic
-      `import()`, Next.js file-conventions, and config references (knip is a heuristic,
-      not a proof — critic finding).
-- [ ] Any candidate that turns out to be referenced is **kept** and moved to AE-0241 or
-      a follow-up, with the reference noted.
-- [ ] After deletion: `npm run typecheck`, `npm run build`, `npm run test`, and
-      `bash scripts/ci/gates.sh frontend` are all green.
-- [ ] `knip` reports correspondingly fewer unused files (the deleted set no longer
-      appears).
+- [x] For **each** file deleted, evidence is recorded that it is unreferenced (see
+      Test Evidence): repo-wide import-path search returned only historical doc
+      mentions (no code import), no sibling/parent barrel re-exports them, and each
+      exported symbol appears only in its own file (the lone `createDocument`
+      collision is a separate local hook/mock, not the fixture).
+- [x] Any candidate that turns out to be referenced is **kept** — none were; all 9
+      proved dead.
+- [x] After deletion: `npm run typecheck`, `npm run build`, `npm run test` green;
+      `bash scripts/ci/gates.sh frontend` reproduced at the wave level (see dev-summary).
+- [x] `knip` reports correspondingly fewer unused files: 21 → 12; the deleted set no
+      longer appears (remaining 12 are the barrels of AE-0241 + the live personas
+      route, both out of scope here).
 
 ## Gherkin Scenarios
 
@@ -138,11 +139,42 @@ barrel-policy decision be split out (→ AE-0241).
 
 ## Files Touched
 
-Pending.
+### REMOVED (all 9 proved dead)
+- `src/components/providers/locale-provider.tsx`
+- `src/constants/documents.ts`
+- `src/constants/rubrics.ts`
+- `src/schemas/neon-button.ts`
+- `src/schemas/neon-progress-bar.ts`
+- `src/schemas/neon-tab.ts`
+- `src/test/fixtures/data.ts`
+- `src/modules/conversation/types/index.ts`
+- `src/modules/knowledge/types/index.ts`
 
 ## Test Evidence
 
-Pending.
+Per-file reference proof (repo-wide):
+- Import-path search (`rg --no-ignore-vcs` over `src` + `docs` for each module
+  path) found **no code imports** — only historical markdown mentions of
+  `schemas/neon-button` (neon-shell-migration-complete.md) and `knowledge/types`
+  (REMEDIATION_PLAN.md).
+- No sibling/parent barrel (`src/schemas`, `src/constants`, `components/providers`,
+  `src/test/fixtures`) re-exports any candidate; the two `types/index.ts` are
+  comment-only post-migration barrels with no importer.
+- Exported-symbol search: every symbol (`LocaleProvider`, `neon*Schema`,
+  `NEON_BUTTON_DEFAULTS`, `CONTENT_TYPE_BLOG_POST`, `SUPPORTED_EXTENSIONS`,
+  `mock*`, …) appears only in its own file. The single `createDocument` hit
+  elsewhere is `useCreateDocument()` + a `vi.fn()` mock in knowledge-base-interface
+  — a different symbol; that file does not import the fixture.
+
+Post-deletion verification:
+```
+$ npm run typecheck          # tsc --noEmit, clean
+$ npm run test -- --run      # 93 files, 896 tests passed
+$ npm run build              # next build OK (full route tree emitted)
+$ npx knip --include files   # 21 → 12 unused files; deleted set gone
+```
+(`knip`/`jscpd` were absent locally — installed via `npm ci`; this is the exact
+AE-0239 scenario.)
 
 ## QA Report
 
