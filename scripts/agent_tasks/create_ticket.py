@@ -12,6 +12,7 @@ from pathlib import Path
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
+from scripts.agent_tasks.board_io import ensure_board, write_board
 from scripts.agent_tasks.constants import (
     BOARD_PATH,
     TASKS_DIR,
@@ -37,6 +38,9 @@ def slugify(title: str) -> str:
 
 
 def add_to_board(board_path: Path, ticket_id: str, column: str = "Intake") -> None:
+    # AE-0237: the board is a gitignored, regenerable view — materialize it from
+    # the ticket files first so a fresh clone / CI checkout never crashes here.
+    ensure_board(board_path, TASKS_DIR)
     content = board_path.read_text(encoding="utf-8")
     marker = f"## {column}\n\n"
     if marker not in content:
@@ -52,7 +56,7 @@ def add_to_board(board_path: Path, ticket_id: str, column: str = "Intake") -> No
     none_line = f"## {column}\n\n- None\n"
     if none_line in content:
         content = content.replace(none_line, marker + insert, 1)
-    board_path.write_text(content, encoding="utf-8")
+    write_board(board_path, content)
 
 
 def main() -> int:

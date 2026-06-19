@@ -49,19 +49,19 @@ Reports: `.agent/reports/kaizen-session-2026-06-18c.{signal,plan,skeptical-revie
 
 ## Acceptance Criteria
 
-- [ ] When `.agent/BOARD.md` is absent, `add_to_board` and `update_board` **regenerate
+- [x] When `.agent/BOARD.md` is absent, `add_to_board` and `update_board` **regenerate
       it first** via `render_board` (the board is a generated view of `.agent/tasks/`),
       then apply their mutation — and never raise `FileNotFoundError`.
-- [ ] Board writes are **atomic** (write a temp file, then `os.replace`) in
+- [x] Board writes are **atomic** (write a temp file, then `os.replace`) in
       `render_board`, `add_to_board`, and `update_board` (critic TOCTOU mitigation).
-- [ ] New `backend/tests/unit/agent_tasks/test_create_ticket.py` covers `next_ticket_id`
+- [x] New `backend/tests/unit/agent_tasks/test_create_ticket.py` covers `next_ticket_id`
       and `add_to_board` with the board **present AND absent**; `test_move_ticket.py`
       extends to `update_board` with the board **present AND absent**.
-- [ ] **Seeded-regression proof:** the absent-board test FAILS on the current code
+- [x] **Seeded-regression proof:** the absent-board test FAILS on the current code
       (reproduces `FileNotFoundError`) and PASSES after the fix.
-- [ ] Tests monkeypatch `BOARD_PATH`/`TASKS_DIR` to `tmp_path` — they never touch the
+- [x] Tests monkeypatch `BOARD_PATH`/`TASKS_DIR` to `tmp_path` — they never touch the
       real `.agent/` tree (critic: avoid TDD-vs-real-tree coupling).
-- [ ] `uv run pytest tests/unit/agent_tasks/ -q` green; `validate_all_tickets.py` green.
+- [x] `uv run pytest tests/unit/agent_tasks/ -q` green; `validate_all_tickets.py` green.
 
 ## Gherkin Scenarios
 
@@ -144,13 +144,37 @@ Feature: Ticket tooling survives an absent generated board
 Created by kaizen session-2026-06-18c (FC-1). Cold-critic (opencode) added the
 atomic-write TOCTOU mitigation and the tmp_path-isolation requirement.
 
+### 2026-06-18 23:30
+
+Implemented (developer-skill wave). Extracted `board_io.py` (atomic `write_board`
++ `ensure_board`); wired `render_board`/`add_to_board`/`update_board`. Added
+seeded absent-board tests. `pytest tests/unit/agent_tasks/` green (24 passed).
+
 ## Files Touched
 
-Pending.
+- `scripts/agent_tasks/board_io.py` (NEW) — shared `render_board_text`, atomic
+  `write_board` (temp + `os.replace`), and `ensure_board` (regenerate-when-absent).
+- `scripts/agent_tasks/render_board.py` — thin CLI wrapper over `board_io`.
+- `scripts/agent_tasks/create_ticket.py` — `add_to_board` calls `ensure_board` then
+  writes atomically.
+- `scripts/agent_tasks/move_ticket.py` — `update_board` calls `ensure_board` then
+  writes atomically.
+- `backend/tests/unit/agent_tasks/test_create_ticket.py` (NEW) — `next_ticket_id`
+  + `add_to_board` present/absent + atomic (no temp left).
+- `backend/tests/unit/agent_tasks/test_move_ticket.py` — `update_board` present/absent.
 
 ## Test Evidence
 
-Pending.
+```
+$ uv run pytest tests/unit/agent_tasks/ -q
+24 passed, 1 skipped in 0.20s
+```
+
+Seeded-regression proof: `test_add_to_board_regenerates_when_board_absent` and
+`test_update_board_regenerates_when_board_absent` exercise the absent-board path
+that raised `FileNotFoundError` on the pre-fix `read_text()`-first code; they pass
+post-fix. Tests monkeypatch `TASKS_DIR`/board path to `tmp_path` — the real
+`.agent/` tree is never touched.
 
 ## QA Report
 

@@ -11,6 +11,7 @@ from pathlib import Path
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
+from scripts.agent_tasks.board_io import ensure_board, write_board
 from scripts.agent_tasks.constants import (
     ALL_STATUSES,
     BOARD_COLUMNS,
@@ -80,6 +81,9 @@ def scaffold_dev_summary(ticket: Ticket) -> Path | None:
 
 
 def update_board(board_path: Path, ticket_id: str, new_status: str) -> None:
+    # AE-0237: regenerate the gitignored board from the ticket files when absent
+    # so moving a ticket never crashes on a fresh clone / CI / post-merge tree.
+    ensure_board(board_path, TASKS_DIR)
     content = board_path.read_text(encoding="utf-8")
     line = f"- {ticket_id}"
     content = re.sub(rf"^- {re.escape(ticket_id)}\s*$", "", content, flags=re.MULTILINE)
@@ -102,7 +106,7 @@ def update_board(board_path: Path, ticket_id: str, new_status: str) -> None:
                 body = rest[:next_idx] if next_idx != -1 else rest
                 if body.strip() == "":
                     content = content.replace(section, f"{section}- None\n", 1)
-    board_path.write_text(content, encoding="utf-8")
+    write_board(board_path, content)
 
 
 def main() -> int:
