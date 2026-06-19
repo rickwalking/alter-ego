@@ -9,10 +9,12 @@ Covers tests/features/agent_harness.feature:
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from pathlib import Path
 from typing import cast
 
 import pytest
+from langchain.agents.middleware.types import AgentMiddleware
 from langchain_core.language_models.chat_models import BaseChatModel
 from langgraph.checkpoint.base import BaseCheckpointSaver
 
@@ -66,22 +68,27 @@ def recording_create(monkeypatch: pytest.MonkeyPatch) -> _RecordingCreate:
     return recorder
 
 
-def _chat_config(**overrides: object) -> DeepAgentConfig:
-    base: dict[str, object] = {
-        "model": _stub_model(),
-        "name": "test-chat",
-        "system_prompt": "sys",
-        "agent_kind": AGENT_KIND_CHAT,
-    }
-    base.update(overrides)
-    return DeepAgentConfig(**base)  # type: ignore[arg-type]
+def _chat_config(
+    *,
+    agent_kind: str = AGENT_KIND_CHAT,
+    checkpointer: BaseCheckpointSaver[str] | None = None,
+    middleware: Sequence[AgentMiddleware] = (),
+) -> DeepAgentConfig:
+    return DeepAgentConfig(
+        model=_stub_model(),
+        name="test-chat",
+        system_prompt="sys",
+        agent_kind=agent_kind,
+        checkpointer=checkpointer,
+        middleware=middleware,
+    )
 
 
 # Scenario: A chat agent is built via the harness builder with summarization
 def test_chat_agent_built_via_builder_has_no_checkpointer(
     recording_create: _RecordingCreate,
 ) -> None:
-    middleware = object()
+    middleware = build_summarization_middleware(_stub_model())
     build_deep_agent(_chat_config(middleware=(middleware,)))
 
     assert recording_create.calls, "create_deep_agent was not invoked"
