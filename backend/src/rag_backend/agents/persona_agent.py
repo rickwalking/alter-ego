@@ -6,8 +6,16 @@ from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import BaseMessage, HumanMessage
 
 from rag_backend.agents.input_sanitizer import sanitize_llm_input
+from rag_backend.agents.prompts.registry import render_prompt
 from rag_backend.domain.models.persona import PersonaProfile
 from rag_backend.infrastructure.monitoring_langfuse import get_langfuse_runnable_config
+
+# 1-line fallback if the prompt registry is unavailable (AE-0243). The live
+# prompt is agents/prompts/persona/v1/enforce.yaml.
+_ENFORCE_PROMPT_FALLBACK = (
+    "Rewrite content to match this persona's voice. Prompt registry "
+    "unavailable — load agents/prompts/persona/v1/enforce.yaml"
+)
 
 
 class PersonaAgent:
@@ -72,7 +80,12 @@ class PersonaAgent:
             }
 
     def _build_style_guide(self) -> str:
-        """Build the style guide string from persona attributes."""
+        """Build the style guide via the prompt registry (AE-0243).
+
+        Output is byte-for-byte identical to the legacy inline f-string (proven
+        by the golden-parity test); only the template now lives in
+        agents/prompts/persona/v1/enforce.yaml.
+        """
         forbidden = "\n".join(
             f"- {phrase}" for phrase in self.persona.forbidden_phrases
         )
@@ -82,30 +95,25 @@ class PersonaAgent:
         samples = "\n".join(
             f"- {sample}" for sample in self.persona.writing_samples[:5]
         )
-        tone_formal = self.persona.tone_attributes.get("formal", 0.5)
-        tone_conv = self.persona.tone_attributes.get("conversational", 0.5)
-        tone_hum = self.persona.tone_attributes.get("humorous", 0.5)
-        return f"""You are writing as {self.persona.name}.
-
-TONE: formal={tone_formal}, conversational={tone_conv}, humorous={tone_hum}
-
-SENTENCE STRUCTURE: {self.persona.sentence_structure_preferences}
-
-PARAGRAPH STYLE: {self.persona.paragraph_style}
-
-OPINION EXPRESSION: {self.persona.opinion_expression}
-
-FORBIDDEN PHRASES: {forbidden if forbidden else "None"}
-
-PREFERRED PHRASES: {preferred if preferred else "None"}
-
-EXPERTISE AREAS: {", ".join(self.persona.expertise_areas)}
-
-WRITING SAMPLES: {samples if samples else "None"}
-
-INSTRUCTION: Rewrite content to match this voice. Sound authentically human,
-with strong opinions, personal anecdotes, zero generic AI-speak.
-"""
+        variables: dict[str, object] = {
+            "persona_name": self.persona.name,
+            "tone_formal": self.persona.tone_attributes.get("formal", 0.5),
+            "tone_conversational": self.persona.tone_attributes.get(
+                "conversational", 0.5
+            ),
+            "tone_humorous": self.persona.tone_attributes.get("humorous", 0.5),
+            "sentence_structure": self.persona.sentence_structure_preferences,
+            "paragraph_style": self.persona.paragraph_style,
+            "opinion_expression": self.persona.opinion_expression,
+            "forbidden_phrases": forbidden if forbidden else "None",
+            "preferred_phrases": preferred if preferred else "None",
+            "expertise_areas": ", ".join(self.persona.expertise_areas),
+            "writing_samples": samples if samples else "None",
+        }
+        try:
+            return render_prompt("persona", "enforce", variables)[0]
+        except Exception:
+            return _ENFORCE_PROMPT_FALLBACK
 
 
 __all__ = ["PersonaAgent"]

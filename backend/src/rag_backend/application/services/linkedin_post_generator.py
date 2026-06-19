@@ -16,6 +16,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from rag_backend.agents.prompts.registry import render_prompt
 from rag_backend.application.services.writing_style_profile import (
     WritingStyleProfile,
     format_samples_for_prompt,
@@ -31,6 +32,14 @@ _ERR_NO_BLOG_CONTENT = "project {} has no blog content for language {!r}"
 LINKEDIN_MAX_CHARS = 3000
 _LANG_EN = "en"
 _LANG_PT = "pt"
+
+# 1-line fallback if the prompt registry is unavailable (AE-0243). The live
+# prompt is agents/prompts/distribution/v1/linkedin_post.yaml.
+_LINKEDIN_PROMPT_FALLBACK = (
+    "Write a LinkedIn post from the blog content, matching the author's voice. "
+    "Prompt registry unavailable — load "
+    "agents/prompts/distribution/v1/linkedin_post.yaml"
+)
 
 
 @dataclass(frozen=True)
@@ -145,27 +154,14 @@ def _build_prompt(
         "No voice samples available — use a direct, technical, "
         "conversational tone without corporate fluff."
     )
-    return f"""You are writing a LinkedIn post in {lang_name} from the blog
-content below. Match the author's voice exactly.
-
-{voice_block}
-
-Hard rules:
-- Output the post body only. No labels, no markdown, no code fences.
-- Plain text only — LinkedIn does not render markdown. Line breaks are
-  fine. Bold and italics are not.
-- First two lines must hook the reader (LinkedIn previews ~200 chars).
-- {LINKEDIN_MAX_CHARS} character maximum including hashtags.
-- End with 3-5 relevant hashtags on a final line.
-- No em-dashes. Use commas or colons instead.
-- No generic LinkedIn clichés ("Excited to share", "I am thrilled").
-- Use short paragraphs (1-3 sentences).
-
-Post topic: {input_data.title}
-
-Source blog ({lang_name}):
-<<<
-{input_data.blog}
->>>
-
-Write the LinkedIn post now."""
+    variables: dict[str, object] = {
+        "lang_name": lang_name,
+        "voice_block": voice_block,
+        "linkedin_max_chars": LINKEDIN_MAX_CHARS,
+        "title": input_data.title,
+        "blog": input_data.blog,
+    }
+    try:
+        return render_prompt("distribution", "linkedin_post", variables)[0]
+    except Exception:
+        return _LINKEDIN_PROMPT_FALLBACK

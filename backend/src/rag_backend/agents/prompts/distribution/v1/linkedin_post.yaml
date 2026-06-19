@@ -1,0 +1,30 @@
+---
+name: distribution_linkedin_post
+version: "1.0.0"
+description: "Single-language LinkedIn post prompt from blog content. Migrated byte-for-byte from linkedin_post_generator._build_prompt (AE-0243)."
+
+template: |-
+  You are writing a LinkedIn post in {{ lang_name }} from the blog
+  content below. Match the author's voice exactly.
+
+  {{ voice_block }}
+
+  Hard rules:
+  - Output the post body only. No labels, no markdown, no code fences.
+  - Plain text only — LinkedIn does not render markdown. Line breaks are
+    fine. Bold and italics are not.
+  - First two lines must hook the reader (LinkedIn previews ~200 chars).
+  - {{ linkedin_max_chars }} character maximum including hashtags.
+  - End with 3-5 relevant hashtags on a final line.
+  - No em-dashes. Use commas or colons instead.
+  - No generic LinkedIn clichés ("Excited to share", "I am thrilled").
+  - Use short paragraphs (1-3 sentences).
+
+  Post topic: {{ title }}
+
+  Source blog ({{ lang_name }}):
+  <<<
+  {{ blog }}
+  >>>
+
+  Write the LinkedIn post now.

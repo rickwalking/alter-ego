@@ -65,19 +65,18 @@ Evidence: arch-plan §1.1 table rows #2–#5, §1.2 target file list. The DEAD
 
 ## Acceptance Criteria
 
-- [ ] The 4 call sites load their prompt via `agents.prompts.registry`
+- [x] The 4 call sites load their prompt via `agents.prompts.registry`
       (`render_prompt(...)`); no inline multi-line prompt string remains in those four
-      functions.
-- [ ] New registry files exist and render: `persona/v1/enforce.yaml` (Jinja2,
+      functions (1-line `*_FALLBACK` constants retained per the plan).
+- [x] New registry files exist and render: `persona/v1/enforce.yaml` (Jinja2,
       parameterized), `quality/v1/evaluate.yaml`, `quality/v1/improve_suggestions.yaml`,
       `distribution/v1/linkedin_post.yaml`, each with a domain README pointer.
-- [ ] **Golden-output parity:** a test renders each new registry prompt with the same
-      inputs the old f-string used and asserts the result **equals** the legacy
-      f-string output (whitespace/ordering identical) — proving behavior is preserved
-      (arch-plan §12 "Prompt extraction parity risk").
-- [ ] `quality_agent.py` has **zero** inline prompt strings afterward (it was 100%
-      off-registry; it is now 100% on-registry).
-- [ ] `uv run pytest` / `mypy` / `ruff` green.
+- [x] **Golden-output parity:** `test_prompt_registry_parity.py` renders each new prompt
+      with the legacy inputs and asserts byte-for-byte equality to the legacy f-string
+      (trailing-newline included). 4/4 parity tests green.
+- [x] `quality_agent.py` has **zero** inline prompt strings afterward (only docstrings
+      remain; both quality prompts on-registry).
+- [x] pytest (127 agent/linkedin tests + parity/fallback) / mypy / ruff green.
 
 ## Gherkin Scenarios
 
@@ -168,11 +167,32 @@ prompts only; the dead `TEMPLATE_ENFORCE` is handled by AE-0242.
 
 ## Files Touched
 
-Pending.
+### ADDED
+- `agents/prompts/persona/v1/enforce.yaml` + `persona/README.md`
+- `agents/prompts/quality/v1/evaluate.yaml`, `quality/v1/improve_suggestions.yaml` + `quality/README.md`
+- `agents/prompts/distribution/v1/linkedin_post.yaml` + `distribution/README.md`
+- `backend/tests/unit/agents/test_prompt_registry_parity.py` (4 golden-parity + 1 fallback)
+
+### MODIFIED
+- `agents/persona_agent.py` (`_build_style_guide` → `render_prompt`)
+- `agents/quality_agent.py` (`_build_evaluation_prompt`, `generate_improvement_suggestions` → `render_prompt`)
+- `application/services/linkedin_post_generator.py` (`_build_prompt` → `render_prompt`)
+
+Each call site keeps a 1-line `*_FALLBACK` constant (registry-unavailable path),
+matching the `rag_agent` `_FALLBACK_SYSTEM_PROMPT` convention. Trailing-newline
+parity handled via YAML `|+`/`|-` chomping (Jinja2 strips one trailing newline).
 
 ## Test Evidence
 
-Pending.
+```
+$ uv run pytest tests/unit/agents/test_prompt_registry_parity.py -q   # 5 passed
+$ uv run pytest tests/unit/agents/test_quality_agent.py \
+    tests/unit/agents/test_persona_agent.py \
+    tests/unit/application/test_linkedin_post_generator.py -q          # 122 passed
+$ uv run ruff check <changed>                                          # All checks passed!
+$ cd src && uv run mypy <changed> --explicit-package-bases            # Success: no issues
+```
+Full backend gate (Postgres) reproduced at the end of the prompt phase (0242–0244).
 
 ## QA Report
 

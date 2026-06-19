@@ -6,12 +6,24 @@ from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import BaseMessage, HumanMessage
 
 from rag_backend.agents.input_sanitizer import sanitize_llm_input
+from rag_backend.agents.prompts.registry import render_prompt
 from rag_backend.domain.models.rubric import (
     EvaluationMethod,
     QualityRubric,
     RubricCriterion,
 )
 from rag_backend.infrastructure.monitoring_langfuse import get_langfuse_runnable_config
+
+# 1-line fallbacks if the prompt registry is unavailable (AE-0243). Live prompts:
+# agents/prompts/quality/v1/{evaluate,improve_suggestions}.yaml.
+_EVALUATE_PROMPT_FALLBACK = (
+    "Evaluate this content against the rubric and return JSON. Prompt registry "
+    "unavailable — load agents/prompts/quality/v1/evaluate.yaml"
+)
+_IMPROVE_PROMPT_FALLBACK = (
+    "Suggest 3-5 improvements for this criterion. Prompt registry unavailable "
+    "— load agents/prompts/quality/v1/improve_suggestions.yaml"
+)
 
 
 class EmbeddingServiceProtocol(Protocol):
@@ -46,27 +58,24 @@ class QualityAgent:
         return self._parse_evaluation_response(cast(str, response.content))
 
     def _build_evaluation_prompt(self, content: str, sources_str: str) -> str:
-        """Build the evaluation prompt."""
+        """Build the evaluation prompt via the registry (AE-0243, byte-parity)."""
         criteria_str = "\n".join(
             f"{c['name']}: {c['description']}" for c in self.rubric.criteria
         )
-        return f"""Evaluate this content against the following quality rubric.
-
-RUBRIC NAME: {self.rubric.name}
-DESCRIPTION: {self.rubric.description}
-APPLICABLE TO: {", ".join(self.rubric.applicable_content_types)}
-
-CRITERIA:
-{criteria_str}
-
-CONTENT TO EVALUATE:
-{content}
-
-SOURCES USED:
-{sources_str}
-
-Format your response as JSON with criterion_scores, overall_score, passed, feedback.
-"""
+        variables: dict[str, object] = {
+            "rubric_name": self.rubric.name,
+            "rubric_description": self.rubric.description,
+            "applicable_content_types": ", ".join(
+                self.rubric.applicable_content_types
+            ),
+            "criteria_str": criteria_str,
+            "content": content,
+            "sources_str": sources_str,
+        }
+        try:
+            return render_prompt("quality", "evaluate", variables)[0]
+        except Exception:
+            return _EVALUATE_PROMPT_FALLBACK
 
     def _parse_evaluation_response(self, response: str) -> dict[str, object]:
         """Parse the evaluation response into a structured dictionary."""
@@ -138,15 +147,17 @@ Format your response as JSON with criterion_scores, overall_score, passed, feedb
         if score >= criterion["min_threshold"]:
             return []
 
-        prompt = f"""Generate 3-5 specific, actionable suggestions to improve this criterion.
-
-CRITERION: {criterion["name"]}
-DESCRIPTION: {criterion["description"]}
-CURRENT SCORE: {score}/100
-THRESHOLD: {criterion["min_threshold"]}/100
-
-CONTENT: {content}
-"""
+        variables: dict[str, object] = {
+            "criterion_name": criterion["name"],
+            "criterion_description": criterion["description"],
+            "score": score,
+            "threshold": criterion["min_threshold"],
+            "content": content,
+        }
+        try:
+            prompt = render_prompt("quality", "improve_suggestions", variables)[0]
+        except Exception:
+            prompt = _IMPROVE_PROMPT_FALLBACK
 
         messages: list[BaseMessage] = [HumanMessage(content=prompt)]
         response = await self.llm.ainvoke(messages, get_langfuse_runnable_config())
