@@ -121,6 +121,9 @@ gate_backend_imports()     { cd "$REPO_ROOT/backend" && uv run lint-imports; }
 gate_backend_arch_ratchet() { cd "$REPO_ROOT" && python3 scripts/metrics/import_baseline.py --check; }
 gate_backend_docstrings()  { cd "$REPO_ROOT/backend" && uv run interrogate src/ --verbose; }
 gate_backend_dead_code()   { cd "$REPO_ROOT/backend" && uv run vulture src/ vulture_whitelist.py --min-confidence 80; }
+# Anti-hardcoded-prompt checker (AE-0244): prompts must live in the registry
+# (.md/.yaml), not inline in agents/ or application/services/. stdlib-only AST scan.
+gate_backend_inline_prompts() { cd "$REPO_ROOT" && python3 scripts/check_inline_prompts.py; }
 # Bandit is ADVISORY in CI (report artifact, `|| true`). Mirror that here so the
 # QA verdict matches CI — the security subagent does the deep analysis.
 gate_backend_bandit()      { cd "$REPO_ROOT/backend" && { uv run bandit -r src/ || echo "ADVISORY: bandit findings above (non-blocking, mirrors CI)."; }; }
@@ -248,6 +251,7 @@ BACKEND_GATES=(
   arch-ratchet:gate_backend_arch_ratchet
   docstrings:gate_backend_docstrings
   dead-code:gate_backend_dead_code
+  inline-prompts:gate_backend_inline_prompts
   bandit:gate_backend_bandit
   pip-audit:gate_backend_pip_audit
   integrity:gate_backend_integrity

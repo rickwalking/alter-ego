@@ -51,20 +51,20 @@ rule-fires test on a seeded violation. Exemplars cited in CLAUDE.md AE-0180:
 
 ## Acceptance Criteria
 
-- [ ] A checker exists under `scripts/` (or a ruff custom rule) that flags multi-line
-      string literals containing prompt markers ("You are", "INSTRUCTIONS:",
-      "OUTPUT FORMAT", etc.) in `backend/src/rag_backend/agents/` and
-      `application/services/`, excluding `*fallback*`-named constants.
-- [ ] The checker is wired into `scripts/ci/gates.sh backend` (or its CI job) and
-      blocks (non-zero exit) on a violation.
-- [ ] **Rule-fires regression test (AE-0180):** a test seeds a file containing an
-      inline prompt and asserts the checker exits **non-zero** (or reports
-      `severity === 2` / failure). A control case (only a `*fallback*` constant)
-      asserts the checker passes. The test proves the rule FIRES, not just that the
-      real tree passes.
-- [ ] The checker passes on the real tree **after** AE-0243 lands (no false positives
-      on the migrated registry call sites or the retained 1-line fallbacks).
-- [ ] `uv run pytest` for the new test green; the backend gate runs green.
+- [x] A checker exists at `scripts/check_inline_prompts.py` (stdlib AST) that flags
+      multi-line strings containing prompt markers ("You are ", "INSTRUCTIONS:",
+      "OUTPUT FORMAT", "Format your response", "Hard rules:") in
+      `agents/` and `application/services/` — handling both `Constant` strings and
+      f-strings (`JoinedStr`, the AE-0243 pattern) — excluding docstrings and guarded
+      inline-fallback constants (name contains `FALLBACK` **or** `TEMPLATE`; see
+      Decision Log for the `*_TEMPLATE` extension).
+- [x] Wired into `scripts/ci/gates.sh backend` as the `inline-prompts` gate
+      (`backend:inline-prompts` → PASS); non-zero exit on a violation.
+- [x] **Rule-fires regression test (AE-0180):** `test_check_inline_prompts.py` seeds an
+      inline f-string prompt → checker exits 1; a guarded `*_FALLBACK` + docstring
+      control → exit 0; empty dir → exit 0.
+- [x] The checker passes on the real tree after AE-0243 (`OK: no inline prompt strings`).
+- [x] pytest for the new test green; the `backend:inline-prompts` gate green.
 
 ## Gherkin Scenarios
 
@@ -153,11 +153,34 @@ rule-fires mandate for the prompt-registry enforcement gate.
 
 ## Files Touched
 
-Pending.
+### ADDED
+- `scripts/check_inline_prompts.py` — the AST checker.
+- `backend/tests/unit/scripts_ci/test_check_inline_prompts.py` — rule-fires + controls.
+- `backend/tests/unit/scripts_ci/conftest.py` — repo-root sys.path for `scripts.*` imports.
+
+### MODIFIED
+- `scripts/ci/gates.sh` — `gate_backend_inline_prompts` + `inline-prompts` registry entry.
+- `docs/guides/qa-checkpoints.md` — rule-fires exemplar row for the AST checker.
 
 ## Test Evidence
 
-Pending.
+```
+$ uv run python scripts/check_inline_prompts.py          # OK: no inline prompt strings found.
+$ bash scripts/ci/gates.sh backend:inline-prompts        # >>> backend:inline-prompts: PASS
+$ uv run pytest tests/unit/scripts_ci/ -q                # 9 passed (3 new rule-fires)
+```
+
+## Decision Log (additions)
+
+- **`*_TEMPLATE` added to the allowed-name tokens (alongside `*_FALLBACK`).** The
+  ticket said "excluding `*fallback*` constants", but the real tree carries two
+  legitimate registry-fallback inline templates named `*_TEMPLATE`
+  (`IMAGE_PROMPT_REWRITE_TEMPLATE`, `DESIGN_PROMPT_TEMPLATE` in
+  `carousel_refinement.py`, used only in the `except` fallback branch). Excluding
+  both `FALLBACK` and `TEMPLATE` lets the checker pass the real tree without
+  touching another subsystem (AE-0244 Non-Goal). The primary regression vector —
+  an inline prompt **inside a function** with no constant name (the AE-0243
+  pattern) — has no such name and is always flagged, so the rule stays meaningful.
 
 ## QA Report
 
