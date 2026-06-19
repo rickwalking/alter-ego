@@ -37,10 +37,11 @@ _LANG_PT = "pt"
 # `render_prompt` would create a forbidden `application -> agents` import edge
 # (enforced by the import-linter contract + the down-only arch-ratchet, which must
 # not be gamed). It therefore stays a guarded `_TEMPLATE` constant — the same
-# sanctioned pattern used by `carousel_refinement.{IMAGE_PROMPT_REWRITE,DESIGN_PROMPT}_TEMPLATE`
-# (the `*_TEMPLATE` name is the AE-0244 checker's allowed escape). The persona and
+# sanctioned pattern as `carousel_refinement`'s `*_TEMPLATE` fallbacks (the
+# `*_TEMPLATE` name is the AE-0244 checker's allowed escape). The persona and
 # quality prompts (both in the `agents` layer) ARE registry-migrated by AE-0243.
-_LINKEDIN_PROMPT_TEMPLATE = """You are writing a LinkedIn post in {lang_name} from the blog
+_LINKEDIN_PROMPT_TEMPLATE = (
+    """You are writing a LinkedIn post in {lang_name} from the blog
 content below. Match the author's voice exactly.
 
 {voice_block}
@@ -64,6 +65,7 @@ Source blog ({lang_name}):
 >>>
 
 Write the LinkedIn post now."""
+)
 
 
 @dataclass(frozen=True)
