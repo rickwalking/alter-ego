@@ -16,7 +16,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from rag_backend.agents.prompts.registry import render_prompt
 from rag_backend.application.services.writing_style_profile import (
     WritingStyleProfile,
     format_samples_for_prompt,
@@ -33,13 +32,38 @@ LINKEDIN_MAX_CHARS = 3000
 _LANG_EN = "en"
 _LANG_PT = "pt"
 
-# 1-line fallback if the prompt registry is unavailable (AE-0243). The live
-# prompt is agents/prompts/distribution/v1/linkedin_post.yaml.
-_LINKEDIN_PROMPT_FALLBACK = (
-    "Write a LinkedIn post from the blog content, matching the author's voice. "
-    "Prompt registry unavailable — load "
-    "agents/prompts/distribution/v1/linkedin_post.yaml"
-)
+# Guarded inline prompt template (AE-0243/AE-0244). This file lives in the
+# `application` layer; the prompt registry lives under `agents`, so wiring it via
+# `render_prompt` would create a forbidden `application -> agents` import edge
+# (enforced by the import-linter contract + the down-only arch-ratchet, which must
+# not be gamed). It therefore stays a guarded `_TEMPLATE` constant — the same
+# sanctioned pattern used by `carousel_refinement.{IMAGE_PROMPT_REWRITE,DESIGN_PROMPT}_TEMPLATE`
+# (the `*_TEMPLATE` name is the AE-0244 checker's allowed escape). The persona and
+# quality prompts (both in the `agents` layer) ARE registry-migrated by AE-0243.
+_LINKEDIN_PROMPT_TEMPLATE = """You are writing a LinkedIn post in {lang_name} from the blog
+content below. Match the author's voice exactly.
+
+{voice_block}
+
+Hard rules:
+- Output the post body only. No labels, no markdown, no code fences.
+- Plain text only — LinkedIn does not render markdown. Line breaks are
+  fine. Bold and italics are not.
+- First two lines must hook the reader (LinkedIn previews ~200 chars).
+- {linkedin_max_chars} character maximum including hashtags.
+- End with 3-5 relevant hashtags on a final line.
+- No em-dashes. Use commas or colons instead.
+- No generic LinkedIn clichés ("Excited to share", "I am thrilled").
+- Use short paragraphs (1-3 sentences).
+
+Post topic: {title}
+
+Source blog ({lang_name}):
+<<<
+{blog}
+>>>
+
+Write the LinkedIn post now."""
 
 
 @dataclass(frozen=True)
@@ -154,14 +178,10 @@ def _build_prompt(
         "No voice samples available — use a direct, technical, "
         "conversational tone without corporate fluff."
     )
-    variables: dict[str, object] = {
-        "lang_name": lang_name,
-        "voice_block": voice_block,
-        "linkedin_max_chars": LINKEDIN_MAX_CHARS,
-        "title": input_data.title,
-        "blog": input_data.blog,
-    }
-    try:
-        return render_prompt("distribution", "linkedin_post", variables)[0]
-    except Exception:
-        return _LINKEDIN_PROMPT_FALLBACK
+    return _LINKEDIN_PROMPT_TEMPLATE.format(
+        lang_name=lang_name,
+        voice_block=voice_block,
+        linkedin_max_chars=LINKEDIN_MAX_CHARS,
+        title=input_data.title,
+        blog=input_data.blog,
+    )

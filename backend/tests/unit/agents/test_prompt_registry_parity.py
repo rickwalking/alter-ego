@@ -8,13 +8,17 @@ ordering, and trailing-newline included). See AE-0243 arch-plan §12.
 
 from __future__ import annotations
 
+from unittest.mock import AsyncMock
+
 import pytest
 
+from rag_backend.agents import persona_agent
+from rag_backend.agents.persona_agent import PersonaAgent
 from rag_backend.agents.prompts.registry import PromptNotFoundError, render_prompt
-from rag_backend.application.services import linkedin_post_generator
+from rag_backend.domain.models.persona import PersonaProfile
 
 
-def test_linkedin_prompt_falls_back_when_registry_unavailable(
+def test_persona_enforce_falls_back_when_registry_unavailable(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     # Registry-unavailable path (AE-0243): the call site degrades to the 1-line
@@ -22,13 +26,20 @@ def test_linkedin_prompt_falls_back_when_registry_unavailable(
     def _raise(*_a: object, **_k: object) -> tuple[str, dict[str, object]]:
         raise PromptNotFoundError("simulated missing prompt")
 
-    monkeypatch.setattr(linkedin_post_generator, "render_prompt", _raise)
-    result = linkedin_post_generator._build_prompt(
-        linkedin_post_generator._PromptInput(
-            blog="b", language="en", title="t", voice_examples="v"
-        )
+    monkeypatch.setattr(persona_agent, "render_prompt", _raise)
+    agent = PersonaAgent(
+        persona=PersonaProfile(
+            name="Test Voice",
+            description="Test persona",
+            tone_attributes={"formal": 0.3},
+            forbidden_phrases=[],
+            preferred_phrases=[],
+            writing_samples=[],
+            expertise_areas=[],
+        ),
+        llm=AsyncMock(),
     )
-    assert result == linkedin_post_generator._LINKEDIN_PROMPT_FALLBACK
+    assert agent._build_style_guide() == persona_agent._ENFORCE_PROMPT_FALLBACK
 
 
 def test_persona_enforce_parity() -> None:
@@ -161,48 +172,44 @@ CONTENT: {content}
     assert rendered == legacy
 
 
-def test_distribution_linkedin_post_parity() -> None:
-    lang_name = "English"
-    voice_block = "Sample voice line."
-    linkedin_max_chars = 3000
-    title = "My Topic"
-    blog = "Blog body here."
+def test_linkedin_template_format_parity() -> None:
+    # LinkedIn's prompt stays an inline guarded `_TEMPLATE` constant (it lives in
+    # the `application` layer; see linkedin_post_generator for the DDD rationale).
+    # This asserts the `.format()` template still produces the legacy output.
+    from rag_backend.application.services import linkedin_post_generator as lpg
 
-    legacy = f"""You are writing a LinkedIn post in {lang_name} from the blog
+    result = lpg._build_prompt(
+        lpg._PromptInput(
+            blog="Blog body here.",
+            language="en",
+            title="My Topic",
+            voice_examples="Sample voice line.",
+        )
+    )
+
+    legacy = f"""You are writing a LinkedIn post in English from the blog
 content below. Match the author's voice exactly.
 
-{voice_block}
+Sample voice line.
 
 Hard rules:
 - Output the post body only. No labels, no markdown, no code fences.
 - Plain text only — LinkedIn does not render markdown. Line breaks are
   fine. Bold and italics are not.
 - First two lines must hook the reader (LinkedIn previews ~200 chars).
-- {linkedin_max_chars} character maximum including hashtags.
+- {lpg.LINKEDIN_MAX_CHARS} character maximum including hashtags.
 - End with 3-5 relevant hashtags on a final line.
 - No em-dashes. Use commas or colons instead.
 - No generic LinkedIn clichés ("Excited to share", "I am thrilled").
 - Use short paragraphs (1-3 sentences).
 
-Post topic: {title}
+Post topic: My Topic
 
-Source blog ({lang_name}):
+Source blog (English):
 <<<
-{blog}
+Blog body here.
 >>>
 
 Write the LinkedIn post now."""
 
-    rendered, _ = render_prompt(
-        "distribution",
-        "linkedin_post",
-        {
-            "lang_name": lang_name,
-            "voice_block": voice_block,
-            "linkedin_max_chars": linkedin_max_chars,
-            "title": title,
-            "blog": blog,
-        },
-    )
-
-    assert rendered == legacy
+    assert result == legacy

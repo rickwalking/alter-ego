@@ -65,9 +65,7 @@ class QualityAgent:
         variables: dict[str, object] = {
             "rubric_name": self.rubric.name,
             "rubric_description": self.rubric.description,
-            "applicable_content_types": ", ".join(
-                self.rubric.applicable_content_types
-            ),
+            "applicable_content_types": ", ".join(self.rubric.applicable_content_types),
             "criteria_str": criteria_str,
             "content": content,
             "sources_str": sources_str,

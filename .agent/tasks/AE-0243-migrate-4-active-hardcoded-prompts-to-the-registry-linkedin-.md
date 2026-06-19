@@ -65,12 +65,18 @@ Evidence: arch-plan §1.1 table rows #2–#5, §1.2 target file list. The DEAD
 
 ## Acceptance Criteria
 
-- [x] The 4 call sites load their prompt via `agents.prompts.registry`
-      (`render_prompt(...)`); no inline multi-line prompt string remains in those four
-      functions (1-line `*_FALLBACK` constants retained per the plan).
+- [x] **3 of 4** call sites (persona + quality×2, all in the `agents` layer) load via
+      `render_prompt(...)` with 1-line `*_FALLBACK` constants. **LinkedIn is the
+      documented exception** (see Decision Log): `linkedin_post_generator` is in the
+      `application` layer, so `render_prompt` would add a forbidden
+      `application -> agents` import edge (import-linter contract + down-only
+      arch-ratchet — must not be gamed). Its prompt is now a **guarded
+      `_LINKEDIN_PROMPT_TEMPLATE` inline constant** (the sanctioned `carousel_refinement`
+      `*_TEMPLATE` pattern), so AE-0244 still passes and no inline prompt is exposed.
 - [x] New registry files exist and render: `persona/v1/enforce.yaml` (Jinja2,
       parameterized), `quality/v1/evaluate.yaml`, `quality/v1/improve_suggestions.yaml`,
-      `distribution/v1/linkedin_post.yaml`, each with a domain README pointer.
+      each with a domain README pointer. (`distribution/v1/linkedin_post.yaml` was NOT
+      kept — it would be an orphan since linkedin cannot cross the layer; see Decision Log.)
 - [x] **Golden-output parity:** `test_prompt_registry_parity.py` renders each new prompt
       with the legacy inputs and asserts byte-for-byte equality to the legacy f-string
       (trailing-newline included). 4/4 parity tests green.
@@ -170,17 +176,19 @@ prompts only; the dead `TEMPLATE_ENFORCE` is handled by AE-0242.
 ### ADDED
 - `agents/prompts/persona/v1/enforce.yaml` + `persona/README.md`
 - `agents/prompts/quality/v1/evaluate.yaml`, `quality/v1/improve_suggestions.yaml` + `quality/README.md`
-- `agents/prompts/distribution/v1/linkedin_post.yaml` + `distribution/README.md`
-- `backend/tests/unit/agents/test_prompt_registry_parity.py` (4 golden-parity + 1 fallback)
+- `backend/tests/unit/agents/test_prompt_registry_parity.py` (3 registry golden-parity +
+  1 linkedin `.format()` parity + 1 persona fallback)
 
 ### MODIFIED
-- `agents/persona_agent.py` (`_build_style_guide` → `render_prompt`)
-- `agents/quality_agent.py` (`_build_evaluation_prompt`, `generate_improvement_suggestions` → `render_prompt`)
-- `application/services/linkedin_post_generator.py` (`_build_prompt` → `render_prompt`)
+- `agents/persona_agent.py` (`_build_style_guide` → `render_prompt`, `_ENFORCE_PROMPT_FALLBACK`)
+- `agents/quality_agent.py` (both prompts → `render_prompt`, `*_FALLBACK` constants)
+- `application/services/linkedin_post_generator.py` (`_build_prompt` → guarded
+  `_LINKEDIN_PROMPT_TEMPLATE.format(...)` — inline, no layer cross; see Decision Log)
 
-Each call site keeps a 1-line `*_FALLBACK` constant (registry-unavailable path),
-matching the `rag_agent` `_FALLBACK_SYSTEM_PROMPT` convention. Trailing-newline
-parity handled via YAML `|+`/`|-` chomping (Jinja2 strips one trailing newline).
+The 3 agents-layer call sites keep a 1-line `*_FALLBACK` constant (registry-unavailable
+path), matching the `rag_agent` `_FALLBACK_SYSTEM_PROMPT` convention; registry trailing-
+newline parity via YAML `|+` chomping (Jinja2 strips one trailing newline). LinkedIn uses
+the guarded `_TEMPLATE` constant pattern (no registry, no `application -> agents` edge).
 
 ## Test Evidence
 
@@ -208,6 +216,18 @@ Pending.
   from the dead `TEMPLATE_ENFORCE` (deleted in AE-0242).
 - **Sequenced before the DeepSeek pilot** so the quality phase is on-registry before a
   cheap model is wired to it.
+- **LinkedIn prompt NOT registry-migrated (DDD-boundary finding, AE-0243).**
+  `linkedin_post_generator` lives in the `application` layer; `agents.prompts.registry`
+  is in the `agents` layer. Wiring `render_prompt` creates an `application -> agents`
+  edge that BREAKS the import-linter contract ("Application must not depend on agents —
+  grandfathered baseline only") and raises the down-only arch-ratchet (22→23) and the
+  integrity DDD-import scan. Bumping that baseline would be gaming a down-only ratchet,
+  which is prohibited. Resolution: linkedin keeps a **guarded inline `_LINKEDIN_PROMPT_TEMPLATE`
+  constant** (same pattern as `carousel_refinement.{IMAGE_PROMPT_REWRITE,DESIGN_PROMPT}_TEMPLATE`,
+  which are themselves grandfathered lazy-import fallbacks). Full registry migration for
+  `application`-layer prompts is a **follow-up architect decision** (relocate the prompt
+  registry out of `agents`, or formally grandfather the edge with sign-off). QA (quality
+  guardian) to confirm this no-game deviation is acceptable.
 
 ## Test Classification (CLAUDE.md AE-0153 / AE-0180)
 
