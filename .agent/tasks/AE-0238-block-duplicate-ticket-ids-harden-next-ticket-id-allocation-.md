@@ -1,6 +1,6 @@
 # AE-0238 — Block duplicate ticket IDs + harden next_ticket_id allocation across git refs
 
-Status: Dev Complete
+Status: Review
 Tier: T2
 Priority: High
 Type: Quality
@@ -133,11 +133,11 @@ Feature: Duplicate ticket IDs fail the gate
 
 ## QA Checklist
 
-- [ ] Security reviewed
-- [ ] Code quality reviewed
-- [ ] Acceptance criteria validated
-- [ ] Edge cases tested (dup with/without other errors; git unavailable)
-- [ ] Orphan/unfinished code checked
+- [x] Security reviewed
+- [x] Code quality reviewed
+- [x] Acceptance criteria validated
+- [x] Edge cases tested (dup with/without other errors; git unavailable)
+- [x] Orphan/unfinished code checked
 
 ## Progress Log
 
@@ -187,7 +187,10 @@ asserts no other errors), pinning the pure 0→1 flip.
 
 ## QA Report
 
-Pending.
+External wave QA (wave-kaizen-1): **PASS** over 2 rounds (round 1 WARN with one
+minor finding F-1, resolved; confirmation round PASS, 0 findings). See
+`.agent/reports/AE-0238.qa.md` → `.agent/reports/wave-kaizen-1.qa.md`.
+
 
 ## Decision Log
 

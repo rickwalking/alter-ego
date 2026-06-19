@@ -1,6 +1,6 @@
 # AE-0241 — Decide and document barrel-import policy (knip entry vs barrel imports)
 
-Status: Dev Complete
+Status: Review
 Tier: T1
 Priority: Low
 Type: Quality
@@ -118,11 +118,11 @@ Feature: Barrel policy is decided and enforced
 
 ## QA Checklist
 
-- [ ] Security reviewed
-- [ ] Code quality reviewed
-- [ ] Acceptance criteria validated
-- [ ] Edge cases tested
-- [ ] Orphan/unfinished code checked
+- [x] Security reviewed
+- [x] Code quality reviewed
+- [x] Acceptance criteria validated
+- [x] Edge cases tested
+- [x] Orphan/unfinished code checked
 
 ## Progress Log
 
@@ -154,7 +154,10 @@ barrels" + green frontend gates (wave-level).
 
 ## QA Report
 
-Pending.
+External wave QA (wave-kaizen-1): **PASS** over 2 rounds (round 1 WARN with one
+minor finding F-1, resolved; confirmation round PASS, 0 findings). See
+`.agent/reports/AE-0241.qa.md` → `.agent/reports/wave-kaizen-1.qa.md`.
+
 
 ## Decision Log
 

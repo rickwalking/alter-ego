@@ -1,6 +1,6 @@
 # AE-0239 — gates.sh preflight: distinguish missing tool from real violation (SKIP not FAIL)
 
-Status: Dev Complete
+Status: Review
 Tier: T1
 Priority: Medium
 Type: Quality
@@ -117,11 +117,11 @@ Feature: gates.sh tells "tool missing" apart from "real violation"
 
 ## QA Checklist
 
-- [ ] Security reviewed
-- [ ] Code quality reviewed
-- [ ] Acceptance criteria validated
-- [ ] Edge cases tested (tool present / absent; advisory vs blocking gate)
-- [ ] Orphan/unfinished code checked
+- [x] Security reviewed
+- [x] Code quality reviewed
+- [x] Acceptance criteria validated
+- [x] Edge cases tested (tool present / absent; advisory vs blocking gate)
+- [x] Orphan/unfinished code checked
 
 ## Progress Log
 
@@ -154,7 +154,10 @@ $ bash -n scripts/ci/gates.sh scripts/lib/require_tool.sh   # syntax OK
 
 ## QA Report
 
-Pending.
+External wave QA (wave-kaizen-1): **PASS** over 2 rounds (round 1 WARN with one
+minor finding F-1, resolved; confirmation round PASS, 0 findings). See
+`.agent/reports/AE-0239.qa.md` → `.agent/reports/wave-kaizen-1.qa.md`.
+
 
 ## Decision Log
 

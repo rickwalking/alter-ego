@@ -1,6 +1,6 @@
 # AE-0237 — Board-mutating ticket tooling: regenerate-or-noop when BOARD.md absent + unit tests
 
-Status: Dev Complete
+Status: Review
 Tier: T2
 Priority: High
 Type: Quality
@@ -131,11 +131,11 @@ Feature: Ticket tooling survives an absent generated board
 
 ## QA Checklist
 
-- [ ] Security reviewed
-- [ ] Code quality reviewed
-- [ ] Acceptance criteria validated
-- [ ] Edge cases tested (board present, absent, malformed)
-- [ ] Orphan/unfinished code checked
+- [x] Security reviewed
+- [x] Code quality reviewed
+- [x] Acceptance criteria validated
+- [x] Edge cases tested (board present, absent, malformed)
+- [x] Orphan/unfinished code checked
 
 ## Progress Log
 
@@ -178,7 +178,10 @@ post-fix. Tests monkeypatch `TASKS_DIR`/board path to `tmp_path` — the real
 
 ## QA Report
 
-Pending.
+External wave QA (wave-kaizen-1): **PASS** over 2 rounds (round 1 WARN with one
+minor finding F-1, resolved; confirmation round PASS, 0 findings). See
+`.agent/reports/AE-0237.qa.md` → `.agent/reports/wave-kaizen-1.qa.md`.
+
 
 ## Decision Log
 

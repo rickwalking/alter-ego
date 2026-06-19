@@ -1,6 +1,6 @@
 # AE-0240 — Delete verified-dead frontend files surfaced by knip
 
-Status: Dev Complete
+Status: Review
 Tier: T2
 Priority: Medium
 Type: Quality
@@ -123,11 +123,11 @@ Feature: Delete only provably-dead frontend files
 
 ## QA Checklist
 
-- [ ] Security reviewed
-- [ ] Code quality reviewed
-- [ ] Acceptance criteria validated
-- [ ] Edge cases tested (dynamic imports, file-route conventions)
-- [ ] Orphan/unfinished code checked
+- [x] Security reviewed
+- [x] Code quality reviewed
+- [x] Acceptance criteria validated
+- [x] Edge cases tested (dynamic imports, file-route conventions)
+- [x] Orphan/unfinished code checked
 
 ## Progress Log
 
@@ -178,7 +178,10 @@ AE-0239 scenario.)
 
 ## QA Report
 
-Pending.
+External wave QA (wave-kaizen-1): **PASS** over 2 rounds (round 1 WARN with one
+minor finding F-1, resolved; confirmation round PASS, 0 findings). See
+`.agent/reports/AE-0240.qa.md` → `.agent/reports/wave-kaizen-1.qa.md`.
+
 
 ## Decision Log
 
