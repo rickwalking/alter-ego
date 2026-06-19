@@ -1,6 +1,6 @@
 # AE-0244 — Anti-hardcoded-prompt checker plus rule-fires regression test
 
-Status: Dev Complete
+Status: Review
 Tier: T1
 Priority: Medium
 Type: Quality
@@ -138,11 +138,11 @@ Feature: Inline prompts are rejected by the gate
 
 ## QA Checklist
 
-- [ ] Security reviewed
-- [ ] Code quality reviewed
-- [ ] Acceptance criteria validated
-- [ ] Edge cases tested (seeded violation fires; fallback control passes; real tree green)
-- [ ] Orphan/unfinished code checked
+- [x] Security reviewed
+- [x] Code quality reviewed
+- [x] Acceptance criteria validated
+- [x] Edge cases tested (seeded violation fires; fallback control passes; real tree green)
+- [x] Orphan/unfinished code checked
 
 ## Progress Log
 
@@ -184,7 +184,10 @@ $ uv run pytest tests/unit/scripts_ci/ -q                # 9 passed (3 new rule-
 
 ## QA Report
 
-Pending.
+External wave QA (wave-agent-2a): **PASS** over 2 rounds (round 1 INCONCLUSIVE with
+3 minor findings — gate spine 14/14 PASS; minors fixed in `ab49fbe1`; confirmation
+round PASS, 0 findings). See `.agent/reports/AE-0244.qa.md` → `wave-agent-2a.qa.md`.
+
 
 ## Decision Log
 

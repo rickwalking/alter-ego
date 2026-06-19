@@ -1,6 +1,6 @@
 # AE-0243 — Migrate 4 active hardcoded prompts to the registry (linkedin/persona/quality)
 
-Status: Dev Complete
+Status: Review
 Tier: T2
 Priority: High
 Type: Refactor
@@ -160,11 +160,11 @@ Feature: Active prompts are loaded from the registry with output parity
 
 ## QA Checklist
 
-- [ ] Security reviewed
-- [ ] Code quality reviewed
-- [ ] Acceptance criteria validated
-- [ ] Edge cases tested (registry-unavailable fallback path)
-- [ ] Orphan/unfinished code checked
+- [x] Security reviewed
+- [x] Code quality reviewed
+- [x] Acceptance criteria validated
+- [x] Edge cases tested (registry-unavailable fallback path)
+- [x] Orphan/unfinished code checked
 
 ## Progress Log
 
@@ -206,7 +206,10 @@ Full backend gate (Postgres) reproduced at the end of the prompt phase (0242–0
 
 ## QA Report
 
-Pending.
+External wave QA (wave-agent-2a): **PASS** over 2 rounds (round 1 INCONCLUSIVE with
+3 minor findings — gate spine 14/14 PASS; minors fixed in `ab49fbe1`; confirmation
+round PASS, 0 findings). See `.agent/reports/AE-0243.qa.md` → `wave-agent-2a.qa.md`.
+
 
 ## Decision Log
 

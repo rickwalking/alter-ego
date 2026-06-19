@@ -1,6 +1,6 @@
 # AE-0245 — Precondition audit: skill-to-file dependency graph for runtime skills relocation
 
-Status: Dev Complete
+Status: Review
 Tier: T1
 Priority: High
 Type: Quality
@@ -153,11 +153,11 @@ Feature: Runtime-skill relocation is gated on a complete dependency map
 
 ## QA Checklist
 
-- [ ] Security reviewed
-- [ ] Code quality reviewed
-- [ ] Acceptance criteria validated (all six consumers enumerated)
-- [ ] Edge cases tested (every `_shared` cross-ref captured; symlink finding documented)
-- [ ] Orphan/unfinished code checked
+- [x] Security reviewed
+- [x] Code quality reviewed
+- [x] Acceptance criteria validated (all six consumers enumerated)
+- [x] Edge cases tested (every `_shared` cross-ref captured; symlink finding documented)
+- [x] Orphan/unfinished code checked
 
 ## Progress Log
 
@@ -186,7 +186,10 @@ $ grep -n 'skills/runtime' backend/Dockerfile     # COPY (85) + ENV (42)
 
 ## QA Report
 
-Pending.
+External wave QA (wave-agent-2a): **PASS** over 2 rounds (round 1 INCONCLUSIVE with
+3 minor findings — gate spine 14/14 PASS; minors fixed in `ab49fbe1`; confirmation
+round PASS, 0 findings). See `.agent/reports/AE-0245.qa.md` → `wave-agent-2a.qa.md`.
+
 
 ## Decision Log
 

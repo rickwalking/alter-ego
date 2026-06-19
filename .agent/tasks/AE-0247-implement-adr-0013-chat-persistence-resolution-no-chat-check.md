@@ -1,6 +1,6 @@
 # AE-0247 — Implement ADR-0013 chat-persistence resolution (no chat checkpointer; assert guard)
 
-Status: Dev Complete
+Status: Review
 Tier: T2
 Priority: High
 Type: Feature
@@ -138,11 +138,11 @@ Feature: Chat agents have a single canonical persistence path
 
 ## QA Checklist
 
-- [ ] Security reviewed
-- [ ] Code quality reviewed
-- [ ] Acceptance criteria validated
-- [ ] Edge cases tested (guard trips on seeded checkpointer; single-writer confirmed)
-- [ ] Orphan/unfinished code checked
+- [x] Security reviewed
+- [x] Code quality reviewed
+- [x] Acceptance criteria validated
+- [x] Edge cases tested (guard trips on seeded checkpointer; single-writer confirmed)
+- [x] Orphan/unfinished code checked
 
 ## Progress Log
 
@@ -178,7 +178,10 @@ same guard; for now the guard is invoked directly by both chat builders.
 
 ## QA Report
 
-Pending.
+External wave QA (wave-agent-2a): **PASS** over 2 rounds (round 1 INCONCLUSIVE with
+3 minor findings — gate spine 14/14 PASS; minors fixed in `ab49fbe1`; confirmation
+round PASS, 0 findings). See `.agent/reports/AE-0247.qa.md` → `wave-agent-2a.qa.md`.
+
 
 ## Decision Log
 

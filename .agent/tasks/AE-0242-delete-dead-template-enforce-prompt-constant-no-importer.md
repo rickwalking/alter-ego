@@ -1,6 +1,6 @@
 # AE-0242 — Delete dead TEMPLATE_ENFORCE prompt constant (no importer)
 
-Status: Dev Complete
+Status: Review
 Tier: T1
 Priority: Medium
 Type: Refactor
@@ -131,11 +131,11 @@ Feature: Dead persona-enforce prompt constant is gone
 
 ## QA Checklist
 
-- [ ] Security reviewed
-- [ ] Code quality reviewed
-- [ ] Acceptance criteria validated
-- [ ] Edge cases tested (grep-zero confirms full removal)
-- [ ] Orphan/unfinished code checked
+- [x] Security reviewed
+- [x] Code quality reviewed
+- [x] Acceptance criteria validated
+- [x] Edge cases tested (grep-zero confirms full removal)
+- [x] Orphan/unfinished code checked
 
 ## Progress Log
 
@@ -162,7 +162,10 @@ Full backend `pytest` reproduced at the end of the prompt phase (0242–0244).
 
 ## QA Report
 
-Pending.
+External wave QA (wave-agent-2a): **PASS** over 2 rounds (round 1 INCONCLUSIVE with
+3 minor findings — gate spine 14/14 PASS; minors fixed in `ab49fbe1`; confirmation
+round PASS, 0 findings). See `.agent/reports/AE-0242.qa.md` → `wave-agent-2a.qa.md`.
+
 
 ## Decision Log
 
