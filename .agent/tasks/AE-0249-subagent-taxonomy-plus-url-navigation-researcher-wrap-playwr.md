@@ -1,6 +1,6 @@
 # AE-0249 — Subagent taxonomy plus URL-navigation researcher (wrap PlaywrightResearchTool as a tool)
 
-Status: In Development
+Status: Dev Complete
 Tier: T2
 Priority: High
 Type: Feature
