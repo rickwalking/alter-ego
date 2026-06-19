@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed
+Accepted
 
 > **Gated on ADR-0013.** The chat-agent portion of this harness MUST NOT wire a
 > LangGraph checkpointer until ADR-0013 (chat-persistence source-of-truth) is

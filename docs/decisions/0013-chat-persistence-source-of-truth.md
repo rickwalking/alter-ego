@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed
+Accepted
 
 > **Blocker.** This ADR gates Phase 3 (the Deep Agents harness) of the
 > agent-architecture-restructure epic. The harness MUST NOT wire a LangGraph

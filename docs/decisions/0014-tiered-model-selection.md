@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed
+Accepted
 
 > Supersedes the "ADR-019" label used informally in the restructure epic
 > (`docs/plans/agent-architecture-restructure-epic.md` RES-2) and arch-plan §13 —
