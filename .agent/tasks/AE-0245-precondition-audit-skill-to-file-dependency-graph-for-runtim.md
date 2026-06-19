@@ -67,19 +67,19 @@ consumed by **any** prod path (expected: NO — prod resolves via
 
 ## Acceptance Criteria
 
-- [ ] A dependency-map deliverable exists listing, for each of the 5 phase skills and 6
-      `_shared` standards: its file path, every relative reference to/from it, and which
-      of the 6 consumers (above) resolves it.
-- [ ] The map enumerates the **exact** path constants in
-      `domain/constants/runtime_skills.py`, the Dockerfile copy line(s), and the CI
-      skill-path gate assertions that the relocation must update.
-- [ ] A documented finding states whether the repo-root symlinks are consumed by any
-      prod path (with the grep/code evidence), i.e. confirms they are prod-dead (or
-      flags any consumer found).
-- [ ] A documented finding records whether any human/slash-command entrypoint
-      references the runtime skills (the `/carousel-pipeline` open question), so AE-0246
-      can decide on a shim.
-- [ ] The map is explicitly referenced by AE-0246 as its precondition input.
+- [x] A dependency-map deliverable exists (`.agent/reports/AE-0245-runtime-skills-dependency-map.md`)
+      listing the runtime-skill tree (21 files), the phase↔`_shared` cross-references
+      (top uses `_shared/`, phases use `../_shared/`), and which of the 6 consumers
+      resolves each.
+- [x] The map enumerates the exact path constants in `domain/constants/runtime_skills.py`
+      (incl. `RUNTIME_PIPELINE_MARKER`), the Dockerfile copy line (85) + `ALTER_EGO_RUNTIME_SKILLS_ROOT`
+      env (42), and the `validate_skill_boundary.py` assertions to update.
+- [x] Finding: the three repo-root **runtime** symlinks are PROD-DEAD (grep shows no
+      code path uses bare `skills/<id>`; all resolve via `runtime_skills.py` /
+      `/app/skills/runtime`). The 7 delivery symlinks stay.
+- [x] Finding: no `/carousel-pipeline` slash-command consumes the runtime skills (they
+      are invoked programmatically); AE-0246 should re-grep `~/.claude` before deletion.
+- [x] The map's §6 is an explicit AE-0246 lockstep checklist; AE-0246 references it.
 
 ## Gherkin Scenarios
 
@@ -168,11 +168,21 @@ precondition that makes the RES-8 co-location safe against a prod FileNotFoundEr
 
 ## Files Touched
 
-Pending.
+### ADDED
+- `.agent/reports/AE-0245-runtime-skills-dependency-map.md` — the deliverable map
+  (tree, `_shared` cross-refs, 6 consumers, prod-dead symlink finding, slash-command
+  finding, the pre-existing `validate_skill_boundary` staleness, AE-0246 checklist).
 
 ## Test Evidence
 
-Pending.
+Audit/deliverable ticket — no production code changed, so no `.feature`/tests. The
+acceptance proof is the map's completeness, validated by review:
+```
+$ find skills/runtime -type f | wc -l            # 21 files
+$ rg -n 'skills/(carousel-pipeline|knowledge-base|carousel-refinement)' \
+       backend/src scripts | grep -v 'runtime/'  # (no matches) => symlinks prod-dead
+$ grep -n 'skills/runtime' backend/Dockerfile     # COPY (85) + ENV (42)
+```
 
 ## QA Report
 
