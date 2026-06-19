@@ -11,6 +11,7 @@ from rag_backend.agents.carousel_workflow_graph import (
     needs_gate_reopen,
 )
 from rag_backend.agents.carousel_workflow_nodes import _CONFIG_ARTIFACT_RUNNER
+from rag_backend.agents.harness.interrupts import iter_interrupt_values
 from rag_backend.application.services.carousel.workflow_state import (
     CarouselWorkflowState,
     get_initial_carousel_state,
@@ -58,27 +59,16 @@ class CarouselWorkflowEngine:
         return {"configurable": configurable}
 
     @staticmethod
-    def _iter_interrupt_values(snapshot: object) -> list[dict[str, object]]:
-        payloads: list[dict[str, object]] = []
-        for interrupt in getattr(snapshot, "interrupts", ()) or ():
-            value = getattr(interrupt, "value", None)
-            if isinstance(value, dict):
-                payloads.append(value)
-        for task in getattr(snapshot, "tasks", ()) or ():
-            for interrupt in getattr(task, "interrupts", ()) or ():
-                value = getattr(interrupt, "value", None)
-                if isinstance(value, dict):
-                    payloads.append(value)
-        return payloads
-
-    @classmethod
     def _merge_interrupt_review_payload(
-        cls,
         state: CarouselWorkflowState,
         snapshot: object,
     ) -> None:
-        """Expose gate review artifacts stored on pending interrupts."""
-        for payload in cls._iter_interrupt_values(snapshot):
+        """Expose gate review artifacts stored on pending interrupts.
+
+        Carousel-coupled (knows ``CarouselWorkflowState``), so it stays in the
+        engine; the generic snapshot scan is the harness ``iter_interrupt_values``.
+        """
+        for payload in iter_interrupt_values(snapshot):
             findings = payload.get("findings")
             if (
                 isinstance(findings, list)
