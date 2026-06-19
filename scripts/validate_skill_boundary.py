@@ -32,7 +32,6 @@ ARCHITECT_MODES = ("validate", "research", "skeptical", "bugfix")
 
 FRONTMATTER_PATTERN = re.compile(r"^---\n(.*?)\n---", re.DOTALL)
 NAME_PATTERN = re.compile(r"^name:\s*(\S+)", re.MULTILINE)
-DISABLE_PATTERN = re.compile(r"^disable-model-invocation:\s*true", re.MULTILINE)
 
 
 def _parse_frontmatter(skill_md: Path) -> str:
@@ -68,8 +67,13 @@ def _validate_delivery_skill_file(
         errors.append(f"Duplicate delivery skill name: {name}")
     seen_names.add(name)
 
-    if not DISABLE_PATTERN.search(frontmatter):
-        errors.append(f"Missing disable-model-invocation: true in {skill_md}")
+    # NOTE: delivery skills are intentionally model-invocable (Skill tool), so
+    # `disable-model-invocation: true` is NO LONGER required — it was removed from
+    # the delivery skills on purpose (commit 04a883b6) so the orchestrator can
+    # invoke developer-skill / qa-agent / etc. via the Skill tool. The boundary
+    # this validator still enforces is structural: name==folder, no duplicates,
+    # the required slash commands exist, runtime/delivery stay separate, and the
+    # Dockerfile copies only runtime skills.
 
 
 def _validate_delivery_skills(errors: list[str]) -> None:
