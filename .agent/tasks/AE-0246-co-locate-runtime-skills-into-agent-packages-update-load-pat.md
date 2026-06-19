@@ -1,6 +1,6 @@
 # AE-0246 — Co-locate runtime skills into agent packages; update load paths, Dockerfile and CI gate
 
-Status: Intake
+Status: Dev Complete
 Tier: T2
 Priority: High
 Type: Refactor
