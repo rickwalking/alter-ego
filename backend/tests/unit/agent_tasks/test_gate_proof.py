@@ -5,7 +5,8 @@ standard, each new check ships a test proving it FIRES on a seeded violation
 (rejects a no-block / fail>0 / no-mode report), not merely that the tree passes.
 """
 
-import subprocess
+import shutil
+import subprocess  # noqa: S404  # integrity-ok: AE-0258 — the gates.sh↔parser coupling test must run the real bash gate (mirrors test_diff_base.py)
 from pathlib import Path
 
 import pytest
@@ -14,6 +15,8 @@ from scripts.agent_tasks.gate_proof import evaluate_gate_proof, evaluate_qa_mode
 from scripts.agent_tasks.schema import can_transition, parse_ticket
 
 REPO_ROOT = Path(__file__).resolve().parents[4]
+# Absolute interpreter so the coupling test never relies on a partial path (S607).
+_BASH = shutil.which("bash") or "bash"
 
 # A genuine PASS GATES_JSON line (mirrors scripts/ci/gates.sh print_summary).
 _GATES_JSON_PASS = 'GATES_JSON: {"pass":7,"fail":0,"skip":0,"results":[]}'
@@ -136,8 +139,8 @@ def teardown_module(_module: object) -> None:
 # Runs an actual single fast gate and feeds its GATES_JSON line to the parser,
 # proving the validator stays coupled to the real script's output format.
 def test_real_gates_sh_line_parses(tmp_path: Path) -> None:
-    proc = subprocess.run(
-        ["bash", "scripts/ci/gates.sh", "backend:lint", "--changed-only"],
+    proc = subprocess.run(  # noqa: S603  # integrity-ok: AE-0258 — fixed bash path, fixed gate args, repo-controlled script
+        [_BASH, "scripts/ci/gates.sh", "backend:lint", "--changed-only"],
         cwd=REPO_ROOT,
         capture_output=True,
         text=True,

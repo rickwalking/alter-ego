@@ -17,7 +17,7 @@ the seeded violation is deterministic and needs no real toolchain.
 from __future__ import annotations
 
 import shutil
-import subprocess
+import subprocess  # noqa: S404  # integrity-ok: AE-0259 — a test for a bash gate wrapper must invoke a subprocess (mirrors test_diff_base.py / test_require_tool.py)
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[4]
@@ -50,7 +50,7 @@ def _stage_wrapper(tmp_path: Path, stub_body: str) -> tuple[Path, Path]:
 
 
 def _run(wrapper: Path, log: Path) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(
+    return subprocess.run(  # noqa: S603  # integrity-ok: AE-0259 — fixed bash path, test-controlled stub script in a throwaway tree
         [BASH, str(wrapper), "backend"],
         capture_output=True,
         text=True,
@@ -84,7 +84,7 @@ def test_wrapper_passes_through_zero_on_green(tmp_path: Path) -> None:
 
 
 def test_wrapper_rejects_missing_scope() -> None:
-    result = subprocess.run(
+    result = subprocess.run(  # noqa: S603  # integrity-ok: AE-0259 — fixed bash path, the real wrapper with no args
         [BASH, str(WRAPPER)],
         capture_output=True,
         text=True,
