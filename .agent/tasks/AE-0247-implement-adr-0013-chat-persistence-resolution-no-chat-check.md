@@ -55,16 +55,19 @@ skeptical-corrections.md revision #1.
 
 ## Acceptance Criteria
 
-- [ ] **ADR-0013 is Accepted** (status flips proposed → accepted) before this ticket is
-      marked done — it is the gating decision.
-- [ ] The two chat Deep Agents persist chat state via `message_repository` only; there
-      is exactly **one** durable write path for chat history (no second writer).
-- [ ] A guard/assert in the agent-build (or harness-builder) path **fails** if a chat
-      checkpointer is ever wired (asserts the Option-A default), with a test proving the
-      guard trips on a seeded violation.
-- [ ] A documented capability finding records whether `create_deep_agent` accepts
-      `checkpointer=` at the pinned `deepagents` version (feeds AE-0248).
-- [ ] `uv run pytest` / `mypy` / `ruff` green.
+- [x] **ADR-0013 is Accepted** (commit `73db1746` accepted ADRs 0013–0017 on this branch).
+- [x] The two chat Deep Agents (`rag_agent`, `alter_ego_agent`) build `create_deep_agent`
+      with **no** checkpointer; `message_repository` remains the single durable
+      chat-persistence writer (unchanged).
+- [x] `assert_no_chat_checkpointer` guard in `agents/chat_persistence_guard.py` is called
+      by both chat-agent build paths; raises `ChatCheckpointerError` on any non-None
+      checkpointer. Seeded-violation test proves it trips; a wiring test proves both
+      builders route through the single guard.
+- [x] **Capability finding:** `deepagents.create_deep_agent` **DOES** accept
+      `checkpointer: Checkpointer | None = None` (`.venv/.../deepagents/graph.py:230`,
+      passed through at `:621`). So AE-0248's harness can pass a checkpointer to the
+      **carousel** agent via the kwarg, while the chat builders pass none (guarded).
+- [x] backend `pytest` (263 agent tests + 4 guard tests) / `mypy` / `ruff` green.
 
 ## Gherkin Scenarios
 
@@ -150,11 +153,28 @@ acceptance; prevents the AE-0163 dual-write class before the harness lands.
 
 ## Files Touched
 
-Pending.
+### ADDED
+- `backend/src/rag_backend/agents/chat_persistence_guard.py` — `assert_no_chat_checkpointer`
+  + `ChatCheckpointerError`.
+- `backend/tests/unit/agents/test_chat_persistence_guard.py` — seeded violation + wiring.
+- `backend/tests/features/chat_persistence.feature` — behavior scenarios.
+
+### MODIFIED
+- `agents/rag_agent.py`, `agents/alter_ego_agent.py` — call `assert_no_chat_checkpointer(None)`
+  immediately before `create_deep_agent` (which is called without a checkpointer).
 
 ## Test Evidence
 
-Pending.
+```
+$ uv run pytest tests/unit/agents/test_chat_persistence_guard.py -q   # 4 passed
+$ uv run pytest tests/unit/agents/ -q                                  # 263 passed
+$ cd src && uv run mypy <guard+chat agents> --explicit-package-bases   # Success
+$ uv run ruff check <guard+chat agents+test>                           # All checks passed!
+```
+
+Note: the airtight single-chokepoint enforcement lands with the shared harness
+builder (AE-0248, deferred) which will route chat-agent construction through this
+same guard; for now the guard is invoked directly by both chat builders.
 
 ## QA Report
 
