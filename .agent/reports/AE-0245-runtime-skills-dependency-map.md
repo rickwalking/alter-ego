@@ -11,7 +11,7 @@ Verified against the working tree at branch `chore/agent-restructure-epic-ticket
 
 ---
 
-## 1. The runtime-skill tree (21 files, a coupled `_shared` tree)
+## 1. The runtime-skill tree (20 files, a coupled `_shared` tree)
 
 ```
 skills/runtime/

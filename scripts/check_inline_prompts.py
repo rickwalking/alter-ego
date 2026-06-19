@@ -44,6 +44,7 @@ PROMPT_MARKERS = (
     "INSTRUCTIONS:",
     "OUTPUT FORMAT",
     "Format your response",
+    "Format as JSON",
     "Hard rules:",
 )
 _ALLOWED_NAME_TOKENS = ("FALLBACK", "TEMPLATE")

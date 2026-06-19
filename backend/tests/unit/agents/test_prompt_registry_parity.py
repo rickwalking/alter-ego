@@ -172,6 +172,27 @@ CONTENT: {content}
     assert rendered == legacy
 
 
+def test_quality_eeat_parity() -> None:
+    content_preview = "Some content here, truncated to 500 chars."
+    sources = ["src-1", "src-2"]
+
+    legacy = f"""Evaluate E-E-A-T for content.
+
+CONTENT: {content_preview}
+SOURCES: {sources}
+
+Format as JSON with experience, expertise, authoritativeness, trustworthiness, overall_eeat.
+"""
+
+    rendered, _ = render_prompt(
+        "quality",
+        "eeat",
+        {"content_preview": content_preview, "sources": sources},
+    )
+
+    assert rendered == legacy
+
+
 def test_linkedin_template_format_parity() -> None:
     # LinkedIn's prompt stays an inline guarded `_TEMPLATE` constant (it lives in
     # the `application` layer; see linkedin_post_generator for the DDD rationale).

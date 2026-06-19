@@ -81,7 +81,9 @@ Evidence: arch-plan §1.1 table rows #2–#5, §1.2 target file list. The DEAD
       with the legacy inputs and asserts byte-for-byte equality to the legacy f-string
       (trailing-newline included). 4/4 parity tests green.
 - [x] `quality_agent.py` has **zero** inline prompt strings afterward (only docstrings
-      remain; both quality prompts on-registry).
+      remain). NOTE: external QA (F-1) caught a third quality prompt — `evaluate_eeat`
+      (line 206, "Format as JSON…") — not in the arch-plan's inventory; it was migrated
+      to `quality/v1/eeat.yaml` too (with golden parity), so the AC is genuinely met.
 - [x] pytest (127 agent/linkedin tests + parity/fallback) / mypy / ruff green.
 
 ## Gherkin Scenarios

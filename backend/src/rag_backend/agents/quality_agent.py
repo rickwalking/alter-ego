@@ -24,6 +24,10 @@ _IMPROVE_PROMPT_FALLBACK = (
     "Suggest 3-5 improvements for this criterion. Prompt registry unavailable "
     "— load agents/prompts/quality/v1/improve_suggestions.yaml"
 )
+_EEAT_PROMPT_FALLBACK = (
+    "Evaluate E-E-A-T and return JSON. Prompt registry unavailable "
+    "— load agents/prompts/quality/v1/eeat.yaml"
+)
 
 
 class EmbeddingServiceProtocol(Protocol):
@@ -203,13 +207,14 @@ class QualityAgent:
         """Evaluate E-E-A-T dimensions."""
         content = sanitize_llm_input(content)
         sources = [sanitize_llm_input(s) for s in sources]
-        prompt = f"""Evaluate E-E-A-T for content.
-
-CONTENT: {content[:500]}
-SOURCES: {sources}
-
-Format as JSON with experience, expertise, authoritativeness, trustworthiness, overall_eeat.
-"""
+        variables: dict[str, object] = {
+            "content_preview": content[:500],
+            "sources": sources,
+        }
+        try:
+            prompt = render_prompt("quality", "eeat", variables)[0]
+        except Exception:
+            prompt = _EEAT_PROMPT_FALLBACK
 
         messages: list[BaseMessage] = [HumanMessage(content=prompt)]
         response = await self.llm.ainvoke(messages, get_langfuse_runnable_config())
