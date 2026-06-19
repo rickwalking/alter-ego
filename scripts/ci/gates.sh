@@ -42,6 +42,13 @@ readonly EXIT_PASS=0
 readonly EXIT_FAIL=1
 readonly EXIT_SKIP=77
 
+# AE-0239 preflight (require_tool): SKIP, don't FAIL, when a frontend gate's
+# jscpd/knip binary is absent locally. Default the probe dir to the npm-local bin;
+# a test can override FRONTEND_BIN_DIR to simulate a missing tool.
+FRONTEND_BIN_DIR="${FRONTEND_BIN_DIR:-$REPO_ROOT/frontend/node_modules/.bin}"
+# shellcheck source=scripts/lib/require_tool.sh
+source "$REPO_ROOT/scripts/lib/require_tool.sh"
+
 # Gates skipped by --changed-only: need a service (DB) or are slow / whole-repo.
 CHANGED_ONLY_SKIP=" test diff-cover migrations schema-drift mutation build "
 
@@ -201,20 +208,20 @@ gate_frontend_build()           { cd "$REPO_ROOT/frontend" && npm run build; }
 # lives in frontend/.jscpd.json and may only ratchet DOWN (raising it is flagged
 # by check-integrity.sh). Test/spec/story files are excluded by design — egregious
 # test duplication is advisory only (AE-0151, gate_frontend_duplication_tests).
-gate_frontend_duplication()     { cd "$REPO_ROOT/frontend" && npm run lint:dup; }
+gate_frontend_duplication()     { require_tool jscpd || return $?; cd "$REPO_ROOT/frontend" && npm run lint:dup; }
 # Dead-export ratchet (AE-0152): knip-based, identity-keyed baseline. Blocks
 # NET-NEW unused exports in PR-changed files (day one); pre-existing/unchanged-file
 # findings are advisory until the full-tree flip. Baseline is down-only (raising
 # its count is flagged by check-integrity.sh). Needs git history for the diff.
-gate_frontend_dead_code()       { cd "$REPO_ROOT/frontend" && npm run lint:dead-code; }
+gate_frontend_dead_code()       { require_tool knip || return $?; cd "$REPO_ROOT/frontend" && npm run lint:dead-code; }
 # Advisory in CI (continue-on-error); reports test-file duplication, never blocks.
-gate_frontend_duplication_tests() { cd "$REPO_ROOT/frontend" && { npm run lint:dup:tests || echo "ADVISORY: jscpd test-duplication findings above (non-blocking, mirrors CI)."; }; }
+gate_frontend_duplication_tests() { require_tool jscpd || return $?; cd "$REPO_ROOT/frontend" && { npm run lint:dup:tests || echo "ADVISORY: jscpd test-duplication findings above (non-blocking, mirrors CI)."; }; }
 # Advisory dead-FILE report (AE-0178): knip file scope surfaces unused files
 # (the class the blocking export-scoped dead-code gate, AE-0152, does NOT cover).
 # Too noisy to block (barrel-reachable / framework files); ALWAYS non-blocking —
 # `|| echo ADVISORY` swallows knip's non-zero exit so the gate can only PASS.
 # Mirrors the duplication-tests / mutation advisory idiom above.
-gate_frontend_dead_files() { cd "$REPO_ROOT/frontend" && { npm run lint:dead-files || echo "ADVISORY: knip dead-file findings above (non-blocking, advisory report only)."; }; }
+gate_frontend_dead_files() { require_tool knip || return $?; cd "$REPO_ROOT/frontend" && { npm run lint:dead-files || echo "ADVISORY: knip dead-file findings above (non-blocking, advisory report only)."; }; }
 gate_frontend_legacy_guard()    { cd "$REPO_ROOT/frontend" && npm run check:legacy; }
 gate_frontend_legacy_inventory() { cd "$REPO_ROOT/frontend" && npm run check:legacy-inventory; }
 gate_frontend_test()            { cd "$REPO_ROOT/frontend" && npm run test -- --run; }

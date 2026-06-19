@@ -40,20 +40,21 @@ Reports: `.agent/reports/kaizen-session-2026-06-18c.{signal,plan,skeptical-revie
 
 ## Acceptance Criteria
 
-- [ ] A preflight resolves each required tool via **`node_modules/.bin/<tool>`** (not
-      `which`/`command -v`, which miss npm-installed binaries; `npx` would auto-install
-      and defeat the check — see Decision Log).
-- [ ] When the tool is missing, the gate returns **`EXIT_SKIP` (77)** with the message
+- [x] A preflight resolves each required tool via **`node_modules/.bin/<tool>`** (not
+      `which`/`command -v`; not `npx`). Done: `scripts/lib/require_tool.sh::require_tool`
+      probes `$FRONTEND_BIN_DIR/<tool>` (`-x`).
+- [x] When the tool is missing, the gate returns **`EXIT_SKIP` (77)** with the message
       `devDependency '<tool>' not installed — run \`cd frontend && npm ci\``, so
       `run_gate` reports **SKIP** locally (and **FAIL** under `GATES_REQUIRE_ALL=1` in
-      CI, as required).
-- [ ] The advisory gates (`gate_frontend_dead_files`, `gate_frontend_duplication_tests`)
-      keep their advisory semantics — a missing tool yields SKIP, not a swallowed
-      false PASS.
-- [ ] **Seeded-violation proof:** a test runs the gate with a PATH/`node_modules` shim
-      hiding the binary and asserts the SKIP exit (77) + the actionable message — i.e.
-      the preflight *fires* on a missing tool.
-- [ ] With tools present, every affected gate behaves exactly as today.
+      CI). Proven by the integration test (both modes).
+- [x] The advisory gates (`gate_frontend_dead_files`, `gate_frontend_duplication_tests`)
+      keep their advisory semantics — a missing tool yields SKIP (preflight returns
+      before the `|| echo ADVISORY` swallow), not a swallowed false PASS.
+- [x] **Seeded-violation proof:** `test_require_tool.py` hides the binary (empty
+      `FRONTEND_BIN_DIR`) and asserts SKIP(77) + the actionable message — the preflight
+      fires. Also asserts the real `gates.sh frontend:dead-files` reports SKIP.
+- [x] With tools present, the preflight returns 0 and the gate runs as today
+      (`test_require_tool_passes_when_binary_present`).
 
 ## Gherkin Scenarios
 
@@ -132,11 +133,24 @@ than `which`/`npx` (verified against `gates.sh`: `EXIT_SKIP=77`, unknown exits�
 
 ## Files Touched
 
-Pending.
+- `scripts/lib/require_tool.sh` (NEW) — sourceable `require_tool <tool>` preflight
+  (probes `$FRONTEND_BIN_DIR/<tool>`; SKIP 77 + actionable message on miss).
+- `scripts/ci/gates.sh` — sources the lib; `gate_frontend_{duplication,dead_code,
+  duplication_tests,dead_files}` call `require_tool <jscpd|knip> || return $?`.
+- `backend/tests/unit/scripts_ci/test_require_tool.py` (NEW) — seeded missing-tool
+  (SKIP 77 + message), tool-present (0), and `gates.sh` integration (SKIP locally,
+  FAIL under `GATES_REQUIRE_ALL=1`).
+
+Followed the existing sourceable-lib pattern (`scripts/lib/diff_base.sh` +
+`test_diff_base.py`) so both preflight branches are unit-testable without `npm`.
 
 ## Test Evidence
 
-Pending.
+```
+$ uv run pytest tests/unit/scripts_ci/test_require_tool.py -q
+3 passed in 0.11s
+$ bash -n scripts/ci/gates.sh scripts/lib/require_tool.sh   # syntax OK
+```
 
 ## QA Report
 
