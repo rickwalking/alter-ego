@@ -14,6 +14,7 @@ from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 from langchain_core.runnables.config import RunnableConfig
 from langchain_core.tools import BaseTool
 
+from rag_backend.agents.chat_persistence_guard import assert_no_chat_checkpointer
 from rag_backend.agents.chat_streaming import extract_message_text, extract_stream_token
 from rag_backend.application.services.chat_stream_service import _ChatContext
 from rag_backend.application.tools.knowledge_base import (
@@ -87,6 +88,10 @@ class AlterEgoAgent:
             streaming=True,
         )
 
+        # ADR-0013 / AE-0247: chat agents persist via message_repository only —
+        # never a LangGraph checkpointer (a second durable write path = the
+        # AE-0163 dual-write trap). The guard makes that invariant enforceable.
+        assert_no_chat_checkpointer(None)
         self._agent = create_deep_agent(
             model=self._llm,
             tools=self._build_tools(),

@@ -79,6 +79,12 @@ alter-ego/
 
 ### Git & Commits
 - Conventional commit messages
+- **Commit subjects must be all-lowercase (commitlint `subject-case`).** The
+  `commit-msg` hook extends `@commitlint/config-conventional`, whose `subject-case`
+  rule rejects upper/start/pascal/sentence case. Keep the **entire** subject
+  lowercase — **including ticket IDs** (e.g. `move ae-0216 ticket to review`, not
+  `AE-0216 → Review`). This is a hard gate, not a style preference; do **not**
+  relax the rule to allow uppercase.
 - One logical change per commit
 - No secrets or API keys committed
 - **⚠️ Pushing/merging to `main` AUTO-DEPLOYS PRODUCTION.** Any commit that lands
@@ -262,11 +268,11 @@ See `docs/architecture/langchain-deep-agents-guide.md` for agent implementation 
 
 ## Agentic Delivery
 
-Repo-backed tickets and board state live under `.agent/` (canonical memory; visual Kanban is optional). Work tiers **T0–T3** control how much pipeline to run — hotfixes skip planner/architect. See [agentic delivery overview](docs/plans/agentic-delivery-system.md) and [ADR-008](docs/decisions/0008-agentic-delivery-workflow.md).
+Repo-backed tickets live under `.agent/tasks/` (canonical memory; visual Kanban is optional). `.agent/BOARD.md` is a generated, gitignored view — regenerate it with `make board`, never commit it (AE-0223). Work tiers **T0–T3** control how much pipeline to run — hotfixes skip planner/architect. See [agentic delivery overview](docs/plans/agentic-delivery-system.md) and [ADR-008](docs/decisions/0008-agentic-delivery-workflow.md).
 
 ```bash
 uv run python scripts/agent_tasks/validate_all_tickets.py
-uv run python scripts/agent_tasks/render_board.py
+make board   # regenerate the local BOARD.md view (not committed)
 ```
 
 ## Development Skills

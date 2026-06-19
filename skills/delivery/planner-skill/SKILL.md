@@ -1,7 +1,6 @@
 ---
 name: planner-skill
 description: "Break fuzzy product or technical requests into epics, tickets, dependencies, and risks with acceptance criteria. Use for T3 epics before architect. Does not write code or modify production source."
-disable-model-invocation: true
 version: 1.0.0
 ---
 

@@ -1,7 +1,6 @@
 ---
 name: orchestrator-skill
 description: "Manage agentic delivery workflow: ticket status, BOARD.md, WIP limits, handoffs, and tier routing. Use when coordinating multiple agents, moving tickets, detecting blockers, or enforcing transition guards. Never implements production code."
-disable-model-invocation: true
 version: 1.0.0
 ---
 
@@ -26,7 +25,10 @@ Own delivery workflow across ticket states, board state, dependencies, and hando
 
 ## Prerequisites
 
-Read `.agent/config.yaml`, `.agent/BOARD.md`, relevant `.agent/tasks/AE-*.md`, and recent `.agent/reports/`.
+Read `.agent/config.yaml`, the `.agent/tasks/AE-*.md` ticket files (canonical),
+and recent `.agent/reports/`. `.agent/BOARD.md` is a generated, gitignored view —
+regenerate it with `make board` if you want the rendered snapshot; don't rely on
+it being committed.
 
 ## Workflow
 
@@ -35,7 +37,8 @@ Read `.agent/config.yaml`, `.agent/BOARD.md`, relevant `.agent/tasks/AE-*.md`, a
 3. Before status change, run:
    `uv run python scripts/agent_tasks/validate_ticket.py AE-####`
    or `move_ticket.py` (enforces guards).
-4. Update `.agent/BOARD.md` via `render_board.py` after bulk changes.
+4. Regenerate the local `.agent/BOARD.md` via `make board` after bulk changes
+   (generated view, not committed).
 5. Record handoff in ticket `Decision Log`.
 
 ## WIP limits

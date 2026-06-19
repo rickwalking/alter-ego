@@ -1,7 +1,6 @@
 ---
 name: ticket-writer-skill
 description: "Create or update .agent/tasks/AE-####.md from plans with acceptance criteria, Gherkin, QA checklist. Use after planner/architect. Does not write production code."
-disable-model-invocation: true
 version: 1.0.0
 ---
 

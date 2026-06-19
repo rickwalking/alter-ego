@@ -2,7 +2,6 @@
 name: developer-skill
 description: "Implement task details from plans following project standards. Use when the user says 'develop this task', 'implement the plan', 'work on this ticket', 'start development', 'do the wave', or after a plan has been created. Follows SDD (Spec-Driven Development): reads specs first, implements in increments, self-verifies, and reproduces the CI gates (scripts/ci/gates.sh) + anti-gaming scan green before handing off. Supports wave mode: implement a group of tickets then loop with automated external QA until convergence. Never use for code review or QA validation."
 version: 1.3.0
-disable-model-invocation: true
 ---
 
 # Developer Skill

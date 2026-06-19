@@ -1,7 +1,6 @@
 ---
 name: architect-skill
 description: "Architecture hub: technical plans, ADR checks, optional validate/research/skeptical/bugfix modes. Use before implementation on T2/T3, high-risk areas, or when trade-offs need evidence. Read-only on production code unless explicitly switched to developer."
-disable-model-invocation: true
 version: 1.0.0
 ---
 

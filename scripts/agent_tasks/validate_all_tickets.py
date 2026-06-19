@@ -14,32 +14,35 @@ from scripts.agent_tasks.constants import TASKS_DIR
 from scripts.agent_tasks.schema import Ticket, load_tickets, validate_ticket_file
 
 
-def _warn_duplicate_ids(tickets: list[Ticket]) -> None:
-    """Surface (non-blocking) ticket IDs claimed by more than one file (AE-0181).
+def _blocking_duplicate_ids(tickets: list[Ticket]) -> int:
+    """Fail (blocking) on ticket IDs claimed by more than one file (AE-0238).
 
     Two files sharing one AE-#### id is the report-freeload root cause: both
     resolve to the same `<id>.dev-summary.md` / `<id>.qa.md` slot, so one ticket
-    can satisfy its report gate on a report authored for the other. The schema's
-    per-report attribution check (AE-0181) binds a report to its id, but the
-    renumbering itself is tracked separately (AE-0181 non-goal), so this is a
-    WARNING for visibility — it does not fail the board.
+    can satisfy its report gate on a report authored for the other. AE-0181 added
+    the per-report attribution check but left this *non-blocking* ("renumbering
+    tracked separately"). Two real collisions since (AE-0145..0148 → AE-0224..0227
+    and an AE-0228 near-miss) override that choice: this now BLOCKS (contributes to
+    the exit code). The attribution check stays as defense in depth. Returns the
+    number of duplicated IDs so the caller can fold it into the blocking count.
     """
     counts = Counter(t.ticket_id for t in tickets)
     dupes = sorted(tid for tid, n in counts.items() if n > 1)
     if not dupes:
-        return
-    print("WARNING: duplicate ticket IDs (report-freeload risk, AE-0181):")
+        return 0
+    print("ERROR: duplicate ticket IDs (report-freeload risk, AE-0238):")
     for tid in dupes:
         files = ", ".join(sorted(t.path.name for t in tickets if t.ticket_id == tid))
         print(f"  {tid} claimed by {counts[tid]} files: {files}")
-    print("  -> renumber to a unique id (tracked separately); reports are still")
-    print("     attribution-checked per id so cross-ticket freeload is blocked.\n")
+    print("  -> renumber the colliding file(s) to a unique id. The allocator now")
+    print("     scans git refs (create_ticket.next_ticket_id) so a fresh ticket")
+    print("     no longer reuses an id minted on another branch.\n")
+    return len(dupes)
 
 
 def main() -> int:
     tickets = load_tickets(TASKS_DIR)
-    _warn_duplicate_ids(tickets)
-    blocking = 0
+    blocking = _blocking_duplicate_ids(tickets)
     for ticket in tickets:
         errors = validate_ticket_file(ticket)
         for err in errors:

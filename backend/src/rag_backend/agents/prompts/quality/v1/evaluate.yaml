@@ -1,0 +1,23 @@
+---
+name: quality_evaluate
+version: "1.0.0"
+description: "Quality-rubric evaluation prompt. Migrated byte-for-byte from QualityAgent._build_evaluation_prompt (AE-0243). Trailing blank line is intentional (Jinja2 strips one trailing newline; the rendered output keeps one to match the legacy f-string)."
+
+template: |+
+  Evaluate this content against the following quality rubric.
+
+  RUBRIC NAME: {{ rubric_name }}
+  DESCRIPTION: {{ rubric_description }}
+  APPLICABLE TO: {{ applicable_content_types }}
+
+  CRITERIA:
+  {{ criteria_str }}
+
+  CONTENT TO EVALUATE:
+  {{ content }}
+
+  SOURCES USED:
+  {{ sources_str }}
+
+  Format your response as JSON with criterion_scores, overall_score, passed, feedback.
+

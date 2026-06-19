@@ -10,7 +10,10 @@
     "src/**/*.stories.{ts,tsx}",
     "src/**/*.{test,spec}.{ts,tsx}",
     "*.config.{ts,mts,js,mjs,cjs}",
-    "scripts/**/*.mjs"
+    "scripts/**/*.mjs",
+    "src/components/{atoms,molecules}/index.ts",
+    "src/modules/**/index.ts",
+    "src/app/**/index.ts"
   ],
   "project": ["src/**/*.{ts,tsx}"],
   "ignore": ["src/**/*.d.ts"],

@@ -58,6 +58,49 @@ fail immediately (there are none today, and none should ever be added).
 Regenerate the baseline (only ever to ratchet DOWN) with
 `npm run boundaries:baseline`.
 
+## Barrel-import policy (AE-0241)
+
+knip's file-scope sweep flagged several re-export barrels (`index.ts`) as
+"unused files" because consumers bypass them with concrete paths. The barrel
+question is **asymmetric** (the two ways to resolve it are not equivalent), so it
+is settled here as an explicit, documented convention rather than left implicit.
+
+**Decision — two barrel classes, two rules:**
+
+1. **Top-level module barrel** `src/modules/<context>/index.ts` — the **public
+   API contract**. Cross-module and `app/` code MUST import through it
+   (`@/modules/<context>`), enforced by `lint:boundaries` (see above). It is a
+   real entry point and is never "unused".
+
+2. **All other barrels are optional re-export sugar.** The canonical import
+   convention is the **concrete path**, and these barrels are a convenience layer
+   that may be bypassed. This covers:
+   - **Design-system barrels** `src/components/{atoms,molecules}/index.ts` — ~128
+     imports already use concrete paths (`@/components/atoms/neon-button`); the
+     barrel stays optional (consistent with the `frontend/CLAUDE.md` import table,
+     which marks `@/components/atoms` as _optional_).
+   - **Module layer sub-barrels** `src/modules/<context>/<layer>/index.ts`
+     (e.g. `.../components/index.ts`, `.../hooks/index.ts`) — intentional internal
+     aggregation; the top-level module barrel re-exports from concrete files.
+   - **Co-located feature/page barrels** `src/app/**/index.ts`
+     (e.g. `app/dashboard/create/workspace/index.ts`).
+
+**We do NOT migrate the ~128 concrete imports to barrel-as-contract.** That is a
+large, review-heavy change with no behavioral benefit; it would only be
+undertaken if the team later chose "barrel as the sole import surface" — a
+separate, explicitly-scoped ticket, not assumed here.
+
+**knip config (the enforcement of this decision):** `frontend/knip.json` lists the
+optional barrels as `entry` — `src/components/{atoms,molecules}/index.ts`,
+`src/modules/**/index.ts`, and `src/app/**/index.ts` — so knip no longer reports
+them as false "unused files". (The export-level dead-code ratchet,
+`scripts/check-dead-code.mjs` / AE-0152, still catches genuinely unused _exports_
+inside any barrel, so marking a barrel `entry` does not hide dead code within it.)
+
+After this change the knip file sweep reports only the live `app/dashboard/personas/*`
+route files, which are a separate legacy-UI-removal deferral (AE-0240 Non-Goal),
+not barrels.
+
 ## Component-type-location convention (AE-0144)
 
 A second down-only ratchet enforces **where component/hook types live** — the

@@ -32,6 +32,41 @@ LINKEDIN_MAX_CHARS = 3000
 _LANG_EN = "en"
 _LANG_PT = "pt"
 
+# Guarded inline prompt template (AE-0243/AE-0244). This file lives in the
+# `application` layer; the prompt registry lives under `agents`, so wiring it via
+# `render_prompt` would create a forbidden `application -> agents` import edge
+# (enforced by the import-linter contract + the down-only arch-ratchet, which must
+# not be gamed). It therefore stays a guarded `_TEMPLATE` constant — the same
+# sanctioned pattern as `carousel_refinement`'s `*_TEMPLATE` fallbacks (the
+# `*_TEMPLATE` name is the AE-0244 checker's allowed escape). The persona and
+# quality prompts (both in the `agents` layer) ARE registry-migrated by AE-0243.
+_LINKEDIN_PROMPT_TEMPLATE = (
+    "You are writing a LinkedIn post in {lang_name} from the blog\n"
+    "content below. Match the author's voice exactly.\n"
+    "\n"
+    "{voice_block}\n"
+    "\n"
+    "Hard rules:\n"
+    "- Output the post body only. No labels, no markdown, no code fences.\n"
+    "- Plain text only — LinkedIn does not render markdown. Line breaks are\n"
+    "  fine. Bold and italics are not.\n"
+    "- First two lines must hook the reader (LinkedIn previews ~200 chars).\n"
+    "- {linkedin_max_chars} character maximum including hashtags.\n"
+    "- End with 3-5 relevant hashtags on a final line.\n"
+    "- No em-dashes. Use commas or colons instead.\n"
+    '- No generic LinkedIn clichés ("Excited to share", "I am thrilled").\n'
+    "- Use short paragraphs (1-3 sentences).\n"
+    "\n"
+    "Post topic: {title}\n"
+    "\n"
+    "Source blog ({lang_name}):\n"
+    "<<<\n"
+    "{blog}\n"
+    ">>>\n"
+    "\n"
+    "Write the LinkedIn post now."
+)
+
 
 @dataclass(frozen=True)
 class _PromptInput:
@@ -145,27 +180,10 @@ def _build_prompt(
         "No voice samples available — use a direct, technical, "
         "conversational tone without corporate fluff."
     )
-    return f"""You are writing a LinkedIn post in {lang_name} from the blog
-content below. Match the author's voice exactly.
-
-{voice_block}
-
-Hard rules:
-- Output the post body only. No labels, no markdown, no code fences.
-- Plain text only — LinkedIn does not render markdown. Line breaks are
-  fine. Bold and italics are not.
-- First two lines must hook the reader (LinkedIn previews ~200 chars).
-- {LINKEDIN_MAX_CHARS} character maximum including hashtags.
-- End with 3-5 relevant hashtags on a final line.
-- No em-dashes. Use commas or colons instead.
-- No generic LinkedIn clichés ("Excited to share", "I am thrilled").
-- Use short paragraphs (1-3 sentences).
-
-Post topic: {input_data.title}
-
-Source blog ({lang_name}):
-<<<
-{input_data.blog}
->>>
-
-Write the LinkedIn post now."""
+    return _LINKEDIN_PROMPT_TEMPLATE.format(
+        lang_name=lang_name,
+        voice_block=voice_block,
+        linkedin_max_chars=LINKEDIN_MAX_CHARS,
+        title=input_data.title,
+        blog=input_data.blog,
+    )

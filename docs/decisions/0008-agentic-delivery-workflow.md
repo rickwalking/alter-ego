@@ -12,7 +12,9 @@ Alter-Ego uses AI agents for implementation (`developer-skill`, `qa-agent`) with
 
 Adopt a **repo-backed agentic delivery system** with:
 
-1. **Canonical state in Git** — `.agent/tasks/*.md`, `.agent/BOARD.md`, `.agent/reports/*.md`
+1. **Canonical state in Git** — `.agent/tasks/*.md`, `.agent/reports/*.md`
+   (`.agent/BOARD.md` is a generated, gitignored view of the tickets, not
+   committed state — see AE-0223)
 2. **Visual Kanban as orchestration layer** — Cline/Vibe/similar; not source of truth
 3. **Tiered workflow (T0–T3)** — Full pipeline for epics; fast paths for hotfixes
 4. **Role skills** — Planner, Architect (hub modes), Ticket Writer, Orchestrator, Release Manager; extended Developer and QA

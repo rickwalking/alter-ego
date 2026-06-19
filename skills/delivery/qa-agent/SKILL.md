@@ -2,7 +2,6 @@
 name: qa-agent
 description: "Quality guardian. Reproduces every CI quality gate locally (the single source of truth) and validates security, code quality, mutation, acceptance criteria, completeness, and integrity/anti-gaming. Use when the user says 'run QA', 'validate the implementation', 'check my code', 'review this PR', 'run the checks', or after the Developer Skill completes. Only returns PASS when everything CI will run is genuinely green. Never use for implementation or development."
 version: 2.0.0
-disable-model-invocation: true
 ---
 
 # QA Agent — Quality Guardian

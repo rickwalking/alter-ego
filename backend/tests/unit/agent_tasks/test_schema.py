@@ -4,7 +4,9 @@ from pathlib import Path
 
 import pytest
 from scripts.agent_tasks.constants import (
+    ALL_STATUSES,
     STATUS_DEV_COMPLETE,
+    STATUS_INTAKE,
     STATUS_READY,
     STATUS_REVIEW,
     TASKS_DIR,
@@ -255,3 +257,40 @@ def test_ae_0001_dev_complete_valid() -> None:
     assert ticket.status == STATUS_DEV_COMPLETE
     errors = validate_ticket_file(ticket)
     assert errors == []
+
+
+def test_invalid_status_message_is_self_documenting(tmp_path: Path) -> None:
+    # AE-0222: a wrong status (e.g. "Todo") must not just say "Invalid status";
+    # the error has to list the valid options and name the entry state so the
+    # author can fix it without reading constants.py.
+    content = """# AE-9999 — Test
+
+Status: Todo
+Tier: T2
+
+## Acceptance Criteria
+- [ ] AC1
+"""
+    path = tmp_path / "AE-9999-test.md"
+    path.write_text(content, encoding="utf-8")
+    ticket = parse_ticket(path)
+    assert ticket is not None
+
+    errors = validate_ticket_file(ticket)
+    assert len(errors) == 1
+    message = errors[0]
+    assert message.startswith("Invalid status: Todo")
+    # Lists every valid status and names the entry state.
+    for status in ALL_STATUSES:
+        assert status in message
+    assert f"'{STATUS_INTAKE}'" in message
+    assert "T0-only" in message
+
+
+def test_can_transition_to_unknown_status_is_self_documenting() -> None:
+    ticket = parse_ticket(TASKS_DIR / "AE-0001-agentic-delivery-system.md")
+    assert ticket is not None
+    errors = can_transition(ticket, "Nonsense")
+    assert len(errors) == 1
+    assert errors[0].startswith("Invalid status: Nonsense")
+    assert STATUS_INTAKE in errors[0]

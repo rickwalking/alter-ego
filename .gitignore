@@ -87,3 +87,8 @@ tmp/
 .agent/handoff/.reminder
 .agent/handoff/learnings-log.jsonl
 .agent/handoff/.kaizen-watermark
+
+# AE-0223: BOARD.md is a generated view of .agent/tasks/ (canonical state).
+# Not committed — regenerate locally with `make board`. Avoids the regressed-board
+# class where a branch-off-main re-render drops cards for tickets on other branches.
+.agent/BOARD.md

@@ -1,0 +1,13 @@
+---
+name: quality_eeat
+version: "1.0.0"
+description: "E-E-A-T dimension evaluation prompt. Migrated byte-for-byte from QualityAgent.evaluate_eeat (AE-0243, F-1 follow-up). Trailing blank line is intentional (Jinja2 strips one trailing newline; the rendered output keeps one to match the legacy f-string)."
+
+template: |+
+  Evaluate E-E-A-T for content.
+
+  CONTENT: {{ content_preview }}
+  SOURCES: {{ sources }}
+
+  Format as JSON with experience, expertise, authoritativeness, trustworthiness, overall_eeat.
+

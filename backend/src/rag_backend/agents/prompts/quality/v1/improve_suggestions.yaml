@@ -1,0 +1,15 @@
+---
+name: quality_improve_suggestions
+version: "1.0.0"
+description: "Improvement-suggestions prompt for a failing rubric criterion. Migrated byte-for-byte from QualityAgent.generate_improvement_suggestions (AE-0243). Trailing blank line is intentional (Jinja2 strips one trailing newline; the rendered output keeps one to match the legacy f-string)."
+
+template: |+
+  Generate 3-5 specific, actionable suggestions to improve this criterion.
+
+  CRITERION: {{ criterion_name }}
+  DESCRIPTION: {{ criterion_description }}
+  CURRENT SCORE: {{ score }}/100
+  THRESHOLD: {{ threshold }}/100
+
+  CONTENT: {{ content }}
+

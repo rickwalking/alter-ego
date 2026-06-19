@@ -1,7 +1,6 @@
 ---
 name: release-manager-skill
 description: "Prepare PR description, release notes, and merge checklist from ticket, dev summary, and QA report. Use before human review. Never auto-merges."
-disable-model-invocation: true
 version: 1.0.0
 ---
 

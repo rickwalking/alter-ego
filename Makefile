@@ -4,7 +4,7 @@
 #   frontend = Node / npm     (frontend/)
 # Kept deliberately simple — NOT npm/pnpm workspaces (JS-only) or Nx/Turborepo.
 .DEFAULT_GOAL := help
-.PHONY: help setup build test lint typecheck dev \
+.PHONY: help setup build test lint typecheck dev board \
         be-setup be-test be-lint be-typecheck \
         fe-setup fe-build fe-test fe-lint fe-typecheck
 
@@ -20,6 +20,9 @@ typecheck: be-typecheck fe-typecheck ## Type-check both stacks
 
 dev: ## Run the full stack (docker compose)
 	docker compose up
+
+board: ## Regenerate the local Kanban board from .agent/tasks/ (BOARD.md is generated, not committed)
+	uv run python scripts/agent_tasks/render_board.py
 
 # --- backend (uv) ---
 be-setup: ; cd backend && uv sync
