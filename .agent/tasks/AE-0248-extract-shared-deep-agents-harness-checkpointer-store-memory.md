@@ -1,6 +1,6 @@
 # AE-0248 — Extract shared Deep Agents harness (checkpointer/store/memory/middleware)
 
-Status: Dev Complete
+Status: Review
 Tier: T3
 Priority: High
 Type: Refactor
