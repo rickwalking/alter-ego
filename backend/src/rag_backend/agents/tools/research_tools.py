@@ -15,12 +15,14 @@ from langchain_core.tools import BaseTool, tool
 from rag_backend.agents.tools.constants import (
     DEFAULT_SEARCH_SOURCE_TYPES,
     EMPTY_SEARCH_RESULT,
+    SCRAPE_BLOCKED_PREFIX,
     SCRAPE_FAILURE_PREFIX,
     SEARCH_RESULT_TEMPLATE,
     SOURCE_KEY_SNIPPET,
     SOURCE_KEY_TITLE,
     SOURCE_KEY_URL,
 )
+from rag_backend.agents.tools.url_safety import is_safe_research_url
 from rag_backend.domain.protocols import ResearchTool
 from rag_backend.infrastructure.logging import get_logger
 
@@ -61,6 +63,9 @@ def build_scrape_url_tool(research: ResearchTool) -> BaseTool:
         Args:
             url: The absolute URL to browse.
         """
+        if not is_safe_research_url(url):
+            logger.warning("scrape_url_blocked", url=url)
+            return f"{SCRAPE_BLOCKED_PREFIX} {url}: unsafe or non-http(s) target"
         try:
             return await research.scrape_url(url)
         except Exception as exc:

@@ -32,6 +32,11 @@ Feature: A researcher subagent can browse a URL during carousel creation (AE-024
     When the researcher subagent runs
     Then the failure is reported and research continues without the URL
 
+  Scenario: The scrape_url adapter blocks SSRF targets (QA F-1)
+    Given an LLM-supplied URL targeting an internal or non-http(s) resource
+    When the scrape_url @tool adapter is invoked
+    Then it returns a blocked message and never calls the scraping service
+
   Scenario: Deterministic phases stay LangGraph nodes
     Given the carousel workflow runs
     When the outline and export phases execute

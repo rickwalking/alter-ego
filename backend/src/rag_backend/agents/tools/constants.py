@@ -13,6 +13,14 @@ TOOL_SEARCH_WEB = "search_web"
 # (ADR-0249 "scrape failure degrades gracefully" scenario).
 SCRAPE_FAILURE_PREFIX = "scrape failed for"
 
+# SSRF boundary guard (AE-0249 QA F-1): the researcher subagent is LLM-driven, so
+# the scrape_url argument is untrusted. Only http(s) is allowed, and host-internal
+# targets (loopback/private/link-local incl. the cloud metadata endpoint) are
+# refused before the Playwright service is invoked.
+SCRAPE_BLOCKED_PREFIX = "scrape blocked for"
+ALLOWED_URL_SCHEMES = ("http", "https")
+BLOCKED_URL_HOSTNAMES = ("localhost", "metadata.google.internal")
+
 # search_web result formatting.
 EMPTY_SEARCH_RESULT = "No web results found."
 SEARCH_RESULT_TEMPLATE = "[{index}] {title} ({url})\n{snippet}"
@@ -28,8 +36,11 @@ DEFAULT_SEARCH_SOURCE_TYPES: tuple[ResearchSourceType, ...] = (
 )
 
 __all__ = [
+    "ALLOWED_URL_SCHEMES",
+    "BLOCKED_URL_HOSTNAMES",
     "DEFAULT_SEARCH_SOURCE_TYPES",
     "EMPTY_SEARCH_RESULT",
+    "SCRAPE_BLOCKED_PREFIX",
     "SCRAPE_FAILURE_PREFIX",
     "SEARCH_RESULT_TEMPLATE",
     "SOURCE_KEY_SNIPPET",

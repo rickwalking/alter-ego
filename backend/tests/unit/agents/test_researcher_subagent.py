@@ -12,6 +12,7 @@ from __future__ import annotations
 
 from typing import cast
 
+import pytest
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.tools import BaseTool, tool
 
@@ -29,7 +30,10 @@ from rag_backend.agents.subagents.constants import (
     SPEC_FIELD_TOOLS,
 )
 from rag_backend.agents.tools import build_scrape_url_tool, build_search_web_tool
-from rag_backend.agents.tools.constants import SCRAPE_FAILURE_PREFIX
+from rag_backend.agents.tools.constants import (
+    SCRAPE_BLOCKED_PREFIX,
+    SCRAPE_FAILURE_PREFIX,
+)
 from rag_backend.application.services.carousel.phase_subagents import (
     build_phase_subagent_specs,
 )
@@ -102,6 +106,37 @@ async def test_scrape_url_adapter_degrades_on_failure() -> None:
     assert result.startswith(SCRAPE_FAILURE_PREFIX)
     assert "https://down.example" in result
     assert "boom" in result
+
+
+# Scenario: The scrape_url adapter blocks SSRF targets before delegating (QA F-1)
+@pytest.mark.parametrize(
+    "unsafe_url",
+    [
+        "file:///etc/passwd",
+        "ftp://example.com/x",
+        "http://169.254.169.254/latest/meta-data/",  # cloud metadata
+        "http://localhost/admin",
+        "http://127.0.0.1:8000/",
+        "http://10.0.0.5/internal",
+        "http://[::1]/",
+    ],
+)
+async def test_scrape_url_adapter_blocks_unsafe_targets(unsafe_url: str) -> None:
+    research = _StubResearch(page="SECRET")
+    adapter = build_scrape_url_tool(research)
+    result = await adapter.ainvoke({"url": unsafe_url})
+    assert result.startswith(SCRAPE_BLOCKED_PREFIX)
+    # The guard must short-circuit BEFORE the service is ever invoked.
+    assert research.scrape_calls == []
+
+
+# Scenario: A safe public http(s) URL is still delegated after the guard
+async def test_scrape_url_adapter_allows_public_url() -> None:
+    research = _StubResearch(page="PAGE BODY")
+    adapter = build_scrape_url_tool(research)
+    result = await adapter.ainvoke({"url": "https://example.com/article"})
+    assert result == "PAGE BODY"
+    assert research.scrape_calls == ["https://example.com/article"]
 
 
 # Scenario: The search_web adapter delegates to the service via the Protocol
