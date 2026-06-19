@@ -11,11 +11,12 @@ from __future__ import annotations
 
 import pytest
 
-from rag_backend.agents import alter_ego_agent, chat_persistence_guard, rag_agent
+from rag_backend.agents import chat_persistence_guard
 from rag_backend.agents.chat_persistence_guard import (
     ChatCheckpointerError,
     assert_no_chat_checkpointer,
 )
+from rag_backend.agents.harness import builder as harness_builder
 
 
 def test_guard_allows_no_checkpointer() -> None:
@@ -38,13 +39,10 @@ def test_error_is_runtimeerror() -> None:
 
 
 def test_chat_agents_route_through_the_guard() -> None:
-    # Both chat-agent build modules import and use the single guard, so the
-    # invariant is enforced at construction (not duplicated/forked).
+    # The chat agents now build via the shared harness builder (AE-0248), which
+    # routes every chat config through the single guard — so the invariant is
+    # enforced at construction in one place (not duplicated/forked per agent).
     assert (
-        rag_agent.assert_no_chat_checkpointer
-        is chat_persistence_guard.assert_no_chat_checkpointer
-    )
-    assert (
-        alter_ego_agent.assert_no_chat_checkpointer
+        harness_builder.assert_no_chat_checkpointer
         is chat_persistence_guard.assert_no_chat_checkpointer
     )

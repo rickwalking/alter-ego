@@ -1,6 +1,6 @@
 # AE-0248 — Extract shared Deep Agents harness (checkpointer/store/memory/middleware)
 
-Status: Intake
+Status: In Development
 Tier: T3
 Priority: High
 Type: Refactor
@@ -169,13 +169,34 @@ Feature: A shared harness composes all agents with the correct persistence defau
 Created from the agent-architecture-restructure epic (RES-9). T3 — touches the
 composition root + both agents; the chat portion is gated on ADR-0013/AE-0247.
 
+### 2026-06-19 (increment 3)
+
+Final increment: added `config.py`/`middleware.py`/`store.py`/`memory.py`/`builder.py`
+and wired both chat agents through `build_deep_agent` with `SummarizationMiddleware`
+(no checkpointer — guard routed via the builder). Gates reproduced green (see Test
+Evidence); `lint-imports` holds at 22 kept / 0 broken; AE-0247 guard test passes.
+
 ## Files Touched
 
-Pending.
+Increment 3 (final):
+- ADDED `agents/harness/config.py` (`DeepAgentConfig`, `AGENT_KIND_*`),
+  `middleware.py` (summarization + HITL presets), `store.py` (`BaseStore` provider),
+  `memory.py` (`resolve_memory_paths`), `builder.py` (`build_deep_agent`).
+- MODIFIED `agents/harness/__init__.py` (public API), `agents/rag_agent.py` +
+  `agents/alter_ego_agent.py` (build via harness + SummarizationMiddleware, no checkpointer).
+- ADDED `tests/features/agent_harness.feature`, `tests/unit/agents/test_harness_builder.py`.
+- MODIFIED `tests/unit/agents/test_chat_persistence_guard.py` (routing assertion now
+  targets the harness builder, which centralizes the guard call).
 
 ## Test Evidence
 
-Pending.
+- `ruff check src/ tests/` → All checks passed.
+- `ruff format --check` (changed files) → all formatted.
+- `mypy rag_backend/ + new test --explicit-package-bases` → Success, 0 issues (513 files).
+- `lint-imports` → 22 kept, 0 broken (no new agents→application edge).
+- `pytest tests/unit/agents tests/unit/bootstrap tests/integration/carousel_consolidation`
+  → 348 passed (incl. AE-0247 guard test + new harness builder tests).
+- `check-integrity.sh backend` → 0 blockers, 0 warnings.
 
 ## QA Report
 

@@ -3,14 +3,18 @@
 from collections.abc import AsyncIterator
 from uuid import UUID
 
-from deepagents import create_deep_agent
 from langchain_anthropic import ChatAnthropic
 from langchain_core.messages import AIMessage, HumanMessage
 from langchain_core.runnables.config import RunnableConfig
 from langchain_core.tools import BaseTool
 
-from rag_backend.agents.chat_persistence_guard import assert_no_chat_checkpointer
 from rag_backend.agents.chat_streaming import extract_message_text, extract_stream_token
+from rag_backend.agents.harness import (
+    AGENT_KIND_CHAT,
+    DeepAgentConfig,
+    build_deep_agent,
+    build_summarization_middleware,
+)
 from rag_backend.application.services.chat_stream_service import _ChatContext
 from rag_backend.application.tools import (
     build_list_documents_tool,
@@ -103,14 +107,19 @@ class RAGAgent:
 
         # ADR-0013 / AE-0247: chat agents persist via message_repository only —
         # never a LangGraph checkpointer (a second durable write path = the
-        # AE-0163 dual-write trap). The guard makes that invariant enforceable.
-        assert_no_chat_checkpointer(None)
-        self._agent = create_deep_agent(
-            model=self._llm,
-            tools=self._build_tools(),
-            subagents=self._build_subagents(),
-            system_prompt=_load_system_prompt(),
-            name="rag-agent",
+        # AE-0163 dual-write trap). The harness builder routes this chat config
+        # through the guard. SummarizationMiddleware caps context-window growth
+        # without touching message_repository persistence (AE-0248).
+        self._agent = build_deep_agent(
+            DeepAgentConfig(
+                model=self._llm,
+                name="rag-agent",
+                system_prompt=_load_system_prompt(),
+                agent_kind=AGENT_KIND_CHAT,
+                tools=self._build_tools(),
+                subagents=self._build_subagents(),
+                middleware=(build_summarization_middleware(self._llm),),
+            )
         )
 
     def _build_subagents(self) -> list[dict[str, object]]:
