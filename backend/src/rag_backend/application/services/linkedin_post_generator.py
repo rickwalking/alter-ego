@@ -41,30 +41,30 @@ _LANG_PT = "pt"
 # `*_TEMPLATE` name is the AE-0244 checker's allowed escape). The persona and
 # quality prompts (both in the `agents` layer) ARE registry-migrated by AE-0243.
 _LINKEDIN_PROMPT_TEMPLATE = (
-    """You are writing a LinkedIn post in {lang_name} from the blog
-content below. Match the author's voice exactly.
-
-{voice_block}
-
-Hard rules:
-- Output the post body only. No labels, no markdown, no code fences.
-- Plain text only — LinkedIn does not render markdown. Line breaks are
-  fine. Bold and italics are not.
-- First two lines must hook the reader (LinkedIn previews ~200 chars).
-- {linkedin_max_chars} character maximum including hashtags.
-- End with 3-5 relevant hashtags on a final line.
-- No em-dashes. Use commas or colons instead.
-- No generic LinkedIn clichés ("Excited to share", "I am thrilled").
-- Use short paragraphs (1-3 sentences).
-
-Post topic: {title}
-
-Source blog ({lang_name}):
-<<<
-{blog}
->>>
-
-Write the LinkedIn post now."""
+    "You are writing a LinkedIn post in {lang_name} from the blog\n"
+    "content below. Match the author's voice exactly.\n"
+    "\n"
+    "{voice_block}\n"
+    "\n"
+    "Hard rules:\n"
+    "- Output the post body only. No labels, no markdown, no code fences.\n"
+    "- Plain text only — LinkedIn does not render markdown. Line breaks are\n"
+    "  fine. Bold and italics are not.\n"
+    "- First two lines must hook the reader (LinkedIn previews ~200 chars).\n"
+    "- {linkedin_max_chars} character maximum including hashtags.\n"
+    "- End with 3-5 relevant hashtags on a final line.\n"
+    "- No em-dashes. Use commas or colons instead.\n"
+    '- No generic LinkedIn clichés ("Excited to share", "I am thrilled").\n'
+    "- Use short paragraphs (1-3 sentences).\n"
+    "\n"
+    "Post topic: {title}\n"
+    "\n"
+    "Source blog ({lang_name}):\n"
+    "<<<\n"
+    "{blog}\n"
+    ">>>\n"
+    "\n"
+    "Write the LinkedIn post now."
 )
 
 
