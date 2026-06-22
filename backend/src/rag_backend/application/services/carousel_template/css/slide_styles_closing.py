@@ -113,9 +113,9 @@ def get_neon_slide_closing_css(theme: dict[str, str]) -> str:
     pointer-events: none;
     background: linear-gradient(
       180deg,
-      rgba(10,12,20,0.08) 0%,
-      rgba(10,12,20,0.35) 25%,
-      rgba(10,12,20,0.75) 50%,
+      var(--scrim-0) 0%,
+      var(--scrim-25) 25%,
+      var(--scrim-50) 50%,
       var(--bg) 70%
     );
   }}
@@ -204,7 +204,7 @@ def get_neon_slide_closing_css(theme: dict[str, str]) -> str:
     padding: 28px 30px 32px;
     border-radius: 18px;
     background:
-      linear-gradient(180deg, rgba(6,10,18,0.88), rgba(6,10,18,0.64)),
+      linear-gradient(180deg, var(--card-bg-1), var(--card-bg-2)),
       radial-gradient(circle at 50% 0%, {primary}1F, transparent 58%);
     border: 1px solid {primary}33;
     box-shadow: 0 0 36px var(--primary-glow), inset 0 0 32px rgba(255,255,255,0.025);

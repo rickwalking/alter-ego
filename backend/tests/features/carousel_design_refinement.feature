@@ -29,3 +29,19 @@ Feature: Carousel design refinement via CSS overrides
     Given a project with no slides
     When the agent refines design
     Then a ValueError is raised with "no slides"
+
+  # AE-0265: light-theme-aware slide text composition -----------------------
+
+  Scenario: A light palette composes dark ink text on a light scrim
+    Given a carousel theme with a light background
+    When the slide CSS is generated
+    Then the root text color is dark ink
+      And the slide scrim is light
+      And the structured-item background is light
+      And body text contrast over the background is at least 4.5 to 1
+
+  Scenario: A dark palette keeps its legacy white-on-dark composition
+    Given a carousel theme with a dark background
+    When the slide CSS is generated
+    Then the root text color is white
+      And the slide scrim is dark
