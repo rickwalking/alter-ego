@@ -62,6 +62,9 @@ export const IMAGE_PRESETS = [
 
 export const DEFAULT_IMAGE_PRESET = IMAGE_PRESETS[0].value;
 
+/** The light/editorial preset value — recommended for light themes. */
+export const FLAT_EDITORIAL_PRESET = "openai__flat_editorial";
+
 /** Phase 5 per-slide image-generation lifecycle. */
 export const SLIDE_GENERATION_STATUS = {
   PENDING: "pending",
@@ -112,6 +115,21 @@ export const THEME_LABEL_KEYS = {
   clinical_mint: "themes.clinical_mint",
   auto: "themes.auto",
 } as const;
+
+/**
+ * Theme keys whose palette uses a LIGHT background. These render correctly
+ * only with the flat_editorial preset, so the create form nudges toward it.
+ */
+export const LIGHT_THEME_KEYS: readonly string[] = [
+  CAROUSEL_THEMES.RISOGRAPH,
+  CAROUSEL_THEMES.PAPER_EDITORIAL,
+  CAROUSEL_THEMES.CLINICAL_MINT,
+];
+
+/** True when the theme's palette is light (pair with flat_editorial). */
+export function isLightTheme(theme: string): boolean {
+  return LIGHT_THEME_KEYS.includes(theme);
+}
 
 /** Pipeline phase display order. */
 export const PIPELINE_PHASES = [

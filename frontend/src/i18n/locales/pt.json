@@ -214,6 +214,7 @@
   "create": {
     "pageTitle": "Criar Carrossel",
     "pageDescription": "Descreva seu tópico e deixe a IA gerar um post de blog e um carrossel do Instagram para você.",
+    "lightThemeHint": "Tema claro — alterado para o preset Flat Editorial para renderizar corretamente.",
     "form": {
       "topicLabel": "Tópico",
       "topicPlaceholder": "ex: Rust vs Go para backend",

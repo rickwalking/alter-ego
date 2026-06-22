@@ -214,6 +214,7 @@
   "create": {
     "pageTitle": "Create Carousel",
     "pageDescription": "Describe your topic and let AI generate a blog post and Instagram carousel for you.",
+    "lightThemeHint": "Light theme — switched to the Flat Editorial preset so it renders correctly.",
     "form": {
       "topicLabel": "Topic",
       "topicPlaceholder": "e.g. Rust vs Go for backend development",
