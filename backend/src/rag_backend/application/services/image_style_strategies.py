@@ -28,6 +28,22 @@ def _palette_fragment(theme: Mapping[str, str]) -> str:
     )
 
 
+def _editorial_palette_fragment(theme: Mapping[str, str]) -> str:
+    """Render the palette line for the light/editorial strategy.
+
+    The light counterpart of :func:`_palette_fragment`: a light background
+    carrying the primary as ink and the accent as a highlight, with no neon
+    glow. Missing keys degrade to empty strings, matching the dark fragment.
+    """
+    primary = theme.get("primary", "")
+    accent = theme.get("accent", "")
+    background = theme.get("background", "")
+    return (
+        f"Light background ({background}) with {primary} ink and {accent} "
+        "highlights, matte fills, generous negative space."
+    )
+
+
 class GeminiComicNeonStrategy(ImageStyleStrategy):
     """Comic/manga cyberpunk preset tuned for Gemini 3.1 Flash Image.
 
@@ -96,6 +112,30 @@ class OpenAIHyperrealStrategy(ImageStyleStrategy):
             "ALSO STRICT: no real-world brand names, no celebrity or CEO "
             "likenesses, no company logos. Use generic analogies only. "
             f"{_palette_fragment(theme)} "
+            f"Scene: {scene.strip()}"
+        )
+
+
+class OpenAIFlatEditorialStrategy(ImageStyleStrategy):
+    """Flat editorial vector preset for gpt-image-2.
+
+    The light/editorial counterpart to the dark neon presets: matte vector
+    illustration on a light ground, paired with the light palettes
+    (risograph, paper_editorial, clinical_mint). Uses the light palette
+    fragment so the prompt does not contradict a light background.
+    """
+
+    @staticmethod
+    def wrap(scene: str, theme: Mapping[str, str]) -> str:
+        return (
+            "Flat editorial vector illustration, single-weight line art, "
+            "matte fills, generous negative space, soft paper grain, calm "
+            "magazine-explainer mood. Wide panoramic 3:1 composition. "
+            "STRICT: no readable text, no logos, no captions, no UI labels, "
+            "no speech bubbles — purely visual. "
+            "ALSO STRICT: no real-world brand names, no celebrity or CEO "
+            "likenesses, no company logos. Use generic analogies only. "
+            f"{_editorial_palette_fragment(theme)} "
             f"Scene: {scene.strip()}"
         )
 

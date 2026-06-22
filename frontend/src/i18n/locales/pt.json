@@ -233,13 +233,22 @@
       "ai_competition": "Competição de IA",
       "developer_skills": "Habilidades de Dev",
       "source_code": "Código Fonte",
-      "social_engineering": "Engenharia Social"
+      "social_engineering": "Engenharia Social",
+      "plasma_magenta": "Plasma Magenta",
+      "acid_lime": "Acid Lime",
+      "mono_indigo": "Mono Indigo",
+      "ember_crimson": "Ember Crimson",
+      "blueprint": "Blueprint",
+      "risograph": "Risograph (claro)",
+      "paper_editorial": "Paper Editorial (claro)",
+      "clinical_mint": "Clinical Mint (claro)"
     },
     "imagePresets": {
       "gemini_comic_neon": "Gemini · Comic Neon",
       "openai_hyperreal": "OpenAI · Hyperreal Graphic Novel",
       "openai_cinematic": "OpenAI · Cinematic Photoreal",
-      "openai_neo_anime": "OpenAI · Neo-Anime (padrão)"
+      "openai_neo_anime": "OpenAI · Neo-Anime (padrão)",
+      "openai_flat_editorial": "OpenAI · Flat Editorial (claro)"
     },
     "progress": {
       "complete": "Carrossel gerado com sucesso!",

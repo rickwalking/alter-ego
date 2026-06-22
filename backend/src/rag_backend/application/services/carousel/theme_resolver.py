@@ -10,6 +10,7 @@ from __future__ import annotations
 import hashlib
 
 from rag_backend.domain.constants import (
+    AUTO_ROTATION_THEME_KEYS,
     BRAND_KEYWORDS,
     BRAND_PALETTES,
     CAROUSEL_THEMES,
@@ -18,9 +19,12 @@ from rag_backend.domain.constants import (
 )
 from rag_backend.domain.models import CarouselProject, CarouselTheme
 
-# Keys of all predefined category themes available for auto-detection.
-# Used as the rotation pool when no brand or category keyword matches.
-CATEGORY_THEME_KEYS: tuple[str, ...] = tuple(CAROUSEL_THEMES.keys())
+# Rotation pool used when no brand or category keyword matches. Limited to the
+# original dark category themes (``AUTO_ROTATION_THEME_KEYS``) so AUTO never
+# hands a LIGHT palette to a dark image strategy. Explicit-select palettes
+# (new dark variants + light/editorial) are reachable only via an explicit
+# ``project.theme``.
+CATEGORY_THEME_KEYS: tuple[str, ...] = AUTO_ROTATION_THEME_KEYS
 
 
 def _hash_to_theme_key(text: str) -> str:

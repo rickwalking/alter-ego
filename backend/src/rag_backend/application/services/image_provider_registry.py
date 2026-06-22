@@ -14,6 +14,7 @@ from dataclasses import dataclass
 from rag_backend.application.services.image_style_strategies import (
     GeminiComicNeonStrategy,
     OpenAICinematicStrategy,
+    OpenAIFlatEditorialStrategy,
     OpenAIHyperrealStrategy,
     OpenAINeoAnimeStrategy,
 )
@@ -22,6 +23,7 @@ from rag_backend.domain.constants import (
     IMAGE_MODEL_OPENAI,
     IMAGE_STYLE_CINEMATIC,
     IMAGE_STYLE_COMIC_NEON,
+    IMAGE_STYLE_FLAT_EDITORIAL,
     IMAGE_STYLE_HYPERREAL,
     IMAGE_STYLE_NEO_ANIME,
     SUPPORTED_IMAGE_COMBOS,
@@ -83,6 +85,10 @@ class ImageProviderRegistry:
             (IMAGE_MODEL_OPENAI, IMAGE_STYLE_NEO_ANIME): ImageProvider(
                 service=openai_service,
                 strategy=OpenAINeoAnimeStrategy(),
+            ),
+            (IMAGE_MODEL_OPENAI, IMAGE_STYLE_FLAT_EDITORIAL): ImageProvider(
+                service=openai_service,
+                strategy=OpenAIFlatEditorialStrategy(),
             ),
         }
 

@@ -6,6 +6,7 @@ Gherkin: tests/features/carousel_design_refinement.feature
 import pytest
 
 from rag_backend.application.services.carousel.theme_resolver import (
+    CATEGORY_THEME_KEYS,
     _detect_brand,
     _detect_category,
     _hash_to_theme_key,
@@ -14,8 +15,10 @@ from rag_backend.application.services.carousel.theme_resolver import (
     resolve_theme,
 )
 from rag_backend.domain.constants import (
+    AUTO_ROTATION_THEME_KEYS,
     BRAND_PALETTES,
     CAROUSEL_THEMES,
+    LIGHT_THEME_KEYS,
 )
 from rag_backend.domain.models import CarouselProject, CarouselTheme
 
@@ -328,3 +331,53 @@ class TestResolveTheme:
         assert "primary" in theme
         assert "accent" in theme
         assert "background" in theme
+
+
+@pytest.mark.unit
+class TestExplicitNewPalettes:
+    """New explicit-select palettes (dark variants + light/editorial).
+
+    Gherkin: tests/features/image_generation_provider.feature
+    (Scenario: a light palette is reachable only by explicit selection).
+    """
+
+    def test_explicit_light_palette_resolves(self):
+        """An explicit light theme returns its light palette verbatim."""
+        project = CarouselProject(
+            topic="Spec-driven development",
+            audience="Engineers",
+            niche="Software",
+            theme=CarouselTheme.PAPER_EDITORIAL,
+        )
+        assert resolve_theme(project) == CAROUSEL_THEMES["paper_editorial"]
+
+    def test_explicit_dark_variant_resolves(self):
+        """An explicit dark-variant theme returns its palette verbatim."""
+        project = CarouselProject(
+            topic="Autonomous agents",
+            audience="Engineers",
+            niche="AI",
+            theme=CarouselTheme.PLASMA_MAGENTA,
+        )
+        assert resolve_theme(project) == CAROUSEL_THEMES["plasma_magenta"]
+
+    def test_auto_never_returns_a_light_palette(self):
+        """AUTO must never hand a LIGHT palette to a dark image strategy.
+
+        Light palettes are excluded from the rotation pool, so no input
+        text — across many hashes — can make AUTO resolve to one.
+        """
+        light_palettes = [CAROUSEL_THEMES[k] for k in LIGHT_THEME_KEYS]
+        for i in range(200):
+            project = CarouselProject(
+                topic=f"unmatched neutral topic number {i} xyzzy",
+                audience="Everyone",
+                niche="General",
+                theme=CarouselTheme.AUTO,
+            )
+            assert resolve_theme(project) not in light_palettes
+
+    def test_auto_rotation_pool_is_the_original_dark_themes(self):
+        """The rotation pool stays the five original dark category themes."""
+        assert set(CATEGORY_THEME_KEYS) == set(AUTO_ROTATION_THEME_KEYS)
+        assert LIGHT_THEME_KEYS.isdisjoint(CATEGORY_THEME_KEYS)

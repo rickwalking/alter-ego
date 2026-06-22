@@ -2,11 +2,15 @@
 statuses, slide types, dimensions, languages, image presets.
 """
 
-from rag_backend.domain.constants.carousel_themes import (
+from rag_backend.domain.constants.carousel_theme_keywords import (
     BRAND_KEYWORDS,
+    THEME_CATEGORY_KEYWORDS,
+)
+from rag_backend.domain.constants.carousel_themes import (
+    AUTO_ROTATION_THEME_KEYS,
     BRAND_PALETTES,
     CAROUSEL_THEMES,
-    THEME_CATEGORY_KEYWORDS,
+    LIGHT_THEME_KEYS,
 )
 
 # Carousel statuses
@@ -92,12 +96,16 @@ IMAGE_STYLE_COMIC_NEON = "comic_neon"
 IMAGE_STYLE_CINEMATIC = "cinematic"
 IMAGE_STYLE_HYPERREAL = "hyperreal"
 IMAGE_STYLE_NEO_ANIME = "neo_anime"
+# Flat editorial vector preset — the light/editorial counterpart, paired with
+# the light palettes (risograph, paper_editorial, clinical_mint).
+IMAGE_STYLE_FLAT_EDITORIAL = "flat_editorial"
 
 VALID_IMAGE_STYLES: set[str] = {
     IMAGE_STYLE_COMIC_NEON,
     IMAGE_STYLE_CINEMATIC,
     IMAGE_STYLE_HYPERREAL,
     IMAGE_STYLE_NEO_ANIME,
+    IMAGE_STYLE_FLAT_EDITORIAL,
 }
 
 # Default combo. OpenAI (not Gemini): prod has OPENAI_API_KEY but no GEMINI_API_KEY,
@@ -121,9 +129,11 @@ SUPPORTED_IMAGE_COMBOS: set[tuple[str, str]] = {
     (IMAGE_MODEL_OPENAI, IMAGE_STYLE_CINEMATIC),
     (IMAGE_MODEL_OPENAI, IMAGE_STYLE_HYPERREAL),
     (IMAGE_MODEL_OPENAI, IMAGE_STYLE_NEO_ANIME),
+    (IMAGE_MODEL_OPENAI, IMAGE_STYLE_FLAT_EDITORIAL),
 }
 
 __all__ = [
+    "AUTO_ROTATION_THEME_KEYS",
     "BRAND_KEYWORDS",
     "BRAND_PALETTES",
     "CAROUSEL_ASPECT_RATIO",
@@ -155,10 +165,12 @@ __all__ = [
     "IMAGE_STYLE_CINEMATIC",
     "IMAGE_STYLE_COMIC_NEON",
     "IMAGE_STYLE_DEFAULT",
+    "IMAGE_STYLE_FLAT_EDITORIAL",
     "IMAGE_STYLE_HYPERREAL",
     "IMAGE_STYLE_NEO_ANIME",
     "LANGUAGE_EN",
     "LANGUAGE_PT",
+    "LIGHT_THEME_KEYS",
     "RESEARCH_SOURCE_BLOG",
     "RESEARCH_SOURCE_DOCUMENTATION",
     "RESEARCH_SOURCE_GITHUB",

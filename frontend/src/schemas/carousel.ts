@@ -130,6 +130,7 @@ export const SUPPORTED_IMAGE_COMBOS: ReadonlyArray<readonly [string, string]> =
     ["openai", "cinematic"],
     ["openai", "hyperreal"],
     ["openai", "neo_anime"],
+    ["openai", "flat_editorial"],
   ];
 
 export const carouselCreateRequestSchema = z
@@ -140,7 +141,13 @@ export const carouselCreateRequestSchema = z
     theme: z.string().max(30).default("auto"),
     image_model: z.enum(["gemini", "openai"]).default("openai"),
     image_style: z
-      .enum(["comic_neon", "cinematic", "hyperreal", "neo_anime"])
+      .enum([
+        "comic_neon",
+        "cinematic",
+        "hyperreal",
+        "neo_anime",
+        "flat_editorial",
+      ])
       .default("neo_anime"),
     strategy: z.string().max(50).optional(),
   })

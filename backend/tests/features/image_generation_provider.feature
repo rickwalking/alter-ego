@@ -38,6 +38,27 @@ Feature: Pluggable image generation provider and style
     Then the neo-anime style wrapper is applied
     And the final prompt includes "Cel-animated feature film still"
 
+  Scenario: Caller picks OpenAI flat-editorial preset for a light palette
+    Given the project has image_model "openai" and image_style "flat_editorial"
+    And the project has a resolved LIGHT theme palette
+    When the pipeline renders the image-generation phase
+    Then the flat-editorial style wrapper is applied
+    And the final prompt includes "Flat editorial vector illustration"
+    And the final prompt includes "Light background"
+    And the final prompt does not mention "neon glow"
+
+  # Palette selection -----------------------------------------------------
+
+  Scenario: A light palette is reachable only by explicit selection
+    Given a project with theme "paper_editorial"
+    When the theme is resolved
+    Then the resolved palette is the light paper_editorial palette
+
+  Scenario: AUTO never assigns a light palette to a dark strategy
+    Given a project with theme AUTO and no matching brand or category keywords
+    When the theme is resolved for many different topics
+    Then the resolved palette is never one of the light palettes
+
   # Validation -------------------------------------------------------------
 
   Scenario: Invalid model rejected at API layer

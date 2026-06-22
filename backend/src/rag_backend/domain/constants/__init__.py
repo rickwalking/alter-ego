@@ -11,6 +11,7 @@ from rag_backend.domain.constants.auth import (
     ROLE_EDITOR,
 )
 from rag_backend.domain.constants.carousel import (
+    AUTO_ROTATION_THEME_KEYS,
     BRAND_KEYWORDS,
     BRAND_PALETTES,
     CAROUSEL_ASPECT_RATIO,
@@ -38,10 +39,12 @@ from rag_backend.domain.constants.carousel import (
     IMAGE_STYLE_CINEMATIC,
     IMAGE_STYLE_COMIC_NEON,
     IMAGE_STYLE_DEFAULT,
+    IMAGE_STYLE_FLAT_EDITORIAL,
     IMAGE_STYLE_HYPERREAL,
     IMAGE_STYLE_NEO_ANIME,
     LANGUAGE_EN,
     LANGUAGE_PT,
+    LIGHT_THEME_KEYS,
     RESEARCH_SOURCE_BLOG,
     RESEARCH_SOURCE_DOCUMENTATION,
     RESEARCH_SOURCE_GITHUB,
@@ -98,6 +101,7 @@ from rag_backend.domain.constants.retry import (
 )
 
 __all__ = [
+    "AUTO_ROTATION_THEME_KEYS",
     "BRAND_KEYWORDS",
     "BRAND_PALETTES",
     "CAROUSEL_ASPECT_RATIO",
@@ -133,6 +137,7 @@ __all__ = [
     "IMAGE_STYLE_CINEMATIC",
     "IMAGE_STYLE_COMIC_NEON",
     "IMAGE_STYLE_DEFAULT",
+    "IMAGE_STYLE_FLAT_EDITORIAL",
     "IMAGE_STYLE_HYPERREAL",
     "IMAGE_STYLE_NEO_ANIME",
     "JWT_ALGORITHM",
@@ -141,6 +146,7 @@ __all__ = [
     "LANGGRAPH_MAX_ATTEMPTS",
     "LANGUAGE_EN",
     "LANGUAGE_PT",
+    "LIGHT_THEME_KEYS",
     "META_MAX_ATTEMPTS",
     "META_POLL_INTERVAL_SECONDS",
     "META_POLL_MAX_ATTEMPTS",

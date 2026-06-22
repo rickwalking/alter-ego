@@ -67,6 +67,16 @@ class CarouselTheme(StrEnum):
     DEVELOPER_SKILLS = "developer_skills"
     SOURCE_CODE = "source_code"
     SOCIAL_ENGINEERING = "social_engineering"
+    # Dark variants (pair with the neon/neo-anime image styles).
+    PLASMA_MAGENTA = "plasma_magenta"
+    ACID_LIME = "acid_lime"
+    MONO_INDIGO = "mono_indigo"
+    EMBER_CRIMSON = "ember_crimson"
+    BLUEPRINT = "blueprint"
+    # Light / editorial palettes (pair with the flat_editorial image style).
+    RISOGRAPH = "risograph"
+    PAPER_EDITORIAL = "paper_editorial"
+    CLINICAL_MINT = "clinical_mint"
     AUTO = "auto"
 
 

@@ -8,6 +8,7 @@ import pytest
 from rag_backend.application.services.image_style_strategies import (
     GeminiComicNeonStrategy,
     OpenAICinematicStrategy,
+    OpenAIFlatEditorialStrategy,
     OpenAIHyperrealStrategy,
     OpenAINeoAnimeStrategy,
 )
@@ -16,6 +17,12 @@ _PALETTE = {
     "primary": "#3b82f6",
     "accent": "#f59e0b",
     "background": "#0a0e17",
+}
+
+_LIGHT_PALETTE = {
+    "primary": "#111827",
+    "accent": "#2563eb",
+    "background": "#f7f5f0",
 }
 
 
@@ -92,6 +99,37 @@ class TestOpenAINeoAnimeStrategy:
 
 
 @pytest.mark.unit
+class TestOpenAIFlatEditorialStrategy:
+    """Scenario: Caller picks OpenAI flat-editorial preset (light palette)."""
+
+    def test_includes_flat_editorial_marker(self) -> None:
+        result = OpenAIFlatEditorialStrategy().wrap("scene", _LIGHT_PALETTE)
+        assert "Flat editorial vector illustration" in result
+
+    def test_uses_light_background_phrasing_not_neon(self) -> None:
+        # The light strategy must not contradict a light palette with the
+        # dark "neon glow" phrasing reserved for the dark strategies.
+        result = OpenAIFlatEditorialStrategy().wrap("scene", _LIGHT_PALETTE)
+        assert "Light background" in result
+        assert "neon glow" not in result.lower()
+
+    def test_injects_light_palette_colors(self) -> None:
+        result = OpenAIFlatEditorialStrategy().wrap("scene", _LIGHT_PALETTE)
+        assert "#111827" in result
+        assert "#2563eb" in result
+        assert "#f7f5f0" in result
+
+    def test_forbids_readable_text(self) -> None:
+        result = OpenAIFlatEditorialStrategy().wrap("scene", _LIGHT_PALETTE)
+        assert "no readable text" in result.lower()
+
+    def test_scene_preserved_verbatim(self) -> None:
+        scene = "a single desk lamp over an open notebook"
+        result = OpenAIFlatEditorialStrategy().wrap(scene, _LIGHT_PALETTE)
+        assert scene in result
+
+
+@pytest.mark.unit
 class TestSceneInvariant:
     """Scenario: Style wrapper never rewrites the LLM scene description.
 
@@ -106,6 +144,7 @@ class TestSceneInvariant:
             OpenAICinematicStrategy(),
             OpenAIHyperrealStrategy(),
             OpenAINeoAnimeStrategy(),
+            OpenAIFlatEditorialStrategy(),
         ],
     )
     def test_scene_verbatim_and_trailing(self, strategy) -> None:
