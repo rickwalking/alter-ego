@@ -14,6 +14,7 @@ from rag_backend.application.services.image_prompt_sanitizer import (
 from rag_backend.application.services.image_style_strategies import (
     GeminiComicNeonStrategy,
     OpenAICinematicStrategy,
+    OpenAIFlatEditorialStrategy,
     OpenAIHyperrealStrategy,
     OpenAINeoAnimeStrategy,
 )
@@ -22,6 +23,7 @@ from rag_backend.domain.constants import (
     IMAGE_MODEL_OPENAI,
     IMAGE_STYLE_CINEMATIC,
     IMAGE_STYLE_COMIC_NEON,
+    IMAGE_STYLE_FLAT_EDITORIAL,
     IMAGE_STYLE_HYPERREAL,
     IMAGE_STYLE_NEO_ANIME,
 )
@@ -99,6 +101,7 @@ _STRATEGY_MAP: dict[tuple[str, str], type[ImageStyleStrategy]] = {
     (IMAGE_MODEL_OPENAI, IMAGE_STYLE_CINEMATIC): OpenAICinematicStrategy,
     (IMAGE_MODEL_OPENAI, IMAGE_STYLE_HYPERREAL): OpenAIHyperrealStrategy,
     (IMAGE_MODEL_OPENAI, IMAGE_STYLE_NEO_ANIME): OpenAINeoAnimeStrategy,
+    (IMAGE_MODEL_OPENAI, IMAGE_STYLE_FLAT_EDITORIAL): OpenAIFlatEditorialStrategy,
 }
 
 _DEFAULT_STRATEGY = GeminiComicNeonStrategy
