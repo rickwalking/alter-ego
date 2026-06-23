@@ -2,15 +2,13 @@
 statuses, slide types, dimensions, languages, image presets.
 """
 
-from rag_backend.domain.constants.carousel_theme_keywords import (
-    BRAND_KEYWORDS,
-    THEME_CATEGORY_KEYWORDS,
-)
 from rag_backend.domain.constants.carousel_themes import (
     AUTO_ROTATION_THEME_KEYS,
+    BRAND_KEYWORDS,
     BRAND_PALETTES,
     CAROUSEL_THEMES,
     LIGHT_THEME_KEYS,
+    THEME_CATEGORY_KEYWORDS,
 )
 
 # Carousel statuses

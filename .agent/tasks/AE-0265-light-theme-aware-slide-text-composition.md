@@ -1,6 +1,6 @@
 # AE-0265 — light-theme-aware slide text composition
 
-Status: Review
+Status: In Development
 Tier: T2
 Priority: Medium
 Type: Feature
