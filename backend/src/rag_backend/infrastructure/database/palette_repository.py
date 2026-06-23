@@ -32,9 +32,11 @@ class PostgresPaletteRepository(PaletteRepository):
         return [row.to_domain() for row in result.scalars().all()]
 
     async def add(self, palette: CustomPalette) -> CustomPalette:
+        # Flush (not commit) so uniqueness conflicts surface as IntegrityError
+        # here while the caller keeps ownership of the transaction boundary.
         model = PaletteModel.from_domain(palette)
         self._session.add(model)
-        await self._session.commit()
+        await self._session.flush()
         await self._session.refresh(model)
         return model.to_domain()
 
@@ -51,7 +53,7 @@ class PostgresPaletteRepository(PaletteRepository):
         row.mode = palette.mode.value
         row.keywords = list(palette.keywords)
         row.archived = palette.archived
-        await self._session.commit()
+        await self._session.flush()
         await self._session.refresh(row)
         return row.to_domain()
 
@@ -63,5 +65,5 @@ class PostgresPaletteRepository(PaletteRepository):
         if row is None:
             return False
         row.archived = True
-        await self._session.commit()
+        await self._session.flush()
         return True

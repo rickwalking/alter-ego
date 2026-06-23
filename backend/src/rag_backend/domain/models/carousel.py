@@ -111,6 +111,10 @@ class CarouselProject:
     # sentinel, or (from AE-0269) a custom palette UUID. The CarouselTheme enum
     # is retained as the canonical root-key list, not as this field's type.
     theme: str = CarouselTheme.AUTO.value
+    # Resolved palette frozen at generation (AE-0269 D9): keys primary/accent/
+    # background/mode/resolved_ref/resolved_at. Render reads this snapshot, not a
+    # live lookup, so palette edits never alter an already-generated carousel.
+    theme_snapshot: dict[str, str] | None = None
     primary_color: str | None = None
     accent_color: str | None = None
     background_color: str | None = None

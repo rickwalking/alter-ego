@@ -57,7 +57,10 @@ class CarouselProjectModel(Base):
     generate_images = Column(Integer, default=1, nullable=False)
     image_model = Column(String(30), nullable=False, server_default="gemini")
     image_style = Column(String(30), nullable=False, server_default="comic_neon")
-    theme = Column(String(30), nullable=False, default=CarouselTheme.AUTO.value)
+    # Widened to 64 (AE-0269 migration a7b8c9d0e1f2) to hold a custom-palette UUID.
+    theme = Column(String(64), nullable=False, default=CarouselTheme.AUTO.value)
+    # Resolved palette frozen at generation (AE-0269 D9).
+    theme_snapshot = Column(JSON, nullable=True)
     primary_color = Column(String(20), nullable=True)
     accent_color = Column(String(20), nullable=True)
     background_color = Column(String(20), nullable=True)
@@ -161,6 +164,7 @@ class CarouselProjectModel(Base):
             image_model=self.image_model,
             image_style=self.image_style,
             theme=self.theme,
+            theme_snapshot=self.theme_snapshot,
             primary_color=self.primary_color,
             accent_color=self.accent_color,
             background_color=self.background_color,
@@ -221,6 +225,7 @@ class CarouselProjectModel(Base):
             image_model=entity.image_model,
             image_style=entity.image_style,
             theme=entity.theme,
+            theme_snapshot=entity.theme_snapshot,
             primary_color=entity.primary_color,
             accent_color=entity.accent_color,
             background_color=entity.background_color,
