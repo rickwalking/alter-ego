@@ -1,6 +1,6 @@
 # AE-0269 — P2: custom-palette persistence + DB-backed resolver + snapshot
 
-Status: Ready
+Status: In Development
 Tier: T2
 Priority: Medium
 Type: Feature
