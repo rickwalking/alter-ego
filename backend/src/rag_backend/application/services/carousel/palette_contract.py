@@ -2,8 +2,8 @@
 
 The backend ``PALETTE_REGISTRY`` (themes + labels + light/dark mode) and
 ``IMAGE_STRATEGY_REGISTRY`` (the supported ``(model, style)`` presets) are the
-single source of truth. This module projects them into a plain, serializable
-``dict`` that ``backend/scripts/export_palettes.py`` writes to
+single source of truth. This module projects them into a typed, serializable
+``PaletteContract`` that ``backend/scripts/export_palettes.py`` writes to
 ``docs/contracts/palettes.json``. The frontend ``check-palette-drift.mjs`` gate
 diffs the create-form constants + i18n labels against that artifact, so the
 dropdown, the zod preset enum, and the locale labels can no longer silently
@@ -12,6 +12,8 @@ AE-0264 bugs).
 """
 
 from __future__ import annotations
+
+from typing import TypedDict
 
 from rag_backend.application.services.image_style_strategies import (
     IMAGE_STRATEGY_REGISTRY,
@@ -26,20 +28,47 @@ CONTRACT_NOTE = (
 )
 
 
-def _theme_rows() -> list[dict[str, str]]:
+class PaletteThemeRow(TypedDict):
+    """One user-selectable theme as projected to the frontend contract."""
+
+    key: str
+    mode: str
+    kind: str
+    label_en: str
+    label_pt: str
+
+
+class ImagePresetRow(TypedDict):
+    """One supported ``(model, style)`` image preset."""
+
+    model: str
+    style: str
+
+
+class PaletteContract(TypedDict):
+    """The full serializable palette contract written to palettes.json."""
+
+    _generator: str
+    _note: str
+    themes: list[PaletteThemeRow]
+    light_theme_keys: list[str]
+    image_presets: list[ImagePresetRow]
+
+
+def _theme_rows() -> list[PaletteThemeRow]:
     """User-selectable themes (every non-brand registry row), in registry order.
 
     Brand palettes are auto-detected from keywords, never offered in the UI
     dropdown, so they are excluded from the frontend contract.
     """
     return [
-        {
-            "key": descriptor.key,
-            "mode": descriptor.mode.value,
-            "kind": descriptor.kind.value,
-            "label_en": descriptor.label_en,
-            "label_pt": descriptor.label_pt,
-        }
+        PaletteThemeRow(
+            key=descriptor.key,
+            mode=descriptor.mode.value,
+            kind=descriptor.kind.value,
+            label_en=descriptor.label_en,
+            label_pt=descriptor.label_pt,
+        )
         for descriptor in PALETTE_REGISTRY
         if descriptor.kind is not PaletteKind.BRAND
     ]
@@ -55,20 +84,20 @@ def _light_theme_keys() -> list[str]:
     ]
 
 
-def _image_presets() -> list[dict[str, str]]:
+def _image_presets() -> list[ImagePresetRow]:
     """Supported ``(model, style)`` presets, sorted for a byte-stable artifact."""
     return [
-        {"model": model, "style": style}
+        ImagePresetRow(model=model, style=style)
         for model, style in sorted(IMAGE_STRATEGY_REGISTRY)
     ]
 
 
-def build_palette_contract() -> dict[str, object]:
+def build_palette_contract() -> PaletteContract:
     """Project the registries into the serializable frontend contract."""
-    return {
-        "_generator": CONTRACT_GENERATOR,
-        "_note": CONTRACT_NOTE,
-        "themes": _theme_rows(),
-        "light_theme_keys": _light_theme_keys(),
-        "image_presets": _image_presets(),
-    }
+    return PaletteContract(
+        _generator=CONTRACT_GENERATOR,
+        _note=CONTRACT_NOTE,
+        themes=_theme_rows(),
+        light_theme_keys=_light_theme_keys(),
+        image_presets=_image_presets(),
+    )

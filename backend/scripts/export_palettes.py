@@ -24,13 +24,19 @@ import argparse
 import json
 import sys
 from pathlib import Path
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from rag_backend.application.services.carousel.palette_contract import (
+        PaletteContract,
+    )
 
 # scripts/ -> backend/ -> repo root
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 _ARTIFACT_PATH = _REPO_ROOT / "docs" / "contracts" / "palettes.json"
 
 
-def _serialize(contract: dict[str, object]) -> str:
+def _serialize(contract: PaletteContract) -> str:
     """Stable, sorted JSON with a trailing newline for clean diffs."""
     return json.dumps(contract, indent=2, sort_keys=True, ensure_ascii=False) + "\n"
 
