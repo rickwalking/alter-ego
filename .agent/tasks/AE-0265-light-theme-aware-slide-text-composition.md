@@ -1,6 +1,6 @@
 # AE-0265 — light-theme-aware slide text composition
 
-Status: In Development
+Status: Review
 Tier: T2
 Priority: Medium
 Type: Feature
@@ -77,12 +77,27 @@ surface tokens.
 
 ## Test Evidence
 
-Pending.
+Commit: `445840e8` (branch `feat/carousel-palettes-light-editorial`).
+New `test_carousel_template_theme_mode.py` — 7 pass incl. a real WCAG blend+contrast
+assert (body `--text-60` over each light bg ≥ 4.5:1). 280 existing template/CSS tests
+still green (dark output unchanged). Full `gates.sh backend`:
+GATES_JSON `{"pass":14,"fail":1,"skip":4}` — only FAIL is the pre-existing `pip-audit`
+dep-CVE; mutation passed; 4 DB-skip (no local Postgres for those gates).
+
+Visual validation: regenerated paper_editorial/flat_editorial carousel
+(`a35720c8`) — heading, body, tldr strip, and the structured-item cards all render
+**dark ink on light** and read cleanly (vs the prior white-on-light invisible text).
 
 ## QA Report
 
-Pending.
+Pending external /qa-agent (optional; gates + visual validation green).
 
 ## Final Summary
 
-Pending.
+Implemented a luminance-driven surface mode in `carousel_template/theme_mode.py`:
+`is_light_background(bg)` (WCAG relative luminance ≥ 0.5) → `surface_css_vars(theme)`
+returns the `:root` token values. `css/base.py` injects `--text-*`, `--scrim-0/25/50`,
+`--card-bg-1/2`, `--item-bg`, and the body bg/text; `slide_styles_shell/closing/components`
+reference those vars instead of hardcoded dark rgba. Dark palettes return the exact
+legacy values (byte-identical). **The 3 light/editorial palettes are now postable.**
+Kept local on the branch (no PR/deploy) per the AE-0264 decision.
