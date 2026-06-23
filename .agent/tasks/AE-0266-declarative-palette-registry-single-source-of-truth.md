@@ -21,6 +21,23 @@ views can never desync. Brand keywords live co-located with their palette.
 
 Plan: `.agent/reports/AE-0266.arch-plan.md` · ADR: `docs/decisions/0018-declarative-palette-registry.md`.
 
+## Problem
+
+Theme/brand/palette config was 6+ parallel structures (`CAROUSEL_THEMES`,
+`BRAND_PALETTES`, `BRAND_KEYWORDS`, `THEME_CATEGORY_KEYWORDS`,
+`AUTO_ROTATION_THEME_KEYS`, `LIGHT_THEME_KEYS`) plus a hand-kept `CarouselTheme` enum,
+two image-strategy maps, and a frontend mirror. "A palette" was an emergent join across
+them, so adding one color meant editing ~8 places and any could silently desync —
+three production bugs in one delivery traced to this (light-on-dark AUTO, drifted
+strategy maps, FE dropdown missing themes).
+
+## Non-Goals
+
+- No public/user-visible behavior change (derived constants keep exact names + values).
+- Not the new palettes/presets themselves (AE-0264) nor the light renderer (AE-0265).
+- Phase 1 does **not** move image-style pairing or labels into descriptors (Phases 2-3).
+- No external YAML config (kept typed in-code to preserve mypy-strict).
+
 ## Classification (no-`.feature`? Yes — pure refactor)
 
 No public/user-visible behavior change: the derived constants keep the exact same
