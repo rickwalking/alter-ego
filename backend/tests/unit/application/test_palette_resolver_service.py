@@ -14,6 +14,7 @@ import pytest
 
 from rag_backend.application.services.carousel.palette_resolver_service import (
     PaletteResolverService,
+    snapshot_project_theme,
 )
 from rag_backend.domain.constants import (
     IMAGE_STYLE_DEFAULT,
@@ -119,3 +120,14 @@ class TestPaletteResolverService:
         svc = PaletteResolverService(_FakeRepo())  # empty repo
         resolved = await svc.resolve(_project(str(uuid4())))
         assert resolved.resolved_ref  # degrades to a root palette, no raise
+
+    async def test_snapshot_project_theme_freezes_onto_project(self) -> None:
+        # The write-hook API: resolve + freeze the result onto theme_snapshot (D9).
+        palette = _custom(PaletteMode.LIGHT, pid=uuid4())
+        project = _project(str(palette.id))
+        assert project.theme_snapshot is None
+        await snapshot_project_theme(project, _FakeRepo([palette]), "2026-06-23T00:00:00")
+        assert project.theme_snapshot is not None
+        assert project.theme_snapshot["primary"] == palette.palette.primary
+        assert project.theme_snapshot["mode"] == "light"
+        assert project.theme_snapshot["resolved_at"] == "2026-06-23T00:00:00"

@@ -163,6 +163,22 @@ class PaletteResolverService:
         return _root_resolved(key, CAROUSEL_THEMES[key])
 
 
+async def snapshot_project_theme(
+    project: CarouselProject,
+    repo: PaletteRepository,
+    resolved_at: str,
+) -> None:
+    """Resolve the project's theme and freeze it onto ``theme_snapshot`` (D9).
+
+    Called once at project creation (where a repo is available). Custom-palette
+    UUID themes REQUIRE this — the pure render-path ``resolve_theme`` cannot look
+    a UUID up — and it freezes AUTO so later catalog changes never alter the
+    carousel.
+    """
+    resolved = await PaletteResolverService(repo).resolve(project)
+    project.theme_snapshot = resolved.as_snapshot(resolved_at)
+
+
 def _registry_only(project: CarouselProject) -> ResolvedPalette:
     """Pure root resolution — the degraded path + non-custom themes."""
     ref = project.theme
