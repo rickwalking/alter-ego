@@ -54,8 +54,11 @@ class PaletteDescriptor:
     """One cohesive declaration of a palette and how it is selected.
 
     Brand/category keywords live here next to their colors (not in a separate
-    parallel dict). ``image_style`` pairing + display labels are added in later
-    AE-0266 phases.
+    parallel dict). ``label_en``/``label_pt`` are the single source for the
+    frontend theme-dropdown labels: the palette contract
+    (``docs/contracts/palettes.json``) carries them and a frontend drift gate
+    asserts the i18n locale files match (AE-0266 Phase 3). Brand rows are not
+    user-selectable in the UI, so they leave the labels empty.
     """
 
     key: str
@@ -64,6 +67,8 @@ class PaletteDescriptor:
     kind: PaletteKind
     keywords: tuple[str, ...] = ()
     auto_selectable: bool = False
+    label_en: str = ""
+    label_pt: str = ""
 
     def __post_init__(self) -> None:
         """Reject contradictions that previously caused real bugs."""

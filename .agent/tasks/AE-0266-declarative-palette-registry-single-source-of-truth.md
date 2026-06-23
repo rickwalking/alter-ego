@@ -54,10 +54,11 @@ no-`.feature` classification pending.
   `PALETTE_REGISTRY` + derivations (same public constants); `__post_init__` rejects a
   light palette in the AUTO pool; `tests/unit/domain/test_palette_registry.py` guards
   enum↔registry drift + derived-view consistency.
-- **Phase 2:** consolidate the two image-strategy maps (`image_provider_registry` +
-  `image_prompt_package._STRATEGY_MAP`) into one; add `image_style` to descriptors.
-- **Phase 3:** emit `docs/contracts/palettes.json`; add a frontend `palette-drift`
-  contract gate; drive `create.ts` options + i18n labels from it.
+- **Phase 2 (done):** consolidate the two image-strategy maps (`image_provider_registry` +
+  `image_prompt_package._STRATEGY_MAP`) into one `IMAGE_STRATEGY_REGISTRY`. (`image_style`
+  on descriptors was intentionally NOT added — see the Phase 2 progress-log decision.)
+- **Phase 3 (done):** emit `docs/contracts/palettes.json`; add a frontend `palette-drift`
+  contract gate; labels (`label_en`/`label_pt`) become the SSOT for the i18n theme labels.
 - **Phase 4 (optional):** runtime `GET /api/carousels/palettes`; FE dynamic catalog.
 
 ## Acceptance Criteria
@@ -73,7 +74,14 @@ no-`.feature` classification pending.
       (in `image_style_strategies.py`); both call sites consume it; contract test
       asserts registry keys == `SUPPORTED_IMAGE_COMBOS` and both consumers resolve
       the same strategy per combo. Pure refactor — strategy resolution byte-identical.
-- [ ] Phase 3-4 (follow-up).
+- [x] Phase 3: `label_en`/`label_pt` added to `PaletteDescriptor` (populated for the
+      13 user-selectable themes); `export_palettes.py` emits `docs/contracts/palettes.json`
+      from `PALETTE_REGISTRY` + `IMAGE_STRATEGY_REGISTRY`; a backend staleness test +
+      `--check` guard the artifact; the frontend `lint:palette-drift` gate (BLOCKING, in
+      the `lint` chain) diffs `create.ts` theme keys / `IMAGE_PRESETS` combos /
+      `LIGHT_THEME_KEYS` + the en/pt i18n labels against the contract; a rule-fires
+      test seeds 5 drift variants and asserts non-zero exit (AE-0180).
+- [ ] Phase 4 (optional follow-up).
 
 ## Affected Areas
 
@@ -81,9 +89,16 @@ no-`.feature` classification pending.
 - Phase 2: `application/services/image_style_strategies.py` (registry SSOT),
   `application/services/image_provider_registry.py`,
   `application/services/carousel/image_prompt_package.py`
+- Phase 3: `application/services/carousel/palette_contract.py` (new),
+  `scripts/export_palettes.py` (new), `docs/contracts/palettes.json` (new artifact),
+  `frontend/scripts/check-palette-drift.mjs` (new gate), `frontend/package.json`
+  (`lint:palette-drift` in the `lint` chain)
 - Tests: `tests/unit/domain/test_palette_registry.py`,
   `tests/unit/application/test_image_strategy_registry.py` (new),
-  `tests/unit/application/test_image_prompt_package.py`
+  `tests/unit/application/test_image_prompt_package.py`,
+  `tests/unit/application/test_palette_contract.py` (new),
+  `frontend/src/scripts/palette-drift.test.ts` (new rule-fires),
+  `frontend/tests/features/palette-drift-gate.feature` (new)
 
 ## QA Checklist
 
@@ -116,6 +131,20 @@ per dark descriptor. Encoding one would be misleading data with no real consumer
 (style still comes from `project.image_style`). Deferred to the Phase 3 frontend
 contract work, where the light→`flat_editorial` nudge is the actual coupling.
 
+Phase 3 implemented: added `label_en`/`label_pt` to `PaletteDescriptor` (the
+single source for the FE dropdown labels) and populated the 13 user-selectable
+themes. New `palette_contract.py` projects `PALETTE_REGISTRY` (themes + labels +
+light keys) and `IMAGE_STRATEGY_REGISTRY` (preset combos) into a serializable
+dict; `export_palettes.py` writes/`--check`s the committed
+`docs/contracts/palettes.json`. New frontend `check-palette-drift.mjs` (BLOCKING,
+added to the `npm run lint` chain) statically parses `create.ts`
+(CAROUSEL_THEMES / THEME_LABEL_KEYS / LIGHT_THEME_KEYS / IMAGE_PRESETS) + the
+en/pt locales and fails on any desync from the contract; `auto` is the one
+sanctioned FE-only sentinel. A backend staleness test + the AE-0180 rule-fires
+test (`palette-drift.test.ts`, 5 seeded violations) guard both ends. The FE was
+already in sync, so the gate is blocking from day one (no pre-existing drift to
+ratchet, unlike schema-drift).
+
 ## Test Evidence
 
 Phase 1: generator asserts derived == current for all 6 constants before writing;
@@ -127,6 +156,14 @@ Phase 2: `test_image_strategy_registry.py` (4 new) + `test_image_prompt_package.
 green; full unit suite **1951 passed / 1 skipped**; backend static gates 15/15 PASS
 (format, lint, lint-diff, blanket-ignore, strict-diff, type, imports, arch-ratchet,
 docstrings, dead-code, inline-prompts, bandit, pip-audit, integrity, mutation).
+
+Phase 3: `export_palettes.py --check` clean; `test_palette_contract.py` (6 new,
+incl. the committed-artifact staleness guard) green; full backend unit suite
+**1957 passed / 1 skipped**; backend ruff/format/mypy (522 files) green. Frontend:
+`lint:palette-drift` OK against the real tree; `palette-drift.test.ts` **6/6**
+(1 pass-through + 5 seeded-drift exit-non-zero); full `npm run lint` exit 0 (no new
+jscpd clones); `npm run typecheck` clean; `lint:i18n` OK; backend+frontend integrity
+(anti-gaming) PASS; frontend dead-code 0-new.
 
 ## QA Report
 
