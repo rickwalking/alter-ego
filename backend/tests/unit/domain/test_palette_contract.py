@@ -20,7 +20,7 @@ from rag_backend.application.services.carousel.palette_contract import (
 from rag_backend.domain.constants.carousel_themes import PALETTE_REGISTRY
 from rag_backend.domain.constants.palette_types import PaletteKind
 
-# backend/tests/unit/application/ -> repo root
+# backend/tests/unit/domain/ -> repo root
 _REPO_ROOT = Path(__file__).resolve().parents[4]
 _ARTIFACT_PATH = _REPO_ROOT / "docs" / "contracts" / "palettes.json"
 
@@ -67,7 +67,9 @@ class TestPaletteContract:
         # Reproduces `export_palettes.py --check`: the committed file MUST equal
         # the freshly projected registries. Regenerate with
         # `uv run python backend/scripts/export_palettes.py` when the registry
-        # changes.
+        # changes. This test lives under tests/unit/domain (not the mutmut
+        # tests_dir) because mutmut does not copy the repo-root docs/ artifact
+        # into its sandbox; the normal Test & Coverage gate still runs it.
         assert _ARTIFACT_PATH.exists(), f"missing artifact: {_ARTIFACT_PATH}"
         assert _ARTIFACT_PATH.read_text(encoding="utf-8") == _serialize(
             build_palette_contract()
