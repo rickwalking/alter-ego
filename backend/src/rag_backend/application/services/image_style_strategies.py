@@ -154,6 +154,9 @@ class OpenAINeoAnimeStrategy(ImageStyleStrategy):
             "no speech bubbles — purely visual. "
             "ALSO STRICT: no real-world brand names, no celebrity or CEO "
             "likenesses, no company logos. Use generic analogies only. "
+            "SAFETY: any characters are fully clothed, modest, and "
+            "professional; no sexual, suggestive, or nudity content "
+            "(avoids anime-style output-moderation false positives). "
             f"{_palette_fragment(theme)} "
             f"Scene: {scene.strip()}"
         )
