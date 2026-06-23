@@ -89,7 +89,10 @@ async def create_carousel(
     """Create a new carousel project."""
     from rag_backend.domain.models import CarouselTheme
 
-    theme = CarouselTheme(request.theme)
+    # Validate the requested theme is a known root key (or "auto") and store it
+    # as a plain string reference (AE-0268). Custom-palette references are
+    # validated against the catalog from AE-0270.
+    theme = CarouselTheme(request.theme).value
     project = CarouselProject(
         topic=request.topic,
         audience=request.audience,

@@ -246,7 +246,7 @@ def _resolve_slide_info(
 def _build_default_design_tokens(
     project: CarouselProject,
 ) -> dict[str, object]:
-    palette = _resolve_palette(project.theme.value, project.topic)
+    palette = _resolve_palette(project.theme, project.topic)
     slide_count, slide_paths, pt_slide_numbers, en_slide_numbers = _resolve_slide_info(
         project,
     )

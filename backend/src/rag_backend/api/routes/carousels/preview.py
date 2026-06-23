@@ -218,7 +218,7 @@ async def preview_carousel_design(
             blog_image_map=tokens["images"].get("blog_image_map"),
         ),
         layout=CarouselDesignLayout(**layout),
-        theme_name=project.theme.value,
+        theme_name=project.theme,
     )
 
 
