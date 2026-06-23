@@ -29,9 +29,9 @@ def get_neon_slide_shell_css(theme: dict[str, str]) -> str:
     background:
       linear-gradient(
         180deg,
-        rgba(10,12,20,0.08) 0%,
-        rgba(10,12,20,0.35) 25%,
-        rgba(10,12,20,0.75) 50%,
+        var(--scrim-0) 0%,
+        var(--scrim-25) 25%,
+        var(--scrim-50) 50%,
         var(--bg) 70%
       );
     pointer-events: none;
@@ -87,9 +87,9 @@ def get_neon_slide_shell_css(theme: dict[str, str]) -> str:
     background:
       linear-gradient(
         180deg,
-        rgba(10,12,20,0.08) 0%,
-        rgba(10,12,20,0.35) 25%,
-        rgba(10,12,20,0.75) 50%,
+        var(--scrim-0) 0%,
+        var(--scrim-25) 25%,
+        var(--scrim-50) 50%,
         var(--bg) 70%
       );
     pointer-events: none;

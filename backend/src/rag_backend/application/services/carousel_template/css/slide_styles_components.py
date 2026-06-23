@@ -119,7 +119,7 @@ def get_neon_slide_component_css(theme: dict[str, str]) -> str:
     align-items: flex-start;
     padding: 14px 14px;
     border-radius: 8px;
-    background: rgba(10,12,20,0.8);
+    background: var(--item-bg);
     border: 1px solid {primary}26;
     backdrop-filter: blur(4px);
     -webkit-backdrop-filter: blur(4px);

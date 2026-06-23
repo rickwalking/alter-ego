@@ -67,6 +67,16 @@ class CarouselTheme(StrEnum):
     DEVELOPER_SKILLS = "developer_skills"
     SOURCE_CODE = "source_code"
     SOCIAL_ENGINEERING = "social_engineering"
+    # Dark variants (pair with the neon/neo-anime image styles).
+    PLASMA_MAGENTA = "plasma_magenta"
+    ACID_LIME = "acid_lime"
+    MONO_INDIGO = "mono_indigo"
+    EMBER_CRIMSON = "ember_crimson"
+    BLUEPRINT = "blueprint"
+    # Light / editorial palettes (pair with the flat_editorial image style).
+    RISOGRAPH = "risograph"
+    PAPER_EDITORIAL = "paper_editorial"
+    CLINICAL_MINT = "clinical_mint"
     AUTO = "auto"
 
 
@@ -119,6 +129,10 @@ class CarouselProject:
     persona_id: str | None = None
     rubric_id: str | None = None
     instructions: str | None = None
+    # Project-level visual direction injected into every slide image prompt
+    # (AE-0263 backdrop / custom scene details). Image-phase revision feedback
+    # is appended here so a revision actually changes the rendered scene (AE-0261).
+    custom_visual_details: str | None = None
     current_phase: str = "brief"
     phase_status: str = "pending"
     is_public: bool = False

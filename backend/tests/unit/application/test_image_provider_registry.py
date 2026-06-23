@@ -13,6 +13,7 @@ from rag_backend.application.services.image_provider_registry import (
 from rag_backend.application.services.image_style_strategies import (
     GeminiComicNeonStrategy,
     OpenAICinematicStrategy,
+    OpenAIFlatEditorialStrategy,
     OpenAIHyperrealStrategy,
     OpenAINeoAnimeStrategy,
 )
@@ -21,6 +22,7 @@ from rag_backend.domain.constants import (
     IMAGE_MODEL_OPENAI,
     IMAGE_STYLE_CINEMATIC,
     IMAGE_STYLE_COMIC_NEON,
+    IMAGE_STYLE_FLAT_EDITORIAL,
     IMAGE_STYLE_HYPERREAL,
     IMAGE_STYLE_NEO_ANIME,
 )
@@ -51,6 +53,12 @@ class TestImageProviderRegistry:
     def test_openai_neo_anime_returns_right_strategy(self) -> None:
         provider = _registry().resolve(IMAGE_MODEL_OPENAI, IMAGE_STYLE_NEO_ANIME)
         assert isinstance(provider.strategy, OpenAINeoAnimeStrategy)
+
+    def test_openai_flat_editorial_returns_right_strategy(self) -> None:
+        provider = _registry().resolve(
+            IMAGE_MODEL_OPENAI, IMAGE_STYLE_FLAT_EDITORIAL
+        )
+        assert isinstance(provider.strategy, OpenAIFlatEditorialStrategy)
 
     def test_unsupported_combo_raises_value_error(self) -> None:
         # (gemini, cinematic) is deliberately not in SUPPORTED_IMAGE_COMBOS.

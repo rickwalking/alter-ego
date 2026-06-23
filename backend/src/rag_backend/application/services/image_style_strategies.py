@@ -9,6 +9,15 @@ documented in `tests/features/image_generation_provider.feature`.
 
 from collections.abc import Mapping
 
+from rag_backend.domain.constants import (
+    IMAGE_MODEL_GEMINI,
+    IMAGE_MODEL_OPENAI,
+    IMAGE_STYLE_CINEMATIC,
+    IMAGE_STYLE_COMIC_NEON,
+    IMAGE_STYLE_FLAT_EDITORIAL,
+    IMAGE_STYLE_HYPERREAL,
+    IMAGE_STYLE_NEO_ANIME,
+)
 from rag_backend.domain.protocols import ImageStyleStrategy
 
 
@@ -25,6 +34,22 @@ def _palette_fragment(theme: Mapping[str, str]) -> str:
     return (
         f"Dark background ({background}) with {primary} and {accent} "
         "neon glow accents, subtle radial light bloom."
+    )
+
+
+def _editorial_palette_fragment(theme: Mapping[str, str]) -> str:
+    """Render the palette line for the light/editorial strategy.
+
+    The light counterpart of :func:`_palette_fragment`: a light background
+    carrying the primary as ink and the accent as a highlight, with no neon
+    glow. Missing keys degrade to empty strings, matching the dark fragment.
+    """
+    primary = theme.get("primary", "")
+    accent = theme.get("accent", "")
+    background = theme.get("background", "")
+    return (
+        f"Light background ({background}) with {primary} ink and {accent} "
+        "highlights, matte fills, generous negative space."
     )
 
 
@@ -100,6 +125,30 @@ class OpenAIHyperrealStrategy(ImageStyleStrategy):
         )
 
 
+class OpenAIFlatEditorialStrategy(ImageStyleStrategy):
+    """Flat editorial vector preset for gpt-image-2.
+
+    The light/editorial counterpart to the dark neon presets: matte vector
+    illustration on a light ground, paired with the light palettes
+    (risograph, paper_editorial, clinical_mint). Uses the light palette
+    fragment so the prompt does not contradict a light background.
+    """
+
+    @staticmethod
+    def wrap(scene: str, theme: Mapping[str, str]) -> str:
+        return (
+            "Flat editorial vector illustration, single-weight line art, "
+            "matte fills, generous negative space, soft paper grain, calm "
+            "magazine-explainer mood. Wide panoramic 3:1 composition. "
+            "STRICT: no readable text, no logos, no captions, no UI labels, "
+            "no speech bubbles — purely visual. "
+            "ALSO STRICT: no real-world brand names, no celebrity or CEO "
+            "likenesses, no company logos. Use generic analogies only. "
+            f"{_editorial_palette_fragment(theme)} "
+            f"Scene: {scene.strip()}"
+        )
+
+
 class OpenAINeoAnimeStrategy(ImageStyleStrategy):
     """Ghost in the Shell / Akira cel-animated preset for gpt-image-2."""
 
@@ -114,6 +163,25 @@ class OpenAINeoAnimeStrategy(ImageStyleStrategy):
             "no speech bubbles — purely visual. "
             "ALSO STRICT: no real-world brand names, no celebrity or CEO "
             "likenesses, no company logos. Use generic analogies only. "
+            "SAFETY: any characters are fully clothed, modest, and "
+            "professional; no sexual, suggestive, or nudity content "
+            "(avoids anime-style output-moderation false positives). "
             f"{_palette_fragment(theme)} "
             f"Scene: {scene.strip()}"
         )
+
+
+# Single source of truth: every supported ``(image_model, image_style)`` combo
+# maps to exactly one strategy class. Both the prompt renderer
+# (``image_prompt_package``) and the provider registry
+# (``image_provider_registry``) consume THIS map, so they can no longer drift —
+# the AE-0264 bug where a light palette fell back to the dark "neon glow"
+# default because the two maps disagreed is now structurally impossible. The
+# keys must equal ``SUPPORTED_IMAGE_COMBOS`` (guarded by a contract test).
+IMAGE_STRATEGY_REGISTRY: dict[tuple[str, str], type[ImageStyleStrategy]] = {
+    (IMAGE_MODEL_GEMINI, IMAGE_STYLE_COMIC_NEON): GeminiComicNeonStrategy,
+    (IMAGE_MODEL_OPENAI, IMAGE_STYLE_CINEMATIC): OpenAICinematicStrategy,
+    (IMAGE_MODEL_OPENAI, IMAGE_STYLE_HYPERREAL): OpenAIHyperrealStrategy,
+    (IMAGE_MODEL_OPENAI, IMAGE_STYLE_NEO_ANIME): OpenAINeoAnimeStrategy,
+    (IMAGE_MODEL_OPENAI, IMAGE_STYLE_FLAT_EDITORIAL): OpenAIFlatEditorialStrategy,
+}

@@ -12,19 +12,10 @@ from rag_backend.application.services.image_prompt_sanitizer import (
     sanitize_image_prompt,
 )
 from rag_backend.application.services.image_style_strategies import (
+    IMAGE_STRATEGY_REGISTRY,
     GeminiComicNeonStrategy,
-    OpenAICinematicStrategy,
-    OpenAIHyperrealStrategy,
-    OpenAINeoAnimeStrategy,
 )
-from rag_backend.domain.constants import (
-    IMAGE_MODEL_GEMINI,
-    IMAGE_MODEL_OPENAI,
-    IMAGE_STYLE_CINEMATIC,
-    IMAGE_STYLE_COMIC_NEON,
-    IMAGE_STYLE_HYPERREAL,
-    IMAGE_STYLE_NEO_ANIME,
-)
+from rag_backend.domain.constants import IMAGE_MODEL_OPENAI
 from rag_backend.domain.models import CarouselProject
 from rag_backend.domain.protocols import ImageStyleStrategy
 
@@ -63,6 +54,7 @@ def render_image_prompt_package(
     request: ImagePromptPackageRequest,
 ) -> ImagePromptPackage:
     raw_prompt = request.slide.image_prompt or ""
+    raw_prompt = _compose_scene(raw_prompt, request.project.custom_visual_details)
     if request.project.image_model == IMAGE_MODEL_OPENAI:
         raw_prompt = sanitize_image_prompt(raw_prompt)
     theme = request.theme or resolve_theme(request.project)
@@ -86,6 +78,25 @@ def render_image_prompt_package(
     )
 
 
+_VISUAL_DIRECTION_PREFIX = "Visual direction:"
+
+
+def _compose_scene(scene: str, custom_visual_details: str | None) -> str:
+    """Fold project-level custom visual direction into the slide scene.
+
+    The details ride inside the scene (the ``Scene:`` trailer the strategy
+    appends), so they reach the model AND change the rendered prompt hash —
+    which busts the per-prompt image reuse so a revision actually regenerates
+    (AE-0261). Empty details leave the scene byte-identical (AE-0263).
+    """
+    details = (custom_visual_details or "").strip()
+    if not details:
+        return scene
+    base = scene.strip()
+    direction = f"{_VISUAL_DIRECTION_PREFIX} {details}"
+    return f"{base}. {direction}" if base else direction
+
+
 def sha256_parts(parts: Sequence[str]) -> str:
     digest = sha256()
     for part in parts:
@@ -94,18 +105,13 @@ def sha256_parts(parts: Sequence[str]) -> str:
     return digest.hexdigest()
 
 
-_STRATEGY_MAP: dict[tuple[str, str], type[ImageStyleStrategy]] = {
-    (IMAGE_MODEL_GEMINI, IMAGE_STYLE_COMIC_NEON): GeminiComicNeonStrategy,
-    (IMAGE_MODEL_OPENAI, IMAGE_STYLE_CINEMATIC): OpenAICinematicStrategy,
-    (IMAGE_MODEL_OPENAI, IMAGE_STYLE_HYPERREAL): OpenAIHyperrealStrategy,
-    (IMAGE_MODEL_OPENAI, IMAGE_STYLE_NEO_ANIME): OpenAINeoAnimeStrategy,
-}
-
+# Dark default for any combo the registry doesn't cover (defence in depth;
+# API validation rejects unsupported combos before they reach here).
 _DEFAULT_STRATEGY = GeminiComicNeonStrategy
 
 
 def _strategy_for_project(project: CarouselProject) -> ImageStyleStrategy:
-    strategy_cls = _STRATEGY_MAP.get(
+    strategy_cls = IMAGE_STRATEGY_REGISTRY.get(
         (project.image_model, project.image_style), _DEFAULT_STRATEGY
     )
     return strategy_cls()

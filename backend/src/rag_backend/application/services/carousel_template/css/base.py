@@ -2,19 +2,24 @@
 
 from __future__ import annotations
 
+from rag_backend.application.services.carousel_template.theme_mode import (
+    surface_css_vars,
+)
+
 
 def _get_neon_base_css(theme: dict[str, str]) -> str:
     """Return base layout and structural CSS matching the reference design."""
     primary = theme["primary"]
     accent = theme["accent"]
     bg = theme["background"]
+    surface = surface_css_vars(theme)
     return f"""
   *, *::before, *::after {{ box-sizing: border-box; margin: 0; padding: 0; }}
   html {{ scroll-behavior: smooth; }}
   body {{
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
-    background: #060a12;
-    color: rgba(255,255,255,0.85);
+    background: {surface["body_bg"]};
+    color: {surface["body_text"]};
     line-height: 1.6;
     overflow-x: hidden;
     -webkit-font-smoothing: antialiased;
@@ -36,11 +41,17 @@ def _get_neon_base_css(theme: dict[str, str]) -> str:
     --accent: {accent};
     --accent-dim: {accent}1F;
     --bg: {bg};
-    --text: #ffffff;
-    --text-60: rgba(255,255,255,0.63);
-    --text-48: rgba(255,255,255,0.48);
-    --text-55: rgba(255,255,255,0.55);
-    --text-06: rgba(255,255,255,0.06);
+    --text: {surface["text"]};
+    --text-60: {surface["text_60"]};
+    --text-48: {surface["text_48"]};
+    --text-55: {surface["text_55"]};
+    --text-06: {surface["text_06"]};
+    --scrim-0: {surface["scrim_0"]};
+    --scrim-25: {surface["scrim_25"]};
+    --scrim-50: {surface["scrim_50"]};
+    --card-bg-1: {surface["card_bg_1"]};
+    --card-bg-2: {surface["card_bg_2"]};
+    --item-bg: {surface["item_bg"]};
     --font-mono: 'JetBrains Mono', ui-monospace, monospace;
     --font-heading: 'Inter', system-ui, -apple-system, sans-serif;
   }}

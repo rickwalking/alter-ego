@@ -38,6 +38,27 @@ Feature: Pluggable image generation provider and style
     Then the neo-anime style wrapper is applied
     And the final prompt includes "Cel-animated feature film still"
 
+  Scenario: Caller picks OpenAI flat-editorial preset for a light palette
+    Given the project has image_model "openai" and image_style "flat_editorial"
+    And the project has a resolved LIGHT theme palette
+    When the pipeline renders the image-generation phase
+    Then the flat-editorial style wrapper is applied
+    And the final prompt includes "Flat editorial vector illustration"
+    And the final prompt includes "Light background"
+    And the final prompt does not mention "neon glow"
+
+  # Palette selection -----------------------------------------------------
+
+  Scenario: A light palette is reachable only by explicit selection
+    Given a project with theme "paper_editorial"
+    When the theme is resolved
+    Then the resolved palette is the light paper_editorial palette
+
+  Scenario: AUTO never assigns a light palette to a dark strategy
+    Given a project with theme AUTO and no matching brand or category keywords
+    When the theme is resolved for many different topics
+    Then the resolved palette is never one of the light palettes
+
   # Validation -------------------------------------------------------------
 
   Scenario: Invalid model rejected at API layer
@@ -76,3 +97,21 @@ Feature: Pluggable image generation provider and style
     When any strategy wraps the scene
     Then the final prompt still contains that exact scene text
     And the scene appears after the style directives, not before
+
+  # Custom visual details + revision (AE-0263 / AE-0261) ---------------------
+
+  Scenario: Project custom visual details reach every slide image prompt
+    Given a project with custom_visual_details "Rio de Janeiro skyline at golden hour"
+    When slide image prompts are rendered
+    Then each rendered prompt contains "Visual direction: Rio de Janeiro skyline"
+
+  Scenario: No custom visual details leaves the scene unchanged
+    Given a project with no custom_visual_details
+    When a slide image prompt is rendered
+    Then the rendered prompt does not contain "Visual direction:"
+
+  Scenario: Image revision feedback changes the rendered prompt
+    Given an image phase awaiting human review
+    When the user requests an image revision with feedback
+    Then the feedback is appended to the project custom_visual_details
+      And the regenerated prompt hash differs from the previous one

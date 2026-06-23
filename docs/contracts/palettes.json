@@ -1,0 +1,124 @@
+{
+  "_generator": "backend/scripts/export_palettes.py",
+  "_note": "Generated from PALETTE_REGISTRY + IMAGE_STRATEGY_REGISTRY (AE-0266). Do not edit by hand; run the generator and commit the result.",
+  "image_presets": [
+    {
+      "model": "gemini",
+      "style": "comic_neon"
+    },
+    {
+      "model": "openai",
+      "style": "cinematic"
+    },
+    {
+      "model": "openai",
+      "style": "flat_editorial"
+    },
+    {
+      "model": "openai",
+      "style": "hyperreal"
+    },
+    {
+      "model": "openai",
+      "style": "neo_anime"
+    }
+  ],
+  "light_theme_keys": [
+    "risograph",
+    "paper_editorial",
+    "clinical_mint"
+  ],
+  "themes": [
+    {
+      "key": "cybersecurity",
+      "kind": "category",
+      "label_en": "Cybersecurity",
+      "label_pt": "Cibersegurança",
+      "mode": "dark"
+    },
+    {
+      "key": "ai_competition",
+      "kind": "category",
+      "label_en": "AI Competition",
+      "label_pt": "Competição de IA",
+      "mode": "dark"
+    },
+    {
+      "key": "developer_skills",
+      "kind": "category",
+      "label_en": "Developer Skills",
+      "label_pt": "Habilidades de Dev",
+      "mode": "dark"
+    },
+    {
+      "key": "source_code",
+      "kind": "category",
+      "label_en": "Source Code",
+      "label_pt": "Código Fonte",
+      "mode": "dark"
+    },
+    {
+      "key": "social_engineering",
+      "kind": "category",
+      "label_en": "Social Engineering",
+      "label_pt": "Engenharia Social",
+      "mode": "dark"
+    },
+    {
+      "key": "plasma_magenta",
+      "kind": "variant",
+      "label_en": "Plasma Magenta",
+      "label_pt": "Plasma Magenta",
+      "mode": "dark"
+    },
+    {
+      "key": "acid_lime",
+      "kind": "variant",
+      "label_en": "Acid Lime",
+      "label_pt": "Acid Lime",
+      "mode": "dark"
+    },
+    {
+      "key": "mono_indigo",
+      "kind": "variant",
+      "label_en": "Mono Indigo",
+      "label_pt": "Mono Indigo",
+      "mode": "dark"
+    },
+    {
+      "key": "ember_crimson",
+      "kind": "variant",
+      "label_en": "Ember Crimson",
+      "label_pt": "Ember Crimson",
+      "mode": "dark"
+    },
+    {
+      "key": "blueprint",
+      "kind": "variant",
+      "label_en": "Blueprint",
+      "label_pt": "Blueprint",
+      "mode": "dark"
+    },
+    {
+      "key": "risograph",
+      "kind": "variant",
+      "label_en": "Risograph (light)",
+      "label_pt": "Risograph (claro)",
+      "mode": "light"
+    },
+    {
+      "key": "paper_editorial",
+      "kind": "variant",
+      "label_en": "Paper Editorial (light)",
+      "label_pt": "Paper Editorial (claro)",
+      "mode": "light"
+    },
+    {
+      "key": "clinical_mint",
+      "kind": "variant",
+      "label_en": "Clinical Mint (light)",
+      "label_pt": "Clinical Mint (claro)",
+      "mode": "light"
+    }
+  ]
+}

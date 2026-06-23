@@ -19,6 +19,7 @@ export const IMAGE_STYLES = {
   CINEMATIC: "cinematic",
   HYPERREAL: "hyperreal",
   NEO_ANIME: "neo_anime",
+  FLAT_EDITORIAL: "flat_editorial",
 } as const;
 
 /**
@@ -51,9 +52,18 @@ export const IMAGE_PRESETS = [
     style: IMAGE_STYLES.NEO_ANIME,
     labelKey: "imagePresets.openai_neo_anime",
   },
+  {
+    value: "openai__flat_editorial",
+    model: IMAGE_MODELS.OPENAI,
+    style: IMAGE_STYLES.FLAT_EDITORIAL,
+    labelKey: "imagePresets.openai_flat_editorial",
+  },
 ] as const;
 
 export const DEFAULT_IMAGE_PRESET = IMAGE_PRESETS[0].value;
+
+/** The light/editorial preset value — recommended for light themes. */
+export const FLAT_EDITORIAL_PRESET = "openai__flat_editorial";
 
 /** Phase 5 per-slide image-generation lifecycle. */
 export const SLIDE_GENERATION_STATUS = {
@@ -66,13 +76,25 @@ export const SLIDE_GENERATION_STATUS = {
 export type SlideGenerationStatus =
   (typeof SLIDE_GENERATION_STATUS)[keyof typeof SLIDE_GENERATION_STATUS];
 
-/** Available carousel themes. */
+/**
+ * Available carousel themes. Dark variants pair with the neon/neo-anime image
+ * styles; light/editorial themes (risograph, paper_editorial, clinical_mint)
+ * pair with the flat_editorial style.
+ */
 export const CAROUSEL_THEMES = {
   CYBERSECURITY: "cybersecurity",
   AI_COMPETITION: "ai_competition",
   DEVELOPER_SKILLS: "developer_skills",
   SOURCE_CODE: "source_code",
   SOCIAL_ENGINEERING: "social_engineering",
+  PLASMA_MAGENTA: "plasma_magenta",
+  ACID_LIME: "acid_lime",
+  MONO_INDIGO: "mono_indigo",
+  EMBER_CRIMSON: "ember_crimson",
+  BLUEPRINT: "blueprint",
+  RISOGRAPH: "risograph",
+  PAPER_EDITORIAL: "paper_editorial",
+  CLINICAL_MINT: "clinical_mint",
   AUTO: "auto",
 } as const;
 
@@ -83,8 +105,31 @@ export const THEME_LABEL_KEYS = {
   developer_skills: "themes.developer_skills",
   source_code: "themes.source_code",
   social_engineering: "themes.social_engineering",
+  plasma_magenta: "themes.plasma_magenta",
+  acid_lime: "themes.acid_lime",
+  mono_indigo: "themes.mono_indigo",
+  ember_crimson: "themes.ember_crimson",
+  blueprint: "themes.blueprint",
+  risograph: "themes.risograph",
+  paper_editorial: "themes.paper_editorial",
+  clinical_mint: "themes.clinical_mint",
   auto: "themes.auto",
 } as const;
+
+/**
+ * Theme keys whose palette uses a LIGHT background. These render correctly
+ * only with the flat_editorial preset, so the create form nudges toward it.
+ */
+export const LIGHT_THEME_KEYS: readonly string[] = [
+  CAROUSEL_THEMES.RISOGRAPH,
+  CAROUSEL_THEMES.PAPER_EDITORIAL,
+  CAROUSEL_THEMES.CLINICAL_MINT,
+];
+
+/** True when the theme's palette is light (pair with flat_editorial). */
+export function isLightTheme(theme: string): boolean {
+  return LIGHT_THEME_KEYS.includes(theme);
+}
 
 /** Pipeline phase display order. */
 export const PIPELINE_PHASES = [

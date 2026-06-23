@@ -3,10 +3,12 @@
 import { useTranslations } from "next-intl";
 import {
   CAROUSEL_THEMES,
+  FLAT_EDITORIAL_PRESET,
   IMAGE_PRESETS,
+  isLightTheme,
   THEME_LABEL_KEYS,
 } from "@/constants/create";
-import { TEXT_MUTED } from "@/constants/neon";
+import { NEON_CYAN, TEXT_MUTED } from "@/constants/neon";
 import type { CreateCarouselFormState } from "@/app/dashboard/create/types";
 import { SectionNumber } from "./section-number";
 import {
@@ -22,6 +24,14 @@ const THEME_OPTIONS = [
   CAROUSEL_THEMES.DEVELOPER_SKILLS,
   CAROUSEL_THEMES.SOURCE_CODE,
   CAROUSEL_THEMES.SOCIAL_ENGINEERING,
+  CAROUSEL_THEMES.PLASMA_MAGENTA,
+  CAROUSEL_THEMES.ACID_LIME,
+  CAROUSEL_THEMES.MONO_INDIGO,
+  CAROUSEL_THEMES.EMBER_CRIMSON,
+  CAROUSEL_THEMES.BLUEPRINT,
+  CAROUSEL_THEMES.RISOGRAPH,
+  CAROUSEL_THEMES.PAPER_EDITORIAL,
+  CAROUSEL_THEMES.CLINICAL_MINT,
 ] as const;
 
 export interface CreateThemeSectionProps {
@@ -34,6 +44,18 @@ export function CreateThemeSection({
   onChange,
 }: CreateThemeSectionProps): React.ReactElement {
   const t = useTranslations("create");
+
+  // Light palettes only render correctly with the flat_editorial preset, so
+  // selecting one nudges the preset toward it to avoid a mismatched dark scene.
+  const handleThemeChange = (theme: string): void => {
+    const patch: Partial<CreateCarouselFormState> = {
+      theme: theme as CreateCarouselFormState["theme"],
+    };
+    if (isLightTheme(theme) && form.imagePreset !== FLAT_EDITORIAL_PRESET) {
+      patch.imagePreset = FLAT_EDITORIAL_PRESET;
+    }
+    onChange(patch);
+  };
 
   return (
     <div style={sectionCardStyle}>
@@ -61,11 +83,7 @@ export function CreateThemeSection({
           </label>
           <select
             value={form.theme}
-            onChange={(e) =>
-              onChange({
-                theme: e.target.value as CreateCarouselFormState["theme"],
-              })
-            }
+            onChange={(e) => handleThemeChange(e.target.value)}
             style={inputStyle}
           >
             {THEME_OPTIONS.map((theme) => (
@@ -74,6 +92,18 @@ export function CreateThemeSection({
               </option>
             ))}
           </select>
+          {isLightTheme(form.theme) && (
+            <p
+              role="note"
+              style={{
+                fontSize: "11px",
+                color: NEON_CYAN,
+                marginTop: "6px",
+              }}
+            >
+              {t("lightThemeHint")}
+            </p>
+          )}
         </div>
         <div>
           <label
