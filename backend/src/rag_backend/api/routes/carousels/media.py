@@ -239,7 +239,7 @@ async def get_carousel_design(
         raise HTTPException(status_code=404, detail=ERR_DESIGN_NOT_GENERATED)
 
     raw_tokens = project.design_tokens
-    theme_name = project.theme.value
+    theme_name = project.theme
 
     required_keys = ("colors", "typography", "images", "layout")
     defaults = handlers.merge_design_tokens(project)

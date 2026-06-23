@@ -107,7 +107,10 @@ class CarouselProject:
     generate_images: bool = True
     image_model: str = IMAGE_MODEL_DEFAULT
     image_style: str = IMAGE_STYLE_DEFAULT
-    theme: CarouselTheme = CarouselTheme.AUTO
+    # Theme is a string reference (AE-0268): a root palette key, the "auto"
+    # sentinel, or (from AE-0269) a custom palette UUID. The CarouselTheme enum
+    # is retained as the canonical root-key list, not as this field's type.
+    theme: str = CarouselTheme.AUTO.value
     primary_color: str | None = None
     accent_color: str | None = None
     background_color: str | None = None

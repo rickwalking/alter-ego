@@ -109,9 +109,9 @@ def resolve_theme(project: CarouselProject) -> dict[str, str]:
     The returned dict always has ``primary``, ``accent``, and
     ``background`` keys.
     """
-    if project.theme != CarouselTheme.AUTO:
+    if project.theme != CarouselTheme.AUTO.value:
         return CAROUSEL_THEMES.get(
-            project.theme.value,
+            project.theme,
             CAROUSEL_THEMES[CATEGORY_THEME_KEYS[0]],
         )
 

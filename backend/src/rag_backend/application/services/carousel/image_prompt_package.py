@@ -73,7 +73,7 @@ def render_image_prompt_package(
         provider=request.project.image_model,
         model=request.project.image_model,
         style=request.project.image_style,
-        theme_name=request.project.theme.value,
+        theme_name=request.project.theme,
         theme_colors=dict(theme),
     )
 

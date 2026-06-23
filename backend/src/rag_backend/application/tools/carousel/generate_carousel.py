@@ -52,7 +52,7 @@ def build_generate_carousel_tool(
         Use when the user says "create a carousel", "create a social media post",
         "generate carousel slides", or "make an Instagram post".
         """
-        theme_enum = CarouselTheme(theme)
+        validated_theme = CarouselTheme(theme).value
         safe_topic = sanitize_llm_input(topic)
         safe_audience = sanitize_llm_input(audience)
         safe_niche = sanitize_llm_input(niche)
@@ -60,7 +60,7 @@ def build_generate_carousel_tool(
             topic=safe_topic,
             audience=safe_audience,
             niche=safe_niche,
-            theme=theme_enum,
+            theme=validated_theme,
             language=language,
             owner_id=access.owner_user_id,
         )
