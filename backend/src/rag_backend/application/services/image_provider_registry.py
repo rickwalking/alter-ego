@@ -12,20 +12,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from rag_backend.application.services.image_style_strategies import (
-    GeminiComicNeonStrategy,
-    OpenAICinematicStrategy,
-    OpenAIFlatEditorialStrategy,
-    OpenAIHyperrealStrategy,
-    OpenAINeoAnimeStrategy,
+    IMAGE_STRATEGY_REGISTRY,
 )
 from rag_backend.domain.constants import (
     IMAGE_MODEL_GEMINI,
     IMAGE_MODEL_OPENAI,
-    IMAGE_STYLE_CINEMATIC,
-    IMAGE_STYLE_COMIC_NEON,
-    IMAGE_STYLE_FLAT_EDITORIAL,
-    IMAGE_STYLE_HYPERREAL,
-    IMAGE_STYLE_NEO_ANIME,
     SUPPORTED_IMAGE_COMBOS,
 )
 from rag_backend.domain.protocols import (
@@ -69,27 +60,19 @@ class ImageProviderRegistry:
         gemini_service: ImageGenerationService,
         openai_service: ImageGenerationService,
     ) -> None:
+        # Build one provider per registry combo, pairing each strategy with the
+        # service for its model. ``IMAGE_STRATEGY_REGISTRY`` is the single source
+        # of truth shared with the prompt renderer, so the two can never drift.
+        services_by_model: dict[str, ImageGenerationService] = {
+            IMAGE_MODEL_GEMINI: gemini_service,
+            IMAGE_MODEL_OPENAI: openai_service,
+        }
         self._providers: dict[tuple[str, str], ImageProvider] = {
-            (IMAGE_MODEL_GEMINI, IMAGE_STYLE_COMIC_NEON): ImageProvider(
-                service=gemini_service,
-                strategy=GeminiComicNeonStrategy(),
-            ),
-            (IMAGE_MODEL_OPENAI, IMAGE_STYLE_CINEMATIC): ImageProvider(
-                service=openai_service,
-                strategy=OpenAICinematicStrategy(),
-            ),
-            (IMAGE_MODEL_OPENAI, IMAGE_STYLE_HYPERREAL): ImageProvider(
-                service=openai_service,
-                strategy=OpenAIHyperrealStrategy(),
-            ),
-            (IMAGE_MODEL_OPENAI, IMAGE_STYLE_NEO_ANIME): ImageProvider(
-                service=openai_service,
-                strategy=OpenAINeoAnimeStrategy(),
-            ),
-            (IMAGE_MODEL_OPENAI, IMAGE_STYLE_FLAT_EDITORIAL): ImageProvider(
-                service=openai_service,
-                strategy=OpenAIFlatEditorialStrategy(),
-            ),
+            (model, style): ImageProvider(
+                service=services_by_model[model],
+                strategy=strategy_cls(),
+            )
+            for (model, style), strategy_cls in IMAGE_STRATEGY_REGISTRY.items()
         }
 
     def resolve(self, model: str, style: str) -> ImageProvider:

@@ -68,12 +68,22 @@ no-`.feature` classification pending.
 - [x] `__post_init__` makes a light AUTO palette unrepresentable; contract test guards
       enum↔registry drift.
 - [x] backend ruff/mypy/lint-imports/arch-ratchet/dead-code green; full unit suite green.
-- [ ] Phase 2-4 (follow-up).
+- [x] Phase 2: the two image-strategy maps (`image_prompt_package._STRATEGY_MAP` +
+      `image_provider_registry._providers`) fold into one `IMAGE_STRATEGY_REGISTRY`
+      (in `image_style_strategies.py`); both call sites consume it; contract test
+      asserts registry keys == `SUPPORTED_IMAGE_COMBOS` and both consumers resolve
+      the same strategy per combo. Pure refactor — strategy resolution byte-identical.
+- [ ] Phase 3-4 (follow-up).
 
 ## Affected Areas
 
 - Backend: `domain/constants/palette_types.py` (new), `domain/constants/carousel_themes.py`
-- Tests: `tests/unit/domain/test_palette_registry.py`
+- Phase 2: `application/services/image_style_strategies.py` (registry SSOT),
+  `application/services/image_provider_registry.py`,
+  `application/services/carousel/image_prompt_package.py`
+- Tests: `tests/unit/domain/test_palette_registry.py`,
+  `tests/unit/application/test_image_strategy_registry.py` (new),
+  `tests/unit/application/test_image_prompt_package.py`
 
 ## QA Checklist
 
@@ -90,11 +100,33 @@ no-`.feature` classification pending.
 Architect plan + ADR-0018. Phase 1 implemented (commit 7e82e73c): registry +
 derivations, parity-verified, 1947 unit tests green. Phases 2-4 are follow-ups.
 
+Phase 2 implemented: consolidated the two parallel `(model, style) → strategy`
+maps into one `IMAGE_STRATEGY_REGISTRY` co-located with the strategy classes in
+`image_style_strategies.py`. The prompt renderer and the provider registry both
+read it, so the AE-0264 drift class (a light palette falling back to the dark
+"neon glow" default because the maps disagreed) is now structurally impossible.
+The provider registry builds `_providers` by iterating the registry and pairing
+each strategy with its model's service. A new contract test pins the SSOT.
+
+**Decision — `image_style` NOT added to `PaletteDescriptor` (deviation from the
+plan's Phase 2 bullet):** the palette→style relation is many-to-one only for the
+3 *light* palettes (all → `flat_editorial`); the 11 *dark* palettes each pair
+with any of 4 dark styles chosen by the user, so there is no single `image_style`
+per dark descriptor. Encoding one would be misleading data with no real consumer
+(style still comes from `project.image_style`). Deferred to the Phase 3 frontend
+contract work, where the light→`flat_editorial` nudge is the actual coupling.
+
 ## Test Evidence
 
 Phase 1: generator asserts derived == current for all 6 constants before writing;
 `test_palette_registry.py` (6) + `test_theme_resolver.py` + `test_image_prompt_package.py`
 green; full unit suite 1947 passed / 1 skipped; ruff/mypy/lint-imports/arch-ratchet/vulture green.
+
+Phase 2: `test_image_strategy_registry.py` (4 new) + `test_image_prompt_package.py`
++ `test_image_provider_registry.py` + `test_image_provider_ports.py` (40 together)
+green; full unit suite **1951 passed / 1 skipped**; backend static gates 15/15 PASS
+(format, lint, lint-diff, blanket-ignore, strict-diff, type, imports, arch-ratchet,
+docstrings, dead-code, inline-prompts, bandit, pip-audit, integrity, mutation).
 
 ## QA Report
 

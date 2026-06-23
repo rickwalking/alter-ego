@@ -2,22 +2,24 @@
 
 Gherkin: tests/features/image_generation_provider.feature
 
-Regression guard for AE-0264: the prompt renderer keeps its own
-``_STRATEGY_MAP`` separate from ``image_provider_registry``. A combo missing
-here silently falls back to the dark default strategy, which rendered a light
-palette with "neon glow" directives in the 2026-06-22 validation run.
+Regression guard for AE-0264: the prompt renderer and ``image_provider_registry``
+once kept two separate strategy maps that drifted — a combo missing from the
+renderer's map silently fell back to the dark default, rendering a light palette
+with "neon glow" directives in the 2026-06-22 validation run. AE-0266 Phase 2
+folds both into one ``IMAGE_STRATEGY_REGISTRY``; this still guards that every
+supported combo resolves to a strategy.
 """
 
 import pytest
 
 from rag_backend.application.services.carousel.image_prompt_package import (
-    _STRATEGY_MAP,
     ImagePromptPackageRequest,
     _strategy_for_project,
     render_image_prompt_package,
 )
 from rag_backend.application.services.carousel.types import SlideData
 from rag_backend.application.services.image_style_strategies import (
+    IMAGE_STRATEGY_REGISTRY,
     OpenAIFlatEditorialStrategy,
 )
 from rag_backend.domain.constants import (
@@ -59,7 +61,9 @@ class TestStrategyResolution:
     def test_every_supported_combo_has_a_strategy(self) -> None:
         # Guard against the registry / prompt-map drift that made a light
         # palette fall back to the dark default (AE-0264).
-        missing = [c for c in SUPPORTED_IMAGE_COMBOS if c not in _STRATEGY_MAP]
+        missing = [
+            c for c in SUPPORTED_IMAGE_COMBOS if c not in IMAGE_STRATEGY_REGISTRY
+        ]
         assert missing == [], f"combos with no prompt strategy: {missing}"
 
 

@@ -9,6 +9,15 @@ documented in `tests/features/image_generation_provider.feature`.
 
 from collections.abc import Mapping
 
+from rag_backend.domain.constants import (
+    IMAGE_MODEL_GEMINI,
+    IMAGE_MODEL_OPENAI,
+    IMAGE_STYLE_CINEMATIC,
+    IMAGE_STYLE_COMIC_NEON,
+    IMAGE_STYLE_FLAT_EDITORIAL,
+    IMAGE_STYLE_HYPERREAL,
+    IMAGE_STYLE_NEO_ANIME,
+)
 from rag_backend.domain.protocols import ImageStyleStrategy
 
 
@@ -160,3 +169,19 @@ class OpenAINeoAnimeStrategy(ImageStyleStrategy):
             f"{_palette_fragment(theme)} "
             f"Scene: {scene.strip()}"
         )
+
+
+# Single source of truth: every supported ``(image_model, image_style)`` combo
+# maps to exactly one strategy class. Both the prompt renderer
+# (``image_prompt_package``) and the provider registry
+# (``image_provider_registry``) consume THIS map, so they can no longer drift —
+# the AE-0264 bug where a light palette fell back to the dark "neon glow"
+# default because the two maps disagreed is now structurally impossible. The
+# keys must equal ``SUPPORTED_IMAGE_COMBOS`` (guarded by a contract test).
+IMAGE_STRATEGY_REGISTRY: dict[tuple[str, str], type[ImageStyleStrategy]] = {
+    (IMAGE_MODEL_GEMINI, IMAGE_STYLE_COMIC_NEON): GeminiComicNeonStrategy,
+    (IMAGE_MODEL_OPENAI, IMAGE_STYLE_CINEMATIC): OpenAICinematicStrategy,
+    (IMAGE_MODEL_OPENAI, IMAGE_STYLE_HYPERREAL): OpenAIHyperrealStrategy,
+    (IMAGE_MODEL_OPENAI, IMAGE_STYLE_NEO_ANIME): OpenAINeoAnimeStrategy,
+    (IMAGE_MODEL_OPENAI, IMAGE_STYLE_FLAT_EDITORIAL): OpenAIFlatEditorialStrategy,
+}
