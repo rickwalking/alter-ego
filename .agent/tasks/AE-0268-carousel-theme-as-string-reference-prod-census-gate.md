@@ -41,11 +41,11 @@ migration is the riskiest single step of the epic.
 
 ## Acceptance Criteria
 
-- [!] **Pre-migration prod census (BLOCKED — needs prod DB access):** capture prod
-      `pg_typeof(carousel_projects.theme)`, the column DDL/CHECK, and
-      `SELECT theme, count(*) FROM carousel_projects GROUP BY 1`; assert every value is a
-      root key or `"auto"`. **Owner action required** (run on the droplet / provide a
-      conn string). Now LOW RISK — see the no-migration finding below. (skeptical G4)
+- [x] **Pre-migration prod census — DONE (via ssh root@206.189.180.85, 2026-06-23).**
+      Prod `carousel_projects.theme` is `character varying(30)` (NOT a PG enum), matching
+      the model. Values: `auto`×16, `cybersecurity`×2, `ai_competition`×2, `source_code`×1,
+      `social_engineering`×1 — every value is a root key or `"auto"`, all ≤18 chars. No
+      drift, no unexpected values → census GREEN, no migration required. (skeptical G4)
 - [x] ~~Migration is expand-only/in-place~~ **N/A — no migration needed.** The column is
       already `String(30)` (not a PG enum), so the enum→string change is domain-layer
       only; zero DDL. Confirmed via `infrastructure/database/models/carousel.py:60`.
@@ -151,9 +151,9 @@ D6 (string reference). G4/F2 migration-hardening ACs rendered **N/A** by the
 already-varchar column (finding above); census remains as a read-only owner-run check.
 
 ## Blockers
-**AC#1 prod census needs prod DB access** (owner-run on the droplet or a conn string).
-Low risk now — read-only, no DDL. Code is complete and gate-green independent of it.
+None. Prod census ran (ssh) and is GREEN — column already `varchar(30)`, all values valid.
 
 ## Final Summary
-Code Dev Complete: theme is a string reference, behaviour-preserving, no migration. The
-only open item is the owner-run prod census (read-only) before merge. Unblocks AE-0269.
+Dev Complete: theme is a string reference, behaviour-preserving, **no migration** (prod
+column already `varchar(30)`, census GREEN). All gates + integrity green. Ready to merge.
+Unblocks AE-0269 (which owns the UUID-width column widening + the custom-palette table).
