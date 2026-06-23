@@ -1,6 +1,6 @@
 # AE-0268 — P1: carousel theme as string reference (+ prod census gate)
 
-Status: Ready
+Status: Dev Complete
 Tier: T2
 Priority: Medium
 Type: Refactor
@@ -41,20 +41,23 @@ migration is the riskiest single step of the epic.
 
 ## Acceptance Criteria
 
-- [ ] **Pre-migration gate (blocking, before writing the migration):** capture prod
-      `pg_typeof(carousel_projects.theme)`, the actual column DDL/CHECK, and
-      `SELECT theme, count(*) FROM carousel_projects GROUP BY 1`; assert every present
-      value is a current root key or `"auto"`. Output attached to this ticket. (skeptical G4)
-- [ ] Migration is **expand-only/in-place** (`USING theme::text`, zero row rewrite);
-      existing values round-trip; any CHECK is widened, not silently dropped.
-- [ ] Recovery path is **roll-forward** (a follow-up migration), NOT `alembic downgrade`;
-      a tested downgrade-failure contingency is documented. (skeptical F2)
-- [ ] Migration trialed (upgrade + downgrade) on a **staging DB restored from a current,
-      unsanitised prod backup**; result recorded.
-- [ ] Post-deploy **monitoring query** confirms every `theme` value resolvable and row
-      counts unchanged.
-- [ ] All ~9 `CarouselTheme` references updated; `mypy --strict` + full `gates.sh backend`
-      green; "no public/user-visible behaviour change" asserted (AE-0153 refactor path).
+- [!] **Pre-migration prod census (BLOCKED — needs prod DB access):** capture prod
+      `pg_typeof(carousel_projects.theme)`, the column DDL/CHECK, and
+      `SELECT theme, count(*) FROM carousel_projects GROUP BY 1`; assert every value is a
+      root key or `"auto"`. **Owner action required** (run on the droplet / provide a
+      conn string). Now LOW RISK — see the no-migration finding below. (skeptical G4)
+- [x] ~~Migration is expand-only/in-place~~ **N/A — no migration needed.** The column is
+      already `String(30)` (not a PG enum), so the enum→string change is domain-layer
+      only; zero DDL. Confirmed via `infrastructure/database/models/carousel.py:60`.
+- [x] ~~Roll-forward recovery / downgrade contingency~~ **N/A** (no migration).
+- [x] ~~Staging upgrade/downgrade trial~~ **N/A** (no migration). The prod census above
+      is the only remaining prod-side check, and it is read-only/non-mutating.
+- [~] Post-deploy **monitoring query** (`SELECT theme … GROUP BY 1`, all values
+      resolvable) — provided as an ops check; pairs with the census (owner-run).
+- [x] All 10 `CarouselTheme` read sites updated; `mypy --strict` clean (522 files);
+      backend static gates green; **1957 existing tests unchanged + 5 new** → "no
+      public/user-visible behaviour change" asserted (AE-0153 refactor path). API schema
+      was already `str` → no OpenAPI change.
 
 ## Gherkin Scenarios
 
@@ -118,17 +121,39 @@ read sites. 4. Staging trial (upgrade+downgrade from prod backup). 5. Monitoring
 ## Progress Log
 
 ### 2026-06-23
-Created from AE-0267 planner breakdown.
+Created from AE-0267 planner breakdown. Implemented: changed `CarouselProject.theme`
+to `str`, updated all 10 enum-assuming sites, added focused tests. **Key finding:** the
+DB column was already `String(30)`, not a PG enum — so NO Alembic migration is required
+(the heavy migration ACs are N/A). The UUID-width column widening moves to AE-0269.
 
 ## Files Touched
-Pending.
+- `domain/models/carousel.py` (theme: CarouselTheme → str)
+- `infrastructure/database/models/carousel.py` (to/from-domain string passthrough)
+- `api/routes/carousels/crud.py`, `application/tools/carousel/generate_carousel.py`
+  (validate via enum, store `.value` string)
+- `application/services/carousel/theme_resolver.py` (auto compare → `.value`; key direct)
+- `api/routes/carousels/media.py`, `preview.py`,
+  `application/services/carousel/design_token_utils.py`, `image_prompt_package.py`
+  (`.theme.value` → `.theme`)
+- `tests/unit/domain/test_carousel_theme_reference.py` (new, 5 tests)
+
 ## Test Evidence
-Pending.
+- `mypy --strict` (rag_backend, 522 files): clean.
+- `tests/unit`: **1957 passed, 1 skipped** (unchanged) + **5 new** (theme reference).
+- Static gates: ruff format/lint, lint-imports, arch-ratchet, vulture, interrogate — all PASS.
+- `check-integrity.sh backend` vs origin/main: 0 net-new blockers.
+
 ## QA Report
-Pending.
+Pending (handoff to /qa-agent after the wave, per AE-0267 wave mode).
+
 ## Decision Log
-D6 (string reference), F2/G4 (migration hardening) — see arch-plan.
+D6 (string reference). G4/F2 migration-hardening ACs rendered **N/A** by the
+already-varchar column (finding above); census remains as a read-only owner-run check.
+
 ## Blockers
-None.
+**AC#1 prod census needs prod DB access** (owner-run on the droplet or a conn string).
+Low risk now — read-only, no DDL. Code is complete and gate-green independent of it.
+
 ## Final Summary
-Pending.
+Code Dev Complete: theme is a string reference, behaviour-preserving, no migration. The
+only open item is the owner-run prod census (read-only) before merge. Unblocks AE-0269.
