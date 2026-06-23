@@ -63,6 +63,55 @@ class TestStrategyResolution:
         assert missing == [], f"combos with no prompt strategy: {missing}"
 
 
+def _project_with_details(details: str | None) -> CarouselProject:
+    return CarouselProject(
+        topic="Agents",
+        audience="Engineers",
+        niche="AI",
+        theme=CarouselTheme.AI_COMPETITION,
+        image_model=IMAGE_MODEL_OPENAI,
+        image_style="neo_anime",
+        custom_visual_details=details,
+    )
+
+
+@pytest.mark.unit
+class TestCustomVisualDetails:
+    # AE-0263 (inject project visual direction) + AE-0261 (revision changes prompt).
+    def test_details_injected_into_scene(self) -> None:
+        pkg = render_image_prompt_package(
+            ImagePromptPackageRequest(
+                project=_project_with_details("Rio de Janeiro skyline at golden hour"),
+                slide=_slide(),
+            )
+        )
+        assert "Visual direction: Rio de Janeiro skyline" in pkg.rendered_prompt
+
+    def test_no_details_leaves_scene_unchanged(self) -> None:
+        base = render_image_prompt_package(
+            ImagePromptPackageRequest(
+                project=_project_with_details(None), slide=_slide()
+            )
+        )
+        assert "Visual direction:" not in base.rendered_prompt
+
+    def test_details_change_the_prompt_hash(self) -> None:
+        # The reuse cache keys on prompt_hash; new direction must bust it so a
+        # revision actually regenerates instead of returning the cached image.
+        without = render_image_prompt_package(
+            ImagePromptPackageRequest(
+                project=_project_with_details(None), slide=_slide()
+            )
+        )
+        with_d = render_image_prompt_package(
+            ImagePromptPackageRequest(
+                project=_project_with_details("set at night, neon rain"),
+                slide=_slide(),
+            )
+        )
+        assert without.prompt_hash != with_d.prompt_hash
+
+
 @pytest.mark.unit
 class TestLightPromptRendering:
     def test_light_project_prompt_is_editorial_not_neon(self) -> None:

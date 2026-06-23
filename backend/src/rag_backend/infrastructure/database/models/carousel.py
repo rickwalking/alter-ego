@@ -90,6 +90,7 @@ class CarouselProjectModel(Base):
     )
     rubric_id = Column(String(36), ForeignKey("quality_rubrics.id"), nullable=True)
     instructions = Column(Text, nullable=True)
+    custom_visual_details = Column(Text, nullable=True)
     current_phase: Mapped[str | None] = mapped_column(String(50), default="brief")
     phase_status: Mapped[str | None] = mapped_column(String(50), default="pending")
     workflow_status: Mapped[str] = mapped_column(
@@ -181,6 +182,7 @@ class CarouselProjectModel(Base):
             persona_id=self.persona_id,
             rubric_id=self.rubric_id,
             instructions=self.instructions,
+            custom_visual_details=self.custom_visual_details,
             current_phase=self.current_phase,
             phase_status=self.phase_status,
             is_public=bool(self.is_public),
@@ -240,6 +242,7 @@ class CarouselProjectModel(Base):
             persona_id=entity.persona_id,
             rubric_id=entity.rubric_id,
             instructions=entity.instructions,
+            custom_visual_details=entity.custom_visual_details,
             current_phase=entity.current_phase,
             phase_status=entity.phase_status,
             is_public=entity.is_public,
@@ -286,6 +289,7 @@ class CarouselProjectModel(Base):
         self.persona_id = entity.persona_id
         self.rubric_id = entity.rubric_id
         self.instructions = entity.instructions
+        self.custom_visual_details = entity.custom_visual_details
         self.current_phase = entity.current_phase
         self.phase_status = entity.phase_status
         self.is_public = entity.is_public

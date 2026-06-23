@@ -129,6 +129,10 @@ class CarouselProject:
     persona_id: str | None = None
     rubric_id: str | None = None
     instructions: str | None = None
+    # Project-level visual direction injected into every slide image prompt
+    # (AE-0263 backdrop / custom scene details). Image-phase revision feedback
+    # is appended here so a revision actually changes the rendered scene (AE-0261).
+    custom_visual_details: str | None = None
     current_phase: str = "brief"
     phase_status: str = "pending"
     is_public: bool = False

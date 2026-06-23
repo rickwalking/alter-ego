@@ -65,6 +65,7 @@ def render_image_prompt_package(
     request: ImagePromptPackageRequest,
 ) -> ImagePromptPackage:
     raw_prompt = request.slide.image_prompt or ""
+    raw_prompt = _compose_scene(raw_prompt, request.project.custom_visual_details)
     if request.project.image_model == IMAGE_MODEL_OPENAI:
         raw_prompt = sanitize_image_prompt(raw_prompt)
     theme = request.theme or resolve_theme(request.project)
@@ -86,6 +87,25 @@ def render_image_prompt_package(
         theme_name=request.project.theme.value,
         theme_colors=dict(theme),
     )
+
+
+_VISUAL_DIRECTION_PREFIX = "Visual direction:"
+
+
+def _compose_scene(scene: str, custom_visual_details: str | None) -> str:
+    """Fold project-level custom visual direction into the slide scene.
+
+    The details ride inside the scene (the ``Scene:`` trailer the strategy
+    appends), so they reach the model AND change the rendered prompt hash —
+    which busts the per-prompt image reuse so a revision actually regenerates
+    (AE-0261). Empty details leave the scene byte-identical (AE-0263).
+    """
+    details = (custom_visual_details or "").strip()
+    if not details:
+        return scene
+    base = scene.strip()
+    direction = f"{_VISUAL_DIRECTION_PREFIX} {details}"
+    return f"{base}. {direction}" if base else direction
 
 
 def sha256_parts(parts: Sequence[str]) -> str:

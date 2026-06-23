@@ -32,6 +32,7 @@ class CarouselProjectCreate(BaseModel):
     theme: str = Field(default="auto", max_length=30)
     image_model: str = Field(default=IMAGE_MODEL_DEFAULT, max_length=30)
     image_style: str = Field(default=IMAGE_STYLE_DEFAULT, max_length=30)
+    custom_visual_details: str | None = Field(None, max_length=500)
     strategy: str | None = Field(None, max_length=50)
 
     @field_validator("image_model")

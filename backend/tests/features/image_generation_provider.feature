@@ -97,3 +97,21 @@ Feature: Pluggable image generation provider and style
     When any strategy wraps the scene
     Then the final prompt still contains that exact scene text
     And the scene appears after the style directives, not before
+
+  # Custom visual details + revision (AE-0263 / AE-0261) ---------------------
+
+  Scenario: Project custom visual details reach every slide image prompt
+    Given a project with custom_visual_details "Rio de Janeiro skyline at golden hour"
+    When slide image prompts are rendered
+    Then each rendered prompt contains "Visual direction: Rio de Janeiro skyline"
+
+  Scenario: No custom visual details leaves the scene unchanged
+    Given a project with no custom_visual_details
+    When a slide image prompt is rendered
+    Then the rendered prompt does not contain "Visual direction:"
+
+  Scenario: Image revision feedback changes the rendered prompt
+    Given an image phase awaiting human review
+    When the user requests an image revision with feedback
+    Then the feedback is appended to the project custom_visual_details
+      And the regenerated prompt hash differs from the previous one

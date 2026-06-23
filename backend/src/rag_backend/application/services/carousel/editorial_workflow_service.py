@@ -263,6 +263,18 @@ class EditorialWorkflowService:
                     db=params.db,
                 ),
             )
+            # AE-0261: a revision on the image phase must change the rendered
+            # scene, otherwise the per-prompt reuse hash matches and the same
+            # image is returned. Persist the feedback as custom visual direction
+            # BEFORE the graph re-runs the image node (which reloads the project).
+            if (
+                params.db is not None
+                and params.feedback
+                and str(prior.get("current_phase", "")) == PHASE_IMAGES
+            ):
+                await self._append_image_visual_feedback(
+                    params.db, params.project_id, params.feedback
+                )
         human_input: dict[str, object] = {
             "action": graph_action,
             "reviewer_id": params.reviewer_id,
@@ -308,6 +320,25 @@ class EditorialWorkflowService:
         )
         await publish_workflow_sse_updates(params.project_id, state)
         return state
+
+    @staticmethod
+    async def _append_image_visual_feedback(
+        db: AsyncSession, project_id: str, feedback: str
+    ) -> None:
+        """Append image-phase revision feedback to custom visual direction.
+
+        Persisted before the graph re-runs so the image node (which reloads
+        the project) renders a different scene and bypasses prompt reuse.
+        """
+        note = feedback.strip()
+        if not note:
+            return
+        project = await db.get(CarouselProjectModel, project_id)
+        if project is None:
+            return
+        existing = (project.custom_visual_details or "").strip()
+        project.custom_visual_details = f"{existing}. {note}" if existing else note
+        await db.commit()
 
     async def get_workflow_state(
         self,

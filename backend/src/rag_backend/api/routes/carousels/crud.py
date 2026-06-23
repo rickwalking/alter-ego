@@ -100,6 +100,7 @@ async def create_carousel(
         image_model=request.image_model,
         image_style=request.image_style,
         theme=theme,
+        custom_visual_details=request.custom_visual_details,
     )
     created = await repo.create_project(project)
     model = await session.get(CarouselProjectModel, str(created.id))
