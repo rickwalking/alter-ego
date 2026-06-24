@@ -12,6 +12,7 @@ duplicate-name race (skeptical F3). ``get_palette_repo`` is the single reviewed
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import Annotated
 from uuid import UUID
 
@@ -76,6 +77,44 @@ def get_palette_service(
 ) -> PaletteCatalogService:
     """Build the catalog service over the request-scoped repository port."""
     return PaletteCatalogService(repo)
+
+
+@dataclass(frozen=True)
+class PaletteWriteCtx:
+    """Bundled per-request collaborators for the authenticated write endpoints.
+
+    Grouping auth + service + session into one dependency keeps each route handler
+    within the 3-argument limit while still resolving them via FastAPI DI.
+    """
+
+    user: User
+    service: PaletteCatalogService
+    session: AsyncSession
+
+
+def get_palette_write_ctx(
+    user: Annotated[User, Depends(require_authenticated_user)],
+    service: Annotated[PaletteCatalogService, Depends(get_palette_service)],
+    session: Annotated[AsyncSession, Depends(get_db)],
+) -> PaletteWriteCtx:
+    """Resolve the authenticated write context (auth enforced by the dependency)."""
+    return PaletteWriteCtx(user=user, service=service, session=session)
+
+
+@dataclass(frozen=True)
+class PaletteEditTarget:
+    """A resolved custom-palette edit target: its id plus the write context."""
+
+    palette_id: UUID
+    ctx: PaletteWriteCtx
+
+
+def get_palette_edit_target(
+    ref: str,
+    ctx: Annotated[PaletteWriteCtx, Depends(get_palette_write_ctx)],
+) -> PaletteEditTarget:
+    """Resolve ``{ref}`` to a custom-palette id (root -> 403; non-uuid -> 404)."""
+    return PaletteEditTarget(palette_id=_as_custom_id(ref), ctx=ctx)
 
 
 def _root_rows() -> list[RootPaletteResponse]:
@@ -158,9 +197,7 @@ async def list_palettes(
 async def create_palette(
     request: Request,
     body: PaletteCreateRequest,
-    user: Annotated[User, Depends(require_authenticated_user)],
-    service: Annotated[PaletteCatalogService, Depends(get_palette_service)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    ctx: Annotated[PaletteWriteCtx, Depends(get_palette_write_ctx)],
 ) -> CustomPaletteResponse:
     """Create a custom palette; concurrent duplicate active name -> 409 (F3)."""
     command = PaletteCreateCommand(
@@ -170,13 +207,13 @@ async def create_palette(
         background=body.background,
         mode=body.mode,
         keywords=tuple(body.keywords),
-        created_by=str(user.id),
+        created_by=str(ctx.user.id),
     )
     try:
-        created = await service.create(command)
-        await session.commit()
+        created = await ctx.service.create(command)
+        await ctx.session.commit()
     except IntegrityError as exc:
-        await session.rollback()
+        await ctx.session.rollback()
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail=ERR_PALETTE_NAME_CONFLICT
         ) from exc
@@ -195,14 +232,10 @@ async def create_palette(
 @limiter.limit(RATE_LIMIT_PALETTE_WRITE)
 async def update_palette(
     request: Request,
-    ref: str,
     body: PaletteUpdateRequest,
-    user: Annotated[User, Depends(require_authenticated_user)],
-    service: Annotated[PaletteCatalogService, Depends(get_palette_service)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    target: Annotated[PaletteEditTarget, Depends(get_palette_edit_target)],
 ) -> CustomPaletteResponse:
     """Edit a custom palette. Roots -> 403; unknown/archived -> 404; slug is immutable."""
-    palette_id = _as_custom_id(ref)
     command = PaletteUpdateCommand(
         name=body.name,
         primary=body.primary,
@@ -211,16 +244,17 @@ async def update_palette(
         mode=body.mode,
         keywords=None if body.keywords is None else tuple(body.keywords),
     )
+    ctx = target.ctx
     try:
-        updated = await service.update(palette_id, command)
-        await session.commit()
+        updated = await ctx.service.update(target.palette_id, command)
+        await ctx.session.commit()
     except PaletteNotFoundError as exc:
-        await session.rollback()
+        await ctx.session.rollback()
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=ERR_PALETTE_NOT_FOUND
         ) from exc
     except IntegrityError as exc:
-        await session.rollback()
+        await ctx.session.rollback()
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail=ERR_PALETTE_NAME_CONFLICT
         ) from exc
@@ -239,16 +273,13 @@ async def update_palette(
 @limiter.limit(RATE_LIMIT_PALETTE_WRITE)
 async def delete_palette(
     request: Request,
-    ref: str,
-    user: Annotated[User, Depends(require_authenticated_user)],
-    service: Annotated[PaletteCatalogService, Depends(get_palette_service)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    target: Annotated[PaletteEditTarget, Depends(get_palette_edit_target)],
 ) -> None:
     """Soft-delete (archive) a custom palette. Roots -> 403; unknown -> 404 (D4)."""
-    palette_id = _as_custom_id(ref)
-    archived = await service.archive(palette_id)
+    ctx = target.ctx
+    archived = await ctx.service.archive(target.palette_id)
     if not archived:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=ERR_PALETTE_NOT_FOUND
         )
-    await session.commit()
+    await ctx.session.commit()
