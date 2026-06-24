@@ -70,7 +70,7 @@ describe("NeonSidebar", () => {
     expect(aside).toHaveAttribute("id", "dashboard-sidebar");
     expect(aside?.className).toContain("-translate-x-full");
     expect(aside?.className).toContain("lg:translate-x-0");
-    expect(aside?.className).toContain("w-[var(--sidebar-width)]");
+    expect(aside?.className).toContain("w-[240px]");
   });
 
   it("slides into view when open", () => {
