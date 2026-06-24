@@ -23,11 +23,8 @@ import { PaletteFormModal } from "./palette-form-modal";
 import { PalettesEmptyState } from "./palettes-empty-state";
 
 const PAGE_FONT_FAMILY = "Inter, system-ui, sans-serif";
-const GRID_STYLE = {
-  display: "grid",
-  gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))",
-  gap: 16,
-} as const;
+// Responsive auto-fill grid; 200px min so cards fit a 360px phone.
+const GRID_CLASS = "grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-4";
 
 type FormTarget = { kind: "create" } | { kind: "edit"; palette: CustomPalette };
 
@@ -91,7 +88,7 @@ export default function PalettesPage(): React.ReactElement {
         }
       />
 
-      <div className="page-content" style={{ padding: "24px 32px" }}>
+      <div className="page-content px-4 py-6 md:px-8">
         {isLoading && (
           <div className="flex justify-center py-12">
             <NeonSpinner size="lg" />
@@ -114,7 +111,7 @@ export default function PalettesPage(): React.ReactElement {
                   onCreate={() => setTarget({ kind: "create" })}
                 />
               ) : (
-                <div style={GRID_STYLE}>
+                <div className={GRID_CLASS}>
                   {data.custom.map((palette) => (
                     <PaletteCard
                       key={palette.id}
@@ -138,7 +135,7 @@ export default function PalettesPage(): React.ReactElement {
               <h2 className="text-xs font-semibold uppercase tracking-wide text-text-muted">
                 {t("section.roots")}
               </h2>
-              <div style={GRID_STYLE}>
+              <div className={GRID_CLASS}>
                 {data.roots.map((root) => (
                   <PaletteCard
                     key={root.key}

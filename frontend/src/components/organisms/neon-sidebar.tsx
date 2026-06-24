@@ -1,9 +1,14 @@
 "use client";
 
+import { useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { cn } from "@/lib/utils";
+import { useFocusTrap } from "@/lib/use-focus-trap";
+import { useScrollLock } from "@/lib/use-scroll-lock";
+import { useMediaQuery } from "@/lib/use-media-query";
 import { NeonIcon } from "@/components/atoms/neon-icon";
 import { NeonBadge } from "@/components/atoms/neon-badge";
 import {
@@ -22,32 +27,51 @@ import {
 } from "@/constants/neon";
 import type { SidebarSection } from "@/schemas/neon-sidebar";
 import { useAuth } from "@/modules/identity";
-import {
-  SIDEBAR_AVATAR_SIZE,
-  SIDEBAR_WIDTH_PX,
-} from "@/components/organisms/constants";
+import { SIDEBAR_AVATAR_SIZE } from "@/components/organisms/constants";
 
 export interface NeonSidebarProps {
   sections: SidebarSection[];
   showUserFooter?: boolean;
+  /** Drawer open state (mobile off-canvas). Omit for an always-static rail. */
+  open?: boolean;
+  /** DOM id so the layout hamburger can wire `aria-controls`. */
+  id?: string;
 }
 
 export function NeonSidebar({
   sections,
   showUserFooter = false,
+  open,
+  id,
 }: NeonSidebarProps): React.ReactElement {
   const pathname = usePathname();
   const t = useTranslations("common.sidebar");
   const { user, logout, isLoading } = useAuth();
+  const asideRef = useRef<HTMLElement>(null);
+  const isOpen = open === true;
+  // Trap/lock ONLY while the drawer is actually off-canvas (below lg). At lg+
+  // the rail is persistent, so an open flag must not lock scroll or trap focus.
+  const isDrawer = useMediaQuery("(max-width: 1023px)");
+  const drawerActive = isOpen && isDrawer;
+
+  // Drawer a11y: trap focus and lock body scroll only while open on mobile.
+  useFocusTrap(asideRef, drawerActive);
+  useScrollLock(drawerActive);
 
   return (
     <aside
-      className="fixed top-0 left-0 h-full flex flex-col"
+      ref={asideRef}
+      id={id}
+      aria-label={t("ariaLabel")}
+      className={cn(
+        // Off-canvas drawer below lg, persistent rail at lg+.
+        "fixed inset-y-0 left-0 z-40 flex w-[var(--sidebar-width)] flex-col",
+        "transition-transform duration-200 ease-out lg:translate-x-0",
+        isOpen ? "translate-x-0" : "-translate-x-full",
+      )}
       style={{
-        width: `${SIDEBAR_WIDTH_PX}px`,
         background: BG_SIDEBAR,
         borderRight: `1px solid ${NEON_BORDER_SUBTLE}`,
-        zIndex: 30,
       }}
     >
       <div
@@ -124,12 +148,10 @@ export function NeonSidebar({
                 <Link
                   key={item.href}
                   href={item.href}
+                  // Touch target: ≥44px on coarse pointers (touch), compact on
+                  // fine pointers (mouse) to preserve desktop density.
+                  className="flex items-center gap-3 rounded-md px-3 py-2.5 [@media(pointer:coarse)]:min-h-11"
                   style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "12px",
-                    padding: "10px 12px",
-                    borderRadius: "6px",
                     color: isActive ? NEON_CYAN : TEXT_MUTED,
                     textDecoration: "none",
                     fontSize: "13px",
@@ -212,18 +234,13 @@ export function NeonSidebar({
             onClick={() => logout()}
             aria-label="Logout"
             title="Logout"
+            // ≥44px tap target on touch devices; compact for mouse.
+            className="flex shrink-0 items-center justify-center rounded-md h-7 w-7 [@media(pointer:coarse)]:h-11 [@media(pointer:coarse)]:w-11"
             style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              width: "28px",
-              height: "28px",
-              borderRadius: "6px",
               border: `1px solid ${NEON_BORDER_LIGHT}`,
               background: "transparent",
               color: TEXT_MUTED,
               cursor: "pointer",
-              flexShrink: 0,
             }}
           >
             <NeonIcon

@@ -39,13 +39,11 @@ export function CreateProgressSteps({
     <div
       role="tablist"
       aria-label="Carousel creation steps"
+      // Scroll horizontally on mobile instead of clipping/squishing the steps.
+      className="mb-7 flex overflow-x-auto rounded-lg"
       style={{
-        display: "flex",
-        marginBottom: "28px",
         background: BG_CARD,
-        borderRadius: "8px",
         border: "1px solid rgba(255,255,255,0.06)",
-        overflow: "hidden",
       }}
     >
       {CREATE_STEPS.map((step) => {
@@ -69,12 +67,10 @@ export function CreateProgressSteps({
             aria-controls={`create-step-${step.id}`}
             id={`create-tab-${step.id}`}
             onClick={() => onStepChange(step.id)}
+            // shrink-0 + min width so steps scroll (not squish) on mobile;
+            // distribute evenly at md+. ≥44px tall on touch devices.
+            className="flex shrink-0 items-center gap-2 px-4 py-3 text-left [@media(pointer:coarse)]:min-h-11 md:flex-1 md:shrink"
             style={{
-              flex: 1,
-              padding: "12px 16px",
-              display: "flex",
-              alignItems: "center",
-              gap: "8px",
               fontSize: "12px",
               color: labelColor,
               border: "none",
@@ -85,7 +81,6 @@ export function CreateProgressSteps({
               background: isActive ? "rgba(0,212,255,0.04)" : "transparent",
               cursor: "pointer",
               fontFamily: "inherit",
-              textAlign: "left",
             }}
           >
             <span

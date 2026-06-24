@@ -30,13 +30,7 @@ export function CreateTemplateSection({
         <SectionNumber num={2} />
         Template Style
       </div>
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(3, 1fr)",
-          gap: "10px",
-        }}
-      >
+      <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 md:grid-cols-3">
         {CREATE_TEMPLATES.map((tpl, idx) => (
           <div
             key={tpl.name}

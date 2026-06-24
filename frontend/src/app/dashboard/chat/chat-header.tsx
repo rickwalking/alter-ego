@@ -10,18 +10,24 @@ import {
 
 export interface ChatHeaderProps {
   onNewChat?: () => void;
+  /** Toggle the conversation drawer (mobile only). */
+  onToggleConversations?: () => void;
+  conversationsOpen?: boolean;
+  conversationsId?: string;
 }
 
-export function ChatHeader({ onNewChat }: ChatHeaderProps): React.ReactElement {
+export function ChatHeader({
+  onNewChat,
+  onToggleConversations,
+  conversationsOpen,
+  conversationsId,
+}: ChatHeaderProps): React.ReactElement {
   return (
     <header
-      className="sticky top-0 z-20 shrink-0"
+      // `pl-14` clears the layout-level mobile hamburger (z-50); layout via
+      // Tailwind so the header reflows. Neon surface styling stays inline.
+      className="sticky top-0 z-20 flex h-14 shrink-0 items-center justify-between gap-2 pr-4 pl-14 md:pr-8 lg:pl-8"
       style={{
-        height: "56px",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        padding: "0 32px",
         borderBottom: `1px solid ${DASHBOARD_CHAT_BORDER_SUBTLE}`,
         background: DASHBOARD_CHAT_BG_HEADER,
         backdropFilter: "blur(12px)",
@@ -29,6 +35,35 @@ export function ChatHeader({ onNewChat }: ChatHeaderProps): React.ReactElement {
       }}
     >
       <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+        {onToggleConversations && (
+          <button
+            type="button"
+            onClick={onToggleConversations}
+            aria-label={
+              conversationsOpen ? "Close conversations" : "Open conversations"
+            }
+            aria-expanded={conversationsOpen}
+            aria-controls={conversationsId}
+            className="flex h-11 w-11 items-center justify-center rounded-md md:hidden"
+            style={{
+              border: `1px solid ${DASHBOARD_CHAT_BORDER_LIGHT}`,
+              background: "transparent",
+              color: DASHBOARD_CHAT_TEXT_MUTED,
+            }}
+          >
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              aria-hidden="true"
+            >
+              <path d="M3 12h18M3 6h18M3 18h18" />
+            </svg>
+          </button>
+        )}
         <h1 style={{ fontSize: "16px", fontWeight: 700 }}>Chat</h1>
         <span
           style={{

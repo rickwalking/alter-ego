@@ -80,20 +80,29 @@ export default function AnalyticsPage(): React.ReactElement {
               {velocity_by_week.map((week) => (
                 <div
                   key={week.week_start}
-                  className="flex items-center gap-3 text-sm"
+                  className="flex min-w-0 items-center gap-3 text-sm"
                 >
-                  <span className="w-28" style={{ color: TEXT_MUTED }}>
+                  <span
+                    className="w-20 shrink-0 sm:w-28"
+                    style={{ color: TEXT_MUTED }}
+                  >
                     {week.week_start}
                   </span>
-                  <div
-                    className="h-4 rounded"
-                    style={{
-                      width: `${Math.max(week.published_count * 24, 4)}px`,
-                      background: NEON_CYAN,
-                      boxShadow: NEON_GLOW_CYAN_SOFT,
-                    }}
-                  />
-                  <span style={{ color: TEXT }}>{week.published_count}</span>
+                  {/* Bar in a min-w-0 scroll track: a long bar scrolls within
+                      the row instead of overflowing the page on mobile. */}
+                  <div className="min-w-0 flex-1 overflow-x-auto">
+                    <div
+                      className="h-4 rounded"
+                      style={{
+                        width: `${Math.max(week.published_count * 24, 4)}px`,
+                        background: NEON_CYAN,
+                        boxShadow: NEON_GLOW_CYAN_SOFT,
+                      }}
+                    />
+                  </div>
+                  <span className="shrink-0" style={{ color: TEXT }}>
+                    {week.published_count}
+                  </span>
                 </div>
               ))}
             </div>

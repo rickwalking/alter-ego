@@ -33,7 +33,8 @@
       "calendar": "Calendar",
       "rubrics": "Rubrics",
       "personas": "Personas",
-      "alterEgo": "Alter Ego"
+      "alterEgo": "Alter Ego",
+      "ariaLabel": "Sidebar navigation"
     },
     "logout": "Logout",
     "login": "Login"

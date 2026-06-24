@@ -1,6 +1,11 @@
 "use client";
 
+import { useRef } from "react";
 import { useTranslations } from "next-intl";
+import { cn } from "@/lib/utils";
+import { useFocusTrap } from "@/lib/use-focus-trap";
+import { useScrollLock } from "@/lib/use-scroll-lock";
+import { useMediaQuery } from "@/lib/use-media-query";
 import {
   DASHBOARD_CHAT_BORDER_LIGHT,
   DASHBOARD_CHAT_BORDER_SUBTLE,
@@ -18,22 +23,44 @@ export interface ChatSidebarProps {
   conversations: DashboardConversation[];
   activeConv: string;
   onSelectConversation: (id: string) => void;
+  /** Drawer open state (mobile off-canvas). Omit for an always-static pane. */
+  open?: boolean;
+  /** DOM id so the chat header toggle can wire `aria-controls`. */
+  id?: string;
 }
 
 export function ChatSidebar({
   conversations,
   activeConv,
   onSelectConversation,
+  open,
+  id,
 }: ChatSidebarProps): React.ReactElement {
   const t = useTranslations("chat.sidebar");
+  const ref = useRef<HTMLDivElement>(null);
+  const isOpen = open === true;
+  // Below md the list is an off-canvas drawer; at md+ it is a persistent pane,
+  // so trap/lock must not engage there even if `open` is stale from mobile.
+  const isDrawer = useMediaQuery("(max-width: 767px)");
+  const drawerActive = isOpen && isDrawer;
+
+  // Reuse the AE-0273 primitives — no duplicated drawer logic (jscpd gate).
+  useFocusTrap(ref, drawerActive);
+  useScrollLock(drawerActive);
+
   return (
     <div
+      ref={ref}
+      id={id}
+      // Off-canvas drawer below md, persistent 280px pane at md+.
+      className={cn(
+        "fixed inset-y-0 left-0 z-40 flex w-[280px] shrink-0 flex-col",
+        "transition-transform duration-200 ease-out",
+        "md:static md:z-auto md:translate-x-0",
+        isOpen ? "translate-x-0" : "-translate-x-full",
+      )}
       style={{
-        width: "280px",
-        flexShrink: 0,
         borderRight: `1px solid ${DASHBOARD_CHAT_BORDER_SUBTLE}`,
-        display: "flex",
-        flexDirection: "column",
         background: DASHBOARD_CHAT_BG_OVERLAY,
       }}
     >

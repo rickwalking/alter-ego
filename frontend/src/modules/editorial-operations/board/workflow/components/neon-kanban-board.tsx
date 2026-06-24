@@ -12,14 +12,13 @@ export function NeonKanbanBoard({
 }: NeonKanbanBoardProps): React.ReactElement {
   return (
     <div
-      className="flex gap-4 overflow-x-auto pb-4"
+      className="flex snap-x gap-4 overflow-x-auto pb-4"
       style={{ minHeight: "calc(100vh - 120px)" }}
     >
       {columns.map((column) => (
         <div
           key={`${column.phase}-${column.status}`}
-          className="flex flex-col shrink-0"
-          style={{ width: "280px" }}
+          className="flex w-[280px] shrink-0 snap-start flex-col"
         >
           <div className="flex items-center justify-between mb-3 px-1">
             <h3 className="text-sm font-bold" style={{ color: TEXT }}>

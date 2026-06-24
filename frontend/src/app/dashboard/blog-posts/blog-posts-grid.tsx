@@ -34,10 +34,7 @@ export function FeaturedBlogPost({
   post,
 }: FeaturedBlogPostProps): React.ReactElement {
   return (
-    <div
-      className="grid grid-cols-2 gap-0"
-      style={{ gridTemplateColumns: "1fr 1fr" }}
-    >
+    <div className="grid grid-cols-1 gap-0 md:grid-cols-2">
       <div
         className="relative overflow-hidden transition-all duration-250"
         style={{
@@ -105,10 +102,7 @@ export function RegularBlogPosts({
   posts,
 }: RegularBlogPostsProps): React.ReactElement {
   return (
-    <div
-      className="grid grid-cols-2 gap-4"
-      style={{ gridTemplateColumns: "1fr 1fr" }}
-    >
+    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
       {posts.map((post) => (
         <BlogPostCard key={post.id} post={post} />
       ))}

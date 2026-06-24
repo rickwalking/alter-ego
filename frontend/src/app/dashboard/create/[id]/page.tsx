@@ -25,11 +25,8 @@ import { BriefStepContent } from "@/app/dashboard/create/workspace/brief-step-co
 import { WorkflowStepContent } from "@/app/dashboard/create/workspace/workflow-step-content";
 import { createRetryWorkflowHandler } from "@/app/dashboard/create/[id]/create-retry-handler";
 
-const layoutGridStyle = {
-  display: "grid",
-  gridTemplateColumns: "1fr 360px",
-  gap: "24px",
-} as const;
+const LAYOUT_GRID_CLASS =
+  "grid grid-cols-1 gap-6 md:grid-cols-[minmax(0,1fr)_360px]";
 
 const briefCardStyle = {
   background: BG_CARD,
@@ -209,7 +206,7 @@ export default function CreateWorkspacePage(): React.ReactElement {
           }
         />
 
-        <div style={layoutGridStyle}>
+        <div className={LAYOUT_GRID_CLASS}>
           <div
             role="tabpanel"
             id={`create-step-${activeStepId}`}

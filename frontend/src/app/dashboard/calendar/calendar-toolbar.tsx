@@ -10,13 +10,7 @@ import {
 
 export function CalendarToolbar(): React.ReactElement {
   return (
-    <div
-      style={{
-        ...CALENDAR_FLEX_CENTER,
-        justifyContent: "space-between",
-        marginBottom: 20,
-      }}
-    >
+    <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
       <div style={{ ...CALENDAR_FLEX_CENTER, gap: 12 }}>
         <button
           type="button"

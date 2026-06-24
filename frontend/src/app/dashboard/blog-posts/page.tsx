@@ -48,7 +48,7 @@ export default function BlogPostsPage(): React.ReactElement {
               placeholder="Search posts..."
               value={search}
               onChange={setSearch}
-              className="w-[200px]"
+              className="w-full sm:w-[200px]"
             />
             <NeonButton
               size="sm"

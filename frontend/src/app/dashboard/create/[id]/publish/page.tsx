@@ -169,16 +169,8 @@ export default function DashboardCreatePublishPage(): React.ReactElement {
         ]}
       />
 
-      <div className="p-7" style={{ maxWidth: "960px" }}>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "flex-start",
-            marginBottom: "24px",
-            gap: "16px",
-          }}
-        >
+      <div className="w-full max-w-[960px] p-4 md:p-7">
+        <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <h1 style={{ fontSize: "20px", fontWeight: 700, margin: 0 }}>
               {project.title || project.topic}
@@ -189,6 +181,7 @@ export default function DashboardCreatePublishPage(): React.ReactElement {
           </div>
           <Link
             href={`${DASHBOARD_ROUTES.CREATE_WORKSPACE(projectId)}?step=publish`}
+            className="inline-flex shrink-0 items-center [@media(pointer:coarse)]:min-h-11"
             style={{
               fontSize: "13px",
               color: "#00d4ff",

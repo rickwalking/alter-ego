@@ -114,6 +114,11 @@
   --radius-xl: 1rem;
   --radius-2xl: 1.5rem;
 
+  /* Dashboard shell rail width. Single source of truth — mirrored by the JS
+     constant SIDEBAR_WIDTH_PX (components/organisms/constants.ts); a unit test
+     asserts the two stay in sync (AE-0273). */
+  --sidebar-width: 240px;
+
   --animate-fade-in: fade-in 0.2s ease-out;
   --animate-slide-up: slide-up 0.3s ease-out;
   --animate-slide-down: slide-down 0.3s ease-out;

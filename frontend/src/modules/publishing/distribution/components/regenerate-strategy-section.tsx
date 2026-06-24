@@ -90,14 +90,7 @@ export function RegenerateStrategySection({
           {t("selectTemplate")}
         </p>
 
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(3, 1fr)",
-            gap: "10px",
-            marginBottom: "16px",
-          }}
-        >
+        <div className="mb-4 grid grid-cols-1 gap-2.5 sm:grid-cols-2 md:grid-cols-3">
           {CREATE_TEMPLATES.map((tpl, idx) => {
             const isActive =
               idx === selectedIndex &&
