@@ -9,11 +9,14 @@ domain-layer type change with no DDL: ``CarouselProject.theme`` is now a plain
 canonical root-key list. These tests pin that resolution is unchanged.
 """
 
+from uuid import uuid4
+
 import pytest
 
 from rag_backend.application.services.carousel.theme_resolver import resolve_theme
 from rag_backend.domain.constants import CAROUSEL_THEMES
 from rag_backend.domain.models import CarouselProject, CarouselTheme
+from rag_backend.domain.models.carousel import validate_theme_reference
 
 
 def _project(theme: str) -> CarouselProject:
@@ -70,3 +73,22 @@ class TestCarouselThemeStringReference:
             "accent": "#bbbbbb",
             "background": "#cccccc",
         }
+
+
+@pytest.mark.unit
+class TestValidateThemeReference:
+    """AE-0271: the create path accepts root key | "auto" | custom-palette UUID."""
+
+    def test_accepts_root_key(self) -> None:
+        assert validate_theme_reference("plasma_magenta") == "plasma_magenta"
+
+    def test_accepts_auto(self) -> None:
+        assert validate_theme_reference("auto") == "auto"
+
+    def test_accepts_custom_palette_uuid(self) -> None:
+        ref = str(uuid4())
+        assert validate_theme_reference(ref) == ref
+
+    def test_rejects_arbitrary_string(self) -> None:
+        with pytest.raises(ValueError, match="root key"):
+            validate_theme_reference("not_a_theme_or_uuid")

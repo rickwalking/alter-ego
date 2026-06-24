@@ -47,6 +47,12 @@ export function Header({ locale }: HeaderProps) {
         {t("nav.rubrics")}
       </Link>
       <Link
+        href={DASHBOARD_ROUTES.PALETTES}
+        className="transition-colors hover:text-[var(--color-primary)]"
+      >
+        {t("nav.palettes")}
+      </Link>
+      <Link
         href={DASHBOARD_ROUTES.BLOG_POSTS}
         className="transition-colors hover:text-[var(--color-primary)]"
       >

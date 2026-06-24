@@ -1,11 +1,8 @@
-import {
-  CAROUSEL_THEMES,
-  DEFAULT_IMAGE_PRESET,
-  IMAGE_PRESETS,
-} from "@/constants/create";
+import { DEFAULT_IMAGE_PRESET, IMAGE_PRESETS } from "@/constants/create";
 import type { CarouselCreateRequest } from "@/schemas/carousel";
 import type { CreateCarouselFormState } from "@/app/dashboard/create/types";
 import { CREATE_TEMPLATES } from "@/constants/create";
+import { AUTO_THEME_VALUE } from "@/app/dashboard/create/theme-options";
 
 function presetFromValue(value: string): { model: string; style: string } {
   const preset = IMAGE_PRESETS.find((p) => p.value === value);
@@ -30,7 +27,7 @@ export function buildCarouselCreateRequest(
     topic: form.topic.trim(),
     audience: form.audience.trim(),
     niche: form.niche.trim() || form.topic.trim(),
-    theme: form.theme || CAROUSEL_THEMES.AUTO,
+    theme: form.theme || AUTO_THEME_VALUE,
     image_model: model as CarouselCreateRequest["image_model"],
     image_style: style as CarouselCreateRequest["image_style"],
     strategy,

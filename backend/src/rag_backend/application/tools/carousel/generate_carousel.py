@@ -8,7 +8,8 @@ from dataclasses import dataclass
 from langchain_core.tools import BaseTool, tool
 
 from rag_backend.agents.input_sanitizer import sanitize_llm_input
-from rag_backend.domain.models import CarouselProject, CarouselTheme
+from rag_backend.domain.models import CarouselProject
+from rag_backend.domain.models.carousel import validate_theme_reference
 from rag_backend.domain.protocols import CarouselRepository
 
 from .access import CarouselToolAccessContext
@@ -52,7 +53,7 @@ def build_generate_carousel_tool(
         Use when the user says "create a carousel", "create a social media post",
         "generate carousel slides", or "make an Instagram post".
         """
-        validated_theme = CarouselTheme(theme).value
+        validated_theme = validate_theme_reference(theme)
         safe_topic = sanitize_llm_input(topic)
         safe_audience = sanitize_llm_input(audience)
         safe_niche = sanitize_llm_input(niche)

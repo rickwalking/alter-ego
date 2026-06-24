@@ -14,6 +14,7 @@
       "createCarousel": "Create Carousel",
       "personas": "Personas",
       "rubrics": "Rubrics",
+      "palettes": "Palettes",
       "blogPosts": "Blog Posts",
       "workflow": "Workflow Board",
       "calendar": "Calendar",
@@ -496,6 +497,67 @@
     },
     "transport": {
       "pollingFallback": "Polling fallback active"
+    }
+  },
+  "palettes": {
+    "title": "Palettes",
+    "breadcrumb": "design catalog",
+    "section": {
+      "custom": "Your palettes",
+      "roots": "Root palettes"
+    },
+    "badge": {
+      "root": "root"
+    },
+    "mode": {
+      "light": "Light",
+      "dark": "Dark"
+    },
+    "derivedStyle": {
+      "light": "Flat Editorial (auto)",
+      "dark": "Default neon (auto)"
+    },
+    "keywords": {
+      "label": "Keywords"
+    },
+    "action": {
+      "new": "New palette",
+      "edit": "Edit",
+      "cancel": "Cancel"
+    },
+    "archive": {
+      "action": "Archive",
+      "confirm": "Archive this palette?"
+    },
+    "empty": {
+      "title": "No custom palettes yet",
+      "body": "Create your first palette to extend the catalog. Root palettes stay available to everyone.",
+      "action": "Create a palette"
+    },
+    "form": {
+      "createTitle": "New palette",
+      "editTitle": "Edit palette",
+      "create": "Create",
+      "save": "Save changes",
+      "name": "Name",
+      "namePlaceholder": "e.g. Aurora",
+      "previewLabel": "New palette",
+      "primary": "Primary",
+      "accent": "Accent",
+      "background": "Background",
+      "hexError": "Use a #rrggbb hex value",
+      "mode": "Mode",
+      "imageStyle": "Image style (derived)",
+      "keywords": "Keywords",
+      "keywordsPlaceholder": "Type a keyword, press Enter",
+      "keywordsHint": "Lowercase, no overlap with brand keywords, up to 10.",
+      "removeKeyword": "Remove keyword {keyword}"
+    },
+    "error": {
+      "load": "Could not load the palette catalog.",
+      "duplicate": "A palette with this name already exists.",
+      "invalid": "Some fields are invalid. Check the colours and name.",
+      "generic": "Something went wrong. Please try again."
     }
   },
   "rubrics": {

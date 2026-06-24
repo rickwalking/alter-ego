@@ -80,6 +80,27 @@ class CarouselTheme(StrEnum):
     AUTO = "auto"
 
 
+def validate_theme_reference(ref: str) -> str:
+    """Validate a project ``theme`` reference and return it (AE-0268/0271).
+
+    A theme is a root key, the ``"auto"`` sentinel, or a **custom-palette UUID**.
+    Custom palettes cannot be enum members, so a UUID-shaped reference is accepted
+    here; whether it points at a live palette is resolved at generation (the D9
+    snapshot resolver, which degrades gracefully), not at creation. Raises
+    ``ValueError`` for anything that is neither a known root key/auto nor a UUID.
+    """
+    try:
+        return CarouselTheme(ref).value
+    except ValueError:
+        pass
+    try:
+        UUID(ref)
+    except ValueError as exc:
+        msg = f"theme must be a root key, 'auto', or a custom palette id: {ref!r}"
+        raise ValueError(msg) from exc
+    return ref
+
+
 class ResearchSourceType(StrEnum):
     """Source types for research data collection."""
 

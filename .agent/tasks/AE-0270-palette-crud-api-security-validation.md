@@ -1,6 +1,6 @@
 # AE-0270 — P3: palette CRUD API + security/validation (feature-flagged)
 
-Status: Review
+Status: Done
 Tier: T2
 Priority: Medium
 Type: Feature

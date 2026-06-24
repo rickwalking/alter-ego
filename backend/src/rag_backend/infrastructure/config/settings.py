@@ -115,10 +115,10 @@ class Settings(BaseSettings):
     feature_flag_quality_checks: bool = True
     feature_flag_workflow_board: bool = True
     feature_flag_content_calendar: bool = True
-    # AE-0270: palette CRUD ships OFF until the AE-0271 frontend lands (skeptical
-    # G6 — no window where customs are writable but invisible). Default False so
-    # production stays gated until the flag is flipped together with the FE.
-    feature_flag_palette_catalog: bool = False
+    # AE-0271: the palette catalog goes live now that the frontend consumes it
+    # (co-deploy with the FE — skeptical G6). Default True so this release flips the
+    # AE-0270 CRUD endpoints on in every environment, including production.
+    feature_flag_palette_catalog: bool = True
     workflow_alerts_enabled: bool = True
 
     @property

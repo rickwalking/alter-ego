@@ -1,15 +1,14 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import {
-  CAROUSEL_THEMES,
-  FLAT_EDITORIAL_PRESET,
-  IMAGE_PRESETS,
-  isLightTheme,
-  THEME_LABEL_KEYS,
-} from "@/constants/create";
+import { FLAT_EDITORIAL_PRESET, IMAGE_PRESETS } from "@/constants/create";
 import { NEON_CYAN, TEXT_MUTED } from "@/constants/neon";
 import type { CreateCarouselFormState } from "@/app/dashboard/create/types";
+import {
+  findThemeMode,
+  type ThemeOption,
+} from "@/app/dashboard/create/theme-options";
+import { PALETTE_MODES } from "@/schemas/palette";
 import { SectionNumber } from "./section-number";
 import {
   inputStyle,
@@ -17,33 +16,21 @@ import {
   sectionHeaderStyle,
 } from "./section-styles";
 
-const THEME_OPTIONS = [
-  CAROUSEL_THEMES.AUTO,
-  CAROUSEL_THEMES.CYBERSECURITY,
-  CAROUSEL_THEMES.AI_COMPETITION,
-  CAROUSEL_THEMES.DEVELOPER_SKILLS,
-  CAROUSEL_THEMES.SOURCE_CODE,
-  CAROUSEL_THEMES.SOCIAL_ENGINEERING,
-  CAROUSEL_THEMES.PLASMA_MAGENTA,
-  CAROUSEL_THEMES.ACID_LIME,
-  CAROUSEL_THEMES.MONO_INDIGO,
-  CAROUSEL_THEMES.EMBER_CRIMSON,
-  CAROUSEL_THEMES.BLUEPRINT,
-  CAROUSEL_THEMES.RISOGRAPH,
-  CAROUSEL_THEMES.PAPER_EDITORIAL,
-  CAROUSEL_THEMES.CLINICAL_MINT,
-] as const;
-
 export interface CreateThemeSectionProps {
   form: CreateCarouselFormState;
   onChange: (patch: Partial<CreateCarouselFormState>) => void;
+  /** Theme options from the dynamic catalog (roots + active custom + auto). */
+  themeOptions: readonly ThemeOption[];
 }
 
 export function CreateThemeSection({
   form,
   onChange,
+  themeOptions,
 }: CreateThemeSectionProps): React.ReactElement {
   const t = useTranslations("create");
+  const selectedIsLight =
+    findThemeMode(themeOptions, form.theme) === PALETTE_MODES[0];
 
   // Light palettes only render correctly with the flat_editorial preset, so
   // selecting one nudges the preset toward it to avoid a mismatched dark scene.
@@ -51,7 +38,8 @@ export function CreateThemeSection({
     const patch: Partial<CreateCarouselFormState> = {
       theme: theme as CreateCarouselFormState["theme"],
     };
-    if (isLightTheme(theme) && form.imagePreset !== FLAT_EDITORIAL_PRESET) {
+    const isLight = findThemeMode(themeOptions, theme) === PALETTE_MODES[0];
+    if (isLight && form.imagePreset !== FLAT_EDITORIAL_PRESET) {
       patch.imagePreset = FLAT_EDITORIAL_PRESET;
     }
     onChange(patch);
@@ -86,13 +74,13 @@ export function CreateThemeSection({
             onChange={(e) => handleThemeChange(e.target.value)}
             style={inputStyle}
           >
-            {THEME_OPTIONS.map((theme) => (
-              <option key={theme} value={theme}>
-                {t(THEME_LABEL_KEYS[theme])}
+            {themeOptions.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
               </option>
             ))}
           </select>
-          {isLightTheme(form.theme) && (
+          {selectedIsLight && (
             <p
               role="note"
               style={{

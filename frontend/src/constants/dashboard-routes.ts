@@ -11,6 +11,7 @@ export const DASHBOARD_ROUTES = {
   CALENDAR: "/dashboard/calendar",
   RUBRICS: "/dashboard/rubrics",
   PERSONAS: "/dashboard/personas",
+  PALETTES: "/dashboard/palettes",
   KNOWLEDGE: "/dashboard/knowledge",
   ANALYTICS: "/dashboard/analytics",
 } as const;

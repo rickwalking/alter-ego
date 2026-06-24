@@ -76,60 +76,11 @@ export const SLIDE_GENERATION_STATUS = {
 export type SlideGenerationStatus =
   (typeof SLIDE_GENERATION_STATUS)[keyof typeof SLIDE_GENERATION_STATUS];
 
-/**
- * Available carousel themes. Dark variants pair with the neon/neo-anime image
- * styles; light/editorial themes (risograph, paper_editorial, clinical_mint)
- * pair with the flat_editorial style.
- */
-export const CAROUSEL_THEMES = {
-  CYBERSECURITY: "cybersecurity",
-  AI_COMPETITION: "ai_competition",
-  DEVELOPER_SKILLS: "developer_skills",
-  SOURCE_CODE: "source_code",
-  SOCIAL_ENGINEERING: "social_engineering",
-  PLASMA_MAGENTA: "plasma_magenta",
-  ACID_LIME: "acid_lime",
-  MONO_INDIGO: "mono_indigo",
-  EMBER_CRIMSON: "ember_crimson",
-  BLUEPRINT: "blueprint",
-  RISOGRAPH: "risograph",
-  PAPER_EDITORIAL: "paper_editorial",
-  CLINICAL_MINT: "clinical_mint",
-  AUTO: "auto",
-} as const;
-
-/** Theme display labels for i18n keys (relative to "create" namespace). */
-export const THEME_LABEL_KEYS = {
-  cybersecurity: "themes.cybersecurity",
-  ai_competition: "themes.ai_competition",
-  developer_skills: "themes.developer_skills",
-  source_code: "themes.source_code",
-  social_engineering: "themes.social_engineering",
-  plasma_magenta: "themes.plasma_magenta",
-  acid_lime: "themes.acid_lime",
-  mono_indigo: "themes.mono_indigo",
-  ember_crimson: "themes.ember_crimson",
-  blueprint: "themes.blueprint",
-  risograph: "themes.risograph",
-  paper_editorial: "themes.paper_editorial",
-  clinical_mint: "themes.clinical_mint",
-  auto: "themes.auto",
-} as const;
-
-/**
- * Theme keys whose palette uses a LIGHT background. These render correctly
- * only with the flat_editorial preset, so the create form nudges toward it.
- */
-export const LIGHT_THEME_KEYS: readonly string[] = [
-  CAROUSEL_THEMES.RISOGRAPH,
-  CAROUSEL_THEMES.PAPER_EDITORIAL,
-  CAROUSEL_THEMES.CLINICAL_MINT,
-];
-
-/** True when the theme's palette is light (pair with flat_editorial). */
-export function isLightTheme(theme: string): boolean {
-  return LIGHT_THEME_KEYS.includes(theme);
-}
+// Theme keys, labels, and the light-theme set are no longer hardcoded here
+// (AE-0271). The create-page theme dropdown renders the live union of root +
+// custom palettes from `GET /api/palettes`, and each palette's light/dark mode
+// drives the flat-editorial nudge. The only FE-only theme value is the `"auto"`
+// sentinel — see `AUTO_THEME_VALUE` in `app/dashboard/create/theme-options.ts`.
 
 /** Pipeline phase display order. */
 export const PIPELINE_PHASES = [
