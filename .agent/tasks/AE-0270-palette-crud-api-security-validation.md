@@ -1,6 +1,6 @@
 # AE-0270 — P3: palette CRUD API + security/validation (feature-flagged)
 
-Status: Dev Complete
+Status: Review
 Tier: T2
 Priority: Medium
 Type: Feature
@@ -112,11 +112,11 @@ Feature: Palette CRUD API with validation and security
 
 ## QA Checklist
 
-- [ ] Security reviewed (OWASP — injection via colours, abuse via keywords, authz)
-- [ ] Code quality reviewed
-- [ ] Acceptance criteria validated
-- [ ] Edge cases tested (concurrency, root immutability, slug change rejection)
-- [ ] Orphan/unfinished code checked
+- [x] Security reviewed (OWASP — injection via colours, abuse via keywords, authz)
+- [x] Code quality reviewed
+- [x] Acceptance criteria validated
+- [x] Edge cases tested (concurrency, root immutability, slug change rejection)
+- [x] Orphan/unfinished code checked
 
 ## Progress Log
 
@@ -167,7 +167,9 @@ GATES_BASE_REF=origin/main bash scripts/ci/check-integrity.sh backend
 ```
 
 ## QA Report
-Pending (handing off to /qa-agent).
+PASS (external/codex round, 0 blockers) — `.agent/reports/AE-0270.qa.md`. Gates
+15 PASS / 0 FAIL / 4 SKIP (DB-only, CI runs); mutation 78.80%; integrity 0 net-new
+blockers. WARN findings addressed (flag-off write test, dedupe-race documented).
 ## Decision Log
 D2, D3, D7, D8; G5/G6/G8 + F3 resolutions — see arch-plan. Implementation notes:
 slug uses an id suffix (globally unique, dodges the recreate-after-archive collision,
