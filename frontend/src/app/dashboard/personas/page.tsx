@@ -46,12 +46,12 @@ export default function PersonasPage(): React.ReactElement {
             placeholder="Search personas..."
             value={searchQuery}
             onChange={setSearchQuery}
-            className="w-[200px]"
+            className="w-full sm:w-[200px]"
           />
         }
       />
 
-      <div className="page-content" style={{ padding: "24px 32px" }}>
+      <div className="page-content px-4 py-6 md:px-8">
         {loading && (
           <div className="flex justify-center py-12">
             <NeonSpinner size="lg" />
@@ -66,13 +66,7 @@ export default function PersonasPage(): React.ReactElement {
           <PersonasEmptyState searchQuery={searchQuery} />
         )}
         {!loading && !error && filtered.length > 0 && (
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))",
-              gap: 16,
-            }}
-          >
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-4">
             {filtered.map((persona) => (
               <NeonPersonaCard
                 key={persona.id}

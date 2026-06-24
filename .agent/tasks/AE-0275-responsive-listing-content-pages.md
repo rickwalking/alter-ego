@@ -1,6 +1,6 @@
 # AE-0275 — Responsive listing & content pages
 
-Status: Planning
+Status: Dev Complete
 Tier: T2
 Priority: Medium
 Type: Feature
@@ -114,3 +114,19 @@ Feature: Responsive dashboard listing pages
 - [ ] Lint + typecheck green; tests reference scenarios.
 - [ ] 360 / 768 / 1280 — grids reflow; no overflow; search bars adapt.
 </content>
+
+
+## Progress Log
+
+- 2026-06-24 — Implemented per ticket scope; layout-critical inline styles migrated to
+  Tailwind responsive utilities. Full `gates.sh frontend` reproduced green (17/17).
+
+## Test Evidence
+
+```
+GATES_JSON: {"pass":17,"fail":0,"skip":0} — full frontend suite green (lint incl.
+responsive-dashboard gate, boundaries, dup, component-types, i18n, typecheck, build,
+test 936+, mutation, dead-files, integrity, format, schema-drift).
+```
+
+- Typecheck + targeted vitest suites pass; no new jscpd duplication; integrity 0 net-new.

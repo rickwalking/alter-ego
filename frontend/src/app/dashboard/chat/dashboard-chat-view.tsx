@@ -22,10 +22,14 @@ import { ChatComposer } from "@/app/dashboard/chat/chat-composer";
 import { ChatHeader } from "@/app/dashboard/chat/chat-header";
 import { ChatMessageList } from "@/app/dashboard/chat/chat-message-list";
 import { ChatSidebar } from "@/app/dashboard/chat/chat-sidebar";
+import { useOffCanvas } from "@/lib/use-off-canvas";
+
+const CHAT_CONVERSATIONS_ID = "chat-conversations";
 
 export function DashboardChatView(): React.ReactElement {
   const [activeConv, setActiveConv] = useState<string | null>(null);
   const [isComposingNew, setIsComposingNew] = useState(false);
+  const convDrawer = useOffCanvas();
   const [input, setInput] = useState("");
 
   const { data: conversations = [] } = useConversations();
@@ -90,8 +94,9 @@ export function DashboardChatView(): React.ReactElement {
       setActiveConv(id);
       setIsComposingNew(false);
       startNewChat();
+      convDrawer.close();
     },
-    [startNewChat],
+    [startNewChat, convDrawer],
   );
 
   return (
@@ -99,7 +104,12 @@ export function DashboardChatView(): React.ReactElement {
       className="flex flex-col min-h-screen"
       style={{ background: DASHBOARD_CHAT_BG_DEEP }}
     >
-      <ChatHeader onNewChat={handleNewChat} />
+      <ChatHeader
+        onNewChat={handleNewChat}
+        onToggleConversations={convDrawer.toggle}
+        conversationsOpen={convDrawer.open}
+        conversationsId={CHAT_CONVERSATIONS_ID}
+      />
       {sseError && (
         <p className="px-6 py-2 text-sm text-red-400" role="alert">
           {sseError}
@@ -112,16 +122,25 @@ export function DashboardChatView(): React.ReactElement {
           minHeight: "calc(100vh - 56px)",
         }}
       >
+        {convDrawer.open && (
+          <button
+            type="button"
+            aria-label="Close conversations"
+            tabIndex={-1}
+            onClick={convDrawer.close}
+            className="fixed inset-0 z-30 bg-black/60 md:hidden"
+          />
+        )}
         <ChatSidebar
           conversations={sidebarConversations}
           activeConv={effectiveConvId ?? ""}
           onSelectConversation={handleSelectConversation}
+          open={convDrawer.open}
+          id={CHAT_CONVERSATIONS_ID}
         />
         <div
+          className="flex flex-1 flex-col"
           style={{
-            flex: 1,
-            display: "flex",
-            flexDirection: "column",
             background: DASHBOARD_CHAT_BG_OVERLAY_LIGHT,
           }}
         >

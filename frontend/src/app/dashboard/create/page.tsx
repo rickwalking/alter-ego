@@ -71,16 +71,8 @@ export default function CreateCarouselPage(): React.ReactElement {
           activeStepId={CREATE_STEP_IDS.BRIEF}
           onStepChange={() => undefined}
         />
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "1fr 360px",
-            gap: "24px",
-          }}
-        >
-          <div
-            style={{ display: "flex", flexDirection: "column", gap: "24px" }}
-          >
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-[minmax(0,1fr)_360px]">
+          <div className="flex flex-col gap-6">
             <CreateTopicSection form={form} onChange={handleChange} />
             <CreateTemplateSection form={form} onChange={handleChange} />
             <CreateThemeSection

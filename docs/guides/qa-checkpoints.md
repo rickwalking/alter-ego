@@ -202,6 +202,7 @@ A passing test for the real config/tree SHOULD accompany it (both directions).
 | ESLint rule severity | `frontend/src/scripts/eslint-fetch-rule.test.ts` | seeded `fetch()`-in-`useEffect` probe → a `no-restricted-syntax` message with `severity === 2` |
 | Bash resolver / gate helper | `backend/tests/unit/scripts_ci/test_diff_base.py` | drives the bash helper in a throwaway repo; asserts the advisory/fallback paths |
 | Python AST checker | `backend/tests/unit/scripts_ci/test_check_inline_prompts.py` | seeds an inline prompt (`scripts/check_inline_prompts.py`, AE-0244) → exit 1; guarded `*_FALLBACK`/`*_TEMPLATE` control → exit 0 |
+| Responsive-layout gate | `frontend/src/scripts/responsive-dashboard.test.ts` | per-branch seeded frozen-layout inline styles (`gridTemplateColumns`, px `marginLeft≥64`, fixed `width≥200` on a flex/grid container) → non-zero exit; false-positive guards (small spacing/leaf widths) → no fire; real tree → exit 0 (`scripts/check-responsive-dashboard.mjs`, AE-0277) |
 
 **QA enforcement:** the code-quality dimension treats a rule-add/promote without a
 rule-fires test as a finding — the claim "this rule is enforced" is *unverified*

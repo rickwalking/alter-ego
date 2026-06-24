@@ -15,17 +15,13 @@ export function CalendarHeader({
 }): React.ReactElement {
   return (
     <div
+      // `pl-14` clears the layout-level mobile hamburger; layout/zIndex via
+      // Tailwind (stacking-map aligned). Neon surface styling stays inline.
+      className="sticky top-0 z-50 flex h-14 items-center justify-between px-4 pl-14 md:px-8 md:pl-8"
       style={{
-        height: 56,
-        ...CALENDAR_FLEX_CENTER,
-        justifyContent: "space-between",
-        padding: "0 32px",
         borderBottom: `1px solid ${CALENDAR_COLORS.bdr}`,
         background: "rgba(6,10,18,0.6)",
         backdropFilter: "blur(12px)",
-        position: "sticky",
-        top: 0,
-        zIndex: 50,
         opacity: loading ? 0.5 : 1,
       }}
     >

@@ -109,6 +109,7 @@ function CalendarDayCell({ cell }: CalendarDayCellProps): React.ReactElement {
     <div
       tabIndex={0}
       role="gridcell"
+      className="snap-start"
       style={{
         minHeight: 100,
         padding: 8,
@@ -143,42 +144,46 @@ function CalendarDayCell({ cell }: CalendarDayCellProps): React.ReactElement {
 export function CalendarGrid({ days }: CalendarGridProps): React.ReactElement {
   const hasCurrentDays = days.filter((day) => day.cur).length > 0;
   return (
-    <div
-      style={{
-        display: "grid",
-        gridTemplateColumns: "repeat(7,1fr)",
-        gap: 1,
-        background: CALENDAR_COLORS.cG,
-        borderRadius: 8,
-        overflow: "hidden",
-        border: `1px solid ${NEON_BORDER_SUBTLE}`,
-      }}
-    >
-      {CALENDAR_WEEKDAY_HEADERS.map((header) => (
-        <div
-          key={header}
-          style={{
-            padding: 10,
-            textAlign: "center",
-            fontFamily: CALENDAR_MONO_FONT,
-            fontSize: 10,
-            textTransform: "uppercase",
-            letterSpacing: 2,
-            color: CALENDAR_COLORS.tD,
-            background: "rgba(6,10,18,0.5)",
-            fontWeight: 700,
-          }}
-        >
-          {header}
-        </div>
-      ))}
-      {hasCurrentDays ? (
-        days.map((cell, index) => (
-          <CalendarDayCell key={`${cell.day}-${index}`} cell={cell} />
-        ))
-      ) : (
-        <CalendarEmptyMonth />
-      )}
+    <div className="overflow-x-auto [overscroll-behavior-x:contain]">
+      <div
+        // Keep the month view; scroll-snap horizontally on small screens so
+        // cells stay ≥~91px wide (min-w 640 / 7) instead of crushing.
+        className="grid min-w-[640px] snap-x snap-mandatory grid-cols-7"
+        style={{
+          gap: 1,
+          background: CALENDAR_COLORS.cG,
+          borderRadius: 8,
+          overflow: "hidden",
+          border: `1px solid ${NEON_BORDER_SUBTLE}`,
+        }}
+      >
+        {CALENDAR_WEEKDAY_HEADERS.map((header) => (
+          <div
+            key={header}
+            className="snap-start"
+            style={{
+              padding: 10,
+              textAlign: "center",
+              fontFamily: CALENDAR_MONO_FONT,
+              fontSize: 10,
+              textTransform: "uppercase",
+              letterSpacing: 2,
+              color: CALENDAR_COLORS.tD,
+              background: "rgba(6,10,18,0.5)",
+              fontWeight: 700,
+            }}
+          >
+            {header}
+          </div>
+        ))}
+        {hasCurrentDays ? (
+          days.map((cell, index) => (
+            <CalendarDayCell key={`${cell.day}-${index}`} cell={cell} />
+          ))
+        ) : (
+          <CalendarEmptyMonth />
+        )}
+      </div>
     </div>
   );
 }

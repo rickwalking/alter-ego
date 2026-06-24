@@ -75,11 +75,8 @@ export function RubricPanel({ rubric }: RubricPanelProps): React.ReactElement {
       </div>
 
       <div
-        className="rubric-header-row"
+        className="rubric-header-row grid grid-cols-[2fr_1fr_1fr_1fr] gap-2"
         style={{
-          display: "grid",
-          gridTemplateColumns: "2fr 1fr 1fr 1fr",
-          gap: 8,
           padding: "10px 20px",
           fontFamily: "var(--font-mono, 'JetBrains Mono', monospace)",
           fontSize: 9,
@@ -100,17 +97,13 @@ export function RubricPanel({ rubric }: RubricPanelProps): React.ReactElement {
         {rubric.criteria.map((c, idx) => (
           <div
             key={c.name}
-            className="rubric-criterion"
+            className="rubric-criterion grid grid-cols-[2fr_1fr_1fr_1fr] items-center gap-2"
             style={{
-              display: "grid",
-              gridTemplateColumns: "2fr 1fr 1fr 1fr",
-              gap: 8,
               padding: "12px 0",
               borderBottom:
                 idx < rubric.criteria.length - 1
                   ? `1px solid ${RUBRIC_ROW_BORDER}`
                   : "none",
-              alignItems: "center",
             }}
           >
             <div>

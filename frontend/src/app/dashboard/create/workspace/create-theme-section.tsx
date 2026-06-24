@@ -51,13 +51,7 @@ export function CreateThemeSection({
         <SectionNumber num={3} />
         Theme & Voice
       </div>
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "1fr 1fr",
-          gap: "12px",
-        }}
-      >
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div>
           <label
             style={{
