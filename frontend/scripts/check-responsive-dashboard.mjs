@@ -46,6 +46,8 @@ export const ALLOW_LIST = [
   "src/app/dashboard/rubrics/rubric-panel.tsx",
   "src/app/dashboard/calendar/calendar-grid.tsx",
   "src/app/dashboard/calendar/calendar-header.tsx",
+  "src/app/dashboard/calendar/calendar-toolbar.tsx",
+  "src/modules/publishing/distribution/components/regenerate-strategy-section.tsx",
   "src/app/dashboard/chat/chat-sidebar.tsx",
   "src/app/dashboard/chat/chat-header.tsx",
   "src/app/dashboard/chat/dashboard-chat-view.tsx",

@@ -36,7 +36,7 @@ export default function CalendarPage(): React.ReactElement {
       )}
       <CalendarHeader loading={loading} />
 
-      <div style={{ padding: "28px 32px" }}>
+      <div className="p-4 md:p-7">
         <CalendarToolbar />
         <CalendarGrid days={days} />
         <CalendarLegend />

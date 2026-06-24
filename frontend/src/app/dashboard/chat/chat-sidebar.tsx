@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { useFocusTrap } from "@/lib/use-focus-trap";
 import { useScrollLock } from "@/lib/use-scroll-lock";
+import { useMediaQuery } from "@/lib/use-media-query";
 import {
   DASHBOARD_CHAT_BORDER_LIGHT,
   DASHBOARD_CHAT_BORDER_SUBTLE,
@@ -38,10 +39,14 @@ export function ChatSidebar({
   const t = useTranslations("chat.sidebar");
   const ref = useRef<HTMLDivElement>(null);
   const isOpen = open === true;
+  // Below md the list is an off-canvas drawer; at md+ it is a persistent pane,
+  // so trap/lock must not engage there even if `open` is stale from mobile.
+  const isDrawer = useMediaQuery("(max-width: 767px)");
+  const drawerActive = isOpen && isDrawer;
 
   // Reuse the AE-0273 primitives — no duplicated drawer logic (jscpd gate).
-  useFocusTrap(ref, isOpen);
-  useScrollLock(isOpen);
+  useFocusTrap(ref, drawerActive);
+  useScrollLock(drawerActive);
 
   return (
     <div

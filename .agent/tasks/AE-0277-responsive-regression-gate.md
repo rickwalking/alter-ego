@@ -1,6 +1,6 @@
 # AE-0277 — Responsive-regression gate (no reintroduced frozen layouts)
 
-Status: Dev Complete
+Status: QA Running
 Tier: T1
 Priority: Medium
 Type: Chore
@@ -66,13 +66,22 @@ class). Nothing stops a future edit from re-adding them, silently re-breaking mo
 
 ## Acceptance Criteria
 
-- [ ] `check-responsive-dashboard.mjs` implements the four branches above with the stated
+> **Branch-count reconciliation (post external-QA):** the v1 "four branches" is delivered
+> as **three precisely-definable branches** (gridTemplateColumns / marginLeft≥64 /
+> fixed-width≥200 on a flex-grid container). The 4th "bare `display:flex` without a
+> responsive class" branch is **intentionally dropped** — the epic deliberately keeps
+> non-layout-critical inline `display:flex` rows, so flagging all of them would
+> false-positive on the intended end state and fail the "exits 0 on current tree" AC.
+> Rationale documented in the script header. (GLM I5 said "define precisely or drop".)
+
+- [ ] `check-responsive-dashboard.mjs` implements the three branches above with the stated
       qualifiers (no false-positive on `6px`/`8px` spacing marginLeft).
 - [ ] **Allow-list = the union of every file modified by AE-0273/0274/0275/0276** (shell +
-      create flow incl. workspace section grids + listings incl. rubric-panel + data-dense
-      incl. calendar-header). A sync check fails if a known-responsive file is absent.
+      create flow incl. workspace section grids + publish `regenerate-strategy-section` +
+      listings incl. rubric-panel + data-dense incl. calendar-header/toolbar). A sync
+      check fails if a known-responsive file is absent.
 - [ ] Exits 0 on the current (post-0273..0276) tree; exits non-zero on a seeded violation.
-- [ ] **Per-branch rule-fires tests** (AE-0180): each of the four detection branches has a
+- [ ] **Per-branch rule-fires tests** (AE-0180): each of the three detection branches has a
       seeded fixture that makes the checker exit non-zero — not just `gridTemplateColumns`.
 - [ ] Added to `npm run lint` and `scripts/ci/gates.sh frontend`; documented in
       `docs/guides/qa-checkpoints.md`. Passes in CI without external keys.

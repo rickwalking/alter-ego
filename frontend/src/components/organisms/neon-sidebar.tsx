@@ -8,6 +8,7 @@ import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { useFocusTrap } from "@/lib/use-focus-trap";
 import { useScrollLock } from "@/lib/use-scroll-lock";
+import { useMediaQuery } from "@/lib/use-media-query";
 import { NeonIcon } from "@/components/atoms/neon-icon";
 import { NeonBadge } from "@/components/atoms/neon-badge";
 import {
@@ -48,10 +49,14 @@ export function NeonSidebar({
   const { user, logout, isLoading } = useAuth();
   const asideRef = useRef<HTMLElement>(null);
   const isOpen = open === true;
+  // Trap/lock ONLY while the drawer is actually off-canvas (below lg). At lg+
+  // the rail is persistent, so an open flag must not lock scroll or trap focus.
+  const isDrawer = useMediaQuery("(max-width: 1023px)");
+  const drawerActive = isOpen && isDrawer;
 
   // Drawer a11y: trap focus and lock body scroll only while open on mobile.
-  useFocusTrap(asideRef, isOpen);
-  useScrollLock(isOpen);
+  useFocusTrap(asideRef, drawerActive);
+  useScrollLock(drawerActive);
 
   return (
     <aside

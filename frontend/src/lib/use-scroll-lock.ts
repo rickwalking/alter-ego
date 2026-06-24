@@ -11,19 +11,32 @@ import { useEffect } from "react";
 const LOCKED_OVERFLOW = "hidden";
 const LOCKED_OVERSCROLL = "contain";
 
+// Reference-counted so concurrent locks (e.g. the dashboard sidebar drawer AND
+// the chat drawer) don't corrupt each other's saved body styles: the original
+// is captured only on the first lock and restored only when the last releases.
+let lockCount = 0;
+let savedOverflow = "";
+let savedOverscroll = "";
+
 export function useScrollLock(active: boolean): void {
   useEffect(() => {
     if (!active) {
       return;
     }
     const body = document.body;
-    const previousOverflow = body.style.overflow;
-    const previousOverscroll = body.style.overscrollBehavior;
-    body.style.overflow = LOCKED_OVERFLOW;
-    body.style.overscrollBehavior = LOCKED_OVERSCROLL;
+    if (lockCount === 0) {
+      savedOverflow = body.style.overflow;
+      savedOverscroll = body.style.overscrollBehavior;
+      body.style.overflow = LOCKED_OVERFLOW;
+      body.style.overscrollBehavior = LOCKED_OVERSCROLL;
+    }
+    lockCount += 1;
     return () => {
-      body.style.overflow = previousOverflow;
-      body.style.overscrollBehavior = previousOverscroll;
+      lockCount -= 1;
+      if (lockCount === 0) {
+        body.style.overflow = savedOverflow;
+        body.style.overscrollBehavior = savedOverscroll;
+      }
     };
   }, [active]);
 }
