@@ -56,4 +56,29 @@ describe("NeonSidebar", () => {
     expect(screen.getByText("editor@example.com")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /logout/i })).toBeInTheDocument();
   });
+
+  // Feature: responsive-dashboard-shell.feature — drawer on mobile / rail on desktop.
+  it("is translated off-canvas when closed and wired for the rail at lg", () => {
+    const { container } = render(
+      <NeonSidebar
+        sections={DASHBOARD_SIDEBAR_SECTIONS}
+        open={false}
+        id="dashboard-sidebar"
+      />,
+    );
+    const aside = container.querySelector("aside");
+    expect(aside).toHaveAttribute("id", "dashboard-sidebar");
+    expect(aside?.className).toContain("-translate-x-full");
+    expect(aside?.className).toContain("lg:translate-x-0");
+    expect(aside?.className).toContain("w-[var(--sidebar-width)]");
+  });
+
+  it("slides into view when open", () => {
+    const { container } = render(
+      <NeonSidebar sections={DASHBOARD_SIDEBAR_SECTIONS} open />,
+    );
+    const aside = container.querySelector("aside");
+    expect(aside?.className).toContain("translate-x-0");
+    expect(aside?.className).not.toContain("-translate-x-full");
+  });
 });

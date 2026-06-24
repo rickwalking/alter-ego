@@ -18,22 +18,19 @@ export function NeonTopBar({
 }: NeonTopBarProps): React.ReactElement {
   return (
     <div
+      // Layout via Tailwind so it can respond; neon surface styling stays inline.
+      // `pl-14` clears the layout-level mobile hamburger (z-50); `lg:pl-8` restores
+      // desktop padding once the rail (and no hamburger) takes over.
+      className="sticky top-0 z-50 flex h-14 items-center justify-between gap-3 px-4 pl-14 md:px-8 lg:pl-8"
       style={{
-        height: "56px",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        padding: "0 32px",
         borderBottom: `1px solid ${NEON_BORDER_SUBTLE}`,
         background: NEON_BG_HEADER,
         backdropFilter: "blur(12px)",
-        position: "sticky",
-        top: 0,
-        zIndex: 30,
       }}
     >
-      <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+      <div className="flex min-w-0 items-center gap-3">
         <h1
+          className="min-w-0 truncate"
           style={{
             fontSize: "16px",
             fontWeight: 700,
@@ -44,10 +41,14 @@ export function NeonTopBar({
           {title}
         </h1>
         {breadcrumb && breadcrumb.length > 0 && (
-          <NeonBreadcrumb items={breadcrumb} />
+          <div className="hidden sm:flex">
+            <NeonBreadcrumb items={breadcrumb} />
+          </div>
         )}
       </div>
-      {actions && <div>{actions}</div>}
+      {actions && (
+        <div className="flex flex-wrap justify-end gap-2">{actions}</div>
+      )}
     </div>
   );
 }

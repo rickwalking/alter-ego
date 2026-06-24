@@ -1,6 +1,6 @@
 # AE-0273 — Responsive app shell + reusable off-canvas drawer primitive
 
-Status: Planning
+Status: Dev Complete
 Tier: T2
 Priority: High
 Type: Feature
@@ -113,8 +113,30 @@ Feature: Responsive dashboard app shell
 
 ## QA Checklist
 
-- [ ] `npm run lint` (boundaries/dup/component-types/i18n) + `npm run typecheck` green.
-- [ ] Vitest covers hooks (open/close/Esc/trap/lock) and drawer class application.
+- [x] `npm run lint` (boundaries/dup/component-types/i18n) + `npm run typecheck` green.
+- [x] Vitest covers hooks (open/close/Esc/trap/lock) and drawer class application.
 - [ ] Playwright/manual: 360 / 768 / 1024 / 1280 — no horizontal overflow; drawer a11y.
-- [ ] No new jscpd duplication; hooks are the single source for off-canvas behavior.
+- [x] No new jscpd duplication; hooks are the single source for off-canvas behavior.
+
+## Progress Log
+
+- 2026-06-24 — Implemented reusable hooks (`useOffCanvas`/`useFocusTrap`/`useScrollLock`),
+  layout hamburger + backdrop, sidebar drawer classes (`w-[var(--sidebar-width)]`,
+  off-canvas translate, `lg` rail), `--sidebar-width` token, touch targets
+  (`[@media(pointer:coarse)]:min-h-11`), NeonTopBar reflow, inline `zIndex`→`z-*` classes.
+  All frontend gates reproduced green.
+
+## Test Evidence
+
+```
+GATES_JSON (frontend full run): pass across lint, lint-changed, component-types,
+duplication, dead-code, typecheck, build, legacy-guard, legacy-inventory, security,
+integrity, test (102 files / 936 tests passed), schema-drift, duplication-tests, format.
+Only initial FAIL was frontend:format (3 files) → fixed via prettier --write → PASS.
+```
+
+- New unit suites: `use-off-canvas.test.ts` (5), `use-focus-trap.test.tsx` (5),
+  `use-scroll-lock.test.ts` (4), `sidebar-width-token.test.ts` (1), extended
+  `neon-sidebar.test.tsx` (drawer translate classes / id / aria). Total 936 FE tests pass.
+- `bash scripts/ci/check-integrity.sh frontend` → 0 net-new blockers.
 </content>
