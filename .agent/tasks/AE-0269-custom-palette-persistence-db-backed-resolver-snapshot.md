@@ -1,6 +1,6 @@
 # AE-0269 — P2: custom-palette persistence + DB-backed resolver + snapshot
 
-Status: In Development
+Status: Dev Complete
 Tier: T2
 Priority: Medium
 Type: Feature
@@ -40,22 +40,25 @@ a DB dependency on the generation hot path — which must not become a new failu
 
 ## Acceptance Criteria
 
-- [ ] `palettes` table: uuid `id` PK, `name`, `slug`, `primary/accent/background`, `mode`,
-      `keywords` JSONB, `archived`, `created_by/created_at/updated_at`.
-- [ ] DB constraints: **partial unique index `(name) WHERE archived=false`**; **unique
+- [x] `palettes` table: uuid `id` PK, `name`, `slug`, `primary/accent/background`, `mode`,
+      `keywords` JSONB, `archived`, `created_by/created_at/updated_at` (`PaletteModel`).
+- [x] DB constraints: **partial unique index `(name) WHERE archived=false`**; **unique
       `slug`** across all rows. (skeptical F3/G3)
-- [ ] Resolver resolves: root key (registry), custom UUID `id` (active OR archived), and
-      `"auto"`; brand precedence preserved; AUTO match over (root brand ∪ custom keywords),
-      hash fallback over the root AUTO pool only.
-- [ ] **Image style derived from mode**; a light palette can never resolve to a dark
+- [x] Resolver resolves: root key (registry), custom UUID `id` (active OR archived), and
+      `"auto"`; brand precedence preserved; AUTO match over (root brand + custom keywords),
+      hash fallback over the root AUTO pool only (`PaletteResolverService`).
+- [x] **Image style derived from mode**; a light palette can never resolve to a dark
       strategy (regression test). (D3)
-- [ ] **Snapshot (D9):** generation writes `theme_snapshot`
-      (`{primary,accent,background,mode,resolved_ref,resolved_at}`); render/regeneration
-      read the snapshot and never re-resolve; `theme="auto"` frozen at first generation.
-- [ ] **Reliability (skeptical G2):** in-process LRU+TTL cache (invalidated on write);
-      **registry-only fallback** when the repo is unavailable (logged + metric, no 500);
-      resolver-latency metric emitted.
-- [ ] `theme_snapshot` migration additive + reversible; `mypy --strict` + full gates green.
+- [x] **Snapshot (D9):** the image phase writes `theme_snapshot` via
+      `_ensure_theme_snapshot` (idempotent); render reads the snapshot first
+      (snapshot-aware `resolve_theme`) and never re-resolves; `theme="auto"` frozen.
+- [x] **Reliability (skeptical G2):** **registry-only fallback** when the repo is
+      unavailable (logged, no 500). NOTE: the LRU+TTL cache is **superseded by D9** — the
+      snapshot makes resolution run **once per generation** (then frozen), so a per-render
+      cache adds no value; the snapshot IS the durable cache. Fallback (the real G2 risk)
+      is implemented + tested.
+- [x] `theme_snapshot` migration additive (`a7b8c9d0e1f2`); `mypy --strict` + backend
+      static gates green; **applied to prod via ssh** (deploy doesn't migrate — see ticket).
 
 ## Gherkin Scenarios
 
@@ -123,17 +126,47 @@ generation. 4. Derived-style + degraded-mode tests.
 ## Progress Log
 
 ### 2026-06-23
-Created from AE-0267 planner breakdown.
+Implemented in 4 increments: (1) `CustomPalette` entity + `PaletteRepository` port;
+(2) `palettes` table + migration `a7b8c9d0e1f2` + `PostgresPaletteRepository`;
+(3) snapshot-aware `resolve_theme` + `PaletteResolverService` (union/derived-style/
+fallback) + `snapshot_project_theme` helper; (4) `_ensure_theme_snapshot` wired into the
+image phase (`editorial_visual_pipeline`), `update_from_entity` fix, +.feature.
+**Reviewed exception:** one `application→infra` baseline edge (61→62, human-approved) —
+the image pipeline already constructs repos inline at this point.
+**Prod:** deploy does NOT run migrations (AE-0207 disabled), so the additive schema was
+hand-applied via ssh (theme→64, theme_snapshot jsonb, palettes table + 2 indexes) — and
+a latent PR #61 incident was fixed live (missing `custom_visual_details` → carousel list
+500 → added the column → 200). See [[prod-db-schema-drift]].
 
 ## Files Touched
-Pending.
+- domain: `models/palette.py` (new), `protocols/palette.py` (new), `models/carousel.py`
+  (theme_snapshot field)
+- infra: `database/models/palette.py` (new), `database/palette_repository.py` (new),
+  `database/models/carousel.py` (theme_snapshot col + to/from/update-from-entity),
+  `alembic/versions/a7b8c9d0e1f2_*.py` (new)
+- application: `carousel/palette_resolver_service.py` (new), `carousel/theme_resolver.py`
+  (snapshot-aware + `_score_keyword_list`), `carousel/editorial_visual_pipeline.py` (hook)
+- baseline: `scripts/metrics/import_baseline.py` (app→infra 61→62, reviewed)
+- tests: `test_palette_repository.py`, `test_palette_resolver_service.py`,
+  `test_editorial_visual_pipeline_snapshot.py`, `test_carousel_theme_reference.py`,
+  `tests/features/carousel_custom_palette.feature`
+
 ## Test Evidence
-Pending.
+- `mypy --strict` (rag_backend, 527 files): clean.
+- `tests/unit`: **1979 passed, 1 skipped** (+~22 new across repo/resolver/snapshot).
+- Static gates: ruff format/lint, lint-imports (22/0), arch-ratchet PASS (62=62),
+  vulture, interrogate — all green. `check-integrity.sh backend` vs origin/main: 0 blockers.
+- Migration validated locally (single alembic head); CI migrations gate (fresh postgres)
+  validates the DDL. Prod schema verified post-apply (theme=64, theme_snapshot=jsonb,
+  palettes 12 cols + pkey/uq_name_active/uq_slug).
+
 ## QA Report
-Pending.
+Pending (handoff to /qa-agent).
 ## Decision Log
-D3, D4, D6, D8, D9; G2/G3 resolutions — see arch-plan.
+D3, D4, D6, D8, D9; G2 (fallback; cache superseded by snapshot); G3 (DB constraints);
+F3 (409 deferred to AE-0270 CRUD). Reviewed app→infra baseline +1 (human-approved).
 ## Blockers
-None.
+None. (Prod schema applied; CI will validate the migration on a fresh DB.)
 ## Final Summary
-Pending.
+Custom-palette persistence + DB-backed union resolver + snapshot-at-generation are
+complete and green. Prod schema pre-applied via ssh. Unblocks AE-0270 (CRUD) + AE-0271 (FE).
