@@ -37,7 +37,7 @@ from rag_backend.infrastructure.config.settings import get_settings
 from rag_backend.infrastructure.database.carousel_repository import (
     PostgresCarouselRepository,
 )
-from rag_backend.infrastructure.database.palette_repository import (
+from rag_backend.infrastructure.database.palette_repository import (  # integrity-ok: AE-0269 human-approved app->infra edge (image pipeline already builds repos inline here; baseline 61->62)
     PostgresPaletteRepository,
 )
 
