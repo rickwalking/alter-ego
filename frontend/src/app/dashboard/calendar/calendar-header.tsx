@@ -17,7 +17,7 @@ export function CalendarHeader({
     <div
       // `pl-14` clears the layout-level mobile hamburger; layout/zIndex via
       // Tailwind (stacking-map aligned). Neon surface styling stays inline.
-      className="sticky top-0 z-50 flex h-14 items-center justify-between px-4 pl-14 md:px-8 md:pl-8"
+      className="sticky top-0 z-50 flex h-14 items-center justify-between pr-4 pl-14 md:pr-8 lg:pl-8"
       style={{
         borderBottom: `1px solid ${CALENDAR_COLORS.bdr}`,
         background: "rgba(6,10,18,0.6)",

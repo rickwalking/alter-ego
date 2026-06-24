@@ -25,7 +25,7 @@ export function NeonTopBar({
       // actions drop to a full-width second row (search becomes truly full-width)
       // instead of colliding inside a fixed-height bar. `pl-14` clears the
       // layout-level mobile hamburger (z-50); `lg:pl-8` restores desktop padding.
-      className="sticky top-0 z-50 flex min-h-14 flex-wrap items-center justify-between gap-x-3 gap-y-2 px-4 py-2 pl-14 md:px-8 md:py-0 lg:pl-8"
+      className="sticky top-0 z-50 flex min-h-14 flex-wrap items-center justify-between gap-x-3 gap-y-2 py-2 pr-4 pl-14 md:py-0 md:pr-8 lg:pl-8"
       style={{
         borderBottom: `1px solid ${NEON_BORDER_SUBTLE}`,
         background: NEON_BG_HEADER,

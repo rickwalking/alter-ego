@@ -26,7 +26,7 @@ export function ChatHeader({
     <header
       // `pl-14` clears the layout-level mobile hamburger (z-50); layout via
       // Tailwind so the header reflows. Neon surface styling stays inline.
-      className="sticky top-0 z-20 flex h-14 shrink-0 items-center justify-between gap-2 px-4 pl-14 md:px-8 md:pl-8"
+      className="sticky top-0 z-20 flex h-14 shrink-0 items-center justify-between gap-2 pr-4 pl-14 md:pr-8 lg:pl-8"
       style={{
         borderBottom: `1px solid ${DASHBOARD_CHAT_BORDER_SUBTLE}`,
         background: DASHBOARD_CHAT_BG_HEADER,
