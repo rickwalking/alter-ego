@@ -55,6 +55,17 @@ export default function DashboardLayout({
         />
       )}
 
+      {/* Sidebar is a root-level sibling of the backdrop (NOT inside the z-1
+          content context) so its z-40 actually sits ABOVE the z-30 backdrop —
+          nesting it under a z-1 stacking context made the backdrop cover the
+          drawer and its menu items. */}
+      <NeonSidebar
+        sections={DASHBOARD_SIDEBAR_SECTIONS}
+        showUserFooter
+        open={open}
+        id={SIDEBAR_ID}
+      />
+
       <div
         className="min-h-full flex flex-col"
         style={{
@@ -65,13 +76,6 @@ export default function DashboardLayout({
         }}
       >
         <div className="flex min-h-screen">
-          <NeonSidebar
-            sections={DASHBOARD_SIDEBAR_SECTIONS}
-            showUserFooter
-            open={open}
-            id={SIDEBAR_ID}
-          />
-
           <div className="flex flex-1 flex-col min-h-screen lg:ml-[var(--sidebar-width)]">
             <main className="flex-1 flex flex-col">{children}</main>
           </div>

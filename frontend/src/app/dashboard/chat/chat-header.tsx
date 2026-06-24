@@ -26,7 +26,7 @@ export function ChatHeader({
     <header
       // `pl-14` clears the layout-level mobile hamburger (z-50); layout via
       // Tailwind so the header reflows. Neon surface styling stays inline.
-      className="sticky top-0 z-20 flex h-14 shrink-0 items-center justify-between gap-2 pr-4 pl-14 md:pr-8 lg:pl-8"
+      className="sticky top-0 z-20 flex h-14 shrink-0 items-center justify-between gap-2 pr-4 pl-16 md:pr-8 lg:pl-8"
       style={{
         borderBottom: `1px solid ${DASHBOARD_CHAT_BORDER_SUBTLE}`,
         background: DASHBOARD_CHAT_BG_HEADER,
@@ -51,6 +51,8 @@ export function ChatHeader({
               color: DASHBOARD_CHAT_TEXT_MUTED,
             }}
           >
+            {/* Panel-left icon — distinct from the global nav hamburger; this
+                toggles the conversation list, not site navigation. */}
             <svg
               width="16"
               height="16"
@@ -58,9 +60,12 @@ export function ChatHeader({
               fill="none"
               stroke="currentColor"
               strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
               aria-hidden="true"
             >
-              <path d="M3 12h18M3 6h18M3 18h18" />
+              <rect x="3" y="4" width="18" height="16" rx="2" />
+              <path d="M9 4v16" />
             </svg>
           </button>
         )}
