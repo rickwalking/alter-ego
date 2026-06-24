@@ -295,6 +295,7 @@ class CarouselProjectModel(Base):
         self.rubric_id = entity.rubric_id
         self.instructions = entity.instructions
         self.custom_visual_details = entity.custom_visual_details
+        self.theme_snapshot = entity.theme_snapshot
         self.current_phase = entity.current_phase
         self.phase_status = entity.phase_status
         self.is_public = entity.is_public
