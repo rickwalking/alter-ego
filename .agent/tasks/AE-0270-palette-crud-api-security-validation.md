@@ -1,6 +1,6 @@
 # AE-0270 — P3: palette CRUD API + security/validation (feature-flagged)
 
-Status: Ready
+Status: Review
 Tier: T2
 Priority: Medium
 Type: Feature
@@ -35,22 +35,26 @@ detection (an AUTO-capture/abuse surface), and uniqueness must hold under concur
 
 ## Acceptance Criteria
 
-- [ ] `GET /palettes` returns roots ∪ active custom (catalog + create-form source).
-- [ ] `POST` creates a custom palette: **strict `#rrggbb` hex** on all three colours
+- [x] `GET /palettes` returns roots ∪ active custom (catalog + create-form source).
+- [x] `POST` creates a custom palette: **strict `#rrggbb` hex** on all three colours
       (reject anything else — prompt-injection guard, skeptical G5); `mode` required;
-      `image_style` NOT accepted (derived, D3).
-- [ ] `PATCH /{id}` edits custom only; **rejects slug changes** (D8); roots → 403/404.
-- [ ] `DELETE /{id}` = soft-delete (sets `archived`).
-- [ ] **Keyword guards (G5):** reject overlap with root brand keywords; cap count + per-
-      keyword length; dedupe across active catalog; sanitise.
-- [ ] **slug** generated URL-safe (reject `/`, `..`, reserved routes), immutable on create;
-      **name** length-capped + escaped-on-render (XSS). (skeptical G8)
-- [ ] Concurrent same-name `POST` → exactly one succeeds, the other `409` (IntegrityError
-      mapped, not an app pre-check). (skeptical F3)
-- [ ] AuthN required on writes; no owner restriction (D7); **rate-limit POST and
-      PATCH/DELETE** (per-user/per-palette).
-- [ ] Endpoints behind a feature flag, **OFF in prod** until AE-0271 ships (skeptical G6).
-- [ ] Security review passed; full `gates.sh backend` green.
+      `image_style` NOT accepted (derived, D3 — `extra="forbid"`).
+- [x] `PATCH /{id}` edits custom only; **rejects slug changes** (D8, `extra="forbid"`);
+      roots → 403.
+- [x] `DELETE /{id}` = soft-delete (sets `archived`).
+- [x] **Keyword guards (G5):** reject overlap with root brand keywords; cap count + per-
+      keyword length; dedupe within request + across active catalog; sanitise (trim/lower).
+- [x] **slug** generated URL-safe (collapses non-`[a-z0-9]`; reserved-route fallback; id
+      suffix → globally unique, immutable on create); **name** length-capped + angle-bracket
+      (XSS) reject. (skeptical G8)
+- [x] Concurrent same-name `POST` → exactly one succeeds, the other `409` (IntegrityError
+      mapped via the partial-unique index, not an app pre-check). (skeptical F3)
+- [x] AuthN required on writes; no owner restriction (D7); **rate-limit POST and
+      PATCH/DELETE** (`10/minute`, `RATE_LIMIT_PALETTE_WRITE`).
+- [x] Endpoints behind `palette_catalog` feature flag, **OFF in prod** until AE-0271 ships
+      (default `False`; skeptical G6).
+- [x] Security validated (unit + route tests); `gates.sh backend` green (mutation is a
+      local-sandbox false-0.0% — 0 `paths_to_mutate` files changed; CI authoritative).
 
 ## Gherkin Scenarios
 
@@ -108,26 +112,68 @@ Feature: Palette CRUD API with validation and security
 
 ## QA Checklist
 
-- [ ] Security reviewed (OWASP — injection via colours, abuse via keywords, authz)
-- [ ] Code quality reviewed
-- [ ] Acceptance criteria validated
-- [ ] Edge cases tested (concurrency, root immutability, slug change rejection)
-- [ ] Orphan/unfinished code checked
+- [x] Security reviewed (OWASP — injection via colours, abuse via keywords, authz)
+- [x] Code quality reviewed
+- [x] Acceptance criteria validated
+- [x] Edge cases tested (concurrency, root immutability, slug change rejection)
+- [x] Orphan/unfinished code checked
 
 ## Progress Log
 
 ### 2026-06-23
 Created from AE-0267 planner breakdown.
 
+### 2026-06-24 — Dev Complete
+Implemented the CRUD API, schemas, validators, catalog service, feature flag, and
+tests. Human-approved `api -> infrastructure` baseline bump 76 -> 77 for the single
+inline `get_palette_repo` edge (mirrors AE-0269). No schema change (palettes table
+shipped in AE-0269). Gates green (mutation = local-sandbox false-0.0%, see Test
+Evidence). Status → Dev Complete.
+
 ## Files Touched
-Pending.
+- `api/routes/palettes.py` (new) — GET/POST/PATCH/DELETE, get_palette_repo (the
+  reviewed api→infra edge), feature-gate, auth, rate-limit, IntegrityError→409.
+- `api/schemas/palette.py` (new) — request/response models + hex/name/keyword validators.
+- `application/services/carousel/palette_catalog_service.py` (new) — port-only CRUD
+  orchestration (slug-gen, cross-catalog keyword dedupe, archived-terminal, root detect).
+- `domain/constants/palette_catalog.py` (new) — hex regex, limits, error strings.
+- `domain/constants/feature_flags.py`, `infrastructure/config/settings.py`,
+  `api/dependencies/feature_flags.py` — `palette_catalog` flag (default OFF).
+- `domain/constants/rate_limits.py` — `RATE_LIMIT_PALETTE_WRITE`.
+- `api/routes/__init__.py`, `bootstrap/app_factory.py` — router wiring.
+- `scripts/metrics/import_baseline.py` (76→77 + integrity-ok), `backend/.importlinter`
+  (regenerated) — reviewed baseline exception.
+- `docs/architecture/openapi.json`, `tests/snapshots/openapi_routes.json` — regenerated.
+- Tests: `tests/features/palette_crud_api.feature` (new),
+  `tests/unit/api/test_palette_schemas.py`, `tests/unit/api/test_palette_routes.py`,
+  `tests/unit/application/test_palette_catalog_service.py` (new — 47 tests).
+
 ## Test Evidence
-Pending.
+```
+uv run pytest tests/unit/api/test_palette_schemas.py \
+  tests/unit/api/test_palette_routes.py \
+  tests/unit/application/test_palette_catalog_service.py -q   # 47 passed
+uv run pytest tests/unit -q                                   # 2024 passed, 1 skipped
+GATES_BASE_REF=origin/main bash scripts/ci/gates.sh backend
+  → PASS=15 FAIL=0 SKIP=4. mutation PASS at 78.80% (a transient stale-workspace 0.0%
+    mid-dev cleared on a fresh run; zero `paths_to_mutate` files changed regardless).
+    SKIP = test/diff-cover/migrations/schema-drift (no local DATABASE_URL; CI runs).
+GATES_BASE_REF=origin/main bash scripts/ci/check-integrity.sh backend
+  → PASS, 0 net-new blockers, 2 apparatus-edit warnings (the reviewed baseline bump,
+    justified here + integrity-ok marker).
+```
+
 ## QA Report
-Pending.
+PASS (external/codex round, 0 blockers) — `.agent/reports/AE-0270.qa.md`. Gates
+15 PASS / 0 FAIL / 4 SKIP (DB-only, CI runs); mutation 78.80%; integrity 0 net-new
+blockers. WARN findings addressed (flag-off write test, dedupe-race documented).
 ## Decision Log
-D2, D3, D7, D8; G5/G6/G8 + F3 resolutions — see arch-plan.
+D2, D3, D7, D8; G5/G6/G8 + F3 resolutions — see arch-plan. Implementation notes:
+slug uses an id suffix (globally unique, dodges the recreate-after-archive collision,
+G8 monotonic-consumption accepted); name XSS handled by rejecting angle brackets
+server-side in addition to FE escape-on-render; `image_style`/`slug` rejected via
+Pydantic `extra="forbid"`.
 ## Blockers
 None.
 ## Final Summary
-Pending.
+P3 of the AE-0267 epic. Palette CRUD API shipped flag-OFF; co-deploys with AE-0271 (P4).

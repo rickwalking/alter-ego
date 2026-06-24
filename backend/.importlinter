@@ -518,6 +518,7 @@ ignore_imports =
     rag_backend.api.routes.conversations -> rag_backend.infrastructure.database.config
     rag_backend.api.routes.conversations -> rag_backend.infrastructure.logging
     rag_backend.api.routes.documents -> rag_backend.infrastructure.retrieval.document_processor
+    rag_backend.api.routes.palettes -> rag_backend.infrastructure.database.palette_repository
     rag_backend.api.routes.personas -> rag_backend.infrastructure.container
     rag_backend.api.routes.personas -> rag_backend.infrastructure.database.models
     rag_backend.api.routes.rubrics -> rag_backend.infrastructure.container
