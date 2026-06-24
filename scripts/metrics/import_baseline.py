@@ -47,7 +47,7 @@ BASELINE_PAIR_CEILING: dict[str, tuple[int, int]] = {
     # point, also constructs PostgresPaletteRepository to freeze theme_snapshot at
     # generation (ADR-0019 D9 — required so custom-palette UUID themes render). A
     # parallel repo at an existing inline-construction site.
-    "application -> infrastructure": (62, 0),
+    "application -> infrastructure": (62, 0),  # integrity-ok: AE-0269 human-approved +1 (parallel palette repo at the image pipeline's existing inline-repo site; see comment above)
     # Ratcheted down 23 -> 22 by AE-0158 (Phase 8 legacy removal): the dead
     # application/services/rag_agent.py compatibility re-export shim — sole
     # remaining application->agents edge from that file, zero importers — was
