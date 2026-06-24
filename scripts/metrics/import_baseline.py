@@ -62,7 +62,12 @@ BASELINE_PAIR_CEILING: dict[str, tuple[int, int]] = {
     # routes moved behind the presentation facade), and 79 -> 76 by AE-0123..0131
     # (blog/publish/distribution/board/calendar/analytics routes moved behind the
     # publishing facade — locked by the AE-0132 exit gate).
-    "api -> infrastructure": (76, 0),
+    # Raised 76 -> 77 by AE-0270 (reviewed/human-approved): the palette catalog
+    # CRUD route constructs PostgresPaletteRepository inline from the request
+    # session (the same DI pattern carousels/deps.py uses for the carousel repo).
+    # The write API genuinely needs the repo at the API boundary and the route
+    # depends on the domain PaletteRepository port; a single parallel edge.
+    "api -> infrastructure": (77, 0),  # integrity-ok: AE-0270 human-approved +1 (palette CRUD route builds the repo at the existing inline-DI site; see comment above)
 }
 # Non-import categories Import Linter cannot express.
 # Ratcheted down 26 -> 14 by Phase 3 (AE-0099/0101/0102 resolve user/conversation

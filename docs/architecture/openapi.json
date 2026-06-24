@@ -1443,19 +1443,31 @@
             "title": "Audience",
             "type": "string"
           },
+          "custom_visual_details": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Custom Visual Details"
+          },
           "generate_images": {
             "default": true,
             "title": "Generate Images",
             "type": "boolean"
           },
           "image_model": {
-            "default": "gemini",
+            "default": "openai",
             "maxLength": 30,
             "title": "Image Model",
             "type": "string"
           },
           "image_style": {
-            "default": "comic_neon",
+            "default": "neo_anime",
             "maxLength": 30,
             "title": "Image Style",
             "type": "string"
@@ -1705,12 +1717,12 @@
             "type": "string"
           },
           "image_model": {
-            "default": "gemini",
+            "default": "openai",
             "title": "Image Model",
             "type": "string"
           },
           "image_style": {
-            "default": "comic_neon",
+            "default": "neo_anime",
             "title": "Image Style",
             "type": "string"
           },
@@ -2547,6 +2559,88 @@
           "creator_asset_id"
         ],
         "title": "CreatorAssetSelectRequest",
+        "type": "object"
+      },
+      "CustomPaletteResponse": {
+        "description": "A custom palette row as returned by the catalog + write endpoints.",
+        "properties": {
+          "accent": {
+            "title": "Accent",
+            "type": "string"
+          },
+          "archived": {
+            "title": "Archived",
+            "type": "boolean"
+          },
+          "background": {
+            "title": "Background",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "created_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created By"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "keywords": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Keywords",
+            "type": "array"
+          },
+          "mode": {
+            "title": "Mode",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "primary": {
+            "title": "Primary",
+            "type": "string"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "slug",
+          "primary",
+          "accent",
+          "background",
+          "mode",
+          "keywords",
+          "archived",
+          "created_by",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "CustomPaletteResponse",
         "type": "object"
       },
       "DocumentCreate": {
@@ -3990,6 +4084,161 @@
         "title": "NotificationResponse",
         "type": "object"
       },
+      "PaletteCatalogResponse": {
+        "description": "The full catalog: read-only roots + active custom palettes (D1).",
+        "properties": {
+          "custom": {
+            "items": {
+              "$ref": "#/components/schemas/CustomPaletteResponse"
+            },
+            "title": "Custom",
+            "type": "array"
+          },
+          "roots": {
+            "items": {
+              "$ref": "#/components/schemas/RootPaletteResponse"
+            },
+            "title": "Roots",
+            "type": "array"
+          }
+        },
+        "required": [
+          "roots",
+          "custom"
+        ],
+        "title": "PaletteCatalogResponse",
+        "type": "object"
+      },
+      "PaletteCreateRequest": {
+        "additionalProperties": false,
+        "description": "Create a custom palette. ``slug`` is server-generated (D8), never accepted;\n``image_style`` is derived from ``mode`` (D3), never accepted.",
+        "properties": {
+          "accent": {
+            "title": "Accent",
+            "type": "string"
+          },
+          "background": {
+            "title": "Background",
+            "type": "string"
+          },
+          "keywords": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Keywords",
+            "type": "array"
+          },
+          "mode": {
+            "$ref": "#/components/schemas/PaletteMode"
+          },
+          "name": {
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "primary": {
+            "title": "Primary",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "primary",
+          "accent",
+          "background",
+          "mode"
+        ],
+        "title": "PaletteCreateRequest",
+        "type": "object"
+      },
+      "PaletteMode": {
+        "description": "Whether a palette's background is light or dark.\n\nDrives the slide scrim (light vs neon) and AUTO eligibility \u2014 a LIGHT\npalette must never be auto-assigned to a dark image strategy.",
+        "enum": [
+          "light",
+          "dark"
+        ],
+        "title": "PaletteMode",
+        "type": "string"
+      },
+      "PaletteUpdateRequest": {
+        "additionalProperties": false,
+        "description": "Patch a custom palette. Every field is optional; ``slug`` is immutable, so\nits presence is rejected by ``extra=\"forbid\"`` (D8).",
+        "properties": {
+          "accent": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Accent"
+          },
+          "background": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Background"
+          },
+          "keywords": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Keywords"
+          },
+          "mode": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PaletteMode"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 80,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "primary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Primary"
+          }
+        },
+        "title": "PaletteUpdateRequest",
+        "type": "object"
+      },
       "PersonaProfileCreate": {
         "description": "Schema for creating a persona profile.",
         "properties": {
@@ -4828,6 +5077,50 @@
           "title"
         ],
         "title": "ReviewAssignmentRequest",
+        "type": "object"
+      },
+      "RootPaletteResponse": {
+        "description": "A read-only root palette projected from the typed registry.",
+        "properties": {
+          "accent": {
+            "title": "Accent",
+            "type": "string"
+          },
+          "background": {
+            "title": "Background",
+            "type": "string"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "label_en": {
+            "title": "Label En",
+            "type": "string"
+          },
+          "label_pt": {
+            "title": "Label Pt",
+            "type": "string"
+          },
+          "mode": {
+            "title": "Mode",
+            "type": "string"
+          },
+          "primary": {
+            "title": "Primary",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "label_en",
+          "label_pt",
+          "mode",
+          "primary",
+          "accent",
+          "background"
+        ],
+        "title": "RootPaletteResponse",
         "type": "object"
       },
       "RubricCriterion": {
@@ -10852,6 +11145,205 @@
         "summary": "Mark notification as read",
         "tags": [
           "notifications"
+        ]
+      }
+    },
+    "/api/palettes": {
+      "get": {
+        "description": "Return the catalog: read-only roots + active custom palettes (D1).",
+        "operationId": "list_palettes_api_palettes_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaletteCatalogResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "Not authenticated"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Palettes",
+        "tags": [
+          "palettes"
+        ]
+      },
+      "post": {
+        "description": "Create a custom palette; concurrent duplicate active name -> 409 (F3).",
+        "operationId": "create_palette_api_palettes_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PaletteCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomPaletteResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "Not authenticated"
+          },
+          "409": {
+            "description": "a palette with this name already exists"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create Palette",
+        "tags": [
+          "palettes"
+        ]
+      }
+    },
+    "/api/palettes/{ref}": {
+      "delete": {
+        "description": "Soft-delete (archive) a custom palette. Roots -> 403; unknown -> 404 (D4).",
+        "operationId": "delete_palette_api_palettes__ref__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ref",
+            "required": true,
+            "schema": {
+              "title": "Ref",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "Not authenticated"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Delete Palette",
+        "tags": [
+          "palettes"
+        ]
+      },
+      "patch": {
+        "description": "Edit a custom palette. Roots -> 403; unknown/archived -> 404; slug is immutable.",
+        "operationId": "update_palette_api_palettes__ref__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ref",
+            "required": true,
+            "schema": {
+              "title": "Ref",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PaletteUpdateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomPaletteResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "Not authenticated"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "409": {
+            "description": "a palette with this name already exists"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Update Palette",
+        "tags": [
+          "palettes"
         ]
       }
     },

@@ -9,6 +9,7 @@ from rag_backend.domain.constants.feature_flags import (
     ERR_FEATURE_DISABLED,
     FLAG_CONTENT_CALENDAR,
     FLAG_EDITORIAL_WORKFLOW,
+    FLAG_PALETTE_CATALOG,
     FLAG_QUALITY_CHECKS,
     FLAG_WORKFLOW_BOARD,
 )
@@ -37,10 +38,12 @@ RequireEditorialWorkflow = Depends(require_feature(FLAG_EDITORIAL_WORKFLOW))
 RequireQualityChecks = Depends(require_feature(FLAG_QUALITY_CHECKS))
 RequireWorkflowBoard = Depends(require_feature(FLAG_WORKFLOW_BOARD))
 RequireContentCalendar = Depends(require_feature(FLAG_CONTENT_CALENDAR))
+RequirePaletteCatalog = Depends(require_feature(FLAG_PALETTE_CATALOG))
 
 __all__ = [
     "RequireContentCalendar",
     "RequireEditorialWorkflow",
+    "RequirePaletteCatalog",
     "RequireQualityChecks",
     "RequireWorkflowBoard",
     "require_feature",

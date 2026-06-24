@@ -115,6 +115,10 @@ class Settings(BaseSettings):
     feature_flag_quality_checks: bool = True
     feature_flag_workflow_board: bool = True
     feature_flag_content_calendar: bool = True
+    # AE-0270: palette CRUD ships OFF until the AE-0271 frontend lands (skeptical
+    # G6 — no window where customs are writable but invisible). Default False so
+    # production stays gated until the flag is flipped together with the FE.
+    feature_flag_palette_catalog: bool = False
     workflow_alerts_enabled: bool = True
 
     @property
@@ -133,6 +137,7 @@ class Settings(BaseSettings):
         from rag_backend.domain.constants.feature_flags import (
             FLAG_CONTENT_CALENDAR,
             FLAG_EDITORIAL_WORKFLOW,
+            FLAG_PALETTE_CATALOG,
             FLAG_QUALITY_CHECKS,
             FLAG_WORKFLOW_BOARD,
         )
@@ -142,6 +147,7 @@ class Settings(BaseSettings):
             FLAG_QUALITY_CHECKS: self.feature_flag_quality_checks,
             FLAG_WORKFLOW_BOARD: self.feature_flag_workflow_board,
             FLAG_CONTENT_CALENDAR: self.feature_flag_content_calendar,
+            FLAG_PALETTE_CATALOG: self.feature_flag_palette_catalog,
         }
 
 
