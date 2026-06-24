@@ -20,6 +20,13 @@ describe("usePaletteForm", () => {
     expect(result.current.isValid).toBe(false);
   });
 
+  it("rejects a name with angle brackets (XSS guard, mirrors backend)", () => {
+    const { result } = renderHook(() => usePaletteForm());
+    act(() => result.current.setField("name", "<script>x</script>"));
+    expect(result.current.errors.name).toBeDefined();
+    expect(result.current.isValid).toBe(false);
+  });
+
   it("dedupes and lowercases keywords", () => {
     const { result } = renderHook(() => usePaletteForm());
     act(() => result.current.addKeywords("Space, space, NEON"));

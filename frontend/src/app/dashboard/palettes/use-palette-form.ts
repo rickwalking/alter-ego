@@ -53,8 +53,14 @@ function initialState(palette?: CustomPalette): PaletteFormState {
 function validate(state: PaletteFormState): PaletteFormErrors {
   const errors: PaletteFormErrors = {};
   const name = state.name.trim();
-  if (name.length < NAME_MIN || name.length > NAME_MAX) {
-    errors.name = "nameLength";
+  // Mirror the backend guards (AE-0270): length cap + reject angle brackets (XSS).
+  if (
+    name.length < NAME_MIN ||
+    name.length > NAME_MAX ||
+    name.includes("<") ||
+    name.includes(">")
+  ) {
+    errors.name = "name";
   }
   for (const field of ["primary", "accent", "background"] as const) {
     if (!HEX_COLOUR_REGEX.test(state[field])) errors[field] = "hex";

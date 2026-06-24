@@ -29,11 +29,21 @@ class CarouselProjectCreate(BaseModel):
     )
     language: str = Field(default="pt-BR", max_length=10)
     generate_images: bool = True
-    theme: str = Field(default="auto", max_length=30)
+    # root key | "auto" | custom-palette UUID (36 chars). Widened from 30 (AE-0271)
+    # so the dynamic catalog's custom-palette references are accepted (AE-0268 made
+    # CarouselProject.theme a string reference; the column is varchar(64)).
+    theme: str = Field(default="auto", max_length=64)
     image_model: str = Field(default=IMAGE_MODEL_DEFAULT, max_length=30)
     image_style: str = Field(default=IMAGE_STYLE_DEFAULT, max_length=30)
     custom_visual_details: str | None = Field(None, max_length=500)
     strategy: str | None = Field(None, max_length=50)
+
+    @field_validator("theme")
+    @classmethod
+    def _check_theme(cls, value: str) -> str:
+        from rag_backend.domain.models.carousel import validate_theme_reference
+
+        return validate_theme_reference(value)
 
     @field_validator("image_model")
     @classmethod
