@@ -1,6 +1,6 @@
 # AE-0275 — Responsive listing & content pages
 
-Status: Dev Complete
+Status: Review
 Tier: T2
 Priority: Medium
 Type: Feature

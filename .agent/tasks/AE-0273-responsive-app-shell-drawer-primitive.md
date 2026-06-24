@@ -1,6 +1,6 @@
 # AE-0273 — Responsive app shell + reusable off-canvas drawer primitive
 
-Status: Dev Complete
+Status: Review
 Tier: T2
 Priority: High
 Type: Feature

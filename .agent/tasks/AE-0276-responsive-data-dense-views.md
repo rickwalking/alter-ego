@@ -1,6 +1,6 @@
 # AE-0276 — Responsive data-dense views (calendar, chat, kanban)
 
-Status: Dev Complete
+Status: Review
 Tier: T2
 Priority: Medium
 Type: Feature

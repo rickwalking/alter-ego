@@ -1,6 +1,6 @@
 # AE-0274 — Responsive create / carousel flow
 
-Status: Dev Complete
+Status: Review
 Tier: T2
 Priority: High
 Type: Feature

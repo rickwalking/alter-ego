@@ -1,6 +1,6 @@
 # AE-0277 — Responsive-regression gate (no reintroduced frozen layouts)
 
-Status: QA Running
+Status: Review
 Tier: T1
 Priority: Medium
 Type: Chore
