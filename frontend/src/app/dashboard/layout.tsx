@@ -76,7 +76,11 @@ export default function DashboardLayout({
         }}
       >
         <div className="flex min-h-screen">
-          <div className="flex flex-1 flex-col min-h-screen lg:ml-[var(--sidebar-width)]">
+          {/* min-w-0 is essential: as a flex item it defaults to min-width:auto
+              and would grow to its widest child's min-content, making inner
+              `overflow-x-auto` regions (progress steps, kanban, calendar) expand
+              the page instead of scrolling. min-w-0 lets it shrink to the viewport. */}
+          <div className="flex min-w-0 flex-1 flex-col min-h-screen lg:ml-[240px]">
             <main className="flex-1 flex flex-col">{children}</main>
           </div>
         </div>

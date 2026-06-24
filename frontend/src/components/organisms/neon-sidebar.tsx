@@ -65,7 +65,9 @@ export function NeonSidebar({
       aria-label={t("ariaLabel")}
       className={cn(
         // Off-canvas drawer below lg, persistent rail at lg+.
-        "fixed inset-y-0 left-0 z-40 flex w-[var(--sidebar-width)] flex-col",
+        // 240px == SIDEBAR_WIDTH_PX (kept in sync by a unit test). A literal,
+        // not a CSS var, because a Tailwind v4 @theme var was tree-shaken out.
+        "fixed inset-y-0 left-0 z-40 flex w-[240px] flex-col",
         "transition-transform duration-200 ease-out lg:translate-x-0",
         isOpen ? "translate-x-0" : "-translate-x-full",
       )}
