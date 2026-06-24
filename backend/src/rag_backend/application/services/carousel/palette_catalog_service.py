@@ -146,6 +146,13 @@ class PaletteCatalogService:
     async def _dedupe_keywords(
         self, keywords: tuple[str, ...], exclude_id: UUID | None
     ) -> tuple[str, ...]:
+        # Best-effort, read-then-write: two simultaneous creates can both observe a
+        # keyword as unclaimed and persist it (there is no DB uniqueness on
+        # keywords). Accepted (D2 small trusted team): keywords are a soft AUTO
+        # signal, the resolver takes the highest score, and D9 freezes the
+        # resolved palette at generation — so a transient duplicate cannot recolor
+        # existing carousels. Hardening to a DB constraint is deferred until the
+        # catalog/user base widens.
         if not keywords:
             return keywords
         actives = await self._repo.list_active()
