@@ -37,7 +37,9 @@ class PaletteModel(Base):
     background: Mapped[str] = mapped_column(String(_HEX_LEN), nullable=False)
     mode: Mapped[str] = mapped_column(String(_MODE_MAX), nullable=False)
     keywords: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
-    archived: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    archived: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text("false")
+    )
     created_by: Mapped[str | None] = mapped_column(String(255), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime, nullable=False, server_default=func.now()

@@ -16,7 +16,6 @@ Create Date: 2026-06-23
 from __future__ import annotations
 
 import sqlalchemy as sa
-from sqlalchemy.dialects import postgresql
 
 from alembic import op
 
@@ -30,15 +29,17 @@ def upgrade() -> None:
     """Create palettes, widen theme, add theme_snapshot."""
     op.create_table(
         "palettes",
-        sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True),
+        sa.Column("id", sa.Uuid(), primary_key=True),
         sa.Column("name", sa.String(length=80), nullable=False),
         sa.Column("slug", sa.String(length=80), nullable=False),
         sa.Column("primary", sa.String(length=7), nullable=False),
         sa.Column("accent", sa.String(length=7), nullable=False),
         sa.Column("background", sa.String(length=7), nullable=False),
         sa.Column("mode", sa.String(length=8), nullable=False),
-        sa.Column("keywords", postgresql.JSONB(), nullable=False),
-        sa.Column("archived", sa.Boolean(), nullable=False, server_default=sa.false()),
+        sa.Column("keywords", sa.JSON(), nullable=False),
+        sa.Column(
+            "archived", sa.Boolean(), nullable=False, server_default=sa.text("false")
+        ),
         sa.Column("created_by", sa.String(length=255), nullable=True),
         sa.Column(
             "created_at",
@@ -77,7 +78,7 @@ def upgrade() -> None:
     # Snapshot of the resolved palette frozen at generation (D9).
     op.add_column(
         "carousel_projects",
-        sa.Column("theme_snapshot", postgresql.JSONB(), nullable=True),
+        sa.Column("theme_snapshot", sa.JSON(), nullable=True),
     )
 
 
