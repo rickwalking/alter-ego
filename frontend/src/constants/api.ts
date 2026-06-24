@@ -25,6 +25,8 @@ export const API_ENDPOINTS = {
   CONVERSATION_PUBLISH_CHAT_STREAM: (id: string) =>
     `/api/conversations/${id}/publish-chat/stream`,
   SEARCH: "/api/search",
+  PALETTES: "/api/palettes",
+  PALETTE_BY_ID: (id: string) => `/api/palettes/${id}`,
   CAROUSELS: "/api/carousels",
   CAROUSEL_BY_ID: (id: string) => `/api/carousels/${id}`,
   CAROUSEL_BLOG: (id: string) => `/api/carousels/${id}/blog`,
@@ -108,6 +110,7 @@ export const HTTP_METHODS = {
   GET: "GET",
   POST: "POST",
   PUT: "PUT",
+  PATCH: "PATCH",
   DELETE: "DELETE",
 } as const;
 

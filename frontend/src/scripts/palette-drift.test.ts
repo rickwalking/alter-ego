@@ -2,10 +2,15 @@
  * Rule-fires regression test for the palette-drift gate (AE-0180 standard).
  *
  * Proves `scripts/check-palette-drift.mjs --strict` EXITS NON-ZERO on a seeded
- * desync between the backend palette contract and the frontend create-form /
- * i18n constants — not merely that the real tree passes. Each case writes
- * fixtures to a temp dir and points the checker at them via its env overrides
- * (PALETTE_CONTRACT_PATH / CREATE_TS_PATH / I18N_EN_PATH / I18N_PT_PATH).
+ * desync between the backend palette contract and the frontend `IMAGE_PRESETS`
+ * — not merely that the real tree passes. Each case writes fixtures to a temp
+ * dir and points the checker at them via its env overrides
+ * (PALETTE_CONTRACT_PATH / CREATE_TS_PATH).
+ *
+ * Retargeted by AE-0271: the theme list is now rendered dynamically from
+ * `GET /api/palettes`, so the gate only guards the still-static IMAGE_PRESETS
+ * surface. The theme-key / label / light-key / i18n drift cases were removed
+ * with the FE constants they checked.
  *
  * Gherkin: tests/features/palette-drift-gate.feature
  */
@@ -27,46 +32,23 @@ const CONTRACT = {
       label_en: "Alpha",
       label_pt: "Alfa",
     },
-    {
-      key: "lumen",
-      mode: "light",
-      kind: "variant",
-      label_en: "Lumen",
-      label_pt: "Lume",
-    },
   ],
-  light_theme_keys: ["lumen"],
-  image_presets: [{ model: "openai", style: "neo_anime" }],
+  light_theme_keys: [],
+  image_presets: [
+    { model: "openai", style: "neo_anime" },
+    { model: "gemini", style: "comic_neon" },
+  ],
 };
 
 const CREATE_TS_OK = `
-export const CAROUSEL_THEMES = {
-  ALPHA: "alpha",
-  LUMEN: "lumen",
-  AUTO: "auto",
-} as const;
-export const THEME_LABEL_KEYS = {
-  alpha: "themes.alpha",
-  lumen: "themes.lumen",
-  auto: "themes.auto",
-} as const;
-export const LIGHT_THEME_KEYS: readonly string[] = [CAROUSEL_THEMES.LUMEN];
 export const IMAGE_PRESETS = [
   { value: "openai__neo_anime", model: "openai", style: "neo_anime" },
+  { value: "gemini__comic_neon", model: "gemini", style: "comic_neon" },
 ] as const;
 `;
 
-const EN_OK = {
-  create: { themes: { alpha: "Alpha", lumen: "Lumen", auto: "Auto-detect" } },
-};
-const PT_OK = {
-  create: { themes: { alpha: "Alfa", lumen: "Lume", auto: "Auto-detectar" } },
-};
-
 interface Fixture {
   createTs?: string;
-  en?: unknown;
-  pt?: unknown;
 }
 
 let dir: string;
@@ -78,19 +60,11 @@ afterEach(() => {
   rmSync(dir, { recursive: true, force: true });
 });
 
-function run({
-  createTs = CREATE_TS_OK,
-  en = EN_OK,
-  pt = PT_OK,
-}: Fixture): number {
+function run({ createTs = CREATE_TS_OK }: Fixture): number {
   const contractPath = join(dir, "palettes.json");
   const createPath = join(dir, "create.ts");
-  const enPath = join(dir, "en.json");
-  const ptPath = join(dir, "pt.json");
   writeFileSync(contractPath, JSON.stringify(CONTRACT));
   writeFileSync(createPath, createTs);
-  writeFileSync(enPath, JSON.stringify(en));
-  writeFileSync(ptPath, JSON.stringify(pt));
   try {
     execFileSync("node", [CHECKER, "--strict"], {
       cwd: FRONTEND_ROOT,
@@ -100,8 +74,6 @@ function run({
         ...process.env,
         PALETTE_CONTRACT_PATH: contractPath,
         CREATE_TS_PATH: createPath,
-        I18N_EN_PATH: enPath,
-        I18N_PT_PATH: ptPath,
       },
     });
     return 0;
@@ -110,42 +82,23 @@ function run({
   }
 }
 
-describe("palette-drift gate fires on seeded drift (AE-0266 Phase 3)", () => {
-  it("passes (exit 0) when create.ts + i18n match the contract", () => {
+describe("palette-drift gate fires on seeded IMAGE_PRESETS drift (AE-0271)", () => {
+  it("passes (exit 0) when IMAGE_PRESETS match the contract", () => {
     expect(run({})).toBe(0);
-  });
-
-  it("ERRORS when a contract theme is missing from CAROUSEL_THEMES", () => {
-    const createTs = CREATE_TS_OK.replace('  LUMEN: "lumen",\n', "");
-    expect(run({ createTs })).not.toBe(0);
-  });
-
-  it("ERRORS when an i18n (en) label diverges from the contract", () => {
-    const en = {
-      create: {
-        themes: { alpha: "WRONG", lumen: "Lumen", auto: "Auto-detect" },
-      },
-    };
-    expect(run({ en })).not.toBe(0);
-  });
-
-  it("ERRORS when a pt label is missing", () => {
-    const pt = { create: { themes: { alpha: "Alfa", auto: "Auto-detectar" } } };
-    expect(run({ pt })).not.toBe(0);
   });
 
   it("ERRORS when an IMAGE_PRESETS combo is missing", () => {
     const createTs = CREATE_TS_OK.replace(
-      '  { value: "openai__neo_anime", model: "openai", style: "neo_anime" },\n',
+      '  { value: "gemini__comic_neon", model: "gemini", style: "comic_neon" },\n',
       "",
     );
     expect(run({ createTs })).not.toBe(0);
   });
 
-  it("ERRORS when LIGHT_THEME_KEYS omits a light theme", () => {
+  it("ERRORS when an unexpected IMAGE_PRESETS combo is present", () => {
     const createTs = CREATE_TS_OK.replace(
-      "export const LIGHT_THEME_KEYS: readonly string[] = [CAROUSEL_THEMES.LUMEN];",
-      "export const LIGHT_THEME_KEYS: readonly string[] = [];",
+      "] as const;",
+      '  { value: "openai__rogue_style", model: "openai", style: "rogue_style" },\n] as const;',
     );
     expect(run({ createTs })).not.toBe(0);
   });

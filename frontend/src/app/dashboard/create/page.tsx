@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useLocale, useTranslations } from "next-intl";
 import { NeonTopBar } from "@/components/organisms/neon-top-bar";
 import {
   CreateTemplateSection,
@@ -17,12 +18,21 @@ import {
   type CreateCarouselFormState,
 } from "@/app/dashboard/create/types";
 import { useCreateCarousel } from "@/modules/editorial";
+import { usePaletteCatalog } from "@/modules/palette";
+import { buildThemeOptions } from "@/app/dashboard/create/theme-options";
 import { DASHBOARD_ROUTES } from "@/constants/dashboard-routes";
 import { DEFAULT_IMAGE_PRESET } from "@/constants/create";
 
 export default function CreateCarouselPage(): React.ReactElement {
   const router = useRouter();
+  const locale = useLocale();
+  const t = useTranslations("create");
   const createCarousel = useCreateCarousel();
+  const { data: catalog } = usePaletteCatalog();
+  const themeOptions = useMemo(
+    () => buildThemeOptions(catalog, locale, t("themes.auto")),
+    [catalog, locale, t],
+  );
   const [form, setForm] = useState<CreateCarouselFormState>({
     ...INITIAL_CREATE_FORM_STATE,
     imagePreset: DEFAULT_IMAGE_PRESET,
@@ -73,7 +83,11 @@ export default function CreateCarouselPage(): React.ReactElement {
           >
             <CreateTopicSection form={form} onChange={handleChange} />
             <CreateTemplateSection form={form} onChange={handleChange} />
-            <CreateThemeSection form={form} onChange={handleChange} />
+            <CreateThemeSection
+              form={form}
+              onChange={handleChange}
+              themeOptions={themeOptions}
+            />
           </div>
           <CreateSidebar
             form={form}

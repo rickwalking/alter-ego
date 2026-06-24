@@ -64,6 +64,14 @@ export function MobileNav() {
           )}
           {isEditor && (
             <Link
+              href={DASHBOARD_ROUTES.PALETTES}
+              onClick={() => setOpen(false)}
+            >
+              {t("palettes")}
+            </Link>
+          )}
+          {isEditor && (
+            <Link
               href={DASHBOARD_ROUTES.BLOG_POSTS}
               onClick={() => setOpen(false)}
             >

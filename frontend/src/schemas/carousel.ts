@@ -138,7 +138,9 @@ export const carouselCreateRequestSchema = z
     topic: z.string().min(1).max(500),
     audience: z.string().min(1).max(500),
     niche: z.string().min(1).max(200),
-    theme: z.string().max(30).default("auto"),
+    // root key | "auto" | custom-palette UUID (36 chars). Matches the backend
+    // varchar(64) widened in AE-0268 so custom-palette references validate.
+    theme: z.string().max(64).default("auto"),
     image_model: z.enum(["gemini", "openai"]).default("openai"),
     image_style: z
       .enum([

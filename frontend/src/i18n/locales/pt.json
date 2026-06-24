@@ -14,6 +14,7 @@
       "createCarousel": "Criar Carrossel",
       "personas": "Personas",
       "rubrics": "Rubricas",
+      "palettes": "Paletas",
       "blogPosts": "Posts do Blog",
       "workflow": "Workflow",
       "calendar": "Calendário",
@@ -496,6 +497,67 @@
     },
     "transport": {
       "pollingFallback": "Fallback de polling ativo"
+    }
+  },
+  "palettes": {
+    "title": "Paletas",
+    "breadcrumb": "catálogo de design",
+    "section": {
+      "custom": "Suas paletas",
+      "roots": "Paletas raiz"
+    },
+    "badge": {
+      "root": "raiz"
+    },
+    "mode": {
+      "light": "Clara",
+      "dark": "Escura"
+    },
+    "derivedStyle": {
+      "light": "Flat Editorial (automático)",
+      "dark": "Neon padrão (automático)"
+    },
+    "keywords": {
+      "label": "Palavras-chave"
+    },
+    "action": {
+      "new": "Nova paleta",
+      "edit": "Editar",
+      "cancel": "Cancelar"
+    },
+    "archive": {
+      "action": "Arquivar",
+      "confirm": "Arquivar esta paleta?"
+    },
+    "empty": {
+      "title": "Nenhuma paleta personalizada ainda",
+      "body": "Crie sua primeira paleta para ampliar o catálogo. As paletas raiz continuam disponíveis para todos.",
+      "action": "Criar uma paleta"
+    },
+    "form": {
+      "createTitle": "Nova paleta",
+      "editTitle": "Editar paleta",
+      "create": "Criar",
+      "save": "Salvar alterações",
+      "name": "Nome",
+      "namePlaceholder": "ex.: Aurora",
+      "previewLabel": "Nova paleta",
+      "primary": "Primária",
+      "accent": "Destaque",
+      "background": "Fundo",
+      "hexError": "Use um valor hex #rrggbb",
+      "mode": "Modo",
+      "imageStyle": "Estilo de imagem (derivado)",
+      "keywords": "Palavras-chave",
+      "keywordsPlaceholder": "Digite uma palavra-chave, pressione Enter",
+      "keywordsHint": "Minúsculas, sem sobreposição com palavras-chave de marca, até 10.",
+      "removeKeyword": "Remover palavra-chave {keyword}"
+    },
+    "error": {
+      "load": "Não foi possível carregar o catálogo de paletas.",
+      "duplicate": "Já existe uma paleta com este nome.",
+      "invalid": "Alguns campos estão inválidos. Verifique as cores e o nome.",
+      "generic": "Algo deu errado. Tente novamente."
     }
   },
   "rubrics": {
