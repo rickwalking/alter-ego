@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from pathlib import Path
 from uuid import UUID
 
@@ -19,6 +20,9 @@ from rag_backend.application.services.carousel.nodes.images import (
 from rag_backend.application.services.carousel.outline_normalize import (
     canonical_slide_type,
 )
+from rag_backend.application.services.carousel.palette_resolver_service import (
+    snapshot_project_theme,
+)
 from rag_backend.application.services.carousel.types import (
     MAX_SLIDES,
     SlideData,
@@ -28,10 +32,13 @@ from rag_backend.application.services.carousel_template import CarouselTemplateB
 from rag_backend.application.services.image_provider_registry import (
     ImageProviderRegistry,
 )
-from rag_backend.domain.models import CarouselSlide
+from rag_backend.domain.models import CarouselProject, CarouselSlide
 from rag_backend.infrastructure.config.settings import get_settings
 from rag_backend.infrastructure.database.carousel_repository import (
     PostgresCarouselRepository,
+)
+from rag_backend.infrastructure.database.palette_repository import (  # integrity-ok: AE-0269 human-approved app->infra edge (image pipeline already builds repos inline here; baseline 61->62)
+    PostgresPaletteRepository,
 )
 
 
@@ -128,6 +135,30 @@ async def apply_design_tokens(
     await repo.update_project(project)
 
 
+async def _ensure_theme_snapshot(
+    db: AsyncSession,
+    repo: PostgresCarouselRepository,
+    project: CarouselProject,
+) -> None:
+    """Freeze the resolved palette at generation if not already done (D9).
+
+    Idempotent: only the first image run writes the snapshot. Custom-palette
+    UUID themes REQUIRE this (the pure render-path resolver cannot look a UUID
+    up); it also freezes AUTO so later catalog changes can't alter the carousel.
+    The ``palette_repository`` import here is the one reviewed application->infra
+    edge for AE-0269 (registered in the AE-0082 baseline) — the carousel image
+    pipeline already constructs its repos inline at this same point.
+    """
+    if project.theme_snapshot is not None:
+        return
+    await snapshot_project_theme(
+        project,
+        PostgresPaletteRepository(session=db),
+        datetime.now(UTC).isoformat(),
+    )
+    await repo.update_project(project)
+
+
 async def generate_carousel_images(
     db: AsyncSession,
     ctx: CarouselImageGenerationContext,
@@ -137,6 +168,7 @@ async def generate_carousel_images(
     project = await repo.get_project_by_id(UUID(ctx.project_id))
     if project is None or not ctx.slides:
         return []
+    await _ensure_theme_snapshot(db, repo, project)
     output_dir = _carousel_output_dir(project.output_dir, ctx.project_id)
     output_dir.mkdir(parents=True, exist_ok=True)
     if not project.output_dir:

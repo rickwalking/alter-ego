@@ -346,6 +346,7 @@ ignore_imports =
     rag_backend.application.services.carousel.editorial_finalize -> rag_backend.infrastructure.database.carousel_repository
     rag_backend.application.services.carousel.editorial_finalize -> rag_backend.infrastructure.logging
     rag_backend.application.services.carousel.editorial_visual_pipeline -> rag_backend.infrastructure.database.carousel_repository
+    rag_backend.application.services.carousel.editorial_visual_pipeline -> rag_backend.infrastructure.database.palette_repository
     rag_backend.application.services.carousel.editorial_workflow_resume_runner -> rag_backend.infrastructure.database.config
     rag_backend.application.services.carousel.editorial_workflow_resume_runner -> rag_backend.infrastructure.logging
     rag_backend.application.services.carousel.editorial_workflow_service -> rag_backend.infrastructure.database.models.carousel

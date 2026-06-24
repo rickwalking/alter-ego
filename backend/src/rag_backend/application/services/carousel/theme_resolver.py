@@ -8,6 +8,7 @@ fallback, and diverse palette selection when auto-detecting themes.
 from __future__ import annotations
 
 import hashlib
+from collections.abc import Iterable
 
 from rag_backend.domain.constants import (
     AUTO_ROTATION_THEME_KEYS,
@@ -40,6 +41,15 @@ def _hash_to_theme_key(text: str) -> str:
     return CATEGORY_THEME_KEYS[index]
 
 
+def _score_keyword_list(lowered: str, keywords: Iterable[str]) -> int:
+    """Count how many of *keywords* appear in the already-lowered text.
+
+    Shared by root brand/category scoring and the AE-0269 custom-palette
+    keyword matcher so they all count matches identically.
+    """
+    return sum(1 for kw in keywords if kw in lowered)
+
+
 def _score_brands(text: str) -> dict[str, int]:
     """Count keyword matches for each brand in the given text.
 
@@ -50,7 +60,7 @@ def _score_brands(text: str) -> dict[str, int]:
     lowered = text.lower()
     scores: dict[str, int] = {}
     for brand, keywords in BRAND_KEYWORDS.items():
-        count = sum(1 for kw in keywords if kw in lowered)
+        count = _score_keyword_list(lowered, keywords)
         if count:
             scores[brand] = count
     return scores
@@ -65,7 +75,7 @@ def _score_categories(text: str) -> dict[str, int]:
     lowered = text.lower()
     scores: dict[str, int] = {}
     for theme, keywords in THEME_CATEGORY_KEYWORDS.items():
-        count = sum(1 for kw in keywords if kw in lowered)
+        count = _score_keyword_list(lowered, keywords)
         if count:
             scores[theme] = count
     return scores
@@ -108,7 +118,20 @@ def resolve_theme(project: CarouselProject) -> dict[str, str]:
 
     The returned dict always has ``primary``, ``accent``, and
     ``background`` keys.
+
+    AE-0269 D9: if the project carries a ``theme_snapshot`` (frozen at
+    generation), render reads the snapshot directly — so a later palette edit
+    never changes an already-generated carousel, and AUTO stays frozen. This is
+    still pure (no I/O); the snapshot was written by ``PaletteResolverService``.
     """
+    snapshot = project.theme_snapshot
+    if snapshot is not None:
+        return {
+            "primary": snapshot["primary"],
+            "accent": snapshot["accent"],
+            "background": snapshot["background"],
+        }
+
     if project.theme != CarouselTheme.AUTO.value:
         return CAROUSEL_THEMES.get(
             project.theme,

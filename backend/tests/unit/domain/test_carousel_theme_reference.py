@@ -47,3 +47,26 @@ class TestCarouselThemeStringReference:
         # (unchanged guard behaviour), never raising.
         resolved = resolve_theme(_project("not_a_real_theme"))
         assert set(resolved) == {"primary", "accent", "background"}
+
+    def test_snapshot_short_circuits_resolution(self) -> None:
+        # AE-0269 D9: a project carrying a theme_snapshot renders from it,
+        # bypassing live resolution — so palette edits never change past work.
+        project = CarouselProject(
+            topic="t",
+            audience="a",
+            niche="n",
+            theme="auto",
+            theme_snapshot={
+                "primary": "#aaaaaa",
+                "accent": "#bbbbbb",
+                "background": "#cccccc",
+                "mode": "dark",
+                "resolved_ref": "some-custom-id",
+                "resolved_at": "2026-06-23T00:00:00",
+            },
+        )
+        assert resolve_theme(project) == {
+            "primary": "#aaaaaa",
+            "accent": "#bbbbbb",
+            "background": "#cccccc",
+        }
