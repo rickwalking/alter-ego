@@ -155,11 +155,8 @@ uv run pytest tests/unit/api/test_palette_schemas.py \
   tests/unit/application/test_palette_catalog_service.py -q   # 47 passed
 uv run pytest tests/unit -q                                   # 2024 passed, 1 skipped
 GATES_BASE_REF=origin/main bash scripts/ci/gates.sh backend
-  → PASS=14 FAIL=1 SKIP=4. FAIL = backend:mutation 0.0% which is a local-sandbox
-    broken-baseline artifact (cicd-stats: killed=0 survived=0 total=2100, ALL
-    "not checked" — mutmut aborted before testing any mutant; 1086 tests_dir tests
-    pass cleanly outside mutmut). Zero `paths_to_mutate` files changed + only
-    additive tests → CI mutation (the authority, green on AE-0269) is unaffected.
+  → PASS=15 FAIL=0 SKIP=4. mutation PASS at 78.80% (a transient stale-workspace 0.0%
+    mid-dev cleared on a fresh run; zero `paths_to_mutate` files changed regardless).
     SKIP = test/diff-cover/migrations/schema-drift (no local DATABASE_URL; CI runs).
 GATES_BASE_REF=origin/main bash scripts/ci/check-integrity.sh backend
   → PASS, 0 net-new blockers, 2 apparatus-edit warnings (the reviewed baseline bump,
