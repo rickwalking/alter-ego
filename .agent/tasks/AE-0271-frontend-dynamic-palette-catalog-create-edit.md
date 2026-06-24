@@ -1,6 +1,6 @@
 # AE-0271 — P4: frontend dynamic palette catalog + create/edit (gate retarget)
 
-Status: QA Running
+Status: Review
 Tier: T2
 Priority: Medium
 Type: Feature
@@ -156,7 +156,10 @@ GATES_BASE_REF=origin/main bash scripts/ci/check-integrity.sh {backend,frontend}
 ```
 
 ## QA Report
-Pending (handing off to external QA).
+PASS (external/codex, FE-focused) — `.agent/reports/AE-0271.qa.md`. First pass
+FAILed on a go-live blocker (custom-UUID theme rejected by carousel create); fixed
+(commit 0d1882bd) + verify round PASS (0 findings). Frontend gates 17/17; carousel
+suite 571 passed; integrity 0 blockers both scopes.
 ## Decision Log
 D1, D3, O3; G6 (gate retarget + co-deploy) — see arch-plan.
 ## Blockers
