@@ -23,7 +23,8 @@ const CYAN_DIM = NEON_CYAN_DIM;
 const TEAL = NEON_TEAL;
 const TEAL_DIM = NEON_TEAL_DIM;
 
-// Named faint tints (no exact design-system token; palette neon.ts is drift-guarded).
+// Named faint tints local to the stepper (no exact token exists in the Neon
+// palette; kept here rather than added to the drift-guarded neon.ts).
 const STEP_NUM_PENDING_BG = "rgba(255,255,255,0.04)";
 const STEP_DIVIDER = "rgba(255,255,255,0.04)";
 const STEP_ACTIVE_BG = "rgba(0,212,255,0.04)";

@@ -32,11 +32,13 @@ describe("WorkflowStatusBadge", () => {
     expect(screen.getByRole("status")).toHaveTextContent("Brand New State");
   });
 
-  it("honours a label override while keeping the semantic colour", () => {
+  it("keeps the status in the accessible name on a label override", () => {
+    // A labelled chip (phase name) must still announce the status word, not
+    // convey it by colour alone — and it is not a live region.
     render(<WorkflowStatusBadge status="failed" label="content" />);
-    const badge = screen.getByRole("status");
+    const badge = screen.getByLabelText("content, status.failed");
     expect(badge).toHaveTextContent("content");
-    expect(badge).toHaveAttribute("aria-label", "content");
+    expect(badge).not.toHaveAttribute("role", "status");
   });
 
   it("resolves a missing status to the Draft label", () => {

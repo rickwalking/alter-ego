@@ -2,15 +2,18 @@ import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { CreateWorkspaceSidebar } from "./create-workspace-sidebar";
 import { WORKFLOW_PHASE_STATUS } from "@/constants/workflow";
-import { NEON_CYAN, NEON_RED } from "@/constants/neon";
+import { NEON_CYAN, NEON_MAGENTA, NEON_RED } from "@/constants/neon";
 import type { CarouselProjectResponse } from "@/schemas/carousel";
 import type { EditorialWorkflowState } from "@/modules/publishing";
 
-/** The active-phase status badge renders the phase name as its label. */
+/**
+ * The active-phase status badge renders the phase name ("content") as its label;
+ * its accessible name is "content, <status>" so it is uniquely identifiable.
+ */
 function phaseBadge(): HTMLElement | undefined {
   return screen
-    .getAllByRole("status")
-    .find((badge) => badge.textContent === "content");
+    .getAllByText("content")
+    .find((el) => el.getAttribute("aria-label")?.startsWith("content,"));
 }
 
 const project = {
@@ -70,5 +73,24 @@ describe("CreateWorkspaceSidebar", () => {
     const badge = phaseBadge();
     expect(badge).toBeDefined();
     expect(badge).toHaveStyle({ color: NEON_CYAN });
+  });
+
+  // Scenario: awaiting human review draws attention (magenta), not red/cyan
+  it("shows an awaiting-human phase as a magenta badge", () => {
+    render(
+      <CreateWorkspaceSidebar
+        project={project}
+        workflowState={{
+          ...baseState,
+          phase_status: WORKFLOW_PHASE_STATUS.AWAITING_HUMAN,
+        }}
+        activeStepId="outline"
+        projectId="p1"
+      />,
+    );
+
+    const badge = phaseBadge();
+    expect(badge).toBeDefined();
+    expect(badge).toHaveStyle({ color: NEON_MAGENTA });
   });
 });

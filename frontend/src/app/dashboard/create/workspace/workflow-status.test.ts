@@ -5,6 +5,8 @@ import {
 } from "./workflow-status";
 import { EDITORIAL_WORKFLOW_STATUS } from "@/constants/editorial-workflow";
 import { WORKFLOW_PHASE_STATUS } from "@/constants/workflow";
+import enMessages from "@/i18n/locales/en.json";
+import ptMessages from "@/i18n/locales/pt.json";
 
 // Scenarios: see tests/features/create-workflow-status-badge.feature
 
@@ -77,6 +79,17 @@ describe("resolveWorkflowStatusVisual", () => {
       WORKFLOW_PHASE_STATUS.FAILED,
     ].filter((s) => resolveWorkflowStatusVisual(s).pulse);
     expect(pulsing).toEqual([WORKFLOW_PHASE_STATUS.IN_PROGRESS]);
+  });
+});
+
+describe("status label i18n parity", () => {
+  // next-intl silently renders the raw key when a label is missing in a locale,
+  // so assert en and pt expose the exact same create.status keys.
+  it("en and pt define the same create.status keys", () => {
+    const en = Object.keys(enMessages.create.status).sort();
+    const pt = Object.keys(ptMessages.create.status).sort();
+    expect(pt).toEqual(en);
+    expect(en.length).toBeGreaterThanOrEqual(9);
   });
 });
 

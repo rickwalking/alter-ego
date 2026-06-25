@@ -57,7 +57,7 @@ export function CreateWorkflowArtifacts({
         {state.design_applied && (
           <li className="flex items-center gap-2">
             {t("designApplied")}
-            <NeonBadge variant="green" dot>
+            <NeonBadge variant="teal" dot>
               {t("ready")}
             </NeonBadge>
           </li>
