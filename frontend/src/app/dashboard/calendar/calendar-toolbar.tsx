@@ -8,13 +8,26 @@ import {
   CALENDAR_VIEW_MODES,
 } from "@/modules/editorial-operations";
 
-export function CalendarToolbar(): React.ReactElement {
+export interface CalendarToolbarProps {
+  title: string;
+  onPrev: () => void;
+  onNext: () => void;
+  onToday: () => void;
+}
+
+export function CalendarToolbar({
+  title,
+  onPrev,
+  onNext,
+  onToday,
+}: CalendarToolbarProps): React.ReactElement {
   return (
     <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
       <div style={{ ...CALENDAR_FLEX_CENTER, gap: 12 }}>
         <button
           type="button"
           aria-label="Previous month"
+          onClick={onPrev}
           style={{
             ...CALENDAR_BTN_GHOST,
             padding: 8,
@@ -33,11 +46,12 @@ export function CalendarToolbar(): React.ReactElement {
             margin: 0,
           }}
         >
-          May 2026
+          {title}
         </h2>
         <button
           type="button"
           aria-label="Next month"
+          onClick={onNext}
           style={{
             ...CALENDAR_BTN_GHOST,
             padding: 8,
@@ -47,7 +61,11 @@ export function CalendarToolbar(): React.ReactElement {
         >
           <CalendarSvgIcon name="right" />
         </button>
-        <button type="button" style={{ ...CALENDAR_BTN_GHOST, marginLeft: 8 }}>
+        <button
+          type="button"
+          onClick={onToday}
+          style={{ ...CALENDAR_BTN_GHOST, marginLeft: 8 }}
+        >
           Today
         </button>
       </div>

@@ -18,6 +18,8 @@ export interface CalendarEvent {
 
 export interface CalendarDay {
   day: number;
+  /** The cell's real calendar date as `yyyy-MM-dd` (for labels + event match). */
+  iso: string;
   cur: boolean;
   today: boolean;
   events: CalendarEvent[];

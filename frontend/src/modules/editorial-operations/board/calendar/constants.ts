@@ -77,13 +77,17 @@ export const CALENDAR_LEGEND = [
 
 export const CALENDAR_VIEW_MODES = ["Month", "Week", "Day"] as const;
 
-export const CALENDAR_TODAY = 28;
+/** Grid week starts on Sunday — matches `CALENDAR_WEEKDAY_HEADERS` ("Sun" first). */
+export const CALENDAR_WEEK_STARTS_ON = 0 as const;
 
-/** Trailing days of the previous month shown before the 1st in the grid. */
-export const CALENDAR_LEADING_DAYS = [27, 28, 29, 30] as const;
+/** date-fns format token for a cell's `yyyy-MM-dd` key (length-significant). */
+export const CALENDAR_ISO_DAY_FORMAT = "yyyy-MM-dd";
 
-/** Highest day-of-month rendered in the static demo month grid. */
-export const CALENDAR_LAST_DAY = 31;
+/** Title format for the viewed month, e.g. "June 2026". */
+export const CALENDAR_TITLE_FORMAT = "MMMM yyyy";
+
+/** Per-event date label format, e.g. "Jun 10". */
+export const CALENDAR_EVENT_DAY_FORMAT = "MMM d";
 
 export const CALENDAR_BTN_GHOST: CSSProperties = {
   display: "inline-flex",

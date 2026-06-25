@@ -10,8 +10,9 @@ Agent Lane: developer → qa
 Branch: TBD
 Kanban Card: AE-0219
 Created: 2026-06-18
-Updated: 2026-06-18
-Source: kaizen session-2026-06-18 (K4, class L4) — `.agent/reports/kaizen-session-2026-06-18.plan.md`
+Updated: 2026-06-25
+Source: kaizen session-2026-06-18 (K4, class L4) — `.agent/reports/kaizen-session-2026-06-18.plan.md`;
+strengthened by kaizen session-2026-06-25 (P3, class C4) — `.agent/reports/kaizen-session-2026-06-25.plan.md`
 
 ## Goal
 
@@ -28,7 +29,22 @@ model worked. A hallucinated review that passes silently is worse than no review
 
 ## Scope
 
-- Document a **provider fallback order** in the architect/kaizen external-review
+- **Fix the actual hardcoded default (kaizen 2026-06-25, P3).** Doc-only is
+  insufficient: `scripts/qa/run_external_qa.sh:21` and
+  `scripts/kaizen/run_external_kaizen.sh:25` hardcode `TOOL="${3:-opencode}"`,
+  and `ext_pick_tool` (`scripts/lib/external_agent.sh:32-40`) falls back on tool
+  *installation* only — not balance. So `opencode` (out of balance) is still
+  selected first and the run fails mid-stream with "Insufficient balance". This
+  friction recurred in sessions 2026-06-22 / -24 / -25 AFTER this ticket was
+  filed doc-only. Change the runner default to the approved chain head
+  (**codex / gpt-5.5**).
+- **Add a fail-fast preflight balance/reachability probe** in
+  `scripts/lib/external_agent.sh`: before committing to a provider, detect
+  "Insufficient balance" / provider-unreachable and AUTO-ADVANCE to the next
+  entry in the chain, surfacing a clear one-line message — instead of failing
+  ~mid-run after the session has started. (Today the only post-launch check is a
+  `stream providerID` hang-detector, not a balance check.)
+- Document the **provider fallback order** in the architect/kaizen external-review
   runbook (`references/external-qa.md` and/or `scripts/qa/run_external_qa.sh`).
   Approved fallback chain (user-specified 2026-06-18):
   1. **codex** with `gpt-5.5`
@@ -52,6 +68,11 @@ model worked. A hallucinated review that passes silently is worse than no review
 
 ## Acceptance Criteria
 
+- [ ] The runner DEFAULT is the approved chain head (codex/gpt-5.5), not
+      `opencode` — `run_external_qa.sh` + `run_external_kaizen.sh` updated.
+- [ ] A preflight balance/reachability probe detects "Insufficient balance" /
+      unreachable provider and auto-advances to the next chain entry with a clear
+      message, BEFORE the review session proceeds — not a mid-run failure.
 - [ ] Provider fallback order documented in the external-review runbook with the
       approved chain (codex/gpt-5.5 → opencode/kimi-k2.7 → glm-5.2 → mimo-2.5-pro).
 - [ ] Engagement sanity check implemented: a review not referencing real
@@ -61,7 +82,15 @@ model worked. A hallucinated review that passes silently is worse than no review
       check; a genuine on-topic review PASSES.
 - [ ] mypy + ruff clean (for any script changes).
 
+## Notes (kaizen 2026-06-25)
+
+- Coordinate with **AE-0281** (external-run commit lock) — both edit
+  `scripts/lib/external_agent.sh`; sequence to avoid conflicting changes.
+
 ## References
 
-- Kaizen plan: `.agent/reports/kaizen-session-2026-06-18.plan.md` (K4)
-- `scripts/qa/run_external_qa.sh`, `skills/delivery/qa-agent/references/external-qa.md`
+- Kaizen plans: `.agent/reports/kaizen-session-2026-06-18.plan.md` (K4),
+  `.agent/reports/kaizen-session-2026-06-25.plan.md` (P3, class C4)
+- `scripts/qa/run_external_qa.sh`, `scripts/kaizen/run_external_kaizen.sh`,
+  `scripts/lib/external_agent.sh`,
+  `skills/delivery/qa-agent/references/external-qa.md`
