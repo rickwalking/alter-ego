@@ -1,6 +1,6 @@
 # AE-0283 — calendar month navigation: replace static may-2026 mockup with real date state
 
-Status: Intake
+Status: In Development
 Tier: T2
 Priority: P1
 Type: Bugfix
@@ -197,33 +197,74 @@ Feature: Calendar month navigation
 
 ## QA Checklist
 
-- [ ] Security reviewed
-- [ ] Code quality reviewed
-- [ ] Acceptance criteria validated
-- [ ] Edge cases tested
-- [ ] Orphan/unfinished code checked
+- [x] Security reviewed (no new inputs/endpoints; FE-only, reuses existing auth'd fetch)
+- [x] Code quality reviewed (17/17 frontend gates green)
+- [x] Acceptance criteria validated (Playwright at 390 + 1440)
+- [x] Edge cases tested (28/29/31-day + leap-Feb grids, UTC time component, stale-fetch race)
+- [x] Orphan/unfinished code checked (removed hardcoded constants; no dead refs)
 
 ## Progress Log
 
-### 2026-06-25 HH:mm
+### 2026-06-25
 
-Ticket created.
+- Ticket created from a user-reported bug; reproduced via Playwright MCP at 1440
+  (static "May 2026", inert next/prev — screenshot `calendar-bug-may2026-stuck.png`).
+- Implemented derived month state (`useCalendarMonth`), `buildMonthGrid(anchor)`,
+  wired controls, scoped fetch + full-date event matching. Unit tests + `.feature`.
+- External plan review attempted with **opencode/glm-5.2 → "Insufficient balance"**
+  (the AE-0219/kaizen-P3 friction). Fell back to **codex/gpt-5.5** (approved chain head).
+- Codex skeptical review of the committed diff → **BLOCK** with 2 MUST-fix:
+  (1) stale-response race in `useContentCalendar`; (2) naive-local fetch window
+  sent to a UTC backend. Both verified against live code and fixed (abort+guard;
+  `toISOString` window) + a renderHook race test.
+- Codex focused re-review → **SHIP-WITH-NITS**, both items **RESOLVED**.
 
 ## Files Touched
 
-Pending.
+- `frontend/src/app/dashboard/calendar/{page,calendar-toolbar,calendar-grid,types,use-calendar-days}.tsx?`
+- `frontend/src/app/dashboard/calendar/use-calendar-month.ts` (new)
+- `frontend/src/modules/editorial-operations/board/calendar/{helpers,constants,types}.ts`
+- `frontend/src/modules/editorial-operations/board/calendar/helpers.test.ts` (new)
+- `frontend/src/modules/editorial/workflow/hooks/use-content-calendar.ts` (race fix)
+- `frontend/src/modules/editorial/workflow/hooks/use-content-calendar.test.ts` (new)
+- `frontend/tests/features/calendar-month-navigation.feature` (new)
+- Commits: `841f5dfa` (feature), `3518cd9e` (review fixes)
 
 ## Test Evidence
 
-Pending.
+- `bash scripts/ci/gates.sh frontend` → **17/17 PASS**.
+  `GATES_JSON: {"pass":17,"fail":0,"skip":0,...}`
+- New unit tests: `helpers.test.ts` (11) + `use-content-calendar.test.ts` (2) green.
+- Playwright MCP (logged in, backend up): `June 2026` on load with today=25
+  highlighted; next/prev/Today correct; rapid next×3→November, prev→October;
+  real backend events on true dates; **no horizontal page overflow at 390**
+  (scrollWidth 383 ≤ 390). Screenshots: `calendar-fixed-{390,1440}-june.png`.
 
 ## QA Report
 
-Pending.
+PASS. Full local gates 17/17 (lint, typecheck, build, format, security,
+integrity, test, mutation, schema-drift, dead-files, …). External skeptical
+review (codex/gpt-5.5): BLOCK → both MUST-fix resolved → SHIP-WITH-NITS.
+Mode: external (opencode/glm-5.2 unavailable — Insufficient balance).
+GATES_JSON: {"pass":17,"fail":0,"skip":0}
 
 ## Decision Log
 
-Pending.
+- **External reviewer fallback:** opencode/glm-5.2 returned "Insufficient
+  balance" (the exact AE-0219/kaizen-P3 recurrence); used codex/gpt-5.5 (the
+  approved chain head). Surfaced to the user.
+- **MUST-fix 1 (stale-fetch race) — accepted & fixed.** My change made
+  `useContentCalendar` take a changing window, elevating a latent last-writer
+  race. Fixed via AbortController + `isCurrent()` ref guard on every setState.
+- **MUST-fix 2 (UTC window) — accepted & fixed.** Send `toISOString()` UTC
+  instants for the local day boundaries instead of naive wall-clock.
+- **Nit (per-effect captured controller) — WAIVED.** Codex noted an effect
+  cleanup could abort a manual `refetch` called outside the effect lifecycle;
+  it confirmed this is "not introduced for the calendar navigation path shown"
+  (the calendar never calls `refetch` out-of-band). Low value vs. churn; left as
+  a future tightening note.
+- **Week/Day view modes + calendar i18n — out of scope** (non-goals); Week/Day
+  buttons remain inert (follow-up).
 
 ## Blockers
 
@@ -231,4 +272,10 @@ None.
 
 ## Final Summary
 
-Pending.
+Replaced the static "May 2026" calendar mockup with a real, navigable month
+(frontend-only). The calendar opens on the current month, prev/next/Today work,
+events render on their true dates (timezone-stable, no cross-month bleed), and
+the fetch is scoped to the visible window with a stale-response guard. 17/17
+gates green; externally reviewed (BLOCK→SHIP-WITH-NITS) and Playwright-verified
+at 390 + 1440. Shipped on `fix/ae-0283-calendar-month-navigation` (PR pending
+merge — merge auto-deploys prod).
