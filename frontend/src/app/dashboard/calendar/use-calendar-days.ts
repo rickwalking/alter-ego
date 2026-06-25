@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo } from "react";
-import { format } from "date-fns";
 import {
   buildCalendarDaysFromApi,
   buildEmptyCalendarDays,
@@ -16,9 +15,6 @@ type UseCalendarDaysResult = {
   error: string | null;
 };
 
-// Naive wall-clock ISO (no offset); the backend treats naive datetimes as UTC.
-const WINDOW_FORMAT = "yyyy-MM-dd'T'HH:mm:ss";
-
 /**
  * Loads the content calendar for the month anchored at `anchor` and derives the
  * month-grid days. The fetch is scoped to the visible grid window (passed as
@@ -28,9 +24,11 @@ const WINDOW_FORMAT = "yyyy-MM-dd'T'HH:mm:ss";
 export function useCalendarDays(anchor: Date): UseCalendarDaysResult {
   const { start, end } = useMemo(() => {
     const range = calendarGridRange(anchor);
+    // Real UTC instants for the local day boundaries (the backend interprets
+    // the window in UTC); keeps the requested range consistent across offsets.
     return {
-      start: format(range.start, WINDOW_FORMAT),
-      end: format(range.end, WINDOW_FORMAT),
+      start: range.start.toISOString(),
+      end: range.end.toISOString(),
     };
   }, [anchor]);
 
