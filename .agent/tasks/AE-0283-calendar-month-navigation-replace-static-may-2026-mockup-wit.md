@@ -243,16 +243,31 @@ Feature: Calendar month navigation
 ## QA Report
 
 PASS. Full local gates 17/17 (lint, typecheck, build, format, security,
-integrity, test, mutation, schema-drift, dead-files, …). External skeptical
-review (codex/gpt-5.5): BLOCK → both MUST-fix resolved → SHIP-WITH-NITS.
-Mode: external (opencode/glm-5.2 unavailable — Insufficient balance).
+integrity, test, mutation, schema-drift, dead-files, …) — re-run green after
+each review round. Two independent external skeptical reviews:
+- **codex/gpt-5.5:** BLOCK → 2 MUST-fix (stale-fetch race, naive-local window)
+  → fixed → SHIP-WITH-NITS.
+- **opencode-go/glm-5.2** (the funded route; Zen `opencode/glm` was out of
+  balance): BLOCK → caught a 3rd real bug codex missed (UTC window didn't cover
+  the visible LOCAL grid → edge-cell event loss at non-UTC offsets) → fixed
+  (±1-day window pad) → re-review **SHIP**.
 GATES_JSON: {"pass":17,"fail":0,"skip":0}
 
 ## Decision Log
 
-- **External reviewer fallback:** opencode/glm-5.2 returned "Insufficient
-  balance" (the exact AE-0219/kaizen-P3 recurrence); used codex/gpt-5.5 (the
-  approved chain head). Surfaced to the user.
+- **External reviewer route:** `opencode/glm-5.2` (the **Zen** provider) returned
+  "Insufficient balance"; the working route is the separate **`opencode-go`**
+  provider — `opencode run -m opencode-go/glm-5.2` (both are in
+  `opencode auth list`). Used codex/gpt-5.5 first, then opencode-go/glm-5.2 per
+  the user. GLM 5.2 found a real bug codex missed (see below) — value of a 2nd
+  independent reviewer.
+- **MUST-fix 3 (UTC window coverage) — accepted & fixed (glm-5.2).** The fetch
+  window was `toISOString()` of LOCAL grid boundaries; at non-UTC offsets the UTC
+  window shifts and an edge-cell event can fall outside it → silently dropped
+  though its cell is visible. Fixed by padding the sent window ±1 day
+  (`subDays`/`addDays`), NOT `calendarGridRange` (its tests assert
+  `start === grid[0]`); placement stays exact via the `yyyy-MM-dd` prefix match
+  so the pad can't bleed. Window-coverage + `useCalendarMonth` tests added.
 - **MUST-fix 1 (stale-fetch race) — accepted & fixed.** My change made
   `useContentCalendar` take a changing window, elevating a latent last-writer
   race. Fixed via AbortController + `isCurrent()` ref guard on every setState.
