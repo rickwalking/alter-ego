@@ -53,7 +53,11 @@ class Settings(BaseSettings):
     llm_provider: str = "glm"
     glm_api_key: SecretStr = SecretStr("")
     glm_base_url: str = "https://opencode.ai/zen/go/v1"
-    glm_model: str = "glm-5-2"
+    # GLM 5.2 is a reasoning model (emits chain-of-thought before the answer), so
+    # the 32K max_tokens in the factory matters — a small budget is consumed by
+    # reasoning before any content is produced. Model id uses a dot (verified
+    # live against the endpoint): "glm-5.2", not "glm-5-2".
+    glm_model: str = "glm-5.2"
 
     langsmith_api_key: SecretStr | None = None
     langsmith_project: str = "rag-backend"

@@ -33,12 +33,12 @@ def test_glm_provider_with_key_builds_openai_compatible_client() -> None:
         _settings(
             llm_provider="glm",
             glm_api_key=SecretStr("glm-key"),
-            glm_model="glm-5-2",
+            glm_model="glm-5.2",
             glm_base_url="https://opencode.ai/zen/go/v1",
         )
     )
     assert isinstance(model, ChatOpenAI)
-    assert model.model_name == "glm-5-2"
+    assert model.model_name == "glm-5.2"
 
 
 def test_glm_provider_without_key_falls_back_to_anthropic() -> None:
