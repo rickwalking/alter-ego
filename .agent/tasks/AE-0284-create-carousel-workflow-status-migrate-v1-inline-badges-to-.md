@@ -1,6 +1,6 @@
 # AE-0284 — create-carousel workflow status: migrate v1 inline badges to v2 neon semantic status badge
 
-Status: Intake
+Status: In Development
 Tier: T2
 Priority: P2
 Type: Bugfix
@@ -169,33 +169,68 @@ Feature: Create-carousel workflow status badge
 
 ## QA Checklist
 
-- [ ] Security reviewed
-- [ ] Code quality reviewed
-- [ ] Acceptance criteria validated
-- [ ] Edge cases tested
-- [ ] Orphan/unfinished code checked
+- [x] Security reviewed (presentation-only; no new inputs/endpoints)
+- [x] Code quality reviewed (17/17 frontend gates)
+- [x] Acceptance criteria validated (Playwright + unit tests)
+- [x] Edge cases tested (unknown/null status, awaiting_human, failed, in_progress)
+- [x] Orphan/unfinished code checked (inline status spans removed; no dead refs)
 
 ## Progress Log
 
-### 2026-06-25 HH:mm
+### 2026-06-25
 
-Ticket created.
+- Redesign planned via `/impeccable shape` (product register); user approved full
+  scope (badge + sidebar + consistency pass + stepper) and the semantic colour map.
+- Built `WorkflowStatusBadge` + `resolveWorkflowStatusVisual()`; added a
+  reduced-motion `pulse` to `NeonBadge`; migrated the 2 inline call sites; routed
+  the 2 existing NeonBadges; stepper magic-rgba → named constants. i18n en+pt.
+- External review **opencode-go/glm-5.2** (the funded route): SHIP-WITH-NITS →
+  1 MUST-fix (a11y: label-override aria-label dropped the status word → status by
+  colour alone for SR) + nits. Fixed (composed aria-label, role=status only on
+  the non-label status, ready→teal, +awaiting_human & locale-parity tests).
+- glm-5.2 re-review → **SHIP** (MUST resolved, nits addressed, no new bugs).
 
 ## Files Touched
 
-Pending.
+- New: `workspace/workflow-status.ts`, `workflow-status-badge.tsx`,
+  `workflow-status.test.ts`, `workflow-status-badge.test.tsx`,
+  `workflow-status-badge.stories.tsx`,
+  `tests/features/create-workflow-status-badge.feature`.
+- Modified: `components/atoms/neon-badge.tsx` (+test), `schemas/neon-badge.ts`,
+  `workspace/project-summary-card.tsx`, `create-workspace-sidebar.tsx` (+test),
+  `workspace/create-workflow-panel.tsx`, `workspace/create-workflow-artifacts.tsx`,
+  `create-progress-steps.tsx`, `i18n/locales/{en,pt}.json`.
+- Commits: `ed7b9f46` (feature), `6d73c8bf` (review fixes).
 
 ## Test Evidence
 
-Pending.
+- `bash scripts/ci/gates.sh frontend` → **17/17 PASS** (green after each review round).
+  `GATES_JSON: {"pass":17,"fail":0,"skip":0}`
+- New unit tests: resolver map (incl. unknown/null fallback + i18n parity), badge
+  render (aria-label, role, pulse), NeonBadge pulse, sidebar status colours.
+- Playwright (logged in): Project Summary Status now a v2 `role="status"`
+  `NeonBadge` (Draft → amber `rgb(245,158,11)` on `rgba(245,158,11,0.15)`,
+  `aria-label`), no horizontal overflow at 390 (scrollWidth 382). Screenshot
+  `create-status-v2-1440.png`.
 
 ## QA Report
 
-Pending.
+PASS. 17/17 local gates. External review opencode-go/glm-5.2: SHIP-WITH-NITS →
+MUST-fix resolved → **SHIP**. Mode: external (the funded `opencode-go` route).
 
 ## Decision Log
 
-Pending.
+- **Reviewer route:** used `opencode-go/glm-5.2` (funded) per the user; the Zen
+  `opencode/glm-5.2` is out of balance. See `[[external-review-opencode-go-route]]`.
+- **Semantic map** (user-approved): pending/draft=amber, in_progress=cyan+pulse,
+  awaiting_human=magenta, approved/approved_for_publish=teal, published/completed
+  =green, rejected/failed=red, unknown=cyan fallback.
+- **a11y MUST-fix (glm-5.2):** label-override badges compose `aria-label` as
+  "<label>, <status>"; `role="status"` (live region) only on the non-label status
+  badge so labelled phase chips don't add redundant per-poll announcements.
+- **artifacts "ready" = teal**, not green (green is reserved for published).
+- **Scope held:** Week/Day view modes + full create-flow i18n out of scope
+  (non-goals); only the new badge labels are i18n'd.
 
 ## Blockers
 
@@ -203,4 +238,10 @@ None.
 
 ## Final Summary
 
-Pending.
+Replaced the create-carousel flow's v1 status indicators (always-amber inline
+pill, inline red/cyan phase span, mismatched hardcoded NeonBadge variants) with a
+single semantic `WorkflowStatusBadge` so colour conveys state and the same status
+looks identical everywhere. Accessible (text + colour + dot, composed aria-label,
+scoped live region), reduced-motion-safe pulse, i18n en+pt. 17/17 gates;
+externally reviewed (SHIP-WITH-NITS → SHIP) and Playwright-verified. Shipped on
+`fix/ae-0284-create-status-v2` (PR pending; merge auto-deploys prod).
