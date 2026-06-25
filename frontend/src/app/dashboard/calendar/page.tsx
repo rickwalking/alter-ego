@@ -7,13 +7,15 @@ import {
 } from "@/modules/editorial-operations";
 import { NEON_RED } from "@/constants/neon";
 import { useCalendarDays } from "@/app/dashboard/calendar/use-calendar-days";
+import { useCalendarMonth } from "@/app/dashboard/calendar/use-calendar-month";
 import { CalendarHeader } from "@/app/dashboard/calendar/calendar-header";
 import { CalendarToolbar } from "@/app/dashboard/calendar/calendar-toolbar";
 import { CalendarGrid } from "@/app/dashboard/calendar/calendar-grid";
 import { CalendarLegend } from "@/app/dashboard/calendar/calendar-legend";
 
 export default function CalendarPage(): React.ReactElement {
-  const { days, loading, error } = useCalendarDays();
+  const { anchor, title, goPrev, goNext, goToday } = useCalendarMonth();
+  const { days, loading, error } = useCalendarDays(anchor);
 
   return (
     <div
@@ -37,7 +39,12 @@ export default function CalendarPage(): React.ReactElement {
       <CalendarHeader loading={loading} />
 
       <div className="p-4 md:p-7">
-        <CalendarToolbar />
+        <CalendarToolbar
+          title={title}
+          onPrev={goPrev}
+          onNext={goNext}
+          onToday={goToday}
+        />
         <CalendarGrid days={days} />
         <CalendarLegend />
       </div>

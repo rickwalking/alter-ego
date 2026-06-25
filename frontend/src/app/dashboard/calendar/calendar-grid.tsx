@@ -1,9 +1,11 @@
 "use client";
 
+import { format, parseISO } from "date-fns";
 import { CalendarSvgIcon } from "@/modules/editorial-operations";
 import {
   CALENDAR_COLORS,
   CALENDAR_CONTENT_META,
+  CALENDAR_EVENT_DAY_FORMAT,
   CALENDAR_FLEX_CENTER,
   CALENDAR_MONO_FONT,
   CALENDAR_STATUS_META,
@@ -40,7 +42,7 @@ function CalendarEmptyMonth(): React.ReactElement {
 
 function CalendarDayEvent({
   event,
-  day,
+  dateLabel,
 }: CalendarDayEventProps): React.ReactElement {
   const contentMeta = CALENDAR_CONTENT_META[event.contentType];
   return (
@@ -98,13 +100,14 @@ function CalendarDayEvent({
         </div>
       )}
       <div style={{ fontSize: 8, color: CALENDAR_COLORS.tM, marginTop: 2 }}>
-        May {day}
+        {dateLabel}
       </div>
     </div>
   );
 }
 
 function CalendarDayCell({ cell }: CalendarDayCellProps): React.ReactElement {
+  const dateLabel = format(parseISO(cell.iso), CALENDAR_EVENT_DAY_FORMAT);
   return (
     <div
       tabIndex={0}
@@ -134,7 +137,7 @@ function CalendarDayCell({ cell }: CalendarDayCellProps): React.ReactElement {
         <CalendarDayEvent
           key={`${event.title}-${eventIndex}`}
           event={event}
-          day={cell.day}
+          dateLabel={dateLabel}
         />
       ))}
     </div>

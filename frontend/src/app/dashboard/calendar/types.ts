@@ -13,5 +13,6 @@ export interface CalendarDayCellProps {
 
 export interface CalendarDayEventProps {
   event: CalendarEvent;
-  day: number;
+  /** Pre-formatted per-event date label, e.g. "Jun 10". */
+  dateLabel: string;
 }
