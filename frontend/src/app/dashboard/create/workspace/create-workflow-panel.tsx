@@ -15,6 +15,7 @@ import {
   type FinalReviewSendBackPhase,
 } from "@/constants/editorial-workflow";
 import { CreateWorkflowArtifacts } from "@/app/dashboard/create/workspace/create-workflow-artifacts";
+import { WorkflowStatusBadge } from "@/app/dashboard/create/workspace/workflow-status-badge";
 import { CreatePhaseReview } from "@/app/dashboard/create/workspace/create-phase-review";
 import { CreateStepHistoryPanel } from "@/app/dashboard/create/workspace/create-step-history-panel";
 import { CreateWorkflowProgress } from "@/app/dashboard/create/workspace/create-workflow-progress";
@@ -235,7 +236,10 @@ export function CreateWorkflowPanel({
             </NeonBadge>
           )}
           {hasActiveWorkflow && (
-            <NeonBadge variant="secondary">{state?.current_phase}</NeonBadge>
+            <WorkflowStatusBadge
+              status={state?.phase_status ?? null}
+              label={state?.current_phase}
+            />
           )}
         </div>
       </div>

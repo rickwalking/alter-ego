@@ -306,6 +306,17 @@
     },
     "chat": {
       "error": "Ocorreu um erro ao processar sua solicitação."
+    },
+    "status": {
+      "draft": "Rascunho",
+      "inProgress": "Em andamento",
+      "awaitingHuman": "Revisão pendente",
+      "approved": "Aprovado",
+      "readyToPublish": "Pronto para publicar",
+      "published": "Publicado",
+      "completed": "Concluído",
+      "rejected": "Rejeitado",
+      "failed": "Falhou"
     }
   },
   "blogEditorial": {

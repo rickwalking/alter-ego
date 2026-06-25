@@ -69,6 +69,30 @@ describe("NeonBadge Component", () => {
     });
   });
 
+  describe("When pulse prop is true", () => {
+    // Scenario: a live state animates the dot, reduced-motion safe
+    it("Then a dot renders even without dot, and it animates", () => {
+      const { container } = render(
+        <NeonBadge variant="cyan" pulse>
+          Active
+        </NeonBadge>,
+      );
+      const dot = container.querySelector('[aria-hidden="true"]');
+      expect(dot).toBeInTheDocument();
+      expect(dot).toHaveClass("animate-pulse");
+      expect(dot).toHaveClass("motion-reduce:animate-none");
+    });
+
+    it("Then a non-pulsing dot does not animate", () => {
+      const { container } = render(
+        <NeonBadge variant="cyan" dot>
+          Idle
+        </NeonBadge>,
+      );
+      expect(container.querySelector(".animate-pulse")).toBeNull();
+    });
+  });
+
   describe("When outline prop is true", () => {
     it("Then background should be transparent", () => {
       render(
