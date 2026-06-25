@@ -3,9 +3,15 @@
 from __future__ import annotations
 
 import re
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 
+from scripts.agent_tasks.gate_proof import (
+    ProofOutcome,
+    evaluate_gate_proof,
+    evaluate_qa_mode,
+)
 from scripts.agent_tasks.constants import (
     ALL_STATUSES,
     DEV_SUMMARY_SCAFFOLD_MARKER,
@@ -118,7 +124,17 @@ def load_tickets(tasks_dir: Path) -> list[Ticket]:
     return tickets
 
 
-def can_transition(ticket: Ticket, new_status: str) -> list[str]:
+def can_transition(
+    ticket: Ticket, new_status: str, enforce_gate_proof: bool = False
+) -> list[str]:
+    """Validate a status transition.
+
+    ``enforce_gate_proof`` adds the move-time GATES_JSON (AE-0258) and declared
+    QA mode (AE-0260) checks. It defaults to ``False`` so the retroactive
+    ``validate_ticket_file`` sweep does NOT enforce the proof on the 164 tickets
+    that reached Dev Complete / Review before it existed (grandfathered).
+    ``move_ticket.py`` passes ``True`` so every NEW transition carries the proof.
+    """
     errors: list[str] = []
     if new_status not in ALL_STATUSES:
         errors.append(_invalid_status_message(new_status))
@@ -149,6 +165,11 @@ def can_transition(ticket: Ticket, new_status: str) -> list[str]:
             errors.append("Missing test evidence")
         if not ticket.has_acceptance_criteria():
             errors.append("Acceptance criteria not present")
+        if enforce_gate_proof:
+            dev_report = REPORTS_DIR / f"{ticket.ticket_id}{REPORT_DEV_SUFFIX}"
+            errors.extend(
+                _gate_proof_errors(dev_report, f"dev-summary {dev_report.name}")
+            )
 
     if new_status == STATUS_REVIEW:
         dev_report = REPORTS_DIR / f"{ticket.ticket_id}{REPORT_DEV_SUFFIX}"
@@ -163,12 +184,46 @@ def can_transition(ticket: Ticket, new_status: str) -> list[str]:
                 qa_report, ticket.ticket_id, f"Missing QA report: {qa_report}"
             )
         )
+        if enforce_gate_proof and qa_report.exists():
+            errors.extend(_gate_proof_errors(qa_report, f"QA report {qa_report.name}"))
+            errors.extend(evaluate_qa_mode(qa_report, f"QA report {qa_report.name}"))
 
     if new_status == STATUS_DONE:
         if not ticket.section_has_content(SECTION_FINAL_SUMMARY):
             errors.append("Missing final summary")
 
     return errors
+
+
+def _gate_proof_errors(report: Path, label: str) -> list[str]:
+    """Return blocking GATES_JSON errors; emit warnings (skip>0, SHA drift) to stderr.
+
+    The proof gate blocks only on a missing block or fail>0 (AE-0258). skip>0 and a
+    commit-SHA mismatch are warnings — they surface at move time but never block,
+    because CI (GATES_REQUIRE_ALL=1) is the authority on skipped gates.
+    """
+    outcome: ProofOutcome = evaluate_gate_proof(report, label, _branch_head_sha())
+    for warning in outcome.warnings:
+        print(f"WARNING: {warning}", file=sys.stderr)
+    return outcome.errors
+
+
+def _branch_head_sha() -> str | None:
+    """Best-effort current HEAD sha for the commit-pin warning; None if unavailable."""
+    import subprocess  # local import: only needed at move time, keeps cold path lean
+
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "HEAD"],
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=5,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    sha = result.stdout.strip()
+    return sha or None
 
 
 def validate_ticket_file(ticket: Ticket) -> list[str]:

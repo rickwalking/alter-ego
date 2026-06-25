@@ -1,6 +1,6 @@
 # AE-0258 — require machine-readable gate proof (gates_json) in dev-summary and qa report
 
-Status: Intake
+Status: Review
 Tier: T2
 Priority: High
 Type: Quality
@@ -122,6 +122,16 @@ Feature: ticket transitions require machine-readable gate proof
 - Missing-evidence #2 "Dev Complete hole" — accepted; the proof now also gates Dev
   Complete via the dev-summary (the actual incident point), not just Review.
 - Missing-evidence #5 "wave mode" — accepted; per-ticket `.qa.md` may reference a wave report.
+
+## Test Evidence
+
+`backend/tests/unit/agent_tasks/test_gate_proof.py` (rule-fires, all pass):
+`test_dev_complete_blocked_without_gates_json` (a dev-summary saying "All green, trust me."
+is BLOCKED), `test_proof_rejects_fail_gt_zero`, `test_proof_warns_on_skip_but_does_not_block`
+(skip>0 → warn, not block), `test_real_gates_sh_line_parses` (coupling — runs the real
+`gates.sh`), `test_wave_report_reference_satisfies_proof`. Backward-compat:
+`validate_all_tickets.py` → **All 255 ticket(s) OK** (enforcement in `can_transition(enforce
+_gate_proof=True)` only, not the retroactive sweep). Full gates `PASS=19/FAIL=0/SKIP=0`.
 
 ## Blockers
 

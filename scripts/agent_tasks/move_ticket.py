@@ -126,7 +126,11 @@ def main() -> int:
         print(f"Could not parse: {path}")
         return 1
 
-    errors = can_transition(ticket, args.status)
+    # enforce_gate_proof=True: every NEW move-time transition must carry the
+    # machine-readable GATES_JSON proof (AE-0258) + declared QA mode (AE-0260).
+    # The retroactive validate_ticket_file sweep intentionally does NOT enforce
+    # it (grandfathers the 164 pre-existing Dev Complete / Review tickets).
+    errors = can_transition(ticket, args.status, enforce_gate_proof=True)
     if errors and not args.force:
         for err in errors:
             print(f"ERROR: {err}")

@@ -518,6 +518,38 @@ Gates needing Postgres (`test`, `diff-cover`, `migrations`) or that are slow
 
 See [CI Quality Gates Guide](./ci-quality-gates.md) for workflow names, branch protection, and rollout policy.
 
+### Gate-run discipline + machine-readable proof (AE-0258 / AE-0259)
+
+The delivery loop must run the **full** gate set (not a `--changed-only` subset),
+the integrity scan, and `/qa-agent` **before** declaring a ticket Dev Complete —
+and prove it mechanically, not in prose:
+
+- **Capture the exit code; never pipe a gate to `tail`/`head`.** A pipe returns
+  the *pipe's* exit (e.g. `tail` = 0), masking a non-zero gate — this once misread
+  a red PR as green. Use the wrapper, which writes the output to a file and exits
+  with the **gate's** real code:
+  ```bash
+  bash scripts/ci/gate-capture.sh backend   # log → .agent/reports/.gates-capture-backend.log
+  echo "exit: $?"                            # the GATE's exit, not a pipe's
+  ```
+- **`--changed-only` is fine for fast iteration** but the **Dev Complete
+  declaration** must be based on a **full** run.
+- **Paste the `GATES_JSON:` line** (printed by `gates.sh`) into the
+  `.dev-summary.md` (for Dev Complete) and the `.qa.md` (for Review). The
+  move-time guard (`can_transition`, invoked by `move_ticket.py`) requires this
+  proof: a **missing block** or **`fail>0`** BLOCKS the transition; **`skip>0`**
+  is a WARNING only (CI with `GATES_REQUIRE_ALL=1` is the authority on skips). A
+  per-ticket `.qa.md` MAY satisfy the proof by referencing a `wave-*.qa.md` that
+  carries the line. The proof is self-pasted (forgeable) — its ultimate authority
+  is CI re-running every gate on the same commit, where a forged PASS surfaces as
+  red. It is an observability + friction ratchet, not a forgery-proof control.
+- **Never declare green** on a gate subset, a delegated agent's self-report, or by
+  deferring to CI.
+
+> The retroactive `validate_all_tickets.py` sweep does **not** enforce the proof
+> (it grandfathers tickets that reached Dev Complete / Review before AE-0258); the
+> enforcement lives only on **new** move-time transitions via `move_ticket.py`.
+
 ### CI vs Full QA Agent
 
 | Dimension | CI (blocking) | CI (advisory) | Full `/qa-agent` only |

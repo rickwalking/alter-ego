@@ -37,6 +37,26 @@ integrity:
     - apparatus_edits         # .github/workflows, scripts/ci, .importlinter, import_baseline, eslint/tsconfig/stryker
     - coverage_omit_additions
 
+# =========================================================================
+# QA mode policy (AE-0260). External (bias-free) QA is the DEFAULT/REQUIRED mode
+# for agent-authored or same-session work — it must NOT depend on a human asking.
+# The .qa.md evidence block (AE-0258) declares the mode on a `mode:` line; the
+# validator (can_transition) FAILS a Review whose report omits `mode:` or uses a
+# value outside `allowed`. The validator CANNOT detect "same session" (no session
+# identity exists in markdown) — truthfulness of `mode: self` is policed by the
+# human reviewer, not the tool.
+qa_mode:
+  default: external          # agent/same-session work defaults to external QA
+  allowed: [external, self, self-fallback]
+  declare_in: ".agent/reports/AE-####.qa.md"   # `mode: <value>` line in the report
+  # Allowed escape when the external toolchain (opencode -> codex -> cursor) is
+  # ALL unavailable: declare `mode: self-fallback (<reason>)`. A tool outage must
+  # not be a hard block; it must be a visible, reasoned downgrade.
+  self_fallback_when: external_toolchain_unavailable
+  # A wave .qa.md (one external run over N tickets) satisfies `mode: external`
+  # for each referenced ticket.
+  wave_inherits: true
+
 external_qa_reviewers:
   - id: opencode
     label: OpenCode (CrofAI / kimi-k2.6 or configured default)

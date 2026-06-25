@@ -101,13 +101,36 @@ The final report must include:
 |------|------|
 | **full** (default) | T2/T3 — Phase 0 gates + all six subagents |
 | **lite** | T1 — **still runs Phase 0 gates + the Integrity subagent (never skippable)** plus AC validation and security if high-risk; may skip the deep manual OWASP pass and full mutation only |
-| **external** | Any tier when independence matters: the implementation was authored in the same session/agent as the QA would be, or the human requests an outside check |
+| **external** | **DEFAULT / REQUIRED for agent-authored or same-session work** (AE-0260) — the implementation was authored in the same session/agent as the QA would be. Also when the human requests an outside check. Not discretionary: bias-free QA must not depend on a human asking. |
 | **wave** | Several related tickets completed together — one external run covering the set, with per-ticket AC validation |
 
 **The deterministic gates (Phase 0) and Integrity dimension run in every mode.**
 Modes only scale the depth of the *manual, judgment-based* dimensions.
 
 Read ticket `Tier:` from `.agent/tasks/`.
+
+### Declared QA `mode:` field (AE-0260)
+
+Every `.qa.md` MUST declare how it was reviewed, on a `mode:` line in the AE-0258
+evidence block. This is a process ratchet (mirrors AE-0257's required-skeptical
+for T3): external review is the default for agent-authored work so it does not
+depend on a human asking.
+
+| `mode:` value | Meaning |
+|---------------|---------|
+| `external` | Reviewed by an independent external CLI session (`run_external_qa.sh`). **Default/required** for agent/same-session-authored work. |
+| `self` | Reviewed in-session (allowed only for genuinely independent / human-authored work). Truthfulness is policed by the **human reviewer** — see below. |
+| `self-fallback` | The external toolchain (opencode → codex → cursor) was **all unavailable**; QA fell back to in-session review. **State the reason** on the line, e.g. `mode: self-fallback (opencode hung, codex over quota, cursor absent)`. A tool outage must not be a hard block. |
+
+The move-time guard (`can_transition`, via `move_ticket.py`) FAILS a Review whose
+`.qa.md` omits `mode:` or uses a value outside `{external, self, self-fallback}`.
+A wave `.qa.md` (one external run over N tickets) satisfies `mode: external` for
+each referenced ticket.
+
+> **The validator does NOT (cannot) detect "same session"** — there is no session
+> identity in any markdown file (AE-0260 Non-Goals). It only checks the field is
+> present and allowed. The honesty of `mode: self` is a human-reviewer judgment,
+> not a mechanical one. Do not claim the validator verifies session identity.
 
 ## External QA orchestration (OpenCode / Codex / Cursor)
 
@@ -128,7 +151,12 @@ automatically:
    actionable findings → short confirmation round; PASS → archive with
    provenance, write per-ticket `.agent/reports/AE-####.qa.md` files
    (required by `validate_all_tickets.py` before Review), move
-   ticket(s) to Review.
+   ticket(s) to Review. **Each `.qa.md` MUST carry the declared
+   `mode:` line (AE-0260 — `external` for this orchestration) AND the
+   `GATES_JSON:` proof line (AE-0258)**; the move-time guard rejects a
+   report missing either. If the external toolchain was unavailable and
+   you fell back to in-session review, declare `mode: self-fallback
+   (<reason>)`.
 
 Reviewer priority and prompt requirements: `config.yaml`. Full runbook
 incl. live progress monitoring: `references/external-qa.md`.
