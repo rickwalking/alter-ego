@@ -53,7 +53,12 @@ export function useContentCalendar(start?: string, end?: string) {
 
   useEffect(() => {
     void fetchCalendar();
-    return () => controllerRef.current?.abort();
+    return () => {
+      // Abort and clear so a settled-but-superseded request's `finally` can't
+      // write state after unmount (its isCurrent() check then returns false).
+      controllerRef.current?.abort();
+      controllerRef.current = null;
+    };
   }, [fetchCalendar]);
 
   return { calendar, loading, error, refetch: fetchCalendar };

@@ -180,9 +180,7 @@ export function CalendarGrid({ days }: CalendarGridProps): React.ReactElement {
           </div>
         ))}
         {hasCurrentDays ? (
-          days.map((cell, index) => (
-            <CalendarDayCell key={`${cell.day}-${index}`} cell={cell} />
-          ))
+          days.map((cell) => <CalendarDayCell key={cell.iso} cell={cell} />)
         ) : (
           <CalendarEmptyMonth />
         )}

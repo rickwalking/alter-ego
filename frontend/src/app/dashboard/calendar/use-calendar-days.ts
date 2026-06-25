@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { addDays, subDays } from "date-fns";
 import {
   buildCalendarDaysFromApi,
   buildEmptyCalendarDays,
@@ -24,11 +25,15 @@ type UseCalendarDaysResult = {
 export function useCalendarDays(anchor: Date): UseCalendarDaysResult {
   const { start, end } = useMemo(() => {
     const range = calendarGridRange(anchor);
-    // Real UTC instants for the local day boundaries (the backend interprets
-    // the window in UTC); keeps the requested range consistent across offsets.
+    // The grid cells are LOCAL dates but the backend window is UTC; a naive
+    // toISOString() of the local boundaries shifts by the viewer's offset and
+    // could drop an edge-cell event whose instant falls just outside the UTC
+    // window. Pad ±1 day so every visible local cell is covered for any
+    // timezone — placement stays exact because buildCalendarDaysFromApi matches
+    // each item to a cell by its yyyy-MM-dd prefix (so the pad can't bleed).
     return {
-      start: range.start.toISOString(),
-      end: range.end.toISOString(),
+      start: subDays(range.start, 1).toISOString(),
+      end: addDays(range.end, 1).toISOString(),
     };
   }, [anchor]);
 
