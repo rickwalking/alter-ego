@@ -8,7 +8,6 @@ and answer questions about Pedro Marins' professional identity.
 from collections.abc import AsyncIterator
 from uuid import UUID
 
-from langchain_anthropic import ChatAnthropic
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 from langchain_core.runnables.config import RunnableConfig
 from langchain_core.tools import BaseTool
@@ -41,6 +40,7 @@ from rag_backend.domain.protocols import (
 from rag_backend.domain.retry import retry_async
 from rag_backend.domain.types import ChatEvent
 from rag_backend.infrastructure.config.settings import Settings
+from rag_backend.infrastructure.external.chat_model_factory import build_chat_model
 from rag_backend.modules.knowledge import (
     KnowledgeSearchPort,
     RetrieverSearchAdapter,
@@ -85,12 +85,7 @@ class AlterEgoAgent:
             else RetrieverSearchAdapter(retriever)
         )
 
-        self._llm = ChatAnthropic(
-            api_key=settings.anthropic_api_key,
-            model=settings.anthropic_model,
-            temperature=0.7,
-            streaming=True,
-        )
+        self._llm = build_chat_model(settings)
 
         # ADR-0013 / AE-0247: chat agents persist via message_repository only —
         # never a LangGraph checkpointer (a second durable write path = the
