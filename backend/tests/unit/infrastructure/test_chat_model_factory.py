@@ -11,13 +11,21 @@ from rag_backend.infrastructure.config.settings import Settings
 from rag_backend.infrastructure.external.chat_model_factory import build_chat_model
 
 
-def _settings(**overrides: object) -> Settings:
-    base: dict[str, object] = {
-        "anthropic_api_key": SecretStr("anthropic-key"),
-        "anthropic_model": "claude-sonnet-4-6",
-    }
-    base.update(overrides)
-    return Settings(**base)  # type: ignore[arg-type]
+def _settings(
+    *,
+    llm_provider: str = "glm",
+    glm_api_key: SecretStr = SecretStr(""),
+    glm_model: str = "glm-5.2",
+    glm_base_url: str = "https://opencode.ai/zen/go/v1",
+) -> Settings:
+    return Settings(
+        anthropic_api_key=SecretStr("anthropic-key"),
+        anthropic_model="claude-sonnet-4-6",
+        llm_provider=llm_provider,
+        glm_api_key=glm_api_key,
+        glm_model=glm_model,
+        glm_base_url=glm_base_url,
+    )
 
 
 def test_anthropic_provider_builds_chat_anthropic() -> None:
