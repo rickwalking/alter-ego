@@ -332,16 +332,54 @@ def resolve_presentation_review_from_state(
     return build_presentation_review_updates([])
 
 
-def has_blocking_presentation_validation(state: Mapping[str, object]) -> bool:
-    """Return True when presentation validation blocks content approval."""
-    validation = state.get(WORKFLOW_STATE_PRESENTATION_VALIDATION_KEY)
-    if isinstance(validation, dict):
-        return validation.get("blocking") is True
-    review = resolve_presentation_review_from_state(state)
+def _blocking_from_repaired_localized(
+    localized: list[object],
+    policy_version: str | None,
+) -> bool:
+    """Validate the REPAIRED localized slides so the deterministic trim counts."""
+    slides = [slide for slide in localized if isinstance(slide, dict)]
+    repaired = repair_localized_slides_sync(slides, policy_version=policy_version)
+    report = validation_report_to_dict(
+        validate_localized_slides(repaired, policy_version=policy_version)
+    )
+    return report.get("blocking") is True
+
+
+def _blocking_from_drafts(
+    slide_drafts: list[object],
+    state: Mapping[str, object],
+    policy_version: str | None,
+) -> bool:
+    """Build + repair + validate from raw drafts (the build path applies the trim)."""
+    review = build_presentation_review_updates(
+        [draft for draft in slide_drafts if isinstance(draft, dict)],
+        translations_en=deserialize_translations_en(
+            state.get(WORKFLOW_STATE_TRANSLATIONS_EN_KEY)
+        ),
+        policy_version=policy_version,
+    )
     derived = review.get(WORKFLOW_STATE_PRESENTATION_VALIDATION_KEY)
-    if not isinstance(derived, dict):
-        return False
-    return derived.get("blocking") is True
+    return isinstance(derived, dict) and derived.get("blocking") is True
+
+
+def has_blocking_presentation_validation(state: Mapping[str, object]) -> bool:
+    """Return True when presentation validation blocks content approval.
+
+    Validates the REPAIRED slides (AE-0286): the deterministic copy trim is
+    applied before the check, so over-budget drafts a model produced do not keep
+    blocking approval once they have been trimmed to fit. Prefers the localized
+    slides, then raw drafts, and only falls back to a stored validation when there
+    is nothing to repair.
+    """
+    policy_version = _state_policy_version(state)
+    localized = state.get(WORKFLOW_STATE_LOCALIZED_SLIDES_KEY)
+    if isinstance(localized, list) and localized:
+        return _blocking_from_repaired_localized(localized, policy_version)
+    slide_drafts = state.get("slide_drafts")
+    if isinstance(slide_drafts, list) and slide_drafts:
+        return _blocking_from_drafts(slide_drafts, state, policy_version)
+    validation = state.get(WORKFLOW_STATE_PRESENTATION_VALIDATION_KEY)
+    return isinstance(validation, dict) and validation.get("blocking") is True
 
 
 __all__ = [
