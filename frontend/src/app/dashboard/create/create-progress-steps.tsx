@@ -2,6 +2,7 @@
 
 import {
   BG_CARD,
+  NEON_CARD_BORDER,
   NEON_CYAN,
   NEON_CYAN_DIM,
   NEON_TEAL,
@@ -21,6 +22,12 @@ const CYAN = NEON_CYAN;
 const CYAN_DIM = NEON_CYAN_DIM;
 const TEAL = NEON_TEAL;
 const TEAL_DIM = NEON_TEAL_DIM;
+
+// Named faint tints local to the stepper (no exact token exists in the Neon
+// palette; kept here rather than added to the drift-guarded neon.ts).
+const STEP_NUM_PENDING_BG = "rgba(255,255,255,0.04)";
+const STEP_DIVIDER = "rgba(255,255,255,0.04)";
+const STEP_ACTIVE_BG = "rgba(0,212,255,0.04)";
 
 export interface CreateProgressStepsProps {
   activeStepId: CreateStepId;
@@ -43,7 +50,7 @@ export function CreateProgressSteps({
       className="mb-7 flex overflow-x-auto rounded-lg"
       style={{
         background: BG_CARD,
-        border: "1px solid rgba(255,255,255,0.06)",
+        border: `1px solid ${NEON_CARD_BORDER}`,
       }}
     >
       {CREATE_STEPS.map((step) => {
@@ -55,7 +62,7 @@ export function CreateProgressSteps({
           ? CYAN_DIM
           : isDone
             ? TEAL_DIM
-            : "rgba(255,255,255,0.04)";
+            : STEP_NUM_PENDING_BG;
         const numColor = isActive ? CYAN : isDone ? TEAL : TEXT_DIM;
 
         return (
@@ -76,9 +83,9 @@ export function CreateProgressSteps({
               border: "none",
               borderRight:
                 step.num < CREATE_STEPS.length
-                  ? "1px solid rgba(255,255,255,0.04)"
+                  ? `1px solid ${STEP_DIVIDER}`
                   : "none",
-              background: isActive ? "rgba(0,212,255,0.04)" : "transparent",
+              background: isActive ? STEP_ACTIVE_BG : "transparent",
               cursor: "pointer",
               fontFamily: "inherit",
             }}

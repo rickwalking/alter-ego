@@ -1,13 +1,8 @@
 "use client";
 
-import {
-  BG_CARD,
-  NEON_AMBER,
-  NEON_AMBER_DIM,
-  TEXT,
-  TEXT_DIM,
-} from "@/constants/neon";
+import { BG_CARD, TEXT, TEXT_DIM } from "@/constants/neon";
 import { EDITORIAL_WORKFLOW_STATUS } from "@/constants/editorial-workflow";
+import { WorkflowStatusBadge } from "@/app/dashboard/create/workspace/workflow-status-badge";
 
 export interface ProjectSummaryCardProps {
   topic: string;
@@ -15,6 +10,7 @@ export interface ProjectSummaryCardProps {
   niche: string;
   currentPhase: string | null;
   workflowStatus: string | null;
+  phaseStatus?: string | null;
 }
 
 const cardStyle = {
@@ -24,26 +20,36 @@ const cardStyle = {
   padding: "20px",
 };
 
+const rowStyle = {
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+  padding: "8px 0",
+  fontSize: "13px",
+  borderBottom: "1px solid rgba(255,255,255,0.03)",
+  gap: "12px",
+} as const;
+
 export function ProjectSummaryCard({
   topic,
   audience,
   niche,
   currentPhase,
   workflowStatus,
+  phaseStatus = null,
 }: ProjectSummaryCardProps): React.ReactElement {
-  const statusLabel =
+  // Prefer the editorial "ready to publish" signal; otherwise reflect the live
+  // phase run status. A missing status resolves to Draft inside the badge.
+  const effectiveStatus =
     workflowStatus === EDITORIAL_WORKFLOW_STATUS.APPROVED_FOR_PUBLISH
-      ? "Ready to publish"
-      : currentPhase
-        ? currentPhase.replace("_", " ")
-        : "Draft";
+      ? workflowStatus
+      : phaseStatus;
 
-  const summaryRows = [
+  const textRows = [
     { label: "Topic", value: topic },
     { label: "Audience", value: audience },
     { label: "Brief", value: niche },
     { label: "Phase", value: currentPhase ?? "—" },
-    { label: "Status", value: statusLabel, badge: true },
   ] as const;
 
   return (
@@ -51,49 +57,27 @@ export function ProjectSummaryCard({
       <h3 style={{ fontSize: "14px", fontWeight: 700, marginBottom: "12px" }}>
         Project Summary
       </h3>
-      {summaryRows.map((row) => (
-        <div
-          key={row.label}
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            padding: "8px 0",
-            fontSize: "13px",
-            borderBottom: "1px solid rgba(255,255,255,0.03)",
-            gap: "12px",
-          }}
-        >
+      {textRows.map((row) => (
+        <div key={row.label} style={rowStyle}>
           <span style={{ color: TEXT_DIM }}>{row.label}</span>
-          {"badge" in row && row.badge ? (
-            <span
-              style={{
-                padding: "2px 6px",
-                borderRadius: "4px",
-                fontSize: "11px",
-                fontWeight: 600,
-                background: NEON_AMBER_DIM,
-                color: NEON_AMBER,
-                textTransform: "capitalize",
-              }}
-            >
-              {row.value}
-            </span>
-          ) : (
-            <span
-              style={{
-                color: TEXT,
-                fontWeight: 600,
-                textAlign: "right",
-                maxWidth: "60%",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-              }}
-            >
-              {row.value}
-            </span>
-          )}
+          <span
+            style={{
+              color: TEXT,
+              fontWeight: 600,
+              textAlign: "right",
+              maxWidth: "60%",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+            }}
+          >
+            {row.value}
+          </span>
         </div>
       ))}
+      <div style={{ ...rowStyle, borderBottom: "none" }}>
+        <span style={{ color: TEXT_DIM }}>Status</span>
+        <WorkflowStatusBadge status={effectiveStatus} />
+      </div>
     </div>
   );
 }

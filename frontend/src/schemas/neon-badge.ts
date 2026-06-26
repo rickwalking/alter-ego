@@ -28,6 +28,7 @@ export const neonBadgePropsSchema = z.object({
   variant: neonBadgeVariantSchema.default("cyan"),
   size: neonBadgeSizeSchema.default("md"),
   dot: z.boolean().default(false),
+  pulse: z.boolean().default(false),
   outline: z.boolean().default(false),
 });
 

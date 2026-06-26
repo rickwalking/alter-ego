@@ -2,21 +2,15 @@
 
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import {
-  BG_CARD,
-  CYAN_GRADIENT,
-  NEON_CYAN,
-  NEON_RED,
-  TEXT_DIM,
-} from "@/constants/neon";
+import { BG_CARD, CYAN_GRADIENT, TEXT_DIM } from "@/constants/neon";
 import { DASHBOARD_ROUTES } from "@/constants/dashboard-routes";
 import { EDITORIAL_WORKFLOW_STATUS } from "@/constants/editorial-workflow";
-import { WORKFLOW_PHASE_STATUS } from "@/constants/workflow";
 import type { CarouselProjectResponse } from "@/schemas/carousel";
 import type { EditorialWorkflowState } from "@/modules/publishing";
 import { CREATE_STEP_IDS } from "@/app/dashboard/create/step-ids";
 import { CreateWorkflowArtifacts } from "@/app/dashboard/create/workspace/create-workflow-artifacts";
 import { ProjectSummaryCard } from "@/app/dashboard/create/workspace/project-summary-card";
+import { WorkflowStatusBadge } from "@/app/dashboard/create/workspace/workflow-status-badge";
 
 const sidebarCardStyle = {
   background: BG_CARD,
@@ -62,6 +56,7 @@ export function CreateWorkspaceSidebar({
         niche={project.niche}
         currentPhase={workflowState?.current_phase ?? null}
         workflowStatus={workflowState?.workflow_status ?? null}
+        phaseStatus={workflowState?.phase_status ?? null}
       />
 
       {showPublishCta && (
@@ -92,32 +87,15 @@ export function CreateWorkspaceSidebar({
           >
             Workflow
           </h3>
-          <p style={{ fontSize: "12px", color: TEXT_DIM, margin: 0 }}>
-            Active phase:{" "}
-            <span
-              style={{
-                color:
-                  workflowState.phase_status === WORKFLOW_PHASE_STATUS.FAILED
-                    ? NEON_RED
-                    : NEON_CYAN,
-                fontWeight: 600,
-              }}
-            >
-              {workflowState.current_phase}
+          <div className="flex items-center gap-2">
+            <span style={{ fontSize: "12px", color: TEXT_DIM }}>
+              Active phase
             </span>
-            {workflowState.phase_status === WORKFLOW_PHASE_STATUS.FAILED && (
-              <span
-                style={{
-                  color: NEON_RED,
-                  fontWeight: 700,
-                  fontSize: "11px",
-                  marginLeft: "6px",
-                }}
-              >
-                (failed)
-              </span>
-            )}
-          </p>
+            <WorkflowStatusBadge
+              status={workflowState.phase_status ?? null}
+              label={workflowState.current_phase}
+            />
+          </div>
         </div>
       )}
 

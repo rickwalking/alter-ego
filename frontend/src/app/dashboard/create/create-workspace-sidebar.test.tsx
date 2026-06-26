@@ -2,8 +2,19 @@ import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { CreateWorkspaceSidebar } from "./create-workspace-sidebar";
 import { WORKFLOW_PHASE_STATUS } from "@/constants/workflow";
+import { NEON_CYAN, NEON_MAGENTA, NEON_RED } from "@/constants/neon";
 import type { CarouselProjectResponse } from "@/schemas/carousel";
 import type { EditorialWorkflowState } from "@/modules/publishing";
+
+/**
+ * The active-phase status badge renders the phase name ("content") as its label;
+ * its accessible name is "content, <status>" so it is uniquely identifiable.
+ */
+function phaseBadge(): HTMLElement | undefined {
+  return screen
+    .getAllByText("content")
+    .find((el) => el.getAttribute("aria-label")?.startsWith("content,"));
+}
 
 const project = {
   topic: "AI safety",
@@ -23,11 +34,11 @@ const baseState: EditorialWorkflowState = {
 
 // Feature: Workflow Error Feedback & Retry (AE-0009)
 describe("CreateWorkspaceSidebar", () => {
-  // Scenario: Sidebar shows failure badge
+  // Scenario: Sidebar shows failure via the red status badge (AE-0284 v2)
   //   Given the editorial workflow has phase_status "failed"
   //   When the sidebar renders
-  //   Then a "(failed)" badge is shown next to the current phase name
-  it("shows a (failed) badge next to the current phase when failed", () => {
+  //   Then the active-phase status badge uses the red (error) variant
+  it("shows the current phase as a red (failed) status badge when failed", () => {
     render(
       <CreateWorkspaceSidebar
         project={project}
@@ -40,15 +51,16 @@ describe("CreateWorkspaceSidebar", () => {
       />,
     );
 
-    expect(screen.getByText("(failed)")).toBeInTheDocument();
-    expect(screen.getAllByText("content").length).toBeGreaterThan(0);
+    const badge = phaseBadge();
+    expect(badge).toBeDefined();
+    expect(badge).toHaveStyle({ color: NEON_RED });
   });
 
-  // Scenario: Non-failed workflow shows existing behavior
+  // Scenario: Non-failed workflow shows the live (cyan) state, not the error red
   //   Given the editorial workflow is in "in_progress"
   //   When the sidebar renders
-  //   Then no failure badge is shown
-  it("does not show the failed badge when the phase is in progress", () => {
+  //   Then the active-phase status badge uses the cyan (live) variant
+  it("shows the in-progress phase as a cyan (live) badge, not red", () => {
     render(
       <CreateWorkspaceSidebar
         project={project}
@@ -58,6 +70,27 @@ describe("CreateWorkspaceSidebar", () => {
       />,
     );
 
-    expect(screen.queryByText("(failed)")).not.toBeInTheDocument();
+    const badge = phaseBadge();
+    expect(badge).toBeDefined();
+    expect(badge).toHaveStyle({ color: NEON_CYAN });
+  });
+
+  // Scenario: awaiting human review draws attention (magenta), not red/cyan
+  it("shows an awaiting-human phase as a magenta badge", () => {
+    render(
+      <CreateWorkspaceSidebar
+        project={project}
+        workflowState={{
+          ...baseState,
+          phase_status: WORKFLOW_PHASE_STATUS.AWAITING_HUMAN,
+        }}
+        activeStepId="outline"
+        projectId="p1"
+      />,
+    );
+
+    const badge = phaseBadge();
+    expect(badge).toBeDefined();
+    expect(badge).toHaveStyle({ color: NEON_MAGENTA });
   });
 });

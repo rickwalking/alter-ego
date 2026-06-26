@@ -35,6 +35,8 @@ export interface NeonBadgeProps
     VariantProps<typeof neonBadgeVariants> {
   variant?: NeonBadgeVariant | LegacyBadgeVariant;
   dot?: boolean;
+  /** Animate the leading dot to signal a live/active state. Implies `dot`. */
+  pulse?: boolean;
 }
 
 export const NeonBadge = forwardRef<HTMLSpanElement, NeonBadgeProps>(
@@ -44,6 +46,7 @@ export const NeonBadge = forwardRef<HTMLSpanElement, NeonBadgeProps>(
       variant = "cyan",
       size,
       dot,
+      pulse,
       outline,
       style,
       children,
@@ -56,6 +59,7 @@ export const NeonBadge = forwardRef<HTMLSpanElement, NeonBadgeProps>(
         ? LEGACY_BADGE_MAP[variant as LegacyBadgeVariant]
         : (variant as NeonBadgeVariant);
     const isOutline = outline ?? variant === "outline";
+    const showDot = dot ?? pulse;
     const colors = BADGE_COLORS[resolvedVariant];
 
     return (
@@ -73,9 +77,12 @@ export const NeonBadge = forwardRef<HTMLSpanElement, NeonBadgeProps>(
         }}
         {...props}
       >
-        {dot && (
+        {showDot && (
           <span
-            className="h-1.5 w-1.5 rounded-full shrink-0"
+            className={cn(
+              "h-1.5 w-1.5 rounded-full shrink-0",
+              pulse && "animate-pulse motion-reduce:animate-none",
+            )}
             style={{ background: colors.text }}
             aria-hidden="true"
           />
