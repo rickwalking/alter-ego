@@ -14,6 +14,7 @@ from rag_backend.application.services.carousel.localized_slide_builder import (
 )
 from rag_backend.application.services.carousel.presentation_copy_repair import (
     deterministic_repair_slide_payload,
+    repair_body_length_and_heading,
 )
 from rag_backend.application.services.carousel.presentation_policy import (
     CarouselPresentationPolicy,
@@ -22,6 +23,7 @@ from rag_backend.application.services.carousel.presentation_policy import (
 from rag_backend.application.services.carousel.presentation_validation import (
     BoundedRepairCommand,
     BoundedRepairRequest,
+    RepairFn,
     ValidatePayloadCommand,
     run_bounded_repair,
     validate_slide_payload,
@@ -46,13 +48,21 @@ class LocaleRepairParams:
 SLIDE_INDEX_KEY = "slide_index"
 
 
-async def _async_deterministic_repair(
-    payload: Mapping[str, object],
-    violations: tuple[SlideValidationViolation, ...],
-    locale: str,
-) -> dict[str, object]:
-    await asyncio.sleep(0)
-    return deterministic_repair_slide_payload(payload, violations, locale)
+def _deterministic_repair_for_policy(
+    policy: CarouselPresentationPolicy,
+) -> RepairFn:
+    """Bind the policy so the deterministic repair can trim bodies to budget."""
+
+    async def _repair(
+        payload: Mapping[str, object],
+        violations: tuple[SlideValidationViolation, ...],
+        locale: str,
+    ) -> dict[str, object]:
+        await asyncio.sleep(0)
+        repaired = deterministic_repair_slide_payload(payload, violations, locale)
+        return repair_body_length_and_heading(repaired, violations, policy)
+
+    return _repair
 
 
 async def attempt_locale_repair(
@@ -78,7 +88,7 @@ async def attempt_locale_repair(
                 payload=params.payload,
                 violations=violations,
             ),
-            repair_fn=_async_deterministic_repair,
+            repair_fn=_deterministic_repair_for_policy(params.policy),
             policy=params.policy,
         )
     )

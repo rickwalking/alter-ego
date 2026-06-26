@@ -100,11 +100,12 @@ class TestAttemptLocaleRepair:
         )
 
         policy = load_presentation_policy(DEFAULT_PRESENTATION_POLICY_VERSION)
-        # Very long body that exceeds budget even after repair
+        # An over-long HEADING is not auto-repairable (the deterministic repair
+        # only trims the body), so a violation remains after repair.
         payload = {
             "slide_type": "intro",
-            "heading": "A",
-            "body": "x" * 500,
+            "heading": "H" * 200,
+            "body": "Corpo curto e valido.",
         }
         result = await attempt_locale_repair(
             LocaleRepairParams(

@@ -6,10 +6,18 @@ import re
 from collections.abc import Mapping, Set
 from typing import TypedDict
 
+from rag_backend.application.services.carousel.presentation_policy import (
+    CarouselPresentationPolicy,
+)
+from rag_backend.application.services.carousel.presentation_validation_fields import (
+    body_budget_for_slide_type,
+)
 from rag_backend.domain.constants.carousel import LANGUAGE_EN
 from rag_backend.domain.constants.carousel_presentation import (
+    VIOLATION_BODY_TOO_LONG,
     VIOLATION_DASH_PUNCTUATION_FORBIDDEN,
     VIOLATION_HEADING_NOT_SENTENCE_CASE_EN,
+    VIOLATION_HEADING_REPEATED_IN_BODY,
     VIOLATION_VISIBLE_EMOJI_FORBIDDEN,
 )
 from rag_backend.domain.models.carousel_presentation import SlideValidationViolation
@@ -105,12 +113,83 @@ def _repair_text_field(
     payload[field] = repaired
 
 
+_SENTENCE_BOUNDARY = re.compile(r"(?<=[.!?])\s+")
+_ELLIPSIS = "…"
+# Reserve headroom in the word-boundary fallback so the trailing ellipsis (and a
+# rstrip of trailing punctuation) can never push the result back over budget.
+_FALLBACK_HEADROOM = 1
+
+
+def _balance_inline_markup(text: str) -> str:
+    """Close inline markup left unbalanced by a cut (no dangling ** or <strong>)."""
+    if text.count("**") % 2 == 1:
+        cut = text.rfind("**")
+        text = (text[:cut] + text[cut + 2 :]).rstrip()
+    for open_tag, close_tag in (("<strong>", "</strong>"), ("<b>", "</b>")):
+        unclosed = text.count(open_tag) - text.count(close_tag)
+        if unclosed > 0:
+            text += close_tag * unclosed
+    return text
+
+
+def _trim_body_to_budget(text: str, max_characters: int) -> str:
+    """Shorten body copy to fit ``max_characters`` without producing nonsense.
+
+    Prefers keeping whole sentences (complete, on-topic, balanced markup). Only
+    when a single sentence already exceeds the budget does it fall back to a
+    word-boundary cut with an ellipsis. Never cuts mid-word; never exceeds budget.
+    """
+    text = text.strip()
+    if len(text) <= max_characters:
+        return text
+    kept = ""
+    for sentence in _SENTENCE_BOUNDARY.split(text):
+        candidate = f"{kept} {sentence}".strip() if kept else sentence.strip()
+        if len(candidate) <= max_characters:
+            kept = candidate
+        else:
+            break
+    if kept:
+        return _balance_inline_markup(kept)
+    # No whole sentence fits: keep whole words up to the budget, drop inline
+    # markup (so nothing is left dangling) and mark the cut with an ellipsis.
+    limit = max_characters - _FALLBACK_HEADROOM
+    truncated = ""
+    for word in text.split():
+        candidate = f"{truncated} {word}".strip() if truncated else word
+        if len(candidate) <= limit:
+            truncated = candidate
+        else:
+            break
+    plain = re.sub(r"<[^>]+>", "", truncated).replace("**", "").rstrip(" \t,;:-")
+    result = (plain + _ELLIPSIS) if plain else text[:max_characters]
+    return result[:max_characters]
+
+
+def _strip_heading_from_body(body: str, heading: str) -> str:
+    """Remove the heading text repeated inside the body (case-insensitive).
+
+    Strips both the raw heading and a markup-free variant, then tidies the
+    leftover punctuation/whitespace so the body reads cleanly.
+    """
+    needles = {
+        heading.strip(),
+        re.sub(r"<[^>]+>|[*_`]", "", heading).strip(),
+    }
+    cleaned = body
+    for needle in needles:
+        if needle:
+            cleaned = re.compile(re.escape(needle), re.IGNORECASE).sub(" ", cleaned)
+    cleaned = re.sub(r"\s{2,}", " ", cleaned).strip(" \t\n.,:;-")
+    return cleaned or body
+
+
 def deterministic_repair_slide_payload(
     payload: Mapping[str, object],
     violations: tuple[SlideValidationViolation, ...],
     locale: str,
 ) -> dict[str, object]:
-    """Apply deterministic repairs for supported violation codes."""
+    """Apply deterministic markup/case repairs for supported violation codes."""
     repaired = dict(payload)
     codes = {violation.code for violation in violations}
     _repair_text_field(
@@ -126,7 +205,36 @@ def deterministic_repair_slide_payload(
     return repaired
 
 
+def repair_body_length_and_heading(
+    payload: Mapping[str, object],
+    violations: tuple[SlideValidationViolation, ...],
+    policy: CarouselPresentationPolicy,
+) -> dict[str, object]:
+    """Strip a repeated heading then trim an over-budget body (in that order).
+
+    Needs the policy because the per-slide-type body budget lives on it. Returns
+    the payload unchanged when there is no body or no length/heading violation.
+    """
+    repaired = dict(payload)
+    body = repaired.get("body")
+    if not isinstance(body, str) or not body:
+        return repaired
+    codes = {violation.code for violation in violations}
+    if VIOLATION_HEADING_REPEATED_IN_BODY in codes:
+        heading = repaired.get("heading")
+        if isinstance(heading, str) and heading.strip():
+            body = _strip_heading_from_body(body, heading)
+    if VIOLATION_BODY_TOO_LONG in codes:
+        slide_type = str(repaired.get("slide_type") or repaired.get("type") or "")
+        budget = body_budget_for_slide_type(slide_type, policy)
+        if budget is not None:
+            body = _trim_body_to_budget(body, budget.max_characters)
+    repaired["body"] = body
+    return repaired
+
+
 __all__ = [
     "deterministic_repair_slide_payload",
+    "repair_body_length_and_heading",
     "repair_text_sentence_case_en",
 ]

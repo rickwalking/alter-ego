@@ -112,6 +112,7 @@ class TestToolScopeBypass:
         mock_settings = MagicMock(spec=Settings)
         mock_settings.anthropic_api_key = "test"
         mock_settings.anthropic_model = "claude-test"
+        mock_settings.llm_provider = "anthropic"
 
         agent = AlterEgoAgent(
             settings=mock_settings,
@@ -143,6 +144,7 @@ class TestToolScopeBypass:
         mock_settings = MagicMock(spec=Settings)
         mock_settings.anthropic_api_key = "test"
         mock_settings.anthropic_model = "claude-test"
+        mock_settings.llm_provider = "anthropic"
 
         agent = AlterEgoAgent(
             settings=mock_settings,
