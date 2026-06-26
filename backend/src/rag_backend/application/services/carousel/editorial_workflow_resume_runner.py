@@ -151,11 +151,13 @@ async def _execute_background_resume(
                 ),
             )
             raise
-        except Exception:
+        except Exception as exc:
             await db.rollback()
             logger.exception(
                 "background_resume_failed",
                 project_id=params.project_id,
+                error=str(exc),
+                error_type=type(exc).__name__,
             )
             await _mark_background_resume_failed(
                 _MarkFailedParams(

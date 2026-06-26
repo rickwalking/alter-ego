@@ -615,6 +615,8 @@ class TestExecuteBackgroundResume:
             mock_logger.exception.assert_called_once_with(
                 "background_resume_failed",
                 project_id=params.project_id,
+                error="boom",
+                error_type="RuntimeError",
             )
 
     @pytest.mark.asyncio
