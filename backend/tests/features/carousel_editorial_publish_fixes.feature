@@ -32,3 +32,29 @@ Feature: Workflow board published column
   Scenario: Kanban columns include published phase
     Given the workflow board API columns list
     Then the last column phase should be "published"
+
+Feature: GLM flat draft blob normalization
+  As the carousel content pipeline
+  I want flat or locale-suffixed slide draft blobs normalized into presentations
+  So that GLM-generated slides render body copy instead of title-only slides
+
+  Scenario: Locale-suffixed intro blob maps subtitle_pt into the body
+    Given a slide draft whose draft_text is a flat blob with heading_pt and subtitle_pt
+    When the slide draft is normalized
+    Then the Portuguese presentation body equals the subtitle_pt text
+    And the presentation body is not the raw blob string
+
+  Scenario: Clean single-locale blob maps body into the presentation
+    Given a slide draft whose draft_text is a flat blob with plain heading and body
+    When the slide draft is normalized
+    Then the Portuguese presentation body equals the body text
+
+  Scenario: Summary points with title_pt items localize per locale
+    Given a summary slide draft whose points items use title_pt and body_pt keys
+    When the slide draft is normalized
+    Then each Portuguese summary point has a non-empty title
+
+  Scenario: Non-dict draft_text is left untouched
+    Given a slide draft whose draft_text is plain prose
+    When the slide draft is normalized
+    Then the slide draft is returned unchanged

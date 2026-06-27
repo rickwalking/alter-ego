@@ -34,22 +34,120 @@ def _as_mapping(value: object) -> dict[str, object] | None:
     return value if isinstance(value, Mapping) else None
 
 
+def _locale_has_content(locale: Mapping[str, object]) -> bool:
+    """Return True when a reshaped locale dict carries renderable copy."""
+    return bool(
+        str(locale.get("heading") or "").strip()
+        or str(locale.get("body") or "").strip()
+        or str(locale.get("subtitle") or "").strip()
+        or locale.get("points")
+        or locale.get("summary_points")
+        or locale.get("features")
+        or locale.get("actions")
+    )
+
+
+_LOCALE_SUFFIX_PT = "_pt"
+_LOCALE_SUFFIX_EN = "_en"
+_LOCALE_SUFFIXES = (_LOCALE_SUFFIX_PT, _LOCALE_SUFFIX_EN)
+_LOCALE_SUFFIX_LEN = 3
+
+
+def _has_locale_suffix(key: str) -> bool:
+    return len(key) > _LOCALE_SUFFIX_LEN and key.endswith(_LOCALE_SUFFIXES)
+
+
+def _localize_item(item: Mapping[str, object], suffix: str) -> dict[str, object]:
+    """Resolve one structured item's locale suffix (``title_pt`` → ``title``)."""
+    out: dict[str, object] = {
+        key: value for key, value in item.items() if not _has_locale_suffix(key)
+    }
+    for key, value in item.items():
+        if len(key) > _LOCALE_SUFFIX_LEN and key.endswith(suffix):
+            out[key[:-_LOCALE_SUFFIX_LEN]] = value
+    return out
+
+
+def _localize_value(value: object, suffix: str) -> object:
+    """Localize a structured-item list; pass non-item values through unchanged."""
+    if isinstance(value, list) and value and all(isinstance(x, Mapping) for x in value):
+        return [_localize_item(x, suffix) for x in value]
+    return value
+
+
+def _split_locales(
+    blob: Mapping[str, object],
+) -> tuple[dict[str, object], dict[str, object]]:
+    """Split a flat blob into ``(pt, en)`` dicts, suffixed keys overriding shared."""
+    pt: dict[str, object] = {}
+    en: dict[str, object] = {}
+    for key, value in blob.items():
+        if _has_locale_suffix(key):
+            continue
+        pt[key] = _localize_value(value, _LOCALE_SUFFIX_PT)
+        en[key] = _localize_value(value, _LOCALE_SUFFIX_EN)
+    for key, value in blob.items():
+        if not _has_locale_suffix(key):
+            continue
+        suffix = key[-_LOCALE_SUFFIX_LEN:]
+        target = pt if suffix == _LOCALE_SUFFIX_PT else en
+        target[key[:-_LOCALE_SUFFIX_LEN]] = _localize_value(value, suffix)
+    return pt, en
+
+
+def _mirror_subtitle_body(locale: dict[str, object]) -> None:
+    """Ensure both ``subtitle`` and ``body`` carry the copy for any builder path."""
+    subtitle = str(locale.get("subtitle") or "").strip()
+    body = str(locale.get("body") or "").strip()
+    if subtitle and not body:
+        locale["body"] = locale["subtitle"]
+    elif body and not subtitle:
+        locale["subtitle"] = locale["body"]
+
+
+def _reshape_flat_blob(blob: Mapping[str, object]) -> dict[str, object] | None:
+    """Reshape a flat draft blob into the nested ``{pt, en}`` builder shape.
+
+    GLM emits per-slide copy as a flat dict where the locale is a key suffix
+    (``heading_pt``/``subtitle_pt``/``body_en`` …) or, for single-locale clean
+    slides, plain ``heading``/``body``. The bilingual builder expects nested
+    ``pt``/``en`` locale dicts, so without this reshape the raw blob string was
+    dumped into ``body`` and rendered as title-only slides. Suffixed keys win
+    over shared ones (recursively, so ``points``/``features`` item entries with
+    ``title_pt``/``body_en`` resolve per locale too), and ``subtitle``↔``body``
+    are mirrored so both the intro builder (reads ``subtitle``) and the
+    content/closing/cta builders (read ``body``) find the copy.
+    """
+    pt, en = _split_locales(blob)
+    _mirror_subtitle_body(pt)
+    _mirror_subtitle_body(en)
+    if not _locale_has_content(pt) and not _locale_has_content(en):
+        return None
+    return {"pt": pt, "en": en}
+
+
 def parse_bilingual_draft_blob(raw: object) -> dict[str, object] | None:
-    """Parse a stringified or nested bilingual draft payload."""
-    if isinstance(raw, dict):
-        return dict(raw) if ("pt" in raw or "en" in raw) else None
-    if not isinstance(raw, str) or not raw.strip():
+    """Parse a stringified or nested bilingual draft payload.
+
+    Accepts the nested ``{pt, en}`` shape as-is and reshapes flat blobs (clean
+    ``heading``/``body`` or locale-suffixed ``heading_pt``/``subtitle_en`` …)
+    into that nested shape so GLM's varied output structures all yield body copy.
+    """
+    if isinstance(raw, Mapping):
+        blob: dict[str, object] = dict(raw)
+    elif isinstance(raw, str) and raw.strip().startswith("{"):
+        try:
+            parsed = ast.literal_eval(raw.strip())
+        except (SyntaxError, ValueError):
+            return None
+        if not isinstance(parsed, dict):
+            return None
+        blob = parsed
+    else:
         return None
-    stripped = raw.strip()
-    if not stripped.startswith("{") or (
-        "'pt'" not in stripped and '"pt"' not in stripped
-    ):
-        return None
-    try:
-        parsed = ast.literal_eval(stripped)
-    except (SyntaxError, ValueError):
-        return None
-    return dict(parsed) if isinstance(parsed, dict) else None
+    if "pt" in blob or "en" in blob:
+        return blob
+    return _reshape_flat_blob(blob)
 
 
 def _feature_item(item: Mapping[str, object], *, default_icon: str) -> dict[str, str]:
