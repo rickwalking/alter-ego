@@ -849,3 +849,65 @@ class TestEditorialWorkflowServiceLangfuseTraceMetadata:
         span_metadata = mock_propagate.call_args.kwargs["metadata"]
         assert span_metadata["project_id"] == project_id
         assert span_metadata["phase"] == PHASE_RESEARCH
+
+
+class TestMarkResumeInProgressPublishLock:
+    """AE-0288: a send-back from an approved carousel drops the DB publish lock
+    synchronously so a concurrent publish cannot ship stale content mid-regen.
+    """
+
+    _PUBLISH_PHASE_CHANGE = (
+        "rag_backend.application.services.carousel"
+        ".editorial_workflow_support.publish_workflow_phase_change"
+    )
+
+    @pytest.mark.asyncio
+    async def test_clears_publish_lock_when_prior_approved_for_publish(
+        self, service: EditorialWorkflowService
+    ) -> None:
+        from rag_backend.domain.constants.carousel_workflow import (
+            CAROUSEL_EDITORIAL_WORKFLOW_STATUS_DRAFT,
+            WORKFLOW_STATUS_APPROVED_FOR_PUBLISH,
+        )
+
+        prior = AsyncMock(
+            return_value={
+                "current_phase": "final_review",
+                "workflow_status": WORKFLOW_STATUS_APPROVED_FOR_PUBLISH,
+            }
+        )
+        sync = AsyncMock()
+        with (
+            patch.object(service, "get_workflow_state", prior),
+            patch.object(service, "_sync_project_phase", sync),
+            patch(self._PUBLISH_PHASE_CHANGE, new=AsyncMock()),
+        ):
+            await service.mark_resume_in_progress("project-1", AsyncMock())
+
+        synced_state = sync.await_args.args[2]
+        assert (
+            synced_state["workflow_status"]
+            == CAROUSEL_EDITORIAL_WORKFLOW_STATUS_DRAFT
+        )
+
+    @pytest.mark.asyncio
+    async def test_keeps_workflow_status_when_not_approved(
+        self, service: EditorialWorkflowService
+    ) -> None:
+        from rag_backend.domain.constants.carousel_workflow import (
+            WORKFLOW_STATUS_APPROVED_FOR_PUBLISH,
+        )
+
+        prior = AsyncMock(
+            return_value={"current_phase": "content", "workflow_status": "draft"}
+        )
+        sync = AsyncMock()
+        with (
+            patch.object(service, "get_workflow_state", prior),
+            patch.object(service, "_sync_project_phase", sync),
+            patch(self._PUBLISH_PHASE_CHANGE, new=AsyncMock()),
+        ):
+            await service.mark_resume_in_progress("project-1", AsyncMock())
+
+        synced_state = sync.await_args.args[2]
+        assert synced_state["workflow_status"] != WORKFLOW_STATUS_APPROVED_FOR_PUBLISH

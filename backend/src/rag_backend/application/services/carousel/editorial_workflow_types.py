@@ -58,6 +58,7 @@ class PhaseFeedbackPersistParams:
     project_id: str
     prior: CarouselWorkflowState
     feedback: str | None
+    target_phase: str | None = None
 
 
 __all__ = [

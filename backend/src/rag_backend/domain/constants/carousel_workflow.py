@@ -8,6 +8,11 @@ PHASE_DESIGN = "design"
 PHASE_IMAGES = "images"
 PHASE_FINAL_REVIEW = "final_review"
 PHASE_PUBLISHED = "published"
+# Internal graph-only node (AE-0288): after final-review approval the graph holds
+# here at an interrupt instead of reaching END, so the approved carousel stays
+# resumable for a send-back. NOT a user-facing phase — never surfaced as
+# ``current_phase`` (get_state keeps the phase as ``final_review`` while held).
+PHASE_APPROVED_HOLD = "approved_hold"
 
 PHASE_STATUS_PENDING = "pending"
 PHASE_STATUS_IN_PROGRESS = "in_progress"

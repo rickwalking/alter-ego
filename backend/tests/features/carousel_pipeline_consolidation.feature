@@ -131,6 +131,34 @@ Feature: Phase artifacts at human gates
     Then the workflow state current_phase should become "content"
     And the workflow state phase_status should eventually be "awaiting_human"
 
+  @cp-edge @cp-final-review
+  Scenario: Send-back files the reviewer note under the target phase (AE-0288)
+    Given the workflow is awaiting human review at phase "final_review"
+    When I send a POST request to "/api/carousels/{project_id}/workflow/resume" with body:
+      | action              | revise                      |
+      | feedback            | Slides repeat; diversify    |
+      | structured_feedback   | {"target_phase":"content"} |
+    Then the workflow state phase_feedback for "content" should include "slides repeat; diversify"
+    And the workflow state phase_feedback for "final_review" should be empty
+    And the workflow state image_assets should be unchanged
+
+  @cp-edge @cp-final-review
+  Scenario: An approved carousel holds (does not end) and stays publishable (AE-0288)
+    Given all phases including final_review have been approved
+    Then the workflow parks at the internal approved_hold node
+    And the workflow state current_phase should be "final_review"
+    And the workflow state phase_status should be "approved"
+    And the workflow state workflow_status should be "approved_for_publish"
+
+  @cp-edge @cp-final-review
+  Scenario: Send-back from an approved (held) carousel regenerates content (AE-0288)
+    Given all phases including final_review have been approved and the carousel is held
+    When I resume with action "revise" and structured_feedback target_phase "content"
+    Then the workflow re-enters the content phase
+    And the workflow state phase_status should be "awaiting_human"
+    And the workflow state workflow_status should be "draft" while re-reviewing
+    And images are reused for any slide whose image prompt is unchanged
+
 @cp-consolidation @cp-stream
 Feature: Unified workflow progress streaming
   As the create workspace UI

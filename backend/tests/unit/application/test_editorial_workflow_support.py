@@ -78,6 +78,40 @@ class TestPersistPhaseFeedback:
         ]
         assert update["revision_count"]["content"] == 2
 
+    async def test_persist_phase_feedback_keys_under_target_phase_on_send_back(
+        self,
+    ) -> None:
+        """AE-0288: a final-review send-back files the note under the target
+        phase (content), not the current phase (final_review), so the content
+        node's revision notes actually see it.
+        """
+        engine = MagicMock()
+        engine.update_state = AsyncMock()
+        prior = {
+            "current_phase": "final_review",
+            "phase_feedback": {"content": ["First note"]},
+            "revision_count": {"content": 1},
+        }
+
+        await persist_phase_feedback(
+            engine,
+            PhaseFeedbackPersistParams(
+                project_id="project-1",
+                prior=prior,
+                feedback="Slides repeat; diversify per the research.",
+                target_phase="content",
+            ),
+        )
+
+        engine.update_state.assert_awaited_once()
+        update = engine.update_state.await_args.args[1]
+        assert update["phase_feedback"]["content"] == [
+            "First note",
+            "Slides repeat; diversify per the research.",
+        ]
+        assert update["revision_count"]["content"] == 2
+        assert "final_review" not in update["phase_feedback"]
+
     async def test_persist_phase_feedback_skips_empty_feedback(self) -> None:
         engine = MagicMock()
         engine.update_state = AsyncMock()

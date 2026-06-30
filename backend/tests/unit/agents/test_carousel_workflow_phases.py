@@ -13,6 +13,7 @@ from rag_backend.agents.carousel_workflow_graph import (
     build_carousel_workflow_graph,
     route_after_final_review,
     route_after_gate,
+    route_after_hold,
 )
 from rag_backend.agents.carousel_workflow_nodes import (
     await_human_review,
@@ -144,6 +145,8 @@ class TestBuildCarouselWorkflowGraph:
 
     def test_graph_includes_all_phase_nodes(self) -> None:
         """Given builder, when graph is created, then every phase node exists."""
+        from rag_backend.domain.constants.carousel_workflow import PHASE_APPROVED_HOLD
+
         graph = build_carousel_workflow_graph()
 
         for phase in (
@@ -153,6 +156,7 @@ class TestBuildCarouselWorkflowGraph:
             PHASE_DESIGN,
             PHASE_IMAGES,
             PHASE_FINAL_REVIEW,
+            PHASE_APPROVED_HOLD,
         ):
             assert phase in graph.nodes
 
@@ -300,6 +304,24 @@ class TestWorkflowPhaseNodes:
         assert result["status"] == "draft"
 
     @patch("rag_backend.agents.carousel_workflow_nodes.interrupt")
+    def test_final_review_phase_clears_send_back_target_on_approval(
+        self, mock_interrupt: object
+    ) -> None:
+        """AE-0288: approval clears any stale send_back_target_phase so a later
+        resume from the approved_hold node cannot route on it."""
+        mock_interrupt.return_value = {"action": REVIEW_ACTION_APPROVE}
+
+        result = final_review_phase(
+            _state(
+                rubric_scores={"tone": 90},
+                **{SEND_BACK_TARGET_PHASE_KEY: PHASE_CONTENT},
+            )
+        )
+
+        assert result["quality_passed"] is True
+        assert result[SEND_BACK_TARGET_PHASE_KEY] == ""
+
+    @patch("rag_backend.agents.carousel_workflow_nodes.interrupt")
     def test_final_review_phase_passes_rubric_scores_to_interrupt(
         self, mock_interrupt: object
     ) -> None:
@@ -367,6 +389,56 @@ class TestWorkflowRouting:
 
         assert updates[SEND_BACK_TARGET_PHASE_KEY] == PHASE_OUTLINE
         assert updates["current_phase"] == PHASE_OUTLINE
+        # AE-0288: any revise drops the publish approval in graph state.
+        assert updates["workflow_status"] == "draft"
+        assert updates["quality_passed"] is False
+
+    def test_revise_without_target_drops_publish_approval(self) -> None:
+        """AE-0288: a revise WITHOUT a target still clears the publish approval,
+        so a held carousel cannot keep approved_for_publish during a revise."""
+        updates = review_updates_from_response({"action": REVIEW_ACTION_REVISE})
+
+        assert updates["phase_status"] == "awaiting_human"
+        assert updates["workflow_status"] == "draft"
+        assert updates["quality_passed"] is False
+        assert SEND_BACK_TARGET_PHASE_KEY not in updates
+
+    def testroute_after_hold_send_back_to_target(self) -> None:
+        """AE-0288: a send-back resume from the hold routes to the target phase."""
+        assert (
+            route_after_hold(
+                _state(
+                    phase_status="awaiting_human",
+                    **{SEND_BACK_TARGET_PHASE_KEY: PHASE_CONTENT},
+                )
+            )
+            == PHASE_CONTENT
+        )
+
+    def testroute_after_hold_approve_finalizes(self) -> None:
+        """AE-0288: an approve resume from the hold finalizes (END)."""
+        assert (
+            route_after_hold(
+                _state(
+                    phase_status="approved",
+                    **{SEND_BACK_TARGET_PHASE_KEY: PHASE_CONTENT},
+                )
+            )
+            == "done"
+        )
+
+    def testroute_after_hold_ignores_stale_target_without_revise(self) -> None:
+        """AE-0288: a non-awaiting_human resume must NOT route on a stale
+        send_back_target_phase left from a prior cycle — it finalizes instead."""
+        assert (
+            route_after_hold(
+                _state(
+                    phase_status="approved",
+                    **{SEND_BACK_TARGET_PHASE_KEY: PHASE_OUTLINE},
+                )
+            )
+            == "done"
+        )
 
 
 @pytest.mark.unit

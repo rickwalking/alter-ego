@@ -17,6 +17,7 @@ from rag_backend.application.services.carousel.workflow_state import (
     get_initial_carousel_state,
 )
 from rag_backend.domain.constants.carousel_workflow import (
+    PHASE_APPROVED_HOLD,
     PHASE_STATUS_AWAITING_HUMAN,
     PHASE_STATUS_IN_PROGRESS,
 )
@@ -180,13 +181,21 @@ class CarouselWorkflowEngine:
             getattr(task, "interrupts", ()) for task in pending_tasks
         )
         pending_next = getattr(snapshot, "next", ()) or ()
-        if pending_next:
-            state["current_phase"] = str(pending_next[0])
-        elif pending_tasks:
-            task_name = str(getattr(pending_tasks[0], "name", ""))
-            if task_name:
-                state["current_phase"] = task_name
-        if pending_interrupts or has_task_interrupt:
+        next_phase = (
+            str(pending_next[0])
+            if pending_next
+            else str(getattr(pending_tasks[0], "name", ""))
+            if pending_tasks
+            else ""
+        )
+        # AE-0288: while parked at the internal approved_hold node the graph has a
+        # pending interrupt, but the carousel is approved/publishable — it must NOT
+        # surface as current_phase="approved_hold" or phase_status="awaiting_human".
+        # Keep the stored final_review/approved values the final_review node wrote.
+        held_at_approval = next_phase == PHASE_APPROVED_HOLD
+        if next_phase and not held_at_approval:
+            state["current_phase"] = next_phase
+        if (pending_interrupts or has_task_interrupt) and not held_at_approval:
             state["phase_status"] = PHASE_STATUS_AWAITING_HUMAN
         self._merge_interrupt_review_payload(state, snapshot)
         return state
