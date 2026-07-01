@@ -1,5 +1,6 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import {
+  KNOWN_WORKFLOW_STATUSES,
   resolveWorkflowStatusVisual,
   titlecaseStatus,
 } from "./workflow-status";
@@ -62,12 +63,34 @@ describe("resolveWorkflowStatusVisual", () => {
     expect(resolveWorkflowStatusVisual("").labelKey).toBe("draft");
   });
 
-  it("falls back to neutral cyan with no label key for an unknown status", () => {
-    expect(resolveWorkflowStatusVisual("brand_new_state")).toEqual({
-      variant: "cyan",
-      pulse: false,
-      labelKey: null,
-    });
+  it("throws for an unknown status outside production (AE-0299 drift guard)", () => {
+    expect(() => resolveWorkflowStatusVisual("brand_new_state")).toThrow(
+      /Unknown workflow status/,
+    );
+  });
+
+  it("falls back to neutral cyan in production (last-resort guard)", () => {
+    vi.stubEnv("NODE_ENV", "production");
+    try {
+      expect(resolveWorkflowStatusVisual("brand_new_state")).toEqual({
+        variant: "cyan",
+        pulse: false,
+        labelKey: null,
+      });
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
+  it("covers the complete known status vocabulary (keys drift guard)", () => {
+    const expected = [
+      ...Object.values(WORKFLOW_PHASE_STATUS),
+      "approved_for_publish",
+      "published",
+      "completed",
+      "draft",
+    ].sort();
+    expect([...KNOWN_WORKFLOW_STATUSES].sort()).toEqual(expected);
   });
 
   it("only the in_progress state pulses", () => {

@@ -28,10 +28,10 @@ export function PhaseItem({ phase, isActive, isPast, index }: PhaseItemProps) {
       <div
         className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold transition-colors ${
           isPast
-            ? "bg-[var(--color-primary)] text-[var(--color-text)]"
+            ? "bg-neon-cyan text-bg-deep"
             : isActive
-              ? "border-2 border-[var(--color-primary)] text-[var(--color-primary)]"
-              : "border border-[var(--color-border)] text-[var(--color-text-muted)]"
+              ? "border-2 border-neon-cyan text-neon-cyan"
+              : "border border-neon-card-border text-text-muted"
         }`}
         aria-current={isActive ? "step" : undefined}
       >
@@ -47,10 +47,10 @@ export function PhaseItem({ phase, isActive, isPast, index }: PhaseItemProps) {
         data-testid={`phase-label-${phase}`}
         className={`text-sm ${
           isActive
-            ? "font-medium text-[var(--color-primary)]"
+            ? "font-medium text-neon-cyan"
             : isPast
-              ? "text-[var(--color-text)]"
-              : "text-[var(--color-text-muted)]"
+              ? "text-text-primary"
+              : "text-text-muted"
         }`}
       >
         {t(`progress.phases.${phase}`)}

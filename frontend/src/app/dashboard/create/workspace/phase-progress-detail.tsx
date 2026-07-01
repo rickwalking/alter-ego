@@ -37,29 +37,27 @@ export function PhaseProgressDetail({
   const barWidth = hasProgressBar ? Math.min(100, (current / total) * 100) : 0;
 
   return (
-    <div className="space-y-2 rounded-md border border-[var(--color-border)] bg-[var(--color-background)] p-3">
+    <div className="space-y-2 rounded-md border border-neon-card-border bg-bg-card p-3">
       <p
-        className="text-[var(--color-text)] text-sm"
+        className="text-text-primary text-sm"
         data-testid="phase-progress-label"
       >
         {label}
       </p>
       {detail ? (
-        <p className="text-[var(--color-text-muted)] text-xs italic">
-          {detail}
-        </p>
+        <p className="text-text-muted text-xs italic">{detail}</p>
       ) : null}
       {hasProgressBar ? (
         <div className="space-y-1">
-          <div className="flex justify-between text-[var(--color-text-muted)] text-xs tabular-nums">
+          <div className="flex justify-between text-text-muted text-xs tabular-nums">
             <span>
               {current} / {total}
             </span>
             <span>{percentComplete}%</span>
           </div>
-          <div className="h-1 overflow-hidden rounded-full bg-[var(--color-border)]">
+          <div className="h-1 overflow-hidden rounded-full bg-neon-card-border">
             <div
-              className="h-full bg-[var(--color-primary)] transition-all"
+              className="h-full bg-neon-cyan transition-all"
               style={{ width: `${barWidth}%` }}
               data-testid="phase-progress-bar"
             />

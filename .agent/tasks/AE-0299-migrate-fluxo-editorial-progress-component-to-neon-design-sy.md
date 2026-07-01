@@ -1,6 +1,6 @@
 # AE-0299 — migrate fluxo editorial progress component to neon design system
 
-Status: Ready
+Status: In Development
 Tier: T1
 Priority: Medium
 Type: Refactor
@@ -149,13 +149,53 @@ Ticket created from production troubleshooting session. Confirmed via git histor
 restyled the siblings but skipped the progress sub-tree; two stale tokens proven (purple
 `--color-primary`, undefined `--color-text`).
 
+### 2026-07-01 — development (wave AE-0295..0299)
+
+Token migration (six files, visual-only — logic/data contract untouched):
+- `var(--color-primary)` → `text-neon-cyan`/`bg-neon-cyan` (+ `text-bg-deep`
+  on cyan fills); undefined `var(--color-text)` → `text-text-primary`;
+  `--color-text-muted` → `text-text-muted`; `--color-border`/`--color-background`
+  → `border-neon-card-border` + `bg-bg-card` (theme tokens, matching siblings).
+- `bg-destructive` slide icon → `bg-neon-red text-white`; ErrorCard → `NeonAlert
+  variant="destructive"`; stalled warning → amber Neon treatment
+  (`NEON_AMBER_DIM`/`NEON_AMBER` constants).
+- Status routed through `WorkflowStatusBadge` (AE-0284 map): the active header
+  renders the single `role="status"` badge (`in_progress`, cyan pulse dot with
+  `motion-reduce:animate-none`); CompleteCard renders the `completed` (green)
+  badge; phase names stay plain text (status never by colour alone).
+- `resolveWorkflowStatusVisual` hardened structurally: map typed
+  `Record<KnownWorkflowStatus, …>` (compile-time exhaustive) + exported
+  `KNOWN_WORKFLOW_STATUSES` keys test + unknown status **throws outside
+  production** (cyan fallback = prod-only last resort). Existing unknown-status
+  tests updated to the new contract.
+- `Slide {n}` + the slide-list aria-label i18n'd (en+pt:
+  `create.progress.slideLabel` / `slidesAria`).
+
 ## Files Touched
 
-Pending.
+- `frontend/src/app/dashboard/create/workspace/create-workflow-progress.tsx` (unchanged — no
+  legacy tokens found; verified by the eradication test)
+- `frontend/src/app/dashboard/create/workspace/{create-carousel-progress,phase-item,phase-progress-detail,slide-progress-grid,progress-icons}.tsx`
+- `frontend/src/app/dashboard/create/workspace/workflow-status.ts` (+ tests)
+- `frontend/src/app/dashboard/create/workspace/workflow-status-badge.test.tsx` (updated contract)
+- `frontend/src/app/dashboard/create/workspace/create-carousel-progress.test.tsx` (new)
+- `frontend/src/i18n/locales/{en,pt}.json`
 
 ## Test Evidence
 
-Pending.
+- `npx vitest run src/app/dashboard/create/workspace` — **53 passed**: legacy-token
+  eradication guard over all six files (`var(--color-primary)`,
+  `var(--color-text)]`, `bg/text-destructive`, `bg/text-warning` = 0 hits),
+  exactly one `role="status"` live region per panel state, pulse dot carries
+  `motion-reduce:animate-none`, error state = `role="alert"` with message,
+  checklist/progress-bar behavior unchanged, localized slide labels, known-status
+  vocabulary keys test, unknown-status throws (dev/test) + prod cyan fallback.
+- `npm run typecheck` clean; `bash scripts/ci/gates.sh frontend:lint` PASS
+  (incl. Tailwind theme tree-shake + responsive-dashboard lint).
+- Visual verification (AE-0282): before screenshots exist
+  (`create-workspace-status-1440.png`, `create-status-v2-1440.png`); after
+  screenshots require a live in-progress workflow run — flagged for the QA
+  round / PR review rather than fabricated.
 
 ## QA Report
 

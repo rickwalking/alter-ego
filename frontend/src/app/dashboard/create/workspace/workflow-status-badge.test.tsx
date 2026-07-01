@@ -27,9 +27,16 @@ describe("WorkflowStatusBadge", () => {
     );
   });
 
-  it("titlecases an unknown status as its own label", () => {
-    render(<WorkflowStatusBadge status="brand_new_state" />);
-    expect(screen.getByRole("status")).toHaveTextContent("Brand New State");
+  it("titlecases an unknown status as its own label (production guard)", () => {
+    // Outside production an unknown status throws (AE-0299 drift guard);
+    // the titlecase fallback is the production-only last resort.
+    vi.stubEnv("NODE_ENV", "production");
+    try {
+      render(<WorkflowStatusBadge status="brand_new_state" />);
+      expect(screen.getByRole("status")).toHaveTextContent("Brand New State");
+    } finally {
+      vi.unstubAllEnvs();
+    }
   });
 
   it("keeps the status in the accessible name on a label override", () => {

@@ -269,7 +269,9 @@
         "generating_images": "Generating images...",
         "exporting": "Exporting slides...",
         "completed": "Complete"
-      }
+      },
+      "slideLabel": "Slide {number}",
+      "slidesAria": "Per-slide image generation status"
     },
     "preview": {
       "viewBlog": "View Blog Post",

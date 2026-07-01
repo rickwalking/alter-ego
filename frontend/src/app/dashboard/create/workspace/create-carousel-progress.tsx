@@ -7,9 +7,17 @@ import {
   type SlideGenerationStatus,
   STALLED_THRESHOLD_MS,
 } from "@/constants/create";
+import { NEON_AMBER, NEON_AMBER_DIM } from "@/constants/neon";
+import { WORKFLOW_PHASE_STATUS } from "@/constants/workflow";
+import {
+  NeonAlert,
+  NeonAlertDescription,
+} from "@/components/molecules/neon-alert";
 import { PhaseItem } from "./phase-item";
 import { PhaseProgressDetail } from "./phase-progress-detail";
-import { CheckIcon, ErrorIcon, Spinner, WarningIcon } from "./progress-icons";
+import { ErrorIcon, WarningIcon } from "./progress-icons";
+import { WorkflowStatusBadge } from "./workflow-status-badge";
+import { WORKFLOW_STATUS_COMPLETED } from "./workflow-status";
 
 interface PhaseProgressSlide {
   number: number;
@@ -54,10 +62,12 @@ function resolvePipelinePhaseLabel(
 function CompleteCard() {
   const t = useTranslations("create");
   return (
-    <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] p-4">
-      <div className="flex items-center gap-2 text-[var(--color-primary)]">
-        <CheckIcon />
-        <span className="font-medium">{t("progress.complete")}</span>
+    <div className="rounded-lg border border-neon-card-border bg-bg-card p-4">
+      <div className="flex items-center gap-2">
+        <WorkflowStatusBadge status={WORKFLOW_STATUS_COMPLETED} />
+        <span className="font-medium text-text-primary">
+          {t("progress.complete")}
+        </span>
       </div>
     </div>
   );
@@ -66,19 +76,19 @@ function CompleteCard() {
 function ErrorCard({ errorMessage }: { errorMessage?: string | null }) {
   const t = useTranslations("create");
   return (
-    <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-4">
-      <div className="flex items-start gap-2 text-destructive">
+    <NeonAlert variant="destructive">
+      <div className="flex items-start gap-2">
         <ErrorIcon />
         <div className="flex-1 space-y-1">
           <span className="font-medium">{t("progress.failed")}</span>
           {errorMessage ? (
-            <p className="break-words font-mono text-destructive/80 text-xs">
+            <NeonAlertDescription className="break-words font-mono text-xs">
               {errorMessage}
-            </p>
+            </NeonAlertDescription>
           ) : null}
         </div>
       </div>
-    </div>
+    </NeonAlert>
   );
 }
 
@@ -91,19 +101,19 @@ function ProgressHeader({
 }) {
   const t = useTranslations("create");
   return (
-    <div className="flex items-start justify-between gap-3 border-b border-[var(--color-border)] pb-3">
-      <div className="flex items-center gap-2">
-        <Spinner />
-        <div className="flex flex-col">
-          <span className="text-[var(--color-text-muted)] text-xs uppercase tracking-wide">
-            {t("progress.currentlyProcessing")}
-          </span>
-          <span className="font-medium text-[var(--color-primary)] text-sm">
+    <div className="flex items-start justify-between gap-3 border-b border-neon-card-border pb-3">
+      <div className="flex flex-col gap-1">
+        <span className="text-text-muted text-xs uppercase tracking-wide">
+          {t("progress.currentlyProcessing")}
+        </span>
+        <div className="flex flex-wrap items-center gap-2">
+          <WorkflowStatusBadge status={WORKFLOW_PHASE_STATUS.IN_PROGRESS} />
+          <span className="font-medium text-sm text-text-primary">
             {phaseLabel}
           </span>
         </div>
       </div>
-      <span className="text-[var(--color-text-muted)] text-xs tabular-nums">
+      <span className="text-text-muted text-xs tabular-nums">
         {formatElapsed(stalledSeconds)}
       </span>
     </div>
@@ -113,7 +123,10 @@ function ProgressHeader({
 function StalledWarning({ stalledSeconds }: { stalledSeconds: number }) {
   const t = useTranslations("create");
   return (
-    <div className="flex items-start gap-2 rounded-md border border-warning/30 bg-warning/10 p-2 text-warning-foreground text-xs">
+    <div
+      className="flex items-start gap-2 rounded-md p-2 text-xs"
+      style={{ background: NEON_AMBER_DIM, color: NEON_AMBER }}
+    >
       <WarningIcon />
       <span>
         {t("progress.stalled", { seconds: Math.floor(stalledSeconds) })}
@@ -141,7 +154,7 @@ function ActiveProgress({
   const phaseLabel = resolvePipelinePhaseLabel(currentPhase, t);
 
   return (
-    <div className="space-y-3 rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] p-4">
+    <div className="space-y-3 rounded-lg border border-neon-card-border bg-bg-card p-4">
       <ProgressHeader phaseLabel={phaseLabel} stalledSeconds={stalledSeconds} />
 
       {isStalled ? <StalledWarning stalledSeconds={stalledSeconds} /> : null}
