@@ -131,6 +131,7 @@ All architecturally significant decisions are documented as ADRs in `docs/decisi
 - [ADR-010: Suspense-based data loading (Server Components + TanStack Query + React 19 use())](docs/decisions/0010-suspense-data-loading.md)
 - [ADR-011: Canonical Distribution Home for Caption + LinkedIn (blog_posts.distribution JSONB)](docs/decisions/0011-canonical-distribution-home.md)
 - [ADR-012: Production uses Alembic Migrations on Deploy (no create_all)](docs/decisions/0012-prod-migrations-on-deploy.md)
+- [ADR-013: Split Blog-Post Reads into a Public API and a Private/Admin API](docs/decisions/0013-public-private-blog-post-api.md) *(proposed)*
 
 **ADR Lifecycle:** `proposed` → `accepted` → `deprecated` (superseded by newer ADR)
 **Format:** MADR 4.x | **Naming:** `NNNN-short-title.md` | **Review:** Annually
