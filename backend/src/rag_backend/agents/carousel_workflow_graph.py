@@ -5,6 +5,7 @@ from __future__ import annotations
 from langgraph.graph import END, StateGraph
 
 from rag_backend.agents.carousel_workflow_nodes import (
+    approved_hold_phase,
     brief_phase,
     content_phase_async,
     design_phase_async,
@@ -17,6 +18,8 @@ from rag_backend.application.services.carousel.workflow_state import (
     CarouselWorkflowState,
 )
 from rag_backend.domain.constants.carousel_workflow import (
+    FINAL_REVIEW_SEND_BACK_PHASES,
+    PHASE_APPROVED_HOLD,
     PHASE_BRIEF,
     PHASE_CONTENT,
     PHASE_DESIGN,
@@ -31,6 +34,7 @@ from rag_backend.domain.constants.carousel_workflow import (
 
 _ROUTE_APPROVED = "approved"
 _ROUTE_RETRY = "retry"
+_ROUTE_DONE = "done"
 
 _PHASE_APPROVAL_FIELDS: dict[str, str] = {
     PHASE_RESEARCH: "research_approved",
@@ -81,6 +85,27 @@ def route_after_final_review(state: CarouselWorkflowState) -> str:
     return _ROUTE_RETRY
 
 
+def route_after_hold(state: CarouselWorkflowState) -> str:
+    """Route a resumed approved-hold node (AE-0288).
+
+    A send-back resume (revise + ``target_phase``) sets ``phase_status`` to
+    ``awaiting_human`` plus a valid ``send_back_target_phase`` → return to that
+    phase to regenerate it. Any other resume (an explicit approve/finalize) →
+    END. The ``awaiting_human`` guard ignores a stale ``send_back_target_phase``
+    from a prior cycle, so a finalize resume cannot re-trigger a send-back.
+
+    In normal operation nothing resumes a held carousel with ``approve`` —
+    publishing is a separate endpoint that never touches the graph — so a held
+    carousel stays parked here and re-drivable; the END path is only the explicit
+    finalize.
+    """
+    if state.get("phase_status") == PHASE_STATUS_AWAITING_HUMAN:
+        target = state.get(SEND_BACK_TARGET_PHASE_KEY)
+        if isinstance(target, str) and target in FINAL_REVIEW_SEND_BACK_PHASES:
+            return target
+    return _ROUTE_DONE
+
+
 def build_carousel_workflow_graph() -> StateGraph:
     """Build the 7-phase carousel workflow graph."""
     graph = StateGraph(CarouselWorkflowState)
@@ -91,6 +116,7 @@ def build_carousel_workflow_graph() -> StateGraph:
     graph.add_node(PHASE_DESIGN, design_phase_async)
     graph.add_node(PHASE_IMAGES, images_phase_async)
     graph.add_node(PHASE_FINAL_REVIEW, final_review_phase)
+    graph.add_node(PHASE_APPROVED_HOLD, approved_hold_phase)
 
     graph.set_entry_point(PHASE_BRIEF)
     graph.add_edge(PHASE_BRIEF, PHASE_RESEARCH)
@@ -123,8 +149,20 @@ def build_carousel_workflow_graph() -> StateGraph:
         PHASE_FINAL_REVIEW,
         route_after_final_review,
         {
-            _ROUTE_APPROVED: END,
+            _ROUTE_APPROVED: PHASE_APPROVED_HOLD,
             _ROUTE_RETRY: PHASE_FINAL_REVIEW,
+            PHASE_RESEARCH: PHASE_RESEARCH,
+            PHASE_OUTLINE: PHASE_OUTLINE,
+            PHASE_CONTENT: PHASE_CONTENT,
+            PHASE_DESIGN: PHASE_DESIGN,
+            PHASE_IMAGES: PHASE_IMAGES,
+        },
+    )
+    graph.add_conditional_edges(
+        PHASE_APPROVED_HOLD,
+        route_after_hold,
+        {
+            _ROUTE_DONE: END,
             PHASE_RESEARCH: PHASE_RESEARCH,
             PHASE_OUTLINE: PHASE_OUTLINE,
             PHASE_CONTENT: PHASE_CONTENT,

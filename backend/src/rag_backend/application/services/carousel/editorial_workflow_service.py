@@ -45,6 +45,7 @@ from rag_backend.application.services.image_provider_registry import (
 from rag_backend.application.services.notification_service import NotificationService
 from rag_backend.application.services.workflow_event_service import WorkflowEventService
 from rag_backend.domain.constants.carousel_workflow import (
+    CAROUSEL_EDITORIAL_WORKFLOW_STATUS_DRAFT,
     PHASE_IMAGES,
     PHASE_RESEARCH,
     PHASE_STATUS_AWAITING_HUMAN,
@@ -54,6 +55,7 @@ from rag_backend.domain.constants.carousel_workflow import (
     REVIEW_ACTION_REVISE,
     STRUCTURED_FEEDBACK_KEY,
     WORKFLOW_METADATA_EDITORIAL_7_PHASE,
+    WORKFLOW_STATUS_APPROVED_FOR_PUBLISH,
     WORKFLOW_TRACE_PHASE_HUMAN_REVIEW,
     WORKFLOW_TRACE_PHASE_REVIEW,
 )
@@ -217,6 +219,7 @@ class EditorialWorkflowService:
                 action=params.action,
                 prior=prior,
                 feedback=params.feedback,
+                structured_feedback=params.structured_feedback,
             ),
         )
         trace = create_workflow_trace(
@@ -373,6 +376,18 @@ class EditorialWorkflowService:
             "current_phase": current_phase,
             "phase_status": PHASE_STATUS_IN_PROGRESS,
         }
+        # AE-0288: resuming an already-approved carousel (a final-review
+        # send-back) must drop the DB publish lock synchronously — before the
+        # 202 returns — so a concurrent publish cannot ship stale content while
+        # the workflow re-runs in the background. The later final_review re-gate
+        # restores approved_for_publish once the revision is re-approved.
+        if (
+            str((prior or {}).get("workflow_status", ""))
+            == WORKFLOW_STATUS_APPROVED_FOR_PUBLISH
+        ):
+            in_progress_state["workflow_status"] = (
+                CAROUSEL_EDITORIAL_WORKFLOW_STATUS_DRAFT
+            )
         await self._sync_project_phase(db, project_id, in_progress_state)
         from rag_backend.application.services.carousel.editorial_workflow_support import (
             publish_workflow_phase_change,

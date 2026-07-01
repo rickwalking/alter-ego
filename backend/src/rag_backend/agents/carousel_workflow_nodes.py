@@ -12,6 +12,7 @@ from rag_backend.application.services.carousel.workflow_state import (
     CarouselWorkflowState,
 )
 from rag_backend.domain.constants.carousel_workflow import (
+    CAROUSEL_EDITORIAL_WORKFLOW_STATUS_DRAFT,
     CAROUSEL_WORKFLOW_PHASES,
     INTERRUPT_TYPE_CONTENT_REVIEW,
     INTERRUPT_TYPE_DESIGN_REVIEW,
@@ -106,9 +107,17 @@ def review_updates_from_response(
         return {**edit_updates, "phase_status": PHASE_STATUS_APPROVED}
     if action not in {REVIEW_ACTION_REVISE, REVIEW_ACTION_REJECT}:
         return {"phase_status": PHASE_STATUS_AWAITING_HUMAN}
+    # AE-0288: ANY revise/reject drops the publish approval in the GRAPH STATE.
+    # Otherwise get_state copies a stale approved_for_publish back to the DB on the
+    # resume sync, reopening a stale-publish window for the whole revision period.
+    # This must cover a revise WITHOUT a target from a held carousel too (a stale
+    # send_back_target_phase could still route it back to an earlier phase). The
+    # later final_review re-approval restores approved_for_publish.
     updates: dict[str, object] = {
         **edit_updates,
         "phase_status": PHASE_STATUS_AWAITING_HUMAN,
+        "workflow_status": CAROUSEL_EDITORIAL_WORKFLOW_STATUS_DRAFT,
+        "quality_passed": False,
     }
     structured = review.get(STRUCTURED_FEEDBACK_KEY)
     if isinstance(structured, dict):
@@ -342,7 +351,7 @@ def final_review_phase(state: CarouselWorkflowState) -> dict[str, object]:
         },
     )
     approved = review_update.get("phase_status") == PHASE_STATUS_APPROVED
-    return {
+    result: dict[str, object] = {
         **review_update,
         "quality_passed": approved,
         "current_phase": PHASE_FINAL_REVIEW,
@@ -353,10 +362,38 @@ def final_review_phase(state: CarouselWorkflowState) -> dict[str, object]:
         ),
         "status": "draft",
     }
+    if approved:
+        # AE-0288: clear any send-back target consumed in a prior cycle so it
+        # can't route a later resume from the approved_hold node on a stale value.
+        result[SEND_BACK_TARGET_PHASE_KEY] = ""
+    return result
+
+
+def approved_hold_phase(state: CarouselWorkflowState) -> dict[str, object]:
+    """Hold an approved carousel at an interrupt so it stays resumable (AE-0288).
+
+    After final-review approval the graph parks here instead of reaching END,
+    keeping ``quality_passed`` / ``workflow_status=approved_for_publish`` intact.
+    A human send-back resume (revise + ``structured_feedback.target_phase``)
+    routes the workflow back to the targeted phase to regenerate it; any other
+    resume finalizes the run. While parked here the checkpoint still reports
+    ``current_phase=final_review`` / ``phase_status=approved`` (see
+    ``CarouselWorkflowEngine.get_state``), so the carousel remains publishable.
+    """
+    return await_human_review(
+        state,
+        PHASE_FINAL_REVIEW,
+        INTERRUPT_TYPE_FINAL_REVIEW,
+        {
+            "rubric_scores": state.get("rubric_scores") or {},
+            "message": "Approved for publish — awaiting publish or revision.",
+        },
+    )
 
 
 __all__ = [
     "_CONFIG_ARTIFACT_RUNNER",
+    "approved_hold_phase",
     "artifact_runner_from_config",
     "brief_phase",
     "content_phase_async",

@@ -38,6 +38,7 @@ from rag_backend.domain.constants.carousel_workflow import (
     ERR_PERSONA_SCORE_TOO_LOW,
     ERR_PRESENTATION_VALIDATION_BLOCKED,
     ERR_REVISION_CAP_EXCEEDED,
+    FINAL_REVIEW_SEND_BACK_PHASES,
     PERSONA_SCORE_OVERALL_KEY,
     PHASE_CONTENT,
     PHASE_STATUS_AWAITING_HUMAN,
@@ -45,6 +46,7 @@ from rag_backend.domain.constants.carousel_workflow import (
     REVIEW_ACTION_REVISE,
     SLIDE_DRAFT_TEXT_KEY,
     STRUCTURED_FEEDBACK_EDITED_TEXT_KEY,
+    STRUCTURED_FEEDBACK_TARGET_PHASE_KEY,
 )
 from rag_backend.domain.constants.persona import VOICE_MATCH_MIN_SCORE
 from rag_backend.domain.constants.workflow_validation import CONTENT_TYPE_CAROUSEL
@@ -81,6 +83,7 @@ class ResumeContext(TypedDict):
     action: str
     prior: CarouselWorkflowState | None
     feedback: str | None
+    structured_feedback: dict[str, object] | None
 
 
 def validate_content_approve_persona_score(prior: CarouselWorkflowState) -> None:
@@ -142,7 +145,14 @@ async def record_feedback_correction(
     """Persist reviewer edits for feedback learning (CP-007)."""
     if ctx.db is None or ctx.persona is None or not ctx.feedback:
         return
-    phase = str(ctx.prior.get("current_phase", ""))
+    # AE-0288: on a final-review send-back the correction belongs to the target
+    # phase (e.g. content), not the current checkpoint phase (final_review).
+    target = _resume_target_phase(ctx.structured_feedback)
+    phase = (
+        target
+        if target in FINAL_REVIEW_SEND_BACK_PHASES
+        else str(ctx.prior.get("current_phase", ""))
+    )
     original = _feedback_original_text(ctx.prior, phase)
     corrected = _feedback_corrected_text(ctx.feedback, ctx.structured_feedback)
     if corrected.strip() == original.strip():
@@ -204,8 +214,19 @@ async def prepare_resume_workflow(
                 project_id=context["project_id"],
                 prior=prior,
                 feedback=context["feedback"],
+                target_phase=_resume_target_phase(context.get("structured_feedback")),
             ),
         )
+
+
+def _resume_target_phase(
+    structured_feedback: dict[str, object] | None,
+) -> str | None:
+    """Extract a final-review send-back ``target_phase`` from structured feedback."""
+    if not isinstance(structured_feedback, dict):
+        return None
+    target = structured_feedback.get(STRUCTURED_FEEDBACK_TARGET_PHASE_KEY)
+    return target if isinstance(target, str) else None
 
 
 async def stream_workflow_phase_updates(

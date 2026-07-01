@@ -369,6 +369,66 @@ class TestEditorialWorkflowReviseAndFailure:
         )
         assert response.status_code == 202
 
+    @pytest.mark.asyncio
+    async def test_send_back_files_feedback_under_content_and_preserves_images(
+        self, client: AsyncClient
+    ) -> None:
+        """AE-0288: a final-review send-back to content files the reviewer note
+        under ``content`` (not ``final_review``) so the content node's
+        regeneration notes pick it up, and leaves the generated images untouched.
+
+        (Graph re-entry from an approved/END checkpoint is covered by the engine
+        unit test; the seed harness keeps the real interrupt at research, so
+        this asserts the API-layer feedback keying + image preservation.)
+        """
+        images = [f"/app/output/carousels/x/images/slide_{n}.jpg" for n in range(1, 7)]
+        editor = await create_user("sendbackimg@example.com", UserRole.EDITOR)
+        project_id = await create_carousel(editor, is_public=False)
+        await seed_workflow_phase(
+            client,
+            project_id,
+            phase=PHASE_FINAL_REVIEW,
+            phase_status=PHASE_STATUS_AWAITING_HUMAN,
+            extra_state={
+                "rubric_scores": {"overall": 80},
+                "outline": [{"slide_index": 1, "title": "Intro", "key_points": []}],
+                "slide_drafts": [{"draft_text": "Repetitive copy"}],
+                "image_assets": images,
+            },
+        )
+        version = await get_lock_version(project_id)
+
+        response = await client.post(
+            f"/api/carousels/{project_id}/workflow/resume",
+            json={
+                "action": "revise",
+                "feedback": "Slides repeat; diversify per the research",
+                "expected_version": version,
+                "structured_feedback": {"target_phase": PHASE_CONTENT},
+            },
+            headers=auth_header(editor),
+        )
+        assert response.status_code == 202
+        await drain_background_tasks()
+        state_response = await client.get(
+            f"/api/carousels/{project_id}/workflow/state",
+            headers=auth_header(editor),
+        )
+        assert state_response.status_code == 200
+        payload = state_response.json()
+
+        phase_feedback = payload.get("phase_feedback", {})
+        assert isinstance(phase_feedback, dict)
+        # The note is filed under content (the target), not final_review.
+        assert "slides repeat; diversify per the research" in (
+            phase_feedback.get(PHASE_CONTENT) or []
+        )
+        assert phase_feedback.get(PHASE_FINAL_REVIEW) in (None, [])
+        revision_counts = payload.get("revision_count", {})
+        assert int(revision_counts.get(PHASE_CONTENT, 0)) >= 1
+        # Images survive a content-only send-back.
+        assert payload.get("image_assets") == images
+
 
 class TestAssignedReviewerPreviewAccess:
     """Scenario: Assigned reviewer can preview draft blog."""

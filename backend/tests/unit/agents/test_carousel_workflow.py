@@ -181,6 +181,211 @@ class TestCarouselWorkflowEngine:
                 })
                 assert snapshot_after.next == (PHASE_OUTLINE,)
 
+    @pytest.mark.asyncio
+    async def test_paused_final_review_send_back_routes_to_content(self) -> None:
+        """AE-0288: from a carousel paused at the final-review gate, a revise with
+        structured_feedback.target_phase=content routes the workflow back into the
+        content phase (the reliable, supported send-back path).
+
+        NB: this works because the graph is genuinely suspended at final_review's
+        interrupt. Re-driving a *terminated* (already-approved) graph is NOT
+        reliably supported by LangGraph and is intentionally not attempted here.
+        """
+        from pathlib import Path
+        from tempfile import TemporaryDirectory
+
+        from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
+
+        from rag_backend.domain.constants.carousel_workflow import (
+            PHASE_CONTENT,
+            PHASE_STATUS_AWAITING_HUMAN,
+            REVIEW_ACTION_REVISE,
+            STRUCTURED_FEEDBACK_KEY,
+            STRUCTURED_FEEDBACK_TARGET_PHASE_KEY,
+        )
+
+        with TemporaryDirectory() as tmp_dir:
+            db_path = Path(tmp_dir) / "workflow.sqlite"
+            async with AsyncSqliteSaver.from_conn_string(str(db_path)) as checkpointer:
+                engine = CarouselWorkflowEngine(checkpointer=checkpointer)
+                project_id = "send-back-paused"
+                config = {"configurable": {"thread_id": project_id}}
+                await engine.start(
+                    project_id,
+                    {"topic": "AI"},
+                    research_findings=[{"source": "report", "key_points": ["risk"]}],
+                )
+                # Approve research, outline, content, design, images -> the graph
+                # pauses awaiting human review at the final_review gate.
+                for _ in range(5):
+                    await engine.resume(
+                        project_id,
+                        {"action": REVIEW_ACTION_APPROVE, "reviewer_id": "user-1"},
+                    )
+                paused = await engine._app.aget_state(config)
+                assert paused.next == (PHASE_FINAL_REVIEW,)
+
+                await engine.resume(
+                    project_id,
+                    {
+                        "action": REVIEW_ACTION_REVISE,
+                        "reviewer_id": "user-1",
+                        "feedback": "Slides repeat; diversify per the research.",
+                        STRUCTURED_FEEDBACK_KEY: {
+                            STRUCTURED_FEEDBACK_TARGET_PHASE_KEY: PHASE_CONTENT
+                        },
+                    },
+                )
+
+                reopened = await engine._app.aget_state(config)
+                assert reopened.next == (PHASE_CONTENT,)
+                assert (
+                    reopened.values["phase_status"] == PHASE_STATUS_AWAITING_HUMAN
+                )
+
+    @pytest.mark.asyncio
+    async def test_approved_carousel_holds_and_send_back_regenerates(self) -> None:
+        """AE-0288: after final-review approval the graph parks at the internal
+        approved_hold node (NOT END), stays publishable, and a send-back from the
+        hold re-enters content so it regenerates exactly once with the publish
+        lock dropped in graph state.
+
+        get_state must hide the hold node: it reports current_phase=final_review /
+        phase_status=approved (not approved_hold / awaiting_human), so the carousel
+        stays publishable while held.
+        """
+        from pathlib import Path
+        from tempfile import TemporaryDirectory
+
+        from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
+
+        from rag_backend.domain.constants.carousel_workflow import (
+            CAROUSEL_EDITORIAL_WORKFLOW_STATUS_DRAFT,
+            PHASE_APPROVED_HOLD,
+            PHASE_CONTENT,
+            PHASE_STATUS_APPROVED,
+            PHASE_STATUS_AWAITING_HUMAN,
+            REVIEW_ACTION_REVISE,
+            STRUCTURED_FEEDBACK_KEY,
+            STRUCTURED_FEEDBACK_TARGET_PHASE_KEY,
+        )
+
+        class _CountingRunner:
+            """Minimal artifact runner: regenerates content drafts on each run."""
+
+            def __init__(self) -> None:
+                self.content_runs = 0
+
+            async def ensure_for_phase(
+                self, state: CarouselWorkflowState
+            ) -> dict[str, object]:
+                if state.get("current_phase") == PHASE_CONTENT:
+                    self.content_runs += 1
+                    return {
+                        "slide_drafts": [{"draft_text": f"gen-{self.content_runs}"}]
+                    }
+                return {}
+
+        runner = _CountingRunner()
+        with TemporaryDirectory() as tmp_dir:
+            db_path = Path(tmp_dir) / "workflow.sqlite"
+            async with AsyncSqliteSaver.from_conn_string(str(db_path)) as checkpointer:
+                engine = CarouselWorkflowEngine(
+                    checkpointer=checkpointer, artifact_runner=runner
+                )
+                project_id = "hold-project"
+                config = {"configurable": {"thread_id": project_id}}
+                await engine.start(
+                    project_id,
+                    {"topic": "AI"},
+                    research_findings=[{"source": "report", "key_points": ["risk"]}],
+                )
+                # Approve research, outline, content, design, images, final_review
+                # -> the graph parks at approved_hold (it does NOT reach END).
+                for _ in range(6):
+                    await engine.resume(
+                        project_id,
+                        {"action": REVIEW_ACTION_APPROVE, "reviewer_id": "user-1"},
+                    )
+                snapshot = await engine._app.aget_state(config)
+                assert snapshot.next == (PHASE_APPROVED_HOLD,)
+
+                held = await engine.get_state(project_id)
+                assert held is not None
+                assert held["current_phase"] == PHASE_FINAL_REVIEW
+                assert held["phase_status"] == PHASE_STATUS_APPROVED
+                assert (
+                    held["workflow_status"] == WORKFLOW_STATUS_APPROVED_FOR_PUBLISH
+                )
+                assert held["quality_passed"] is True
+
+                runs_before = runner.content_runs
+                await engine.resume(
+                    project_id,
+                    {
+                        "action": REVIEW_ACTION_REVISE,
+                        "reviewer_id": "user-1",
+                        "feedback": "Slides repeat; diversify per the research.",
+                        STRUCTURED_FEEDBACK_KEY: {
+                            STRUCTURED_FEEDBACK_TARGET_PHASE_KEY: PHASE_CONTENT
+                        },
+                    },
+                )
+                after = await engine._app.aget_state(config)
+                assert after.next == (PHASE_CONTENT,)
+                # Content regenerated exactly once on the send-back.
+                assert runner.content_runs == runs_before + 1
+
+                reentered = await engine.get_state(project_id)
+                assert reentered is not None
+                assert reentered["current_phase"] == PHASE_CONTENT
+                assert reentered["phase_status"] == PHASE_STATUS_AWAITING_HUMAN
+                # The publish lock must be dropped in graph state for the whole
+                # revision window (so the resume sync writes draft to the DB).
+                assert (
+                    reentered["workflow_status"]
+                    == CAROUSEL_EDITORIAL_WORKFLOW_STATUS_DRAFT
+                )
+                assert reentered["quality_passed"] is False
+
+    @pytest.mark.asyncio
+    async def test_approve_resume_from_hold_finalizes_to_end(self) -> None:
+        """AE-0288: an explicit approve resume of a held carousel finalizes the
+        graph (END). Normal UX never does this (publishing is a separate
+        endpoint), but the finalize path must be deterministic."""
+        from pathlib import Path
+        from tempfile import TemporaryDirectory
+
+        from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
+
+        from rag_backend.domain.constants.carousel_workflow import PHASE_APPROVED_HOLD
+
+        with TemporaryDirectory() as tmp_dir:
+            db_path = Path(tmp_dir) / "workflow.sqlite"
+            async with AsyncSqliteSaver.from_conn_string(str(db_path)) as checkpointer:
+                engine = CarouselWorkflowEngine(checkpointer=checkpointer)
+                project_id = "finalize-project"
+                config = {"configurable": {"thread_id": project_id}}
+                await engine.start(
+                    project_id,
+                    {"topic": "AI"},
+                    research_findings=[{"source": "report", "key_points": ["risk"]}],
+                )
+                for _ in range(6):
+                    await engine.resume(
+                        project_id,
+                        {"action": REVIEW_ACTION_APPROVE, "reviewer_id": "user-1"},
+                    )
+                assert (
+                    await engine._app.aget_state(config)
+                ).next == (PHASE_APPROVED_HOLD,)
+
+                await engine.resume(
+                    project_id,
+                    {"action": REVIEW_ACTION_APPROVE, "reviewer_id": "user-1"},
+                )
+                assert (await engine._app.aget_state(config)).next == ()
+
     def test_merge_interrupt_review_payload_exposes_gate_artifacts(self) -> None:
         """Given pending interrupt payload, when merging state, then review data is visible."""
         from types import SimpleNamespace

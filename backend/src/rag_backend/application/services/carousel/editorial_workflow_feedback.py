@@ -6,6 +6,23 @@ from rag_backend.agents.carousel_workflow import CarouselWorkflowEngine
 from rag_backend.application.services.carousel.editorial_workflow_types import (
     PhaseFeedbackPersistParams,
 )
+from rag_backend.domain.constants.carousel_workflow import (
+    FINAL_REVIEW_SEND_BACK_PHASES,
+)
+
+
+def _resolve_feedback_phase(params: PhaseFeedbackPersistParams) -> str:
+    """Return the phase the note belongs to.
+
+    On a final-review send-back the reviewer targets an earlier phase
+    (e.g. ``content``); the note must be filed there so that phase's
+    regeneration notes pick it up — not under the current ``final_review``
+    phase (AE-0288).
+    """
+    target = params.target_phase
+    if target in FINAL_REVIEW_SEND_BACK_PHASES:
+        return str(target)
+    return str(params.prior.get("current_phase", ""))
 
 
 async def read_checkpoint_phase(
@@ -28,7 +45,7 @@ async def persist_phase_feedback(
     trimmed = (params.feedback or "").strip()
     if not trimmed:
         return
-    phase = str(params.prior.get("current_phase", ""))
+    phase = _resolve_feedback_phase(params)
     if not phase:
         return
     phase_feedback = dict(params.prior.get("phase_feedback") or {})
