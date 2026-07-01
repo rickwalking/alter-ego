@@ -178,9 +178,7 @@ class TestPublicList:
         assert [item["id"] for item in body["items"]] == [new, old]
 
     @pytest.mark.asyncio
-    async def test_list_ignores_client_status_filter(
-        self, client: AsyncClient
-    ) -> None:
+    async def test_list_ignores_client_status_filter(self, client: AsyncClient) -> None:
         await _insert_post(status_value=BlogPostStatus.DRAFT.value)
 
         response = await client.get(f"{PUBLIC_LIST_URL}?status=draft")

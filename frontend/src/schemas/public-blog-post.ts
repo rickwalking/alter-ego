@@ -35,6 +35,3 @@ export type PublicBlogPostSummary = z.infer<typeof publicBlogPostSummarySchema>;
 export type PublicBlogPostResponse = z.infer<
   typeof publicBlogPostResponseSchema
 >;
-export type PublicBlogPostListResponse = z.infer<
-  typeof publicBlogPostListResponseSchema
->;

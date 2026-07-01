@@ -32,12 +32,16 @@ class TestDeleteProjectDetachesBlogRow:
         created = await carousel_repository.create_project(_project_with_blog())
 
         row = (
-            await db_session.execute(
-                select(BlogPostModel).where(
-                    BlogPostModel.project_id == str(created.id)
+            (
+                await db_session.execute(
+                    select(BlogPostModel).where(
+                        BlogPostModel.project_id == str(created.id)
+                    )
                 )
             )
-        ).scalars().one()
+            .scalars()
+            .one()
+        )
         assert row.origin == BlogPostOrigin.CAROUSEL.value
         assert row.status == BlogPostStatus.PUBLISHED.value
         row.published_at = datetime.now(UTC)
@@ -50,10 +54,14 @@ class TestDeleteProjectDetachesBlogRow:
 
         db_session.expire_all()
         row_after = (
-            await db_session.execute(
-                select(BlogPostModel).where(BlogPostModel.id == row_id)
+            (
+                await db_session.execute(
+                    select(BlogPostModel).where(BlogPostModel.id == row_id)
+                )
             )
-        ).scalars().one()
+            .scalars()
+            .one()
+        )
         assert row_after.status == BlogPostStatus.DRAFT.value
         assert row_after.published_at is None
         assert row_after.submitted_for_review_at is None
@@ -64,12 +72,16 @@ class TestDeleteProjectDetachesBlogRow:
     ) -> None:
         created = await carousel_repository.create_project(_project_with_blog())
         row = (
-            await db_session.execute(
-                select(BlogPostModel).where(
-                    BlogPostModel.project_id == str(created.id)
+            (
+                await db_session.execute(
+                    select(BlogPostModel).where(
+                        BlogPostModel.project_id == str(created.id)
+                    )
                 )
             )
-        ).scalars().one()
+            .scalars()
+            .one()
+        )
         row.status = BlogPostStatus.ARCHIVED.value
         initial_lock_version = row.lock_version
         row_id = row.id
@@ -79,9 +91,13 @@ class TestDeleteProjectDetachesBlogRow:
 
         db_session.expire_all()
         row_after = (
-            await db_session.execute(
-                select(BlogPostModel).where(BlogPostModel.id == row_id)
+            (
+                await db_session.execute(
+                    select(BlogPostModel).where(BlogPostModel.id == row_id)
+                )
             )
-        ).scalars().one()
+            .scalars()
+            .one()
+        )
         assert row_after.status == BlogPostStatus.ARCHIVED.value
         assert row_after.lock_version == initial_lock_version
