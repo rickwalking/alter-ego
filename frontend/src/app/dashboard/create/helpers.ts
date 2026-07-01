@@ -31,5 +31,6 @@ export function buildCarouselCreateRequest(
     image_model: model as CarouselCreateRequest["image_model"],
     image_style: style as CarouselCreateRequest["image_style"],
     strategy,
+    custom_visual_details: form.customVisualDetails.trim() || null,
   };
 }

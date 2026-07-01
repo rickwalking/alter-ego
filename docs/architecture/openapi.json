@@ -573,6 +573,11 @@
             ],
             "title": "Meta Title"
           },
+          "origin": {
+            "default": "standalone",
+            "title": "Origin",
+            "type": "string"
+          },
           "project_id": {
             "anyOf": [
               {
@@ -775,6 +780,23 @@
               }
             ],
             "title": "Meta Title"
+          },
+          "origin": {
+            "default": "standalone",
+            "title": "Origin",
+            "type": "string"
+          },
+          "project_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Project Id"
           },
           "published_at": {
             "anyOf": [
@@ -1504,7 +1526,7 @@
           },
           "theme": {
             "default": "auto",
-            "maxLength": 30,
+            "maxLength": 64,
             "title": "Theme",
             "type": "string"
           },
@@ -1666,6 +1688,17 @@
               }
             ],
             "title": "Current Phase"
+          },
+          "custom_visual_details": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Custom Visual Details"
           },
           "design_tokens": {
             "anyOf": [
@@ -4708,6 +4741,275 @@
         "title": "PlagiarismCheckResponse",
         "type": "object"
       },
+      "PublicBlogPostListResponse": {
+        "description": "Public listing envelope.",
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/PublicBlogPostSummary"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "title": "Offset",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "limit",
+          "offset"
+        ],
+        "title": "PublicBlogPostListResponse",
+        "type": "object"
+      },
+      "PublicBlogPostResponse": {
+        "description": "Public detail \u2014 summary plus the rendered content body.",
+        "properties": {
+          "canonical_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Canonical Url"
+          },
+          "content": {
+            "additionalProperties": true,
+            "title": "Content",
+            "type": "object"
+          },
+          "excerpt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Excerpt"
+          },
+          "featured_image_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Featured Image Url"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "keywords": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Keywords",
+            "type": "array"
+          },
+          "meta_description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Meta Description"
+          },
+          "meta_title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Meta Title"
+          },
+          "origin": {
+            "title": "Origin",
+            "type": "string"
+          },
+          "project_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Project Id"
+          },
+          "published_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Published At"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "slug",
+          "title",
+          "origin"
+        ],
+        "title": "PublicBlogPostResponse",
+        "type": "object"
+      },
+      "PublicBlogPostSummary": {
+        "description": "Public listing item \u2014 lean allow-list projection of a published post.",
+        "properties": {
+          "canonical_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Canonical Url"
+          },
+          "excerpt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Excerpt"
+          },
+          "featured_image_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Featured Image Url"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "keywords": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Keywords",
+            "type": "array"
+          },
+          "meta_description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Meta Description"
+          },
+          "meta_title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Meta Title"
+          },
+          "origin": {
+            "title": "Origin",
+            "type": "string"
+          },
+          "project_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Project Id"
+          },
+          "published_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Published At"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "slug",
+          "title",
+          "origin"
+        ],
+        "title": "PublicBlogPostSummary",
+        "type": "object"
+      },
       "QualityRubricCreate": {
         "description": "Schema for creating a quality rubric.",
         "properties": {
@@ -6706,7 +7008,7 @@
     },
     "/api/blog-posts/{post_id}": {
       "delete": {
-        "description": "Delete a blog post.",
+        "description": "Delete a blog post (optimistic-locked, origin-guarded; AE-0296).",
         "operationId": "delete_blog_post_api_blog_posts__post_id__delete",
         "parameters": [
           {
@@ -6717,6 +7019,22 @@
               "format": "uuid",
               "title": "Post Id",
               "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "If-Match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "If-Match"
             }
           }
         ],
@@ -7679,7 +7997,7 @@
     },
     "/api/blog-posts/{post_id}/unpublish": {
       "post": {
-        "description": "Unpublish a blog post.",
+        "description": "Unpublish a blog post (optimistic-locked visibility flip; AE-0296).",
         "operationId": "unpublish_blog_post_api_blog_posts__post_id__unpublish_post",
         "parameters": [
           {
@@ -7690,6 +8008,22 @@
               "format": "uuid",
               "title": "Post Id",
               "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "If-Match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "If-Match"
             }
           }
         ],
@@ -11909,6 +12243,107 @@
         "summary": "Extract key points from source material",
         "tags": [
           "content_sources"
+        ]
+      }
+    },
+    "/api/public/blog-posts": {
+      "get": {
+        "description": "Published-only listing; any client status filter is ignored.",
+        "operationId": "list_public_blog_posts_api_public_blog_posts_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 50,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicBlogPostListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List published blog posts (public)",
+        "tags": [
+          "public_blog_posts"
+        ]
+      }
+    },
+    "/api/public/blog-posts/{post_id}": {
+      "get": {
+        "description": "Uniform 404 for missing AND non-published posts (no existence leak).",
+        "operationId": "get_public_blog_post_api_public_blog_posts__post_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "post_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Post Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicBlogPostResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get a published blog post (public)",
+        "tags": [
+          "public_blog_posts"
         ]
       }
     },

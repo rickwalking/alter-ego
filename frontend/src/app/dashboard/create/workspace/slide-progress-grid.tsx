@@ -1,3 +1,4 @@
+import { useTranslations } from "next-intl";
 import type { SlideGenerationStatus } from "@/constants/create";
 import { SlideStatusIcon } from "./progress-icons";
 
@@ -20,12 +21,13 @@ interface SlideProgressGridProps {
  * finish, and this grid reflects the live state.
  */
 export function SlideProgressGrid({ slides }: SlideProgressGridProps) {
+  const t = useTranslations("create");
   if (slides.length === 0) return null;
 
   return (
     <ul
       className="space-y-1.5 pt-1"
-      aria-label="Per-slide image generation status"
+      aria-label={t("progress.slidesAria")}
       data-testid="phase-progress-slides"
     >
       {slides.map((slide) => (
@@ -37,13 +39,11 @@ export function SlideProgressGrid({ slides }: SlideProgressGridProps) {
         >
           <SlideStatusIcon status={slide.status} />
           <div className="flex-1 space-y-0.5">
-            <span className="font-medium text-[var(--color-text)]">
-              Slide {slide.number}
+            <span className="font-medium text-text-primary">
+              {t("progress.slideLabel", { number: slide.number })}
             </span>
             {slide.scene ? (
-              <p className="text-[var(--color-text-muted)] italic">
-                {slide.scene}
-              </p>
+              <p className="text-text-muted italic">{slide.scene}</p>
             ) : null}
           </div>
         </li>

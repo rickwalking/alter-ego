@@ -3,6 +3,8 @@ import {
   fetchCompletedProjects,
   fetchBlogWithDesign,
   fetchBlogWithDesignCombined,
+  fetchPublicBlogPost,
+  fetchPublicBlogPosts,
 } from "@/lib/server-fetch";
 
 vi.stubEnv("NEXT_PUBLIC_API_URL", "http://localhost:8000");
@@ -183,6 +185,54 @@ describe("server-fetch", () => {
       const result = await fetchBlogWithDesign("bad-id");
 
       expect(result).toBeNull();
+    });
+  });
+
+  describe("fetchPublicBlogPost (AE-0297)", () => {
+    const MOCK_PUBLIC_POST = {
+      id: "e7e871c7-9f5f-4b70-b226-a2d2adeb06fa",
+      slug: "a-post",
+      title: "A post",
+      excerpt: "Excerpt",
+      featured_image_url: null,
+      published_at: "2026-07-01T00:00:00Z",
+      meta_title: null,
+      meta_description: null,
+      keywords: [],
+      canonical_url: null,
+      origin: "standalone",
+      project_id: null,
+      content: { markdown: "# Body" },
+    };
+
+    it("returns the validated lean post on success", async () => {
+      const mockFetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve(MOCK_PUBLIC_POST),
+      });
+      vi.spyOn(globalThis, "fetch").mockImplementation(mockFetch);
+
+      const result = await fetchPublicBlogPost(MOCK_PUBLIC_POST.id);
+      expect(result?.title).toBe("A post");
+      const calledUrl = mockFetch.mock.calls[0][0] as string;
+      expect(calledUrl).toContain(
+        `/api/public/blog-posts/${MOCK_PUBLIC_POST.id}`,
+      );
+    });
+
+    it("returns null on 404 (hidden or unknown post)", async () => {
+      vi.spyOn(globalThis, "fetch").mockResolvedValue({
+        ok: false,
+        status: 404,
+      } as Response);
+      expect(await fetchPublicBlogPost("nope")).toBeNull();
+    });
+  });
+
+  describe("fetchPublicBlogPosts (AE-0297)", () => {
+    it("returns null on failure so the listing can fall open", async () => {
+      vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("boom"));
+      expect(await fetchPublicBlogPosts(20)).toBeNull();
     });
   });
 

@@ -37,6 +37,7 @@ from rag_backend.api.routes import (
     notifications,
     palettes,
     personas,
+    public_blog_post,
     rubrics,
     search,
     sources,
@@ -211,6 +212,7 @@ def _register_routes(app: FastAPI) -> None:
     app.include_router(search.router, prefix="/api")
     app.include_router(carousels.router, prefix="/api")
     app.include_router(blog_post.router, prefix="/api")
+    app.include_router(public_blog_post.router, prefix="/api")
     app.include_router(blog_post_ai.router, prefix="/api")
     app.include_router(blog_post_workflow.router, prefix="/api")
     app.include_router(blog_post_versions.router, prefix="/api")

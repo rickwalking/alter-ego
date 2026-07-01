@@ -4,7 +4,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.api.dependencies.database import get_db
@@ -29,6 +29,9 @@ from rag_backend.application.services.notification_service import (
     NotificationService,
     _WorkflowUpdateParams,
 )
+from rag_backend.application.services.optimistic_lock_service import (
+    OptimisticLockService,
+)
 from rag_backend.application.services.scheduled_publish_service import (
     ScheduledPublishService,
 )
@@ -42,6 +45,10 @@ from rag_backend.domain.constants.blog_post import (
     EditorialCommentStatus,
 )
 from rag_backend.domain.constants.notifications import NOTIFICATION_TYPE_PHASE_REJECTED
+from rag_backend.domain.constants.optimistic_locking import (
+    ERR_VERSION_CONFLICT,
+    HTTP_HEADER_IF_MATCH,
+)
 from rag_backend.domain.constants.rate_limits import RATE_LIMIT_WORKFLOW_ENDPOINTS
 from rag_backend.domain.constants.workflow_events import (
     AGGREGATE_TYPE_BLOG_POST,
@@ -52,6 +59,7 @@ from rag_backend.domain.constants.workflow_validation import (
     CONTENT_TYPE_BLOG_POST,
     ERR_SCHEDULE_IN_PAST,
     ERR_SELF_REVIEW,
+    ERR_VERSION_HEADER_REQUIRED,
     MAX_REJECT_REASON_LENGTH,
     MIN_SCHEDULE_LEAD_SECONDS,
     NOTIFICATION_TITLE_CHANGES_REQUESTED,
@@ -338,13 +346,29 @@ async def unpublish_blog_post(
     db: Annotated[AsyncSession, Depends(get_db)],
     current_user: EditorUser,
     publishing: Annotated[PublishingModule, Depends(get_publishing_module_for_blog)],
+    if_match: Annotated[int | None, Header(alias=HTTP_HEADER_IF_MATCH)] = None,
 ) -> BlogPostResponse:
-    """Unpublish a blog post."""
+    """Unpublish a blog post (optimistic-locked visibility flip; AE-0296)."""
     post = await get_blog_post_for_user(db, post_id, current_user)
+    if if_match is None:
+        raise HTTPException(
+            status_code=status.HTTP_428_PRECONDITION_REQUIRED,
+            detail=ERR_VERSION_HEADER_REQUIRED,
+        )
     assert_blog_post_status(post, BlogPostStatus.PUBLISHED)
+    try:
+        await OptimisticLockService.check_version(post.lock_version, if_match)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=ERR_VERSION_CONFLICT,
+        ) from exc
     old_status = post.status
 
     await publishing.service.unpublish_blog(post)
+    # A visibility flip is a versioned write like any other: bump the version
+    # so a concurrent editor's stale If-Match is rejected instead of clobbered.
+    post.lock_version = if_match + 1
 
     await _emit_status_change(
         db, str(post.id), old_status, post.status, current_user.id

@@ -17,7 +17,9 @@ export function filterBlogPosts(
   const categoryLower = filters.categoryFilter.toLowerCase();
 
   return posts.filter((post) => {
-    if (statusLower && post.category.toLowerCase() !== statusLower) {
+    // Status filter matches the workflow status, not the content category
+    // (conflating the two was the AE-0295 root cause).
+    if (statusLower && (post.status ?? "") !== statusLower) {
       return false;
     }
     if (categoryLower && post.category.toLowerCase() !== categoryLower) {

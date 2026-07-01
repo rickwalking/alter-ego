@@ -349,8 +349,10 @@ class TestBlogPostEndpoints:
         create_response = await client.post("/api/blog-posts", json=create_payload)
         created = create_response.json()
 
-        # Then delete it
-        response = await client.delete(f"/api/blog-posts/{created['id']}")
+        # Then delete it (If-Match required since AE-0296)
+        response = await client.delete(
+            f"/api/blog-posts/{created['id']}", headers={"If-Match": "1"}
+        )
         assert response.status_code == 204
 
     @pytest.mark.asyncio

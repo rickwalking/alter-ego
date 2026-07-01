@@ -1,9 +1,12 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import type { CreateCarouselFormState } from "@/app/dashboard/create/types";
 import { SectionNumber } from "./section-number";
 import { sectionCardStyle, sectionHeaderStyle } from "./section-styles";
 import { LabeledField } from "./labeled-field";
+
+const IMAGE_GUIDANCE_MAX_LENGTH = 500;
 
 export interface CreateTopicSectionProps {
   form: CreateCarouselFormState;
@@ -14,6 +17,7 @@ export function CreateTopicSection({
   form,
   onChange,
 }: CreateTopicSectionProps): React.ReactElement {
+  const t = useTranslations("create.form");
   return (
     <div style={sectionCardStyle}>
       <div style={sectionHeaderStyle}>
@@ -47,6 +51,17 @@ export function CreateTopicSection({
         maxLength={200}
         multiline
         rows={4}
+        marginBottom="14px"
+      />
+      <LabeledField
+        label={t("imageGuidanceLabel")}
+        hint={t("imageGuidanceHint")}
+        value={form.customVisualDetails}
+        onChange={(customVisualDetails) => onChange({ customVisualDetails })}
+        placeholder={t("imageGuidancePlaceholder")}
+        maxLength={IMAGE_GUIDANCE_MAX_LENGTH}
+        multiline
+        rows={3}
       />
     </div>
   );

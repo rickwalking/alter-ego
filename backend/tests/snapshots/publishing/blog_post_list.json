@@ -16,6 +16,8 @@
         "lock_version": 1,
         "meta_description": null,
         "meta_title": null,
+        "origin": "standalone",
+        "project_id": null,
         "published_at": null,
         "share_count": 0,
         "slug": "fixture-blog-post",

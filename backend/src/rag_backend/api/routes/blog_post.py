@@ -37,6 +37,11 @@ from rag_backend.application.services.optimistic_lock_service import (
 )
 from rag_backend.application.services.workflow_event_service import WorkflowEventService
 from rag_backend.domain.constants.blog_ai import ERR_BLOG_POST_NOT_FOUND
+from rag_backend.domain.constants.blog_post import (
+    BLOG_POST_HARD_DELETABLE_ORIGINS,
+    ERR_CAROUSEL_ORIGIN_DELETE_BLOCKED,
+    BlogPostOrigin,
+)
 from rag_backend.domain.constants.optimistic_locking import (
     ERR_VERSION_CONFLICT,
     HTTP_HEADER_IF_MATCH,
@@ -233,6 +238,25 @@ async def update_blog_post(
     return post
 
 
+def _guard_hard_delete(post: object) -> None:
+    """Block hard delete of rows that back a live public projection (AE-0296).
+
+    A ``carousel``-origin row still linked to its project is the source of the
+    public ``GET /carousels/{id}/blog`` read (ADR-0011); deleting it would 404
+    that surface. Erasure path: delete the parent carousel project (the row is
+    then detached/flipped to draft and becomes hard-deletable).
+    """
+    origin = BlogPostOrigin(getattr(post, "origin", BlogPostOrigin.STANDALONE.value))
+    if origin in BLOG_POST_HARD_DELETABLE_ORIGINS:
+        return
+    if getattr(post, "project_id", None) is None:
+        return
+    raise HTTPException(
+        status_code=status.HTTP_409_CONFLICT,
+        detail=ERR_CAROUSEL_ORIGIN_DELETE_BLOCKED,
+    )
+
+
 @router.delete(
     "/blog-posts/{post_id}",
     status_code=status.HTTP_204_NO_CONTENT,
@@ -244,9 +268,23 @@ async def delete_blog_post(
     post_id: UUID,
     db: Annotated[AsyncSession, Depends(get_db)],
     current_user: EditorUser,
+    if_match: Annotated[int | None, Header(alias=HTTP_HEADER_IF_MATCH)] = None,
 ) -> None:
-    """Delete a blog post."""
+    """Delete a blog post (optimistic-locked, origin-guarded; AE-0296)."""
     post = await get_blog_post_for_user(db, post_id, current_user)
+    if if_match is None:
+        raise HTTPException(
+            status_code=status.HTTP_428_PRECONDITION_REQUIRED,
+            detail=ERR_VERSION_HEADER_REQUIRED,
+        )
+    _guard_hard_delete(post)
+    try:
+        await OptimisticLockService.check_version(post.lock_version, if_match)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=ERR_VERSION_CONFLICT,
+        ) from exc
     await _audit_service().log_deleted(
         db,
         entry=_AuditEntry(

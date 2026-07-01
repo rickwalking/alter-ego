@@ -61,6 +61,8 @@ export const API_ENDPOINTS = {
     `/api/carousels/${id}/workflow/stream`,
   BLOG_POSTS: "/api/blog-posts",
   BLOG_POST_BY_ID: (id: string) => `/api/blog-posts/${id}`,
+  PUBLIC_BLOG_POSTS: "/api/public/blog-posts",
+  PUBLIC_BLOG_POST_BY_ID: (id: string) => `/api/public/blog-posts/${id}`,
   BLOG_POST_VERSIONS: (id: string) => `/api/blog-posts/${id}/versions`,
   BLOG_POST_AI_SUGGEST: (id: string) => `/api/blog-posts/${id}/ai-suggest`,
   BLOG_POST_AI_IMPROVE: (id: string) => `/api/blog-posts/${id}/ai-improve`,

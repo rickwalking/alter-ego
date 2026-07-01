@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { cookies } from "next/headers";
 import { BLOG_LANGUAGES } from "@/constants/api";
 import { designTokensToCssVars } from "@/constants/blog";
-import { fetchBlogWithDesign } from "@/lib/server-fetch";
+import { resolvePublicBlogView } from "@/lib/public-blog";
 import { DEFAULT_LOCALE, SUPPORTED_LOCALES } from "@/i18n/config";
 import type { SupportedLocale } from "@/i18n/config";
 import {
@@ -41,13 +41,13 @@ export default async function PublicBlogPostPage({
       ? langParam
       : cookieLang;
 
-  const data = await fetchBlogWithDesign(id, currentLang);
+  const view = await resolvePublicBlogView(id, currentLang);
 
-  if (!data) {
+  if (!view) {
     notFound();
   }
 
-  const { blog, design } = data;
+  const { design } = view;
   const cssVars = designTokensToCssVars(design);
   const badge = design.layout.badge_label;
 
@@ -84,20 +84,20 @@ export default async function PublicBlogPostPage({
         <BackLink />
         <article className="mx-auto max-w-3xl">
           <BlogPostHeader
-            title={blog.title}
-            subtitle={blog.subtitle ?? undefined}
+            title={view.title}
+            subtitle={view.subtitle ?? undefined}
             badge={badge}
             design={design}
           />
           {heroImageUrl && (
             <BlogPostHero
               imageUrl={heroImageUrl}
-              title={blog.title}
+              title={view.title}
               design={design}
             />
           )}
           <BlogPostContent
-            markdown={blog.markdown}
+            markdown={view.markdown}
             design={design}
             slideImages={slideImageUrls}
           />

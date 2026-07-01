@@ -11,8 +11,14 @@ import {
   carouselDesignResponseSchema,
   carouselProjectListResponseSchema,
 } from "@/schemas/carousel";
+import {
+  publicBlogPostListResponseSchema,
+  publicBlogPostResponseSchema,
+} from "@/schemas/public-blog-post";
 
-function getBaseUrl(): string {
+// Exported for the AE-0297 prod-reachability test: API_BASE_URL must override
+// the internal Docker hostname fallback server-side.
+export function getBaseUrl(): string {
   // Server-side in Docker: explicit override
   if (typeof window === "undefined" && process.env.API_BASE_URL) {
     return process.env.API_BASE_URL;
@@ -95,6 +101,26 @@ export async function fetchBlogWithDesign(
   }
 
   return { blog, design };
+}
+
+export async function fetchPublicBlogPosts(
+  limit: number = SERVER_FETCH.DEFAULT_PROJECT_LIMIT,
+): Promise<z.infer<typeof publicBlogPostListResponseSchema> | null> {
+  return validatedFetch(
+    `${API_ENDPOINTS.PUBLIC_BLOG_POSTS}?limit=${limit}`,
+    publicBlogPostListResponseSchema,
+    { cache: "no-store" },
+  );
+}
+
+export async function fetchPublicBlogPost(
+  id: string,
+): Promise<z.infer<typeof publicBlogPostResponseSchema> | null> {
+  return validatedFetch(
+    API_ENDPOINTS.PUBLIC_BLOG_POST_BY_ID(id),
+    publicBlogPostResponseSchema,
+    { cache: "no-store" },
+  );
 }
 
 export async function fetchBlogWithDesignCombined(

@@ -14,14 +14,25 @@ import {
   FeaturedBlogPost,
   RegularBlogPosts,
 } from "@/app/dashboard/blog-posts/blog-posts-grid";
+import { DeleteConfirmModal } from "@/app/dashboard/blog-posts/blog-posts-actions";
 import { useNewBlogPost } from "@/app/dashboard/blog-posts/use-new-blog-post";
+import { useBlogPostActions } from "@/app/dashboard/blog-posts/use-blog-post-actions";
 
 export default function BlogPostsPage(): React.ReactElement {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
-  const { posts, loading, error, create } = useBlogPosts();
+  const {
+    posts,
+    loading,
+    error,
+    create,
+    delete: deletePost,
+    unpublish,
+  } = useBlogPosts();
   const { creating, handleNewPost } = useNewBlogPost(create);
+  const { actions, deleteTarget, actionError, confirmDelete, cancelDelete } =
+    useBlogPostActions({ deletePost, unpublish });
 
   const dashboardPosts = posts.map(mapBlogPostToDashboard);
 
@@ -86,6 +97,15 @@ export default function BlogPostsPage(): React.ReactElement {
             {error}
           </p>
         )}
+        {actionError && !loading && (
+          <p
+            className="text-center py-2"
+            style={{ color: NEON_RED }}
+            role="alert"
+          >
+            {actionError}
+          </p>
+        )}
         {!loading && !error && (
           <>
             <BlogPostsFilters
@@ -96,12 +116,19 @@ export default function BlogPostsPage(): React.ReactElement {
             />
 
             <div className="grid gap-4">
-              {featuredPost && <FeaturedBlogPost post={featuredPost} />}
-              <RegularBlogPosts posts={regularPosts} />
+              {featuredPost && (
+                <FeaturedBlogPost post={featuredPost} actions={actions} />
+              )}
+              <RegularBlogPosts posts={regularPosts} actions={actions} />
             </div>
           </>
         )}
       </div>
+      <DeleteConfirmModal
+        post={deleteTarget}
+        onConfirm={() => void confirmDelete()}
+        onCancel={cancelDelete}
+      />
     </div>
   );
 }

@@ -228,7 +228,10 @@
       "imagePresetLabel": "Image Style",
       "imagePresetHelp": "Picks the image model + style wrapper the pipeline uses. OpenAI presets require a verified OPENAI_API_KEY.",
       "submit": "Create Project",
-      "submitting": "Creating..."
+      "submitting": "Creating...",
+      "imageGuidanceLabel": "Image Guidance (optional)",
+      "imageGuidancePlaceholder": "e.g. misty harbor at dusk, retro-futuristic workshop, rainy neon street",
+      "imageGuidanceHint": "max 500 chars — steers the scene/backdrop of every slide image; the brand style and palette stay locked"
     },
     "themes": {
       "auto": "Auto-detect",
@@ -266,7 +269,9 @@
         "generating_images": "Generating images...",
         "exporting": "Exporting slides...",
         "completed": "Complete"
-      }
+      },
+      "slideLabel": "Slide {number}",
+      "slidesAria": "Per-slide image generation status"
     },
     "preview": {
       "viewBlog": "View Blog Post",
@@ -752,7 +757,8 @@
         "under_review": "Under Review",
         "approved": "Approved",
         "published": "Published",
-        "archived": "Archived"
+        "archived": "Archived",
+        "unknown": "Unknown"
       },
       "fields": {
         "title": "Title",
@@ -772,7 +778,8 @@
         "submitReview": "Submit for Review",
         "approve": "Approve",
         "publish": "Publish",
-        "generateImage": "Generate Image"
+        "generateImage": "Generate Image",
+        "hide": "Hide (revert to draft)"
       },
       "notFound": "Blog post not found.",
       "backToList": "Back to list",
@@ -785,6 +792,12 @@
         "versionLabel": "Version {number}",
         "diffTitle": "Preview diff",
         "restore": "Restore this version"
+      },
+      "featured": "Featured",
+      "errors": {
+        "versionConflict": "This post changed in another session. The list was refreshed — try again.",
+        "carouselDeleteBlocked": "This post comes from a carousel and cannot be deleted while linked. Hide it, or delete the carousel project.",
+        "actionFailed": "The action failed. Try again."
       }
     },
     "analytics": {

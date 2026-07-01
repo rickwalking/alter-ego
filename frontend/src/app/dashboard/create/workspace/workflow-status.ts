@@ -15,11 +15,25 @@ export interface WorkflowStatusVisual {
 }
 
 /** Additional non-enum statuses the calendar/board surface can emit. */
-const STATUS_PUBLISHED = "published";
-const STATUS_COMPLETED = "completed";
+export const WORKFLOW_STATUS_PUBLISHED = "published";
+export const WORKFLOW_STATUS_COMPLETED = "completed";
+const STATUS_PUBLISHED = WORKFLOW_STATUS_PUBLISHED;
+const STATUS_COMPLETED = WORKFLOW_STATUS_COMPLETED;
 const STATUS_DRAFT = "draft";
 
-const STATUS_VISUALS: Record<string, WorkflowStatusVisual> = {
+/**
+ * The complete status vocabulary this map may receive (AE-0299). Typed as a
+ * closed union so a new status is a compile error here — the same
+ * cross-domain-drift failure class AE-0295 fixed for blog statuses.
+ */
+type KnownWorkflowStatus =
+  | (typeof WORKFLOW_PHASE_STATUS)[keyof typeof WORKFLOW_PHASE_STATUS]
+  | (typeof EDITORIAL_WORKFLOW_STATUS)[keyof typeof EDITORIAL_WORKFLOW_STATUS]
+  | typeof WORKFLOW_STATUS_PUBLISHED
+  | typeof WORKFLOW_STATUS_COMPLETED
+  | typeof STATUS_DRAFT;
+
+const STATUS_VISUALS: Record<KnownWorkflowStatus, WorkflowStatusVisual> = {
   [WORKFLOW_PHASE_STATUS.PENDING]: {
     variant: "amber",
     pulse: false,
@@ -70,14 +84,36 @@ const UNKNOWN_STATUS_VISUAL: WorkflowStatusVisual = {
   labelKey: null,
 };
 
-/** Map a workflow/phase status string to its semantic badge treatment. */
+/** Known status vocabulary — exported for the drift-guard unit test (AE-0299). */
+export const KNOWN_WORKFLOW_STATUSES: readonly string[] =
+  Object.keys(STATUS_VISUALS);
+
+const ERR_UNKNOWN_WORKFLOW_STATUS = "Unknown workflow status";
+
+/**
+ * Map a workflow/phase status string to its semantic badge treatment.
+ *
+ * An unrecognized status THROWS outside production (AE-0299) so drift from a
+ * loose-typed path (e.g. a deserialized API string) is observable instead of
+ * silently rendering the neutral cyan; the cyan fallback remains only as a
+ * last-resort production guard.
+ */
 export function resolveWorkflowStatusVisual(
   status: string | null | undefined,
 ): WorkflowStatusVisual {
   if (!status) {
     return EMPTY_STATUS_VISUAL;
   }
-  return STATUS_VISUALS[status] ?? UNKNOWN_STATUS_VISUAL;
+  const visual = (STATUS_VISUALS as Record<string, WorkflowStatusVisual>)[
+    status
+  ];
+  if (visual) {
+    return visual;
+  }
+  if (process.env.NODE_ENV !== "production") {
+    throw new Error(`${ERR_UNKNOWN_WORKFLOW_STATUS}: ${status}`);
+  }
+  return UNKNOWN_STATUS_VISUAL;
 }
 
 /** Titlecase a raw status token for the unknown-status fallback label. */

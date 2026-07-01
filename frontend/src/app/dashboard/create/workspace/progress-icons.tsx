@@ -68,7 +68,7 @@ export function Spinner({
   const size = small ? "h-3 w-3" : "h-4 w-4";
   return (
     <svg
-      className={`${size} animate-spin text-[var(--color-primary)]`}
+      className={`${size} animate-spin text-neon-cyan`}
       fill="none"
       viewBox="0 0 24 24"
       aria-hidden="true"
@@ -95,18 +95,18 @@ const SLIDE_STATUS_ICON: Record<
   () => React.ReactElement
 > = {
   [SLIDE_GENERATION_STATUS.DONE]: () => (
-    <span className="mt-0.5 inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-[var(--color-primary)] text-[10px] text-[var(--color-text)]">
+    <span className="mt-0.5 inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-neon-cyan text-[10px] text-bg-deep">
       ✓
     </span>
   ),
   [SLIDE_GENERATION_STATUS.FAILED]: () => (
-    <span className="mt-0.5 inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-destructive text-[10px] text-destructive-foreground">
+    <span className="mt-0.5 inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-neon-red text-[10px] text-white">
       ×
     </span>
   ),
   [SLIDE_GENERATION_STATUS.IN_FLIGHT]: () => <Spinner small />,
   [SLIDE_GENERATION_STATUS.PENDING]: () => (
-    <span className="mt-1 inline-flex h-2 w-2 shrink-0 rounded-full border border-[var(--color-border)]" />
+    <span className="mt-1 inline-flex h-2 w-2 shrink-0 rounded-full border border-neon-card-border" />
   ),
 };
 

@@ -5,6 +5,8 @@
 export interface BlogPost {
   id: string;
   project_id?: string | null;
+  /** Provenance (AE-0296): "standalone" | "carousel"; absent on old payloads. */
+  origin?: string | null;
   title: string;
   slug: string;
   status: string;

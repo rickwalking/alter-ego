@@ -49,6 +49,8 @@
   "GET /api/personas",
   "GET /api/personas/{persona_id}",
   "GET /api/projects/{project_id}/sources",
+  "GET /api/public/blog-posts",
+  "GET /api/public/blog-posts/{post_id}",
   "GET /api/rubrics",
   "GET /api/rubrics/{rubric_id}",
   "GET /api/search",
