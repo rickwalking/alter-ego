@@ -1,7 +1,7 @@
 """Unit tests for ContentDraftAgent."""
 
 import json
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -128,7 +128,8 @@ class TestContentDraftAgent:
     async def test_draft_slide_passes_langfuse_config(
         self, agent: ContentDraftAgent, mock_llm: AsyncMock
     ) -> None:
-        """AE-0291: the content LLM call carries the Langfuse runnable config."""
+        """AE-0291: the content LLM call carries the Langfuse runnable config — the
+        exact object returned by get_langfuse_runnable_config, not just non-None."""
         mock_llm.ainvoke.return_value = MagicMock(
             content=json.dumps({
                 "draft_text": "c",
@@ -136,8 +137,13 @@ class TestContentDraftAgent:
                 "sources_used": [],
             })
         )
+        sentinel = {"callbacks": ["langfuse-marker"]}
 
-        await agent.draft_slide(1, "Title", ["Point"])
+        with patch(
+            "rag_backend.agents.content_draft_agent.get_langfuse_runnable_config",
+            return_value=sentinel,
+        ):
+            await agent.draft_slide(1, "Title", ["Point"])
 
         # ainvoke(messages, config) — the second positional is the Langfuse config.
-        assert mock_llm.ainvoke.await_args.args[1] is not None
+        assert mock_llm.ainvoke.await_args.args[1] == sentinel

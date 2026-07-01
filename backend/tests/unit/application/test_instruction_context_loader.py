@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
+from unittest.mock import patch
+
 import pytest
 
 from rag_backend.application.services.carousel.instruction_context_loader import (
     INSTRUCTION_CONTEXT_MAX_CHARS,
     PREVIOUS_DRAFT_LABEL,
     REVISION_IMPERATIVE_HEADER,
-    SECTION_SHARED,
     SECTION_SIBLING,
     CarouselInstructionContextLoader,
     InstructionContextRequest,
@@ -122,25 +123,30 @@ class TestInstructionContextLoader:
         assert "The rejected copy." in result.instruction
 
     def test_revision_and_sibling_survive_truncation_before_shared(self) -> None:
-        """AE-0291: with an oversized shared blob, notes + sibling context survive
-        because shared standards are ordered last and truncated first."""
+        """AE-0291: with an OVERSIZED shared-standards blob that forces truncation,
+        the reviewer notes + sibling context survive because they are ordered before
+        the shared standards (which the tail-truncation drops first)."""
         loader = CarouselInstructionContextLoader()
-        result = loader.load(
-            InstructionContextRequest(
-                phase=PHASE_CONTENT,
-                locale="pt-BR",
-                slide_number=3,
-                revision_notes="Keep this reviewer note.",
-                sibling_context="Keep this sibling outline.",
+        oversized = "SHARED_BOILERPLATE " * 2000  # ~38k chars, well over the cap
+        with patch(
+            "rag_backend.application.services.carousel.instruction_context_loader"
+            ".read_runtime_shared_markdown",
+            return_value=oversized,
+        ):
+            result = loader.load(
+                InstructionContextRequest(
+                    phase=PHASE_CONTENT,
+                    locale="pt-BR",
+                    slide_number=3,
+                    revision_notes="Keep this reviewer note.",
+                    sibling_context="Keep this sibling outline.",
+                )
             )
-        )
 
+        # Truncation actually fired (the oversized shared blob was cut).
         assert len(result.instruction) <= INSTRUCTION_CONTEXT_MAX_CHARS
+        assert "[instruction context truncated]" in result.instruction
+        # Notes + sibling context survived because they precede the shared section.
         assert "Keep this reviewer note." in result.instruction
         assert "Keep this sibling outline." in result.instruction
-        # Revision + sibling sections precede the shared-standards section.
-        assert result.instruction.index(SECTION_SIBLING) < (
-            result.instruction.index(SECTION_SHARED)
-            if SECTION_SHARED in result.instruction
-            else len(result.instruction)
-        )
+        assert SECTION_SIBLING in result.instruction

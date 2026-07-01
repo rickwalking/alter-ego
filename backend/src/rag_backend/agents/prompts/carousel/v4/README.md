@@ -23,8 +23,12 @@ Prompt templates for the `hero_lower_third_v1` presentation contract. v4 superse
 
 ## Files
 
-- `outline.yaml` — seven-slide outline planning (unchanged from v3).
-- `content.yaml` — per-slide draft generation with cross-slide distinctness.
+- `content.yaml` — per-slide draft generation with cross-slide distinctness. **This
+  is the only v4 template wired in** (`ContentDraftAgent` renders `carousel/content`
+  at `version=v4`).
+- `outline.yaml` — forward-compat copy of the v3 outline, **not yet wired** (the
+  outline agent still renders `version=v3`). Kept so a future outline bump has a
+  self-consistent v4 folder; safe to delete if that never happens.
 
 ## Policy fragment
 
