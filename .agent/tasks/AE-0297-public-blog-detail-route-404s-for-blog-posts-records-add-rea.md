@@ -1,6 +1,6 @@
 # AE-0297 — public blog detail route 404s for blog_posts records: add real data path
 
-Status: Ready
+Status: Dev Complete
 Tier: T2
 Priority: High
 Type: Feature

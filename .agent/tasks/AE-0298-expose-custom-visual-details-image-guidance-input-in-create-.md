@@ -1,6 +1,6 @@
 # AE-0298 — expose custom_visual_details image-guidance input in create carousel brief step
 
-Status: In Development
+Status: Dev Complete
 Tier: T2
 Priority: Medium
 Type: Feature

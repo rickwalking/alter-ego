@@ -1,6 +1,6 @@
 # AE-0299 — migrate fluxo editorial progress component to neon design system
 
-Status: In Development
+Status: Dev Complete
 Tier: T1
 Priority: Medium
 Type: Refactor

@@ -1,6 +1,6 @@
 # AE-0296 — blog post management: edit, delete, and hide controls in dashboard
 
-Status: In Development
+Status: Dev Complete
 Tier: T2
 Priority: High
 Type: Feature

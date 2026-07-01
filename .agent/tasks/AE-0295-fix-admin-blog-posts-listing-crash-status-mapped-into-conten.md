@@ -1,6 +1,6 @@
 # AE-0295 — fix admin blog-posts listing crash: status mapped into content-category badge palette
 
-Status: In Development
+Status: Dev Complete
 Tier: T1
 Priority: High
 Type: Bugfix
