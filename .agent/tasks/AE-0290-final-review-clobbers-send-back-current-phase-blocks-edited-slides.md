@@ -1,6 +1,6 @@
 # AE-0290 — final_review clobbers send-back current_phase, blocking edited slides
 
-Status: Dev Complete
+Status: Review
 Tier: T1
 Priority: P1
 Type: Bugfix
@@ -154,6 +154,12 @@ Extend `tests/unit/agents/test_carousel_workflow_phases.py` and
 
 - `agents/carousel_workflow_nodes.py` (`final_review_phase`)
 - `tests/features/*.feature` + the two unit test modules above.
+
+## QA Report
+
+External QA (OpenCode Go → `opencode-go/glm-5.2`), 2 consecutive PASS verdicts.
+See `.agent/reports/AE-0290.qa.md`. Gates: 15 PASS / 0 FAIL / 4 SKIP (Postgres —
+CI runs them). Integrity: 0 net-new blockers.
 
 ## Related
 

@@ -1,6 +1,6 @@
 # AE-0291 — GLM content prompt: cross-slide distinctness + rework-feedback adherence
 
-Status: Dev Complete
+Status: Review
 Tier: T2
 Priority: P1
 Type: Enhancement
@@ -217,6 +217,12 @@ override actually applied. Mock GLM (`build_chat_model`) — no live keys in CI
 - `application/services/carousel/phase_artifact_runner.py` (previous-draft plumbing if added)
 - `agents/skills/carousel-pipeline/phases/content/SKILL.md` + `_shared/content-contracts.md` (distinctness rule)
 - tests + `.feature`
+
+## QA Report
+
+External QA (OpenCode Go → `opencode-go/glm-5.2`), 2 consecutive PASS verdicts.
+See `.agent/reports/AE-0291.qa.md`. Gates: 15 PASS / 0 FAIL / 4 SKIP (Postgres —
+CI runs them). Integrity: 0 net-new blockers.
 
 ## Related
 
