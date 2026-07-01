@@ -146,13 +146,65 @@ Ticket created from production troubleshooting session. Root cause: public reade
 carousel-projection-only and has no path to `blog_posts` records. Needs architect decision
 (A vs B) before development.
 
+### 2026-07-01 — development (wave AE-0295..0299)
+
+Backend (`/api/public/blog-posts` — new, additive):
+- List: published-only (server-forced; client status filter ignored), ordered
+  `published_at DESC`, limit ≤50. Detail: **id-only** resolution, uniform 404
+  for missing AND every non-published state. No auth dependency of any kind
+  (guarded by a recursive dependency-tree test). Zero DB writes.
+- Lean **allow-list** schemas (`api/schemas/public_blog_post.py`) built by
+  explicit field mapping (never `from_orm`); `PUBLIC_BLOG_POST_EXCLUDED_FIELDS`
+  drives a recursive leak test over the real payloads.
+- `Cache-Control: no-store` on both routes; rate limit
+  `RATE_LIMIT_PUBLIC_BLOG_READ = 120/minute` (committed ceiling test).
+
+Frontend:
+- `fetchPublicBlogPost(s)` in `server-fetch.ts` + Zod lean schemas
+  (`schemas/public-blog-post.ts`); `getBaseUrl` exported + tested
+  (API_BASE_URL override beats the `backend:8000` Docker fallback — the prod
+  reachability knob).
+- Detail `/blog/{id}` now resolves via `resolvePublicBlogView`
+  (`lib/public-blog.ts`): public post → carousel-origin enriches through the
+  project design tokens; standalone (or failed design fetch) renders the
+  **default public theme** (never 404 for missing tokens); legacy carousel
+  project ids keep rendering via the old projection path.
+- Listing prefers the public feed (standalone posts now discoverable);
+  carousel-origin entries enriched from the carousel feed (hero/localized
+  copy preserved); public-feed failure falls open to today's carousel feed
+  (own schema — fallback leak-tested at the schema level).
+
+ADR-0013 committed (proposed).
+
 ## Files Touched
 
-Pending.
+Backend:
+- `src/rag_backend/api/routes/public_blog_post.py` (new)
+- `src/rag_backend/api/schemas/public_blog_post.py` (new)
+- `src/rag_backend/domain/constants/rate_limits.py`
+- `src/rag_backend/bootstrap/app_factory.py`
+- Tests: `tests/integration/test_public_blog_api_ae0297.py`,
+  `tests/features/public_blog_api_ae0297.feature`
+
+Frontend:
+- `src/constants/api.ts`, `src/schemas/public-blog-post.ts` (new, + test)
+- `src/lib/server-fetch.ts` (+ tests incl. `server-fetch-base-url.test.ts`)
+- `src/lib/public-blog.ts` (new, + test)
+- `src/app/(public)/blog/[id]/page.tsx`, `src/app/(public)/blog/page.tsx`
+- `tests/features/public-blog-detail.feature`
 
 ## Test Evidence
 
-Pending.
+- Backend: `uv run pytest tests/integration/test_public_blog_api_ae0297.py`
+  — **14 passed** (published-only + ordering, filter-ignored, uniform 404 ×4
+  states + unknown id, recursive excluded-key leak, byte-identical
+  editor/anon payload, no-auth dependency tree, no-store headers, rate-limit
+  ceiling, private drafts unchanged).
+- Frontend: `npx vitest run src/lib src/schemas/public-blog-post.test.ts` —
+  **187 passed** in scope (resolver branches incl. default-theme fallback +
+  legacy URL, lean Zod schemas, fallback-feed leak guard, getBaseUrl
+  server-side override precedence).
+- `mypy --explicit-package-bases` + `ruff`: clean. `gates.sh frontend:lint`: PASS.
 
 ## QA Report
 
