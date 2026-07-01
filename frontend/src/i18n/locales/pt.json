@@ -228,7 +228,10 @@
       "imagePresetLabel": "Estilo de Imagem",
       "imagePresetHelp": "Escolhe o modelo de imagem + wrapper de estilo que o pipeline usa. Presets OpenAI requerem uma OPENAI_API_KEY verificada.",
       "submit": "Criar Projeto",
-      "submitting": "Criando..."
+      "submitting": "Criando...",
+      "imageGuidanceLabel": "Direção de Imagem (opcional)",
+      "imageGuidancePlaceholder": "ex.: porto enevoado ao entardecer, oficina retrofuturista, rua neon chuvosa",
+      "imageGuidanceHint": "máx. 500 caracteres — orienta o cenário/fundo das imagens de cada slide; o estilo e a paleta da marca permanecem fixos"
     },
     "themes": {
       "auto": "Auto-detectar",

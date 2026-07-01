@@ -99,6 +99,23 @@ class TestCustomVisualDetails:
         )
         assert "Visual direction:" not in base.rendered_prompt
 
+    def test_details_land_after_the_locked_directives(self) -> None:
+        # AE-0298 structural guard: the user text rides in the Scene trailer
+        # AFTER the brand-lock directives. This proves positioning ONLY - it
+        # does NOT claim injection-immunity (a trailer directive can still
+        # attempt to override the no-text lock; documented residual risk).
+        pkg = render_image_prompt_package(
+            ImagePromptPackageRequest(
+                project=_project_with_details("misty cyber harbor"),
+                slide=_slide(),
+            )
+        )
+        rendered = pkg.rendered_prompt
+        lock_pos = rendered.index("STRICT:")
+        scene_pos = rendered.index("Scene:")
+        direction_pos = rendered.index("Visual direction:")
+        assert lock_pos < scene_pos < direction_pos
+
     def test_details_change_the_prompt_hash(self) -> None:
         # The reuse cache keys on prompt_hash; new direction must bust it so a
         # revision actually regenerates instead of returning the cached image.

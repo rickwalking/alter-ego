@@ -1,6 +1,6 @@
 # AE-0298 — expose custom_visual_details image-guidance input in create carousel brief step
 
-Status: Ready
+Status: In Development
 Tier: T2
 Priority: Medium
 Type: Feature
@@ -143,13 +143,42 @@ Plan `.agent/reports/AE-0298.arch-plan.md`; review `.agent/reports/AE-0295-0299.
 Ticket created from production troubleshooting session. Backend field confirmed fully wired;
 scope is frontend exposure (+ optional response echo).
 
+### 2026-07-01 — development (wave AE-0295..0299)
+
+- Zod: `custom_visual_details` (max 500, nullable, optional) added to
+  `carouselCreateRequestSchema`; response echo added to
+  `carouselProjectResponseSchema` (additive optional).
+- Form: `customVisualDetails` in `CreateCarouselFormState` + initial state;
+  payload builder sends trimmed text or `null`.
+- UI: optional multiline `LabeledField` (maxLength 500) after the niche field
+  in the Topic & Brief step; label/placeholder/hint i18n'd (en+pt,
+  `create.form.imageGuidance*`) with the hint stating brand style/palette
+  stay locked.
+- Backend: `custom_visual_details` echoed in `CarouselProjectResponse`
+  (round-trip test); structural positioning test added —
+  `Visual direction:` clause lands AFTER the locked `STRICT:` directives and
+  the `Scene:` trailer (positioning only; injection-immunity NOT claimed —
+  residual risk documented in the arch plan).
+
 ## Files Touched
 
-Pending.
+- `frontend/src/schemas/carousel.ts`
+- `frontend/src/app/dashboard/create/{types,helpers}.ts` (+ `helpers.test.ts`)
+- `frontend/src/app/dashboard/create/workspace/create-topic-section.tsx` (+ test)
+- `frontend/src/i18n/locales/{en,pt}.json`
+- `frontend/tests/features/create-image-guidance.feature`
+- `backend/src/rag_backend/api/schemas/carousel.py`
+- `backend/tests/unit/api/test_carousel_response_echo.py` (new)
+- `backend/tests/unit/application/test_image_prompt_package.py` (positioning test)
 
 ## Test Evidence
 
-Pending.
+- Frontend: `npx vitest run src/app/dashboard/create` — **60 passed**
+  (trimmed payload / null-when-blank / >500 schema reject / textarea cap /
+  onChange patch, plus existing create-suite regression).
+- Backend: `test_image_prompt_package.py` — **7 passed** (incl. new
+  lock→scene→direction ordering); `test_carousel_response_echo.py` — 2 passed.
+- `npm run typecheck` clean.
 
 ## QA Report
 

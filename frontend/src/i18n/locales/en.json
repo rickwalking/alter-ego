@@ -228,7 +228,10 @@
       "imagePresetLabel": "Image Style",
       "imagePresetHelp": "Picks the image model + style wrapper the pipeline uses. OpenAI presets require a verified OPENAI_API_KEY.",
       "submit": "Create Project",
-      "submitting": "Creating..."
+      "submitting": "Creating...",
+      "imageGuidanceLabel": "Image Guidance (optional)",
+      "imageGuidancePlaceholder": "e.g. misty harbor at dusk, retro-futuristic workshop, rainy neon street",
+      "imageGuidanceHint": "max 500 chars — steers the scene/backdrop of every slide image; the brand style and palette stay locked"
     },
     "themes": {
       "auto": "Auto-detect",

@@ -75,6 +75,8 @@ export const carouselProjectResponseSchema = z.object({
   status: z.string(),
   image_model: z.string().optional(),
   image_style: z.string().optional(),
+  // AE-0298: response echo of the request-side scene guidance (additive).
+  custom_visual_details: z.string().nullable().optional(),
   primary_color: z.string().nullable(),
   accent_color: z.string().nullable(),
   background_color: z.string().nullable(),
@@ -152,6 +154,9 @@ export const carouselCreateRequestSchema = z
       ])
       .default("neo_anime"),
     strategy: z.string().max(50).optional(),
+    // AE-0298: optional scene guidance folded into every slide image prompt
+    // (cap mirrors the backend Field(max_length=500)).
+    custom_visual_details: z.string().max(500).nullable().optional(),
   })
   .refine(
     (data) =>

@@ -117,6 +117,9 @@ class CarouselProjectResponse(BaseModel):
     theme: str
     image_model: str = IMAGE_MODEL_DEFAULT
     image_style: str = IMAGE_STYLE_DEFAULT
+    # AE-0298: echo the request-side scene guidance so it survives a reload
+    # (strictly additive optional response field).
+    custom_visual_details: str | None = None
     primary_color: str | None
     accent_color: str | None
     background_color: str | None
