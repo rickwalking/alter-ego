@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
-from rag_backend.agents.input_sanitizer import sanitize_llm_input
+from rag_backend.agents.input_sanitizer import (
+    sanitize_display_input,
+    sanitize_llm_input,
+)
 from rag_backend.api.schemas.carousel_workflow import (
     EditorialStructuredFeedback,
     LocalizedSlideReview,
@@ -15,8 +18,11 @@ from rag_backend.domain.constants.carousel_workflow import (
 
 
 def _sanitize_payload_strings(value: object) -> object:
+    # AE-0289: edited slide copy is FINAL published content, so preserve case
+    # (sanitize_display_input) instead of lowercasing it (sanitize_llm_input),
+    # which corrupted headings and broke heading_not_sentence_case_en validation.
     if isinstance(value, str):
-        return sanitize_llm_input(value)
+        return sanitize_display_input(value)
     if isinstance(value, list):
         return [_sanitize_payload_strings(item) for item in value]
     if isinstance(value, dict):
