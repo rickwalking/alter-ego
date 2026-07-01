@@ -21,8 +21,22 @@ export type {
   BlogPostCreatePayload,
   BlogPostUpdatePayload,
 } from "./blog/types";
-export type { BlogPostStatus } from "./blog/constants";
-export { BLOG_POST_STATUSES, toBlogPostStatus } from "./blog/constants";
+export type {
+  BlogPostMutationErrorCode,
+  BlogPostOrigin,
+  BlogPostStatus,
+} from "./blog/constants";
+export {
+  BLOG_POST_ERR_CAROUSEL_DELETE_BLOCKED,
+  BLOG_POST_ERR_VERSION_CONFLICT,
+  BLOG_POST_ORIGIN_CAROUSEL,
+  BLOG_POST_ORIGIN_STANDALONE,
+  BLOG_POST_ORIGINS,
+  BLOG_POST_STATUSES,
+  BlogPostMutationError,
+  toBlogPostOrigin,
+  toBlogPostStatus,
+} from "./blog/constants";
 export type {
   BlogAiSuggestResult,
   BlogAiImproveResult,

@@ -5,6 +5,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field
 
+from rag_backend.domain.constants.blog_post import BlogPostOrigin
+
 
 class BlogPostCreate(BaseModel):
     """Schema for creating a blog post."""
@@ -45,6 +47,7 @@ class BlogPostResponse(BaseModel):
 
     id: UUID
     project_id: UUID | None = None
+    origin: str = BlogPostOrigin.STANDALONE.value
     title: str
     slug: str
     status: str
@@ -87,6 +90,8 @@ class BlogPostSummaryResponse(BaseModel):
     title: str
     slug: str
     status: str
+    origin: str = BlogPostOrigin.STANDALONE.value
+    project_id: UUID | None = None
     excerpt: str | None = None
     featured_image_url: str | None = None
     author_id: str | None = None

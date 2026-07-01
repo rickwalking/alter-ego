@@ -773,7 +773,8 @@
         "submitReview": "Enviar para Revisão",
         "approve": "Aprovar",
         "publish": "Publicar",
-        "generateImage": "Gerar Imagem"
+        "generateImage": "Gerar Imagem",
+        "hide": "Ocultar (voltar a rascunho)"
       },
       "notFound": "Post não encontrado.",
       "backToList": "Voltar à lista",
@@ -787,7 +788,12 @@
         "diffTitle": "Prévia da diferença",
         "restore": "Restaurar esta versão"
       },
-      "featured": "Destaque"
+      "featured": "Destaque",
+      "errors": {
+        "versionConflict": "Este post foi alterado em outra sessão. A lista foi atualizada — tente novamente.",
+        "carouselDeleteBlocked": "Este post vem de um carrossel e não pode ser excluído enquanto vinculado. Oculte-o ou exclua o projeto de carrossel.",
+        "actionFailed": "A ação falhou. Tente novamente."
+      }
     },
     "analytics": {
       "title": "Analytics Editorial",

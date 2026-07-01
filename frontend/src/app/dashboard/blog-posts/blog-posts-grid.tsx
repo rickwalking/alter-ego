@@ -7,6 +7,7 @@ import {
 } from "@/modules/editorial-operations";
 import { formatBlogPostDate } from "@/modules/editorial-operations";
 import { BLOG_POSTS_I18N_NAMESPACE } from "@/modules/editorial-operations";
+import { BlogPostCardActions } from "@/app/dashboard/blog-posts/blog-posts-actions";
 import {
   BG_CARD,
   NEON_CARD_BORDER,
@@ -37,6 +38,7 @@ function BlogPostMeta({ post }: BlogPostMetaProps): React.ReactElement {
 
 export function FeaturedBlogPost({
   post,
+  actions,
 }: FeaturedBlogPostProps): React.ReactElement {
   const t = useTranslations(BLOG_POSTS_I18N_NAMESPACE);
   return (
@@ -59,16 +61,20 @@ export function FeaturedBlogPost({
         <p className="text-[13px] leading-relaxed text-[rgba(255,255,255,0.88)] line-clamp-3">
           {post.excerpt}
         </p>
+        <BlogPostCardActions post={post} actions={actions} />
         <BlogPostMeta post={post} />
       </div>
     </div>
   );
 }
 
-export function BlogPostCard({ post }: BlogPostCardProps): React.ReactElement {
+export function BlogPostCard({
+  post,
+  actions,
+}: BlogPostCardProps): React.ReactElement {
   return (
     <div
-      className="rounded p-[16px] overflow-hidden transition-all duration-250 cursor-pointer hover:-translate-y-0.5 active:translate-y-[-2px]"
+      className="rounded p-[16px] overflow-hidden transition-all duration-250 hover:-translate-y-0.5 active:translate-y-[-2px]"
       style={{
         background: BG_CARD,
         border: `1px solid ${NEON_CARD_BORDER}`,
@@ -94,6 +100,7 @@ export function BlogPostCard({ post }: BlogPostCardProps): React.ReactElement {
         <p className="text-[12px] leading-relaxed text-[rgba(255,255,255,0.55)] line-clamp-2">
           {post.excerpt}
         </p>
+        <BlogPostCardActions post={post} actions={actions} />
         <BlogPostMeta post={post} />
       </div>
     </div>
@@ -102,11 +109,12 @@ export function BlogPostCard({ post }: BlogPostCardProps): React.ReactElement {
 
 export function RegularBlogPosts({
   posts,
+  actions,
 }: RegularBlogPostsProps): React.ReactElement {
   return (
     <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
       {posts.map((post) => (
-        <BlogPostCard key={post.id} post={post} />
+        <BlogPostCard key={post.id} post={post} actions={actions} />
       ))}
     </div>
   );

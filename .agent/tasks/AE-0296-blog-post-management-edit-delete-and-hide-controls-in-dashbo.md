@@ -1,6 +1,6 @@
 # AE-0296 — blog post management: edit, delete, and hide controls in dashboard
 
-Status: Ready
+Status: In Development
 Tier: T2
 Priority: High
 Type: Feature
@@ -147,13 +147,65 @@ Plan `.agent/reports/AE-0296.arch-plan.md`; review `.agent/reports/AE-0295-0299.
 Ticket created from production troubleshooting session. Backend endpoints confirmed; scope now FE
 wiring + a small backend delete-integrity guard + unpublish If-Match (see Decision Log).
 
+### 2026-07-01 — development (wave AE-0295..0299)
+
+Backend:
+- DELETE `/blog-posts/{id}`: requires `If-Match` (428 when absent, 409
+  `version_conflict` when stale) + origin guard — carousel-origin rows still
+  linked to a project ⇒ 409 `carousel_origin_delete_blocked`; detached rows
+  (project_id NULL) are hard-deletable. Policy sets
+  (`BLOG_POST_HARD_DELETABLE_ORIGINS` / `BLOG_POST_LINK_GUARDED_ORIGINS`) with
+  a completeness test over every `BlogPostOrigin` member.
+- POST `/unpublish`: requires `If-Match` (428/409), bumps `lock_version` on the flip.
+- `delete_project` (carousel repo) now calls `detach_carousel_blog_posts`
+  (dual-write module): published carousel-origin rows revert to draft (stamps
+  cleared, lock bumped) in the same transaction — no orphaned public rows.
+- `origin` (+ `project_id` on summaries) exposed in blog-post responses.
+
+Frontend:
+- `use-blog-posts`: `delete`/`unpublish` send `If-Match`; 409s map to typed
+  `BlogPostMutationError` (carousel guard vs version conflict, which refetches);
+  dead `delete` path wired.
+- Cards get Edit (link), Hide (published only, "revert to draft" copy), Delete
+  (standalone only, `NeonModal` confirmation via `useBlogPostActions`); errors
+  surface as localized copy. Edit page save returns to the listing.
+- i18n: `actions.hide`, `errors.*` (en+pt).
+
+Deviation: no symmetric "Unhide" control (per Decision Log — restore is the
+normal publish workflow, not a one-click toggle). Note: version-conflict is
+surfaced as **409 `version_conflict`** (matching the PUT convention), not 412.
+
 ## Files Touched
 
-Pending.
+Backend:
+- `src/rag_backend/domain/constants/blog_post.py` (delete policy + error)
+- `src/rag_backend/api/routes/blog_post.py` (DELETE guard + If-Match)
+- `src/rag_backend/api/routes/blog_post_workflow.py` (unpublish If-Match)
+- `src/rag_backend/api/schemas/blog_post.py` (origin echo)
+- `src/rag_backend/infrastructure/database/{carousel_blog_dual_write,carousel_repository}.py`
+- Tests: `tests/unit/domain/test_blog_post_delete_policy.py`,
+  `tests/unit/infrastructure/test_carousel_repository_detach.py`,
+  `tests/integration/test_blog_post_management_ae0296.py`,
+  `tests/features/blog_post_management_ae0296.feature`
+
+Frontend:
+- `src/modules/publishing/blog/{constants,types}.ts`, `publishing/index.ts`
+- `src/modules/publishing/blog/hooks/use-blog-posts.ts` (+ test)
+- `src/modules/editorial-operations/board/blog-posts/{types.ts,adapters/blog-post-adapter.ts}`
+- `src/app/dashboard/blog-posts/{page.tsx,types.ts,blog-posts-grid.tsx,blog-posts-actions.tsx,use-blog-post-actions.ts}` (+ tests)
+- `src/app/dashboard/blog-posts/[id]/edit/page.tsx`
+- `src/i18n/locales/{en,pt}.json`
+- `tests/features/blog-posts-management.feature`
 
 ## Test Evidence
 
-Pending.
+- Backend: `uv run pytest` over the 3 new test files — **14 passed** (428/409
+  guards, origin policy completeness, detach flip, origin echo).
+- Backend `ruff check` + `mypy --explicit-package-bases`: clean (533 files).
+- Frontend: `npx vitest run` over blog-posts scope — **29 passed** (If-Match
+  transport, typed 409 mapping, hide/delete visibility rules, confirm/cancel,
+  version-conflict copy).
+- `bash scripts/ci/gates.sh frontend:lint`: PASS.
 
 ## QA Report
 

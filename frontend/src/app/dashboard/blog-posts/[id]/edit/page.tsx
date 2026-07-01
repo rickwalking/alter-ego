@@ -42,6 +42,12 @@ export default function BlogPostEditPage() {
     handleRestore,
   } = useBlogPostEditor(postId);
 
+  // AE-0296: saving returns to the listing so the refreshed card is visible.
+  const handleSaveAndReturn = async (): Promise<void> => {
+    await handleSave();
+    router.push(ROUTE_PATHS.BLOG_POSTS);
+  };
+
   if (loading && !post) {
     return (
       <div className="flex h-64 items-center justify-center">
@@ -74,7 +80,10 @@ export default function BlogPostEditPage() {
           >
             {t("backToList")}
           </NeonButton>
-          <NeonButton onClick={() => void handleSave()} disabled={saving}>
+          <NeonButton
+            onClick={() => void handleSaveAndReturn()}
+            disabled={saving}
+          >
             {saving ? t("saving") : t("saveChanges")}
           </NeonButton>
         </div>

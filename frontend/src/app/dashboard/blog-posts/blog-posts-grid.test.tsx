@@ -7,6 +7,12 @@ import {
   FeaturedBlogPost,
   RegularBlogPosts,
 } from "@/app/dashboard/blog-posts/blog-posts-grid";
+import type { BlogPostActionHandlers } from "@/app/dashboard/blog-posts/types";
+
+const NOOP_ACTIONS: BlogPostActionHandlers = {
+  onDelete: () => undefined,
+  onHide: () => undefined,
+};
 
 // Scenarios: see tests/features/blog-posts-listing-status-badge.feature
 // ("Listing renders posts of every workflow status without crashing")
@@ -23,6 +29,8 @@ function makeDashboardPost(
     comments: 2,
     status: "draft",
     category: "",
+    origin: "standalone",
+    lockVersion: 1,
     featured: false,
     ...overrides,
   };
@@ -37,7 +45,9 @@ describe("blog posts grid (AE-0295)", () => {
         status,
       }),
     );
-    expect(() => render(<RegularBlogPosts posts={posts} />)).not.toThrow();
+    expect(() =>
+      render(<RegularBlogPosts posts={posts} actions={NOOP_ACTIONS} />),
+    ).not.toThrow();
     for (const status of BLOG_POST_STATUSES) {
       expect(screen.getByText(`Post ${status}`)).toBeInTheDocument();
     }
@@ -45,7 +55,9 @@ describe("blog posts grid (AE-0295)", () => {
 
   it("renders a card with an unknown (null) status using the neutral badge", () => {
     const posts = [makeDashboardPost({ status: null, title: "Drifted post" })];
-    expect(() => render(<RegularBlogPosts posts={posts} />)).not.toThrow();
+    expect(() =>
+      render(<RegularBlogPosts posts={posts} actions={NOOP_ACTIONS} />),
+    ).not.toThrow();
     expect(screen.getByText("Drifted post")).toBeInTheDocument();
     expect(screen.getByText("Unknown")).toBeInTheDocument();
   });
@@ -54,6 +66,7 @@ describe("blog posts grid (AE-0295)", () => {
     render(
       <FeaturedBlogPost
         post={makeDashboardPost({ status: "published", featured: true })}
+        actions={NOOP_ACTIONS}
       />,
     );
     expect(screen.getByText("Published")).toBeInTheDocument();

@@ -773,7 +773,8 @@
         "submitReview": "Submit for Review",
         "approve": "Approve",
         "publish": "Publish",
-        "generateImage": "Generate Image"
+        "generateImage": "Generate Image",
+        "hide": "Hide (revert to draft)"
       },
       "notFound": "Blog post not found.",
       "backToList": "Back to list",
@@ -787,7 +788,12 @@
         "diffTitle": "Preview diff",
         "restore": "Restore this version"
       },
-      "featured": "Featured"
+      "featured": "Featured",
+      "errors": {
+        "versionConflict": "This post changed in another session. The list was refreshed — try again.",
+        "carouselDeleteBlocked": "This post comes from a carousel and cannot be deleted while linked. Hide it, or delete the carousel project.",
+        "actionFailed": "The action failed. Try again."
+      }
     },
     "analytics": {
       "title": "Editorial Analytics",

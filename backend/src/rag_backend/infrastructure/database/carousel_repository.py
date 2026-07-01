@@ -20,6 +20,7 @@ from rag_backend.domain.models import (
 from rag_backend.domain.protocols import CarouselRepository
 from rag_backend.domain.protocols.repositories import _ProjectQuery
 from rag_backend.infrastructure.database.carousel_blog_dual_write import (
+    detach_carousel_blog_posts,
     sync_carousel_blog_post,
 )
 from rag_backend.infrastructure.database.distribution_home import read_distribution
@@ -140,7 +141,12 @@ class PostgresCarouselRepository(CarouselRepository):
         return model.to_entity()
 
     async def delete_project(self, project_id: UUID) -> bool:
-        """Delete a carousel project and its slides."""
+        """Delete a carousel project and its slides.
+
+        Any published carousel-origin blog row is flipped back to draft in the
+        same transaction (AE-0296) so the FK's ``ON DELETE SET NULL`` cannot
+        leave an orphaned row that is still publicly visible.
+        """
         stmt = select(CarouselProjectModel).where(
             CarouselProjectModel.id == str(project_id)
         )
@@ -148,6 +154,7 @@ class PostgresCarouselRepository(CarouselRepository):
         model = result.scalar_one_or_none()
         if model is None:
             return False
+        await detach_carousel_blog_posts(self._session, str(project_id))
         await self._session.delete(model)
         await self._session.flush()
         await self._session.commit()

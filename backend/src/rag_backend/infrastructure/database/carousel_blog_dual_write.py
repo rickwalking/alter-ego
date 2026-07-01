@@ -24,7 +24,7 @@ from __future__ import annotations
 
 import uuid
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.domain.constants.blog_post import BlogPostOrigin, BlogPostStatus
@@ -117,4 +117,35 @@ async def _existing_carousel_row(
     return result.scalars().first()
 
 
-__all__ = ["sync_carousel_blog_post"]
+async def detach_carousel_blog_posts(
+    session: AsyncSession,
+    project_id: str,
+) -> None:
+    """Flip the project's carousel-origin blog rows out of ``published`` (AE-0296).
+
+    Called by the carousel repository right before the project row is deleted.
+    The FK is ``ON DELETE SET NULL``, so without this flip a published
+    carousel-origin post would survive its parent's deletion as an orphan that
+    is still publicly visible yet unmanageable. Reverting it to ``draft``
+    (clearing publish stamps, bumping ``lock_version``) makes the detached row
+    invisible publicly and hard-deletable like a standalone one. Flushed, not
+    committed — shares the caller's delete transaction.
+    """
+    await session.execute(
+        update(BlogPostModel)
+        .where(
+            BlogPostModel.project_id == project_id,
+            BlogPostModel.origin == BlogPostOrigin.CAROUSEL.value,
+            BlogPostModel.status == BlogPostStatus.PUBLISHED.value,
+        )
+        .values(
+            status=BlogPostStatus.DRAFT.value,
+            published_at=None,
+            submitted_for_review_at=None,
+            lock_version=BlogPostModel.lock_version + 1,
+        )
+    )
+    await session.flush()
+
+
+__all__ = ["detach_carousel_blog_posts", "sync_carousel_blog_post"]
