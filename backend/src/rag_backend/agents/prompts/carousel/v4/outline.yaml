@@ -1,0 +1,37 @@
+---
+name: carousel_outline
+version: "3.0.0"
+description: "Plan a seven-slide hero lower-third carousel outline from research context"
+
+template: |
+  Plan a {{ slide_count }}-slide Instagram carousel outline aligned with the
+  hero_lower_third presentation contract.
+
+  Topic: {{ topic }}
+  Audience: {{ audience }}
+  Brief: {{ brief }}
+  Locale: {{ locale }}
+  Phase: {{ phase }}
+
+  Research sources:
+  {{ sources }}
+
+  {{ presentation_policy_context }}
+
+  Return ONLY a JSON array with exactly {{ slide_count }} objects:
+  {slide_index, slide_type, title, key_points, tldr_strip?}
+
+  Use slide types from the policy sequence. Slide 1 may include tldr_strip.
+  Do not use emoji icons. Reference Lucide icon_name values only in notes.
+
+  {{ persona_context }}
+  {{ revision_notes }}
+
+model:
+  temperature: 0.5
+  max_tokens: 2048
+
+metadata:
+  author: "content-team"
+  created_at: "2026-06-09"
+  tags: ["carousel", "outline", "hero-lower-third-v1"]

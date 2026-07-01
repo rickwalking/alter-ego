@@ -35,6 +35,10 @@ Full JSON return shape and per-type body contracts: [`content-contracts.md`](../
 - EN: professional, direct, same depth and structure
 - NEVER use em dashes in either language
 - Short paragraphs (2-4 sentences max)
+- Cross-slide distinctness (AE-0291): each slide MUST cover a distinct angle. Do
+  not repeat another slide's framing, examples, statistics, or sentences. The
+  other slides' headings and key points are supplied under "Other slides in this
+  carousel" — differentiate wording and concrete detail against them.
 - One structured extra per content slide (`stats`, `features`, or `insight`)
 - Tool vocabulary: Claude Code, OpenCode, BMAD, Superpowers, Cursor (Copilot valid but dated alone)
 

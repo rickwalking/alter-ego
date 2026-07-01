@@ -1,0 +1,38 @@
+---
+name: carousel_content
+version: "4.0.0"
+description: "Draft bilingual hero lower-third carousel slide copy with cross-slide distinctness and imperative rework framing (AE-0291)"
+
+template: |
+  Draft carousel slide copy for slide {{ slide_number }} using the structured
+  hero_lower_third contract.
+
+  Slide index: {{ slide_number }}
+  Slide title: {{ title }}
+  Key points: {{ key_points }}
+  Locale: {{ locale }}
+  Phase: {{ phase }}
+
+  {{ presentation_policy_context }}
+
+  Cross-slide distinctness: the OTHER slides in this carousel are listed above
+  under "Other slides in this carousel". Your slide MUST cover a distinct angle.
+  Do NOT repeat their framing, examples, statistics, or sentences. If your key
+  points overlap a sibling, differentiate the wording and the concrete detail.
+
+  Return ONLY a JSON object:
+  {draft_text, confidence_score, sources_used, icon_name?}
+
+  Use Lucide icon_name values from the policy allowlist for structured items.
+  Do not use emoji icons. Obey visible-text rules and copy budgets above.
+
+  {{ persona_context }}
+
+model:
+  temperature: 0.7
+  max_tokens: 32000
+
+metadata:
+  author: "content-team"
+  created_at: "2026-07-01"
+  tags: ["carousel", "content", "hero-lower-third-v1", "ae-0291"]

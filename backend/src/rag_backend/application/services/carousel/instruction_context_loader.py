@@ -38,8 +38,23 @@ SECTION_LOCALE = "## Locale rules"
 SECTION_SLIDE = "## Slide constraints"
 SECTION_PERSONA = "## Persona voice"
 SECTION_REVISION = "## Reviewer revision notes"
+SECTION_SIBLING = "## Other slides in this carousel"
 SECTION_PHASE_SKILL = "## Phase skill"
 SECTION_SHARED = "## Shared standards"
+
+# AE-0291: imperative rework framing. Rendered once, here in the instruction
+# context (the v4 content.yaml no longer carries a second revision-notes block).
+REVISION_IMPERATIVE_HEADER = (
+    "REGENERATION: your previous draft for this slide was REJECTED. You MUST apply "
+    "every reviewer note below and change the copy accordingly. Do not return the "
+    "previous text."
+)
+PREVIOUS_DRAFT_LABEL = "Previous rejected draft (change this):"
+SIBLING_DISTINCTNESS_NOTE = (
+    "Cover a distinct angle from these sibling slides. Do not repeat their framing, "
+    "examples, statistics, or sentences."
+)
+_NONE_PLACEHOLDER = "None."
 
 PHASE_TO_SUBAGENT: dict[str, str] = {
     PHASE_OUTLINE: SUBAGENT_OUTLINE_PLANNER,
@@ -58,6 +73,11 @@ class InstructionContextRequest:
     slide_number: int | None = None
     policy_version: str = DEFAULT_PRESENTATION_POLICY_VERSION
     prompt_version: str = CAROUSEL_PROMPT_VERSION_V3
+    # AE-0291: sibling outline (other slides' headings + key points) and the prior
+    # rejected draft body, injected here so tail-truncation drops shared boilerplate
+    # (added later) before this cross-slide / rework context.
+    sibling_context: str = ""
+    previous_draft: str = ""
 
 
 @dataclass(frozen=True)
@@ -96,7 +116,9 @@ class CarouselInstructionContextLoader:
             SECTION_PERSONA,
             request.persona_context.strip() or "Default professional voice.",
             SECTION_REVISION,
-            request.revision_notes.strip() or "None.",
+            _revision_block(request.revision_notes, request.previous_draft),
+            SECTION_SIBLING,
+            _sibling_block(request.sibling_context),
         ])
         phase_skill, shared_files = _phase_resources(request.phase)
         sections.extend([SECTION_PHASE_SKILL, phase_skill])
@@ -126,6 +148,28 @@ def _phase_resources(phase: str) -> tuple[str, tuple[str, ...]]:
             return read_runtime_skill_markdown(spec.phase_skill), spec.shared_standards
     msg = f"Phase subagent not registered: {subagent_name}"
     raise ValueError(msg)
+
+
+def _revision_block(revision_notes: str, previous_draft: str) -> str:
+    """AE-0291: imperative rework framing + previous rejected draft (single site)."""
+    notes = revision_notes.strip()
+    prior = previous_draft.strip()
+    if not notes and not prior:
+        return _NONE_PLACEHOLDER
+    parts: list[str] = []
+    if notes:
+        parts.append(f"{REVISION_IMPERATIVE_HEADER}\n{notes}")
+    if prior:
+        parts.append(f"{PREVIOUS_DRAFT_LABEL}\n{prior}")
+    return "\n\n".join(parts)
+
+
+def _sibling_block(sibling_context: str) -> str:
+    """AE-0291: other slides' outline so each slide can differentiate its copy."""
+    context = sibling_context.strip()
+    if not context:
+        return _NONE_PLACEHOLDER
+    return f"{SIBLING_DISTINCTNESS_NOTE}\n{context}"
 
 
 def _bound_instruction(text: str) -> str:

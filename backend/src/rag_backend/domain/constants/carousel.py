@@ -55,6 +55,9 @@ CAROUSEL_SLIDES_CONFIG_SEVEN = "7_slides"
 TEMPLATE_VERSION_V1 = "v1"
 TEMPLATE_VERSION_V2 = "v2"
 CAROUSEL_PROMPT_VERSION_V3 = "v3"
+# AE-0291: v4 adds cross-slide sibling context, imperative rework-feedback framing,
+# a previous-draft diff channel, and a live model config (temperature/max_tokens).
+CAROUSEL_PROMPT_VERSION_V4 = "v4"
 DEFAULT_TEMPLATE_VERSION = TEMPLATE_VERSION_V2
 DEFAULT_CAROUSEL_PROMPT_VERSION = "v2"
 
@@ -139,6 +142,7 @@ __all__ = [
     "CAROUSEL_DEFAULT_SLIDES_CONFIG",
     "CAROUSEL_HEIGHT",
     "CAROUSEL_PROMPT_VERSION_V3",
+    "CAROUSEL_PROMPT_VERSION_V4",
     "CAROUSEL_SLIDES_CONFIG_SEVEN",
     "CAROUSEL_STATUS_COMPLETED",
     "CAROUSEL_STATUS_DESIGNING",
