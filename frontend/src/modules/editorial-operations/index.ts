@@ -22,6 +22,7 @@ export * from "./board/blog-posts/types";
 export * from "./board/blog-posts/constants";
 export * from "./board/blog-posts/helpers";
 export * from "./board/blog-posts/components/badge";
+export * from "./board/blog-posts/components/status-badge";
 export * from "./board/blog-posts/adapters/blog-post-adapter";
 
 /* --- board: calendar --- */

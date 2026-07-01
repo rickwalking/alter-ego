@@ -6,7 +6,14 @@
  * live here rather than inline in the `.tsx` files.
  */
 
+import type { BlogPostStatus } from "@/modules/publishing";
+
 export interface BlogPostBadgeProps {
   children: React.ReactNode;
   color: string;
+}
+
+export interface BlogPostStatusBadgeProps {
+  /** `null` = unknown/drifted backend status → neutral fallback badge. */
+  status: BlogPostStatus | null;
 }

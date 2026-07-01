@@ -752,7 +752,8 @@
         "under_review": "Under Review",
         "approved": "Approved",
         "published": "Published",
-        "archived": "Archived"
+        "archived": "Archived",
+        "unknown": "Unknown"
       },
       "fields": {
         "title": "Title",
@@ -785,7 +786,8 @@
         "versionLabel": "Version {number}",
         "diffTitle": "Preview diff",
         "restore": "Restore this version"
-      }
+      },
+      "featured": "Featured"
     },
     "analytics": {
       "title": "Editorial Analytics",

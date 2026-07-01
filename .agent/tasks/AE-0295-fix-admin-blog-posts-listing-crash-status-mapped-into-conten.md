@@ -1,6 +1,6 @@
 # AE-0295 — fix admin blog-posts listing crash: status mapped into content-category badge palette
 
-Status: Ready
+Status: In Development
 Tier: T1
 Priority: High
 Type: Bugfix
@@ -132,13 +132,42 @@ Plan `.agent/reports/AE-0295.arch-plan.md`; review `.agent/reports/AE-0295-0299.
 Ticket created from production troubleshooting session. Root cause fully isolated to the
 status→category badge mapping crash.
 
+### 2026-07-01 — development (wave AE-0295..0299)
+
+Implemented on `feat/ae-0295-0299-blog-prod-fixes`:
+- `BLOG_POST_STATUSES` + `BlogPostStatus` + `toBlogPostStatus` in
+  `publishing/blog/constants.ts` (backend enum mirrored; FE/BE contract test).
+- `BLOG_POST_STATUS_COLORS: Record<BlogPostStatus, BlogPostBadgeVisual>`
+  (compile-time exhaustive) + `BLOG_POST_BADGE_FALLBACK` neutral visual.
+- New `BlogPostStatusBadge` typed `BlogPostStatus | null` (null = drifted
+  backend value → neutral "Unknown" badge); `BlogPostBadge` gains the safe
+  fallback for unmapped keys (rule-fires test).
+- Adapter maps status into a dedicated `status` slot; `category` left empty
+  (status no longer conflated). Status filter now matches `post.status`;
+  filter options i18n-driven from the real 5-status vocabulary (fixes the
+  stale `review` option value).
+
 ## Files Touched
 
-Pending.
+- `frontend/src/modules/publishing/blog/constants.ts` (new) + `publishing/index.ts`
+- `frontend/src/modules/editorial-operations/board/blog-posts/{types,constants,helpers}.ts`
+- `frontend/src/modules/editorial-operations/board/blog-posts/components/{badge.tsx,status-badge.tsx,types.ts}`
+- `frontend/src/modules/editorial-operations/board/blog-posts/adapters/blog-post-adapter.ts`
+- `frontend/src/modules/editorial-operations/index.ts`
+- `frontend/src/app/dashboard/blog-posts/{blog-posts-grid.tsx,blog-posts-filters.tsx}`
+- `frontend/src/i18n/locales/{en,pt}.json` (`featured`, `status.unknown`)
+- `frontend/tests/features/blog-posts-listing-status-badge.feature` (new)
+- Tests: `constants.test.ts`, `badge.test.tsx`, `status-badge.test.tsx`,
+  `blog-post-adapter.test.ts`, `blog-posts-grid.test.tsx`
 
 ## Test Evidence
 
-Pending.
+- `npx vitest run` over the 5 new test files: **18 passed** (badge fallback
+  rule-fires, exhaustive status map, draft≠published visuals, adapter
+  narrowing, grid renders all 5 statuses + unknown, FE/BE enum contract).
+- `npm run typecheck`: clean.
+- `bash scripts/ci/gates.sh frontend:lint`: PASS
+  (`GATES_JSON: {"pass":1,"fail":0,"skip":0,...}`).
 
 ## QA Report
 

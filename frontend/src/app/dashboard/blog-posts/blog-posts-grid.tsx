@@ -1,7 +1,12 @@
 "use client";
 
-import { BlogPostBadge } from "@/modules/editorial-operations";
+import { useTranslations } from "next-intl";
+import {
+  BlogPostBadge,
+  BlogPostStatusBadge,
+} from "@/modules/editorial-operations";
 import { formatBlogPostDate } from "@/modules/editorial-operations";
+import { BLOG_POSTS_I18N_NAMESPACE } from "@/modules/editorial-operations";
 import {
   BG_CARD,
   NEON_CARD_BORDER,
@@ -33,6 +38,7 @@ function BlogPostMeta({ post }: BlogPostMetaProps): React.ReactElement {
 export function FeaturedBlogPost({
   post,
 }: FeaturedBlogPostProps): React.ReactElement {
+  const t = useTranslations(BLOG_POSTS_I18N_NAMESPACE);
   return (
     <div className="grid grid-cols-1 gap-0 md:grid-cols-2">
       <div
@@ -44,8 +50,8 @@ export function FeaturedBlogPost({
       />
       <div className="p-6 flex flex-col justify-center">
         <div className="flex gap-1.5 mb-2.5">
-          <BlogPostBadge color="magenta">Security</BlogPostBadge>
-          <BlogPostBadge color="cyan">Featured</BlogPostBadge>
+          <BlogPostStatusBadge status={post.status} />
+          <BlogPostBadge color="cyan">{t("featured")}</BlogPostBadge>
         </div>
         <h3 className="text-[20px] font-bold leading-tight mb-2">
           {post.title}
@@ -81,11 +87,7 @@ export function BlogPostCard({ post }: BlogPostCardProps): React.ReactElement {
         }}
       />
       <div>
-        {post.category && (
-          <BlogPostBadge color={post.category.toLowerCase()}>
-            {post.category}
-          </BlogPostBadge>
-        )}
+        <BlogPostStatusBadge status={post.status} />
         <h3 className="text-[15px] font-bold leading-snug mb-1.5">
           {post.title}
         </h3>

@@ -21,6 +21,8 @@ export type {
   BlogPostCreatePayload,
   BlogPostUpdatePayload,
 } from "./blog/types";
+export type { BlogPostStatus } from "./blog/constants";
+export { BLOG_POST_STATUSES, toBlogPostStatus } from "./blog/constants";
 export type {
   BlogAiSuggestResult,
   BlogAiImproveResult,
