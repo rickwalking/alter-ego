@@ -347,6 +347,62 @@ class TestWorkflowPhaseNodes:
         assert result["current_phase"] == PHASE_FINAL_REVIEW
         assert result["status"] == "draft"
 
+    @patch("rag_backend.agents.carousel_workflow_nodes.interrupt")
+    def test_final_review_phase_preserves_content_phase_on_send_back(
+        self, mock_interrupt: object
+    ) -> None:
+        """AE-0290: a send-back to content must record current_phase=content (not
+        clobber it back to final_review), so read_checkpoint_phase reports content
+        and the edited-localized-slides gate accepts the edits."""
+        mock_interrupt.return_value = {
+            "action": REVIEW_ACTION_REVISE,
+            STRUCTURED_FEEDBACK_KEY: {
+                STRUCTURED_FEEDBACK_TARGET_PHASE_KEY: PHASE_CONTENT,
+            },
+        }
+
+        result = final_review_phase(_state())
+
+        assert result["current_phase"] == PHASE_CONTENT
+        # AE-0290: target must stay set so route_after_final_review can route.
+        assert result[SEND_BACK_TARGET_PHASE_KEY] == PHASE_CONTENT
+        assert result["quality_passed"] is False
+
+    @patch("rag_backend.agents.carousel_workflow_nodes.interrupt")
+    def test_final_review_phase_preserves_images_phase_on_send_back(
+        self, mock_interrupt: object
+    ) -> None:
+        """AE-0290: send-back to a non-content phase is preserved too."""
+        mock_interrupt.return_value = {
+            "action": REVIEW_ACTION_REVISE,
+            STRUCTURED_FEEDBACK_KEY: {
+                STRUCTURED_FEEDBACK_TARGET_PHASE_KEY: PHASE_IMAGES,
+            },
+        }
+
+        result = final_review_phase(_state())
+
+        assert result["current_phase"] == PHASE_IMAGES
+        assert result[SEND_BACK_TARGET_PHASE_KEY] == PHASE_IMAGES
+
+    @patch("rag_backend.agents.carousel_workflow_nodes.interrupt")
+    def test_final_review_phase_rejects_bogus_send_back_target(
+        self, mock_interrupt: object
+    ) -> None:
+        """AE-0290 membership guard: a target outside CAROUSEL_WORKFLOW_PHASES never
+        reaches current_phase — the node falls back to final_review."""
+        mock_interrupt.return_value = {
+            "action": REVIEW_ACTION_REVISE,
+            STRUCTURED_FEEDBACK_KEY: {
+                STRUCTURED_FEEDBACK_TARGET_PHASE_KEY: "banana",
+            },
+        }
+
+        result = final_review_phase(_state())
+
+        assert result["current_phase"] == PHASE_FINAL_REVIEW
+        assert SEND_BACK_TARGET_PHASE_KEY not in result
+
 
 @pytest.mark.unit
 class TestWorkflowRouting:

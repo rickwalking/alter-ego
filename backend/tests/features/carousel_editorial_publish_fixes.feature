@@ -58,3 +58,30 @@ Feature: GLM flat draft blob normalization
     Given a slide draft whose draft_text is plain prose
     When the slide draft is normalized
     Then the slide draft is returned unchanged
+
+Feature: Final-review send-back preserves the target phase (AE-0290)
+  As an editor sending an approved carousel back to content
+  I want the checkpoint to record the content phase
+  So that edited localized slides are accepted instead of rejected with 422
+
+  Scenario: Send-back to content records the content phase
+    Given a carousel at the final-review interrupt
+    When the reviewer revises with structured feedback target_phase "content"
+    Then the final_review node records current_phase "content"
+    And the send_back_target_phase remains set to "content"
+
+  Scenario: Send-back to a non-content phase is preserved
+    Given a carousel at the final-review interrupt
+    When the reviewer revises with structured feedback target_phase "images"
+    Then the final_review node records current_phase "images"
+
+  Scenario: Approval keeps the final-review phase and clears the send-back target
+    Given a carousel at the final-review interrupt with a stale send_back_target_phase
+    When the reviewer approves for publish
+    Then the final_review node records current_phase "final_review"
+    And the send_back_target_phase is cleared
+
+  Scenario: A bogus send-back target never reaches current_phase
+    Given a carousel at the final-review interrupt
+    When the reviewer revises with a target_phase outside the workflow phases
+    Then the final_review node falls back to current_phase "final_review"
