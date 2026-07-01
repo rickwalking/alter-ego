@@ -67,8 +67,12 @@ class TestDeleteProjectDetachesBlogRow:
         assert row_after.submitted_for_review_at is None
         assert row_after.lock_version == initial_lock_version + 1
 
+    @pytest.mark.parametrize(
+        "untouched_status",
+        [BlogPostStatus.DRAFT, BlogPostStatus.ARCHIVED],
+    )
     async def test_non_published_blog_row_is_left_untouched(
-        self, carousel_repository, db_session
+        self, carousel_repository, db_session, untouched_status: BlogPostStatus
     ) -> None:
         created = await carousel_repository.create_project(_project_with_blog())
         row = (
@@ -82,7 +86,7 @@ class TestDeleteProjectDetachesBlogRow:
             .scalars()
             .one()
         )
-        row.status = BlogPostStatus.ARCHIVED.value
+        row.status = untouched_status.value
         initial_lock_version = row.lock_version
         row_id = row.id
         await db_session.flush()
@@ -99,5 +103,6 @@ class TestDeleteProjectDetachesBlogRow:
             .scalars()
             .one()
         )
-        assert row_after.status == BlogPostStatus.ARCHIVED.value
+        assert row_after.status == untouched_status.value
+        assert row_after.published_at is None
         assert row_after.lock_version == initial_lock_version

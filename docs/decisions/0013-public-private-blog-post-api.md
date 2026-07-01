@@ -65,6 +65,13 @@ model). Public payload = **only**: `id`, `slug`, `title`, `excerpt`, `content` (
 `origin`, `project_id` (nullable — enables carousel design enrichment on the FE). All of these are
 public-safe (verified: SEO is flat columns, there is no `seo_meta` JSONB blob).
 
+**`project_id` exposure is intentional (external QA F-2, 2026-07-01):** the anonymous payload
+deliberately reveals the blog↔carousel correlation for carousel-origin posts, because the public
+detail page needs the project id to fetch the (already-public) carousel design tokens via
+`GET /carousels/{id}/design`. The correlated resource is gated by its own `is_public` flag, so no
+non-public data becomes reachable through the correlation. Removing it would require server-side
+design resolution — a deliberate future option, not a v1 requirement.
+
 **Excluded (never serialized publicly):** `status`, `author_id`, `reviewer_id`, `editor_comments`,
 `version_history`, `ai_suggestions`, `ai_generation_metadata`, `lock_version`, `distribution`,
 `sources`, `citations`. `distribution`/`citations` are **omitted in v1** (not needed to render a
