@@ -351,10 +351,20 @@ def final_review_phase(state: CarouselWorkflowState) -> dict[str, object]:
         },
     )
     approved = review_update.get("phase_status") == PHASE_STATUS_APPROVED
+    # AE-0290: on a send-back, review_update already carries current_phase=<target>
+    # (e.g. content). We must NOT clobber it back to final_review, or the committed
+    # checkpoint reports final_review and read_checkpoint_phase 422s the edited
+    # slides (edited_localized_slides_content_phase_only). Only pin current_phase to
+    # final_review when there is no valid send-back target. Membership guard hardens
+    # against a stale/corrupted-but-truthy target reaching current_phase.
+    send_back_target = review_update.get(SEND_BACK_TARGET_PHASE_KEY)
+    has_send_back = (
+        isinstance(send_back_target, str)
+        and send_back_target in CAROUSEL_WORKFLOW_PHASES
+    )
     result: dict[str, object] = {
         **review_update,
         "quality_passed": approved,
-        "current_phase": PHASE_FINAL_REVIEW,
         "workflow_status": (
             WORKFLOW_STATUS_APPROVED_FOR_PUBLISH
             if approved
@@ -362,6 +372,10 @@ def final_review_phase(state: CarouselWorkflowState) -> dict[str, object]:
         ),
         "status": "draft",
     }
+    if not has_send_back:
+        # No send-back (approval or plain resume): keep the node pinned to
+        # final_review. Routing off SEND_BACK_TARGET_PHASE_KEY is unaffected.
+        result["current_phase"] = PHASE_FINAL_REVIEW
     if approved:
         # AE-0288: clear any send-back target consumed in a prior cycle so it
         # can't route a later resume from the approved_hold node on a stale value.

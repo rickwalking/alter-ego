@@ -43,6 +43,7 @@ from .editorial_distribution_pack import (
     build_editorial_distribution_updates,
 )
 from .editorial_workflow_generators import (
+    ContentRegenInputs,
     SlideDraftGenerationParams,
     generate_outline,
     generate_slide_drafts,
@@ -229,12 +230,19 @@ class PhaseArtifactRunner:
         outline, outline_updates = await self._resolve_outline(pending, state)
         updates.update(outline_updates)
         revision_notes = self._content_revision_notes(state)
+        prior_drafts = [
+            draft
+            for draft in (state.get("slide_drafts") or [])
+            if isinstance(draft, dict)
+        ]
         should_regenerate = not state.get("slide_drafts") or bool(revision_notes)
         if should_regenerate and isinstance(outline, list):
             draft_updates = await self._generate_content_drafts(
                 resolved,
                 outline,
-                revision_notes,
+                ContentRegenInputs(
+                    revision_notes=revision_notes, previous_drafts=prior_drafts
+                ),
             )
             if draft_updates.get("phase_status") == PHASE_STATUS_FAILED:
                 return draft_updates
@@ -305,7 +313,7 @@ class PhaseArtifactRunner:
         self,
         resolved: EditorialWorkflowStartInput,
         outline: list[object],
-        revision_notes: list[str],
+        regen: ContentRegenInputs,
     ) -> dict[str, object]:
         learned_examples = await self._load_learned_examples(resolved.persona)
         try:
@@ -314,8 +322,9 @@ class PhaseArtifactRunner:
                 SlideDraftGenerationParams(
                     outline=[slide for slide in outline if isinstance(slide, dict)],
                     persona=resolved.persona,
-                    revision_notes=revision_notes or None,
+                    revision_notes=regen.revision_notes or None,
                     learned_examples=learned_examples or None,
+                    previous_drafts=regen.previous_drafts or None,
                 ),
             )
         except ValueError as exc:
