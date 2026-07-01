@@ -1,6 +1,6 @@
 # AE-0296 — blog post management: edit, delete, and hide controls in dashboard
 
-Status: Dev Complete
+Status: Review
 Tier: T2
 Priority: High
 Type: Feature
@@ -209,7 +209,9 @@ Frontend:
 
 ## QA Report
 
-Pending.
+Wave external QA (GLM 5.2, opencode-go, cold context): R1 WARN (0 critical) →
+fixes (eac18aee) → R2 confirmation **PASS**. Wave report:
+`.agent/reports/AE-0295-0299.qa.md`; pointer: `.agent/reports/AE-0296.qa.md`.
 
 ## Blockers
 

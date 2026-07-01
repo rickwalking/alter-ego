@@ -1,6 +1,6 @@
 # AE-0299 — migrate fluxo editorial progress component to neon design system
 
-Status: Dev Complete
+Status: Review
 Tier: T1
 Priority: Medium
 Type: Refactor
@@ -199,7 +199,9 @@ Token migration (six files, visual-only — logic/data contract untouched):
 
 ## QA Report
 
-Pending.
+Wave external QA (GLM 5.2, opencode-go, cold context): R1 WARN (0 critical) →
+fixes (eac18aee) → R2 confirmation **PASS**. Wave report:
+`.agent/reports/AE-0295-0299.qa.md`; pointer: `.agent/reports/AE-0299.qa.md`.
 
 ## Blockers
 

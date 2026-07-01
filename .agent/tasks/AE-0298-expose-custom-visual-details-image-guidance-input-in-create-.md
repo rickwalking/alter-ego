@@ -1,6 +1,6 @@
 # AE-0298 — expose custom_visual_details image-guidance input in create carousel brief step
 
-Status: Dev Complete
+Status: Review
 Tier: T2
 Priority: Medium
 Type: Feature
@@ -182,7 +182,9 @@ scope is frontend exposure (+ optional response echo).
 
 ## QA Report
 
-Pending.
+Wave external QA (GLM 5.2, opencode-go, cold context): R1 WARN (0 critical) →
+fixes (eac18aee) → R2 confirmation **PASS**. Wave report:
+`.agent/reports/AE-0295-0299.qa.md`; pointer: `.agent/reports/AE-0298.qa.md`.
 
 ## Blockers
 

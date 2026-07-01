@@ -1,6 +1,6 @@
 # AE-0295 — fix admin blog-posts listing crash: status mapped into content-category badge palette
 
-Status: Dev Complete
+Status: Review
 Tier: T1
 Priority: High
 Type: Bugfix
@@ -171,7 +171,9 @@ Implemented on `feat/ae-0295-0299-blog-prod-fixes`:
 
 ## QA Report
 
-Pending.
+Wave external QA (GLM 5.2, opencode-go, cold context): R1 WARN (0 critical) →
+fixes (eac18aee) → R2 confirmation **PASS**. Wave report:
+`.agent/reports/AE-0295-0299.qa.md`; pointer: `.agent/reports/AE-0295.qa.md`.
 
 ## Blockers
 
