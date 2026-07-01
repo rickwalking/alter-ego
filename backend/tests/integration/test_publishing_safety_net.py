@@ -429,11 +429,16 @@ class TestBlogPostCrud:
 
     @pytest.mark.asyncio
     async def test_delete_returns_204(self, pub_env: PubEnv) -> None:
-        """Scenario: blog post delete returns 204 and removes the post."""
+        """Scenario: blog post delete returns 204 and removes the post.
+
+        Sends ``If-Match`` — DELETE is optimistic-locked since AE-0296.
+        """
         async with pub_env.client_for(pub_env.owner) as client:
             created = await _create_blog_post(client)
             post_id = created.json()["id"]
-            resp = await client.delete(f"/api/blog-posts/{post_id}")
+            resp = await client.delete(
+                f"/api/blog-posts/{post_id}", headers={"If-Match": "1"}
+            )
             after = await client.get(f"/api/blog-posts/{post_id}")
         assert resp.status_code == 204
         assert after.status_code == 404
@@ -851,10 +856,13 @@ class TestPublishingSnapshots:
     async def test_snapshot_blog_post_delete(
         self, pub_env: PubEnv, snapshot_update: bool
     ) -> None:
-        """Golden: DELETE /blog-posts/{id} (204)."""
+        """Golden: DELETE /blog-posts/{id} (204) — If-Match required (AE-0296)."""
         async with pub_env.client_for(pub_env.owner) as client:
             created = await _create_blog_post(client)
-            resp = await client.delete(f"/api/blog-posts/{created.json()['id']}")
+            resp = await client.delete(
+                f"/api/blog-posts/{created.json()['id']}",
+                headers={"If-Match": "1"},
+            )
         await self._check("blog_post_delete", resp, update=snapshot_update)
 
     @pytest.mark.asyncio
