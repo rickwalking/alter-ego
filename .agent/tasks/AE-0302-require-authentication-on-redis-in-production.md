@@ -1,6 +1,6 @@
 # AE-0302 — require authentication on redis in production
 
-Status: Dev Complete
+Status: Review
 Tier: T2
 Priority: Medium
 Type: Security
@@ -232,11 +232,11 @@ Feature: redis requires authentication in production
 
 ## QA Checklist
 
-- [ ] Security reviewed
-- [ ] Code quality reviewed
-- [ ] Acceptance criteria validated
-- [ ] Edge cases tested (missing credential, healthcheck, reconnect)
-- [ ] Orphan/unfinished code checked
+- [x] Security reviewed (external R1: adversarial pass on bypasses/quoting/logging — no blockers)
+- [x] Code quality reviewed (gates green incl. new redis-factory gate)
+- [x] Acceptance criteria validated (7 dev-side [x] verified; 4 deploy-time open, deploy-enforced)
+- [x] Edge cases tested (missing/empty/query-param credential, env gate, conflict, entrypoint fail-closed)
+- [x] Orphan/unfinished code checked (unused constants finding fixed)
 
 ## Progress Log
 
@@ -311,7 +311,12 @@ healthcheck  → HEALTHY
 
 ## QA Report
 
-Pending.
+External QA (opencode-go/glm-5.2, read-only plan agent): **R1 WARN (0
+blockers) → 5-file fix round → R2 confirmation PASS** (all findings RESOLVED;
+R2 reviewer independently reproduced gates + integrity + targeted tests).
+Report + provenance: `.agent/reports/AE-0302.qa.md`. Deploy-time ACs remain
+open until the branch's first deploy; the deploy's own NOAUTH probe enforces
+them red/green.
 
 ## Decision Log
 
