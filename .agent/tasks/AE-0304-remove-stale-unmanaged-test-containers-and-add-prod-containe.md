@@ -1,6 +1,6 @@
 # AE-0304 — remove stale unmanaged test containers and add prod container hygiene
 
-Status: In Development
+Status: Review
 Tier: T1
 Priority: Medium
 Type: Chore
@@ -202,7 +202,11 @@ sha256(minio_test_data.tar.gz) = 6d3acfbfddfbf2571e141db897b20896c8b8c2242f46aa4
 
 ## QA Report
 
-Pending.
+External QA (opencode-go/glm-5.2): **WARN, 0 blockers** — both warnings are
+operator/CI-time items (carousel smoke; SKIP gates green-by-construction on a
+docs-only diff). AE-0153 no-.feature classification signed off; soak-gate
+coherence and no-secret-leak grep verified by the reviewer. Report:
+`.agent/reports/AE-0304.qa.md`. Open operator items tracked in its addendum.
 
 ## Blockers
 
