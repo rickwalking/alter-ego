@@ -1,6 +1,6 @@
 # AE-0301 — restrict production secret file permissions and remove plaintext env backups
 
-Status: Dev Complete
+Status: Review
 Tier: T1
 Priority: High
 Type: Security
@@ -254,7 +254,11 @@ $ ssh root@206.189.180.85 'stat -c "%a %U %n" /opt/alter-ego/.env /opt/alter-ego
 
 ## QA Report
 
-Pending.
+External QA (opencode-go/glm-5.2, read-only plan agent): **R1 FAIL → fixes →
+R2 full re-run PASS** (0 blockers, 0 warnings; AE-0153 classification signed
+off). Report + provenance: `.agent/reports/AE-0301.qa.md`. Fix commits:
+`107ab1c6` (ruff PTH), `7b84402a` (honest gate re-capture after R1 caught a
+false-green capture taken pre-commit).
 
 ## Decision Log
 
