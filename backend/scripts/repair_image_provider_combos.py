@@ -45,6 +45,14 @@ _UPDATE_PROJECT = text(
     "UPDATE carousel_projects SET image_model = :model, image_style = :style "
     "WHERE id = :id"
 )
+# The prod DB was bootstrapped via create_all, so changing the model's
+# server_default does NOT alter the live column — repair it here (postgres
+# only; sqlite test DBs neither support nor need it).
+_ALTER_MODEL_DEFAULT = text(
+    "ALTER TABLE carousel_projects "
+    f"ALTER COLUMN image_model SET DEFAULT '{IMAGE_MODEL_OPENAI}'"
+)
+_POSTGRES_DIALECT = "postgresql"
 
 
 @dataclass(frozen=True)
@@ -129,6 +137,9 @@ async def _main() -> None:
         async with engine.begin() as conn:
             repairs = await repair_image_provider_rows(conn, dry_run=args.dry_run)
             _report(repairs, dry_run=args.dry_run)
+            if engine.dialect.name == _POSTGRES_DIALECT and not args.dry_run:
+                await conn.execute(_ALTER_MODEL_DEFAULT)
+                print(f"column default: image_model -> '{IMAGE_MODEL_OPENAI}'")
     finally:
         await engine.dispose()
 
