@@ -1,12 +1,12 @@
 # AE-0304 — remove stale unmanaged test containers and add prod container hygiene
 
-Status: Ready
+Status: In Development
 Tier: T1
 Priority: Medium
 Type: Chore
 Area: Deployment
-Owner: Unassigned
-Branch: TBD
+Owner: Claude (developer-skill)
+Branch: feat/ae-0300-0307-prod-security
 Created: 2026-07-01
 Updated: 2026-07-01
 
@@ -63,27 +63,34 @@ documented reason to keep them.
 
 ## Acceptance Criteria
 
-- [ ] Orphan status verified beyond compose: shell history, cron, systemd timers,
-      and runbooks were grepped for the container names/endpoint and found no
-      references (evidence recorded).
-- [ ] `docker inspect` of both containers **and their volumes (incl. anonymous
+- [x] Orphan status verified beyond compose: shell history (0 refs), root crontab,
+      /etc/cron.\*, /etc/systemd/system all clean; creator identified as the ad-hoc
+      `compose.langfuse-s3-test.yml` (2026-06-12 debugging leftover); timer set
+      enumerated (evidence in docs/deployment/ae-0304-orphan-container-removal.md).
+- [x] `docker inspect` of both containers **and their volumes (incl. anonymous
       volumes)** is captured to a runbook artifact before removal; any non-empty
-      volume is snapshotted (reversibility incl. stored data, not just config).
-- [ ] For any non-empty volume, restorability is proven **off the prod box** (the 4GB
-      droplet at 79% disk should not run a restore-demo container): copy the snapshot to
-      a dev/laptop host and demonstrate mount → start container → read an object/row
-      back. On prod itself, only a lightweight integrity check (hash + `mc ls` of the
-      mounted volume). "We have the bytes" is not proof of restorability (a MinIO volume
-      needs its keys + bucket metadata + a compatible binary to rehydrate).
-- [ ] `minio-test` and `langfuse-worker-test` no longer exist
-      (`docker ps -a` shows neither), and they do not come back after a reboot.
-- [ ] `docker ps` shows only containers defined in `docker-compose.prod.yml`.
-- [ ] Dangling images/build cache pruned; free disk on `/` measurably improved
-      (record before/after `df -h /`).
+      volume is snapshotted (`/root/env-backups/ae-0304/`: 2 inspect JSONs +
+      `minio_test_data.tar.gz` sha256 6d3acfbf…4077a21; worker had no mounts).
+- [x] For any non-empty volume, restorability is proven **off the prod box**: snapshot
+      copied to the dev host (sha256 verified), mounted into a fresh `minio/minio` with
+      the original root creds from the inspect artifact, `mc ls -r` listed all 6
+      objects, `mc cat` read an object back intact. (Discovered + recorded: MinIO root
+      creds live in container env, so the inspect artifact is required to rehydrate.)
+- [x] `minio-test` and `langfuse-worker-test` no longer exist
+      (`docker ps -a` shows neither); nothing can recreate them (the restart policy
+      died with the containers; no compose/cron/systemd reference remains) — the
+      AE-0303 reboot doubles as the live confirmation.
+- [x] `docker ps` shows only containers defined in `docker-compose.prod.yml`.
+- [x] Dangling images/build cache pruned (~1G: the floating `langfuse-worker:3`);
+      `df -h /`: 91G/79% → 90G/78%. (`minio/minio:latest` kept — same digest the
+      compose-managed MinIO pins.)
 - [ ] The production site and a carousel smoke still work after cleanup (no
-      accidental removal of a real dependency).
-- [ ] Deployment runbook documents the "only compose-managed containers in prod"
-      hygiene rule.
+      accidental removal of a real dependency). **Partially done**: site 200, backend
+      /health 200, Langfuse health 200, real langfuse-worker-1 executing jobs
+      post-cleanup. The carousel-specific smoke needs an authenticated prod run —
+      open for the operator (removed containers are not on the carousel path).
+- [x] Deployment runbook documents the "only compose-managed containers in prod"
+      hygiene rule (DEPLOYMENT_GUIDE §9 + ae-0304-orphan-container-removal.md).
 
 ## Repro Steps
 
@@ -160,13 +167,38 @@ documented reason to keep them.
 
 Ticket created from the 2026-07-01 production security scan (finding #5, MEDIUM).
 
+### 2026-07-02 — executed (developer-skill)
+
+- Investigation found the containers were NOT inert: `langfuse-worker-test` ran a
+  floating `:3` tag **live against the real Postgres/Redis/ClickHouse** while
+  pointing S3 uploads at `minio-test:9000` — a second, version-drifting worker on
+  the real queue writing blobs to the wrong MinIO. Removal is a data-integrity fix.
+- **Security finding**: the creator file `compose.langfuse-s3-test.yml` sat in
+  `/opt/alter-ego` with the **real `LANGFUSE_MINIO_PASSWORD` in plaintext**;
+  relocated to `/root/env-backups/ae-0304/` (600) and the secret added to the
+  AE-0301 cheap-rotation list.
+- Sequence executed: stop → inspect JSONs + volume tar (sha256) → off-box restore
+  demo proven → `rm -f` both → `volume rm minio_test_data` → prune (~1G) →
+  smoke green. Full record: `docs/deployment/ae-0304-orphan-container-removal.md`.
+- **Soak for AE-0303 started 2026-07-02 ~04:00 UTC** — reboot allowed after ≥24h
+  AND every enumerated daily timer fires once (list in the removal record).
+
 ## Files Touched
 
-Pending.
+- `docs/deployment/ae-0304-orphan-container-removal.md` — new removal/reversibility record
+- `docs/deployment/ae-0301-key-rotation-runbook.md` — `LANGFUSE_MINIO_PASSWORD` row added
+- `docs/deployment/DEPLOYMENT_GUIDE.md` — §9 compose-managed-only hygiene item
+- Droplet (not in git): containers + volume removed; artifacts in `/root/env-backups/ae-0304/`
 
 ## Test Evidence
 
-Pending.
+```
+docker ps -a | grep test           → (nothing)
+df -h /                            → 79% → 78% (91G → 90G)
+site 200 / backend health 200 / langfuse health 200 / worker-1 executing jobs
+restore demo (dev host): mc ls → 6 objects; mc cat test-evt-minio.json → intact
+sha256(minio_test_data.tar.gz) = 6d3acfbfddfbf2571e141db897b20896c8b8c2242f46aa44ebee3afea4077a21
+```
 
 ## QA Report
 

@@ -232,6 +232,7 @@ docker compose -f docker-compose.prod.yml exec postgres pg_dump -U rag_user rag_
 - [ ] Automatic security updates (`sudo apt install unattended-upgrades`)
 - [ ] Docker socket not exposed
 - [ ] `.env` file permissions: `chmod 600 .env`
+- [ ] **Only compose-managed containers running** (`docker ps` shows nothing outside `docker-compose.prod.yml`; ad-hoc test containers are removed in the session that creates them — AE-0304, see [ae-0304-orphan-container-removal.md](ae-0304-orphan-container-removal.md))
 - [ ] SSL certificate auto-renewal configured
 - [ ] Database backups scheduled
 - [ ] No secrets committed to git
