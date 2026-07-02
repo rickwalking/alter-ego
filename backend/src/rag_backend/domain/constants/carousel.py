@@ -126,6 +126,14 @@ IMAGE_FORMAT_JPEG_LOWER = "jpeg"
 IMAGE_FORMAT_PNG = "PNG"
 IMAGE_FORMAT_WEBP = "WEBP"
 
+# AE-0308 creation guard: a combo whose provider has no API key is rejected at
+# project creation (before any workflow spend), not at the images phase. The
+# stable machine-readable prefix lets clients branch on the error class.
+ERR_IMAGE_PROVIDER_UNCONFIGURED = (
+    "image_provider_unconfigured: image provider {!r} has no API key configured "
+    "on this deployment; choose a preset backed by a configured provider"
+)
+
 # Supported (model, style) combos
 SUPPORTED_IMAGE_COMBOS: set[tuple[str, str]] = {
     (IMAGE_MODEL_OPENAI, IMAGE_STYLE_COMIC_NEON),
@@ -158,6 +166,7 @@ __all__ = [
     "CAROUSEL_WIDTH",
     "DEFAULT_CAROUSEL_PROMPT_VERSION",
     "DEFAULT_TEMPLATE_VERSION",
+    "ERR_IMAGE_PROVIDER_UNCONFIGURED",
     "HD_SUBDIR_NAME",
     "IMAGE_FORMAT_JPEG",
     "IMAGE_FORMAT_JPEG_LOWER",
