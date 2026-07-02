@@ -24,6 +24,10 @@ from rag_backend.domain.constants import (
 )
 from rag_backend.infrastructure.config.settings import Settings
 from rag_backend.infrastructure.logging import get_logger
+from rag_backend.infrastructure.redis_clients import (
+    RedisConfigError,
+    resolve_authed_redis_url,
+)
 
 logger = get_logger()
 
@@ -149,6 +153,24 @@ def validate_default_image_provider_key(settings: Settings) -> bool:
     return False
 
 
+def validate_redis_credentials(settings: Settings) -> None:
+    """AE-0302: fail fast when Redis is configured without a credential.
+
+    Delegates the policy to the sanctioned client factory
+    (``redis_clients.resolve_authed_redis_url``): missing/empty credentials in a
+    production-like environment — including an unset or unrecognized
+    ``ENVIRONMENT`` — raise; explicit dev/test tolerates an unauthenticated
+    local Redis (the factory logs a warning). An empty ``REDIS_URL`` means the
+    in-memory event publisher is in use, so there is nothing to validate.
+    """
+    if not settings.redis_url:
+        return
+    try:
+        resolve_authed_redis_url(settings)
+    except RedisConfigError as exc:
+        raise StartupValidationError(str(exc)) from exc
+
+
 def run_startup_validations(settings: Settings) -> StartupValidationResult:
     """Run all composition-root startup guards.
 
@@ -156,6 +178,7 @@ def run_startup_validations(settings: Settings) -> StartupValidationResult:
     a production-like environment. In dev/test, downgrades to warnings and
     reports which guards flagged a problem.
     """
+    validate_redis_credentials(settings)
     return StartupValidationResult(
         checkpoint_durable=validate_checkpointer_durability(settings),
         default_image_provider_usable=validate_default_image_provider_key(settings),
