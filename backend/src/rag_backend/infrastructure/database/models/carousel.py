@@ -55,7 +55,8 @@ class CarouselProjectModel(Base):
     aspect_ratio = Column(String(20), nullable=False, default="1080x1350")
     language = Column(String(10), nullable=False, default="pt-BR")
     generate_images = Column(Integer, default=1, nullable=False)
-    image_model = Column(String(30), nullable=False, server_default="gemini")
+    # AE-0308: openai is the only funded provider; comic_neon now runs on it.
+    image_model = Column(String(30), nullable=False, server_default="openai")
     image_style = Column(String(30), nullable=False, server_default="comic_neon")
     # Widened to 64 (AE-0269 migration a7b8c9d0e1f2) to hold a custom-palette UUID.
     theme = Column(String(64), nullable=False, default=CarouselTheme.AUTO.value)
