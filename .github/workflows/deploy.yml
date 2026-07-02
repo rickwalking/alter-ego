@@ -119,7 +119,10 @@ jobs:
               exit 1
             fi
 
-            # Create/update environment file
+            # Create/update environment file. umask 077 makes the file 600
+            # from the very first byte — no world-readable window between
+            # create and chmod (AE-0301: these files were 644 for ~2 months).
+            umask 077
             cat > .env << 'EOF'
             POSTGRES_USER=${{ secrets.POSTGRES_USER }}
             POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
@@ -145,6 +148,12 @@ jobs:
             CAROUSEL_CHECKPOINT_BACKEND=postgres
             CAROUSEL_CHECKPOINT_POSTGRES_URL=postgresql://${{ secrets.POSTGRES_USER }}:${{ secrets.POSTGRES_PASSWORD }}@postgres:5432/${{ secrets.POSTGRES_DB }}
             EOF
+            # Defensive: the umask above already lands 600; keep an explicit
+            # chmod so a future refactor that drops the umask still converges.
+            chmod 600 .env
+            if [ -e backend/.env ]; then
+              chmod 600 backend/.env
+            fi
 
             # Langfuse env must never be blank — a blank SALT/ENCRYPTION_KEY
             # invalidates all API keys and encrypted data on container recreate.
@@ -211,6 +220,13 @@ jobs:
 
             echo "--- Frontend logs (last 20 lines) ---"
             docker compose -f docker-compose.prod.yml logs --tail=20 frontend || true
+
+            # AE-0301: post-deploy stat assertion — a secret-file permissions
+            # regression (or a reappearing plaintext .env.backup*) FAILS the
+            # deploy under `set -e`; it is not a log line. The script is synced
+            # by the scp step above.
+            echo "--- Secret file permissions check (AE-0301) ---"
+            bash scripts/deploy/check-env-permissions.sh /opt/alter-ego /opt/alter-ego/.env /opt/alter-ego/backend/.env
 
             # Clean up old images
             docker image prune -af --filter "until=168h"

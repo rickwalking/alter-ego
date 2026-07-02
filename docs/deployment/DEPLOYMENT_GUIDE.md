@@ -21,19 +21,19 @@ Before deploying, ensure you have:
 
 Go to **Settings → Secrets and variables → Actions** and add:
 
-| Secret | Description |
-|--------|-------------|
-| `DO_HOST` | Your droplet's public IP address |
-| `DO_USER` | SSH username (e.g. `root` or `deploy`) |
-| `DO_SSH_KEY` | Private SSH key (pem format) |
-| `POSTGRES_USER` | Database username (default: `rag_user`) |
-| `POSTGRES_PASSWORD` | Strong random password |
-| `POSTGRES_DB` | Database name (default: `rag_db`) |
-| `PINECONE_API_KEY` | Pinecone API key |
-| `OPENAI_API_KEY` | OpenAI API key |
-| `ANTHROPIC_API_KEY` | Anthropic API key |
-| `SECRET_KEY` | JWT signing key (`openssl rand -hex 32`) |
-| `ANON_SECRET_KEY` | Anonymous token key (`openssl rand -hex 32`) |
+| Secret              | Description                                  |
+| ------------------- | -------------------------------------------- |
+| `DO_HOST`           | Your droplet's public IP address             |
+| `DO_USER`           | SSH username (e.g. `root` or `deploy`)       |
+| `DO_SSH_KEY`        | Private SSH key (pem format)                 |
+| `POSTGRES_USER`     | Database username (default: `rag_user`)      |
+| `POSTGRES_PASSWORD` | Strong random password                       |
+| `POSTGRES_DB`       | Database name (default: `rag_db`)            |
+| `PINECONE_API_KEY`  | Pinecone API key                             |
+| `OPENAI_API_KEY`    | OpenAI API key                               |
+| `ANTHROPIC_API_KEY` | Anthropic API key                            |
+| `SECRET_KEY`        | JWT signing key (`openssl rand -hex 32`)     |
+| `ANON_SECRET_KEY`   | Anonymous token key (`openssl rand -hex 32`) |
 
 ---
 
@@ -72,7 +72,16 @@ cd /opt/alter-ego
 
 ### 3.4 Create Environment File
 
+**Secret files must be mode 600, owned by root (AE-0301).** The deploy
+workflow writes `.env` under `umask 077` and ends with a stat assertion
+(`scripts/deploy/check-env-permissions.sh`) that **fails the deploy** if
+`/opt/alter-ego/.env` or `/opt/alter-ego/backend/.env` is not `600 root`, or
+if any plaintext `.env.backup.*` exists in `/opt/alter-ego`. Never create
+world-readable copies of these files. Rotation runbook:
+[ae-0301-key-rotation-runbook.md](ae-0301-key-rotation-runbook.md).
+
 ```bash
+umask 077
 cat > /opt/alter-ego/.env << 'EOF'
 POSTGRES_USER=rag_user
 POSTGRES_PASSWORD=$(openssl rand -base64 32)
@@ -203,14 +212,14 @@ docker compose -f docker-compose.prod.yml exec postgres pg_dump -U rag_user rag_
 
 ## 8. Troubleshooting
 
-| Issue | Solution |
-|-------|----------|
-| SSL certificate error | Run `sudo certbot renew --force-renewal` |
-| 502 Bad Gateway | Check backend health: `docker compose -f docker-compose.prod.yml ps` |
-| WebSocket not connecting | Verify Nginx proxy config includes `upgrade` headers |
-| CORS errors | Check `ALLOWED_ORIGINS` in `.env` matches domain |
-| Database connection failed | Verify `.env` credentials match PostgreSQL container |
-| Out of memory | Upgrade droplet or add swap: `sudo fallocate -l 2G /swapfile && sudo chmod 600 /swapfile && sudo mkswap /swapfile && sudo swapon /swapfile` |
+| Issue                      | Solution                                                                                                                                    |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| SSL certificate error      | Run `sudo certbot renew --force-renewal`                                                                                                    |
+| 502 Bad Gateway            | Check backend health: `docker compose -f docker-compose.prod.yml ps`                                                                        |
+| WebSocket not connecting   | Verify Nginx proxy config includes `upgrade` headers                                                                                        |
+| CORS errors                | Check `ALLOWED_ORIGINS` in `.env` matches domain                                                                                            |
+| Database connection failed | Verify `.env` credentials match PostgreSQL container                                                                                        |
+| Out of memory              | Upgrade droplet or add swap: `sudo fallocate -l 2G /swapfile && sudo chmod 600 /swapfile && sudo mkswap /swapfile && sudo swapon /swapfile` |
 
 ---
 
@@ -230,15 +239,15 @@ docker compose -f docker-compose.prod.yml exec postgres pg_dump -U rag_user rag_
 
 ## 10. Cost Breakdown
 
-| Service | Monthly Cost |
-|---------|-------------|
-| DigitalOcean Droplet (2vCPU/4GB) | ~$24 |
-| CloudFlare (DNS + SSL + CDN) | $0 |
-| Pinecone (serverless, low traffic) | ~$0-5 |
-| OpenAI API | ~$5-20 |
-| Anthropic API | ~$5-20 |
-| **Total** | **~$34-69/month** |
+| Service                            | Monthly Cost      |
+| ---------------------------------- | ----------------- |
+| DigitalOcean Droplet (2vCPU/4GB)   | ~$24              |
+| CloudFlare (DNS + SSL + CDN)       | $0                |
+| Pinecone (serverless, low traffic) | ~$0-5             |
+| OpenAI API                         | ~$5-20            |
+| Anthropic API                      | ~$5-20            |
+| **Total**                          | **~$34-69/month** |
 
 ---
 
-*Last updated: 2026-04-28*
+_Last updated: 2026-04-28_
