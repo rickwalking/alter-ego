@@ -1,13 +1,13 @@
 # AE-0302 — require authentication on redis in production
 
-Status: Ready
+Status: In Development
 Tier: T2
 Priority: Medium
 Type: Security
 Area: Backend
-Owner: Unassigned
+Owner: Claude (developer-skill)
 Agent Lane: architect → developer → qa → release
-Branch: TBD
+Branch: feat/ae-0300-0307-prod-security
 Kanban Card: TBD
 Created: 2026-07-01
 Updated: 2026-07-01
@@ -116,11 +116,12 @@ depth.
 
 - [ ] `docker exec alter-ego-redis-1 redis-cli PING` **fails** with NOAUTH, and
       `redis-cli -a <password> PING` returns `PONG`.
-- [ ] **Empty/absent `REDIS_PASSWORD` in prod ⇒ the Redis container refuses to start
+- [x] **Empty/absent `REDIS_PASSWORD` in prod ⇒ the Redis container refuses to start
       (unhealthy/exit), NOT an open `requirepass ""` instance.** The empty-secret
       branch is tested in the prod gate, not only the happy path — so the most likely
-      deploy failure cannot silently reopen Redis.
-- [ ] The factory preserves each consumer's `db`/`decode_responses`/pool/timeout
+      deploy failure cannot silently reopen Redis. (Entrypoint seeded-violation tests
+      + real-Docker verification: empty password in production ⇒ exit 1.)
+- [x] The factory preserves each consumer's `db`/`decode_responses`/pool/timeout
       settings (unit test asserts no param loss), not just that all clients use it.
 - [ ] Dangerous admin commands (`CONFIG`, `FLUSHALL`, `FLUSHDB`, …) are disabled via
       `rename-command` in prod, verified by **two non-contradictory checks**: (a)
@@ -136,19 +137,24 @@ depth.
       **Langfuse + langfuse-worker** (their `REDIS_CONNECTION_STRING` carries the
       password); Langfuse traces/queue keep working (verified), and the `rename-command`
       set does not break langfuse-worker's BullMQ (or Redis is split per-consumer).
-- [ ] `REDIS_PASSWORD` is sourced from GitHub Secrets and written into the deploy
-      `.env`; `.env.example` documents the placeholder.
+- [x] `REDIS_PASSWORD` is sourced from GitHub Secrets and written into the deploy
+      `.env`; `.env.example` documents the placeholder. (Secret set 2026-07-02; the
+      deploy's never-blank loop rejects a blank value BEFORE taking the stack down.)
 - [ ] The Redis container healthcheck passes with auth enabled.
-- [ ] Fail-fast is **environment-gated and fails closed**: with `ENVIRONMENT`
+- [x] Fail-fast is **environment-gated and fails closed**: with `ENVIRONMENT`
       `production` _or unset/unrecognized_ and no credential, the backend raises a
       clear `ConfigError` at startup; only an explicit dev/test/local value allows an
-      absent password (so local/CI still run).
-- [ ] All Redis clients are built via the single factory; a **rule-fires test**
+      absent password (so local/CI still run). (`validate_redis_credentials` in
+      `run_startup_validations`, delegating to the factory's policy; unit-tested.)
+- [x] All Redis clients are built via the single factory; a **rule-fires test**
       proves the checker FIRES on a seeded direct-`redis.Redis(` usage outside the
       factory (non-zero exit / severity), not merely that the current tree is clean.
-- [ ] Unit tests cover: authenticated URL construction, **absent/empty credentials
+      (`scripts/check_redis_factory.py`, wired as the `backend:redis-factory` gate in
+      `gates.sh`; import-based detection so any construction path is caught.)
+- [x] Unit tests cover: authenticated URL construction, **absent/empty credentials
       treated as missing in prod**, the fail-closed env gate (unset `ENVIRONMENT` ⇒
       requires auth), and the explicit dev/test unauth-allowed path — mocking Redis.
+      (30 new tests across factory / checker / entrypoint / startup-guard files.)
 
 ## Gherkin Scenarios
 
@@ -239,13 +245,70 @@ Feature: redis requires authentication in production
 
 Ticket created from the 2026-07-01 production security scan (finding #4, MEDIUM).
 
+### 2026-07-02 — In Development (developer-skill)
+
+- Spec first: `backend/tests/features/redis_auth.feature` (8 scenarios incl. both
+  fail-closed halves, env-gate, conflict rule, checker rule-fires).
+- **Backend factory**: new `infrastructure/redis_clients/` package —
+  `create_redis_client` is the only sanctioned construction site;
+  `resolve_authed_redis_url` implements the credential policy (empty URL fragment =
+  missing; URL-vs-managed conflict ⇒ `RedisConfigError`; production-like incl.
+  unset/unrecognized env ⇒ credential required). `RedisStreamEventPublisher` routed
+  through it (decode_responses preserved). Startup guard
+  `validate_redis_credentials` added to `run_startup_validations`.
+- **Enforcement**: `scripts/check_redis_factory.py` + `backend:redis-factory` gate in
+  `gates.sh`; rule-fires tests (seeded `from redis.asyncio import` / `import redis`
+  fire; factory path allowed; first-party `redis_clients` import not flagged).
+- **Server-side fail-closed**: `scripts/deploy/redis-entrypoint.sh` (mounted in
+  `docker-compose.prod.yml`) — refuses to start on empty `REDIS_PASSWORD` in a
+  production-like env; sets `requirepass` + `rename-command` lockdown
+  (CONFIG/FLUSHALL/FLUSHDB/DEBUG/SHUTDOWN). Verified against real Redis in local
+  Docker: unauth PING ⇒ NOAUTH; authed PING ⇒ PONG; `CONFIG` ⇒ unknown command;
+  healthcheck cmd green; empty password ⇒ exit 1.
+- **Compose**: authed healthcheck (`REDISCLI_AUTH`); backend gets `REDIS_PASSWORD`
+  (URL stays credential-free so the sources cannot conflict); **Langfuse +
+  langfuse-worker `REDIS_CONNECTION_STRING` now carry the password** (the R9
+  shared-Redis catch); all redis `depends_on` upgraded to `service_healthy`.
+- **Deploy**: `REDIS_PASSWORD` written from GitHub Secrets (secret set 2026-07-02),
+  added to the never-blank fail-fast loop; post-deploy runtime probe fails the
+  deploy if unauth PING returns PONG or authed PING fails.
+- Deploy-time ACs (NOAUTH on prod, backend E2E, Langfuse verified, healthcheck in
+  prod) remain open until the first deploy of this branch.
+
 ## Files Touched
 
-Pending.
+- `backend/src/rag_backend/infrastructure/redis_clients/{__init__,factory,constants}.py` — new
+- `backend/src/rag_backend/infrastructure/events/redis_stream_publisher.py` — via factory
+- `backend/src/rag_backend/infrastructure/events/factory.py` — no-arg publisher
+- `backend/src/rag_backend/infrastructure/config/settings.py` — `redis_password`
+- `backend/src/rag_backend/bootstrap/startup_validation.py` — `validate_redis_credentials`
+- `scripts/check_redis_factory.py` — new checker; `scripts/ci/gates.sh` — `backend:redis-factory` gate
+- `scripts/deploy/redis-entrypoint.sh` — new fail-closed entrypoint
+- `docker-compose.prod.yml` — redis entrypoint/healthcheck/env; backend + Langfuse×2 auth; `service_healthy`
+- `.github/workflows/deploy.yml` — secret wiring + never-blank + runtime NOAUTH probe
+- `.env.example`, `docs/deployment/DEPLOYMENT_GUIDE.md` — documentation
+- `backend/tests/features/redis_auth.feature` — new
+- `backend/tests/unit/infrastructure/test_redis_client_factory.py` — new (14)
+- `backend/tests/unit/scripts_ci/test_check_redis_factory.py` — new (5)
+- `backend/tests/unit/scripts_ci/test_redis_entrypoint.py` — new (6)
+- `backend/tests/unit/bootstrap/test_startup_validation_redis.py` — new (5)
 
 ## Test Evidence
 
-Pending.
+```
+backend$ uv run pytest tests/unit/infrastructure/test_redis_client_factory.py \
+  tests/unit/scripts_ci/test_check_redis_factory.py \
+  tests/unit/scripts_ci/test_redis_entrypoint.py \
+  tests/unit/bootstrap/test_startup_validation_redis.py -q
+30 passed
+
+$ docker run ... redis:7-alpine sh redis-entrypoint.sh (ENVIRONMENT=production, REDIS_PASSWORD=testpw)
+unauth ping  → NOAUTH Authentication required.
+authed ping  → PONG
+CONFIG GET   → ERR unknown command 'CONFIG'
+healthcheck  → HEALTHY
+(ENVIRONMENT=production, REDIS_PASSWORD=) → FATAL ... Refusing to start; exit=1
+```
 
 ## QA Report
 
@@ -293,6 +356,19 @@ requirepass` non-empty AC still contradicts `rename-command CONFIG`" → **accep
   validate the `rename-command` set against langfuse-worker's BullMQ (or split Redis),
   and restated the lint scope as "no _backend_ code bypasses auth." This is the highest-
   value catch of the review — it would otherwise be a post-deploy Langfuse outage.
+
+## Decision Log (implementation)
+
+- 2026-07-02: **Shared Redis kept (no split)** — the `rename-command CONFIG ""`
+  lockdown was validated against the shared consumer: langfuse-worker:3.185 runs
+  **BullMQ 5.76.3** (checked in the running container), and BullMQ 5.x tolerates an
+  unavailable `CONFIG` (standard on ElastiCache/MemoryDB deployments). Langfuse
+  worker health is explicitly re-verified at rollout (deploy-time AC); if it
+  regresses, the fallback recorded here is splitting Redis per consumer.
+- 2026-07-02: Factory enforcement is **import-based** (`\bredis\b` word boundary)
+  rather than call-pattern-based — you cannot construct a client without the import,
+  so `Redis(...)`, `Redis.from_url`, and `ConnectionPool` bypasses are all caught,
+  with zero false positives on the first-party `redis_clients` package.
 
 ## Blockers
 

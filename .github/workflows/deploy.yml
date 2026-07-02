@@ -142,6 +142,7 @@ jobs:
             LANGFUSE_ENCRYPTION_KEY=${{ secrets.LANGFUSE_ENCRYPTION_KEY }}
             LANGFUSE_CLICKHOUSE_PASSWORD=${{ secrets.LANGFUSE_CLICKHOUSE_PASSWORD }}
             LANGFUSE_MINIO_PASSWORD=${{ secrets.LANGFUSE_MINIO_PASSWORD }}
+            REDIS_PASSWORD=${{ secrets.REDIS_PASSWORD }}
             WRITING_STYLE_URLS=${{ secrets.WRITING_STYLE_URLS }}
             ALLOWED_ORIGINS=https://marinssolutions.com
             ENVIRONMENT=production
@@ -157,7 +158,10 @@ jobs:
 
             # Langfuse env must never be blank — a blank SALT/ENCRYPTION_KEY
             # invalidates all API keys and encrypted data on container recreate.
-            for var in LANGFUSE_SALT LANGFUSE_NEXTAUTH_SECRET LANGFUSE_ENCRYPTION_KEY LANGFUSE_CLICKHOUSE_PASSWORD LANGFUSE_MINIO_PASSWORD LANGFUSE_SECRET_KEY LANGFUSE_PUBLIC_KEY; do
+            # REDIS_PASSWORD (AE-0302) must never be blank either: Redis and the
+            # backend both fail closed on it, so catch it here BEFORE the stack
+            # is taken down.
+            for var in LANGFUSE_SALT LANGFUSE_NEXTAUTH_SECRET LANGFUSE_ENCRYPTION_KEY LANGFUSE_CLICKHOUSE_PASSWORD LANGFUSE_MINIO_PASSWORD LANGFUSE_SECRET_KEY LANGFUSE_PUBLIC_KEY REDIS_PASSWORD; do
               if ! grep -q "^${var}=..*" .env; then
                 echo "ERROR: ${var} is empty. Set the ${var} GitHub Secret before deploying."
                 exit 1
@@ -220,6 +224,18 @@ jobs:
 
             echo "--- Frontend logs (last 20 lines) ---"
             docker compose -f docker-compose.prod.yml logs --tail=20 frontend || true
+
+            # AE-0302 runtime probe: unauthenticated PING must be refused
+            # (NOAUTH), authenticated PING must succeed. This proves auth is
+            # required NOW; the build-time config-integrity assertion (the
+            # rename-command lines in redis-entrypoint.sh, unit-tested) is what
+            # guarantees auth cannot be re-opened via CONFIG SET.
+            echo "--- Redis auth probe (AE-0302) ---"
+            if docker compose -f docker-compose.prod.yml exec -T redis redis-cli ping 2>&1 | grep -q PONG; then
+              echo "ERROR: unauthenticated redis-cli PING returned PONG — Redis is OPEN. Failing the deploy."
+              exit 1
+            fi
+            docker compose -f docker-compose.prod.yml exec -T redis sh -c 'REDISCLI_AUTH="$REDIS_PASSWORD" redis-cli ping' | grep -q PONG
 
             # AE-0301: post-deploy stat assertion — a secret-file permissions
             # regression (or a reappearing plaintext .env.backup*) FAILS the

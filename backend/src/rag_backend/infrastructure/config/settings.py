@@ -120,6 +120,9 @@ class Settings(BaseSettings):
     otel_service_name: str = "rag-backend"
 
     redis_url: str = ""
+    # AE-0302: managed Redis credential; required (fail-closed) whenever the
+    # environment is production-like — see redis_clients.factory.
+    redis_password: SecretStr = SecretStr("")
     workflow_worker_interval_seconds: int = 60
     # AE-0210: auto-reject workflows stuck past this threshold (never-stuck rule).
     workflow_auto_reject_enabled: bool = True

@@ -34,6 +34,7 @@ Go to **Settings → Secrets and variables → Actions** and add:
 | `ANTHROPIC_API_KEY` | Anthropic API key                            |
 | `SECRET_KEY`        | JWT signing key (`openssl rand -hex 32`)     |
 | `ANON_SECRET_KEY`   | Anonymous token key (`openssl rand -hex 32`) |
+| `REDIS_PASSWORD`    | Redis auth (AE-0302, `openssl rand -hex 32`) — required; Redis and the backend fail closed without it; shared by backend + Langfuse + langfuse-worker |
 
 ---
 

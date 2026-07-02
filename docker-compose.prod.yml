@@ -22,9 +22,27 @@ services:
   redis:
     image: redis:7-alpine
     restart: unless-stopped
+    # AE-0302: auth required + fail-closed entrypoint. The entrypoint refuses
+    # to start an OPEN Redis when REDIS_PASSWORD is empty in a production-like
+    # environment, and disables admin verbs (CONFIG/FLUSHALL/FLUSHDB/DEBUG/
+    # SHUTDOWN) so an authed-but-compromised peer cannot silently re-open auth.
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+      ENVIRONMENT: ${ENVIRONMENT:-production}
     volumes:
       - redis_data:/data
-    command: redis-server --appendonly yes
+      - ./scripts/deploy/redis-entrypoint.sh:/usr/local/bin/redis-entrypoint.sh:ro
+    command: sh /usr/local/bin/redis-entrypoint.sh
+    healthcheck:
+      # $$ defers to the container env (not compose interpolation).
+      test:
+        [
+          "CMD-SHELL",
+          'REDISCLI_AUTH="$$REDIS_PASSWORD" redis-cli ping | grep -q PONG',
+        ]
+      interval: 5s
+      timeout: 3s
+      retries: 5
     logging:
       driver: "json-file"
       options:
@@ -47,6 +65,9 @@ services:
       GEMINI_API_KEY: ${GEMINI_API_KEY}
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-https://marinssolutions.com}
       REDIS_URL: redis://redis:6379
+      # AE-0302: managed credential — the backend factory injects it into the
+      # URL; keep REDIS_URL credential-free so the two sources cannot conflict.
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
       DEBUG: "false"
       CAROUSEL_CHECKPOINT_BACKEND: ${CAROUSEL_CHECKPOINT_BACKEND:-memory}
       CAROUSEL_CHECKPOINT_POSTGRES_URL: ${CAROUSEL_CHECKPOINT_POSTGRES_URL:-}
@@ -58,7 +79,7 @@ services:
       postgres:
         condition: service_healthy
       redis:
-        condition: service_started
+        condition: service_healthy
     volumes:
       - carousel_output:/app/output
     restart: unless-stopped
@@ -212,7 +233,9 @@ services:
       LANGFUSE_DEFAULT_ORG_ID: ${LANGFUSE_DEFAULT_ORG_ID:-default}
       LANGFUSE_DEFAULT_PROJECT_ID: ${LANGFUSE_DEFAULT_PROJECT_ID:-default}
       LANGFUSE_DEFAULT_PROJECT_NAME: ${LANGFUSE_DEFAULT_PROJECT_NAME:-alter-ego}
-      REDIS_CONNECTION_STRING: redis://redis:6379
+      # AE-0302: Langfuse shares this Redis — its connection must carry the
+      # password or enabling requirepass NOAUTHs the whole observability stack.
+      REDIS_CONNECTION_STRING: redis://:${REDIS_PASSWORD:-}@redis:6379
       LANGFUSE_S3_EVENT_UPLOAD_BUCKET: langfuse-events
       LANGFUSE_S3_EVENT_UPLOAD_REGION: us-east-1
       LANGFUSE_S3_EVENT_UPLOAD_ACCESS_KEY_ID: langfuse
@@ -230,7 +253,7 @@ services:
       clickhouse:
         condition: service_started
       redis:
-        condition: service_started
+        condition: service_healthy
     restart: unless-stopped
     logging:
       driver: "json-file"
@@ -251,7 +274,9 @@ services:
       CLICKHOUSE_USER: langfuse
       CLICKHOUSE_PASSWORD: ${LANGFUSE_CLICKHOUSE_PASSWORD:-changeme}
       CLICKHOUSE_CLUSTER_ENABLED: "false"
-      REDIS_CONNECTION_STRING: redis://redis:6379
+      # AE-0302: Langfuse shares this Redis — its connection must carry the
+      # password or enabling requirepass NOAUTHs the whole observability stack.
+      REDIS_CONNECTION_STRING: redis://:${REDIS_PASSWORD:-}@redis:6379
       LANGFUSE_S3_EVENT_UPLOAD_BUCKET: langfuse-events
       LANGFUSE_S3_EVENT_UPLOAD_REGION: us-east-1
       LANGFUSE_S3_EVENT_UPLOAD_ACCESS_KEY_ID: langfuse
@@ -269,7 +294,7 @@ services:
       clickhouse:
         condition: service_started
       redis:
-        condition: service_started
+        condition: service_healthy
     restart: unless-stopped
     deploy:
       resources:

@@ -23,7 +23,7 @@ def get_event_publisher(redis_url: str | None) -> EventPublisherProtocol:
         return _publisher
     if redis_url:
         try:
-            _publisher = RedisStreamEventPublisher(redis_url)
+            _publisher = RedisStreamEventPublisher()
         except Exception:
             logger.warning("event_publisher_redis_failed", hint="using memory fallback")
         else:

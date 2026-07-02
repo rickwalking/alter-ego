@@ -124,6 +124,9 @@ gate_backend_dead_code()   { cd "$REPO_ROOT/backend" && uv run vulture src/ vult
 # Anti-hardcoded-prompt checker (AE-0244): prompts must live in the registry
 # (.md/.yaml), not inline in agents/ or application/services/. stdlib-only AST scan.
 gate_backend_inline_prompts() { cd "$REPO_ROOT" && python3 scripts/check_inline_prompts.py; }
+# Redis factory enforcement (AE-0302): backend Redis clients must be built by
+# the sanctioned authenticated factory — no direct redis imports elsewhere.
+gate_backend_redis_factory() { cd "$REPO_ROOT" && python3 scripts/check_redis_factory.py; }
 # Bandit is ADVISORY in CI (report artifact, `|| true`). Mirror that here so the
 # QA verdict matches CI — the security subagent does the deep analysis.
 gate_backend_bandit()      { cd "$REPO_ROOT/backend" && { uv run bandit -r src/ || echo "ADVISORY: bandit findings above (non-blocking, mirrors CI)."; }; }
@@ -252,6 +255,7 @@ BACKEND_GATES=(
   docstrings:gate_backend_docstrings
   dead-code:gate_backend_dead_code
   inline-prompts:gate_backend_inline_prompts
+  redis-factory:gate_backend_redis_factory
   bandit:gate_backend_bandit
   pip-audit:gate_backend_pip_audit
   integrity:gate_backend_integrity
