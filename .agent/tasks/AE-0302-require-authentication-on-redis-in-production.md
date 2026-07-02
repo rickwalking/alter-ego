@@ -1,6 +1,6 @@
 # AE-0302 — require authentication on redis in production
 
-Status: In Development
+Status: Dev Complete
 Tier: T2
 Priority: Medium
 Type: Security
@@ -119,8 +119,7 @@ depth.
 - [x] **Empty/absent `REDIS_PASSWORD` in prod ⇒ the Redis container refuses to start
       (unhealthy/exit), NOT an open `requirepass ""` instance.** The empty-secret
       branch is tested in the prod gate, not only the happy path — so the most likely
-      deploy failure cannot silently reopen Redis. (Entrypoint seeded-violation tests
-      + real-Docker verification: empty password in production ⇒ exit 1.)
+      deploy failure cannot silently reopen Redis. (Entrypoint seeded-violation tests + real-Docker verification: empty password in production ⇒ exit 1.)
 - [x] The factory preserves each consumer's `db`/`decode_responses`/pool/timeout
       settings (unit test asserts no param loss), not just that all clients use it.
 - [ ] Dangerous admin commands (`CONFIG`, `FLUSHALL`, `FLUSHDB`, …) are disabled via

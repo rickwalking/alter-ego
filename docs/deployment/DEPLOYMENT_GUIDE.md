@@ -21,19 +21,19 @@ Before deploying, ensure you have:
 
 Go to **Settings → Secrets and variables → Actions** and add:
 
-| Secret              | Description                                  |
-| ------------------- | -------------------------------------------- |
-| `DO_HOST`           | Your droplet's public IP address             |
-| `DO_USER`           | SSH username (e.g. `root` or `deploy`)       |
-| `DO_SSH_KEY`        | Private SSH key (pem format)                 |
-| `POSTGRES_USER`     | Database username (default: `rag_user`)      |
-| `POSTGRES_PASSWORD` | Strong random password                       |
-| `POSTGRES_DB`       | Database name (default: `rag_db`)            |
-| `PINECONE_API_KEY`  | Pinecone API key                             |
-| `OPENAI_API_KEY`    | OpenAI API key                               |
-| `ANTHROPIC_API_KEY` | Anthropic API key                            |
-| `SECRET_KEY`        | JWT signing key (`openssl rand -hex 32`)     |
-| `ANON_SECRET_KEY`   | Anonymous token key (`openssl rand -hex 32`) |
+| Secret              | Description                                                                                                                                           |
+| ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `DO_HOST`           | Your droplet's public IP address                                                                                                                      |
+| `DO_USER`           | SSH username (e.g. `root` or `deploy`)                                                                                                                |
+| `DO_SSH_KEY`        | Private SSH key (pem format)                                                                                                                          |
+| `POSTGRES_USER`     | Database username (default: `rag_user`)                                                                                                               |
+| `POSTGRES_PASSWORD` | Strong random password                                                                                                                                |
+| `POSTGRES_DB`       | Database name (default: `rag_db`)                                                                                                                     |
+| `PINECONE_API_KEY`  | Pinecone API key                                                                                                                                      |
+| `OPENAI_API_KEY`    | OpenAI API key                                                                                                                                        |
+| `ANTHROPIC_API_KEY` | Anthropic API key                                                                                                                                     |
+| `SECRET_KEY`        | JWT signing key (`openssl rand -hex 32`)                                                                                                              |
+| `ANON_SECRET_KEY`   | Anonymous token key (`openssl rand -hex 32`)                                                                                                          |
 | `REDIS_PASSWORD`    | Redis auth (AE-0302, `openssl rand -hex 32`) — required; Redis and the backend fail closed without it; shared by backend + Langfuse + langfuse-worker |
 
 ---
