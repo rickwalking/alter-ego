@@ -50,7 +50,7 @@ def _run(*args: str) -> subprocess.CompletedProcess[str]:
 def _seed_env(tmp_path: Path, mode: int) -> Path:
     env_file = tmp_path / ".env"
     env_file.write_text("SECRET_KEY=not-a-real-secret\n", encoding="utf-8")
-    os.chmod(env_file, mode)
+    env_file.chmod(mode)
     return env_file
 
 
@@ -105,7 +105,7 @@ def test_passes_on_healthy_600_files(tmp_path: Path) -> None:
     env_file = _seed_env(tmp_path, MODE_SECRET)
     backend_env = tmp_path / "backend.env"
     backend_env.write_text("DEBUG=false\n", encoding="utf-8")
-    os.chmod(backend_env, MODE_SECRET)
+    backend_env.chmod(MODE_SECRET)
 
     result = _run(str(tmp_path), str(env_file), str(backend_env))
 
