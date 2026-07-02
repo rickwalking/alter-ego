@@ -22,7 +22,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
-from urllib.parse import urlsplit, urlunsplit
+from urllib.parse import parse_qs, urlsplit, urlunsplit
 
 from rag_backend.infrastructure.config.settings import Settings
 from rag_backend.infrastructure.logging import get_logger
@@ -59,12 +59,18 @@ class RedisConnectionConfig:
 
 
 def _url_password(url: str) -> str | None:
-    """Return the password embedded in ``url``, treating empty as absent."""
+    """Return the password embedded in ``url``, treating empty as absent.
+
+    Covers both credential carriers redis-py honors: the netloc userinfo
+    (``redis://:pw@host``) and the ``?password=`` query parameter — so a stale
+    query-param credential cannot dodge the conflict rule (external QA R1).
+    """
     try:
-        password = urlsplit(url).password
+        parts = urlsplit(url)
     except ValueError:
         return None
-    return password or None
+    query_passwords = parse_qs(parts.query).get("password", [])
+    return parts.password or next(iter(query_passwords), None) or None
 
 
 def _with_password(url: str, password: str) -> str:

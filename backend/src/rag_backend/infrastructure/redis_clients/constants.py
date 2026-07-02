@@ -2,9 +2,6 @@
 
 from __future__ import annotations
 
-REDIS_SCHEME = "redis"
-REDIS_SCHEME_TLS = "rediss"
-
 ERR_MISSING_CREDENTIAL = (
     "Redis credentials are required in a production-like environment "
     "({environment!r}) but neither REDIS_PASSWORD nor a password embedded in "
@@ -22,6 +19,4 @@ __all__ = [
     "ERR_CONFLICTING_CREDENTIALS",
     "ERR_MISSING_CREDENTIAL",
     "EVENT_REDIS_UNAUTHENTICATED_DEV",
-    "REDIS_SCHEME",
-    "REDIS_SCHEME_TLS",
 ]

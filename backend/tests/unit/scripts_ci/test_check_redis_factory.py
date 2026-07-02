@@ -15,6 +15,8 @@ import subprocess  # noqa: S404  # integrity-ok: AE-0302 — a test for a CLI ch
 import sys
 from pathlib import Path
 
+import pytest
+
 REPO_ROOT = Path(__file__).resolve().parents[4]
 CHECKER = REPO_ROOT / "scripts" / "check_redis_factory.py"
 PYTHON = shutil.which("python3") or sys.executable
@@ -51,6 +53,24 @@ def test_fires_on_seeded_redis_import(tmp_path: Path) -> None:
 
 def test_fires_on_seeded_plain_import(tmp_path: Path) -> None:
     (tmp_path / "cache.py").write_text(_SEEDED_PLAIN_IMPORT, encoding="utf-8")
+
+    result = _run(tmp_path)
+
+    assert result.returncode == EXIT_VIOLATION, result.stdout + result.stderr
+
+
+# Token-split so THIS file (now inside the checker's scan scope) does not
+# itself match the pattern; the seeded tmp files still carry the real text.
+_SEEDED_DUNDER_IMPORT = 'client_mod = ' + '__import' + '__("redis.asyncio")\n'
+_SEEDED_IMPORT_MODULE = "redis_mod = importlib.import" + '_module("redis")\n'
+
+
+@pytest.mark.parametrize(
+    "dynamic_import",
+    [_SEEDED_DUNDER_IMPORT, _SEEDED_IMPORT_MODULE],
+)
+def test_fires_on_seeded_dynamic_import(tmp_path: Path, dynamic_import: str) -> None:
+    (tmp_path / "sneaky_dynamic.py").write_text(dynamic_import, encoding="utf-8")
 
     result = _run(tmp_path)
 

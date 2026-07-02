@@ -125,6 +125,27 @@ def test_url_only_credential_is_accepted() -> None:
     assert resolve_authed_redis_url(settings) == _URL_WITH_CREDS
 
 
+# Scenario: conflicting credentials fail closed (query-param carrier, QA R1)
+def test_conflicting_query_param_password_raises() -> None:
+    settings = _settings(
+        environment=ENVIRONMENT_PRODUCTION,
+        redis_url="redis://redis:6379?password=stale-pw",
+        password=_PASSWORD,
+    )
+
+    with pytest.raises(RedisConfigError, match="Refusing"):
+        resolve_authed_redis_url(settings)
+
+
+def test_query_param_credential_counts_as_present() -> None:
+    settings = _settings(
+        environment=ENVIRONMENT_PRODUCTION,
+        redis_url="redis://redis:6379?password=qp-pw",
+    )
+
+    assert resolve_authed_redis_url(settings) == "redis://redis:6379?password=qp-pw"
+
+
 # --- no param loss (AE-0302: per-consumer connection semantics) ---------------
 
 

@@ -25,14 +25,23 @@ import sys
 from pathlib import Path
 
 _REPO_ROOT = Path(__file__).resolve().parents[1]
-_DEFAULT_DIRS = (_REPO_ROOT / "backend" / "src" / "rag_backend",)
+_DEFAULT_DIRS = (
+    _REPO_ROOT / "backend" / "src" / "rag_backend",
+    # Tests too (external QA R1): a test constructing a raw client would
+    # otherwise dodge the guarantee unnoticed.
+    _REPO_ROOT / "backend" / "tests",
+)
 
 # The only file allowed to import the redis package (suffix-matched so seeded
 # test trees can stage their own factory at the same relative location).
 ALLOWED_FACTORY_SUFFIX = "infrastructure/redis_clients/factory.py"
 
+# Static imports AND the dynamic-import escape hatches (external QA R1):
+# __import__("redis"...) / import_module("redis"...).
 _REDIS_IMPORT = re.compile(
     r"^\s*(?:from\s+redis(?:\.[\w.]+)?\s+import\b|import\s+redis\b)"
+    r"|__import__\(\s*[\"']redis[\"'.]"
+    r"|import_module\(\s*[\"']redis[\"'.]"
 )
 
 VIOLATION_MESSAGE = (
@@ -50,7 +59,7 @@ def _iter_violations(directory: Path) -> list[str]:
         for lineno, text in enumerate(
             path.read_text(encoding="utf-8", errors="replace").splitlines(), start=1
         ):
-            if _REDIS_IMPORT.match(text):
+            if _REDIS_IMPORT.search(text):
                 violations.append(
                     VIOLATION_MESSAGE.format(path=path, line=lineno)
                 )
