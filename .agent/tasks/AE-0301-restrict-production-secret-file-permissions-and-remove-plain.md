@@ -1,12 +1,12 @@
 # AE-0301 — restrict production secret file permissions and remove plaintext env backups
 
-Status: Ready
+Status: Dev Complete
 Tier: T1
 Priority: High
 Type: Security
 Area: Deployment
-Owner: Unassigned
-Branch: TBD
+Owner: Claude (developer-skill)
+Branch: feat/ae-0300-0307-prod-security
 Created: 2026-07-01
 Updated: 2026-07-01
 
@@ -106,17 +106,17 @@ at-rest `true` is a footgun if a future compose change starts sourcing that file
 
 ## Acceptance Criteria
 
-- [ ] `/opt/alter-ego/.env` and `/opt/alter-ego/backend/.env` are mode `600`
+- [x] `/opt/alter-ego/.env` and `/opt/alter-ego/backend/.env` are mode `600`
       owned by root on the droplet (`stat -c '%a %U' ...` → `600 root`).
-- [ ] No world-readable plaintext secret backup remains in `/opt/alter-ego`
+- [x] No world-readable plaintext secret backup remains in `/opt/alter-ego`
       (the `.env.backup.*` is removed or moved out with mode 600).
 - [ ] The deploy sets `umask 077` before writing `.env` (files created `600`, no
       644 window), and a post-deploy `stat` check **fails the deploy** if any `.env`
       is not `600` (verified by inspecting the workflow + a fresh deploy).
-- [ ] The source that created `.env.backup.*` is identified and stopped/confirmed
+- [x] The source that created `.env.backup.*` is identified and stopped/confirmed
       non-recurring (documented in the ticket).
-- [ ] The 644 exposure window is estimated and recorded.
-- [ ] A **per-provider exerciser list exists as a checked artifact before execution**
+- [x] The 644 exposure window is estimated and recorded.
+- [x] A **per-provider exerciser list exists as a checked artifact before execution**
       (OpenAI/Anthropic → carousel smoke; GLM → named exerciser; Pinecone → named
       retrieval exerciser; Gemini → excluded, not active in prod). This is a hard gate,
       not prose.
@@ -126,12 +126,13 @@ at-rest `true` is a footgun if a future compose change starts sourcing that file
       single smoke). A provider with no exerciser is either given a minimal one or its
       revoke-on-faith / exclusion is explicitly recorded — never revoked silently
       unverified.
-- [ ] The expensive-to-rotate secrets are tracked in follow-up **AE-0306** with a
+- [x] The expensive-to-rotate secrets are tracked in follow-up **AE-0306** with a
       deadline (not left as a free-form decision-log line).
-- [ ] `backend/.env` on the droplet has `DEBUG=false` (or the line removed), and
+- [x] `backend/.env` on the droplet has `DEBUG=false` (or the line removed), and
       the running backend container remains `DEBUG=false`.
-- [ ] The change does not break container startup (containers still read their env
-      via compose `env_file`/`environment` as before).
+- [x] The change does not break container startup (containers still read their env
+      via compose `env_file`/`environment` as before — `docker compose config -q`
+      parses post-chmod, stack healthy, site 200).
 
 ## Repro Steps
 
@@ -162,19 +163,94 @@ at-rest `true` is a footgun if a future compose change starts sourcing that file
 3. Set `DEBUG=false` in the at-rest `backend/.env` template/secret.
 4. Trigger a deploy (or dry-run the write step) and confirm files land at 600.
 
+## Test-classification (AE-0153)
+
+CI/config/tooling ticket — no public/user-visible behavior change (the deploy
+workflow and a server-side assertion script change; no API, workflow, or
+business rule changes). `.feature` not required; substitutes focused unit
+tests **plus** the seeded-violation (rule-fires, AE-0180) tests in
+`backend/tests/unit/scripts_ci/test_check_env_permissions.py` (644 file → exit
+1; `.env.backup.*` present → exit 1; missing file → exit 1; wrong owner →
+exit 1). Affected gate: the deploy itself (`deploy.yml` fails on violation).
+QA sign-off on this classification is requested in the QA pass.
+
+## Execution findings (2026-07-01)
+
+- **`.env.backup.*` source identified**: no cron entry, no deploy step, and no
+  repo script creates date-suffixed env backups (`git log -S`, server crontabs
+  and `/etc/cron.*` checked). It was a one-time manual
+  `cp` (2026-06-02 21:17). Confirmed non-recurring **and enforced**: the new
+  post-deploy check fails any deploy where a `.env.backup.*` reappears.
+- **644 exposure window (worst-case lower bound)**: mtime discarded (deploys
+  rewrite `.env`). Bound: **at least 2026-05-04 (first `deploy.yml` run) →
+  2026-07-01 (remediation), ~58 days; possibly since droplet creation
+  2026-04-28 (~64 days)**. AE-0306's accept-loss decisions must be justified
+  against the ~64-day worst case.
+- **Per-provider exerciser pre-decisions** (details in
+  `docs/deployment/ae-0301-key-rotation-runbook.md`): GLM **is** exercised by
+  the carousel smoke — `LLM_PROVIDER=glm` verified in the live prod `.env`
+  (not assumed); Pinecone's named exerciser is the prod RAG chat retrieval
+  step (existing path — not revoke-on-faith); Anthropic is exercised by RAG
+  chat, **not** the carousel smoke (prod carousel LLM is GLM); Gemini excluded
+  (key empty in prod by design).
+
 ## Progress Log
 
 ### 2026-07-01
 
 Ticket created from the 2026-07-01 production security scan (finding #2, MEDIUM-HIGH).
 
+### 2026-07-01 — In Development (developer-skill)
+
+- Branch `feat/ae-0300-0307-prod-security`; repo-side implementation:
+  `umask 077` + defensive `chmod 600` around the `.env` write in `deploy.yml`;
+  post-deploy stat assertion via new `scripts/deploy/check-env-permissions.sh`
+  (fails the deploy on wrong mode/owner, missing file, or `.env.backup.*`).
+- Rule-fires tests added (6, all green).
+- Exerciser list + rotation runbook checked in:
+  `docs/deployment/ae-0301-key-rotation-runbook.md`; 600 invariant documented
+  in `DEPLOYMENT_GUIDE.md` §3.4.
+- **One-time prod remediation executed and verified** over SSH: both `.env`
+  files now `600 root`; `.env.backup.20260602-211752` **moved** to
+  `/root/env-backups/` (dir 700, file 600 — ticket allows remove-or-relocate);
+  `DEBUG=false` at rest in `backend/.env` (running container already
+  `DEBUG=false`). The committed check script piped over SSH against the live
+  droplet returns `ENV-PERMS OK`.
+- **Not done here (by design)**: cheap-key rotation — requires provider
+  dashboards (user-owned). Staged step-by-step in the runbook with
+  per-provider revoke-after-verify gates.
+
 ## Files Touched
 
-Pending.
+- `.github/workflows/deploy.yml` — `umask 077` before the `.env` heredoc;
+  defensive `chmod 600` for both env files; post-deploy
+  `check-env-permissions.sh` assertion (fails deploy under `set -e`).
+- `scripts/deploy/check-env-permissions.sh` — new stat-based assertion
+  (mode/owner/backup-glob), owner expectation overridable for tests.
+- `backend/tests/unit/scripts_ci/test_check_env_permissions.py` — new
+  rule-fires tests (seeded violations + healthy pass + usage guard).
+- `docs/deployment/ae-0301-key-rotation-runbook.md` — new: 600 invariant,
+  per-provider exerciser table (hard AC), rotation procedure, remediation log.
+- `docs/deployment/DEPLOYMENT_GUIDE.md` — §3.4 600-invariant note + umask in
+  the bootstrap snippet.
+- Server-side (not in git): `/opt/alter-ego/.env` + `backend/.env` → `600
+root`; backup relocated to `/root/env-backups/`; `DEBUG=false` at rest.
 
 ## Test Evidence
 
-Pending.
+```
+backend$ uv run pytest tests/unit/scripts_ci/test_check_env_permissions.py -q
+6 passed in 0.12s
+
+$ ssh root@206.189.180.85 'bash -s -- /opt/alter-ego /opt/alter-ego/.env \
+    /opt/alter-ego/backend/.env' < scripts/deploy/check-env-permissions.sh
+ENV-PERMS OK: /opt/alter-ego/.env /opt/alter-ego/backend/.env are 600 root; \
+no .env.backup* in /opt/alter-ego
+
+$ ssh root@206.189.180.85 'stat -c "%a %U %n" /opt/alter-ego/.env /opt/alter-ego/backend/.env'
+600 root /opt/alter-ego/.env
+600 root /opt/alter-ego/backend/.env
+```
 
 ## QA Report
 
