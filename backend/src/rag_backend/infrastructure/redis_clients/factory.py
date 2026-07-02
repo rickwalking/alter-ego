@@ -32,7 +32,7 @@ from rag_backend.infrastructure.redis_clients.constants import (
     EVENT_REDIS_UNAUTHENTICATED_DEV,
 )
 
-if TYPE_CHECKING:  # pragma: no cover - typing only
+if TYPE_CHECKING:
     from redis.asyncio import Redis
 
 logger = get_logger()
