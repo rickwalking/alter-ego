@@ -1,6 +1,6 @@
 # AE-0308 — re-route comic_neon image preset to openai provider (gemini unfunded in prod)
 
-Status: Dev Complete
+Status: Review
 Tier: T2
 Priority: High
 Type: Bugfix
@@ -188,11 +188,11 @@ Feature: Comic Neon carousels generate images via the OpenAI provider
 
 ## QA Checklist
 
-- [ ] Security reviewed
-- [ ] Code quality reviewed
-- [ ] Acceptance criteria validated
-- [ ] Edge cases tested
-- [ ] Orphan/unfinished code checked
+- [x] Security reviewed (bandit + pip-audit PASS; guard reviewed externally)
+- [x] Code quality reviewed (ruff/mypy strict/strict-diff/arch-ratchet PASS; external R1)
+- [x] Acceptance criteria validated (every `[x]` independently re-verified, cold context)
+- [x] Edge cases tested (Gherkin completeness dimension: every scenario maps to a real test)
+- [x] Orphan/unfinished code checked (integrity 0/0 both scopes; dead-code gates PASS)
 
 ## Progress Log
 
@@ -257,7 +257,18 @@ Prod combo census taken: 13 openai/neo_anime, 11 legacy gemini-2.5-flash/neon_co
 
 ## QA Report
 
-Pending.
+External GLM 5.2 (opencode-go, cold context), 2026-07-02: **QA_VERDICT: PASS**.
+R1 read-only — all dimensions clean, 0 findings; R1b gate reproduction — the
+reviewer ran both gate suites, both integrity scans, `export_openapi --check`,
+AND the compensating 2539-test SQLite suite itself (all green; mutation 79.91%
+backend / 84.82% frontend). One minor non-actionable finding (unreachable
+mutant, schema-guarded). Full report + provenance:
+`.agent/reports/AE-0308.qa.md`.
+
+```
+GATES_JSON: {"pass":15,"fail":0,"skip":4,"results":[{"gate":"backend:format","status":"PASS"},{"gate":"backend:lint","status":"PASS"},{"gate":"backend:lint-diff","status":"PASS"},{"gate":"backend:blanket-ignore","status":"PASS"},{"gate":"backend:strict-diff","status":"PASS"},{"gate":"backend:type","status":"PASS"},{"gate":"backend:imports","status":"PASS"},{"gate":"backend:arch-ratchet","status":"PASS"},{"gate":"backend:docstrings","status":"PASS"},{"gate":"backend:dead-code","status":"PASS"},{"gate":"backend:inline-prompts","status":"PASS"},{"gate":"backend:bandit","status":"PASS"},{"gate":"backend:pip-audit","status":"PASS"},{"gate":"backend:integrity","status":"PASS"},{"gate":"backend:test","status":"SKIP"},{"gate":"backend:diff-cover","status":"SKIP"},{"gate":"backend:migrations","status":"SKIP"},{"gate":"backend:schema-drift","status":"SKIP"},{"gate":"backend:mutation","status":"PASS"}]}
+GATES_JSON: {"pass":17,"fail":0,"skip":0,"results":[{"gate":"frontend:lint","status":"PASS"},{"gate":"frontend:lint-changed","status":"PASS"},{"gate":"frontend:component-types","status":"PASS"},{"gate":"frontend:duplication","status":"PASS"},{"gate":"frontend:dead-code","status":"PASS"},{"gate":"frontend:typecheck","status":"PASS"},{"gate":"frontend:build","status":"PASS"},{"gate":"frontend:legacy-guard","status":"PASS"},{"gate":"frontend:legacy-inventory","status":"PASS"},{"gate":"frontend:format","status":"PASS"},{"gate":"frontend:security","status":"PASS"},{"gate":"frontend:integrity","status":"PASS"},{"gate":"frontend:test","status":"PASS"},{"gate":"frontend:schema-drift","status":"PASS"},{"gate":"frontend:duplication-tests","status":"PASS"},{"gate":"frontend:dead-files","status":"PASS"},{"gate":"frontend:mutation","status":"PASS"}]}
+```
 
 ## Decision Log
 
