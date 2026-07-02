@@ -11,8 +11,8 @@ from rag_backend.application.services.image_provider_registry import (
     ImageProviderRegistry,
 )
 from rag_backend.application.services.image_style_strategies import (
-    GeminiComicNeonStrategy,
     OpenAICinematicStrategy,
+    OpenAIComicNeonStrategy,
     OpenAIFlatEditorialStrategy,
     OpenAIHyperrealStrategy,
     OpenAINeoAnimeStrategy,
@@ -35,12 +35,28 @@ def _registry() -> ImageProviderRegistry:
 
 
 @pytest.mark.unit
+def test_comic_neon_pairs_openai_service_with_comic_strategy() -> None:
+    # AE-0308: the re-keyed combo must hit the OpenAI *service*, not just the
+    # renamed strategy — this is the exact wiring that failed in prod.
+    openai = AsyncMock()
+    registry = ImageProviderRegistry(gemini_service=AsyncMock(), openai_service=openai)
+    provider = registry.resolve(IMAGE_MODEL_OPENAI, IMAGE_STYLE_COMIC_NEON)
+    assert provider.service is openai
+
+
+@pytest.mark.unit
 class TestImageProviderRegistry:
     """Scenario: Incompatible combo rejected."""
 
-    def test_default_combo_returns_gemini_comic_neon(self) -> None:
-        provider = _registry().resolve(IMAGE_MODEL_GEMINI, IMAGE_STYLE_COMIC_NEON)
-        assert isinstance(provider.strategy, GeminiComicNeonStrategy)
+    def test_comic_neon_resolves_to_openai_strategy(self) -> None:
+        # Scenario: Caller picks OpenAI comic-neon preset (AE-0308 re-route).
+        provider = _registry().resolve(IMAGE_MODEL_OPENAI, IMAGE_STYLE_COMIC_NEON)
+        assert isinstance(provider.strategy, OpenAIComicNeonStrategy)
+
+    def test_gemini_comic_neon_is_no_longer_supported(self) -> None:
+        # Scenario: No Gemini combo remains supported (AE-0308).
+        with pytest.raises(ValueError, match="not supported"):
+            _registry().resolve(IMAGE_MODEL_GEMINI, IMAGE_STYLE_COMIC_NEON)
 
     def test_openai_hyperreal_returns_right_strategy(self) -> None:
         provider = _registry().resolve(IMAGE_MODEL_OPENAI, IMAGE_STYLE_HYPERREAL)
@@ -55,9 +71,7 @@ class TestImageProviderRegistry:
         assert isinstance(provider.strategy, OpenAINeoAnimeStrategy)
 
     def test_openai_flat_editorial_returns_right_strategy(self) -> None:
-        provider = _registry().resolve(
-            IMAGE_MODEL_OPENAI, IMAGE_STYLE_FLAT_EDITORIAL
-        )
+        provider = _registry().resolve(IMAGE_MODEL_OPENAI, IMAGE_STYLE_FLAT_EDITORIAL)
         assert isinstance(provider.strategy, OpenAIFlatEditorialStrategy)
 
     def test_unsupported_combo_raises_value_error(self) -> None:

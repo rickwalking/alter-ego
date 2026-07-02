@@ -109,8 +109,10 @@ VALID_IMAGE_STYLES: set[str] = {
     IMAGE_STYLE_FLAT_EDITORIAL,
 }
 
-# Default combo. OpenAI (not Gemini): prod has OPENAI_API_KEY but no GEMINI_API_KEY,
-# so the default preset must use a provider with a configured key (AE-0215 guard).
+# Default combo. OpenAI (not Gemini): prod has OPENAI_API_KEY but no GEMINI_API_KEY
+# — intentionally (AE-0308): ALL image generation routes through OpenAI, so every
+# supported combo below uses IMAGE_MODEL_OPENAI. The AE-0215 startup guard checks
+# the default; the AE-0308 creation guard checks every requested combo.
 IMAGE_MODEL_DEFAULT = IMAGE_MODEL_OPENAI
 IMAGE_STYLE_DEFAULT = IMAGE_STYLE_NEO_ANIME
 
@@ -126,7 +128,7 @@ IMAGE_FORMAT_WEBP = "WEBP"
 
 # Supported (model, style) combos
 SUPPORTED_IMAGE_COMBOS: set[tuple[str, str]] = {
-    (IMAGE_MODEL_GEMINI, IMAGE_STYLE_COMIC_NEON),
+    (IMAGE_MODEL_OPENAI, IMAGE_STYLE_COMIC_NEON),
     (IMAGE_MODEL_OPENAI, IMAGE_STYLE_CINEMATIC),
     (IMAGE_MODEL_OPENAI, IMAGE_STYLE_HYPERREAL),
     (IMAGE_MODEL_OPENAI, IMAGE_STYLE_NEO_ANIME),

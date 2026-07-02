@@ -40,7 +40,7 @@ EXTRAS_FIELDS: tuple[str, ...] = (
 # (image_model, image_style) → human-readable preset name, surfaced in
 # the phase-progress label during image gen.
 IMAGE_PRESET_DISPLAY: dict[tuple[str, str], str] = {
-    ("gemini", "comic_neon"): "Gemini Comic Neon",
+    ("openai", "comic_neon"): "OpenAI Comic Neon",
     ("openai", "cinematic"): "OpenAI Cinematic Photoreal",
     ("openai", "hyperreal"): "OpenAI Hyperreal Graphic Novel",
     ("openai", "neo_anime"): "OpenAI Neo-Anime",

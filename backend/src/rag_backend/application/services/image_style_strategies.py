@@ -10,7 +10,6 @@ documented in `tests/features/image_generation_provider.feature`.
 from collections.abc import Mapping
 
 from rag_backend.domain.constants import (
-    IMAGE_MODEL_GEMINI,
     IMAGE_MODEL_OPENAI,
     IMAGE_STYLE_CINEMATIC,
     IMAGE_STYLE_COMIC_NEON,
@@ -53,12 +52,13 @@ def _editorial_palette_fragment(theme: Mapping[str, str]) -> str:
     )
 
 
-class GeminiComicNeonStrategy(ImageStyleStrategy):
-    """Comic/manga cyberpunk preset tuned for Gemini 3.1 Flash Image.
+class OpenAIComicNeonStrategy(ImageStyleStrategy):
+    """Comic/manga cyberpunk preset, served by gpt-image-2 (AE-0308).
 
-    This mirrors the original `_build_gemini_prompt` that shipped with the
-    first carousel pipeline — kept as the default so existing projects
-    render identically after the DIP refactor.
+    Formerly ``GeminiComicNeonStrategy`` — prod intentionally has no Gemini
+    key, so the style moved providers. The prompt text is byte-identical to
+    the Gemini-era original except for the brand/likeness ALSO STRICT block
+    every OpenAI preset carries, keeping the visual identity intact.
     """
 
     @staticmethod
@@ -69,6 +69,8 @@ class GeminiComicNeonStrategy(ImageStyleStrategy):
             "Wide panoramic 3:1 ratio. "
             "STRICT: no text, no words, no letters, no labels, no speech bubbles, "
             "no signs, no captions, no code readable as text — purely visual. "
+            "ALSO STRICT: no real-world brand names, no celebrity or CEO "
+            "likenesses, no company logos. Use generic analogies only. "
             f"{_palette_fragment(theme)} "
             "Concrete tech scene only — acceptable elements: monitors, terminals, "
             "code streams as abstract glowing glyphs, holographic UI panels, "
@@ -179,7 +181,7 @@ class OpenAINeoAnimeStrategy(ImageStyleStrategy):
 # default because the two maps disagreed is now structurally impossible. The
 # keys must equal ``SUPPORTED_IMAGE_COMBOS`` (guarded by a contract test).
 IMAGE_STRATEGY_REGISTRY: dict[tuple[str, str], type[ImageStyleStrategy]] = {
-    (IMAGE_MODEL_GEMINI, IMAGE_STYLE_COMIC_NEON): GeminiComicNeonStrategy,
+    (IMAGE_MODEL_OPENAI, IMAGE_STYLE_COMIC_NEON): OpenAIComicNeonStrategy,
     (IMAGE_MODEL_OPENAI, IMAGE_STYLE_CINEMATIC): OpenAICinematicStrategy,
     (IMAGE_MODEL_OPENAI, IMAGE_STYLE_HYPERREAL): OpenAIHyperrealStrategy,
     (IMAGE_MODEL_OPENAI, IMAGE_STYLE_NEO_ANIME): OpenAINeoAnimeStrategy,

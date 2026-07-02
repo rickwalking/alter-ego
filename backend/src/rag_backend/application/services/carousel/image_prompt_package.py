@@ -13,7 +13,7 @@ from rag_backend.application.services.image_prompt_sanitizer import (
 )
 from rag_backend.application.services.image_style_strategies import (
     IMAGE_STRATEGY_REGISTRY,
-    GeminiComicNeonStrategy,
+    OpenAIComicNeonStrategy,
 )
 from rag_backend.domain.constants import IMAGE_MODEL_OPENAI
 from rag_backend.domain.models import CarouselProject
@@ -107,7 +107,7 @@ def sha256_parts(parts: Sequence[str]) -> str:
 
 # Dark default for any combo the registry doesn't cover (defence in depth;
 # API validation rejects unsupported combos before they reach here).
-_DEFAULT_STRATEGY = GeminiComicNeonStrategy
+_DEFAULT_STRATEGY = OpenAIComicNeonStrategy
 
 
 def _strategy_for_project(project: CarouselProject) -> ImageStyleStrategy:
