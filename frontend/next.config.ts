@@ -1,6 +1,8 @@
 import type { NextConfig } from "next";
 import createNextIntlPlugin from "next-intl/plugin";
 
+import { buildContentSecurityPolicy } from "./src/constants/csp";
+
 const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 
 const nextConfig: NextConfig = {
@@ -78,18 +80,46 @@ const nextConfig: NextConfig = {
         destination: "/dashboard/create/:id/publish",
         permanent: false,
       },
-      { source: "/knowledge", destination: "/dashboard/knowledge", permanent: false },
-      { source: "/personas", destination: "/dashboard/personas", permanent: false },
-      { source: "/rubrics", destination: "/dashboard/rubrics", permanent: false },
-      { source: "/blog-posts", destination: "/dashboard/blog-posts", permanent: false },
+      {
+        source: "/knowledge",
+        destination: "/dashboard/knowledge",
+        permanent: false,
+      },
+      {
+        source: "/personas",
+        destination: "/dashboard/personas",
+        permanent: false,
+      },
+      {
+        source: "/rubrics",
+        destination: "/dashboard/rubrics",
+        permanent: false,
+      },
+      {
+        source: "/blog-posts",
+        destination: "/dashboard/blog-posts",
+        permanent: false,
+      },
       {
         source: "/blog-posts/:id/edit",
         destination: "/dashboard/blog-posts/:id/edit",
         permanent: false,
       },
-      { source: "/workflow", destination: "/dashboard/workflow", permanent: false },
-      { source: "/calendar", destination: "/dashboard/calendar", permanent: false },
-      { source: "/analytics", destination: "/dashboard/analytics", permanent: false },
+      {
+        source: "/workflow",
+        destination: "/dashboard/workflow",
+        permanent: false,
+      },
+      {
+        source: "/calendar",
+        destination: "/dashboard/calendar",
+        permanent: false,
+      },
+      {
+        source: "/analytics",
+        destination: "/dashboard/analytics",
+        permanent: false,
+      },
     ];
   },
 
@@ -116,8 +146,12 @@ const nextConfig: NextConfig = {
             value: "origin-when-cross-origin",
           },
           {
+            // AE-0305: single authoritative CSP definition lives in
+            // src/constants/csp.ts (env-gated; drift-guarded by csp.test.ts).
             key: "Content-Security-Policy",
-            value: "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline' https://va.vercel-scripts.com https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https: http://localhost:8000; font-src 'self'; connect-src 'self' ws: wss: http: https:; frame-ancestors 'none'; base-uri 'self'; form-action 'self';",
+            value: buildContentSecurityPolicy(
+              process.env.NODE_ENV === "production",
+            ),
           },
           {
             key: "X-Frame-Options",
