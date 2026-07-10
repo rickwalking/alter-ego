@@ -9,8 +9,11 @@ Scenario: Direct edits remain available after all caps are exhausted
 
 from __future__ import annotations
 
+from typing import cast
+
 import pytest
 from fastapi import HTTPException
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.api.routes.carousels.editorial_workflow_routes_validate import (
     _ResumeGateContext,
@@ -22,13 +25,15 @@ from rag_backend.api.schemas.carousel_workflow import (
     EditorialWorkflowResumeRequest,
     LocalizedSlideReview,
 )
+from rag_backend.application.services.carousel.workflow_state import (
+    CarouselWorkflowState,
+)
 from rag_backend.domain.constants.carousel_workflow import (
     DEFAULT_REVISION_CAP_PER_PHASE,
     ERR_REVISE_FEEDBACK_REQUIRED,
     PHASE_CONTENT,
     PHASE_DESIGN,
     PHASE_FINAL_REVIEW,
-    REVIEW_ACTION_REVISE,
 )
 from rag_backend.domain.models.carousel_conflict import CarouselConflictError
 
@@ -46,7 +51,7 @@ def _request(
     structured: EditorialStructuredFeedback | None,
 ) -> EditorialWorkflowResumeRequest:
     return EditorialWorkflowResumeRequest(
-        action=REVIEW_ACTION_REVISE,
+        action="revise",
         feedback=feedback,
         expected_version=1,
         structured_feedback=structured,
@@ -55,7 +60,9 @@ def _request(
 
 def _gate_ctx() -> _ResumeGateContext:
     return _ResumeGateContext(
-        db=None,  # type: ignore[arg-type]
+        # None skips the escalation-notification side effect (runtime guard
+        # checks `ctx.db is not None`); cast bridges the stricter hint.
+        db=cast(AsyncSession, None),
         project_id="38affb3e",
         project_title="Prod carousel",
     )
@@ -96,7 +103,7 @@ class TestResumeGatesCapAccounting:
         with pytest.raises(CarouselConflictError) as exc:
             await validate_resume_workflow_gates(
                 request,
-                workflow_state,  # type: ignore[arg-type]
+                cast(CarouselWorkflowState, workflow_state),
                 ctx=_gate_ctx(),
             )
         assert exc.value.conflict.phase == PHASE_CONTENT
@@ -115,6 +122,6 @@ class TestResumeGatesCapAccounting:
 
         await validate_resume_workflow_gates(
             request,
-            workflow_state,  # type: ignore[arg-type]
+            cast(CarouselWorkflowState, workflow_state),
             ctx=_gate_ctx(),
         )  # no raise

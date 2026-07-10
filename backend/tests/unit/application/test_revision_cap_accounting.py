@@ -10,6 +10,7 @@ Scenario: Plain design revise while blocking consumes no design budget
 
 from __future__ import annotations
 
+from typing import cast
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -20,6 +21,9 @@ from rag_backend.application.services.carousel.editorial_workflow_service_helper
     prepare_resume_workflow,
     resolve_revision_cap_phase,
     validate_revision_cap,
+)
+from rag_backend.application.services.carousel.workflow_state import (
+    CarouselWorkflowState,
 )
 from rag_backend.domain.constants.carousel_workflow import (
     DEFAULT_REVISION_CAP_PER_PHASE,
@@ -60,14 +64,14 @@ def _prior(
     revision_count: dict[str, int],
     *,
     blocking: bool = False,
-) -> dict[str, object]:
+) -> CarouselWorkflowState:
     state: dict[str, object] = {
         "current_phase": phase,
         "revision_count": revision_count,
     }
     if blocking:
         state["localized_slides"] = _blocking_localized_slides()
-    return state
+    return cast(CarouselWorkflowState, state)
 
 
 def _send_back(target: str) -> dict[str, object]:
@@ -93,7 +97,7 @@ class TestResolveRevisionCapPhase:
     def test_design_send_back_charges_content(self) -> None:
         prior = _prior(PHASE_DESIGN, {})
         assert (
-            resolve_revision_cap_phase(prior, _send_back(PHASE_CONTENT))  # type: ignore[arg-type]
+            resolve_revision_cap_phase(prior, _send_back(PHASE_CONTENT))
             == PHASE_CONTENT
         )
 
@@ -102,35 +106,32 @@ class TestResolveRevisionCapPhase:
         the check now evaluates the TARGET phase like the increment does."""
         prior = _prior(PHASE_FINAL_REVIEW, {})
         assert (
-            resolve_revision_cap_phase(prior, _send_back(PHASE_CONTENT))  # type: ignore[arg-type]
+            resolve_revision_cap_phase(prior, _send_back(PHASE_CONTENT))
             == PHASE_CONTENT
         )
 
     def test_edited_slides_charge_no_phase(self) -> None:
         prior = _prior(PHASE_DESIGN, {})
-        assert resolve_revision_cap_phase(prior, _edits()) is None  # type: ignore[arg-type]
+        assert resolve_revision_cap_phase(prior, _edits()) is None
 
     def test_edits_with_target_charge_the_target(self) -> None:
         prior = _prior(PHASE_DESIGN, {})
         structured = {**_send_back(PHASE_CONTENT), **_edits()}
-        assert (
-            resolve_revision_cap_phase(prior, structured)  # type: ignore[arg-type]
-            == PHASE_CONTENT
-        )
+        assert resolve_revision_cap_phase(prior, structured) == PHASE_CONTENT
 
     def test_plain_design_revise_while_blocking_charges_no_phase(self) -> None:
         """A design revise with a blocking report is a provable content no-op
         (re-validate + re-interrupt), so it must not burn the design budget."""
         prior = _prior(PHASE_DESIGN, {}, blocking=True)
-        assert resolve_revision_cap_phase(prior, None) is None  # type: ignore[arg-type]
+        assert resolve_revision_cap_phase(prior, None) is None
 
     def test_plain_design_revise_without_blocking_charges_design(self) -> None:
         prior = _prior(PHASE_DESIGN, {})
-        assert resolve_revision_cap_phase(prior, None) == PHASE_DESIGN  # type: ignore[arg-type]
+        assert resolve_revision_cap_phase(prior, None) == PHASE_DESIGN
 
     def test_plain_content_revise_charges_content(self) -> None:
         prior = _prior(PHASE_CONTENT, {})
-        assert resolve_revision_cap_phase(prior, None) == PHASE_CONTENT  # type: ignore[arg-type]
+        assert resolve_revision_cap_phase(prior, None) == PHASE_CONTENT
 
 
 @pytest.mark.unit
@@ -147,7 +148,7 @@ class TestValidateRevisionCapTargetAware:
         )
 
         with pytest.raises(ValueError, match=ERR_REVISION_CAP_EXCEEDED):
-            await validate_revision_cap(prior, _ctx(_send_back(PHASE_CONTENT)))  # type: ignore[arg-type]
+            await validate_revision_cap(prior, _ctx(_send_back(PHASE_CONTENT)))
 
     @pytest.mark.parametrize("source", [PHASE_DESIGN, PHASE_FINAL_REVIEW])
     async def test_send_back_allowed_with_content_budget_remaining(
@@ -161,7 +162,7 @@ class TestValidateRevisionCapTargetAware:
             },
         )
 
-        await validate_revision_cap(prior, _ctx(_send_back(PHASE_CONTENT)))  # type: ignore[arg-type]
+        await validate_revision_cap(prior, _ctx(_send_back(PHASE_CONTENT)))
 
     async def test_edited_slides_pass_with_all_caps_exhausted(self) -> None:
         """Scenario: Direct edits remain available after all caps are
@@ -175,7 +176,7 @@ class TestValidateRevisionCapTargetAware:
             blocking=True,
         )
 
-        await validate_revision_cap(prior, _ctx(_edits()))  # type: ignore[arg-type]
+        await validate_revision_cap(prior, _ctx(_edits()))
 
     async def test_plain_design_revise_while_blocking_skips_cap(self) -> None:
         prior = _prior(
@@ -184,13 +185,13 @@ class TestValidateRevisionCapTargetAware:
             blocking=True,
         )
 
-        await validate_revision_cap(prior, _ctx(None))  # type: ignore[arg-type]
+        await validate_revision_cap(prior, _ctx(None))
 
     async def test_plain_revise_still_capped_on_current_phase(self) -> None:
         prior = _prior(PHASE_CONTENT, {PHASE_CONTENT: DEFAULT_REVISION_CAP_PER_PHASE})
 
         with pytest.raises(ValueError, match=ERR_REVISION_CAP_EXCEEDED):
-            await validate_revision_cap(prior, _ctx(None))  # type: ignore[arg-type]
+            await validate_revision_cap(prior, _ctx(None))
 
 
 @pytest.mark.unit
@@ -215,7 +216,7 @@ class TestUncappedSubmissionsDoNotIncrement:
                 orchestrator=orchestrator,
                 project_id="38affb3e",
                 action=REVIEW_ACTION_REVISE,
-                prior=prior,  # type: ignore[typeddict-item]
+                prior=prior,
                 feedback="Slide 4 still shows scaffold text",
                 structured_feedback=None,
             ),
@@ -236,7 +237,7 @@ class TestUncappedSubmissionsDoNotIncrement:
                 orchestrator=orchestrator,
                 project_id="38affb3e",
                 action=REVIEW_ACTION_REVISE,
-                prior=prior,  # type: ignore[typeddict-item]
+                prior=prior,
                 feedback="Regenerate slide 4 without scaffold",
                 structured_feedback=_send_back(PHASE_CONTENT),
             ),

@@ -14,7 +14,8 @@ generated images already exist.
 
 from __future__ import annotations
 
-from unittest.mock import patch
+from typing import cast
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -31,6 +32,7 @@ from rag_backend.application.services.carousel.presentation_review import (
     WORKFLOW_STATE_PRESENTATION_VALIDATION_KEY,
 )
 from rag_backend.application.services.carousel.workflow_state import (
+    CarouselWorkflowState,
     get_initial_carousel_state,
 )
 from rag_backend.domain.constants.carousel_workflow import (
@@ -73,9 +75,11 @@ def _localized_slide(index: int, body_pt: str) -> dict[str, object]:
     }
 
 
-def _prod_shaped_design_state(**overrides: object) -> dict[str, object]:
+def _prod_shaped_design_state(**overrides: object) -> CarouselWorkflowState:
     """Prod-shaped 38affb3e state: blocking slide 4 parked at design."""
-    state = get_initial_carousel_state("38affb3e", {"topic": "AI"})
+    state: dict[str, object] = dict(
+        get_initial_carousel_state("38affb3e", {"topic": "AI"})
+    )
     state.update({
         "current_phase": PHASE_DESIGN,
         "content_approved": True,
@@ -94,8 +98,8 @@ def _prod_shaped_design_state(**overrides: object) -> dict[str, object]:
             ],
         },
     })
-    state.update(overrides)  # type: ignore[typeddict-item]
-    return dict(state)
+    state.update(overrides)
+    return cast(CarouselWorkflowState, state)
 
 
 @pytest.mark.unit
@@ -103,7 +107,9 @@ class TestDesignSendBackToContent:
     """Scenario: Reviewer sends the workflow back to content from design."""
 
     @patch("rag_backend.agents.carousel_workflow_nodes.interrupt")
-    def test_design_send_back_re_enters_content(self, mock_interrupt: object) -> None:
+    def test_design_send_back_re_enters_content(
+        self, mock_interrupt: MagicMock
+    ) -> None:
         """A design revise targeting content keeps current_phase=content,
         preserves the routing target, and resets content_approved."""
         mock_interrupt.return_value = {
@@ -113,7 +119,7 @@ class TestDesignSendBackToContent:
             },
         }
 
-        result = design_phase(_prod_shaped_design_state())  # type: ignore[arg-type]
+        result = design_phase(_prod_shaped_design_state())
 
         assert result["current_phase"] == PHASE_CONTENT
         assert result[SEND_BACK_TARGET_PHASE_KEY] == PHASE_CONTENT
@@ -122,7 +128,7 @@ class TestDesignSendBackToContent:
 
     @patch("rag_backend.agents.carousel_workflow_nodes.interrupt")
     def test_design_send_back_preserves_generated_images(
-        self, mock_interrupt: object
+        self, mock_interrupt: MagicMock
     ) -> None:
         """Image assets are untouched by the send-back updates — preservation
         for unchanged outline headings rides the prompt-hash reuse, so the
@@ -134,7 +140,7 @@ class TestDesignSendBackToContent:
             },
         }
 
-        result = design_phase(_prod_shaped_design_state())  # type: ignore[arg-type]
+        result = design_phase(_prod_shaped_design_state())
 
         assert "image_assets" not in result
         # post_review must not force design_applied on a send-back either.
@@ -142,14 +148,14 @@ class TestDesignSendBackToContent:
 
     @patch("rag_backend.agents.carousel_workflow_nodes.interrupt")
     def test_plain_design_revise_clears_stale_send_back_target(
-        self, mock_interrupt: object
+        self, mock_interrupt: MagicMock
     ) -> None:
         """A plain revise clears a stale target from a prior cycle so it
         cannot re-route the retry loop back to content."""
         mock_interrupt.return_value = {"action": REVIEW_ACTION_REVISE}
 
         result = design_phase(
-            _prod_shaped_design_state(**{SEND_BACK_TARGET_PHASE_KEY: PHASE_CONTENT})  # type: ignore[arg-type]
+            _prod_shaped_design_state(**{SEND_BACK_TARGET_PHASE_KEY: PHASE_CONTENT})
         )
 
         assert result["current_phase"] == PHASE_DESIGN
@@ -157,11 +163,11 @@ class TestDesignSendBackToContent:
 
     @patch("rag_backend.agents.carousel_workflow_nodes.interrupt")
     def test_design_approve_still_applies_post_review(
-        self, mock_interrupt: object
+        self, mock_interrupt: MagicMock
     ) -> None:
         mock_interrupt.return_value = {"action": REVIEW_ACTION_APPROVE}
 
-        result = design_phase(_prod_shaped_design_state())  # type: ignore[arg-type]
+        result = design_phase(_prod_shaped_design_state())
 
         assert result["design_approved"] is True
         assert result["design_applied"] is True
@@ -174,7 +180,7 @@ class TestDesignEditedSlides:
 
     @patch("rag_backend.agents.carousel_workflow_nodes.interrupt")
     def test_edited_slides_applied_and_revalidated_at_design(
-        self, mock_interrupt: object
+        self, mock_interrupt: MagicMock
     ) -> None:
         """Edits submitted from design update localized_slides and store a
         fresh non-blocking validation report (uniform apply semantics)."""
@@ -187,7 +193,7 @@ class TestDesignEditedSlides:
             },
         }
 
-        result = design_phase(_prod_shaped_design_state())  # type: ignore[arg-type]
+        result = design_phase(_prod_shaped_design_state())
 
         slides = result[WORKFLOW_STATE_LOCALIZED_SLIDES_KEY]
         assert isinstance(slides, list)
@@ -211,7 +217,7 @@ class TestDesignEditedSlides:
                     ],
                 },
             },
-            state=state,  # type: ignore[arg-type]
+            state=state,
             phase=PHASE_FINAL_REVIEW,
         )
 
@@ -229,7 +235,7 @@ class TestDesignEditedSlides:
                     ],
                 },
             },
-            state=state,  # type: ignore[arg-type]
+            state=state,
             phase=PHASE_IMAGES,
         )
 
@@ -242,32 +248,32 @@ class TestRouteAfterDesign:
 
     def test_route_after_design_approved_goes_to_images(self) -> None:
         state = _prod_shaped_design_state(design_approved=True)
-        assert route_after_design(state) == "approved"  # type: ignore[arg-type]
+        assert route_after_design(state) == "approved"
 
     def test_route_after_design_send_back_goes_to_content(self) -> None:
         state = _prod_shaped_design_state(
             design_approved=False,
             **{SEND_BACK_TARGET_PHASE_KEY: PHASE_CONTENT},
         )
-        assert route_after_design(state) == PHASE_CONTENT  # type: ignore[arg-type]
+        assert route_after_design(state) == PHASE_CONTENT
 
     def test_route_after_design_plain_revise_retries_design(self) -> None:
         state = _prod_shaped_design_state(
             design_approved=False,
             **{SEND_BACK_TARGET_PHASE_KEY: ""},
         )
-        assert route_after_design(state) == "retry"  # type: ignore[arg-type]
+        assert route_after_design(state) == "retry"
 
     def test_route_after_design_ignores_disallowed_target(self) -> None:
         state = _prod_shaped_design_state(
             design_approved=False,
             **{SEND_BACK_TARGET_PHASE_KEY: PHASE_IMAGES},
         )
-        assert route_after_design(state) == "retry"  # type: ignore[arg-type]
+        assert route_after_design(state) == "retry"
 
     def test_route_after_gate_unchanged_for_other_phases(self) -> None:
         state = _prod_shaped_design_state(outline_approved=True)
-        assert route_after_gate(state, "outline_approved") == "approved"  # type: ignore[arg-type]
+        assert route_after_gate(state, "outline_approved") == "approved"
 
 
 @pytest.mark.unit
@@ -277,14 +283,14 @@ class TestDesignInterruptPayload:
 
     @patch("rag_backend.agents.carousel_workflow_nodes.interrupt")
     def test_design_interrupt_payload_carries_report_and_hint(
-        self, mock_interrupt: object
+        self, mock_interrupt: MagicMock
     ) -> None:
         mock_interrupt.return_value = {"action": REVIEW_ACTION_REVISE}
         state = _prod_shaped_design_state(**{
             STATE_FIELD_DESIGN_RECOVERY_HINT: DESIGN_VALIDATION_RECOVERY_HINT
         })
 
-        design_phase(state)  # type: ignore[arg-type]
+        design_phase(state)
 
         payload = mock_interrupt.call_args[0][0]
         validation = payload[STATE_FIELD_PRESENTATION_VALIDATION]
