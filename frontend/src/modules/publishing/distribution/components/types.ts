@@ -40,4 +40,13 @@ export interface PublishPanelProps {
   onPublishInstagram?: (caption: string) => Promise<void>;
   isPublishingInstagram?: boolean;
   publishResult?: { status: "idle" | "success" | "error"; message?: string };
+  // AE-0313: extra cache-buster (the freshly built artifact version) appended
+  // to PDF/slide URLs after a "Rebuild PDF" so the browser fetches the new
+  // artifact rather than a cached prior version.
+  cacheBustToken?: string;
+}
+
+export interface RebuildPdfSectionProps {
+  projectId: string;
+  onRebuilt: (artifactVersion: string | null) => void;
 }

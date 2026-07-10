@@ -2028,6 +2028,58 @@
         "title": "CarouselProjectResponse",
         "type": "object"
       },
+      "CarouselRepublishResponse": {
+        "description": "Result of an idempotent artifact republish (AE-0313).",
+        "properties": {
+          "artifact_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Artifact Version"
+          },
+          "pdf_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pdf Path"
+          },
+          "pdf_path_en": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pdf Path En"
+          },
+          "project_id": {
+            "title": "Project Id",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "project_id",
+          "status"
+        ],
+        "title": "CarouselRepublishResponse",
+        "type": "object"
+      },
       "CarouselSlideResponse": {
         "properties": {
           "body": {
@@ -9352,6 +9404,66 @@
         "summary": "Publish To Instagram",
         "tags": [
           "carousels"
+        ]
+      }
+    },
+    "/api/carousels/{project_id}/republish": {
+      "post": {
+        "description": "Re-render from persisted slides and activate a fresh artifact version.",
+        "operationId": "republish_carousel_api_carousels__project_id__republish_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CarouselRepublishResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CarouselConflictResponse"
+                }
+              }
+            },
+            "description": "Typed conflict: a workflow run or another artifact build is in progress for this carousel (AE-0313/AE-0316)."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Rebuild and re-activate a completed carousel's artifacts",
+        "tags": [
+          "carousels",
+          "carousels-republish"
         ]
       }
     },

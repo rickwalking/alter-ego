@@ -664,6 +664,18 @@
       "success": "Slides regenerados com novo layout.",
       "fetchError": "Não foi possível carregar as opções de layout.",
       "retry": "Tentar novamente"
+    },
+    "rebuildPdf": {
+      "title": "Reconstruir PDF",
+      "description": "Re-renderize os slides e o PDF a partir do texto mais recente e reconstrua o arquivo para download.",
+      "rebuild": "Reconstruir PDF",
+      "rebuilding": "Reconstruindo…",
+      "confirmTitle": "Reconstruir o PDF?",
+      "confirmBody": "Isso re-renderiza cada slide e PDF a partir dos dados atuais dos slides e ativa uma nova versão do artefato. A versão anterior continua ativa até a nova ficar pronta.",
+      "confirm": "Reconstruir",
+      "cancel": "Cancelar",
+      "success": "PDF reconstruído com o texto mais recente dos slides.",
+      "failed": "Não foi possível reconstruir o PDF."
     }
   },
   "auth": {

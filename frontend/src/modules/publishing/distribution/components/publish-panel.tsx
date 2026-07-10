@@ -20,9 +20,22 @@ const LINKEDIN_COMPOSE_URL = "https://www.linkedin.com/feed/?shareActive=true";
 type LanguageTab = "pt" | "en";
 type ActiveTab = "instagram" | "linkedin";
 
+// AE-0313: combine the project's updated_at with the freshly built artifact
+// version (when a "Rebuild PDF" just ran) so served PDF/slide URLs are
+// cache-busted on version change.
+function cacheBustVersion(
+  project: CarouselProjectResponse,
+  cacheBustToken: string | undefined,
+): string {
+  return cacheBustToken
+    ? `${project.updated_at}-${cacheBustToken}`
+    : project.updated_at;
+}
+
 function slideUrlsFromProject(
   project: CarouselProjectResponse,
   language: "pt" | "en",
+  cacheBustToken: string | undefined,
 ): string[] {
   const tokens = project.design_tokens as
     | {
@@ -45,17 +58,18 @@ function slideUrlsFromProject(
     projectId: project.id,
     paths: slides,
     language,
-    updatedAt: project.updated_at,
+    updatedAt: cacheBustVersion(project, cacheBustToken),
   });
 }
 
 function pdfUrl(
   project: CarouselProjectResponse,
   language: "pt" | "en",
+  cacheBustToken: string | undefined,
 ): string {
   return appendCacheBuster(
     `${API_ENDPOINTS.CAROUSEL_PDF(project.id)}?lang=${language}`,
-    project.updated_at,
+    cacheBustVersion(project, cacheBustToken),
   );
 }
 
@@ -77,6 +91,7 @@ export function PublishPanel({
   onPublishInstagram,
   isPublishingInstagram,
   publishResult,
+  cacheBustToken,
 }: PublishPanelProps) {
   const t = useTranslations("publish");
   const [activeTab, setActiveTab] = useState<ActiveTab>("instagram");
@@ -92,7 +107,7 @@ export function PublishPanel({
     setEditorState(incomingEditorState);
   }
 
-  const slideUrls = slideUrlsFromProject(project, language);
+  const slideUrls = slideUrlsFromProject(project, language, cacheBustToken);
   const activeLinkedInText =
     language === "pt" ? editor.linkedinPt : editor.linkedinEn;
   const setCaption = (caption: string) =>
@@ -144,7 +159,7 @@ export function PublishPanel({
           alt={project.title || project.topic}
         />
         <a
-          href={pdfUrl(project, language)}
+          href={pdfUrl(project, language, cacheBustToken)}
           target="_blank"
           rel="noopener"
           className="inline-flex w-full items-center justify-center rounded-md border border-[var(--color-border)] px-4 py-2 font-medium text-sm hover:bg-[var(--color-background)]"
@@ -281,7 +296,7 @@ export function PublishPanel({
                 {t("linkedin.copyPost")}
               </button>
               <a
-                href={pdfUrl(project, language)}
+                href={pdfUrl(project, language, cacheBustToken)}
                 target="_blank"
                 rel="noopener"
                 className="rounded-md border border-[var(--color-border)] px-3 py-1.5 text-sm hover:bg-[var(--color-background)]"

@@ -664,6 +664,18 @@
       "success": "Slides regenerated with new layout.",
       "fetchError": "Could not load layout options.",
       "retry": "Retry"
+    },
+    "rebuildPdf": {
+      "title": "Rebuild PDF",
+      "description": "Re-render the slides and PDF from the latest slide text and rebuild the downloadable artifact.",
+      "rebuild": "Rebuild PDF",
+      "rebuilding": "Rebuilding…",
+      "confirmTitle": "Rebuild the PDF?",
+      "confirmBody": "This re-renders every slide and PDF from the current slide data and activates a new artifact version. The previous version keeps serving until the new one is ready.",
+      "confirm": "Rebuild",
+      "cancel": "Cancel",
+      "success": "PDF rebuilt with the latest slide text.",
+      "failed": "Could not rebuild the PDF."
     }
   },
   "auth": {

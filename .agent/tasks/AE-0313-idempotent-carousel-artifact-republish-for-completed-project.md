@@ -253,13 +253,70 @@ Ticket created from prod incident analysis (project 66014ba3: PDF served
 stale versioned artifact after slide fix; re-finalize health check false
 negative marked the project failed).
 
+### 2026-07-11 — Developer implementation (all 10 deliverables)
+
+- Health-check fix: `CarouselArtifactHealthRequest.validate_pre_promotion`
+  routes `evaluate_carousel_artifacts` to the project-root fresh outputs and
+  skips the stale-version manifest check; `_verify_artifacts` sets it. 66014ba3
+  regression + full call-site matrix (NULL/set/stale × pre_promotion) covered.
+- Failure safety: `_fail_finalize` skips `mark_failed`/persist when the project
+  is already `completed` (error returned, prior version + error_message intact).
+- Build ordering: `write_current_index` moved AFTER the `activate_build` commit
+  in the fresh path; `_activate_existing` now writes the index too (idempotent
+  path no longer lags the DB). A CAS-losing build never touches current.json.
+- New `POST /api/carousels/{id}/republish`: owner/assigned-reviewer auth, 422 on
+  non-completed, typed `run_in_progress` 409 when a run is active, shared
+  advisory lock (AE-0316) held across the whole pipeline and surfaced as
+  `build_in_progress` for concurrent builds. Reads the refreshed session-identity
+  project (no new api→infrastructure edge).
+- Frontend: publish-page "Rebuild PDF" action (NeonModal confirmation) → republish
+  hook → progress/result + version cache-busting on PDF/slide URLs; pt/en i18n.
+- Regenerated route snapshot + `docs/architecture/openapi.json` (publishing
+  snapshots unaffected — full unit suite green).
+
 ## Files Touched
 
-Pending.
+Backend (src):
+- `application/services/carousel/artifact_health.py` — `validate_pre_promotion`
+  + `_health_root`.
+- `application/services/carousel/editorial_finalize.py` — `_fail_finalize`
+  guard; pre-promotion health request.
+- `application/services/carousel/artifact_build_service.py` — index-write
+  ordering (both paths) + `project_root` in `ActivateExistingCommand`.
+- `application/services/carousel/carousel_republish.py` — NEW orchestration +
+  `republish_build_lock` (mutation→build_in_progress) + `engine_from_session`.
+- `api/routes/carousels/republish.py` — NEW route; `api/routes/carousels/router.py`
+  wiring; `api/schemas/carousel.py` `CarouselRepublishResponse`.
+- `domain/constants/carousel_republish.py` — NEW constants.
+
+Backend (tests):
+- `tests/unit/application/test_artifact_health_pre_promotion.py` (NEW, 5),
+  `test_carousel_republish.py` (NEW, 6), `tests/unit/api/test_republish_route.py`
+  (NEW, 7); additions to `test_artifact_build_service.py` (+4) and
+  `test_editorial_finalize.py` (+2); `tests/features/carousel_republish.feature`
+  (NEW).
+
+Frontend:
+- `constants/api.ts` (`CAROUSEL_REPUBLISH`);
+  `modules/publishing/distribution/hooks/use-republish-carousel.ts` (NEW);
+  `modules/publishing/distribution/components/rebuild-pdf-section.tsx` (NEW) +
+  test; `publish-panel.tsx` + `types.ts` (cacheBustToken); publishing +
+  distribution barrels; `app/dashboard/create/[id]/publish/page.tsx`;
+  `i18n/locales/{en,pt}.json` (`publish.rebuildPdf`).
+
+Artifacts: `docs/architecture/openapi.json`, `backend/tests/snapshots/openapi_routes.json`.
 
 ## Test Evidence
 
-Pending.
+- `MYPYPATH=src uv run mypy -p rag_backend` → Success: no issues found in 590 source files.
+- `uv run ruff check src/rag_backend tests/...` → All checks passed!
+- `uv run lint-imports` → Contracts: 22 kept, 0 broken.
+- `uv run pytest tests/unit -q` → 2300 passed, 1 skipped.
+- New backend files: `test_carousel_republish.py` (6), `test_republish_route.py`
+  (7), `test_artifact_health_pre_promotion.py` (5) all green.
+- Frontend: `npx tsc --noEmit` clean; `npm run lint` EXIT=0; vitest
+  `rebuild-pdf-section.test.tsx` (4) + `publish-panel.test.tsx` (10, incl. new
+  cache-bust) green; schema-drift: No drift across mapped schemas.
 
 ## QA Report
 

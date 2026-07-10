@@ -86,6 +86,7 @@
   "POST /api/carousels/{project_id}/creator-asset/upload",
   "POST /api/carousels/{project_id}/publish",
   "POST /api/carousels/{project_id}/publish/instagram",
+  "POST /api/carousels/{project_id}/republish",
   "POST /api/carousels/{project_id}/workflow/resume",
   "POST /api/carousels/{project_id}/workflow/start",
   "POST /api/content/{content_id}/lock",

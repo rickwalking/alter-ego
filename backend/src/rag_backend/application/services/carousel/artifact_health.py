@@ -15,6 +15,7 @@ from rag_backend.application.services.carousel.artifact_manifest import (
     manifest_from_payload,
 )
 from rag_backend.application.services.carousel.artifact_path_resolver import (
+    ArtifactServingPaths,
     resolve_and_reconcile_serving_paths,
     resolve_manifest_path,
 )
@@ -72,6 +73,13 @@ class CarouselArtifactHealthRequest:
     project: CarouselProject
     slides: Sequence[CarouselSlide]
     require_english: bool | None = None
+    # AE-0313: validate the FRESHLY RENDERED pre-promotion outputs under the
+    # project root (plain ``pt/`` / ``en/`` dirs) instead of the currently
+    # active versioned serving root. The finalize/republish pipeline re-renders
+    # into the project root BEFORE the artifact build promotes a new version;
+    # validating the old version root would false-negative the fresh PDFs as
+    # missing (the 66014ba3 incident) and skip the stale-version manifest check.
+    validate_pre_promotion: bool = False
 
 
 @dataclass(frozen=True)
@@ -118,7 +126,9 @@ def evaluate_carousel_artifacts(
 ) -> CarouselArtifactHealthReport:
     """Validate all files needed before final review, publish, or Instagram."""
     serving_paths = resolve_and_reconcile_serving_paths(request.project)
-    output_dir = serving_paths.serving_root if serving_paths is not None else None
+    output_dir = _health_root(
+        serving_paths, validate_pre_promotion=request.validate_pre_promotion
+    )
     expected = _expected_slide_numbers(request.slides)
     warnings: list[str] = []
     if output_dir is None:
@@ -158,7 +168,10 @@ def evaluate_carousel_artifacts(
     raw_root = serving_paths.project_root if serving_paths is not None else output_dir
     errors.extend(_validate_raw_images(request, raw_root))
     errors.extend(_validate_pdfs(request, output_dir, expected))
-    if request.project.artifact_version:
+    # Pre-promotion outputs have no versioned manifest yet (it is written during
+    # the artifact build); the still-active version's manifest is irrelevant to
+    # the fresh render, so the manifest check is skipped in that mode.
+    if request.project.artifact_version and not request.validate_pre_promotion:
         errors.extend(_validate_manifest(request.project))
     return _report(
         ReportInput(
@@ -185,6 +198,19 @@ def _report(report_input: ReportInput) -> CarouselArtifactHealthReport:
         rendered_slide_numbers_pt=report_input.rendered_pt,
         rendered_slide_numbers_en=report_input.rendered_en,
     )
+
+
+def _health_root(
+    serving_paths: ArtifactServingPaths | None,
+    *,
+    validate_pre_promotion: bool,
+) -> Path | None:
+    """Pick the root to validate: project root pre-promotion, else serving root."""
+    if serving_paths is None:
+        return None
+    if validate_pre_promotion:
+        return serving_paths.project_root
+    return serving_paths.serving_root
 
 
 def _resolved_output_dir(project: CarouselProject) -> Path | None:

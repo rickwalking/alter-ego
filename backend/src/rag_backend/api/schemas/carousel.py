@@ -157,6 +157,16 @@ class CarouselProjectListResponse(BaseModel):
     offset: int
 
 
+class CarouselRepublishResponse(BaseModel):
+    """Result of an idempotent artifact republish (AE-0313)."""
+
+    project_id: str
+    status: str
+    artifact_version: str | None = None
+    pdf_path: str | None = None
+    pdf_path_en: str | None = None
+
+
 class InstagramPublishRequest(BaseModel):
     caption: str = Field(..., min_length=1, max_length=2200)
 

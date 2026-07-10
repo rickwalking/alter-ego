@@ -184,6 +184,15 @@ describe("PublishPanel", () => {
     expect(pdfLink.getAttribute("href")).toContain("/api/carousels/proj-1/pdf");
   });
 
+  // Scenario: Served PDF URLs are cache-busted on version change (AE-0313)
+  it("appends the rebuilt artifact version to the PDF cache-buster", () => {
+    render(
+      <PublishPanel project={buildProject()} cacheBustToken="sha256-new" />,
+    );
+    const pdfLink = screen.getByRole("link", { name: /Download PDF/ });
+    expect(pdfLink.getAttribute("href")).toContain("sha256-new");
+  });
+
   // Scenario: Open LinkedIn points to the compose URL
   it("Open LinkedIn links to the LinkedIn compose URL", async () => {
     const user = userEvent.setup();

@@ -62,6 +62,7 @@ class ActivateExistingCommand(TypedDict):
     artifact_version: str
     version_dir: Path
     manifest_path: Path
+    project_root: Path
 
 
 class CarouselArtifactBuildService:
@@ -103,6 +104,7 @@ class CarouselArtifactBuildService:
                         artifact_version=artifact_version,
                         version_dir=version_dir,
                         manifest_path=manifest_path,
+                        project_root=project_root,
                     ),
                 )
 
@@ -125,7 +127,6 @@ class CarouselArtifactBuildService:
             build_record.status = ARTIFACT_BUILD_STATUS_READY
             build_record.staging_path = None
             await build_repo.upsert_build(build_record)
-            write_current_index(project_root, artifact_version)
             lock_version = await build_repo.activate_build(
                 params=_ActivateBuildParams(
                     project_id=request.project.id,
@@ -135,6 +136,11 @@ class CarouselArtifactBuildService:
                 ),
             )
             await db.commit()
+            # AE-0313 r4: write the on-disk index ONLY after the activation CAS
+            # commit succeeds — a CAS-losing concurrent build raises above and
+            # never reaches here, so current.json can never name a version that
+            # failed to activate in the DB.
+            write_current_index(project_root, artifact_version)
             request.project.artifact_version = artifact_version
             logger.info(
                 "carousel_artifact_promoted",
@@ -188,6 +194,11 @@ class CarouselArtifactBuildService:
                 ),
             )
             await command["db"].commit()
+            # AE-0313 r3: the idempotent re-activation path must refresh the
+            # on-disk index too — without this, current.json lagged the DB until
+            # a lazy read-path reconciler ran, so a republish→download with no
+            # intervening state read served the prior version's PDF.
+            write_current_index(command["project_root"], command["artifact_version"])
             command["request"].project.artifact_version = command["artifact_version"]
             return ArtifactBuildResult(
                 artifact_version=command["artifact_version"],
