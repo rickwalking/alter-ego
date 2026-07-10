@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from hashlib import sha256
 from typing import cast
 
+import structlog
 import yaml
 
 from rag_backend.application.services.carousel.presentation_policy_types import (
@@ -36,9 +37,8 @@ from rag_backend.domain.constants.runtime_skills import (
     CAROUSEL_PIPELINE_SKILL_ID,
     resolve_runtime_skill_filesystem_path,
 )
-from rag_backend.infrastructure.logging import get_logger
 
-logger = get_logger()
+logger = structlog.get_logger(__name__)
 
 _POLICY_KEY_RULE_SEVERITIES = "rule_severities"
 _POLICY_KEY_CASING = "casing"
