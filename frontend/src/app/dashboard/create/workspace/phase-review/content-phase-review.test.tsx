@@ -101,4 +101,42 @@ describe("ContentPhaseReview content-gate violations (AE-0309)", () => {
       screen.queryByText("Presentation violations"),
     ).not.toBeInTheDocument();
   });
+
+  // AE-0312 — Gherkin: backend/tests/features/carousel_pt_casing_severity.feature
+  // Scenario: warning-tier violations render distinctly from blockers.
+  it("labels warning-severity casing violations as non-blocking warnings", () => {
+    const warningReport: SlideValidationReport = {
+      validation_status: "invalid",
+      validated_at: "2026-07-10T00:00:00.000Z",
+      blocking: false,
+      violations: [
+        {
+          code: "heading_not_sentence_case_pt",
+          message: "Portuguese heading must start with an uppercase letter",
+          slide_index: 4,
+          locale: "pt",
+          field: "heading",
+          severity: "warning",
+        },
+      ],
+    };
+    const state: EditorialWorkflowState = {
+      ...baseState,
+      presentation_validation: warningReport,
+    };
+
+    render(<ContentPhaseReview state={state} />);
+
+    const violation = screen
+      .getByText("heading_not_sentence_case_pt")
+      .closest("li");
+    expect(violation).toHaveTextContent("Warning");
+    expect(violation?.className).not.toContain("destructive");
+    // A non-blocking report must not raise the approval-blocked alert.
+    expect(
+      screen.queryByText(
+        "Approval is blocked until all presentation violations are resolved.",
+      ),
+    ).not.toBeInTheDocument();
+  });
 });

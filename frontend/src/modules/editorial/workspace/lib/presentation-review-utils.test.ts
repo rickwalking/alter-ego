@@ -7,6 +7,7 @@ import {
   formatBudgetUsage,
   hasBlockingPresentationViolations,
   isBudgetExceeded,
+  isWarningViolation,
   listPresentationIconNames,
   listPresentationStructuredItems,
   listPresentationViolations,
@@ -15,6 +16,7 @@ import {
   resolvePresentationPreviewText,
   resolveBodyBudget,
   resolveHeadingBudget,
+  violationToneClasses,
 } from "./presentation-review-utils";
 import {
   applySlideCopyEdit,
@@ -259,5 +261,48 @@ describe("presentation review utils", () => {
     expect(
       localizedSlidesHaveBudgetViolations(slides, "hero_lower_third_v1"),
     ).toBe(true);
+  });
+});
+
+// AE-0312: warning-tier violations render distinctly from blockers.
+// Feature: tests/features/carousel_pt_casing_severity.feature
+describe("violation severity styling (AE-0312)", () => {
+  it("classifies warning-severity casing violations as warnings", () => {
+    expect(
+      isWarningViolation({
+        code: "heading_not_sentence_case_pt",
+        message: "warn",
+        severity: "warning",
+      }),
+    ).toBe(true);
+  });
+
+  it("treats a blocker and an absent severity as non-warning", () => {
+    expect(
+      isWarningViolation({
+        code: "heading_empty",
+        message: "x",
+        severity: "blocker",
+      }),
+    ).toBe(false);
+    expect(isWarningViolation({ code: "heading_empty", message: "x" })).toBe(
+      false,
+    );
+  });
+
+  it("gives warnings and blockers distinct tone classes", () => {
+    const warning = violationToneClasses({
+      code: "proper_noun_casing",
+      message: "w",
+      severity: "warning",
+    });
+    const blocker = violationToneClasses({
+      code: "heading_empty",
+      message: "b",
+    });
+
+    expect(warning).not.toBe(blocker);
+    expect(blocker).toContain("destructive");
+    expect(warning).not.toContain("destructive");
   });
 });

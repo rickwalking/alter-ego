@@ -30,6 +30,7 @@ from rag_backend.application.services.carousel.workflow_state_sanitize import (
     SanitizeWorkflowStateCommand,
     sanitize_workflow_state_artifacts,
 )
+from rag_backend.domain.constants.carousel_presentation import SEVERITY_BLOCKER
 from rag_backend.domain.constants.workflow_state_fields import (
     STATE_DEFAULT_STATUS,
     STATE_FIELD_BLOCKING,
@@ -68,6 +69,7 @@ from rag_backend.domain.constants.workflow_state_fields import (
     STATE_FIELD_VIOLATION_FIELD,
     STATE_FIELD_VIOLATION_LOCALE,
     STATE_FIELD_VIOLATION_MESSAGE,
+    STATE_FIELD_VIOLATION_SEVERITY,
     STATE_FIELD_VIOLATIONS,
     STATE_FIELD_WORKFLOW_ERROR,
     STATE_FIELD_WORKFLOW_STATUS,
@@ -406,12 +408,14 @@ def _validation_violation(item: object) -> SlideValidationViolationResponse | No
     slide_index = item.get(STATE_FIELD_SLIDE_INDEX)
     locale = item.get(STATE_FIELD_VIOLATION_LOCALE)
     field = item.get(STATE_FIELD_VIOLATION_FIELD)
+    severity = item.get(STATE_FIELD_VIOLATION_SEVERITY)
     return SlideValidationViolationResponse(
         code=code,
         message=message,
         slide_index=slide_index if isinstance(slide_index, int) else None,
         locale=locale if isinstance(locale, str) else None,
         field=field if isinstance(field, str) else None,
+        severity=severity if isinstance(severity, str) else SEVERITY_BLOCKER,
     )
 
 

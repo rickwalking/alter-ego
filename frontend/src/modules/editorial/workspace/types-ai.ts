@@ -50,12 +50,17 @@ export interface ContentSource {
   is_primary: boolean;
 }
 
+/** AE-0312: severity tier for a validation violation. */
+export type ViolationSeverity = "blocker" | "warning";
+
 export interface SlideValidationViolation {
   code: string;
   message: string;
   slide_index?: number | null;
   locale?: string | null;
   field?: string | null;
+  // AE-0312: absent defaults to a blocking treatment client-side.
+  severity?: ViolationSeverity | null;
 }
 
 export interface SlideValidationReport {

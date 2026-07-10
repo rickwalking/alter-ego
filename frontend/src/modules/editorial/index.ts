@@ -28,6 +28,7 @@ export type {
   RubricEvaluationResult,
   ContentSource,
   SlideValidationViolation,
+  ViolationSeverity,
   SlideValidationReport,
   LocalizedSlideReview,
   SlideImagePrompt,
@@ -86,6 +87,10 @@ export {
   hasBlockingContentGateValidation,
   listContentGateViolations,
   listContentReviewViolations,
+  isWarningViolation,
+  violationToneClasses,
+  VIOLATION_SEVERITY_WARNING,
+  VIOLATION_SEVERITY_BLOCKER,
   type PresentationStructuredItem,
   type PresentationFieldBudget,
 } from "./workspace/lib/presentation-review-utils";

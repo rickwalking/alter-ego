@@ -6,6 +6,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
+from rag_backend.domain.constants.carousel_presentation import SEVERITY_BLOCKER
 from rag_backend.domain.constants.carousel_workflow import SOURCE_TYPE_DOCUMENT
 
 ReviewAction = Literal["approve", "reject", "revise", "edit"]
@@ -74,6 +75,9 @@ class SlideValidationViolationResponse(BaseModel):
     slide_index: int | None = None
     locale: str | None = None
     field: str | None = None
+    # AE-0312: severity tier ("blocker" | "warning"); defaults to blocker so a
+    # legacy report without the field keeps its blocking treatment client-side.
+    severity: str = SEVERITY_BLOCKER
 
 
 class SlideValidationReportResponse(BaseModel):

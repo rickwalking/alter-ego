@@ -467,6 +467,8 @@
       "contentGateBlocked": "Automatic drafting could not produce valid copy for some slides after repair and one retry. Review the violations below before approving.",
       "presentationBlocked": "Approval is blocked until all presentation violations are resolved.",
       "violationsTitle": "Presentation violations",
+      "violationSeverityBlocker": "Blocker",
+      "violationSeverityWarning": "Warning",
       "designTitle": "Design review",
       "designReady": "Design tokens are applied. Approve to generate slide images.",
       "designPending": "Review the outline and content above, then approve to apply design and generate images.",

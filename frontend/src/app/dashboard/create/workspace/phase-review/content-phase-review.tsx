@@ -20,6 +20,7 @@ import {
   hasBlockingPresentationViolations,
   isBudgetExceeded,
   isPresentationStructuredItemList,
+  isWarningViolation,
   listContentReviewViolations,
   listPresentationIconNames,
   listPresentationStructuredItems,
@@ -29,6 +30,7 @@ import {
   resolveBodyBudget,
   resolveHeadingBudget,
   resolveLocalizedSlides,
+  violationToneClasses,
   type PresentationLocaleKey,
   type SlideCopyEdit,
 } from "@/modules/editorial";
@@ -137,21 +139,32 @@ export function ContentPhaseReview({
           <p className="font-medium text-destructive text-xs">
             {t("violationsTitle")}
           </p>
-          <ul className="space-y-1 text-destructive text-xs">
-            {violations.map((violation) => (
-              <li
-                key={`${violation.code}-${violation.slide_index ?? "all"}-${violation.field ?? "field"}-${violation.locale ?? "locale"}`}
-              >
-                <span className="font-mono">{violation.code}</span>
-                {violation.slide_index
-                  ? ` · ${t("slideLabel", { index: violation.slide_index })}`
-                  : ""}
-                {violation.locale ? ` · ${violation.locale.toUpperCase()}` : ""}
-                {violation.field ? ` · ${violation.field}` : ""}
-                {": "}
-                {violation.message}
-              </li>
-            ))}
+          <ul className="space-y-1 text-xs">
+            {violations.map((violation) => {
+              const warning = isWarningViolation(violation);
+              return (
+                <li
+                  key={`${violation.code}-${violation.slide_index ?? "all"}-${violation.field ?? "field"}-${violation.locale ?? "locale"}`}
+                  className={violationToneClasses(violation)}
+                >
+                  <span className="mr-1 font-medium uppercase tracking-wide">
+                    {warning
+                      ? t("violationSeverityWarning")
+                      : t("violationSeverityBlocker")}
+                  </span>
+                  <span className="font-mono">{violation.code}</span>
+                  {violation.slide_index
+                    ? ` · ${t("slideLabel", { index: violation.slide_index })}`
+                    : ""}
+                  {violation.locale
+                    ? ` · ${violation.locale.toUpperCase()}`
+                    : ""}
+                  {violation.field ? ` · ${violation.field}` : ""}
+                  {": "}
+                  {violation.message}
+                </li>
+              );
+            })}
           </ul>
         </div>
       ) : null}

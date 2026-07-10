@@ -318,13 +318,96 @@ Feature: PT sentence-case validation and repair
 Ticket created from prod incident analysis (project 66014ba3 lowercase
 headings shipped to publish).
 
+### 2026-07-10 — Developer implementation
+
+Implemented the severity model, PT casing rules, deterministic casing repair,
+create-time v2 stamping, the deploy-gated in-flight upgrade migration, and the
+frontend warning-tier treatment. Highlights:
+
+- Net-new severity tier: `severity: blocker | warning` on
+  `SlideValidationViolation` (code default BLOCKER); `build_validation_report`
+  now derives `blocking` from severity (dropped the hardcoded literal);
+  `validate_localized_slides` / every stored-report producer inherit it, so the
+  stored report agrees with the approval gate. `_blocking_from_*` are unchanged
+  because they read the derived `blocking` flag.
+- v2 policy `hero_lower_third_v2.yaml` = v1 + `rule_severities` map (all
+  pre-existing codes `blocker`, three casing codes `warning`) + `casing` section
+  (proper_nouns [Claude, Anthropic] + per-rule `exempt_slide_types`). Loader
+  asserts every casing rule carries an explicit severity (load fails otherwise)
+  and now falls back to v1 with a structlog warning for unknown versions
+  (never raises). Added to `SUPPORTED_PRESENTATION_POLICY_VERSIONS`; DEFAULT
+  stays v1. Proper-noun maintenance ownership documented in `contracts/README.md`.
+- Casing rules in `presentation_casing.py`: `heading_not_sentence_case_pt`,
+  `body_not_sentence_case_pt` (markdown-aware, accent-aware), `proper_noun_casing`
+  (both locales). `repair_casing()` deterministic transform, policy-version
+  gated (no-op on v1), registered in the bounded repair pipeline.
+- Create-time stamping: both project-creation sites stamp
+  `hero_lower_third_v2`; DEFAULT stays v1 for legacy NULL rows.
+- Migration `scripts/upgrade_inflight_presentation_policy_v2.py` (batched 50/
+  commit, resumable, idempotent, down path) + pure testable core in
+  `presentation_policy_upgrade.py`; DEPLOY-GATED on AE-0311 (documented in the
+  script docstring — must not run in prod before AE-0311 ships).
+- API: `severity` added to `SlideValidationViolationResponse` + threaded through
+  the response mapper; openapi.json regenerated.
+- Frontend: `ViolationSeverity` type + `isWarningViolation`/`violationToneClasses`
+  helpers; content-phase-review + design-recovery-panel render warnings with a
+  distinct non-blocking tone + severity label; pt/en i18n for the tier labels.
+
 ## Files Touched
 
-Pending.
+Backend (src):
+- `domain/constants/carousel_presentation.py` (severity + casing violation codes)
+- `domain/constants/presentation_policy.py` (v2 constant, supported set, errors)
+- `domain/constants/workflow_state_fields.py` (`STATE_FIELD_VIOLATION_SEVERITY`)
+- `domain/models/carousel_presentation.py` (`severity` field + `is_blocker`)
+- `application/services/carousel/presentation_policy_types.py` (`CasingRulePolicy`,
+  policy severity/casing fields + helpers)
+- `application/services/carousel/presentation_policy.py` (parse casing/severity,
+  loader v1 fallback, severity assertion)
+- `application/services/carousel/presentation_casing.py` (NEW: validators + repair)
+- `application/services/carousel/presentation_validation.py` (severity-derived
+  `build_validation_report`, casing wiring)
+- `application/services/carousel/presentation_review_pipeline.py` (drop literal)
+- `application/services/carousel/presentation_review_repair.py` (register repair)
+- `application/services/carousel/presentation_policy_upgrade.py` (NEW: migration core)
+- `api/schemas/carousel_workflow.py` (`severity` on response schema)
+- `api/routes/carousels/editorial_workflow_routes_response.py` (thread severity)
+- `api/routes/carousels/crud.py` + `application/tools/carousel/generate_carousel.py`
+  (create-time v2 stamping)
+- `agents/skills/carousel-pipeline/contracts/hero_lower_third_v2.yaml` (NEW)
+- `agents/skills/carousel-pipeline/contracts/README.md` (NEW)
+
+Backend (scripts): `scripts/upgrade_inflight_presentation_policy_v2.py` (NEW)
+
+Backend (tests): `tests/features/carousel_pt_casing_severity.feature` (NEW),
+`tests/unit/application/test_presentation_casing.py` (NEW),
+`test_presentation_severity.py` (NEW), `test_presentation_policy_upgrade.py` (NEW),
+`test_presentation_policy.py` (updated), and
+`tests/unit/api/routes/carousels/test_create_carousel_policy_stamp.py` (NEW).
+
+Frontend: `modules/editorial/workspace/types-ai.ts`,
+`modules/editorial/workspace/lib/presentation-review-utils.ts` (+ `.test.ts`),
+`modules/editorial/index.ts`,
+`app/dashboard/create/workspace/phase-review/content-phase-review.tsx` (+ `.test.tsx`),
+`app/dashboard/create/workspace/phase-review/design-recovery-panel.tsx`,
+`i18n/locales/en.json`, `i18n/locales/pt.json`.
+
+Docs: `docs/architecture/openapi.json` (regenerated — additive `severity` field).
 
 ## Test Evidence
 
-Pending.
+- Backend full unit suite: `2277 passed, 1 skipped` (pre-existing skip).
+- New/updated backend tests: `test_presentation_casing.py` 17, plus
+  `test_presentation_severity.py` / `test_presentation_policy_upgrade.py` /
+  `test_presentation_policy.py` / `test_create_carousel_policy_stamp.py` — all
+  green (67 in the combined new-file run).
+- Route snapshot + carousel API create integration: green.
+- `MYPYPATH=src mypy -p rag_backend`: `Success: no issues found in 587 files`;
+  migration script mypy clean.
+- `ruff check` + `ruff format`: clean on all touched files.
+- Frontend: `presentation-review-utils.test.ts` (13) + `content-phase-review.test.tsx`
+  (5, incl. warning-tier render) + `design-phase-review.test.tsx` (5) green;
+  `tsc --noEmit` clean; `eslint --quiet` exit 0; `lint:i18n` OK.
 
 ## QA Report
 
@@ -396,6 +479,29 @@ supported set, route new carousels to v2, never modify v1.
 ## Blockers
 
 None.
+
+## Known Gap (flagged for QA / follow-up)
+
+**Live workflow policy-version threading for BRAND-NEW projects.** Create-time
+stamping sets `carousel_projects.presentation_policy_version = v2` (the pinned
+mechanism, tested). However, the live content-drafting/review workflow currently
+resolves its policy version from the drafts' embedded `policy_version`, which the
+content-draft agent stamps from `InstructionContextRequest.policy_version`
+(defaults to `DEFAULT_PRESENTATION_POLICY_VERSION` = v1) — the project column is
+not yet threaded into `get_initial_carousel_state` /
+`FailClosedReviewCommand.policy_version`. Consequences:
+
+- In-flight projects: fully covered — the run-once migration bumps the project
+  AND re-validates the checkpoint under v2 (casing warnings surface at review).
+- Validation with an explicit `policy_version=v2`: fully covered and tested.
+- Brand-new projects: casing rules will NOT fire live at content review until the
+  project's v2 version is seeded into the workflow state at start and passed into
+  the content-review command (a cross-layer change spanning the engine start,
+  state seed, content node, and fail-closed command). This was deliberately left
+  out of this change to avoid an under-tested modification to the live pipeline;
+  recommended as a focused follow-up (or folded into AE-0311's endpoint work,
+  which already threads policy versions). The severity model, casing rules,
+  repair, v2 policy, loader safety, migration, and frontend are all complete.
 
 ## Final Summary
 

@@ -2,7 +2,30 @@ import type {
   EditorialWorkflowState,
   LocalizedSlideReview,
   SlideValidationViolation,
+  ViolationSeverity,
 } from "@/modules/editorial/workspace/types-ai";
+
+/** AE-0312: warning-tier casing violations render distinctly from blockers. */
+export const VIOLATION_SEVERITY_WARNING: ViolationSeverity = "warning";
+export const VIOLATION_SEVERITY_BLOCKER: ViolationSeverity = "blocker";
+
+export function isWarningViolation(
+  violation: SlideValidationViolation,
+): boolean {
+  return violation.severity === VIOLATION_SEVERITY_WARNING;
+}
+
+/**
+ * AE-0312: non-blocking warnings get a muted/amber treatment; blockers keep the
+ * destructive treatment. A violation with no severity defaults to blocker.
+ */
+export function violationToneClasses(
+  violation: SlideValidationViolation,
+): string {
+  return isWarningViolation(violation)
+    ? "text-[var(--color-warning,#b45309)]"
+    : "text-destructive";
+}
 
 export const PRESENTATION_STRUCTURED_EXTRA_KEYS = [
   "features",

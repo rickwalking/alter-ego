@@ -8,6 +8,9 @@ from dataclasses import dataclass
 from langchain_core.tools import BaseTool, tool
 
 from rag_backend.agents.input_sanitizer import sanitize_llm_input
+from rag_backend.domain.constants.presentation_policy import (
+    CREATE_TIME_PRESENTATION_POLICY_VERSION,
+)
 from rag_backend.domain.models import CarouselProject
 from rag_backend.domain.models.carousel import validate_theme_reference
 from rag_backend.domain.protocols import CarouselRepository
@@ -64,6 +67,8 @@ def build_generate_carousel_tool(
             theme=validated_theme,
             language=language,
             owner_id=access.owner_user_id,
+            # AE-0312: stamp v2 so PT casing rules apply to new carousels.
+            presentation_policy_version=CREATE_TIME_PRESENTATION_POLICY_VERSION,
         )
 
         created = await carousel_repository.create_project(project)

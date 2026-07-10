@@ -6018,6 +6018,11 @@
             "title": "Message",
             "type": "string"
           },
+          "severity": {
+            "default": "blocker",
+            "title": "Severity",
+            "type": "string"
+          },
           "slide_index": {
             "anyOf": [
               {

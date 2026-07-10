@@ -126,7 +126,9 @@ def validate_localized_slides(
     violations: list[SlideValidationViolation] = []
     for slide in localized_slides:
         violations.extend(_validate_single_slide(slide, policy))
-    return build_validation_report(violations, blocking=True)
+    # AE-0312: blocking is severity-derived inside build_validation_report so the
+    # stored report agrees with the approval-gate decision (no hardcoded literal).
+    return build_validation_report(violations)
 
 
 def validation_report_to_dict(report: SlideValidationReport) -> dict[str, object]:

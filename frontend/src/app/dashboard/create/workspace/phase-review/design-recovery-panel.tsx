@@ -15,11 +15,13 @@ import type {
 } from "@/modules/publishing";
 import {
   applySlideCopyEdit,
+  isWarningViolation,
   listPresentationViolations,
   presentationBody,
   presentationHeading,
   resolveLocalizedSlides,
   slidesHaveCopyChanges,
+  violationToneClasses,
   type PresentationLocaleKey,
   type SlideCopyEdit,
 } from "@/modules/editorial";
@@ -69,6 +71,7 @@ interface ViolationListProps {
   onSelect: () => void;
   selectHint: string;
   slideLabel: (index: number) => string;
+  severityLabel: (violation: SlideValidationViolation) => string;
 }
 
 function ViolationList({
@@ -76,17 +79,24 @@ function ViolationList({
   onSelect,
   selectHint,
   slideLabel,
+  severityLabel,
 }: ViolationListProps): React.ReactElement {
   return (
-    <ul className="space-y-1 text-destructive text-xs">
+    <ul className="space-y-1 text-xs">
       {violations.map((violation) => (
-        <li key={violationKey(violation)}>
+        <li
+          key={violationKey(violation)}
+          className={violationToneClasses(violation)}
+        >
           <button
             type="button"
             className="text-left underline-offset-2 hover:underline"
             title={selectHint}
             onClick={onSelect}
           >
+            <span className="mr-1 font-medium uppercase tracking-wide">
+              {severityLabel(violation)}
+            </span>
             <span className="font-mono">{violation.code}</span>
             {typeof violation.slide_index === "number"
               ? ` · ${slideLabel(violation.slide_index)}`
@@ -331,6 +341,11 @@ export function DesignRecoveryPanel({
             }}
             selectHint={tRecovery("violationHint")}
             slideLabel={(index) => t("slideLabel", { index })}
+            severityLabel={(violation) =>
+              isWarningViolation(violation)
+                ? t("violationSeverityWarning")
+                : t("violationSeverityBlocker")
+            }
           />
         </div>
       ) : null}

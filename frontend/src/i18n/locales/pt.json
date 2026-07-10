@@ -467,6 +467,8 @@
       "contentGateBlocked": "A geração automática não produziu texto válido para alguns slides mesmo após reparo e uma nova tentativa. Revise as violações abaixo antes de aprovar.",
       "presentationBlocked": "A aprovação está bloqueada até que todas as violações de apresentação sejam resolvidas.",
       "violationsTitle": "Violações de apresentação",
+      "violationSeverityBlocker": "Bloqueio",
+      "violationSeverityWarning": "Aviso",
       "designTitle": "Revisão de design",
       "designReady": "Tokens de design aplicados. Aprove para gerar as imagens dos slides.",
       "designPending": "Revise o outline e o conteúdo acima, depois aprove para aplicar o design e gerar imagens.",
