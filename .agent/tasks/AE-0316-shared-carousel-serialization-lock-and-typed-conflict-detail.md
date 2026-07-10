@@ -1,6 +1,6 @@
 # AE-0316 — Shared carousel serialization lock and typed conflict details
 
-Status: In Development
+Status: Dev Complete
 Tier: T1
 Priority: High
 Type: Feature
@@ -81,22 +81,22 @@ small ticket both sides depend on.
 
 ## Acceptance Criteria
 
-- [ ] `carousel_project_lock` serializes two concurrent holders in a
+- [x] `carousel_project_lock` serializes two concurrent holders in a
       concurrency test (second waits or fails typed, per variant), and
       the lock provably spans multiple sequential transactions by one
       holder (session-scoped semantics test).
-- [ ] The three existing resume 409 causes return distinct
+- [x] The three existing resume 409 causes return distinct
       machine-readable codes; response shapes are additive
       (existing clients unaffected).
-- [ ] Cap-exceeded details include the charged phase; run-in-progress
+- [x] Cap-exceeded details include the charged phase; run-in-progress
       details include `run_started_at` when available.
-- [ ] OpenAPI + route snapshot regenerated (pinned artifacts).
-- [ ] Rule-fires-style test: each conflict path is seeded and asserts its
+- [x] OpenAPI + route snapshot regenerated (pinned artifacts).
+- [x] Rule-fires-style test: each conflict path is seeded and asserts its
       exact code.
-- [ ] Resume-start guard: a resume submitted while the advisory lock is
+- [x] Resume-start guard: a resume submitted while the advisory lock is
       held returns the typed `mutation_in_progress` conflict; after
       release it succeeds (test covers the two-commit seam window).
-- [ ] Lock lifetime safety: unlock in a `finally` on the same connection;
+- [x] Lock lifetime safety: unlock in a `finally` on the same connection;
       pooled-connection recycling resets advisory locks on return
       (test/documented pool configuration) so a crashed request can never
       leak a held lock into an unrelated request.
@@ -176,13 +176,47 @@ Feature: Typed carousel conflict details
 Ticket created from cold-critic r3 cross-ticket finding (shared surface
 needs a single owner).
 
+### 2026-07-10 — Dev Complete
+
+Implemented on branch feat/ae-0309-0316-carousel-reliability-wave
+(worktree). Session-scoped advisory lock in
+modules/editorial/infrastructure/carousel_project_lock.py (dialect-gated:
+Postgres-only semantics, SQLite test fixtures no-op), re-exported via the
+editorial facade. Typed conflict domain model + additive 409 body
+(detail keeps the legacy string; conflict object added) via a dedicated
+exception handler. Resume-start mutation guard wired into the resume
+route. OpenAPI artifact regenerated (+73 lines). Existing resume 409
+integration tests pass unchanged (additive proof).
+
 ## Files Touched
 
-Pending.
+- backend/src/rag_backend/domain/constants/carousel_conflicts.py (new)
+- backend/src/rag_backend/domain/models/carousel_conflict.py (new)
+- backend/src/rag_backend/api/schemas/carousel_conflict.py (new)
+- backend/src/rag_backend/api/middleware/carousel_conflict_handler.py (new)
+- backend/src/rag_backend/modules/editorial/infrastructure/carousel_project_lock.py (new)
+- backend/src/rag_backend/modules/editorial/public.py
+- backend/src/rag_backend/api/routes/carousels/editorial_workflow_routes_validate.py
+- backend/src/rag_backend/api/routes/carousels/editorial_workflow_routes_support.py
+- backend/src/rag_backend/api/routes/carousels/editorial_workflow.py
+- backend/src/rag_backend/bootstrap/app_factory.py
+- backend/tests/features/carousel_typed_conflicts.feature (new)
+- backend/tests/unit/domain/test_carousel_conflict.py (new)
+- backend/tests/unit/api/test_carousel_conflict_handler.py (new)
+- backend/tests/unit/api/test_editorial_workflow_resume_guard.py (new)
+- backend/tests/unit/infrastructure/test_carousel_project_lock.py (new)
+- backend/tests/integration/test_carousel_project_lock_pg.py (new)
+- docs/architecture/openapi.json (regenerated)
 
 ## Test Evidence
 
-Pending.
+- 22 new unit tests pass (domain model, handler round-trip per code,
+  dialect gating, resume-start guard).
+- Postgres integration tests (advisory-lock concurrency, blocking waits,
+  session scope across transactions) skip locally, run in CI's postgres.
+- Full unit suite: 2175 passed, 1 skipped.
+- gates.sh backend --changed-only: PASS=15 FAIL=0 SKIP=5.
+- Existing resume 409 integration tests pass unchanged (additive body).
 
 ## QA Report
 
