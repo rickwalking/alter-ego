@@ -46,8 +46,7 @@ class TestAdvisoryLockSemantics:
                     ):
                         pass
                 assert (
-                    exc_info.value.conflict.code
-                    == CONFLICT_CODE_MUTATION_IN_PROGRESS
+                    exc_info.value.conflict.code == CONFLICT_CODE_MUTATION_IN_PROGRESS
                 )
             assert not await is_carousel_project_lock_held(engine, PROJECT_ID)
         finally:

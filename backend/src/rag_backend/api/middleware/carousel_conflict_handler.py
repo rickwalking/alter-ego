@@ -15,9 +15,7 @@ from rag_backend.api.schemas.carousel_conflict import (
 from rag_backend.domain.models.carousel_conflict import CarouselConflictError
 
 
-def carousel_conflict_handler(
-    _request: Request, exc: Exception
-) -> JSONResponse:
+def carousel_conflict_handler(_request: Request, exc: Exception) -> JSONResponse:
     """Serialize a CarouselConflictError additively (legacy + structured)."""
     if not isinstance(exc, CarouselConflictError):
         raise exc

@@ -104,9 +104,7 @@ async def carousel_project_lock(
         if blocking:
             await connection.execute(_ADVISORY_LOCK_SQL, {"key": key})
         else:
-            acquired = await connection.scalar(
-                _ADVISORY_TRY_LOCK_SQL, {"key": key}
-            )
+            acquired = await connection.scalar(_ADVISORY_TRY_LOCK_SQL, {"key": key})
             if not acquired:
                 raise _mutation_in_progress_error()
         try:
@@ -141,9 +139,7 @@ async def is_carousel_project_lock_held_session(
     if not _is_postgres(bind.dialect.name):
         return False
     classid, objid = _key_halves(carousel_project_lock_key(project_id))
-    held = await db.scalar(
-        _ADVISORY_HELD_SQL, {"classid": classid, "objid": objid}
-    )
+    held = await db.scalar(_ADVISORY_HELD_SQL, {"classid": classid, "objid": objid})
     return bool(held)
 
 

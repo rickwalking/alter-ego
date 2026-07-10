@@ -28,9 +28,7 @@ CAROUSEL_CONFLICT_CODES = (
 )
 
 MSG_RUN_IN_PROGRESS = "A workflow run is already in progress for this carousel."
-MSG_VERSION_CONFLICT = (
-    "The carousel changed since it was loaded; refresh and retry."
-)
+MSG_VERSION_CONFLICT = "The carousel changed since it was loaded; refresh and retry."
 MSG_REVISION_CAP_EXCEEDED = (
     "The revision limit for this phase is exhausted; edit the text directly "
     "instead of requesting another revision."

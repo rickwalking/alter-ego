@@ -26,14 +26,12 @@ _GUARD_TARGET = (
 class TestEnsureNoArtifactMutationInProgress:
     async def test_passes_when_lock_not_held(self) -> None:
         with patch(_GUARD_TARGET, new=AsyncMock(return_value=False)):
-            await ensure_no_artifact_mutation_in_progress(
-                AsyncMock(), PROJECT_ID
-            )
+            await ensure_no_artifact_mutation_in_progress(AsyncMock(), PROJECT_ID)
 
     async def test_raises_typed_conflict_when_lock_held(self) -> None:
-        with patch(_GUARD_TARGET, new=AsyncMock(return_value=True)):
-            with pytest.raises(CarouselConflictError) as exc_info:
-                await ensure_no_artifact_mutation_in_progress(
-                    AsyncMock(), PROJECT_ID
-                )
+        with (
+            patch(_GUARD_TARGET, new=AsyncMock(return_value=True)),
+            pytest.raises(CarouselConflictError) as exc_info,
+        ):
+            await ensure_no_artifact_mutation_in_progress(AsyncMock(), PROJECT_ID)
         assert exc_info.value.conflict.code == CONFLICT_CODE_MUTATION_IN_PROGRESS
