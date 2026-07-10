@@ -3,20 +3,36 @@
 import { useTranslations } from "next-intl";
 import { draftText, outlineTitle } from "../create-phase-review-helpers";
 import type { EditorialWorkflowState } from "@/modules/publishing";
+import { hasBlockingPresentationViolations } from "@/modules/editorial";
+import {
+  DesignRecoveryPanel,
+  type DesignRecoveryActions,
+} from "./design-recovery-panel";
 
 export interface DesignPhaseReviewProps {
   state: EditorialWorkflowState;
+  /** AE-0310: recovery actions rendered while blocking violations exist. */
+  recovery?: DesignRecoveryActions;
 }
 
 export function DesignPhaseReview({
   state,
+  recovery,
 }: DesignPhaseReviewProps): React.ReactElement {
   const t = useTranslations("editorialWorkflow.review");
   const untitledSlide = t("untitledSlide");
+  // AE-0310: the backend hint (design_recovery_hint) and the blocking report
+  // both signal the dead-end state; either one surfaces the recovery panel.
+  const blocked =
+    hasBlockingPresentationViolations(state) ||
+    Boolean(state.design_recovery_hint);
 
   return (
     <div className="space-y-3 rounded-md border border-[var(--color-border)] bg-[var(--color-background)] p-3 text-sm">
       <p className="font-medium">{t("designTitle")}</p>
+      {blocked ? (
+        <DesignRecoveryPanel state={state} recovery={recovery} />
+      ) : null}
       <p className="text-[var(--color-text-muted)]">
         {state.design_applied ? t("designReady") : t("designPending")}
       </p>

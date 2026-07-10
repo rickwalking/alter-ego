@@ -188,6 +188,22 @@ export function CreateWorkflowPanel({
   });
   const contentEditable =
     state?.current_phase === EDITORIAL_PHASES.CONTENT && showLiveControls;
+  // AE-0310: design-step recovery — blocking content-level violations at the
+  // design gate are only resolvable by direct edits or a content send-back;
+  // a plain revise is a provable no-op there, so it is disabled.
+  const designReviseBlocked =
+    state?.current_phase === EDITORIAL_PHASES.DESIGN &&
+    (hasBlockingPresentationViolations(state) ||
+      Boolean(state.design_recovery_hint));
+  const designRecovery = {
+    onSubmitEditedSlides: (slides: LocalizedSlideReview[]): void => {
+      void revise("", { editedLocalizedSlides: slides });
+    },
+    onSendBackToContent: (sendBackFeedback: string): void => {
+      void revise(sendBackFeedback, { targetPhase: EDITORIAL_PHASES.CONTENT });
+    },
+    disabled: loading || !showLiveControls,
+  };
   const showPhaseReview =
     Boolean(state) &&
     (isLiveStep || isHistoricalCreateStep(viewStepId, workflowStepId)) &&
@@ -267,6 +283,7 @@ export function CreateWorkflowPanel({
           contentEditable={contentEditable}
           contentSlides={contentSlides}
           onContentSlidesChange={setEditedContentSlides}
+          designRecovery={designRecovery}
         />
       )}
 
@@ -290,6 +307,7 @@ export function CreateWorkflowPanel({
           personaApproveBlocked={personaApproveBlocked}
           presentationApproveBlocked={presentationApproveBlocked}
           editBudgetBlocked={editBudgetBlocked}
+          designReviseBlocked={designReviseBlocked}
           showPublishLink={showPublishLink}
         />
       )}

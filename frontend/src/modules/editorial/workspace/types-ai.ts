@@ -123,4 +123,10 @@ export interface EditorialWorkflowState {
    * validate -> repair -> retry chain still ended blocking.
    */
   content_gate_validation?: SlideValidationReport | null;
+  /**
+   * AE-0310: recovery-hint code set while the design step holds a blocking
+   * validation report — direct edits or a content send-back resolve the
+   * violations; a plain revise alone does not modify content.
+   */
+  design_recovery_hint?: string | null;
 }

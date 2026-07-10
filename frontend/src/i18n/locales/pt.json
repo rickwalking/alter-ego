@@ -426,7 +426,8 @@
     "presentation": {
       "blockedApproval": "Resolva as violações de apresentação bloqueantes antes de aprovar o conteúdo.",
       "editBudgetBlocked": "O texto editado excede os orçamentos de campo da apresentação. Encurte os campos destacados antes de aprovar.",
-      "unsavedEdits": "O texto editado dos slides será enviado na aprovação com a versão atual do workflow."
+      "unsavedEdits": "O texto editado dos slides será enviado na aprovação com a versão atual do workflow.",
+      "designReviseDisabled": "Solicitar uma revisão simples está desabilitado enquanto houver violações bloqueantes — ela não altera o texto dos slides. Use \"Editar texto dos slides\" ou \"Devolver para conteúdo\" acima."
     },
     "publishReady": "Revisão final aprovada. Abra o painel de publicação para liberar o carrossel no site público.",
     "gate": {
@@ -469,6 +470,19 @@
       "designTitle": "Revisão de design",
       "designReady": "Tokens de design aplicados. Aprove para gerar as imagens dos slides.",
       "designPending": "Revise o outline e o conteúdo acima, depois aprove para aplicar o design e gerar imagens.",
+      "designRecovery": {
+        "blockedTitle": "Violações de conteúdo estão bloqueando a etapa de design",
+        "hint": "Corrija estas violações editando o texto dos slides diretamente ou devolvendo o fluxo para a fase de conteúdo. Solicitar uma revisão simples não altera o texto.",
+        "editAction": "Editar texto dos slides",
+        "sendBackAction": "Devolver para conteúdo",
+        "submitEdits": "Enviar texto editado",
+        "cancel": "Cancelar",
+        "sendBackFeedbackLabel": "Feedback para regeneração do conteúdo",
+        "sendBackFeedbackPlaceholder": "Descreva o que a fase de conteúdo deve corrigir (ex.: remover texto de rascunho do slide 4)…",
+        "sendBackSubmit": "Devolver",
+        "sendBackFeedbackRequired": "O feedback é obrigatório para devolver o fluxo para conteúdo.",
+        "violationHint": "Abrir o editor deste slide"
+      },
       "outlineSlides": "{count, plural, one {# slide no outline} other {# slides no outline}}",
       "imagesTitle": "Imagens geradas",
       "imagePromptsTitle": "Prompts de imagem dos slides",
@@ -511,7 +525,8 @@
       "startFailed": "Falha ao iniciar o fluxo editorial",
       "startUnknown": "Falha ao iniciar o fluxo de trabalho",
       "resumeFailed": "Falha ao retomar o fluxo editorial",
-      "resumeUnknown": "Falha ao retomar o fluxo de trabalho"
+      "resumeUnknown": "Falha ao retomar o fluxo de trabalho",
+      "revisionCapExceeded": "O limite de revisões desta fase foi esgotado. Você ainda pode corrigir o texto: edite o conteúdo dos slides diretamente — edições diretas estão sempre disponíveis e não contam para o limite."
     },
     "transport": {
       "pollingFallback": "Fallback de polling ativo"

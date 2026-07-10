@@ -210,6 +210,7 @@ class EditorialWorkflowService:
                     project_title=params.project_title,
                     db=params.db,
                     notifications=self._notifications,
+                    structured_feedback=params.structured_feedback,
                 ),
             )
         await prepare_resume_workflow(

@@ -38,6 +38,7 @@ from rag_backend.domain.constants.workflow_state_fields import (
     STATE_FIELD_CONTENT_GATE_VALIDATION,
     STATE_FIELD_CURRENT_PHASE,
     STATE_FIELD_DESIGN_APPLIED,
+    STATE_FIELD_DESIGN_RECOVERY_HINT,
     STATE_FIELD_ERROR_MESSAGE,
     STATE_FIELD_IMAGE_ASSETS,
     STATE_FIELD_LINKEDIN_POST_EN,
@@ -214,6 +215,12 @@ def _policy_version_field(state: dict[str, object]) -> str | None:
     return str(raw) if raw is not None else None
 
 
+def _design_recovery_hint_field(state: dict[str, object]) -> str | None:
+    """Extract the design recovery hint code (AE-0310), omitted when clear."""
+    raw = state.get(STATE_FIELD_DESIGN_RECOVERY_HINT)
+    return str(raw) if raw else None
+
+
 def _error_message_field(state: dict[str, object]) -> str | None:
     """Extract a client-safe failure message (AE-0009).
 
@@ -268,6 +275,7 @@ _FIELD_MAPPING: list[tuple[str, StateExtractor]] = [
     ),
     (STATE_FIELD_STATUS, _status_field),
     (STATE_FIELD_PRESENTATION_POLICY_VERSION, _policy_version_field),
+    (STATE_FIELD_DESIGN_RECOVERY_HINT, _design_recovery_hint_field),
     (STATE_FIELD_ERROR_MESSAGE, _error_message_field),
 ]
 

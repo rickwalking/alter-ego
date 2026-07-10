@@ -293,6 +293,33 @@ describe("useEditorialWorkflowResume", () => {
     expect(enterPollingFallback).not.toHaveBeenCalled();
   });
 
+  // AE-0310 — Gherkin: backend/tests/features/carousel_design_phase_recovery.feature
+  // Scenario: Direct edits remain available after all caps are exhausted
+  //   The cap-exceeded 409 copy points to the uncapped edit path instead of
+  //   surfacing the raw machine code.
+  it("maps the revision-cap 409 to the uncapped-edit guidance message", async () => {
+    mockAuthenticatedFetch.mockResolvedValue({
+      ok: false,
+      status: HTTP_STATUS.CONFLICT,
+      json: async () => ({ detail: "revision_cap_exceeded" }),
+    } as Response);
+
+    const { hookParams, setError } = createHookOptions();
+    const { result } = renderHook(() => useEditorialWorkflowResume(hookParams));
+
+    let caught: unknown;
+    await act(async () => {
+      try {
+        await result.current.resume("revise", "Fix slide 4");
+      } catch (error) {
+        caught = error;
+      }
+    });
+
+    expect(caught).toEqual(new Error("error.revisionCapExceeded"));
+    expect(setError).toHaveBeenCalledWith("error.revisionCapExceeded");
+  });
+
   it("recovers from transport failures by polling workflow state", async () => {
     const readyState: EditorialWorkflowState = {
       ...baseState,

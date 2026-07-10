@@ -132,6 +132,10 @@ class EditorialWorkflowStateResponse(BaseModel):
     # AE-0309: fail-closed content-gate report; present only when the content
     # build's validate -> repair -> retry chain still ended blocking.
     content_gate_validation: SlideValidationReportResponse | None = None
+    # AE-0310: client-displayable recovery-hint code set while the design step
+    # holds a blocking validation report (direct edits or a content send-back
+    # resolve violations; a plain revise does not modify content).
+    design_recovery_hint: str | None = None
 
 
 __all__ = [

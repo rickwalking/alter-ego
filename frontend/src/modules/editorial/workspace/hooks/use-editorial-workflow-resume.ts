@@ -2,7 +2,10 @@
 
 import { useCallback } from "react";
 import { API_ENDPOINTS, HTTP_METHODS, HTTP_STATUS } from "@/constants/api";
-import { EDITORIAL_WORKFLOW_TRANSPORT_MODE } from "@/constants/editorial-workflow";
+import {
+  EDITORIAL_WORKFLOW_CONFLICT_CODES,
+  EDITORIAL_WORKFLOW_TRANSPORT_MODE,
+} from "@/constants/editorial-workflow";
 import { WORKFLOW_PHASE_STATUS } from "@/constants/workflow";
 import type {
   EditorialWorkflowState,
@@ -62,6 +65,13 @@ export function useEditorialWorkflowResume({
 
       const preferSseTransport = (): boolean =>
         transportModeRef.current === EDITORIAL_WORKFLOW_TRANSPORT_MODE.SSE;
+
+      // AE-0310: the cap-exceeded 409 must point at the uncapped edit path
+      // instead of surfacing the raw machine code.
+      const resolveResumeErrorMessage = (message: string): string =>
+        message === EDITORIAL_WORKFLOW_CONFLICT_CODES.REVISION_CAP_EXCEEDED
+          ? translateError("revisionCapExceeded")
+          : message;
 
       const waitForReadyState =
         async (): Promise<EditorialWorkflowState | null> =>
@@ -195,7 +205,9 @@ export function useEditorialWorkflowResume({
 
         if (isResumeClientErrorStatus(response.status)) {
           throw new Error(
-            await readApiError(response, translateError("resumeFailed")),
+            resolveResumeErrorMessage(
+              await readApiError(response, translateError("resumeFailed")),
+            ),
           );
         }
 
@@ -205,7 +217,9 @@ export function useEditorialWorkflowResume({
         }
 
         throw new Error(
-          await readApiError(response, translateError("resumeFailed")),
+          resolveResumeErrorMessage(
+            await readApiError(response, translateError("resumeFailed")),
+          ),
         );
       } catch (err) {
         const message =

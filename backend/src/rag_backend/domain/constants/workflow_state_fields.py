@@ -32,6 +32,9 @@ STATE_FIELD_PRESENTATION_VALIDATION = "presentation_validation"
 # the content build's validate -> repair -> retry chain still ends blocking; the
 # content interrupt payload mirrors it so the reviewer sees the violations.
 STATE_FIELD_CONTENT_GATE_VALIDATION = "content_gate_validation"
+# AE-0310: hint code stored by the design ensure when the fresh presentation
+# validation report still blocks (cleared to "" once validation passes).
+STATE_FIELD_DESIGN_RECOVERY_HINT = "design_recovery_hint"
 STATE_FIELD_LOCK_VERSION = "lock_version"
 # Response field carrying the persisted failure message (AE-0009). The raw
 # state stores the message under ``workflow_error`` (WORKFLOW_ERROR_KEY); this
@@ -67,6 +70,7 @@ __all__ = [
     "STATE_FIELD_CONTENT_GATE_VALIDATION",
     "STATE_FIELD_CURRENT_PHASE",
     "STATE_FIELD_DESIGN_APPLIED",
+    "STATE_FIELD_DESIGN_RECOVERY_HINT",
     "STATE_FIELD_ERROR_MESSAGE",
     "STATE_FIELD_IMAGE_ASSETS",
     "STATE_FIELD_LINKEDIN_POST_EN",

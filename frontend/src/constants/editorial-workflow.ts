@@ -98,3 +98,18 @@ export const WORKFLOW_ARTIFACT_FIELD_MAP: Record<string, string> = {
   localized_slides: "localized_slides",
   presentation_validation: "presentation_validation",
 } as const;
+
+/**
+ * Machine-readable resume conflict codes surfaced in the 409 `detail`
+ * (AE-0310; backend `rag_backend.domain.constants.carousel_conflicts`).
+ */
+export const EDITORIAL_WORKFLOW_CONFLICT_CODES = {
+  REVISION_CAP_EXCEEDED: "revision_cap_exceeded",
+} as const;
+
+/**
+ * AE-0310: backend hint code carried in `design_recovery_hint` while the
+ * design step holds a blocking presentation validation report.
+ */
+export const DESIGN_VALIDATION_RECOVERY_HINT =
+  "design_validation_blocked_edit_or_send_back";

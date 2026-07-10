@@ -31,12 +31,17 @@ from rag_backend.application.services.image_provider_registry import (
 )
 from rag_backend.domain.constants.ai_agents import ERR_INVALID_JSON
 from rag_backend.domain.constants.carousel_workflow import (
+    DESIGN_VALIDATION_RECOVERY_HINT,
     PHASE_CONTENT,
     PHASE_DESIGN,
     PHASE_IMAGES,
     PHASE_OUTLINE,
     PHASE_STATUS_FAILED,
     WORKFLOW_ERROR_KEY,
+)
+from rag_backend.domain.constants.workflow_state_fields import (
+    STATE_FIELD_DESIGN_RECOVERY_HINT,
+    STATE_FIELD_PRESENTATION_VALIDATION,
 )
 from rag_backend.domain.models.persona import PersonaProfile
 from rag_backend.infrastructure.external.openai_embeddings import (  # type: ignore[attr-defined]
@@ -471,6 +476,21 @@ class PhaseArtifactRunner:
         state: CarouselWorkflowState,
         pending: dict[str, object],
     ) -> dict[str, object]:
+        """Apply design tokens AND re-validate localized slides (AE-0310).
+
+        Validation runs on EVERY execution — the 38affb3e dead-end happened
+        because the design ensure re-applied tokens unconditionally but never
+        validated, so the stored report went stale by omission.
+        """
+        updates = await self._apply_design_tokens_updates(state, pending)
+        updates.update(self._design_validation_updates(state))
+        return updates
+
+    async def _apply_design_tokens_updates(
+        self,
+        state: CarouselWorkflowState,
+        pending: dict[str, object],
+    ) -> dict[str, object]:
         if self._db is None:
             return {}
         outline = pending.get("outline") or state.get("outline") or []
@@ -489,6 +509,42 @@ class PhaseArtifactRunner:
             slides,
         )
         return {"design_applied": True}
+
+    @staticmethod
+    def _design_validation_updates(
+        state: CarouselWorkflowState,
+    ) -> dict[str, object]:
+        """Fresh presentation validation for the design ensure (AE-0310).
+
+        Stores a new report (``validated_at`` advances) plus the recovery hint
+        while the report still blocks; the hint is cleared once it passes.
+        """
+        from rag_backend.application.services.carousel.presentation_review import (
+            WORKFLOW_STATE_LOCALIZED_SLIDES_KEY,
+            WORKFLOW_STATE_PRESENTATION_POLICY_VERSION_KEY,
+            validate_localized_slides,
+            validation_report_to_dict,
+        )
+
+        localized = state.get(WORKFLOW_STATE_LOCALIZED_SLIDES_KEY)
+        slides = (
+            [slide for slide in localized if isinstance(slide, dict)]
+            if isinstance(localized, list)
+            else []
+        )
+        if not slides:
+            return {}
+        policy_raw = state.get(WORKFLOW_STATE_PRESENTATION_POLICY_VERSION_KEY)
+        report = validate_localized_slides(
+            slides,
+            policy_version=str(policy_raw) if policy_raw else None,
+        )
+        return {
+            STATE_FIELD_PRESENTATION_VALIDATION: validation_report_to_dict(report),
+            STATE_FIELD_DESIGN_RECOVERY_HINT: (
+                DESIGN_VALIDATION_RECOVERY_HINT if report.blocking else ""
+            ),
+        }
 
     async def _ensure_image_artifacts(
         self,

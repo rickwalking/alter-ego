@@ -426,7 +426,8 @@
     "presentation": {
       "blockedApproval": "Blocking presentation violations must be resolved before approving content.",
       "editBudgetBlocked": "Edited copy exceeds the presentation field budgets. Shorten the highlighted fields before approving.",
-      "unsavedEdits": "Edited slide copy will be submitted with approval using the current workflow version."
+      "unsavedEdits": "Edited slide copy will be submitted with approval using the current workflow version.",
+      "designReviseDisabled": "Requesting a plain revision is disabled while blocking violations are present — it does not change the slide text. Use \"Edit slide copy\" or \"Send back to content\" above."
     },
     "publishReady": "Final review approved. Open the publish panel to release the carousel to the public site.",
     "gate": {
@@ -469,6 +470,19 @@
       "designTitle": "Design review",
       "designReady": "Design tokens are applied. Approve to generate slide images.",
       "designPending": "Review the outline and content above, then approve to apply design and generate images.",
+      "designRecovery": {
+        "blockedTitle": "Content violations are blocking the design step",
+        "hint": "Fix these violations by editing the slide copy directly or by sending the workflow back to the content phase. Requesting a plain revision does not change the text.",
+        "editAction": "Edit slide copy",
+        "sendBackAction": "Send back to content",
+        "submitEdits": "Submit edited copy",
+        "cancel": "Cancel",
+        "sendBackFeedbackLabel": "Feedback for content regeneration",
+        "sendBackFeedbackPlaceholder": "Describe what the content phase should fix (e.g. remove scaffold text from slide 4)…",
+        "sendBackSubmit": "Send back",
+        "sendBackFeedbackRequired": "Feedback is required to send the workflow back to content.",
+        "violationHint": "Open the editor for this slide"
+      },
       "outlineSlides": "{count, plural, one {# slide in outline} other {# slides in outline}}",
       "imagesTitle": "Generated images",
       "imagePromptsTitle": "Slide image prompts",
@@ -511,7 +525,8 @@
       "startFailed": "Failed to start editorial workflow",
       "startUnknown": "Workflow start failed",
       "resumeFailed": "Failed to resume editorial workflow",
-      "resumeUnknown": "Workflow resume failed"
+      "resumeUnknown": "Workflow resume failed",
+      "revisionCapExceeded": "The revision limit for this phase is exhausted. You can still fix the copy: edit the slide text directly — direct edits are always available and never count against the limit."
     },
     "transport": {
       "pollingFallback": "Polling fallback active"

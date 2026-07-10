@@ -28,6 +28,9 @@ from rag_backend.domain.constants.carousel_workflow import (
     WORKFLOW_ARTIFACT_FIELD_TYPE,
     WORKFLOW_ERROR_KEY,
 )
+from rag_backend.domain.constants.workflow_state_fields import (
+    STATE_FIELD_DESIGN_RECOVERY_HINT,
+)
 
 
 @dataclass(frozen=True)
@@ -99,6 +102,11 @@ def build_review_gate_payload(state: CarouselWorkflowState) -> dict[str, object]
         "caption": str(state.get("caption")) if state.get("caption") else None,
         "blog_markdown": (
             str(state.get("blog_markdown")) if state.get("blog_markdown") else None
+        ),
+        # AE-0310: design recovery hint rides the review gate snapshot so SSE
+        # consumers see it without an extra state fetch ("" when clear).
+        STATE_FIELD_DESIGN_RECOVERY_HINT: str(
+            state.get(STATE_FIELD_DESIGN_RECOVERY_HINT) or ""
         ),
         **review,
     }

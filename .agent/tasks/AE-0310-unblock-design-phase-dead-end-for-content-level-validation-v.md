@@ -253,13 +253,144 @@ Feature: Design-step recovery from content-level violations
 
 Ticket created from prod incident analysis (project 38affb3e dead-end loop).
 
+### 2026-07-10 — Development complete (wave branch)
+
+Backend:
+
+- Widened the `edited_localized_slides` allowlist to
+  `{content, design, final_review}` in BOTH surfaces: the HTTP gate
+  (`ensure_structured_feedback_allowed`) and the node helper
+  (`_edited_slide_updates`), with uniform apply + re-validate + store-fresh-report
+  semantics (`apply_localized_slide_edits_via_port` already implements them).
+  Renamed `ERR_EDITED_SLIDES_CONTENT_ONLY` →
+  `ERR_EDITED_SLIDES_PHASE_NOT_ALLOWED`; the wire value was renamed too
+  (`edited_localized_slides_content_phase_only` →
+  `edited_localized_slides_phase_not_allowed`) because a frontend grep found NO
+  string-match on the old detail — the UI displays `detail` verbatim and has no
+  logic keyed on it, so keeping the now-false "content_phase_only" wording would
+  only mislead consumers. New `ERR_SEND_BACK_TARGET_NOT_ALLOWED` covers a design
+  revise targeting anything but content (`DESIGN_SEND_BACK_PHASES = {content}`).
+- Design send-back: `_run_sync_artifact_phase` is send-back aware
+  (`SyncArtifactPhaseConfig.send_back_phases`); on `target_phase=content` it
+  keeps `current_phase=content` (no clobber — same class as the AE-0290 fix),
+  resets `content_approved`, skips `post_review`, and the new
+  `route_after_design` routes the graph edge to the content node. On every
+  NON-send-back design review the stale `send_back_target_phase` is cleared so
+  it cannot re-route a later cycle. Feedback keying to the TARGET phase and the
+  target-phase revision increment were already in
+  `_resolve_feedback_phase`/`persist_phase_feedback` (verified + covered).
+  Images are preserved by omission (the node never touches `image_assets`;
+  regeneration reuse rides the prompt-hash keyed on outline headings).
+- Design ensure (`_ensure_design_artifacts`) now runs
+  `validate_localized_slides` and stores a fresh `presentation_validation`
+  report on EVERY execution (`validated_at` advances), plus the
+  `design_recovery_hint` state field (constant
+  `DESIGN_VALIDATION_RECOVERY_HINT`) while the report blocks — cleared to ""
+  once it passes. The hint + fresh report ride the design interrupt payload,
+  the state response (`EditorialWorkflowStateResponse.design_recovery_hint`,
+  openapi.json regenerated) and the SSE review-gate snapshot.
+- Revision-cap accounting made target-aware via
+  `resolve_revision_cap_phase`: send-backs (design AND the pre-existing
+  final_review path) check + charge the TARGET phase; `edited_localized_slides`
+  submissions consume NO counter (uncapped escape hatch — `validate_resume_action`
+  also accepts a feedback-less revise when edits are present); a plain design
+  revise while a blocking report exists checks/charges NOTHING (provable content
+  no-op). `persist_phase_feedback` gained `count_revision` so uncapped
+  submissions store the note without bumping the counter. The 409 conflict now
+  names the CHARGED phase (AE-0316 `phase` detail).
+
+Frontend:
+
+- Design step renders the AE-0309-style violation list + the backend hint and
+  two dominant recovery actions: "Edit slide copy" (inline PT/EN heading+body
+  editor for flagged slides only, submits `edited_localized_slides` via a
+  feedback-less revise) and "Send back to content" (revise with
+  `target_phase=content` + required feedback). Each violation row links to the
+  slide editor. Plain "Request revision" is disabled with an explanatory note
+  while the design step is blocking.
+- The resume 409 `revision_cap_exceeded` is translated to copy that points to
+  the uncapped direct-edit path (pt/en).
+
 ## Files Touched
 
-Pending.
+Backend:
+
+- `backend/src/rag_backend/domain/constants/carousel_workflow.py` — renamed
+  error, new `ERR_SEND_BACK_TARGET_NOT_ALLOWED`,
+  `EDITED_SLIDES_ALLOWED_PHASES`, `DESIGN_SEND_BACK_PHASES`,
+  `DESIGN_VALIDATION_RECOVERY_HINT`
+- `backend/src/rag_backend/domain/constants/workflow_state_fields.py` —
+  `STATE_FIELD_DESIGN_RECOVERY_HINT`
+- `backend/src/rag_backend/application/services/carousel/workflow_state.py` —
+  `design_recovery_hint` state field
+- `backend/src/rag_backend/agents/carousel_workflow_nodes.py` — widened
+  `_edited_slide_updates`, send-back-aware `_sync_phase_result`,
+  `_design_review_payload` (report + hint in interrupt)
+- `backend/src/rag_backend/agents/carousel_workflow_graph.py` —
+  `route_after_design` + design conditional edge to content
+- `backend/src/rag_backend/application/services/carousel/phase_artifact_runner.py`
+  — design ensure re-validates every execution + stores hint
+- `backend/src/rag_backend/application/services/carousel/editorial_workflow_service_helpers.py`
+  — `resolve_revision_cap_phase`, target-aware `validate_revision_cap`,
+  `count_revision` wiring
+- `backend/src/rag_backend/application/services/carousel/editorial_workflow_feedback.py`
+  — increment gated on `count_revision`
+- `backend/src/rag_backend/application/services/carousel/editorial_workflow_types.py`
+  — `PhaseFeedbackPersistParams.count_revision`
+- `backend/src/rag_backend/application/services/carousel/editorial_workflow_service.py`
+  — passes structured feedback into the cap context
+- `backend/src/rag_backend/application/services/carousel/editorial_workflow_sse_build.py`
+  — hint in the review-gate SSE snapshot
+- `backend/src/rag_backend/api/routes/carousels/editorial_workflow_routes_validate.py`
+  — widened gates, feedback-less edit revise, charged-phase 409
+- `backend/src/rag_backend/api/routes/carousels/editorial_workflow_routes_response.py`
+  + `backend/src/rag_backend/api/schemas/carousel_workflow.py` —
+  `design_recovery_hint` response field
+- `docs/architecture/openapi.json` — regenerated (new optional response field)
+
+Frontend:
+
+- `frontend/src/app/dashboard/create/workspace/phase-review/design-recovery-panel.tsx`
+  (new), `design-phase-review.tsx`, `create-phase-review.tsx`,
+  `create-workflow-panel.tsx`, `create-workflow-controls.tsx`
+- `frontend/src/modules/editorial/workspace/hooks/use-editorial-workflow-resume.ts`
+  — cap-409 → i18n mapping; `types.ts` — `designReviseBlocked` prop;
+  `types-ai.ts` — `design_recovery_hint`
+- `frontend/src/constants/editorial-workflow.ts` — conflict-code + hint constants
+- `frontend/src/i18n/locales/en.json`, `pt.json` — designRecovery block,
+  `designReviseDisabled`, `revisionCapExceeded`
+
+Tests:
+
+- `backend/tests/features/carousel_design_phase_recovery.feature` (new)
+- `backend/tests/unit/agents/test_carousel_workflow_design_recovery.py` (new, 13)
+- `backend/tests/unit/application/test_revision_cap_accounting.py` (new, 16)
+- `backend/tests/unit/api/test_editorial_workflow_resume_validation.py` (new, 5)
+- `backend/tests/unit/api/test_editorial_workflow_structured_feedback_gate.py`
+  (updated for the widened allowlist + design targets)
+- `backend/tests/unit/application/test_phase_artifact_runner.py` (design ensure
+  re-validation: validated_at advances, hint set/cleared, no-slides no-op)
+- `frontend/src/app/dashboard/create/workspace/phase-review/design-phase-review.test.tsx`
+  (new, 5) and
+  `frontend/src/modules/editorial/workspace/hooks/use-editorial-workflow-resume.test.ts`
+  (cap-409 mapping case)
 
 ## Test Evidence
 
-Pending.
+- Backend full unit suite: `uv run pytest tests/unit -q` →
+  `2237 passed, 1 skipped` (skip is the pre-existing
+  `tests/unit/agent_tasks/test_schema.py` fixture skip, unrelated).
+- Targeted: design recovery nodes 13 passed; cap accounting 16 passed; resume
+  validation 5 passed; structured-feedback gate suite 51 passed (with workflow
+  phase/node suites); phase artifact runner 5 passed.
+- `mypy rag_backend/ --explicit-package-bases` → Success (547 files);
+  `ruff check src/` + `ruff format --check src/` clean; `lint-imports` → 22
+  contracts kept, 0 broken.
+- Frontend: `npx tsc --noEmit` clean; scoped vitest
+  (`src/modules/editorial` + `src/app/dashboard/create`) → 41 files,
+  332 passed; `npm run lint:i18n` OK (en/pt parity);
+  `npm run check:schema-drift` → no drift; eslint --quiet clean on touched
+  files.
 
 ## QA Report
 

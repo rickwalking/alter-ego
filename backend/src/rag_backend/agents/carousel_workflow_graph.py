@@ -18,6 +18,7 @@ from rag_backend.application.services.carousel.workflow_state import (
     CarouselWorkflowState,
 )
 from rag_backend.domain.constants.carousel_workflow import (
+    DESIGN_SEND_BACK_PHASES,
     FINAL_REVIEW_SEND_BACK_PHASES,
     PHASE_APPROVED_HOLD,
     PHASE_BRIEF,
@@ -68,6 +69,22 @@ def needs_gate_reopen(snapshot: object) -> bool:
         return False
     approved_field = _PHASE_APPROVAL_FIELDS.get(phase)
     return not (approved_field and values.get(approved_field))
+
+
+def route_after_design(state: CarouselWorkflowState) -> str:
+    """Route the design gate (AE-0310).
+
+    A design revise carrying ``target_phase=content`` re-enters the content
+    node to regenerate the flagged copy; the design node clears the target on
+    every non-send-back review, so a stale value from a prior cycle cannot
+    re-route a plain revise.
+    """
+    if state.get("design_approved"):
+        return _ROUTE_APPROVED
+    target = state.get(SEND_BACK_TARGET_PHASE_KEY)
+    if isinstance(target, str) and target in DESIGN_SEND_BACK_PHASES:
+        return target
+    return _ROUTE_RETRY
 
 
 def route_after_final_review(state: CarouselWorkflowState) -> str:
@@ -137,8 +154,12 @@ def build_carousel_workflow_graph() -> StateGraph:
     )
     graph.add_conditional_edges(
         PHASE_DESIGN,
-        lambda state: route_after_gate(state, "design_approved"),
-        {_ROUTE_APPROVED: PHASE_IMAGES, _ROUTE_RETRY: PHASE_DESIGN},
+        route_after_design,
+        {
+            _ROUTE_APPROVED: PHASE_IMAGES,
+            _ROUTE_RETRY: PHASE_DESIGN,
+            PHASE_CONTENT: PHASE_CONTENT,
+        },
     )
     graph.add_conditional_edges(
         PHASE_IMAGES,
@@ -173,4 +194,8 @@ def build_carousel_workflow_graph() -> StateGraph:
     return graph
 
 
-__all__ = ["build_carousel_workflow_graph", "needs_gate_reopen"]
+__all__ = [
+    "build_carousel_workflow_graph",
+    "needs_gate_reopen",
+    "route_after_design",
+]
