@@ -41,6 +41,7 @@ from rag_backend.api.routes.carousels.editorial_workflow_routes_support import (
     build_editorial_workflow_service,
     build_editorial_workflow_state_response,
     bump_resume_lock_version,
+    ensure_no_artifact_mutation_in_progress,
     ensure_resume_not_in_progress,
     ensure_resume_reviewer_access,
     ensure_structured_feedback_allowed,
@@ -52,6 +53,7 @@ from rag_backend.api.routes.carousels.editorial_workflow_routes_support import (
 from rag_backend.api.routes.carousels.editorial_workflow_routes_validate import (
     _ResumeGateContext,
 )
+from rag_backend.api.schemas.carousel_conflict import CarouselConflictResponse
 from rag_backend.api.schemas.carousel_workflow import (
     EditorialWorkflowResumeAcceptedResponse,
     EditorialWorkflowResumeRequest,
@@ -197,7 +199,11 @@ async def start_editorial_workflow(
             "model": EditorialWorkflowResumeAcceptedResponse,
         },
         status.HTTP_409_CONFLICT: {
-            "description": "Resume already in progress or version conflict",
+            "description": (
+                "Typed conflict: run in progress, version conflict, revision "
+                "cap exceeded, or artifact mutation in progress (AE-0316)"
+            ),
+            "model": CarouselConflictResponse,
         },
     },
 )
@@ -217,6 +223,7 @@ async def resume_editorial_workflow(
     engine = build_editorial_workflow_service(request)
     workflow_state = await engine.get_workflow_state(str(project_id))
     ensure_resume_not_in_progress(project, workflow_state)
+    await ensure_no_artifact_mutation_in_progress(db, str(project_id))
     await validate_resume_workflow_gates(
         body,
         workflow_state,

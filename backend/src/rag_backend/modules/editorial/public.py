@@ -99,6 +99,12 @@ from rag_backend.modules.editorial.domain.status import (
     REVIEW_ACTIONS,
     WORKFLOW_STATUS_APPROVED_FOR_PUBLISH,
 )
+from rag_backend.modules.editorial.infrastructure.carousel_project_lock import (
+    carousel_project_lock,
+    carousel_project_lock_key,
+    is_carousel_project_lock_held,
+    is_carousel_project_lock_held_session,
+)
 from rag_backend.modules.editorial.infrastructure.carousel_project_write_owner import (
     CarouselProjectWriteOwner,
 )
@@ -158,6 +164,10 @@ __all__ = [
     "ApprovalState",
     "CarouselProject",
     "CarouselProjectWriteOwner",
+    "carousel_project_lock",
+    "carousel_project_lock_key",
+    "is_carousel_project_lock_held",
+    "is_carousel_project_lock_held_session",
     "CarouselRepository",
     "CarouselSlide",
     "CarouselStatus",

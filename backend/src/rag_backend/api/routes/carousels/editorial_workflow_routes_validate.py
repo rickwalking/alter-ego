@@ -29,11 +29,16 @@ from rag_backend.application.services.carousel.workflow_state import (
 )
 from rag_backend.application.services.notification_service import NotificationService
 from rag_backend.domain.constants.access_control import ERR_INVALID_REQUEST
+from rag_backend.domain.constants.carousel_conflicts import (
+    CONFLICT_CODE_MUTATION_IN_PROGRESS,
+    CONFLICT_CODE_REVISION_CAP_EXCEEDED,
+    CONFLICT_CODE_RUN_IN_PROGRESS,
+    CONFLICT_CODE_VERSION_CONFLICT,
+)
 from rag_backend.domain.constants.carousel_workflow import (
     ERR_EDITED_SLIDES_CONTENT_ONLY,
     ERR_PERSONA_SCORE_TOO_LOW,
     ERR_PRESENTATION_VALIDATION_BLOCKED,
-    ERR_RESUME_ALREADY_IN_PROGRESS,
     ERR_REVISE_FEEDBACK_REQUIRED,
     ERR_REVISION_CAP_EXCEEDED,
     ERR_STRUCTURED_FEEDBACK_FINAL_REVIEW_ONLY,
@@ -49,11 +54,18 @@ from rag_backend.domain.constants.carousel_workflow import (
 from rag_backend.domain.constants.optimistic_locking import ERR_VERSION_CONFLICT
 from rag_backend.domain.constants.persona import ERR_PERSONA_NOT_FOUND
 from rag_backend.domain.constants.workflow_validation import ERR_NOT_ASSIGNED_REVIEWER
+from rag_backend.domain.models.carousel_conflict import (
+    CarouselConflict,
+    CarouselConflictError,
+)
 from rag_backend.domain.models.persona import PersonaProfile
 from rag_backend.infrastructure.database.models import PersonaProfileModel
 from rag_backend.infrastructure.database.models.carousel import CarouselProjectModel
 from rag_backend.infrastructure.database.models.user import UserModel
-from rag_backend.modules.editorial.public import CarouselProjectWriteOwner
+from rag_backend.modules.editorial.public import (
+    CarouselProjectWriteOwner,
+    is_carousel_project_lock_held_session,
+)
 
 
 async def load_persona(
@@ -108,17 +120,33 @@ def ensure_resume_not_in_progress(
 ) -> None:
     """Reject resume when workflow is already running."""
     if project.phase_status == PHASE_STATUS_IN_PROGRESS:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=ERR_RESUME_ALREADY_IN_PROGRESS,
+        raise CarouselConflictError(
+            CarouselConflict.for_code(CONFLICT_CODE_RUN_IN_PROGRESS)
         )
     if workflow_state is None:
         return
     if str(workflow_state.get("phase_status", "")) != PHASE_STATUS_IN_PROGRESS:
         return
-    raise HTTPException(
-        status_code=status.HTTP_409_CONFLICT,
-        detail=ERR_RESUME_ALREADY_IN_PROGRESS,
+    raise CarouselConflictError(
+        CarouselConflict.for_code(CONFLICT_CODE_RUN_IN_PROGRESS)
+    )
+
+
+async def ensure_no_artifact_mutation_in_progress(
+    db: AsyncSession,
+    project_id: str,
+) -> None:
+    """Reject resume while an artifact mutator holds the project lock.
+
+    Closes the two-commit seam (AE-0316/AE-0311): a repair/republish/edit
+    holds the session-scoped advisory lock across its full write sequence;
+    a resume must not start inside that window. The resume runner never
+    acquires the lock itself — it only refuses to start while one is held.
+    """
+    if not await is_carousel_project_lock_held_session(db, project_id):
+        return
+    raise CarouselConflictError(
+        CarouselConflict.for_code(CONFLICT_CODE_MUTATION_IN_PROGRESS)
     )
 
 
@@ -153,9 +181,11 @@ async def validate_resume_workflow_gates(
             )
         except ValueError as exc:
             if str(exc) == ERR_REVISION_CAP_EXCEEDED:
-                raise HTTPException(
-                    status_code=status.HTTP_409_CONFLICT,
-                    detail=ERR_REVISION_CAP_EXCEEDED,
+                raise CarouselConflictError(
+                    CarouselConflict.for_code(
+                        CONFLICT_CODE_REVISION_CAP_EXCEEDED,
+                        phase=str(workflow_state.get("current_phase", "")),
+                    )
                 ) from None
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -221,9 +251,8 @@ async def bump_resume_lock_version(
         )
     except ValueError as exc:
         if str(exc) == ERR_VERSION_CONFLICT:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail=ERR_VERSION_CONFLICT,
+            raise CarouselConflictError(
+                CarouselConflict.for_code(CONFLICT_CODE_VERSION_CONFLICT)
             ) from None
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -256,6 +285,7 @@ async def ensure_structured_feedback_allowed(
 
 __all__ = [
     "bump_resume_lock_version",
+    "ensure_no_artifact_mutation_in_progress",
     "ensure_resume_not_in_progress",
     "ensure_resume_reviewer_access",
     "ensure_structured_feedback_allowed",

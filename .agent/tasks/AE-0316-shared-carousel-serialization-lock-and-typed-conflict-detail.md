@@ -1,6 +1,6 @@
 # AE-0316 — Shared carousel serialization lock and typed conflict details
 
-Status: Ready
+Status: In Development
 Tier: T1
 Priority: High
 Type: Feature

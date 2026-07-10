@@ -1271,6 +1271,71 @@
         "title": "CarouselCaptionResponse",
         "type": "object"
       },
+      "CarouselConflictDetail": {
+        "description": "Structured conflict payload served alongside the legacy detail.",
+        "properties": {
+          "code": {
+            "description": "Machine-readable conflict cause",
+            "title": "Code",
+            "type": "string"
+          },
+          "message": {
+            "description": "Human-readable explanation",
+            "title": "Message",
+            "type": "string"
+          },
+          "phase": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Charged workflow phase for revision-cap conflicts",
+            "title": "Phase"
+          },
+          "run_started_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Start of the active run for run-in-progress conflicts",
+            "title": "Run Started At"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ],
+        "title": "CarouselConflictDetail",
+        "type": "object"
+      },
+      "CarouselConflictResponse": {
+        "description": "Response body for carousel 409s: legacy string + structured payload.\n\n``detail`` stays the historical machine-readable string so existing\nclients that string-compare it are unaffected; ``conflict`` is the\nadditive structured payload for new consumers.",
+        "properties": {
+          "conflict": {
+            "$ref": "#/components/schemas/CarouselConflictDetail"
+          },
+          "detail": {
+            "description": "Legacy machine-readable detail string",
+            "title": "Detail",
+            "type": "string"
+          }
+        },
+        "required": [
+          "detail",
+          "conflict"
+        ],
+        "title": "CarouselConflictResponse",
+        "type": "object"
+      },
       "CarouselDesignColors": {
         "properties": {
           "accent": {
@@ -9487,7 +9552,14 @@
             "description": "Successful Response"
           },
           "409": {
-            "description": "Resume already in progress or version conflict"
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CarouselConflictResponse"
+                }
+              }
+            },
+            "description": "Typed conflict: run in progress, version conflict, revision cap exceeded, or artifact mutation in progress (AE-0316)"
           },
           "422": {
             "content": {
