@@ -463,6 +463,7 @@
       "localeEn": "English",
       "slideLabel": "Slide {index}",
       "presentationPolicy": "Policy {version}",
+      "contentGateBlocked": "Automatic drafting could not produce valid copy for some slides after repair and one retry. Review the violations below before approving.",
       "presentationBlocked": "Approval is blocked until all presentation violations are resolved.",
       "violationsTitle": "Presentation violations",
       "designTitle": "Design review",

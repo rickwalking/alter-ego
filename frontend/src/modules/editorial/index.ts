@@ -83,6 +83,9 @@ export {
   listPresentationIconNames,
   hasBlockingPresentationViolations,
   listPresentationViolations,
+  hasBlockingContentGateValidation,
+  listContentGateViolations,
+  listContentReviewViolations,
   type PresentationStructuredItem,
   type PresentationFieldBudget,
 } from "./workspace/lib/presentation-review-utils";

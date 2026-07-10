@@ -182,13 +182,81 @@ Feature: Content drafting fails closed on parse failure
 Ticket created from prod incident analysis (session: carousel validation
 debugging, projects 38affb3e / 66014ba3).
 
+### 2026-07-10 — Development complete (wave worktree)
+
+Implemented the fail-closed chain end to end:
+
+- `_build_locale_payload` no longer dumps a raw scaffold/blob draft into
+  `body`; it returns a typed `SlideParseFailure` (clean plain `draft_text`
+  copy still flows through so legacy drafts are unaffected).
+- New deterministic recovery (`slide_scaffold_recovery`): `## PT / ## EN`
+  section extraction, scaffold-label stripping, canonical shape
+  normalization (`content_kind`/`features` for content slides). Wired into
+  both sync/async review builders and into
+  `deterministic_repair_slide_payload` (scaffold-strip on
+  `drafting_scaffold_present`).
+- Unrecovered failures persist as slide-level `parse_failures` markers;
+  `validate_localized_slides` folds them in as blocking
+  `slide_parse_failed` violations, so read resolvers and
+  `has_blocking_presentation_validation` stay fail-closed. Reviewer edits
+  drop the marker for the edited locale.
+- `content_fail_closed.build_fail_closed_review_updates`: validate ->
+  deterministic repair -> ONE injectable LLM retry
+  (`build_slide_draft_retry`, `PhaseArtifactRunnerConfig.slide_draft_retry`)
+  -> blocking `content_gate_validation` report. Chain keys strictly on the
+  report's `blocking` flag (AE-0312 forward-compat).
+- Content interrupt payload + engine `_REVIEW_INTERRUPT_KEYS` +
+  `EditorialWorkflowStateResponse.content_gate_validation` (openapi.json
+  regenerated) carry the gate report; frontend content step renders the
+  merged violations and a dedicated blocked alert (i18n pt/en).
+- Structured log `carousel_slide_parse_failed` with project_id,
+  slide_index, locale, reason, repair_outcome
+  (deterministic_repair | llm_retry | unrepaired).
+
 ## Files Touched
 
-Pending.
+- `backend/src/rag_backend/application/services/carousel/slide_parse_failures.py` (new)
+- `backend/src/rag_backend/application/services/carousel/slide_scaffold_recovery.py` (new)
+- `backend/src/rag_backend/application/services/carousel/content_fail_closed.py` (new)
+- `backend/src/rag_backend/application/services/carousel/presentation_review_pipeline.py` (new, split from presentation_review)
+- `backend/src/rag_backend/application/services/carousel/localized_slide_builder.py`
+- `backend/src/rag_backend/application/services/carousel/presentation_review.py`
+- `backend/src/rag_backend/application/services/carousel/presentation_review_edits.py`
+- `backend/src/rag_backend/application/services/carousel/presentation_copy_repair.py`
+- `backend/src/rag_backend/application/services/carousel/phase_artifact_runner.py`
+- `backend/src/rag_backend/application/services/carousel/editorial_workflow_generators.py`
+- `backend/src/rag_backend/application/services/carousel/workflow_state.py`
+- `backend/src/rag_backend/agents/carousel_workflow_nodes.py`
+- `backend/src/rag_backend/agents/carousel_workflow_engine.py`
+- `backend/src/rag_backend/api/schemas/carousel_workflow.py`
+- `backend/src/rag_backend/api/routes/carousels/editorial_workflow_routes_response.py`
+- `backend/src/rag_backend/domain/constants/carousel_presentation.py`
+- `backend/src/rag_backend/domain/constants/workflow_state_fields.py`
+- `backend/tests/features/carousel_content_fail_closed.feature` (new)
+- `backend/tests/unit/application/test_content_fail_closed.py` (new)
+- `docs/architecture/openapi.json` (regenerated)
+- `frontend/src/modules/editorial/workspace/types-ai.ts`
+- `frontend/src/modules/editorial/workspace/lib/presentation-review-utils.ts`
+- `frontend/src/modules/editorial/index.ts`
+- `frontend/src/app/dashboard/create/workspace/phase-review/content-phase-review.tsx`
+- `frontend/src/app/dashboard/create/workspace/phase-review/content-phase-review.test.tsx` (new)
+- `frontend/src/i18n/locales/en.json`, `frontend/src/i18n/locales/pt.json`
 
 ## Test Evidence
 
-Pending.
+- Backend full unit suite: `uv run pytest tests/unit -q` →
+  `2196 passed, 1 skipped, 16 warnings in 29.90s`
+- New tests: `tests/unit/application/test_content_fail_closed.py` →
+  `21 passed` (incident-payload rule-fires, retry rescue with
+  fail-then-succeed double, blocking gate report, blocking=False no-retry,
+  canonical keys, EN-only failure, structured log outcomes, clean-draft
+  parity/no-retry).
+- mypy strict: `uv run mypy rag_backend/ --explicit-package-bases` →
+  `Success: no issues found in 547 source files`
+- ruff: `uv run ruff check src tests` → `All checks passed!`
+- Frontend: `npx vitest run src/app/dashboard/create/workspace/phase-review/content-phase-review.test.tsx src/modules/editorial/workspace/lib`
+  → `13 passed`; `npm run typecheck` clean; eslint on touched files →
+  0 errors (4 pre-existing size warnings in content-phase-review.tsx).
 
 ## QA Report
 

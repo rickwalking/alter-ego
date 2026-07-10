@@ -12,10 +12,15 @@ from rag_backend.application.services.carousel.presentation_policy import (
 from rag_backend.application.services.carousel.presentation_validation_fields import (
     body_budget_for_slide_type,
 )
+from rag_backend.application.services.carousel.slide_scaffold_recovery import (
+    recover_scaffold_body,
+    strip_scaffold_labels,
+)
 from rag_backend.domain.constants.carousel import LANGUAGE_EN
 from rag_backend.domain.constants.carousel_presentation import (
     VIOLATION_BODY_TOO_LONG,
     VIOLATION_DASH_PUNCTUATION_FORBIDDEN,
+    VIOLATION_DRAFTING_SCAFFOLD_PRESENT,
     VIOLATION_HEADING_NOT_SENTENCE_CASE_EN,
     VIOLATION_HEADING_REPEATED_IN_BODY,
     VIOLATION_VISIBLE_EMOJI_FORBIDDEN,
@@ -184,14 +189,31 @@ def _strip_heading_from_body(body: str, heading: str) -> str:
     return cleaned or body
 
 
+def _repair_scaffold_fields(
+    payload: dict[str, object],
+    codes: Set[str],
+    locale: str,
+) -> None:
+    """Strip drafting-scaffold labels from visible copy (AE-0309)."""
+    if VIOLATION_DRAFTING_SCAFFOLD_PRESENT not in codes:
+        return
+    body = payload.get("body")
+    if isinstance(body, str) and body:
+        payload["body"] = recover_scaffold_body(body, locale)
+    heading = payload.get("heading")
+    if isinstance(heading, str) and heading:
+        payload["heading"] = strip_scaffold_labels(heading) or heading
+
+
 def deterministic_repair_slide_payload(
     payload: Mapping[str, object],
     violations: tuple[SlideValidationViolation, ...],
     locale: str,
 ) -> dict[str, object]:
-    """Apply deterministic markup/case repairs for supported violation codes."""
+    """Apply deterministic markup/case/scaffold repairs for supported codes."""
     repaired = dict(payload)
     codes = {violation.code for violation in violations}
+    _repair_scaffold_fields(repaired, codes, locale)
     _repair_text_field(
         RepairFieldCommand(
             payload=repaired, field="heading", violations=codes, locale=locale

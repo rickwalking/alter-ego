@@ -35,6 +35,7 @@ from rag_backend.domain.constants.workflow_state_fields import (
     STATE_FIELD_BLOCKING,
     STATE_FIELD_BLOG_MARKDOWN,
     STATE_FIELD_CAPTION,
+    STATE_FIELD_CONTENT_GATE_VALIDATION,
     STATE_FIELD_CURRENT_PHASE,
     STATE_FIELD_DESIGN_APPLIED,
     STATE_FIELD_ERROR_MESSAGE,
@@ -260,6 +261,10 @@ _FIELD_MAPPING: list[tuple[str, StateExtractor]] = [
     (
         STATE_FIELD_PRESENTATION_VALIDATION,
         _validation_field(STATE_FIELD_PRESENTATION_VALIDATION),
+    ),
+    (
+        STATE_FIELD_CONTENT_GATE_VALIDATION,
+        _validation_field(STATE_FIELD_CONTENT_GATE_VALIDATION),
     ),
     (STATE_FIELD_STATUS, _status_field),
     (STATE_FIELD_PRESENTATION_POLICY_VERSION, _policy_version_field),

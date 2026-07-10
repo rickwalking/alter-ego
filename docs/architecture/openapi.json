@@ -3469,6 +3469,16 @@
             ],
             "title": "Caption"
           },
+          "content_gate_validation": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SlideValidationReportResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "current_phase": {
             "title": "Current Phase",
             "type": "string"

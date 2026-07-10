@@ -129,6 +129,9 @@ class EditorialWorkflowStateResponse(BaseModel):
     presentation_policy_version: str | None = None
     localized_slides: list[LocalizedSlideReview] = Field(default_factory=list)
     presentation_validation: SlideValidationReportResponse | None = None
+    # AE-0309: fail-closed content-gate report; present only when the content
+    # build's validate -> repair -> retry chain still ended blocking.
+    content_gate_validation: SlideValidationReportResponse | None = None
 
 
 __all__ = [

@@ -21,6 +21,9 @@ from rag_backend.domain.constants.carousel_workflow import (
     PHASE_STATUS_AWAITING_HUMAN,
     PHASE_STATUS_IN_PROGRESS,
 )
+from rag_backend.domain.constants.workflow_state_fields import (
+    STATE_FIELD_CONTENT_GATE_VALIDATION,
+)
 
 _REVIEW_INTERRUPT_KEYS = (
     "outline",
@@ -29,6 +32,8 @@ _REVIEW_INTERRUPT_KEYS = (
     "design_applied",
     "persona_scores",
     "rubric_scores",
+    # AE-0309: fail-closed content-gate report carried on the content interrupt.
+    STATE_FIELD_CONTENT_GATE_VALIDATION,
 )
 
 if TYPE_CHECKING:

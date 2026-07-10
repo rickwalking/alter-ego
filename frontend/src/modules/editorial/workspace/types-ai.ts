@@ -117,4 +117,10 @@ export interface EditorialWorkflowState {
   presentation_policy_version?: string | null;
   localized_slides?: LocalizedSlideReview[];
   presentation_validation?: SlideValidationReport | null;
+  /**
+   * AE-0309: fail-closed content-gate report mirrored from the content
+   * interrupt payload; present only when the content build's
+   * validate -> repair -> retry chain still ended blocking.
+   */
+  content_gate_validation?: SlideValidationReport | null;
 }

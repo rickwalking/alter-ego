@@ -16,12 +16,13 @@ import { PresentationStructuredItems } from "@/modules/editorial";
 import {
   applySlideCopyEdit,
   formatBudgetUsage,
+  hasBlockingContentGateValidation,
   hasBlockingPresentationViolations,
   isBudgetExceeded,
   isPresentationStructuredItemList,
+  listContentReviewViolations,
   listPresentationIconNames,
   listPresentationStructuredItems,
-  listPresentationViolations,
   listStructuredExtras,
   presentationBody,
   presentationHeading,
@@ -74,8 +75,12 @@ export function ContentPhaseReview({
   const untitledSlide = t("untitledSlide");
   const baselineSlides = resolveLocalizedSlides(state);
   const localizedSlides = controlledSlides ?? baselineSlides;
-  const violations = listPresentationViolations(state);
-  const approvalBlocked = hasBlockingPresentationViolations(state);
+  // AE-0309: merge violations arriving in the content interrupt/gate payload
+  // with the presentation validation ones (de-duplicated).
+  const violations = listContentReviewViolations(state);
+  const contentGateBlocked = hasBlockingContentGateValidation(state);
+  const approvalBlocked =
+    hasBlockingPresentationViolations(state) || contentGateBlocked;
   const promptCount = state.slide_image_prompts?.length ?? 0;
   const canEdit = editable && onSlidesChange !== undefined;
 
@@ -111,6 +116,12 @@ export function ContentPhaseReview({
         <p className="text-[var(--color-text-muted)] text-xs">
           {t("imagePromptsLink", { count: promptCount })}
         </p>
+      ) : null}
+
+      {contentGateBlocked ? (
+        <NeonAlert variant="destructive">
+          <NeonAlertDescription>{t("contentGateBlocked")}</NeonAlertDescription>
+        </NeonAlert>
       ) : null}
 
       {approvalBlocked ? (

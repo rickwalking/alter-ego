@@ -315,3 +315,51 @@ export function listPresentationViolations(
 ): SlideValidationViolation[] {
   return state?.presentation_validation?.violations ?? [];
 }
+
+/**
+ * AE-0309: true when the content interrupt/gate payload carries a blocking
+ * fail-closed report (validate -> repair -> retry all failed for a slide).
+ */
+export function hasBlockingContentGateValidation(
+  state: EditorialWorkflowState | null | undefined,
+): boolean {
+  return state?.content_gate_validation?.blocking === true;
+}
+
+export function listContentGateViolations(
+  state: EditorialWorkflowState | null | undefined,
+): SlideValidationViolation[] {
+  return state?.content_gate_validation?.violations ?? [];
+}
+
+function violationKey(violation: SlideValidationViolation): string {
+  return [
+    violation.code,
+    violation.slide_index ?? "all",
+    violation.locale ?? "locale",
+    violation.field ?? "field",
+  ].join("-");
+}
+
+/**
+ * AE-0309: presentation violations merged with the ones arriving in the
+ * content interrupt/gate payload, de-duplicated for a single review list.
+ */
+export function listContentReviewViolations(
+  state: EditorialWorkflowState | null | undefined,
+): SlideValidationViolation[] {
+  const seen = new Set<string>();
+  const merged: SlideValidationViolation[] = [];
+  for (const violation of [
+    ...listPresentationViolations(state),
+    ...listContentGateViolations(state),
+  ]) {
+    const key = violationKey(violation);
+    if (seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    merged.push(violation);
+  }
+  return merged;
+}

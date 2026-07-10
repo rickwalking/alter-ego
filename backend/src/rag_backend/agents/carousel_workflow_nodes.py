@@ -39,6 +39,9 @@ from rag_backend.domain.constants.carousel_workflow import (
     STRUCTURED_FEEDBACK_TARGET_PHASE_KEY,
     WORKFLOW_STATUS_APPROVED_FOR_PUBLISH,
 )
+from rag_backend.domain.constants.workflow_state_fields import (
+    STATE_FIELD_CONTENT_GATE_VALIDATION,
+)
 from rag_backend.modules.presentation import (
     apply_localized_slide_edits_via_port,
 )
@@ -233,6 +236,17 @@ def outline_phase(
     )
 
 
+def _content_review_payload(merged: dict[str, object]) -> dict[str, object]:
+    """Content interrupt payload incl. the fail-closed gate report (AE-0309)."""
+    return {
+        "slide_drafts": merged.get("slide_drafts") or [],
+        "persona_scores": merged.get("persona_scores") or {},
+        STATE_FIELD_CONTENT_GATE_VALIDATION: (
+            merged.get(STATE_FIELD_CONTENT_GATE_VALIDATION) or {}
+        ),
+    }
+
+
 def content_phase(
     state: CarouselWorkflowState,
     config: RunnableConfig | None = None,
@@ -247,9 +261,7 @@ def content_phase(
             payload_key="slide_drafts",
             approved_field="content_approved",
             message="Review slide copy.",
-            extra_payload={
-                "persona_scores": state.get("persona_scores") or {},
-            },
+            payload_builder=_content_review_payload,
         ),
     )
 

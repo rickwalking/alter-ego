@@ -28,6 +28,10 @@ STATE_FIELD_REVISION_COUNT = "revision_count"
 STATE_FIELD_PRESENTATION_POLICY_VERSION = "presentation_policy_version"
 STATE_FIELD_LOCALIZED_SLIDES = "localized_slides"
 STATE_FIELD_PRESENTATION_VALIDATION = "presentation_validation"
+# AE-0309: fail-closed content-gate validation report. Set (non-empty) only when
+# the content build's validate -> repair -> retry chain still ends blocking; the
+# content interrupt payload mirrors it so the reviewer sees the violations.
+STATE_FIELD_CONTENT_GATE_VALIDATION = "content_gate_validation"
 STATE_FIELD_LOCK_VERSION = "lock_version"
 # Response field carrying the persisted failure message (AE-0009). The raw
 # state stores the message under ``workflow_error`` (WORKFLOW_ERROR_KEY); this
@@ -60,6 +64,7 @@ __all__ = [
     "STATE_FIELD_BLOCKING",
     "STATE_FIELD_BLOG_MARKDOWN",
     "STATE_FIELD_CAPTION",
+    "STATE_FIELD_CONTENT_GATE_VALIDATION",
     "STATE_FIELD_CURRENT_PHASE",
     "STATE_FIELD_DESIGN_APPLIED",
     "STATE_FIELD_ERROR_MESSAGE",

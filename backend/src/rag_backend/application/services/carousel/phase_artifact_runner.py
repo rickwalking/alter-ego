@@ -12,6 +12,11 @@ from rag_backend.agents.content_draft_agent import ContentDraftAgent
 from rag_backend.agents.feedback_learning import FeedbackLearningLoop
 from rag_backend.agents.outline_agent import OutlineAgent
 from rag_backend.agents.persona_agent import PersonaAgent
+from rag_backend.application.services.carousel.content_fail_closed import (
+    FailClosedReviewCommand,
+    SlideDraftRetryFn,
+    build_fail_closed_review_updates,
+)
 from rag_backend.application.services.carousel.editorial_visual_pipeline import (
     CarouselImageGenerationContext,
     apply_design_tokens,
@@ -45,6 +50,7 @@ from .editorial_distribution_pack import (
 from .editorial_workflow_generators import (
     ContentRegenInputs,
     SlideDraftGenerationParams,
+    build_slide_draft_retry,
     generate_outline,
     generate_slide_drafts,
     resolve_workflow_input,
@@ -64,6 +70,19 @@ class PhaseArtifactRunnerConfig:
     image_registry: ImageProviderRegistry | None = None
     db: AsyncSession | None = None
     workflow_input: EditorialWorkflowStartInput | None = None
+    # AE-0309: injectable single-slide re-draft used by the fail-closed content
+    # chain. Defaults to a ContentDraftAgent-backed retry when None.
+    slide_draft_retry: SlideDraftRetryFn | None = None
+
+
+@dataclass(frozen=True)
+class ContentReviewContext:
+    """Inputs for building the fail-closed content review updates."""
+
+    project_id: str
+    slide_drafts: object
+    translations_en: object
+    retry_draft: SlideDraftRetryFn | None
 
 
 class DistributionCheckParams(TypedDict):
@@ -86,6 +105,7 @@ class PhaseArtifactRunner:
         self._image_registry = config.image_registry
         self._db = config.db
         self._workflow_input = config.workflow_input
+        self._slide_draft_retry = config.slide_draft_retry
 
     def with_context(
         self,
@@ -102,6 +122,7 @@ class PhaseArtifactRunner:
                 image_registry=self._image_registry,
                 db=db if db is not None else self._db,
                 workflow_input=workflow_input or self._workflow_input,
+                slide_draft_retry=self._slide_draft_retry,
             )
         )
 
@@ -280,33 +301,64 @@ class PhaseArtifactRunner:
             updates["slide_drafts"] = sanitized_state["slide_drafts"]
         updates.update(
             await self._build_presentation_review_updates(
-                sanitized_state.get("slide_drafts") or [],
-                updates.get("translations_en"),
+                ContentReviewContext(
+                    project_id=str(state.get("project_id", "")),
+                    slide_drafts=sanitized_state.get("slide_drafts") or [],
+                    translations_en=updates.get("translations_en"),
+                    retry_draft=self._resolve_slide_draft_retry(resolved, outline),
+                )
             )
         )
         return updates
 
+    def _resolve_slide_draft_retry(
+        self,
+        resolved: EditorialWorkflowStartInput,
+        outline: object,
+    ) -> SlideDraftRetryFn | None:
+        """Injected retry double when configured, else the agent-backed retry."""
+        if self._slide_draft_retry is not None:
+            return self._slide_draft_retry
+        if not isinstance(outline, list):
+            return None
+        outline_dicts = [slide for slide in outline if isinstance(slide, dict)]
+        if not outline_dicts:
+            return None
+        return build_slide_draft_retry(
+            self._content_agent,
+            SlideDraftGenerationParams(
+                outline=outline_dicts,
+                persona=resolved.persona,
+            ),
+        )
+
     @staticmethod
     async def _build_presentation_review_updates(
-        slide_drafts: object,
-        translations_en: object,
+        context: ContentReviewContext,
     ) -> dict[str, object]:
+        """Build content review updates through the fail-closed chain (AE-0309)."""
         from rag_backend.application.services.carousel.presentation_review import (
-            build_presentation_review_updates_async,
             deserialize_translations_en,
         )
 
-        if not isinstance(slide_drafts, list):
-            return await build_presentation_review_updates_async([])
-        draft_dicts = [slide for slide in slide_drafts if isinstance(slide, dict)]
+        slide_drafts = context.slide_drafts
+        draft_dicts = (
+            [slide for slide in slide_drafts if isinstance(slide, dict)]
+            if isinstance(slide_drafts, list)
+            else []
+        )
         translations = (
-            deserialize_translations_en(translations_en)
-            if translations_en is not None
+            deserialize_translations_en(context.translations_en)
+            if context.translations_en is not None
             else None
         )
-        return await build_presentation_review_updates_async(
-            draft_dicts,
-            translations_en=translations,
+        return await build_fail_closed_review_updates(
+            FailClosedReviewCommand(
+                project_id=context.project_id,
+                slide_drafts=draft_dicts,
+                translations_en=translations,
+                retry_draft=context.retry_draft,
+            )
         )
 
     async def _generate_content_drafts(

@@ -463,6 +463,7 @@
       "localeEn": "Inglês",
       "slideLabel": "Slide {index}",
       "presentationPolicy": "Política {version}",
+      "contentGateBlocked": "A geração automática não produziu texto válido para alguns slides mesmo após reparo e uma nova tentativa. Revise as violações abaixo antes de aprovar.",
       "presentationBlocked": "A aprovação está bloqueada até que todas as violações de apresentação sejam resolvidas.",
       "violationsTitle": "Violações de apresentação",
       "designTitle": "Revisão de design",
