@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from typing import cast
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -12,6 +13,9 @@ from rag_backend.application.services.carousel.editorial_workflow_support import
 from rag_backend.application.services.carousel.phase_artifact_runner import (
     PhaseArtifactRunner,
     PhaseArtifactRunnerConfig,
+)
+from rag_backend.application.services.carousel.workflow_state import (
+    CarouselWorkflowState,
 )
 from rag_backend.domain.constants.ai_agents import ERR_INVALID_JSON
 from rag_backend.domain.constants.carousel_workflow import (
@@ -151,7 +155,9 @@ async def test_design_ensure_revalidates_and_advances_validated_at() -> None:
         },
     }
 
-    updates = await _design_runner().ensure_for_phase(state)  # type: ignore[arg-type]
+    updates = await _design_runner().ensure_for_phase(
+        cast(CarouselWorkflowState, state)
+    )
 
     report = updates["presentation_validation"]
     assert isinstance(report, dict)
@@ -177,7 +183,9 @@ async def test_design_ensure_clears_hint_when_validation_passes() -> None:
         ],
     }
 
-    updates = await _design_runner().ensure_for_phase(state)  # type: ignore[arg-type]
+    updates = await _design_runner().ensure_for_phase(
+        cast(CarouselWorkflowState, state)
+    )
 
     report = updates["presentation_validation"]
     assert isinstance(report, dict)
@@ -193,7 +201,9 @@ async def test_design_ensure_without_localized_slides_skips_validation() -> None
         "current_phase": PHASE_DESIGN,
     }
 
-    updates = await _design_runner().ensure_for_phase(state)  # type: ignore[arg-type]
+    updates = await _design_runner().ensure_for_phase(
+        cast(CarouselWorkflowState, state)
+    )
 
     assert "presentation_validation" not in updates
     assert "design_recovery_hint" not in updates
