@@ -48,6 +48,7 @@
     "is_public": true,
     "linkedin_post_en": null,
     "linkedin_post_pt": null,
+    "needs_republish_since": null,
     "niche": "FIXTURE",
     "output_dir": "/fixture/carousel-output",
     "pdf_path": "/fixture/carousel-output/pt/carousel.pdf",
