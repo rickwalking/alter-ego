@@ -212,6 +212,7 @@ class TestFullChainEndToEnd:
                     db, pid
                 )
             )
+        assert resolved is not None  # narrows str | None for the TypedDict
         command = FailClosedReviewCommand(
             project_id=pid,
             slide_drafts=_lowercase_proper_noun_drafts(),
