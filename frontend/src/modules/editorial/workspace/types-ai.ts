@@ -1,3 +1,4 @@
+import type { EditorialRunStage } from "@/constants/editorial-workflow";
 /** Types for blog AI assistance. */
 
 import type { WORKFLOW_PHASE_STATUS } from "@/constants/workflow";
@@ -140,5 +141,5 @@ export interface EditorialWorkflowState {
    * from these on reload (no dependency on the run.started SSE event).
    */
   run_started_at?: string | null;
-  run_stage?: string | null;
+  run_stage?: EditorialRunStage | (string & {}) | null;
 }

@@ -239,9 +239,7 @@ class TestCarouselWorkflowEngine:
 
                 reopened = await engine._app.aget_state(config)
                 assert reopened.next == (PHASE_CONTENT,)
-                assert (
-                    reopened.values["phase_status"] == PHASE_STATUS_AWAITING_HUMAN
-                )
+                assert reopened.values["phase_status"] == PHASE_STATUS_AWAITING_HUMAN
 
     @pytest.mark.asyncio
     async def test_approved_carousel_holds_and_send_back_regenerates(self) -> None:
@@ -314,9 +312,7 @@ class TestCarouselWorkflowEngine:
                 assert held is not None
                 assert held["current_phase"] == PHASE_FINAL_REVIEW
                 assert held["phase_status"] == PHASE_STATUS_APPROVED
-                assert (
-                    held["workflow_status"] == WORKFLOW_STATUS_APPROVED_FOR_PUBLISH
-                )
+                assert held["workflow_status"] == WORKFLOW_STATUS_APPROVED_FOR_PUBLISH
                 assert held["quality_passed"] is True
 
                 runs_before = runner.content_runs
@@ -376,9 +372,9 @@ class TestCarouselWorkflowEngine:
                         project_id,
                         {"action": REVIEW_ACTION_APPROVE, "reviewer_id": "user-1"},
                     )
-                assert (
-                    await engine._app.aget_state(config)
-                ).next == (PHASE_APPROVED_HOLD,)
+                assert (await engine._app.aget_state(config)).next == (
+                    PHASE_APPROVED_HOLD,
+                )
 
                 await engine.resume(
                     project_id,

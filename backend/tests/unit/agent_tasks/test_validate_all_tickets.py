@@ -34,8 +34,7 @@ def test_duplicate_ids_fail_with_no_other_errors(
     # Precondition: the two files are otherwise valid (Intake → no section gate),
     # so the only thing that can flip the exit code is the duplicate id.
     assert all(
-        not validate_all_tickets.validate_ticket_file(t)
-        for t in load_tickets(tmp_path)
+        not validate_all_tickets.validate_ticket_file(t) for t in load_tickets(tmp_path)
     )
 
     assert validate_all_tickets.main() == 1

@@ -68,9 +68,7 @@ def test_production_without_credential_raises() -> None:
 
 # Scenario: missing credential fails fast (empty URL fragment is NOT a credential)
 def test_empty_url_credential_counts_as_missing_in_production() -> None:
-    settings = _settings(
-        environment=ENVIRONMENT_PRODUCTION, redis_url=_URL_EMPTY_CREDS
-    )
+    settings = _settings(environment=ENVIRONMENT_PRODUCTION, redis_url=_URL_EMPTY_CREDS)
 
     with pytest.raises(RedisConfigError):
         resolve_authed_redis_url(settings)
@@ -118,9 +116,7 @@ def test_matching_url_and_managed_password_accepted() -> None:
 
 
 def test_url_only_credential_is_accepted() -> None:
-    settings = _settings(
-        environment=ENVIRONMENT_PRODUCTION, redis_url=_URL_WITH_CREDS
-    )
+    settings = _settings(environment=ENVIRONMENT_PRODUCTION, redis_url=_URL_WITH_CREDS)
 
     assert resolve_authed_redis_url(settings) == _URL_WITH_CREDS
 

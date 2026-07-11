@@ -181,9 +181,7 @@ class TestHeartbeatRetry:
         monkeypatch.setattr(
             carousel_run_progress, "_HEARTBEAT_RETRY_DELAY_SECONDS", 0.0
         )
-        ok = await carousel_run_progress.write_run_heartbeat_with_retry(
-            _PROJECT_ID, 0
-        )
+        ok = await carousel_run_progress.write_run_heartbeat_with_retry(_PROJECT_ID, 0)
         assert ok is True
         assert len(attempts) == 2
 
@@ -197,9 +195,7 @@ class TestHeartbeatRetry:
         monkeypatch.setattr(
             carousel_run_progress, "_HEARTBEAT_RETRY_DELAY_SECONDS", 0.0
         )
-        ok = await carousel_run_progress.write_run_heartbeat_with_retry(
-            _PROJECT_ID, 0
-        )
+        ok = await carousel_run_progress.write_run_heartbeat_with_retry(_PROJECT_ID, 0)
         assert ok is False
 
 

@@ -55,9 +55,7 @@ class TestImageProviderRegistry:
         assert isinstance(provider.strategy, OpenAINeoAnimeStrategy)
 
     def test_openai_flat_editorial_returns_right_strategy(self) -> None:
-        provider = _registry().resolve(
-            IMAGE_MODEL_OPENAI, IMAGE_STYLE_FLAT_EDITORIAL
-        )
+        provider = _registry().resolve(IMAGE_MODEL_OPENAI, IMAGE_STYLE_FLAT_EDITORIAL)
         assert isinstance(provider.strategy, OpenAIFlatEditorialStrategy)
 
     def test_unsupported_combo_raises_value_error(self) -> None:

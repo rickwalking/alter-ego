@@ -36,7 +36,9 @@ exit 0
 """
 
 
-def _run(env: dict[str, str], fake_bin: Path | None = None) -> subprocess.CompletedProcess[str]:
+def _run(
+    env: dict[str, str], fake_bin: Path | None = None
+) -> subprocess.CompletedProcess[str]:
     merged = {"PATH": os.environ.get("PATH", "/usr/bin:/bin"), **env}
     if fake_bin is not None:
         merged["PATH"] = f"{fake_bin}:{merged['PATH']}"

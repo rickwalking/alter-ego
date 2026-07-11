@@ -31,7 +31,7 @@ _SEEDED_ORM_VIOLATION = (
     "stmt = update(CarouselProjectModel).values(phase_status='approved')\n"
 )
 _SEEDED_TEXTUAL_VIOLATION = (
-    'QUERY = "UPDATE carousel_projects SET phase_status = \'approved\'"\n'
+    "QUERY = \"UPDATE carousel_projects SET phase_status = 'approved'\"\n"
 )
 
 
@@ -70,7 +70,7 @@ class TestCarouselRawUpdateGate:
         bystander = tmp_path / "other.py"
         bystander.write_text(
             "stmt = update(BlogPostModel).values(title='x')\n"
-            'Q = "UPDATE blog_posts SET title = \'x\'"\n',
+            "Q = \"UPDATE blog_posts SET title = 'x'\"\n",
             encoding="utf-8",
         )
         assert scan_for_raw_updates(tmp_path) == []
@@ -81,9 +81,12 @@ class TestCarouselRawUpdateGate:
 
     def test_allowlist_matches_survey_enumeration(self) -> None:
         # The allowlist must stay in lockstep with the write-site survey §2.
-        assert ALLOWED_RAW_UPDATE_FILES == frozenset({
-            "application/services/optimistic_lock_service.py",
-            "infrastructure/database/carousel_artifact_build_repository.py",
-            "infrastructure/database/carousel_run_reaper.py",
-            "modules/editorial/infrastructure/carousel_run_progress.py",
-        })
+        assert (
+            frozenset({
+                "application/services/optimistic_lock_service.py",
+                "infrastructure/database/carousel_artifact_build_repository.py",
+                "infrastructure/database/carousel_run_reaper.py",
+                "modules/editorial/infrastructure/carousel_run_progress.py",
+            })
+            == ALLOWED_RAW_UPDATE_FILES
+        )

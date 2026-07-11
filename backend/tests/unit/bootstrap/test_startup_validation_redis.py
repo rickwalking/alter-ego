@@ -28,7 +28,9 @@ _URL = "redis://redis:6379"
 _PASSWORD = "startup-pw"
 
 
-def _settings(*, environment: str, redis_url: str = _URL, password: str = "") -> Settings:
+def _settings(
+    *, environment: str, redis_url: str = _URL, password: str = ""
+) -> Settings:
     return Settings(
         environment=environment,
         redis_url=redis_url,

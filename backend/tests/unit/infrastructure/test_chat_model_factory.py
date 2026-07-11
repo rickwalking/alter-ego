@@ -51,9 +51,7 @@ def test_glm_provider_with_key_builds_openai_compatible_client() -> None:
 
 def test_glm_provider_without_key_falls_back_to_anthropic() -> None:
     # Scenario: GLM selected but no key (CI / prod not yet configured)
-    model = build_chat_model(
-        _settings(llm_provider="glm", glm_api_key=SecretStr(""))
-    )
+    model = build_chat_model(_settings(llm_provider="glm", glm_api_key=SecretStr("")))
     assert isinstance(model, ChatAnthropic)
 
 
