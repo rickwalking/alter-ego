@@ -19,21 +19,21 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, status
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.api.dependencies.carousel_access import (
     get_carousel_project_for_workflow_user,
 )
-from rag_backend.api.dependencies.database import get_db
 from rag_backend.api.dependencies.roles import EditorUser
-from rag_backend.api.routes.carousels.deps import get_carousel_repair_service
+from rag_backend.api.routes.carousels.deps import (
+    CarouselRepairRouteDeps,
+    get_carousel_repair_route_deps,
+)
 from rag_backend.api.schemas.carousel_conflict import CarouselConflictResponse
 from rag_backend.api.schemas.carousel_repair import (
     CarouselRepairResponse,
     RepairSlideDiffResponse,
 )
 from rag_backend.application.services.carousel.carousel_repair_service import (
-    CarouselRepairService,
     RepairCarouselCommand,
     RepairResult,
 )
@@ -79,12 +79,13 @@ def _to_response(project_id: str, result: RepairResult) -> CarouselRepairRespons
 )
 async def repair_carousel(
     project_id: UUID,
-    db: Annotated[AsyncSession, Depends(get_db)],
-    service: Annotated[CarouselRepairService, Depends(get_carousel_repair_service)],
+    deps: Annotated[CarouselRepairRouteDeps, Depends(get_carousel_repair_route_deps)],
     current_user: EditorUser,
 ) -> CarouselRepairResponse:
     """Run the bounded deterministic repair and return per-slide diffs."""
-    project = await get_carousel_project_for_workflow_user(db, project_id, current_user)
+    project = await get_carousel_project_for_workflow_user(
+        deps.db, project_id, current_user
+    )
     command = RepairCarouselCommand(
         project_id=str(project_id),
         status=str(project.status),
@@ -93,7 +94,7 @@ async def repair_carousel(
         policy_version=project.presentation_policy_version,
         actor_user_id=str(current_user.id),
     )
-    result = await service.repair(command)
+    result = await deps.service.repair(command)
     return _to_response(str(project_id), result)
 
 

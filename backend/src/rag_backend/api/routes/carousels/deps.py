@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from typing import Annotated
 
 from fastapi import Depends, Request
@@ -70,9 +71,28 @@ def get_strategy_registry() -> SlideLayoutRegistry:
     return container.strategy_registry()
 
 
-def get_carousel_repair_service(
+@dataclass(frozen=True)
+class CarouselRepairRouteDeps:
+    """Request-scoped bundle: one session shared by route and service."""
+
+    db: AsyncSession
+    service: CarouselRepairService
+
+
+def get_carousel_repair_route_deps(
     request: Request,
     session: Annotated[AsyncSession, Depends(get_db)],
+) -> CarouselRepairRouteDeps:
+    """Bundle the shared session with the repair service (PLR0913 ≤3 args)."""
+    return CarouselRepairRouteDeps(
+        db=session,
+        service=get_carousel_repair_service(request, session),
+    )
+
+
+def get_carousel_repair_service(
+    request: Request,
+    session: AsyncSession,
 ) -> CarouselRepairService:
     """Build the AE-0311 repair service bound to one request session.
 
