@@ -88,6 +88,7 @@ __all__ = [
     "AdminUser",
     "CurrentUser",
     "EditorUser",
+    "UserModel",
     "RoleUser",
     "get_current_user",
     "require_admin",

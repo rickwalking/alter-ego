@@ -5,7 +5,7 @@ from fastapi import Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.api.dependencies.database import get_db
-from rag_backend.api.dependencies.roles import EditorUser
+from rag_backend.api.dependencies.roles import EditorUser, UserModel
 from rag_backend.application.services.carousel.carousel_repair_service import (
     CarouselRepairDeps,
     CarouselRepairService,
@@ -32,7 +32,6 @@ from rag_backend.infrastructure.database.carousel_repository import (
     PostgresCarouselRepository,
 )
 from rag_backend.infrastructure.database.config import get_session
-from rag_backend.infrastructure.database.models.user import UserModel
 
 
 def get_carousel_repo(
