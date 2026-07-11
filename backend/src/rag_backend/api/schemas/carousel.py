@@ -142,6 +142,10 @@ class CarouselProjectResponse(BaseModel):
     is_public: bool = False
     current_phase: str | None = None
     phase_status: str | None = None
+    # AE-0314: non-null while a post-completion edit still owes a PDF rebuild;
+    # the publish page shows a "rebuild pending" state until the watchdog (or the
+    # client) republishes and clears it.
+    needs_republish_since: datetime | None = None
     slides: list[CarouselSlideResponse] = Field(default_factory=list)
     research_sources: list[ResearchSourceResponse] = Field(default_factory=list)
     created_at: datetime

@@ -485,6 +485,8 @@
         "sendBackFeedbackRequired": "Feedback is required to send the workflow back to content.",
         "violationHint": "Open the editor for this slide"
       },
+      "structuredItems": "Structured items",
+      "structuredItemLabel": "Item {index} body",
       "autoRepair": {
         "button": "Fix issues automatically",
         "pending": "Fixing…",
@@ -700,6 +702,18 @@
       "cancel": "Cancel",
       "success": "PDF rebuilt with the latest slide text.",
       "failed": "Could not rebuild the PDF."
+    },
+    "slideEditor": {
+      "title": "Edit slide text",
+      "noImageRegen": "Fix typos or casing in the slide text. Editing text never regenerates the images.",
+      "editText": "Edit text",
+      "save": "Save changes",
+      "saving": "Saving…",
+      "cancel": "Cancel",
+      "rebuildPending": "PDF rebuild pending — the new PDF will reflect your edit shortly.",
+      "success": "Slide text updated and the PDF was rebuilt.",
+      "blockedRunInProgress": "Editing is unavailable while a workflow run is in progress. Try again once it finishes.",
+      "blockingViolations": "Some edits still violate the content rules. Adjust the highlighted slides and save again."
     }
   },
   "auth": {

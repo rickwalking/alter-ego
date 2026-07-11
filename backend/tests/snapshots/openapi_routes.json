@@ -59,6 +59,7 @@
   "GET /health",
   "GET /health/ready",
   "PATCH /api/admin/users/{user_id}",
+  "PATCH /api/carousels/{project_id}/slides",
   "PATCH /api/palettes/{ref}",
   "POST /api/admin/carousels/refresh-design-tokens",
   "POST /api/admin/carousels/render-slides",

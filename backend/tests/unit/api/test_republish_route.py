@@ -67,6 +67,9 @@ def _project_model(
 def _db(refreshed: MagicMock | None) -> AsyncSession:
     db = MagicMock()
     db.get = AsyncMock(return_value=refreshed)
+    # AE-0314: the success path clears the needs_republish marker + commits.
+    db.commit = AsyncMock()
+    db.flush = AsyncMock()
     return cast(AsyncSession, db)
 
 

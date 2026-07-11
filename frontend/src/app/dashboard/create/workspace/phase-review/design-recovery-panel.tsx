@@ -17,12 +17,10 @@ import {
   applySlideCopyEdit,
   isWarningViolation,
   listPresentationViolations,
-  presentationBody,
-  presentationHeading,
   resolveLocalizedSlides,
+  SlideCopyEditor,
   slidesHaveCopyChanges,
   violationToneClasses,
-  type PresentationLocaleKey,
   type SlideCopyEdit,
 } from "@/modules/editorial";
 
@@ -39,11 +37,6 @@ interface DesignRecoveryPanelProps {
 }
 
 type RecoveryMode = "idle" | "edit" | "sendBack";
-
-const LOCALE_KEYS: PresentationLocaleKey[] = [
-  "presentation_pt",
-  "presentation_en",
-];
 
 function violationKey(violation: SlideValidationViolation): string {
   return [
@@ -112,91 +105,6 @@ function ViolationList({
   );
 }
 
-interface FlaggedSlideEditorProps {
-  slides: LocalizedSlideReview[];
-  flagged: Set<number>;
-  onCopyChange: (edit: SlideCopyEdit) => void;
-}
-
-function FlaggedSlideEditor({
-  slides,
-  flagged,
-  onCopyChange,
-}: FlaggedSlideEditorProps): React.ReactElement {
-  const t = useTranslations("editorialWorkflow.review");
-  const editable =
-    flagged.size > 0
-      ? slides.filter((slide) => flagged.has(slide.slide_index))
-      : slides;
-
-  return (
-    <div className="space-y-3">
-      {editable.map((slide) => (
-        <div
-          key={`recovery-${slide.slide_index}`}
-          className="space-y-2 rounded-md border border-[var(--color-border)] p-2"
-        >
-          <p className="font-medium text-[var(--color-text)] text-xs">
-            {t("slideLabel", { index: slide.slide_index })}
-          </p>
-          <div className="grid gap-3 md:grid-cols-2">
-            {LOCALE_KEYS.map((localeKey) => {
-              const presentation = slide[localeKey];
-              const localeLabel =
-                localeKey === "presentation_pt" ? t("localePt") : t("localeEn");
-              return (
-                <div key={localeKey} className="space-y-1">
-                  <p className="font-medium text-[var(--color-text-muted)] text-xs uppercase tracking-wide">
-                    {localeLabel}
-                  </p>
-                  <label
-                    className="font-medium text-[var(--color-text-muted)] text-xs"
-                    htmlFor={`recovery-${slide.slide_index}-${localeKey}-heading`}
-                  >
-                    {t("headingLabel")}
-                  </label>
-                  <NeonTextarea
-                    id={`recovery-${slide.slide_index}-${localeKey}-heading`}
-                    value={presentationHeading(presentation, "")}
-                    rows={2}
-                    onChange={(event) => {
-                      onCopyChange({
-                        slideIndex: slide.slide_index,
-                        locale: localeKey,
-                        field: "heading",
-                        value: event.target.value,
-                      });
-                    }}
-                  />
-                  <label
-                    className="font-medium text-[var(--color-text-muted)] text-xs"
-                    htmlFor={`recovery-${slide.slide_index}-${localeKey}-body`}
-                  >
-                    {t("bodyLabel")}
-                  </label>
-                  <NeonTextarea
-                    id={`recovery-${slide.slide_index}-${localeKey}-body`}
-                    value={presentationBody(presentation)}
-                    rows={4}
-                    onChange={(event) => {
-                      onCopyChange({
-                        slideIndex: slide.slide_index,
-                        locale: localeKey,
-                        field: "body",
-                        value: event.target.value,
-                      });
-                    }}
-                  />
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
 interface RecoveryEditSectionProps {
   baselineSlides: LocalizedSlideReview[];
   flagged: Set<number>;
@@ -224,8 +132,9 @@ function RecoveryEditSection({
 
   return (
     <div className="space-y-2">
-      <FlaggedSlideEditor
+      <SlideCopyEditor
         slides={editedSlides}
+        idPrefix="recovery"
         flagged={flagged}
         onCopyChange={handleCopyChange}
       />

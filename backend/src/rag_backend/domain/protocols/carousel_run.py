@@ -64,9 +64,25 @@ class CarouselDriftReconciler(Protocol):
         ...
 
 
+class CarouselRepublishSweeper(Protocol):
+    """Server-guaranteed republish of marked completed carousels (AE-0314).
+
+    A post-completion slide edit stamps ``needs_republish_since`` transactionally
+    and the client triggers the republish for fast feedback. This watchdog is the
+    guarantee: it republishes any marked project whose marker is older than a few
+    minutes (the client's own republish already cleared fresh ones) and clears the
+    marker on success. Runs AFTER the drift reconciler in the tick.
+    """
+
+    async def sweep(self, db: AsyncSession) -> int:
+        """Republish overdue-marked completed carousels; return the count."""
+        ...
+
+
 __all__ = [
     "CarouselCheckpointPhaseStatusReader",
     "CarouselCheckpointStateGateway",
     "CarouselDriftReconciler",
+    "CarouselRepublishSweeper",
     "CarouselStaleRunReaper",
 ]

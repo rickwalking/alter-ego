@@ -44,6 +44,7 @@ from rag_backend.domain.models.carousel_conflict import (
     CarouselConflict,
     CarouselConflictError,
 )
+from rag_backend.modules.editorial.public import CarouselProjectWriteOwner
 
 router = APIRouter(tags=["carousels-republish"])
 
@@ -103,6 +104,12 @@ async def republish_carousel(
     result = await republish_completed_carousel(db, str(project_id))
     if not result.completed:
         _raise_republish_failure(result.errors)
+
+    # AE-0314: a successful republish (client-triggered or watchdog-swept)
+    # clears the server-guaranteed rebuild marker so the publish page leaves the
+    # "PDF rebuild pending" state — the fresh PDF now reflects the edited copy.
+    await CarouselProjectWriteOwner(db).clear_needs_republish(str(project_id))
+    await db.commit()
 
     # The finalize pipeline persists + refreshes the SAME session-identity
     # project row (repo.update_project), so its artifact_version / PDF pointers

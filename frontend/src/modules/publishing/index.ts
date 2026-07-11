@@ -119,6 +119,10 @@ export {
   useRepublishCarousel,
   type RepublishCarouselResponse,
 } from "./distribution/hooks/use-republish-carousel";
+export {
+  useEditCarouselSlides,
+  type EditCarouselSlidesResponse,
+} from "./distribution/hooks/use-edit-carousel-slides";
 
 /* --- distribution: components --- */
 export { PublishPanel } from "./distribution/components/publish-panel";
@@ -130,6 +134,7 @@ export {
 export { PublishFailedNotice } from "./distribution/components/publish-failed-notice";
 export { RegenerateStrategySection } from "./distribution/components/regenerate-strategy-section";
 export { RebuildPdfSection } from "./distribution/components/rebuild-pdf-section";
+export { SlideTextEditSection } from "./distribution/components/slide-text-edit-section";
 
 /* --- distribution: lib / types --- */
 export { mergePublishProjectWithWorkflow } from "./distribution/lib/merge-publish-project";

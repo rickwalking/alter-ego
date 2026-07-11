@@ -15,11 +15,13 @@ import { WORKFLOW_PHASE_STATUS } from "@/constants/workflow";
 import { useCarouselProject } from "@/modules/editorial";
 import { useEditorialWorkflow } from "@/modules/editorial";
 import { AutoRepairButton } from "@/modules/editorial";
+import { resolveLocalizedSlides } from "@/modules/editorial";
 import {
   PublishPanel,
   PublishFailedNotice,
   RebuildPdfSection,
   RegenerateStrategySection,
+  SlideTextEditSection,
   mergePublishProjectWithWorkflow,
   usePublishInstagram,
   useRepublishCarousel,
@@ -292,6 +294,25 @@ export default function DashboardCreatePublishPage(): React.ReactElement {
             />
           </div>
         </div>
+
+        {workflowState && (
+          <div style={{ marginTop: "16px" }}>
+            {/* AE-0314: fix slide text after completion without regenerating
+                images; chains the republish so the served PDF reflects the edit. */}
+            <SlideTextEditSection
+              projectId={projectId}
+              slides={resolveLocalizedSlides(workflowState)}
+              policyVersion={workflowState.presentation_policy_version}
+              runInProgress={
+                workflowState.phase_status === WORKFLOW_PHASE_STATUS.IN_PROGRESS
+              }
+              rebuildPending={Boolean(project?.needs_republish_since)}
+              onEdited={() => {
+                void Promise.all([refreshState(), refetchProject()]);
+              }}
+            />
+          </div>
+        )}
 
         <div style={{ marginTop: "16px" }}>
           <RegenerateStrategySection project={project} projectId={projectId} />

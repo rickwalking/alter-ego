@@ -179,6 +179,31 @@ class CarouselWorkflowEngine:
                     as_node = str(pending_next[0])
         await self._app.aupdate_state(config, values, as_node=as_node)
 
+    async def patch_parked_checkpoint(
+        self,
+        project_id: str,
+        values: dict[str, object],
+    ) -> bool:
+        """Patch a parked/held checkpoint WITHOUT advancing the node (AE-0314).
+
+        The completed-project slide edit converges the checkpoint (source-of-
+        truth option (a)) on an approved-hold thread. Writes with
+        ``as_node=None`` so the pending park (``snapshot.next``) is preserved:
+        inferring ``as_node`` from ``snapshot.next[0]`` would treat the
+        ``approved_hold`` node as complete and advance it to END, losing
+        resumability (the documented ``as_node`` footgun). Returns ``True`` when
+        a parked checkpoint existed and was patched; ``False`` for END-state or
+        absent threads (the legacy projection-only fallback).
+        """
+        await ensure_checkpoint_commit_allowed(project_id)
+        config = self._run_config(project_id)
+        snapshot = await self._app.aget_state(config)
+        pending_next = (getattr(snapshot, "next", ()) or ()) if snapshot else ()
+        if not pending_next:
+            return False
+        await self._app.aupdate_state(config, values, as_node=None)
+        return True
+
     async def get_state(self, project_id: str) -> CarouselWorkflowState | None:
         """Load persisted workflow state from checkpointer (WF-002)."""
         config = self._run_config(project_id)

@@ -106,5 +106,12 @@ class CarouselEditorialOrchestrator:
     ) -> None:
         await self._engine.update_state(project_id, values)
 
+    async def patch_parked_checkpoint(
+        self,
+        project_id: str,
+        values: dict[str, object],
+    ) -> bool:
+        return await self._engine.patch_parked_checkpoint(project_id, values)
+
 
 __all__ = ["CarouselEditorialOrchestrator"]

@@ -59,12 +59,14 @@ export { AutoRepairButton } from "./workspace/components/auto-repair-button";
 export { ImagePromptReview } from "./workspace/components/image-prompt-review";
 export { PresentationIconPreview } from "./workspace/components/presentation-icon-preview";
 export { PresentationStructuredItems } from "./workspace/components/presentation-structured-items";
+export { SlideCopyEditor } from "./workspace/components/slide-copy-editor";
 export { WorkflowFailedCard } from "./workspace/components/workflow-failed-card";
 export type {
   AutoRepairButtonProps,
   ImagePromptReviewProps,
   PresentationIconPreviewProps,
   PresentationStructuredItemsProps,
+  SlideCopyEditorProps,
   WorkflowFailedCardProps,
 } from "./workspace/components/types";
 
@@ -105,11 +107,14 @@ export {
 /* --- workspace: localized slide resolution + copy editing --- */
 export {
   applySlideCopyEdit,
+  applySlideStructuredItemEdit,
   slidesHaveCopyChanges,
   resolveLocalizedSlides,
   type PresentationLocaleKey,
   type EditableCopyField,
   type SlideCopyEdit,
+  type SlideStructuredItemEdit,
+  type StructuredItemField,
 } from "./workspace/lib/presentation-slide-resolution";
 
 /* --- workflow: types --- */

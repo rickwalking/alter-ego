@@ -485,6 +485,8 @@
         "sendBackFeedbackRequired": "O feedback é obrigatório para devolver o fluxo para conteúdo.",
         "violationHint": "Abrir o editor deste slide"
       },
+      "structuredItems": "Itens estruturados",
+      "structuredItemLabel": "Corpo do item {index}",
       "autoRepair": {
         "button": "Corrigir problemas automaticamente",
         "pending": "Corrigindo…",
@@ -700,6 +702,18 @@
       "cancel": "Cancelar",
       "success": "PDF reconstruído com o texto mais recente dos slides.",
       "failed": "Não foi possível reconstruir o PDF."
+    },
+    "slideEditor": {
+      "title": "Editar texto dos slides",
+      "noImageRegen": "Corrija erros de digitação ou caixa no texto dos slides. Editar o texto nunca regenera as imagens.",
+      "editText": "Editar texto",
+      "save": "Salvar alterações",
+      "saving": "Salvando…",
+      "cancel": "Cancelar",
+      "rebuildPending": "Reconstrução do PDF pendente — o novo PDF refletirá sua edição em breve.",
+      "success": "Texto dos slides atualizado e o PDF foi reconstruído.",
+      "blockedRunInProgress": "A edição fica indisponível enquanto uma execução do fluxo está em andamento. Tente novamente ao terminar.",
+      "blockingViolations": "Algumas edições ainda violam as regras de conteúdo. Ajuste os slides destacados e salve novamente."
     }
   },
   "auth": {

@@ -1851,6 +1851,18 @@
             ],
             "title": "Linkedin Post Pt"
           },
+          "needs_republish_since": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Needs Republish Since"
+          },
           "niche": {
             "title": "Niche",
             "type": "string"
@@ -2113,6 +2125,59 @@
           "status"
         ],
         "title": "CarouselRepublishResponse",
+        "type": "object"
+      },
+      "CarouselSlideEditRequest": {
+        "description": "Reviewer text edits for a completed carousel's slides (no image regen).",
+        "properties": {
+          "edited_slides": {
+            "items": {
+              "$ref": "#/components/schemas/LocalizedSlideReview"
+            },
+            "minItems": 1,
+            "title": "Edited Slides",
+            "type": "array"
+          }
+        },
+        "required": [
+          "edited_slides"
+        ],
+        "title": "CarouselSlideEditRequest",
+        "type": "object"
+      },
+      "CarouselSlideEditResponse": {
+        "description": "Result of a completed-project slide edit: fresh report + republish marker.",
+        "properties": {
+          "needs_republish": {
+            "default": false,
+            "title": "Needs Republish",
+            "type": "boolean"
+          },
+          "project_id": {
+            "title": "Project Id",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "updated_slides": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Updated Slides",
+            "type": "array"
+          },
+          "validation": {
+            "$ref": "#/components/schemas/SlideValidationReport"
+          }
+        },
+        "required": [
+          "project_id",
+          "status",
+          "validation"
+        ],
+        "title": "CarouselSlideEditResponse",
         "type": "object"
       },
       "CarouselSlideResponse": {
@@ -9850,6 +9915,74 @@
         "summary": "Get Carousel Slides",
         "tags": [
           "carousels"
+        ]
+      },
+      "patch": {
+        "description": "Persist reviewer text edits + mark a republish; images stay unchanged.",
+        "operationId": "edit_carousel_slides_api_carousels__project_id__slides_patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CarouselSlideEditRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CarouselSlideEditResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CarouselConflictResponse"
+                }
+              }
+            },
+            "description": "Typed conflict: a workflow run is in progress, another mutator holds the project lock, or a concurrent mutator won the CAS (AE-0314/AE-0316)."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Edit a completed carousel's slide text without regenerating images",
+        "tags": [
+          "carousels",
+          "carousels-slide-edit"
         ]
       }
     },

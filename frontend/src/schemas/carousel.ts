@@ -82,6 +82,7 @@ export const carouselProjectResponseSchema = z.object({
   is_public: z.boolean().optional(),
   current_phase: z.string().nullable().optional(),
   phase_status: z.string().nullable().optional(),
+  needs_republish_since: z.string().nullable().optional(),
   error_message: z.string().nullable().optional(),
   output_dir: z.string().nullable().optional(),
   research_sources: z.array(z.unknown()).optional(),

@@ -35,6 +35,47 @@ export function applySlideCopyEdit(
   });
 }
 
+/**
+ * AE-0314: structured-extras edit (summary points / closing features). Edits one
+ * field (`title`/`body`) of one item in a locale's structured-item list, keeping
+ * the rest of the item and the array immutable.
+ */
+export type StructuredItemField = "title" | "body";
+
+export interface SlideStructuredItemEdit {
+  slideIndex: number;
+  locale: PresentationLocaleKey;
+  listKey: string;
+  itemIndex: number;
+  field: StructuredItemField;
+  value: string;
+}
+
+export function applySlideStructuredItemEdit(
+  slides: LocalizedSlideReview[],
+  edit: SlideStructuredItemEdit,
+): LocalizedSlideReview[] {
+  return slides.map((slide) => {
+    if (slide.slide_index !== edit.slideIndex) {
+      return slide;
+    }
+    const presentation = slide[edit.locale];
+    const current = presentation[edit.listKey];
+    if (!Array.isArray(current)) {
+      return slide;
+    }
+    const nextItems = current.map((item, index) =>
+      index === edit.itemIndex && item && typeof item === "object"
+        ? { ...(item as Record<string, unknown>), [edit.field]: edit.value }
+        : item,
+    );
+    return {
+      ...slide,
+      [edit.locale]: { ...presentation, [edit.listKey]: nextItems },
+    };
+  });
+}
+
 function localeCopySignature(presentation: Record<string, unknown>): string {
   const heading =
     typeof presentation.heading === "string" ? presentation.heading : "";

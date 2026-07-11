@@ -27,6 +27,8 @@ artifact-activation CAS (which keeps writing its own bump) are untouched.
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
+
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.application.services.carousel.workflow_state import (
@@ -128,6 +130,26 @@ class CarouselProjectWriteOwner:
             return
         project.phase_status = phase_status
         await self.commit()
+
+    async def mark_needs_republish(self, project_id: str) -> None:
+        """Stamp the AE-0314 republish marker (flush only; caller commits).
+
+        Set in the SAME transaction as the post-completion slide write so a
+        corrected carousel can never lose its owed rebuild.
+        """
+        project = await self._session.get(CarouselProjectModel, project_id)
+        if project is None:
+            return
+        project.needs_republish_since = datetime.now(UTC)
+        await self._session.flush()
+
+    async def clear_needs_republish(self, project_id: str) -> None:
+        """Clear the AE-0314 republish marker after a successful republish."""
+        project = await self._session.get(CarouselProjectModel, project_id)
+        if project is None:
+            return
+        project.needs_republish_since = None
+        await self._session.flush()
 
     async def bump_resume_lock_version(
         self,

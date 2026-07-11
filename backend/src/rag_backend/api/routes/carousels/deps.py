@@ -9,6 +9,10 @@ from rag_backend.application.services.carousel.carousel_repair_service import (
     CarouselRepairDeps,
     CarouselRepairService,
 )
+from rag_backend.application.services.carousel.carousel_slide_edit_service import (
+    CarouselSlideEditDeps,
+    CarouselSlideEditService,
+)
 from rag_backend.application.services.carousel.refinement_service import (
     CarouselRefinementConfig,
 )
@@ -107,6 +111,45 @@ def get_carousel_repair_service(
     workflow = build_editorial_workflow_service(request)
     return CarouselRepairService(
         CarouselRepairDeps(
+            db=session,
+            workflow_service=workflow,
+            repo=PostgresCarouselRepository(session),
+            events=workflow.events,
+        )
+    )
+
+
+@dataclass(frozen=True)
+class CarouselSlideEditRouteDeps:
+    """Request-scoped bundle: one session shared by route and slide-edit service."""
+
+    db: AsyncSession
+    service: CarouselSlideEditService
+
+
+def get_carousel_slide_edit_route_deps(
+    request: Request,
+    session: Annotated[AsyncSession, Depends(get_db)],
+) -> CarouselSlideEditRouteDeps:
+    """Bundle the shared session with the slide-edit service (PLR0913 ≤3 args)."""
+    return CarouselSlideEditRouteDeps(
+        db=session,
+        service=get_carousel_slide_edit_service(request, session),
+    )
+
+
+def get_carousel_slide_edit_service(
+    request: Request,
+    session: AsyncSession,
+) -> CarouselSlideEditService:
+    """Build the AE-0314 slide-edit service bound to one request session."""
+    from rag_backend.api.routes.carousels.editorial_workflow_routes_support import (
+        build_editorial_workflow_service,
+    )
+
+    workflow = build_editorial_workflow_service(request)
+    return CarouselSlideEditService(
+        CarouselSlideEditDeps(
             db=session,
             workflow_service=workflow,
             repo=PostgresCarouselRepository(session),

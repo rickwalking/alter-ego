@@ -19,6 +19,7 @@ from rag_backend.application.services.workflow_failure_alert_service import (
 )
 from rag_backend.domain.protocols.carousel_run import (
     CarouselDriftReconciler,
+    CarouselRepublishSweeper,
     CarouselStaleRunReaper,
 )
 from rag_backend.domain.protocols.workflow_timeout import StuckWorkflowAutoRejector
@@ -47,6 +48,7 @@ class WorkflowWorkerServices:
     auto_rejector_factory: AutoRejectorFactory
     stale_run_reaper: CarouselStaleRunReaper | None = None
     drift_reconciler: CarouselDriftReconciler | None = None
+    republish_sweeper: CarouselRepublishSweeper | None = None
 
 
 @dataclass(frozen=True)
@@ -58,6 +60,7 @@ class _TickCollaborators:
     auto_rejector: StuckWorkflowAutoRejector
     stale_run_reaper: CarouselStaleRunReaper | None
     drift_reconciler: CarouselDriftReconciler | None
+    republish_sweeper: CarouselRepublishSweeper | None
 
 
 async def _run_tick(
@@ -81,6 +84,12 @@ async def _run_tick(
     converged = 0
     if services.drift_reconciler is not None:
         converged = await services.drift_reconciler.reconcile(db)
+    # AE-0314: the republish sweeper runs AFTER the drift reconciler — it
+    # guarantees a marked-but-abandoned post-completion edit is rebuilt into a
+    # fresh PDF even if the client never triggered the republish.
+    republished = 0
+    if services.republish_sweeper is not None:
+        republished = await services.republish_sweeper.sweep(db)
     reminders = await services.notifications.send_deadline_reminders(db)
     alerts = 0
     if settings.workflow_alerts_enabled:
@@ -93,6 +102,7 @@ async def _run_tick(
     return {
         "reaped": reaped,
         "converged": converged,
+        "republished": republished,
         "reminders": reminders,
         "alerts": alerts,
         "auto_rejected": auto_rejected,
@@ -118,6 +128,7 @@ async def run_workflow_workers(
         auto_rejector=services.auto_rejector_factory(event_service),
         stale_run_reaper=services.stale_run_reaper,
         drift_reconciler=services.drift_reconciler,
+        republish_sweeper=services.republish_sweeper,
     )
     interval = settings.workflow_worker_interval_seconds
 

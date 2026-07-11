@@ -219,6 +219,21 @@ class EditorialWorkflowService:
         """
         await self._orchestrator.update_state(project_id, values)
 
+    async def patch_parked_checkpoint(
+        self,
+        project_id: str,
+        values: dict[str, object],
+    ) -> bool:
+        """Patch a parked/held checkpoint without advancing the node (AE-0314).
+
+        The completed-project slide edit converges the checkpoint (source-of-
+        truth option (a)) on the approved-hold thread via ``as_node=None`` so the
+        pending interrupt is preserved. Returns ``True`` when a parked checkpoint
+        was patched; ``False`` for legacy END-state/absent threads (the
+        projection-only fallback).
+        """
+        return await self._orchestrator.patch_parked_checkpoint(project_id, values)
+
     @staticmethod
     async def _sync_project_phase(
         db: AsyncSession | None,

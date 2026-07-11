@@ -120,6 +120,16 @@ class CarouselProjectModel(Base):
         Integer, nullable=False, default=0, server_default="0"
     )
 
+    # AE-0314: server-guaranteed republish marker. Stamped in the SAME
+    # transaction as a post-completion slide-text edit; the workflow watchdog
+    # republishes any marked project older than a few minutes and clears it, so
+    # a corrected carousel never keeps serving a stale PDF (cold-critic r6).
+    # Deliberately NOT mapped onto the domain entity (like the run columns) so
+    # the ``update_from_entity`` hydrator can never clobber it.
+    needs_republish_since: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
     # Creator watermark metadata
     creator_name = Column(String(100), nullable=True)
     creator_handle = Column(String(100), nullable=True)
@@ -221,6 +231,8 @@ class CarouselProjectModel(Base):
             presentation_policy_checksum=self.presentation_policy_checksum,
             artifact_version=self.artifact_version,
             slide_layout_strategy=self.slide_layout_strategy,
+            # AE-0314: read-only marker (never written back via update_from_entity).
+            needs_republish_since=self.needs_republish_since,
             created_at=self.created_at,
             updated_at=self.updated_at,
         )

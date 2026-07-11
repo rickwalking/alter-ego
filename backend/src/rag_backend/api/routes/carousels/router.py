@@ -11,6 +11,7 @@ from .preview import router as preview_router
 from .publishing import router as publishing_router
 from .repair import router as repair_router
 from .republish import router as republish_router
+from .slide_edit import router as slide_edit_router
 from .strategies import router as strategies_router
 
 PREFIX = "/carousels"
@@ -25,6 +26,7 @@ router.include_router(preview_router, prefix=PREFIX)
 router.include_router(publishing_router, prefix=PREFIX)
 router.include_router(repair_router, prefix=PREFIX)
 router.include_router(republish_router, prefix=PREFIX)
+router.include_router(slide_edit_router, prefix=PREFIX)
 router.include_router(editorial_workflow_router, prefix="")
 
 __all__ = ["PREFIX", "router"]

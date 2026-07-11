@@ -275,19 +275,111 @@ Ticket created from prod incident analysis (project 66014ba3: user could
 not fix slide text from the frontend at publish; backend capability exists
 but is unexposed).
 
+### 2026-07-10 — Implemented (developer)
+
+**Feasibility proof FIRST (hard AC #1) — PASSED.** The
+`aupdate_state`-on-approved-hold integration test revealed the documented
+`as_node` footgun empirically: inferring `as_node=approved_hold` (the existing
+`update_state` wrapper's default) advances the hold node to END (`next == ()`),
+losing the park. Raw `as_node=None` lands the write AND preserves the park
+(`next` stays `approved_hold`); the carousel stays publishable and a later
+resume still finalizes. Resolution: a new `patch_parked_checkpoint` engine
+method writes with `as_node=None`. Both the preserving path and the footgun are
+asserted in `tests/integration/test_carousel_approved_hold_edit.py`.
+
+Backend: new completed-project `PATCH /api/carousels/{id}/slides` endpoint
+(owner/assigned-reviewer auth, completed-only) + `CarouselSlideEditService`
+(advisory lock for the full write sequence, `lock_version` CAS, projection write
++ `needs_republish_since` marker in ONE transaction, fresh severity-aware report
+in the response, checkpoint convergence via option (a) `patch_parked_checkpoint`;
+legacy END-thread fallback = projection-only). New Alembic revision
+`c9d0e1f2a3b4` (head) adds `needs_republish_since`. Server-guaranteed republish:
+`CarouselRepublishSweeperRepository` wired into the watchdog tick AFTER the drift
+reconciler; the republish route + sweeper clear the marker on success.
+Case/markdown-preserving sanitize reused (`sanitize_edited_slides`).
+
+Frontend: extracted a shared `SlideCopyEditor` (`@/modules/editorial`) used by
+BOTH the design-recovery review panel (refactored to delegate to it — no
+duplicated editor bodies) and the new publish-page `SlideTextEditSection`
+(edit → `useEditCarouselSlides` PATCH → chained `useRepublishCarousel` → fresh
+PDF; blocked while `phase_status == in_progress`; client-side budget warn;
+server rejection rendered; "does not regenerate images" note; "PDF rebuild
+pending" state from the persisted marker). i18n pt/en complete. XSS boundary:
+slide copy renders as plain text (zero `dangerouslySetInnerHTML`); backend
+strips `<>()`.
+
 ## Files Touched
 
-Pending.
+Backend:
+- `src/rag_backend/agents/carousel_workflow_engine.py` (+`patch_parked_checkpoint`)
+- `src/rag_backend/agents/carousel_editorial_orchestrator.py` (delegate)
+- `src/rag_backend/application/services/carousel/editorial_workflow_service.py` (delegate)
+- `src/rag_backend/application/services/carousel/carousel_slide_edit_service.py` (new)
+- `src/rag_backend/api/routes/carousels/slide_edit.py` (new)
+- `src/rag_backend/api/routes/carousels/deps.py` (slide-edit route deps)
+- `src/rag_backend/api/routes/carousels/router.py` (register)
+- `src/rag_backend/api/routes/carousels/republish.py` (clear marker on success)
+- `src/rag_backend/api/routes/carousels/editorial_workflow_routes_sanitize.py` (public `sanitize_edited_slides`)
+- `src/rag_backend/api/schemas/carousel_slide_edit.py` (new), `api/schemas/carousel.py` (`needs_republish_since`)
+- `src/rag_backend/domain/constants/carousel_slide_edit.py` (new)
+- `src/rag_backend/domain/models/carousel.py` + `infrastructure/database/models/carousel.py` (marker column, read-only entity field)
+- `src/rag_backend/modules/editorial/infrastructure/carousel_project_write_owner.py` (mark/clear marker)
+- `src/rag_backend/infrastructure/database/carousel_republish_sweeper.py` (new) + `bootstrap/carousel_republish_sweeper_factory.py` (new)
+- `src/rag_backend/domain/protocols/carousel_run.py` (`CarouselRepublishSweeper`)
+- `src/rag_backend/application/workers/workflow_workers.py` + `bootstrap/app_factory.py` (wire sweep after drift)
+- `alembic/versions/c9d0e1f2a3b4_add_carousel_needs_republish_since.py` (new)
+- Regenerated: `docs/architecture/openapi.json`, `tests/snapshots/openapi_routes.json`
+
+Frontend:
+- `src/modules/editorial/workspace/components/slide-copy-editor.tsx` (new, shared)
+- `src/modules/editorial/workspace/components/types.ts`, `.../lib/presentation-slide-resolution.ts` (`applySlideStructuredItemEdit`), `src/modules/editorial/index.ts`
+- `src/app/dashboard/create/workspace/phase-review/design-recovery-panel.tsx` (delegate to shared editor)
+- `src/modules/publishing/distribution/components/slide-text-edit-section.tsx` (new) + `types.ts` + `index.ts`
+- `src/modules/publishing/distribution/hooks/use-edit-carousel-slides.ts` (new)
+- `src/app/dashboard/create/[id]/publish/page.tsx` (wire section)
+- `src/schemas/carousel.ts` (`needs_republish_since`)
+- `src/i18n/locales/{en,pt}.json`
 
 ## Test Evidence
 
-Pending.
+Backend:
+- Feasibility proof + footgun: `tests/integration/test_carousel_approved_hold_edit.py` (2 passed).
+- Service: `tests/unit/application/test_carousel_slide_edit_service.py` (8 passed) — projection+marker+image-unchanged, option-(a) fresh report, legacy fallback, summary extras, run-in-progress/CAS/lock conflicts, audit.
+- Route: `tests/unit/api/test_slide_edit_route.py` (4 passed) — completed-only, sanitize-on-wire, typed 409.
+- Sweeper: `tests/unit/infrastructure/test_carousel_republish_sweeper.py` (3 passed).
+- Tick ordering + sanitize round-trip/XSS: `tests/unit/application/test_workflow_workers.py`, `tests/unit/api/test_editorial_workflow_routes_sanitize.py`.
+- Gherkin: `tests/features/carousel_text_edit_no_regen.feature`.
+- Full unit suite: **2388 passed, 1 skipped, 0 failed**. `ruff check`/`ruff format --check` clean; `mypy --strict` (613 files) clean; single Alembic head `c9d0e1f2a3b4`.
+
+Frontend:
+- `slide-copy-editor.test.tsx` (5), `slide-text-edit-section.test.tsx` (5); design-recovery refactor tests still green.
+- Full vitest: **132 files, 1106 tests passed**. `tsc --noEmit` clean; `npm run lint` (all sub-gates incl. schema-drift, boundaries, component-types, i18n) exit 0.
 
 ## QA Report
 
 Pending.
 
 ## Decision Log
+
+### 2026-07-10 (impl) — Option (a) implemented for the AE-0293 read-authority ADR
+
+Per the AE-0293 read-authority ADR note: **option (a) was implemented** — the
+completed-project slide-edit endpoint writes the edited copy + a freshly computed
+severity-aware `presentation_validation` report to the LangGraph checkpoint via a
+new **park-preserving** engine method `patch_parked_checkpoint` (writes with
+`aupdate_state(..., as_node=None)`). The pre-implementation feasibility proof
+(hard AC #1) empirically confirmed the `carousel_workflow_engine.py` `as_node`
+footgun: the existing `update_state` wrapper infers `as_node=snapshot.next[0]`,
+which for the `approved_hold` park advances the node to END (`next == ()`),
+discarding resumability. Raw `as_node=None` both lands the write and preserves
+the pending interrupt (`next` stays `approved_hold`); the carousel remains
+publishable (`get_state` still hides the hold) and a later approve/send-back
+resume still works. For legacy END-state / unrecoverable threads
+`patch_parked_checkpoint` returns `False` and the flow is projection-only
+(`needs_republish` + AE-0311 drift reconciler). This means for `completed`
+projects the `carousel_slides` projection stays canonical while the checkpoint
+fast-path (`resolve_presentation_review_from_state`) serves the fresh report — no
+stale checkpoint-derived violations over corrected copy.
 
 ### 2026-07-10 (r6) — Cold-critic WARN resolved: server-guaranteed republish
 

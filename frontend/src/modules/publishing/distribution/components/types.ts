@@ -7,6 +7,7 @@
  */
 
 import type { CarouselProjectResponse } from "@/schemas/carousel";
+import type { LocalizedSlideReview } from "@/modules/publishing/blog/types-ai";
 
 export interface CaptionEditorProps {
   value: string;
@@ -49,4 +50,21 @@ export interface PublishPanelProps {
 export interface RebuildPdfSectionProps {
   projectId: string;
   onRebuilt: (artifactVersion: string | null) => void;
+}
+
+/**
+ * AE-0314: publish-page text editor for a completed carousel. Reuses the shared
+ * ``SlideCopyEditor``; on save it PATCHes the slides then chains the republish so
+ * the served PDF reflects the edit (images never regenerate).
+ */
+export interface SlideTextEditSectionProps {
+  projectId: string;
+  slides: LocalizedSlideReview[];
+  policyVersion?: string | null;
+  /** True while a workflow run is in progress — editing is blocked. */
+  runInProgress: boolean;
+  /** True while a server-guaranteed rebuild is still owed (marker set). */
+  rebuildPending?: boolean;
+  /** Refetch project + workflow state after a successful edit + republish. */
+  onEdited: () => void;
 }
