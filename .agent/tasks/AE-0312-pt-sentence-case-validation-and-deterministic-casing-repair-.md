@@ -482,26 +482,17 @@ None.
 
 ## Known Gap (flagged for QA / follow-up)
 
-**Live workflow policy-version threading for BRAND-NEW projects.** Create-time
-stamping sets `carousel_projects.presentation_policy_version = v2` (the pinned
-mechanism, tested). However, the live content-drafting/review workflow currently
-resolves its policy version from the drafts' embedded `policy_version`, which the
-content-draft agent stamps from `InstructionContextRequest.policy_version`
-(defaults to `DEFAULT_PRESENTATION_POLICY_VERSION` = v1) — the project column is
-not yet threaded into `get_initial_carousel_state` /
-`FailClosedReviewCommand.policy_version`. Consequences:
-
-- In-flight projects: fully covered — the run-once migration bumps the project
-  AND re-validates the checkpoint under v2 (casing warnings surface at review).
-- Validation with an explicit `policy_version=v2`: fully covered and tested.
-- Brand-new projects: casing rules will NOT fire live at content review until the
-  project's v2 version is seeded into the workflow state at start and passed into
-  the content-review command (a cross-layer change spanning the engine start,
-  state seed, content node, and fail-closed command). This was deliberately left
-  out of this change to avoid an under-tested modification to the live pipeline;
-  recommended as a focused follow-up (or folded into AE-0311's endpoint work,
-  which already threads policy versions). The severity model, casing rules,
-  repair, v2 policy, loader safety, migration, and frontend are all complete.
+**RESOLVED by AE-0311 (deliverable 3) — recorded here per external QA r1.**
+The project's `presentation_policy_version` column is now threaded into the
+live workflow: `editorial_workflow_service._resolve_presentation_policy_version`
+reads the column and seeds `presentation_policy_version` into workflow state at
+start; `phase_artifact_runner._state_policy_version` carries it into
+`ContentReviewContext.policy_version` → `FailClosedReviewCommand.policy_version`.
+Brand-new v2-stamped projects therefore fire casing rules live at content
+review. Covered by tests in
+`backend/tests/unit/application/test_carousel_repair_policy_threading.py`,
+including an end-to-end chain test (column → state seed → content gate) added
+after external QA round 1 requested a single integration pin.
 
 ## Final Summary
 

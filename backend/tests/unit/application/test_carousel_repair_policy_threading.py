@@ -16,6 +16,10 @@ import pytest_asyncio
 from sqlalchemy import delete
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
+from rag_backend.application.services.carousel.content_fail_closed import (
+    FailClosedReviewCommand,
+    build_fail_closed_review_updates,
+)
 from rag_backend.application.services.carousel.editorial_workflow_service import (
     EditorialWorkflowService,
 )
@@ -63,6 +67,19 @@ async def _add_project(db: AsyncSession, policy_version: str | None) -> str:
     db.add(project)
     await db.commit()
     return str(project.id)
+
+
+def _lowercase_proper_noun_drafts() -> list[dict[str, object]]:
+    """Content-phase drafts whose PT copy violates only casing rules."""
+    return [
+        {
+            "slide_index": 2,
+            "slide_type": "content",
+            "title": "como o claude muda tudo",
+            "key_points": [],
+            "draft_text": "Um corpo limpo e curto de exemplo sobre o claude.",
+        }
+    ]
 
 
 def _lowercase_proper_noun_slide() -> list[dict[str, object]]:
@@ -137,3 +154,70 @@ class TestContentGateSemantics:
             _lowercase_proper_noun_slide(), policy_version=_V1
         )
         assert report.violations == []
+
+
+class TestFullChainEndToEnd:
+    """External QA r1: one pin across the WHOLE chain — DB column → resolver
+    → state seed → _state_policy_version → FailClosedReviewCommand → gate
+    report shows v2 casing warnings, non-blocking (Gherkin:
+    carousel_pt_casing_severity.feature, "Casing warnings never block")."""
+
+    @pytest.mark.asyncio
+    async def test_v2_column_reaches_the_content_gate(
+        self, test_engine: AsyncEngine
+    ) -> None:
+        async with _factory(test_engine)() as db:
+            pid = await _add_project(db, _V2)
+            resolved = (
+                await EditorialWorkflowService._resolve_presentation_policy_version(
+                    db, pid
+                )
+            )
+        state = {"presentation_policy_version": resolved}
+        threaded = _state_policy_version(state)
+        assert threaded == _V2
+        command = FailClosedReviewCommand(
+            project_id=pid,
+            slide_drafts=_lowercase_proper_noun_drafts(),
+            policy_version=threaded,
+        )
+        updates = await build_fail_closed_review_updates(command)
+        report = updates["presentation_validation"]
+        assert isinstance(report, dict)
+        # v2 threaded through: the bounded repair (which includes AE-0312's
+        # policy-gated repair_casing) FIXES the lowercase copy — the strongest
+        # proof the column reached the gate. Under v1 the same input passes
+        # through untouched (no casing rules, no mutation).
+        slides = updates["localized_slides"]
+        assert isinstance(slides, list)
+        payload = slides[0]["presentation_pt"]
+        assert isinstance(payload, dict)
+        assert "Claude" in str(payload["body"])
+        assert str(payload["heading"]).startswith("Como")
+        assert report["blocking"] is False
+        assert report["violations"] == []
+
+    @pytest.mark.asyncio
+    async def test_v1_column_leaves_copy_untouched(
+        self, test_engine: AsyncEngine
+    ) -> None:
+        async with _factory(test_engine)() as db:
+            pid = await _add_project(db, _V1)
+            resolved = (
+                await EditorialWorkflowService._resolve_presentation_policy_version(
+                    db, pid
+                )
+            )
+        command = FailClosedReviewCommand(
+            project_id=pid,
+            slide_drafts=_lowercase_proper_noun_drafts(),
+            policy_version=_state_policy_version({
+                "presentation_policy_version": resolved
+            }),
+        )
+        updates = await build_fail_closed_review_updates(command)
+        slides = updates["localized_slides"]
+        assert isinstance(slides, list)
+        payload = slides[0]["presentation_pt"]
+        assert isinstance(payload, dict)
+        assert "claude" in str(payload["body"])  # untouched under v1
