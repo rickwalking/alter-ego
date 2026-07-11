@@ -66,12 +66,22 @@ export function useEditorialWorkflowResume({
       const preferSseTransport = (): boolean =>
         transportModeRef.current === EDITORIAL_WORKFLOW_TRANSPORT_MODE.SSE;
 
-      // AE-0310: the cap-exceeded 409 must point at the uncapped edit path
+      // AE-0310/AE-0315: each machine-readable 409 cause gets distinct copy
       // instead of surfacing the raw machine code.
-      const resolveResumeErrorMessage = (message: string): string =>
-        message === EDITORIAL_WORKFLOW_CONFLICT_CODES.REVISION_CAP_EXCEEDED
-          ? translateError("revisionCapExceeded")
-          : message;
+      const resolveResumeErrorMessage = (message: string): string => {
+        if (
+          message === EDITORIAL_WORKFLOW_CONFLICT_CODES.REVISION_CAP_EXCEEDED
+        ) {
+          return translateError("revisionCapExceeded");
+        }
+        if (message === EDITORIAL_WORKFLOW_CONFLICT_CODES.VERSION_CONFLICT) {
+          return translateError("versionConflict");
+        }
+        if (message === EDITORIAL_WORKFLOW_CONFLICT_CODES.RUN_IN_PROGRESS) {
+          return translateError("runInProgress");
+        }
+        return message;
+      };
 
       const waitForReadyState =
         async (): Promise<EditorialWorkflowState | null> =>
@@ -204,11 +214,25 @@ export function useEditorialWorkflowResume({
         }
 
         if (isResumeClientErrorStatus(response.status)) {
-          throw new Error(
-            resolveResumeErrorMessage(
-              await readApiError(response, translateError("resumeFailed")),
-            ),
+          const detail = await readApiError(
+            response,
+            translateError("resumeFailed"),
           );
+          if (
+            response.status === HTTP_STATUS.CONFLICT &&
+            detail === EDITORIAL_WORKFLOW_CONFLICT_CODES.RUN_IN_PROGRESS
+          ) {
+            // AE-0315: a run-in-progress 409 renders the banner, not a
+            // toast — refresh pulls run_started_at/run_stage so the banner
+            // reconstructs from state.
+            const refreshed = await refreshState();
+            if (refreshed) {
+              setState(refreshed);
+              workflowStateRef.current = refreshed;
+              return refreshed;
+            }
+          }
+          throw new Error(resolveResumeErrorMessage(detail));
         }
 
         if (isResumeTransportFailure(response.status)) {

@@ -37,6 +37,10 @@ from rag_backend.api.dependencies.feature_flags import RequireEditorialWorkflow
 from rag_backend.api.dependencies.resource_access import validate_reviewer_user
 from rag_backend.api.dependencies.roles import EditorUser
 from rag_backend.api.middleware.rate_limiting import limiter
+from rag_backend.api.routes.carousels.editorial_workflow_routes_response import (
+    RunMetadataInput,
+    apply_run_metadata,
+)
 from rag_backend.api.routes.carousels.editorial_workflow_routes_support import (
     build_editorial_workflow_service,
     build_editorial_workflow_state_response,
@@ -60,6 +64,7 @@ from rag_backend.api.schemas.carousel_workflow import (
     EditorialWorkflowStartRequest,
     EditorialWorkflowStateResponse,
 )
+from rag_backend.application.services.carousel.carousel_run_stage import get_run_stage
 from rag_backend.application.services.carousel.editorial_workflow_resume_runner import (
     BackgroundResumeParams,
     schedule_background_resume,
@@ -113,7 +118,7 @@ async def get_editorial_workflow_state(
     handlers: EditorialWorkflowHandlersDep,
 ) -> EditorialWorkflowStateResponse:
     """Return persisted workflow state for UI polling."""
-    await get_carousel_project_for_workflow_user(db, project_id, current_user)
+    project = await get_carousel_project_for_workflow_user(db, project_id, current_user)
     engine = build_editorial_workflow_service(request)
     view = await handlers.get_state(engine, str(project_id))
     if view is None:
@@ -121,10 +126,19 @@ async def get_editorial_workflow_state(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=ERR_INVALID_REQUEST,
         )
-    return build_editorial_workflow_state_response(
+    response = build_editorial_workflow_state_response(
         dict(view.state),
         phase_progress=view.phase_progress,
         lock_version=view.lock_version,
+    )
+    # AE-0315: run metadata (banner reconstruction on reload) — only attached
+    # while the merged state reports in_progress.
+    return apply_run_metadata(
+        response,
+        RunMetadataInput(
+            run_started_at=project.run_started_at,
+            run_stage=get_run_stage(str(project_id)),
+        ),
     )
 
 

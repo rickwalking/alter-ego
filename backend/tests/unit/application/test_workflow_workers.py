@@ -78,7 +78,11 @@ async def test_worker_error_renders_traceback(monkeypatch, test_engine) -> None:
 
     try:
         await workflow_workers.run_workflow_workers(
-            _settings(), stop_event, _noop_factory
+            _settings(),
+            stop_event,
+            workflow_workers.WorkflowWorkerServices(
+                auto_rejector_factory=_noop_factory,
+            ),
         )
     finally:
         structlog.reset_defaults()

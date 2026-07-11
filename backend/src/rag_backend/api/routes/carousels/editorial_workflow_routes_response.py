@@ -10,6 +10,8 @@ from __future__ import annotations
 
 import warnings
 from collections.abc import Callable
+from dataclasses import dataclass
+from datetime import datetime
 from typing import cast
 
 from typing_extensions import deprecated
@@ -31,6 +33,7 @@ from rag_backend.application.services.carousel.workflow_state_sanitize import (
     sanitize_workflow_state_artifacts,
 )
 from rag_backend.domain.constants.carousel_presentation import SEVERITY_BLOCKER
+from rag_backend.domain.constants.carousel_workflow import PHASE_STATUS_IN_PROGRESS
 from rag_backend.domain.constants.workflow_state_fields import (
     STATE_DEFAULT_STATUS,
     STATE_FIELD_BLOCKING,
@@ -419,7 +422,39 @@ def _validation_violation(item: object) -> SlideValidationViolationResponse | No
     )
 
 
+# ── Run metadata overlay (AE-0315) ───────────────────────────────────────────
+
+
+@dataclass(frozen=True)
+class RunMetadataInput:
+    """Row-sourced run metadata overlaid on the state response."""
+
+    run_started_at: datetime | None
+    run_stage: str | None
+
+
+def apply_run_metadata(
+    response: EditorialWorkflowStateResponse,
+    run: RunMetadataInput,
+) -> EditorialWorkflowStateResponse:
+    """Attach run metadata ONLY while the workflow reports in_progress.
+
+    The reload path reconstructs the in-progress banner from this response
+    alone (no dependency on having witnessed the run.started SSE event).
+    """
+    if response.phase_status != PHASE_STATUS_IN_PROGRESS:
+        return response
+    return response.model_copy(
+        update={
+            "run_started_at": run.run_started_at,
+            "run_stage": run.run_stage,
+        }
+    )
+
+
 __all__ = [
+    "RunMetadataInput",
+    "apply_run_metadata",
     "build_editorial_workflow_state_response",
     "build_workflow_state_response",
 ]

@@ -134,17 +134,28 @@ def ensure_resume_not_in_progress(
     project: CarouselProjectModel,
     workflow_state: CarouselWorkflowState | None,
 ) -> None:
-    """Reject resume when workflow is already running."""
+    """Reject resume when workflow is already running.
+
+    AE-0315: the run-in-progress detail carries ``run_started_at`` (stamped
+    by the ORM listener when the run flipped to in_progress) so the client
+    can render the live in-progress banner instead of a generic error.
+    """
     if project.phase_status == PHASE_STATUS_IN_PROGRESS:
         raise CarouselConflictError(
-            CarouselConflict.for_code(CONFLICT_CODE_RUN_IN_PROGRESS)
+            CarouselConflict.for_code(
+                CONFLICT_CODE_RUN_IN_PROGRESS,
+                run_started_at=project.run_started_at,
+            )
         )
     if workflow_state is None:
         return
     if str(workflow_state.get("phase_status", "")) != PHASE_STATUS_IN_PROGRESS:
         return
     raise CarouselConflictError(
-        CarouselConflict.for_code(CONFLICT_CODE_RUN_IN_PROGRESS)
+        CarouselConflict.for_code(
+            CONFLICT_CODE_RUN_IN_PROGRESS,
+            run_started_at=project.run_started_at,
+        )
     )
 
 

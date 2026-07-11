@@ -399,7 +399,29 @@ class EditorialWorkflowService:
             current_phase,
             PHASE_STATUS_IN_PROGRESS,
         )
+        # AE-0315: the before_update listener stamped run_started_at inside the
+        # same flush that flipped phase_status; surface it on run.started so
+        # the client shows the banner within seconds of the 202.
+        await self._publish_run_started(db, project_id, current_phase)
         return current_phase
+
+    @staticmethod
+    async def _publish_run_started(
+        db: AsyncSession | None,
+        project_id: str,
+        current_phase: str,
+    ) -> None:
+        """Broadcast run.started with the freshly stamped run_started_at."""
+        from rag_backend.application.services.carousel.editorial_workflow_run_events import (
+            publish_run_started,
+        )
+
+        run_started_at = None
+        if db is not None:
+            project = await db.get(CarouselProjectModel, project_id)
+            if project is not None:
+                run_started_at = project.run_started_at
+        await publish_run_started(project_id, current_phase, run_started_at)
 
     async def publish_resume_error_event(
         self,

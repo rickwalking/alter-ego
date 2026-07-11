@@ -24,6 +24,7 @@ from rag_backend.domain.constants.carousel_workflow import (
 from rag_backend.domain.constants.workflow_state_fields import (
     STATE_FIELD_CONTENT_GATE_VALIDATION,
 )
+from rag_backend.domain.models.carousel_run import ensure_checkpoint_commit_allowed
 
 _REVIEW_INTERRUPT_KEYS = (
     "outline",
@@ -98,6 +99,9 @@ class CarouselWorkflowEngine:
         **state_overrides: object,
     ) -> CarouselWorkflowState:
         """Start a new workflow run."""
+        # AE-0315 layer (b): fence node-return application/checkpoint commits
+        # against a reaped (stale-epoch) run before invoking the graph.
+        await ensure_checkpoint_commit_allowed(project_id)
         initial = get_initial_carousel_state(project_id, brief)
         initial.update(state_overrides)
         result = await self._app.ainvoke(initial, config=self._run_config(project_id))
@@ -109,6 +113,9 @@ class CarouselWorkflowEngine:
         human_input: dict[str, object] | None = None,
     ) -> CarouselWorkflowState:
         """Resume a paused workflow after human review."""
+        # AE-0315 layer (b): a zombie run must not re-enter the graph and
+        # commit checkpoints after its epoch was fenced by the reaper.
+        await ensure_checkpoint_commit_allowed(project_id)
         config = self._run_config(project_id)
         payload = human_input or {}
         snapshot = await self._app.aget_state(config)
@@ -161,6 +168,8 @@ class CarouselWorkflowEngine:
         first node name from the checkpoint ``snapshot.next`` is used as the
         default, preserving the pending interrupt context.
         """
+        # AE-0315 layer (b): direct checkpoint patches are fenced too.
+        await ensure_checkpoint_commit_allowed(project_id)
         config = self._run_config(project_id)
         if as_node is None:
             snapshot = await self._app.aget_state(config)

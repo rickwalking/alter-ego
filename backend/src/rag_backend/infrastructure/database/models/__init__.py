@@ -1,5 +1,10 @@
 """SQLAlchemy ORM models subpackage. All model classes re-exported here."""
 
+# AE-0315: importing the guard module attaches the run-column atomic-clear
+# listener + the run-epoch flush fence (self-registering, idempotent).
+from rag_backend.infrastructure.database.carousel_run_guard import (
+    register_carousel_run_guards,
+)
 from rag_backend.infrastructure.database.models.blog_post import BlogPostModel
 from rag_backend.infrastructure.database.models.carousel import (
     CarouselProjectModel,
@@ -66,4 +71,5 @@ __all__ = [
     "RubricEvaluationScoreModel",
     "UserModel",
     "WorkflowAuditLogModel",
+    "register_carousel_run_guards",
 ]

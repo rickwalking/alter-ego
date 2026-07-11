@@ -528,10 +528,26 @@
       "startUnknown": "Falha ao iniciar o fluxo de trabalho",
       "resumeFailed": "Falha ao retomar o fluxo editorial",
       "resumeUnknown": "Falha ao retomar o fluxo de trabalho",
-      "revisionCapExceeded": "O limite de revisões desta fase foi esgotado. Você ainda pode corrigir o texto: edite o conteúdo dos slides diretamente — edições diretas estão sempre disponíveis e não contam para o limite."
+      "revisionCapExceeded": "O limite de revisões desta fase foi esgotado. Você ainda pode corrigir o texto: edite o conteúdo dos slides diretamente — edições diretas estão sempre disponíveis e não contam para o limite.",
+      "runInProgress": "Já existe uma revisão em andamento para este carrossel. Acompanhe o progresso no aviso acima.",
+      "versionConflict": "Este carrossel foi alterado em outra sessão. Atualize a página e tente novamente."
     },
     "transport": {
       "pollingFallback": "Fallback de polling ativo"
+    },
+    "runProgress": {
+      "title": "Revisão em andamento",
+      "phase": "Fase em execução: {phase}",
+      "stage": {
+        "generating": "gerando conteúdo",
+        "validating": "validando resultado",
+        "persisting": "salvando alterações"
+      },
+      "startedAt": "Iniciada às {time}.",
+      "elapsed": "Tempo decorrido: {minutes}min {seconds}s.",
+      "actionsDisabled": "As ações de revisão ficam temporariamente indisponíveis enquanto a revisão roda.",
+      "stillRunningHint": "Esta execução está demorando mais que o normal. Você pode verificar se ela ainda está ativa.",
+      "checkAgain": "Verificar novamente"
     }
   },
   "palettes": {

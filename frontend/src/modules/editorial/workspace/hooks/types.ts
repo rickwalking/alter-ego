@@ -88,6 +88,11 @@ export interface WorkflowEventPayload {
   presentation_policy_version?: string | null;
   localized_slides?: EditorialWorkflowState["localized_slides"];
   presentation_validation?: EditorialWorkflowState["presentation_validation"];
+  // AE-0315 run lifecycle payload fields (run.started / run.stage_changed /
+  // run.finished).
+  run_started_at?: string | null;
+  run_stage?: string | null;
+  reason?: string;
 }
 
 export interface StartWorkflowInput {

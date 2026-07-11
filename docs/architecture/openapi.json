@@ -3687,6 +3687,29 @@
             "title": "Rubric Scores",
             "type": "object"
           },
+          "run_stage": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Run Stage"
+          },
+          "run_started_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Run Started At"
+          },
           "slide_drafts": {
             "items": {
               "additionalProperties": true,

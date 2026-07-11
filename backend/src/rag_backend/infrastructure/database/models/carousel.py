@@ -1,6 +1,7 @@
 """SQLAlchemy ORM models for CarouselProject, CarouselSlide, and ResearchSource entities."""
 
 import uuid
+from datetime import datetime
 
 from sqlalchemy import (
     JSON,
@@ -100,6 +101,24 @@ class CarouselProjectModel(Base):
         String(50), nullable=False, default="", server_default=""
     )
     lock_version = Column(Integer, default=1, nullable=False)
+
+    # AE-0315: run-progress visibility + zombie fencing. ``run_started_at`` /
+    # ``run_heartbeat_at`` are stamped when ``phase_status`` transitions INTO
+    # ``in_progress`` and cleared ATOMICALLY (same flush UPDATE) on any
+    # value-changing transition out of it — enforced by the ``before_update``
+    # listener in ``infrastructure/database/carousel_run_guard.py``, not per
+    # call site. ``run_epoch`` is the monotonic fencing token; only the
+    # stale-run reaper increments it. Deliberately NOT mapped onto the domain
+    # entity so the ``update_from_entity`` hydrator can never clobber them.
+    run_started_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    run_heartbeat_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    run_epoch: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, server_default="0"
+    )
 
     # Creator watermark metadata
     creator_name = Column(String(100), nullable=True)

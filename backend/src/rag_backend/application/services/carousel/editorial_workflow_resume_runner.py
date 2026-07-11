@@ -1,10 +1,26 @@
-"""Background execution for async editorial workflow resume (RW-010-RW-013)."""
+"""Background execution for async editorial workflow resume (RW-010-RW-013).
+
+AE-0315: the background task is a *run-owned* execution context — it captures
+the row's ``run_epoch`` into the ``carousel_run_epoch`` contextvar at start
+(fencing every ORM flush, checkpoint commit, and raw-SQL site against a
+reaper flip), heartbeats ``run_heartbeat_at`` on a fixed interval and at
+stage boundaries, emits the coarse ``run.stage_changed`` stages
+(generating → validating → persisting), and closes the run with
+``run.finished`` on every exit path. A fenced (reaped) zombie logs and stops:
+the reaper already owns the row and has published ``run.finished(stale)``.
+"""
 
 from __future__ import annotations
 
 import asyncio
 from dataclasses import dataclass
 
+import structlog
+
+from rag_backend.application.services.carousel.editorial_workflow_run_events import (
+    publish_run_finished,
+    publish_run_stage_changed,
+)
 from rag_backend.application.services.carousel.editorial_workflow_service import (
     EditorialWorkflowService,
 )
@@ -12,6 +28,15 @@ from rag_backend.application.services.carousel.editorial_workflow_support import
     ResumeWorkflowInput,
     publish_workflow_sse_updates,
     resolve_background_resume_sse_error_message,
+)
+from rag_backend.domain.constants.carousel_run import (
+    DEFAULT_RUN_HEARTBEAT_INTERVAL_SECONDS,
+    LOG_EVENT_RUN_FENCED,
+    RUN_FINISHED_REASON_COMPLETED,
+    RUN_FINISHED_REASON_FAILED,
+    RUN_STAGE_GENERATING,
+    RUN_STAGE_PERSISTING,
+    RUN_STAGE_VALIDATING,
 )
 from rag_backend.domain.constants.carousel_workflow import (
     ERR_BACKGROUND_RESUME_FAILED,
@@ -22,13 +47,23 @@ from rag_backend.domain.constants.carousel_workflow import (
     PHASE_STATUS_FAILED,
     REVIEW_ACTION_APPROVE,
 )
+from rag_backend.domain.models.carousel_run import (
+    CarouselRunContext,
+    StaleRunEpochError,
+    carousel_run_epoch_var,
+)
 from rag_backend.infrastructure.database.config import get_session_maker
-from rag_backend.infrastructure.logging import get_logger
-from rag_backend.modules.editorial.public import CarouselProjectWriteOwner
+from rag_backend.modules.editorial.public import (
+    CarouselProjectWriteOwner,
+    read_run_fence,
+    write_run_heartbeat_with_retry,
+)
 
-logger = get_logger()
+logger = structlog.get_logger()
 
 _background_tasks: set[asyncio.Task[None]] = set()
+
+_TASK_NAME_PREFIX = "workflow-resume-"
 
 
 @dataclass(frozen=True)
@@ -60,23 +95,85 @@ def schedule_background_resume(
     """Fire-and-forget background resume with task tracking."""
     task = asyncio.create_task(
         _execute_background_resume(service, params),
-        name=f"workflow-resume-{params.project_id}",
+        name=f"{_TASK_NAME_PREFIX}{params.project_id}",
     )
     _background_tasks.add(task)
     task.add_done_callback(_background_tasks.discard)
+
+
+def cancel_background_resume_task(project_id: str) -> bool:
+    """Best-effort cancel of an in-process resume task by reference.
+
+    Called by the stale-run reaper when the dying task's asyncio handle is
+    still known in this process; the epoch fence is the correctness
+    guarantee — cancellation just stops wasted LLM spend.
+    """
+    name = f"{_TASK_NAME_PREFIX}{project_id}"
+    cancelled = False
+    for task in _background_tasks:
+        if task.get_name() == name and not task.done():
+            task.cancel()
+            cancelled = True
+    return cancelled
+
+
+async def _run_heartbeat_loop(ctx: CarouselRunContext) -> None:
+    """Heartbeat run_heartbeat_at until cancelled or the fence is lost.
+
+    The interval is the domain default (60s); the write itself retries on
+    transient failure and is self-fencing (epoch pinned in its WHERE clause).
+    """
+    while True:
+        await asyncio.sleep(DEFAULT_RUN_HEARTBEAT_INTERVAL_SECONDS)
+        if not await write_run_heartbeat_with_retry(ctx.project_id, ctx.epoch):
+            return
 
 
 async def _execute_background_resume(
     service: EditorialWorkflowService,
     params: BackgroundResumeParams,
 ) -> None:
+    """Run-owned wrapper: fence capture, heartbeat task, fenced-zombie exit."""
+    fence = await read_run_fence(params.project_id)
+    token = carousel_run_epoch_var.set(fence) if fence is not None else None
+    heartbeat = (
+        asyncio.create_task(_run_heartbeat_loop(fence)) if fence is not None else None
+    )
+    try:
+        await _run_background_resume(service, params)
+    except StaleRunEpochError:
+        # Reaped mid-flight: the reaper owns the row (epoch bumped), already
+        # published run.finished(stale), and the replacement run is free to
+        # start. This zombie must not touch anything else.
+        logger.warning(LOG_EVENT_RUN_FENCED, project_id=params.project_id)
+    finally:
+        if heartbeat is not None:
+            heartbeat.cancel()
+        if token is not None:
+            carousel_run_epoch_var.reset(token)
+
+
+async def _beat_and_stage(ctx: CarouselRunContext | None, stage: str) -> None:
+    """Emit a stage boundary and refresh the heartbeat alongside it."""
+    if ctx is None:
+        return
+    await publish_run_stage_changed(ctx.project_id, stage)
+    await write_run_heartbeat_with_retry(ctx.project_id, ctx.epoch)
+
+
+async def _run_background_resume(
+    service: EditorialWorkflowService,
+    params: BackgroundResumeParams,
+) -> None:
     session_factory = get_session_maker()
+    ctx = carousel_run_epoch_var.get()
     async with session_factory() as db:
         try:
             prior_state = await service.get_workflow_state(params.project_id)
             prior_phase = (
                 str(prior_state.get("current_phase", "")) if prior_state else ""
             )
+            await _beat_and_stage(ctx, RUN_STAGE_GENERATING)
 
             state = await service.resume_workflow(
                 ResumeWorkflowInput(
@@ -90,6 +187,7 @@ async def _execute_background_resume(
                     structured_feedback=params.structured_feedback,
                 ),
             )
+            await _beat_and_stage(ctx, RUN_STAGE_VALIDATING)
 
             if _detect_resume_stuck(
                 params,
@@ -109,8 +207,17 @@ async def _execute_background_resume(
                 )
                 return
 
+            await _beat_and_stage(ctx, RUN_STAGE_PERSISTING)
             await CarouselProjectWriteOwner(db).commit()
             await publish_workflow_sse_updates(params.project_id, state)
+            await publish_run_finished(
+                params.project_id,
+                RUN_FINISHED_REASON_COMPLETED,
+                final_phase_status=str(state.get("phase_status", "")),
+            )
+        except StaleRunEpochError:
+            await db.rollback()
+            raise
         except ValueError as exc:
             await db.rollback()
             detail = resolve_background_resume_sse_error_message(str(exc))
@@ -136,20 +243,26 @@ async def _execute_background_resume(
             # leave the workflow holding the in_progress lock. ``CancelledError``
             # is a BaseException, so the generic ``except Exception`` below never
             # catches it — release the lock (mark failed/recoverable) then
-            # re-raise to honor cooperative cancellation.
+            # re-raise to honor cooperative cancellation. AE-0315: when the
+            # cancel came from the reaper the epoch is already fenced — the
+            # mark-failed write is rejected and skipped (the reaper owns the
+            # row and published run.finished(stale)).
             await db.rollback()
             logger.warning(
                 "background_resume_cancelled",
                 project_id=params.project_id,
             )
-            await _mark_background_resume_failed(
-                _MarkFailedParams(
-                    service=service,
-                    project_id=params.project_id,
-                    message=ERR_BACKGROUND_RESUME_FAILED,
-                    recoverable=True,
-                ),
-            )
+            try:
+                await _mark_background_resume_failed(
+                    _MarkFailedParams(
+                        service=service,
+                        project_id=params.project_id,
+                        message=ERR_BACKGROUND_RESUME_FAILED,
+                        recoverable=True,
+                    ),
+                )
+            except StaleRunEpochError:
+                logger.warning(LOG_EVENT_RUN_FENCED, project_id=params.project_id)
             raise
         except Exception as exc:
             await db.rollback()
@@ -207,6 +320,11 @@ async def _revert_background_resume_stuck(
             message=ERR_BACKGROUND_RESUME_STUCK,
             recoverable=True,
         )
+        await publish_run_finished(
+            project_id,
+            RUN_FINISHED_REASON_FAILED,
+            final_phase_status=PHASE_STATUS_AWAITING_HUMAN,
+        )
 
 
 async def _mark_background_resume_failed(
@@ -223,9 +341,15 @@ async def _mark_background_resume_failed(
             message=params.message,
             recoverable=params.recoverable,
         )
+        await publish_run_finished(
+            params.project_id,
+            RUN_FINISHED_REASON_FAILED,
+            final_phase_status=PHASE_STATUS_FAILED,
+        )
 
 
 __all__ = [
     "BackgroundResumeParams",
+    "cancel_background_resume_task",
     "schedule_background_resume",
 ]

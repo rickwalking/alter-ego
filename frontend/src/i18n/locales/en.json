@@ -528,10 +528,26 @@
       "startUnknown": "Workflow start failed",
       "resumeFailed": "Failed to resume editorial workflow",
       "resumeUnknown": "Workflow resume failed",
-      "revisionCapExceeded": "The revision limit for this phase is exhausted. You can still fix the copy: edit the slide text directly — direct edits are always available and never count against the limit."
+      "revisionCapExceeded": "The revision limit for this phase is exhausted. You can still fix the copy: edit the slide text directly — direct edits are always available and never count against the limit.",
+      "runInProgress": "A revision run is already in progress for this carousel. Follow its progress in the banner above.",
+      "versionConflict": "This carousel changed in another session. Refresh the page and try again."
     },
     "transport": {
       "pollingFallback": "Polling fallback active"
+    },
+    "runProgress": {
+      "title": "Revision in progress",
+      "phase": "Running phase: {phase}",
+      "stage": {
+        "generating": "generating content",
+        "validating": "validating result",
+        "persisting": "saving changes"
+      },
+      "startedAt": "Started at {time}.",
+      "elapsed": "Elapsed: {minutes}min {seconds}s.",
+      "actionsDisabled": "Review actions are temporarily unavailable while the revision runs.",
+      "stillRunningHint": "This run is taking longer than usual. You can check whether it is still active.",
+      "checkAgain": "Check again"
     }
   },
   "palettes": {

@@ -14,6 +14,8 @@ import {
   PERSONA_VOICE_MATCH_MIN_SCORE,
   type FinalReviewSendBackPhase,
 } from "@/constants/editorial-workflow";
+import { WORKFLOW_PHASE_STATUS } from "@/constants/workflow";
+import { CreateRunProgressBanner } from "@/app/dashboard/create/workspace/create-run-progress-banner";
 import { CreateWorkflowArtifacts } from "@/app/dashboard/create/workspace/create-workflow-artifacts";
 import { WorkflowStatusBadge } from "@/app/dashboard/create/workspace/workflow-status-badge";
 import { CreatePhaseReview } from "@/app/dashboard/create/workspace/create-phase-review";
@@ -84,9 +86,26 @@ export function CreateWorkflowPanel({
     start,
     approve,
     revise,
+    refreshState,
     awaitingHumanReview,
     hasActiveWorkflow,
   } = workflow;
+
+  // AE-0315: live in-progress banner on EVERY step while a run executes.
+  const runInProgress =
+    state?.phase_status === WORKFLOW_PHASE_STATUS.IN_PROGRESS;
+  const runProgressBanner =
+    runInProgress && state ? (
+      <CreateRunProgressBanner
+        currentPhase={state.current_phase}
+        runStartedAt={state.run_started_at}
+        runStage={state.run_stage}
+        onCheckAgain={() => {
+          void refreshState();
+        }}
+        checkAgainDisabled={loading}
+      />
+    ) : null;
 
   useEffect(() => {
     if (!autoStart || startedRef.current || hasActiveWorkflow) {
@@ -224,6 +243,7 @@ export function CreateWorkflowPanel({
           padding: "20px",
         }}
       >
+        {runProgressBanner}
         <p className="text-sm" style={{ color: "rgba(255,255,255,0.55)" }}>
           {tCreate("historicalHint", { phase: viewPhase ?? viewStepId })}
         </p>
@@ -259,6 +279,8 @@ export function CreateWorkflowPanel({
           )}
         </div>
       </div>
+
+      {runProgressBanner}
 
       {error && (
         <NeonAlert variant="destructive">

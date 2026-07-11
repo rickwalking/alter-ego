@@ -134,4 +134,11 @@ export interface EditorialWorkflowState {
    * violations; a plain revise alone does not modify content.
    */
   design_recovery_hint?: string | null;
+  /**
+   * AE-0315: run metadata present ONLY while phase_status === in_progress —
+   * ISO start timestamp + coarse stage; the create-flow banner reconstructs
+   * from these on reload (no dependency on the run.started SSE event).
+   */
+  run_started_at?: string | null;
+  run_stage?: string | null;
 }

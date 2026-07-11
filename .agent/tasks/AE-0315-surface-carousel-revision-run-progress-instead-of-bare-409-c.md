@@ -365,13 +365,119 @@ Ticket created from prod incident analysis (project 66014ba3: 15-minute
 revision run indistinguishable from a stuck workflow; bare 409s; premature
 operator intervention on a healthy run).
 
+### 2026-07-10 — Development complete (wave worktree)
+
+- **Pre-implementation write-site survey** (gate deliverable) written FIRST:
+  `.agent/reports/AE-0315.write-site-survey.md` — 27 in-scope mutation sites
+  (16 project ORM incl. the ~20-caller `update_project` funnel, 4 raw-SQL,
+  4 slide, 3 checkpoint) mapped to layers (a)/(b)/(c) + enumerated OOS set.
+- Alembic revision `b8c9d0e1f2a3` adds `run_started_at`, `run_heartbeat_at`,
+  `run_epoch` (default 0); SQLite tests get the columns via `create_all`.
+- ORM `before_update` listener (`carousel_run_guard.py`) stamps the run
+  columns on the transition INTO `in_progress` and clears them atomically on
+  every value-changing transition out (no-op hydrates guarded; suite-wide
+  parametrized test covers all non-in_progress targets + the three
+  owner-bypass sites: timeout `_reject`, phase-5 backfill, hydrator).
+- Epoch fence: `carousel_run_epoch` contextvar (domain, run-owned contexts
+  only) enforced at (a) the `before_flush` session boundary for
+  project+slide rows (current-epoch read inside the flush txn, READ
+  COMMITTED-safe), (b) the engine checkpoint-commit boundary
+  (`ensure_checkpoint_commit_allowed` on start/resume/update_state via a
+  domain DI seam), (c) explicit checks in `activate_build` + self-fencing
+  WHERE clauses in the heartbeat write and reaper flip, plus the raw-UPDATE
+  lint gate (`scripts/check_carousel_raw_updates.py`, AE-0180 rule-fires
+  tests).
+- Background resume task is run-owned: captures the fence at start,
+  heartbeats every 60s with in-task retry, emits
+  `generating`→`validating`→`persisting` stage boundaries and
+  `run.finished(completed|failed)`; a fenced zombie logs
+  `carousel_run_fenced` and exits without touching the row.
+- Reaper (`carousel_run_reaper.py`) runs FIRST in the workers tick (AE-0311
+  ordering hook left in place): in_progress-only, NULL heartbeat alert-only
+  forever, N=3 consecutive stale observations (worker-scoped memory),
+  wall-clock overdue (60 min) alert-only, ONE atomic flip UPDATE
+  (checkpoint-reconciled status, lock_version+epoch bump, columns cleared),
+  best-effort task cancel, `run.finished(stale)` + `run_overdue` logs.
+- Typed 409: run-in-progress detail now carries `run_started_at`; state
+  response gains additive `run_started_at`/`run_stage` (in_progress only);
+  OpenAPI regenerated.
+- Frontend: `CreateRunProgressBanner` on every create-flow step (phase,
+  stage, started HH:MM, live elapsed, "Check again" past 5 min, never
+  permanently disabled), SSE `run.*` subscription + state merge, reload
+  reconstruction from state, run-in-progress 409 → banner not toast,
+  distinct pt/en copy for all three 409 causes.
+
 ## Files Touched
 
-Pending.
+Backend (new): `domain/constants/carousel_run.py`,
+`domain/models/carousel_run.py`, `domain/protocols/carousel_run.py`,
+`infrastructure/database/carousel_run_guard.py`,
+`infrastructure/database/carousel_run_reaper.py`,
+`modules/editorial/infrastructure/carousel_run_progress.py`,
+`application/services/carousel/carousel_run_stage.py`,
+`application/services/carousel/editorial_workflow_run_events.py`,
+`bootstrap/carousel_run_reaper_factory.py`,
+`alembic/versions/b8c9d0e1f2a3_add_carousel_run_progress_columns.py`,
+`scripts/check_carousel_raw_updates.py`.
+
+Backend (modified): `infrastructure/database/models/carousel.py` (+3
+columns), `infrastructure/database/models/__init__.py` (guard re-export),
+`infrastructure/database/carousel_artifact_build_repository.py` (layer-c
+check), `agents/carousel_workflow_engine.py` (layer-b fence),
+`application/services/carousel/editorial_workflow_resume_runner.py`
+(run-owned context/heartbeat/stages/finish + cancel-by-reference),
+`application/services/carousel/editorial_workflow_service.py` (run.started),
+`application/workers/workflow_workers.py` (reaper-first tick +
+`WorkflowWorkerServices`), `bootstrap/app_factory.py` (reaper wiring),
+`infrastructure/config/settings.py` (4 reaper settings),
+`api/routes/carousels/editorial_workflow.py` (run metadata overlay),
+`api/routes/carousels/editorial_workflow_routes_response.py`
+(`apply_run_metadata`), `api/routes/carousels/editorial_workflow_routes_validate.py`
+(409 `run_started_at`), `api/schemas/carousel_workflow.py` (additive fields),
+`docs/architecture/openapi.json` (regenerated),
+`docs/backend/carousel-run-lifecycle.md` (new guide).
+
+Backend tests: `tests/features/carousel_run_progress_reaper.feature` (new),
+`tests/unit/infrastructure/test_carousel_run_guard.py` (new, 16),
+`tests/unit/infrastructure/test_carousel_run_reaper.py` (new, 9),
+`tests/unit/application/test_carousel_run_lifecycle.py` (new, 15),
+`tests/unit/scripts_ci/test_carousel_raw_update_gate.py` (new, 7),
+`tests/unit/agents/test_carousel_workflow.py` (re-resume test),
+`tests/unit/application/test_workflow_workers.py` (new signature).
+
+Frontend (new): `src/app/dashboard/create/workspace/create-run-progress-banner.tsx`
+(+ its test).
+
+Frontend (modified): `src/constants/editorial-workflow.ts` (run events,
+stages, conflict codes, threshold), `src/modules/editorial/workspace/types-ai.ts`,
+`hooks/types.ts`, `hooks/use-editorial-workflow-utils.ts` (run merge),
+`hooks/use-editorial-workflow-sse.ts` (run.* subscription),
+`hooks/use-editorial-workflow-resume.ts` (409 banner path + distinct copy),
+`src/app/dashboard/create/workspace/create-workflow-panel.tsx` (banner on
+every step), `src/i18n/locales/en.json` + `pt.json` (runProgress +
+versionConflict/runInProgress errors), plus updated hook tests
+(`use-editorial-workflow.test.ts`, `use-editorial-workflow-resume.test.ts`,
+`use-editorial-workflow-utils.test.ts`).
+
+Survey: `.agent/reports/AE-0315.write-site-survey.md`.
 
 ## Test Evidence
 
-Pending.
+- Backend full unit suite:
+  `uv run pytest tests/unit -q` →
+  `2345 passed, 1 skipped, 25 warnings in 29.63s`
+- `uv run mypy rag_backend/ --explicit-package-bases` →
+  `Success: no issues found in 561 source files`
+- `uv run ruff format --check src/` → `595 files already formatted`;
+  `uv run ruff check src/` → `All checks passed!`
+- `python3 scripts/metrics/import_baseline.py --check` → `RESULT: PASS`;
+  `uv run lint-imports` → `Contracts: 22 kept, 0 broken.`;
+  vulture clean; interrogate `PASSED (minimum: 80.0%, actual: 86.4%)`
+- Frontend: `npx tsc --noEmit` → clean;
+  `npx vitest run src/modules/editorial/workspace/hooks src/app/dashboard/create/workspace`
+  → `Test Files 22 passed (22)`, `Tests 268 passed (268)`
+- Rule-fires (AE-0180): seeded ORM-core + textual + slide-table violations
+  each flagged; allowlisted file skipped; real tree clean.
 
 ## QA Report
 

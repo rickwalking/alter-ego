@@ -17,7 +17,29 @@ export const EDITORIAL_WORKFLOW_SSE_EVENTS = {
   REVIEW_REQUIRED: "review_required",
   ERROR: "error",
   ARTIFACT: "artifact",
+  // AE-0315 run lifecycle (backend domain.constants.carousel_run).
+  RUN_STARTED: "run.started",
+  RUN_STAGE_CHANGED: "run.stage_changed",
+  RUN_FINISHED: "run.finished",
 } as const;
+
+/** Coarse run stages emitted by the backend at stage boundaries (AE-0315). */
+export const EDITORIAL_RUN_STAGES = {
+  GENERATING: "generating",
+  VALIDATING: "validating",
+  PERSISTING: "persisting",
+} as const;
+
+export type EditorialRunStage =
+  (typeof EDITORIAL_RUN_STAGES)[keyof typeof EDITORIAL_RUN_STAGES];
+
+/**
+ * AE-0315: past this elapsed time the in-progress banner offers "Check
+ * again" (the backend reaper clears genuinely dead runs within a few
+ * watchdog ticks; healthy runs observed in prod take ~13-15 min, so the
+ * escape hatch appears well before that without ever blocking the run).
+ */
+export const EDITORIAL_RUN_CHECK_AGAIN_AFTER_MS = 5 * 60_000;
 
 /** Editorial workflow phase identifiers (mirror backend PHASE_*). */
 export const EDITORIAL_PHASES = {
@@ -105,6 +127,11 @@ export const WORKFLOW_ARTIFACT_FIELD_MAP: Record<string, string> = {
  */
 export const EDITORIAL_WORKFLOW_CONFLICT_CODES = {
   REVISION_CAP_EXCEEDED: "revision_cap_exceeded",
+  // AE-0315: run-in-progress resume conflict — renders the in-progress
+  // banner (via a state refresh), never an error toast.
+  RUN_IN_PROGRESS: "resume_already_in_progress",
+  // AE-0315: stale lock_version — distinct copy from the other two causes.
+  VERSION_CONFLICT: "version_conflict",
 } as const;
 
 /**

@@ -127,6 +127,16 @@ class Settings(BaseSettings):
     # AE-0210: auto-reject workflows stuck past this threshold (never-stuck rule).
     workflow_auto_reject_enabled: bool = True
     workflow_stuck_timeout_hours: int = 72
+    # AE-0315: run-progress heartbeat + stale-run reaper. The background resume
+    # task heartbeats every `heartbeat_seconds`; a heartbeat older than
+    # `heartbeat_stale_seconds` counts as one stale observation; the reaper
+    # flips a run only after `reap_observations` CONSECUTIVE stale ticks
+    # (never on NULL heartbeats — those alert only). Wall-clock age past
+    # `overdue_minutes` only ever alerts, never reaps.
+    workflow_run_heartbeat_seconds: int = 60
+    workflow_run_heartbeat_stale_seconds: int = 180
+    workflow_run_reap_observations: int = 3
+    workflow_run_overdue_minutes: int = 60
 
     feature_flag_editorial_workflow: bool = True
     feature_flag_quality_checks: bool = True

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Literal
 
 from pydantic import BaseModel, Field
@@ -140,6 +141,11 @@ class EditorialWorkflowStateResponse(BaseModel):
     # holds a blocking validation report (direct edits or a content send-back
     # resolve violations; a plain revise does not modify content).
     design_recovery_hint: str | None = None
+    # AE-0315: run metadata, populated ONLY while phase_status == in_progress
+    # so the create flow reconstructs the in-progress banner on reload without
+    # depending on having witnessed the run.started SSE event.
+    run_started_at: datetime | None = None
+    run_stage: str | None = None
 
 
 __all__ = [
