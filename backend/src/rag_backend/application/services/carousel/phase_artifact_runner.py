@@ -80,6 +80,12 @@ class PhaseArtifactRunnerConfig:
     slide_draft_retry: SlideDraftRetryFn | None = None
 
 
+def _state_policy_version(state: CarouselWorkflowState) -> str | None:
+    """Resolve the seeded presentation policy version from workflow state."""
+    value = state.get("presentation_policy_version")
+    return value if isinstance(value, str) and value.strip() else None
+
+
 @dataclass(frozen=True)
 class ContentReviewContext:
     """Inputs for building the fail-closed content review updates."""
@@ -88,6 +94,7 @@ class ContentReviewContext:
     slide_drafts: object
     translations_en: object
     retry_draft: SlideDraftRetryFn | None
+    policy_version: str | None = None
 
 
 class DistributionCheckParams(TypedDict):
@@ -311,6 +318,7 @@ class PhaseArtifactRunner:
                     slide_drafts=sanitized_state.get("slide_drafts") or [],
                     translations_en=updates.get("translations_en"),
                     retry_draft=self._resolve_slide_draft_retry(resolved, outline),
+                    policy_version=_state_policy_version(state),
                 )
             )
         )
@@ -362,6 +370,7 @@ class PhaseArtifactRunner:
                 project_id=context.project_id,
                 slide_drafts=draft_dicts,
                 translations_en=translations,
+                policy_version=context.policy_version,
                 retry_draft=context.retry_draft,
             )
         )

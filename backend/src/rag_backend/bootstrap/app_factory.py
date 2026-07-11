@@ -52,6 +52,9 @@ from rag_backend.application.workers.workflow_workers import (
     WorkflowWorkerServices,
     run_workflow_workers,
 )
+from rag_backend.bootstrap.carousel_drift_reconciler_factory import (
+    build_drift_reconciler,
+)
 from rag_backend.bootstrap.carousel_run_reaper_factory import build_stale_run_reaper
 from rag_backend.bootstrap.startup_validation import run_startup_validations
 from rag_backend.infrastructure.config.settings import Settings, get_settings
@@ -128,6 +131,9 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
                     auto_rejector_factory=WorkflowTimeoutRepository,
                     stale_run_reaper=build_stale_run_reaper(
                         settings,
+                        app.state.carousel_checkpointer,
+                    ),
+                    drift_reconciler=build_drift_reconciler(
                         app.state.carousel_checkpointer,
                     ),
                 ),

@@ -17,7 +17,10 @@ from rag_backend.application.services.workflow_event_service import WorkflowEven
 from rag_backend.application.services.workflow_failure_alert_service import (
     WorkflowFailureAlertService,
 )
-from rag_backend.domain.protocols.carousel_run import CarouselStaleRunReaper
+from rag_backend.domain.protocols.carousel_run import (
+    CarouselDriftReconciler,
+    CarouselStaleRunReaper,
+)
 from rag_backend.domain.protocols.workflow_timeout import StuckWorkflowAutoRejector
 from rag_backend.infrastructure.config.settings import Settings
 from rag_backend.infrastructure.database.config import get_session_maker
@@ -43,6 +46,7 @@ class WorkflowWorkerServices:
 
     auto_rejector_factory: AutoRejectorFactory
     stale_run_reaper: CarouselStaleRunReaper | None = None
+    drift_reconciler: CarouselDriftReconciler | None = None
 
 
 @dataclass(frozen=True)
@@ -53,6 +57,7 @@ class _TickCollaborators:
     alerts: WorkflowFailureAlertService
     auto_rejector: StuckWorkflowAutoRejector
     stale_run_reaper: CarouselStaleRunReaper | None
+    drift_reconciler: CarouselDriftReconciler | None
 
 
 async def _run_tick(
@@ -70,8 +75,12 @@ async def _run_tick(
     reaped = 0
     if services.stale_run_reaper is not None:
         reaped = await services.stale_run_reaper.tick(db)
-    # AE-0311 ordering hook: insert the drift reconciler HERE (after the
-    # reaper, before alerts) when it is implemented.
+    # AE-0311: the drift reconciler runs AFTER the reaper — its convergence
+    # writes stamp the row's CURRENT run_epoch, so the fence accepts them and a
+    # just-reaped row (epoch bumped) is converged idempotently on a later tick.
+    converged = 0
+    if services.drift_reconciler is not None:
+        converged = await services.drift_reconciler.reconcile(db)
     reminders = await services.notifications.send_deadline_reminders(db)
     alerts = 0
     if settings.workflow_alerts_enabled:
@@ -83,6 +92,7 @@ async def _run_tick(
         )
     return {
         "reaped": reaped,
+        "converged": converged,
         "reminders": reminders,
         "alerts": alerts,
         "auto_rejected": auto_rejected,
@@ -107,6 +117,7 @@ async def run_workflow_workers(
         alerts=WorkflowFailureAlertService(),
         auto_rejector=services.auto_rejector_factory(event_service),
         stale_run_reaper=services.stale_run_reaper,
+        drift_reconciler=services.drift_reconciler,
     )
     interval = settings.workflow_worker_interval_seconds
 

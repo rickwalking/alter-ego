@@ -2028,6 +2028,41 @@
         "title": "CarouselProjectResponse",
         "type": "object"
       },
+      "CarouselRepairResponse": {
+        "description": "Result of a deterministic repair: per-slide diffs + fresh report.",
+        "properties": {
+          "needs_republish": {
+            "default": false,
+            "title": "Needs Republish",
+            "type": "boolean"
+          },
+          "project_id": {
+            "title": "Project Id",
+            "type": "string"
+          },
+          "repaired": {
+            "items": {
+              "$ref": "#/components/schemas/RepairSlideDiffResponse"
+            },
+            "title": "Repaired",
+            "type": "array"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "validation": {
+            "$ref": "#/components/schemas/SlideValidationReport"
+          }
+        },
+        "required": [
+          "project_id",
+          "status",
+          "validation"
+        ],
+        "title": "CarouselRepairResponse",
+        "type": "object"
+      },
       "CarouselRepublishResponse": {
         "description": "Result of an idempotent artifact republish (AE-0313).",
         "properties": {
@@ -5445,6 +5480,54 @@
         "title": "RenderSlidesResponse",
         "type": "object"
       },
+      "RepairSlideDiffResponse": {
+        "description": "Per-slide/locale repair outcome: fixed vs still-remaining rule codes.",
+        "properties": {
+          "locale": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Locale"
+          },
+          "remaining_codes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Remaining Codes",
+            "type": "array"
+          },
+          "repaired": {
+            "default": false,
+            "title": "Repaired",
+            "type": "boolean"
+          },
+          "repaired_codes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Repaired Codes",
+            "type": "array"
+          },
+          "slide_index": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Slide Index"
+          }
+        },
+        "title": "RepairSlideDiffResponse",
+        "type": "object"
+      },
       "ResearchSourceResponse": {
         "properties": {
           "created_at": {
@@ -6029,6 +6112,42 @@
         "title": "SlideImagePrompt",
         "type": "object"
       },
+      "SlideValidationReport": {
+        "additionalProperties": false,
+        "properties": {
+          "blocking": {
+            "title": "Blocking",
+            "type": "boolean"
+          },
+          "validated_at": {
+            "format": "date-time",
+            "title": "Validated At",
+            "type": "string"
+          },
+          "validation_status": {
+            "enum": [
+              "valid",
+              "invalid"
+            ],
+            "title": "Validation Status",
+            "type": "string"
+          },
+          "violations": {
+            "items": {
+              "$ref": "#/components/schemas/SlideValidationViolation"
+            },
+            "title": "Violations",
+            "type": "array"
+          }
+        },
+        "required": [
+          "validation_status",
+          "validated_at",
+          "blocking"
+        ],
+        "title": "SlideValidationReport",
+        "type": "object"
+      },
       "SlideValidationReportResponse": {
         "description": "Aggregated presentation validation report for content review.",
         "properties": {
@@ -6058,6 +6177,67 @@
           "blocking"
         ],
         "title": "SlideValidationReportResponse",
+        "type": "object"
+      },
+      "SlideValidationViolation": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "field": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Field"
+          },
+          "locale": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Locale"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "severity": {
+            "default": "blocker",
+            "enum": [
+              "blocker",
+              "warning"
+            ],
+            "title": "Severity",
+            "type": "string"
+          },
+          "slide_index": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Slide Index"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ],
+        "title": "SlideValidationViolation",
         "type": "object"
       },
       "SlideValidationViolationResponse": {
@@ -9427,6 +9607,66 @@
         "summary": "Publish To Instagram",
         "tags": [
           "carousels"
+        ]
+      }
+    },
+    "/api/carousels/{project_id}/repair": {
+      "post": {
+        "description": "Run the bounded deterministic repair and return per-slide diffs.",
+        "operationId": "repair_carousel_api_carousels__project_id__repair_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CarouselRepairResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CarouselConflictResponse"
+                }
+              }
+            },
+            "description": "Typed conflict: a workflow run is in progress, another mutator holds the project lock, or a concurrent resume won the CAS (AE-0311/AE-0316)."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Deterministically repair a carousel's localized slides",
+        "tags": [
+          "carousels",
+          "carousels-repair"
         ]
       }
     },

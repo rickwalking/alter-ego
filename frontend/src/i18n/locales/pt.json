@@ -485,6 +485,14 @@
         "sendBackFeedbackRequired": "O feedback é obrigatório para devolver o fluxo para conteúdo.",
         "violationHint": "Abrir o editor deste slide"
       },
+      "autoRepair": {
+        "button": "Corrigir problemas automaticamente",
+        "pending": "Corrigindo…",
+        "failed": "A correção automática não pôde ser aplicada. Tente novamente.",
+        "conflictInProgress": "Uma revisão está em andamento; verifique novamente em instantes.",
+        "noChanges": "Nenhuma correção determinística foi necessária.",
+        "fixedSlide": "Slide {index} · {locale}: corrigido {codes}"
+      },
       "outlineSlides": "{count, plural, one {# slide no outline} other {# slides no outline}}",
       "imagesTitle": "Imagens geradas",
       "imagePromptsTitle": "Prompts de imagem dos slides",

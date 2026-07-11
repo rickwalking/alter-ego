@@ -306,6 +306,7 @@ export function CreateWorkflowPanel({
           contentSlides={contentSlides}
           onContentSlidesChange={setEditedContentSlides}
           designRecovery={designRecovery}
+          onRepaired={() => void refreshState()}
         />
       )}
 

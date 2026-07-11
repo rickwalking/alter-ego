@@ -131,10 +131,16 @@ class EditorialWorkflowService:
             "brief": workflow_input.brief,
             "sources": workflow_input.sources,
         }
+        overrides: dict[str, object] = {"research_findings": research_findings}
+        policy_version = await self._resolve_presentation_policy_version(db, project_id)
+        if policy_version:
+            # AE-0311 deliverable 3: seed the project's stamped policy version so
+            # a v2 project fires casing rules live at the content-review gate.
+            overrides["presentation_policy_version"] = policy_version
         state = await self._orchestrator.start(
             project_id,
             initial_brief,
-            research_findings=research_findings,
+            **overrides,
         )
         persisted = await self._orchestrator.get_state(project_id)
         if persisted is not None:
@@ -173,12 +179,45 @@ class EditorialWorkflowService:
         await publish_workflow_sse_updates(project_id, state)
         return state
 
+    @staticmethod
+    async def _resolve_presentation_policy_version(
+        db: AsyncSession | None,
+        project_id: str,
+    ) -> str | None:
+        """Read the project's stamped presentation policy version (None → v1)."""
+        if db is None:
+            return None
+        project = await db.get(CarouselProjectModel, project_id)
+        if project is None:
+            return None
+        version = project.presentation_policy_version
+        return version if isinstance(version, str) and version.strip() else None
+
     async def read_checkpoint_phase(self, project_id: str) -> str:
         """Return checkpoint phase for structured feedback validation."""
         return await read_engine_checkpoint_phase(
             self._orchestrator.engine,
             project_id,
         )
+
+    @property
+    def events(self) -> WorkflowEventService | None:
+        """The workflow event service (audit + outbox), shared with AE-0311."""
+        return self._events
+
+    async def update_workflow_state(
+        self,
+        project_id: str,
+        values: dict[str, object],
+    ) -> None:
+        """Patch checkpoint state through the engine wrapper (AE-0311 repair).
+
+        Routes to ``CarouselWorkflowEngine.update_state`` (``as_node`` inferred
+        from the pending interrupt) so the repair's checkpoint write shares the
+        interrupt-preserving path and never hits the ``as_node=None`` clearing
+        footgun on approved-hold threads.
+        """
+        await self._orchestrator.update_state(project_id, values)
 
     @staticmethod
     async def _sync_project_phase(

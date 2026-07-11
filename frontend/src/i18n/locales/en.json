@@ -485,6 +485,14 @@
         "sendBackFeedbackRequired": "Feedback is required to send the workflow back to content.",
         "violationHint": "Open the editor for this slide"
       },
+      "autoRepair": {
+        "button": "Fix issues automatically",
+        "pending": "Fixing…",
+        "failed": "The automatic fix could not be applied. Try again.",
+        "conflictInProgress": "A revision run is in progress; check again in a moment.",
+        "noChanges": "No deterministic fixes were needed.",
+        "fixedSlide": "Slide {index} · {locale}: fixed {codes}"
+      },
       "outlineSlides": "{count, plural, one {# slide in outline} other {# slides in outline}}",
       "imagesTitle": "Generated images",
       "imagePromptsTitle": "Slide image prompts",

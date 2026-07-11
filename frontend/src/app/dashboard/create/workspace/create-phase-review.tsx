@@ -5,6 +5,7 @@ import type {
   EditorialWorkflowState,
   LocalizedSlideReview,
 } from "@/modules/publishing";
+import { AutoRepairButton } from "@/modules/editorial";
 import { ResearchPhaseReview } from "./phase-review/research-phase-review";
 import { OutlinePhaseReview } from "./phase-review/outline-phase-review";
 import { ContentPhaseReview } from "./phase-review/content-phase-review";
@@ -21,6 +22,8 @@ interface EditorialPhaseReviewProps {
   contentEditable?: boolean;
   /** AE-0310: design-step recovery actions (edit copy / send back). */
   designRecovery?: DesignRecoveryActions;
+  /** AE-0311: refresh workflow state after a one-click deterministic repair. */
+  onRepaired?: () => void;
 }
 
 export function CreatePhaseReview({
@@ -30,6 +33,7 @@ export function CreatePhaseReview({
   onContentSlidesChange,
   contentEditable = false,
   designRecovery,
+  onRepaired,
 }: EditorialPhaseReviewProps): React.JSX.Element | null {
   const phase = state.current_phase;
 
@@ -40,15 +44,23 @@ export function CreatePhaseReview({
       return <OutlinePhaseReview state={state} />;
     case EDITORIAL_PHASES.CONTENT:
       return (
-        <ContentPhaseReview
-          state={state}
-          editable={contentEditable}
-          slides={contentSlides}
-          onSlidesChange={onContentSlidesChange}
-        />
+        <div className="space-y-3">
+          <ContentPhaseReview
+            state={state}
+            editable={contentEditable}
+            slides={contentSlides}
+            onSlidesChange={onContentSlidesChange}
+          />
+          <AutoRepairButton projectId={projectId} onRepaired={onRepaired} />
+        </div>
       );
     case EDITORIAL_PHASES.DESIGN:
-      return <DesignPhaseReview state={state} recovery={designRecovery} />;
+      return (
+        <div className="space-y-3">
+          <DesignPhaseReview state={state} recovery={designRecovery} />
+          <AutoRepairButton projectId={projectId} onRepaired={onRepaired} />
+        </div>
+      );
     case EDITORIAL_PHASES.IMAGES:
       return <ImagesPhaseReview state={state} />;
     case EDITORIAL_PHASES.FINAL_REVIEW:

@@ -1,8 +1,13 @@
 from typing import Annotated
 
-from fastapi import Depends
+from fastapi import Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from rag_backend.api.dependencies.database import get_db
+from rag_backend.application.services.carousel.carousel_repair_service import (
+    CarouselRepairDeps,
+    CarouselRepairService,
+)
 from rag_backend.application.services.carousel.refinement_service import (
     CarouselRefinementConfig,
 )
@@ -63,3 +68,28 @@ def get_strategy_registry() -> SlideLayoutRegistry:
 
     container = get_container()
     return container.strategy_registry()
+
+
+def get_carousel_repair_service(
+    request: Request,
+    session: Annotated[AsyncSession, Depends(get_db)],
+) -> CarouselRepairService:
+    """Build the AE-0311 repair service bound to one request session.
+
+    Repo, CAS, and audit share the single ``get_db`` instance (cached by
+    FastAPI for the request, and also injected into the route) so the
+    projection-first transaction is atomic.
+    """
+    from rag_backend.api.routes.carousels.editorial_workflow_routes_support import (
+        build_editorial_workflow_service,
+    )
+
+    workflow = build_editorial_workflow_service(request)
+    return CarouselRepairService(
+        CarouselRepairDeps(
+            db=session,
+            workflow_service=workflow,
+            repo=PostgresCarouselRepository(session),
+            events=workflow.events,
+        )
+    )

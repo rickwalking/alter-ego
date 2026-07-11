@@ -266,13 +266,84 @@ Feature: One-click deterministic carousel repair
 Ticket created from prod incident analysis — codifies the manual repair
 scripts run against projects 38affb3e and 66014ba3.
 
+### 2026-07-10 — Developer implementation (all 8 deliverables)
+
+Implemented endpoint + service (two-commit contract), drift reconciler,
+policy threading, logging/audit, frontend button in all three panels + chained
+republish, tests + Gherkin, and regenerated pinned artifacts. Gates green
+(ruff/mypy/lint-imports/arch-ratchet backend; tsc/lint/vitest frontend).
+
+Implementation notes / resolved ambiguities:
+- **Drift reconciler validates, does not re-repair, the projection.** The
+  projection is authoritative and (in the AE-0311 drift scenario) already
+  repaired by the failed repair's projection-first commit; the reconciler
+  converges the checkpoint only when the projection validates clean. A
+  still-blocking projection is NOT drift (it needs the repair endpoint, not a
+  checkpoint overwrite from stale copy).
+- **Reconciler scope = parked (`awaiting_human`, non-completed) rows.** The
+  reaper only flips `in_progress` rows, so the two never contend; a just-reaped
+  row's checkpoint (reaper never touches checkpoint) is converged idempotently
+  and epoch-fenced on a later tick, honouring the "after the reaper" ordering.
+- **Frontend republish chaining via callback, not a cross-context import.** The
+  button lives in the editorial context; importing publishing's
+  `useRepublishCarousel` (barrel → cycle; concrete path → boundary violation).
+  Resolved by the publish page supplying an `onRepublishNeeded` callback that
+  owns the republish, keeping the button context-clean.
+- **Deliverable 3 tested at the validation layer.** At the content gate the
+  fail-closed chain auto-repairs repairable casing, so v2 warnings only surface
+  when unrepairable; the behavior difference (v2 fires `proper_noun_casing` +
+  `heading_not_sentence_case_pt`, v1 fires nothing) is asserted directly on
+  `validate_localized_slides`, plus the resolve/thread plumbing unit tests.
+- **Pre-existing branch failures:** 10 `test_editorial_workflow_resume_runner`
+  tests fail on this branch independent of AE-0311 (reproduced with changes
+  stashed) — out of scope for this ticket.
+
 ## Files Touched
 
-Pending.
+### Backend — added
+- `src/rag_backend/domain/constants/carousel_repair.py` — log/audit event + status constants.
+- `src/rag_backend/application/services/carousel/carousel_repair_pipeline.py` — pure validate→repair→re-validate + per-slide diff.
+- `src/rag_backend/application/services/carousel/carousel_repair_projection.py` — localized ↔ `carousel_slides` mapping.
+- `src/rag_backend/application/services/carousel/carousel_repair_service.py` — two-commit contract (lock + CAS + projection-first + one-call checkpoint + audit).
+- `src/rag_backend/api/schemas/carousel_repair.py` — response schema.
+- `src/rag_backend/api/routes/carousels/repair.py` — `POST /api/carousels/{id}/repair`.
+- `src/rag_backend/infrastructure/database/carousel_drift_reconciler.py` — autonomous drift reconciler.
+- `src/rag_backend/bootstrap/carousel_drift_reconciler_factory.py` — engine-checkpoint gateway + reconciler factory.
+
+### Backend — modified
+- `api/routes/carousels/router.py` — mount repair router.
+- `api/routes/carousels/deps.py` — `get_carousel_repair_service` (shares the cached `get_db` session; reuses the workflow service's events + baselined repo → no new api→infra edge).
+- `application/services/carousel/editorial_workflow_service.py` — `update_workflow_state` + `events` property; **deliverable 3**: thread the project's `presentation_policy_version` into workflow-start seeding.
+- `application/services/carousel/phase_artifact_runner.py` — **deliverable 3**: `_state_policy_version` → `ContentReviewContext.policy_version` → `FailClosedReviewCommand.policy_version`.
+- `domain/protocols/carousel_run.py` — `CarouselCheckpointStateGateway` + `CarouselDriftReconciler` protocols.
+- `application/workers/workflow_workers.py` — drift reconciler runs AFTER the reaper (AE-0315 ordering hook).
+- `bootstrap/app_factory.py` — build + inject the reconciler.
+- Regenerated pinned artifacts: `docs/architecture/openapi.json`, `backend/tests/snapshots/openapi_routes.json`.
+
+### Frontend — added
+- `src/modules/editorial/workspace/hooks/use-repair-carousel.ts` — repair mutation hook + zod schema.
+- `src/modules/editorial/workspace/components/auto-repair-button.tsx` — "Fix issues automatically" button (diff summary, typed-409 banner path, republish chaining via callback).
+- `*.test.tsx` for the button + `create-phase-review` wiring.
+
+### Frontend — modified
+- `constants/api.ts` — `CAROUSEL_REPAIR`.
+- `create-phase-review.tsx` (+ `create-workflow-panel.tsx`) — render the button at content + design steps.
+- `app/dashboard/create/[id]/publish/page.tsx` — button near `RebuildPdfSection`, chains `useRepublishCarousel`.
+- `modules/editorial/index.ts`, `workspace/components/types.ts` — exports + colocated props type.
+- `i18n/locales/{en,pt}.json` — `editorialWorkflow.review.autoRepair`.
+
+### Gherkin
+- `tests/features/carousel_deterministic_repair.feature`.
 
 ## Test Evidence
 
-Pending.
+- Backend AE-0311 suite (pipeline + projection + service + policy-threading + drift): `uv run pytest ... -q` → **25 passed**.
+- Full backend unit: `uv run pytest tests/unit -q` → **2360 passed, 1 skipped, 10 failed**. The 10 failures are all `test_editorial_workflow_resume_runner.py::TestExecuteBackgroundResume::*` and are **pre-existing on the branch** (reproduced with AE-0311 changes fully stashed) — not caused by this ticket.
+- `ruff format`/`ruff check src/ tests/` → All checks passed.
+- `mypy rag_backend/ --explicit-package-bases` (MYPYPATH=src) → **no issues in 569 files**.
+- `lint-imports` → 22 kept, 0 broken. `import_baseline.py --check` → **PASS** (api→infra held at baseline 77; application→infra ratcheted DOWN to 60).
+- OpenAPI + route snapshot regenerated (repair route + schemas present).
+- Frontend: `tsc --noEmit` exit 0; `npm run lint` (full chain incl. circular/boundaries/component-types/i18n/dup) exit 0; `vitest run` over touched areas → **316 passed** (incl. 6 new).
 
 ## QA Report
 

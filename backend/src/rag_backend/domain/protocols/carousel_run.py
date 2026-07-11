@@ -37,4 +37,36 @@ class CarouselStaleRunReaper(Protocol):
         ...
 
 
-__all__ = ["CarouselCheckpointPhaseStatusReader", "CarouselStaleRunReaper"]
+class CarouselCheckpointStateGateway(Protocol):
+    """Read/write a carousel's LangGraph checkpoint state (AE-0311 reconciler).
+
+    Adapts ``CarouselWorkflowEngine`` so the drift reconciler stays free of an
+    application/infrastructure → agents import; the engine's ``update_state``
+    wrapper (``as_node`` inferred) is preserved.
+    """
+
+    async def read_state(self, project_id: str) -> dict[str, object] | None:
+        """Return the checkpoint workflow state, or None when absent."""
+        ...
+
+    async def write_state(self, project_id: str, values: dict[str, object]) -> None:
+        """Patch checkpoint state through the engine wrapper."""
+        ...
+
+
+class CarouselDriftReconciler(Protocol):
+    """Auto-converges projection↔checkpoint drift for in-flight carousels."""
+
+    async def reconcile(self, db: AsyncSession) -> int:
+        """Converge in-flight rows whose repaired projection outran a stale
+        blocking checkpoint report; return the number converged (AE-0311).
+        """
+        ...
+
+
+__all__ = [
+    "CarouselCheckpointPhaseStatusReader",
+    "CarouselCheckpointStateGateway",
+    "CarouselDriftReconciler",
+    "CarouselStaleRunReaper",
+]

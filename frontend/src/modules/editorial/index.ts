@@ -48,13 +48,20 @@ export {
   useEditorialWorkflow,
   type EditorialReviseOptions,
 } from "./workspace/hooks/use-editorial-workflow";
+export {
+  useRepairCarousel,
+  type RepairCarouselResponse,
+  type RepairSlideDiff,
+} from "./workspace/hooks/use-repair-carousel";
 
 /* --- workspace: components --- */
+export { AutoRepairButton } from "./workspace/components/auto-repair-button";
 export { ImagePromptReview } from "./workspace/components/image-prompt-review";
 export { PresentationIconPreview } from "./workspace/components/presentation-icon-preview";
 export { PresentationStructuredItems } from "./workspace/components/presentation-structured-items";
 export { WorkflowFailedCard } from "./workspace/components/workflow-failed-card";
 export type {
+  AutoRepairButtonProps,
   ImagePromptReviewProps,
   PresentationIconPreviewProps,
   PresentationStructuredItemsProps,

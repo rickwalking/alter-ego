@@ -14,6 +14,7 @@ import { EDITORIAL_WORKFLOW_STATUS } from "@/constants/editorial-workflow";
 import { WORKFLOW_PHASE_STATUS } from "@/constants/workflow";
 import { useCarouselProject } from "@/modules/editorial";
 import { useEditorialWorkflow } from "@/modules/editorial";
+import { AutoRepairButton } from "@/modules/editorial";
 import {
   PublishPanel,
   PublishFailedNotice,
@@ -21,6 +22,7 @@ import {
   RegenerateStrategySection,
   mergePublishProjectWithWorkflow,
   usePublishInstagram,
+  useRepublishCarousel,
 } from "@/modules/publishing";
 import { authenticatedFetch } from "@/lib/authenticated-fetch";
 
@@ -48,6 +50,7 @@ export default function DashboardCreatePublishPage(): React.ReactElement {
   const { refreshState, state: workflowState } =
     useEditorialWorkflow(projectId);
   const publishInstagram = usePublishInstagram();
+  const republish = useRepublishCarousel();
   const [publishResult, setPublishResult] = useState<PublishResult>({
     status: "idle",
   });
@@ -269,6 +272,25 @@ export default function DashboardCreatePublishPage(): React.ReactElement {
 
         <div style={{ marginTop: "16px" }}>
           <RebuildPdfSection projectId={projectId} onRebuilt={handleRebuilt} />
+          {/* AE-0311: one-click deterministic repair; a completed carousel
+              chains AE-0313's republish so the served PDF reflects the fix. */}
+          <div style={{ marginTop: "12px" }}>
+            <AutoRepairButton
+              projectId={projectId}
+              onRepaired={() => {
+                void Promise.all([refreshState(), refetchProject()]);
+              }}
+              onRepublishNeeded={() => {
+                republish.mutate(
+                  { projectId },
+                  {
+                    onSuccess: (data) =>
+                      handleRebuilt(data.artifact_version ?? null),
+                  },
+                );
+              }}
+            />
+          </div>
         </div>
 
         <div style={{ marginTop: "16px" }}>

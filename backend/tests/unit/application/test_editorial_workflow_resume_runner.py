@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+from collections.abc import Generator
 from contextlib import asynccontextmanager
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -50,6 +51,25 @@ def _make_params(
         project_title="Test carousel",
         structured_feedback=structured_feedback,
     )
+
+
+_RUNNER = "rag_backend.application.services.carousel.editorial_workflow_resume_runner"
+
+
+@pytest.fixture(autouse=True)
+def _patch_run_progress_seams() -> Generator[None, None, None]:
+    """AE-0315 seams: fence/heartbeat/stage helpers open their own sessions
+    via the global factory; patch them so these tests stay hermetic (no
+    dependency on init_db side effects from unrelated tests)."""
+    with (
+        patch(f"{_RUNNER}.read_run_fence", new=AsyncMock(return_value=None)),
+        patch(
+            f"{_RUNNER}.write_run_heartbeat_with_retry",
+            new=AsyncMock(return_value=True),
+        ),
+        patch(f"{_RUNNER}.publish_run_stage_changed", new=AsyncMock()),
+    ):
+        yield
 
 
 def _make_session_factory(mock_db: AsyncMock) -> MagicMock:
