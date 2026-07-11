@@ -144,12 +144,16 @@ class CarouselProjectWriteOwner:
         await self._session.flush()
 
     async def clear_needs_republish(self, project_id: str) -> None:
-        """Clear the AE-0314 republish marker after a successful republish."""
+        """Clear the AE-0314 republish marker and commit (single owner).
+
+        Commit lives here (not in the infrastructure/database sweeper) so the
+        ddd:adapter-commit boundary holds — adapters flush, owners commit.
+        """
         project = await self._session.get(CarouselProjectModel, project_id)
         if project is None:
             return
         project.needs_republish_since = None
-        await self._session.flush()
+        await self._session.commit()
 
     async def bump_resume_lock_version(
         self,

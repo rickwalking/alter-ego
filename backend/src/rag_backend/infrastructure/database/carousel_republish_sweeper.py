@@ -89,7 +89,6 @@ async def _republish_row(db: AsyncSession, project_id: str) -> bool:
     if not result.completed:
         return False
     await CarouselProjectWriteOwner(db).clear_needs_republish(project_id)
-    await db.commit()
     logger.info(LOG_EVENT_REPUBLISH_SWEPT, project_id=project_id)
     return True
 

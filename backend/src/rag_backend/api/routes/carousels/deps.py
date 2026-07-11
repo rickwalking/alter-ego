@@ -5,6 +5,7 @@ from fastapi import Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.api.dependencies.database import get_db
+from rag_backend.api.dependencies.roles import EditorUser
 from rag_backend.application.services.carousel.carousel_repair_service import (
     CarouselRepairDeps,
     CarouselRepairService,
@@ -31,6 +32,7 @@ from rag_backend.infrastructure.database.carousel_repository import (
     PostgresCarouselRepository,
 )
 from rag_backend.infrastructure.database.config import get_session
+from rag_backend.infrastructure.database.models.user import UserModel
 
 
 def get_carousel_repo(
@@ -121,20 +123,23 @@ def get_carousel_repair_service(
 
 @dataclass(frozen=True)
 class CarouselSlideEditRouteDeps:
-    """Request-scoped bundle: one session shared by route and slide-edit service."""
+    """Request-scoped bundle: session, service, and caller (PLR0913 ≤3 args)."""
 
     db: AsyncSession
     service: CarouselSlideEditService
+    current_user: UserModel
 
 
 def get_carousel_slide_edit_route_deps(
     request: Request,
     session: Annotated[AsyncSession, Depends(get_db)],
+    current_user: EditorUser,
 ) -> CarouselSlideEditRouteDeps:
-    """Bundle the shared session with the slide-edit service (PLR0913 ≤3 args)."""
+    """Bundle the shared session, service, and editor caller."""
     return CarouselSlideEditRouteDeps(
         db=session,
         service=get_carousel_slide_edit_service(request, session),
+        current_user=current_user,
     )
 
 

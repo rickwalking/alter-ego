@@ -193,7 +193,8 @@ class TestAsyncEditorialResume:
         events = await collect_hub_events_during(
             project_id,
             resume_and_drain,
-            expected_count=5,
+            # AE-0315 adds run.started/stage_changed/finished to the stream
+            expected_count=9,
         )
         review_events = [
             event for event in events if event.get("event") == SSE_EVENT_REVIEW_REQUIRED
@@ -242,7 +243,8 @@ class TestAsyncEditorialResume:
         events = await collect_hub_events_during(
             project_id,
             resume_and_drain,
-            expected_count=2,
+            # AE-0315 adds run lifecycle events ahead of the error event
+            expected_count=4,
         )
         error_events = [
             event for event in events if event.get("event") == SSE_EVENT_ERROR

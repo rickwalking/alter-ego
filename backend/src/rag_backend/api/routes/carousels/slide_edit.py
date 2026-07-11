@@ -21,7 +21,6 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from rag_backend.api.dependencies.carousel_access import (
     get_carousel_project_for_workflow_user,
 )
-from rag_backend.api.dependencies.roles import EditorUser
 from rag_backend.api.routes.carousels.deps import (
     CarouselSlideEditRouteDeps,
     get_carousel_slide_edit_route_deps,
@@ -79,11 +78,10 @@ async def edit_carousel_slides(
     deps: Annotated[
         CarouselSlideEditRouteDeps, Depends(get_carousel_slide_edit_route_deps)
     ],
-    current_user: EditorUser,
 ) -> CarouselSlideEditResponse:
     """Persist reviewer text edits + mark a republish; images stay unchanged."""
     project = await get_carousel_project_for_workflow_user(
-        deps.db, project_id, current_user
+        deps.db, project_id, deps.current_user
     )
     if project.status != CarouselStatus.COMPLETED.value:
         raise HTTPException(
@@ -95,7 +93,7 @@ async def edit_carousel_slides(
         phase_status=str(project.phase_status or ""),
         lock_version=int(project.lock_version or 1),
         policy_version=project.presentation_policy_version,
-        actor_user_id=str(current_user.id),
+        actor_user_id=str(deps.current_user.id),
         edited_slides=sanitize_edited_slides(payload.edited_slides),
     )
     result = await deps.service.edit(command)

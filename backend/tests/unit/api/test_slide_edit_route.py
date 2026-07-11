@@ -71,7 +71,7 @@ def _result() -> SlideEditResult:
 
 def _deps(service: MagicMock) -> CarouselSlideEditRouteDeps:
     return CarouselSlideEditRouteDeps(
-        db=cast(AsyncSession, MagicMock()), service=service
+        current_user=_user(), db=cast(AsyncSession, MagicMock()), service=service
     )
 
 
@@ -104,7 +104,7 @@ class TestSlideEditRoute:
             patch(_ACCESS_TARGET, AsyncMock(return_value=model)),
             pytest.raises(HTTPException) as exc,
         ):
-            await edit_carousel_slides(uuid4(), _payload(), _deps(service), _user())
+            await edit_carousel_slides(uuid4(), _payload(), _deps(service))
         assert exc.value.status_code == 422
         assert exc.value.detail == ERR_SLIDE_EDIT_NOT_COMPLETED
 
@@ -113,9 +113,7 @@ class TestSlideEditRoute:
         service = MagicMock()
         service.edit = AsyncMock(return_value=_result())
         with patch(_ACCESS_TARGET, AsyncMock(return_value=model)):
-            response = await edit_carousel_slides(
-                uuid4(), _payload(), _deps(service), _user()
-            )
+            response = await edit_carousel_slides(uuid4(), _payload(), _deps(service))
         assert response.status == SLIDE_EDIT_STATUS_UPDATED
         assert response.needs_republish is True
         assert response.validation.blocking is False
@@ -131,7 +129,6 @@ class TestSlideEditRoute:
                 uuid4(),
                 _payload(heading="<img onerror=alert(1)>Keep Case"),
                 _deps(service),
-                _user(),
             )
         command = cast(SlideEditCommand, service.edit.call_args[0][0])
         sanitized_pt = command.edited_slides[0]["presentation_pt"]
@@ -152,5 +149,5 @@ class TestSlideEditRoute:
             patch(_ACCESS_TARGET, AsyncMock(return_value=model)),
             pytest.raises(CarouselConflictError) as exc,
         ):
-            await edit_carousel_slides(uuid4(), _payload(), _deps(service), _user())
+            await edit_carousel_slides(uuid4(), _payload(), _deps(service))
         assert exc.value.conflict.code == CONFLICT_CODE_MUTATION_IN_PROGRESS
