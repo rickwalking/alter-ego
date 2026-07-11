@@ -1,6 +1,6 @@
 # AE-0312 — PT sentence-case validation and deterministic casing repair for carousel copy
 
-Status: Dev Complete
+Status: Review
 Tier: T2
 Priority: High
 Type: Feature

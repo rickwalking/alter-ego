@@ -1,6 +1,6 @@
 # AE-0313 — Idempotent carousel artifact republish for completed projects
 
-Status: Dev Complete
+Status: Review
 Tier: T2
 Priority: High
 Type: Bugfix

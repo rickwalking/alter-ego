@@ -1,6 +1,6 @@
 # AE-0310 — Unblock design-phase dead-end for content-level validation violations
 
-Status: Dev Complete
+Status: Review
 Tier: T2
 Priority: High
 Type: Bugfix

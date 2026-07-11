@@ -1,6 +1,6 @@
 # AE-0314 — Frontend flow to edit carousel text without regenerating images
 
-Status: Ready
+Status: Review
 Tier: T2
 Priority: High
 Type: Feature

@@ -1,6 +1,6 @@
 # AE-0309 — Carousel content drafter must fail closed on scaffold parse failure
 
-Status: Dev Complete
+Status: Review
 Tier: T2
 Priority: High
 Type: Bugfix

@@ -1,6 +1,6 @@
 # AE-0311 — Deterministic carousel repair endpoint with frontend fix-issues button
 
-Status: Dev Complete
+Status: Review
 Tier: T2
 Priority: High
 Type: Feature
