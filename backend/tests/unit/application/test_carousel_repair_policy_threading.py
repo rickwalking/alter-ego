@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import uuid
 from collections.abc import AsyncIterator
+from typing import cast
 
 import pytest
 import pytest_asyncio
@@ -28,6 +29,9 @@ from rag_backend.application.services.carousel.phase_artifact_runner import (
 )
 from rag_backend.application.services.carousel.presentation_review_pipeline import (
     validate_localized_slides,
+)
+from rag_backend.application.services.carousel.workflow_state import (
+    CarouselWorkflowState,
 )
 from rag_backend.domain.constants.presentation_policy import (
     PRESENTATION_POLICY_VERSION_HERO_LOWER_THIRD_V1,
@@ -173,7 +177,7 @@ class TestFullChainEndToEnd:
                     db, pid
                 )
             )
-        state = {"presentation_policy_version": resolved}
+        state = cast(CarouselWorkflowState, {"presentation_policy_version": resolved})
         threaded = _state_policy_version(state)
         assert threaded == _V2
         command = FailClosedReviewCommand(
