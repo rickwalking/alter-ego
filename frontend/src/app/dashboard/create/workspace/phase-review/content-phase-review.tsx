@@ -16,18 +16,21 @@ import { PresentationStructuredItems } from "@/modules/editorial";
 import {
   applySlideCopyEdit,
   formatBudgetUsage,
+  hasBlockingContentGateValidation,
   hasBlockingPresentationViolations,
   isBudgetExceeded,
   isPresentationStructuredItemList,
+  isWarningViolation,
+  listContentReviewViolations,
   listPresentationIconNames,
   listPresentationStructuredItems,
-  listPresentationViolations,
   listStructuredExtras,
   presentationBody,
   presentationHeading,
   resolveBodyBudget,
   resolveHeadingBudget,
   resolveLocalizedSlides,
+  violationToneClasses,
   type PresentationLocaleKey,
   type SlideCopyEdit,
 } from "@/modules/editorial";
@@ -74,8 +77,12 @@ export function ContentPhaseReview({
   const untitledSlide = t("untitledSlide");
   const baselineSlides = resolveLocalizedSlides(state);
   const localizedSlides = controlledSlides ?? baselineSlides;
-  const violations = listPresentationViolations(state);
-  const approvalBlocked = hasBlockingPresentationViolations(state);
+  // AE-0309: merge violations arriving in the content interrupt/gate payload
+  // with the presentation validation ones (de-duplicated).
+  const violations = listContentReviewViolations(state);
+  const contentGateBlocked = hasBlockingContentGateValidation(state);
+  const approvalBlocked =
+    hasBlockingPresentationViolations(state) || contentGateBlocked;
   const promptCount = state.slide_image_prompts?.length ?? 0;
   const canEdit = editable && onSlidesChange !== undefined;
 
@@ -113,6 +120,12 @@ export function ContentPhaseReview({
         </p>
       ) : null}
 
+      {contentGateBlocked ? (
+        <NeonAlert variant="destructive">
+          <NeonAlertDescription>{t("contentGateBlocked")}</NeonAlertDescription>
+        </NeonAlert>
+      ) : null}
+
       {approvalBlocked ? (
         <NeonAlert variant="destructive">
           <NeonAlertDescription>
@@ -126,21 +139,32 @@ export function ContentPhaseReview({
           <p className="font-medium text-destructive text-xs">
             {t("violationsTitle")}
           </p>
-          <ul className="space-y-1 text-destructive text-xs">
-            {violations.map((violation) => (
-              <li
-                key={`${violation.code}-${violation.slide_index ?? "all"}-${violation.field ?? "field"}-${violation.locale ?? "locale"}`}
-              >
-                <span className="font-mono">{violation.code}</span>
-                {violation.slide_index
-                  ? ` · ${t("slideLabel", { index: violation.slide_index })}`
-                  : ""}
-                {violation.locale ? ` · ${violation.locale.toUpperCase()}` : ""}
-                {violation.field ? ` · ${violation.field}` : ""}
-                {": "}
-                {violation.message}
-              </li>
-            ))}
+          <ul className="space-y-1 text-xs">
+            {violations.map((violation) => {
+              const warning = isWarningViolation(violation);
+              return (
+                <li
+                  key={`${violation.code}-${violation.slide_index ?? "all"}-${violation.field ?? "field"}-${violation.locale ?? "locale"}`}
+                  className={violationToneClasses(violation)}
+                >
+                  <span className="mr-1 font-medium uppercase tracking-wide">
+                    {warning
+                      ? t("violationSeverityWarning")
+                      : t("violationSeverityBlocker")}
+                  </span>
+                  <span className="font-mono">{violation.code}</span>
+                  {violation.slide_index
+                    ? ` · ${t("slideLabel", { index: violation.slide_index })}`
+                    : ""}
+                  {violation.locale
+                    ? ` · ${violation.locale.toUpperCase()}`
+                    : ""}
+                  {violation.field ? ` · ${violation.field}` : ""}
+                  {": "}
+                  {violation.message}
+                </li>
+              );
+            })}
           </ul>
         </div>
       ) : null}

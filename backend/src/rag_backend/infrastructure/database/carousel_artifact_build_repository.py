@@ -17,6 +17,10 @@ from rag_backend.domain.constants.carousel_presentation import (
     ARTIFACT_BUILD_STATUS_SUPERSEDED,
 )
 from rag_backend.domain.models.carousel_artifact_build import CarouselArtifactBuild
+from rag_backend.domain.models.carousel_run import (
+    StaleRunEpochError,
+    current_run_context,
+)
 from rag_backend.infrastructure.database.models.carousel import CarouselProjectModel
 from rag_backend.infrastructure.database.models.carousel_artifact_build import (
     CarouselArtifactBuildModel,
@@ -116,6 +120,14 @@ class PostgresCarouselArtifactBuildRepository:
         project = await self._session.get(CarouselProjectModel, str(project_id))
         if project is None:
             raise ValueError(ERR_ARTIFACT_BUILD_CONFLICT)
+        # AE-0315 layer (c): this raw Core UPDATE bypasses the ORM flush fence,
+        # so the epoch check is explicit here (enumerated in the write-site
+        # survey; the raw-UPDATE lint gate allowlists this file).
+        run_ctx = current_run_context()
+        if run_ctx is not None and run_ctx.project_id == str(project_id):
+            current_epoch = int(project.run_epoch or 0)
+            if current_epoch != run_ctx.epoch:
+                raise StaleRunEpochError(str(project_id))
         current_lock = int(project.lock_version or 1)
         current_artifact = project.artifact_version
         if current_lock != source_lock_version:

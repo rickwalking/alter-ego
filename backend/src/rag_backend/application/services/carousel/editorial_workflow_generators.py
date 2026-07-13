@@ -13,6 +13,9 @@ from rag_backend.application.services.carousel.content_distinctness import (
     find_duplicate_slide_indices,
     max_similarity_against,
 )
+from rag_backend.application.services.carousel.content_fail_closed import (
+    SlideDraftRetryFn,
+)
 from rag_backend.application.services.carousel.malformed_draft_normalizer import (
     normalize_slide_draft,
 )
@@ -36,6 +39,14 @@ DISTINCTNESS_REDRAFT_NOTE = (
     "Your previous draft was too similar to another slide in this carousel. "
     "Rewrite it with different wording, examples, and concrete detail so it is "
     "clearly distinct from the other slides."
+)
+# AE-0309: note fed to the single bounded re-draft when a slide's copy could
+# not be parsed into localized presentation payloads.
+PARSE_FAILURE_REDRAFT_NOTE = (
+    "Your previous draft could not be parsed into localized slide copy. "
+    "Return the slide copy in the exact requested structure with plain visible "
+    "text for the heading and body, without drafting scaffold labels such as "
+    "'## PT', '## EN', '**Heading:**' or '**Body:**'."
 )
 
 
@@ -237,6 +248,41 @@ async def generate_slide_drafts(
     return await _redraft_duplicates(runner, drafts)
 
 
+def build_slide_draft_retry(
+    content_agent: ContentDraftAgent,
+    params: SlideDraftGenerationParams,
+) -> SlideDraftRetryFn:
+    """Build the injectable single-slide re-draft for the fail-closed chain.
+
+    AE-0309: the returned callable re-drafts ONE slide (looked up by its
+    ``slide_index``) with an explicit parse-failure note, returning the fresh
+    normalized draft or ``None`` when the index is unknown.
+    """
+    runner = _SlideDraftRunner(
+        content_agent=content_agent,
+        outline=params.outline,
+        persona=params.persona,
+        persona_context=_learned_persona_context(params),
+        revision_notes=_joined_revision_notes([
+            PARSE_FAILURE_REDRAFT_NOTE,
+            *(params.revision_notes or []),
+        ]),
+        previous_drafts=params.previous_drafts or [],
+    )
+    positions = {
+        int(slide.get(_SLIDE_INDEX_KEY, position + 1) or position + 1): position
+        for position, slide in enumerate(params.outline)
+    }
+
+    async def _retry(slide_index: int) -> dict[str, object] | None:
+        position = positions.get(slide_index)
+        if position is None:
+            return None
+        return await runner.draft_at(position)
+
+    return _retry
+
+
 def resolve_workflow_input(
     prior: CarouselWorkflowState,
     workflow_input: EditorialWorkflowStartInput,
@@ -259,8 +305,10 @@ def resolve_workflow_input(
 
 
 __all__ = [
+    "PARSE_FAILURE_REDRAFT_NOTE",
     "ContentRegenInputs",
     "SlideDraftGenerationParams",
+    "build_slide_draft_retry",
     "generate_outline",
     "generate_slide_drafts",
     "resolve_workflow_input",

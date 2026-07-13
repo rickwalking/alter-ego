@@ -1,3 +1,4 @@
+import type { EditorialRunStage } from "@/constants/editorial-workflow";
 /** Types for blog AI assistance. */
 
 import type { WORKFLOW_PHASE_STATUS } from "@/constants/workflow";
@@ -50,12 +51,17 @@ export interface ContentSource {
   is_primary: boolean;
 }
 
+/** AE-0312: severity tier for a validation violation. */
+export type ViolationSeverity = "blocker" | "warning";
+
 export interface SlideValidationViolation {
   code: string;
   message: string;
   slide_index?: number | null;
   locale?: string | null;
   field?: string | null;
+  // AE-0312: absent defaults to a blocking treatment client-side.
+  severity?: ViolationSeverity | null;
 }
 
 export interface SlideValidationReport {
@@ -117,4 +123,23 @@ export interface EditorialWorkflowState {
   presentation_policy_version?: string | null;
   localized_slides?: LocalizedSlideReview[];
   presentation_validation?: SlideValidationReport | null;
+  /**
+   * AE-0309: fail-closed content-gate report mirrored from the content
+   * interrupt payload; present only when the content build's
+   * validate -> repair -> retry chain still ended blocking.
+   */
+  content_gate_validation?: SlideValidationReport | null;
+  /**
+   * AE-0310: recovery-hint code set while the design step holds a blocking
+   * validation report — direct edits or a content send-back resolve the
+   * violations; a plain revise alone does not modify content.
+   */
+  design_recovery_hint?: string | null;
+  /**
+   * AE-0315: run metadata present ONLY while phase_status === in_progress —
+   * ISO start timestamp + coarse stage; the create-flow banner reconstructs
+   * from these on reload (no dependency on the run.started SSE event).
+   */
+  run_started_at?: string | null;
+  run_stage?: EditorialRunStage | (string & {}) | null;
 }

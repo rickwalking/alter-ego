@@ -19,5 +19,7 @@ export interface CreateWorkflowControlsProps {
   personaApproveBlocked: boolean;
   presentationApproveBlocked: boolean;
   editBudgetBlocked: boolean;
+  /** AE-0310: plain revise is a no-op while the design step is blocking. */
+  designReviseBlocked: boolean;
   showPublishLink: boolean;
 }

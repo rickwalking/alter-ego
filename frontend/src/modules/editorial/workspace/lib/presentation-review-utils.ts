@@ -2,7 +2,30 @@ import type {
   EditorialWorkflowState,
   LocalizedSlideReview,
   SlideValidationViolation,
+  ViolationSeverity,
 } from "@/modules/editorial/workspace/types-ai";
+
+/** AE-0312: warning-tier casing violations render distinctly from blockers. */
+export const VIOLATION_SEVERITY_WARNING: ViolationSeverity = "warning";
+export const VIOLATION_SEVERITY_BLOCKER: ViolationSeverity = "blocker";
+
+export function isWarningViolation(
+  violation: SlideValidationViolation,
+): boolean {
+  return violation.severity === VIOLATION_SEVERITY_WARNING;
+}
+
+/**
+ * AE-0312: non-blocking warnings get a muted/amber treatment; blockers keep the
+ * destructive treatment. A violation with no severity defaults to blocker.
+ */
+export function violationToneClasses(
+  violation: SlideValidationViolation,
+): string {
+  return isWarningViolation(violation)
+    ? "text-[var(--color-warning,#b45309)]"
+    : "text-destructive";
+}
 
 export const PRESENTATION_STRUCTURED_EXTRA_KEYS = [
   "features",
@@ -314,4 +337,52 @@ export function listPresentationViolations(
   state: EditorialWorkflowState | null | undefined,
 ): SlideValidationViolation[] {
   return state?.presentation_validation?.violations ?? [];
+}
+
+/**
+ * AE-0309: true when the content interrupt/gate payload carries a blocking
+ * fail-closed report (validate -> repair -> retry all failed for a slide).
+ */
+export function hasBlockingContentGateValidation(
+  state: EditorialWorkflowState | null | undefined,
+): boolean {
+  return state?.content_gate_validation?.blocking === true;
+}
+
+export function listContentGateViolations(
+  state: EditorialWorkflowState | null | undefined,
+): SlideValidationViolation[] {
+  return state?.content_gate_validation?.violations ?? [];
+}
+
+function violationKey(violation: SlideValidationViolation): string {
+  return [
+    violation.code,
+    violation.slide_index ?? "all",
+    violation.locale ?? "locale",
+    violation.field ?? "field",
+  ].join("-");
+}
+
+/**
+ * AE-0309: presentation violations merged with the ones arriving in the
+ * content interrupt/gate payload, de-duplicated for a single review list.
+ */
+export function listContentReviewViolations(
+  state: EditorialWorkflowState | null | undefined,
+): SlideValidationViolation[] {
+  const seen = new Set<string>();
+  const merged: SlideValidationViolation[] = [];
+  for (const violation of [
+    ...listPresentationViolations(state),
+    ...listContentGateViolations(state),
+  ]) {
+    const key = violationKey(violation);
+    if (seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    merged.push(violation);
+  }
+  return merged;
 }

@@ -179,6 +179,10 @@ class CarouselProject:
     template_version: str = "v2"
     # Slide layout strategy for visual formatting
     slide_layout_strategy: str | None = None
+    # AE-0314: read-only view of the server-guaranteed republish marker. Written
+    # ONLY by the write owner (mark/clear); never round-tripped through the ORM
+    # ``update_from_entity`` hydrator, so it cannot be clobbered.
+    needs_republish_since: datetime | None = None
     created_at: datetime = field(default_factory=datetime.utcnow)
     updated_at: datetime = field(default_factory=datetime.utcnow)
 

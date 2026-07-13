@@ -15,6 +15,9 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from rag_backend.agents.harness import build_checkpointer
+from rag_backend.api.middleware.carousel_conflict_handler import (
+    add_carousel_conflict_handler,
+)
 from rag_backend.api.middleware.error_handlers import add_error_handlers
 from rag_backend.api.middleware.rate_limiting import setup_rate_limiting
 from rag_backend.api.middleware.request_logging import RequestLoggingMiddleware
@@ -45,7 +48,17 @@ from rag_backend.api.routes import (
     workflow_board,
 )
 from rag_backend.api.schemas import HealthCheckResponse, HealthResponse
-from rag_backend.application.workers.workflow_workers import run_workflow_workers
+from rag_backend.application.workers.workflow_workers import (
+    WorkflowWorkerServices,
+    run_workflow_workers,
+)
+from rag_backend.bootstrap.carousel_drift_reconciler_factory import (
+    build_drift_reconciler,
+)
+from rag_backend.bootstrap.carousel_republish_sweeper_factory import (
+    build_republish_sweeper,
+)
+from rag_backend.bootstrap.carousel_run_reaper_factory import build_stale_run_reaper
 from rag_backend.bootstrap.startup_validation import run_startup_validations
 from rag_backend.infrastructure.config.settings import Settings, get_settings
 from rag_backend.infrastructure.container import container
@@ -114,7 +127,21 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         app.state.carousel_checkpointer = await build_checkpointer(settings, stack)
         worker_stop = asyncio.Event()
         worker_task = asyncio.create_task(
-            run_workflow_workers(settings, worker_stop, WorkflowTimeoutRepository)
+            run_workflow_workers(
+                settings,
+                worker_stop,
+                WorkflowWorkerServices(
+                    auto_rejector_factory=WorkflowTimeoutRepository,
+                    stale_run_reaper=build_stale_run_reaper(
+                        settings,
+                        app.state.carousel_checkpointer,
+                    ),
+                    drift_reconciler=build_drift_reconciler(
+                        app.state.carousel_checkpointer,
+                    ),
+                    republish_sweeper=build_republish_sweeper(settings),
+                ),
+            )
         )
         app.state.workflow_worker_stop = worker_stop
         app.state.workflow_worker_task = worker_task
@@ -274,6 +301,7 @@ def create_app() -> FastAPI:
         )
 
     _register_routes(app)
+    add_carousel_conflict_handler(app)
     add_error_handlers(app)
 
     instrument_fastapi(app)

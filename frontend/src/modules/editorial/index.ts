@@ -28,6 +28,7 @@ export type {
   RubricEvaluationResult,
   ContentSource,
   SlideValidationViolation,
+  ViolationSeverity,
   SlideValidationReport,
   LocalizedSlideReview,
   SlideImagePrompt,
@@ -47,16 +48,25 @@ export {
   useEditorialWorkflow,
   type EditorialReviseOptions,
 } from "./workspace/hooks/use-editorial-workflow";
+export {
+  useRepairCarousel,
+  type RepairCarouselResponse,
+  type RepairSlideDiff,
+} from "./workspace/hooks/use-repair-carousel";
 
 /* --- workspace: components --- */
+export { AutoRepairButton } from "./workspace/components/auto-repair-button";
 export { ImagePromptReview } from "./workspace/components/image-prompt-review";
 export { PresentationIconPreview } from "./workspace/components/presentation-icon-preview";
 export { PresentationStructuredItems } from "./workspace/components/presentation-structured-items";
+export { SlideCopyEditor } from "./workspace/components/slide-copy-editor";
 export { WorkflowFailedCard } from "./workspace/components/workflow-failed-card";
 export type {
+  AutoRepairButtonProps,
   ImagePromptReviewProps,
   PresentationIconPreviewProps,
   PresentationStructuredItemsProps,
+  SlideCopyEditorProps,
   WorkflowFailedCardProps,
 } from "./workspace/components/types";
 
@@ -83,6 +93,13 @@ export {
   listPresentationIconNames,
   hasBlockingPresentationViolations,
   listPresentationViolations,
+  hasBlockingContentGateValidation,
+  listContentGateViolations,
+  listContentReviewViolations,
+  isWarningViolation,
+  violationToneClasses,
+  VIOLATION_SEVERITY_WARNING,
+  VIOLATION_SEVERITY_BLOCKER,
   type PresentationStructuredItem,
   type PresentationFieldBudget,
 } from "./workspace/lib/presentation-review-utils";
@@ -90,11 +107,14 @@ export {
 /* --- workspace: localized slide resolution + copy editing --- */
 export {
   applySlideCopyEdit,
+  applySlideStructuredItemEdit,
   slidesHaveCopyChanges,
   resolveLocalizedSlides,
   type PresentationLocaleKey,
   type EditableCopyField,
   type SlideCopyEdit,
+  type SlideStructuredItemEdit,
+  type StructuredItemField,
 } from "./workspace/lib/presentation-slide-resolution";
 
 /* --- workflow: types --- */

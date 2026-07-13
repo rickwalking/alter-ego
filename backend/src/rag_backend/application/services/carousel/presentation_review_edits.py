@@ -30,6 +30,19 @@ from rag_backend.application.services.carousel.presentation_review import (
     validate_localized_slides,
     validation_report_to_dict,
 )
+from rag_backend.application.services.carousel.slide_parse_failures import (
+    drop_parse_failure_marker,
+)
+from rag_backend.domain.constants.carousel import LANGUAGE_EN, LANGUAGE_PT
+from rag_backend.domain.constants.workflow_state_fields import (
+    STATE_FIELD_BLOCKING,
+    STATE_FIELD_CONTENT_GATE_VALIDATION,
+)
+
+_LOCALE_BY_PAYLOAD_KEY: dict[str, str] = {
+    PRESENTATION_PT_KEY: LANGUAGE_PT,
+    PRESENTATION_EN_KEY: LANGUAGE_EN,
+}
 
 
 def merge_localized_slide_edits(
@@ -54,6 +67,9 @@ def merge_localized_slide_edits(
             payload = as_dict(edit.get(locale_key))
             if payload:
                 updated[locale_key] = dict(payload)
+                # AE-0309: a reviewer-provided payload supersedes the stored
+                # parse failure for that locale.
+                drop_parse_failure_marker(updated, _LOCALE_BY_PAYLOAD_KEY[locale_key])
         merged.append(updated)
     return merged
 
@@ -151,6 +167,24 @@ def _apply_edits_to_translations(
     return serialize_translations_en(result)
 
 
+def _validated_edit_updates(
+    merged: list[dict[str, object]],
+    policy_version: str | None,
+) -> dict[str, object]:
+    """Re-validate merged slides and build the base review updates."""
+    report = validate_localized_slides(merged, policy_version=policy_version)
+    report_dict = validation_report_to_dict(report)
+    return {
+        WORKFLOW_STATE_LOCALIZED_SLIDES_KEY: merged,
+        WORKFLOW_STATE_PRESENTATION_VALIDATION_KEY: report_dict,
+        # AE-0309: keep the fail-closed gate report in sync with the edited
+        # slides so a fixed slide clears the content-gate alert.
+        STATE_FIELD_CONTENT_GATE_VALIDATION: (
+            dict(report_dict) if report_dict.get(STATE_FIELD_BLOCKING) is True else {}
+        ),
+    }
+
+
 def apply_localized_slide_edits(
     state: Mapping[str, object],
     edited_slides: list[dict[str, object]],
@@ -167,11 +201,7 @@ def apply_localized_slide_edits(
         index = slide.get(SLIDE_INDEX_KEY)
         if isinstance(index, int):
             merged_by_index[index] = slide
-    report = validate_localized_slides(merged, policy_version=policy_version)
-    updates: dict[str, object] = {
-        WORKFLOW_STATE_LOCALIZED_SLIDES_KEY: merged,
-        WORKFLOW_STATE_PRESENTATION_VALIDATION_KEY: validation_report_to_dict(report),
-    }
+    updates = _validated_edit_updates(merged, policy_version)
     if policy_version:
         updates[WORKFLOW_STATE_PRESENTATION_POLICY_VERSION_KEY] = policy_version
     slide_drafts = state.get("slide_drafts")

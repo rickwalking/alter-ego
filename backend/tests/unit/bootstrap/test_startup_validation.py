@@ -28,7 +28,9 @@ from rag_backend.infrastructure.config.settings import Settings
 _CHECKPOINT_BACKEND_MEMORY = "memory"
 _CHECKPOINT_BACKEND_DISABLED = "disabled"
 _CHECKPOINT_BACKEND_POSTGRES = "postgres"
-_DEFAULT_PROVIDER_KEY = "openai-test-key"  # default provider (IMAGE_MODEL_DEFAULT=openai)
+_DEFAULT_PROVIDER_KEY = (
+    "openai-test-key"  # default provider (IMAGE_MODEL_DEFAULT=openai)
+)
 
 
 def _settings(
@@ -112,7 +114,9 @@ def test_prod_missing_default_image_key_raises() -> None:
 
 # Scenario: Production accepts a present default image-provider key
 def test_prod_present_default_image_key_passes() -> None:
-    settings = _settings(environment=ENVIRONMENT_PRODUCTION, default_provider_key=_DEFAULT_PROVIDER_KEY)
+    settings = _settings(
+        environment=ENVIRONMENT_PRODUCTION, default_provider_key=_DEFAULT_PROVIDER_KEY
+    )
     assert validate_default_image_provider_key(settings) is True
 
 

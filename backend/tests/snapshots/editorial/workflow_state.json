@@ -2,8 +2,10 @@
   "body": {
     "blog_markdown": "# Fixture blog\n\nDeterministic blog body for the snapshot.",
     "caption": "Fixture caption for the snapshot.",
+    "content_gate_validation": null,
     "current_phase": "content",
     "design_applied": true,
+    "design_recovery_hint": null,
     "error_message": null,
     "image_assets": [
       "/media/carousel/fixture/slide-1.png",
@@ -43,6 +45,8 @@
     "rubric_scores": {
       "clarity": 9
     },
+    "run_stage": null,
+    "run_started_at": null,
     "slide_drafts": [],
     "slide_image_prompts": null,
     "status": "draft",

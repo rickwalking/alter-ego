@@ -12,6 +12,11 @@ from rag_backend.agents.content_draft_agent import ContentDraftAgent
 from rag_backend.agents.feedback_learning import FeedbackLearningLoop
 from rag_backend.agents.outline_agent import OutlineAgent
 from rag_backend.agents.persona_agent import PersonaAgent
+from rag_backend.application.services.carousel.content_fail_closed import (
+    FailClosedReviewCommand,
+    SlideDraftRetryFn,
+    build_fail_closed_review_updates,
+)
 from rag_backend.application.services.carousel.editorial_visual_pipeline import (
     CarouselImageGenerationContext,
     apply_design_tokens,
@@ -26,12 +31,17 @@ from rag_backend.application.services.image_provider_registry import (
 )
 from rag_backend.domain.constants.ai_agents import ERR_INVALID_JSON
 from rag_backend.domain.constants.carousel_workflow import (
+    DESIGN_VALIDATION_RECOVERY_HINT,
     PHASE_CONTENT,
     PHASE_DESIGN,
     PHASE_IMAGES,
     PHASE_OUTLINE,
     PHASE_STATUS_FAILED,
     WORKFLOW_ERROR_KEY,
+)
+from rag_backend.domain.constants.workflow_state_fields import (
+    STATE_FIELD_DESIGN_RECOVERY_HINT,
+    STATE_FIELD_PRESENTATION_VALIDATION,
 )
 from rag_backend.domain.models.persona import PersonaProfile
 from rag_backend.infrastructure.external.openai_embeddings import (  # type: ignore[attr-defined]
@@ -45,6 +55,7 @@ from .editorial_distribution_pack import (
 from .editorial_workflow_generators import (
     ContentRegenInputs,
     SlideDraftGenerationParams,
+    build_slide_draft_retry,
     generate_outline,
     generate_slide_drafts,
     resolve_workflow_input,
@@ -64,6 +75,26 @@ class PhaseArtifactRunnerConfig:
     image_registry: ImageProviderRegistry | None = None
     db: AsyncSession | None = None
     workflow_input: EditorialWorkflowStartInput | None = None
+    # AE-0309: injectable single-slide re-draft used by the fail-closed content
+    # chain. Defaults to a ContentDraftAgent-backed retry when None.
+    slide_draft_retry: SlideDraftRetryFn | None = None
+
+
+def _state_policy_version(state: CarouselWorkflowState) -> str | None:
+    """Resolve the seeded presentation policy version from workflow state."""
+    value = state.get("presentation_policy_version")
+    return value if isinstance(value, str) and value.strip() else None
+
+
+@dataclass(frozen=True)
+class ContentReviewContext:
+    """Inputs for building the fail-closed content review updates."""
+
+    project_id: str
+    slide_drafts: object
+    translations_en: object
+    retry_draft: SlideDraftRetryFn | None
+    policy_version: str | None = None
 
 
 class DistributionCheckParams(TypedDict):
@@ -86,6 +117,7 @@ class PhaseArtifactRunner:
         self._image_registry = config.image_registry
         self._db = config.db
         self._workflow_input = config.workflow_input
+        self._slide_draft_retry = config.slide_draft_retry
 
     def with_context(
         self,
@@ -102,6 +134,7 @@ class PhaseArtifactRunner:
                 image_registry=self._image_registry,
                 db=db if db is not None else self._db,
                 workflow_input=workflow_input or self._workflow_input,
+                slide_draft_retry=self._slide_draft_retry,
             )
         )
 
@@ -280,33 +313,66 @@ class PhaseArtifactRunner:
             updates["slide_drafts"] = sanitized_state["slide_drafts"]
         updates.update(
             await self._build_presentation_review_updates(
-                sanitized_state.get("slide_drafts") or [],
-                updates.get("translations_en"),
+                ContentReviewContext(
+                    project_id=str(state.get("project_id", "")),
+                    slide_drafts=sanitized_state.get("slide_drafts") or [],
+                    translations_en=updates.get("translations_en"),
+                    retry_draft=self._resolve_slide_draft_retry(resolved, outline),
+                    policy_version=_state_policy_version(state),
+                )
             )
         )
         return updates
 
+    def _resolve_slide_draft_retry(
+        self,
+        resolved: EditorialWorkflowStartInput,
+        outline: object,
+    ) -> SlideDraftRetryFn | None:
+        """Injected retry double when configured, else the agent-backed retry."""
+        if self._slide_draft_retry is not None:
+            return self._slide_draft_retry
+        if not isinstance(outline, list):
+            return None
+        outline_dicts = [slide for slide in outline if isinstance(slide, dict)]
+        if not outline_dicts:
+            return None
+        return build_slide_draft_retry(
+            self._content_agent,
+            SlideDraftGenerationParams(
+                outline=outline_dicts,
+                persona=resolved.persona,
+            ),
+        )
+
     @staticmethod
     async def _build_presentation_review_updates(
-        slide_drafts: object,
-        translations_en: object,
+        context: ContentReviewContext,
     ) -> dict[str, object]:
+        """Build content review updates through the fail-closed chain (AE-0309)."""
         from rag_backend.application.services.carousel.presentation_review import (
-            build_presentation_review_updates_async,
             deserialize_translations_en,
         )
 
-        if not isinstance(slide_drafts, list):
-            return await build_presentation_review_updates_async([])
-        draft_dicts = [slide for slide in slide_drafts if isinstance(slide, dict)]
+        slide_drafts = context.slide_drafts
+        draft_dicts = (
+            [slide for slide in slide_drafts if isinstance(slide, dict)]
+            if isinstance(slide_drafts, list)
+            else []
+        )
         translations = (
-            deserialize_translations_en(translations_en)
-            if translations_en is not None
+            deserialize_translations_en(context.translations_en)
+            if context.translations_en is not None
             else None
         )
-        return await build_presentation_review_updates_async(
-            draft_dicts,
-            translations_en=translations,
+        return await build_fail_closed_review_updates(
+            FailClosedReviewCommand(
+                project_id=context.project_id,
+                slide_drafts=draft_dicts,
+                translations_en=translations,
+                policy_version=context.policy_version,
+                retry_draft=context.retry_draft,
+            )
         )
 
     async def _generate_content_drafts(
@@ -419,6 +485,21 @@ class PhaseArtifactRunner:
         state: CarouselWorkflowState,
         pending: dict[str, object],
     ) -> dict[str, object]:
+        """Apply design tokens AND re-validate localized slides (AE-0310).
+
+        Validation runs on EVERY execution — the 38affb3e dead-end happened
+        because the design ensure re-applied tokens unconditionally but never
+        validated, so the stored report went stale by omission.
+        """
+        updates = await self._apply_design_tokens_updates(state, pending)
+        updates.update(self._design_validation_updates(state))
+        return updates
+
+    async def _apply_design_tokens_updates(
+        self,
+        state: CarouselWorkflowState,
+        pending: dict[str, object],
+    ) -> dict[str, object]:
         if self._db is None:
             return {}
         outline = pending.get("outline") or state.get("outline") or []
@@ -437,6 +518,42 @@ class PhaseArtifactRunner:
             slides,
         )
         return {"design_applied": True}
+
+    @staticmethod
+    def _design_validation_updates(
+        state: CarouselWorkflowState,
+    ) -> dict[str, object]:
+        """Fresh presentation validation for the design ensure (AE-0310).
+
+        Stores a new report (``validated_at`` advances) plus the recovery hint
+        while the report still blocks; the hint is cleared once it passes.
+        """
+        from rag_backend.application.services.carousel.presentation_review import (
+            WORKFLOW_STATE_LOCALIZED_SLIDES_KEY,
+            WORKFLOW_STATE_PRESENTATION_POLICY_VERSION_KEY,
+            validate_localized_slides,
+            validation_report_to_dict,
+        )
+
+        localized = state.get(WORKFLOW_STATE_LOCALIZED_SLIDES_KEY)
+        slides = (
+            [slide for slide in localized if isinstance(slide, dict)]
+            if isinstance(localized, list)
+            else []
+        )
+        if not slides:
+            return {}
+        policy_raw = state.get(WORKFLOW_STATE_PRESENTATION_POLICY_VERSION_KEY)
+        report = validate_localized_slides(
+            slides,
+            policy_version=str(policy_raw) if policy_raw else None,
+        )
+        return {
+            STATE_FIELD_PRESENTATION_VALIDATION: validation_report_to_dict(report),
+            STATE_FIELD_DESIGN_RECOVERY_HINT: (
+                DESIGN_VALIDATION_RECOVERY_HINT if report.blocking else ""
+            ),
+        }
 
     async def _ensure_image_artifacts(
         self,

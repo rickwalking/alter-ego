@@ -60,6 +60,31 @@ class CarouselFinalizeResult:
     artifact_report: CarouselArtifactHealthReport | None = None
 
 
+async def _fail_finalize(
+    repo: PostgresCarouselRepository,
+    project: CarouselProject,
+    error_message: str,
+) -> None:
+    """Persist a finalize failure UNLESS the project is already completed.
+
+    AE-0313: a re-finalize/republish on a ``completed`` project must never
+    ``mark_failed`` it — a false-negative health check or a transient build
+    error would otherwise corrupt a healthy, already-served carousel. The
+    project stays ``completed`` on its current artifact version and the error
+    is returned to the caller instead. First-time finalize (project not yet
+    completed) keeps its existing mark_failed behavior.
+    """
+    if project.status == CarouselStatus.COMPLETED:
+        logger.warning(
+            "editorial_finalize_failed_preserved_completed",
+            project_id=str(project.id),
+            error=error_message,
+        )
+        return
+    project.mark_failed(error_message)
+    await repo.update_project(project)
+
+
 async def _guard_project_exists(
     repo: PostgresCarouselRepository,
     project_id: str,
@@ -80,8 +105,7 @@ async def _guard_project_exists(
             project_id=project_id,
             reason="missing_output_dir",
         )
-        project.mark_failed(_ERR_OUTPUT_DIR_MISSING)
-        await repo.update_project(project)
+        await _fail_finalize(repo, project, _ERR_OUTPUT_DIR_MISSING)
         return None, CarouselFinalizeResult(
             completed=False,
             errors=(_ERR_OUTPUT_DIR_MISSING,),
@@ -102,8 +126,7 @@ async def _try_rerender_slides(
             project_id=target.project_id,
             error=str(exc),
         )
-        target.project.mark_failed(str(exc))
-        await repo.update_project(target.project)
+        await _fail_finalize(repo, target.project, str(exc))
         return target.project, (str(exc),)
     else:
         return updated, ()
@@ -116,7 +139,11 @@ async def _verify_artifacts(
 ) -> tuple[tuple[str, ...], CarouselArtifactHealthReport | None]:
     slides = await repo.get_slides_by_project(UUID(project_id))
     report = evaluate_carousel_artifacts(
-        CarouselArtifactHealthRequest(project=updated, slides=slides)
+        CarouselArtifactHealthRequest(
+            project=updated,
+            slides=slides,
+            validate_pre_promotion=True,
+        )
     )
     if report.ok:
         return (), None
@@ -126,8 +153,7 @@ async def _verify_artifacts(
         project_id=project_id,
         errors=list(report.errors),
     )
-    updated.mark_failed(error_message)
-    await repo.update_project(updated)
+    await _fail_finalize(repo, updated, error_message)
     return report.errors, report
 
 
@@ -149,8 +175,7 @@ async def _try_build_artifacts(
         return (), None, activation
     if ERR_ARTIFACT_BUILD_CONFLICT not in activation.errors:
         error_message = format_artifact_health_errors(activation.errors)
-        target.updated.mark_failed(error_message)
-        await repo.update_project(target.updated)
+        await _fail_finalize(repo, target.updated, error_message)
     else:
         logger.warning(
             "editorial_finalize_artifact_conflict",

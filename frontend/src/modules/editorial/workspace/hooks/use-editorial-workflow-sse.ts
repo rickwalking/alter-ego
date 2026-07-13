@@ -153,11 +153,16 @@ export function useEditorialWorkflowSse({
         setPhaseEvents((prev) => appendUniquePhase(prev, phase));
       }
       const hasProgressUpdate = Boolean(normalizeProgressPayload(resolved));
+      const isRunLifecycleEvent =
+        resolved.event === EDITORIAL_WORKFLOW_SSE_EVENTS.RUN_STARTED ||
+        resolved.event === EDITORIAL_WORKFLOW_SSE_EVENTS.RUN_STAGE_CHANGED ||
+        resolved.event === EDITORIAL_WORKFLOW_SSE_EVENTS.RUN_FINISHED;
       if (
         resolved.phase ||
         resolved.current_phase ||
         resolved.phase_status ||
         hasProgressUpdate ||
+        isRunLifecycleEvent ||
         resolved.event === EDITORIAL_WORKFLOW_SSE_EVENTS.REVIEW_REQUIRED ||
         resolved.event === EDITORIAL_WORKFLOW_SSE_EVENTS.ARTIFACT
       ) {
@@ -208,6 +213,19 @@ export function useEditorialWorkflowSse({
       );
       source.addEventListener(
         EDITORIAL_WORKFLOW_SSE_EVENTS.ARTIFACT,
+        handleSseMessage,
+      );
+      // AE-0315 run lifecycle: live banner updates without polling.
+      source.addEventListener(
+        EDITORIAL_WORKFLOW_SSE_EVENTS.RUN_STARTED,
+        handleSseMessage,
+      );
+      source.addEventListener(
+        EDITORIAL_WORKFLOW_SSE_EVENTS.RUN_STAGE_CHANGED,
+        handleSseMessage,
+      );
+      source.addEventListener(
+        EDITORIAL_WORKFLOW_SSE_EVENTS.RUN_FINISHED,
         handleSseMessage,
       );
       source.onmessage = handleSseMessage;

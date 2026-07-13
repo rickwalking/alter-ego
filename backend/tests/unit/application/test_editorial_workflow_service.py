@@ -886,8 +886,7 @@ class TestMarkResumeInProgressPublishLock:
 
         synced_state = sync.await_args.args[2]
         assert (
-            synced_state["workflow_status"]
-            == CAROUSEL_EDITORIAL_WORKFLOW_STATUS_DRAFT
+            synced_state["workflow_status"] == CAROUSEL_EDITORIAL_WORKFLOW_STATUS_DRAFT
         )
 
     @pytest.mark.asyncio

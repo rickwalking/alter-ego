@@ -1,0 +1,261 @@
+[0m
+> plan · glm-5.2
+[0m
+[0m→ [0mRead skills/delivery/qa-agent/SKILL.md
+[0m
+[0m$ [0mgit log --oneline -8 && echo "---BRANCH---" && git branch --show-current
+7ccb8f82 test(carousel): ae-0312 narrow resolved policy version in chain test
+85fd946b test(carousel): ae-0312 typed casts in chain test
+5f2e3fc7 test(carousel): ae-0312 end-to-end policy-threading pin per external qa round 1
+e291e4a1 style(carousel): ae-0314 sort roles __all__
+de79c2f2 fix(carousel): ae-0314 route usermodel through the roles re-export
+5c7cc1d2 fix(carousel): ae-0314 gate fixes — owner-committed sweeper, bundled route deps, sse window updates
+b1f41beb feat(carousel): ae-0314 slide text editing without image regen and server-guaranteed republish
+9a7fdc49 chore(agent): ae-0311 dev complete with dev summary
+---BRANCH---
+feat/ae-0309-0316-carousel-reliability-wave
+[0m
+[0m✱ [0mGlob ".agent/tasks/AE-0312-*.md"[90m 0 matches[0m
+[0m
+[0m$ [0mls backend/tests/unit/application/test_carousel_repair_policy_threading.py 2>&1
+backend/tests/unit/application/test_carousel_repair_policy_threading.py
+[0m
+I'll run the confirmation round. Let me start by reading the QA protocol and gathering evidencein parallel.
+[0m$ [0mls .agent/tasks/ | grep -i 0312
+AE-0312-pt-sentence-case-validation-and-deterministic-casing-repair-.md
+[0m
+[0m→ [0mRead backend/tests/unit/application/test_carousel_repair_policy_threading.py
+The ticket file glob didn't match. Let me find it and read the test file.
+[0m✱ [0mGrep "Known Gap|End-to-End|End to End|Full Chain|policy.threading|AE-0311"[90m in .agent/tasks/AE-0312-pt-sentence-case-validation-and-deterministic-casing-repair-.md · 55 matches[0m
+Now let me read the ticket's Known Gap section and run the targeted test.
+[0m
+[0m$ [0mcd backend && uv run pytest tests/unit/application/test_carousel_repair_policy_threading.py -q 2>&1 | tail -30
+============================= test session starts ==============================
+platform linux -- Python 3.11.15, pytest-9.0.3, pluggy-1.6.0
+rootdir: /home/pmarins/projects/alter-ego/.claude/worktrees/ae-0309-0316-carousel-reliability-wave/backend
+configfile: pytest.ini (WARNING: ignoring pytest config in pyproject.toml!)
+plugins: cov-7.1.0, pythonpath-0.7.3, anyio-4.13.0, hypothesis-6.155.1, asyncio-1.3.0, langsmith-0.9.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=session, asyncio_default_test_loop_scope=function
+collected 7 items
+
+tests/unit/application/test_carousel_repair_policy_threading.py .......  [100%]
+
+============================== 7 passed in 1.96s ===============================
+[0m
+[0m→ [0mRead .agent/tasks/AE-0312-pt-sentence-case-validation-and-deterministic-casing-repair-.md[90m [offset=480, limit=30][0m
+All 7 tests pass. Let me read the Known Gap section of the ticket precisely.
+[0m
+[0m$ [0mcd backend && uv run pytest tests/unit tests/integration/carousel_consolidation -q 2>&1 | tail -15
+sys:1: SAWarning: transaction already deassociated from connection
+
+tests/integration/carousel_consolidation/test_workflow_lifecycle.py::TestEditorialWorkflowLifecycle::test_content_approve_blocked_when_persona_below_threshold
+  /home/pmarins/projects/alter-ego/.claude/worktrees/ae-0309-0316-carousel-reliability-wave/backend/src/rag_backend/api/routes/carousels/editorial_workflow.py:241: StarletteDeprecationWarning: 'HTTP_422_UNPROCESSABLE_ENTITY' is deprecated. Use 'HTTP_422_UNPROCESSABLE_CONTENT' instead.
+    await validate_resume_workflow_gates(
+
+tests/integration/carousel_consolidation/test_workflow_validation.py::TestEditorialWorkflowValidation::test_resume_rejects_unsupported_review_actions[edit]
+tests/integration/carousel_consolidation/test_workflow_validation.py::TestEditorialWorkflowValidation::test_resume_rejects_unsupported_review_actions[reject]
+tests/integration/carousel_consolidation/test_workflow_validation.py::TestEditorialWorkflowValidation::test_resume_rejects_empty_revise_feedback
+  /home/pmarins/projects/alter-ego/.claude/worktrees/ae-0309-0316-carousel-reliability-wave/backend/src/rag_backend/api/routes/carousels/editorial_workflow.py:235: StarletteDeprecationWarning: 'HTTP_422_UNPROCESSABLE_ENTITY' is deprecated. Use 'HTTP_422_UNPROCESSABLE_CONTENT' instead.
+    safe_feedback = validate_resume_action(body)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========== 2460 passed, 1 skipped, 30 warnings in 65.81s (0:01:05) ============
+Failed to export span batch due to timeout, max retries or shutdown.
+[0m
+Known Gap section confirmed RESOLVED with end-to-end chain test reference. Regression suite: **2460 passed, 1 skipped** as expected. Now running the deterministic gates one at a time.
+[0m$ [0mbash scripts/ci/gates.sh backend:lint 2>&1 | tail -20; echo "EXIT=$?"
+::group::gate backend:lint
+All checks passed!
+::endgroup::
+>>> backend:lint: PASS
+
+================= GATE SUMMARY =================
+  backend:lint                 PASS
+-----------------------------------------------
+  PASS=1  FAIL=0  SKIP=0
+===============================================
+GATES_JSON: {"pass":1,"fail":0,"skip":0,"results":[{"gate":"backend:lint","status":"PASS"}]}
+EXIT=0
+[0m
+[0m$ [0mbash scripts/ci/gates.sh backend:strict-diff 2>&1 | tail -25; echo "EXIT=$?"
+::group::gate backend:strict-diff
+Strict ruff on 86 changed source file(s): PLR0913, C901, PLR0912, PLR0911, PLR0914, PLR1702
+::endgroup::
+>>> backend:strict-diff: PASS
+
+================= GATE SUMMARY =================
+  backend:strict-diff          PASS
+-----------------------------------------------
+  PASS=1  FAIL=0  SKIP=0
+===============================================
+GATES_JSON: {"pass":1,"fail":0,"skip":0,"results":[{"gate":"backend:strict-diff","status":"PASS"}]}
+EXIT=0
+[0m
+[0m$ [0mbash scripts/ci/gates.sh backend:type 2>&1 | tail -25; echo "EXIT=$?"
+::group::gate backend:type
+Success: no issues found in 575 source files
+::endgroup::
+>>> backend:type: PASS
+
+================= GATE SUMMARY =================
+  backend:type                 PASS
+-----------------------------------------------
+  PASS=1  FAIL=0  SKIP=0
+===============================================
+GATES_JSON: {"pass":1,"fail":0,"skip":0,"results":[{"gate":"backend:type","status":"PASS"}]}
+EXIT=0
+[0m
+[0m$ [0mbash scripts/ci/gates.sh backend:imports 2>&1 | tail -15; echo "EXIT=$?"
+only) KEPT
+Application layer must not depend on agents (grandfathered baseline only) KEPT
+Agents must not depend on application (grandfathered baseline only) KEPT
+API must not depend on infrastructure (grandfathered baseline only) KEPT
+
+Contracts: 22 kept, 0 broken.
+::endgroup::
+>>> backend:imports: PASS
+
+================= GATE SUMMARY =================
+  backend:imports              PASS
+-----------------------------------------------
+  PASS=1  FAIL=0  SKIP=0
+===============================================
+GATES_JSON: {"pass":1,"fail":0,"skip":0,"results":[{"gate":"backend:imports","status":"PASS"}]}
+EXIT=0
+[0m
+[0m$ [0mbash scripts/ci/gates.sh backend:arch-ratchet 2>&1 | tail -15; echo "EXIT=$?"
+OK                           api -> infrastructure [runtime pairs]: current=77 baseline=77
+OK                           api -> infrastructure [type-checking pairs]: current=0 baseline=0
+OK                           get_container() locator hits: current=14 baseline=14
+OK                           .commit() adapter hits: current=9 baseline=9
+
+RESULT: PASS
+::endgroup::
+>>> backend:arch-ratchet: PASS
+
+================= GATE SUMMARY =================
+  backend:arch-ratchet         PASS
+-----------------------------------------------
+  PASS=1  FAIL=0  SKIP=0
+===============================================
+GATES_JSON: {"pass":1,"fail":0,"skip":0,"results":[{"gate":"backend:arch-ratchet","status":"PASS"}]}
+EXIT=0
+[0m
+[0m$ [0mbash scripts/ci/gates.sh backend:integrity 2>&1 | tail -30; echo "EXIT=$?"
+::group::gate backend:integrity
+Build-output gitignore pre-flight OK (9 outputs checked).
+Integrity scan (diff vs origin/main) — net-new only.
+
+=== 🔴 BLOCKERS (net-new gaming — bounce to developer) (0) ===
+
+=== 🟠 WARNINGS (review with ticket context) (0) ===
+
+PASS: no net-new gaming detected.
+::endgroup::
+>>> backend:integrity: PASS
+
+================= GATE SUMMARY =================
+  backend:integrity            PASS
+-----------------------------------------------
+  PASS=1  FAIL=0  SKIP=0
+===============================================
+GATES_JSON: {"pass":1,"fail":0,"skip":0,"results":[{"gate":"backend:integrity","status":"PASS"}]}
+EXIT=0
+[0m
+[0m$ [0mbash scripts/ci/check-integrity.sh backend 2>&1 | tail -30; echo "EXIT=$?"
+Build-output gitignore pre-flight OK (9 outputs checked).
+Integrity scan (diff vs origin/main) — net-new only.
+
+=== 🔴 BLOCKERS (net-new gaming — bounce to developer) (0) ===
+
+=== 🟠 WARNINGS (review with ticket context) (0) ===
+
+PASS: no net-new gaming detected.
+EXIT=0
+[0m
+[0m$ [0mcd backend && wc -l src/rag_backend/application/services/carousel/phase_artifact_runner.py src/rag_backend/application/services/carousel/editorial_workflow_service.py src/rag_backend/application/services/carousel/content_fail_closed.py src/rag_backend/application/services/carousel/presentation_review_pipeline.py tests/unit/application/test_carousel_repair_policy_threading.py 2>&1
+603 src/rag_backend/application/services/carousel/phase_artifact_runner.py
+  521 src/rag_backend/application/services/carousel/editorial_workflow_service.py
+  221 src/rag_backend/application/services/carousel/content_fail_closed.py
+  290 src/rag_backend/application/services/carousel/presentation_review_pipeline.py
+  228 tests/unit/application/test_carousel_repair_policy_threading.py
+ 1863 total
+[0m
+[0m$ [0mgit diff --stat origin/main...HEAD -- backend/src/rag_backend/application/services/carousel/ backend/tests/unit/application/test_carousel_repair_policy_threading.py 2>&1 | tail -20
+.../carousel/editorial_workflow_service_helpers.py |  59 +++-
+ .../carousel/editorial_workflow_sse_build.py       |   8 +
+ .../services/carousel/editorial_workflow_types.py  |   9 +-
+ .../services/carousel/localized_slide_builder.py   | 183 +++++++++--
+ .../services/carousel/phase_artifact_runner.py     | 143 ++++++++-
+ .../services/carousel/presentation_casing.py       | 318 +++++++++++++++++++
+ .../services/carousel/presentation_copy_repair.py  |  24 +-
+ .../services/carousel/presentation_policy.py       | 130 +++++++-
+ .../services/carousel/presentation_policy_types.py |  45 ++-
+ .../carousel/presentation_policy_upgrade.py        |  92 ++++++
+ .../services/carousel/presentation_review.py       | 238 ++-------------
+ .../services/carousel/presentation_review_edits.py |  40 ++-
+ .../carousel/presentation_review_pipeline.py       | 290 ++++++++++++++++++
+ .../carousel/presentation_review_repair.py         |   7 +-
+ .../services/carousel/presentation_validation.py   |  27 +-
+ .../services/carousel/slide_parse_failures.py      | 187 ++++++++++++
+ .../services/carousel/slide_scaffold_recovery.py   | 213 +++++++++++++
+ .../services/carousel/workflow_state.py            |   7 +
+ .../test_carousel_repair_policy_threading.py       | 228 ++++++++++++++
+ 34 files changed, 3565 insertions(+), 326 deletions(-)
+[0m
+All gates green, integrity clean. Now let me confirm the round-1 INFO items (file line counts vs 400 cap) and verify no NEWfindings.
+[0m$ [0mecho "=== phase_artifact_runner ==="; git show origin/main:backend/src/rag_backend/application/services/carousel/phase_artifact_runner.py 2>/dev/null | wc -l; echo "=== editorial_workflow_service ==="; git show origin/main:backend/src/rag_backend/application/services/carousel/editorial_workflow_service.py 2>/dev/null | wc -l; echo "=== presentation_review_pipeline (new file) ==="; git show origin/main:backend/src/rag_backend/application/services/carousel/presentation_review_pipeline.py 2>/dev/null | wc -l; echo "=== presentation_casing (new) ==="; git show origin/main:backend/src/rag_backend/application/services/carousel/presentation_casing.py 2>/dev/null | wc -l; echo "=== slide_scaffold_recovery (new) ==="; git show origin/main:backend/src/rag_backend/application/services/carousel/slide_scaffold_recovery.py 2>/dev/null | wc -l; echo "=== slide_parse_failures (new) ==="; git show origin/main:backend/src/rag_backend/application/services/carousel/slide_parse_failures.py 2>/dev/null | wc -l
+=== phase_artifact_runner ===
+486
+=== editorial_workflow_service ===
+444
+=== presentation_review_pipeline (new file) ===
+0
+=== presentation_casing (new) ===
+0
+=== slide_scaffold_recovery (new) ===
+0
+=== slide_parse_failures (new) ===
+0
+[0m
+Two files exceed 400 lines. Let me verify whether they're pre-existing overage (debt) or net-new in thisPR.
+All evidence gathered. Here is the confirmation report.
+
+---
+
+## QA Confirmation Report — Round 2 (Verify-Only)
+
+**Scope:** Wave `feat/ae-0309-0316-carousel-reliability-wave`, 8 tickets. Round 1 verdict: **WARN** with one actionable finding (AE-0312).
+
+### 1. Round-1 WARN remediation — CONFIRMED ADDRESSED ✅
+- **Known Gap section** (`AE-0312-...md:483–495`): now reads "**RESOLVED by AE-0311 (deliverable 3)**", documents the full threading path (`_resolve_presentation_policy_version` → state seed → `_state_policy_version` → `ContentReviewContext.policy_version` → `FailClosedReviewCommand`), and records the r1-requested end-to-end pin. Stale "gap open" prose is gone.
+- **`TestFullChainEndToEnd`** (`test_carousel_repair_policy_threading.py:163–228`): two tests — `test_v2_column_reaches_the_content_gate` (v2 column → resolver → state seed → FailClosedReviewCommand → gate auto-repairs lowercase "claude"→"Claude", `report["blocking"] is False`, `violations == []`) and `test_v1_column_leaves_copy_untouched` (v1 control: copy stays lowercase). Exactly the pin r1 asked for.
+- **Run:** `uv run pytest tests/unit/application/test_carousel_repair_policy_threading.py -q` → **7 passed** (incl. the 2 new chain tests).
+
+### 2. Regression spot-check — PASS ✅
+`uv run pytest tests/unit tests/integration/carousel_consolidation -q` → **2460 passed, 1 skipped** (matches the ~2460 expectation; 0 failures). Confirms AE-0311's noted pre-existing resume-runner failures are not reproduced in this subset.
+
+### 3. Fast deterministic gates — all PASS ✅
+| Gate | Status |
+|------|--------|
+| `backend:lint` | PASS |
+| `backend:strict-diff` | PASS (86 changed files) |
+| `backend:type` | PASS (mypy --strict, 575 files, 0 issues) |
+| `backend:imports` | PASS (22 contracts kept, 0 broken) |
+| `backend:arch-ratchet` | PASS (baselines held: get_container=14, .commit=9, api→infra=77) |
+| `backend:integrity` | PASS (0 blockers, 0 warnings — no net-new gaming) |
+| `check-integrity.sh backend` | PASS (0 blockers, 0 warnings) |
+
+### 4. Round-1 INFO items — confirmed no action needed ⚪
+- **Line counts:** 4 new files all under 400 (presentation_review_pipeline 290, presentation_casing 318, slide_scaffold_recovery 213, slide_parse_failures 187). Two pre-existing-over files grew slightly (`phase_artifact_runner` 486→603, `editorial_workflow_service` 444→521) — both were **already over the 400 cap on `origin/main`**, so this is pre-existing debt, not net-new; the diff-scoped integrity scanner (source of truth) reports 0 net-new blockers. Advisory only, consistent with r1 INFO.
+- **Deprecation warnings:** `StarletteDeprecationWarning: HTTP_422_UNPROCESSABLE_ENTITY` at `editorial_workflow.py:235/241` and `SAWarning: transaction already deassociated` — both in pre-existing code untouched by this wave. INFO, pre-existing.
+- **PG/mutation gates:** `test` (full, incl. PG integration), `diff-cover`, `migrations`, `mutation` not run locally — deferred to CI per confirmation scope. These are the material-SKIP gates CI will decide; they were classified in r1 and are not a NEW finding.
+
+### NEW findings
+None. No net-new suppressions, no loosened rules, no skipped tests, no prohibited imports, no orphan code introduced. The single r1 WARN is genuinely resolved; nothing regressed.
+
+### Notes
+- The PG-gated `test`/`diff-cover`/`migrations` and the `mutation` gate remain the CI-decided residual; per r1 classification and the confirmation scope they do not block this round's verdict. CI is the final authority on those.
+- The pre-existing >400-line files (phase_artifact_runner, editorial_workflow_service) grew modestly; a future cleanup ticket to split them would reduce debt, but it is out of scope and non-blocking here.
+
+QA_VERDICT: PASS

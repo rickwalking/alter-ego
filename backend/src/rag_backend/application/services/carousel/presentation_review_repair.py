@@ -12,6 +12,9 @@ from rag_backend.application.services.carousel.localized_slide_builder import (
     PRESENTATION_PT_KEY,
     as_dict,
 )
+from rag_backend.application.services.carousel.presentation_casing import (
+    repair_casing,
+)
 from rag_backend.application.services.carousel.presentation_copy_repair import (
     deterministic_repair_slide_payload,
     repair_body_length_and_heading,
@@ -60,7 +63,9 @@ def _deterministic_repair_for_policy(
     ) -> dict[str, object]:
         await asyncio.sleep(0)
         repaired = deterministic_repair_slide_payload(payload, violations, locale)
-        return repair_body_length_and_heading(repaired, violations, policy)
+        repaired = repair_body_length_and_heading(repaired, violations, policy)
+        # AE-0312: deterministic casing repair (policy-version gated — no-op on v1).
+        return repair_casing(repaired, locale, policy)
 
     return _repair
 

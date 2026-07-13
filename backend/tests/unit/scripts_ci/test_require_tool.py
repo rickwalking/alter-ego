@@ -29,7 +29,9 @@ BASH = shutil.which("bash") or "bash"
 _MESSAGE = "devDependency 'knip' not installed"
 
 
-def _run(script: str, env: dict[str, str] | None = None) -> subprocess.CompletedProcess[str]:
+def _run(
+    script: str, env: dict[str, str] | None = None
+) -> subprocess.CompletedProcess[str]:
     return subprocess.run(  # noqa: S603  # integrity-ok: AE-0239 — fixed bash path, test-controlled script
         [BASH, "-c", script],
         cwd=REPO_ROOT,

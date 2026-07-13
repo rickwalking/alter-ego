@@ -38,7 +38,9 @@ class TestRegistryInvariants:
         # palette is added to the registry without its enum member (or vice
         # versa) — the AE-0264 drift class.
         enum_keys = {t.value for t in CarouselTheme} - {_AUTO}
-        registry_keys = {d.key for d in PALETTE_REGISTRY if d.kind is not PaletteKind.BRAND}
+        registry_keys = {
+            d.key for d in PALETTE_REGISTRY if d.kind is not PaletteKind.BRAND
+        }
         assert enum_keys == registry_keys
 
     def test_light_palettes_are_never_auto_selectable(self) -> None:

@@ -909,7 +909,11 @@ describe("useEditorialWorkflow", () => {
       await expect(result.current.approve()).rejects.toThrow();
     });
     await waitFor(() => {
-      expect(result.current.error).toBe("version_conflict");
+      // AE-0315: the version-conflict 409 now maps to distinct client copy
+      // (editorialWorkflow.errors.versionConflict) instead of the raw code.
+      expect(result.current.error).toBe(
+        "This carousel changed in another session. Refresh the page and try again.",
+      );
     });
     expect(countStateFetches() - statePollsBeforeApprove).toBe(1);
   });

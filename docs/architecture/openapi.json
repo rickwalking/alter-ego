@@ -1271,6 +1271,71 @@
         "title": "CarouselCaptionResponse",
         "type": "object"
       },
+      "CarouselConflictDetail": {
+        "description": "Structured conflict payload served alongside the legacy detail.",
+        "properties": {
+          "code": {
+            "description": "Machine-readable conflict cause",
+            "title": "Code",
+            "type": "string"
+          },
+          "message": {
+            "description": "Human-readable explanation",
+            "title": "Message",
+            "type": "string"
+          },
+          "phase": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Charged workflow phase for revision-cap conflicts",
+            "title": "Phase"
+          },
+          "run_started_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Start of the active run for run-in-progress conflicts",
+            "title": "Run Started At"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ],
+        "title": "CarouselConflictDetail",
+        "type": "object"
+      },
+      "CarouselConflictResponse": {
+        "description": "Response body for carousel 409s: legacy string + structured payload.\n\n``detail`` stays the historical machine-readable string so existing\nclients that string-compare it are unaffected; ``conflict`` is the\nadditive structured payload for new consumers.",
+        "properties": {
+          "conflict": {
+            "$ref": "#/components/schemas/CarouselConflictDetail"
+          },
+          "detail": {
+            "description": "Legacy machine-readable detail string",
+            "title": "Detail",
+            "type": "string"
+          }
+        },
+        "required": [
+          "detail",
+          "conflict"
+        ],
+        "title": "CarouselConflictResponse",
+        "type": "object"
+      },
       "CarouselDesignColors": {
         "properties": {
           "accent": {
@@ -1786,6 +1851,18 @@
             ],
             "title": "Linkedin Post Pt"
           },
+          "needs_republish_since": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Needs Republish Since"
+          },
           "niche": {
             "title": "Niche",
             "type": "string"
@@ -1961,6 +2038,146 @@
           "updated_at"
         ],
         "title": "CarouselProjectResponse",
+        "type": "object"
+      },
+      "CarouselRepairResponse": {
+        "description": "Result of a deterministic repair: per-slide diffs + fresh report.",
+        "properties": {
+          "needs_republish": {
+            "default": false,
+            "title": "Needs Republish",
+            "type": "boolean"
+          },
+          "project_id": {
+            "title": "Project Id",
+            "type": "string"
+          },
+          "repaired": {
+            "items": {
+              "$ref": "#/components/schemas/RepairSlideDiffResponse"
+            },
+            "title": "Repaired",
+            "type": "array"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "validation": {
+            "$ref": "#/components/schemas/SlideValidationReport"
+          }
+        },
+        "required": [
+          "project_id",
+          "status",
+          "validation"
+        ],
+        "title": "CarouselRepairResponse",
+        "type": "object"
+      },
+      "CarouselRepublishResponse": {
+        "description": "Result of an idempotent artifact republish (AE-0313).",
+        "properties": {
+          "artifact_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Artifact Version"
+          },
+          "pdf_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pdf Path"
+          },
+          "pdf_path_en": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pdf Path En"
+          },
+          "project_id": {
+            "title": "Project Id",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "project_id",
+          "status"
+        ],
+        "title": "CarouselRepublishResponse",
+        "type": "object"
+      },
+      "CarouselSlideEditRequest": {
+        "description": "Reviewer text edits for a completed carousel's slides (no image regen).",
+        "properties": {
+          "edited_slides": {
+            "items": {
+              "$ref": "#/components/schemas/LocalizedSlideReview"
+            },
+            "minItems": 1,
+            "title": "Edited Slides",
+            "type": "array"
+          }
+        },
+        "required": [
+          "edited_slides"
+        ],
+        "title": "CarouselSlideEditRequest",
+        "type": "object"
+      },
+      "CarouselSlideEditResponse": {
+        "description": "Result of a completed-project slide edit: fresh report + republish marker.",
+        "properties": {
+          "needs_republish": {
+            "default": false,
+            "title": "Needs Republish",
+            "type": "boolean"
+          },
+          "project_id": {
+            "title": "Project Id",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "updated_slides": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Updated Slides",
+            "type": "array"
+          },
+          "validation": {
+            "$ref": "#/components/schemas/SlideValidationReport"
+          }
+        },
+        "required": [
+          "project_id",
+          "status",
+          "validation"
+        ],
+        "title": "CarouselSlideEditResponse",
         "type": "object"
       },
       "CarouselSlideResponse": {
@@ -3404,6 +3621,16 @@
             ],
             "title": "Caption"
           },
+          "content_gate_validation": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SlideValidationReportResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "current_phase": {
             "title": "Current Phase",
             "type": "string"
@@ -3412,6 +3639,17 @@
             "default": false,
             "title": "Design Applied",
             "type": "boolean"
+          },
+          "design_recovery_hint": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Design Recovery Hint"
           },
           "error_message": {
             "anyOf": [
@@ -3548,6 +3786,29 @@
             "additionalProperties": true,
             "title": "Rubric Scores",
             "type": "object"
+          },
+          "run_stage": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Run Stage"
+          },
+          "run_started_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Run Started At"
           },
           "slide_drafts": {
             "items": {
@@ -5284,6 +5545,54 @@
         "title": "RenderSlidesResponse",
         "type": "object"
       },
+      "RepairSlideDiffResponse": {
+        "description": "Per-slide/locale repair outcome: fixed vs still-remaining rule codes.",
+        "properties": {
+          "locale": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Locale"
+          },
+          "remaining_codes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Remaining Codes",
+            "type": "array"
+          },
+          "repaired": {
+            "default": false,
+            "title": "Repaired",
+            "type": "boolean"
+          },
+          "repaired_codes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Repaired Codes",
+            "type": "array"
+          },
+          "slide_index": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Slide Index"
+          }
+        },
+        "title": "RepairSlideDiffResponse",
+        "type": "object"
+      },
       "ResearchSourceResponse": {
         "properties": {
           "created_at": {
@@ -5868,6 +6177,42 @@
         "title": "SlideImagePrompt",
         "type": "object"
       },
+      "SlideValidationReport": {
+        "additionalProperties": false,
+        "properties": {
+          "blocking": {
+            "title": "Blocking",
+            "type": "boolean"
+          },
+          "validated_at": {
+            "format": "date-time",
+            "title": "Validated At",
+            "type": "string"
+          },
+          "validation_status": {
+            "enum": [
+              "valid",
+              "invalid"
+            ],
+            "title": "Validation Status",
+            "type": "string"
+          },
+          "violations": {
+            "items": {
+              "$ref": "#/components/schemas/SlideValidationViolation"
+            },
+            "title": "Violations",
+            "type": "array"
+          }
+        },
+        "required": [
+          "validation_status",
+          "validated_at",
+          "blocking"
+        ],
+        "title": "SlideValidationReport",
+        "type": "object"
+      },
       "SlideValidationReportResponse": {
         "description": "Aggregated presentation validation report for content review.",
         "properties": {
@@ -5897,6 +6242,67 @@
           "blocking"
         ],
         "title": "SlideValidationReportResponse",
+        "type": "object"
+      },
+      "SlideValidationViolation": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "field": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Field"
+          },
+          "locale": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Locale"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "severity": {
+            "default": "blocker",
+            "enum": [
+              "blocker",
+              "warning"
+            ],
+            "title": "Severity",
+            "type": "string"
+          },
+          "slide_index": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Slide Index"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ],
+        "title": "SlideValidationViolation",
         "type": "object"
       },
       "SlideValidationViolationResponse": {
@@ -5930,6 +6336,11 @@
           },
           "message": {
             "title": "Message",
+            "type": "string"
+          },
+          "severity": {
+            "default": "blocker",
+            "title": "Severity",
             "type": "string"
           },
           "slide_index": {
@@ -9264,6 +9675,126 @@
         ]
       }
     },
+    "/api/carousels/{project_id}/repair": {
+      "post": {
+        "description": "Run the bounded deterministic repair and return per-slide diffs.",
+        "operationId": "repair_carousel_api_carousels__project_id__repair_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CarouselRepairResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CarouselConflictResponse"
+                }
+              }
+            },
+            "description": "Typed conflict: a workflow run is in progress, another mutator holds the project lock, or a concurrent resume won the CAS (AE-0311/AE-0316)."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Deterministically repair a carousel's localized slides",
+        "tags": [
+          "carousels",
+          "carousels-repair"
+        ]
+      }
+    },
+    "/api/carousels/{project_id}/republish": {
+      "post": {
+        "description": "Re-render from persisted slides and activate a fresh artifact version.",
+        "operationId": "republish_carousel_api_carousels__project_id__republish_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CarouselRepublishResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CarouselConflictResponse"
+                }
+              }
+            },
+            "description": "Typed conflict: a workflow run or another artifact build is in progress for this carousel (AE-0313/AE-0316)."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Rebuild and re-activate a completed carousel's artifacts",
+        "tags": [
+          "carousels",
+          "carousels-republish"
+        ]
+      }
+    },
     "/api/carousels/{project_id}/slide-images/{lang}/{filename}": {
       "get": {
         "description": "Serve a per-language rendered slide JPG (from <output>/<lang>/).",
@@ -9385,6 +9916,74 @@
         "tags": [
           "carousels"
         ]
+      },
+      "patch": {
+        "description": "Persist reviewer text edits + mark a republish; images stay unchanged.",
+        "operationId": "edit_carousel_slides_api_carousels__project_id__slides_patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CarouselSlideEditRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CarouselSlideEditResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CarouselConflictResponse"
+                }
+              }
+            },
+            "description": "Typed conflict: a workflow run is in progress, another mutator holds the project lock, or a concurrent mutator won the CAS (AE-0314/AE-0316)."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Edit a completed carousel's slide text without regenerating images",
+        "tags": [
+          "carousels",
+          "carousels-slide-edit"
+        ]
       }
     },
     "/api/carousels/{project_id}/strategy": {
@@ -9487,7 +10086,14 @@
             "description": "Successful Response"
           },
           "409": {
-            "description": "Resume already in progress or version conflict"
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CarouselConflictResponse"
+                }
+              }
+            },
+            "description": "Typed conflict: run in progress, version conflict, revision cap exceeded, or artifact mutation in progress (AE-0316)"
           },
           "422": {
             "content": {

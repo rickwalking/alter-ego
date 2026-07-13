@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Literal
 
 from pydantic import BaseModel, Field
 
+from rag_backend.domain.constants.carousel_presentation import SEVERITY_BLOCKER
 from rag_backend.domain.constants.carousel_workflow import SOURCE_TYPE_DOCUMENT
 
 ReviewAction = Literal["approve", "reject", "revise", "edit"]
@@ -74,6 +76,9 @@ class SlideValidationViolationResponse(BaseModel):
     slide_index: int | None = None
     locale: str | None = None
     field: str | None = None
+    # AE-0312: severity tier ("blocker" | "warning"); defaults to blocker so a
+    # legacy report without the field keeps its blocking treatment client-side.
+    severity: str = SEVERITY_BLOCKER
 
 
 class SlideValidationReportResponse(BaseModel):
@@ -129,6 +134,18 @@ class EditorialWorkflowStateResponse(BaseModel):
     presentation_policy_version: str | None = None
     localized_slides: list[LocalizedSlideReview] = Field(default_factory=list)
     presentation_validation: SlideValidationReportResponse | None = None
+    # AE-0309: fail-closed content-gate report; present only when the content
+    # build's validate -> repair -> retry chain still ended blocking.
+    content_gate_validation: SlideValidationReportResponse | None = None
+    # AE-0310: client-displayable recovery-hint code set while the design step
+    # holds a blocking validation report (direct edits or a content send-back
+    # resolve violations; a plain revise does not modify content).
+    design_recovery_hint: str | None = None
+    # AE-0315: run metadata, populated ONLY while phase_status == in_progress
+    # so the create flow reconstructs the in-progress banner on reload without
+    # depending on having witnessed the run.started SSE event.
+    run_started_at: datetime | None = None
+    run_stage: str | None = None
 
 
 __all__ = [

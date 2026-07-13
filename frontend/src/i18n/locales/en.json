@@ -426,7 +426,8 @@
     "presentation": {
       "blockedApproval": "Blocking presentation violations must be resolved before approving content.",
       "editBudgetBlocked": "Edited copy exceeds the presentation field budgets. Shorten the highlighted fields before approving.",
-      "unsavedEdits": "Edited slide copy will be submitted with approval using the current workflow version."
+      "unsavedEdits": "Edited slide copy will be submitted with approval using the current workflow version.",
+      "designReviseDisabled": "Requesting a plain revision is disabled while blocking violations are present — it does not change the slide text. Use \"Edit slide copy\" or \"Send back to content\" above."
     },
     "publishReady": "Final review approved. Open the publish panel to release the carousel to the public site.",
     "gate": {
@@ -463,11 +464,37 @@
       "localeEn": "English",
       "slideLabel": "Slide {index}",
       "presentationPolicy": "Policy {version}",
+      "contentGateBlocked": "Automatic drafting could not produce valid copy for some slides after repair and one retry. Review the violations below before approving.",
       "presentationBlocked": "Approval is blocked until all presentation violations are resolved.",
       "violationsTitle": "Presentation violations",
+      "violationSeverityBlocker": "Blocker",
+      "violationSeverityWarning": "Warning",
       "designTitle": "Design review",
       "designReady": "Design tokens are applied. Approve to generate slide images.",
       "designPending": "Review the outline and content above, then approve to apply design and generate images.",
+      "designRecovery": {
+        "blockedTitle": "Content violations are blocking the design step",
+        "hint": "Fix these violations by editing the slide copy directly or by sending the workflow back to the content phase. Requesting a plain revision does not change the text.",
+        "editAction": "Edit slide copy",
+        "sendBackAction": "Send back to content",
+        "submitEdits": "Submit edited copy",
+        "cancel": "Cancel",
+        "sendBackFeedbackLabel": "Feedback for content regeneration",
+        "sendBackFeedbackPlaceholder": "Describe what the content phase should fix (e.g. remove scaffold text from slide 4)…",
+        "sendBackSubmit": "Send back",
+        "sendBackFeedbackRequired": "Feedback is required to send the workflow back to content.",
+        "violationHint": "Open the editor for this slide"
+      },
+      "structuredItems": "Structured items",
+      "structuredItemLabel": "Item {index} body",
+      "autoRepair": {
+        "button": "Fix issues automatically",
+        "pending": "Fixing…",
+        "failed": "The automatic fix could not be applied. Try again.",
+        "conflictInProgress": "A revision run is in progress; check again in a moment.",
+        "noChanges": "No deterministic fixes were needed.",
+        "fixedSlide": "Slide {index} · {locale}: fixed {codes}"
+      },
       "outlineSlides": "{count, plural, one {# slide in outline} other {# slides in outline}}",
       "imagesTitle": "Generated images",
       "imagePromptsTitle": "Slide image prompts",
@@ -510,10 +537,27 @@
       "startFailed": "Failed to start editorial workflow",
       "startUnknown": "Workflow start failed",
       "resumeFailed": "Failed to resume editorial workflow",
-      "resumeUnknown": "Workflow resume failed"
+      "resumeUnknown": "Workflow resume failed",
+      "revisionCapExceeded": "The revision limit for this phase is exhausted. You can still fix the copy: edit the slide text directly — direct edits are always available and never count against the limit.",
+      "runInProgress": "A revision run is already in progress for this carousel. Follow its progress in the banner above.",
+      "versionConflict": "This carousel changed in another session. Refresh the page and try again."
     },
     "transport": {
       "pollingFallback": "Polling fallback active"
+    },
+    "runProgress": {
+      "title": "Revision in progress",
+      "phase": "Running phase: {phase}",
+      "stage": {
+        "generating": "generating content",
+        "validating": "validating result",
+        "persisting": "saving changes"
+      },
+      "startedAt": "Started at {time}.",
+      "elapsed": "Elapsed: {minutes}min {seconds}s.",
+      "actionsDisabled": "Review actions are temporarily unavailable while the revision runs.",
+      "stillRunningHint": "This run is taking longer than usual. You can check whether it is still active.",
+      "checkAgain": "Check again"
     }
   },
   "palettes": {
@@ -646,6 +690,30 @@
       "success": "Slides regenerated with new layout.",
       "fetchError": "Could not load layout options.",
       "retry": "Retry"
+    },
+    "rebuildPdf": {
+      "title": "Rebuild PDF",
+      "description": "Re-render the slides and PDF from the latest slide text and rebuild the downloadable artifact.",
+      "rebuild": "Rebuild PDF",
+      "rebuilding": "Rebuilding…",
+      "confirmTitle": "Rebuild the PDF?",
+      "confirmBody": "This re-renders every slide and PDF from the current slide data and activates a new artifact version. The previous version keeps serving until the new one is ready.",
+      "confirm": "Rebuild",
+      "cancel": "Cancel",
+      "success": "PDF rebuilt with the latest slide text.",
+      "failed": "Could not rebuild the PDF."
+    },
+    "slideEditor": {
+      "title": "Edit slide text",
+      "noImageRegen": "Fix typos or casing in the slide text. Editing text never regenerates the images.",
+      "editText": "Edit text",
+      "save": "Save changes",
+      "saving": "Saving…",
+      "cancel": "Cancel",
+      "rebuildPending": "PDF rebuild pending — the new PDF will reflect your edit shortly.",
+      "success": "Slide text updated and the PDF was rebuilt.",
+      "blockedRunInProgress": "Editing is unavailable while a workflow run is in progress. Try again once it finishes.",
+      "blockingViolations": "Some edits still violate the content rules. Adjust the highlighted slides and save again."
     }
   },
   "auth": {

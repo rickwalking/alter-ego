@@ -27,6 +27,7 @@ export function CreateWorkflowControls({
   personaApproveBlocked,
   presentationApproveBlocked,
   editBudgetBlocked,
+  designReviseBlocked,
   showPublishLink,
 }: CreateWorkflowControlsProps): React.JSX.Element {
   const t = useTranslations("editorialWorkflow");
@@ -114,12 +115,17 @@ export function CreateWorkflowControls({
           <NeonButton
             size="sm"
             variant="outline"
-            disabled={loading || !showLiveControls}
+            disabled={loading || !showLiveControls || designReviseBlocked}
             onClick={handleRevise}
           >
             {t("actions.requestRevision")}
           </NeonButton>
         </div>
+        {designReviseBlocked && (
+          <p className="text-[var(--color-text-muted)] text-xs">
+            {t("presentation.designReviseDisabled")}
+          </p>
+        )}
         {personaApproveBlocked && (
           <p className="text-destructive text-xs">
             {t("persona.belowThreshold")}

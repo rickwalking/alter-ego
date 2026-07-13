@@ -99,8 +99,19 @@ from rag_backend.modules.editorial.domain.status import (
     REVIEW_ACTIONS,
     WORKFLOW_STATUS_APPROVED_FOR_PUBLISH,
 )
+from rag_backend.modules.editorial.infrastructure.carousel_project_lock import (
+    carousel_project_lock,
+    carousel_project_lock_key,
+    is_carousel_project_lock_held,
+    is_carousel_project_lock_held_session,
+)
 from rag_backend.modules.editorial.infrastructure.carousel_project_write_owner import (
     CarouselProjectWriteOwner,
+)
+from rag_backend.modules.editorial.infrastructure.carousel_run_progress import (
+    read_run_fence,
+    write_run_heartbeat,
+    write_run_heartbeat_with_retry,
 )
 from rag_backend.modules.editorial.infrastructure.editorial_port_adapters import (
     AclApprovalAdapter,
@@ -187,4 +198,11 @@ __all__ = [
     "WorkflowEngine",
     "WorkflowStateView",
     "bootstrap_module",
+    "carousel_project_lock",
+    "carousel_project_lock_key",
+    "is_carousel_project_lock_held",
+    "is_carousel_project_lock_held_session",
+    "read_run_fence",
+    "write_run_heartbeat",
+    "write_run_heartbeat_with_retry",
 ]

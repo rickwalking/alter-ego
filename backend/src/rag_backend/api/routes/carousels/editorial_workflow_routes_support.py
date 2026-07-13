@@ -12,6 +12,7 @@ from rag_backend.api.routes.carousels.editorial_workflow_routes_sanitize import 
 )
 from rag_backend.api.routes.carousels.editorial_workflow_routes_validate import (
     bump_resume_lock_version,
+    ensure_no_artifact_mutation_in_progress,
     ensure_resume_not_in_progress,
     ensure_resume_reviewer_access,
     ensure_structured_feedback_allowed,
@@ -51,6 +52,7 @@ __all__ = [
     "build_editorial_workflow_service",
     "build_editorial_workflow_state_response",
     "bump_resume_lock_version",
+    "ensure_no_artifact_mutation_in_progress",
     "ensure_resume_not_in_progress",
     "ensure_resume_reviewer_access",
     "ensure_structured_feedback_allowed",

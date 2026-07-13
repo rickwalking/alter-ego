@@ -64,7 +64,13 @@ ERR_PERSONA_SCORE_TOO_LOW = "persona_score_too_low"
 ERR_PRESENTATION_VALIDATION_BLOCKED = "presentation_validation_blocked"
 ERR_WORKFLOW_NOT_APPROVED_FOR_PUBLISH = "workflow_not_approved_for_publish"
 ERR_STRUCTURED_FEEDBACK_FINAL_REVIEW_ONLY = "structured_feedback_final_review_only"
-ERR_EDITED_SLIDES_CONTENT_ONLY = "edited_localized_slides_content_phase_only"
+# AE-0310: renamed from ERR_EDITED_SLIDES_CONTENT_ONLY when the allowlist widened
+# to {content, design, final_review}. The wire value is renamed too: no client
+# string-matches the old detail (the frontend surfaces `detail` verbatim and has
+# no logic keyed on it), so keeping the stale "content_phase_only" wording would
+# only mislead API consumers.
+ERR_EDITED_SLIDES_PHASE_NOT_ALLOWED = "edited_localized_slides_phase_not_allowed"
+ERR_SEND_BACK_TARGET_NOT_ALLOWED = "send_back_target_phase_not_allowed"
 ERR_CAROUSEL_NOT_COMPLETED = "carousel_not_completed"
 ERR_WORKFLOW_PHASE_FAILED = "workflow_phase_failed"
 ERR_WORKFLOW_SSE_SUBSCRIBER_LIMIT = "workflow_sse_subscriber_limit_exceeded"
@@ -99,6 +105,24 @@ FINAL_REVIEW_SEND_BACK_PHASES: frozenset[str] = frozenset({
     PHASE_DESIGN,
     PHASE_IMAGES,
 })
+
+# AE-0310: phases whose review gate accepts ``edited_localized_slides``.
+# Widened from content-only so a reviewer parked at design/final_review with
+# content-level violations can fix copy in place (uniform semantics: apply
+# edits, re-validate, store the fresh report).
+EDITED_SLIDES_ALLOWED_PHASES: frozenset[str] = frozenset({
+    PHASE_CONTENT,
+    PHASE_DESIGN,
+    PHASE_FINAL_REVIEW,
+})
+
+# AE-0310: phases a design revise may send the workflow back to.
+DESIGN_SEND_BACK_PHASES: frozenset[str] = frozenset({PHASE_CONTENT})
+
+# AE-0310: client-displayable hint code emitted with a still-blocking design
+# re-interrupt — direct edits or a send-back resolve violations; a plain revise
+# alone does not modify content. The frontend maps this code to i18n copy.
+DESIGN_VALIDATION_RECOVERY_HINT = "design_validation_blocked_edit_or_send_back"
 
 REVIEW_ACTIONS: tuple[str, ...] = (
     REVIEW_ACTION_APPROVE,

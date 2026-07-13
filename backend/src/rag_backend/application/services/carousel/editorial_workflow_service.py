@@ -131,10 +131,16 @@ class EditorialWorkflowService:
             "brief": workflow_input.brief,
             "sources": workflow_input.sources,
         }
+        overrides: dict[str, object] = {"research_findings": research_findings}
+        policy_version = await self._resolve_presentation_policy_version(db, project_id)
+        if policy_version:
+            # AE-0311 deliverable 3: seed the project's stamped policy version so
+            # a v2 project fires casing rules live at the content-review gate.
+            overrides["presentation_policy_version"] = policy_version
         state = await self._orchestrator.start(
             project_id,
             initial_brief,
-            research_findings=research_findings,
+            **overrides,
         )
         persisted = await self._orchestrator.get_state(project_id)
         if persisted is not None:
@@ -173,12 +179,60 @@ class EditorialWorkflowService:
         await publish_workflow_sse_updates(project_id, state)
         return state
 
+    @staticmethod
+    async def _resolve_presentation_policy_version(
+        db: AsyncSession | None,
+        project_id: str,
+    ) -> str | None:
+        """Read the project's stamped presentation policy version (None → v1)."""
+        if db is None:
+            return None
+        project = await db.get(CarouselProjectModel, project_id)
+        if project is None:
+            return None
+        version = project.presentation_policy_version
+        return version if isinstance(version, str) and version.strip() else None
+
     async def read_checkpoint_phase(self, project_id: str) -> str:
         """Return checkpoint phase for structured feedback validation."""
         return await read_engine_checkpoint_phase(
             self._orchestrator.engine,
             project_id,
         )
+
+    @property
+    def events(self) -> WorkflowEventService | None:
+        """The workflow event service (audit + outbox), shared with AE-0311."""
+        return self._events
+
+    async def update_workflow_state(
+        self,
+        project_id: str,
+        values: dict[str, object],
+    ) -> None:
+        """Patch checkpoint state through the engine wrapper (AE-0311 repair).
+
+        Routes to ``CarouselWorkflowEngine.update_state`` (``as_node`` inferred
+        from the pending interrupt) so the repair's checkpoint write shares the
+        interrupt-preserving path and never hits the ``as_node=None`` clearing
+        footgun on approved-hold threads.
+        """
+        await self._orchestrator.update_state(project_id, values)
+
+    async def patch_parked_checkpoint(
+        self,
+        project_id: str,
+        values: dict[str, object],
+    ) -> bool:
+        """Patch a parked/held checkpoint without advancing the node (AE-0314).
+
+        The completed-project slide edit converges the checkpoint (source-of-
+        truth option (a)) on the approved-hold thread via ``as_node=None`` so the
+        pending interrupt is preserved. Returns ``True`` when a parked checkpoint
+        was patched; ``False`` for legacy END-state/absent threads (the
+        projection-only fallback).
+        """
+        return await self._orchestrator.patch_parked_checkpoint(project_id, values)
 
     @staticmethod
     async def _sync_project_phase(
@@ -210,6 +264,7 @@ class EditorialWorkflowService:
                     project_title=params.project_title,
                     db=params.db,
                     notifications=self._notifications,
+                    structured_feedback=params.structured_feedback,
                 ),
             )
         await prepare_resume_workflow(
@@ -398,7 +453,29 @@ class EditorialWorkflowService:
             current_phase,
             PHASE_STATUS_IN_PROGRESS,
         )
+        # AE-0315: the before_update listener stamped run_started_at inside the
+        # same flush that flipped phase_status; surface it on run.started so
+        # the client shows the banner within seconds of the 202.
+        await self._publish_run_started(db, project_id, current_phase)
         return current_phase
+
+    @staticmethod
+    async def _publish_run_started(
+        db: AsyncSession | None,
+        project_id: str,
+        current_phase: str,
+    ) -> None:
+        """Broadcast run.started with the freshly stamped run_started_at."""
+        from rag_backend.application.services.carousel.editorial_workflow_run_events import (
+            publish_run_started,
+        )
+
+        run_started_at = None
+        if db is not None:
+            project = await db.get(CarouselProjectModel, project_id)
+            if project is not None:
+                run_started_at = project.run_started_at
+        await publish_run_started(project_id, current_phase, run_started_at)
 
     async def publish_resume_error_event(
         self,

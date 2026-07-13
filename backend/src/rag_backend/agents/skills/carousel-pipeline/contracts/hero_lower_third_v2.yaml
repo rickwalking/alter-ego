@@ -1,0 +1,183 @@
+version: hero_lower_third_v2
+slide_count: 7
+
+slide_sequence:
+  - slide_number: 1
+    slide_type: intro
+    image_required: true
+    copy_start_ratio: 0.55
+  - slide_number: 2
+    slide_type: summary
+    image_required: true
+    copy_start_ratio: 0.54
+  - slide_number: 3
+    slide_type: content
+    image_required: true
+    copy_start_ratio: 0.54
+  - slide_number: 4
+    slide_type: content
+    image_required: true
+    copy_start_ratio: 0.54
+  - slide_number: 5
+    slide_type: content
+    image_required: true
+    copy_start_ratio: 0.54
+  - slide_number: 6
+    slide_type: closing
+    image_required: true
+    copy_start_ratio: 0.52
+  - slide_number: 7
+    slide_type: cta
+    image_required: false
+    avatar_required: true
+
+image_scope:
+  artwork_slides: [1, 2, 3, 4, 5, 6]
+  cta_avatar_required: true
+
+visible_text_rules:
+  - rule_id: visible_emoji_forbidden
+    summary: No decorative emoji in visible slide text.
+  - rule_id: dash_punctuation_forbidden
+    summary: No em dash or en dash in visible slide text.
+  - rule_id: ascii_hyphen_prose_forbidden
+    summary: No ASCII hyphen used as prose punctuation outside protected tokens.
+  - rule_id: english_heading_sentence_case
+    summary: English headings start with an uppercase alphabetic character.
+  - rule_id: portuguese_heading_sentence_case
+    summary: Portuguese headings start with an uppercase alphabetic character.
+  - rule_id: portuguese_body_sentence_case
+    summary: Portuguese body sentences start with an uppercase alphabetic character.
+  - rule_id: proper_noun_casing
+    summary: Configured proper nouns match their canonical casing in both locales.
+  - rule_id: bilingual_structural_parity
+    summary: PT and EN slides share slide type, intent, and structured-extra shape.
+  - rule_id: drafting_scaffold_forbidden
+    summary: No drafting labels such as SLIDE 3, TITLE, BODY, or source URLs on slides.
+  - rule_id: body_must_not_repeat_heading
+    summary: Body copy must not repeat the heading text.
+  - rule_id: accent_highlight_at_most_one
+    summary: Visible text uses at most one accent-highlighted phrase.
+  - rule_id: lucide_icon_name_required
+    summary: Structured icons use Lucide icon_name values from the policy allowlist.
+
+# AE-0312: severity tier per violation code. A report blocks approval only when
+# a blocker-severity violation remains; the casing rules are warning-severity so
+# they surface in the review panel without blocking. The loader asserts every
+# casing rule below carries a severity here (load fails otherwise).
+rule_severities:
+  slide_count_invalid: blocker
+  slide_type_invalid: blocker
+  heading_empty: blocker
+  heading_not_sentence_case_en: blocker
+  visible_emoji_forbidden: blocker
+  dash_punctuation_forbidden: blocker
+  body_too_long: blocker
+  copy_too_many_lines: blocker
+  heading_too_long: blocker
+  structured_extra_missing: blocker
+  structured_extra_shape_mismatch: blocker
+  heading_repeated_in_body: blocker
+  drafting_scaffold_present: blocker
+  slide_parse_failed: blocker
+  translation_missing: blocker
+  translation_shape_mismatch: blocker
+  icon_name_not_allowlisted: blocker
+  heading_not_sentence_case_pt: warning
+  body_not_sentence_case_pt: warning
+  proper_noun_casing: warning
+
+# AE-0312: PT casing rules + configurable proper-noun list. Maintenance
+# ownership is documented in contracts/README.md — add product names here (a
+# policy edit, no code deploy). ``exempt_slide_types`` lets a stylistic
+# all-lowercase slide type opt out of a rule explicitly.
+casing:
+  proper_nouns:
+    - Claude
+    - Anthropic
+  rules:
+    - code: heading_not_sentence_case_pt
+      exempt_slide_types: []
+    - code: body_not_sentence_case_pt
+      exempt_slide_types: []
+    - code: proper_noun_casing
+      exempt_slide_types: []
+
+lucide_icon_allowlist:
+  - chart-column
+  - book-open
+  - newspaper
+  - brain
+  - target
+  - eye
+  - message-circle
+  - shield-check
+  - wrench
+  - flask-conical
+
+copy_budgets:
+  intro_heading:
+    max_characters: 72
+    max_lines: 3
+  intro_subtitle:
+    max_characters: 180
+    max_lines: 4
+  summary_heading:
+    max_characters: 64
+    max_lines: 3
+  summary_point_title:
+    max_characters: 36
+  summary_point_body:
+    max_characters: 90
+  content_heading:
+    max_characters: 64
+    max_lines: 3
+  content_body:
+    max_characters: 220
+    max_lines: 6
+  feature_title:
+    max_characters: 32
+  feature_body:
+    max_characters: 100
+  closing_action_title:
+    max_characters: 30
+  closing_action_body:
+    max_characters: 90
+  cta_creator_name:
+    max_characters: 60
+  cta_handle:
+    max_characters: 80
+  cta_website:
+    max_characters: 80
+
+geometry:
+  viewport_standard:
+    width: 1080
+    height: 1350
+  viewport_hd:
+    width: 2160
+    height: 2700
+  footer_gap_standard: 24
+  footer_gap_hd: 48
+  tolerance_standard: 1
+  tolerance_hd: 2
+  near_limit_standard: 8
+  near_limit_hd: 16
+  selectors:
+    slide_root: "[data-slide-number]"
+    artwork: ".slide-artwork"
+    presentation: ".slide-presentation"
+    copy: ".slide-presentation-copy"
+    footer: ".slide-footer"
+    cta_card: ".creator-card"
+    cta_avatar: ".closing-avatar img"
+
+fonts:
+  heading_family: "'Inter', system-ui, -apple-system, sans-serif"
+  body_family: "'Inter', system-ui, -apple-system, sans-serif"
+  badge_family: "'JetBrains Mono', monospace"
+
+intentional_lowercase_allowlist:
+  - iPhone
+  - eBay
+  - macOS

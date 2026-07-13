@@ -426,7 +426,8 @@
     "presentation": {
       "blockedApproval": "Resolva as violações de apresentação bloqueantes antes de aprovar o conteúdo.",
       "editBudgetBlocked": "O texto editado excede os orçamentos de campo da apresentação. Encurte os campos destacados antes de aprovar.",
-      "unsavedEdits": "O texto editado dos slides será enviado na aprovação com a versão atual do workflow."
+      "unsavedEdits": "O texto editado dos slides será enviado na aprovação com a versão atual do workflow.",
+      "designReviseDisabled": "Solicitar uma revisão simples está desabilitado enquanto houver violações bloqueantes — ela não altera o texto dos slides. Use \"Editar texto dos slides\" ou \"Devolver para conteúdo\" acima."
     },
     "publishReady": "Revisão final aprovada. Abra o painel de publicação para liberar o carrossel no site público.",
     "gate": {
@@ -463,11 +464,37 @@
       "localeEn": "Inglês",
       "slideLabel": "Slide {index}",
       "presentationPolicy": "Política {version}",
+      "contentGateBlocked": "A geração automática não produziu texto válido para alguns slides mesmo após reparo e uma nova tentativa. Revise as violações abaixo antes de aprovar.",
       "presentationBlocked": "A aprovação está bloqueada até que todas as violações de apresentação sejam resolvidas.",
       "violationsTitle": "Violações de apresentação",
+      "violationSeverityBlocker": "Bloqueio",
+      "violationSeverityWarning": "Aviso",
       "designTitle": "Revisão de design",
       "designReady": "Tokens de design aplicados. Aprove para gerar as imagens dos slides.",
       "designPending": "Revise o outline e o conteúdo acima, depois aprove para aplicar o design e gerar imagens.",
+      "designRecovery": {
+        "blockedTitle": "Violações de conteúdo estão bloqueando a etapa de design",
+        "hint": "Corrija estas violações editando o texto dos slides diretamente ou devolvendo o fluxo para a fase de conteúdo. Solicitar uma revisão simples não altera o texto.",
+        "editAction": "Editar texto dos slides",
+        "sendBackAction": "Devolver para conteúdo",
+        "submitEdits": "Enviar texto editado",
+        "cancel": "Cancelar",
+        "sendBackFeedbackLabel": "Feedback para regeneração do conteúdo",
+        "sendBackFeedbackPlaceholder": "Descreva o que a fase de conteúdo deve corrigir (ex.: remover texto de rascunho do slide 4)…",
+        "sendBackSubmit": "Devolver",
+        "sendBackFeedbackRequired": "O feedback é obrigatório para devolver o fluxo para conteúdo.",
+        "violationHint": "Abrir o editor deste slide"
+      },
+      "structuredItems": "Itens estruturados",
+      "structuredItemLabel": "Corpo do item {index}",
+      "autoRepair": {
+        "button": "Corrigir problemas automaticamente",
+        "pending": "Corrigindo…",
+        "failed": "A correção automática não pôde ser aplicada. Tente novamente.",
+        "conflictInProgress": "Uma revisão está em andamento; verifique novamente em instantes.",
+        "noChanges": "Nenhuma correção determinística foi necessária.",
+        "fixedSlide": "Slide {index} · {locale}: corrigido {codes}"
+      },
       "outlineSlides": "{count, plural, one {# slide no outline} other {# slides no outline}}",
       "imagesTitle": "Imagens geradas",
       "imagePromptsTitle": "Prompts de imagem dos slides",
@@ -510,10 +537,27 @@
       "startFailed": "Falha ao iniciar o fluxo editorial",
       "startUnknown": "Falha ao iniciar o fluxo de trabalho",
       "resumeFailed": "Falha ao retomar o fluxo editorial",
-      "resumeUnknown": "Falha ao retomar o fluxo de trabalho"
+      "resumeUnknown": "Falha ao retomar o fluxo de trabalho",
+      "revisionCapExceeded": "O limite de revisões desta fase foi esgotado. Você ainda pode corrigir o texto: edite o conteúdo dos slides diretamente — edições diretas estão sempre disponíveis e não contam para o limite.",
+      "runInProgress": "Já existe uma revisão em andamento para este carrossel. Acompanhe o progresso no aviso acima.",
+      "versionConflict": "Este carrossel foi alterado em outra sessão. Atualize a página e tente novamente."
     },
     "transport": {
       "pollingFallback": "Fallback de polling ativo"
+    },
+    "runProgress": {
+      "title": "Revisão em andamento",
+      "phase": "Fase em execução: {phase}",
+      "stage": {
+        "generating": "gerando conteúdo",
+        "validating": "validando resultado",
+        "persisting": "salvando alterações"
+      },
+      "startedAt": "Iniciada às {time}.",
+      "elapsed": "Tempo decorrido: {minutes}min {seconds}s.",
+      "actionsDisabled": "As ações de revisão ficam temporariamente indisponíveis enquanto a revisão roda.",
+      "stillRunningHint": "Esta execução está demorando mais que o normal. Você pode verificar se ela ainda está ativa.",
+      "checkAgain": "Verificar novamente"
     }
   },
   "palettes": {
@@ -646,6 +690,30 @@
       "success": "Slides regenerados com novo layout.",
       "fetchError": "Não foi possível carregar as opções de layout.",
       "retry": "Tentar novamente"
+    },
+    "rebuildPdf": {
+      "title": "Reconstruir PDF",
+      "description": "Re-renderize os slides e o PDF a partir do texto mais recente e reconstrua o arquivo para download.",
+      "rebuild": "Reconstruir PDF",
+      "rebuilding": "Reconstruindo…",
+      "confirmTitle": "Reconstruir o PDF?",
+      "confirmBody": "Isso re-renderiza cada slide e PDF a partir dos dados atuais dos slides e ativa uma nova versão do artefato. A versão anterior continua ativa até a nova ficar pronta.",
+      "confirm": "Reconstruir",
+      "cancel": "Cancelar",
+      "success": "PDF reconstruído com o texto mais recente dos slides.",
+      "failed": "Não foi possível reconstruir o PDF."
+    },
+    "slideEditor": {
+      "title": "Editar texto dos slides",
+      "noImageRegen": "Corrija erros de digitação ou caixa no texto dos slides. Editar o texto nunca regenera as imagens.",
+      "editText": "Editar texto",
+      "save": "Salvar alterações",
+      "saving": "Salvando…",
+      "cancel": "Cancelar",
+      "rebuildPending": "Reconstrução do PDF pendente — o novo PDF refletirá sua edição em breve.",
+      "success": "Texto dos slides atualizado e o PDF foi reconstruído.",
+      "blockedRunInProgress": "A edição fica indisponível enquanto uma execução do fluxo está em andamento. Tente novamente ao terminar.",
+      "blockingViolations": "Algumas edições ainda violam as regras de conteúdo. Ajuste os slides destacados e salve novamente."
     }
   },
   "auth": {

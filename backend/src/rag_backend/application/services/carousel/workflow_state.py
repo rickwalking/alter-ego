@@ -49,6 +49,13 @@ class CarouselWorkflowState(TypedDict, total=False):
     presentation_policy_version: str
     localized_slides: list[dict[str, object]]
     presentation_validation: dict[str, object]
+    # AE-0309: fail-closed content-gate report (empty dict when the content
+    # build ended non-blocking; mirrored into the content interrupt payload).
+    content_gate_validation: dict[str, object]
+    # AE-0310: hint code set by the design ensure while the fresh validation
+    # report still blocks ("" once it passes); mirrored into the design
+    # interrupt payload and the state response for the recovery UI.
+    design_recovery_hint: str
     translations_en: dict[str, object]
 
 

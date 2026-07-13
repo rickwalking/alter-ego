@@ -14,6 +14,8 @@ import {
   PERSONA_VOICE_MATCH_MIN_SCORE,
   type FinalReviewSendBackPhase,
 } from "@/constants/editorial-workflow";
+import { WORKFLOW_PHASE_STATUS } from "@/constants/workflow";
+import { CreateRunProgressBanner } from "@/app/dashboard/create/workspace/create-run-progress-banner";
 import { CreateWorkflowArtifacts } from "@/app/dashboard/create/workspace/create-workflow-artifacts";
 import { WorkflowStatusBadge } from "@/app/dashboard/create/workspace/workflow-status-badge";
 import { CreatePhaseReview } from "@/app/dashboard/create/workspace/create-phase-review";
@@ -84,9 +86,26 @@ export function CreateWorkflowPanel({
     start,
     approve,
     revise,
+    refreshState,
     awaitingHumanReview,
     hasActiveWorkflow,
   } = workflow;
+
+  // AE-0315: live in-progress banner on EVERY step while a run executes.
+  const runInProgress =
+    state?.phase_status === WORKFLOW_PHASE_STATUS.IN_PROGRESS;
+  const runProgressBanner =
+    runInProgress && state ? (
+      <CreateRunProgressBanner
+        currentPhase={state.current_phase}
+        runStartedAt={state.run_started_at}
+        runStage={state.run_stage}
+        onCheckAgain={() => {
+          void refreshState();
+        }}
+        checkAgainDisabled={loading}
+      />
+    ) : null;
 
   useEffect(() => {
     if (!autoStart || startedRef.current || hasActiveWorkflow) {
@@ -188,6 +207,22 @@ export function CreateWorkflowPanel({
   });
   const contentEditable =
     state?.current_phase === EDITORIAL_PHASES.CONTENT && showLiveControls;
+  // AE-0310: design-step recovery — blocking content-level violations at the
+  // design gate are only resolvable by direct edits or a content send-back;
+  // a plain revise is a provable no-op there, so it is disabled.
+  const designReviseBlocked =
+    state?.current_phase === EDITORIAL_PHASES.DESIGN &&
+    (hasBlockingPresentationViolations(state) ||
+      Boolean(state.design_recovery_hint));
+  const designRecovery = {
+    onSubmitEditedSlides: (slides: LocalizedSlideReview[]): void => {
+      void revise("", { editedLocalizedSlides: slides });
+    },
+    onSendBackToContent: (sendBackFeedback: string): void => {
+      void revise(sendBackFeedback, { targetPhase: EDITORIAL_PHASES.CONTENT });
+    },
+    disabled: loading || !showLiveControls,
+  };
   const showPhaseReview =
     Boolean(state) &&
     (isLiveStep || isHistoricalCreateStep(viewStepId, workflowStepId)) &&
@@ -208,6 +243,7 @@ export function CreateWorkflowPanel({
           padding: "20px",
         }}
       >
+        {runProgressBanner}
         <p className="text-sm" style={{ color: "rgba(255,255,255,0.55)" }}>
           {tCreate("historicalHint", { phase: viewPhase ?? viewStepId })}
         </p>
@@ -244,6 +280,8 @@ export function CreateWorkflowPanel({
         </div>
       </div>
 
+      {runProgressBanner}
+
       {error && (
         <NeonAlert variant="destructive">
           <NeonAlertDescription>{error}</NeonAlertDescription>
@@ -267,6 +305,8 @@ export function CreateWorkflowPanel({
           contentEditable={contentEditable}
           contentSlides={contentSlides}
           onContentSlidesChange={setEditedContentSlides}
+          designRecovery={designRecovery}
+          onRepaired={() => void refreshState()}
         />
       )}
 
@@ -290,6 +330,7 @@ export function CreateWorkflowPanel({
           personaApproveBlocked={personaApproveBlocked}
           presentationApproveBlocked={presentationApproveBlocked}
           editBudgetBlocked={editBudgetBlocked}
+          designReviseBlocked={designReviseBlocked}
           showPublishLink={showPublishLink}
         />
       )}

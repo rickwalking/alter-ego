@@ -59,9 +59,7 @@ class TestThemeSnapshotAtGeneration:
     async def test_snapshot_is_idempotent(self, db_session: AsyncSession) -> None:
         repo = PostgresCarouselRepository(db_session)
         created = await repo.create_project(
-            CarouselProject(
-                topic="t", audience="a", niche="n", theme="plasma_magenta"
-            )
+            CarouselProject(topic="t", audience="a", niche="n", theme="plasma_magenta")
         )
         await _ensure_theme_snapshot(db_session, repo, created)
         first = created.theme_snapshot

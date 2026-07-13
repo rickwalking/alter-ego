@@ -41,10 +41,12 @@ from rag_backend.domain.constants.carousel_workflow import (
     FINAL_REVIEW_SEND_BACK_PHASES,
     PERSONA_SCORE_OVERALL_KEY,
     PHASE_CONTENT,
+    PHASE_DESIGN,
     PHASE_STATUS_AWAITING_HUMAN,
     REVIEW_ACTION_APPROVE,
     REVIEW_ACTION_REVISE,
     SLIDE_DRAFT_TEXT_KEY,
+    STRUCTURED_FEEDBACK_EDITED_SLIDES_KEY,
     STRUCTURED_FEEDBACK_EDITED_TEXT_KEY,
     STRUCTURED_FEEDBACK_TARGET_PHASE_KEY,
 )
@@ -61,6 +63,9 @@ class RevisionCapValidationContext:
     project_title: str
     db: AsyncSession | None = None
     notifications: NotificationService | None = None
+    # AE-0310: sanitized structured feedback so the cap check is target-aware
+    # (send-backs consume the TARGET phase's budget; edits consume none).
+    structured_feedback: dict[str, object] | None = None
 
 
 @dataclass(frozen=True)
@@ -113,12 +118,55 @@ def validate_content_approve_presentation(prior: CarouselWorkflowState) -> None:
         raise ValueError(ERR_PRESENTATION_VALIDATION_BLOCKED)
 
 
+def _has_edited_localized_slides(
+    structured_feedback: dict[str, object] | None,
+) -> bool:
+    """True when the resume submission carries non-empty edited slides."""
+    if not isinstance(structured_feedback, dict):
+        return False
+    edited = structured_feedback.get(STRUCTURED_FEEDBACK_EDITED_SLIDES_KEY)
+    return isinstance(edited, list) and bool(edited)
+
+
+def resolve_revision_cap_phase(
+    prior: CarouselWorkflowState,
+    structured_feedback: dict[str, object] | None,
+) -> str | None:
+    """Return the phase whose revision budget a revise consumes (AE-0310).
+
+    Accounting rule (pinned by the ticket):
+    - a send-back charges the TARGET phase — the phase whose LLM re-runs
+      (fixes the pre-existing check/increment divergence: the increment
+      already bumped the target while the check read the current phase);
+    - an ``edited_localized_slides`` submission charges NO phase — human
+      edits are uncapped, the guaranteed escape hatch;
+    - a plain design revise while a blocking validation report exists charges
+      NO phase — it is a provable content no-op (re-validate + re-interrupt);
+    - any other plain revise charges the current phase.
+    """
+    target = _resume_target_phase(structured_feedback)
+    if target in FINAL_REVIEW_SEND_BACK_PHASES:
+        return target
+    if _has_edited_localized_slides(structured_feedback):
+        return None
+    current = str(prior.get("current_phase", ""))
+    if current == PHASE_DESIGN and has_blocking_presentation_validation(prior):
+        return None
+    return current
+
+
 async def validate_revision_cap(
     prior: CarouselWorkflowState,
     ctx: RevisionCapValidationContext,
 ) -> None:
-    """Reject revise when the per-phase revision cap is exceeded."""
-    phase = str(prior.get("current_phase", ""))
+    """Reject revise when the charged phase's revision cap is exceeded.
+
+    Target-aware (AE-0310): send-backs evaluate the TARGET phase's counter,
+    plain revises the current phase's; uncapped submissions skip the check.
+    """
+    phase = resolve_revision_cap_phase(prior, ctx.structured_feedback)
+    if phase is None:
+        return
     revision_counts = prior.get("revision_count") or {}
     current_count = (
         int(revision_counts.get(phase, 0)) if isinstance(revision_counts, dict) else 0
@@ -208,13 +256,17 @@ async def prepare_resume_workflow(
         validate_content_approve_persona_score(prior)
         validate_content_approve_presentation(prior)
     if action == REVIEW_ACTION_REVISE:
+        structured = context.get("structured_feedback")
         await persist_phase_feedback(
             context["orchestrator"].engine,
             PhaseFeedbackPersistParams(
                 project_id=context["project_id"],
                 prior=prior,
                 feedback=context["feedback"],
-                target_phase=_resume_target_phase(context.get("structured_feedback")),
+                target_phase=_resume_target_phase(structured),
+                # AE-0310: increment only when a phase budget is charged.
+                count_revision=resolve_revision_cap_phase(prior, structured)
+                is not None,
             ),
         )
 
@@ -276,6 +328,7 @@ __all__ = [
     "RevisionCapValidationContext",
     "prepare_resume_workflow",
     "record_feedback_correction",
+    "resolve_revision_cap_phase",
     "stream_workflow_phase_updates",
     "validate_content_approve_persona_score",
     "validate_content_approve_presentation",

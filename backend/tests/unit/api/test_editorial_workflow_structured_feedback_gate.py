@@ -22,10 +22,14 @@ from rag_backend.api.schemas.carousel_workflow import (
     LocalizedSlideReview,
 )
 from rag_backend.domain.constants.carousel_workflow import (
-    ERR_EDITED_SLIDES_CONTENT_ONLY,
+    ERR_EDITED_SLIDES_PHASE_NOT_ALLOWED,
+    ERR_SEND_BACK_TARGET_NOT_ALLOWED,
+    ERR_STRUCTURED_FEEDBACK_FINAL_REVIEW_ONLY,
     PHASE_CONTENT,
+    PHASE_DESIGN,
     PHASE_FINAL_REVIEW,
     PHASE_IMAGES,
+    PHASE_OUTLINE,
     REVIEW_ACTION_REVISE,
 )
 
@@ -71,25 +75,26 @@ class TestStructuredFeedbackGate:
             service, "project-1", request
         )  # no raise
 
-    async def test_edited_slides_rejected_at_final_review(self) -> None:
-        """Combined-payload semantic: edited slides submitted while still at
-        final_review are rejected (two-step flow is required)."""
-        service = _service(PHASE_FINAL_REVIEW)
-        request = _request(
-            EditorialStructuredFeedback(
-                edited_localized_slides=[
-                    LocalizedSlideReview(slide_index=1, slide_type="intro")
-                ]
+    async def test_edited_slides_accepted_at_design_and_final_review(self) -> None:
+        """AE-0310: the edited-slides allowlist is widened to
+        {content, design, final_review} — all three phases accept edits."""
+        for phase in (PHASE_DESIGN, PHASE_FINAL_REVIEW):
+            service = _service(phase)
+            request = _request(
+                EditorialStructuredFeedback(
+                    edited_localized_slides=[
+                        LocalizedSlideReview(slide_index=1, slide_type="intro")
+                    ]
+                )
             )
-        )
 
-        with pytest.raises(HTTPException) as exc:
-            await ensure_structured_feedback_allowed(service, "project-1", request)
-        assert exc.value.detail == ERR_EDITED_SLIDES_CONTENT_ONLY
+            await ensure_structured_feedback_allowed(
+                service, "project-1", request
+            )  # no raise
 
     async def test_edited_slides_rejected_at_images_checkpoint(self) -> None:
-        """AE-0290 AC5: edited slides are rejected at a non-content phase (images),
-        i.e. the content-only gate still fires for every non-content checkpoint."""
+        """AE-0310: edits stay rejected outside {content, design, final_review}
+        (images), with the renamed phase-not-allowed error."""
         service = _service(PHASE_IMAGES)
         request = _request(
             EditorialStructuredFeedback(
@@ -101,4 +106,40 @@ class TestStructuredFeedbackGate:
 
         with pytest.raises(HTTPException) as exc:
             await ensure_structured_feedback_allowed(service, "project-1", request)
-        assert exc.value.detail == ERR_EDITED_SLIDES_CONTENT_ONLY
+        assert exc.value.detail == ERR_EDITED_SLIDES_PHASE_NOT_ALLOWED
+
+    async def test_design_send_back_to_content_accepted(self) -> None:
+        """AE-0310: a design revise may target content (send-back)."""
+        service = _service(PHASE_DESIGN)
+        request = _request(EditorialStructuredFeedback(target_phase=PHASE_CONTENT))
+
+        await ensure_structured_feedback_allowed(
+            service, "project-1", request
+        )  # no raise
+
+    async def test_design_send_back_to_outline_rejected(self) -> None:
+        """AE-0310: design send-backs are limited to content."""
+        service = _service(PHASE_DESIGN)
+        request = _request(EditorialStructuredFeedback(target_phase=PHASE_OUTLINE))
+
+        with pytest.raises(HTTPException) as exc:
+            await ensure_structured_feedback_allowed(service, "project-1", request)
+        assert exc.value.detail == ERR_SEND_BACK_TARGET_NOT_ALLOWED
+
+    async def test_target_phase_rejected_at_content_checkpoint(self) -> None:
+        """target_phase stays rejected at phases without send-back support."""
+        service = _service(PHASE_CONTENT)
+        request = _request(EditorialStructuredFeedback(target_phase=PHASE_OUTLINE))
+
+        with pytest.raises(HTTPException) as exc:
+            await ensure_structured_feedback_allowed(service, "project-1", request)
+        assert exc.value.detail == ERR_STRUCTURED_FEEDBACK_FINAL_REVIEW_ONLY
+
+    async def test_edited_text_rejected_at_design(self) -> None:
+        """AE-0310: edited_text remains final-review-only."""
+        service = _service(PHASE_DESIGN)
+        request = _request(EditorialStructuredFeedback(edited_text="Caption"))
+
+        with pytest.raises(HTTPException) as exc:
+            await ensure_structured_feedback_allowed(service, "project-1", request)
+        assert exc.value.detail == ERR_STRUCTURED_FEEDBACK_FINAL_REVIEW_ONLY

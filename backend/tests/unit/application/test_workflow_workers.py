@@ -78,7 +78,11 @@ async def test_worker_error_renders_traceback(monkeypatch, test_engine) -> None:
 
     try:
         await workflow_workers.run_workflow_workers(
-            _settings(), stop_event, _noop_factory
+            _settings(),
+            stop_event,
+            workflow_workers.WorkflowWorkerServices(
+                auto_rejector_factory=_noop_factory,
+            ),
         )
     finally:
         structlog.reset_defaults()
@@ -90,3 +94,61 @@ async def test_worker_error_renders_traceback(monkeypatch, test_engine) -> None:
     assert "Traceback" in output
     assert _BOOM in output
     assert "RuntimeError" in output
+
+
+class _RecordingReaper:
+    def __init__(self, log: list[str]) -> None:
+        self._log = log
+
+    async def tick(self, _db: object) -> int:
+        self._log.append("reaper")
+        return 0
+
+
+class _RecordingReconciler:
+    def __init__(self, log: list[str]) -> None:
+        self._log = log
+
+    async def reconcile(self, _db: object) -> int:
+        self._log.append("drift")
+        return 0
+
+
+class _RecordingSweeper:
+    def __init__(self, log: list[str]) -> None:
+        self._log = log
+
+    async def sweep(self, _db: object) -> int:
+        self._log.append("republish")
+        return 0
+
+
+class _NoopNotifications:
+    async def send_deadline_reminders(self, _db: object) -> int:
+        return 0
+
+
+class _NoopAlerts:
+    async def check_and_alert(self, _db: object) -> int:
+        return 0
+
+
+@pytest.mark.asyncio
+async def test_run_tick_sweeps_republish_after_drift_reconciler() -> None:
+    """AE-0314 pinned ordering: reaper -> drift reconciler -> republish sweep."""
+    from typing import cast
+
+    log: list[str] = []
+    collaborators = workflow_workers._TickCollaborators(
+        notifications=cast(object, _NoopNotifications()),
+        alerts=cast(object, _NoopAlerts()),
+        auto_rejector=cast(object, _NoopAutoRejector()),
+        stale_run_reaper=cast(object, _RecordingReaper(log)),
+        drift_reconciler=cast(object, _RecordingReconciler(log)),
+        republish_sweeper=cast(object, _RecordingSweeper(log)),
+    )
+    counters = await workflow_workers._run_tick(
+        _settings(), cast(object, None), collaborators
+    )
+    assert log == ["reaper", "drift", "republish"]
+    assert counters["republished"] == 0

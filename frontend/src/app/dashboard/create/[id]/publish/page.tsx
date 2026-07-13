@@ -14,12 +14,17 @@ import { EDITORIAL_WORKFLOW_STATUS } from "@/constants/editorial-workflow";
 import { WORKFLOW_PHASE_STATUS } from "@/constants/workflow";
 import { useCarouselProject } from "@/modules/editorial";
 import { useEditorialWorkflow } from "@/modules/editorial";
+import { AutoRepairButton } from "@/modules/editorial";
+import { resolveLocalizedSlides } from "@/modules/editorial";
 import {
   PublishPanel,
   PublishFailedNotice,
+  RebuildPdfSection,
   RegenerateStrategySection,
+  SlideTextEditSection,
   mergePublishProjectWithWorkflow,
   usePublishInstagram,
+  useRepublishCarousel,
 } from "@/modules/publishing";
 import { authenticatedFetch } from "@/lib/authenticated-fetch";
 
@@ -47,11 +52,23 @@ export default function DashboardCreatePublishPage(): React.ReactElement {
   const { refreshState, state: workflowState } =
     useEditorialWorkflow(projectId);
   const publishInstagram = usePublishInstagram();
+  const republish = useRepublishCarousel();
   const [publishResult, setPublishResult] = useState<PublishResult>({
     status: "idle",
   });
   const [sitePublishMessage, setSitePublishMessage] = useState<string | null>(
     null,
+  );
+  // AE-0313: the freshly rebuilt artifact version, used to cache-bust the
+  // served PDF/slide URLs after a "Rebuild PDF".
+  const [rebuiltVersion, setRebuiltVersion] = useState<string | null>(null);
+
+  const handleRebuilt = useCallback(
+    (artifactVersion: string | null): void => {
+      setRebuiltVersion(artifactVersion);
+      void Promise.all([refreshState(), refetchProject()]);
+    },
+    [refreshState, refetchProject],
   );
 
   useEffect(() => {
@@ -251,8 +268,51 @@ export default function DashboardCreatePublishPage(): React.ReactElement {
             }
             isPublishingInstagram={publishInstagram.isPending}
             publishResult={publishResult}
+            cacheBustToken={rebuiltVersion ?? undefined}
           />
         </div>
+
+        <div style={{ marginTop: "16px" }}>
+          <RebuildPdfSection projectId={projectId} onRebuilt={handleRebuilt} />
+          {/* AE-0311: one-click deterministic repair; a completed carousel
+              chains AE-0313's republish so the served PDF reflects the fix. */}
+          <div style={{ marginTop: "12px" }}>
+            <AutoRepairButton
+              projectId={projectId}
+              onRepaired={() => {
+                void Promise.all([refreshState(), refetchProject()]);
+              }}
+              onRepublishNeeded={() => {
+                republish.mutate(
+                  { projectId },
+                  {
+                    onSuccess: (data) =>
+                      handleRebuilt(data.artifact_version ?? null),
+                  },
+                );
+              }}
+            />
+          </div>
+        </div>
+
+        {workflowState && (
+          <div style={{ marginTop: "16px" }}>
+            {/* AE-0314: fix slide text after completion without regenerating
+                images; chains the republish so the served PDF reflects the edit. */}
+            <SlideTextEditSection
+              projectId={projectId}
+              slides={resolveLocalizedSlides(workflowState)}
+              policyVersion={workflowState.presentation_policy_version}
+              runInProgress={
+                workflowState.phase_status === WORKFLOW_PHASE_STATUS.IN_PROGRESS
+              }
+              rebuildPending={Boolean(project?.needs_republish_since)}
+              onEdited={() => {
+                void Promise.all([refreshState(), refetchProject()]);
+              }}
+            />
+          </div>
+        )}
 
         <div style={{ marginTop: "16px" }}>
           <RegenerateStrategySection project={project} projectId={projectId} />

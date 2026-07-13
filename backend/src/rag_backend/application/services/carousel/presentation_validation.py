@@ -7,6 +7,10 @@ from collections.abc import Awaitable, Callable, Mapping
 from dataclasses import dataclass
 from datetime import UTC, datetime
 
+from rag_backend.application.services.carousel.presentation_casing import (
+    CasingCheckCommand,
+    casing_violations,
+)
 from rag_backend.application.services.carousel.presentation_policy import (
     CarouselPresentationPolicy,
     load_presentation_policy,
@@ -268,6 +272,18 @@ def validate_slide_payload(
     _validate_heading_not_in_body(heading, body, ctx)
     _validate_copy_budgets(slide_type, (heading, body), ctx)
     _validate_structured_sections(command.payload, active_policy, ctx)
+    # AE-0312: PT casing rules (heading/body sentence case + proper nouns). No-op
+    # for v1 policies, which define no casing rules.
+    violations.extend(
+        casing_violations(
+            CasingCheckCommand(
+                payload=command.payload,
+                locale=command.locale,
+                policy=active_policy,
+                slide_index=command.slide_index,
+            )
+        )
+    )
     return violations
 
 
@@ -290,10 +306,14 @@ def validate_bilingual_shape_parity(
 
 def build_validation_report(
     violations: list[SlideValidationViolation],
-    *,
-    blocking: bool = True,
 ) -> SlideValidationReport:
-    """Build a consistent validation report from collected violations."""
+    """Build a consistent validation report from collected violations.
+
+    AE-0312: ``blocking`` is derived from severity — the report blocks only
+    when at least one blocker-severity violation remains, so warning-tier
+    casing violations surface in the review panel without blocking approval.
+    The stored report therefore always agrees with the approval-gate decision.
+    """
     if not violations:
         return SlideValidationReport(
             validation_status=VALIDATION_STATUS_VALID,
@@ -301,6 +321,7 @@ def build_validation_report(
             blocking=False,
             violations=[],
         )
+    blocking = any(violation.is_blocker for violation in violations)
     return SlideValidationReport(
         validation_status=VALIDATION_STATUS_INVALID,
         validated_at=datetime.now(tz=UTC),

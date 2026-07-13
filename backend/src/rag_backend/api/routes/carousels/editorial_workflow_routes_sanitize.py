@@ -32,9 +32,15 @@ def _sanitize_payload_strings(value: object) -> object:
     return value
 
 
-def _sanitize_edited_slides(
+def sanitize_edited_slides(
     edited_slides: list[LocalizedSlideReview],
 ) -> list[dict[str, object]]:
+    """Case-preservingly sanitize edited localized slide payloads (AE-0289).
+
+    Shared by the review-step resume path and the AE-0314 completed-project
+    slide-edit endpoint so both wires apply identical display-preserving
+    sanitization (markdown emphasis + case survive; markup injection stripped).
+    """
     sanitized: list[dict[str, object]] = []
     for slide in edited_slides:
         payload = slide.model_dump()
@@ -64,12 +70,13 @@ def sanitize_structured_feedback(
         if safe_edited:
             sanitized["edited_text"] = safe_edited
     if feedback.edited_localized_slides:
-        sanitized[STRUCTURED_FEEDBACK_EDITED_SLIDES_KEY] = _sanitize_edited_slides(
+        sanitized[STRUCTURED_FEEDBACK_EDITED_SLIDES_KEY] = sanitize_edited_slides(
             feedback.edited_localized_slides
         )
     return sanitized or None
 
 
 __all__ = [
+    "sanitize_edited_slides",
     "sanitize_structured_feedback",
 ]

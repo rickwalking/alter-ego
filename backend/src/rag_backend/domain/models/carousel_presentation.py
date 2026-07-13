@@ -43,12 +43,15 @@ from rag_backend.domain.constants.carousel_presentation import (
     FEATURE_ITEM_MAX,
     FEATURE_ITEM_MIN,
     LUCIDE_ICON_ALLOWLIST,
+    SEVERITY_BLOCKER,
     STAT_ITEM_COUNT,
     SUMMARY_POINT_COUNT,
     VALID_CONTENT_KINDS,
     VALIDATION_STATUS_INVALID,
     VALIDATION_STATUS_VALID,
 )
+
+ViolationSeverity = Literal["blocker", "warning"]
 
 _FORBID_EXTRA = ConfigDict(extra="forbid")
 
@@ -310,6 +313,14 @@ class SlideValidationViolation(BaseModel):
     slide_index: int | None = None
     locale: str | None = None
     field: str | None = None
+    # AE-0312: severity tier. Absent-severity defaults to BLOCKER at the model
+    # level so a rule that forgets to set it can never silently unblock.
+    severity: ViolationSeverity = SEVERITY_BLOCKER
+
+    @property
+    def is_blocker(self) -> bool:
+        """Return True when this violation blocks approval."""
+        return self.severity == SEVERITY_BLOCKER
 
 
 class SlideValidationReport(BaseModel):
@@ -347,4 +358,5 @@ __all__ = [
     "SlideValidationViolation",
     "StatItem",
     "SummarySlideCopy",
+    "ViolationSeverity",
 ]

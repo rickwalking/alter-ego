@@ -49,6 +49,8 @@ export const API_ENDPOINTS = {
   CAROUSEL_PUBLISH_INSTAGRAM_STATUS: (id: string) =>
     `/api/carousels/${id}/publish/instagram/status`,
   CAROUSEL_PUBLISH: (id: string) => `/api/carousels/${id}/publish`,
+  CAROUSEL_REPAIR: (id: string) => `/api/carousels/${id}/repair`,
+  CAROUSEL_REPUBLISH: (id: string) => `/api/carousels/${id}/republish`,
   CAROUSEL_STRATEGIES: "/api/carousels/strategies",
   CAROUSEL_STRATEGY_APPLY: (id: string) => `/api/carousels/${id}/strategy`,
   CAROUSEL_WORKFLOW_START: (id: string) =>

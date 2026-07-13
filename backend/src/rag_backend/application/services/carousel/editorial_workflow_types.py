@@ -53,12 +53,19 @@ class ReviewEventEmitContext:
 
 @dataclass(frozen=True)
 class PhaseFeedbackPersistParams:
-    """Inputs for persisting reviewer phase feedback."""
+    """Inputs for persisting reviewer phase feedback.
+
+    ``count_revision=False`` stores the note without bumping the phase's
+    revision counter (AE-0310): edited-slides submissions and a plain design
+    revise while a blocking report exists are provable non-regenerations, so
+    they must not consume the LLM revision budget.
+    """
 
     project_id: str
     prior: CarouselWorkflowState
     feedback: str | None
     target_phase: str | None = None
+    count_revision: bool = True
 
 
 __all__ = [

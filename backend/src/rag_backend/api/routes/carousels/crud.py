@@ -36,6 +36,9 @@ from rag_backend.domain.constants.carousel_workflow import (
     ERR_WORKFLOW_NOT_APPROVED_FOR_PUBLISH,
     WORKFLOW_STATUS_APPROVED_FOR_PUBLISH,
 )
+from rag_backend.domain.constants.presentation_policy import (
+    CREATE_TIME_PRESENTATION_POLICY_VERSION,
+)
 from rag_backend.domain.constants.rate_limits import RATE_LIMIT_CAROUSEL_PUBLISH
 from rag_backend.domain.models import CarouselProject, CarouselStatus, User
 from rag_backend.domain.protocols import CarouselRepository
@@ -102,6 +105,9 @@ async def create_carousel(
         image_style=request.image_style,
         theme=theme,
         custom_visual_details=request.custom_visual_details,
+        # AE-0312: new carousels are stamped v2 so PT casing rules apply; DEFAULT
+        # stays v1 for legacy NULL-version rows on re-validation reads.
+        presentation_policy_version=CREATE_TIME_PRESENTATION_POLICY_VERSION,
     )
     created = await repo.create_project(project)
     model = await session.get(CarouselProjectModel, str(created.id))

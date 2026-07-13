@@ -16,6 +16,7 @@ Feature: Versioned carousel presentation contract
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
@@ -41,6 +42,7 @@ from rag_backend.domain.constants import (
     LANGUAGE_PT,
 )
 from rag_backend.domain.constants.artifact_build import (
+    ARTIFACT_CURRENT_INDEX_FILENAME,
     ARTIFACT_MANIFEST_FILENAME,
     ARTIFACT_VERSION_PREFIX,
     ARTIFACT_VERSIONS_DIR,
@@ -276,3 +278,189 @@ class TestCarouselArtifactBuildService:
         assert result.artifact_version == artifact_version
         assert result.lock_version == 3
         build_repo.activate_build.assert_awaited_once()
+
+
+def _current_index_version(project_root: Path) -> str | None:
+    index_path = project_root / ARTIFACT_CURRENT_INDEX_FILENAME
+    if not index_path.is_file():
+        return None
+    payload = json.loads(index_path.read_text(encoding="utf-8"))
+    value = payload.get("artifact_version")
+    return value if isinstance(value, str) else None
+
+
+@pytest.mark.asyncio
+@pytest.mark.unit
+class TestArtifactBuildIndexOrdering:
+    """AE-0313: current.json is written only AFTER a successful activation CAS."""
+
+    async def test_fresh_build_writes_index_after_activation(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        # Scenario: a new version activates -> current.json names it.
+        project = _make_project(tmp_path)
+        slides = [_make_slide(1, project.id)]
+        _populate_legacy_output(tmp_path, [1])
+
+        db = AsyncMock()
+        build_repo = MagicMock()
+        build_repo.get_by_project_and_version = AsyncMock(return_value=None)
+        build_repo.upsert_build = AsyncMock(side_effect=lambda build: build)
+        build_repo.activate_build = AsyncMock(return_value=3)
+
+        with patch(
+            "rag_backend.application.services.carousel.artifact_build_service.PostgresCarouselArtifactBuildRepository",
+            return_value=build_repo,
+        ):
+            result = await CarouselArtifactBuildService().build_and_activate(
+                db,
+                ArtifactBuildRequest(
+                    project=project,
+                    slides=slides,
+                    source_lock_version=2,
+                    prior_artifact_version=None,
+                ),
+            )
+
+        assert isinstance(result, ArtifactBuildResult)
+        assert _current_index_version(tmp_path) == result.artifact_version
+
+    async def test_cas_conflict_leaves_index_naming_the_winner(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        # Scenario: a CAS-losing concurrent build never touches current.json.
+        winner = f"{ARTIFACT_VERSION_PREFIX}{'9' * 64}"
+        (tmp_path / ARTIFACT_CURRENT_INDEX_FILENAME).write_text(
+            json.dumps({"artifact_version": winner}), encoding="utf-8"
+        )
+        project = _make_project(tmp_path)
+        slides = [_make_slide(1, project.id)]
+        _populate_legacy_output(tmp_path, [1])
+
+        db = AsyncMock()
+        build_repo = MagicMock()
+        build_repo.get_by_project_and_version = AsyncMock(return_value=None)
+        build_repo.upsert_build = AsyncMock(side_effect=lambda build: build)
+        build_repo.mark_build_status = AsyncMock()
+        build_repo.activate_build = AsyncMock(
+            side_effect=ValueError(ERR_ARTIFACT_BUILD_CONFLICT)
+        )
+
+        from rag_backend.application.services.carousel.artifact_build_service import (
+            ArtifactBuildFailure,
+        )
+
+        with patch(
+            "rag_backend.application.services.carousel.artifact_build_service.PostgresCarouselArtifactBuildRepository",
+            return_value=build_repo,
+        ):
+            result = await CarouselArtifactBuildService().build_and_activate(
+                db,
+                ArtifactBuildRequest(
+                    project=project,
+                    slides=slides,
+                    source_lock_version=2,
+                    prior_artifact_version=None,
+                ),
+            )
+
+        assert isinstance(result, ArtifactBuildFailure)
+        # The losing build must NOT have re-pointed current.json at its version.
+        assert _current_index_version(tmp_path) == winner
+
+    async def test_activate_existing_writes_current_index(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        # Scenario: idempotent re-activation refreshes current.json immediately.
+        project = _make_project(tmp_path)
+        slides = [_make_slide(1, project.id)]
+        _populate_legacy_output(tmp_path, [1])
+
+        version_input = ArtifactVersionInput(
+            project_id=str(project.id),
+            source_lock_version=2,
+            presentation_policy_version="hero_lower_third_v1",
+            presentation_policy_checksum="sha256-abc",
+            template_version="v2",
+            slides_fingerprint=compute_slides_fingerprint(slides),
+            design_fingerprint=None,
+            creator_asset_hash=None,
+            export_width=1080,
+            export_height=1350,
+        )
+        artifact_version = compute_artifact_version(version_input)
+        version_dir = tmp_path / ARTIFACT_VERSIONS_DIR / artifact_version
+        version_dir.mkdir(parents=True)
+        (version_dir / ARTIFACT_MANIFEST_FILENAME).write_text("{}", encoding="utf-8")
+
+        db = AsyncMock()
+        build_repo = MagicMock()
+        build_repo.get_by_project_and_version = AsyncMock(
+            return_value=MagicMock(
+                project_id=project.id, artifact_version=artifact_version
+            )
+        )
+        build_repo.activate_build = AsyncMock(return_value=4)
+
+        with patch(
+            "rag_backend.application.services.carousel.artifact_build_service.PostgresCarouselArtifactBuildRepository",
+            return_value=build_repo,
+        ):
+            result = await CarouselArtifactBuildService().build_and_activate(
+                db,
+                ArtifactBuildRequest(
+                    project=project,
+                    slides=slides,
+                    source_lock_version=2,
+                    prior_artifact_version=None,
+                ),
+            )
+
+        assert isinstance(result, ArtifactBuildResult)
+        assert _current_index_version(tmp_path) == artifact_version
+
+    async def test_repeat_build_reuses_same_digest(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        # Digest determinism (r5): two renders of identical slide DATA yield the
+        # same version, so the second build re-activates via _activate_existing
+        # (a true no-op) instead of growing versions unbounded.
+        project = _make_project(tmp_path)
+        slides = [_make_slide(1, project.id), _make_slide(2, project.id)]
+        _populate_legacy_output(tmp_path, [1, 2])
+
+        db = AsyncMock()
+        build_repo = MagicMock()
+        build_repo.upsert_build = AsyncMock(side_effect=lambda build: build)
+        build_repo.activate_build = AsyncMock(return_value=3)
+        build_repo.get_by_project_and_version = AsyncMock(return_value=None)
+
+        service = CarouselArtifactBuildService()
+        request = ArtifactBuildRequest(
+            project=project,
+            slides=slides,
+            source_lock_version=2,
+            prior_artifact_version=None,
+        )
+        with patch(
+            "rag_backend.application.services.carousel.artifact_build_service.PostgresCarouselArtifactBuildRepository",
+            return_value=build_repo,
+        ):
+            first = await service.build_and_activate(db, request)
+            # Re-render identical DATA into fresh files (new bytes/timestamps).
+            _populate_legacy_output(tmp_path, [1, 2])
+            build_repo.get_by_project_and_version = AsyncMock(
+                return_value=MagicMock(
+                    project_id=project.id,
+                    artifact_version=first.artifact_version,
+                )
+            )
+            second = await service.build_and_activate(db, request)
+
+        assert isinstance(first, ArtifactBuildResult)
+        assert isinstance(second, ArtifactBuildResult)
+        assert first.artifact_version == second.artifact_version

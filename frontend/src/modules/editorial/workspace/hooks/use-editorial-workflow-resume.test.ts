@@ -269,6 +269,9 @@ describe("useEditorialWorkflowResume", () => {
     expect(refreshState).toHaveBeenCalled();
   });
 
+  // AE-0315 — Gherkin: backend/tests/features/carousel_run_progress_reaper.feature
+  //   The three 409 causes have distinct client copy; version conflicts get
+  //   their own message instead of the raw machine code.
   it("surfaces client resume errors without entering polling recovery", async () => {
     mockAuthenticatedFetch.mockResolvedValue({
       ok: false,
@@ -288,9 +291,76 @@ describe("useEditorialWorkflowResume", () => {
       }
     });
 
-    expect(caught).toEqual(new Error("version_conflict"));
-    expect(setError).toHaveBeenCalledWith("version_conflict");
+    expect(caught).toEqual(new Error("error.versionConflict"));
+    expect(setError).toHaveBeenCalledWith("error.versionConflict");
     expect(enterPollingFallback).not.toHaveBeenCalled();
+  });
+
+  // AE-0315 — Gherkin: backend/tests/features/carousel_run_progress_reaper.feature
+  // Scenario: Resume attempt during a run explains itself
+  //   A run-in-progress 409 renders the banner (state refresh), not a toast.
+  it("run-in-progress 409 refreshes state for the banner instead of erroring", async () => {
+    mockAuthenticatedFetch.mockResolvedValue({
+      ok: false,
+      status: HTTP_STATUS.CONFLICT,
+      json: async () => ({
+        detail: "resume_already_in_progress",
+        conflict: {
+          code: "resume_already_in_progress",
+          message: "A workflow run is already in progress for this carousel.",
+          run_started_at: "2026-07-10T03:39:00+00:00",
+        },
+      }),
+    } as Response);
+
+    const runningState: EditorialWorkflowState = {
+      ...baseState,
+      phase_status: WORKFLOW_PHASE_STATUS.IN_PROGRESS,
+      run_started_at: "2026-07-10T03:39:00+00:00",
+      run_stage: "generating",
+    };
+
+    const { hookParams, setError, refreshState, setState } =
+      createHookOptions();
+    refreshState.mockResolvedValue(runningState);
+    const { result } = renderHook(() => useEditorialWorkflowResume(hookParams));
+
+    let returned: EditorialWorkflowState | undefined;
+    await act(async () => {
+      returned = await result.current.resume("approve");
+    });
+
+    expect(returned).toEqual(runningState);
+    expect(setState).toHaveBeenCalledWith(runningState);
+    expect(setError).not.toHaveBeenCalledWith(expect.stringContaining("error"));
+    expect(refreshState).toHaveBeenCalled();
+  });
+
+  // AE-0310 — Gherkin: backend/tests/features/carousel_design_phase_recovery.feature
+  // Scenario: Direct edits remain available after all caps are exhausted
+  //   The cap-exceeded 409 copy points to the uncapped edit path instead of
+  //   surfacing the raw machine code.
+  it("maps the revision-cap 409 to the uncapped-edit guidance message", async () => {
+    mockAuthenticatedFetch.mockResolvedValue({
+      ok: false,
+      status: HTTP_STATUS.CONFLICT,
+      json: async () => ({ detail: "revision_cap_exceeded" }),
+    } as Response);
+
+    const { hookParams, setError } = createHookOptions();
+    const { result } = renderHook(() => useEditorialWorkflowResume(hookParams));
+
+    let caught: unknown;
+    await act(async () => {
+      try {
+        await result.current.resume("revise", "Fix slide 4");
+      } catch (error) {
+        caught = error;
+      }
+    });
+
+    expect(caught).toEqual(new Error("error.revisionCapExceeded"));
+    expect(setError).toHaveBeenCalledWith("error.revisionCapExceeded");
   });
 
   it("recovers from transport failures by polling workflow state", async () => {

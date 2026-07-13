@@ -931,3 +931,70 @@ describe("useEditorialWorkflow utils", () => {
     expect(payload.phase).toBe("research");
   });
 });
+
+// AE-0315 — Gherkin: backend/tests/features/carousel_run_progress_reaper.feature
+describe("run metadata merge (AE-0315)", () => {
+  const runningState: EditorialWorkflowState = {
+    project_id: "project-1",
+    current_phase: "content",
+    phase_status: WORKFLOW_PHASE_STATUS.IN_PROGRESS,
+    research_findings: [],
+    outline: [],
+    slide_drafts: [],
+    status: "draft",
+    run_started_at: "2026-07-10T03:39:00+00:00",
+    run_stage: "generating",
+  };
+
+  // Scenario: User sees a live in-progress banner during a revision
+  it("run.started carries run_started_at into state", () => {
+    const merged = mergeWorkflowState("project-1", null, {
+      event: EDITORIAL_WORKFLOW_SSE_EVENTS.RUN_STARTED,
+      project_id: "project-1",
+      phase: "content",
+      phase_status: WORKFLOW_PHASE_STATUS.IN_PROGRESS,
+      run_started_at: "2026-07-10T03:39:00+00:00",
+    });
+
+    expect(merged.phase_status).toBe(WORKFLOW_PHASE_STATUS.IN_PROGRESS);
+    expect(merged.run_started_at).toBe("2026-07-10T03:39:00+00:00");
+  });
+
+  it("run.stage_changed updates the stage and keeps the start time", () => {
+    const merged = mergeWorkflowState("project-1", runningState, {
+      event: EDITORIAL_WORKFLOW_SSE_EVENTS.RUN_STAGE_CHANGED,
+      project_id: "project-1",
+      phase_status: WORKFLOW_PHASE_STATUS.IN_PROGRESS,
+      run_stage: "validating",
+    });
+
+    expect(merged.run_stage).toBe("validating");
+    expect(merged.run_started_at).toBe("2026-07-10T03:39:00+00:00");
+  });
+
+  // Scenario: Banner clears when the run finishes
+  it("run.finished clears the run metadata and re-enables via phase_status", () => {
+    const merged = mergeWorkflowState("project-1", runningState, {
+      event: EDITORIAL_WORKFLOW_SSE_EVENTS.RUN_FINISHED,
+      project_id: "project-1",
+      phase_status: WORKFLOW_PHASE_STATUS.AWAITING_HUMAN,
+      reason: "completed",
+    });
+
+    expect(merged.phase_status).toBe(WORKFLOW_PHASE_STATUS.AWAITING_HUMAN);
+    expect(merged.run_started_at).toBeNull();
+    expect(merged.run_stage).toBeNull();
+  });
+
+  it("unrelated events carry the run metadata forward", () => {
+    const merged = mergeWorkflowState("project-1", runningState, {
+      event: EDITORIAL_WORKFLOW_SSE_EVENTS.PROGRESS,
+      project_id: "project-1",
+      phase: "content",
+      phase_progress: { current: 2, total: 6 },
+    });
+
+    expect(merged.run_started_at).toBe("2026-07-10T03:39:00+00:00");
+    expect(merged.run_stage).toBe("generating");
+  });
+});

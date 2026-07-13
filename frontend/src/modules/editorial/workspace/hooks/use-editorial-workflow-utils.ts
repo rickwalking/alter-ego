@@ -142,15 +142,34 @@ function isFullWorkflowState(
   );
 }
 
+/**
+ * AE-0315: run metadata merge — run.finished ends the run (fields cleared);
+ * other events carry forward the payload's run fields or the previous state.
+ */
+function mergeRunMetadata(
+  prev: EditorialWorkflowState | null,
+  payload: WorkflowEventPayload,
+): Pick<EditorialWorkflowState, "run_started_at" | "run_stage"> {
+  if (payload.event === EDITORIAL_WORKFLOW_SSE_EVENTS.RUN_FINISHED) {
+    return { run_started_at: null, run_stage: null };
+  }
+  return {
+    run_started_at: payload.run_started_at ?? prev?.run_started_at ?? null,
+    run_stage: payload.run_stage ?? prev?.run_stage ?? null,
+  };
+}
+
 export function mergeWorkflowState(
   projectId: string,
   prev: EditorialWorkflowState | null,
   payload: WorkflowEventPayload,
 ): EditorialWorkflowState {
   const normalizedProgress = normalizeProgressPayload(payload);
+  const runMetadata = mergeRunMetadata(prev, payload);
 
   if (isFullWorkflowState(payload, projectId)) {
     return {
+      ...runMetadata,
       project_id: payload.project_id ?? projectId,
       current_phase: payload.current_phase ?? payload.phase ?? "",
       phase_status: payload.phase_status,
@@ -184,6 +203,7 @@ export function mergeWorkflowState(
   }
 
   return {
+    ...runMetadata,
     project_id: projectId,
     current_phase:
       payload.phase ?? payload.current_phase ?? prev?.current_phase ?? "",

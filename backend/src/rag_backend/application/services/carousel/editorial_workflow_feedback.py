@@ -41,7 +41,12 @@ async def persist_phase_feedback(
     engine: CarouselWorkflowEngine,
     params: PhaseFeedbackPersistParams,
 ) -> None:
-    """Store reviewer feedback and increment revision count for the current phase."""
+    """Store reviewer feedback and increment the charged phase's revision count.
+
+    The counter is keyed by the phase that will re-run (target phase on a
+    send-back, current phase otherwise). ``count_revision=False`` (AE-0310)
+    stores the note only — uncapped submissions never consume the budget.
+    """
     trimmed = (params.feedback or "").strip()
     if not trimmed:
         return
@@ -52,16 +57,12 @@ async def persist_phase_feedback(
     existing = phase_feedback.get(phase, [])
     prior_feedback = existing if isinstance(existing, list) else []
     phase_feedback[phase] = [*prior_feedback, trimmed]
-    revision_count = dict(params.prior.get("revision_count") or {})
-    count = int(revision_count.get(phase, 0)) + 1
-    revision_count[phase] = count
-    await engine.update_state(
-        params.project_id,
-        {
-            "phase_feedback": phase_feedback,
-            "revision_count": revision_count,
-        },
-    )
+    updates: dict[str, object] = {"phase_feedback": phase_feedback}
+    if params.count_revision:
+        revision_count = dict(params.prior.get("revision_count") or {})
+        revision_count[phase] = int(revision_count.get(phase, 0)) + 1
+        updates["revision_count"] = revision_count
+    await engine.update_state(params.project_id, updates)
 
 
 __all__ = [

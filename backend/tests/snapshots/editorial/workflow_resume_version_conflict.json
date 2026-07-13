@@ -1,5 +1,11 @@
 {
   "body": {
+    "conflict": {
+      "code": "version_conflict",
+      "message": "The carousel changed since it was loaded; refresh and retry.",
+      "phase": null,
+      "run_started_at": null
+    },
     "detail": "version_conflict"
   },
   "cookies": {},

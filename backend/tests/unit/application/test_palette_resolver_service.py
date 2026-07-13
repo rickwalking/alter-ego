@@ -126,7 +126,9 @@ class TestPaletteResolverService:
         palette = _custom(PaletteMode.LIGHT, pid=uuid4())
         project = _project(str(palette.id))
         assert project.theme_snapshot is None
-        await snapshot_project_theme(project, _FakeRepo([palette]), "2026-06-23T00:00:00")
+        await snapshot_project_theme(
+            project, _FakeRepo([palette]), "2026-06-23T00:00:00"
+        )
         assert project.theme_snapshot is not None
         assert project.theme_snapshot["primary"] == palette.palette.primary
         assert project.theme_snapshot["mode"] == "light"

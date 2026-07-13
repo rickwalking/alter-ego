@@ -239,9 +239,7 @@ class TestCarouselWorkflowEngine:
 
                 reopened = await engine._app.aget_state(config)
                 assert reopened.next == (PHASE_CONTENT,)
-                assert (
-                    reopened.values["phase_status"] == PHASE_STATUS_AWAITING_HUMAN
-                )
+                assert reopened.values["phase_status"] == PHASE_STATUS_AWAITING_HUMAN
 
     @pytest.mark.asyncio
     async def test_approved_carousel_holds_and_send_back_regenerates(self) -> None:
@@ -314,9 +312,7 @@ class TestCarouselWorkflowEngine:
                 assert held is not None
                 assert held["current_phase"] == PHASE_FINAL_REVIEW
                 assert held["phase_status"] == PHASE_STATUS_APPROVED
-                assert (
-                    held["workflow_status"] == WORKFLOW_STATUS_APPROVED_FOR_PUBLISH
-                )
+                assert held["workflow_status"] == WORKFLOW_STATUS_APPROVED_FOR_PUBLISH
                 assert held["quality_passed"] is True
 
                 runs_before = runner.content_runs
@@ -376,9 +372,9 @@ class TestCarouselWorkflowEngine:
                         project_id,
                         {"action": REVIEW_ACTION_APPROVE, "reviewer_id": "user-1"},
                     )
-                assert (
-                    await engine._app.aget_state(config)
-                ).next == (PHASE_APPROVED_HOLD,)
+                assert (await engine._app.aget_state(config)).next == (
+                    PHASE_APPROVED_HOLD,
+                )
 
                 await engine.resume(
                     project_id,
@@ -572,3 +568,57 @@ class TestCarouselWorkflowEngine:
                     assert final_snapshot.next == (PHASE_OUTLINE,), (
                         f"Expected outline but got {final_snapshot.next}"
                     )
+
+    @pytest.mark.asyncio
+    async def test_reap_then_resume_re_executes_interrupted_node(self) -> None:
+        """AE-0315 clean re-resume: a mid-generation reap + resume produces a
+        complete, validated artifact, not a half-built one.
+
+        Feature: tests/features/carousel_run_progress_reaper.feature
+        Scenario: Dead run is reaped and the user recovers without an operator.
+        The reaper NEVER rewinds or edits checkpoint state — it only flips the
+        DB row. LangGraph resumes from the last node-boundary checkpoint and
+        re-executes the interrupted node from its start (safe because side
+        effects before ``interrupt()`` are idempotent by project rule).
+        """
+        from pathlib import Path
+        from tempfile import TemporaryDirectory
+
+        from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
+
+        with TemporaryDirectory() as tmp_dir:
+            db_path = Path(tmp_dir) / "workflow.sqlite"
+            async with AsyncSqliteSaver.from_conn_string(str(db_path)) as checkpointer:
+                engine = CarouselWorkflowEngine(checkpointer=checkpointer)
+                project_id = "ae0315-reaped-mid-run"
+                await engine.start(
+                    project_id,
+                    research_findings=[{"source": "report", "key_points": ["risk"]}],
+                )
+                # Shape the checkpoint like a run killed mid-step: pending
+                # node, no live interrupt, phase_status=in_progress.
+                await engine._app.aupdate_state(
+                    {"configurable": {"thread_id": project_id}},
+                    {"phase_status": "in_progress"},
+                )
+                mid_step = await engine._app.aget_state({
+                    "configurable": {"thread_id": project_id}
+                })
+                assert mid_step.next == (PHASE_RESEARCH,)
+                assert not mid_step.interrupts
+
+                # The reaper flips ONLY the carousel row (awaiting_human +
+                # lock/epoch bump) — the checkpoint above stays untouched.
+                # The user's next resume re-executes the interrupted node.
+                state = await engine.resume(
+                    project_id,
+                    {"action": REVIEW_ACTION_APPROVE, "reviewer_id": "user-1"},
+                )
+
+                assert state["research_approved"] is True
+                final_snapshot = await engine._app.aget_state({
+                    "configurable": {"thread_id": project_id}
+                })
+                # A complete node re-execution: the workflow advanced past the
+                # reaped node to the next gate (no half-built stall).
+                assert final_snapshot.next == (PHASE_OUTLINE,)

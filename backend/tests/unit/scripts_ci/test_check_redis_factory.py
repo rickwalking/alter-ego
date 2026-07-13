@@ -61,7 +61,7 @@ def test_fires_on_seeded_plain_import(tmp_path: Path) -> None:
 
 # Token-split so THIS file (now inside the checker's scan scope) does not
 # itself match the pattern; the seeded tmp files still carry the real text.
-_SEEDED_DUNDER_IMPORT = 'client_mod = ' + '__import' + '__("redis.asyncio")\n'
+_SEEDED_DUNDER_IMPORT = "client_mod = " + "__import" + '__("redis.asyncio")\n'
 _SEEDED_IMPORT_MODULE = "redis_mod = importlib.import" + '_module("redis")\n'
 
 

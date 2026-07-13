@@ -1,6 +1,7 @@
 """SQLAlchemy ORM models for CarouselProject, CarouselSlide, and ResearchSource entities."""
 
 import uuid
+from datetime import datetime
 
 from sqlalchemy import (
     JSON,
@@ -100,6 +101,34 @@ class CarouselProjectModel(Base):
         String(50), nullable=False, default="", server_default=""
     )
     lock_version = Column(Integer, default=1, nullable=False)
+
+    # AE-0315: run-progress visibility + zombie fencing. ``run_started_at`` /
+    # ``run_heartbeat_at`` are stamped when ``phase_status`` transitions INTO
+    # ``in_progress`` and cleared ATOMICALLY (same flush UPDATE) on any
+    # value-changing transition out of it — enforced by the ``before_update``
+    # listener in ``infrastructure/database/carousel_run_guard.py``, not per
+    # call site. ``run_epoch`` is the monotonic fencing token; only the
+    # stale-run reaper increments it. Deliberately NOT mapped onto the domain
+    # entity so the ``update_from_entity`` hydrator can never clobber them.
+    run_started_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    run_heartbeat_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    run_epoch: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, server_default="0"
+    )
+
+    # AE-0314: server-guaranteed republish marker. Stamped in the SAME
+    # transaction as a post-completion slide-text edit; the workflow watchdog
+    # republishes any marked project older than a few minutes and clears it, so
+    # a corrected carousel never keeps serving a stale PDF (cold-critic r6).
+    # Deliberately NOT mapped onto the domain entity (like the run columns) so
+    # the ``update_from_entity`` hydrator can never clobber it.
+    needs_republish_since: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
 
     # Creator watermark metadata
     creator_name = Column(String(100), nullable=True)
@@ -202,6 +231,8 @@ class CarouselProjectModel(Base):
             presentation_policy_checksum=self.presentation_policy_checksum,
             artifact_version=self.artifact_version,
             slide_layout_strategy=self.slide_layout_strategy,
+            # AE-0314: read-only marker (never written back via update_from_entity).
+            needs_republish_since=self.needs_republish_since,
             created_at=self.created_at,
             updated_at=self.updated_at,
         )

@@ -10,6 +10,8 @@ from __future__ import annotations
 
 import warnings
 from collections.abc import Callable
+from dataclasses import dataclass
+from datetime import datetime
 from typing import cast
 
 from typing_extensions import deprecated
@@ -30,13 +32,17 @@ from rag_backend.application.services.carousel.workflow_state_sanitize import (
     SanitizeWorkflowStateCommand,
     sanitize_workflow_state_artifacts,
 )
+from rag_backend.domain.constants.carousel_presentation import SEVERITY_BLOCKER
+from rag_backend.domain.constants.carousel_workflow import PHASE_STATUS_IN_PROGRESS
 from rag_backend.domain.constants.workflow_state_fields import (
     STATE_DEFAULT_STATUS,
     STATE_FIELD_BLOCKING,
     STATE_FIELD_BLOG_MARKDOWN,
     STATE_FIELD_CAPTION,
+    STATE_FIELD_CONTENT_GATE_VALIDATION,
     STATE_FIELD_CURRENT_PHASE,
     STATE_FIELD_DESIGN_APPLIED,
+    STATE_FIELD_DESIGN_RECOVERY_HINT,
     STATE_FIELD_ERROR_MESSAGE,
     STATE_FIELD_IMAGE_ASSETS,
     STATE_FIELD_LINKEDIN_POST_EN,
@@ -66,6 +72,7 @@ from rag_backend.domain.constants.workflow_state_fields import (
     STATE_FIELD_VIOLATION_FIELD,
     STATE_FIELD_VIOLATION_LOCALE,
     STATE_FIELD_VIOLATION_MESSAGE,
+    STATE_FIELD_VIOLATION_SEVERITY,
     STATE_FIELD_VIOLATIONS,
     STATE_FIELD_WORKFLOW_ERROR,
     STATE_FIELD_WORKFLOW_STATUS,
@@ -213,6 +220,12 @@ def _policy_version_field(state: dict[str, object]) -> str | None:
     return str(raw) if raw is not None else None
 
 
+def _design_recovery_hint_field(state: dict[str, object]) -> str | None:
+    """Extract the design recovery hint code (AE-0310), omitted when clear."""
+    raw = state.get(STATE_FIELD_DESIGN_RECOVERY_HINT)
+    return str(raw) if raw else None
+
+
 def _error_message_field(state: dict[str, object]) -> str | None:
     """Extract a client-safe failure message (AE-0009).
 
@@ -261,8 +274,13 @@ _FIELD_MAPPING: list[tuple[str, StateExtractor]] = [
         STATE_FIELD_PRESENTATION_VALIDATION,
         _validation_field(STATE_FIELD_PRESENTATION_VALIDATION),
     ),
+    (
+        STATE_FIELD_CONTENT_GATE_VALIDATION,
+        _validation_field(STATE_FIELD_CONTENT_GATE_VALIDATION),
+    ),
     (STATE_FIELD_STATUS, _status_field),
     (STATE_FIELD_PRESENTATION_POLICY_VERSION, _policy_version_field),
+    (STATE_FIELD_DESIGN_RECOVERY_HINT, _design_recovery_hint_field),
     (STATE_FIELD_ERROR_MESSAGE, _error_message_field),
 ]
 
@@ -393,16 +411,50 @@ def _validation_violation(item: object) -> SlideValidationViolationResponse | No
     slide_index = item.get(STATE_FIELD_SLIDE_INDEX)
     locale = item.get(STATE_FIELD_VIOLATION_LOCALE)
     field = item.get(STATE_FIELD_VIOLATION_FIELD)
+    severity = item.get(STATE_FIELD_VIOLATION_SEVERITY)
     return SlideValidationViolationResponse(
         code=code,
         message=message,
         slide_index=slide_index if isinstance(slide_index, int) else None,
         locale=locale if isinstance(locale, str) else None,
         field=field if isinstance(field, str) else None,
+        severity=severity if isinstance(severity, str) else SEVERITY_BLOCKER,
+    )
+
+
+# ── Run metadata overlay (AE-0315) ───────────────────────────────────────────
+
+
+@dataclass(frozen=True)
+class RunMetadataInput:
+    """Row-sourced run metadata overlaid on the state response."""
+
+    run_started_at: datetime | None
+    run_stage: str | None
+
+
+def apply_run_metadata(
+    response: EditorialWorkflowStateResponse,
+    run: RunMetadataInput,
+) -> EditorialWorkflowStateResponse:
+    """Attach run metadata ONLY while the workflow reports in_progress.
+
+    The reload path reconstructs the in-progress banner from this response
+    alone (no dependency on having witnessed the run.started SSE event).
+    """
+    if response.phase_status != PHASE_STATUS_IN_PROGRESS:
+        return response
+    return response.model_copy(
+        update={
+            "run_started_at": run.run_started_at,
+            "run_stage": run.run_stage,
+        }
     )
 
 
 __all__ = [
+    "RunMetadataInput",
+    "apply_run_metadata",
     "build_editorial_workflow_state_response",
     "build_workflow_state_response",
 ]
