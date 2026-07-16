@@ -29,10 +29,11 @@ export const IMAGE_STYLES = {
  */
 export const IMAGE_PRESETS = [
   {
-    value: "gemini__comic_neon",
-    model: IMAGE_MODELS.GEMINI,
+    // AE-0308: comic neon re-routed to OpenAI — prod has no Gemini key.
+    value: "openai__comic_neon",
+    model: IMAGE_MODELS.OPENAI,
     style: IMAGE_STYLES.COMIC_NEON,
-    labelKey: "imagePresets.gemini_comic_neon",
+    labelKey: "imagePresets.openai_comic_neon",
   },
   {
     value: "openai__hyperreal",

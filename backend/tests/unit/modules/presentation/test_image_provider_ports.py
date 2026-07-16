@@ -154,7 +154,7 @@ class TestRegistryImplementsPort:
         assert isinstance(_registry(), ImageProviderPort)
 
     def test_resolve_returns_image_provider(self) -> None:
-        provider = _registry().resolve(IMAGE_MODEL_GEMINI, IMAGE_STYLE_COMIC_NEON)
+        provider = _registry().resolve(IMAGE_MODEL_OPENAI, IMAGE_STYLE_COMIC_NEON)
         assert isinstance(provider, ImageProvider)
         service: ImageGenerationService = provider.service
         strategy: ImageStyleStrategy = provider.strategy
@@ -168,7 +168,7 @@ class TestResolveBehaviorUnchanged:
     @pytest.mark.parametrize(
         ("model", "style", "strategy_name"),
         [
-            (IMAGE_MODEL_GEMINI, IMAGE_STYLE_COMIC_NEON, "GeminiComicNeonStrategy"),
+            (IMAGE_MODEL_OPENAI, IMAGE_STYLE_COMIC_NEON, "OpenAIComicNeonStrategy"),
             (IMAGE_MODEL_OPENAI, IMAGE_STYLE_CINEMATIC, "OpenAICinematicStrategy"),
             (IMAGE_MODEL_OPENAI, IMAGE_STYLE_HYPERREAL, "OpenAIHyperrealStrategy"),
             (IMAGE_MODEL_OPENAI, IMAGE_STYLE_NEO_ANIME, "OpenAINeoAnimeStrategy"),
@@ -188,12 +188,13 @@ class TestResolveBehaviorUnchanged:
         for model, style in SUPPORTED_IMAGE_COMBOS:
             assert isinstance(registry.resolve(model, style), ImageProvider)
 
-    def test_gemini_combo_uses_injected_gemini_service(self) -> None:
+    def test_comic_neon_uses_injected_openai_service(self) -> None:
+        # AE-0308: comic_neon re-routed to OpenAI — no gemini combo remains.
         gemini = FakeImageService()
         openai = FakeImageService()
         registry = ImageProviderRegistry(gemini_service=gemini, openai_service=openai)
-        provider = registry.resolve(IMAGE_MODEL_GEMINI, IMAGE_STYLE_COMIC_NEON)
-        assert provider.service is gemini
+        provider = registry.resolve(IMAGE_MODEL_OPENAI, IMAGE_STYLE_COMIC_NEON)
+        assert provider.service is openai
 
     def test_openai_combos_use_injected_openai_service(self) -> None:
         gemini = FakeImageService()
@@ -223,12 +224,12 @@ class TestEndToEndThroughPort:
         self,
         tmp_path: Path,
     ) -> None:
-        gemini = FakeImageService()
+        openai = FakeImageService()
         registry: ImageProviderPort = ImageProviderRegistry(
-            gemini_service=gemini,
-            openai_service=FakeImageService(),
+            gemini_service=FakeImageService(),
+            openai_service=openai,
         )
-        provider = registry.resolve(IMAGE_MODEL_GEMINI, IMAGE_STYLE_COMIC_NEON)
+        provider = registry.resolve(IMAGE_MODEL_OPENAI, IMAGE_STYLE_COMIC_NEON)
 
         scene = "a hooded figure at a glowing terminal"
         theme = {"primary": "#0ff", "accent": "#f0f", "background": "#000"}
@@ -239,6 +240,6 @@ class TestEndToEndThroughPort:
 
         assert result == output_path
         assert Path(output_path).read_bytes() == _FAKE_PNG_BYTES
-        assert gemini.calls == [(final_prompt, output_path)]
+        assert openai.calls == [(final_prompt, output_path)]
         # The style wrapper prepends directives; the user scene appears verbatim.
         assert scene in final_prompt

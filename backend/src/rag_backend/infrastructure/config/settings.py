@@ -158,6 +158,25 @@ class Settings(BaseSettings):
         """
         return self.environment.strip().lower() not in NON_PRODUCTION_ENVIRONMENTS
 
+    def image_provider_api_key(self, provider: str) -> SecretStr | None:
+        """API-key secret for a carousel image provider; ``None`` if unknown.
+
+        Single source of truth for the provider→key wiring (AE-0308): the
+        AE-0215 startup guard and the request-time creation guard both consult
+        this mapping, so they can never disagree about which providers are
+        usable on this deployment.
+        """
+        from rag_backend.domain.constants import (
+            IMAGE_MODEL_GEMINI,
+            IMAGE_MODEL_OPENAI,
+        )
+
+        keys: dict[str, SecretStr] = {
+            IMAGE_MODEL_GEMINI: self.gemini_api_key,
+            IMAGE_MODEL_OPENAI: self.openai_api_key,
+        }
+        return keys.get(provider)
+
     @property
     def feature_flags(self) -> dict[str, bool]:
         """Feature flag map for gradual rollout (DEPLOY-003)."""

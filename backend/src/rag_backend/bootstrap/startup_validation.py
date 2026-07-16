@@ -17,11 +17,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from rag_backend.domain.constants import (
-    IMAGE_MODEL_DEFAULT,
-    IMAGE_MODEL_GEMINI,
-    IMAGE_MODEL_OPENAI,
-)
+from rag_backend.domain.constants import IMAGE_MODEL_DEFAULT
 from rag_backend.infrastructure.config.settings import Settings
 from rag_backend.infrastructure.logging import get_logger
 from rag_backend.infrastructure.redis_clients import (
@@ -84,17 +80,16 @@ class StartupValidationResult:
 def _provider_key_present(settings: Settings, provider: str) -> bool:
     """Return whether the API key for ``provider`` is configured (non-empty).
 
-    Mirrors the image-provider wiring in the DI container: ``gemini`` →
-    ``gemini_api_key``, ``openai`` → ``openai_api_key``. An unmapped provider
-    raises rather than silently passing the guard.
+    Delegates to ``Settings.image_provider_api_key`` — the single provider→key
+    mapping shared with the AE-0308 request-time creation guard. An unmapped
+    provider raises rather than silently passing the guard.
     """
-    if provider == IMAGE_MODEL_GEMINI:
-        return bool(settings.gemini_api_key.get_secret_value())
-    if provider == IMAGE_MODEL_OPENAI:
-        return bool(settings.openai_api_key.get_secret_value())
-    raise StartupValidationError(
-        _ERR_UNKNOWN_DEFAULT_PROVIDER.format(provider=provider)
-    )
+    key = settings.image_provider_api_key(provider)
+    if key is None:
+        raise StartupValidationError(
+            _ERR_UNKNOWN_DEFAULT_PROVIDER.format(provider=provider)
+        )
+    return bool(key.get_secret_value())
 
 
 def validate_checkpointer_durability(settings: Settings) -> bool:

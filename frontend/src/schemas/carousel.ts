@@ -128,7 +128,7 @@ export const carouselSlideResponseSchema = z.object({
  */
 export const SUPPORTED_IMAGE_COMBOS: ReadonlyArray<readonly [string, string]> =
   [
-    ["gemini", "comic_neon"],
+    ["openai", "comic_neon"],
     ["openai", "cinematic"],
     ["openai", "hyperreal"],
     ["openai", "neo_anime"],

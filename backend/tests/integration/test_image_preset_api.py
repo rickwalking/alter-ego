@@ -114,6 +114,38 @@ class TestImagePresetValidation:
         assert body["image_style"] == "neo_anime"
 
     @pytest.mark.asyncio
+    async def test_openai_comic_neon_preset_accepted(self, client):
+        """Scenario: Creating a Comic Neon carousel succeeds on the OpenAI provider
+        (AE-0308, carousel_image_provider_reroute_ae0308.feature)."""
+        payload = {
+            "topic": "T",
+            "audience": "A",
+            "niche": "N",
+            "image_model": "openai",
+            "image_style": "comic_neon",
+        }
+        response = await client.post("/api/carousels", json=payload)
+        assert response.status_code == 201
+        body = response.json()
+        assert body["image_model"] == "openai"
+        assert body["image_style"] == "comic_neon"
+
+    @pytest.mark.asyncio
+    async def test_gemini_comic_neon_combo_rejected(self, client):
+        """Scenario: A gemini combo is rejected as unsupported at validation
+        time (AE-0308 — no gemini combo remains supported)."""
+        payload = {
+            "topic": "T",
+            "audience": "A",
+            "niche": "N",
+            "image_model": "gemini",
+            "image_style": "comic_neon",
+        }
+        response = await client.post("/api/carousels", json=payload)
+        assert response.status_code == 422
+        assert "not supported" in response.text
+
+    @pytest.mark.asyncio
     async def test_openai_hyperreal_preset_accepted(self, client):
         """Scenario: Caller picks OpenAI hyperreal preset."""
         payload = {

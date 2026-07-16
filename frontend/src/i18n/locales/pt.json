@@ -250,7 +250,7 @@
       "clinical_mint": "Clinical Mint (claro)"
     },
     "imagePresets": {
-      "gemini_comic_neon": "Gemini · Comic Neon",
+      "openai_comic_neon": "OpenAI · Comic Neon",
       "openai_hyperreal": "OpenAI · Hyperreal Graphic Novel",
       "openai_cinematic": "OpenAI · Cinematic Photoreal",
       "openai_neo_anime": "OpenAI · Neo-Anime (padrão)",

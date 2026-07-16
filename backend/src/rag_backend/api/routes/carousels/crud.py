@@ -20,6 +20,9 @@ from rag_backend.api.dependencies import (
 from rag_backend.api.dependencies.carousel_access import (
     get_carousel_project_for_domain_user,
 )
+from rag_backend.api.dependencies.feature_flags import (
+    require_image_provider_configured,
+)
 from rag_backend.api.dependencies.presentation import get_presentation_handlers
 from rag_backend.api.dependencies.publishing import (
     PublishingComposition,
@@ -78,6 +81,9 @@ def get_publishing_module_for_carousel(
 @router.post(
     "",
     status_code=status.HTTP_201_CREATED,
+    # AE-0308: reject a preset whose provider key is unconfigured BEFORE any
+    # workflow spend (422 in production-like environments).
+    dependencies=[Depends(require_image_provider_configured)],
     responses={
         401: {"description": ERR_NOT_AUTHENTICATED},
         403: {"description": ERR_FORBIDDEN},

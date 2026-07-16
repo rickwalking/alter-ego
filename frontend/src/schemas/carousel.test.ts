@@ -462,6 +462,24 @@ describe("Carousel Create Request Schema — image_model/image_style", () => {
     expect(result.success).toBe(true);
   });
 
+  it("accepts supported openai + comic_neon combo (AE-0308 re-route)", () => {
+    const result = carouselCreateRequestSchema.safeParse({
+      ...BASE,
+      image_model: "openai",
+      image_style: "comic_neon",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects the retired (gemini, comic_neon) combo (AE-0308)", () => {
+    const result = carouselCreateRequestSchema.safeParse({
+      ...BASE,
+      image_model: "gemini",
+      image_style: "comic_neon",
+    });
+    expect(result.success).toBe(false);
+  });
+
   it("rejects unsupported (gemini, cinematic) combo", () => {
     const result = carouselCreateRequestSchema.safeParse({
       ...BASE,

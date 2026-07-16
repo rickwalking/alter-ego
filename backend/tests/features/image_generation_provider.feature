@@ -13,10 +13,25 @@ Feature: Pluggable image generation provider and style
   Scenario: Default provider + style when caller omits both fields
     Given the project does not specify an image_model or image_style
     When the pipeline renders the image-generation phase
-    Then the Gemini provider is selected
+    Then the OpenAI provider is selected
+    And the neo_anime style wrapper is applied
+    And the final prompt includes the project's primary and accent hex colors
+
+  Scenario: Caller picks OpenAI comic-neon preset (AE-0308 re-route)
+    Given the project has image_model "openai" and image_style "comic_neon"
+    When the pipeline renders the image-generation phase
+    Then the OpenAI provider is selected
     And the comic_neon style wrapper is applied
     And the final prompt includes "Comic/manga style illustration"
     And the final prompt includes the project's primary and accent hex colors
+    And the final prompt forbids real-world brand names and celebrity likenesses
+    And the prompt is otherwise byte-identical to the pre-AE-0308 Gemini-era prompt
+
+  Scenario: No Gemini combo remains supported (AE-0308)
+    Given prod intentionally has no GEMINI_API_KEY
+    When any (gemini, style) combo is validated against the supported combos
+    Then the combo is rejected as unsupported
+    And the provider registry raises for image_model "gemini"
 
   Scenario: Caller picks OpenAI hyperreal preset
     Given the project has image_model "openai" and image_style "hyperreal"

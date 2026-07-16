@@ -3,12 +3,12 @@
   "_note": "Generated from PALETTE_REGISTRY + IMAGE_STRATEGY_REGISTRY (AE-0266). Do not edit by hand; run the generator and commit the result.",
   "image_presets": [
     {
-      "model": "gemini",
-      "style": "comic_neon"
+      "model": "openai",
+      "style": "cinematic"
     },
     {
       "model": "openai",
-      "style": "cinematic"
+      "style": "comic_neon"
     },
     {
       "model": "openai",
