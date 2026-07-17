@@ -910,3 +910,71 @@ class TestMarkResumeInProgressPublishLock:
 
         synced_state = sync.await_args.args[2]
         assert synced_state["workflow_status"] != WORKFLOW_STATUS_APPROVED_FOR_PUBLISH
+
+
+class TestStartWorkflowResearchEnrichment:
+    """AE-0317 scenarios (tests/features/research_enrichment.feature)."""
+
+    def test_init_threads_research_tool(self) -> None:
+        """Scenario: URL source is navigated (wiring half)."""
+        research_tool = MagicMock()
+        service = EditorialWorkflowService(
+            EditorialWorkflowConfig(llm=MagicMock(), research_tool=research_tool)
+        )
+        assert service._research_tool is research_tool
+
+    def test_init_defaults_research_tool_to_none(self) -> None:
+        """Scenario: Enrichment disabled restores legacy behavior (wiring half)."""
+        service = EditorialWorkflowService(EditorialWorkflowConfig(llm=MagicMock()))
+        assert service._research_tool is None
+
+    @pytest.mark.asyncio
+    async def test_start_workflow_synthesizes_and_briefs_enriched_sources(
+        self,
+    ) -> None:
+        """Scenario: URL source is navigated and its content informs research."""
+        research_tool = MagicMock()
+        service = EditorialWorkflowService(
+            EditorialWorkflowConfig(llm=MagicMock(), research_tool=research_tool)
+        )
+        raw_sources = [
+            {"title": "u", "content": "https://example.com/a", "source_type": "url"}
+        ]
+        enriched_sources = [
+            {"title": "u", "content": "scraped body", "source_type": "url"},
+            {
+                "title": "hit",
+                "content": "snippet",
+                "source_type": "web_search",
+                "url": "https://hit.example.com",
+            },
+        ]
+        started_state = {
+            "current_phase": PHASE_RESEARCH,
+            "phase_status": PHASE_STATUS_IN_PROGRESS,
+        }
+        orchestrator = MagicMock()
+        orchestrator.get_state = AsyncMock(side_effect=[None, None])
+        orchestrator.enrich_research_sources = AsyncMock(return_value=enriched_sources)
+        orchestrator.synthesize_research = AsyncMock(return_value=[])
+        orchestrator.start = AsyncMock(return_value=started_state)
+        service._orchestrator = orchestrator
+
+        state = await service.start_workflow(
+            str(uuid4()),
+            EditorialWorkflowStartInput(
+                topic="topic",
+                audience="aud",
+                brief="brief",
+                sources=raw_sources,
+            ),
+        )
+
+        assert state == started_state
+        enrich_call = orchestrator.enrich_research_sources.await_args
+        assert enrich_call.args[0] == raw_sources
+        assert enrich_call.args[1].topic == "topic"
+        assert enrich_call.args[1].research_tool is research_tool
+        orchestrator.synthesize_research.assert_awaited_once_with(enriched_sources)
+        initial_brief = orchestrator.start.await_args.args[1]
+        assert initial_brief["sources"] == enriched_sources

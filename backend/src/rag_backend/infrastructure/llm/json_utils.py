@@ -15,7 +15,7 @@ _ERR_JSON_NOT_FOUND = "No valid JSON object found"
 
 _JSON_FENCE_RE = re.compile(r"```(?:json)?\s*(.*?)\s*```", re.DOTALL)
 
-_JSON_REPAIR_PROMPT = (
+JSON_REPAIR_PROMPT = (
     "Your previous response contained invalid JSON. "
     "Please return ONLY the corrected JSON object, with no additional text, "
     "no markdown fences, and no explanations."
@@ -101,7 +101,7 @@ async def extract_json_with_repair(
     repair_response = await llm.generate(
         messages=[
             {"role": "user", "content": raw},
-            {"role": "assistant", "content": _JSON_REPAIR_PROMPT},
+            {"role": "assistant", "content": JSON_REPAIR_PROMPT},
         ],
         temperature=0.2,
     )
@@ -119,4 +119,4 @@ async def extract_json_with_repair(
         raise
 
 
-__all__ = ["extract_json", "extract_json_with_repair"]
+__all__ = ["JSON_REPAIR_PROMPT", "extract_json", "extract_json_with_repair"]

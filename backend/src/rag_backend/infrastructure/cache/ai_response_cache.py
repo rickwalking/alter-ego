@@ -51,6 +51,10 @@ class AIResponseCache:
         ttl = ttl_seconds if ttl_seconds is not None else self._default_ttl
         self._store[key] = CacheEntry(value=value, expires_at=time.time() + ttl)
 
+    def delete(self, prompt: str, model_id: str, scope: str = "global") -> None:
+        """Evict a single entry (e.g. a cached response that fails to parse)."""
+        self._store.pop(self._make_key(prompt, model_id, scope), None)
+
     def clear(self) -> None:
         self._store.clear()
 

@@ -44,6 +44,11 @@ def build_editorial_workflow_service(request: Request) -> EditorialWorkflowServi
             checkpointer=checkpointer,
             event_service=events,
             image_registry=container.image_provider_registry(),
+            research_tool=(
+                container.research_tool()
+                if settings.research_enrichment_enabled
+                else None
+            ),
         ),
     )
 

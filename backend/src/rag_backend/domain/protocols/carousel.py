@@ -82,6 +82,21 @@ class ResearchTool(Protocol):
     ) -> list[dict[str, str]]: ...
 
 
+@dataclass(frozen=True)
+class ResearchEnrichmentParams:
+    """Topic + research tool bundle for one enrichment run (AE-0317).
+
+    Lives next to :class:`ResearchTool` (not in ``domain.models``) so the
+    domain layer keeps zero internal import cycles. ``research_tool=None``
+    disables enrichment entirely (CI, tests, or the
+    ``research_enrichment_enabled`` kill switch) — sources pass through
+    unchanged.
+    """
+
+    topic: str
+    research_tool: ResearchTool | None
+
+
 class CarouselRefinementService(Protocol):
     """Protocol for carousel refinement operations (copy, design, re-export)."""
 

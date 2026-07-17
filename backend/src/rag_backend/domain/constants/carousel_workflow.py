@@ -72,6 +72,10 @@ ERR_STRUCTURED_FEEDBACK_FINAL_REVIEW_ONLY = "structured_feedback_final_review_on
 ERR_EDITED_SLIDES_PHASE_NOT_ALLOWED = "edited_localized_slides_phase_not_allowed"
 ERR_SEND_BACK_TARGET_NOT_ALLOWED = "send_back_target_phase_not_allowed"
 ERR_CAROUSEL_NOT_COMPLETED = "carousel_not_completed"
+# AE-0318: workflow/start synthesis failures surface this instead of the opaque
+# access-control "Invalid request" so operators can tell a parse failure from a
+# genuinely malformed request.
+ERR_RESEARCH_SYNTHESIS_FAILED = "research_synthesis_failed"
 ERR_WORKFLOW_PHASE_FAILED = "workflow_phase_failed"
 ERR_WORKFLOW_SSE_SUBSCRIBER_LIMIT = "workflow_sse_subscriber_limit_exceeded"
 ERR_RESUME_ALREADY_IN_PROGRESS = "resume_already_in_progress"

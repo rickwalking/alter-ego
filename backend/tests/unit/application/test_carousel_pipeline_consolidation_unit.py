@@ -12,7 +12,7 @@ import pytest
 from structlog.testing import capture_logs
 
 from rag_backend.agents.input_sanitizer import sanitize_web_content
-from rag_backend.api.dependencies.agents import _scrape_url_sources
+from rag_backend.agents.research_enrichment import enrich_sources
 from rag_backend.application.services.carousel.editorial_subagent import (
     build_editorial_carousel_subagent,
 )
@@ -25,7 +25,7 @@ from rag_backend.application.tools.carousel.generate_carousel import (
 )
 from rag_backend.domain.constants.carousel_workflow import SOURCE_TYPE_URL
 from rag_backend.domain.models import CarouselProject, CarouselTheme
-from rag_backend.domain.protocols import ResearchTool
+from rag_backend.domain.protocols import ResearchEnrichmentParams, ResearchTool
 
 
 @pytest.mark.unit
@@ -204,13 +204,29 @@ class TestSanitizeWebContent:
         assert sanitize_web_content("<br><hr>") == ""
 
 
+def _enrichment_params(tool: ResearchTool | None) -> ResearchEnrichmentParams:
+    return ResearchEnrichmentParams(topic="test topic", research_tool=tool)
+
+
+def _research_tool_mock() -> AsyncMock:
+    """ResearchTool mock whose search returns no hits (scrape-focused tests)."""
+    mock_tool = AsyncMock(spec=ResearchTool)
+    mock_tool.search_web = AsyncMock(return_value=[])
+    return mock_tool
+
+
 @pytest.mark.unit
 class TestScrapeUrlSources:
-    """Feature: URL Source Extraction in Editorial Workflow."""
+    """Feature: URL Source Extraction in Editorial Workflow.
+
+    AE-0317: the route-edge ``_scrape_url_sources`` was consolidated into the
+    workflow service's ``enrich_sources`` (single SSRF-guarded choke point).
+    These scenarios are preserved against the new entry point.
+    """
 
     async def test_scrapes_url_sources(self) -> None:
         """Scenario: URL sources are scraped before LLM content drafting."""
-        mock_tool = AsyncMock(spec=ResearchTool)
+        mock_tool = _research_tool_mock()
         mock_tool.scrape_url = AsyncMock(
             return_value="Scraped content from <b>article</b>"
         )
@@ -221,13 +237,13 @@ class TestScrapeUrlSources:
                 "source_type": SOURCE_TYPE_URL,
             },
         ]
-        result = await _scrape_url_sources(sources, mock_tool)
+        result = await enrich_sources(sources, _enrichment_params(mock_tool))
         mock_tool.scrape_url.assert_awaited_once_with("https://example.com/article")
         assert result[0]["content"] == "Scraped content from article"
 
     async def test_skips_non_url_sources(self) -> None:
         """Scenario: Non-URL sources pass through unchanged."""
-        mock_tool = AsyncMock(spec=ResearchTool)
+        mock_tool = _research_tool_mock()
         sources: list[dict[str, str]] = [
             {
                 "title": "Document",
@@ -235,7 +251,7 @@ class TestScrapeUrlSources:
                 "source_type": "document",
             },
         ]
-        result = await _scrape_url_sources(sources, mock_tool)
+        result = await enrich_sources(sources, _enrichment_params(mock_tool))
         mock_tool.scrape_url.assert_not_called()
         assert result[0]["content"] == "Some pre-written text"
 
@@ -243,10 +259,10 @@ class TestScrapeUrlSources:
         """Scenario: URL scraping fails gracefully.
 
         QA F-4 (AE-0008): when scrape_url raises, the original URL content is
-        retained AND a structured warning with the ``url_scrape_failed`` event
-        is emitted for observability.
+        retained AND a structured warning with the ``research_url_scrape_failed``
+        event is emitted for observability.
         """
-        mock_tool = AsyncMock(spec=ResearchTool)
+        mock_tool = _research_tool_mock()
         mock_tool.scrape_url = AsyncMock(side_effect=ConnectionError("Network error"))
         sources: list[dict[str, str]] = [
             {
@@ -256,12 +272,14 @@ class TestScrapeUrlSources:
             },
         ]
         with capture_logs() as logs:
-            result = await _scrape_url_sources(sources, mock_tool)
+            result = await enrich_sources(sources, _enrichment_params(mock_tool))
         mock_tool.scrape_url.assert_awaited_once()
         # Original URL content is retained on failure.
         assert result[0]["content"] == "https://example.com/article"
         # Graceful-degradation warning is logged with the failed URL + error.
-        warnings = [entry for entry in logs if entry["event"] == "url_scrape_failed"]
+        warnings = [
+            entry for entry in logs if entry["event"] == "research_url_scrape_failed"
+        ]
         assert len(warnings) == 1
         assert warnings[0]["log_level"] == "warning"
         assert warnings[0]["url"] == "https://example.com/article"
@@ -276,12 +294,12 @@ class TestScrapeUrlSources:
                 "source_type": SOURCE_TYPE_URL,
             },
         ]
-        result = await _scrape_url_sources(sources, None)
+        result = await enrich_sources(sources, _enrichment_params(None))
         assert result[0]["content"] == "https://example.com/article"
 
     async def test_mixed_source_types(self) -> None:
         """Scenario: Mixed URL and document sources."""
-        mock_tool = AsyncMock(spec=ResearchTool)
+        mock_tool = _research_tool_mock()
         mock_tool.scrape_url = AsyncMock(return_value="Scraped text")
         sources: list[dict[str, str]] = [
             {"title": "Doc", "content": "Document text", "source_type": "document"},
@@ -291,19 +309,20 @@ class TestScrapeUrlSources:
                 "source_type": SOURCE_TYPE_URL,
             },
         ]
-        result = await _scrape_url_sources(sources, mock_tool)
+        result = await enrich_sources(sources, _enrichment_params(mock_tool))
         mock_tool.scrape_url.assert_awaited_once_with("https://example.com")
         assert result[0]["content"] == "Document text"
         assert result[1]["content"] == "Scraped text"
 
     async def test_empty_url_skipped(self) -> None:
         """Scenario: Empty URL content is skipped."""
-        mock_tool = AsyncMock(spec=ResearchTool)
+        mock_tool = _research_tool_mock()
         sources: list[dict[str, str]] = [
             {"title": "Empty", "content": "", "source_type": SOURCE_TYPE_URL},
         ]
-        result = await _scrape_url_sources(sources, mock_tool)
+        result = await enrich_sources(sources, _enrichment_params(mock_tool))
         mock_tool.scrape_url.assert_not_called()
+        assert result[0]["content"] == ""
 
     async def test_bare_url_without_source_type_is_scraped(self) -> None:
         """Scenario: Bare URL content is scraped even without source_type=='url'.
@@ -313,7 +332,7 @@ class TestScrapeUrlSources:
         ``source_type`` is not ``url`` (e.g. a RAG agent note embedding a URL),
         while a plain-text document source is left untouched.
         """
-        mock_tool = AsyncMock(spec=ResearchTool)
+        mock_tool = _research_tool_mock()
         mock_tool.scrape_url = AsyncMock(return_value="Scraped note body")
         sources: list[dict[str, str]] = [
             {
@@ -327,9 +346,65 @@ class TestScrapeUrlSources:
                 "source_type": "document",
             },
         ]
-        result = await _scrape_url_sources(sources, mock_tool)
+        result = await enrich_sources(sources, _enrichment_params(mock_tool))
         # Superset branch: bare URL scraped despite source_type != "url".
         mock_tool.scrape_url.assert_awaited_once_with("https://example.com/embedded")
         assert result[0]["content"] == "Scraped note body"
         # Plain-text document source is NOT scraped.
         assert result[1]["content"] == "Just some prose, not a URL"
+
+
+@pytest.mark.unit
+class TestEdgeScrapingConsolidation:
+    """AE-0317 review r1 (M4): all entry points enrich via the service path.
+
+    Regression against re-introducing route-edge scraping: the RAG workflow
+    starter must hand the ORIGINAL url content to the workflow service (which
+    owns enrichment), and the legacy edge helper must stay gone.
+    """
+
+    async def test_rag_workflow_start_passes_unscraped_urls_to_service(self) -> None:
+        from unittest.mock import MagicMock
+
+        from rag_backend.api.dependencies.agents import (
+            WorkflowContext,
+            _start_editorial_workflow_for_rag,
+        )
+        from rag_backend.application.tools.carousel.generate_carousel import (
+            SubagentWorkflowStartRequest,
+        )
+
+        workflow_service = MagicMock()
+        workflow_service.start_workflow = AsyncMock(
+            return_value={"current_phase": "research", "phase_status": "in_progress"}
+        )
+        db = MagicMock()
+        db.commit = AsyncMock()
+
+        await _start_editorial_workflow_for_rag(
+            str(uuid4()),
+            SubagentWorkflowStartRequest(
+                topic="topic",
+                audience="aud",
+                brief="brief",
+                source_urls=["https://example.com/article"],
+            ),
+            ctx=WorkflowContext(
+                workflow_service=workflow_service,
+                workflow_user_id="user",
+                db=db,
+            ),
+        )
+
+        workflow_input = workflow_service.start_workflow.await_args.kwargs[
+            "workflow_input"
+        ]
+        # The edge does NOT scrape: the bare URL reaches the service, whose
+        # research enrichment is the single guarded scrape choke point.
+        assert workflow_input.sources[0]["content"] == "https://example.com/article"
+        assert workflow_input.sources[0]["source_type"] == "url"
+
+    def test_route_edge_scrape_helper_is_gone(self) -> None:
+        from rag_backend.api.dependencies import agents as agents_module
+
+        assert not hasattr(agents_module, "_scrape_url_sources")

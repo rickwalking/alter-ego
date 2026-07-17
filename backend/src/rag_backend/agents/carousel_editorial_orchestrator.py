@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from rag_backend.agents.carousel_workflow import CarouselWorkflowEngine
 from rag_backend.agents.content_draft_agent import ContentDraftAgent
 from rag_backend.agents.outline_agent import OutlineAgent
+from rag_backend.agents.research_enrichment import enrich_sources
 from rag_backend.agents.source_synthesis_agent import SourceSynthesisAgent
 from rag_backend.application.services.carousel.editorial_workflow_generators import (
     synthesize_research,
@@ -25,6 +26,7 @@ from rag_backend.application.services.carousel.workflow_state import (
 from rag_backend.application.services.image_provider_registry import (
     ImageProviderRegistry,
 )
+from rag_backend.domain.protocols import ResearchEnrichmentParams
 
 
 class CarouselEditorialOrchestrator:
@@ -60,6 +62,14 @@ class CarouselEditorialOrchestrator:
         sources: list[dict[str, str]],
     ) -> list[dict[str, object]]:
         return await synthesize_research(self._source_agent, sources)
+
+    async def enrich_research_sources(
+        self,
+        sources: list[dict[str, str]],
+        params: ResearchEnrichmentParams,
+    ) -> list[dict[str, str]]:
+        """AE-0317: deterministic scrape + topic-search enrichment pre-synthesis."""
+        return await enrich_sources(sources, params)
 
     def _bind_resume_context(
         self,

@@ -14,6 +14,10 @@ from rag_backend.agents.harness import (
     build_deep_agent,
     build_summarization_middleware,
 )
+from rag_backend.agents.subagents import (
+    ResearcherSubagentConfig,
+    build_researcher_subagent,
+)
 from rag_backend.application.services.chat_stream_service import _ChatContext
 from rag_backend.application.tools import (
     build_list_documents_tool,
@@ -35,6 +39,7 @@ from rag_backend.domain.protocols import (
     CarouselRepository,
     DocumentRepository,
     MessageRepository,
+    ResearchTool,
     Retriever,
 )
 from rag_backend.domain.retry import retry_async
@@ -82,6 +87,7 @@ class RAGAgent:
         start_editorial_workflow: object | None = None,
         carousel_tool_access: CarouselToolAccessContext | None = None,
         knowledge_search: KnowledgeSearchPort | None = None,
+        research_tool: ResearchTool | None = None,
     ) -> None:
         self._settings = settings
         self._retriever = retriever
@@ -92,6 +98,7 @@ class RAGAgent:
         self._editorial_subagent = editorial_subagent
         self._start_editorial_workflow = start_editorial_workflow
         self._carousel_tool_access = carousel_tool_access
+        self._research_tool = research_tool
         self._knowledge_search: KnowledgeSearchPort = (
             knowledge_search
             if knowledge_search is not None
@@ -119,9 +126,25 @@ class RAGAgent:
 
     def _build_subagents(self) -> list[dict[str, object]]:
         """Return DeepAgents-compatible subagent specs."""
-        if self._editorial_subagent is None:
-            return []
-        return [self._editorial_subagent]
+        subagents: list[dict[str, object]] = []
+        if self._editorial_subagent is not None:
+            subagents.append(self._editorial_subagent)
+        # AE-0317: register the AE-0249 researcher (previously built but never
+        # wired anywhere) so chat can search the web / navigate pasted URLs.
+        # Same gate as the editorial subagent: carousel tool access required.
+        if self._research_tool is not None and self._carousel_tool_access is not None:
+            subagents.append(
+                build_researcher_subagent(
+                    ResearcherSubagentConfig(
+                        research=self._research_tool,
+                        search_documents=build_search_documents_tool(
+                            self._knowledge_search, top_k=5
+                        ),
+                        model=self._llm,
+                    )
+                )
+            )
+        return subagents
 
     def _build_tools(self) -> list[BaseTool]:
         """Assemble agent tools from domain-specific builders.
