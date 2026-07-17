@@ -50,3 +50,96 @@ class TestSourceSynthesisAgent:
 
         with pytest.raises(ValueError, match="Invalid JSON"):
             await agent.extract_key_points("Title", "Content", "document")
+
+
+class TestSourceSynthesisHardening:
+    """AE-0318 scenarios (tests/features/source_synthesis_hardening.feature)."""
+
+    @pytest.fixture(autouse=True)
+    def clear_cache(self) -> None:
+        from rag_backend.infrastructure.cache.ai_response_cache import (
+            get_ai_response_cache,
+        )
+
+        get_ai_response_cache().clear()
+
+    @pytest.fixture
+    def mock_llm(self) -> AsyncMock:
+        return AsyncMock()
+
+    @pytest.fixture
+    def agent(self, mock_llm: AsyncMock) -> SourceSynthesisAgent:
+        return SourceSynthesisAgent(llm=mock_llm)
+
+    async def test_truncated_response_triggers_one_repair_retry(
+        self, agent: SourceSynthesisAgent, mock_llm: AsyncMock
+    ) -> None:
+        """Scenario: Truncated response triggers one repair retry."""
+        payload = {"key_points": ["Repaired point"], "summary": "Repaired"}
+        mock_llm.ainvoke.side_effect = [
+            MagicMock(content='```json\n{\n  "key_points": [\n    "The provided'),
+            MagicMock(content=json.dumps(payload)),
+        ]
+
+        result = await agent.extract_key_points("title", "content body", "document")
+
+        assert result["key_points"] == ["Repaired point"]
+        assert mock_llm.ainvoke.await_count == 2
+
+    async def test_repaired_response_is_cached_not_the_malformed_raw(
+        self, agent: SourceSynthesisAgent, mock_llm: AsyncMock
+    ) -> None:
+        """Scenario: Truncated response triggers one repair retry (cache half)."""
+        payload = {"key_points": ["Repaired point"], "summary": "Repaired"}
+        mock_llm.ainvoke.side_effect = [
+            MagicMock(content="not-json"),
+            MagicMock(content=json.dumps(payload)),
+        ]
+        await agent.extract_key_points("title", "content body", "document")
+
+        result = await agent.extract_key_points("title", "content body", "document")
+
+        assert result["key_points"] == ["Repaired point"]
+        assert mock_llm.ainvoke.await_count == 2  # second call served from cache
+
+    async def test_repair_failure_raises_and_does_not_poison_cache(
+        self, agent: SourceSynthesisAgent, mock_llm: AsyncMock
+    ) -> None:
+        """Scenario: Retry after a transient malformed response is not poisoned."""
+        payload = {"key_points": ["Fresh point"], "summary": "Fresh"}
+        mock_llm.ainvoke.side_effect = [
+            MagicMock(content="not-json"),
+            MagicMock(content="still-not-json"),
+            MagicMock(content=json.dumps(payload)),
+        ]
+        with pytest.raises(ValueError, match="Invalid JSON"):
+            await agent.extract_key_points("title", "content body", "document")
+
+        result = await agent.extract_key_points("title", "content body", "document")
+
+        assert result["key_points"] == ["Fresh point"]
+        assert mock_llm.ainvoke.await_count == 3  # retry hit the LLM, not a cache
+
+    async def test_poisoned_cache_entry_is_evicted(
+        self, agent: SourceSynthesisAgent, mock_llm: AsyncMock
+    ) -> None:
+        """Scenario: Poisoned cache entry from a previous deploy is evicted."""
+        from rag_backend.domain.constants.ai_agents import PROMPT_SOURCE_SYNTHESIS
+        from rag_backend.infrastructure.cache.ai_response_cache import (
+            get_ai_response_cache,
+        )
+
+        prompt = PROMPT_SOURCE_SYNTHESIS.format(
+            title="title", source_type="document", content="content body"
+        )
+        get_ai_response_cache().set(prompt, agent.model_id, "poisoned-not-json")
+        payload = {"key_points": ["Fresh point"], "summary": "Fresh"}
+        mock_llm.ainvoke.return_value = MagicMock(content=json.dumps(payload))
+
+        result = await agent.extract_key_points("title", "content body", "document")
+
+        assert result["key_points"] == ["Fresh point"]
+        assert mock_llm.ainvoke.await_count == 1
+        assert get_ai_response_cache().get(prompt, agent.model_id) == json.dumps(
+            payload
+        )

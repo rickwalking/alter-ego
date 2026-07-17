@@ -21,6 +21,7 @@ from collections.abc import AsyncIterator
 from typing import Annotated
 from uuid import UUID
 
+import structlog
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import JSONResponse, StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -83,6 +84,7 @@ from rag_backend.application.services.carousel.workflow_sse_hub import (
 )
 from rag_backend.domain.constants.access_control import ERR_INVALID_REQUEST
 from rag_backend.domain.constants.carousel_workflow import (
+    ERR_RESEARCH_SYNTHESIS_FAILED,
     ERR_WORKFLOW_SSE_SUBSCRIBER_LIMIT,
     PHASE_STATUS_IN_PROGRESS,
 )
@@ -95,6 +97,8 @@ from rag_backend.modules.editorial import (
     EditorialWorkflowHandlers,
     StartWorkflowCommand,
 )
+
+logger = structlog.get_logger(__name__)
 
 router = APIRouter(
     tags=["carousel_editorial_workflow"], dependencies=[RequireEditorialWorkflow]
@@ -191,10 +195,17 @@ async def start_editorial_workflow(
                 ),
             ),
         )
-    except ValueError:
+    except ValueError as exc:
+        # AE-0318: this catch used to swallow the engine error unlogged with a
+        # generic detail, which made prod synthesis failures undiagnosable.
+        logger.exception(
+            "workflow_start_failed",
+            project_id=str(project_id),
+            error=str(exc),
+        )
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ERR_INVALID_REQUEST,
+            detail=ERR_RESEARCH_SYNTHESIS_FAILED,
         ) from None
     return build_editorial_workflow_state_response(
         dict(view.state),

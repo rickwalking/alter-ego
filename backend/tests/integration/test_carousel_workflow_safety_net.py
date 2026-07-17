@@ -477,6 +477,49 @@ class TestWorkflowStartBehavior:
             )
         assert resp.status_code == 400
 
+    @pytest.mark.asyncio
+    async def test_start_synthesis_failure_is_logged_with_specific_detail(
+        self, wf_env: WfEnv, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Scenario: Repair failure fails closed with an observable error
+        (tests/features/source_synthesis_hardening.feature, AE-0318)."""
+        import structlog
+
+        from rag_backend.domain.constants.ai_agents import ERR_INVALID_JSON
+        from rag_backend.domain.constants.carousel_workflow import (
+            ERR_RESEARCH_SYNTHESIS_FAILED,
+        )
+
+        project_id = await wf_env.seed_project(wf_env.editor)
+        stub = _patch_service(monkeypatch, project_id, has_state=False)
+
+        async def _raise_start(
+            project_id: str,
+            workflow_input: object,
+            db: object | None = None,
+        ) -> CarouselWorkflowState:
+            del project_id, workflow_input, db
+            raise ValueError(ERR_INVALID_JSON)
+
+        monkeypatch.setattr(stub, "start_workflow", _raise_start)
+        with structlog.testing.capture_logs() as logs:
+            async with wf_env.client_for(wf_env.editor) as client:
+                resp = await client.post(
+                    f"/api/carousels/{project_id}/workflow/start",
+                    json={
+                        "topic": "Fixture topic",
+                        "audience": "Fixture audience",
+                        "brief": "Fixture brief",
+                        "sources": [],
+                    },
+                )
+        assert resp.status_code == 400
+        assert resp.json()["detail"] == ERR_RESEARCH_SYNTHESIS_FAILED
+        failures = [log for log in logs if log["event"] == "workflow_start_failed"]
+        assert failures
+        assert failures[0]["project_id"] == project_id
+        assert failures[0]["error"] == ERR_INVALID_JSON
+
 
 # ==============================================================================
 # POST /workflow/resume behavior + interrupt->resume gates + optimistic lock
