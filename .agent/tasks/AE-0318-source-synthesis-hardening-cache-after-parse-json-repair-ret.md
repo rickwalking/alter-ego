@@ -1,6 +1,6 @@
 # AE-0318 — source synthesis hardening cache after parse json repair retry and observable workflow start failures
 
-Status: Ready
+Status: Review
 Tier: T1
 Priority: High
 Type: Bugfix
@@ -144,15 +144,24 @@ evidenced via prod Langfuse traces.
 
 ## Files Touched
 
-Pending.
+See `.agent/reports/AE-0318.dev-summary.md` (Files touched section).
 
 ## Test Evidence
 
-Pending.
+Full backend gates 2026-07-17: 16 PASS / 0 FAIL / 4 SKIP (test/diff-cover/
+migrations/schema-drift need Postgres, deferred to CI per AE-0258; suites
+reproduced by hand: unit 2447 passed / 1 skipped, integration 410 passed /
+6 skipped). Mutation 79.62% >= 75% with the new modules in paths_to_mutate.
+mypy strict clean (577 files), ruff clean. GATES_JSON in the dev summary.
+
+Per-AC test mapping: `.agent/reports/AE-0318.dev-summary.md`.
 
 ## QA Report
 
-Pending.
+External QA converged (mode: external, GLM 5.2 via OpenCode Go): r1 FAIL
+(0 blocker / 5 major) -> fix round -> r2 verify-only PASS. Reports:
+`.agent/reports/wave-ae0317-0318.qa.md` (+ per-ticket copy), review rounds in
+`.agent/reports/wave-ae0317-0318.external-review.r{1,2}.md`.
 
 ## Decision Log
 
