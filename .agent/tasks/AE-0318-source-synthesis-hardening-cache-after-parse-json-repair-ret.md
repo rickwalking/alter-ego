@@ -131,6 +131,12 @@ Feature: Source synthesis is resilient to malformed LLM responses
 
 ## Progress Log
 
+### 2026-07-17 (r1 review round)
+
+External cold-critic review r1: findings 1, 2 fixed with regression tests
+(scoped detail mapping; repair transport guard); finding 6 waived (see Decision
+Log); finding 14 fixed (cache-reuse happy-path test).
+
 ### 2026-07-17
 
 Ticket created from `.agent/reports/AE-0317.arch-plan.md` §4.5; root cause fully
@@ -153,6 +159,19 @@ Pending.
 - Fail-closed retained: repair failure still 400s (no fabricated findings); fix
   targets observability + self-healing, not silent success.
 - Detail string change deemed additive (same status, same schema).
+- External review r1 finding 1: the synthesis-specific 400 detail is SCOPED —
+  only `ValueError(ERR_INVALID_JSON)` maps to `research_synthesis_failed`; any
+  other engine ValueError keeps the legacy generic detail (now logged). Both
+  branches route-tested.
+- External review r1 finding 2: a transport/provider failure during the repair
+  round-trip is folded into the `ValueError` contract (logged
+  `source_synthesis_repair_call_failed`), so no new 500 path exists.
+- External review r1 finding 6 (waived): repair reuses the shared
+  `JSON_REPAIR_PROMPT` but drives the agent's own chat model via `ainvoke`
+  (LangChain message API) instead of the `LLMService.generate` helper; the
+  0.2-temperature override is not carried over (per-call temperature is not
+  portable through `ainvoke` without rebinding the model). Divergence is
+  deliberate and documented; roles are assistant=raw, user=repair-instruction.
 
 ## Blockers
 

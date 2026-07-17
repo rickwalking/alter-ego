@@ -83,6 +83,7 @@ from rag_backend.application.services.carousel.workflow_sse_hub import (
     get_workflow_sse_hub,
 )
 from rag_backend.domain.constants.access_control import ERR_INVALID_REQUEST
+from rag_backend.domain.constants.ai_agents import ERR_INVALID_JSON
 from rag_backend.domain.constants.carousel_workflow import (
     ERR_RESEARCH_SYNTHESIS_FAILED,
     ERR_WORKFLOW_SSE_SUBSCRIBER_LIMIT,
@@ -197,15 +198,23 @@ async def start_editorial_workflow(
         )
     except ValueError as exc:
         # AE-0318: this catch used to swallow the engine error unlogged with a
-        # generic detail, which made prod synthesis failures undiagnosable.
+        # generic detail, which made prod synthesis failures undiagnosable. The
+        # synthesis-specific detail is scoped to the synthesis parse error; any
+        # other engine ValueError keeps the legacy generic detail (but is now
+        # logged too).
         logger.exception(
             "workflow_start_failed",
             project_id=str(project_id),
             error=str(exc),
         )
+        detail = (
+            ERR_RESEARCH_SYNTHESIS_FAILED
+            if str(exc) == ERR_INVALID_JSON
+            else ERR_INVALID_REQUEST
+        )
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ERR_RESEARCH_SYNTHESIS_FAILED,
+            detail=detail,
         ) from None
     return build_editorial_workflow_state_response(
         dict(view.state),

@@ -15,9 +15,7 @@ import pytest
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 
 _SCRIPT_PATH = (
-    Path(__file__).resolve().parents[3]
-    / "scripts"
-    / "repair_image_provider_combos.py"
+    Path(__file__).resolve().parents[3] / "scripts" / "repair_image_provider_combos.py"
 )
 
 _LEGACY_PREVIEW_MODEL = "gemini-2.5-flash-preview-05-20"
@@ -33,9 +31,7 @@ _INSERT_ROW = (
     "INSERT INTO carousel_projects (id, image_model, image_style) "
     "VALUES (:id, :model, :style)"
 )
-_SELECT_ROW = (
-    "SELECT image_model, image_style FROM carousel_projects WHERE id = :id"
-)
+_SELECT_ROW = "SELECT image_model, image_style FROM carousel_projects WHERE id = :id"
 
 
 def _load_script() -> ModuleType:

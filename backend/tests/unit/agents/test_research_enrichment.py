@@ -15,7 +15,7 @@ from rag_backend.domain.constants.research_enrichment import (
     SOURCE_TYPE_WEB_SEARCH,
 )
 from rag_backend.domain.models import ResearchSourceType
-from rag_backend.domain.models.research_enrichment import ResearchEnrichmentParams
+from rag_backend.domain.protocols import ResearchEnrichmentParams
 
 _TOPIC = "ai frontier models"
 
@@ -227,3 +227,109 @@ class TestDisabled:
         enriched = await enrich_sources(sources, _params(None))
 
         assert enriched is sources
+
+
+class TestObservabilityEvents:
+    """AE-0317 review r1 (M5): the spec-listed structlog events must fire."""
+
+    async def test_blocked_url_logs_research_url_blocked(self) -> None:
+        """Scenario: Unsafe URL is blocked, workflow proceeds (log half)."""
+        from structlog.testing import capture_logs
+
+        tool = _StubResearchTool()
+        with capture_logs() as logs:
+            await enrich_sources(
+                [_url_source("http://169.254.169.254/latest/meta-data")],
+                _params(tool),
+            )
+        blocked = [log for log in logs if log["event"] == "research_url_blocked"]
+        assert len(blocked) == 1
+        assert blocked[0]["url"] == "http://169.254.169.254/latest/meta-data"
+        assert blocked[0]["log_level"] == "warning"
+
+    async def test_cap_overflow_logs_research_url_cap_hit(self) -> None:
+        """Scenario: Scrape volume is capped (log half)."""
+        from structlog.testing import capture_logs
+
+        tool = _StubResearchTool()
+        sources = [
+            _url_source(f"https://example.com/{i}")
+            for i in range(MAX_URL_SOURCES_SCRAPED + 2)
+        ]
+        with capture_logs() as logs:
+            await enrich_sources(sources, _params(tool))
+        cap_hits = [log for log in logs if log["event"] == "research_url_cap_hit"]
+        assert len(cap_hits) == 2
+
+    async def test_search_failure_logs_research_search_failed(self) -> None:
+        """Scenario: Search failure is non-fatal (log half)."""
+        from structlog.testing import capture_logs
+
+        class _FailingSearch(_StubResearchTool):
+            async def search_web(
+                self, query: str, _source_types: list[ResearchSourceType]
+            ) -> list[dict[str, str]]:
+                raise RuntimeError("ddg unavailable")
+
+        with capture_logs() as logs:
+            await enrich_sources([], _params(_FailingSearch()))
+        failed = [log for log in logs if log["event"] == "research_search_failed"]
+        assert len(failed) == 1
+        assert failed[0]["topic"] == _TOPIC
+
+
+class TestCapSemantics:
+    """AE-0317 review r1 (m7): unsafe URLs must not consume scrape budget."""
+
+    async def test_unsafe_urls_do_not_consume_scrape_budget(self) -> None:
+        tool = _StubResearchTool()
+        unsafe = [
+            _url_source("http://localhost/a"),
+            _url_source("http://127.0.0.1/b"),
+        ]
+        safe = [
+            _url_source(f"https://example.com/{i}")
+            for i in range(MAX_URL_SOURCES_SCRAPED)
+        ]
+
+        await enrich_sources(unsafe + safe, _params(tool))
+
+        assert len(tool.scraped_urls) == MAX_URL_SOURCES_SCRAPED
+        assert all(url.startswith("https://example.com/") for url in tool.scraped_urls)
+
+
+class TestConcurrencyBound:
+    """AE-0317 review r1 (m10): deterministic semaphore-width assertion."""
+
+    async def test_semaphore_admits_exactly_the_configured_width(self) -> None:
+        class _GatedTool(_StubResearchTool):
+            """Blocks every scrape until the full semaphore width is in flight."""
+
+            def __init__(self) -> None:
+                super().__init__()
+                self.gate = asyncio.Event()
+
+            async def scrape_url(self, url: str) -> str:
+                self.active_scrapes += 1
+                self.max_active_scrapes = max(
+                    self.max_active_scrapes, self.active_scrapes
+                )
+                if self.active_scrapes >= MAX_CONCURRENT_SCRAPES:
+                    self.gate.set()
+                # If the semaphore admitted fewer than MAX_CONCURRENT_SCRAPES
+                # tasks, this wait times out, the scrape degrades gracefully,
+                # and the assertion below fails.
+                await asyncio.wait_for(self.gate.wait(), timeout=1)
+                self.scraped_urls.append(url)
+                self.active_scrapes -= 1
+                return self.page_text
+
+        tool = _GatedTool()
+        sources = [
+            _url_source(f"https://example.com/{i}")
+            for i in range(MAX_URL_SOURCES_SCRAPED)
+        ]
+
+        await enrich_sources(sources, _params(tool))
+
+        assert tool.max_active_scrapes == MAX_CONCURRENT_SCRAPES

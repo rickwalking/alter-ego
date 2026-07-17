@@ -240,3 +240,23 @@ def test_rag_agent_skips_researcher_without_tool_access() -> None:
     specs = agent._build_subagents()
 
     assert RESEARCHER_SUBAGENT_NAME not in [spec["name"] for spec in specs]
+
+
+# Scenario: Researcher subagent is registered in the chat pipeline
+# (negative half 2, AE-0317 r1 m8: tool access present but no research tool)
+def test_rag_agent_skips_researcher_without_research_tool() -> None:
+    from unittest.mock import MagicMock
+
+    from rag_backend.agents.rag_agent import RAGAgent
+    from rag_backend.agents.subagents import RESEARCHER_SUBAGENT_NAME
+
+    agent = RAGAgent.__new__(RAGAgent)
+    agent._editorial_subagent = {"name": "editorial-carousel"}
+    agent._research_tool = None
+    agent._carousel_tool_access = MagicMock()
+    agent._knowledge_search = MagicMock()
+    agent._llm = MagicMock()
+
+    specs = agent._build_subagents()
+
+    assert RESEARCHER_SUBAGENT_NAME not in [spec["name"] for spec in specs]

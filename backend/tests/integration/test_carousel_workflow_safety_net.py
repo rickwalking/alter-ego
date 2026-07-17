@@ -520,6 +520,44 @@ class TestWorkflowStartBehavior:
         assert failures[0]["project_id"] == project_id
         assert failures[0]["error"] == ERR_INVALID_JSON
 
+    @pytest.mark.asyncio
+    async def test_start_non_synthesis_value_error_keeps_generic_detail(
+        self, wf_env: WfEnv, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Scenario: Repair failure fails closed (scoping half, AE-0318 r1 M1):
+        a non-synthesis ValueError must NOT be labeled research_synthesis_failed."""
+        import structlog
+
+        from rag_backend.domain.constants.access_control import ERR_INVALID_REQUEST
+
+        project_id = await wf_env.seed_project(wf_env.editor)
+        stub = _patch_service(monkeypatch, project_id, has_state=False)
+
+        async def _raise_start(
+            project_id: str,
+            workflow_input: object,
+            db: object | None = None,
+        ) -> CarouselWorkflowState:
+            del project_id, workflow_input, db
+            raise ValueError("some_other_engine_error")
+
+        monkeypatch.setattr(stub, "start_workflow", _raise_start)
+        with structlog.testing.capture_logs() as logs:
+            async with wf_env.client_for(wf_env.editor) as client:
+                resp = await client.post(
+                    f"/api/carousels/{project_id}/workflow/start",
+                    json={
+                        "topic": "Fixture topic",
+                        "audience": "Fixture audience",
+                        "brief": "Fixture brief",
+                        "sources": [],
+                    },
+                )
+        assert resp.status_code == 400
+        assert resp.json()["detail"] == ERR_INVALID_REQUEST
+        failures = [log for log in logs if log["event"] == "workflow_start_failed"]
+        assert failures and failures[0]["error"] == "some_other_engine_error"
+
 
 # ==============================================================================
 # POST /workflow/resume behavior + interrupt->resume gates + optimistic lock

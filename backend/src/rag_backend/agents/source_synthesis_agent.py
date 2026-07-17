@@ -97,12 +97,25 @@ class SourceSynthesisAgent:
             raise
 
     async def _request_repair(self, raw: str) -> str:
-        """Ask the model to correct its own malformed JSON response."""
+        """Ask the model to correct its own malformed JSON response.
+
+        A transport/provider failure during the repair round-trip is folded into
+        the same ``ValueError`` contract as a failed parse, so the route's 400
+        mapping holds (no new 500 path).
+        """
         messages: list[BaseMessage] = [
             AIMessage(content=raw),
             HumanMessage(content=JSON_REPAIR_PROMPT),
         ]
-        response = await self.llm.ainvoke(messages, get_langfuse_runnable_config())
+        try:
+            response = await self.llm.ainvoke(messages, get_langfuse_runnable_config())
+        except Exception as exc:
+            logger.warning(
+                "source_synthesis_repair_call_failed",
+                model_id=self.model_id,
+                error=str(exc),
+            )
+            raise ValueError(ERR_INVALID_JSON) from exc
         return cast(str, response.content)
 
     def _parse_response(self, raw: str) -> dict[str, object]:

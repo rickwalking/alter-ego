@@ -26,7 +26,7 @@ from rag_backend.application.services.carousel.workflow_state import (
 from rag_backend.application.services.image_provider_registry import (
     ImageProviderRegistry,
 )
-from rag_backend.domain.models.research_enrichment import ResearchEnrichmentParams
+from rag_backend.domain.protocols import ResearchEnrichmentParams
 
 
 class CarouselEditorialOrchestrator:

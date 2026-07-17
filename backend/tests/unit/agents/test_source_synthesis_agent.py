@@ -143,3 +143,40 @@ class TestSourceSynthesisHardening:
         assert get_ai_response_cache().get(prompt, agent.model_id) == json.dumps(
             payload
         )
+
+
+class TestSourceSynthesisRepairTransport:
+    """AE-0318 review r1 (M2): repair transport failure keeps the 400 contract."""
+
+    @pytest.fixture(autouse=True)
+    def clear_cache(self) -> None:
+        from rag_backend.infrastructure.cache.ai_response_cache import (
+            get_ai_response_cache,
+        )
+
+        get_ai_response_cache().clear()
+
+    async def test_repair_transport_failure_raises_value_error(self) -> None:
+        """Scenario: Repair failure fails closed with an observable error."""
+        mock_llm = AsyncMock()
+        agent = SourceSynthesisAgent(llm=mock_llm)
+        mock_llm.ainvoke.side_effect = [
+            MagicMock(content="not-json"),
+            RuntimeError("provider stream aborted"),
+        ]
+
+        with pytest.raises(ValueError, match="Invalid JSON"):
+            await agent.extract_key_points("title", "content body", "document")
+
+    async def test_valid_response_is_reused_from_cache(self) -> None:
+        """Scenario: Valid response is parsed and cached (reuse half)."""
+        mock_llm = AsyncMock()
+        agent = SourceSynthesisAgent(llm=mock_llm)
+        payload = {"key_points": ["Point A"], "summary": "S"}
+        mock_llm.ainvoke.return_value = MagicMock(content=json.dumps(payload))
+
+        first = await agent.extract_key_points("title", "content body", "document")
+        second = await agent.extract_key_points("title", "content body", "document")
+
+        assert first == second
+        assert mock_llm.ainvoke.await_count == 1

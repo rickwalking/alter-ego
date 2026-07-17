@@ -955,9 +955,7 @@ class TestStartWorkflowResearchEnrichment:
         }
         orchestrator = MagicMock()
         orchestrator.get_state = AsyncMock(side_effect=[None, None])
-        orchestrator.enrich_research_sources = AsyncMock(
-            return_value=enriched_sources
-        )
+        orchestrator.enrich_research_sources = AsyncMock(return_value=enriched_sources)
         orchestrator.synthesize_research = AsyncMock(return_value=[])
         orchestrator.start = AsyncMock(return_value=started_state)
         service._orchestrator = orchestrator

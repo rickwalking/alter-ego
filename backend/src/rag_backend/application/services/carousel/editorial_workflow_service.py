@@ -61,8 +61,7 @@ from rag_backend.domain.constants.carousel_workflow import (
 )
 from rag_backend.domain.constants.workflow_validation import CONTENT_TYPE_CAROUSEL
 from rag_backend.domain.models.carousels import ReviewEventParams
-from rag_backend.domain.models.research_enrichment import ResearchEnrichmentParams
-from rag_backend.domain.protocols import ResearchTool
+from rag_backend.domain.protocols import ResearchEnrichmentParams, ResearchTool
 from rag_backend.infrastructure.database.models.carousel import CarouselProjectModel
 from rag_backend.infrastructure.monitoring_langfuse import (
     _TraceConfig,

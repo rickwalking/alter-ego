@@ -150,8 +150,14 @@ Feature: Web research enrichment in the initial editorial workflow
 
 ### ADDED
 
-- `application/services/carousel/research_enrichment.py`
+- `agents/research_enrichment.py` (placement moved from the planned
+  `application/services/carousel/` — see Decision Log: application→agents
+  import ratchet forbids the application layer importing the sanitizer/SSRF
+  guard that live in `agents/`; module added to mutmut `paths_to_mutate`)
 - `domain/constants/research_enrichment.py`
+- `ResearchEnrichmentParams` in `domain/protocols/carousel.py` (placed next to
+  `ResearchTool`; a `domain/models/` home created a domain-internal import
+  cycle caught by the imports gate)
 - `Settings.research_enrichment_enabled`
 - `tests/features/research_enrichment.feature` + unit/integration tests
 
@@ -210,6 +216,11 @@ Feature: Web research enrichment in the initial editorial workflow
 
 ## Progress Log
 
+### 2026-07-17 (r1 review round)
+
+External cold-critic review r1 (GLM 5.2 via OpenCode Go): verdict FAIL, 5 MAJOR.
+All fixed or waived-with-rationale this round; see `.agent/reports/wave-ae0317-0318.qa.md`.
+
 ### 2026-07-17
 
 Ticket created from `.agent/reports/AE-0317.arch-plan.md`; architect validation
@@ -233,7 +244,18 @@ Pending.
   chat pipeline per AE-0249's original design; both share one `ResearchTool`.
 - Search hits contribute snippets only (no scrape) — bounded latency; revisit later.
 - SSRF guard consolidated at the single service choke point (fixes pre-existing
-  unguarded RAG edge).
+  unguarded RAG edge). Guard runs at scrape-job SELECTION so unsafe URLs never
+  consume the scrape budget (external review r1, finding 7).
+- Module placement `agents/` (not `application/`) WAIVED vs ticket text: the
+  application→agents arch ratchet (down-only) forbids new application-layer
+  imports of `agents.input_sanitizer` / `agents.tools.url_safety`; the service
+  reaches enrichment through the orchestrator it already owns. Mutation-test
+  scope preserved by adding the module to mutmut `paths_to_mutate`
+  (external review r1, finding 3).
+- External review r1 (GLM 5.2, FAIL→fixed): added all-entry-points consolidation
+  regression tests, observability log-event assertions, kill-switch wiring
+  tests, deterministic semaphore-width test, negative researcher-registration
+  cases (findings 4, 5, 8, 9, 10).
 
 ## Blockers
 

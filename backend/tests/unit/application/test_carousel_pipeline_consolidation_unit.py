@@ -25,8 +25,7 @@ from rag_backend.application.tools.carousel.generate_carousel import (
 )
 from rag_backend.domain.constants.carousel_workflow import SOURCE_TYPE_URL
 from rag_backend.domain.models import CarouselProject, CarouselTheme
-from rag_backend.domain.models.research_enrichment import ResearchEnrichmentParams
-from rag_backend.domain.protocols import ResearchTool
+from rag_backend.domain.protocols import ResearchEnrichmentParams, ResearchTool
 
 
 @pytest.mark.unit
@@ -353,3 +352,59 @@ class TestScrapeUrlSources:
         assert result[0]["content"] == "Scraped note body"
         # Plain-text document source is NOT scraped.
         assert result[1]["content"] == "Just some prose, not a URL"
+
+
+@pytest.mark.unit
+class TestEdgeScrapingConsolidation:
+    """AE-0317 review r1 (M4): all entry points enrich via the service path.
+
+    Regression against re-introducing route-edge scraping: the RAG workflow
+    starter must hand the ORIGINAL url content to the workflow service (which
+    owns enrichment), and the legacy edge helper must stay gone.
+    """
+
+    async def test_rag_workflow_start_passes_unscraped_urls_to_service(self) -> None:
+        from unittest.mock import MagicMock
+
+        from rag_backend.api.dependencies.agents import (
+            WorkflowContext,
+            _start_editorial_workflow_for_rag,
+        )
+        from rag_backend.application.tools.carousel.generate_carousel import (
+            SubagentWorkflowStartRequest,
+        )
+
+        workflow_service = MagicMock()
+        workflow_service.start_workflow = AsyncMock(
+            return_value={"current_phase": "research", "phase_status": "in_progress"}
+        )
+        db = MagicMock()
+        db.commit = AsyncMock()
+
+        await _start_editorial_workflow_for_rag(
+            str(uuid4()),
+            SubagentWorkflowStartRequest(
+                topic="topic",
+                audience="aud",
+                brief="brief",
+                source_urls=["https://example.com/article"],
+            ),
+            ctx=WorkflowContext(
+                workflow_service=workflow_service,
+                workflow_user_id="user",
+                db=db,
+            ),
+        )
+
+        workflow_input = workflow_service.start_workflow.await_args.kwargs[
+            "workflow_input"
+        ]
+        # The edge does NOT scrape: the bare URL reaches the service, whose
+        # research enrichment is the single guarded scrape choke point.
+        assert workflow_input.sources[0]["content"] == "https://example.com/article"
+        assert workflow_input.sources[0]["source_type"] == "url"
+
+    def test_route_edge_scrape_helper_is_gone(self) -> None:
+        from rag_backend.api.dependencies import agents as agents_module
+
+        assert not hasattr(agents_module, "_scrape_url_sources")

@@ -32,8 +32,7 @@ from rag_backend.domain.constants.research_enrichment import (
     MAX_WEB_SEARCH_RESULTS,
     SOURCE_TYPE_WEB_SEARCH,
 )
-from rag_backend.domain.models.research_enrichment import ResearchEnrichmentParams
-from rag_backend.domain.protocols import ResearchTool
+from rag_backend.domain.protocols import ResearchEnrichmentParams, ResearchTool
 from rag_backend.infrastructure.logging import get_logger
 
 logger = get_logger()
@@ -65,6 +64,29 @@ def _is_scrapeable(source: dict[str, str]) -> bool:
     return bool(_BARE_URL_RE.match(content))
 
 
+def _select_scrape_jobs(sources: list[dict[str, str]]) -> list[int]:
+    """Pick the source indexes to navigate: safe URLs only, cap-bounded.
+
+    The SSRF guard runs at selection time so an unsafe URL never consumes a
+    slot of the scrape budget (it is skipped with a warning instead).
+    """
+    budget = MAX_URL_SOURCES_SCRAPED
+    jobs: list[int] = []
+    for index, source in enumerate(sources):
+        if not _is_scrapeable(source):
+            continue
+        url = source.get("content", "")
+        if not is_safe_research_url(url):
+            logger.warning("research_url_blocked", url=url)
+            continue
+        if budget == 0:
+            logger.warning("research_url_cap_hit", url=url)
+            continue
+        budget -= 1
+        jobs.append(index)
+    return jobs
+
+
 async def _scrape_url_sources(
     sources: list[dict[str, str]],
     research_tool: ResearchTool,
@@ -72,16 +94,7 @@ async def _scrape_url_sources(
     """Replace navigable sources' content with scraped page text, bounded."""
     out = [dict(source) for source in sources]
     semaphore = asyncio.Semaphore(MAX_CONCURRENT_SCRAPES)
-    budget = MAX_URL_SOURCES_SCRAPED
-    jobs: list[int] = []
-    for index, source in enumerate(out):
-        if not _is_scrapeable(source):
-            continue
-        if budget == 0:
-            logger.warning("research_url_cap_hit", url=source.get("content", ""))
-            continue
-        budget -= 1
-        jobs.append(index)
+    jobs = _select_scrape_jobs(out)
     results = await asyncio.gather(
         *(_scrape_one(out[i]["content"], research_tool, semaphore) for i in jobs)
     )
@@ -97,9 +110,6 @@ async def _scrape_one(
     semaphore: asyncio.Semaphore,
 ) -> str | None:
     """Scrape one URL; ``None`` keeps the original content (graceful path)."""
-    if not is_safe_research_url(url):
-        logger.warning("research_url_blocked", url=url)
-        return None
     try:
         async with semaphore:
             scraped = await research_tool.scrape_url(url)
@@ -115,9 +125,7 @@ async def _search_topic_sources(
 ) -> list[dict[str, str]]:
     """Search the topic and shape the top hits as ``web_search`` sources."""
     try:
-        hits = await research_tool.search_web(
-            topic, list(DEFAULT_SEARCH_SOURCE_TYPES)
-        )
+        hits = await research_tool.search_web(topic, list(DEFAULT_SEARCH_SOURCE_TYPES))
     except Exception as exc:
         logger.warning("research_search_failed", topic=topic, error=str(exc))
         return []

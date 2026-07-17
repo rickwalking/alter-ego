@@ -490,6 +490,8 @@ paths_to_mutate = [
     "src/rag_backend/api/routes/carousels/preview.py",
     "src/rag_backend/application/services/carousel/editorial_workflow_resume_runner.py",
     "src/rag_backend/agents/carousel_editorial_orchestrator.py",
+    "src/rag_backend/agents/research_enrichment.py",
+    "src/rag_backend/agents/source_synthesis_agent.py",
     "src/rag_backend/application/services/carousel/phase_subagents.py",
     "src/rag_backend/agents/carousel_workflow.py",
     "src/rag_backend/application/services/carousel_refinement.py",
