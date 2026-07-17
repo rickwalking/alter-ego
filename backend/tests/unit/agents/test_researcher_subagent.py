@@ -199,3 +199,44 @@ def test_deterministic_phases_are_langgraph_nodes_not_subagents() -> None:
         assert "runnable" not in phase_spec
         assert "task" not in phase_spec
         assert phase_spec[SPEC_FIELD_TOOLS] == []
+
+
+# Scenario: Researcher subagent is registered in the chat pipeline
+# (tests/features/research_enrichment.feature, AE-0317)
+def test_rag_agent_registers_researcher_subagent() -> None:
+    from unittest.mock import MagicMock
+
+    from rag_backend.agents.rag_agent import RAGAgent
+    from rag_backend.agents.subagents import RESEARCHER_SUBAGENT_NAME
+
+    agent = RAGAgent.__new__(RAGAgent)
+    agent._editorial_subagent = {"name": "editorial-carousel"}
+    agent._research_tool = MagicMock()
+    agent._carousel_tool_access = MagicMock()
+    agent._knowledge_search = MagicMock()
+    agent._llm = MagicMock()
+
+    specs = agent._build_subagents()
+
+    names = [spec["name"] for spec in specs]
+    assert names[0] == "editorial-carousel"
+    assert RESEARCHER_SUBAGENT_NAME in names
+
+
+# Scenario: Researcher subagent is registered in the chat pipeline (negative half)
+def test_rag_agent_skips_researcher_without_tool_access() -> None:
+    from unittest.mock import MagicMock
+
+    from rag_backend.agents.rag_agent import RAGAgent
+    from rag_backend.agents.subagents import RESEARCHER_SUBAGENT_NAME
+
+    agent = RAGAgent.__new__(RAGAgent)
+    agent._editorial_subagent = None
+    agent._research_tool = MagicMock()
+    agent._carousel_tool_access = None
+    agent._knowledge_search = MagicMock()
+    agent._llm = MagicMock()
+
+    specs = agent._build_subagents()
+
+    assert RESEARCHER_SUBAGENT_NAME not in [spec["name"] for spec in specs]

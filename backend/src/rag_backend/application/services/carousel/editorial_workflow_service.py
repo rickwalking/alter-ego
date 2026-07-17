@@ -61,6 +61,8 @@ from rag_backend.domain.constants.carousel_workflow import (
 )
 from rag_backend.domain.constants.workflow_validation import CONTENT_TYPE_CAROUSEL
 from rag_backend.domain.models.carousels import ReviewEventParams
+from rag_backend.domain.models.research_enrichment import ResearchEnrichmentParams
+from rag_backend.domain.protocols import ResearchTool
 from rag_backend.infrastructure.database.models.carousel import CarouselProjectModel
 from rag_backend.infrastructure.monitoring_langfuse import (
     _TraceConfig,
@@ -80,6 +82,9 @@ class EditorialWorkflowConfig:
     event_service: WorkflowEventService | None = None
     notification_service: NotificationService | None = None
     image_registry: ImageProviderRegistry | None = None
+    # AE-0317: enables deterministic web-research enrichment at workflow start;
+    # None (CI, tests, kill switch) means sources pass through unchanged.
+    research_tool: ResearchTool | None = None
 
 
 class EditorialWorkflowService:
@@ -97,6 +102,7 @@ class EditorialWorkflowService:
         )
         self._events = config.event_service
         self._notifications = config.notification_service or NotificationService()
+        self._research_tool = config.research_tool
 
     async def start_workflow(
         self,
@@ -121,15 +127,22 @@ class EditorialWorkflowService:
         with propagate_attributes(
             metadata={"project_id": project_id, "phase": PHASE_RESEARCH},
         ):
-            research_findings = await self._orchestrator.synthesize_research(
+            enriched_sources = await self._orchestrator.enrich_research_sources(
                 workflow_input.sources,
+                ResearchEnrichmentParams(
+                    topic=workflow_input.topic,
+                    research_tool=self._research_tool,
+                ),
+            )
+            research_findings = await self._orchestrator.synthesize_research(
+                enriched_sources,
             )
 
         initial_brief = {
             "topic": workflow_input.topic,
             "audience": workflow_input.audience,
             "brief": workflow_input.brief,
-            "sources": workflow_input.sources,
+            "sources": enriched_sources,
         }
         overrides: dict[str, object] = {"research_findings": research_findings}
         policy_version = await self._resolve_presentation_policy_version(db, project_id)

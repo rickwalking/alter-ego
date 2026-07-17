@@ -59,6 +59,10 @@ class Settings(BaseSettings):
     # live against the endpoint): "glm-5.2", not "glm-5-2".
     glm_model: str = "glm-5.2"
 
+    # AE-0317 kill switch: when false, workflow-start web research (URL scraping
+    # + DuckDuckGo topic search) is skipped and sources pass through unchanged.
+    research_enrichment_enabled: bool = True
+
     langsmith_api_key: SecretStr | None = None
     langsmith_project: str = "rag-backend"
     langsmith_tracing: bool = False

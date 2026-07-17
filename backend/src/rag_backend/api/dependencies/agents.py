@@ -10,7 +10,6 @@ retriever, external services) from the container.
 
 from __future__ import annotations
 
-import re
 from collections.abc import Callable
 from dataclasses import dataclass
 from uuid import UUID
@@ -18,7 +17,7 @@ from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.agents.alter_ego_agent import AlterEgoAgent
-from rag_backend.agents.input_sanitizer import sanitize_llm_input, sanitize_web_content
+from rag_backend.agents.input_sanitizer import sanitize_llm_input
 from rag_backend.agents.rag_agent import RAGAgent
 from rag_backend.application.services.carousel.editorial_subagent import (
     build_editorial_carousel_subagent,
@@ -49,7 +48,6 @@ from rag_backend.domain.constants.carousel_tools import (
 from rag_backend.domain.constants.carousel_workflow import SOURCE_TYPE_URL
 from rag_backend.domain.constants.conversation import CONVERSATION_METADATA_PROJECT_ID
 from rag_backend.domain.models import CarouselProject, Conversation
-from rag_backend.domain.protocols import ResearchTool
 from rag_backend.infrastructure.container import Container
 from rag_backend.infrastructure.database.carousel_repository import (
     PostgresCarouselRepository,
@@ -98,7 +96,6 @@ class WorkflowContext:
     workflow_service: EditorialWorkflowService
     workflow_user_id: str
     db: AsyncSession
-    research_tool: ResearchTool | None = None
 
 
 def build_agent_for_conversation(
@@ -194,51 +191,15 @@ def _sanitize_url_sources(source_urls: list[str]) -> list[dict[str, str]]:
     ]
 
 
-_URL_PATTERN = re.compile(r"^https?://\S+$")
-
-
-async def _scrape_url_sources(
-    sources: list[dict[str, str]],
-    research_tool: ResearchTool | None,
-) -> list[dict[str, str]]:
-    """Scrape URL-type sources, replacing content with scraped text.
-
-    Intentional superset matching: a source is treated as scrapeable when
-    ``source_type == "url"`` OR when its ``content`` is a bare http(s) URL
-    matching ``_URL_PATTERN`` (anchored, no surrounding text). The second
-    branch handles RAG agent notes that embed a raw URL without setting
-    ``source_type``. Plain-text/document sources (whose ``content`` is not a
-    bare URL) are NOT scraped, even when ``research_tool`` is available.
-
-    Graceful degradation: if scraping fails or research_tool is None,
-    the original content (URL string) is preserved.
-    """
-    if research_tool is None:
-        return sources
-    for item in sources:
-        content = item.get("content", "")
-        is_url = item.get("source_type") == SOURCE_TYPE_URL or bool(
-            _URL_PATTERN.match(content)
-        )
-        if not is_url or not content:
-            continue
-        try:
-            scraped = await research_tool.scrape_url(content)
-            item["content"] = sanitize_web_content(scraped)
-        except Exception as exc:
-            # Graceful degradation: keep the original URL content, log for visibility.
-            logger.warning("url_scrape_failed", url=content, error=str(exc))
-    return sources
-
-
 async def _start_editorial_workflow_for_rag(
     project_id: str,
     request: SubagentWorkflowStartRequest,
     *,
     ctx: WorkflowContext,
 ) -> str:
+    # AE-0317: URL scraping now happens inside the workflow service's research
+    # enrichment (single guarded choke point) — no route-edge scraping here.
     sources = _sanitize_url_sources(request.source_urls)
-    sources = await _scrape_url_sources(sources, ctx.research_tool)
     state = await ctx.workflow_service.start_workflow(
         project_id=project_id,
         workflow_input=EditorialWorkflowStartInput(
@@ -286,6 +247,9 @@ def build_rag_agent(
         EditorialWorkflowConfig(
             llm=llm,
             image_registry=container.image_provider_registry(),
+            research_tool=(
+                research_tool if settings.research_enrichment_enabled else None
+            ),
         ),
     )
     workflow_user_id = build_context.owner_user_id or RAG_AGENT_USER_ID
@@ -330,7 +294,6 @@ def build_rag_agent(
                 workflow_service=workflow_service,
                 workflow_user_id=workflow_user_id,
                 db=db,
-                research_tool=research_tool,
             ),
         )
 
@@ -355,7 +318,6 @@ def build_rag_agent(
             }
             for item in normalized
         ]
-        scraped_sources = await _scrape_url_sources(sanitized_sources, research_tool)
         state = await workflow_service.start_workflow(
             project_id=project_id,
             workflow_input=EditorialWorkflowStartInput(
@@ -364,7 +326,7 @@ def build_rag_agent(
                 brief=sanitize_llm_input(
                     str(payload.get("brief", payload.get("topic", "")))
                 ),
-                sources=scraped_sources,
+                sources=sanitized_sources,
                 user_id=workflow_user_id,
             ),
             db=db,
@@ -395,4 +357,5 @@ def build_rag_agent(
         editorial_subagent=editorial_subagent,
         start_editorial_workflow=start_editorial_workflow_compat,
         carousel_tool_access=tool_access,
+        research_tool=research_tool,
     )
