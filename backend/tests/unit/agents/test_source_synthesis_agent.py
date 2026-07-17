@@ -180,3 +180,99 @@ class TestSourceSynthesisRepairTransport:
 
         assert first == second
         assert mock_llm.ainvoke.await_count == 1
+
+
+class TestSourceSynthesisObservability:
+    """AE-0318: the hardening's structlog events fire with the right fields."""
+
+    @pytest.fixture(autouse=True)
+    def clear_cache(self) -> None:
+        from rag_backend.infrastructure.cache.ai_response_cache import (
+            get_ai_response_cache,
+        )
+
+        get_ai_response_cache().clear()
+
+    async def test_parse_failure_logs_both_attempts_with_truncated_payloads(
+        self,
+    ) -> None:
+        """Scenario: Repair failure fails closed (observability half)."""
+        from structlog.testing import capture_logs
+
+        mock_llm = AsyncMock()
+        agent = SourceSynthesisAgent(llm=mock_llm)
+        long_garbage = "x" * 600
+        mock_llm.ainvoke.side_effect = [
+            MagicMock(content=long_garbage),
+            MagicMock(content="still-not-json"),
+        ]
+
+        with capture_logs() as logs, pytest.raises(ValueError):
+            await agent.extract_key_points("title", "content body", "document")
+
+        first = [
+            log
+            for log in logs
+            if log["event"] == "source_synthesis_json_parse_failed_attempt_1"
+        ]
+        second = [
+            log
+            for log in logs
+            if log["event"] == "source_synthesis_json_parse_failed_attempt_2"
+        ]
+        assert len(first) == 1 and len(second) == 1
+        assert first[0]["model_id"] == agent.model_id
+        # The logged payload is truncated to exactly 500 chars.
+        assert first[0]["raw_response"] == "x" * 500
+        assert second[0]["repair_response"] == "still-not-json"
+
+    async def test_poisoned_cache_eviction_is_logged(self) -> None:
+        """Scenario: Poisoned cache entry from a previous deploy is evicted."""
+        from structlog.testing import capture_logs
+
+        from rag_backend.domain.constants.ai_agents import PROMPT_SOURCE_SYNTHESIS
+        from rag_backend.infrastructure.cache.ai_response_cache import (
+            get_ai_response_cache,
+        )
+
+        mock_llm = AsyncMock()
+        agent = SourceSynthesisAgent(llm=mock_llm)
+        prompt = PROMPT_SOURCE_SYNTHESIS.format(
+            title="title", source_type="document", content="content body"
+        )
+        get_ai_response_cache().set(prompt, agent.model_id, "poisoned")
+        mock_llm.ainvoke.return_value = MagicMock(
+            content=json.dumps({"key_points": [], "summary": ""})
+        )
+
+        with capture_logs() as logs:
+            await agent.extract_key_points("title", "content body", "document")
+
+        evictions = [
+            log
+            for log in logs
+            if log["event"] == "source_synthesis_poisoned_cache_evicted"
+        ]
+        assert len(evictions) == 1
+        assert evictions[0]["model_id"] == agent.model_id
+        assert evictions[0]["log_level"] == "warning"
+
+    async def test_repair_transport_failure_is_logged(self) -> None:
+        """Scenario: Repair failure fails closed (transport half)."""
+        from structlog.testing import capture_logs
+
+        mock_llm = AsyncMock()
+        agent = SourceSynthesisAgent(llm=mock_llm)
+        mock_llm.ainvoke.side_effect = [
+            MagicMock(content="not-json"),
+            RuntimeError("stream aborted"),
+        ]
+
+        with capture_logs() as logs, pytest.raises(ValueError):
+            await agent.extract_key_points("title", "content body", "document")
+
+        failures = [
+            log for log in logs if log["event"] == "source_synthesis_repair_call_failed"
+        ]
+        assert len(failures) == 1
+        assert failures[0]["error"] == "stream aborted"
