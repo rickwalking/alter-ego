@@ -29,6 +29,9 @@ ALLOWED_RAW_UPDATE_FILES: frozenset[str] = frozenset({
     "infrastructure/database/carousel_run_reaper.py",
     # Heartbeat write — self-fencing WHERE on run_epoch (survey #19).
     "modules/editorial/infrastructure/carousel_run_progress.py",
+    # AE-0320 phase-drift convergence — tick-owned CAS on phase_status=failed,
+    # bumping lock_version + run_epoch like the reaper flip it mirrors.
+    "infrastructure/database/carousel_drift_reconciler.py",
 })
 
 _ORM_CORE_UPDATE_RE = re.compile(r"update\(\s*Carousel(Project|Slide)Model\b")

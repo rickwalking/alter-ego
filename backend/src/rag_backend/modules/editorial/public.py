@@ -111,6 +111,7 @@ from rag_backend.modules.editorial.infrastructure.carousel_project_write_owner i
 from rag_backend.modules.editorial.infrastructure.carousel_run_progress import (
     read_run_fence,
     write_run_heartbeat,
+    write_run_heartbeat_once,
     write_run_heartbeat_with_retry,
 )
 from rag_backend.modules.editorial.infrastructure.editorial_port_adapters import (
@@ -204,5 +205,6 @@ __all__ = [
     "is_carousel_project_lock_held_session",
     "read_run_fence",
     "write_run_heartbeat",
+    "write_run_heartbeat_once",
     "write_run_heartbeat_with_retry",
 ]

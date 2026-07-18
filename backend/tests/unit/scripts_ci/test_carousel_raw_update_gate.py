@@ -80,11 +80,13 @@ class TestCarouselRawUpdateGate:
         assert scan_for_raw_updates(_SRC_ROOT) == []
 
     def test_allowlist_matches_survey_enumeration(self) -> None:
-        # The allowlist must stay in lockstep with the write-site survey §2.
+        # The allowlist must stay in lockstep with the write-site survey §2
+        # (+ the AE-0320 phase-drift convergence CAS, mirroring the reaper flip).
         assert (
             frozenset({
                 "application/services/optimistic_lock_service.py",
                 "infrastructure/database/carousel_artifact_build_repository.py",
+                "infrastructure/database/carousel_drift_reconciler.py",
                 "infrastructure/database/carousel_run_reaper.py",
                 "modules/editorial/infrastructure/carousel_run_progress.py",
             })

@@ -16,17 +16,22 @@ checkpoint is untouched by the reaper) is safe and epoch-fenced.
 
 from __future__ import annotations
 
+from typing import cast
 from uuid import UUID
 
 import structlog
-from sqlalchemy import select
+from sqlalchemy import CursorResult, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.domain.constants.carousel_repair import (
     LOG_EVENT_DRIFT_CONVERGED,
     LOG_EVENT_DRIFT_DETECTED,
 )
-from rag_backend.domain.constants.carousel_workflow import PHASE_STATUS_AWAITING_HUMAN
+from rag_backend.domain.constants.carousel_run import LOG_EVENT_PHASE_DRIFT_CONVERGED
+from rag_backend.domain.constants.carousel_workflow import (
+    PHASE_STATUS_AWAITING_HUMAN,
+    PHASE_STATUS_FAILED,
+)
 from rag_backend.domain.models.carousel import CarouselStatus
 from rag_backend.domain.models.carousel_run import (
     CarouselRunContext,
@@ -40,6 +45,8 @@ logger = structlog.get_logger()
 _CHECKPOINT_VALIDATION_KEY = "presentation_validation"
 _CHECKPOINT_LOCALIZED_KEY = "localized_slides"
 _CHECKPOINT_POLICY_KEY = "presentation_policy_version"
+_CHECKPOINT_PHASE_KEY = "current_phase"
+_CHECKPOINT_PHASE_STATUS_KEY = "phase_status"
 _REPORT_BLOCKING_KEY = "blocking"
 
 # Recompute result: repaired slides, the fresh report dict, and whether the
@@ -60,7 +67,67 @@ class CarouselDriftReconcilerRepository:
         for row in rows:
             if await self._reconcile_row(db, row):
                 converged += 1
+        converged += await self._reconcile_failed_phase_drift(db)
         return converged
+
+    async def _reconcile_failed_phase_drift(self, db: AsyncSession) -> int:
+        """AE-0320: converge rows a dead run left ``failed`` behind a parked
+        checkpoint at a DIFFERENT phase.
+
+        A resume run that completed its phase work (checkpoint advanced and
+        parked at ``awaiting_human``) but died during finalization marks the
+        row ``failed`` at the OLD phase — the UI shows a failure while the
+        workflow is actually parked at the next gate. Same-phase failures are
+        genuine and stay ``failed`` (the recovery UI owns them).
+        """
+        result = await db.execute(
+            select(CarouselProjectModel).where(
+                CarouselProjectModel.phase_status == PHASE_STATUS_FAILED,
+                CarouselProjectModel.status != CarouselStatus.COMPLETED.value,
+            )
+        )
+        converged = 0
+        for row in result.scalars().all():
+            if await self._converge_failed_row(db, row):
+                converged += 1
+        return converged
+
+    async def _converge_failed_row(
+        self,
+        db: AsyncSession,
+        row: CarouselProjectModel,
+    ) -> bool:
+        """Converge one failed row onto its parked checkpoint phase."""
+        project_id = str(row.id)
+        from_phase = str(row.current_phase or "")
+        state = await self._checkpoint.read_state(project_id)
+        target = _parked_checkpoint_phase(state)
+        if target is None or target == from_phase:
+            return False
+        result = await db.execute(
+            update(CarouselProjectModel)
+            .where(
+                CarouselProjectModel.id == project_id,
+                CarouselProjectModel.phase_status == PHASE_STATUS_FAILED,
+            )
+            .values(
+                current_phase=target,
+                phase_status=PHASE_STATUS_AWAITING_HUMAN,
+                lock_version=CarouselProjectModel.lock_version + 1,
+                run_epoch=CarouselProjectModel.run_epoch + 1,
+                run_started_at=None,
+                run_heartbeat_at=None,
+            )
+        )
+        if cast(CursorResult[object], result).rowcount != 1:
+            return False
+        logger.warning(
+            LOG_EVENT_PHASE_DRIFT_CONVERGED,
+            project_id=project_id,
+            from_phase=from_phase,
+            to_phase=target,
+        )
+        return True
 
     @staticmethod
     async def _parked_in_flight_rows(db: AsyncSession) -> list[CarouselProjectModel]:
@@ -141,6 +208,17 @@ def _policy_of(row: CarouselProjectModel) -> str | None:
     """Read the row's presentation policy version as ``str | None``."""
     value: object = row.presentation_policy_version
     return value if isinstance(value, str) and value.strip() else None
+
+
+def _parked_checkpoint_phase(state: dict[str, object] | None) -> str | None:
+    """Checkpoint phase when it is parked at ``awaiting_human``; else ``None``."""
+    if not isinstance(state, dict):
+        return None
+    status = str(state.get(_CHECKPOINT_PHASE_STATUS_KEY, "") or "")
+    if status != PHASE_STATUS_AWAITING_HUMAN:
+        return None
+    phase = str(state.get(_CHECKPOINT_PHASE_KEY, "") or "")
+    return phase or None
 
 
 def _checkpoint_blocks(state: dict[str, object] | None) -> bool:

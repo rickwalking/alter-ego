@@ -29,6 +29,9 @@ from rag_backend.domain.constants.carousel_workflow import PHASE_STATUS_IN_PROGR
 from rag_backend.domain.models.carousel_run import CarouselRunContext
 from rag_backend.infrastructure.database.config import get_session_maker
 from rag_backend.infrastructure.database.models.carousel import CarouselProjectModel
+from rag_backend.infrastructure.database.pg_lock_timeout import (
+    apply_run_write_lock_timeout,
+)
 
 logger = structlog.get_logger()
 
@@ -55,9 +58,15 @@ async def read_run_fence(project_id: str) -> CarouselRunContext | None:
 
 
 async def write_run_heartbeat(project_id: str, epoch: int) -> bool:
-    """Stamp ``run_heartbeat_at`` now; False when the fence no longer matches."""
+    """Stamp ``run_heartbeat_at`` now; False when the fence no longer matches.
+
+    AE-0320: the write carries a transaction-scoped ``lock_timeout`` so a beat
+    issued while the resume runner's own session holds the row lock fails fast
+    instead of self-deadlocking the run (prod incident 2026-07-18).
+    """
     session_factory = get_session_maker()
     async with session_factory() as session:
+        await apply_run_write_lock_timeout(session)
         result = await session.execute(
             update(CarouselProjectModel)
             .where(
@@ -88,8 +97,29 @@ async def write_run_heartbeat_with_retry(project_id: str, epoch: int) -> bool:
     return False
 
 
+async def write_run_heartbeat_once(project_id: str, epoch: int) -> bool:
+    """Single-attempt heartbeat that never raises (stage-boundary beats).
+
+    AE-0320: the resume runner awaits stage-boundary beats INLINE while its
+    main session may hold flushed-but-uncommitted row writes — those beats
+    must be strictly bounded (one attempt, lock-timeout-capped) and soft-fail;
+    liveness is owned by the interval heartbeat loop, not by stage beats.
+    """
+    try:
+        return await write_run_heartbeat(project_id, epoch)
+    except Exception as exc:
+        logger.warning(
+            LOG_EVENT_RUN_HEARTBEAT_FAILED,
+            project_id=project_id,
+            attempt=1,
+            error=str(exc),
+        )
+        return False
+
+
 __all__ = [
     "read_run_fence",
     "write_run_heartbeat",
+    "write_run_heartbeat_once",
     "write_run_heartbeat_with_retry",
 ]

@@ -32,6 +32,13 @@ LOG_EVENT_RUN_REAPED = "carousel_run_reaped"
 LOG_EVENT_RUN_NULL_HEARTBEAT = "carousel_run_null_heartbeat_alert"
 LOG_EVENT_RUN_HEARTBEAT_FAILED = "carousel_run_heartbeat_failed"
 LOG_EVENT_RUN_FENCED = "carousel_run_fenced"
+LOG_EVENT_RUN_REAP_BLOCKED = "carousel_run_reap_blocked"
+LOG_EVENT_PHASE_DRIFT_CONVERGED = "carousel_phase_drift_converged"
+
+# AE-0320: run-column writers (heartbeat, reaper flip) run on their own
+# sessions; this bounds their row-lock wait so they fail fast instead of
+# queueing behind the resume runner's own uncommitted transaction.
+RUN_WRITE_LOCK_TIMEOUT_MS = 2000
 
 # Reaper defaults (overridable via Settings).
 DEFAULT_RUN_HEARTBEAT_INTERVAL_SECONDS = 60
@@ -48,11 +55,13 @@ __all__ = [
     "DEFAULT_RUN_OVERDUE_MINUTES",
     "DEFAULT_RUN_REAP_CONSECUTIVE_OBSERVATIONS",
     "ERR_STALE_RUN_EPOCH",
+    "LOG_EVENT_PHASE_DRIFT_CONVERGED",
     "LOG_EVENT_RUN_FENCED",
     "LOG_EVENT_RUN_HEARTBEAT_FAILED",
     "LOG_EVENT_RUN_NULL_HEARTBEAT",
     "LOG_EVENT_RUN_OVERDUE",
     "LOG_EVENT_RUN_REAPED",
+    "LOG_EVENT_RUN_REAP_BLOCKED",
     "RUN_FINISHED_REASON_COMPLETED",
     "RUN_FINISHED_REASON_FAILED",
     "RUN_FINISHED_REASON_STALE",
@@ -60,6 +69,7 @@ __all__ = [
     "RUN_STAGE_GENERATING",
     "RUN_STAGE_PERSISTING",
     "RUN_STAGE_VALIDATING",
+    "RUN_WRITE_LOCK_TIMEOUT_MS",
     "SSE_EVENT_RUN_FINISHED",
     "SSE_EVENT_RUN_STAGE_CHANGED",
     "SSE_EVENT_RUN_STARTED",

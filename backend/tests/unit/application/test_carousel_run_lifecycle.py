@@ -9,6 +9,7 @@ state-response run metadata.
 from __future__ import annotations
 
 import uuid
+from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 from unittest.mock import AsyncMock, patch
 
@@ -248,3 +249,89 @@ class TestRunMetadataResponse:
         )
         assert response.run_started_at is None
         assert response.run_stage is None
+
+
+@pytest.mark.asyncio
+class TestHeartbeatLockSafety:
+    """AE-0320 scenarios (tests/features/carousel_run_lock_safety.feature)."""
+
+    async def test_single_attempt_beat_never_raises_and_logs(self, monkeypatch) -> None:
+        """Scenario: Stage-boundary beat is single-attempt and never raises."""
+        from structlog.testing import capture_logs
+
+        attempts: list[int] = []
+
+        async def _always_failing(project_id: str, epoch: int) -> bool:
+            attempts.append(epoch)
+            raise RuntimeError("row lock timeout")
+
+        monkeypatch.setattr(
+            carousel_run_progress, "write_run_heartbeat", _always_failing
+        )
+        with capture_logs() as logs:
+            ok = await carousel_run_progress.write_run_heartbeat_once(_PROJECT_ID, 0)
+
+        assert ok is False
+        assert len(attempts) == 1  # single attempt — no retry loop
+        warned = [
+            log for log in logs if log["event"] == "carousel_run_heartbeat_failed"
+        ]
+        assert len(warned) == 1
+
+    async def test_single_attempt_beat_returns_write_result(self, monkeypatch) -> None:
+        async def _ok(project_id: str, epoch: int) -> bool:
+            return True
+
+        monkeypatch.setattr(carousel_run_progress, "write_run_heartbeat", _ok)
+        assert await carousel_run_progress.write_run_heartbeat_once(_PROJECT_ID, 0)
+
+    async def test_heartbeat_applies_lock_timeout_on_postgres(self) -> None:
+        """Scenario: Heartbeat write is bounded by a lock timeout on Postgres."""
+        from unittest.mock import AsyncMock, MagicMock, patch
+
+        session = AsyncMock()
+        bind = MagicMock()
+        bind.dialect.name = "postgresql"
+        session.get_bind = MagicMock(return_value=bind)
+        result = MagicMock()
+        result.rowcount = 1
+        session.execute = AsyncMock(return_value=result)
+
+        @asynccontextmanager
+        async def _fake_session():
+            yield session
+
+        factory = MagicMock(return_value=_fake_session())
+        with patch.object(
+            carousel_run_progress, "get_session_maker", return_value=factory
+        ):
+            ok = await carousel_run_progress.write_run_heartbeat(_PROJECT_ID, 0)
+
+        assert ok is True
+        first_stmt = str(session.execute.await_args_list[0].args[0])
+        assert "lock_timeout" in first_stmt
+
+    async def test_heartbeat_skips_lock_timeout_on_sqlite(self) -> None:
+        """Scenario: Heartbeat write skips the lock timeout on SQLite."""
+        from unittest.mock import AsyncMock, MagicMock, patch
+
+        session = AsyncMock()
+        bind = MagicMock()
+        bind.dialect.name = "sqlite"
+        session.get_bind = MagicMock(return_value=bind)
+        result = MagicMock()
+        result.rowcount = 1
+        session.execute = AsyncMock(return_value=result)
+
+        @asynccontextmanager
+        async def _fake_session():
+            yield session
+
+        factory = MagicMock(return_value=_fake_session())
+        with patch.object(
+            carousel_run_progress, "get_session_maker", return_value=factory
+        ):
+            await carousel_run_progress.write_run_heartbeat(_PROJECT_ID, 0)
+
+        for call in session.execute.await_args_list:
+            assert "lock_timeout" not in str(call.args[0])
