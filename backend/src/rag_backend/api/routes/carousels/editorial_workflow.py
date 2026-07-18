@@ -78,6 +78,9 @@ from rag_backend.application.services.carousel.editorial_workflow_support import
     SSE_PAYLOAD_FIELD_EVENT,
     format_sse_event,
 )
+from rag_backend.application.services.carousel.provider_errors import (
+    classify_provider_error,
+)
 from rag_backend.application.services.carousel.workflow_sse_hub import (
     WorkflowSseSubscriberLimitError,
     get_workflow_sse_hub,
@@ -85,6 +88,7 @@ from rag_backend.application.services.carousel.workflow_sse_hub import (
 from rag_backend.domain.constants.access_control import ERR_INVALID_REQUEST
 from rag_backend.domain.constants.ai_agents import ERR_INVALID_JSON
 from rag_backend.domain.constants.carousel_workflow import (
+    ERR_PROVIDER_RATE_LIMITED,
     ERR_RESEARCH_SYNTHESIS_FAILED,
     ERR_WORKFLOW_SSE_SUBSCRIBER_LIMIT,
     PHASE_STATUS_IN_PROGRESS,
@@ -215,6 +219,29 @@ async def start_editorial_workflow(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=detail,
+        ) from None
+    except Exception as exc:
+        # AE-0319: a provider outage/rate-limit during the synchronous start
+        # (observed live: OpenCode Go 429 GoUsageLimitError) must surface as a
+        # structured retryable error, not a generic 500. Non-provider errors
+        # re-raise unchanged.
+        provider_detail = classify_provider_error(exc)
+        if provider_detail is None:
+            raise
+        logger.exception(
+            "workflow_start_provider_error",
+            project_id=str(project_id),
+            detail=provider_detail,
+            error=str(exc),
+        )
+        status_code = (
+            status.HTTP_429_TOO_MANY_REQUESTS
+            if provider_detail == ERR_PROVIDER_RATE_LIMITED
+            else status.HTTP_503_SERVICE_UNAVAILABLE
+        )
+        raise HTTPException(
+            status_code=status_code,
+            detail=provider_detail,
         ) from None
     return build_editorial_workflow_state_response(
         dict(view.state),

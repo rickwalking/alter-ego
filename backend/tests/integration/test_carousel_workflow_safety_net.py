@@ -558,6 +558,93 @@ class TestWorkflowStartBehavior:
         failures = [log for log in logs if log["event"] == "workflow_start_failed"]
         assert failures and failures[0]["error"] == "some_other_engine_error"
 
+    @pytest.mark.asyncio
+    async def test_start_provider_rate_limit_maps_to_429(
+        self, wf_env: WfEnv, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Scenario: Provider rate limit maps to 429
+        (tests/features/workflow_start_provider_errors.feature, AE-0319)."""
+        import httpx
+        import openai
+        import structlog
+
+        from rag_backend.domain.constants.carousel_workflow import (
+            ERR_PROVIDER_RATE_LIMITED,
+        )
+
+        project_id = await wf_env.seed_project(wf_env.editor)
+        stub = _patch_service(monkeypatch, project_id, has_state=False)
+
+        async def _raise_start(
+            project_id: str,
+            workflow_input: object,
+            db: object | None = None,
+        ) -> CarouselWorkflowState:
+            del project_id, workflow_input, db
+            request = httpx.Request("POST", "https://provider.example.com/v1/chat")
+            response = httpx.Response(429, request=request, json={"error": {}})
+            raise openai.RateLimitError(
+                "usage limit reached", response=response, body=None
+            )
+
+        monkeypatch.setattr(stub, "start_workflow", _raise_start)
+        with structlog.testing.capture_logs() as logs:
+            async with wf_env.client_for(wf_env.editor) as client:
+                resp = await client.post(
+                    f"/api/carousels/{project_id}/workflow/start",
+                    json={
+                        "topic": "Fixture topic",
+                        "audience": "Fixture audience",
+                        "brief": "Fixture brief",
+                        "sources": [],
+                    },
+                )
+        assert resp.status_code == 429
+        assert resp.json()["detail"] == ERR_PROVIDER_RATE_LIMITED
+        errors = [
+            log for log in logs if log["event"] == "workflow_start_provider_error"
+        ]
+        assert errors and errors[0]["project_id"] == project_id
+
+    @pytest.mark.asyncio
+    async def test_start_provider_outage_maps_to_503(
+        self, wf_env: WfEnv, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Scenario: Provider outage maps to 503 (AE-0319)."""
+        import httpx
+        import openai
+
+        from rag_backend.domain.constants.carousel_workflow import (
+            ERR_PROVIDER_UNAVAILABLE,
+        )
+
+        project_id = await wf_env.seed_project(wf_env.editor)
+        stub = _patch_service(monkeypatch, project_id, has_state=False)
+
+        async def _raise_start(
+            project_id: str,
+            workflow_input: object,
+            db: object | None = None,
+        ) -> CarouselWorkflowState:
+            del project_id, workflow_input, db
+            request = httpx.Request("POST", "https://provider.example.com/v1/chat")
+            response = httpx.Response(502, request=request, json={"error": {}})
+            raise openai.APIStatusError("bad gateway", response=response, body=None)
+
+        monkeypatch.setattr(stub, "start_workflow", _raise_start)
+        async with wf_env.client_for(wf_env.editor) as client:
+            resp = await client.post(
+                f"/api/carousels/{project_id}/workflow/start",
+                json={
+                    "topic": "Fixture topic",
+                    "audience": "Fixture audience",
+                    "brief": "Fixture brief",
+                    "sources": [],
+                },
+            )
+        assert resp.status_code == 503
+        assert resp.json()["detail"] == ERR_PROVIDER_UNAVAILABLE
+
 
 # ==============================================================================
 # POST /workflow/resume behavior + interrupt->resume gates + optimistic lock

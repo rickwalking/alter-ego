@@ -76,6 +76,10 @@ ERR_CAROUSEL_NOT_COMPLETED = "carousel_not_completed"
 # access-control "Invalid request" so operators can tell a parse failure from a
 # genuinely malformed request.
 ERR_RESEARCH_SYNTHESIS_FAILED = "research_synthesis_failed"
+# AE-0319: LLM-provider failures during synchronous workflow start surface as
+# structured retryable errors, not a generic 500.
+ERR_PROVIDER_RATE_LIMITED = "provider_rate_limited"
+ERR_PROVIDER_UNAVAILABLE = "provider_unavailable"
 ERR_WORKFLOW_PHASE_FAILED = "workflow_phase_failed"
 ERR_WORKFLOW_SSE_SUBSCRIBER_LIMIT = "workflow_sse_subscriber_limit_exceeded"
 ERR_RESUME_ALREADY_IN_PROGRESS = "resume_already_in_progress"
