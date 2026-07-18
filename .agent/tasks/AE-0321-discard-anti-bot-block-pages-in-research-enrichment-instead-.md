@@ -1,6 +1,6 @@
 # AE-0321 — discard anti-bot block pages in research enrichment instead of treating them as source content
 
-Status: Ready
+Status: Review
 Tier: T1
 Priority: Medium
 Type: Bugfix
@@ -70,15 +70,21 @@ Ticket created.
 
 ## Files Touched
 
-Pending.
+See `.agent/reports/AE-0321.dev-summary.md`.
 
 ## Test Evidence
 
-Pending.
+Full backend gates (post r1-fix rerun): see GATES_JSON in the dev summary.
+Suites reproduced by hand: unit 2465 passed / 1 skipped, integration 413
+passed / 6 skipped, safety-net 23 passed. mypy strict clean, ruff + format
+clean. Per-AC test mapping in the dev summary.
 
 ## QA Report
 
-Pending.
+External QA converged (mode: external, GLM 5.2 via OpenCode Go): r1 FAIL
+(1 blocker / 3 major) -> fix round -> r2 verify-only PASS. Reports:
+`.agent/reports/wave-ae0319-0321.qa.md` (+ per-ticket copy), rounds in
+`.agent/reports/wave-ae0319-0321.external-review.r{1,2}.md`.
 
 ## Blockers
 
