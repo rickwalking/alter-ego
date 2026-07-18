@@ -31,6 +31,9 @@ _PROVIDER_ERRORS: tuple[type[Exception], ...] = (
 )
 
 
+_RETRY_AFTER_HEADER = "retry-after"
+
+
 def classify_provider_error(exc: BaseException) -> str | None:
     """Map a vendor SDK exception onto a workflow error detail, else ``None``.
 
@@ -44,4 +47,18 @@ def classify_provider_error(exc: BaseException) -> str | None:
     return None
 
 
-__all__ = ["classify_provider_error"]
+def provider_retry_after(exc: BaseException) -> str | None:
+    """Extract the provider's ``Retry-After`` header value, when present.
+
+    Both SDKs attach the httpx response to status errors; a missing response
+    or header simply yields ``None`` (the 429 is still returned, headerless).
+    """
+    response = getattr(exc, "response", None)
+    headers = getattr(response, "headers", None)
+    if headers is None:
+        return None
+    value = headers.get(_RETRY_AFTER_HEADER)
+    return str(value) if value else None
+
+
+__all__ = ["classify_provider_error", "provider_retry_after"]

@@ -80,6 +80,7 @@ from rag_backend.application.services.carousel.editorial_workflow_support import
 )
 from rag_backend.application.services.carousel.provider_errors import (
     classify_provider_error,
+    provider_retry_after,
 )
 from rag_backend.application.services.carousel.workflow_sse_hub import (
     WorkflowSseSubscriberLimitError,
@@ -239,9 +240,11 @@ async def start_editorial_workflow(
             if provider_detail == ERR_PROVIDER_RATE_LIMITED
             else status.HTTP_503_SERVICE_UNAVAILABLE
         )
+        retry_after = provider_retry_after(exc)
         raise HTTPException(
             status_code=status_code,
             detail=provider_detail,
+            headers={"Retry-After": retry_after} if retry_after else None,
         ) from None
     return build_editorial_workflow_state_response(
         dict(view.state),

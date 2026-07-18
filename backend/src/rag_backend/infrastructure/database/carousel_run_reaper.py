@@ -166,28 +166,29 @@ class CarouselRunReaperRepository:
         # phase_status + run_epoch makes the flip race-safe without the
         # advisory lock; the lock_version bump fails any in-flight
         # repair/resume CAS holding the old version. AE-0320: the flip is
-        # lock-timeout-bounded — a run whose own transaction still holds the
-        # row lock must not wedge the whole worker tick behind it (the reap
-        # simply retries on a later tick).
+        # lock-timeout-bounded AND savepoint-scoped — a run whose own
+        # transaction still holds the row lock must not wedge the worker tick,
+        # and a blocked flip must roll back ONLY itself (never earlier flips
+        # pending in the same tick transaction; external review r1 #1).
         try:
-            await apply_run_write_lock_timeout(db)
-            result = await db.execute(
-                update(CarouselProjectModel)
-                .where(
-                    CarouselProjectModel.id == project_id,
-                    CarouselProjectModel.phase_status == PHASE_STATUS_IN_PROGRESS,
-                    CarouselProjectModel.run_epoch == seen_epoch,
+            async with db.begin_nested():
+                await apply_run_write_lock_timeout(db)
+                result = await db.execute(
+                    update(CarouselProjectModel)
+                    .where(
+                        CarouselProjectModel.id == project_id,
+                        CarouselProjectModel.phase_status == PHASE_STATUS_IN_PROGRESS,
+                        CarouselProjectModel.run_epoch == seen_epoch,
+                    )
+                    .values(
+                        phase_status=reconciled,
+                        lock_version=CarouselProjectModel.lock_version + 1,
+                        run_epoch=seen_epoch + 1,
+                        run_started_at=None,
+                        run_heartbeat_at=None,
+                    )
                 )
-                .values(
-                    phase_status=reconciled,
-                    lock_version=CarouselProjectModel.lock_version + 1,
-                    run_epoch=seen_epoch + 1,
-                    run_started_at=None,
-                    run_heartbeat_at=None,
-                )
-            )
         except OperationalError as exc:
-            await db.rollback()
             logger.warning(
                 LOG_EVENT_RUN_REAP_BLOCKED,
                 project_id=project_id,

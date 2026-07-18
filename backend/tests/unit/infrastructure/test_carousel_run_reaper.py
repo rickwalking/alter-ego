@@ -9,6 +9,7 @@ reap-vs-repair CAS serialization, zombie-rejected/replacement-accepted.
 from __future__ import annotations
 
 import uuid
+from contextlib import asynccontextmanager
 from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, patch
 
@@ -293,6 +294,12 @@ class TestReapSerialization:
             carousel_run_epoch_var.set(None)
 
 
+@asynccontextmanager
+async def _fake_nested():
+    """Savepoint double: propagates exceptions like a real begin_nested."""
+    yield
+
+
 @pytest.mark.asyncio
 class TestReapLockSafety:
     """AE-0320 (tests/features/carousel_run_lock_safety.feature)."""
@@ -320,6 +327,7 @@ class TestReapLockSafety:
         bind = MagicMock()
         bind.dialect.name = "sqlite"
         db.get_bind = MagicMock(return_value=bind)
+        db.begin_nested = MagicMock(side_effect=lambda: _fake_nested())
         db.execute = AsyncMock(
             side_effect=OperationalError(
                 "canceling statement due to lock timeout", None, Exception()
@@ -330,7 +338,9 @@ class TestReapLockSafety:
             reaped = await reaper._reap(db, row)
 
         assert reaped is False
-        db.rollback.assert_awaited_once()
+        # Savepoint-scoped: the blocked flip must NOT roll back the whole
+        # worker-tick transaction (external review r1 #1).
+        db.rollback.assert_not_awaited()
         blocked = [log for log in logs if log["event"] == "carousel_run_reap_blocked"]
         assert len(blocked) == 1
 
@@ -354,6 +364,7 @@ class TestReapLockSafety:
         bind = MagicMock()
         bind.dialect.name = "postgresql"
         db.get_bind = MagicMock(return_value=bind)
+        db.begin_nested = MagicMock(side_effect=lambda: _fake_nested())
         flip_result = MagicMock()
         flip_result.rowcount = 0  # CAS miss: skip finalize side effects
         db.execute = AsyncMock(side_effect=[MagicMock(), flip_result])

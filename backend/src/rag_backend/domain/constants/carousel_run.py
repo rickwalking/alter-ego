@@ -33,7 +33,8 @@ LOG_EVENT_RUN_NULL_HEARTBEAT = "carousel_run_null_heartbeat_alert"
 LOG_EVENT_RUN_HEARTBEAT_FAILED = "carousel_run_heartbeat_failed"
 LOG_EVENT_RUN_FENCED = "carousel_run_fenced"
 LOG_EVENT_RUN_REAP_BLOCKED = "carousel_run_reap_blocked"
-LOG_EVENT_PHASE_DRIFT_CONVERGED = "carousel_phase_drift_converged"
+LOG_EVENT_PHASE_DRIFT_CONVERGED = "carousel_drift_phase_converged"
+LOG_EVENT_PHASE_DRIFT_BLOCKED = "carousel_drift_phase_blocked"
 
 # AE-0320: run-column writers (heartbeat, reaper flip) run on their own
 # sessions; this bounds their row-lock wait so they fail fast instead of
@@ -55,6 +56,7 @@ __all__ = [
     "DEFAULT_RUN_OVERDUE_MINUTES",
     "DEFAULT_RUN_REAP_CONSECUTIVE_OBSERVATIONS",
     "ERR_STALE_RUN_EPOCH",
+    "LOG_EVENT_PHASE_DRIFT_BLOCKED",
     "LOG_EVENT_PHASE_DRIFT_CONVERGED",
     "LOG_EVENT_RUN_FENCED",
     "LOG_EVENT_RUN_HEARTBEAT_FAILED",

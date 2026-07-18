@@ -21,13 +21,17 @@ from uuid import UUID
 
 import structlog
 from sqlalchemy import CursorResult, select, update
+from sqlalchemy.exc import OperationalError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.domain.constants.carousel_repair import (
     LOG_EVENT_DRIFT_CONVERGED,
     LOG_EVENT_DRIFT_DETECTED,
 )
-from rag_backend.domain.constants.carousel_run import LOG_EVENT_PHASE_DRIFT_CONVERGED
+from rag_backend.domain.constants.carousel_run import (
+    LOG_EVENT_PHASE_DRIFT_BLOCKED,
+    LOG_EVENT_PHASE_DRIFT_CONVERGED,
+)
 from rag_backend.domain.constants.carousel_workflow import (
     PHASE_STATUS_AWAITING_HUMAN,
     PHASE_STATUS_FAILED,
@@ -39,6 +43,9 @@ from rag_backend.domain.models.carousel_run import (
 )
 from rag_backend.domain.protocols.carousel_run import CarouselCheckpointStateGateway
 from rag_backend.infrastructure.database.models.carousel import CarouselProjectModel
+from rag_backend.infrastructure.database.pg_lock_timeout import (
+    apply_run_write_lock_timeout,
+)
 
 logger = structlog.get_logger()
 
@@ -100,25 +107,41 @@ class CarouselDriftReconcilerRepository:
         """Converge one failed row onto its parked checkpoint phase."""
         project_id = str(row.id)
         from_phase = str(row.current_phase or "")
+        seen_epoch = int(row.run_epoch or 0)
         state = await self._checkpoint.read_state(project_id)
         target = _parked_checkpoint_phase(state)
         if target is None or target == from_phase:
             return False
-        result = await db.execute(
-            update(CarouselProjectModel)
-            .where(
-                CarouselProjectModel.id == project_id,
-                CarouselProjectModel.phase_status == PHASE_STATUS_FAILED,
+        # AE-0320 (external review r1 #6/#7): CAS on run_epoch like the reaper
+        # flip (a replacement run's writes must never be clobbered), and the
+        # write is savepoint-scoped + lock-timeout-bounded so a locked row can
+        # neither wedge the tick nor roll back sibling convergences.
+        try:
+            async with db.begin_nested():
+                await apply_run_write_lock_timeout(db)
+                result = await db.execute(
+                    update(CarouselProjectModel)
+                    .where(
+                        CarouselProjectModel.id == project_id,
+                        CarouselProjectModel.phase_status == PHASE_STATUS_FAILED,
+                        CarouselProjectModel.run_epoch == seen_epoch,
+                    )
+                    .values(
+                        current_phase=target,
+                        phase_status=PHASE_STATUS_AWAITING_HUMAN,
+                        lock_version=CarouselProjectModel.lock_version + 1,
+                        run_epoch=seen_epoch + 1,
+                        run_started_at=None,
+                        run_heartbeat_at=None,
+                    )
+                )
+        except OperationalError as exc:
+            logger.warning(
+                LOG_EVENT_PHASE_DRIFT_BLOCKED,
+                project_id=project_id,
+                error=str(exc),
             )
-            .values(
-                current_phase=target,
-                phase_status=PHASE_STATUS_AWAITING_HUMAN,
-                lock_version=CarouselProjectModel.lock_version + 1,
-                run_epoch=CarouselProjectModel.run_epoch + 1,
-                run_started_at=None,
-                run_heartbeat_at=None,
-            )
-        )
+            return False
         if cast(CursorResult[object], result).rowcount != 1:
             return False
         logger.warning(

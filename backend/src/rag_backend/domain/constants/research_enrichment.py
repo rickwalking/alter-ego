@@ -17,7 +17,6 @@ BLOCK_PAGE_SCAN_CHARS = 600
 BLOCK_PAGE_MARKERS = (
     "you have been blocked",
     "attention required! | cloudflare",
-    "access denied",
     "enable javascript and cookies to continue",
     "checking your browser before accessing",
     "verify you are human",

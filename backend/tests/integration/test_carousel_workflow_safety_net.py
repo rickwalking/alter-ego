@@ -582,7 +582,12 @@ class TestWorkflowStartBehavior:
         ) -> CarouselWorkflowState:
             del project_id, workflow_input, db
             request = httpx.Request("POST", "https://provider.example.com/v1/chat")
-            response = httpx.Response(429, request=request, json={"error": {}})
+            response = httpx.Response(
+                429,
+                request=request,
+                json={"error": {}},
+                headers={"Retry-After": "120"},
+            )
             raise openai.RateLimitError(
                 "usage limit reached", response=response, body=None
             )
@@ -601,6 +606,7 @@ class TestWorkflowStartBehavior:
                 )
         assert resp.status_code == 429
         assert resp.json()["detail"] == ERR_PROVIDER_RATE_LIMITED
+        assert resp.headers.get("Retry-After") == "120"
         errors = [
             log for log in logs if log["event"] == "workflow_start_provider_error"
         ]
@@ -631,19 +637,26 @@ class TestWorkflowStartBehavior:
             response = httpx.Response(502, request=request, json={"error": {}})
             raise openai.APIStatusError("bad gateway", response=response, body=None)
 
+        import structlog
+
         monkeypatch.setattr(stub, "start_workflow", _raise_start)
-        async with wf_env.client_for(wf_env.editor) as client:
-            resp = await client.post(
-                f"/api/carousels/{project_id}/workflow/start",
-                json={
-                    "topic": "Fixture topic",
-                    "audience": "Fixture audience",
-                    "brief": "Fixture brief",
-                    "sources": [],
-                },
-            )
+        with structlog.testing.capture_logs() as logs:
+            async with wf_env.client_for(wf_env.editor) as client:
+                resp = await client.post(
+                    f"/api/carousels/{project_id}/workflow/start",
+                    json={
+                        "topic": "Fixture topic",
+                        "audience": "Fixture audience",
+                        "brief": "Fixture brief",
+                        "sources": [],
+                    },
+                )
         assert resp.status_code == 503
         assert resp.json()["detail"] == ERR_PROVIDER_UNAVAILABLE
+        errors = [
+            log for log in logs if log["event"] == "workflow_start_provider_error"
+        ]
+        assert errors and errors[0]["project_id"] == project_id
 
 
 # ==============================================================================

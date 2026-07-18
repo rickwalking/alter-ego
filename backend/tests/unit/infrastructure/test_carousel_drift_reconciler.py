@@ -214,7 +214,7 @@ class TestPhaseDriftReconciliation:
             assert row.run_started_at is None
             assert row.run_heartbeat_at is None
             events = [
-                log for log in logs if log["event"] == "carousel_phase_drift_converged"
+                log for log in logs if log["event"] == "carousel_drift_phase_converged"
             ]
             assert len(events) == 1
             assert events[0]["from_phase"] == "design"
