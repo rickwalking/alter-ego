@@ -36,11 +36,13 @@ from typing import cast
 
 import structlog
 from sqlalchemy import CursorResult, select, update
+from sqlalchemy.exc import OperationalError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.domain.constants.carousel_run import (
     LOG_EVENT_RUN_NULL_HEARTBEAT,
     LOG_EVENT_RUN_OVERDUE,
+    LOG_EVENT_RUN_REAP_BLOCKED,
     LOG_EVENT_RUN_REAPED,
     RUN_FINISHED_REASON_STALE,
 )
@@ -52,6 +54,9 @@ from rag_backend.domain.protocols.carousel_run import (
     CarouselCheckpointPhaseStatusReader,
 )
 from rag_backend.infrastructure.database.models.carousel import CarouselProjectModel
+from rag_backend.infrastructure.database.pg_lock_timeout import (
+    apply_run_write_lock_timeout,
+)
 
 logger = structlog.get_logger()
 
@@ -160,22 +165,36 @@ class CarouselRunReaperRepository:
         # Enumerated raw-SQL site (write-site survey §2 #20): the CAS on
         # phase_status + run_epoch makes the flip race-safe without the
         # advisory lock; the lock_version bump fails any in-flight
-        # repair/resume CAS holding the old version.
-        result = await db.execute(
-            update(CarouselProjectModel)
-            .where(
-                CarouselProjectModel.id == project_id,
-                CarouselProjectModel.phase_status == PHASE_STATUS_IN_PROGRESS,
-                CarouselProjectModel.run_epoch == seen_epoch,
+        # repair/resume CAS holding the old version. AE-0320: the flip is
+        # lock-timeout-bounded AND savepoint-scoped — a run whose own
+        # transaction still holds the row lock must not wedge the worker tick,
+        # and a blocked flip must roll back ONLY itself (never earlier flips
+        # pending in the same tick transaction; external review r1 #1).
+        try:
+            async with db.begin_nested():
+                await apply_run_write_lock_timeout(db)
+                result = await db.execute(
+                    update(CarouselProjectModel)
+                    .where(
+                        CarouselProjectModel.id == project_id,
+                        CarouselProjectModel.phase_status == PHASE_STATUS_IN_PROGRESS,
+                        CarouselProjectModel.run_epoch == seen_epoch,
+                    )
+                    .values(
+                        phase_status=reconciled,
+                        lock_version=CarouselProjectModel.lock_version + 1,
+                        run_epoch=seen_epoch + 1,
+                        run_started_at=None,
+                        run_heartbeat_at=None,
+                    )
+                )
+        except OperationalError as exc:
+            logger.warning(
+                LOG_EVENT_RUN_REAP_BLOCKED,
+                project_id=project_id,
+                error=str(exc),
             )
-            .values(
-                phase_status=reconciled,
-                lock_version=CarouselProjectModel.lock_version + 1,
-                run_epoch=seen_epoch + 1,
-                run_started_at=None,
-                run_heartbeat_at=None,
-            )
-        )
+            return False
         if cast(CursorResult[object], result).rowcount != 1:
             return False
         self._stale_counts.pop(project_id, None)

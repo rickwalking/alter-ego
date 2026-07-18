@@ -9,6 +9,7 @@ reap-vs-repair CAS serialization, zombie-rejected/replacement-accepted.
 from __future__ import annotations
 
 import uuid
+from contextlib import asynccontextmanager
 from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, patch
 
@@ -291,3 +292,85 @@ class TestReapSerialization:
             await db.commit()
             assert replacement.title == "replacement write"
             carousel_run_epoch_var.set(None)
+
+
+@asynccontextmanager
+async def _fake_nested():
+    """Savepoint double: propagates exceptions like a real begin_nested."""
+    yield
+
+
+@pytest.mark.asyncio
+class TestReapLockSafety:
+    """AE-0320 (tests/features/carousel_run_lock_safety.feature)."""
+
+    async def test_blocked_flip_fails_fast_and_logs(self) -> None:
+        """Scenario: Blocked reaper flip fails fast and retries next tick."""
+        from unittest.mock import MagicMock
+
+        from sqlalchemy.exc import OperationalError
+        from structlog.testing import capture_logs
+
+        reaper = CarouselRunReaperRepository(_config())
+        row = CarouselProjectModel(
+            id=str(uuid.uuid4()),
+            topic="t",
+            audience="a",
+            niche="n",
+            status="in_review",
+            current_phase=PHASE_CONTENT,
+            phase_status=PHASE_STATUS_IN_PROGRESS,
+            lock_version=1,
+        )
+        row.run_epoch = 0
+        db = AsyncMock()
+        bind = MagicMock()
+        bind.dialect.name = "sqlite"
+        db.get_bind = MagicMock(return_value=bind)
+        db.begin_nested = MagicMock(side_effect=lambda: _fake_nested())
+        db.execute = AsyncMock(
+            side_effect=OperationalError(
+                "canceling statement due to lock timeout", None, Exception()
+            )
+        )
+
+        with capture_logs() as logs:
+            reaped = await reaper._reap(db, row)
+
+        assert reaped is False
+        # Savepoint-scoped: the blocked flip must NOT roll back the whole
+        # worker-tick transaction (external review r1 #1).
+        db.rollback.assert_not_awaited()
+        blocked = [log for log in logs if log["event"] == "carousel_run_reap_blocked"]
+        assert len(blocked) == 1
+
+    async def test_flip_applies_lock_timeout_on_postgres(self) -> None:
+        """Scenario: Heartbeat/flip writes are lock-timeout-bounded (flip half)."""
+        from unittest.mock import MagicMock
+
+        reaper = CarouselRunReaperRepository(_config())
+        row = CarouselProjectModel(
+            id=str(uuid.uuid4()),
+            topic="t",
+            audience="a",
+            niche="n",
+            status="in_review",
+            current_phase=PHASE_CONTENT,
+            phase_status=PHASE_STATUS_IN_PROGRESS,
+            lock_version=1,
+        )
+        row.run_epoch = 0
+        db = AsyncMock()
+        bind = MagicMock()
+        bind.dialect.name = "postgresql"
+        db.get_bind = MagicMock(return_value=bind)
+        db.begin_nested = MagicMock(side_effect=lambda: _fake_nested())
+        flip_result = MagicMock()
+        flip_result.rowcount = 0  # CAS miss: skip finalize side effects
+        db.execute = AsyncMock(side_effect=[MagicMock(), flip_result])
+
+        reaped = await reaper._reap(db, row)
+
+        assert reaped is False
+        first_stmt = str(db.execute.await_args_list[0].args[0])
+        assert "lock_timeout" in first_stmt

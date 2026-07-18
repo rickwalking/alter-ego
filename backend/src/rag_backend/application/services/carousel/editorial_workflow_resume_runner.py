@@ -56,6 +56,7 @@ from rag_backend.infrastructure.database.config import get_session_maker
 from rag_backend.modules.editorial.public import (
     CarouselProjectWriteOwner,
     read_run_fence,
+    write_run_heartbeat_once,
     write_run_heartbeat_with_retry,
 )
 
@@ -154,11 +155,18 @@ async def _execute_background_resume(
 
 
 async def _beat_and_stage(ctx: CarouselRunContext | None, stage: str) -> None:
-    """Emit a stage boundary and refresh the heartbeat alongside it."""
+    """Emit a stage boundary and refresh the heartbeat alongside it.
+
+    AE-0320: this is awaited INLINE by the run's main coroutine, whose session
+    may hold flushed-but-uncommitted writes on the same row — the beat must be
+    single-attempt and lock-timeout-bounded (soft-fail) or it self-deadlocks
+    the run (prod incident 2026-07-18). Liveness is owned by the interval
+    heartbeat loop; a skipped stage beat is cosmetic.
+    """
     if ctx is None:
         return
     await publish_run_stage_changed(ctx.project_id, stage)
-    await write_run_heartbeat_with_retry(ctx.project_id, ctx.epoch)
+    await write_run_heartbeat_once(ctx.project_id, ctx.epoch)
 
 
 async def _run_background_resume(

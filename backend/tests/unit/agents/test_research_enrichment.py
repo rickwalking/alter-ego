@@ -333,3 +333,46 @@ class TestConcurrencyBound:
         await enrich_sources(sources, _params(tool))
 
         assert tool.max_active_scrapes == MAX_CONCURRENT_SCRAPES
+
+
+class TestBlockPageDetection:
+    """AE-0321 (tests/features/research_enrichment.feature, block-page scenario)."""
+
+    async def test_block_page_is_discarded_and_logged(self) -> None:
+        """Scenario: Anti-bot block page is not treated as research content."""
+        from structlog.testing import capture_logs
+
+        tool = _StubResearchTool(
+            page_text=(
+                "Sorry, you have been blocked. You are unable to access "
+                "x.ai. This website is using a security service."
+            )
+        )
+        sources = [_url_source("https://x.ai/news/grok-4-5")]
+
+        with capture_logs() as logs:
+            enriched = await enrich_sources(sources, _params(tool))
+
+        assert enriched[0]["content"] == "https://x.ai/news/grok-4-5"
+        blocked = [log for log in logs if log["event"] == "research_url_block_page"]
+        assert len(blocked) == 1
+        assert blocked[0]["url"] == "https://x.ai/news/grok-4-5"
+
+    async def test_marker_deep_in_page_body_is_not_a_block_page(self) -> None:
+        filler = "Legitimate article content. " * 40
+        tool = _StubResearchTool(
+            page_text=filler + "the phrase you have been blocked appears late"
+        )
+        sources = [_url_source("https://example.com/article")]
+
+        enriched = await enrich_sources(sources, _params(tool))
+
+        assert enriched[0]["content"].startswith("Legitimate article content.")
+
+    async def test_normal_page_is_unaffected(self) -> None:
+        tool = _StubResearchTool(page_text="A perfectly normal article body")
+        sources = [_url_source("https://example.com/ok")]
+
+        enriched = await enrich_sources(sources, _params(tool))
+
+        assert enriched[0]["content"] == "A perfectly normal article body"

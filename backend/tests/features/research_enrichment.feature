@@ -55,3 +55,10 @@ Feature: Web research enrichment in the initial editorial workflow
     Given a RAG agent built with carousel tool access and a research tool
     When its subagents are composed
     Then the researcher subagent is included alongside the editorial subagent
+
+  Scenario: Anti-bot block page is not treated as research content
+    Given a url source whose page returns a CDN block page
+    When the editorial workflow is started
+    Then the scraped block page is discarded
+    And the source keeps its original URL content
+    And a research_url_block_page warning is logged

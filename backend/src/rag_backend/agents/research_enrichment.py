@@ -27,6 +27,8 @@ from rag_backend.agents.tools.constants import (
 from rag_backend.agents.tools.url_safety import is_safe_research_url
 from rag_backend.domain.constants.carousel_workflow import SOURCE_TYPE_URL
 from rag_backend.domain.constants.research_enrichment import (
+    BLOCK_PAGE_MARKERS,
+    BLOCK_PAGE_SCAN_CHARS,
     MAX_CONCURRENT_SCRAPES,
     MAX_URL_SOURCES_SCRAPED,
     MAX_WEB_SEARCH_RESULTS,
@@ -104,6 +106,12 @@ async def _scrape_url_sources(
     return out
 
 
+def _is_block_page(text: str) -> bool:
+    """AE-0321: detect anti-bot/CDN block pages so they never become research."""
+    head = text[:BLOCK_PAGE_SCAN_CHARS].lower()
+    return any(marker in head for marker in BLOCK_PAGE_MARKERS)
+
+
 async def _scrape_one(
     url: str,
     research_tool: ResearchTool,
@@ -116,7 +124,11 @@ async def _scrape_one(
     except Exception as exc:
         logger.warning("research_url_scrape_failed", url=url, error=str(exc))
         return None
-    return sanitize_web_content(scraped)
+    sanitized = sanitize_web_content(scraped)
+    if _is_block_page(sanitized):
+        logger.warning("research_url_block_page", url=url)
+        return None
+    return sanitized
 
 
 async def _search_topic_sources(

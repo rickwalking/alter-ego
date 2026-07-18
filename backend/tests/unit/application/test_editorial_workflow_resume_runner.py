@@ -67,6 +67,11 @@ def _patch_run_progress_seams() -> Generator[None, None, None]:
             f"{_RUNNER}.write_run_heartbeat_with_retry",
             new=AsyncMock(return_value=True),
         ),
+        # AE-0320: stage-boundary beats use the single-attempt variant.
+        patch(
+            f"{_RUNNER}.write_run_heartbeat_once",
+            new=AsyncMock(return_value=True),
+        ),
         patch(f"{_RUNNER}.publish_run_stage_changed", new=AsyncMock()),
     ):
         yield

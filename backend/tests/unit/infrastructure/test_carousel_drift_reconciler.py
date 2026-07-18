@@ -20,6 +20,7 @@ from rag_backend.domain.constants.carousel_repair import (
 )
 from rag_backend.domain.constants.carousel_workflow import (
     PHASE_STATUS_AWAITING_HUMAN,
+    PHASE_STATUS_FAILED,
     PHASE_STATUS_IN_PROGRESS,
 )
 from rag_backend.domain.models.carousel_run import carousel_run_epoch_var
@@ -174,3 +175,106 @@ class TestDriftReconciler:
             gateway = _FakeGateway(_blocking_state())
             converged = await CarouselDriftReconcilerRepository(gateway).reconcile(db)
             assert converged == 0
+
+
+@pytest.mark.asyncio
+class TestPhaseDriftReconciliation:
+    """AE-0320 scenarios (tests/features/carousel_run_lock_safety.feature)."""
+
+    async def _row(self, db: AsyncSession, project_id: str) -> CarouselProjectModel:
+        found = await db.get(CarouselProjectModel, project_id)
+        assert found is not None
+        return found
+
+    async def test_failed_row_converges_to_parked_checkpoint_phase(
+        self, test_engine: AsyncEngine
+    ) -> None:
+        """Scenario: Failed row behind an advanced parked checkpoint converges."""
+        async with _factory(test_engine)() as db:
+            await _reset(db)
+            project_id = await _add(
+                db, body=_CLEAN_BODY, phase_status=PHASE_STATUS_FAILED
+            )
+            gateway = _FakeGateway({
+                "current_phase": "images",
+                "phase_status": PHASE_STATUS_AWAITING_HUMAN,
+            })
+            reconciler = CarouselDriftReconcilerRepository(gateway)
+
+            with capture_logs() as logs:
+                converged = await reconciler.reconcile(db)
+            await db.commit()
+
+            assert converged == 1
+            row = await self._row(db, project_id)
+            assert row.current_phase == "images"
+            assert row.phase_status == PHASE_STATUS_AWAITING_HUMAN
+            assert int(row.lock_version) == 2
+            assert int(row.run_epoch) == 3
+            assert row.run_started_at is None
+            assert row.run_heartbeat_at is None
+            events = [
+                log for log in logs if log["event"] == "carousel_drift_phase_converged"
+            ]
+            assert len(events) == 1
+            assert events[0]["from_phase"] == "design"
+            assert events[0]["to_phase"] == "images"
+
+    async def test_same_phase_failure_stays_failed(
+        self, test_engine: AsyncEngine
+    ) -> None:
+        """Scenario: Same-phase failure is left for the recovery UI."""
+        async with _factory(test_engine)() as db:
+            await _reset(db)
+            project_id = await _add(
+                db, body=_CLEAN_BODY, phase_status=PHASE_STATUS_FAILED
+            )
+            gateway = _FakeGateway({
+                "current_phase": "design",
+                "phase_status": PHASE_STATUS_AWAITING_HUMAN,
+            })
+            reconciler = CarouselDriftReconcilerRepository(gateway)
+
+            assert await reconciler.reconcile(db) == 0
+            row = await self._row(db, project_id)
+            assert row.phase_status == PHASE_STATUS_FAILED
+
+    async def test_mid_step_checkpoint_not_converged(
+        self, test_engine: AsyncEngine
+    ) -> None:
+        """Scenario: Mid-step checkpoint never triggers phase convergence."""
+        async with _factory(test_engine)() as db:
+            await _reset(db)
+            project_id = await _add(
+                db, body=_CLEAN_BODY, phase_status=PHASE_STATUS_FAILED
+            )
+            gateway = _FakeGateway({
+                "current_phase": "images",
+                "phase_status": PHASE_STATUS_IN_PROGRESS,
+            })
+            reconciler = CarouselDriftReconcilerRepository(gateway)
+
+            assert await reconciler.reconcile(db) == 0
+            row = await self._row(db, project_id)
+            assert row.phase_status == PHASE_STATUS_FAILED
+
+    async def test_completed_projects_are_ignored(
+        self, test_engine: AsyncEngine
+    ) -> None:
+        async with _factory(test_engine)() as db:
+            await _reset(db)
+            project_id = await _add(
+                db,
+                body=_CLEAN_BODY,
+                phase_status=PHASE_STATUS_FAILED,
+                status="completed",
+            )
+            gateway = _FakeGateway({
+                "current_phase": "images",
+                "phase_status": PHASE_STATUS_AWAITING_HUMAN,
+            })
+            reconciler = CarouselDriftReconcilerRepository(gateway)
+
+            assert await reconciler.reconcile(db) == 0
+            row = await self._row(db, project_id)
+            assert row.phase_status == PHASE_STATUS_FAILED
