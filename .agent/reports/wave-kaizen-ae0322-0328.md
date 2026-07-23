@@ -1,6 +1,6 @@
 # Wave report — kaizen session-2026-07-22 enforcement wave (AE-0292, AE-0322..AE-0328)
 
-Commit: 15441eb5ad7606b8c3e24324ed321ce28005544e
+Commit: 0c33ec2ba118e961f64147924d8157a3f9ae67ac
 Branch: feat/kaizen-wave-ae0322-0328 (base origin/main 64889be6)
 Generated: 2026-07-23
 
@@ -58,3 +58,12 @@ Both GATES_JSON lines above are the post-fix full runs on this commit.
 Round-1 operational note: two GLM (opencode) attempts failed (one mid-stream
 death, one wedged in the deps-less worktree and killed); codex produced the
 verdict. The AE-0292 engagement-retry landed in this very wave.
+
+## External QA round 2 (codex, 2026-07-23) — FAIL -> fixed -> gates re-run
+Round-1 findings F-1..F-4 all verified RESOLVED. One NEW critical:
+- R2-F1 (AE-0322, critical): gate_proof.py evaluated only the FIRST GATES_JSON
+  line in a proof — a wave report pins one line per scope, so a clean backend
+  line could mask a failing/dirty frontend line. Fixed in commit 6f8a-era HEAD
+  (evaluate EVERY line; per-line labels; 3 seeded multi-line tests: second-line
+  fail>0 blocks, second-line dirty>0 blocks, two clean lines pass).
+Both GATES_JSON lines above are the post-fix full runs on this commit.
