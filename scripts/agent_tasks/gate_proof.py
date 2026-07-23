@@ -76,12 +76,14 @@ def _safe_read(path: Path) -> str:
         return ""
 
 
-def _gates_line(text: str) -> str | None:
-    """Return the first line containing the GATES_JSON marker, else None."""
-    for line in text.splitlines():
-        if GATES_JSON_MARKER in line:
-            return line
-    return None
+def _gates_lines(text: str) -> list[str]:
+    """Return EVERY line carrying the GATES_JSON marker (QA r2, 2026-07-23).
+
+    A wave report pins one line PER SCOPE (backend + frontend). Evaluating
+    only the first line would let a clean backend line mask a failing or
+    dirty frontend line — every line must independently satisfy the proof.
+    """
+    return [line for line in text.splitlines() if GATES_JSON_MARKER in line]
 
 
 def _verdict_errors(gates_line: str, label: str) -> list[str]:
@@ -181,8 +183,8 @@ def evaluate_gate_proof(
             ],
             warnings=[],
         )
-    gates_line = _gates_line(proof_text)
-    if gates_line is None:  # defensive: _resolve_proof_text guaranteed the marker
+    gates_lines = _gates_lines(proof_text)
+    if not gates_lines:  # defensive: _resolve_proof_text guaranteed the marker
         return ProofOutcome(
             errors=[f"{label} GATES_JSON marker present but no line found."],
             warnings=[],
@@ -190,14 +192,17 @@ def evaluate_gate_proof(
     # The waiver may live in the per-ticket report even when the GATES_JSON
     # proof is inherited from a wave report — search both texts (AE-0322).
     waiver_text = proof_text + "\n" + _safe_read(report)
-    errors = _verdict_errors(gates_line, label) + _dirty_errors(
-        gates_line, waiver_text, label
-    )
-    warnings = (
-        _skip_warnings(gates_line, label)
-        + _dirty_warnings(gates_line, waiver_text, label)
-        + _commit_warnings(proof_text, head_sha, label)
-    )
+    errors: list[str] = []
+    warnings: list[str] = []
+    for index, gates_line in enumerate(gates_lines, start=1):
+        line_label = (
+            label if len(gates_lines) == 1 else f"{label} (GATES_JSON line {index})"
+        )
+        errors += _verdict_errors(gates_line, line_label)
+        errors += _dirty_errors(gates_line, waiver_text, line_label)
+        warnings += _skip_warnings(gates_line, line_label)
+        warnings += _dirty_warnings(gates_line, waiver_text, line_label)
+    warnings += _commit_warnings(proof_text, head_sha, label)
     return ProofOutcome(errors=errors, warnings=warnings)
 
 

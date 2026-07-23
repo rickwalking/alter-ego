@@ -167,6 +167,26 @@ def test_proof_empty_waiver_line_still_blocks() -> None:
     assert any("dirty>0" in e for e in outcome.errors), outcome
 
 
+# --- QA r2 (2026-07-23): EVERY GATES_JSON line is evaluated, not just the
+# first — a wave report pins one line per scope.
+def test_second_gates_line_fail_blocks() -> None:
+    body = f"AE-1\n{_GATES_JSON_PASS}\n{_GATES_JSON_FAIL}\n"
+    outcome = evaluate_gate_proof(_written("m1.qa.md", body), "report")
+    assert any("fail>0" in e for e in outcome.errors), outcome
+
+
+def test_second_gates_line_dirty_blocks_without_waiver() -> None:
+    body = f"AE-1\n{_GATES_JSON_PASS}\n{_GATES_JSON_DIRTY}\n"
+    outcome = evaluate_gate_proof(_written("m2.qa.md", body), "report")
+    assert any("dirty>0" in e for e in outcome.errors), outcome
+
+
+def test_two_clean_gates_lines_pass() -> None:
+    body = f"AE-1\n{_GATES_JSON_PASS}\n{_GATES_JSON_PASS}\n"
+    outcome = evaluate_gate_proof(_written("m3.qa.md", body), "report")
+    assert outcome.errors == [], outcome.errors
+
+
 def test_proof_dirty_zero_is_clean() -> None:
     outcome = evaluate_gate_proof(
         _written("d4.qa.md", f"AE-1 {_GATES_JSON_DIRTY_ZERO}"), "report"
