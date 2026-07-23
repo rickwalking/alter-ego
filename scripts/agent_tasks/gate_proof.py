@@ -19,7 +19,9 @@ from pathlib import Path
 
 from scripts.agent_tasks.constants import (
     ALLOWED_QA_MODES,
+    DIRTY_WAIVER_RE,
     GATES_COMMIT_FIELD_RE,
+    GATES_DIRTY_FIELD_RE,
     GATES_FAIL_FIELD_RE,
     GATES_JSON_MARKER,
     GATES_SKIP_FIELD_RE,
@@ -95,6 +97,43 @@ def _verdict_errors(gates_line: str, label: str) -> list[str]:
     return []
 
 
+def _dirty_errors(gates_line: str, waiver_text: str, label: str) -> list[str]:
+    """Block on dirty>0 without a DIRTY_WAIVER: line (AE-0322).
+
+    gate-capture.sh stamps ``"dirty":N`` when it ran with
+    GATE_CAPTURE_ALLOW_DIRTY=1 over N uncommitted in-scope source files —
+    diff-based gates did NOT see that work, so the proof is tainted unless the
+    dev-summary waives it (naming the files and why they belong to other
+    sessions). An absent dirty field (pre-AE-0322 wrappers) is not an error.
+    """
+    match = GATES_DIRTY_FIELD_RE.search(gates_line)
+    if match is None or int(match.group(1)) == 0:
+        return []
+    if DIRTY_WAIVER_RE.search(waiver_text):
+        return []
+    return [
+        f"{label} GATES_JSON reports dirty>0 ({match.group(1)} uncommitted "
+        f"in-scope source file(s)) — diff-based gates cannot see uncommitted "
+        f"work (AE-0322). Commit and re-run gates, or add a line "
+        f"`DIRTY_WAIVER: <files — why they belong to other sessions>` "
+        f"to the report."
+    ]
+
+
+def _dirty_warnings(gates_line: str, waiver_text: str, label: str) -> list[str]:
+    """A waived dirty run stays visible as a warning (AE-0322)."""
+    match = GATES_DIRTY_FIELD_RE.search(gates_line)
+    if match is None or int(match.group(1)) == 0:
+        return []
+    if not DIRTY_WAIVER_RE.search(waiver_text):
+        return []
+    return [
+        f"{label} gate run was over a dirty tree ({match.group(1)} in-scope "
+        f"file(s)), waived by DIRTY_WAIVER — CI on the committed tree is the "
+        f"final authority (AE-0322)."
+    ]
+
+
 def _skip_warnings(gates_line: str, label: str) -> list[str]:
     """skip>0 ⇒ WARNING, not a block — CI (GATES_REQUIRE_ALL=1) decides skips."""
     skip_match = GATES_SKIP_FIELD_RE.search(gates_line)
@@ -148,9 +187,16 @@ def evaluate_gate_proof(
             errors=[f"{label} GATES_JSON marker present but no line found."],
             warnings=[],
         )
-    errors = _verdict_errors(gates_line, label)
-    warnings = _skip_warnings(gates_line, label) + _commit_warnings(
-        proof_text, head_sha, label
+    # The waiver may live in the per-ticket report even when the GATES_JSON
+    # proof is inherited from a wave report — search both texts (AE-0322).
+    waiver_text = proof_text + "\n" + _safe_read(report)
+    errors = _verdict_errors(gates_line, label) + _dirty_errors(
+        gates_line, waiver_text, label
+    )
+    warnings = (
+        _skip_warnings(gates_line, label)
+        + _dirty_warnings(gates_line, waiver_text, label)
+        + _commit_warnings(proof_text, head_sha, label)
     )
     return ProofOutcome(errors=errors, warnings=warnings)
 

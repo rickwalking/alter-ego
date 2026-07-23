@@ -292,6 +292,12 @@ not assert it:
 - **Never pipe a gate to `tail`/`head`.** The pipe returns the pipe's exit (e.g.
   `tail` = 0), masking a non-zero gate (this misread a red PR as green). Capture
   the exit to a file (the wrapper does this) instead.
+- **Commit before capturing (AE-0322).** Diff-based gates cannot see
+  uncommitted/untracked work, so `gate-capture.sh` refuses to run when in-scope
+  source files are dirty. `GATE_CAPTURE_ALLOW_DIRTY=1` runs anyway but stamps
+  `"dirty":N` into the GATES_JSON line — the Dev Complete/Review move then
+  BLOCKS unless the dev-summary carries a `DIRTY_WAIVER: <files — why they
+  belong to other sessions>` line.
 - **Never declare green** on a gate **subset**, a delegated agent's **self-report**,
   or by **deferring to CI**. `gates.sh <scope> --changed-only` is fine for fast
   iteration, but the **Dev Complete declaration** must be based on a **full** run.
