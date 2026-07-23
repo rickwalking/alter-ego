@@ -1,12 +1,12 @@
 # AE-0326 — document external-review convergence criterion: 3 consecutive zero-blocker rounds default stop rule
 
-Status: In Development
+Status: Dev Complete
 Tier: T1
 Priority: Low
 Type: Quality
 Area: Cross-cutting
 Owner: Unassigned
-Branch: TBD
+Branch: feat/kaizen-wave-ae0322-0328
 Created: 2026-07-22
 Updated: 2026-07-22
 
@@ -49,12 +49,12 @@ in architect-skill or kaizen-skill references.
 
 ## Acceptance Criteria
 
-- [ ] Convergence section present in both skill references with the default rule,
+- [x] Convergence section present in both skill references with the default rule,
       override-with-justification clause, and calibration caveat.
-- [ ] Down-ratchet guard sentence present (≥3-findings mandate must not be
+- [x] Down-ratchet guard sentence present (≥3-findings mandate must not be
       weakened).
-- [ ] Prettier non-idempotence landmine documented.
-- [ ] AE-0153 no-`.feature` classification recorded (docs-only, no behavior
+- [x] Prettier non-idempotence landmine documented.
+- [x] AE-0153 no-`.feature` classification recorded (docs-only, no behavior
       change; no seeded-violation test applicable — no rule/gate added).
 
 ## Repro Steps
@@ -81,6 +81,10 @@ None.
 
 ## Progress Log
 
+### 2026-07-22 — development complete (wave feat/kaizen-wave-ae0322-0328)
+
+Documented the convergence stop rule in the architect skeptical reference (+ operational landmines: /tmp output, absolute prompt path) and cross-linked from the kaizen external runbook. Commit ca0d93b2.
+
 ### 2026-07-22
 
 Ticket created by kaizen session-2026-07-22 (proposal P6). Plan:
@@ -88,11 +92,12 @@ Ticket created by kaizen session-2026-07-22 (proposal P6). Plan:
 
 ## Files Touched
 
-Pending.
+- skills/delivery/architect-skill/references/skeptical-reviewer.md
+- skills/delivery/kaizen-skill/references/external-kaizen.md
 
 ## Test Evidence
 
-Pending.
+Docs-only (AE-0153 no-.feature path: no public/user-visible behavior change; no static-analysis rule added so AE-0180 N/A). Both references carry the Convergence section: default 3-consecutive-zero-BLOCKER stop rule, override-with-recorded-justification, severity-drift calibration caveat, down-ratchet guard on the >=3-findings mandate, prettier code-span landmine.
 
 ## QA Report
 

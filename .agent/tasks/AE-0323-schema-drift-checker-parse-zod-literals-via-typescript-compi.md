@@ -1,12 +1,12 @@
 # AE-0323 — schema-drift checker: parse zod literals via typescript compiler api to kill comment false positives
 
-Status: In Development
+Status: Dev Complete
 Tier: T1
 Priority: Medium
 Type: Quality
 Area: frontend
 Owner: Unassigned
-Branch: TBD
+Branch: feat/kaizen-wave-ae0322-0328
 Created: 2026-07-22
 Updated: 2026-07-22
 
@@ -44,14 +44,14 @@ parser"). A gate steering code style via a parser bug erodes trust in all gates.
 
 ## Acceptance Criteria
 
-- [ ] Seeded literal WITH inline `//` and `/* */` comments parses to the correct
+- [x] Seeded literal WITH inline `//` and `/* */` comments parses to the correct
       field set (regression test for the AE-0298 incident).
-- [ ] Seeded genuine drift (extra frontend field, missing required API field,
+- [x] Seeded genuine drift (extra frontend field, missing required API field,
       type mismatch) still FAILS the gate — AE-0180 rule-fires tests.
-- [ ] False-negative guards: fields whose values contain template literals, regex
+- [x] False-negative guards: fields whose values contain template literals, regex
       literals, strings containing `//` or `,`/`{`, and nested quoted keys are all
       extracted correctly (cold-critic WARN-3: prove no new false negatives).
-- [ ] Gate passes on the current real tree (no behaviour change on clean input).
+- [x] Gate passes on the current real tree (no behaviour change on clean input).
 
 ## Repro Steps
 
@@ -79,6 +79,10 @@ None.
 
 ## Progress Log
 
+### 2026-07-22 — development complete (wave feat/kaizen-wave-ae0322-0328)
+
+Implemented: extractZodObjectFields via ts.createSourceFile (typescript ^5 already a direct dep); pure compareFields exported; main() guarded behind direct execution; detection surface unchanged. Commit c276f337.
+
 ### 2026-07-22
 
 Ticket created by kaizen session-2026-07-22 (proposal P3). Plan:
@@ -86,11 +90,12 @@ Ticket created by kaizen session-2026-07-22 (proposal P3). Plan:
 
 ## Files Touched
 
-Pending.
+- frontend/scripts/check-schema-drift.mjs
+- frontend/src/scripts/schema-drift-parser.test.ts
 
 ## Test Evidence
 
-Pending.
+npx vitest run src/scripts/schema-drift-parser.test.ts -> 10 passed (comment regression, strings/templates/regex false-negative guards, quoted+nested keys, named-const targeting, seeded EXTRA-FRONTEND-FIELD / MISSING-REQUIRED-FIELD / TYPE-MISMATCH still fire, clean control); node scripts/check-schema-drift.mjs --strict on the real tree -> exit 0.
 
 ## QA Report
 

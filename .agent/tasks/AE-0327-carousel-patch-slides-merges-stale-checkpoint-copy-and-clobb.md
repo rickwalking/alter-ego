@@ -1,13 +1,13 @@
 # AE-0327 — carousel patch slides merges stale checkpoint copy and clobbers repaired slides
 
-Status: In Development
+Status: Dev Complete
 Tier: T2
 Priority: High
 Type: Bugfix
 Area: backend
 Owner: Unassigned
 Agent Lane: planner → architect → developer → qa → release
-Branch: TBD
+Branch: feat/kaizen-wave-ae0322-0328
 Kanban Card: TBD
 Created: 2026-07-22
 Updated: 2026-07-22
@@ -47,16 +47,16 @@ knowledge for a data-loss-shaped bug.
 
 ## Acceptance Criteria
 
-- [ ] `.feature` scenarios (behavior-changing bugfix, AE-0153): happy path
+- [x] `.feature` scenarios (behavior-changing bugfix, AE-0153): happy path
       (PATCH one slide → only that slide changes), regression path (repair →
       PATCH a different slide → repaired slides keep their repaired content),
       failure/edge (PATCH with stale lock_version → 409/412 per existing
       convention).
-- [ ] Regression test reproducing the 2026-07-22 clobber sequence fails on
+- [x] Regression test reproducing the 2026-07-22 clobber sequence fails on
       current code and passes with the fix.
-- [ ] Checkpoint and projection agree on slide content after PATCH (drift
+- [x] Checkpoint and projection agree on slide content after PATCH (drift
       assertion in the test).
-- [ ] Existing PATCH behaviour for fully-submitted slide sets unchanged.
+- [x] Existing PATCH behaviour for fully-submitted slide sets unchanged.
 
 ## Repro Steps
 
@@ -77,6 +77,10 @@ None.
 
 ## Progress Log
 
+### 2026-07-22 — development complete (wave feat/kaizen-wave-ae0322-0328)
+
+Root cause refined vs ticket: the route ALREADY merges from the projection; the clobber vector is clients building whole-locale payloads from the STALER checkpoint-backed state endpoint, which the merge then persists. Fix (ticket's sanctioned alternative design): run compute_localized_repairs over the merged copy inside the same lock+transaction, persist + converge checkpoint on the repaired slides, log casing_repairs count. Idempotent; repair only uppercases/canonicalizes so intentional reviewer fixes survive. Commit 040ec538.
+
 ### 2026-07-22
 
 Ticket created by kaizen session-2026-07-22 (supplemental S1, user-approved).
@@ -84,11 +88,13 @@ Plan: `.agent/reports/kaizen-session-2026-07-22.plan.md`.
 
 ## Files Touched
 
-Pending.
+- backend/src/rag_backend/application/services/carousel/carousel_slide_edit_service.py
+- backend/tests/unit/application/test_carousel_slide_edit_service.py
+- backend/tests/features/carousel_text_edit_no_regen.feature
 
 ## Test Evidence
 
-Pending.
+uv run pytest tests/unit/application/test_carousel_slide_edit_service.py tests/unit/api/test_slide_edit_route.py -> 15 passed. Regression test reproduces the 2026-07-22 sequence (repaired projection + stale checkpoint-shaped payload) and asserts the persisted copy + checkpoint carry the REPAIRED text; reviewer capitalization (China, off noun-list) survives; untouched slides byte-identical. .feature scenarios appended (happy/regression/edge per AE-0153).
 
 ## QA Report
 

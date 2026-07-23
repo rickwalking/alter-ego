@@ -1,12 +1,12 @@
 # AE-0322 — gate-capture dirty-tree guard: fail on uncommitted in-scope source, gate_proof blocks dirty>0 without waiver
 
-Status: In Development
+Status: Dev Complete
 Tier: T1
 Priority: High
 Type: Quality
 Area: Cross-cutting
 Owner: Unassigned
-Branch: TBD
+Branch: feat/kaizen-wave-ae0322-0328
 Created: 2026-07-22
 Updated: 2026-07-22
 
@@ -51,16 +51,16 @@ working-tree pre-flight (verified 2026-07-22).
 
 ## Acceptance Criteria
 
-- [ ] `gate-capture.sh <scope>` exits 2 and names the files when untracked or
+- [x] `gate-capture.sh <scope>` exits 2 and names the files when untracked or
       modified source files exist under the scope's dirs (seeded-violation test:
       create an untracked seeded `.py`/`.ts` in scope → exit 2; AE-0180).
-- [ ] With `GATE_CAPTURE_ALLOW_DIRTY=1` the gate runs, the exit is the gate's own
+- [x] With `GATE_CAPTURE_ALLOW_DIRTY=1` the gate runs, the exit is the gate's own
       exit, and the echoed GATES_JSON line carries `"dirty":N` with the correct N.
-- [ ] Clean tree behaviour is byte-identical to today (control test).
-- [ ] `gate_proof.py` blocks a transition whose GATES_JSON has `"dirty">0` and no
+- [x] Clean tree behaviour is byte-identical to today (control test).
+- [x] `gate_proof.py` blocks a transition whose GATES_JSON has `"dirty">0` and no
       `DIRTY_WAIVER:` line in the dev-summary (seeded test), and allows it when the
       waiver line is present (control test).
-- [ ] Existing gate-proof tests still pass; docs updated (CLAUDE.md gate-run loop
+- [x] Existing gate-proof tests still pass; docs updated (CLAUDE.md gate-run loop
       section gains one line on the dirty guard + waiver).
 
 ## Repro Steps
@@ -88,6 +88,10 @@ None.
 
 ## Progress Log
 
+### 2026-07-22 — development complete (wave feat/kaizen-wave-ae0322-0328)
+
+Implemented: scoped git status --porcelain -uall pre-flight (backend/scripts | frontend/src/scripts | superset) filtered to source extensions; default exit 2, GATE_CAPTURE_ALLOW_DIRTY=1 stamps "dirty":N into the echoed GATES_JSON; gate_proof.py blocks transitions on dirty>0 without a DIRTY_WAIVER: line (horizontal-whitespace-only regex), warns when waived; CLAUDE.md gate-loop section documents it. Commit ccfc8793.
+
 ### 2026-07-22
 
 Ticket created by kaizen session-2026-07-22 (proposal P1). Plan:
@@ -95,11 +99,16 @@ Ticket created by kaizen session-2026-07-22 (proposal P1). Plan:
 
 ## Files Touched
 
-Pending.
+- scripts/ci/gate-capture.sh
+- scripts/agent_tasks/constants.py
+- scripts/agent_tasks/gate_proof.py
+- backend/tests/unit/scripts_ci/test_gate_capture_dirty_guard.py
+- backend/tests/unit/agent_tasks/test_gate_proof.py
+- CLAUDE.md
 
 ## Test Evidence
 
-Pending.
+uv run pytest tests/unit/scripts_ci/test_gate_capture_dirty_guard.py tests/unit/agent_tasks/test_gate_proof.py tests/unit/scripts_ci/test_gate_capture.py -> 25 passed (untracked/modified source -> exit 2 naming files; ALLOW_DIRTY=1 stamps dirty:N; clean tree byte-identical; non-source + out-of-scope ignored; failing-gate exit preserved; gate_proof blocks dirty>0 without waiver, warns with waiver, empty waiver blocks).
 
 ## QA Report
 

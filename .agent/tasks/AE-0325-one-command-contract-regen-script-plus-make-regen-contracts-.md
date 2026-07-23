@@ -1,12 +1,12 @@
 # AE-0325 — one-command contract regen script plus make regen-contracts with read-only verify pass
 
-Status: In Development
+Status: Dev Complete
 Tier: T1
 Priority: Medium
 Type: Quality
 Area: backend
 Owner: Unassigned
-Branch: TBD
+Branch: feat/kaizen-wave-ae0322-0328
 Created: 2026-07-22
 Updated: 2026-07-22
 
@@ -48,14 +48,14 @@ so running it from repo root fails on the root `.env`'s `ENCRYPTION_KEY`.
 
 ## Acceptance Criteria
 
-- [ ] `make regen-contracts` regenerates all four artifacts from a clean state
+- [x] `make regen-contracts` regenerates all four artifacts from a clean state
       and exits 0 with a final read-only verification pass green.
-- [ ] Seeded failure test (AE-0180): with one regen step forced to fail (e.g.
+- [x] Seeded failure test (AE-0180): with one regen step forced to fail (e.g.
       unimportable app / broken test), the script exits non-zero, prints the
       INCOMPLETE banner, and does not report success.
-- [ ] Script works from any CWD (explicitly cd's; no dependence on the caller's
+- [x] Script works from any CWD (explicitly cd's; no dependence on the caller's
       directory or root `.env`).
-- [ ] Doc page lists the four artifacts and when regen is required, replacing
+- [x] Doc page lists the four artifacts and when regen is required, replacing
       tribal knowledge.
 
 ## Repro Steps
@@ -82,6 +82,10 @@ None.
 
 ## Progress Log
 
+### 2026-07-22 — development complete (wave feat/kaizen-wave-ae0322-0328)
+
+Implemented: scripts/dev/regen_contracts.sh (set -euo pipefail + ERR trap banner, cds into backend/ killing the .env landmine, 4 regen steps + read-only verify of all four), make regen-contracts, docs/guides/api-contract-regen.md linked from backend CLAUDE.md. Commit ac281fd4.
+
 ### 2026-07-22
 
 Ticket created by kaizen session-2026-07-22 (proposal P5). Plan:
@@ -89,11 +93,15 @@ Ticket created by kaizen session-2026-07-22 (proposal P5). Plan:
 
 ## Files Touched
 
-Pending.
+- scripts/dev/regen_contracts.sh
+- Makefile
+- docs/guides/api-contract-regen.md
+- backend/tests/unit/scripts_ci/test_regen_contracts.py
+- backend/CLAUDE.md
 
 ## Test Evidence
 
-Pending.
+uv run pytest tests/unit/scripts_ci/test_regen_contracts.py -> 5 passed (seeded step failure -> INCOMPLETE banner + fail-fast at call N; green run -> read-only verify pass + exit 0; verify-phase failure -> INCOMPLETE; CWD-independent). Real end-to-end run: bash scripts/dev/regen_contracts.sh -> exit 0, all 4 artifacts regenerated + verified read-only, zero git diff (byte-idempotent).
 
 ## QA Report
 

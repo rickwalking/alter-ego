@@ -1,12 +1,12 @@
 # AE-0328 — bake nsfw and non-humanoid safety clause into carousel image prompt composition
 
-Status: In Development
+Status: Dev Complete
 Tier: T1
 Priority: Medium
 Type: Quality
 Area: backend
 Owner: Unassigned
-Branch: TBD
+Branch: feat/kaizen-wave-ae0322-0328
 Created: 2026-07-22
 Updated: 2026-07-22
 
@@ -50,14 +50,14 @@ fixed by hand; the class is unenforced — nothing prevents the next
 
 ## Acceptance Criteria
 
-- [ ] Every composed slide image prompt contains the safety clause, across all
+- [x] Every composed slide image prompt contains the safety clause, across all
       presets, with and without `custom_visual_details` (parameterized test).
-- [ ] The clause survives revision-feedback prompt rebuilds (feedback append
+- [x] The clause survives revision-feedback prompt rebuilds (feedback append
       path).
-- [ ] Seeded test: a `custom_visual_details` string steering toward humanoid
+- [x] Seeded test: a `custom_visual_details` string steering toward humanoid
       character art still yields a composed prompt carrying the non-humanoid/
       modesty constraint (AE-0180-style proof the guard fires where it matters).
-- [ ] Existing prompt snapshot/golden tests updated in the same change;
+- [x] Existing prompt snapshot/golden tests updated in the same change;
       `.feature` scenario for the prompt-composition behavior change (AE-0153).
 
 ## Repro Steps
@@ -80,6 +80,10 @@ None.
 
 ## Progress Log
 
+### 2026-07-22 — development complete (wave feat/kaizen-wave-ae0322-0328)
+
+Implemented: IMAGE_SAFETY_CLAUSE appended by _append_safety_clause after _compose_scene in render_image_prompt_package -- the single funnel every provider strategy and the revision path flow through; participates in the prompt hash (one-time reuse-cache bust on next regeneration, same class as AE-0263). Commit 9edc1430.
+
 ### 2026-07-22
 
 Ticket created by kaizen session-2026-07-22 (supplemental S2, user-approved).
@@ -87,11 +91,13 @@ Plan: `.agent/reports/kaizen-session-2026-07-22.plan.md`.
 
 ## Files Touched
 
-Pending.
+- backend/src/rag_backend/application/services/carousel/image_prompt_package.py
+- backend/tests/unit/application/test_image_prompt_package.py
+- backend/tests/features/image_generation_provider.feature
 
 ## Test Evidence
 
-Pending.
+uv run pytest tests/unit/application/test_image_prompt_package.py -> 16 passed (clause present for EVERY combo in SUPPORTED_IMAGE_COMBOS, with/without custom_visual_details, after the user's visual direction on a steering payload, on revision-feedback rebuilds, on empty scenes). Adjacent suites (editorial visual pipeline snapshot, phase5 parallel, image generation records, strategy registry) -> 33 passed unchanged (no golden pins needed updates). .feature scenarios appended.
 
 ## QA Report
 
