@@ -19,7 +19,9 @@ from pathlib import Path
 
 from scripts.agent_tasks.constants import (
     ALLOWED_QA_MODES,
+    DIRTY_WAIVER_RE,
     GATES_COMMIT_FIELD_RE,
+    GATES_DIRTY_FIELD_RE,
     GATES_FAIL_FIELD_RE,
     GATES_JSON_MARKER,
     GATES_SKIP_FIELD_RE,
@@ -74,12 +76,14 @@ def _safe_read(path: Path) -> str:
         return ""
 
 
-def _gates_line(text: str) -> str | None:
-    """Return the first line containing the GATES_JSON marker, else None."""
-    for line in text.splitlines():
-        if GATES_JSON_MARKER in line:
-            return line
-    return None
+def _gates_lines(text: str) -> list[str]:
+    """Return EVERY line carrying the GATES_JSON marker (QA r2, 2026-07-23).
+
+    A wave report pins one line PER SCOPE (backend + frontend). Evaluating
+    only the first line would let a clean backend line mask a failing or
+    dirty frontend line — every line must independently satisfy the proof.
+    """
+    return [line for line in text.splitlines() if GATES_JSON_MARKER in line]
 
 
 def _verdict_errors(gates_line: str, label: str) -> list[str]:
@@ -93,6 +97,43 @@ def _verdict_errors(gates_line: str, label: str) -> list[str]:
             f"({fail_match.group(1)} failing gate(s)) — fix the gates, do not advance."
         ]
     return []
+
+
+def _dirty_errors(gates_line: str, waiver_text: str, label: str) -> list[str]:
+    """Block on dirty>0 without a DIRTY_WAIVER: line (AE-0322).
+
+    gate-capture.sh stamps ``"dirty":N`` when it ran with
+    GATE_CAPTURE_ALLOW_DIRTY=1 over N uncommitted in-scope source files —
+    diff-based gates did NOT see that work, so the proof is tainted unless the
+    dev-summary waives it (naming the files and why they belong to other
+    sessions). An absent dirty field (pre-AE-0322 wrappers) is not an error.
+    """
+    match = GATES_DIRTY_FIELD_RE.search(gates_line)
+    if match is None or int(match.group(1)) == 0:
+        return []
+    if DIRTY_WAIVER_RE.search(waiver_text):
+        return []
+    return [
+        f"{label} GATES_JSON reports dirty>0 ({match.group(1)} uncommitted "
+        f"in-scope source file(s)) — diff-based gates cannot see uncommitted "
+        f"work (AE-0322). Commit and re-run gates, or add a line "
+        f"`DIRTY_WAIVER: <files — why they belong to other sessions>` "
+        f"to the report."
+    ]
+
+
+def _dirty_warnings(gates_line: str, waiver_text: str, label: str) -> list[str]:
+    """A waived dirty run stays visible as a warning (AE-0322)."""
+    match = GATES_DIRTY_FIELD_RE.search(gates_line)
+    if match is None or int(match.group(1)) == 0:
+        return []
+    if not DIRTY_WAIVER_RE.search(waiver_text):
+        return []
+    return [
+        f"{label} gate run was over a dirty tree ({match.group(1)} in-scope "
+        f"file(s)), waived by DIRTY_WAIVER — CI on the committed tree is the "
+        f"final authority (AE-0322)."
+    ]
 
 
 def _skip_warnings(gates_line: str, label: str) -> list[str]:
@@ -142,16 +183,26 @@ def evaluate_gate_proof(
             ],
             warnings=[],
         )
-    gates_line = _gates_line(proof_text)
-    if gates_line is None:  # defensive: _resolve_proof_text guaranteed the marker
+    gates_lines = _gates_lines(proof_text)
+    if not gates_lines:  # defensive: _resolve_proof_text guaranteed the marker
         return ProofOutcome(
             errors=[f"{label} GATES_JSON marker present but no line found."],
             warnings=[],
         )
-    errors = _verdict_errors(gates_line, label)
-    warnings = _skip_warnings(gates_line, label) + _commit_warnings(
-        proof_text, head_sha, label
-    )
+    # The waiver may live in the per-ticket report even when the GATES_JSON
+    # proof is inherited from a wave report — search both texts (AE-0322).
+    waiver_text = proof_text + "\n" + _safe_read(report)
+    errors: list[str] = []
+    warnings: list[str] = []
+    for index, gates_line in enumerate(gates_lines, start=1):
+        line_label = (
+            label if len(gates_lines) == 1 else f"{label} (GATES_JSON line {index})"
+        )
+        errors += _verdict_errors(gates_line, line_label)
+        errors += _dirty_errors(gates_line, waiver_text, line_label)
+        warnings += _skip_warnings(gates_line, line_label)
+        warnings += _dirty_warnings(gates_line, waiver_text, line_label)
+    warnings += _commit_warnings(proof_text, head_sha, label)
     return ProofOutcome(errors=errors, warnings=warnings)
 
 

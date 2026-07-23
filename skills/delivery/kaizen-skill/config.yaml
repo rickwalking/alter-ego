@@ -82,6 +82,11 @@ external:
   runner: scripts/kaizen/run_external_kaizen.sh
   shared_mechanics: scripts/lib/external_agent.sh   # also used by run_external_qa.sh
   reviewers: [opencode, codex, cursor]              # tool fallback order
+  # Model pin (AE-0292): external_agent.sh passes -m $EXT_OPENCODE_MODEL to
+  # opencode (default opencode-go/glm-5.2 — the FUNDED route; the unpinned Zen
+  # default dies with "Insufficient balance"). Empty replies retry once with a
+  # no-tools preamble, then exit 5 so the tool fallback can engage.
+  opencode_model_env: EXT_OPENCODE_MODEL
   phases_external: [0, 1, 2]                         # signal, research pack, analysis
   phases_local:    [3, 3.5, 4, 5]                    # synthesis, RE-VALIDATION, approval, emission
   output_contract: "full plan report + final fenced KAIZEN_JSON block (proposals[].ratchet required)"

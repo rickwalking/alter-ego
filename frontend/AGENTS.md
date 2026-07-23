@@ -22,6 +22,22 @@ This document provides general guidelines for AI agents working on the Next.js f
   `gates.sh frontend:component-types`) with a down-only baseline. See
   [`src/modules/README.md`](src/modules/README.md#component-type-location-convention-ae-0144).
 
+### 1a. No Unchecked Indexed Access (AE-0324, enforced)
+
+- **`Record[key]` / array indexing must be guarded** — an unguarded lookup
+  destructure crashed the whole admin blog listing in prod (AE-0295:
+  `BLOG_POST_BADGE_COLORS[color]` with a non-key status → `TypeError`).
+- Gated by `npm run lint:strict-index` (in `npm run lint` → the frontend lint
+  gate): `tsc -p tsconfig.strict-index.json` (`noUncheckedIndexedAccess: true`
+  over the whole tree) against the DOWN-ONLY per-file baseline
+  `scripts/strict-index-baseline.json`. New files must be clean; baselined
+  legacy files must not grow; ratchet down with `npm run strict-index:baseline`
+  after fixing errors. When the baseline hits 0, fold the flag into
+  `tsconfig.json` (follow-up AE-0329).
+- Write `map[key]?.field ?? fallback` (or narrow with `in`/`has`) — do NOT
+  silence the flag with `!` non-null assertions (that is gaming; reviewers
+  treat a net-new `!` on indexed access as suspect).
+
 ### 1b. No Copy-Paste Duplication (AE-0149, enforced)
 
 - **Source-scoped jscpd gate** — `src/**` `.ts`/`.tsx` files are scanned for

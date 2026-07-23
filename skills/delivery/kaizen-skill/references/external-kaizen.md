@@ -83,6 +83,20 @@ re-validates every proposal in `<output>.proposals.json`:
 Then proceed with the normal local Phase 4 (approval) and Phase 5 (emit tickets
 via `ticket-writer-skill`).
 
+## Convergence for multi-round external reviews (AE-0326)
+
+When the Phase-3.6 skeptical loop (or any cold-critic loop) runs multiple
+rounds: the critic prompt mandates **≥3 findings per round**, so literal-zero is
+structurally unreachable — never loop waiting for it, and never weaken the
+mandate to make it reachable (down-ratchet).
+
+**Default stop rule: 3 consecutive zero-BLOCKER rounds = converged** (track the
+severity trajectory, not the verdict text). Default, not absolute — deviate
+with a recorded justification. Caveat: BLOCKER/WARN severity assignment drifts
+across reviewer models; verify borderline WARNs against live code before
+counting a round as clean. Full rationale + landmines:
+`skills/delivery/architect-skill/references/skeptical-reviewer.md` → Convergence.
+
 ## Loop / reuse
 
 For `sweep` mode, run this weekly (schedule skill / GH Actions). The external

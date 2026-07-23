@@ -13,6 +13,7 @@ supported combo resolves to a strategy.
 import pytest
 
 from rag_backend.application.services.carousel.image_prompt_package import (
+    IMAGE_SAFETY_CLAUSE,
     ImagePromptPackageRequest,
     _strategy_for_project,
     render_image_prompt_package,
@@ -131,6 +132,123 @@ class TestCustomVisualDetails:
             )
         )
         assert without.prompt_hash != with_d.prompt_hash
+
+
+def _combo_project(model: str, style: str) -> CarouselProject:
+    return CarouselProject(
+        topic="Agents",
+        audience="Engineers",
+        niche="AI",
+        theme=CarouselTheme.AI_COMPETITION,
+        image_model=model,
+        image_style=style,
+    )
+
+
+# Source-independent fragments (external QA F-4, 2026-07-23): asserting the
+# imported constant would pass even if the clause were weakened to nothing —
+# these pin the actual REQUIREMENTS the clause must keep expressing.
+_SAFETY_REQUIRED_FRAGMENTS = (
+    "no nudity",
+    "fully clothed",
+    "NON-HUMANOID",
+    "no body, face, or torso",
+)
+
+
+@pytest.mark.unit
+class TestImageSafetyClause:
+    """AE-0328 (tests/features/image_generation_provider.feature).
+
+    Prod incident 2026-07-22: a published slide contained nudity — the
+    project's custom_visual_details steered an unconstrained "AI entity"
+    scene into humanoid output. The clause must ride EVERY prompt.
+    """
+
+    def test_clause_expresses_the_required_guarantees(self) -> None:
+        # A weakened IMAGE_SAFETY_CLAUSE must fail HERE, not survive because
+        # the other tests compare prompts against the same constant.
+        for fragment in _SAFETY_REQUIRED_FRAGMENTS:
+            assert fragment in IMAGE_SAFETY_CLAUSE, fragment
+
+    def test_rendered_prompt_carries_required_fragments_verbatim(self) -> None:
+        pkg = render_image_prompt_package(
+            ImagePromptPackageRequest(
+                project=_project_with_details("Ghost in the Shell style hologram"),
+                slide=_slide(),
+            )
+        )
+        for fragment in _SAFETY_REQUIRED_FRAGMENTS:
+            assert fragment in pkg.rendered_prompt, fragment
+
+    # Scenario: Every rendered slide prompt carries the safety clause
+    @pytest.mark.parametrize(("model", "style"), sorted(SUPPORTED_IMAGE_COMBOS))
+    def test_clause_present_for_every_supported_combo(
+        self, model: str, style: str
+    ) -> None:
+        pkg = render_image_prompt_package(
+            ImagePromptPackageRequest(
+                project=_combo_project(model, style),
+                slide=_slide(),
+                theme=CAROUSEL_THEMES["ai_competition"],
+            )
+        )
+        assert IMAGE_SAFETY_CLAUSE in pkg.rendered_prompt
+        assert IMAGE_SAFETY_CLAUSE in pkg.raw_prompt
+
+    def test_clause_present_without_custom_details(self) -> None:
+        pkg = render_image_prompt_package(
+            ImagePromptPackageRequest(
+                project=_project_with_details(None), slide=_slide()
+            )
+        )
+        assert IMAGE_SAFETY_CLAUSE in pkg.rendered_prompt
+
+    # Scenario: Steering custom visual details cannot escape the safety clause
+    def test_clause_survives_steering_details_and_lands_after_them(self) -> None:
+        pkg = render_image_prompt_package(
+            ImagePromptPackageRequest(
+                project=_project_with_details(
+                    "Ghost in the Shell style female hologram, sensual"
+                ),
+                slide=_slide(),
+            )
+        )
+        rendered = pkg.rendered_prompt
+        assert IMAGE_SAFETY_CLAUSE in rendered
+        # The guard is the LAST word the model reads — after the user text.
+        assert rendered.index("Visual direction:") < rendered.index(
+            "SAFETY (non-negotiable"
+        )
+
+    # Scenario: Revision feedback rebuilds still carry the safety clause
+    def test_clause_survives_revision_feedback_append(self) -> None:
+        # Revision feedback is appended to custom_visual_details (AE-0261);
+        # the rebuilt prompt flows through the same funnel.
+        pkg = render_image_prompt_package(
+            ImagePromptPackageRequest(
+                project=_project_with_details(
+                    "misty cyber harbor. Revision feedback: make the entity glow"
+                ),
+                slide=_slide(),
+            )
+        )
+        assert IMAGE_SAFETY_CLAUSE in pkg.rendered_prompt
+
+    def test_clause_present_on_empty_scene(self) -> None:
+        pkg = render_image_prompt_package(
+            ImagePromptPackageRequest(
+                project=_project_with_details(None),
+                slide=SlideData(
+                    slide_number=2,
+                    slide_type="content",
+                    heading="h",
+                    body="b",
+                    image_prompt="",
+                ),
+            )
+        )
+        assert IMAGE_SAFETY_CLAUSE in pkg.rendered_prompt
 
 
 @pytest.mark.unit
