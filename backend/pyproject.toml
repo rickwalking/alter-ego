@@ -46,6 +46,7 @@ dependencies = [
     "langsmith>=0.8.18",  # GHSA-f4xh-w4cj-qxq8 (TracingMiddleware arbitrary file read)
     "starlette>=1.3.1",  # CVE-2026-54282/54283
     "msgpack>=1.2.1",  # GHSA-6v7p-g79w-8964 (unpacker SEGV/DoS); transitive floor
+    "pyasn1>=0.6.4",  # PYSEC-2026-3455/3456/3457 (BER/CER/DER decode DoS); transitive floor
 ]
 
 [tool.uv]
