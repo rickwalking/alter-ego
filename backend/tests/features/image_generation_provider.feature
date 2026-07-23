@@ -130,3 +130,23 @@ Feature: Pluggable image generation provider and style
     When the user requests an image revision with feedback
     Then the feedback is appended to the project custom_visual_details
       And the regenerated prompt hash differs from the previous one
+
+  # NSFW / non-humanoid safety clause (AE-0328) -------------------------------
+
+  Scenario: Every rendered slide prompt carries the safety clause
+    Given any supported image model and style combo
+    When a slide image prompt is rendered
+    Then the rendered prompt ends the scene with the SAFETY clause
+      And the clause forbids nudity and demands modest, fully clothed people
+      And the clause forces abstract or AI entities to be non-humanoid
+
+  Scenario: Steering custom visual details cannot escape the safety clause
+    Given a project with custom_visual_details "Ghost in the Shell style female hologram"
+    When a slide image prompt is rendered
+    Then the rendered prompt still contains the SAFETY clause
+      And the clause appears after the user's visual direction
+
+  Scenario: Revision feedback rebuilds still carry the safety clause
+    Given revision feedback appended to the project custom_visual_details
+    When the slide image prompt is re-rendered
+    Then the rendered prompt still contains the SAFETY clause
