@@ -42,7 +42,14 @@ uv run pytest --cov=rag_backend  # Coverage report (90%+ required)
 uv run mypy src/                 # Type checking (strict mode)
 uv run ruff check src/           # Linting
 uv run ruff format src/          # Formatting
+make regen-contracts             # (repo root) regen + verify all 4 pinned API-contract artifacts
 ```
+
+After any API-contract change (routes/schemas), run `make regen-contracts` from
+the repo root — it regenerates and read-only-verifies all four pinned artifacts
+in one fail-fast pass. See
+[`docs/guides/api-contract-regen.md`](../docs/guides/api-contract-regen.md)
+(AE-0325).
 
 ## Code Rules
 
