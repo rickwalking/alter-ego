@@ -1,6 +1,6 @@
 # Wave report — kaizen session-2026-07-22 enforcement wave (AE-0292, AE-0322..AE-0328)
 
-Commit: d5e622e51dcafafc36ce0b73b51c9091c4fbf989
+Commit: 15441eb5ad7606b8c3e24324ed321ce28005544e
 Branch: feat/kaizen-wave-ae0322-0328 (base origin/main 64889be6)
 Generated: 2026-07-23
 
@@ -39,3 +39,22 @@ AE-0322's deliverable). frontend: PASS, 0 blockers, 1 warning
 - frontend:test one-off failures in 3 subprocess-spawning checker tests during
   a CPU-contended parallel run; all pass in isolation and in the final
   uncontended full run (17/17 gates).
+
+## External QA round 1 (codex, 2026-07-23) — FAIL -> fixed -> gates re-run
+Verdict FAIL: 2 critical + 2 warning, all verified real and fixed in commit
+15441eb5:
+- F-1 (AE-0322, critical): frontend dirty-scope omitted frontend/scripts (the
+  frontend gate checkers) -> added to frontend/all scopes + seeded test.
+- F-2 (AE-0324, critical): baseline generator refused only TOTAL increases, so
+  a shrinking total could absorb a NEW file's errors -> generator now refuses
+  any NEW/GREW/TOTAL violation vs the committed baseline + seeded test
+  (STRICT_INDEX_BASELINE env added for hermetic tests).
+- F-3 (AE-0327, warning): stale lock_version 409 scenario added to the
+  .feature and linked to the pre-existing CAS test.
+- F-4 (AE-0328, warning): safety-clause tests now assert source-independent
+  required fragments (no nudity / fully clothed / NON-HUMANOID / no body,
+  face, or torso) in both the constant and rendered prompts.
+Both GATES_JSON lines above are the post-fix full runs on this commit.
+Round-1 operational note: two GLM (opencode) attempts failed (one mid-stream
+death, one wedged in the deps-less worktree and killed); codex produced the
+verdict. The AE-0292 engagement-retry landed in this very wave.
