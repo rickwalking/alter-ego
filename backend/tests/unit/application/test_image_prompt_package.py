@@ -145,6 +145,17 @@ def _combo_project(model: str, style: str) -> CarouselProject:
     )
 
 
+# Source-independent fragments (external QA F-4, 2026-07-23): asserting the
+# imported constant would pass even if the clause were weakened to nothing —
+# these pin the actual REQUIREMENTS the clause must keep expressing.
+_SAFETY_REQUIRED_FRAGMENTS = (
+    "no nudity",
+    "fully clothed",
+    "NON-HUMANOID",
+    "no body, face, or torso",
+)
+
+
 @pytest.mark.unit
 class TestImageSafetyClause:
     """AE-0328 (tests/features/image_generation_provider.feature).
@@ -153,6 +164,22 @@ class TestImageSafetyClause:
     project's custom_visual_details steered an unconstrained "AI entity"
     scene into humanoid output. The clause must ride EVERY prompt.
     """
+
+    def test_clause_expresses_the_required_guarantees(self) -> None:
+        # A weakened IMAGE_SAFETY_CLAUSE must fail HERE, not survive because
+        # the other tests compare prompts against the same constant.
+        for fragment in _SAFETY_REQUIRED_FRAGMENTS:
+            assert fragment in IMAGE_SAFETY_CLAUSE, fragment
+
+    def test_rendered_prompt_carries_required_fragments_verbatim(self) -> None:
+        pkg = render_image_prompt_package(
+            ImagePromptPackageRequest(
+                project=_project_with_details("Ghost in the Shell style hologram"),
+                slide=_slide(),
+            )
+        )
+        for fragment in _SAFETY_REQUIRED_FRAGMENTS:
+            assert fragment in pkg.rendered_prompt, fragment
 
     # Scenario: Every rendered slide prompt carries the safety clause
     @pytest.mark.parametrize(("model", "style"), sorted(SUPPORTED_IMAGE_COMBOS))

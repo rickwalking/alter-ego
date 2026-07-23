@@ -166,6 +166,23 @@ def test_non_source_dirty_file_is_ignored(tmp_path: Path) -> None:
     assert '"dirty"' not in result.stdout
 
 
+# Scenario: frontend gate-checker sources are in the frontend scope (QA F-1:
+# frontend/scripts holds the .mjs checkers; uncommitted edits must not evade)
+def test_untracked_frontend_scripts_checker_trips_frontend_scope(
+    tmp_path: Path,
+) -> None:
+    repo = _stage_repo(tmp_path)
+    (repo / "frontend" / "scripts").mkdir(parents=True)
+    (repo / "frontend" / "scripts" / "seeded-checker.mjs").write_text(
+        "export const x = 1;\n", encoding="utf-8"
+    )
+
+    result = _run(repo, scope="frontend")
+
+    assert result.returncode == 2, result.stdout + result.stderr
+    assert "frontend/scripts/seeded-checker.mjs" in result.stderr
+
+
 # Scenario: out-of-scope files do not trip the other scope's run
 def test_backend_dirty_file_does_not_trip_frontend_scope(tmp_path: Path) -> None:
     repo = _stage_repo(tmp_path)

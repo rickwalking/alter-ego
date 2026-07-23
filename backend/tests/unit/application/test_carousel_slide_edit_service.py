@@ -388,6 +388,8 @@ class TestSlideEditRepairsStalePayloads:
             assert exc.value.conflict.code == CONFLICT_CODE_RUN_IN_PROGRESS
 
     async def test_stale_cas_loses(self, test_engine: AsyncEngine) -> None:
+        # Scenario: A stale lock_version loses the CAS and conflicts
+        # (tests/features/carousel_text_edit_no_regen.feature, AE-0327 edge)
         async with _factory(test_engine)() as db:
             project = await _add_completed_project(db)
             pid = str(project.id)

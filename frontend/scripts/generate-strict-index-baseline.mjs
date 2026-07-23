@@ -14,7 +14,10 @@ import {
   evaluateStrictIndex,
 } from "./check-strict-index.mjs";
 
-const BASELINE_PATH = new URL("./strict-index-baseline.json", import.meta.url);
+// STRICT_INDEX_BASELINE override keeps the down-only tests hermetic (F-2).
+const BASELINE_PATH =
+  process.env.STRICT_INDEX_BASELINE ??
+  new URL("./strict-index-baseline.json", import.meta.url);
 
 const errorsByFile = collectStrictIndexErrors();
 const files = Object.fromEntries(
@@ -24,10 +27,15 @@ const { total } = evaluateStrictIndex(errorsByFile, { count: Infinity, files });
 
 if (existsSync(BASELINE_PATH)) {
   const existing = JSON.parse(readFileSync(BASELINE_PATH, "utf8"));
-  if (total > existing.count) {
+  // DOWN-ONLY per FILE, not just per total (external QA F-2, 2026-07-23):
+  // a total that shrinks can still hide a NEW or GROWN file's errors being
+  // absorbed into the baseline — exactly the gaming the checker blocks.
+  const { violations } = evaluateStrictIndex(errorsByFile, existing);
+  if (violations.length > 0) {
     process.stderr.write(
-      `REFUSED: new total (${total}) exceeds the committed baseline (${existing.count}).\n` +
-        "The strict-index baseline is DOWN-ONLY — fix the new errors instead of absorbing them.\n",
+      `REFUSED: the current tree violates the committed baseline — the generator\n` +
+        `never absorbs NEW/GROWN/TOTAL violations (fix them instead):\n` +
+        `${violations.map((v) => `  - ${v}`).join("\n")}\n`,
     );
     process.exit(1);
   }

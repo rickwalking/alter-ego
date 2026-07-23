@@ -70,3 +70,9 @@ Feature: Edit carousel text without regenerating images
     Given an edit that capitalizes a proper noun the policy noun list misses
     When the reviewer submits the slide edit
     Then the repaired copy keeps the reviewer's capitalization
+
+  Scenario: A stale lock_version loses the CAS and conflicts
+    Given a completed project whose lock_version advanced after the client read it
+    When the reviewer submits a slide edit carrying the stale lock_version
+    Then the request fails with the typed version_conflict 409
+    And no slide copy, republish marker, or checkpoint write is persisted

@@ -103,6 +103,78 @@ describe("strict-index gate end-to-end (AE-0324, real tsc)", () => {
   });
 });
 
+describe("strict-index baseline generator is down-only per file (QA F-2)", () => {
+  const GENERATOR = join(
+    FRONTEND_ROOT,
+    "scripts",
+    "generate-strict-index-baseline.mjs",
+  );
+
+  function runGenerator(dir: string): { status: number; output: string } {
+    try {
+      const output = execFileSync("node", [GENERATOR], {
+        encoding: "utf8",
+        env: {
+          ...process.env,
+          STRICT_INDEX_PROJECT: join(dir, "tsconfig.json"),
+          STRICT_INDEX_BASELINE: join(dir, "baseline.json"),
+        },
+      });
+      return { status: 0, output };
+    } catch (err) {
+      const e = err as { status?: number; stdout?: string; stderr?: string };
+      return {
+        status: e.status ?? 1,
+        output: `${e.stdout ?? ""}${e.stderr ?? ""}`,
+      };
+    }
+  }
+
+  let dir: string;
+  beforeEach(() => {
+    dir = mkdtempSync(join(tmpdir(), "strict-index-gen-"));
+    writeFileSync(join(dir, "tsconfig.json"), SANDBOX_TSCONFIG);
+  });
+  afterEach(() => rmSync(dir, { recursive: true, force: true }));
+
+  // Scenario: a shrinking TOTAL must not absorb a NEW file's errors
+  it("refuses to absorb a new-file error even when the total shrinks", () => {
+    // Baseline tolerates 2 errors in legacy.ts; tree now has 1 in legacy.ts
+    // (one fixed) + 1 in a NEW file -> total 2 <= 2, but NEW must refuse.
+    writeFileSync(
+      join(dir, "legacy.ts"),
+      `${SEEDED_VIOLATION}\nconst m: Record<string, number> = {};\nexport const second = m["k"] + seeded.length;\n`,
+    );
+    writeFileSync(
+      join(dir, "baseline.json"),
+      JSON.stringify({ count: 3, files: { "legacy.ts": 3 } }),
+    );
+    writeFileSync(
+      join(dir, "fresh.ts"),
+      SEEDED_VIOLATION.replace("seeded", "fresh"),
+    );
+
+    const { status, output } = runGenerator(dir);
+
+    expect(status).toBe(1);
+    expect(output).toContain("REFUSED");
+    expect(output).toContain("NEW: fresh.ts");
+  });
+
+  it("writes a genuinely ratcheted-down baseline", () => {
+    writeFileSync(join(dir, "legacy.ts"), SEEDED_VIOLATION);
+    writeFileSync(
+      join(dir, "baseline.json"),
+      JSON.stringify({ count: 3, files: { "legacy.ts": 3 } }),
+    );
+
+    const { status, output } = runGenerator(dir);
+
+    expect(status).toBe(0);
+    expect(output).toContain("baseline written");
+  });
+});
+
 describe("strict-index baseline comparator (AE-0324)", () => {
   const baseline = { count: 3, files: { "src/legacy.ts": 3 } };
 

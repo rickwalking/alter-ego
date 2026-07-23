@@ -46,10 +46,12 @@ fi
 # Source files git can't diff (untracked or modified) under the scope's dirs.
 SOURCE_EXT_RE='\.(py|ts|tsx|js|jsx|mjs|cjs|sh)$'
 scope_root="${SCOPE%%:*}"
+# frontend/scripts holds the frontend GATE CHECKERS (.mjs) — uncommitted edits
+# there must not evade the guard (external QA F-1, 2026-07-23).
 case "$scope_root" in
   backend)  DIRTY_SCOPE_DIRS=(backend scripts) ;;
-  frontend) DIRTY_SCOPE_DIRS=(frontend/src scripts) ;;
-  *)        DIRTY_SCOPE_DIRS=(backend frontend/src scripts) ;;  # all / unknown: superset
+  frontend) DIRTY_SCOPE_DIRS=(frontend/src frontend/scripts scripts) ;;
+  *)        DIRTY_SCOPE_DIRS=(backend frontend/src frontend/scripts scripts) ;;  # all / unknown: superset
 esac
 
 # --untracked-files=all: a fresh directory must list its files, not `dir/`.
