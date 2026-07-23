@@ -1,6 +1,6 @@
 # AE-0322 — gate-capture dirty-tree guard: fail on uncommitted in-scope source, gate_proof blocks dirty>0 without waiver
 
-Status: Dev Complete
+Status: Review
 Tier: T1
 Priority: High
 Type: Quality

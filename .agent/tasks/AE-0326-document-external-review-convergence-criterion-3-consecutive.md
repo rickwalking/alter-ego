@@ -1,6 +1,6 @@
 # AE-0326 — document external-review convergence criterion: 3 consecutive zero-blocker rounds default stop rule
 
-Status: Dev Complete
+Status: Review
 Tier: T1
 Priority: Low
 Type: Quality

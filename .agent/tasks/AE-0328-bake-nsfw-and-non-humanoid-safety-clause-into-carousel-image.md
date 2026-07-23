@@ -1,6 +1,6 @@
 # AE-0328 — bake nsfw and non-humanoid safety clause into carousel image prompt composition
 
-Status: Dev Complete
+Status: Review
 Tier: T1
 Priority: Medium
 Type: Quality

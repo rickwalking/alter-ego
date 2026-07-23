@@ -1,6 +1,6 @@
 # AE-0327 — carousel patch slides merges stale checkpoint copy and clobbers repaired slides
 
-Status: Dev Complete
+Status: Review
 Tier: T2
 Priority: High
 Type: Bugfix

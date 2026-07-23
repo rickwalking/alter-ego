@@ -1,6 +1,6 @@
 # AE-0292 — external-agent runner pins funded glm model (opencode-go/glm-5.2)
 
-Status: Dev Complete
+Status: Review
 Tier: T1
 Priority: P1
 Type: Quality

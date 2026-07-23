@@ -1,6 +1,6 @@
 # AE-0323 — schema-drift checker: parse zod literals via typescript compiler api to kill comment false positives
 
-Status: Dev Complete
+Status: Review
 Tier: T1
 Priority: Medium
 Type: Quality

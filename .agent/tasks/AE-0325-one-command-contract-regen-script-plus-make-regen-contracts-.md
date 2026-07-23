@@ -1,6 +1,6 @@
 # AE-0325 — one-command contract regen script plus make regen-contracts with read-only verify pass
 
-Status: Dev Complete
+Status: Review
 Tier: T1
 Priority: Medium
 Type: Quality

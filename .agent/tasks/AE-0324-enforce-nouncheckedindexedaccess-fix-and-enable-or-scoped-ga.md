@@ -1,6 +1,6 @@
 # AE-0324 — enforce nouncheckedindexedaccess: fix-and-enable or scoped gate plus down-only baseline
 
-Status: Dev Complete
+Status: Review
 Tier: T2
 Priority: Medium
 Type: Quality
