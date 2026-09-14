@@ -156,6 +156,30 @@ re-roll remains the real protection. **No A/B was run**; the open risk is the
 persona voice-match (>= 70) gate on PT copy, and voice-match scores on the first
 prod carousels are the signal to watch.
 
+**Fifth defect: a failed phase looped the graph forever.** After the retry
+path was live, the content phase failed again — but not on the LLM. Every LLM
+call had completed; the graph then spun for 14 minutes with **no LLM call** and
+died on `GraphRecursionError` ("Recursion limit of 10007"). Mechanism:
+`content_phase_async` returned early on `phase_status=failed` **without
+`interrupt()`**, and `route_after_gate` only knew approved/retry, so a failed
+phase was routed straight back into itself at ~4 steps/s. It hit the same
+project twice — the second time with all 7 drafts already built, because resume
+flips only the DB row to in_progress and never clears the stale `failed` flag
+in the checkpoint. Damage: **20,022 checkpoints, 700,676 checkpoint_writes rows,
+791 MB** in prod Postgres from one project. langgraph's default recursion limit
+is 10007 (`LANGGRAPH_DEFAULT_RECURSION_LIMIT`), not langchain_core's 25, and
+nothing in our code set one.
+
+Fixed: failed routes to END on every gated phase; the node decides on this
+run's artifact result, clears a stale failed flag when artifacts succeed, and
+stamps `current_phase=content` on failure (otherwise the END state still said
+"outline", `needs_gate_reopen` checked `outline_approved`, and a retry resumed
+a finished graph as a silent no-op — caught by the engine test);
+`needs_gate_reopen` re-enters a failed phase; `recursion_limit=100` (legit max
+20 steps, p95 13 across all prod threads). Engine-level regression drives a
+real sqlite-checkpointed run through fail → END → retry → design gate; with the
+routing reverted it raises `GraphRecursionError` (verified).
+
 **Scope note:** `pip-audit` is a blocking CI gate and had gone red repo-wide on
 freshly published advisories (19 across 7 packages, none introduced by this
 diff). Nothing merges until it is green, so the dependency bumps ship here.
