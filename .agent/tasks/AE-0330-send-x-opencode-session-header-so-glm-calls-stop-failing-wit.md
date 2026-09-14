@@ -129,6 +129,23 @@ Cloudflare still caps the edge at ~100s, so this covers the 60-100s band only;
 a generation slower than that needs `workflow/start` made async (202 + poll).
 Worth its own ticket.
 
+**Third defect: unparseable responses poison the retry cache.** With the
+provider and proxy fixed, the run reached GLM and exposed a pre-existing bug.
+`outline_agent` and `content_draft_agent` wrote the raw response into the shared
+1-hour TTL cache **before** parsing it. GLM 5.2 returned empty content (31999 of
+32000 tokens spent reasoning), the empty string was cached, and the next approve
+failed in **milliseconds with no LLM call at all** — unrecoverable by retrying
+until the TTL expired. The content phase then hit the same thing.
+
+Fixed by parsing first, caching only what parsed, and evicting an entry that no
+longer parses on read — the identical fix **AE-0318 already applied to
+`source_synthesis_agent`** and never propagated to the other two agents. Of the
+three agents sharing this cache, one was correct and two were not.
+
+Note the outline spiral itself was a **tail event, not reproducible**: the same
+prompt on retry used 7548 reasoning tokens (127s) and produced a valid outline.
+So no model-config change (`reasoning_effort` / `max_tokens`) is included.
+
 **Scope note:** `pip-audit` is a blocking CI gate and had gone red repo-wide on
 freshly published advisories (19 across 7 packages, none introduced by this
 diff). Nothing merges until it is green, so the dependency bumps ship here.
@@ -140,6 +157,9 @@ diff). Nothing merges until it is green, so the dependency bumps ship here.
 - `backend/tests/features/llm_provider_toggle.feature`
 - `backend/pyproject.toml`, `backend/uv.lock` (pip-audit gate — see Progress Log)
 - `nginx/nginx.conf`, `nginx/nginx.conf.ssl` (follow-on 504 — see Progress Log)
+- `backend/src/rag_backend/agents/outline_agent.py`,
+  `backend/src/rag_backend/agents/content_draft_agent.py` (cache poisoning)
+- `backend/tests/features/ai_response_cache_poisoning.feature` + agent tests
 
 ## Test Evidence
 
