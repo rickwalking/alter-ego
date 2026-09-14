@@ -1,6 +1,6 @@
 # AE-0330 — send x-opencode-session header so glm calls stop failing with provider_unavailable
 
-Status: In Development
+Status: Dev Complete
 Tier: T1
 Priority: Critical
 Type: Bug
@@ -95,6 +95,27 @@ None. (Builds on AE-0285 provider toggle and AE-0319 provider-error mapping.)
 
 Diagnosed from prod logs, reproduced against the live endpoint with prod's key,
 fixed in the factory, covered by wire-level tests with a negative control.
+
+**Prod hot-patch applied (temporary).** With prod down and a deploy ~12 min
+behind a merge, the patched `chat_model_factory.py` was copied into the running
+`alter-ego-backend-1` and the container restarted (healthy). A live GLM call
+from inside the container then returned normally:
+
+```
+provider: glm | model: glm-5.2
+headers: {'x-opencode-session': 'alter-ego-dad54b25-…', 'User-Agent': 'alter-ego/0.1.0'}
+GLM replied: 'PATCH_OK'
+```
+
+The original file is backed up at `/root/hotfix-ae-0330/chat_model_factory.py.orig`
+on the droplet (md5 matched `origin/main` before patching). **This patch lives in
+the container layer only** — it is lost on any `docker compose up`/recreate, and
+is superseded by the real image on the next deploy. Merging this PR is still
+required.
+
+**Scope note:** `pip-audit` is a blocking CI gate and had gone red repo-wide on
+freshly published advisories (19 across 7 packages, none introduced by this
+diff). Nothing merges until it is green, so the dependency bumps ship here.
 
 ## Files Touched
 
