@@ -15,7 +15,7 @@ from __future__ import annotations
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from types import SimpleNamespace
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
@@ -138,7 +138,7 @@ class TestContentNodeFailedHandling:
 
     @patch("rag_backend.agents.carousel_workflow_nodes.interrupt")
     async def test_fresh_failure_returns_without_interrupting(
-        self, mock_interrupt: object
+        self, mock_interrupt: MagicMock
     ) -> None:
         # Scenario: a fresh artifact failure does not open a review gate
         runner = _Runner(fail_content=True)
@@ -150,14 +150,14 @@ class TestContentNodeFailedHandling:
         assert result["phase_status"] == PHASE_STATUS_FAILED
         assert result[WORKFLOW_ERROR_KEY] == ERR_INVALID_JSON
         assert result["current_phase"] == PHASE_CONTENT  # names the failed phase
-        mock_interrupt.assert_not_called()  # type: ignore[attr-defined]
+        mock_interrupt.assert_not_called()
 
     @patch("rag_backend.agents.carousel_workflow_nodes.interrupt")
     async def test_stale_failure_is_cleared_when_artifacts_succeed(
-        self, mock_interrupt: object
+        self, mock_interrupt: MagicMock
     ) -> None:
         # Scenario: a stale failed flag does not block a successful rebuild
-        mock_interrupt.return_value = {"action": REVIEW_ACTION_APPROVE}  # type: ignore[attr-defined]
+        mock_interrupt.return_value = {"action": REVIEW_ACTION_APPROVE}
         runner = _Runner(fail_content=False)
         stale = _state(
             phase_status=PHASE_STATUS_FAILED,
@@ -166,7 +166,7 @@ class TestContentNodeFailedHandling:
 
         result = await content_phase_async(stale, self._config(runner))
 
-        mock_interrupt.assert_called_once()  # type: ignore[attr-defined]
+        mock_interrupt.assert_called_once()
         assert result["slide_drafts"] == _DRAFTS
         assert result["phase_status"] != PHASE_STATUS_FAILED
         assert result[WORKFLOW_ERROR_KEY] == ""
