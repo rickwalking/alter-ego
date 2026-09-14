@@ -147,3 +147,63 @@ class TestContentDraftAgent:
 
         # ainvoke(messages, config) — the second positional is the Langfuse config.
         assert mock_llm.ainvoke.await_args.args[1] == sentinel
+
+
+class TestContentDraftCachePoisoning:
+    """AE-0330: an unparseable response must never be cached.
+
+    Live 2026-09-14: the content phase returned empty content, which was cached
+    and made every retry fail instantly without calling the model at all.
+    """
+
+    @pytest.fixture(autouse=True)
+    def clear_cache(self) -> None:
+        get_ai_response_cache().clear()
+
+    @pytest.fixture
+    def mock_llm(self) -> AsyncMock:
+        llm = AsyncMock()
+        llm.bind = MagicMock(return_value=llm)
+        return llm
+
+    @pytest.fixture
+    def agent(self, mock_llm: AsyncMock) -> ContentDraftAgent:
+        return ContentDraftAgent(llm=mock_llm)
+
+    @staticmethod
+    def _payload() -> dict[str, object]:
+        return {
+            "draft_text": "Slide copy",
+            "confidence_score": 0.9,
+            "sources_used": ["source-1"],
+        }
+
+    async def test_empty_response_is_not_cached_so_retry_reaches_the_model(
+        self, agent: ContentDraftAgent, mock_llm: AsyncMock
+    ) -> None:
+        # Scenario: an empty model response does not poison the retry (AE-0330)
+        mock_llm.ainvoke.side_effect = [
+            MagicMock(content=""),
+            MagicMock(content=json.dumps(self._payload())),
+        ]
+        with pytest.raises(ValueError, match="Invalid JSON"):
+            await agent.draft_slide(1, "Title", ["Point"])
+
+        result = await agent.draft_slide(1, "Title", ["Point"])
+
+        assert result["draft_text"] == "Slide copy"
+        assert mock_llm.ainvoke.await_count == 2  # retry hit the LLM, not a cache
+
+    async def test_poisoned_cache_entry_is_evicted(
+        self, agent: ContentDraftAgent, mock_llm: AsyncMock
+    ) -> None:
+        # Scenario: a poisoned entry from an older deploy is evicted (AE-0330)
+        mock_llm.ainvoke.return_value = MagicMock(content=json.dumps(self._payload()))
+        await agent.draft_slide(1, "Title", ["Point"])
+        prompt = mock_llm.ainvoke.call_args[0][0][0].content
+        get_ai_response_cache().set(prompt, agent.model_id, "poisoned-not-json")
+
+        result = await agent.draft_slide(1, "Title", ["Point"])
+
+        assert result["draft_text"] == "Slide copy"
+        assert mock_llm.ainvoke.await_count == 2  # evicted, so the model ran again

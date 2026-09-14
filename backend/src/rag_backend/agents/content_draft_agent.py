@@ -26,7 +26,10 @@ from rag_backend.domain.constants.carousel_workflow import PHASE_CONTENT
 from rag_backend.domain.models.persona import PersonaProfile
 from rag_backend.infrastructure.cache.ai_response_cache import get_ai_response_cache
 from rag_backend.infrastructure.llm.json_utils import extract_json
+from rag_backend.infrastructure.logging import get_logger
 from rag_backend.infrastructure.monitoring_langfuse import get_langfuse_runnable_config
+
+logger = get_logger()
 
 _MODEL_CFG_TEMPERATURE = "temperature"
 _MODEL_CFG_MAX_TOKENS = "max_tokens"
@@ -105,8 +108,8 @@ class ContentDraftAgent:
             version=CAROUSEL_PROMPT_VERSION_V4,
         )
         full_prompt = f"{instruction.instruction}\n\n{prompt_text}"
-        cached = self._cache.get(full_prompt, self.model_id)
-        raw = cached
+        raw = self._cached_raw(full_prompt)
+        from_cache = raw is not None
         if raw is None:
             messages: list[BaseMessage] = [HumanMessage(content=full_prompt)]
             # AE-0291: apply the v4 YAML model config (temperature/max_tokens) via a
@@ -114,9 +117,15 @@ class ContentDraftAgent:
             runnable = self._runnable_with_model_config(model_cfg)
             response = await runnable.ainvoke(messages, get_langfuse_runnable_config())
             raw = cast(str, response.content)
-            self._cache.set(full_prompt, self.model_id, raw)
 
+        # AE-0330: parse BEFORE caching. An empty/unparseable response cached
+        # here poisoned every retry for the whole TTL — the content phase failed
+        # in milliseconds without calling the model at all (observed live
+        # 2026-09-14). Same fix as AE-0318 already applied to
+        # source_synthesis_agent.
         draft = self._parse_draft(raw)
+        if not from_cache:
+            self._cache.set(full_prompt, self.model_id, raw)
         draft["instruction_checksum"] = instruction.checksum
         draft["policy_version"] = instruction.policy_version
         draft["prompt_version"] = instruction.prompt_version
@@ -125,6 +134,27 @@ class ContentDraftAgent:
             enforced = await persona_agent.enforce(str(draft.get("draft_text", "")))
             draft["draft_text"] = enforced
         return draft
+
+    def _cached_raw(self, prompt: str) -> str | None:
+        """Return a cached response only while it still parses, evicting poison.
+
+        An entry written by an older deploy (or any response that stopped being
+        parseable) is dropped so the caller falls through to a fresh LLM call
+        instead of replaying the failure until the TTL expires.
+        """
+        cached = self._cache.get(prompt, self.model_id)
+        if cached is None:
+            return None
+        try:
+            self._parse_draft(cached)
+        except (ValueError, TypeError):
+            self._cache.delete(prompt, self.model_id)
+            logger.warning(
+                "content_draft_poisoned_cache_evicted",
+                model_id=self.model_id,
+            )
+            return None
+        return cached
 
     def _runnable_with_model_config(
         self, model_cfg: dict[str, object]

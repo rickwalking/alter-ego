@@ -26,7 +26,10 @@ from rag_backend.domain.constants.carousel import CAROUSEL_PROMPT_VERSION_V3
 from rag_backend.domain.constants.carousel_workflow import PHASE_OUTLINE
 from rag_backend.infrastructure.cache.ai_response_cache import get_ai_response_cache
 from rag_backend.infrastructure.llm.json_utils import extract_json
+from rag_backend.infrastructure.logging import get_logger
 from rag_backend.infrastructure.monitoring_langfuse import get_langfuse_runnable_config
+
+logger = get_logger()
 
 
 class OutlineAgent:
@@ -79,15 +82,43 @@ class OutlineAgent:
             version=CAROUSEL_PROMPT_VERSION_V3,
         )
         full_prompt = f"{instruction.instruction}\n\n{prompt_text}"
-        cached = self._cache.get(full_prompt, self.model_id)
-        raw = cached
+        raw = self._cached_raw(full_prompt)
+        from_cache = raw is not None
         if raw is None:
             messages: list[BaseMessage] = [HumanMessage(content=full_prompt)]
             response = await self.llm.ainvoke(messages, get_langfuse_runnable_config())
             raw = cast(str, response.content)
-            self._cache.set(full_prompt, self.model_id, raw)
 
-        return self._parse_outline(raw)
+        # AE-0330: parse BEFORE caching. GLM 5.2 can return empty content (its
+        # reasoning exhausted the token budget — observed live 2026-09-14, 31999
+        # of 32000 tokens spent thinking), and caching that empty string made
+        # every retry fail instantly for the whole TTL without calling the model
+        # at all. Same fix as AE-0318 already applied to source_synthesis_agent.
+        outline = self._parse_outline(raw)
+        if not from_cache:
+            self._cache.set(full_prompt, self.model_id, raw)
+        return outline
+
+    def _cached_raw(self, prompt: str) -> str | None:
+        """Return a cached response only while it still parses, evicting poison.
+
+        An entry written by an older deploy (or any response that stopped being
+        parseable) is dropped so the caller falls through to a fresh LLM call
+        instead of replaying the failure until the TTL expires.
+        """
+        cached = self._cache.get(prompt, self.model_id)
+        if cached is None:
+            return None
+        try:
+            self._parse_outline(cached)
+        except (ValueError, TypeError):
+            self._cache.delete(prompt, self.model_id)
+            logger.warning(
+                "outline_poisoned_cache_evicted",
+                model_id=self.model_id,
+            )
+            return None
+        return cached
 
     def _parse_outline(self, raw: str) -> list[dict[str, object]]:
         try:
