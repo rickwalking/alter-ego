@@ -54,11 +54,27 @@ class TestOutlineCachePoisoning:
     def _outline() -> list[dict[str, object]]:
         return [{"slide_index": 1, "title": "Hook", "key_points": ["Open strong"]}]
 
-    async def test_empty_response_is_not_cached_so_retry_reaches_the_model(
+    async def test_empty_response_is_rerolled_instead_of_failing_the_phase(
         self, agent: OutlineAgent, mock_llm: AsyncMock
     ) -> None:
-        # Scenario: an empty model response does not poison the retry (AE-0330)
+        # Scenario: an empty response is re-rolled (AE-0330). This is the live
+        # 2026-09-14 failure: one empty response killed the whole workflow.
         mock_llm.ainvoke.side_effect = [
+            MagicMock(content=""),
+            MagicMock(content=json.dumps(self._outline())),
+        ]
+
+        result = await agent.generate_outline("Topic", "Devs", "Brief", ["Source"])
+
+        assert result[0]["title"] == "Hook"
+        assert mock_llm.ainvoke.await_count == 2  # re-rolled, phase survived
+
+    async def test_two_empty_responses_raise_and_cache_nothing(
+        self, agent: OutlineAgent, mock_llm: AsyncMock
+    ) -> None:
+        # Scenario: the re-roll is bounded, and a failure caches nothing
+        mock_llm.ainvoke.side_effect = [
+            MagicMock(content=""),
             MagicMock(content=""),
             MagicMock(content=json.dumps(self._outline())),
         ]
@@ -68,7 +84,21 @@ class TestOutlineCachePoisoning:
         result = await agent.generate_outline("Topic", "Devs", "Brief", ["Source"])
 
         assert result[0]["title"] == "Hook"
-        assert mock_llm.ainvoke.await_count == 2  # retry hit the LLM, not a cache
+        assert mock_llm.ainvoke.await_count == 3  # nothing poisoned the retry
+
+    async def test_malformed_response_is_repaired(
+        self, agent: OutlineAgent, mock_llm: AsyncMock
+    ) -> None:
+        # Scenario: malformed-but-present output goes through the repair round-trip
+        mock_llm.ainvoke.side_effect = [
+            MagicMock(content="[not json"),
+            MagicMock(content=json.dumps(self._outline())),
+        ]
+
+        result = await agent.generate_outline("Topic", "Devs", "Brief", ["Source"])
+
+        assert result[0]["title"] == "Hook"
+        assert mock_llm.ainvoke.await_count == 2  # repaired, phase survived
 
     async def test_poisoned_cache_entry_is_evicted(
         self, agent: OutlineAgent, mock_llm: AsyncMock

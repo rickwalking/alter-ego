@@ -1,4 +1,4 @@
-Feature: Unparseable AI responses never poison the retry (AE-0330)
+Feature: Carousel agents survive a bad LLM response (AE-0330)
   The carousel agents share a process-wide TTL cache of raw LLM responses. When
   a response that cannot be parsed is written into it, every retry replays the
   same failure for the whole TTL window without ever calling the model again —
@@ -28,3 +28,20 @@ Feature: Unparseable AI responses never poison the retry (AE-0330)
     When the agent parses it successfully
     Then it is written to the cache
     And a repeated request is served from the cache without calling the model
+
+  Scenario: an empty response is re-rolled instead of failing the phase
+    Given the model returns empty content
+    When the agent detects there is nothing to parse
+    Then it re-rolls the original call once
+    And a good second sample completes the phase normally
+
+  Scenario: the re-roll is bounded
+    Given the model returns empty content twice in a row
+    When the agent has exhausted its re-roll
+    Then it raises the invalid-JSON error
+    And nothing unparseable is written to the cache
+
+  Scenario: malformed but present output is repaired
+    Given the model returns text that is not valid JSON
+    When the agent hands it back with the JSON repair prompt
+    Then the repaired response is parsed and the phase completes

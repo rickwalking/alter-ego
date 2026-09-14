@@ -139,8 +139,11 @@ class TestContentDraftAgent:
         )
         sentinel = {"callbacks": ["langfuse-marker"]}
 
+        # AE-0330 moved the invocation into the shared retry helper; the
+        # AE-0291 guarantee (the call carries the Langfuse config) is unchanged,
+        # so the patch follows the call to where it now lives.
         with patch(
-            "rag_backend.agents.content_draft_agent.get_langfuse_runnable_config",
+            "rag_backend.agents.llm_json_retry.get_langfuse_runnable_config",
             return_value=sentinel,
         ):
             await agent.draft_slide(1, "Title", ["Point"])
@@ -178,11 +181,26 @@ class TestContentDraftCachePoisoning:
             "sources_used": ["source-1"],
         }
 
-    async def test_empty_response_is_not_cached_so_retry_reaches_the_model(
+    async def test_empty_response_is_rerolled_instead_of_failing_the_phase(
         self, agent: ContentDraftAgent, mock_llm: AsyncMock
     ) -> None:
-        # Scenario: an empty model response does not poison the retry (AE-0330)
+        # Scenario: an empty response is re-rolled (AE-0330)
         mock_llm.ainvoke.side_effect = [
+            MagicMock(content=""),
+            MagicMock(content=json.dumps(self._payload())),
+        ]
+
+        result = await agent.draft_slide(1, "Title", ["Point"])
+
+        assert result["draft_text"] == "Slide copy"
+        assert mock_llm.ainvoke.await_count == 2  # re-rolled, phase survived
+
+    async def test_two_empty_responses_raise_and_cache_nothing(
+        self, agent: ContentDraftAgent, mock_llm: AsyncMock
+    ) -> None:
+        # Scenario: the re-roll is bounded, and a failure caches nothing
+        mock_llm.ainvoke.side_effect = [
+            MagicMock(content=""),
             MagicMock(content=""),
             MagicMock(content=json.dumps(self._payload())),
         ]
@@ -192,7 +210,21 @@ class TestContentDraftCachePoisoning:
         result = await agent.draft_slide(1, "Title", ["Point"])
 
         assert result["draft_text"] == "Slide copy"
-        assert mock_llm.ainvoke.await_count == 2  # retry hit the LLM, not a cache
+        assert mock_llm.ainvoke.await_count == 3  # nothing poisoned the retry
+
+    async def test_malformed_response_is_repaired(
+        self, agent: ContentDraftAgent, mock_llm: AsyncMock
+    ) -> None:
+        # Scenario: malformed-but-present output goes through the repair round-trip
+        mock_llm.ainvoke.side_effect = [
+            MagicMock(content="{not json"),
+            MagicMock(content=json.dumps(self._payload())),
+        ]
+
+        result = await agent.draft_slide(1, "Title", ["Point"])
+
+        assert result["draft_text"] == "Slide copy"
+        assert mock_llm.ainvoke.await_count == 2  # repaired, phase survived
 
     async def test_poisoned_cache_entry_is_evicted(
         self, agent: ContentDraftAgent, mock_llm: AsyncMock

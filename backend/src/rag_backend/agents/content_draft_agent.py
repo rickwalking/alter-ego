@@ -3,13 +3,13 @@
 from __future__ import annotations
 
 import json
-from typing import cast
 
 from langchain_core.language_models import BaseChatModel, LanguageModelInput
-from langchain_core.messages import BaseMessage, HumanMessage
+from langchain_core.messages import BaseMessage
 from langchain_core.runnables import Runnable
 
 from rag_backend.agents.input_sanitizer import sanitize_llm_input
+from rag_backend.agents.llm_json_retry import JsonRetryPolicy, ainvoke_json
 from rag_backend.agents.persona_agent import PersonaAgent
 from rag_backend.agents.prompts.registry import render_prompt
 from rag_backend.application.services.carousel.instruction_context_loader import (
@@ -27,7 +27,6 @@ from rag_backend.domain.models.persona import PersonaProfile
 from rag_backend.infrastructure.cache.ai_response_cache import get_ai_response_cache
 from rag_backend.infrastructure.llm.json_utils import extract_json
 from rag_backend.infrastructure.logging import get_logger
-from rag_backend.infrastructure.monitoring_langfuse import get_langfuse_runnable_config
 
 logger = get_logger()
 
@@ -108,23 +107,26 @@ class ContentDraftAgent:
             version=CAROUSEL_PROMPT_VERSION_V4,
         )
         full_prompt = f"{instruction.instruction}\n\n{prompt_text}"
-        raw = self._cached_raw(full_prompt)
-        from_cache = raw is not None
-        if raw is None:
-            messages: list[BaseMessage] = [HumanMessage(content=full_prompt)]
+        cached = self._cached_raw(full_prompt)
+        if cached is not None:
+            draft = self._parse_draft(cached)
+        else:
             # AE-0291: apply the v4 YAML model config (temperature/max_tokens) via a
             # per-call .bind — previously discarded, so the knobs were inert.
             runnable = self._runnable_with_model_config(model_cfg)
-            response = await runnable.ainvoke(messages, get_langfuse_runnable_config())
-            raw = cast(str, response.content)
-
-        # AE-0330: parse BEFORE caching. An empty/unparseable response cached
-        # here poisoned every retry for the whole TTL — the content phase failed
-        # in milliseconds without calling the model at all (observed live
-        # 2026-09-14). Same fix as AE-0318 already applied to
-        # source_synthesis_agent.
-        draft = self._parse_draft(raw)
-        if not from_cache:
+            # AE-0330: one bad response used to fail the whole workflow — GLM 5.2
+            # returned empty content live on 2026-09-14 and the phase died.
+            # Re-roll an empty response, repair a malformed one, and cache only
+            # what parsed (an unparseable raw poisons every retry for the TTL).
+            draft, raw = await ainvoke_json(
+                runnable,
+                full_prompt,
+                JsonRetryPolicy(
+                    parse=self._parse_draft,
+                    agent="content_draft",
+                    model_id=self.model_id,
+                ),
+            )
             self._cache.set(full_prompt, self.model_id, raw)
         draft["instruction_checksum"] = instruction.checksum
         draft["policy_version"] = instruction.policy_version

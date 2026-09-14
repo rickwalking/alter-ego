@@ -3,12 +3,11 @@
 from __future__ import annotations
 
 import json
-from typing import cast
 
 from langchain_core.language_models import BaseChatModel
-from langchain_core.messages import BaseMessage, HumanMessage
 
 from rag_backend.agents.input_sanitizer import sanitize_llm_input
+from rag_backend.agents.llm_json_retry import JsonRetryPolicy, ainvoke_json
 from rag_backend.agents.prompts.registry import render_prompt
 from rag_backend.application.services.carousel.instruction_context_loader import (
     CarouselInstructionContextLoader,
@@ -27,7 +26,6 @@ from rag_backend.domain.constants.carousel_workflow import PHASE_OUTLINE
 from rag_backend.infrastructure.cache.ai_response_cache import get_ai_response_cache
 from rag_backend.infrastructure.llm.json_utils import extract_json
 from rag_backend.infrastructure.logging import get_logger
-from rag_backend.infrastructure.monitoring_langfuse import get_langfuse_runnable_config
 
 logger = get_logger()
 
@@ -82,21 +80,24 @@ class OutlineAgent:
             version=CAROUSEL_PROMPT_VERSION_V3,
         )
         full_prompt = f"{instruction.instruction}\n\n{prompt_text}"
-        raw = self._cached_raw(full_prompt)
-        from_cache = raw is not None
-        if raw is None:
-            messages: list[BaseMessage] = [HumanMessage(content=full_prompt)]
-            response = await self.llm.ainvoke(messages, get_langfuse_runnable_config())
-            raw = cast(str, response.content)
+        cached = self._cached_raw(full_prompt)
+        if cached is not None:
+            return self._parse_outline(cached)
 
-        # AE-0330: parse BEFORE caching. GLM 5.2 can return empty content (its
-        # reasoning exhausted the token budget — observed live 2026-09-14, 31999
-        # of 32000 tokens spent thinking), and caching that empty string made
-        # every retry fail instantly for the whole TTL without calling the model
-        # at all. Same fix as AE-0318 already applied to source_synthesis_agent.
-        outline = self._parse_outline(raw)
-        if not from_cache:
-            self._cache.set(full_prompt, self.model_id, raw)
+        # AE-0330: one bad response used to fail the whole workflow — GLM 5.2
+        # returned empty content live on 2026-09-14 and the phase died. Re-roll
+        # an empty response, repair a malformed one, and cache only what parsed
+        # (an unparseable raw cached here poisons every retry for the TTL).
+        outline, raw = await ainvoke_json(
+            self.llm,
+            full_prompt,
+            JsonRetryPolicy(
+                parse=self._parse_outline,
+                agent="outline",
+                model_id=self.model_id,
+            ),
+        )
+        self._cache.set(full_prompt, self.model_id, raw)
         return outline
 
     def _cached_raw(self, prompt: str) -> str | None:
