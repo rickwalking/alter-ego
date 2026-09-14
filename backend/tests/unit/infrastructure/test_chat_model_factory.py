@@ -24,7 +24,7 @@ def _settings(
     *,
     llm_provider: str = "glm",
     glm_api_key: SecretStr = SecretStr(""),
-    glm_model: str = "glm-5.2",
+    glm_model: str = "glm-5.3",
     glm_base_url: str = "https://opencode.ai/zen/go/v1",
 ) -> Settings:
     return Settings(
@@ -50,18 +50,32 @@ def test_glm_provider_with_key_builds_openai_compatible_client() -> None:
         _settings(
             llm_provider="glm",
             glm_api_key=SecretStr("glm-key"),
-            glm_model="glm-5.2",
+            glm_model="glm-5.3",
             glm_base_url="https://opencode.ai/zen/go/v1",
         )
     )
     assert isinstance(model, ChatOpenAI)
-    assert model.model_name == "glm-5.2"
+    assert model.model_name == "glm-5.3"
 
 
 def test_glm_provider_without_key_falls_back_to_anthropic() -> None:
     # Scenario: GLM selected but no key (CI / prod not yet configured)
     model = build_chat_model(_settings(llm_provider="glm", glm_api_key=SecretStr("")))
     assert isinstance(model, ChatAnthropic)
+
+
+def test_shipped_default_model_is_glm_5_3() -> None:
+    # AE-0330: 5.2 returned empty content after spending 31999 of 32000 tokens
+    # reasoning, failing a live carousel phase. Pin the default so the move to
+    # 5.3 cannot be reverted silently.
+    assert (
+        Settings(
+            anthropic_api_key=SecretStr("a"),
+            secret_key=SecretStr("s"),
+            anon_secret_key=SecretStr("s"),
+        ).glm_model
+        == "glm-5.3"
+    )
 
 
 def test_default_provider_is_glm_but_safe_without_a_key() -> None:
@@ -84,7 +98,7 @@ def _stub_handler(captured: _CapturedRequests) -> type[BaseHTTPRequestHandler]:
                 "id": "stub",
                 "object": "chat.completion.chunk",
                 "created": 0,
-                "model": "glm-5.2",
+                "model": "glm-5.3",
                 "choices": [
                     {
                         "index": 0,
