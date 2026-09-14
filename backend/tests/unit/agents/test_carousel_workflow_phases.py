@@ -30,6 +30,7 @@ from rag_backend.application.services.carousel.workflow_state import (
     get_initial_carousel_state,
 )
 from rag_backend.domain.constants.carousel_workflow import (
+    CAROUSEL_GRAPH_RECURSION_LIMIT,
     INTERRUPT_TYPE_CONTENT_REVIEW,
     INTERRUPT_TYPE_DESIGN_REVIEW,
     INTERRUPT_TYPE_OUTLINE_REVIEW,
@@ -512,7 +513,11 @@ class TestCarouselWorkflowEngineLifecycle:
         )
 
         assert result["project_id"] == "project-9"
-        assert engine._app.last_config == {"configurable": {"thread_id": "project-9"}}
+        assert engine._app.last_config == {
+            "configurable": {"thread_id": "project-9"},
+            # AE-0330: every run is bounded so a self-routing loop dies fast.
+            "recursion_limit": CAROUSEL_GRAPH_RECURSION_LIMIT,
+        }
 
     @pytest.mark.asyncio
     async def test_get_state_returns_none_when_snapshot_missing(self) -> None:

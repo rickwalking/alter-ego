@@ -17,6 +17,7 @@ from rag_backend.application.services.carousel.workflow_state import (
     get_initial_carousel_state,
 )
 from rag_backend.domain.constants.carousel_workflow import (
+    CAROUSEL_GRAPH_RECURSION_LIMIT,
     PHASE_APPROVED_HOLD,
     PHASE_STATUS_AWAITING_HUMAN,
     PHASE_STATUS_IN_PROGRESS,
@@ -63,7 +64,11 @@ class CarouselWorkflowEngine:
         configurable: dict[str, object] = {"thread_id": project_id}
         if self._artifact_runner is not None:
             configurable[_CONFIG_ARTIFACT_RUNNER] = self._artifact_runner
-        return {"configurable": configurable}
+        return {
+            "configurable": configurable,
+            # AE-0330: bound any future self-routing loop to seconds.
+            "recursion_limit": CAROUSEL_GRAPH_RECURSION_LIMIT,
+        }
 
     @staticmethod
     def _merge_interrupt_review_payload(

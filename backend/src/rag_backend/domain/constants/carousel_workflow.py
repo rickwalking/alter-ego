@@ -93,6 +93,14 @@ STRUCTURED_FEEDBACK_EDITED_TEXT_KEY = "edited_text"
 STRUCTURED_FEEDBACK_EDITED_SLIDES_KEY = "edited_localized_slides"
 SEND_BACK_TARGET_PHASE_KEY = "send_back_target_phase"
 WORKFLOW_ERROR_KEY = "workflow_error"
+
+# AE-0330: explicit LangGraph recursion limit for the carousel graph. langgraph's
+# own default is 10007 (LANGGRAPH_DEFAULT_RECURSION_LIMIT), so a node that
+# routes back into itself ran for 14 minutes and wrote ~350k checkpoint rows
+# before dying. A legitimate run is short — max 20 steps, p95 13 across every
+# prod thread on 2026-09-14 — so 100 is a 5x ceiling that turns any future loop
+# into a seconds-long failure instead of a slow-motion outage.
+CAROUSEL_GRAPH_RECURSION_LIMIT = 100
 PERSONA_SCORE_OVERALL_KEY = "overall"
 SLIDE_DRAFT_TEXT_KEY = "draft_text"
 WORKFLOW_STATE_LINKEDIN_POST_PT_KEY = "linkedin_post_pt"
