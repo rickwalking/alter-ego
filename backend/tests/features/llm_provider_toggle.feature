@@ -20,6 +20,24 @@ Feature: Configurable backend chat LLM provider (AE-0285)
     Then it falls back to ChatAnthropic
     And a warning is logged so the misconfiguration is visible
 
+  Scenario: GLM requests carry the OpenCode session header (AE-0330)
+    Given llm_provider is "glm" and a GLM api key is set
+    When the chat model sends a request to the OpenCode Go endpoint
+    Then the request carries an "x-opencode-session" header
+    And it identifies itself with an "alter-ego/<version>" user agent
+    And OpenCode Go therefore does not reject it with 400 MissingSessionID
+
+  Scenario: the session id is stable for the life of a client (AE-0330)
+    Given a GLM chat model has been built
+    When two requests are made through it
+    Then both carry the same session id
+    And a separately built client uses a different session id
+
+  Scenario: the OpenCode headers do not leak onto Anthropic (AE-0330)
+    Given llm_provider is "anthropic"
+    When the chat model is built
+    Then it carries no OpenCode session header
+
   Scenario: provider swap is transparent to consumers
     Given any provider is configured
     When a consumer requests the chat model
