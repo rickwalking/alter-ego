@@ -146,6 +146,16 @@ Note the outline spiral itself was a **tail event, not reproducible**: the same
 prompt on retry used 7548 reasoning tokens (127s) and produced a valid outline.
 So no model-config change (`reasoning_effort` / `max_tokens`) is included.
 
+**Fourth change: GLM default moved 5.2 -> 5.3.** Requested directly by the
+user after the trade-off was raised. `glm-5.3` and `glm-5.3-flash` were verified
+present on the OpenCode Go endpoint first. Sampled on the same prompt shape, 5.3
+held 1605-1808 reasoning tokens where 5.2 ranged 49-31999 — suggestive, **not
+proof** it cannot spiral, since a tail event does not surface in a few samples
+(exactly how 5.2 looked healthy before failing prod). The `llm_json_retry`
+re-roll remains the real protection. **No A/B was run**; the open risk is the
+persona voice-match (>= 70) gate on PT copy, and voice-match scores on the first
+prod carousels are the signal to watch.
+
 **Scope note:** `pip-audit` is a blocking CI gate and had gone red repo-wide on
 freshly published advisories (19 across 7 packages, none introduced by this
 diff). Nothing merges until it is green, so the dependency bumps ship here.
