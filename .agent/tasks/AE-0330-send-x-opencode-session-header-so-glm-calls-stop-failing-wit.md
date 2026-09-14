@@ -113,6 +113,22 @@ the container layer only** — it is lost on any `docker compose up`/recreate, a
 is superseded by the real image on the next deploy. Merging this PR is still
 required.
 
+**Follow-on 504 (nginx), found after the hot-patch.** With GLM answering again,
+`POST workflow/start` ran its full length and nginx returned **504 Gateway
+Timeout** at 60s — while the backend finished at **68.5s** with a 200, published
+`phase_changed` + `review.requested` and advanced the project to
+`outline`/`approved`. The work landed; only the response was lost.
+
+Cause: `location /api/` set no `proxy_read_timeout`, falling back to nginx's 60s
+default. `/api/health` and `/api/conversations/` already carried 300s — the
+general api block was the gap, and the race only became visible once GLM calls
+stopped failing fast. Fixed in `nginx/nginx.conf{,.ssl}` and applied live
+(`nginx -t` + reload, original at `/root/hotfix-ae-0330/nginx.conf.ssl.orig`).
+
+Cloudflare still caps the edge at ~100s, so this covers the 60-100s band only;
+a generation slower than that needs `workflow/start` made async (202 + poll).
+Worth its own ticket.
+
 **Scope note:** `pip-audit` is a blocking CI gate and had gone red repo-wide on
 freshly published advisories (19 across 7 packages, none introduced by this
 diff). Nothing merges until it is green, so the dependency bumps ship here.
@@ -122,6 +138,8 @@ diff). Nothing merges until it is green, so the dependency bumps ship here.
 - `backend/src/rag_backend/infrastructure/external/chat_model_factory.py`
 - `backend/tests/unit/infrastructure/test_chat_model_factory.py`
 - `backend/tests/features/llm_provider_toggle.feature`
+- `backend/pyproject.toml`, `backend/uv.lock` (pip-audit gate — see Progress Log)
+- `nginx/nginx.conf`, `nginx/nginx.conf.ssl` (follow-on 504 — see Progress Log)
 
 ## Test Evidence
 
