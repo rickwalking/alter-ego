@@ -78,23 +78,21 @@ class _CapturedRequests(list[dict[str, str]]):
 
 def _stub_handler(captured: _CapturedRequests) -> type[BaseHTTPRequestHandler]:
     class Handler(BaseHTTPRequestHandler):
-        def do_POST(self) -> None:  # noqa: N802 - BaseHTTPRequestHandler contract
+        def do_POST(self) -> None:
             captured.append({k.lower(): v for k, v in self.headers.items()})
-            chunk = json.dumps(
-                {
-                    "id": "stub",
-                    "object": "chat.completion.chunk",
-                    "created": 0,
-                    "model": "glm-5.2",
-                    "choices": [
-                        {
-                            "index": 0,
-                            "finish_reason": "stop",
-                            "delta": {"role": "assistant", "content": "ok"},
-                        }
-                    ],
-                }
-            )
+            chunk = json.dumps({
+                "id": "stub",
+                "object": "chat.completion.chunk",
+                "created": 0,
+                "model": "glm-5.2",
+                "choices": [
+                    {
+                        "index": 0,
+                        "finish_reason": "stop",
+                        "delta": {"role": "assistant", "content": "ok"},
+                    }
+                ],
+            })
             body = f"data: {chunk}\n\ndata: [DONE]\n\n".encode()
             self.send_response(200)
             self.send_header("Content-Type", "text/event-stream")
@@ -168,6 +166,4 @@ def test_opencode_headers_do_not_leak_onto_anthropic() -> None:
     # Scenario: the OpenCode headers do not leak onto Anthropic (AE-0330)
     model = build_chat_model(_settings(llm_provider="anthropic"))
     assert isinstance(model, ChatAnthropic)
-    assert SESSION_HEADER not in {
-        key.lower() for key in (model.default_headers or {})
-    }
+    assert SESSION_HEADER not in {key.lower() for key in (model.default_headers or {})}
