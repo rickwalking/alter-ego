@@ -197,7 +197,23 @@ diff). Nothing merges until it is green, so the dependency bumps ship here.
 
 ## Test Evidence
 
-Pending gate capture.
+Final full backend gate set on `bfd21af7` (all eight fixes), captured via
+`scripts/ci/gate-capture.sh backend` — gate exit 0, mutation score 78.97%:
+
+GATES_JSON: {"pass":16,"fail":0,"skip":4,"results":[{"gate":"backend:format","status":"PASS"},{"gate":"backend:lint","status":"PASS"},{"gate":"backend:lint-diff","status":"PASS"},{"gate":"backend:blanket-ignore","status":"PASS"},{"gate":"backend:strict-diff","status":"PASS"},{"gate":"backend:type","status":"PASS"},{"gate":"backend:imports","status":"PASS"},{"gate":"backend:arch-ratchet","status":"PASS"},{"gate":"backend:docstrings","status":"PASS"},{"gate":"backend:dead-code","status":"PASS"},{"gate":"backend:inline-prompts","status":"PASS"},{"gate":"backend:redis-factory","status":"PASS"},{"gate":"backend:bandit","status":"PASS"},{"gate":"backend:pip-audit","status":"PASS"},{"gate":"backend:integrity","status":"PASS"},{"gate":"backend:test","status":"SKIP"},{"gate":"backend:diff-cover","status":"SKIP"},{"gate":"backend:migrations","status":"SKIP"},{"gate":"backend:schema-drift","status":"SKIP"},{"gate":"backend:mutation","status":"PASS"}]}
+
+The 4 SKIPs are the Postgres-dependent gates (test, diff-cover, migrations,
+schema-drift): no local Docker daemon, so no DATABASE_URL. CI runs them (green
+on the PR for every completed job). Compensating evidence: full suite by hand,
+**2890 passed / 7 skipped**.
+
+Every fix carries a test verified to FAIL with the fix reverted (negative
+control run, not assumed): session header (KeyError on the wire), cache
+poisoning (4 tests), retry/repair (6 tests), graph loop (GraphRecursionError
+with the routing reverted). Live verification on prod for each: pre-fix 400
+MissingSessionID → 200 with header; research completed 6 GLM calls; the
+incident carousel resumed after the loop fix and parked at the design gate in
+9s, one checkpoint step, zero LLM calls.
 
 ## QA Report
 
