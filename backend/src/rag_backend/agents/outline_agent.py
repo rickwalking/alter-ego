@@ -3,12 +3,11 @@
 from __future__ import annotations
 
 import json
-from typing import cast
 
 from langchain_core.language_models import BaseChatModel
-from langchain_core.messages import BaseMessage, HumanMessage
 
 from rag_backend.agents.input_sanitizer import sanitize_llm_input
+from rag_backend.agents.llm_json_retry import JsonRetryPolicy, ainvoke_json
 from rag_backend.agents.prompts.registry import render_prompt
 from rag_backend.application.services.carousel.instruction_context_loader import (
     CarouselInstructionContextLoader,
@@ -26,7 +25,9 @@ from rag_backend.domain.constants.carousel import CAROUSEL_PROMPT_VERSION_V3
 from rag_backend.domain.constants.carousel_workflow import PHASE_OUTLINE
 from rag_backend.infrastructure.cache.ai_response_cache import get_ai_response_cache
 from rag_backend.infrastructure.llm.json_utils import extract_json
-from rag_backend.infrastructure.monitoring_langfuse import get_langfuse_runnable_config
+from rag_backend.infrastructure.logging import get_logger
+
+logger = get_logger()
 
 
 class OutlineAgent:
@@ -79,15 +80,46 @@ class OutlineAgent:
             version=CAROUSEL_PROMPT_VERSION_V3,
         )
         full_prompt = f"{instruction.instruction}\n\n{prompt_text}"
-        cached = self._cache.get(full_prompt, self.model_id)
-        raw = cached
-        if raw is None:
-            messages: list[BaseMessage] = [HumanMessage(content=full_prompt)]
-            response = await self.llm.ainvoke(messages, get_langfuse_runnable_config())
-            raw = cast(str, response.content)
-            self._cache.set(full_prompt, self.model_id, raw)
+        cached = self._cached_raw(full_prompt)
+        if cached is not None:
+            return self._parse_outline(cached)
 
-        return self._parse_outline(raw)
+        # AE-0330: one bad response used to fail the whole workflow — GLM 5.2
+        # returned empty content live on 2026-09-14 and the phase died. Re-roll
+        # an empty response, repair a malformed one, and cache only what parsed
+        # (an unparseable raw cached here poisons every retry for the TTL).
+        outline, raw = await ainvoke_json(
+            self.llm,
+            full_prompt,
+            JsonRetryPolicy(
+                parse=self._parse_outline,
+                agent="outline",
+                model_id=self.model_id,
+            ),
+        )
+        self._cache.set(full_prompt, self.model_id, raw)
+        return outline
+
+    def _cached_raw(self, prompt: str) -> str | None:
+        """Return a cached response only while it still parses, evicting poison.
+
+        An entry written by an older deploy (or any response that stopped being
+        parseable) is dropped so the caller falls through to a fresh LLM call
+        instead of replaying the failure until the TTL expires.
+        """
+        cached = self._cache.get(prompt, self.model_id)
+        if cached is None:
+            return None
+        try:
+            self._parse_outline(cached)
+        except (ValueError, TypeError):
+            self._cache.delete(prompt, self.model_id)
+            logger.warning(
+                "outline_poisoned_cache_evicted",
+                model_id=self.model_id,
+            )
+            return None
+        return cached
 
     def _parse_outline(self, raw: str) -> list[dict[str, object]]:
         try:

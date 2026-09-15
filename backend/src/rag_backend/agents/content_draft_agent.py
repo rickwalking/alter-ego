@@ -3,13 +3,13 @@
 from __future__ import annotations
 
 import json
-from typing import cast
 
 from langchain_core.language_models import BaseChatModel, LanguageModelInput
-from langchain_core.messages import BaseMessage, HumanMessage
+from langchain_core.messages import BaseMessage
 from langchain_core.runnables import Runnable
 
 from rag_backend.agents.input_sanitizer import sanitize_llm_input
+from rag_backend.agents.llm_json_retry import JsonRetryPolicy, ainvoke_json
 from rag_backend.agents.persona_agent import PersonaAgent
 from rag_backend.agents.prompts.registry import render_prompt
 from rag_backend.application.services.carousel.instruction_context_loader import (
@@ -26,7 +26,9 @@ from rag_backend.domain.constants.carousel_workflow import PHASE_CONTENT
 from rag_backend.domain.models.persona import PersonaProfile
 from rag_backend.infrastructure.cache.ai_response_cache import get_ai_response_cache
 from rag_backend.infrastructure.llm.json_utils import extract_json
-from rag_backend.infrastructure.monitoring_langfuse import get_langfuse_runnable_config
+from rag_backend.infrastructure.logging import get_logger
+
+logger = get_logger()
 
 _MODEL_CFG_TEMPERATURE = "temperature"
 _MODEL_CFG_MAX_TOKENS = "max_tokens"
@@ -105,18 +107,27 @@ class ContentDraftAgent:
             version=CAROUSEL_PROMPT_VERSION_V4,
         )
         full_prompt = f"{instruction.instruction}\n\n{prompt_text}"
-        cached = self._cache.get(full_prompt, self.model_id)
-        raw = cached
-        if raw is None:
-            messages: list[BaseMessage] = [HumanMessage(content=full_prompt)]
+        cached = self._cached_raw(full_prompt)
+        if cached is not None:
+            draft = self._parse_draft(cached)
+        else:
             # AE-0291: apply the v4 YAML model config (temperature/max_tokens) via a
             # per-call .bind — previously discarded, so the knobs were inert.
             runnable = self._runnable_with_model_config(model_cfg)
-            response = await runnable.ainvoke(messages, get_langfuse_runnable_config())
-            raw = cast(str, response.content)
+            # AE-0330: one bad response used to fail the whole workflow — GLM 5.2
+            # returned empty content live on 2026-09-14 and the phase died.
+            # Re-roll an empty response, repair a malformed one, and cache only
+            # what parsed (an unparseable raw poisons every retry for the TTL).
+            draft, raw = await ainvoke_json(
+                runnable,
+                full_prompt,
+                JsonRetryPolicy(
+                    parse=self._parse_draft,
+                    agent="content_draft",
+                    model_id=self.model_id,
+                ),
+            )
             self._cache.set(full_prompt, self.model_id, raw)
-
-        draft = self._parse_draft(raw)
         draft["instruction_checksum"] = instruction.checksum
         draft["policy_version"] = instruction.policy_version
         draft["prompt_version"] = instruction.prompt_version
@@ -125,6 +136,27 @@ class ContentDraftAgent:
             enforced = await persona_agent.enforce(str(draft.get("draft_text", "")))
             draft["draft_text"] = enforced
         return draft
+
+    def _cached_raw(self, prompt: str) -> str | None:
+        """Return a cached response only while it still parses, evicting poison.
+
+        An entry written by an older deploy (or any response that stopped being
+        parseable) is dropped so the caller falls through to a fresh LLM call
+        instead of replaying the failure until the TTL expires.
+        """
+        cached = self._cache.get(prompt, self.model_id)
+        if cached is None:
+            return None
+        try:
+            self._parse_draft(cached)
+        except (ValueError, TypeError):
+            self._cache.delete(prompt, self.model_id)
+            logger.warning(
+                "content_draft_poisoned_cache_evicted",
+                model_id=self.model_id,
+            )
+            return None
+        return cached
 
     def _runnable_with_model_config(
         self, model_cfg: dict[str, object]

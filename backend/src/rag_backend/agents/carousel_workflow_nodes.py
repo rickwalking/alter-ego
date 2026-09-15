@@ -39,6 +39,7 @@ from rag_backend.domain.constants.carousel_workflow import (
     STRUCTURED_FEEDBACK_EDITED_SLIDES_KEY,
     STRUCTURED_FEEDBACK_KEY,
     STRUCTURED_FEEDBACK_TARGET_PHASE_KEY,
+    WORKFLOW_ERROR_KEY,
     WORKFLOW_STATUS_APPROVED_FOR_PUBLISH,
 )
 from rag_backend.domain.constants.workflow_state_fields import (
@@ -387,9 +388,26 @@ async def content_phase_async(
     config: RunnableConfig,
 ) -> dict[str, object]:
     merged = dict(state)
-    merged.update(await ensure_artifacts(state, config, PHASE_CONTENT))
-    if merged.get("phase_status") == PHASE_STATUS_FAILED:
+    artifact_updates = await ensure_artifacts(state, config, PHASE_CONTENT)
+    merged.update(artifact_updates)
+    # AE-0330: decide on THIS run's artifact result, not on whatever
+    # phase_status the checkpoint carried in. A failure here returns without
+    # interrupting and the graph routes it to END (_ROUTE_FAILED).
+    if artifact_updates.get("phase_status") == PHASE_STATUS_FAILED:
+        # Name the phase that failed. ensure_artifacts only stamps
+        # current_phase on its own copy, so without this the END state still
+        # says "outline" and needs_gate_reopen checks outline_approved (True)
+        # — a retry then resumes a finished graph and silently does nothing.
+        merged["current_phase"] = PHASE_CONTENT
         return merged
+    if merged.get("phase_status") == PHASE_STATUS_FAILED:
+        # Stale failure from a previous run whose artifacts have now been
+        # rebuilt successfully. Resume only flips the DB row to in_progress,
+        # never the checkpoint, so without this the old flag re-triggered the
+        # early return above on every retry — the second half of the live
+        # 2026-09-14 loop, with all seven drafts already present.
+        merged["phase_status"] = PHASE_STATUS_IN_PROGRESS
+        merged[WORKFLOW_ERROR_KEY] = ""
     sync_result = content_phase(cast(CarouselWorkflowState, merged), config)
     return {**merged, **sync_result}
 

@@ -168,6 +168,15 @@ http {
             limit_req zone=api burst=20 nodelay;
             proxy_pass http://backend/api/;
             proxy_http_version 1.1;
+            # AE-0330: without these nginx falls back to its 60s default, which
+            # is shorter than a synchronous carousel workflow/start (~68s live).
+            # nginx returned 504 while the backend went on to finish the run and
+            # advance the project — the work landed, the client just never saw
+            # it. /api/health and /api/conversations/ already carry 300s; this
+            # block was the gap. Cloudflare still caps the edge at ~100s, so a
+            # generation slower than that needs workflow/start made async.
+            proxy_read_timeout 300s;
+            proxy_send_timeout 300s;
             proxy_set_header Host $host;
             proxy_set_header X-Real-IP $remote_addr;
             proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;

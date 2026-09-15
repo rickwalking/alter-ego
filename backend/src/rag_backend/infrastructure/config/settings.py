@@ -53,11 +53,21 @@ class Settings(BaseSettings):
     llm_provider: str = "glm"
     glm_api_key: SecretStr = SecretStr("")
     glm_base_url: str = "https://opencode.ai/zen/go/v1"
-    # GLM 5.2 is a reasoning model (emits chain-of-thought before the answer), so
+    # GLM 5.3 is a reasoning model (emits chain-of-thought before the answer), so
     # the 32K max_tokens in the factory matters — a small budget is consumed by
     # reasoning before any content is produced. Model id uses a dot (verified
-    # live against the endpoint): "glm-5.2", not "glm-5-2".
-    glm_model: str = "glm-5.2"
+    # live against the endpoint): "glm-5.3", not "glm-5-3".
+    #
+    # AE-0330: moved up from 5.2 after 5.2 spent 31999 of its 32000 tokens
+    # reasoning on an outline prompt and returned empty content, failing the
+    # phase live on 2026-09-14. Sampled against the same prompt shape, 5.3 held
+    # a tight 1605-1808 reasoning tokens where 5.2 ranged 49-31999. That is
+    # suggestive, NOT proof it cannot spiral — a tail event will not show in a
+    # handful of samples, which is exactly how 5.2 looked healthy right before
+    # it failed. The llm_json_retry re-roll is what actually makes a bad sample
+    # survivable; this swap is a narrower distribution on top of it, not a
+    # replacement for it. Watch the persona voice-match (>= 70) on PT copy.
+    glm_model: str = "glm-5.3"
 
     # AE-0317 kill switch: when false, workflow-start web research (URL scraping
     # + DuckDuckGo topic search) is skipped and sources pass through unchanged.

@@ -30,12 +30,19 @@ from rag_backend.domain.constants.carousel_workflow import (
     PHASE_PUBLISHED,
     PHASE_RESEARCH,
     PHASE_STATUS_AWAITING_HUMAN,
+    PHASE_STATUS_FAILED,
     SEND_BACK_TARGET_PHASE_KEY,
 )
 
 _ROUTE_APPROVED = "approved"
 _ROUTE_RETRY = "retry"
 _ROUTE_DONE = "done"
+# AE-0330: a phase whose artifacts failed must leave the graph, not re-enter
+# itself. content_phase_async returns early on phase_status=failed WITHOUT
+# interrupting, so the old {approved, retry} map sent it straight back into the
+# same node: an instant loop with no LLM call that only stopped at langgraph's
+# 10007-step recursion limit (14 minutes, ~350k checkpoint rows, live 2026-09-14).
+_ROUTE_FAILED = "failed"
 
 _PHASE_APPROVAL_FIELDS: dict[str, str] = {
     PHASE_RESEARCH: "research_approved",
@@ -47,7 +54,13 @@ _PHASE_APPROVAL_FIELDS: dict[str, str] = {
 }
 
 
+def _phase_failed(state: CarouselWorkflowState) -> bool:
+    return str(state.get("phase_status", "")) == PHASE_STATUS_FAILED
+
+
 def route_after_gate(state: CarouselWorkflowState, approved_field: str) -> str:
+    if _phase_failed(state):
+        return _ROUTE_FAILED
     if state.get(approved_field):
         return _ROUTE_APPROVED
     return _ROUTE_RETRY
@@ -62,7 +75,10 @@ def needs_gate_reopen(snapshot: object) -> bool:
     if not isinstance(values, dict):
         return False
     phase_status = str(values.get("phase_status", ""))
-    if phase_status != PHASE_STATUS_AWAITING_HUMAN:
+    # AE-0330: a phase that failed now routes to END (see _ROUTE_FAILED). A
+    # retry must be able to re-enter it, exactly like a review gate stuck at
+    # END — otherwise Command(resume) on a finished graph is a silent no-op.
+    if phase_status not in {PHASE_STATUS_AWAITING_HUMAN, PHASE_STATUS_FAILED}:
         return False
     phase = str(values.get("current_phase", ""))
     if not phase or phase == PHASE_PUBLISHED:
@@ -79,6 +95,8 @@ def route_after_design(state: CarouselWorkflowState) -> str:
     every non-send-back review, so a stale value from a prior cycle cannot
     re-route a plain revise.
     """
+    if _phase_failed(state):
+        return _ROUTE_FAILED
     if state.get("design_approved"):
         return _ROUTE_APPROVED
     target = state.get(SEND_BACK_TARGET_PHASE_KEY)
@@ -140,17 +158,29 @@ def build_carousel_workflow_graph() -> StateGraph:
     graph.add_conditional_edges(
         PHASE_RESEARCH,
         lambda state: route_after_gate(state, "research_approved"),
-        {_ROUTE_APPROVED: PHASE_OUTLINE, _ROUTE_RETRY: PHASE_RESEARCH},
+        {
+            _ROUTE_APPROVED: PHASE_OUTLINE,
+            _ROUTE_RETRY: PHASE_RESEARCH,
+            _ROUTE_FAILED: END,
+        },
     )
     graph.add_conditional_edges(
         PHASE_OUTLINE,
         lambda state: route_after_gate(state, "outline_approved"),
-        {_ROUTE_APPROVED: PHASE_CONTENT, _ROUTE_RETRY: PHASE_OUTLINE},
+        {
+            _ROUTE_APPROVED: PHASE_CONTENT,
+            _ROUTE_RETRY: PHASE_OUTLINE,
+            _ROUTE_FAILED: END,
+        },
     )
     graph.add_conditional_edges(
         PHASE_CONTENT,
         lambda state: route_after_gate(state, "content_approved"),
-        {_ROUTE_APPROVED: PHASE_DESIGN, _ROUTE_RETRY: PHASE_CONTENT},
+        {
+            _ROUTE_APPROVED: PHASE_DESIGN,
+            _ROUTE_RETRY: PHASE_CONTENT,
+            _ROUTE_FAILED: END,
+        },
     )
     graph.add_conditional_edges(
         PHASE_DESIGN,
@@ -158,13 +188,18 @@ def build_carousel_workflow_graph() -> StateGraph:
         {
             _ROUTE_APPROVED: PHASE_IMAGES,
             _ROUTE_RETRY: PHASE_DESIGN,
+            _ROUTE_FAILED: END,
             PHASE_CONTENT: PHASE_CONTENT,
         },
     )
     graph.add_conditional_edges(
         PHASE_IMAGES,
         lambda state: route_after_gate(state, "images_approved"),
-        {_ROUTE_APPROVED: PHASE_FINAL_REVIEW, _ROUTE_RETRY: PHASE_IMAGES},
+        {
+            _ROUTE_APPROVED: PHASE_FINAL_REVIEW,
+            _ROUTE_RETRY: PHASE_IMAGES,
+            _ROUTE_FAILED: END,
+        },
     )
     graph.add_conditional_edges(
         PHASE_FINAL_REVIEW,

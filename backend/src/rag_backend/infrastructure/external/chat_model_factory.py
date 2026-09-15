@@ -8,6 +8,8 @@ Every consumer only depends on the LangChain ``BaseChatModel`` contract, so the
 provider is swapped here with no downstream change.
 """
 
+import uuid
+
 import structlog
 from langchain_anthropic import ChatAnthropic
 from langchain_core.language_models.chat_models import BaseChatModel
@@ -25,7 +27,32 @@ _TEMPERATURE = 0.7
 _MAX_TOKENS = 32000
 _MAX_RETRIES = 3
 
+# AE-0330: OpenCode Go rejects every request that carries no conversation header
+# with ``400 MissingSessionID`` ("Request is missing x-opencode-session and
+# cannot be routed efficiently"), which the workflow-start route then surfaced as
+# a 503 ``provider_unavailable`` — observed live in prod 2026-09-14. Their docs
+# also ask callers to identify with their own user agent instead of the generic
+# ``OpenAI/Python`` the SDK sends by default. Both go on the client as default
+# headers so every call made through it complies.
+_OPENCODE_SESSION_HEADER = "x-opencode-session"
+_USER_AGENT_HEADER = "User-Agent"
+_OPENCODE_SESSION_PREFIX = "alter-ego-"
+_USER_AGENT_PREFIX = "alter-ego/"
+
 logger = structlog.get_logger(__name__)
+
+
+def _opencode_headers(settings: Settings) -> dict[str, str]:
+    """Default headers the OpenCode Go endpoint requires of API callers.
+
+    The session id is minted once per client and therefore stays stable for the
+    life of the process (the chat model is a DI singleton), which is what their
+    routing and prompt-cache optimisation expects of a "conversation".
+    """
+    return {
+        _OPENCODE_SESSION_HEADER: f"{_OPENCODE_SESSION_PREFIX}{uuid.uuid4()}",
+        _USER_AGENT_HEADER: f"{_USER_AGENT_PREFIX}{settings.app_version}",
+    }
 
 
 def _build_glm_model(settings: Settings) -> ChatOpenAI:
@@ -38,6 +65,7 @@ def _build_glm_model(settings: Settings) -> ChatOpenAI:
         streaming=True,
         max_tokens=_MAX_TOKENS,
         max_retries=_MAX_RETRIES,
+        default_headers=_opencode_headers(settings),
     )
 
 
