@@ -1,6 +1,6 @@
 # AE-0331 — pin minio to quay.io so prod deploys stop failing at compose pull
 
-Status: In Development
+Status: Review
 Tier: T1
 Priority: Critical
 Type: Bug

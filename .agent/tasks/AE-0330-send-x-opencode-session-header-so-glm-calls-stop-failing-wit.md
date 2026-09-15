@@ -1,6 +1,6 @@
 # AE-0330 — send x-opencode-session header so glm calls stop failing with provider_unavailable
 
-Status: Dev Complete
+Status: Review
 Tier: T1
 Priority: Critical
 Type: Bug
