@@ -182,7 +182,11 @@ services:
         max-file: "3"
 
   minio:
-    image: minio/minio@sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e
+    # AE-0331: Docker Hub's minio/minio is no longer pullable (digest, latest and
+    # dated tags all 'pull access denied'), which aborted the 2026-09-15 deploy at
+    # `compose pull` after `compose down` and left prod with no containers. Same
+    # release, served from quay.io.
+    image: quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z
     command: server /data
     environment:
       MINIO_ROOT_USER: langfuse
@@ -201,7 +205,7 @@ services:
         max-file: "3"
 
   minio-init:
-    image: minio/minio@sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e
+    image: quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z
     entrypoint:
       - sh
       - -c
