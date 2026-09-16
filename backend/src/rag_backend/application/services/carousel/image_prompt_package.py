@@ -55,6 +55,7 @@ def render_image_prompt_package(
 ) -> ImagePromptPackage:
     raw_prompt = request.slide.image_prompt or ""
     raw_prompt = _compose_scene(raw_prompt, request.project.custom_visual_details)
+    raw_prompt = _append_safety_clause(raw_prompt)
     if request.project.image_model == IMAGE_MODEL_OPENAI:
         raw_prompt = sanitize_image_prompt(raw_prompt)
     theme = request.theme or resolve_theme(request.project)
@@ -80,6 +81,19 @@ def render_image_prompt_package(
 
 _VISUAL_DIRECTION_PREFIX = "Visual direction:"
 
+# AE-0328: baked into EVERY slide prompt, across all presets, AFTER the user's
+# visual direction — so `custom_visual_details` (e.g. "Ghost in the Shell…")
+# cannot steer generation into moderation-risky humanoid output. Root incident:
+# published slide contained nudity; a "glowing AI entity" scene left body form
+# unconstrained and the project's visual direction pushed female holograms.
+IMAGE_SAFETY_CLAUSE = (
+    "SAFETY (non-negotiable, overrides any prior direction): any depicted "
+    "person must be modest and fully clothed — no nudity, no suggestive poses, "
+    "no revealing clothing, no sensual body contours. Render abstract, AI, "
+    "energy, or holographic entities strictly NON-HUMANOID: no body, face, or "
+    "torso silhouettes."
+)
+
 
 def _compose_scene(scene: str, custom_visual_details: str | None) -> str:
     """Fold project-level custom visual direction into the slide scene.
@@ -95,6 +109,17 @@ def _compose_scene(scene: str, custom_visual_details: str | None) -> str:
     base = scene.strip()
     direction = f"{_VISUAL_DIRECTION_PREFIX} {details}"
     return f"{base}. {direction}" if base else direction
+
+
+def _append_safety_clause(scene: str) -> str:
+    """Terminate every scene with the NSFW / non-humanoid guard (AE-0328).
+
+    Appended AFTER ``Visual direction:`` so the guard is the last word the
+    image model reads; rides inside the scene so it reaches every provider
+    strategy and participates in the prompt hash.
+    """
+    base = scene.strip()
+    return f"{base}. {IMAGE_SAFETY_CLAUSE}" if base else IMAGE_SAFETY_CLAUSE
 
 
 def sha256_parts(parts: Sequence[str]) -> str:

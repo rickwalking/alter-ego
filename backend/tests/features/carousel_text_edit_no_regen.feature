@@ -50,3 +50,29 @@ Feature: Edit carousel text without regenerating images
     Given a completed carousel with rendered slide images
     When the user edits a slide's heading and body and saves
     Then the slide image assets are unchanged
+
+  # AE-0327 — stale client payloads must not clobber repaired copy ------------
+
+  Scenario: Slide edit re-repairs the merged copy in the same transaction
+    Given a completed project on a casing-rules policy whose projection was repaired
+    And a client edit payload built from the STALE pre-repair checkpoint copy
+    When the reviewer submits the slide edit
+    Then the persisted slide copy satisfies the casing policy again
+    And the fresh validation report carries no casing violations
+    And the checkpoint receives the repaired copy, not the stale payload
+
+  Scenario: Editing one slide leaves other repaired slides untouched
+    Given a completed project with two repaired slides
+    When the reviewer edits only the second slide
+    Then the first slide's repaired copy is byte-identical after the edit
+
+  Scenario: Reviewer capitalization fixes survive the automatic repair
+    Given an edit that capitalizes a proper noun the policy noun list misses
+    When the reviewer submits the slide edit
+    Then the repaired copy keeps the reviewer's capitalization
+
+  Scenario: A stale lock_version loses the CAS and conflicts
+    Given a completed project whose lock_version advanced after the client read it
+    When the reviewer submits a slide edit carrying the stale lock_version
+    Then the request fails with the typed version_conflict 409
+    And no slide copy, republish marker, or checkpoint write is persisted

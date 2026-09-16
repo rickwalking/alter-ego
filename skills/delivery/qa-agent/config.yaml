@@ -59,8 +59,8 @@ qa_mode:
 
 external_qa_reviewers:
   - id: opencode
-    label: OpenCode (CrofAI / kimi-k2.6 or configured default)
-    command_hint: "scripts/qa/run_external_qa.sh <prompt> <out> opencode — plan (read-only) agent with repo access; clean-kill + stream health check handled by the script"
+    label: OpenCode (funded route pinned via EXT_OPENCODE_MODEL, default opencode-go/glm-5.2)
+    command_hint: "scripts/qa/run_external_qa.sh <prompt> <out> opencode — plan (read-only) agent with repo access; clean-kill + stream health check handled by the script. Model pin (AE-0292): the lib passes -m $EXT_OPENCODE_MODEL (default opencode-go/glm-5.2, the funded route); override the env var to change it. Empty replies retry once with a no-tools preamble, then exit 5."
   - id: codex
     label: OpenAI Codex CLI
     command_hint: "scripts/qa/run_external_qa.sh <prompt> <out> codex — read-only sandbox at repo root; subject to usage limits"

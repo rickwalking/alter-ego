@@ -9,7 +9,14 @@ republish). The sequence mirrors the repair two-commit contract:
    (a held lock raises the typed ``mutation_in_progress`` conflict) for the WHOLE
    sequence so a concurrent repair/republish serializes.
 2. Read the authoritative ``carousel_slides`` projection, merge the reviewer
-   edits by slide index, and re-validate (severity-aware, policy-versioned).
+   edits by slide index, then run the deterministic repair pass over the merged
+   copy and re-validate (severity-aware, policy-versioned). The repair pass is
+   the AE-0327 clobber guard: clients naturally build edit payloads from the
+   checkpoint-backed state endpoint, which is STALER than a repaired
+   projection — a whole-locale payload replace would silently reintroduce the
+   casing violations POST /repair fixed (the 2026-07-22 prod incident; the
+   manual recovery was "re-run repair after any PATCH"). Repair is idempotent
+   and only uppercases/canonicalizes, so intentional reviewer fixes survive.
 3. ``lock_version`` compare-and-swap, then write the projection + stamp the
    persisted ``needs_republish`` marker in ONE transaction.
 4. Converge the checkpoint (source-of-truth option (a), pinned): write the edited
@@ -27,6 +34,9 @@ from uuid import UUID
 import structlog
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from rag_backend.application.services.carousel.carousel_repair_pipeline import (
+    compute_localized_repairs,
+)
 from rag_backend.application.services.carousel.carousel_repair_projection import (
     apply_localized_to_slides,
     localized_from_slides,
@@ -44,8 +54,6 @@ from rag_backend.application.services.carousel.presentation_review_pipeline impo
     WORKFLOW_STATE_LOCALIZED_SLIDES_KEY,
     WORKFLOW_STATE_PRESENTATION_POLICY_VERSION_KEY,
     WORKFLOW_STATE_PRESENTATION_VALIDATION_KEY,
-    validate_localized_slides,
-    validation_report_to_dict,
 )
 from rag_backend.application.services.workflow_event_service import WorkflowEventService
 from rag_backend.domain.constants.carousel_conflicts import (
@@ -123,14 +131,18 @@ class CarouselSlideEditService:
             return await self._edit_locked(command)
 
     async def _edit_locked(self, command: SlideEditCommand) -> SlideEditResult:
-        """Gather → merge → validate → persist inside the critical section."""
+        """Gather → merge → repair → validate → persist inside the critical section."""
         slides = await self._repo.get_slides_by_project(UUID(command.project_id))
         merged = merge_localized_slide_edits(
             localized_from_slides(slides), command.edited_slides
         )
-        report = validation_report_to_dict(
-            validate_localized_slides(merged, policy_version=command.policy_version)
+        # AE-0327: repair the merged copy in the SAME transaction so a stale
+        # client payload cannot reintroduce violations a prior repair fixed.
+        repair = await compute_localized_repairs(
+            merged, policy_version=command.policy_version
         )
+        merged = repair.repaired_slides
+        report = repair.report
         await self._take_cas(command)
         updated = await apply_localized_to_slides(self._repo, slides, merged)
         await CarouselProjectWriteOwner(self._db).mark_needs_republish(
@@ -143,6 +155,7 @@ class CarouselSlideEditService:
             LOG_EVENT_SLIDE_EDITED,
             project_id=command.project_id,
             slide_indexes=list(updated),
+            casing_repairs=len(repair.diffs),
             checkpoint_updated=checkpoint_updated,
         )
         return SlideEditResult(

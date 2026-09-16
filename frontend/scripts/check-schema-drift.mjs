@@ -21,12 +21,13 @@
  * follow-up once the reported drift is 0 — see
  * docs/frontend/phase-7-baseline.md.
  *
- * Scope note: dependency-free static analysis. The Zod side is parsed from the
- * `z.object({...})` literal of each mapped schema (the schemas in src/schemas
- * are flat object literals, by convention). The OpenAPI side reads the JSON
- * `components.schemas` block. This intentionally avoids a bundler/AST toolchain
- * to stay aligned with the other Phase 7 gate scripts (url-inventory, feature
- * boundaries), which are also plain static scans.
+ * Scope note: static analysis with the TypeScript compiler API (AE-0323). The
+ * Zod side is parsed from the `z.object({...})` literal of each mapped schema
+ * (the schemas in src/schemas are flat object literals, by convention) via
+ * `ts.createSourceFile` — NOT a hand-rolled char walk, which misread comments
+ * and string contents as fields (`// AE-0298` was reported as an
+ * EXTRA-FRONTEND-FIELD). `typescript` is already a direct dependency, so this
+ * adds no toolchain. The OpenAPI side reads the JSON `components.schemas` block.
  *
  * Usage:
  *   node scripts/check-schema-drift.mjs            # print advisory report (exit 0)
@@ -34,10 +35,14 @@
  */
 
 import { readFileSync } from "node:fs";
-import { join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const FRONTEND_ROOT = join(fileURLToPath(new URL(".", import.meta.url)), "..");
+import ts from "typescript";
+
+// resolve(dirname(fileURLToPath(...))) — the `new URL(".", import.meta.url)`
+// variant throws under the vitest transform (AE-0323 test imports).
+const FRONTEND_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const REPO_ROOT = join(FRONTEND_ROOT, "..");
 const OPENAPI_PATH = join(REPO_ROOT, "docs/architecture/openapi.json");
 const SCHEMAS_DIR = join(FRONTEND_ROOT, "src/schemas");
@@ -84,88 +89,85 @@ const SCHEMA_MAP = [
 const OPAQUE = "<opaque>";
 
 /**
- * Slice the `{ ... }` body of the FIRST `z.object(` after the named export.
- *
- * @param {string} source full TS file text
- * @param {string} constName e.g. "documentSchema"
- * @returns {string | null} the brace body (without the outer braces) or null
+ * First `z.object({...})` literal inside the initializer of `const <constName>`.
+ * @param {import("typescript").SourceFile} sourceFile
+ * @param {string} constName
+ * @returns {import("typescript").ObjectLiteralExpression | null}
  */
-function extractZodObjectBody(source, constName) {
-  const declRe = new RegExp(`export\\s+const\\s+${constName}\\b`);
-  const declMatch = declRe.exec(source);
-  if (!declMatch) {
-    return null;
-  }
-  const objIdx = source.indexOf("z.object(", declMatch.index);
-  if (objIdx === -1) {
-    return null;
-  }
-  const braceStart = source.indexOf("{", objIdx);
-  if (braceStart === -1) {
-    return null;
-  }
-  let depth = 0;
-  for (let i = braceStart; i < source.length; i += 1) {
-    const ch = source[i];
-    if (ch === "{") {
-      depth += 1;
-    } else if (ch === "}") {
-      depth -= 1;
-      if (depth === 0) {
-        return source.slice(braceStart + 1, i);
-      }
+function findZodObjectLiteral(sourceFile, constName) {
+  /** @type {import("typescript").ObjectLiteralExpression | null} */
+  let literal = null;
+  /** @param {import("typescript").Node} node */
+  const findCall = (node) => {
+    if (literal) {
+      return;
     }
-  }
-  return null;
+    if (
+      ts.isCallExpression(node) &&
+      node.expression.getText(sourceFile) === "z.object" &&
+      node.arguments.length > 0 &&
+      ts.isObjectLiteralExpression(node.arguments[0])
+    ) {
+      literal = node.arguments[0];
+      return;
+    }
+    ts.forEachChild(node, findCall);
+  };
+  /** @param {import("typescript").Node} node */
+  const findDecl = (node) => {
+    if (literal) {
+      return;
+    }
+    if (
+      ts.isVariableDeclaration(node) &&
+      ts.isIdentifier(node.name) &&
+      node.name.text === constName &&
+      node.initializer
+    ) {
+      findCall(node.initializer);
+      return;
+    }
+    ts.forEachChild(node, findDecl);
+  };
+  findDecl(sourceFile);
+  return literal;
 }
 
 /**
- * Split an object-literal body into top-level `key: value` field entries,
- * respecting nesting and ignoring commas inside nested braces/parens/brackets.
- *
- * @param {string} body
- * @returns {{ name: string, expr: string }[]}
+ * Extract the top-level `key: value` fields of the mapped schema's
+ * `z.object({...})` literal via the TS compiler API — comments and string
+ * contents are trivia/tokens to the parser, so they can never corrupt field
+ * extraction (the old char-walk misread `// AE-0298` as a field name).
+ * @param {string} source
+ * @param {string} constName
+ * @returns {{ name: string, expr: string }[] | null}
  */
-function splitTopLevelFields(body) {
+export function extractZodObjectFields(source, constName) {
+  const sourceFile = ts.createSourceFile(
+    "schema.ts",
+    source,
+    ts.ScriptTarget.Latest,
+    true,
+  );
+  const literal = findZodObjectLiteral(sourceFile, constName);
+  if (!literal) {
+    return null;
+  }
   /** @type {{ name: string, expr: string }[]} */
   const fields = [];
-  let depth = 0;
-  let current = "";
-  for (const ch of body) {
-    if (ch === "{" || ch === "(" || ch === "[") {
-      depth += 1;
-    } else if (ch === "}" || ch === ")" || ch === "]") {
-      depth -= 1;
+  for (const prop of /** @type {import("typescript").ObjectLiteralExpression} */ (
+    literal
+  ).properties) {
+    if (!ts.isPropertyAssignment(prop)) {
+      continue; // spreads / methods are not flat DTO fields — stay out of the map
     }
-    if (ch === "," && depth === 0) {
-      pushField(fields, current);
-      current = "";
-      continue;
-    }
-    current += ch;
+    const name =
+      ts.isIdentifier(prop.name) || ts.isStringLiteralLike(prop.name)
+        ? prop.name.text
+        : prop.name.getText(sourceFile);
+    fields.push({ name, expr: prop.initializer.getText(sourceFile) });
   }
-  pushField(fields, current);
   return fields;
-}
-
-/**
- * @param {{ name: string, expr: string }[]} fields
- * @param {string} raw
- */
-function pushField(fields, raw) {
-  const trimmed = raw.trim();
-  if (!trimmed) {
-    return;
-  }
-  const colon = trimmed.indexOf(":");
-  if (colon === -1) {
-    return;
-  }
-  const name = trimmed.slice(0, colon).trim().replace(/['"]/g, "");
-  const expr = trimmed.slice(colon + 1).trim();
-  if (name) {
-    fields.push({ name, expr });
-  }
 }
 
 /**
@@ -176,7 +178,7 @@ function pushField(fields, raw) {
  * @param {string} expr e.g. `z.string().nullable().optional()`
  * @returns {{ type: string, nullable: boolean, optional: boolean }}
  */
-function classifyZodExpr(expr) {
+export function classifyZodExpr(expr) {
   const nullable = /\.nullable\(\)/.test(expr);
   const optional = /\.optional\(\)/.test(expr);
   let type = OPAQUE;
@@ -204,13 +206,13 @@ function classifyZodExpr(expr) {
  */
 function parseZodSchema(file, constName) {
   const source = readFileSync(join(SCHEMAS_DIR, file), "utf8");
-  const body = extractZodObjectBody(source, constName);
-  if (body === null) {
+  const fields = extractZodObjectFields(source, constName);
+  if (fields === null) {
     return null;
   }
   /** @type {Record<string, { type: string, nullable: boolean, optional: boolean }>} */
   const out = {};
-  for (const { name, expr } of splitTopLevelFields(body)) {
+  for (const { name, expr } of fields) {
     out[name] = classifyZodExpr(expr);
   }
   return out;
@@ -270,21 +272,30 @@ function parseOpenApiComponent(component) {
  * @returns {string[]}
  */
 function compareEntry(entry, openApiSchemas) {
-  /** @type {string[]} */
-  const findings = [];
-
   const component = openApiSchemas[entry.openapi];
   if (!component) {
-    findings.push(`MISSING-COMPONENT: OpenAPI has no schema "${entry.openapi}" (mapping is stale or the backend renamed/removed it).`);
-    return findings;
+    return [`MISSING-COMPONENT: OpenAPI has no schema "${entry.openapi}" (mapping is stale or the backend renamed/removed it).`];
   }
 
   const zodFields = parseZodSchema(entry.file, entry.zod);
   if (zodFields === null) {
-    findings.push(`UNPARSEABLE-ZOD: could not extract a z.object literal for "${entry.zod}" in ${entry.file}.`);
-    return findings;
+    return [`UNPARSEABLE-ZOD: could not extract a z.object literal for "${entry.zod}" in ${entry.file}.`];
   }
 
+  return compareFields(zodFields, component);
+}
+
+/**
+ * Pure drift comparison between a classified Zod field map and one OpenAPI
+ * component schema (exported for the AE-0180 rule-fires tests).
+ *
+ * @param {Record<string, { type: string, nullable: boolean, optional: boolean }>} zodFields
+ * @param {Record<string, unknown>} component
+ * @returns {string[]}
+ */
+export function compareFields(zodFields, component) {
+  /** @type {string[]} */
+  const findings = [];
   const { props: apiProps, required } = parseOpenApiComponent(component);
   const zodNames = new Set(Object.keys(zodFields));
   const apiNames = new Set(Object.keys(apiProps));
@@ -386,4 +397,9 @@ function main() {
   process.exit(0);
 }
 
-main();
+// Run only when executed directly (`node scripts/check-schema-drift.mjs`) —
+// the AE-0323 tests import the parser/comparator functions without side effects.
+// endsWith (not fileURLToPath equality): vitest imports carry a non-file URL.
+if (process.argv[1] && process.argv[1].endsWith("check-schema-drift.mjs")) {
+  main();
+}

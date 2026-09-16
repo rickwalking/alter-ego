@@ -109,6 +109,17 @@ WAVE_REPORT_PREFIX = "wave-"
 GATES_FAIL_FIELD_RE = re.compile(r'"fail":\s*(\d+)')
 GATES_SKIP_FIELD_RE = re.compile(r'"skip":\s*(\d+)')
 
+# --- Dirty-tree taint (AE-0322) ----------------------------------------------
+# gate-capture.sh stamps `"dirty":N` into the echoed GATES_JSON line when it ran
+# over a working tree with N uncommitted/untracked in-scope source files
+# (GATE_CAPTURE_ALLOW_DIRTY=1). Diff-based gates cannot see uncommitted work, so
+# a dirty>0 proof BLOCKS the transition unless the dev-summary carries a
+# DIRTY_WAIVER: line naming the files and why they belong to other sessions.
+GATES_DIRTY_FIELD_RE = re.compile(r'"dirty":\s*(\d+)')
+# [^\S\n]* = horizontal whitespace only: the justification must be on the SAME
+# line — a bare `DIRTY_WAIVER:` (no files/reason) does not count as a waiver.
+DIRTY_WAIVER_RE = re.compile(r"^DIRTY_WAIVER:[^\S\n]*\S", re.MULTILINE)
+
 # The reviewed commit SHA the proof is pinned to (AC: SHA mismatch ⇒ WARNING).
 # A report SHOULD record the commit it was produced against on a line like:
 #   Commit: <40-or-7-hex>

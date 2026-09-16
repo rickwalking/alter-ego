@@ -247,6 +247,124 @@ class TestSlideEditService:
             assert result.needs_republish is True
             assert result.checkpoint_updated is False
 
+
+_V2 = "hero_lower_third_v2"
+_STALE_PT_BODY = (
+    "um corpo que veio do checkpoint antigo. outra frase minúscula do payload."
+)
+
+
+def _v2_command(
+    project: CarouselProjectModel, edited: list[dict[str, object]]
+) -> SlideEditCommand:
+    return SlideEditCommand(
+        project_id=str(project.id),
+        phase_status=str(project.phase_status or ""),
+        lock_version=1,
+        policy_version=_V2,
+        actor_user_id="user-1",
+        edited_slides=edited,
+    )
+
+
+@pytest.mark.asyncio
+class TestSlideEditRepairsStalePayloads:
+    """AE-0327 (tests/features/carousel_text_edit_no_regen.feature).
+
+    Prod incident 2026-07-22 (project ee540af1): POST /repair fixed
+    sentence-casing on the projection; a PATCH built from the STALER
+    checkpoint-backed state endpoint then replaced whole locale payloads,
+    silently reintroducing the repaired violations. The edit service now runs
+    the deterministic repair pass over the merged copy in the same
+    transaction, so the manual "re-run repair after any PATCH" recovery dies.
+    """
+
+    # Scenario: Slide edit re-repairs the merged copy in the same transaction
+    async def test_stale_payload_is_re_repaired_before_persisting(
+        self, test_engine: AsyncEngine
+    ) -> None:
+        async with _factory(test_engine)() as db:
+            project = await _add_completed_project(db)
+            project.presentation_policy_version = _V2
+            await db.commit()
+            workflow = _FakeWorkflow(parked=True)
+            stale = _edit_payload(heading="título vindo do checkpoint")
+            pt = cast(dict[str, object], stale["presentation_pt"])
+            pt["body"] = _STALE_PT_BODY
+            result = await _service(db, workflow).edit(_v2_command(project, [stale]))
+
+            slide = await _slide(db, str(project.id))
+            # The repair pass uppercased the stale sentence starts (the exact
+            # violation class the 2026-07-22 clobber reintroduced).
+            assert slide.heading.startswith("Título")
+            assert slide.body.startswith("Um corpo")
+            assert ". Outra frase" in slide.body
+            # The checkpoint converged on the REPAIRED copy, not the stale one.
+            assert workflow.writes
+            written_slides = cast(
+                list[dict[str, object]], workflow.writes[0]["localized_slides"]
+            )
+            written_pt = cast(dict[str, object], written_slides[0]["presentation_pt"])
+            assert str(written_pt["body"]).startswith("Um corpo")
+            assert result.status == SLIDE_EDIT_STATUS_UPDATED
+
+    # Scenario: Reviewer capitalization fixes survive the automatic repair
+    async def test_reviewer_capitalization_survives_repair(
+        self, test_engine: AsyncEngine
+    ) -> None:
+        async with _factory(test_engine)() as db:
+            project = await _add_completed_project(db)
+            project.presentation_policy_version = _V2
+            await db.commit()
+            workflow = _FakeWorkflow(parked=True)
+            # "China" is NOT in the policy noun list — the repair must keep the
+            # reviewer's mid-sentence capitalization (repair only uppercases).
+            edit = _edit_payload(body="A China lidera a corrida. Outro fato aqui.")
+            await _service(db, workflow).edit(_v2_command(project, [edit]))
+
+            slide = await _slide(db, str(project.id))
+            assert "A China lidera" in slide.body
+
+    # Scenario: Editing one slide leaves other repaired slides untouched
+    async def test_untouched_slide_keeps_repaired_copy(
+        self, test_engine: AsyncEngine
+    ) -> None:
+        async with _factory(test_engine)() as db:
+            project = await _add_completed_project(db)
+            project.presentation_policy_version = _V2
+            db.add(
+                CarouselSlideModel(
+                    id=str(uuid.uuid4()),
+                    project_id=project.id,
+                    slide_number=2,
+                    slide_type="summary",
+                    heading="Segundo título já reparado",
+                    body="Um corpo já reparado. Tudo maiúsculo no lugar certo.",
+                    image_path=_IMAGE,
+                    image_prompt="p",
+                    extras={
+                        "translation_en": {"heading": "Second", "body": "Body two."}
+                    },
+                )
+            )
+            await db.commit()
+            workflow = _FakeWorkflow(parked=True)
+            edit = dict(_edit_payload())
+            edit["slide_index"] = 1
+            await _service(db, workflow).edit(_v2_command(project, [edit]))
+
+            rows = (
+                await db.scalars(
+                    select(CarouselSlideModel)
+                    .where(CarouselSlideModel.project_id == str(project.id))
+                    .order_by(CarouselSlideModel.slide_number)
+                )
+            ).all()
+            assert rows[1].heading == "Segundo título já reparado"
+            assert rows[1].body == (
+                "Um corpo já reparado. Tudo maiúsculo no lugar certo."
+            )
+
     async def test_summary_extras_are_edited(self, test_engine: AsyncEngine) -> None:
         # AC: editing a summary slide edits its structured extras.
         async with _factory(test_engine)() as db:
@@ -270,6 +388,8 @@ class TestSlideEditService:
             assert exc.value.conflict.code == CONFLICT_CODE_RUN_IN_PROGRESS
 
     async def test_stale_cas_loses(self, test_engine: AsyncEngine) -> None:
+        # Scenario: A stale lock_version loses the CAS and conflicts
+        # (tests/features/carousel_text_edit_no_regen.feature, AE-0327 edge)
         async with _factory(test_engine)() as db:
             project = await _add_completed_project(db)
             pid = str(project.id)

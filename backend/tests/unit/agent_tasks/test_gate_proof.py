@@ -135,6 +135,66 @@ def teardown_module(_module: object) -> None:
         _TMP.rmdir()
 
 
+# --- AE-0322 rule-fires: dirty>0 blocks without a DIRTY_WAIVER ----------------
+# gate-capture.sh stamps "dirty":N when it ran over uncommitted in-scope source
+# files (GATE_CAPTURE_ALLOW_DIRTY=1); diff-based gates did not see that work.
+_GATES_JSON_DIRTY = 'GATES_JSON: {"dirty":2,"pass":7,"fail":0,"skip":0,"results":[]}'
+_GATES_JSON_DIRTY_ZERO = (
+    'GATES_JSON: {"dirty":0,"pass":7,"fail":0,"skip":0,"results":[]}'
+)
+_WAIVER_LINE = "DIRTY_WAIVER: backend/other.py — other session's uncommitted work"
+
+
+def test_proof_rejects_dirty_without_waiver() -> None:
+    outcome = evaluate_gate_proof(
+        _written("d1.qa.md", f"AE-1 {_GATES_JSON_DIRTY}"), "report"
+    )
+    assert any("dirty>0" in e for e in outcome.errors), outcome
+
+
+def test_proof_allows_dirty_with_waiver_but_warns() -> None:
+    outcome = evaluate_gate_proof(
+        _written("d2.qa.md", f"AE-1 {_GATES_JSON_DIRTY}\n{_WAIVER_LINE}\n"), "report"
+    )
+    assert outcome.errors == [], outcome.errors
+    assert any("DIRTY_WAIVER" in w for w in outcome.warnings), outcome.warnings
+
+
+def test_proof_empty_waiver_line_still_blocks() -> None:
+    outcome = evaluate_gate_proof(
+        _written("d3.qa.md", f"AE-1 {_GATES_JSON_DIRTY}\nDIRTY_WAIVER:\n"), "report"
+    )
+    assert any("dirty>0" in e for e in outcome.errors), outcome
+
+
+# --- QA r2 (2026-07-23): EVERY GATES_JSON line is evaluated, not just the
+# first — a wave report pins one line per scope.
+def test_second_gates_line_fail_blocks() -> None:
+    body = f"AE-1\n{_GATES_JSON_PASS}\n{_GATES_JSON_FAIL}\n"
+    outcome = evaluate_gate_proof(_written("m1.qa.md", body), "report")
+    assert any("fail>0" in e for e in outcome.errors), outcome
+
+
+def test_second_gates_line_dirty_blocks_without_waiver() -> None:
+    body = f"AE-1\n{_GATES_JSON_PASS}\n{_GATES_JSON_DIRTY}\n"
+    outcome = evaluate_gate_proof(_written("m2.qa.md", body), "report")
+    assert any("dirty>0" in e for e in outcome.errors), outcome
+
+
+def test_two_clean_gates_lines_pass() -> None:
+    body = f"AE-1\n{_GATES_JSON_PASS}\n{_GATES_JSON_PASS}\n"
+    outcome = evaluate_gate_proof(_written("m3.qa.md", body), "report")
+    assert outcome.errors == [], outcome.errors
+
+
+def test_proof_dirty_zero_is_clean() -> None:
+    outcome = evaluate_gate_proof(
+        _written("d4.qa.md", f"AE-1 {_GATES_JSON_DIRTY_ZERO}"), "report"
+    )
+    assert outcome.errors == [], outcome.errors
+    assert not any("dirty" in w.lower() for w in outcome.warnings), outcome.warnings
+
+
 # --- AE-0258 coupling test: a REAL gates.sh line parses ----------------------
 # Runs an actual single fast gate and feeds its GATES_JSON line to the parser,
 # proving the validator stays coupled to the real script's output format.

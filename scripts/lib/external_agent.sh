@@ -19,11 +19,24 @@
 #   EXTERNAL_STREAM_WAIT_SECS   default 90   (OpenCode must stream within this)
 #   EXTERNAL_RUN_TIMEOUT_SECS   default 1500 (hard per-run timeout)
 #     (QA_RUN_TIMEOUT_SECS is honored as a back-compat fallback)
+#   EXT_OPENCODE_MODEL          default opencode-go/glm-5.2 (AE-0292)
+#     Funded routes (keep this list current): opencode-go/glm-5.2.
+#     Do NOT use opencode/glm-5.2 — that is the Zen route opencode resolves to
+#     WITHOUT -m, and it dies with "Insufficient balance". Reasoning runs take
+#     3-8 min: run in background, redirect stdin from /dev/null.
 # =============================================================================
 
 EXT_OPENCODE_LOG="${EXT_OPENCODE_LOG:-$HOME/.local/share/opencode/log/opencode.log}"
 EXT_STREAM_WAIT_SECS="${EXTERNAL_STREAM_WAIT_SECS:-90}"
 EXT_RUN_TIMEOUT_SECS="${EXTERNAL_RUN_TIMEOUT_SECS:-${QA_RUN_TIMEOUT_SECS:-1500}}"
+EXT_OPENCODE_MODEL="${EXT_OPENCODE_MODEL:-opencode-go/glm-5.2}"
+
+# Preamble for the engagement-retry (AE-0292): reasoning models sometimes go
+# agentic (tool-hunting) under the plan agent and stream NOTHING back; the
+# retry pins them to plain analysis. Distinct exit code so callers can react
+# (e.g. fall back to codex) instead of accepting a silent empty verdict.
+EXT_NO_TOOLS_PREAMBLE="IMPORTANT: do NOT use tools. Respond with analysis only."
+EXT_EXIT_EMPTY_OUTPUT=5
 
 # Resolve repo root from this lib's location (scripts/lib/ -> repo root).
 EXT_REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -47,7 +60,10 @@ _ext_run_opencode() {
   pkill -9 opencode 2>/dev/null || true
   local marker
   marker=$(wc -l < "$EXT_OPENCODE_LOG" 2>/dev/null || echo 0)
-  timeout "$EXT_RUN_TIMEOUT_SECS" opencode run --agent plan "$(cat "$prompt_file")" \
+  # -m pins the FUNDED route (AE-0292): without it opencode's plan agent
+  # resolves to the unfunded Zen glm-5.2 and dies with "Insufficient balance".
+  timeout "$EXT_RUN_TIMEOUT_SECS" opencode run -m "$EXT_OPENCODE_MODEL" --agent plan \
+    "$(cat "$prompt_file")" \
     > "$output_file" 2> "$output_file.log" &
   local pid=$! waited=0
   while [ "$waited" -lt "$EXT_STREAM_WAIT_SECS" ]; do
@@ -75,20 +91,47 @@ _ext_run_cursor() {
     > "$2" 2> "$2.log" || true
 }
 
+# ext_output_engaged <output-file> -> 0 if the file has non-whitespace content.
+ext_output_engaged() {
+  [ -s "$1" ] && grep -q '[^[:space:]]' "$1"
+}
+
+# _ext_opencode_engaged <prompt-file> <output-file>  (AE-0292)
+#   Runs OpenCode (with the hung-launch retry) and then applies the engagement
+#   sanity check: an empty/whitespace-only reply gets ONE retry with the
+#   no-tools preamble prepended; a second empty reply is a hard failure with a
+#   distinct exit code (EXT_EXIT_EMPTY_OUTPUT) so the caller can fall back to
+#   another tool instead of accepting a silent empty verdict.
+_ext_opencode_engaged() {
+  local prompt_file="$1" output_file="$2"
+  if ! _ext_run_opencode "$prompt_file" "$output_file"; then
+    echo "external-agent: retrying once after hung launch" >&2
+    _ext_run_opencode "$prompt_file" "$output_file" || {
+      echo "ERROR: opencode hung twice" >&2; return 3; }
+  fi
+  ext_output_engaged "$output_file" && return 0
+
+  echo "WARN: opencode returned empty output — retrying once with the no-tools preamble (AE-0292)" >&2
+  local preamble_prompt="$output_file.no-tools-prompt"
+  { echo "$EXT_NO_TOOLS_PREAMBLE"; echo; cat "$prompt_file"; } > "$preamble_prompt"
+  if ! _ext_run_opencode "$preamble_prompt" "$output_file"; then
+    echo "ERROR: opencode hung on the engagement retry" >&2; return 3
+  fi
+  ext_output_engaged "$output_file" && return 0
+  echo "ERROR: opencode produced empty output twice — engagement failure (AE-0292)" >&2
+  return "$EXT_EXIT_EMPTY_OUTPUT"
+}
+
 # ext_run <tool> <prompt-file> <output-file>
-#   Runs the prompt; for OpenCode retries once on a hung launch.
-#   Returns 0 on a run that produced output, 3 on launch failure / double-hang.
+#   Runs the prompt; for OpenCode retries once on a hung launch and once on an
+#   empty (non-engaged) reply.
+#   Returns 0 on a run that produced output, 3 on launch failure / double-hang,
+#   EXT_EXIT_EMPTY_OUTPUT (5) on a double-empty OpenCode reply.
 ext_run() {
   local tool="$1" prompt_file="$2" output_file="$3"
   echo "external-agent: tool=$tool prompt=$prompt_file" >&2
   case "$tool" in
-    opencode)
-      if ! _ext_run_opencode "$prompt_file" "$output_file"; then
-        echo "external-agent: retrying once after hung launch" >&2
-        _ext_run_opencode "$prompt_file" "$output_file" || {
-          echo "ERROR: opencode hung twice" >&2; return 3; }
-      fi
-      ;;
+    opencode)            _ext_opencode_engaged "$prompt_file" "$output_file" || return $? ;;
     codex)               _ext_run_codex "$prompt_file" "$output_file" ;;
     cursor-agent|cursor) _ext_run_cursor "$prompt_file" "$output_file" ;;
     none|*) echo "ERROR: no external CLI available (opencode/codex/cursor-agent)" >&2; return 3 ;;
