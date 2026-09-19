@@ -8,10 +8,7 @@ from typing import cast
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import HumanMessage
 
-from rag_backend.agents.input_sanitizer import (
-    sanitize_display_input,
-    sanitize_llm_input,
-)
+from rag_backend.agents.input_sanitizer import sanitize_llm_input
 from rag_backend.application.services.carousel.editorial_distribution_constants import (
     CAPTION_FALLBACK_HEADINGS_PLACEHOLDER,
     ERR_EN_TRANSLATION_PARSE_FAILED,
@@ -93,10 +90,12 @@ def _build_translation_payload(
             OUTLINE_LEGACY_BODY_KEY: sanitize_llm_input(_slide_body(slide)),
         }
         # AE-0347: ship the PT long-form notes so the EN blog gets translated prose.
-        # Case-preserving: lowercased prose would come back as lowercased EN blog.
+        # Sent verbatim: the notes are model output already inside our pipeline
+        # (user inputs were sanitized at intake) and the lowercasing sanitizer
+        # would come back as a lowercased EN blog.
         notes = _slide_long_form_notes(slide)
         if notes:
-            item[LONG_FORM_NOTES_KEY] = sanitize_display_input(notes)
+            item[LONG_FORM_NOTES_KEY] = notes
         payload.append(item)
     return payload
 

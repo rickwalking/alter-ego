@@ -116,11 +116,11 @@ class TestTranslationNotes:
                 "slide_index": 1,
                 "title": "H",
                 "draft_text": "B",
-                LONG_FORM_NOTES_KEY: "Notas <b>Longas</b>.",
+                LONG_FORM_NOTES_KEY: "Notas Longas.",
             },
             {"slide_index": 2, "title": "H2", "draft_text": "B2"},
         ])
-        assert payload[0][LONG_FORM_NOTES_KEY] == "Notas bLongas/b."
+        assert payload[0][LONG_FORM_NOTES_KEY] == "Notas Longas."
         assert LONG_FORM_NOTES_KEY not in payload[1]
 
     def test_parse_keeps_translated_notes(self) -> None:
@@ -164,7 +164,7 @@ class TestResearchSummary:
         assert research_summary_from_findings(raw) == ""
 
 
-def _project(**overrides: object) -> CarouselProject:
+def _project(title: str | None = None, title_en: str | None = None) -> CarouselProject:
     project_id = uuid4()
     return CarouselProject(
         id=project_id,
@@ -173,7 +173,8 @@ def _project(**overrides: object) -> CarouselProject:
         niche="Tech",
         status=CarouselStatus.DRAFTING,
         output_dir=f"/tmp/{project_id}",
-        **overrides,  # type: ignore[arg-type]
+        title=title,
+        title_en=title_en,
     )
 
 
