@@ -8,6 +8,9 @@ from uuid import UUID
 from langchain_core.language_models import BaseChatModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from rag_backend.application.services.carousel.blog_composition import (
+    _resolve_slide_index,
+)
 from rag_backend.application.services.carousel.editorial_distribution_blog import (
     BlogBuildContext,
     build_blog_markdown_en_from_translations,
@@ -16,6 +19,8 @@ from rag_backend.application.services.carousel.editorial_distribution_blog impor
 from rag_backend.application.services.carousel.editorial_distribution_constants import (
     BLOG_LANG_ENGLISH,
     BLOG_LANG_PORTUGUESE,
+    DEFAULT_UNTITLED_SLIDE_LABEL,
+    OUTLINE_LEGACY_HEADING_KEY,
 )
 from rag_backend.application.services.carousel.editorial_distribution_generation import (
     _generate_caption,
@@ -26,6 +31,9 @@ from rag_backend.application.services.carousel.editorial_distribution_persist im
 )
 from rag_backend.application.services.carousel.editorial_distribution_persist import (
     apply_slide_drafts_to_database,
+)
+from rag_backend.application.services.carousel.editorial_distribution_slide import (
+    _slide_heading,
 )
 from rag_backend.application.services.carousel.presentation_review import (
     WORKFLOW_STATE_TRANSLATIONS_EN_KEY,
@@ -38,9 +46,12 @@ from rag_backend.domain.constants.carousel_workflow import (
     WORKFLOW_STATE_LINKEDIN_POST_EN_KEY,
     WORKFLOW_STATE_LINKEDIN_POST_PT_KEY,
 )
+from rag_backend.domain.models import CarouselProject
 from rag_backend.infrastructure.database.carousel_repository import (
     PostgresCarouselRepository,
 )
+
+INTRO_SLIDE_INDEX = 1
 
 
 @dataclass(frozen=True)
@@ -53,6 +64,35 @@ class DistributionBuildContext:
     outline: list[dict[str, object]]
     slide_drafts: list[dict[str, object]]
     research_summary: str = ""
+
+
+def _ensure_blog_titles(
+    project: CarouselProject,
+    slide_drafts: list[dict[str, object]],
+    translations_en: dict[int, dict[str, object]],
+) -> None:
+    """AE-0347: derive PT/EN titles from the intro slide when none are set.
+
+    The editorial path never called ``set_title``/``set_title_en``, so the blog H1
+    fell back to the raw (often English) ``topic`` in BOTH languages. Never
+    overwrite a title the user or a prior run already set.
+    """
+    dicts = [(i, s) for i, s in enumerate(slide_drafts, start=1) if isinstance(s, dict)]
+    if not dicts:
+        return
+    intro = next(
+        (s for i, s in dicts if _resolve_slide_index(s, i) == INTRO_SLIDE_INDEX),
+        dicts[0][1],
+    )
+    if not project.title:
+        heading = _slide_heading(intro)
+        if heading and heading != DEFAULT_UNTITLED_SLIDE_LABEL:
+            project.set_title(heading)
+    if not project.title_en:
+        en = translations_en.get(_resolve_slide_index(intro, INTRO_SLIDE_INDEX), {})
+        en_heading = str(en.get(OUTLINE_LEGACY_HEADING_KEY) or "").strip()
+        if en_heading:
+            project.set_title_en(en_heading)
 
 
 async def build_editorial_distribution_updates(
@@ -81,6 +121,7 @@ async def build_editorial_distribution_updates(
     if project is None:
         return {}
 
+    _ensure_blog_titles(project, context.slide_drafts, translations_en)
     blog_title = project.title or project.topic
     blog_en_title = project.title_en or blog_title
     composition_kwargs = {

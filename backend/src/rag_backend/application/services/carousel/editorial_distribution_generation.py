@@ -22,6 +22,7 @@ from rag_backend.application.services.carousel.editorial_distribution_constants 
 from rag_backend.application.services.carousel.editorial_distribution_slide import (
     _slide_body,
     _slide_heading,
+    _slide_long_form_notes,
 )
 from rag_backend.application.services.carousel.types import MAX_SLIDES
 from rag_backend.application.services.carousel_template import CarouselTemplateBuilder
@@ -82,12 +83,21 @@ def _build_translation_payload(
     for slide in slide_drafts[:MAX_SLIDES]:
         if not isinstance(slide, dict):
             continue
-        index = int(slide.get(SLIDE_INDEX_KEY, 0))
-        payload.append({
+        # AE-0347: fall back to the 1-based position like every other resolver.
+        index = int(slide.get(SLIDE_INDEX_KEY, len(payload) + 1))
+        item: dict[str, object] = {
             SLIDE_INDEX_KEY: index,
             OUTLINE_LEGACY_HEADING_KEY: sanitize_llm_input(_slide_heading(slide)),
             OUTLINE_LEGACY_BODY_KEY: sanitize_llm_input(_slide_body(slide)),
-        })
+        }
+        # AE-0347: ship the PT long-form notes so the EN blog gets translated prose.
+        # Sent verbatim: the notes are model output already inside our pipeline
+        # (user inputs were sanitized at intake) and the lowercasing sanitizer
+        # would come back as a lowercased EN blog.
+        notes = _slide_long_form_notes(slide)
+        if notes:
+            item[LONG_FORM_NOTES_KEY] = notes
+        payload.append(item)
     return payload
 
 

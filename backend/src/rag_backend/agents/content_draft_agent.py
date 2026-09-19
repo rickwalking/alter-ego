@@ -8,7 +8,10 @@ from langchain_core.language_models import BaseChatModel, LanguageModelInput
 from langchain_core.messages import BaseMessage
 from langchain_core.runnables import Runnable
 
-from rag_backend.agents.input_sanitizer import sanitize_llm_input
+from rag_backend.agents.input_sanitizer import (
+    sanitize_display_input,
+    sanitize_llm_input,
+)
 from rag_backend.agents.llm_json_retry import JsonRetryPolicy, ainvoke_json
 from rag_backend.agents.persona_agent import PersonaAgent
 from rag_backend.agents.prompts.registry import render_prompt
@@ -21,7 +24,7 @@ from rag_backend.application.services.carousel.presentation_policy import (
     render_presentation_policy_context,
 )
 from rag_backend.domain.constants.ai_agents import ERR_INVALID_JSON
-from rag_backend.domain.constants.carousel import CAROUSEL_PROMPT_VERSION_V4
+from rag_backend.domain.constants.carousel import CAROUSEL_PROMPT_VERSION_V5
 from rag_backend.domain.constants.carousel_workflow import PHASE_CONTENT
 from rag_backend.domain.models.persona import PersonaProfile
 from rag_backend.infrastructure.cache.ai_response_cache import get_ai_response_cache
@@ -30,6 +33,7 @@ from rag_backend.infrastructure.logging import get_logger
 
 logger = get_logger()
 
+LOG_LONG_FORM_NOTES_MISSING = "content_draft.long_form_notes_missing"
 _MODEL_CFG_TEMPERATURE = "temperature"
 _MODEL_CFG_MAX_TOKENS = "max_tokens"
 _BINDABLE_MODEL_KEYS = (_MODEL_CFG_TEMPERATURE, _MODEL_CFG_MAX_TOKENS)
@@ -53,6 +57,7 @@ class ContentDraftAgent:
         self.model_id = model_id
         self._cache = get_ai_response_cache()
         self._instruction_loader = CarouselInstructionContextLoader()
+        self._prompt_version = CAROUSEL_PROMPT_VERSION_V5
 
     async def draft_slide(
         self,
@@ -82,14 +87,15 @@ class ContentDraftAgent:
                 persona_context=persona_context,
                 revision_notes=revision_notes,
                 slide_number=slide_index,
-                prompt_version=CAROUSEL_PROMPT_VERSION_V4,
+                prompt_version=CAROUSEL_PROMPT_VERSION_V5,
                 sibling_context=sibling_context,
                 previous_draft=previous_draft,
             )
         )
         policy = load_presentation_policy(instruction.policy_version)
         # AE-0291: revision notes are rendered ONCE, in the instruction context above.
-        # The v4 template no longer carries a second {{ revision_notes }} block.
+        # AE-0347: v5 additionally requires long_form_notes (blog source).
+        # The v4/v5 template no longer carries a second {{ revision_notes }} block.
         prompt_text, model_cfg = render_prompt(
             "carousel",
             "content",
@@ -104,7 +110,7 @@ class ContentDraftAgent:
                 ),
                 "persona_context": persona_context or "Default professional voice.",
             },
-            version=CAROUSEL_PROMPT_VERSION_V4,
+            version=CAROUSEL_PROMPT_VERSION_V5,
         )
         full_prompt = f"{instruction.instruction}\n\n{prompt_text}"
         cached = self._cached_raw(full_prompt)
@@ -128,6 +134,7 @@ class ContentDraftAgent:
                 ),
             )
             self._cache.set(full_prompt, self.model_id, raw)
+        self._warn_if_notes_missing(draft, slide_index)
         draft["instruction_checksum"] = instruction.checksum
         draft["policy_version"] = instruction.policy_version
         draft["prompt_version"] = instruction.prompt_version
@@ -187,8 +194,27 @@ class ContentDraftAgent:
             draft["icon_name"] = icon_name.strip()
         long_form_notes = data.get("long_form_notes")
         if isinstance(long_form_notes, str) and long_form_notes.strip():
-            draft["long_form_notes"] = long_form_notes.strip()
+            # AE-0347: case-preserving sanitization at the source — the notes are
+            # later fed verbatim into the translation prompt and the public blog.
+            draft["long_form_notes"] = sanitize_display_input(long_form_notes)
         return draft
+
+    def _warn_if_notes_missing(
+        self, draft: dict[str, object], slide_index: int
+    ) -> None:
+        """AE-0347: a note-less reply silently reproduces the H1-only blog section.
+
+        Fires once per drafted slide (not per parse) with enough context for ops
+        to correlate the affected slide.
+        """
+        if "long_form_notes" in draft:
+            return
+        logger.warning(
+            LOG_LONG_FORM_NOTES_MISSING,
+            slide_index=slide_index,
+            model_id=self.model_id,
+            prompt_version=self._prompt_version,
+        )
 
 
 __all__ = ["ContentDraftAgent"]

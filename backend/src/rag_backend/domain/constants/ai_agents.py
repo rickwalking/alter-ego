@@ -35,8 +35,9 @@ PROMPT_EDITORIAL_SLIDE_TRANSLATIONS = """Translate carousel slide copy to Englis
 Input slides (PT):
 {slides_json}
 
-Return JSON only: {{"slides_en": [{{"slide_index": 1, "heading": "...", "body": "..."}}]}}
-Use the same slide_index values. Translate heading and body only.
+Return JSON only: {{"slides_en": [{{"slide_index": 1, "heading": "...", "body": "...", "long_form_notes": "..."}}]}}
+Use the same slide_index values. Translate heading, body and long_form_notes
+(when present; keep its paragraph breaks). Add nothing else.
 """
 
 PROMPT_EDITORIAL_CAPTION_FALLBACK = """Write an Instagram caption (max 2200 chars) for this carousel.

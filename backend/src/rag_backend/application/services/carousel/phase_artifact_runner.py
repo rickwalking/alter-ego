@@ -12,6 +12,9 @@ from rag_backend.agents.content_draft_agent import ContentDraftAgent
 from rag_backend.agents.feedback_learning import FeedbackLearningLoop
 from rag_backend.agents.outline_agent import OutlineAgent
 from rag_backend.agents.persona_agent import PersonaAgent
+from rag_backend.application.services.carousel.blog_composition import (
+    research_summary_from_findings,
+)
 from rag_backend.application.services.carousel.content_fail_closed import (
     FailClosedReviewCommand,
     SlideDraftRetryFn,
@@ -42,6 +45,7 @@ from rag_backend.domain.constants.carousel_workflow import (
 from rag_backend.domain.constants.workflow_state_fields import (
     STATE_FIELD_DESIGN_RECOVERY_HINT,
     STATE_FIELD_PRESENTATION_VALIDATION,
+    STATE_FIELD_RESEARCH_FINDINGS,
 )
 from rag_backend.domain.models.persona import PersonaProfile
 from rag_backend.infrastructure.external.openai_embeddings import (  # type: ignore[attr-defined]
@@ -248,7 +252,9 @@ class PhaseArtifactRunner:
                 slide_drafts=[
                     slide for slide in slide_drafts if isinstance(slide, dict)
                 ],
-                research_summary=str(state.get("research_summary", "") or ""),
+                research_summary=research_summary_from_findings(
+                    state.get(STATE_FIELD_RESEARCH_FINDINGS)
+                ),
             ),
             linkedin_generator=container.linkedin_post_generator(),
         )

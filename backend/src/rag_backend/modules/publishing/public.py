@@ -93,6 +93,9 @@ from rag_backend.modules.publishing.infrastructure.distribution_channel_adapter 
 from rag_backend.modules.publishing.infrastructure.legacy_publishing_acl import (
     LegacyPublishingAcl,
 )
+from rag_backend.modules.publishing.infrastructure.public_visibility import (
+    public_blog_visibility_clause,
+)
 from rag_backend.modules.publishing.infrastructure.publishing_port_adapters import (
     AclBlogPostCrudAdapter,
     AclBlogScheduleAdapter,
@@ -154,4 +157,5 @@ __all__ = [
     "ReleasePhase",
     "ReleaseState",
     "bootstrap_module",
+    "public_blog_visibility_clause",
 ]
