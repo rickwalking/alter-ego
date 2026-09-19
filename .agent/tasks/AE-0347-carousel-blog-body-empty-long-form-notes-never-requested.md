@@ -1,6 +1,6 @@
 # AE-0347 — Carousel blog body is an H1-only stub: long_form_notes never requested, research never fed, titles never set, non-public carousels leak publicly
 
-Status: In Development
+Status: Review
 Tier: T2
 Priority: High
 Type: Bugfix
@@ -92,11 +92,11 @@ See `backend/tests/features/carousel_blog_body_ae0347.feature`.
 
 ## QA Checklist
 
-- [ ] Security reviewed
-- [ ] Code quality reviewed
-- [ ] Acceptance criteria validated
-- [ ] Edge cases tested
-- [ ] Orphan/unfinished code checked
+- [x] Security reviewed
+- [x] Code quality reviewed
+- [x] Acceptance criteria validated
+- [x] Edge cases tested
+- [x] Orphan/unfinished code checked
 
 ## Progress Log
 
@@ -137,11 +137,17 @@ threat, pre-fix rows have no notes at all (that was the bug).
 
 ## Test Evidence
 
-Pending gate capture.
+```bash
+bash scripts/ci/gate-capture.sh backend   # exit 0 — PASS=16 FAIL=0 SKIP=4 (DB gates), mutation 78.65%
+bash scripts/ci/check-integrity.sh backend # PASS: 0 blockers, 0 warnings
+cd backend && uv run pytest tests -q --ignore=tests/e2e --ignore=tests/load   # 2925 passed, 7 skipped
+uv run pytest tests/unit/application/test_carousel_blog_body_ae0347.py tests/integration/test_public_blog_api_ae0297.py -q  # 22 + 17 passed
+```
+GATES_JSON line: `.agent/reports/AE-0347.dev-summary.md` (Gate proof).
 
 ## QA Report
 
-Pending.
+`.agent/reports/AE-0347.qa.md` — external (GLM 5.2 via OpenCode), 3 rounds, final VERDICT PASS.
 
 ## Decision Log
 
@@ -157,4 +163,4 @@ None.
 
 ## Final Summary
 
-Pending.
+Blog body now composed from v5 long-form notes + research intro + derived titles; public blog reads gated on carousel `is_public`. Existing prod stubs need a content re-run per project.
