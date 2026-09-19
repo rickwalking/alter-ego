@@ -8,7 +8,10 @@ from typing import cast
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import HumanMessage
 
-from rag_backend.agents.input_sanitizer import sanitize_llm_input
+from rag_backend.agents.input_sanitizer import (
+    sanitize_display_input,
+    sanitize_llm_input,
+)
 from rag_backend.application.services.carousel.editorial_distribution_constants import (
     CAPTION_FALLBACK_HEADINGS_PLACEHOLDER,
     ERR_EN_TRANSLATION_PARSE_FAILED,
@@ -22,6 +25,7 @@ from rag_backend.application.services.carousel.editorial_distribution_constants 
 from rag_backend.application.services.carousel.editorial_distribution_slide import (
     _slide_body,
     _slide_heading,
+    _slide_long_form_notes,
 )
 from rag_backend.application.services.carousel.types import MAX_SLIDES
 from rag_backend.application.services.carousel_template import CarouselTemplateBuilder
@@ -83,11 +87,17 @@ def _build_translation_payload(
         if not isinstance(slide, dict):
             continue
         index = int(slide.get(SLIDE_INDEX_KEY, 0))
-        payload.append({
+        item: dict[str, object] = {
             SLIDE_INDEX_KEY: index,
             OUTLINE_LEGACY_HEADING_KEY: sanitize_llm_input(_slide_heading(slide)),
             OUTLINE_LEGACY_BODY_KEY: sanitize_llm_input(_slide_body(slide)),
-        })
+        }
+        # AE-0347: ship the PT long-form notes so the EN blog gets translated prose.
+        # Case-preserving: lowercased prose would come back as lowercased EN blog.
+        notes = _slide_long_form_notes(slide)
+        if notes:
+            item[LONG_FORM_NOTES_KEY] = sanitize_display_input(notes)
+        payload.append(item)
     return payload
 
 

@@ -21,7 +21,7 @@ from rag_backend.application.services.carousel.presentation_policy import (
     render_presentation_policy_context,
 )
 from rag_backend.domain.constants.ai_agents import ERR_INVALID_JSON
-from rag_backend.domain.constants.carousel import CAROUSEL_PROMPT_VERSION_V4
+from rag_backend.domain.constants.carousel import CAROUSEL_PROMPT_VERSION_V5
 from rag_backend.domain.constants.carousel_workflow import PHASE_CONTENT
 from rag_backend.domain.models.persona import PersonaProfile
 from rag_backend.infrastructure.cache.ai_response_cache import get_ai_response_cache
@@ -82,14 +82,15 @@ class ContentDraftAgent:
                 persona_context=persona_context,
                 revision_notes=revision_notes,
                 slide_number=slide_index,
-                prompt_version=CAROUSEL_PROMPT_VERSION_V4,
+                prompt_version=CAROUSEL_PROMPT_VERSION_V5,
                 sibling_context=sibling_context,
                 previous_draft=previous_draft,
             )
         )
         policy = load_presentation_policy(instruction.policy_version)
         # AE-0291: revision notes are rendered ONCE, in the instruction context above.
-        # The v4 template no longer carries a second {{ revision_notes }} block.
+        # AE-0347: v5 additionally requires long_form_notes (blog source).
+        # The v4/v5 template no longer carries a second {{ revision_notes }} block.
         prompt_text, model_cfg = render_prompt(
             "carousel",
             "content",
@@ -104,7 +105,7 @@ class ContentDraftAgent:
                 ),
                 "persona_context": persona_context or "Default professional voice.",
             },
-            version=CAROUSEL_PROMPT_VERSION_V4,
+            version=CAROUSEL_PROMPT_VERSION_V5,
         )
         full_prompt = f"{instruction.instruction}\n\n{prompt_text}"
         cached = self._cached_raw(full_prompt)

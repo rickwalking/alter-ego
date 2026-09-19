@@ -1,0 +1,45 @@
+---
+name: carousel_content
+version: "5.0.0"
+description: "Draft bilingual hero lower-third carousel slide copy plus long_form_notes for blog composition (AE-0347)"
+
+template: |
+  Draft carousel slide copy for slide {{ slide_number }} using the structured
+  hero_lower_third contract.
+
+  Slide index: {{ slide_number }}
+  Slide title: {{ title }}
+  Key points: {{ key_points }}
+  Locale: {{ locale }}
+  Phase: {{ phase }}
+
+  {{ presentation_policy_context }}
+
+  Cross-slide distinctness: the OTHER slides in this carousel are listed above
+  under "Other slides in this carousel". Your slide MUST cover a distinct angle.
+  Do NOT repeat their framing, examples, statistics, or sentences. If your key
+  points overlap a sibling, differentiate the wording and the concrete detail.
+
+  Return ONLY a JSON object:
+  {draft_text, confidence_score, sources_used, icon_name?, long_form_notes}
+
+  long_form_notes is REQUIRED: 2-4 paragraphs (150-350 words) of long-form
+  blog prose in the slide locale that expands this slide's angle with context,
+  reasoning, and concrete examples. It is NOT shown on the slide and is NOT
+  bound by the copy budgets above. Write it as plain paragraphs separated by
+  blank lines: no headings, no bullet lists, no emoji, no markup.
+
+  Use Lucide icon_name values from the policy allowlist for structured items.
+  Do not use emoji icons. Obey visible-text rules and copy budgets above for
+  draft_text only.
+
+  {{ persona_context }}
+
+model:
+  temperature: 0.7
+  max_tokens: 32000
+
+metadata:
+  author: "content-team"
+  created_at: "2026-09-19"
+  tags: ["carousel", "content", "hero-lower-third-v1", "ae-0347"]
