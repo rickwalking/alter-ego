@@ -11,12 +11,20 @@ Feature: Carousel blog body is composed from real long-form content (AE-0347)
   Scenario: Long-form notes survive parsing and reach the slide draft
     Given the model returns draft_text plus long_form_notes
     When the content agent drafts the slide
-    Then the draft carries the long_form_notes verbatim
+    Then the draft carries the long_form_notes, case preserved, with markup and
+      injection patterns stripped at the source
+
+  Scenario: Model omits long-form notes
+    Given the model returns a draft without long_form_notes
+    When the content agent drafts the slide
+    Then the draft has no long_form_notes
+    And one warning naming the slide index is logged, even on a cache hit
 
   Scenario: English translation carries long-form notes
     Given a PT slide draft with long_form_notes
     When the EN translation payload is built
     Then it includes the PT long_form_notes
+    And a draft without slide_index is keyed by its 1-based position
     And the translated long_form_notes are parsed back per slide
 
   Scenario: Research findings feed the blog intro
@@ -32,7 +40,8 @@ Feature: Carousel blog body is composed from real long-form content (AE-0347)
   Scenario: Blog titles derive from the intro slide
     Given a project with no title and no English title
     When the distribution pack is built
-    Then the PT title is the intro slide heading
+    Then the PT title is the heading of the slide whose slide_index is 1,
+      even when it is not first in the list
     And the EN title is the translated intro heading
 
   Scenario: Existing titles are never overwritten

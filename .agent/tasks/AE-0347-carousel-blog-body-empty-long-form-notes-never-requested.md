@@ -112,6 +112,16 @@ m4 (runner test proves `research_findings` → `research_summary` wiring).
 m5 (translation prompt lives in a `.py` constant) left as-is: moving it to the
 registry is a separate application→agents boundary change (see
 [[prompt-registry-ddd-boundary]]).
+External QA r2 (`.agent/reports/.external-review-ae0347.r2.stdout.log`): VERDICT
+FAIL — BLOCKER net-new `type: ignore` in the runner test (fixed: state literal typed
+as `CarouselWorkflowState`), MAJOR order-dependent test on the process-global AI
+response cache (fixed: autouse `get_ai_response_cache().clear()` on both agent
+test classes), MINOR warning fires per parse with no slide context (fixed: single
+`_warn_if_notes_missing` per drafted slide with slide_index/model_id/prompt_version
++ cache-hit test), MINOR Gherkin drift (fixed: scenarios for sanitize-at-source,
+missing-notes warning, index fallback, intro-by-index). MINOR legacy persisted
+drafts replayed on resume carry unsanitized notes — accepted: model-output
+threat, pre-fix rows have no notes at all (that was the bug).
 
 ## Files Touched
 

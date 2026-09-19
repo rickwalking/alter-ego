@@ -28,6 +28,7 @@ from rag_backend.domain.constants.ai_agents import PROMPT_EDITORIAL_SLIDE_TRANSL
 from rag_backend.domain.constants.carousel import CAROUSEL_PROMPT_VERSION_V5
 from rag_backend.domain.models import CarouselProject
 from rag_backend.domain.models.carousel import CarouselStatus
+from rag_backend.infrastructure.cache.ai_response_cache import get_ai_response_cache
 
 _PACK = "rag_backend.application.services.carousel.editorial_distribution_pack"
 _PERSIST = "rag_backend.application.services.carousel.editorial_distribution_persist"
@@ -84,6 +85,10 @@ class TestContentPromptContract:
 @pytest.mark.asyncio
 class TestContentAgentV5:
     """Scenario: Long-form notes survive parsing and reach the slide draft."""
+
+    @pytest.fixture(autouse=True)
+    def clear_cache(self) -> None:
+        get_ai_response_cache().clear()
 
     async def test_agent_renders_v5_and_keeps_notes(self) -> None:
         llm = AsyncMock()
@@ -296,6 +301,9 @@ class TestRunnerFeedsResearchFindings:
             PhaseArtifactRunner,
             PhaseArtifactRunnerConfig,
         )
+        from rag_backend.application.services.carousel.workflow_state import (
+            CarouselWorkflowState,
+        )
         from rag_backend.domain.constants.workflow_state_fields import (
             STATE_FIELD_RESEARCH_FINDINGS,
         )
@@ -311,7 +319,7 @@ class TestRunnerFeedsResearchFindings:
                 slide_draft_retry=MagicMock(),
             )
         )
-        state = {
+        state: CarouselWorkflowState = {
             "project_id": "p1",
             STATE_FIELD_RESEARCH_FINDINGS: [
                 {"source": "a", "summary": "Alpha."},
@@ -336,7 +344,7 @@ class TestRunnerFeedsResearchFindings:
         ):
             container.return_value.linkedin_post_generator.return_value = None
             await runner._build_distribution_if_needed(
-                state,  # type: ignore[arg-type]
+                state,
                 [{"slide_index": 1}],
                 ([{"slide_index": 1, "draft_text": "x"}], {"slide_drafts": True}),
             )
@@ -347,6 +355,10 @@ class TestRunnerFeedsResearchFindings:
 @pytest.mark.asyncio
 class TestContentAgentNotesHardening:
     """Scenarios: notes sanitized at the source; missing notes are observable."""
+
+    @pytest.fixture(autouse=True)
+    def clear_cache(self) -> None:
+        get_ai_response_cache().clear()
 
     async def test_notes_are_case_preserving_sanitized(self) -> None:
         llm = AsyncMock()
@@ -367,7 +379,18 @@ class TestContentAgentNotesHardening:
         payload = {"draft_text": "Slide", "confidence_score": 0.5, "sources_used": []}
         llm.ainvoke.return_value = MagicMock(content=json.dumps(payload))
         with patch("rag_backend.agents.content_draft_agent.logger") as log:
-            # Distinct prompt: the AI response cache is process-global.
             result = await ContentDraftAgent(llm=llm).draft_slide(2, "No notes", ["q"])
         assert LONG_FORM_NOTES_KEY not in result
+        log.warning.assert_called_once()
+        assert log.warning.call_args.kwargs["slide_index"] == 2
+
+    async def test_cached_noteless_reply_warns_once(self) -> None:
+        llm = AsyncMock()
+        llm.bind = MagicMock(return_value=llm)
+        payload = {"draft_text": "Slide", "confidence_score": 0.5, "sources_used": []}
+        llm.ainvoke.return_value = MagicMock(content=json.dumps(payload))
+        agent = ContentDraftAgent(llm=llm)
+        await agent.draft_slide(3, "Cached", ["q"])
+        with patch("rag_backend.agents.content_draft_agent.logger") as log:
+            await agent.draft_slide(3, "Cached", ["q"])  # cache hit → parsed twice
         log.warning.assert_called_once()

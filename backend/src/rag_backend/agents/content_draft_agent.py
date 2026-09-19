@@ -134,6 +134,7 @@ class ContentDraftAgent:
                 ),
             )
             self._cache.set(full_prompt, self.model_id, raw)
+        self._warn_if_notes_missing(draft, slide_index)
         draft["instruction_checksum"] = instruction.checksum
         draft["policy_version"] = instruction.policy_version
         draft["prompt_version"] = instruction.prompt_version
@@ -196,13 +197,24 @@ class ContentDraftAgent:
             # AE-0347: case-preserving sanitization at the source — the notes are
             # later fed verbatim into the translation prompt and the public blog.
             draft["long_form_notes"] = sanitize_display_input(long_form_notes)
-        else:
-            # AE-0347: the v5 contract requires notes; a note-less reply silently
-            # reproduces the H1-only blog for this slide, so make it observable.
-            logger.warning(
-                LOG_LONG_FORM_NOTES_MISSING, prompt_version=self._prompt_version
-            )
         return draft
+
+    def _warn_if_notes_missing(
+        self, draft: dict[str, object], slide_index: int
+    ) -> None:
+        """AE-0347: a note-less reply silently reproduces the H1-only blog section.
+
+        Fires once per drafted slide (not per parse) with enough context for ops
+        to correlate the affected slide.
+        """
+        if "long_form_notes" in draft:
+            return
+        logger.warning(
+            LOG_LONG_FORM_NOTES_MISSING,
+            slide_index=slide_index,
+            model_id=self.model_id,
+            prompt_version=self._prompt_version,
+        )
 
 
 __all__ = ["ContentDraftAgent"]
