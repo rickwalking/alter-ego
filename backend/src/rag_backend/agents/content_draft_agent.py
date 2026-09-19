@@ -8,7 +8,10 @@ from langchain_core.language_models import BaseChatModel, LanguageModelInput
 from langchain_core.messages import BaseMessage
 from langchain_core.runnables import Runnable
 
-from rag_backend.agents.input_sanitizer import sanitize_llm_input
+from rag_backend.agents.input_sanitizer import (
+    sanitize_display_input,
+    sanitize_llm_input,
+)
 from rag_backend.agents.llm_json_retry import JsonRetryPolicy, ainvoke_json
 from rag_backend.agents.persona_agent import PersonaAgent
 from rag_backend.agents.prompts.registry import render_prompt
@@ -30,6 +33,7 @@ from rag_backend.infrastructure.logging import get_logger
 
 logger = get_logger()
 
+LOG_LONG_FORM_NOTES_MISSING = "content_draft.long_form_notes_missing"
 _MODEL_CFG_TEMPERATURE = "temperature"
 _MODEL_CFG_MAX_TOKENS = "max_tokens"
 _BINDABLE_MODEL_KEYS = (_MODEL_CFG_TEMPERATURE, _MODEL_CFG_MAX_TOKENS)
@@ -53,6 +57,7 @@ class ContentDraftAgent:
         self.model_id = model_id
         self._cache = get_ai_response_cache()
         self._instruction_loader = CarouselInstructionContextLoader()
+        self._prompt_version = CAROUSEL_PROMPT_VERSION_V5
 
     async def draft_slide(
         self,
@@ -188,7 +193,15 @@ class ContentDraftAgent:
             draft["icon_name"] = icon_name.strip()
         long_form_notes = data.get("long_form_notes")
         if isinstance(long_form_notes, str) and long_form_notes.strip():
-            draft["long_form_notes"] = long_form_notes.strip()
+            # AE-0347: case-preserving sanitization at the source — the notes are
+            # later fed verbatim into the translation prompt and the public blog.
+            draft["long_form_notes"] = sanitize_display_input(long_form_notes)
+        else:
+            # AE-0347: the v5 contract requires notes; a note-less reply silently
+            # reproduces the H1-only blog for this slide, so make it observable.
+            logger.warning(
+                LOG_LONG_FORM_NOTES_MISSING, prompt_version=self._prompt_version
+            )
         return draft
 
 

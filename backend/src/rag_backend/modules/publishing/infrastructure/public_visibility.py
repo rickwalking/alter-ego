@@ -11,11 +11,11 @@ from __future__ import annotations
 
 from sqlalchemy import ColumnElement, and_, or_, select
 
-from rag_backend.domain.constants.blog_post import BlogPostStatus
+from rag_backend.domain.constants.blog_post import BlogPostOrigin, BlogPostStatus
 from rag_backend.infrastructure.database.models.blog_post import BlogPostModel
 from rag_backend.infrastructure.database.models.carousel import CarouselProjectModel
 
-BLOG_ORIGIN_CAROUSEL = "carousel"
+BLOG_ORIGIN_CAROUSEL = BlogPostOrigin.CAROUSEL.value
 
 
 def public_blog_visibility_clause() -> ColumnElement[bool]:

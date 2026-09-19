@@ -51,6 +51,8 @@ from rag_backend.infrastructure.database.carousel_repository import (
     PostgresCarouselRepository,
 )
 
+INTRO_SLIDE_INDEX = 1
+
 
 @dataclass(frozen=True)
 class DistributionBuildContext:
@@ -75,15 +77,19 @@ def _ensure_blog_titles(
     fell back to the raw (often English) ``topic`` in BOTH languages. Never
     overwrite a title the user or a prior run already set.
     """
-    intro = next((s for s in slide_drafts if isinstance(s, dict)), None)
-    if intro is None:
+    dicts = [(i, s) for i, s in enumerate(slide_drafts, start=1) if isinstance(s, dict)]
+    if not dicts:
         return
+    intro = next(
+        (s for i, s in dicts if _resolve_slide_index(s, i) == INTRO_SLIDE_INDEX),
+        dicts[0][1],
+    )
     if not project.title:
         heading = _slide_heading(intro)
         if heading and heading != DEFAULT_UNTITLED_SLIDE_LABEL:
             project.set_title(heading)
     if not project.title_en:
-        en = translations_en.get(_resolve_slide_index(intro, 1), {})
+        en = translations_en.get(_resolve_slide_index(intro, INTRO_SLIDE_INDEX), {})
         en_heading = str(en.get(OUTLINE_LEGACY_HEADING_KEY) or "").strip()
         if en_heading:
             project.set_title_en(en_heading)

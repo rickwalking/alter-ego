@@ -123,6 +123,13 @@ class TestTranslationNotes:
         assert payload[0][LONG_FORM_NOTES_KEY] == "Notas Longas."
         assert LONG_FORM_NOTES_KEY not in payload[1]
 
+    def test_payload_index_falls_back_to_position(self) -> None:
+        payload = _build_translation_payload([
+            {"title": "A", "draft_text": "a"},
+            {"title": "B", "draft_text": "b"},
+        ])
+        assert [item["slide_index"] for item in payload] == [1, 2]
+
     def test_parse_keeps_translated_notes(self) -> None:
         parsed = _parse_translation_response({
             "slides_en": [
@@ -183,8 +190,10 @@ async def _run_pack(
     *,
     translations: dict[int, dict[str, object]],
     research_summary: str = "",
+    leading_slide: dict[str, object] | None = None,
 ) -> dict[str, object]:
     slide_drafts: list[dict[str, object]] = [
+        *([leading_slide] if leading_slide else []),
         {
             "slide_index": 1,
             "title": "Gancho em PT",
@@ -260,8 +269,105 @@ class TestBlogTitles:
         assert project.title == "Meu título"
         assert project.title_en == "My title"
 
+    async def test_intro_is_selected_by_slide_index_not_position(self) -> None:
+        project = _project()
+        await _run_pack(
+            project,
+            translations={1: {"heading": "Intro EN", "body": "B"}},
+            leading_slide={"slide_index": 2, "title": "Segundo", "draft_text": "b"},
+        )
+        assert project.title == "Gancho em PT"
+        assert project.title_en == "Intro EN"
+
     async def test_no_en_heading_leaves_title_en_unset(self) -> None:
         project = _project()
         await _run_pack(project, translations={})
         assert project.title == "Gancho em PT"
         assert project.title_en is None
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+class TestRunnerFeedsResearchFindings:
+    """Scenario: Research findings feed the blog intro (state key wiring)."""
+
+    async def test_runner_maps_research_findings_into_research_summary(self) -> None:
+        from rag_backend.application.services.carousel.phase_artifact_runner import (
+            PhaseArtifactRunner,
+            PhaseArtifactRunnerConfig,
+        )
+        from rag_backend.domain.constants.workflow_state_fields import (
+            STATE_FIELD_RESEARCH_FINDINGS,
+        )
+
+        runner = PhaseArtifactRunner(
+            PhaseArtifactRunnerConfig(
+                outline_agent=MagicMock(),
+                content_agent=MagicMock(),
+                llm=MagicMock(),
+                image_registry=MagicMock(),
+                db=MagicMock(),
+                workflow_input=MagicMock(),
+                slide_draft_retry=MagicMock(),
+            )
+        )
+        state = {
+            "project_id": "p1",
+            STATE_FIELD_RESEARCH_FINDINGS: [
+                {"source": "a", "summary": "Alpha."},
+                {"source": "b", "summary": "Alpha."},
+                {"source": "c", "summary": "Beta."},
+            ],
+        }
+        captured: list[DistributionBuildContext] = []
+
+        async def _fake_build(
+            ctx: DistributionBuildContext, **_kw: object
+        ) -> dict[str, object]:
+            captured.append(ctx)
+            return {}
+
+        with (
+            patch(
+                "rag_backend.application.services.carousel.phase_artifact_runner.build_editorial_distribution_updates",
+                new=_fake_build,
+            ),
+            patch("rag_backend.infrastructure.container.get_container") as container,
+        ):
+            container.return_value.linkedin_post_generator.return_value = None
+            await runner._build_distribution_if_needed(
+                state,  # type: ignore[arg-type]
+                [{"slide_index": 1}],
+                ([{"slide_index": 1, "draft_text": "x"}], {"slide_drafts": True}),
+            )
+        assert captured and captured[0].research_summary == "Alpha.\n\nBeta."
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+class TestContentAgentNotesHardening:
+    """Scenarios: notes sanitized at the source; missing notes are observable."""
+
+    async def test_notes_are_case_preserving_sanitized(self) -> None:
+        llm = AsyncMock()
+        llm.bind = MagicMock(return_value=llm)
+        payload = {
+            "draft_text": "Slide",
+            "confidence_score": 0.5,
+            "sources_used": [],
+            LONG_FORM_NOTES_KEY: "Keep Case <b>(x)</b>.",
+        }
+        llm.ainvoke.return_value = MagicMock(content=json.dumps(payload))
+        result = await ContentDraftAgent(llm=llm).draft_slide(1, "T", ["p"])
+        assert result[LONG_FORM_NOTES_KEY] == "Keep Case bx/b."
+
+    async def test_missing_notes_logs_warning(self) -> None:
+        llm = AsyncMock()
+        llm.bind = MagicMock(return_value=llm)
+        payload = {"draft_text": "Slide", "confidence_score": 0.5, "sources_used": []}
+        llm.ainvoke.return_value = MagicMock(content=json.dumps(payload))
+        with patch("rag_backend.agents.content_draft_agent.logger") as log:
+            # Distinct prompt: the AI response cache is process-global.
+            result = await ContentDraftAgent(llm=llm).draft_slide(2, "No notes", ["q"])
+        assert LONG_FORM_NOTES_KEY not in result
+        log.warning.assert_called_once()

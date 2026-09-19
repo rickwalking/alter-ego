@@ -83,7 +83,8 @@ def _build_translation_payload(
     for slide in slide_drafts[:MAX_SLIDES]:
         if not isinstance(slide, dict):
             continue
-        index = int(slide.get(SLIDE_INDEX_KEY, 0))
+        # AE-0347: fall back to the 1-based position like every other resolver.
+        index = int(slide.get(SLIDE_INDEX_KEY, len(payload) + 1))
         item: dict[str, object] = {
             SLIDE_INDEX_KEY: index,
             OUTLINE_LEGACY_HEADING_KEY: sanitize_llm_input(_slide_heading(slide)),

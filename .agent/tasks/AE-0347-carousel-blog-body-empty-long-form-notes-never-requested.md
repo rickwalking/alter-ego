@@ -102,6 +102,16 @@ See `backend/tests/features/carousel_blog_body_ae0347.feature`.
 
 ### 2026-09-19
 Diagnosed on prod; implemented on `feat/carousel-blog-body-fix` (worktree off main).
+External QA r1 (GLM 5.2 via OpenCode, `.agent/reports/.external-review-ae0347.r1.stdout.log`):
+VERDICT PASS, 2 MAJOR + 5 MINOR. Fixed M1 (notes now case-preserving-sanitized at
+the source in `ContentDraftAgent._parse_draft`, agents layer — the application
+layer cannot add an `agents` import under the DDD ratchet), M2 (warning log when
+the model omits `long_form_notes`), m1 (`BlogPostOrigin` enum), m2 (translation
+index falls back to position), m3 (intro slide selected by resolved index 1),
+m4 (runner test proves `research_findings` → `research_summary` wiring).
+m5 (translation prompt lives in a `.py` constant) left as-is: moving it to the
+registry is a separate application→agents boundary change (see
+[[prompt-registry-ddd-boundary]]).
 
 ## Files Touched
 
@@ -128,6 +138,8 @@ Pending.
 - Read-time `is_public` gate instead of changing dual-write status: fixes the
   already-stamped prod rows without a data migration.
 - Titles derived deterministically from the intro slide (no extra LLM call).
+- No bounded re-roll when notes are missing (QA M2): logged instead; a retry is
+  an LLM-cost decision for a follow-up.
 
 ## Blockers
 
