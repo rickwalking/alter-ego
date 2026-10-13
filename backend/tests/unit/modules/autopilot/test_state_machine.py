@@ -11,7 +11,10 @@ import pytest
 
 from rag_backend.modules.autopilot.constants import EVENT_TYPE_STATE_CHANGED
 from rag_backend.modules.autopilot.domain.exceptions import InvalidAutopilotTransition
-from rag_backend.modules.autopilot.domain.models import AutopilotRunState, TransitionPair
+from rag_backend.modules.autopilot.domain.models import (
+    AutopilotRunState,
+    TransitionPair,
+)
 from rag_backend.modules.autopilot.domain.state_machine import (
     ALLOWED_TRANSITIONS,
     assert_allowed,
