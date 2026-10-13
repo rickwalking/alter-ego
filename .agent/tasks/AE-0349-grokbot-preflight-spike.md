@@ -117,7 +117,9 @@ Pending.
 
 ## Decision Log
 
-See ADR-0020.
+- 2026-10-13 Cursor CLI: logged in locally, `agent --list-models` lists `grok-4.7-high`; headless run confirmed (model reported "Grok 4.7 256K High"). Uses the existing Cursor subscription Grok limits. Droplet install still pending (AE-0360).
+- 2026-10-13 Telegram: bot `@carousel_creator_bot` verified via `getMe`. Owner chat id pending (`/start`). Token was exposed in a chat transcript → revoke via BotFather `/revoke` and store the new one only as GitHub Secret `TELEGRAM_BOT_TOKEN`.
+- 2026-10-13 Instagram: Meta app `alter-ego-publisher` (Development mode, use case "Manage messaging & content on Instagram", Instagram Login). `/me` → `username=pedromarins.ai`, `account_type=MEDIA_CREATOR`, `user_id=17841480011497925` (= `META_IG_USER_ID`). Token is an Instagram-Login token → requires `graph.instagram.com` (see AE-0357 host fix).
 
 ## Blockers
 
