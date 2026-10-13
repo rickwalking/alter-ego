@@ -26,6 +26,7 @@ Publish an approved carousel to Instagram exactly once, durably, with retries an
 - `InstagramPublishJob` run from the worker tick for runs in `publishing` (1 per tick).
 - Idempotency: if `ig_post_id` is set → transition to `published`, no API call. If `ig_container_id` is set and < 24 h old → skip container creation, poll it and `media_publish`.
 - Pre-checks: `content_publishing_limit` quota > 0; project `workflow_status == approved_for_publish`, `status == completed`, `is_public`; 2–10 slides; slide URLs from existing helper (`api/routes/carousels/helpers.py:147`) — move/expose via publishing facade if needed.
+- **Graph host fix (found 2026-10-13 in AE-0349):** `meta_instagram_publisher.py:41` hard-codes `_GRAPH_BASE = "https://graph.facebook.com/v23.0"`, but the owner's token comes from *Instagram API with Instagram Login* (user tokens `IGAA…`), which only works against `https://graph.instagram.com/v23.0`. Make the base URL a setting `META_IG_GRAPH_BASE` defaulting to `https://graph.instagram.com/v23.0`; keep `graph.facebook.com` selectable for Page-token setups. Add a respx test asserting the host.
 - Use existing `MetaInstagramPublisher` (`infrastructure/external/meta_instagram_publisher.py`); refactor it to return container id before publish and accept a token provider (AE-0358) instead of the static setting, keeping the existing route working.
 - Persist `ig_container_id`, `ig_post_id`, `ig_permalink` (GET `/<media_id>?fields=permalink`).
 - Errors: transient (5xx, rate limit, container IN_PROGRESS timeout) → retry with backoff, max 3 → `publish_failed` + notify (AE-0355). Permanent (4xx auth/format, e.g. 36003 aspect ratio) → `publish_failed` immediately with Meta error code.
@@ -43,6 +44,7 @@ Publish an approved carousel to Instagram exactly once, durably, with retries an
 - [ ] WHEN the process crashes after container creation THE next tick SHALL reuse the container (no duplicate post).
 - [ ] WHEN Meta returns a transient error THE job SHALL retry up to 3 times, then set `publish_failed` and notify.
 - [ ] WHEN publish succeeds THE run SHALL be `published` with `ig_post_id` + `ig_permalink` and the owner SHALL get the link.
+- [ ] WHEN publishing with an Instagram-Login token THE publisher SHALL call `graph.instagram.com` (host configurable via `META_IG_GRAPH_BASE`).
 - [ ] WHEN the status route is called THE API SHALL return the persisted state.
 
 ## Gherkin Scenarios
