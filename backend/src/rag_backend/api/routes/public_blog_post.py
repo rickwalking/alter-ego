@@ -25,7 +25,10 @@ from rag_backend.api.schemas.public_blog_post import (
     to_public_summary,
 )
 from rag_backend.domain.constants.rate_limits import RATE_LIMIT_PUBLIC_BLOG_READ
-from rag_backend.modules.publishing import BlogPostModel, BlogPostStatus
+from rag_backend.modules.publishing import (
+    BlogPostModel,
+    public_blog_visibility_clause,
+)
 
 ERR_PUBLIC_BLOG_POST_NOT_FOUND = "blog_post_not_found"
 CACHE_CONTROL_HEADER = "Cache-Control"
@@ -51,8 +54,12 @@ async def list_public_blog_posts(
     db: Annotated[AsyncSession, Depends(get_db)],
     params: Annotated[PublicBlogListParams, Depends()],
 ) -> PublicBlogPostListResponse:
-    """Published-only listing; any client status filter is ignored."""
-    published = BlogPostModel.status == BlogPostStatus.PUBLISHED.value
+    """Published-only listing; any client status filter is ignored.
+
+    AE-0347: carousel-origin rows are also gated on the parent carousel being
+    public (the dual-write stamps them ``published`` before the site release).
+    """
+    published = public_blog_visibility_clause()
     total = (
         await db.execute(
             select(func.count()).select_from(BlogPostModel).where(published)
@@ -92,9 +99,13 @@ async def get_public_blog_post(
 ) -> PublicBlogPostResponse:
     """Uniform 404 for missing AND non-published posts (no existence leak)."""
     row = (
-        await db.execute(select(BlogPostModel).where(BlogPostModel.id == str(post_id)))
+        await db.execute(
+            select(BlogPostModel)
+            .where(BlogPostModel.id == str(post_id))
+            .where(public_blog_visibility_clause())
+        )
     ).scalar_one_or_none()
-    if row is None or row.status != BlogPostStatus.PUBLISHED.value:
+    if row is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=ERR_PUBLIC_BLOG_POST_NOT_FOUND,

@@ -1,0 +1,220 @@
+[0m
+> build · glm-5.2
+[0m
+[0m$ [0mgit status --short && git log --oneline -5
+?? .agent/reports/.external-review-ae0347.r1.stdout.log
+61172938 chore(deps): bump anyio to 4.14.2 for pip-audit (ae-0347)
+990c142e fix(blog): drop net-new sanitizer import and type-ignore flagged by integrity (ae-0347)
+8ea4949b fix(blog): compose carousel blog body and gate public reads (ae-0347)
+3402a497 Merge pull request #89 from rickwalking/chore/ae-0332-followup-tickets
+[0m
+[0m✱ [0mGlob "backend/src/rag_backend/agents/prompts/carousel/v4/*.yaml"[90m 2 matches[0m
+[0m→ [0mRead backend/src/rag_backend/agents/prompts/carousel/v4/content.yaml
+[0m→ [0mRead backend/src/rag_backend/application/services/carousel/blog_composition.py
+[0m→ [0mRead backend/src/rag_backend/agents/content_draft_agent.py
+[0m→ [0mRead backend/src/rag_backend/application/services/carousel/editorial_distribution_generation.py
+[0m→ [0mRead backend/src/rag_backend/application/services/carousel/editorial_distribution_pack.py
+[0m→ [0mRead backend/src/rag_backend/application/services/carousel/editorial_distribution_slide.py
+[0m→ [0mRead backend/src/rag_backend/infrastructure/database/models/blog_post.py
+[0m→ [0mRead backend/src/rag_backend/infrastructure/database/models/carousel.py
+[0m✱ [0mGrep "STATE_FIELD_RESEARCH_FINDINGS|research_findings"[90m in backend/src · 20 matches[0m
+[0m✱ [0mGrep "BlogPostStatus\.PUBLISHED|status == .published.|PUBLISHED\.value"[90m in backend/src/rag_backend · 8 matches[0m
+[0m→ [0mRead backend/src/rag_backend/infrastructure/database/carousel_blog_dual_write.py
+[0m→ [0mRead backend/src/rag_backend/domain/constants/blog_post.py
+[0m→ [0mRead backend/src/rag_backend/application/services/carousel/phase_artifact_runner.py[90m [offset=200, limit=90][0m
+[0m→ [0mRead backend/src/rag_backend/agents/input_sanitizer.py
+[0m→ [0mRead backend/src/rag_backend/domain/constants/input_sanitizer.py
+[0m→ [0mRead backend/src/rag_backend/api/schemas/public_blog_post.py
+[0m✱ [0mGrep "public"[90m in backend/src/rag_backend/api/routes · 56 matches[0m
+[0m✱ [0mGrep "def set_title|def set_title_en"[90m in backend/src · 2 matches[0m
+[0m✱ [0mGrep "rehype-raw|dangerouslySetInnerHTML|ReactMarkdown|markdown-it|marked"[90m in frontend/src · 4 matches[0m
+[0m✱ [0mGrep "/blog"[90m in backend/src/rag_backend/api/routes/carousels · 4 matches[0m
+[0m→ [0mRead frontend/src/modules/publishing/blog/components/public-post/blog-post-content.tsx
+[0m→ [0mRead backend/src/rag_backend/api/routes/carousels/media.py[90m [limit=120, offset=130][0m
+[0m→ [0mRead backend/src/rag_backend/application/services/carousel/editorial_workflow_generators.py[90m [limit=45, offset=60][0m
+[0m✱ [0mGrep "def extract_key_points|summary"[90m in backend/src · 100 matches[0m
+[0m✱ [0mGrep "class SourceSynthesisAgent"[90m in backend/src · 1 match[0m
+[0m→ [0mRead backend/src/rag_backend/agents/source_synthesis_agent.py
+[0m✱ [0mGrep "pytest_bdd|pytest-bdd|gherkin|scenario\("[90m in backend · 0 matches[0m
+[0m✱ [0mGrep "slide_index|SLIDE_INDEX_KEY"[90m in backend/src/rag_backend/application/services/carousel · 14 matches[0m
+[0m→ [0mRead backend/src/rag_backend/application/services/carousel/editorial_workflow_generators.py[90m [limit=115, offset=130][0m
+[0m✱ [0mGrep "def normalize_slide_draft"[90m in backend/src · 2 matches[0m
+[0m→ [0mRead backend/src/rag_backend/application/services/carousel/editorial_distribution_persist.py
+[0m→ [0mRead backend/src/rag_backend/application/services/carousel/malformed_draft_normalizer.py[90m [limit=80, offset=320][0m
+[0m✱ [0mGrep "def pack_extras|long_form_notes|LONG_FORM"[90m in backend/src/rag_backend/application/services/carousel/types.py · 34 matches[0m
+Now let me run the tests and gates to verify the diff's claims.
+[0m
+[0m$ [0muv run pytest tests/unit/application/test_carousel_blog_body_ae0347.py -q 2>&1 | tail -20
+tests/unit/application/test_carousel_blog_body_ae0347.py::TestBlogTitles::test_existing_titles_are_kept
+tests/unit/application/test_carousel_blog_body_ae0347.py::TestBlogTitles::test_no_en_heading_leaves_title_en_unset
+  <string>:14: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+
+tests/unit/application/test_carousel_blog_body_ae0347.py::TestBlogTitles::test_titles_derive_from_intro_slide
+tests/unit/application/test_carousel_blog_body_ae0347.py::TestBlogTitles::test_existing_titles_are_kept
+tests/unit/application/test_carousel_blog_body_ae0347.py::TestBlogTitles::test_no_en_heading_leaves_title_en_unset
+  <string>:15: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+
+tests/unit/application/test_carousel_blog_body_ae0347.py::TestBlogTitles::test_titles_derive_from_intro_slide
+tests/unit/application/test_carousel_blog_body_ae0347.py::TestBlogTitles::test_no_en_heading_leaves_title_en_unset
+  /home/pmarins/projects/alter-ego-blogfix/backend/src/rag_backend/domain/models/carousel.py:215: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    self.updated_at = datetime.utcnow()
+
+tests/unit/application/test_carousel_blog_body_ae0347.py::TestBlogTitles::test_titles_derive_from_intro_slide
+  /home/pmarins/projects/alter-ego-blogfix/backend/src/rag_backend/domain/models/carousel.py:220: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    self.updated_at = datetime.utcnow()
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+======================= 15 passed, 15 warnings in 1.56s ========================
+[0m
+[0m$ [0muv run pytest tests/integration/test_public_blog_api_ae0297.py -q 2>&1 | tail -8
+<string>:9: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+
+tests/integration/test_public_blog_api_ae0297.py::TestLeanSchemaSecurity::test_editor_gets_byte_identical_anonymous_payload
+tests/integration/test_public_blog_api_ae0297.py::TestStructuralGuards::test_private_surface_still_returns_drafts
+  <string>:10: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+======================= 16 passed, 10 warnings in 7.53s ========================
+[0m
+[0m✱ [0mGrep "def normalize_editorial_outline|sort|slide_index"[90m in backend/src/rag_backend/application/services/carousel/outline_normalize.py · 100 matches[0m
+[0m✱ [0mGrep "CAROUSEL_PROMPT_VERSION|render_prompt|version="[90m in backend/src/rag_backend/agents/outline_agent.py · 41 matches[0m
+[0m✱ [0mGrep "BlogPostStatus|BlogPostModel|blog_post import|from rag_backend.domain.constants"[90m in backend/src/rag_backend/modules/publishing/__init__.py · 80 matches[0m
+[0m→ [0mRead backend/src/rag_backend/application/services/carousel/outline_normalize.py[90m [limit=80][0m
+[0m
+[0m$ [0mls alembic/versions/ | head -50 && rg -l "origin" alembic/versions/ | head
+63eaefa67b8c_initial_baseline_schema.py
+a1b2c3d4e5f6_add_documents_scope_is_public.py
+a7b8c9d0e1f2_add_palettes_and_theme_snapshot.py
+b2c3d4e5f6a7_add_blog_post_origin_and_backfill.py
+b8c9d0e1f2a3_add_carousel_run_progress_columns.py
+c3d4e5f6a7b8_add_event_outbox.py
+c9d0e1f2a3b4_add_carousel_needs_republish_since.py
+d4e5f6a7b8c9_topup_carousel_blog_backfill.py
+e5f6a7b8c9d0_add_blog_posts_distribution.py
+f6a7b8c9d0e1_add_carousel_custom_visual_details.py
+__init__.py
+__pycache__
+zsh:1: command not found: rg
+[0m
+[0m$ [0mgrep -n "origin" alembic/versions/b2c3d4e5f6a7_add_blog_post_origin_and_backfill.py | head -20 && grep -rn "server_default\|nullable" alembic/versions/b2c3d4e5f6a7_add_blog_post_origin_and_backfill.py | head
+1:"""add blog_post origin column and additive carousel backfill
+10:inserts new ``origin='carousel'`` rows backfilled from the carousel embedded blog
+19:1. Add ``blog_posts.origin`` (``String(20)``, NOT NULL, server_default
+23:   origin='carousel' WHERE project_id IS NOT NULL``.
+26:   and no existing ``origin='carousel'`` blog_posts row, insert a ``blog_posts``
+27:   row (``origin='carousel'``, ``project_id`` set). **Idempotent** — guarded by a
+33:``origin`` column. The step-2 re-classification of *pre-existing* project-linked
+47:(prod). The new ``origin`` column is mirrored in ``BlogPostModel`` so the
+91:    sa.column("origin", sa.String),
+135:        "origin": _ORIGIN_CAROUSEL,
+159:    """Add the origin column + idempotently backfill carousel-derived posts."""
+163:            "origin",
+175:        .values(origin=_ORIGIN_CAROUSEL)
+194:                _blog_posts.c.origin == _ORIGIN_CAROUSEL,
+203:    """Delete ONLY the step-3 backfill-inserted rows, then drop the origin column.
+213:            _blog_posts.c.origin == _ORIGIN_CAROUSEL,
+218:    op.drop_column("blog_posts", "origin")
+19:1. Add ``blog_posts.origin`` (``String(20)``, NOT NULL, server_default
+165:            server_default=_ORIGIN_STANDALONE,
+166:            nullable=False,
+[0m
+[0m$ [0muv run ruff check src/ 2>&1 | tail -5 && uv run mypy src/rag_backend/modules/publishing/infrastructure/public_visibility.py src/rag_backend/api/routes/public_blog_post.py src/rag_backend/application/services/carousel/blog_composition.py src/rag_backend/application/services/carousel/editorial_distribution_pack.py src/rag_backend/application/services/carousel/editorial_distribution_generation.py src/rag_backend/agents/content_draft_agent.py src/rag_backend/application/services/carousel/phase_artifact_runner.py 2>&1 | tail -5
+All checks passed!
+src/rag_backend/api/__init__.py: error: Source file found twice under different
+module names: "src.rag_backend.modules.publishing" and
+"rag_backend.modules.publishing"
+Found 1 error in 1 file (errors prevented further checking)
+[0m
+[0m✱ [0mGrep "research_summary|research_findings"[90m in backend/tests · 38 matches[0m
+[0m
+[0m$ [0muv run mypy src/ 2>&1 | tail -3
+src/rag_backend/monitoring_langfuse.py: note:     a) adding `__init__.py` somewhere,
+src/rag_backend/monitoring_langfuse.py: note:     b) using `--explicit-package-bases` or adjusting `MYPYPATH`
+Found 1 error in 1 file (errors prevented further checking)
+[0m
+[0m$ [0mgrep -n "mypy\|pytest" ../scripts/ci/gates.sh | head -20
+119:gate_backend_type()        { cd "$REPO_ROOT/backend/src" && uv run mypy rag_backend/ --explicit-package-bases; }
+142:  cd "$REPO_ROOT/backend" && uv run pytest --cov=rag_backend --cov-report=xml --cov-report=term
+[0m
+[0m$ [0mcd src && uv run mypy rag_backend/ --explicit-package-bases 2>&1 | tail -3
+Success: no issues found in 581 source files
+[0m
+[0m$ [0muv run pytest tests/unit/agents/test_content_draft_agent.py tests/unit/application/test_blog_composition.py tests/unit/application/test_editorial_distribution_pack.py -q 2>&1 | tail -4
+self.updated_at = datetime.utcnow()
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+======================== 17 passed, 8 warnings in 1.51s ========================
+[0m
+[0m$ [0mgrep -rln "CAROUSEL_PROMPT_VERSION_V4\|prompt_version.*v4\|version=\"v4\"\|'v4'" tests/ | head
+tests/unit/application/test_carousel_blog_body_ae0347.py
+[0m
+[0m$ [0muv run pytest tests/unit/application tests/unit/agents -q 2>&1 | tail -4
+<sys>:0: SAWarning: transaction already deassociated from connection
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+===================== 1480 passed, 1672 warnings in 24.96s =====================
+[0m
+[0m$ [0mgrep -rln "_build_distribution_if_needed\|research_summary_from_findings" tests/ ; ls ../.agent/tasks/ | grep -i 0347
+tests/unit/application/test_carousel_blog_body_ae0347.py
+tests/unit/application/__pycache__/test_carousel_blog_body_ae0347.cpython-313-pytest-9.0.3.pyc
+AE-0347-carousel-blog-body-empty-long-form-notes-never-requested.md
+[0m
+[0m$ [0mgrep -n "GATES_JSON\|fail\|skip\|pass" ../.agent/tasks/AE-0347-carousel-blog-body-empty-long-form-notes-never-requested.md | head -15 ; ls ../.agent/reports/ 2>/dev/null | grep -i "gates-capture\|ae0347\|ae-0347" | head
+31:   parsed but **never requested**, so the composer skips every slide. The EN
+[0m
+[0m$ [0mls ../.agent/tasks/AE-0347* 2>/dev/null; find ../.agent -name "*ae-0347*" -o -name "*ae0347*" | head; grep -n "Status\|status" ../.agent/tasks/AE-0347-carousel-blog-body-empty-long-form-notes-never-requested.md | head -5
+../.agent/tasks/AE-0347-carousel-blog-body-empty-long-form-notes-never-requested.md
+../.agent/reports/.external-review-ae0347.r1.stdout.log
+3:Status: In Development
+38:   time; `/api/public/blog-posts` filters on status only → blogs of carousels
+54:- Changing the dual-write status semantics (read-time gate fixes existing rows).
+128:- Read-time `is_public` gate instead of changing dual-write status: fixes the
+[0m
+[0m$ [0mgrep -rln "public/blog-posts\|sync_carousel_blog_post\|project_carousel_blog" tests/integration | head
+tests/integration/__pycache__/test_public_blog_api_ae0297.cpython-313-pytest-9.0.3.pyc
+tests/integration/test_public_blog_api_ae0297.py
+[0m
+[0m$ [0mgrep -rln "blog" tests/integration --include="*.py" | head -12 && uv run pytest tests/integration -q -k "blog or carousel_blog or dual" 2>&1 | tail -3
+tests/integration/test_publishing_safety_net.py
+tests/integration/test_carousel_workflow_safety_net.py
+tests/integration/test_blog_post_management_ae0296.py
+tests/integration/test_blog_origin_migration.py
+tests/integration/test_carousel_api.py
+tests/integration/test_distribution_home_migration.py
+tests/integration/test_phase4_quality.py
+tests/integration/test_public_blog_api_ae0297.py
+tests/integration/test_presentation_safety_net.py
+tests/integration/carousel_consolidation/test_workflow_validation.py
+tests/integration/carousel_consolidation/test_workflow_gates.py
+tests/integration/carousel_consolidation/test_workflow_lifecycle.py
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+============== 73 passed, 348 deselected, 287 warnings in 22.86s ===============
+[0m
+[0m→ [0mRead backend/src/rag_backend/api/routes/public_blog_post.py
+One last read of the final route file to confirm the query shape:
+## Review: AE-0347 — carousel blog body + public read gate
+
+**Evidence reproduced locally:** ruff clean; `mypy rag_backend/ --explicit-package-bases` clean (581 files); 1480 unit tests (application+agents) pass; 73 blog/dual-write integration tests pass; both new suites pass (15 + 16). Refuted as non-issues after source verification: NULL-`origin` SQL trap (`origin` is NOT NULL + `server_default='standalone'` + backfill migration `b2c3d4e5f6a7`), missing `Mapping` import (blog_composition.py:5), parser dropping notes (content_draft_agent.py:189-191 keeps them), EN composer ignoring notes (blog_composition.py:149-153 consumes them), title persistence (pack.py:156 `update_project` persists + dual-write mirrors), v4 sibling/previous-draft channel regression (lives in the instruction, prepended at content_draft_agent.py:110), parallel leak via `/carousels/{id}/blog` (already gated by `assert_carousel_public`, media.py:170/200), `BlogPostStatus` enum identity (modules.publishing re-exports the canonical domain enum).
+
+### MAJOR
+
+**M1. New unsanitized injection channel into the translation prompt** — editorial_distribution_generation.py:92-98. Heading and body pass through `sanitize_llm_input` (strips `<> ()`, `INJECTION_PATTERNS`, caps 10k chars); `long_form_notes` are serialized **verbatim** into `PROMPT_EDITORIAL_SLIDE_TRANSLATIONS` (ai_agents.py:38-41). The inline justification is half-right: lowercasing would corrupt the EN blog, but `sanitize_display_input` (input_sanitizer.py:21-34) already exists for exactly this case — same injection defenses + length cap, case preserved (AE-0289). Notes are the largest field fed to an LLM prompt and transitively derive from scraped web research; a paraphrased injection ("disregard everything above") that survives intake sanitization passes into the translation prompt unchecked, while the same text in `heading`/`body` would be stripped. Impact is content-integrity on a public page, not XSS (frontend `ReactMarkdown` allow-list + `isSafeMarkdownHref`, blog-post-content.tsx:17-45) — hence MAJOR, not BLOCKER. Fix: `item[LONG_FORM_NOTES_KEY] = sanitize_display_input(notes)`.
+
+**M2. Nothing enforces or observes that `long_form_notes` actually return** — content_draft_agent.py:189-191 keeps notes only *if present*; `_parse_draft` accepts a note-less response; blog_composition.py:127-129 silently skips note-less slides. The ticket's core failure (H1-only stubs) can silently recur per-slide on model non-compliance — no retry (contrast AE-0330's empty-content re-roll), no log, no metric. Failing scenario: model returns the old `{draft_text, confidence_score, sources_used}` shape → blog publishes with title + research intro and zero sections, green all the way down. The AC is met to the letter ("prompt requires… agent renders v5"), but the fix is prompt-compliance-only; add at minimum a `long_form_notes_missing` warning per slide, ideally a bounded re-roll.
+
+### MINOR
+
+**m1.** public_visibility.py:16 — `BLOG_ORIGIN_CAROUSEL = "carousel"` re-declares `BlogPostOrigin.CAROUSEL.value` (domain/constants/blog_post.py:32), which is imported one line above for status. Magic-string duplication; if the enum value ever changes, the gate silently fails **open** (carousel rows treated as non-carousel → leak returns). Use the enum.
+
+**m2.** Slide-index fallback mismatch: `_build_translation_payload` defaults a missing `slide_index` to **0** (editorial_distribution_generation.py:86); every consumer resolves to **1..N** (`_resolve_slide_index`, pack.py:86; blog_composition.py:179). A draft without `slide_index` gets translations keyed 0 that nobody reads → EN title not derived, EN notes fall back to PT, silently. Unlikely (drafts merge the positionally-renumbered outline, outline_normalize.py:54), but the resolvers should agree.
+
+**m3.** pack.py:78 — "intro slide" is implemented as *first dict in `slide_drafts`*. Correct only via the implicit invariant that drafts stay in outline order (normalize_editorial_outline.py:51-54 renumbers positionally). A checkpoint-restored/reordered list titles the blog from an arbitrary slide. Select by `_resolve_slide_index(...) == 1` instead.
+
+**m4.** AC↔test gap: the actual bug-fix point for root cause #2 — `phase_artifact_runner.py:255-257` mapping `state[research_findings]` → `research_summary` — is untested. `research_summary_from_findings` is tested standalone and `_run_pack` injects `research_summary` by hand (test file:225-246); a typo in the state key reproduces the empty-intro bug with everything green. Feature scenario "When the distribution pack is built / Then the blog markdown opens with the de-duplicated summaries" is simulated, not exercised.
+
+**m5.** ai_agents.py:38-41 — the translation prompt is edited in place inside a `.py` constants file, perpetuating the documented "prompts never in `.py`" standard at the exact lines this ticket touches (registry/.yaml migration was the moment to do it).
+
+No BLOCKERs found: the public gate is applied consistently to count, list, and detail with the same clause, fails closed for carousel rows with dangling/absent parents, and the uniform-404 no-existence-leak property is preserved (public_blog_post.py:101-112).
+
+VERDICT: PASS

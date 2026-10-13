@@ -58,6 +58,8 @@ CAROUSEL_PROMPT_VERSION_V3 = "v3"
 # AE-0291: v4 adds cross-slide sibling context, imperative rework-feedback framing,
 # a previous-draft diff channel, and a live model config (temperature/max_tokens).
 CAROUSEL_PROMPT_VERSION_V4 = "v4"
+# AE-0347: v5 requires long_form_notes so the carousel blog is no longer H1-only.
+CAROUSEL_PROMPT_VERSION_V5 = "v5"
 DEFAULT_TEMPLATE_VERSION = TEMPLATE_VERSION_V2
 DEFAULT_CAROUSEL_PROMPT_VERSION = "v2"
 
@@ -153,6 +155,7 @@ __all__ = [
     "CAROUSEL_HEIGHT",
     "CAROUSEL_PROMPT_VERSION_V3",
     "CAROUSEL_PROMPT_VERSION_V4",
+    "CAROUSEL_PROMPT_VERSION_V5",
     "CAROUSEL_SLIDES_CONFIG_SEVEN",
     "CAROUSEL_STATUS_COMPLETED",
     "CAROUSEL_STATUS_DESIGNING",

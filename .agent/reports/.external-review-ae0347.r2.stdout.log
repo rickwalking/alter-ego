@@ -1,0 +1,304 @@
+[0m
+> build · glm-5.2
+[0m
+[0m$ [0mgit log --oneline -5 && git status
+36a5018e fix(blog): external qa r1 fixes - sanitize notes at source, warn when missing (ae-0347)
+61172938 chore(deps): bump anyio to 4.14.2 for pip-audit (ae-0347)
+990c142e fix(blog): drop net-new sanitizer import and type-ignore flagged by integrity (ae-0347)
+8ea4949b fix(blog): compose carousel blog body and gate public reads (ae-0347)
+3402a497 Merge pull request #89 from rickwalking/chore/ae-0332-followup-tickets
+On branch feat/carousel-blog-body-fix
+Your branch is ahead of 'origin/main' by 4 commits.
+  (use "git push" to publish your local commits)
+
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+	.agent/reports/.external-review-ae0347.r1.stdout.log
+	.agent/reports/.external-review-ae0347.r2.stdout.log
+
+nothing added to commit but untracked files present (use "git add" to track)
+[0m
+[0m→ [0mRead backend/src/rag_backend/agents/content_draft_agent.py
+[0m→ [0mRead backend/src/rag_backend/agents/input_sanitizer.py
+[0m→ [0mRead backend/src/rag_backend/application/services/carousel/editorial_distribution_generation.py
+[0m→ [0mRead backend/src/rag_backend/application/services/carousel/editorial_distribution_pack.py
+[0m→ [0mRead backend/src/rag_backend/modules/publishing/infrastructure/public_visibility.py
+[0m→ [0mRead backend/src/rag_backend/domain/constants/blog_post.py
+[0m→ [0mRead backend/src/rag_backend/application/services/carousel/editorial_distribution_slide.py
+Round-2 review. Source files match the delta so far. Now verifying the supporting pieces the diff depends on.
+[0m→ [0mRead backend/src/rag_backend/application/services/carousel/blog_composition.py
+[0m→ [0mRead backend/src/rag_backend/application/services/carousel/phase_artifact_runner.py
+[0m→ [0mRead backend/src/rag_backend/domain/constants/input_sanitizer.py
+[0m✱ [0mGrep "STATE_FIELD_RESEARCH_FINDINGS|CAROUSEL_PROMPT_VERSION_V5"[90m in backend/src/rag_backend/domain/constants · 4 matches[0m
+[0m✱ [0mGrep "long_form_notes|LONG_FORM_NOTES_KEY"[90m in backend/src · 51 matches[0m
+[0m✱ [0mGrep "from rag_backend.agents"[90m in backend/src/rag_backend · 100 matches[0m
+Source-side wiring checks out so far. Now checking all writers of `long_form_notes` (M1 completeness — user-edit paths bypass `_parse_draft`) and the EN-notes path.
+[0m
+[0m$ [0mgit diff 61172938..36a5018e --stat && git log --format='%H %s' -1 36a5018e
+...g-body-empty-long-form-notes-never-requested.md |  12 +++
+ .../src/rag_backend/agents/content_draft_agent.py  |  17 +++-
+ .../carousel/editorial_distribution_generation.py  |   3 +-
+ .../carousel/editorial_distribution_pack.py        |  12 ++-
+ .../publishing/infrastructure/public_visibility.py |   4 +-
+ .../application/test_carousel_blog_body_ae0347.py  | 106 +++++++++++++++++++++
+ 6 files changed, 146 insertions(+), 8 deletions(-)
+36a5018e49b160a7c7b49c83aa7133d57caff618 fix(blog): external qa r1 fixes - sanitize notes at source, warn when missing (ae-0347)
+[0m
+[0m→ [0mRead backend/src/rag_backend/api/routes/carousels/crud.py[90m [offset=200, limit=90][0m
+The DDD ratchet claim needs verification — `editorial_distribution_generation.py` still has a pre-existing agents import. Checking whether the round-2 delta added any, and auditing the user-edit path in `crud.py` that writes `long_form_notes` (M1 completeness).
+[0m→ [0mRead backend/src/rag_backend/application/services/carousel/nodes/content/slides.py
+[0m✱ [0mGrep "extras|patch|PATCH|put|update_slide|slides"[90m in backend/src/rag_backend/api/routes/carousels · 100 matches[0m
+[0m✱ [0mGrep "def unpack_extras|extras\[|extras =|\"extras\""[90m in backend/src/rag_backend/application/services/carousel · 8 matches[0m
+[0m✱ [0mGrep "_parse_slides|long_form_notes"[90m in backend/src/rag_backend/application/services/carousel · 25 matches[0m
+[0m→ [0mRead backend/src/rag_backend/application/services/carousel/workflow_state_sanitize.py
+`sanitize_slide_drafts` notably does NOT touch `long_form_notes` — so the legacy-state gap is real (resumed pre-fix projects still feed old unsanitized notes to the translation prompt). Now reading the full test file and running the suite.
+[0m→ [0mRead backend/tests/unit/application/test_carousel_blog_body_ae0347.py
+[0m✱ [0mGrep "origin\s*==\s*["']carousel["']|["']carousel["']\s*==\s*.*origin|BLOG_ORIGIN_CAROUSEL|origin="carousel"|origin='carousel'"[90m in backend/src · 23 matches[0m
+[0m
+[0m$ [0mgit diff origin/main..HEAD -- backend/src/rag_backend/application | grep -E '^\+.*from rag_backend(\.| import rag_backend)' ; echo "---exit:$?"
++from rag_backend.application.services.carousel.blog_composition import (
++from rag_backend.application.services.carousel.editorial_distribution_slide import (
++from rag_backend.domain.models import CarouselProject
++from rag_backend.application.services.carousel.blog_composition import (
+---exit:0
+[0m
+Test file verified — tests are behavioral and discriminate the fixes. Now checking for remaining origin literals, the DDD ratchet enforcement, and the feature file.
+[0m✱ [0mGlob "**/carousel_blog_body_ae0347.feature"[90m in backend · 1 match[0m
+[0m✱ [0mGrep "\.origin\s*(==|!=)\s*["']|origin\s*=\s*["']carousel["']"[90m in backend/src · 20 matches[0m
+[0m→ [0mRead backend/tests/features/carousel_blog_body_ae0347.feature
+DDD ratchet holds — no new `rag_backend.agents` imports in the application layer across the branch. Checking for other code-level origin literals and the feature file, then running tests.
+Feature file exists but scenario line 14 ("carries the long_form_notes verbatim") is now stale — notes are sanitized, not verbatim, post-fix. Running the test suites for all touched modules now.
+[0m
+[0m$ [0muv run pytest tests/unit/application/test_carousel_blog_body_ae0347.py -q 2>&1 | tail -5
+/home/pmarins/projects/alter-ego-blogfix/backend/src/rag_backend/domain/models/carousel.py:220: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    self.updated_at = datetime.utcnow()
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+======================= 20 passed, 21 warnings in 1.79s ========================
+[0m
+[0m$ [0muv run pytest tests/unit -q -k "content_draft or editorial or public_visibility or blog or distribution" 2>&1 | tail -4
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/unit/application/test_carousel_blog_body_ae0347.py::TestContentAgentV5::test_agent_renders_v5_and_keeps_notes
+========= 1 failed, 457 passed, 2055 deselected, 157 warnings in 5.67s =========
+[0m
+A test-isolation failure appears when the suite runs with other tests. Investigating.
+[0m$ [0muv run pytest tests/unit -q -k "content_draft or editorial or public_visibility or blog or distribution" 2>&1 | grep -B 40 "short test summary" | head -70
+tests/unit/application/test_editorial_distribution_pack.py::test_build_editorial_distribution_updates_persists_fields
+  /home/pmarins/projects/alter-ego-blogfix/backend/src/rag_backend/domain/models/carousel.py:215: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    self.updated_at = datetime.utcnow()
+
+tests/unit/application/test_carousel_blog_body_ae0347.py::TestBlogTitles::test_titles_derive_from_intro_slide
+tests/unit/application/test_carousel_blog_body_ae0347.py::TestBlogTitles::test_intro_is_selected_by_slide_index_not_position
+tests/unit/application/test_editorial_distribution_pack.py::test_build_editorial_distribution_updates_persists_fields
+  /home/pmarins/projects/alter-ego-blogfix/backend/src/rag_backend/domain/models/carousel.py:220: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    self.updated_at = datetime.utcnow()
+
+tests/unit/application/test_editorial_finalize.py::TestExportAndCompleteCarousel::test_skips_when_output_dir_missing
+tests/unit/application/test_editorial_finalize.py::TestExportAndCompleteCarousel::test_logs_warning_on_render_failure
+  /home/pmarins/projects/alter-ego-blogfix/backend/src/rag_backend/domain/models/carousel.py:205: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    self.updated_at = datetime.utcnow()
+
+tests/unit/application/test_editorial_finalize.py::TestExportAndCompleteCarousel::test_completes_after_render
+  /home/pmarins/projects/alter-ego-blogfix/backend/src/rag_backend/domain/models/carousel.py:194: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    self.updated_at = datetime.utcnow()
+
+tests/unit/application/test_editorial_visual_pipeline_snapshot.py::TestThemeSnapshotAtGeneration::test_custom_palette_is_frozen_and_persisted
+  <string>:11: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+
+tests/unit/application/test_editorial_visual_pipeline_snapshot.py::TestThemeSnapshotAtGeneration::test_custom_palette_is_frozen_and_persisted
+  <string>:12: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+
+tests/unit/application/test_editorial_workflow_resume_runner.py::TestExecuteBackgroundResume::test_happy_path_commits_and_publishes_sse
+  /home/pmarins/.local/share/uv/python/cpython-3.13.13-linux-x86_64-gnu/lib/python3.13/unittest/mock.py:458: RuntimeWarning: coroutine '_execute_background_resume' was never awaited
+    new = type(cls.__name__, bases, {'__doc__': cls.__doc__})
+  Enable tracemalloc to get traceback where the object was allocated.
+  See https://docs.pytest.org/en/stable/how-to/capture-warnings.html#resource-warnings for more info.
+
+tests/unit/application/test_editorial_workflow_service.py::TestEditorialWorkflowServiceMarkResumeInProgress::test_calls_sync_project_phase_with_db
+tests/unit/application/test_editorial_workflow_service.py::TestMarkResumeInProgressPublishLock::test_clears_publish_lock_when_prior_approved_for_publish
+tests/unit/application/test_editorial_workflow_service.py::TestMarkResumeInProgressPublishLock::test_keeps_workflow_status_when_not_approved
+  /home/pmarins/projects/alter-ego-blogfix/backend/src/rag_backend/application/services/carousel/editorial_workflow_run_events.py:45: RuntimeWarning: coroutine 'AsyncMockMixin._execute_mock_call' was never awaited
+    await get_workflow_sse_hub().publish(
+  Enable tracemalloc to get traceback where the object was allocated.
+  See https://docs.pytest.org/en/stable/how-to/capture-warnings.html#resource-warnings for more info.
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+[0m
+[0m$ [0muv run pytest tests/unit -q -k "content_draft or editorial or public_visibility or blog or distribution" --tb=short -p no:warnings 2>&1 | grep -A 40 "TestContentAgentV5" | head 60; uv run pytest tests/unit -q -k "content_draft or editorial or public_visibility or blog or distribution" --tb=long -p no:warnings 2>&1 | sed -n '/____ TestContentAgentV5/,/short test summary/p' | head -60
+head: cannot open '60' for reading: No such file or directory
+___________ TestContentAgentV5.test_agent_renders_v5_and_keeps_notes ___________
+
+self = <tests.unit.application.test_carousel_blog_body_ae0347.TestContentAgentV5 object at 0x7d22c0b87610>
+
+    async def test_agent_renders_v5_and_keeps_notes(self) -> None:
+        llm = AsyncMock()
+        llm.bind = MagicMock(return_value=llm)
+        payload = {
+            "draft_text": "Slide copy",
+            "confidence_score": 0.9,
+            "sources_used": [],
+            LONG_FORM_NOTES_KEY: "Para one.\n\nPara two.",
+        }
+        llm.ainvoke.return_value = MagicMock(content=json.dumps(payload))
+        agent = ContentDraftAgent(llm=llm)
+        with patch(
+            "rag_backend.agents.content_draft_agent.render_prompt",
+            wraps=render_prompt,
+        ) as spy:
+            result = await agent.draft_slide(1, "Title", ["Point"])
+>       assert result[LONG_FORM_NOTES_KEY] == "Para one.\n\nPara two."
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       KeyError: 'long_form_notes'
+
+tests/unit/application/test_carousel_blog_body_ae0347.py:104: KeyError
+----------------------------- Captured stdout call -----------------------------
+2026-09-19 18:58:10 [warning  ] content_draft.long_form_notes_missing prompt_version=v5
+2026-09-19 18:58:10 [warning  ] content_draft.long_form_notes_missing prompt_version=v5
+=========================== short test summary info ============================
+[0m
+[0m✱ [0mGrep "draft_slide\(1, "Title", \["Point"\]\)|draft_slide\(1, \"Title\""[90m in backend/tests · 13 matches[0m
+Confirmed root cause: the test hit the process-global AI response cache — another earlier test cached a note-less response under the identical prompt, and `_cached_raw` + `draft_slide` each re-parse (hence two warnings). Finding the colliding test.
+[0m✱ [0mGrep "ContentDraftAgent\("[90m in backend/tests · 5 matches[0m
+The colliding tests are in `tests/unit/agents/test_content_draft_agent.py` — same `draft_slide(1, "Title", ["Point"])` prompt, note-less payloads, run earlier in collection order. Verifying whether the full unit suite (what CI runs) is red.
+[0m
+[0m$ [0muv run pytest tests/unit -q -p no:warnings 2>&1 | tail -6
+tests/unit/test_checkpoint_fixture_portability.py ...                    [ 99%]
+tests/unit/test_mutation_agent_split.py ..............                   [ 99%]
+tests/unit/test_route_snapshot.py .                                      [ 99%]
+tests/unit/test_sse_event_inventory_contract.py ..........               [100%]
+
+======================= 2512 passed, 1 skipped in 31.73s =======================
+[0m
+Full suite is green (2512 passed) — but the order-dependence is real. Minimal reproduction to confirm fragility:
+[0m$ [0muv run pytest tests/unit/agents/test_content_draft_agent.py tests/unit/application/test_carousel_blog_body_ae0347.py -q -p no:warnings 2>&1 | tail -4
+2026-09-19 18:59:26 [warning  ] content_draft.long_form_notes_missing prompt_version=v5
+=========================== short test summary info ============================
+FAILED tests/unit/application/test_carousel_blog_body_ae0347.py::TestContentAgentV5::test_agent_renders_v5_and_keeps_notes
+========================= 1 failed, 29 passed in 1.92s =========================
+[0m
+Deterministic reproduction confirmed — two-file invocation is red. Checking the cache TTL to explain why the full suite squeaks by:
+[0m→ [0mRead backend/src/rag_backend/infrastructure/cache/ai_response_cache.py
+TTL is 3600s — expiry doesn't explain the full-suite pass. Something between the files must clear the global cache:
+[0m✱ [0mGrep "get_ai_response_cache|_GLOBAL_AI_CACHE|\.clear\(\)"[90m in backend/tests · 27 matches[0m
+[0m
+[0m$ [0muv run ruff check src/rag_backend/agents/content_draft_agent.py src/rag_backend/application/services/carousel/editorial_distribution_generation.py src/rag_backend/application/services/carousel/editorial_distribution_pack.py src/rag_backend/modules/publishing/infrastructure/public_visibility.py tests/unit/application/test_carousel_blog_body_ae0347.py && uv run ruff format --check src/rag_backend/agents/content_draft_agent.py src/rag_backend/application/services/carousel/editorial_distribution_generation.py src/rag_backend/application/services/carousel/editorial_distribution_pack.py src/rag_backend/modules/publishing/infrastructure/public_visibility.py tests/unit/application/test_carousel_blog_body_ae0347.py
+All checks passed!
+5 files already formatted
+[0m
+The full suite passes only because `test_outline_agent.py`/`test_source_synthesis_agent.py` fixtures clear the global cache between the two files — cross-file order luck. The repo's own pattern (autouse clear fixture, test_content_draft_agent.py:13-16) was not adopted in the new test file. Now running static gates on the changed files:
+[0m$ [0muv run mypy src/rag_backend/agents/content_draft_agent.py src/rag_backend/application/services/carousel/editorial_distribution_generation.py src/rag_backend/application/services/carousel/editorial_distribution_pack.py src/rag_backend/modules/publishing/infrastructure/public_visibility.py 2>&1 | tail -3
+and
+"rag_backend.application.services.carousel.editorial_distribution_generation"
+Found 1 error in 1 file (errors prevented further checking)
+[0m
+mypy flags an error — getting the full output:
+[0m$ [0muv run mypy src/rag_backend/agents/content_draft_agent.py src/rag_backend/application/services/carousel/editorial_distribution_generation.py src/rag_backend/application/services/carousel/editorial_distribution_pack.py src/rag_backend/modules/publishing/infrastructure/public_visibility.py 2>&1 | head -20
+src/rag_backend/application/services/carousel/editorial_distribution_generation.py: error:
+Source file found twice under different module names:
+"src.rag_backend.application.services.carousel.editorial_distribution_generation"
+and
+"rag_backend.application.services.carousel.editorial_distribution_generation"
+Found 1 error in 1 file (errors prevented further checking)
+[0m
+That's an invocation artifact (file passed both as path and package module). Running the canonical project gate instead:
+[0m$ [0muv run mypy src/ 2>&1 | tail -3
+src/rag_backend/monitoring_langfuse.py: note:     a) adding `__init__.py` somewhere,
+src/rag_backend/monitoring_langfuse.py: note:     b) using `--explicit-package-bases` or adjusting `MYPYPATH`
+Found 1 error in 1 file (errors prevented further checking)
+[0m
+[0m$ [0mrg -n "mypy" scripts/ci/gates.sh ../scripts/ci/ 2>/dev/null | head -10
+(no output)
+[0m
+[0m$ [0mgit stash list | head -2; git log --oneline origin/main -1
+stash@{0}: On phase-8-kaizen-class-b: cleanup-2026-06-18: WIP on chore/phase-8-kaizen-class-b (BOARD + AE-0172..0177 frontend-debt, parallel conversation)
+3402a497 Merge pull request #89 from rickwalking/chore/ae-0332-followup-tickets
+[0m
+[0m$ [0mrg -n "mypy" scripts/ci/gates.sh | head -6; ls scripts/ci/ | head -20
+zsh:1: command not found: rg
+build-outputs.txt
+changed-backend-files.sh
+changed-frontend-files.sh
+check-build-output-ignored.sh
+check-integrity.sh
+eslint-changed.mjs
+gate-capture.sh
+gates.sh
+mutation-score-gate.sh
+post-pr-quality-comment.sh
+ruff-reviewdog.sh
+ruff-strict-changed.sh
+[0m
+[0m$ [0mgrep -n "mypy\|pytest\|ruff" scripts/ci/gates.sh | head -12
+96:gate_backend_format()   { cd "$REPO_ROOT/backend" && uv run ruff format --check src/; }
+97:gate_backend_lint()     { cd "$REPO_ROOT/backend" && uv run ruff check src/; }
+102:    echo "origin/main unavailable — skipping ruff diff check."; return "$EXIT_SKIP"; }
+105:  cd "$REPO_ROOT/backend" && uv run ruff check --diff "${CHANGED[@]}"
+118:gate_backend_strict_diff() { bash "$SCRIPT_DIR/ruff-strict-changed.sh"; }
+119:gate_backend_type()        { cd "$REPO_ROOT/backend/src" && uv run mypy rag_backend/ --explicit-package-bases; }
+142:  cd "$REPO_ROOT/backend" && uv run pytest --cov=rag_backend --cov-report=xml --cov-report=term
+[0m
+[0m$ [0muv run mypy rag_backend/ --explicit-package-bases 2>&1 | tail -3
+Success: no issues found in 581 source files
+[0m
+[0m$ [0muv run ruff check src/ 2>&1 | tail -2 && uv run ruff format --check src/ 2>&1 | tail -2
+All checks passed!
+616 files already formatted
+[0m
+[0m$ [0mbash scripts/ci/check-integrity.sh backend 2>&1 | tail -8
+=== 🔴 BLOCKERS (net-new gaming — bounce to developer) (1) ===
+  [suppression:type-ignore] backend/tests/unit/application/test_carousel_blog_body_ae0347.py:339
+      state,  # type: ignore[arg-type]
+
+=== 🟠 WARNINGS (review with ticket context) (0) ===
+
+FAIL: 1 net-new integrity blocker(s). Fix the underlying issue — do not suppress, skip, or loosen the gate.
+[0m
+[0m→ [0mRead backend/src/rag_backend/application/services/carousel/workflow_state.py
+Integrity gate is RED — net-new `type: ignore` in the delta's new runner test. Verifying it's avoidable (what `CarouselWorkflowState` is) and checking the ticket's gate claims:
+[0m
+[0m$ [0mls .agent/tasks/ | grep -i 0347 && grep -n "integrity\|gates\|GATES_JSON" .agent/tasks/AE-0347.md | head -10
+AE-0347-carousel-blog-body-empty-long-form-notes-never-requested.md
+grep: .agent/tasks/AE-0347.md: No such file or directory
+[0m
+[0m$ [0mgrep -n "integrity\|GATES_JSON\|check-integrity\|fail\|skip" .agent/tasks/AE-0347-carousel-blog-body-empty-long-form-notes-never-requested.md | head -15; ls .agent/tasks/AE-0347-carousel-blog-body-empty-long-form-notes-never-requested.md.d/ 2>/dev/null; ls .agent/reports/ 2>/dev/null | grep -i 0347
+31:   parsed but **never requested**, so the composer skips every slide. The EN
+[0m
+All verification complete. Compiling the round-2 report.
+
+---
+
+# AE-0347 — Round 2 External QA Review
+
+## Round-1 finding verification
+
+| R1 ID | Status | Evidence |
+|---|---|---|
+| **M1** notes verbatim → translation prompt | **Fixed at source** | `sanitize_display_input` in `ContentDraftAgent._parse_draft` (agents/content_draft_agent.py:198) covers fresh drafts, cache replays (`_cached_raw` re-parses, :157), and the fail-closed retry path. DDD ratchet holds: `git diff origin/main..HEAD` shows zero new `rag_backend.agents` imports in application-layer files. |
+| **M2** no observability on missing notes | **Fixed, weakened** | Named warning `content_draft.long_form_notes_missing` (agents/content_draft_agent.py:202-204); test asserts it fires. |
+| **m1** magic string `"carousel"` | **Fixed & complete** | `BLOG_ORIGIN_CAROUSEL = BlogPostOrigin.CAROUSEL.value` (modules/publishing/infrastructure/public_visibility.py:18); enum value is identical `"carousel"` (domain/constants/blog_post.py:32) — no behavior change. All remaining `origin='carousel'` hits are docstrings only. |
+| **m2** payload `slide_index` default 0 | **Fixed** | 1-based positional fallback (editorial_distribution_generation.py:87), consistent with the caption resolver (:49); test `test_payload_index_falls_back_to_position` discriminates. |
+| **m3** intro chosen by list position | **Fixed** | Selection by resolved `slide_index == INTRO_SLIDE_INDEX` with first-dict fallback (editorial_distribution_pack.py:80-86); `test_intro_is_selected_by_slide_index_not_position` fails on the old behavior. |
+| **m4** runner state-key wiring untested | **Fixed** | Runner reads `STATE_FIELD_RESEARCH_FINDINGS` (phase_artifact_runner.py:255-257); new test captures the built context and proves the mapping end-to-end. |
+| **m5** translation prompt in `.py` | Deferred (accepted) | Unchanged in domain/constants/ai_agents.py:38-39. |
+
+## New issues introduced by the delta
+
+- **BLOCKER — integrity gate red (net-new suppression).** `state,  # type: ignore[arg-type]` at tests/unit/application/test_carousel_blog_body_ae0347.py:339. `bash scripts/ci/check-integrity.sh backend` → `FAIL: 1 net-new integrity blocker(s) … bounce to developer`. The suppression is avoidable: `CarouselWorkflowState` is a `TypedDict, total=False` (application/services/carousel/workflow_state.py:13) — annotate the state literal (or use `get_initial_carousel_state`) and drop the ignore. Per AE-0259, Dev Complete requires `check-integrity.sh` green; this was shipped red.
+- **MAJOR — order-dependent test on the process-global AI cache.** `test_agent_renders_v5_and_keeps_notes` (test_carousel_blog_body_ae0347.py:88-106) uses the exact prompt `draft_slide(1, "Title", ["Point"])` also used throughout tests/unit/agents/test_content_draft_agent.py, whose note-less cached raws poison `AIResponseCache` (TTL 3600s). Deterministic repro: `uv run pytest tests/unit/agents/test_content_draft_agent.py tests/unit/application/test_carousel_blog_body_ae0347.py` → 1 failed (`KeyError: 'long_form_notes'`). The full suite (2512 passed) is green only because `test_outline_agent.py`'s autouse fixture clears the cache between the files — cross-file luck. The team knew (the "process-global" comment + distinct prompts on the two *new* tests) but left the third exposed; adopt the autouse `get_ai_response_cache().clear()` fixture pattern from test_content_draft_agent.py:13-16.
+
+## Carry-over / residual minors
+
+- **MINOR (M2 metadata):** the warning carries only `prompt_version` — no `slide_index`/`project_id`/`model_id`, so ops can't correlate which slide/project went note-less; and it double-fires per cache hit (validation parse in `_cached_raw` + main parse, content_draft_agent.py:118/:157).
+- **MINOR (M1 legacy data):** sanitization covers newly generated notes only. `sanitize_slide_drafts` (workflow_state_sanitize.py:156-187) does **not** touch `long_form_notes`, so pre-fix persisted drafts replayed on resume still feed unsanitized notes verbatim into the prompt (editorial_distribution_generation.py:97-99). Threat is model-output (low), but the exact path M1 flagged remains open for legacy rows.
+- **MINOR (Gherkin drift):** tests/features/carousel_blog_body_ae0347.feature:14 still asserts "carries the long_form_notes **verbatim**" — now false post-sanitization; and none of the r2 behaviors (sanitize-at-source, missing-notes warning, index fallback, intro-by-index) have scenarios, contrary to AE-0153 for behavior-changing fixes.
+
+## Gate ground truth (reproduced locally)
+
+- `ruff check src/` ✓ · `ruff format --check src/` ✓ (616 files)
+- `mypy rag_backend/ --explicit-package-bases` ✓ (581 files)
+- `pytest tests/unit` ✓ 2512 passed / 1 skipped — **but** red under partial selection (MAJOR above)
+- `check-integrity.sh backend` **✗ 1 blocker**
+
+**VERDICT: FAIL**

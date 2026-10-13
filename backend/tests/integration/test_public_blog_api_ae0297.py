@@ -100,11 +100,37 @@ def _auth_headers(user: User) -> dict[str, str]:
     return {"Authorization": f"Bearer {token}"}
 
 
+async def _insert_carousel(*, is_public: bool) -> str:
+    """Insert a minimal carousel project row (AE-0347 public-gate fixtures)."""
+    from rag_backend.infrastructure.database.config import get_session_maker
+    from rag_backend.infrastructure.database.models.carousel import (
+        CarouselProjectModel,
+    )
+
+    project_id = str(uuid4())
+    session_maker = get_session_maker()
+    async with session_maker() as session:
+        session.add(
+            CarouselProjectModel(
+                id=project_id,
+                owner_id=None,
+                topic="Fixture topic",
+                audience="Fixture audience",
+                niche="Fixture niche",
+                is_public=is_public,
+            )
+        )
+        await session.commit()
+    return project_id
+
+
 async def _insert_post(
     *,
     status_value: str,
     published_at: datetime | None = None,
     title: str = "Post",
+    origin: str = "standalone",
+    project_id: str | None = None,
 ) -> str:
     """Insert a blog row directly, rich in internal fields."""
     from rag_backend.infrastructure.database.config import get_session_maker
@@ -119,6 +145,8 @@ async def _insert_post(
                 title=title,
                 slug=f"slug-{post_id}",
                 status=status_value,
+                origin=origin,
+                project_id=project_id,
                 content={"markdown": "# Body"},
                 excerpt="Excerpt",
                 author_id="author-1",
@@ -223,6 +251,30 @@ class TestPublicDetail:
         post_id = await _insert_post(status_value=hidden_status.value)
         response = await client.get(f"{PUBLIC_LIST_URL}/{post_id}")
         assert response.status_code == 404
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("is_public", [False, True])
+    async def test_carousel_origin_gated_on_carousel_is_public(
+        self, client: AsyncClient, is_public: bool
+    ) -> None:
+        """AE-0347: the dual-write stamps carousel blogs 'published' before the
+        site release, so anonymous reads must also require is_public."""
+        project_id = await _insert_carousel(is_public=is_public)
+        post_id = await _insert_post(
+            status_value=BlogPostStatus.PUBLISHED.value,
+            published_at=datetime.now(UTC),
+            origin="carousel",
+            project_id=project_id,
+        )
+        detail = await client.get(f"{PUBLIC_LIST_URL}/{post_id}")
+        listing = await client.get(PUBLIC_LIST_URL)
+        listed_ids = {item["id"] for item in listing.json()["items"]}
+        if is_public:
+            assert detail.status_code == 200
+            assert post_id in listed_ids
+        else:
+            assert detail.status_code == 404
+            assert post_id not in listed_ids
 
     @pytest.mark.asyncio
     async def test_unknown_id_is_the_same_404(self, client: AsyncClient) -> None:

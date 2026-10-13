@@ -80,6 +80,7 @@ from rag_backend.modules.publishing.public import (
     ReleasePhase,
     ReleaseState,
     bootstrap_module,
+    public_blog_visibility_clause,
 )
 
 __all__ = [
@@ -132,4 +133,5 @@ __all__ = [
     "ReleasePhase",
     "ReleaseState",
     "bootstrap_module",
+    "public_blog_visibility_clause",
 ]

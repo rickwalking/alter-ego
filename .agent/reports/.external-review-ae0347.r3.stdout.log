@@ -1,0 +1,220 @@
+[0m
+> build · glm-5.2
+[0m
+[0m→ [0mRead backend/src/rag_backend/agents/content_draft_agent.py
+[0m→ [0mRead backend/tests/unit/application/test_carousel_blog_body_ae0347.py
+[0m→ [0mRead backend/tests/features/carousel_blog_body_ae0347.feature
+[0m✱ [0mGrep "LOG_LONG_FORM_NOTES_MISSING"[90m in backend · 2 matches[0m
+[0m✱ [0mGrep "type: ignore"[90m in backend/tests/unit/application/test_carousel_blog_body_ae0347.py · 7 matches[0m
+[0m→ [0mRead backend/src/rag_backend/infrastructure/cache/ai_response_cache.py
+Round 3 for AE-0347. I'll verify each r2 fix against the actual tree, then hunt for regressions. Starting with the affected files.
+[0m
+[0m$ [0mgit log --oneline -8 && git status --short | head -20
+95a24a72 fix(blog): external qa r2 fixes - typed runner state, cache-safe agent tests (ae-0347)
+36a5018e fix(blog): external qa r1 fixes - sanitize notes at source, warn when missing (ae-0347)
+61172938 chore(deps): bump anyio to 4.14.2 for pip-audit (ae-0347)
+990c142e fix(blog): drop net-new sanitizer import and type-ignore flagged by integrity (ae-0347)
+8ea4949b fix(blog): compose carousel blog body and gate public reads (ae-0347)
+3402a497 Merge pull request #89 from rickwalking/chore/ae-0332-followup-tickets
+?? .agent/reports/.external-review-ae0347.r1.stdout.log
+?? .agent/reports/.external-review-ae0347.r2.stdout.log
+?? .agent/reports/.external-review-ae0347.r3.stdout.log
+[0m
+[0m✱ [0mGrep "ContentDraftAgent|get_ai_response_cache"[90m in backend/tests · 43 matches[0m
+[0m✱ [0mGrep "class CarouselWorkflowState|STATE_FIELD_RESEARCH_FINDINGS|total="[90m in backend/src/rag_backend/application/services/carousel/workflow_state.py · 8 matches[0m
+[0m✱ [0mGrep "def _build_distribution_if_needed"[90m in backend/src/rag_backend/application/services/carousel/phase_artifact_runner.py · 1 match[0m
+[0m→ [0mRead backend/src/rag_backend/infrastructure/logging.py
+[0m✱ [0mGrep "def sanitize_display_input|def _strip|INJECTION|MARKUP|lower\("[90m in backend/src/rag_backend/agents/input_sanitizer.py · 14 matches[0m
+Tree matches the delta (commit `95a24a72`). The r2 "twice on cache hit" mechanism is now visible: `_cached_raw` validates with a parse (line 158) and line 118 parses again — the warn correctly moved out of the parse path. Now checking the typed state, cache consumers, logging, and sanitizer.
+[0m✱ [0mGrep "STATE_FIELD_RESEARCH_FINDINGS"[90m in backend/src/rag_backend/domain/constants/workflow_state_fields.py · 2 matches[0m
+[0m→ [0mRead backend/src/rag_backend/application/services/carousel/workflow_state.py[90m [limit=80][0m
+[0m→ [0mRead backend/src/rag_backend/application/services/carousel/phase_artifact_runner.py[90m [limit=45, offset=220][0m
+[0m→ [0mRead backend/src/rag_backend/agents/input_sanitizer.py
+[0m✱ [0mGlob "**/test_input_sanitizer*.py"[90m in backend/tests · 1 match[0m
+[0m→ [0mRead backend/src/rag_backend/application/services/carousel/instruction_context_loader.py
+Cache-clear fixtures match the established pattern in `test_content_draft_agent.py`/`test_outline_agent.py` (both directions covered), and structlog's JSONRenderer means the new `slide_index` kwarg actually renders. Now verifying the TypedDict keys, runner signature, sanitizer coverage, and prompt determinism (the cache-hit test's bite depends on it).
+[0m✱ [0mGrep "\[tool\.(mypy|pytest)|files =|testpaths|asyncio_mode|addopts"[90m in backend/pyproject.toml · 23 matches[0m
+[0m
+[0m$ [0mls scripts/ci/ 2>/dev/null; ls backend/scripts/../../scripts/ci 2>/dev/null
+build-outputs.txt
+changed-backend-files.sh
+changed-frontend-files.sh
+check-build-output-ignored.sh
+check-integrity.sh
+eslint-changed.mjs
+gate-capture.sh
+gates.sh
+mutation-score-gate.sh
+post-pr-quality-comment.sh
+ruff-reviewdog.sh
+ruff-strict-changed.sh
+build-outputs.txt
+changed-backend-files.sh
+changed-frontend-files.sh
+check-build-output-ignored.sh
+check-integrity.sh
+eslint-changed.mjs
+gate-capture.sh
+gates.sh
+mutation-score-gate.sh
+post-pr-quality-comment.sh
+ruff-reviewdog.sh
+ruff-strict-changed.sh
+[0m
+[0m✱ [0mGrep "def test_|sanitize_display_input|IGNORE|injection"[90m in backend/tests/unit/agents/test_input_sanitizer.py · 100 matches[0m
+[0m✱ [0mGrep "autouse|def clear|class Test"[90m in backend/tests/unit/agents/test_content_draft_agent.py · 52 matches[0m
+`CarouselWorkflowState` is `total=False` with `project_id` and `research_findings` declared — the annotation is sound. The instruction loader is fully deterministic (static sections only), so the cache-hit test exercises a real hit. One thing to pin down: whether mypy even covers `tests/` (the third tuple arg `dict[str, bool]` wouldn't survive strict invariance), and what check-integrity actually scans. Also checking the sanitizer's own tests and the sibling files' fixtures.
+[0m✱ [0mGrep "autouse|def clear|class Test"[90m in backend/tests/unit/agents/test_outline_agent.py · 52 matches[0m
+[0m→ [0mRead backend/pyproject.toml[90m [limit=40, offset=119][0m
+[0m→ [0mRead scripts/ci/check-integrity.sh
+[0m→ [0mRead backend/src/rag_backend/domain/constants/workflow_state_fields.py[90m [limit=30][0m
+`test_content_draft_agent.py` and the outline/synthesis files all have autouse cache-clear fixtures — the delta follows the established pattern. Now checking the mypy scope, the `Final` annotation on the state-field constant, and the integrity scanner, while running the AE-0347 suite.
+[0m
+[0m$ [0muv run pytest tests/unit/application/test_carousel_blog_body_ae0347.py -q 2>&1; echo "EXIT:$?"
+============================= test session starts ==============================
+platform linux -- Python 3.13.13, pytest-9.0.3, pluggy-1.6.0
+rootdir: /home/pmarins/projects/alter-ego-blogfix/backend
+configfile: pytest.ini (WARNING: ignoring pytest config in pyproject.toml!)
+plugins: asyncio-1.3.0, langsmith-0.9.0, cov-7.1.0, anyio-4.14.2, pythonpath-0.7.3, hypothesis-6.155.1
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=session, asyncio_default_test_loop_scope=function
+collected 21 items
+
+tests/unit/application/test_carousel_blog_body_ae0347.py ............... [ 71%]
+......                                                                   [100%]
+
+=============================== warnings summary ===============================
+tests/unit/application/test_carousel_blog_body_ae0347.py::TestBlogTitles::test_titles_derive_from_intro_slide
+tests/unit/application/test_carousel_blog_body_ae0347.py::TestBlogTitles::test_existing_titles_are_kept
+tests/unit/application/test_carousel_blog_body_ae0347.py::TestBlogTitles::test_intro_is_selected_by_slide_index_not_position
+tests/unit/application/test_carousel_blog_body_ae0347.py::TestBlogTitles::test_no_en_heading_leaves_title_en_unset
+  <string>:57: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+
+tests/unit/application/test_carousel_blog_body_ae0347.py::TestBlogTitles::test_titles_derive_from_intro_slide
+tests/unit/application/test_carousel_blog_body_ae0347.py::TestBlogTitles::test_existing_titles_are_kept
+tests/unit/application/test_carousel_blog_body_ae0347.py::TestBlogTitles::test_intro_is_selected_by_slide_index_not_position
+tests/unit/application/test_carousel_blog_body_ae0347.py::TestBlogTitles::test_no_en_heading_leaves_title_en_unset
+  <string>:58: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+
+tests/unit/application/test_carousel_blog_body_ae0347.py::TestBlogTitles::test_titles_derive_from_intro_slide
+tests/unit/application/test_carousel_blog_body_ae0347.py::TestBlogTitles::test_existing_titles_are_kept
+tests/unit/application/test_carousel_blog_body_ae0347.py::TestBlogTitles::test_intro_is_selected_by_slide_index_not_position
+tests/unit/application/test_carousel_blog_body_ae0347.py::TestBlogTitles::test_no_en_heading_leaves_title_en_unset
+  <string>:14: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+
+tests/unit/application/test_carousel_blog_body_ae0347.py::TestBlogTitles::test_titles_derive_from_intro_slide
+tests/unit/application/test_carousel_blog_body_ae0347.py::TestBlogTitles::test_existing_titles_are_kept
+tests/unit/application/test_carousel_blog_body_ae0347.py::TestBlogTitles::test_intro_is_selected_by_slide_index_not_position
+tests/unit/application/test_carousel_blog_body_ae0347.py::TestBlogTitles::test_no_en_heading_leaves_title_en_unset
+  <string>:15: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+
+tests/unit/application/test_carousel_blog_body_ae0347.py::TestBlogTitles::test_titles_derive_from_intro_slide
+tests/unit/application/test_carousel_blog_body_ae0347.py::TestBlogTitles::test_intro_is_selected_by_slide_index_not_position
+tests/unit/application/test_carousel_blog_body_ae0347.py::TestBlogTitles::test_no_en_heading_leaves_title_en_unset
+  /home/pmarins/projects/alter-ego-blogfix/backend/src/rag_backend/domain/models/carousel.py:215: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    self.updated_at = datetime.utcnow()
+
+tests/unit/application/test_carousel_blog_body_ae0347.py::TestBlogTitles::test_titles_derive_from_intro_slide
+tests/unit/application/test_carousel_blog_body_ae0347.py::TestBlogTitles::test_intro_is_selected_by_slide_index_not_position
+  /home/pmarins/projects/alter-ego-blogfix/backend/src/rag_backend/domain/models/carousel.py:220: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    self.updated_at = datetime.utcnow()
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+======================= 21 passed, 21 warnings in 2.31s ========================
+EXIT:0
+[0m
+[0m← [0mWrite /tmp/opencode/probe_ae0347.py
+Wrote file successfully.
+[0m
+All 21 tests pass. `check-integrity.sh` scans net- added lines for suppression tokens — the removed ignore + no new tokens explains its PASS. mypy scope is `-p rag_backend` (src only, per pyproject comment), so the test annotation isn't gated but the **agent file change is** — running the real gates now: full mypy, ruff, reversed-order cache-consumer runs, and an empirical probe that the cache-hit test really hits the cache and warns once.
+[0m$ [0muv run ruff check src/rag_backend/agents/content_draft_agent.py tests/unit/application/test_carousel_blog_body_ae0347.py 2>&1; echo "EXIT:$?"
+All checks passed!
+EXIT:0
+[0m
+[0m$ [0mPYTHONPATH=src uv run python /tmp/opencode/probe_ae0347.py 2>&1; echo "EXIT:$?"
+2026-09-19 19:07:45 [warning  ] content_draft.long_form_notes_missing model_id=content-draft prompt_version=v5 slide_index=3
+ainvoke after 1st call: 1
+ainvoke after 3 calls total: 1
+warns on the 2 cached calls: 2
+  event=content_draft.long_form_notes_missing kwargs={'slide_index': 3, 'model_id': 'content-draft', 'prompt_version': 'v5'}
+  event=content_draft.long_form_notes_missing kwargs={'slide_index': 3, 'model_id': 'content-draft', 'prompt_version': 'v5'}
+EXIT:0
+[0m
+[0m$ [0muv run pytest tests/unit/application/test_carousel_blog_body_ae0347.py tests/unit/agents/test_content_draft_agent.py tests/unit/agents/test_outline_agent.py tests/unit/agents/test_source_synthesis_agent.py -q -p no:cacheprovider 2>&1 | tail -5; echo "EXIT:${pipestatus[1]}"
+/home/pmarins/projects/alter-ego-blogfix/backend/src/rag_backend/domain/models/carousel.py:220: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    self.updated_at = datetime.utcnow()
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+======================= 48 passed, 23 warnings in 4.48s ========================
+EXIT:0
+[0m
+[0m$ [0mMYPYPATH=src uv run mypy -p rag_backend 2>&1 | tail -5; echo "EXIT:${pipestatus[1]}"
+Success: no issues found in 620 source files
+EXIT:0
+[0m
+[0m→ [0mRead backend/tests/unit/agents/test_input_sanitizer.py
+[0m
+[0m$ [0mrg -l "is_public" backend/tests --type py | head; echo ---; rg -n "Scenario: Public blog|carousel.*is_public|public/blog-posts" backend/tests/unit -g '*.py' -l | head
+zsh:1: command not found: rg
+zsh:1: command not found: rg
+---
+[0m
+[0m$ [0mrg -n "backend\)|pytest|mypy|ruff|integrity|coverage" scripts/ci/gates.sh | head -40
+zsh:1: command not found: rg
+[0m
+Probe nails it: `ainvoke` stays at 1 across 3 identical calls (real cache hits), each cached call warns **exactly once** with `slide_index=3` rendered in the structured log — the old per-parse double-fire is gone. Cross-file order run (AE-0347 first, populating the shared cache): 48 passed. Full-package mypy (620 files) and ruff are clean.
+
+Closing out: sanitizer injection-pattern coverage, the public-blog scenarios' tests, the gate list, and a full unit-suite regression run.
+[0m✱ [0mGrep "is_public"[90m in backend/tests · 100 matches[0m
+[0m✱ [0mGrep "backend|pytest|mypy|ruff|integrity|coverage|unit"[90m in scripts/ci/gates.sh · 100 matches[0m
+[0m
+[0m$ [0muv run ruff format --check src/rag_backend/agents/content_draft_agent.py 2>&1; echo "EXIT:$?"
+1 file already formatted
+EXIT:0
+[0m
+Public-blog feature scenarios are covered by `test_public_blog_api_ae0297.py` (r1 scope, untouched by this delta). Final sweep: full unit-suite regression run, format check on the changed src file, and re-running integrity myself.
+[0m$ [0mbash scripts/ci/check-integrity.sh backend 2>&1 | tail -12; echo "EXIT:${pipestatus[1]}"
+Build-output gitignore pre-flight OK (9 outputs checked).
+Integrity scan (diff vs origin/main) — net-new only.
+
+=== 🔴 BLOCKERS (net-new gaming — bounce to developer) (0) ===
+
+=== 🟠 WARNINGS (review with ticket context) (0) ===
+
+PASS: no net-new gaming detected.
+EXIT:0
+[0m
+[0m$ [0muv run pytest tests/unit -q -p no:cacheprovider 2>&1 | tail -4; echo "EXIT:${pipestatus[1]}"
+self.updated_at = datetime.utcnow()
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=============== 2513 passed, 1 skipped, 2372 warnings in 30.60s ================
+EXIT:0
+[0m
+## AE-0347 Round 3 — QA Review
+
+### r2 BLOCKER: net-new `type: ignore[arg-type]` in runner test — **FIXED**
+- `test_carousel_blog_body_ae0347.py:322` annotates `state: CarouselWorkflowState` (real `TypedDict, total=False` declaring `project_id` and `research_findings` — `workflow_state.py:13-21`); the ignore is gone (line 346-347 passes `state` bare). Zero suppression tokens in the delta's added lines.
+- Reproduced `check-integrity.sh backend` myself: **0 blockers, 0 warnings** (not just taking the reported PASS).
+- Observation (not a finding): mypy's gate scope is `src/` only (`gates.sh:119`), so the test annotation isn't machine-verified — and wouldn't be strict-clean as written (non-`Final` key constant as TypedDict key; `dict[str, bool]` vs invariant `dict[str, object]` in the config tuple). Consistent with pre-existing test files; no gate covers it.
+
+### r2 MAJOR: order-dependent agent tests on process-global cache — **FIXED**
+- Autouse `clear_cache` fixtures before every test in both agent classes (`test:89-91`, `test:359-361`), matching the established pattern in `test_content_draft_agent.py`, `test_outline_agent.py`, `test_source_synthesis_agent.py`. Cache keys embed `model_id`, so no cross-agent collision is possible.
+- Verified empirically: file alone (21 pass), AE-0347 run **first** in one process with all other cache-consuming agent files (48 pass — its cache entries populated before the others ran), full unit suite green.
+
+### r2 MINOR: warning per parse, no slide context — **FIXED**
+- Warn moved out of `_parse_draft` (which parses twice per cache hit — validation in `content_draft_agent.py:158` + real parse at `:118` — and N times under retry) into `_warn_if_notes_missing` at `content_draft_agent.py:137`, at method level after the cache if/else: fires exactly once per `draft_slide` call on both hit and miss paths.
+- Empirical probe: 3 identical `draft_slide` calls → `ainvoke` count stays at **1** (true cache hits; instruction context is fully deterministic, no timestamps), exactly **one warn per cached call**, and structlog's JSONRenderer renders `slide_index=3`, `model_id`, `prompt_version` in the output line — the context is real, not just a passed kwarg. `test_cached_noteless_reply_warns_once` (test:387-396) has genuine bite: a regression to per-parse warning would fire twice on the hit.
+
+### r2 MINOR: Gherkin drift — **FIXED**
+- "verbatim" → "case preserved, markup and injection patterns stripped at source" (feature:14-15) — matches implementation; mechanics covered by `test_input_sanitizer.py::TestSanitizeDisplayInput` (case, angle/paren, injection patterns, truncation), wiring by `test_notes_are_case_preserving_sanitized` (test:363-374).
+- New "Model omits long-form notes" scenario (feature:17-21) → `test_missing_notes_logs_warning` (asserts `slide_index` kwarg, test:385) + cache-hit test. New steps map to real tests: position-fallback keying → `test_payload_index_falls_back_to_position` (test:131); intro-by-`slide_index`-not-position → `test_intro_is_selected_by_slide_index_not_position` (test:277). No scenario now describes untested behavior; public-blog scenarios (feature:52-63) remain covered by `test_public_blog_api_ae0297.py` (r1 scope, untouched).
+
+### r2 MINOR (accepted): legacy persisted drafts on resume — unchanged, team-accepted. Not re-flagged.
+
+### Regression sweep (delta + surrounding tree)
+- Full-package mypy (620 files, gate's exact scope): **clean** — the src change is type-safe.
+- ruff check + `ruff format --check` on changed files: clean.
+- Full unit suite: **2513 passed, 1 skipped (pre-existing), 0 failed**.
+- No other callers of `_parse_draft` outside `draft_slide`'s single flow; warn fires before persona enforcement on the only return path — no path can silently skip it. Cache stores raw replies and parse+sanitize re-runs on cache hits — no sanitization bypass introduced.
+
+**VERDICT: PASS**

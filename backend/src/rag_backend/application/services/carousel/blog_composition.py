@@ -17,6 +17,33 @@ from rag_backend.application.services.carousel.outline_normalize import (
 from rag_backend.application.services.carousel.types import MAX_SLIDES
 
 BLOG_SECTION_HEADING_PREFIX = "## "
+RESEARCH_FINDING_SUMMARY_KEY = "summary"
+
+
+def research_summary_from_findings(findings: object) -> str:
+    """Join the per-source ``summary`` of research findings into intro prose.
+
+    AE-0347: the workflow stores research as ``research_findings`` (one dict per
+    source with ``key_points`` + ``summary``); nothing ever wrote the
+    ``research_summary`` scalar the blog composer expected, so the intro was
+    always empty. Duplicate/blank summaries are dropped, order is preserved.
+    """
+    if not isinstance(findings, list):
+        return ""
+    seen: set[str] = set()
+    paragraphs: list[str] = []
+    for item in findings:
+        if not isinstance(item, Mapping):
+            continue
+        summary = item.get(RESEARCH_FINDING_SUMMARY_KEY)
+        if not isinstance(summary, str):
+            continue
+        text = summary.strip()
+        if not text or text in seen:
+            continue
+        seen.add(text)
+        paragraphs.append(text)
+    return "\n\n".join(paragraphs)
 
 
 @dataclass(frozen=True)
@@ -168,4 +195,5 @@ __all__ = [
     "BlogCompositionInput",
     "build_blog_markdown_en_from_long_form_notes",
     "build_blog_markdown_from_long_form_notes",
+    "research_summary_from_findings",
 ]
