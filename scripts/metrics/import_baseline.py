@@ -484,6 +484,7 @@ def render_importlinter(ignores: dict[str, list[tuple[str, str]]] | None = None)
         "editorial",
         "presentation",
         "publishing",
+        "autopilot",
     ):
         # Contract A — application/domain isolation: inner layers must not import
         # frameworks (sqlalchemy/fastapi), the global DI container, or ANY

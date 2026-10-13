@@ -294,6 +294,44 @@ forbidden_modules =
     rag_backend.modules.publishing.bootstrap
     rag_backend.modules.publishing.constants
 
+# Contract: Autopilot module application/domain exit-gate (AE-0103)
+# The autopilot inner layers must stay free of frameworks, the global
+# container, and concrete infrastructure (incl. Postgres repos).
+# Currently clean — no ignore_imports; any NEW such import breaks CI.
+[importlinter:contract:autopilot-application-isolation]
+name = Autopilot application/domain must not import frameworks, the global container, or infrastructure
+type = forbidden
+allow_indirect_imports = true
+unmatched_ignore_imports_alerting = none
+source_modules =
+    rag_backend.modules.autopilot.application
+    rag_backend.modules.autopilot.domain
+forbidden_modules =
+    sqlalchemy
+    fastapi
+    rag_backend.infrastructure
+
+# Contract: autopilot internals are private (import via the facade only)
+# AE-0103 — mirrors module-conventions §7a; the proven Phase-2 pattern.
+[importlinter:contract:autopilot-public-facade]
+name = autopilot internals are private (import via the facade only)
+type = forbidden
+allow_indirect_imports = true
+unmatched_ignore_imports_alerting = none
+source_modules =
+    rag_backend.api
+    rag_backend.agents
+    rag_backend.application
+    rag_backend.domain
+    rag_backend.infrastructure
+forbidden_modules =
+    rag_backend.modules.autopilot.domain
+    rag_backend.modules.autopilot.application
+    rag_backend.modules.autopilot.infrastructure
+    rag_backend.modules.autopilot.api
+    rag_backend.modules.autopilot.bootstrap
+    rag_backend.modules.autopilot.constants
+
 # Contract: presentation must not import the editorial module (editorial -> presentation only)
 # AE-0122 — locks the acyclic module direction.
 [importlinter:contract:presentation-no-editorial]
