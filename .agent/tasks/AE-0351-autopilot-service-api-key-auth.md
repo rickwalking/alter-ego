@@ -1,6 +1,6 @@
 # AE-0351 — Scoped service API key auth for /api/autopilot/*
 
-Status: In Development
+Status: Dev Complete
 Tier: T2
 Priority: High
 Type: Feature
@@ -131,6 +131,10 @@ In Development on `feat/ae-0351-autopilot-service-api-key-auth`. Feature file wr
 ### 2026-10-13 17:58
 
 `bash scripts/ci/gate-capture.sh backend` exit 0 (20 pass, 0 fail, 0 skip). Pytest 2985 passed / 2 skipped. Dev summary: `.agent/reports/AE-0351.dev-summary.md`.
+
+### 2026-10-13 18:05
+
+Moved to Dev Complete. Post-commit integrity scan: 0 blockers, same two AE-0350 apparatus warnings.
 
 ## Files Touched
 

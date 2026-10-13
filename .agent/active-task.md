@@ -1,6 +1,6 @@
 # Active Task
 
-AE-0351 is In Development on `feat/ae-0351-autopilot-service-api-key-auth`.
+AE-0351 is Dev Complete on `feat/ae-0351-autopilot-service-api-key-auth`.
 
 Scoped service API key for `/api/autopilot/*`.
 
