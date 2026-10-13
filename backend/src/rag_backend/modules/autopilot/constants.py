@@ -45,3 +45,16 @@ PAYLOAD_REASON = "reason"
 METADATA_MODULE = "module"
 
 INVALID_TRANSITION_MESSAGE = "invalid_autopilot_transition"
+
+# Service API key (AE-0351). The plaintext key is never stored or logged.
+HEADER_API_KEY = "X-Api-Key"
+ROUTER_PREFIX = "/autopilot"
+PATH_SIGNALS = "/signals"
+TAG_AUTOPILOT = "autopilot"
+RATE_LIMIT_SCOPE_AUTOPILOT = "autopilot"
+DETAIL_API_KEY_INVALID = "invalid_api_key"
+DETAIL_API_KEY_UNCONFIGURED = "autopilot_api_key_unconfigured"
+LOG_API_KEY_REJECTED = "autopilot_api_key_rejected"
+LOG_API_KEY_DISABLED = "autopilot_api_key_disabled"
+REASON_KEY_MISSING = "missing"
+REASON_KEY_MISMATCH = "mismatch"

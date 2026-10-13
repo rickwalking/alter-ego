@@ -74,6 +74,12 @@ from rag_backend.infrastructure.telemetry.opentelemetry import (
     instrument_fastapi,
 )
 
+# The HTTP router stays off the package facade. Model registration imports
+# the facade, and the router imports the shared slowapi limiter under
+# ``rag_backend.api``. Pulling that through the facade would make
+# infrastructure depend on the API layer.
+from rag_backend.modules.autopilot.api.router import router as autopilot_router
+
 logger = get_logger()
 
 
@@ -254,6 +260,7 @@ def _register_routes(app: FastAPI) -> None:
     app.include_router(workflow_audit.router, prefix="/api")
     app.include_router(workflow_board.router, prefix="/api")
     app.include_router(chat_stream.router, prefix="/api")
+    app.include_router(autopilot_router, prefix="/api")
 
 
 def create_app() -> FastAPI:

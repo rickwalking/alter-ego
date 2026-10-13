@@ -1,6 +1,6 @@
 # AE-0351 — Scoped service API key auth for /api/autopilot/*
 
-Status: Ready
+Status: In Development
 Tier: T2
 Priority: High
 Type: Feature
@@ -34,10 +34,10 @@ Auth today is HS256 JWT only (`infrastructure/auth.py`), 60-min expiry, no refre
 
 ## Acceptance Criteria
 
-- [ ] WHEN a request to `/api/autopilot/signals` has a valid key THE API SHALL return 200.
-- [ ] WHEN the key is missing or wrong THE API SHALL return 401 and log a warning without the key value.
-- [ ] WHEN the key is valid but the route is outside `/api/autopilot/*` (e.g. `/api/carousels`) THE API SHALL still return 401.
-- [ ] WHEN `GROKBOT_API_KEY_SHA256` is unset THE autopilot routes SHALL return 503.
+- [x] WHEN a request to `/api/autopilot/signals` has a valid key THE API SHALL return 200.
+- [x] WHEN the key is missing or wrong THE API SHALL return 401 and log a warning without the key value.
+- [x] WHEN the key is valid but the route is outside `/api/autopilot/*` (e.g. `/api/carousels`) THE API SHALL still return 401.
+- [x] WHEN `GROKBOT_API_KEY_SHA256` is unset THE autopilot routes SHALL return 503.
 
 ## Gherkin Scenarios
 
@@ -124,13 +124,33 @@ Feature: Autopilot service API key
 
 Ticket created from docs/architecture/grokbot-autopilot.md (ticket #2).
 
+### 2026-10-13 17:20
+
+In Development on `feat/ae-0351-autopilot-service-api-key-auth`. Feature file written first, then the scoped dependency, router, and tests.
+
+### 2026-10-13 17:58
+
+`bash scripts/ci/gate-capture.sh backend` exit 0 (20 pass, 0 fail, 0 skip). Pytest 2985 passed / 2 skipped. Dev summary: `.agent/reports/AE-0351.dev-summary.md`.
+
 ## Files Touched
 
-Pending.
+- `backend/tests/features/autopilot_api_key.feature`
+- `backend/tests/integration/test_autopilot_api_key.py`
+- `backend/src/rag_backend/modules/autopilot/api/auth.py`
+- `backend/src/rag_backend/modules/autopilot/api/router.py`
+- `backend/src/rag_backend/modules/autopilot/api/__init__.py`
+- `backend/src/rag_backend/modules/autopilot/constants.py`
+- `backend/src/rag_backend/domain/constants/rate_limits.py`
+- `backend/src/rag_backend/infrastructure/config/settings.py`
+- `backend/src/rag_backend/bootstrap/app_factory.py`
+- `backend/tests/snapshots/openapi_routes.json`
+- `backend/.env.example`
 
 ## Test Evidence
 
-Pending.
+- `backend/tests/features/autopilot_api_key.feature` — valid key, wrong key, missing key, other routes, public carousel list, disabled feature, shared rate limit, dependency scope.
+- `tests/integration/test_autopilot_api_key.py` — those scenarios, plus empty header, padded/uppercase digest, malformed digest (401, not 500), and `hmac.compare_digest` called with the hex digests.
+- Gate proof: `.agent/reports/AE-0351.dev-summary.md`.
 
 ## QA Report
 
@@ -139,6 +159,13 @@ Pending.
 ## Decision Log
 
 See ADR-0020.
+
+### 2026-10-13
+
+- The stored verifier is the sha256 hex digest in `GROKBOT_API_KEY_SHA256`, compared with `hmac.compare_digest`. The architecture gap table also says "argon2/sha256" and `GROKBOT_API_KEY_HASH`. This ticket and AE-0359 both name `GROKBOT_API_KEY_SHA256`, and the ticket specifies sha256. Argon2 is not used.
+- `GET /api/carousels` (the list) is anonymous-public and stays 200. The key does not attach a user. Routes that already require a user still return 401: `GET /api/documents` and `GET /api/carousels/{project_id}`.
+- `GET /api/autopilot/signals` returns `{}` until AE-0352 fills the bundle. This ticket only mounts the route so the key can be enforced.
+- The HTTP router is included from the composition root (`bootstrap/app_factory.py`), not re-exported on the package facade. Model registration imports the facade; putting the router there would make infrastructure depend on `rag_backend.api` through the shared slowapi limiter.
 
 ## Blockers
 

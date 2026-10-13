@@ -124,6 +124,10 @@ class Settings(BaseSettings):
     meta_ig_access_token: SecretStr = SecretStr("")
     meta_ig_user_id: str = ""
 
+    # AE-0351: sha256 hex digest of the scout API key. Empty disables
+    # /api/autopilot/* (HTTP 503). The plaintext key is never stored.
+    grokbot_api_key_sha256: SecretStr = SecretStr("")
+
     carousel_public_base_url: str = ""
 
     cdn_base_url: str = ""

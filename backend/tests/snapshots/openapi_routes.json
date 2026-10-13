@@ -11,6 +11,7 @@
   "DELETE /api/rubrics/{rubric_id}",
   "GET /api/admin/users",
   "GET /api/auth/me",
+  "GET /api/autopilot/signals",
   "GET /api/blog-posts",
   "GET /api/blog-posts/{post_id}",
   "GET /api/blog-posts/{post_id}/accessibility-check",

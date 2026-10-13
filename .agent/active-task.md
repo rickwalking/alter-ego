@@ -1,10 +1,8 @@
 # Active Task
 
-AE-0350 is Dev Complete on `feat/ae-0350-autopilot-module-skeleton-and-migration`.
+AE-0351 is In Development on `feat/ae-0351-autopilot-service-api-key-auth`.
 
-Report: `.agent/reports/AE-0350.dev-summary.md`.
-
-Next: QA agent for AE-0350. Do not start AE-0351 until that passes.
+Scoped service API key for `/api/autopilot/*`.
 
 ## Rules
 
