@@ -1,6 +1,6 @@
 # AE-0352 — Signal collectors (X via ddgs web search, HN, HF, RSS, Bluesky, GitHub) + GET /api/autopilot/signals
 
-Status: Ready
+Status: Dev Complete
 Tier: T2
 Priority: High
 Type: Feature
@@ -42,12 +42,12 @@ No trend ingestion exists. Official X paths are paid; xcancel returned HTTP 451 
 
 ## Acceptance Criteria
 
-- [ ] WHEN all collectors succeed THE endpoint SHALL return deduped signals with `source` in {x_search, hn, hf_papers, rss, bluesky, github}.
-- [ ] WHEN one collector raises or times out THE endpoint SHALL still return 200 with the others' signals and an `errors[]` entry naming the failed source.
-- [ ] WHEN `ddgs` returns a non-status x.com URL (profile, search page) THE X collector SHALL drop it.
-- [ ] WHEN an X status id decodes to older than 48 h THE X collector SHALL drop it.
-- [ ] WHEN `AUTOPILOT_X_RESOLVER=mirror` and the mirror returns 451 THE resolver SHALL return None and the snippet text SHALL be kept.
-- [ ] WHEN tests run THE network SHALL be fully mocked (respx / fakes); no live HTTP in CI.
+- [x] WHEN all collectors succeed THE endpoint SHALL return deduped signals with `source` in {x_search, hn, hf_papers, rss, bluesky, github}.
+- [x] WHEN one collector raises or times out THE endpoint SHALL still return 200 with the others' signals and an `errors[]` entry naming the failed source.
+- [x] WHEN `ddgs` returns a non-status x.com URL (profile, search page) THE X collector SHALL drop it.
+- [x] WHEN an X status id decodes to older than 48 h THE X collector SHALL drop it.
+- [x] WHEN `AUTOPILOT_X_RESOLVER=mirror` and the mirror returns 451 THE resolver SHALL return None and the snippet text SHALL be kept.
+- [x] WHEN tests run THE network SHALL be fully mocked (respx / fakes); no live HTTP in CI.
 
 ## Gherkin Scenarios
 
@@ -140,13 +140,46 @@ Feature: Autopilot signal collection
 
 Ticket created from docs/architecture/grokbot-autopilot.md (ticket #3).
 
+### 2026-10-13 19:50
+
+Status moved to In Development on `feat/ae-0352-autopilot-signal-collectors`.
+Feature file written before implementation.
+
+### 2026-10-13 20:55
+
+`bash scripts/ci/gate-capture.sh backend` exit 0 (20 pass, 0 fail, 0 skip). Pytest 3070 passed / 2 skipped. Dev summary: `.agent/reports/AE-0352.dev-summary.md`.
+
+### 2026-10-13 21:00
+
+Moved to Dev Complete.
+
 ## Files Touched
 
-Pending.
+- `backend/tests/features/autopilot_signals.feature`
+- `backend/tests/unit/autopilot/`
+- `backend/tests/integration/test_autopilot_signals.py`
+- `backend/tests/integration/test_autopilot_api_key.py`
+- `backend/src/rag_backend/modules/autopilot/domain/signals.py`
+- `backend/src/rag_backend/modules/autopilot/domain/snowflake.py`
+- `backend/src/rag_backend/modules/autopilot/domain/x_status.py`
+- `backend/src/rag_backend/modules/autopilot/domain/ports.py`
+- `backend/src/rag_backend/modules/autopilot/application/signals_service.py`
+- `backend/src/rag_backend/modules/autopilot/application/signal_cache.py`
+- `backend/src/rag_backend/modules/autopilot/infrastructure/collectors/`
+- `backend/src/rag_backend/modules/autopilot/api/router.py`
+- `backend/src/rag_backend/modules/autopilot/bootstrap.py`
+- `backend/src/rag_backend/modules/autopilot/constants.py`
+- `backend/src/rag_backend/infrastructure/config/settings.py`
+- `backend/.env.example`
+- `backend/pyproject.toml`
+- `backend/uv.lock`
 
 ## Test Evidence
 
-Pending.
+- `backend/tests/features/autopilot_signals.feature` — all six sources, one source timing out, recent X posts only, mirror 451, cache reuse, 200-signal cap.
+- `backend/tests/unit/autopilot/` — snowflake round-trip, X URL filter and 48h cutoff, mirror resolver, HN/HF/Bluesky/GitHub parsers, RSS/Atom/sitemap, service isolation, cache, wiring. Network is respx or a fake search client.
+- `backend/tests/integration/test_autopilot_signals.py` — `GET /api/autopilot/signals` returns 200 with every source and no duplicate URL; a Bluesky timeout stays 200 and names `bluesky` in `errors`.
+- Gate proof: `.agent/reports/AE-0352.dev-summary.md`.
 
 ## QA Report
 
@@ -155,6 +188,15 @@ Pending.
 ## Decision Log
 
 See ADR-0020.
+
+### 2026-10-13
+
+- Anthropic has no RSS feed (the documented URLs returned 404 on 2026-10-13). The collector reads `https://www.anthropic.com/sitemap.xml` and keeps paths containing `/news/`.
+- The Meta AI blog RSS also returned 404. The collector uses `https://engineering.fb.com/category/ml-applications/feed/`.
+- Google AI uses `https://blog.google/innovation-and-ai/technology/ai/rss/`.
+- GitHub search uses `topic:llm created:>` with a 7-day lookback (`GITHUB_LOOKBACK_DAYS`). The architecture table left the date window unspecified.
+- The mirror resolver returns visible text. It does not parse like or repost counts. The default resolver stays `none`.
+- Shipped X queries are the three examples in the architecture doc. The cap remains six. Six queries at the 5s spacing ceiling can exceed the 20s collector timeout, so the default list stays at three.
 
 ## Blockers
 
