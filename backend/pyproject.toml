@@ -46,6 +46,7 @@ dependencies = [
     "langsmith>=0.8.18",  # GHSA-f4xh-w4cj-qxq8 (TracingMiddleware arbitrary file read)
     "starlette>=1.3.1",  # CVE-2026-54282/54283
     "msgpack>=1.2.1",  # GHSA-6v7p-g79w-8964 (unpacker SEGV/DoS); transitive floor
+    "defusedxml>=0.7.1",
 ]
 
 [tool.uv]
@@ -143,6 +144,10 @@ pretty = true
 
 # MYPYPATH=src must be set when running mypy so imports resolve as rag_backend.*
 # Do not run mypy src/ directly; always use: MYPYPATH=src mypy -p rag_backend
+
+[[tool.mypy.overrides]]
+module = ["defusedxml", "defusedxml.*"]
+ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
 module = [

@@ -3,19 +3,20 @@
 Every route on this router requires the service API key. Decorate each
 route with the shared slowapi limit (``RATE_LIMIT_AUTOPILOT`` /
 ``RATE_LIMIT_SCOPE_AUTOPILOT``) so they share one 10/minute budget per IP.
-The signals body is filled by AE-0352; this handler only proves the route
-is mounted and authenticated.
 """
 
 from __future__ import annotations
 
+from typing import cast
+
 from fastapi import APIRouter, Depends, Request, status
-from fastapi.responses import JSONResponse
 
 from rag_backend.api.middleware.rate_limiting import limiter
 from rag_backend.domain.constants.rate_limits import RATE_LIMIT_AUTOPILOT
 from rag_backend.modules.autopilot.api.auth import require_autopilot_api_key
+from rag_backend.modules.autopilot.bootstrap import default_signals_service
 from rag_backend.modules.autopilot.constants import (
+    APP_STATE_SIGNALS,
     DETAIL_API_KEY_INVALID,
     DETAIL_API_KEY_UNCONFIGURED,
     PATH_SIGNALS,
@@ -23,6 +24,8 @@ from rag_backend.modules.autopilot.constants import (
     ROUTER_PREFIX,
     TAG_AUTOPILOT,
 )
+from rag_backend.modules.autopilot.domain.ports import SignalsReader
+from rag_backend.modules.autopilot.domain.signals import SignalsBundle
 
 router = APIRouter(
     prefix=ROUTER_PREFIX,
@@ -33,6 +36,7 @@ router = APIRouter(
 
 @router.get(
     PATH_SIGNALS,
+    response_model=SignalsBundle,
     responses={
         status.HTTP_401_UNAUTHORIZED: {"description": DETAIL_API_KEY_INVALID},
         status.HTTP_503_SERVICE_UNAVAILABLE: {
@@ -41,12 +45,15 @@ router = APIRouter(
     },
 )
 @limiter.shared_limit(RATE_LIMIT_AUTOPILOT, RATE_LIMIT_SCOPE_AUTOPILOT)
-async def get_autopilot_signals(request: Request) -> JSONResponse:
-    """Return 200 once the scout key is accepted.
+async def get_autopilot_signals(request: Request) -> SignalsBundle:
+    """Return the deduped signal bundle for the scout."""
+    reader = signals_reader(request)
+    return await reader.collect_all()
 
-    AE-0352 replaces this body with the signal bundle. ``request`` stays in
-    the signature so slowapi can read the caller address; the body does not
-    use it.
-    """
-    del request
-    return JSONResponse(status_code=status.HTTP_200_OK, content={})
+
+def signals_reader(request: Request) -> SignalsReader:
+    """Prefer an app-state override, otherwise the process service."""
+    override: object = getattr(request.app.state, APP_STATE_SIGNALS, None)
+    if override is None:
+        return default_signals_service()
+    return cast(SignalsReader, override)

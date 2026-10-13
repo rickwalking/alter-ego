@@ -84,3 +84,99 @@ CALLBACK_RETRY_PREFIX = "ap:retry:"
 NOTICE_PUBLISHED = "published"
 NOTICE_PUBLISH_FAILED = "publish_failed"
 LOG_PUBLISH_JOB = "autopilot_instagram_publish"
+
+# Signal bundle (AE-0352, architecture §5 and §5.1).
+SOURCE_X_SEARCH = "x_search"
+SOURCE_HN = "hn"
+SOURCE_HF_PAPERS = "hf_papers"
+SOURCE_RSS = "rss"
+SOURCE_BLUESKY = "bluesky"
+SOURCE_GITHUB = "github"
+ERROR_TIMEOUT = "timeout"
+ERROR_FAILED = "failed"
+LOG_COLLECTOR_FAILED = "autopilot_collector_failed"
+LOG_COLLECTOR_TIMEOUT = "autopilot_collector_timeout"
+LOG_UPSTREAM_SKIPPED = "autopilot_upstream_skipped"
+APP_STATE_SIGNALS = "autopilot_signals"
+COLLECTOR_TIMEOUT_SECONDS = 20.0
+SIGNAL_CACHE_TTL_SECONDS = 30 * 60
+MAX_SIGNALS = 200
+HTTP_TIMEOUT_SECONDS = 10.0
+MAX_SIGNAL_TEXT_CHARS = 2000
+HTTP_SUCCESS_MIN = 200
+HTTP_SUCCESS_MAX = 300
+NO_RESULTS_MARK = "No results found"
+
+# X via web search. The backend never requests x.com (architecture §5.1).
+X_RESOLVER_NONE = "none"
+X_RESOLVER_MIRROR = "mirror"
+X_SEARCH_TIMELIMIT = "d"
+X_SEARCH_MAX_RESULTS = 10
+X_MAX_QUERIES_PER_RUN = 6
+X_QUERY_SPACING_MIN_SECONDS = 2.0
+X_QUERY_SPACING_MAX_SECONDS = 5.0
+X_MAX_AGE_HOURS = 48
+X_RESOLVE_TIMEOUT_SECONDS = 3.0
+X_CANONICAL_ORIGIN = "https://x.com"
+SCHEME_HTTPS = "https"
+TWITTER_SNOWFLAKE_EPOCH_MS = 1_288_834_974_657
+X_STATUS_URL_PATTERN = r"^https://(x|twitter)\.com/([A-Za-z0-9_]{1,15})/status/(\d+)$"
+X_SEARCH_QUERIES = (
+    'site:x.com "AI agent"',
+    'site:x.com "new model" launch',
+    "site:x.com Claude OR GPT OR Gemini OR Grok",
+)
+
+# Hacker News Algolia. ``points>100`` matches the architecture table.
+HN_SEARCH_URL = "https://hn.algolia.com/api/v1/search"
+HN_TAG_STORY = "story"
+HN_MIN_POINTS = 100
+HN_LOOKBACK_HOURS = 48
+HN_ITEM_URL_PREFIX = "https://news.ycombinator.com/item?id="
+HN_SEARCH_QUERIES = ("AI", "LLM", "Claude", "GPT", "Gemini", "Grok")
+HN_PARAM_TAGS = "tags"
+HN_PARAM_QUERY = "query"
+HN_PARAM_NUMERIC_FILTERS = "numericFilters"
+HN_FILTER_POINTS = "points"
+HN_FILTER_CREATED = "created_at_i"
+
+# Hugging Face daily papers.
+HF_DAILY_PAPERS_URL = "https://huggingface.co/api/daily_papers"
+HF_PAPER_URL_PREFIX = "https://huggingface.co/papers/"
+
+# RSS / Atom. Anthropic publishes no RSS (rss.xml and news/rss.xml were
+# HTTP 404 on 2026-10-13); the news sitemap is the machine-readable
+# substitute and only ``/news/`` URLs are kept. ai.meta.com/blog RSS was
+# also 404; Meta's engineering ML feed is the live official substitute.
+FEED_URL_OPENAI = "https://openai.com/news/rss.xml"
+FEED_URL_ANTHROPIC = "https://www.anthropic.com/sitemap.xml"
+FEED_URL_GOOGLE_AI = "https://blog.google/innovation-and-ai/technology/ai/rss/"
+FEED_URL_META_AI = "https://engineering.fb.com/category/ml-applications/feed/"
+FEED_URL_VERGE_AI = "https://www.theverge.com/rss/ai-artificial-intelligence/index.xml"
+ANTHROPIC_NEWS_PATH = "/news/"
+RSS_MAX_AGE_DAYS = 14
+
+# Bluesky public AppView. ``link`` is often a path, so the collector
+# prefixes ``BSKY_ORIGIN`` when the value is relative.
+BSKY_TRENDS_URL = "https://public.api.bsky.app/xrpc/app.bsky.unspecced.getTrends"
+BSKY_ORIGIN = "https://bsky.app"
+BSKY_TREND_LIMIT = "10"
+BSKY_PARAM_LIMIT = "limit"
+
+# GitHub Search API. The token is optional; an empty token sends no
+# Authorization header.
+GITHUB_SEARCH_URL = "https://api.github.com/search/repositories"
+GITHUB_LOOKBACK_DAYS = 7
+GITHUB_TOPIC_QUERY = "topic:llm"
+GITHUB_CREATED_PREFIX = "created:>"
+GITHUB_SORT_STARS = "stars"
+GITHUB_ORDER_DESC = "desc"
+GITHUB_PARAM_Q = "q"
+GITHUB_PARAM_SORT = "sort"
+GITHUB_PARAM_ORDER = "order"
+GITHUB_ACCEPT = "application/vnd.github+json"
+HEADER_ACCEPT = "Accept"
+HEADER_AUTHORIZATION = "Authorization"
+HEADER_USER_AGENT = "User-Agent"
+HTTP_USER_AGENT = "alter-ego-autopilot"
+AUTH_BEARER_PREFIX = "Bearer "

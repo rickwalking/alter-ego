@@ -27,6 +27,12 @@ from rag_backend.modules.autopilot.domain.publish import (
     SaveContainerCommand,
     SavePostCommand,
 )
+from rag_backend.modules.autopilot.domain.signals import (
+    CollectWindow,
+    Signal,
+    SignalsBundle,
+)
+from rag_backend.modules.autopilot.domain.x_status import XStatusTarget
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -178,4 +184,58 @@ class TelegramUpdateRepository(Protocol):
 
     async def has_telegram_update(self, update_id: int) -> bool:
         """True when this update id was already stored."""
+        ...
+
+
+@dataclass(frozen=True, kw_only=True)
+class WebSearchQuery:
+    """One ``ddgs`` text search. The collector never calls x.com itself."""
+
+    text: str
+    timelimit: str
+    max_results: int
+
+
+@dataclass(frozen=True, kw_only=True)
+class WebSearchHit:
+    """A search snippet. ``url`` is untrusted until the status regex accepts it."""
+
+    url: str
+    title: str
+    snippet: str
+
+
+class WebSearchClient(Protocol):
+    """Async wrapper around the synchronous ``ddgs`` client."""
+
+    async def search(self, query: WebSearchQuery) -> list[WebSearchHit]:
+        """Return snippet hits for one query."""
+        ...
+
+
+class XPostResolver(Protocol):
+    """Optional enrichment of a status URL. The default implementation is a no-op."""
+
+    async def resolve(self, target: XStatusTarget) -> str | None:
+        """Return replacement post text, or None to keep the snippet."""
+        ...
+
+
+class Collector(Protocol):
+    """One free signal source. Failures are isolated by ``SignalsService``."""
+
+    def source_name(self) -> str:
+        """Stable source id recorded in ``errors[]`` when collection fails."""
+        ...
+
+    async def collect(self, window: CollectWindow) -> list[Signal]:
+        """Return the signals visible at ``window.as_of``."""
+        ...
+
+
+class SignalsReader(Protocol):
+    """The read side the signals route calls."""
+
+    async def collect_all(self) -> SignalsBundle:
+        """Return the cached bundle, collecting on a miss."""
         ...

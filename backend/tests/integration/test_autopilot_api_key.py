@@ -10,6 +10,7 @@ import hmac
 import json
 import os
 from collections.abc import AsyncIterator, Iterator
+from datetime import UTC, datetime
 from uuid import uuid4
 
 import pytest
@@ -21,6 +22,7 @@ from rag_backend.domain.constants import ENCODING_UTF8
 from rag_backend.modules.autopilot.api import auth as auth_module
 from rag_backend.modules.autopilot.api.auth import require_autopilot_api_key
 from rag_backend.modules.autopilot.constants import (
+    APP_STATE_SIGNALS,
     DETAIL_API_KEY_INVALID,
     DETAIL_API_KEY_UNCONFIGURED,
     HEADER_API_KEY,
@@ -29,6 +31,7 @@ from rag_backend.modules.autopilot.constants import (
     REASON_KEY_MISMATCH,
     REASON_KEY_MISSING,
 )
+from rag_backend.modules.autopilot.domain.signals import SignalsBundle
 
 _PLAINTEXT_KEY = "k1"
 _WRONG_KEY = "nope"
@@ -106,6 +109,8 @@ async def _open_client() -> AsyncIterator[AsyncClient]:
         await conn.run_sync(Base.metadata.create_all)
     db_config.c_engine = engine
     app = create_app()
+    # Auth tests must not collect live signals (AE-0352 owns the bundle).
+    setattr(app.state, APP_STATE_SIGNALS, _IdleSignals())
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
         yield client
@@ -130,7 +135,10 @@ def _logs_omit_secrets(logs: list[dict[str, object]], *secrets: str) -> None:
 async def test_valid_key_returns_200(scout: AsyncClient) -> None:
     response = await scout.get(_SIGNALS_PATH, headers=_key_header(_PLAINTEXT_KEY))
     assert response.status_code == 200
-    assert response.json() == {}
+    body = response.json()
+    assert body["signals"] == []
+    assert body["errors"] == []
+    assert isinstance(body["generated_at"], str)
 
 
 # Scenario: Wrong key is rejected
@@ -276,6 +284,17 @@ def test_compare_digest_receives_hex_not_the_plaintext(
     assert seen == [(_digest(_PLAINTEXT_KEY), _digest(_PLAINTEXT_KEY))]
     assert _PLAINTEXT_KEY not in seen[0][0]
     assert _PLAINTEXT_KEY not in seen[0][1]
+
+
+class _IdleSignals:
+    """Stand-in bundle so API-key tests never open a socket."""
+
+    async def collect_all(self) -> SignalsBundle:
+        return SignalsBundle(
+            generated_at=datetime(2026, 10, 13, tzinfo=UTC),
+            signals=[],
+            errors=[],
+        )
 
 
 def _dependency_calls(route: APIRoute) -> list[object]:

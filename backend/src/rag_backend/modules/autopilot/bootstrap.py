@@ -11,18 +11,32 @@ from dataclasses import dataclass
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.domain.protocols.social import SocialPublisher
+from rag_backend.infrastructure.config.settings import Settings, get_settings
 from rag_backend.modules.autopilot.application.publish_job import (
     InstagramPublishJob,
     PublishJobDependencies,
     SystemClock,
 )
 from rag_backend.modules.autopilot.application.service import AutopilotService
+from rag_backend.modules.autopilot.application.signal_cache import SignalBundleCache
+from rag_backend.modules.autopilot.application.signals_service import (
+    SignalsService,
+    SignalsServiceDependencies,
+)
+from rag_backend.modules.autopilot.constants import (
+    COLLECTOR_TIMEOUT_SECONDS,
+    SIGNAL_CACHE_TTL_SECONDS,
+)
 from rag_backend.modules.autopilot.domain.publish import (
     ManualPublishCommand,
     ManualPublishOutcome,
 )
 from rag_backend.modules.autopilot.infrastructure.carousel_source import (
     PublishingCarouselSource,
+)
+from rag_backend.modules.autopilot.infrastructure.collectors.factory import (
+    CollectorBuildConfig,
+    build_collectors,
 )
 from rag_backend.modules.autopilot.infrastructure.instagram_gateway import gateway_for
 from rag_backend.modules.autopilot.infrastructure.publish_notifier import (
@@ -112,3 +126,29 @@ def _job(
         checkpoint=repo,
     )
     return InstagramPublishJob(deps)
+
+
+_bundle_cache: SignalBundleCache | None = None
+
+
+def default_signals_service() -> SignalsService:
+    """Process-wide signals service. The cache is shared across requests."""
+    global _bundle_cache
+    if _bundle_cache is None:
+        _bundle_cache = SignalBundleCache(SystemClock(), SIGNAL_CACHE_TTL_SECONDS)
+    settings = get_settings()
+    deps = SignalsServiceDependencies(
+        collectors=build_collectors(_collector_config(settings)),
+        clock=SystemClock(),
+        cache=_bundle_cache,
+        timeout_seconds=COLLECTOR_TIMEOUT_SECONDS,
+    )
+    return SignalsService(deps)
+
+
+def _collector_config(settings: Settings) -> CollectorBuildConfig:
+    return CollectorBuildConfig(
+        x_resolver=settings.autopilot_x_resolver,
+        x_mirror_host=settings.autopilot_x_mirror_host,
+        github_token=settings.github_token.get_secret_value(),
+    )

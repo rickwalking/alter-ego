@@ -1,6 +1,7 @@
 """Application settings using Pydantic Settings."""
 
 from functools import lru_cache
+from typing import Literal
 
 from pydantic import AliasChoices, Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -131,6 +132,15 @@ class Settings(BaseSettings):
     # AE-0351: sha256 hex digest of the scout API key. Empty disables
     # /api/autopilot/* (HTTP 503). The plaintext key is never stored.
     grokbot_api_key_sha256: SecretStr = SecretStr("")
+
+    # AE-0352: X post enrichment. "none" (the default) never requests x.com
+    # or a mirror. "mirror" rewrites a status URL to
+    # https://{autopilot_x_mirror_host}/{handle}/status/{id}. The host is a
+    # hostname, not a URL. Leave the resolver at none while mirrors return 451.
+    autopilot_x_resolver: Literal["none", "mirror"] = "none"
+    autopilot_x_mirror_host: str = ""
+    # Optional GitHub Search token. Empty uses the unauthenticated API.
+    github_token: SecretStr = SecretStr("")
 
     carousel_public_base_url: str = ""
 
