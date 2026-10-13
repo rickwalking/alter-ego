@@ -139,6 +139,10 @@ Ticket created from docs/architecture/grokbot-autopilot.md (ticket #8).
 
 Implemented the idempotent publish job, Graph host setting, status route, and container timestamp. Gate capture exit 0 with fail=0 (4 Postgres gates skipped: DATABASE_URL unset).
 
+### 2026-10-13 22:38
+
+`instagram_publish_status` had five parameters, so `backend:strict-diff` failed PLR0913. The handler now takes `InstagramPublishStatusDeps`. Full `gate-capture.sh backend` exit 0, fail=0, skip=4 (DATABASE_URL unset). Status stays Dev Complete.
+
 ## Files Touched
 
 - `backend/tests/features/autopilot_instagram_publish.feature`

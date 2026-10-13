@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from typing import Annotated
 from uuid import UUID
 
@@ -56,6 +57,24 @@ from .helpers import (
 )
 
 router = APIRouter()
+
+
+@dataclass(frozen=True)
+class InstagramPublishStatusDeps:
+    """Caller, repository, and session for the Instagram status route."""
+
+    user: User
+    repo: CarouselRepository
+    db: AsyncSession
+
+
+def get_instagram_publish_status_deps(
+    user: Annotated[User, Depends(require_editor_or_admin)],
+    repo: Annotated[CarouselRepository, Depends(get_carousel_repo)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> InstagramPublishStatusDeps:
+    """Bundle status-route dependencies so the handler stays at three arguments."""
+    return InstagramPublishStatusDeps(user=user, repo=repo, db=db)
 
 
 def get_publishing_module_for_distribution(
@@ -196,18 +215,18 @@ async def publish_to_instagram(
 async def instagram_publish_status(
     request: Request,
     project_id: UUID,
-    user: Annotated[User, Depends(require_editor_or_admin)],
-    repo: Annotated[CarouselRepository, Depends(get_carousel_repo)],
-    db: Annotated[AsyncSession, Depends(get_db)],
+    deps: Annotated[
+        InstagramPublishStatusDeps,
+        Depends(get_instagram_publish_status_deps),
+    ],
 ) -> InstagramPublishStatusResponse:
     """Return the persisted Instagram publish state for this carousel."""
-    project = await repo.get_project_by_id(project_id)
+    project = await deps.repo.get_project_by_id(project_id)
     if project is None:
         raise HTTPException(status_code=404, detail=ERR_CAROUSEL_NOT_FOUND)
-    assert_domain_owner_or_admin(project.owner_id, user)
-    view = await bootstrap_module(AutopilotBootstrapDeps(session=db)).instagram_status(
-        str(project_id)
-    )
+    assert_domain_owner_or_admin(project.owner_id, deps.user)
+    module = bootstrap_module(AutopilotBootstrapDeps(session=deps.db))
+    view = await module.instagram_status(str(project_id))
     return InstagramPublishStatusResponse(
         state=view.state,
         ig_post_id=view.ig_post_id,
