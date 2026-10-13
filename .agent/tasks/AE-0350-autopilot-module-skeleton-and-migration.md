@@ -1,6 +1,6 @@
 # AE-0350 — Autopilot bounded context skeleton + Alembic migration (4 tables)
 
-Status: Ready
+Status: Dev Complete
 Tier: T2
 Priority: High
 Type: Feature
@@ -38,11 +38,11 @@ Every later ticket needs persisted state with conditional (compare-and-set) tran
 
 ## Acceptance Criteria
 
-- [ ] WHEN `alembic upgrade head` runs on a fresh DB AND on a prod-like snapshot THE migration SHALL apply and `alembic heads` SHALL show exactly one head.
-- [ ] WHEN `transition()` is called with a stale expected state THE repository SHALL return False and change nothing.
-- [ ] WHEN a transition not allowed by the state-machine table is requested THE domain SHALL raise `InvalidAutopilotTransition`.
-- [ ] WHEN a transition succeeds THE outbox SHALL contain exactly one `content.autopilot.state_changed` row in the same DB transaction.
-- [ ] WHEN import-linter runs THE new `autopilot` public-facade contract SHALL pass and a seeded internal import from another module SHALL fail it.
+- [x] WHEN `alembic upgrade head` runs on a fresh DB AND on a prod-like snapshot THE migration SHALL apply and `alembic heads` SHALL show exactly one head.
+- [x] WHEN `transition()` is called with a stale expected state THE repository SHALL return False and change nothing.
+- [x] WHEN a transition not allowed by the state-machine table is requested THE domain SHALL raise `InvalidAutopilotTransition`.
+- [x] WHEN a transition succeeds THE outbox SHALL contain exactly one `content.autopilot.state_changed` row in the same DB transaction.
+- [x] WHEN import-linter runs THE new `autopilot` public-facade contract SHALL pass and a seeded internal import from another module SHALL fail it.
 
 ## Gherkin Scenarios
 
@@ -127,17 +127,43 @@ Feature: Autopilot run state machine
 
 ## Progress Log
 
+### 2026-10-13 16:50
+
+Module, migration `d0e1f2a3b4c5`, and import-linter contract are in. Full backend gate on `8e072276`: 20 pass, 0 fail, 0 skip. Handing to QA.
+
+### 2026-10-13 16:02
+
+Moved to In Development on `feat/ae-0350-autopilot-module-skeleton-and-migration`.
+Spec-first: `.feature` then tests then the module, migration, and import-linter contract.
+
 ### 2026-10-13 00:00
 
 Ticket created from docs/architecture/grokbot-autopilot.md (ticket #1).
 
 ## Files Touched
 
-Pending.
+- `backend/src/rag_backend/modules/autopilot/**` (domain, application, infrastructure, api, public, bootstrap, constants)
+- `backend/src/rag_backend/infrastructure/database/models/autopilot_registry.py`
+- `backend/src/rag_backend/infrastructure/database/models/__init__.py`
+- `backend/alembic/versions/d0e1f2a3b4c5_autopilot_tables.py`
+- `backend/.importlinter`
+- `scripts/metrics/import_baseline.py`
+- `backend/tests/features/autopilot_state_machine.feature`
+- `backend/tests/unit/modules/autopilot/test_state_machine.py`
+- `backend/tests/unit/modules/autopilot/test_import_contract.py`
+- `backend/tests/integration/test_autopilot_state_machine.py`
+- `backend/tests/integration/test_autopilot_migration.py`
+- `backend/uv.lock`, `backend/pyproject.toml` (pip-audit floors already allowed the fixed releases)
 
 ## Test Evidence
 
-Pending.
+- `backend/tests/features/autopilot_state_machine.feature` — allowed transition, stale compare-and-set, illegal transition.
+- `tests/integration/test_autopilot_state_machine.py` — those three scenarios, plus a missing run (no event), rollback of the outbox row, and a topic/credential/telegram round trip.
+- `tests/unit/modules/autopilot/test_state_machine.py` — architecture §4 table, illegal pairs raise `InvalidAutopilotTransition`.
+- `tests/unit/modules/autopilot/test_import_contract.py` — seeded `api` import of `autopilot.domain` fails `lint-imports` (AE-0180).
+- `tests/integration/test_autopilot_migration.py` — single head `d0e1f2a3b4c5`; sqlite upgrade/downgrade from the previous head.
+- Postgres `alembic upgrade head` from an empty database applies the chain, including `autopilot_tables`, and autogenerate reports no schema drift.
+- Gate proof: `.agent/reports/AE-0350.dev-summary.md`.
 
 ## QA Report
 
@@ -145,7 +171,17 @@ Pending.
 
 ## Decision Log
 
-See ADR-0020.
+See ADR-0020. Implementation choices recorded here because the ticket and the architecture doc were both satisfiable:
+
+- `why_viral` is a NOT NULL column. The ticket scope and architecture §5 require it; §4's column list omitted it.
+- `carousel_project_id` is `VARCHAR(36)` NULL, unique, FK to `carousel_projects.id` ON DELETE SET NULL. That primary key is a string, so a native UUID column cannot reference it.
+- `topic_candidate_id` is NOT NULL, FK ON DELETE RESTRICT. Only `carousel_project_id` was specified as nullable.
+- JSON columns use JSON with a JSONB variant so PostgreSQL stores JSONB and the sqlite tests still run.
+- `transition()` takes one `TransitionCommand` so the function stays within the three-argument limit.
+- ORM models use a typed `DeclarativeBase` that shares the application metadata. Subclassing the legacy `declarative_base()` is `Any` under mypy strict, and a new ignore is not allowed.
+- Callers raise and catch `InvalidAutopilotTransition`. The class is `InvalidAutopilotTransitionError` so ruff N818 is satisfied; the ticket name is an alias.
+- Persistence registration lives in `autopilot_registry.py`. `models/__init__.py` only re-exports, because ruff RUF067 forbids a call there.
+- The sqlite migration test stamps the previous head. Older revisions use PostgreSQL-only `ALTER COLUMN ... TYPE`. The full chain is what the Postgres migration gate runs.
 
 ## Blockers
 
@@ -153,4 +189,4 @@ None.
 
 ## Final Summary
 
-Pending.
+Autopilot is a bounded context with the §4 run state machine, compare-and-set persistence, one outbox event per successful transition, and a single Alembic head (`d0e1f2a3b4c5`) for the four tables. The public facade is enforced by import-linter, including a seeded-violation test. Backend gates: 20 pass, 0 fail, 0 skip.
