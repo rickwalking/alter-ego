@@ -1,7 +1,7 @@
-"""Alembic revision ``autopilot_tables`` (AE-0350).
+"""Alembic revisions for the autopilot tables (AE-0350, AE-0357).
 
-Proves the new revision is the single head and that upgrade/downgrade apply
-on a database stamped at the previous head. The full chain from base is
+Proves the latest revision is the single head and that upgrade/downgrade apply
+on a database stamped at the pre-autopilot head. The full chain from base is
 PostgreSQL (an older revision uses ``ALTER COLUMN … TYPE``, which SQLite
 rejects); CI's migration gate runs that chain.
 """
@@ -15,7 +15,8 @@ from pathlib import Path
 import pytest
 
 _PREVIOUS_HEAD = "c9d0e1f2a3b4"
-_THIS_HEAD = "d0e1f2a3b4c5"
+_TABLES_HEAD = "d0e1f2a3b4c5"
+_THIS_HEAD = "e1f2a3b4c5d6"
 _BACKEND_ROOT = Path(__file__).resolve().parents[2]
 _TABLES = (
     "autopilot_runs",
@@ -74,7 +75,7 @@ def test_autopilot_revision_is_the_only_head() -> None:
     assert list(script.get_heads()) == [_THIS_HEAD]
     revision = script.get_revision(_THIS_HEAD)
     assert revision is not None
-    assert revision.down_revision == _PREVIOUS_HEAD
+    assert revision.down_revision == _TABLES_HEAD
 
 
 def test_upgrade_and_downgrade_on_a_stamped_database(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -102,6 +103,7 @@ def test_upgrade_and_downgrade_on_a_stamped_database(tmp_path: Path, monkeypatch
     run_columns = _columns(db_path, "autopilot_runs")
     assert "carousel_project_id" in run_columns
     assert "ig_post_id" in run_columns
+    assert "ig_container_created_at" in run_columns
     assert "state" in _columns(db_path, "autopilot_runs")
     index_conn = sqlite3.connect(db_path)
     try:

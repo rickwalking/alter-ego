@@ -58,3 +58,29 @@ LOG_API_KEY_REJECTED = "autopilot_api_key_rejected"
 LOG_API_KEY_DISABLED = "autopilot_api_key_disabled"
 REASON_KEY_MISSING = "missing"
 REASON_KEY_MISMATCH = "mismatch"
+
+# Instagram publish job (AE-0357).
+PUBLISH_MAX_ATTEMPTS = 3
+PUBLISH_SCAN_LIMIT = 20
+CONTAINER_REUSE_HOURS = 24
+# Wait after attempt 1, then after attempt 2. The third failure is terminal.
+PUBLISH_BACKOFF_SECONDS = (60, 300)
+REASON_CAROUSEL_MISSING = "carousel_missing"
+REASON_CAROUSEL_NOT_PUBLIC = "carousel_not_public"
+REASON_PUBLIC_BASE_URL_MISSING = "instagram_public_base_url_not_configured"
+REASON_IG_LOGIN_ABSENT = "instagram_token_missing"
+REASON_QUOTA_EXHAUSTED = "content_publishing_limit_exhausted"
+REASON_PUBLISHED = "published"
+REASON_ATTEMPTS_EXHAUSTED = "publish_attempts_exhausted"
+REASON_CONTAINER_MISSING = "instagram_container_missing"
+STATE_UNPUBLISHED = "unpublished"
+EVENT_TYPE_PUBLISH_NOTICE = "content.autopilot.publish_notice"
+PAYLOAD_PERMALINK = "permalink"
+PAYLOAD_ERROR_CODE = "error_code"
+PAYLOAD_OFFER_RETRY = "offer_retry"
+PAYLOAD_RETRY_CALLBACK = "retry_callback"
+PAYLOAD_OUTCOME = "outcome"
+CALLBACK_RETRY_PREFIX = "ap:retry:"
+NOTICE_PUBLISHED = "published"
+NOTICE_PUBLISH_FAILED = "publish_failed"
+LOG_PUBLISH_JOB = "autopilot_instagram_publish"

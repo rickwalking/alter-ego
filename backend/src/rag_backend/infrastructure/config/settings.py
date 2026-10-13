@@ -6,6 +6,7 @@ from pydantic import AliasChoices, Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from rag_backend.domain.constants import ENCODING_UTF8
+from rag_backend.domain.constants.instagram_publish import GRAPH_HOST_INSTAGRAM
 from rag_backend.infrastructure.config.constants import (
     ENVIRONMENT_DEVELOPMENT,
     NON_PRODUCTION_ENVIRONMENTS,
@@ -123,6 +124,9 @@ class Settings(BaseSettings):
 
     meta_ig_access_token: SecretStr = SecretStr("")
     meta_ig_user_id: str = ""
+    # Instagram Login tokens (IGAA…) only work against graph.instagram.com.
+    # Page tokens set this to https://graph.facebook.com/v23.0.
+    meta_ig_graph_base: str = GRAPH_HOST_INSTAGRAM
 
     # AE-0351: sha256 hex digest of the scout API key. Empty disables
     # /api/autopilot/* (HTTP 503). The plaintext key is never stored.

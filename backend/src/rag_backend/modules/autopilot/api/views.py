@@ -12,3 +12,13 @@ class AutopilotRunView:
     run_id: str
     state: str
     state_reason: str | None
+
+
+@dataclass(frozen=True, kw_only=True)
+class InstagramStatusView:
+    """Body of ``GET /publish/instagram/status``."""
+
+    state: str
+    ig_post_id: str | None
+    permalink: str | None
+    error: str | None

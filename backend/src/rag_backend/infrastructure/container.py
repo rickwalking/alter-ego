@@ -49,8 +49,8 @@ from rag_backend.infrastructure.database.user_repository import (
 )
 from rag_backend.infrastructure.external.anthropic_llm import AnthropicLLMService
 from rag_backend.infrastructure.external.gemini_image import GeminiImageService
-from rag_backend.infrastructure.external.meta_instagram_publisher import (
-    MetaInstagramPublisher,
+from rag_backend.infrastructure.external.instagram_publisher_factory import (
+    build_meta_instagram_publisher,
 )
 from rag_backend.infrastructure.external.openai_embeddings import (
     OpenAIEmbeddingService,
@@ -190,9 +190,8 @@ class Container(containers.DeclarativeContainer):
     pdf_slide_builder = providers.Singleton(PdfSlideBuilder)
 
     instagram_publisher = providers.Singleton(
-        MetaInstagramPublisher,
-        access_token=settings.provided().meta_ig_access_token,
-        ig_user_id=settings.provided().meta_ig_user_id,
+        build_meta_instagram_publisher,
+        settings=settings,
     )
 
     export_service = providers.Singleton(PlaywrightExportService)

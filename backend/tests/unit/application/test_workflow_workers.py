@@ -152,3 +152,35 @@ async def test_run_tick_sweeps_republish_after_drift_reconciler() -> None:
     )
     assert log == ["reaper", "drift", "republish"]
     assert counters["republished"] == 0
+    assert counters["instagram_runs"] == 0
+
+
+class _RecordingPublish:
+    def __init__(self, log: list[str]) -> None:
+        self._log = log
+
+    async def tick(self, _db: object) -> int:
+        self._log.append("instagram")
+        return 1
+
+
+@pytest.mark.asyncio
+async def test_run_tick_publishes_instagram_after_the_other_workers() -> None:
+    """AE-0357: the Instagram job is the last collaborator on the tick."""
+    from typing import cast
+
+    log: list[str] = []
+    collaborators = workflow_workers._TickCollaborators(
+        notifications=cast(object, _NoopNotifications()),
+        alerts=cast(object, _NoopAlerts()),
+        auto_rejector=cast(object, _NoopAutoRejector()),
+        stale_run_reaper=cast(object, _RecordingReaper(log)),
+        drift_reconciler=cast(object, _RecordingReconciler(log)),
+        republish_sweeper=cast(object, _RecordingSweeper(log)),
+        instagram_publish=cast(object, _RecordingPublish(log)),
+    )
+    counters = await workflow_workers._run_tick(
+        _settings(), cast(object, None), collaborators
+    )
+    assert log == ["reaper", "drift", "republish", "instagram"]
+    assert counters["instagram_runs"] == 1

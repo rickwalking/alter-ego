@@ -81,7 +81,11 @@ async def client_and_container():
     from rag_backend.api.app import create_app
     from rag_backend.infrastructure.container import get_container
     from rag_backend.infrastructure.database.config import Base, close_db
+    from rag_backend.infrastructure.database.models.autopilot_registry import (
+        AUTOPILOT_TABLES,
+    )
 
+    assert AUTOPILOT_TABLES
     engine = create_async_engine("sqlite+aiosqlite:///:memory:", echo=False)
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
@@ -293,3 +297,104 @@ class TestInstagramPublishRoute:
         body = resp.json()
         assert body["status"] == "failed"
         assert body["error_message"] == "Meta token expired"
+
+    @pytest.mark.asyncio
+    async def test_status_unpublished_without_a_run(self, client_and_container):
+        """Scenario: Status route returns persisted state — no run yet."""
+        client, _container = client_and_container
+        project_id = await _seed_completed_project(client)
+
+        resp = await client.get(
+            f"/api/carousels/{project_id}/publish/instagram/status",
+        )
+
+        assert resp.status_code == 200
+        assert resp.json() == {
+            "state": "unpublished",
+            "ig_post_id": None,
+            "permalink": None,
+            "error": None,
+        }
+
+    @pytest.mark.asyncio
+    async def test_second_publish_does_not_call_graph(
+        self, client_and_container, monkeypatch
+    ):
+        """Scenario: Manual route does not publish twice."""
+        client, container = client_and_container
+        project_id = await _seed_completed_project(client)
+        monkeypatch.setenv("CAROUSEL_PUBLIC_BASE_URL", "https://public.test")
+        from rag_backend.infrastructure.config.settings import get_settings
+
+        get_settings.cache_clear()
+        await _seed_posted_run(project_id, "post-kept", "https://instagram.com/p/kept")
+
+        fake = AsyncMock()
+        fake.publish_instagram = AsyncMock(
+            return_value=PublishResult(status="published", post_id="should-not-run"),
+        )
+        container.instagram_publisher.override(fake)
+        resp = await client.post(
+            f"/api/carousels/{project_id}/publish/instagram",
+            json={"caption": "again"},
+        )
+        status = await client.get(
+            f"/api/carousels/{project_id}/publish/instagram/status",
+        )
+        container.instagram_publisher.reset_override()
+
+        assert resp.status_code == 200
+        assert resp.json()["status"] == "published"
+        assert resp.json()["ig_post_id"] == "post-kept"
+        assert fake.publish_instagram.await_count == 0
+        assert status.json()["state"] == "published"
+        assert status.json()["permalink"] == "https://instagram.com/p/kept"
+        assert status.json()["error"] is None
+
+
+async def _seed_posted_run(project_id: str, post_id: str, permalink: str) -> None:
+    from sqlalchemy.ext.asyncio import async_sessionmaker
+
+    import rag_backend.infrastructure.database.config as db_config
+    from rag_backend.modules.autopilot.domain.models import (
+        AutopilotRun,
+        AutopilotRunState,
+        TopicCandidate,
+    )
+    from rag_backend.modules.autopilot.infrastructure.repository import (
+        SqlAlchemyAutopilotRepository,
+    )
+
+    assert db_config.c_engine is not None
+    session_factory = async_sessionmaker(db_config.c_engine, expire_on_commit=False)
+    async with session_factory() as session:
+        repo = SqlAlchemyAutopilotRepository(session)
+        topic = TopicCandidate(
+            candidate_id=uuid4(),
+            title="T",
+            angle="A",
+            why_viral="W",
+            audience="A",
+            niche="N",
+            brief="B",
+            sources=(),
+            score=1,
+            signal_hash=uuid4().hex,
+            status="new",
+        )
+        await repo.add_topic(topic)
+        await repo.add(
+            AutopilotRun(
+                run_id=uuid4(),
+                topic_candidate_id=topic.candidate_id,
+                carousel_project_id=project_id,
+                state=AutopilotRunState.PUBLISHED,
+                state_reason=None,
+                attempts=1,
+                telegram_message_ids=(),
+                ig_container_id=None,
+                ig_post_id=post_id,
+                ig_permalink=permalink,
+            )
+        )
+        await session.commit()

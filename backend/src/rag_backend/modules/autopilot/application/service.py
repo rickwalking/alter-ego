@@ -8,8 +8,16 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from rag_backend.modules.autopilot.api.views import AutopilotRunView
-from rag_backend.modules.autopilot.domain.models import TransitionCommand
+from rag_backend.modules.autopilot.api.views import (
+    AutopilotRunView,
+    InstagramStatusView,
+)
+from rag_backend.modules.autopilot.constants import STATE_UNPUBLISHED
+from rag_backend.modules.autopilot.domain.models import (
+    AutopilotRun,
+    AutopilotRunState,
+    TransitionCommand,
+)
 from rag_backend.modules.autopilot.domain.ports import AutopilotRunRepository
 
 
@@ -33,3 +41,26 @@ class AutopilotService:
             state=run.state.value,
             state_reason=run.state_reason,
         )
+
+    async def instagram_status(self, project_id: str) -> InstagramStatusView:
+        """Return the persisted Instagram publish state for a carousel."""
+        return _status_view(await self._runs.find_by_carousel(project_id))
+
+
+def _status_view(run: AutopilotRun | None) -> InstagramStatusView:
+    if run is None:
+        return InstagramStatusView(
+            state=STATE_UNPUBLISHED,
+            ig_post_id=None,
+            permalink=None,
+            error=None,
+        )
+    error = None
+    if run.state is AutopilotRunState.PUBLISH_FAILED:
+        error = run.state_reason
+    return InstagramStatusView(
+        state=run.state.value,
+        ig_post_id=run.ig_post_id,
+        permalink=run.ig_permalink,
+        error=error,
+    )

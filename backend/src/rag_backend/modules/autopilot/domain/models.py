@@ -83,6 +83,10 @@ class AutopilotRun:
     ig_container_id: str | None
     ig_post_id: str | None
     ig_permalink: str | None
+    # Set when the container id is first stored. ``updated_at`` moves on every
+    # retry, so it cannot answer the 24h container-reuse rule.
+    ig_container_created_at: datetime | None = None
+    updated_at: datetime | None = None
 
 
 @dataclass(frozen=True, kw_only=True)

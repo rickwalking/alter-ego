@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 from collections.abc import Callable
 from dataclasses import dataclass
+from typing import Protocol
 
 import structlog
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -36,6 +37,14 @@ logger = structlog.get_logger()
 AutoRejectorFactory = Callable[[WorkflowEventService], StuckWorkflowAutoRejector]
 
 
+class InstagramPublishTick(Protocol):
+    """One Instagram publish attempt per worker tick (AE-0357)."""
+
+    async def tick(self, db: AsyncSession) -> int:
+        """Publish or resume one due run. Returns 1 when a run was touched."""
+        ...
+
+
 @dataclass(frozen=True)
 class WorkflowWorkerServices:
     """Composition-root-injected collaborators for the worker tick (AE-0315).
@@ -49,6 +58,7 @@ class WorkflowWorkerServices:
     stale_run_reaper: CarouselStaleRunReaper | None = None
     drift_reconciler: CarouselDriftReconciler | None = None
     republish_sweeper: CarouselRepublishSweeper | None = None
+    instagram_publish: InstagramPublishTick | None = None
 
 
 @dataclass(frozen=True)
@@ -61,6 +71,7 @@ class _TickCollaborators:
     stale_run_reaper: CarouselStaleRunReaper | None
     drift_reconciler: CarouselDriftReconciler | None
     republish_sweeper: CarouselRepublishSweeper | None
+    instagram_publish: InstagramPublishTick | None = None
 
 
 async def _run_tick(
@@ -99,6 +110,9 @@ async def _run_tick(
         auto_rejected = await services.auto_rejector.auto_reject_stuck(
             db, settings.workflow_stuck_timeout_hours
         )
+    instagram_runs = 0
+    if services.instagram_publish is not None:
+        instagram_runs = await services.instagram_publish.tick(db)
     return {
         "reaped": reaped,
         "converged": converged,
@@ -106,6 +120,7 @@ async def _run_tick(
         "reminders": reminders,
         "alerts": alerts,
         "auto_rejected": auto_rejected,
+        "instagram_runs": instagram_runs,
     }
 
 
@@ -129,6 +144,7 @@ async def run_workflow_workers(
         stale_run_reaper=services.stale_run_reaper,
         drift_reconciler=services.drift_reconciler,
         republish_sweeper=services.republish_sweeper,
+        instagram_publish=services.instagram_publish,
     )
     interval = settings.workflow_worker_interval_seconds
 

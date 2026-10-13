@@ -181,6 +181,15 @@ class InstagramPublishResponse(BaseModel):
     error_message: str | None = None
 
 
+class InstagramPublishStatusResponse(BaseModel):
+    """Persisted Instagram publish state. Matches the frontend status path."""
+
+    state: str
+    ig_post_id: str | None = None
+    permalink: str | None = None
+    error: str | None = None
+
+
 class CarouselCaptionResponse(BaseModel):
     caption: str
     hashtags: list[str]

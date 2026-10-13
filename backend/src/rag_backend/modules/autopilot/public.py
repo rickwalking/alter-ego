@@ -5,26 +5,42 @@ package ``__init__``). Import Linter rejects imports of the private
 subpackages.
 """
 
-from rag_backend.modules.autopilot.api.views import AutopilotRunView
+from rag_backend.modules.autopilot.api.views import (
+    AutopilotRunView,
+    InstagramStatusView,
+)
 from rag_backend.modules.autopilot.application.service import AutopilotService
 from rag_backend.modules.autopilot.bootstrap import (
     AutopilotBootstrapDeps,
+    InstagramPublishTickAdapter,
+    InstagramTickConfig,
+    ManualInstagramPublishRequest,
     bootstrap_module,
+    build_instagram_publish_tick,
+    manual_instagram_publish,
 )
 from rag_backend.modules.autopilot.domain.exceptions import InvalidAutopilotTransition
 from rag_backend.modules.autopilot.domain.models import (
     AutopilotRunState,
     TransitionCommand,
 )
+from rag_backend.modules.autopilot.domain.publish import ManualPublishOutcome
 
 __all__ = [
     "AutopilotBootstrapDeps",
     "AutopilotRunState",
     "AutopilotRunView",
     "AutopilotService",
+    "InstagramPublishTickAdapter",
+    "InstagramStatusView",
+    "InstagramTickConfig",
     "InvalidAutopilotTransition",
+    "ManualInstagramPublishRequest",
+    "ManualPublishOutcome",
     "TransitionCommand",
     "bootstrap_module",
+    "build_instagram_publish_tick",
+    "manual_instagram_publish",
     "register_persistence_models",
 ]
 

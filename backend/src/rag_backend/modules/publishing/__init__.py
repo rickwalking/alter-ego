@@ -68,6 +68,7 @@ from rag_backend.modules.publishing.public import (
     DistributionChannelKind,
     DistributionPublisher,
     DistributionResult,
+    InstagramPublishTarget,
     LegacyPublishingAcl,
     Publication,
     PublishingAdapters,
@@ -79,7 +80,10 @@ from rag_backend.modules.publishing.public import (
     PublishingService,
     ReleasePhase,
     ReleaseState,
+    SlideImageUrlRequest,
     bootstrap_module,
+    build_public_slide_image_urls,
+    load_instagram_publish_target,
     public_blog_visibility_clause,
 )
 
@@ -121,6 +125,7 @@ __all__ = [
     "DistributionChannelKind",
     "DistributionPublisher",
     "DistributionResult",
+    "InstagramPublishTarget",
     "LegacyPublishingAcl",
     "Publication",
     "PublishingAdapters",
@@ -132,6 +137,9 @@ __all__ = [
     "PublishingService",
     "ReleasePhase",
     "ReleaseState",
+    "SlideImageUrlRequest",
     "bootstrap_module",
+    "build_public_slide_image_urls",
+    "load_instagram_publish_target",
     "public_blog_visibility_clause",
 ]

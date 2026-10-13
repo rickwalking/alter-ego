@@ -6,6 +6,8 @@ import the adapters (ADR-0009 §9).
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+from datetime import datetime
 from typing import Protocol
 from uuid import UUID
 
@@ -16,6 +18,27 @@ from rag_backend.modules.autopilot.domain.models import (
     TopicCandidate,
     TransitionCommand,
 )
+from rag_backend.modules.autopilot.domain.publish import (
+    AtomicPublishResult,
+    CarouselMedia,
+    PublishAttemptCommand,
+    PublishNotice,
+    RunListQuery,
+    SaveContainerCommand,
+    SavePostCommand,
+)
+
+
+@dataclass(frozen=True, kw_only=True)
+class CarouselPublishSnapshot:
+    """Carousel facts the publish job checks before calling Graph."""
+
+    workflow_status: str
+    status: str
+    is_public: bool
+    caption: str
+    image_urls: tuple[str, ...]
+    base_url_configured: bool
 
 
 class AutopilotRunRepository(Protocol):
@@ -31,6 +54,94 @@ class AutopilotRunRepository(Protocol):
 
     async def transition(self, command: TransitionCommand) -> bool:
         """Compare-and-set the state. False when the expected state is stale."""
+        ...
+
+    async def find_by_carousel(self, project_id: str) -> AutopilotRun | None:
+        """Return the run for this carousel, or None."""
+        ...
+
+    async def list_by_state(self, query: RunListQuery) -> list[AutopilotRun]:
+        """Return up to ``query.limit`` runs in ``query.state``, oldest first."""
+        ...
+
+    async def save_container(self, command: SaveContainerCommand) -> bool:
+        """Store the container id while the run is still publishing."""
+        ...
+
+    async def save_post(self, command: SavePostCommand) -> bool:
+        """Store the media id and optional permalink while still publishing."""
+        ...
+
+    async def record_attempt(self, command: PublishAttemptCommand) -> bool:
+        """Bump the attempt counter without leaving ``publishing``."""
+        ...
+
+
+class PublishCheckpoint(Protocol):
+    """Commits the current unit of work so a crash can resume."""
+
+    async def commit(self) -> None:
+        """Durably flush the session."""
+        ...
+
+
+class Clock(Protocol):
+    """Time source. Tests inject a fixed clock."""
+
+    def now(self) -> datetime:
+        """Current timezone-aware instant."""
+        ...
+
+
+class PublishNotifier(Protocol):
+    """Tells the owner a publish finished or failed. AE-0355 sends Telegram."""
+
+    async def notify(self, notice: PublishNotice) -> None:
+        """Record or deliver one notice. Must not call Instagram."""
+        ...
+
+
+class CarouselPublishSource(Protocol):
+    """Reads the carousel facts the publish pre-checks need."""
+
+    async def load(self, project_id: str) -> CarouselPublishSnapshot | None:
+        """Return the snapshot, or None when the project does not exist."""
+        ...
+
+
+class InstagramGraphGateway(Protocol):
+    """Graph steps the job calls. Atomic publishers cannot resume a container."""
+
+    def can_resume(self) -> bool:
+        """True when container creation and ``media_publish`` are separate calls."""
+        ...
+
+    async def current_token(self) -> str:
+        """Current access token, possibly empty."""
+        ...
+
+    def user_configured(self) -> bool:
+        """True when the Instagram user id is set."""
+        ...
+
+    async def quota_remaining(self) -> int:
+        """Posts still allowed in the current publishing window."""
+        ...
+
+    async def open_carousel(self, media: CarouselMedia) -> str:
+        """Create the parent container and return its id."""
+        ...
+
+    async def finish_container(self, container_id: str) -> str:
+        """Poll the container and ``media_publish``. Returns the media id."""
+        ...
+
+    async def permalink(self, media_id: str) -> str:
+        """Public URL for a published media id."""
+        ...
+
+    async def publish_atomic(self, media: CarouselMedia) -> AtomicPublishResult:
+        """One-shot publish used when the adapter cannot pause mid-flight."""
         ...
 
 

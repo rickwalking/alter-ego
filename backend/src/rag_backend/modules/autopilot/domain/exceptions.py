@@ -36,3 +36,17 @@ class InvalidAutopilotTransitionError(Exception):
 
 # Ticket and Gherkin name for InvalidAutopilotTransitionError.
 InvalidAutopilotTransition = InvalidAutopilotTransitionError
+
+
+class InstagramCallError(Exception):
+    """A Graph failure translated for the publish job.
+
+    ``transient`` is True for 5xx, rate limits, and container poll timeouts.
+    Permanent failures (4xx auth/format, including Meta code 36003) are False.
+    """
+
+    def __init__(self, *, status_code: int, error_code: str, transient: bool) -> None:
+        super().__init__(error_code)
+        self.status_code = status_code
+        self.error_code = error_code
+        self.transient = transient

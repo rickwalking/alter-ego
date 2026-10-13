@@ -37,6 +37,12 @@ from rag_backend.modules.autopilot.domain.models import (
     TopicCandidate,
     TransitionCommand,
 )
+from rag_backend.modules.autopilot.domain.publish import (
+    PublishAttemptCommand,
+    RunListQuery,
+    SaveContainerCommand,
+    SavePostCommand,
+)
 from rag_backend.modules.autopilot.domain.state_machine import assert_allowed
 from rag_backend.modules.autopilot.infrastructure.models import (
     AutopilotRunModel,
@@ -113,6 +119,97 @@ class SqlAlchemyAutopilotRepository:
         """Insert an update id."""
         self._session.add(_telegram_row(update))
         await self._session.flush()
+
+    async def find_by_carousel(self, project_id: str) -> AutopilotRun | None:
+        """Return the run linked to this carousel project, or None."""
+        result = await self._session.execute(
+            select(AutopilotRunModel)
+            .where(AutopilotRunModel.carousel_project_id == project_id)
+            .execution_options(populate_existing=True)
+        )
+        row = result.scalar_one_or_none()
+        if row is None:
+            return None
+        return _run_from_row(row)
+
+    async def list_by_state(self, query: RunListQuery) -> list[AutopilotRun]:
+        """Return the oldest runs in ``query.state``, capped by ``query.limit``."""
+        result = await self._session.execute(
+            select(AutopilotRunModel)
+            .where(AutopilotRunModel.state == query.state.value)
+            .order_by(AutopilotRunModel.updated_at.asc())
+            .limit(query.limit)
+            .execution_options(populate_existing=True)
+        )
+        return [_run_from_row(row) for row in result.scalars().all()]
+
+    async def save_container(self, command: SaveContainerCommand) -> bool:
+        """Store the container id. Refuses the write once a post id exists."""
+        result = await self._session.execute(
+            update(AutopilotRunModel)
+            .where(
+                AutopilotRunModel.id == command.run_id,
+                AutopilotRunModel.state == AutopilotRunState.PUBLISHING.value,
+                AutopilotRunModel.ig_post_id.is_(None),
+            )
+            .values(
+                ig_container_id=command.container_id,
+                ig_container_created_at=command.created_at,
+                updated_at=command.created_at,
+            )
+        )
+        return cast(CursorResult[object], result).rowcount == 1
+
+    async def save_post(self, command: SavePostCommand) -> bool:
+        """Store the media id. A null permalink does not clear one already stored."""
+        if command.ig_permalink is None:
+            return await self._write_post_id(command)
+        return await self._write_post_and_permalink(command)
+
+    async def _write_post_id(self, command: SavePostCommand) -> bool:
+        result = await self._session.execute(
+            update(AutopilotRunModel)
+            .where(
+                AutopilotRunModel.id == command.run_id,
+                AutopilotRunModel.state == AutopilotRunState.PUBLISHING.value,
+            )
+            .values(ig_post_id=command.ig_post_id)
+        )
+        return cast(CursorResult[object], result).rowcount == 1
+
+    async def _write_post_and_permalink(self, command: SavePostCommand) -> bool:
+        result = await self._session.execute(
+            update(AutopilotRunModel)
+            .where(
+                AutopilotRunModel.id == command.run_id,
+                AutopilotRunModel.state == AutopilotRunState.PUBLISHING.value,
+            )
+            .values(
+                ig_post_id=command.ig_post_id,
+                ig_permalink=command.ig_permalink,
+            )
+        )
+        return cast(CursorResult[object], result).rowcount == 1
+
+    async def record_attempt(self, command: PublishAttemptCommand) -> bool:
+        """Remember a transient failure so the next tick waits out the backoff."""
+        result = await self._session.execute(
+            update(AutopilotRunModel)
+            .where(
+                AutopilotRunModel.id == command.run_id,
+                AutopilotRunModel.state == AutopilotRunState.PUBLISHING.value,
+            )
+            .values(
+                attempts=command.attempts,
+                state_reason=command.reason,
+                updated_at=command.at,
+            )
+        )
+        return cast(CursorResult[object], result).rowcount == 1
+
+    async def commit(self) -> None:
+        """Commit so a crash after container creation can reuse that container."""
+        await self._session.commit()
 
     async def has_telegram_update(self, update_id: int) -> bool:
         """True when this update id was already stored."""
@@ -207,6 +304,7 @@ def _run_row(run: AutopilotRun) -> AutopilotRunModel:
         ig_container_id=run.ig_container_id,
         ig_post_id=run.ig_post_id,
         ig_permalink=run.ig_permalink,
+        ig_container_created_at=run.ig_container_created_at,
     )
 
 
@@ -222,6 +320,8 @@ def _run_from_row(row: AutopilotRunModel) -> AutopilotRun:
         ig_container_id=row.ig_container_id,
         ig_post_id=row.ig_post_id,
         ig_permalink=row.ig_permalink,
+        ig_container_created_at=_aware(row.ig_container_created_at),
+        updated_at=_aware(row.updated_at),
     )
 
 
@@ -241,6 +341,14 @@ def _credential_from_row(row: IntegrationCredentialModel) -> IntegrationCredenti
         expires_at=row.expires_at,
         refreshed_at=row.refreshed_at,
     )
+
+
+def _aware(value: datetime | None) -> datetime | None:
+    if value is None:
+        return None
+    if value.tzinfo is None:
+        return value.replace(tzinfo=UTC)
+    return value
 
 
 def _telegram_row(update: TelegramUpdate) -> TelegramUpdateModel:

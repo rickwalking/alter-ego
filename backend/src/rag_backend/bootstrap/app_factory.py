@@ -78,6 +78,10 @@ from rag_backend.infrastructure.telemetry.opentelemetry import (
 # the facade, and the router imports the shared slowapi limiter under
 # ``rag_backend.api``. Pulling that through the facade would make
 # infrastructure depend on the API layer.
+from rag_backend.modules.autopilot import (
+    InstagramTickConfig,
+    build_instagram_publish_tick,
+)
 from rag_backend.modules.autopilot.api.router import router as autopilot_router
 
 logger = get_logger()
@@ -146,6 +150,12 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
                         app.state.carousel_checkpointer,
                     ),
                     republish_sweeper=build_republish_sweeper(settings),
+                    instagram_publish=build_instagram_publish_tick(
+                        InstagramTickConfig(
+                            publisher=container.instagram_publisher(),
+                            public_base_url=settings.carousel_public_base_url,
+                        )
+                    ),
                 ),
             )
         )

@@ -121,6 +121,9 @@ class AutopilotRunModel(AutopilotOrmBase):
     ig_container_id: Mapped[str | None] = mapped_column(
         String(IG_IDENTIFIER_LENGTH), nullable=True
     )
+    ig_container_created_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     ig_post_id: Mapped[str | None] = mapped_column(
         String(IG_IDENTIFIER_LENGTH), nullable=True
     )
