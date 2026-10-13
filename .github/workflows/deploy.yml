@@ -169,11 +169,14 @@ jobs:
             done
 
             # Deploy with Docker Compose (server caches layers automatically)
-            docker compose -f docker-compose.prod.yml down
-            docker compose -f docker-compose.prod.yml pull
+            # Incident 2026-10-13: quay.io/minio/minio now returns 401 (image withdrawn).
+            # Pull BEFORE down so a registry failure never leaves prod torn down, and
+            # tolerate per-image pull failures so `up -d` falls back to the cached image.
+            docker compose -f docker-compose.prod.yml pull --ignore-pull-failures
             # Build images first so the migration one-shot below uses the freshly
             # built backend image (and the app start that follows is cache-warm).
             docker compose -f docker-compose.prod.yml build
+            docker compose -f docker-compose.prod.yml down
 
             # --- Database migrations (AE-0207) --------------------------------
             # Prod used to bootstrap via SQLAlchemy create_all, which NEVER ALTERs
