@@ -46,6 +46,14 @@ class WakeCheck:
     at: datetime
 
 
+@dataclass(frozen=True, kw_only=True)
+class UnnotifiedMark:
+    """A fixed escalation that cannot be woken because no notifier is set."""
+
+    run_id: UUID
+    at: datetime
+
+
 class RunRecoveryStore(Protocol):
     """Recovery writes on ``autopilot_runs``. The caller commits."""
 
@@ -67,6 +75,10 @@ class RunRecoveryStore(Protocol):
 
     async def mark_checked(self, check: WakeCheck) -> None:
         """Record the check time. Leaves ``state`` and ``updated_at`` alone."""
+        ...
+
+    async def mark_unnotified(self, mark: UnnotifiedMark) -> bool:
+        """Set reason ``notifier_unconfigured`` and ``updated_at`` (QA r3 Q3)."""
         ...
 
     async def rollback(self) -> None:

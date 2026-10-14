@@ -60,6 +60,7 @@ from rag_backend.modules.autopilot.domain.recovery import (
     EscalatedScan,
     EscalationMark,
     ReworkIntent,
+    UnnotifiedMark,
     WakeCheck,
 )
 from rag_backend.modules.autopilot.notify_constants import (
@@ -255,6 +256,10 @@ class _Recovery:
 
     async def mark_checked(self, check: WakeCheck) -> None:
         self.checks.append(check)
+
+    async def mark_unnotified(self, mark: UnnotifiedMark) -> bool:
+        del mark
+        return False
 
     async def rollback(self) -> None:
         self.rollbacks += 1

@@ -13,14 +13,21 @@ from rag_backend.modules.autopilot.domain.recovery import (
     EscalatedScan,
     EscalationMark,
     ReworkIntent,
+    UnnotifiedMark,
     WakeCheck,
 )
 from rag_backend.modules.autopilot.infrastructure.models import AutopilotRunModel
 from rag_backend.modules.autopilot.infrastructure.run_mapping import run_from_row
+from rag_backend.modules.autopilot.notify_constants import (
+    REASON_NOTIFIER_UNCONFIGURED,
+)
 
 
 class SqlRunRecoveryStore:
-    """Session-scoped. Writes never touch ``state`` or ``updated_at``."""
+    """Session-scoped. Writes never touch ``state``.
+
+    Only ``mark_unnotified`` moves ``updated_at``: it restarts the close clock.
+    """
 
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
@@ -76,6 +83,18 @@ class SqlRunRecoveryStore:
             .where(AutopilotRunModel.id == check.run_id)
             .values(wake_checked_at=check.at)
         )
+
+    async def mark_unnotified(self, mark: UnnotifiedMark) -> bool:
+        """Record ``notifier_unconfigured`` on a still-escalated run."""
+        result = await self._session.execute(
+            update(AutopilotRunModel)
+            .where(
+                AutopilotRunModel.id == mark.run_id,
+                AutopilotRunModel.state == AutopilotRunState.ESCALATED.value,
+            )
+            .values(state_reason=REASON_NOTIFIER_UNCONFIGURED, updated_at=mark.at)
+        )
+        return cast(CursorResult[object], result).rowcount == 1
 
     async def rollback(self) -> None:
         """Discard the session's pending work."""

@@ -12,7 +12,14 @@ import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.modules.autopilot.domain.models import AutopilotRunState
-from rag_backend.modules.autopilot.domain.recovery import EscalatedScan, WakeCheck
+from rag_backend.modules.autopilot.domain.recovery import (
+    EscalatedScan,
+    UnnotifiedMark,
+    WakeCheck,
+)
+from rag_backend.modules.autopilot.notify_constants import (
+    REASON_NOTIFIER_UNCONFIGURED,
+)
 from rag_backend.modules.autopilot.infrastructure.run_recovery_store import (
     SqlRunRecoveryStore,
 )
@@ -61,3 +68,24 @@ async def test_only_escalated_runs_are_scanned(db_session: AsyncSession) -> None
     )
 
     assert [run.run_id for run in found] == [escalated.run_id]
+
+
+# Scenario: A fixed escalation without a notifier is recorded before it closes
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("state", "recorded"),
+    [(AutopilotRunState.ESCALATED, True), (AutopilotRunState.AWAITING_OWNER, False)],
+)
+async def test_unnotified_mark_records_the_reason_on_escalated_runs_only(
+    db_session: AsyncSession, state: AutopilotRunState, recorded: bool
+) -> None:
+    repo, run = await _run_in(db_session, state)
+    store = SqlRunRecoveryStore(db_session)
+
+    marked = await store.mark_unnotified(UnnotifiedMark(run_id=run.run_id, at=_NOW))
+    stored = await _stored(repo, run.run_id)
+
+    assert marked is recorded
+    assert (stored.state_reason == REASON_NOTIFIER_UNCONFIGURED) is recorded
+    assert (stored.updated_at == _NOW) is recorded
+    assert stored.state is state

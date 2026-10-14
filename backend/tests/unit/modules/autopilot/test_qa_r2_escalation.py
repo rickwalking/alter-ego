@@ -40,6 +40,7 @@ from rag_backend.modules.autopilot.domain.recovery import (
     EscalatedScan,
     EscalationMark,
     ReworkIntent,
+    UnnotifiedMark,
     WakeCheck,
 )
 from rag_backend.modules.autopilot.notify_constants import KIND_ESCALATION_CLOSED
@@ -124,6 +125,10 @@ class _RotatingRecovery:
 
     async def mark_escalated(self, mark: EscalationMark) -> None:
         return None
+
+    async def mark_unnotified(self, mark: UnnotifiedMark) -> bool:
+        del mark
+        return False
 
     async def rollback(self) -> None:
         return None

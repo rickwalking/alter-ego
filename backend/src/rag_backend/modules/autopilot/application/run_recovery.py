@@ -6,7 +6,10 @@
   rotates by last check time, so old escalations never starve newer ones.
 * Close: an ``escalated`` run whose carousel was rejected (web UI or the
   stuck auto-reject), or that nobody fixed within 72 hours, becomes
-  ``rejected`` and the owner is told (QA r2 R1).
+  ``rejected`` and the owner is told (QA r2 R1). The wake check runs first,
+  and a carousel back at final review at a new lock version is never closed.
+  Without a notifier such a run is first recorded as ``notifier_unconfigured``
+  (which restarts its 72 hours); only then may it close (QA r3 Q3).
 * Containment: an engine error the driver did not classify ends the run
   with a reason instead of rolling back the whole worker tick forever.
 """
@@ -40,6 +43,7 @@ from rag_backend.modules.autopilot.domain.recovery import (
     EscalatedScan,
     EscalationMark,
     RunRecoveryStore,
+    UnnotifiedMark,
     WakeCheck,
 )
 from rag_backend.modules.autopilot.notify_constants import (
@@ -94,8 +98,8 @@ class RunRecovery:
     async def sweep(self) -> int:
         """Expire stale reviews, close or wake escalations. Returns moves."""
         expired = await self._expire_due()
-        closed = await self._close_abandoned()
-        return expired + closed + await self._check_escalated()
+        woken = await self._check_escalated()
+        return expired + woken + await self._close_abandoned()
 
     async def contain(self, run: AutopilotRun, exc: BaseException) -> int:
         """Roll back, then end the run with an ``engine_error`` reason."""
@@ -163,9 +167,38 @@ class RunRecovery:
         for run in await self._deps.runs.list_by_state(query):
             if run.updated_at is None or run.updated_at > cutoff:
                 continue
-            if await self._move(run, _S.REJECTED, REASON_ESCALATION_EXPIRED):
-                moved += 1
+            moved += await self._close_one(run)
         return moved
+
+    async def _close_one(self, run: AutopilotRun) -> int:
+        """Close an abandoned escalation unless its carousel was fixed."""
+        if await self._keeps_open(run):
+            return 0
+        return int(await self._move(run, _S.REJECTED, REASON_ESCALATION_EXPIRED))
+
+    async def _keeps_open(self, run: AutopilotRun) -> bool:
+        if run.carousel_project_id is None:
+            return False
+        try:
+            snapshot = await self._deps.editorial.read_gate(run.carousel_project_id)
+        except Exception:
+            logger.exception(LOG_RUNNER_WAKE_FAILED, run_id=str(run.run_id))
+            return True
+        if not _fixed_at_new_version(run, snapshot):
+            return False
+        return not await self._may_close(run)
+
+    async def _may_close(self, run: AutopilotRun) -> bool:
+        """A fixed run closes only once recorded as ``notifier_unconfigured``."""
+        if self._deps.notifier_configured:
+            return False
+        if run.state_reason == REASON_NOTIFIER_UNCONFIGURED:
+            return True
+        now = self._deps.clock.now()
+        await self._deps.recovery.mark_unnotified(
+            UnnotifiedMark(run_id=run.run_id, at=now)
+        )
+        return False
 
     async def _check_escalated(self) -> int:
         scan = EscalatedScan(limit=ESCALATED_SCAN_LIMIT)
@@ -241,10 +274,21 @@ def engine_error_reason(exc: BaseException) -> str:
     return reason[:ENGINE_ERROR_DETAIL_MAX_CHARS]
 
 
-def _back_at_final_review(run: AutopilotRun, snapshot: GateSnapshot) -> bool:
+def _at_final_review(snapshot: GateSnapshot) -> bool:
     if snapshot.stale or snapshot.phase != GATE_FINAL_REVIEW:
         return False
-    if snapshot.phase_status != PHASE_STATUS_AWAITING:
+    return snapshot.phase_status == PHASE_STATUS_AWAITING
+
+
+def _fixed_at_new_version(run: AutopilotRun, snapshot: GateSnapshot) -> bool:
+    """The owner changed the carousel and it waits at final review again."""
+    if not _at_final_review(snapshot):
+        return False
+    return run.escalated_version != snapshot.lock_version
+
+
+def _back_at_final_review(run: AutopilotRun, snapshot: GateSnapshot) -> bool:
+    if not _at_final_review(snapshot):
         return False
     if run.state_reason == REASON_NOTIFIER_UNCONFIGURED:
         return True

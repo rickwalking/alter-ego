@@ -115,3 +115,21 @@ Feature: Autopilot runner
     When the runner sweeps, with or without Telegram configured
     Then the run is "rejected" with reason "carousel_rejected"
     And the owner is told on Telegram that the escalation was closed
+
+  # QA r3 Q3: the wake check runs before the close, and a fix is never lost.
+  Scenario: A fixed escalation is woken, never closed
+    Given an escalated run last updated 73 hours ago
+    And its carousel is back at final review awaiting a human at a new lock version
+    When the runner sweeps escalations
+    Then the run is woken to "awaiting_owner"
+    And a fixed run outside this sweep's wake scan is not closed either
+    And a run whose carousel cannot be read is not closed
+
+  Scenario: A fixed escalation without a notifier is recorded before it closes
+    Given no Telegram notifier is configured
+    And an escalated run 73 hours old whose carousel was fixed at a new lock version
+    When the runner sweeps escalations
+    Then the run stays escalated with reason "notifier_unconfigured"
+    And it is closed only 72 hours after that record
+    And it wakes instead if the notifier is configured in the meantime
+
