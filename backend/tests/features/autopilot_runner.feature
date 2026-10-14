@@ -133,3 +133,45 @@ Feature: Autopilot runner
     And it is closed only 72 hours after that record
     And it wakes instead if the notifier is configured in the meantime
 
+
+  # --- AE-0362 hotfix: the pipeline's real slide count ----------------------
+
+  Scenario: The autopilot creates the project with the pipeline's 7 slides
+    Given the autopilot driver creates a carousel project
+    Then its slides_config is the pipeline default "1 intro, 1 summary, 3 content, 1 closing, 1 cta"
+    And the expected slide count for that project is 7
+
+  Scenario: The contract's slide_count wins over a stale slides_config
+    Given a project whose slides_config asks for 6 slides
+    And its presentation policy contract has slide_count 7
+    Then the expected slide count is 7
+
+  Scenario: A project rewritten to "7_slides" still expects 7 slides
+    Given a project whose slides_config is "7_slides"
+    Then the expected slide count is 7
+
+  Scenario: An unreadable contract falls back to the project's config
+    Given the presentation policy contract cannot be loaded
+    And the project's slides_config asks for 6 slides
+    Then the expected slide count is 6
+
+  Scenario: Outline and images gates accept the pipeline's 7 slides
+    Given a project created by the autopilot driver
+    When the outline gate shows 7 outline items
+    Then the policy approves the outline gate
+    When the images gate shows 7 raw 1536x1024 OpenAI hero JPEGs
+    Then the policy approves the images gate
+
+  Scenario: A real slide-count mismatch is still revised
+    Given a project created by the autopilot driver
+    When the outline gate shows 5 outline items
+    Then the outline gate is revised with reason "outline_slide_count_mismatch"
+    When the images gate shows 6 images or one image file is missing
+    Then the images gate is revised with reason "image_assets_invalid"
+
+  Scenario: The images gate checks the hero images the pipeline stores
+    Given the images phase stores one raw hero JPEG per slide in "image_assets"
+    And the 1080x1350 slides are only composed later, at finalize
+    When every hero image is a present JPEG with a decodable size
+    Then the policy approves the images gate
+    But a missing file, a non-JPEG, or a zero width or height is revised

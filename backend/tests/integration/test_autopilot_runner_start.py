@@ -18,12 +18,12 @@ from rag_backend.application.services.carousel.editorial_workflow_service import
     EditorialWorkflowConfig,
     EditorialWorkflowService,
 )
+from rag_backend.domain.constants.carousel import CAROUSEL_DEFAULT_SLIDES_CONFIG
 from rag_backend.domain.models.user import UserRole
 from rag_backend.infrastructure.database.models.carousel import CarouselProjectModel
 from rag_backend.infrastructure.database.models.user import UserModel
 from rag_backend.modules.autopilot.constants import (
     AGENT_NAME_AUTOPILOT,
-    AUTOPILOT_SLIDES_CONFIG,
     CONTENT_TYPE_CAROUSEL,
     GATE_RESEARCH,
     LANGFUSE_FIELD_AGENT_NAME,
@@ -117,7 +117,7 @@ async def test_start_uses_the_editorial_service_in_process(
     assert row is not None
     assert row.language == LANGUAGE_PT_BR
     assert row.generate_images == 1
-    assert row.slides_config == AUTOPILOT_SLIDES_CONFIG
+    assert row.slides_config == CAROUSEL_DEFAULT_SLIDES_CONFIG
     assert row.owner_id == _OWNER
     assert row.assigned_reviewer_id is None
     assert row.current_phase == GATE_RESEARCH

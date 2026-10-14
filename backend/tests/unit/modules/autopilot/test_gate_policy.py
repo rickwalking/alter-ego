@@ -164,15 +164,19 @@ def test_design_fails_closed_on_blockers() -> None:
     assert blocked.reason == REASON_DESIGN
 
 
-def test_images_require_every_slide_at_carousel_size() -> None:
+def test_images_require_every_slide_as_a_sized_jpeg() -> None:
     assert decide(_snapshot(phase=GATE_IMAGES)).action is GateAction.APPROVE
     short = decide(
         _snapshot(phase=GATE_IMAGES, images=tuple(_jpeg() for _ in range(5)))
     )
     assert short.reason == REASON_IMAGES
-    wrong = replace(_jpeg(), width=CAROUSEL_WIDTH - 1)
-    sized = decide(_snapshot(phase=GATE_IMAGES, images=tuple(wrong for _ in range(6))))
-    assert sized.reason == REASON_IMAGES
+    for unsized in (replace(_jpeg(), width=0), replace(_jpeg(), height=0)):
+        images = tuple(unsized for _ in range(6))
+        sized = decide(_snapshot(phase=GATE_IMAGES, images=images))
+        assert sized.reason == REASON_IMAGES
+    not_jpeg = replace(_jpeg(), is_jpeg=False)
+    png = decide(_snapshot(phase=GATE_IMAGES, images=(not_jpeg,) * 6))
+    assert png.reason == REASON_IMAGES
     missing = replace(_jpeg(), present=False, is_jpeg=False)
     absent = decide(_snapshot(phase=GATE_IMAGES, images=(missing,) * 6))
     assert absent.reason == REASON_IMAGES

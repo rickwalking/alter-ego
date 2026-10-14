@@ -368,10 +368,13 @@ Topics stored before AE-0361 get the same fallback.
 **Auto-approve checks per gate.** These are deterministic and live in `modules/autopilot/domain/policy.py`:
 
 - **research:** ≥ 3 sources with content.
-- **outline:** slide count matches `slides_config`.
+- **outline:** the outline length equals the slides the pipeline builds: the presentation
+  contract's `slide_count` (7), falling back to `slides_config` only if the contract is
+  unreadable (AE-0362). Projects are created with `CAROUSEL_DEFAULT_SLIDES_CONFIG` (7).
 - **content:** the existing persona score must be ≥ 70, and forbidden phrases count as blockers.
 - **design:** `presentation_validation` has no blockers.
-- **images:** all `image_assets` are present, and every JPEG is 1080×1350.
+- **images:** one `image_assets` entry per slide (the same expected count as the outline),
+  every file present, and every JPEG is 1080×1350.
 
 A failed check means `revise` with templated feedback, at most 2×, then **escalate**.
 Escalation never approves anything blindly.
