@@ -81,10 +81,14 @@ from rag_backend.modules.publishing.public import (
     ReleasePhase,
     ReleaseState,
     SlideImageUrlRequest,
+    StoryImageTarget,
     bootstrap_module,
     build_public_slide_image_urls,
+    build_public_story_image_url,
     load_instagram_publish_target,
+    prepare_story_image,
     public_blog_visibility_clause,
+    story_image_file,
 )
 
 __all__ = [
@@ -138,8 +142,12 @@ __all__ = [
     "ReleasePhase",
     "ReleaseState",
     "SlideImageUrlRequest",
+    "StoryImageTarget",
     "bootstrap_module",
     "build_public_slide_image_urls",
+    "build_public_story_image_url",
     "load_instagram_publish_target",
+    "prepare_story_image",
     "public_blog_visibility_clause",
+    "story_image_file",
 ]
