@@ -367,6 +367,33 @@ Topics stored before AE-0361 get the same fallback.
 - `topic_candidates` gains `image_style` (NOT NULL, default `neo_anime`) and `image_guidance` (nullable). Revision `e7f8a9b0c1d2` is additive.
 - The Telegram review message starts with `Audience: … · Niche: … · Style: …`, read from the carousel row.
 
+### 5.4 Story after each post and the "add music" nudge (AE-0369)
+
+After a carousel is posted, the autopilot also posts an Instagram Story announcing it, and tells the owner which music to add in the app (the Graph API cannot add music to a feed post).
+
+**Story image.** `story_pt.jpg`, 1080x1920 JPEG (at most 8 MB), rendered with Pillow from the PT `slide_1.jpg`: the slide is centred on a blurred, darkened copy of itself, with a caption band reading `Novo post no perfil ↑`. Pillow's bundled font has no arrow glyph, so the arrow is drawn as a shape. The file lives in the serving root (the active artifact version, else the output dir) and is rendered again only when slide 1 is newer. Code: `modules/publishing/application/story_image.py`, behind the publishing facade (`prepare_story_image`, `story_image_file`, `build_public_story_image_url`).
+
+**Public route.** `GET /api/carousels/{id}/story-image/pt.jpg`, `image/jpeg`. Same gate as `slide-images`: 404 unless the carousel is public, and 404 until the image is rendered.
+
+**Story step.** `InstagramStoryStep` (`modules/autopilot/application/story_step.py`) runs inside `_mark_published`, after the post id is stored and before the `publishing → published` transition, under the same publish claim. The manual route (no autopilot run) runs it before the ledger records the post id. Graph: `POST /{ig_user_id}/media` with `media_type=STORIES` + `image_url`, then `GET /{container}?fields=status_code` until `FINISHED`, then `POST /{ig_user_id}/media_publish`.
+
+- Idempotent: one `instagram_stories` row per carousel. A `published` row short-circuits with no Graph call. The container id is committed before `media_publish`; a crash resumes it (or, past 24 h, reads its status and never posts a second Story when it reports `PUBLISHED`).
+- Transient Graph errors are retried, three attempts in total. A permanent error, a missing slide 1, or any unexpected error is stored on the row and returned. The step never raises, so the post's published state never depends on the Story.
+- Only the real Graph publisher gets a Story step. Any other publisher has no Story line.
+- The publish claim's stale window now covers the Story's worst case too (`CLAIM_HELD_WORST_CASE_SECONDS`).
+
+**Telegram notice.** The published notice reads:
+
+```
+✅ Publicado: <permalink>
+📲 Story: publicado            (or: 📲 Story falhou: <reason>)
+🎵 Adicione uma música pelo app (20s): sugestão: <style>
+```
+
+The style comes from `music_style_for(niche, image_style)` (`story_constants.MUSIC_*`): niche words first (accents stripped: AI/IA/tech → `lo-fi eletrônico / synthwave`, cybersecurity → `dark synth`, robotics → `cinematic electronic`), then the image style (`comic_neon` → synthwave, `cinematic` → cinematic electronic), else `lo-fi beats`.
+
+**Migration.** Revision `f8a9b0c1d2e3` adds the `instagram_stories` table (additive). Prod deploys do not run Alembic, so it is applied by hand before the deploy.
+
 ## 6. Backend changes (gap → fix)
 
 | Gap found in the codebase | Fix |
