@@ -116,6 +116,27 @@ back at final review at a new lock version returns to `awaiting_owner`. The manu
 Instagram route publishes an autopilot carousel only through its `publishing` run, and
 both callers take a compare-and-set publish claim first.
 
+**QA round 2 hardening (AE-0348).**
+- Escalations are closed, not left open. An `escalated` run becomes `rejected` (and the owner
+  is told on Telegram) when its carousel is rejected in the web UI or by the stuck
+  auto-reject, or after 72 h with no fix. The wake scan rotates by `wake_checked_at`, so old
+  escalations never starve a newer one.
+- A `PUBLISHED` container's media is matched only to the single album posted after the stored
+  container creation time. With no match or an ambiguous match, the run ends `publish_failed`
+  with `instagram_published_media_unknown`. That reason never offers or accepts Retry, and
+  the owner is told the post may already be live.
+- Every Graph request has an overall deadline. The publish-claim stale window is derived from
+  the worst-case publish time, and a stale claim is never taken over while a container
+  younger than 24 h has no post id. A container older than 24 h is first checked for
+  `PUBLISHED` and recovered instead of being posted again.
+- The manual publish of a carousel without a run stores its container id in
+  `instagram_manual_publishes` before `media_publish`, so a retry resumes that container.
+- A run that is `publishing` but whose carousel is not public yet (the approve release is
+  still landing) is not failed during a 5-minute grace window.
+- The Telegram notifier re-reads the 10 minutes behind its outbox cursor. Outbox
+  `created_at` is the transaction start time, so a long transaction can commit an event
+  behind the cursor; the notice ledger dedupes the re-read events.
+
 ---
 
 ## 4. Autopilot state machine (new table `autopilot_runs`)
@@ -126,7 +147,7 @@ both callers take a compare-and-set publish claim first.
 | `generating` | `awaiting_owner` / `escalated` / `failed` | gates auto-approved to final_review / check failed after retries / workflow failed |
 | `awaiting_owner` | `publishing` / `reworking` / `rejected` / `expired` | Approve / Rework / Reject / 72 h |
 | `reworking` | `awaiting_owner` / `escalated` | revise drove back to final_review / cap hit |
-| `escalated` | `awaiting_owner` / `rejected` | Pedro fixes it in the web UI, or rejects |
+| `escalated` | `awaiting_owner` / `rejected` | Pedro fixes it in the web UI / the carousel is rejected (web UI or stuck auto-reject), or 72 h pass with no fix |
 | `publishing` | `published` / `publish_failed` / `awaiting_owner` | IG success / 3 retries exhausted / the editorial approve refused the owner's Approve (review stays open) |
 | `publish_failed` | `publishing` | Pedro taps [Retry] |
 
@@ -134,7 +155,7 @@ Columns:
 
 - `id`, `carousel_project_id` (FK, unique), `topic_candidate_id`, `state`
 - `state_reason`, `attempts` (publish attempts; reset on every entry to `publishing`), `start_attempts`
-- `rework_phase`, `rework_feedback` (the owner's queued rework), `escalated_version`, `publish_claimed_at`
+- `rework_phase`, `rework_feedback` (the owner's queued rework), `escalated_version`, `publish_claimed_at`, `wake_checked_at` (escalated wake-scan rotation)
 - `telegram_message_ids` (JSONB)
 - `ig_container_id`, `ig_post_id`, `ig_permalink`
 - `created_at`, `updated_at`
