@@ -278,3 +278,12 @@ def test_a_first_word_longer_than_the_title_budget_does_not_split() -> None:
 def test_titles_without_long_words_are_read_as_sentences() -> None:
     assert "Argon" not in build_vocabulary(VocabularySources(titles=("A IA",)))
     assert "BYD" in build_vocabulary(VocabularySources(titles=("Vi a BYD",)))
+
+
+@pytest.mark.unit
+def test_urls_domains_and_handles_are_never_rewritten() -> None:
+    nouns = ("GitHub", "Argon")
+    text = "veja github.com/argon, @argon e argon-cli; o argon. github hoje"
+    assert restore_proper_nouns(text, nouns) == (
+        "veja github.com/argon, @argon e argon-cli; o Argon. GitHub hoje"
+    )

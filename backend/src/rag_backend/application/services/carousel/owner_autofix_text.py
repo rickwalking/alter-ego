@@ -74,7 +74,11 @@ def balance_strong(text: str) -> str:
 
 
 def _noun_pattern(noun: str) -> re.Pattern[str]:
-    return re.compile(rf"(?<!\w){re.escape(noun)}(?!\w)", flags=re.IGNORECASE)
+    # Never inside a URL, a domain or a handle ("github.com/x", "@argon").
+    return re.compile(
+        rf"(?<![\w@/.\-]){re.escape(noun)}(?![\w@/\-]|\.\w)",
+        flags=re.IGNORECASE,
+    )
 
 
 def restore_proper_nouns(text: str, nouns: tuple[str, ...]) -> str:
