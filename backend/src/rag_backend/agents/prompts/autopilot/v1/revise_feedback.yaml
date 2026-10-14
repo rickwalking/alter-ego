@@ -1,0 +1,10 @@
+---
+name: autopilot_revise_feedback
+version: "1.0.0"
+description: "Feedback the autopilot runner sends when a gate check fails. Loaded by render_prompt('autopilot', 'revise_feedback')."
+
+template: |
+  The {{ phase }} gate failed the autopilot check.
+  Reason: {{ reason }}.
+  Measured: {{ detail }}.
+  Revise this phase so the deterministic check passes. Keep the topic and the audience.

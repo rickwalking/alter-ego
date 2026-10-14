@@ -7,7 +7,7 @@ relocated from ``rag_backend.api.app`` in AE-0080 with zero behavior change;
 """
 
 import asyncio
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Callable
 from contextlib import AsyncExitStack, asynccontextmanager
 from datetime import datetime
 
@@ -48,6 +48,11 @@ from rag_backend.api.routes import (
     workflow_board,
 )
 from rag_backend.api.schemas import HealthCheckResponse, HealthResponse
+from rag_backend.application.services.carousel.editorial_workflow_service import (
+    EditorialWorkflowConfig,
+    EditorialWorkflowService,
+)
+from rag_backend.application.services.workflow_event_service import WorkflowEventService
 from rag_backend.application.workers.workflow_workers import (
     WorkflowWorkerServices,
     run_workflow_workers,
@@ -66,6 +71,7 @@ from rag_backend.infrastructure.database.config import close_db, init_db
 from rag_backend.infrastructure.database.workflow_timeout_repository import (
     WorkflowTimeoutRepository,
 )
+from rag_backend.infrastructure.events.factory import get_event_publisher
 from rag_backend.infrastructure.langfuse_client import init_langfuse
 from rag_backend.infrastructure.logging import get_logger, setup_logging
 from rag_backend.infrastructure.monitoring import init_langsmith
@@ -79,7 +85,9 @@ from rag_backend.infrastructure.telemetry.opentelemetry import (
 # ``rag_backend.api``. Pulling that through the facade would make
 # infrastructure depend on the API layer.
 from rag_backend.modules.autopilot import (
+    AutopilotTickConfig,
     InstagramTickConfig,
+    build_autopilot_runner_tick,
     build_instagram_publish_tick,
 )
 from rag_backend.modules.autopilot.api.router import router as autopilot_router
@@ -88,6 +96,30 @@ logger = get_logger()
 
 
 @asynccontextmanager
+def _autopilot_engine_factory(
+    checkpointer: object | None,
+) -> Callable[[], EditorialWorkflowService]:
+    """Editorial engine for one autopilot tick. Uses the process container."""
+
+    def build() -> EditorialWorkflowService:
+        settings = get_settings()
+        publisher = get_event_publisher(settings.redis_url or None)
+        research = None
+        if settings.research_enrichment_enabled:
+            research = container.research_tool()
+        return EditorialWorkflowService(
+            EditorialWorkflowConfig(
+                llm=container.llm_service().chat_model,
+                checkpointer=checkpointer,
+                event_service=WorkflowEventService(publisher),
+                image_registry=container.image_provider_registry(),
+                research_tool=research,
+            )
+        )
+
+    return build
+
+
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     """Application lifespan manager.
 
@@ -154,6 +186,17 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
                         InstagramTickConfig(
                             publisher=container.instagram_publisher(),
                             public_base_url=settings.carousel_public_base_url,
+                        )
+                    ),
+                    autopilot_runner=build_autopilot_runner_tick(
+                        AutopilotTickConfig(
+                            owner_user_id=settings.autopilot_owner_user_id,
+                            engine_factory=_autopilot_engine_factory(
+                                app.state.carousel_checkpointer
+                            ),
+                            stale_after_seconds=(
+                                settings.workflow_run_heartbeat_stale_seconds
+                            ),
                         )
                     ),
                 ),

@@ -113,6 +113,7 @@ stuck auto-reject closes the run and posts a Telegram notice.
 | State | Next | Trigger |
 |---|---|---|
 | `queued` | `generating` | runner tick picks it up |
+| `queued` | `failed` | workflow start returns 429/503 three times |
 | `generating` | `awaiting_owner` / `escalated` / `failed` | gates auto-approved to final_review / check failed after retries / workflow failed |
 | `awaiting_owner` | `publishing` / `reworking` / `rejected` / `expired` | Approve / Rework / Reject / 72 h |
 | `reworking` | `awaiting_owner` / `escalated` | revise drove back to final_review / cap hit |

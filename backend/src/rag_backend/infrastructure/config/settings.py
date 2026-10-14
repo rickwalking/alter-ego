@@ -148,6 +148,19 @@ class Settings(BaseSettings):
         ge=0,
         validation_alias=AliasChoices("AUTOPILOT_DAILY_CAP", "autopilot_daily_cap"),
     )
+    # AE-0354: the worker calls the in-process runner only when this is true.
+    autopilot_enabled: bool = Field(
+        default=False,
+        validation_alias=AliasChoices("AUTOPILOT_ENABLED", "autopilot_enabled"),
+    )
+    # Existing user id the created carousels are owned by. reviewer_id stays unset.
+    autopilot_owner_user_id: str = Field(
+        default="",
+        validation_alias=AliasChoices(
+            "AUTOPILOT_OWNER_USER_ID",
+            "autopilot_owner_user_id",
+        ),
+    )
 
     carousel_public_base_url: str = ""
 

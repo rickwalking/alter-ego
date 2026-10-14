@@ -11,6 +11,10 @@ from datetime import datetime
 from typing import Protocol
 from uuid import UUID
 
+from rag_backend.modules.autopilot.domain.gate import (
+    AttachProjectCommand,
+    StartAttemptCommand,
+)
 from rag_backend.modules.autopilot.domain.models import (
     AutopilotRun,
     IntegrationCredential,
@@ -80,6 +84,14 @@ class AutopilotRunRepository(Protocol):
 
     async def record_attempt(self, command: PublishAttemptCommand) -> bool:
         """Bump the attempt counter without leaving ``publishing``."""
+        ...
+
+    async def attach_project(self, command: AttachProjectCommand) -> bool:
+        """Store the carousel id while the run is still queued."""
+        ...
+
+    async def note_start_attempt(self, command: StartAttemptCommand) -> bool:
+        """Count a failed workflow start without leaving ``queued``."""
         ...
 
 

@@ -29,6 +29,10 @@ from rag_backend.modules.autopilot.constants import (
     PAYLOAD_REASON,
     PAYLOAD_STATE,
 )
+from rag_backend.modules.autopilot.domain.gate import (
+    AttachProjectCommand,
+    StartAttemptCommand,
+)
 from rag_backend.modules.autopilot.domain.models import (
     AutopilotRun,
     AutopilotRunState,
@@ -204,6 +208,34 @@ class SqlAlchemyAutopilotRepository:
                 state_reason=command.reason,
                 updated_at=command.at,
             )
+        )
+        return cast(CursorResult[object], result).rowcount == 1
+
+    async def attach_project(self, command: AttachProjectCommand) -> bool:
+        """Store the carousel id while the run is still queued, then commit."""
+        result = await self._session.execute(
+            update(AutopilotRunModel)
+            .where(
+                AutopilotRunModel.id == command.run_id,
+                AutopilotRunModel.state == AutopilotRunState.QUEUED.value,
+                AutopilotRunModel.carousel_project_id.is_(None),
+            )
+            .values(carousel_project_id=command.project_id)
+        )
+        matched = cast(CursorResult[object], result).rowcount == 1
+        if matched:
+            await self._session.commit()
+        return matched
+
+    async def note_start_attempt(self, command: StartAttemptCommand) -> bool:
+        """Count a failed start. The run stays queued."""
+        result = await self._session.execute(
+            update(AutopilotRunModel)
+            .where(
+                AutopilotRunModel.id == command.run_id,
+                AutopilotRunModel.state == AutopilotRunState.QUEUED.value,
+            )
+            .values(attempts=command.attempts, state_reason=command.reason)
         )
         return cast(CursorResult[object], result).rowcount == 1
 

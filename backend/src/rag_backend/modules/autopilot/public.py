@@ -12,10 +12,13 @@ from rag_backend.modules.autopilot.api.views import (
 from rag_backend.modules.autopilot.application.service import AutopilotService
 from rag_backend.modules.autopilot.bootstrap import (
     AutopilotBootstrapDeps,
+    AutopilotRunnerTickAdapter,
+    AutopilotTickConfig,
     InstagramPublishTickAdapter,
     InstagramTickConfig,
     ManualInstagramPublishRequest,
     bootstrap_module,
+    build_autopilot_runner_tick,
     build_instagram_publish_tick,
     manual_instagram_publish,
 )
@@ -30,7 +33,9 @@ __all__ = [
     "AutopilotBootstrapDeps",
     "AutopilotRunState",
     "AutopilotRunView",
+    "AutopilotRunnerTickAdapter",
     "AutopilotService",
+    "AutopilotTickConfig",
     "InstagramPublishTickAdapter",
     "InstagramStatusView",
     "InstagramTickConfig",
@@ -39,6 +44,7 @@ __all__ = [
     "ManualPublishOutcome",
     "TransitionCommand",
     "bootstrap_module",
+    "build_autopilot_runner_tick",
     "build_instagram_publish_tick",
     "manual_instagram_publish",
     "register_persistence_models",

@@ -45,6 +45,14 @@ class InstagramPublishTick(Protocol):
         ...
 
 
+class AutopilotRunnerTick(Protocol):
+    """One in-process autopilot step per worker tick (AE-0354)."""
+
+    async def tick(self, db: AsyncSession) -> int:
+        """Advance at most one run. Returns 1 when a run was touched."""
+        ...
+
+
 @dataclass(frozen=True)
 class WorkflowWorkerServices:
     """Composition-root-injected collaborators for the worker tick (AE-0315).
@@ -59,6 +67,7 @@ class WorkflowWorkerServices:
     drift_reconciler: CarouselDriftReconciler | None = None
     republish_sweeper: CarouselRepublishSweeper | None = None
     instagram_publish: InstagramPublishTick | None = None
+    autopilot_runner: AutopilotRunnerTick | None = None
 
 
 @dataclass(frozen=True)
@@ -72,6 +81,7 @@ class _TickCollaborators:
     drift_reconciler: CarouselDriftReconciler | None
     republish_sweeper: CarouselRepublishSweeper | None
     instagram_publish: InstagramPublishTick | None = None
+    autopilot_runner: AutopilotRunnerTick | None = None
 
 
 async def _run_tick(
@@ -113,6 +123,9 @@ async def _run_tick(
     instagram_runs = 0
     if services.instagram_publish is not None:
         instagram_runs = await services.instagram_publish.tick(db)
+    autopilot_runs = 0
+    if settings.autopilot_enabled and services.autopilot_runner is not None:
+        autopilot_runs = await services.autopilot_runner.tick(db)
     return {
         "reaped": reaped,
         "converged": converged,
@@ -121,6 +134,7 @@ async def _run_tick(
         "alerts": alerts,
         "auto_rejected": auto_rejected,
         "instagram_runs": instagram_runs,
+        "autopilot_runs": autopilot_runs,
     }
 
 
@@ -145,6 +159,7 @@ async def run_workflow_workers(
         drift_reconciler=services.drift_reconciler,
         republish_sweeper=services.republish_sweeper,
         instagram_publish=services.instagram_publish,
+        autopilot_runner=services.autopilot_runner,
     )
     interval = settings.workflow_worker_interval_seconds
 

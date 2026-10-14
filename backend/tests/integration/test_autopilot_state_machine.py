@@ -20,12 +20,24 @@ from rag_backend.modules.autopilot import (
     TransitionCommand,
     bootstrap_module,
 )
+from rag_backend.modules.autopilot.constants import (
+    EVENT_TYPE_READY_FOR_OWNER,
+    REASON_START_FAILED,
+)
+from rag_backend.modules.autopilot.domain.gate import (
+    AttachProjectCommand,
+    OwnerReadyNotice,
+    StartAttemptCommand,
+)
 from rag_backend.modules.autopilot.domain.models import (
     AutopilotRun,
     AutopilotRunState,
     IntegrationCredential,
     TelegramUpdate,
     TopicCandidate,
+)
+from rag_backend.modules.autopilot.infrastructure.ready_notifier import (
+    OutboxReadyNotifier,
 )
 from rag_backend.modules.autopilot.infrastructure.repository import (
     SqlAlchemyAutopilotRepository,
@@ -237,3 +249,50 @@ async def test_topic_credential_and_telegram_round_trip(db_session: AsyncSession
     await repo.add_telegram_update(update)
     assert await repo.has_telegram_update(update.update_id) is True
     assert await repo.has_telegram_update(update.update_id + 1) is False
+
+
+@pytest.mark.asyncio
+async def test_queued_start_failure_persists(db_session: AsyncSession) -> None:
+    """A start outage stays queued until the third failure moves it to failed."""
+    repo, service = _wired(db_session)
+    run = await _persist(repo, AutopilotRunState.QUEUED)
+    attached = await repo.attach_project(
+        AttachProjectCommand(run_id=run.run_id, project_id="carousel-1")
+    )
+    assert attached is True
+    again = await repo.attach_project(
+        AttachProjectCommand(run_id=run.run_id, project_id="carousel-2")
+    )
+    assert again is False
+    noted = await repo.note_start_attempt(
+        StartAttemptCommand(run_id=run.run_id, attempts=3, reason=REASON_START_FAILED)
+    )
+    assert noted is True
+    changed = await service.transition(
+        _command(run.run_id, AutopilotRunState.QUEUED, AutopilotRunState.FAILED, REASON_START_FAILED)
+    )
+    assert changed is True
+    view = await service.get_run(run.run_id)
+    stored = await repo.get(run.run_id)
+    assert view is not None
+    assert stored is not None
+    assert view.state == "failed"
+    assert view.state_reason == REASON_START_FAILED
+    assert stored.attempts == 3
+    assert stored.carousel_project_id == "carousel-1"
+
+
+@pytest.mark.asyncio
+async def test_ready_for_owner_is_one_outbox_row(db_session: AsyncSession) -> None:
+    """The runner's notice is the ready_for_owner event, not a Telegram call."""
+    run_id = uuid4()
+    await OutboxReadyNotifier(db_session).notify_ready(
+        OwnerReadyNotice(run_id=run_id, project_id="carousel-1")
+    )
+    result = await db_session.execute(
+        select(EventOutboxModel).where(EventOutboxModel.aggregate_id == str(run_id))
+    )
+    rows = list(result.scalars().all())
+    assert len(rows) == 1
+    assert rows[0].event_type == EVENT_TYPE_READY_FOR_OWNER
+    assert rows[0].payload == {"project_id": "carousel-1"}

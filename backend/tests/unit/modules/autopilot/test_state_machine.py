@@ -26,6 +26,7 @@ _S = AutopilotRunState
 _SPEC: frozenset[tuple[AutopilotRunState, AutopilotRunState]] = frozenset(
     {
         (_S.QUEUED, _S.GENERATING),
+        (_S.QUEUED, _S.FAILED),
         (_S.GENERATING, _S.AWAITING_OWNER),
         (_S.GENERATING, _S.ESCALATED),
         (_S.GENERATING, _S.FAILED),
@@ -79,6 +80,11 @@ def test_illegal_pair_raises(
         assert_allowed(TransitionPair(expected=expected, new=new))
     assert caught.value.expected == expected
     assert caught.value.new == new
+
+
+def test_queued_to_failed_is_allowed() -> None:
+    """AE-0354: three provider failures on start may fail a queued run."""
+    assert_allowed(TransitionPair(expected=_S.QUEUED, new=_S.FAILED))
 
 
 def test_state_changed_event_type_matches_the_spec() -> None:

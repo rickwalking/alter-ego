@@ -2,12 +2,14 @@
 
 The inbound edge creates the request-scoped session (the unit of work) and
 passes it here. This module does not look up a global container (ADR-0009 §9).
+The app factory supplies the editorial engine factory for the worker tick.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -17,6 +19,10 @@ from rag_backend.modules.autopilot.application.publish_job import (
     InstagramPublishJob,
     PublishJobDependencies,
     SystemClock,
+)
+from rag_backend.modules.autopilot.application.runner import (
+    AutopilotRunner,
+    RunnerDependencies,
 )
 from rag_backend.modules.autopilot.application.service import AutopilotService
 from rag_backend.modules.autopilot.application.signal_cache import SignalBundleCache
@@ -48,9 +54,17 @@ from rag_backend.modules.autopilot.infrastructure.intake_store import (
 from rag_backend.modules.autopilot.infrastructure.publish_notifier import (
     OutboxPublishNotifier,
 )
+from rag_backend.modules.autopilot.infrastructure.ready_notifier import (
+    OutboxReadyNotifier,
+)
 from rag_backend.modules.autopilot.infrastructure.repository import (
     SqlAlchemyAutopilotRepository,
 )
+
+if TYPE_CHECKING:
+    from rag_backend.modules.autopilot.infrastructure.editorial_driver import (
+        EngineFactory,
+    )
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -162,6 +176,60 @@ async def remember_served_signal_urls(
     urls = tuple(signal.url for signal in bundle.signals)
     await store.record_served_urls(RecordServedUrls(urls=urls, served_at=served_at))
     await store.commit()
+
+
+@dataclass(frozen=True, kw_only=True)
+class AutopilotTickConfig:
+    """Worker-tick wiring for the editorial runner. The session arrives per tick."""
+
+    owner_user_id: str
+    engine_factory: EngineFactory
+    stale_after_seconds: int
+
+
+class AutopilotRunnerTickAdapter:
+    """One autopilot run step per worker tick, on the tick's session."""
+
+    def __init__(self, config: AutopilotTickConfig) -> None:
+        self._config = config
+
+    async def tick(self, db: AsyncSession) -> int:
+        """Advance at most one run. Returns 1 when a run was touched."""
+        return await AutopilotRunner(_runner_deps(db, self._config)).tick()
+
+
+def build_autopilot_runner_tick(
+    config: AutopilotTickConfig,
+) -> AutopilotRunnerTickAdapter:
+    """Build the worker collaborator. The engine is constructed on each tick."""
+    return AutopilotRunnerTickAdapter(config)
+
+
+def _runner_deps(
+    session: AsyncSession,
+    config: AutopilotTickConfig,
+) -> RunnerDependencies:
+    from rag_backend.modules.autopilot.infrastructure.editorial_driver import (
+        EditorialDriverConfig,
+        InProcessEditorialDriver,
+    )
+
+    repo = SqlAlchemyAutopilotRepository(session)
+    driver = InProcessEditorialDriver(
+        EditorialDriverConfig(
+            session=session,
+            engine_factory=config.engine_factory,
+            clock=SystemClock(),
+            stale_after_seconds=config.stale_after_seconds,
+        )
+    )
+    return RunnerDependencies(
+        runs=repo,
+        topics=repo,
+        editorial=driver,
+        notices=OutboxReadyNotifier(session),
+        owner_user_id=config.owner_user_id,
+    )
 
 
 def _collector_config(settings: Settings) -> CollectorBuildConfig:

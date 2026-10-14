@@ -1,6 +1,6 @@
 # AE-0354 — AutopilotRunner: drive editorial workflow in-process, auto-approve gates, stop at final_review
 
-Status: Ready
+Status: Dev Complete
 Tier: T2
 Priority: Critical
 Type: Feature
@@ -40,13 +40,13 @@ The workflow has 6 `interrupt()` gates and no auto mode; driving it over HTTP hi
 
 ## Acceptance Criteria
 
-- [ ] WHEN a queued run is ticked THE runner SHALL create and start the workflow without any HTTP call.
-- [ ] WHEN a gate is awaiting_human and its policy check passes THE runner SHALL resume `approve` with the current `lock_version`.
-- [ ] WHEN the content persona score is <70 THE runner SHALL resume `revise` (max 2) and then escalate — it SHALL never approve below 70.
-- [ ] WHEN the workflow reaches final_review THE runner SHALL stop, set `awaiting_owner`, and emit `content.autopilot.ready_for_owner` exactly once.
-- [ ] WHEN a test drives the runner through all gates THE runner SHALL NOT call approve on `final_review` (asserted).
-- [ ] WHEN `lock_version` conflicts (409) THE runner SHALL re-read state on the next tick, not crash or double-resume.
-- [ ] WHEN `autopilot_enabled=false` THE worker tick SHALL skip the runner entirely.
+- [x] WHEN a queued run is ticked THE runner SHALL create and start the workflow without any HTTP call.
+- [x] WHEN a gate is awaiting_human and its policy check passes THE runner SHALL resume `approve` with the current `lock_version`.
+- [x] WHEN the content persona score is <70 THE runner SHALL resume `revise` (max 2) and then escalate — it SHALL never approve below 70.
+- [x] WHEN the workflow reaches final_review THE runner SHALL stop, set `awaiting_owner`, and emit `content.autopilot.ready_for_owner` exactly once.
+- [x] WHEN a test drives the runner through all gates THE runner SHALL NOT call approve on `final_review` (asserted).
+- [x] WHEN `lock_version` conflicts (409) THE runner SHALL re-read state on the next tick, not crash or double-resume.
+- [x] WHEN `autopilot_enabled=false` THE worker tick SHALL skip the runner entirely.
 
 ## Gherkin Scenarios
 
@@ -145,13 +145,51 @@ Feature: Autopilot runner
 
 Ticket created from docs/architecture/grokbot-autopilot.md (ticket #5).
 
+### 2026-10-13
+
+Runner, gate policy, and worker wiring implemented. Feature scenarios are covered by fake-driver unit tests plus one in-process start against `EditorialWorkflowService` with a mocked orchestrator. `final_review` is never approved. `bash scripts/ci/gate-capture.sh backend` is fail=0. Four Postgres gates skipped because `DATABASE_URL` is unset in this shell. Local pytest: 3139 passed, 7 skipped.
+
 ## Files Touched
 
-Pending.
+- `backend/tests/features/autopilot_runner.feature`
+- `backend/src/rag_backend/modules/autopilot/application/runner.py`
+- `backend/src/rag_backend/modules/autopilot/application/feedback.py`
+- `backend/src/rag_backend/modules/autopilot/domain/policy.py`
+- `backend/src/rag_backend/modules/autopilot/domain/gate.py`
+- `backend/src/rag_backend/modules/autopilot/domain/snapshot.py`
+- `backend/src/rag_backend/modules/autopilot/domain/state_machine.py`
+- `backend/src/rag_backend/modules/autopilot/infrastructure/editorial_driver.py`
+- `backend/src/rag_backend/modules/autopilot/infrastructure/jpeg_size.py`
+- `backend/src/rag_backend/modules/autopilot/infrastructure/ready_notifier.py`
+- `backend/src/rag_backend/modules/autopilot/infrastructure/repository.py`
+- `backend/src/rag_backend/modules/autopilot/constants.py`
+- `backend/src/rag_backend/modules/autopilot/bootstrap.py`
+- `backend/src/rag_backend/modules/autopilot/public.py`
+- `backend/src/rag_backend/modules/autopilot/__init__.py`
+- `backend/src/rag_backend/modules/autopilot/domain/ports.py`
+- `backend/src/rag_backend/application/workers/workflow_workers.py`
+- `backend/src/rag_backend/bootstrap/app_factory.py`
+- `backend/src/rag_backend/infrastructure/config/settings.py`
+- `backend/src/rag_backend/agents/prompts/autopilot/v1/revise_feedback.yaml`
+- `backend/src/rag_backend/agents/prompts/autopilot/v1/README.md`
+- `docs/architecture/grokbot-autopilot.md` (§4 `queued` → `failed`)
+- `backend/tests/unit/modules/autopilot/test_gate_policy.py`
+- `backend/tests/unit/modules/autopilot/test_gate_snapshot.py`
+- `backend/tests/unit/modules/autopilot/test_jpeg_size.py`
+- `backend/tests/unit/modules/autopilot/test_autopilot_runner.py`
+- `backend/tests/unit/modules/autopilot/test_editorial_driver_outcomes.py`
+- `backend/tests/unit/modules/autopilot/test_state_machine.py`
+- `backend/tests/unit/application/test_workflow_workers.py`
+- `backend/tests/integration/test_autopilot_runner_start.py`
+- `backend/tests/integration/test_autopilot_state_machine.py`
+- `.agent/reports/AE-0354.dev-summary.md`
 
 ## Test Evidence
 
-Pending.
+- `backend/tests/features/autopilot_runner.feature` — clean run, persona revise-then-escalate, version conflict, start outage, disabled worker.
+- `uv run pytest` from `backend/`: 3139 passed, 7 skipped.
+- `bash scripts/ci/gate-capture.sh backend`: fail=0, skip=4 (`test`, `diff-cover`, `migrations`, `schema-drift` — `DATABASE_URL` unset). Mutation score 79.82%.
+- `cd backend && uv run alembic heads`: single head `f2a3b4c5d6e7`.
 
 ## QA Report
 
@@ -159,12 +197,18 @@ Pending.
 
 ## Decision Log
 
-See ADR-0020.
+- See ADR-0020.
+- Every phase, including design, revises at most twice, then escalates. That matches this ticket and architecture §6. Architecture §3 still says the presentation pass revises once; the runner follows the ticket and §6.
+- `queued` → `failed` is a legal transition so three workflow-start outages can fail the run. Architecture §4 now lists that edge.
+- `AutopilotRunner.tick()` takes no database session, so the application layer stays free of SQLAlchemy. The worker calls `AutopilotRunnerTickAdapter.tick(db)`, the same shape as the Instagram publish tick.
+- The editorial engine factory is built in `app_factory` from the process `container` object. The autopilot module does not call `get_container()`, so the import ratchet stays at 14.
+- A missing persona score fails closed (`persona_score_below_threshold`). A design gate with no presentation report fails closed (`missing_presentation_validation`).
 
 ## Blockers
 
-None.
+- Manual (Pedro): set `AUTOPILOT_ENABLED=true` and `AUTOPILOT_OWNER_USER_ID` to an existing user id before the worker creates carousels. An empty owner fails the queued run with `owner_unconfigured` and does not insert a project.
+- Gate skip (environment): `DATABASE_URL` is unset in this shell, so `backend:test`, `backend:diff-cover`, `backend:migrations`, and `backend:schema-drift` skipped inside `gate-capture.sh`. Local `uv run pytest` was 3139 passed / 7 skipped. Alembic still has one head, `f2a3b4c5d6e7`.
 
 ## Final Summary
 
-Pending.
+The worker tick, when autopilot is enabled, advances at most one run in-process: it creates and starts a pt-BR carousel, auto-approves research, outline, content, design, and images when the deterministic checks pass, revises a failed check at most twice, and stops at `final_review` with one `content.autopilot.ready_for_owner` event. It never approves `final_review`.

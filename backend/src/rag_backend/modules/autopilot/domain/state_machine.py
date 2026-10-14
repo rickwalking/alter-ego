@@ -15,9 +15,11 @@ from rag_backend.modules.autopilot.domain.models import (
 _S = AutopilotRunState
 
 # (expected, new) pairs from docs/architecture/grokbot-autopilot.md §4.
+# AE-0354 adds (queued, failed): three provider failures on start.
 ALLOWED_TRANSITIONS: frozenset[tuple[AutopilotRunState, AutopilotRunState]] = (
     frozenset({
         (_S.QUEUED, _S.GENERATING),
+        (_S.QUEUED, _S.FAILED),
         (_S.GENERATING, _S.AWAITING_OWNER),
         (_S.GENERATING, _S.ESCALATED),
         (_S.GENERATING, _S.FAILED),
