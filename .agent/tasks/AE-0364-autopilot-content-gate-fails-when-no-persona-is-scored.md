@@ -1,6 +1,6 @@
 # AE-0364 — Autopilot content gate fails when no persona is scored
 
-Status: Intake
+Status: Dev Complete
 Tier: T1
 Priority: P0
 Type: Bugfix
@@ -99,7 +99,8 @@ AE-0363 (merged).
 ### 2026-10-14
 
 Ticket created from the prod incident. Fix, tests (new tests fail on the old policy), doc.
-Hotfix fast path gates; see the dev summary.
+Hotfix fast path: 20 backend gates PASS individually (mutation deferred to CI); Python 3.11
+import check 706 modules, 0 failures. Moved to Dev Complete.
 
 ## Files Touched
 
