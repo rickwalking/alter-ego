@@ -112,8 +112,7 @@ stuck auto-reject closes the run and posts a Telegram notice.
 
 | State | Next | Trigger |
 |---|---|---|
-| `queued` | `generating` | runner tick picks it up |
-| `queued` | `failed` | workflow start returns 429/503 three times |
+| `queued` | `generating` / `failed` | runner tick picks it up / workflow start failed 3× (provider 429/503) |
 | `generating` | `awaiting_owner` / `escalated` / `failed` | gates auto-approved to final_review / check failed after retries / workflow failed |
 | `awaiting_owner` | `publishing` / `reworking` / `rejected` / `expired` | Approve / Rework / Reject / 72 h |
 | `reworking` | `awaiting_owner` / `escalated` | revise drove back to final_review / cap hit |
@@ -233,6 +232,35 @@ The official X route can still be added later if the new "X Subscription" pool t
 
 ---
 
+### 5.2 Update 2026-10-14: the scout runs as a Cursor Grok Bot routine
+
+This supersedes the host or Cursor CLI parts of §5, §2 and §7 (AE-0360).
+
+**Why the change**
+- Grok Bot is authenticated natively through the owner's Cursor account and uses the existing Grok Bot plan limits.
+- So there is no Cursor API key, no droplet install and no systemd timer.
+- Grok Bot routines run on a schedule in the cloud, on a persistent computer with a browser, command line and filesystem.
+
+**What the routine does** (`ops/grokbot/grok-bot/v1/routine.md`, daily 08:00 America/Sao_Paulo)
+1. Fetches `GET /api/autopilot/signals` with the scoped key.
+2. Browses x.com **in its own logged-in browser** and collects at most 30 recent AI posts with likes, reposts and views.
+3. Posts them to `POST /api/autopilot/x-signals`. The backend validates them (status regex, 48 h snowflake age) and adds them to the topic allowlist.
+4. Ranks 1–3 topics.
+5. Posts them to `POST /api/autopilot/topics`.
+6. On failure, calls `POST /api/autopilot/scout-failed`, which sends a Telegram message.
+
+**Trust model (unchanged)**
+- The Bot holds only the scoped autopilot key. It is stored in `/workspace/grokbot/config` and typed by the owner via takeover.
+- That key cannot publish or reach any other route.
+- The backend still enforces schema, allowlist, dedupe and the daily cap.
+- Publishing still requires the owner's Telegram approval.
+
+**Kept**
+- The `ddgs` X web-search collector (§5.1) stays as a backend signal source and fallback.
+
+**Known issue**
+- Grok Bot routines may start late or miss runs (Cursor forum, Sept 2026). Re-runs are safe because of the daily cap and dedupe.
+
 ## 6. Backend changes (gap → fix)
 
 | Gap found in the codebase | Fix |
@@ -319,7 +347,7 @@ Escalation never approves anything blindly.
 | 8 | Idempotent `InstagramPublishJob` + status route + persist `ig_post_id` | 1 | yes |
 | 9 | IG token store + refresher + expiry alert | 8 | yes |
 | 10 | Prod wiring: secrets in `deploy.yml` + compose, Cloudflare skip rule, setWebhook | 7,8,9 | no (config, plus a seeded check) |
-| 11 | `ops/grokbot/`: scout script, prompt v1, schema, validator, systemd unit + timer + OnFailure | 3,4 | no (tooling, plus validator unit tests) |
+| 11 | Grok Bot routine pack + `POST /autopilot/x-signals` + `POST /autopilot/scout-failed` (§5.2) | 2,3,4,6 | yes |
 
 **MVP cut.** Tickets 0, 1, 2, 4, 5, 6, 7, 8, 10, 11 make the loop work end to end.
 Tickets 3 and 9 can start minimal: X web search + HN + HF, and a manual token refresh with an alert.

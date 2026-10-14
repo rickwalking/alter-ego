@@ -26,7 +26,7 @@ There is no trend discovery, no unattended workflow mode (6 human gates), no mac
 - Wave A (foundation): AE-0349 spike, AE-0350 module + migration, AE-0351 service API key.
 - Wave B (inputs + engine): AE-0352 collectors, AE-0353 topic intake, AE-0354 runner + gate policy.
 - Wave C (human loop + output): AE-0355 Telegram notifier, AE-0356 Telegram webhook, AE-0357 idempotent IG publish, AE-0358 IG token store/refresher.
-- Wave D (ship): AE-0359 prod wiring, AE-0360 ops scout (Cursor CLI on droplet).
+- Wave D (ship): AE-0359 prod wiring, AE-0360 scout as a Cursor Grok Bot routine (+ x-signals intake).
 
 ## Non-Goals
 
