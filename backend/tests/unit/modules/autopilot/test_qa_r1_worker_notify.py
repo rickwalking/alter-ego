@@ -22,6 +22,7 @@ from rag_backend.modules.autopilot.constants import (
     PAYLOAD_REASON,
     PAYLOAD_STATE,
 )
+from rag_backend.modules.autopilot.domain.exceptions import TelegramDeliveryError
 from rag_backend.modules.autopilot.domain.messages import review_keyboard
 from rag_backend.modules.autopilot.domain.models import AutopilotRun, AutopilotRunState
 from rag_backend.modules.autopilot.domain.notice_log import bump_attempt
@@ -41,7 +42,6 @@ from rag_backend.modules.autopilot.recovery_constants import (
     REASON_OWNER_EXPIRED,
     REASON_REWORK_RETRY,
 )
-from rag_backend.modules.autopilot.domain.exceptions import TelegramDeliveryError
 from tests.unit.application.test_workflow_workers import (
     _FakeSession,
     _NoopAlerts,
@@ -245,9 +245,7 @@ async def test_cursor_passes_delivered_and_exhausted_notices() -> None:
     exhausted = _run(AutopilotRunState.ESCALATED).notice_log
     for _ in range(NOTIFY_MAX_ATTEMPTS):
         exhausted = bump_attempt(exhausted, f"{ATTEMPT_STATUS_PREFIX}evt-dead")
-    run: AutopilotRun = replace(
-        _run(AutopilotRunState.ESCALATED), notice_log=exhausted
-    )
+    run: AutopilotRun = replace(_run(AutopilotRunState.ESCALATED), notice_log=exhausted)
     runs = _Runs(run=run)
     events = _Events(
         items=[

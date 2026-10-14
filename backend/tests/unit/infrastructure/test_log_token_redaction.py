@@ -32,6 +32,11 @@ def stdout(monkeypatch: pytest.MonkeyPatch) -> Iterator[io.StringIO]:
         root.removeHandler(handler)
     buffer = io.StringIO()
     monkeypatch.setattr("sys.stdout", buffer)
+    # An earlier test may have run alembic's fileConfig, which disables every
+    # logger that already existed (httpx included). Production never does.
+    for name in ("httpx", "httpcore", "some.other"):
+        monkeypatch.setattr(logging.getLogger(name), "disabled", False)
+        monkeypatch.setattr(logging.getLogger(name), "propagate", True)
     setup_logging(debug=False)
     yield buffer
     for handler in list(root.handlers):

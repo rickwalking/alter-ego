@@ -144,7 +144,9 @@ async def _stored(repo: SqlAlchemyAutopilotRepository, run_id: UUID) -> Autopilo
 
 # Scenario: Retry after exhaustion calls Graph again
 @pytest.mark.asyncio
-async def test_retry_after_exhaustion_calls_graph_again(db_session: AsyncSession) -> None:
+async def test_retry_after_exhaustion_calls_graph_again(
+    db_session: AsyncSession,
+) -> None:
     repo, run = await _run_in(
         db_session, AutopilotRunState.PUBLISH_FAILED, publish_attempts=3
     )
@@ -220,7 +222,9 @@ async def test_manual_publish_is_refused_while_the_run_awaits_the_owner(
 
 # Scenario: Manual publish of a carousel without a run is idempotent
 @pytest.mark.asyncio
-async def test_manual_publish_without_a_run_posts_once(db_session: AsyncSession) -> None:
+async def test_manual_publish_without_a_run_posts_once(
+    db_session: AsyncSession,
+) -> None:
     project_id = await _carousel(db_session)
     gateway = _Gateway()
     manual = ManualInstagramPublish(_deps(db_session, gateway))
@@ -343,7 +347,9 @@ async def test_a_hash_stored_by_a_concurrent_batch_is_a_duplicate(
     assert second.queued == ()
     assert second.accepted == ()
     assert [item.reason for item in second.rejected] == [REASON_DUPLICATE_TOPIC]
-    count = await db_session.execute(select(func.count()).select_from(TopicCandidateModel))
+    count = await db_session.execute(
+        select(func.count()).select_from(TopicCandidateModel)
+    )
     assert count.scalar_one() == 1
 
 

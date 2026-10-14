@@ -5,6 +5,7 @@ Feature: tests/features/url_safety_ssrf.feature
 
 from __future__ import annotations
 
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 
 import pytest
@@ -119,21 +120,25 @@ class _Page:
     def __init__(self, redirect_to: str) -> None:
         self.url = ""
         self._redirect_to = redirect_to
-        self._handler: object = None
-        self._listener: object = None
+        self._handler: Callable[[_Route], Awaitable[None]] | None = None
+        self._listener: Callable[[_Request], None] | None = None
 
-    async def route(self, _pattern: str, handler: object) -> None:
+    async def route(
+        self, _pattern: str, handler: Callable[[_Route], Awaitable[None]]
+    ) -> None:
         self._handler = handler
 
-    def on(self, _event: str, listener: object) -> None:
+    def on(self, _event: str, listener: Callable[[_Request], None]) -> None:
         self._listener = listener
 
     async def goto(self, url: str, **_: object) -> None:
         for hop in (url, self._redirect_to):
             request = _Request(hop)
-            self._listener(request)  # type: ignore[operator]
+            assert self._listener is not None
+            assert self._handler is not None
+            self._listener(request)
             route = _Route(request)
-            await self._handler(route)  # type: ignore[operator]
+            await self._handler(route)
             if route.outcome == ["abort"]:
                 return
             self.url = hop

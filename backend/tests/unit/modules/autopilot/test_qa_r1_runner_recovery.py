@@ -26,7 +26,6 @@ from rag_backend.modules.autopilot.constants import (
     GATE_CONTENT,
     GATE_DESIGN,
     GATE_FINAL_REVIEW,
-    PHASE_STATUS_AWAITING,
     REASON_DESIGN,
     REASON_PERSONA_SCORE,
 )
@@ -178,7 +177,9 @@ def test_design_escalates_after_one_revise() -> None:
 async def test_unclassified_resume_error_escalates_once() -> None:
     run = _run(AutopilotRunState.GENERATING, _PROJECT)
     runs = _Runs(run=run, topic=_topic(run.topic_candidate_id))
-    editorial = _Raising(phase=GATE_CONTENT, error=ValueError(ERR_PERSONA_SCORE_TOO_LOW))
+    editorial = _Raising(
+        phase=GATE_CONTENT, error=ValueError(ERR_PERSONA_SCORE_TOO_LOW)
+    )
     runner, recovery = _runner(runs, editorial, _Notices())
 
     assert await runner.tick() == 1
