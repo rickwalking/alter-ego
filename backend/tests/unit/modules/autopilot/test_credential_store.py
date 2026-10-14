@@ -198,7 +198,7 @@ async def test_startup_warns_and_disables_publishing_without_a_key(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Scenario: Encryption key missing disables publishing."""
-    from rag_backend.bootstrap import app_factory
+    from rag_backend.bootstrap import autopilot_worker_factory
     from rag_backend.modules.autopilot import bootstrap_credentials
 
     buffer = _capture(
@@ -215,8 +215,8 @@ async def test_startup_warns_and_disables_publishing_without_a_key(
     assert LOG_CREDENTIALS_KEY_UNUSABLE in rendered
     assert PUBLISHING_DISABLED in rendered
     assert credential_tick_config(settings) is None
-    assert app_factory._instagram_publish(settings) is None
-    assert app_factory._credential_refresh(settings) is None
+    assert autopilot_worker_factory.instagram_publish_step(settings) is None
+    assert autopilot_worker_factory.credential_refresh_step(settings) is None
     structlog.reset_defaults()
 
 

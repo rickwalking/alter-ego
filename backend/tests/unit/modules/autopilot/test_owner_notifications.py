@@ -64,9 +64,13 @@ class _Clock:
 @dataclass
 class _Events:
     items: list[AutopilotOutboxEvent] = field(default_factory=list)
+    advanced: list[str] = field(default_factory=list)
 
     async def recent(self) -> list[AutopilotOutboxEvent]:
         return list(self.items)
+
+    async def advance(self, event: AutopilotOutboxEvent) -> None:
+        self.advanced.append(event.event_id)
 
 
 @dataclass
@@ -144,7 +148,7 @@ def _run(
         carousel_project_id=_PROJECT,
         state=state,
         state_reason=None,
-        attempts=0,
+        publish_attempts=0,
         telegram_message_ids=() if log is None else log.message_ids,
         ig_container_id=None,
         ig_post_id=None,
@@ -371,7 +375,7 @@ async def test_missing_carousel_counts_a_failure() -> None:
         carousel_project_id=None,
         state=run.state,
         state_reason=None,
-        attempts=0,
+        publish_attempts=0,
         telegram_message_ids=(),
         ig_container_id=None,
         ig_post_id=None,

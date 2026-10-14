@@ -126,6 +126,20 @@ class _RecordingSweeper:
         return 0
 
 
+class _FakeSession:
+    """Records the per-step commits and rollbacks of the worker tick."""
+
+    def __init__(self) -> None:
+        self.commits = 0
+        self.rollbacks = 0
+
+    async def commit(self) -> None:
+        self.commits += 1
+
+    async def rollback(self) -> None:
+        self.rollbacks += 1
+
+
 class _NoopNotifications:
     async def send_deadline_reminders(self, _db: object) -> int:
         return 0
@@ -151,7 +165,7 @@ async def test_run_tick_sweeps_republish_after_drift_reconciler() -> None:
         republish_sweeper=cast(object, _RecordingSweeper(log)),
     )
     counters = await workflow_workers._run_tick(
-        _settings(), cast(object, None), collaborators
+        _settings(), cast(object, _FakeSession()), collaborators
     )
     assert log == ["reaper", "drift", "republish"]
     assert counters["republished"] == 0
@@ -183,7 +197,7 @@ async def test_run_tick_publishes_instagram_after_the_other_workers() -> None:
         instagram_publish=cast(object, _RecordingPublish(log)),
     )
     counters = await workflow_workers._run_tick(
-        _settings(), cast(object, None), collaborators
+        _settings(), cast(object, _FakeSession()), collaborators
     )
     assert log == ["reaper", "drift", "republish", "instagram"]
     assert counters["instagram_runs"] == 1
@@ -217,7 +231,7 @@ async def test_run_tick_runs_autopilot_after_instagram_when_enabled() -> None:
     )
     counters = await workflow_workers._run_tick(
         _settings(autopilot_enabled=True),
-        cast(object, None),
+        cast(object, _FakeSession()),
         collaborators,
     )
     assert log == ["reaper", "drift", "republish", "instagram", "autopilot"]
@@ -244,7 +258,7 @@ async def test_run_tick_skips_autopilot_when_disabled() -> None:
     )
     counters = await workflow_workers._run_tick(
         _settings(autopilot_enabled=False),
-        cast(object, None),
+        cast(object, _FakeSession()),
         collaborators,
     )
     assert log == ["instagram"]
@@ -280,7 +294,7 @@ async def test_run_tick_notifies_after_autopilot() -> None:
     )
     counters = await workflow_workers._run_tick(
         _settings(autopilot_enabled=True),
-        cast(object, None),
+        cast(object, _FakeSession()),
         collaborators,
     )
     assert log == ["instagram", "autopilot", "telegram"]
@@ -315,7 +329,7 @@ async def test_run_tick_refreshes_credentials_before_instagram() -> None:
         instagram_publish=cast(object, _RecordingPublish(log)),
     )
     counters = await workflow_workers._run_tick(
-        _settings(), cast(object, None), collaborators
+        _settings(), cast(object, _FakeSession()), collaborators
     )
     assert log == ["credentials", "instagram"]
     assert counters["credential_refresh"] == 1

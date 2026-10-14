@@ -31,3 +31,67 @@ Feature: Autopilot runner
     Given autopilot is disabled
     When the worker tick runs
     Then the runner is not called
+
+  # --- AE-0348 QA round 1 -------------------------------------------------
+
+  Scenario: The engine rejects an approve the policy allowed
+    Given the content gate persona entry has no "overall" score
+    And the engine reads a missing "overall" as 0
+    When the runner reads the gate
+    Then the policy revises instead of approving
+    And no approve is sent that the engine would refuse
+
+  Scenario: Content approve with blocking presentation violations is revised
+    Given the content gate passes persona and forbidden-phrase checks
+    And the engine's own content-approve check reports a presentation blocker
+    When the runner ticks
+    Then the content gate is revised with reason "presentation_validation_blocked"
+
+  Scenario: Design is revised at most once
+    Given the design gate still has presentation blockers after one revise
+    When the runner ticks
+    Then the run state is "escalated" with reason "presentation_validation_blocked"
+
+  Scenario: An unclassified engine error escalates the run instead of looping
+    Given a generating run whose resume raises an unclassified ValueError
+    When the runner ticks
+    Then the session is rolled back
+    And the run state is "escalated" with a reason starting "engine_error:ValueError"
+    And the next tick does not retry that run
+
+  Scenario: An unclassified start error fails the queued run
+    Given a queued run whose workflow start raises an unclassified error
+    When the runner ticks
+    Then the run state is "failed" with a reason starting "engine_error"
+
+  Scenario: An autopilot failure does not roll back the other worker steps
+    Given the stale-run reaper and the auto-reject made changes this tick
+    And the autopilot runner step raises
+    When the worker tick runs
+    Then the reaper and auto-reject changes are committed
+    And only the autopilot step is rolled back
+    And the Telegram step still runs
+
+  Scenario: 72 hour expiry
+    Given a run in "awaiting_owner" whose last transition was 72 hours ago
+    When the runner ticks
+    Then the run state is "expired" with reason "owner_review_expired"
+    And the owner is told on Telegram that the review expired
+
+  Scenario: An escalated run the owner fixed in the web UI returns to the owner
+    Given an escalated run recorded at lock version 4
+    And its carousel is back at final review awaiting human at lock version 6
+    When the runner ticks
+    Then the run state is "awaiting_owner"
+    And one "content.autopilot.ready_for_owner" event was emitted for revision 6
+
+  Scenario: An escalated run whose carousel did not change stays escalated
+    Given an escalated run recorded at lock version 4
+    And its carousel is at final review awaiting human at lock version 4
+    When the runner ticks
+    Then the run state stays "escalated"
+
+  Scenario: The autopilot imports editorial code only through its facade
+    Given the import-linter contract "autopilot-editorial-facade-only"
+    When a module under the autopilot imports the legacy carousel service, the carousel ORM, or an editorial internal
+    Then lint-imports fails on that contract

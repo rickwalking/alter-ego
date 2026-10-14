@@ -85,7 +85,7 @@ async def test_container_post_and_attempt_round_trip(db_session: AsyncSession) -
     assert stored.ig_container_created_at == _AT
     assert stored.ig_post_id == "post-1"
     assert stored.ig_permalink == "https://instagram.com/p/abc"
-    assert stored.attempts == 1
+    assert stored.publish_attempts == 1
 
 
 @pytest.mark.asyncio

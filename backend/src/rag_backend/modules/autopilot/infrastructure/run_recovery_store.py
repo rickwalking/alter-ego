@@ -1,0 +1,52 @@
+"""SQLAlchemy adapter for ``RunRecoveryStore`` (AE-0348 QA round 1)."""
+
+from __future__ import annotations
+
+from typing import cast
+from uuid import UUID
+
+from sqlalchemy import CursorResult, update
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from rag_backend.modules.autopilot.domain.models import AutopilotRunState
+from rag_backend.modules.autopilot.domain.recovery import EscalationMark, ReworkIntent
+from rag_backend.modules.autopilot.infrastructure.models import AutopilotRunModel
+
+
+class SqlRunRecoveryStore:
+    """Session-scoped. Writes never touch ``state`` or ``updated_at``."""
+
+    def __init__(self, session: AsyncSession) -> None:
+        self._session = session
+
+    async def queue_rework(self, intent: ReworkIntent) -> bool:
+        """Store phase and feedback while the run is ``reworking``."""
+        result = await self._session.execute(
+            update(AutopilotRunModel)
+            .where(
+                AutopilotRunModel.id == intent.run_id,
+                AutopilotRunModel.state == AutopilotRunState.REWORKING.value,
+            )
+            .values(rework_phase=intent.phase, rework_feedback=intent.feedback)
+        )
+        return cast(CursorResult[object], result).rowcount == 1
+
+    async def clear_rework(self, run_id: UUID) -> None:
+        """Forget the queued rework."""
+        await self._session.execute(
+            update(AutopilotRunModel)
+            .where(AutopilotRunModel.id == run_id)
+            .values(rework_phase=None, rework_feedback=None)
+        )
+
+    async def mark_escalated(self, mark: EscalationMark) -> None:
+        """Remember the lock version the run was escalated at."""
+        await self._session.execute(
+            update(AutopilotRunModel)
+            .where(AutopilotRunModel.id == mark.run_id)
+            .values(escalated_version=mark.version)
+        )
+
+    async def rollback(self) -> None:
+        """Discard the session's pending work."""
+        await self._session.rollback()

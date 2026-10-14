@@ -14,6 +14,7 @@ import structlog
 
 from rag_backend.modules.autopilot.constants import (
     LOG_TOPIC_INTAKE,
+    REASON_DUPLICATE_TOPIC,
     STATUS_CANDIDATE_ACCEPTED,
 )
 from rag_backend.modules.autopilot.domain.intake import (
@@ -77,9 +78,10 @@ class TopicIntakeService:
     async def accept(self, command: TopicIntakeCommand) -> TopicIntakeResult:
         """Store every accepted proposal and queue only those the cap allows."""
         prepared = tuple(prepare(item) for item in command.proposals)
+        await self._deps.store.lock_intake()
         facts = await self._facts(prepared)
-        plan = plan_intake(prepared, facts)
-        queued = await self._persist(plan)
+        plan = await self._stored(plan_intake(prepared, facts))
+        queued = await self._queue(plan)
         await self._deps.store.commit()
         result = TopicIntakeResult(
             accepted=plan.accepted_ids,
@@ -106,10 +108,21 @@ class TopicIntakeService:
             daily_cap=self._deps.daily_cap,
         )
 
-    async def _persist(self, plan: IntakePlan) -> tuple[UUID, ...]:
+    async def _stored(self, plan: IntakePlan) -> IntakePlan:
+        """Insert new candidates. A hash a concurrent batch won is a duplicate."""
+        kept: list[NewCandidate] = []
+        lost: list[NewCandidate] = []
         for item in plan.new_candidates:
-            await self._deps.store.add_candidate(_candidate(item))
-        return await self._queue(plan)
+            stored = await self._deps.store.add_candidate(_candidate(item))
+            (kept if stored else lost).append(item)
+        if not lost:
+            return plan
+        lost_ids = {item.candidate_id for item in lost}
+        return IntakePlan(
+            accepted_ids=tuple(i for i in plan.accepted_ids if i not in lost_ids),
+            new_candidates=tuple(kept),
+            rejected=(*plan.rejected, *(_duplicate(item) for item in lost)),
+        )
 
     async def _queue(self, plan: IntakePlan) -> tuple[UUID, ...]:
         created_at = self._deps.clock.now()
@@ -150,6 +163,10 @@ def _candidate(item: NewCandidate) -> TopicCandidate:
         signal_hash=proposal.signal_hash,
         status=STATUS_CANDIDATE_ACCEPTED,
     )
+
+
+def _duplicate(item: NewCandidate) -> TopicRejection:
+    return TopicRejection(title=item.proposal.title, reason=REASON_DUPLICATE_TOPIC)
 
 
 def _score(item: NewCandidate) -> int:

@@ -26,3 +26,8 @@ Feature: Autopilot run state machine
     When the runner transitions it from "queued" to "generating"
     Then the transition returns false
     And no "content.autopilot.state_changed" outbox event exists
+
+  Scenario: A refused editorial approve may return a publishing run to the owner
+    Given a run in "publishing"
+    When the transition to "awaiting_owner" is requested
+    Then it is allowed

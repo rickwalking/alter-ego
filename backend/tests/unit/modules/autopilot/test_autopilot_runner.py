@@ -5,7 +5,7 @@ Gherkin: tests/features/autopilot_runner.feature
 
 from __future__ import annotations
 
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 from uuid import UUID, uuid4
 
 import pytest
@@ -56,6 +56,7 @@ from rag_backend.modules.autopilot.domain.models import (
     TransitionCommand,
 )
 from rag_backend.modules.autopilot.domain.publish import RunListQuery
+from rag_backend.modules.autopilot.domain.recovery import EscalationMark, ReworkIntent
 from rag_backend.modules.autopilot.notify_constants import (
     REASON_NOTIFIER_UNCONFIGURED,
 )
@@ -99,7 +100,7 @@ def _run(state: AutopilotRunState, project_id: str | None = None) -> AutopilotRu
         carousel_project_id=project_id,
         state=state,
         state_reason=None,
-        attempts=0,
+        publish_attempts=0,
         telegram_message_ids=(),
         ig_container_id=None,
         ig_post_id=None,
@@ -146,6 +147,9 @@ class _Runs:
     async def get_topic(self, candidate_id: UUID) -> TopicCandidate | None:
         return self.topic
 
+    async def get(self, run_id: UUID) -> AutopilotRun | None:
+        return self.run if self.run.run_id == run_id else None
+
     async def attach_project(self, command: AttachProjectCommand) -> bool:
         if not self.accept_attach:
             return False
@@ -155,7 +159,7 @@ class _Runs:
     async def note_start_attempt(self, command: StartAttemptCommand) -> bool:
         self.run = replace(
             self.run,
-            attempts=command.attempts,
+            start_attempts=command.attempts,
             state_reason=command.reason,
         )
         return True
@@ -210,6 +214,38 @@ class _Editorial:
         return ResumeResult(status=ResumeStatus.APPLIED)
 
 
+@dataclass
+class _Recovery:
+    """In-memory ``RunRecoveryStore`` bound to the fake run (QA r1)."""
+
+    runs: _Runs | None = None
+    rollbacks: int = 0
+    marks: list[EscalationMark] = field(default_factory=list)
+    cleared: int = 0
+
+    async def queue_rework(self, intent: ReworkIntent) -> bool:
+        assert self.runs is not None
+        self.runs.run = replace(
+            self.runs.run, rework_phase=intent.phase, rework_feedback=intent.feedback
+        )
+        return True
+
+    async def clear_rework(self, run_id: UUID) -> None:
+        self.cleared += 1
+        if self.runs is not None:
+            self.runs.run = replace(
+                self.runs.run, rework_phase=None, rework_feedback=None
+            )
+
+    async def mark_escalated(self, mark: EscalationMark) -> None:
+        self.marks.append(mark)
+        if self.runs is not None:
+            self.runs.run = replace(self.runs.run, escalated_version=mark.version)
+
+    async def rollback(self) -> None:
+        self.rollbacks += 1
+
+
 class _Notices:
     def __init__(self) -> None:
         self.events: list[OwnerReadyNotice] = []
@@ -231,6 +267,7 @@ def _runner(
             topics=runs,
             editorial=editorial,
             notices=notices,
+            recovery=_Recovery(runs=runs),
             owner_user_id=owner,
             notifier_configured=notifier_configured,
         )
@@ -335,9 +372,9 @@ async def test_provider_outage_fails_the_run_on_the_third_start() -> None:
 
     assert await runner.tick() == 1
     assert runs.run.state is AutopilotRunState.QUEUED
-    assert runs.run.attempts == 1
+    assert runs.run.start_attempts == 1
     assert await runner.tick() == 1
-    assert runs.run.attempts == 2
+    assert runs.run.start_attempts == 2
     assert await runner.tick() == 1
     assert runs.run.state is AutopilotRunState.FAILED
     assert runs.run.state_reason == REASON_START_FAILED

@@ -76,7 +76,7 @@ async def test_notice_log_round_trips_without_moving_updated_at(
         carousel_project_id=None,
         state=AutopilotRunState.AWAITING_OWNER,
         state_reason="ready_for_owner",
-        attempts=0,
+        publish_attempts=0,
         telegram_message_ids=(),
         ig_container_id=None,
         ig_post_id=None,
@@ -164,8 +164,9 @@ async def test_recent_events_skip_bad_ids_and_non_object_payloads(
     events = await SqlAutopilotEventSource(db_session).recent()
     mine = [event for event in events if event.run_id == run_id]
     assert len(mine) == 2
-    assert mine[0].payload == {"revision": 4}
-    assert mine[1].payload == {}
+    # QA r1: oldest first, so a busy outbox never hides an older notice.
+    assert mine[0].payload == {}
+    assert mine[1].payload == {"revision": 4}
     assert mine[0].created_at.tzinfo is not None
     await SqlNoticeLogStore(db_session).save(
         SaveNoticeLog(run_id=uuid4(), log=NoticeLog())

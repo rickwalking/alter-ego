@@ -44,3 +44,21 @@ Feature: Telegram review notification
     Given publishing failed after the retries
     When the notifier handles the event
     Then Telegram receives a Retry button
+
+  # --- AE-0348 QA round 1 -------------------------------------------------
+
+  Scenario: Undelivered notices are processed oldest first and never skipped
+    Given more than 100 newer autopilot outbox rows than an undelivered notice
+    When the notifier ticks repeatedly
+    Then the older notice is delivered
+    And the cursor never moves past a notice that is still being retried
+
+  Scenario: Review reopened without regeneration sends the keyboard again
+    Given a run returned to "awaiting_owner" with reason "owner_rework_not_applied"
+    When the notifier ticks
+    Then a status message with Approve, Rework and Reject buttons is sent
+
+  Scenario: Expired review notice
+    Given a run moved to "expired"
+    When the notifier ticks
+    Then the owner is told the review expired after 72 hours

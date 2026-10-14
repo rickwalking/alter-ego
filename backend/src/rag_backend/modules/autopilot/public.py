@@ -35,7 +35,10 @@ from rag_backend.modules.autopilot.bootstrap_credentials import (
     encryption_key_usable,
     prepare_instagram_credentials,
 )
-from rag_backend.modules.autopilot.domain.exceptions import InvalidAutopilotTransition
+from rag_backend.modules.autopilot.domain.exceptions import (
+    InvalidAutopilotTransition,
+    ManualPublishRefusedError,
+)
 from rag_backend.modules.autopilot.domain.models import (
     AutopilotRunState,
     TransitionCommand,
@@ -57,6 +60,7 @@ __all__ = [
     "InvalidAutopilotTransition",
     "ManualInstagramPublishRequest",
     "ManualPublishOutcome",
+    "ManualPublishRefusedError",
     "TelegramNotifyTickAdapter",
     "TelegramTickConfig",
     "TransitionCommand",
@@ -84,6 +88,8 @@ def register_persistence_models() -> tuple[str, ...]:
     from rag_backend.modules.autopilot.infrastructure.models import (
         AutopilotRunModel,
         IntegrationCredentialModel,
+        ManualPublishModel,
+        NotifyCursorModel,
         ServedSignalUrlModel,
         TelegramUpdateModel,
         TopicCandidateModel,
@@ -97,4 +103,6 @@ def register_persistence_models() -> tuple[str, ...]:
         TelegramUpdateModel.__tablename__,
         ServedSignalUrlModel.__tablename__,
         XBrowserSignalModel.__tablename__,
+        ManualPublishModel.__tablename__,
+        NotifyCursorModel.__tablename__,
     )

@@ -112,6 +112,52 @@ async def test_valid_secret_dispatches_and_returns_200(webhook: _Webhook) -> Non
     assert len(world.release.ids) == 1
 
 
+# Scenario: Webhook failure after Telegram side effects (QA r1 H4)
+@pytest.mark.asyncio
+async def test_failure_after_queued_replies_sends_nothing(webhook: _Webhook) -> None:
+    """A handler that fails after queuing replies rolls back and stays silent."""
+    from rag_backend.modules.autopilot.application.owner_actions import (
+        OwnerActionService,
+    )
+    from rag_backend.modules.autopilot.domain.webhook_update import WebhookUpdate
+
+    class _FailsAfterReplies(OwnerActionService):
+        async def handle(self, update: WebhookUpdate) -> None:
+            await super().handle(update)
+            raise RuntimeError("commit-time failure")
+
+    world = _world()
+    service = _FailsAfterReplies(world.service._deps)
+    setattr(webhook.app.state, APP_STATE_OWNER_ACTIONS, service)
+    run_id = world.runs.run.run_id
+    response = await webhook.client.post(
+        _PATH,
+        json=_callback(11, f"ap:reject:{run_id}"),
+        headers={HEADER_WEBHOOK_AUTH: _SECRET},
+    )
+    assert response.status_code == 200
+    assert world.messenger.answers == []
+    assert world.messenger.edits == []
+
+
+@pytest.mark.asyncio
+async def test_successful_dispatch_delivers_replies_after_commit(
+    webhook: _Webhook,
+) -> None:
+    """Replies are sent once the request's unit of work committed."""
+    world = _world()
+    setattr(webhook.app.state, APP_STATE_OWNER_ACTIONS, world.service)
+    run_id = world.runs.run.run_id
+    response = await webhook.client.post(
+        _PATH,
+        json=_callback(12, f"ap:reject:{run_id}"),
+        headers={HEADER_WEBHOOK_AUTH: _SECRET},
+    )
+    assert response.status_code == 200
+    assert len(world.messenger.answers) == 1
+    assert len(world.messenger.edits) == 1
+
+
 @pytest.mark.asyncio
 async def test_bad_body_and_missing_engine_stay_200(webhook: _Webhook) -> None:
     """A valid secret never becomes a retryable error, and a bad body is not claimed."""
@@ -227,7 +273,7 @@ def _run(topic: TopicCandidate) -> AutopilotRun:
         carousel_project_id=None,
         state=AutopilotRunState.AWAITING_OWNER,
         state_reason="ready_for_owner",
-        attempts=0,
+        publish_attempts=0,
         telegram_message_ids=(),
         ig_container_id=None,
         ig_post_id=None,

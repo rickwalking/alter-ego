@@ -133,10 +133,14 @@ class Notifier(Protocol):
 
 
 class AutopilotEventSource(Protocol):
-    """Recent ``content.autopilot.*`` outbox rows, newest window first."""
+    """``content.autopilot.*`` outbox rows after a cursor, oldest first."""
 
     async def recent(self) -> list[AutopilotOutboxEvent]:
-        """Return up to the scan limit. The caller sorts and dedupes."""
+        """Return up to the scan limit after the cursor. The caller dedupes."""
+        ...
+
+    async def advance(self, event: AutopilotOutboxEvent) -> None:
+        """Move the cursor past ``event`` once it is settled."""
         ...
 
 
@@ -361,8 +365,12 @@ class TopicIntakeStore(Protocol):
         """How many autopilot runs were created in the half-open window."""
         ...
 
-    async def add_candidate(self, candidate: TopicCandidate) -> None:
-        """Insert one topic candidate."""
+    async def add_candidate(self, candidate: TopicCandidate) -> bool:
+        """Insert one topic candidate. False when its signal hash already exists."""
+        ...
+
+    async def lock_intake(self) -> None:
+        """Serialize concurrent intake batches for the rest of the transaction."""
         ...
 
     async def add_queued_run(self, command: QueuedRunCommand) -> None:

@@ -390,7 +390,7 @@ async def _seed_posted_run(project_id: str, post_id: str, permalink: str) -> Non
                 carousel_project_id=project_id,
                 state=AutopilotRunState.PUBLISHED,
                 state_reason=None,
-                attempts=1,
+                publish_attempts=1,
                 telegram_message_ids=(),
                 ig_container_id=None,
                 ig_post_id=post_id,

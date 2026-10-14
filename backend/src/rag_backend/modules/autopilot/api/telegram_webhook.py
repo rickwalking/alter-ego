@@ -21,7 +21,6 @@ from rag_backend.modules.autopilot.bootstrap_webhook import (
     build_owner_action_service,
 )
 from rag_backend.modules.autopilot.domain.webhook_update import (
-    WebhookUpdate,
     parse_webhook_body,
     secrets_match,
 )
@@ -52,24 +51,22 @@ async def post_telegram_webhook(
     if not secrets_match(provided, expected):
         return Response(status_code=status.HTTP_401_UNAUTHORIZED)
     update = parse_webhook_body(_json_body(await request.body()))
+    service: OwnerActionService | None = None
     try:
-        await _dispatch(request, session, update)
+        if update is not None:
+            service = _service(request, session)
+            await service.handle(update)
         await session.commit()
     except Exception:
         await session.rollback()
+        if service is not None:
+            service.discard()
         logger.exception(LOG_WEBHOOK_FAILED)
+        return Response(status_code=status.HTTP_200_OK)
+    # Telegram side effects only after the claim and transitions are durable.
+    if service is not None:
+        await service.deliver()
     return Response(status_code=status.HTTP_200_OK)
-
-
-async def _dispatch(
-    request: Request,
-    session: AsyncSession,
-    update: WebhookUpdate | None,
-) -> None:
-    if update is None:
-        return
-    service = _service(request, session)
-    await service.handle(update)
 
 
 def _service(request: Request, session: AsyncSession) -> OwnerActionService:

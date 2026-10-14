@@ -12,21 +12,9 @@ from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import cast
-from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from rag_backend.application.services.carousel.editorial_workflow_service import (
-    EditorialWorkflowService,
-)
-from rag_backend.application.services.carousel.editorial_workflow_types import (
-    EditorialWorkflowStartInput,
-    ResumeWorkflowInput,
-)
-from rag_backend.application.services.carousel.provider_errors import (
-    classify_provider_error,
-)
-from rag_backend.application.services.carousel.types import slide_count_from_config
 from rag_backend.domain.constants.carousel_workflow import (
     ERR_REVISION_CAP_EXCEEDED,
     STRUCTURED_FEEDBACK_TARGET_PHASE_KEY,
@@ -35,10 +23,6 @@ from rag_backend.domain.constants.optimistic_locking import ERR_VERSION_CONFLICT
 from rag_backend.domain.constants.presentation_policy import (
     CREATE_TIME_PRESENTATION_POLICY_VERSION,
 )
-from rag_backend.infrastructure.database.carousel_repository import (
-    PostgresCarouselRepository,
-)
-from rag_backend.infrastructure.database.models.carousel import CarouselProjectModel
 from rag_backend.infrastructure.monitoring_langfuse import propagate_attributes
 from rag_backend.modules.autopilot.constants import (
     AGENT_NAME_AUTOPILOT,
@@ -74,10 +58,14 @@ from rag_backend.modules.autopilot.domain.snapshot import assemble_snapshot
 from rag_backend.modules.autopilot.infrastructure.jpeg_size import jpeg_size
 from rag_backend.modules.editorial.public import (
     AclOptimisticLockingAdapter,
+    AutomationResume,
+    AutomationStart,
+    CarouselAutomationAcl,
     CarouselProject,
     CarouselProjectWriteOwner,
     EditorialPorts,
     EditorialService,
+    EditorialWorkflowEngine,
     EditorialWorkflowHandlers,
     EngineReviewDecisionAdapter,
     LegacyCarouselAcl,
@@ -85,9 +73,13 @@ from rag_backend.modules.editorial.public import (
     StartWorkflowCommand,
     WorkflowEngine,
     WorkflowStateView,
+    build_resume_input,
+    build_start_input,
+    content_approve_blocker,
+    is_provider_outage,
 )
 
-EngineFactory = Callable[[], EditorialWorkflowService]
+EngineFactory = Callable[[], EditorialWorkflowEngine]
 _CONTENT = "content"
 
 
@@ -106,7 +98,7 @@ class InProcessEditorialDriver:
 
     def __init__(self, config: EditorialDriverConfig) -> None:
         self._config = config
-        self._repo = PostgresCarouselRepository(config.session)
+        self._acl = CarouselAutomationAcl(config.session)
 
     async def create_project(self, spec: ProjectSpec) -> str:
         """Insert a private pt-BR carousel owned by the autopilot user."""
@@ -120,15 +112,14 @@ class InProcessEditorialDriver:
             owner_id=spec.owner_user_id or None,
             presentation_policy_version=CREATE_TIME_PRESENTATION_POLICY_VERSION,
         )
-        created = await self._repo.create_project(project)
-        return str(created.id)
+        return await self._acl.create_project(project)
 
     async def start(self, command: StartCommand) -> StartStatus:
         """Start the workflow under autopilot Langfuse metadata."""
         engine = self._config.engine_factory()
         workflow = StartWorkflowCommand(
             project_id=command.project_id,
-            workflow_input=_start_input(command.spec),
+            workflow_input=build_start_input(_start_input(command.spec)),
         )
         metadata = _trace(command.project_id, command.phase)
         try:
@@ -159,13 +150,14 @@ class InProcessEditorialDriver:
                 slides_total=await self._slides_total(project_id),
                 lock_version=lock_version,
                 stale=await self._is_stale(project_id),
+                engine_blocker=content_approve_blocker(state) or "",
             )
         )
 
     async def resume(self, command: ResumeCommand) -> ResumeResult:
         """Bump the lock, then resume once. A conflict skips the resume."""
         engine = self._config.engine_factory()
-        service = _service(self._config.session, self._repo, engine)
+        service = _service(self._config.session, self._acl, engine)
         metadata = _trace(command.project_id, command.phase)
         try:
             with propagate_attributes(metadata=metadata):
@@ -186,23 +178,20 @@ class InProcessEditorialDriver:
         return ResumeResult(status=ResumeStatus.APPLIED)
 
     async def _slides_total(self, project_id: str) -> int:
-        project = await self._repo.get_project_by_id(UUID(project_id))
-        if project is None:
-            return 0
-        return slide_count_from_config(project.slides_config)
+        return await self._acl.slide_total(project_id)
 
     async def _is_stale(self, project_id: str) -> bool:
-        row = await self._config.session.get(CarouselProjectModel, project_id)
-        if row is None or row.run_heartbeat_at is None:
+        beat = await self._acl.heartbeat(project_id)
+        if beat is None or beat.heartbeat_at is None:
             return False
-        if str(row.phase_status) != PHASE_STATUS_IN_PROGRESS:
+        if beat.phase_status != PHASE_STATUS_IN_PROGRESS:
             return False
-        heartbeat = _aware(row.run_heartbeat_at)
+        heartbeat = _aware(beat.heartbeat_at)
         limit = timedelta(seconds=self._config.stale_after_seconds)
         return self._config.clock.now() - heartbeat > limit
 
 
-def _as_engine(engine: EditorialWorkflowService) -> WorkflowEngine:
+def _as_engine(engine: EditorialWorkflowEngine) -> WorkflowEngine:
     """The service is the engine. The protocol types ``db`` as object."""
     return cast(WorkflowEngine, engine)
 
@@ -217,30 +206,29 @@ def _acl(session: AsyncSession) -> LegacyCarouselAcl:
 
 def _service(
     session: AsyncSession,
-    repo: PostgresCarouselRepository,
-    engine: EditorialWorkflowService,
+    acl: CarouselAutomationAcl,
+    engine: EditorialWorkflowEngine,
 ) -> EditorialService:
     ports = EditorialPorts(
         optimistic_locking=AclOptimisticLockingAdapter(_acl(session)),
         review_decision=EngineReviewDecisionAdapter(engine),
     )
-    return EditorialService(repo, ports)
+    return EditorialService(acl.repository, ports)
 
 
-def _start_input(spec: ProjectSpec) -> EditorialWorkflowStartInput:
-    return EditorialWorkflowStartInput(
+def _start_input(spec: ProjectSpec) -> AutomationStart:
+    return AutomationStart(
         topic=spec.topic,
         audience=spec.audience,
         brief=spec.brief,
         sources=_source_rows(spec.sources),
         user_id=spec.owner_user_id,
-        reviewer_id=None,
     )
 
 
-def _source_rows(sources: tuple[str, ...]) -> list[dict[str, str]]:
+def _source_rows(sources: tuple[str, ...]) -> tuple[dict[str, str], ...]:
     kind = ResearchSourceType.DOCUMENTATION.value
-    return [_source_row(url, kind) for url in sources]
+    return tuple(_source_row(url, kind) for url in sources)
 
 
 def _source_row(url: str, kind: str) -> dict[str, str]:
@@ -260,17 +248,16 @@ def _state_of(view: WorkflowStateView | None) -> dict[str, object]:
     return {str(key): value for key, value in view.state.items()}
 
 
-def _resume_input(
-    command: ResumeCommand,
-    session: AsyncSession,
-) -> ResumeWorkflowInput:
-    return ResumeWorkflowInput(
-        project_id=command.project_id,
-        action=command.action,
-        reviewer_id=REVIEWER_UNSET,
-        feedback=command.feedback or None,
-        db=session,
-        structured_feedback=_structured_feedback(command),
+def _resume_input(command: ResumeCommand, session: AsyncSession) -> object:
+    return build_resume_input(
+        AutomationResume(
+            project_id=command.project_id,
+            action=command.action,
+            reviewer_id=REVIEWER_UNSET,
+            feedback=command.feedback,
+            structured_feedback=_structured_feedback(command),
+            session=session,
+        )
     )
 
 
@@ -306,13 +293,13 @@ def _trace(project_id: str, phase: str) -> dict[str, str]:
 
 
 def _start_status(exc: BaseException) -> StartStatus | None:
-    if classify_provider_error(exc) is None:
+    if not is_provider_outage(exc):
         return None
     return StartStatus.PROVIDER_OUTAGE
 
 
 def _resume_status(exc: BaseException) -> ResumeStatus | None:
-    if classify_provider_error(exc) is not None:
+    if is_provider_outage(exc):
         return ResumeStatus.PROVIDER_OUTAGE
     if not isinstance(exc, ValueError):
         return None

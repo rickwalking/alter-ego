@@ -71,6 +71,7 @@ from rag_backend.modules.autopilot.notify_constants import (
     KIND_PUBLISH_FAILED,
     KIND_REMINDER,
     KIND_REVIEW,
+    KIND_REVIEW_REOPENED,
     LOG_NOTIFIER_DROPPED,
     LOG_NOTIFIER_FAILED,
     LOG_NOTIFIER_UNCONFIGURED,
@@ -147,17 +148,32 @@ class OwnerNotificationService:
         return sent + await self._remind(room)
 
     async def _deliver(self) -> int:
-        events = sorted(
-            await self._deps.events.recent(),
-            key=lambda item: item.created_at,
-        )
+        """Oldest first. The cursor moves only over a settled prefix (QA r1)."""
         sent = 0
-        for event in events:
+        blocked = False
+        for event in await self._deps.events.recent():
             if sent >= NOTIFY_BATCH:
                 return sent
             if await self._one(event):
                 sent += 1
+            blocked = blocked or not await self._settled(event)
+            if not blocked:
+                await self._deps.events.advance(event)
         return sent
+
+    async def _settled(self, event: AutopilotOutboxEvent) -> bool:
+        """True when this event needs no further delivery attempt."""
+        kind = notice_kind(event.event_type, event.payload)
+        run = await self._deps.runs.get(event.run_id)
+        if kind is None or run is None:
+            return True
+        log = run.notice_log
+        if kind == KIND_REVIEW:
+            revision = revision_of(event.payload)
+            key = f"{ATTEMPT_REVIEW_PREFIX}{revision}"
+            return is_review_complete(log, revision) or _exhausted(log, key)
+        key = f"{ATTEMPT_STATUS_PREFIX}{event.event_id}"
+        return event.event_id in log.statuses or _exhausted(log, key)
 
     async def _one(self, event: AutopilotOutboxEvent) -> bool:
         kind = notice_kind(event.event_type, event.payload)
@@ -363,9 +379,11 @@ def _empty_copy() -> StatusCopy:
 
 
 def _status_keyboard(kind: str, run: AutopilotRun) -> InlineKeyboard | None:
-    if kind != KIND_PUBLISH_FAILED:
-        return None
-    return retry_keyboard(run.run_id)
+    if kind == KIND_PUBLISH_FAILED:
+        return retry_keyboard(run.run_id)
+    if kind == KIND_REVIEW_REOPENED:
+        return review_keyboard(run.run_id)
+    return None
 
 
 def _reminder_due(job: _ReminderJob, revision: int, key: str) -> bool:

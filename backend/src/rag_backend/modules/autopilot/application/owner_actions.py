@@ -1,8 +1,10 @@
 """Owner button presses and rework text become exactly-once run transitions.
 
 Rework stays in ``awaiting_owner`` until the feedback text arrives. The
-runner treats ``reworking`` like ``generating`` and would otherwise send
-a still-open final review back to the owner before the revise is applied.
+text then moves the run to ``reworking`` and queues phase and feedback on
+the row; the worker runner applies the revise, so the webhook never runs
+LLM regeneration (QA r1 H4). Replies are buffered and sent only after the
+caller commits (``deliver``), or dropped after a rollback (``discard``).
 """
 
 from __future__ import annotations
@@ -13,10 +15,13 @@ from uuid import UUID
 
 import structlog
 
+from rag_backend.modules.autopilot.application.deferred_replies import (
+    DeferredOwnerMessenger,
+)
 from rag_backend.modules.autopilot.application.owner_steps import (
     APPROVE_FAILED_STEP,
+    APPROVE_REFUSED_STEP,
     APPROVE_STEP,
-    CAP_STEP,
     REJECT_STEP,
     RETRY_STEP,
     REWORK_STEP,
@@ -30,11 +35,11 @@ from rag_backend.modules.autopilot.domain.callback_parse import (
 from rag_backend.modules.autopilot.domain.gate import (
     EditorialDriver,
     ResumeCommand,
-    ResumeResult,
     ResumeStatus,
 )
 from rag_backend.modules.autopilot.domain.messages import (
     InlineKeyboard,
+    review_keyboard,
     rework_phase_keyboard,
 )
 from rag_backend.modules.autopilot.domain.models import (
@@ -56,6 +61,7 @@ from rag_backend.modules.autopilot.domain.owner_ports import (
     UpdateClaimStore,
 )
 from rag_backend.modules.autopilot.domain.ports import AutopilotRunRepository, Clock
+from rag_backend.modules.autopilot.domain.recovery import ReworkIntent, RunRecoveryStore
 from rag_backend.modules.autopilot.domain.webhook_update import WebhookUpdate, is_owner
 from rag_backend.modules.autopilot.webhook_constants import (
     ANSWER_ALREADY,
@@ -74,18 +80,15 @@ from rag_backend.modules.autopilot.webhook_constants import (
     LOG_WEBHOOK,
     TEXT_ALREADY,
     TEXT_APPROVE_FAILED,
+    TEXT_APPROVE_REFUSED,
     TEXT_APPROVED,
     TEXT_CHOOSE_PHASE,
     TEXT_FORCE_REPLY,
     TEXT_REJECTED,
     TEXT_RETRY,
-    TEXT_REVISION_CAP,
     TEXT_REWORKING,
 )
-from rag_backend.modules.editorial.public import (
-    REVIEW_ACTION_APPROVE,
-    REVIEW_ACTION_REVISE,
-)
+from rag_backend.modules.editorial.public import REVIEW_ACTION_APPROVE
 
 logger = structlog.get_logger()
 
@@ -105,28 +108,9 @@ class OwnerActionDeps:
     editorial: EditorialDriver
     release: CarouselReleaser
     messenger: OwnerMessenger
+    recovery: RunRecoveryStore
     clock: Clock
     owner_chat_id: str
-
-
-@dataclass(frozen=True, kw_only=True)
-class _Revise:
-    """Feedback that already won the compare-and-set into ``reworking``."""
-
-    update: WebhookUpdate
-    run: AutopilotRun
-    phase: str
-    feedback: str
-
-
-@dataclass(frozen=True, kw_only=True)
-class _Resume:
-    """One editorial resume at the current lock version."""
-
-    run: AutopilotRun
-    action: str
-    feedback: str
-    target_phase: str
 
 
 class OwnerActionService:
@@ -134,6 +118,15 @@ class OwnerActionService:
 
     def __init__(self, deps: OwnerActionDeps) -> None:
         self._deps = deps
+        self._replies = DeferredOwnerMessenger(deps.messenger)
+
+    async def deliver(self) -> int:
+        """Send the replies queued by ``handle``. Call after the commit."""
+        return await self._replies.deliver()
+
+    def discard(self) -> int:
+        """Drop the queued replies. Call after a rollback."""
+        return self._replies.discard()
 
     async def handle(self, update: WebhookUpdate) -> None:
         """Dedupe, allowlist, then dispatch. Non-owners leave every run unchanged."""
@@ -165,11 +158,21 @@ class OwnerActionService:
         if run is None or not await self._to_publishing(run.run_id):
             await self._finish(update, ANSWER_ALREADY, TEXT_ALREADY)
             return
-        if not await self._approve_and_release(run):
+        status = await self._approve_resume(run)
+        if status is not ResumeStatus.APPLIED:
+            await self._reopen(update, run)
+            return
+        if not await self._release(run):
             await self._fail_publish(run.run_id)
             await self._finish(update, TEXT_APPROVE_FAILED, TEXT_APPROVE_FAILED)
             return
         await self._finish(update, ANSWER_APPROVED, TEXT_APPROVED)
+
+    async def _reopen(self, update: WebhookUpdate, run: AutopilotRun) -> None:
+        """The editorial approve was refused: keep the review open with buttons."""
+        await self._apply(run.run_id, APPROVE_REFUSED_STEP)
+        await self._answer(update, TEXT_APPROVE_FAILED)
+        await self._edit(update, TEXT_APPROVE_REFUSED, review_keyboard(run.run_id))
 
     async def _rework_menu(self, update: WebhookUpdate, parsed: ParsedCallback) -> None:
         run = await self._awaiting(parsed.run_id)
@@ -195,7 +198,7 @@ class OwnerActionService:
         await self._deps.pending.put(_pending(update, run.run_id, parsed.phase))
         await self._answer(update, TEXT_FORCE_REPLY)
         await self._edit(update, TEXT_FORCE_REPLY, None)
-        await self._deps.messenger.ask(_prompt(update))
+        await self._replies.ask(_prompt(update))
 
     async def _reject(self, update: WebhookUpdate, parsed: ParsedCallback) -> None:
         run = await self._awaiting(parsed.run_id)
@@ -222,54 +225,27 @@ class OwnerActionService:
         if run is None or not await self._to_reworking(run.run_id):
             await self._tell(update, TEXT_ALREADY)
             return
-        revise = _Revise(
-            update=update,
-            run=run,
-            phase=pending.phase,
-            feedback=feedback,
-        )
-        await self._after_revise(revise)
+        intent = ReworkIntent(run_id=run.run_id, phase=pending.phase, feedback=feedback)
+        await self._deps.recovery.queue_rework(intent)
+        await self._tell(update, TEXT_REWORKING.format(phase=pending.phase))
 
-    async def _after_revise(self, revise: _Revise) -> None:
-        result = await self._resume(
-            _Resume(
-                run=revise.run,
-                action=REVIEW_ACTION_REVISE,
-                feedback=revise.feedback,
-                target_phase=revise.phase,
-            )
-        )
-        if result.status is ResumeStatus.REVISION_CAP:
-            await self._to_escalated(revise.run.run_id)
-            await self._tell(revise.update, TEXT_REVISION_CAP)
-            return
-        if result.status is not ResumeStatus.APPLIED:
-            await self._tell(revise.update, TEXT_APPROVE_FAILED)
-            return
-        await self._tell(revise.update, TEXT_REWORKING.format(phase=revise.phase))
-
-    async def _approve_and_release(self, run: AutopilotRun) -> bool:
-        result = await self._resume(
-            _Resume(run=run, action=REVIEW_ACTION_APPROVE, feedback="", target_phase="")
-        )
-        if result.status is not ResumeStatus.APPLIED:
-            return False
+    async def _approve_resume(self, run: AutopilotRun) -> ResumeStatus:
         project_id = run.carousel_project_id or ""
-        return await self._deps.release.release(ReleaseCommand(project_id=project_id))
-
-    async def _resume(self, command: _Resume) -> ResumeResult:
-        project_id = command.run.carousel_project_id or ""
         snapshot = await self._deps.editorial.read_gate(project_id)
-        return await self._deps.editorial.resume(
+        result = await self._deps.editorial.resume(
             ResumeCommand(
                 project_id=project_id,
-                action=command.action,
+                action=REVIEW_ACTION_APPROVE,
                 expected_version=snapshot.lock_version,
-                feedback=command.feedback,
+                feedback="",
                 phase=GATE_FINAL_REVIEW,
-                target_phase=command.target_phase,
             )
         )
+        return result.status
+
+    async def _release(self, run: AutopilotRun) -> bool:
+        project_id = run.carousel_project_id or ""
+        return await self._deps.release.release(ReleaseCommand(project_id=project_id))
 
     async def _awaiting(self, run_id: UUID) -> AutopilotRun | None:
         run = await self._deps.runs.get(run_id)
@@ -294,9 +270,6 @@ class OwnerActionService:
     async def _to_reworking(self, run_id: UUID) -> bool:
         return await self._apply(run_id, REWORK_STEP)
 
-    async def _to_escalated(self, run_id: UUID) -> bool:
-        return await self._apply(run_id, CAP_STEP)
-
     async def _apply(self, run_id: UUID, step: OwnerStep) -> bool:
         command = TransitionCommand(
             run_id=run_id,
@@ -313,7 +286,7 @@ class OwnerActionService:
     async def _answer(self, update: WebhookUpdate, text: str) -> None:
         if not update.callback_id:
             return
-        await self._deps.messenger.answer(
+        await self._replies.answer(
             CallbackAnswer(callback_id=update.callback_id, text=text)
         )
 
@@ -325,7 +298,7 @@ class OwnerActionService:
     ) -> None:
         if update.message_id is None or not update.chat_id:
             return
-        await self._deps.messenger.edit(
+        await self._replies.edit(
             MessageEdit(
                 chat_id=update.chat_id,
                 message_id=update.message_id,
@@ -338,7 +311,7 @@ class OwnerActionService:
         chat_id = update.chat_id or update.actor_id
         if not chat_id:
             return
-        await self._deps.messenger.tell(OwnerText(chat_id=chat_id, text=text))
+        await self._replies.tell(OwnerText(chat_id=chat_id, text=text))
 
 
 def _delivery(update: WebhookUpdate, deps: OwnerActionDeps) -> TelegramUpdate:

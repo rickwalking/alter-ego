@@ -88,3 +88,16 @@ Feature: Autopilot topic intake
     And the signals bundle served URLs A and B
     When the scout posts topics citing A and B
     Then two autopilot runs are queued
+
+  # --- AE-0348 QA round 1 -------------------------------------------------
+
+  Scenario: Concurrent duplicate topic POSTs
+    Given two scout POSTs carry the same signal hash at the same time
+    When both are accepted
+    Then exactly one topic candidate and at most one run exist
+    And the losing batch reports the topic as "duplicate_topic"
+
+  Scenario: Over-long URLs are rejected
+    Given a topic source or an X observation URL longer than 300 characters
+    When it is posted
+    Then the request is rejected with 422

@@ -35,12 +35,14 @@ from rag_backend.modules.autopilot.notify_constants import (
     CAPTION_TEMPLATE,
     EVENT_TYPE_IG_EXPIRING,
     KIND_ESCALATED,
+    KIND_EXPIRED,
     KIND_FAILED,
     KIND_IG_EXPIRING,
     KIND_PUBLISH_FAILED,
     KIND_PUBLISHED,
     KIND_REMINDER,
     KIND_REVIEW,
+    KIND_REVIEW_REOPENED,
     LABEL_PERSONA,
     LABEL_SCORE_MISSING,
     LABEL_SOURCES,
@@ -53,6 +55,7 @@ from rag_backend.modules.autopilot.notify_constants import (
     TEXT_CAPTION_MISSING,
     TEXT_ESCALATED,
     TEXT_ESCALATED_WITH_LINK,
+    TEXT_EXPIRED,
     TEXT_FAILED,
     TEXT_IG_EXPIRY,
     TEXT_IG_EXPIRY_DAYS,
@@ -60,6 +63,11 @@ from rag_backend.modules.autopilot.notify_constants import (
     TEXT_PUBLISHED,
     TEXT_PUBLISHED_NO_LINK,
     TEXT_REMINDER,
+    TEXT_REVIEW_REOPENED,
+)
+from rag_backend.modules.autopilot.recovery_constants import (
+    REASON_REVIEW_REOPENED,
+    REASON_REWORK_RETRY,
 )
 from rag_backend.modules.autopilot.webhook_constants import (
     BUTTON_PHASE_DESIGN,
@@ -270,11 +278,24 @@ def _publish_kind(payload: Mapping[str, object]) -> str | None:
 
 def _state_kind(payload: Mapping[str, object]) -> str | None:
     state = payload.get(PAYLOAD_STATE)
-    if state == AutopilotRunState.ESCALATED.value:
-        return KIND_ESCALATED
-    if state == AutopilotRunState.FAILED.value:
-        return KIND_FAILED
+    if state == AutopilotRunState.AWAITING_OWNER.value:
+        return _reopened_kind(payload)
+    return _STATE_KINDS.get(str(state))
+
+
+def _reopened_kind(payload: Mapping[str, object]) -> str | None:
+    """Back to the owner without a new revision: send the buttons again."""
+    if payload.get(PAYLOAD_REASON) in _REOPEN_REASONS:
+        return KIND_REVIEW_REOPENED
     return None
+
+
+_STATE_KINDS: dict[str, str] = {
+    AutopilotRunState.ESCALATED.value: KIND_ESCALATED,
+    AutopilotRunState.FAILED.value: KIND_FAILED,
+    AutopilotRunState.EXPIRED.value: KIND_EXPIRED,
+}
+_REOPEN_REASONS = frozenset({REASON_REWORK_RETRY, REASON_REVIEW_REOPENED})
 
 
 def _failed(copy: StatusCopy) -> str:
@@ -283,6 +304,15 @@ def _failed(copy: StatusCopy) -> str:
 
 def _publish_failed(copy: StatusCopy) -> str:
     return TEXT_PUBLISH_FAILED.format(reason=copy.reason)
+
+
+def _expired(copy: StatusCopy) -> str:
+    del copy
+    return TEXT_EXPIRED
+
+
+def _reopened(copy: StatusCopy) -> str:
+    return TEXT_REVIEW_REOPENED.format(reason=copy.reason)
 
 
 def _reminder(copy: StatusCopy) -> str:
@@ -323,6 +353,8 @@ _STATUS_TEXT: dict[str, Callable[[StatusCopy], str]] = {
     KIND_PUBLISH_FAILED: _publish_failed,
     KIND_IG_EXPIRING: _token_copy,
     KIND_REMINDER: _reminder,
+    KIND_EXPIRED: _expired,
+    KIND_REVIEW_REOPENED: _reopened,
 }
 
 

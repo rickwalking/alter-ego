@@ -71,7 +71,7 @@ def _run(topic_id: UUID, state: AutopilotRunState) -> AutopilotRun:
         carousel_project_id=None,
         state=state,
         state_reason=None,
-        attempts=0,
+        publish_attempts=0,
         telegram_message_ids=(),
         ig_container_id=None,
         ig_post_id=None,
@@ -278,7 +278,7 @@ async def test_queued_start_failure_persists(db_session: AsyncSession) -> None:
     assert stored is not None
     assert view.state == "failed"
     assert view.state_reason == REASON_START_FAILED
-    assert stored.attempts == 3
+    assert stored.start_attempts == 3
     assert stored.carousel_project_id == "carousel-1"
 
 

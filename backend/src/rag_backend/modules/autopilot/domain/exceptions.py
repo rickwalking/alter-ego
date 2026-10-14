@@ -79,3 +79,16 @@ class InstagramCallError(Exception):
         self.status_code = status_code
         self.error_code = error_code
         self.transient = transient
+
+
+class ManualPublishRefusedError(Exception):
+    """A manual Instagram publish was refused before any Graph call (QA r1 H1).
+
+    ``code`` is ``autopilot_run_not_publishing`` when an autopilot run owns the
+    carousel and is not in ``publishing``, or ``instagram_publish_in_progress``
+    when another caller holds the publish claim.
+    """
+
+    def __init__(self, code: str) -> None:
+        super().__init__(code)
+        self.code = code

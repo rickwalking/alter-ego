@@ -58,6 +58,7 @@ def assemble_snapshot(parts: SnapshotParts) -> GateSnapshot:
         images=parts.images,
         revisions_used=_revisions(state.get(FIELD_REVISION_COUNT), phase),
         stale=parts.stale,
+        engine_blocker=parts.engine_blocker,
     )
 
 
@@ -87,8 +88,8 @@ def _persona_score(raw: object) -> float | None:
 
 def _one_score(value: object) -> float | None:
     if isinstance(value, dict):
-        overall = value.get(FIELD_OVERALL)
-        return _float_or_none(overall)
+        # The engine reads a missing ``overall`` as 0 (QA r1 B1); so do we.
+        return _float_or_none(value.get(FIELD_OVERALL, 0))
     return _float_or_none(value)
 
 

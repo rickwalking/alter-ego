@@ -20,6 +20,9 @@ from rag_backend.domain.constants.carousel_workflow import (
 from rag_backend.domain.constants.instagram_publish import (
     ERR_INSTAGRAM_IMAGE_COUNT_INVALID,
 )
+from rag_backend.modules.autopilot.application.manual_publish import (
+    ManualInstagramPublish,
+)
 from rag_backend.modules.autopilot.application.publish_job import (
     InstagramPublishJob,
     PublishJobDependencies,
@@ -53,6 +56,11 @@ from rag_backend.modules.autopilot.domain.publish import (
     SaveContainerCommand,
     SavePostCommand,
 )
+from rag_backend.modules.autopilot.domain.publish_claims import (
+    ManualClaim,
+    ManualRecord,
+    RunClaim,
+)
 from rag_backend.modules.autopilot.infrastructure.publish_notifier import _record
 
 _NOW = datetime(2026, 10, 13, 15, 0, tzinfo=UTC)
@@ -67,7 +75,7 @@ def _run() -> AutopilotRun:
         carousel_project_id=_PROJECT,
         state=AutopilotRunState.PUBLISHING,
         state_reason=None,
-        attempts=0,
+        publish_attempts=0,
         telegram_message_ids=(),
         ig_container_id=None,
         ig_post_id=None,
@@ -140,7 +148,7 @@ class _Repo:
         run = self.runs[command.run_id]
         self.runs[command.run_id] = replace(
             run,
-            attempts=command.attempts,
+            publish_attempts=command.attempts,
             state_reason=command.reason,
             updated_at=command.at,
         )
@@ -164,6 +172,39 @@ class _Repo:
     async def commit(self) -> None:
         self.order.append("commit")
         self.commits += 1
+
+
+@dataclass
+class _Claims:
+    """In-memory publish claims (QA r1 H1). ``held`` simulates another caller."""
+
+    held: set[UUID] = field(default_factory=set)
+    manual: dict[str, ManualRecord] = field(default_factory=dict)
+    manual_held: set[str] = field(default_factory=set)
+    released: list[UUID] = field(default_factory=list)
+
+    async def claim_run(self, claim: RunClaim) -> bool:
+        if claim.run_id in self.held:
+            return False
+        self.held.add(claim.run_id)
+        return True
+
+    async def release_run(self, run_id: UUID) -> None:
+        self.held.discard(run_id)
+        self.released.append(run_id)
+
+    async def manual_record(self, project_id: str) -> ManualRecord | None:
+        return self.manual.get(project_id)
+
+    async def claim_manual(self, claim: ManualClaim) -> bool:
+        if claim.project_id in self.manual_held:
+            return False
+        self.manual_held.add(claim.project_id)
+        return True
+
+    async def finish_manual(self, record: ManualRecord) -> None:
+        self.manual[record.project_id] = record
+        self.manual_held.discard(record.project_id)
 
 
 class _Gateway:
@@ -242,6 +283,25 @@ class _Notifier:
         self.notices.append(notice)
 
 
+def _deps(
+    repo: _Repo,
+    gateway: _Gateway,
+    source: _Source,
+    clock: _Clock,
+    notifier: _Notifier,
+    claims: _Claims | None = None,
+) -> PublishJobDependencies:
+    return PublishJobDependencies(
+        runs=repo,
+        source=source,
+        gateway=gateway,
+        notifier=notifier,
+        clock=clock,
+        checkpoint=repo,
+        claims=claims if claims is not None else _Claims(),
+    )
+
+
 def _job(
     repo: _Repo,
     gateway: _Gateway,
@@ -249,15 +309,17 @@ def _job(
     clock: _Clock,
     notifier: _Notifier,
 ) -> InstagramPublishJob:
-    deps = PublishJobDependencies(
-        runs=repo,
-        source=source,
-        gateway=gateway,
-        notifier=notifier,
-        clock=clock,
-        checkpoint=repo,
-    )
-    return InstagramPublishJob(deps)
+    return InstagramPublishJob(_deps(repo, gateway, source, clock, notifier))
+
+
+def _manual(
+    repo: _Repo,
+    gateway: _Gateway,
+    source: _Source,
+    claims: _Claims | None = None,
+) -> ManualInstagramPublish:
+    deps = _deps(repo, gateway, source, _Clock(), _Notifier(), claims)
+    return ManualInstagramPublish(deps)
 
 
 def _store(repo: _Repo, run: AutopilotRun) -> AutopilotRun:
@@ -349,18 +411,18 @@ class TestTransientRetry:
         job = _job(repo, gateway, _Source(_snapshot()), clock, notifier)
 
         assert await job.tick() == 1
-        assert repo.runs[run.run_id].attempts == 1
+        assert repo.runs[run.run_id].publish_attempts == 1
         assert await job.tick() == 0
 
         clock.advance(60)
         assert await job.tick() == 1
-        assert repo.runs[run.run_id].attempts == 2
+        assert repo.runs[run.run_id].publish_attempts == 2
         clock.advance(300)
         assert await job.tick() == 1
 
         stored = repo.runs[run.run_id]
         assert stored.state is AutopilotRunState.PUBLISH_FAILED
-        assert stored.attempts == 3
+        assert stored.publish_attempts == 3
         assert notifier.notices[0].outcome == NOTICE_PUBLISH_FAILED
         assert gateway.finishes == 3
 
@@ -420,7 +482,7 @@ class TestPublishBranches:
         assert gateway.opens == 0
         assert repo.runs[run.run_id].state is AutopilotRunState.PUBLISH_FAILED
         assert repo.runs[run.run_id].state_reason == REASON_IG_LOGIN_ABSENT
-        assert repo.runs[run.run_id].attempts == 0
+        assert repo.runs[run.run_id].publish_attempts == 0
 
     async def test_container_older_than_24h_is_recreated(self) -> None:
         repo, gateway = _Repo(), _Gateway()
@@ -519,7 +581,7 @@ class TestPublishBranches:
 
     async def test_exhausted_attempts_do_not_call_graph(self) -> None:
         repo, gateway = _Repo(), _Gateway()
-        run = _store(repo, replace(_run(), attempts=3, state_reason="503"))
+        run = _store(repo, replace(_run(), publish_attempts=3, state_reason="503"))
         job = _job(repo, gateway, _Source(_snapshot()), _Clock(), _Notifier())
 
         await job.tick()
@@ -536,9 +598,9 @@ class TestManualPublish:
     async def test_stored_post_id_skips_the_publisher(self) -> None:
         repo, gateway = _Repo(), _Gateway()
         _store(repo, replace(_run(), ig_post_id="post-kept"))
-        job = _job(repo, gateway, _Source(_snapshot()), _Clock(), _Notifier())
+        manual = _manual(repo, gateway, _Source(_snapshot()))
 
-        outcome = await job.publish_manual(
+        outcome = await manual.publish(
             ManualPublishCommand(project_id=_PROJECT, caption="cap", image_urls=_SEVEN)
         )
 
@@ -550,9 +612,9 @@ class TestManualPublish:
     async def test_atomic_publisher_is_used_when_resume_is_unavailable(self) -> None:
         repo, gateway = _Repo(), _Gateway()
         gateway.resume = False
-        job = _job(repo, gateway, _Source(None), _Clock(), _Notifier())
+        manual = _manual(repo, gateway, _Source(None))
 
-        outcome = await job.publish_manual(
+        outcome = await manual.publish(
             ManualPublishCommand(project_id=_PROJECT, caption="cap", image_urls=_SEVEN)
         )
 
@@ -562,7 +624,7 @@ class TestManualPublish:
 
     async def test_exhausted_reason_defaults_when_blank(self) -> None:
         repo, gateway = _Repo(), _Gateway()
-        run = _store(repo, replace(_run(), attempts=3))
+        run = _store(repo, replace(_run(), publish_attempts=3))
         job = _job(repo, gateway, _Source(_snapshot()), _Clock(), _Notifier())
 
         await job.tick()

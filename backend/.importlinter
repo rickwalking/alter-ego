@@ -332,6 +332,41 @@ forbidden_modules =
     rag_backend.modules.autopilot.bootstrap
     rag_backend.modules.autopilot.constants
 
+# Contract: autopilot reaches editorial/publishing only through their facades
+# AE-0354 / AE-0348 QA r1 H5. The autopilot drives the carousel workflow
+# in-process, so it must not import the legacy carousel service, the carousel
+# repository/ORM, or another module's internals. Everything it needs is on
+# ``rag_backend.modules.editorial.public`` (CarouselAutomationAcl and the
+# start/resume/approve-check helpers) or ``rag_backend.modules.publishing.public``.
+# Shared platform infrastructure (session factory, event outbox, settings,
+# Meta publisher) stays allowed; it is not editorial/publishing state.
+# Currently clean — no ignore_imports; any NEW such import breaks CI.
+[importlinter:contract:autopilot-editorial-facade-only]
+name = autopilot reaches editorial and publishing only through their public facades
+type = forbidden
+allow_indirect_imports = true
+unmatched_ignore_imports_alerting = none
+source_modules =
+    rag_backend.modules.autopilot
+forbidden_modules =
+    rag_backend.application.services.carousel
+    rag_backend.infrastructure.database.carousel_repository
+    rag_backend.infrastructure.database.models.carousel
+    rag_backend.infrastructure.database.blog_post_repository
+    rag_backend.infrastructure.database.models.blog_post
+    rag_backend.modules.editorial.domain
+    rag_backend.modules.editorial.application
+    rag_backend.modules.editorial.infrastructure
+    rag_backend.modules.editorial.api
+    rag_backend.modules.editorial.bootstrap
+    rag_backend.modules.editorial.constants
+    rag_backend.modules.publishing.domain
+    rag_backend.modules.publishing.application
+    rag_backend.modules.publishing.infrastructure
+    rag_backend.modules.publishing.api
+    rag_backend.modules.publishing.bootstrap
+    rag_backend.modules.publishing.constants
+
 # Contract: presentation must not import the editorial module (editorial -> presentation only)
 # AE-0122 — locks the acyclic module direction.
 [importlinter:contract:presentation-no-editorial]

@@ -16,6 +16,8 @@ _S = AutopilotRunState
 
 # (expected, new) pairs from docs/architecture/grokbot-autopilot.md §4.
 # AE-0354 adds (queued, failed): three provider failures on start.
+# QA r1 adds (publishing, awaiting_owner): the editorial approve refused the
+# owner's Approve, so the review stays open instead of a dead publish_failed.
 ALLOWED_TRANSITIONS: frozenset[tuple[AutopilotRunState, AutopilotRunState]] = (
     frozenset({
         (_S.QUEUED, _S.GENERATING),
@@ -33,6 +35,7 @@ ALLOWED_TRANSITIONS: frozenset[tuple[AutopilotRunState, AutopilotRunState]] = (
         (_S.ESCALATED, _S.REJECTED),
         (_S.PUBLISHING, _S.PUBLISHED),
         (_S.PUBLISHING, _S.PUBLISH_FAILED),
+        (_S.PUBLISHING, _S.AWAITING_OWNER),
         (_S.PUBLISH_FAILED, _S.PUBLISHING),
     })
 )

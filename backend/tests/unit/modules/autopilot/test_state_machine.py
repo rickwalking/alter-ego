@@ -41,6 +41,8 @@ _SPEC: frozenset[tuple[AutopilotRunState, AutopilotRunState]] = frozenset(
         (_S.PUBLISHING, _S.PUBLISHED),
         (_S.PUBLISHING, _S.PUBLISH_FAILED),
         (_S.PUBLISH_FAILED, _S.PUBLISHING),
+    # QA r1: a refused editorial approve keeps the owner review open.
+    (_S.PUBLISHING, _S.AWAITING_OWNER),
     }
 )
 

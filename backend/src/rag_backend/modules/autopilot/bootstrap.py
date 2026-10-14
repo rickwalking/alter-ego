@@ -15,6 +15,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.domain.protocols.social import SocialPublisher
 from rag_backend.infrastructure.config.settings import Settings, get_settings
+from rag_backend.modules.autopilot.application.manual_publish import (
+    ManualInstagramPublish,
+)
 from rag_backend.modules.autopilot.application.publish_job import (
     InstagramPublishJob,
     PublishJobDependencies,
@@ -51,6 +54,9 @@ from rag_backend.modules.autopilot.infrastructure.instagram_gateway import gatew
 from rag_backend.modules.autopilot.infrastructure.intake_store import (
     SqlAlchemyTopicIntakeStore,
 )
+from rag_backend.modules.autopilot.infrastructure.publish_claims import (
+    SqlPublishClaims,
+)
 from rag_backend.modules.autopilot.infrastructure.publish_notifier import (
     OutboxPublishNotifier,
 )
@@ -59,6 +65,9 @@ from rag_backend.modules.autopilot.infrastructure.ready_notifier import (
 )
 from rag_backend.modules.autopilot.infrastructure.repository import (
     SqlAlchemyAutopilotRepository,
+)
+from rag_backend.modules.autopilot.infrastructure.run_recovery_store import (
+    SqlRunRecoveryStore,
 )
 
 if TYPE_CHECKING:
@@ -76,7 +85,10 @@ class AutopilotBootstrapDeps:
 
 def bootstrap_module(deps: AutopilotBootstrapDeps) -> AutopilotService:
     """Wire the repository to the application service for this session."""
-    return AutopilotService(SqlAlchemyAutopilotRepository(deps.session))
+    return AutopilotService(
+        SqlAlchemyAutopilotRepository(deps.session),
+        SqlPublishClaims(deps.session),
+    )
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -122,13 +134,13 @@ async def manual_instagram_publish(
     request: ManualInstagramPublishRequest,
 ) -> ManualPublishOutcome:
     """Run the publish job for the owner route, including the post-id short circuit."""
-    job = _job(request.session, request.publisher, request.public_base_url)
+    deps = _job_deps(request.session, request.publisher, request.public_base_url)
     command = ManualPublishCommand(
         project_id=request.project_id,
         caption=request.caption,
         image_urls=request.image_urls,
     )
-    return await job.publish_manual(command)
+    return await ManualInstagramPublish(deps).publish(command)
 
 
 def _job(
@@ -136,16 +148,24 @@ def _job(
     publisher: SocialPublisher,
     public_base_url: str,
 ) -> InstagramPublishJob:
+    return InstagramPublishJob(_job_deps(session, publisher, public_base_url))
+
+
+def _job_deps(
+    session: AsyncSession,
+    publisher: SocialPublisher,
+    public_base_url: str,
+) -> PublishJobDependencies:
     repo = SqlAlchemyAutopilotRepository(session)
-    deps = PublishJobDependencies(
+    return PublishJobDependencies(
         runs=repo,
         source=PublishingCarouselSource(session, public_base_url),
         gateway=gateway_for(publisher),
         notifier=OutboxPublishNotifier(session),
         clock=SystemClock(),
         checkpoint=repo,
+        claims=SqlPublishClaims(session),
     )
-    return InstagramPublishJob(deps)
 
 
 _bundle_cache: SignalBundleCache | None = None
@@ -229,6 +249,7 @@ def _runner_deps(
         topics=repo,
         editorial=driver,
         notices=OutboxReadyNotifier(session),
+        recovery=SqlRunRecoveryStore(session),
         owner_user_id=config.owner_user_id,
         notifier_configured=config.notifier_configured,
     )

@@ -95,7 +95,8 @@ calls) still applies. A daily cap bounds it.
    Approve → resume approve(final_review) → approved_for_publish
            → release (is_public=true) → InstagramPublishJob(queued)
    Rework  → keyboard: Text | Design | Images | Outline → ForceReply "what to change?"
-           → resume revise(structured_feedback.target_phase, feedback)
+           → webhook queues phase + feedback (state=reworking) and answers at once
+           → worker runner: resume revise(structured_feedback.target_phase, feedback)
            → runner re-drives gates → back to Telegram (revision cap 5/phase, existing)
    Reject  → state=rejected (no publish, project stays private)
 [publish job] check content_publishing_limit → create item containers → CAROUSEL container
@@ -103,8 +104,17 @@ calls) still applies. A daily cap bounds it.
    any error → retry w/ backoff (3×) → Telegram "❌ publish failed: <reason>" + [Retry] button
 ```
 
-**Reminders.** `awaiting_owner` triggers a Telegram nudge at 24 h. The existing 72 h
-stuck auto-reject closes the run and posts a Telegram notice.
+**Reminders.** `awaiting_owner` triggers a Telegram nudge at 24 h. After 72 h the runner
+moves the run to `expired` and posts a Telegram notice; the existing 72 h stuck
+auto-reject still closes the carousel.
+
+**QA round 1 hardening (AE-0348).** Every autopilot worker step commits or rolls back on its
+own, so a failing step never rolls back the reaper or the auto-reject. An engine error the
+runner cannot classify ends the run (`escalated`, or `failed` from `queued`) with an
+`engine_error:` reason instead of retrying forever. An `escalated` run whose carousel is
+back at final review at a new lock version returns to `awaiting_owner`. The manual
+Instagram route publishes an autopilot carousel only through its `publishing` run, and
+both callers take a compare-and-set publish claim first.
 
 ---
 
@@ -117,13 +127,14 @@ stuck auto-reject closes the run and posts a Telegram notice.
 | `awaiting_owner` | `publishing` / `reworking` / `rejected` / `expired` | Approve / Rework / Reject / 72 h |
 | `reworking` | `awaiting_owner` / `escalated` | revise drove back to final_review / cap hit |
 | `escalated` | `awaiting_owner` / `rejected` | Pedro fixes it in the web UI, or rejects |
-| `publishing` | `published` / `publish_failed` | IG success / 3 retries exhausted |
+| `publishing` | `published` / `publish_failed` / `awaiting_owner` | IG success / 3 retries exhausted / the editorial approve refused the owner's Approve (review stays open) |
 | `publish_failed` | `publishing` | Pedro taps [Retry] |
 
 Columns:
 
 - `id`, `carousel_project_id` (FK, unique), `topic_candidate_id`, `state`
-- `state_reason`, `attempts`
+- `state_reason`, `attempts` (publish attempts; reset on every entry to `publishing`), `start_attempts`
+- `rework_phase`, `rework_feedback` (the owner's queued rework), `escalated_version`, `publish_claimed_at`
 - `telegram_message_ids` (JSONB)
 - `ig_container_id`, `ig_post_id`, `ig_permalink`
 - `created_at`, `updated_at`

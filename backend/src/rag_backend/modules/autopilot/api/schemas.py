@@ -7,6 +7,7 @@ values must be http(s) URLs. Length limits match the ticket.
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Annotated
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -27,6 +28,7 @@ from rag_backend.modules.autopilot.constants import (
     TITLE_MAX_CHARS,
     TOPIC_BATCH_MAX,
     TOPIC_BATCH_MIN,
+    URL_MAX_CHARS,
     WHY_VIRAL_MAX_CHARS,
     X_HANDLE_MAX_CHARS,
     X_POST_TEXT_MAX_CHARS,
@@ -47,7 +49,9 @@ class TopicProposal(BaseModel):
     audience: str = Field(min_length=TEXT_MIN_CHARS, max_length=AUDIENCE_MAX_CHARS)
     niche: str = Field(min_length=TEXT_MIN_CHARS, max_length=NICHE_MAX_CHARS)
     brief: str = Field(min_length=TEXT_MIN_CHARS, max_length=BRIEF_MAX_CHARS)
-    sources: list[str] = Field(min_length=SOURCE_URL_MIN, max_length=SOURCE_URL_MAX)
+    sources: list[Annotated[str, Field(max_length=URL_MAX_CHARS)]] = Field(
+        min_length=SOURCE_URL_MIN, max_length=SOURCE_URL_MAX
+    )
     score: int = Field(ge=SCORE_MIN, le=SCORE_MAX)
 
     @field_validator("sources")
@@ -92,7 +96,7 @@ class ObservedXPost(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    url: str = Field(min_length=TEXT_MIN_CHARS)
+    url: str = Field(min_length=TEXT_MIN_CHARS, max_length=URL_MAX_CHARS)
     handle: str = Field(min_length=TEXT_MIN_CHARS, max_length=X_HANDLE_MAX_CHARS)
     text: str = Field(min_length=TEXT_MIN_CHARS, max_length=X_POST_TEXT_MAX_CHARS)
     likes: int | None = Field(default=None, ge=METRIC_MIN)

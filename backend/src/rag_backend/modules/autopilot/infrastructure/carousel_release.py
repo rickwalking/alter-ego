@@ -2,14 +2,10 @@
 
 from __future__ import annotations
 
-from uuid import UUID
-
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from rag_backend.infrastructure.database.carousel_repository import (
-    PostgresCarouselRepository,
-)
 from rag_backend.modules.autopilot.domain.owner_ports import ReleaseCommand
+from rag_backend.modules.editorial.public import CarouselAutomationAcl
 from rag_backend.modules.publishing.public import (
     AclCarouselReleaseAdapter,
     CarouselReleaseCommand,
@@ -26,11 +22,11 @@ class PublishingCarouselReleaser:
 
     async def release(self, command: ReleaseCommand) -> bool:
         """True when the project existed and the public-release write ran."""
-        repo = PostgresCarouselRepository(self._session)
-        project = await repo.get_project_by_id(UUID(command.project_id))
+        carousels = CarouselAutomationAcl(self._session)
+        project = await carousels.load_project(command.project_id)
         if project is None:
             return False
-        acl = LegacyPublishingAcl(self._session, repo)
+        acl = LegacyPublishingAcl(self._session, carousels.repository)
         handler = CarouselReleaseHandler(AclCarouselReleaseAdapter(acl))
         await handler.release(
             CarouselReleaseCommand(project=project, project_id=command.project_id)

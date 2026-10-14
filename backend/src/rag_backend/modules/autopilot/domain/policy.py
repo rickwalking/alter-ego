@@ -1,6 +1,6 @@
 """Deterministic auto-approve checks (architecture §6).
 
-A failed check revises at most twice, then escalates. ``final_review``
+A failed check revises at most twice (design: once), then escalates. ``final_review``
 is never approved. The persona floor is the persona module's constant.
 """
 
@@ -9,6 +9,10 @@ from __future__ import annotations
 from collections.abc import Callable
 
 from rag_backend.domain.constants.carousel import CAROUSEL_HEIGHT, CAROUSEL_WIDTH
+from rag_backend.domain.constants.carousel_workflow import (
+    ERR_PERSONA_SCORE_TOO_LOW,
+    ERR_PRESENTATION_VALIDATION_BLOCKED,
+)
 from rag_backend.domain.constants.persona import VOICE_MATCH_MIN_SCORE
 from rag_backend.modules.autopilot.constants import (
     GATE_CONTENT,
@@ -41,6 +45,10 @@ from rag_backend.modules.autopilot.domain.gate import (
     ImageFact,
     PolicyDecision,
     ResearchSourceFact,
+)
+from rag_backend.modules.autopilot.recovery_constants import (
+    MAX_REVISES_DESIGN,
+    REASON_ENGINE_ERROR,
 )
 
 Check = Callable[[GateSnapshot], str | None]
@@ -82,7 +90,7 @@ def _terminal(snapshot: GateSnapshot) -> PolicyDecision | None:
 def _from_check(snapshot: GateSnapshot, reason: str | None) -> PolicyDecision:
     if reason is None:
         return PolicyDecision(action=GateAction.APPROVE, reason=REASON_PASSED)
-    if snapshot.revisions_used >= MAX_REVISES_PER_PHASE:
+    if snapshot.revisions_used >= _revise_cap(snapshot.phase):
         return PolicyDecision(action=GateAction.ESCALATE, reason=reason)
     return PolicyDecision(action=GateAction.REVISE, reason=reason)
 
@@ -108,7 +116,21 @@ def _content(snapshot: GateSnapshot) -> str | None:
         return REASON_PERSONA_SCORE
     if snapshot.forbidden_hits:
         return REASON_FORBIDDEN
-    return None
+    return _engine_reason(snapshot.engine_blocker)
+
+
+def _engine_reason(blocker: str) -> str | None:
+    """Map the engine's content-approve refusal onto a policy reason."""
+    if not blocker:
+        return None
+    return _ENGINE_REASONS.get(blocker, REASON_ENGINE_ERROR)
+
+
+def _revise_cap(phase: str) -> int:
+    """Design revises once (architecture §6); the other gates twice."""
+    if phase == GATE_DESIGN:
+        return MAX_REVISES_DESIGN
+    return MAX_REVISES_PER_PHASE
 
 
 def _design(snapshot: GateSnapshot) -> str | None:
@@ -135,6 +157,11 @@ def _valid_jpeg(image: ImageFact) -> bool:
         and image.height == CAROUSEL_HEIGHT
     )
 
+
+_ENGINE_REASONS: dict[str, str] = {
+    ERR_PERSONA_SCORE_TOO_LOW: REASON_PERSONA_SCORE,
+    ERR_PRESENTATION_VALIDATION_BLOCKED: REASON_DESIGN,
+}
 
 _CHECKS: dict[str, Check] = {
     GATE_RESEARCH: _research,

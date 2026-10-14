@@ -25,6 +25,7 @@ from rag_backend.modules.autopilot.constants import (
     GATE_FINAL_REVIEW,
     GATE_IMAGES,
     PHASE_STATUS_AWAITING,
+    REASON_REVISION_CAP,
 )
 from rag_backend.modules.autopilot.domain.callback_parse import parse_callback
 from rag_backend.modules.autopilot.domain.gate import (
@@ -36,7 +37,10 @@ from rag_backend.modules.autopilot.domain.gate import (
     ResumeResult,
     ResumeStatus,
 )
-from rag_backend.modules.autopilot.domain.messages import rework_phase_keyboard
+from rag_backend.modules.autopilot.domain.messages import (
+    review_keyboard,
+    rework_phase_keyboard,
+)
 from rag_backend.modules.autopilot.domain.models import (
     AutopilotRun,
     AutopilotRunState,
@@ -59,18 +63,25 @@ from rag_backend.modules.autopilot.domain.webhook_update import (
     parse_webhook_body,
     secrets_match,
 )
+from rag_backend.modules.autopilot.recovery_constants import (
+    REASON_APPROVE_REFUSED,
+    REASON_REWORK_RETRY,
+)
 from rag_backend.modules.autopilot.webhook_constants import (
     ANSWER_ALREADY,
     ANSWER_UNKNOWN,
     KIND_CALLBACK,
     KIND_MESSAGE,
     KIND_PHASE,
+    TEXT_APPROVE_REFUSED,
     TEXT_FORCE_REPLY,
+    TEXT_REWORKING,
 )
 from rag_backend.modules.editorial.public import (
     REVIEW_ACTION_APPROVE,
     REVIEW_ACTION_REVISE,
 )
+from tests.unit.modules.autopilot.test_autopilot_runner import _Recovery
 
 _OWNER = "42"
 _STRANGER = "99"
@@ -280,8 +291,8 @@ def test_rework_keyboard_uses_phase_tokens() -> None:
 @pytest.mark.asyncio
 async def test_approve_twice_publishes_once() -> None:
     world = _world()
-    await world.service.handle(_tap(1, _action("approve", world)))
-    await world.service.handle(_tap(2, _action("approve", world)))
+    await _handle(world, _tap(1, _action("approve", world)))
+    await _handle(world, _tap(2, _action("approve", world)))
     assert len(world.editorial.resumes) == 1
     assert world.editorial.resumes[0].action == REVIEW_ACTION_APPROVE
     assert world.editorial.resumes[0].phase == GATE_FINAL_REVIEW
@@ -295,8 +306,8 @@ async def test_approve_twice_publishes_once() -> None:
 async def test_concurrent_double_approve_publishes_once() -> None:
     world = _world()
     await asyncio.gather(
-        world.service.handle(_tap(1, _action("approve", world))),
-        world.service.handle(_tap(2, _action("approve", world))),
+        _handle(world, _tap(1, _action("approve", world))),
+        _handle(world, _tap(2, _action("approve", world))),
     )
     assert len(world.editorial.resumes) == 1
     assert len(world.release.ids) == 1
@@ -307,7 +318,7 @@ async def test_concurrent_double_approve_publishes_once() -> None:
 @pytest.mark.asyncio
 async def test_stranger_does_not_change_the_run() -> None:
     world = _world()
-    await world.service.handle(_tap(1, _action("approve", world), actor=_STRANGER))
+    await _handle(world, _tap(1, _action("approve", world), actor=_STRANGER))
     assert world.runs.run.state is AutopilotRunState.AWAITING_OWNER
     assert world.editorial.resumes == []
     assert world.release.ids == []
@@ -318,7 +329,7 @@ async def test_stranger_does_not_change_the_run() -> None:
 @pytest.mark.asyncio
 async def test_reject_keeps_the_carousel_private() -> None:
     world = _world()
-    await world.service.handle(_tap(1, _action("reject", world)))
+    await _handle(world, _tap(1, _action("reject", world)))
     assert world.runs.run.state is AutopilotRunState.REJECTED
     assert world.release.public is False
     assert world.release.ids == []
@@ -330,7 +341,7 @@ async def test_reject_keeps_the_carousel_private() -> None:
 async def test_approve_when_not_awaiting_is_already_handled() -> None:
     world = _world()
     world.runs.run = replace(world.runs.run, state=AutopilotRunState.PUBLISHING)
-    await world.service.handle(_tap(1, _action("approve", world)))
+    await _handle(world, _tap(1, _action("approve", world)))
     assert world.messenger.answers[-1].text == ANSWER_ALREADY
     assert world.runs.run.state is AutopilotRunState.PUBLISHING
     assert world.editorial.resumes == []
@@ -342,8 +353,8 @@ async def test_approve_when_not_awaiting_is_already_handled() -> None:
 async def test_same_update_id_does_not_approve_again() -> None:
     world = _world()
     tap = _tap(1, _action("approve", world))
-    await world.service.handle(tap)
-    await world.service.handle(tap)
+    await _handle(world, tap)
+    await _handle(world, tap)
     assert len(world.editorial.resumes) == 1
     assert len(world.release.ids) == 1
 
@@ -352,40 +363,39 @@ async def test_same_update_id_does_not_approve_again() -> None:
 @pytest.mark.asyncio
 async def test_unknown_callback_does_not_change_the_run() -> None:
     world = _world()
-    await world.service.handle(_tap(1, "ap:dance:" + str(world.runs.run.run_id)))
+    await _handle(world, _tap(1, "ap:dance:" + str(world.runs.run.run_id)))
     assert world.messenger.answers[-1].text == ANSWER_UNKNOWN
     assert world.runs.run.state is AutopilotRunState.AWAITING_OWNER
     assert world.editorial.resumes == []
 
 
 # Scenario: Rework with feedback
+# Scenario: Rework never runs LLM regeneration inside the webhook (QA r1 H4)
 @pytest.mark.asyncio
 async def test_rework_images_revises_and_returns_to_the_owner() -> None:
     world = _world()
     notices = _Notices()
-    await world.service.handle(_tap(1, _action("rework", world)))
+    await _handle(world, _tap(1, _action("rework", world)))
     assert world.runs.run.state is AutopilotRunState.AWAITING_OWNER
-    await world.service.handle(_tap(2, f"ap:rw:images:{world.runs.run.run_id}"))
+    await _handle(world, _tap(2, f"ap:rw:images:{world.runs.run.run_id}"))
     assert world.pending.item is not None
     assert world.pending.item.phase == GATE_IMAGES
     assert world.messenger.asks[-1].text == TEXT_FORCE_REPLY
-    await world.service.handle(_text(3, _FEEDBACK))
+    await _handle(world, _text(3, _FEEDBACK))
+    # The webhook only queued the rework: no editorial call yet.
+    assert world.editorial.resumes == []
+    assert world.runs.run.state is AutopilotRunState.REWORKING
+    assert world.runs.run.rework_phase == GATE_IMAGES
+    assert world.runs.run.rework_feedback == _FEEDBACK
+    assert world.messenger.texts[-1].text == TEXT_REWORKING.format(phase=GATE_IMAGES)
+    runner = _runner(world, notices)
+    assert await runner.tick() == 1
     assert len(world.editorial.resumes) == 1
     revise = world.editorial.resumes[0]
     assert revise.action == REVIEW_ACTION_REVISE
     assert revise.feedback == _FEEDBACK
     assert revise.target_phase == GATE_IMAGES
-    assert world.runs.run.state is AutopilotRunState.REWORKING
-    runner = AutopilotRunner(
-        RunnerDependencies(
-            runs=world.runs,
-            topics=_Topics(),
-            editorial=world.editorial,
-            notices=notices,
-            owner_user_id="owner",
-            notifier_configured=True,
-        )
-    )
+    assert world.runs.run.rework_phase is None
     assert await runner.tick() == 1
     assert world.runs.run.state is AutopilotRunState.AWAITING_OWNER
     assert len(notices.ready) == 1
@@ -396,11 +406,54 @@ async def test_rework_images_revises_and_returns_to_the_owner() -> None:
 async def test_revision_cap_escalates() -> None:
     world = _world()
     world.editorial.status = ResumeStatus.REVISION_CAP
-    await world.service.handle(_tap(1, _action("rework", world)))
-    await world.service.handle(_tap(2, f"ap:rw:text:{world.runs.run.run_id}"))
-    await world.service.handle(_text(3, _FEEDBACK))
+    await _handle(world, _tap(1, _action("rework", world)))
+    await _handle(world, _tap(2, f"ap:rw:text:{world.runs.run.run_id}"))
+    await _handle(world, _text(3, _FEEDBACK))
+    assert await _runner(world, _Notices()).tick() == 1
     assert world.editorial.resumes[0].target_phase == GATE_CONTENT
     assert world.runs.run.state is AutopilotRunState.ESCALATED
+    assert world.runs.run.state_reason == REASON_REVISION_CAP
+    assert world.runs.run.escalated_version == _snapshot().lock_version
+
+
+# Scenario: Rework that cannot be applied reopens the review (QA r1)
+@pytest.mark.asyncio
+async def test_rework_outage_returns_to_the_owner_with_buttons() -> None:
+    world = _world()
+    world.editorial.status = ResumeStatus.PROVIDER_OUTAGE
+    await _handle(world, _tap(1, _action("rework", world)))
+    await _handle(world, _tap(2, f"ap:rw:design:{world.runs.run.run_id}"))
+    await _handle(world, _text(3, _FEEDBACK))
+    assert await _runner(world, _Notices()).tick() == 1
+    assert world.runs.run.state is AutopilotRunState.AWAITING_OWNER
+    assert world.runs.run.state_reason == REASON_REWORK_RETRY
+    assert world.runs.run.rework_phase is None
+
+
+# Scenario: The editorial approve refuses the owner's Approve (QA r1)
+@pytest.mark.asyncio
+async def test_refused_approve_keeps_the_review_open() -> None:
+    world = _world()
+    world.editorial.status = ResumeStatus.VERSION_CONFLICT
+    await _handle(world, _tap(1, _action("approve", world)))
+    assert world.runs.run.state is AutopilotRunState.AWAITING_OWNER
+    assert world.runs.run.state_reason == REASON_APPROVE_REFUSED
+    assert world.release.ids == []
+    edit = world.messenger.edits[-1]
+    assert edit.text == TEXT_APPROVE_REFUSED
+    assert edit.keyboard == review_keyboard(world.runs.run.run_id)
+
+
+# Scenario: Webhook failure after Telegram side effects (QA r1 H4)
+@pytest.mark.asyncio
+async def test_discarded_replies_are_never_sent() -> None:
+    world = _world()
+    await world.service.handle(_tap(1, _action("reject", world)))
+    assert world.messenger.answers == []
+    assert world.messenger.edits == []
+    assert world.service.discard() == 2
+    assert await world.service.deliver() == 0
+    assert world.messenger.answers == []
 
 
 # Scenario: Retry enqueues once
@@ -408,8 +461,8 @@ async def test_revision_cap_escalates() -> None:
 async def test_retry_enqueues_once() -> None:
     world = _world()
     world.runs.run = replace(world.runs.run, state=AutopilotRunState.PUBLISH_FAILED)
-    await world.service.handle(_tap(1, _action("retry", world)))
-    await world.service.handle(_tap(2, _action("retry", world)))
+    await _handle(world, _tap(1, _action("retry", world)))
+    await _handle(world, _tap(2, _action("retry", world)))
     assert world.runs.run.state is AutopilotRunState.PUBLISHING
     assert world.editorial.resumes == []
     assert world.release.ids == []
@@ -419,9 +472,9 @@ async def test_retry_enqueues_once() -> None:
 @pytest.mark.asyncio
 async def test_blank_text_keeps_the_pending_phase() -> None:
     world = _world()
-    await world.service.handle(_tap(1, _action("rework", world)))
-    await world.service.handle(_tap(2, f"ap:rw:images:{world.runs.run.run_id}"))
-    await world.service.handle(_text(3, "   "))
+    await _handle(world, _tap(1, _action("rework", world)))
+    await _handle(world, _tap(2, f"ap:rw:images:{world.runs.run.run_id}"))
+    await _handle(world, _text(3, "   "))
     assert world.pending.item is not None
     assert world.editorial.resumes == []
     assert world.runs.run.state is AutopilotRunState.AWAITING_OWNER
@@ -430,8 +483,8 @@ async def test_blank_text_keeps_the_pending_phase() -> None:
 @pytest.mark.asyncio
 async def test_rework_after_reject_is_already_handled() -> None:
     world = _world()
-    await world.service.handle(_tap(1, _action("reject", world)))
-    await world.service.handle(_tap(2, _action("rework", world)))
+    await _handle(world, _tap(1, _action("reject", world)))
+    await _handle(world, _tap(2, _action("rework", world)))
     assert world.messenger.answers[-1].text == ANSWER_ALREADY
     assert world.runs.run.state is AutopilotRunState.REJECTED
 
@@ -440,9 +493,29 @@ async def test_rework_after_reject_is_already_handled() -> None:
 async def test_failed_release_does_not_stay_publishing() -> None:
     world = _world()
     world.release.ok = False
-    await world.service.handle(_tap(1, _action("approve", world)))
+    await _handle(world, _tap(1, _action("approve", world)))
     assert world.runs.run.state is AutopilotRunState.PUBLISH_FAILED
     assert world.release.public is False
+
+
+async def _handle(world: _World, update: WebhookUpdate) -> None:
+    """The route's order: handle, (commit), then deliver the queued replies."""
+    await world.service.handle(update)
+    await world.service.deliver()
+
+
+def _runner(world: _World, notices: _Notices) -> AutopilotRunner:
+    return AutopilotRunner(
+        RunnerDependencies(
+            runs=world.runs,
+            topics=_Topics(),
+            editorial=world.editorial,
+            notices=notices,
+            recovery=_Recovery(runs=world.runs),
+            owner_user_id="owner",
+            notifier_configured=True,
+        )
+    )
 
 
 def _world() -> _World:
@@ -452,7 +525,7 @@ def _world() -> _World:
         carousel_project_id=_PROJECT,
         state=AutopilotRunState.AWAITING_OWNER,
         state_reason=None,
-        attempts=0,
+        publish_attempts=0,
         telegram_message_ids=(),
         ig_container_id=None,
         ig_post_id=None,
@@ -472,6 +545,7 @@ def _world() -> _World:
             editorial=editorial,
             release=release,
             messenger=messenger,
+            recovery=_Recovery(runs=runs),
             clock=_Clock(),
             owner_chat_id=_OWNER,
         )

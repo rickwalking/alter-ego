@@ -39,11 +39,6 @@ from rag_backend.modules.autopilot.domain.models import (
     TopicCandidate,
     TransitionCommand,
 )
-from rag_backend.modules.autopilot.domain.notice_log import (
-    dump_log,
-    notice_log_is_empty,
-    parse_stored,
-)
 from rag_backend.modules.autopilot.domain.publish import (
     PublishAttemptCommand,
     RunListQuery,
@@ -57,6 +52,10 @@ from rag_backend.modules.autopilot.infrastructure.models import (
     TelegramUpdateModel,
     TopicCandidateModel,
 )
+from rag_backend.modules.autopilot.infrastructure.run_mapping import (
+    run_from_row,
+    run_row,
+)
 
 
 class SqlAlchemyAutopilotRepository:
@@ -67,7 +66,7 @@ class SqlAlchemyAutopilotRepository:
 
     async def add(self, run: AutopilotRun) -> None:
         """Insert a run. The topic row must already exist."""
-        self._session.add(_run_row(run))
+        self._session.add(run_row(run))
         await self._session.flush()
 
     async def get(self, run_id: UUID) -> AutopilotRun | None:
@@ -80,7 +79,7 @@ class SqlAlchemyAutopilotRepository:
         row = result.scalar_one_or_none()
         if row is None:
             return None
-        return _run_from_row(row)
+        return run_from_row(row)
 
     async def transition(self, command: TransitionCommand) -> bool:
         """CAS the state. Illegal pairs raise; a stale expected state returns False."""
@@ -137,7 +136,7 @@ class SqlAlchemyAutopilotRepository:
         row = result.scalar_one_or_none()
         if row is None:
             return None
-        return _run_from_row(row)
+        return run_from_row(row)
 
     async def list_by_state(self, query: RunListQuery) -> list[AutopilotRun]:
         """Return the oldest runs in ``query.state``, capped by ``query.limit``."""
@@ -148,7 +147,7 @@ class SqlAlchemyAutopilotRepository:
             .limit(query.limit)
             .execution_options(populate_existing=True)
         )
-        return [_run_from_row(row) for row in result.scalars().all()]
+        return [run_from_row(row) for row in result.scalars().all()]
 
     async def save_container(self, command: SaveContainerCommand) -> bool:
         """Store the container id. Refuses the write once a post id exists."""
@@ -207,7 +206,7 @@ class SqlAlchemyAutopilotRepository:
                 AutopilotRunModel.state == AutopilotRunState.PUBLISHING.value,
             )
             .values(
-                attempts=command.attempts,
+                publish_attempts=command.attempts,
                 state_reason=command.reason,
                 updated_at=command.at,
             )
@@ -238,7 +237,7 @@ class SqlAlchemyAutopilotRepository:
                 AutopilotRunModel.id == command.run_id,
                 AutopilotRunModel.state == AutopilotRunState.QUEUED.value,
             )
-            .values(attempts=command.attempts, state_reason=command.reason)
+            .values(start_attempts=command.attempts, state_reason=command.reason)
         )
         return cast(CursorResult[object], result).rowcount == 1
 
@@ -272,11 +271,7 @@ class SqlAlchemyAutopilotRepository:
                 AutopilotRunModel.id == command.run_id,
                 AutopilotRunModel.state == command.expected.value,
             )
-            .values(
-                state=command.new.value,
-                state_reason=command.reason,
-                updated_at=func.now(),
-            )
+            .values(_transition_values(command))
         )
         matched = cast(CursorResult[object], result).rowcount == 1
         return matched
@@ -286,6 +281,24 @@ class SqlAlchemyAutopilotRepository:
         self._session.add(audit)
         self._session.add(outbox)
         await self._session.flush()
+
+
+def _transition_values(command: TransitionCommand) -> dict[str, object]:
+    """Entering ``publishing`` restarts the publish retry budget (QA r1 B2/B3)."""
+    values: dict[str, object] = {
+        _STATE: command.new.value,
+        _STATE_REASON: command.reason,
+        _UPDATED_AT: func.now(),
+    }
+    if command.new is AutopilotRunState.PUBLISHING:
+        values[_PUBLISH_ATTEMPTS] = 0
+    return values
+
+
+_STATE = AutopilotRunModel.state.key
+_STATE_REASON = AutopilotRunModel.state_reason.key
+_UPDATED_AT = AutopilotRunModel.updated_at.key
+_PUBLISH_ATTEMPTS = AutopilotRunModel.publish_attempts.key
 
 
 def _state_changed_record(command: TransitionCommand) -> EventRecord:
@@ -337,41 +350,6 @@ def _topic_from_row(row: TopicCandidateModel) -> TopicCandidate:
     )
 
 
-def _run_row(run: AutopilotRun) -> AutopilotRunModel:
-    return AutopilotRunModel(
-        id=run.run_id,
-        carousel_project_id=run.carousel_project_id,
-        topic_candidate_id=run.topic_candidate_id,
-        state=run.state.value,
-        state_reason=run.state_reason,
-        attempts=run.attempts,
-        telegram_message_ids=_stored_messages(run),
-        ig_container_id=run.ig_container_id,
-        ig_post_id=run.ig_post_id,
-        ig_permalink=run.ig_permalink,
-        ig_container_created_at=run.ig_container_created_at,
-    )
-
-
-def _run_from_row(row: AutopilotRunModel) -> AutopilotRun:
-    log = parse_stored(row.telegram_message_ids)
-    return AutopilotRun(
-        run_id=row.id,
-        topic_candidate_id=row.topic_candidate_id,
-        carousel_project_id=row.carousel_project_id,
-        state=AutopilotRunState(row.state),
-        state_reason=row.state_reason,
-        attempts=row.attempts,
-        telegram_message_ids=log.message_ids,
-        notice_log=log,
-        ig_container_id=row.ig_container_id,
-        ig_post_id=row.ig_post_id,
-        ig_permalink=row.ig_permalink,
-        ig_container_created_at=_aware(row.ig_container_created_at),
-        updated_at=_aware(row.updated_at),
-    )
-
-
 def _credential_row(credential: IntegrationCredential) -> IntegrationCredentialModel:
     return IntegrationCredentialModel(
         provider=credential.provider,
@@ -388,20 +366,6 @@ def _credential_from_row(row: IntegrationCredentialModel) -> IntegrationCredenti
         expires_at=row.expires_at,
         refreshed_at=row.refreshed_at,
     )
-
-
-def _stored_messages(run: AutopilotRun) -> list[int] | dict[str, object]:
-    if notice_log_is_empty(run.notice_log):
-        return list(run.telegram_message_ids)
-    return dump_log(run.notice_log)
-
-
-def _aware(value: datetime | None) -> datetime | None:
-    if value is None:
-        return None
-    if value.tzinfo is None:
-        return value.replace(tzinfo=UTC)
-    return value
 
 
 def _telegram_row(update: TelegramUpdate) -> TelegramUpdateModel:

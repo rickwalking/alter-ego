@@ -51,6 +51,15 @@ from rag_backend.modules.autopilot.constants import (
     UQ_RUNS_CAROUSEL_PROJECT,
     UQ_TOPIC_SIGNAL_HASH,
 )
+from rag_backend.modules.autopilot.recovery_constants import (
+    FK_MANUAL_PUBLISH_PROJECT,
+    NOTIFY_CURSOR_NAME_LENGTH,
+    ON_DELETE_CASCADE,
+    OUTBOX_EVENT_ID_LENGTH,
+    REWORK_PHASE_LENGTH,
+    TABLE_MANUAL_PUBLISHES,
+    TABLE_NOTIFY_CURSOR,
+)
 
 # JSON on SQLite (tests), JSONB on PostgreSQL (prod, ADR-0006).
 _JSON_DOCUMENT = JSON().with_variant(JSONB(), "postgresql")
@@ -115,8 +124,21 @@ class AutopilotRunModel(AutopilotOrmBase):
     )
     state: Mapped[str] = mapped_column(String(STATE_LENGTH), nullable=False)
     state_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
-    attempts: Mapped[int] = mapped_column(
+    # The ``attempts`` column predates the split; it counts publish attempts.
+    publish_attempts: Mapped[int] = mapped_column(
+        "attempts", Integer, nullable=False, default=0, server_default="0"
+    )
+    start_attempts: Mapped[int] = mapped_column(
         Integer, nullable=False, default=0, server_default="0"
+    )
+    rework_phase: Mapped[str | None] = mapped_column(
+        String(REWORK_PHASE_LENGTH), nullable=True
+    )
+    rework_feedback: Mapped[str | None] = mapped_column(Text, nullable=True)
+    escalated_version: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    # Compare-and-set claim held while one caller is talking to Graph.
+    publish_claimed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
     )
     telegram_message_ids: Mapped[list[int] | dict[str, object]] = mapped_column(
         _JSON_DOCUMENT, nullable=False
@@ -199,3 +221,48 @@ class XBrowserSignalModel(AutopilotOrmBase):
     posted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     source: Mapped[str] = mapped_column(String(STATUS_LENGTH), nullable=False)
     stored_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+class ManualPublishModel(AutopilotOrmBase):
+    """Owner-triggered Instagram publish for a carousel without an autopilot run.
+
+    The primary key is the claim: one row per carousel, so two concurrent
+    manual publishes cannot both call Graph.
+    """
+
+    __tablename__ = TABLE_MANUAL_PUBLISHES
+
+    carousel_project_id: Mapped[str] = mapped_column(
+        String(CAROUSEL_PROJECT_ID_LENGTH),
+        ForeignKey(
+            CAROUSEL_PROJECT_FK,
+            name=FK_MANUAL_PUBLISH_PROJECT,
+            ondelete=ON_DELETE_CASCADE,
+        ),
+        primary_key=True,
+    )
+    state: Mapped[str] = mapped_column(String(STATE_LENGTH), nullable=False)
+    ig_post_id: Mapped[str | None] = mapped_column(
+        String(IG_IDENTIFIER_LENGTH), nullable=True
+    )
+    ig_permalink: Mapped[str | None] = mapped_column(Text, nullable=True)
+    error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    claimed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+
+
+class NotifyCursorModel(AutopilotOrmBase):
+    """The Telegram notifier's position in the outbox (created_at, event_id)."""
+
+    __tablename__ = TABLE_NOTIFY_CURSOR
+
+    name: Mapped[str] = mapped_column(
+        String(NOTIFY_CURSOR_NAME_LENGTH), primary_key=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+    event_id: Mapped[str] = mapped_column(
+        String(OUTBOX_EVENT_ID_LENGTH), nullable=False
+    )

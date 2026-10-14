@@ -44,6 +44,7 @@ from rag_backend.infrastructure.database.models.carousel import CarouselProjectM
 from rag_backend.modules.autopilot import (
     AutopilotBootstrapDeps,
     ManualInstagramPublishRequest,
+    ManualPublishRefusedError,
     bootstrap_module,
     manual_instagram_publish,
 )
@@ -186,16 +187,20 @@ async def publish_to_instagram(
             detail=ERR_INSTAGRAM_PUBLIC_BASE_URL_NOT_CONFIGURED,
         ) from None
 
-    outcome = await manual_instagram_publish(
-        ManualInstagramPublishRequest(
-            session=db,
-            publisher=publisher,
-            project_id=str(project_id),
-            caption=body.caption,
-            image_urls=tuple(image_urls),
-            public_base_url=configured_public_base_url(),
+    try:
+        outcome = await manual_instagram_publish(
+            ManualInstagramPublishRequest(
+                session=db,
+                publisher=publisher,
+                project_id=str(project_id),
+                caption=body.caption,
+                image_urls=tuple(image_urls),
+                public_base_url=configured_public_base_url(),
+            )
         )
-    )
+    except ManualPublishRefusedError as exc:
+        # QA r1 H1: an autopilot run owns this carousel, or a publish is running.
+        raise HTTPException(status_code=409, detail=exc.code) from None
     return InstagramPublishResponse(
         status=outcome.status,
         ig_post_id=outcome.ig_post_id,

@@ -7,7 +7,7 @@ from datetime import UTC, datetime
 from typing import cast
 from uuid import UUID
 
-from sqlalchemy import select, update
+from sqlalchemy import ColumnElement, and_, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.infrastructure.database.models.event_outbox import EventOutboxModel
@@ -19,32 +19,72 @@ from rag_backend.modules.autopilot.domain.notify import (
     AutopilotOutboxEvent,
     SaveNoticeLog,
 )
-from rag_backend.modules.autopilot.infrastructure.models import AutopilotRunModel
+from rag_backend.modules.autopilot.infrastructure.models import (
+    AutopilotRunModel,
+    NotifyCursorModel,
+)
 from rag_backend.modules.autopilot.notify_constants import (
     NOTIFY_EVENT_TYPES,
     OUTBOX_SCAN_LIMIT,
 )
+from rag_backend.modules.autopilot.recovery_constants import NOTIFY_CURSOR_NAME
 
 
 class SqlAutopilotEventSource:
-    """The newest ``content.autopilot.*`` rows. Delivery dedupe is the ledger."""
+    """``content.autopilot.*`` rows after the cursor, oldest first.
+
+    The cursor only moves past events the dispatcher has settled, so a busy
+    outbox can never push an undelivered notice out of the scan window.
+    """
 
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 
     async def recent(self) -> list[AutopilotOutboxEvent]:
-        """Return up to the scan limit, newest first."""
-        result = await self._session.execute(
+        """Return up to the scan limit after the cursor, oldest first."""
+        cursor = await self._session.get(NotifyCursorModel, NOTIFY_CURSOR_NAME)
+        query = (
             select(EventOutboxModel)
             .where(
                 EventOutboxModel.aggregate_type == AGGREGATE_TYPE_AUTOPILOT_RUN,
                 EventOutboxModel.event_type.in_(NOTIFY_EVENT_TYPES),
             )
-            .order_by(EventOutboxModel.created_at.desc())
+            .order_by(EventOutboxModel.created_at.asc(), EventOutboxModel.event_id)
             .limit(OUTBOX_SCAN_LIMIT)
         )
+        if cursor is not None:
+            query = query.where(_after(cursor))
+        result = await self._session.execute(query)
         events = [_event(row) for row in result.scalars().all()]
         return [event for event in events if event is not None]
+
+    async def advance(self, event: AutopilotOutboxEvent) -> None:
+        """Move the cursor to ``event``. The caller commits."""
+        cursor = await self._session.get(NotifyCursorModel, NOTIFY_CURSOR_NAME)
+        if cursor is None:
+            self._session.add(
+                NotifyCursorModel(
+                    name=NOTIFY_CURSOR_NAME,
+                    created_at=event.created_at,
+                    event_id=event.event_id,
+                )
+            )
+            await self._session.flush()
+            return
+        cursor.created_at = event.created_at
+        cursor.event_id = event.event_id
+        await self._session.flush()
+
+
+def _after(cursor: NotifyCursorModel) -> ColumnElement[bool]:
+    created = EventOutboxModel.created_at
+    return or_(
+        created > cursor.created_at,
+        and_(
+            created == cursor.created_at,
+            EventOutboxModel.event_id > cursor.event_id,
+        ),
+    )
 
 
 class SqlNoticeLogStore:

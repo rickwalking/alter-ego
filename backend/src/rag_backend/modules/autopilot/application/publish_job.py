@@ -9,7 +9,7 @@ committed before ``media_publish`` so a crash resumes that container.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 from rag_backend.domain.constants.instagram_publish import (
     PUBLISH_RESULT_FAILED,
@@ -45,7 +45,6 @@ from rag_backend.modules.autopilot.domain.ports import (
 from rag_backend.modules.autopilot.domain.publish import (
     CarouselMedia,
     DueFacts,
-    ManualPublishCommand,
     ManualPublishOutcome,
     PublishAction,
     PublishAttemptCommand,
@@ -59,6 +58,8 @@ from rag_backend.modules.autopilot.domain.publish import (
     gate_reason,
     is_publish_due,
 )
+from rag_backend.modules.autopilot.domain.publish_claims import PublishClaims, RunClaim
+from rag_backend.modules.autopilot.recovery_constants import MANUAL_CLAIM_STALE_MINUTES
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -71,6 +72,7 @@ class PublishJobDependencies:
     notifier: PublishNotifier
     clock: Clock
     checkpoint: PublishCheckpoint
+    claims: PublishClaims
 
 
 class SystemClock:
@@ -91,32 +93,45 @@ class InstagramPublishJob:
         self._deps = deps
 
     async def tick(self) -> int:
-        """Process at most one due ``publishing`` run. Returns 1 when it did."""
+        """Process at most one due ``publishing`` run. Returns 1 when it did.
+
+        The run is claimed first, so the manual route cannot publish it at
+        the same time (QA r1 H1).
+        """
         query = RunListQuery(
             state=AutopilotRunState.PUBLISHING,
             limit=PUBLISH_SCAN_LIMIT,
         )
         runs = await self._deps.runs.list_by_state(query)
         chosen = _first_due(runs, self._deps.clock.now())
-        if chosen is None:
+        if chosen is None or not await self.claim(chosen):
             return 0
-        await self._execute(chosen, None)
+        try:
+            fresh = await self._deps.runs.get(chosen.run_id)
+            if fresh is not None and fresh.state is AutopilotRunState.PUBLISHING:
+                await self._execute(fresh, None)
+        finally:
+            await self._deps.claims.release_run(chosen.run_id)
         return 1
 
-    async def publish_manual(
-        self, command: ManualPublishCommand
+    async def claim(self, run: AutopilotRun) -> bool:
+        """Take the run's publish claim, or False when a fresh one is held."""
+        now = self._deps.clock.now()
+        stale = now - timedelta(minutes=MANUAL_CLAIM_STALE_MINUTES)
+        return await self._deps.claims.claim_run(
+            RunClaim(run_id=run.run_id, now=now, stale_before=stale)
+        )
+
+    async def publish_claimed(
+        self, run: AutopilotRun, media: CarouselMedia
     ) -> ManualPublishOutcome:
-        """Owner route. Reuses a stored post id and, when possible, the container."""
-        run = await self._deps.runs.find_by_carousel(command.project_id)
-        if run is not None and run.ig_post_id:
-            return _outcome(PUBLISH_RESULT_PUBLISHED, run.ig_post_id, None)
-        media = CarouselMedia(caption=command.caption, image_urls=command.image_urls)
-        if run is not None and _can_step(run, self._deps.gateway):
+        """Owner route on a claimed ``publishing`` run. Reuses its container."""
+        if _can_step(run, self._deps.gateway):
             return await self._execute(run, media)
         atomic = await self._deps.gateway.publish_atomic(media)
         post_id = atomic.post_id
         if post_id is not None and _should_record(run, atomic.status, post_id):
-            return await self._mark_published(_require_run(run), post_id, None)
+            return await self._mark_published(run, post_id, None)
         return _outcome(atomic.status, atomic.post_id, atomic.error_message)
 
     async def _execute(
@@ -126,7 +141,7 @@ class InstagramPublishJob:
     ) -> ManualPublishOutcome:
         if run.ig_post_id:
             return await self._mark_published(run, run.ig_post_id, run.ig_permalink)
-        if run.attempts >= PUBLISH_MAX_ATTEMPTS:
+        if run.publish_attempts >= PUBLISH_MAX_ATTEMPTS:
             reason = run.state_reason or REASON_ATTEMPTS_EXHAUSTED
             return await self._fail(run, reason, None)
         snapshot = await self._snapshot(run)
@@ -201,7 +216,7 @@ class InstagramPublishJob:
     async def _on_error(
         self, run: AutopilotRun, exc: InstagramCallError
     ) -> ManualPublishOutcome:
-        next_attempts = run.attempts + 1
+        next_attempts = run.publish_attempts + 1
         if not exc.transient:
             return await self._fail(run, exc.error_code, None)
         if next_attempts < PUBLISH_MAX_ATTEMPTS:
@@ -293,7 +308,9 @@ class InstagramPublishJob:
 
 def _first_due(runs: list[AutopilotRun], now: datetime) -> AutopilotRun | None:
     for run in runs:
-        facts = DueFacts(attempts=run.attempts, updated_at=run.updated_at, now=now)
+        facts = DueFacts(
+            attempts=run.publish_attempts, updated_at=run.updated_at, now=now
+        )
         if is_publish_due(facts):
             return run
     return None
@@ -345,14 +362,11 @@ def _should_record(run: AutopilotRun | None, status: str, post_id: str | None) -
     return status == PUBLISH_RESULT_PUBLISHED and post_id is not None
 
 
-def _require_run(run: AutopilotRun | None) -> AutopilotRun:
-    if run is None:
-        raise InstagramCallError(
-            status_code=0,
-            error_code=REASON_CAROUSEL_MISSING,
-            transient=False,
-        )
-    return run
+def outcome_of(
+    status: str, post_id: str | None, error: str | None
+) -> ManualPublishOutcome:
+    """The HTTP-shaped outcome of one publish."""
+    return _outcome(status, post_id, error)
 
 
 def _outcome(

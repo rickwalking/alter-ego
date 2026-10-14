@@ -15,8 +15,8 @@ from pathlib import Path
 import pytest
 
 _PREVIOUS_HEAD = "c9d0e1f2a3b4"
-_PARENT_HEAD = "f2a3b4c5d6e7"
-_THIS_HEAD = "c8d9e0f1a2b3"
+_PARENT_HEAD = "c8d9e0f1a2b3"
+_THIS_HEAD = "d1e2f3a4b5c6"
 _BACKEND_ROOT = Path(__file__).resolve().parents[2]
 _TABLES = (
     "autopilot_runs",
@@ -25,6 +25,8 @@ _TABLES = (
     "telegram_updates",
     "autopilot_served_urls",
     "autopilot_x_signals",
+    "instagram_manual_publishes",
+    "autopilot_notify_cursor",
 )
 
 
@@ -47,7 +49,9 @@ def _alembic_config():
 
 def _run_migration(direction: str, revision: str) -> None:
     command, cfg, _script = _alembic_config()
-    {"upgrade": command.upgrade, "downgrade": command.downgrade}[direction](cfg, revision)
+    {"upgrade": command.upgrade, "downgrade": command.downgrade}[direction](
+        cfg, revision
+    )
 
 
 def _tables(db_path: Path) -> set[str]:
@@ -80,7 +84,9 @@ def test_autopilot_revision_is_the_only_head() -> None:
     assert revision.down_revision == _PARENT_HEAD
 
 
-def test_upgrade_and_downgrade_on_a_stamped_database(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_upgrade_and_downgrade_on_a_stamped_database(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """Upgrade from the pre-autopilot head creates the tables; downgrade drops them."""
     db_path = tmp_path / "autopilot.db"
     conn = sqlite3.connect(db_path)
@@ -107,6 +113,21 @@ def test_upgrade_and_downgrade_on_a_stamped_database(tmp_path: Path, monkeypatch
     assert "ig_post_id" in run_columns
     assert "ig_container_created_at" in run_columns
     assert "state" in _columns(db_path, "autopilot_runs")
+    # QA r1 B3/H3/H4: split counters, queued rework, escalation version.
+    for column in (
+        "start_attempts",
+        "rework_phase",
+        "rework_feedback",
+        "escalated_version",
+    ):
+        assert column in run_columns
+    manual_columns = _columns(db_path, "instagram_manual_publishes")
+    assert {
+        "carousel_project_id",
+        "state",
+        "ig_post_id",
+        "claimed_at",
+    } <= manual_columns
     signal_columns = _columns(db_path, "autopilot_x_signals")
     assert "source" in signal_columns
     assert "text" in signal_columns

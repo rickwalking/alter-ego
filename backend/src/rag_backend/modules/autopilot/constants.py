@@ -222,6 +222,8 @@ TOPIC_BATCH_MIN = 1
 TOPIC_BATCH_MAX = 3
 SOURCE_URL_MIN = 1
 SOURCE_URL_MAX = 8
+# Longest accepted URL in a topic source or an X observation (QA r1).
+URL_MAX_CHARS = 300
 SCORE_MIN = 0
 SCORE_MAX = 100
 

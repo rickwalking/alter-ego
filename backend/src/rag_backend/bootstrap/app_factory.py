@@ -7,8 +7,8 @@ relocated from ``rag_backend.api.app`` in AE-0080 with zero behavior change;
 """
 
 import asyncio
-from collections.abc import AsyncIterator, Callable
-from contextlib import AsyncExitStack
+from collections.abc import AsyncIterator
+from contextlib import AsyncExitStack, asynccontextmanager
 from datetime import datetime
 
 from fastapi import FastAPI
@@ -48,14 +48,18 @@ from rag_backend.api.routes import (
     workflow_board,
 )
 from rag_backend.api.schemas import HealthCheckResponse, HealthResponse
-from rag_backend.application.services.carousel.editorial_workflow_service import (
-    EditorialWorkflowConfig,
-    EditorialWorkflowService,
-)
-from rag_backend.application.services.workflow_event_service import WorkflowEventService
 from rag_backend.application.workers.workflow_workers import (
     WorkflowWorkerServices,
     run_workflow_workers,
+)
+
+# The HTTP router stays off the package facade. Model registration imports
+# the facade, and the router imports the shared slowapi limiter under
+# ``rag_backend.api``. Pulling that through the facade would make
+# infrastructure depend on the API layer.
+from rag_backend.bootstrap.autopilot_worker_factory import (
+    autopilot_engine_factory,
+    build_autopilot_worker_steps,
 )
 from rag_backend.bootstrap.carousel_drift_reconciler_factory import (
     build_drift_reconciler,
@@ -71,7 +75,6 @@ from rag_backend.infrastructure.database.config import close_db, init_db
 from rag_backend.infrastructure.database.workflow_timeout_repository import (
     WorkflowTimeoutRepository,
 )
-from rag_backend.infrastructure.events.factory import get_event_publisher
 from rag_backend.infrastructure.langfuse_client import init_langfuse
 from rag_backend.infrastructure.logging import get_logger, setup_logging
 from rag_backend.infrastructure.monitoring import init_langsmith
@@ -79,25 +82,7 @@ from rag_backend.infrastructure.telemetry.opentelemetry import (
     init_opentelemetry,
     instrument_fastapi,
 )
-
-# The HTTP router stays off the package facade. Model registration imports
-# the facade, and the router imports the shared slowapi limiter under
-# ``rag_backend.api``. Pulling that through the facade would make
-# infrastructure depend on the API layer.
-from rag_backend.modules.autopilot import (
-    AutopilotTickConfig,
-    CredentialRefreshTickAdapter,
-    InstagramPublishTickAdapter,
-    InstagramTickConfig,
-    TelegramTickConfig,
-    build_autopilot_runner_tick,
-    build_credential_refresh_tick,
-    build_instagram_publish_tick,
-    build_telegram_notify_tick,
-    credential_tick_config,
-    notifier_is_configured,
-    prepare_instagram_credentials,
-)
+from rag_backend.modules.autopilot import prepare_instagram_credentials
 from rag_backend.modules.autopilot.api.router import router as autopilot_router
 from rag_backend.modules.autopilot.api.telegram_webhook import (
     router as telegram_webhook_router,
@@ -107,30 +92,7 @@ from rag_backend.modules.autopilot.webhook_constants import APP_STATE_ENGINE
 logger = get_logger()
 
 
-def _autopilot_engine_factory(
-    checkpointer: object | None,
-) -> Callable[[], EditorialWorkflowService]:
-    """Editorial engine for one autopilot tick. Uses the process container."""
-
-    def build() -> EditorialWorkflowService:
-        settings = get_settings()
-        publisher = get_event_publisher(settings.redis_url or None)
-        research = None
-        if settings.research_enrichment_enabled:
-            research = container.research_tool()
-        return EditorialWorkflowService(
-            EditorialWorkflowConfig(
-                llm=container.llm_service().chat_model,
-                checkpointer=checkpointer,
-                event_service=WorkflowEventService(publisher),
-                image_registry=container.image_provider_registry(),
-                research_tool=research,
-            )
-        )
-
-    return build
-
-
+@asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     """Application lifespan manager.
 
@@ -179,8 +141,9 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     # sqlite (dev), postgres (prod), memory (ephemeral), disabled (no resume).
     async with AsyncExitStack() as stack:
         app.state.carousel_checkpointer = await build_checkpointer(settings, stack)
-        engine_factory = _autopilot_engine_factory(app.state.carousel_checkpointer)
+        engine_factory = autopilot_engine_factory(app.state.carousel_checkpointer)
         setattr(app.state, APP_STATE_ENGINE, engine_factory)
+        autopilot = build_autopilot_worker_steps(settings, engine_factory)
         worker_stop = asyncio.Event()
         worker_task = asyncio.create_task(
             run_workflow_workers(
@@ -196,28 +159,10 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
                         app.state.carousel_checkpointer,
                     ),
                     republish_sweeper=build_republish_sweeper(settings),
-                    instagram_publish=_instagram_publish(settings),
-                    credential_refresh=_credential_refresh(settings),
-                    autopilot_runner=build_autopilot_runner_tick(
-                        AutopilotTickConfig(
-                            owner_user_id=settings.autopilot_owner_user_id,
-                            engine_factory=engine_factory,
-                            stale_after_seconds=(
-                                settings.workflow_run_heartbeat_stale_seconds
-                            ),
-                            notifier_configured=notifier_is_configured(
-                                settings.telegram_bot_token.get_secret_value(),
-                                settings.telegram_owner_chat_id,
-                            ),
-                        )
-                    ),
-                    telegram_notify=build_telegram_notify_tick(
-                        TelegramTickConfig(
-                            token=settings.telegram_bot_token.get_secret_value(),
-                            chat_id=settings.telegram_owner_chat_id,
-                            web_base_url=settings.carousel_public_base_url,
-                        )
-                    ),
+                    instagram_publish=autopilot.instagram_publish,
+                    credential_refresh=autopilot.credential_refresh,
+                    autopilot_runner=autopilot.autopilot_runner,
+                    telegram_notify=autopilot.telegram_notify,
                 ),
             )
         )
@@ -387,21 +332,3 @@ def create_app() -> FastAPI:
     instrument_fastapi(app)
 
     return app
-
-
-def _instagram_publish(settings: Settings) -> InstagramPublishTickAdapter | None:
-    if credential_tick_config(settings) is None:
-        return None
-    return build_instagram_publish_tick(
-        InstagramTickConfig(
-            publisher=container.instagram_publisher(),
-            public_base_url=settings.carousel_public_base_url,
-        )
-    )
-
-
-def _credential_refresh(settings: Settings) -> CredentialRefreshTickAdapter | None:
-    config = credential_tick_config(settings)
-    if config is None:
-        return None
-    return build_credential_refresh_tick(config)

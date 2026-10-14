@@ -75,6 +75,9 @@ class SnapshotParts:
     slides_total: int
     lock_version: int
     stale: bool
+    # The engine's own content-approve verdict (error code), empty when it
+    # would accept. Lets the policy revise instead of approving into a refusal.
+    engine_blocker: str = ""
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -93,6 +96,7 @@ class GateSnapshot:
     images: tuple[ImageFact, ...]
     revisions_used: int
     stale: bool
+    engine_blocker: str = ""
 
 
 @dataclass(frozen=True, kw_only=True)

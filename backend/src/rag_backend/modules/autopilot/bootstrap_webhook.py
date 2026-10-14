@@ -27,6 +27,9 @@ from rag_backend.modules.autopilot.infrastructure.pending_rework import (
 from rag_backend.modules.autopilot.infrastructure.repository import (
     SqlAlchemyAutopilotRepository,
 )
+from rag_backend.modules.autopilot.infrastructure.run_recovery_store import (
+    SqlRunRecoveryStore,
+)
 from rag_backend.modules.autopilot.infrastructure.telegram_reply import (
     ReplyClientConfig,
     TelegramOwnerMessenger,
@@ -61,6 +64,7 @@ def build_owner_action_service(build: OwnerActionBuild) -> OwnerActionService:
         editorial=driver,
         release=PublishingCarouselReleaser(build.session),
         messenger=TelegramOwnerMessenger(ReplyClientConfig(token=token)),
+        recovery=SqlRunRecoveryStore(build.session),
         clock=SystemClock(),
         owner_chat_id=build.settings.telegram_owner_chat_id,
     )

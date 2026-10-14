@@ -59,3 +59,32 @@ Feature: Owner actions via Telegram
     Given a run awaiting the owner
     When the owner sends rework feedback and the revision cap is hit
     Then the run is "escalated"
+
+  # --- AE-0348 QA round 1 -------------------------------------------------
+
+  Scenario: Rework never runs LLM regeneration inside the webhook
+    Given the owner chose the "Images" phase and sent feedback text
+    When the webhook handles the text
+    Then the run moves to "reworking" with the phase and feedback queued
+    And no editorial resume is called during the webhook request
+    When the worker runner ticks
+    Then the revise is applied once with the owner's feedback and target phase
+
+  Scenario: Rework that cannot be applied reopens the review
+    Given a queued rework whose revise hits a provider outage
+    When the worker runner ticks
+    Then the run returns to "awaiting_owner" with reason "owner_rework_not_applied"
+    And the review keyboard is sent again
+
+  Scenario: The editorial approve refuses the owner's Approve
+    Given the run is awaiting the owner
+    And the editorial approve returns a version conflict
+    When the owner taps Approve
+    Then the run returns to "awaiting_owner" with reason "owner_approve_refused"
+    And the keyboard message keeps the Approve, Rework and Reject buttons
+
+  Scenario: Webhook failure after Telegram side effects
+    Given the handler queued a callback answer and an edit
+    When the handler fails before the commit
+    Then the update claim and every transition are rolled back
+    And no Telegram reply is sent

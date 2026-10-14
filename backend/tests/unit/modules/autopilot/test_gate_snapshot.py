@@ -56,12 +56,26 @@ def test_persona_score_is_the_minimum_overall() -> None:
         FIELD_PERSONA_SCORES: {
             "voice": {FIELD_OVERALL: 80},
             "tone": {FIELD_OVERALL: 62.5},
-            "empty": {},
         },
     }
     snapshot = assemble_snapshot(_parts(state, slides=6, lock=3))
     assert snapshot.persona_score == 62.5
     assert snapshot.lock_version == 3
+
+
+def test_persona_dict_without_overall_counts_as_zero_like_the_engine() -> None:
+    """Scenario: The engine rejects an approve the policy allowed (QA r1 B1).
+
+    The engine reads a persona entry without ``overall`` as 0, so the
+    snapshot must too; otherwise the policy approves into a refusal.
+    """
+    state = {
+        FIELD_CURRENT_PHASE: "content",
+        FIELD_PHASE_STATUS: PHASE_STATUS_AWAITING,
+        FIELD_PERSONA_SCORES: {"voice": {FIELD_OVERALL: 80}, "empty": {}},
+    }
+    snapshot = assemble_snapshot(_parts(state, slides=6, lock=3))
+    assert snapshot.persona_score == 0.0
 
 
 def test_missing_persona_scores_stay_none() -> None:
@@ -111,7 +125,10 @@ def test_forbidden_hits_include_gate_codes_and_draft_phrases() -> None:
 
 
 def test_design_without_a_report_is_a_blocker() -> None:
-    state = {FIELD_CURRENT_PHASE: GATE_DESIGN, FIELD_PHASE_STATUS: PHASE_STATUS_AWAITING}
+    state = {
+        FIELD_CURRENT_PHASE: GATE_DESIGN,
+        FIELD_PHASE_STATUS: PHASE_STATUS_AWAITING,
+    }
     snapshot = assemble_snapshot(_parts(state, images=(_IMAGE,), slides=1))
     assert snapshot.presentation_blockers == (BLOCKER_MISSING,)
 

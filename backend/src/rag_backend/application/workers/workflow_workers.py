@@ -61,6 +61,17 @@ class TelegramNotifyTick(Protocol):
         ...
 
 
+class _DbStep(Protocol):
+    """Any autopilot worker step: one call per tick on the tick's session."""
+
+    async def tick(self, db: AsyncSession) -> int:
+        """Do the step. Returns how many items it touched."""
+        ...
+
+
+_LOG_STEP_FAILED = "autopilot_worker_step_failed"
+
+
 class CredentialRefreshTick(Protocol):
     """Daily Instagram token refresh (AE-0358)."""
 
@@ -115,7 +126,22 @@ async def _run_tick(
     drift reconciler (when it lands) must run AFTER it, only over rows the
     reaper did not touch this tick, stamping the row's CURRENT epoch so the
     epoch fence never rejects its convergence writes.
+
+    AE-0348 QA r1: the core steps commit before the autopilot steps run, and
+    each autopilot step commits or rolls back on its own, so an autopilot
+    failure never rolls back the reaper, the auto-reject, or a notice.
     """
+    counters = await _core_steps(settings, db, services)
+    await db.commit()
+    counters.update(await _autopilot_steps(settings, db, services))
+    return counters
+
+
+async def _core_steps(
+    settings: Settings,
+    db: AsyncSession,
+    services: _TickCollaborators,
+) -> dict[str, int]:
     reaped = 0
     if services.stale_run_reaper is not None:
         reaped = await services.stale_run_reaper.tick(db)
@@ -140,16 +166,6 @@ async def _run_tick(
         auto_rejected = await services.auto_rejector.auto_reject_stuck(
             db, settings.workflow_stuck_timeout_hours
         )
-    credential_refresh = await _credential_step(services, db)
-    instagram_runs = 0
-    if services.instagram_publish is not None:
-        instagram_runs = await services.instagram_publish.tick(db)
-    autopilot_runs = 0
-    if settings.autopilot_enabled and services.autopilot_runner is not None:
-        autopilot_runs = await services.autopilot_runner.tick(db)
-    telegram_notices = 0
-    if services.telegram_notify is not None:
-        telegram_notices = await services.telegram_notify.tick(db)
     return {
         "reaped": reaped,
         "converged": converged,
@@ -157,23 +173,37 @@ async def _run_tick(
         "reminders": reminders,
         "alerts": alerts,
         "auto_rejected": auto_rejected,
-        "credential_refresh": credential_refresh,
-        "instagram_runs": instagram_runs,
-        "autopilot_runs": autopilot_runs,
-        "telegram_notices": telegram_notices,
     }
 
 
-async def _credential_step(services: _TickCollaborators, db: AsyncSession) -> int:
-    """Daily Instagram token refresh. Absent when the Fernet key is unusable.
+async def _autopilot_steps(
+    settings: Settings,
+    db: AsyncSession,
+    services: _TickCollaborators,
+) -> dict[str, int]:
+    """Credential refresh, publish, runner, then Telegram; each isolated."""
+    runner = services.autopilot_runner if settings.autopilot_enabled else None
+    steps: tuple[tuple[str, _DbStep | None], ...] = (
+        ("credential_refresh", services.credential_refresh),
+        ("instagram_runs", services.instagram_publish),
+        ("autopilot_runs", runner),
+        ("telegram_notices", services.telegram_notify),
+    )
+    return {name: await _isolated(name, step, db) for name, step in steps}
 
-    Runs before publish. ``get()`` opens its own session, so this tick's
-    publish still sees the previous token; the next tick sees the new one.
-    """
-    refresher = services.credential_refresh
-    if refresher is None:
+
+async def _isolated(name: str, step: _DbStep | None, db: AsyncSession) -> int:
+    """Run one autopilot step in its own commit; a failure is rolled back alone."""
+    if step is None:
         return 0
-    return await refresher.tick(db)
+    try:
+        count = await step.tick(db)
+        await db.commit()
+    except Exception:
+        await db.rollback()
+        logger.exception(_LOG_STEP_FAILED, step=name, exc_info=True)
+        return 0
+    return count
 
 
 async def run_workflow_workers(

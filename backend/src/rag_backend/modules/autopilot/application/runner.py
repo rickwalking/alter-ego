@@ -8,13 +8,22 @@ adapter in ``bootstrap`` opens the session and calls ``tick``.
 from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import structlog
 
 from rag_backend.modules.autopilot.application.feedback import (
     ReviseFeedbackRequest,
     revise_feedback,
+)
+from rag_backend.modules.autopilot.application.publish_job import SystemClock
+from rag_backend.modules.autopilot.application.rework_step import (
+    ReworkDependencies,
+    ReworkStep,
+)
+from rag_backend.modules.autopilot.application.run_recovery import (
+    RecoveryDependencies,
+    RunRecovery,
 )
 from rag_backend.modules.autopilot.constants import (
     GATE_FINAL_REVIEW,
@@ -55,9 +64,11 @@ from rag_backend.modules.autopilot.domain.models import (
 from rag_backend.modules.autopilot.domain.policy import decide, source_has_content
 from rag_backend.modules.autopilot.domain.ports import (
     AutopilotRunRepository,
+    Clock,
     TopicCandidateRepository,
 )
 from rag_backend.modules.autopilot.domain.publish import RunListQuery
+from rag_backend.modules.autopilot.domain.recovery import RunRecoveryStore
 from rag_backend.modules.autopilot.notify_constants import (
     REASON_NOTIFIER_UNCONFIGURED,
 )
@@ -83,8 +94,10 @@ class RunnerDependencies:
     topics: TopicCandidateRepository
     editorial: EditorialDriver
     notices: OwnerReadyNotifier
+    recovery: RunRecoveryStore
     owner_user_id: str
     notifier_configured: bool = True
+    clock: Clock = field(default_factory=SystemClock)
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -99,14 +112,38 @@ class AutopilotRunner:
 
     def __init__(self, deps: RunnerDependencies) -> None:
         self._deps = deps
+        self._recovery = RunRecovery(_recovery_deps(deps))
+        self._rework = ReworkStep(
+            ReworkDependencies(
+                runs=deps.runs,
+                editorial=deps.editorial,
+                recovery=deps.recovery,
+                escalations=self._recovery,
+            )
+        )
 
     async def tick(self) -> int:
-        """Do one step. Returns 1 when the run changed or a resume was tried."""
+        """Sweep expiries and fixed escalations, then step at most one run.
+
+        An engine error the driver did not classify ends that run with a
+        reason; it never propagates and rolls back the worker tick.
+        """
+        swept = await self._recovery.sweep()
         run = await _first_run(self._deps.runs)
         if run is None:
-            return 0
+            return swept
+        try:
+            stepped = await self._step(run)
+        except Exception as exc:
+            stepped = await self._recovery.contain(run, exc)
+        return swept + stepped
+
+    async def _step(self, run: AutopilotRun) -> int:
         if run.state is AutopilotRunState.QUEUED:
             return await self._tick_queued(run)
+        reworked = await self._rework.try_apply(run)
+        if reworked is not None:
+            return reworked
         return await self._tick_active(run)
 
     async def _tick_queued(self, run: AutopilotRun) -> int:
@@ -166,11 +203,7 @@ class AutopilotRunner:
 
     async def _stop(self, step: _Step) -> int:
         if not self._deps.notifier_configured:
-            await self._move(
-                step.run,
-                AutopilotRunState.ESCALATED,
-                REASON_NOTIFIER_UNCONFIGURED,
-            )
+            await self._escalate_at(step, REASON_NOTIFIER_UNCONFIGURED)
             return 1
         moved = await self._move(
             step.run,
@@ -183,8 +216,12 @@ class AutopilotRunner:
         return 1
 
     async def _escalate(self, step: _Step) -> int:
-        await self._move(step.run, AutopilotRunState.ESCALATED, step.decision.reason)
+        await self._escalate_at(step, step.decision.reason)
         return 1
+
+    async def _escalate_at(self, step: _Step, reason: str) -> None:
+        if await self._move(step.run, AutopilotRunState.ESCALATED, reason):
+            await self._recovery.mark(step.run, step.snapshot.lock_version)
 
     async def _revise(self, step: _Step) -> int:
         if step.snapshot.phase == GATE_FINAL_REVIEW:
@@ -209,7 +246,7 @@ class AutopilotRunner:
             )
         )
         if result.status is ResumeStatus.REVISION_CAP:
-            await self._move(step.run, AutopilotRunState.ESCALATED, REASON_REVISION_CAP)
+            await self._escalate_at(step, REASON_REVISION_CAP)
         return 1
 
     async def _spec(self, run: AutopilotRun) -> ProjectSpec | None:
@@ -237,7 +274,7 @@ class AutopilotRunner:
         return project_id
 
     async def _count_start_failure(self, run: AutopilotRun) -> None:
-        attempts = run.attempts + 1
+        attempts = run.start_attempts + 1
         await self._deps.runs.note_start_attempt(
             StartAttemptCommand(
                 run_id=run.run_id,
@@ -262,6 +299,17 @@ class AutopilotRunner:
                 reason=reason,
             )
         )
+
+
+def _recovery_deps(deps: RunnerDependencies) -> RecoveryDependencies:
+    return RecoveryDependencies(
+        runs=deps.runs,
+        editorial=deps.editorial,
+        notices=deps.notices,
+        recovery=deps.recovery,
+        clock=deps.clock,
+        notifier_configured=deps.notifier_configured,
+    )
 
 
 async def _first_run(runs: AutopilotRunRepository) -> AutopilotRun | None:

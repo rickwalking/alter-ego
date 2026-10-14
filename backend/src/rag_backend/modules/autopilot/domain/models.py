@@ -80,7 +80,8 @@ class AutopilotRun:
     carousel_project_id: str | None
     state: AutopilotRunState
     state_reason: str | None
-    attempts: int
+    # Publish attempts only. Start failures count in ``start_attempts``.
+    publish_attempts: int
     telegram_message_ids: tuple[int, ...]
     ig_container_id: str | None
     ig_post_id: str | None
@@ -90,6 +91,13 @@ class AutopilotRun:
     ig_container_created_at: datetime | None = None
     updated_at: datetime | None = None
     notice_log: NoticeLog = field(default_factory=NoticeLog)
+    start_attempts: int = 0
+    # Owner rework the webhook queued for the runner (phase + feedback text).
+    rework_phase: str | None = None
+    rework_feedback: str | None = None
+    # Workflow lock version when the run was escalated. A different version
+    # at final review means the owner changed the carousel in the web UI.
+    escalated_version: int | None = None
 
 
 @dataclass(frozen=True, kw_only=True)

@@ -9,10 +9,10 @@ from __future__ import annotations
 from datetime import datetime, timedelta
 from uuid import UUID
 
-from sqlalchemy import delete, func, select
+from sqlalchemy import delete, func, select, text
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from rag_backend.infrastructure.database.models.carousel import CarouselProjectModel
 from rag_backend.modules.autopilot.constants import (
     RUN_ATTEMPTS_INITIAL,
     SERVED_URL_TTL_HOURS,
@@ -33,6 +33,13 @@ from rag_backend.modules.autopilot.infrastructure.models import (
     ServedSignalUrlModel,
     TopicCandidateModel,
 )
+from rag_backend.modules.autopilot.recovery_constants import (
+    ADVISORY_LOCK_PARAM,
+    ADVISORY_LOCK_SQL,
+    DIALECT_POSTGRESQL,
+    INTAKE_LOCK_KEY,
+)
+from rag_backend.modules.editorial.public import CarouselAutomationAcl
 
 
 class SqlAlchemyTopicIntakeStore:
@@ -74,13 +81,7 @@ class SqlAlchemyTopicIntakeStore:
 
     async def carousel_topics_since(self, since: datetime) -> tuple[str, ...]:
         """Return non-blank carousel topics created at or after ``since``."""
-        result = await self._session.execute(
-            select(CarouselProjectModel.topic).where(
-                CarouselProjectModel.created_at >= since
-            )
-        )
-        topics = [value for value in result.scalars().all() if value != ""]
-        return tuple(topics)
+        return await CarouselAutomationAcl(self._session).topics_since(since)
 
     async def runs_created_between(self, window: DayWindow) -> int:
         """Count runs whose ``created_at`` is inside the half-open window."""
@@ -94,10 +95,27 @@ class SqlAlchemyTopicIntakeStore:
         )
         return int(result.scalar_one())
 
-    async def add_candidate(self, candidate: TopicCandidate) -> None:
-        """Insert a topic candidate."""
-        self._session.add(_topic_row(candidate))
-        await self._session.flush()
+    async def add_candidate(self, candidate: TopicCandidate) -> bool:
+        """Insert one candidate. False when a concurrent batch stored its hash."""
+        try:
+            async with self._session.begin_nested():
+                self._session.add(_topic_row(candidate))
+                await self._session.flush()
+        except IntegrityError:
+            return False
+        return True
+
+    async def lock_intake(self) -> None:
+        """Transaction-scoped advisory lock on PostgreSQL; a no-op elsewhere.
+
+        Two concurrent POSTs would otherwise both read "hash unknown" and
+        "under the daily cap" before either commits (QA r1).
+        """
+        if self._session.get_bind().dialect.name != DIALECT_POSTGRESQL:
+            return
+        await self._session.execute(
+            text(ADVISORY_LOCK_SQL), {ADVISORY_LOCK_PARAM: INTAKE_LOCK_KEY}
+        )
 
     async def add_queued_run(self, command: QueuedRunCommand) -> None:
         """Insert a queued run stamped with the intake clock."""
@@ -148,7 +166,8 @@ def _run_row(command: QueuedRunCommand) -> AutopilotRunModel:
         topic_candidate_id=command.topic_candidate_id,
         state=AutopilotRunState.QUEUED.value,
         state_reason=None,
-        attempts=RUN_ATTEMPTS_INITIAL,
+        publish_attempts=RUN_ATTEMPTS_INITIAL,
+        start_attempts=RUN_ATTEMPTS_INITIAL,
         telegram_message_ids=[],
         ig_container_id=None,
         ig_post_id=None,
