@@ -1,6 +1,6 @@
 # AE-0356 — Telegram webhook: secret header, owner allowlist, dedupe, Approve / Rework / Reject / Retry
 
-Status: Ready
+Status: Dev Complete
 Tier: T2
 Priority: Critical
 Type: Feature
@@ -10,7 +10,7 @@ Agent Lane: developer → qa → release
 Branch: feat/ae-0356-autopilot-telegram-webhook-actions
 Kanban Card: TBD
 Created: 2026-10-13
-Updated: 2026-10-13
+Updated: 2026-10-14
 Parent: AE-0348
 
 ## Goal
@@ -41,12 +41,12 @@ This endpoint is the ONLY path to publishing; it must be impossible to trigger b
 
 ## Acceptance Criteria
 
-- [ ] WHEN the secret header is missing or wrong THE webhook SHALL return 401 and take no action.
-- [ ] WHEN a non-owner presses a button THE webhook SHALL take no action.
-- [ ] WHEN the owner taps Approve twice (or Telegram redelivers) THE system SHALL publish exactly once.
-- [ ] WHEN the owner taps Rework → Images and types feedback THE images phase SHALL re-run with that feedback and a new review SHALL arrive.
-- [ ] WHEN the owner taps Reject THE project SHALL remain `is_public=false` and nothing SHALL be published.
-- [ ] WHEN Approve is pressed on a run not in `awaiting_owner` THE owner SHALL see 'already handled' and nothing changes.
+- [x] WHEN the secret header is missing or wrong THE webhook SHALL return 401 and take no action.
+- [x] WHEN a non-owner presses a button THE webhook SHALL take no action.
+- [x] WHEN the owner taps Approve twice (or Telegram redelivers) THE system SHALL publish exactly once.
+- [x] WHEN the owner taps Rework → Images and types feedback THE images phase SHALL re-run with that feedback and a new review SHALL arrive.
+- [x] WHEN the owner taps Reject THE project SHALL remain `is_public=false` and nothing SHALL be published.
+- [x] WHEN Approve is pressed on a run not in `awaiting_owner` THE owner SHALL see 'already handled' and nothing changes.
 
 ## Gherkin Scenarios
 
@@ -143,13 +143,46 @@ Feature: Owner actions via Telegram
 
 Ticket created from docs/architecture/grokbot-autopilot.md (ticket #7).
 
+### 2026-10-14
+
+Webhook, owner actions, and `set_webhook` implemented. Rework stays in `awaiting_owner` until the feedback text arrives, then compare-and-set moves the run to `reworking` and resumes `revise`. An earlier compare-and-set would let the runner hand the still-open final review back to the owner before the revise. Pending phase is stored on the existing notice ledger (`pending`), so this ticket adds no migration.
+
 ## Files Touched
 
-Pending.
+- `backend/tests/features/autopilot_owner_actions.feature`
+- `backend/src/rag_backend/modules/autopilot/api/telegram_webhook.py`
+- `backend/src/rag_backend/modules/autopilot/application/owner_actions.py`
+- `backend/src/rag_backend/modules/autopilot/application/owner_steps.py`
+- `backend/src/rag_backend/modules/autopilot/bootstrap_webhook.py`
+- `backend/src/rag_backend/modules/autopilot/domain/callback_parse.py`
+- `backend/src/rag_backend/modules/autopilot/domain/owner_ports.py`
+- `backend/src/rag_backend/modules/autopilot/domain/webhook_update.py`
+- `backend/src/rag_backend/modules/autopilot/domain/gate.py`
+- `backend/src/rag_backend/modules/autopilot/domain/messages.py`
+- `backend/src/rag_backend/modules/autopilot/domain/notice_log.py`
+- `backend/src/rag_backend/modules/autopilot/infrastructure/carousel_release.py`
+- `backend/src/rag_backend/modules/autopilot/infrastructure/editorial_driver.py`
+- `backend/src/rag_backend/modules/autopilot/infrastructure/pending_rework.py`
+- `backend/src/rag_backend/modules/autopilot/infrastructure/repository.py`
+- `backend/src/rag_backend/modules/autopilot/infrastructure/telegram_payload.py`
+- `backend/src/rag_backend/modules/autopilot/infrastructure/telegram_reply.py`
+- `backend/src/rag_backend/modules/autopilot/scripts/set_webhook.py`
+- `backend/src/rag_backend/modules/autopilot/webhook_constants.py`
+- `backend/src/rag_backend/bootstrap/app_factory.py`
+- `backend/src/rag_backend/infrastructure/config/settings.py`
+- `backend/.env.example`
+- `nginx/nginx.conf`
+- `nginx/nginx.conf.ssl`
+- `backend/tests/integration/test_autopilot_owner_actions.py`
+- `backend/tests/unit/modules/autopilot/test_owner_actions.py`
+- `backend/tests/unit/modules/autopilot/test_telegram_reply.py`
+- `backend/tests/unit/modules/autopilot/test_editorial_driver_outcomes.py`
+- `backend/tests/snapshots/openapi_routes.json`
+- `.agent/reports/AE-0356.dev-summary.md`
 
 ## Test Evidence
 
-Pending.
+Scenarios in `backend/tests/features/autopilot_owner_actions.feature`. Unit coverage includes concurrent `asyncio.gather` double-approve, duplicate `update_id`, stranger, reject stays private, already handled, unknown action, retry once, revision cap, and rework feedback that the runner returns to `awaiting_owner`. HTTP tests cover 401 (missing and wrong secret, no `telegram_updates` row), 200 with a valid secret, a bad body, and a handler error. `uv run alembic heads` is the single head `f2a3b4c5d6e7` (no new revision). Gate proof is in `.agent/reports/AE-0356.dev-summary.md`.
 
 ## QA Report
 
@@ -161,7 +194,8 @@ See ADR-0020.
 
 ## Blockers
 
-None.
+- Manual (Pedro): set `TELEGRAM_WEBHOOK_SECRET` in GitHub Secrets and the server env. AE-0359 owns the deploy.yml / compose wiring. This ticket only adds the setting and `.env.example`.
+- Manual (Pedro): after the public HTTPS URL exists, register the webhook with `cd backend && uv run python -m rag_backend.modules.autopilot.scripts.set_webhook https://<host>/api/telegram/webhook`. Cloudflare and the droplet install are other tickets.
 
 ## Final Summary
 
