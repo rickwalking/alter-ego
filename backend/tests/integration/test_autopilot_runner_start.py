@@ -108,7 +108,9 @@ async def test_start_uses_the_editorial_service_in_process(
         owner_user_id=_OWNER,
     )
     project_id = await driver.create_project(spec)
-    status = await driver.start(StartCommand(project_id=project_id, spec=spec, phase=GATE_RESEARCH))
+    status = await driver.start(
+        StartCommand(project_id=project_id, spec=spec, phase=GATE_RESEARCH)
+    )
 
     row = await db_session.get(CarouselProjectModel, project_id)
     assert status is editorial_driver.StartStatus.STARTED

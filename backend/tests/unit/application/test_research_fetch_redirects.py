@@ -70,8 +70,8 @@ def _handler_for(hits: _Hits, port_box: list[int]) -> type[BaseHTTPRequestHandle
             self.end_headers()
             self.wfile.write(body)
 
-        def log_message(self, format: str, *args: object) -> None:
-            del format, args
+        def log_message(self, fmt: str, *args: object) -> None:
+            del fmt, args
 
     return _Handler
 

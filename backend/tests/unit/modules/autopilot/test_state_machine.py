@@ -23,28 +23,26 @@ from rag_backend.modules.autopilot.domain.state_machine import (
 _S = AutopilotRunState
 
 # docs/architecture/grokbot-autopilot.md §4
-_SPEC: frozenset[tuple[AutopilotRunState, AutopilotRunState]] = frozenset(
-    {
-        (_S.QUEUED, _S.GENERATING),
-        (_S.QUEUED, _S.FAILED),
-        (_S.GENERATING, _S.AWAITING_OWNER),
-        (_S.GENERATING, _S.ESCALATED),
-        (_S.GENERATING, _S.FAILED),
-        (_S.AWAITING_OWNER, _S.PUBLISHING),
-        (_S.AWAITING_OWNER, _S.REWORKING),
-        (_S.AWAITING_OWNER, _S.REJECTED),
-        (_S.AWAITING_OWNER, _S.EXPIRED),
-        (_S.REWORKING, _S.AWAITING_OWNER),
-        (_S.REWORKING, _S.ESCALATED),
-        (_S.ESCALATED, _S.AWAITING_OWNER),
-        (_S.ESCALATED, _S.REJECTED),
-        (_S.PUBLISHING, _S.PUBLISHED),
-        (_S.PUBLISHING, _S.PUBLISH_FAILED),
-        (_S.PUBLISH_FAILED, _S.PUBLISHING),
+_SPEC: frozenset[tuple[AutopilotRunState, AutopilotRunState]] = frozenset({
+    (_S.QUEUED, _S.GENERATING),
+    (_S.QUEUED, _S.FAILED),
+    (_S.GENERATING, _S.AWAITING_OWNER),
+    (_S.GENERATING, _S.ESCALATED),
+    (_S.GENERATING, _S.FAILED),
+    (_S.AWAITING_OWNER, _S.PUBLISHING),
+    (_S.AWAITING_OWNER, _S.REWORKING),
+    (_S.AWAITING_OWNER, _S.REJECTED),
+    (_S.AWAITING_OWNER, _S.EXPIRED),
+    (_S.REWORKING, _S.AWAITING_OWNER),
+    (_S.REWORKING, _S.ESCALATED),
+    (_S.ESCALATED, _S.AWAITING_OWNER),
+    (_S.ESCALATED, _S.REJECTED),
+    (_S.PUBLISHING, _S.PUBLISHED),
+    (_S.PUBLISHING, _S.PUBLISH_FAILED),
+    (_S.PUBLISH_FAILED, _S.PUBLISHING),
     # QA r1: a refused editorial approve keeps the owner review open.
     (_S.PUBLISHING, _S.AWAITING_OWNER),
-    }
-)
+})
 
 _ILLEGAL = (
     (_S.PUBLISHED, _S.GENERATING),
@@ -68,7 +66,9 @@ def test_every_state_appears_in_the_table() -> None:
 
 
 @pytest.mark.parametrize(("expected", "new"), sorted(_SPEC))
-def test_spec_pair_is_allowed(expected: AutopilotRunState, new: AutopilotRunState) -> None:
+def test_spec_pair_is_allowed(
+    expected: AutopilotRunState, new: AutopilotRunState
+) -> None:
     """Scenario: Allowed transition persists and emits an event (domain half)."""
     assert_allowed(TransitionPair(expected=expected, new=new))
 

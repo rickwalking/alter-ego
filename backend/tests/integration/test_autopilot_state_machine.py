@@ -79,7 +79,9 @@ def _run(topic_id: UUID, state: AutopilotRunState) -> AutopilotRun:
     )
 
 
-def _command(run_id: UUID, expected: AutopilotRunState, new: AutopilotRunState, reason: str) -> TransitionCommand:
+def _command(
+    run_id: UUID, expected: AutopilotRunState, new: AutopilotRunState, reason: str
+) -> TransitionCommand:
     return TransitionCommand(run_id=run_id, expected=expected, new=new, reason=reason)
 
 
@@ -114,7 +116,12 @@ async def test_allowed_transition_persists_and_emits(db_session: AsyncSession) -
     run = await _persist(repo, AutopilotRunState.QUEUED)
 
     changed = await service.transition(
-        _command(run.run_id, AutopilotRunState.QUEUED, AutopilotRunState.GENERATING, _RUNNER_TICK)
+        _command(
+            run.run_id,
+            AutopilotRunState.QUEUED,
+            AutopilotRunState.GENERATING,
+            _RUNNER_TICK,
+        )
     )
 
     assert changed is True
@@ -133,7 +140,9 @@ async def test_allowed_transition_persists_and_emits(db_session: AsyncSession) -
 
 # Scenario: Concurrent transition loses the compare-and-set
 @pytest.mark.asyncio
-async def test_stale_compare_and_set_writes_nothing_more(db_session: AsyncSession) -> None:
+async def test_stale_compare_and_set_writes_nothing_more(
+    db_session: AsyncSession,
+) -> None:
     """A second actor with a stale expected state loses and adds no outbox row."""
     repo, service = _wired(db_session)
     run = await _persist(repo, AutopilotRunState.AWAITING_OWNER)
@@ -166,7 +175,9 @@ async def test_stale_compare_and_set_writes_nothing_more(db_session: AsyncSessio
 
 # Scenario: Illegal transition is rejected
 @pytest.mark.asyncio
-async def test_illegal_transition_raises_and_does_not_emit(db_session: AsyncSession) -> None:
+async def test_illegal_transition_raises_and_does_not_emit(
+    db_session: AsyncSession,
+) -> None:
     """Published cannot move to generating, and no outbox row is written."""
     repo, service = _wired(db_session)
     run = await _persist(repo, AutopilotRunState.PUBLISHED)
@@ -188,13 +199,20 @@ async def test_illegal_transition_raises_and_does_not_emit(db_session: AsyncSess
 
 # Scenario: Missing run does not emit an event
 @pytest.mark.asyncio
-async def test_missing_run_returns_false_without_event(db_session: AsyncSession) -> None:
+async def test_missing_run_returns_false_without_event(
+    db_session: AsyncSession,
+) -> None:
     """A legal pair against an unknown id changes nothing."""
     _repo, service = _wired(db_session)
     missing = uuid4()
 
     changed = await service.transition(
-        _command(missing, AutopilotRunState.QUEUED, AutopilotRunState.GENERATING, _RUNNER_TICK)
+        _command(
+            missing,
+            AutopilotRunState.QUEUED,
+            AutopilotRunState.GENERATING,
+            _RUNNER_TICK,
+        )
     )
 
     assert changed is False
@@ -209,7 +227,12 @@ async def test_rollback_discards_the_outbox_row(db_session: AsyncSession) -> Non
     repo, service = _wired(db_session)
     run = await _persist(repo, AutopilotRunState.QUEUED)
     await service.transition(
-        _command(run.run_id, AutopilotRunState.QUEUED, AutopilotRunState.GENERATING, _RUNNER_TICK)
+        _command(
+            run.run_id,
+            AutopilotRunState.QUEUED,
+            AutopilotRunState.GENERATING,
+            _RUNNER_TICK,
+        )
     )
     assert len(await _events(db_session, run.run_id)) == 1
 
@@ -220,7 +243,9 @@ async def test_rollback_discards_the_outbox_row(db_session: AsyncSession) -> Non
 
 
 @pytest.mark.asyncio
-async def test_topic_credential_and_telegram_round_trip(db_session: AsyncSession) -> None:
+async def test_topic_credential_and_telegram_round_trip(
+    db_session: AsyncSession,
+) -> None:
     """The three supporting tables persist and read back."""
     repo, _service = _wired(db_session)
     topic = _topic()
@@ -269,7 +294,12 @@ async def test_queued_start_failure_persists(db_session: AsyncSession) -> None:
     )
     assert noted is True
     changed = await service.transition(
-        _command(run.run_id, AutopilotRunState.QUEUED, AutopilotRunState.FAILED, REASON_START_FAILED)
+        _command(
+            run.run_id,
+            AutopilotRunState.QUEUED,
+            AutopilotRunState.FAILED,
+            REASON_START_FAILED,
+        )
     )
     assert changed is True
     view = await service.get_run(run.run_id)

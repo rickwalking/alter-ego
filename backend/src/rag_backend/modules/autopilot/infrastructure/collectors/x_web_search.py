@@ -14,7 +14,6 @@ from datetime import datetime
 from typing import Protocol
 
 import structlog
-from rag_backend.modules.autopilot.domain.snowflake import posted_at_from_snowflake
 
 from rag_backend.modules.autopilot.constants import (
     LOG_UPSTREAM_SKIPPED,
@@ -38,6 +37,7 @@ from rag_backend.modules.autopilot.domain.signals import (
     SignalSource,
     signal_from,
 )
+from rag_backend.modules.autopilot.domain.snowflake import posted_at_from_snowflake
 from rag_backend.modules.autopilot.domain.x_status import (
     XStatusTarget,
     is_recent_status,

@@ -45,7 +45,9 @@ from rag_backend.modules.autopilot.domain.policy import decide, source_has_conte
 _BELOW = VOICE_MATCH_MIN_SCORE - 0.1
 
 
-def _source(content: str = "body", summary: str = "", points: tuple[str, ...] = ()) -> ResearchSourceFact:
+def _source(
+    content: str = "body", summary: str = "", points: tuple[str, ...] = ()
+) -> ResearchSourceFact:
     return ResearchSourceFact(content=content, summary=summary, key_points=points)
 
 
@@ -106,7 +108,9 @@ def test_outline_requires_slide_count_match_within_instagram_max() -> None:
     assert decide(_snapshot(phase=GATE_OUTLINE)).action is GateAction.APPROVE
     mismatch = decide(_snapshot(phase=GATE_OUTLINE, outline_count=5))
     assert mismatch.reason == REASON_OUTLINE
-    too_many = decide(_snapshot(phase=GATE_OUTLINE, slides_total=MAX_SLIDES + 1, outline_count=11))
+    too_many = decide(
+        _snapshot(phase=GATE_OUTLINE, slides_total=MAX_SLIDES + 1, outline_count=11)
+    )
     assert too_many.reason == REASON_OUTLINE
     empty = decide(_snapshot(phase=GATE_OUTLINE, slides_total=0, outline_count=0))
     assert empty.reason == REASON_OUTLINE
@@ -114,7 +118,9 @@ def test_outline_requires_slide_count_match_within_instagram_max() -> None:
 
 def test_content_floor_is_the_persona_constant() -> None:
     """Scenario: Low persona score is revised then escalated."""
-    at_floor = decide(_snapshot(phase=GATE_CONTENT, persona_score=VOICE_MATCH_MIN_SCORE))
+    at_floor = decide(
+        _snapshot(phase=GATE_CONTENT, persona_score=VOICE_MATCH_MIN_SCORE)
+    )
     assert at_floor.action is GateAction.APPROVE
     below = decide(_snapshot(phase=GATE_CONTENT, persona_score=_BELOW))
     assert below.action is GateAction.REVISE
@@ -160,7 +166,9 @@ def test_design_fails_closed_on_blockers() -> None:
 
 def test_images_require_every_slide_at_carousel_size() -> None:
     assert decide(_snapshot(phase=GATE_IMAGES)).action is GateAction.APPROVE
-    short = decide(_snapshot(phase=GATE_IMAGES, images=tuple(_jpeg() for _ in range(5))))
+    short = decide(
+        _snapshot(phase=GATE_IMAGES, images=tuple(_jpeg() for _ in range(5)))
+    )
     assert short.reason == REASON_IMAGES
     wrong = replace(_jpeg(), width=CAROUSEL_WIDTH - 1)
     sized = decide(_snapshot(phase=GATE_IMAGES, images=tuple(wrong for _ in range(6))))

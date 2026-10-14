@@ -11,9 +11,9 @@ from datetime import UTC, datetime, timedelta
 from hypothesis import given
 from hypothesis import settings as hypothesis_settings
 from hypothesis import strategies as st
-from rag_backend.modules.autopilot.domain.snowflake import posted_at_from_snowflake
 
 from rag_backend.modules.autopilot.constants import TWITTER_SNOWFLAKE_EPOCH_MS
+from rag_backend.modules.autopilot.domain.snowflake import posted_at_from_snowflake
 
 _MS_PER_SECOND = 1000
 _FIFTY_YEARS_MS = 50 * 365 * 24 * 60 * 60 * _MS_PER_SECOND
