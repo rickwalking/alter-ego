@@ -31,14 +31,19 @@ IPV6_ZONE_SEPARATOR = "%"
 # listed explicitly.
 BLOCKED_NETWORKS: tuple[str, ...] = ("100.64.0.0/10",)
 
-# Playwright resource types the text scraper never needs; aborting them avoids
-# a DNS check per asset and keeps the page load small.
-SKIPPED_RESOURCE_TYPES: frozenset[str] = frozenset({"image", "media", "font"})
-
-# Route glob that matches every request a page makes, including redirect hops.
+# QA r2 R2: Chromium never follows a redirect. The document is fetched with
+# redirects off, each hop is checked (scheme, names, every DNS answer) before
+# it is requested, then the HTML is rendered with every page request aborted.
 ROUTE_ALL_REQUESTS = "**/*"
-PAGE_EVENT_REQUEST = "request"
+RESEARCH_MAX_REDIRECTS = 5
+RESEARCH_FETCH_TIMEOUT_SECONDS = 15.0
+RESEARCH_FETCH_MAX_BYTES = 2_000_000
+REDIRECT_STATUSES: frozenset[int] = frozenset({301, 302, 303, 307, 308})
+HEADER_LOCATION = "location"
+HTTP_METHOD_GET = "GET"
+TEXT_ENCODING_FALLBACK = "utf-8"
 
 LOG_URL_BLOCKED = "research_url_hop_blocked"
 LOG_URL_RESOLVE_FAILED = "research_url_resolve_failed"
 ERR_UNSAFE_REDIRECT = "research_url_redirected_to_unsafe_target"
+ERR_TOO_MANY_REDIRECTS = "research_url_too_many_redirects"

@@ -1,14 +1,12 @@
 """Web research tool for carousel content generation."""
 
+from rag_backend.application.services.tools.research_fetch import (
+    fetch_public_document,
+)
 from rag_backend.application.services.tools.research_route_guard import (
-    ScrapeRouteGuard,
-    UnsafeResearchTargetError,
+    block_all_requests,
 )
-from rag_backend.domain.constants.url_safety import (
-    ERR_UNSAFE_REDIRECT,
-    PAGE_EVENT_REQUEST,
-    ROUTE_ALL_REQUESTS,
-)
+from rag_backend.domain.constants.url_safety import ROUTE_ALL_REQUESTS
 from rag_backend.domain.models import ResearchSourceType
 from rag_backend.domain.protocols import ResearchTool
 
@@ -20,23 +18,23 @@ class PlaywrightResearchTool(ResearchTool):
     async def scrape_url(url: str) -> str:
         """Scrape and extract content from a URL.
 
-        Every request the page makes (redirect hops and sub-resources) passes
-        the SSRF guard first (QA r1 S-W1). Raises ``UnsafeResearchTargetError``
-        when the URL or any hop is not allowed.
+        The document is fetched with redirects off and every hop checked
+        before it is requested (QA r2 R2). Chromium only renders that HTML,
+        with JavaScript off and every page request aborted, so it never
+        reaches the network. Raises ``UnsafeResearchTargetError`` when the URL
+        or any redirect hop is not allowed.
         """
         from playwright.async_api import async_playwright
 
-        guard = ScrapeRouteGuard()
-        if not await guard.allows(url):
-            raise UnsafeResearchTargetError(ERR_UNSAFE_REDIRECT)
+        document = await fetch_public_document(url)
         async with async_playwright() as p:
             browser = await p.chromium.launch(headless=True)
-            page = await browser.new_page()
+            page = await browser.new_page(java_script_enabled=False)
             try:
-                await page.route(ROUTE_ALL_REQUESTS, guard.handle)
-                page.on(PAGE_EVENT_REQUEST, guard.record)
-                await page.goto(url, wait_until="domcontentloaded", timeout=15000)
-                await guard.verify(page.url)
+                await page.route(ROUTE_ALL_REQUESTS, block_all_requests)
+                await page.set_content(
+                    document.html, wait_until="domcontentloaded", timeout=15000
+                )
                 content = await page.inner_text("body")
                 return content[:10000]  # Limit content length
             finally:

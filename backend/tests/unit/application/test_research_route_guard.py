@@ -1,4 +1,9 @@
-"""Playwright route guard re-checks every hop (QA r1 S-W1).
+"""The research scraper never lets Chromium make a network request (QA r1 S-W1, r2 R2).
+
+Playwright does not route redirect hops through ``page.route``, so the
+browser no longer navigates at all: the document is fetched hop by hop by
+``GuardedDocumentFetcher`` (see ``test_research_fetch_redirects.py``), then
+rendered with ``page.set_content`` while every page request is aborted.
 
 Feature: tests/features/url_safety_ssrf.feature
 """
@@ -11,15 +16,19 @@ from dataclasses import dataclass, field
 import pytest
 
 from rag_backend.application.services.tools import research_tool
+from rag_backend.application.services.tools.research_fetch import FetchedDocument
 from rag_backend.application.services.tools.research_route_guard import (
     ScrapeRouteGuard,
     UnsafeResearchTargetError,
+    block_all_requests,
 )
 from rag_backend.domain import url_safety
 
 _PUBLIC_URL = "https://news.example.com/story"
-_METADATA_URL = "http://169.254.169.254/latest"
 _REBOUND_URL = "https://rebind.example.net/x"
+_HTML = (
+    "<html><body><p>article text</p><img src='http://169.254.169.254/x'></body></html>"
+)
 
 
 async def _resolve(host: str) -> tuple[str, ...]:
@@ -46,39 +55,16 @@ class _Route:
         self.outcome.append("continue")
 
 
-# Scenario: Redirect hop to an internal address is aborted
+# Scenario: The rendered page cannot reach the network
 @pytest.mark.asyncio
-async def test_redirect_hop_to_metadata_is_aborted() -> None:
-    guard = ScrapeRouteGuard(_resolve)
-    first = _Route(_Request(_PUBLIC_URL))
-    hop = _Route(_Request(_METADATA_URL))
-
-    await guard.handle(first)
-    await guard.handle(hop)
-
-    assert first.outcome == ["continue"]
-    assert hop.outcome == ["abort"]
-    assert guard.blocked == [_METADATA_URL]
-    with pytest.raises(UnsafeResearchTargetError):
-        await guard.verify(_PUBLIC_URL)
-
-
-@pytest.mark.asyncio
-async def test_assets_are_aborted_without_dns() -> None:
-    calls: list[str] = []
-
-    async def spy(host: str) -> tuple[str, ...]:
-        calls.append(host)
-        return ("93.184.216.34",)
-
-    guard = ScrapeRouteGuard(spy)
-    image = _Route(_Request("https://cdn.example.com/a.png", "image"))
-    await guard.handle(image)
-    guard.record(_Request("https://cdn.example.com/b.png", "image"))
-
-    assert image.outcome == ["abort"]
-    assert calls == []
-    assert guard.seen == []
+@pytest.mark.parametrize(
+    "url",
+    ["http://169.254.169.254/latest", _PUBLIC_URL, "https://cdn.example.com/a.png"],
+)
+async def test_every_page_request_is_aborted(url: str) -> None:
+    route = _Route(_Request(url))
+    await block_all_requests(route)
+    assert route.outcome == ["abort"]
 
 
 @pytest.mark.asyncio
@@ -96,63 +82,36 @@ async def test_verdicts_are_cached_per_host() -> None:
     assert calls == ["news.example.com"]
 
 
-# Scenario: Redirect hop the browser did not route is still refused
-@pytest.mark.asyncio
-async def test_unrouted_hop_is_refused_after_navigation() -> None:
-    guard = ScrapeRouteGuard(_resolve)
-    guard.record(_Request(_PUBLIC_URL))
-    guard.record(_Request(_REBOUND_URL))
-
-    with pytest.raises(UnsafeResearchTargetError):
-        await guard.verify(_PUBLIC_URL)
-
-
-@pytest.mark.asyncio
-async def test_clean_navigation_verifies() -> None:
-    guard = ScrapeRouteGuard(_resolve)
-    guard.record(_Request(_PUBLIC_URL))
-    await guard.verify(_PUBLIC_URL)
-    with pytest.raises(UnsafeResearchTargetError):
-        await guard.verify(_REBOUND_URL)
-
-
 class _Page:
-    def __init__(self, redirect_to: str) -> None:
-        self.url = ""
-        self._redirect_to = redirect_to
-        self._handler: Callable[[_Route], Awaitable[None]] | None = None
-        self._listener: Callable[[_Request], None] | None = None
+    def __init__(self) -> None:
+        self.handler: Callable[[_Route], Awaitable[None]] | None = None
+        self.content: str | None = None
+        self.navigated = False
 
     async def route(
         self, _pattern: str, handler: Callable[[_Route], Awaitable[None]]
     ) -> None:
-        self._handler = handler
-
-    def on(self, _event: str, listener: Callable[[_Request], None]) -> None:
-        self._listener = listener
+        self.handler = handler
 
     async def goto(self, url: str, **_: object) -> None:
-        for hop in (url, self._redirect_to):
-            request = _Request(hop)
-            assert self._listener is not None
-            assert self._handler is not None
-            self._listener(request)
-            route = _Route(request)
-            await self._handler(route)
-            if route.outcome == ["abort"]:
-                return
-            self.url = hop
+        self.navigated = True
+
+    async def set_content(self, html: str, **_: object) -> None:
+        assert self.handler is not None, "requests must be blocked before rendering"
+        self.content = html
 
     async def inner_text(self, _selector: str) -> str:
-        return "secret metadata"
+        return "article text"
 
 
 class _Browser:
     def __init__(self, page: _Page) -> None:
         self._page = page
         self.closed = False
+        self.page_options: dict[str, object] = {}
 
-    async def new_page(self) -> _Page:
+    async def new_page(self, **options: object) -> _Page:
+        self.page_options = options
         return self._page
 
     async def close(self) -> None:
@@ -176,35 +135,40 @@ class _Playwright:
         return None
 
 
-def _patch(monkeypatch: pytest.MonkeyPatch, fake: _Playwright) -> None:
+def _patch(
+    monkeypatch: pytest.MonkeyPatch, fake: _Playwright, fetched: list[str]
+) -> None:
     import playwright.async_api as pw
 
+    async def fetch(url: str) -> FetchedDocument:
+        fetched.append(url)
+        if not await url_safety.is_safe_url_target(url, _resolve):
+            raise UnsafeResearchTargetError(url)
+        return FetchedDocument(final_url=url, html=_HTML)
+
     monkeypatch.setattr(pw, "async_playwright", lambda: fake)
-    monkeypatch.setattr(url_safety, "system_resolve", _resolve)
+    monkeypatch.setattr(research_tool, "fetch_public_document", fetch)
 
 
-# Scenario: Redirect hop to an internal address is aborted
+# Scenario: The rendered page cannot reach the network
 @pytest.mark.asyncio
-async def test_scraper_refuses_page_that_redirects_to_metadata(
+async def test_scraper_renders_the_fetched_html_without_navigating(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    browser = _Browser(_Page(_METADATA_URL))
-    _patch(monkeypatch, _Playwright(browser))
-
-    with pytest.raises(UnsafeResearchTargetError):
-        await research_tool.PlaywrightResearchTool.scrape_url(_PUBLIC_URL)
-    assert browser.closed is True
-
-
-@pytest.mark.asyncio
-async def test_scraper_returns_text_for_public_redirect(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    browser = _Browser(_Page("https://news.example.com/final"))
-    _patch(monkeypatch, _Playwright(browser))
+    page = _Page()
+    browser = _Browser(page)
+    fetched: list[str] = []
+    _patch(monkeypatch, _Playwright(browser), fetched)
 
     text = await research_tool.PlaywrightResearchTool.scrape_url(_PUBLIC_URL)
-    assert text == "secret metadata"
+
+    assert text == "article text"
+    assert fetched == [_PUBLIC_URL]
+    assert page.navigated is False
+    assert page.content == _HTML
+    assert page.handler is block_all_requests
+    assert browser.page_options.get("java_script_enabled") is False
+    assert browser.closed is True
 
 
 # Scenario: Unsafe first URL never launches the browser
@@ -212,8 +176,9 @@ async def test_scraper_returns_text_for_public_redirect(
 async def test_unsafe_first_url_never_launches_browser(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    fake = _Playwright(_Browser(_Page(_PUBLIC_URL)))
-    _patch(monkeypatch, fake)
+    fake = _Playwright(_Browser(_Page()))
+    fetched: list[str] = []
+    _patch(monkeypatch, fake, fetched)
 
     with pytest.raises(UnsafeResearchTargetError):
         await research_tool.PlaywrightResearchTool.scrape_url(_REBOUND_URL)

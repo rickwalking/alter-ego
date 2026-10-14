@@ -51,17 +51,20 @@ Feature: Research scraper SSRF guard (QA r1 S-W1)
       | http://metadata.google.internal/ |
       | ftp://example.com/file      |
 
-  Scenario: Redirect hop to an internal address is aborted
-    Given a page whose navigation redirects to "http://169.254.169.254/latest"
-    When the scraper's route guard sees each request
-    Then the public request is continued
-    And the redirect hop is aborted
-    And the scrape is refused after navigation
+  # QA r2 R2: Playwright does not route redirect hops, so the browser never
+  # navigates. The document is fetched hop by hop with redirects off.
+  Scenario: A redirect to an internal address is never requested
+    Given a public page that answers 302 with Location "http://127.0.0.1/internal"
+    When the research fetcher follows the redirect chain
+    Then the hop to 127.0.0.1 is refused before it is requested
+    And the internal server never receives a request
+    And at most five redirects are followed
 
-  Scenario: Redirect hop the browser did not route is still refused
-    Given the page recorded a request to a host resolving to a private address
-    When the scraper verifies the navigation
-    Then the scrape is refused
+  Scenario: The rendered page cannot reach the network
+    Given the fetched HTML references an image on "http://169.254.169.254/x"
+    When the scraper renders it with page.set_content
+    Then JavaScript is off and every page request is aborted
+    And the page is never navigated
 
   Scenario: Unsafe first URL never launches the browser
     Given a URL whose host resolves to a private address

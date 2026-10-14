@@ -10,11 +10,12 @@ third-party story links collected by autopilot. A URL is safe only when:
   loopback, link-local incl. ``169.254.169.254``, ULA ``fc00::/7``,
   unspecified, multicast, reserved, or CGNAT ``100.64.0.0/10``).
 
-The scraper re-runs this check on every request the page makes, which covers
-redirect hops (see ``application/services/tools/research_tool.py``).
+The scraper runs this check on the first URL and on every redirect hop before
+that hop is requested; the browser only renders the fetched HTML with every
+request aborted (see ``application/services/tools/research_fetch.py``).
 
-Residual risk: DNS rebinding between this lookup and the browser's own lookup.
-The window is small and every hop is re-checked.
+Residual risk: DNS rebinding between this lookup and the HTTP client's own
+lookup. The window is one request long and every hop is re-checked.
 
 Stdlib only, so both ``agents`` and ``application`` may import it.
 """
