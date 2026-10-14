@@ -1,6 +1,6 @@
 # AE-0358 — Instagram token store (encrypted) + 50-day auto-refresh + expiry alert
 
-Status: Ready
+Status: Dev Complete
 Tier: T2
 Priority: High
 Type: Feature
@@ -10,7 +10,7 @@ Agent Lane: developer → qa → release
 Branch: feat/ae-0358-autopilot-instagram-token-store-and-refresh
 Kanban Card: TBD
 Created: 2026-10-13
-Updated: 2026-10-13
+Updated: 2026-10-14
 Parent: AE-0348
 
 ## Goal
@@ -36,10 +36,10 @@ The token is a static env var (`META_IG_ACCESS_TOKEN`); long-lived tokens expire
 
 ## Acceptance Criteria
 
-- [ ] WHEN the token is 50 days old THE worker SHALL refresh it and persist the new expiry.
-- [ ] WHEN refresh fails and expiry is <7 days away THE owner SHALL receive a Telegram alert once per day.
-- [ ] WHEN the DB row is read raw THE token SHALL NOT appear in plaintext.
-- [ ] WHEN no token is configured THE publish job SHALL fail fast with reason `instagram_token_missing`.
+- [x] WHEN the token is 50 days old THE worker SHALL refresh it and persist the new expiry.
+- [x] WHEN refresh fails and expiry is <7 days away THE owner SHALL receive a Telegram alert once per day.
+- [x] WHEN the DB row is read raw THE token SHALL NOT appear in plaintext.
+- [x] WHEN no token is configured THE publish job SHALL fail fast with reason `instagram_token_missing`.
 
 ## Gherkin Scenarios
 
@@ -117,13 +117,49 @@ Feature: Instagram token lifecycle
 
 Ticket created from docs/architecture/grokbot-autopilot.md (ticket #9).
 
+### 2026-10-14
+
+Moved to In Development. Encrypted store, startup seed, daily refresh, and the expiry alert are implemented. `bash scripts/ci/gate-capture.sh backend` exit 0 (16 pass, 0 fail, 4 skip). See `.agent/reports/AE-0358.dev-summary.md`.
+
 ## Files Touched
 
-Pending.
+- `backend/tests/features/autopilot_ig_token.feature`
+- `backend/src/rag_backend/modules/autopilot/credential_constants.py`
+- `backend/src/rag_backend/modules/autopilot/domain/credential_ports.py`
+- `backend/src/rag_backend/modules/autopilot/domain/token_refresh.py`
+- `backend/src/rag_backend/modules/autopilot/domain/models.py`
+- `backend/src/rag_backend/modules/autopilot/application/credential_seed.py`
+- `backend/src/rag_backend/modules/autopilot/application/day_gate.py`
+- `backend/src/rag_backend/modules/autopilot/application/token_refresher.py`
+- `backend/src/rag_backend/modules/autopilot/infrastructure/credential_cipher.py`
+- `backend/src/rag_backend/modules/autopilot/infrastructure/credential_store.py`
+- `backend/src/rag_backend/modules/autopilot/infrastructure/instagram_token_client.py`
+- `backend/src/rag_backend/modules/autopilot/infrastructure/token_alert.py`
+- `backend/src/rag_backend/modules/autopilot/infrastructure/stored_token_provider.py`
+- `backend/src/rag_backend/modules/autopilot/bootstrap_credentials.py`
+- `backend/src/rag_backend/modules/autopilot/public.py`
+- `backend/src/rag_backend/modules/autopilot/__init__.py`
+- `backend/src/rag_backend/infrastructure/config/settings.py`
+- `backend/src/rag_backend/infrastructure/external/instagram_publisher_factory.py`
+- `backend/src/rag_backend/infrastructure/external/instagram_token.py`
+- `backend/src/rag_backend/infrastructure/external/meta_instagram_publisher.py`
+- `backend/src/rag_backend/domain/protocols/instagram_token.py`
+- `backend/src/rag_backend/application/workers/workflow_workers.py`
+- `backend/src/rag_backend/bootstrap/app_factory.py`
+- `backend/.env.example`
+- `backend/tests/unit/modules/autopilot/test_token_lifecycle.py`
+- `backend/tests/unit/modules/autopilot/test_credential_store.py`
+- `backend/tests/unit/modules/autopilot/test_token_refresher.py`
+- `backend/tests/unit/application/test_workflow_workers.py`
+- `backend/tests/unit/infrastructure/test_meta_instagram_publisher.py`
+- `backend/tests/unit/modules/autopilot/test_instagram_publish_job.py`
 
 ## Test Evidence
 
-Pending.
+- `backend/tests/features/autopilot_ig_token.feature` — refresh, once-per-day alert and retry, error 190, ciphertext, missing token, seed, missing key, token never logged.
+- Focused pytest: **80 passed** (`test_token_lifecycle`, `test_credential_store`, `test_token_refresher`, `test_workflow_workers`, `test_meta_instagram_publisher`, `test_instagram_publish_job`).
+- `cd backend && uv run alembic heads` → single head `f2a3b4c5d6e7`.
+- `bash scripts/ci/gate-capture.sh backend` exit 0. Mutation score 79.98%.
 
 ## QA Report
 
@@ -133,10 +169,20 @@ Pending.
 
 See ADR-0020.
 
+- `cryptography` is already a dependency (`cryptography>=48.0.1`, locked at 50.0.1). Fernet is used. No package was added.
+- Seed writes `refreshed_at = now` as well as `expires_at = now + 60d`. A null refresh clock is not treated as older than 50 days.
+- Once per day is an in-memory America/Sao_Paulo gate on the process-lived adapter. A restart can run the step again the same day. No new column.
+- Refresh uses the unversioned `https://graph.instagram.com/refresh_access_token` with proxies and redirects off.
+- The owner alert is a direct Telegram `sendMessage`, not `content.autopilot.ig_token_expiring`, because that event requires an autopilot run id. The message links to Meta's Instagram Login business-login doc.
+- A missing or invalid key logs a warning and skips registering Instagram publish and credential refresh. Publishing fails fast with `instagram_token_missing`. Startup is not aborted.
+- A publish `get()` in the same worker tick can still see the previous token. The next tick sees the refreshed one.
+- Age `>= 50` days matches "50 days old" and the 51-day scenario. The 10-day and 7-day windows are strict less-than.
+
 ## Blockers
 
-None.
+- Manual (Pedro): generate `CREDENTIALS_ENCRYPTION_KEY` (`python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"`) and set it in the runtime environment. GitHub Secrets, `deploy.yml`, and `docker-compose.prod.yml` belong to AE-0359.
+- Manual (Pedro): set `META_IG_ACCESS_TOKEN` on the first boot that has a usable encryption key so the row can be seeded. After that the database row is the source of truth.
 
 ## Final Summary
 
-Pending.
+The Instagram token is encrypted at rest, seeded once from the env var, refreshed on a daily worker step, and the owner is alerted on Telegram when refresh fails near expiry or Meta returns error 190. Gate capture is green (16 pass, 0 fail, 4 skip).
