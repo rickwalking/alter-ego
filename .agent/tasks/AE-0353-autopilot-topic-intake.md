@@ -1,6 +1,6 @@
 # AE-0353 — Topic intake POST /api/autopilot/topics: schema, source allowlist, dedupe, daily cap
 
-Status: Dev Complete
+Status: Review
 Tier: T2
 Priority: High
 Type: Feature

@@ -1,6 +1,6 @@
 # AE-0357 — Idempotent InstagramPublishJob + persisted ig_post_id + publish status route
 
-Status: Dev Complete
+Status: Review
 Tier: T2
 Priority: Critical
 Type: Feature

@@ -1,6 +1,6 @@
 # AE-0350 — Autopilot bounded context skeleton + Alembic migration (4 tables)
 
-Status: Dev Complete
+Status: Review
 Tier: T2
 Priority: High
 Type: Feature

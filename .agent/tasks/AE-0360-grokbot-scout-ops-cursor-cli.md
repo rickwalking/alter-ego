@@ -1,6 +1,6 @@
 # AE-0360 — GrokBot scout as a Cursor Grok Bot routine (+ X-signals intake, scout-failed route)
 
-Status: Dev Complete
+Status: Review
 Tier: T2
 Priority: High
 Type: Feature

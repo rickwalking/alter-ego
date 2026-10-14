@@ -1,6 +1,6 @@
 # AE-0352 — Signal collectors (X via ddgs web search, HN, HF, RSS, Bluesky, GitHub) + GET /api/autopilot/signals
 
-Status: Dev Complete
+Status: Review
 Tier: T2
 Priority: High
 Type: Feature

@@ -1,6 +1,6 @@
 # AE-0351 — Scoped service API key auth for /api/autopilot/*
 
-Status: Dev Complete
+Status: Review
 Tier: T2
 Priority: High
 Type: Feature

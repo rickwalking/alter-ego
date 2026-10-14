@@ -1,6 +1,6 @@
 # AE-0354 — AutopilotRunner: drive editorial workflow in-process, auto-approve gates, stop at final_review
 
-Status: Dev Complete
+Status: Review
 Tier: T2
 Priority: Critical
 Type: Feature

@@ -1,6 +1,6 @@
 # AE-0355 — Notifier protocol + TelegramNotifier (slide album + action keyboard, reminders)
 
-Status: Dev Complete
+Status: Review
 Tier: T2
 Priority: High
 Type: Feature
