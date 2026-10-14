@@ -1,6 +1,6 @@
 # AE-0363 — Autopilot approval records the decision but never runs the next phase
 
-Status: In Development
+Status: Dev Complete
 Tier: T1
 Priority: P0
 Type: Bugfix
@@ -134,8 +134,9 @@ AE-0362 (merged).
 ### 2026-10-14
 
 Ticket created from the prod incident. Root cause verified against the code and reproduced with
-the real service (scratch test). Test-first regression suite, then the fix. Gates run once at the
-end; see the dev summary.
+the real service (scratch test). Test-first regression suite, then the fix. Full backend gate run
+on c9f95588: PASS=21 FAIL=0 SKIP=0 (mutation 78.44%). Python 3.11 import check: 706 modules,
+0 failures. Moved to Dev Complete.
 
 ## Files Touched
 
