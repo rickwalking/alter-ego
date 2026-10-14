@@ -15,6 +15,17 @@ from rag_backend.domain.constants.instagram_publish import (
     PUBLISH_RESULT_FAILED,
     PUBLISH_RESULT_PUBLISHED,
 )
+from rag_backend.modules.autopilot.application.publish_steps import (
+    can_step,
+    due_runs,
+    gate_for,
+    media_for,
+    outcome_of,
+    release_pending,
+    reusable_container,
+    should_record,
+    stored_container,
+)
 from rag_backend.modules.autopilot.constants import (
     NOTICE_PUBLISH_FAILED,
     NOTICE_PUBLISHED,
@@ -44,25 +55,20 @@ from rag_backend.modules.autopilot.domain.ports import (
 )
 from rag_backend.modules.autopilot.domain.publish import (
     CarouselMedia,
-    DueFacts,
     ManualPublishOutcome,
-    PublishAction,
     PublishAttemptCommand,
-    PublishFacts,
-    PublishGate,
     PublishNotice,
     RunListQuery,
     SaveContainerCommand,
     SavePostCommand,
     StoredContainer,
-    choose_publish_action,
     gate_reason,
-    is_publish_due,
 )
 from rag_backend.modules.autopilot.domain.publish_claims import PublishClaims, RunClaim
 from rag_backend.modules.autopilot.recovery_constants import (
     MANUAL_CLAIM_STALE_MINUTES,
     NO_RETRY_REASONS,
+    REASON_RELEASE_PENDING,
 )
 
 
@@ -107,16 +113,20 @@ class InstagramPublishJob:
             limit=PUBLISH_SCAN_LIMIT,
         )
         runs = await self._deps.runs.list_by_state(query)
-        chosen = _first_due(runs, self._deps.clock.now())
-        if chosen is None or not await self.claim(chosen):
-            return 0
+        for chosen in due_runs(runs, self._deps.clock.now()):
+            if await self.claim(chosen):
+                await self._claimed_tick(chosen)
+                return 1
+        return 0
+
+    async def _claimed_tick(self, chosen: AutopilotRun) -> None:
+        """A refused claim no longer blocks the next due run (QA r2 R4a)."""
         try:
             fresh = await self._deps.runs.get(chosen.run_id)
             if fresh is not None and fresh.state is AutopilotRunState.PUBLISHING:
                 await self._execute(fresh, None)
         finally:
             await self._deps.claims.release_run(chosen.run_id)
-        return 1
 
     async def claim(self, run: AutopilotRun) -> bool:
         """Take the run's publish claim, or False when a fresh one is held."""
@@ -130,13 +140,13 @@ class InstagramPublishJob:
         self, run: AutopilotRun, media: CarouselMedia
     ) -> ManualPublishOutcome:
         """Owner route on a claimed ``publishing`` run. Reuses its container."""
-        if _can_step(run, self._deps.gateway):
+        if can_step(run, self._deps.gateway):
             return await self._execute(run, media)
         atomic = await self._deps.gateway.publish_atomic(media)
         post_id = atomic.post_id
-        if post_id is not None and _should_record(run, atomic.status, post_id):
+        if post_id is not None and should_record(run, atomic.status, post_id):
             return await self._mark_published(run, post_id, None)
-        return _outcome(atomic.status, atomic.post_id, atomic.error_message)
+        return outcome_of(atomic.status, atomic.post_id, atomic.error_message)
 
     async def _execute(
         self,
@@ -149,11 +159,22 @@ class InstagramPublishJob:
             reason = run.state_reason or REASON_ATTEMPTS_EXHAUSTED
             return await self._fail(run, reason, None)
         snapshot = await self._snapshot(run)
-        media = _media(snapshot, override)
-        blocked = gate_reason(_gate(snapshot, media))
+        media = media_for(snapshot, override)
+        blocked = gate_reason(gate_for(snapshot, media))
         if blocked is not None or media is None:
-            failure = blocked or REASON_CAROUSEL_MISSING
-            return await self._fail(run, failure, None)
+            return await self._blocked(run, blocked or REASON_CAROUSEL_MISSING)
+        return await self._publish(run, media)
+
+    async def _blocked(self, run: AutopilotRun, reason: str) -> ManualPublishOutcome:
+        """Fail on a pre-check, except while an approve is still releasing."""
+        if release_pending(run, reason, self._deps.clock.now()):
+            # Approved but not public yet: wait, do not fail (QA r2 R4c).
+            return outcome_of(PUBLISH_RESULT_FAILED, None, REASON_RELEASE_PENDING)
+        return await self._fail(run, reason, None)
+
+    async def _publish(
+        self, run: AutopilotRun, media: CarouselMedia
+    ) -> ManualPublishOutcome:
         try:
             await self._ensure_quota()
             post_id = await self._container_then_publish(run, media)
@@ -169,35 +190,32 @@ class InstagramPublishJob:
     async def _container_then_publish(
         self, run: AutopilotRun, media: CarouselMedia
     ) -> str:
-        facts = PublishFacts(
-            ig_post_id=run.ig_post_id,
-            ig_container_id=run.ig_container_id,
-            container_created_at=run.ig_container_created_at,
-            now=self._deps.clock.now(),
-        )
-        action = choose_publish_action(facts)
-        container = _stored(run)
-        if action == PublishAction.CREATE_CONTAINER:
-            created_at = self._deps.clock.now()
-            container_id = await self._deps.gateway.open_carousel(media)
-            await self._deps.runs.save_container(
-                SaveContainerCommand(
-                    run_id=run.run_id,
-                    container_id=container_id,
-                    created_at=created_at,
-                )
-            )
-            await self._deps.checkpoint.commit()
-            container = StoredContainer(
-                container_id=container_id, created_at=created_at
-            )
-        if container is None or not container.container_id:
+        now = self._deps.clock.now()
+        stored = stored_container(run)
+        container = await reusable_container(self._deps.gateway, stored, now)
+        if container is None:
+            container = await self._open(run, media)
+        return await self._deps.gateway.finish_container(container)
+
+    async def _open(self, run: AutopilotRun, media: CarouselMedia) -> StoredContainer:
+        """Create the container and commit its id before ``media_publish``."""
+        created_at = self._deps.clock.now()
+        container_id = await self._deps.gateway.open_carousel(media)
+        if not container_id:
             raise InstagramCallError(
                 status_code=0,
                 error_code=REASON_CONTAINER_MISSING,
                 transient=False,
             )
-        return await self._deps.gateway.finish_container(container)
+        await self._deps.runs.save_container(
+            SaveContainerCommand(
+                run_id=run.run_id,
+                container_id=container_id,
+                created_at=created_at,
+            )
+        )
+        await self._deps.checkpoint.commit()
+        return StoredContainer(container_id=container_id, created_at=created_at)
 
     async def _ensure_quota(self) -> None:
         token = await self._deps.gateway.current_token()
@@ -237,7 +255,7 @@ class InstagramPublishJob:
                 )
             )
             await self._deps.checkpoint.commit()
-            return _outcome(PUBLISH_RESULT_FAILED, None, exc.error_code)
+            return outcome_of(PUBLISH_RESULT_FAILED, None, exc.error_code)
         return await self._fail(run, exc.error_code, next_attempts)
 
     async def _mark_published(
@@ -270,7 +288,7 @@ class InstagramPublishJob:
                 )
             )
         await self._deps.checkpoint.commit()
-        return _outcome(PUBLISH_RESULT_PUBLISHED, post_id, None)
+        return outcome_of(PUBLISH_RESULT_PUBLISHED, post_id, None)
 
     async def _fail(
         self,
@@ -306,7 +324,7 @@ class InstagramPublishJob:
                 )
             )
         await self._deps.checkpoint.commit()
-        return _outcome(PUBLISH_RESULT_FAILED, run.ig_post_id, reason)
+        return outcome_of(PUBLISH_RESULT_FAILED, run.ig_post_id, reason)
 
     async def _snapshot(self, run: AutopilotRun) -> CarouselPublishSnapshot | None:
         if run.carousel_project_id is None:
@@ -314,78 +332,9 @@ class InstagramPublishJob:
         return await self._deps.source.load(run.carousel_project_id)
 
 
-def _stored(run: AutopilotRun) -> StoredContainer | None:
-    if not run.ig_container_id or run.ig_container_created_at is None:
-        return None
-    return StoredContainer(
-        container_id=run.ig_container_id, created_at=run.ig_container_created_at
-    )
-
-
-def _first_due(runs: list[AutopilotRun], now: datetime) -> AutopilotRun | None:
-    for run in runs:
-        facts = DueFacts(
-            attempts=run.publish_attempts, updated_at=run.updated_at, now=now
-        )
-        if is_publish_due(facts):
-            return run
-    return None
-
-
-def _media(
-    snapshot: CarouselPublishSnapshot | None,
-    override: CarouselMedia | None,
-) -> CarouselMedia | None:
-    if override is not None:
-        return override
-    if snapshot is None:
-        return None
-    return CarouselMedia(caption=snapshot.caption, image_urls=snapshot.image_urls)
-
-
-def _gate(
-    snapshot: CarouselPublishSnapshot | None, media: CarouselMedia | None
-) -> PublishGate:
-    if snapshot is None:
-        return PublishGate(
-            project_found=False,
-            base_url_configured=False,
-            workflow_status="",
-            status="",
-            is_public=False,
-            image_count=0,
-        )
-    count = len(snapshot.image_urls) if media is None else len(media.image_urls)
-    return PublishGate(
-        project_found=True,
-        base_url_configured=snapshot.base_url_configured,
-        workflow_status=snapshot.workflow_status,
-        status=snapshot.status,
-        is_public=snapshot.is_public,
-        image_count=count,
-    )
-
-
-def _can_step(run: AutopilotRun | None, gateway: InstagramGraphGateway) -> bool:
-    if run is None or run.state is not AutopilotRunState.PUBLISHING:
-        return False
-    return gateway.can_resume()
-
-
-def _should_record(run: AutopilotRun | None, status: str, post_id: str | None) -> bool:
-    if run is None or run.state is not AutopilotRunState.PUBLISHING:
-        return False
-    return status == PUBLISH_RESULT_PUBLISHED and post_id is not None
-
-
-def outcome_of(
-    status: str, post_id: str | None, error: str | None
-) -> ManualPublishOutcome:
-    """The HTTP-shaped outcome of one publish."""
-    return _outcome(status, post_id, error)
-
-
-def _outcome(
-    status: str, post_id: str | None, error: str | None
-) -> ManualPublishOutcome:
-    return ManualPublishOutcome(status=status, ig_post_id=post_id, error_message=error)
+__all__ = [
+    "InstagramPublishJob",
+    "PublishJobDependencies",
+    "SystemClock",
+    "outcome_of",
+]

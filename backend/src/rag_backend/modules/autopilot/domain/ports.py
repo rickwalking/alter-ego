@@ -208,6 +208,10 @@ class InstagramGraphGateway(Protocol):
         """Create the parent container and return its id."""
         ...
 
+    async def was_published(self, container: StoredContainer) -> bool:
+        """True when an expired stored container reports ``PUBLISHED``."""
+        ...
+
     async def finish_container(self, container: StoredContainer) -> str:
         """Poll the container and ``media_publish``. Returns the media id."""
         ...

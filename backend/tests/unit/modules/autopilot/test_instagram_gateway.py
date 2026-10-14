@@ -5,6 +5,7 @@ Gherkin: tests/features/autopilot_instagram_publish.feature
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from datetime import UTC, datetime
 from unittest.mock import AsyncMock
 
@@ -113,3 +114,26 @@ async def test_guard_translates_graph_runtime_and_transport_errors() -> None:
     assert meta_error.value.error_code == "36003"
     assert meta_error.value.transient is False
     assert InstagramGraphError is not InstagramCallError
+
+
+def _published(request: httpx.Request) -> httpx.Response:
+    del request
+    return httpx.Response(200, json={"status_code": "PUBLISHED"})
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(("handler", "expected"), [(_ok, False), (_published, True)])
+async def test_stepped_gateway_reads_whether_an_old_container_was_published(
+    handler: Callable[[httpx.Request], httpx.Response], expected: bool
+) -> None:
+    """QA r2 R4a: an expired container is checked before a new one is opened."""
+    gateway = gateway_for(_publisher("token", "ig-user", _transport(handler)))
+    container = StoredContainer(container_id="old", created_at=datetime.now(UTC))
+    assert await gateway.was_published(container) is expected
+
+
+@pytest.mark.unit
+async def test_atomic_gateway_never_reports_a_published_container() -> None:
+    gateway = gateway_for(AsyncMock())
+    container = StoredContainer(container_id="old", created_at=datetime.now(UTC))
+    assert await gateway.was_published(container) is False

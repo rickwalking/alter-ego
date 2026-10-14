@@ -1,5 +1,11 @@
 """Stable error codes and Graph API literals for Instagram publish."""
 
+from rag_backend.domain.constants.retry import (
+    META_MAX_ATTEMPTS,
+    META_POLL_INTERVAL_SECONDS,
+    META_POLL_MAX_ATTEMPTS,
+)
+
 ERR_INSTAGRAM_API_REQUEST_FAILED = "instagram_api_request_failed"
 ERR_INSTAGRAM_CREDENTIALS_NOT_CONFIGURED = "instagram_credentials_not_configured"
 ERR_INSTAGRAM_IMAGE_COUNT_INVALID = "instagram_image_count_invalid"
@@ -53,6 +59,19 @@ RECENT_MEDIA_LIMIT = 5
 CONTAINER_CLOCK_SKEW_SECONDS = 60
 GRAPH_TIMESTAMP_FORMAT = "%Y-%m-%dT%H:%M:%S%z"
 
+# Worst-case wall time of one stepped publish (QA r2 R4a). Every Graph request
+# has an overall deadline, and each is tried at most META_MAX_ATTEMPTS times.
+# Requests: quota, an expired container's status, the item containers, the
+# parent, the status polls, media_publish (or the media recovery), permalink.
+GRAPH_REQUEST_DEADLINE_SECONDS = 30
+GRAPH_REQUESTS_PER_PUBLISH = (
+    1 + 1 + MAX_INSTAGRAM_CAROUSEL_ITEMS + 1 + META_POLL_MAX_ATTEMPTS + 1 + 1
+)
+GRAPH_PUBLISH_WORST_CASE_SECONDS = (
+    GRAPH_REQUESTS_PER_PUBLISH * META_MAX_ATTEMPTS * GRAPH_REQUEST_DEADLINE_SECONDS
+    + META_POLL_MAX_ATTEMPTS * META_POLL_INTERVAL_SECONDS
+)
+
 KEY_DATA = "data"
 KEY_QUOTA_USAGE = "quota_usage"
 KEY_CONFIG = "config"
@@ -99,6 +118,9 @@ __all__ = [
     "GRAPH_PATH_MEDIA_NODE",
     "GRAPH_PATH_MEDIA_PUBLISH",
     "GRAPH_PATH_PUBLISHING_LIMIT",
+    "GRAPH_PUBLISH_WORST_CASE_SECONDS",
+    "GRAPH_REQUESTS_PER_PUBLISH",
+    "GRAPH_REQUEST_DEADLINE_SECONDS",
     "GRAPH_TIMESTAMP_FORMAT",
     "HTTP_GET",
     "HTTP_POST",

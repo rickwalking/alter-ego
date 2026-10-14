@@ -3,7 +3,10 @@
 A run claim is a compare-and-set on ``publish_claimed_at``; a manual claim
 is one row per carousel in ``instagram_manual_publishes``. Both are
 committed at once, so the worker and the manual route see each other. A
-claim older than the stale window is taken over (the holder crashed).
+claim older than the stale window is taken over (the holder crashed), but
+never while a stored container younger than 24 hours has no post id: the
+holder may have published it (QA r2 R4a). The stale window itself is longer
+than the slowest possible Graph publish.
 """
 
 from __future__ import annotations
@@ -41,6 +44,17 @@ class ManualRecord:
     ig_post_id: str | None
     ig_permalink: str | None
     error: str | None
+    ig_container_id: str | None = None
+    ig_container_created_at: datetime | None = None
+
+
+@dataclass(frozen=True, kw_only=True)
+class ManualContainer:
+    """The parent container of a manual publish, stored before ``media_publish``."""
+
+    project_id: str
+    container_id: str
+    created_at: datetime
 
 
 class PublishClaims(Protocol):
@@ -64,4 +78,8 @@ class PublishClaims(Protocol):
 
     async def finish_manual(self, record: ManualRecord) -> None:
         """Store the outcome and release the manual claim."""
+        ...
+
+    async def save_manual_container(self, container: ManualContainer) -> None:
+        """Persist the container id so a retry resumes it (QA r2 R4b)."""
         ...

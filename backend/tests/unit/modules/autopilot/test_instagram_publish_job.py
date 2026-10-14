@@ -59,10 +59,12 @@ from rag_backend.modules.autopilot.domain.publish import (
 )
 from rag_backend.modules.autopilot.domain.publish_claims import (
     ManualClaim,
+    ManualContainer,
     ManualRecord,
     RunClaim,
 )
 from rag_backend.modules.autopilot.infrastructure.publish_notifier import _record
+from rag_backend.modules.autopilot.recovery_constants import RELEASE_GRACE_SECONDS
 
 _NOW = datetime(2026, 10, 13, 15, 0, tzinfo=UTC)
 _PROJECT = "carousel-1"
@@ -183,6 +185,7 @@ class _Claims:
     manual: dict[str, ManualRecord] = field(default_factory=dict)
     manual_held: set[str] = field(default_factory=set)
     released: list[UUID] = field(default_factory=list)
+    saved_containers: list[ManualContainer] = field(default_factory=list)
 
     async def claim_run(self, claim: RunClaim) -> bool:
         if claim.run_id in self.held:
@@ -207,6 +210,18 @@ class _Claims:
         self.manual[record.project_id] = record
         self.manual_held.discard(record.project_id)
 
+    async def save_manual_container(self, container: ManualContainer) -> None:
+        self.saved_containers.append(container)
+        self.manual[container.project_id] = ManualRecord(
+            project_id=container.project_id,
+            state="publishing",
+            ig_post_id=None,
+            ig_permalink=None,
+            error=None,
+            ig_container_id=container.container_id,
+            ig_container_created_at=container.created_at,
+        )
+
 
 class _Gateway:
     def __init__(self) -> None:
@@ -223,6 +238,10 @@ class _Gateway:
         self.fail_finish: InstagramCallError | None = None
         self.fail_permalink = False
         self.order: list[str] = []
+        # QA r2 R4: an expired stored container may already be published.
+        self.published_before = False
+        self.checked: list[str] = []
+        self.crash_finish = False
 
     def can_resume(self) -> bool:
         return self.resume
@@ -244,9 +263,15 @@ class _Gateway:
             raise self.fail_open
         return "container-new"
 
+    async def was_published(self, container: StoredContainer) -> bool:
+        self.checked.append(container.container_id)
+        return self.published_before
+
     async def finish_container(self, container: StoredContainer) -> str:
         self.finishes += 1
         self.last_container = container.container_id
+        if self.crash_finish:
+            raise RuntimeError("worker died mid-publish")
         self.order.append("finish")
         if self.fail_finish is not None:
             raise self.fail_finish
@@ -546,9 +571,11 @@ class TestPublishBranches:
         snapshot: CarouselPublishSnapshot | None,
         reason: str,
     ) -> None:
-        repo, gateway = _Repo(), _Gateway()
+        repo, gateway, clock = _Repo(), _Gateway(), _Clock()
         run = _store(repo, _run())
-        job = _job(repo, gateway, _Source(snapshot), _Clock(), _Notifier())
+        # Past the approve-release grace window (QA r2 R4c).
+        clock.advance(RELEASE_GRACE_SECONDS + 1)
+        job = _job(repo, gateway, _Source(snapshot), clock, _Notifier())
 
         await job.tick()
 

@@ -13,6 +13,7 @@ from typing import TypeVar
 import httpx
 
 from rag_backend.domain.constants.instagram_publish import (
+    CONTAINER_STATUS_PUBLISHED,
     ERR_INSTAGRAM_API_REQUEST_FAILED,
 )
 from rag_backend.domain.protocols.social import SocialPublisher
@@ -63,6 +64,13 @@ class SteppedInstagramGateway:
                 media.caption, list(media.image_urls)
             )
         )
+
+    async def was_published(self, container: StoredContainer) -> bool:
+        """One status read: an old container may have been published by a crash."""
+        status = await _guard(
+            lambda: self._publisher.container_status(container.container_id)
+        )
+        return status == CONTAINER_STATUS_PUBLISHED
 
     async def finish_container(self, container: StoredContainer) -> str:
         """Poll, then ``media_publish``. A ``PUBLISHED`` container is recovered."""
@@ -117,6 +125,11 @@ class AtomicInstagramGateway:
         """Atomic publishers cannot open a container separately."""
         del media
         raise self._unsupported()
+
+    async def was_published(self, container: StoredContainer) -> bool:
+        """Atomic publishers never store a container."""
+        del container
+        return self._resumable
 
     async def finish_container(self, container: StoredContainer) -> str:
         """Atomic publishers cannot publish a stored container."""

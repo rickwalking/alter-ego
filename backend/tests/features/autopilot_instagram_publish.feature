@@ -107,3 +107,25 @@ Feature: Idempotent Instagram publish
     And the owner is told the post may already be live and to check Instagram
     And the notice has no Retry button
     And tapping an older Retry button for that run changes nothing
+
+  # QA r2 R4: the double-publish edge windows.
+  Scenario: A stale publish claim is not taken over while Graph may still run
+    Given the publish claim stale window is longer than the slowest possible Graph publish
+    And a publishing run holds a stale claim and a container created 1 hour ago with no post id
+    When the worker or the manual route tries to claim the run
+    Then the claim is refused and other due runs are still published
+    And once the container is older than 24 hours it is checked first
+    And a container Graph reports as PUBLISHED is recovered instead of posted again
+
+  Scenario: A manual publish crash after the container reuses that container
+    Given a carousel without an autopilot run
+    When the manual publish creates a container and then fails before media_publish returns
+    Then the container id is already stored in the manual ledger
+    And the next manual publish finishes that container without creating another
+
+  Scenario: An approved carousel that is not public yet is not failed
+    Given the owner tapped Approve and the run is "publishing"
+    And the release has not made the carousel public yet
+    When the worker ticks within the 5 minute grace window
+    Then the run stays "publishing" and no publish-failed message is sent
+    And after the grace window a carousel that is still not public fails as before

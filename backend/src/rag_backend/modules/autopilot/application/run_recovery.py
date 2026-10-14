@@ -22,7 +22,6 @@ from rag_backend.modules.autopilot.constants import (
     GATE_FINAL_REVIEW,
     PHASE_STATUS_AWAITING,
 )
-from rag_backend.modules.editorial.public import PHASE_STATUS_REJECTED
 from rag_backend.modules.autopilot.domain.gate import (
     EditorialDriver,
     GateSnapshot,
@@ -48,19 +47,20 @@ from rag_backend.modules.autopilot.notify_constants import (
 )
 from rag_backend.modules.autopilot.recovery_constants import (
     ENGINE_ERROR_DETAIL_MAX_CHARS,
-    REASON_CAROUSEL_REJECTED,
-    REASON_ESCALATION_EXPIRED,
     ESCALATED_SCAN_LIMIT,
     EXPIRY_SCAN_LIMIT,
     LOG_RUNNER_ENGINE_ERROR,
     LOG_RUNNER_WAKE_FAILED,
     OWNER_REVIEW_EXPIRY_HOURS,
+    REASON_CAROUSEL_REJECTED,
     REASON_ENGINE_ERROR,
     REASON_ENGINE_ERROR_FORMAT,
+    REASON_ESCALATION_EXPIRED,
     REASON_OWNER_EXPIRED,
     REASON_OWNER_FIXED,
     REASON_REVIEW_REOPENED,
 )
+from rag_backend.modules.editorial.public import PHASE_STATUS_REJECTED
 
 logger = structlog.get_logger()
 
@@ -187,6 +187,14 @@ class RunRecovery:
             return 0
         if snapshot.phase_status == PHASE_STATUS_REJECTED:
             return int(await self._move(run, _S.REJECTED, REASON_CAROUSEL_REJECTED))
+        return await self._wake(run, snapshot, project_id)
+
+    async def _wake(
+        self,
+        run: AutopilotRun,
+        snapshot: GateSnapshot,
+        project_id: str,
+    ) -> int:
         if not self._deps.notifier_configured:
             return 0
         if not _back_at_final_review(run, snapshot):

@@ -5,8 +5,11 @@ Kept beside ``constants.py`` so neither file exceeds the 400-line limit.
 
 from __future__ import annotations
 
+import math
+
 from rag_backend.domain.constants.instagram_publish import (
     ERR_INSTAGRAM_PUBLISHED_MEDIA_UNKNOWN,
+    GRAPH_PUBLISH_WORST_CASE_SECONDS,
 )
 
 # Engine errors the runner did not classify end the run with a reason
@@ -44,7 +47,18 @@ REWORK_PHASE_LENGTH = 32
 MANUAL_STATE_PUBLISHING = "publishing"
 MANUAL_STATE_PUBLISHED = "published"
 MANUAL_STATE_FAILED = "failed"
-MANUAL_CLAIM_STALE_MINUTES = 10
+# A claim is taken over only once its holder cannot still be talking to
+# Graph: the slowest possible publish plus a margin (QA r2 R4a).
+CLAIM_STALE_MARGIN_MINUTES = 5
+SECONDS_PER_MINUTE = 60
+MANUAL_CLAIM_STALE_MINUTES = (
+    math.ceil(GRAPH_PUBLISH_WORST_CASE_SECONDS / SECONDS_PER_MINUTE)
+    + CLAIM_STALE_MARGIN_MINUTES
+)
+# Approve sets ``publishing`` before the release makes the carousel public;
+# the worker waits this long before failing a not-yet-public run (QA r2 R4c).
+RELEASE_GRACE_SECONDS = 300
+REASON_RELEASE_PENDING = "carousel_release_pending"
 ERR_AUTOPILOT_RUN_ACTIVE = "autopilot_run_not_publishing"
 ERR_PUBLISH_IN_PROGRESS = "instagram_publish_in_progress"
 # QA r2 R3: the post may already be live. Retry would open a new container

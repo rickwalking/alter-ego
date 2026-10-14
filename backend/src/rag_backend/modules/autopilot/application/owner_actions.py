@@ -62,8 +62,8 @@ from rag_backend.modules.autopilot.domain.owner_ports import (
 )
 from rag_backend.modules.autopilot.domain.ports import AutopilotRunRepository, Clock
 from rag_backend.modules.autopilot.domain.recovery import ReworkIntent, RunRecoveryStore
-from rag_backend.modules.autopilot.recovery_constants import NO_RETRY_REASONS
 from rag_backend.modules.autopilot.domain.webhook_update import WebhookUpdate, is_owner
+from rag_backend.modules.autopilot.recovery_constants import NO_RETRY_REASONS
 from rag_backend.modules.autopilot.webhook_constants import (
     ANSWER_ALREADY,
     ANSWER_APPROVED,

@@ -232,14 +232,15 @@ async def test_manual_publish_without_a_run_posts_once(
     first = await manual.publish(_manual_command(project_id))
     second = await manual.publish(_manual_command(project_id))
 
-    assert gateway.atomics == 1
-    assert first.ig_post_id == "atomic-post"
-    assert second.ig_post_id == "atomic-post"
+    # QA r2 R4b: the stepped gateway stores the container before publishing.
+    assert (gateway.opens, gateway.finishes, gateway.atomics) == (1, 1, 0)
+    assert first.ig_post_id == "post-1"
+    assert second.ig_post_id == "post-1"
     status = await bootstrap_module(
         AutopilotBootstrapDeps(session=db_session)
     ).instagram_status(project_id)
     assert status.state == "published"
-    assert status.ig_post_id == "atomic-post"
+    assert status.ig_post_id == "post-1"
     assert status.error is None
 
 

@@ -55,6 +55,7 @@ from rag_backend.domain.constants.instagram_publish import (
     GRAPH_PATH_MEDIA_NODE,
     GRAPH_PATH_MEDIA_PUBLISH,
     GRAPH_PATH_PUBLISHING_LIMIT,
+    GRAPH_REQUEST_DEADLINE_SECONDS,
     HTTP_GET,
     HTTP_POST,
     MAX_INSTAGRAM_CAROUSEL_ITEMS,
@@ -65,7 +66,11 @@ from rag_backend.domain.constants.instagram_publish import (
     RECENT_MEDIA_LIMIT,
     VALUE_TRUE,
 )
-from rag_backend.domain.constants.retry import META_MAX_ATTEMPTS, META_POLL_MAX_ATTEMPTS
+from rag_backend.domain.constants.retry import (
+    META_MAX_ATTEMPTS,
+    META_POLL_INTERVAL_SECONDS,
+    META_POLL_MAX_ATTEMPTS,
+)
 from rag_backend.domain.protocols.instagram_token import InstagramTokenProvider
 from rag_backend.domain.protocols.social import PublishResult
 from rag_backend.infrastructure.external.instagram_graph_error import (
@@ -81,8 +86,9 @@ from rag_backend.infrastructure.logging import get_logger
 
 logger = get_logger()
 
-# Tests patch this to skip the real poll sleep.
-_POLL_INTERVAL_SECONDS = 2.0
+# Tests patch these to skip the real poll sleep and to shorten the deadline.
+_POLL_INTERVAL_SECONDS = META_POLL_INTERVAL_SECONDS
+_REQUEST_DEADLINE_SECONDS: float = GRAPH_REQUEST_DEADLINE_SECONDS
 
 _CLIENT_MESSAGES = frozenset({
     ERR_INSTAGRAM_CONTAINER_FAILED,
@@ -170,7 +176,7 @@ class MetaInstagramPublisher:
     async def await_container(self, container_id: str) -> str:
         """Poll until ``FINISHED`` or ``PUBLISHED`` and return it. Timeout is transient."""
         for _attempt in range(META_POLL_MAX_ATTEMPTS):
-            status = await self._container_status(container_id)
+            status = await self.container_status(container_id)
             if status in _TERMINAL_OK:
                 return status
             if status in {CONTAINER_STATUS_ERROR, CONTAINER_STATUS_EXPIRED}:
@@ -302,7 +308,8 @@ class MetaInstagramPublisher:
         )
         return _require_id(payload)
 
-    async def _container_status(self, container_id: str) -> str:
+    async def container_status(self, container_id: str) -> str:
+        """The container's ``status_code`` (``FINISHED``, ``PUBLISHED``, ...)."""
         payload = await self._request(
             _GraphCall(
                 method=HTTP_GET,
@@ -342,12 +349,18 @@ class MetaInstagramPublisher:
         else:
             query[COOKIE_ACCESS_TOKEN] = token
         try:
-            return await self._client.request(
-                call.method,
-                self._url(call.path),
-                data=form or None,
-                params=query or None,
-            )
+            async with asyncio.timeout(_REQUEST_DEADLINE_SECONDS):
+                return await self._client.request(
+                    call.method,
+                    self._url(call.path),
+                    data=form or None,
+                    params=query or None,
+                )
+        except TimeoutError as exc:
+            # One overall deadline per request bounds the worst-case publish
+            # time the publish-claim stale window is derived from (QA r2 R4a).
+            logger.warning("instagram_graph_request_deadline", path=call.path)
+            raise httpx.TimeoutException(ERR_INSTAGRAM_API_REQUEST_FAILED) from exc
         except httpx.HTTPError:
             logger.exception("instagram_graph_transport_error", path=call.path)
             raise
