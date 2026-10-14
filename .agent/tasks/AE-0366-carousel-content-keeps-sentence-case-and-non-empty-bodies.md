@@ -1,6 +1,6 @@
 # AE-0366 — Carousel content keeps sentence case and non-empty bodies
 
-Status: In Development
+Status: Dev Complete
 Tier: T2
 Priority: P0
 Type: Bugfix
@@ -104,7 +104,9 @@ Root causes (evidence in the PR and the tests):
 ### 2026-10-14
 
 Root cause traced in code; scope extended by the coordinator with the EN translation
-lowercasing, the edit → persist gap and the quality rubric.
+lowercasing, the edit → persist gap and the quality rubric. All backend gates except mutation
+green individually (hotfix fast path); mutation deferred to CI. Python 3.11 import check: 713
+modules, 0 failures. Moved to Dev Complete.
 
 ## Files Touched
 
@@ -112,7 +114,15 @@ See the PR.
 
 ## Test Evidence
 
-See `.agent/reports/AE-0366.dev-summary.md`.
+See `.agent/reports/AE-0366.dev-summary.md` (GATES_JSON line).
+
+## Follow-ups
+
+- `PersonaAgent.enforce()` still passes its input through the lowercasing `sanitize_llm_input`
+  and replaces `draft_text` with the rewrite; with a persona attached it can lowercase drafts.
+  Persona code is owned by another PR (not touched here).
+- `presentation_validation.py` (412 lines), `phase_artifact_runner.py` and
+  `editorial_workflow_service.py` exceed the 400-line guideline (pre-existing).
 
 ## QA Report
 
