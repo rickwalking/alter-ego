@@ -56,3 +56,10 @@ Feature: Grok Bot scout intake
     When Grok Bot calls scout-failed with reason "first" again
     Then the response is 200 with delivered false
     And no Telegram message is sent
+
+  # QA r2 R7: the cap read and the record are serialized.
+  Scenario: Concurrent scout failures respect the daily cap
+    Given no scout failure was delivered in the last 24 hours
+    When Grok Bot sends five scout-failed calls with distinct reasons at the same time
+    Then exactly three Telegram messages are sent
+    And the other calls return delivered false with "scout_failure_daily_cap"

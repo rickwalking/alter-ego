@@ -25,10 +25,14 @@ from rag_backend.modules.autopilot.constants import (
     MODULE_NAME,
 )
 from rag_backend.modules.autopilot.domain.scout_ports import ScoutFailureEntry
+from rag_backend.modules.autopilot.infrastructure.advisory_lock import (
+    advisory_xact_lock,
+)
 from rag_backend.modules.autopilot.scout_constants import (
     AGGREGATE_TYPE_AUTOPILOT_SCOUT,
     EVENT_TYPE_SCOUT_FAILED,
     PAYLOAD_SCOUT_REASON,
+    SCOUT_FAILURE_LOCK_KEY,
 )
 
 
@@ -37,6 +41,10 @@ class OutboxScoutFailureLog:
 
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
+
+    async def lock(self) -> None:
+        """Serialize the cap check with concurrent requests until the commit."""
+        await advisory_xact_lock(self._session, SCOUT_FAILURE_LOCK_KEY)
 
     async def reasons_since(self, since: datetime) -> tuple[str, ...]:
         """Reasons of scout-failed rows created at or after ``since``."""
@@ -60,7 +68,7 @@ class OutboxScoutFailureLog:
         await self._session.flush()
 
     async def commit(self) -> None:
-        """Commit so a later request in the same day sees this failure."""
+        """Commit (releasing the lock) so a later request sees this failure."""
         await self._session.commit()
 
 

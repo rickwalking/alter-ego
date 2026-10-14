@@ -87,9 +87,20 @@ class ScoutFailureService:
         """Deliver the reason, or return a stable error code and send nothing."""
         cleaned = without_urls(strip_controls(command.reason))
         chat_id = self._deps.chat_id.strip()
-        blocked = _blocked(cleaned, chat_id) or await self._suppressed(cleaned)
+        blocked = _blocked(cleaned, chat_id)
         if blocked is not None:
             return _undelivered(blocked)
+        await self._deps.log.lock()
+        try:
+            return await self._report_locked(cleaned, chat_id)
+        finally:
+            await self._deps.log.commit()
+
+    async def _report_locked(self, cleaned: str, chat_id: str) -> ScoutFailureResult:
+        """Cap check, send, and record, serialized by the log lock (QA r2 R7)."""
+        suppressed = await self._suppressed(cleaned)
+        if suppressed is not None:
+            return _undelivered(suppressed)
         try:
             await self._deps.notifier.send_status(_notice(chat_id, cleaned))
         except NotifierUnconfiguredError:
@@ -112,7 +123,6 @@ class ScoutFailureService:
     async def _remember(self, reason: str) -> None:
         entry = ScoutFailureEntry(reason=reason, sent_at=self._deps.clock.now())
         await self._deps.log.record(entry)
-        await self._deps.log.commit()
 
 
 def without_urls(reason: str) -> str:

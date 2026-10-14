@@ -9,7 +9,7 @@ from __future__ import annotations
 from datetime import datetime, timedelta
 from uuid import UUID
 
-from sqlalchemy import delete, func, select, text
+from sqlalchemy import delete, func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -28,17 +28,15 @@ from rag_backend.modules.autopilot.domain.ports import (
     RecordServedUrls,
 )
 from rag_backend.modules.autopilot.domain.x_status import canonical_url
+from rag_backend.modules.autopilot.infrastructure.advisory_lock import (
+    advisory_xact_lock,
+)
 from rag_backend.modules.autopilot.infrastructure.models import (
     AutopilotRunModel,
     ServedSignalUrlModel,
     TopicCandidateModel,
 )
-from rag_backend.modules.autopilot.recovery_constants import (
-    ADVISORY_LOCK_PARAM,
-    ADVISORY_LOCK_SQL,
-    DIALECT_POSTGRESQL,
-    INTAKE_LOCK_KEY,
-)
+from rag_backend.modules.autopilot.recovery_constants import INTAKE_LOCK_KEY
 from rag_backend.modules.editorial.public import CarouselAutomationAcl
 
 
@@ -111,11 +109,7 @@ class SqlAlchemyTopicIntakeStore:
         Two concurrent POSTs would otherwise both read "hash unknown" and
         "under the daily cap" before either commits (QA r1).
         """
-        if self._session.get_bind().dialect.name != DIALECT_POSTGRESQL:
-            return
-        await self._session.execute(
-            text(ADVISORY_LOCK_SQL), {ADVISORY_LOCK_PARAM: INTAKE_LOCK_KEY}
-        )
+        await advisory_xact_lock(self._session, INTAKE_LOCK_KEY)
 
     async def add_queued_run(self, command: QueuedRunCommand) -> None:
         """Insert a queued run stamped with the intake clock."""

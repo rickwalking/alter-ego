@@ -63,15 +63,22 @@ class _Log:
         self.reasons = list(reasons)
         self.since: datetime | None = None
         self.commits = 0
+        self.calls: list[str] = []
+
+    async def lock(self) -> None:
+        self.calls.append("lock")
 
     async def reasons_since(self, since: datetime) -> tuple[str, ...]:
+        self.calls.append("read")
         self.since = since
         return tuple(self.reasons)
 
     async def record(self, entry: ScoutFailureEntry) -> None:
+        self.calls.append("record")
         self.reasons.append(entry.reason)
 
     async def commit(self) -> None:
+        self.calls.append("commit")
         self.commits += 1
 
 
@@ -219,3 +226,32 @@ async def test_failed_send_is_not_recorded() -> None:
         ScoutFailureCommand(reason=_REASON)
     )
     assert log.reasons == []
+
+
+# Scenario: Concurrent scout failures respect the daily cap (QA r2 R7)
+@pytest.mark.asyncio
+async def test_cap_is_read_and_recorded_under_the_lock() -> None:
+    """The lock comes before the cap read; the commit after the record ends it."""
+    log = _Log()
+    await _service(_Recorder(), log=log).report(ScoutFailureCommand(reason=_REASON))
+    assert log.calls == ["lock", "read", "record", "commit"]
+
+
+# Scenario: Concurrent scout failures respect the daily cap (QA r2 R7)
+@pytest.mark.asyncio
+async def test_suppressed_failure_releases_the_lock() -> None:
+    """A capped request commits nothing but still ends its locking transaction."""
+    log = _Log(("one", "two", "three"))
+    result = await _service(_Recorder(), log=log).report(
+        ScoutFailureCommand(reason="four")
+    )
+    assert result.error == DETAIL_SCOUT_DAILY_CAP
+    assert log.calls == ["lock", "read", "commit"]
+
+
+@pytest.mark.asyncio
+async def test_empty_reason_never_takes_the_lock() -> None:
+    """Validation failures do not touch the database."""
+    log = _Log()
+    await _service(_Recorder(), log=log).report(ScoutFailureCommand(reason="\x00"))
+    assert log.calls == []

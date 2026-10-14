@@ -52,6 +52,10 @@ class ScoutFailureEntry:
 class ScoutFailureLog(Protocol):
     """Remembers delivered scout failures. The caller commits."""
 
+    async def lock(self) -> None:
+        """Hold the cap lock until the next commit (QA r2 R7)."""
+        ...
+
     async def reasons_since(self, since: datetime) -> tuple[str, ...]:
         """Reasons delivered at or after ``since``, oldest first."""
         ...
