@@ -52,7 +52,9 @@ def _slide_body(slide: dict[str, object]) -> str:
     presentation_pt = as_dict(slide.get(PRESENTATION_PT_KEY))
     if presentation_pt is not None:
         body = str(presentation_pt.get("body") or "").strip()
-        if body and not body.startswith("{"):
+        if not body.startswith("{"):
+            # AE-0366: the presentation copy is the source of truth, even when
+            # its body is empty: never resurrect stale draft_text behind it.
             return body
     draft_body = str(
         slide.get(SLIDE_DRAFT_TEXT_KEY, "") or slide.get(OUTLINE_LEGACY_BODY_KEY, "")
@@ -83,6 +85,24 @@ def _structured_from_presentation(
     return payload
 
 
+def _translation_from_presentation(
+    presentation_en: dict[str, object],
+    translation_en: dict[str, object] | None,
+) -> dict[str, object]:
+    """EN row copy: the (possibly reviewer-edited) presentation_en wins.
+
+    AE-0366: the translator map only fills gaps (and carries the EN
+    long_form_notes); it used to override an edited presentation_en heading and
+    body, so EN edits never reached the rendered slides.
+    """
+    base = dict(translation_en or {})
+    for key in ("heading", "body"):
+        value = str(presentation_en.get(key) or "").strip()
+        base[key] = value or str(base.get(key) or "")
+    base.update(_structured_from_presentation(presentation_en))
+    return base
+
+
 def _slide_data_from_draft(
     input: SlideDataFromDraftInput,  # noqa: A002 — shadowing built-in is intentional here
 ) -> SlideData:
@@ -93,26 +113,7 @@ def _slide_data_from_draft(
     structured_pt = _structured_from_presentation(presentation_pt)
     translation_en = input.translations_en.get(input.slide_number)
     if presentation_en is not None:
-        structured_en = _structured_from_presentation(presentation_en)
-        if translation_en is None:
-            translation_en = {
-                "heading": str(presentation_en.get("heading") or ""),
-                "body": str(presentation_en.get("body") or ""),
-                **structured_en,
-            }
-        elif structured_en:
-            translation_en = {
-                **translation_en,
-                **structured_en,
-                "heading": str(
-                    translation_en.get("heading")
-                    or presentation_en.get("heading")
-                    or ""
-                ),
-                "body": str(
-                    translation_en.get("body") or presentation_en.get("body") or ""
-                ),
-            }
+        translation_en = _translation_from_presentation(presentation_en, translation_en)
     return SlideData(
         slide_number=input.slide_number,
         slide_type=input.slide_type,

@@ -22,6 +22,14 @@ from rag_backend.application.services.carousel.localized_slide_builder import (
     build_localized_slides_with_failures,
     resolve_policy_version,
 )
+from rag_backend.application.services.carousel.presentation_casing_markers import (
+    apply_sentence_case_repair,
+    casing_marker_violations,
+)
+from rag_backend.application.services.carousel.presentation_content_rules import (
+    TranslationCheckCommand,
+    translation_violations,
+)
 from rag_backend.application.services.carousel.presentation_policy import (
     CarouselPresentationPolicy,
     load_presentation_policy,
@@ -77,6 +85,8 @@ def _validate_single_slide(
     presentation_pt = as_dict(slide.get(PRESENTATION_PT_KEY))
     presentation_en = as_dict(slide.get(PRESENTATION_EN_KEY))
     violations: list[SlideValidationViolation] = list(marker_violations(slide))
+    # AE-0366: fields the sentence-case repair had to fix stay blocking.
+    violations.extend(casing_marker_violations(slide, policy))
     if presentation_pt is not None:
         violations.extend(
             validate_slide_payload(
@@ -107,6 +117,13 @@ def _validate_single_slide(
         )
         if parity is not None:
             violations.append(parity)
+        violations.extend(
+            translation_violations(
+                TranslationCheckCommand(
+                    presentation_pt, presentation_en, policy, slide_index
+                )
+            )
+        )
     return violations
 
 
@@ -200,18 +217,26 @@ def _review_updates_for(
 def _build_and_recover(
     slide_drafts: list[dict[str, object]],
     translations_en: Mapping[int, dict[str, object]] | None,
+    policy_version: str,
 ) -> tuple[
     list[dict[str, object]],
     tuple[SlideParseFailure, ...],
     tuple[SlideParseFailure, ...],
 ]:
-    """Build localized slides, then run deterministic parse-failure recovery."""
+    """Build localized slides, recover parse failures, repair sentence case.
+
+    AE-0366: the sentence-case repair runs BEFORE validation and marks every
+    field it fixed, so the report stays blocking until the slide is regenerated.
+    """
     built, failures = build_localized_slides_with_failures(
         slide_drafts,
         translations_en=translations_en,
     )
     recovered, remaining = recover_parse_failures(built, failures)
-    return recovered, tuple(failures), tuple(remaining)
+    repaired = apply_sentence_case_repair(
+        recovered, load_presentation_policy(policy_version)
+    )
+    return repaired, tuple(failures), tuple(remaining)
 
 
 def build_presentation_review_updates(
@@ -224,7 +249,7 @@ def build_presentation_review_updates(
     if not slide_drafts:
         return _empty_review_updates(policy_version)
     resolved_policy = policy_version or resolve_policy_version(slide_drafts)
-    localized, _, _ = _build_and_recover(slide_drafts, translations_en)
+    localized, _, _ = _build_and_recover(slide_drafts, translations_en, resolved_policy)
     localized = repair_localized_slides_sync(localized, policy_version=resolved_policy)
     return _review_updates_for(
         localized,
@@ -244,7 +269,7 @@ async def build_presentation_review_result_async(
         return PresentationReviewBuildResult(_empty_review_updates(policy_version))
     resolved_policy = policy_version or resolve_policy_version(slide_drafts)
     localized, all_failures, remaining = _build_and_recover(
-        slide_drafts, translations_en
+        slide_drafts, translations_en, resolved_policy
     )
     localized = await repair_localized_slides(localized, policy_version=resolved_policy)
     updates = _review_updates_for(

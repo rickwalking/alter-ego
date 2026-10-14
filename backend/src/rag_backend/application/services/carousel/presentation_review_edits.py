@@ -19,6 +19,9 @@ from rag_backend.application.services.carousel.localized_slide_builder import (
 from rag_backend.application.services.carousel.outline_normalize import (
     OUTLINE_FIELD_TITLE,
 )
+from rag_backend.application.services.carousel.presentation_casing_markers import (
+    drop_casing_repair_markers,
+)
 from rag_backend.application.services.carousel.presentation_review import (
     WORKFLOW_STATE_LOCALIZED_SLIDES_KEY,
     WORKFLOW_STATE_PRESENTATION_POLICY_VERSION_KEY,
@@ -70,6 +73,8 @@ def merge_localized_slide_edits(
                 # AE-0309: a reviewer-provided payload supersedes the stored
                 # parse failure for that locale.
                 drop_parse_failure_marker(updated, _LOCALE_BY_PAYLOAD_KEY[locale_key])
+                # AE-0366: the reviewer's copy also supersedes casing markers.
+                drop_casing_repair_markers(updated, _LOCALE_BY_PAYLOAD_KEY[locale_key])
         merged.append(updated)
     return merged
 
@@ -93,21 +98,23 @@ def _apply_pt_edits(
     updated: dict[str, object],
     pt_payload: dict[str, object] | None,
 ) -> dict[str, object]:
-    """Apply PT locale edits to the updated draft."""
+    """Apply PT locale edits to the updated draft.
+
+    AE-0366: the edited ``presentation_pt`` is the source of truth the slide
+    rows are persisted from. It is always stored on the draft, the draft
+    ``title`` follows its heading, and ``draft_text`` mirrors its body (even an
+    empty one) so no stale raw copy can resurface at persist time.
+    """
     if pt_payload is None:
-        heading = ""
-        body = ""
-    else:
-        heading = _safe_str(pt_payload.get(OUTLINE_LEGACY_HEADING_KEY))
-        body = _safe_str(pt_payload.get(OUTLINE_LEGACY_BODY_KEY))
+        return updated
+    heading = _safe_str(pt_payload.get(OUTLINE_LEGACY_HEADING_KEY))
+    body = _safe_str(pt_payload.get(OUTLINE_LEGACY_BODY_KEY))
     if heading:
         updated[OUTLINE_FIELD_TITLE] = heading
         updated[OUTLINE_LEGACY_HEADING_KEY] = heading
-    if body:
-        updated[SLIDE_DRAFT_TEXT_KEY] = body
-        updated[OUTLINE_LEGACY_BODY_KEY] = body
-    if pt_payload is not None and as_dict(updated.get(PRESENTATION_PT_KEY)) is not None:
-        updated[PRESENTATION_PT_KEY] = dict(pt_payload)
+    updated[SLIDE_DRAFT_TEXT_KEY] = body
+    updated[OUTLINE_LEGACY_BODY_KEY] = body
+    updated[PRESENTATION_PT_KEY] = dict(pt_payload)
     return updated
 
 
@@ -115,12 +122,12 @@ def _merge_one_draft(
     draft: dict[str, object],
     localized: dict[str, object],
 ) -> dict[str, object]:
-    """Merge localized edits into a single draft."""
+    """Merge localized edits into a single draft (presentation copy wins)."""
     updated = dict(draft)
     pt_payload = as_dict(localized.get(PRESENTATION_PT_KEY))
     updated = _apply_pt_edits(updated, pt_payload)
     en_payload = as_dict(localized.get(PRESENTATION_EN_KEY))
-    if en_payload is not None and as_dict(updated.get(PRESENTATION_EN_KEY)) is not None:
+    if en_payload is not None:
         updated[PRESENTATION_EN_KEY] = dict(en_payload)
     return updated
 
@@ -196,10 +203,17 @@ def apply_localized_slide_edits(
     policy_version_raw = review.get(WORKFLOW_STATE_PRESENTATION_POLICY_VERSION_KEY)
     policy_version = str(policy_version_raw) if policy_version_raw else None
     merged = merge_localized_slide_edits(current, edited_slides)
+    # AE-0366: only the slides the reviewer actually edited are written back to
+    # the drafts/translations; untouched slides keep their draft fields.
+    edited_indices = {
+        edit.get(SLIDE_INDEX_KEY)
+        for edit in edited_slides
+        if isinstance(edit.get(SLIDE_INDEX_KEY), int)
+    }
     merged_by_index: dict[int, dict[str, object]] = {}
     for slide in merged:
         index = slide.get(SLIDE_INDEX_KEY)
-        if isinstance(index, int):
+        if isinstance(index, int) and index in edited_indices:
             merged_by_index[index] = slide
     updates = _validated_edit_updates(merged, policy_version)
     if policy_version:

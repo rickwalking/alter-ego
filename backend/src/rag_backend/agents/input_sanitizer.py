@@ -6,6 +6,7 @@ from rag_backend.domain.constants.input_sanitizer import (
     INJECTION_PATTERNS,
     MAX_LLM_INPUT_LENGTH,
 )
+from rag_backend.domain.copy_sanitize import sanitize_model_copy
 
 
 def sanitize_llm_input(value: str) -> str:
@@ -59,4 +60,9 @@ def sanitize_web_content(value: str) -> str:
     return cleaned.strip()
 
 
-__all__ = ["sanitize_display_input", "sanitize_llm_input", "sanitize_web_content"]
+__all__ = [
+    "sanitize_display_input",
+    "sanitize_llm_input",
+    "sanitize_model_copy",
+    "sanitize_web_content",
+]

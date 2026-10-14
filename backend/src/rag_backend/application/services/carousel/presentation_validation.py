@@ -11,6 +11,10 @@ from rag_backend.application.services.carousel.presentation_casing import (
     CasingCheckCommand,
     casing_violations,
 )
+from rag_backend.application.services.carousel.presentation_content_rules import (
+    ContentRuleCommand,
+    content_rule_violations,
+)
 from rag_backend.application.services.carousel.presentation_policy import (
     CarouselPresentationPolicy,
     load_presentation_policy,
@@ -272,15 +276,19 @@ def validate_slide_payload(
     _validate_heading_not_in_body(heading, body, ctx)
     _validate_copy_budgets(slide_type, (heading, body), ctx)
     _validate_structured_sections(command.payload, active_policy, ctx)
-    # AE-0312: PT casing rules (heading/body sentence case + proper nouns). No-op
-    # for v1 policies, which define no casing rules.
+    # AE-0312/AE-0366: sentence case (PT + EN, items too), proper nouns, and the
+    # structural/markup rubric rules. No-op for v1 policies.
+    casing = CasingCheckCommand(
+        payload=command.payload,
+        locale=command.locale,
+        policy=active_policy,
+        slide_index=command.slide_index,
+    )
+    violations.extend(casing_violations(casing))
     violations.extend(
-        casing_violations(
-            CasingCheckCommand(
-                payload=command.payload,
-                locale=command.locale,
-                policy=active_policy,
-                slide_index=command.slide_index,
+        content_rule_violations(
+            ContentRuleCommand(
+                casing.payload, casing.locale, casing.policy, casing.slide_index
             )
         )
     )

@@ -5,9 +5,14 @@ PRESENTATION_POLICY_VERSION_HERO_LOWER_THIRD_V1 = "hero_lower_third_v1"
 # carousels are stamped v2 at creation; DEFAULT stays v1 so legacy NULL-version
 # rows keep their current semantics on re-validation reads.
 PRESENTATION_POLICY_VERSION_HERO_LOWER_THIRD_V2 = "hero_lower_third_v2"
+# AE-0366: v3 makes sentence case (PT + EN, items too) blocking, adds the
+# objective quality-rubric rules (empty body, closing actions, summary points,
+# untranslated EN, <strong>-only markup) and the LLM quality rubric itself.
+# New carousels are stamped v3; v2 projects keep their frozen semantics.
+PRESENTATION_POLICY_VERSION_HERO_LOWER_THIRD_V3 = "hero_lower_third_v3"
 DEFAULT_PRESENTATION_POLICY_VERSION = PRESENTATION_POLICY_VERSION_HERO_LOWER_THIRD_V1
 CREATE_TIME_PRESENTATION_POLICY_VERSION = (
-    PRESENTATION_POLICY_VERSION_HERO_LOWER_THIRD_V2
+    PRESENTATION_POLICY_VERSION_HERO_LOWER_THIRD_V3
 )
 
 ERR_PRESENTATION_POLICY_NOT_FOUND = "presentation_policy_not_found"
@@ -20,6 +25,7 @@ ERR_PRESENTATION_POLICY_RULE_SEVERITY_MISSING = (
 SUPPORTED_PRESENTATION_POLICY_VERSIONS: frozenset[str] = frozenset({
     PRESENTATION_POLICY_VERSION_HERO_LOWER_THIRD_V1,
     PRESENTATION_POLICY_VERSION_HERO_LOWER_THIRD_V2,
+    PRESENTATION_POLICY_VERSION_HERO_LOWER_THIRD_V3,
 })
 
 CONTRACTS_SUBDIR = "contracts"
@@ -36,5 +42,6 @@ __all__ = [
     "POLICY_FILE_SUFFIX",
     "PRESENTATION_POLICY_VERSION_HERO_LOWER_THIRD_V1",
     "PRESENTATION_POLICY_VERSION_HERO_LOWER_THIRD_V2",
+    "PRESENTATION_POLICY_VERSION_HERO_LOWER_THIRD_V3",
     "SUPPORTED_PRESENTATION_POLICY_VERSIONS",
 ]
