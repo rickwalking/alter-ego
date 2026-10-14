@@ -1,6 +1,6 @@
 # AE-0368 — Instagram publish job never posts: quota read always unreadable
 
-Status: Intake
+Status: Dev Complete
 Tier: T1
 Priority: P0
 Type: Bugfix
