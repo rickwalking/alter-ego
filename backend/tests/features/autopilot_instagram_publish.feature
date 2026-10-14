@@ -156,3 +156,24 @@ Feature: Idempotent Instagram publish
     When the owner's manual publish takes the claim
     Then it re-reads the ledger and resumes that container instead of opening one
     And a post id stored in between is returned without calling Graph
+
+  # AE-0368: prod sat in "publishing" with content_publishing_limit_unreadable.
+  Scenario: The quota read requests the config field
+    Given the Graph publishing-limit endpoint returns config only when asked for it
+    When the publish job reads the content publishing limit
+    Then the request carries fields "quota_usage,config"
+    And the remaining quota is quota_total minus quota_usage
+
+  Scenario: A quota body without config falls back to the documented limit
+    Given the publishing-limit body has quota_usage 0 and no config
+    When the publish job runs
+    Then the remaining quota is computed against Meta's documented 100 posts per 24 hours
+    And a warning is logged
+    And the carousel is published
+
+  Scenario: An unreadable quota fails the run instead of looping forever
+    Given the publishing-limit body has no readable quota_usage
+    When the publish job runs three times past the backoff
+    Then no container is created
+    And the run is "publish_failed" with reason "content_publishing_limit_unreadable"
+    And the owner is notified with a Retry button

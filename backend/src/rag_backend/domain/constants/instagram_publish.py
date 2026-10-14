@@ -79,6 +79,12 @@ KEY_CONFIG = "config"
 KEY_QUOTA_TOTAL = "quota_total"
 KEY_ERROR = "error"
 KEY_CODE = "code"
+# Without ``fields`` Graph returns only ``quota_usage`` (AE-0368, verified live
+# on graph.instagram.com/v23.0). ``config`` carries ``quota_total``.
+PUBLISHING_LIMIT_FIELDS = ",".join((KEY_QUOTA_USAGE, KEY_CONFIG))
+# Meta's documented limit: 100 API-published posts per rolling 24 hours. Used
+# only when a readable ``quota_usage`` comes without ``config.quota_total``.
+DEFAULT_PUBLISHING_QUOTA_TOTAL = 100
 
 PUBLISH_RESULT_PUBLISHED = "published"
 PUBLISH_RESULT_FAILED = "failed"
@@ -94,6 +100,7 @@ __all__ = [
     "CONTAINER_STATUS_FINISHED",
     "CONTAINER_STATUS_IN_PROGRESS",
     "CONTAINER_STATUS_PUBLISHED",
+    "DEFAULT_PUBLISHING_QUOTA_TOTAL",
     "ERR_INSTAGRAM_API_NO_ID",
     "ERR_INSTAGRAM_API_REQUEST_FAILED",
     "ERR_INSTAGRAM_CONTAINER_FAILED",
@@ -136,6 +143,7 @@ __all__ = [
     "MEDIA_TYPE_CAROUSEL",
     "MEDIA_TYPE_CAROUSEL_ALBUM",
     "MIN_INSTAGRAM_CAROUSEL_ITEMS",
+    "PUBLISHING_LIMIT_FIELDS",
     "PUBLISH_RESULT_FAILED",
     "PUBLISH_RESULT_PUBLISHED",
     "RECENT_MEDIA_LIMIT",
