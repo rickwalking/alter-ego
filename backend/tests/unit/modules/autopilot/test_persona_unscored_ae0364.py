@@ -21,7 +21,6 @@ from rag_backend.application.services.carousel.editorial_workflow_service_helper
 from rag_backend.application.services.carousel.workflow_state import (
     CarouselWorkflowState,
 )
-
 from rag_backend.domain.constants.carousel_workflow import (
     ERR_PERSONA_SCORE_TOO_LOW,
     ERR_PRESENTATION_VALIDATION_BLOCKED,
@@ -106,14 +105,12 @@ def test_missing_persona_scores_key_approves() -> None:
 
 def test_score_of_62_revises_and_the_engine_agrees() -> None:
     """Scenario: Persona scores, when present, still enforce the voice floor."""
-    state = _state(
-        **{
-            FIELD_PERSONA_SCORES: {
-                "slide_1": {FIELD_OVERALL: 80},
-                "slide_2": {FIELD_OVERALL: _LOW},
-            }
+    state = _state(**{
+        FIELD_PERSONA_SCORES: {
+            "slide_1": {FIELD_OVERALL: 80},
+            "slide_2": {FIELD_OVERALL: _LOW},
         }
-    )
+    })
 
     decision = _decide(state)
 
