@@ -1,0 +1,14 @@
+{
+  "topics": [
+    {
+      "title": "Agents that read the timeline",
+      "angle": "What a logged-in browser sees that search snippets miss",
+      "why_viral": "Three model launches in one week are already spreading on X",
+      "audience": "PT-BR builders",
+      "niche": "ai",
+      "brief": "Rank the AI theme with the highest viral potential for a Brazilian tech audience. Cite only URLs from the signals bundle and the accepted X posts.",
+      "sources": ["https://x.com/openai/status/2010000000000000001"],
+      "score": 80
+    }
+  ]
+}

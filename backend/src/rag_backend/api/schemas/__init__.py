@@ -35,6 +35,7 @@ from rag_backend.api.schemas.carousel import (
     CarouselSlideResponse,
     InstagramPublishRequest,
     InstagramPublishResponse,
+    InstagramPublishStatusResponse,
     ResearchSourceResponse,
 )
 
@@ -136,6 +137,7 @@ __all__ = [
     "HealthResponse",
     "InstagramPublishRequest",
     "InstagramPublishResponse",
+    "InstagramPublishStatusResponse",
     "MessageListResponse",
     "MessageResponse",
     "MessageSource",

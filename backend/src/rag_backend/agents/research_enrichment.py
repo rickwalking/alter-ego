@@ -24,7 +24,7 @@ from rag_backend.agents.tools.constants import (
     SOURCE_KEY_TITLE,
     SOURCE_KEY_URL,
 )
-from rag_backend.agents.tools.url_safety import is_safe_research_url
+from rag_backend.agents.tools.url_safety import is_safe_research_target
 from rag_backend.domain.constants.carousel_workflow import SOURCE_TYPE_URL
 from rag_backend.domain.constants.research_enrichment import (
     BLOCK_PAGE_MARKERS,
@@ -66,11 +66,13 @@ def _is_scrapeable(source: dict[str, str]) -> bool:
     return bool(_BARE_URL_RE.match(content))
 
 
-def _select_scrape_jobs(sources: list[dict[str, str]]) -> list[int]:
+async def _select_scrape_jobs(sources: list[dict[str, str]]) -> list[int]:
     """Pick the source indexes to navigate: safe URLs only, cap-bounded.
 
-    The SSRF guard runs at selection time so an unsafe URL never consumes a
-    slot of the scrape budget (it is skipped with a warning instead).
+    The SSRF guard (scheme, internal names, and every DNS answer) runs at
+    selection time so an unsafe URL never consumes a slot of the scrape budget
+    (it is skipped with a warning instead). The scraper re-checks each
+    redirect hop (QA r1 S-W1).
     """
     budget = MAX_URL_SOURCES_SCRAPED
     jobs: list[int] = []
@@ -78,7 +80,7 @@ def _select_scrape_jobs(sources: list[dict[str, str]]) -> list[int]:
         if not _is_scrapeable(source):
             continue
         url = source.get("content", "")
-        if not is_safe_research_url(url):
+        if not await is_safe_research_target(url):
             logger.warning("research_url_blocked", url=url)
             continue
         if budget == 0:
@@ -96,7 +98,7 @@ async def _scrape_url_sources(
     """Replace navigable sources' content with scraped page text, bounded."""
     out = [dict(source) for source in sources]
     semaphore = asyncio.Semaphore(MAX_CONCURRENT_SCRAPES)
-    jobs = _select_scrape_jobs(out)
+    jobs = await _select_scrape_jobs(out)
     results = await asyncio.gather(
         *(_scrape_one(out[i]["content"], research_tool, semaphore) for i in jobs)
     )

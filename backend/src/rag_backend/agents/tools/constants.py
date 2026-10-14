@@ -2,6 +2,10 @@
 
 from __future__ import annotations
 
+from rag_backend.domain.constants.url_safety import (
+    ALLOWED_URL_SCHEMES,
+    BLOCKED_URL_HOSTNAMES,
+)
 from rag_backend.domain.models import ResearchSourceType
 
 # Tool names exposed to the researcher subagent.
@@ -18,8 +22,8 @@ SCRAPE_FAILURE_PREFIX = "scrape failed for"
 # targets (loopback/private/link-local incl. the cloud metadata endpoint) are
 # refused before the Playwright service is invoked.
 SCRAPE_BLOCKED_PREFIX = "scrape blocked for"
-ALLOWED_URL_SCHEMES = ("http", "https")
-BLOCKED_URL_HOSTNAMES = ("localhost", "metadata.google.internal")
+# The scheme and host lists live in the domain so the application scraper
+# shares them (QA r1 S-W1).
 
 # search_web result formatting.
 EMPTY_SEARCH_RESULT = "No web results found."

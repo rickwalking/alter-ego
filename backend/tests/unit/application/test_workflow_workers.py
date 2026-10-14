@@ -34,13 +34,16 @@ def _noop_factory(_event_service: WorkflowEventService) -> StuckWorkflowAutoReje
     return _NoopAutoRejector()
 
 
-def _settings() -> Settings:
+def _settings(**overrides: bool | int) -> Settings:
     # Disable downstream DB-touching steps so the test isolates the error path.
-    return Settings(
-        workflow_worker_interval_seconds=0,
-        workflow_alerts_enabled=False,
-        workflow_auto_reject_enabled=False,
-    )
+    values: dict[str, bool | int] = {
+        "workflow_worker_interval_seconds": 0,
+        "workflow_alerts_enabled": False,
+        "workflow_auto_reject_enabled": False,
+        "autopilot_enabled": False,
+    }
+    values.update(overrides)
+    return Settings(**values)
 
 
 @pytest.mark.asyncio
@@ -123,6 +126,20 @@ class _RecordingSweeper:
         return 0
 
 
+class _FakeSession:
+    """Records the per-step commits and rollbacks of the worker tick."""
+
+    def __init__(self) -> None:
+        self.commits = 0
+        self.rollbacks = 0
+
+    async def commit(self) -> None:
+        self.commits += 1
+
+    async def rollback(self) -> None:
+        self.rollbacks += 1
+
+
 class _NoopNotifications:
     async def send_deadline_reminders(self, _db: object) -> int:
         return 0
@@ -148,7 +165,171 @@ async def test_run_tick_sweeps_republish_after_drift_reconciler() -> None:
         republish_sweeper=cast(object, _RecordingSweeper(log)),
     )
     counters = await workflow_workers._run_tick(
-        _settings(), cast(object, None), collaborators
+        _settings(), cast(object, _FakeSession()), collaborators
     )
     assert log == ["reaper", "drift", "republish"]
     assert counters["republished"] == 0
+    assert counters["instagram_runs"] == 0
+
+
+class _RecordingPublish:
+    def __init__(self, log: list[str]) -> None:
+        self._log = log
+
+    async def tick(self, _db: object) -> int:
+        self._log.append("instagram")
+        return 1
+
+
+@pytest.mark.asyncio
+async def test_run_tick_publishes_instagram_after_the_other_workers() -> None:
+    """AE-0357: the Instagram job is the last collaborator on the tick."""
+    from typing import cast
+
+    log: list[str] = []
+    collaborators = workflow_workers._TickCollaborators(
+        notifications=cast(object, _NoopNotifications()),
+        alerts=cast(object, _NoopAlerts()),
+        auto_rejector=cast(object, _NoopAutoRejector()),
+        stale_run_reaper=cast(object, _RecordingReaper(log)),
+        drift_reconciler=cast(object, _RecordingReconciler(log)),
+        republish_sweeper=cast(object, _RecordingSweeper(log)),
+        instagram_publish=cast(object, _RecordingPublish(log)),
+    )
+    counters = await workflow_workers._run_tick(
+        _settings(), cast(object, _FakeSession()), collaborators
+    )
+    assert log == ["reaper", "drift", "republish", "instagram"]
+    assert counters["instagram_runs"] == 1
+    assert counters["autopilot_runs"] == 0
+
+
+class _RecordingRunner:
+    def __init__(self, log: list[str]) -> None:
+        self._log = log
+
+    async def tick(self, _db: object) -> int:
+        self._log.append("autopilot")
+        return 1
+
+
+@pytest.mark.asyncio
+async def test_run_tick_runs_autopilot_after_instagram_when_enabled() -> None:
+    """AE-0354: an enabled runner is the step after Instagram."""
+    from typing import cast
+
+    log: list[str] = []
+    collaborators = workflow_workers._TickCollaborators(
+        notifications=cast(object, _NoopNotifications()),
+        alerts=cast(object, _NoopAlerts()),
+        auto_rejector=cast(object, _NoopAutoRejector()),
+        stale_run_reaper=cast(object, _RecordingReaper(log)),
+        drift_reconciler=cast(object, _RecordingReconciler(log)),
+        republish_sweeper=cast(object, _RecordingSweeper(log)),
+        instagram_publish=cast(object, _RecordingPublish(log)),
+        autopilot_runner=cast(object, _RecordingRunner(log)),
+    )
+    counters = await workflow_workers._run_tick(
+        _settings(autopilot_enabled=True),
+        cast(object, _FakeSession()),
+        collaborators,
+    )
+    assert log == ["reaper", "drift", "republish", "instagram", "autopilot"]
+    assert counters["autopilot_runs"] == 1
+
+
+@pytest.mark.asyncio
+async def test_run_tick_skips_autopilot_when_disabled() -> None:
+    """Feature: tests/features/autopilot_runner.feature
+    Scenario: Disabled worker skips the runner
+    """
+    from typing import cast
+
+    log: list[str] = []
+    collaborators = workflow_workers._TickCollaborators(
+        notifications=cast(object, _NoopNotifications()),
+        alerts=cast(object, _NoopAlerts()),
+        auto_rejector=cast(object, _NoopAutoRejector()),
+        stale_run_reaper=None,
+        drift_reconciler=None,
+        republish_sweeper=None,
+        instagram_publish=cast(object, _RecordingPublish(log)),
+        autopilot_runner=cast(object, _RecordingRunner(log)),
+    )
+    counters = await workflow_workers._run_tick(
+        _settings(autopilot_enabled=False),
+        cast(object, _FakeSession()),
+        collaborators,
+    )
+    assert log == ["instagram"]
+    assert counters["autopilot_runs"] == 0
+    assert counters["telegram_notices"] == 0
+
+
+class _RecordingTelegram:
+    def __init__(self, log: list[str]) -> None:
+        self._log = log
+
+    async def tick(self, _db: object) -> int:
+        self._log.append("telegram")
+        return 2
+
+
+@pytest.mark.asyncio
+async def test_run_tick_notifies_after_autopilot() -> None:
+    """AE-0355: Telegram runs after the runner so a ready event is visible."""
+    from typing import cast
+
+    log: list[str] = []
+    collaborators = workflow_workers._TickCollaborators(
+        notifications=cast(object, _NoopNotifications()),
+        alerts=cast(object, _NoopAlerts()),
+        auto_rejector=cast(object, _NoopAutoRejector()),
+        stale_run_reaper=None,
+        drift_reconciler=None,
+        republish_sweeper=None,
+        instagram_publish=cast(object, _RecordingPublish(log)),
+        autopilot_runner=cast(object, _RecordingRunner(log)),
+        telegram_notify=cast(object, _RecordingTelegram(log)),
+    )
+    counters = await workflow_workers._run_tick(
+        _settings(autopilot_enabled=True),
+        cast(object, _FakeSession()),
+        collaborators,
+    )
+    assert log == ["instagram", "autopilot", "telegram"]
+    assert counters["telegram_notices"] == 2
+
+
+class _RecordingCredentials:
+    def __init__(self, log: list[str]) -> None:
+        self._log = log
+
+    async def tick(self, _db: object) -> int:
+        self._log.append("credentials")
+        return 1
+
+
+@pytest.mark.asyncio
+async def test_run_tick_refreshes_credentials_before_instagram() -> None:
+    """Feature: tests/features/autopilot_ig_token.feature
+    Scenario: Token refreshed before expiry
+    """
+    from typing import cast
+
+    log: list[str] = []
+    collaborators = workflow_workers._TickCollaborators(
+        notifications=cast(object, _NoopNotifications()),
+        alerts=cast(object, _NoopAlerts()),
+        auto_rejector=cast(object, _NoopAutoRejector()),
+        stale_run_reaper=None,
+        drift_reconciler=None,
+        republish_sweeper=None,
+        credential_refresh=cast(object, _RecordingCredentials(log)),
+        instagram_publish=cast(object, _RecordingPublish(log)),
+    )
+    counters = await workflow_workers._run_tick(
+        _settings(), cast(object, _FakeSession()), collaborators
+    )
+    assert log == ["credentials", "instagram"]
+    assert counters["credential_refresh"] == 1

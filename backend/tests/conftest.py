@@ -131,3 +131,21 @@ def sample_documents() -> list[Document]:
             metadata={"category": "nlp"},
         ),
     ]
+
+
+# QA r1 S-W1: the research SSRF guard resolves hostnames before scraping. Tests
+# must never touch real DNS, so every test sees a public answer unless it
+# passes its own resolver (see tests/unit/domain/test_url_safety.py).
+_TEST_PUBLIC_IP = "93.184.216.34"
+
+
+async def _public_resolver(_host: str) -> tuple[str, ...]:
+    return (_TEST_PUBLIC_IP,)
+
+
+@pytest.fixture(autouse=True)
+def _stub_research_dns(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Replace the SSRF guard's system resolver with a fixed public address."""
+    from rag_backend.domain import url_safety
+
+    monkeypatch.setattr(url_safety, "system_resolve", _public_resolver)

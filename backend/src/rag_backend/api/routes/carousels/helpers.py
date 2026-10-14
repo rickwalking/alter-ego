@@ -25,6 +25,10 @@ from rag_backend.application.services.carousel.artifact_path_resolver import (
 from rag_backend.domain.constants import LANGUAGE_PT
 from rag_backend.domain.models import CarouselProject
 from rag_backend.domain.protocols import CarouselRepository
+from rag_backend.modules.publishing import (
+    SlideImageUrlRequest,
+    build_public_slide_image_urls,
+)
 
 _SAFE_IMAGE_FILENAME = re.compile(r"^[a-zA-Z0-9_\-\.]+$")
 
@@ -144,21 +148,30 @@ async def _load_project_with_output(
     return project
 
 
+def configured_public_base_url() -> str:
+    """Public origin Meta uses to fetch slide JPEGs. Empty when unset."""
+    from rag_backend.infrastructure.config.settings import get_settings
+
+    return get_settings().carousel_public_base_url
+
+
 def _build_public_image_urls(
     project_id: UUID,
     slide_numbers: Sequence[int] | int | None = None,
     lang: str = LANGUAGE_PT,
 ) -> list[str]:
-    from rag_backend.infrastructure.config.settings import get_settings
-
-    base = get_settings().carousel_public_base_url.rstrip("/")
+    base = configured_public_base_url().rstrip("/")
     if not base:
         raise RuntimeError(ERR_INSTAGRAM_PUBLIC_BASE_URL_NOT_CONFIGURED)
     if slide_numbers is None:
         slide_numbers = range(1, 5)
     if isinstance(slide_numbers, int):
         slide_numbers = range(1, slide_numbers + 1)
-    return [
-        f"{base}/api/carousels/{project_id}/slide-images/{lang}/slide_{i}.jpg"
-        for i in slide_numbers
-    ]
+    return build_public_slide_image_urls(
+        SlideImageUrlRequest(
+            base_url=base,
+            project_id=str(project_id),
+            slide_numbers=tuple(slide_numbers),
+            language=lang,
+        )
+    )

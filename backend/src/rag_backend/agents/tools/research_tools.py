@@ -22,7 +22,7 @@ from rag_backend.agents.tools.constants import (
     SOURCE_KEY_TITLE,
     SOURCE_KEY_URL,
 )
-from rag_backend.agents.tools.url_safety import is_safe_research_url
+from rag_backend.agents.tools.url_safety import is_safe_research_target
 from rag_backend.domain.protocols import ResearchTool
 from rag_backend.infrastructure.logging import get_logger
 
@@ -63,7 +63,7 @@ def build_scrape_url_tool(research: ResearchTool) -> BaseTool:
         Args:
             url: The absolute URL to browse.
         """
-        if not is_safe_research_url(url):
+        if not await is_safe_research_target(url):
             logger.warning("scrape_url_blocked", url=url)
             return f"{SCRAPE_BLOCKED_PREFIX} {url}: unsafe or non-http(s) target"
         try:

@@ -42,12 +42,19 @@ from rag_backend.modules.publishing.application.service import (
     PublishingPorts,
     PublishingService,
 )
+from rag_backend.modules.publishing.application.slide_image_urls import (
+    SlideImageUrlRequest,
+    build_public_slide_image_urls,
+)
 from rag_backend.modules.publishing.bootstrap import (
     PublishingAdapters,
     PublishingModule,
     bootstrap_module,
 )
 from rag_backend.modules.publishing.constants import BOARD_PHASES
+from rag_backend.modules.publishing.domain.instagram_target import (
+    InstagramPublishTarget,
+)
 from rag_backend.modules.publishing.domain.models import (
     BlogPost,
     BlogPostModel,
@@ -89,6 +96,9 @@ from rag_backend.modules.publishing.domain.projections import (
 )
 from rag_backend.modules.publishing.infrastructure.distribution_channel_adapter import (
     ChannelDistributionPublisher,
+)
+from rag_backend.modules.publishing.infrastructure.instagram_target import (
+    load_instagram_publish_target,
 )
 from rag_backend.modules.publishing.infrastructure.legacy_publishing_acl import (
     LegacyPublishingAcl,
@@ -145,6 +155,7 @@ __all__ = [
     "DistributionChannelKind",
     "DistributionPublisher",
     "DistributionResult",
+    "InstagramPublishTarget",
     "LegacyPublishingAcl",
     "Publication",
     "PublishingAdapters",
@@ -156,6 +167,9 @@ __all__ = [
     "PublishingService",
     "ReleasePhase",
     "ReleaseState",
+    "SlideImageUrlRequest",
     "bootstrap_module",
+    "build_public_slide_image_urls",
+    "load_instagram_publish_target",
     "public_blog_visibility_clause",
 ]

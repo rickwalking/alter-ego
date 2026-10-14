@@ -1,10 +1,8 @@
 # Active Task
 
-QA complete for AE-0028 epic (AE-0029 … AE-0039).
+AE-0359 is Dev Complete on `feat/ae-0359-autopilot-prod-wiring`.
 
-Report: `.agent/reports/AE-0028.qa.md` — **68/100, Needs Fixes**.
-
-Next: fix slide-image path traversal blocker, then AE-0039 E2E release evidence.
+`gate-capture.sh all` is green (fail 0). `frontend:security` passes. Four backend database gates skipped because `DATABASE_URL` is unset.
 
 ## Rules
 

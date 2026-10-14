@@ -11,10 +11,13 @@ RATE_LIMIT_PALETTE_WRITE = "10/minute"
 # AE-0297: public unauthenticated blog reads - committed abuse ceiling
 # (<=120/min/IP per the external review; distributed scraping = WAF follow-up).
 RATE_LIMIT_PUBLIC_BLOG_READ = "120/minute"
+# AE-0351: shared budget for /api/autopilot/* (one bucket per IP).
+RATE_LIMIT_AUTOPILOT = "10/minute"
 
 __all__ = [
     "RATE_LIMIT_ADMIN_MIGRATION",
     "RATE_LIMIT_AI_ENDPOINTS",
+    "RATE_LIMIT_AUTOPILOT",
     "RATE_LIMIT_CAROUSEL_PUBLISH",
     "RATE_LIMIT_PALETTE_WRITE",
     "RATE_LIMIT_PUBLIC_BLOG_READ",

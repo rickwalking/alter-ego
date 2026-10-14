@@ -37,15 +37,18 @@ _PAGE_TEXT = "Rust eliminates entire classes of memory bugs at compile time."
 
 
 class _FakePage:
-    async def goto(self, url: str, **_: object) -> None:
-        self.url = url
+    async def route(self, _pattern: str, _handler: object) -> None:
+        return None
+
+    async def set_content(self, _html: str, **_: object) -> None:
+        return None
 
     async def inner_text(self, _selector: str) -> str:
         return _PAGE_TEXT
 
 
 class _FakeBrowser:
-    async def new_page(self) -> _FakePage:
+    async def new_page(self, **_: object) -> _FakePage:
         return _FakePage()
 
     async def close(self) -> None:
@@ -69,9 +72,19 @@ class _FakePlaywright:
 
 
 def _patch_playwright(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Fake browser and fetch: no network in CI (QA r2 R2 fetches before render)."""
     import playwright.async_api as pw
 
+    from rag_backend.application.services.tools import research_tool
+    from rag_backend.application.services.tools.research_fetch import (
+        FetchedDocument,
+    )
+
+    async def _fetch(url: str) -> FetchedDocument:
+        return FetchedDocument(final_url=url, html=f"<body>{_PAGE_TEXT}</body>")
+
     monkeypatch.setattr(pw, "async_playwright", lambda: _FakePlaywright())
+    monkeypatch.setattr(research_tool, "fetch_public_document", _fetch)
 
 
 def _patch_search(monkeypatch: pytest.MonkeyPatch) -> None:

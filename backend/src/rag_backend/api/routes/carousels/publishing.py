@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from typing import Annotated
 from uuid import UUID
 
@@ -23,6 +24,7 @@ from rag_backend.api.schemas import (
     CarouselCaptionResponse,
     InstagramPublishRequest,
     InstagramPublishResponse,
+    InstagramPublishStatusResponse,
 )
 from rag_backend.domain.constants.carousel_workflow import (
     ERR_CAROUSEL_NOT_COMPLETED,
@@ -39,12 +41,41 @@ from rag_backend.domain.protocols import (
     SocialPublisher,
 )
 from rag_backend.infrastructure.database.models.carousel import CarouselProjectModel
+from rag_backend.modules.autopilot import (
+    AutopilotBootstrapDeps,
+    ManualInstagramPublishRequest,
+    ManualPublishRefusedError,
+    bootstrap_module,
+    manual_instagram_publish,
+)
 from rag_backend.modules.publishing import Publication, PublishingModule
 
 from .deps import get_carousel_repo, get_instagram_publisher
-from .helpers import _build_public_image_urls, assert_carousel_artifacts_healthy
+from .helpers import (
+    _build_public_image_urls,
+    assert_carousel_artifacts_healthy,
+    configured_public_base_url,
+)
 
 router = APIRouter()
+
+
+@dataclass(frozen=True)
+class InstagramPublishStatusDeps:
+    """Caller, repository, and session for the Instagram status route."""
+
+    user: User
+    repo: CarouselRepository
+    db: AsyncSession
+
+
+def get_instagram_publish_status_deps(
+    user: Annotated[User, Depends(require_editor_or_admin)],
+    repo: Annotated[CarouselRepository, Depends(get_carousel_repo)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> InstagramPublishStatusDeps:
+    """Bundle status-route dependencies so the handler stays at three arguments."""
+    return InstagramPublishStatusDeps(user=user, repo=repo, db=db)
 
 
 def get_publishing_module_for_distribution(
@@ -118,9 +149,7 @@ async def publish_to_instagram(
     body: InstagramPublishRequest,
     user: Annotated[User, Depends(require_editor_or_admin)],
     repo: Annotated[CarouselRepository, Depends(get_carousel_repo)],
-    publishing: Annotated[
-        PublishingModule, Depends(get_publishing_module_for_distribution)
-    ],
+    publisher: Annotated[SocialPublisher, Depends(get_instagram_publisher)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> InstagramPublishResponse:
     """Publish the carousel's slides to Instagram with the provided caption."""
@@ -158,9 +187,54 @@ async def publish_to_instagram(
             detail=ERR_INSTAGRAM_PUBLIC_BASE_URL_NOT_CONFIGURED,
         ) from None
 
-    result = await publishing.service.publish_instagram(body.caption, image_urls)
+    try:
+        outcome = await manual_instagram_publish(
+            ManualInstagramPublishRequest(
+                session=db,
+                publisher=publisher,
+                project_id=str(project_id),
+                caption=body.caption,
+                image_urls=tuple(image_urls),
+                public_base_url=configured_public_base_url(),
+            )
+        )
+    except ManualPublishRefusedError as exc:
+        # QA r1 H1: an autopilot run owns this carousel, or a publish is running.
+        raise HTTPException(status_code=409, detail=exc.code) from None
     return InstagramPublishResponse(
-        status=result.status,
-        ig_post_id=result.post_id,
-        error_message=result.error_message,
+        status=outcome.status,
+        ig_post_id=outcome.ig_post_id,
+        error_message=outcome.error_message,
+    )
+
+
+@router.get(
+    "/{project_id}/publish/instagram/status",
+    responses={
+        401: {"description": ERR_NOT_AUTHENTICATED},
+        403: {"description": ERR_FORBIDDEN},
+        404: {"description": ERR_NOT_FOUND},
+    },
+)
+@limiter.limit(RATE_LIMIT_CAROUSEL_PUBLISH)
+async def instagram_publish_status(
+    request: Request,
+    project_id: UUID,
+    deps: Annotated[
+        InstagramPublishStatusDeps,
+        Depends(get_instagram_publish_status_deps),
+    ],
+) -> InstagramPublishStatusResponse:
+    """Return the persisted Instagram publish state for this carousel."""
+    project = await deps.repo.get_project_by_id(project_id)
+    if project is None:
+        raise HTTPException(status_code=404, detail=ERR_CAROUSEL_NOT_FOUND)
+    assert_domain_owner_or_admin(project.owner_id, deps.user)
+    module = bootstrap_module(AutopilotBootstrapDeps(session=deps.db))
+    view = await module.instagram_status(str(project_id))
+    return InstagramPublishStatusResponse(
+        state=view.state,
+        ig_post_id=view.ig_post_id,
+        permalink=view.permalink,
+        error=view.error,
     )

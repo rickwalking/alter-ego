@@ -45,6 +45,8 @@ jobs:
               - 'backend/**'
               - 'scripts/ci/**'
               - 'scripts/metrics/**'
+              - 'docker-compose.prod.yml'
+              - '.github/workflows/deploy.yml'
             frontend:
               - 'frontend/**'
               - 'scripts/ci/**'

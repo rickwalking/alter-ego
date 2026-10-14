@@ -1,11 +1,13 @@
 """Application settings using Pydantic Settings."""
 
 from functools import lru_cache
+from typing import Literal
 
 from pydantic import AliasChoices, Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from rag_backend.domain.constants import ENCODING_UTF8
+from rag_backend.domain.constants.instagram_publish import GRAPH_HOST_INSTAGRAM
 from rag_backend.infrastructure.config.constants import (
     ENVIRONMENT_DEVELOPMENT,
     NON_PRODUCTION_ENVIRONMENTS,
@@ -123,6 +125,58 @@ class Settings(BaseSettings):
 
     meta_ig_access_token: SecretStr = SecretStr("")
     meta_ig_user_id: str = ""
+    # Instagram Login tokens (IGAA…) only work against graph.instagram.com.
+    # Page tokens set this to https://graph.facebook.com/v23.0.
+    meta_ig_graph_base: str = GRAPH_HOST_INSTAGRAM
+    # AE-0358: Fernet key for integration_credentials. Empty disables
+    # autopilot Instagram publishing and logs a startup warning.
+    credentials_encryption_key: SecretStr = Field(
+        default=SecretStr(""),
+        validation_alias=AliasChoices(
+            "CREDENTIALS_ENCRYPTION_KEY",
+            "credentials_encryption_key",
+        ),
+    )
+
+    # AE-0351: sha256 hex digest of the scout API key. Empty disables
+    # /api/autopilot/* (HTTP 503). The plaintext key is never stored.
+    grokbot_api_key_sha256: SecretStr = SecretStr("")
+
+    # AE-0352: X post enrichment. "none" (the default) never requests x.com
+    # or a mirror. "mirror" rewrites a status URL to
+    # https://{autopilot_x_mirror_host}/{handle}/status/{id}. The host is a
+    # hostname, not a URL. Leave the resolver at none while mirrors return 451.
+    autopilot_x_resolver: Literal["none", "mirror"] = "none"
+    autopilot_x_mirror_host: str = ""
+    # Optional GitHub Search token. Empty uses the unauthenticated API.
+    github_token: SecretStr = SecretStr("")
+    # AE-0353: queued autopilot runs allowed per America/Sao_Paulo day.
+    # Keep the default aligned with autopilot.constants.DEFAULT_DAILY_CAP.
+    autopilot_daily_cap: int = Field(
+        default=1,
+        ge=0,
+        validation_alias=AliasChoices("AUTOPILOT_DAILY_CAP", "autopilot_daily_cap"),
+    )
+    # AE-0355: empty token or chat id makes the notifier a no-op logger.
+    # The runner then escalates final review with notifier_unconfigured.
+    telegram_bot_token: SecretStr = SecretStr("")
+    telegram_owner_chat_id: str = ""
+    # AE-0356: empty rejects POST /api/telegram/webhook with HTTP 401.
+    telegram_webhook_secret: SecretStr = SecretStr("")
+
+    # AE-0354: the worker calls the in-process runner only when this is true.
+    autopilot_enabled: bool = Field(
+        default=False,
+        validation_alias=AliasChoices("AUTOPILOT_ENABLED", "autopilot_enabled"),
+    )
+    # Existing user id the created carousels are owned by. reviewer_id stays unset.
+    autopilot_owner_user_id: str = Field(
+        default="",
+        validation_alias=AliasChoices(
+            "AUTOPILOT_OWNER_USER_ID",
+            "autopilot_owner_user_id",
+        ),
+    )
 
     carousel_public_base_url: str = ""
 

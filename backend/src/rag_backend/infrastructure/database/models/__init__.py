@@ -5,6 +5,9 @@
 from rag_backend.infrastructure.database.carousel_run_guard import (
     register_carousel_run_guards,
 )
+from rag_backend.infrastructure.database.models.autopilot_registry import (
+    AUTOPILOT_TABLES as AUTOPILOT_TABLES,
+)
 from rag_backend.infrastructure.database.models.blog_post import BlogPostModel
 from rag_backend.infrastructure.database.models.carousel import (
     CarouselProjectModel,
@@ -48,6 +51,7 @@ from rag_backend.infrastructure.database.models.workflow_audit_log import (
 )
 
 __all__ = [
+    "AUTOPILOT_TABLES",
     "BlogPostModel",
     "CarouselArtifactBuildModel",
     "CarouselCreatorAssetModel",

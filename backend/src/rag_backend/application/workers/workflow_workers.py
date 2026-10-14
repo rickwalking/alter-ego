@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 from collections.abc import Callable
 from dataclasses import dataclass
+from typing import Protocol
 
 import structlog
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -36,6 +37,49 @@ logger = structlog.get_logger()
 AutoRejectorFactory = Callable[[WorkflowEventService], StuckWorkflowAutoRejector]
 
 
+class InstagramPublishTick(Protocol):
+    """One Instagram publish attempt per worker tick (AE-0357)."""
+
+    async def tick(self, db: AsyncSession) -> int:
+        """Publish or resume one due run. Returns 1 when a run was touched."""
+        ...
+
+
+class AutopilotRunnerTick(Protocol):
+    """One in-process autopilot step per worker tick (AE-0354)."""
+
+    async def tick(self, db: AsyncSession) -> int:
+        """Advance at most one run. Returns 1 when a run was touched."""
+        ...
+
+
+class TelegramNotifyTick(Protocol):
+    """Deliver pending owner notices on the worker tick (AE-0355)."""
+
+    async def tick(self, db: AsyncSession) -> int:
+        """Send due Telegram notices. Returns how many were delivered."""
+        ...
+
+
+class _DbStep(Protocol):
+    """Any autopilot worker step: one call per tick on the tick's session."""
+
+    async def tick(self, db: AsyncSession) -> int:
+        """Do the step. Returns how many items it touched."""
+        ...
+
+
+_LOG_STEP_FAILED = "autopilot_worker_step_failed"
+
+
+class CredentialRefreshTick(Protocol):
+    """Daily Instagram token refresh (AE-0358)."""
+
+    async def tick(self, db: AsyncSession) -> int:
+        """Refresh when due. Returns 1 when a new token was stored."""
+        ...
+
+
 @dataclass(frozen=True)
 class WorkflowWorkerServices:
     """Composition-root-injected collaborators for the worker tick (AE-0315).
@@ -49,6 +93,10 @@ class WorkflowWorkerServices:
     stale_run_reaper: CarouselStaleRunReaper | None = None
     drift_reconciler: CarouselDriftReconciler | None = None
     republish_sweeper: CarouselRepublishSweeper | None = None
+    instagram_publish: InstagramPublishTick | None = None
+    autopilot_runner: AutopilotRunnerTick | None = None
+    telegram_notify: TelegramNotifyTick | None = None
+    credential_refresh: CredentialRefreshTick | None = None
 
 
 @dataclass(frozen=True)
@@ -61,6 +109,10 @@ class _TickCollaborators:
     stale_run_reaper: CarouselStaleRunReaper | None
     drift_reconciler: CarouselDriftReconciler | None
     republish_sweeper: CarouselRepublishSweeper | None
+    instagram_publish: InstagramPublishTick | None = None
+    autopilot_runner: AutopilotRunnerTick | None = None
+    telegram_notify: TelegramNotifyTick | None = None
+    credential_refresh: CredentialRefreshTick | None = None
 
 
 async def _run_tick(
@@ -74,7 +126,22 @@ async def _run_tick(
     drift reconciler (when it lands) must run AFTER it, only over rows the
     reaper did not touch this tick, stamping the row's CURRENT epoch so the
     epoch fence never rejects its convergence writes.
+
+    AE-0348 QA r1: the core steps commit before the autopilot steps run, and
+    each autopilot step commits or rolls back on its own, so an autopilot
+    failure never rolls back the reaper, the auto-reject, or a notice.
     """
+    counters = await _core_steps(settings, db, services)
+    await db.commit()
+    counters.update(await _autopilot_steps(settings, db, services))
+    return counters
+
+
+async def _core_steps(
+    settings: Settings,
+    db: AsyncSession,
+    services: _TickCollaborators,
+) -> dict[str, int]:
     reaped = 0
     if services.stale_run_reaper is not None:
         reaped = await services.stale_run_reaper.tick(db)
@@ -109,6 +176,36 @@ async def _run_tick(
     }
 
 
+async def _autopilot_steps(
+    settings: Settings,
+    db: AsyncSession,
+    services: _TickCollaborators,
+) -> dict[str, int]:
+    """Credential refresh, publish, runner, then Telegram; each isolated."""
+    runner = services.autopilot_runner if settings.autopilot_enabled else None
+    steps: tuple[tuple[str, _DbStep | None], ...] = (
+        ("credential_refresh", services.credential_refresh),
+        ("instagram_runs", services.instagram_publish),
+        ("autopilot_runs", runner),
+        ("telegram_notices", services.telegram_notify),
+    )
+    return {name: await _isolated(name, step, db) for name, step in steps}
+
+
+async def _isolated(name: str, step: _DbStep | None, db: AsyncSession) -> int:
+    """Run one autopilot step in its own commit; a failure is rolled back alone."""
+    if step is None:
+        return 0
+    try:
+        count = await step.tick(db)
+        await db.commit()
+    except Exception:
+        await db.rollback()
+        logger.exception(_LOG_STEP_FAILED, step=name, exc_info=True)
+        return 0
+    return count
+
+
 async def run_workflow_workers(
     settings: Settings,
     stop_event: asyncio.Event,
@@ -129,6 +226,10 @@ async def run_workflow_workers(
         stale_run_reaper=services.stale_run_reaper,
         drift_reconciler=services.drift_reconciler,
         republish_sweeper=services.republish_sweeper,
+        instagram_publish=services.instagram_publish,
+        autopilot_runner=services.autopilot_runner,
+        telegram_notify=services.telegram_notify,
+        credential_refresh=services.credential_refresh,
     )
     interval = settings.workflow_worker_interval_seconds
 

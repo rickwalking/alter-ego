@@ -52,6 +52,15 @@ from rag_backend.application.workers.workflow_workers import (
     WorkflowWorkerServices,
     run_workflow_workers,
 )
+
+# The HTTP router stays off the package facade. Model registration imports
+# the facade, and the router imports the shared slowapi limiter under
+# ``rag_backend.api``. Pulling that through the facade would make
+# infrastructure depend on the API layer.
+from rag_backend.bootstrap.autopilot_worker_factory import (
+    autopilot_engine_factory,
+    build_autopilot_worker_steps,
+)
 from rag_backend.bootstrap.carousel_drift_reconciler_factory import (
     build_drift_reconciler,
 )
@@ -73,6 +82,12 @@ from rag_backend.infrastructure.telemetry.opentelemetry import (
     init_opentelemetry,
     instrument_fastapi,
 )
+from rag_backend.modules.autopilot import prepare_instagram_credentials
+from rag_backend.modules.autopilot.api.router import router as autopilot_router
+from rag_backend.modules.autopilot.api.telegram_webhook import (
+    router as telegram_webhook_router,
+)
+from rag_backend.modules.autopilot.webhook_constants import APP_STATE_ENGINE
 
 logger = get_logger()
 
@@ -116,6 +131,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         pool_size=settings.db_pool_size,
         max_overflow=settings.db_max_overflow,
     )
+    await prepare_instagram_credentials(settings)
 
     container.wire(packages=["rag_backend.api"])
 
@@ -125,6 +141,9 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     # sqlite (dev), postgres (prod), memory (ephemeral), disabled (no resume).
     async with AsyncExitStack() as stack:
         app.state.carousel_checkpointer = await build_checkpointer(settings, stack)
+        engine_factory = autopilot_engine_factory(app.state.carousel_checkpointer)
+        setattr(app.state, APP_STATE_ENGINE, engine_factory)
+        autopilot = build_autopilot_worker_steps(settings, engine_factory)
         worker_stop = asyncio.Event()
         worker_task = asyncio.create_task(
             run_workflow_workers(
@@ -140,6 +159,10 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
                         app.state.carousel_checkpointer,
                     ),
                     republish_sweeper=build_republish_sweeper(settings),
+                    instagram_publish=autopilot.instagram_publish,
+                    credential_refresh=autopilot.credential_refresh,
+                    autopilot_runner=autopilot.autopilot_runner,
+                    telegram_notify=autopilot.telegram_notify,
                 ),
             )
         )
@@ -254,6 +277,8 @@ def _register_routes(app: FastAPI) -> None:
     app.include_router(workflow_audit.router, prefix="/api")
     app.include_router(workflow_board.router, prefix="/api")
     app.include_router(chat_stream.router, prefix="/api")
+    app.include_router(autopilot_router, prefix="/api")
+    app.include_router(telegram_webhook_router, prefix="/api")
 
 
 def create_app() -> FastAPI:

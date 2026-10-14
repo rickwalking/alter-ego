@@ -148,6 +148,20 @@ jobs:
             ENVIRONMENT=production
             CAROUSEL_CHECKPOINT_BACKEND=postgres
             CAROUSEL_CHECKPOINT_POSTGRES_URL=postgresql://${{ secrets.POSTGRES_USER }}:${{ secrets.POSTGRES_PASSWORD }}@postgres:5432/${{ secrets.POSTGRES_DB }}
+            # AE-0359 autopilot. Empty secrets stay empty while AUTOPILOT_ENABLED
+            # defaults to false, so this deploy does not start the runner.
+            # Flip the AUTOPILOT_ENABLED secret to true only after verification.
+            META_IG_ACCESS_TOKEN=${{ secrets.META_IG_ACCESS_TOKEN }}
+            META_IG_USER_ID=${{ secrets.META_IG_USER_ID }}
+            CAROUSEL_PUBLIC_BASE_URL=https://marinssolutions.com
+            TELEGRAM_BOT_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }}
+            TELEGRAM_OWNER_CHAT_ID=${{ secrets.TELEGRAM_OWNER_CHAT_ID }}
+            TELEGRAM_WEBHOOK_SECRET=${{ secrets.TELEGRAM_WEBHOOK_SECRET }}
+            GROKBOT_API_KEY_SHA256=${{ secrets.GROKBOT_API_KEY_SHA256 }}
+            CREDENTIALS_ENCRYPTION_KEY=${{ secrets.CREDENTIALS_ENCRYPTION_KEY }}
+            AUTOPILOT_ENABLED=${{ secrets.AUTOPILOT_ENABLED || 'false' }}
+            AUTOPILOT_OWNER_USER_ID=${{ secrets.AUTOPILOT_OWNER_USER_ID }}
+            AUTOPILOT_DAILY_CAP=${{ secrets.AUTOPILOT_DAILY_CAP || '1' }}
             EOF
             # Defensive: the umask above already lands 600; keep an explicit
             # chmod so a future refactor that drops the umask still converges.
