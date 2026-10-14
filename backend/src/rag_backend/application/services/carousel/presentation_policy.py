@@ -21,6 +21,9 @@ from rag_backend.application.services.carousel.presentation_policy_types import 
     VisibleTextPolicy,
     VisibleTextRule,
 )
+from rag_backend.application.services.carousel.presentation_rubric import (
+    parse_quality_rubric,
+)
 from rag_backend.domain.constants.carousel_presentation import (
     VALID_VIOLATION_SEVERITIES,
 )
@@ -186,6 +189,9 @@ def _parse_policy_document(
         rule_severities=casing.rule_severities,
         casing_rules=casing.casing_rules,
         proper_nouns=casing.proper_nouns,
+        quality_rubric=parse_quality_rubric(
+            document.get("quality_rubric"), casing.rule_severities
+        ),
     )
 
 

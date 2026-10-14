@@ -69,9 +69,9 @@ Feature: PT sentence-case validation, casing repair, and severity tiers (AE-0312
     And the stored report shows v2 casing warnings immediately
     And a completed project is left untouched
 
-  Scenario: New carousels are stamped v2 while legacy NULL rows keep v1
+  Scenario: New carousels get the create-time policy while legacy NULL rows keep v1
     Given a new carousel is created
-    Then it is stamped hero_lower_third_v2
+    Then it is stamped with the create-time policy (hero_lower_third_v3 since AE-0366)
     And a legacy NULL-version row keeps v1 semantics on re-validation
 
   Scenario: A v1 project reports no casing violations and gets no casing repair

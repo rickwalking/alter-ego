@@ -83,6 +83,20 @@ class CasingRulePolicy:
 
 
 @dataclass(frozen=True)
+class QualityRubricItem:
+    """One LLM quality-rubric item and the validator rules that enforce it.
+
+    AE-0366: the contract's ``quality_rubric`` is the single source of truth.
+    The prompt renders ``instruction``; the validator enforces ``rule_codes``.
+    """
+
+    rubric_id: str
+    instruction: str
+    rule_codes: tuple[str, ...]
+    audiences: frozenset[str] = frozenset()
+
+
+@dataclass(frozen=True)
 class CarouselPresentationPolicy:
     """Immutable typed presentation policy loaded from canonical YAML."""
 
@@ -103,11 +117,18 @@ class CarouselPresentationPolicy:
     rule_severities: dict[str, str] = field(default_factory=dict)
     casing_rules: tuple[CasingRulePolicy, ...] = ()
     proper_nouns: tuple[str, ...] = ()
+    # AE-0366: LLM quality rubric (empty for v1).
+    quality_rubric: tuple[QualityRubricItem, ...] = ()
 
     @property
     def has_casing_rules(self) -> bool:
         """Return True when this policy defines PT casing rules (v2+)."""
         return bool(self.casing_rules)
+
+    @property
+    def enforces_quality_rubric(self) -> bool:
+        """Return True when this policy carries the LLM quality rubric (v3+)."""
+        return bool(self.quality_rubric)
 
     def severity_for(self, code: str) -> str:
         """Resolve a violation code's severity, defaulting to blocker."""
@@ -135,6 +156,7 @@ __all__ = [
     "FontPolicy",
     "GeometryBudget",
     "PresentationPolicyError",
+    "QualityRubricItem",
     "SlideTypePolicy",
     "TextBudget",
     "VisibleTextPolicy",
