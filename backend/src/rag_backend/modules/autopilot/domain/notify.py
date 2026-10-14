@@ -23,6 +23,8 @@ class ReviewNotice:
     caption: str
     slide_paths: tuple[str, ...]
     prior_album_ids: tuple[int, ...]
+    # AE-0361: ``Audience · Niche · Style`` above the caption preview.
+    profile: str = ""
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -68,6 +70,9 @@ class ReviewFacts:
     title: str
     caption: str
     slide_paths: tuple[str, ...]
+    audience: str = ""
+    niche: str = ""
+    image_style: str = ""
 
 
 @dataclass(frozen=True, kw_only=True)

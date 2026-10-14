@@ -41,6 +41,10 @@ from rag_backend.modules.autopilot.constants import (
     REASON_TOPIC_MISSING,
     RUNS_PER_TICK,
 )
+from rag_backend.modules.autopilot.domain.carousel_defaults import (
+    GuidanceRequest,
+    image_guidance_for,
+)
 from rag_backend.modules.autopilot.domain.gate import (
     AttachProjectCommand,
     EditorialDriver,
@@ -59,6 +63,7 @@ from rag_backend.modules.autopilot.domain.gate import (
 from rag_backend.modules.autopilot.domain.models import (
     AutopilotRun,
     AutopilotRunState,
+    TopicCandidate,
     TransitionCommand,
 )
 from rag_backend.modules.autopilot.domain.policy import decide, source_has_content
@@ -260,6 +265,8 @@ class AutopilotRunner:
             brief=topic.brief,
             sources=topic.sources,
             owner_user_id=self._deps.owner_user_id,
+            image_style=topic.image_style,
+            image_guidance=image_guidance_for(_guidance_request(topic)),
         )
 
     async def _project_id(self, run: AutopilotRun, spec: ProjectSpec) -> str | None:
@@ -346,3 +353,11 @@ def _detail(snapshot: GateSnapshot, reason: str) -> str:
         usable = sum(1 for source in snapshot.sources if source_has_content(source))
         return str(usable)
     return ""
+
+
+def _guidance_request(topic: TopicCandidate) -> GuidanceRequest:
+    return GuidanceRequest(
+        image_style=topic.image_style,
+        niche=topic.niche,
+        image_guidance=topic.image_guidance,
+    )

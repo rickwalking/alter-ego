@@ -26,7 +26,9 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
+from rag_backend.domain.constants import IMAGE_STYLE_NEO_ANIME
 from rag_backend.infrastructure.database.config import Base as SharedBase
+from rag_backend.modules.autopilot.carousel_constants import IMAGE_STYLE_MAX_CHARS
 from rag_backend.modules.autopilot.constants import (
     CAROUSEL_PROJECT_FK,
     CAROUSEL_PROJECT_ID_LENGTH,
@@ -95,6 +97,13 @@ class TopicCandidateModel(AutopilotOrmBase):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
+    # AE-0361: the scout's image preset and optional visual direction.
+    image_style: Mapped[str] = mapped_column(
+        String(IMAGE_STYLE_MAX_CHARS),
+        nullable=False,
+        server_default=IMAGE_STYLE_NEO_ANIME,
+    )
+    image_guidance: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     __table_args__ = (UniqueConstraint("signal_hash", name=UQ_TOPIC_SIGNAL_HASH),)
 

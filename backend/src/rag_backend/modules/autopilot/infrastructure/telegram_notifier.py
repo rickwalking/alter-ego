@@ -10,6 +10,7 @@ from dataclasses import dataclass
 import httpx
 import structlog
 
+from rag_backend.modules.autopilot.domain.carousel_defaults import with_profile
 from rag_backend.modules.autopilot.domain.exceptions import (
     NotifierUnconfiguredError,
     TelegramDeliveryError,
@@ -124,7 +125,7 @@ class TelegramNotifier:
         status = StatusNotice(
             chat_id=notice.chat_id,
             run_id=notice.run_id,
-            text=caption_preview(notice.caption),
+            text=with_profile(notice.profile, caption_preview(notice.caption)),
             keyboard=review_keyboard(notice.run_id),
         )
         payload = await self._message(status)

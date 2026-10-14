@@ -43,4 +43,6 @@ def _input(item: TopicProposal) -> ProposalInput:
         brief=item.brief,
         sources=tuple(item.sources),
         score=item.score,
+        image_style=item.image_style.value,
+        image_guidance=item.image_guidance,
     )

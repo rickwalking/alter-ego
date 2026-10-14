@@ -1,0 +1,154 @@
+"""Carousel defaults for GrokBot topics (AE-0361).
+
+Pure rules: the image presets the scout may pick, the simple-words checks
+on audience, niche and brief, the fallback image guidance, and the review
+line the owner sees. The backend always uses the OpenAI image model and the
+``auto`` palette theme, so neither is part of the scout contract.
+"""
+
+from __future__ import annotations
+
+from collections.abc import Callable
+from dataclasses import dataclass
+from enum import StrEnum
+
+from rag_backend.domain.constants import (
+    IMAGE_MODEL_OPENAI,
+    IMAGE_STYLE_CINEMATIC,
+    IMAGE_STYLE_COMIC_NEON,
+    IMAGE_STYLE_FLAT_EDITORIAL,
+    IMAGE_STYLE_HYPERREAL,
+    IMAGE_STYLE_NEO_ANIME,
+    SUPPORTED_IMAGE_COMBOS,
+)
+from rag_backend.modules.autopilot.carousel_constants import (
+    BRIEF_STOP_WORDS,
+    GUIDANCE_BACKGROUND_TEMPLATE,
+    GUIDANCE_JOIN,
+    GUIDANCE_NEO_ANIME,
+    GUIDANCE_STYLE_NEUTRAL,
+    LABEL_AUDIENCE,
+    LABEL_NICHE,
+    LABEL_STYLE,
+    PROFILE_LINE_TEMPLATE,
+    PROFILE_SEPARATOR,
+    REASON_AUDIENCE_NOT_SIMPLE,
+    REASON_BRIEF_NOT_SIMPLE,
+    REASON_BRIEF_OFF_THEME,
+    REASON_IMAGE_STYLE_UNSUPPORTED,
+    REASON_NICHE_NOT_SIMPLE,
+    SIMPLE_BRIEF_MAX_CHARS,
+    SIMPLE_WORDS_MAX,
+    SIMPLE_WORDS_MIN,
+)
+from rag_backend.modules.autopilot.domain.topic_text import tokens
+
+
+class ImageStyle(StrEnum):
+    """Image presets the scout may choose. Every one is an OpenAI combo."""
+
+    NEO_ANIME = IMAGE_STYLE_NEO_ANIME
+    FLAT_EDITORIAL = IMAGE_STYLE_FLAT_EDITORIAL
+    HYPERREAL = IMAGE_STYLE_HYPERREAL
+    CINEMATIC = IMAGE_STYLE_CINEMATIC
+    COMIC_NEON = IMAGE_STYLE_COMIC_NEON
+
+
+DEFAULT_IMAGE_STYLE = ImageStyle.NEO_ANIME
+
+
+@dataclass(frozen=True, kw_only=True)
+class CarouselText:
+    """The proposal fields the simple-words rules read, already stripped."""
+
+    title: str
+    audience: str
+    niche: str
+    brief: str
+    image_style: str
+
+
+@dataclass(frozen=True, kw_only=True)
+class GuidanceRequest:
+    """Inputs for the image guidance sent to the carousel."""
+
+    image_style: str
+    niche: str
+    image_guidance: str | None
+
+
+def carousel_reason(text: CarouselText) -> str | None:
+    """The first carousel-default rule the proposal breaks, or None."""
+    for reason, passes in _RULES:
+        if not passes(text):
+            return reason
+    return None
+
+
+def _brief_is_short(text: CarouselText) -> bool:
+    return len(text.brief) <= SIMPLE_BRIEF_MAX_CHARS
+
+
+def is_supported_style(style: str) -> bool:
+    """True when the OpenAI image model supports ``style``."""
+    return (IMAGE_MODEL_OPENAI, style) in SUPPORTED_IMAGE_COMBOS
+
+
+def is_simple(value: str) -> bool:
+    """True for one to three whitespace-separated words."""
+    count = len(value.split())
+    return SIMPLE_WORDS_MIN <= count <= SIMPLE_WORDS_MAX
+
+
+def theme_keywords(title: str) -> frozenset[str]:
+    """Casefolded title words that are not stop words."""
+    return tokens(title) - BRIEF_STOP_WORDS
+
+
+def brief_on_theme(title: str, brief: str) -> bool:
+    """True when the brief names a title keyword, or the title has none."""
+    keywords = theme_keywords(title)
+    if not keywords:
+        return True
+    return not keywords.isdisjoint(tokens(brief))
+
+
+_RULES: tuple[tuple[str, Callable[[CarouselText], bool]], ...] = (
+    (REASON_IMAGE_STYLE_UNSUPPORTED, lambda text: is_supported_style(text.image_style)),
+    (REASON_AUDIENCE_NOT_SIMPLE, lambda text: is_simple(text.audience)),
+    (REASON_NICHE_NOT_SIMPLE, lambda text: is_simple(text.niche)),
+    (REASON_BRIEF_NOT_SIMPLE, _brief_is_short),
+    (REASON_BRIEF_OFF_THEME, lambda text: brief_on_theme(text.title, text.brief)),
+)
+
+
+def image_guidance_for(request: GuidanceRequest) -> str:
+    """The scout's guidance, or the template for the style and niche."""
+    if request.image_guidance:
+        return request.image_guidance
+    lead = GUIDANCE_STYLE_NEUTRAL
+    if request.image_style == ImageStyle.NEO_ANIME:
+        lead = GUIDANCE_NEO_ANIME
+    background = GUIDANCE_BACKGROUND_TEMPLATE.format(niche=request.niche)
+    return GUIDANCE_JOIN.join((lead, background))
+
+
+def profile_line(audience: str, niche: str, image_style: str) -> str:
+    """``Audience: … · Niche: … · Style: …``. Empty when nothing is known."""
+    if not (audience or niche or image_style):
+        return ""
+    return PROFILE_LINE_TEMPLATE.format(
+        audience_label=LABEL_AUDIENCE,
+        audience=audience,
+        niche_label=LABEL_NICHE,
+        niche=niche,
+        style_label=LABEL_STYLE,
+        style=image_style,
+    )
+
+
+def with_profile(profile: str, body: str) -> str:
+    """Put the profile line above the review body."""
+    if not profile:
+        return body
+    return f"{profile}{PROFILE_SEPARATOR}{body}"

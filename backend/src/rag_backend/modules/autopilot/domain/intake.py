@@ -22,6 +22,11 @@ from rag_backend.modules.autopilot.constants import (
     REASON_SOURCE_NOT_IN_SIGNALS,
     REASON_URL_IN_TEXT,
 )
+from rag_backend.modules.autopilot.domain.carousel_defaults import (
+    DEFAULT_IMAGE_STYLE,
+    CarouselText,
+    carousel_reason,
+)
 from rag_backend.modules.autopilot.domain.topic_text import (
     contains_url,
     signal_hash,
@@ -43,6 +48,8 @@ class ProposalInput:
     brief: str
     sources: tuple[str, ...]
     score: int
+    image_style: str = DEFAULT_IMAGE_STYLE
+    image_guidance: str | None = None
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -59,6 +66,8 @@ class PreparedProposal:
     sources: tuple[str, ...]
     score: int
     signal_hash: str
+    image_style: str = DEFAULT_IMAGE_STYLE
+    image_guidance: str | None = None
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -123,7 +132,15 @@ def prepare(proposal: ProposalInput) -> PreparedProposal:
         sources=sources,
         score=proposal.score,
         signal_hash=signal_hash(title, sources),
+        image_style=proposal.image_style,
+        image_guidance=_optional_text(proposal.image_guidance),
     )
+
+
+def _optional_text(value: str | None) -> str | None:
+    if value is None:
+        return None
+    return strip_controls(value) or None
 
 
 def plan_intake(
@@ -189,7 +206,17 @@ def _rejection_reason(proposal: PreparedProposal, facts: IntakeFacts) -> str | N
         return REASON_URL_IN_TEXT
     if _missing_source(proposal, facts.allowlist):
         return REASON_SOURCE_NOT_IN_SIGNALS
-    return None
+    return carousel_reason(_carousel_text(proposal))
+
+
+def _carousel_text(proposal: PreparedProposal) -> CarouselText:
+    return CarouselText(
+        title=proposal.title,
+        audience=proposal.audience,
+        niche=proposal.niche,
+        brief=proposal.brief,
+        image_style=proposal.image_style,
+    )
 
 
 def _free_text(proposal: PreparedProposal) -> tuple[str, ...]:
@@ -208,7 +235,8 @@ def _is_blank(proposal: PreparedProposal) -> bool:
 
 
 def _text_has_url(proposal: PreparedProposal) -> bool:
-    return any(contains_url(text) for text in _free_text(proposal))
+    texts = (*_free_text(proposal), proposal.image_guidance or "")
+    return any(contains_url(text) for text in texts)
 
 
 def _missing_source(proposal: PreparedProposal, allowlist: frozenset[str]) -> bool:

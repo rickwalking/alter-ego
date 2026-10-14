@@ -150,6 +150,8 @@ def _topic_row(candidate: TopicCandidate) -> TopicCandidateModel:
         score=candidate.score,
         signal_hash=candidate.signal_hash,
         status=candidate.status,
+        image_style=candidate.image_style,
+        image_guidance=candidate.image_guidance,
     )
 
 

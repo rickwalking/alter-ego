@@ -325,6 +325,8 @@ def _topic_row(candidate: TopicCandidate) -> TopicCandidateModel:
         score=candidate.score,
         signal_hash=candidate.signal_hash,
         status=candidate.status,
+        image_style=candidate.image_style,
+        image_guidance=candidate.image_guidance,
     )
 
 
@@ -341,6 +343,8 @@ def _topic_from_row(row: TopicCandidateModel) -> TopicCandidate:
         score=row.score,
         signal_hash=row.signal_hash,
         status=row.status,
+        image_style=row.image_style,
+        image_guidance=row.image_guidance,
     )
 
 

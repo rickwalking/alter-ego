@@ -12,6 +12,8 @@ from enum import StrEnum
 from typing import Protocol
 from uuid import UUID
 
+from rag_backend.modules.autopilot.domain.carousel_defaults import DEFAULT_IMAGE_STYLE
+
 
 class GateAction(StrEnum):
     """What the runner should do with the current gate."""
@@ -109,6 +111,10 @@ class ProjectSpec:
     brief: str
     sources: tuple[str, ...]
     owner_user_id: str
+    # AE-0361: the carousel always uses the OpenAI image model and the auto
+    # palette; the driver sets those. These two come from the topic.
+    image_style: str = DEFAULT_IMAGE_STYLE
+    image_guidance: str = ""
 
 
 @dataclass(frozen=True, kw_only=True)

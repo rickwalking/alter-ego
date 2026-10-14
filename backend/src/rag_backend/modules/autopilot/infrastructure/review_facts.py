@@ -1,4 +1,4 @@
-"""Title, caption, and PT slide paths for a review message."""
+"""Title, caption, PT slide paths, and the profile line for a review message."""
 
 from __future__ import annotations
 
@@ -24,4 +24,7 @@ class CarouselReviewFacts:
             title=row.topic,
             caption=row.caption,
             slide_paths=pt_slide_paths(row.output_dir),
+            audience=row.audience,
+            niche=row.niche,
+            image_style=row.image_style,
         )

@@ -15,6 +15,7 @@ import structlog
 from rag_backend.modules.autopilot.constants import (
     PAYLOAD_PROJECT_ID,
 )
+from rag_backend.modules.autopilot.domain.carousel_defaults import profile_line
 from rag_backend.modules.autopilot.domain.exceptions import (
     NotifierUnconfiguredError,
     TelegramDeliveryError,
@@ -349,7 +350,12 @@ def _review_notice(
         caption=job.facts.caption,
         slide_paths=job.facts.slide_paths,
         prior_album_ids=album,
+        profile=_profile(job.facts),
     )
+
+
+def _profile(facts: ReviewFacts) -> str:
+    return profile_line(facts.audience, facts.niche, facts.image_style)
 
 
 def _status_notice(deps: NotificationDependencies, job: _StatusJob) -> StatusNotice:
