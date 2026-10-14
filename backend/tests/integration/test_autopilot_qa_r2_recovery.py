@@ -17,11 +17,11 @@ from rag_backend.modules.autopilot.domain.recovery import (
     UnnotifiedMark,
     WakeCheck,
 )
-from rag_backend.modules.autopilot.notify_constants import (
-    REASON_NOTIFIER_UNCONFIGURED,
-)
 from rag_backend.modules.autopilot.infrastructure.run_recovery_store import (
     SqlRunRecoveryStore,
+)
+from rag_backend.modules.autopilot.notify_constants import (
+    REASON_NOTIFIER_UNCONFIGURED,
 )
 from rag_backend.modules.autopilot.recovery_constants import ESCALATED_SCAN_LIMIT
 from tests.integration.test_autopilot_qa_r1 import _run_in, _stored
