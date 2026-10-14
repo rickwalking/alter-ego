@@ -159,18 +159,18 @@ Feature: Autopilot runner
     Given a project created by the autopilot driver
     When the outline gate shows 7 outline items
     Then the policy approves the outline gate
-    When the images gate shows 7 raw 1536x1024 OpenAI hero JPEGs
+    When the images gate shows 6 raw 1536x1024 OpenAI hero JPEGs (AE-0365: no CTA image)
     Then the policy approves the images gate
 
   Scenario: A real slide-count mismatch is still revised
     Given a project created by the autopilot driver
     When the outline gate shows 5 outline items
     Then the outline gate is revised with reason "outline_slide_count_mismatch"
-    When the images gate shows 6 images or one image file is missing
+    When the images gate shows 5 hero images or one image file is missing
     Then the images gate is revised with reason "image_assets_invalid"
 
   Scenario: The images gate checks the hero images the pipeline stores
-    Given the images phase stores one raw hero JPEG per slide in "image_assets"
+    Given the images phase stores one raw hero JPEG per illustrated slide in "image_assets"
     And the 1080x1350 slides are only composed later, at finalize
     When every hero image is a present JPEG with a decodable size
     Then the policy approves the images gate
@@ -237,3 +237,42 @@ Feature: Autopilot runner
     Given the outline revision cap is reached
     When the runner revises the outline gate
     Then the resume is refused with "revision_cap" and the row is unchanged
+
+  # --- AE-0365 hotfix: hero images only for slides that have one ------------
+  # Prod 2026-10-14, carousel 8e350d6e: the image phase stored 6 hero images
+  # (slide_1..slide_6). Slide 7 is the CTA, rendered with the owner avatar, so
+  # it has no hero image. The images gate expected slides_total (7), revised,
+  # regenerated the same 6, and escalated: every real run failed there.
+
+  Scenario: A 7-slide carousel expects 6 hero images
+    Given a carousel whose persisted slides are 6 illustrated slides and a CTA slide
+    When the driver reads the images gate
+    Then the gate expects 6 hero images, counted by the image phase's own slide filter
+    And a slide with no image prompt is not expected to have one
+
+  Scenario: The images gate approves 6 hero images on a 7-slide carousel
+    Given the images gate expects 6 hero images
+    When the gate shows 6 present, non-empty hero JPEGs
+    Then the policy approves the images gate
+
+  Scenario: A missing or extra hero image is revised
+    Given the images gate expects 6 hero images
+    When the gate shows 5 hero images, or 7
+    Then the images gate is revised with reason "image_assets_invalid"
+
+  Scenario: A missing or zero-size hero image file is revised
+    Given the images gate expects 6 hero images
+    When one hero image file is missing or has zero bytes
+    Then the images gate is revised with reason "image_assets_invalid"
+
+  Scenario: An unknown hero image count fails closed
+    Given the carousel has no persisted slides
+    When the driver reads the images gate
+    Then the gate expects 0 hero images and the images gate is revised
+
+  Scenario: The autopilot approves the real image phase and reaches final_review
+    Given a carousel driven by the real editorial engine with a fake image vendor
+    When the autopilot approves the outline, content, design, and images gates
+    Then the image phase generated slide_1..slide_6 and no CTA image
+    And the images gate is approved with reason "passed"
+    And the run stops at "final_review" with reason "ready_for_owner"
