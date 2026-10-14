@@ -17,10 +17,14 @@ from rag_backend.modules.autopilot.bootstrap import (
     InstagramPublishTickAdapter,
     InstagramTickConfig,
     ManualInstagramPublishRequest,
+    TelegramNotifyTickAdapter,
+    TelegramTickConfig,
     bootstrap_module,
     build_autopilot_runner_tick,
     build_instagram_publish_tick,
+    build_telegram_notify_tick,
     manual_instagram_publish,
+    notifier_is_configured,
 )
 from rag_backend.modules.autopilot.domain.exceptions import InvalidAutopilotTransition
 from rag_backend.modules.autopilot.domain.models import (
@@ -42,11 +46,15 @@ __all__ = [
     "InvalidAutopilotTransition",
     "ManualInstagramPublishRequest",
     "ManualPublishOutcome",
+    "TelegramNotifyTickAdapter",
+    "TelegramTickConfig",
     "TransitionCommand",
     "bootstrap_module",
     "build_autopilot_runner_tick",
     "build_instagram_publish_tick",
+    "build_telegram_notify_tick",
     "manual_instagram_publish",
+    "notifier_is_configured",
     "register_persistence_models",
 ]
 

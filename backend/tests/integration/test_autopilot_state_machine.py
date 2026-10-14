@@ -295,4 +295,9 @@ async def test_ready_for_owner_is_one_outbox_row(db_session: AsyncSession) -> No
     rows = list(result.scalars().all())
     assert len(rows) == 1
     assert rows[0].event_type == EVENT_TYPE_READY_FOR_OWNER
-    assert rows[0].payload == {"project_id": "carousel-1"}
+    assert rows[0].payload == {
+        "project_id": "carousel-1",
+        "revision": 0,
+        "persona_score": None,
+        "sources_count": 0,
+    }

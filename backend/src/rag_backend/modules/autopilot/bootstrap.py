@@ -185,6 +185,7 @@ class AutopilotTickConfig:
     owner_user_id: str
     engine_factory: EngineFactory
     stale_after_seconds: int
+    notifier_configured: bool = True
 
 
 class AutopilotRunnerTickAdapter:
@@ -229,7 +230,69 @@ def _runner_deps(
         editorial=driver,
         notices=OutboxReadyNotifier(session),
         owner_user_id=config.owner_user_id,
+        notifier_configured=config.notifier_configured,
     )
+
+
+@dataclass(frozen=True, kw_only=True)
+class TelegramTickConfig:
+    """Worker-tick wiring for owner Telegram notices."""
+
+    token: str
+    chat_id: str
+    web_base_url: str
+
+
+class TelegramNotifyTickAdapter:
+    """Deliver pending notices on the tick's session, after the runner."""
+
+    def __init__(self, config: TelegramTickConfig) -> None:
+        self._config = config
+
+    async def tick(self, db: AsyncSession) -> int:
+        """Send due reviews, statuses, and reminders."""
+        from rag_backend.modules.autopilot.application.notifications import (
+            NotificationDependencies,
+            OwnerNotificationService,
+        )
+        from rag_backend.modules.autopilot.infrastructure.notice_source import (
+            SqlAutopilotEventSource,
+            SqlNoticeLogStore,
+        )
+        from rag_backend.modules.autopilot.infrastructure.review_facts import (
+            CarouselReviewFacts,
+        )
+        from rag_backend.modules.autopilot.infrastructure.telegram_notifier import (
+            AsyncSleeper,
+            TelegramClientConfig,
+            TelegramNotifier,
+        )
+
+        configured = bool(self._config.token.strip() and self._config.chat_id.strip())
+        deps = NotificationDependencies(
+            events=SqlAutopilotEventSource(db),
+            runs=SqlAlchemyAutopilotRepository(db),
+            facts=CarouselReviewFacts(db),
+            notices=SqlNoticeLogStore(db),
+            notifier=TelegramNotifier(
+                TelegramClientConfig(token=self._config.token, sleeper=AsyncSleeper())
+            ),
+            clock=SystemClock(),
+            chat_id=self._config.chat_id,
+            configured=configured,
+            web_base_url=self._config.web_base_url,
+        )
+        return await OwnerNotificationService(deps).tick()
+
+
+def build_telegram_notify_tick(config: TelegramTickConfig) -> TelegramNotifyTickAdapter:
+    """Build the worker collaborator. The HTTP client is created per process tick."""
+    return TelegramNotifyTickAdapter(config)
+
+
+def notifier_is_configured(token: str, chat_id: str) -> bool:
+    """True when both Telegram settings are non-empty."""
+    return bool(token.strip() and chat_id.strip())
 
 
 def _collector_config(settings: Settings) -> CollectorBuildConfig:

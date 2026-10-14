@@ -153,10 +153,13 @@ class StartAttemptCommand:
 
 @dataclass(frozen=True, kw_only=True)
 class OwnerReadyNotice:
-    """The owner may review this carousel. Emitted once."""
+    """The owner may review this carousel. Emitted once per revision."""
 
     run_id: UUID
     project_id: str
+    revision: int = 0
+    persona_score: float | None = None
+    sources_count: int = 0
 
 
 class EditorialDriver(Protocol):

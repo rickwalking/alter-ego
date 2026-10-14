@@ -22,6 +22,15 @@ from rag_backend.modules.autopilot.domain.models import (
     TopicCandidate,
     TransitionCommand,
 )
+from rag_backend.modules.autopilot.domain.notify import (
+    AutopilotOutboxEvent,
+    ReviewFacts,
+    ReviewNotice,
+    ReviewSendResult,
+    SaveNoticeLog,
+    StatusNotice,
+    StatusSendResult,
+)
 from rag_backend.modules.autopilot.domain.publish import (
     AtomicPublishResult,
     CarouselMedia,
@@ -108,6 +117,50 @@ class Clock(Protocol):
 
     def now(self) -> datetime:
         """Current timezone-aware instant."""
+        ...
+
+
+class Notifier(Protocol):
+    """Sends owner notices. AE-0355's Telegram adapter implements this."""
+
+    async def send_review(self, notice: ReviewNotice) -> ReviewSendResult:
+        """Upload the slide album and the action keyboard."""
+        ...
+
+    async def send_status(self, notice: StatusNotice) -> StatusSendResult:
+        """Send one status or reminder message."""
+        ...
+
+
+class AutopilotEventSource(Protocol):
+    """Recent ``content.autopilot.*`` outbox rows, newest window first."""
+
+    async def recent(self) -> list[AutopilotOutboxEvent]:
+        """Return up to the scan limit. The caller sorts and dedupes."""
+        ...
+
+
+class ReviewFactsSource(Protocol):
+    """Loads the private carousel facts a review message needs."""
+
+    async def load(self, project_id: str) -> ReviewFacts | None:
+        """Return facts, or None when the carousel does not exist."""
+        ...
+
+
+class NoticeLogStore(Protocol):
+    """Persists the notice ledger on the run row."""
+
+    async def save(self, command: SaveNoticeLog) -> None:
+        """Write the ledger. Must not change ``updated_at``."""
+        ...
+
+
+class Sleeper(Protocol):
+    """Awaitable delay. Tests record the seconds instead of waiting."""
+
+    async def sleep(self, seconds: float) -> None:
+        """Pause for ``seconds``."""
         ...
 
 

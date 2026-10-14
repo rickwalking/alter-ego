@@ -1,9 +1,6 @@
 """SQLAlchemy adapter for autopilot persistence.
 
-``transition`` checks the domain table, then issues one conditional
-``UPDATE … WHERE id AND state = expected``. A matching row stages exactly
-one ``content.autopilot.state_changed`` outbox row in the same session.
-The caller owns the commit (ADR-0009 unit of work).
+``transition`` is one conditional update plus one outbox row. The caller commits.
 """
 
 from __future__ import annotations
@@ -40,6 +37,11 @@ from rag_backend.modules.autopilot.domain.models import (
     TelegramUpdate,
     TopicCandidate,
     TransitionCommand,
+)
+from rag_backend.modules.autopilot.domain.notice_log import (
+    dump_log,
+    notice_log_is_empty,
+    parse_stored,
 )
 from rag_backend.modules.autopilot.domain.publish import (
     PublishAttemptCommand,
@@ -332,7 +334,7 @@ def _run_row(run: AutopilotRun) -> AutopilotRunModel:
         state=run.state.value,
         state_reason=run.state_reason,
         attempts=run.attempts,
-        telegram_message_ids=list(run.telegram_message_ids),
+        telegram_message_ids=_stored_messages(run),
         ig_container_id=run.ig_container_id,
         ig_post_id=run.ig_post_id,
         ig_permalink=run.ig_permalink,
@@ -341,6 +343,7 @@ def _run_row(run: AutopilotRun) -> AutopilotRunModel:
 
 
 def _run_from_row(row: AutopilotRunModel) -> AutopilotRun:
+    log = parse_stored(row.telegram_message_ids)
     return AutopilotRun(
         run_id=row.id,
         topic_candidate_id=row.topic_candidate_id,
@@ -348,7 +351,8 @@ def _run_from_row(row: AutopilotRunModel) -> AutopilotRun:
         state=AutopilotRunState(row.state),
         state_reason=row.state_reason,
         attempts=row.attempts,
-        telegram_message_ids=tuple(row.telegram_message_ids),
+        telegram_message_ids=log.message_ids,
+        notice_log=log,
         ig_container_id=row.ig_container_id,
         ig_post_id=row.ig_post_id,
         ig_permalink=row.ig_permalink,
@@ -373,6 +377,12 @@ def _credential_from_row(row: IntegrationCredentialModel) -> IntegrationCredenti
         expires_at=row.expires_at,
         refreshed_at=row.refreshed_at,
     )
+
+
+def _stored_messages(run: AutopilotRun) -> list[int] | dict[str, object]:
+    if notice_log_is_empty(run.notice_log):
+        return list(run.telegram_message_ids)
+    return dump_log(run.notice_log)
 
 
 def _aware(value: datetime | None) -> datetime | None:

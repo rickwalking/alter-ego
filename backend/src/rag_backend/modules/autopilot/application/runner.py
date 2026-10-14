@@ -58,6 +58,9 @@ from rag_backend.modules.autopilot.domain.ports import (
     TopicCandidateRepository,
 )
 from rag_backend.modules.autopilot.domain.publish import RunListQuery
+from rag_backend.modules.autopilot.notify_constants import (
+    REASON_NOTIFIER_UNCONFIGURED,
+)
 from rag_backend.modules.editorial.public import (
     REVIEW_ACTION_APPROVE,
     REVIEW_ACTION_REVISE,
@@ -81,6 +84,7 @@ class RunnerDependencies:
     editorial: EditorialDriver
     notices: OwnerReadyNotifier
     owner_user_id: str
+    notifier_configured: bool = True
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -161,6 +165,13 @@ class AutopilotRunner:
         return 0
 
     async def _stop(self, step: _Step) -> int:
+        if not self._deps.notifier_configured:
+            await self._move(
+                step.run,
+                AutopilotRunState.ESCALATED,
+                REASON_NOTIFIER_UNCONFIGURED,
+            )
+            return 1
         moved = await self._move(
             step.run,
             AutopilotRunState.AWAITING_OWNER,
@@ -168,8 +179,7 @@ class AutopilotRunner:
         )
         project_id = step.run.carousel_project_id
         if moved and project_id is not None:
-            notice = OwnerReadyNotice(run_id=step.run.run_id, project_id=project_id)
-            await self._deps.notices.notify_ready(notice)
+            await self._deps.notices.notify_ready(_ready_notice(step, project_id))
         return 1
 
     async def _escalate(self, step: _Step) -> int:
@@ -261,6 +271,16 @@ async def _first_run(runs: AutopilotRunRepository) -> AutopilotRun | None:
         if found:
             return found[0]
     return None
+
+
+def _ready_notice(step: _Step, project_id: str) -> OwnerReadyNotice:
+    return OwnerReadyNotice(
+        run_id=step.run.run_id,
+        project_id=project_id,
+        revision=step.snapshot.lock_version,
+        persona_score=step.snapshot.persona_score,
+        sources_count=len(step.snapshot.sources),
+    )
 
 
 def _feedback_request(step: _Step) -> ReviseFeedbackRequest:

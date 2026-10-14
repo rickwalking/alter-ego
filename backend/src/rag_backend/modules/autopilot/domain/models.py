@@ -8,10 +8,12 @@ because AE-0350's scope and the §5 scout output contract both require it
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from enum import StrEnum
 from uuid import UUID
+
+from rag_backend.modules.autopilot.domain.notice_log import NoticeLog
 
 
 class AutopilotRunState(StrEnum):
@@ -87,6 +89,7 @@ class AutopilotRun:
     # retry, so it cannot answer the 24h container-reuse rule.
     ig_container_created_at: datetime | None = None
     updated_at: datetime | None = None
+    notice_log: NoticeLog = field(default_factory=NoticeLog)
 
 
 @dataclass(frozen=True, kw_only=True)

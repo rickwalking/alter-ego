@@ -24,6 +24,11 @@ from rag_backend.modules.autopilot.constants import (
     PAYLOAD_PROJECT_ID,
 )
 from rag_backend.modules.autopilot.domain.gate import OwnerReadyNotice
+from rag_backend.modules.autopilot.notify_constants import (
+    PAYLOAD_PERSONA_SCORE,
+    PAYLOAD_REVISION,
+    PAYLOAD_SOURCES_COUNT,
+)
 
 
 class OutboxReadyNotifier:
@@ -47,7 +52,12 @@ def _record(notice: OwnerReadyNotice) -> EventRecord:
         aggregate_id=str(notice.run_id),
         aggregate_type=AGGREGATE_TYPE_AUTOPILOT_RUN,
         version=EVENT_VERSION,
-        payload={PAYLOAD_PROJECT_ID: notice.project_id},
+        payload={
+            PAYLOAD_PROJECT_ID: notice.project_id,
+            PAYLOAD_REVISION: notice.revision,
+            PAYLOAD_PERSONA_SCORE: notice.persona_score,
+            PAYLOAD_SOURCES_COUNT: notice.sources_count,
+        },
         metadata={METADATA_MODULE: MODULE_NAME},
         emitted_at=datetime.now(UTC),
     )

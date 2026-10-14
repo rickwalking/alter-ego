@@ -117,7 +117,7 @@ class AutopilotRunModel(AutopilotOrmBase):
     attempts: Mapped[int] = mapped_column(
         Integer, nullable=False, default=0, server_default="0"
     )
-    telegram_message_ids: Mapped[list[int]] = mapped_column(
+    telegram_message_ids: Mapped[list[int] | dict[str, object]] = mapped_column(
         _JSON_DOCUMENT, nullable=False
     )
     ig_container_id: Mapped[str | None] = mapped_column(

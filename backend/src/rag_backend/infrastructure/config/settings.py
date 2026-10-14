@@ -148,6 +148,11 @@ class Settings(BaseSettings):
         ge=0,
         validation_alias=AliasChoices("AUTOPILOT_DAILY_CAP", "autopilot_daily_cap"),
     )
+    # AE-0355: empty token or chat id makes the notifier a no-op logger.
+    # The runner then escalates final review with notifier_unconfigured.
+    telegram_bot_token: SecretStr = SecretStr("")
+    telegram_owner_chat_id: str = ""
+
     # AE-0354: the worker calls the in-process runner only when this is true.
     autopilot_enabled: bool = Field(
         default=False,

@@ -249,3 +249,39 @@ async def test_run_tick_skips_autopilot_when_disabled() -> None:
     )
     assert log == ["instagram"]
     assert counters["autopilot_runs"] == 0
+    assert counters["telegram_notices"] == 0
+
+
+class _RecordingTelegram:
+    def __init__(self, log: list[str]) -> None:
+        self._log = log
+
+    async def tick(self, _db: object) -> int:
+        self._log.append("telegram")
+        return 2
+
+
+@pytest.mark.asyncio
+async def test_run_tick_notifies_after_autopilot() -> None:
+    """AE-0355: Telegram runs after the runner so a ready event is visible."""
+    from typing import cast
+
+    log: list[str] = []
+    collaborators = workflow_workers._TickCollaborators(
+        notifications=cast(object, _NoopNotifications()),
+        alerts=cast(object, _NoopAlerts()),
+        auto_rejector=cast(object, _NoopAutoRejector()),
+        stale_run_reaper=None,
+        drift_reconciler=None,
+        republish_sweeper=None,
+        instagram_publish=cast(object, _RecordingPublish(log)),
+        autopilot_runner=cast(object, _RecordingRunner(log)),
+        telegram_notify=cast(object, _RecordingTelegram(log)),
+    )
+    counters = await workflow_workers._run_tick(
+        _settings(autopilot_enabled=True),
+        cast(object, None),
+        collaborators,
+    )
+    assert log == ["instagram", "autopilot", "telegram"]
+    assert counters["telegram_notices"] == 2

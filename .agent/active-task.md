@@ -1,8 +1,8 @@
 # Active Task
 
-AE-0351 is Dev Complete on `feat/ae-0351-autopilot-service-api-key-auth`.
+AE-0355 is Dev Complete on `feat/ae-0355-autopilot-telegram-notifier`.
 
-Scoped service API key for `/api/autopilot/*`.
+Telegram owner notices for autopilot runs: album, keyboard, status, reminder.
 
 ## Rules
 

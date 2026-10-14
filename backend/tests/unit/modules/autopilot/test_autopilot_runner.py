@@ -56,6 +56,9 @@ from rag_backend.modules.autopilot.domain.models import (
     TransitionCommand,
 )
 from rag_backend.modules.autopilot.domain.publish import RunListQuery
+from rag_backend.modules.autopilot.notify_constants import (
+    REASON_NOTIFIER_UNCONFIGURED,
+)
 from rag_backend.modules.editorial.public import (
     REVIEW_ACTION_APPROVE,
     REVIEW_ACTION_REVISE,
@@ -220,6 +223,7 @@ def _runner(
     editorial: _Editorial,
     notices: _Notices,
     owner: str = _OWNER,
+    notifier_configured: bool = True,
 ) -> AutopilotRunner:
     return AutopilotRunner(
         RunnerDependencies(
@@ -228,6 +232,7 @@ def _runner(
             editorial=editorial,
             notices=notices,
             owner_user_id=owner,
+            notifier_configured=notifier_configured,
         )
     )
 
@@ -254,12 +259,30 @@ async def test_clean_run_stops_at_final_review_and_emits_once() -> None:
     approved_final = [
         command
         for command in editorial.resumes
-        if command.phase == GATE_FINAL_REVIEW and command.action == REVIEW_ACTION_APPROVE
+        if command.phase == GATE_FINAL_REVIEW
+        and command.action == REVIEW_ACTION_APPROVE
     ]
     assert approved_final == []
     assert len(notices.events) == 1
     assert notices.events[0].project_id == _PROJECT
+    assert notices.events[0].revision == 4
+    assert notices.events[0].persona_score == 90.0
+    assert notices.events[0].sources_count == 3
     assert EVENT_TYPE_READY_FOR_OWNER == "content.autopilot.ready_for_owner"
+
+
+@pytest.mark.asyncio
+async def test_missing_bot_token_escalates_instead_of_notifying() -> None:
+    """Scenario: Missing bot token escalates and does not call Telegram."""
+    run = _run(AutopilotRunState.GENERATING, project_id=_PROJECT)
+    runs = _Runs(run=run, topic=_topic(run.topic_candidate_id))
+    editorial = _Editorial(phase=GATE_FINAL_REVIEW)
+    notices = _Notices()
+    await _until_idle(_runner(runs, editorial, notices, notifier_configured=False))
+
+    assert runs.run.state is AutopilotRunState.ESCALATED
+    assert runs.run.state_reason == REASON_NOTIFIER_UNCONFIGURED
+    assert notices.events == []
 
 
 @pytest.mark.asyncio
@@ -272,7 +295,11 @@ async def test_low_persona_score_revises_twice_then_escalates() -> None:
     await _until_idle(_runner(runs, editorial, notices))
 
     assert editorial.resumes is not None
-    revises = [command for command in editorial.resumes if command.action == REVIEW_ACTION_REVISE]
+    revises = [
+        command
+        for command in editorial.resumes
+        if command.action == REVIEW_ACTION_REVISE
+    ]
     assert len(revises) == 2
     assert all(REASON_PERSONA_SCORE in command.feedback for command in revises)
     assert runs.run.state is AutopilotRunState.ESCALATED
@@ -386,7 +413,9 @@ async def test_attach_miss_leaves_the_run_queued() -> None:
 
 def test_revise_feedback_renders_the_prompt() -> None:
     text = revise_feedback(
-        ReviseFeedbackRequest(phase=GATE_CONTENT, reason=REASON_PERSONA_SCORE, detail="62.0")
+        ReviseFeedbackRequest(
+            phase=GATE_CONTENT, reason=REASON_PERSONA_SCORE, detail="62.0"
+        )
     )
     assert GATE_CONTENT in text
     assert REASON_PERSONA_SCORE in text

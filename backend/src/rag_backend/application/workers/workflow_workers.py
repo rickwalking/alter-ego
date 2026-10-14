@@ -53,6 +53,14 @@ class AutopilotRunnerTick(Protocol):
         ...
 
 
+class TelegramNotifyTick(Protocol):
+    """Deliver pending owner notices on the worker tick (AE-0355)."""
+
+    async def tick(self, db: AsyncSession) -> int:
+        """Send due Telegram notices. Returns how many were delivered."""
+        ...
+
+
 @dataclass(frozen=True)
 class WorkflowWorkerServices:
     """Composition-root-injected collaborators for the worker tick (AE-0315).
@@ -68,6 +76,7 @@ class WorkflowWorkerServices:
     republish_sweeper: CarouselRepublishSweeper | None = None
     instagram_publish: InstagramPublishTick | None = None
     autopilot_runner: AutopilotRunnerTick | None = None
+    telegram_notify: TelegramNotifyTick | None = None
 
 
 @dataclass(frozen=True)
@@ -82,6 +91,7 @@ class _TickCollaborators:
     republish_sweeper: CarouselRepublishSweeper | None
     instagram_publish: InstagramPublishTick | None = None
     autopilot_runner: AutopilotRunnerTick | None = None
+    telegram_notify: TelegramNotifyTick | None = None
 
 
 async def _run_tick(
@@ -126,6 +136,9 @@ async def _run_tick(
     autopilot_runs = 0
     if settings.autopilot_enabled and services.autopilot_runner is not None:
         autopilot_runs = await services.autopilot_runner.tick(db)
+    telegram_notices = 0
+    if services.telegram_notify is not None:
+        telegram_notices = await services.telegram_notify.tick(db)
     return {
         "reaped": reaped,
         "converged": converged,
@@ -135,6 +148,7 @@ async def _run_tick(
         "auto_rejected": auto_rejected,
         "instagram_runs": instagram_runs,
         "autopilot_runs": autopilot_runs,
+        "telegram_notices": telegram_notices,
     }
 
 
@@ -160,6 +174,7 @@ async def run_workflow_workers(
         republish_sweeper=services.republish_sweeper,
         instagram_publish=services.instagram_publish,
         autopilot_runner=services.autopilot_runner,
+        telegram_notify=services.telegram_notify,
     )
     interval = settings.workflow_worker_interval_seconds
 

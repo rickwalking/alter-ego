@@ -87,8 +87,11 @@ from rag_backend.infrastructure.telemetry.opentelemetry import (
 from rag_backend.modules.autopilot import (
     AutopilotTickConfig,
     InstagramTickConfig,
+    TelegramTickConfig,
     build_autopilot_runner_tick,
     build_instagram_publish_tick,
+    build_telegram_notify_tick,
+    notifier_is_configured,
 )
 from rag_backend.modules.autopilot.api.router import router as autopilot_router
 
@@ -197,6 +200,17 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
                             stale_after_seconds=(
                                 settings.workflow_run_heartbeat_stale_seconds
                             ),
+                            notifier_configured=notifier_is_configured(
+                                settings.telegram_bot_token.get_secret_value(),
+                                settings.telegram_owner_chat_id,
+                            ),
+                        )
+                    ),
+                    telegram_notify=build_telegram_notify_tick(
+                        TelegramTickConfig(
+                            token=settings.telegram_bot_token.get_secret_value(),
+                            chat_id=settings.telegram_owner_chat_id,
+                            web_base_url=settings.carousel_public_base_url,
                         )
                     ),
                 ),

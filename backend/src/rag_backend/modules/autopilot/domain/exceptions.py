@@ -2,10 +2,15 @@
 
 from __future__ import annotations
 
-from rag_backend.modules.autopilot.constants import INVALID_TRANSITION_MESSAGE
+from rag_backend.modules.autopilot.constants import (
+    INVALID_TRANSITION_MESSAGE,
+)
 from rag_backend.modules.autopilot.domain.models import (
     AutopilotRunState,
     TransitionPair,
+)
+from rag_backend.modules.autopilot.notify_constants import (
+    DETAIL_CALLBACK_TOO_LONG,
 )
 
 
@@ -36,6 +41,30 @@ class InvalidAutopilotTransitionError(Exception):
 
 # Ticket and Gherkin name for InvalidAutopilotTransitionError.
 InvalidAutopilotTransition = InvalidAutopilotTransitionError
+
+
+class CallbackDataTooLongError(Exception):
+    """An inline callback does not fit Telegram's 64-byte limit."""
+
+    def __init__(self, size: int) -> None:
+        self.size = size
+        super().__init__(f"{DETAIL_CALLBACK_TOO_LONG}:{size}")
+
+
+class TelegramDeliveryError(Exception):
+    """Telegram refused the notice. The detail is safe to log (no token)."""
+
+    def __init__(self, detail: str) -> None:
+        self.detail = detail
+        super().__init__(detail)
+
+
+class TelegramRateLimitedError(TelegramDeliveryError):
+    """Still limited after honouring retry_after. Do not count a failure."""
+
+
+class NotifierUnconfiguredError(Exception):
+    """The bot token is empty. Callers must not record a delivery."""
 
 
 class InstagramCallError(Exception):
