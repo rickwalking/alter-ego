@@ -59,6 +59,7 @@ from rag_backend.modules.autopilot.infrastructure.jpeg_size import jpeg_size
 from rag_backend.modules.editorial.public import (
     AclOptimisticLockingAdapter,
     AutomationResume,
+    AutomationResumeInput,
     AutomationStart,
     CarouselAutomationAcl,
     CarouselProject,
@@ -248,7 +249,9 @@ def _state_of(view: WorkflowStateView | None) -> dict[str, object]:
     return {str(key): value for key, value in view.state.items()}
 
 
-def _resume_input(command: ResumeCommand, session: AsyncSession) -> object:
+def _resume_input(
+    command: ResumeCommand, session: AsyncSession
+) -> AutomationResumeInput:
     return build_resume_input(
         AutomationResume(
             project_id=command.project_id,

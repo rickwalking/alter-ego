@@ -39,6 +39,8 @@ if TYPE_CHECKING:
 # The service, the repository and the ORM are imported lazily: the editorial
 # facade is loaded while the ORM registry is still initialising.
 EditorialWorkflowEngine: TypeAlias = "EditorialWorkflowService"
+# The engine resume input ``build_resume_input`` returns (QA r2 R6).
+AutomationResumeInput: TypeAlias = ResumeWorkflowInput
 
 
 @dataclass(frozen=True, kw_only=True)

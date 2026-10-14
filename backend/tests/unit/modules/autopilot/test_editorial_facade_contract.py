@@ -1,7 +1,7 @@
 """Rule-fires test for the autopilot facade-only contract (AE-0180 / QA r1 H5).
 
 A clean tree is not evidence the contract works. This plants a legacy
-carousel-service import inside the autopilot module and asserts
+carousel-service import inside a temporary copy of the autopilot module and asserts
 ``lint-imports`` exits non-zero on ``autopilot-editorial-facade-only``.
 
 Gherkin: tests/features/autopilot_runner.feature
@@ -10,16 +10,18 @@ Gherkin: tests/features/autopilot_runner.feature
 
 from __future__ import annotations
 
-import shutil
-import subprocess
 from pathlib import Path
 
 import pytest
 
-_BACKEND = Path(__file__).resolve().parents[4]
-_PACKAGE = _BACKEND / "src" / "rag_backend" / "modules" / "autopilot" / "infrastructure"
-_SEED_NAME = "_qa_r1_facade_seed"
-_SEED = _PACKAGE / f"{_SEED_NAME}.py"
+from tests.unit.modules.autopilot.import_seed import (
+    ImportSeed,
+    run_seeded_lint,
+    source_tree_has,
+)
+
+_SEED_PATH = "modules/autopilot/infrastructure/_qa_r1_facade_seed.py"
+_CONTRACT_ID = "autopilot-editorial-facade-only"
 _CONTRACT_NAME = "autopilot reaches editorial and publishing only through"
 _SEEDS = {
     "legacy_service": (
@@ -43,31 +45,30 @@ _SEEDS = {
 }
 
 
-def _remove_seed() -> None:
-    _SEED.unlink(missing_ok=True)
-    for compiled in (_PACKAGE / "__pycache__").glob(f"{_SEED_NAME}*"):
-        compiled.unlink(missing_ok=True)
-    shutil.rmtree(_BACKEND / ".grimp_cache", ignore_errors=True)
-
-
 @pytest.mark.parametrize("seed", sorted(_SEEDS))
-def test_contract_fires_on_seeded_legacy_import(seed: str) -> None:
+def test_contract_fires_on_seeded_legacy_import(seed: str, tmp_path: Path) -> None:
     """A seeded legacy or internal import from the autopilot breaks the contract."""
     source, imported = _SEEDS[seed]
-    _remove_seed()
-    _SEED.write_text(source, encoding="utf-8")
-    try:
-        result = subprocess.run(
-            ["uv", "run", "lint-imports"],
-            cwd=_BACKEND,
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-    finally:
-        _remove_seed()
+
+    result = run_seeded_lint(
+        ImportSeed(relative_path=_SEED_PATH, source=source, contract_id=_CONTRACT_ID),
+        tmp_path,
+    )
 
     output = result.stdout + result.stderr
     assert result.returncode != 0
     assert _CONTRACT_NAME in output
     assert imported in output
+    assert not source_tree_has(_SEED_PATH)
+
+
+def test_contract_passes_on_the_unseeded_copy(tmp_path: Path) -> None:
+    """The same run without a forbidden import is clean, so the seed is the cause."""
+    clean = "_SEEDED = 1\n"
+
+    result = run_seeded_lint(
+        ImportSeed(relative_path=_SEED_PATH, source=clean, contract_id=_CONTRACT_ID),
+        tmp_path,
+    )
+
+    assert result.returncode == 0, result.stdout + result.stderr

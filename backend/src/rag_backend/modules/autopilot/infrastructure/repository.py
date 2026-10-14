@@ -9,7 +9,7 @@ from datetime import UTC, datetime
 from typing import cast
 from uuid import UUID, uuid4
 
-from sqlalchemy import CursorResult, func, select, update
+from sqlalchemy import CursorResult, Update, func, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -265,14 +265,7 @@ class SqlAlchemyAutopilotRepository:
         return result.scalar_one_or_none() is not None
 
     async def _compare_and_set(self, command: TransitionCommand) -> bool:
-        result = await self._session.execute(
-            update(AutopilotRunModel)
-            .where(
-                AutopilotRunModel.id == command.run_id,
-                AutopilotRunModel.state == command.expected.value,
-            )
-            .values(_transition_values(command))
-        )
+        result = await self._session.execute(_transition_statement(command))
         matched = cast(CursorResult[object], result).rowcount == 1
         return matched
 
@@ -283,22 +276,23 @@ class SqlAlchemyAutopilotRepository:
         await self._session.flush()
 
 
-def _transition_values(command: TransitionCommand) -> dict[str, object]:
+def _transition_statement(command: TransitionCommand) -> Update:
     """Entering ``publishing`` restarts the publish retry budget (QA r1 B2/B3)."""
-    values: dict[str, object] = {
-        _STATE: command.new.value,
-        _STATE_REASON: command.reason,
-        _UPDATED_AT: func.now(),
-    }
+    statement = (
+        update(AutopilotRunModel)
+        .where(
+            AutopilotRunModel.id == command.run_id,
+            AutopilotRunModel.state == command.expected.value,
+        )
+        .values(
+            state=command.new.value,
+            state_reason=command.reason,
+            updated_at=func.now(),
+        )
+    )
     if command.new is AutopilotRunState.PUBLISHING:
-        values[_PUBLISH_ATTEMPTS] = 0
-    return values
-
-
-_STATE = AutopilotRunModel.state.key
-_STATE_REASON = AutopilotRunModel.state_reason.key
-_UPDATED_AT = AutopilotRunModel.updated_at.key
-_PUBLISH_ATTEMPTS = AutopilotRunModel.publish_attempts.key
+        return statement.values(publish_attempts=0)
+    return statement
 
 
 def _state_changed_record(command: TransitionCommand) -> EventRecord:

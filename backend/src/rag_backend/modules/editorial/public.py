@@ -105,6 +105,7 @@ from rag_backend.modules.editorial.domain.status import (
 )
 from rag_backend.modules.editorial.infrastructure.carousel_automation import (
     AutomationResume,
+    AutomationResumeInput,
     AutomationStart,
     CarouselAutomationAcl,
     CarouselReviewRow,
@@ -186,6 +187,7 @@ __all__ = [
     "ApprovalPort",
     "ApprovalState",
     "AutomationResume",
+    "AutomationResumeInput",
     "AutomationStart",
     "CarouselAutomationAcl",
     "CarouselProject",

@@ -12,7 +12,12 @@ from dataclasses import dataclass, field, replace
 from typing import cast
 
 import pytest
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from rag_backend.application.services.notification_service import NotificationService
+from rag_backend.application.services.workflow_failure_alert_service import (
+    WorkflowFailureAlertService,
+)
 from rag_backend.application.workers import workflow_workers
 from rag_backend.modules.autopilot.application.deferred_replies import (
     DeferredOwnerMessenger,
@@ -26,7 +31,10 @@ from rag_backend.modules.autopilot.domain.exceptions import TelegramDeliveryErro
 from rag_backend.modules.autopilot.domain.messages import review_keyboard
 from rag_backend.modules.autopilot.domain.models import AutopilotRun, AutopilotRunState
 from rag_backend.modules.autopilot.domain.notice_log import bump_attempt
-from rag_backend.modules.autopilot.domain.notify import SaveNoticeLog
+from rag_backend.modules.autopilot.domain.notify import (
+    AutopilotOutboxEvent,
+    SaveNoticeLog,
+)
 from rag_backend.modules.autopilot.domain.owner_ports import (
     CallbackAnswer,
     ForceReplyPrompt,
@@ -85,19 +93,19 @@ async def test_failing_autopilot_step_rolls_back_alone() -> None:
     log: list[str] = []
     session = _FakeSession()
     collaborators = workflow_workers._TickCollaborators(
-        notifications=cast(object, _NoopNotifications()),
-        alerts=cast(object, _NoopAlerts()),
-        auto_rejector=cast(object, _NoopAutoRejector()),
-        stale_run_reaper=cast(object, _Reaper()),
+        notifications=cast(NotificationService, _NoopNotifications()),
+        alerts=cast(WorkflowFailureAlertService, _NoopAlerts()),
+        auto_rejector=_NoopAutoRejector(),
+        stale_run_reaper=_Reaper(),
         drift_reconciler=None,
         republish_sweeper=None,
-        instagram_publish=cast(object, _Step(log, "instagram")),
-        autopilot_runner=cast(object, _Step(log, "autopilot", error=True)),
-        telegram_notify=cast(object, _Step(log, "telegram")),
+        instagram_publish=_Step(log, "instagram"),
+        autopilot_runner=_Step(log, "autopilot", error=True),
+        telegram_notify=_Step(log, "telegram"),
     )
 
     counters = await workflow_workers._run_tick(
-        _settings(autopilot_enabled=True), cast(object, session), collaborators
+        _settings(autopilot_enabled=True), cast(AsyncSession, session), collaborators
     )
 
     assert log == ["instagram", "autopilot", "telegram"]
@@ -171,7 +179,7 @@ class _LedgerStore:
             self.runs.run = replace(run, notice_log=command.log)
 
 
-def _state_event(state: str, reason: str, event_id: str) -> object:
+def _state_event(state: str, reason: str, event_id: str) -> AutopilotOutboxEvent:
     return _event(
         EVENT_TYPE_STATE_CHANGED,
         {PAYLOAD_STATE: state, PAYLOAD_REASON: reason},
