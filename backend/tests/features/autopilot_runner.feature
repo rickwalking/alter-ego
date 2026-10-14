@@ -95,3 +95,23 @@ Feature: Autopilot runner
     Given the import-linter contract "autopilot-editorial-facade-only"
     When a module under the autopilot imports the legacy carousel service, the carousel ORM, or an editorial internal
     Then lint-imports fails on that contract
+
+  # QA r2 R1: escalations neither starve each other nor stay open forever.
+  Scenario: A fixed escalation wakes even behind five abandoned ones
+    Given five escalated runs nobody has touched
+    And a newer escalated run whose carousel is back at final review at a new version
+    When the runner sweeps twice
+    Then the newer run is back in "awaiting_owner" with reason "owner_fixed_in_web_ui"
+    And checking a run never moves its "updated_at"
+
+  Scenario: An escalation nobody fixes is closed after 72 hours
+    Given a run "escalated" 73 hours ago
+    When the runner sweeps
+    Then the run is "rejected" with reason "escalation_expired"
+    And the owner is told on Telegram that the escalation was closed
+
+  Scenario: An escalation whose carousel was rejected is closed
+    Given an escalated run whose carousel the owner rejected in the web UI
+    When the runner sweeps, with or without Telegram configured
+    Then the run is "rejected" with reason "carousel_rejected"
+    And the owner is told on Telegram that the escalation was closed

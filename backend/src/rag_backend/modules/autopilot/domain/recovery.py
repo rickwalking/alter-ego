@@ -7,8 +7,11 @@ the rollback the runner needs before it records an engine failure.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Protocol
 from uuid import UUID
+
+from rag_backend.modules.autopilot.domain.models import AutopilotRun
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -28,6 +31,21 @@ class EscalationMark:
     version: int
 
 
+@dataclass(frozen=True, kw_only=True)
+class EscalatedScan:
+    """How many escalated runs one sweep checks (QA r2 R1)."""
+
+    limit: int
+
+
+@dataclass(frozen=True, kw_only=True)
+class WakeCheck:
+    """When the sweep last looked at an escalated run's carousel."""
+
+    run_id: UUID
+    at: datetime
+
+
 class RunRecoveryStore(Protocol):
     """Recovery writes on ``autopilot_runs``. The caller commits."""
 
@@ -41,6 +59,14 @@ class RunRecoveryStore(Protocol):
 
     async def mark_escalated(self, mark: EscalationMark) -> None:
         """Remember the lock version the run was escalated at."""
+        ...
+
+    async def escalated_for_check(self, scan: EscalatedScan) -> list[AutopilotRun]:
+        """Escalated runs, least recently checked first, so none is starved."""
+        ...
+
+    async def mark_checked(self, check: WakeCheck) -> None:
+        """Record the check time. Leaves ``state`` and ``updated_at`` alone."""
         ...
 
     async def rollback(self) -> None:

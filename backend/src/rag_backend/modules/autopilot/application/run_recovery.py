@@ -2,7 +2,11 @@
 
 * Expiry: ``awaiting_owner`` for 72 hours becomes ``expired`` (spec §3/§4).
 * Wake: an ``escalated`` run whose carousel is back at final review becomes
-  ``awaiting_owner`` again and the owner is re-notified (spec §4).
+  ``awaiting_owner`` again and the owner is re-notified (spec §4). The scan
+  rotates by last check time, so old escalations never starve newer ones.
+* Close: an ``escalated`` run whose carousel was rejected (web UI or the
+  stuck auto-reject), or that nobody fixed within 72 hours, becomes
+  ``rejected`` and the owner is told (QA r2 R1).
 * Containment: an engine error the driver did not classify ends the run
   with a reason instead of rolling back the whole worker tick forever.
 """
@@ -18,6 +22,7 @@ from rag_backend.modules.autopilot.constants import (
     GATE_FINAL_REVIEW,
     PHASE_STATUS_AWAITING,
 )
+from rag_backend.modules.editorial.public import PHASE_STATUS_REJECTED
 from rag_backend.modules.autopilot.domain.gate import (
     EditorialDriver,
     GateSnapshot,
@@ -33,14 +38,18 @@ from rag_backend.modules.autopilot.domain.notice_log import is_review_complete
 from rag_backend.modules.autopilot.domain.ports import AutopilotRunRepository, Clock
 from rag_backend.modules.autopilot.domain.publish import RunListQuery
 from rag_backend.modules.autopilot.domain.recovery import (
+    EscalatedScan,
     EscalationMark,
     RunRecoveryStore,
+    WakeCheck,
 )
 from rag_backend.modules.autopilot.notify_constants import (
     REASON_NOTIFIER_UNCONFIGURED,
 )
 from rag_backend.modules.autopilot.recovery_constants import (
     ENGINE_ERROR_DETAIL_MAX_CHARS,
+    REASON_CAROUSEL_REJECTED,
+    REASON_ESCALATION_EXPIRED,
     ESCALATED_SCAN_LIMIT,
     EXPIRY_SCAN_LIMIT,
     LOG_RUNNER_ENGINE_ERROR,
@@ -83,9 +92,10 @@ class RunRecovery:
         self._deps = deps
 
     async def sweep(self) -> int:
-        """Expire stale reviews, then wake fixed escalations. Returns moves."""
+        """Expire stale reviews, close or wake escalations. Returns moves."""
         expired = await self._expire_due()
-        return expired + await self._wake_fixed()
+        closed = await self._close_abandoned()
+        return expired + closed + await self._check_escalated()
 
     async def contain(self, run: AutopilotRun, exc: BaseException) -> int:
         """Roll back, then end the run with an ``engine_error`` reason."""
@@ -145,16 +155,28 @@ class RunRecovery:
                 moved += 1
         return moved
 
-    async def _wake_fixed(self) -> int:
-        if not self._deps.notifier_configured:
-            return 0
-        query = RunListQuery(state=_S.ESCALATED, limit=ESCALATED_SCAN_LIMIT)
-        woken = 0
+    async def _close_abandoned(self) -> int:
+        """Escalations nobody fixed within the expiry window become rejected."""
+        query = RunListQuery(state=_S.ESCALATED, limit=EXPIRY_SCAN_LIMIT)
+        cutoff = self._deps.clock.now() - timedelta(hours=OWNER_REVIEW_EXPIRY_HOURS)
+        moved = 0
         for run in await self._deps.runs.list_by_state(query):
-            woken += await self._wake_one(run)
-        return woken
+            if run.updated_at is None or run.updated_at > cutoff:
+                continue
+            if await self._move(run, _S.REJECTED, REASON_ESCALATION_EXPIRED):
+                moved += 1
+        return moved
 
-    async def _wake_one(self, run: AutopilotRun) -> int:
+    async def _check_escalated(self) -> int:
+        scan = EscalatedScan(limit=ESCALATED_SCAN_LIMIT)
+        moved = 0
+        for run in await self._deps.recovery.escalated_for_check(scan):
+            now = self._deps.clock.now()
+            await self._deps.recovery.mark_checked(WakeCheck(run_id=run.run_id, at=now))
+            moved += await self._check_one(run)
+        return moved
+
+    async def _check_one(self, run: AutopilotRun) -> int:
         project_id = run.carousel_project_id
         if project_id is None:
             return 0
@@ -162,6 +184,10 @@ class RunRecovery:
             snapshot = await self._deps.editorial.read_gate(project_id)
         except Exception:
             logger.exception(LOG_RUNNER_WAKE_FAILED, run_id=str(run.run_id))
+            return 0
+        if snapshot.phase_status == PHASE_STATUS_REJECTED:
+            return int(await self._move(run, _S.REJECTED, REASON_CAROUSEL_REJECTED))
+        if not self._deps.notifier_configured:
             return 0
         if not _back_at_final_review(run, snapshot):
             return 0

@@ -56,7 +56,12 @@ from rag_backend.modules.autopilot.domain.models import (
     TransitionCommand,
 )
 from rag_backend.modules.autopilot.domain.publish import RunListQuery
-from rag_backend.modules.autopilot.domain.recovery import EscalationMark, ReworkIntent
+from rag_backend.modules.autopilot.domain.recovery import (
+    EscalatedScan,
+    EscalationMark,
+    ReworkIntent,
+    WakeCheck,
+)
 from rag_backend.modules.autopilot.notify_constants import (
     REASON_NOTIFIER_UNCONFIGURED,
 )
@@ -222,6 +227,7 @@ class _Recovery:
     rollbacks: int = 0
     marks: list[EscalationMark] = field(default_factory=list)
     cleared: int = 0
+    checks: list[WakeCheck] = field(default_factory=list)
 
     async def queue_rework(self, intent: ReworkIntent) -> bool:
         assert self.runs is not None
@@ -241,6 +247,14 @@ class _Recovery:
         self.marks.append(mark)
         if self.runs is not None:
             self.runs.run = replace(self.runs.run, escalated_version=mark.version)
+
+    async def escalated_for_check(self, scan: EscalatedScan) -> list[AutopilotRun]:
+        if self.runs is None or self.runs.run.state is not AutopilotRunState.ESCALATED:
+            return []
+        return [self.runs.run][: scan.limit]
+
+    async def mark_checked(self, check: WakeCheck) -> None:
+        self.checks.append(check)
 
     async def rollback(self) -> None:
         self.rollbacks += 1

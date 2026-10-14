@@ -140,6 +140,10 @@ class AutopilotRunModel(AutopilotOrmBase):
     publish_claimed_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
+    # QA r2 R1: the escalated wake scan rotates by this, never by updated_at.
+    wake_checked_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     telegram_message_ids: Mapped[list[int] | dict[str, object]] = mapped_column(
         _JSON_DOCUMENT, nullable=False
     )
@@ -246,6 +250,13 @@ class ManualPublishModel(AutopilotOrmBase):
         String(IG_IDENTIFIER_LENGTH), nullable=True
     )
     ig_permalink: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # QA r2 R4b: stored before ``media_publish`` so a retry resumes it.
+    ig_container_id: Mapped[str | None] = mapped_column(
+        String(IG_IDENTIFIER_LENGTH), nullable=True
+    )
+    ig_container_created_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     error: Mapped[str | None] = mapped_column(Text, nullable=True)
     claimed_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False

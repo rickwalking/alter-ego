@@ -5,12 +5,18 @@ from __future__ import annotations
 from typing import cast
 from uuid import UUID
 
-from sqlalchemy import CursorResult, update
+from sqlalchemy import CursorResult, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from rag_backend.modules.autopilot.domain.models import AutopilotRunState
-from rag_backend.modules.autopilot.domain.recovery import EscalationMark, ReworkIntent
+from rag_backend.modules.autopilot.domain.models import AutopilotRun, AutopilotRunState
+from rag_backend.modules.autopilot.domain.recovery import (
+    EscalatedScan,
+    EscalationMark,
+    ReworkIntent,
+    WakeCheck,
+)
 from rag_backend.modules.autopilot.infrastructure.models import AutopilotRunModel
+from rag_backend.modules.autopilot.infrastructure.run_mapping import run_from_row
 
 
 class SqlRunRecoveryStore:
@@ -45,6 +51,30 @@ class SqlRunRecoveryStore:
             update(AutopilotRunModel)
             .where(AutopilotRunModel.id == mark.run_id)
             .values(escalated_version=mark.version)
+        )
+
+    async def escalated_for_check(self, scan: EscalatedScan) -> list[AutopilotRun]:
+        """Never-checked runs first, then the least recently checked (QA r2 R1)."""
+        checked = AutopilotRunModel.wake_checked_at
+        result = await self._session.execute(
+            select(AutopilotRunModel)
+            .where(AutopilotRunModel.state == AutopilotRunState.ESCALATED.value)
+            .order_by(
+                checked.is_not(None),
+                checked.asc(),
+                AutopilotRunModel.updated_at.asc(),
+            )
+            .limit(scan.limit)
+            .execution_options(populate_existing=True)
+        )
+        return [run_from_row(row) for row in result.scalars().all()]
+
+    async def mark_checked(self, check: WakeCheck) -> None:
+        """Stamp ``wake_checked_at`` so the next sweep starts with other runs."""
+        await self._session.execute(
+            update(AutopilotRunModel)
+            .where(AutopilotRunModel.id == check.run_id)
+            .values(wake_checked_at=check.at)
         )
 
     async def rollback(self) -> None:

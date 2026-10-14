@@ -35,6 +35,7 @@ from rag_backend.modules.autopilot.notify_constants import (
     CAPTION_TEMPLATE,
     EVENT_TYPE_IG_EXPIRING,
     KIND_ESCALATED,
+    KIND_ESCALATION_CLOSED,
     KIND_EXPIRED,
     KIND_FAILED,
     KIND_IG_EXPIRING,
@@ -55,6 +56,7 @@ from rag_backend.modules.autopilot.notify_constants import (
     TEXT_CAPTION_MISSING,
     TEXT_ESCALATED,
     TEXT_ESCALATED_WITH_LINK,
+    TEXT_ESCALATION_CLOSED,
     TEXT_EXPIRED,
     TEXT_FAILED,
     TEXT_IG_EXPIRY,
@@ -66,6 +68,8 @@ from rag_backend.modules.autopilot.notify_constants import (
     TEXT_REVIEW_REOPENED,
 )
 from rag_backend.modules.autopilot.recovery_constants import (
+    REASON_CAROUSEL_REJECTED,
+    REASON_ESCALATION_EXPIRED,
     REASON_REVIEW_REOPENED,
     REASON_REWORK_RETRY,
 )
@@ -280,6 +284,8 @@ def _state_kind(payload: Mapping[str, object]) -> str | None:
     state = payload.get(PAYLOAD_STATE)
     if state == AutopilotRunState.AWAITING_OWNER.value:
         return _reopened_kind(payload)
+    if state == AutopilotRunState.REJECTED.value:
+        return _closed_kind(payload)
     return _STATE_KINDS.get(str(state))
 
 
@@ -290,12 +296,20 @@ def _reopened_kind(payload: Mapping[str, object]) -> str | None:
     return None
 
 
+def _closed_kind(payload: Mapping[str, object]) -> str | None:
+    """The runner closed an escalation. An owner reject was already answered."""
+    if payload.get(PAYLOAD_REASON) in _CLOSE_REASONS:
+        return KIND_ESCALATION_CLOSED
+    return None
+
+
 _STATE_KINDS: dict[str, str] = {
     AutopilotRunState.ESCALATED.value: KIND_ESCALATED,
     AutopilotRunState.FAILED.value: KIND_FAILED,
     AutopilotRunState.EXPIRED.value: KIND_EXPIRED,
 }
 _REOPEN_REASONS = frozenset({REASON_REWORK_RETRY, REASON_REVIEW_REOPENED})
+_CLOSE_REASONS = frozenset({REASON_ESCALATION_EXPIRED, REASON_CAROUSEL_REJECTED})
 
 
 def _failed(copy: StatusCopy) -> str:
@@ -309,6 +323,10 @@ def _publish_failed(copy: StatusCopy) -> str:
 def _expired(copy: StatusCopy) -> str:
     del copy
     return TEXT_EXPIRED
+
+
+def _closed(copy: StatusCopy) -> str:
+    return TEXT_ESCALATION_CLOSED.format(reason=copy.reason)
 
 
 def _reopened(copy: StatusCopy) -> str:
@@ -355,6 +373,7 @@ _STATUS_TEXT: dict[str, Callable[[StatusCopy], str]] = {
     KIND_REMINDER: _reminder,
     KIND_EXPIRED: _expired,
     KIND_REVIEW_REOPENED: _reopened,
+    KIND_ESCALATION_CLOSED: _closed,
 }
 
 

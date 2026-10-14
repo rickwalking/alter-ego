@@ -13,7 +13,9 @@ the manual publish route from both calling Graph for one run.
 publishes for carousels that have no autopilot run and is the row lock
 that keeps two manual publishes from both calling Graph.
 ``autopilot_notify_cursor`` is the Telegram notifier's oldest-first position
-in the outbox, so no undelivered notice is skipped. No existing column
+in the outbox, so no undelivered notice is skipped. QA r2 adds
+``wake_checked_at`` (the escalated wake scan rotates by it) and the manual
+ledger's container id and creation time, persisted before ``media_publish``. No existing column
 is altered or dropped, so the LangGraph checkpoint-drain rule does not
 apply. ``downgrade`` drops what ``upgrade`` added.
 """
@@ -36,6 +38,7 @@ _REWORK_PHASE = "rework_phase"
 _REWORK_FEEDBACK = "rework_feedback"
 _ESCALATED_VERSION = "escalated_version"
 _PUBLISH_CLAIMED_AT = "publish_claimed_at"
+_WAKE_CHECKED_AT = "wake_checked_at"
 _PHASE_LENGTH = 32
 _STATE_LENGTH = 32
 _ID_LENGTH = 36
@@ -65,6 +68,10 @@ def upgrade() -> None:
         _RUNS,
         sa.Column(_PUBLISH_CLAIMED_AT, sa.DateTime(timezone=True), nullable=True),
     )
+    op.add_column(
+        _RUNS,
+        sa.Column(_WAKE_CHECKED_AT, sa.DateTime(timezone=True), nullable=True),
+    )
     op.create_table(
         _MANUAL,
         sa.Column(
@@ -80,6 +87,10 @@ def upgrade() -> None:
         sa.Column("state", sa.String(_STATE_LENGTH), nullable=False),
         sa.Column("ig_post_id", sa.String(_IG_ID_LENGTH), nullable=True),
         sa.Column("ig_permalink", sa.Text(), nullable=True),
+        sa.Column("ig_container_id", sa.String(_IG_ID_LENGTH), nullable=True),
+        sa.Column(
+            "ig_container_created_at", sa.DateTime(timezone=True), nullable=True
+        ),
         sa.Column("error", sa.Text(), nullable=True),
         sa.Column("claimed_at", sa.DateTime(timezone=True), nullable=False),
     )
@@ -95,6 +106,7 @@ def downgrade() -> None:
     """Drop the manual publish ledger and the run recovery columns."""
     op.drop_table(_CURSOR)
     op.drop_table(_MANUAL)
+    op.drop_column(_RUNS, _WAKE_CHECKED_AT)
     op.drop_column(_RUNS, _PUBLISH_CLAIMED_AT)
     op.drop_column(_RUNS, _ESCALATED_VERSION)
     op.drop_column(_RUNS, _REWORK_FEEDBACK)

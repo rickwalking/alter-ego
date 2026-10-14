@@ -22,6 +22,10 @@ EXPIRY_SCAN_LIMIT = 20
 # Escalated runs whose carousel came back to final review.
 REASON_OWNER_FIXED = "owner_fixed_in_web_ui"
 ESCALATED_SCAN_LIMIT = 5
+# QA r2 R1: escalations are closed instead of blocking the scan forever. The
+# window matches the owner-review expiry and the carousel stuck auto-reject.
+REASON_ESCALATION_EXPIRED = "escalation_expired"
+REASON_CAROUSEL_REJECTED = "carousel_rejected"
 
 # Owner rework is queued by the webhook and applied by the runner.
 REASON_REWORK_QUEUED = "owner_rework_queued"
