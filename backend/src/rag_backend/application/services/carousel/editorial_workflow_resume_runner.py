@@ -16,6 +16,7 @@ import asyncio
 from dataclasses import dataclass
 
 import structlog
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.application.services.carousel.editorial_workflow_run_events import (
     publish_run_finished,
@@ -28,6 +29,9 @@ from rag_backend.application.services.carousel.editorial_workflow_support import
     ResumeWorkflowInput,
     publish_workflow_sse_updates,
     resolve_background_resume_sse_error_message,
+)
+from rag_backend.application.services.carousel.workflow_state import (
+    CarouselWorkflowState,
 )
 from rag_backend.domain.constants.carousel_run import (
     DEFAULT_RUN_HEARTBEAT_INTERVAL_SECONDS,
@@ -46,6 +50,7 @@ from rag_backend.domain.constants.carousel_workflow import (
     PHASE_STATUS_AWAITING_HUMAN,
     PHASE_STATUS_FAILED,
     REVIEW_ACTION_APPROVE,
+    RUN_ACTION_REDRIVE,
 )
 from rag_backend.domain.models.carousel_run import (
     CarouselRunContext,
@@ -79,7 +84,11 @@ class _MarkFailedParams:
 
 @dataclass(frozen=True)
 class BackgroundResumeParams:
-    """Inputs required to resume a workflow in the background."""
+    """Inputs required to resume a workflow in the background.
+
+    ``action`` is a review action, or ``RUN_ACTION_REDRIVE`` to re-run a
+    parked pending node without a review decision (AE-0363).
+    """
 
     project_id: str
     action: str
@@ -95,7 +104,7 @@ def schedule_background_resume(
 ) -> None:
     """Fire-and-forget background resume with task tracking."""
     task = asyncio.create_task(
-        _execute_background_resume(service, params),
+        execute_resume_run(service, params),
         name=f"{_TASK_NAME_PREFIX}{params.project_id}",
     )
     _background_tasks.add(task)
@@ -130,11 +139,16 @@ async def _run_heartbeat_loop(ctx: CarouselRunContext) -> None:
             return
 
 
-async def _execute_background_resume(
+async def execute_resume_run(
     service: EditorialWorkflowService,
     params: BackgroundResumeParams,
 ) -> None:
-    """Run-owned wrapper: fence capture, heartbeat task, fenced-zombie exit."""
+    """Run-owned wrapper: fence capture, heartbeat task, fenced-zombie exit.
+
+    The HTTP route schedules it as a task. The autopilot tick awaits it
+    inline after committing its own transaction (AE-0363), so both callers
+    get the same heartbeat, run events, epoch fence, and failure marking.
+    """
     fence = await read_run_fence(params.project_id)
     token = carousel_run_epoch_var.set(fence) if fence is not None else None
     heartbeat = (
@@ -183,18 +197,7 @@ async def _run_background_resume(
             )
             await _beat_and_stage(ctx, RUN_STAGE_GENERATING)
 
-            state = await service.resume_workflow(
-                ResumeWorkflowInput(
-                    project_id=params.project_id,
-                    action=params.action,
-                    reviewer_id=params.reviewer_id,
-                    feedback=params.feedback,
-                    db=db,
-                    persona=None,
-                    project_title=params.project_title,
-                    structured_feedback=params.structured_feedback,
-                ),
-            )
+            state = await _run_phase(service, params, db)
             await _beat_and_stage(ctx, RUN_STAGE_VALIDATING)
 
             if _detect_resume_stuck(
@@ -290,6 +293,28 @@ async def _run_background_resume(
             )
 
 
+async def _run_phase(
+    service: EditorialWorkflowService,
+    params: BackgroundResumeParams,
+    db: AsyncSession,
+) -> CarouselWorkflowState:
+    """Apply the review decision, or re-run the parked node (AE-0363)."""
+    if params.action == RUN_ACTION_REDRIVE:
+        return await service.redrive_pending_phase(params.project_id, db)
+    return await service.resume_workflow(
+        ResumeWorkflowInput(
+            project_id=params.project_id,
+            action=params.action,
+            reviewer_id=params.reviewer_id,
+            feedback=params.feedback,
+            db=db,
+            persona=None,
+            project_title=params.project_title,
+            structured_feedback=params.structured_feedback,
+        ),
+    )
+
+
 def _detect_resume_stuck(
     params: BackgroundResumeParams,
     prior_phase: str,
@@ -359,5 +384,6 @@ async def _mark_background_resume_failed(
 __all__ = [
     "BackgroundResumeParams",
     "cancel_background_resume_task",
+    "execute_resume_run",
     "schedule_background_resume",
 ]

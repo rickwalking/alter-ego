@@ -59,6 +59,8 @@ def assemble_snapshot(parts: SnapshotParts) -> GateSnapshot:
         revisions_used=_revisions(state.get(FIELD_REVISION_COUNT), phase),
         stale=parts.stale,
         engine_blocker=parts.engine_blocker,
+        parked=parts.parked,
+        parked_overdue=parts.parked_overdue,
     )
 
 

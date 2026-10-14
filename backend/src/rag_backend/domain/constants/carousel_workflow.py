@@ -85,6 +85,11 @@ ERR_WORKFLOW_SSE_SUBSCRIBER_LIMIT = "workflow_sse_subscriber_limit_exceeded"
 ERR_RESUME_ALREADY_IN_PROGRESS = "resume_already_in_progress"
 ERR_BACKGROUND_RESUME_FAILED = "background_resume_failed"
 ERR_BACKGROUND_RESUME_STUCK = "background_resume_stuck"
+# AE-0363: a re-drive needs a checkpoint parked before a pending node with no
+# open interrupt (a phase whose run died after the gate was approved).
+ERR_NOTHING_TO_REDRIVE = "nothing_to_redrive"
+# AE-0363: the run action that re-runs a parked node instead of a review.
+RUN_ACTION_REDRIVE = "redrive"
 ERR_UNSUPPORTED_REVIEW_ACTION = "unsupported_review_action"
 
 STRUCTURED_FEEDBACK_KEY = "structured_feedback"

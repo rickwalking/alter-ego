@@ -106,6 +106,17 @@ class CarouselEditorialOrchestrator:
         self._bind_resume_context(db=db, workflow_input=workflow_input)
         return await self._engine.resume(project_id, human_input)
 
+    async def continue_pending(
+        self,
+        project_id: str,
+        *,
+        db: AsyncSession | None = None,
+        workflow_input: EditorialWorkflowStartInput | None = None,
+    ) -> CarouselWorkflowState:
+        """AE-0363: re-run a parked pending node with the resume context bound."""
+        self._bind_resume_context(db=db, workflow_input=workflow_input)
+        return await self._engine.continue_pending(project_id)
+
     async def get_state(self, project_id: str) -> CarouselWorkflowState | None:
         return await self._engine.get_state(project_id)
 

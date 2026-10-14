@@ -45,6 +45,10 @@ from rag_backend.modules.autopilot.domain.gate import (
     PolicyDecision,
     ResearchSourceFact,
 )
+from rag_backend.modules.autopilot.parked_constants import (
+    REASON_ENGINE_PARKED,
+    REDRIVABLE_PHASE_STATUSES,
+)
 from rag_backend.modules.autopilot.recovery_constants import (
     MAX_REVISES_DESIGN,
     REASON_ENGINE_ERROR,
@@ -62,9 +66,9 @@ def source_has_content(source: ResearchSourceFact) -> bool:
 
 def decide(snapshot: GateSnapshot) -> PolicyDecision:
     """Choose approve, revise, escalate, stop, or wait."""
-    terminal = _terminal(snapshot)
-    if terminal is not None:
-        return terminal
+    early = _before_gate(snapshot)
+    if early is not None:
+        return early
     if snapshot.phase_status != PHASE_STATUS_AWAITING:
         return PolicyDecision(action=GateAction.WAIT, reason=REASON_WAITING)
     if snapshot.phase == GATE_FINAL_REVIEW:
@@ -78,12 +82,31 @@ def decide(snapshot: GateSnapshot) -> PolicyDecision:
     return _from_check(snapshot, check(snapshot))
 
 
+def _before_gate(snapshot: GateSnapshot) -> PolicyDecision | None:
+    """A stale or failed run, then a parked workflow (AE-0363), come first."""
+    terminal = _terminal(snapshot)
+    if terminal is not None:
+        return terminal
+    if snapshot.parked:
+        return _parked(snapshot)
+    return None
+
+
 def _terminal(snapshot: GateSnapshot) -> PolicyDecision | None:
     if snapshot.stale:
         return PolicyDecision(action=GateAction.ESCALATE, reason=REASON_RUN_STALE)
     if snapshot.phase_status == PHASE_STATUS_FAILED:
         return PolicyDecision(action=GateAction.ESCALATE, reason=REASON_PHASE_FAILED)
     return None
+
+
+def _parked(snapshot: GateSnapshot) -> PolicyDecision:
+    """Never wait on a parked workflow past the grace period (AE-0363)."""
+    if not snapshot.parked_overdue:
+        return PolicyDecision(action=GateAction.WAIT, reason=REASON_WAITING)
+    if snapshot.phase_status in REDRIVABLE_PHASE_STATUSES:
+        return PolicyDecision(action=GateAction.REDRIVE, reason=REASON_ENGINE_PARKED)
+    return PolicyDecision(action=GateAction.ESCALATE, reason=REASON_ENGINE_PARKED)
 
 
 def _from_check(snapshot: GateSnapshot, reason: str | None) -> PolicyDecision:

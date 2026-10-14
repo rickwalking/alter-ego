@@ -18,6 +18,7 @@ from rag_backend.application.services.carousel.workflow_state import (
 )
 from rag_backend.domain.constants.carousel_workflow import (
     CAROUSEL_GRAPH_RECURSION_LIMIT,
+    ERR_NOTHING_TO_REDRIVE,
     PHASE_APPROVED_HOLD,
     PHASE_STATUS_AWAITING_HUMAN,
     PHASE_STATUS_IN_PROGRESS,
@@ -161,6 +162,29 @@ class CarouselWorkflowEngine:
         )
         return cast(CarouselWorkflowState, result)
 
+    async def continue_pending(self, project_id: str) -> CarouselWorkflowState:
+        """Run the parked pending node again, with NO resume value (AE-0363).
+
+        A run that died after its gate was approved leaves the checkpoint
+        before the next node with no open interrupt. ``Command(resume=...)``
+        there is a trap: the value is a null resume that the next gate's
+        ``interrupt()`` consumes, so that gate is approved unreviewed.
+        ``ainvoke(None)`` only re-runs the pending node, which then parks at
+        its own gate.
+        """
+        await ensure_checkpoint_commit_allowed(project_id)
+        config = self._run_config(project_id)
+        snapshot = await self._app.aget_state(config)
+        if not is_parked_before_node(snapshot):
+            raise ValueError(ERR_NOTHING_TO_REDRIVE)
+        result = await self._app.ainvoke(None, config=config)
+        return cast(CarouselWorkflowState, result)
+
+    async def is_parked(self, project_id: str) -> bool:
+        """True when :meth:`continue_pending` has a node to re-run (AE-0363)."""
+        snapshot = await self._app.aget_state(self._run_config(project_id))
+        return is_parked_before_node(snapshot)
+
     async def update_state(
         self,
         project_id: str,
@@ -245,4 +269,20 @@ class CarouselWorkflowEngine:
         return state
 
 
-__all__ = ["CarouselWorkflowEngine"]
+def is_parked_before_node(snapshot: object) -> bool:
+    """True when a node is pending and no interrupt waits for a human.
+
+    The approved-hold park (AE-0288) is a held carousel, never a dead run.
+    """
+    if snapshot is None:
+        return False
+    pending_next = getattr(snapshot, "next", ()) or ()
+    if not pending_next or str(pending_next[0]) == PHASE_APPROVED_HOLD:
+        return False
+    if getattr(snapshot, "interrupts", ()) or ():
+        return False
+    tasks = getattr(snapshot, "tasks", ()) or ()
+    return not any(getattr(task, "interrupts", ()) for task in tasks)
+
+
+__all__ = ["CarouselWorkflowEngine", "is_parked_before_node"]

@@ -54,6 +54,7 @@ from rag_backend.modules.autopilot.domain.gate import (
     OwnerReadyNotifier,
     PolicyDecision,
     ProjectSpec,
+    RedriveCommand,
     ResumeCommand,
     ResumeStatus,
     StartAttemptCommand,
@@ -76,6 +77,10 @@ from rag_backend.modules.autopilot.domain.publish import RunListQuery
 from rag_backend.modules.autopilot.domain.recovery import RunRecoveryStore
 from rag_backend.modules.autopilot.notify_constants import (
     REASON_NOTIFIER_UNCONFIGURED,
+)
+from rag_backend.modules.autopilot.parked_constants import (
+    LOG_RUNNER_REDRIVE,
+    REASON_ENGINE_PARKED,
 )
 from rag_backend.modules.editorial.public import (
     REVIEW_ACTION_APPROVE,
@@ -194,6 +199,7 @@ class AutopilotRunner:
             GateAction.ESCALATE: self._escalate,
             GateAction.REVISE: self._revise,
             GateAction.APPROVE: self._approve,
+            GateAction.REDRIVE: self._redrive,
         }
         return await handlers[step.decision.action](step)
 
@@ -252,6 +258,31 @@ class AutopilotRunner:
         )
         if result.status is ResumeStatus.REVISION_CAP:
             await self._escalate_at(step, REASON_REVISION_CAP)
+        return 1
+
+    async def _redrive(self, step: _Step) -> int:
+        """Re-run a parked phase once; escalate when nothing is parked (AE-0363).
+
+        A re-drive that fails marks the carousel ``failed``, and the next
+        tick escalates it, so a parked workflow is never retried silently.
+        """
+        project_id = step.run.carousel_project_id or ""
+        logger.warning(
+            LOG_RUNNER_REDRIVE,
+            run_id=str(step.run.run_id),
+            project_id=project_id,
+            phase=step.snapshot.phase,
+            phase_status=step.snapshot.phase_status,
+        )
+        result = await self._deps.editorial.redrive(
+            RedriveCommand(
+                project_id=project_id,
+                expected_version=step.snapshot.lock_version,
+                phase=step.snapshot.phase,
+            )
+        )
+        if result.status is ResumeStatus.NOT_PARKED:
+            await self._escalate_at(step, REASON_ENGINE_PARKED)
         return 1
 
     async def _spec(self, run: AutopilotRun) -> ProjectSpec | None:

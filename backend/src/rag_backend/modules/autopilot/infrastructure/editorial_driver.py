@@ -3,11 +3,17 @@
 Creates the carousel, starts the workflow, reads the gate, and resumes
 approve or revise. Provider 429/503 become a status. A lock conflict
 does not call resume a second time.
+
+AE-0363: approve, revise, and re-drive run through the editorial
+``run_automation_phase`` facade operation, the same run-owned path as the
+HTTP resume. The tick commits the lock bump and the ``in_progress`` flip
+before the phase runs, so no transaction is held across LLM work, and the
+row carries ``run_started_at`` and a live heartbeat while the phase runs.
 """
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -18,6 +24,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from rag_backend.domain.constants import IMAGE_MODEL_OPENAI
 from rag_backend.domain.constants.carousel import CAROUSEL_DEFAULT_SLIDES_CONFIG
 from rag_backend.domain.constants.carousel_workflow import (
+    ERR_NOTHING_TO_REDRIVE,
+    ERR_RESUME_ALREADY_IN_PROGRESS,
     ERR_REVISION_CAP_EXCEEDED,
     STRUCTURED_FEEDBACK_TARGET_PHASE_KEY,
 )
@@ -47,6 +55,7 @@ from rag_backend.modules.autopilot.domain.gate import (
     GateSnapshot,
     ImageFact,
     ProjectSpec,
+    RedriveCommand,
     ResumeCommand,
     ResumeResult,
     ResumeStatus,
@@ -54,32 +63,36 @@ from rag_backend.modules.autopilot.domain.gate import (
     StartCommand,
     StartStatus,
 )
+from rag_backend.modules.autopilot.domain.parked import (
+    GateStatus,
+    GateStatusInput,
+    RowRun,
+    reconcile_gate_status,
+)
 from rag_backend.modules.autopilot.domain.ports import Clock
 from rag_backend.modules.autopilot.domain.snapshot import assemble_snapshot
 from rag_backend.modules.autopilot.infrastructure.jpeg_size import jpeg_size
+from rag_backend.modules.autopilot.parked_constants import PARKED_GRACE_SECONDS
 from rag_backend.modules.editorial.public import (
-    AclOptimisticLockingAdapter,
-    AutomationResume,
-    AutomationResumeInput,
+    AutomationRun,
     AutomationStart,
     CarouselAutomationAcl,
     CarouselProject,
     CarouselProjectWriteOwner,
     CarouselTheme,
-    EditorialPorts,
-    EditorialService,
     EditorialWorkflowEngine,
     EditorialWorkflowHandlers,
-    EngineReviewDecisionAdapter,
     LegacyCarouselAcl,
     ResearchSourceType,
+    RunHeartbeat,
     StartWorkflowCommand,
     WorkflowEngine,
     WorkflowStateView,
-    build_resume_input,
     build_start_input,
     content_approve_blocker,
     is_provider_outage,
+    redrive_automation_phase,
+    run_automation_phase,
 )
 
 EngineFactory = Callable[[], EditorialWorkflowEngine]
@@ -148,7 +161,11 @@ class InProcessEditorialDriver:
         return StartStatus.STARTED
 
     async def read_gate(self, project_id: str) -> GateSnapshot:
-        """Load workflow state and measure image files. No resume."""
+        """Load workflow state and measure image files. No resume.
+
+        AE-0363: the status comes from the checkpoint reconciled with the row,
+        so a run in flight waits and a parked workflow is flagged.
+        """
         engine = self._config.engine_factory()
         view = await _handlers(self._config.session).get_state(
             _as_engine(engine),
@@ -156,31 +173,69 @@ class InProcessEditorialDriver:
         )
         state = _state_of(view)
         lock_version = view.lock_version if view is not None else 1
+        beat = await self._acl.heartbeat(project_id)
+        gate = self._gate_status(state, beat)
+        state[FIELD_PHASE_STATUS] = gate.phase_status
         return assemble_snapshot(
             SnapshotParts(
                 state=state,
                 images=_images(state.get(FIELD_IMAGE_ASSETS)),
                 slides_total=await self._slides_total(project_id),
                 lock_version=lock_version,
-                stale=await self._is_stale(project_id),
+                stale=self._is_stale(beat),
                 engine_blocker=content_approve_blocker(state) or "",
+                parked=gate.parked,
+                parked_overdue=gate.parked_overdue,
             )
         )
 
     async def resume(self, command: ResumeCommand) -> ResumeResult:
-        """Bump the lock, then resume once. A conflict skips the resume."""
-        engine = self._config.engine_factory()
-        service = _service(self._config.session, self._acl, engine)
-        metadata = _trace(command.project_id, command.phase)
+        """Approve or revise once through the run-owned editorial path."""
+        return await self._run(
+            run_automation_phase,
+            AutomationRun(
+                engine=self._config.engine_factory(),
+                session=self._config.session,
+                project_id=command.project_id,
+                expected_version=command.expected_version,
+                action=command.action,
+                reviewer_id=REVIEWER_UNSET,
+                feedback=command.feedback,
+                structured_feedback=_structured_feedback(command),
+            ),
+            command.phase,
+        )
+
+    async def redrive(self, command: RedriveCommand) -> ResumeResult:
+        """Re-run a parked pending node once (AE-0363). No review is sent."""
+        return await self._run(
+            redrive_automation_phase,
+            AutomationRun(
+                engine=self._config.engine_factory(),
+                session=self._config.session,
+                project_id=command.project_id,
+                expected_version=command.expected_version,
+                action="",
+            ),
+            command.phase,
+        )
+
+    async def _run(
+        self,
+        operation: Callable[[AutomationRun], Awaitable[None]],
+        run: AutomationRun,
+        phase: str,
+    ) -> ResumeResult:
+        """Run one facade operation; map the refusals it raises to a status.
+
+        Refusals are raised before the run start is committed, so the tick
+        transaction holds nothing of the run. A failure inside the phase is not
+        raised: the run wrapper marked the row ``failed`` and the next read
+        escalates it.
+        """
         try:
-            with propagate_attributes(metadata=metadata):
-                await service.bump_resume_lock_version(
-                    command.project_id,
-                    command.expected_version,
-                )
-                await service.record_review_decision(
-                    _resume_input(command, self._config.session)
-                )
+            with propagate_attributes(metadata=_trace(run.project_id, phase)):
+                await operation(run)
         except Exception as exc:
             status = _resume_status(exc)
             if status is None:
@@ -190,11 +245,31 @@ class InProcessEditorialDriver:
             return ResumeResult(status=status)
         return ResumeResult(status=ResumeStatus.APPLIED)
 
+    def _gate_status(
+        self, state: dict[str, object], beat: RunHeartbeat | None
+    ) -> GateStatus:
+        return reconcile_gate_status(
+            GateStatusInput(
+                engine_phase=str(state.get(FIELD_CURRENT_PHASE, "")),
+                engine_status=str(state.get(FIELD_PHASE_STATUS, "")),
+                row=self._row_run(beat),
+                grace_seconds=PARKED_GRACE_SECONDS,
+            )
+        )
+
+    def _row_run(self, beat: RunHeartbeat | None) -> RowRun | None:
+        if beat is None:
+            return None
+        idle: float | None = None
+        if beat.updated_at is not None:
+            elapsed = self._config.clock.now() - _aware(beat.updated_at)
+            idle = elapsed.total_seconds()
+        return RowRun(phase_status=beat.phase_status, idle_seconds=idle)
+
     async def _slides_total(self, project_id: str) -> int:
         return await self._acl.slide_total(project_id)
 
-    async def _is_stale(self, project_id: str) -> bool:
-        beat = await self._acl.heartbeat(project_id)
+    def _is_stale(self, beat: RunHeartbeat | None) -> bool:
         if beat is None or beat.heartbeat_at is None:
             return False
         if beat.phase_status != PHASE_STATUS_IN_PROGRESS:
@@ -215,18 +290,6 @@ def _handlers(session: AsyncSession) -> EditorialWorkflowHandlers:
 
 def _acl(session: AsyncSession) -> LegacyCarouselAcl:
     return LegacyCarouselAcl(session, CarouselProjectWriteOwner(session))
-
-
-def _service(
-    session: AsyncSession,
-    acl: CarouselAutomationAcl,
-    engine: EditorialWorkflowEngine,
-) -> EditorialService:
-    ports = EditorialPorts(
-        optimistic_locking=AclOptimisticLockingAdapter(_acl(session)),
-        review_decision=EngineReviewDecisionAdapter(engine),
-    )
-    return EditorialService(acl.repository, ports)
 
 
 def _start_input(spec: ProjectSpec) -> AutomationStart:
@@ -259,21 +322,6 @@ def _state_of(view: WorkflowStateView | None) -> dict[str, object]:
             FIELD_PHASE_STATUS: PHASE_STATUS_FAILED,
         }
     return {str(key): value for key, value in view.state.items()}
-
-
-def _resume_input(
-    command: ResumeCommand, session: AsyncSession
-) -> AutomationResumeInput:
-    return build_resume_input(
-        AutomationResume(
-            project_id=command.project_id,
-            action=command.action,
-            reviewer_id=REVIEWER_UNSET,
-            feedback=command.feedback,
-            structured_feedback=_structured_feedback(command),
-            session=session,
-        )
-    )
 
 
 def _structured_feedback(command: ResumeCommand) -> dict[str, object] | None:
@@ -318,11 +366,15 @@ def _resume_status(exc: BaseException) -> ResumeStatus | None:
         return ResumeStatus.PROVIDER_OUTAGE
     if not isinstance(exc, ValueError):
         return None
-    if str(exc) == ERR_VERSION_CONFLICT:
-        return ResumeStatus.VERSION_CONFLICT
-    if str(exc) == ERR_REVISION_CAP_EXCEEDED:
-        return ResumeStatus.REVISION_CAP
-    return None
+    return _REFUSALS.get(str(exc))
+
+
+_REFUSALS: dict[str, ResumeStatus] = {
+    ERR_VERSION_CONFLICT: ResumeStatus.VERSION_CONFLICT,
+    ERR_REVISION_CAP_EXCEEDED: ResumeStatus.REVISION_CAP,
+    ERR_RESUME_ALREADY_IN_PROGRESS: ResumeStatus.IN_PROGRESS,
+    ERR_NOTHING_TO_REDRIVE: ResumeStatus.NOT_PARKED,
+}
 
 
 def _aware(value: datetime) -> datetime:

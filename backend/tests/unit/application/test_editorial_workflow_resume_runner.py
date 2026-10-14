@@ -13,10 +13,10 @@ from rag_backend.application.services.carousel.editorial_workflow_resume_runner 
     BackgroundResumeParams,
     _background_tasks,
     _detect_resume_stuck,
-    _execute_background_resume,
     _mark_background_resume_failed,
     _MarkFailedParams,
     _revert_background_resume_stuck,
+    execute_resume_run,
     schedule_background_resume,
 )
 from rag_backend.application.services.carousel.editorial_workflow_support import (
@@ -220,7 +220,7 @@ class TestScheduleBackgroundResume:
 
 @pytest.mark.unit
 class TestExecuteBackgroundResume:
-    """Scenario: _execute_background_resume runs workflow and handles all branches."""
+    """Scenario: execute_resume_run runs workflow and handles all branches."""
 
     @pytest.mark.asyncio
     async def test_happy_path_commits_and_publishes_sse(self) -> None:
@@ -254,7 +254,7 @@ class TestExecuteBackgroundResume:
                 return_value=False,
             ) as mock_detect,
         ):
-            await _execute_background_resume(service, params)
+            await execute_resume_run(service, params)
 
             service.get_workflow_state.assert_awaited_once_with(params.project_id)
 
@@ -310,7 +310,7 @@ class TestExecuteBackgroundResume:
                 return_value=False,
             ),
         ):
-            await _execute_background_resume(service, params)
+            await execute_resume_run(service, params)
 
             service.resume_workflow.assert_awaited_once()
             actual_input = service.resume_workflow.await_args[0][0]
@@ -357,7 +357,7 @@ class TestExecuteBackgroundResume:
                 return_value=False,
             ) as mock_detect,
         ):
-            await _execute_background_resume(service, params)
+            await execute_resume_run(service, params)
 
             mock_detect.assert_called_once_with(params, "", new_state)
 
@@ -392,7 +392,7 @@ class TestExecuteBackgroundResume:
                 return_value=False,
             ) as mock_detect,
         ):
-            await _execute_background_resume(service, params)
+            await execute_resume_run(service, params)
 
             mock_detect.assert_called_once_with(params, "", new_state)
 
@@ -435,7 +435,7 @@ class TestExecuteBackgroundResume:
                 "rag_backend.application.services.carousel.editorial_workflow_resume_runner.logger",
             ) as mock_logger,
         ):
-            await _execute_background_resume(service, params)
+            await execute_resume_run(service, params)
 
             mock_detect.assert_called_once_with(params, "research", new_state)
             mock_revert.assert_awaited_once_with(service, params.project_id, "research")
@@ -483,7 +483,7 @@ class TestExecuteBackgroundResume:
                 "rag_backend.application.services.carousel.editorial_workflow_resume_runner.logger",
             ) as mock_logger,
         ):
-            await _execute_background_resume(service, params)
+            await execute_resume_run(service, params)
 
             mock_db.rollback.assert_awaited_once()
             mock_resolve.assert_called_once_with(ERR_REVISION_CAP_EXCEEDED)
@@ -536,7 +536,7 @@ class TestExecuteBackgroundResume:
                 "rag_backend.application.services.carousel.editorial_workflow_resume_runner.logger",
             ) as mock_logger,
         ):
-            await _execute_background_resume(service, params)
+            await execute_resume_run(service, params)
 
             mock_db.rollback.assert_awaited_once()
             mock_resolve.assert_called_once_with(ERR_PERSONA_SCORE_TOO_LOW)
@@ -585,7 +585,7 @@ class TestExecuteBackgroundResume:
                 "rag_backend.application.services.carousel.editorial_workflow_resume_runner.logger",
             ) as mock_logger,
         ):
-            await _execute_background_resume(service, params)
+            await execute_resume_run(service, params)
 
             mock_db.rollback.assert_awaited_once()
             mock_resolve.assert_called_once_with("some error")
@@ -626,7 +626,7 @@ class TestExecuteBackgroundResume:
                 "rag_backend.application.services.carousel.editorial_workflow_resume_runner.logger",
             ) as mock_logger,
         ):
-            await _execute_background_resume(service, params)
+            await execute_resume_run(service, params)
 
             mock_db.rollback.assert_awaited_once()
             mock_mark.assert_awaited_once_with(
@@ -677,7 +677,7 @@ class TestExecuteBackgroundResume:
             ) as mock_logger,
         ):
             with pytest.raises(asyncio.CancelledError):
-                await _execute_background_resume(service, params)
+                await execute_resume_run(service, params)
 
             mock_db.rollback.assert_awaited_once()
             mock_mark.assert_awaited_once_with(

@@ -78,6 +78,8 @@ class RunHeartbeat:
 
     phase_status: str
     heartbeat_at: datetime | None
+    # AE-0363: when the row last changed, to time a parked workflow.
+    updated_at: datetime | None = None
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -213,6 +215,7 @@ class CarouselAutomationAcl:
         return RunHeartbeat(
             phase_status=str(row.phase_status),
             heartbeat_at=row.run_heartbeat_at,
+            updated_at=cast(datetime | None, row.updated_at),
         )
 
     async def review_row(self, project_id: str) -> CarouselReviewRow | None:

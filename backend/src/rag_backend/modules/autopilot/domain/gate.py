@@ -23,6 +23,8 @@ class GateAction(StrEnum):
     ESCALATE = "escalate"
     STOP = "stop"
     WAIT = "wait"
+    # AE-0363: re-run a parked pending node (no review decision is sent).
+    REDRIVE = "redrive"
 
 
 class StartStatus(StrEnum):
@@ -39,6 +41,10 @@ class ResumeStatus(StrEnum):
     VERSION_CONFLICT = "version_conflict"
     REVISION_CAP = "revision_cap"
     PROVIDER_OUTAGE = "provider_outage"
+    # AE-0363: a run is already in flight; nothing was changed.
+    IN_PROGRESS = "in_progress"
+    # AE-0363: a re-drive found no parked node; nothing was changed.
+    NOT_PARKED = "not_parked"
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -80,6 +86,10 @@ class SnapshotParts:
     # The engine's own content-approve verdict (error code), empty when it
     # would accept. Lets the policy revise instead of approving into a refusal.
     engine_blocker: str = ""
+    # AE-0363: no run in flight and the checkpoint neither waits for a review
+    # nor failed; overdue once the grace period passed.
+    parked: bool = False
+    parked_overdue: bool = False
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -99,6 +109,8 @@ class GateSnapshot:
     revisions_used: int
     stale: bool
     engine_blocker: str = ""
+    parked: bool = False
+    parked_overdue: bool = False
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -136,6 +148,15 @@ class ResumeCommand:
     feedback: str
     phase: str
     target_phase: str = ""
+
+
+@dataclass(frozen=True, kw_only=True)
+class RedriveCommand:
+    """Re-run the parked pending node at the current lock version (AE-0363)."""
+
+    project_id: str
+    expected_version: int
+    phase: str
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -190,6 +211,10 @@ class EditorialDriver(Protocol):
 
     async def resume(self, command: ResumeCommand) -> ResumeResult:
         """Approve or revise once, using ``expected_version``."""
+        ...
+
+    async def redrive(self, command: RedriveCommand) -> ResumeResult:
+        """Re-run a parked pending node once. Sends no review decision."""
         ...
 
 
