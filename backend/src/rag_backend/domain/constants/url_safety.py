@@ -47,3 +47,49 @@ LOG_URL_BLOCKED = "research_url_hop_blocked"
 LOG_URL_RESOLVE_FAILED = "research_url_resolve_failed"
 ERR_UNSAFE_REDIRECT = "research_url_redirected_to_unsafe_target"
 ERR_TOO_MANY_REDIRECTS = "research_url_too_many_redirects"
+
+# QA r3 Q5: parity with the old Chromium navigation. One deadline covers the
+# whole fetch (all hops); only text documents are rendered; the request looks
+# like a browser; the charset comes from the header, then the page's <meta>.
+RESEARCH_FETCH_DEADLINE_SECONDS = 15.0
+HEADER_USER_AGENT = "user-agent"
+HEADER_ACCEPT = "accept"
+HEADER_ACCEPT_LANGUAGE = "accept-language"
+HEADER_CONTENT_TYPE = "content-type"
+RESEARCH_REQUEST_HEADERS: dict[str, str] = {
+    HEADER_USER_AGENT: (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+        "(KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36"
+    ),
+    HEADER_ACCEPT: (
+        "text/html,application/xhtml+xml,application/xml;q=0.9,"
+        "text/plain;q=0.8,*/*;q=0.5"
+    ),
+    HEADER_ACCEPT_LANGUAGE: "en-US,en;q=0.9,pt-BR;q=0.8,pt;q=0.7",
+}
+MEDIA_TYPE_TEXT_HTML = "text/html"
+MEDIA_TYPE_XHTML = "application/xhtml+xml"
+MEDIA_TYPE_TEXT_PLAIN = "text/plain"
+RESEARCH_TEXT_MEDIA_TYPES: frozenset[str] = frozenset({
+    MEDIA_TYPE_TEXT_HTML,
+    MEDIA_TYPE_XHTML,
+    MEDIA_TYPE_TEXT_PLAIN,
+})
+MEDIA_TYPE_PARAM_SEPARATOR = ";"
+ERR_UNSUPPORTED_CONTENT = "research_url_unsupported_content_type"
+LOG_URL_UNSUPPORTED = "research_url_unsupported_content"
+# <meta charset="x"> and <meta http-equiv=... content="...; charset=x">.
+META_CHARSET_PATTERN = r"""<meta\b[^>]*?charset\s*=\s*["']?\s*([A-Za-z0-9._:-]+)"""
+META_CHARSET_SCAN_BYTES = 4096
+META_SCAN_ENCODING = "ascii"
+DECODE_ERRORS = "replace"
+# Scraped page text is cut to this many characters, as before.
+RESEARCH_TEXT_MAX_CHARS = 10_000
+
+# QA r3 Q6: rendered HTML must not make Chromium resolve or connect to a host.
+CHROMIUM_DISABLE_DNS_PREFETCH = "--dns-prefetch-disable"
+RESOURCE_HINT_PATTERN = (
+    r"""<link\b[^>]*?\brel\s*=\s*["']?[^"'>]*?"""
+    r"""\b(?:dns-prefetch|preconnect|prefetch|preload|modulepreload|prerender)\b"""
+    r"""[^>]*>"""
+)

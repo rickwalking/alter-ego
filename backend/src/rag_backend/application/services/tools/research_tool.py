@@ -2,11 +2,17 @@
 
 from rag_backend.application.services.tools.research_fetch import (
     fetch_public_document,
+    strip_resource_hints,
 )
 from rag_backend.application.services.tools.research_route_guard import (
     block_all_requests,
 )
-from rag_backend.domain.constants.url_safety import ROUTE_ALL_REQUESTS
+from rag_backend.domain.constants.url_safety import (
+    CHROMIUM_DISABLE_DNS_PREFETCH,
+    MEDIA_TYPE_TEXT_PLAIN,
+    RESEARCH_TEXT_MAX_CHARS,
+    ROUTE_ALL_REQUESTS,
+)
 from rag_backend.domain.models import ResearchSourceType
 from rag_backend.domain.protocols import ResearchTool
 
@@ -23,20 +29,30 @@ class PlaywrightResearchTool(ResearchTool):
         with JavaScript off and every page request aborted, so it never
         reaches the network. Raises ``UnsafeResearchTargetError`` when the URL
         or any redirect hop is not allowed.
+
+        Plain text is returned as is. Before rendering, resource hints are
+        stripped and DNS prefetch is off, so the HTML cannot make Chromium
+        resolve or connect to a host (QA r3 Q6).
         """
         from playwright.async_api import async_playwright
 
         document = await fetch_public_document(url)
+        if document.media_type == MEDIA_TYPE_TEXT_PLAIN:
+            return document.html[:RESEARCH_TEXT_MAX_CHARS]
         async with async_playwright() as p:
-            browser = await p.chromium.launch(headless=True)
+            browser = await p.chromium.launch(
+                headless=True, args=[CHROMIUM_DISABLE_DNS_PREFETCH]
+            )
             page = await browser.new_page(java_script_enabled=False)
             try:
                 await page.route(ROUTE_ALL_REQUESTS, block_all_requests)
                 await page.set_content(
-                    document.html, wait_until="domcontentloaded", timeout=15000
+                    strip_resource_hints(document.html),
+                    wait_until="domcontentloaded",
+                    timeout=15000,
                 )
                 content = await page.inner_text("body")
-                return content[:10000]  # Limit content length
+                return content[:RESEARCH_TEXT_MAX_CHARS]
             finally:
                 await browser.close()
 

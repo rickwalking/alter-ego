@@ -70,3 +70,30 @@ Feature: Research scraper SSRF guard (QA r1 S-W1)
     Given a URL whose host resolves to a private address
     When the research tool scrapes it
     Then it raises an unsafe-target error before Playwright starts
+
+  # QA r3 Q5: parity with the old Chromium navigation.
+  Scenario: A research fetch ends at one overall deadline
+    Given a redirect chain whose hops are each slow
+    When the research fetcher follows it
+    Then the whole fetch, all hops included, ends at 15 seconds
+    And the source is skipped like a failed scrape
+
+  Scenario: Only text documents are rendered
+    Given a URL that serves "application/pdf", an image, binary data, or no content type
+    When the research tool scrapes it
+    Then the source is skipped and Chromium never starts
+    And "text/html" and "application/xhtml+xml" are rendered
+    And "text/plain" is returned as text without Chromium
+
+  Scenario: The fetch sends browser headers and honours the page charset
+    Given a page encoded in ISO-8859-1
+    When the research fetcher requests it with a browser User-Agent, Accept and Accept-Language
+    Then the text is decoded with the header charset, else the meta charset, else UTF-8 with replacement
+    And a page that needs JavaScript comes back as its static HTML
+
+  # QA r3 Q6: no DNS prefetch or preconnect from rendered HTML.
+  Scenario: Resource hints in the page never reach the network
+    Given fetched HTML with dns-prefetch, preconnect, prefetch, preload and prerender links
+    When the scraper renders it
+    Then those links are removed before page.set_content
+    And Chromium is launched with "--dns-prefetch-disable"
