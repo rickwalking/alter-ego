@@ -88,3 +88,26 @@ def build_slide_translation_prompt(slides_json: str, quality_rubric: str) -> str
         version=CAROUSEL_PROMPT_VERSION_V6,
     )
     return prompt_text
+
+
+def build_autofix_retranslate_prompt(items_json: str) -> str:
+    """AE-0367: re-translate the EN texts the owner autofix found untranslated.
+
+    Same baselined lazy registry import as the builders above.
+    """
+    from rag_backend.agents.prompts.registry import (  # integrity-ok: baselined pair
+        render_prompt,
+    )
+    from rag_backend.domain.constants.carousel_autofix import (
+        AUTOFIX_PROMPT_DOMAIN,
+        AUTOFIX_PROMPT_NAME,
+        AUTOFIX_PROMPT_VERSION,
+    )
+
+    prompt_text, _ = render_prompt(
+        AUTOFIX_PROMPT_DOMAIN,
+        AUTOFIX_PROMPT_NAME,
+        variables={"items_json": items_json},
+        version=AUTOFIX_PROMPT_VERSION,
+    )
+    return prompt_text

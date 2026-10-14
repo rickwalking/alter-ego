@@ -221,6 +221,11 @@ class EditorialWorkflowService:
         """The workflow event service (audit + outbox), shared with AE-0311."""
         return self._events
 
+    @property
+    def chat_model(self) -> BaseChatModel:
+        """The workflow's chat model (AE-0367 owner autofix EN re-translate)."""
+        return self._llm
+
     async def update_workflow_state(
         self,
         project_id: str,
