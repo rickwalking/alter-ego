@@ -21,8 +21,14 @@ from rag_backend.application.services.carousel.editorial_workflow_types import (
     EditorialWorkflowStartInput,
     ResumeWorkflowInput,
 )
+from rag_backend.application.services.carousel.presentation_policy_types import (
+    PresentationPolicyError,
+)
 from rag_backend.application.services.carousel.workflow_state import (
     CarouselWorkflowState,
+)
+from rag_backend.domain.constants.presentation_policy import (
+    DEFAULT_PRESENTATION_POLICY_VERSION,
 )
 from rag_backend.modules.editorial.domain.models import CarouselProject
 from rag_backend.modules.editorial.domain.ports import CarouselRepository
@@ -149,6 +155,24 @@ def slides_in_config(slides_config: str) -> int:
     return slide_count_from_config(slides_config)
 
 
+def expected_slide_total(project: CarouselProject) -> int:
+    """Slides the editorial pipeline builds for ``project`` (AE-0362).
+
+    The outline agent sizes the carousel from the presentation contract's
+    ``slide_count``, not from ``slides_config``, so the contract is the
+    authority. The config is only a fallback when the contract is unreadable.
+    """
+    from rag_backend.application.services.carousel import presentation_policy
+
+    version = project.presentation_policy_version or (
+        DEFAULT_PRESENTATION_POLICY_VERSION
+    )
+    try:
+        return presentation_policy.load_presentation_policy(version).slide_count
+    except PresentationPolicyError:
+        return slides_in_config(project.slides_config)
+
+
 class CarouselAutomationAcl:
     """Session-scoped carousel reads and the unattended project insert."""
 
@@ -175,11 +199,11 @@ class CarouselAutomationAcl:
         return await self._repo.get_project_by_id(UUID(project_id))
 
     async def slide_total(self, project_id: str) -> int:
-        """Slides the project's config asks for. Zero when it does not exist."""
+        """Slides the pipeline builds for the project. Zero when it does not exist."""
         project = await self.load_project(project_id)
         if project is None:
             return 0
-        return slides_in_config(project.slides_config)
+        return expected_slide_total(project)
 
     async def heartbeat(self, project_id: str) -> RunHeartbeat | None:
         """Phase status and run heartbeat, or None when the row is missing."""
@@ -238,6 +262,7 @@ __all__ = [
     "build_resume_input",
     "build_start_input",
     "content_approve_blocker",
+    "expected_slide_total",
     "is_provider_outage",
     "slides_in_config",
 ]

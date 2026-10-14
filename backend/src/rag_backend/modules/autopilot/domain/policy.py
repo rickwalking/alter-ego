@@ -8,7 +8,6 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
-from rag_backend.domain.constants.carousel import CAROUSEL_HEIGHT, CAROUSEL_WIDTH
 from rag_backend.domain.constants.carousel_workflow import (
     ERR_PERSONA_SCORE_TOO_LOW,
     ERR_PRESENTATION_VALIDATION_BLOCKED,
@@ -150,12 +149,13 @@ def _images(snapshot: GateSnapshot) -> str | None:
 
 
 def _valid_jpeg(image: ImageFact) -> bool:
-    return (
-        image.present
-        and image.is_jpeg
-        and image.width == CAROUSEL_WIDTH
-        and image.height == CAROUSEL_HEIGHT
-    )
+    """A present JPEG with a decodable size (AE-0362).
+
+    ``image_assets`` are the raw hero images (OpenAI renders 1536x1024), not
+    the 1080x1350 slides: those are composed later, at finalize. Requiring the
+    slide size here could never pass on a real run.
+    """
+    return image.present and image.is_jpeg and image.width > 0 and image.height > 0
 
 
 _ENGINE_REASONS: dict[str, str] = {

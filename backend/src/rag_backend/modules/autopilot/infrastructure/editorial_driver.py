@@ -16,6 +16,7 @@ from typing import cast
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.domain.constants import IMAGE_MODEL_OPENAI
+from rag_backend.domain.constants.carousel import CAROUSEL_DEFAULT_SLIDES_CONFIG
 from rag_backend.domain.constants.carousel_workflow import (
     ERR_REVISION_CAP_EXCEEDED,
     STRUCTURED_FEEDBACK_TARGET_PHASE_KEY,
@@ -27,7 +28,6 @@ from rag_backend.domain.constants.presentation_policy import (
 from rag_backend.infrastructure.monitoring_langfuse import propagate_attributes
 from rag_backend.modules.autopilot.constants import (
     AGENT_NAME_AUTOPILOT,
-    AUTOPILOT_SLIDES_CONFIG,
     CONTENT_TYPE_CAROUSEL,
     FIELD_CURRENT_PHASE,
     FIELD_IMAGE_ASSETS,
@@ -108,12 +108,14 @@ class InProcessEditorialDriver:
 
         AE-0361: OpenAI images, the auto palette, the scout's preset, and its
         image guidance (or the template) as the project's visual direction.
+        AE-0362: the pipeline's default 7-slide config, the count the editorial
+        pipeline actually builds.
         """
         project = CarouselProject(
             topic=spec.topic,
             audience=spec.audience,
             niche=spec.niche,
-            slides_config=AUTOPILOT_SLIDES_CONFIG,
+            slides_config=CAROUSEL_DEFAULT_SLIDES_CONFIG,
             language=LANGUAGE_PT_BR,
             generate_images=True,
             image_model=IMAGE_MODEL_OPENAI,
