@@ -46,7 +46,7 @@ from rag_backend.modules.autopilot.notify_constants import (
     KIND_REVIEW,
     KIND_REVIEW_REOPENED,
     LABEL_PERSONA,
-    LABEL_SCORE_MISSING,
+    LABEL_PERSONA_NOT_SCORED,
     LABEL_SOURCES,
     PATH_OWNER_UI,
     PAYLOAD_DAYS_REMAINING,
@@ -182,8 +182,8 @@ def retry_keyboard(run_id: UUID) -> InlineKeyboard:
 
 
 def album_caption(summary: ScoreSummary) -> str:
-    """Title plus persona score and source count, for the first slide."""
-    score = LABEL_SCORE_MISSING
+    """Title plus persona score (or "not scored") and source count, first slide."""
+    score = LABEL_PERSONA_NOT_SCORED
     if summary.persona_score is not None:
         score = format(summary.persona_score, PERSONA_SCORE_FORMAT)
     return CAPTION_TEMPLATE.format(

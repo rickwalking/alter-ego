@@ -126,8 +126,9 @@ def test_content_floor_is_the_persona_constant() -> None:
     below = decide(_snapshot(phase=GATE_CONTENT, persona_score=_BELOW))
     assert below.action is GateAction.REVISE
     assert below.reason == REASON_PERSONA_SCORE
+    # AE-0364: no persona scores means "not scored"; the engine skips the floor.
     missing = decide(_snapshot(phase=GATE_CONTENT, persona_score=None))
-    assert missing.reason == REASON_PERSONA_SCORE
+    assert missing.action is GateAction.APPROVE
 
 
 def test_content_forbidden_phrase_blocks_a_passing_score() -> None:

@@ -133,8 +133,14 @@ def _outline(snapshot: GateSnapshot) -> str | None:
 
 
 def _content(snapshot: GateSnapshot) -> str | None:
+    """Mirror the engine's content-approve rule (AE-0364).
+
+    The engine enforces the voice floor only when persona scores exist; a run
+    with no persona has none, so the voice check is skipped. Forbidden phrases
+    and the engine's own refusal still apply.
+    """
     score = snapshot.persona_score
-    if score is None or score < VOICE_MATCH_MIN_SCORE:
+    if score is not None and score < VOICE_MATCH_MIN_SCORE:
         return REASON_PERSONA_SCORE
     if snapshot.forbidden_hits:
         return REASON_FORBIDDEN

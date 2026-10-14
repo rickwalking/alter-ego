@@ -85,7 +85,7 @@ calls) still applies. A daily cap bounds it.
 [worker tick] queued → create CarouselProject + workflow start (in-process, no HTTP cap)
    loop per gate (research, outline, content, design, images):
        awaiting_human & checks pass  → approve(expected_version=lock_version)
-       content persona score < 70    → revise("raise voice match: …") up to 2× → else ESCALATE
+       content persona score < 70    → (only when scored) revise("raise voice match: …") up to 2× → else ESCALATE
        presentation_validation_block → revise up to 1× → else ESCALATE
        phase failed / run stale      → ESCALATE
        parked (no run in flight, checkpoint neither awaiting nor failed)
@@ -387,7 +387,10 @@ Topics stored before AE-0361 get the same fallback.
 - **outline:** the outline length equals the slides the pipeline builds: the presentation
   contract's `slide_count` (7), falling back to `slides_config` only if the contract is
   unreadable (AE-0362). Projects are created with `CAROUSEL_DEFAULT_SLIDES_CONFIG` (7).
-- **content:** the existing persona score must be ≥ 70, and forbidden phrases count as blockers.
+- **content:** when persona scores exist, the lowest must be ≥ 70 (a missing `overall` or an
+  unreadable entry counts as 0). A run with no persona has no scores; like the engine, the
+  voice check is then skipped and the owner's review reads `Persona: not scored` (AE-0364).
+  Forbidden phrases and the engine's own content-approve refusal still block.
 - **design:** `presentation_validation` has no blockers.
 - **images:** one `image_assets` hero image per slide the image phase illustrates, counted by
   the pipeline's own filter on the persisted slides (AE-0365): the CTA slide uses the owner
