@@ -1,8 +1,8 @@
 # Active Task
 
-AE-0360 is Dev Complete on `feat/ae-0360-grokbot-scout-ops-cursor-cli`.
+AE-0359 is In Development on `feat/ae-0359-autopilot-prod-wiring`.
 
-Grok Bot scout intake: `POST /api/autopilot/x-signals` and `POST /api/autopilot/scout-failed`, plus the owner routine pack.
+Prod wiring is committed. Not moved to Dev Complete: `gate-capture.sh all` fails only on the pre-existing `frontend:security` npm audit.
 
 ## Rules
 

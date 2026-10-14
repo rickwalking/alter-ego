@@ -1,6 +1,6 @@
 # AE-0359 — Prod wiring: secrets in deploy.yml + compose, Cloudflare skip rule, Telegram setWebhook
 
-Status: Ready
+Status: In Development
 Tier: T2
 Priority: High
 Type: Chore
@@ -35,10 +35,10 @@ Make the autopilot actually runnable in production.
 
 ## Acceptance Criteria
 
-- [ ] WHEN deploy.yml and compose disagree on an autopilot variable THE CI gate SHALL fail (seeded-violation test proves it).
+- [x] WHEN deploy.yml and compose disagree on an autopilot variable THE CI gate SHALL fail (seeded-violation test proves it).
 - [ ] WHEN Meta's user agent fetches a public slide THE edge SHALL return 200 image/jpeg (evidence pasted).
 - [ ] WHEN `getWebhookInfo` is called after deploy THE webhook URL SHALL be set with no `last_error_message`.
-- [ ] WHEN deployed with `AUTOPILOT_ENABLED=false` THE worker SHALL not run the autopilot.
+- [x] WHEN deployed with `AUTOPILOT_ENABLED=false` THE worker SHALL not run the autopilot.
 
 ## Gherkin Scenarios
 
@@ -104,13 +104,34 @@ Not required — CI/config/deployment ticket. No public/user-visible behavior ch
 
 Ticket created from docs/architecture/grokbot-autopilot.md (ticket #10).
 
+### 2026-10-14 04:15
+
+Moved to In Development on `feat/ae-0359-autopilot-prod-wiring`. Wired the
+autopilot variables into `deploy.yml` and the prod backend service, with
+`AUTOPILOT_ENABLED` defaulting to false and `AUTOPILOT_DAILY_CAP` defaulting
+to 1. Added `scripts/ci/check_autopilot_env_parity.py` as `backend:autopilot-env`.
+Seeded-violation tests exit 1 when a variable is missing from either file, when
+the flag defaults to true, when the public base URL is wrong, and when the
+daily cap has no numeric default. The real pair exits 0.
+
 ## Files Touched
 
-Pending.
+- `.github/workflows/deploy.yml` — writes the autopilot env block. Secrets may be empty; `AUTOPILOT_ENABLED` falls back to false and `AUTOPILOT_DAILY_CAP` to 1.
+- `docker-compose.prod.yml` — passes the same names into the backend service.
+- `backend/.env.example` — documents `AUTOPILOT_ENABLED`, `AUTOPILOT_OWNER_USER_ID`, `AUTOPILOT_DAILY_CAP`, and the prod public base URL.
+- `scripts/ci/check_autopilot_env_parity.py` — parity checker.
+- `scripts/ci/gates.sh` — `backend:autopilot-env`.
+- `.github/workflows/ci-gate.yml` — backend path filter also matches `docker-compose.prod.yml` and `deploy.yml`.
+- `backend/tests/unit/scripts_ci/test_check_autopilot_env_parity.py` — seeded-violation tests.
 
 ## Test Evidence
 
-Pending.
+- `cd backend && uv run pytest tests/unit/scripts_ci/test_check_autopilot_env_parity.py` — 12 passed.
+- `python3 scripts/ci/check_autopilot_env_parity.py` — `autopilot env parity OK`.
+- `cd backend && uv run alembic heads` — single head `c8d9e0f1a2b3`.
+- `docker compose -f docker-compose.prod.yml config` renders `AUTOPILOT_ENABLED: "false"`, `AUTOPILOT_DAILY_CAP: "1"`, and `CAROUSEL_PUBLIC_BASE_URL: https://marinssolutions.com` when those vars are unset.
+- Worker skip is the existing `test_run_tick_skips_autopilot_when_disabled` (`backend/tests/unit/application/test_workflow_workers.py`): `autopilot_runs == 0` when the flag is false.
+- Full gate capture: see `.agent/reports/AE-0359.dev-summary.md`. Post-commit `bash scripts/ci/check-integrity.sh backend`: PASS, 0 blockers, 6 warnings (two `integrity-ok` noqa, two AE-0359 apparatus edits, two AE-0350 apparatus edits).
 
 ## QA Report
 
@@ -120,10 +141,29 @@ Pending.
 
 See ADR-0020.
 
+- The architecture doc names `GROKBOT_API_KEY_HASH`. AE-0351 and this ticket name `GROKBOT_API_KEY_SHA256`, which is the setting the process reads. Wired `GROKBOT_API_KEY_SHA256`.
+- `AUTOPILOT_ENABLED` and `AUTOPILOT_DAILY_CAP` are optional GitHub Secrets. The committed fallbacks are `false` and `1`. Pedro flips the runner on by setting `AUTOPILOT_ENABLED=true` and re-running deploy. The parity gate rejects a committed default of `true`.
+- No `.feature` file. The ticket classifies this as CI/config (AE-0153). QA still signs off on that classification.
+- `ci-gate.yml` now treats `docker-compose.prod.yml` and `.github/workflows/deploy.yml` as backend paths so a deploy-only change still runs the parity gate.
+
 ## Blockers
 
-Manual steps (GitHub Secrets, Cloudflare) require Pedro.
+- Manual (Pedro): add GitHub Secrets `META_IG_ACCESS_TOKEN`, `META_IG_USER_ID`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_OWNER_CHAT_ID`, `TELEGRAM_WEBHOOK_SECRET`, `GROKBOT_API_KEY_SHA256` (sha256 hex of the scout key, not the plaintext), `CREDENTIALS_ENCRYPTION_KEY` (Fernet), and `AUTOPILOT_OWNER_USER_ID`. Leave `AUTOPILOT_ENABLED` unset for the first deploy (the workflow writes `false`). `AUTOPILOT_DAILY_CAP` is optional and defaults to `1`. `CAROUSEL_PUBLIC_BASE_URL` is not a secret; deploy writes `https://marinssolutions.com`.
+- Manual (Pedro): Cloudflare WAF custom rule Skip for `/api/carousels/*/slide-images/*` (bot fight / challenges). Then `curl -A 'facebookexternalhit/1.1' -I https://marinssolutions.com/api/carousels/<public-id>/slide-images/pt/slide_1.jpg` must return 200 `image/jpeg`. Paste that evidence on this ticket. Not run from this workspace.
+- Manual (Pedro): after the deploy that still has `AUTOPILOT_ENABLED=false`, register the webhook and confirm it:
+
+```bash
+docker compose -f docker-compose.prod.yml exec -T backend \
+  python -m rag_backend.modules.autopilot.scripts.set_webhook \
+  https://marinssolutions.com/api/telegram/webhook
+docker compose -f docker-compose.prod.yml exec -T backend \
+  python -c "import httpx; from rag_backend.infrastructure.config.settings import get_settings; token = get_settings().telegram_bot_token.get_secret_value(); info = httpx.get(f'https://api.telegram.org/bot{token}/getWebhookInfo', timeout=30).json()['result']; print(info.get('url')); print(info.get('last_error_message'))"
+```
+
+  The URL must be `https://marinssolutions.com/api/telegram/webhook` and `last_error_message` must be empty. The command does not print the bot token.
+- Manual (Pedro): merge only when a live deploy is intended (`main` auto-deploys). Confirm a queued run does not start while the flag is false, then set the `AUTOPILOT_ENABLED` secret to `true` and redeploy.
+- Pre-existing gate, not changed by this ticket: `frontend:security` (`npm audit --audit-level=high`) fails on the current frontend lockfile (61 advisories: 39 moderate, 21 high, 1 critical), including Next.js, postcss, sharp, prosemirror-view, smol-toml, and source-map-js. This ticket does not touch frontend dependencies, so the audit was not fixed here. `bash scripts/ci/gate-capture.sh all` is otherwise green: 37 pass, 1 fail, 0 skip. Every backend gate passed, including `backend:autopilot-env`. Dev Complete was not moved because the proof guard rejects `fail>0`. Question: should this ticket stay In Development until that audit is cleared on its own change, or proceed on the backend proof?
 
 ## Final Summary
 
-Pending.
+Prod compose and deploy.yml now carry the autopilot settings, with the runner left off (`AUTOPILOT_ENABLED` defaults to false). CI fails if those files drift. Cloudflare, GitHub Secrets, `set_webhook`, and `getWebhookInfo` are still Pedro's. Full `gate-capture.sh all` is red only on the pre-existing frontend npm audit.
