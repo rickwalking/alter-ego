@@ -2,16 +2,17 @@
 
 ``quota_remaining`` reads ``content_publishing_limit``. ``recent_carousel_id``
 recovers the media id of a container that is already ``PUBLISHED`` (QA r1 H2):
-the container node does not link to its media, so the newest carousel album
-posted inside the recovery window is taken as the one this container produced.
-The window matches the 24 hour container lifetime, and the autopilot posts at
-most one carousel per day, so a different carousel is not expected there.
+the container node does not link to its media, so the one carousel album
+posted after the container was created is taken as the one it produced
+(QA r2 R3). A manual post from before the container is never matched, and
+two albums after it are ambiguous: nothing is guessed, and the caller fails
+the publish without retrying.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime
 
 import httpx
 
@@ -28,7 +29,6 @@ from rag_backend.domain.constants.instagram_publish import (
     KEY_QUOTA_TOTAL,
     KEY_QUOTA_USAGE,
     MEDIA_TYPE_CAROUSEL_ALBUM,
-    PUBLISHED_RECOVERY_WINDOW_HOURS,
     TRANSIENT_HTTP_STATUS,
     TRANSIENT_META_ERROR_CODES,
 )
@@ -74,13 +74,12 @@ def quota_error() -> InstagramGraphError:
     )
 
 
-def recent_carousel_id(payload: dict[str, object], now: datetime) -> str | None:
-    """Newest carousel album posted within the recovery window, or None."""
-    oldest = now - timedelta(hours=PUBLISHED_RECOVERY_WINDOW_HOURS)
-    albums = [item for item in _albums(payload) if item.posted_at >= oldest]
-    if not albums:
+def recent_carousel_id(payload: dict[str, object], since: datetime) -> str | None:
+    """The only carousel album posted at or after ``since``, or None."""
+    albums = [item for item in _albums(payload) if item.posted_at >= since]
+    if len(albums) != 1:
         return None
-    return max(albums, key=lambda item: item.posted_at).media_id
+    return albums[0].media_id
 
 
 def _albums(payload: dict[str, object]) -> list[RecentMedia]:

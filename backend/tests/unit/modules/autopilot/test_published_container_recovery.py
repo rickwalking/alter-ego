@@ -3,6 +3,7 @@
 Gherkin: tests/features/autopilot_instagram_publish.feature
   Scenario: Crash after media_publish recovers the published post
   Scenario: Published container whose media cannot be matched fails without reposting
+  Scenario: A manual post before the container is not taken as the autopilot post
 """
 
 from __future__ import annotations
@@ -29,6 +30,7 @@ from rag_backend.modules.autopilot.application.publish_job import (
 from rag_backend.modules.autopilot.constants import NOTICE_PUBLISHED
 from rag_backend.modules.autopilot.domain.exceptions import InstagramCallError
 from rag_backend.modules.autopilot.domain.models import AutopilotRunState
+from rag_backend.modules.autopilot.domain.publish import StoredContainer
 from rag_backend.modules.autopilot.infrastructure.instagram_gateway import (
     SteppedInstagramGateway,
 )
@@ -48,6 +50,13 @@ from tests.unit.modules.autopilot.test_instagram_publish_job import (
 
 _CONTAINER = "container-77"
 _RECOVERED = "media-recovered"
+_CREATED_AGO = timedelta(minutes=5)
+
+
+def _stored_container() -> StoredContainer:
+    return StoredContainer(
+        container_id=_CONTAINER, created_at=datetime.now(UTC) - _CREATED_AGO
+    )
 
 
 def _stamp(delta: timedelta) -> str:
@@ -97,7 +106,7 @@ def _job_with_stored_container(
     run = replace(
         _run(),
         ig_container_id=_CONTAINER,
-        ig_container_created_at=clock.now() - timedelta(minutes=5),
+        ig_container_created_at=datetime.now(UTC) - _CREATED_AGO,
     )
     repo.runs[run.run_id] = run
     notifier = _Notifier()
@@ -132,7 +141,7 @@ async def test_crash_after_media_publish_marks_the_run_published() -> None:
 async def test_unmatched_published_container_fails_without_reposting() -> None:
     """Scenario: Published container whose media cannot be matched fails without reposting."""
     graph = _Graph([_album("old-post", timedelta(hours=30))])
-    job, repo, _notifier = _job_with_stored_container(graph)
+    job, repo, notifier = _job_with_stored_container(graph)
 
     await job.tick()
 
@@ -141,6 +150,34 @@ async def test_unmatched_published_container_fails_without_reposting() -> None:
     assert stored.state is AutopilotRunState.PUBLISH_FAILED
     assert stored.state_reason == ERR_INSTAGRAM_PUBLISHED_MEDIA_UNKNOWN
     assert stored.ig_post_id is None
+    # QA r2 R3: Retry would create a new container and could post twice.
+    assert [notice.offer_retry for notice in notifier.notices] == [False]
+
+
+@pytest.mark.unit
+async def test_manual_post_before_the_container_is_ignored() -> None:
+    """Scenario: A manual post before the container is not taken as the autopilot post."""
+    graph = _Graph([_album("manual-post", _CREATED_AGO + timedelta(minutes=2))])
+    job, repo, notifier = _job_with_stored_container(graph)
+
+    await job.tick()
+
+    stored = next(iter(repo.runs.values()))
+    assert stored.ig_post_id is None
+    assert stored.state_reason == ERR_INSTAGRAM_PUBLISHED_MEDIA_UNKNOWN
+    assert [notice.offer_retry for notice in notifier.notices] == [False]
+
+
+@pytest.mark.unit
+async def test_two_albums_after_the_container_are_not_guessed() -> None:
+    """Scenario: A manual post before the container is not taken as the autopilot post."""
+    graph = _Graph([
+        _album(_RECOVERED, timedelta(minutes=3)),
+        _album("manual-post", timedelta(minutes=1)),
+    ])
+    with pytest.raises(InstagramCallError) as caught:
+        await _gateway(graph).finish_container(_stored_container())
+    assert caught.value.error_code == ERR_INSTAGRAM_PUBLISHED_MEDIA_UNKNOWN
 
 
 @pytest.mark.unit
@@ -148,27 +185,27 @@ async def test_gateway_raises_a_permanent_error_when_nothing_matches() -> None:
     """Scenario: Published container whose media cannot be matched fails without reposting."""
     graph = _Graph([])
     with pytest.raises(InstagramCallError) as caught:
-        await _gateway(graph).finish_container(_CONTAINER)
+        await _gateway(graph).finish_container(_stored_container())
     assert caught.value.error_code == ERR_INSTAGRAM_PUBLISHED_MEDIA_UNKNOWN
     assert caught.value.transient is False
     assert graph.publish_calls == 0
 
 
 @pytest.mark.unit
-async def test_gateway_returns_the_newest_recent_album() -> None:
+async def test_gateway_matches_the_album_posted_after_the_container() -> None:
     """Scenario: Crash after media_publish recovers the published post."""
     graph = _Graph([
         _album("older", timedelta(hours=2)),
         _album(_RECOVERED, timedelta(minutes=1)),
     ])
-    assert await _gateway(graph).finish_container(_CONTAINER) == _RECOVERED
+    assert await _gateway(graph).finish_container(_stored_container()) == _RECOVERED
     assert graph.publish_calls == 0
 
 
 @pytest.mark.unit
 def test_recent_carousel_id_skips_non_albums_and_malformed_rows() -> None:
-    """Only carousel albums with an id and a parseable timestamp in 24 h count."""
-    now = datetime.now(UTC)
+    """Only carousel albums with an id and a parseable timestamp after ``since``."""
+    since = datetime.now(UTC) - timedelta(hours=24)
     payload: dict[str, object] = {
         "data": [
             {"id": "image", "media_type": "IMAGE", "timestamp": _stamp(timedelta(0))},
@@ -187,6 +224,6 @@ def test_recent_carousel_id_skips_non_albums_and_malformed_rows() -> None:
             _album("kept", timedelta(hours=23)),
         ]
     }
-    assert recent_carousel_id(payload, now) == "kept"
-    assert recent_carousel_id({"data": "nope"}, now) is None
-    assert recent_carousel_id({}, now) is None
+    assert recent_carousel_id(payload, since) == "kept"
+    assert recent_carousel_id({"data": "nope"}, since) is None
+    assert recent_carousel_id({}, since) is None

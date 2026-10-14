@@ -39,6 +39,7 @@ from rag_backend.modules.autopilot.domain.publish import (
     RunListQuery,
     SaveContainerCommand,
     SavePostCommand,
+    StoredContainer,
 )
 from rag_backend.modules.autopilot.domain.signals import (
     CollectWindow,
@@ -207,7 +208,7 @@ class InstagramGraphGateway(Protocol):
         """Create the parent container and return its id."""
         ...
 
-    async def finish_container(self, container_id: str) -> str:
+    async def finish_container(self, container: StoredContainer) -> str:
         """Poll the container and ``media_publish``. Returns the media id."""
         ...
 

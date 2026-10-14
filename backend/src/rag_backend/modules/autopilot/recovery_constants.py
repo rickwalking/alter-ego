@@ -5,6 +5,10 @@ Kept beside ``constants.py`` so neither file exceeds the 400-line limit.
 
 from __future__ import annotations
 
+from rag_backend.domain.constants.instagram_publish import (
+    ERR_INSTAGRAM_PUBLISHED_MEDIA_UNKNOWN,
+)
+
 # Engine errors the runner did not classify end the run with a reason
 # instead of rolling back the whole worker tick on every retry.
 REASON_ENGINE_ERROR = "engine_error"
@@ -43,6 +47,9 @@ MANUAL_STATE_FAILED = "failed"
 MANUAL_CLAIM_STALE_MINUTES = 10
 ERR_AUTOPILOT_RUN_ACTIVE = "autopilot_run_not_publishing"
 ERR_PUBLISH_IN_PROGRESS = "instagram_publish_in_progress"
+# QA r2 R3: the post may already be live. Retry would open a new container
+# and could post the carousel twice, so it is never offered or accepted.
+NO_RETRY_REASONS = frozenset({ERR_INSTAGRAM_PUBLISHED_MEDIA_UNKNOWN})
 
 # Review reopened without regeneration: the keyboard is sent again.
 REASON_REVIEW_REOPENED = "review_reopened"

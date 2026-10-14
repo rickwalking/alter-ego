@@ -93,6 +93,18 @@ class SaveContainerCommand:
 
 
 @dataclass(frozen=True, kw_only=True)
+class StoredContainer:
+    """A parent container and when it was created (QA r2 R3).
+
+    The creation time bounds the recovery of a ``PUBLISHED`` container's
+    media: only albums posted after it can be the autopilot's post.
+    """
+
+    container_id: str
+    created_at: datetime
+
+
+@dataclass(frozen=True, kw_only=True)
 class SavePostCommand:
     """Persist the media id and, when known, the permalink."""
 

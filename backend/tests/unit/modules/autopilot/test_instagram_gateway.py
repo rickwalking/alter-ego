@@ -5,6 +5,7 @@ Gherkin: tests/features/autopilot_instagram_publish.feature
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock
 
 import httpx
@@ -15,7 +16,7 @@ from rag_backend.infrastructure.external.instagram_graph_error import (
     InstagramGraphError,
 )
 from rag_backend.modules.autopilot.domain.exceptions import InstagramCallError
-from rag_backend.modules.autopilot.domain.publish import CarouselMedia
+from rag_backend.modules.autopilot.domain.publish import CarouselMedia, StoredContainer
 from rag_backend.modules.autopilot.infrastructure.instagram_gateway import (
     AtomicInstagramGateway,
     SteppedInstagramGateway,
@@ -54,7 +55,9 @@ async def test_stepped_gateway_opens_finishes_and_reads_quota() -> None:
     assert gateway.user_configured() is True
     assert await gateway.quota_remaining() == 5
     container_id = await gateway.open_carousel(_MEDIA)
-    post_id = await gateway.finish_container(container_id)
+    post_id = await gateway.finish_container(
+        StoredContainer(container_id=container_id, created_at=datetime.now(UTC))
+    )
     assert post_id == "media-1"
     assert await gateway.permalink(post_id) == "https://instagram.com/p/x"
     atomic = await gateway.publish_atomic(_MEDIA)
@@ -78,7 +81,9 @@ async def test_atomic_gateway_forwards_and_refuses_steps() -> None:
     with pytest.raises(InstagramCallError):
         await gateway.open_carousel(_MEDIA)
     with pytest.raises(InstagramCallError):
-        await gateway.finish_container("container")
+        await gateway.finish_container(
+            StoredContainer(container_id="container", created_at=datetime.now(UTC))
+        )
     with pytest.raises(InstagramCallError):
         await gateway.permalink("media")
 

@@ -37,6 +37,12 @@ TEXT_ALREADY = "already handled"
 TEXT_APPROVED = "Approved. Publishing."
 TEXT_REJECTED = "Rejected. The carousel stays private."
 TEXT_RETRY = "Retrying publish."
+# QA r2 R3: Retry is refused when the post may already be live.
+ANSWER_MAY_BE_LIVE = "Not retried: the post may already be live"
+TEXT_MAY_BE_LIVE = (
+    "Not retried: Instagram reports this carousel as published. "
+    "Check Instagram before posting it again by hand."
+)
 TEXT_CHOOSE_PHASE = "Choose what to rework."
 TEXT_FORCE_REPLY = "What should change?"
 TEXT_REWORKING = "Reworking {phase}."

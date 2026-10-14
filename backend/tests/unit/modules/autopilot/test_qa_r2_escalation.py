@@ -239,7 +239,9 @@ async def test_rejected_carousel_closes_the_escalation(configured: bool) -> None
 
 
 # Scenario: An escalation nobody fixes is closed after 72 hours
-@pytest.mark.parametrize("reason", [REASON_ESCALATION_EXPIRED, REASON_CAROUSEL_REJECTED])
+@pytest.mark.parametrize(
+    "reason", [REASON_ESCALATION_EXPIRED, REASON_CAROUSEL_REJECTED]
+)
 def test_closed_escalation_tells_the_owner(reason: str) -> None:
     payload = {PAYLOAD_STATE: AutopilotRunState.REJECTED.value, PAYLOAD_REASON: reason}
 

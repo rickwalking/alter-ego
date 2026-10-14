@@ -59,6 +59,11 @@ TEXT_FAILED = "Failed: {reason}"
 TEXT_PUBLISHED = "\u2705 posted {permalink}"
 TEXT_PUBLISHED_NO_LINK = "\u2705 posted"
 TEXT_PUBLISH_FAILED = "\u274c publish failed: {reason}"
+TEXT_PUBLISHED_MEDIA_UNKNOWN = (
+    "\u26a0\ufe0f Instagram reports this carousel as published, but the post "
+    "could not be matched. The post may already be live; check Instagram. "
+    "Retry is off so it is not posted twice."
+)
 TEXT_REMINDER = "This review has been waiting for more than 24 hours."
 TEXT_IG_EXPIRY_DAYS = "Instagram token expires in {days} days."
 TEXT_IG_EXPIRY = "Instagram token is expiring."

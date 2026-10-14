@@ -54,12 +54,16 @@ from rag_backend.modules.autopilot.domain.publish import (
     RunListQuery,
     SaveContainerCommand,
     SavePostCommand,
+    StoredContainer,
     choose_publish_action,
     gate_reason,
     is_publish_due,
 )
 from rag_backend.modules.autopilot.domain.publish_claims import PublishClaims, RunClaim
-from rag_backend.modules.autopilot.recovery_constants import MANUAL_CLAIM_STALE_MINUTES
+from rag_backend.modules.autopilot.recovery_constants import (
+    MANUAL_CLAIM_STALE_MINUTES,
+    NO_RETRY_REASONS,
+)
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -172,24 +176,28 @@ class InstagramPublishJob:
             now=self._deps.clock.now(),
         )
         action = choose_publish_action(facts)
-        container_id = run.ig_container_id
+        container = _stored(run)
         if action == PublishAction.CREATE_CONTAINER:
+            created_at = self._deps.clock.now()
             container_id = await self._deps.gateway.open_carousel(media)
             await self._deps.runs.save_container(
                 SaveContainerCommand(
                     run_id=run.run_id,
                     container_id=container_id,
-                    created_at=self._deps.clock.now(),
+                    created_at=created_at,
                 )
             )
             await self._deps.checkpoint.commit()
-        if not container_id:
+            container = StoredContainer(
+                container_id=container_id, created_at=created_at
+            )
+        if container is None or not container.container_id:
             raise InstagramCallError(
                 status_code=0,
                 error_code=REASON_CONTAINER_MISSING,
                 transient=False,
             )
-        return await self._deps.gateway.finish_container(container_id)
+        return await self._deps.gateway.finish_container(container)
 
     async def _ensure_quota(self) -> None:
         token = await self._deps.gateway.current_token()
@@ -294,7 +302,7 @@ class InstagramPublishJob:
                     outcome=NOTICE_PUBLISH_FAILED,
                     permalink=run.ig_permalink,
                     error_code=reason,
-                    offer_retry=True,
+                    offer_retry=reason not in NO_RETRY_REASONS,
                 )
             )
         await self._deps.checkpoint.commit()
@@ -304,6 +312,14 @@ class InstagramPublishJob:
         if run.carousel_project_id is None:
             return None
         return await self._deps.source.load(run.carousel_project_id)
+
+
+def _stored(run: AutopilotRun) -> StoredContainer | None:
+    if not run.ig_container_id or run.ig_container_created_at is None:
+        return None
+    return StoredContainer(
+        container_id=run.ig_container_id, created_at=run.ig_container_created_at
+    )
 
 
 def _first_due(runs: list[AutopilotRun], now: datetime) -> AutopilotRun | None:

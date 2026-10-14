@@ -63,11 +63,13 @@ from rag_backend.modules.autopilot.notify_constants import (
     TEXT_IG_EXPIRY_DAYS,
     TEXT_PUBLISH_FAILED,
     TEXT_PUBLISHED,
+    TEXT_PUBLISHED_MEDIA_UNKNOWN,
     TEXT_PUBLISHED_NO_LINK,
     TEXT_REMINDER,
     TEXT_REVIEW_REOPENED,
 )
 from rag_backend.modules.autopilot.recovery_constants import (
+    NO_RETRY_REASONS,
     REASON_CAROUSEL_REJECTED,
     REASON_ESCALATION_EXPIRED,
     REASON_REVIEW_REOPENED,
@@ -317,6 +319,8 @@ def _failed(copy: StatusCopy) -> str:
 
 
 def _publish_failed(copy: StatusCopy) -> str:
+    if copy.reason in NO_RETRY_REASONS:
+        return TEXT_PUBLISHED_MEDIA_UNKNOWN
     return TEXT_PUBLISH_FAILED.format(reason=copy.reason)
 
 

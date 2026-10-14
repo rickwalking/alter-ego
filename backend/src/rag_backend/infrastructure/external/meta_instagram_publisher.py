@@ -20,12 +20,13 @@ from __future__ import annotations
 
 import asyncio
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 import httpx
 
 from rag_backend.domain.constants import COOKIE_ACCESS_TOKEN
 from rag_backend.domain.constants.instagram_publish import (
+    CONTAINER_CLOCK_SKEW_SECONDS,
     CONTAINER_STATUS_ERROR,
     CONTAINER_STATUS_EXPIRED,
     CONTAINER_STATUS_FINISHED,
@@ -132,8 +133,9 @@ class MetaInstagramPublisher:
     ) -> PublishResult:
         """Run all four steps. Failures become a ``PublishResult``, never a raise."""
         try:
+            created_at = datetime.now(UTC)
             parent_id = await self.create_carousel_container(caption, image_urls)
-            post_id = await self.publish_container(parent_id)
+            post_id = await self.publish_container(parent_id, created_at)
         except RuntimeError as exc:
             return PublishResult(status=PUBLISH_RESULT_FAILED, error_message=str(exc))
         except InstagramGraphError as exc:
@@ -184,17 +186,20 @@ class MetaInstagramPublisher:
             transient=True,
         )
 
-    async def publish_container(self, container_id: str) -> str:
+    async def publish_container(self, container_id: str, created_at: datetime) -> str:
         """Poll, then publish once. An already published container is recovered."""
         status = await self.await_container(container_id)
         if status == CONTAINER_STATUS_PUBLISHED:
-            return await self.recover_published_media(container_id)
+            return await self.recover_published_media(container_id, created_at)
         return await self.media_publish(container_id)
 
-    async def recover_published_media(self, container_id: str) -> str:
+    async def recover_published_media(
+        self, container_id: str, created_at: datetime
+    ) -> str:
         """Media id for a ``PUBLISHED`` container, read from the recent media list.
 
-        Raises a non-transient error when nothing matches: calling
+        Only an album posted after ``created_at`` can match (QA r2 R3). Raises
+        a non-transient error when none or several match: calling
         ``media_publish`` again could post the carousel twice.
         """
         payload = await self._request(
@@ -207,7 +212,8 @@ class MetaInstagramPublisher:
                 },
             )
         )
-        media_id = recent_carousel_id(payload, datetime.now(UTC))
+        since = created_at - timedelta(seconds=CONTAINER_CLOCK_SKEW_SECONDS)
+        media_id = recent_carousel_id(payload, since)
         logger.warning(
             "instagram_container_already_published",
             container_id=container_id,

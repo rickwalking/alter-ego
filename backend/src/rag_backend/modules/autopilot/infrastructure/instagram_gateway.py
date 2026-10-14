@@ -27,6 +27,7 @@ from rag_backend.modules.autopilot.domain.exceptions import InstagramCallError
 from rag_backend.modules.autopilot.domain.publish import (
     AtomicPublishResult,
     CarouselMedia,
+    StoredContainer,
 )
 
 _T = TypeVar("_T")
@@ -63,9 +64,13 @@ class SteppedInstagramGateway:
             )
         )
 
-    async def finish_container(self, container_id: str) -> str:
+    async def finish_container(self, container: StoredContainer) -> str:
         """Poll, then ``media_publish``. A ``PUBLISHED`` container is recovered."""
-        return await _guard(lambda: self._publisher.publish_container(container_id))
+        return await _guard(
+            lambda: self._publisher.publish_container(
+                container.container_id, container.created_at
+            )
+        )
 
     async def permalink(self, media_id: str) -> str:
         """Public URL for the published media."""
@@ -113,9 +118,9 @@ class AtomicInstagramGateway:
         del media
         raise self._unsupported()
 
-    async def finish_container(self, container_id: str) -> str:
+    async def finish_container(self, container: StoredContainer) -> str:
         """Atomic publishers cannot publish a stored container."""
-        del container_id
+        del container
         raise self._unsupported()
 
     async def permalink(self, media_id: str) -> str:

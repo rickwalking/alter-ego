@@ -21,7 +21,6 @@ from rag_backend.modules.autopilot.domain.exceptions import (
     TelegramRateLimitedError,
 )
 from rag_backend.modules.autopilot.domain.messages import (
-    InlineKeyboard,
     StatusCopy,
     days_remaining_of,
     notice_kind,
@@ -29,7 +28,6 @@ from rag_backend.modules.autopilot.domain.messages import (
     permalink_of,
     persona_score_of,
     reason_of,
-    retry_keyboard,
     review_keyboard,
     revision_of,
     sources_count_of,
@@ -64,14 +62,13 @@ from rag_backend.modules.autopilot.domain.ports import (
     ReviewFactsSource,
 )
 from rag_backend.modules.autopilot.domain.publish import RunListQuery
+from rag_backend.modules.autopilot.domain.status_keyboard import status_keyboard
 from rag_backend.modules.autopilot.notify_constants import (
     ATTEMPT_REMINDER_PREFIX,
     ATTEMPT_REVIEW_PREFIX,
     ATTEMPT_STATUS_PREFIX,
-    KIND_PUBLISH_FAILED,
     KIND_REMINDER,
     KIND_REVIEW,
-    KIND_REVIEW_REOPENED,
     LOG_NOTIFIER_DROPPED,
     LOG_NOTIFIER_FAILED,
     LOG_NOTIFIER_UNCONFIGURED,
@@ -360,7 +357,7 @@ def _status_notice(deps: NotificationDependencies, job: _StatusJob) -> StatusNot
         chat_id=deps.chat_id,
         run_id=job.run.run_id,
         text=status_text(job.kind, _copy(deps.web_base_url, job.event, job.run)),
-        keyboard=_status_keyboard(job.kind, job.run),
+        keyboard=status_keyboard(job.kind, job.run.run_id, job.event.payload),
     )
 
 
@@ -376,14 +373,6 @@ def _copy(base_url: str, event: AutopilotOutboxEvent, run: AutopilotRun) -> Stat
 
 def _empty_copy() -> StatusCopy:
     return StatusCopy(reason="", link="", permalink="", days_remaining=None)
-
-
-def _status_keyboard(kind: str, run: AutopilotRun) -> InlineKeyboard | None:
-    if kind == KIND_PUBLISH_FAILED:
-        return retry_keyboard(run.run_id)
-    if kind == KIND_REVIEW_REOPENED:
-        return review_keyboard(run.run_id)
-    return None
 
 
 def _reminder_due(job: _ReminderJob, revision: int, key: str) -> bool:

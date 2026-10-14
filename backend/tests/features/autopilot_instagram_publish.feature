@@ -96,3 +96,14 @@ Feature: Idempotent Instagram publish
     When the manual route publishes that carousel
     Then the route answers 409 "instagram_publish_in_progress"
     And the worker tick skips the claimed run
+
+  # QA r2 R3: recovery never guesses, and never posts twice.
+  Scenario: A manual post before the container is not taken as the autopilot post
+    Given a publishing run whose container was created 5 minutes ago and reports PUBLISHED
+    And the only recent album was posted by hand 7 minutes ago
+    When the publish job resumes the run
+    Then "media_publish" is not called
+    And the run is "publish_failed" with reason "instagram_published_media_unknown"
+    And the owner is told the post may already be live and to check Instagram
+    And the notice has no Retry button
+    And tapping an older Retry button for that run changes nothing

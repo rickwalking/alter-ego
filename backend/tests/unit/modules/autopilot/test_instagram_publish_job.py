@@ -55,6 +55,7 @@ from rag_backend.modules.autopilot.domain.publish import (
     RunListQuery,
     SaveContainerCommand,
     SavePostCommand,
+    StoredContainer,
 )
 from rag_backend.modules.autopilot.domain.publish_claims import (
     ManualClaim,
@@ -243,9 +244,9 @@ class _Gateway:
             raise self.fail_open
         return "container-new"
 
-    async def finish_container(self, container_id: str) -> str:
+    async def finish_container(self, container: StoredContainer) -> str:
         self.finishes += 1
-        self.last_container = container_id
+        self.last_container = container.container_id
         self.order.append("finish")
         if self.fail_finish is not None:
             raise self.fail_finish
