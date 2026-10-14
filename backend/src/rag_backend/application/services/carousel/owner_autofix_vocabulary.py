@@ -59,7 +59,9 @@ def _mid_tokens(sentence: str) -> list[str]:
 
 def _is_distinctive(token: str) -> bool:
     """Inner capital or a digit: "OpenAI", "iPhone", "GPT-5"."""
-    inner_upper = any(char.isupper() for char in token[1:])
+    inner_upper = any(char.isupper() for char in token[1:]) and any(
+        char.islower() for char in token
+    )
     has_digit = any(char.isdigit() for char in token)
     return (inner_upper or has_digit) and any(char.isalpha() for char in token)
 

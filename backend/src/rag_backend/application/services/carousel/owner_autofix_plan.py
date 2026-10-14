@@ -199,16 +199,18 @@ def _fill(payload: dict[str, object], slide: _Slide, context: AutofixContext) ->
 
 def _mirror_fill(
     english: dict[str, object], portuguese: Mapping[str, object], slide: _Slide
-) -> None:
-    """Give the EN payload the PT items it lacks (translated afterwards)."""
-    if _needs_features(english, slide.slide_type) and complete_items(
-        portuguese, _FEATURES
-    ):
-        english[_FEATURES] = copy.deepcopy(portuguese[_FEATURES])
-    if _needs_summary(english, slide.slide_type) and complete_items(
-        portuguese, _SUMMARY_POINTS
-    ):
-        english[_SUMMARY_POINTS] = copy.deepcopy(portuguese[_SUMMARY_POINTS])
+) -> tuple[str, ...]:
+    """Give the EN payload the PT items it lacks; return the lists copied.
+
+    The copied items are Portuguese, so all of them are translated afterwards.
+    """
+    copied: list[str] = []
+    checks = ((_FEATURES, _needs_features), (_SUMMARY_POINTS, _needs_summary))
+    for list_field, needs in checks:
+        if needs(english, slide.slide_type) and complete_items(portuguese, list_field):
+            english[list_field] = copy.deepcopy(portuguese[list_field])
+            copied.append(list_field)
+    return tuple(copied)
 
 
 def _polish(
@@ -222,19 +224,35 @@ def _polish(
     return repair_casing(cleaned, locale, context.policy)
 
 
-def _targets(
-    index: int, english: Mapping[str, object], portuguese: Mapping[str, object]
-) -> list[RetranslateTarget]:
+@dataclass(frozen=True)
+class _Pair:
+    index: int
+    english: Mapping[str, object]
+    portuguese: Mapping[str, object]
+    copied: tuple[str, ...] = ()
+
+
+def _needs_translation(pair: _Pair, path: str) -> str:
+    """The source text when the EN text at ``path`` must be translated, else ""."""
+    text = text_at(pair.english, path)
+    source = text_at(pair.portuguese, path)
+    if source and path.split("[", 1)[0] in pair.copied and text == source:
+        return source
+    if source and is_untranslated(text, source):
+        return source
+    if not source and text and looks_portuguese(text):
+        return text
+    return ""
+
+
+def _targets(pair: _Pair) -> list[RetranslateTarget]:
     targets: list[RetranslateTarget] = []
-    for path in visible_paths(english):
-        text = text_at(english, path)
-        source = text_at(portuguese, path)
-        if source and is_untranslated(text, source):
+    for path in visible_paths(pair.english):
+        source = _needs_translation(pair, path)
+        if source:
             targets.append(
-                RetranslateTarget(slide_index=index, path=path, source=source)
+                RetranslateTarget(slide_index=pair.index, path=path, source=source)
             )
-        elif not source and text and looks_portuguese(text):
-            targets.append(RetranslateTarget(slide_index=index, path=path, source=text))
     return targets
 
 
@@ -256,10 +274,13 @@ def _fix_record(record: Mapping[str, object], context: AutofixContext) -> _Recor
     english = as_dict(fixed.get(PRESENTATION_EN_KEY))
     if english is None:
         return _RecordFix(record=fixed, targets=[])
-    _mirror_fill(english, portuguese, slide)
+    copied = _mirror_fill(english, portuguese, slide)
     english = _polish(english, LANGUAGE_EN, context)
     fixed[PRESENTATION_EN_KEY] = english
-    return _RecordFix(record=fixed, targets=_targets(slide.index, english, portuguese))
+    pair = _Pair(
+        index=slide.index, english=english, portuguese=portuguese, copied=copied
+    )
+    return _RecordFix(record=fixed, targets=_targets(pair))
 
 
 def plan_autofix(

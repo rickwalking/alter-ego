@@ -7,7 +7,8 @@ tick, never in the webhook:
 1. plan the deterministic repairs over the persisted rows (+ outline/research);
 2. re-translate the untranslated EN texts in one bounded call (kept on failure);
 3. under the shared per-project lock (AE-0316), take the ``lock_version`` CAS
-   (always, so the owner gets a fresh review revision), project the repaired
+   (always, so the owner gets a fresh review revision; a lost CAS or a held
+   lock writes nothing and leaves the caller's session alone), project the repaired
    copy onto the rows (images, prompts and notes untouched), commit, and patch
    the checkpoint's presentation copy + validation report;
 4. re-render through the republish path (new artifact version, hero images
@@ -20,7 +21,7 @@ from dataclasses import dataclass
 from typing import Protocol
 
 import structlog
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine, AsyncSession
 
 from rag_backend.application.services.carousel.carousel_republish import (
     engine_from_session,
@@ -135,6 +136,14 @@ class _Fix:
     records: list[dict[str, object]]
 
 
+def _lock_engine(db: AsyncSession) -> AsyncEngine:
+    """The engine the advisory lock opens its own connection from."""
+    bind = db.bind
+    if isinstance(bind, AsyncConnection):
+        return bind.engine
+    return engine_from_session(db)
+
+
 def _inspection(source: AutofixSource, plan: AutofixPlan) -> AutofixInspection:
     report = validate_localized_slides(
         source.records, policy_version=source.policy_version
@@ -228,14 +237,13 @@ class OwnerAutofixService:
     async def _persist(
         self, command: AutofixApplyCommand, fix: _Fix
     ) -> tuple[int, ...]:
-        engine = engine_from_session(self._deps.db)
+        engine = _lock_engine(self._deps.db)
         try:
             async with carousel_project_lock(
                 engine, command.project_id, blocking=False
             ):
                 return await self._write(command, fix)
         except CarouselConflictError as exc:
-            await self._deps.db.rollback()
             raise _ConflictError from exc
 
     async def _write(self, command: AutofixApplyCommand, fix: _Fix) -> tuple[int, ...]:
@@ -263,7 +271,6 @@ class OwnerAutofixService:
         except ValueError as exc:
             if str(exc) != ERR_VERSION_CONFLICT:
                 raise
-            await self._deps.db.rollback()
             raise _ConflictError from exc
 
     async def _patch_checkpoint(self, project_id: str, fix: _Fix) -> None:
