@@ -64,6 +64,13 @@ class PublishClaims(Protocol):
         """True when this caller now holds the run's publish claim."""
         ...
 
+    async def take_over_held(self, claim: RunClaim) -> bool:
+        """Take a stale claim even over a fresh container (QA r3 Q2).
+
+        Only called once Graph reported the container's status.
+        """
+        ...
+
     async def release_run(self, run_id: UUID) -> None:
         """Drop the run claim."""
         ...

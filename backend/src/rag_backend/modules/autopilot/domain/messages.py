@@ -40,6 +40,7 @@ from rag_backend.modules.autopilot.notify_constants import (
     KIND_FAILED,
     KIND_IG_EXPIRING,
     KIND_PUBLISH_FAILED,
+    KIND_PUBLISH_HELD,
     KIND_PUBLISHED,
     KIND_REMINDER,
     KIND_REVIEW,
@@ -62,6 +63,7 @@ from rag_backend.modules.autopilot.notify_constants import (
     TEXT_IG_EXPIRY,
     TEXT_IG_EXPIRY_DAYS,
     TEXT_PUBLISH_FAILED,
+    TEXT_PUBLISH_HELD,
     TEXT_PUBLISHED,
     TEXT_PUBLISHED_MEDIA_UNKNOWN,
     TEXT_PUBLISHED_NO_LINK,
@@ -70,6 +72,8 @@ from rag_backend.modules.autopilot.notify_constants import (
 )
 from rag_backend.modules.autopilot.recovery_constants import (
     NO_RETRY_REASONS,
+    NOTICE_PUBLISH_HELD,
+    PUBLISH_HELD_NOTICE_MINUTES,
     REASON_CAROUSEL_REJECTED,
     REASON_ESCALATION_EXPIRED,
     REASON_REVIEW_REOPENED,
@@ -279,6 +283,8 @@ def _publish_kind(payload: Mapping[str, object]) -> str | None:
         return KIND_PUBLISHED
     if outcome == NOTICE_PUBLISH_FAILED:
         return KIND_PUBLISH_FAILED
+    if outcome == NOTICE_PUBLISH_HELD:
+        return KIND_PUBLISH_HELD
     return None
 
 
@@ -322,6 +328,11 @@ def _publish_failed(copy: StatusCopy) -> str:
     if copy.reason in NO_RETRY_REASONS:
         return TEXT_PUBLISHED_MEDIA_UNKNOWN
     return TEXT_PUBLISH_FAILED.format(reason=copy.reason)
+
+
+def _publish_held(copy: StatusCopy) -> str:
+    del copy
+    return TEXT_PUBLISH_HELD.format(minutes=PUBLISH_HELD_NOTICE_MINUTES)
 
 
 def _expired(copy: StatusCopy) -> str:
@@ -373,6 +384,7 @@ _STATUS_TEXT: dict[str, Callable[[StatusCopy], str]] = {
     KIND_FAILED: _failed,
     KIND_PUBLISHED: _published_copy,
     KIND_PUBLISH_FAILED: _publish_failed,
+    KIND_PUBLISH_HELD: _publish_held,
     KIND_IG_EXPIRING: _token_copy,
     KIND_REMINDER: _reminder,
     KIND_EXPIRED: _expired,

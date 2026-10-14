@@ -100,6 +100,37 @@ async def test_a_released_claim_with_a_fresh_container_can_be_resumed(
     assert won is True
 
 
+# Scenario: A run held by a dead worker's container is resolved by its status
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("claimed_at", "taken_over"),
+    [(_LONG_AGO, True), (_NOW, False), (None, True)],
+)
+async def test_held_takeover_only_replaces_a_stale_or_empty_claim(
+    db_session: AsyncSession,
+    claimed_at: datetime | None,
+    taken_over: bool,
+) -> None:
+    repo, run = await _run_in(db_session, AutopilotRunState.PUBLISHING)
+    await repo.save_container(
+        SaveContainerCommand(
+            run_id=run.run_id, container_id="container-1", created_at=_NOW
+        )
+    )
+    await db_session.execute(
+        update(AutopilotRunModel)
+        .where(AutopilotRunModel.id == run.run_id)
+        .values(publish_claimed_at=claimed_at)
+    )
+    await db_session.commit()
+    claims = SqlPublishClaims(db_session)
+    claim = RunClaim(run_id=run.run_id, now=_NOW, stale_before=_STALE)
+
+    won = await claims.take_over_held(claim)
+
+    assert won is taken_over
+
+
 # Scenario: A manual publish crash after the container reuses that container
 @pytest.mark.asyncio
 async def test_manual_container_is_persisted_and_blocks_stale_takeover(

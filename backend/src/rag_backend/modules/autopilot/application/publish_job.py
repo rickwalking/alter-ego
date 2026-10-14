@@ -12,8 +12,14 @@ from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 
 from rag_backend.domain.constants.instagram_publish import (
+    ERR_INSTAGRAM_CONTAINER_FAILED,
     PUBLISH_RESULT_FAILED,
     PUBLISH_RESULT_PUBLISHED,
+)
+from rag_backend.modules.autopilot.application.publish_hold import (
+    HeldAction,
+    HeldRunCheck,
+    HeldRunDependencies,
 )
 from rag_backend.modules.autopilot.application.publish_steps import (
     can_step,
@@ -101,6 +107,15 @@ class InstagramPublishJob:
 
     def __init__(self, deps: PublishJobDependencies) -> None:
         self._deps = deps
+        self._held = HeldRunCheck(
+            HeldRunDependencies(
+                runs=deps.runs,
+                gateway=deps.gateway,
+                notifier=deps.notifier,
+                clock=deps.clock,
+                checkpoint=deps.checkpoint,
+            )
+        )
 
     async def tick(self) -> int:
         """Process at most one due ``publishing`` run. Returns 1 when it did.
@@ -117,7 +132,25 @@ class InstagramPublishJob:
             if await self.claim(chosen):
                 await self._claimed_tick(chosen)
                 return 1
+            if await self._took_over_held(chosen):
+                return 1
         return 0
+
+    async def _took_over_held(self, chosen: AutopilotRun) -> bool:
+        """Resolve a run a dead worker's container holds (QA r3 Q2)."""
+        action = await self._held.action_for(chosen)
+        if action is HeldAction.WAIT:
+            return False
+        if not await self._deps.claims.take_over_held(self._run_claim(chosen)):
+            return False
+        if action is HeldAction.RESUME:
+            await self._claimed_tick(chosen)
+            return True
+        try:
+            await self._fail(chosen, ERR_INSTAGRAM_CONTAINER_FAILED, None)
+        finally:
+            await self._deps.claims.release_run(chosen.run_id)
+        return True
 
     async def _claimed_tick(self, chosen: AutopilotRun) -> None:
         """A refused claim no longer blocks the next due run (QA r2 R4a)."""
@@ -130,11 +163,12 @@ class InstagramPublishJob:
 
     async def claim(self, run: AutopilotRun) -> bool:
         """Take the run's publish claim, or False when a fresh one is held."""
+        return await self._deps.claims.claim_run(self._run_claim(run))
+
+    def _run_claim(self, run: AutopilotRun) -> RunClaim:
         now = self._deps.clock.now()
         stale = now - timedelta(minutes=MANUAL_CLAIM_STALE_MINUTES)
-        return await self._deps.claims.claim_run(
-            RunClaim(run_id=run.run_id, now=now, stale_before=stale)
-        )
+        return RunClaim(run_id=run.run_id, now=now, stale_before=stale)
 
     async def publish_claimed(
         self, run: AutopilotRun, media: CarouselMedia

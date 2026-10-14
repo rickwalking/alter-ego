@@ -82,6 +82,12 @@ TEXT_REVIEW_REOPENED = "The review is open again ({reason})."
 # QA r2 R1: an escalated run closed by the runner (72 h, or carousel rejected).
 KIND_ESCALATION_CLOSED = "escalation_closed"
 TEXT_ESCALATION_CLOSED = "Escalation closed ({reason}). The carousel stays private."
+# QA r3 Q2: a publish held by an unfinished Instagram container.
+KIND_PUBLISH_HELD = "publish_held"
+TEXT_PUBLISH_HELD = (
+    "\u23f3 Instagram publish has been held for over {minutes} minutes by an "
+    "unfinished container. It resumes on its own once Instagram reports it."
+)
 LEDGER_IDS = "ids"
 LEDGER_REVIEWS = "reviews"
 LEDGER_ALBUM = "album"

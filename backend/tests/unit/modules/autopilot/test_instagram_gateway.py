@@ -137,3 +137,18 @@ async def test_atomic_gateway_never_reports_a_published_container() -> None:
     gateway = gateway_for(AsyncMock())
     container = StoredContainer(container_id="old", created_at=datetime.now(UTC))
     assert await gateway.was_published(container) is False
+
+
+@pytest.mark.unit
+async def test_stepped_gateway_reads_a_held_container_status() -> None:
+    """QA r3 Q2: a held run's container status is read once, as reported."""
+    gateway = gateway_for(_publisher("token", "ig-user", _transport(_published)))
+    container = StoredContainer(container_id="held", created_at=datetime.now(UTC))
+    assert await gateway.container_status(container) == "PUBLISHED"
+
+
+@pytest.mark.unit
+async def test_atomic_gateway_has_no_container_status() -> None:
+    gateway = gateway_for(AsyncMock())
+    container = StoredContainer(container_id="held", created_at=datetime.now(UTC))
+    assert await gateway.container_status(container) == ""

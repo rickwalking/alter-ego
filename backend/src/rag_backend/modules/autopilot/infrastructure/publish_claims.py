@@ -69,6 +69,22 @@ class SqlPublishClaims:
         await self._session.commit()
         return won
 
+    async def take_over_held(self, claim: RunClaim) -> bool:
+        """CAS a stale or empty claim; the caller already read the container."""
+        claimed_at = AutopilotRunModel.publish_claimed_at
+        result = await self._session.execute(
+            update(AutopilotRunModel)
+            .where(
+                AutopilotRunModel.id == claim.run_id,
+                AutopilotRunModel.state == AutopilotRunState.PUBLISHING.value,
+                or_(claimed_at.is_(None), claimed_at < claim.stale_before),
+            )
+            .values(publish_claimed_at=claim.now)
+        )
+        won = cast(CursorResult[object], result).rowcount == 1
+        await self._session.commit()
+        return won
+
     async def release_run(self, run_id: UUID) -> None:
         """Clear the claim and commit."""
         await self._session.execute(

@@ -59,6 +59,11 @@ MANUAL_CLAIM_STALE_MINUTES = (
 # the worker waits this long before failing a not-yet-public run (QA r2 R4c).
 RELEASE_GRACE_SECONDS = 300
 REASON_RELEASE_PENDING = "carousel_release_pending"
+# QA r3 Q2: a dead worker's container holds the run. Its status is read once
+# per tick; the owner is told once when the hold passes this many minutes.
+PUBLISH_HELD_NOTICE_MINUTES = 30
+REASON_PUBLISH_HELD = "publish_held_by_container"
+NOTICE_PUBLISH_HELD = "publish_held"
 ERR_AUTOPILOT_RUN_ACTIVE = "autopilot_run_not_publishing"
 ERR_PUBLISH_IN_PROGRESS = "instagram_publish_in_progress"
 # QA r2 R3: the post may already be live. Retry would open a new container

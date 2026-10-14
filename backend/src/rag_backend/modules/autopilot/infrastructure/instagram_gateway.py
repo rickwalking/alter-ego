@@ -72,6 +72,12 @@ class SteppedInstagramGateway:
         )
         return status == CONTAINER_STATUS_PUBLISHED
 
+    async def container_status(self, container: StoredContainer) -> str:
+        """One status read for a container a dead worker left (QA r3 Q2)."""
+        return await _guard(
+            lambda: self._publisher.container_status(container.container_id)
+        )
+
     async def finish_container(self, container: StoredContainer) -> str:
         """Poll, then ``media_publish``. A ``PUBLISHED`` container is recovered."""
         return await _guard(
@@ -130,6 +136,11 @@ class AtomicInstagramGateway:
         """Atomic publishers never store a container."""
         del container
         return self._resumable
+
+    async def container_status(self, container: StoredContainer) -> str:
+        """Atomic publishers never store a container, so there is no status."""
+        del container
+        return self._token
 
     async def finish_container(self, container: StoredContainer) -> str:
         """Atomic publishers cannot publish a stored container."""

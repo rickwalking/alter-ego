@@ -193,6 +193,10 @@ class _Claims:
         self.held.add(claim.run_id)
         return True
 
+    async def take_over_held(self, claim: RunClaim) -> bool:
+        self.held.add(claim.run_id)
+        return True
+
     async def release_run(self, run_id: UUID) -> None:
         self.held.discard(run_id)
         self.released.append(run_id)
@@ -266,6 +270,10 @@ class _Gateway:
     async def was_published(self, container: StoredContainer) -> bool:
         self.checked.append(container.container_id)
         return self.published_before
+
+    async def container_status(self, container: StoredContainer) -> str:
+        self.checked.append(container.container_id)
+        return ""
 
     async def finish_container(self, container: StoredContainer) -> str:
         self.finishes += 1

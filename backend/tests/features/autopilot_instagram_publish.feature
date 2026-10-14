@@ -129,3 +129,22 @@ Feature: Idempotent Instagram publish
     When the worker ticks within the 5 minute grace window
     Then the run stays "publishing" and no publish-failed message is sent
     And after the grace window a carousel that is still not public fails as before
+
+  # QA r3 Q2: a worker killed mid-publish no longer holds the run for 24 h.
+  Scenario Outline: A run held by a dead worker's container is resolved by its status
+    Given a publishing run whose stale claim covers a container with no post id
+    When the publish job reads the container status as "<status>"
+    Then the job <outcome>
+
+    Examples:
+      | status      | outcome                                              |
+      | PUBLISHED   | takes the claim over and recovers the posted media   |
+      | FINISHED    | takes the claim over and calls media_publish once    |
+      | ERROR       | takes the claim over and fails the run               |
+      | EXPIRED     | takes the claim over and fails the run               |
+      | IN_PROGRESS | keeps waiting                                        |
+
+  Scenario: The owner is told once when a publish is held for 30 minutes
+    Given a publishing run held by an IN_PROGRESS container for 31 minutes
+    When the publish job ticks twice
+    Then the owner receives one "publish held" notice

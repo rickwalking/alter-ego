@@ -216,6 +216,10 @@ class InstagramGraphGateway(Protocol):
         """Poll the container and ``media_publish``. Returns the media id."""
         ...
 
+    async def container_status(self, container: StoredContainer) -> str:
+        """One read of the container's Graph ``status_code`` (QA r3 Q2)."""
+        ...
+
     async def permalink(self, media_id: str) -> str:
         """Public URL for a published media id."""
         ...
