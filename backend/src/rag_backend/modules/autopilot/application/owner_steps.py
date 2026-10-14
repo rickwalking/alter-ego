@@ -9,6 +9,7 @@ from rag_backend.modules.autopilot.recovery_constants import REASON_APPROVE_REFU
 from rag_backend.modules.autopilot.webhook_constants import (
     REASON_APPROVE_FAILED,
     REASON_OWNER_APPROVED,
+    REASON_OWNER_AUTOFIX,
     REASON_OWNER_REJECTED,
     REASON_OWNER_RETRY,
     REASON_OWNER_REWORK,
@@ -60,4 +61,10 @@ APPROVE_REFUSED_STEP = OwnerStep(
     expected=_PUBLISHING,
     new=_AWAITING,
     reason=REASON_APPROVE_REFUSED,
+)
+# AE-0367: "Fix issues" queues a deterministic repair for the worker tick.
+AUTOFIX_STEP = OwnerStep(
+    expected=_AWAITING,
+    new=_REWORKING,
+    reason=REASON_OWNER_AUTOFIX,
 )

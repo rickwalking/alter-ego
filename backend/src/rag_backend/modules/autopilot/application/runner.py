@@ -41,6 +41,7 @@ from rag_backend.modules.autopilot.constants import (
     REASON_TOPIC_MISSING,
     RUNS_PER_TICK,
 )
+from rag_backend.modules.autopilot.domain.autofix import ContentAutofixer
 from rag_backend.modules.autopilot.domain.carousel_defaults import (
     GuidanceRequest,
     image_guidance_for,
@@ -108,6 +109,8 @@ class RunnerDependencies:
     owner_user_id: str
     notifier_configured: bool = True
     clock: Clock = field(default_factory=SystemClock)
+    # AE-0367: the owner's queued "Fix issues" repair.
+    autofix: ContentAutofixer | None = None
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -129,6 +132,7 @@ class AutopilotRunner:
                 editorial=deps.editorial,
                 recovery=deps.recovery,
                 escalations=self._recovery,
+                autofix=deps.autofix,
             )
         )
 

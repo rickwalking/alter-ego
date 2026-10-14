@@ -42,12 +42,20 @@ CALLBACK_DATA_MAX_BYTES = 64
 CALLBACK_APPROVE_PREFIX = "ap:approve:"
 CALLBACK_REWORK_PREFIX = "ap:rework:"
 CALLBACK_REJECT_PREFIX = "ap:reject:"
+# AE-0367: deterministic content repair of the reviewed carousel.
+CALLBACK_FIX_PREFIX = "ap:fix:"
 PERSONA_SCORE_FORMAT = ".0f"
 PATH_OWNER_UI = "/dashboard/create"
 BUTTON_APPROVE = "\u2705 Approve"
 BUTTON_REWORK = "\u270f\ufe0f Rework"
 BUTTON_REJECT = "\U0001f5d1 Reject"
 BUTTON_RETRY = "\U0001f501 Retry"
+BUTTON_FIX = "\U0001f6e0 Fix issues"
+# AE-0367: quality issues listed under the review caption preview.
+ISSUES_HEADER = "\u26a0\ufe0f Issues:"
+ISSUE_BULLET = "\u2022 {line}"
+ISSUES_SEPARATOR = "\n\n"
+LOG_REVIEW_ISSUES_FAILED = "autopilot_review_issues_failed"
 LABEL_PERSONA = "Persona:"
 LABEL_SOURCES = "sources"
 # AE-0364: a run with no persona has no scores; the owner sees it on the review.

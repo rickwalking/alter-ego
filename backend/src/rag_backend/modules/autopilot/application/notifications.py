@@ -351,6 +351,8 @@ def _review_notice(
         slide_paths=job.facts.slide_paths,
         prior_album_ids=album,
         profile=_profile(job.facts),
+        issues=job.facts.issues,
+        fixable=job.facts.fixable,
     )
 
 

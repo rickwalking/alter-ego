@@ -25,6 +25,9 @@ class ReviewNotice:
     prior_album_ids: tuple[int, ...]
     # AE-0361: ``Audience · Niche · Style`` above the caption preview.
     profile: str = ""
+    # AE-0367: quality issue lines; ``fixable`` adds the "Fix issues" button.
+    issues: tuple[str, ...] = ()
+    fixable: bool = False
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -73,6 +76,8 @@ class ReviewFacts:
     audience: str = ""
     niche: str = ""
     image_style: str = ""
+    issues: tuple[str, ...] = ()
+    fixable: bool = False
 
 
 @dataclass(frozen=True, kw_only=True)

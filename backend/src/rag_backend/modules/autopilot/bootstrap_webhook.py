@@ -15,6 +15,10 @@ from rag_backend.modules.autopilot.application.publish_job import SystemClock
 from rag_backend.modules.autopilot.infrastructure.carousel_release import (
     PublishingCarouselReleaser,
 )
+from rag_backend.modules.autopilot.infrastructure.content_autofixer import (
+    AutofixerConfig,
+    InProcessContentAutofixer,
+)
 from rag_backend.modules.autopilot.infrastructure.editorial_driver import (
     EditorialDriverConfig,
     EngineFactory,
@@ -67,5 +71,8 @@ def build_owner_action_service(build: OwnerActionBuild) -> OwnerActionService:
         recovery=SqlRunRecoveryStore(build.session),
         clock=SystemClock(),
         owner_chat_id=build.settings.telegram_owner_chat_id,
+        autofix=InProcessContentAutofixer(
+            AutofixerConfig(session=build.session, engine_factory=build.engine_factory)
+        ),
     )
     return OwnerActionService(deps)
