@@ -63,6 +63,7 @@ from rag_backend.modules.autopilot.domain.ports import (
     ReviewFactsSource,
 )
 from rag_backend.modules.autopilot.domain.publish import RunListQuery
+from rag_backend.modules.autopilot.domain.published_copy import post_extras_of
 from rag_backend.modules.autopilot.domain.status_keyboard import status_keyboard
 from rag_backend.modules.autopilot.notify_constants import (
     ATTEMPT_REMINDER_PREFIX,
@@ -374,6 +375,7 @@ def _copy(base_url: str, event: AutopilotOutboxEvent, run: AutopilotRun) -> Stat
         link=owner_ui_link(base_url, project_id),
         permalink=permalink_of(event.payload),
         days_remaining=days_remaining_of(event.payload),
+        extras=post_extras_of(event.payload),
     )
 
 

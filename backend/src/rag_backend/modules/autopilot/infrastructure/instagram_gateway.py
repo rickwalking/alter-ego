@@ -55,11 +55,11 @@ class SteppedInstagramGateway:
 
     async def quota_remaining(self) -> int:
         """Remaining ``content_publishing_limit`` quota."""
-        return await _guard(self._publisher.content_publishing_remaining)
+        return await guard_graph(self._publisher.content_publishing_remaining)
 
     async def open_carousel(self, media: CarouselMedia) -> str:
         """Create the parent container."""
-        return await _guard(
+        return await guard_graph(
             lambda: self._publisher.create_carousel_container(
                 media.caption, list(media.image_urls)
             )
@@ -67,20 +67,20 @@ class SteppedInstagramGateway:
 
     async def was_published(self, container: StoredContainer) -> bool:
         """One status read: an old container may have been published by a crash."""
-        status = await _guard(
+        status = await guard_graph(
             lambda: self._publisher.container_status(container.container_id)
         )
         return status == CONTAINER_STATUS_PUBLISHED
 
     async def container_status(self, container: StoredContainer) -> str:
         """One status read for a container a dead worker left (QA r3 Q2)."""
-        return await _guard(
+        return await guard_graph(
             lambda: self._publisher.container_status(container.container_id)
         )
 
     async def finish_container(self, container: StoredContainer) -> str:
         """Poll, then ``media_publish``. A ``PUBLISHED`` container is recovered."""
-        return await _guard(
+        return await guard_graph(
             lambda: self._publisher.publish_container(
                 container.container_id, container.created_at
             )
@@ -88,7 +88,7 @@ class SteppedInstagramGateway:
 
     async def permalink(self, media_id: str) -> str:
         """Public URL for the published media."""
-        return await _guard(lambda: self._publisher.fetch_permalink(media_id))
+        return await guard_graph(lambda: self._publisher.fetch_permalink(media_id))
 
     async def publish_atomic(self, media: CarouselMedia) -> AtomicPublishResult:
         """Full publish for a carousel that has no autopilot run to checkpoint."""
@@ -186,7 +186,7 @@ def gateway_for(
     return AtomicInstagramGateway(publisher)
 
 
-async def _guard(call: Callable[[], Awaitable[_T]]) -> _T:
+async def guard_graph(call: Callable[[], Awaitable[_T]]) -> _T:
     try:
         return await call()
     except (InstagramGraphError, RuntimeError, httpx.HTTPError) as exc:

@@ -57,8 +57,6 @@ TEXT_CAPTION_MISSING = "Review the slides above."
 TEXT_ESCALATED = "Escalated: {reason}"
 TEXT_ESCALATED_WITH_LINK = "Escalated: {reason}\n{link}"
 TEXT_FAILED = "Failed: {reason}"
-TEXT_PUBLISHED = "\u2705 posted {permalink}"
-TEXT_PUBLISHED_NO_LINK = "\u2705 posted"
 TEXT_PUBLISH_FAILED = "\u274c publish failed: {reason}"
 TEXT_PUBLISHED_MEDIA_UNKNOWN = (
     "\u26a0\ufe0f Instagram reports this carousel as published, but the post "

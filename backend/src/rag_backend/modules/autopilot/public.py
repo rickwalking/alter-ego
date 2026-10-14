@@ -87,6 +87,7 @@ def register_persistence_models() -> tuple[str, ...]:
     """
     from rag_backend.modules.autopilot.infrastructure.models import (
         AutopilotRunModel,
+        InstagramStoryModel,
         IntegrationCredentialModel,
         ManualPublishModel,
         NotifyCursorModel,
@@ -105,4 +106,5 @@ def register_persistence_models() -> tuple[str, ...]:
         XBrowserSignalModel.__tablename__,
         ManualPublishModel.__tablename__,
         NotifyCursorModel.__tablename__,
+        InstagramStoryModel.__tablename__,
     )

@@ -32,6 +32,7 @@ from rag_backend.modules.autopilot.application.publish_steps import (
     should_record,
     stored_container,
 )
+from rag_backend.modules.autopilot.application.story_step import post_extras
 from rag_backend.modules.autopilot.constants import (
     NOTICE_PUBLISH_FAILED,
     NOTICE_PUBLISHED,
@@ -71,6 +72,7 @@ from rag_backend.modules.autopilot.domain.publish import (
     gate_reason,
 )
 from rag_backend.modules.autopilot.domain.publish_claims import PublishClaims, RunClaim
+from rag_backend.modules.autopilot.domain.story import StoryRunner
 from rag_backend.modules.autopilot.recovery_constants import (
     MANUAL_CLAIM_STALE_MINUTES,
     NO_RETRY_REASONS,
@@ -89,6 +91,8 @@ class PublishJobDependencies:
     clock: Clock
     checkpoint: PublishCheckpoint
     claims: PublishClaims
+    # AE-0369: posts the Story after the carousel. None: no Story step.
+    story: StoryRunner | None = None
 
 
 class SystemClock:
@@ -303,6 +307,9 @@ class InstagramPublishJob:
                 run_id=run.run_id, ig_post_id=post_id, ig_permalink=permalink
             )
         )
+        # Before the transition, so a crash leaves the run publishing and the
+        # next tick resumes the Story; the Story never fails the post.
+        extras = await post_extras(self._deps.story, run.carousel_project_id)
         changed = await self._deps.runs.transition(
             TransitionCommand(
                 run_id=run.run_id,
@@ -319,6 +326,7 @@ class InstagramPublishJob:
                     permalink=permalink,
                     error_code=None,
                     offer_retry=False,
+                    extras=extras,
                 )
             )
         await self._deps.checkpoint.commit()

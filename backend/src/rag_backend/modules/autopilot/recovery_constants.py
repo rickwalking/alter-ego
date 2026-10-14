@@ -10,7 +10,9 @@ import math
 from rag_backend.domain.constants.instagram_publish import (
     ERR_INSTAGRAM_PUBLISHED_MEDIA_UNKNOWN,
     GRAPH_PUBLISH_WORST_CASE_SECONDS,
+    GRAPH_STORY_WORST_CASE_SECONDS,
 )
+from rag_backend.modules.autopilot.story_constants import STORY_MAX_ATTEMPTS
 
 # Engine errors the runner did not classify end the run with a reason
 # instead of rolling back the whole worker tick on every retry.
@@ -51,8 +53,13 @@ MANUAL_STATE_FAILED = "failed"
 # Graph: the slowest possible publish plus a margin (QA r2 R4a).
 CLAIM_STALE_MARGIN_MINUTES = 5
 SECONDS_PER_MINUTE = 60
+# AE-0369: the Story runs under the same claim, up to STORY_MAX_ATTEMPTS times.
+CLAIM_HELD_WORST_CASE_SECONDS = (
+    GRAPH_PUBLISH_WORST_CASE_SECONDS
+    + STORY_MAX_ATTEMPTS * GRAPH_STORY_WORST_CASE_SECONDS
+)
 MANUAL_CLAIM_STALE_MINUTES = (
-    math.ceil(GRAPH_PUBLISH_WORST_CASE_SECONDS / SECONDS_PER_MINUTE)
+    math.ceil(CLAIM_HELD_WORST_CASE_SECONDS / SECONDS_PER_MINUTE)
     + CLAIM_STALE_MARGIN_MINUTES
 )
 # Approve sets ``publishing`` before the release makes the carousel public;

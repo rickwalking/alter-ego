@@ -151,6 +151,15 @@ class ManualPublishOutcome:
 
 
 @dataclass(frozen=True, kw_only=True)
+class PostExtras:
+    """What the published notice adds: the Story outcome and the music style."""
+
+    story_status: str
+    story_error: str | None
+    music_style: str
+
+
+@dataclass(frozen=True, kw_only=True)
 class PublishNotice:
     """What the owner is told. AE-0355 renders this on Telegram."""
 
@@ -159,6 +168,8 @@ class PublishNotice:
     permalink: str | None
     error_code: str | None
     offer_retry: bool
+    # AE-0369: the Story outcome and the music nudge, on a published notice.
+    extras: PostExtras | None = None
 
 
 def choose_publish_action(facts: PublishFacts) -> str:

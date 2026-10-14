@@ -33,6 +33,10 @@ from rag_backend.modules.autopilot.application.signals_service import (
     SignalsService,
     SignalsServiceDependencies,
 )
+from rag_backend.modules.autopilot.application.story_step import (
+    InstagramStoryStep,
+    StoryDependencies,
+)
 from rag_backend.modules.autopilot.constants import (
     COLLECTOR_TIMEOUT_SECONDS,
     SIGNAL_CACHE_TTL_SECONDS,
@@ -69,6 +73,13 @@ from rag_backend.modules.autopilot.infrastructure.repository import (
 from rag_backend.modules.autopilot.infrastructure.run_recovery_store import (
     SqlRunRecoveryStore,
 )
+from rag_backend.modules.autopilot.infrastructure.story_gateway import (
+    story_gateway_for,
+)
+from rag_backend.modules.autopilot.infrastructure.story_media import (
+    PublishingStoryMedia,
+)
+from rag_backend.modules.autopilot.infrastructure.story_store import SqlStoryStore
 
 if TYPE_CHECKING:
     from rag_backend.modules.autopilot.infrastructure.editorial_driver import (
@@ -165,6 +176,27 @@ def _job_deps(
         clock=SystemClock(),
         checkpoint=repo,
         claims=SqlPublishClaims(session),
+        story=_story_step(session, publisher, public_base_url),
+    )
+
+
+def _story_step(
+    session: AsyncSession,
+    publisher: SocialPublisher,
+    public_base_url: str,
+) -> InstagramStoryStep | None:
+    """The Story step (AE-0369), only for the real Graph publisher."""
+    gateway = story_gateway_for(publisher)
+    if gateway is None:
+        return None
+    return InstagramStoryStep(
+        StoryDependencies(
+            store=SqlStoryStore(session),
+            media=PublishingStoryMedia(session, public_base_url),
+            gateway=gateway,
+            checkpoint=SqlAlchemyAutopilotRepository(session),
+            clock=SystemClock(),
+        )
     )
 
 

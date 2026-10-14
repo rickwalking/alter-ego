@@ -62,6 +62,10 @@ from rag_backend.modules.autopilot.recovery_constants import (
     TABLE_MANUAL_PUBLISHES,
     TABLE_NOTIFY_CURSOR,
 )
+from rag_backend.modules.autopilot.story_constants import (
+    FK_STORY_PROJECT,
+    TABLE_INSTAGRAM_STORIES,
+)
 
 # JSON on SQLite (tests), JSONB on PostgreSQL (prod, ADR-0006).
 _JSON_DOCUMENT = JSON().with_variant(JSONB(), "postgresql")
@@ -269,6 +273,39 @@ class ManualPublishModel(AutopilotOrmBase):
     error: Mapped[str | None] = mapped_column(Text, nullable=True)
     claimed_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False
+    )
+
+
+class InstagramStoryModel(AutopilotOrmBase):
+    """The Story announcing one carousel (AE-0369). The primary key is the claim:
+    one Story per carousel, whichever path published it.
+    """
+
+    __tablename__ = TABLE_INSTAGRAM_STORIES
+
+    carousel_project_id: Mapped[str] = mapped_column(
+        String(CAROUSEL_PROJECT_ID_LENGTH),
+        ForeignKey(
+            CAROUSEL_PROJECT_FK,
+            name=FK_STORY_PROJECT,
+            ondelete=ON_DELETE_CASCADE,
+        ),
+        primary_key=True,
+    )
+    state: Mapped[str] = mapped_column(String(STATE_LENGTH), nullable=False)
+    # Stored before ``media_publish`` so a retry resumes it.
+    story_container_id: Mapped[str | None] = mapped_column(
+        String(IG_IDENTIFIER_LENGTH), nullable=True
+    )
+    story_container_created_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    story_media_id: Mapped[str | None] = mapped_column(
+        String(IG_IDENTIFIER_LENGTH), nullable=True
+    )
+    error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
     )
 
 
