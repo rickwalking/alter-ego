@@ -63,6 +63,7 @@ from rag_backend.domain.constants.instagram_publish import (
     MIN_INSTAGRAM_CAROUSEL_ITEMS,
     PUBLISH_RESULT_FAILED,
     PUBLISH_RESULT_PUBLISHED,
+    PUBLISHING_LIMIT_FIELDS,
     RECENT_MEDIA_LIMIT,
     VALUE_TRUE,
 )
@@ -265,13 +266,15 @@ class MetaInstagramPublisher:
         return link
 
     async def content_publishing_remaining(self) -> int:
-        """Return quota left (``quota_total - quota_usage``). Unreadable is transient."""
+        """Quota left (``quota_total - quota_usage``). Unreadable is transient."""
         payload = await self._request(
             _GraphCall(
                 method=HTTP_GET,
                 path=GRAPH_PATH_PUBLISHING_LIMIT.format(
                     ig_user_id=self._config.ig_user_id
                 ),
+                # Without ``fields`` Graph omits ``config`` (AE-0368).
+                query={FIELD_FIELDS: PUBLISHING_LIMIT_FIELDS},
             )
         )
         return quota_remaining(payload)
