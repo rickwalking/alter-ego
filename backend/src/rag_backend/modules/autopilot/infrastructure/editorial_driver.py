@@ -186,6 +186,7 @@ class InProcessEditorialDriver:
                 engine_blocker=content_approve_blocker(state) or "",
                 parked=gate.parked,
                 parked_overdue=gate.parked_overdue,
+                hero_images_total=await self._acl.hero_image_total(project_id),
             )
         )
 
