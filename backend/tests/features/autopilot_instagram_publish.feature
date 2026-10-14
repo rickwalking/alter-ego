@@ -148,3 +148,11 @@ Feature: Idempotent Instagram publish
     Given a publishing run held by an IN_PROGRESS container for 31 minutes
     When the publish job ticks twice
     Then the owner receives one "publish held" notice
+
+  # QA r3 Q4: the ledger is read again once the manual claim is held.
+  Scenario: A manual publish resumes the container another attempt just stored
+    Given a carousel without an autopilot run
+    And another attempt stores a container in the ledger after our first read
+    When the owner's manual publish takes the claim
+    Then it re-reads the ledger and resumes that container instead of opening one
+    And a post id stored in between is returned without calling Graph

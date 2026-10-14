@@ -5,7 +5,8 @@
 * A carousel without a run gets a ledger row whose post id short-circuits a
   second publish. Its container id is stored in that row before
   ``media_publish``, so a retry after a crash resumes or recovers that
-  container instead of posting again (QA r2 R4b).
+  container instead of posting again (QA r2 R4b). The row is read again
+  after the claim, so a container stored in between is resumed (QA r3 Q4).
 * Both paths claim first, so the worker tick and a second request cannot
   call Graph for the same carousel at the same time.
 """
@@ -106,6 +107,11 @@ class ManualInstagramPublish:
             return outcome_of(PUBLISH_RESULT_PUBLISHED, record.ig_post_id, None)
         if not await self._deps.claims.claim_manual(self._claim(project_id)):
             raise ManualPublishRefusedError(ERR_PUBLISH_IN_PROGRESS)
+        # Another attempt may have written the ledger since the first read.
+        record = await self._deps.claims.manual_record(project_id)
+        if record is not None and record.ig_post_id:
+            await self._deps.claims.finish_manual(record)
+            return outcome_of(PUBLISH_RESULT_PUBLISHED, record.ig_post_id, None)
         if self._deps.gateway.can_resume():
             return await self._stepped(manual, _ledger_container(record))
         try:
