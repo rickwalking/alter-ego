@@ -21,6 +21,7 @@ from rag_backend.modules.autopilot.infrastructure.models import NotifyCursorMode
 from rag_backend.modules.autopilot.infrastructure.notice_source import (
     SqlAutopilotEventSource,
 )
+from rag_backend.modules.autopilot.notify_constants import OUTBOX_SCAN_LIMIT
 from rag_backend.modules.autopilot.recovery_constants import (
     NOTIFY_CURSOR_NAME,
     NOTIFY_RESCAN_WINDOW_MINUTES,
@@ -90,3 +91,27 @@ async def test_advancing_to_a_re_read_event_never_moves_the_cursor_back(
 
     assert cursor is not None
     assert cursor.event_id == second.event_id
+
+
+# Scenario: A full re-scan window never stalls the notifier
+@pytest.mark.asyncio
+async def test_new_event_is_read_past_a_window_full_of_settled_events(
+    db_session: AsyncSession,
+) -> None:
+    run_id = uuid4()
+    source = SqlAutopilotEventSource(db_session)
+    settled = [
+        _outbox(run_id, _at(index * 0.05)) for index in range(OUTBOX_SCAN_LIMIT + 50)
+    ]
+    db_session.add_all(settled)
+    await db_session.flush()
+    for _ in range(3):
+        for event in await source.recent():
+            await source.advance(event)
+
+    fresh = _outbox(run_id, _at(9))
+    db_session.add(fresh)
+    await db_session.flush()
+    seen = [e.event_id for e in await source.recent() if e.run_id == run_id]
+
+    assert str(fresh.event_id) in seen

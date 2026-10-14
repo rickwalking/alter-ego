@@ -70,3 +70,8 @@ Feature: Telegram review notification
     Then the next notifier scan reads that notice again from the 10 minute window
     And the owner receives it once
     And the cursor never moves back to it
+
+  Scenario: A full re-scan window never stalls the notifier
+    Given 150 settled notices sit inside the 10 minute window behind the cursor
+    When a new notice is written after them
+    Then the next notifier scan reads the new notice

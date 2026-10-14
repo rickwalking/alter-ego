@@ -7,7 +7,7 @@ from datetime import UTC, datetime, timedelta
 from typing import cast
 from uuid import UUID
 
-from sqlalchemy import ColumnElement, select, update
+from sqlalchemy import ColumnElement, Tuple, and_, literal, select, tuple_, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.infrastructure.database.models.event_outbox import EventOutboxModel
@@ -40,15 +40,26 @@ class SqlAutopilotEventSource:
     outbox can never push an undelivered notice out of the scan window.
     ``created_at`` is the transaction start, so a row can commit behind the
     cursor; each scan re-reads a window behind it (QA r2 R5). The dispatcher
-    skips re-read events its notice ledger already records.
+    skips re-read events its notice ledger already records. The window and
+    the rows after the cursor are separate queries with their own limit, so a
+    window full of settled rows can never starve new events (QA r3 Q1).
     """
 
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 
     async def recent(self) -> list[AutopilotOutboxEvent]:
-        """Up to the scan limit from the re-scan window behind the cursor on."""
+        """The re-scan window behind the cursor, then the rows after it."""
         cursor = await self._session.get(NotifyCursorModel, NOTIFY_CURSOR_NAME)
+        if cursor is None:
+            return await self._scan(None)
+        behind = await self._scan(_in_window(cursor))
+        ahead = await self._scan(_after(cursor))
+        return behind + ahead
+
+    async def _scan(
+        self, condition: ColumnElement[bool] | None
+    ) -> list[AutopilotOutboxEvent]:
         query = (
             select(EventOutboxModel)
             .where(
@@ -58,8 +69,8 @@ class SqlAutopilotEventSource:
             .order_by(EventOutboxModel.created_at.asc(), EventOutboxModel.event_id)
             .limit(OUTBOX_SCAN_LIMIT)
         )
-        if cursor is not None:
-            query = query.where(_after(cursor))
+        if condition is not None:
+            query = query.where(condition)
         result = await self._session.execute(query)
         events = [_event(row) for row in result.scalars().all()]
         return [event for event in events if event is not None]
@@ -84,9 +95,24 @@ class SqlAutopilotEventSource:
         await self._session.flush()
 
 
+def _position() -> Tuple:
+    return tuple_(EventOutboxModel.created_at, EventOutboxModel.event_id)
+
+
+def _cursor_position(cursor: NotifyCursorModel) -> Tuple:
+    return tuple_(literal(_aware(cursor.created_at)), literal(cursor.event_id))
+
+
 def _after(cursor: NotifyCursorModel) -> ColumnElement[bool]:
+    return _position() > _cursor_position(cursor)
+
+
+def _in_window(cursor: NotifyCursorModel) -> ColumnElement[bool]:
     window = timedelta(minutes=NOTIFY_RESCAN_WINDOW_MINUTES)
-    return EventOutboxModel.created_at > _aware(cursor.created_at) - window
+    return and_(
+        EventOutboxModel.created_at > _aware(cursor.created_at) - window,
+        _position() <= _cursor_position(cursor),
+    )
 
 
 def _is_ahead(event: AutopilotOutboxEvent, cursor: NotifyCursorModel) -> bool:
