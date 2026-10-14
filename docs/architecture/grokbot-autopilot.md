@@ -310,6 +310,46 @@ This supersedes the host or Cursor CLI parts of §5, §2 and §7 (AE-0360).
 **Known issue**
 - Grok Bot routines may start late or miss runs (Cursor forum, Sept 2026). Re-runs are safe because of the daily cap and dedupe.
 
+### 5.3 Carousel defaults (AE-0361)
+
+Every GrokBot carousel has a simple audience and niche, a brief on the selected theme, and image guidance. The routine pack is `ops/grokbot/grok-bot/v2/`.
+
+**Fixed by the backend**
+- `image_model` is always `openai` and the palette `theme` is always `auto`. The scout never sends either.
+- The editorial driver creates the carousel with these values, the topic's `image_style`, and `custom_visual_details` = the image guidance.
+
+**Chosen by the scout** (two optional fields on each topic)
+- `image_style`: one of the OpenAI presets in `SUPPORTED_IMAGE_COMBOS`. The default is `neo_anime`. An unknown value is a 422 for the whole batch.
+- `image_guidance`: plain text, at most 400 characters, no URLs. It should end with `Background: <theme-specific scene>.`
+
+| Theme of the topic | image_style |
+|---|---|
+| Default: AI agents, models, AGI, LLM launches, robotics/automation, cybersecurity, future of work, most AI themes | `neo_anime` |
+| Data, benchmarks, how-to/tutorials, business strategy or ROI explainers | `flat_editorial` |
+| Physical hardware launches: chips, GPUs, devices, consumer gadgets | `hyperreal` |
+| Regulation, policy, ethics, society or real-world events involving people | `cinematic` |
+| Humor, memes, hype or internet culture | `comic_neon` |
+
+**Fallback guidance.** When the scout omits `image_guidance`, the runner builds it from constants in `modules/autopilot/carousel_constants.py`:
+- For `neo_anime`: the Akira / Ghost in the Shell / Evangelion line.
+- For any other style: a style-neutral line.
+- Both end with `Background: <niche>-themed setting.`
+
+Topics stored before AE-0361 get the same fallback.
+
+**Simple-words rules.** Each failing topic is listed under `rejected`; the rest of the batch is still accepted.
+
+| Rule | Reason |
+|---|---|
+| `audience` is 1–3 words | `audience_not_simple` |
+| `niche` is 1–3 words | `niche_not_simple` |
+| `brief` is at most 600 characters | `brief_not_simple` |
+| `brief` shares at least one title word, case-insensitive, stop words ignored (`BRIEF_STOP_WORDS`) | `brief_off_theme` |
+
+**Storage and review**
+- `topic_candidates` gains `image_style` (NOT NULL, default `neo_anime`) and `image_guidance` (nullable). Revision `e7f8a9b0c1d2` is additive.
+- The Telegram review message starts with `Audience: … · Niche: … · Style: …`, read from the carousel row.
+
 ## 6. Backend changes (gap → fix)
 
 | Gap found in the codebase | Fix |
