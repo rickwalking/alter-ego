@@ -153,6 +153,10 @@ Feature file written before implementation.
 
 Moved to Dev Complete.
 
+### 2026-10-13 21:12
+
+Verifier capture exited 3 on `backend:strict-diff`, `backend:integrity`, and `backend:mutation`. Each died in `mktemp` or pytest `TemporaryFile` because `/tmp` had no free inodes. No gate threshold or test was changed. After the stale pytest temp dirs were removed, `bash scripts/ci/gate-capture.sh backend` exited 0 (20 pass, 0 fail, 0 skip). Pytest 3070 passed / 2 skipped. Mutation score 79.39%. Status stays Dev Complete.
+
 ## Files Touched
 
 - `backend/tests/features/autopilot_signals.feature`
