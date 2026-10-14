@@ -237,3 +237,43 @@ Feature: Autopilot runner
     Given the outline revision cap is reached
     When the runner revises the outline gate
     Then the resume is refused with "revision_cap" and the row is unchanged
+
+  # AE-0364: the autopilot attaches no persona, so the content phase scores
+  # nothing (prod 2026-10-14, carousel 8e350d6e: 7 drafts, persona_scores {}).
+  # The engine skips the voice floor when there are no scores; the policy
+  # treated "no score" as a failure and revised the content gate to the cap.
+
+  Scenario: A content gate with no persona scores is approved like the engine does
+    Given the content gate has drafts and no persona scores
+    And no forbidden phrase or engine blocker applies
+    When the runner reads the gate
+    Then the policy approves the content gate
+    And the engine's own content-approve check agrees
+
+  Scenario: The autopilot approves an unscored content gate and the workflow moves to design
+    Given a carousel waiting at the content gate with drafts and no persona scores
+    When the runner approves the content gate
+    Then the design phase runs and the workflow waits at the design gate
+
+  Scenario: Persona scores, when present, still enforce the voice floor
+    Given the content gate persona scores have a lowest overall of 62
+    Then the policy revises the content gate with reason "persona_score_below_threshold"
+    Given the content gate persona scores have a lowest overall of 75
+    Then the policy approves the content gate
+
+  Scenario: An unscored run still fails on forbidden phrases and engine blockers
+    Given the content gate has no persona scores
+    And a draft contains a forbidden phrase
+    Then the policy revises the content gate with reason "forbidden_phrase"
+    Given the content gate has no persona scores
+    And the engine's content-approve check reports a presentation blocker
+    Then the policy revises the content gate with reason "presentation_validation_blocked"
+
+  Scenario: An unreadable persona score fails closed
+    Given the content gate persona entry is present but not a number
+    Then the snapshot counts it as 0 and the policy revises
+
+  Scenario: The owner sees that the run was not scored
+    Given a run that reaches final review with no persona scores
+    When the review album caption is built
+    Then it reads "Persona: not scored"

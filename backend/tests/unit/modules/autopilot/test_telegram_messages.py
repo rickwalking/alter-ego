@@ -101,7 +101,7 @@ def test_album_caption_marks_a_missing_score() -> None:
     text = album_caption(
         ScoreSummary(title="Agents", persona_score=None, sources_count=0)
     )
-    assert "n/a" in text
+    assert "Persona: not scored" in text
 
 
 def test_caption_preview_truncates_and_fills_empty() -> None:
