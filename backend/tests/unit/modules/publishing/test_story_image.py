@@ -11,7 +11,6 @@ from pathlib import Path
 import pytest
 from PIL import Image
 
-import rag_backend.infrastructure.database.models  # noqa: F401  (import order)
 from rag_backend.modules.publishing.application import story_image
 from rag_backend.modules.publishing.application.story_image import (
     StoryPaths,

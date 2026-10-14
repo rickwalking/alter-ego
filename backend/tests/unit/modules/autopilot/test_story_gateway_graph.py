@@ -14,6 +14,7 @@ import pytest
 import respx
 
 from rag_backend.domain.constants.instagram_publish import GRAPH_HOST_INSTAGRAM
+from rag_backend.domain.protocols.social import PublishResult
 from rag_backend.infrastructure.external import meta_instagram_publisher
 from rag_backend.infrastructure.external.instagram_token import (
     StaticInstagramTokenProvider,
@@ -154,7 +155,8 @@ class TestStoryGatewayFor:
         class _Stub:
             async def publish_instagram(
                 self, caption: str, image_urls: list[str]
-            ) -> None:
+            ) -> PublishResult:
                 del caption, image_urls
+                return PublishResult(status="published", post_id="p-1")
 
-        assert story_gateway_for(_Stub()) is None  # type: ignore[arg-type]
+        assert story_gateway_for(_Stub()) is None
