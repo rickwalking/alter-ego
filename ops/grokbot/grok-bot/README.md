@@ -8,7 +8,7 @@ The bot holds only the scoped autopilot key. That key cannot publish and cannot 
 
 `v2/` is the current routine pack (AE-0361). It adds the carousel rules: audience and niche in 1 to 3 words, a brief that names the title's theme, an `image_style` picked from a decision table (`neo_anime` by default), and `image_guidance` with a theme-specific background.
 
-`v1/` is immutable and kept for rollback. Never edit files under `v1/` or `v2/`. To change the routine, copy the latest directory to the next version (`v3/`) and change the copy.
+`v1/` is **superseded** and must not be run. From AE-0361 on, v2 is required: the v1 example brief does not name its title's theme, so the backend rejects it with `brief_off_theme`. The owner must paste `v2/routine.md`. `v1/` is immutable and kept for history. Never edit files under `v1/` or `v2/`. To change the routine, copy the latest directory to the next version (`v3/`) and change the copy.
 
 ## Owner setup
 
@@ -29,7 +29,7 @@ The bot holds only the scoped autopilot key. That key cannot publish and cannot 
 
 ## Carousel defaults
 
-The backend creates every GrokBot carousel with the OpenAI image model and the `auto` palette theme. The bot picks only the image style and writes the image guidance. A topic that breaks a carousel rule is listed under `rejected` with `audience_not_simple`, `niche_not_simple`, `brief_not_simple` or `brief_off_theme`. An unknown `image_style` rejects the whole batch with 422. See `docs/architecture/grokbot-autopilot.md` §5.3.
+The backend creates every GrokBot carousel with the OpenAI image model and the `auto` palette theme. The bot picks only the image style and writes the image guidance. A topic that breaks a carousel rule is listed under `rejected` with `image_style_unsupported`, `audience_not_simple`, `niche_not_simple`, `brief_not_simple` (brief over 600 characters) or `brief_off_theme`; the rest of the batch is still accepted. Only a malformed field (for example an `image_style` over 40 characters or a brief over 800) rejects the whole batch with 422. See `docs/architecture/grokbot-autopilot.md` §5.3.
 
 ## Known issue
 
