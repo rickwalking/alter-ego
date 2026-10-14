@@ -134,7 +134,7 @@ class TestStoryGraphCalls:
         with respx.mock() as router:
             limit = router.get(
                 f"{_BASE}/{_USER}/content_publishing_limit",
-                params={"fields": "config,quota_usage"},
+                params={"fields": "quota_usage,config"},
             ).respond(
                 200,
                 json={"data": [{"quota_usage": 2, "config": {"quota_total": 25}}]},

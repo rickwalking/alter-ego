@@ -168,9 +168,16 @@ def _design(snapshot: GateSnapshot) -> str | None:
 
 
 def _images(snapshot: GateSnapshot) -> str | None:
-    if snapshot.slides_total < 1 or snapshot.slides_total > MAX_SLIDES:
+    """One valid hero JPEG per slide the image phase illustrates (AE-0365).
+
+    The CTA slide uses the owner avatar, so a 7-slide run stores 6 hero
+    images. The count comes from the pipeline's own slide filter, not from
+    ``slides_total``; zero (no slides persisted) fails closed.
+    """
+    expected = snapshot.hero_images_total
+    if expected < 1 or expected > MAX_SLIDES:
         return REASON_IMAGES
-    if len(snapshot.images) != snapshot.slides_total:
+    if len(snapshot.images) != expected:
         return REASON_IMAGES
     if any(not _valid_jpeg(image) for image in snapshot.images):
         return REASON_IMAGES

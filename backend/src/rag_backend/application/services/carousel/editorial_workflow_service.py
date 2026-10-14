@@ -12,6 +12,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from rag_backend.agents.carousel_editorial_orchestrator import (
     CarouselEditorialOrchestrator,
 )
+from rag_backend.application.services.carousel.edited_slide_persist import (
+    EditedSlidePersistCommand,
+    persist_edited_slide_copy,
+)
 from rag_backend.application.services.carousel.editorial_workflow_events import (
     PhaseEventEmitContext,
     ReviewEventEmitRequest,
@@ -345,6 +349,16 @@ class EditorialWorkflowService:
                 await self._append_image_visual_feedback(
                     params.db, params.project_id, params.feedback
                 )
+        # AE-0366: reviewer edits reach the rendered slide rows before the graph
+        # moves on (design/images/finalize/republish read those rows).
+        await persist_edited_slide_copy(
+            EditedSlidePersistCommand(
+                db=params.db,
+                project_id=params.project_id,
+                prior=prior,
+                structured_feedback=params.structured_feedback,
+            )
+        )
         human_input: dict[str, object] = {
             "action": graph_action,
             "reviewer_id": params.reviewer_id,

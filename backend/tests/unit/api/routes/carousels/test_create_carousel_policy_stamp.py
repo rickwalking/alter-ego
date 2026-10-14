@@ -22,7 +22,7 @@ from rag_backend.domain.constants.carousel_presentation import (
 from rag_backend.domain.constants.presentation_policy import (
     CREATE_TIME_PRESENTATION_POLICY_VERSION,
     DEFAULT_PRESENTATION_POLICY_VERSION,
-    PRESENTATION_POLICY_VERSION_HERO_LOWER_THIRD_V2,
+    PRESENTATION_POLICY_VERSION_HERO_LOWER_THIRD_V3,
 )
 from rag_backend.domain.models import CarouselProject, User
 from rag_backend.domain.protocols import CarouselRepository
@@ -50,15 +50,15 @@ class _NoopSession:
 
 @pytest.mark.unit
 class TestCreateTimeStamping:
-    """New carousels are stamped v2; legacy NULL rows keep v1 semantics."""
+    """New carousels are stamped v3 (AE-0366); legacy NULL rows keep v1."""
 
-    def test_create_time_constant_is_v2(self) -> None:
+    def test_create_time_constant_is_v3(self) -> None:
         assert CREATE_TIME_PRESENTATION_POLICY_VERSION == (
-            PRESENTATION_POLICY_VERSION_HERO_LOWER_THIRD_V2
+            PRESENTATION_POLICY_VERSION_HERO_LOWER_THIRD_V3
         )
         assert DEFAULT_PRESENTATION_POLICY_VERSION == "hero_lower_third_v1"
 
-    async def test_create_carousel_stamps_v2(self) -> None:
+    async def test_create_carousel_stamps_v3(self) -> None:
         repo = _CaptureRepo()
         user = User(
             email="e@x.com",

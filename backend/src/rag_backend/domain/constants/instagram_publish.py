@@ -46,8 +46,6 @@ VALUE_TRUE = "true"
 MEDIA_TYPE_CAROUSEL = "CAROUSEL"
 # AE-0369: a Story container is one image with media_type STORIES.
 MEDIA_TYPE_STORIES = "STORIES"
-# content_publishing_limit returns only quota_usage unless config is asked for.
-PUBLISHING_LIMIT_FIELDS = "config,quota_usage"
 CONTAINER_STATUS_FINISHED = "FINISHED"
 CONTAINER_STATUS_IN_PROGRESS = "IN_PROGRESS"
 CONTAINER_STATUS_ERROR = "ERROR"
@@ -89,6 +87,12 @@ KEY_CONFIG = "config"
 KEY_QUOTA_TOTAL = "quota_total"
 KEY_ERROR = "error"
 KEY_CODE = "code"
+# Without ``fields`` Graph returns only ``quota_usage`` (AE-0368, verified live
+# on graph.instagram.com/v23.0). ``config`` carries ``quota_total``.
+PUBLISHING_LIMIT_FIELDS = ",".join((KEY_QUOTA_USAGE, KEY_CONFIG))
+# Meta's documented limit: 100 API-published posts per rolling 24 hours. Used
+# only when a readable ``quota_usage`` comes without ``config.quota_total``.
+DEFAULT_PUBLISHING_QUOTA_TOTAL = 100
 
 PUBLISH_RESULT_PUBLISHED = "published"
 PUBLISH_RESULT_FAILED = "failed"
@@ -104,6 +108,7 @@ __all__ = [
     "CONTAINER_STATUS_FINISHED",
     "CONTAINER_STATUS_IN_PROGRESS",
     "CONTAINER_STATUS_PUBLISHED",
+    "DEFAULT_PUBLISHING_QUOTA_TOTAL",
     "ERR_INSTAGRAM_API_NO_ID",
     "ERR_INSTAGRAM_API_REQUEST_FAILED",
     "ERR_INSTAGRAM_CONTAINER_FAILED",

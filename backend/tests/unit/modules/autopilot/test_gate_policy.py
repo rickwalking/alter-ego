@@ -74,6 +74,7 @@ def _snapshot(**overrides: object) -> GateSnapshot:
         images=tuple(_jpeg() for _ in range(6)),
         revisions_used=0,
         stale=False,
+        hero_images_total=6,
     )
     return replace(base, **overrides)
 

@@ -419,8 +419,10 @@ The style comes from `music_style_for(niche, image_style)` (`story_constants.MUS
   voice check is then skipped and the owner's review reads `Persona: not scored` (AE-0364).
   Forbidden phrases and the engine's own content-approve refusal still block.
 - **design:** `presentation_validation` has no blockers.
-- **images:** one `image_assets` entry per slide (the same expected count as the outline),
-  every file present, and every JPEG is 1080×1350.
+- **images:** one `image_assets` hero image per slide the image phase illustrates, counted by
+  the pipeline's own filter on the persisted slides (AE-0365): the CTA slide uses the owner
+  avatar, so a 7-slide carousel has 6. Every file is a present JPEG with a decodable size (raw
+  hero images, not the 1080×1350 slides composed at finalize; AE-0362).
 
 A failed check means `revise` with templated feedback, at most 2×, then **escalate**.
 Escalation never approves anything blindly.

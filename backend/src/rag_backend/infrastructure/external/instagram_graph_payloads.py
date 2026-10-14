@@ -13,10 +13,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime
+from typing import TypeGuard
 
 import httpx
 
 from rag_backend.domain.constants.instagram_publish import (
+    DEFAULT_PUBLISHING_QUOTA_TOTAL,
     ERR_INSTAGRAM_API_NO_ID,
     ERR_INSTAGRAM_API_REQUEST_FAILED,
     ERR_INSTAGRAM_CONTAINER_FAILED,
@@ -63,7 +65,11 @@ class RecentMedia:
 
 
 def quota_remaining(payload: dict[str, object]) -> int:
-    """``quota_total - quota_usage``. Unreadable bodies raise a transient error."""
+    """``quota_total - quota_usage``. Unreadable bodies raise a transient error.
+
+    A readable ``quota_usage`` without ``config.quota_total`` falls back to
+    Meta's documented limit instead of failing every tick (AE-0368).
+    """
     data = payload.get(KEY_DATA)
     if not isinstance(data, list) or not data:
         raise quota_error()
@@ -71,15 +77,25 @@ def quota_remaining(payload: dict[str, object]) -> int:
     if not isinstance(first, dict):
         raise quota_error()
     usage = first.get(KEY_QUOTA_USAGE)
-    config = first.get(KEY_CONFIG)
-    if isinstance(usage, bool) or not isinstance(usage, int):
+    if not _is_count(usage):
         raise quota_error()
-    if not isinstance(config, dict):
-        raise quota_error()
-    total = config.get(KEY_QUOTA_TOTAL)
-    if isinstance(total, bool) or not isinstance(total, int):
-        raise quota_error()
-    return total - usage
+    return _quota_total(first.get(KEY_CONFIG)) - usage
+
+
+def _quota_total(config: object) -> int:
+    total = config.get(KEY_QUOTA_TOTAL) if isinstance(config, dict) else None
+    if _is_count(total):
+        return total
+    logger.warning(
+        "instagram_quota_total_missing",
+        fallback_total=DEFAULT_PUBLISHING_QUOTA_TOTAL,
+    )
+    return DEFAULT_PUBLISHING_QUOTA_TOTAL
+
+
+def _is_count(value: object) -> TypeGuard[int]:
+    """True for a plain int. ``bool`` is an ``int`` subclass and is rejected."""
+    return isinstance(value, int) and not isinstance(value, bool)
 
 
 def quota_error() -> InstagramGraphError:

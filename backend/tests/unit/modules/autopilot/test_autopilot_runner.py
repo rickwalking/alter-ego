@@ -135,6 +135,7 @@ def _snapshot(phase: str, score: float | None, revisions: int) -> GateSnapshot:
         images=tuple(image for _ in range(6)),
         revisions_used=revisions,
         stale=False,
+        hero_images_total=6,
     )
 
 

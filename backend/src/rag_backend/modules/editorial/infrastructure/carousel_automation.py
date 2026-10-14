@@ -8,7 +8,7 @@ application/domain layers stay free of the carousel ORM.
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from datetime import datetime
 from typing import TYPE_CHECKING, TypeAlias, cast
@@ -30,7 +30,7 @@ from rag_backend.application.services.carousel.workflow_state import (
 from rag_backend.domain.constants.presentation_policy import (
     DEFAULT_PRESENTATION_POLICY_VERSION,
 )
-from rag_backend.modules.editorial.domain.models import CarouselProject
+from rag_backend.modules.editorial.domain.models import CarouselProject, CarouselSlide
 from rag_backend.modules.editorial.domain.ports import CarouselRepository
 
 if TYPE_CHECKING:
@@ -175,6 +175,21 @@ def expected_slide_total(project: CarouselProject) -> int:
         return slides_in_config(project.slides_config)
 
 
+def hero_image_total(slides: Sequence[CarouselSlide]) -> int:
+    """Hero images the image phase generates for ``slides`` (AE-0365).
+
+    The image phase only illustrates the slide types in ``IMAGE_SLIDE_TYPES``
+    that carry an image prompt (``filter_image_slides``). The CTA slide uses
+    the owner avatar instead, so a 7-slide carousel has 6 hero images.
+    """
+    from rag_backend.application.services.carousel.nodes.images import (
+        filter_image_slides,
+    )
+    from rag_backend.application.services.carousel.types import unpack_extras
+
+    return len(filter_image_slides([unpack_extras(slide) for slide in slides]))
+
+
 class CarouselAutomationAcl:
     """Session-scoped carousel reads and the unattended project insert."""
 
@@ -206,6 +221,16 @@ class CarouselAutomationAcl:
         if project is None:
             return 0
         return expected_slide_total(project)
+
+    async def hero_image_total(self, project_id: str) -> int:
+        """Hero images the image phase builds for the persisted slides (AE-0365).
+
+        Zero when the project or its slides do not exist (the gate then revises).
+        """
+        project = await self.load_project(project_id)
+        if project is None:
+            return 0
+        return hero_image_total(await self._repo.get_slides_by_project(project.id))
 
     async def heartbeat(self, project_id: str) -> RunHeartbeat | None:
         """Phase status and run heartbeat, or None when the row is missing."""
@@ -266,6 +291,7 @@ __all__ = [
     "build_start_input",
     "content_approve_blocker",
     "expected_slide_total",
+    "hero_image_total",
     "is_provider_outage",
     "slides_in_config",
 ]

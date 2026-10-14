@@ -67,3 +67,24 @@ def build_caption_prompt(
         version="v2",
     )
     return prompt_text
+
+
+def build_slide_translation_prompt(slides_json: str, quality_rubric: str) -> str:
+    """AE-0366: PT -> EN slide translation prompt (v6, carries the rubric).
+
+    Same lazy registry import as the three builders above: the
+    carousel_template.prompts -> agents.prompts.registry pair is already in the
+    import-linter baseline, so no new layer edge is introduced.
+    """
+    from rag_backend.agents.prompts.registry import (  # integrity-ok: baselined pair
+        render_prompt,
+    )
+    from rag_backend.domain.constants.carousel import CAROUSEL_PROMPT_VERSION_V6
+
+    prompt_text, _ = render_prompt(
+        "carousel",
+        "slide_translations",
+        variables={"slides_json": slides_json, "quality_rubric": quality_rubric},
+        version=CAROUSEL_PROMPT_VERSION_V6,
+    )
+    return prompt_text

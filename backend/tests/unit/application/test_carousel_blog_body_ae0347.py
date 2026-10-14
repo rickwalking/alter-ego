@@ -25,7 +25,10 @@ from rag_backend.application.services.carousel.editorial_distribution_pack impor
     build_editorial_distribution_updates,
 )
 from rag_backend.domain.constants.ai_agents import PROMPT_EDITORIAL_SLIDE_TRANSLATIONS
-from rag_backend.domain.constants.carousel import CAROUSEL_PROMPT_VERSION_V5
+from rag_backend.domain.constants.carousel import (
+    CAROUSEL_PROMPT_VERSION_V5,
+    CAROUSEL_PROMPT_VERSION_V6,
+)
 from rag_backend.domain.models import CarouselProject
 from rag_backend.domain.models.carousel import CarouselStatus
 from rag_backend.infrastructure.cache.ai_response_cache import get_ai_response_cache
@@ -107,8 +110,9 @@ class TestContentAgentV5:
         ) as spy:
             result = await agent.draft_slide(1, "Title", ["Point"])
         assert result[LONG_FORM_NOTES_KEY] == "Para one.\n\nPara two."
-        assert result["prompt_version"] == CAROUSEL_PROMPT_VERSION_V5
-        assert spy.call_args.kwargs["version"] == CAROUSEL_PROMPT_VERSION_V5
+        # AE-0366: the agent now renders v6, which keeps the v5 notes contract.
+        assert result["prompt_version"] == CAROUSEL_PROMPT_VERSION_V6
+        assert spy.call_args.kwargs["version"] == CAROUSEL_PROMPT_VERSION_V6
 
 
 @pytest.mark.unit
