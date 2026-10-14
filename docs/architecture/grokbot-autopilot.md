@@ -137,6 +137,23 @@ both callers take a compare-and-set publish claim first.
   `created_at` is the transaction start time, so a long transaction can commit an event
   behind the cursor; the notice ledger dedupes the re-read events.
 
+**QA round 3 hardening (AE-0348).**
+- The notifier reads the re-scan window and the events after its cursor as two queries, each
+  with its own limit, so a window full of settled notices never stalls new ones.
+- A run held in `publishing` by a dead worker's container (stale claim, container under 24 h,
+  no post id) is not left for 24 h. The job reads the container status once per tick:
+  `PUBLISHED` is recovered, `FINISHED` gets one `media_publish` under the claim, `ERROR` /
+  `EXPIRED` fail the run, `IN_PROGRESS` waits. A hold over 30 minutes is told to the owner once.
+- The escalation sweep runs the wake check before closing. A carousel back at final review at a
+  new lock version is never closed. Without a notifier such a run is first recorded as
+  `notifier_unconfigured` (restarting its 72 h) and only then may close.
+- The manual publish re-reads its ledger row after taking the claim.
+- The research fetch has one 15 s deadline over all hops, reads only `text/html`,
+  `application/xhtml+xml` and `text/plain` (anything else skips the source), sends browser
+  headers, decodes by header / `<meta>` charset, strips resource-hint `<link>` tags and
+  launches Chromium with `--dns-prefetch-disable`. Pages that need JavaScript come back as
+  their static HTML.
+
 ---
 
 ## 4. Autopilot state machine (new table `autopilot_runs`)
