@@ -1,6 +1,6 @@
 # AE-0353 — Topic intake POST /api/autopilot/topics: schema, source allowlist, dedupe, daily cap
 
-Status: Ready
+Status: Dev Complete
 Tier: T2
 Priority: High
 Type: Feature
@@ -37,11 +37,11 @@ LLM output is untrusted and may be prompt-injected via scraped signals; it may a
 
 ## Acceptance Criteria
 
-- [ ] WHEN a proposal cites a URL not served in signals THE intake SHALL reject that proposal with reason `source_not_in_signals`.
-- [ ] WHEN a proposal duplicates a topic from the last 60 days THE intake SHALL reject it with reason `duplicate_topic`.
-- [ ] WHEN the daily cap is already reached THE intake SHALL persist candidates but queue no run, reason `daily_cap_reached`.
-- [ ] WHEN the payload violates the schema THE API SHALL return 422 and persist nothing.
-- [ ] WHEN the same batch is posted twice THE second call SHALL queue nothing new (idempotent via signal_hash).
+- [x] WHEN a proposal cites a URL not served in signals THE intake SHALL reject that proposal with reason `source_not_in_signals`.
+- [x] WHEN a proposal duplicates a topic from the last 60 days THE intake SHALL reject it with reason `duplicate_topic`.
+- [x] WHEN the daily cap is already reached THE intake SHALL persist candidates but queue no run, reason `daily_cap_reached`.
+- [x] WHEN the payload violates the schema THE API SHALL return 422 and persist nothing.
+- [x] WHEN the same batch is posted twice THE second call SHALL queue nothing new (idempotent via signal_hash).
 
 ## Gherkin Scenarios
 
@@ -129,13 +129,29 @@ Feature: Autopilot topic intake
 
 Ticket created from docs/architecture/grokbot-autopilot.md (ticket #4).
 
+### 2026-10-13 22:30
+
+Implemented topic intake on `feat/ae-0353-autopilot-topic-intake`. The first full `gate-capture.sh backend` failed the route snapshot because `POST /api/autopilot/topics` was new. After the snapshot update, the capture is green (20 pass, 0 fail, 0 skip).
+
 ## Files Touched
 
-Pending.
+- `backend/src/rag_backend/modules/autopilot/application/topic_intake.py` — batch accept, persist, queue
+- `backend/src/rag_backend/modules/autopilot/domain/intake.py` — allowlist, dedupe, cap plan
+- `backend/src/rag_backend/modules/autopilot/domain/topic_text.py` — strip, hash, Jaccard, Sao Paulo day
+- `backend/src/rag_backend/modules/autopilot/infrastructure/intake_store.py` — served URLs, candidates, runs
+- `backend/src/rag_backend/modules/autopilot/api/schemas.py` — `TopicBatch` / response
+- `backend/src/rag_backend/modules/autopilot/api/router.py` — `POST /topics` and served-URL record on `GET /signals`
+- `backend/alembic/versions/f2a3b4c5d6e7_autopilot_served_signal_urls.py` — allowlist table
+- `backend/tests/features/autopilot_topic_intake.feature`
+- `backend/tests/unit/autopilot/test_topic_intake_plan.py`
+- `backend/tests/integration/test_autopilot_topic_intake.py`
+- `backend/tests/snapshots/openapi_routes.json`
 
 ## Test Evidence
 
-Pending.
+`bash scripts/ci/gate-capture.sh backend` exit 0 at `6a8a2a46`. Pytest 3102 passed / 2 skipped. Diff coverage 96%. Mutation score 79.91%.
+
+GATES_JSON: {"pass":20,"fail":0,"skip":0,"results":[{"gate":"backend:format","status":"PASS"},{"gate":"backend:lint","status":"PASS"},{"gate":"backend:lint-diff","status":"PASS"},{"gate":"backend:blanket-ignore","status":"PASS"},{"gate":"backend:strict-diff","status":"PASS"},{"gate":"backend:type","status":"PASS"},{"gate":"backend:imports","status":"PASS"},{"gate":"backend:arch-ratchet","status":"PASS"},{"gate":"backend:docstrings","status":"PASS"},{"gate":"backend:dead-code","status":"PASS"},{"gate":"backend:inline-prompts","status":"PASS"},{"gate":"backend:redis-factory","status":"PASS"},{"gate":"backend:bandit","status":"PASS"},{"gate":"backend:pip-audit","status":"PASS"},{"gate":"backend:integrity","status":"PASS"},{"gate":"backend:test","status":"PASS"},{"gate":"backend:diff-cover","status":"PASS"},{"gate":"backend:migrations","status":"PASS"},{"gate":"backend:schema-drift","status":"PASS"},{"gate":"backend:mutation","status":"PASS"}]}
 
 ## QA Report
 
