@@ -87,8 +87,8 @@ def test_worst_case_graph_publish_is_derived_from_the_retry_constants() -> None:
 # Scenario: A stale publish claim is not taken over while Graph may still run
 def test_stale_claim_window_outlasts_the_worst_case_publish() -> None:
     assert MANUAL_CLAIM_STALE_MINUTES * 60 > GRAPH_PUBLISH_WORST_CASE_SECONDS
-    assert MANUAL_CLAIM_STALE_MINUTES >= math.ceil(
-        GRAPH_PUBLISH_WORST_CASE_SECONDS / 60
+    assert (
+        math.ceil(GRAPH_PUBLISH_WORST_CASE_SECONDS / 60) <= MANUAL_CLAIM_STALE_MINUTES
     )
 
 
