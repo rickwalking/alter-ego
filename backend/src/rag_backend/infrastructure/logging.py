@@ -4,9 +4,10 @@ import logging
 import re
 import sys
 from collections.abc import MutableMapping
-from typing import cast, override
+from typing import cast
 
 import structlog
+from typing_extensions import override
 
 from rag_backend.domain.constants.log_redaction import (
     GRAPH_QUERY_CREDENTIAL_PATTERN,
