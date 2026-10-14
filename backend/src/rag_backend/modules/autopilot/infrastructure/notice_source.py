@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import cast
 from uuid import UUID
 
-from sqlalchemy import ColumnElement, and_, or_, select, update
+from sqlalchemy import ColumnElement, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.infrastructure.database.models.event_outbox import EventOutboxModel
@@ -27,7 +27,10 @@ from rag_backend.modules.autopilot.notify_constants import (
     NOTIFY_EVENT_TYPES,
     OUTBOX_SCAN_LIMIT,
 )
-from rag_backend.modules.autopilot.recovery_constants import NOTIFY_CURSOR_NAME
+from rag_backend.modules.autopilot.recovery_constants import (
+    NOTIFY_CURSOR_NAME,
+    NOTIFY_RESCAN_WINDOW_MINUTES,
+)
 
 
 class SqlAutopilotEventSource:
@@ -35,13 +38,16 @@ class SqlAutopilotEventSource:
 
     The cursor only moves past events the dispatcher has settled, so a busy
     outbox can never push an undelivered notice out of the scan window.
+    ``created_at`` is the transaction start, so a row can commit behind the
+    cursor; each scan re-reads a window behind it (QA r2 R5). The dispatcher
+    skips re-read events its notice ledger already records.
     """
 
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 
     async def recent(self) -> list[AutopilotOutboxEvent]:
-        """Return up to the scan limit after the cursor, oldest first."""
+        """Up to the scan limit from the re-scan window behind the cursor on."""
         cursor = await self._session.get(NotifyCursorModel, NOTIFY_CURSOR_NAME)
         query = (
             select(EventOutboxModel)
@@ -59,7 +65,7 @@ class SqlAutopilotEventSource:
         return [event for event in events if event is not None]
 
     async def advance(self, event: AutopilotOutboxEvent) -> None:
-        """Move the cursor to ``event``. The caller commits."""
+        """Move the cursor forward to ``event``; never back. The caller commits."""
         cursor = await self._session.get(NotifyCursorModel, NOTIFY_CURSOR_NAME)
         if cursor is None:
             self._session.add(
@@ -71,20 +77,21 @@ class SqlAutopilotEventSource:
             )
             await self._session.flush()
             return
+        if not _is_ahead(event, cursor):
+            return
         cursor.created_at = event.created_at
         cursor.event_id = event.event_id
         await self._session.flush()
 
 
 def _after(cursor: NotifyCursorModel) -> ColumnElement[bool]:
-    created = EventOutboxModel.created_at
-    return or_(
-        created > cursor.created_at,
-        and_(
-            created == cursor.created_at,
-            EventOutboxModel.event_id > cursor.event_id,
-        ),
-    )
+    window = timedelta(minutes=NOTIFY_RESCAN_WINDOW_MINUTES)
+    return EventOutboxModel.created_at > _aware(cursor.created_at) - window
+
+
+def _is_ahead(event: AutopilotOutboxEvent, cursor: NotifyCursorModel) -> bool:
+    position = (_aware(cursor.created_at), cursor.event_id)
+    return (_aware(event.created_at), event.event_id) > position
 
 
 class SqlNoticeLogStore:

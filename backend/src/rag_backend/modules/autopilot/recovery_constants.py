@@ -50,6 +50,9 @@ TABLE_NOTIFY_CURSOR = "autopilot_notify_cursor"
 NOTIFY_CURSOR_NAME = "telegram"
 NOTIFY_CURSOR_NAME_LENGTH = 32
 OUTBOX_EVENT_ID_LENGTH = 36
+# ``created_at`` is the transaction start, so a long transaction can commit an
+# event behind the cursor. Each scan re-reads this window behind it (QA r2 R5).
+NOTIFY_RESCAN_WINDOW_MINUTES = 10
 
 # Topic intake: concurrent POSTs are serialized with an advisory lock.
 DIALECT_POSTGRESQL = "postgresql"

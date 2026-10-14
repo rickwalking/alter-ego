@@ -326,7 +326,9 @@ async def test_event_source_reads_oldest_first_after_the_cursor(
     await source.advance(first[1])
     rest = [e for e in await source.recent() if e.run_id == run_id]
 
-    assert [e.event_id for e in rest] == [first[2].event_id]
+    # QA r2 R5: settled events inside the re-scan window are read again (the
+    # dispatcher's ledger skips them); the unsettled one is never dropped.
+    assert [e.event_id for e in rest] == [e.event_id for e in first]
 
 
 # Scenario: Concurrent duplicate topic POSTs

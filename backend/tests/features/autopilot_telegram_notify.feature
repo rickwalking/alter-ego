@@ -62,3 +62,11 @@ Feature: Telegram review notification
     Given a run moved to "expired"
     When the notifier ticks
     Then the owner is told the review expired after 72 hours
+
+  # QA r2 R5: outbox created_at is the transaction start time.
+  Scenario: A notice committed behind the cursor is still delivered
+    Given the notifier cursor has passed an event created at 09:05
+    When a long transaction that started at 09:03 commits an escalation notice
+    Then the next notifier scan reads that notice again from the 10 minute window
+    And the owner receives it once
+    And the cursor never moves back to it
