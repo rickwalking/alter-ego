@@ -1,54 +1,32 @@
 """SSRF boundary guard for the research ``scrape_url`` @tool (AE-0249, QA F-1).
 
-The researcher subagent is LLM-driven, so the URL handed to ``scrape_url`` is
-untrusted input. This guard runs at the adapter boundary, before the Playwright
-service is invoked, and refuses:
+The researcher subagent is LLM-driven and autopilot feeds third-party story
+links, so every URL handed to the scraper is untrusted. The rules live in
+``rag_backend.domain.url_safety`` so the Playwright scraper (``application``)
+re-checks each redirect hop with the same code:
 
-- non-``http(s)`` schemes (``file://``, ``ftp://``, ``data:``, …); and
-- targets that point at the host's own network — a literal loopback/private/
-  link-local/reserved IP (covering the cloud metadata endpoint
-  ``169.254.169.254``) or a known-internal hostname.
+- only ``http(s)``;
+- no known-internal host (loopback alias, metadata service, docker-compose
+  service names) and no single-label host;
+- every DNS answer must be globally routable (QA r1 S-W1).
 
-Pure stdlib — no ``application``/``infrastructure`` imports, so the
-``agents -> application`` edge stays frozen at its AE-0082 baseline.
-
-Residual risk (documented, not closed here): a *public* hostname that DNS-resolves
-to an internal address is not caught — the guard does not resolve DNS. The scraping
-service remains the deeper control for that class.
+Imports only the domain, so the ``agents -> application`` edge stays frozen at
+its AE-0082 baseline.
 """
 
 from __future__ import annotations
 
-import ipaddress
-from urllib.parse import urlparse
-
-from rag_backend.agents.tools.constants import (
-    ALLOWED_URL_SCHEMES,
-    BLOCKED_URL_HOSTNAMES,
-)
-
-
-def _is_internal_ip_literal(host: str) -> bool:
-    """True only when ``host`` is a literal IP that is not globally routable."""
-    try:
-        ip = ipaddress.ip_address(host)
-    except ValueError:
-        return False  # a hostname, not an IP literal
-    return not ip.is_global
+from rag_backend.domain.url_safety import is_safe_url_syntax, is_safe_url_target
 
 
 def is_safe_research_url(url: str) -> bool:
-    """Return True when ``url`` is an http(s) target that is not host-internal."""
-    try:
-        parsed = urlparse(url.strip())
-    except ValueError:
-        return False
-    if parsed.scheme.lower() not in ALLOWED_URL_SCHEMES:
-        return False
-    host = parsed.hostname
-    if host is None or host.lower() in BLOCKED_URL_HOSTNAMES:
-        return False
-    return not _is_internal_ip_literal(host)
+    """Return True when ``url`` passes the checks that need no DNS lookup."""
+    return is_safe_url_syntax(url)
 
 
-__all__ = ["is_safe_research_url"]
+async def is_safe_research_target(url: str) -> bool:
+    """Return True when ``url`` is safe and its host resolves only to public IPs."""
+    return await is_safe_url_target(url)
+
+
+__all__ = ["is_safe_research_target", "is_safe_research_url"]

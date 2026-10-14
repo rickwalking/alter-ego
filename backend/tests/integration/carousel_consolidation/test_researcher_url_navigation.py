@@ -37,6 +37,14 @@ _PAGE_TEXT = "Rust eliminates entire classes of memory bugs at compile time."
 
 
 class _FakePage:
+    url = ""
+
+    async def route(self, _pattern: str, _handler: object) -> None:
+        return None
+
+    def on(self, _event: str, _listener: object) -> None:
+        return None
+
     async def goto(self, url: str, **_: object) -> None:
         self.url = url
 

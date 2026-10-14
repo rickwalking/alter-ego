@@ -1,5 +1,14 @@
 """Web research tool for carousel content generation."""
 
+from rag_backend.application.services.tools.research_route_guard import (
+    ScrapeRouteGuard,
+    UnsafeResearchTargetError,
+)
+from rag_backend.domain.constants.url_safety import (
+    ERR_UNSAFE_REDIRECT,
+    PAGE_EVENT_REQUEST,
+    ROUTE_ALL_REQUESTS,
+)
 from rag_backend.domain.models import ResearchSourceType
 from rag_backend.domain.protocols import ResearchTool
 
@@ -9,14 +18,25 @@ class PlaywrightResearchTool(ResearchTool):
 
     @staticmethod
     async def scrape_url(url: str) -> str:
-        """Scrape and extract content from a URL."""
+        """Scrape and extract content from a URL.
+
+        Every request the page makes (redirect hops and sub-resources) passes
+        the SSRF guard first (QA r1 S-W1). Raises ``UnsafeResearchTargetError``
+        when the URL or any hop is not allowed.
+        """
         from playwright.async_api import async_playwright
 
+        guard = ScrapeRouteGuard()
+        if not await guard.allows(url):
+            raise UnsafeResearchTargetError(ERR_UNSAFE_REDIRECT)
         async with async_playwright() as p:
             browser = await p.chromium.launch(headless=True)
             page = await browser.new_page()
             try:
+                await page.route(ROUTE_ALL_REQUESTS, guard.handle)
+                page.on(PAGE_EVENT_REQUEST, guard.record)
                 await page.goto(url, wait_until="domcontentloaded", timeout=15000)
+                await guard.verify(page.url)
                 content = await page.inner_text("body")
                 return content[:10000]  # Limit content length
             finally:

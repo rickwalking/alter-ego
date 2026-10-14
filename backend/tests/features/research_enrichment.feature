@@ -27,6 +27,13 @@ Feature: Web research enrichment in the initial editorial workflow
     And the original source content is preserved
     And a research_url_blocked warning is logged
 
+  Scenario: Public-looking URL that resolves to a private address is blocked
+    Given a source "https://story.example.com/x" whose host resolves to "10.0.0.8"
+    And a source naming the docker service "http://redis:6379/"
+    When the editorial workflow is started
+    Then neither URL is scraped
+    And both original contents are preserved
+
   Scenario: Dead link degrades gracefully
     Given a source of type "url" whose page times out
     When the editorial workflow is started

@@ -7,6 +7,8 @@ from __future__ import annotations
 
 import asyncio
 
+import pytest
+
 from rag_backend.agents.research_enrichment import enrich_sources
 from rag_backend.domain.constants.research_enrichment import (
     MAX_CONCURRENT_SCRAPES,
@@ -113,6 +115,28 @@ class TestScraping:
         assert enriched[0]["content"] == "http://169.254.169.254/latest/meta-data"
         assert enriched[1]["content"] == "file:///etc/passwd"
         assert enriched[2]["content"] == "http://localhost/admin"
+
+    async def test_private_dns_answer_and_docker_host_are_blocked(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Scenario: Public-looking URL that resolves to a private address is blocked."""
+        from rag_backend.domain import url_safety
+
+        async def private(_host: str) -> tuple[str, ...]:
+            return ("10.0.0.8",)
+
+        monkeypatch.setattr(url_safety, "system_resolve", private)
+        tool = _StubResearchTool()
+        sources = [
+            _url_source("https://story.example.com/x"),
+            _url_source("http://redis:6379/"),
+        ]
+
+        enriched = await enrich_sources(sources, _params(tool))
+
+        assert tool.scraped_urls == []
+        assert enriched[0]["content"] == "https://story.example.com/x"
+        assert enriched[1]["content"] == "http://redis:6379/"
 
     async def test_scrape_failure_keeps_original_content(self) -> None:
         """Scenario: Dead link degrades gracefully."""
