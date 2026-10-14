@@ -34,6 +34,22 @@ def sanitize_display_input(value: str) -> str:
     return cleaned[:MAX_LLM_INPUT_LENGTH].strip()
 
 
+def sanitize_model_copy(value: str) -> str:
+    """Sanitize pipeline-generated slide copy fed back into a prompt (AE-0366).
+
+    Outline titles/key points and drafted slide copy are model output that is
+    re-sent to the content drafter and the EN translator. ``sanitize_llm_input``
+    lowercased them and stripped ``< >`` (so ``<strong>`` came back as bare
+    ``strong``), and the models faithfully echoed the damage into the slides.
+    This keeps the injection-pattern defense and the length cap but preserves
+    case, inline markup and parentheses.
+    """
+    cleaned = value
+    for pattern in INJECTION_PATTERNS:
+        cleaned = re.sub(re.escape(pattern), "", cleaned, flags=re.IGNORECASE)
+    return cleaned[:MAX_LLM_INPUT_LENGTH].strip()
+
+
 _HTML_TAG_RE = re.compile(r"<[^>]*>")
 
 
@@ -59,4 +75,9 @@ def sanitize_web_content(value: str) -> str:
     return cleaned.strip()
 
 
-__all__ = ["sanitize_display_input", "sanitize_llm_input", "sanitize_web_content"]
+__all__ = [
+    "sanitize_display_input",
+    "sanitize_llm_input",
+    "sanitize_model_copy",
+    "sanitize_web_content",
+]

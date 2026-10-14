@@ -1,0 +1,28 @@
+---
+name: carousel_slide_translations
+version: "6.0.0"
+description: "Translate PT carousel slide copy to English under the contract quality rubric (AE-0366)"
+
+template: |
+  Translate carousel slide copy from Portuguese to English.
+
+  Input slides (PT):
+  {{ slides_json }}
+
+  Return JSON only: {"slides_en": [{"slide_index": 1, "heading": "...", "body": "...", "long_form_notes": "..."}]}
+  Use the same slide_index values. Translate heading, body and long_form_notes
+  (when present; keep its paragraph breaks). Add nothing else.
+
+  Keep the source casing conventions in English: sentence case for every
+  heading and sentence, and the canonical capitals of proper nouns, brands,
+  products and acronyms. Keep every <strong>...</strong> tag around the
+  translated words it emphasizes.
+
+  {{ quality_rubric }}
+
+model: {}
+
+metadata:
+  author: "content-team"
+  created_at: "2026-10-14"
+  tags: ["carousel", "translation", "ae-0366"]

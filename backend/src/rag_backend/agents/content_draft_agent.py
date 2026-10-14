@@ -10,7 +10,7 @@ from langchain_core.runnables import Runnable
 
 from rag_backend.agents.input_sanitizer import (
     sanitize_display_input,
-    sanitize_llm_input,
+    sanitize_model_copy,
 )
 from rag_backend.agents.llm_json_retry import JsonRetryPolicy, ainvoke_json
 from rag_backend.agents.persona_agent import PersonaAgent
@@ -23,9 +23,16 @@ from rag_backend.application.services.carousel.presentation_policy import (
     load_presentation_policy,
     render_presentation_policy_context,
 )
+from rag_backend.application.services.carousel.presentation_rubric import (
+    RUBRIC_AUDIENCE_CONTENT,
+    render_quality_rubric,
+)
 from rag_backend.domain.constants.ai_agents import ERR_INVALID_JSON
-from rag_backend.domain.constants.carousel import CAROUSEL_PROMPT_VERSION_V5
+from rag_backend.domain.constants.carousel import CAROUSEL_PROMPT_VERSION_V6
 from rag_backend.domain.constants.carousel_workflow import PHASE_CONTENT
+from rag_backend.domain.constants.presentation_policy import (
+    CREATE_TIME_PRESENTATION_POLICY_VERSION,
+)
 from rag_backend.domain.models.persona import PersonaProfile
 from rag_backend.infrastructure.cache.ai_response_cache import get_ai_response_cache
 from rag_backend.infrastructure.llm.json_utils import extract_json
@@ -57,7 +64,7 @@ class ContentDraftAgent:
         self.model_id = model_id
         self._cache = get_ai_response_cache()
         self._instruction_loader = CarouselInstructionContextLoader()
-        self._prompt_version = CAROUSEL_PROMPT_VERSION_V5
+        self._prompt_version = CAROUSEL_PROMPT_VERSION_V6
 
     async def draft_slide(
         self,
@@ -73,12 +80,15 @@ class ContentDraftAgent:
         previous_draft: str = "",
     ) -> dict[str, object]:
         """Draft copy for a single slide."""
-        title = sanitize_llm_input(title)
-        safe_points = [sanitize_llm_input(p) for p in key_points]
-        persona_context = sanitize_llm_input(persona_context)
-        revision_notes = sanitize_llm_input(revision_notes)
-        sibling_context = sanitize_llm_input(sibling_context)
-        previous_draft = sanitize_llm_input(previous_draft)
+        # AE-0366: case-preserving sanitization. The lowercasing sanitizer fed
+        # the model "a versão para robótica leva o argon..." for a correctly
+        # cased outline title, and GLM echoed the lowercase into the slides.
+        title = sanitize_model_copy(title)
+        safe_points = [sanitize_model_copy(p) for p in key_points]
+        persona_context = sanitize_display_input(persona_context)
+        revision_notes = sanitize_display_input(revision_notes)
+        sibling_context = sanitize_model_copy(sibling_context)
+        previous_draft = sanitize_model_copy(previous_draft)
 
         instruction = self._instruction_loader.load(
             InstructionContextRequest(
@@ -87,7 +97,7 @@ class ContentDraftAgent:
                 persona_context=persona_context,
                 revision_notes=revision_notes,
                 slide_number=slide_index,
-                prompt_version=CAROUSEL_PROMPT_VERSION_V5,
+                prompt_version=CAROUSEL_PROMPT_VERSION_V6,
                 sibling_context=sibling_context,
                 previous_draft=previous_draft,
             )
@@ -95,6 +105,7 @@ class ContentDraftAgent:
         policy = load_presentation_policy(instruction.policy_version)
         # AE-0291: revision notes are rendered ONCE, in the instruction context above.
         # AE-0347: v5 additionally requires long_form_notes (blog source).
+        # AE-0366: v6 adds explicit sentence-case and non-empty-body rules.
         # The v4/v5 template no longer carries a second {{ revision_notes }} block.
         prompt_text, model_cfg = render_prompt(
             "carousel",
@@ -109,8 +120,13 @@ class ContentDraftAgent:
                     policy
                 ),
                 "persona_context": persona_context or "Default professional voice.",
+                # AE-0366: the current contract's quality rubric (+ self-check).
+                "quality_rubric": render_quality_rubric(
+                    load_presentation_policy(CREATE_TIME_PRESENTATION_POLICY_VERSION),
+                    RUBRIC_AUDIENCE_CONTENT,
+                ),
             },
-            version=CAROUSEL_PROMPT_VERSION_V5,
+            version=CAROUSEL_PROMPT_VERSION_V6,
         )
         full_prompt = f"{instruction.instruction}\n\n{prompt_text}"
         cached = self._cached_raw(full_prompt)
