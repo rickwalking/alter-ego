@@ -7,6 +7,9 @@ Carousel publish is four steps against the configured Graph host:
 3. Poll ``status_code`` until ``FINISHED``.
 4. ``media_publish`` with that container as ``creation_id``.
 
+A container that already reports ``PUBLISHED`` (a crash after step 4) is not
+published again: its media id is recovered from the account's recent media.
+
 ``META_IG_GRAPH_BASE`` selects the host. The default is Instagram Login
 (``graph.instagram.com``). Page tokens can select ``graph.facebook.com``.
 The access token comes from an ``InstagramTokenProvider``. AE-0358's
@@ -17,6 +20,7 @@ from __future__ import annotations
 
 import asyncio
 from dataclasses import dataclass
+from datetime import UTC, datetime
 
 import httpx
 
@@ -25,12 +29,14 @@ from rag_backend.domain.constants.instagram_publish import (
     CONTAINER_STATUS_ERROR,
     CONTAINER_STATUS_EXPIRED,
     CONTAINER_STATUS_FINISHED,
+    CONTAINER_STATUS_PUBLISHED,
     ERR_INSTAGRAM_API_NO_ID,
     ERR_INSTAGRAM_API_REQUEST_FAILED,
     ERR_INSTAGRAM_CONTAINER_FAILED,
     ERR_INSTAGRAM_CONTAINER_TIMEOUT,
     ERR_INSTAGRAM_CREDENTIALS_NOT_CONFIGURED,
     ERR_INSTAGRAM_IMAGE_COUNT_INVALID,
+    ERR_INSTAGRAM_PUBLISHED_MEDIA_UNKNOWN,
     ERR_INSTAGRAM_QUOTA_UNREADABLE,
     FIELD_CAPTION,
     FIELD_CHILDREN,
@@ -39,28 +45,23 @@ from rag_backend.domain.constants.instagram_publish import (
     FIELD_ID,
     FIELD_IMAGE_URL,
     FIELD_IS_CAROUSEL_ITEM,
+    FIELD_LIMIT,
     FIELD_MEDIA_TYPE,
     FIELD_PERMALINK,
     FIELD_STATUS_CODE,
+    FIELD_TIMESTAMP,
     GRAPH_PATH_MEDIA,
     GRAPH_PATH_MEDIA_NODE,
     GRAPH_PATH_MEDIA_PUBLISH,
     GRAPH_PATH_PUBLISHING_LIMIT,
     HTTP_GET,
     HTTP_POST,
-    KEY_CODE,
-    KEY_CONFIG,
-    KEY_DATA,
-    KEY_ERROR,
-    KEY_QUOTA_TOTAL,
-    KEY_QUOTA_USAGE,
     MAX_INSTAGRAM_CAROUSEL_ITEMS,
     MEDIA_TYPE_CAROUSEL,
     MIN_INSTAGRAM_CAROUSEL_ITEMS,
     PUBLISH_RESULT_FAILED,
     PUBLISH_RESULT_PUBLISHED,
-    TRANSIENT_HTTP_STATUS,
-    TRANSIENT_META_ERROR_CODES,
+    RECENT_MEDIA_LIMIT,
     VALUE_TRUE,
 )
 from rag_backend.domain.constants.retry import META_MAX_ATTEMPTS, META_POLL_MAX_ATTEMPTS
@@ -68,6 +69,12 @@ from rag_backend.domain.protocols.instagram_token import InstagramTokenProvider
 from rag_backend.domain.protocols.social import PublishResult
 from rag_backend.infrastructure.external.instagram_graph_error import (
     InstagramGraphError,
+)
+from rag_backend.infrastructure.external.instagram_graph_payloads import (
+    error_from,
+    json_dict,
+    quota_remaining,
+    recent_carousel_id,
 )
 from rag_backend.infrastructure.logging import get_logger
 
@@ -81,7 +88,10 @@ _CLIENT_MESSAGES = frozenset({
     ERR_INSTAGRAM_CONTAINER_TIMEOUT,
     ERR_INSTAGRAM_API_NO_ID,
     ERR_INSTAGRAM_QUOTA_UNREADABLE,
+    ERR_INSTAGRAM_PUBLISHED_MEDIA_UNKNOWN,
 })
+_TERMINAL_OK = frozenset({CONTAINER_STATUS_FINISHED, CONTAINER_STATUS_PUBLISHED})
+_RECENT_MEDIA_FIELDS = ",".join((FIELD_ID, FIELD_MEDIA_TYPE, FIELD_TIMESTAMP))
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -123,8 +133,7 @@ class MetaInstagramPublisher:
         """Run all four steps. Failures become a ``PublishResult``, never a raise."""
         try:
             parent_id = await self.create_carousel_container(caption, image_urls)
-            await self.await_container(parent_id)
-            post_id = await self.media_publish(parent_id)
+            post_id = await self.publish_container(parent_id)
         except RuntimeError as exc:
             return PublishResult(status=PUBLISH_RESULT_FAILED, error_message=str(exc))
         except InstagramGraphError as exc:
@@ -156,12 +165,12 @@ class MetaInstagramPublisher:
         item_ids = [await self._create_item(url) for url in image_urls]
         return await self._create_parent(item_ids, caption)
 
-    async def await_container(self, container_id: str) -> None:
-        """Poll until the container is ``FINISHED``. Timeout is transient."""
+    async def await_container(self, container_id: str) -> str:
+        """Poll until ``FINISHED`` or ``PUBLISHED`` and return it. Timeout is transient."""
         for _attempt in range(META_POLL_MAX_ATTEMPTS):
             status = await self._container_status(container_id)
-            if status == CONTAINER_STATUS_FINISHED:
-                return
+            if status in _TERMINAL_OK:
+                return status
             if status in {CONTAINER_STATUS_ERROR, CONTAINER_STATUS_EXPIRED}:
                 raise InstagramGraphError(
                     status_code=400,
@@ -174,6 +183,43 @@ class MetaInstagramPublisher:
             error_code=ERR_INSTAGRAM_CONTAINER_TIMEOUT,
             transient=True,
         )
+
+    async def publish_container(self, container_id: str) -> str:
+        """Poll, then publish once. An already published container is recovered."""
+        status = await self.await_container(container_id)
+        if status == CONTAINER_STATUS_PUBLISHED:
+            return await self.recover_published_media(container_id)
+        return await self.media_publish(container_id)
+
+    async def recover_published_media(self, container_id: str) -> str:
+        """Media id for a ``PUBLISHED`` container, read from the recent media list.
+
+        Raises a non-transient error when nothing matches: calling
+        ``media_publish`` again could post the carousel twice.
+        """
+        payload = await self._request(
+            _GraphCall(
+                method=HTTP_GET,
+                path=GRAPH_PATH_MEDIA.format(ig_user_id=self._config.ig_user_id),
+                query={
+                    FIELD_FIELDS: _RECENT_MEDIA_FIELDS,
+                    FIELD_LIMIT: str(RECENT_MEDIA_LIMIT),
+                },
+            )
+        )
+        media_id = recent_carousel_id(payload, datetime.now(UTC))
+        logger.warning(
+            "instagram_container_already_published",
+            container_id=container_id,
+            recovered=media_id is not None,
+        )
+        if media_id is None:
+            raise InstagramGraphError(
+                status_code=200,
+                error_code=ERR_INSTAGRAM_PUBLISHED_MEDIA_UNKNOWN,
+                transient=False,
+            )
+        return media_id
 
     async def media_publish(self, container_id: str) -> str:
         """Publish one finished container. Returns the media id."""
@@ -216,7 +262,7 @@ class MetaInstagramPublisher:
                 ),
             )
         )
-        return _quota_remaining(payload)
+        return quota_remaining(payload)
 
     async def close(self) -> None:
         """Close the client this instance created."""
@@ -269,8 +315,8 @@ class MetaInstagramPublisher:
         for _attempt in range(META_MAX_ATTEMPTS):
             response = await self._send(call, token)
             if response.is_success:
-                return _json_dict(response)
-            error = _error_from(response)
+                return json_dict(response)
+            error = error_from(response)
             if not error.transient:
                 raise error
             last_error = error
@@ -322,35 +368,6 @@ def _client_message(exc: InstagramGraphError) -> str:
     return ERR_INSTAGRAM_API_REQUEST_FAILED
 
 
-def _json_dict(response: httpx.Response) -> dict[str, object]:
-    body: object = response.json()
-    if not isinstance(body, dict):
-        return {}
-    return {str(key): value for key, value in body.items()}
-
-
-def _error_from(response: httpx.Response) -> InstagramGraphError:
-    code = _meta_code(response)
-    transient = (
-        response.status_code in TRANSIENT_HTTP_STATUS
-        or code in TRANSIENT_META_ERROR_CODES
-    )
-    return InstagramGraphError(
-        status_code=response.status_code,
-        error_code=code,
-        transient=transient,
-    )
-
-
-def _meta_code(response: httpx.Response) -> str:
-    error = _json_dict(response).get(KEY_ERROR)
-    if isinstance(error, dict):
-        code = error.get(KEY_CODE)
-        if code is not None:
-            return str(code)
-    return str(response.status_code)
-
-
 def _require_id(payload: dict[str, object]) -> str:
     raw = payload.get(FIELD_ID)
     if raw is None or raw == "":
@@ -361,30 +378,3 @@ def _require_id(payload: dict[str, object]) -> str:
             transient=False,
         )
     return str(raw)
-
-
-def _quota_remaining(payload: dict[str, object]) -> int:
-    data = payload.get(KEY_DATA)
-    if not isinstance(data, list) or not data:
-        raise _quota_error()
-    first = data[0]
-    if not isinstance(first, dict):
-        raise _quota_error()
-    usage = first.get(KEY_QUOTA_USAGE)
-    config = first.get(KEY_CONFIG)
-    if isinstance(usage, bool) or not isinstance(usage, int):
-        raise _quota_error()
-    if not isinstance(config, dict):
-        raise _quota_error()
-    total = config.get(KEY_QUOTA_TOTAL)
-    if isinstance(total, bool) or not isinstance(total, int):
-        raise _quota_error()
-    return total - usage
-
-
-def _quota_error() -> InstagramGraphError:
-    return InstagramGraphError(
-        status_code=200,
-        error_code=ERR_INSTAGRAM_QUOTA_UNREADABLE,
-        transient=True,
-    )

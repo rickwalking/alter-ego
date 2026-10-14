@@ -64,9 +64,8 @@ class SteppedInstagramGateway:
         )
 
     async def finish_container(self, container_id: str) -> str:
-        """Poll, then ``media_publish``."""
-        await _guard(lambda: self._publisher.await_container(container_id))
-        return await _guard(lambda: self._publisher.media_publish(container_id))
+        """Poll, then ``media_publish``. A ``PUBLISHED`` container is recovered."""
+        return await _guard(lambda: self._publisher.publish_container(container_id))
 
     async def permalink(self, media_id: str) -> str:
         """Public URL for the published media."""
