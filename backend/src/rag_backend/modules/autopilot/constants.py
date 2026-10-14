@@ -180,3 +180,50 @@ HEADER_AUTHORIZATION = "Authorization"
 HEADER_USER_AGENT = "User-Agent"
 HTTP_USER_AGENT = "alter-ego-autopilot"
 AUTH_BEARER_PREFIX = "Bearer "
+
+# Topic intake (AE-0353). The scout posts 1-3 proposals. Code decides
+# which of them become queued runs.
+PATH_TOPICS = "/topics"
+TABLE_SERVED_SIGNAL_URLS = "autopilot_served_urls"
+INDEX_SERVED_URLS_SERVED_AT = "idx_autopilot_served_urls_served_at"
+APP_STATE_CLOCK = "autopilot_clock"
+LOG_TOPIC_INTAKE = "autopilot_topic_intake"
+
+TEXT_MIN_CHARS = 1
+TITLE_MAX_CHARS = 120
+ANGLE_MAX_CHARS = 300
+WHY_VIRAL_MAX_CHARS = 300
+AUDIENCE_MAX_CHARS = 120
+NICHE_MAX_CHARS = 80
+BRIEF_MAX_CHARS = 800
+TOPIC_BATCH_MIN = 1
+TOPIC_BATCH_MAX = 3
+SOURCE_URL_MIN = 1
+SOURCE_URL_MAX = 8
+SCORE_MIN = 0
+SCORE_MAX = 100
+
+SERVED_URL_TTL_HOURS = 6
+TOPIC_LOOKBACK_DAYS = 60
+JACCARD_DUPLICATE_THRESHOLD = 0.6
+DAILY_CAP_TIMEZONE = "America/Sao_Paulo"
+DEFAULT_DAILY_CAP = 1
+NO_QUEUE_SLOTS = 0
+
+REASON_SOURCE_NOT_IN_SIGNALS = "source_not_in_signals"
+REASON_DUPLICATE_TOPIC = "duplicate_topic"
+REASON_DAILY_CAP_REACHED = "daily_cap_reached"
+REASON_URL_IN_TEXT = "url_in_text"
+REASON_EMPTY_TEXT = "empty_text"
+STATUS_CANDIDATE_ACCEPTED = "accepted"
+KIND_NEW = "new"
+KIND_EXISTING = "existing"
+
+HASH_FIELD_SEPARATOR = "\n"
+TEXT_ENCODING = "utf-8"
+UNICODE_CATEGORY_CONTROL = "Cc"
+URL_IN_TEXT_PATTERN = r"(?i)(?:[a-z][a-z0-9+.-]*://|www\.)"
+SOURCE_URL_PATTERN = r"(?i)^https?://\S+$"
+WORD_PATTERN = r"[^\W_]+"
+SOURCE_URL_INVALID = "source_must_be_http_url"
+RUN_ATTEMPTS_INITIAL = 0

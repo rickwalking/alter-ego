@@ -239,3 +239,71 @@ class SignalsReader(Protocol):
     async def collect_all(self) -> SignalsBundle:
         """Return the cached bundle, collecting on a miss."""
         ...
+
+
+@dataclass(frozen=True, kw_only=True)
+class RecordServedUrls:
+    """Canonical or raw signal URLs to remember as served at one instant."""
+
+    urls: tuple[str, ...]
+    served_at: datetime
+
+
+@dataclass(frozen=True, kw_only=True)
+class HashLookup:
+    """Signal hashes to resolve to existing candidate ids."""
+
+    hashes: tuple[str, ...]
+
+
+@dataclass(frozen=True, kw_only=True)
+class DayWindow:
+    """Half-open ``[start, end)`` interval, both timezone-aware."""
+
+    start: datetime
+    end: datetime
+
+
+@dataclass(frozen=True, kw_only=True)
+class QueuedRunCommand:
+    """A new ``queued`` run for a candidate that was just inserted."""
+
+    run_id: UUID
+    topic_candidate_id: UUID
+    created_at: datetime
+
+
+class TopicIntakeStore(Protocol):
+    """Reads and writes the facts topic intake needs. The caller commits."""
+
+    async def record_served_urls(self, command: RecordServedUrls) -> None:
+        """Upsert served URLs and drop rows older than the allowlist window."""
+        ...
+
+    async def urls_served_since(self, since: datetime) -> frozenset[str]:
+        """Canonical URLs whose last serve time is at or after ``since``."""
+        ...
+
+    async def ids_for_hashes(self, query: HashLookup) -> dict[str, UUID]:
+        """Map each known signal hash to its candidate id."""
+        ...
+
+    async def carousel_topics_since(self, since: datetime) -> tuple[str, ...]:
+        """Carousel ``topic`` values created at or after ``since``."""
+        ...
+
+    async def runs_created_between(self, window: DayWindow) -> int:
+        """How many autopilot runs were created in the half-open window."""
+        ...
+
+    async def add_candidate(self, candidate: TopicCandidate) -> None:
+        """Insert one topic candidate."""
+        ...
+
+    async def add_queued_run(self, command: QueuedRunCommand) -> None:
+        """Insert one run in ``queued``. The candidate row must exist."""
+        ...
+
+    async def commit(self) -> None:
+        """Commit the current unit of work."""
+        ...

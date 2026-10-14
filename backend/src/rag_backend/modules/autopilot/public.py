@@ -54,6 +54,7 @@ def register_persistence_models() -> tuple[str, ...]:
     from rag_backend.modules.autopilot.infrastructure.models import (
         AutopilotRunModel,
         IntegrationCredentialModel,
+        ServedSignalUrlModel,
         TelegramUpdateModel,
         TopicCandidateModel,
     )
@@ -63,4 +64,5 @@ def register_persistence_models() -> tuple[str, ...]:
         TopicCandidateModel.__tablename__,
         IntegrationCredentialModel.__tablename__,
         TelegramUpdateModel.__tablename__,
+        ServedSignalUrlModel.__tablename__,
     )

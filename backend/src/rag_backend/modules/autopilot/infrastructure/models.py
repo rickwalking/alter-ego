@@ -34,6 +34,7 @@ from rag_backend.modules.autopilot.constants import (
     FK_RUNS_TOPIC_CANDIDATE,
     IG_IDENTIFIER_LENGTH,
     INDEX_RUNS_STATE_UPDATED_AT,
+    INDEX_SERVED_URLS_SERVED_AT,
     ON_DELETE_RESTRICT,
     ON_DELETE_SET_NULL,
     PROVIDER_LENGTH,
@@ -42,6 +43,7 @@ from rag_backend.modules.autopilot.constants import (
     STATUS_LENGTH,
     TABLE_AUTOPILOT_RUNS,
     TABLE_INTEGRATION_CREDENTIALS,
+    TABLE_SERVED_SIGNAL_URLS,
     TABLE_TELEGRAM_UPDATES,
     TABLE_TOPIC_CANDIDATES,
     TOPIC_CANDIDATE_FK,
@@ -154,6 +156,17 @@ class IntegrationCredentialModel(AutopilotOrmBase):
     refreshed_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
+
+
+class ServedSignalUrlModel(AutopilotOrmBase):
+    """A signal URL returned by GET /signals, kept for the 6 hour allowlist."""
+
+    __tablename__ = TABLE_SERVED_SIGNAL_URLS
+
+    url: Mapped[str] = mapped_column(Text, primary_key=True)
+    served_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+    __table_args__ = (Index(INDEX_SERVED_URLS_SERVED_AT, "served_at"),)
 
 
 class TelegramUpdateModel(AutopilotOrmBase):

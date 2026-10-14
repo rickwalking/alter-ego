@@ -7,6 +7,7 @@ passes it here. This module does not look up a global container (ADR-0009 §9).
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import datetime
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -27,10 +28,12 @@ from rag_backend.modules.autopilot.constants import (
     COLLECTOR_TIMEOUT_SECONDS,
     SIGNAL_CACHE_TTL_SECONDS,
 )
+from rag_backend.modules.autopilot.domain.ports import RecordServedUrls
 from rag_backend.modules.autopilot.domain.publish import (
     ManualPublishCommand,
     ManualPublishOutcome,
 )
+from rag_backend.modules.autopilot.domain.signals import SignalsBundle
 from rag_backend.modules.autopilot.infrastructure.carousel_source import (
     PublishingCarouselSource,
 )
@@ -39,6 +42,9 @@ from rag_backend.modules.autopilot.infrastructure.collectors.factory import (
     build_collectors,
 )
 from rag_backend.modules.autopilot.infrastructure.instagram_gateway import gateway_for
+from rag_backend.modules.autopilot.infrastructure.intake_store import (
+    SqlAlchemyTopicIntakeStore,
+)
 from rag_backend.modules.autopilot.infrastructure.publish_notifier import (
     OutboxPublishNotifier,
 )
@@ -144,6 +150,18 @@ def default_signals_service() -> SignalsService:
         timeout_seconds=COLLECTOR_TIMEOUT_SECONDS,
     )
     return SignalsService(deps)
+
+
+async def remember_served_signal_urls(
+    session: AsyncSession,
+    bundle: SignalsBundle,
+    served_at: datetime,
+) -> None:
+    """Persist the bundle's URLs so topic intake can allowlist them for 6 hours."""
+    store = SqlAlchemyTopicIntakeStore(session)
+    urls = tuple(signal.url for signal in bundle.signals)
+    await store.record_served_urls(RecordServedUrls(urls=urls, served_at=served_at))
+    await store.commit()
 
 
 def _collector_config(settings: Settings) -> CollectorBuildConfig:

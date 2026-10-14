@@ -15,14 +15,15 @@ from pathlib import Path
 import pytest
 
 _PREVIOUS_HEAD = "c9d0e1f2a3b4"
-_TABLES_HEAD = "d0e1f2a3b4c5"
-_THIS_HEAD = "e1f2a3b4c5d6"
+_PARENT_HEAD = "e1f2a3b4c5d6"
+_THIS_HEAD = "f2a3b4c5d6e7"
 _BACKEND_ROOT = Path(__file__).resolve().parents[2]
 _TABLES = (
     "autopilot_runs",
     "topic_candidates",
     "integration_credentials",
     "telegram_updates",
+    "autopilot_served_urls",
 )
 
 
@@ -75,11 +76,11 @@ def test_autopilot_revision_is_the_only_head() -> None:
     assert list(script.get_heads()) == [_THIS_HEAD]
     revision = script.get_revision(_THIS_HEAD)
     assert revision is not None
-    assert revision.down_revision == _TABLES_HEAD
+    assert revision.down_revision == _PARENT_HEAD
 
 
 def test_upgrade_and_downgrade_on_a_stamped_database(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """Upgrade from the previous head creates the four tables; downgrade drops them."""
+    """Upgrade from the pre-autopilot head creates the tables; downgrade drops them."""
     db_path = tmp_path / "autopilot.db"
     conn = sqlite3.connect(db_path)
     conn.execute("CREATE TABLE carousel_projects (id VARCHAR(36) PRIMARY KEY)")

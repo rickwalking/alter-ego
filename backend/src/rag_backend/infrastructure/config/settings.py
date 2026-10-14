@@ -141,6 +141,13 @@ class Settings(BaseSettings):
     autopilot_x_mirror_host: str = ""
     # Optional GitHub Search token. Empty uses the unauthenticated API.
     github_token: SecretStr = SecretStr("")
+    # AE-0353: queued autopilot runs allowed per America/Sao_Paulo day.
+    # Keep the default aligned with autopilot.constants.DEFAULT_DAILY_CAP.
+    autopilot_daily_cap: int = Field(
+        default=1,
+        ge=0,
+        validation_alias=AliasChoices("AUTOPILOT_DAILY_CAP", "autopilot_daily_cap"),
+    )
 
     carousel_public_base_url: str = ""
 
