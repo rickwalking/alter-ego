@@ -1,6 +1,6 @@
 # AE-0362 — Autopilot outline and images gates expect the pipeline's 7-slide count
 
-Status: Intake
+Status: Dev Complete
 Tier: T1
 Priority: P0
 Type: Bugfix
@@ -97,6 +97,8 @@ None.
 
 Ticket created from the prod escalation. Test-first: `test_slide_count_ae0362.py` failed (7 of
 12) on the old code, then the fix landed. Gates run once at the end; see the dev summary.
+Full backend gate run on 28dd51af: PASS=21 FAIL=0 SKIP=0. Python 3.11 import check: 703
+modules, 0 failures. Moved to Dev Complete.
 
 ## Files Touched
 
