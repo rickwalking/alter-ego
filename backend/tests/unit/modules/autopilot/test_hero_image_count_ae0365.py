@@ -108,23 +108,26 @@ def test_a_slide_without_an_image_prompt_is_not_expected() -> None:
 
 
 @pytest.mark.asyncio
-async def test_the_acl_counts_the_persisted_slides() -> None:
+async def test_the_acl_counts_the_persisted_slides(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """The editorial facade reads the persisted slides, the image phase's source."""
     acl = CarouselAutomationAcl(AsyncMock())
     project = CarouselProject(topic="t", audience="a", niche="ai", id=_PROJECT_ID)
-    acl.load_project = AsyncMock(return_value=project)  # type: ignore[method-assign]
-    acl._repo.get_slides_by_project = AsyncMock(  # type: ignore[method-assign]
-        return_value=_seven_slides()
-    )
+    slides = AsyncMock(return_value=_seven_slides())
+    monkeypatch.setattr(acl, "load_project", AsyncMock(return_value=project))
+    monkeypatch.setattr(acl.repository, "get_slides_by_project", slides)
     assert await acl.hero_image_total(str(_PROJECT_ID)) == _HERO_IMAGES
-    acl._repo.get_slides_by_project.assert_awaited_once_with(_PROJECT_ID)
+    slides.assert_awaited_once_with(_PROJECT_ID)
 
 
 @pytest.mark.asyncio
-async def test_an_unknown_project_expects_no_hero_images() -> None:
+async def test_an_unknown_project_expects_no_hero_images(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """A missing project fails closed at zero (the gate then revises)."""
     acl = CarouselAutomationAcl(AsyncMock())
-    acl.load_project = AsyncMock(return_value=None)  # type: ignore[method-assign]
+    monkeypatch.setattr(acl, "load_project", AsyncMock(return_value=None))
     assert await acl.hero_image_total(str(_PROJECT_ID)) == 0
 
 
