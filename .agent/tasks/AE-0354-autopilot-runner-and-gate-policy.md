@@ -30,7 +30,7 @@ The workflow has 6 `interrupt()` gates and no auto mode; driving it over HTTP hi
 - Gate policy `domain/policy.py` (pure): research ≥3 sources with content; outline slide count == slides_config total; content persona score ≥70 (constant from persona module) AND no forbidden phrases; design `presentation_validation` has no blockers; images: all assets present and each JPEG 1080×1350.
 - Check fails → `revise` with templated feedback (prompt text in `agents/prompts/autopilot/v1/revise_feedback.yaml`, loaded via `render_prompt`), max 2 per phase (constant) → then state `escalated` with reason.
 - On `final_review` + `awaiting_human` → transition `generating → awaiting_owner` and emit `content.autopilot.ready_for_owner` (consumed by AE-0355).
-- Phase `failed`, run reaped/stale, or 409 revision-cap → `escalated`/`failed` with reason. Workflow `start` provider errors (429/503) → leave `queued`, increment attempts, give up after 3 → `failed`.
+- Phase `failed`, run reaped/stale, or 409 revision-cap → `escalated`/`failed` with reason. Workflow `start` provider errors (429/503) → leave `queued`, increment attempts, give up after 3 → `failed`. **AE-0350's `ALLOWED_TRANSITIONS` lacks `(QUEUED, FAILED)` — add it in `domain/state_machine.py` (doc §4 was updated 2026-10-13) with a unit test, otherwise this path raises `InvalidAutopilotTransition`.**
 - Langfuse metadata `content_type=carousel`, `agent_name=autopilot`, `phase`, `project_id` on every call path that triggers LLM work.
 
 ## Non-Goals
