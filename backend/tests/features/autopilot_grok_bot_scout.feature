@@ -37,3 +37,22 @@ Feature: Grok Bot scout intake
   Scenario: Example JSON matches the API schemas
     When the v1 example files are validated against the Pydantic schemas
     Then both examples are accepted
+
+  # QA r1 S-W3: scout-failed is free text from an outside caller.
+  Scenario: Scout failure reason carries a URL
+    When Grok Bot calls scout-failed with reason "login expired https://evil.example/phish"
+    Then the owner receives a Telegram message containing "login expired"
+    And the message contains no URL
+    And a reason made only of a URL is rejected with 422 and nothing is sent
+
+  Scenario: A fourth scout failure in one day is not sent
+    Given three distinct scout failures were delivered in the last 24 hours
+    When Grok Bot calls scout-failed with a new reason
+    Then the response is 200 with delivered false
+    And no Telegram message is sent
+
+  Scenario: A repeated scout failure is not sent twice
+    Given the reason "first" was delivered in the last 24 hours
+    When Grok Bot calls scout-failed with reason "first" again
+    Then the response is 200 with delivered false
+    And no Telegram message is sent

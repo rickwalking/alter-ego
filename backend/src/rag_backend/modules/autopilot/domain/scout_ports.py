@@ -39,3 +39,27 @@ class StatusSender(Protocol):
     async def send_status(self, notice: StatusNotice) -> StatusSendResult:
         """Deliver ``notice`` and return the message id."""
         ...
+
+
+@dataclass(frozen=True, kw_only=True)
+class ScoutFailureEntry:
+    """One delivered scout failure, kept for the daily cap and dedupe."""
+
+    reason: str
+    sent_at: datetime
+
+
+class ScoutFailureLog(Protocol):
+    """Remembers delivered scout failures. The caller commits."""
+
+    async def reasons_since(self, since: datetime) -> tuple[str, ...]:
+        """Reasons delivered at or after ``since``, oldest first."""
+        ...
+
+    async def record(self, entry: ScoutFailureEntry) -> None:
+        """Stage one delivered failure."""
+        ...
+
+    async def commit(self) -> None:
+        """Commit the current unit of work."""
+        ...

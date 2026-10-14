@@ -7,6 +7,7 @@ The reason is inert text: it is not interpreted as an instruction.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import timedelta
 from uuid import UUID
 
 import structlog
@@ -23,8 +24,22 @@ from rag_backend.modules.autopilot.domain.exceptions import (
     TelegramDeliveryError,
 )
 from rag_backend.modules.autopilot.domain.notify import StatusNotice
-from rag_backend.modules.autopilot.domain.scout_ports import StatusSender
-from rag_backend.modules.autopilot.domain.topic_text import strip_controls
+from rag_backend.modules.autopilot.domain.ports import Clock
+from rag_backend.modules.autopilot.domain.scout_ports import (
+    ScoutFailureEntry,
+    ScoutFailureLog,
+    StatusSender,
+)
+from rag_backend.modules.autopilot.domain.topic_text import (
+    contains_url,
+    strip_controls,
+)
+from rag_backend.modules.autopilot.scout_constants import (
+    DETAIL_SCOUT_DAILY_CAP,
+    DETAIL_SCOUT_DUPLICATE,
+    SCOUT_FAILURE_WINDOW_HOURS,
+    SCOUT_FAILURES_PER_DAY,
+)
 
 logger = structlog.get_logger()
 
@@ -35,10 +50,16 @@ _SCOUT_RUN_ID = UUID(int=0)
 
 @dataclass(frozen=True, kw_only=True)
 class ScoutFailureDependencies:
-    """Notifier and the owner chat. An empty chat id cannot deliver."""
+    """Notifier, the owner chat, and the delivered-failure log.
+
+    An empty chat id cannot deliver. The log bounds Telegram to three
+    distinct reasons per rolling 24 hours (QA r1 S-W3).
+    """
 
     notifier: StatusSender
     chat_id: str
+    log: ScoutFailureLog
+    clock: Clock
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -64,9 +85,9 @@ class ScoutFailureService:
 
     async def report(self, command: ScoutFailureCommand) -> ScoutFailureResult:
         """Deliver the reason, or return a stable error code and send nothing."""
-        cleaned = strip_controls(command.reason)
+        cleaned = without_urls(strip_controls(command.reason))
         chat_id = self._deps.chat_id.strip()
-        blocked = _blocked(cleaned, chat_id)
+        blocked = _blocked(cleaned, chat_id) or await self._suppressed(cleaned)
         if blocked is not None:
             return _undelivered(blocked)
         try:
@@ -75,8 +96,29 @@ class ScoutFailureService:
             return _undelivered(DETAIL_SCOUT_NOTIFY_UNCONFIGURED)
         except TelegramDeliveryError:
             return _undelivered(DETAIL_SCOUT_NOTIFY_FAILED)
+        await self._remember(cleaned)
         logger.info(LOG_SCOUT_FAILED, delivered=True)
         return ScoutFailureResult(delivered=True, error=None)
+
+    async def _suppressed(self, reason: str) -> str | None:
+        since = self._deps.clock.now() - timedelta(hours=SCOUT_FAILURE_WINDOW_HOURS)
+        sent = await self._deps.log.reasons_since(since)
+        if reason in sent:
+            return DETAIL_SCOUT_DUPLICATE
+        if len(sent) >= SCOUT_FAILURES_PER_DAY:
+            return DETAIL_SCOUT_DAILY_CAP
+        return None
+
+    async def _remember(self, reason: str) -> None:
+        entry = ScoutFailureEntry(reason=reason, sent_at=self._deps.clock.now())
+        await self._deps.log.record(entry)
+        await self._deps.log.commit()
+
+
+def without_urls(reason: str) -> str:
+    """Drop every whitespace-separated token that carries a URL."""
+    kept = [word for word in reason.split() if not contains_url(word)]
+    return " ".join(kept)
 
 
 def failure_text(reason: str) -> str:

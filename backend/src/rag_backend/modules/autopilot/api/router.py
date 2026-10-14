@@ -59,6 +59,7 @@ from rag_backend.modules.autopilot.constants import (
 )
 from rag_backend.modules.autopilot.domain.ports import SignalsReader
 from rag_backend.modules.autopilot.domain.signals import SignalsBundle
+from rag_backend.modules.autopilot.scout_constants import SCOUT_SUPPRESSED_DETAILS
 
 router = APIRouter(
     prefix=ROUTER_PREFIX,
@@ -154,6 +155,8 @@ async def post_autopilot_scout_failed(
     result = await service.report(scout_command(body.reason))
     if result.delivered:
         return ScoutFailedResponse(delivered=True)
+    if result.error in SCOUT_SUPPRESSED_DETAILS:
+        return ScoutFailedResponse(delivered=False)
     detail = result.error or DETAIL_SCOUT_NOTIFY_FAILED
     raise HTTPException(status_code=_failure_status(detail), detail=detail)
 

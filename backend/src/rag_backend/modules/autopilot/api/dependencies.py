@@ -35,6 +35,9 @@ from rag_backend.modules.autopilot.domain.scout_ports import StatusSender
 from rag_backend.modules.autopilot.infrastructure.intake_store import (
     SqlAlchemyTopicIntakeStore,
 )
+from rag_backend.modules.autopilot.infrastructure.scout_failure_log import (
+    OutboxScoutFailureLog,
+)
 from rag_backend.modules.autopilot.infrastructure.scout_status import (
     ClosingTelegramStatus,
 )
@@ -81,11 +84,14 @@ def build_x_signals(
 def build_scout_failure(
     request: Request,
     settings: Annotated[Settings, Depends(get_settings)],
+    session: Annotated[AsyncSession, Depends(get_db)],
 ) -> ScoutFailureService:
     """Wire the scout-failed notifier. Tests may replace it on app state."""
     deps = ScoutFailureDependencies(
         notifier=_status_sender(request, settings),
         chat_id=settings.telegram_owner_chat_id,
+        log=OutboxScoutFailureLog(session),
+        clock=clock_from(request),
     )
     return ScoutFailureService(deps)
 
