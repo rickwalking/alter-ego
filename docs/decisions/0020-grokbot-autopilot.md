@@ -56,6 +56,12 @@ Chosen: **Option 3**.
 - Bad, because X signals come only from search-engine snippets (`ddgs` `site:x.com`), with no like or repost counts. Official X paths are pay-per-use, and the xcancel mirror returned HTTP 451 (suspended over legal proceedings) on 2026-10-13. A mirror resolver exists only as an off-by-default port.
 - Neutral, because per-carousel provider spend still exists. A daily cap bounds it.
 
+## Update 2026-10-14
+
+The scout runs as a **Cursor Grok Bot routine**, authenticated natively via the owner's Cursor account and using the existing Grok Bot limits. It no longer runs as a Cursor CLI + systemd job on the droplet.
+
+The Bot browses x.com in its own logged-in browser and submits observed posts through a validated `x-signals` endpoint. The trust boundary is unchanged: the Bot gets a scoped key only, and publishing stays human-gated.
+
 ## Rejected
 
 - **Option 1:** it needs a user password on a bot, re-login every hour, and six racy HTTP calls, and it hits the 100 s start timeout.
