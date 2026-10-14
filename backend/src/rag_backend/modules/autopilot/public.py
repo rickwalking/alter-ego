@@ -87,6 +87,7 @@ def register_persistence_models() -> tuple[str, ...]:
         ServedSignalUrlModel,
         TelegramUpdateModel,
         TopicCandidateModel,
+        XBrowserSignalModel,
     )
 
     return (
@@ -95,4 +96,5 @@ def register_persistence_models() -> tuple[str, ...]:
         IntegrationCredentialModel.__tablename__,
         TelegramUpdateModel.__tablename__,
         ServedSignalUrlModel.__tablename__,
+        XBrowserSignalModel.__tablename__,
     )

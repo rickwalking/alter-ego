@@ -6,6 +6,7 @@ values must be http(s) URLs. Length limits match the ticket.
 
 from __future__ import annotations
 
+from datetime import datetime
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -14,9 +15,11 @@ from rag_backend.modules.autopilot.constants import (
     ANGLE_MAX_CHARS,
     AUDIENCE_MAX_CHARS,
     BRIEF_MAX_CHARS,
+    METRIC_MIN,
     NICHE_MAX_CHARS,
     SCORE_MAX,
     SCORE_MIN,
+    SCOUT_REASON_MAX_CHARS,
     SOURCE_URL_INVALID,
     SOURCE_URL_MAX,
     SOURCE_URL_MIN,
@@ -25,6 +28,10 @@ from rag_backend.modules.autopilot.constants import (
     TOPIC_BATCH_MAX,
     TOPIC_BATCH_MIN,
     WHY_VIRAL_MAX_CHARS,
+    X_HANDLE_MAX_CHARS,
+    X_POST_TEXT_MAX_CHARS,
+    X_SIGNAL_BATCH_MAX,
+    X_SIGNAL_BATCH_MIN,
 )
 from rag_backend.modules.autopilot.domain.topic_text import is_http_url, strip_controls
 
@@ -78,6 +85,66 @@ class TopicIntakeResponse(BaseModel):
     accepted: list[UUID]
     queued: list[UUID]
     rejected: list[RejectedTopic]
+
+
+class ObservedXPost(BaseModel):
+    """One browser observation. Unknown keys reject the whole body."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    url: str = Field(min_length=TEXT_MIN_CHARS)
+    handle: str = Field(min_length=TEXT_MIN_CHARS, max_length=X_HANDLE_MAX_CHARS)
+    text: str = Field(min_length=TEXT_MIN_CHARS, max_length=X_POST_TEXT_MAX_CHARS)
+    likes: int | None = Field(default=None, ge=METRIC_MIN)
+    reposts: int | None = Field(default=None, ge=METRIC_MIN)
+    replies: int | None = Field(default=None, ge=METRIC_MIN)
+    views: int | None = Field(default=None, ge=METRIC_MIN)
+    observed_at: datetime
+
+
+class XSignalsBatch(BaseModel):
+    """One to thirty observations. The body is an object, not a bare array."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    posts: list[ObservedXPost] = Field(
+        min_length=X_SIGNAL_BATCH_MIN,
+        max_length=X_SIGNAL_BATCH_MAX,
+    )
+
+
+class RejectedXPost(BaseModel):
+    """An observation the intake did not store, with a stable reason code."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    url: str
+    reason: str
+
+
+class XSignalsResponse(BaseModel):
+    """Canonical URLs stored, and the observations the response rejects."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    accepted: list[str]
+    rejected: list[RejectedXPost]
+
+
+class ScoutFailedBody(BaseModel):
+    """Why the scout stopped. The text is delivered, not interpreted."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    reason: str = Field(min_length=TEXT_MIN_CHARS, max_length=SCOUT_REASON_MAX_CHARS)
+
+
+class ScoutFailedResponse(BaseModel):
+    """True when the owner was sent exactly one Telegram message."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    delivered: bool
 
 
 def _require_http_url(value: str) -> str:

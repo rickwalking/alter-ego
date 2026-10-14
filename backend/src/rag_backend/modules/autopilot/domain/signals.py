@@ -17,12 +17,16 @@ from rag_backend.modules.autopilot.constants import (
     SOURCE_HF_PAPERS,
     SOURCE_HN,
     SOURCE_RSS,
+    SOURCE_X_BROWSER,
     SOURCE_X_SEARCH,
 )
 
 
 class SignalSource(StrEnum):
-    """Free backends the bundle is allowed to name."""
+    """Backends a stored signal is allowed to name.
+
+    ``X_BROWSER`` is not a collector. Grok Bot posts those observations.
+    """
 
     X_SEARCH = SOURCE_X_SEARCH
     HN = SOURCE_HN
@@ -30,6 +34,7 @@ class SignalSource(StrEnum):
     RSS = SOURCE_RSS
     BLUESKY = SOURCE_BLUESKY
     GITHUB = SOURCE_GITHUB
+    X_BROWSER = SOURCE_X_BROWSER
 
 
 @dataclass(frozen=True, kw_only=True)

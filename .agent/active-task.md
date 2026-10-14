@@ -1,8 +1,8 @@
 # Active Task
 
-AE-0355 is Dev Complete on `feat/ae-0355-autopilot-telegram-notifier`.
+AE-0360 is Dev Complete on `feat/ae-0360-grokbot-scout-ops-cursor-cli`.
 
-Telegram owner notices for autopilot runs: album, keyboard, status, reminder.
+Grok Bot scout intake: `POST /api/autopilot/x-signals` and `POST /api/autopilot/scout-failed`, plus the owner routine pack.
 
 ## Rules
 

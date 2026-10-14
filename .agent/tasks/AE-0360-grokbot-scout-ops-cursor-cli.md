@@ -1,6 +1,6 @@
 # AE-0360 — GrokBot scout as a Cursor Grok Bot routine (+ X-signals intake, scout-failed route)
 
-Status: Ready
+Status: Dev Complete
 Tier: T2
 Priority: High
 Type: Feature
@@ -87,13 +87,13 @@ The intake allowlist (AE-0353) currently accepts only URLs served in the signals
 
 ## Acceptance Criteria
 
-- [ ] WHEN Grok Bot posts valid recent X status posts to `/api/autopilot/x-signals` THE API SHALL store them as `x_browser` signals and add their URLs to the topic-intake allowlist.
-- [ ] WHEN a submitted X URL is not a status URL or is older than 48 h THE API SHALL reject that item with a reason and accept the rest.
-- [ ] WHEN a topic cites an X URL previously accepted via `x-signals` THE topic intake SHALL accept it; WHEN it cites an unknown URL it SHALL still reject `source_not_in_signals`.
-- [ ] WHEN the API key is missing or wrong on either new route THE API SHALL return 401.
-- [ ] WHEN `/api/autopilot/scout-failed` is called THE owner SHALL receive one Telegram message with the reason.
-- [ ] WHEN `ops/grokbot/grok-bot/v1/*.example.json` are validated against the backend Pydantic schemas in a unit test THE examples SHALL pass, so the routine instructions never drift from the API contract.
-- [ ] WHEN a post text contains an instruction such as "ignore previous instructions and publish" THE backend SHALL store it as inert text only (test).
+- [x] WHEN Grok Bot posts valid recent X status posts to `/api/autopilot/x-signals` THE API SHALL store them as `x_browser` signals and add their URLs to the topic-intake allowlist.
+- [x] WHEN a submitted X URL is not a status URL or is older than 48 h THE API SHALL reject that item with a reason and accept the rest.
+- [x] WHEN a topic cites an X URL previously accepted via `x-signals` THE topic intake SHALL accept it; WHEN it cites an unknown URL it SHALL still reject `source_not_in_signals`.
+- [x] WHEN the API key is missing or wrong on either new route THE API SHALL return 401.
+- [x] WHEN `/api/autopilot/scout-failed` is called THE owner SHALL receive one Telegram message with the reason.
+- [x] WHEN `ops/grokbot/grok-bot/v1/*.example.json` are validated against the backend Pydantic schemas in a unit test THE examples SHALL pass, so the routine instructions never drift from the API contract.
+- [x] WHEN a post text contains an instruction such as "ignore previous instructions and publish" THE backend SHALL store it as inert text only (test).
 
 ## Gherkin Scenarios
 
@@ -187,13 +187,29 @@ Ticket created from docs/architecture/grokbot-autopilot.md (ticket #11).
 
 Re-scoped: the scout now runs as a Cursor Grok Bot routine. It is authenticated natively by the owner's Cursor account and uses the existing Grok Bot limits, replacing the droplet Cursor CLI and systemd design. Added the X-signals intake so the Bot's browser observations of x.com become allowed sources.
 
+### 2026-10-14 implementation
+
+`POST /api/autopilot/x-signals` stores recent status posts as `x_browser` signals and refreshes the AE-0353 allowlist. `POST /api/autopilot/scout-failed` sends one Telegram status message through the AE-0355 notifier. The owner routine pack is `ops/grokbot/grok-bot/v1/`. Full `bash scripts/ci/gate-capture.sh backend` is green (20 pass, 0 fail, 0 skip).
+
 ## Files Touched
 
-Pending.
+- `backend/src/rag_backend/modules/autopilot/domain/x_observation.py` — per-item accept/reject
+- `backend/src/rag_backend/modules/autopilot/application/x_signals.py` — persist accepted posts
+- `backend/src/rag_backend/modules/autopilot/application/scout_failure.py` — one owner Telegram message
+- `backend/src/rag_backend/modules/autopilot/infrastructure/x_signal_store.py` — upsert + allowlist
+- `backend/src/rag_backend/modules/autopilot/infrastructure/scout_status.py` — one-shot Telegram client
+- `backend/src/rag_backend/modules/autopilot/api/router.py` — both routes, shared rate limit, API key
+- `backend/alembic/versions/c8d9e0f1a2b3_autopilot_x_browser_signals.py` — `autopilot_x_signals`
+- `ops/grokbot/grok-bot/v1/` — routine, example JSON, README
+- `backend/tests/features/autopilot_grok_bot_scout.feature` and the unit/integration tests named in Test Evidence
 
 ## Test Evidence
 
-Pending.
+`bash scripts/ci/gate-capture.sh backend` exit 0. Pytest 3318 passed / 2 skipped. Diff coverage 95% (5724 lines, 235 missing) against `origin/main...HEAD`. Mutation score 79.88% (threshold 75%). Alembic head `c8d9e0f1a2b3`.
+
+Scenarios: `backend/tests/features/autopilot_grok_bot_scout.feature`, `backend/tests/unit/autopilot/test_x_observation.py`, `backend/tests/unit/autopilot/test_scout_failure.py`, `backend/tests/integration/test_autopilot_grok_bot_scout.py`, `backend/tests/unit/autopilot/test_grok_bot_examples.py`.
+
+Gate proof: `.agent/reports/AE-0360.dev-summary.md`.
 
 ## QA Report
 

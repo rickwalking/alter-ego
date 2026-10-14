@@ -1,4 +1,4 @@
-"""SQLAlchemy models for the four autopilot tables.
+"""SQLAlchemy models for the autopilot tables.
 
 Private to the module. ``Mapped[]`` columns mirror the Alembic revision
 ``autopilot_tables``. ``carousel_project_id`` is ``String(36)`` because
@@ -46,6 +46,7 @@ from rag_backend.modules.autopilot.constants import (
     TABLE_SERVED_SIGNAL_URLS,
     TABLE_TELEGRAM_UPDATES,
     TABLE_TOPIC_CANDIDATES,
+    TABLE_X_SIGNALS,
     TOPIC_CANDIDATE_FK,
     UQ_RUNS_CAROUSEL_PROJECT,
     UQ_TOPIC_SIGNAL_HASH,
@@ -178,3 +179,23 @@ class TelegramUpdateModel(AutopilotOrmBase):
     received_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False
     )
+
+
+class XBrowserSignalModel(AutopilotOrmBase):
+    """One X status the Grok Bot observed in its own browser."""
+
+    __tablename__ = TABLE_X_SIGNALS
+
+    url: Mapped[str] = mapped_column(Text, primary_key=True)
+    handle: Mapped[str] = mapped_column(Text, nullable=False)
+    text: Mapped[str] = mapped_column(Text, nullable=False)
+    likes: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    reposts: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    replies: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    views: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    observed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+    posted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    source: Mapped[str] = mapped_column(String(STATUS_LENGTH), nullable=False)
+    stored_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)

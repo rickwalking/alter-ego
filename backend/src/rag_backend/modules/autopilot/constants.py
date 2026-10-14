@@ -184,6 +184,28 @@ AUTH_BEARER_PREFIX = "Bearer "
 # Topic intake (AE-0353). The scout posts 1-3 proposals. Code decides
 # which of them become queued runs.
 PATH_TOPICS = "/topics"
+# Grok Bot browser observations (AE-0360). Stored beside the allowlist.
+PATH_X_SIGNALS = "/x-signals"
+PATH_SCOUT_FAILED = "/scout-failed"
+SOURCE_X_BROWSER = "x_browser"
+TABLE_X_SIGNALS = "autopilot_x_signals"
+APP_STATE_SCOUT_NOTIFIER = "autopilot_scout_notifier"
+X_POST_TEXT_MAX_CHARS = 600
+METRIC_MIN = 0
+X_HANDLE_MAX_CHARS = 15
+X_SIGNAL_BATCH_MIN = 1
+X_SIGNAL_BATCH_MAX = 30
+SCOUT_REASON_MAX_CHARS = 500
+SCOUT_FAILED_PREFIX = "Scout failed: "
+REASON_NOT_STATUS_URL = "not_status_url"
+REASON_STALE_STATUS = "stale_status"
+REASON_EMPTY_HANDLE = "empty_handle"
+REASON_HANDLE_MISMATCH = "handle_mismatch"
+DETAIL_SCOUT_NOTIFY_UNCONFIGURED = "scout_notify_unconfigured"
+DETAIL_SCOUT_NOTIFY_FAILED = "scout_notify_failed"
+DETAIL_SCOUT_REASON_EMPTY = "scout_reason_empty"
+LOG_X_SIGNALS = "autopilot_x_signals"
+LOG_SCOUT_FAILED = "autopilot_scout_failed"
 TABLE_SERVED_SIGNAL_URLS = "autopilot_served_urls"
 INDEX_SERVED_URLS_SERVED_AT = "idx_autopilot_served_urls_served_at"
 APP_STATE_CLOCK = "autopilot_clock"
