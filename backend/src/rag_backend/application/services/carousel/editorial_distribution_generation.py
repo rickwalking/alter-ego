@@ -8,8 +8,6 @@ from typing import cast
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import HumanMessage
 
-from rag_backend.agents.input_sanitizer import sanitize_model_copy
-from rag_backend.agents.prompts.registry import render_prompt
 from rag_backend.application.services.carousel.editorial_distribution_constants import (
     CAPTION_FALLBACK_HEADINGS_PLACEHOLDER,
     ERR_EN_TRANSLATION_PARSE_FAILED,
@@ -34,17 +32,17 @@ from rag_backend.application.services.carousel.presentation_rubric import (
 )
 from rag_backend.application.services.carousel.types import MAX_SLIDES
 from rag_backend.application.services.carousel_template import CarouselTemplateBuilder
+from rag_backend.application.services.carousel_template.prompts import (
+    build_slide_translation_prompt,
+)
 from rag_backend.domain.constants.ai_agents import PROMPT_EDITORIAL_CAPTION_FALLBACK
-from rag_backend.domain.constants.carousel import CAROUSEL_PROMPT_VERSION_V6
 from rag_backend.domain.constants.presentation_policy import (
     CREATE_TIME_PRESENTATION_POLICY_VERSION,
 )
+from rag_backend.domain.copy_sanitize import sanitize_model_copy
 from rag_backend.domain.models import CarouselProject
 from rag_backend.infrastructure.llm.json_utils import extract_json
 from rag_backend.infrastructure.monitoring_langfuse import get_langfuse_runnable_config
-
-_PROMPT_DOMAIN_CAROUSEL = "carousel"
-_PROMPT_SLIDE_TRANSLATIONS = "slide_translations"
 
 
 def _slide_headings_for_caption(
@@ -149,17 +147,12 @@ async def _generate_en_translations(
     if not payload:
         return {}
     # AE-0366: versioned YAML prompt carrying the contract's quality rubric.
-    prompt, _model_cfg = render_prompt(
-        _PROMPT_DOMAIN_CAROUSEL,
-        _PROMPT_SLIDE_TRANSLATIONS,
-        variables={
-            "slides_json": json.dumps(payload, ensure_ascii=False),
-            "quality_rubric": render_quality_rubric(
-                load_presentation_policy(CREATE_TIME_PRESENTATION_POLICY_VERSION),
-                RUBRIC_AUDIENCE_TRANSLATION,
-            ),
-        },
-        version=CAROUSEL_PROMPT_VERSION_V6,
+    prompt = build_slide_translation_prompt(
+        json.dumps(payload, ensure_ascii=False),
+        render_quality_rubric(
+            load_presentation_policy(CREATE_TIME_PRESENTATION_POLICY_VERSION),
+            RUBRIC_AUDIENCE_TRANSLATION,
+        ),
     )
     response = await llm.ainvoke(
         [HumanMessage(content=prompt)],

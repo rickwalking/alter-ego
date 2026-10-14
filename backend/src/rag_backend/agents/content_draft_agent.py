@@ -20,11 +20,9 @@ from rag_backend.application.services.carousel.instruction_context_loader import
     InstructionContextRequest,
 )
 from rag_backend.application.services.carousel.presentation_policy import (
+    RUBRIC_AUDIENCE_CONTENT,
     load_presentation_policy,
     render_presentation_policy_context,
-)
-from rag_backend.application.services.carousel.presentation_rubric import (
-    RUBRIC_AUDIENCE_CONTENT,
     render_quality_rubric,
 )
 from rag_backend.domain.constants.ai_agents import ERR_INVALID_JSON

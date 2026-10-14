@@ -22,7 +22,10 @@ from rag_backend.application.services.carousel.presentation_policy_types import 
     VisibleTextRule,
 )
 from rag_backend.application.services.carousel.presentation_rubric import (
+    RUBRIC_AUDIENCE_CONTENT,
+    RUBRIC_AUDIENCE_TRANSLATION,
     parse_quality_rubric,
+    render_quality_rubric,
 )
 from rag_backend.domain.constants.carousel_presentation import (
     VALID_VIOLATION_SEVERITIES,
@@ -449,6 +452,8 @@ def canonical_policy_json(policy: CarouselPresentationPolicy) -> str:
 
 
 __all__ = [
+    "RUBRIC_AUDIENCE_CONTENT",
+    "RUBRIC_AUDIENCE_TRANSLATION",
     "CarouselPresentationPolicy",
     "CasingRulePolicy",
     "FontPolicy",
@@ -462,4 +467,5 @@ __all__ = [
     "load_presentation_policy",
     "policy_checksum",
     "render_presentation_policy_context",
+    "render_quality_rubric",
 ]

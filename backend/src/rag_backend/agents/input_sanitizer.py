@@ -6,6 +6,7 @@ from rag_backend.domain.constants.input_sanitizer import (
     INJECTION_PATTERNS,
     MAX_LLM_INPUT_LENGTH,
 )
+from rag_backend.domain.copy_sanitize import sanitize_model_copy
 
 
 def sanitize_llm_input(value: str) -> str:
@@ -29,22 +30,6 @@ def sanitize_display_input(value: str) -> str:
     length) but leaves case intact by matching patterns case-insensitively.
     """
     cleaned = value.replace("<", "").replace(">", "").replace("(", "").replace(")", "")
-    for pattern in INJECTION_PATTERNS:
-        cleaned = re.sub(re.escape(pattern), "", cleaned, flags=re.IGNORECASE)
-    return cleaned[:MAX_LLM_INPUT_LENGTH].strip()
-
-
-def sanitize_model_copy(value: str) -> str:
-    """Sanitize pipeline-generated slide copy fed back into a prompt (AE-0366).
-
-    Outline titles/key points and drafted slide copy are model output that is
-    re-sent to the content drafter and the EN translator. ``sanitize_llm_input``
-    lowercased them and stripped ``< >`` (so ``<strong>`` came back as bare
-    ``strong``), and the models faithfully echoed the damage into the slides.
-    This keeps the injection-pattern defense and the length cap but preserves
-    case, inline markup and parentheses.
-    """
-    cleaned = value
     for pattern in INJECTION_PATTERNS:
         cleaned = re.sub(re.escape(pattern), "", cleaned, flags=re.IGNORECASE)
     return cleaned[:MAX_LLM_INPUT_LENGTH].strip()
