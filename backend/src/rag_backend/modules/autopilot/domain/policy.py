@@ -133,8 +133,14 @@ def _outline(snapshot: GateSnapshot) -> str | None:
 
 
 def _content(snapshot: GateSnapshot) -> str | None:
+    """Mirror the engine's content-approve rule (AE-0364).
+
+    The engine enforces the voice floor only when persona scores exist; a run
+    with no persona has none, so the voice check is skipped. Forbidden phrases
+    and the engine's own refusal still apply.
+    """
     score = snapshot.persona_score
-    if score is None or score < VOICE_MATCH_MIN_SCORE:
+    if score is not None and score < VOICE_MATCH_MIN_SCORE:
         return REASON_PERSONA_SCORE
     if snapshot.forbidden_hits:
         return REASON_FORBIDDEN
@@ -162,9 +168,16 @@ def _design(snapshot: GateSnapshot) -> str | None:
 
 
 def _images(snapshot: GateSnapshot) -> str | None:
-    if snapshot.slides_total < 1 or snapshot.slides_total > MAX_SLIDES:
+    """One valid hero JPEG per slide the image phase illustrates (AE-0365).
+
+    The CTA slide uses the owner avatar, so a 7-slide run stores 6 hero
+    images. The count comes from the pipeline's own slide filter, not from
+    ``slides_total``; zero (no slides persisted) fails closed.
+    """
+    expected = snapshot.hero_images_total
+    if expected < 1 or expected > MAX_SLIDES:
         return REASON_IMAGES
-    if len(snapshot.images) != snapshot.slides_total:
+    if len(snapshot.images) != expected:
         return REASON_IMAGES
     if any(not _valid_jpeg(image) for image in snapshot.images):
         return REASON_IMAGES

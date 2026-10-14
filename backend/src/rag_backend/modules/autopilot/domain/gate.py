@@ -90,6 +90,8 @@ class SnapshotParts:
     # nor failed; overdue once the grace period passed.
     parked: bool = False
     parked_overdue: bool = False
+    # AE-0365: hero images the image phase builds (the CTA slide has none).
+    hero_images_total: int = 0
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -111,6 +113,8 @@ class GateSnapshot:
     engine_blocker: str = ""
     parked: bool = False
     parked_overdue: bool = False
+    # AE-0365: the images gate expects this many hero images, not slides_total.
+    hero_images_total: int = 0
 
 
 @dataclass(frozen=True, kw_only=True)

@@ -59,6 +59,8 @@ _PROJECT_ID = str(uuid4())
 _STALE_SIX_SLIDE_CONFIG = "1 intro, 3 content, 1 closing, 1 cta"
 _STALE_SIX_SLIDES = 6
 _PIPELINE_SLIDES = 7
+# AE-0365: the CTA slide uses the owner avatar, so 6 of the 7 get a hero image.
+_HERO_IMAGES = _PIPELINE_SLIDES - 1
 # gpt-image default size (infrastructure/external/openai_image.py).
 _HERO_WIDTH = 1536
 _HERO_HEIGHT = 1024
@@ -151,6 +153,7 @@ def _gate(phase: str, slides_total: int, count: int) -> GateSnapshot:
         images=tuple(_jpeg() for _ in range(count)),
         revisions_used=0,
         stale=False,
+        hero_images_total=_HERO_IMAGES,
     )
 
 
@@ -217,9 +220,9 @@ async def test_unknown_project_expects_no_slides(
     ("phase", "count", "action", "reason"),
     [
         (GATE_OUTLINE, _PIPELINE_SLIDES, GateAction.APPROVE, REASON_PASSED),
-        (GATE_IMAGES, _PIPELINE_SLIDES, GateAction.APPROVE, REASON_PASSED),
+        (GATE_IMAGES, _HERO_IMAGES, GateAction.APPROVE, REASON_PASSED),
         (GATE_OUTLINE, 5, GateAction.REVISE, REASON_OUTLINE),
-        (GATE_IMAGES, _PIPELINE_SLIDES - 1, GateAction.REVISE, REASON_IMAGES),
+        (GATE_IMAGES, _HERO_IMAGES - 1, GateAction.REVISE, REASON_IMAGES),
     ],
 )
 async def test_gates_pass_on_a_real_seven_slide_run(
@@ -229,8 +232,8 @@ async def test_gates_pass_on_a_real_seven_slide_run(
     action: GateAction,
     reason: str,
 ) -> None:
-    """Scenarios: Outline and images gates accept the pipeline's 7 slides; a real
-    slide-count mismatch is still revised.
+    """Scenarios: The outline gate accepts the pipeline's 7 slides and the images
+    gate its 6 hero images (AE-0365); a real count mismatch is still revised.
     """
     total = await _slide_total(monkeypatch, await _created_project(monkeypatch))
     decision = decide(_gate(phase, total, count))
@@ -241,7 +244,7 @@ def test_a_missing_image_file_still_revises() -> None:
     """Scenarios: A real slide-count mismatch is still revised; the images gate
     checks the hero images the pipeline stores (a missing file revises).
     """
-    gate = _gate(GATE_IMAGES, _PIPELINE_SLIDES, _PIPELINE_SLIDES)
+    gate = _gate(GATE_IMAGES, _PIPELINE_SLIDES, _HERO_IMAGES)
     missing = ImageFact(present=False, is_jpeg=False, width=0, height=0)
     broken = replace(gate, images=(*gate.images[:-1], missing))
     decision = decide(broken)
