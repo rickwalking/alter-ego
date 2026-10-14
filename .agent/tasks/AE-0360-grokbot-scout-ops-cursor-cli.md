@@ -160,7 +160,7 @@ Feature: Grok Bot scout intake
 
 ## Implementer Notes (read first — Cursor CLI / Grok)
 
-- Source of truth: [docs/architecture/grokbot-autopilot.md](../../docs/architecture/grokbot-autopilot.md) (§5.2 supersedes the CLI parts of §5) and [ADR-0020](../../docs/decisions/0020-grokbot-autopilot.md). If this ticket and the doc disagree, STOP and ask — do not guess.
+- Source of truth: [docs/architecture/grokbot-autopilot.md](../../docs/architecture/grokbot-autopilot.md) and [ADR-0020](../../docs/decisions/0020-grokbot-autopilot.md). **For the scout, THIS TICKET is authoritative**: the doc copy on your branch may predate the 2026-10-14 Grok Bot change (§5.2) and still describe a Cursor CLI/systemd scout — ignore those parts and do not build them. For anything else, if ticket and doc disagree, STOP and ask.
 - Read `CLAUDE.md`, `backend/CLAUDE.md`, `backend/AGENTS.md`, `docs/architecture/module-conventions.md` before coding.
 - Module rules: code lives in `backend/src/rag_backend/modules/autopilot/`; other modules only via their `public.py`.
 - Hard rules: no magic strings (constants.py), no `Any`/`object`, ≤3 args per function, guard clauses, ≤400 lines/file, mypy strict, ruff clean, 90%+ branch coverage.
