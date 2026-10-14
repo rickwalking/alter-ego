@@ -391,6 +391,34 @@ class EditorialWorkflowService:
         await publish_workflow_sse_updates(params.project_id, state)
         return state
 
+    async def is_parked_before_node(self, project_id: str) -> bool:
+        """True when a re-drive has a pending node to re-run (AE-0363)."""
+        return await self._orchestrator.engine.is_parked(project_id)
+
+    async def redrive_pending_phase(
+        self,
+        project_id: str,
+        db: AsyncSession | None,
+    ) -> CarouselWorkflowState:
+        """Re-run a parked pending node; never sends a review decision (AE-0363).
+
+        For a run that died after its gate was approved: the next phase runs
+        again and parks at its own gate, which still needs a review.
+        """
+        state = await self._orchestrator.continue_pending(
+            project_id,
+            db=db,
+            workflow_input=EditorialWorkflowStartInput(
+                topic="", audience="", brief="", sources=[], user_id=""
+            ),
+        )
+        persisted = await self._orchestrator.get_state(project_id)
+        if persisted is not None:
+            state = persisted
+        await self._sync_project_phase(db, project_id, state)
+        await publish_workflow_sse_updates(project_id, state)
+        return state
+
     @staticmethod
     async def _append_image_visual_feedback(
         db: AsyncSession, project_id: str, feedback: str

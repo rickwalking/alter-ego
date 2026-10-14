@@ -297,6 +297,21 @@ not assert it:
   or by **deferring to CI**. `gates.sh <scope> --changed-only` is fine for fast
   iteration, but the **Dev Complete declaration** must be based on a **full** run.
 
+### Hotfix fast path (owner rule, 2026-10-14)
+
+For **hotfixes** (T1 bugfixes / prod-impacting fixes) only — this is the one sanctioned
+exception to the full-run rule above:
+- **Local verification:** run every backend gate **except mutation**, individually
+  (`bash scripts/ci/gates.sh backend:<gate>`, with `DATABASE_URL` set so test /
+  diff-cover / migrations / schema-drift really run), plus a **Python 3.11 import
+  check** (prod image is `python:3.11-slim`). Skip local `mutmut`; record
+  `mutation: deferred to CI (hotfix fast path)` in the dev summary.
+- **Merge:** once CI's **Test & Coverage** and all other non-mutation checks are
+  green and every review thread is resolved, merge with `gh pr merge --admin`
+  without waiting for CI mutation. Watch CI mutation on `main` afterwards and fix
+  forward if it fails.
+- Feature / epic PRs keep the full gate run, mutation, and QA.
+
 ## Development Skills
 
 This project provides AI agent skills for development and quality assurance:

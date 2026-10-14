@@ -117,6 +117,11 @@ from rag_backend.modules.editorial.infrastructure.carousel_automation import (
     is_provider_outage,
     slides_in_config,
 )
+from rag_backend.modules.editorial.infrastructure.carousel_automation_run import (
+    AutomationRun,
+    redrive_automation_phase,
+    run_automation_phase,
+)
 from rag_backend.modules.editorial.infrastructure.carousel_project_lock import (
     carousel_project_lock,
     carousel_project_lock_key,
@@ -188,6 +193,7 @@ __all__ = [
     "ApprovalState",
     "AutomationResume",
     "AutomationResumeInput",
+    "AutomationRun",
     "AutomationStart",
     "CarouselAutomationAcl",
     "CarouselProject",
@@ -233,6 +239,8 @@ __all__ = [
     "is_carousel_project_lock_held_session",
     "is_provider_outage",
     "read_run_fence",
+    "redrive_automation_phase",
+    "run_automation_phase",
     "slides_in_config",
     "write_run_heartbeat",
     "write_run_heartbeat_once",

@@ -88,6 +88,9 @@ calls) still applies. A daily cap bounds it.
        content persona score < 70    → revise("raise voice match: …") up to 2× → else ESCALATE
        presentation_validation_block → revise up to 1× → else ESCALATE
        phase failed / run stale      → ESCALATE
+       parked (no run in flight, checkpoint neither awaiting nor failed)
+                                     → wait 10 min, then re-drive once (approved/in_progress)
+                                       or ESCALATE engine_parked_no_run_in_flight
    final_review awaiting_human → state=awaiting_owner → Telegram:
        sendMediaGroup(slides 1-10, PT) + caption preview + score summary
        sendMessage(inline keyboard: ✅ Approve · ✏️ Rework · 🗑 Reject)
@@ -103,6 +106,19 @@ calls) still applies. A daily cap bounds it.
    → poll status → media_publish → persist ig_post_id + permalink → Telegram "✅ posted <link>"
    any error → retry w/ backoff (3×) → Telegram "❌ publish failed: <reason>" + [Retry] button
 ```
+
+**How a gate decision runs (AE-0363).** Approve, revise, and re-drive go through the
+editorial facade operation `run_automation_phase`, the same run-owned path as the HTTP
+`POST /workflow/resume`. The tick session only does the pre-run steps (in-flight guard,
+revision-cap check, `lock_version` CAS, flip to `in_progress`, which stamps
+`run_started_at`/`run_heartbeat_at`) and **commits them before any LLM work**. The phase then
+runs inline through `execute_resume_run`: epoch fence, 60 s heartbeat loop, `run.started` /
+`run.finished`, its own DB session, and a failure marks the row `failed` (the next tick
+escalates it with a Telegram notice). Inline (not fire-and-forget) keeps one run per tick and
+lets the driver map refusals (`version_conflict`, `revision_cap`, `in_progress`) at once. A
+re-drive re-runs the pending node with `ainvoke(None)`: a `Command(resume=…)` there would be a
+null resume that the next gate's `interrupt()` consumes, approving it unreviewed. Ops recovery
+for a parked carousel: `backend/scripts/redrive_parked_carousel.py` (dry run by default).
 
 **Reminders.** `awaiting_owner` triggers a Telegram nudge at 24 h. After 72 h the runner
 moves the run to `expired` and posts a Telegram notice; the existing 72 h stuck

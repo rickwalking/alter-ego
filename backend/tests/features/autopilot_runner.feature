@@ -175,3 +175,65 @@ Feature: Autopilot runner
     When every hero image is a present JPEG with a decodable size
     Then the policy approves the images gate
     But a missing file, a non-JPEG, or a zero width or height is revised
+
+  # AE-0363: an autopilot approve recorded the decision but the next phase
+  # never ran (prod 2026-10-14, carousel 8e350d6e). The in-tick resume held
+  # the lock bump uncommitted, set no run heartbeat, and turned a provider
+  # error into a silent "provider_outage" after the checkpointer had already
+  # committed the approved gate. The policy then waited forever.
+
+  Scenario: An autopilot approve of the outline runs the content phase
+    Given a carousel waiting at the outline gate with a passing outline
+    When the runner approves the outline gate
+    Then the content phase runs and the workflow waits at the content gate
+    And the slide drafts exist and the content gate is not approved
+    And the carousel row is at "content" "awaiting_human" with the lock version bumped once
+    And the run finished with reason "completed"
+
+  Scenario: The phase runs with a live run and a committed lock bump
+    Given a carousel waiting at the outline gate
+    When the runner approves the outline gate
+    Then while the content phase runs the row is "in_progress" with run_started_at set
+    And the heartbeat loop refreshes run_heartbeat_at during the LLM work
+    And the worker tick holds no open transaction while the phase runs
+
+  Scenario: A provider error in the next phase escalates, never parks
+    Given a carousel waiting at the outline gate
+    And the content phase fails with a provider timeout
+    When the runner approves the outline gate
+    Then the carousel row is marked "failed" and the run finished with reason "failed"
+    And the next tick escalates the run with reason "phase_failed"
+
+  Scenario: A freshly parked workflow waits for the grace period
+    Given the checkpoint is at "content" "approved" with the content node pending
+    And the carousel row is at "outline" "awaiting_human" with no run in flight
+    And the row changed less than 600 seconds ago
+    Then the gate is parked and the policy waits
+
+  Scenario: A parked workflow past the grace period is re-driven
+    Given the checkpoint is at "content" "approved" with the content node pending
+    And the carousel row is at "outline" "awaiting_human" with no run in flight
+    And the row has not changed for more than 600 seconds
+    Then the policy re-drives with reason "engine_parked_no_run_in_flight"
+    When the runner re-drives the parked phase
+    Then the content node runs again under a live run, with no review decision sent
+    And the workflow waits at the content gate for the policy check
+
+  Scenario: A parked workflow that cannot be re-driven escalates
+    Given a parked workflow past the grace period whose status is not re-drivable
+    Then the policy escalates with reason "engine_parked_no_run_in_flight"
+    Given a re-drive finds no parked node
+    Then nothing is written and the runner escalates with reason "engine_parked_no_run_in_flight"
+
+  Scenario: A carousel with a run in flight is never resumed twice
+    Given the carousel row is "in_progress"
+    Then the policy waits even if the checkpoint shows a review gate
+    And a resume is refused with "in_progress" before any write
+
+  Scenario: A revise re-runs the phase and a capped revise changes nothing
+    Given a carousel waiting at the outline gate
+    When the runner revises the outline gate
+    Then the outline phase runs again and waits at the outline gate
+    Given the outline revision cap is reached
+    When the runner revises the outline gate
+    Then the resume is refused with "revision_cap" and the row is unchanged
