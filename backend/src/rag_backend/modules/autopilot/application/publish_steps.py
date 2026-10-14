@@ -28,6 +28,7 @@ from rag_backend.modules.autopilot.domain.publish import (
     choose_publish_action,
     is_publish_due,
 )
+from rag_backend.modules.autopilot.domain.story import ContainerProbe
 from rag_backend.modules.autopilot.recovery_constants import RELEASE_GRACE_SECONDS
 
 # Approve makes the run ``publishing`` before the release write lands.
@@ -58,7 +59,7 @@ def stored_container(run: AutopilotRun) -> StoredContainer | None:
 
 
 async def reusable_container(
-    gateway: InstagramGraphGateway,
+    gateway: ContainerProbe,
     stored: StoredContainer | None,
     now: datetime,
 ) -> StoredContainer | None:

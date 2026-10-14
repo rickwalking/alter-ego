@@ -34,6 +34,7 @@
   "GET /api/carousels/{project_id}/publish/instagram/status",
   "GET /api/carousels/{project_id}/slide-images/{lang}/{filename}",
   "GET /api/carousels/{project_id}/slides",
+  "GET /api/carousels/{project_id}/story-image/pt.jpg",
   "GET /api/carousels/{project_id}/workflow/state",
   "GET /api/carousels/{project_id}/workflow/stream",
   "GET /api/content-calendar",

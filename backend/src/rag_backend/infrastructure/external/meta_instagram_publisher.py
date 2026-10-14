@@ -38,7 +38,6 @@ from rag_backend.domain.constants.instagram_publish import (
     ERR_INSTAGRAM_CREDENTIALS_NOT_CONFIGURED,
     ERR_INSTAGRAM_IMAGE_COUNT_INVALID,
     ERR_INSTAGRAM_PUBLISHED_MEDIA_UNKNOWN,
-    ERR_INSTAGRAM_QUOTA_UNREADABLE,
     FIELD_CAPTION,
     FIELD_CHILDREN,
     FIELD_CREATION_ID,
@@ -60,6 +59,7 @@ from rag_backend.domain.constants.instagram_publish import (
     HTTP_POST,
     MAX_INSTAGRAM_CAROUSEL_ITEMS,
     MEDIA_TYPE_CAROUSEL,
+    MEDIA_TYPE_STORIES,
     MIN_INSTAGRAM_CAROUSEL_ITEMS,
     PUBLISH_RESULT_FAILED,
     PUBLISH_RESULT_PUBLISHED,
@@ -78,10 +78,12 @@ from rag_backend.infrastructure.external.instagram_graph_error import (
     InstagramGraphError,
 )
 from rag_backend.infrastructure.external.instagram_graph_payloads import (
+    client_message,
     error_from,
     json_dict,
     quota_remaining,
     recent_carousel_id,
+    require_id,
 )
 from rag_backend.infrastructure.logging import get_logger
 
@@ -91,13 +93,6 @@ logger = get_logger()
 _POLL_INTERVAL_SECONDS = META_POLL_INTERVAL_SECONDS
 _REQUEST_DEADLINE_SECONDS: float = GRAPH_REQUEST_DEADLINE_SECONDS
 
-_CLIENT_MESSAGES = frozenset({
-    ERR_INSTAGRAM_CONTAINER_FAILED,
-    ERR_INSTAGRAM_CONTAINER_TIMEOUT,
-    ERR_INSTAGRAM_API_NO_ID,
-    ERR_INSTAGRAM_QUOTA_UNREADABLE,
-    ERR_INSTAGRAM_PUBLISHED_MEDIA_UNKNOWN,
-})
 _TERMINAL_OK = frozenset({CONTAINER_STATUS_FINISHED, CONTAINER_STATUS_PUBLISHED})
 _RECENT_MEDIA_FIELDS = ",".join((FIELD_ID, FIELD_MEDIA_TYPE, FIELD_TIMESTAMP))
 
@@ -148,7 +143,7 @@ class MetaInstagramPublisher:
         except InstagramGraphError as exc:
             return PublishResult(
                 status=PUBLISH_RESULT_FAILED,
-                error_message=_client_message(exc),
+                error_message=client_message(exc),
             )
         except httpx.HTTPError:
             logger.exception("instagram_publish_http_error")
@@ -173,6 +168,17 @@ class MetaInstagramPublisher:
         self._validate_images(image_urls)
         item_ids = [await self._create_item(url) for url in image_urls]
         return await self._create_parent(item_ids, caption)
+
+    async def create_story_container(self, image_url: str) -> str:
+        """Create one ``STORIES`` container for a public JPEG. Does not publish."""
+        payload = await self._request(
+            _GraphCall(
+                method=HTTP_POST,
+                path=GRAPH_PATH_MEDIA.format(ig_user_id=self._config.ig_user_id),
+                form={FIELD_MEDIA_TYPE: MEDIA_TYPE_STORIES, FIELD_IMAGE_URL: image_url},
+            )
+        )
+        return require_id(payload)
 
     async def await_container(self, container_id: str) -> str:
         """Poll until ``FINISHED`` or ``PUBLISHED`` and return it. Timeout is transient."""
@@ -245,7 +251,7 @@ class MetaInstagramPublisher:
                 form={FIELD_CREATION_ID: container_id},
             )
         )
-        return _require_id(payload)
+        return require_id(payload)
 
     async def fetch_permalink(self, media_id: str) -> str:
         """Read ``permalink`` for a published media id."""
@@ -295,7 +301,7 @@ class MetaInstagramPublisher:
                 },
             )
         )
-        return _require_id(payload)
+        return require_id(payload)
 
     async def _create_parent(self, item_ids: list[str], caption: str) -> str:
         payload = await self._request(
@@ -309,7 +315,7 @@ class MetaInstagramPublisher:
                 },
             )
         )
-        return _require_id(payload)
+        return require_id(payload)
 
     async def container_status(self, container_id: str) -> str:
         """The container's ``status_code`` (``FINISHED``, ``PUBLISHED``, ...)."""
@@ -382,21 +388,3 @@ class MetaInstagramPublisher:
         count = len(image_urls)
         if count < MIN_INSTAGRAM_CAROUSEL_ITEMS or count > MAX_INSTAGRAM_CAROUSEL_ITEMS:
             raise RuntimeError(ERR_INSTAGRAM_IMAGE_COUNT_INVALID)
-
-
-def _client_message(exc: InstagramGraphError) -> str:
-    if exc.error_code in _CLIENT_MESSAGES:
-        return exc.error_code
-    return ERR_INSTAGRAM_API_REQUEST_FAILED
-
-
-def _require_id(payload: dict[str, object]) -> str:
-    raw = payload.get(FIELD_ID)
-    if raw is None or raw == "":
-        logger.error("instagram_api_missing_id")
-        raise InstagramGraphError(
-            status_code=200,
-            error_code=ERR_INSTAGRAM_API_NO_ID,
-            transient=False,
-        )
-    return str(raw)

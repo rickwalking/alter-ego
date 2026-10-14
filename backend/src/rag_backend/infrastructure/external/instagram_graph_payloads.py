@@ -19,6 +19,11 @@ import httpx
 
 from rag_backend.domain.constants.instagram_publish import (
     DEFAULT_PUBLISHING_QUOTA_TOTAL,
+    ERR_INSTAGRAM_API_NO_ID,
+    ERR_INSTAGRAM_API_REQUEST_FAILED,
+    ERR_INSTAGRAM_CONTAINER_FAILED,
+    ERR_INSTAGRAM_CONTAINER_TIMEOUT,
+    ERR_INSTAGRAM_PUBLISHED_MEDIA_UNKNOWN,
     ERR_INSTAGRAM_QUOTA_UNREADABLE,
     FIELD_ID,
     FIELD_MEDIA_TYPE,
@@ -40,6 +45,15 @@ from rag_backend.infrastructure.external.instagram_graph_error import (
 from rag_backend.infrastructure.logging import get_logger
 
 logger = get_logger()
+
+# Error codes the one-shot publish returns as-is; any other becomes generic.
+_CLIENT_MESSAGES = frozenset({
+    ERR_INSTAGRAM_CONTAINER_FAILED,
+    ERR_INSTAGRAM_CONTAINER_TIMEOUT,
+    ERR_INSTAGRAM_API_NO_ID,
+    ERR_INSTAGRAM_QUOTA_UNREADABLE,
+    ERR_INSTAGRAM_PUBLISHED_MEDIA_UNKNOWN,
+})
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -160,3 +174,23 @@ def meta_code(response: httpx.Response) -> str:
         if code is not None:
             return str(code)
     return str(response.status_code)
+
+
+def client_message(exc: InstagramGraphError) -> str:
+    """The error code a ``PublishResult`` may expose, else the generic failure."""
+    if exc.error_code in _CLIENT_MESSAGES:
+        return exc.error_code
+    return ERR_INSTAGRAM_API_REQUEST_FAILED
+
+
+def require_id(payload: dict[str, object]) -> str:
+    """The ``id`` of a create or publish response. Missing is non-transient."""
+    raw = payload.get(FIELD_ID)
+    if raw is None or raw == "":
+        logger.error("instagram_api_missing_id")
+        raise InstagramGraphError(
+            status_code=200,
+            error_code=ERR_INSTAGRAM_API_NO_ID,
+            transient=False,
+        )
+    return str(raw)

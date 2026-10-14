@@ -9,6 +9,8 @@
   after the claim, so a container stored in between is resumed (QA r3 Q4).
 * Both paths claim first, so the worker tick and a second request cannot
   call Graph for the same carousel at the same time.
+* AE-0369: a post published here also gets its Story, under the same claim
+  and the same one-row-per-carousel idempotency as the worker tick.
 """
 
 from __future__ import annotations
@@ -28,6 +30,7 @@ from rag_backend.modules.autopilot.application.publish_steps import (
     outcome_of,
     reusable_container,
 )
+from rag_backend.modules.autopilot.application.story_step import post_extras
 from rag_backend.modules.autopilot.domain.exceptions import (
     InstagramCallError,
     ManualPublishRefusedError,
@@ -143,6 +146,9 @@ class ManualInstagramPublish:
                 _failed(project_id, str(exc), container)
             )
             raise
+        # The Story runs before the ledger records the post, so a crash
+        # resumes both (AE-0369). It never fails the publish.
+        await post_extras(self._deps.story, project_id)
         await self._deps.claims.finish_manual(
             _published(project_id, post_id, container)
         )

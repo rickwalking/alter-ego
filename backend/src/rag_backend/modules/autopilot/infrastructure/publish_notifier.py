@@ -29,6 +29,7 @@ from rag_backend.modules.autopilot.constants import (
     PAYLOAD_RETRY_CALLBACK,
 )
 from rag_backend.modules.autopilot.domain.publish import PublishNotice
+from rag_backend.modules.autopilot.domain.published_copy import extras_payload
 
 
 class OutboxPublishNotifier:
@@ -61,6 +62,7 @@ def _record(notice: PublishNotice) -> EventRecord:
             PAYLOAD_ERROR_CODE: notice.error_code,
             PAYLOAD_OFFER_RETRY: notice.offer_retry,
             PAYLOAD_RETRY_CALLBACK: callback,
+            **extras_payload(notice.extras),
         },
         metadata={METADATA_MODULE: MODULE_NAME},
         emitted_at=datetime.now(UTC),

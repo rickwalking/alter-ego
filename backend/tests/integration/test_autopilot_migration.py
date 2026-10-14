@@ -1,4 +1,4 @@
-"""Alembic revisions for the autopilot tables (AE-0350, AE-0357, AE-0361).
+"""Alembic revisions for the autopilot tables (AE-0350, AE-0357, AE-0361, AE-0369).
 
 Proves the latest revision is the single head and that upgrade/downgrade apply
 on a database stamped at the pre-autopilot head. The full chain from base is
@@ -15,8 +15,8 @@ from pathlib import Path
 import pytest
 
 _PREVIOUS_HEAD = "c9d0e1f2a3b4"
-_PARENT_HEAD = "d1e2f3a4b5c6"
-_THIS_HEAD = "e7f8a9b0c1d2"
+_PARENT_HEAD = "e7f8a9b0c1d2"
+_THIS_HEAD = "f8a9b0c1d2e3"
 _BACKEND_ROOT = Path(__file__).resolve().parents[2]
 _TABLES = (
     "autopilot_runs",
@@ -27,6 +27,7 @@ _TABLES = (
     "autopilot_x_signals",
     "instagram_manual_publishes",
     "autopilot_notify_cursor",
+    "instagram_stories",
 )
 
 
@@ -130,6 +131,15 @@ def test_upgrade_and_downgrade_on_a_stamped_database(
         "ig_post_id",
         "claimed_at",
     } <= manual_columns
+    # AE-0369: one Story row per carousel.
+    assert {
+        "carousel_project_id",
+        "state",
+        "story_container_id",
+        "story_container_created_at",
+        "story_media_id",
+        "error",
+    } <= _columns(db_path, "instagram_stories")
     signal_columns = _columns(db_path, "autopilot_x_signals")
     assert "source" in signal_columns
     assert "text" in signal_columns

@@ -156,5 +156,5 @@ def test_status_text_omits_a_missing_link_and_permalink() -> None:
     escalated = status_text(KIND_ESCALATED, copy)
     assert "phase_failed" in escalated
     assert "http" not in escalated
-    assert "posted" in status_text(KIND_PUBLISHED, copy)
+    assert status_text(KIND_PUBLISHED, copy) == "\u2705 Publicado"
     assert "expiring" in status_text(KIND_IG_EXPIRING, copy)

@@ -46,6 +46,10 @@ from rag_backend.modules.publishing.application.slide_image_urls import (
     SlideImageUrlRequest,
     build_public_slide_image_urls,
 )
+from rag_backend.modules.publishing.application.story_image import (
+    build_public_story_image_url,
+    story_image_file,
+)
 from rag_backend.modules.publishing.bootstrap import (
     PublishingAdapters,
     PublishingModule,
@@ -54,6 +58,7 @@ from rag_backend.modules.publishing.bootstrap import (
 from rag_backend.modules.publishing.constants import BOARD_PHASES
 from rag_backend.modules.publishing.domain.instagram_target import (
     InstagramPublishTarget,
+    StoryImageTarget,
 )
 from rag_backend.modules.publishing.domain.models import (
     BlogPost,
@@ -116,6 +121,9 @@ from rag_backend.modules.publishing.infrastructure.publishing_port_adapters impo
 from rag_backend.modules.publishing.infrastructure.publishing_read_acl import (
     PublishingReadAcl,
 )
+from rag_backend.modules.publishing.infrastructure.story_image_target import (
+    prepare_story_image,
+)
 
 __all__ = [
     "BOARD_PHASES",
@@ -168,8 +176,12 @@ __all__ = [
     "ReleasePhase",
     "ReleaseState",
     "SlideImageUrlRequest",
+    "StoryImageTarget",
     "bootstrap_module",
     "build_public_slide_image_urls",
+    "build_public_story_image_url",
     "load_instagram_publish_target",
+    "prepare_story_image",
     "public_blog_visibility_clause",
+    "story_image_file",
 ]

@@ -22,6 +22,8 @@ from rag_backend.modules.autopilot.constants import (
 )
 from rag_backend.modules.autopilot.domain.exceptions import CallbackDataTooLongError
 from rag_backend.modules.autopilot.domain.models import AutopilotRunState
+from rag_backend.modules.autopilot.domain.publish import PostExtras
+from rag_backend.modules.autopilot.domain.published_copy import published_text
 from rag_backend.modules.autopilot.notify_constants import (
     BUTTON_APPROVE,
     BUTTON_REJECT,
@@ -64,9 +66,7 @@ from rag_backend.modules.autopilot.notify_constants import (
     TEXT_IG_EXPIRY_DAYS,
     TEXT_PUBLISH_FAILED,
     TEXT_PUBLISH_HELD,
-    TEXT_PUBLISHED,
     TEXT_PUBLISHED_MEDIA_UNKNOWN,
-    TEXT_PUBLISHED_NO_LINK,
     TEXT_REMINDER,
     TEXT_REVIEW_REOPENED,
 )
@@ -124,6 +124,8 @@ class StatusCopy:
     link: str
     permalink: str
     days_remaining: int | None
+    # AE-0369: the Story outcome and the music nudge of a published notice.
+    extras: PostExtras | None = None
 
 
 def callback_data(prefix: str, run_id: UUID) -> str:
@@ -359,12 +361,6 @@ def _escalated(copy: StatusCopy) -> str:
     return TEXT_ESCALATED_WITH_LINK.format(reason=copy.reason, link=copy.link)
 
 
-def _published(permalink: str) -> str:
-    if not permalink:
-        return TEXT_PUBLISHED_NO_LINK
-    return TEXT_PUBLISHED.format(permalink=permalink)
-
-
 def _token(days: int | None) -> str:
     if days is None:
         return TEXT_IG_EXPIRY
@@ -372,7 +368,7 @@ def _token(days: int | None) -> str:
 
 
 def _published_copy(copy: StatusCopy) -> str:
-    return _published(copy.permalink)
+    return published_text(copy.permalink, copy.extras)
 
 
 def _token_copy(copy: StatusCopy) -> str:
