@@ -1,6 +1,6 @@
 # AE-0367 — Telegram fix-issues button with deterministic content repair
 
-Status: In Progress
+Status: In Development
 Tier: T1
 Priority: P0
 Type: Bugfix
@@ -51,16 +51,16 @@ The owner only has Approve / Rework / Reject; Rework regenerates a whole phase w
 
 ## Acceptance Criteria
 
-- [ ] Review message lists at most 5 issue lines; the keyboard has `🛠 Fix issues` only when
+- [x] Review message lists at most 5 issue lines; the keyboard has `🛠 Fix issues` only when
   something is fixable.
-- [ ] A non-owner tap changes nothing; a double tap queues and runs the fix once; a clean
+- [x] A non-owner tap changes nothing; a double tap queues and runs the fix once; a clean
   carousel answers "Nothing to fix" and keeps the review open.
-- [ ] Each repair has a unit test: first-letter capitalization, proper nouns from the carousel
+- [x] Each repair has a unit test: first-letter capitalization, proper nouns from the carousel
   vocabulary, features from key_points, summary points, `<strong>` balancing, untranslated-EN
   detection.
-- [ ] Integration test on the real editorial engine (fake renderer + fake LLM): lowercase /
+- [x] Integration test on the real editorial engine (fake renderer + fake LLM): lowercase /
   empty fixtures → tap fix → rows fixed → render called → new review sent.
-- [ ] EN re-translate failure keeps the current EN and the new review still lists it.
+- [x] EN re-translate failure keeps the current EN and the new review still lists it.
 - [ ] Python 3.11 import check.
 
 ## Gherkin Scenarios
@@ -82,15 +82,31 @@ The owner only has Approve / Rework / Reject; Rework regenerates a whole phase w
 
 ### 2026-10-14
 
-Ticket created (hotfix fast path, owner decision).
+Ticket created (hotfix fast path, owner decision). Implemented: editorial owner-autofix
+service + facade seam, autopilot webhook/worker/notifier wiring, versioned re-translate prompt,
+Gherkin + 103 tests. Rebased onto origin/main. All 16 static backend gates PASS on the Pi;
+DB gates and the Python 3.11 import check relayed to the orchestrator. See
+`.agent/reports/AE-0367.dev-summary.md`.
 
 ## Files Touched
 
-Pending.
+- `backend/src/rag_backend/application/services/carousel/owner_autofix_*.py` (new)
+- `backend/src/rag_backend/domain/constants/carousel_autofix.py` (new)
+- `backend/src/rag_backend/agents/prompts/carousel_autofix/v1/` (new prompt + README)
+- `backend/src/rag_backend/modules/editorial/infrastructure/carousel_owner_autofix.py` (new), `public.py`
+- `backend/src/rag_backend/modules/autopilot/` (domain/autofix, review_issues, content_autofixer,
+  owner_actions, owner_steps, rework_step, runner, notifications, review_facts, telegram_notifier,
+  bootstraps, constants)
+- `backend/src/rag_backend/bootstrap/autopilot_worker_factory.py`,
+  `application/services/carousel/editorial_workflow_service.py` (`chat_model`),
+  `application/services/carousel_template/prompts.py`
+- Tests: `tests/unit/application/*ae0367*`, `tests/unit/modules/autopilot/test_owner_autofix_ae0367.py`,
+  `tests/features/autopilot_owner_autofix.feature`
+- Docs: `docs/architecture/grokbot-autopilot.md`
 
 ## Test Evidence
 
-Pending.
+See `.agent/reports/AE-0367.dev-summary.md`.
 
 ## QA Report
 
