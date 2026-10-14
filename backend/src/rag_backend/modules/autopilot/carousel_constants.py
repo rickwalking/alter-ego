@@ -11,6 +11,9 @@ SIMPLE_WORDS_MAX = 3
 SIMPLE_BRIEF_MAX_CHARS = 600
 IMAGE_GUIDANCE_MAX_CHARS = 400
 IMAGE_STYLE_MAX_CHARS = 32
+# The API accepts any short style string; the domain rejects an unsupported
+# one per topic (``image_style_unsupported``) instead of failing the batch.
+IMAGE_STYLE_INPUT_MAX_CHARS = 40
 
 REASON_AUDIENCE_NOT_SIMPLE = "audience_not_simple"
 REASON_NICHE_NOT_SIMPLE = "niche_not_simple"

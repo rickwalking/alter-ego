@@ -10,14 +10,9 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
-from enum import StrEnum
 
 from rag_backend.domain.constants import (
     IMAGE_MODEL_OPENAI,
-    IMAGE_STYLE_CINEMATIC,
-    IMAGE_STYLE_COMIC_NEON,
-    IMAGE_STYLE_FLAT_EDITORIAL,
-    IMAGE_STYLE_HYPERREAL,
     IMAGE_STYLE_NEO_ANIME,
     SUPPORTED_IMAGE_COMBOS,
 )
@@ -43,18 +38,13 @@ from rag_backend.modules.autopilot.carousel_constants import (
 )
 from rag_backend.modules.autopilot.domain.topic_text import tokens
 
+# Image presets the scout may choose: every style the OpenAI image model
+# supports. Derived from ``SUPPORTED_IMAGE_COMBOS`` so a new preset cannot drift.
+SCOUT_IMAGE_STYLES: frozenset[str] = frozenset(
+    style for model, style in SUPPORTED_IMAGE_COMBOS if model == IMAGE_MODEL_OPENAI
+)
 
-class ImageStyle(StrEnum):
-    """Image presets the scout may choose. Every one is an OpenAI combo."""
-
-    NEO_ANIME = IMAGE_STYLE_NEO_ANIME
-    FLAT_EDITORIAL = IMAGE_STYLE_FLAT_EDITORIAL
-    HYPERREAL = IMAGE_STYLE_HYPERREAL
-    CINEMATIC = IMAGE_STYLE_CINEMATIC
-    COMIC_NEON = IMAGE_STYLE_COMIC_NEON
-
-
-DEFAULT_IMAGE_STYLE = ImageStyle.NEO_ANIME
+DEFAULT_IMAGE_STYLE = IMAGE_STYLE_NEO_ANIME
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -90,8 +80,8 @@ def _brief_is_short(text: CarouselText) -> bool:
 
 
 def is_supported_style(style: str) -> bool:
-    """True when the OpenAI image model supports ``style``."""
-    return (IMAGE_MODEL_OPENAI, style) in SUPPORTED_IMAGE_COMBOS
+    """True when ``style`` is one of the scout's OpenAI presets."""
+    return style in SCOUT_IMAGE_STYLES
 
 
 def is_simple(value: str) -> bool:
@@ -127,7 +117,7 @@ def image_guidance_for(request: GuidanceRequest) -> str:
     if request.image_guidance:
         return request.image_guidance
     lead = GUIDANCE_STYLE_NEUTRAL
-    if request.image_style == ImageStyle.NEO_ANIME:
+    if request.image_style == IMAGE_STYLE_NEO_ANIME:
         lead = GUIDANCE_NEO_ANIME
     background = GUIDANCE_BACKGROUND_TEMPLATE.format(niche=request.niche)
     return GUIDANCE_JOIN.join((lead, background))

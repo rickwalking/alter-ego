@@ -319,7 +319,7 @@ Every GrokBot carousel has a simple audience and niche, a brief on the selected 
 - The editorial driver creates the carousel with these values, the topic's `image_style`, and `custom_visual_details` = the image guidance.
 
 **Chosen by the scout** (two optional fields on each topic)
-- `image_style`: one of the OpenAI presets in `SUPPORTED_IMAGE_COMBOS`. The default is `neo_anime`. An unknown value is a 422 for the whole batch.
+- `image_style`: one of the OpenAI presets in `SUPPORTED_IMAGE_COMBOS`. The default is `neo_anime`. The API accepts any string of at most 40 characters; an unsupported value rejects only that topic with `image_style_unsupported`. The allowed set is derived from `SUPPORTED_IMAGE_COMBOS` (`SCOUT_IMAGE_STYLES`), so it cannot drift from the editorial presets.
 - `image_guidance`: plain text, at most 400 characters, no URLs. It should end with `Background: <theme-specific scene>.`
 
 | Theme of the topic | image_style |
@@ -341,9 +341,10 @@ Topics stored before AE-0361 get the same fallback.
 
 | Rule | Reason |
 |---|---|
+| `image_style` is an OpenAI preset in `SUPPORTED_IMAGE_COMBOS` | `image_style_unsupported` |
 | `audience` is 1–3 words | `audience_not_simple` |
 | `niche` is 1–3 words | `niche_not_simple` |
-| `brief` is at most 600 characters | `brief_not_simple` |
+| `brief` is at most 600 characters (the schema still allows 800 for v1 compatibility; 801+ is a 422) | `brief_not_simple` |
 | `brief` shares at least one title word, case-insensitive, stop words ignored (`BRIEF_STOP_WORDS`) | `brief_off_theme` |
 
 **Storage and review**

@@ -27,7 +27,7 @@ The scout's `audience`, `niche` and `brief` are free text up to 120/80/800 chara
 
 ## Scope
 
-- `TopicProposal` gains `image_style` (enum, default `neo_anime`) and `image_guidance` (optional, ≤400 chars, plain text, no URLs).
+- `TopicProposal` gains `image_style` (string ≤40 chars, default `neo_anime`; validated per topic in the domain — QA r1 F2) and `image_guidance` (optional, ≤400 chars, plain text, no URLs).
 - Simple-words rules, each a per-proposal rejection (the rest of the batch still passes):
   - `audience` 1–3 words → `audience_not_simple`
   - `niche` 1–3 words → `niche_not_simple`
@@ -59,7 +59,7 @@ The scout's `audience`, `niche` and `brief` are free text up to 120/80/800 chara
 ## Acceptance Criteria
 
 - [x] AC1 — WHEN a proposal omits `image_style`, THE intake SHALL store `neo_anime`.
-- [x] AC2 — WHEN a proposal sets `image_style` to a preset outside the openai-supported set, THE API SHALL return 422 and store nothing.
+- [x] AC2 — WHEN a proposal sets `image_style` to a preset outside the openai-supported set, THE API SHALL reject only that topic with `image_style_unsupported` (HTTP 200; the rest of the batch is still accepted). An `image_style` over 40 characters is a 422. (Revised in QA r1 F2; was a whole-batch 422.)
 - [x] AC3 — WHEN `audience` or `niche` has zero or more than 3 words, THE intake SHALL reject that proposal with `audience_not_simple` / `niche_not_simple` and still accept the others.
 - [x] AC4 — WHEN `brief` shares no significant keyword with `title` (stop words ignored), THE intake SHALL reject it with `brief_off_theme`. WHEN it is longer than 600 chars, THE intake SHALL reject it with `brief_not_simple`.
 - [x] AC5 — WHEN `image_guidance` contains a URL, THE intake SHALL reject the proposal with `url_in_text`.
@@ -81,10 +81,10 @@ Feature: GrokBot carousel defaults
     Then the candidate is stored with image_style "neo_anime"
     And the carousel is created with the anime template guidance and a niche background
 
-  Scenario: Invalid image style is rejected
-    Given a proposal with image_style "watercolor"
+  Scenario: Unsupported image style rejects only that topic
+    Given a proposal with image_style "watercolor" and a valid proposal
     When the scout posts the batch
-    Then the response is 422 and nothing is stored
+    Then the response is 200, the first is rejected with "image_style_unsupported" and the valid one is queued
 ```
 
 ## Delta
@@ -133,7 +133,7 @@ Feature: GrokBot carousel defaults
 
 ## QA Checklist
 
-- [x] Security reviewed (no URLs in guidance, enum-only style, no new secrets)
+- [x] Security reviewed (no URLs in guidance, style validated against `SUPPORTED_IMAGE_COMBOS`, no new secrets)
 - [x] Code quality reviewed
 - [x] Acceptance criteria validated
 - [x] Edge cases tested
@@ -163,7 +163,7 @@ Pending.
 
 ## Decision Log
 
-- `image_style` is a schema enum, so an unknown preset is a 422 for the batch (like unknown keys). The domain also re-checks the `(openai, style)` combo against `SUPPORTED_IMAGE_COMBOS` as a drift guard.
+- `image_style` is a short string at the schema (≤40 chars). The domain checks it against `SCOUT_IMAGE_STYLES`, derived from `SUPPORTED_IMAGE_COMBOS` (QA r1 F4), and rejects only that topic with `image_style_unsupported` (QA r1 F2). v1 is superseded: its example is rejected with `brief_off_theme` (QA r1 F1).
 - The simple-words rules are per-proposal rejections so one weak proposal does not drop the batch.
 - `brief` >600 chars uses its own reason `brief_not_simple`. The schema limit stays at 800 so the batch is not 422'd.
 - Guidance is stored as sent (nullable). The runner resolves the template, so rows created before this change also get guidance.

@@ -45,7 +45,7 @@ Write in simple words. The backend checks these rules and rejects a topic that b
 
 Do not send an image model or a palette theme. The backend always uses OpenAI images and the `auto` palette.
 
-Pick `image_style` from this table. When in doubt, use `neo_anime`. Any other value rejects the whole batch.
+Pick `image_style` from this table. When in doubt, use `neo_anime`. Any other value rejects that topic with `image_style_unsupported`.
 
 | Theme of the topic | image_style |
 |---|---|

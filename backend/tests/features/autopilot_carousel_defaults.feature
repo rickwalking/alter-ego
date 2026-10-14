@@ -23,8 +23,19 @@ Feature: GrokBot carousel defaults (AE-0361)
     Then the candidate is stored with image_style "hyperreal" and that guidance
     And one run is queued
 
-  Scenario: An invalid style is rejected
-    When the scout posts a topic with image_style "watercolor"
+  Scenario: An unsupported style rejects only that topic
+    When the scout posts one topic with image_style "watercolor" and one valid topic with image_style "cinematic"
+    Then the response status is 200
+    And only the first topic is rejected with reason "image_style_unsupported"
+    And the valid topic is queued
+
+  Scenario: An image_style longer than 40 characters fails the batch
+    When the scout posts a topic whose image_style is 41 characters long
+    Then the response status is 422
+    And no candidate is stored
+
+  Scenario: Image guidance over 400 characters fails the batch
+    When the scout posts a topic whose image_guidance is 401 characters long
     Then the response status is 422
     And no candidate is stored
 
@@ -48,7 +59,13 @@ Feature: GrokBot carousel defaults (AE-0361)
 
   Scenario: A brief longer than 600 characters is rejected
     When the scout posts a topic whose brief is 601 characters long
-    Then that topic is rejected with reason "brief_not_simple"
+    Then the response status is 200
+    And that topic is rejected with reason "brief_not_simple"
+
+  Scenario: A brief longer than 800 characters fails the batch
+    When the scout posts a topic whose brief is 801 characters long
+    Then the response status is 422
+    And no candidate is stored
 
   Scenario: The create-project call receives openai, auto, the style and the guidance
     Given a project spec with image_style "cinematic" and guidance "Cinematic still. Background: a parliament hall."

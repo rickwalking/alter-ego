@@ -26,9 +26,9 @@ from rag_backend.modules.autopilot.constants import (
 )
 from rag_backend.modules.autopilot.domain.carousel_defaults import (
     DEFAULT_IMAGE_STYLE,
+    SCOUT_IMAGE_STYLES,
     CarouselText,
     GuidanceRequest,
-    ImageStyle,
     brief_on_theme,
     carousel_reason,
     image_guidance_for,
@@ -93,14 +93,23 @@ def _facts() -> IntakeFacts:
     )
 
 
-def test_every_scout_style_is_an_openai_combo() -> None:
-    """The scout's enum stays inside the supported OpenAI presets."""
-    assert {style.value for style in ImageStyle} == VALID_IMAGE_STYLES
-    for style in ImageStyle:
-        assert (IMAGE_MODEL_OPENAI, style.value) in SUPPORTED_IMAGE_COMBOS
+def test_scout_styles_match_the_openai_combos_exactly() -> None:
+    """Parity (AE-0361 F4): the scout's presets are derived, never hardcoded.
+
+    Every OpenAI combo in ``SUPPORTED_IMAGE_COMBOS`` is a scout style and
+    nothing else is, so a new editorial preset cannot drift from intake.
+    """
+    openai_styles = {
+        style for model, style in SUPPORTED_IMAGE_COMBOS if model == IMAGE_MODEL_OPENAI
+    }
+    assert openai_styles == SCOUT_IMAGE_STYLES
+    assert SCOUT_IMAGE_STYLES <= VALID_IMAGE_STYLES
     assert DEFAULT_IMAGE_STYLE == "neo_anime"
-    assert is_supported_style("cinematic")
+    assert DEFAULT_IMAGE_STYLE in SCOUT_IMAGE_STYLES
+    for style in SCOUT_IMAGE_STYLES:
+        assert is_supported_style(style)
     assert not is_supported_style("watercolor")
+    assert not is_supported_style("gemini")
 
 
 @pytest.mark.parametrize(
@@ -219,6 +228,17 @@ def test_plan_rejects_only_the_proposal_that_breaks_a_rule() -> None:
     assert len(plan.new_candidates) == 1
     assert plan.new_candidates[0].proposal.image_style == "cinematic"
     assert plan.new_candidates[0].queue
+
+
+def test_plan_rejects_only_the_topic_with_an_unsupported_style() -> None:
+    """Scenario: An unsupported style rejects only that topic (AE-0361 F2)."""
+    bad = prepare(_input("Agents", image_style="watercolor"))
+    good = prepare(_input("Robots", image_style="cinematic"))
+    plan = plan_intake((bad, good), _facts())
+    assert [(item.title, item.reason) for item in plan.rejected] == [
+        ("Agents", REASON_IMAGE_STYLE_UNSUPPORTED)
+    ]
+    assert [item.proposal.title for item in plan.new_candidates] == ["Robots"]
 
 
 def test_plan_rejects_a_url_in_the_image_guidance() -> None:

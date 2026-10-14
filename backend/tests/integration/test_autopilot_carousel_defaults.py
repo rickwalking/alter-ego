@@ -20,6 +20,7 @@ from rag_backend.modules.autopilot.carousel_constants import (
     REASON_AUDIENCE_NOT_SIMPLE,
     REASON_BRIEF_NOT_SIMPLE,
     REASON_BRIEF_OFF_THEME,
+    REASON_IMAGE_STYLE_UNSUPPORTED,
     REASON_NICHE_NOT_SIMPLE,
 )
 from rag_backend.modules.autopilot.constants import REASON_URL_IN_TEXT
@@ -114,19 +115,34 @@ async def test_bot_chosen_style_and_guidance_are_stored(
     assert await _stored_image(engine) == [("hyperreal", _GUIDANCE)]
 
 
-# Scenario: An invalid style is rejected
+# Scenario: An unsupported style rejects only that topic
 @pytest.mark.asyncio
-async def test_invalid_style_is_422_and_stores_nothing(
+async def test_unsupported_style_rejects_only_that_topic(
     configured_key: None, tmp_path: Path
 ) -> None:
     del configured_key
-    topic = {**_topic("Agents", _URL_A, 80), "image_style": "watercolor"}
-    status, _body, engine = await _post(tmp_path, "invalid.db", [topic])
+    bad = {**_topic("Agents", _URL_A, 80), "image_style": "watercolor"}
+    good = {**_topic("Robots", _URL_A, 70), "image_style": "cinematic"}
+    status, body, engine = await _post(tmp_path, "unsupported.db", [bad, good])
+    assert status == 200
+    assert _reasons(body) == [("Agents", REASON_IMAGE_STYLE_UNSUPPORTED)]
+    assert len(_queued(body)) == 1
+    assert await _stored_image(engine) == [("cinematic", None)]
+
+
+# Scenario: An image_style longer than 40 characters fails the batch
+@pytest.mark.asyncio
+async def test_overlong_style_is_422_and_stores_nothing(
+    configured_key: None, tmp_path: Path
+) -> None:
+    del configured_key
+    topic = {**_topic("Agents", _URL_A, 80), "image_style": "x" * 41}
+    status, _body, engine = await _post(tmp_path, "overlong.db", [topic])
     assert status == 422
     assert await _topic_count(engine) == 0
 
 
-# Scenario: An invalid style is rejected (guidance over 400 characters)
+# Scenario: Image guidance over 400 characters fails the batch
 @pytest.mark.asyncio
 async def test_too_long_guidance_is_422(configured_key: None, tmp_path: Path) -> None:
     del configured_key
@@ -194,6 +210,18 @@ async def test_off_theme_and_long_briefs_are_rejected(
         ("GPU prices crash", REASON_BRIEF_OFF_THEME),
         ("Agents", REASON_BRIEF_NOT_SIMPLE),
     ]
+    assert await _topic_count(engine) == 0
+
+
+# Scenario: A brief longer than 800 characters fails the batch
+@pytest.mark.asyncio
+async def test_brief_over_the_schema_limit_is_422(
+    configured_key: None, tmp_path: Path
+) -> None:
+    del configured_key
+    topic = _topic("Agents", _URL_A, 80, brief="agents " + "x" * 794)
+    status, _body, engine = await _post(tmp_path, "huge.db", [topic])
+    assert status == 422
     assert await _topic_count(engine) == 0
 
 
