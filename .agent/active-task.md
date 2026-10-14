@@ -1,8 +1,8 @@
 # Active Task
 
-AE-0359 is In Development on `feat/ae-0359-autopilot-prod-wiring`.
+AE-0359 is Dev Complete on `feat/ae-0359-autopilot-prod-wiring`.
 
-Prod wiring is committed. Not moved to Dev Complete: `gate-capture.sh all` fails only on the pre-existing `frontend:security` npm audit.
+`gate-capture.sh all` is green (fail 0). `frontend:security` passes. Four backend database gates skipped because `DATABASE_URL` is unset.
 
 ## Rules
 

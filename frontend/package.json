@@ -53,16 +53,16 @@
   "dependencies": {
     "@tanstack/react-query": "^5.74.0",
     "@tanstack/react-query-devtools": "^5.74.0",
-    "@tiptap/pm": "^3.23.6",
-    "@tiptap/react": "^3.23.6",
-    "@tiptap/starter-kit": "^3.23.6",
+    "@tiptap/pm": "^3.32.0",
+    "@tiptap/react": "^3.32.0",
+    "@tiptap/starter-kit": "^3.32.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
     "jose": "^6.2.3",
     "jszip": "^3.10.1",
     "lucide-react": "^0.488.0",
-    "next": "^16.2.6",
+    "next": "^16.4.0",
     "next-intl": "^4.9.1",
     "react": "19.2.4",
     "react-dom": "19.2.4",
@@ -93,6 +93,7 @@
     "@vitejs/plugin-react": "^4.4.0",
     "@vitest/coverage-v8": "^4.1.8",
     "babel-plugin-react-compiler": "^19.0.0-beta-ebf51a3-20250411",
+    "braces": "file:scripts/braces-patched",
     "eslint": "^9",
     "eslint-config-next": "16.2.4",
     "eslint-plugin-react-hooks": "^6.0.0",
@@ -114,6 +115,13 @@
   },
   "overrides": {
     "esbuild": "^0.28.1",
-    "vite": "^7.3.5"
+    "vite": "^7.3.5",
+    "minimatch@3.1.5": {
+      "brace-expansion": "1.1.21"
+    },
+    "eslint-config-next": {
+      "eslint-plugin-react-hooks": "7.0.1"
+    },
+    "braces": "$braces"
   }
 }

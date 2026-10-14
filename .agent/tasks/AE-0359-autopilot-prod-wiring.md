@@ -1,6 +1,6 @@
 # AE-0359 — Prod wiring: secrets in deploy.yml + compose, Cloudflare skip rule, Telegram setWebhook
 
-Status: In Development
+Status: Dev Complete
 Tier: T2
 Priority: High
 Type: Chore
@@ -10,7 +10,7 @@ Agent Lane: developer (Grok for code; Pedro for GitHub Secrets + Cloudflare) →
 Branch: feat/ae-0359-autopilot-prod-wiring
 Kanban Card: TBD
 Created: 2026-10-13
-Updated: 2026-10-13
+Updated: 2026-10-14
 Parent: AE-0348
 
 ## Goal
@@ -114,6 +114,10 @@ Seeded-violation tests exit 1 when a variable is missing from either file, when
 the flag defaults to true, when the public base URL is wrong, and when the
 daily cap has no numeric default. The real pair exits 0.
 
+### 2026-10-14 05:50
+
+Cleared `frontend:security`. `next` is ^16.4.0 and TipTap is ^3.32.0. `brace-expansion` 1.1.14 is pinned to 1.1.21 under `minimatch@3.1.5`. `braces` has no published fix, so a local 3.0.4 with a nesting cap replaces it. `gate-capture.sh all` is exit 0 with fail 0. Moved to Dev Complete.
+
 ## Files Touched
 
 - `.github/workflows/deploy.yml` — writes the autopilot env block. Secrets may be empty; `AUTOPILOT_ENABLED` falls back to false and `AUTOPILOT_DAILY_CAP` to 1.
@@ -123,6 +127,10 @@ daily cap has no numeric default. The real pair exits 0.
 - `scripts/ci/gates.sh` — `backend:autopilot-env`.
 - `.github/workflows/ci-gate.yml` — backend path filter also matches `docker-compose.prod.yml` and `deploy.yml`.
 - `backend/tests/unit/scripts_ci/test_check_autopilot_env_parity.py` — seeded-violation tests.
+- `frontend/package.json` — raises `next` and TipTap above the patched releases; pins `brace-expansion` 1.1.21 and the nested react-hooks plugin at 7.0.1; overrides `braces` with the local patch.
+- `frontend/package-lock.json` — lockfile for those resolutions.
+- `frontend/scripts/braces-patched/` — braces 3.0.4 (3.0.3 plus a nesting cap) for GHSA-vfj7-8cjw-p6xm.
+- `frontend/src/scripts/braces-patched.test.ts` — shallow expand, depth cap, and version.
 
 ## Test Evidence
 
@@ -131,7 +139,9 @@ daily cap has no numeric default. The real pair exits 0.
 - `cd backend && uv run alembic heads` — single head `c8d9e0f1a2b3`.
 - `docker compose -f docker-compose.prod.yml config` renders `AUTOPILOT_ENABLED: "false"`, `AUTOPILOT_DAILY_CAP: "1"`, and `CAROUSEL_PUBLIC_BASE_URL: https://marinssolutions.com` when those vars are unset.
 - Worker skip is the existing `test_run_tick_skips_autopilot_when_disabled` (`backend/tests/unit/application/test_workflow_workers.py`): `autopilot_runs == 0` when the flag is false.
-- Full gate capture: see `.agent/reports/AE-0359.dev-summary.md`. Post-commit `bash scripts/ci/check-integrity.sh backend`: PASS, 0 blockers, 6 warnings (two `integrity-ok` noqa, two AE-0359 apparatus edits, two AE-0350 apparatus edits).
+- `cd frontend && npx vitest run src/scripts/braces-patched.test.ts` — 4 passed.
+- `cd frontend && npm audit --audit-level=high` — exit 0 (11 moderate remain, below the gate).
+- Full gate capture: see `.agent/reports/AE-0359.dev-summary.md`. `bash scripts/ci/gate-capture.sh all` exit 0, fail 0. `frontend:security` PASS. Four backend DB gates skipped because `DATABASE_URL` is unset.
 
 ## QA Report
 
@@ -162,8 +172,7 @@ docker compose -f docker-compose.prod.yml exec -T backend \
 
   The URL must be `https://marinssolutions.com/api/telegram/webhook` and `last_error_message` must be empty. The command does not print the bot token.
 - Manual (Pedro): merge only when a live deploy is intended (`main` auto-deploys). Confirm a queued run does not start while the flag is false, then set the `AUTOPILOT_ENABLED` secret to `true` and redeploy.
-- Pre-existing gate, not changed by this ticket: `frontend:security` (`npm audit --audit-level=high`) fails on the current frontend lockfile (61 advisories: 39 moderate, 21 high, 1 critical), including Next.js, postcss, sharp, prosemirror-view, smol-toml, and source-map-js. This ticket does not touch frontend dependencies, so the audit was not fixed here. `bash scripts/ci/gate-capture.sh all` is otherwise green: 37 pass, 1 fail, 0 skip. Every backend gate passed, including `backend:autopilot-env`. Dev Complete was not moved because the proof guard rejects `fail>0`. Question: should this ticket stay In Development until that audit is cleared on its own change, or proceed on the backend proof?
 
 ## Final Summary
 
-Prod compose and deploy.yml now carry the autopilot settings, with the runner left off (`AUTOPILOT_ENABLED` defaults to false). CI fails if those files drift. Cloudflare, GitHub Secrets, `set_webhook`, and `getWebhookInfo` are still Pedro's. Full `gate-capture.sh all` is red only on the pre-existing frontend npm audit.
+Prod compose and deploy.yml now carry the autopilot settings, with the runner left off (`AUTOPILOT_ENABLED` defaults to false). CI fails if those files drift. `npm audit --audit-level=high` is clean. Cloudflare, GitHub Secrets, `set_webhook`, and `getWebhookInfo` are still Pedro's.
