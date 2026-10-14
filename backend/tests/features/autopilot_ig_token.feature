@@ -61,3 +61,19 @@ Feature: Instagram token lifecycle
     Given a stored Instagram token
     When the daily credential step refreshes it
     Then logs do not contain the plaintext token
+
+  # QA r1 H6: manual publishing must not hard-depend on the Fernet key.
+  Scenario: Encryption key missing falls back to the env token
+    Given CREDENTIALS_ENCRYPTION_KEY is unset or not a Fernet key
+    And META_IG_ACCESS_TOKEN is set
+    When the manual Instagram publish route asks for a token
+    Then it receives the env token
+    And a warning is logged without the token
+    And startup reports publishing as "env_token_fallback"
+
+  Scenario: Stored token unreadable falls back to the env token
+    Given a usable encryption key
+    And the credential row is missing or the database cannot be read
+    When the manual Instagram publish route asks for a token
+    Then it receives the env token
+    And a warning names the reason without the token

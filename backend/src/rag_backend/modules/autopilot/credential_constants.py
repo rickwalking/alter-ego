@@ -55,3 +55,10 @@ LOG_CREDENTIAL_REFRESH_FAILED = "instagram_credential_refresh_failed"
 LOG_CREDENTIAL_SEEDED = "instagram_credential_seeded"
 LOG_CREDENTIAL_ALERT_SKIPPED = "instagram_credential_alert_skipped"
 LOG_CREDENTIAL_ALERT_FAILED = "instagram_credential_alert_failed"
+# QA r1 H6: without a usable Fernet key or stored row, the manual route uses
+# the legacy env token. The token itself is never logged.
+LOG_CREDENTIAL_ENV_FALLBACK = "instagram_credential_env_fallback"
+PUBLISHING_ENV_FALLBACK = "env_token_fallback"
+FALLBACK_REASON_KEY_UNUSABLE = "encryption_key_unusable"
+FALLBACK_REASON_STORE_UNREADABLE = "credential_store_unreadable"
+FALLBACK_REASON_STORE_EMPTY = "credential_store_empty"

@@ -25,6 +25,7 @@ from rag_backend.modules.autopilot.credential_constants import (
     LOG_CREDENTIALS_KEY_UNUSABLE,
     PROVIDER_INSTAGRAM,
     PUBLISHING_DISABLED,
+    PUBLISHING_ENV_FALLBACK,
 )
 from rag_backend.modules.autopilot.infrastructure.credential_cipher import (
     FernetTokenCipher,
@@ -92,15 +93,15 @@ def credential_tick_config(settings: Settings) -> CredentialTickConfig | None:
 async def prepare_instagram_credentials(settings: Settings) -> None:
     """Warn when the Fernet key is unusable, otherwise seed the env token once."""
     key = settings.credentials_encryption_key.get_secret_value()
+    token = settings.meta_ig_access_token.get_secret_value()
     problem = encryption_key_problem(key)
     if problem is not None:
         logger.warning(
             LOG_CREDENTIALS_KEY_UNUSABLE,
             reason=problem,
-            publishing=PUBLISHING_DISABLED,
+            publishing=_keyless_mode(token),
         )
         return
-    token = settings.meta_ig_access_token.get_secret_value()
     if not token.strip():
         return
     await _seed(key, token)
@@ -124,6 +125,13 @@ async def _seed(key: str, token: str) -> None:
             return
         await session.commit()
         logger.info(LOG_CREDENTIAL_SEEDED, provider=PROVIDER_INSTAGRAM)
+
+
+def _keyless_mode(env_token: str) -> str:
+    """Manual publishing falls back to the env token; autopilot stays off."""
+    if env_token.strip():
+        return PUBLISHING_ENV_FALLBACK
+    return PUBLISHING_DISABLED
 
 
 def _dependencies(

@@ -22,8 +22,9 @@ def build_meta_instagram_publisher(settings: Settings) -> MetaInstagramPublisher
 
 
 def token_provider_for(settings: Settings) -> InstagramTokenProvider:
-    """The encrypted credential store. Tests may replace this function."""
+    """The encrypted store, falling back to the env token. Tests may replace it."""
     from rag_backend.modules.autopilot import build_stored_instagram_token_provider
 
     key = settings.credentials_encryption_key.get_secret_value()
-    return build_stored_instagram_token_provider(key)
+    env_token = settings.meta_ig_access_token.get_secret_value()
+    return build_stored_instagram_token_provider(key, env_token)
