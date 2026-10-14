@@ -1,6 +1,6 @@
 # AE-0369 — Autopilot posts an Instagram Story after each carousel and nudges the owner to add music
 
-Status: In Development
+Status: Dev Complete
 Tier: T1
 Priority: P1
 Type: Bugfix
@@ -65,8 +65,8 @@ supports Stories for Business and Creator accounts (`media_type=STORIES` + `imag
 - [x] Notice copy with permalink, Story line, and music suggestion; music map by niche / style.
 - [x] Manual route posts the Story once, behind the same idempotency.
 - [x] Gherkin: `backend/tests/features/autopilot_story_and_music.feature`.
-- [ ] DB gates (test, diff-cover, migrations, schema-drift) and the Python 3.11 import check,
-  relayed from the x86 orchestrator.
+- [x] DB gates (test, diff-cover, migrations, schema-drift) and the Python 3.11 import check,
+  relayed from the x86 orchestrator: all PASS on 57592e0.
 
 ## Repro Steps
 
@@ -90,7 +90,9 @@ not run Alembic).
 ### 2026-10-14
 
 Ticket created from the owner brief (hotfix fast path, behaviour change → Gherkin first).
-Implemented on the Pi; static backend gates run here, DB gates relayed to x86.
+Implemented on the Pi; 16 static backend gates PASS here. DB gates (test, diff-cover,
+migrations, schema-drift) and the Python 3.11 import check PASS on x86 (relayed). Mutation
+deferred to CI (hotfix fast path). Moved to Dev Complete.
 
 ## Files Touched
 
