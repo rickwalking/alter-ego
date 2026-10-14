@@ -61,6 +61,17 @@ from rag_backend.modules.autopilot.notify_constants import (
     TEXT_PUBLISHED_NO_LINK,
     TEXT_REMINDER,
 )
+from rag_backend.modules.autopilot.webhook_constants import (
+    BUTTON_PHASE_DESIGN,
+    BUTTON_PHASE_IMAGES,
+    BUTTON_PHASE_OUTLINE,
+    BUTTON_PHASE_TEXT,
+    CALLBACK_PHASE_PREFIX,
+    PHASE_SLUG_DESIGN,
+    PHASE_SLUG_IMAGES,
+    PHASE_SLUG_OUTLINE,
+    PHASE_SLUG_TEXT,
+)
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -123,6 +134,24 @@ def review_keyboard(run_id: UUID) -> InlineKeyboard:
         ),
     )
     return InlineKeyboard(rows=(row,))
+
+
+def rework_phase_keyboard(run_id: UUID) -> InlineKeyboard:
+    """Text, Design, Images, and Outline. Text's callback token maps to content."""
+    buttons = (
+        (BUTTON_PHASE_TEXT, PHASE_SLUG_TEXT),
+        (BUTTON_PHASE_DESIGN, PHASE_SLUG_DESIGN),
+        (BUTTON_PHASE_IMAGES, PHASE_SLUG_IMAGES),
+        (BUTTON_PHASE_OUTLINE, PHASE_SLUG_OUTLINE),
+    )
+    row = tuple(
+        InlineButton(
+            text=label,
+            callback_data=callback_data(f"{CALLBACK_PHASE_PREFIX}{token}:", run_id),
+        )
+        for label, token in buttons
+    )
+    return InlineKeyboard(rows=(row[:2], row[2:]))
 
 
 def retry_keyboard(run_id: UUID) -> InlineKeyboard:

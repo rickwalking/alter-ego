@@ -10,6 +10,7 @@ from typing import cast
 from uuid import UUID, uuid4
 
 from sqlalchemy import CursorResult, func, select, update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.infrastructure.events.outbox_dispatch import (
@@ -244,6 +245,16 @@ class SqlAlchemyAutopilotRepository:
     async def commit(self) -> None:
         """Commit so a crash after container creation can reuse that container."""
         await self._session.commit()
+
+    async def claim_update(self, update: TelegramUpdate) -> bool:
+        """Insert the update id. False when it is already stored."""
+        try:
+            async with self._session.begin_nested():
+                self._session.add(_telegram_row(update))
+                await self._session.flush()
+        except IntegrityError:
+            return False
+        return True
 
     async def has_telegram_update(self, update_id: int) -> bool:
         """True when this update id was already stored."""

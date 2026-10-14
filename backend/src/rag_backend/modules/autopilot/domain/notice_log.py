@@ -18,6 +18,11 @@ from rag_backend.modules.autopilot.notify_constants import (
     LEDGER_REVIEWS,
     LEDGER_STATUSES,
 )
+from rag_backend.modules.autopilot.webhook_constants import (
+    LEDGER_PENDING,
+    LEDGER_PENDING_OWNER,
+    LEDGER_PENDING_PHASE,
+)
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -38,6 +43,14 @@ class AttemptRecord:
 
 
 @dataclass(frozen=True, kw_only=True)
+class StoredPending:
+    """Rework phase waiting for the owner's next text, keyed by chat id."""
+
+    owner_chat_id: str
+    phase: str
+
+
+@dataclass(frozen=True, kw_only=True)
 class NoticeLog:
     """What has already been delivered for one run."""
 
@@ -46,13 +59,28 @@ class NoticeLog:
     statuses: tuple[str, ...] = ()
     attempts: tuple[AttemptRecord, ...] = ()
     message_ids: tuple[int, ...] = ()
+    pending: StoredPending | None = None
 
 
 def notice_log_is_empty(log: NoticeLog) -> bool:
     """True when nothing has been recorded yet."""
+    if log.pending is not None:
+        return False
     if log.reviews or log.reminders or log.statuses or log.attempts:
         return False
     return not log.message_ids
+
+
+def set_pending(log: NoticeLog, pending: StoredPending | None) -> NoticeLog:
+    """Replace the pending rework phase without dropping delivered notices."""
+    return NoticeLog(
+        reviews=log.reviews,
+        reminders=log.reminders,
+        statuses=log.statuses,
+        attempts=log.attempts,
+        message_ids=log.message_ids,
+        pending=pending,
+    )
 
 
 def find_review(log: NoticeLog, revision: int) -> ReviewRecord | None:
@@ -93,6 +121,7 @@ def record_review(log: NoticeLog, review: ReviewRecord) -> NoticeLog:
         statuses=log.statuses,
         attempts=log.attempts,
         message_ids=_merge_ids(log.message_ids, _review_ids(review)),
+        pending=log.pending,
     )
 
 
@@ -107,6 +136,7 @@ def record_status(log: NoticeLog, event_id: str, message_id: int) -> NoticeLog:
         statuses=statuses,
         attempts=log.attempts,
         message_ids=_merge_ids(log.message_ids, (message_id,)),
+        pending=log.pending,
     )
 
 
@@ -121,6 +151,7 @@ def record_reminder(log: NoticeLog, revision: int, message_id: int) -> NoticeLog
         statuses=log.statuses,
         attempts=log.attempts,
         message_ids=_merge_ids(log.message_ids, (message_id,)),
+        pending=log.pending,
     )
 
 
@@ -134,6 +165,7 @@ def bump_attempt(log: NoticeLog, key: str) -> NoticeLog:
         statuses=log.statuses,
         attempts=(*kept, AttemptRecord(key=key, count=count)),
         message_ids=log.message_ids,
+        pending=log.pending,
     )
 
 
@@ -146,13 +178,19 @@ def dump_log(log: NoticeLog) -> dict[str, object]:
             LEDGER_KEYBOARD: review.keyboard_id,
         }
     attempts = {item.key: item.count for item in log.attempts}
-    return {
+    payload: dict[str, object] = {
         LEDGER_IDS: list(log.message_ids),
         LEDGER_REVIEWS: reviews,
         LEDGER_REMINDERS: list(log.reminders),
         LEDGER_STATUSES: list(log.statuses),
         LEDGER_ATTEMPTS: attempts,
     }
+    if log.pending is not None:
+        payload[LEDGER_PENDING] = {
+            LEDGER_PENDING_OWNER: log.pending.owner_chat_id,
+            LEDGER_PENDING_PHASE: log.pending.phase,
+        }
+    return payload
 
 
 def parse_stored(raw: object) -> NoticeLog:
@@ -171,7 +209,20 @@ def _from_object(raw: dict[str, object]) -> NoticeLog:
         statuses=_strings(raw.get(LEDGER_STATUSES)),
         attempts=_attempts(raw.get(LEDGER_ATTEMPTS)),
         message_ids=_ints(raw.get(LEDGER_IDS)),
+        pending=_pending(raw.get(LEDGER_PENDING)),
     )
+
+
+def _pending(raw: object) -> StoredPending | None:
+    if not isinstance(raw, dict):
+        return None
+    owner = raw.get(LEDGER_PENDING_OWNER)
+    phase = raw.get(LEDGER_PENDING_PHASE)
+    if not isinstance(owner, str) or not owner:
+        return None
+    if not isinstance(phase, str) or not phase:
+        return None
+    return StoredPending(owner_chat_id=owner, phase=phase)
 
 
 def _reviews(raw: object) -> tuple[ReviewRecord, ...]:

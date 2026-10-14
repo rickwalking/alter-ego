@@ -27,7 +27,10 @@ from rag_backend.application.services.carousel.provider_errors import (
     classify_provider_error,
 )
 from rag_backend.application.services.carousel.types import slide_count_from_config
-from rag_backend.domain.constants.carousel_workflow import ERR_REVISION_CAP_EXCEEDED
+from rag_backend.domain.constants.carousel_workflow import (
+    ERR_REVISION_CAP_EXCEEDED,
+    STRUCTURED_FEEDBACK_TARGET_PHASE_KEY,
+)
 from rag_backend.domain.constants.optimistic_locking import ERR_VERSION_CONFLICT
 from rag_backend.domain.constants.presentation_policy import (
     CREATE_TIME_PRESENTATION_POLICY_VERSION,
@@ -267,7 +270,14 @@ def _resume_input(
         reviewer_id=REVIEWER_UNSET,
         feedback=command.feedback or None,
         db=session,
+        structured_feedback=_structured_feedback(command),
     )
+
+
+def _structured_feedback(command: ResumeCommand) -> dict[str, object] | None:
+    if not command.target_phase:
+        return None
+    return {STRUCTURED_FEEDBACK_TARGET_PHASE_KEY: command.target_phase}
 
 
 def _images(raw: object) -> tuple[ImageFact, ...]:

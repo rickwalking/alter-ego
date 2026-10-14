@@ -32,6 +32,10 @@ from rag_backend.modules.autopilot.notify_constants import (
     TELEGRAM_PHOTO_MIME,
     TELEGRAM_RETRY_AFTER_DEFAULT,
 )
+from rag_backend.modules.autopilot.webhook_constants import (
+    FIELD_FORCE_REPLY,
+    FIELD_SELECTIVE,
+)
 
 _File = tuple[str, bytes, str]
 
@@ -118,6 +122,24 @@ def retry_after_seconds(response: httpx.Response) -> float:
     if isinstance(value, bool) or not isinstance(value, int | float):
         return TELEGRAM_RETRY_AFTER_DEFAULT
     return float(value)
+
+
+def inline_markup(keyboard: InlineKeyboard) -> dict[str, object]:
+    """``reply_markup`` for an inline keyboard."""
+    rows: list[list[dict[str, str]]] = [
+        [_button(button) for button in row] for row in keyboard.rows
+    ]
+    return {FIELD_INLINE_KEYBOARD: rows}
+
+
+def empty_markup() -> dict[str, object]:
+    """``reply_markup`` that removes an inline keyboard."""
+    return {FIELD_INLINE_KEYBOARD: []}
+
+
+def force_reply_markup() -> dict[str, object]:
+    """``reply_markup`` that asks the owner to reply to this message."""
+    return {FIELD_FORCE_REPLY: True, FIELD_SELECTIVE: True}
 
 
 def _button(button: InlineButton) -> dict[str, str]:

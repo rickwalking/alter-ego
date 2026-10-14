@@ -8,7 +8,7 @@ relocated from ``rag_backend.api.app`` in AE-0080 with zero behavior change;
 
 import asyncio
 from collections.abc import AsyncIterator, Callable
-from contextlib import AsyncExitStack, asynccontextmanager
+from contextlib import AsyncExitStack
 from datetime import datetime
 
 from fastapi import FastAPI
@@ -99,11 +99,14 @@ from rag_backend.modules.autopilot import (
     prepare_instagram_credentials,
 )
 from rag_backend.modules.autopilot.api.router import router as autopilot_router
+from rag_backend.modules.autopilot.api.telegram_webhook import (
+    router as telegram_webhook_router,
+)
+from rag_backend.modules.autopilot.webhook_constants import APP_STATE_ENGINE
 
 logger = get_logger()
 
 
-@asynccontextmanager
 def _autopilot_engine_factory(
     checkpointer: object | None,
 ) -> Callable[[], EditorialWorkflowService]:
@@ -176,6 +179,8 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     # sqlite (dev), postgres (prod), memory (ephemeral), disabled (no resume).
     async with AsyncExitStack() as stack:
         app.state.carousel_checkpointer = await build_checkpointer(settings, stack)
+        engine_factory = _autopilot_engine_factory(app.state.carousel_checkpointer)
+        setattr(app.state, APP_STATE_ENGINE, engine_factory)
         worker_stop = asyncio.Event()
         worker_task = asyncio.create_task(
             run_workflow_workers(
@@ -196,9 +201,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
                     autopilot_runner=build_autopilot_runner_tick(
                         AutopilotTickConfig(
                             owner_user_id=settings.autopilot_owner_user_id,
-                            engine_factory=_autopilot_engine_factory(
-                                app.state.carousel_checkpointer
-                            ),
+                            engine_factory=engine_factory,
                             stale_after_seconds=(
                                 settings.workflow_run_heartbeat_stale_seconds
                             ),
@@ -330,6 +333,7 @@ def _register_routes(app: FastAPI) -> None:
     app.include_router(workflow_board.router, prefix="/api")
     app.include_router(chat_stream.router, prefix="/api")
     app.include_router(autopilot_router, prefix="/api")
+    app.include_router(telegram_webhook_router, prefix="/api")
 
 
 def create_app() -> FastAPI:

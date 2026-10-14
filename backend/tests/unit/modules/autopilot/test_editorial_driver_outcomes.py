@@ -113,6 +113,40 @@ async def test_version_conflict_does_not_resume_again(
     session.rollback.assert_not_awaited()
 
 
+class _Capture:
+    def __init__(self) -> None:
+        self.payload: object = None
+
+    async def bump_resume_lock_version(self, project_id: str, version: int) -> None:
+        del project_id, version
+
+    async def record_review_decision(self, payload: object) -> None:
+        self.payload = payload
+
+
+@pytest.mark.asyncio
+async def test_target_phase_is_structured_feedback(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Rework feedback names the phase the editorial revise should reopen."""
+    session = AsyncMock()
+    capture = _Capture()
+    monkeypatch.setattr(editorial_driver, "_service", lambda *_args: capture)
+    await _driver(session).resume(
+        ResumeCommand(
+            project_id=_PROJECT,
+            action="revise",
+            expected_version=4,
+            feedback="darker palette",
+            phase="final_review",
+            target_phase="images",
+        )
+    )
+    payload = capture.payload
+    assert payload is not None
+    assert payload.structured_feedback == {"target_phase": "images"}
+
+
 @pytest.mark.asyncio
 async def test_revision_cap_and_resume_outage(monkeypatch: pytest.MonkeyPatch) -> None:
     session = AsyncMock()

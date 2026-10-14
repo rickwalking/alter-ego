@@ -125,6 +125,7 @@ class ResumeCommand:
     expected_version: int
     feedback: str
     phase: str
+    target_phase: str = ""
 
 
 @dataclass(frozen=True, kw_only=True)

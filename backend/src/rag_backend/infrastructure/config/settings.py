@@ -161,6 +161,8 @@ class Settings(BaseSettings):
     # The runner then escalates final review with notifier_unconfigured.
     telegram_bot_token: SecretStr = SecretStr("")
     telegram_owner_chat_id: str = ""
+    # AE-0356: empty rejects POST /api/telegram/webhook with HTTP 401.
+    telegram_webhook_secret: SecretStr = SecretStr("")
 
     # AE-0354: the worker calls the in-process runner only when this is true.
     autopilot_enabled: bool = Field(
