@@ -20,7 +20,11 @@ The facade exposes:
   interrupt types, caps) — re-exported from the canonical
   ``rag_backend.domain.constants.carousel_workflow`` (no new strings);
 * ``EditorialAdapters`` / ``EditorialModule`` / ``bootstrap_module`` — the
-  composition root (manual constructor injection).
+  composition root (manual constructor injection);
+* ``CarouselAutomationAcl`` and the ``build_start_input`` /
+  ``build_resume_input`` / ``content_approve_blocker`` / ``is_provider_outage``
+  helpers — the in-process automation seam the autopilot module drives the
+  workflow through (AE-0348 QA r1), so it imports no legacy carousel code.
 
 Consumers SHALL NOT import internals such as
 ``rag_backend.modules.editorial.application.service`` or
@@ -99,6 +103,19 @@ from rag_backend.modules.editorial.domain.status import (
     REVIEW_ACTIONS,
     WORKFLOW_STATUS_APPROVED_FOR_PUBLISH,
 )
+from rag_backend.modules.editorial.infrastructure.carousel_automation import (
+    AutomationResume,
+    AutomationStart,
+    CarouselAutomationAcl,
+    CarouselReviewRow,
+    EditorialWorkflowEngine,
+    RunHeartbeat,
+    build_resume_input,
+    build_start_input,
+    content_approve_blocker,
+    is_provider_outage,
+    slides_in_config,
+)
 from rag_backend.modules.editorial.infrastructure.carousel_project_lock import (
     carousel_project_lock,
     carousel_project_lock_key,
@@ -168,9 +185,13 @@ __all__ = [
     "AclReviewerAssignmentAdapter",
     "ApprovalPort",
     "ApprovalState",
+    "AutomationResume",
+    "AutomationStart",
+    "CarouselAutomationAcl",
     "CarouselProject",
     "CarouselProjectWriteOwner",
     "CarouselRepository",
+    "CarouselReviewRow",
     "CarouselSlide",
     "CarouselStatus",
     "CarouselTheme",
@@ -181,6 +202,7 @@ __all__ = [
     "EditorialProjectView",
     "EditorialService",
     "EditorialWorkflow",
+    "EditorialWorkflowEngine",
     "EditorialWorkflowHandlers",
     "EngineReviewDecisionAdapter",
     "EngineSourceMaterialAdapter",
@@ -193,17 +215,23 @@ __all__ = [
     "ReviewDecisionPort",
     "ReviewWorkflowEngine",
     "ReviewerAssignmentPort",
+    "RunHeartbeat",
     "SourceMaterialPort",
     "SourceSynthesisEngine",
     "StartWorkflowCommand",
     "WorkflowEngine",
     "WorkflowStateView",
     "bootstrap_module",
+    "build_resume_input",
+    "build_start_input",
     "carousel_project_lock",
     "carousel_project_lock_key",
+    "content_approve_blocker",
     "is_carousel_project_lock_held",
     "is_carousel_project_lock_held_session",
+    "is_provider_outage",
     "read_run_fence",
+    "slides_in_config",
     "write_run_heartbeat",
     "write_run_heartbeat_once",
     "write_run_heartbeat_with_retry",
