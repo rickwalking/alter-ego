@@ -79,25 +79,27 @@ def _source(item: Mapping[str, object]) -> ResearchSourceFact:
 
 
 def _persona_score(raw: object) -> float | None:
+    """The lowest persona score, or None when the run was not scored (AE-0364).
+
+    None means "not scored" (no persona), which the policy skips like the
+    engine does. An entry that is present but unreadable counts as 0, so the
+    gate fails closed instead of approving into an engine error.
+    """
     if not isinstance(raw, dict) or not raw:
         return None
-    scores = [_one_score(value) for value in raw.values()]
-    present = [score for score in scores if score is not None]
-    if not present:
-        return None
-    return min(present)
+    return min(_one_score(value) for value in raw.values())
 
 
-def _one_score(value: object) -> float | None:
+def _one_score(value: object) -> float:
     if isinstance(value, dict):
         # The engine reads a missing ``overall`` as 0 (QA r1 B1); so do we.
-        return _float_or_none(value.get(FIELD_OVERALL, 0))
-    return _float_or_none(value)
+        return _float_or_zero(value.get(FIELD_OVERALL, 0))
+    return _float_or_zero(value)
 
 
-def _float_or_none(value: object) -> float | None:
+def _float_or_zero(value: object) -> float:
     if isinstance(value, bool) or not isinstance(value, int | float):
-        return None
+        return 0.0
     return float(value)
 
 
