@@ -93,7 +93,8 @@ calls) still applies. A daily cap bounds it.
                                        or ESCALATE engine_parked_no_run_in_flight
    final_review awaiting_human → state=awaiting_owner → Telegram:
        sendMediaGroup(slides 1-10, PT) + caption preview + score summary
-       sendMessage(inline keyboard: ✅ Approve · ✏️ Rework · 🗑 Reject)
+       sendMessage(caption preview + up to 5 quality-issue lines,
+                   inline keyboard: ✅ Approve · ✏️ Rework · 🗑 Reject [· 🛠 Fix issues])
 [Pedro taps]
    Approve → resume approve(final_review) → approved_for_publish
            → release (is_public=true) → InstagramPublishJob(queued)
@@ -102,6 +103,14 @@ calls) still applies. A daily cap bounds it.
            → worker runner: resume revise(structured_feedback.target_phase, feedback)
            → runner re-drives gates → back to Telegram (revision cap 5/phase, existing)
    Reject  → state=rejected (no publish, project stays private)
+   Fix issues (AE-0367; shown only when something is fixable)
+           → webhook: clean carousel → "Nothing to fix"; else CAS → reworking
+             (reason owner_autofix), queue the fix, old keyboard → "Superseded by fixed version"
+           → worker runner: deterministic repair of the slide rows + checkpoint copy
+             (sentence case, proper nouns from the carousel vocabulary, features/summary
+             points from the outline, <strong> balancing), one bounded LLM re-translate
+             of untranslated EN fields only, lock-version CAS, republish (hero images kept)
+           → final-review stop → awaiting_owner + fresh review (remaining issues listed)
 [publish job] check content_publishing_limit → create item containers → CAROUSEL container
    → poll status → media_publish → persist ig_post_id + permalink → Telegram "✅ posted <link>"
    any error → retry w/ backoff (3×) → Telegram "❌ publish failed: <reason>" + [Retry] button
