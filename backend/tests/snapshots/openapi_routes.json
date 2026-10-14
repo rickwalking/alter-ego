@@ -71,6 +71,7 @@
   "POST /api/auth/change-password",
   "POST /api/auth/logout",
   "POST /api/auth/token",
+  "POST /api/autopilot/topics",
   "POST /api/blog-posts",
   "POST /api/blog-posts/{post_id}/ai-improve",
   "POST /api/blog-posts/{post_id}/ai-suggest",
