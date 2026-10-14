@@ -409,6 +409,7 @@ class TestPublishBranches:
         assert repo.runs[run.run_id].state_reason == REASON_QUOTA_EXHAUSTED
 
     async def test_missing_token_fails_immediately(self) -> None:
+        """Scenario: No token is configured (tests/features/autopilot_ig_token.feature)."""
         repo, gateway = _Repo(), _Gateway()
         gateway.token = ""
         run = _store(repo, _run())

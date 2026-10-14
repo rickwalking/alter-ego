@@ -9,8 +9,8 @@ Carousel publish is four steps against the configured Graph host:
 
 ``META_IG_GRAPH_BASE`` selects the host. The default is Instagram Login
 (``graph.instagram.com``). Page tokens can select ``graph.facebook.com``.
-The access token comes from an ``InstagramTokenProvider`` so a later ticket
-can replace the static setting without changing this class.
+The access token comes from an ``InstagramTokenProvider``. AE-0358's
+encrypted store is the production provider.
 """
 
 from __future__ import annotations

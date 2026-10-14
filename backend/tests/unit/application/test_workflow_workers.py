@@ -285,3 +285,37 @@ async def test_run_tick_notifies_after_autopilot() -> None:
     )
     assert log == ["instagram", "autopilot", "telegram"]
     assert counters["telegram_notices"] == 2
+
+
+class _RecordingCredentials:
+    def __init__(self, log: list[str]) -> None:
+        self._log = log
+
+    async def tick(self, _db: object) -> int:
+        self._log.append("credentials")
+        return 1
+
+
+@pytest.mark.asyncio
+async def test_run_tick_refreshes_credentials_before_instagram() -> None:
+    """Feature: tests/features/autopilot_ig_token.feature
+    Scenario: Token refreshed before expiry
+    """
+    from typing import cast
+
+    log: list[str] = []
+    collaborators = workflow_workers._TickCollaborators(
+        notifications=cast(object, _NoopNotifications()),
+        alerts=cast(object, _NoopAlerts()),
+        auto_rejector=cast(object, _NoopAutoRejector()),
+        stale_run_reaper=None,
+        drift_reconciler=None,
+        republish_sweeper=None,
+        credential_refresh=cast(object, _RecordingCredentials(log)),
+        instagram_publish=cast(object, _RecordingPublish(log)),
+    )
+    counters = await workflow_workers._run_tick(
+        _settings(), cast(object, None), collaborators
+    )
+    assert log == ["credentials", "instagram"]
+    assert counters["credential_refresh"] == 1

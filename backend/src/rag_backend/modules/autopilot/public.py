@@ -26,6 +26,15 @@ from rag_backend.modules.autopilot.bootstrap import (
     manual_instagram_publish,
     notifier_is_configured,
 )
+from rag_backend.modules.autopilot.bootstrap_credentials import (
+    CredentialRefreshTickAdapter,
+    CredentialTickConfig,
+    build_credential_refresh_tick,
+    build_stored_instagram_token_provider,
+    credential_tick_config,
+    encryption_key_usable,
+    prepare_instagram_credentials,
+)
 from rag_backend.modules.autopilot.domain.exceptions import InvalidAutopilotTransition
 from rag_backend.modules.autopilot.domain.models import (
     AutopilotRunState,
@@ -40,6 +49,8 @@ __all__ = [
     "AutopilotRunnerTickAdapter",
     "AutopilotService",
     "AutopilotTickConfig",
+    "CredentialRefreshTickAdapter",
+    "CredentialTickConfig",
     "InstagramPublishTickAdapter",
     "InstagramStatusView",
     "InstagramTickConfig",
@@ -51,10 +62,15 @@ __all__ = [
     "TransitionCommand",
     "bootstrap_module",
     "build_autopilot_runner_tick",
+    "build_credential_refresh_tick",
     "build_instagram_publish_tick",
+    "build_stored_instagram_token_provider",
     "build_telegram_notify_tick",
+    "credential_tick_config",
+    "encryption_key_usable",
     "manual_instagram_publish",
     "notifier_is_configured",
+    "prepare_instagram_credentials",
     "register_persistence_models",
 ]
 

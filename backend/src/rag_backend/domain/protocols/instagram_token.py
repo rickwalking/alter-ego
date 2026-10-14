@@ -1,7 +1,6 @@
 """Token source for the Instagram Graph publisher.
 
-AE-0358 replaces the settings-backed adapter with the encrypted credential
-store. Both call ``get``.
+The encrypted credential store and test doubles both implement ``get``.
 """
 
 from __future__ import annotations

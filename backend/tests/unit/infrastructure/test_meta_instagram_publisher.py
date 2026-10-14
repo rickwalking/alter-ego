@@ -238,8 +238,15 @@ class TestInstagramLoginHost:
             Settings.model_fields["meta_ig_graph_base"].default == GRAPH_HOST_INSTAGRAM
         )
 
-    async def test_factory_reads_the_configured_host(self) -> None:
+    async def test_factory_reads_the_configured_host(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         import respx
+
+        monkeypatch.setattr(
+            "rag_backend.infrastructure.external.instagram_publisher_factory.token_provider_for",
+            lambda _settings: StaticInstagramTokenProvider("page-token"),
+        )
 
         seen: list[str] = []
 

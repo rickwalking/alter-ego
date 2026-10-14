@@ -128,6 +128,15 @@ class Settings(BaseSettings):
     # Instagram Login tokens (IGAA…) only work against graph.instagram.com.
     # Page tokens set this to https://graph.facebook.com/v23.0.
     meta_ig_graph_base: str = GRAPH_HOST_INSTAGRAM
+    # AE-0358: Fernet key for integration_credentials. Empty disables
+    # autopilot Instagram publishing and logs a startup warning.
+    credentials_encryption_key: SecretStr = Field(
+        default=SecretStr(""),
+        validation_alias=AliasChoices(
+            "CREDENTIALS_ENCRYPTION_KEY",
+            "credentials_encryption_key",
+        ),
+    )
 
     # AE-0351: sha256 hex digest of the scout API key. Empty disables
     # /api/autopilot/* (HTTP 503). The plaintext key is never stored.

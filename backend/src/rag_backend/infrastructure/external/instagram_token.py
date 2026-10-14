@@ -1,4 +1,4 @@
-"""Settings-backed Instagram token until AE-0358 stores it encrypted."""
+"""Settings-backed Instagram token for tests that already hold a token."""
 
 from __future__ import annotations
 

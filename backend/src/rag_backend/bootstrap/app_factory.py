@@ -86,12 +86,17 @@ from rag_backend.infrastructure.telemetry.opentelemetry import (
 # infrastructure depend on the API layer.
 from rag_backend.modules.autopilot import (
     AutopilotTickConfig,
+    CredentialRefreshTickAdapter,
+    InstagramPublishTickAdapter,
     InstagramTickConfig,
     TelegramTickConfig,
     build_autopilot_runner_tick,
+    build_credential_refresh_tick,
     build_instagram_publish_tick,
     build_telegram_notify_tick,
+    credential_tick_config,
     notifier_is_configured,
+    prepare_instagram_credentials,
 )
 from rag_backend.modules.autopilot.api.router import router as autopilot_router
 
@@ -161,6 +166,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         pool_size=settings.db_pool_size,
         max_overflow=settings.db_max_overflow,
     )
+    await prepare_instagram_credentials(settings)
 
     container.wire(packages=["rag_backend.api"])
 
@@ -185,12 +191,8 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
                         app.state.carousel_checkpointer,
                     ),
                     republish_sweeper=build_republish_sweeper(settings),
-                    instagram_publish=build_instagram_publish_tick(
-                        InstagramTickConfig(
-                            publisher=container.instagram_publisher(),
-                            public_base_url=settings.carousel_public_base_url,
-                        )
-                    ),
+                    instagram_publish=_instagram_publish(settings),
+                    credential_refresh=_credential_refresh(settings),
                     autopilot_runner=build_autopilot_runner_tick(
                         AutopilotTickConfig(
                             owner_user_id=settings.autopilot_owner_user_id,
@@ -381,3 +383,21 @@ def create_app() -> FastAPI:
     instrument_fastapi(app)
 
     return app
+
+
+def _instagram_publish(settings: Settings) -> InstagramPublishTickAdapter | None:
+    if credential_tick_config(settings) is None:
+        return None
+    return build_instagram_publish_tick(
+        InstagramTickConfig(
+            publisher=container.instagram_publisher(),
+            public_base_url=settings.carousel_public_base_url,
+        )
+    )
+
+
+def _credential_refresh(settings: Settings) -> CredentialRefreshTickAdapter | None:
+    config = credential_tick_config(settings)
+    if config is None:
+        return None
+    return build_credential_refresh_tick(config)

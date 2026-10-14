@@ -61,6 +61,14 @@ class TelegramNotifyTick(Protocol):
         ...
 
 
+class CredentialRefreshTick(Protocol):
+    """Daily Instagram token refresh (AE-0358)."""
+
+    async def tick(self, db: AsyncSession) -> int:
+        """Refresh when due. Returns 1 when a new token was stored."""
+        ...
+
+
 @dataclass(frozen=True)
 class WorkflowWorkerServices:
     """Composition-root-injected collaborators for the worker tick (AE-0315).
@@ -77,6 +85,7 @@ class WorkflowWorkerServices:
     instagram_publish: InstagramPublishTick | None = None
     autopilot_runner: AutopilotRunnerTick | None = None
     telegram_notify: TelegramNotifyTick | None = None
+    credential_refresh: CredentialRefreshTick | None = None
 
 
 @dataclass(frozen=True)
@@ -92,6 +101,7 @@ class _TickCollaborators:
     instagram_publish: InstagramPublishTick | None = None
     autopilot_runner: AutopilotRunnerTick | None = None
     telegram_notify: TelegramNotifyTick | None = None
+    credential_refresh: CredentialRefreshTick | None = None
 
 
 async def _run_tick(
@@ -130,6 +140,7 @@ async def _run_tick(
         auto_rejected = await services.auto_rejector.auto_reject_stuck(
             db, settings.workflow_stuck_timeout_hours
         )
+    credential_refresh = await _credential_step(services, db)
     instagram_runs = 0
     if services.instagram_publish is not None:
         instagram_runs = await services.instagram_publish.tick(db)
@@ -146,10 +157,23 @@ async def _run_tick(
         "reminders": reminders,
         "alerts": alerts,
         "auto_rejected": auto_rejected,
+        "credential_refresh": credential_refresh,
         "instagram_runs": instagram_runs,
         "autopilot_runs": autopilot_runs,
         "telegram_notices": telegram_notices,
     }
+
+
+async def _credential_step(services: _TickCollaborators, db: AsyncSession) -> int:
+    """Daily Instagram token refresh. Absent when the Fernet key is unusable.
+
+    Runs before publish. ``get()`` opens its own session, so this tick's
+    publish still sees the previous token; the next tick sees the new one.
+    """
+    refresher = services.credential_refresh
+    if refresher is None:
+        return 0
+    return await refresher.tick(db)
 
 
 async def run_workflow_workers(
@@ -175,6 +199,7 @@ async def run_workflow_workers(
         instagram_publish=services.instagram_publish,
         autopilot_runner=services.autopilot_runner,
         telegram_notify=services.telegram_notify,
+        credential_refresh=services.credential_refresh,
     )
     interval = settings.workflow_worker_interval_seconds
 

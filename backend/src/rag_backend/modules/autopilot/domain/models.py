@@ -94,7 +94,7 @@ class AutopilotRun:
 
 @dataclass(frozen=True, kw_only=True)
 class IntegrationCredential:
-    """An encrypted provider token (ciphertext only; this ticket does not encrypt)."""
+    """Ciphertext stored for one provider. Callers decrypt at the edge."""
 
     provider: str
     encrypted_token: str
