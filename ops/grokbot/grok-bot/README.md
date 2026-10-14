@@ -6,14 +6,16 @@ The bot holds only the scoped autopilot key. That key cannot publish and cannot 
 
 ## Versioning
 
-`v1/` is immutable. Never edit files under `v1/`. Copy the directory to `v2/` and change the copy.
+`v2/` is the current routine pack (AE-0361). It adds the carousel rules: audience and niche in 1 to 3 words, a brief that names the title's theme, an `image_style` picked from a decision table (`neo_anime` by default), and `image_guidance` with a theme-specific background.
+
+`v1/` is **superseded** and must not be run. From AE-0361 on, v2 is required: the v1 example brief does not name its title's theme, so the backend rejects it with `brief_off_theme`. The owner must paste `v2/routine.md`. `v1/` is immutable and kept for history. Never edit files under `v1/` or `v2/`. To change the routine, copy the latest directory to the next version (`v3/`) and change the copy.
 
 ## Owner setup
 
 1. Create a Bot named "GrokBot Scout" in the Grok Bot app.
 2. Log in to x.com in the Bot browser via takeover.
 3. Create `/workspace/grokbot/config` through the Bot command line. Type `ALTER_EGO_URL` and `GROKBOT_API_KEY` via takeover so the key never enters the chat transcript. The file is shell assignments, for example `ALTER_EGO_URL=https://your-host` and `GROKBOT_API_KEY=` followed by the scoped key.
-4. Paste `v1/routine.md` and ask the Bot to create the routine "every day at 08:00 America/Sao_Paulo".
+4. Paste `v2/routine.md` and ask the Bot to create the routine "every day at 08:00 America/Sao_Paulo".
 5. Do one test run. The chat should show the `/api/autopilot/topics` response and must not show the API key.
 
 ## What the bot may call
@@ -24,6 +26,10 @@ The bot holds only the scoped autopilot key. That key cannot publish and cannot 
 - `POST /api/autopilot/scout-failed`
 
 `x-signals` returns `accepted` as the canonical `https://x.com/.../status/...` URLs that topic intake will allow for the next 6 hours. A profile URL or a status older than 48 hours is listed under `rejected` and is not stored. The rest of the batch is still accepted.
+
+## Carousel defaults
+
+The backend creates every GrokBot carousel with the OpenAI image model and the `auto` palette theme. The bot picks only the image style and writes the image guidance. A topic that breaks a carousel rule is listed under `rejected` with `image_style_unsupported`, `audience_not_simple`, `niche_not_simple`, `brief_not_simple` (brief over 600 characters) or `brief_off_theme`; the rest of the batch is still accepted. Only a malformed field (for example an `image_style` over 40 characters or a brief over 800) rejects the whole batch with 422. See `docs/architecture/grokbot-autopilot.md` §5.3.
 
 ## Known issue
 

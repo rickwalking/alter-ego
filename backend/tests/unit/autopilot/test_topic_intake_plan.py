@@ -37,6 +37,14 @@ _URL_A = "https://news.ycombinator.com/item?id=1"
 _URL_B = "https://huggingface.co/papers/1"
 _FOREIGN = "https://evil.example/invented"
 _BRIEF = "A plain brief about agents."
+_BRIEF_TEMPLATE = "A plain brief about {title}."
+
+
+def _brief_for(title: str, brief: str | None) -> str:
+    """AE-0361: the default brief names the title, so it stays on theme."""
+    if brief is not None:
+        return brief
+    return _BRIEF_TEMPLATE.format(title=title)
 
 
 def _input(
@@ -44,7 +52,7 @@ def _input(
     url: str,
     score: int,
     *,
-    brief: str = _BRIEF,
+    brief: str | None = None,
 ) -> ProposalInput:
     return ProposalInput(
         title=title,
@@ -52,7 +60,7 @@ def _input(
         why_viral="three launches in one week",
         audience="builders",
         niche="ai",
-        brief=brief,
+        brief=_brief_for(title, brief),
         sources=(url,),
         score=score,
     )

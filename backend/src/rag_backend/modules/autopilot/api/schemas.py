@@ -12,6 +12,10 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from rag_backend.modules.autopilot.carousel_constants import (
+    IMAGE_GUIDANCE_MAX_CHARS,
+    IMAGE_STYLE_INPUT_MAX_CHARS,
+)
 from rag_backend.modules.autopilot.constants import (
     ANGLE_MAX_CHARS,
     AUDIENCE_MAX_CHARS,
@@ -35,6 +39,7 @@ from rag_backend.modules.autopilot.constants import (
     X_SIGNAL_BATCH_MAX,
     X_SIGNAL_BATCH_MIN,
 )
+from rag_backend.modules.autopilot.domain.carousel_defaults import DEFAULT_IMAGE_STYLE
 from rag_backend.modules.autopilot.domain.topic_text import is_http_url, strip_controls
 
 
@@ -53,6 +58,18 @@ class TopicProposal(BaseModel):
         min_length=SOURCE_URL_MIN, max_length=SOURCE_URL_MAX
     )
     score: int = Field(ge=SCORE_MIN, le=SCORE_MAX)
+    # AE-0361: a plain short string here; the domain rejects an unsupported
+    # preset for that topic only (``image_style_unsupported``), not the batch.
+    image_style: str = Field(
+        default=DEFAULT_IMAGE_STYLE,
+        min_length=TEXT_MIN_CHARS,
+        max_length=IMAGE_STYLE_INPUT_MAX_CHARS,
+    )
+    image_guidance: str | None = Field(
+        default=None,
+        min_length=TEXT_MIN_CHARS,
+        max_length=IMAGE_GUIDANCE_MAX_CHARS,
+    )
 
     @field_validator("sources")
     @classmethod

@@ -162,6 +162,8 @@ def _candidate(item: NewCandidate) -> TopicCandidate:
         score=proposal.score,
         signal_hash=proposal.signal_hash,
         status=STATUS_CANDIDATE_ACCEPTED,
+        image_style=proposal.image_style,
+        image_guidance=proposal.image_guidance,
     )
 
 

@@ -13,6 +13,7 @@ from datetime import datetime
 from enum import StrEnum
 from uuid import UUID
 
+from rag_backend.modules.autopilot.domain.carousel_defaults import DEFAULT_IMAGE_STYLE
 from rag_backend.modules.autopilot.domain.notice_log import NoticeLog
 
 
@@ -69,6 +70,9 @@ class TopicCandidate:
     score: int
     signal_hash: str
     status: str
+    # AE-0361: the scout's image preset and optional visual direction.
+    image_style: str = DEFAULT_IMAGE_STYLE
+    image_guidance: str | None = None
 
 
 @dataclass(frozen=True, kw_only=True)

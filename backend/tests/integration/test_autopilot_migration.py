@@ -1,4 +1,4 @@
-"""Alembic revisions for the autopilot tables (AE-0350, AE-0357).
+"""Alembic revisions for the autopilot tables (AE-0350, AE-0357, AE-0361).
 
 Proves the latest revision is the single head and that upgrade/downgrade apply
 on a database stamped at the pre-autopilot head. The full chain from base is
@@ -15,8 +15,8 @@ from pathlib import Path
 import pytest
 
 _PREVIOUS_HEAD = "c9d0e1f2a3b4"
-_PARENT_HEAD = "c8d9e0f1a2b3"
-_THIS_HEAD = "d1e2f3a4b5c6"
+_PARENT_HEAD = "d1e2f3a4b5c6"
+_THIS_HEAD = "e7f8a9b0c1d2"
 _BACKEND_ROOT = Path(__file__).resolve().parents[2]
 _TABLES = (
     "autopilot_runs",
@@ -107,6 +107,8 @@ def test_upgrade_and_downgrade_on_a_stamped_database(
         assert name in present
     topic_columns = _columns(db_path, "topic_candidates")
     assert "why_viral" in topic_columns
+    # AE-0361: image preset and guidance.
+    assert {"image_style", "image_guidance"} <= topic_columns
     assert "signal_hash" in topic_columns
     run_columns = _columns(db_path, "autopilot_runs")
     assert "carousel_project_id" in run_columns

@@ -1,0 +1,16 @@
+{
+  "topics": [
+    {
+      "title": "Agents that read the timeline",
+      "angle": "What a logged-in browser sees that search snippets miss",
+      "why_viral": "Three model launches in one week are already spreading on X",
+      "audience": "developers",
+      "niche": "AI agents",
+      "brief": "Show how AI agents that read the X timeline find signals that search snippets miss. Cite only URLs from the signals bundle and the accepted X posts.",
+      "image_style": "neo_anime",
+      "image_guidance": "Futuristic anime in the style of Akira, Ghost in the Shell and Neon Genesis Evangelion. Background: a neon control room where an AI agent watches a wall of scrolling social feeds.",
+      "sources": ["https://x.com/openai/status/2010000000000000001"],
+      "score": 80
+    }
+  ]
+}

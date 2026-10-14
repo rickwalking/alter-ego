@@ -81,6 +81,10 @@ class CarouselReviewRow:
     topic: str
     caption: str
     output_dir: str | None
+    # AE-0361: the review line quotes who the carousel is for and its preset.
+    audience: str = ""
+    niche: str = ""
+    image_style: str = ""
 
 
 def build_start_input(start: AutomationStart) -> EditorialWorkflowStartInput:
@@ -196,6 +200,9 @@ class CarouselAutomationAcl:
             topic=_text(row.topic),
             caption=_text(row.caption),
             output_dir=cast(str | None, row.output_dir),
+            audience=_text(row.audience),
+            niche=_text(row.niche),
+            image_style=_text(row.image_style),
         )
 
     async def topics_since(self, since: datetime) -> tuple[str, ...]:

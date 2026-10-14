@@ -199,7 +199,7 @@ async def test_prompt_injection_brief_is_stored_as_text(
         response = await client.post(
             _PATH,
             headers=_headers(),
-            json={"topics": [_topic("Agents", _URL_A, 80, brief=_INJECTION)]},
+            json={"topics": [_topic("Carousel agents", _URL_A, 80, brief=_INJECTION)]},
         )
     assert response.status_code == 200
     assert len(response.json()["queued"]) == 1

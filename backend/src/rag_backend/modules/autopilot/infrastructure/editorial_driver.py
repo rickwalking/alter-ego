@@ -15,6 +15,7 @@ from typing import cast
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from rag_backend.domain.constants import IMAGE_MODEL_OPENAI
 from rag_backend.domain.constants.carousel_workflow import (
     ERR_REVISION_CAP_EXCEEDED,
     STRUCTURED_FEEDBACK_TARGET_PHASE_KEY,
@@ -64,6 +65,7 @@ from rag_backend.modules.editorial.public import (
     CarouselAutomationAcl,
     CarouselProject,
     CarouselProjectWriteOwner,
+    CarouselTheme,
     EditorialPorts,
     EditorialService,
     EditorialWorkflowEngine,
@@ -102,7 +104,11 @@ class InProcessEditorialDriver:
         self._acl = CarouselAutomationAcl(config.session)
 
     async def create_project(self, spec: ProjectSpec) -> str:
-        """Insert a private pt-BR carousel owned by the autopilot user."""
+        """Insert a private pt-BR carousel owned by the autopilot user.
+
+        AE-0361: OpenAI images, the auto palette, the scout's preset, and its
+        image guidance (or the template) as the project's visual direction.
+        """
         project = CarouselProject(
             topic=spec.topic,
             audience=spec.audience,
@@ -110,6 +116,10 @@ class InProcessEditorialDriver:
             slides_config=AUTOPILOT_SLIDES_CONFIG,
             language=LANGUAGE_PT_BR,
             generate_images=True,
+            image_model=IMAGE_MODEL_OPENAI,
+            image_style=spec.image_style,
+            theme=CarouselTheme.AUTO.value,
+            custom_visual_details=spec.image_guidance or None,
             owner_id=spec.owner_user_id or None,
             presentation_policy_version=CREATE_TIME_PRESENTATION_POLICY_VERSION,
         )
