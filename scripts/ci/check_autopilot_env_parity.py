@@ -6,6 +6,7 @@ both name every autopilot variable. ``AUTOPILOT_ENABLED`` must default to
 false so a deploy does not start the runner. ``CAROUSEL_PUBLIC_BASE_URL``
 must be the public site origin. ``AUTOPILOT_DAILY_CAP`` must have a numeric
 default so an unset secret does not crash settings parsing.
+``AUTOPILOT_DEFAULT_PUBLISH`` (AE-0370) must be named on both surfaces.
 
 Usage:
     python3 scripts/ci/check_autopilot_env_parity.py
@@ -38,6 +39,8 @@ VAR_CREDENTIALS_ENCRYPTION_KEY = "CREDENTIALS_ENCRYPTION_KEY"
 VAR_AUTOPILOT_ENABLED = "AUTOPILOT_ENABLED"
 VAR_AUTOPILOT_OWNER_USER_ID = "AUTOPILOT_OWNER_USER_ID"
 VAR_AUTOPILOT_DAILY_CAP = "AUTOPILOT_DAILY_CAP"
+# AE-0370: what Telegram Approve does; both surfaces default it to "now".
+VAR_AUTOPILOT_DEFAULT_PUBLISH = "AUTOPILOT_DEFAULT_PUBLISH"
 
 REQUIRED_ENV_NAMES: tuple[str, ...] = (
     VAR_META_IG_ACCESS_TOKEN,
@@ -51,11 +54,13 @@ REQUIRED_ENV_NAMES: tuple[str, ...] = (
     VAR_AUTOPILOT_ENABLED,
     VAR_AUTOPILOT_OWNER_USER_ID,
     VAR_AUTOPILOT_DAILY_CAP,
+    VAR_AUTOPILOT_DEFAULT_PUBLISH,
 )
 
 PUBLIC_SLIDE_BASE_URL = "https://marinssolutions.com"
 DISABLED_VALUE = "false"
 DEFAULT_DAILY_CAP = "1"
+DEFAULT_PUBLISH_MODE = "now"
 DEPLOY_SURFACE = "deploy.yml"
 COMPOSE_SURFACE = "docker-compose.prod.yml backend environment"
 
@@ -142,6 +147,8 @@ def sample_deploy_value(name: str) -> str:
         return "${{ secrets." + name + " || '" + DISABLED_VALUE + "' }}"
     if name == VAR_AUTOPILOT_DAILY_CAP:
         return "${{ secrets." + name + " || '" + DEFAULT_DAILY_CAP + "' }}"
+    if name == VAR_AUTOPILOT_DEFAULT_PUBLISH:
+        return "${{ secrets." + name + " || '" + DEFAULT_PUBLISH_MODE + "' }}"
     if name == VAR_CAROUSEL_PUBLIC_BASE_URL:
         return PUBLIC_SLIDE_BASE_URL
     return "${{ secrets." + name + " }}"
@@ -153,6 +160,8 @@ def sample_compose_value(name: str) -> str:
         return "${" + name + ":-" + DISABLED_VALUE + "}"
     if name == VAR_AUTOPILOT_DAILY_CAP:
         return "${" + name + ":-" + DEFAULT_DAILY_CAP + "}"
+    if name == VAR_AUTOPILOT_DEFAULT_PUBLISH:
+        return "${" + name + ":-" + DEFAULT_PUBLISH_MODE + "}"
     if name == VAR_CAROUSEL_PUBLIC_BASE_URL:
         return "${" + name + ":-" + PUBLIC_SLIDE_BASE_URL + "}"
     return "${" + name + ":-}"

@@ -66,6 +66,9 @@ from rag_backend.modules.autopilot.recovery_constants import (
     TABLE_MANUAL_PUBLISHES,
     TABLE_NOTIFY_CURSOR,
 )
+from rag_backend.modules.autopilot.schedule_constants import (
+    INDEX_RUNS_STATE_SCHEDULED_AT,
+)
 from rag_backend.modules.autopilot.story_constants import (
     FK_STORY_PROJECT,
     TABLE_INSTAGRAM_STORIES,
@@ -185,6 +188,10 @@ class AutopilotRunModel(AutopilotOrmBase):
     pov_thesis: Mapped[str | None] = mapped_column(
         String(THESIS_DRAFT_MAX_CHARS), nullable=True
     )
+    # AE-0370: the owner's publish time while the run is ``scheduled``.
+    scheduled_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
@@ -195,6 +202,7 @@ class AutopilotRunModel(AutopilotOrmBase):
     __table_args__ = (
         UniqueConstraint("carousel_project_id", name=UQ_RUNS_CAROUSEL_PROJECT),
         Index(INDEX_RUNS_STATE_UPDATED_AT, "state", "updated_at"),
+        Index(INDEX_RUNS_STATE_SCHEDULED_AT, "state", "scheduled_at"),
     )
 
 

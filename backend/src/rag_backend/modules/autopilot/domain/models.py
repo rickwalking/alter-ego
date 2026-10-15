@@ -26,6 +26,8 @@ class AutopilotRunState(StrEnum):
     REWORKING = "reworking"
     ESCALATED = "escalated"
     FAILED = "failed"
+    # AE-0370: approved, waiting for the owner's publish time.
+    SCHEDULED = "scheduled"
     PUBLISHING = "publishing"
     PUBLISHED = "published"
     PUBLISH_FAILED = "publish_failed"
@@ -51,6 +53,8 @@ class TransitionCommand:
     expected: AutopilotRunState
     new: AutopilotRunState
     reason: str
+    # AE-0370: the publish time stored when the run enters ``scheduled``.
+    scheduled_at: datetime | None = None
 
     def pair(self) -> TransitionPair:
         """The state pair the domain table judges, ignoring persistence."""
@@ -118,6 +122,9 @@ class AutopilotRun:
     escalated_version: int | None = None
     # AE-0377: the thesis the owner confirmed (POV runs only).
     pov_thesis: str | None = None
+    # AE-0370: when a ``scheduled`` run is due. Kept after the due tick so the
+    # published notice can say how late it went out.
+    scheduled_at: datetime | None = None
 
 
 @dataclass(frozen=True, kw_only=True)

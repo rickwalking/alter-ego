@@ -20,7 +20,7 @@ from tests.integration.test_autopilot_migration import (
 )
 
 _REVISION = "b0c1d2e3f4a5"
-_PARENT = "f8a9b0c1d2e3"
+_PARENT = "a9b0c1d2e3f4"
 _POV_THESIS = "b1c2d3e4f5a6"
 _HEAD = "c2d3e4f5a6b7"
 _PROJECT_COLUMNS = {
@@ -49,7 +49,7 @@ def _stamped_db(tmp_path: Path) -> Path:
 
 
 def test_revision_chains_on_the_story_revision() -> None:
-    """The content-mode revision follows AE-0369's; AE-0378's is the single head."""
+    """The content-mode revision follows AE-0370's; AE-0378's is the single head."""
     _command, cfg, script_cls = _alembic_config()
     script = script_cls.from_config(cfg)
     revision = script.get_revision(_REVISION)

@@ -1,7 +1,7 @@
 """carousel content mode and pov inputs; creator asset role and pose
 
 Revision ID: b0c1d2e3f4a5
-Revises: f8a9b0c1d2e3
+Revises: a9b0c1d2e3f4
 Create Date: 2026-10-15
 
 AE-0373 (ADR-0021): ADDITIVE. ``carousel_projects`` gains the content mode
@@ -22,7 +22,7 @@ import sqlalchemy as sa
 from alembic import op
 
 revision = "b0c1d2e3f4a5"
-down_revision = "f8a9b0c1d2e3"
+down_revision = "a9b0c1d2e3f4"
 branch_labels = None
 depends_on = None
 

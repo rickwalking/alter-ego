@@ -79,6 +79,7 @@ from rag_backend.modules.autopilot.recovery_constants import (
     REASON_REVIEW_REOPENED,
     REASON_REWORK_RETRY,
 )
+from rag_backend.modules.autopilot.schedule_constants import EXPIRED_TEXT_BY_REASON
 from rag_backend.modules.autopilot.webhook_constants import (
     BUTTON_PHASE_DESIGN,
     BUTTON_PHASE_IMAGES,
@@ -338,8 +339,7 @@ def _publish_held(copy: StatusCopy) -> str:
 
 
 def _expired(copy: StatusCopy) -> str:
-    del copy
-    return TEXT_EXPIRED
+    return EXPIRED_TEXT_BY_REASON.get(copy.reason, TEXT_EXPIRED)
 
 
 def _closed(copy: StatusCopy) -> str:

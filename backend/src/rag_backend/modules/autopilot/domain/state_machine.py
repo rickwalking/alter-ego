@@ -42,6 +42,12 @@ ALLOWED_TRANSITIONS: frozenset[tuple[AutopilotRunState, AutopilotRunState]] = (
         (_S.AWAITING_THESIS, _S.QUEUED),
         (_S.AWAITING_THESIS, _S.REJECTED),
         (_S.AWAITING_THESIS, _S.EXPIRED),
+        # AE-0370: the owner's publish time. Cancel reopens the review; a
+        # carousel no longer approved at the due time expires the run.
+        (_S.AWAITING_OWNER, _S.SCHEDULED),
+        (_S.SCHEDULED, _S.PUBLISHING),
+        (_S.SCHEDULED, _S.AWAITING_OWNER),
+        (_S.SCHEDULED, _S.EXPIRED),
     })
 )
 

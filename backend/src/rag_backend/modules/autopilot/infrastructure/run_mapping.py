@@ -35,6 +35,7 @@ def run_row(run: AutopilotRun) -> AutopilotRunModel:
         rework_feedback=run.rework_feedback,
         escalated_version=run.escalated_version,
         pov_thesis=run.pov_thesis,
+        scheduled_at=run.scheduled_at,
     )
 
 
@@ -60,6 +61,7 @@ def run_from_row(row: AutopilotRunModel) -> AutopilotRun:
         rework_feedback=row.rework_feedback,
         escalated_version=row.escalated_version,
         pov_thesis=row.pov_thesis,
+        scheduled_at=aware(row.scheduled_at),
     )
 
 

@@ -54,10 +54,14 @@ class ForceReplyPrompt:
 
 @dataclass(frozen=True, kw_only=True)
 class OwnerText:
-    """A plain message, used when the update was not a button."""
+    """A plain message, used when the update was not a button.
+
+    ``keyboard`` adds inline buttons, e.g. after a typed publish time (AE-0370).
+    """
 
     chat_id: str
     text: str
+    keyboard: InlineKeyboard | None = None
 
 
 class UpdateClaimStore(Protocol):

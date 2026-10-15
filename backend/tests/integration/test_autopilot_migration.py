@@ -1,4 +1,4 @@
-"""Alembic revisions for the autopilot tables (AE-0350, AE-0357, AE-0361, AE-0369).
+"""Alembic revisions for the autopilot tables (AE-0350, AE-0357, AE-0361, AE-0369, AE-0370).
 
 Proves the latest revision is the single head and that upgrade/downgrade apply
 on a database stamped at the pre-autopilot head. The full chain from base is
@@ -129,6 +129,8 @@ def test_upgrade_and_downgrade_on_a_stamped_database(
         "rework_phase",
         "rework_feedback",
         "escalated_version",
+        # AE-0370: the owner's publish time.
+        "scheduled_at",
     ):
         assert column in run_columns
     manual_columns = _columns(db_path, "instagram_manual_publishes")
@@ -158,7 +160,9 @@ def test_upgrade_and_downgrade_on_a_stamped_database(
         ).fetchall()
     finally:
         index_conn.close()
-    assert "idx_autopilot_runs_state_updated_at" in {row[0] for row in indexes}
+    index_names = {row[0] for row in indexes}
+    assert "idx_autopilot_runs_state_updated_at" in index_names
+    assert "idx_autopilot_runs_state_scheduled_at" in index_names
 
     _run_migration("downgrade", _PREVIOUS_HEAD)
 

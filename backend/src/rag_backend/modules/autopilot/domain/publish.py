@@ -157,6 +157,8 @@ class PostExtras:
     story_status: str
     story_error: str | None
     music_style: str
+    # AE-0370: minutes a scheduled run went out late, when over the threshold.
+    late_minutes: int | None = None
 
 
 @dataclass(frozen=True, kw_only=True)

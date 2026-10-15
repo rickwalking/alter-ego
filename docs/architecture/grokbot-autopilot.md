@@ -96,8 +96,11 @@ calls) still applies. A daily cap bounds it.
        sendMessage(caption preview + up to 5 quality-issue lines,
                    inline keyboard: ✅ Approve · ✏️ Rework · 🗑 Reject [· 🛠 Fix issues])
 [Pedro taps]
-   Approve → resume approve(final_review) → approved_for_publish
+   Approve → keyboard: 🚀 Publicar agora · 🗓 Agendar   (AE-0370, see §5.5)
+   Publicar agora → resume approve(final_review) → approved_for_publish
            → release (is_public=true) → InstagramPublishJob(queued)
+   Agendar → slot or typed time → approve(final_review), no release → state=scheduled
+           → due tick: release → InstagramPublishJob
    Rework  → keyboard: Text | Design | Images | Outline → ForceReply "what to change?"
            → webhook queues phase + feedback (state=reworking) and answers at once
            → worker runner: resume revise(structured_feedback.target_phase, feedback)
@@ -188,7 +191,8 @@ both callers take a compare-and-set publish claim first.
 | `queued` | `generating` / `awaiting_thesis` / `failed` | runner tick picks it up / the topic is POV and no thesis is confirmed yet (AE-0377) / workflow start failed 3× (provider 429/503) |
 | `awaiting_thesis` | `queued` / `rejected` / `expired` | owner confirms or edits the thesis / owner discards the topic / 72 h (AE-0377) |
 | `generating` | `awaiting_owner` / `escalated` / `failed` | gates auto-approved to final_review / check failed after retries / workflow failed |
-| `awaiting_owner` | `publishing` / `reworking` / `rejected` / `expired` | Approve / Rework / Reject / 72 h |
+| `awaiting_owner` | `publishing` / `scheduled` / `reworking` / `rejected` / `expired` | Publicar agora / Agendar (AE-0370) / Rework / Reject / 72 h |
+| `scheduled` | `publishing` / `awaiting_owner` / `expired` | `scheduled_at` is due, or Publicar agora / Cancelar agendamento / the carousel is no longer approved at the due time |
 | `reworking` | `awaiting_owner` / `escalated` | revise drove back to final_review / cap hit |
 | `escalated` | `awaiting_owner` / `rejected` | Pedro fixes it in the web UI / the carousel is rejected (web UI or stuck auto-reject), or 72 h pass with no fix |
 | `publishing` | `published` / `publish_failed` / `awaiting_owner` | IG success / 3 retries exhausted / the editorial approve refused the owner's Approve (review stays open) |
@@ -201,6 +205,7 @@ Columns:
 - `rework_phase`, `rework_feedback` (the owner's queued rework), `escalated_version`, `publish_claimed_at`, `wake_checked_at` (escalated wake-scan rotation)
 - `telegram_message_ids` (JSONB)
 - `ig_container_id`, `ig_post_id`, `ig_permalink`
+- `scheduled_at` (AE-0370: the owner's publish time; index `(state, scheduled_at)`)
 - `created_at`, `updated_at`
 
 Every transition is one conditional UPDATE, and it emits `content.autopilot.*` through the
@@ -404,7 +409,25 @@ The style comes from `music_style_for(niche, image_style)` (`story_constants.MUS
 
 **Migration.** Revision `f8a9b0c1d2e3` adds the `instagram_stories` table (additive). Prod deploys do not run Alembic, so it is applied by hand before the deploy.
 
-### 5.5 Ponto de Vista topics and the thesis gate (AE-0377, ADR-0021)
+### 5.5 Scheduled publishing from Telegram (AE-0370)
+
+Instagram's Graph API has no native scheduling (`media_publish` posts at once) and containers expire 24 h after creation. So the schedule is our own queue: the time is stored on the run, and the containers are created only when the run is due.
+
+**Approve.** The review keyboard's Approve now answers with `🚀 Publicar agora` (`ap:pubnow:<run>`) and `🗓 Agendar` (`ap:sched:<run>`). Publicar agora keeps the AE-0356 path. With `AUTOPILOT_DEFAULT_PUBLISH=next_slot` (default `now`), Approve schedules the next slot directly and says so.
+
+**Agendar.** The next three of the slots `12:00`, `18:00`, `21:00` (America/Sao_Paulo, `schedule_constants.SCHEDULE_SLOTS`), each at least 15 min ahead, rolling over to the next day (`ap:at:<unix seconds>:<run>`, 53 bytes), plus `✏️ Outro horário`. That one sends a ForceReply asking for `HH:MM` (today, else tomorrow) or `DD/MM HH:MM`. Past times and anything more than 30 days ahead are refused with a reply, and the prompt is asked again.
+
+**On a chosen time.** The run moves `awaiting_owner → scheduled` with `scheduled_at` (the compare-and-set makes a double tap act once), then final review is approved (`approved_for_publish`) but the carousel is not released. A refused approve returns the run to `awaiting_owner` with the review keyboard. The owner sees `🗓 Agendado para dd/mm HH:MM` with `🚀 Publicar agora` and `❌ Cancelar agendamento`.
+
+**Due tick.** Before the publish job, the worker's Instagram step runs `ScheduledPublishSweep`. Each run with `scheduled_at <= now` moves `scheduled → publishing` (reason `schedule_due`) and is released public. The publish job then posts it on the same tick (quota, containers, Story, notice). A run more than 10 min late (downtime, deploy) still publishes, and the notice line reads `✅ Publicado: <link> (publicado com atraso de N min)`. If the carousel is no longer `approved_for_publish` at its time (sent back or rejected), the run becomes `expired` (reason `schedule_withdrawn`) and nothing is published.
+
+**Cancel and publish now.** `❌ Cancelar agendamento` moves `scheduled → awaiting_owner`, clears `scheduled_at`, and shows the review keyboard again. `🚀 Publicar agora` on a scheduled run moves it to `publishing` and releases it at once. Final review is already approved, so it is not approved again (also after a cancel).
+
+**Safety.** Only the owner allowlist can tap. The 72 h review expiry scans `awaiting_owner` only, so a `scheduled` run is never expired before its time. Webhook replies are still sent only after the commit.
+
+**Migration.** Revision `a9b0c1d2e3f4` adds the nullable `autopilot_runs.scheduled_at` TIMESTAMPTZ and the index `idx_autopilot_runs_state_scheduled_at (state, scheduled_at)` (additive). Prod deploys do not run Alembic, so it is applied by hand before the deploy.
+
+### 5.6 Ponto de Vista topics and the thesis gate (AE-0377, ADR-0021)
 
 The routine pack is `ops/grokbot/grok-bot/v3/`. A v3 topic carries `mode`
 (`news_analysis` = Radar IA, the default when absent, so v2 stays valid, or `pov`) and, for
@@ -433,10 +456,9 @@ The run then starts a POV carousel: `content_mode=pov`, the confirmed thesis, th
 São Paulo) and `slot_policy_for(mode)`. It is not wired into the publish choice yet: that
 belongs to AE-0370's `publish_choice`.
 
-**Migration.** Revision `b1c2d3e4f5a6` (after `b0c1d2e3f4a5`) adds the nullable
+**Migration.** Revision `b1c2d3e4f5a6` (after `b0c1d2e3f4a5`, which follows AE-0370's `a9b0c1d2e3f4`) adds the nullable
 `topic_candidates.content_mode`, `topic_candidates.thesis_draft` and `autopilot_runs.pov_thesis`
 (additive).
-
 ## 6. Backend changes (gap → fix)
 
 | Gap found in the codebase | Fix |
