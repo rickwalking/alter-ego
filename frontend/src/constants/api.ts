@@ -96,6 +96,7 @@ export const API_ENDPOINTS = {
   BLOG_POST_AI_DISCLOSURE: (id: string) =>
     `/api/blog-posts/${id}/ai-disclosure`,
   EDITORIAL_ANALYTICS: "/api/editorial-analytics",
+  INSTAGRAM_INSIGHTS: "/api/instagram/insights",
 } as const;
 
 /** Route paths for navigation. */

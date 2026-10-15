@@ -54,3 +54,4 @@ export {
 
 /* --- analytics --- */
 export * from "./analytics/hooks/use-editorial-analytics";
+export * from "./analytics/hooks/use-instagram-insights";

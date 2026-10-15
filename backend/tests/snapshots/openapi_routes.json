@@ -49,6 +49,7 @@
   "GET /api/documents/{document_id}",
   "GET /api/documents/{document_id}/status",
   "GET /api/editorial-analytics",
+  "GET /api/instagram/insights",
   "GET /api/notifications",
   "GET /api/palettes",
   "GET /api/personas",

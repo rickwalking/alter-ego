@@ -186,3 +186,35 @@ def _require_http_url(value: str) -> str:
     if is_http_url(cleaned):
         return cleaned
     raise ValueError(SOURCE_URL_INVALID)
+
+
+# --- AE-0378: GET /api/instagram/insights (null metric = "n/d") ---
+
+
+class InstagramPostInsightsItem(BaseModel):
+    """One published post and its last metrics."""
+
+    media_id: str
+    carousel_project_id: str | None = None
+    permalink: str | None = None
+    topic: str | None = None
+    views: int | None = None
+    reach: int | None = None
+    saved: int | None = None
+    shares: int | None = None
+    follows: int | None = None
+    profile_visits: int | None = None
+    total_interactions: int | None = None
+    shares_per_100_views: float | None = None
+    fetched_at: datetime | None = None
+    stale: bool = Field(description="True when the metrics are older than 6 h.")
+
+
+class InstagramInsightsResponse(BaseModel):
+    """Rows (newest first) and the KPI ratios over the posts that report them."""
+
+    items: list[InstagramPostInsightsItem]
+    follows_total: int | None = None
+    follows_per_post: float | None = None
+    shares_per_100_views: float | None = None
+    configured: bool = Field(description="False when no Graph account is set.")

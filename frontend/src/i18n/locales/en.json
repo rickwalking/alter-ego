@@ -946,7 +946,29 @@
       "pendingReview": "Pending Review",
       "qualityScore": "Avg Quality Score",
       "velocityTitle": "Publish Velocity (8 weeks)",
-      "loadFailed": "Failed to load analytics"
+      "loadFailed": "Failed to load analytics",
+      "disabledTitle": "Editorial analytics is off",
+      "disabledBody": "The editorial analytics feature is disabled for this environment or your role. The rest of the dashboard still works."
+    },
+    "instagram": {
+      "title": "Instagram",
+      "subtitle": "Latest published posts: totals and the growth ratios",
+      "loadFailed": "Failed to load Instagram insights",
+      "empty": "No published posts yet.",
+      "notConfigured": "No Instagram account is configured; showing the last stored numbers.",
+      "notAvailable": "n/a",
+      "stale": "outdated",
+      "postLine": "{views} views · {shares} shares · {saves} saves · {follows} follows",
+      "kpi": {
+        "views": "Views",
+        "reach": "Reach",
+        "shares": "Shares",
+        "saved": "Saves",
+        "follows": "Follows",
+        "profile_visits": "Profile visits",
+        "followsPerPost": "Follows per post",
+        "sharesPer100Views": "Shares per 100 views"
+      }
     }
   },
   "admin": {

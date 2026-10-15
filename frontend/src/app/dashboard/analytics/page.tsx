@@ -21,7 +21,7 @@ import { useEditorialAnalytics } from "@/modules/editorial-operations";
 
 export default function AnalyticsPage(): React.ReactElement {
   const t = useTranslations("dashboard.analytics");
-  const { data, loading, error } = useEditorialAnalytics();
+  const { data, loading, error, disabled } = useEditorialAnalytics();
 
   if (loading) {
     return (
@@ -29,6 +29,23 @@ export default function AnalyticsPage(): React.ReactElement {
         <NeonTopBar title={t("title")} breadcrumb={[{ label: "analytics" }]} />
         <div className="flex justify-center py-20">
           <NeonSpinner size="lg" />
+        </div>
+      </div>
+    );
+  }
+
+  if (disabled) {
+    // AE-0378: the analytics flag is off (404) or the role has no access (403).
+    return (
+      <div className="flex-1">
+        <NeonTopBar title={t("title")} breadcrumb={[{ label: "analytics" }]} />
+        <div className="text-center py-8" data-testid="analytics-disabled">
+          <p className="font-semibold" style={{ color: TEXT_MUTED }}>
+            {t("disabledTitle")}
+          </p>
+          <p className="text-xs mt-1" style={{ color: TEXT_MUTED }}>
+            {t("disabledBody")}
+          </p>
         </div>
       </div>
     );

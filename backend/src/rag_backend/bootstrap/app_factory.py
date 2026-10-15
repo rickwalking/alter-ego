@@ -83,6 +83,9 @@ from rag_backend.infrastructure.telemetry.opentelemetry import (
     instrument_fastapi,
 )
 from rag_backend.modules.autopilot import prepare_instagram_credentials
+from rag_backend.modules.autopilot.api.insights import (
+    router as instagram_insights_router,
+)
 from rag_backend.modules.autopilot.api.router import router as autopilot_router
 from rag_backend.modules.autopilot.api.telegram_webhook import (
     router as telegram_webhook_router,
@@ -278,6 +281,7 @@ def _register_routes(app: FastAPI) -> None:
     app.include_router(workflow_board.router, prefix="/api")
     app.include_router(chat_stream.router, prefix="/api")
     app.include_router(autopilot_router, prefix="/api")
+    app.include_router(instagram_insights_router, prefix="/api")
     app.include_router(telegram_webhook_router, prefix="/api")
 
 

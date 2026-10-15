@@ -946,7 +946,29 @@
       "pendingReview": "Aguardando Revisão",
       "qualityScore": "Score Médio de Qualidade",
       "velocityTitle": "Velocidade de Publicação (8 semanas)",
-      "loadFailed": "Falha ao carregar analytics"
+      "loadFailed": "Falha ao carregar analytics",
+      "disabledTitle": "Analytics editorial desativado",
+      "disabledBody": "O recurso de analytics editorial está desligado neste ambiente ou para o seu perfil. O resto do dashboard continua funcionando."
+    },
+    "instagram": {
+      "title": "Instagram",
+      "subtitle": "Últimos posts publicados: totais e as razões de crescimento",
+      "loadFailed": "Falha ao carregar os insights do Instagram",
+      "empty": "Nenhum post publicado ainda.",
+      "notConfigured": "Nenhuma conta do Instagram configurada; mostrando os últimos números salvos.",
+      "notAvailable": "n/d",
+      "stale": "desatualizado",
+      "postLine": "{views} visualizações · {shares} compartilhamentos · {saves} salvamentos · {follows} seguidores",
+      "kpi": {
+        "views": "Visualizações",
+        "reach": "Alcance",
+        "shares": "Compartilhamentos",
+        "saved": "Salvamentos",
+        "follows": "Seguidores ganhos",
+        "profile_visits": "Visitas ao perfil",
+        "followsPerPost": "Seguidores por post",
+        "sharesPer100Views": "Compart. a cada 100 visualizações"
+      }
     }
   },
   "admin": {
