@@ -25,9 +25,11 @@ from rag_backend.application.services.carousel.workflow_state import (
     CarouselWorkflowState,
 )
 from rag_backend.domain.constants.carousel import LANGUAGE_PT
-from rag_backend.domain.constants.carousel_workflow import SOURCE_TYPE_DOCUMENT
+from rag_backend.domain.constants.carousel_workflow import (
+    DEFAULT_CONTENT_DRAFT_CONCURRENCY,
+    SOURCE_TYPE_DOCUMENT,
+)
 from rag_backend.domain.models.persona import PersonaProfile
-from rag_backend.infrastructure.config.settings import get_settings
 
 from .editorial_workflow_support import EditorialWorkflowStartInput
 
@@ -64,8 +66,8 @@ class SlideDraftGenerationParams:
     # AE-0291: prior slide drafts (from checkpoint) so a regeneration can show the
     # model its previously-rejected copy to diff against (also busts the cache).
     previous_drafts: list[dict[str, object]] | None = None
-    # AE-0391: slides drafted at once; None reads CONTENT_DRAFT_CONCURRENCY.
-    concurrency: int | None = None
+    # AE-0391: slides drafted at once (the CONTENT_DRAFT_CONCURRENCY setting).
+    concurrency: int = DEFAULT_CONTENT_DRAFT_CONCURRENCY
 
 
 @dataclass(frozen=True)
@@ -256,15 +258,9 @@ async def generate_slide_drafts(
     )
     drafts = await gather_bounded(
         [partial(runner.draft_at, index) for index in range(len(params.outline))],
-        _draft_concurrency(params),
+        params.concurrency,
     )
     return await _redraft_duplicates(runner, drafts)
-
-
-def _draft_concurrency(params: SlideDraftGenerationParams) -> int:
-    if params.concurrency is not None:
-        return params.concurrency
-    return get_settings().content_draft_concurrency
 
 
 def build_slide_draft_retry(

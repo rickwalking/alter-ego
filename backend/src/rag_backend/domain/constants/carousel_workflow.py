@@ -156,3 +156,7 @@ RESUME_ROUTE_SUPPORTED_ACTIONS: frozenset[str] = frozenset({
     REVIEW_ACTION_APPROVE,
     REVIEW_ACTION_REVISE,
 })
+
+# AE-0391: slides drafted concurrently in the content phase (default of the
+# CONTENT_DRAFT_CONCURRENCY setting). Bounded: endpoint rate limits are unknown.
+DEFAULT_CONTENT_DRAFT_CONCURRENCY = 4

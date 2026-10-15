@@ -46,6 +46,7 @@ _LLM_TYPE = "routed-chat-model"
 _STATUS_CODE_ATTR = "status_code"
 _MODEL_NAME_ATTRS = ("model_name", "model")
 _UNKNOWN_MODEL = "unknown"
+_ERROR_PREVIEW_CHARS = 200
 
 
 class EmptyLLMResponseError(RuntimeError):
@@ -136,7 +137,7 @@ class RoutedChatModel(BaseChatModel):
             request.config, self._run_config(model, fallback=fallback)
         )
         message = await asyncio.wait_for(
-            model.ainvoke(request.input, config, stop=request.stop, **request.kwargs),
+            model.ainvoke(request.prompt, config, stop=request.stop, **request.kwargs),
             timeout,
         )
         # Empty content only triggers the fallback; a fallback's own empty answer
@@ -147,14 +148,14 @@ class RoutedChatModel(BaseChatModel):
 
     async def ainvoke(
         self,
-        input: LanguageModelInput,  # noqa: A002 - LangChain's Runnable signature
+        prompt: LanguageModelInput,
         config: RunnableConfig | None = None,
         *,
         stop: list[str] | None = None,
         **kwargs: object,
     ) -> AIMessage:
         """Run the primary model; on failure re-issue the call on the fallback."""
-        request = _RoutedRequest(input=input, config=config, stop=stop, kwargs=kwargs)
+        request = _RoutedRequest(prompt=prompt, config=config, stop=stop, kwargs=kwargs)
         try:
             return await self._call(self.primary, request, self.timeout_seconds)
         except Exception as exc:
@@ -166,10 +167,10 @@ class RoutedChatModel(BaseChatModel):
                 primary_model=model_id_of(self.primary),
                 fallback_model=model_id_of(self.fallback),
                 reason=_fallback_reason(exc),
-                error=str(exc)[:200],
+                error=str(exc)[:_ERROR_PREVIEW_CHARS],
             )
         fallback_request = _RoutedRequest(
-            input=input, config=config, stop=stop, kwargs=kwargs, fallback=True
+            prompt=prompt, config=config, stop=stop, kwargs=kwargs, fallback=True
         )
         return await self._call(
             self.fallback, fallback_request, LLM_TIMEOUT_FALLBACK_SECONDS
@@ -190,7 +191,7 @@ class RoutedChatModel(BaseChatModel):
 class _RoutedRequest:
     """One chat call, re-issuable on the fallback model."""
 
-    input: LanguageModelInput
+    prompt: LanguageModelInput
     config: RunnableConfig | None
     stop: list[str] | None
     kwargs: dict[str, object]
@@ -218,23 +219,7 @@ def fallback_runnable_for(
     return fallback.bind(**runnable.kwargs).with_config(runnable.config)
 
 
-@dataclass(frozen=True)
-class ChatModelRoles:
-    """The chat model of each carousel task role."""
-
-    reasoning: BaseChatModel
-    fast: BaseChatModel
-
-    @classmethod
-    def coerce(cls, llm: BaseChatModel | ChatModelRoles) -> ChatModelRoles:
-        """A single model serves both roles (tests, legacy callers)."""
-        if isinstance(llm, ChatModelRoles):
-            return llm
-        return cls(reasoning=llm, fast=llm)
-
-
 __all__ = [
-    "ChatModelRoles",
     "EmptyLLMResponseError",
     "RoutedChatModel",
     "fallback_runnable_for",

@@ -14,6 +14,7 @@ from rag_backend.application.services.carousel.editorial_workflow_generators imp
     synthesize_research,
 )
 from rag_backend.application.services.carousel.editorial_workflow_support import (
+    ChatModelRoles,
     EditorialWorkflowStartInput,
 )
 from rag_backend.application.services.carousel.phase_artifact_runner import (
@@ -27,7 +28,6 @@ from rag_backend.application.services.image_provider_registry import (
     ImageProviderRegistry,
 )
 from rag_backend.domain.protocols import ResearchEnrichmentParams
-from rag_backend.infrastructure.external.routed_chat_model import ChatModelRoles
 
 
 class CarouselEditorialOrchestrator:
@@ -49,6 +49,7 @@ class CarouselEditorialOrchestrator:
                 content_agent=ContentDraftAgent(llm=roles.fast),
                 llm=roles.fast,
                 image_registry=image_registry,
+                draft_concurrency=roles.draft_concurrency,
             )
         )
         self._engine = CarouselWorkflowEngine(

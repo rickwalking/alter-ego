@@ -10,13 +10,15 @@ from collections.abc import AsyncIterator, Callable
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
 
+from rag_backend.application.services.carousel.editorial_workflow_types import (
+    ChatModelRoles,
+)
 from rag_backend.domain.constants import ROLE_ASSISTANT, ROLE_SYSTEM, ROLE_USER
 from rag_backend.infrastructure.config.settings import Settings
 from rag_backend.infrastructure.external.chat_model_factory import (
     build_chat_model,
     build_role_models,
 )
-from rag_backend.infrastructure.external.routed_chat_model import ChatModelRoles
 
 # Role → LangChain message constructor dispatch.
 _ROLE_TO_MESSAGE: dict[str, Callable[[str], BaseMessage]] = {

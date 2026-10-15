@@ -15,6 +15,9 @@ from langchain_anthropic import ChatAnthropic
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_openai import ChatOpenAI
 
+from rag_backend.application.services.carousel.editorial_workflow_types import (
+    ChatModelRoles,
+)
 from rag_backend.infrastructure.config.llm_routing_constants import (
     LLM_ROLE_FAST,
     LLM_ROLE_REASONING,
@@ -22,10 +25,7 @@ from rag_backend.infrastructure.config.llm_routing_constants import (
     LLM_TIMEOUT_REASONING_SECONDS,
 )
 from rag_backend.infrastructure.config.settings import Settings
-from rag_backend.infrastructure.external.routed_chat_model import (
-    ChatModelRoles,
-    RoutedChatModel,
-)
+from rag_backend.infrastructure.external.routed_chat_model import RoutedChatModel
 
 LLM_PROVIDER_ANTHROPIC = "anthropic"
 LLM_PROVIDER_GLM = "glm"
@@ -147,4 +147,5 @@ def build_role_models(settings: Settings) -> ChatModelRoles:
     return ChatModelRoles(
         reasoning=build_chat_model(settings, LLM_ROLE_REASONING),
         fast=build_chat_model(settings, LLM_ROLE_FAST),
+        draft_concurrency=settings.content_draft_concurrency,
     )

@@ -32,6 +32,7 @@ from rag_backend.application.services.carousel.editorial_workflow_service_helper
     validate_revision_cap,
 )
 from rag_backend.application.services.carousel.editorial_workflow_support import (
+    ChatModelRoles,
     EditorialWorkflowStartInput,
     ResumeWorkflowInput,
     ReviewEventEmitContext,
@@ -67,7 +68,6 @@ from rag_backend.domain.constants.workflow_validation import CONTENT_TYPE_CAROUS
 from rag_backend.domain.models.carousels import ReviewEventParams
 from rag_backend.domain.protocols import ResearchEnrichmentParams, ResearchTool
 from rag_backend.infrastructure.database.models.carousel import CarouselProjectModel
-from rag_backend.infrastructure.external.routed_chat_model import ChatModelRoles
 from rag_backend.infrastructure.monitoring_langfuse import (
     _TraceConfig,
     create_workflow_trace,

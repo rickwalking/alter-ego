@@ -55,10 +55,15 @@ class TestEditorialWorkflowServiceInit:
     def test_init_passes_llm_to_orchestrator(
         self, mock_orchestrator: MagicMock
     ) -> None:
-        """Given llm, when creating service, then orchestrator receives llm."""
+        """Given llm, when creating service, then orchestrator receives llm.
+
+        AE-0391: a single model is coerced into both task roles.
+        """
         llm = MagicMock()
         EditorialWorkflowService(EditorialWorkflowConfig(llm=llm))
-        assert mock_orchestrator.call_args.kwargs["llm"] is llm
+        roles = mock_orchestrator.call_args.kwargs["llm"]
+        assert roles.reasoning is llm
+        assert roles.fast is llm
 
     @patch(
         "rag_backend.application.services.carousel.editorial_workflow_service.CarouselEditorialOrchestrator"

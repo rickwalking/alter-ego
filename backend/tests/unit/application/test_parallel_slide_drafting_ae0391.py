@@ -8,6 +8,8 @@ from __future__ import annotations
 import asyncio
 import json
 import re
+from collections.abc import Callable
+from typing import cast
 
 import pytest
 
@@ -22,7 +24,11 @@ from rag_backend.application.services.carousel.editorial_workflow_service import
     EditorialWorkflowService,
 )
 from rag_backend.application.services.carousel.editorial_workflow_types import (
+    ChatModelRoles,
     EditorialWorkflowStartInput,
+)
+from rag_backend.application.services.carousel.workflow_state import (
+    CarouselWorkflowState,
 )
 from rag_backend.domain.constants.carousel_workflow import PHASE_CONTENT
 from rag_backend.infrastructure.cache.ai_response_cache import get_ai_response_cache
@@ -31,10 +37,7 @@ from rag_backend.infrastructure.config.llm_routing_constants import (
     LLM_ROLE_REASONING,
     LLM_TAG_FALLBACK,
 )
-from rag_backend.infrastructure.external.routed_chat_model import (
-    ChatModelRoles,
-    RoutedChatModel,
-)
+from rag_backend.infrastructure.external.routed_chat_model import RoutedChatModel
 from tests.unit.llm_fakes_ae0391 import CallLog, FakeChat
 
 SLIDE_COUNT = 7
@@ -67,7 +70,7 @@ def _draft_json(slide: int) -> str:
     })
 
 
-def _reply(bad_slide: int | None = None):  # type: ignore[no-untyped-def]
+def _reply(bad_slide: int | None = None) -> Callable[[str], str]:
     def reply(prompt: str) -> str:
         if "not json" in prompt:
             return "not json"
@@ -151,7 +154,7 @@ async def test_generate_slide_drafts_parallel_ordered_and_outline_context_only()
     agent = _RecordingAgent()
 
     drafts = await generate_slide_drafts(
-        agent,  # type: ignore[arg-type]
+        cast(ContentDraftAgent, agent),
         SlideDraftGenerationParams(outline=_outline(), concurrency=4),
     )
 
@@ -165,25 +168,15 @@ async def test_generate_slide_drafts_parallel_ordered_and_outline_context_only()
     assert set(agent.previous_drafts.values()) == {""}
 
 
-async def test_generate_slide_drafts_reads_concurrency_from_settings(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    from rag_backend.application.services.carousel import (
-        editorial_workflow_generators as generators,
-    )
-
-    class _Settings:
-        content_draft_concurrency = 2
-
-    monkeypatch.setattr(generators, "get_settings", lambda: _Settings())
+async def test_generate_slide_drafts_default_concurrency_is_four() -> None:
     agent = _RecordingAgent()
 
     await generate_slide_drafts(
-        agent,  # type: ignore[arg-type]
+        cast(ContentDraftAgent, agent),
         SlideDraftGenerationParams(outline=_outline()),
     )
 
-    assert agent.log.max_in_flight == 2
+    assert agent.log.max_in_flight == 4
 
 
 # --- integration: real editorial service, fake chat models -----------------------
@@ -219,8 +212,11 @@ async def _run_content_phase(service: EditorialWorkflowService) -> dict[str, obj
             topic="IA", audience="devs", brief="b", sources=[]
         )
     )
-    state = {"project_id": "p-1", "current_phase": PHASE_CONTENT, "outline": _outline()}
-    return await runner.ensure_for_phase(state)  # type: ignore[arg-type]
+    state = cast(
+        CarouselWorkflowState,
+        {"project_id": "p-1", "current_phase": PHASE_CONTENT, "outline": _outline()},
+    )
+    return await runner.ensure_for_phase(state)
 
 
 def test_editorial_service_wires_each_task_to_its_role() -> None:
@@ -235,6 +231,14 @@ def test_editorial_service_wires_each_task_to_its_role() -> None:
     assert runner._content_agent.llm is roles.fast
     assert runner._llm is roles.fast
     assert service.chat_model is roles.fast
+    assert runner._draft_concurrency == roles.draft_concurrency
+
+
+def test_draft_concurrency_survives_with_context() -> None:
+    roles = ChatModelRoles(reasoning=FakeChat(), fast=FakeChat(), draft_concurrency=2)
+    runner = _service(roles)._orchestrator._artifact_runner
+
+    assert runner.with_context()._draft_concurrency == 2
 
 
 async def test_content_phase_drafts_in_parallel_on_the_fast_model() -> None:

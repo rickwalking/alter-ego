@@ -36,6 +36,7 @@ from rag_backend.application.services.image_provider_registry import (
 )
 from rag_backend.domain.constants.ai_agents import ERR_INVALID_JSON
 from rag_backend.domain.constants.carousel_workflow import (
+    DEFAULT_CONTENT_DRAFT_CONCURRENCY,
     DESIGN_VALIDATION_RECOVERY_HINT,
     PHASE_CONTENT,
     PHASE_DESIGN,
@@ -50,7 +51,6 @@ from rag_backend.domain.constants.workflow_state_fields import (
     STATE_FIELD_RESEARCH_FINDINGS,
 )
 from rag_backend.domain.models.persona import PersonaProfile
-from rag_backend.infrastructure.config.settings import get_settings
 from rag_backend.infrastructure.external.openai_embeddings import (  # type: ignore[attr-defined]
     OpenAIEmbeddings,
 )
@@ -85,6 +85,8 @@ class PhaseArtifactRunnerConfig:
     # AE-0309: injectable single-slide re-draft used by the fail-closed content
     # chain. Defaults to a ContentDraftAgent-backed retry when None.
     slide_draft_retry: SlideDraftRetryFn | None = None
+    # AE-0391: slides drafted / persona-scored concurrently (bounded).
+    draft_concurrency: int = DEFAULT_CONTENT_DRAFT_CONCURRENCY
 
 
 def _state_policy_version(state: CarouselWorkflowState) -> str | None:
@@ -125,6 +127,7 @@ class PhaseArtifactRunner:
         self._db = config.db
         self._workflow_input = config.workflow_input
         self._slide_draft_retry = config.slide_draft_retry
+        self._draft_concurrency = config.draft_concurrency
 
     def with_context(
         self,
@@ -142,6 +145,7 @@ class PhaseArtifactRunner:
                 db=db if db is not None else self._db,
                 workflow_input=workflow_input or self._workflow_input,
                 slide_draft_retry=self._slide_draft_retry,
+                draft_concurrency=self._draft_concurrency,
             )
         )
 
@@ -400,6 +404,7 @@ class PhaseArtifactRunner:
                     revision_notes=regen.revision_notes or None,
                     learned_examples=learned_examples or None,
                     previous_drafts=regen.previous_drafts or None,
+                    concurrency=self._draft_concurrency,
                 ),
             )
         except ValueError as exc:
@@ -604,7 +609,7 @@ class PhaseArtifactRunner:
         # AE-0391: scored concurrently (bounded), keyed back in slide order.
         scores = await gather_bounded(
             [partial(persona_agent.evaluate_match, text) for text in texts.values()],
-            get_settings().content_draft_concurrency,
+            self._draft_concurrency,
         )
         return {
             f"slide_{index + 1}": score

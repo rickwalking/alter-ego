@@ -10,6 +10,10 @@ The model ids here are only the defaults; ``Settings`` reads the live values
 from ``LLM_MODEL_REASONING`` / ``LLM_MODEL_FAST`` / ``LLM_MODEL_FALLBACK``.
 """
 
+from rag_backend.domain.constants.carousel_workflow import (
+    DEFAULT_CONTENT_DRAFT_CONCURRENCY as _DOMAIN_DRAFT_CONCURRENCY,
+)
+
 # Roles a carousel LLM call can be routed to.
 LLM_ROLE_REASONING = "reasoning"
 LLM_ROLE_FAST = "fast"
@@ -27,7 +31,7 @@ LLM_TIMEOUT_FALLBACK_SECONDS = 900.0
 
 # Slides drafted concurrently in the content phase. Bounded: the endpoint's
 # rate limits are unknown (429s are retried with backoff by the OpenAI SDK).
-DEFAULT_CONTENT_DRAFT_CONCURRENCY = 4
+DEFAULT_CONTENT_DRAFT_CONCURRENCY = _DOMAIN_DRAFT_CONCURRENCY
 
 # Langfuse run tags/metadata recording which model ran and in which role.
 LLM_TAG_ROLE_PREFIX = "role:"

@@ -6,6 +6,7 @@ Scenarios: see tests/features/llm_model_routing_ae0391.feature
 from __future__ import annotations
 
 import asyncio
+from collections.abc import Callable
 
 import pytest
 from langchain_anthropic import ChatAnthropic
@@ -14,6 +15,9 @@ from langchain_openai import ChatOpenAI
 from pydantic import SecretStr
 from structlog.testing import capture_logs
 
+from rag_backend.application.services.carousel.editorial_workflow_types import (
+    ChatModelRoles,
+)
 from rag_backend.infrastructure.config.llm_routing_constants import (
     DEFAULT_CONTENT_DRAFT_CONCURRENCY,
     LLM_ROLE_FAST,
@@ -30,7 +34,6 @@ from rag_backend.infrastructure.external.chat_model_factory import (
     build_role_models,
 )
 from rag_backend.infrastructure.external.routed_chat_model import (
-    ChatModelRoles,
     RoutedChatModel,
     fallback_runnable_for,
     model_id_of,
@@ -41,13 +44,12 @@ PROMPT = [HumanMessage(content="hello")]
 
 
 def _settings(**overrides: object) -> Settings:
-    values: dict[str, object] = {
-        "anthropic_api_key": SecretStr("anthropic-key"),
-        "llm_provider": "glm",
-        "glm_api_key": SecretStr("glm-key"),
-        **overrides,
-    }
-    return Settings(**values)  # type: ignore[arg-type]
+    base = Settings(
+        anthropic_api_key=SecretStr("anthropic-key"),
+        llm_provider="glm",
+        glm_api_key=SecretStr("glm-key"),
+    )
+    return base.model_copy(update=overrides)
 
 
 def _routed(primary: FakeChat, fallback: FakeChat | None) -> RoutedChatModel:
@@ -141,6 +143,10 @@ def test_build_role_models_builds_both_roles() -> None:
 
     assert model_id_of(roles.reasoning) == "deepseek-v4-pro"
     assert model_id_of(roles.fast) == "deepseek-v4.1-flash"
+    assert roles.draft_concurrency == DEFAULT_CONTENT_DRAFT_CONCURRENCY
+    assert (
+        build_role_models(_settings(content_draft_concurrency=2)).draft_concurrency == 2
+    )
 
 
 def test_llm_service_role_routing_and_cached_role_models() -> None:
@@ -193,22 +199,32 @@ async def test_primary_success_does_not_call_fallback_and_tags_the_run() -> None
     assert LLM_TAG_FALLBACK not in log.tags[0]
 
 
+def _failing(status: int) -> Callable[[CallLog], FakeChat]:
+    return lambda log: FakeChat(
+        model_name="primary", log=log, error=StatusError(status)
+    )
+
+
+def _empty(log: CallLog) -> FakeChat:
+    return FakeChat(model_name="primary", log=log, reply=lambda _prompt: "   ")
+
+
 @pytest.mark.parametrize(
-    ("primary_kwargs", "reason"),
+    ("make_primary", "reason"),
     [
-        ({"error": StatusError(503)}, "error"),
-        ({"error": StatusError(429)}, "error"),
-        ({"error": StatusError(400)}, "error"),
-        ({"reply": lambda _prompt: "   "}, "empty_content"),
+        (_failing(503), "error"),
+        (_failing(429), "error"),
+        (_failing(400), "error"),
+        (_empty, "empty_content"),
     ],
 )
 async def test_fallback_answers_when_primary_fails(
-    primary_kwargs: dict[str, object], reason: str
+    make_primary: Callable[[CallLog], FakeChat], reason: str
 ) -> None:
     # Scenario Outline: the fallback model answers when the primary call fails
     log = CallLog()
     model = _routed(
-        FakeChat(model_name="primary", log=log, **primary_kwargs),  # type: ignore[arg-type]
+        make_primary(log),
         FakeChat(model_name="fallback", log=log, reply=lambda _p: "from fallback"),
     )
 
