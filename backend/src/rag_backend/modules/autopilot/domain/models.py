@@ -91,6 +91,9 @@ class TopicCandidate:
     # AE-0377: Radar IA (None / news_analysis) or POV with the scout's draft.
     content_mode: str | None = None
     thesis_draft: str | None = None
+    # PR #106 review: the scout v3 POV format and slide count (None = default).
+    pov_format: str | None = None
+    slide_count: int | None = None
 
 
 @dataclass(frozen=True, kw_only=True)

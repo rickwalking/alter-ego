@@ -165,6 +165,7 @@ async def _pov_outline(
             pov=_thesis(brief),
             roles=tuple(slide.role or "" for slide in brief.policy.slides),
             policy_context=render_presentation_policy_context(brief.policy),
+            persona=request.workflow_input.persona,
         )
     )
     outline = normalize_editorial_outline(stamp_outline_roles(raw, brief.policy))

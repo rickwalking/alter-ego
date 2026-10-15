@@ -1,9 +1,10 @@
 """Content-mode request/response fields for carousel projects (AE-0373, ADR-0021).
 
 Kept apart from ``carousel.py`` so the create schema stays readable. The rules:
-``pov`` needs a thesis (the model may sharpen it, never invent it), a known
-format and 8-10 slides; ``news_analysis`` (Radar IA, the default) rejects the
-POV-only fields and allows 7 or 8 slides.
+``pov`` needs a thesis (the model may sharpen it, never invent it), the slide-1
+photo (``hook_asset_id``, PR #106 review), a known format and 8-10 slides;
+``news_analysis`` (Radar IA, the default) rejects the POV-only fields and
+allows 7 or 8 slides.
 """
 
 from __future__ import annotations
@@ -27,6 +28,7 @@ from rag_backend.domain.constants.content_mode import (
     ERR_HOOK_TOO_MANY_WORDS,
     ERR_POV_FIELDS_ON_NEWS,
     ERR_POV_FORMAT_UNKNOWN,
+    ERR_POV_HOOK_PHOTO_REQUIRED,
     ERR_POV_THESIS_REQUIRED,
     ERR_SLIDE_COUNT_RANGE,
     HOOK_MAX_WORDS,
@@ -46,6 +48,7 @@ _POV_ONLY_FIELDS: tuple[str, ...] = (
     "pov_thesis",
     "pov_personal_proof",
     "pov_format",
+    "hook_asset_id",
 )
 _SLIDE_RANGES: dict[str, tuple[int, int]] = {
     CONTENT_MODE_POV: (POV_SLIDE_COUNT_MIN, POV_SLIDE_COUNT_MAX),
@@ -72,6 +75,8 @@ class ContentModeRequestFields(BaseModel):
     slide_count: int | None = None
     cta_goal: str | None = Field(None, max_length=CTA_GOAL_MAX_CHARS)
     persona_id: UUID | None = None
+    # PR #106 review: the slide-1 photo (role hook) is required for POV.
+    hook_asset_id: UUID | None = None
 
     @field_validator("pov_thesis", "pov_personal_proof", "pov_format")
     @classmethod
@@ -129,6 +134,8 @@ class ContentModeRequestFields(BaseModel):
 def _check_pov(fields: ContentModeRequestFields) -> None:
     if fields.pov_thesis is None:
         raise ValueError(ERR_POV_THESIS_REQUIRED)
+    if fields.hook_asset_id is None:
+        raise ValueError(ERR_POV_HOOK_PHOTO_REQUIRED)
     if fields.pov_format is not None and fields.pov_format not in POV_FORMATS:
         raise ValueError(
             ERR_POV_FORMAT_UNKNOWN.format(sorted(POV_FORMATS), fields.pov_format)

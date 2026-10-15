@@ -34,6 +34,7 @@ type ContentModeRequest = Pick<
   | "pov_format"
   | "slide_count"
   | "cta_goal"
+  | "hook_asset_id"
 >;
 
 /** AE-0373: POV fields only in POV mode (the API rejects them on Radar IA). */
@@ -49,6 +50,8 @@ function contentModeFields(form: CreateCarouselFormState): ContentModeRequest {
     pov_format: template.format,
     slide_count: form.slideCount,
     cta_goal: form.ctaGoal,
+    // PR #106 review: the slide-1 photo is required for POV.
+    hook_asset_id: form.hookAssetId,
   };
 }
 
@@ -79,10 +82,13 @@ export function buildCarouselCreateRequest(
   };
 }
 
-/** AE-0373: the wizard can submit (POV needs a thesis). */
+/** AE-0373: the wizard can submit (POV needs a thesis and the slide-1 photo). */
 export function canSubmitCreateForm(form: CreateCarouselFormState): boolean {
   if (!form.topic.trim() || !form.audience.trim()) {
     return false;
   }
-  return !isPovForm(form) || form.povThesis.trim().length > 0;
+  if (!isPovForm(form)) {
+    return true;
+  }
+  return form.povThesis.trim().length > 0 && form.hookAssetId.length > 0;
 }

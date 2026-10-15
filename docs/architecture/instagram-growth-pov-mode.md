@@ -324,3 +324,31 @@ Differences from the plan above, and facts found while building:
   `publish_choice`; autopilot POV runs do not pick a slide-1 photo automatically (the owner
   binds one in the web UI before approval, else the hook slide renders without a photo).
 
+
+## 11. PR #106 review amendments (2026-10-15)
+
+- **Idempotent migrations.** Prod has no `alembic_version` table and the additive SQL is applied by
+  hand, so `b0c1d2e3f4a5`, `b1c2d3e4f5a6` and `c2d3e4f5a6b7` add / create only what is missing
+  (and the FK only when absent) and drop only what is present. A later `alembic upgrade` on prod
+  is a no-op for them. `c2d3e4f5a6b7` stays the single head.
+- **Persona and voice gate.** `ProjectSpec.persona_id` comes from `AUTOPILOT_PERSONA_ID`, else the
+  newest persona named "Pedro" (case-insensitive), else None (logged as
+  `autopilot.persona_unresolved`). The persona is stored on the carousel and loaded into the
+  workflow start, so the content phase scores voice. A POV carousel with no voice score escalates
+  with `persona_not_scored` (no revise: a revise cannot add a persona); Radar IA keeps AE-0364.
+  The POV outline prompt receives the persona's voice, signature (preferred) and forbidden phrases
+  (`persona_pov/v1/context.yaml`); a project with no persona gets an explicit empty context.
+- **Slide-1 photo.** `POST /api/carousels` requires `hook_asset_id` for POV (422), checks it before
+  insert (unknown 400, foreign 403) and binds/stages it after; the wizard sends it at create.
+  `hook_face` raises `HookPhotoError` (`hook_photo_missing` / `hook_photo_unreadable`) instead of
+  rendering slide 1 without the photo. The autopilot picks the owner's `hook` photo (most recently
+  used, else newest, skipping one whose file is gone); with none, no carousel is created and the
+  run fails with `hook_photo_missing` plus a Telegram upload request. Pose-tag matching was not
+  built: nothing upstream (scout, run) names a pose yet.
+- **Scheduling.** With `AUTOPILOT_DEFAULT_PUBLISH=now` (the default) a POV approve is scheduled for
+  the next Tue/Thu 12:00 São Paulo slot (≥15 min ahead); Radar IA keeps the publish-now / schedule
+  choice.
+- **Scout POV choice.** Scout v3 sends `pov_format` (one of the four formats) and `slide_count`
+  (8–10) per POV topic; the intake validates them (422) and stores them on `topic_candidates`
+  (new nullable columns, folded into `b1c2d3e4f5a6`); the run falls back to `opiniao` / 9 only
+  when they are absent. Radar IA topics never store them.

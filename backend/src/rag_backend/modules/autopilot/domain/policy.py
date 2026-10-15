@@ -49,6 +49,7 @@ from rag_backend.modules.autopilot.parked_constants import (
     REASON_ENGINE_PARKED,
     REDRIVABLE_PHASE_STATUSES,
 )
+from rag_backend.modules.autopilot.pov_constants import REASON_PERSONA_NOT_SCORED
 from rag_backend.modules.autopilot.quality_constants import REASON_CONTENT_QUALITY
 from rag_backend.modules.autopilot.recovery_constants import (
     MAX_REVISES_DESIGN,
@@ -113,7 +114,9 @@ def _parked(snapshot: GateSnapshot) -> PolicyDecision:
 def _from_check(snapshot: GateSnapshot, reason: str | None) -> PolicyDecision:
     if reason is None:
         return PolicyDecision(action=GateAction.APPROVE, reason=REASON_PASSED)
-    if snapshot.revisions_used >= _revise_cap(snapshot.phase):
+    if reason in _NO_REVISE_REASONS or snapshot.revisions_used >= _revise_cap(
+        snapshot.phase
+    ):
         return PolicyDecision(action=GateAction.ESCALATE, reason=reason)
     return PolicyDecision(action=GateAction.REVISE, reason=reason)
 
@@ -136,11 +139,16 @@ def _outline(snapshot: GateSnapshot) -> str | None:
 def _content(snapshot: GateSnapshot) -> str | None:
     """Mirror the engine's content-approve rule (AE-0364).
 
-    The engine enforces the voice floor only when persona scores exist; a run
-    with no persona has none, so the voice check is skipped. Forbidden phrases,
-    blocking presentation rules (AE-0392) and the engine's refusal still apply.
+    The engine enforces the voice floor only when persona scores exist; a
+    Radar IA run with no persona has none, so the voice check is skipped.
+    PR #106 review: a POV run is never approved unscored; it escalates with
+    ``persona_not_scored`` (a revise cannot add the missing persona).
+    Forbidden phrases, blocking presentation rules (AE-0392) and the engine's
+    refusal still apply.
     """
     score = snapshot.persona_score
+    if score is None and snapshot.pov:
+        return REASON_PERSONA_NOT_SCORED
     if score is not None and score < VOICE_MATCH_MIN_SCORE:
         return REASON_PERSONA_SCORE
     if snapshot.forbidden_hits:
@@ -202,6 +210,9 @@ def _valid_jpeg(image: ImageFact) -> bool:
     """
     return image.present and image.is_jpeg and image.width > 0 and image.height > 0
 
+
+# Escalate at once: revising cannot fix these.
+_NO_REVISE_REASONS = frozenset({REASON_PERSONA_NOT_SCORED})
 
 _ENGINE_REASONS: dict[str, str] = {
     ERR_PERSONA_SCORE_TOO_LOW: REASON_PERSONA_SCORE,

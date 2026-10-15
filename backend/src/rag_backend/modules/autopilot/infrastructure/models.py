@@ -27,6 +27,7 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 from rag_backend.domain.constants import IMAGE_STYLE_NEO_ANIME
+from rag_backend.domain.constants.content_mode import POV_FORMAT_MAX_CHARS
 from rag_backend.infrastructure.database.config import Base as SharedBase
 from rag_backend.modules.autopilot.carousel_constants import IMAGE_STYLE_MAX_CHARS
 from rag_backend.modules.autopilot.constants import (
@@ -122,6 +123,11 @@ class TopicCandidateModel(AutopilotOrmBase):
     thesis_draft: Mapped[str | None] = mapped_column(
         String(THESIS_DRAFT_MAX_CHARS), nullable=True
     )
+    # PR #106 review: scout v3 POV format and slide count (NULL = default).
+    pov_format: Mapped[str | None] = mapped_column(
+        String(POV_FORMAT_MAX_CHARS), nullable=True
+    )
+    slide_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     __table_args__ = (UniqueConstraint("signal_hash", name=UQ_TOPIC_SIGNAL_HASH),)
 

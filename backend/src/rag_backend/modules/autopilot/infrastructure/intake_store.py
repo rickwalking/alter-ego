@@ -37,6 +37,7 @@ from rag_backend.modules.autopilot.infrastructure.models import (
     ServedSignalUrlModel,
     TopicCandidateModel,
 )
+from rag_backend.modules.autopilot.infrastructure.topic_rows import topic_row
 from rag_backend.modules.autopilot.recovery_constants import INTAKE_LOCK_KEY
 from rag_backend.modules.editorial.public import CarouselAutomationAcl
 
@@ -118,7 +119,7 @@ class SqlAlchemyTopicIntakeStore:
         """Insert one candidate. False when a concurrent batch stored its hash."""
         try:
             async with self._session.begin_nested():
-                self._session.add(_topic_row(candidate))
+                self._session.add(topic_row(candidate))
                 await self._session.flush()
         except IntegrityError:
             return False
@@ -156,26 +157,6 @@ def _canonical_urls(urls: tuple[str, ...]) -> tuple[str, ...]:
         if canonical != "":
             ordered[canonical] = None
     return tuple(ordered)
-
-
-def _topic_row(candidate: TopicCandidate) -> TopicCandidateModel:
-    return TopicCandidateModel(
-        id=candidate.candidate_id,
-        title=candidate.title,
-        angle=candidate.angle,
-        why_viral=candidate.why_viral,
-        audience=candidate.audience,
-        niche=candidate.niche,
-        brief=candidate.brief,
-        sources=list(candidate.sources),
-        score=candidate.score,
-        signal_hash=candidate.signal_hash,
-        status=candidate.status,
-        image_style=candidate.image_style,
-        image_guidance=candidate.image_guidance,
-        content_mode=candidate.content_mode,
-        thesis_draft=candidate.thesis_draft,
-    )
 
 
 def _run_row(command: QueuedRunCommand) -> AutopilotRunModel:

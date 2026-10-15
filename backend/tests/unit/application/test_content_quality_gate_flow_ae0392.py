@@ -57,6 +57,7 @@ from tests.unit.application.owner_autofix_fixtures_ae0367 import (
     FakeChatModel,
     build_engine,
 )
+from tests.unit.modules.autopilot.project_inputs_fake import FakeProjectInputs
 from tests.unit.modules.autopilot.test_autopilot_runner import _Recovery
 from tests.unit.modules.autopilot.test_owner_actions import (
     _Notices,
@@ -108,6 +109,7 @@ async def _tick(flow: _Flow, *, repair: bool = True) -> None:
             notices=_Notices(),
             recovery=_Recovery(runs=flow.runs),
             owner_user_id="owner",
+            inputs=FakeProjectInputs(),
             autofix=autofixer,
             gate_repair=autofixer if repair else None,
         )

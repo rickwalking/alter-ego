@@ -166,6 +166,10 @@ from rag_backend.modules.editorial.infrastructure.legacy_carousel_acl import (
     EditorialProjectView,
     LegacyCarouselAcl,
 )
+from rag_backend.modules.editorial.infrastructure.pov_inputs import (
+    PovInputsAcl,
+    as_uuid,
+)
 from rag_backend.modules.editorial.infrastructure.run_trace_scope import (
     open_run_trace_scope,
 )
@@ -241,6 +245,7 @@ __all__ = [
     "OwnerAutofixReport",
     "OwnerAutofixRequest",
     "OwnerIssues",
+    "PovInputsAcl",
     "PublicReleasePort",
     "PublicReleaseState",
     "ResearchSource",
@@ -254,6 +259,7 @@ __all__ = [
     "StartWorkflowCommand",
     "WorkflowEngine",
     "WorkflowStateView",
+    "as_uuid",
     "bootstrap_module",
     "build_resume_input",
     "build_start_input",

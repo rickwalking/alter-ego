@@ -82,6 +82,7 @@ from tests.unit.application.owner_autofix_fixtures_ae0367 import (
     seed_carousel,
     seed_checkpoint,
 )
+from tests.unit.modules.autopilot.project_inputs_fake import FakeProjectInputs
 from tests.unit.modules.autopilot.test_autopilot_runner import _Recovery
 from tests.unit.modules.autopilot.test_owner_actions import (
     _OWNER,
@@ -217,6 +218,7 @@ async def _tick(flow: _Flow) -> _Notices:
             notices=notices,
             recovery=flow.recovery,
             owner_user_id="owner",
+            inputs=FakeProjectInputs(),
             autofix=flow.autofixer,
         )
     )

@@ -109,6 +109,8 @@ class SnapshotParts:
     parked_overdue: bool = False
     # AE-0365: hero images the image phase builds (the CTA slide has none).
     hero_images_total: int = 0
+    # PR #106 review: a POV carousel must be voice-scored at the content gate.
+    pov: bool = False
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -135,6 +137,7 @@ class GateSnapshot:
     # AE-0392: blocking presentation rules (content and design gates), kept
     # apart from ``forbidden_hits`` so each is reported under its own reason.
     quality_violations: tuple[QualityViolation, ...] = ()
+    pov: bool = False
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -154,6 +157,12 @@ class ProjectSpec:
     # AE-0377: Radar IA or POV; POV carries the owner-confirmed thesis.
     content_mode: str = CONTENT_MODE_NEWS_ANALYSIS
     pov_thesis: str | None = None
+    # PR #106 review: the scout's POV format and slide count (defaults applied),
+    # the persona that voices and scores the carousel, and the slide-1 photo.
+    pov_format: str | None = None
+    slide_count: int | None = None
+    persona_id: str | None = None
+    hook_asset_id: str | None = None
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -242,6 +251,18 @@ class EditorialDriver(Protocol):
 
     async def redrive(self, command: RedriveCommand) -> ResumeResult:
         """Re-run a parked pending node once. Sends no review decision."""
+        ...
+
+
+class ProjectInputs(Protocol):
+    """Who voices a new carousel and which photo opens a POV deck."""
+
+    async def persona_id(self) -> str | None:
+        """The autopilot persona (setting, else "Pedro" by name), or None."""
+        ...
+
+    async def hook_photo_id(self, owner_user_id: str) -> str | None:
+        """The owner's slide-1 photo (library role ``hook``), or None."""
         ...
 
 

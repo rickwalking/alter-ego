@@ -5,8 +5,12 @@ Gherkin: tests/features/carousel_pov_prompts.feature (Hook pick)
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 from httpx import AsyncClient
+
+from tests.integration.hook_photo_support import hook_photo_id
 
 _THESIS = "A IA escreve código. Quem decide ainda é você."
 _BASE = {"topic": "Julgamento técnico", "audience": "Devs", "niche": "IA"}
@@ -16,6 +20,17 @@ async def _create(client: AsyncClient, body: dict[str, object]) -> str:
     response = await client.post("/api/carousels", json=body)
     assert response.status_code == 201, response.text
     return str(response.json()["id"])
+
+
+async def _pov(client: AsyncClient) -> dict[str, object]:
+    """A POV create body with an uploaded slide-1 photo (PR #106 review)."""
+    photo = await hook_photo_id(client)
+    return {
+        **_BASE,
+        "content_mode": "pov",
+        "pov_thesis": _THESIS,
+        "hook_asset_id": photo,
+    }
 
 
 async def _set_version(project_id: str, version: str) -> None:
@@ -35,10 +50,11 @@ async def _set_version(project_id: str, version: str) -> None:
 class TestHookPick:
     # Scenario: Owner picks a hook
     @pytest.mark.asyncio
-    async def test_pov_hook_is_stored(self, client: AsyncClient) -> None:
-        project_id = await _create(
-            client, {**_BASE, "content_mode": "pov", "pov_thesis": _THESIS}
-        )
+    async def test_pov_hook_is_stored(
+        self, client: AsyncClient, asset_dirs: Path
+    ) -> None:
+        project_id = await _create(client, await _pov(client))
+        del asset_dirs
         response = await client.put(
             f"/api/carousels/{project_id}/hook",
             json={"hook_text": "  Pare de pedir   código pra IA  "},
@@ -63,10 +79,11 @@ class TestHookPick:
         [" ".join(["palavra"] * 11), "x" * 61, "   ", ""],
         ids=["11-words", "61-chars", "blank", "empty"],
     )
-    async def test_invalid_hook_is_422(self, client: AsyncClient, hook: str) -> None:
-        project_id = await _create(
-            client, {**_BASE, "content_mode": "pov", "pov_thesis": _THESIS}
-        )
+    async def test_invalid_hook_is_422(
+        self, client: AsyncClient, asset_dirs: Path, hook: str
+    ) -> None:
+        project_id = await _create(client, await _pov(client))
+        del asset_dirs
         response = await client.put(
             f"/api/carousels/{project_id}/hook", json={"hook_text": hook}
         )

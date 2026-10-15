@@ -175,6 +175,8 @@ def _candidate(item: NewCandidate) -> TopicCandidate:
         image_guidance=proposal.image_guidance,
         content_mode=proposal.content_mode,
         thesis_draft=proposal.thesis_draft,
+        pov_format=proposal.pov_choice.pov_format,
+        slide_count=proposal.pov_choice.slide_count,
     )
 
 

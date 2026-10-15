@@ -66,6 +66,7 @@ def assemble_snapshot(parts: SnapshotParts) -> GateSnapshot:
         parked_overdue=parts.parked_overdue,
         hero_images_total=parts.hero_images_total,
         quality_violations=_quality(state, phase),
+        pov=parts.pov,
     )
 
 

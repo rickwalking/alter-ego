@@ -110,3 +110,48 @@ Feature: Carousel content mode and POV inputs (AE-0373, ADR-0021)
   Scenario: Wizard Radar IA mode
     Given the create wizard in "Radar IA" mode
     Then the POV fields are hidden and the six Radar IA templates are shown
+
+  # --- Idempotent migrations (PR #106 review, item 2) -------------------------
+
+  Scenario: Fresh upgrade adds the AE-0371 schema
+    Given a database stamped before the AE-0371 revisions
+    When alembic upgrades to head
+    Then the POV columns, the creator-asset role/pose and instagram_post_insights exist
+
+  Scenario: Re-running the AE-0371 migrations on a database that already has them
+    Given a database whose AE-0371 columns and table were applied by hand
+    And alembic believes it is before the AE-0371 revisions
+    When alembic upgrades to head twice
+    Then no error is raised and the schema is unchanged
+
+  Scenario: Downgrading over objects that are already gone
+    Given a database whose AE-0371 columns and table were already dropped
+    When alembic downgrades the AE-0371 revisions again
+    Then no error is raised
+
+  # --- Slide-1 photo on create (PR #106 review, item 4) -----------------------
+
+  Scenario: POV create needs the slide-1 photo
+    Given a POV create request without hook_asset_id
+    When it is submitted
+    Then the API answers 422 "hook_asset_id is required when content_mode is 'pov'"
+
+  Scenario: POV create binds and stages the chosen photo
+    Given a POV create request with one of the owner's hook photos
+    When it is submitted
+    Then the project stores hook_asset_id and the photo is staged in its output folder
+
+  Scenario: POV create with an unknown photo creates nothing
+    Given a POV create request whose hook_asset_id does not exist
+    When it is submitted
+    Then the API answers 400 "creator_asset_not_found" and no project is created
+
+  Scenario: POV create with another user's photo
+    Given a POV create request with another user's photo
+    When it is submitted
+    Then the API answers 403
+
+  Scenario: Radar IA rejects a slide-1 photo
+    Given a Radar IA create request with hook_asset_id
+    When it is submitted
+    Then the API answers 422

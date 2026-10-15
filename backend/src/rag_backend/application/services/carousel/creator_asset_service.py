@@ -183,6 +183,13 @@ class CreatorAssetService:
             raise CreatorAssetValidationError(ERR_CREATOR_ASSET_NOT_FOUND)
         return path
 
+    def has_stored_file(self, asset: CarouselCreatorAsset) -> bool:
+        """True when the asset's canonical WebP exists (PR #106 review)."""
+        try:
+            return self._canonical_storage_path(asset.content_sha256).is_file()
+        except CreatorAssetValidationError:
+            return False
+
     async def select_hook_photo(self, command: HookPhotoCommand) -> CarouselProject:
         """Bind the slide-1 photo and stage it where the slides are rendered."""
         self._assert_owner_or_admin(command.project, command.user)

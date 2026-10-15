@@ -51,7 +51,6 @@ export {
 export {
   creatorPhotoKeys,
   useCreatorPhotos,
-  useSetHookPhoto,
   useUploadCreatorPhoto,
   type CreatorPhoto,
 } from "./workspace/hooks/use-creator-photos";
@@ -61,7 +60,6 @@ export {
 } from "./workspace/hooks/use-save-hook";
 export type {
   SaveHookInput,
-  SetHookPhotoInput,
   UploadCreatorPhotoInput,
 } from "./workspace/hooks/types";
 export {
