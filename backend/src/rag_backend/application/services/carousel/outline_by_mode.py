@@ -11,10 +11,10 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Protocol
 
 import structlog
 
-from rag_backend.agents.outline_agent import OutlineAgent
 from rag_backend.application.services.carousel.content_mode_brief import (
     ContentModeBrief,
 )
@@ -41,6 +41,7 @@ from rag_backend.domain.models.pov_prompts import (
     PovOutlineRequest,
     PovThesis,
     RadarHookRequest,
+    SizedOutlineRequest,
     SlidePolicyContext,
 )
 
@@ -48,6 +49,22 @@ logger = structlog.get_logger(__name__)
 
 LOG_HOOK_CANDIDATES_FAILED = "pov_hook_candidates_failed"
 _EARLY_SLIDES = 2
+
+
+class OutlineAgent(Protocol):
+    """The outline agent's calls used here (structural: no application->agents import)."""
+
+    async def generate_outline_for(
+        self, request: SizedOutlineRequest
+    ) -> list[dict[str, object]]: ...
+
+    async def generate_pov_outline(
+        self, request: PovOutlineRequest
+    ) -> list[dict[str, object]]: ...
+
+    async def hook_candidates(self, request: PovHookRequest) -> list[str]: ...
+
+    async def radar_hook_candidates(self, request: RadarHookRequest) -> list[str]: ...
 
 
 @dataclass(frozen=True)
@@ -162,26 +179,25 @@ async def generate_outline_for_mode(
     workflow_input = request.workflow_input
     if brief is not None and brief.is_pov:
         return await _pov_outline(agent, request, brief)
-    if brief is None or not brief.has_roles:
-        return await agent.generate_outline(
+    sizing = _sizing(brief) if brief is not None and brief.has_roles else None
+    outline = await agent.generate_outline_for(
+        SizedOutlineRequest(
             topic=workflow_input.topic,
             audience=workflow_input.audience,
             brief=workflow_input.brief,
             sources=request.source_texts(),
+            sizing=sizing,
         )
-    outline = await agent.generate_outline(
-        topic=workflow_input.topic,
-        audience=workflow_input.audience,
-        brief=workflow_input.brief,
-        sources=request.source_texts(),
-        sizing=_sizing(brief),
     )
+    if brief is None or sizing is None:
+        return outline
     stamped = normalize_editorial_outline(stamp_outline_roles(outline, brief.policy))
     return attach_hook_and_checks(stamped, brief, await _hooks(agent, request, brief))
 
 
 __all__ = [
     "ModeOutlineRequest",
+    "OutlineAgent",
     "attach_hook_and_checks",
     "generate_outline_for_mode",
 ]

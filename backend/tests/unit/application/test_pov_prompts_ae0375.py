@@ -54,6 +54,7 @@ from rag_backend.domain.models.pov_prompts import (
     PovHookRequest,
     PovOutlineRequest,
     RadarHookRequest,
+    SizedOutlineRequest,
     SlidePolicyContext,
 )
 
@@ -95,15 +96,10 @@ class _FakeAgent:
         self.calls: list[tuple[str, object]] = []
         self._hooks = hooks if hooks is not None else ["Gancho um", "Gancho dois"]
 
-    async def generate_outline(
-        self,
-        topic: str,
-        audience: str,
-        brief: str,
-        sources: list[str],
-        *,
-        sizing: SlidePolicyContext | None = None,
+    async def generate_outline_for(
+        self, request: SizedOutlineRequest
     ) -> list[dict[str, object]]:
+        sizing = request.sizing
         self.calls.append(("outline", sizing))
         count = sizing.slide_count if sizing else 7
         return [
@@ -372,7 +368,8 @@ class TestSlidePolicyContext:
 
     def test_content_prompt_routes_radar_v4_to_v7(self) -> None:
         brief = _brief(
-            content_mode="news_analysis", presentation_policy_version="hero_lower_third_v4"
+            content_mode="news_analysis",
+            presentation_policy_version="hero_lower_third_v4",
         )
         context = slide_policy_context(brief, {"slide_index": 2, "title": "x"})
         assert context is not None and context.role == "news"

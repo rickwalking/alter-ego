@@ -34,6 +34,7 @@ from rag_backend.domain.models.pov_prompts import (
     PovHookRequest,
     PovOutlineRequest,
     PovThesis,
+    SizedOutlineRequest,
     SlidePolicyContext,
 )
 from rag_backend.infrastructure.cache.ai_response_cache import get_ai_response_cache
@@ -68,6 +69,18 @@ class OutlineAgent(PovOutlineMixin):
         self.model_id = model_id
         self._cache = get_ai_response_cache()
         self._instruction_loader = CarouselInstructionContextLoader()
+
+    async def generate_outline_for(
+        self, request: SizedOutlineRequest
+    ) -> list[dict[str, object]]:
+        """``generate_outline`` from one request object (the mode-aware caller)."""
+        return await self.generate_outline(
+            request.topic,
+            request.audience,
+            request.brief,
+            request.sources,
+            sizing=request.sizing,
+        )
 
     async def generate_outline(
         self,

@@ -82,11 +82,26 @@ class SlidePolicyContext:
     hook_text: str = ""
 
 
+@dataclass(frozen=True, kw_only=True)
+class SizedOutlineRequest:
+    """One outline call (Radar IA): the brief, its sources and optional sizing.
+
+    ``sizing`` is None for the legacy fixed contract (v1-v3).
+    """
+
+    topic: str
+    audience: str
+    brief: str
+    sources: list[str] = field(default_factory=list)
+    sizing: SlidePolicyContext | None = None
+
+
 __all__ = [
     "PovHookRequest",
     "PovOutlineRequest",
     "PovSlideContext",
     "PovThesis",
     "RadarHookRequest",
+    "SizedOutlineRequest",
     "SlidePolicyContext",
 ]

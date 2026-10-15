@@ -7,6 +7,7 @@ Only carousels on a role contract (Ponto de Vista, Radar IA v4) take a hook.
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import Annotated
 from uuid import UUID
 
@@ -35,6 +36,23 @@ from rag_backend.domain.models import User
 router = APIRouter()
 
 
+@dataclass(frozen=True)
+class _HookTarget:
+    """The carousel id, the caller and the session that commits the hook."""
+
+    project_id: UUID
+    user: User
+    session: AsyncSession
+
+
+def _hook_target(
+    project_id: UUID,
+    user: Annotated[User, Depends(require_editor_or_admin)],
+    session: Annotated[AsyncSession, Depends(get_db)],
+) -> _HookTarget:
+    return _HookTarget(project_id=project_id, user=user, session=session)
+
+
 @router.put(
     "/{project_id}/hook",
     responses={
@@ -44,21 +62,21 @@ router = APIRouter()
     },
 )
 async def select_hook(
-    project_id: UUID,
     request: HookSelectRequest,
-    user: Annotated[User, Depends(require_editor_or_admin)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    target: Annotated[_HookTarget, Depends(_hook_target)],
 ) -> HookSelectResponse:
     """Store the owner's slide-1 hook (<=60 characters, <=10 words)."""
-    project = await get_carousel_project_for_domain_user(session, project_id, user)
+    project = await get_carousel_project_for_domain_user(
+        target.session, target.project_id, target.user
+    )
     version = project.presentation_policy_version or DEFAULT_PRESENTATION_POLICY_VERSION
     if not load_presentation_policy(version).has_roles:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail=ERR_HOOK_NOT_SUPPORTED
         )
     project.hook_text = request.hook_text
-    await session.commit()
-    return HookSelectResponse(project_id=project_id, hook_text=request.hook_text)
+    await target.session.commit()
+    return HookSelectResponse(project_id=target.project_id, hook_text=request.hook_text)
 
 
 __all__ = ["router"]
