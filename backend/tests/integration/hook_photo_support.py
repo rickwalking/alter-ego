@@ -7,11 +7,8 @@ asset and output folders at ``tmp_path``.
 
 from __future__ import annotations
 
-from collections.abc import Iterator
 from io import BytesIO
-from pathlib import Path
 
-import pytest
 from httpx import AsyncClient
 
 HOOK_ROLE = "hook"
@@ -24,18 +21,6 @@ def png(color: tuple[int, int, int, int]) -> bytes:
     buffer = BytesIO()
     Image.new("RGBA", (16, 20), color).save(buffer, format="PNG")
     return buffer.getvalue()
-
-
-@pytest.fixture
-def asset_dirs(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[Path]:
-    """Creator assets and carousel output under ``tmp_path``."""
-    from rag_backend.infrastructure.config.settings import get_settings
-
-    monkeypatch.setenv("CAROUSEL_CREATOR_ASSETS_DIR", str(tmp_path / "assets"))
-    monkeypatch.setenv("CAROUSEL_OUTPUT_DIR", str(tmp_path / "output"))
-    get_settings.cache_clear()
-    yield tmp_path
-    get_settings.cache_clear()
 
 
 async def upload_photo(

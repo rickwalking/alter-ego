@@ -6,6 +6,7 @@ Gherkin: tests/features/autopilot_pov_thesis.feature
 
 from __future__ import annotations
 
+from dataclasses import replace
 from uuid import UUID
 
 import pytest
@@ -21,18 +22,32 @@ from rag_backend.modules.editorial.public import as_uuid
 _PHOTO = "00000000-0000-4000-8000-0000000000aa"
 
 
-def _spec(**changes: object) -> ProjectSpec:
-    base: dict[str, object] = {
-        "topic": "T",
-        "audience": "Devs",
-        "niche": "IA",
-        "brief": "b",
-        "sources": ("https://x.com/a/status/1",),
-        "owner_user_id": "owner-1",
-        "persona_id": "persona-pedro",
-    }
-    base.update(changes)
-    return ProjectSpec(**base)  # type: ignore[arg-type]
+_BASE = ProjectSpec(
+    topic="T",
+    audience="Devs",
+    niche="IA",
+    brief="b",
+    sources=("https://x.com/a/status/1",),
+    owner_user_id="owner-1",
+    persona_id="persona-pedro",
+)
+
+
+def _spec(
+    content_mode: str = "news_analysis",
+    pov_format: str | None = None,
+    slide_count: int | None = None,
+    hook_asset_id: str | None = None,
+) -> ProjectSpec:
+    pov_thesis = "Tese" if content_mode == "pov" else None
+    return replace(
+        _BASE,
+        content_mode=content_mode,
+        pov_thesis=pov_thesis,
+        pov_format=pov_format,
+        slide_count=slide_count,
+        hook_asset_id=hook_asset_id,
+    )
 
 
 @pytest.mark.unit
@@ -40,7 +55,6 @@ class TestPovFields:
     def test_pov_carries_choice_photo_and_persona(self) -> None:
         spec = _spec(
             content_mode="pov",
-            pov_thesis="Tese",
             pov_format="comparacao",
             slide_count=10,
             hook_asset_id=_PHOTO,
@@ -53,7 +67,7 @@ class TestPovFields:
         assert policy_version_for(spec) != policy_version_for(_spec())
 
     def test_pov_without_format_uses_the_default(self) -> None:
-        fields = pov_fields_for(_spec(content_mode="pov", pov_thesis="Tese"))
+        fields = pov_fields_for(_spec(content_mode="pov"))
         assert fields["pov_format"] == "opiniao"
         assert fields["hook_asset_id"] is None
 
