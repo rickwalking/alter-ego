@@ -377,7 +377,7 @@
     "photo": {
       "title": "Slide 1 photo",
       "hint": "Your cut-out photo (PNG/WebP with transparency, up to 5 MB) sits next to the hook. The newest photo is selected by default.",
-      "empty": "No photos yet: upload one (slide 1 then shows only the hook).",
+      "empty": "No photos yet: upload one. The slide-1 photo is required for Ponto de Vista.",
       "photoLabel": "Photo",
       "upload": "Upload a new photo",
       "uploading": "Uploading…",

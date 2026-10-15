@@ -59,7 +59,6 @@ export const API_ENDPOINTS = {
   CREATOR_ASSETS: "/api/carousels/creator-assets",
   CREATOR_ASSET_IMAGE: (id: string) =>
     `/api/carousels/creator-assets/${id}/image`,
-  CAROUSEL_HOOK_PHOTO: (id: string) => `/api/carousels/${id}/hook-photo`,
   CAROUSEL_WORKFLOW_START: (id: string) =>
     `/api/carousels/${id}/workflow/start`,
   CAROUSEL_WORKFLOW_STATE: (id: string) =>

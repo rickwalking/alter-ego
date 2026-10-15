@@ -177,6 +177,8 @@ export const carouselCreateRequestSchema = z
     slide_count: z.number().int().min(7).max(10).optional(),
     cta_goal: z.enum(["follow", "send", "comment"]).optional(),
     persona_id: z.string().uuid().nullable().optional(),
+    // PR #106 review: required by the API when content_mode is "pov".
+    hook_asset_id: z.string().uuid().optional(),
   })
   .refine(
     (data) =>

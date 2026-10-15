@@ -1,21 +1,17 @@
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { CREATOR_PHOTO_ROLES } from "@/constants/create";
-import {
-  useCreatorPhotos,
-  useSetHookPhoto,
-  useUploadCreatorPhoto,
-} from "@/modules/editorial";
+import { useCreatorPhotos, useUploadCreatorPhoto } from "@/modules/editorial";
 import type { CreatePhotoSectionProps } from "@/app/dashboard/create/workspace/create-photo-section";
 
 export interface PovPhotoState {
   section: CreatePhotoSectionProps;
-  /** Bind the chosen photo to a just-created project (no-op without one). */
-  attachTo: (projectId: string) => Promise<void>;
 }
 
 /**
  * AE-0376: the wizard's "Foto do slide 1": the owner's hook photos (newest
- * first, preselected once), upload, and binding after the project is created.
+ * first, preselected once) and upload. PR #106 review: the chosen photo is
+ * sent as `hook_asset_id` in the create request (required for POV), so the
+ * backend binds it before the project exists without its photo.
  */
 export function usePovPhoto(
   selectedId: string,
@@ -24,7 +20,6 @@ export function usePovPhoto(
   const role = CREATOR_PHOTO_ROLES.HOOK;
   const photos = useCreatorPhotos(role);
   const upload = useUploadCreatorPhoto();
-  const setHookPhoto = useSetHookPhoto();
   const preselected = useRef(false);
   const items = useMemo(() => photos.data ?? [], [photos.data]);
 
@@ -47,16 +42,6 @@ export function usePovPhoto(
     [upload, role, onSelect],
   );
 
-  const attachTo = useCallback(
-    async (projectId: string): Promise<void> => {
-      if (!selectedId) {
-        return;
-      }
-      await setHookPhoto.mutateAsync({ projectId, assetId: selectedId });
-    },
-    [selectedId, setHookPhoto],
-  );
-
   return {
     section: {
       photos: items,
@@ -66,6 +51,5 @@ export function usePovPhoto(
       uploading: upload.isPending,
       uploadFailed: upload.isError,
     },
-    attachTo,
   };
 }

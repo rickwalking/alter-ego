@@ -86,6 +86,11 @@ def run_content_mode(run: AutopilotRun) -> str | None:
     return None
 
 
+def is_pov_run(run: AutopilotRun) -> bool:
+    """PR #106 review: a POV run always lands on its Tue/Thu 12:00 slot."""
+    return run_content_mode(run) == CONTENT_MODE_POV
+
+
 def publish_slots_for(run: AutopilotRun, now: datetime) -> tuple[datetime, ...]:
     """AE-0370's next slots; a POV run gets its Tue/Thu 12:00 slot first."""
     default = next_slots(now)
@@ -102,6 +107,7 @@ __all__ = [
     "POV_SLOT_TIME",
     "POV_SLOT_WEEKDAYS",
     "PovPublishSlots",
+    "is_pov_run",
     "publish_slots_for",
     "run_content_mode",
     "sao_paulo_week",

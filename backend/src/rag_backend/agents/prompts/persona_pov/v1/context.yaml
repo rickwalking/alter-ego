@@ -1,0 +1,22 @@
+---
+name: persona_pov_context
+version: "1.0.0"
+description: "The owner's voice for the Ponto de Vista outline (AE-0371, PR #106 review). Built from the project's persona: voice, signature (preferred) phrases and forbidden phrases. The persona shapes HOW the text sounds, never WHAT the author thinks or lived."
+
+template: |
+  VOZ DO AUTOR (persona "{{ persona_name }}"):
+  - Descrição da voz: {{ description }}
+  - Como opina: {{ opinion_expression }}
+  - Frases: {{ sentence_structure }}
+  - Parágrafos: {{ paragraph_style }}
+  - Frases-assinatura (no máximo uma, só se couber naturalmente): {{ signature_phrases }}
+  - Frases proibidas (nunca use, nem parafraseadas): {{ forbidden_phrases }}
+  A persona define COMO o texto soa, nunca O QUE o autor pensa ou viveu: não
+  invente opiniões, experiências, resultados ou números a partir dela.
+
+model: {}
+
+metadata:
+  author: "content-team"
+  created_at: "2026-10-15"
+  tags: ["carousel", "pov", "persona", "outline", "growth-plan"]

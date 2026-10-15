@@ -9,6 +9,8 @@ import { INITIAL_CREATE_FORM_STATE } from "./types";
 
 // Scenarios: see tests/features/create-image-guidance.feature
 
+const HOOK_PHOTO_ID = "0b7c1d2e-3f4a-4b5c-8d6e-7f8091a2b3c4";
+
 const BASE_FORM = {
   ...INITIAL_CREATE_FORM_STATE,
   topic: "Topic",
@@ -90,6 +92,7 @@ describe("buildCarouselCreateRequest content mode (AE-0373)", () => {
       slideCount: 10,
       ctaGoal: "send",
       personaId: "6f1c2b8e-1d2a-4c3b-9a8e-1f2e3d4c5b6a",
+      hookAssetId: HOOK_PHOTO_ID,
     });
     expect(request).toMatchObject({
       content_mode: "pov",
@@ -100,6 +103,7 @@ describe("buildCarouselCreateRequest content mode (AE-0373)", () => {
       cta_goal: "send",
       strategy: "numbered_list",
       persona_id: "6f1c2b8e-1d2a-4c3b-9a8e-1f2e3d4c5b6a",
+      hook_asset_id: HOOK_PHOTO_ID,
     });
     expect(carouselCreateRequestSchema.safeParse(request).success).toBe(true);
   });
@@ -113,14 +117,26 @@ describe("buildCarouselCreateRequest content mode (AE-0373)", () => {
     expect(request.content_mode).toBe("news_analysis");
     expect(request.pov_thesis).toBeUndefined();
     expect(request.slide_count).toBeUndefined();
+    expect(request.hook_asset_id).toBeUndefined();
     expect(request.strategy).toBe("feature_grid");
     expect(request.persona_id).toBeNull();
   });
 
-  it("requires the thesis to submit in POV mode", () => {
+  // PR #106 review: POV needs the thesis AND the slide-1 photo.
+  it("requires the thesis and the slide-1 photo to submit in POV mode", () => {
     const pov = { ...BASE_FORM, contentMode: "pov" as const };
     expect(canSubmitCreateForm(pov)).toBe(false);
-    expect(canSubmitCreateForm({ ...pov, povThesis: "Tese" })).toBe(true);
+    expect(canSubmitCreateForm({ ...pov, povThesis: "Tese" })).toBe(false);
+    expect(canSubmitCreateForm({ ...pov, hookAssetId: HOOK_PHOTO_ID })).toBe(
+      false,
+    );
+    expect(
+      canSubmitCreateForm({
+        ...pov,
+        povThesis: "Tese",
+        hookAssetId: HOOK_PHOTO_ID,
+      }),
+    ).toBe(true);
     expect(canSubmitCreateForm(BASE_FORM)).toBe(true);
     expect(canSubmitCreateForm({ ...BASE_FORM, audience: " " })).toBe(false);
   });

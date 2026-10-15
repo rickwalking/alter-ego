@@ -15,6 +15,7 @@ from langchain_core.language_models import BaseChatModel
 
 from rag_backend.agents.input_sanitizer import sanitize_llm_input
 from rag_backend.agents.llm_json_retry import JsonRetryPolicy, ainvoke_json
+from rag_backend.agents.pov_persona_context import pov_persona_context
 from rag_backend.agents.prompts.registry import render_prompt
 from rag_backend.domain.constants.ai_agents import ERR_INVALID_JSON
 from rag_backend.domain.constants.carousel_workflow import PHASE_OUTLINE
@@ -108,7 +109,9 @@ class PovOutlineMixin:
                 "slide_count": len(request.roles),
                 "presentation_policy_context": request.policy_context,
                 "phase": PHASE_OUTLINE,
-                "persona_context": "",
+                # PR #106 review: the project's persona (explicitly empty
+                # only when the project has none).
+                "persona_context": pov_persona_context(request.persona),
                 "revision_notes": "",
             },
             version=POV_PROMPT_VERSION,

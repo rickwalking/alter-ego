@@ -81,6 +81,7 @@ def build_autopilot_worker_steps(
         autopilot_runner=build_autopilot_runner_tick(
             AutopilotTickConfig(
                 owner_user_id=settings.autopilot_owner_user_id,
+                persona_id=settings.autopilot_persona_id,
                 engine_factory=engine_factory,
                 stale_after_seconds=settings.workflow_run_heartbeat_stale_seconds,
                 notifier_configured=notifier_is_configured(token, chat_id),

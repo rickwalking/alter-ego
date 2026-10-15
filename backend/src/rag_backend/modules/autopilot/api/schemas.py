@@ -12,7 +12,13 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from rag_backend.domain.constants.content_mode import CONTENT_MODE_NEWS_ANALYSIS
+from rag_backend.domain.constants.content_mode import (
+    CONTENT_MODE_NEWS_ANALYSIS,
+    ERR_POV_FORMAT_UNKNOWN,
+    POV_FORMATS,
+    POV_SLIDE_COUNT_MAX,
+    POV_SLIDE_COUNT_MIN,
+)
 from rag_backend.modules.autopilot.carousel_constants import (
     IMAGE_GUIDANCE_MAX_CHARS,
     IMAGE_STYLE_INPUT_MAX_CHARS,
@@ -83,6 +89,21 @@ class TopicProposal(BaseModel):
         min_length=TEXT_MIN_CHARS,
         max_length=THESIS_DRAFT_MAX_CHARS,
     )
+
+    # PR #106 review (scout v3): the POV format and slide count per topic.
+    # Omitted = the autopilot default (opiniao, 9); ignored on Radar IA topics.
+    pov_format: str | None = None
+    slide_count: int | None = Field(
+        default=None, ge=POV_SLIDE_COUNT_MIN, le=POV_SLIDE_COUNT_MAX
+    )
+
+    @field_validator("pov_format")
+    @classmethod
+    def pov_format_is_known(cls, value: str | None) -> str | None:
+        """Reject a batch whose POV format is not one of the four formats."""
+        if value is None or value in POV_FORMATS:
+            return value
+        raise ValueError(ERR_POV_FORMAT_UNKNOWN.format(sorted(POV_FORMATS), value))
 
     @field_validator("sources")
     @classmethod

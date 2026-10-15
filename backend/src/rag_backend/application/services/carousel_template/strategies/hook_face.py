@@ -1,7 +1,13 @@
-"""Hook-face strategy: the owner's photo + a big hook (AE-0376, POV slide 1)."""
+"""Hook-face strategy: the owner's photo + a big hook (AE-0376, POV slide 1).
+
+PR #106 review: the photo is never optional. A missing or unreadable photo
+raises ``HookPhotoError`` instead of silently rendering slide 1 without it.
+"""
 
 import html
+import os
 from collections.abc import Mapping
+from pathlib import Path
 
 from typing_extensions import override
 
@@ -15,6 +21,10 @@ from rag_backend.application.services.carousel_template.pov_shell import (
     render_pov_shell,
 )
 from rag_backend.domain.constants import LANGUAGE_PT
+from rag_backend.domain.constants.content_mode import (
+    ERR_HOOK_PHOTO_MISSING,
+    ERR_HOOK_PHOTO_UNREADABLE,
+)
 from rag_backend.domain.models import CarouselProject
 from rag_backend.domain.protocols.carousel import _RenderOptions
 
@@ -22,17 +32,35 @@ HOOK_FACE_STRATEGY = "hook_face"
 _LAYOUT = "pov-hook"
 
 
+class HookPhotoError(RuntimeError):
+    """Slide 1 of a POV deck cannot render: its photo is missing or unreadable."""
+
+    def __init__(self, code: str, project_id: str) -> None:
+        super().__init__(f"{code}: project {project_id}")
+        self.code = code
+        self.project_id = project_id
+
+
 def hook_photo_src(project: CarouselProject) -> str:
-    """The slide-1 photo staged in the artifact, or "" (no generated artwork)."""
-    if project.hook_asset_id is not None and project.hook_asset_staged_path:
-        return project.hook_asset_staged_path
-    return ""
+    """The slide-1 photo staged in the artifact; raises when it is unusable.
+
+    The staged path is relative to the project's output dir. When the output
+    dir is known the file must exist and be readable there.
+    """
+    staged = project.hook_asset_staged_path
+    if project.hook_asset_id is None or not staged:
+        raise HookPhotoError(ERR_HOOK_PHOTO_MISSING, str(project.id))
+    if project.output_dir and not _readable(Path(project.output_dir) / staged):
+        raise HookPhotoError(ERR_HOOK_PHOTO_UNREADABLE, str(project.id))
+    return staged
+
+
+def _readable(path: Path) -> bool:
+    return path.is_file() and os.access(path, os.R_OK)
 
 
 def _photo_html(project: CarouselProject, alt: str) -> str:
     src = hook_photo_src(project)
-    if not src:
-        return ""
     return (
         f'<div class="pov-hook-photo">'
         f'<img src="{html.escape(src, quote=True)}" '
@@ -83,4 +111,9 @@ class HookFaceStrategy:
         )
 
 
-__all__ = ["HOOK_FACE_STRATEGY", "HookFaceStrategy", "hook_photo_src"]
+__all__ = [
+    "HOOK_FACE_STRATEGY",
+    "HookFaceStrategy",
+    "HookPhotoError",
+    "hook_photo_src",
+]

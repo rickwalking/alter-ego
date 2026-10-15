@@ -45,6 +45,7 @@ from rag_backend.modules.autopilot.domain.parked import (
 )
 from rag_backend.modules.autopilot.domain.policy import decide
 from rag_backend.modules.autopilot.parked_constants import REASON_ENGINE_PARKED
+from tests.unit.modules.autopilot.project_inputs_fake import FakeProjectInputs
 from tests.unit.modules.autopilot.test_autopilot_runner import (
     _PROJECT,
     _Editorial,
@@ -184,6 +185,7 @@ def _runner_for(editorial: _ParkedEditorial) -> tuple[AutopilotRunner, _Runs]:
             notices=_Notices(),
             recovery=_Recovery(runs=runs),
             owner_user_id="owner-1",
+            inputs=FakeProjectInputs(),
         )
     )
     return runner, runs

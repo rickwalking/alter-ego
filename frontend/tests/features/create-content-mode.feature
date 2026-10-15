@@ -36,3 +36,20 @@ Feature: Create wizard content mode (AE-0373, ADR-0021)
     Given the persona list has no "Pedro"
     When the wizard loads
     Then no persona is selected
+
+  # PR #106 review (AE-0371): the slide-1 photo is required for POV.
+  Scenario: POV submit needs the slide-1 photo
+    Given the wizard in "Ponto de Vista" mode with a thesis
+    And no slide-1 photo is selected
+    Then "Start Carousel" is disabled
+
+  Scenario: POV create sends the chosen photo
+    Given the wizard in "Ponto de Vista" mode with a thesis and a selected photo
+    When the owner starts the carousel
+    Then the create request carries hook_asset_id with the photo id
+    And no separate hook-photo call is made after the project is created
+
+  Scenario: Radar IA create never sends a photo
+    Given the wizard in "Radar IA" mode with a photo left selected
+    When the owner starts the carousel
+    Then the create request has no hook_asset_id

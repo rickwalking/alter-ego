@@ -114,9 +114,3 @@ export interface UploadCreatorPhotoInput {
   file: File;
   role: string;
 }
-
-/** AE-0376: bind a library photo to slide 1 of a POV carousel. */
-export interface SetHookPhotoInput {
-  projectId: string;
-  assetId: string;
-}

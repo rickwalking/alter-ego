@@ -7,7 +7,7 @@ in the application service.
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from typing import cast
 from uuid import UUID, uuid4
@@ -30,6 +30,11 @@ from rag_backend.modules.autopilot.domain.carousel_defaults import (
     DEFAULT_IMAGE_STYLE,
     CarouselText,
     carousel_reason,
+)
+from rag_backend.modules.autopilot.domain.pov_choice import (
+    NO_POV_CHOICE,
+    PovChoice,
+    pov_choice_for,
 )
 from rag_backend.modules.autopilot.domain.topic_text import (
     contains_url,
@@ -62,6 +67,7 @@ class ProposalInput:
     # AE-0377: scout v3. No mode = Radar IA; POV needs the draft thesis.
     content_mode: str = CONTENT_MODE_NEWS_ANALYSIS
     thesis_draft: str | None = None
+    pov_choice: PovChoice = NO_POV_CHOICE
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -82,6 +88,7 @@ class PreparedProposal:
     image_guidance: str | None = None
     content_mode: str = CONTENT_MODE_NEWS_ANALYSIS
     thesis_draft: str | None = None
+    pov_choice: PovChoice = NO_POV_CHOICE
 
     @property
     def is_news(self) -> bool:
@@ -157,6 +164,7 @@ def prepare(proposal: ProposalInput) -> PreparedProposal:
         image_guidance=_optional_text(proposal.image_guidance),
         content_mode=proposal.content_mode,
         thesis_draft=_optional_text(proposal.thesis_draft),
+        pov_choice=pov_choice_for(proposal.content_mode, proposal.pov_choice),
     )
 
 
@@ -293,7 +301,7 @@ def _finish(rows: list[_Classified], facts: IntakeFacts) -> IntakePlan:
         _collect_row(row, buckets)
     queue_ids = _ids_to_queue(buckets.fresh, facts)
     if _slots(facts) == NO_QUEUE_SLOTS:
-        buckets.rejected.extend(_cap_rejections(buckets.fresh))
+        buckets.rejected.extend(_rejections(buckets.fresh, REASON_DAILY_CAP_REACHED))
     else:
         buckets.rejected.extend(_weekly_cap_rejections(buckets.fresh, facts))
     candidates = tuple(_candidate(row, queue_ids) for row in buckets.fresh)
@@ -362,13 +370,10 @@ def _required_ids(rows: list[_Classified]) -> list[UUID]:
     return [row.candidate_id for row in rows if row.candidate_id is not None]
 
 
-def _cap_rejections(fresh: list[_Classified]) -> list[TopicRejection]:
+def _rejections(rows: Iterable[_Classified], reason: str) -> list[TopicRejection]:
     return [
-        TopicRejection(
-            title=_rejection_title(row.proposal),
-            reason=REASON_DAILY_CAP_REACHED,
-        )
-        for row in fresh
+        TopicRejection(title=_rejection_title(row.proposal), reason=reason)
+        for row in rows
     ]
 
 
@@ -378,13 +383,8 @@ def _weekly_cap_rejections(
     """AE-0377: Radar IA topics stored but not queued (this week's run is used)."""
     if facts.news_runs_this_week < MAX_NEWS_RUNS_PER_WEEK:
         return []
-    return [
-        TopicRejection(
-            title=_rejection_title(row.proposal), reason=REASON_WEEKLY_NEWS_CAP
-        )
-        for row in fresh
-        if row.proposal.is_news
-    ]
+    news = (row for row in fresh if row.proposal.is_news)
+    return _rejections(news, REASON_WEEKLY_NEWS_CAP)
 
 
 def _candidate(row: _Classified, queue_ids: frozenset[UUID]) -> NewCandidate:

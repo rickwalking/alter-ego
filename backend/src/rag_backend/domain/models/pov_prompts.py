@@ -9,6 +9,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+from rag_backend.domain.models.persona import PersonaProfile
+
 
 @dataclass(frozen=True, kw_only=True)
 class PovThesis:
@@ -30,6 +32,8 @@ class PovOutlineRequest:
     pov: PovThesis
     roles: tuple[str, ...]
     policy_context: str = ""
+    # PR #106 review: the project's persona voices the outline (None = none).
+    persona: PersonaProfile | None = None
 
 
 @dataclass(frozen=True, kw_only=True)

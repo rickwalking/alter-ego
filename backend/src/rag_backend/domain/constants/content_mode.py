@@ -55,6 +55,13 @@ ERR_CTA_GOAL_UNKNOWN = "cta_goal must be one of {}, got {!r}"
 ERR_HOOK_BLANK = "hook_text must not be blank"
 ERR_HOOK_TOO_MANY_WORDS = "hook_text must have at most {} words"
 ERR_HOOK_NOT_SUPPORTED = "hook_not_supported_for_this_carousel"
+# PR #106 review: slide 1 of a POV deck is the owner's photo, never optional.
+ERR_POV_HOOK_PHOTO_REQUIRED = (
+    "hook_asset_id is required when content_mode is 'pov': "
+    "choose the slide-1 photo (role hook) from your photo library"
+)
+ERR_HOOK_PHOTO_MISSING = "hook_photo_missing"
+ERR_HOOK_PHOTO_UNREADABLE = "hook_photo_unreadable"
 
 __all__ = [
     "CONTENT_MODES",
@@ -68,9 +75,12 @@ __all__ = [
     "ERR_CTA_GOAL_UNKNOWN",
     "ERR_HOOK_BLANK",
     "ERR_HOOK_NOT_SUPPORTED",
+    "ERR_HOOK_PHOTO_MISSING",
+    "ERR_HOOK_PHOTO_UNREADABLE",
     "ERR_HOOK_TOO_MANY_WORDS",
     "ERR_POV_FIELDS_ON_NEWS",
     "ERR_POV_FORMAT_UNKNOWN",
+    "ERR_POV_HOOK_PHOTO_REQUIRED",
     "ERR_POV_THESIS_REQUIRED",
     "ERR_SLIDE_COUNT_RANGE",
     "HOOK_MAX_WORDS",

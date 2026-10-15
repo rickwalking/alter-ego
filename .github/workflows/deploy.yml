@@ -168,6 +168,7 @@ jobs:
             AUTOPILOT_OWNER_USER_ID=${{ secrets.AUTOPILOT_OWNER_USER_ID }}
             AUTOPILOT_DAILY_CAP=${{ secrets.AUTOPILOT_DAILY_CAP || '1' }}
             AUTOPILOT_DEFAULT_PUBLISH=${{ secrets.AUTOPILOT_DEFAULT_PUBLISH || 'now' }}
+            AUTOPILOT_PERSONA_ID=${{ secrets.AUTOPILOT_PERSONA_ID }}
             # AE-0393 GrokBot image bridge (owner decision 2026-10-15): ON in prod,
             # OpenAI only when a bridge job fails. Rollback = set ENABLED=false here.
             # Without the two secrets the backend logs image_bridge_misconfigured and

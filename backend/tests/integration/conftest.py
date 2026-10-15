@@ -1,7 +1,9 @@
 """Shared fixtures for integration tests."""
 
 import os
+from collections.abc import Iterator
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
 
 import jwt
 import pytest
@@ -22,6 +24,18 @@ def integration_test_settings() -> None:
     os.environ["SECRET_KEY"] = TEST_SECRET
     os.environ["ANON_SECRET_KEY"] = "test-anon-secret-for-integration-tests"
     yield
+    get_settings.cache_clear()
+
+
+@pytest.fixture
+def asset_dirs(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[Path]:
+    """Creator assets and carousel output under ``tmp_path`` (PR #106 review)."""
+    from rag_backend.infrastructure.config.settings import get_settings
+
+    monkeypatch.setenv("CAROUSEL_CREATOR_ASSETS_DIR", str(tmp_path / "assets"))
+    monkeypatch.setenv("CAROUSEL_OUTPUT_DIR", str(tmp_path / "output"))
+    get_settings.cache_clear()
+    yield tmp_path
     get_settings.cache_clear()
 
 

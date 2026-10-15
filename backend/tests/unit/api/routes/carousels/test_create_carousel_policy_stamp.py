@@ -13,6 +13,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.api.routes.carousels.crud import create_carousel
 from rag_backend.api.schemas.carousel import CarouselProjectCreate
+from rag_backend.application.services.carousel.creator_asset_service import (
+    CreatorAssetService,
+)
 from rag_backend.application.services.carousel.presentation_review_pipeline import (
     validate_localized_slides,
 )
@@ -76,6 +79,8 @@ class TestCreateTimeStamping:
             user,
             cast(CarouselRepository, repo),
             cast(AsyncSession, _NoopSession()),
+            # PR #106 review: a Radar IA create never touches the photo service.
+            cast(CreatorAssetService, object()),
         )
 
         assert repo.captured is not None

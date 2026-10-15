@@ -77,6 +77,7 @@ from rag_backend.modules.editorial.public import (
     REVIEW_ACTION_APPROVE,
     REVIEW_ACTION_REVISE,
 )
+from tests.unit.modules.autopilot.project_inputs_fake import FakeProjectInputs
 from tests.unit.modules.autopilot.test_autopilot_runner import (
     _PROJECT,
     _Editorial,
@@ -312,6 +313,7 @@ def _runner(
             notices=_Notices(),
             recovery=_Recovery(runs=runs),
             owner_user_id="owner-1",
+            inputs=FakeProjectInputs(),
             gate_repair=repairer,
         )
     )

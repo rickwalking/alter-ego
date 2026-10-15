@@ -6,7 +6,8 @@ both name every autopilot variable. ``AUTOPILOT_ENABLED`` must default to
 false so a deploy does not start the runner. ``CAROUSEL_PUBLIC_BASE_URL``
 must be the public site origin. ``AUTOPILOT_DAILY_CAP`` must have a numeric
 default so an unset secret does not crash settings parsing.
-``AUTOPILOT_DEFAULT_PUBLISH`` (AE-0370) must be named on both surfaces.
+``AUTOPILOT_DEFAULT_PUBLISH`` (AE-0370) and ``AUTOPILOT_PERSONA_ID`` (AE-0371,
+empty default) must be named on both surfaces.
 
 Usage:
     python3 scripts/ci/check_autopilot_env_parity.py
@@ -41,6 +42,8 @@ VAR_AUTOPILOT_OWNER_USER_ID = "AUTOPILOT_OWNER_USER_ID"
 VAR_AUTOPILOT_DAILY_CAP = "AUTOPILOT_DAILY_CAP"
 # AE-0370: what Telegram Approve does; both surfaces default it to "now".
 VAR_AUTOPILOT_DEFAULT_PUBLISH = "AUTOPILOT_DEFAULT_PUBLISH"
+# AE-0371 PR #106 review: the autopilot persona; empty = resolve "Pedro" by name.
+VAR_AUTOPILOT_PERSONA_ID = "AUTOPILOT_PERSONA_ID"
 
 REQUIRED_ENV_NAMES: tuple[str, ...] = (
     VAR_META_IG_ACCESS_TOKEN,
@@ -55,6 +58,7 @@ REQUIRED_ENV_NAMES: tuple[str, ...] = (
     VAR_AUTOPILOT_OWNER_USER_ID,
     VAR_AUTOPILOT_DAILY_CAP,
     VAR_AUTOPILOT_DEFAULT_PUBLISH,
+    VAR_AUTOPILOT_PERSONA_ID,
 )
 
 PUBLIC_SLIDE_BASE_URL = "https://marinssolutions.com"

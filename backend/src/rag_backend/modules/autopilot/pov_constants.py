@@ -69,10 +69,31 @@ ANSWER_THESIS_EDIT = "Responda com a sua tese"
 
 LOG_THESIS = "autopilot.thesis"
 
+# PR #106 review: a POV carousel needs the persona and the slide-1 photo.
+REASON_PERSONA_NOT_SCORED = "persona_not_scored"
+REASON_HOOK_PHOTO_MISSING = "hook_photo_missing"
+TEXT_PERSONA_NOT_SCORED = (
+    "⚠️ POV precisa da persona Pedro configurada: o carrossel não recebeu nota "
+    'de voz. Crie a persona "Pedro" (ou defina AUTOPILOT_PERSONA_ID) e gere de novo.'
+)
+TEXT_HOOK_PHOTO_MISSING = (
+    '📸 POV sem foto do slide 1: envie uma foto com o papel "hook" na sua '
+    "biblioteca de fotos do dashboard. Nada foi gerado."
+)
+# Telegram text for these reasons (escalated / failed notices).
+POV_TEXT_BY_REASON: dict[str, str] = {
+    REASON_PERSONA_NOT_SCORED: TEXT_PERSONA_NOT_SCORED,
+    REASON_HOOK_PHOTO_MISSING: TEXT_HOOK_PHOTO_MISSING,
+}
+# ``AUTOPILOT_PERSONA_ID`` empty: the persona resolved by this name instead.
+AUTOPILOT_PERSONA_NAME = "Pedro"
+LOG_PERSONA_UNRESOLVED = "autopilot.persona_unresolved"
+
 __all__ = [
     "ANSWER_THESIS_CONFIRMED",
     "ANSWER_THESIS_DISCARDED",
     "ANSWER_THESIS_EDIT",
+    "AUTOPILOT_PERSONA_NAME",
     "BUTTON_THESIS_CONFIRM",
     "BUTTON_THESIS_DISCARD",
     "BUTTON_THESIS_EDIT",
@@ -85,9 +106,13 @@ __all__ = [
     "KIND_THESIS_CONFIRM",
     "KIND_THESIS_DISCARD",
     "KIND_THESIS_EDIT",
+    "LOG_PERSONA_UNRESOLVED",
     "LOG_THESIS",
     "MAX_NEWS_RUNS_PER_WEEK",
     "POV_IMAGE_STYLE",
+    "POV_TEXT_BY_REASON",
+    "REASON_HOOK_PHOTO_MISSING",
+    "REASON_PERSONA_NOT_SCORED",
     "REASON_THESIS_CONFIRMED",
     "REASON_THESIS_DISCARDED",
     "REASON_THESIS_EXPIRED",
@@ -96,6 +121,8 @@ __all__ = [
     "REASON_WEEKLY_NEWS_CAP",
     "SCOUT_MODES",
     "SCOUT_MODE_PATTERN",
+    "TEXT_HOOK_PHOTO_MISSING",
+    "TEXT_PERSONA_NOT_SCORED",
     "TEXT_THESIS_ALREADY",
     "TEXT_THESIS_CONFIRMED",
     "TEXT_THESIS_DISCARDED",

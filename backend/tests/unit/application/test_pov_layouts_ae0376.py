@@ -6,6 +6,7 @@ Gherkin: tests/features/carousel_pov_layouts.feature
 from __future__ import annotations
 
 from io import BytesIO
+from pathlib import Path
 from uuid import uuid4
 
 import pytest
@@ -36,6 +37,7 @@ from rag_backend.application.services.carousel_template.strategies.cta_follow im
 )
 from rag_backend.application.services.carousel_template.strategies.hook_face import (
     HookFaceStrategy,
+    HookPhotoError,
 )
 from rag_backend.application.services.carousel_template.strategies.registry import (
     bootstrap_strategies,
@@ -94,14 +96,48 @@ class TestHookFace:
         assert "Deslize" in html
         assert "@pedromarins.ai" in html
 
-    # Scenario: Hook slide without a photo
-    def test_no_photo(self) -> None:
-        html = HookFaceStrategy().render(
-            {"number": "1", "heading": "Gancho"}, _pov(), _THEME, options=_opts()
+    # Scenario: Hook slide without a photo fails loudly (PR #106 review)
+    def test_no_photo_raises(self) -> None:
+        with pytest.raises(HookPhotoError) as caught:
+            HookFaceStrategy().render(
+                {"number": "1", "heading": "Gancho"}, _pov(), _THEME, options=_opts()
+            )
+        assert caught.value.code == "hook_photo_missing"
+
+    # Scenario: Hook photo bound but its staged path is empty
+    def test_bound_photo_without_staged_path_raises(self) -> None:
+        project = _pov(hook_asset_id=uuid4(), hook_asset_staged_path="")
+        with pytest.raises(HookPhotoError) as caught:
+            HookFaceStrategy().render({"number": "1"}, project, _THEME, options=_opts())
+        assert caught.value.code == "hook_photo_missing"
+
+    # Scenario: Hook photo file unreadable in the output dir
+    def test_unreadable_photo_raises(self, tmp_path: Path) -> None:
+        project = _pov(
+            hook_asset_id=uuid4(),
+            hook_asset_staged_path=_PHOTO,
+            output_dir=str(tmp_path),
         )
-        assert "pov-hook-photo" not in html
+        with pytest.raises(HookPhotoError) as caught:
+            HookFaceStrategy().render({"number": "1"}, project, _THEME, options=_opts())
+        assert caught.value.code == "hook_photo_unreadable"
+        assert str(project.id) in str(caught.value)
+
+    # Scenario: Hook photo present in the output dir renders
+    def test_photo_present_in_output_dir_renders(self, tmp_path: Path) -> None:
+        photo = tmp_path / _PHOTO
+        photo.parent.mkdir(parents=True)
+        photo.write_bytes(b"webp")
+        project = _pov(
+            hook_asset_id=uuid4(),
+            hook_asset_staged_path=_PHOTO,
+            output_dir=str(tmp_path),
+        )
+        html = HookFaceStrategy().render(
+            {"number": "1", "heading": "Gancho"}, project, _THEME, options=_opts()
+        )
+        assert f'src="{_PHOTO}"' in html
         assert "pov-hook-sub" not in html
-        assert "Gancho" in html
 
 
 @pytest.mark.unit
@@ -210,7 +246,7 @@ class TestRoleLayouts:
             )
         ]
         html = CarouselTemplateBuilder.build_carousel_html(
-            _pov(),
+            _pov(hook_asset_id=uuid4(), hook_asset_staged_path=_PHOTO),
             slides,
             _THEME,
             strategy_registry=bootstrap_strategies(),
@@ -311,8 +347,8 @@ class TestTransparency:
 def test_export_rewrites_images_and_assets() -> None:
     """Scenario: Exported slides find staged assets."""
     html = (
-        '<img src="images/slide_1.jpg"/><img src=\'assets/creators/a.webp\'/>'
-        '<div style="background: url(\'images/x.jpg\')"></div>'
+        "<img src=\"images/slide_1.jpg\"/><img src='assets/creators/a.webp'/>"
+        "<div style=\"background: url('images/x.jpg')\"></div>"
         '<img src="https://cdn/x.png"/>'
     )
     out = rewrite_asset_paths(html, "../")
@@ -320,7 +356,9 @@ def test_export_rewrites_images_and_assets() -> None:
     assert "src='../assets/creators/a.webp'" in out
     assert "url('../images/x.jpg')" in out
     assert 'src="https://cdn/x.png"' in out
-    assert 'src="../../assets/' in rewrite_asset_paths('<img src="assets/a"/>', "../../")
+    assert 'src="../../assets/' in rewrite_asset_paths(
+        '<img src="assets/a"/>', "../../"
+    )
 
 
 @pytest.mark.unit

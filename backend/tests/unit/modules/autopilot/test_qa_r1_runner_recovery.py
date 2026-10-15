@@ -49,6 +49,7 @@ from rag_backend.modules.autopilot.recovery_constants import (
     REASON_REVIEW_REOPENED,
 )
 from rag_backend.modules.editorial.public import content_approve_blocker
+from tests.unit.modules.autopilot.project_inputs_fake import FakeProjectInputs
 from tests.unit.modules.autopilot.test_autopilot_runner import (
     _OWNER,
     _PROJECT,
@@ -110,6 +111,7 @@ def _runner(
             notices=notices,
             recovery=recovery,
             owner_user_id=_OWNER,
+            inputs=FakeProjectInputs(),
             notifier_configured=configured,
             clock=_Clock(),
         )

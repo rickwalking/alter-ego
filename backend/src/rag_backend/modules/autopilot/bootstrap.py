@@ -245,6 +245,8 @@ class AutopilotTickConfig:
     engine_factory: EngineFactory
     stale_after_seconds: int
     notifier_configured: bool = True
+    # PR #106 review: AUTOPILOT_PERSONA_ID ("" = the persona named "Pedro").
+    persona_id: str = ""
 
 
 class AutopilotRunnerTickAdapter:
@@ -277,6 +279,9 @@ def _runner_deps(
         EditorialDriverConfig,
         InProcessEditorialDriver,
     )
+    from rag_backend.modules.autopilot.infrastructure.project_inputs import (
+        SqlProjectInputs,
+    )
 
     repo = SqlAlchemyAutopilotRepository(session)
     driver = InProcessEditorialDriver(
@@ -297,6 +302,7 @@ def _runner_deps(
         notices=OutboxReadyNotifier(session),
         recovery=SqlRunRecoveryStore(session),
         owner_user_id=config.owner_user_id,
+        inputs=SqlProjectInputs(session, config.persona_id),
         notifier_configured=config.notifier_configured,
         autofix=autofixer,
         gate_repair=autofixer,

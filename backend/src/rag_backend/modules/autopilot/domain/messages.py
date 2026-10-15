@@ -70,6 +70,7 @@ from rag_backend.modules.autopilot.notify_constants import (
     TEXT_REMINDER,
     TEXT_REVIEW_REOPENED,
 )
+from rag_backend.modules.autopilot.pov_constants import POV_TEXT_BY_REASON
 from rag_backend.modules.autopilot.recovery_constants import (
     NO_RETRY_REASONS,
     NOTICE_PUBLISH_HELD,
@@ -324,7 +325,7 @@ _CLOSE_REASONS = frozenset({REASON_ESCALATION_EXPIRED, REASON_CAROUSEL_REJECTED}
 
 
 def _failed(copy: StatusCopy) -> str:
-    return TEXT_FAILED.format(reason=copy.reason)
+    return TEXT_FAILED.format(reason=POV_TEXT_BY_REASON.get(copy.reason, copy.reason))
 
 
 def _publish_failed(copy: StatusCopy) -> str:
@@ -356,9 +357,10 @@ def _reminder(copy: StatusCopy) -> str:
 
 
 def _escalated(copy: StatusCopy) -> str:
+    reason = POV_TEXT_BY_REASON.get(copy.reason, copy.reason)
     if not copy.link:
-        return TEXT_ESCALATED.format(reason=copy.reason)
-    return TEXT_ESCALATED_WITH_LINK.format(reason=copy.reason, link=copy.link)
+        return TEXT_ESCALATED.format(reason=reason)
+    return TEXT_ESCALATED_WITH_LINK.format(reason=reason, link=copy.link)
 
 
 def _token(days: int | None) -> str:

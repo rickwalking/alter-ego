@@ -69,9 +69,6 @@ export default function CreateCarouselPage(): React.ReactElement {
     try {
       const payload = buildCarouselCreateRequest(form);
       const project = await createCarousel.mutateAsync(payload);
-      if (isPovForm(form)) {
-        await povPhoto.attachTo(project.id);
-      }
       router.push(DASHBOARD_ROUTES.CREATE_WORKSPACE(project.id));
     } catch (err) {
       setError(

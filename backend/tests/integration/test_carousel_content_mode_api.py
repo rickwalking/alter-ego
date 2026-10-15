@@ -5,17 +5,28 @@ Gherkin: tests/features/carousel_content_mode.feature
 
 from __future__ import annotations
 
+from pathlib import Path
 from uuid import uuid4
 
 import pytest
 from httpx import AsyncClient
 
+from tests.integration.hook_photo_support import hook_photo_id
+
 _THESIS = "A IA escreve código. Quem decide ainda é você."
 _BASE = {"topic": "Julgamento técnico", "audience": "Devs", "niche": "IA"}
+# PR #106 review: a syntactically valid photo id for the schema-level 422 cases;
+# the 201 cases upload a real photo (``hook_photo_id``).
+_ANY_PHOTO = "00000000-0000-4000-8000-0000000000aa"
 
 
 def _pov(**changes: object) -> dict[str, object]:
-    body: dict[str, object] = {**_BASE, "content_mode": "pov", "pov_thesis": _THESIS}
+    body: dict[str, object] = {
+        **_BASE,
+        "content_mode": "pov",
+        "pov_thesis": _THESIS,
+        "hook_asset_id": _ANY_PHOTO,
+    }
     body.update(changes)
     return body
 
@@ -75,11 +86,15 @@ class TestContentModeDefaults:
 class TestPovCreate:
     # Scenario: POV project with all fields
     @pytest.mark.asyncio
-    async def test_pov_fields_round_trip(self, client: AsyncClient) -> None:
+    async def test_pov_fields_round_trip(
+        self, client: AsyncClient, asset_dirs: Path
+    ) -> None:
         proof = "No meu último projeto a revisão de arquitetura levou duas horas."
+        photo = await hook_photo_id(client)
         data = await _create(
             client,
             _pov(
+                hook_asset_id=photo,
                 pov_personal_proof=proof,
                 pov_format="opiniao",
                 slide_count=9,
@@ -92,14 +107,17 @@ class TestPovCreate:
         assert data["pov_format"] == "opiniao"
         assert data["slide_count"] == 9
         assert data["cta_goal"] == "send"
+        assert data["hook_asset_id"] == photo
+        del asset_dirs
         fetched = (await client.get(f"/api/carousels/{data['id']}")).json()
         assert fetched["pov_thesis"] == _THESIS
         assert fetched["slide_count"] == 9
 
     # Scenario: POV defaults
     @pytest.mark.asyncio
-    async def test_pov_defaults(self, client: AsyncClient) -> None:
-        data = await _create(client, _pov())
+    async def test_pov_defaults(self, client: AsyncClient, asset_dirs: Path) -> None:
+        data = await _create(client, _pov(hook_asset_id=await hook_photo_id(client)))
+        del asset_dirs
         assert data["pov_format"] == "opiniao"
         assert data["slide_count"] == 9
         assert data["cta_goal"] == "follow"
@@ -107,8 +125,14 @@ class TestPovCreate:
 
     # Scenario: Thesis is trimmed
     @pytest.mark.asyncio
-    async def test_thesis_is_trimmed(self, client: AsyncClient) -> None:
-        data = await _create(client, _pov(pov_thesis=f"  {_THESIS}  "))
+    async def test_thesis_is_trimmed(
+        self, client: AsyncClient, asset_dirs: Path
+    ) -> None:
+        photo = await hook_photo_id(client)
+        data = await _create(
+            client, _pov(pov_thesis=f"  {_THESIS}  ", hook_asset_id=photo)
+        )
+        del asset_dirs
         assert data["pov_thesis"] == _THESIS
 
 
@@ -125,6 +149,8 @@ class TestContentModeRejections:
             _pov(slide_count=7),
             _pov(slide_count=11),
             _pov(pov_format="listicle"),
+            {**_BASE, "content_mode": "pov", "pov_thesis": _THESIS},
+            {**_BASE, "hook_asset_id": _ANY_PHOTO},
             {**_BASE, "content_mode": "reels"},
             {**_BASE, "cta_goal": "dance"},
             {**_BASE, "pov_thesis": _THESIS},
@@ -139,6 +165,9 @@ class TestContentModeRejections:
             "pov-7-slides",
             "pov-11-slides",
             "unknown-format",
+            # PR #106 review: POV needs the slide-1 photo; Radar IA rejects it.
+            "pov-missing-photo",
+            "photo-on-radar",
             "unknown-mode",
             "unknown-cta-goal",
             "thesis-on-radar",
