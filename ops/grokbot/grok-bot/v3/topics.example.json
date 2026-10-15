@@ -1,0 +1,33 @@
+{
+  "topics": [
+    {
+      "title": "O que o Gemini 4 muda pra quem programa",
+      "angle": "O que isso muda para devs brasileiros, além do anúncio",
+      "why_viral": "Lançamento discutido no X nas últimas 24 horas",
+      "audience": "developers",
+      "niche": "AI models",
+      "brief": "Uma única tela sobre o anúncio do Gemini 4 e o resto sobre o que muda na prática para quem programa. Cite apenas URLs do bundle de sinais e dos posts aceitos.",
+      "mode": "news_analysis",
+      "image_style": "flat_editorial",
+      "image_guidance": "Clean editorial diagram style. Background: a developer desk with two monitors showing code side by side.",
+      "sources": [
+        "https://x.com/openai/status/2010000000000000001"
+      ],
+      "score": 80
+    },
+    {
+      "title": "A IA escreve código, quem decide é você",
+      "angle": "Julgamento técnico vale mais quando gerar código fica barato",
+      "why_viral": "Debate sobre IA substituir devs voltou ao topo no X",
+      "audience": "developers",
+      "niche": "AI coding",
+      "brief": "Defender que a IA escreve o código, mas decidir o que construir continua sendo trabalho do dev. Cite apenas URLs do bundle de sinais e dos posts aceitos.",
+      "mode": "pov",
+      "thesis_draft": "A IA escreve código; decidir o que construir continua sendo o trabalho do dev.",
+      "sources": [
+        "https://x.com/openai/status/2010000000000000001"
+      ],
+      "score": 75
+    }
+  ]
+}

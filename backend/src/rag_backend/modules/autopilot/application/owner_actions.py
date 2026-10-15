@@ -28,6 +28,10 @@ from rag_backend.modules.autopilot.application.owner_steps import (
     REWORK_STEP,
     OwnerStep,
 )
+from rag_backend.modules.autopilot.application.thesis_actions import (
+    ThesisOwnerActions,
+    is_thesis_pending,
+)
 from rag_backend.modules.autopilot.constants import GATE_FINAL_REVIEW
 from rag_backend.modules.autopilot.domain.autofix import ContentAutofixer
 from rag_backend.modules.autopilot.domain.callback_parse import (
@@ -62,7 +66,11 @@ from rag_backend.modules.autopilot.domain.owner_ports import (
     ReleaseCommand,
     UpdateClaimStore,
 )
-from rag_backend.modules.autopilot.domain.ports import AutopilotRunRepository, Clock
+from rag_backend.modules.autopilot.domain.ports import (
+    AutopilotRunRepository,
+    Clock,
+    TopicCandidateRepository,
+)
 from rag_backend.modules.autopilot.domain.recovery import ReworkIntent, RunRecoveryStore
 from rag_backend.modules.autopilot.domain.webhook_update import WebhookUpdate, is_owner
 from rag_backend.modules.autopilot.recovery_constants import NO_RETRY_REASONS
@@ -123,9 +131,11 @@ class OwnerActionDeps:
     owner_chat_id: str
     # AE-0367: without it every "Fix issues" tap answers "Nothing to fix".
     autofix: ContentAutofixer | None = None
+    # AE-0377: the POV draft thesis lives on the topic candidate.
+    topics: TopicCandidateRepository | None = None
 
 
-class OwnerActionService:
+class OwnerActionService(ThesisOwnerActions):
     """Apply one claimed update. A second delivery of the same id does nothing."""
 
     def __init__(self, deps: OwnerActionDeps) -> None:
@@ -155,6 +165,8 @@ class OwnerActionService:
             await self._on_callback(update)
 
     async def _on_callback(self, update: WebhookUpdate) -> None:
+        if await self._thesis_callback(update):
+            return
         parsed = parse_callback(update.data)
         if parsed is None:
             await self._answer(update, ANSWER_UNKNOWN)
@@ -260,6 +272,9 @@ class OwnerActionService:
             return
         pending = await self._deps.pending.take(update.actor_id)
         if pending is None:
+            return
+        if is_thesis_pending(pending):
+            await self._thesis_reply(update, pending)
             return
         run = await self._awaiting(pending.run_id)
         if run is None or not await self._to_reworking(run.run_id):

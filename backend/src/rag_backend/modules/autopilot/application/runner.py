@@ -25,6 +25,7 @@ from rag_backend.modules.autopilot.application.run_recovery import (
     RecoveryDependencies,
     RunRecovery,
 )
+from rag_backend.modules.autopilot.application.run_spec import project_spec
 from rag_backend.modules.autopilot.constants import (
     GATE_FINAL_REVIEW,
     GATE_RESEARCH,
@@ -42,10 +43,6 @@ from rag_backend.modules.autopilot.constants import (
     RUNS_PER_TICK,
 )
 from rag_backend.modules.autopilot.domain.autofix import ContentAutofixer
-from rag_backend.modules.autopilot.domain.carousel_defaults import (
-    GuidanceRequest,
-    image_guidance_for,
-)
 from rag_backend.modules.autopilot.domain.gate import (
     AttachProjectCommand,
     EditorialDriver,
@@ -65,7 +62,6 @@ from rag_backend.modules.autopilot.domain.gate import (
 from rag_backend.modules.autopilot.domain.models import (
     AutopilotRun,
     AutopilotRunState,
-    TopicCandidate,
     TransitionCommand,
 )
 from rag_backend.modules.autopilot.domain.policy import decide, source_has_content
@@ -76,6 +72,7 @@ from rag_backend.modules.autopilot.domain.ports import (
 )
 from rag_backend.modules.autopilot.domain.publish import RunListQuery
 from rag_backend.modules.autopilot.domain.recovery import RunRecoveryStore
+from rag_backend.modules.autopilot.domain.thesis import needs_thesis
 from rag_backend.modules.autopilot.notify_constants import (
     REASON_NOTIFIER_UNCONFIGURED,
 )
@@ -83,6 +80,7 @@ from rag_backend.modules.autopilot.parked_constants import (
     LOG_RUNNER_REDRIVE,
     REASON_ENGINE_PARKED,
 )
+from rag_backend.modules.autopilot.pov_constants import REASON_THESIS_REQUESTED
 from rag_backend.modules.editorial.public import (
     REVIEW_ACTION_APPROVE,
     REVIEW_ACTION_REVISE,
@@ -163,6 +161,11 @@ class AutopilotRunner:
     async def _tick_queued(self, run: AutopilotRun) -> int:
         if not self._deps.owner_user_id.strip():
             await self._move(run, AutopilotRunState.FAILED, REASON_OWNER_UNCONFIGURED)
+            return 1
+        if await self._needs_thesis(run):
+            await self._move(
+                run, AutopilotRunState.AWAITING_THESIS, REASON_THESIS_REQUESTED
+            )
             return 1
         spec = await self._spec(run)
         if spec is None:
@@ -293,16 +296,12 @@ class AutopilotRunner:
         topic = await self._deps.topics.get_topic(run.topic_candidate_id)
         if topic is None:
             return None
-        return ProjectSpec(
-            topic=topic.title,
-            audience=topic.audience,
-            niche=topic.niche,
-            brief=topic.brief,
-            sources=topic.sources,
-            owner_user_id=self._deps.owner_user_id,
-            image_style=topic.image_style,
-            image_guidance=image_guidance_for(_guidance_request(topic)),
-        )
+        return project_spec(run, topic, self._deps.owner_user_id)
+
+    async def _needs_thesis(self, run: AutopilotRun) -> bool:
+        """AE-0377: a POV run waits for the owner's thesis before generating."""
+        topic = await self._deps.topics.get_topic(run.topic_candidate_id)
+        return topic is not None and needs_thesis(run, topic)
 
     async def _project_id(self, run: AutopilotRun, spec: ProjectSpec) -> str | None:
         if run.carousel_project_id is not None:
@@ -388,11 +387,3 @@ def _detail(snapshot: GateSnapshot, reason: str) -> str:
         usable = sum(1 for source in snapshot.sources if source_has_content(source))
         return str(usable)
     return ""
-
-
-def _guidance_request(topic: TopicCandidate) -> GuidanceRequest:
-    return GuidanceRequest(
-        image_style=topic.image_style,
-        niche=topic.niche,
-        image_guidance=topic.image_guidance,
-    )

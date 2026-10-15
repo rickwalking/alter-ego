@@ -12,6 +12,7 @@ from enum import StrEnum
 from typing import Protocol
 from uuid import UUID
 
+from rag_backend.domain.constants.content_mode import CONTENT_MODE_NEWS_ANALYSIS
 from rag_backend.modules.autopilot.domain.carousel_defaults import DEFAULT_IMAGE_STYLE
 
 
@@ -131,6 +132,9 @@ class ProjectSpec:
     # palette; the driver sets those. These two come from the topic.
     image_style: str = DEFAULT_IMAGE_STYLE
     image_guidance: str = ""
+    # AE-0377: Radar IA or POV; POV carries the owner-confirmed thesis.
+    content_mode: str = CONTENT_MODE_NEWS_ANALYSIS
+    pov_thesis: str | None = None
 
 
 @dataclass(frozen=True, kw_only=True)

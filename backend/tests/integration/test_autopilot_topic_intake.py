@@ -5,6 +5,7 @@ Gherkin: tests/features/autopilot_topic_intake.feature
 
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
@@ -53,6 +54,8 @@ from tests.integration.autopilot_topic_support import (
 )
 
 _ = configured_key
+# AE-0377: a scout v3 "Ponto de Vista" topic with its draft thesis.
+_POV = {"mode": "pov", "thesis_draft": "Quem decide o que construir ainda é o dev."}
 
 
 # Scenario: Best valid topic is queued
@@ -320,7 +323,13 @@ async def test_higher_daily_cap_queues_both(
         response = await client.post(
             _PATH,
             headers=_headers(),
-            json={"topics": [_topic("One", _URL_A, 60), _topic("Two", _URL_B, 70)]},
+            # AE-0377: Radar IA is capped at one a week, so "Two" is a POV topic.
+            json={
+                "topics": [
+                    _topic("One", _URL_A, 60),
+                    {**_topic("Two", _URL_B, 70), **_POV},
+                ]
+            },
         )
     assert response.status_code == 200
     assert len(response.json()["queued"]) == 2
@@ -340,9 +349,13 @@ async def test_run_before_sao_paulo_midnight_does_not_consume_the_cap(
     service = TopicIntakeService(
         TopicIntakeDependencies(store=store, clock=_Clock(moment), daily_cap=1)
     )
-    result = await service.accept(
-        TopicIntakeCommand(proposals=(_proposal("After midnight", _URL_A, 77),))
+    # AE-0377: the seeded run is this week's Radar IA run, so this is POV.
+    pov = replace(
+        _proposal("After midnight", _URL_A, 77),
+        content_mode="pov",
+        thesis_draft=_POV["thesis_draft"],
     )
+    result = await service.accept(TopicIntakeCommand(proposals=(pov,)))
     assert len(result.queued) == 1
     assert result.rejected == ()
 

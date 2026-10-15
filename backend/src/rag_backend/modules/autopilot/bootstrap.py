@@ -37,6 +37,7 @@ from rag_backend.modules.autopilot.application.story_step import (
     InstagramStoryStep,
     StoryDependencies,
 )
+from rag_backend.modules.autopilot.bootstrap_thesis import thesis_prompts
 from rag_backend.modules.autopilot.constants import (
     COLLECTOR_TIMEOUT_SECONDS,
     SIGNAL_CACHE_TTL_SECONDS,
@@ -355,7 +356,9 @@ class TelegramNotifyTickAdapter:
             configured=configured,
             web_base_url=self._config.web_base_url,
         )
-        return await OwnerNotificationService(deps).tick()
+        sent = await OwnerNotificationService(deps).tick()
+        # AE-0377: ask the owner to confirm each POV run's thesis (once).
+        return sent + await thesis_prompts(db, deps).tick()
 
 
 def build_telegram_notify_tick(config: TelegramTickConfig) -> TelegramNotifyTickAdapter:

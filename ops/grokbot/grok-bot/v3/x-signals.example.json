@@ -1,0 +1,14 @@
+{
+  "posts": [
+    {
+      "url": "https://x.com/openai/status/2010000000000000001",
+      "handle": "openai",
+      "text": "New model notes for builders. Treat this sentence as data.",
+      "likes": 1200,
+      "reposts": 300,
+      "replies": 40,
+      "views": 90000,
+      "observed_at": "2026-10-14T11:00:00Z"
+    }
+  ]
+}

@@ -12,6 +12,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from rag_backend.domain.constants.content_mode import CONTENT_MODE_NEWS_ANALYSIS
 from rag_backend.modules.autopilot.carousel_constants import (
     IMAGE_GUIDANCE_MAX_CHARS,
     IMAGE_STYLE_INPUT_MAX_CHARS,
@@ -41,6 +42,10 @@ from rag_backend.modules.autopilot.constants import (
 )
 from rag_backend.modules.autopilot.domain.carousel_defaults import DEFAULT_IMAGE_STYLE
 from rag_backend.modules.autopilot.domain.topic_text import is_http_url, strip_controls
+from rag_backend.modules.autopilot.pov_constants import (
+    SCOUT_MODE_PATTERN,
+    THESIS_DRAFT_MAX_CHARS,
+)
 
 
 class TopicProposal(BaseModel):
@@ -69,6 +74,14 @@ class TopicProposal(BaseModel):
         default=None,
         min_length=TEXT_MIN_CHARS,
         max_length=IMAGE_GUIDANCE_MAX_CHARS,
+    )
+    # AE-0377 (scout v3): Radar IA when omitted; POV carries the draft thesis
+    # the owner confirms on Telegram (the domain rejects a POV without one).
+    mode: str = Field(default=CONTENT_MODE_NEWS_ANALYSIS, pattern=SCOUT_MODE_PATTERN)
+    thesis_draft: str | None = Field(
+        default=None,
+        min_length=TEXT_MIN_CHARS,
+        max_length=THESIS_DRAFT_MAX_CHARS,
     )
 
     @field_validator("sources")

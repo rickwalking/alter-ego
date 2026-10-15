@@ -45,4 +45,6 @@ def _input(item: TopicProposal) -> ProposalInput:
         score=item.score,
         image_style=item.image_style,
         image_guidance=item.image_guidance,
+        content_mode=item.mode,
+        thesis_draft=item.thesis_draft,
     )

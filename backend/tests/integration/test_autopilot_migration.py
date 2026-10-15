@@ -15,9 +15,9 @@ from pathlib import Path
 import pytest
 
 _PREVIOUS_HEAD = "c9d0e1f2a3b4"
-_PARENT_HEAD = "f8a9b0c1d2e3"
-# AE-0373: the content-mode revision now sits on top of the last autopilot one.
-_THIS_HEAD = "b0c1d2e3f4a5"
+# AE-0377: the POV thesis revision sits on top of AE-0373's content-mode one.
+_PARENT_HEAD = "b0c1d2e3f4a5"
+_THIS_HEAD = "b1c2d3e4f5a6"
 _BACKEND_ROOT = Path(__file__).resolve().parents[2]
 _TABLES = (
     "autopilot_runs",
@@ -113,6 +113,9 @@ def test_upgrade_and_downgrade_on_a_stamped_database(
     # AE-0361: image preset and guidance.
     assert {"image_style", "image_guidance"} <= topic_columns
     assert "signal_hash" in topic_columns
+    # AE-0377: scout v3 mode and the draft / confirmed POV thesis.
+    assert {"content_mode", "thesis_draft"} <= topic_columns
+    assert "pov_thesis" in _columns(db_path, "autopilot_runs")
     run_columns = _columns(db_path, "autopilot_runs")
     assert "carousel_project_id" in run_columns
     assert "ig_post_id" in run_columns
