@@ -234,7 +234,7 @@ def build_rag_agent(
     carousel_refinement = CarouselRefinementService(
         CarouselRefinementConfig(
             repository=carousel_repo,
-            llm_service=container.llm_service(),
+            llm_service=container.fast_llm_service(),
             image_registry=container.image_provider_registry(),
             export_service=container.export_service(),
             pdf_slide_builder=container.pdf_slide_builder(),
@@ -242,7 +242,7 @@ def build_rag_agent(
         )
     )
     research_tool = container.research_tool()
-    llm = container.llm_service().chat_model
+    llm = container.llm_service().role_models
     workflow_service = EditorialWorkflowService(
         EditorialWorkflowConfig(
             llm=llm,

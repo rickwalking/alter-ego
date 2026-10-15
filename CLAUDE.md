@@ -177,13 +177,17 @@ npm run lint                     # ESLint
 - Make side effects before `interrupt()` idempotent
 
 ### Model Selection Strategy
-| Task | Recommended Model |
-|------|------------------|
-| Orchestrator / Complex reasoning | Claude Sonnet 4 |
-| Research / Data extraction | GPT-4o-mini |
-| Creative writing / Voice matching | Claude Sonnet 4 |
-| Quality scoring / Deterministic | GPT-4o-mini |
-| Image generation | DALL-E 3 / Stable Diffusion |
+Carousel LLM calls are routed per task role (AE-0391; see
+[`docs/backend/llm-model-routing.md`](docs/backend/llm-model-routing.md)). All run on the
+OpenCode Go endpoint; ids come from settings, never code.
+
+| Task | Role | Model (default, env) |
+|------|------|----------------------|
+| Research synthesis, outline, quality/rubric judgement | reasoning | `deepseek-v4-pro` (`LLM_MODEL_REASONING`, 240 s) |
+| Slide drafting, translation, caption/LinkedIn/blog copy, refinement, autofix re-translate, persona scoring | fast | `deepseek-v4.1-flash` (`LLM_MODEL_FAST`, 120 s) |
+| Any failed primary call (error, timeout, empty, bad JSON after retry) | fallback | `glm-5.3` (`LLM_MODEL_FALLBACK`) |
+| Chat / RAG agents | — | `GLM_MODEL` (or Anthropic via `LLM_PROVIDER`) |
+| Image generation | — | Gemini / OpenAI images |
 
 ### Persona Engine
 - All AI-generated content must pass through `PersonaAgent.enforce()`

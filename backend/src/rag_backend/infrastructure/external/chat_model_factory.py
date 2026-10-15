@@ -15,7 +15,17 @@ from langchain_anthropic import ChatAnthropic
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_openai import ChatOpenAI
 
+from rag_backend.application.services.carousel.editorial_workflow_types import (
+    ChatModelRoles,
+)
+from rag_backend.infrastructure.config.llm_routing_constants import (
+    LLM_ROLE_FAST,
+    LLM_ROLE_REASONING,
+    LLM_TIMEOUT_FAST_SECONDS,
+    LLM_TIMEOUT_REASONING_SECONDS,
+)
 from rag_backend.infrastructure.config.settings import Settings
+from rag_backend.infrastructure.external.routed_chat_model import RoutedChatModel
 
 LLM_PROVIDER_ANTHROPIC = "anthropic"
 LLM_PROVIDER_GLM = "glm"
@@ -55,12 +65,16 @@ def _opencode_headers(settings: Settings) -> dict[str, str]:
     }
 
 
-def _build_glm_model(settings: Settings) -> ChatOpenAI:
-    """GLM 5.2 via the OpenCode Go OpenAI-compatible endpoint."""
+def _build_glm_model(settings: Settings, model: str | None = None) -> ChatOpenAI:
+    """A model (GLM by default) via the OpenCode Go OpenAI-compatible endpoint.
+
+    AE-0391: the same endpoint/key/session header serves the DeepSeek models,
+    so ``model`` selects any id the endpoint lists.
+    """
     return ChatOpenAI(
         api_key=settings.glm_api_key,
         base_url=settings.glm_base_url,
-        model=settings.glm_model,
+        model=model or settings.glm_model,
         temperature=_TEMPERATURE,
         streaming=True,
         max_tokens=_MAX_TOKENS,
@@ -81,18 +95,57 @@ def _build_anthropic_model(settings: Settings) -> ChatAnthropic:
     )
 
 
-def build_chat_model(settings: Settings) -> BaseChatModel:
+def _role_model_id(settings: Settings, role: str) -> str:
+    return {
+        LLM_ROLE_REASONING: settings.llm_model_reasoning,
+        LLM_ROLE_FAST: settings.llm_model_fast,
+    }.get(role, settings.glm_model)
+
+
+def _build_routed_model(settings: Settings, role: str) -> RoutedChatModel:
+    """AE-0391: the role's model with a per-call timeout and the GLM fallback."""
+    return RoutedChatModel(
+        primary=_build_glm_model(settings, _role_model_id(settings, role)),
+        fallback=_build_glm_model(settings, settings.llm_model_fallback),
+        role=role,
+        timeout_seconds=_ROLE_TIMEOUTS.get(role, LLM_TIMEOUT_REASONING_SECONDS),
+    )
+
+
+_ROLE_TIMEOUTS: dict[str, float] = {
+    LLM_ROLE_REASONING: LLM_TIMEOUT_REASONING_SECONDS,
+    LLM_ROLE_FAST: LLM_TIMEOUT_FAST_SECONDS,
+}
+
+
+def build_chat_model(settings: Settings, role: str | None = None) -> BaseChatModel:
     """Return the configured chat model.
 
     ``llm_provider="glm"`` selects GLM **only when a GLM key is present**; with an
     empty key (CI, or a prod not yet given the secret) it falls back to Anthropic
     and warns, so a missing key degrades gracefully instead of breaking generation.
+
+    AE-0391: a ``role`` (reasoning / fast) routes the call to that role's model
+    on the OpenCode Go endpoint, wrapped with the GLM fallback. Without a role
+    (chat / RAG agents) the single ``glm_model`` is built as before.
     """
-    if settings.llm_provider == LLM_PROVIDER_GLM:
-        if settings.glm_api_key.get_secret_value():
-            return _build_glm_model(settings)
+    if settings.llm_provider != LLM_PROVIDER_GLM:
+        return _build_anthropic_model(settings)
+    if not settings.glm_api_key.get_secret_value():
         logger.warning(
             "llm_provider_glm_without_key_falling_back_to_anthropic",
             glm_base_url=settings.glm_base_url,
         )
-    return _build_anthropic_model(settings)
+        return _build_anthropic_model(settings)
+    if role is None:
+        return _build_glm_model(settings)
+    return _build_routed_model(settings, role)
+
+
+def build_role_models(settings: Settings) -> ChatModelRoles:
+    """AE-0391: the carousel pipeline's reasoning and fast chat models."""
+    return ChatModelRoles(
+        reasoning=build_chat_model(settings, LLM_ROLE_REASONING),
+        fast=build_chat_model(settings, LLM_ROLE_FAST),
+        draft_concurrency=settings.content_draft_concurrency,
+    )

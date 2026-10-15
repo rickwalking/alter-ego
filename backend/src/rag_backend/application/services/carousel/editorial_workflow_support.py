@@ -47,6 +47,7 @@ from rag_backend.application.services.carousel.editorial_workflow_sse_publish im
     publish_workflow_sse_updates,
 )
 from rag_backend.application.services.carousel.editorial_workflow_types import (
+    ChatModelRoles,
     EditorialWorkflowStartInput,
     PhaseFeedbackPersistParams,
     ResumeWorkflowInput,
@@ -67,6 +68,7 @@ __all__ = [
     "WORKFLOW_ARTIFACT_UPDATE_FIELD_MAP",
     "WORKFLOW_SSE_KEEPALIVE_SECONDS",
     "WORKFLOW_SSE_MAX_SUBSCRIBERS_PER_PROJECT",
+    "ChatModelRoles",
     "EditorialWorkflowStartInput",
     "EventParams",
     "PhaseFeedbackPersistParams",
