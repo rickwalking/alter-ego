@@ -63,6 +63,7 @@ async def test_redrive_runs_the_pending_node_and_syncs_the_row() -> None:
         patch(f"{_SERVICE}.publish_workflow_sse_updates", new=AsyncMock()) as sse,
     ):
         owner.return_value.sync_phase = AsyncMock()
+        owner.return_value.commit = AsyncMock()
         state = await service.redrive_pending_phase(_PROJECT, db)
 
     assert state == _PERSISTED
@@ -73,8 +74,10 @@ async def test_redrive_runs_the_pending_node_and_syncs_the_row() -> None:
             topic="", audience="", brief="", sources=[], user_id=""
         ),
     )
-    owner.assert_called_once_with(db)
+    owner.assert_called_with(db)
     owner.return_value.sync_phase.assert_awaited_once_with(_PROJECT, _PERSISTED)
+    # AE-0390: the sync is committed at once so the row lock is released.
+    owner.return_value.commit.assert_awaited_once_with()
     sse.assert_awaited_once_with(_PROJECT, _PERSISTED)
 
 
