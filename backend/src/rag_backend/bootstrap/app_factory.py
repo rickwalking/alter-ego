@@ -91,6 +91,7 @@ from rag_backend.modules.autopilot.api.telegram_webhook import (
     router as telegram_webhook_router,
 )
 from rag_backend.modules.autopilot.webhook_constants import APP_STATE_ENGINE
+from rag_backend.modules.image_bridge.api.router import router as image_bridge_router
 
 logger = get_logger()
 
@@ -283,6 +284,7 @@ def _register_routes(app: FastAPI) -> None:
     app.include_router(autopilot_router, prefix="/api")
     app.include_router(instagram_insights_router, prefix="/api")
     app.include_router(telegram_webhook_router, prefix="/api")
+    app.include_router(image_bridge_router, prefix="/api")
 
 
 def create_app() -> FastAPI:

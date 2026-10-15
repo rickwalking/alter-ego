@@ -24,6 +24,7 @@ from rag_backend.infrastructure.redis_clients import (
     RedisConfigError,
     resolve_authed_redis_url,
 )
+from rag_backend.modules.image_bridge import validate_image_bridge_settings
 
 logger = get_logger()
 
@@ -174,6 +175,8 @@ def run_startup_validations(settings: Settings) -> StartupValidationResult:
     reports which guards flagged a problem.
     """
     validate_redis_credentials(settings)
+    # AE-0393: an enabled bridge without its URLs fails in every environment.
+    validate_image_bridge_settings(settings)
     return StartupValidationResult(
         checkpoint_durable=validate_checkpointer_durability(settings),
         default_image_provider_usable=validate_default_image_provider_key(settings),

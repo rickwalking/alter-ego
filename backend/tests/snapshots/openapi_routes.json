@@ -123,6 +123,7 @@
   "POST /api/rubrics/{rubric_id}/evaluate",
   "POST /api/search",
   "POST /api/telegram/webhook",
+  "POST /api/v1/image-bridge/jobs/{job_id}/result",
   "PUT /api/blog-posts/{post_id}",
   "PUT /api/carousels/{project_id}/creator-asset",
   "PUT /api/carousels/{project_id}/hook",
