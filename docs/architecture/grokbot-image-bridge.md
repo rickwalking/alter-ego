@@ -103,6 +103,24 @@ Rules:
 | `413` | Body too large. |
 | `422` | Body is neither a valid ImagesResponse nor an error, or the image fails validation. The job is marked failed. |
 
+## 2.3 Experiment (2026-10-15)
+
+The owner ran the contract by hand through the Grok Bot, posting to a webhook.site inbox
+instead of our callback:
+
+- **Result:** the image arrived exactly 1536×1024 as a PNG of 2,135,995 bytes. The callback body
+  was 2,848,043 bytes and arrived intact, with `X-Image-Bridge-Token` present, and the POST
+  returned HTTP 200.
+- **How it was made:** the Grok Bot generated the image through the Codex CLI (0.162.1) and its
+  built-in image tool, on the owner's ChatGPT account.
+- **Timing:** 63 s for the Codex run and ≈75 s for the whole job.
+- **Grok Bot-side requirements for unattended runs:**
+  - run `codex exec` non-interactively with stdin closed (`< /dev/null`) and a hard timeout. The
+    first attempt hung for 10 minutes waiting for keyboard input.
+  - grant a standing approval for the upload to the callback host.
+- **Still to verify:** routine runs are queued, so parallelism and start latency are not
+  guaranteed. The bridge timeout (600 s) and the fallback cover this.
+
 ## 3. Backend design
 
 ### 3.1 Module
@@ -137,7 +155,7 @@ by primary key), not an in-process event. Image bytes go in `image_bridge_jobs.i
 (`bytea`), written by the callback, read once by the waiter, then nulled. That needs no shared
 filesystem.
 
-Timeout: `IMAGE_BRIDGE_TIMEOUT_SECONDS` (default 480). `expires_at = created_at + timeout`.
+Timeout: `IMAGE_BRIDGE_TIMEOUT_SECONDS` (default 600; Grok Bot runs are queued, so start time is not guaranteed). `expires_at = created_at + timeout`.
 On timeout the waiter marks the job `expired`, and late callbacks get `409`.
 
 ### 3.3 Output normalization
@@ -157,7 +175,7 @@ fallback=OpenAIImageService(...))`. When false (the default), nothing changes.
 |---|---|---|
 | `IMAGE_BRIDGE_ENABLED` | `false` | Master switch. |
 | `IMAGE_BRIDGE_FALLBACK_ENABLED` | `true` | On failure, call OpenAI. |
-| `IMAGE_BRIDGE_TIMEOUT_SECONDS` | `480` | Per image. |
+| `IMAGE_BRIDGE_TIMEOUT_SECONDS` | `600` | Per image; includes the Grok Bot queue wait. |
 | `IMAGE_BRIDGE_MAX_CONCURRENCY` | `2` | Bridge jobs in flight per process. |
 | `IMAGE_BRIDGE_PUBLIC_BASE_URL` | — | Builds `callback_url`; required when enabled. |
 | `GROKBOT_IMAGE_WEBHOOK_URL` | — | Required when enabled (secret). |
