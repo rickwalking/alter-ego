@@ -128,10 +128,12 @@ from rag_backend.modules.editorial.infrastructure.carousel_automation_run import
     run_automation_phase,
 )
 from rag_backend.modules.editorial.infrastructure.carousel_owner_autofix import (
+    GateRepairReport,
     OwnerAutofixReport,
     OwnerAutofixRequest,
     OwnerIssues,
     inspect_owner_issues,
+    run_gate_repair,
     run_owner_autofix,
 )
 from rag_backend.modules.editorial.infrastructure.carousel_project_lock import (
@@ -229,6 +231,7 @@ __all__ = [
     "EditorialWorkflowHandlers",
     "EngineReviewDecisionAdapter",
     "EngineSourceMaterialAdapter",
+    "GateRepairReport",
     "LegacyCarouselAcl",
     "OptimisticLockingPort",
     "OwnerAutofixReport",
@@ -260,6 +263,7 @@ __all__ = [
     "read_run_fence",
     "redrive_automation_phase",
     "run_automation_phase",
+    "run_gate_repair",
     "run_owner_autofix",
     "slides_in_config",
     "write_run_heartbeat",

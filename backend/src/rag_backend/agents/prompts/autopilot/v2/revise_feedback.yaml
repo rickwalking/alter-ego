@@ -1,0 +1,16 @@
+---
+name: autopilot_revise_feedback
+version: "2.0.0"
+description: "Feedback the autopilot runner sends when a gate check fails (AE-0392: Measured is never empty; content-quality failures list each failing slide). Loaded by render_prompt('autopilot', 'revise_feedback', version='v2')."
+
+template: |
+  The {{ phase }} gate failed the autopilot check.
+  Reason: {{ reason }}.
+  Measured: {{ detail }}.
+  {%- if violations %}
+  Fix only these slides and keep every other slide exactly as it is:
+  {%- for line in violations %}
+  - {{ line }}
+  {%- endfor %}
+  {%- endif %}
+  Revise this phase so the deterministic check passes. Keep the topic and the audience.

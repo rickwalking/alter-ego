@@ -280,6 +280,9 @@ def _runner_deps(
             stale_after_seconds=config.stale_after_seconds,
         )
     )
+    autofixer = InProcessContentAutofixer(
+        AutofixerConfig(session=session, engine_factory=config.engine_factory)
+    )
     return RunnerDependencies(
         runs=repo,
         topics=repo,
@@ -288,9 +291,8 @@ def _runner_deps(
         recovery=SqlRunRecoveryStore(session),
         owner_user_id=config.owner_user_id,
         notifier_configured=config.notifier_configured,
-        autofix=InProcessContentAutofixer(
-            AutofixerConfig(session=session, engine_factory=config.engine_factory)
-        ),
+        autofix=autofixer,
+        gate_repair=autofixer,
     )
 
 
