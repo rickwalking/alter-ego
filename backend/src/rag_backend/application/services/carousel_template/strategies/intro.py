@@ -36,7 +36,7 @@ class IntroHeroStrategy:
     ) -> str:
         opts = options or {}
         total_slides: int = opts.get("total_slides", 0)  # type: ignore[assignment]
-        language: str = opts.get("language", LANGUAGE_PT)  # type: ignore[assignment]
+        language = str(opts.get("language", LANGUAGE_PT))
         heading = _render_inline(str(slide.get("heading") or ""))
         subtitle = _render_inline(str(slide.get("body") or ""))
         badge = html.escape(project.niche, quote=True)
