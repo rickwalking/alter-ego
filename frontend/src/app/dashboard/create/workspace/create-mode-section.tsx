@@ -1,0 +1,101 @@
+"use client";
+
+import { useTranslations } from "next-intl";
+import { CONTENT_MODES, type ContentMode } from "@/constants/create";
+import {
+  BG_CARD,
+  NEON_CYAN,
+  NEON_CYAN_DIM,
+  TEXT,
+  TEXT_DIM,
+} from "@/constants/neon";
+import type { CreateCarouselFormState } from "@/app/dashboard/create/types";
+import { LabeledSelect } from "./labeled-select";
+import { sectionCardStyle, sectionHeaderStyle } from "./section-styles";
+
+export interface PersonaOption {
+  id: string;
+  name: string;
+}
+
+export interface CreateModeSectionProps {
+  form: CreateCarouselFormState;
+  onChange: (patch: Partial<CreateCarouselFormState>) => void;
+  personas: readonly PersonaOption[];
+}
+
+const MODE_KEYS: Record<ContentMode, string> = {
+  [CONTENT_MODES.NEWS_ANALYSIS]: "radar",
+  [CONTENT_MODES.POV]: "pov",
+};
+
+/**
+ * AE-0373: Modo (Radar IA / Ponto de Vista) drives the rest of the wizard;
+ * the persona applies to both modes.
+ */
+export function CreateModeSection({
+  form,
+  onChange,
+  personas,
+}: CreateModeSectionProps): React.ReactElement {
+  const t = useTranslations("create.mode");
+  const personaOptions = [
+    { value: "", label: t("personaNone") },
+    ...personas.map((p) => ({ value: p.id, label: p.name })),
+  ];
+  return (
+    <div style={sectionCardStyle}>
+      <div style={sectionHeaderStyle}>{t("title")}</div>
+      <div
+        role="radiogroup"
+        aria-label={t("title")}
+        className="mb-3.5 grid grid-cols-1 gap-2.5 sm:grid-cols-2"
+      >
+        {Object.values(CONTENT_MODES).map((mode) => {
+          const selected = form.contentMode === mode;
+          return (
+            <button
+              key={mode}
+              type="button"
+              role="radio"
+              aria-checked={selected}
+              onClick={() =>
+                onChange({ contentMode: mode, selectedTemplate: 0 })
+              }
+              style={{
+                background: selected ? NEON_CYAN_DIM : BG_CARD,
+                border: selected
+                  ? `1px solid ${NEON_CYAN}`
+                  : "1px solid rgba(255,255,255,0.06)",
+                borderRadius: "8px",
+                padding: "14px",
+                textAlign: "left",
+                cursor: "pointer",
+              }}
+            >
+              <span style={{ fontSize: "13px", fontWeight: 600, color: TEXT }}>
+                {t(`${MODE_KEYS[mode]}.name`)}
+              </span>
+              <span
+                style={{
+                  display: "block",
+                  fontSize: "11px",
+                  color: TEXT_DIM,
+                  marginTop: "4px",
+                }}
+              >
+                {t(`${MODE_KEYS[mode]}.desc`)}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+      <LabeledSelect
+        label={t("personaLabel")}
+        value={form.personaId}
+        options={personaOptions}
+        onChange={(personaId) => onChange({ personaId })}
+      />
+    </div>
+  );
+}

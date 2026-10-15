@@ -179,6 +179,18 @@ class CarouselProject:
     template_version: str = "v2"
     # Slide layout strategy for visual formatting
     slide_layout_strategy: str | None = None
+    # AE-0373 (ADR-0021): content mode and the "Ponto de Vista" inputs. NULL mode
+    # means Radar IA (news_analysis). The POV inputs are create-only; hook_text and
+    # hook_asset_id are owner edits (hook picker, slide-1 photo).
+    content_mode: str | None = None
+    pov_thesis: str | None = None
+    pov_personal_proof: str | None = None
+    pov_format: str | None = None
+    slide_count: int | None = None
+    cta_goal: str | None = None
+    hook_text: str | None = None
+    hook_asset_id: UUID | None = None
+    hook_asset_staged_path: str | None = None
     # AE-0314: read-only view of the server-guaranteed republish marker. Written
     # ONLY by the write owner (mark/clear); never round-tripped through the ORM
     # ``update_from_entity`` hydrator, so it cannot be clobbered.

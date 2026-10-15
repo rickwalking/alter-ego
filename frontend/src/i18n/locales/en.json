@@ -253,8 +253,8 @@
       "openai_comic_neon": "OpenAI · Comic Neon",
       "openai_hyperreal": "OpenAI · Hyperreal Graphic Novel",
       "openai_cinematic": "OpenAI · Cinematic Photoreal",
-      "openai_neo_anime": "OpenAI · Neo-Anime (default)",
-      "openai_flat_editorial": "OpenAI · Flat Editorial (light)"
+      "openai_neo_anime": "OpenAI · Neo-Anime",
+      "openai_flat_editorial": "OpenAI · Flat Editorial (light, default)"
     },
     "progress": {
       "complete": "Carousel generated successfully!",
@@ -322,6 +322,56 @@
       "completed": "Completed",
       "rejected": "Rejected",
       "failed": "Failed"
+    },
+    "mode": {
+      "title": "Mode",
+      "summaryLabel": "Mode",
+      "radar": {
+        "name": "Radar IA",
+        "desc": "AI news → what it changes for you (one post a week at most)"
+      },
+      "pov": {
+        "name": "Ponto de Vista",
+        "desc": "Your opinion, in first person, with your photo on slide 1"
+      },
+      "personaLabel": "Persona (voice)",
+      "personaNone": "No persona"
+    },
+    "pov": {
+      "title": "Your point of view",
+      "thesisLabel": "My thesis (what I stand for)",
+      "thesisHint": "required · max 280 chars · the AI may sharpen it, never invent it",
+      "thesisPlaceholder": "e.g. AI writes the code. Deciding what to build is still your job.",
+      "thesisRequired": "The thesis is required in Ponto de Vista mode.",
+      "proofLabel": "Personal proof (optional)",
+      "proofHint": "max 500 chars · a real experience that backs the thesis; without it the post argues from reasoning",
+      "proofPlaceholder": "A real situation from your work that shows this",
+      "slideCountLabel": "Number of slides",
+      "slideCountOption": "{count} slides",
+      "ctaGoalLabel": "Call to action",
+      "ctaGoals": {
+        "follow": "Follow (grow the account)",
+        "send": "Send to someone",
+        "comment": "Comment (disagree?)"
+      },
+      "formats": {
+        "opiniao": {
+          "name": "Opinion (hot take)",
+          "desc": "Thesis → why → evidence → counterpoint → twist → verdict"
+        },
+        "como_eu_faco": {
+          "name": "How I do it",
+          "desc": "Promise → my context → steps → common mistake → checklist"
+        },
+        "erros_e_mitos": {
+          "name": "Mistakes and myths",
+          "desc": "One mistake and its fix per slide → twist"
+        },
+        "comparacao": {
+          "name": "Comparison in practice",
+          "desc": "What I use for each task (my own tests only)"
+        }
+      }
     }
   },
   "blogEditorial": {

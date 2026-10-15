@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { NeonTopBar } from "@/components/organisms/neon-top-bar";
@@ -10,15 +10,20 @@ import {
   CreateTopicSection,
 } from "@/app/dashboard/create/create-form-sections";
 import { CreateSidebar } from "@/app/dashboard/create/create-sidebar";
+import { CreateModeSection } from "@/app/dashboard/create/workspace/create-mode-section";
+import { CreatePovSection } from "@/app/dashboard/create/workspace/create-pov-section";
+import { useDefaultPersona } from "@/app/dashboard/create/use-default-persona";
 import { CreateProgressSteps } from "@/app/dashboard/create/create-progress-steps";
 import { CREATE_STEP_IDS } from "@/app/dashboard/create/step-ids";
 import { buildCarouselCreateRequest } from "@/app/dashboard/create/helpers";
 import {
   INITIAL_CREATE_FORM_STATE,
+  isPovForm,
   type CreateCarouselFormState,
 } from "@/app/dashboard/create/types";
 import { useCreateCarousel } from "@/modules/editorial";
 import { usePaletteCatalog } from "@/modules/palette";
+import { usePersonas } from "@/modules/persona";
 import { buildThemeOptions } from "@/app/dashboard/create/theme-options";
 import { DASHBOARD_ROUTES } from "@/constants/dashboard-routes";
 import { DEFAULT_IMAGE_PRESET } from "@/constants/create";
@@ -39,9 +44,18 @@ export default function CreateCarouselPage(): React.ReactElement {
   });
   const [error, setError] = useState<string | null>(null);
 
-  const handleChange = (patch: Partial<CreateCarouselFormState>): void => {
-    setForm((prev) => ({ ...prev, ...patch }));
-  };
+  const handleChange = useCallback(
+    (patch: Partial<CreateCarouselFormState>): void => {
+      setForm((prev) => ({ ...prev, ...patch }));
+    },
+    [],
+  );
+  const { personas } = usePersonas();
+  const selectPersona = useCallback(
+    (personaId: string) => handleChange({ personaId }),
+    [handleChange],
+  );
+  useDefaultPersona(personas, selectPersona);
 
   const handleSubmit = async (): Promise<void> => {
     setError(null);
@@ -73,7 +87,15 @@ export default function CreateCarouselPage(): React.ReactElement {
         />
         <div className="grid grid-cols-1 gap-6 md:grid-cols-[minmax(0,1fr)_360px]">
           <div className="flex flex-col gap-6">
+            <CreateModeSection
+              form={form}
+              onChange={handleChange}
+              personas={personas}
+            />
             <CreateTopicSection form={form} onChange={handleChange} />
+            {isPovForm(form) && (
+              <CreatePovSection form={form} onChange={handleChange} />
+            )}
             <CreateTemplateSection form={form} onChange={handleChange} />
             <CreateThemeSection
               form={form}

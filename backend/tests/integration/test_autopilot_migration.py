@@ -15,8 +15,9 @@ from pathlib import Path
 import pytest
 
 _PREVIOUS_HEAD = "c9d0e1f2a3b4"
-_PARENT_HEAD = "e7f8a9b0c1d2"
-_THIS_HEAD = "f8a9b0c1d2e3"
+_PARENT_HEAD = "f8a9b0c1d2e3"
+# AE-0373: the content-mode revision now sits on top of the last autopilot one.
+_THIS_HEAD = "b0c1d2e3f4a5"
 _BACKEND_ROOT = Path(__file__).resolve().parents[2]
 _TABLES = (
     "autopilot_runs",
@@ -92,6 +93,7 @@ def test_upgrade_and_downgrade_on_a_stamped_database(
     db_path = tmp_path / "autopilot.db"
     conn = sqlite3.connect(db_path)
     conn.execute("CREATE TABLE carousel_projects (id VARCHAR(36) PRIMARY KEY)")
+    conn.execute("CREATE TABLE carousel_creator_assets (id VARCHAR(36) PRIMARY KEY)")
     conn.execute("CREATE TABLE alembic_version (version_num VARCHAR(32) NOT NULL)")
     conn.execute(
         "INSERT INTO alembic_version (version_num) VALUES (?)",

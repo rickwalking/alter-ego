@@ -167,7 +167,7 @@ async def start_editorial_workflow(
     handlers: EditorialWorkflowHandlersDep,
 ) -> EditorialWorkflowStateResponse:
     """Run AI synthesis, outline, and draft phases then pause at human gates."""
-    await get_carousel_project_for_user(db, project_id, current_user)
+    project = await get_carousel_project_for_user(db, project_id, current_user)
     if body.reviewer_id is not None:
         await validate_reviewer_user(db, body.reviewer_id)
         if body.reviewer_id == current_user.id:
@@ -176,7 +176,9 @@ async def start_editorial_workflow(
                 detail=ERR_SELF_REVIEW,
             )
     engine = build_editorial_workflow_service(request)
-    persona = await load_persona(db, body.persona_id)
+    # AE-0373: the wizard's persona (stored on the project) when the start
+    # request names none, so the persona gate applies to both modes.
+    persona = await load_persona(db, body.persona_id or project.persona_id)
     sanitized_sources = [
         {
             **source.model_dump(),

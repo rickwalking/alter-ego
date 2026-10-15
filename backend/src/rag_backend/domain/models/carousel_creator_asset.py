@@ -16,5 +16,8 @@ class CarouselCreatorAsset:
     height: int
     relative_path: str
     id: UUID = field(default_factory=uuid4)
+    # AE-0373: photo library role (hook / cta / pov) and an optional pose tag.
+    role: str | None = None
+    pose_tag: str | None = None
     created_at: datetime = field(default_factory=datetime.utcnow)
     updated_at: datetime = field(default_factory=datetime.utcnow)

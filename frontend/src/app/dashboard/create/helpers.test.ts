@@ -4,7 +4,7 @@ import {
   DEFAULT_IMAGE_PRESET,
   FLAT_EDITORIAL_PRESET,
 } from "@/constants/create";
-import { buildCarouselCreateRequest } from "./helpers";
+import { buildCarouselCreateRequest, canSubmitCreateForm } from "./helpers";
 import { INITIAL_CREATE_FORM_STATE } from "./types";
 
 // Scenarios: see tests/features/create-image-guidance.feature
@@ -75,5 +75,53 @@ describe("buildCarouselCreateRequest image defaults (AE-0372)", () => {
       imagePreset: "openai__comic_neon",
     });
     expect(request.image_style).toBe("comic_neon");
+  });
+});
+
+// Scenarios: tests/features/create-content-mode.feature (AE-0373)
+describe("buildCarouselCreateRequest content mode (AE-0373)", () => {
+  it("sends the POV fields in POV mode", () => {
+    const request = buildCarouselCreateRequest({
+      ...BASE_FORM,
+      contentMode: "pov",
+      povThesis: "  A IA escreve código.  ",
+      povPersonalProof: "  ",
+      selectedTemplate: 1,
+      slideCount: 10,
+      ctaGoal: "send",
+      personaId: "6f1c2b8e-1d2a-4c3b-9a8e-1f2e3d4c5b6a",
+    });
+    expect(request).toMatchObject({
+      content_mode: "pov",
+      pov_thesis: "A IA escreve código.",
+      pov_personal_proof: null,
+      pov_format: "como_eu_faco",
+      slide_count: 10,
+      cta_goal: "send",
+      strategy: "numbered_list",
+      persona_id: "6f1c2b8e-1d2a-4c3b-9a8e-1f2e3d4c5b6a",
+    });
+    expect(carouselCreateRequestSchema.safeParse(request).success).toBe(true);
+  });
+
+  it("drops leftover POV fields in Radar IA mode", () => {
+    const request = buildCarouselCreateRequest({
+      ...BASE_FORM,
+      povThesis: "sobra",
+      selectedTemplate: 1,
+    });
+    expect(request.content_mode).toBe("news_analysis");
+    expect(request.pov_thesis).toBeUndefined();
+    expect(request.slide_count).toBeUndefined();
+    expect(request.strategy).toBe("feature_grid");
+    expect(request.persona_id).toBeNull();
+  });
+
+  it("requires the thesis to submit in POV mode", () => {
+    const pov = { ...BASE_FORM, contentMode: "pov" as const };
+    expect(canSubmitCreateForm(pov)).toBe(false);
+    expect(canSubmitCreateForm({ ...pov, povThesis: "Tese" })).toBe(true);
+    expect(canSubmitCreateForm(BASE_FORM)).toBe(true);
+    expect(canSubmitCreateForm({ ...BASE_FORM, audience: " " })).toBe(false);
   });
 });

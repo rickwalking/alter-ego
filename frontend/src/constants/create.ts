@@ -160,3 +160,43 @@ export const CREATE_ROUTE = "/dashboard/create";
 
 /** Route pattern for create workspace (neon dashboard). */
 export const CREATE_WORKSPACE_ROUTE = (id: string) => `/dashboard/create/${id}`;
+
+/** AE-0373 (ADR-0021): carousel content modes. NULL on the backend = Radar IA. */
+export const CONTENT_MODES = {
+  NEWS_ANALYSIS: "news_analysis",
+  POV: "pov",
+} as const;
+
+export type ContentMode = (typeof CONTENT_MODES)[keyof typeof CONTENT_MODES];
+
+/** "Ponto de Vista" input limits (growth plan 16.3 A). */
+export const POV_THESIS_MAX_LENGTH = 280;
+export const POV_PROOF_MAX_LENGTH = 500;
+export const POV_SLIDE_COUNTS = [8, 9, 10] as const;
+export const POV_SLIDE_COUNT_DEFAULT = 9;
+
+/** CTA goals: one specific action per carousel (growth plan 16.3 F). */
+export const CTA_GOALS = ["follow", "send", "comment"] as const;
+export type CtaGoal = (typeof CTA_GOALS)[number];
+export const DEFAULT_CTA_GOAL: CtaGoal = "follow";
+
+/** Persona preselected in the wizard when it exists (growth plan 16.3 G). */
+export const DEFAULT_PERSONA_NAME = "Pedro";
+
+/**
+ * POV formats (growth plan 16.3 B). `format` is the backend `pov_format`;
+ * `strategy` is the layout preferred for the point slides. Labels live in
+ * i18n under `create.pov.formats.<format>`.
+ */
+export interface PovTemplate {
+  readonly icon: string;
+  readonly format: string;
+  readonly strategy: string;
+}
+
+export const POV_TEMPLATES: readonly PovTemplate[] = [
+  { icon: "🔥", format: "opiniao", strategy: "insight_quote" },
+  { icon: "🛠️", format: "como_eu_faco", strategy: "numbered_list" },
+  { icon: "⚠️", format: "erros_e_mitos", strategy: "hero_content" },
+  { icon: "⚖️", format: "comparacao", strategy: "feature_grid" },
+] as const;

@@ -54,7 +54,9 @@ from rag_backend.modules.publishing import (
     PublishingModule,
 )
 
+from .content_mode_fields import content_mode_fields
 from .deps import get_carousel_repo
+from .editorial_workflow_routes_validate import load_persona
 from .helpers import assert_carousel_artifacts_healthy
 
 router = APIRouter()
@@ -114,6 +116,10 @@ async def create_carousel(
         # AE-0312: new carousels are stamped v2 so PT casing rules apply; DEFAULT
         # stays v1 for legacy NULL-version rows on re-validation reads.
         presentation_policy_version=CREATE_TIME_PRESENTATION_POLICY_VERSION,
+        # AE-0373: the wizard's template (dropped before) and the persona.
+        slide_layout_strategy=request.strategy,
+        persona_id=await _persona_id(session, request.persona_id),
+        **content_mode_fields(request),
     )
     created = await repo.create_project(project)
     model = await session.get(CarouselProjectModel, str(created.id))
@@ -121,6 +127,14 @@ async def create_carousel(
         model.owner_id = str(user.id)
         await session.commit()
     return CarouselProjectResponse.model_validate(created)
+
+
+async def _persona_id(session: AsyncSession, persona_id: UUID | None) -> str | None:
+    """The persona id as stored; an unknown persona is a 404 (AE-0373)."""
+    if persona_id is None:
+        return None
+    persona = await load_persona(session, str(persona_id))
+    return str(persona.id) if persona is not None else None
 
 
 @router.get(
