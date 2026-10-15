@@ -131,7 +131,9 @@ class _World:
     project_id: str
 
 
-@pytest_asyncio.fixture
+# pytest.ini defaults async fixtures to the session loop; asyncpg connections
+# are bound to the loop that opened them, so the fixture must share the test's.
+@pytest_asyncio.fixture(loop_scope="function")
 async def world(monkeypatch: pytest.MonkeyPatch) -> AsyncIterator[_World]:
     # Register every model so the isolated schema has all the run's tables.
     importlib.import_module(_MODELS_PACKAGE)
