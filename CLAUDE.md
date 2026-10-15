@@ -133,6 +133,7 @@ All architecturally significant decisions are documented as ADRs in `docs/decisi
 - [ADR-012: Production uses Alembic Migrations on Deploy (no create_all)](docs/decisions/0012-prod-migrations-on-deploy.md)
 - [ADR-013: Split Blog-Post Reads into a Public API and a Private/Admin API](docs/decisions/0013-public-private-blog-post-api.md) *(proposed)*
 - [ADR-020: GrokBot Autopilot (LLM scout + in-backend autopilot + Telegram-gated Instagram publish)](docs/decisions/0020-grokbot-autopilot.md) *(proposed)*
+- [ADR-021: Content Mode "Ponto de Vista" (roles on top of the existing carousel pipeline)](docs/decisions/0021-content-mode-pov.md) *(proposed)*
 
 **ADR Lifecycle:** `proposed` → `accepted` → `deprecated` (superseded by newer ADR)
 **Format:** MADR 4.x | **Naming:** `NNNN-short-title.md` | **Review:** Annually
