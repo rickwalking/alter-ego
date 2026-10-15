@@ -1,4 +1,4 @@
-"""Owner Telegram actions (AE-0356).
+"""Owner Telegram actions (AE-0356). Approve-now taps use ``ap:pubnow`` (AE-0370).
 
 Gherkin: tests/features/autopilot_owner_actions.feature
 """
@@ -291,8 +291,8 @@ def test_rework_keyboard_uses_phase_tokens() -> None:
 @pytest.mark.asyncio
 async def test_approve_twice_publishes_once() -> None:
     world = _world()
-    await _handle(world, _tap(1, _action("approve", world)))
-    await _handle(world, _tap(2, _action("approve", world)))
+    await _handle(world, _tap(1, _action("pubnow", world)))
+    await _handle(world, _tap(2, _action("pubnow", world)))
     assert len(world.editorial.resumes) == 1
     assert world.editorial.resumes[0].action == REVIEW_ACTION_APPROVE
     assert world.editorial.resumes[0].phase == GATE_FINAL_REVIEW
@@ -306,8 +306,8 @@ async def test_approve_twice_publishes_once() -> None:
 async def test_concurrent_double_approve_publishes_once() -> None:
     world = _world()
     await asyncio.gather(
-        _handle(world, _tap(1, _action("approve", world))),
-        _handle(world, _tap(2, _action("approve", world))),
+        _handle(world, _tap(1, _action("pubnow", world))),
+        _handle(world, _tap(2, _action("pubnow", world))),
     )
     assert len(world.editorial.resumes) == 1
     assert len(world.release.ids) == 1
@@ -318,7 +318,7 @@ async def test_concurrent_double_approve_publishes_once() -> None:
 @pytest.mark.asyncio
 async def test_stranger_does_not_change_the_run() -> None:
     world = _world()
-    await _handle(world, _tap(1, _action("approve", world), actor=_STRANGER))
+    await _handle(world, _tap(1, _action("pubnow", world), actor=_STRANGER))
     assert world.runs.run.state is AutopilotRunState.AWAITING_OWNER
     assert world.editorial.resumes == []
     assert world.release.ids == []
@@ -341,7 +341,7 @@ async def test_reject_keeps_the_carousel_private() -> None:
 async def test_approve_when_not_awaiting_is_already_handled() -> None:
     world = _world()
     world.runs.run = replace(world.runs.run, state=AutopilotRunState.PUBLISHING)
-    await _handle(world, _tap(1, _action("approve", world)))
+    await _handle(world, _tap(1, _action("pubnow", world)))
     assert world.messenger.answers[-1].text == ANSWER_ALREADY
     assert world.runs.run.state is AutopilotRunState.PUBLISHING
     assert world.editorial.resumes == []
@@ -352,7 +352,7 @@ async def test_approve_when_not_awaiting_is_already_handled() -> None:
 @pytest.mark.asyncio
 async def test_same_update_id_does_not_approve_again() -> None:
     world = _world()
-    tap = _tap(1, _action("approve", world))
+    tap = _tap(1, _action("pubnow", world))
     await _handle(world, tap)
     await _handle(world, tap)
     assert len(world.editorial.resumes) == 1
@@ -435,7 +435,7 @@ async def test_rework_outage_returns_to_the_owner_with_buttons() -> None:
 async def test_refused_approve_keeps_the_review_open() -> None:
     world = _world()
     world.editorial.status = ResumeStatus.VERSION_CONFLICT
-    await _handle(world, _tap(1, _action("approve", world)))
+    await _handle(world, _tap(1, _action("pubnow", world)))
     assert world.runs.run.state is AutopilotRunState.AWAITING_OWNER
     assert world.runs.run.state_reason == REASON_APPROVE_REFUSED
     assert world.release.ids == []
@@ -493,7 +493,7 @@ async def test_rework_after_reject_is_already_handled() -> None:
 async def test_failed_release_does_not_stay_publishing() -> None:
     world = _world()
     world.release.ok = False
-    await _handle(world, _tap(1, _action("approve", world)))
+    await _handle(world, _tap(1, _action("pubnow", world)))
     assert world.runs.run.state is AutopilotRunState.PUBLISH_FAILED
     assert world.release.public is False
 

@@ -72,6 +72,8 @@ from rag_backend.modules.autopilot.domain.publish import (
     gate_reason,
 )
 from rag_backend.modules.autopilot.domain.publish_claims import PublishClaims, RunClaim
+from rag_backend.modules.autopilot.domain.published_copy import with_late
+from rag_backend.modules.autopilot.domain.schedule import late_minutes
 from rag_backend.modules.autopilot.domain.story import StoryRunner
 from rag_backend.modules.autopilot.recovery_constants import (
     MANUAL_CLAIM_STALE_MINUTES,
@@ -309,7 +311,10 @@ class InstagramPublishJob:
         )
         # Before the transition, so a crash leaves the run publishing and the
         # next tick resumes the Story; the Story never fails the post.
-        extras = await post_extras(self._deps.story, run.carousel_project_id)
+        extras = with_late(
+            await post_extras(self._deps.story, run.carousel_project_id),
+            late_minutes(run.scheduled_at, self._deps.clock.now()),
+        )
         changed = await self._deps.runs.transition(
             TransitionCommand(
                 run_id=run.run_id,

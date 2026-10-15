@@ -37,6 +37,7 @@ from rag_backend.modules.autopilot.application.story_step import (
     InstagramStoryStep,
     StoryDependencies,
 )
+from rag_backend.modules.autopilot.bootstrap_schedule import scheduled_publish_sweep
 from rag_backend.modules.autopilot.constants import (
     COLLECTOR_TIMEOUT_SECONDS,
     SIGNAL_CACHE_TTL_SECONDS,
@@ -129,9 +130,14 @@ class InstagramPublishTickAdapter:
         self._config = config
 
     async def tick(self, db: AsyncSession) -> int:
-        """Publish or resume at most one run. Returns how many runs were touched."""
+        """Release due scheduled runs, then publish or resume at most one run.
+
+        AE-0370: the due runs become ``publishing`` first, so the publish job
+        posts them on this same tick.
+        """
+        due = await scheduled_publish_sweep(db, self._config.public_base_url).tick()
         job = _job(db, self._config.publisher, self._config.public_base_url)
-        return await job.tick()
+        return due + await job.tick()
 
 
 def build_instagram_publish_tick(

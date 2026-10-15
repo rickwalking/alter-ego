@@ -197,6 +197,16 @@ class Settings(BaseSettings):
         ),
     )
 
+    # AE-0370: what Approve does on Telegram. "now" offers publish-now or a
+    # schedule; "next_slot" schedules the next good slot directly.
+    autopilot_default_publish: Literal["now", "next_slot"] = Field(
+        default="now",
+        validation_alias=AliasChoices(
+            "AUTOPILOT_DEFAULT_PUBLISH",
+            "autopilot_default_publish",
+        ),
+    )
+
     carousel_public_base_url: str = ""
 
     cdn_base_url: str = ""

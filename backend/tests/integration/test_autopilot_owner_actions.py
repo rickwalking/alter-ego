@@ -104,7 +104,7 @@ async def test_valid_secret_dispatches_and_returns_200(webhook: _Webhook) -> Non
     run_id = world.runs.run.run_id
     response = await webhook.client.post(
         _PATH,
-        json=_callback(9, f"ap:approve:{run_id}"),
+        json=_callback(9, f"ap:pubnow:{run_id}"),
         headers={HEADER_WEBHOOK_AUTH: _SECRET},
     )
     assert response.status_code == 200

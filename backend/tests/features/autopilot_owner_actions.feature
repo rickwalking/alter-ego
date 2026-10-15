@@ -3,6 +3,10 @@ Feature: Owner actions via Telegram
   I want Approve, Rework, Reject, and Retry to run exactly once
   So that only I can publish, and a double tap cannot double-post
 
+  # AE-0370: Approve now offers "🚀 Publicar agora" or "🗓 Agendar"
+  # (autopilot_scheduled_publish.feature). "Approve" in the scenarios below is
+  # the "🚀 Publicar agora" tap, which keeps this behaviour.
+
   Scenario: Approve publishes once
     Given a run awaiting the owner
     When the owner taps Approve twice

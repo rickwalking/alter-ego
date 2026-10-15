@@ -45,6 +45,7 @@ from rag_backend.modules.autopilot.domain.publish import (
     SaveContainerCommand,
     SavePostCommand,
 )
+from rag_backend.modules.autopilot.domain.schedule import clears_schedule
 from rag_backend.modules.autopilot.domain.state_machine import assert_allowed
 from rag_backend.modules.autopilot.infrastructure.models import (
     AutopilotRunModel,
@@ -291,7 +292,12 @@ def _transition_statement(command: TransitionCommand) -> Update:
         )
     )
     if command.new is AutopilotRunState.PUBLISHING:
-        return statement.values(publish_attempts=0)
+        statement = statement.values(publish_attempts=0)
+    # AE-0370: entering ``scheduled`` stores the time; cancel clears it.
+    if command.new is AutopilotRunState.SCHEDULED:
+        return statement.values(scheduled_at=command.scheduled_at)
+    if clears_schedule(command):
+        return statement.values(scheduled_at=None)
     return statement
 
 

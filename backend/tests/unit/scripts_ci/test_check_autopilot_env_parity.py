@@ -39,6 +39,8 @@ _TICKET_ENV_NAMES = (
     "AUTOPILOT_ENABLED",
     "AUTOPILOT_OWNER_USER_ID",
     "AUTOPILOT_DAILY_CAP",
+    # AE-0370
+    "AUTOPILOT_DEFAULT_PUBLISH",
 )
 
 
@@ -140,6 +142,23 @@ def test_fires_when_one_side_omits_a_variable(tmp_path: Path, side: str) -> None
         return
     assert f"{name} missing from docker-compose.prod.yml" in result.stderr
     assert f"{name} missing from deploy.yml" not in result.stderr
+
+
+@pytest.mark.parametrize("side", ["deploy", "compose"])
+def test_fires_when_default_publish_is_missing(tmp_path: Path, side: str) -> None:
+    """AE-0370: AUTOPILOT_DEFAULT_PUBLISH missing on either side fails the gate."""
+    deploy_values, compose_values = _canonical_values()
+    name = "AUTOPILOT_DEFAULT_PUBLISH"
+    assert deploy_values[name] == "${{ secrets." + name + " || 'now' }}"
+    assert compose_values[name] == "${" + name + ":-now}"
+    del (deploy_values if side == "deploy" else compose_values)[name]
+    deploy, compose = _write_pair(tmp_path, deploy_values, compose_values)
+
+    result = _run(str(deploy), str(compose))
+
+    assert result.returncode == EXIT_VIOLATION, result.stdout + result.stderr
+    surface = "deploy.yml" if side == "deploy" else "docker-compose.prod.yml"
+    assert f"{name} missing from {surface}" in result.stderr
 
 
 def test_comment_does_not_count_as_present(tmp_path: Path) -> None:

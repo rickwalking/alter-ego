@@ -42,6 +42,11 @@ _SPEC: frozenset[tuple[AutopilotRunState, AutopilotRunState]] = frozenset({
     (_S.PUBLISH_FAILED, _S.PUBLISHING),
     # QA r1: a refused editorial approve keeps the owner review open.
     (_S.PUBLISHING, _S.AWAITING_OWNER),
+    # AE-0370: the owner's publish time.
+    (_S.AWAITING_OWNER, _S.SCHEDULED),
+    (_S.SCHEDULED, _S.PUBLISHING),
+    (_S.SCHEDULED, _S.AWAITING_OWNER),
+    (_S.SCHEDULED, _S.EXPIRED),
 })
 
 _ILLEGAL = (
@@ -51,6 +56,8 @@ _ILLEGAL = (
     (_S.REJECTED, _S.PUBLISHING),
     (_S.EXPIRED, _S.AWAITING_OWNER),
     (_S.PUBLISHED, _S.PUBLISHED),
+    (_S.SCHEDULED, _S.PUBLISHED),
+    (_S.SCHEDULED, _S.REJECTED),
 )
 
 
