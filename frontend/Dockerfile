@@ -29,6 +29,9 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
+# AE-0390: bind every IPv4 interface. Docker sets HOSTNAME to the container id
+# and the standalone server listens on it, so a loopback probe was refused.
+ENV HOSTNAME=0.0.0.0
 
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs && \
@@ -42,7 +45,11 @@ USER nextjs
 
 EXPOSE 3000
 
+# AE-0390: probe 127.0.0.1, not localhost. busybox wget resolves localhost to
+# [::1] first and Next.js listens on IPv4 only, so the probe was refused (prod
+# frontend stuck "unhealthy"). /api/* is proxied to the backend, so the probe
+# reads /robots.txt: Next.js serves it itself, with no redirect and no backend.
 HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
-    CMD wget --no-verbose --tries=1 --spider http://localhost:3000/api/health || exit 1
+    CMD wget --no-verbose --tries=1 --spider http://127.0.0.1:3000/robots.txt || exit 1
 
 CMD ["node", "server.js"]
