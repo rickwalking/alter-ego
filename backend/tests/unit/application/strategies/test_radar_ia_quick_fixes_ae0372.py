@@ -43,7 +43,9 @@ from rag_backend.domain.constants.carousel_cta import (
 from rag_backend.domain.protocols.carousel import _RenderOptions
 from rag_backend.modules.autopilot.domain.carousel_defaults import DEFAULT_IMAGE_STYLE
 
-_FOLLOW_PT = "Siga @pedromarins.ai: toda terça e quinta eu traduzo IA em decisões reais."
+_FOLLOW_PT = (
+    "Siga @pedromarins.ai: toda terça e quinta eu traduzo IA em decisões reais."
+)
 _FOLLOW_EN = (
     "Follow @pedromarins.ai: every Tuesday and Thursday I turn AI into real decisions."
 )
@@ -168,7 +170,9 @@ class TestCaptionV7:
         assert "Objetivo do CTA: follow" in prompt
 
     def test_caption_prompt_forbids_invented_claims(self, sample_project) -> None:
-        prompt = CarouselTemplateBuilder.build_caption_prompt(sample_project, [(1, "X")])
+        prompt = CarouselTemplateBuilder.build_caption_prompt(
+            sample_project, [(1, "X")]
+        )
         assert "Não invente números" in prompt
 
 
@@ -203,7 +207,9 @@ class TestCtaCopy:
         assert _FOLLOW_PT in html
 
     def test_goal_variants(self) -> None:
-        assert cta_copy(CTA_GOAL_SEND, "pt", "x") == "Manda pra quem precisa ouvir isso."
+        assert (
+            cta_copy(CTA_GOAL_SEND, "pt", "x") == "Manda pra quem precisa ouvir isso."
+        )
         assert cta_copy(CTA_GOAL_COMMENT, "en", "x") == (
             "Disagree? Tell me in the comments."
         )

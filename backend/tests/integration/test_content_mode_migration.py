@@ -63,8 +63,8 @@ def test_upgrade_adds_and_downgrade_drops_the_columns(
     monkeypatch.setenv("DATABASE_URL", f"sqlite:///{db_path}")
 
     _run_migration("upgrade", _REVISION)
-    assert _PROJECT_COLUMNS <= _columns(db_path, "carousel_projects")
-    assert _ASSET_COLUMNS <= _columns(db_path, "carousel_creator_assets")
+    assert _columns(db_path, "carousel_projects") >= _PROJECT_COLUMNS
+    assert _columns(db_path, "carousel_creator_assets") >= _ASSET_COLUMNS
 
     _run_migration("downgrade", _PARENT)
     assert not _PROJECT_COLUMNS & _columns(db_path, "carousel_projects")

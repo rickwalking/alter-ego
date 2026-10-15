@@ -88,7 +88,9 @@ def _reasons(body: dict[str, object]) -> list[tuple[str, str]]:
 
 # Scenario: Default flat_editorial style and template guidance (AE-0372)
 @pytest.mark.asyncio
-async def test_default_style_is_flat_editorial(configured_key: None, tmp_path: Path) -> None:
+async def test_default_style_is_flat_editorial(
+    configured_key: None, tmp_path: Path
+) -> None:
     del configured_key
     status, body, engine = await _post(
         tmp_path, "default.db", [_topic("Agents", _URL_A, 80)]
