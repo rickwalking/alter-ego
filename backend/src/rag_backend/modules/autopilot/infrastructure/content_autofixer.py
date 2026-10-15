@@ -19,6 +19,7 @@ from rag_backend.modules.autopilot.constants import (
     LANGFUSE_FIELD_CONTENT_TYPE,
     LANGFUSE_FIELD_PHASE,
     LANGFUSE_FIELD_PROJECT_ID,
+    LANGFUSE_FIELD_USER_ID,
 )
 from rag_backend.modules.autopilot.domain.autofix import (
     AutofixCommand,
@@ -35,6 +36,7 @@ from rag_backend.modules.editorial.public import (
     AUTOFIX_STATUS_FIXED,
     OwnerAutofixRequest,
     inspect_owner_issues,
+    read_project_owner_id,
     run_gate_repair,
     run_owner_autofix,
 )
@@ -67,7 +69,8 @@ class InProcessContentAutofixer:
     async def autofix(self, command: AutofixCommand) -> AutofixOutcome:
         """Run the fix under autopilot Langfuse metadata."""
         request = self._request(command.project_id, command.expected_version)
-        metadata = _trace(command.project_id, AUTOFIX_REWORK_PHASE)
+        owner = await read_project_owner_id(command.project_id, self._config.session)
+        metadata = _trace(command.project_id, AUTOFIX_REWORK_PHASE, owner)
         with propagate_attributes(metadata=metadata):
             report = await run_owner_autofix(request)
         return AutofixOutcome(
@@ -79,7 +82,9 @@ class InProcessContentAutofixer:
     async def repair_gate(self, command: GateRepairCommand) -> GateRepairOutcome:
         """Repair a content/design gate's checkpoint copy (AE-0392)."""
         request = self._request(command.project_id, command.expected_version)
-        with propagate_attributes(metadata=_trace(command.project_id, command.phase)):
+        owner = await read_project_owner_id(command.project_id, self._config.session)
+        metadata = _trace(command.project_id, command.phase, owner)
+        with propagate_attributes(metadata=metadata):
             report = await run_gate_repair(request)
         return GateRepairOutcome(
             status=_STATUSES.get(report.status, AutofixStatus.NOTHING_TO_FIX),
@@ -97,10 +102,11 @@ class InProcessContentAutofixer:
         )
 
 
-def _trace(project_id: str, phase: str) -> dict[str, str]:
+def _trace(project_id: str, phase: str, owner: str) -> dict[str, str]:
     return {
         LANGFUSE_FIELD_CONTENT_TYPE: CONTENT_TYPE_CAROUSEL,
         LANGFUSE_FIELD_AGENT_NAME: AGENT_NAME_AUTOPILOT,
         LANGFUSE_FIELD_PHASE: phase,
         LANGFUSE_FIELD_PROJECT_ID: project_id,
+        LANGFUSE_FIELD_USER_ID: owner,
     }

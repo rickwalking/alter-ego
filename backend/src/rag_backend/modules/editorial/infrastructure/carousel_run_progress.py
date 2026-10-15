@@ -21,6 +21,7 @@ from typing import cast
 
 import structlog
 from sqlalchemy import CursorResult, select, update
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.domain.constants.carousel_run import (
     LOG_EVENT_RUN_HEARTBEAT_FAILED,
@@ -55,6 +56,30 @@ async def read_run_fence(project_id: str) -> CarouselRunContext | None:
     if epoch is None:
         return None
     return CarouselRunContext(project_id=project_id, epoch=int(epoch))
+
+
+async def read_project_owner_id(
+    project_id: str,
+    session: AsyncSession | None = None,
+) -> str:
+    """The carousel owner's user id, ``""`` when unset (AE-0390 trace user).
+
+    Reads on ``session`` when given (a plain SELECT, no row lock), otherwise
+    on a short session of its own.
+    """
+    if session is not None:
+        return await _owner_on(session, project_id)
+    async with get_session_maker()() as own:
+        return await _owner_on(own, project_id)
+
+
+async def _owner_on(session: AsyncSession, project_id: str) -> str:
+    result = await session.execute(
+        select(CarouselProjectModel.owner_id).where(
+            CarouselProjectModel.id == project_id
+        )
+    )
+    return str(result.scalar_one_or_none() or "")
 
 
 async def write_run_heartbeat(project_id: str, epoch: int) -> bool:
@@ -118,6 +143,7 @@ async def write_run_heartbeat_once(project_id: str, epoch: int) -> bool:
 
 
 __all__ = [
+    "read_project_owner_id",
     "read_run_fence",
     "write_run_heartbeat",
     "write_run_heartbeat_once",

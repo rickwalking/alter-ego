@@ -5,6 +5,7 @@ Feature: blog_post_management_ae0296.feature
 
 import os
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
 
 import jwt
 import pytest
@@ -38,15 +39,24 @@ def _test_settings():
 
 
 @pytest.fixture
-async def client():
-    """Create async test client with in-memory SQLite."""
+async def client(tmp_path: Path):
+    """Create async test client backed by a per-test SQLite file.
+
+    Not ``:memory:``: SQLAlchemy serves an in-memory aiosqlite DB through a
+    ``StaticPool`` (ONE shared connection), so the fire-and-forget outbox
+    publish task and the deferred request-session teardown ROLLBACK ran in the
+    same transaction as ``_set_post_fields`` and could discard its UPDATE
+    (flaky 204/400, AE-0390). A file DB gives each session its own connection.
+    """
     from sqlalchemy.ext.asyncio import create_async_engine
 
     import rag_backend.infrastructure.database.config as db_config
     from rag_backend.api.app import create_app
     from rag_backend.infrastructure.database.config import Base, close_db
 
-    engine = create_async_engine("sqlite+aiosqlite:///:memory:", echo=False)
+    engine = create_async_engine(
+        f"sqlite+aiosqlite:///{tmp_path / 'ae0296.db'}", echo=False
+    )
 
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)

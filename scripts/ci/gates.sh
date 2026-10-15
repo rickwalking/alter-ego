@@ -130,6 +130,9 @@ gate_backend_redis_factory() { cd "$REPO_ROOT" && python3 scripts/check_redis_fa
 # Autopilot prod env parity (AE-0359): deploy.yml and docker-compose.prod.yml
 # must name the same autopilot variables, with AUTOPILOT_ENABLED defaulting false.
 gate_backend_autopilot_env() { cd "$REPO_ROOT" && python3 scripts/ci/check_autopilot_env_parity.py; }
+# Healthcheck loopback (AE-0390): no compose healthcheck or Dockerfile
+# HEALTHCHECK may probe localhost (busybox wget resolves it to [::1]).
+gate_backend_healthcheck_loopback() { cd "$REPO_ROOT" && python3 scripts/ci/check_healthcheck_loopback.py; }
 # Bandit is ADVISORY in CI (report artifact, `|| true`). Mirror that here so the
 # QA verdict matches CI — the security subagent does the deep analysis.
 gate_backend_bandit()      { cd "$REPO_ROOT/backend" && { uv run bandit -r src/ || echo "ADVISORY: bandit findings above (non-blocking, mirrors CI)."; }; }
@@ -260,6 +263,7 @@ BACKEND_GATES=(
   inline-prompts:gate_backend_inline_prompts
   redis-factory:gate_backend_redis_factory
   autopilot-env:gate_backend_autopilot_env
+  healthcheck-loopback:gate_backend_healthcheck_loopback
   bandit:gate_backend_bandit
   pip-audit:gate_backend_pip_audit
   integrity:gate_backend_integrity

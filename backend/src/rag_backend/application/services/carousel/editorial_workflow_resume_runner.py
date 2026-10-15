@@ -60,6 +60,7 @@ from rag_backend.domain.models.carousel_run import (
 from rag_backend.infrastructure.database.config import get_session_maker
 from rag_backend.modules.editorial.public import (
     CarouselProjectWriteOwner,
+    open_run_trace_scope,
     read_run_fence,
     write_run_heartbeat_once,
     write_run_heartbeat_with_retry,
@@ -147,8 +148,17 @@ async def execute_resume_run(
 
     The HTTP route schedules it as a task. The autopilot tick awaits it
     inline after committing its own transaction (AE-0363), so both callers
-    get the same heartbeat, run events, epoch fence, and failure marking.
+    get the same heartbeat, run events, epoch fence, failure marking, and
+    (AE-0390) the Langfuse trace scope: project, owner, and the caller's agent.
     """
+    with await open_run_trace_scope(params.project_id, params.reviewer_id):
+        await _execute_owned_run(service, params)
+
+
+async def _execute_owned_run(
+    service: EditorialWorkflowService,
+    params: BackgroundResumeParams,
+) -> None:
     fence = await read_run_fence(params.project_id)
     token = carousel_run_epoch_var.set(fence) if fence is not None else None
     heartbeat = (

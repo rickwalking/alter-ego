@@ -12,6 +12,11 @@ from rag_backend.domain.models.carousels import ReviewEventParams
 from rag_backend.infrastructure.langfuse_client import (
     get_langfuse_client,
 )
+from rag_backend.infrastructure.langfuse_phase_trace import (
+    WorkflowTraceScope,
+    phase_trace,
+    workflow_trace_scope,
+)
 
 if TYPE_CHECKING:
     from langchain_core.runnables import RunnableConfig
@@ -242,23 +247,14 @@ def propagate_attributes(
     metadata: dict[str, str],
     callbacks: list[object] | None = None,
 ) -> Generator[None, None, None]:
-    """Propagate metadata across multiple LLM calls via Langfuse v3 spans."""
+    """Run the enclosed LLM calls in the named, tagged phase trace (AE-0390).
+
+    Missing ``project_id``/``user_id``/``agent_name``/``content_type`` come
+    from the enclosing :func:`workflow_trace_scope`.
+    """
     _ = callbacks
-    client = get_langfuse_client()
-
-    if client is None:
+    with phase_trace(metadata):
         yield
-        return
-
-    span = client.start_as_current_span(
-        name=f"workflow_{metadata.get('phase', 'unknown')}",
-        metadata=metadata,
-    )
-    try:
-        with span:
-            yield
-    finally:
-        client.flush()
 
 
 def create_workflow_trace(
@@ -402,11 +398,14 @@ def add_error_span(
 
 __all__ = [
     "LangfuseCallbackHandler",
+    "WorkflowTraceScope",
     "add_error_span",
     "add_quality_score",
     "add_voice_match_score",
     "create_workflow_trace",
     "get_langfuse_handler",
     "get_langfuse_runnable_config",
+    "phase_trace",
     "propagate_attributes",
+    "workflow_trace_scope",
 ]

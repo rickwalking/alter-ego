@@ -146,6 +146,7 @@ from rag_backend.modules.editorial.infrastructure.carousel_project_write_owner i
     CarouselProjectWriteOwner,
 )
 from rag_backend.modules.editorial.infrastructure.carousel_run_progress import (
+    read_project_owner_id,
     read_run_fence,
     write_run_heartbeat,
     write_run_heartbeat_once,
@@ -164,6 +165,9 @@ from rag_backend.modules.editorial.infrastructure.editorial_port_adapters import
 from rag_backend.modules.editorial.infrastructure.legacy_carousel_acl import (
     EditorialProjectView,
     LegacyCarouselAcl,
+)
+from rag_backend.modules.editorial.infrastructure.run_trace_scope import (
+    open_run_trace_scope,
 )
 
 __all__ = [
@@ -260,6 +264,8 @@ __all__ = [
     "is_carousel_project_lock_held",
     "is_carousel_project_lock_held_session",
     "is_provider_outage",
+    "open_run_trace_scope",
+    "read_project_owner_id",
     "read_run_fence",
     "redrive_automation_phase",
     "run_automation_phase",

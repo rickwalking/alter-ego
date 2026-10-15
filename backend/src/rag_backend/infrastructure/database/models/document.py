@@ -12,6 +12,7 @@ from sqlalchemy import (
     Integer,
     String,
     Text,
+    false,
     func,
 )
 from sqlalchemy.orm import relationship
@@ -45,7 +46,7 @@ class DocumentModel(Base):
     is_public = Column(
         Boolean,
         default=False,
-        server_default=func.false(),
+        server_default=false(),
         nullable=False,
     )
     created_at = Column(
