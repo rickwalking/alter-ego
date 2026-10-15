@@ -11,6 +11,10 @@ Telegram before generation. Every column is nullable; no existing column is
 altered or dropped. The new run state ``awaiting_thesis`` fits the existing
 ``state`` column (no constraint lists the states). ``downgrade`` drops the
 three columns.
+
+Idempotent (AE-0371 review): prod has no ``alembic_version`` table and the SQL
+was applied by hand, so each column is added only when missing and dropped only
+when present.
 """
 
 from __future__ import annotations
@@ -30,21 +34,29 @@ _MODE_LENGTH = 20
 _THESIS_LENGTH = 280
 
 
+_COLUMNS: tuple[tuple[str, str, int], ...] = (
+    (_TOPICS, "content_mode", _MODE_LENGTH),
+    (_TOPICS, "thesis_draft", _THESIS_LENGTH),
+    (_RUNS, "pov_thesis", _THESIS_LENGTH),
+)
+
+
+def _has_column(table: str, name: str) -> bool:
+    columns = sa.inspect(op.get_bind()).get_columns(table)
+    return any(column["name"] == name for column in columns)
+
+
 def upgrade() -> None:
-    """Add the POV columns."""
-    op.add_column(
-        _TOPICS, sa.Column("content_mode", sa.String(_MODE_LENGTH), nullable=True)
-    )
-    op.add_column(
-        _TOPICS, sa.Column("thesis_draft", sa.String(_THESIS_LENGTH), nullable=True)
-    )
-    op.add_column(
-        _RUNS, sa.Column("pov_thesis", sa.String(_THESIS_LENGTH), nullable=True)
-    )
+    """Add the POV columns (if missing)."""
+    for table, name, length in _COLUMNS:
+        if _has_column(table, name):
+            continue
+        op.add_column(table, sa.Column(name, sa.String(length), nullable=True))
 
 
 def downgrade() -> None:
-    """Drop the POV columns."""
-    op.drop_column(_RUNS, "pov_thesis")
-    op.drop_column(_TOPICS, "thesis_draft")
-    op.drop_column(_TOPICS, "content_mode")
+    """Drop the POV columns (only those present)."""
+    for table, name, _length in reversed(_COLUMNS):
+        if not _has_column(table, name):
+            continue
+        op.drop_column(table, name)

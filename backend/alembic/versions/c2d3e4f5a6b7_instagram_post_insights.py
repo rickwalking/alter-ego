@@ -9,6 +9,10 @@ one row per Instagram media id holding the latest Graph insights snapshot.
 Every metric column is nullable (NULL = the Graph API did not return it, shown
 as "n/d"). No existing table or column is altered or dropped. ``downgrade``
 drops the table.
+
+Idempotent (AE-0371 review): prod has no ``alembic_version`` table and the SQL
+was applied by hand, so the table is created only when missing and dropped only
+when present.
 """
 
 from __future__ import annotations
@@ -35,8 +39,14 @@ _METRICS = (
 )
 
 
+def _has_table() -> bool:
+    return bool(sa.inspect(op.get_bind()).has_table(_INSIGHTS))
+
+
 def upgrade() -> None:
-    """Create the insights snapshot table."""
+    """Create the insights snapshot table (if missing)."""
+    if _has_table():
+        return
     op.create_table(
         _INSIGHTS,
         sa.Column("media_id", sa.String(_IG_ID_LENGTH), nullable=False),
@@ -47,5 +57,7 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    """Drop the insights snapshot table."""
+    """Drop the insights snapshot table (if present)."""
+    if not _has_table():
+        return
     op.drop_table(_INSIGHTS)
