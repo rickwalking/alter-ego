@@ -1,6 +1,6 @@
 # AE-0393 — GrokBot image bridge: async OpenAI-compatible image provider via Grok Bot webhook
 
-Status: Ready
+Status: In Development
 Tier: T2
 Priority: P1
 Type: Feature
@@ -210,13 +210,56 @@ Feature: GrokBot image bridge
 
 Ticket created from the codex image spike and the owner's decision to use a Grok Bot webhook.
 
+### 2026-10-15 (developer, Pi worktree)
+
+- `.feature` first (`backend/tests/features/image_bridge.feature`, 18 scenarios), then the
+  module `modules/image_bridge/` (domain → application → infrastructure → api → bootstrap/public,
+  autopilot layout). Two new import-linter contracts (application isolation, public facade).
+  The router stays off the facade (as in autopilot) so infrastructure never reaches the API layer.
+- Callback route `POST /api/v1/image-bridge/jobs/{job_id}/result`: 413 on Content-Length or
+  streamed body > 16 MB, the same 401 for bad/missing token, unknown job and non-UUID id, 409 for
+  non-pending or overdue jobs (overdue is expired on the spot), 422 + job failed for malformed
+  JSON / shapes / invalid images, 202 for an image or an OpenAI error body. b64_json only.
+- Waiter: semaphore (`IMAGE_BRIDGE_MAX_CONCURRENCY`), lazy sweep, job + webhook (httpx, 15 s),
+  2 s Postgres poll, conditional transitions (`WHERE status='pending'`), bytes read once and
+  nulled, `ImageOps.fit` LANCZOS → PNG at exactly 1536x1024. Webhook metadata carries the
+  carousel `project_id` from the run context when known.
+- Owner update (same day): bridge ON in prod via `deploy.yml` with the OpenAI fallback; AC8
+  replaced by "log one `image_bridge_misconfigured` ERROR and wire plain OpenAI" (no crash
+  loop on auto-deploy). Design doc, ADR-0022, ticket ACs updated.
+- Env parity: new `scripts/ci/check_image_bridge_env_parity.py` chained into
+  `backend:autopilot-env` (4 surfaces, secret/plain split, deploy literals), with rule-fires tests.
+- Migration `d3e4f5a6b7c8_image_bridge_jobs` (single head); the two migration tests that pinned
+  the old head now pin the new one. Route snapshot regenerated (+1 route).
+
 ## Files Touched
 
-Pending.
+- `backend/src/rag_backend/modules/image_bridge/**` (new module, 23 files)
+- `backend/src/rag_backend/infrastructure/container.py` (flagged OpenAI-slot service),
+  `infrastructure/config/settings.py` (8 settings), `infrastructure/database/models/__init__.py`
+  + `image_bridge_registry.py`, `bootstrap/app_factory.py` (router), `bootstrap/startup_validation.py`
+- `backend/alembic/versions/d3e4f5a6b7c8_image_bridge_jobs.py`, `backend/.importlinter`
+- `backend/.env.example`, `.github/workflows/deploy.yml`, `docker-compose.prod.yml`,
+  `nginx/nginx.conf`, `nginx/nginx.conf.ssl`
+- `scripts/ci/check_image_bridge_env_parity.py`, `scripts/ci/gates.sh`, `scripts/image_bridge_smoke.py`
+- Tests: `backend/tests/features/image_bridge.feature`, `backend/tests/unit/modules/image_bridge/*`,
+  `backend/tests/unit/scripts_ci/test_check_image_bridge_env_parity.py`,
+  `backend/tests/unit/scripts_ci/test_image_bridge_smoke.py`,
+  `backend/tests/integration/test_image_bridge_migration.py`,
+  `backend/tests/integration/test_image_bridge_repository_pg.py`,
+  `backend/tests/integration/test_autopilot_migration.py`,
+  `backend/tests/integration/test_content_mode_migration.py`, `backend/tests/snapshots/openapi_routes.json`
+- Docs: `docs/architecture/grokbot-image-bridge.md`, `docs/decisions/0022-grokbot-image-bridge.md`
 
 ## Test Evidence
 
-Pending.
+- Image bridge + touched areas: 185 passed, 4 skipped (the Postgres tests; relayed), module
+  branch coverage 100% (732 stmts, 68 branches).
+- Regression over 33 test files touching the container, registry, settings, startup: 348 passed.
+- Static gates (Pi, individually via `gate-capture.sh`): 16/16 PASS — see
+  `.agent/reports/AE-0393.dev-summary.md` for the GATES_JSON.
+- Relayed to x86: DB gates (test, diff-cover, migrations, schema-drift), the PG tests, the
+  Python 3.11 import check.
 
 ## QA Report
 
