@@ -16,6 +16,7 @@ from rag_backend.domain.constants import (
     IMAGE_STYLE_FLAT_EDITORIAL,
     IMAGE_STYLE_HYPERREAL,
     IMAGE_STYLE_NEO_ANIME,
+    IMAGE_STYLE_POV_EDITORIAL,
 )
 from rag_backend.domain.protocols import ImageStyleStrategy
 
@@ -186,4 +187,6 @@ IMAGE_STRATEGY_REGISTRY: dict[tuple[str, str], type[ImageStyleStrategy]] = {
     (IMAGE_MODEL_OPENAI, IMAGE_STYLE_HYPERREAL): OpenAIHyperrealStrategy,
     (IMAGE_MODEL_OPENAI, IMAGE_STYLE_NEO_ANIME): OpenAINeoAnimeStrategy,
     (IMAGE_MODEL_OPENAI, IMAGE_STYLE_FLAT_EDITORIAL): OpenAIFlatEditorialStrategy,
+    # AE-0376: POV point slides get the same light flat-editorial illustration.
+    (IMAGE_MODEL_OPENAI, IMAGE_STYLE_POV_EDITORIAL): OpenAIFlatEditorialStrategy,
 }

@@ -17,8 +17,9 @@ tick, never in the webhook:
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import Protocol
+from collections.abc import Awaitable, Callable
+from dataclasses import dataclass, replace
+from typing import Protocol, TypeVar, cast
 
 import structlog
 from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine, AsyncSession
@@ -32,6 +33,14 @@ from rag_backend.application.services.carousel.editorial_distribution_persist im
 )
 from rag_backend.application.services.carousel.owner_autofix_checkpoint import (
     checkpoint_patch,
+)
+from rag_backend.application.services.carousel.owner_autofix_gate import (
+    GatePatch,
+    GatePatchInput,
+    GateRepairResult,
+    gate_fixed,
+    gate_noop,
+    gate_patch,
 )
 from rag_backend.application.services.carousel.owner_autofix_issues import (
     issue_lines,
@@ -50,6 +59,7 @@ from rag_backend.application.services.carousel.owner_autofix_source import (
     AutofixSourceRequest,
     WorkflowStateStore,
     load_autofix_source,
+    load_gate_source,
 )
 from rag_backend.application.services.carousel.owner_autofix_translate import (
     EnRetranslator,
@@ -78,6 +88,8 @@ from rag_backend.modules.editorial.public import (
 )
 
 logger = structlog.get_logger()
+
+_T = TypeVar("_T")
 
 
 class CarouselRenderer(Protocol):
@@ -192,6 +204,44 @@ class OwnerAutofixService:
             return AutofixApplyResult(status=AUTOFIX_STATUS_NOTHING_TO_FIX)
         return await self._finish(command, slides, translation)
 
+    async def repair_gate(self, command: AutofixApplyCommand) -> GateRepairResult:
+        """Repair the checkpoint copy at a content or design gate (AE-0392).
+
+        Nothing is written (no CAS) when the plan changes nothing, so the
+        caller's revise keeps its lock version. The rows are not touched: the
+        engine projects the checkpoint copy onto them later.
+        """
+        source = await load_gate_source(self._gate_request(command.project_id))
+        if source is None or source.state is None:
+            return GateRepairResult(status=AUTOFIX_STATUS_NOTHING_TO_FIX)
+        plan = plan_autofix(source.records, source.context)
+        translation = await self._translate(plan)
+        records = apply_translations(plan.records, translation.texts, source.context)
+        patch = gate_patch(
+            GatePatchInput(state=source.state, before=source.records, after=records)
+        )
+        if patch is None:
+            return gate_noop(command.project_id, source.state)
+        try:
+            await self._locked(command, lambda: self._patch_gate(command, patch))
+        except _ConflictError:
+            logger.info(LOG_AUTOFIX_CONFLICT, project_id=command.project_id)
+            return GateRepairResult(status=AUTOFIX_STATUS_CONFLICT)
+        return gate_fixed(
+            command.project_id, replace(patch, translation_failed=translation.failed)
+        )
+
+    def _gate_request(self, project_id: str) -> AutofixSourceRequest:
+        return AutofixSourceRequest(
+            repo=self._deps.repo, project_id=project_id, workflow=self._deps.workflow
+        )
+
+    async def _patch_gate(self, command: AutofixApplyCommand, patch: GatePatch) -> None:
+        await self._deps.db.commit()
+        # ``load_gate_source`` found a checkpoint, so the store is wired.
+        workflow = cast(WorkflowStateStore, self._deps.workflow)
+        await workflow.update_workflow_state(command.project_id, patch.updates)
+
     async def _finish(
         self,
         command: AutofixApplyCommand,
@@ -237,17 +287,23 @@ class OwnerAutofixService:
     async def _persist(
         self, command: AutofixApplyCommand, fix: _Fix
     ) -> tuple[int, ...]:
+        return await self._locked(command, lambda: self._write(command, fix))
+
+    async def _locked(
+        self, command: AutofixApplyCommand, write: Callable[[], Awaitable[_T]]
+    ) -> _T:
+        """Run ``write`` under the project lock after the lock-version CAS."""
         engine = _lock_engine(self._deps.db)
         try:
             async with carousel_project_lock(
                 engine, command.project_id, blocking=False
             ):
-                return await self._write(command, fix)
+                await self._take_cas(command)
+                return await write()
         except CarouselConflictError as exc:
             raise _ConflictError from exc
 
     async def _write(self, command: AutofixApplyCommand, fix: _Fix) -> tuple[int, ...]:
-        await self._take_cas(command)
         slides: tuple[int, ...] = ()
         if fix.records != fix.source.records:
             slides = await project_localized_copy_to_database(

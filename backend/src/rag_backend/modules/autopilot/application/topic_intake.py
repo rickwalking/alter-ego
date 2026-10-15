@@ -35,6 +35,7 @@ from rag_backend.modules.autopilot.domain.ports import (
     QueuedRunCommand,
     TopicIntakeStore,
 )
+from rag_backend.modules.autopilot.domain.pov_schedule import sao_paulo_week
 from rag_backend.modules.autopilot.domain.topic_text import (
     carousel_topic_cutoff,
     sao_paulo_day,
@@ -100,12 +101,17 @@ class TopicIntakeService:
         known_hashes = await store.ids_for_hashes(HashLookup(hashes=hashes))
         topics = await store.carousel_topics_since(carousel_topic_cutoff(now))
         runs_today = await store.runs_created_between(DayWindow(start=start, end=end))
+        week_start, week_end = sao_paulo_week(now)
+        news_week = await store.news_runs_created_between(
+            DayWindow(start=week_start, end=week_end)
+        )
         return IntakeFacts(
             allowlist=allowlist,
             known_hashes=known_hashes,
             carousel_topics=topics,
             runs_today=runs_today,
             daily_cap=self._deps.daily_cap,
+            news_runs_this_week=news_week,
         )
 
     async def _stored(self, plan: IntakePlan) -> IntakePlan:
@@ -118,10 +124,13 @@ class TopicIntakeService:
         if not lost:
             return plan
         lost_ids = {item.candidate_id for item in lost}
+        # A lost row is a duplicate, not also "capped" (daily or weekly).
+        lost_titles = {item.proposal.title for item in lost}
+        capped = tuple(r for r in plan.rejected if r.title not in lost_titles)
         return IntakePlan(
             accepted_ids=tuple(i for i in plan.accepted_ids if i not in lost_ids),
             new_candidates=tuple(kept),
-            rejected=(*plan.rejected, *(_duplicate(item) for item in lost)),
+            rejected=(*capped, *(_duplicate(item) for item in lost)),
         )
 
     async def _queue(self, plan: IntakePlan) -> tuple[UUID, ...]:
@@ -164,6 +173,8 @@ def _candidate(item: NewCandidate) -> TopicCandidate:
         status=STATUS_CANDIDATE_ACCEPTED,
         image_style=proposal.image_style,
         image_guidance=proposal.image_guidance,
+        content_mode=proposal.content_mode,
+        thesis_draft=proposal.thesis_draft,
     )
 
 

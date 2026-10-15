@@ -59,6 +59,23 @@ class SlideTypePolicy:
     image_required: bool
     copy_start_ratio: float | None
     avatar_required: bool = False
+    # AE-0374: narrative role (maps to ``slide_type``) and whether the slide may
+    # be dropped when the deck is shorter than the contract's longest sequence.
+    role: str | None = None
+    optional: bool = False
+
+
+@dataclass(frozen=True)
+class SlideCountRange:
+    """Deck size a contract accepts (AE-0374); fixed contracts are min = max."""
+
+    minimum: int
+    maximum: int
+    default: int
+
+    def accepts(self, count: int) -> bool:
+        """True when ``count`` slides is a valid deck size."""
+        return self.minimum <= count <= self.maximum
 
 
 @dataclass(frozen=True)
@@ -119,6 +136,24 @@ class CarouselPresentationPolicy:
     proper_nouns: tuple[str, ...] = ()
     # AE-0366: LLM quality rubric (empty for v1).
     quality_rubric: tuple[QualityRubricItem, ...] = ()
+    # AE-0374: accepted deck sizes; None means exactly ``slide_count``.
+    slide_count_range: SlideCountRange | None = None
+
+    @property
+    def slide_range(self) -> SlideCountRange:
+        """The accepted deck sizes (fixed contracts: ``slide_count`` only)."""
+        if self.slide_count_range is not None:
+            return self.slide_count_range
+        return SlideCountRange(
+            minimum=self.slide_count,
+            maximum=self.slide_count,
+            default=self.slide_count,
+        )
+
+    @property
+    def has_roles(self) -> bool:
+        """True when every slide of the contract declares a role (AE-0374)."""
+        return bool(self.slides) and all(slide.role for slide in self.slides)
 
     @property
     def has_casing_rules(self) -> bool:
@@ -157,6 +192,7 @@ __all__ = [
     "GeometryBudget",
     "PresentationPolicyError",
     "QualityRubricItem",
+    "SlideCountRange",
     "SlideTypePolicy",
     "TextBudget",
     "VisibleTextPolicy",

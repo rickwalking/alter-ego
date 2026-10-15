@@ -3,9 +3,11 @@
 from fastapi import APIRouter
 
 from .admin import router as admin_router
+from .creator_asset_library import router as creator_asset_library_router
 from .creator_assets import router as creator_assets_router
 from .crud import router as crud_router
 from .editorial_workflow import router as editorial_workflow_router
+from .hook import router as hook_router
 from .media import router as media_router
 from .preview import router as preview_router
 from .publishing import router as publishing_router
@@ -20,8 +22,11 @@ PREFIX = "/carousels"
 router = APIRouter(tags=["carousels"])
 router.include_router(admin_router, prefix="")
 router.include_router(strategies_router, prefix=PREFIX)
+# AE-0376: before CRUD so "/creator-assets" is not read as "/{project_id}".
+router.include_router(creator_asset_library_router, prefix=PREFIX)
 router.include_router(crud_router, prefix=PREFIX)
 router.include_router(creator_assets_router, prefix=PREFIX)
+router.include_router(hook_router, prefix=PREFIX)
 router.include_router(media_router, prefix=PREFIX)
 router.include_router(preview_router, prefix=PREFIX)
 router.include_router(publishing_router, prefix=PREFIX)

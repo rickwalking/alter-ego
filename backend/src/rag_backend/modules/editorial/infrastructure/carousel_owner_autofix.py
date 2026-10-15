@@ -53,6 +53,16 @@ class OwnerAutofixReport:
     render_errors: tuple[str, ...] = ()
 
 
+@dataclass(frozen=True, kw_only=True)
+class GateRepairReport:
+    """Outcome of one gate repair (AE-0392). ``status`` is ``AUTOFIX_STATUS_*``."""
+
+    status: str
+    fixed_rules: tuple[str, ...] = ()
+    remaining_rules: tuple[str, ...] = ()
+    translation_failed: bool = False
+
+
 class _RepublishRenderer:
     """Re-render through the AE-0313 republish path (hero images reused)."""
 
@@ -75,7 +85,9 @@ class _RepublishRenderer:
         return result.errors
 
 
-def _service(request: OwnerAutofixRequest, *, for_apply: bool) -> OwnerAutofixService:
+def _service(
+    request: OwnerAutofixRequest, *, for_apply: bool, render: bool = True
+) -> OwnerAutofixService:
     from rag_backend.application.services.carousel.owner_autofix_service import (
         OwnerAutofixDeps,
         OwnerAutofixService,
@@ -108,7 +120,9 @@ def _service(request: OwnerAutofixRequest, *, for_apply: bool) -> OwnerAutofixSe
             repo=PostgresCarouselRepository(session=request.session),
             workflow=engine,
             translator=translator,
-            renderer=_RepublishRenderer(request.session) if for_apply else None,
+            renderer=(
+                _RepublishRenderer(request.session) if for_apply and render else None
+            ),
         )
     )
 
@@ -140,10 +154,36 @@ async def run_owner_autofix(request: OwnerAutofixRequest) -> OwnerAutofixReport:
     )
 
 
+async def run_gate_repair(request: OwnerAutofixRequest) -> GateRepairReport:
+    """Repair the checkpoint copy at a content/design gate (AE-0392).
+
+    No re-render: nothing is rendered before finalize.
+    """
+    from rag_backend.application.services.carousel.owner_autofix_service import (
+        AutofixApplyCommand,
+    )
+
+    service = _service(request, for_apply=True, render=False)
+    result = await service.repair_gate(
+        AutofixApplyCommand(
+            project_id=request.project_id,
+            expected_version=request.expected_version,
+        )
+    )
+    return GateRepairReport(
+        status=result.status,
+        fixed_rules=result.fixed_rules,
+        remaining_rules=result.remaining_rules,
+        translation_failed=result.translation_failed,
+    )
+
+
 __all__ = [
+    "GateRepairReport",
     "OwnerAutofixReport",
     "OwnerAutofixRequest",
     "OwnerIssues",
     "inspect_owner_issues",
+    "run_gate_repair",
     "run_owner_autofix",
 ]

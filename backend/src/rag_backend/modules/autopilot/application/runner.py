@@ -12,9 +12,11 @@ from dataclasses import dataclass, field
 
 import structlog
 
-from rag_backend.modules.autopilot.application.feedback import (
-    ReviseFeedbackRequest,
-    revise_feedback,
+from rag_backend.modules.autopilot.application.feedback import gate_feedback
+from rag_backend.modules.autopilot.application.gate_repair import (
+    GateRead,
+    GateRepairDependencies,
+    GateRepairStep,
 )
 from rag_backend.modules.autopilot.application.publish_job import SystemClock
 from rag_backend.modules.autopilot.application.rework_step import (
@@ -25,6 +27,7 @@ from rag_backend.modules.autopilot.application.run_recovery import (
     RecoveryDependencies,
     RunRecovery,
 )
+from rag_backend.modules.autopilot.application.run_spec import project_spec
 from rag_backend.modules.autopilot.constants import (
     GATE_FINAL_REVIEW,
     GATE_RESEARCH,
@@ -32,28 +35,23 @@ from rag_backend.modules.autopilot.constants import (
     MAX_START_ATTEMPTS,
     REASON_GENERATING,
     REASON_OWNER_UNCONFIGURED,
-    REASON_PERSONA_SCORE,
     REASON_PROJECT_MISSING,
     REASON_READY,
-    REASON_RESEARCH,
     REASON_REVISION_CAP,
     REASON_START_FAILED,
     REASON_TOPIC_MISSING,
     RUNS_PER_TICK,
 )
-from rag_backend.modules.autopilot.domain.autofix import ContentAutofixer
-from rag_backend.modules.autopilot.domain.carousel_defaults import (
-    GuidanceRequest,
-    image_guidance_for,
+from rag_backend.modules.autopilot.domain.autofix import (
+    ContentAutofixer,
+    GateRepairer,
 )
 from rag_backend.modules.autopilot.domain.gate import (
     AttachProjectCommand,
     EditorialDriver,
     GateAction,
-    GateSnapshot,
     OwnerReadyNotice,
     OwnerReadyNotifier,
-    PolicyDecision,
     ProjectSpec,
     RedriveCommand,
     ResumeCommand,
@@ -65,10 +63,9 @@ from rag_backend.modules.autopilot.domain.gate import (
 from rag_backend.modules.autopilot.domain.models import (
     AutopilotRun,
     AutopilotRunState,
-    TopicCandidate,
     TransitionCommand,
 )
-from rag_backend.modules.autopilot.domain.policy import decide, source_has_content
+from rag_backend.modules.autopilot.domain.policy import decide
 from rag_backend.modules.autopilot.domain.ports import (
     AutopilotRunRepository,
     Clock,
@@ -76,6 +73,7 @@ from rag_backend.modules.autopilot.domain.ports import (
 )
 from rag_backend.modules.autopilot.domain.publish import RunListQuery
 from rag_backend.modules.autopilot.domain.recovery import RunRecoveryStore
+from rag_backend.modules.autopilot.domain.thesis import needs_thesis
 from rag_backend.modules.autopilot.notify_constants import (
     REASON_NOTIFIER_UNCONFIGURED,
 )
@@ -83,6 +81,7 @@ from rag_backend.modules.autopilot.parked_constants import (
     LOG_RUNNER_REDRIVE,
     REASON_ENGINE_PARKED,
 )
+from rag_backend.modules.autopilot.pov_constants import REASON_THESIS_REQUESTED
 from rag_backend.modules.editorial.public import (
     REVIEW_ACTION_APPROVE,
     REVIEW_ACTION_REVISE,
@@ -111,13 +110,11 @@ class RunnerDependencies:
     clock: Clock = field(default_factory=SystemClock)
     # AE-0367: the owner's queued "Fix issues" repair.
     autofix: ContentAutofixer | None = None
+    # AE-0392: repair a content/design gate before revising it.
+    gate_repair: GateRepairer | None = None
 
 
-@dataclass(frozen=True, kw_only=True)
-class _Step:
-    run: AutopilotRun
-    snapshot: GateSnapshot
-    decision: PolicyDecision
+_Step = GateRead
 
 
 class AutopilotRunner:
@@ -134,6 +131,9 @@ class AutopilotRunner:
                 escalations=self._recovery,
                 autofix=deps.autofix,
             )
+        )
+        self._repair = GateRepairStep(
+            GateRepairDependencies(editorial=deps.editorial, repairer=deps.gate_repair)
         )
 
     async def tick(self) -> int:
@@ -164,6 +164,11 @@ class AutopilotRunner:
         if not self._deps.owner_user_id.strip():
             await self._move(run, AutopilotRunState.FAILED, REASON_OWNER_UNCONFIGURED)
             return 1
+        if await self._needs_thesis(run):
+            await self._move(
+                run, AutopilotRunState.AWAITING_THESIS, REASON_THESIS_REQUESTED
+            )
+            return 1
         spec = await self._spec(run)
         if spec is None:
             await self._move(run, AutopilotRunState.FAILED, REASON_TOPIC_MISSING)
@@ -179,8 +184,11 @@ class AutopilotRunner:
             await self._move(run, AutopilotRunState.FAILED, REASON_PROJECT_MISSING)
             return 1
         snapshot = await self._deps.editorial.read_gate(project_id)
-        decision = decide(snapshot)
-        return await self._apply(_Step(run=run, snapshot=snapshot, decision=decision))
+        read = GateRead(run=run, snapshot=snapshot, decision=decide(snapshot))
+        step = await self._repair.apply(read)
+        if step is None:
+            return 1
+        return await self._apply(step)
 
     async def _start(
         self,
@@ -241,7 +249,7 @@ class AutopilotRunner:
     async def _revise(self, step: _Step) -> int:
         if step.snapshot.phase == GATE_FINAL_REVIEW:
             return await self._stop(step)
-        feedback = revise_feedback(_feedback_request(step))
+        feedback = gate_feedback(step.snapshot, step.decision.reason)
         return await self._resume(step, REVIEW_ACTION_REVISE, feedback)
 
     async def _approve(self, step: _Step) -> int:
@@ -293,16 +301,12 @@ class AutopilotRunner:
         topic = await self._deps.topics.get_topic(run.topic_candidate_id)
         if topic is None:
             return None
-        return ProjectSpec(
-            topic=topic.title,
-            audience=topic.audience,
-            niche=topic.niche,
-            brief=topic.brief,
-            sources=topic.sources,
-            owner_user_id=self._deps.owner_user_id,
-            image_style=topic.image_style,
-            image_guidance=image_guidance_for(_guidance_request(topic)),
-        )
+        return project_spec(run, topic, self._deps.owner_user_id)
+
+    async def _needs_thesis(self, run: AutopilotRun) -> bool:
+        """AE-0377: a POV run waits for the owner's thesis before generating."""
+        topic = await self._deps.topics.get_topic(run.topic_candidate_id)
+        return topic is not None and needs_thesis(run, topic)
 
     async def _project_id(self, run: AutopilotRun, spec: ProjectSpec) -> str | None:
         if run.carousel_project_id is not None:
@@ -370,29 +374,4 @@ def _ready_notice(step: _Step, project_id: str) -> OwnerReadyNotice:
         revision=step.snapshot.lock_version,
         persona_score=step.snapshot.persona_score,
         sources_count=len(step.snapshot.sources),
-    )
-
-
-def _feedback_request(step: _Step) -> ReviseFeedbackRequest:
-    return ReviseFeedbackRequest(
-        phase=step.snapshot.phase,
-        reason=step.decision.reason,
-        detail=_detail(step.snapshot, step.decision.reason),
-    )
-
-
-def _detail(snapshot: GateSnapshot, reason: str) -> str:
-    if reason == REASON_PERSONA_SCORE and snapshot.persona_score is not None:
-        return str(snapshot.persona_score)
-    if reason == REASON_RESEARCH:
-        usable = sum(1 for source in snapshot.sources if source_has_content(source))
-        return str(usable)
-    return ""
-
-
-def _guidance_request(topic: TopicCandidate) -> GuidanceRequest:
-    return GuidanceRequest(
-        image_style=topic.image_style,
-        niche=topic.niche,
-        image_guidance=topic.image_guidance,
     )

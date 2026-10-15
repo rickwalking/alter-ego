@@ -208,6 +208,37 @@ class TestEditorialWorkflowValidation:
         assert response.status_code == 404
         assert response.json()["detail"] == ERR_PERSONA_NOT_FOUND
 
+    @pytest.mark.asyncio
+    async def test_start_falls_back_to_the_project_persona(
+        self, client: AsyncClient
+    ) -> None:
+        """Scenario: Workflow start uses the project's persona (AE-0373).
+
+        Gherkin: tests/features/carousel_content_mode.feature. The project's
+        persona id is loaded when the start request names none, so a stale id
+        on the project surfaces as the same persona 404.
+        """
+        from rag_backend.infrastructure.database.config import get_session_maker
+        from rag_backend.infrastructure.database.models.carousel import (
+            CarouselProjectModel,
+        )
+
+        editor = await create_user("persona-fallback@example.com", UserRole.EDITOR)
+        project_id = await create_carousel(editor, is_public=False)
+        async with get_session_maker()() as session:
+            project = await session.get(CarouselProjectModel, project_id)
+            assert project is not None
+            project.persona_id = "00000000-0000-0000-0000-000000000098"
+            await session.commit()
+
+        response = await client.post(
+            f"/api/carousels/{project_id}/workflow/start",
+            json={"topic": "Topic", "audience": "Audience", "brief": "Brief"},
+            headers=auth_header(editor),
+        )
+        assert response.status_code == 404
+        assert response.json()["detail"] == ERR_PERSONA_NOT_FOUND
+
 
 class TestWorkflowPhaseArtifacts:
     """Scenarios: phase artifacts and persona gate at human review."""

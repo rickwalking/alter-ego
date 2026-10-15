@@ -1,15 +1,24 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { asString, outlineTitle } from "../create-phase-review-helpers";
+import {
+  asString,
+  outlineHookCandidates,
+  outlineThesisEarly,
+  outlineTitle,
+} from "../create-phase-review-helpers";
+import { HookPicker } from "@/modules/editorial";
 import type { EditorialWorkflowState } from "@/modules/publishing";
 
 export interface OutlinePhaseReviewProps {
   state: EditorialWorkflowState;
+  /** AE-0375: the project whose slide-1 hook the owner picks. */
+  projectId?: string;
 }
 
 export function OutlinePhaseReview({
   state,
+  projectId,
 }: OutlinePhaseReviewProps): React.ReactElement {
   const t = useTranslations("editorialWorkflow.review");
   const untitledSlide = t("untitledSlide");
@@ -22,8 +31,18 @@ export function OutlinePhaseReview({
     );
   }
 
+  const first = state.outline[0];
+  const candidates = outlineHookCandidates(first);
   return (
     <div className="space-y-2 rounded-md border border-[var(--color-border)] bg-[var(--color-background)] p-3 text-sm">
+      {projectId && candidates.length > 0 ? (
+        <HookPicker
+          projectId={projectId}
+          candidates={candidates}
+          initialHook={outlineTitle(first, "")}
+          thesisEarly={outlineThesisEarly(first)}
+        />
+      ) : null}
       <p className="font-medium">{t("outlineTitle")}</p>
       <ol className="list-decimal space-y-2 pl-4">
         {state.outline.map((slide, index) => {

@@ -28,9 +28,12 @@ from rag_backend.domain.models import (
     ResearchSource as ResearchSourceEntity,
 )
 from rag_backend.infrastructure.database.config import Base
+from rag_backend.infrastructure.database.models.carousel_content_mode import (
+    CarouselContentModeColumns,
+)
 
 
-class CarouselProjectModel(Base):
+class CarouselProjectModel(CarouselContentModeColumns, Base):
     """SQLAlchemy model for CarouselProject entity."""
 
     __tablename__ = "carousel_projects"
@@ -236,12 +239,13 @@ class CarouselProjectModel(Base):
             needs_republish_since=self.needs_republish_since,
             created_at=self.created_at,
             updated_at=self.updated_at,
+            **self.content_mode_fields(),
         )
 
     @classmethod
     def from_entity(cls, entity: CarouselProjectEntity) -> "CarouselProjectModel":
         """Create ORM model from domain entity."""
-        return cls(
+        model = cls(
             id=str(entity.id),
             topic=entity.topic,
             audience=entity.audience,
@@ -298,6 +302,8 @@ class CarouselProjectModel(Base):
             created_at=entity.created_at,
             updated_at=entity.updated_at,
         )
+        model.write_content_mode(entity)
+        return model
 
     def update_from_entity(self, entity: CarouselProjectEntity) -> None:
         """Update ORM model from domain entity."""
@@ -343,6 +349,7 @@ class CarouselProjectModel(Base):
         self.presentation_policy_checksum = entity.presentation_policy_checksum
         self.artifact_version = entity.artifact_version
         self.slide_layout_strategy = entity.slide_layout_strategy
+        self.write_owner_edits(entity)
         self.updated_at = entity.updated_at
 
 

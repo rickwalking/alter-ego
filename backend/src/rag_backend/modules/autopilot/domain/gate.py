@@ -12,6 +12,7 @@ from enum import StrEnum
 from typing import Protocol
 from uuid import UUID
 
+from rag_backend.domain.constants.content_mode import CONTENT_MODE_NEWS_ANALYSIS
 from rag_backend.modules.autopilot.domain.carousel_defaults import DEFAULT_IMAGE_STYLE
 
 
@@ -75,6 +76,22 @@ class ImageFact:
 
 
 @dataclass(frozen=True, kw_only=True)
+class QualityViolation:
+    """One blocking presentation rule on one slide (AE-0392).
+
+    ``slide_index`` is None for a carousel-wide rule. ``text`` is the
+    offending copy when the field is a plain text field, else empty.
+    """
+
+    rule: str
+    slide_index: int | None = None
+    locale: str = ""
+    field: str = ""
+    message: str = ""
+    text: str = ""
+
+
+@dataclass(frozen=True, kw_only=True)
 class SnapshotParts:
     """Inputs for one snapshot. One object keeps the assembler at one argument."""
 
@@ -115,6 +132,9 @@ class GateSnapshot:
     parked_overdue: bool = False
     # AE-0365: the images gate expects this many hero images, not slides_total.
     hero_images_total: int = 0
+    # AE-0392: blocking presentation rules (content and design gates), kept
+    # apart from ``forbidden_hits`` so each is reported under its own reason.
+    quality_violations: tuple[QualityViolation, ...] = ()
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -131,6 +151,9 @@ class ProjectSpec:
     # palette; the driver sets those. These two come from the topic.
     image_style: str = DEFAULT_IMAGE_STYLE
     image_guidance: str = ""
+    # AE-0377: Radar IA or POV; POV carries the owner-confirmed thesis.
+    content_mode: str = CONTENT_MODE_NEWS_ANALYSIS
+    pov_thesis: str | None = None
 
 
 @dataclass(frozen=True, kw_only=True)

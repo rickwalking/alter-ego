@@ -18,17 +18,27 @@ import structlog
 from rag_backend.modules.autopilot.application.deferred_replies import (
     DeferredOwnerMessenger,
 )
+from rag_backend.modules.autopilot.application.owner_approval import (
+    FinalReviewApproval,
+)
+from rag_backend.modules.autopilot.application.owner_replies import OwnerReplies
 from rag_backend.modules.autopilot.application.owner_steps import (
-    APPROVE_FAILED_STEP,
-    APPROVE_REFUSED_STEP,
-    APPROVE_STEP,
     AUTOFIX_STEP,
     REJECT_STEP,
     RETRY_STEP,
     REWORK_STEP,
     OwnerStep,
 )
-from rag_backend.modules.autopilot.constants import GATE_FINAL_REVIEW
+from rag_backend.modules.autopilot.application.publish_choice import (
+    CHOICE_KINDS,
+    PublishChoiceActions,
+    PublishChoiceDeps,
+    is_schedule_reply,
+)
+from rag_backend.modules.autopilot.application.thesis_actions import (
+    ThesisOwnerActions,
+    is_thesis_pending,
+)
 from rag_backend.modules.autopilot.domain.autofix import ContentAutofixer
 from rag_backend.modules.autopilot.domain.callback_parse import (
     ParsedCallback,
@@ -36,12 +46,9 @@ from rag_backend.modules.autopilot.domain.callback_parse import (
 )
 from rag_backend.modules.autopilot.domain.gate import (
     EditorialDriver,
-    ResumeCommand,
-    ResumeStatus,
 )
 from rag_backend.modules.autopilot.domain.messages import (
     InlineKeyboard,
-    review_keyboard,
     rework_phase_keyboard,
 )
 from rag_backend.modules.autopilot.domain.models import (
@@ -51,24 +58,25 @@ from rag_backend.modules.autopilot.domain.models import (
     TransitionCommand,
 )
 from rag_backend.modules.autopilot.domain.owner_ports import (
-    CallbackAnswer,
     CarouselReleaser,
     ForceReplyPrompt,
-    MessageEdit,
     OwnerMessenger,
-    OwnerText,
     PendingRework,
     PendingReworkStore,
-    ReleaseCommand,
     UpdateClaimStore,
 )
-from rag_backend.modules.autopilot.domain.ports import AutopilotRunRepository, Clock
+from rag_backend.modules.autopilot.domain.ports import (
+    AutopilotRunRepository,
+    CarouselPublishSource,
+    Clock,
+    TopicCandidateRepository,
+)
 from rag_backend.modules.autopilot.domain.recovery import ReworkIntent, RunRecoveryStore
 from rag_backend.modules.autopilot.domain.webhook_update import WebhookUpdate, is_owner
 from rag_backend.modules.autopilot.recovery_constants import NO_RETRY_REASONS
+from rag_backend.modules.autopilot.schedule_constants import PUBLISH_MODE_NOW
 from rag_backend.modules.autopilot.webhook_constants import (
     ANSWER_ALREADY,
-    ANSWER_APPROVED,
     ANSWER_FIXING,
     ANSWER_MAY_BE_LIVE,
     ANSWER_NOTHING_TO_FIX,
@@ -76,7 +84,6 @@ from rag_backend.modules.autopilot.webhook_constants import (
     ANSWER_RETRY,
     ANSWER_UNKNOWN,
     AUTOFIX_REWORK_PHASE,
-    KIND_APPROVE,
     KIND_CALLBACK,
     KIND_FIX,
     KIND_IGNORED,
@@ -87,9 +94,6 @@ from rag_backend.modules.autopilot.webhook_constants import (
     KIND_REWORK,
     LOG_WEBHOOK,
     TEXT_ALREADY,
-    TEXT_APPROVE_FAILED,
-    TEXT_APPROVE_REFUSED,
-    TEXT_APPROVED,
     TEXT_CHOOSE_PHASE,
     TEXT_FORCE_REPLY,
     TEXT_MAY_BE_LIVE,
@@ -98,7 +102,6 @@ from rag_backend.modules.autopilot.webhook_constants import (
     TEXT_REWORKING,
     TEXT_SUPERSEDED,
 )
-from rag_backend.modules.editorial.public import REVIEW_ACTION_APPROVE
 
 logger = structlog.get_logger()
 
@@ -121,16 +124,24 @@ class OwnerActionDeps:
     recovery: RunRecoveryStore
     clock: Clock
     owner_chat_id: str
+    # AE-0370: skips a second approve after a cancelled schedule.
+    carousels: CarouselPublishSource | None = None
+    # AE-0370: ``now`` offers publish-now or schedule; ``next_slot`` schedules.
+    default_publish: str = PUBLISH_MODE_NOW
     # AE-0367: without it every "Fix issues" tap answers "Nothing to fix".
     autofix: ContentAutofixer | None = None
+    # AE-0377: the POV draft thesis lives on the topic candidate.
+    topics: TopicCandidateRepository | None = None
 
 
-class OwnerActionService:
+class OwnerActionService(ThesisOwnerActions):
     """Apply one claimed update. A second delivery of the same id does nothing."""
 
     def __init__(self, deps: OwnerActionDeps) -> None:
         self._deps = deps
         self._replies = DeferredOwnerMessenger(deps.messenger)
+        self._out = OwnerReplies(self._replies)
+        self._choice = PublishChoiceActions(_choice_deps(deps), self._out)
 
     async def deliver(self) -> int:
         """Send the replies queued by ``handle``. Call after the commit."""
@@ -155,36 +166,20 @@ class OwnerActionService:
             await self._on_callback(update)
 
     async def _on_callback(self, update: WebhookUpdate) -> None:
+        if await self._thesis_callback(update):
+            return
         parsed = parse_callback(update.data)
         if parsed is None:
             await self._answer(update, ANSWER_UNKNOWN)
+            return
+        if parsed.kind in CHOICE_KINDS:
+            await self._choice.handle(update, parsed)
             return
         handler = _HANDLERS.get(parsed.kind)
         if handler is None:
             await self._answer(update, ANSWER_UNKNOWN)
             return
         await handler(self, update, parsed)
-
-    async def _approve(self, update: WebhookUpdate, parsed: ParsedCallback) -> None:
-        run = await self._awaiting(parsed.run_id)
-        if run is None or not await self._to_publishing(run.run_id):
-            await self._finish(update, ANSWER_ALREADY, TEXT_ALREADY)
-            return
-        status = await self._approve_resume(run)
-        if status is not ResumeStatus.APPLIED:
-            await self._reopen(update, run)
-            return
-        if not await self._release(run):
-            await self._fail_publish(run.run_id)
-            await self._finish(update, TEXT_APPROVE_FAILED, TEXT_APPROVE_FAILED)
-            return
-        await self._finish(update, ANSWER_APPROVED, TEXT_APPROVED)
-
-    async def _reopen(self, update: WebhookUpdate, run: AutopilotRun) -> None:
-        """The editorial approve was refused: keep the review open with buttons."""
-        await self._apply(run.run_id, APPROVE_REFUSED_STEP)
-        await self._answer(update, TEXT_APPROVE_FAILED)
-        await self._edit(update, TEXT_APPROVE_REFUSED, review_keyboard(run.run_id))
 
     async def _rework_menu(self, update: WebhookUpdate, parsed: ParsedCallback) -> None:
         run = await self._awaiting(parsed.run_id)
@@ -261,6 +256,12 @@ class OwnerActionService:
         pending = await self._deps.pending.take(update.actor_id)
         if pending is None:
             return
+        if is_thesis_pending(pending):
+            await self._thesis_reply(update, pending)
+            return
+        if is_schedule_reply(pending):
+            await self._choice.on_time_text(update, pending)
+            return
         run = await self._awaiting(pending.run_id)
         if run is None or not await self._to_reworking(run.run_id):
             await self._tell(update, TEXT_ALREADY)
@@ -269,24 +270,6 @@ class OwnerActionService:
         await self._deps.recovery.queue_rework(intent)
         await self._tell(update, TEXT_REWORKING.format(phase=pending.phase))
 
-    async def _approve_resume(self, run: AutopilotRun) -> ResumeStatus:
-        project_id = run.carousel_project_id or ""
-        snapshot = await self._deps.editorial.read_gate(project_id)
-        result = await self._deps.editorial.resume(
-            ResumeCommand(
-                project_id=project_id,
-                action=REVIEW_ACTION_APPROVE,
-                expected_version=snapshot.lock_version,
-                feedback="",
-                phase=GATE_FINAL_REVIEW,
-            )
-        )
-        return result.status
-
-    async def _release(self, run: AutopilotRun) -> bool:
-        project_id = run.carousel_project_id or ""
-        return await self._deps.release.release(ReleaseCommand(project_id=project_id))
-
     async def _awaiting(self, run_id: UUID) -> AutopilotRun | None:
         run = await self._deps.runs.get(run_id)
         if run is None or run.carousel_project_id is None:
@@ -294,12 +277,6 @@ class OwnerActionService:
         if run.state is not AutopilotRunState.AWAITING_OWNER:
             return None
         return run
-
-    async def _to_publishing(self, run_id: UUID) -> bool:
-        return await self._apply(run_id, APPROVE_STEP)
-
-    async def _fail_publish(self, run_id: UUID) -> bool:
-        return await self._apply(run_id, APPROVE_FAILED_STEP)
 
     async def _to_rejected(self, run_id: UUID) -> bool:
         return await self._apply(run_id, REJECT_STEP)
@@ -320,15 +297,10 @@ class OwnerActionService:
         return await self._deps.runs.transition(command)
 
     async def _finish(self, update: WebhookUpdate, answer: str, text: str) -> None:
-        await self._answer(update, answer)
-        await self._edit(update, text, None)
+        await self._out.finish(update, answer, text)
 
     async def _answer(self, update: WebhookUpdate, text: str) -> None:
-        if not update.callback_id:
-            return
-        await self._replies.answer(
-            CallbackAnswer(callback_id=update.callback_id, text=text)
-        )
+        await self._out.answer(update, text)
 
     async def _edit(
         self,
@@ -336,22 +308,25 @@ class OwnerActionService:
         text: str,
         keyboard: InlineKeyboard | None,
     ) -> None:
-        if update.message_id is None or not update.chat_id:
-            return
-        await self._replies.edit(
-            MessageEdit(
-                chat_id=update.chat_id,
-                message_id=update.message_id,
-                text=text,
-                keyboard=keyboard,
-            )
-        )
+        await self._out.edit(update, text, keyboard)
 
     async def _tell(self, update: WebhookUpdate, text: str) -> None:
-        chat_id = update.chat_id or update.actor_id
-        if not chat_id:
-            return
-        await self._replies.tell(OwnerText(chat_id=chat_id, text=text))
+        await self._out.tell(update, text)
+
+
+def _choice_deps(deps: OwnerActionDeps) -> PublishChoiceDeps:
+    approval = FinalReviewApproval(
+        editorial=deps.editorial,
+        release_port=deps.release,
+        carousels=deps.carousels,
+    )
+    return PublishChoiceDeps(
+        runs=deps.runs,
+        pending=deps.pending,
+        approval=approval,
+        clock=deps.clock,
+        default_publish=deps.default_publish,
+    )
 
 
 def _delivery(update: WebhookUpdate, deps: OwnerActionDeps) -> TelegramUpdate:
@@ -369,7 +344,6 @@ def _prompt(update: WebhookUpdate) -> ForceReplyPrompt:
 
 def _handlers() -> dict[str, _Handler]:
     return {
-        KIND_APPROVE: OwnerActionService._approve,
         KIND_REWORK: OwnerActionService._rework_menu,
         KIND_PHASE: OwnerActionService._choose_phase,
         KIND_REJECT: OwnerActionService._reject,

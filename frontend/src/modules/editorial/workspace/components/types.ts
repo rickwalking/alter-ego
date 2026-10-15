@@ -71,3 +71,14 @@ export interface AutoRepairButtonProps {
    */
   onRepublishNeeded?: () => void;
 }
+
+/** AE-0375: the slide-1 hook picker at the outline gate. */
+export interface HookPickerProps {
+  projectId: string;
+  /** Up to five candidates generated from the owner's thesis. */
+  candidates: readonly string[];
+  /** The hook currently on slide 1 (the saved pick, else candidate 1). */
+  initialHook: string;
+  /** False when no thesis word shows up on slides 1-2 (outline check). */
+  thesisEarly?: boolean;
+}

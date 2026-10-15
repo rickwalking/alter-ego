@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from functools import partial
 
 import structlog
 
 from rag_backend.agents.content_draft_agent import ContentDraftAgent
 from rag_backend.agents.outline_agent import OutlineAgent
 from rag_backend.agents.source_synthesis_agent import SourceSynthesisAgent
+from rag_backend.application.services.carousel.bounded_gather import gather_bounded
 from rag_backend.application.services.carousel.content_distinctness import (
     find_duplicate_slide_indices,
     max_similarity_against,
@@ -16,15 +18,29 @@ from rag_backend.application.services.carousel.content_distinctness import (
 from rag_backend.application.services.carousel.content_fail_closed import (
     SlideDraftRetryFn,
 )
+from rag_backend.application.services.carousel.content_mode_brief import (
+    ContentModeBrief,
+)
 from rag_backend.application.services.carousel.malformed_draft_normalizer import (
     normalize_slide_draft,
+)
+from rag_backend.application.services.carousel.outline_by_mode import (
+    ModeOutlineRequest,
+    generate_outline_for_mode,
+)
+from rag_backend.application.services.carousel.slide_policy_context import (
+    slide_policy_context,
 )
 from rag_backend.application.services.carousel.workflow_state import (
     CarouselWorkflowState,
 )
 from rag_backend.domain.constants.carousel import LANGUAGE_PT
-from rag_backend.domain.constants.carousel_workflow import SOURCE_TYPE_DOCUMENT
+from rag_backend.domain.constants.carousel_workflow import (
+    DEFAULT_CONTENT_DRAFT_CONCURRENCY,
+    SOURCE_TYPE_DOCUMENT,
+)
 from rag_backend.domain.models.persona import PersonaProfile
+from rag_backend.domain.models.pov_prompts import SlidePolicyContext
 
 from .editorial_workflow_support import EditorialWorkflowStartInput
 
@@ -61,6 +77,10 @@ class SlideDraftGenerationParams:
     # AE-0291: prior slide drafts (from checkpoint) so a regeneration can show the
     # model its previously-rejected copy to diff against (also busts the cache).
     previous_drafts: list[dict[str, object]] | None = None
+    # AE-0375: the project's content mode (role contract, POV thesis).
+    mode: ContentModeBrief | None = None
+    # AE-0391: slides drafted at once (the CONTENT_DRAFT_CONCURRENCY setting).
+    concurrency: int = DEFAULT_CONTENT_DRAFT_CONCURRENCY
 
 
 @dataclass(frozen=True)
@@ -69,6 +89,8 @@ class ContentRegenInputs:
 
     revision_notes: list[str]
     previous_drafts: list[dict[str, object]] = field(default_factory=list)
+    # AE-0375: the project's content mode for this regeneration.
+    mode: ContentModeBrief | None = None
 
 
 async def synthesize_research(
@@ -93,14 +115,11 @@ async def synthesize_research(
 async def generate_outline(
     outline_agent: OutlineAgent,
     workflow_input: EditorialWorkflowStartInput,
+    brief: ContentModeBrief | None = None,
 ) -> list[dict[str, object]]:
-    """Generate carousel outline from brief and sources."""
-    source_texts = [s.get("content", "") for s in workflow_input.sources]
-    outline = await outline_agent.generate_outline(
-        topic=workflow_input.topic,
-        audience=workflow_input.audience,
-        brief=workflow_input.brief,
-        sources=source_texts,
+    """Generate the carousel outline for the project's content mode (AE-0375)."""
+    outline = await generate_outline_for_mode(
+        outline_agent, ModeOutlineRequest(workflow_input=workflow_input, brief=brief)
     )
     return [slide for slide in outline if isinstance(slide, dict)]
 
@@ -163,6 +182,11 @@ class _SlideDraftRunner:
     persona_context: str
     revision_notes: str
     previous_drafts: list[dict[str, object]] = field(default_factory=list)
+    mode: ContentModeBrief | None = None
+
+    def _policy_at(self, index: int) -> SlidePolicyContext | None:
+        """AE-0375: the slide's contract (and POV inputs) for role contracts."""
+        return slide_policy_context(self.mode, self.outline[index])
 
     async def draft_at(self, index: int) -> dict[str, object]:
         slide = self.outline[index]
@@ -177,6 +201,7 @@ class _SlideDraftRunner:
             revision_notes=self.revision_notes,
             sibling_context=_build_sibling_context(self.outline, index),
             previous_draft=_previous_draft_body(self.previous_drafts, slide_index),
+            policy=self._policy_at(index),
         )
         return normalize_slide_draft({**slide, **draft})
 
@@ -199,6 +224,7 @@ class _SlideDraftRunner:
             revision_notes=notes,
             sibling_context=_build_sibling_context(self.outline, index),
             previous_draft=prior_body,
+            policy=self._policy_at(index),
         )
         return normalize_slide_draft({**slide, **draft})
 
@@ -235,7 +261,12 @@ async def generate_slide_drafts(
     content_agent: ContentDraftAgent,
     params: SlideDraftGenerationParams,
 ) -> list[dict[str, object]]:
-    """Draft slide copy for each outline entry with cross-slide distinctness."""
+    """Draft slide copy for each outline entry with cross-slide distinctness.
+
+    AE-0391: slides are drafted concurrently (bounded, results in outline
+    order). Each draft only sees its siblings' OUTLINE context, never a
+    sibling's fresh draft; near-duplicates are caught and re-drafted after.
+    """
     runner = _SlideDraftRunner(
         content_agent=content_agent,
         outline=params.outline,
@@ -243,8 +274,12 @@ async def generate_slide_drafts(
         persona_context=_learned_persona_context(params),
         revision_notes=_joined_revision_notes(params.revision_notes),
         previous_drafts=params.previous_drafts or [],
+        mode=params.mode,
     )
-    drafts = [await runner.draft_at(index) for index in range(len(params.outline))]
+    drafts = await gather_bounded(
+        [partial(runner.draft_at, index) for index in range(len(params.outline))],
+        params.concurrency,
+    )
     return await _redraft_duplicates(runner, drafts)
 
 
@@ -268,6 +303,7 @@ def build_slide_draft_retry(
             *(params.revision_notes or []),
         ]),
         previous_drafts=params.previous_drafts or [],
+        mode=params.mode,
     )
     positions = {
         int(slide.get(_SLIDE_INDEX_KEY, position + 1) or position + 1): position

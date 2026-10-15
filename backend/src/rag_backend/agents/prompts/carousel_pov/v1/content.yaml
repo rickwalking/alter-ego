@@ -1,0 +1,91 @@
+---
+name: carousel_pov_content
+version: "1.0.0"
+description: "Draft one 'Ponto de Vista' slide in the owner's first-person voice, v6 rules + never-invent (AE-0375)"
+
+template: |
+  Escreva o texto do slide {{ slide_number }} de {{ slide_count }} de um carrossel
+  "Ponto de Vista", seguindo o contrato hero_lower_third.
+
+  Papel deste slide: {{ role }}
+  Título planejado: {{ title }}
+  Pontos-chave: {{ key_points }}
+  Locale: {{ locale }}
+  Phase: {{ phase }}
+
+  Tese do autor (a opinião DELE; afie, nunca invente nem troque):
+  {{ thesis }}
+
+  Prova pessoal do autor (a ÚNICA fonte de experiências e números pessoais):
+  {{ personal_proof or "(nenhuma: argumente pelo raciocínio, nunca com uma história inventada)" }}
+
+  O que este papel exige:
+  {% if role == "hook" -%}
+  O heading é o gancho, EXATAMENTE: "{{ hook_text }}" (não reescreva).
+  O body é um sub-gancho opcional de uma linha (até 80 caracteres).
+  {%- elif role == "rehook" -%}
+  Uma frase de tensão (até 90 caracteres no body) que funciona sozinha mesmo se
+  for o primeiro slide visto. Nomeia a dor ou o que está em jogo.
+  {%- elif role == "pov" -%}
+  "Por que eu digo isso": comece pela linha de assinatura do autor e use a prova
+  pessoal (até 200 caracteres no body). Sem prova pessoal, explique o raciocínio
+  em primeira pessoa ("Eu vejo que...", "Na minha leitura..."), sem inventar um caso.
+  {%- elif role == "point" -%}
+  UMA ideia que sustenta a tese, em frases curtas (até 160 caracteres no body).
+  {%- elif role == "twist" -%}
+  O ponto contraintuitivo, o que faz alguém mandar o post (até 160 caracteres).
+  Use um insight com uma frase de destaque.
+  {%- elif role == "save" -%}
+  Um checklist de uma tela, feito para ser salvo: 3 a 5 itens curtos (até 60
+  caracteres cada), em summary_points.
+  {%- elif role == "cta" -%}
+  Uma única ação: "{{ cta_copy }}". Não peça outra coisa.
+  {%- endif %}
+
+  Voz (obrigatório):
+  - Primeira pessoa do autor: "Eu", "no meu trabalho", "o erro que eu vejo". Diga o
+    que o autor pensa, não o que o comunicado de imprensa diz.
+  - Frases curtas e diretas, sem hype ("revolucionário", "game changer", "o futuro
+    chegou" e "você não vai acreditar" são proibidos).
+  - NUNCA invente opiniões, experiências, projetos, clientes, resultados de teste
+    ou números. Experiências e números pessoais só podem vir da prova pessoal acima.
+
+  {{ presentation_policy_context }}
+
+  Casing (português E inglês, todo heading, body, título e corpo de item):
+  - Caixa normal de frase: a primeira letra de todo heading e de toda frase é
+    maiúscula. Mantenha a caixa canônica de nomes próprios, marcas e siglas
+    (Brasil, Google, OpenAI, GitHub, API).
+  - Nunca escreva um heading ou uma frase inteira em minúsculas.
+
+  Body (obrigatório): todo slide, exceto o CTA, tem um body não vazio abaixo do
+  heading (1 a 3 frases). O slide save tem seus itens.
+
+  {{ quality_rubric }}
+
+  Distinção entre slides: os OUTROS slides estão listados acima em "Other slides
+  in this carousel". Cubra um ângulo diferente; não repita frases nem exemplos.
+
+  Responda SOMENTE com um objeto JSON:
+  {draft_text, confidence_score, sources_used, icon_name?, long_form_notes}
+
+  long_form_notes é OBRIGATÓRIO: 2 a 4 parágrafos (150 a 350 palavras) de prosa
+  para o blog, na voz do autor, que expandem o ângulo deste slide com contexto e
+  raciocínio. Exemplos só da prova pessoal ou de conhecimento geral claramente
+  apresentado como tal; nunca um caso, número ou resultado inventado. Parágrafos
+  simples separados por linha em branco: sem títulos, listas, emoji ou markup.
+
+  Use valores de icon_name do allowlist Lucide para itens estruturados. Não use
+  ícones emoji. Respeite as regras de texto visível e os limites acima só no
+  draft_text.
+
+  {{ persona_context }}
+
+model:
+  temperature: 0.7
+  max_tokens: 32000
+
+metadata:
+  author: "content-team"
+  created_at: "2026-10-15"
+  tags: ["carousel", "pov", "content", "pov-hook-v1", "growth-plan"]

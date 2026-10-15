@@ -10,6 +10,9 @@ from rag_backend.application.services.carousel_template.css.styles import (
 from rag_backend.application.services.carousel_template.helpers import (
     _build_watermark_html,
 )
+from rag_backend.application.services.carousel_template.role_layouts import (
+    pov_slide_strategies,
+)
 from rag_backend.application.services.carousel_template.slides import (
     _render_closing_slide,
     _render_content_slide,
@@ -185,12 +188,16 @@ def build_carousel_html(
     caption_html = _build_caption_html(project, language=lang)
 
     slides_html = ""
+    # AE-0376: POV decks pick a layout per role (hook_face, statement, ...).
+    role_layouts = pov_slide_strategies(project, total_slides)
     for slide in slides:
         slide_type = slide["type"]
         is_first_or_last = slide["number"] in {_FIRST_SLIDE_NUMBER, str(total_slides)}
 
         if strategy_registry is not None:
-            effective_strategy = strategy_name or project.slide_layout_strategy
+            effective_strategy = role_layouts.get(int(slide["number"])) or (
+                strategy_name or project.slide_layout_strategy
+            )
             strategy = strategy_registry.find_for_slide(
                 slide_type,
                 preferred=effective_strategy,

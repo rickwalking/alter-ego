@@ -12,6 +12,12 @@ from rag_backend.infrastructure.config.constants import (
     ENVIRONMENT_DEVELOPMENT,
     NON_PRODUCTION_ENVIRONMENTS,
 )
+from rag_backend.infrastructure.config.llm_routing_constants import (
+    DEFAULT_CONTENT_DRAFT_CONCURRENCY,
+    DEFAULT_LLM_MODEL_FALLBACK,
+    DEFAULT_LLM_MODEL_FAST,
+    DEFAULT_LLM_MODEL_REASONING,
+)
 
 
 class Settings(BaseSettings):
@@ -70,6 +76,19 @@ class Settings(BaseSettings):
     # survivable; this swap is a narrower distribution on top of it, not a
     # replacement for it. Watch the persona voice-match (>= 70) on PT copy.
     glm_model: str = "glm-5.3"
+    # AE-0391: per-task carousel models on the same OpenCode Go endpoint/key.
+    # Reasoning: research synthesis, outline, quality/rubric judgement. Fast:
+    # slide drafting, translation, distribution copy, refinement, persona
+    # scoring. Fallback: used when the primary call fails (error, timeout,
+    # empty content, bad JSON after the retry). Ignored unless the GLM provider
+    # is active with a key (Anthropic semantics are unchanged).
+    llm_model_reasoning: str = DEFAULT_LLM_MODEL_REASONING
+    llm_model_fast: str = DEFAULT_LLM_MODEL_FAST
+    llm_model_fallback: str = DEFAULT_LLM_MODEL_FALLBACK
+    # AE-0391: slides drafted concurrently in the content phase (>= 1).
+    content_draft_concurrency: int = Field(
+        default=DEFAULT_CONTENT_DRAFT_CONCURRENCY, ge=1
+    )
 
     # AE-0317 kill switch: when false, workflow-start web research (URL scraping
     # + DuckDuckGo topic search) is skipped and sources pass through unchanged.
@@ -175,6 +194,16 @@ class Settings(BaseSettings):
         validation_alias=AliasChoices(
             "AUTOPILOT_OWNER_USER_ID",
             "autopilot_owner_user_id",
+        ),
+    )
+
+    # AE-0370: what Approve does on Telegram. "now" offers publish-now or a
+    # schedule; "next_slot" schedules the next good slot directly.
+    autopilot_default_publish: Literal["now", "next_slot"] = Field(
+        default="now",
+        validation_alias=AliasChoices(
+            "AUTOPILOT_DEFAULT_PUBLISH",
+            "autopilot_default_publish",
         ),
     )
 

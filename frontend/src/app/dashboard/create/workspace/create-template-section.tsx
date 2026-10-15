@@ -7,8 +7,13 @@ import {
   TEXT,
   TEXT_DIM,
 } from "@/constants/neon";
+import { useTranslations } from "next-intl";
 import { CREATE_TEMPLATES } from "@/app/dashboard/create/constants";
-import type { CreateCarouselFormState } from "@/app/dashboard/create/types";
+import { POV_TEMPLATES } from "@/constants/create";
+import {
+  isPovForm,
+  type CreateCarouselFormState,
+} from "@/app/dashboard/create/types";
 import { SectionNumber } from "./section-number";
 import { sectionCardStyle, sectionHeaderStyle } from "./section-styles";
 
@@ -20,10 +25,32 @@ export interface CreateTemplateSectionProps {
   onChange: (patch: Partial<CreateCarouselFormState>) => void;
 }
 
+interface TemplateCard {
+  icon: string;
+  name: string;
+  desc: string;
+}
+
+/** AE-0373: the four POV formats in POV mode, the six Radar IA templates otherwise. */
+function useTemplateCards(
+  form: CreateCarouselFormState,
+): readonly TemplateCard[] {
+  const t = useTranslations("create.pov.formats");
+  if (!isPovForm(form)) {
+    return CREATE_TEMPLATES;
+  }
+  return POV_TEMPLATES.map((tpl) => ({
+    icon: tpl.icon,
+    name: t(`${tpl.format}.name`),
+    desc: t(`${tpl.format}.desc`),
+  }));
+}
+
 export function CreateTemplateSection({
   form,
   onChange,
 }: CreateTemplateSectionProps): React.ReactElement {
+  const cards = useTemplateCards(form);
   return (
     <div style={sectionCardStyle}>
       <div style={sectionHeaderStyle}>
@@ -31,7 +58,7 @@ export function CreateTemplateSection({
         Template Style
       </div>
       <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 md:grid-cols-3">
-        {CREATE_TEMPLATES.map((tpl, idx) => (
+        {cards.map((tpl, idx) => (
           <div
             key={tpl.name}
             role="button"

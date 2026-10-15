@@ -62,35 +62,42 @@ This injection is performed via `page.evaluate()` so the original HTML template 
 
 ## Instagram caption structure
 
-Generate caption with this structure:
+Generate caption with this structure (AE-0372, prompt `carousel/v7/caption_prompt.yaml`;
+the v2 structure below it is kept only for history):
 
-1. **Hook** (1-2 lines with emoji): Attention-grabbing opener
-2. **Value promise** (2-3 lines): What the reader will learn
-3. **Comment question** (1 line): Engagement prompt
-4. **Double CTA:** "Salve este post" + "Compartilhe com quem precisa"
-5. **Hashtags** (12-18): Mix of Portuguese and English, niche-specific
+1. **Hook** (line 1): the slide 1 hook again, no leading emoji
+2. **Take** (2-4 short lines): what it changes in practice, from the slides only
+3. **Question** (1 line): invites disagreement or the reader's own experience
+4. **One CTA** by `cta_goal`: follow, send, or comment. Never "Salve" + "Compartilhe" together
+5. **Search keywords** in plain text (e.g. "inteligência artificial", "IA para programadores")
+6. **Hashtags** (3-5): mostly Portuguese (#inteligenciaartificial #IA #programacao + 1-2 niche)
+
+Superseded v2 structure: emoji hook, value promise, comment question, double CTA
+("Salve este post" + "Compartilhe com quem precisa"), 12-18 PT/EN hashtags.
 
 ### Caption style
 
-- Informal Brazilian Portuguese
-- Use relevant emojis
+- Informal Brazilian Portuguese, first person when it is the owner's take
+- At most 2 emojis in the whole caption
 - No em dashes
 - Direct and assertive
-- Always end with engagement question
+- Never invent numbers, tests, results or experiences that are not on the slides
 
-### Example
+### Example (shape only; every claim must come from the slides)
 
 ```
-🧠 5 coisas que todo dev precisa saber sobre IA em 2026
+Pare de pedir código pra IA. Peça isso no lugar.
 
-A corrida por modelos mais eficientes esta mudando tudo. Se voce e dev, estas mudancas vao afetar seu trabalho direto.
+O gargalo não é gerar código, é decidir o que construir.
+Nos slides: as perguntas que eu faço antes de abrir o chat.
 
-Comente: qual dessas tendencias voce ja esta acompanhando?
+Qual dessas você já faz? Discorda de alguma?
 
-Salve este post para consultar depois
-Compartilhe com quem precisa ficar atualizado
+Manda pra quem ainda pede "faz um app pra mim".
 
-#IA #MachineLearning #DevLife #TechTrends #InteligenciaArtificial #SoftwareEngineering #FutureOfWork #Codigo #Programacao #AI2026 #DeepLearning #TechBR
+inteligência artificial, IA para programadores
+
+#inteligenciaartificial #IA #programacao #engenhariadesoftware
 ```
 
 ## Editorial workflow API (unified path)

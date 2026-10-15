@@ -6,6 +6,7 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from rag_backend.agents.outline_agent import OutlineAgent
+from rag_backend.domain.models.pov_prompts import SizedOutlineRequest
 from rag_backend.infrastructure.cache.ai_response_cache import get_ai_response_cache
 
 
@@ -28,6 +29,21 @@ class TestOutlineAgent:
 
         assert len(result) == 1
         assert result[0]["title"] == "Hook"
+
+    async def test_generate_outline_for_matches_the_positional_call(
+        self, agent: OutlineAgent, mock_llm: AsyncMock
+    ) -> None:
+        """AE-0376: the request-object entry point is the legacy outline call."""
+        outline = [{"slide_index": 1, "title": "Hook", "key_points": ["Open strong"]}]
+        mock_llm.ainvoke.return_value = MagicMock(content=json.dumps(outline))
+
+        result = await agent.generate_outline_for(
+            SizedOutlineRequest(
+                topic="Topic for", audience="Devs", brief="Brief", sources=["Source"]
+            )
+        )
+
+        assert [slide["title"] for slide in result] == ["Hook"]
 
 
 class TestOutlineCachePoisoning:

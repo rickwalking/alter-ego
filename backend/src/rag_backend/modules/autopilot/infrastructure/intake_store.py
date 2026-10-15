@@ -9,10 +9,11 @@ from __future__ import annotations
 from datetime import datetime, timedelta
 from uuid import UUID
 
-from sqlalchemy import delete, func, select
+from sqlalchemy import delete, func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from rag_backend.domain.constants.content_mode import CONTENT_MODE_NEWS_ANALYSIS
 from rag_backend.modules.autopilot.constants import (
     RUN_ATTEMPTS_INITIAL,
     SERVED_URL_TTL_HOURS,
@@ -93,6 +94,26 @@ class SqlAlchemyTopicIntakeStore:
         )
         return int(result.scalar_one())
 
+    async def news_runs_created_between(self, window: DayWindow) -> int:
+        """AE-0377: Radar IA runs (topic mode NULL or news) in the window."""
+        result = await self._session.execute(
+            select(func.count())
+            .select_from(AutopilotRunModel)
+            .join(
+                TopicCandidateModel,
+                TopicCandidateModel.id == AutopilotRunModel.topic_candidate_id,
+            )
+            .where(
+                AutopilotRunModel.created_at >= window.start,
+                AutopilotRunModel.created_at < window.end,
+                or_(
+                    TopicCandidateModel.content_mode.is_(None),
+                    TopicCandidateModel.content_mode == CONTENT_MODE_NEWS_ANALYSIS,
+                ),
+            )
+        )
+        return int(result.scalar_one())
+
     async def add_candidate(self, candidate: TopicCandidate) -> bool:
         """Insert one candidate. False when a concurrent batch stored its hash."""
         try:
@@ -152,6 +173,8 @@ def _topic_row(candidate: TopicCandidate) -> TopicCandidateModel:
         status=candidate.status,
         image_style=candidate.image_style,
         image_guidance=candidate.image_guidance,
+        content_mode=candidate.content_mode,
+        thesis_draft=candidate.thesis_draft,
     )
 
 

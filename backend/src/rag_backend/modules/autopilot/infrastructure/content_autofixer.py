@@ -25,6 +25,8 @@ from rag_backend.modules.autopilot.domain.autofix import (
     AutofixCommand,
     AutofixOutcome,
     AutofixStatus,
+    GateRepairCommand,
+    GateRepairOutcome,
     QualityIssues,
 )
 from rag_backend.modules.autopilot.infrastructure.editorial_driver import EngineFactory
@@ -35,6 +37,7 @@ from rag_backend.modules.editorial.public import (
     OwnerAutofixRequest,
     inspect_owner_issues,
     read_project_owner_id,
+    run_gate_repair,
     run_owner_autofix,
 )
 
@@ -67,12 +70,26 @@ class InProcessContentAutofixer:
         """Run the fix under autopilot Langfuse metadata."""
         request = self._request(command.project_id, command.expected_version)
         owner = await read_project_owner_id(command.project_id, self._config.session)
-        with propagate_attributes(metadata=_trace(command.project_id, owner)):
+        metadata = _trace(command.project_id, AUTOFIX_REWORK_PHASE, owner)
+        with propagate_attributes(metadata=metadata):
             report = await run_owner_autofix(request)
         return AutofixOutcome(
             status=_STATUSES.get(report.status, AutofixStatus.NOTHING_TO_FIX),
             remaining=report.remaining,
             translation_failed=report.translation_failed,
+        )
+
+    async def repair_gate(self, command: GateRepairCommand) -> GateRepairOutcome:
+        """Repair a content/design gate's checkpoint copy (AE-0392)."""
+        request = self._request(command.project_id, command.expected_version)
+        owner = await read_project_owner_id(command.project_id, self._config.session)
+        metadata = _trace(command.project_id, command.phase, owner)
+        with propagate_attributes(metadata=metadata):
+            report = await run_gate_repair(request)
+        return GateRepairOutcome(
+            status=_STATUSES.get(report.status, AutofixStatus.NOTHING_TO_FIX),
+            fixed_rules=report.fixed_rules,
+            remaining_rules=report.remaining_rules,
         )
 
     def _request(self, project_id: str, version: int) -> OwnerAutofixRequest:
@@ -85,11 +102,11 @@ class InProcessContentAutofixer:
         )
 
 
-def _trace(project_id: str, owner: str) -> dict[str, str]:
+def _trace(project_id: str, phase: str, owner: str) -> dict[str, str]:
     return {
         LANGFUSE_FIELD_CONTENT_TYPE: CONTENT_TYPE_CAROUSEL,
         LANGFUSE_FIELD_AGENT_NAME: AGENT_NAME_AUTOPILOT,
-        LANGFUSE_FIELD_PHASE: AUTOFIX_REWORK_PHASE,
+        LANGFUSE_FIELD_PHASE: phase,
         LANGFUSE_FIELD_PROJECT_ID: project_id,
         LANGFUSE_FIELD_USER_ID: owner,
     }

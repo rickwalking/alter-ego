@@ -12,8 +12,12 @@ import {
   TEXT_DIM,
 } from "@/constants/neon";
 import { CREATE_TEMPLATES } from "@/app/dashboard/create/constants";
-import type { CreateCarouselFormState } from "@/app/dashboard/create/types";
-import { IMAGE_PRESETS } from "@/constants/create";
+import { canSubmitCreateForm } from "@/app/dashboard/create/helpers";
+import {
+  isPovForm,
+  type CreateCarouselFormState,
+} from "@/app/dashboard/create/types";
+import { IMAGE_PRESETS, POV_TEMPLATES } from "@/constants/create";
 
 const sidebarCardStyle = {
   background: BG_CARD,
@@ -29,6 +33,19 @@ export interface CreateSidebarProps {
   error: string | null;
 }
 
+function modeKey(form: CreateCarouselFormState): string {
+  return isPovForm(form) ? "pov" : "radar";
+}
+
+function useTemplateName(form: CreateCarouselFormState): string {
+  const t = useTranslations("create.pov.formats");
+  if (!isPovForm(form)) {
+    return CREATE_TEMPLATES[form.selectedTemplate]?.name ?? "—";
+  }
+  const pov = POV_TEMPLATES[form.selectedTemplate];
+  return pov ? t(`${pov.format}.name`) : "—";
+}
+
 export function CreateSidebar({
   form,
   onSubmit,
@@ -36,11 +53,12 @@ export function CreateSidebar({
   error,
 }: CreateSidebarProps): React.ReactElement {
   const t = useTranslations("create");
-  const template = CREATE_TEMPLATES[form.selectedTemplate];
+  const templateName = useTemplateName(form);
   const preset = IMAGE_PRESETS.find((p) => p.value === form.imagePreset);
 
   const summaryRows = [
-    { label: "Template", value: template?.name ?? "—" },
+    { label: t("mode.summaryLabel"), value: t(`mode.${modeKey(form)}.name`) },
+    { label: "Template", value: templateName },
     { label: "Theme", value: form.theme },
     {
       label: "Image preset",
@@ -118,7 +136,7 @@ export function CreateSidebar({
       <button
         type="button"
         onClick={onSubmit}
-        disabled={isPending || !form.topic.trim() || !form.audience.trim()}
+        disabled={isPending || !canSubmitCreateForm(form)}
         style={{
           width: "100%",
           padding: "12px",

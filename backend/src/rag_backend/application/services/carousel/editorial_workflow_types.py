@@ -4,12 +4,33 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from langchain_core.language_models import BaseChatModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.application.services.carousel.workflow_state import (
     CarouselWorkflowState,
 )
+from rag_backend.domain.constants.carousel_workflow import (
+    DEFAULT_CONTENT_DRAFT_CONCURRENCY,
+)
 from rag_backend.domain.models.persona import PersonaProfile
+
+
+@dataclass(frozen=True)
+class ChatModelRoles:
+    """AE-0391: the chat model of each carousel task role + drafting bound."""
+
+    reasoning: BaseChatModel
+    fast: BaseChatModel
+    # Slides drafted (and persona-scored) concurrently in the content phase.
+    draft_concurrency: int = DEFAULT_CONTENT_DRAFT_CONCURRENCY
+
+    @classmethod
+    def coerce(cls, llm: BaseChatModel | ChatModelRoles) -> ChatModelRoles:
+        """A single model serves both roles (tests, legacy callers)."""
+        if isinstance(llm, ChatModelRoles):
+            return llm
+        return cls(reasoning=llm, fast=llm)
 
 
 @dataclass(frozen=True)

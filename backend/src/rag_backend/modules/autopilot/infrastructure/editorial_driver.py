@@ -23,6 +23,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.domain.constants import IMAGE_MODEL_OPENAI
 from rag_backend.domain.constants.carousel import CAROUSEL_DEFAULT_SLIDES_CONFIG
+from rag_backend.domain.constants.carousel_cta import DEFAULT_CTA_GOAL
 from rag_backend.domain.constants.carousel_workflow import (
     ERR_NOTHING_TO_REDRIVE,
     ERR_RESUME_ALREADY_IN_PROGRESS,
@@ -30,9 +31,6 @@ from rag_backend.domain.constants.carousel_workflow import (
     STRUCTURED_FEEDBACK_TARGET_PHASE_KEY,
 )
 from rag_backend.domain.constants.optimistic_locking import ERR_VERSION_CONFLICT
-from rag_backend.domain.constants.presentation_policy import (
-    CREATE_TIME_PRESENTATION_POLICY_VERSION,
-)
 from rag_backend.infrastructure.monitoring_langfuse import (
     WorkflowTraceScope,
     workflow_trace_scope,
@@ -71,6 +69,10 @@ from rag_backend.modules.autopilot.domain.parked import (
 from rag_backend.modules.autopilot.domain.ports import Clock
 from rag_backend.modules.autopilot.domain.snapshot import assemble_snapshot
 from rag_backend.modules.autopilot.infrastructure.jpeg_size import jpeg_size
+from rag_backend.modules.autopilot.infrastructure.pov_project import (
+    policy_version_for,
+    pov_fields_for,
+)
 from rag_backend.modules.autopilot.parked_constants import PARKED_GRACE_SECONDS
 from rag_backend.modules.editorial.public import (
     AutomationRun,
@@ -122,6 +124,8 @@ class InProcessEditorialDriver:
         image guidance (or the template) as the project's visual direction.
         AE-0362: the pipeline's default 7-slide config, the count the editorial
         pipeline actually builds.
+        AE-0377: a POV spec creates a "Ponto de Vista" carousel from the
+        owner-confirmed thesis (pov_hook_v1, 9 slides, opinion format, follow CTA).
         """
         project = CarouselProject(
             topic=spec.topic,
@@ -135,7 +139,10 @@ class InProcessEditorialDriver:
             theme=CarouselTheme.AUTO.value,
             custom_visual_details=spec.image_guidance or None,
             owner_id=spec.owner_user_id or None,
-            presentation_policy_version=CREATE_TIME_PRESENTATION_POLICY_VERSION,
+            presentation_policy_version=policy_version_for(spec),
+            content_mode=spec.content_mode,
+            cta_goal=DEFAULT_CTA_GOAL,
+            **pov_fields_for(spec),
         )
         return await self._acl.create_project(project)
 

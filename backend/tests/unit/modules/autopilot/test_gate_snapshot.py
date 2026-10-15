@@ -22,6 +22,7 @@ from rag_backend.modules.autopilot.constants import (
     FIELD_SLIDE_DRAFTS,
     FIELD_SUMMARY,
     FIELD_VIOLATIONS,
+    GATE_CONTENT,
     GATE_DESIGN,
     PHASE_STATUS_AWAITING,
     SEVERITY_BLOCKER,
@@ -107,8 +108,10 @@ def test_outline_length_and_revision_count_follow_the_phase() -> None:
     assert snapshot.revisions_used == 2
 
 
-def test_forbidden_hits_include_gate_codes_and_draft_phrases() -> None:
+def test_forbidden_hits_are_phrases_and_gate_codes_are_quality() -> None:
+    """AE-0392: gate codes are content-quality violations, not forbidden phrases."""
     state = {
+        FIELD_CURRENT_PHASE: GATE_CONTENT,
         FIELD_FORBIDDEN_PHRASES: ["Synergy"],
         FIELD_SLIDE_DRAFTS: [{"body": "This has synergy inside"}],
         FIELD_CONTENT_GATE: {
@@ -119,9 +122,8 @@ def test_forbidden_hits_include_gate_codes_and_draft_phrases() -> None:
         },
     }
     snapshot = assemble_snapshot(_parts(state, slides=1))
-    assert "Synergy" in snapshot.forbidden_hits
-    assert "banned" in snapshot.forbidden_hits
-    assert "soft" not in snapshot.forbidden_hits
+    assert snapshot.forbidden_hits == ("Synergy",)
+    assert [item.rule for item in snapshot.quality_violations] == ["banned"]
 
 
 def test_design_without_a_report_is_a_blocker() -> None:

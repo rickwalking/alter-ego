@@ -4,7 +4,10 @@ from rag_backend.application.services.carousel.outline_normalize import (
     canonical_slide_type,
     normalize_editorial_outline,
 )
-from rag_backend.application.services.carousel.types import MAX_SLIDES
+from rag_backend.application.services.carousel.types import (
+    LEGACY_SLIDE_COUNT,
+    MAX_SLIDES,
+)
 from rag_backend.domain.constants.carousel import (
     SLIDE_TYPE_CLOSING,
     SLIDE_TYPE_CONTENT,
@@ -21,7 +24,9 @@ class TestNormalizeEditorialOutline:
             for index in range(1, 12)
         ]
         result = normalize_editorial_outline(raw)
-        assert len(result) == MAX_SLIDES
+        # AE-0374: an outline without roles keeps the fixed 7-slide trim.
+        assert len(result) == LEGACY_SLIDE_COUNT
+        assert LEGACY_SLIDE_COUNT < MAX_SLIDES
 
     def test_assigns_canonical_slide_types(self) -> None:
         raw = [{"slide_index": 1, "title": "Hook", "key_points": ["a"]}]

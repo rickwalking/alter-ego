@@ -1,0 +1,140 @@
+"""CSS for the "Ponto de Vista" layouts (AE-0376, growth plan 16.3 B/D).
+
+Solid palette backgrounds with a subtle texture instead of generated art,
+large left-aligned type, one accent colour, the owner's cut-out photo on
+slide 1 and a follow-focused CTA card.
+"""
+
+from __future__ import annotations
+
+
+def get_pov_slide_css(_theme: dict[str, str]) -> str:
+    """Return the POV layout CSS (uses the shell's colour variables)."""
+    return """
+  .pov-solid {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    background:
+      radial-gradient(circle at 18% 12%, var(--primary-glow) 0%, transparent 45%),
+      repeating-linear-gradient(135deg, var(--text-06) 0 1px, transparent 1px 14px),
+      var(--bg);
+  }
+  .pov-presentation {
+    justify-content: flex-start;
+    padding: 40px 32px 64px;
+  }
+  .pov-copy {
+    justify-content: flex-start;
+    margin-top: 0;
+    max-width: 92%;
+  }
+  .pov-statement-heading {
+    font-family: var(--font-heading);
+    font-size: clamp(27px, 5.6vw, 34px);
+    line-height: 1.08;
+    font-weight: 800;
+    color: var(--text);
+    margin: 12px 0 0;
+  }
+  .pov-statement-heading strong { color: var(--accent); }
+  .pov-statement-body {
+    font-size: clamp(14px, 2.9vw, 18px);
+    line-height: 1.4;
+    color: var(--text-60);
+    margin: 14px 0 0;
+  }
+  .pov-footer {
+    position: absolute;
+    left: 32px;
+    right: 32px;
+    bottom: 22px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-48);
+  }
+  .pov-hook-heading {
+    font-family: var(--font-heading);
+    font-size: clamp(32px, 7vw, 44px);
+    line-height: 1.02;
+    font-weight: 900;
+    color: var(--text);
+    max-width: 62%;
+    margin: 0;
+  }
+  .pov-hook-heading strong { color: var(--accent); }
+  .pov-hook-sub {
+    font-size: clamp(14px, 2.8vw, 17px);
+    line-height: 1.3;
+    color: var(--text-60);
+    max-width: 58%;
+    margin: 14px 0 0;
+  }
+  .pov-hook-photo {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    width: 58%;
+    height: 72%;
+    z-index: 1;
+    display: flex;
+    align-items: flex-end;
+    justify-content: flex-end;
+  }
+  .pov-hook-photo img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    object-position: right bottom;
+    display: block;
+  }
+  .pov-checklist {
+    list-style: none;
+    padding: 0;
+    margin: 18px 0 0;
+    display: flex;
+    flex-direction: column;
+    gap: 11px;
+  }
+  .pov-check-item {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    font-size: clamp(14px, 2.9vw, 18px);
+    line-height: 1.25;
+    color: var(--text);
+  }
+  .pov-check-icon {
+    flex: 0 0 22px;
+    height: 22px;
+    border-radius: 5px;
+    background: var(--accent);
+    color: var(--bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .pov-check-icon svg { width: 14px; height: 14px; }
+  .pov-cta { z-index: 2; justify-content: center; }
+  .pov-cta-card { gap: 8px; }
+  .pov-cta-sentence {
+    font-family: var(--font-heading);
+    font-size: clamp(20px, 4.4vw, 27px);
+    line-height: 1.15;
+    font-weight: 800;
+    color: var(--text);
+    text-align: center;
+    margin: 0 0 12px;
+  }
+  .pov-cta-website {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--text-48);
+  }
+"""
+
+
+__all__ = ["get_pov_slide_css"]

@@ -40,7 +40,9 @@ from rag_backend.domain.constants.presentation_policy import (
     DEFAULT_PRESENTATION_POLICY_VERSION,
 )
 from rag_backend.domain.constants.workflow_state_fields import (
+    STATE_FIELD_LOCALIZED_SLIDES,
     STATE_FIELD_OUTLINE,
+    STATE_FIELD_PRESENTATION_POLICY_VERSION,
     STATE_FIELD_RESEARCH_FINDINGS,
     STATE_FIELD_SLIDE_INDEX,
     STATE_FIELD_SLIDE_TYPE,
@@ -159,6 +161,34 @@ def _vocabulary(source: _VocabularyInput) -> tuple[str, ...]:
     )
 
 
+@dataclass(frozen=True)
+class _SourceParts:
+    state: Mapping[str, object] | None
+    records: list[dict[str, object]]
+    topic: str
+    version: str
+
+
+def _source(parts: _SourceParts) -> AutofixSource:
+    policy = load_presentation_policy(parts.version)
+    state = parts.state
+    records = parts.records
+    outline = _outline(state)
+    vocabulary = _vocabulary(
+        _VocabularyInput(
+            state=state,
+            outline=outline,
+            records=records,
+            topic=parts.topic,
+            configured=policy.proper_nouns,
+        )
+    )
+    context = AutofixContext(policy=policy, vocabulary=vocabulary, outline=outline)
+    return AutofixSource(
+        policy_version=parts.version, records=records, context=context, state=state
+    )
+
+
 async def load_autofix_source(request: AutofixSourceRequest) -> AutofixSource | None:
     """Read rows + checkpoint; None when the carousel does not exist."""
     project = await request.repo.get_project_by_id(UUID(request.project_id))
@@ -169,21 +199,56 @@ async def load_autofix_source(request: AutofixSourceRequest) -> AutofixSource | 
     if request.workflow is not None:
         state = await request.workflow.get_workflow_state(request.project_id)
     version = project.presentation_policy_version or DEFAULT_PRESENTATION_POLICY_VERSION
-    policy = load_presentation_policy(version)
-    records = localized_from_slides(rows)
-    outline = _outline(state)
-    vocabulary = _vocabulary(
-        _VocabularyInput(
+    return _source(
+        _SourceParts(
             state=state,
-            outline=outline,
-            records=records,
+            records=localized_from_slides(rows),
             topic=project.topic,
-            configured=policy.proper_nouns,
+            version=version,
         )
     )
-    context = AutofixContext(policy=policy, vocabulary=vocabulary, outline=outline)
-    return AutofixSource(
-        policy_version=version, records=records, context=context, state=state
+
+
+def _checkpoint_records(state: Mapping[str, object]) -> list[dict[str, object]]:
+    raw = state.get(STATE_FIELD_LOCALIZED_SLIDES)
+    if not isinstance(raw, list):
+        return []
+    return [dict(slide) for slide in raw if isinstance(slide, Mapping)]
+
+
+def _checkpoint_version(state: Mapping[str, object], fallback: str) -> str:
+    version = state.get(STATE_FIELD_PRESENTATION_POLICY_VERSION)
+    if isinstance(version, str) and version:
+        return version
+    return fallback
+
+
+async def load_gate_source(request: AutofixSourceRequest) -> AutofixSource | None:
+    """The checkpoint copy at a review gate (AE-0392); None when there is none.
+
+    Before finalize the rows are not the copy the engine validates: the
+    checkpoint's ``localized_slides`` are. The plan context is built the same
+    way as for the rows.
+    """
+    if request.workflow is None:
+        return None
+    project = await request.repo.get_project_by_id(UUID(request.project_id))
+    if project is None:
+        return None
+    state = await request.workflow.get_workflow_state(request.project_id)
+    records = _checkpoint_records(state) if state is not None else []
+    if state is None or not records:
+        return None
+    fallback = (
+        project.presentation_policy_version or DEFAULT_PRESENTATION_POLICY_VERSION
+    )
+    return _source(
+        _SourceParts(
+            state=state,
+            records=records,
+            topic=project.topic,
+            version=_checkpoint_version(state, fallback),
+        )
     )
 
 
@@ -192,4 +257,5 @@ __all__ = [
     "AutofixSourceRequest",
     "WorkflowStateStore",
     "load_autofix_source",
+    "load_gate_source",
 ]

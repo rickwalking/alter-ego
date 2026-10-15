@@ -1,0 +1,43 @@
+---
+name: carousel_hook
+version: "7.0.0"
+description: "Five slide-1 hook candidates for a Radar IA carousel, from the sources only (AE-0376)"
+
+template: |
+  Você escreve o slide 1 (o gancho) de um carrossel do Instagram "Radar IA":
+  uma notícia de IA contada pelo que ela muda para quem lê. O slide 1 precisa
+  fazer um desconhecido parar de rolar o feed, sem contexto. Não é uma manchete.
+
+  Tema: {{ topic }}
+  Público: {{ audience }}
+  Brief: {{ brief }}
+  Fontes:
+  {{ sources }}
+
+  Escreva EXATAMENTE 5 candidatos, cada um com uma fórmula diferente desta lista:
+  - lacuna_curiosidade: "Todo mundo falou de X. Ninguém falou disso."
+  - impacto_pra_voce: "O que o [modelo/produto] muda pra quem programa"
+  - erro_custo: um erro comum e o custo dele
+  - pare_de: "Pare de ... Faça isso no lugar."
+  - numero_especifico: um número que está nas fontes
+  - mito: "'Frase comum.' Não é bem assim."
+
+  Regras (todas obrigatórias):
+  - Cada candidato tem no máximo 10 palavras e no máximo 60 caracteres.
+  - Só use fatos, nomes e números que estão nas fontes. Nunca invente números,
+    resultados, testes ou experiências pessoais.
+  - Sem clickbait: a promessa do gancho precisa ser cumprida nos slides seguintes.
+  - Português do Brasil, caixa normal de frase, sem emoji, sem travessão (— ou –),
+    sem hashtags.
+
+  Responda SOMENTE com um JSON:
+  {"candidates": [{"formula": "<id da fórmula>", "text": "<gancho>"}, ...]}
+
+model:
+  temperature: 0.8
+  max_tokens: 1024
+
+metadata:
+  author: "content-team"
+  created_at: "2026-10-15"
+  tags: ["carousel", "radar-ia", "hook", "growth-plan"]

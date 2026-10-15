@@ -111,7 +111,8 @@ class TestImagePresetValidation:
         assert response.status_code == 201
         body = response.json()
         assert body["image_model"] == "openai"
-        assert body["image_style"] == "neo_anime"
+        # AE-0372: flat editorial is the default everywhere.
+        assert body["image_style"] == "flat_editorial"
 
     @pytest.mark.asyncio
     async def test_openai_comic_neon_preset_accepted(self, client):

@@ -53,6 +53,10 @@ from rag_backend.modules.autopilot.constants import (
     UQ_RUNS_CAROUSEL_PROJECT,
     UQ_TOPIC_SIGNAL_HASH,
 )
+from rag_backend.modules.autopilot.pov_constants import (
+    CONTENT_MODE_COLUMN_LENGTH,
+    THESIS_DRAFT_MAX_CHARS,
+)
 from rag_backend.modules.autopilot.recovery_constants import (
     FK_MANUAL_PUBLISH_PROJECT,
     NOTIFY_CURSOR_NAME_LENGTH,
@@ -61,6 +65,9 @@ from rag_backend.modules.autopilot.recovery_constants import (
     REWORK_PHASE_LENGTH,
     TABLE_MANUAL_PUBLISHES,
     TABLE_NOTIFY_CURSOR,
+)
+from rag_backend.modules.autopilot.schedule_constants import (
+    INDEX_RUNS_STATE_SCHEDULED_AT,
 )
 from rag_backend.modules.autopilot.story_constants import (
     FK_STORY_PROJECT,
@@ -108,6 +115,13 @@ class TopicCandidateModel(AutopilotOrmBase):
         server_default=IMAGE_STYLE_NEO_ANIME,
     )
     image_guidance: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # AE-0377: scout v3 mode (NULL = Radar IA) and the POV draft thesis.
+    content_mode: Mapped[str | None] = mapped_column(
+        String(CONTENT_MODE_COLUMN_LENGTH), nullable=True
+    )
+    thesis_draft: Mapped[str | None] = mapped_column(
+        String(THESIS_DRAFT_MAX_CHARS), nullable=True
+    )
 
     __table_args__ = (UniqueConstraint("signal_hash", name=UQ_TOPIC_SIGNAL_HASH),)
 
@@ -170,6 +184,14 @@ class AutopilotRunModel(AutopilotOrmBase):
         String(IG_IDENTIFIER_LENGTH), nullable=True
     )
     ig_permalink: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # AE-0377: the thesis the owner confirmed on Telegram (POV runs only).
+    pov_thesis: Mapped[str | None] = mapped_column(
+        String(THESIS_DRAFT_MAX_CHARS), nullable=True
+    )
+    # AE-0370: the owner's publish time while the run is ``scheduled``.
+    scheduled_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
@@ -180,6 +202,7 @@ class AutopilotRunModel(AutopilotOrmBase):
     __table_args__ = (
         UniqueConstraint("carousel_project_id", name=UQ_RUNS_CAROUSEL_PROJECT),
         Index(INDEX_RUNS_STATE_UPDATED_AT, "state", "updated_at"),
+        Index(INDEX_RUNS_STATE_SCHEDULED_AT, "state", "scheduled_at"),
     )
 
 

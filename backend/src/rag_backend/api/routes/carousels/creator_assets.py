@@ -79,7 +79,7 @@ def get_creator_asset_service(
 
 
 @dataclass(frozen=True)
-class _CreatorAssetContext:
+class CreatorAssetContext:
     user: User
     handlers: PresentationHandlers
 
@@ -87,17 +87,17 @@ class _CreatorAssetContext:
 def get_creator_asset_context(
     user: Annotated[User, Depends(require_authenticated_user)],
     handlers: Annotated[PresentationHandlers, Depends(get_presentation_handlers)],
-) -> _CreatorAssetContext:
-    return _CreatorAssetContext(user=user, handlers=handlers)
+) -> CreatorAssetContext:
+    return CreatorAssetContext(user=user, handlers=handlers)
 
 
-def _normalize_upload_mime(content_type: str | None) -> str:
+def normalize_upload_mime(content_type: str | None) -> str:
     if not content_type:
         return ""
     return content_type.split(";", 1)[0].strip().lower()
 
 
-def _to_creator_asset_response(asset: CarouselCreatorAsset) -> CreatorAssetResponse:
+def to_creator_asset_response(asset: CarouselCreatorAsset) -> CreatorAssetResponse:
     return CreatorAssetResponse(
         id=asset.id,
         owner_id=asset.owner_id,
@@ -109,17 +109,26 @@ def _to_creator_asset_response(asset: CarouselCreatorAsset) -> CreatorAssetRespo
         staged_relative_path=asset.relative_path,
         created_at=asset.created_at,
         updated_at=asset.updated_at,
+        role=asset.role,
+        pose_tag=asset.pose_tag,
     )
 
 
-def _map_validation_error(error: CreatorAssetValidationError) -> HTTPException:
+def default_output_root(project: CarouselProject) -> Path:
+    """Where the project's slides render: its output dir, else the default one."""
+    if project.output_dir:
+        return Path(project.output_dir).resolve()
+    return (Path(get_settings().carousel_output_dir) / str(project.id)).resolve()
+
+
+def map_validation_error(error: CreatorAssetValidationError) -> HTTPException:
     if error.code == ERR_CREATOR_ASSET_FORBIDDEN:
         return HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=error.code)
     return HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=error.code)
 
 
-async def _load_owned_project(
-    ctx: _CreatorAssetContext,
+async def load_owned_project(
+    ctx: CreatorAssetContext,
     project_id: UUID,
 ) -> CarouselProject:
     project = await ctx.handlers.get_project(project_id)
@@ -145,11 +154,11 @@ async def _load_owned_project(
 async def upload_creator_asset(
     request: Request,
     file: UploadFile,
-    ctx: Annotated[_CreatorAssetContext, Depends(get_creator_asset_context)],
+    ctx: Annotated[CreatorAssetContext, Depends(get_creator_asset_context)],
 ) -> CreatorAssetResponse:
     """Upload and bind a managed creator branding asset to a carousel project."""
     project_id = UUID(request.path_params["project_id"])
-    project = await _load_owned_project(ctx, project_id)
+    project = await load_owned_project(ctx, project_id)
 
     raw_bytes = await file.read()
     if len(raw_bytes) > CREATOR_ASSET_MAX_BYTES:
@@ -164,13 +173,13 @@ async def upload_creator_asset(
                 project=project,
                 user=ctx.user,
                 content=raw_bytes,
-                declared_mime=_normalize_upload_mime(file.content_type),
+                declared_mime=normalize_upload_mime(file.content_type),
             )
         )
     except CreatorAssetValidationError as error:
-        raise _map_validation_error(error) from error
+        raise map_validation_error(error) from error
 
-    return _to_creator_asset_response(result.asset)
+    return to_creator_asset_response(result.asset)
 
 
 @router.put(
@@ -186,11 +195,11 @@ async def upload_creator_asset(
 async def select_creator_asset(
     http_request: Request,
     request: CreatorAssetSelectRequest,
-    ctx: Annotated[_CreatorAssetContext, Depends(get_creator_asset_context)],
+    ctx: Annotated[CreatorAssetContext, Depends(get_creator_asset_context)],
 ) -> CreatorAssetResponse:
     """Select an existing managed creator asset for a carousel project."""
     project_id = UUID(http_request.path_params["project_id"])
-    project = await _load_owned_project(ctx, project_id)
+    project = await load_owned_project(ctx, project_id)
 
     try:
         result = await ctx.handlers.select_creator_asset(
@@ -201,6 +210,6 @@ async def select_creator_asset(
             )
         )
     except CreatorAssetValidationError as error:
-        raise _map_validation_error(error) from error
+        raise map_validation_error(error) from error
 
-    return _to_creator_asset_response(result.asset)
+    return to_creator_asset_response(result.asset)

@@ -49,6 +49,22 @@ export {
   type EditorialReviseOptions,
 } from "./workspace/hooks/use-editorial-workflow";
 export {
+  creatorPhotoKeys,
+  useCreatorPhotos,
+  useSetHookPhoto,
+  useUploadCreatorPhoto,
+  type CreatorPhoto,
+} from "./workspace/hooks/use-creator-photos";
+export {
+  useSaveCarouselHook,
+  type SaveHookResponse,
+} from "./workspace/hooks/use-save-hook";
+export type {
+  SaveHookInput,
+  SetHookPhotoInput,
+  UploadCreatorPhotoInput,
+} from "./workspace/hooks/types";
+export {
   useRepairCarousel,
   type RepairCarouselResponse,
   type RepairSlideDiff,
@@ -56,6 +72,7 @@ export {
 
 /* --- workspace: components --- */
 export { AutoRepairButton } from "./workspace/components/auto-repair-button";
+export { HookPicker } from "./workspace/components/hook-picker";
 export { ImagePromptReview } from "./workspace/components/image-prompt-review";
 export { PresentationIconPreview } from "./workspace/components/presentation-icon-preview";
 export { PresentationStructuredItems } from "./workspace/components/presentation-structured-items";
@@ -63,6 +80,7 @@ export { SlideCopyEditor } from "./workspace/components/slide-copy-editor";
 export { WorkflowFailedCard } from "./workspace/components/workflow-failed-card";
 export type {
   AutoRepairButtonProps,
+  HookPickerProps,
   ImagePromptReviewProps,
   PresentationIconPreviewProps,
   PresentationStructuredItemsProps,

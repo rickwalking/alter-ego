@@ -49,6 +49,7 @@ from rag_backend.modules.autopilot.parked_constants import (
     REASON_ENGINE_PARKED,
     REDRIVABLE_PHASE_STATUSES,
 )
+from rag_backend.modules.autopilot.quality_constants import REASON_CONTENT_QUALITY
 from rag_backend.modules.autopilot.recovery_constants import (
     MAX_REVISES_DESIGN,
     REASON_ENGINE_ERROR,
@@ -136,14 +137,16 @@ def _content(snapshot: GateSnapshot) -> str | None:
     """Mirror the engine's content-approve rule (AE-0364).
 
     The engine enforces the voice floor only when persona scores exist; a run
-    with no persona has none, so the voice check is skipped. Forbidden phrases
-    and the engine's own refusal still apply.
+    with no persona has none, so the voice check is skipped. Forbidden phrases,
+    blocking presentation rules (AE-0392) and the engine's refusal still apply.
     """
     score = snapshot.persona_score
     if score is not None and score < VOICE_MATCH_MIN_SCORE:
         return REASON_PERSONA_SCORE
     if snapshot.forbidden_hits:
         return REASON_FORBIDDEN
+    if snapshot.quality_violations:
+        return REASON_CONTENT_QUALITY
     return _engine_reason(snapshot.engine_blocker)
 
 
@@ -162,9 +165,15 @@ def _revise_cap(phase: str) -> int:
 
 
 def _design(snapshot: GateSnapshot) -> str | None:
-    if snapshot.presentation_blockers:
-        return REASON_DESIGN
-    return None
+    """Blocking presentation rules are content quality (AE-0392).
+
+    A missing or rule-less blocking report stays a design failure.
+    """
+    if not snapshot.presentation_blockers:
+        return None
+    if snapshot.quality_violations:
+        return REASON_CONTENT_QUALITY
+    return REASON_DESIGN
 
 
 def _images(snapshot: GateSnapshot) -> str | None:

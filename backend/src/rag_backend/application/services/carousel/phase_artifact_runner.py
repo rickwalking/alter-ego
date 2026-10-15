@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from functools import partial
 from typing import TypedDict
 
 from langchain_core.language_models import BaseChatModel
@@ -15,6 +16,7 @@ from rag_backend.agents.persona_agent import PersonaAgent
 from rag_backend.application.services.carousel.blog_composition import (
     research_summary_from_findings,
 )
+from rag_backend.application.services.carousel.bounded_gather import gather_bounded
 from rag_backend.application.services.carousel.content_fail_closed import (
     FailClosedReviewCommand,
     SlideDraftRetryFn,
@@ -34,6 +36,7 @@ from rag_backend.application.services.image_provider_registry import (
 )
 from rag_backend.domain.constants.ai_agents import ERR_INVALID_JSON
 from rag_backend.domain.constants.carousel_workflow import (
+    DEFAULT_CONTENT_DRAFT_CONCURRENCY,
     DESIGN_VALIDATION_RECOVERY_HINT,
     PHASE_CONTENT,
     PHASE_DESIGN,
@@ -52,6 +55,7 @@ from rag_backend.infrastructure.external.openai_embeddings import (  # type: ign
     OpenAIEmbeddings,
 )
 
+from .content_mode_brief import ContentModeBrief, load_content_mode_brief
 from .editorial_distribution_pack import (
     DistributionBuildContext,
     build_editorial_distribution_updates,
@@ -82,6 +86,8 @@ class PhaseArtifactRunnerConfig:
     # AE-0309: injectable single-slide re-draft used by the fail-closed content
     # chain. Defaults to a ContentDraftAgent-backed retry when None.
     slide_draft_retry: SlideDraftRetryFn | None = None
+    # AE-0391: slides drafted / persona-scored concurrently (bounded).
+    draft_concurrency: int = DEFAULT_CONTENT_DRAFT_CONCURRENCY
 
 
 def _state_policy_version(state: CarouselWorkflowState) -> str | None:
@@ -122,6 +128,7 @@ class PhaseArtifactRunner:
         self._db = config.db
         self._workflow_input = config.workflow_input
         self._slide_draft_retry = config.slide_draft_retry
+        self._draft_concurrency = config.draft_concurrency
 
     def with_context(
         self,
@@ -139,6 +146,7 @@ class PhaseArtifactRunner:
                 db=db if db is not None else self._db,
                 workflow_input=workflow_input or self._workflow_input,
                 slide_draft_retry=self._slide_draft_retry,
+                draft_concurrency=self._draft_concurrency,
             )
         )
 
@@ -179,6 +187,25 @@ class PhaseArtifactRunner:
             return
         await publish_workflow_artifacts_from_updates(project_id, phase, updates)
 
+    async def _regen_inputs(self, state: CarouselWorkflowState) -> ContentRegenInputs:
+        """Reviewer notes, the prior drafts and the content mode for a regeneration."""
+        prior_drafts = [
+            draft
+            for draft in (state.get("slide_drafts") or [])
+            if isinstance(draft, dict)
+        ]
+        return ContentRegenInputs(
+            revision_notes=self._content_revision_notes(state),
+            previous_drafts=prior_drafts,
+            mode=await self._mode_brief(state),
+        )
+
+    async def _mode_brief(
+        self, state: CarouselWorkflowState
+    ) -> ContentModeBrief | None:
+        """AE-0375: the project's content mode, read from its row (ADR-0021 D4)."""
+        return await load_content_mode_brief(self._db, str(state.get("project_id", "")))
+
     async def ensure_for_phase(self, state: CarouselWorkflowState) -> dict[str, object]:
         """Build missing artifacts for the active workflow phase."""
         phase = str(state.get("current_phase", ""))
@@ -189,7 +216,9 @@ class PhaseArtifactRunner:
         updates: dict[str, object] = {**outline_updates}
 
         if phase == PHASE_OUTLINE and not state.get("outline"):
-            updates["outline"] = await generate_outline(self._outline_agent, resolved)
+            updates["outline"] = await generate_outline(
+                self._outline_agent, resolved, await self._mode_brief(state)
+            )
         elif phase == PHASE_CONTENT:
             updates.update(
                 await self._ensure_content_artifacts(state, resolved, updates)
@@ -268,20 +297,11 @@ class PhaseArtifactRunner:
         updates: dict[str, object] = {}
         outline, outline_updates = await self._resolve_outline(pending, state)
         updates.update(outline_updates)
-        revision_notes = self._content_revision_notes(state)
-        prior_drafts = [
-            draft
-            for draft in (state.get("slide_drafts") or [])
-            if isinstance(draft, dict)
-        ]
-        should_regenerate = not state.get("slide_drafts") or bool(revision_notes)
+        regen = await self._regen_inputs(state)
+        should_regenerate = not state.get("slide_drafts") or bool(regen.revision_notes)
         if should_regenerate and isinstance(outline, list):
             draft_updates = await self._generate_content_drafts(
-                resolved,
-                outline,
-                ContentRegenInputs(
-                    revision_notes=revision_notes, previous_drafts=prior_drafts
-                ),
+                resolved, outline, regen
             )
             if draft_updates.get("phase_status") == PHASE_STATUS_FAILED:
                 return draft_updates
@@ -323,7 +343,9 @@ class PhaseArtifactRunner:
                     project_id=str(state.get("project_id", "")),
                     slide_drafts=sanitized_state.get("slide_drafts") or [],
                     translations_en=updates.get("translations_en"),
-                    retry_draft=self._resolve_slide_draft_retry(resolved, outline),
+                    retry_draft=self._resolve_slide_draft_retry(
+                        resolved, outline, regen.mode
+                    ),
                     policy_version=_state_policy_version(state),
                 )
             )
@@ -334,6 +356,7 @@ class PhaseArtifactRunner:
         self,
         resolved: EditorialWorkflowStartInput,
         outline: object,
+        mode: ContentModeBrief | None = None,
     ) -> SlideDraftRetryFn | None:
         """Injected retry double when configured, else the agent-backed retry."""
         if self._slide_draft_retry is not None:
@@ -348,6 +371,7 @@ class PhaseArtifactRunner:
             SlideDraftGenerationParams(
                 outline=outline_dicts,
                 persona=resolved.persona,
+                mode=mode,
             ),
         )
 
@@ -397,6 +421,8 @@ class PhaseArtifactRunner:
                     revision_notes=regen.revision_notes or None,
                     learned_examples=learned_examples or None,
                     previous_drafts=regen.previous_drafts or None,
+                    mode=regen.mode,
+                    concurrency=self._draft_concurrency,
                 ),
             )
         except ValueError as exc:
@@ -593,17 +619,20 @@ class PhaseArtifactRunner:
         persona: PersonaProfile,
     ) -> dict[str, object]:
         persona_agent = PersonaAgent(persona=persona, llm=self._llm)
-        persona_scores: dict[str, object] = {}
-        for index, slide in enumerate(slide_drafts):
-            if not isinstance(slide, dict):
-                continue
-            draft_text = str(slide.get("draft_text", ""))
-            if not draft_text:
-                continue
-            persona_scores[f"slide_{index + 1}"] = await persona_agent.evaluate_match(
-                draft_text
-            )
-        return persona_scores
+        texts = {
+            index: str(slide.get("draft_text", ""))
+            for index, slide in enumerate(slide_drafts)
+            if isinstance(slide, dict) and str(slide.get("draft_text", ""))
+        }
+        # AE-0391: scored concurrently (bounded), keyed back in slide order.
+        scores = await gather_bounded(
+            [partial(persona_agent.evaluate_match, text) for text in texts.values()],
+            self._draft_concurrency,
+        )
+        return {
+            f"slide_{index + 1}": score
+            for index, score in zip(texts, scores, strict=True)
+        }
 
 
 __all__ = ["PhaseArtifactRunner"]

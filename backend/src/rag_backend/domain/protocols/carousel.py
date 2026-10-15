@@ -21,6 +21,10 @@ class ExportConfig:
     css_overrides: str | None = None
     quality: int = 95
     hd: bool = False
+    # AE-0374: the project's contract and deck size, so the export preflight
+    # checks a ranged (role) deck against its own slide map, not the v1 one.
+    policy_version: str | None = None
+    slide_count: int | None = None
 
 
 class ImageGenerationService(Protocol):

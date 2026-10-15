@@ -32,6 +32,7 @@ from rag_backend.domain.constants import (
     LANGUAGE_PT,
     SHARED_IMAGES_DIR_NAME,
 )
+from rag_backend.domain.constants.creator_asset import ARTIFACT_ASSETS_DIR
 from rag_backend.domain.models import CarouselProject
 from rag_backend.domain.protocols import CarouselExportService, ExportConfig
 from rag_backend.infrastructure.logging import get_logger
@@ -56,6 +57,23 @@ class BilingualExportConfig:
     html_content: str = ""
 
 
+_UP_ONE = "../"
+_UP_TWO = "../../"
+
+
+def rewrite_asset_paths(html: str, up: str) -> str:
+    """Point ``images/`` and ``assets/`` at the export root from a language dir.
+
+    The slides are exported from ``<output>/<lang>/`` (HD: ``<lang>/hd/``);
+    AE-0376 adds ``assets/`` so the POV slide-1 photo and uploaded avatars,
+    staged under ``<output>/assets/creators/``, resolve too.
+    """
+    for directory in (SHARED_IMAGES_DIR_NAME, ARTIFACT_ASSETS_DIR):
+        for opener in ('src="', "src='", 'url("', "url('"):
+            html = html.replace(f"{opener}{directory}/", f"{opener}{up}{directory}/")
+    return html
+
+
 async def render_language(
     config: BilingualExportConfig,
 ) -> None:
@@ -65,21 +83,15 @@ async def render_language(
     if config.language == LANGUAGE_PT:
         prepare_carousel_export_assets(config.output_dir)
 
-    def _rewrite_image_paths(html: str, prefix: str) -> str:
-        return (
-            html
-            .replace(f'src="{SHARED_IMAGES_DIR_NAME}/', f'src="{prefix}')
-            .replace(f"src='{SHARED_IMAGES_DIR_NAME}/", f"src='{prefix}")
-            .replace(f'url("{SHARED_IMAGES_DIR_NAME}/', f'url("{prefix}')
-            .replace(f"url('{SHARED_IMAGES_DIR_NAME}/", f"url('{prefix}")
-        )
+    standard_html = rewrite_asset_paths(config.html_content, _UP_ONE)
+    hd_html = rewrite_asset_paths(config.html_content, _UP_TWO)
 
-    standard_html = _rewrite_image_paths(config.html_content, "../images/")
-    hd_html = _rewrite_image_paths(config.html_content, "../../images/")
-
+    policy_version = config.project.presentation_policy_version
+    slide_count = len(config.slides_data) or config.project.slide_count
     slide_paths = await config.export.export_slides(
         html_content=standard_html,
         output_dir=str(lang_dir),
+        config=ExportConfig(policy_version=policy_version, slide_count=slide_count),
     )
     # Export HD slides too (2160x2700 for archive/retina). Non-blocking:
     # if HD fails the standard slides are still available.
@@ -89,7 +101,9 @@ async def render_language(
         await config.export.export_slides(
             html_content=hd_html,
             output_dir=str(hd_dir),
-            config=ExportConfig(hd=True),
+            config=ExportConfig(
+                hd=True, policy_version=policy_version, slide_count=slide_count
+            ),
         )
     except Exception:
         logger.warning(

@@ -19,7 +19,11 @@ from rag_backend.domain.constants.creator_asset import (
     build_creator_asset_filename,
 )
 from rag_backend.domain.models import CarouselProject, User
-from rag_backend.domain.models.carousel_creator_asset import CarouselCreatorAsset
+from rag_backend.domain.models.carousel_creator_asset import (
+    CarouselCreatorAsset,
+    CreatorAssetLibraryQuery,
+    CreatorAssetTags,
+)
 from rag_backend.domain.protocols import CarouselRepository
 from rag_backend.infrastructure.database.creator_asset_repository import (
     PostgresCreatorAssetRepository,
@@ -52,6 +56,27 @@ class CreatorAssetSelectCommand:
     project: CarouselProject
     user: User
     creator_asset_id: UUID
+
+
+@dataclass(frozen=True)
+class LibraryUploadCommand:
+    """AE-0376: a photo for the owner's library (no project binding)."""
+
+    user: User
+    content: bytes
+    declared_mime: str
+    role: str | None = None
+    pose_tag: str | None = None
+
+
+@dataclass(frozen=True)
+class HookPhotoCommand:
+    """AE-0376: bind a library photo as the project's slide-1 photo."""
+
+    project: CarouselProject
+    user: User
+    creator_asset_id: UUID
+    output_root: Path
 
 
 class CreatorAssetService:
@@ -118,6 +143,60 @@ class CreatorAssetService:
             standard_relative_path=relative,
             hd_relative_path=relative,
         )
+
+    async def upload_to_library(
+        self, command: LibraryUploadCommand
+    ) -> CarouselCreatorAsset:
+        """Validate and store a library photo with its role and pose tag."""
+        normalized = validate_and_normalize_creator_asset(
+            CreatorAssetUpload(
+                content=command.content, declared_mime=command.declared_mime
+            )
+        )
+        asset = await self._persist_normalized_asset(
+            owner_id=str(command.user.id), normalized=normalized
+        )
+        tagged = await self._asset_repo.set_tags(
+            CreatorAssetTags(
+                asset_id=asset.id, role=command.role, pose_tag=command.pose_tag
+            )
+        )
+        return tagged or asset
+
+    async def list_library(
+        self, user: User, role: str | None
+    ) -> list[CarouselCreatorAsset]:
+        """The caller's own photos, newest first (admins see their own too)."""
+        return await self._asset_repo.list_for_owner(
+            CreatorAssetLibraryQuery(owner_id=str(user.id), role=role)
+        )
+
+    async def library_image_path(self, user: User, asset_id: UUID) -> Path:
+        """The stored WebP of one of the caller's photos."""
+        asset = await self._asset_repo.get_by_id(asset_id)
+        if asset is None:
+            raise CreatorAssetValidationError(ERR_CREATOR_ASSET_NOT_FOUND)
+        if not user.is_admin() and asset.owner_id != str(user.id):
+            raise CreatorAssetValidationError(ERR_CREATOR_ASSET_FORBIDDEN)
+        path = self._canonical_storage_path(asset.content_sha256)
+        if not path.is_file():
+            raise CreatorAssetValidationError(ERR_CREATOR_ASSET_NOT_FOUND)
+        return path
+
+    async def select_hook_photo(self, command: HookPhotoCommand) -> CarouselProject:
+        """Bind the slide-1 photo and stage it where the slides are rendered."""
+        self._assert_owner_or_admin(command.project, command.user)
+        asset = await self._asset_repo.get_by_id(command.creator_asset_id)
+        if asset is None:
+            raise CreatorAssetValidationError(ERR_CREATOR_ASSET_NOT_FOUND)
+        self._assert_asset_access(asset, command.project, command.user)
+        command.project.hook_asset_id = asset.id
+        command.project.hook_asset_staged_path = asset.relative_path
+        updated = await self._carousel_repo.update_project(command.project)
+        self.stage_into_candidate_artifact(
+            StageCreatorAssetCommand(asset=asset, staging_root=command.output_root)
+        )
+        return updated
 
     async def _persist_normalized_asset(
         self,

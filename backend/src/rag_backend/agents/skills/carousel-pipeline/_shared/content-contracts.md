@@ -37,7 +37,13 @@ Alternate title shape (single-locale projects): `{title, subtitle}` or `{title_p
 
 **Parsing:** See [`critical-rules.md`](critical-rules.md) — fail loudly on parse failure; never stub.
 
-## Slide structure (7 slides)
+## Slide structure (7 slides; Radar IA v1-v4)
+
+The table below is the fixed Radar IA deck. A "Ponto de Vista" (`pov_hook_v1`) deck has 8-10
+slides: hook (owner's photo, no artwork) → rehook → pov (personal proof) → 2-4 points → twist →
+save checklist → CTA with one goal. Each POV role maps onto the slide types below (hook=`intro`,
+rehook/pov/point/twist=`content`, save=`summary`, cta=`cta`); follow the role the slide block
+names. See `contracts/pov_hook_v1.yaml`.
 
 | # | Type | Content | Image |
 |---|------|---------|-------|
@@ -99,6 +105,13 @@ See [`image-generation.md`](image-generation.md) for full rules. Summary:
 - ❌ DO NOT request text, words, labels, speech bubbles, signs, or captions
 - ❌ DO NOT use metaphorical/cultural settings (dojos, sensei, crossroads, books being held up)
 - ✅ Favor: monitors, terminals, code streams, neon cityscapes, robots, circuit boards, holographic UI panels, servers, data pipelines, hooded figures at consoles
+
+**"Ponto de Vista" decks (AE-0376, `pov_hook_v1` + `pov_editorial`):** the cyberpunk rule
+above is for Radar IA artwork. A POV deck generates artwork only for its `point` slides, as a
+light flat-editorial illustration (calm, explanatory, not neon). Slide 1 is the owner's uploaded
+photo and the statement/twist/save slides have no artwork. Real screenshots and diagrams the
+owner uploads as source materials may be described as the scene; never invent a UI, a result or
+a number in them.
 
 **Good:** *"A developer in a high-tech command center gestures at three large holographic panels showing a requirements flowchart, a system architecture diagram with interconnected nodes, and a real-time communication feed between human avatars and AI agents."*
 

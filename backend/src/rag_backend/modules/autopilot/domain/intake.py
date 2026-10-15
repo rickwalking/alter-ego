@@ -12,6 +12,10 @@ from dataclasses import dataclass
 from typing import cast
 from uuid import UUID, uuid4
 
+from rag_backend.domain.constants.content_mode import (
+    CONTENT_MODE_NEWS_ANALYSIS,
+    CONTENT_MODE_POV,
+)
 from rag_backend.modules.autopilot.constants import (
     KIND_EXISTING,
     KIND_NEW,
@@ -34,6 +38,11 @@ from rag_backend.modules.autopilot.domain.topic_text import (
     titles_are_duplicates,
 )
 from rag_backend.modules.autopilot.domain.x_status import canonical_url
+from rag_backend.modules.autopilot.pov_constants import (
+    MAX_NEWS_RUNS_PER_WEEK,
+    REASON_THESIS_MISSING,
+    REASON_WEEKLY_NEWS_CAP,
+)
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -50,6 +59,9 @@ class ProposalInput:
     score: int
     image_style: str = DEFAULT_IMAGE_STYLE
     image_guidance: str | None = None
+    # AE-0377: scout v3. No mode = Radar IA; POV needs the draft thesis.
+    content_mode: str = CONTENT_MODE_NEWS_ANALYSIS
+    thesis_draft: str | None = None
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -68,6 +80,13 @@ class PreparedProposal:
     signal_hash: str
     image_style: str = DEFAULT_IMAGE_STYLE
     image_guidance: str | None = None
+    content_mode: str = CONTENT_MODE_NEWS_ANALYSIS
+    thesis_draft: str | None = None
+
+    @property
+    def is_news(self) -> bool:
+        """True for a Radar IA proposal (capped per week)."""
+        return self.content_mode != CONTENT_MODE_POV
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -79,6 +98,8 @@ class IntakeFacts:
     carousel_topics: tuple[str, ...]
     runs_today: int
     daily_cap: int
+    # AE-0377: Radar IA runs already created this São Paulo week.
+    news_runs_this_week: int = 0
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -134,6 +155,8 @@ def prepare(proposal: ProposalInput) -> PreparedProposal:
         signal_hash=signal_hash(title, sources),
         image_style=proposal.image_style,
         image_guidance=_optional_text(proposal.image_guidance),
+        content_mode=proposal.content_mode,
+        thesis_draft=_optional_text(proposal.thesis_draft),
     )
 
 
@@ -206,6 +229,9 @@ def _rejection_reason(proposal: PreparedProposal, facts: IntakeFacts) -> str | N
         return REASON_URL_IN_TEXT
     if _missing_source(proposal, facts.allowlist):
         return REASON_SOURCE_NOT_IN_SIGNALS
+    if not proposal.is_news and not proposal.thesis_draft:
+        # AE-0377: a POV topic needs the scout's draft thesis.
+        return REASON_THESIS_MISSING
     return carousel_reason(_carousel_text(proposal))
 
 
@@ -235,7 +261,11 @@ def _is_blank(proposal: PreparedProposal) -> bool:
 
 
 def _text_has_url(proposal: PreparedProposal) -> bool:
-    texts = (*_free_text(proposal), proposal.image_guidance or "")
+    texts = (
+        *_free_text(proposal),
+        proposal.image_guidance or "",
+        proposal.thesis_draft or "",
+    )
     return any(contains_url(text) for text in texts)
 
 
@@ -264,6 +294,8 @@ def _finish(rows: list[_Classified], facts: IntakeFacts) -> IntakePlan:
     queue_ids = _ids_to_queue(buckets.fresh, facts)
     if _slots(facts) == NO_QUEUE_SLOTS:
         buckets.rejected.extend(_cap_rejections(buckets.fresh))
+    else:
+        buckets.rejected.extend(_weekly_cap_rejections(buckets.fresh, facts))
     candidates = tuple(_candidate(row, queue_ids) for row in buckets.fresh)
     return IntakePlan(
         accepted_ids=tuple(buckets.accepted),
@@ -303,8 +335,23 @@ def _ids_to_queue(fresh: list[_Classified], facts: IntakeFacts) -> frozenset[UUI
     room = _slots(facts)
     if room == NO_QUEUE_SLOTS:
         return frozenset()
-    ranked = sorted(fresh, key=_score, reverse=True)
+    ranked = _within_news_cap(sorted(fresh, key=_score, reverse=True), facts)
     return frozenset(_required_ids(ranked[:room]))
+
+
+def _within_news_cap(
+    ranked: list[_Classified], facts: IntakeFacts
+) -> list[_Classified]:
+    """AE-0377: queue at most the week's remaining Radar IA runs (POV is free)."""
+    news_left = MAX_NEWS_RUNS_PER_WEEK - facts.news_runs_this_week
+    kept: list[_Classified] = []
+    for row in ranked:
+        if row.proposal.is_news:
+            if news_left <= 0:
+                continue
+            news_left -= 1
+        kept.append(row)
+    return kept
 
 
 def _score(row: _Classified) -> int:
@@ -322,6 +369,21 @@ def _cap_rejections(fresh: list[_Classified]) -> list[TopicRejection]:
             reason=REASON_DAILY_CAP_REACHED,
         )
         for row in fresh
+    ]
+
+
+def _weekly_cap_rejections(
+    fresh: list[_Classified], facts: IntakeFacts
+) -> list[TopicRejection]:
+    """AE-0377: Radar IA topics stored but not queued (this week's run is used)."""
+    if facts.news_runs_this_week < MAX_NEWS_RUNS_PER_WEEK:
+        return []
+    return [
+        TopicRejection(
+            title=_rejection_title(row.proposal), reason=REASON_WEEKLY_NEWS_CAP
+        )
+        for row in fresh
+        if row.proposal.is_news
     ]
 
 

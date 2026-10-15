@@ -26,6 +26,13 @@ The LLM's `image_prompt` is a **scene description only**. The server wraps it wi
 
 Full contract and examples: [`content-contracts.md`](content-contracts.md#image_prompt-contract-scene-description-only).
 
+**"Ponto de Vista" decks (AE-0376, `pov_hook_v1` + `pov_editorial`):** the cyberpunk rule
+above is for Radar IA artwork. A POV deck generates artwork only for its `point` slides, as a
+light flat-editorial illustration (calm, explanatory, not neon). Slide 1 is the owner's uploaded
+photo and the statement/twist/save slides have no artwork. Real screenshots and diagrams the
+owner uploads as source materials may be described as the scene; never invent a UI, a result or
+a number in them.
+
 ## Server-side wrapper template
 
 `_build_gemini_prompt`:

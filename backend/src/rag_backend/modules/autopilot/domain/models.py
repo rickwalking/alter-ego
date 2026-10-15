@@ -26,11 +26,15 @@ class AutopilotRunState(StrEnum):
     REWORKING = "reworking"
     ESCALATED = "escalated"
     FAILED = "failed"
+    # AE-0370: approved, waiting for the owner's publish time.
+    SCHEDULED = "scheduled"
     PUBLISHING = "publishing"
     PUBLISHED = "published"
     PUBLISH_FAILED = "publish_failed"
     REJECTED = "rejected"
     EXPIRED = "expired"
+    # AE-0377: a POV run waits for the owner to confirm the scout's thesis.
+    AWAITING_THESIS = "awaiting_thesis"
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -49,10 +53,21 @@ class TransitionCommand:
     expected: AutopilotRunState
     new: AutopilotRunState
     reason: str
+    # AE-0370: the publish time stored when the run enters ``scheduled``.
+    scheduled_at: datetime | None = None
 
     def pair(self) -> TransitionPair:
         """The state pair the domain table judges, ignoring persistence."""
         return TransitionPair(expected=self.expected, new=self.new)
+
+
+@dataclass(frozen=True, kw_only=True)
+class ThesisConfirmCommand:
+    """AE-0377: store the owner's thesis and requeue the run in one CAS."""
+
+    run_id: UUID
+    thesis: str
+    reason: str
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -73,6 +88,9 @@ class TopicCandidate:
     # AE-0361: the scout's image preset and optional visual direction.
     image_style: str = DEFAULT_IMAGE_STYLE
     image_guidance: str | None = None
+    # AE-0377: Radar IA (None / news_analysis) or POV with the scout's draft.
+    content_mode: str | None = None
+    thesis_draft: str | None = None
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -102,6 +120,11 @@ class AutopilotRun:
     # Workflow lock version when the run was escalated. A different version
     # at final review means the owner changed the carousel in the web UI.
     escalated_version: int | None = None
+    # AE-0377: the thesis the owner confirmed (POV runs only).
+    pov_thesis: str | None = None
+    # AE-0370: when a ``scheduled`` run is due. Kept after the due tick so the
+    # published notice can say how late it went out.
+    scheduled_at: datetime | None = None
 
 
 @dataclass(frozen=True, kw_only=True)

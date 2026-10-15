@@ -133,6 +133,7 @@ All architecturally significant decisions are documented as ADRs in `docs/decisi
 - [ADR-012: Production uses Alembic Migrations on Deploy (no create_all)](docs/decisions/0012-prod-migrations-on-deploy.md)
 - [ADR-013: Split Blog-Post Reads into a Public API and a Private/Admin API](docs/decisions/0013-public-private-blog-post-api.md) *(proposed)*
 - [ADR-020: GrokBot Autopilot (LLM scout + in-backend autopilot + Telegram-gated Instagram publish)](docs/decisions/0020-grokbot-autopilot.md) *(proposed)*
+- [ADR-021: Content Mode "Ponto de Vista" (roles on top of the existing carousel pipeline)](docs/decisions/0021-content-mode-pov.md) *(proposed)*
 
 **ADR Lifecycle:** `proposed` → `accepted` → `deprecated` (superseded by newer ADR)
 **Format:** MADR 4.x | **Naming:** `NNNN-short-title.md` | **Review:** Annually
@@ -177,13 +178,17 @@ npm run lint                     # ESLint
 - Make side effects before `interrupt()` idempotent
 
 ### Model Selection Strategy
-| Task | Recommended Model |
-|------|------------------|
-| Orchestrator / Complex reasoning | Claude Sonnet 4 |
-| Research / Data extraction | GPT-4o-mini |
-| Creative writing / Voice matching | Claude Sonnet 4 |
-| Quality scoring / Deterministic | GPT-4o-mini |
-| Image generation | DALL-E 3 / Stable Diffusion |
+Carousel LLM calls are routed per task role (AE-0391; see
+[`docs/backend/llm-model-routing.md`](docs/backend/llm-model-routing.md)). All run on the
+OpenCode Go endpoint; ids come from settings, never code.
+
+| Task | Role | Model (default, env) |
+|------|------|----------------------|
+| Research synthesis, outline, quality/rubric judgement | reasoning | `deepseek-v4-pro` (`LLM_MODEL_REASONING`, 240 s) |
+| Slide drafting, translation, caption/LinkedIn/blog copy, refinement, autofix re-translate, persona scoring | fast | `deepseek-v4.1-flash` (`LLM_MODEL_FAST`, 120 s) |
+| Any failed primary call (error, timeout, empty, bad JSON after retry) | fallback | `glm-5.3` (`LLM_MODEL_FALLBACK`) |
+| Chat / RAG agents | — | `GLM_MODEL` (or Anthropic via `LLM_PROVIDER`) |
+| Image generation | — | Gemini / OpenAI images |
 
 ### Persona Engine
 - All AI-generated content must pass through `PersonaAgent.enforce()`

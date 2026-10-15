@@ -1,0 +1,80 @@
+---
+name: carousel_content
+version: "7.0.0"
+description: "Draft one Radar IA slide by role: news once, impact for the reader, a practical verdict (AE-0376)"
+
+template: |
+  Draft carousel slide copy for slide {{ slide_number }} using the structured
+  hero_lower_third contract.
+
+  Slide index: {{ slide_number }}
+  Slide role: {{ role }}
+  Slide title: {{ title }}
+  Key points: {{ key_points }}
+  Locale: {{ locale }}
+  Phase: {{ phase }}
+
+  Radar IA angle (growth plan 16.4): the carousel answers "what does this change
+  for you, according to someone who builds with AI", never a plain news recap.
+  {% if role == "hook" -%}
+  The heading is the hook, EXACTLY: "{{ hook_text }}" (do not rewrite it).
+  {%- elif role == "news" -%}
+  This is the ONLY slide about what happened: the facts in short points.
+  {%- elif role == "impact" -%}
+  One concrete thing this changes for the reader in practice.
+  {%- elif role == "twist" -%}
+  The point nobody mentions: counterintuitive, still backed by the sources.
+  {%- elif role == "verdict" -%}
+  A practical verdict for the reader (what to do now), backed by the sources.
+  Do not attribute an opinion or a personal experience to the author.
+  {%- endif %}
+  Never invent numbers, test results, opinions or experiences: use only facts,
+  names and numbers from the research.
+
+  {{ presentation_policy_context }}
+
+  Casing (Portuguese AND English, every heading, body, item title and item body):
+  - Write normal sentence case: the first letter of every heading and of every
+    sentence is uppercase ("A versão para robótica...", "À frente...").
+  - Keep the canonical capitals of proper nouns, brands, products, places and
+    acronyms (Argon, Brasil, Google, OpenAI, GitHub, CWE-Bench, API).
+  - Never write a heading or a sentence entirely in lowercase, even if the
+    slide title or key points above look lowercase. Lowercase-first is only
+    allowed for brand names that are officially lowercase (iPhone, eBay, macOS).
+
+  Body (required): every slide except the CTA MUST have a non-empty body below
+  its heading. The body is 1-3 complete sentences of visible copy; it is never
+  only a heading. Content slides keep their body even when they also carry a
+  structured extra (features, stats or insight). The closing slide has a short
+  body sentence before its actions checklist; the summary slide has its points.
+
+  {{ quality_rubric }}
+
+  Cross-slide distinctness: the OTHER slides in this carousel are listed above
+  under "Other slides in this carousel". Your slide MUST cover a distinct angle.
+  Do NOT repeat their framing, examples, statistics, or sentences. If your key
+  points overlap a sibling, differentiate the wording and the concrete detail.
+
+  Return ONLY a JSON object:
+  {draft_text, confidence_score, sources_used, icon_name?, long_form_notes}
+
+  long_form_notes is REQUIRED: 2-4 paragraphs (150-350 words) of long-form
+  blog prose in the slide locale that expands this slide's angle with context,
+  reasoning, and concrete examples. It is NOT shown on the slide and is NOT
+  bound by the copy budgets above. Write it as plain paragraphs separated by
+  blank lines: no headings, no bullet lists, no emoji, no markup.
+
+  Use Lucide icon_name values from the policy allowlist for structured items.
+  Do not use emoji icons. Obey visible-text rules and copy budgets above for
+  draft_text only.
+
+  {{ persona_context }}
+
+model:
+  temperature: 0.7
+  max_tokens: 32000
+
+metadata:
+  author: "content-team"
+  created_at: "2026-10-15"
+  tags: ["carousel", "content", "radar-ia", "hero-lower-third-v4", "growth-plan"]

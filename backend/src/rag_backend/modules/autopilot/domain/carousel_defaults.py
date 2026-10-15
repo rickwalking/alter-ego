@@ -13,7 +13,9 @@ from dataclasses import dataclass
 
 from rag_backend.domain.constants import (
     IMAGE_MODEL_OPENAI,
+    IMAGE_STYLE_DEFAULT,
     IMAGE_STYLE_NEO_ANIME,
+    IMAGE_STYLE_POV_EDITORIAL,
     SUPPORTED_IMAGE_COMBOS,
 )
 from rag_backend.modules.autopilot.carousel_constants import (
@@ -38,13 +40,20 @@ from rag_backend.modules.autopilot.carousel_constants import (
 )
 from rag_backend.modules.autopilot.domain.topic_text import tokens
 
+# AE-0376: the POV preset needs the owner's photo, so the Radar IA scout never
+# picks it (POV autopilot runs set it themselves, AE-0377).
+POV_ONLY_IMAGE_STYLES: frozenset[str] = frozenset({IMAGE_STYLE_POV_EDITORIAL})
+
 # Image presets the scout may choose: every style the OpenAI image model
 # supports. Derived from ``SUPPORTED_IMAGE_COMBOS`` so a new preset cannot drift.
 SCOUT_IMAGE_STYLES: frozenset[str] = frozenset(
-    style for model, style in SUPPORTED_IMAGE_COMBOS if model == IMAGE_MODEL_OPENAI
+    style
+    for model, style in SUPPORTED_IMAGE_COMBOS
+    if model == IMAGE_MODEL_OPENAI and style not in POV_ONLY_IMAGE_STYLES
 )
 
-DEFAULT_IMAGE_STYLE = IMAGE_STYLE_NEO_ANIME
+# AE-0372: the same default as the API and the wizard (flat editorial).
+DEFAULT_IMAGE_STYLE = IMAGE_STYLE_DEFAULT
 
 
 @dataclass(frozen=True, kw_only=True)

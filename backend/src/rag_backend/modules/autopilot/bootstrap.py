@@ -37,6 +37,8 @@ from rag_backend.modules.autopilot.application.story_step import (
     InstagramStoryStep,
     StoryDependencies,
 )
+from rag_backend.modules.autopilot.bootstrap_schedule import scheduled_publish_sweep
+from rag_backend.modules.autopilot.bootstrap_thesis import thesis_prompts
 from rag_backend.modules.autopilot.constants import (
     COLLECTOR_TIMEOUT_SECONDS,
     SIGNAL_CACHE_TTL_SECONDS,
@@ -129,9 +131,14 @@ class InstagramPublishTickAdapter:
         self._config = config
 
     async def tick(self, db: AsyncSession) -> int:
-        """Publish or resume at most one run. Returns how many runs were touched."""
+        """Release due scheduled runs, then publish or resume at most one run.
+
+        AE-0370: the due runs become ``publishing`` first, so the publish job
+        posts them on this same tick.
+        """
+        due = await scheduled_publish_sweep(db, self._config.public_base_url).tick()
         job = _job(db, self._config.publisher, self._config.public_base_url)
-        return await job.tick()
+        return due + await job.tick()
 
 
 def build_instagram_publish_tick(
@@ -280,6 +287,9 @@ def _runner_deps(
             stale_after_seconds=config.stale_after_seconds,
         )
     )
+    autofixer = InProcessContentAutofixer(
+        AutofixerConfig(session=session, engine_factory=config.engine_factory)
+    )
     return RunnerDependencies(
         runs=repo,
         topics=repo,
@@ -288,9 +298,8 @@ def _runner_deps(
         recovery=SqlRunRecoveryStore(session),
         owner_user_id=config.owner_user_id,
         notifier_configured=config.notifier_configured,
-        autofix=InProcessContentAutofixer(
-            AutofixerConfig(session=session, engine_factory=config.engine_factory)
-        ),
+        autofix=autofixer,
+        gate_repair=autofixer,
     )
 
 
@@ -355,7 +364,9 @@ class TelegramNotifyTickAdapter:
             configured=configured,
             web_base_url=self._config.web_base_url,
         )
-        return await OwnerNotificationService(deps).tick()
+        sent = await OwnerNotificationService(deps).tick()
+        # AE-0377: ask the owner to confirm each POV run's thesis (once).
+        return sent + await thesis_prompts(db, deps).tick()
 
 
 def build_telegram_notify_tick(config: TelegramTickConfig) -> TelegramNotifyTickAdapter:

@@ -22,3 +22,12 @@ export interface EditorialAnalytics {
   summary: EditorialAnalyticsSummary;
   velocity_by_week: Array<{ week_start: string; published_count: number }>;
 }
+
+/** AE-0378: `disabled` = the analytics flag is off (404) or the role has no access (403). */
+export interface EditorialAnalyticsState {
+  data: EditorialAnalytics | null;
+  loading: boolean;
+  error: string | null;
+  disabled: boolean;
+  refetch: () => Promise<void>;
+}

@@ -5,12 +5,13 @@ from collections.abc import Mapping
 
 from typing_extensions import override
 
+from rag_backend.application.services.carousel_template.constants import swipe_text_for
 from rag_backend.application.services.carousel_template.helpers import _render_inline
 from rag_backend.application.services.carousel_template.lower_third_shell import (
     LowerThirdConfig,
     render_lower_third_shell,
 )
-from rag_backend.domain.constants import SWIPE_TEXT_PT
+from rag_backend.domain.constants import LANGUAGE_PT
 from rag_backend.domain.models import CarouselProject
 from rag_backend.domain.protocols.carousel import _RenderOptions
 
@@ -35,6 +36,7 @@ class IntroHeroStrategy:
     ) -> str:
         opts = options or {}
         total_slides: int = opts.get("total_slides", 0)  # type: ignore[assignment]
+        language = str(opts.get("language", LANGUAGE_PT))
         heading = _render_inline(str(slide.get("heading") or ""))
         subtitle = _render_inline(str(slide.get("body") or ""))
         badge = html.escape(project.niche, quote=True)
@@ -56,7 +58,7 @@ class IntroHeroStrategy:
         footer_html = (
             f'<div class="s1-footer">'
             f'<span class="s1-niche">{audience}</span>'
-            f'<span class="s1-swipe">{SWIPE_TEXT_PT}</span>'
+            f'<span class="s1-swipe">{swipe_text_for(language)}</span>'
             f"</div>"
         )
         return render_lower_third_shell(

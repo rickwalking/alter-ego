@@ -36,6 +36,7 @@ from rag_backend.modules.autopilot.domain.models import (
     AutopilotRunState,
     IntegrationCredential,
     TelegramUpdate,
+    ThesisConfirmCommand,
     TopicCandidate,
     TransitionCommand,
 )
@@ -45,6 +46,7 @@ from rag_backend.modules.autopilot.domain.publish import (
     SaveContainerCommand,
     SavePostCommand,
 )
+from rag_backend.modules.autopilot.domain.schedule import clears_schedule
 from rag_backend.modules.autopilot.domain.state_machine import assert_allowed
 from rag_backend.modules.autopilot.infrastructure.models import (
     AutopilotRunModel,
@@ -87,6 +89,22 @@ class SqlAlchemyAutopilotRepository:
         if not await self._compare_and_set(command):
             return False
         await self._emit_state_changed(command)
+        return True
+
+    async def confirm_thesis(self, command: ThesisConfirmCommand) -> bool:
+        """AE-0377: store the owner's thesis and requeue, in one CAS."""
+        transition = TransitionCommand(
+            run_id=command.run_id,
+            expected=AutopilotRunState.AWAITING_THESIS,
+            new=AutopilotRunState.QUEUED,
+            reason=command.reason,
+        )
+        assert_allowed(transition.pair())
+        statement = _transition_statement(transition).values(pov_thesis=command.thesis)
+        result = await self._session.execute(statement)
+        if cast(CursorResult[object], result).rowcount != 1:
+            return False
+        await self._emit_state_changed(transition)
         return True
 
     async def add_topic(self, candidate: TopicCandidate) -> None:
@@ -291,7 +309,12 @@ def _transition_statement(command: TransitionCommand) -> Update:
         )
     )
     if command.new is AutopilotRunState.PUBLISHING:
-        return statement.values(publish_attempts=0)
+        statement = statement.values(publish_attempts=0)
+    # AE-0370: entering ``scheduled`` stores the time; cancel clears it.
+    if command.new is AutopilotRunState.SCHEDULED:
+        return statement.values(scheduled_at=command.scheduled_at)
+    if clears_schedule(command):
+        return statement.values(scheduled_at=None)
     return statement
 
 
@@ -327,6 +350,8 @@ def _topic_row(candidate: TopicCandidate) -> TopicCandidateModel:
         status=candidate.status,
         image_style=candidate.image_style,
         image_guidance=candidate.image_guidance,
+        content_mode=candidate.content_mode,
+        thesis_draft=candidate.thesis_draft,
     )
 
 
@@ -345,6 +370,8 @@ def _topic_from_row(row: TopicCandidateModel) -> TopicCandidate:
         status=row.status,
         image_style=row.image_style,
         image_guidance=row.image_guidance,
+        content_mode=row.content_mode,
+        thesis_draft=row.thesis_draft,
     )
 
 

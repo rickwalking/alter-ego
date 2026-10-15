@@ -173,3 +173,6 @@ LOG_AUTOFIX_NOOP = "carousel_owner_autofix_noop"
 LOG_AUTOFIX_CONFLICT = "carousel_owner_autofix_conflict"
 LOG_AUTOFIX_TRANSLATE_FAILED = "carousel_owner_autofix_translate_failed"
 LOG_AUTOFIX_RENDER_FAILED = "carousel_owner_autofix_render_failed"
+# AE-0392: the autopilot's repair of a content/design gate's checkpoint copy.
+LOG_AUTOFIX_GATE_REPAIRED = "carousel_gate_autofix_applied"
+LOG_AUTOFIX_GATE_NOOP = "carousel_gate_autofix_noop"
