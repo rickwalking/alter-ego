@@ -6,11 +6,11 @@ The bot holds only the scoped autopilot key. That key cannot publish and cannot 
 
 ## Versioning
 
-`v3/` is the current routine pack (AE-0377). It adds `mode` (`news_analysis` = Radar IA, at most one per São Paulo week; `pov` = Ponto de Vista) and, for `pov`, a `thesis_draft` the owner confirms, edits or discards on Telegram before generation. Topics rank by debate potential ("o que isso muda para devs brasileiros"), and `flat_editorial` is the default image style.
+`v3/` is the current routine pack (AE-0377). It adds `mode` (`news_analysis` = Radar IA, at most one per São Paulo week; `pov` = Ponto de Vista) and, for `pov`, a `thesis_draft` the owner confirms, edits or discards on Telegram before generation, plus the scout's `pov_format` (`opiniao`, `como_eu_faco`, `erros_e_mitos`, `comparacao`) and `slide_count` (8–10); both default to `opiniao` / 9 when omitted. Topics rank by debate potential ("o que isso muda para devs brasileiros"), and `flat_editorial` is the default image style.
 
 `v2/` is the previous routine pack and still accepted (a topic without `mode` is Radar IA) (AE-0361). It adds the carousel rules: audience and niche in 1 to 3 words, a brief that names the title's theme, an `image_style` picked from a decision table (`neo_anime` by default), and `image_guidance` with a theme-specific background.
 
-`v1/` is **superseded** and must not be run. From AE-0361 on, v2 is required: the v1 example brief does not name its title's theme, so the backend rejects it with `brief_off_theme`. The owner must paste `v2/routine.md`. `v1/` is immutable and kept for history. Never edit files under `v1/`, `v2/` or `v3/`. To change the routine, copy the latest directory to the next version (`v4/`) and change the copy.
+`v1/` is **superseded** and must not be run. From AE-0361 on, v2 is required: the v1 example brief does not name its title's theme, so the backend rejects it with `brief_off_theme`. The owner must paste `v2/routine.md`. `v1/` is immutable and kept for history. Never edit files under `v1/`, `v2/` or `v3/` (v3 got `pov_format` / `slide_count` in the AE-0371 PR #106 review, before its first release; it is frozen from that release on). To change the routine, copy the latest directory to the next version (`v4/`) and change the copy.
 
 ## Owner setup
 

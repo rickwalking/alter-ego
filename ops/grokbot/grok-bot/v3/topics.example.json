@@ -24,6 +24,8 @@
       "brief": "Defender que a IA escreve o código, mas decidir o que construir continua sendo trabalho do dev. Cite apenas URLs do bundle de sinais e dos posts aceitos.",
       "mode": "pov",
       "thesis_draft": "A IA escreve código; decidir o que construir continua sendo o trabalho do dev.",
+      "pov_format": "opiniao",
+      "slide_count": 9,
       "sources": [
         "https://x.com/openai/status/2010000000000000001"
       ],

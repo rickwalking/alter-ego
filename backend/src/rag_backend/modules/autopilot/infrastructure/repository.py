@@ -58,6 +58,10 @@ from rag_backend.modules.autopilot.infrastructure.run_mapping import (
     run_from_row,
     run_row,
 )
+from rag_backend.modules.autopilot.infrastructure.topic_rows import (
+    topic_from_row,
+    topic_row,
+)
 
 
 class SqlAlchemyAutopilotRepository:
@@ -109,7 +113,7 @@ class SqlAlchemyAutopilotRepository:
 
     async def add_topic(self, candidate: TopicCandidate) -> None:
         """Insert a topic candidate."""
-        self._session.add(_topic_row(candidate))
+        self._session.add(topic_row(candidate))
         await self._session.flush()
 
     async def get_topic(self, candidate_id: UUID) -> TopicCandidate | None:
@@ -120,7 +124,7 @@ class SqlAlchemyAutopilotRepository:
         row = result.scalar_one_or_none()
         if row is None:
             return None
-        return _topic_from_row(row)
+        return topic_from_row(row)
 
     async def add_credential(self, credential: IntegrationCredential) -> None:
         """Insert a provider credential."""
@@ -332,46 +336,6 @@ def _state_changed_record(command: TransitionCommand) -> EventRecord:
         },
         metadata={METADATA_MODULE: MODULE_NAME},
         emitted_at=datetime.now(UTC),
-    )
-
-
-def _topic_row(candidate: TopicCandidate) -> TopicCandidateModel:
-    return TopicCandidateModel(
-        id=candidate.candidate_id,
-        title=candidate.title,
-        angle=candidate.angle,
-        why_viral=candidate.why_viral,
-        audience=candidate.audience,
-        niche=candidate.niche,
-        brief=candidate.brief,
-        sources=list(candidate.sources),
-        score=candidate.score,
-        signal_hash=candidate.signal_hash,
-        status=candidate.status,
-        image_style=candidate.image_style,
-        image_guidance=candidate.image_guidance,
-        content_mode=candidate.content_mode,
-        thesis_draft=candidate.thesis_draft,
-    )
-
-
-def _topic_from_row(row: TopicCandidateModel) -> TopicCandidate:
-    return TopicCandidate(
-        candidate_id=row.id,
-        title=row.title,
-        angle=row.angle,
-        why_viral=row.why_viral,
-        audience=row.audience,
-        niche=row.niche,
-        brief=row.brief,
-        sources=tuple(row.sources),
-        score=row.score,
-        signal_hash=row.signal_hash,
-        status=row.status,
-        image_style=row.image_style,
-        image_guidance=row.image_guidance,
-        content_mode=row.content_mode,
-        thesis_draft=row.thesis_draft,
     )
 
 

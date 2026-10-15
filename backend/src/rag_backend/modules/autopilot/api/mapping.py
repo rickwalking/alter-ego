@@ -13,6 +13,7 @@ from rag_backend.modules.autopilot.application.topic_intake import (
     TopicIntakeResult,
 )
 from rag_backend.modules.autopilot.domain.intake import ProposalInput
+from rag_backend.modules.autopilot.domain.pov_choice import PovChoice
 
 
 def command_from(batch: TopicBatch) -> TopicIntakeCommand:
@@ -47,4 +48,5 @@ def _input(item: TopicProposal) -> ProposalInput:
         image_guidance=item.image_guidance,
         content_mode=item.mode,
         thesis_draft=item.thesis_draft,
+        pov_choice=PovChoice(pov_format=item.pov_format, slide_count=item.slide_count),
     )

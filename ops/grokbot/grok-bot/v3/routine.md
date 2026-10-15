@@ -1,7 +1,8 @@
 # GrokBot Scout routine (v3)
 
 v3 (AE-0377, growth plan 16.4 #9-10 and roadmap R7) adds the content mode, the draft
-thesis for "Ponto de Vista" topics and the weekly mix. v2 stays valid: a topic without
+thesis for "Ponto de Vista" topics, the POV format and slide count per topic (AE-0371
+PR #106 review) and the weekly mix. v2 stays valid: a topic without
 `mode` is Radar IA.
 
 Schedule: every day at 08:00 America/Sao_Paulo.
@@ -63,6 +64,16 @@ with `weekly_news_cap_reached`.
   - Never claim experiences, projects, clients, test results or numbers on the owner's behalf.
   - For `pov`, `image_style` and `image_guidance` are ignored: the backend uses the owner's photo
     and the `pov_editorial` preset.
+  - Choose the **format** and the **slide count** of every `pov` topic (PR #106 review):
+    - `pov_format`: one of `opiniao` (a stance and why), `como_eu_faco` (how the owner does it,
+      step by step), `erros_e_mitos` (common mistakes or myths, corrected), `comparacao` (A vs B,
+      and when each wins). Pick the one the theme argues best. Any other value rejects the whole
+      batch (422).
+    - `slide_count`: an integer from 8 to 10. Use 8 for a tight argument, 9 by default, 10 only
+      when the format needs every point (a step list, a comparison). Outside 8–10 the whole batch
+      is rejected (422).
+    - Leave both out and the backend uses `opiniao` and 9. A `news_analysis` topic never carries
+      them (they are ignored there).
 
 ## Image style
 
