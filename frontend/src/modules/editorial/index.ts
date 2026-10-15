@@ -54,14 +54,16 @@ export {
   useSetHookPhoto,
   useUploadCreatorPhoto,
   type CreatorPhoto,
-  type SetHookPhotoInput,
-  type UploadCreatorPhotoInput,
 } from "./workspace/hooks/use-creator-photos";
 export {
   useSaveCarouselHook,
-  type SaveHookInput,
   type SaveHookResponse,
 } from "./workspace/hooks/use-save-hook";
+export type {
+  SaveHookInput,
+  SetHookPhotoInput,
+  UploadCreatorPhotoInput,
+} from "./workspace/hooks/types";
 export {
   useRepairCarousel,
   type RepairCarouselResponse,

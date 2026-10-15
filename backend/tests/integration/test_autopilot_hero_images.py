@@ -82,7 +82,10 @@ from rag_backend.modules.autopilot.infrastructure.editorial_driver import (
 
 _OWNER = "autopilot-owner"
 _SLIDES = 7
-_HERO_IMAGES = 6
+# AE-0374/AE-0376: autopilot projects use hero_lower_third_v4, where only the
+# hook and impact slides get artwork (news, verdict and CTA carry none).
+_ARTWORK_SLIDES = (1, 3, 4, 5)
+_HERO_IMAGES = len(_ARTWORK_SLIDES)
 _PASSING_SCORE = 90
 _MAX_TICKS = 8
 _IMAGE_SIZE = (64, 48)
@@ -352,5 +355,5 @@ async def test_autopilot_approves_real_hero_images_and_reaches_final_review(
     assert len(images_gate.images) == _HERO_IMAGES
     assert all(image.is_jpeg and image.width > 0 for image in images_gate.images)
     written = sorted(Path(path).name for path in world.vendor.calls)
-    assert written == sorted(f"slide_{n}.jpg" for n in range(1, _HERO_IMAGES + 1))
+    assert written == sorted(f"slide_{n}.jpg" for n in _ARTWORK_SLIDES)
     assert world.finalized == [world.project_id]

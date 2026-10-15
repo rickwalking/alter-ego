@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
 import { apiCall, apiUpload } from "@/lib/api-client";
 import { API_ENDPOINTS, HTTP_METHODS } from "@/constants/api";
+import type { SetHookPhotoInput, UploadCreatorPhotoInput } from "./types";
 
 /** AE-0376: one photo of the owner's library. */
 export const creatorPhotoSchema = z.object({
@@ -34,11 +35,6 @@ export function useCreatorPhotos(role: string) {
   });
 }
 
-export interface UploadCreatorPhotoInput {
-  file: File;
-  role: string;
-}
-
 /** Upload a photo (PNG/WebP keep transparency, ≤5 MB) to the library. */
 export function useUploadCreatorPhoto() {
   const queryClient = useQueryClient();
@@ -58,11 +54,6 @@ export function useUploadCreatorPhoto() {
       });
     },
   });
-}
-
-export interface SetHookPhotoInput {
-  projectId: string;
-  assetId: string;
 }
 
 /** Use one of the owner's photos on slide 1 of a POV carousel. */
