@@ -20,7 +20,6 @@ from rag_backend.modules.autopilot.domain.messages import (
     ScoreSummary,
     album_caption,
     caption_preview,
-    review_keyboard,
 )
 from rag_backend.modules.autopilot.domain.notify import (
     ReviewNotice,
@@ -29,6 +28,10 @@ from rag_backend.modules.autopilot.domain.notify import (
     StatusSendResult,
 )
 from rag_backend.modules.autopilot.domain.ports import Sleeper
+from rag_backend.modules.autopilot.domain.review_issues import (
+    review_keyboard_with_fix,
+    with_issues,
+)
 from rag_backend.modules.autopilot.infrastructure.telegram_payload import (
     accepted_payload,
     group_ids,
@@ -125,8 +128,11 @@ class TelegramNotifier:
         status = StatusNotice(
             chat_id=notice.chat_id,
             run_id=notice.run_id,
-            text=with_profile(notice.profile, caption_preview(notice.caption)),
-            keyboard=review_keyboard(notice.run_id),
+            text=with_issues(
+                with_profile(notice.profile, caption_preview(notice.caption)),
+                notice.issues,
+            ),
+            keyboard=review_keyboard_with_fix(notice.run_id, fixable=notice.fixable),
         )
         payload = await self._message(status)
         return one_id(payload)

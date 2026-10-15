@@ -1,0 +1,28 @@
+---
+name: carousel_autofix_en_retranslate
+version: "1.0.0"
+description: "Re-translate the EN carousel texts the owner autofix found still in Portuguese (AE-0367)"
+
+template: |
+  Translate these carousel slide texts from Brazilian Portuguese to English.
+  Each item is one visible text of one slide (a heading, a body, or the title
+  or body of a structured item).
+
+  Items:
+  {{ items_json }}
+
+  Return JSON only: {"translations": [{"id": "...", "text": "..."}]}
+  Use the same id values, one entry per item. Add nothing else.
+
+  Keep the meaning and the length close to the source. Use sentence case: the
+  first letter of every heading and sentence is uppercase, and proper nouns,
+  brands, products and acronyms keep their canonical capitals. Keep every
+  <strong>...</strong> tag around the translated words it emphasizes and use no
+  other markup.
+
+model: {}
+
+metadata:
+  author: "content-team"
+  created_at: "2026-10-14"
+  tags: ["carousel", "translation", "autofix", "ae-0367"]

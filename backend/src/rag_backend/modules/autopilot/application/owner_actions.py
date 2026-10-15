@@ -23,6 +23,7 @@ from rag_backend.modules.autopilot.application.owner_approval import (
 )
 from rag_backend.modules.autopilot.application.owner_replies import OwnerReplies
 from rag_backend.modules.autopilot.application.owner_steps import (
+    AUTOFIX_STEP,
     REJECT_STEP,
     RETRY_STEP,
     REWORK_STEP,
@@ -34,6 +35,7 @@ from rag_backend.modules.autopilot.application.publish_choice import (
     PublishChoiceDeps,
     is_schedule_reply,
 )
+from rag_backend.modules.autopilot.domain.autofix import ContentAutofixer
 from rag_backend.modules.autopilot.domain.callback_parse import (
     ParsedCallback,
     parse_callback,
@@ -70,11 +72,15 @@ from rag_backend.modules.autopilot.recovery_constants import NO_RETRY_REASONS
 from rag_backend.modules.autopilot.schedule_constants import PUBLISH_MODE_NOW
 from rag_backend.modules.autopilot.webhook_constants import (
     ANSWER_ALREADY,
+    ANSWER_FIXING,
     ANSWER_MAY_BE_LIVE,
+    ANSWER_NOTHING_TO_FIX,
     ANSWER_REJECTED,
     ANSWER_RETRY,
     ANSWER_UNKNOWN,
+    AUTOFIX_REWORK_PHASE,
     KIND_CALLBACK,
+    KIND_FIX,
     KIND_IGNORED,
     KIND_MESSAGE,
     KIND_PHASE,
@@ -89,6 +95,7 @@ from rag_backend.modules.autopilot.webhook_constants import (
     TEXT_REJECTED,
     TEXT_RETRY,
     TEXT_REWORKING,
+    TEXT_SUPERSEDED,
 )
 
 logger = structlog.get_logger()
@@ -116,6 +123,8 @@ class OwnerActionDeps:
     carousels: CarouselPublishSource | None = None
     # AE-0370: ``now`` offers publish-now or schedule; ``next_slot`` schedules.
     default_publish: str = PUBLISH_MODE_NOW
+    # AE-0367: without it every "Fix issues" tap answers "Nothing to fix".
+    autofix: ContentAutofixer | None = None
 
 
 class OwnerActionService:
@@ -206,6 +215,30 @@ class OwnerActionService:
             await self._finish(update, ANSWER_ALREADY, TEXT_ALREADY)
             return
         await self._finish(update, ANSWER_RETRY, TEXT_RETRY)
+
+    async def _fix(self, update: WebhookUpdate, parsed: ParsedCallback) -> None:
+        """Queue the deterministic repair; the worker tick runs it (AE-0367)."""
+        run = await self._awaiting(parsed.run_id)
+        if run is None:
+            await self._finish(update, ANSWER_ALREADY, TEXT_ALREADY)
+            return
+        if not await self._fixable(run):
+            await self._answer(update, ANSWER_NOTHING_TO_FIX)
+            return
+        if not await self._apply(run.run_id, AUTOFIX_STEP):
+            await self._finish(update, ANSWER_ALREADY, TEXT_ALREADY)
+            return
+        intent = ReworkIntent(
+            run_id=run.run_id, phase=AUTOFIX_REWORK_PHASE, feedback=""
+        )
+        await self._deps.recovery.queue_rework(intent)
+        await self._finish(update, ANSWER_FIXING, TEXT_SUPERSEDED)
+
+    async def _fixable(self, run: AutopilotRun) -> bool:
+        if self._deps.autofix is None:
+            return False
+        issues = await self._deps.autofix.inspect(run.carousel_project_id or "")
+        return issues.fixable
 
     async def _on_text(self, update: WebhookUpdate) -> None:
         feedback = update.text.strip()
@@ -303,6 +336,7 @@ def _handlers() -> dict[str, _Handler]:
         KIND_PHASE: OwnerActionService._choose_phase,
         KIND_REJECT: OwnerActionService._reject,
         KIND_RETRY: OwnerActionService._retry,
+        KIND_FIX: OwnerActionService._fix,
     }
 
 

@@ -139,3 +139,41 @@ async def test_slot_on_a_moved_run_is_already_handled() -> None:
 
 def test_local_label_of_the_scheduled_time() -> None:
     assert local_label(_local(15, 18)) == "15/10 18:00"
+
+
+# Merge with AE-0367: the fix-issues button and the schedule flows coexist.
+def test_fix_and_schedule_callbacks_fit_and_parse() -> None:
+    from rag_backend.modules.autopilot.domain.callback_parse import parse_callback
+    from rag_backend.modules.autopilot.domain.review_issues import (
+        review_keyboard_with_fix,
+    )
+    from rag_backend.modules.autopilot.domain.schedule_keyboards import (
+        publish_choice_keyboard,
+    )
+
+    world = _world()
+    keyboards = (
+        review_keyboard_with_fix(world.run_id, fixable=True),
+        publish_choice_keyboard(world.run_id),
+        scheduled_keyboard(world.run_id),
+    )
+    kinds = set()
+    for keyboard in keyboards:
+        for row in keyboard.rows:
+            for button in row:
+                assert len(button.callback_data.encode()) <= 64
+                parsed = parse_callback(button.callback_data)
+                assert parsed is not None
+                kinds.add(parsed.kind)
+    assert {"approve", "fix", "pubnow", "sched", "unsched"} <= kinds
+
+
+@pytest.mark.asyncio
+async def test_fix_tap_still_reaches_the_autofix_handler() -> None:
+    from rag_backend.modules.autopilot.webhook_constants import ANSWER_NOTHING_TO_FIX
+
+    world = _world()
+    await _handle(world, _tap(1, world.data("fix")))
+    assert world.messenger.answers[-1].text == ANSWER_NOTHING_TO_FIX
+    assert world.runs.run.state is _S.AWAITING_OWNER
+    assert local_label(_local(15, 18)) == "15/10 18:00"

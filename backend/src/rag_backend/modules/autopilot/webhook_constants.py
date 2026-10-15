@@ -21,6 +21,8 @@ KIND_REWORK = "rework"
 KIND_REJECT = "reject"
 KIND_RETRY = "retry"
 KIND_PHASE = "phase"
+# AE-0367: the owner's "Fix issues" button.
+KIND_FIX = "fix"
 
 PHASE_SLUG_TEXT = "text"
 PHASE_SLUG_DESIGN = "design"
@@ -55,6 +57,14 @@ REASON_OWNER_REJECTED = "owner_rejected"
 REASON_OWNER_REWORK = "owner_rework"
 REASON_OWNER_RETRY = "owner_retry"
 REASON_APPROVE_FAILED = "owner_approve_failed"
+
+# AE-0367: "Fix issues" is queued on the run row like a rework. The phase slot
+# carries this marker (fits REWORK_PHASE_LENGTH); the worker tick applies it.
+REASON_OWNER_AUTOFIX = "owner_autofix"
+AUTOFIX_REWORK_PHASE = "owner_autofix"
+ANSWER_NOTHING_TO_FIX = "Nothing to fix"
+ANSWER_FIXING = "Fixing issues"
+TEXT_SUPERSEDED = "Superseded by fixed version. Fixing the issues now."
 
 BUTTON_PHASE_TEXT = "Text"
 BUTTON_PHASE_DESIGN = "Design"
@@ -92,7 +102,7 @@ LEDGER_PENDING_PHASE = "phase"
 REWORK_SCAN_LIMIT = 20
 
 CALLBACK_ACTION_PATTERN = (
-    r"^ap:(approve|rework|reject|retry):"
+    r"^ap:(approve|rework|reject|retry|fix):"
     r"([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-"
     r"[0-9a-fA-F]{4}-[0-9a-fA-F]{12})$"
 )

@@ -18,6 +18,10 @@ from rag_backend.modules.autopilot.infrastructure.carousel_release import (
 from rag_backend.modules.autopilot.infrastructure.carousel_source import (
     PublishingCarouselSource,
 )
+from rag_backend.modules.autopilot.infrastructure.content_autofixer import (
+    AutofixerConfig,
+    InProcessContentAutofixer,
+)
 from rag_backend.modules.autopilot.infrastructure.editorial_driver import (
     EditorialDriverConfig,
     EngineFactory,
@@ -74,5 +78,8 @@ def build_owner_action_service(build: OwnerActionBuild) -> OwnerActionService:
             build.session, build.settings.carousel_public_base_url
         ),
         default_publish=build.settings.autopilot_default_publish,
+        autofix=InProcessContentAutofixer(
+            AutofixerConfig(session=build.session, engine_factory=build.engine_factory)
+        ),
     )
     return OwnerActionService(deps)

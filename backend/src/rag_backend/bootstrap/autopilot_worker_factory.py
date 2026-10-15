@@ -91,6 +91,7 @@ def build_autopilot_worker_steps(
                 token=token,
                 chat_id=chat_id,
                 web_base_url=settings.carousel_public_base_url,
+                engine_factory=engine_factory,
             )
         ),
     )
