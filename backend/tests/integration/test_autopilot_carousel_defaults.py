@@ -86,16 +86,16 @@ def _reasons(body: dict[str, object]) -> list[tuple[str, str]]:
     return [(str(item["title"]), str(item["reason"])) for item in rejected]
 
 
-# Scenario: Default neo_anime style and template guidance
+# Scenario: Default flat_editorial style and template guidance (AE-0372)
 @pytest.mark.asyncio
-async def test_default_style_is_neo_anime(configured_key: None, tmp_path: Path) -> None:
+async def test_default_style_is_flat_editorial(configured_key: None, tmp_path: Path) -> None:
     del configured_key
     status, body, engine = await _post(
         tmp_path, "default.db", [_topic("Agents", _URL_A, 80)]
     )
     assert status == 200
     assert body["rejected"] == []
-    assert await _stored_image(engine) == [("neo_anime", None)]
+    assert await _stored_image(engine) == [("flat_editorial", None)]
 
 
 # Scenario: A bot-chosen style is accepted

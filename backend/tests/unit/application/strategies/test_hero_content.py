@@ -24,8 +24,9 @@ class TestHeroContentStrategy:
             options=_RenderOptions(total_slides=7, language="pt"),
         )
 
-        assert "Swipe \u2192" in result
-        assert "Deslize" not in result
+        # AE-0372: PT slides say "Deslize", not the English "Swipe".
+        assert "Deslize \u2192" in result
+        assert "Swipe" not in result
 
     def test_renders_global_swipe_label_for_english(
         self,

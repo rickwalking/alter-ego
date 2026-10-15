@@ -9,6 +9,7 @@ from rag_backend.application.services.carousel_template.helpers import (
     _plain_text_for_attribute,
 )
 from rag_backend.application.services.carousel_template.slide_number import (
+    format_slide_counter,
     normalize_slide_number,
 )
 
@@ -42,10 +43,8 @@ def render_lower_third_shell(
     safe_number = normalize_slide_number(config.slide_number)
     counter_html = ""
     if config.include_counter:
-        counter_html = (
-            f'<div class="slide-hero-number">0{safe_number} / '
-            f"{config.total_slides:02d}</div>"
-        )
+        counter = format_slide_counter(safe_number, config.total_slides)
+        counter_html = f'<div class="slide-hero-number">{counter}</div>'
     return (
         f"{render_slide_artwork(safe_number, alt=config.artwork_alt)}\n"
         f'  <div class="{config.overlay_classes}"></div>\n'

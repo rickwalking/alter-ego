@@ -61,10 +61,14 @@ export const IMAGE_PRESETS = [
   },
 ] as const;
 
-export const DEFAULT_IMAGE_PRESET = IMAGE_PRESETS[0].value;
-
 /** The light/editorial preset value — recommended for light themes. */
 export const FLAT_EDITORIAL_PRESET = "openai__flat_editorial";
+
+/**
+ * AE-0372: flat editorial is the default in the wizard, the backend and the
+ * autopilot, so not every post looks like the same neon AI art.
+ */
+export const DEFAULT_IMAGE_PRESET = FLAT_EDITORIAL_PRESET;
 
 /** Phase 5 per-slide image-generation lifecycle. */
 export const SLIDE_GENERATION_STATUS = {

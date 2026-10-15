@@ -13,6 +13,7 @@ from dataclasses import dataclass
 
 from rag_backend.domain.constants import (
     IMAGE_MODEL_OPENAI,
+    IMAGE_STYLE_DEFAULT,
     IMAGE_STYLE_NEO_ANIME,
     SUPPORTED_IMAGE_COMBOS,
 )
@@ -44,7 +45,8 @@ SCOUT_IMAGE_STYLES: frozenset[str] = frozenset(
     style for model, style in SUPPORTED_IMAGE_COMBOS if model == IMAGE_MODEL_OPENAI
 )
 
-DEFAULT_IMAGE_STYLE = IMAGE_STYLE_NEO_ANIME
+# AE-0372: the same default as the API and the wizard (flat editorial).
+DEFAULT_IMAGE_STYLE = IMAGE_STYLE_DEFAULT
 
 
 @dataclass(frozen=True, kw_only=True)

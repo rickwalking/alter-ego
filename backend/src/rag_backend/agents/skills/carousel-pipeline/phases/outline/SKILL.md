@@ -24,13 +24,22 @@ Transform research findings into an ordered slide narrative with an optimized ti
 - No clickbait: promise must be delivered in content
 - If original title is weak, propose 3 alternatives with rationale
 
-### Weak → strong examples
+### Weak → strong examples (AE-0372: hooks with a point of view, not headlines)
 
-| Weak | Strong |
+Slide 1 is a hook, not a news headline: up to 10 words, it must make sense to a
+stranger with no context, and the carousel must pay it off. Never put a number,
+test or result in a hook that the sources (or the owner's own proof) do not back.
+
+| Weak (recap headline) | Strong (hook formula) |
 |------|--------|
-| "AI News This Week" | "3 AI Models That Changed Everything This Week" |
-| "Python Tips" | "5 Python Tricks Senior Devs Use Daily" |
-| "Cybersecurity Update" | "This Zero-Day Affects 90% of Web Apps" |
+| "Novidades de IA da semana" | "Todo mundo falou do [lançamento]. Ninguém falou do que importa." (lacuna de curiosidade) |
+| "Novo modelo lançado" | "O que o [modelo] muda pra quem programa" (impacto para você) |
+| "Dicas de prompt" | "Pare de pedir código pra IA. Peça isso no lugar." ("Pare de…") |
+| "IA no trabalho" | "Como eu uso IA para revisar uma arquitetura" (primeira pessoa + resultado) |
+| "IA e empregos" | "A IA não vai roubar seu emprego. Sua falta de critério vai." (opinião contrária) |
+
+Radar IA angle (growth plan 16.4 #1): at most one slide on what happened, at least
+three on what it changes for the reader, and the closing slide is the owner's verdict.
 
 ## Outline output shape
 

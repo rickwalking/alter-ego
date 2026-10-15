@@ -9,7 +9,11 @@ function presetFromValue(value: string): { model: string; style: string } {
   if (preset) {
     return { model: preset.model, style: preset.style };
   }
-  const fallback = IMAGE_PRESETS[0];
+  // AE-0372: an unknown value falls back to the default (flat editorial),
+  // not to whichever preset happens to be listed first.
+  const fallback =
+    IMAGE_PRESETS.find((p) => p.value === DEFAULT_IMAGE_PRESET) ??
+    IMAGE_PRESETS[0];
   return { model: fallback.model, style: fallback.style };
 }
 

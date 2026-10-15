@@ -4,7 +4,7 @@ from collections.abc import Mapping
 
 from typing_extensions import override
 
-from rag_backend.application.services.carousel_template.constants import SWIPE_TEXT
+from rag_backend.application.services.carousel_template.constants import swipe_text_for
 from rag_backend.application.services.carousel_template.helpers import (
     _build_watermark_html,
     _render_inline,
@@ -13,6 +13,7 @@ from rag_backend.application.services.carousel_template.lower_third_shell import
     LowerThirdConfig,
     render_lower_third_shell,
 )
+from rag_backend.domain.constants import LANGUAGE_PT
 from rag_backend.domain.models import CarouselProject
 from rag_backend.domain.protocols.carousel import _RenderOptions
 
@@ -43,8 +44,11 @@ class HeroContentStrategy:
         slide_number = str(slide.get("number", ""))
         show_watermark = slide_number == _WATERMARK_SLIDE_NUMBER
         watermark_html = _build_watermark_html(project) if show_watermark else ""
-        show_swipe = slide_number == _WATERMARK_SLIDE_NUMBER
-        swipe_html = f'<div class="s1-swipe">{SWIPE_TEXT}</div>' if show_swipe else ""
+        swipe_html = (
+            _swipe_html(str(opts.get("language", LANGUAGE_PT)))
+            if show_watermark
+            else ""
+        )
         body_html = (
             f'<p class="slide-hero-body">{_render_inline(body_raw)}</p>'
             if body_raw
@@ -61,6 +65,11 @@ class HeroContentStrategy:
                 footer_html=footer_html,
             )
         )
+
+
+def _swipe_html(language: str) -> str:
+    """The swipe hint shown on slide 2, in the slide's locale (AE-0372)."""
+    return f'<div class="s1-swipe">{swipe_text_for(language)}</div>'
 
 
 __all__ = ["HeroContentStrategy"]

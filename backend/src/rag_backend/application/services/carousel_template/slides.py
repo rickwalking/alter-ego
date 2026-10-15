@@ -3,10 +3,18 @@
 import html
 
 from rag_backend.application.services.carousel.types import SlideDict
+from rag_backend.application.services.carousel_template.cta_copy import cta_copy
 from rag_backend.application.services.carousel_template.helpers import (
     _render_inline,
 )
+from rag_backend.application.services.carousel_template.slide_number import (
+    format_slide_counter,
+)
 from rag_backend.domain.constants import SWIPE_TEXT_PT
+from rag_backend.domain.constants.carousel_cta import (
+    DEFAULT_CTA_GOAL,
+    DEFAULT_CTA_HANDLE,
+)
 from rag_backend.domain.models import CarouselProject
 
 
@@ -52,6 +60,7 @@ def _render_summary_slide(
 ) -> str:
     """Render summary slide with hero-bg layout."""
     heading = _render_inline(str(slide["heading"]))
+    counter = format_slide_counter(str(slide["number"]), total_slides)
     body_raw = str(slide.get("body") or "").strip()
     body_html = (
         f'<p class="slide-hero-body">{_render_inline(body_raw)}</p>' if body_raw else ""
@@ -63,7 +72,7 @@ def _render_summary_slide(
   <div class="slide-hero-bg-gradient"></div>
   <div class="slide-hero-content">
     <div class="slide-hero-main">
-      <div class="slide-hero-number">0{slide["number"]} / {total_slides:02d}</div>
+      <div class="slide-hero-number">{counter}</div>
       <h2 class="slide-hero-heading">{heading}</h2>
       {body_html}
     </div>
@@ -79,6 +88,7 @@ def _render_content_slide(
 ) -> str:
     """Render content slide with hero-bg layout."""
     heading = _render_inline(str(slide["heading"]))
+    counter = format_slide_counter(str(slide["number"]), total_slides)
     body_raw = str(slide.get("body") or "").strip()
     body_html = (
         f'<p class="slide-hero-body">{_render_inline(body_raw)}</p>' if body_raw else ""
@@ -90,7 +100,7 @@ def _render_content_slide(
   <div class="slide-hero-bg-gradient"></div>
   <div class="slide-hero-content">
     <div class="slide-hero-main">
-      <div class="slide-hero-number">0{slide["number"]} / {total_slides:02d}</div>
+      <div class="slide-hero-number">{counter}</div>
       <h2 class="slide-hero-heading">{heading}</h2>
       {body_html}
     </div>
@@ -106,6 +116,7 @@ def _render_closing_slide(
 ) -> str:
     """Render closing slide with hero-bg layout."""
     heading = _render_inline(str(slide["heading"]))
+    counter = format_slide_counter(str(slide["number"]), total_slides)
     body_raw = str(slide.get("body") or "").strip()
     body_html = (
         f'<p class="slide-hero-body">{_render_inline(body_raw)}</p>' if body_raw else ""
@@ -117,7 +128,7 @@ def _render_closing_slide(
   <div class="slide-hero-bg-gradient"></div>
   <div class="slide-hero-content">
     <div class="slide-hero-main">
-      <div class="slide-hero-number">0{slide["number"]} / {total_slides:02d}</div>
+      <div class="slide-hero-number">{counter}</div>
       <h2 class="slide-hero-heading">{heading}</h2>
       {body_html}
     </div>
@@ -133,8 +144,6 @@ def _render_cta_slide(
     project: CarouselProject | None = None,
 ) -> str:
     """Render closing/CTA slide with centered avatar layout."""
-    from rag_backend.domain.constants import LANGUAGE_EN
-
     name = html.escape(project.creator_name or "", quote=True) if project else ""
     handle = project.creator_handle or "" if project else ""
     avatar = project.creator_avatar_url or "" if project else ""
@@ -153,14 +162,19 @@ def _render_cta_slide(
         else ""
     )
 
-    if language == LANGUAGE_EN:
-        cta_text = "Follow for more content like this"
-    else:
-        cta_text = "Siga para mais conteúdo como esse"
+    cta_text = html.escape(
+        cta_copy(
+            DEFAULT_CTA_GOAL,
+            language,
+            handle or DEFAULT_CTA_HANDLE,
+        ),
+        quote=True,
+    )
 
+    counter = format_slide_counter(str(slide["number"]), total_slides)
     return f"""\
   <div class="slide-content slide-closing">
-    <div class="slide-number">0{slide["number"]} / {total_slides:02d}</div>
+    <div class="slide-number">{counter}</div>
     {avatar_html}
     <div class="closing-name">{name}</div>
     {handle_html}

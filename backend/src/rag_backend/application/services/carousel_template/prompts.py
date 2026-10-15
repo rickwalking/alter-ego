@@ -55,7 +55,10 @@ def build_content_prompt(project: CarouselProject, research_context: str) -> str
 def build_caption_prompt(
     project: CarouselProject, slide_headings: list[tuple[int, str]]
 ) -> str:
+    """AE-0372: caption v7 (hook first, 3-5 hashtags, one CTA by goal)."""
     from rag_backend.agents.prompts.registry import render_prompt
+    from rag_backend.domain.constants.carousel import CAROUSEL_CAPTION_PROMPT_VERSION
+    from rag_backend.domain.constants.carousel_cta import DEFAULT_CTA_GOAL
 
     prompt_text, _ = render_prompt(
         "carousel",
@@ -63,8 +66,9 @@ def build_caption_prompt(
         variables={
             "title": project.title,
             "slide_headings": slide_headings,
+            "cta_goal": DEFAULT_CTA_GOAL,
         },
-        version="v2",
+        version=CAROUSEL_CAPTION_PROMPT_VERSION,
     )
     return prompt_text
 

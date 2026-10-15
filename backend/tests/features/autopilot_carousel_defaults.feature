@@ -2,16 +2,21 @@ Feature: GrokBot carousel defaults (AE-0361)
   Every carousel GrokBot creates has a target audience and a niche in simple
   words, a brief that covers the selected theme, and image guidance. The
   backend always uses the OpenAI image model and the auto palette theme. The
-  scout picks the image preset (neo_anime by default) and may send guidance
+  scout picks the image preset (flat_editorial by default since AE-0372) and may send guidance
   with a theme-specific background; otherwise the backend builds it.
 
   Background:
     Given the signals bundle served URL A
 
-  Scenario: Default neo_anime style and template guidance
+  Scenario: Default flat_editorial style and template guidance
     When the scout posts a topic with no image_style and no image_guidance
-    Then the candidate is stored with image_style "neo_anime" and no guidance
-    And the runner builds the guidance "Futuristic anime in the style of Akira, Ghost in the Shell and Neon Genesis Evangelion. Background: ai-themed setting."
+    Then the candidate is stored with image_style "flat_editorial" and no guidance
+    And the runner builds the guidance "Clean visuals that follow the chosen image style. Background: ai-themed setting."
+
+  Scenario: Neo anime style gets the anime template guidance
+    Given a stored topic with image_style "neo_anime", niche "ai" and no guidance
+    When the runner builds the project spec
+    Then the guidance is "Futuristic anime in the style of Akira, Ghost in the Shell and Neon Genesis Evangelion. Background: ai-themed setting."
 
   Scenario: Non-anime style gets style-neutral template guidance
     Given a stored topic with image_style "flat_editorial", niche "benchmarks" and no guidance

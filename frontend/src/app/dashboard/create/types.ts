@@ -1,3 +1,4 @@
+import { DEFAULT_IMAGE_PRESET } from "@/constants/create";
 import type { CarouselCreateRequest } from "@/schemas/carousel";
 
 export interface CreateCarouselFormState {
@@ -16,7 +17,7 @@ export const INITIAL_CREATE_FORM_STATE: CreateCarouselFormState = {
   audience: "",
   niche: "",
   theme: "auto",
-  imagePreset: "openai__neo_anime",
+  imagePreset: DEFAULT_IMAGE_PRESET,
   selectedTemplate: 0,
   customVisualDetails: "",
 };

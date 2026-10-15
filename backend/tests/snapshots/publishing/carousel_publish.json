@@ -44,7 +44,7 @@
     "error_message": null,
     "id": "<uuid>",
     "image_model": "openai",
-    "image_style": "neo_anime",
+    "image_style": "flat_editorial",
     "is_public": true,
     "linkedin_post_en": null,
     "linkedin_post_pt": null,

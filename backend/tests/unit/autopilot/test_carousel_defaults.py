@@ -104,7 +104,7 @@ def test_scout_styles_match_the_openai_combos_exactly() -> None:
     }
     assert openai_styles == SCOUT_IMAGE_STYLES
     assert SCOUT_IMAGE_STYLES <= VALID_IMAGE_STYLES
-    assert DEFAULT_IMAGE_STYLE == "neo_anime"
+    assert DEFAULT_IMAGE_STYLE == "flat_editorial"
     assert DEFAULT_IMAGE_STYLE in SCOUT_IMAGE_STYLES
     for style in SCOUT_IMAGE_STYLES:
         assert is_supported_style(style)
@@ -214,7 +214,7 @@ def test_prepare_strips_guidance_and_drops_blank_guidance() -> None:
     assert padded.image_guidance == "Anime."
     assert blank.image_guidance is None
     assert absent.image_guidance is None
-    assert absent.image_style == "neo_anime"
+    assert absent.image_style == "flat_editorial"
 
 
 def test_plan_rejects_only_the_proposal_that_breaks_a_rule() -> None:

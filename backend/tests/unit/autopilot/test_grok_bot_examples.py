@@ -12,6 +12,7 @@ from pathlib import Path
 
 import pytest
 
+from rag_backend.domain.constants import IMAGE_STYLE_NEO_ANIME
 from rag_backend.modules.autopilot.api.mapping import command_from
 from rag_backend.modules.autopilot.api.schemas import TopicBatch, XSignalsBatch
 from rag_backend.modules.autopilot.carousel_constants import REASON_BRIEF_OFF_THEME
@@ -105,7 +106,10 @@ def test_v2_example_passes_the_carousel_rules() -> None:
     plan, image_style, image_guidance = _plan_for(_V2)
     assert plan.rejected == ()
     assert len(plan.new_candidates) == 1
-    assert image_style == DEFAULT_IMAGE_STYLE
+    # The frozen v2 example names neo_anime explicitly; the default moved to
+    # flat editorial in AE-0372 and only applies when the scout omits a style.
+    assert image_style == IMAGE_STYLE_NEO_ANIME
+    assert image_style != DEFAULT_IMAGE_STYLE
     assert image_style in SCOUT_IMAGE_STYLES
     assert plan.new_candidates[0].proposal.image_guidance == image_guidance
     assert image_guidance is not None

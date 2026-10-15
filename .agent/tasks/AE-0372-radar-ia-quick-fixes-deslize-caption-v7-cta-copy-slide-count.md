@@ -1,6 +1,6 @@
 # AE-0372 — Radar IA quick fixes: deslize, caption v7, cta copy, slide counter, image defaults
 
-Status: Ready
+Status: In Development
 Tier: T2
 Priority: High
 Type: Feature

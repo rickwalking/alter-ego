@@ -62,9 +62,20 @@ async def _spec_for(**topic_changes: str | None) -> ProjectSpec:
 
 
 @pytest.mark.asyncio
-async def test_runner_spec_defaults_to_neo_anime_template_guidance() -> None:
-    """Scenario: Default neo_anime style and template guidance."""
+async def test_runner_spec_defaults_to_flat_editorial_template_guidance() -> None:
+    """Scenario: Default flat_editorial style and template guidance (AE-0372)."""
     spec = await _spec_for()
+    assert spec.image_style == "flat_editorial"
+    assert spec.image_guidance == (
+        "Clean visuals that follow the chosen image style. "
+        "Background: ai-themed setting."
+    )
+
+
+@pytest.mark.asyncio
+async def test_runner_spec_neo_anime_gets_the_anime_template() -> None:
+    """Scenario: Neo anime style gets the anime template guidance."""
+    spec = await _spec_for(image_style="neo_anime")
     assert spec.image_style == "neo_anime"
     assert spec.image_guidance == _ANIME
 
