@@ -81,5 +81,6 @@ def build_owner_action_service(build: OwnerActionBuild) -> OwnerActionService:
         autofix=InProcessContentAutofixer(
             AutofixerConfig(session=build.session, engine_factory=build.engine_factory)
         ),
+        topics=repo,
     )
     return OwnerActionService(deps)

@@ -71,6 +71,13 @@ class PostgresCarouselRepository(CarouselRepository):
             )
             if asset_model is not None:
                 entity.creator_asset_staged_path = asset_model.relative_path
+        if model.hook_asset_id:
+            # AE-0376: the POV slide-1 photo, staged at the same relative path.
+            hook_model = await self._session.get(
+                CarouselCreatorAssetModel, str(model.hook_asset_id)
+            )
+            if hook_model is not None:
+                entity.hook_asset_staged_path = hook_model.relative_path
         await self._overlay_distribution(entity)
         return entity
 

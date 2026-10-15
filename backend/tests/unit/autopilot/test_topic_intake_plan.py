@@ -5,6 +5,7 @@ Gherkin: tests/features/autopilot_topic_intake.feature
 
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from uuid import UUID, uuid4
 
@@ -201,8 +202,15 @@ def test_recent_carousel_title_is_a_duplicate() -> None:
 
 def test_higher_cap_queues_both() -> None:
     # Scenario: A higher daily cap queues more than one run
+    # AE-0377: Radar IA is capped at one a week, so the second is a POV topic.
     first = prepare(_input("One", _URL_A, 60))
-    second = prepare(_input("Two", _URL_B, 70))
+    second = prepare(
+        replace(
+            _input("Two", _URL_B, 70),
+            content_mode="pov",
+            thesis_draft="Quem decide o que construir ainda é o dev.",
+        )
+    )
     plan = plan_intake((first, second), _facts(daily_cap=2))
     assert sum(item.queue for item in plan.new_candidates) == 2
     assert plan.rejected == ()

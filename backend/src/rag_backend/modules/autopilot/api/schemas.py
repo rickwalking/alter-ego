@@ -12,6 +12,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from rag_backend.domain.constants.content_mode import CONTENT_MODE_NEWS_ANALYSIS
 from rag_backend.modules.autopilot.carousel_constants import (
     IMAGE_GUIDANCE_MAX_CHARS,
     IMAGE_STYLE_INPUT_MAX_CHARS,
@@ -41,6 +42,10 @@ from rag_backend.modules.autopilot.constants import (
 )
 from rag_backend.modules.autopilot.domain.carousel_defaults import DEFAULT_IMAGE_STYLE
 from rag_backend.modules.autopilot.domain.topic_text import is_http_url, strip_controls
+from rag_backend.modules.autopilot.pov_constants import (
+    SCOUT_MODE_PATTERN,
+    THESIS_DRAFT_MAX_CHARS,
+)
 
 
 class TopicProposal(BaseModel):
@@ -69,6 +74,14 @@ class TopicProposal(BaseModel):
         default=None,
         min_length=TEXT_MIN_CHARS,
         max_length=IMAGE_GUIDANCE_MAX_CHARS,
+    )
+    # AE-0377 (scout v3): Radar IA when omitted; POV carries the draft thesis
+    # the owner confirms on Telegram (the domain rejects a POV without one).
+    mode: str = Field(default=CONTENT_MODE_NEWS_ANALYSIS, pattern=SCOUT_MODE_PATTERN)
+    thesis_draft: str | None = Field(
+        default=None,
+        min_length=TEXT_MIN_CHARS,
+        max_length=THESIS_DRAFT_MAX_CHARS,
     )
 
     @field_validator("sources")
@@ -173,3 +186,35 @@ def _require_http_url(value: str) -> str:
     if is_http_url(cleaned):
         return cleaned
     raise ValueError(SOURCE_URL_INVALID)
+
+
+# --- AE-0378: GET /api/instagram/insights (null metric = "n/d") ---
+
+
+class InstagramPostInsightsItem(BaseModel):
+    """One published post and its last metrics."""
+
+    media_id: str
+    carousel_project_id: str | None = None
+    permalink: str | None = None
+    topic: str | None = None
+    views: int | None = None
+    reach: int | None = None
+    saved: int | None = None
+    shares: int | None = None
+    follows: int | None = None
+    profile_visits: int | None = None
+    total_interactions: int | None = None
+    shares_per_100_views: float | None = None
+    fetched_at: datetime | None = None
+    stale: bool = Field(description="True when the metrics are older than 6 h.")
+
+
+class InstagramInsightsResponse(BaseModel):
+    """Rows (newest first) and the KPI ratios over the posts that report them."""
+
+    items: list[InstagramPostInsightsItem]
+    follows_total: int | None = None
+    follows_per_post: float | None = None
+    shares_per_100_views: float | None = None
+    configured: bool = Field(description="False when no Graph account is set.")

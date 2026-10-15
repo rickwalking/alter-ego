@@ -18,6 +18,12 @@ Before running generation, verify:
 - **Bilingual storage:** Always generate both locales. Store in `blog_translations` (not a single-language field).
 - **Em dashes:** NEVER use em dashes (`—` / `–`) in either language. Use periods, commas, parentheses, or conjunctions instead. See [`text-formatting.md`](text-formatting.md) for renderer defenses.
 
+## Never invent the owner's voice (AE-0375)
+
+The model may sharpen the owner's thesis, but never invent their opinion, experiences, projects,
+clients, test results or numbers. In "Ponto de Vista" carousels the personal proof is the only
+source of first-person anecdotes and personal numbers; without it, argue from reasoning.
+
 ## Fact-checking
 
 Every factual claim must have at least one authoritative source from the research phase.

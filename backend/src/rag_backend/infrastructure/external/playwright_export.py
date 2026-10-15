@@ -10,7 +10,11 @@ from pathlib import Path
 from playwright.async_api import async_playwright
 
 from rag_backend.application.services.carousel.presentation_policy import (
+    CarouselPresentationPolicy,
     load_presentation_policy,
+)
+from rag_backend.application.services.carousel.presentation_policy_range import (
+    expand_policy_for_count,
 )
 from rag_backend.domain.constants import (
     CAROUSEL_HEIGHT,
@@ -235,6 +239,25 @@ def _crop_border_artifact(path: str, target_width: int, target_height: int) -> N
         )
 
 
+def export_policy(cfg: ExportConfig) -> CarouselPresentationPolicy:
+    """The policy the preflight checks (AE-0374).
+
+    A role contract (POV, Radar IA v4) is sized to the project's deck; every
+    fixed contract keeps the v1 slide map the preflight always used.
+    """
+    default = load_presentation_policy(DEFAULT_PRESENTATION_POLICY_VERSION)
+    if cfg.policy_version is None:
+        return default
+    policy = load_presentation_policy(cfg.policy_version)
+    if not policy.has_roles:
+        return default
+    span = policy.slide_range
+    count = cfg.slide_count if cfg.slide_count is not None else span.default
+    return expand_policy_for_count(
+        policy, count if span.accepts(count) else span.default
+    )
+
+
 class PlaywrightExportService(CarouselExportService):
     """Playwright implementation for exporting carousel HTML to images.
 
@@ -297,8 +320,7 @@ class PlaywrightExportService(CarouselExportService):
                 )
                 await page.evaluate(override_js)
 
-            policy = load_presentation_policy(DEFAULT_PRESENTATION_POLICY_VERSION)
-            await run_export_preflight(page, policy, hd=cfg.hd)
+            await run_export_preflight(page, export_policy(cfg), hd=cfg.hd)
 
             # Screenshot each .ig-slide-inner element
             slide_inners = await page.locator(".ig-slide-inner").all()

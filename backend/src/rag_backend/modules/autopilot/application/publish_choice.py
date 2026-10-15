@@ -46,11 +46,11 @@ from rag_backend.modules.autopilot.domain.owner_ports import (
     PendingReworkStore,
 )
 from rag_backend.modules.autopilot.domain.ports import AutopilotRunRepository, Clock
+from rag_backend.modules.autopilot.domain.pov_schedule import publish_slots_for
 from rag_backend.modules.autopilot.domain.schedule import (
     check_choice,
     from_epoch,
     local_label,
-    next_slots,
     parse_owner_time,
 )
 from rag_backend.modules.autopilot.domain.schedule_keyboards import (
@@ -146,7 +146,8 @@ class PublishChoiceActions:
             await self._replies.finish(update, ANSWER_ALREADY, TEXT_ALREADY)
             return
         if self._deps.default_publish == PUBLISH_MODE_NEXT_SLOT:
-            first = next_slots(self._deps.clock.now())[0]
+            # AE-0377 (R6): a POV run's first slot is Tue/Thu 12:00.
+            first = publish_slots_for(run, self._deps.clock.now())[0]
             await self._schedule(update, run, _Choice(at=first, next_slot=True))
             return
         await self._replies.answer(update, ANSWER_CHOOSE)
@@ -193,7 +194,7 @@ class PublishChoiceActions:
             await self._replies.finish(update, ANSWER_ALREADY, TEXT_ALREADY)
             return
         await self._replies.answer(update, TEXT_CHOOSE_SLOT)
-        await self._show_slots(update, run.run_id)
+        await self._show_slots(update, run)
 
     async def _slot(self, update: WebhookUpdate, parsed: ParsedCallback) -> None:
         run = await self._in_state(parsed.run_id, _S.AWAITING_OWNER)
@@ -205,7 +206,7 @@ class PublishChoiceActions:
         if error is not None:
             # A stale keyboard: the slot has passed. Offer fresh slots.
             await self._replies.answer(update, TIME_ERROR_TEXT[error])
-            await self._show_slots(update, run.run_id)
+            await self._show_slots(update, run)
             return
         await self._schedule(update, run, _Choice(at=at))
 
@@ -256,9 +257,10 @@ class PublishChoiceActions:
         await self._replies.answer(update, TEXT_APPROVE_FAILED)
         await self._show(update, TEXT_APPROVE_REFUSED, review_keyboard(run.run_id))
 
-    async def _show_slots(self, update: WebhookUpdate, run_id: UUID) -> None:
+    async def _show_slots(self, update: WebhookUpdate, run: AutopilotRun) -> None:
         now = self._deps.clock.now()
-        menu = SlotMenu(run_id=run_id, slots=next_slots(now), now=now)
+        slots = publish_slots_for(run, now)
+        menu = SlotMenu(run_id=run.run_id, slots=slots, now=now)
         await self._replies.edit(update, TEXT_CHOOSE_SLOT, slot_keyboard(menu))
 
     async def _show(

@@ -253,8 +253,9 @@
       "openai_comic_neon": "OpenAI · Comic Neon",
       "openai_hyperreal": "OpenAI · Hyperreal Graphic Novel",
       "openai_cinematic": "OpenAI · Cinematic Photoreal",
-      "openai_neo_anime": "OpenAI · Neo-Anime (padrão)",
-      "openai_flat_editorial": "OpenAI · Flat Editorial (claro)"
+      "openai_neo_anime": "OpenAI · Neo-Anime",
+      "openai_flat_editorial": "OpenAI · Flat Editorial (claro, padrão)",
+      "openai_pov_editorial": "OpenAI · Foto + Editorial (POV)"
     },
     "progress": {
       "complete": "Carrossel gerado com sucesso!",
@@ -322,6 +323,65 @@
       "completed": "Concluído",
       "rejected": "Rejeitado",
       "failed": "Falhou"
+    },
+    "mode": {
+      "title": "Modo",
+      "summaryLabel": "Modo",
+      "radar": {
+        "name": "Radar IA",
+        "desc": "Notícia de IA → o que isso muda para você (no máximo 1 por semana)"
+      },
+      "pov": {
+        "name": "Ponto de Vista",
+        "desc": "Sua opinião, em primeira pessoa, com sua foto no slide 1"
+      },
+      "personaLabel": "Persona (voz)",
+      "personaNone": "Sem persona"
+    },
+    "pov": {
+      "title": "Seu ponto de vista",
+      "thesisLabel": "Minha tese (o que eu defendo)",
+      "thesisHint": "obrigatório · máx. 280 caracteres · a IA pode lapidar, nunca inventar",
+      "thesisPlaceholder": "ex.: A IA escreve o código. Decidir o que construir ainda é com você.",
+      "thesisRequired": "A tese é obrigatória no modo Ponto de Vista.",
+      "proofLabel": "Prova pessoal (opcional)",
+      "proofHint": "máx. 500 caracteres · uma experiência real que prova a tese; sem ela, o post argumenta pelo raciocínio",
+      "proofPlaceholder": "Uma situação real do seu trabalho que mostra isso",
+      "slideCountLabel": "Nº de slides",
+      "slideCountOption": "{count} slides",
+      "ctaGoalLabel": "Chamada para ação",
+      "ctaGoals": {
+        "follow": "Seguir (crescer o perfil)",
+        "send": "Mandar para alguém",
+        "comment": "Comentar (discorda?)"
+      },
+      "formats": {
+        "opiniao": {
+          "name": "Opinião (hot take)",
+          "desc": "Tese → por quê → evidência → contraponto → virada → veredito"
+        },
+        "como_eu_faco": {
+          "name": "Como eu faço",
+          "desc": "Promessa → meu contexto → passos → erro comum → checklist"
+        },
+        "erros_e_mitos": {
+          "name": "Erros e mitos",
+          "desc": "Um erro e a correção por slide → virada"
+        },
+        "comparacao": {
+          "name": "Comparação na prática",
+          "desc": "O que eu uso para cada tarefa (só testes meus)"
+        }
+      }
+    },
+    "photo": {
+      "title": "Foto do slide 1",
+      "hint": "Sua foto recortada (PNG/WebP com transparência, até 5 MB) fica ao lado do gancho. A foto mais recente vem selecionada.",
+      "empty": "Nenhuma foto ainda: envie uma (sem foto, o slide 1 mostra só o gancho).",
+      "photoLabel": "Foto",
+      "upload": "Enviar uma foto nova",
+      "uploading": "Enviando…",
+      "uploadFailed": "Não foi possível enviar a foto (PNG, WebP ou JPEG até 5 MB)."
     }
   },
   "blogEditorial": {
@@ -522,6 +582,16 @@
         "blogPreviewError": "Não foi possível carregar a pré-visualização do rascunho.",
         "captionEmpty": "Nenhuma legenda foi gerada ainda.",
         "qualityEmpty": "Pontuações de qualidade ainda não estão disponíveis."
+      },
+      "hookPicker": {
+        "title": "Gancho do slide 1: escolha um ou edite",
+        "editLabel": "Gancho (máx. 60 caracteres, 10 palavras)",
+        "wordCount": "{count} de {max} palavras",
+        "save": "Salvar gancho",
+        "saving": "Salvando…",
+        "saved": "Gancho salvo; a etapa de conteúdo usa ele no slide 1.",
+        "failed": "Não foi possível salvar o gancho.",
+        "thesisNotEarly": "Sua tese ainda não aparece nos slides 1 e 2. Considere um gancho que a diga."
       }
     },
     "failed": {
@@ -876,7 +946,29 @@
       "pendingReview": "Aguardando Revisão",
       "qualityScore": "Score Médio de Qualidade",
       "velocityTitle": "Velocidade de Publicação (8 semanas)",
-      "loadFailed": "Falha ao carregar analytics"
+      "loadFailed": "Falha ao carregar analytics",
+      "disabledTitle": "Analytics editorial desativado",
+      "disabledBody": "O recurso de analytics editorial está desligado neste ambiente ou para o seu perfil. O resto do dashboard continua funcionando."
+    },
+    "instagram": {
+      "title": "Instagram",
+      "subtitle": "Últimos posts publicados: totais e as razões de crescimento",
+      "loadFailed": "Falha ao carregar os insights do Instagram",
+      "empty": "Nenhum post publicado ainda.",
+      "notConfigured": "Nenhuma conta do Instagram configurada; mostrando os últimos números salvos.",
+      "notAvailable": "n/d",
+      "stale": "desatualizado",
+      "postLine": "{views} visualizações · {shares} compartilhamentos · {saves} salvamentos · {follows} seguidores",
+      "kpi": {
+        "views": "Visualizações",
+        "reach": "Alcance",
+        "shares": "Compartilhamentos",
+        "saved": "Salvamentos",
+        "follows": "Seguidores ganhos",
+        "profile_visits": "Visitas ao perfil",
+        "followsPerPost": "Seguidores por post",
+        "sharesPer100Views": "Compart. a cada 100 visualizações"
+      }
     }
   },
   "admin": {

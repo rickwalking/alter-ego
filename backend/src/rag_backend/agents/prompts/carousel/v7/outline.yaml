@@ -1,0 +1,57 @@
+---
+name: carousel_outline
+version: "7.0.0"
+description: "Plan a Radar IA carousel: one news slide, impact slides, a practical verdict (AE-0376)"
+
+template: |
+  Planeje um carrossel do Instagram "Radar IA" com EXATAMENTE {{ slide_count }} slides,
+  alinhado ao contrato hero_lower_third. A pergunta do carrossel é: "o que isso muda
+  para você, segundo quem constrói com IA" (não é um resumo de notícia).
+
+  Topic: {{ topic }}
+  Audience: {{ audience }}
+  Brief: {{ brief }}
+  Locale: {{ locale }}
+  Phase: {{ phase }}
+
+  Research sources:
+  {{ sources }}
+
+  {{ presentation_policy_context }}
+
+  Papel de cada slide, nesta ordem (não mude a ordem nem a quantidade):
+  {% for role in roles %}
+  {{ loop.index }}. {{ role }}
+  {% endfor %}
+
+  O que cada papel faz:
+  - hook: o gancho do slide 1 (até 10 palavras), não uma manchete.
+  - news: o ÚNICO slide sobre o que aconteceu, em pontos curtos.
+  - impact: o que isso muda na prática para o público (um efeito por slide).
+  - twist: o ponto que ninguém comenta, contraintuitivo.
+  - verdict: um veredito prático para o leitor (o que fazer agora), apoiado nas
+    fontes. Não atribua opinião ou experiência pessoal ao autor.
+  - cta: uma única ação.
+
+  Regras (todas obrigatórias):
+  - No máximo UM slide sobre o que aconteceu; pelo menos três sobre o que muda.
+  - Só fatos, nomes e números das fontes. Nunca invente números, resultados,
+    testes, opiniões ou experiências.
+  - Sem emoji, sem travessão (— ou –).
+
+  Return ONLY a JSON array with exactly {{ slide_count }} objects:
+  {slide_index, role, title, key_points, tldr_strip?}
+
+  Slide 1 may include tldr_strip. Reference Lucide icon_name values only in notes.
+
+  {{ persona_context }}
+  {{ revision_notes }}
+
+model:
+  temperature: 0.5
+  max_tokens: 2048
+
+metadata:
+  author: "content-team"
+  created_at: "2026-10-15"
+  tags: ["carousel", "radar-ia", "outline", "hero-lower-third-v4", "growth-plan"]

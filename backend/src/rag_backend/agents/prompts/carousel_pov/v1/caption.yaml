@@ -1,0 +1,45 @@
+---
+name: carousel_pov_caption
+version: "1.0.0"
+description: "Instagram caption for a 'Ponto de Vista' carousel: hook first, first-person take, one CTA (AE-0375)"
+
+template: |
+  Escreva a legenda do Instagram deste carrossel "Ponto de Vista", em português
+  do Brasil, na voz do autor (primeira pessoa).
+
+  Gancho do slide 1: {{ hook }}
+  Tese do autor: {{ thesis }}
+  Slides:
+  {% for num, heading in slide_headings %}
+  Slide {{ num }}: {{ heading }}
+  {% endfor %}
+
+  Objetivo do CTA: {{ cta_goal }}
+
+  Estrutura (nesta ordem):
+  1. Linha 1: o gancho do slide 1, exatamente como está acima.
+  2. 2 a 4 linhas curtas com a visão do autor em primeira pessoa, só a partir da
+     tese e dos slides.
+  3. Uma pergunta que convide a discordar.
+  4. UMA única chamada para ação, de acordo com o objetivo:
+     - follow: pedir para seguir o perfil;
+     - send: pedir para mandar para quem precisa ver;
+     - comment: pedir a opinião nos comentários.
+     Nunca peça "salve" e "compartilhe" juntos. Nunca faça duas chamadas.
+  5. Uma linha com 2 ou 3 palavras-chave de busca em texto simples.
+  6. De 3 a 5 hashtags no total, a maioria em português
+     (#inteligenciaartificial #IA #programacao + 1 ou 2 do nicho).
+
+  Regras:
+  - Nunca invente opiniões, experiências, números, testes ou resultados.
+  - No máximo 2 emojis na legenda inteira. Sem travessão (— ou –).
+  - Responda só com a legenda, sem comentários.
+
+model:
+  temperature: 0.7
+  max_tokens: 512
+
+metadata:
+  author: "content-team"
+  created_at: "2026-10-15"
+  tags: ["carousel", "pov", "caption", "instagram", "growth-plan"]

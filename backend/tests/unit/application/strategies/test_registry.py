@@ -78,9 +78,10 @@ class TestSlideLayoutRegistry:
         strategy = registry.find_for_slide("cta")
         assert strategy.strategy_name == "cta_centered"
 
-    def test_bootstrap_registers_all_eight(self, registry):
+    def test_bootstrap_registers_all_twelve(self, registry):
+        # AE-0376: + hook_face, statement, save_checklist, cta_follow (POV).
         result = registry.list()
-        assert len(result) == 8
+        assert len(result) == 12
 
     def test_bootstrap_has_all_strategy_names(self, registry):
         names = {r["name"] for r in registry.list()}
@@ -93,6 +94,10 @@ class TestSlideLayoutRegistry:
             "insight_quote",
             "numbered_list",
             "summary_grid",
+            "hook_face",
+            "statement",
+            "save_checklist",
+            "cta_follow",
         }
         assert names == expected
 

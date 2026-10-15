@@ -13,6 +13,7 @@ from sqlalchemy import (
     String,
     UniqueConstraint,
 )
+from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.sql import func
 
 from rag_backend.domain.models.carousel_creator_asset import CarouselCreatorAsset
@@ -35,6 +36,9 @@ class CarouselCreatorAssetModel(Base):
     width = Column(Integer, nullable=False)
     height = Column(Integer, nullable=False)
     relative_path = Column(String(500), nullable=False)
+    # AE-0373: photo library role (hook / cta / pov) and an optional pose tag.
+    role: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    pose_tag: Mapped[str | None] = mapped_column(String(40), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(
         DateTime(timezone=True),
@@ -60,6 +64,8 @@ class CarouselCreatorAssetModel(Base):
             width=int(self.width),
             height=int(self.height),
             relative_path=str(self.relative_path),
+            role=self.role,
+            pose_tag=self.pose_tag,
             created_at=self.created_at,
             updated_at=self.updated_at,
         )
@@ -74,6 +80,8 @@ class CarouselCreatorAssetModel(Base):
             width=entity.width,
             height=entity.height,
             relative_path=entity.relative_path,
+            role=entity.role,
+            pose_tag=entity.pose_tag,
             created_at=entity.created_at,
             updated_at=entity.updated_at,
         )

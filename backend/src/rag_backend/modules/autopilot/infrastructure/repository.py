@@ -36,6 +36,7 @@ from rag_backend.modules.autopilot.domain.models import (
     AutopilotRunState,
     IntegrationCredential,
     TelegramUpdate,
+    ThesisConfirmCommand,
     TopicCandidate,
     TransitionCommand,
 )
@@ -88,6 +89,22 @@ class SqlAlchemyAutopilotRepository:
         if not await self._compare_and_set(command):
             return False
         await self._emit_state_changed(command)
+        return True
+
+    async def confirm_thesis(self, command: ThesisConfirmCommand) -> bool:
+        """AE-0377: store the owner's thesis and requeue, in one CAS."""
+        transition = TransitionCommand(
+            run_id=command.run_id,
+            expected=AutopilotRunState.AWAITING_THESIS,
+            new=AutopilotRunState.QUEUED,
+            reason=command.reason,
+        )
+        assert_allowed(transition.pair())
+        statement = _transition_statement(transition).values(pov_thesis=command.thesis)
+        result = await self._session.execute(statement)
+        if cast(CursorResult[object], result).rowcount != 1:
+            return False
+        await self._emit_state_changed(transition)
         return True
 
     async def add_topic(self, candidate: TopicCandidate) -> None:
@@ -333,6 +350,8 @@ def _topic_row(candidate: TopicCandidate) -> TopicCandidateModel:
         status=candidate.status,
         image_style=candidate.image_style,
         image_guidance=candidate.image_guidance,
+        content_mode=candidate.content_mode,
+        thesis_draft=candidate.thesis_draft,
     )
 
 
@@ -351,6 +370,8 @@ def _topic_from_row(row: TopicCandidateModel) -> TopicCandidate:
         status=row.status,
         image_style=row.image_style,
         image_guidance=row.image_guidance,
+        content_mode=row.content_mode,
+        thesis_draft=row.thesis_draft,
     )
 
 

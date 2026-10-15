@@ -130,6 +130,20 @@ def _reject_if_animated(image: object) -> None:
         raise CreatorAssetValidationError(ERR_CREATOR_ASSET_ANIMATED)
 
 
+_MODE_RGB = "RGB"
+_MODE_RGBA = "RGBA"
+_ALPHA_MODES: frozenset[str] = frozenset({"RGBA", "LA", "PA", "RGBa", "La"})
+_TRANSPARENCY_INFO_KEY = "transparency"
+
+
+def _target_mode(image: object) -> str:
+    """RGBA when the image carries alpha (or a transparency key), else RGB."""
+    mode = str(getattr(image, "mode", ""))
+    info = getattr(image, "info", {})
+    has_key = isinstance(info, dict) and _TRANSPARENCY_INFO_KEY in info
+    return _MODE_RGBA if mode in _ALPHA_MODES or has_key else _MODE_RGB
+
+
 def _decode_and_normalize(content: bytes) -> NormalizedCreatorAsset:
     from PIL import Image, ImageOps
 
@@ -141,7 +155,9 @@ def _decode_and_normalize(content: bytes) -> NormalizedCreatorAsset:
             width, height = image.size
             _validate_dimensions(width, height)
             oriented = ImageOps.exif_transpose(image)
-            rgb = oriented.convert("RGB")
+            # AE-0376: keep transparency so pre-cut PNG/WebP photos ("lift
+            # subject") sit on the POV slide-1 background; opaque stays RGB.
+            rgb = oriented.convert(_target_mode(oriented))
     except CreatorAssetValidationError:
         raise
     except Image.DecompressionBombError:

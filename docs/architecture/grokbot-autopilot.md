@@ -188,7 +188,8 @@ both callers take a compare-and-set publish claim first.
 
 | State | Next | Trigger |
 |---|---|---|
-| `queued` | `generating` / `failed` | runner tick picks it up / workflow start failed 3× (provider 429/503) |
+| `queued` | `generating` / `awaiting_thesis` / `failed` | runner tick picks it up / the topic is POV and no thesis is confirmed yet (AE-0377) / workflow start failed 3× (provider 429/503) |
+| `awaiting_thesis` | `queued` / `rejected` / `expired` | owner confirms or edits the thesis / owner discards the topic / 72 h (AE-0377) |
 | `generating` | `awaiting_owner` / `escalated` / `failed` | gates auto-approved to final_review / check failed after retries / workflow failed |
 | `awaiting_owner` | `publishing` / `scheduled` / `reworking` / `rejected` / `expired` | Publicar agora / Agendar (AE-0370) / Rework / Reject / 72 h |
 | `scheduled` | `publishing` / `awaiting_owner` / `expired` | `scheduled_at` is due, or Publicar agora / Cancelar agendamento / the carousel is no longer approved at the due time |
@@ -426,6 +427,41 @@ Instagram's Graph API has no native scheduling (`media_publish` posts at once) a
 
 **Migration.** Revision `a9b0c1d2e3f4` adds the nullable `autopilot_runs.scheduled_at` TIMESTAMPTZ and the index `idx_autopilot_runs_state_scheduled_at (state, scheduled_at)` (additive). Prod deploys do not run Alembic, so it is applied by hand before the deploy.
 
+### 5.6 Ponto de Vista topics and the thesis gate (AE-0377, ADR-0021)
+
+The routine pack is `ops/grokbot/grok-bot/v3/`. A v3 topic carries `mode`
+(`news_analysis` = Radar IA, the default when absent, so v2 stays valid, or `pov`) and, for
+`pov`, a `thesis_draft` of at most 280 characters.
+
+**Intake.** A `pov` topic without a draft is rejected with `thesis_missing`; a draft with a URL
+is rejected with `url_in_text`. Radar IA is capped at one run per São Paulo week (Monday 00:00
+to Monday 00:00): a second one is rejected with `weekly_news_cap_reached`, and within one batch
+only the best-scored Radar IA topic is queued. POV topics only count against the daily cap.
+
+**Thesis gate.** The scout's thesis is a draft, never the owner's opinion. On its tick the runner
+moves a POV run without a confirmed thesis from `queued` to `awaiting_thesis` instead of starting
+generation. The worker's Telegram tick sends one prompt per run (recorded in the run's notice
+ledger, so a replayed tick never asks twice) with **✅ Confirmar / ✏️ Editar / ❌ Descartar**:
+
+- Confirmar stores the draft as `autopilot_runs.pov_thesis` and moves the run back to `queued`
+  in one compare-and-set (`confirm_thesis`), so a double tap starts generation once.
+- Editar opens a ForceReply. The owner's reply (trimmed, at most 280 characters, else asked
+  again) is stored the same way.
+- Descartar moves the run to `rejected`. After 72 h the run expires (`thesis_expired`).
+
+The run then starts a POV carousel: `content_mode=pov`, the confirmed thesis, the
+`pov_editorial` image preset and the POV defaults. No photo is picked automatically (follow-up).
+
+**Publish slots.** `domain/pov_schedule.py` defines the POV slots (Tuesday and Thursday 12:00
+São Paulo) and `publish_slots_for(run, now)`, which AE-0370's `publish_choice` calls (section 5.5).
+A run with a confirmed `pov_thesis` is a POV run: with `AUTOPILOT_DEFAULT_PUBLISH=next_slot`,
+Approve schedules it for the next Tuesday or Thursday 12:00 (at least 15 min ahead), and the
+`🗓 Agendar` menu lists that slot first, then AE-0370's next default slots (three buttons in total).
+Radar IA runs keep AE-0370's slots unchanged.
+
+**Migration.** Revision `b1c2d3e4f5a6` (after `b0c1d2e3f4a5`, which follows AE-0370's `a9b0c1d2e3f4`) adds the nullable
+`topic_candidates.content_mode`, `topic_candidates.thesis_draft` and `autopilot_runs.pov_thesis`
+(additive).
 ## 6. Backend changes (gap → fix)
 
 | Gap found in the codebase | Fix |

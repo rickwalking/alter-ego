@@ -10,6 +10,10 @@ from typing import cast
 import structlog
 import yaml
 
+from rag_backend.application.services.carousel.presentation_policy_range import (
+    parse_slide_range,
+    validate_roles,
+)
 from rag_backend.application.services.carousel.presentation_policy_types import (
     CarouselPresentationPolicy,
     CasingRulePolicy,
@@ -175,6 +179,7 @@ def _parse_policy_document(
 
     if len(slides) != slide_count:
         raise PresentationPolicyError(ERR_PRESENTATION_POLICY_INVALID)
+    validate_roles(slides)
 
     return CarouselPresentationPolicy(
         version=version,
@@ -195,6 +200,7 @@ def _parse_policy_document(
         quality_rubric=parse_quality_rubric(
             document.get("quality_rubric"), casing.rule_severities
         ),
+        slide_count_range=parse_slide_range(document, slides),
     )
 
 
@@ -299,6 +305,8 @@ def _parse_slide_sequence(raw_value: object) -> tuple[SlideTypePolicy, ...]:
                 image_required=bool(mapping.get("image_required", False)),
                 copy_start_ratio=copy_start_ratio,
                 avatar_required=bool(mapping.get("avatar_required", False)),
+                role=_optional_str(mapping, "role"),
+                optional=bool(mapping.get("optional", False)),
             )
         )
     return tuple(slides)
@@ -401,6 +409,11 @@ def _require_str(document: dict[str, object], key: str) -> str:
     if not isinstance(value, str) or not value.strip():
         raise PresentationPolicyError(ERR_PRESENTATION_POLICY_INVALID)
     return value
+
+
+def _optional_str(document: dict[str, object], key: str) -> str | None:
+    value = document.get(key)
+    return value if isinstance(value, str) and value else None
 
 
 def _require_int(document: dict[str, object], key: str) -> int:

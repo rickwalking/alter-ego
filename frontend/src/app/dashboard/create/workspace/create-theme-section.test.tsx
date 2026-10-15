@@ -34,9 +34,13 @@ describe("CreateThemeSection", () => {
 
   it("nudges to the flat-editorial preset when a light theme is selected", () => {
     const onChange = vi.fn();
+    // AE-0372: flat editorial is now the initial preset, so start from another.
     render(
       <CreateThemeSection
-        form={INITIAL_CREATE_FORM_STATE}
+        form={{
+          ...INITIAL_CREATE_FORM_STATE,
+          imagePreset: "openai__comic_neon",
+        }}
         onChange={onChange}
         themeOptions={THEME_OPTIONS}
       />,
@@ -61,6 +65,20 @@ describe("CreateThemeSection", () => {
     const themeSelect = screen.getAllByRole("combobox")[0];
     fireEvent.change(themeSelect, { target: { value: "plasma_magenta" } });
     expect(onChange).toHaveBeenCalledWith({ theme: "plasma_magenta" });
+  });
+
+  it("does not patch the preset when it is already flat editorial", () => {
+    const onChange = vi.fn();
+    render(
+      <CreateThemeSection
+        form={INITIAL_CREATE_FORM_STATE}
+        onChange={onChange}
+        themeOptions={THEME_OPTIONS}
+      />,
+    );
+    const themeSelect = screen.getAllByRole("combobox")[0];
+    fireEvent.change(themeSelect, { target: { value: "paper_editorial" } });
+    expect(onChange).toHaveBeenCalledWith({ theme: "paper_editorial" });
   });
 
   it("shows the light-theme hint when a light theme is active", () => {

@@ -25,6 +25,20 @@ See [`_shared/critical-rules.md`](_shared/critical-rules.md#prerequisites).
 
 Do **not** use legacy `/generate` or `/stream` endpoints — removed in consolidation.
 
+## Route by content mode (AE-0375, ADR-0021)
+
+The project's `content_mode` and stamped contract pick the prompts:
+
+| Mode | Contract | Outline / content prompts | Notes |
+|------|----------|---------------------------|-------|
+| `news_analysis` (Radar IA, default) | `hero_lower_third_v4` (new) or v1-v3 (existing) | `carousel/v3` outline + `carousel/v6` content (`carousel/v7` from AE-0376) | ≤1 "what happened" slide, ≥3 "what it changes for you", closing = the owner's verdict. |
+| `pov` (Ponto de Vista) | `pov_hook_v1` (8-10 slides) | `carousel_pov/v1/{hook,outline,content,caption}` | From the owner's thesis; 5 hook candidates on outline slide 1, picked at the outline gate. |
+
+Roles (`hook`, `rehook`, `pov`, `point`, `twist`, `save`, `cta`; Radar IA v4: `news`, `impact`,
+`verdict`) are stamped on the outline by position from the contract, never taken from the model.
+The model may sharpen the owner's thesis but never invent their opinion, experiences, test results
+or numbers.
+
 ## Delegate to phase subagents
 
 Do not load the full workflow into parent agent context. Route work via `task` to the phase subagent for the current workflow phase:

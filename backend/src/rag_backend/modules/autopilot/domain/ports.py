@@ -19,6 +19,7 @@ from rag_backend.modules.autopilot.domain.models import (
     AutopilotRun,
     IntegrationCredential,
     TelegramUpdate,
+    ThesisConfirmCommand,
     TopicCandidate,
     TransitionCommand,
 )
@@ -74,6 +75,10 @@ class AutopilotRunRepository(Protocol):
 
     async def transition(self, command: TransitionCommand) -> bool:
         """Compare-and-set the state. False when the expected state is stale."""
+        ...
+
+    async def confirm_thesis(self, command: ThesisConfirmCommand) -> bool:
+        """AE-0377: store the thesis and move awaiting_thesis -> queued (CAS)."""
         ...
 
     async def find_by_carousel(self, project_id: str) -> AutopilotRun | None:
@@ -372,6 +377,10 @@ class TopicIntakeStore(Protocol):
 
     async def runs_created_between(self, window: DayWindow) -> int:
         """How many autopilot runs were created in the half-open window."""
+        ...
+
+    async def news_runs_created_between(self, window: DayWindow) -> int:
+        """AE-0377: Radar IA runs (topic mode NULL or news) in the window."""
         ...
 
     async def add_candidate(self, candidate: TopicCandidate) -> bool:

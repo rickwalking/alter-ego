@@ -32,6 +32,22 @@
       {
         "display_name": "Summary Card Grid",
         "name": "summary_grid"
+      },
+      {
+        "display_name": "Hook + Face",
+        "name": "hook_face"
+      },
+      {
+        "display_name": "Statement",
+        "name": "statement"
+      },
+      {
+        "display_name": "Save Checklist",
+        "name": "save_checklist"
+      },
+      {
+        "display_name": "CTA Follow",
+        "name": "cta_follow"
       }
     ]
   },

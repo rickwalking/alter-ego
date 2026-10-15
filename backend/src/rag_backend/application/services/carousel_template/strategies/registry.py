@@ -145,7 +145,23 @@ def bootstrap_strategies() -> SlideLayoutRegistry:
     registry.register(InsightQuoteStrategy())
     registry.register(NumberedListStrategy())
     registry.register(SummaryGridStrategy())
+    _register_pov_strategies(registry)
     return registry
+
+
+def _register_pov_strategies(registry: SlideLayoutRegistry) -> None:
+    """AE-0376: the "Ponto de Vista" layouts, after the defaults (fallback order)."""
+    from rag_backend.application.services.carousel_template.strategies import (
+        cta_follow,
+        hook_face,
+        save_checklist,
+        statement,
+    )
+
+    registry.register(hook_face.HookFaceStrategy())
+    registry.register(statement.StatementStrategy())
+    registry.register(save_checklist.SaveChecklistStrategy())
+    registry.register(cta_follow.CtaFollowStrategy())
 
 
 def _has_structured_items(field: object) -> bool:

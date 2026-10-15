@@ -17,6 +17,21 @@ in-flight and completed projects keep their frozen semantics.
 | `hero_lower_third_v2` | AE-0312: PT casing rules + severity metadata + proper-noun list. |
 | `hero_lower_third_v3` | AE-0366: sentence-case rules are BLOCKERS in PT and EN (headings, bodies, structured items); objective rubric rules `body_empty`, `closing_actions_missing`, `summary_points_missing`, `translation_not_english`, `emphasis_markup_invalid`; the `quality_rubric` (single source of truth for the drafter/translator checklist). Stamped on new carousels at creation. |
 
+| `hero_lower_third_v4` | AE-0374 (ADR-0021): v3 + per-slide `role` for the Radar IA angle (hook, one `news` summary, `impact` slides, optional `twist`, `verdict` closing); 7 slides, or 8 with the twist; no generated artwork on the news summary, twist and verdict. Stamped on new Radar IA carousels. |
+| `pov_hook_v1` | AE-0374 (ADR-0021): "Ponto de Vista". 8-10 slides (hook, rehook, pov, 2-4 points, twist, save, cta); only the point slides need artwork; POV copy budgets. Stamped on new POV carousels. |
+
+## Slide-count ranges and roles (`slide_count_min/max/default`, `role`, `optional`; v4+)
+
+A ranged contract lists its LONGEST sequence (`slide_count` = `slide_count_max`)
+and marks the droppable slides `optional: true` (exactly `max - min` of them).
+`expand_policy_for_count` (`presentation_policy_range.py`) keeps the first
+optional slides, drops the last ones and renumbers; `project_policy()` sizes a
+project's contract to `project.slide_count` (or `slide_count_default`). Every
+`role` maps to an existing slide type (`domain/constants/presentation_roles.py`),
+so the per-slide validators, casing rules and translation keep working; roles
+are stamped onto an outline **by position**, never taken from the model. A
+contract either gives every slide a role or none.
+
 ## Severity metadata (`rule_severities`, v2+)
 
 Each violation code maps to `blocker` or `warning`. A report blocks approval

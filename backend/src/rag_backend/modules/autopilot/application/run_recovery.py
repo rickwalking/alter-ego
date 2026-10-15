@@ -49,6 +49,7 @@ from rag_backend.modules.autopilot.domain.recovery import (
 from rag_backend.modules.autopilot.notify_constants import (
     REASON_NOTIFIER_UNCONFIGURED,
 )
+from rag_backend.modules.autopilot.pov_constants import REASON_THESIS_EXPIRED
 from rag_backend.modules.autopilot.recovery_constants import (
     ENGINE_ERROR_DETAIL_MAX_CHARS,
     ESCALATED_SCAN_LIMIT,
@@ -98,6 +99,7 @@ class RunRecovery:
     async def sweep(self) -> int:
         """Expire stale reviews, close or wake escalations. Returns moves."""
         expired = await self._expire_due()
+        expired += await self._expire_state(_S.AWAITING_THESIS, REASON_THESIS_EXPIRED)
         woken = await self._check_escalated()
         return expired + woken + await self._close_abandoned()
 
@@ -149,13 +151,20 @@ class RunRecovery:
         return snapshot.lock_version
 
     async def _expire_due(self) -> int:
-        query = RunListQuery(state=_S.AWAITING_OWNER, limit=EXPIRY_SCAN_LIMIT)
+        return await self._expire_state(_S.AWAITING_OWNER, REASON_OWNER_EXPIRED)
+
+    async def _expire_state(self, state: AutopilotRunState, reason: str) -> int:
+        """Runs left in ``state`` past the 72-hour window become ``expired``.
+
+        AE-0377: an unanswered POV thesis expires like an unanswered review.
+        """
+        query = RunListQuery(state=state, limit=EXPIRY_SCAN_LIMIT)
         cutoff = self._deps.clock.now() - timedelta(hours=OWNER_REVIEW_EXPIRY_HOURS)
         moved = 0
         for run in await self._deps.runs.list_by_state(query):
             if run.updated_at is None or run.updated_at > cutoff:
                 continue
-            if await self._move(run, _S.EXPIRED, REASON_OWNER_EXPIRED):
+            if await self._move(run, _S.EXPIRED, reason):
                 moved += 1
         return moved
 

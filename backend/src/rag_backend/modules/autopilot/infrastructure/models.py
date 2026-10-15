@@ -53,6 +53,10 @@ from rag_backend.modules.autopilot.constants import (
     UQ_RUNS_CAROUSEL_PROJECT,
     UQ_TOPIC_SIGNAL_HASH,
 )
+from rag_backend.modules.autopilot.pov_constants import (
+    CONTENT_MODE_COLUMN_LENGTH,
+    THESIS_DRAFT_MAX_CHARS,
+)
 from rag_backend.modules.autopilot.recovery_constants import (
     FK_MANUAL_PUBLISH_PROJECT,
     NOTIFY_CURSOR_NAME_LENGTH,
@@ -111,6 +115,13 @@ class TopicCandidateModel(AutopilotOrmBase):
         server_default=IMAGE_STYLE_NEO_ANIME,
     )
     image_guidance: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # AE-0377: scout v3 mode (NULL = Radar IA) and the POV draft thesis.
+    content_mode: Mapped[str | None] = mapped_column(
+        String(CONTENT_MODE_COLUMN_LENGTH), nullable=True
+    )
+    thesis_draft: Mapped[str | None] = mapped_column(
+        String(THESIS_DRAFT_MAX_CHARS), nullable=True
+    )
 
     __table_args__ = (UniqueConstraint("signal_hash", name=UQ_TOPIC_SIGNAL_HASH),)
 
@@ -173,6 +184,10 @@ class AutopilotRunModel(AutopilotOrmBase):
         String(IG_IDENTIFIER_LENGTH), nullable=True
     )
     ig_permalink: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # AE-0377: the thesis the owner confirmed on Telegram (POV runs only).
+    pov_thesis: Mapped[str | None] = mapped_column(
+        String(THESIS_DRAFT_MAX_CHARS), nullable=True
+    )
     # AE-0370: the owner's publish time while the run is ``scheduled``.
     scheduled_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True

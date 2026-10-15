@@ -212,7 +212,17 @@ async def _collect_generated_image_paths(
     images_dir = output_dir / "images"
     if not images_dir.is_dir():
         return []
-    return sorted(str(path) for path in images_dir.glob("slide_*.jpg"))
+    # AE-0374: numeric order, so slide_10 sorts after slide_9 (not after slide_1).
+    return [
+        str(path)
+        for path in sorted(images_dir.glob("slide_*.jpg"), key=_slide_file_number)
+    ]
+
+
+def _slide_file_number(path: Path) -> int:
+    """``slide_10.jpg`` -> 10; a name without a number sorts first."""
+    digits = path.stem.rpartition("_")[2]
+    return int(digits) if digits.isdigit() else 0
 
 
 def _carousel_output_dir(output_dir: str | None, project_id: str) -> Path:

@@ -20,6 +20,9 @@ from pathlib import Path
 from rag_backend.application.services.carousel.editorial_workflow_support import (
     publish_workflow_progress,
 )
+from rag_backend.application.services.carousel.image_artwork import (
+    artwork_slide_numbers,
+)
 from rag_backend.application.services.carousel.image_generation_constants import (
     DEFAULT_IMAGE_CONCURRENCY,
     DEFAULT_IMAGE_MAX_ATTEMPTS,
@@ -201,8 +204,16 @@ def _apply_image_metadata(update: SlideImageMetadataUpdate) -> None:
     update.slide.metadata = metadata
 
 
-def filter_image_slides(slides: list[SlideData]) -> list[SlideData]:
-    """Return only the slides that should get a hero image."""
+def filter_image_slides(
+    slides: list[SlideData], artwork: frozenset[int] | None = None
+) -> list[SlideData]:
+    """Return only the slides that should get a hero image.
+
+    AE-0376: a role contract passes ``artwork`` (the slide numbers whose policy
+    entry has ``image_required``); fixed contracts keep the slide-type rule.
+    """
+    if artwork is not None:
+        return [s for s in slides if s.slide_number in artwork and s.image_prompt]
     return [s for s in slides if s.slide_type in IMAGE_SLIDE_TYPES and s.image_prompt]
 
 
@@ -427,7 +438,9 @@ async def _build_image_run_context(
         project.image_model, project.image_style
     )
 
-    slides_with_images = filter_image_slides(config.slides)  # type: ignore[arg-type]
+    slides_with_images = filter_image_slides(
+        config.slides or [], artwork_slide_numbers(project)
+    )
     total = len(slides_with_images)
     style_label = style_display_name(project.image_model, project.image_style)
     slide_status = build_initial_status(slides_with_images, style_label)

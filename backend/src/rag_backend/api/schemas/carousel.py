@@ -3,8 +3,12 @@
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+from rag_backend.api.schemas.carousel_content_mode import (
+    ContentModeRequestFields,
+    ContentModeResponseFields,
+)
 from rag_backend.domain.constants import (
     IMAGE_MODEL_DEFAULT,
     IMAGE_STYLE_DEFAULT,
@@ -20,7 +24,7 @@ _ERR_UNSUPPORTED_IMAGE_COMBO = (
 )
 
 
-class CarouselProjectCreate(BaseModel):
+class CarouselProjectCreate(ContentModeRequestFields):
     topic: str = Field(..., min_length=1, max_length=500)
     audience: str = Field(..., min_length=1, max_length=500)
     niche: str = Field(..., min_length=1, max_length=200)
@@ -71,6 +75,7 @@ class CarouselProjectCreate(BaseModel):
                     self.image_model, self.image_style, sorted(SUPPORTED_IMAGE_COMBOS)
                 )
             )
+        self.check_content_mode()
         return self
 
 
@@ -105,7 +110,7 @@ class ResearchSourceResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
-class CarouselProjectResponse(BaseModel):
+class CarouselProjectResponse(ContentModeResponseFields):
     id: UUID
     topic: str
     audience: str
@@ -151,7 +156,7 @@ class CarouselProjectResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
 
-    model_config = {"from_attributes": True}
+    model_config = ConfigDict(from_attributes=True)
 
 
 class CarouselProjectListResponse(BaseModel):

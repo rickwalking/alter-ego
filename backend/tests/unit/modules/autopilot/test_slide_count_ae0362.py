@@ -26,6 +26,7 @@ from rag_backend.domain.constants.carousel import (
 from rag_backend.domain.constants.carousel_presentation import CANONICAL_SLIDE_COUNT
 from rag_backend.domain.constants.persona import VOICE_MATCH_MIN_SCORE
 from rag_backend.domain.constants.presentation_policy import (
+    CREATE_TIME_NEWS_PRESENTATION_POLICY_VERSION,
     CREATE_TIME_PRESENTATION_POLICY_VERSION,
     ERR_PRESENTATION_POLICY_NOT_FOUND,
 )
@@ -170,8 +171,10 @@ async def test_autopilot_project_uses_the_pipeline_default(
     """Scenario: The autopilot creates the project with the pipeline's 7 slides."""
     project = await _created_project(monkeypatch)
     assert project.slides_config == CAROUSEL_DEFAULT_SLIDES_CONFIG
+    # AE-0374: new Radar IA carousels are stamped hero_lower_third_v4 (7 slides
+    # by default, 8 with the optional twist).
     assert project.presentation_policy_version == (
-        CREATE_TIME_PRESENTATION_POLICY_VERSION
+        CREATE_TIME_NEWS_PRESENTATION_POLICY_VERSION
     )
     assert await _slide_total(monkeypatch, project) == _PIPELINE_SLIDES
 

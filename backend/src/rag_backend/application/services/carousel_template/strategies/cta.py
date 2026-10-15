@@ -5,13 +5,19 @@ from collections.abc import Mapping
 
 from typing_extensions import override
 
-from rag_backend.domain.constants import LANGUAGE_EN
+from rag_backend.application.services.carousel_template.cta_copy import (
+    cta_copy,
+    handle_with_at,
+)
+from rag_backend.application.services.carousel_template.slide_number import (
+    format_slide_counter,
+)
+from rag_backend.domain.constants.carousel_cta import DEFAULT_CTA_HANDLE
 from rag_backend.domain.models import CarouselProject
 from rag_backend.domain.protocols.carousel import _RenderOptions
 
 _SLIDE_TYPE_CTA = "cta"
 _DEFAULT_CREATOR_NAME = "Pedro Marins"
-_DEFAULT_CREATOR_HANDLE = "pedromarins.ai"
 _DEFAULT_CREATOR_AVATAR = "images/about-pedro.jpg"
 _CREATOR_WEBSITE = "marinssolutions.com"
 _LINK_ICON = (
@@ -46,20 +52,16 @@ class CtaCenteredStrategy:
             project.creator_name or _DEFAULT_CREATOR_NAME,
             quote=True,
         )
-        handle = project.creator_handle or _DEFAULT_CREATOR_HANDLE
-        avatar = _resolve_creator_avatar_src(project)
-        handle_text = handle if handle.startswith("@") else f"@{handle}"
-        handle_html = html.escape(handle_text, quote=True)
+        handle = project.creator_handle or DEFAULT_CTA_HANDLE
+        avatar = resolve_creator_avatar_src(project)
+        handle_html = html.escape(handle_with_at(handle), quote=True)
         avatar_url = html.escape(avatar, quote=True)
-        if language == LANGUAGE_EN:
-            cta_text = "Follow for more content like this"
-        else:
-            cta_text = "Siga para mais conteúdo como esse"
-        slide_number = str(slide.get("number", ""))
+        cta_text = html.escape(cta_copy(project.cta_goal, language, handle), quote=True)
+        counter = format_slide_counter(str(slide.get("number", "")), total_slides)
         return f"""\
   <div class="slide-content slide-closing">
     <div class="closing-card">
-      <div class="slide-number">0{slide_number} / {total_slides:02d}</div>
+      <div class="slide-number">{counter}</div>
       <div class="closing-avatar">
         <img src="{avatar_url}" alt="{name}" />
       </div>
@@ -71,7 +73,7 @@ class CtaCenteredStrategy:
   </div>"""
 
 
-def _resolve_creator_avatar_src(project: CarouselProject) -> str:
+def resolve_creator_avatar_src(project: CarouselProject) -> str:
     """Prefer staged managed creator asset over legacy avatar URLs."""
     if project.creator_asset_id is not None and project.creator_asset_staged_path:
         return project.creator_asset_staged_path
@@ -80,4 +82,4 @@ def _resolve_creator_avatar_src(project: CarouselProject) -> str:
     return _DEFAULT_CREATOR_AVATAR
 
 
-__all__ = ["CtaCenteredStrategy"]
+__all__ = ["CtaCenteredStrategy", "resolve_creator_avatar_src"]

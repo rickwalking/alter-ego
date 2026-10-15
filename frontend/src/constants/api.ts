@@ -53,6 +53,13 @@ export const API_ENDPOINTS = {
   CAROUSEL_REPUBLISH: (id: string) => `/api/carousels/${id}/republish`,
   CAROUSEL_STRATEGIES: "/api/carousels/strategies",
   CAROUSEL_STRATEGY_APPLY: (id: string) => `/api/carousels/${id}/strategy`,
+  /** AE-0375: the owner's slide-1 hook pick at the outline gate. */
+  CAROUSEL_HOOK: (id: string) => `/api/carousels/${id}/hook`,
+  /** AE-0376: the owner's photo library and the POV slide-1 photo. */
+  CREATOR_ASSETS: "/api/carousels/creator-assets",
+  CREATOR_ASSET_IMAGE: (id: string) =>
+    `/api/carousels/creator-assets/${id}/image`,
+  CAROUSEL_HOOK_PHOTO: (id: string) => `/api/carousels/${id}/hook-photo`,
   CAROUSEL_WORKFLOW_START: (id: string) =>
     `/api/carousels/${id}/workflow/start`,
   CAROUSEL_WORKFLOW_STATE: (id: string) =>
@@ -89,6 +96,7 @@ export const API_ENDPOINTS = {
   BLOG_POST_AI_DISCLOSURE: (id: string) =>
     `/api/blog-posts/${id}/ai-disclosure`,
   EDITORIAL_ANALYTICS: "/api/editorial-analytics",
+  INSTAGRAM_INSIGHTS: "/api/instagram/insights",
 } as const;
 
 /** Route paths for navigation. */

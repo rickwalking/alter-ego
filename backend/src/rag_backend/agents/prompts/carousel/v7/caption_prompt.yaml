@@ -1,0 +1,45 @@
+---
+name: carousel_caption
+version: "7.0.0"
+description: "Instagram caption, Radar IA: hook first, 3-5 hashtags, one CTA (AE-0372)"
+
+template: |
+  Escreva a legenda do Instagram para este carrossel, em português do Brasil.
+
+  Título: {{ title }}
+  Slides:
+  {% for num, heading in slide_headings %}
+  Slide {{ num }}: {{ heading }}
+  {% endfor %}
+
+  Objetivo do CTA: {{ cta_goal }}
+
+  Estrutura (nesta ordem):
+  1. Linha 1: repita o gancho do slide 1, sem emoji no começo.
+  2. 2 a 4 linhas curtas dizendo o que isso muda na prática para quem lê,
+     no ponto de vista de quem constrói com IA. Use só o que está nos slides.
+  3. Uma pergunta que convide a discordar ou a contar a própria experiência.
+  4. UMA única chamada para ação, de acordo com o objetivo:
+     - follow: pedir para seguir o perfil;
+     - send: pedir para mandar para alguém que precisa ver;
+     - comment: pedir a opinião nos comentários.
+     Nunca peça "salve" e "compartilhe" juntos. Nunca faça duas chamadas.
+  5. Uma linha com 2 ou 3 palavras-chave de busca em texto simples
+     (por exemplo: inteligência artificial, IA para programadores).
+  6. De 3 a 5 hashtags no total, a maioria em português
+     (#inteligenciaartificial #IA #programacao + 1 ou 2 do nicho).
+
+  Regras:
+  - Não invente números, resultados, testes ou experiências que não estão nos slides.
+  - No máximo 2 emojis na legenda inteira.
+  - Sem travessão (— ou –). Use ponto, vírgula, dois-pontos ou parênteses.
+  - Responda só com a legenda, sem comentários.
+
+model:
+  temperature: 0.7
+  max_tokens: 512
+
+metadata:
+  author: "content-team"
+  created_at: "2026-10-15"
+  tags: ["carousel", "caption", "instagram", "radar-ia", "growth-plan"]

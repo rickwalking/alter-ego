@@ -50,6 +50,8 @@ CAROUSEL_DEFAULT_LANGUAGE = "pt-BR"
 # Default slides config
 CAROUSEL_DEFAULT_SLIDES_CONFIG = "1 intro, 1 summary, 3 content, 1 closing, 1 cta"
 CAROUSEL_SLIDES_CONFIG_SEVEN = "7_slides"
+# AE-0374: the persisted deck size after drafting (``7_slides``, ``9_slides``).
+CAROUSEL_SLIDES_CONFIG_FORMAT = "{count}_slides"
 
 # Template versions
 TEMPLATE_VERSION_V1 = "v1"
@@ -63,6 +65,10 @@ CAROUSEL_PROMPT_VERSION_V5 = "v5"
 # AE-0366: v6 requires sentence case (proper nouns kept) and a body on every
 # non-CTA slide.
 CAROUSEL_PROMPT_VERSION_V6 = "v6"
+# AE-0372: v7 is the Radar IA generation of the growth plan (caption first:
+# hook on line 1, 3-5 hashtags, one CTA).
+CAROUSEL_PROMPT_VERSION_V7 = "v7"
+CAROUSEL_CAPTION_PROMPT_VERSION = CAROUSEL_PROMPT_VERSION_V7
 DEFAULT_TEMPLATE_VERSION = TEMPLATE_VERSION_V2
 DEFAULT_CAROUSEL_PROMPT_VERSION = "v2"
 
@@ -70,8 +76,8 @@ DEFAULT_CAROUSEL_PROMPT_VERSION = "v2"
 LANGUAGE_PT = "pt"
 LANGUAGE_EN = "en"
 
-# Swipe text
-SWIPE_TEXT_PT = "Swipe \u2192"
+# Swipe text (AE-0372: PT slides say "Deslize", not the English "Swipe")
+SWIPE_TEXT_PT = "Deslize \u2192"
 SWIPE_TEXT_EN = "Swipe \u2192"
 
 # Research source types
@@ -105,6 +111,10 @@ IMAGE_STYLE_NEO_ANIME = "neo_anime"
 # Flat editorial vector preset — the light/editorial counterpart, paired with
 # the light palettes (risograph, paper_editorial, clinical_mint).
 IMAGE_STYLE_FLAT_EDITORIAL = "flat_editorial"
+# AE-0376: "Foto + Editorial" for Ponto de Vista decks. Slide 1 is the owner's
+# photo (no generation) and only the point slides get a light flat-editorial
+# illustration (the contract's image_required), which also cuts image spend.
+IMAGE_STYLE_POV_EDITORIAL = "pov_editorial"
 
 VALID_IMAGE_STYLES: set[str] = {
     IMAGE_STYLE_COMIC_NEON,
@@ -112,6 +122,7 @@ VALID_IMAGE_STYLES: set[str] = {
     IMAGE_STYLE_HYPERREAL,
     IMAGE_STYLE_NEO_ANIME,
     IMAGE_STYLE_FLAT_EDITORIAL,
+    IMAGE_STYLE_POV_EDITORIAL,
 }
 
 # Default combo. OpenAI (not Gemini): prod has OPENAI_API_KEY but no GEMINI_API_KEY
@@ -119,7 +130,9 @@ VALID_IMAGE_STYLES: set[str] = {
 # supported combo below uses IMAGE_MODEL_OPENAI. The AE-0215 startup guard checks
 # the default; the AE-0308 creation guard checks every requested combo.
 IMAGE_MODEL_DEFAULT = IMAGE_MODEL_OPENAI
-IMAGE_STYLE_DEFAULT = IMAGE_STYLE_NEO_ANIME
+# AE-0372: flat editorial, aligned with the wizard and the autopilot, so not
+# every post looks like the same neon AI art (growth plan 16.4 #7).
+IMAGE_STYLE_DEFAULT = IMAGE_STYLE_FLAT_EDITORIAL
 
 # Export constants
 HD_SUBDIR_NAME = "hd"
@@ -146,6 +159,7 @@ SUPPORTED_IMAGE_COMBOS: set[tuple[str, str]] = {
     (IMAGE_MODEL_OPENAI, IMAGE_STYLE_HYPERREAL),
     (IMAGE_MODEL_OPENAI, IMAGE_STYLE_NEO_ANIME),
     (IMAGE_MODEL_OPENAI, IMAGE_STYLE_FLAT_EDITORIAL),
+    (IMAGE_MODEL_OPENAI, IMAGE_STYLE_POV_EDITORIAL),
 }
 
 __all__ = [
@@ -153,6 +167,7 @@ __all__ = [
     "BRAND_KEYWORDS",
     "BRAND_PALETTES",
     "CAROUSEL_ASPECT_RATIO",
+    "CAROUSEL_CAPTION_PROMPT_VERSION",
     "CAROUSEL_DEFAULT_LANGUAGE",
     "CAROUSEL_DEFAULT_SLIDES_CONFIG",
     "CAROUSEL_HEIGHT",
@@ -160,6 +175,7 @@ __all__ = [
     "CAROUSEL_PROMPT_VERSION_V4",
     "CAROUSEL_PROMPT_VERSION_V5",
     "CAROUSEL_PROMPT_VERSION_V6",
+    "CAROUSEL_SLIDES_CONFIG_FORMAT",
     "CAROUSEL_SLIDES_CONFIG_SEVEN",
     "CAROUSEL_STATUS_COMPLETED",
     "CAROUSEL_STATUS_DESIGNING",
@@ -188,6 +204,7 @@ __all__ = [
     "IMAGE_STYLE_FLAT_EDITORIAL",
     "IMAGE_STYLE_HYPERREAL",
     "IMAGE_STYLE_NEO_ANIME",
+    "IMAGE_STYLE_POV_EDITORIAL",
     "LANGUAGE_EN",
     "LANGUAGE_PT",
     "LIGHT_THEME_KEYS",

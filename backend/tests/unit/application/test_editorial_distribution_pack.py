@@ -21,7 +21,7 @@ from rag_backend.application.services.carousel.editorial_distribution_pack impor
     DistributionBuildContext,
     build_editorial_distribution_updates,
 )
-from rag_backend.domain.constants.carousel import CAROUSEL_SLIDES_CONFIG_SEVEN
+from rag_backend.domain.constants.carousel import CAROUSEL_SLIDES_CONFIG_FORMAT
 from rag_backend.domain.models import CarouselProject, CarouselStatus
 
 
@@ -147,5 +147,7 @@ async def test_build_editorial_distribution_updates_persists_fields() -> None:
 
     assert updates["caption"] == "Caption #tag"
     assert "Hook" in str(updates["blog_markdown"])
-    assert project.slides_config == CAROUSEL_SLIDES_CONFIG_SEVEN
+    # AE-0374: the persisted deck size is the real count (one outline slide),
+    # no longer a fixed "7_slides".
+    assert project.slides_config == CAROUSEL_SLIDES_CONFIG_FORMAT.format(count=1)
     mock_repo.update_project.assert_called()

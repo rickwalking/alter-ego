@@ -102,3 +102,21 @@ export interface StartWorkflowInput {
   sources: Array<{ title: string; content: string; source_type?: string }>;
   personaId?: string;
 }
+
+/** AE-0375: the owner's slide-1 hook for one carousel. */
+export interface SaveHookInput {
+  projectId: string;
+  hookText: string;
+}
+
+/** AE-0376: one photo upload to the creator library. */
+export interface UploadCreatorPhotoInput {
+  file: File;
+  role: string;
+}
+
+/** AE-0376: bind a library photo to slide 1 of a POV carousel. */
+export interface SetHookPhotoInput {
+  projectId: string;
+  assetId: string;
+}

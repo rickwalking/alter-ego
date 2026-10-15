@@ -20,6 +20,7 @@ from rag_backend.domain.constants.carousel_presentation import (
     VIOLATION_HEADING_NOT_SENTENCE_CASE_PT,
 )
 from rag_backend.domain.constants.presentation_policy import (
+    CREATE_TIME_NEWS_PRESENTATION_POLICY_VERSION,
     CREATE_TIME_PRESENTATION_POLICY_VERSION,
     DEFAULT_PRESENTATION_POLICY_VERSION,
     PRESENTATION_POLICY_VERSION_HERO_LOWER_THIRD_V3,
@@ -78,8 +79,9 @@ class TestCreateTimeStamping:
         )
 
         assert repo.captured is not None
+        # AE-0374: a new Radar IA carousel is stamped hero_lower_third_v4.
         assert repo.captured.presentation_policy_version == (
-            CREATE_TIME_PRESENTATION_POLICY_VERSION
+            CREATE_TIME_NEWS_PRESENTATION_POLICY_VERSION
         )
 
     def test_legacy_null_version_keeps_v1_semantics(self) -> None:

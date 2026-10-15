@@ -41,7 +41,7 @@ export function CreatePhaseReview({
     case EDITORIAL_PHASES.RESEARCH:
       return <ResearchPhaseReview state={state} />;
     case EDITORIAL_PHASES.OUTLINE:
-      return <OutlinePhaseReview state={state} />;
+      return <OutlinePhaseReview state={state} projectId={projectId} />;
     case EDITORIAL_PHASES.CONTENT:
       return (
         <div className="space-y-3">

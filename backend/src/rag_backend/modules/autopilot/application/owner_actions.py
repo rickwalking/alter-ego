@@ -35,6 +35,10 @@ from rag_backend.modules.autopilot.application.publish_choice import (
     PublishChoiceDeps,
     is_schedule_reply,
 )
+from rag_backend.modules.autopilot.application.thesis_actions import (
+    ThesisOwnerActions,
+    is_thesis_pending,
+)
 from rag_backend.modules.autopilot.domain.autofix import ContentAutofixer
 from rag_backend.modules.autopilot.domain.callback_parse import (
     ParsedCallback,
@@ -65,6 +69,7 @@ from rag_backend.modules.autopilot.domain.ports import (
     AutopilotRunRepository,
     CarouselPublishSource,
     Clock,
+    TopicCandidateRepository,
 )
 from rag_backend.modules.autopilot.domain.recovery import ReworkIntent, RunRecoveryStore
 from rag_backend.modules.autopilot.domain.webhook_update import WebhookUpdate, is_owner
@@ -125,9 +130,11 @@ class OwnerActionDeps:
     default_publish: str = PUBLISH_MODE_NOW
     # AE-0367: without it every "Fix issues" tap answers "Nothing to fix".
     autofix: ContentAutofixer | None = None
+    # AE-0377: the POV draft thesis lives on the topic candidate.
+    topics: TopicCandidateRepository | None = None
 
 
-class OwnerActionService:
+class OwnerActionService(ThesisOwnerActions):
     """Apply one claimed update. A second delivery of the same id does nothing."""
 
     def __init__(self, deps: OwnerActionDeps) -> None:
@@ -159,6 +166,8 @@ class OwnerActionService:
             await self._on_callback(update)
 
     async def _on_callback(self, update: WebhookUpdate) -> None:
+        if await self._thesis_callback(update):
+            return
         parsed = parse_callback(update.data)
         if parsed is None:
             await self._answer(update, ANSWER_UNKNOWN)
@@ -246,6 +255,9 @@ class OwnerActionService:
             return
         pending = await self._deps.pending.take(update.actor_id)
         if pending is None:
+            return
+        if is_thesis_pending(pending):
+            await self._thesis_reply(update, pending)
             return
         if is_schedule_reply(pending):
             await self._choice.on_time_text(update, pending)
