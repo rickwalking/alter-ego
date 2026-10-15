@@ -188,9 +188,17 @@ export const DEFAULT_PERSONA_NAME = "Pedro";
  * `strategy` is the layout preferred for the point slides. Labels live in
  * i18n under `create.pov.formats.<format>`.
  */
+export const POV_FORMATS = [
+  "opiniao",
+  "como_eu_faco",
+  "erros_e_mitos",
+  "comparacao",
+] as const;
+export type PovFormat = (typeof POV_FORMATS)[number];
+
 export interface PovTemplate {
   readonly icon: string;
-  readonly format: string;
+  readonly format: PovFormat;
   readonly strategy: string;
 }
 
