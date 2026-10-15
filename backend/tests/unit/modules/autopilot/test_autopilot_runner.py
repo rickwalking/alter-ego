@@ -70,6 +70,7 @@ from rag_backend.modules.editorial.public import (
     REVIEW_ACTION_APPROVE,
     REVIEW_ACTION_REVISE,
 )
+from tests.unit.modules.autopilot.project_inputs_fake import FakeProjectInputs
 
 _PROJECT = "11111111-1111-1111-1111-111111111111"
 _OWNER = "owner-1"
@@ -289,6 +290,7 @@ def _runner(
             notices=notices,
             recovery=_Recovery(runs=runs),
             owner_user_id=owner,
+            inputs=FakeProjectInputs(),
             notifier_configured=notifier_configured,
         )
     )

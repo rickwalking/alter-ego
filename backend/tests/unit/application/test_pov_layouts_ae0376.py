@@ -347,8 +347,8 @@ class TestTransparency:
 def test_export_rewrites_images_and_assets() -> None:
     """Scenario: Exported slides find staged assets."""
     html = (
-        '<img src="images/slide_1.jpg"/><img src=\'assets/creators/a.webp\'/>'
-        '<div style="background: url(\'images/x.jpg\')"></div>'
+        "<img src=\"images/slide_1.jpg\"/><img src='assets/creators/a.webp'/>"
+        "<div style=\"background: url('images/x.jpg')\"></div>"
         '<img src="https://cdn/x.png"/>'
     )
     out = rewrite_asset_paths(html, "../")
@@ -356,7 +356,9 @@ def test_export_rewrites_images_and_assets() -> None:
     assert "src='../assets/creators/a.webp'" in out
     assert "url('../images/x.jpg')" in out
     assert 'src="https://cdn/x.png"' in out
-    assert 'src="../../assets/' in rewrite_asset_paths('<img src="assets/a"/>', "../../")
+    assert 'src="../../assets/' in rewrite_asset_paths(
+        '<img src="assets/a"/>', "../../"
+    )
 
 
 @pytest.mark.unit

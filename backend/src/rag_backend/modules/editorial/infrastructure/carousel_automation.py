@@ -27,8 +27,11 @@ from rag_backend.application.services.carousel.presentation_policy_types import 
 from rag_backend.application.services.carousel.workflow_state import (
     CarouselWorkflowState,
 )
+from rag_backend.domain.constants.content_mode import CONTENT_MODE_POV
+from rag_backend.domain.models.persona import PersonaProfile
 from rag_backend.modules.editorial.domain.models import CarouselProject, CarouselSlide
 from rag_backend.modules.editorial.domain.ports import CarouselRepository
+from rag_backend.modules.editorial.infrastructure.pov_inputs import PovInputsAcl
 
 if TYPE_CHECKING:
     from rag_backend.application.services.carousel.editorial_workflow_service import (
@@ -55,6 +58,8 @@ class AutomationStart:
     brief: str
     sources: tuple[Mapping[str, str], ...]
     user_id: str
+    # PR #106 review: the persona that voices and scores the carousel.
+    persona_id: str | None = None
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -92,13 +97,16 @@ class CarouselReviewRow:
     image_style: str = ""
 
 
-def build_start_input(start: AutomationStart) -> EditorialWorkflowStartInput:
-    """Engine start input with no reviewer."""
+def build_start_input(
+    start: AutomationStart, persona: PersonaProfile | None = None
+) -> EditorialWorkflowStartInput:
+    """Engine start input with no reviewer, voiced by ``persona`` when given."""
     return EditorialWorkflowStartInput(
         topic=start.topic,
         audience=start.audience,
         brief=start.brief,
         sources=[dict(source) for source in start.sources],
+        persona=persona,
         user_id=start.user_id,
         reviewer_id=None,
     )
@@ -214,9 +222,20 @@ class CarouselAutomationAcl:
         return self._repo
 
     async def create_project(self, project: CarouselProject) -> str:
-        """Insert the project and return its id."""
+        """Insert the project, stage its slide-1 photo, and return its id."""
         created = await self._repo.create_project(project)
+        await PovInputsAcl(self._session).stage_hook_photo(created)
         return str(created.id)
+
+    async def start_input(self, start: AutomationStart) -> EditorialWorkflowStartInput:
+        """The engine start input with the start's persona loaded (PR #106)."""
+        persona = await PovInputsAcl(self._session).load_persona(start.persona_id)
+        return build_start_input(start, persona)
+
+    async def is_pov(self, project_id: str) -> bool:
+        """True for a "Ponto de Vista" carousel (voice must be scored)."""
+        project = await self.load_project(project_id)
+        return project is not None and project.content_mode == CONTENT_MODE_POV
 
     async def load_project(self, project_id: str) -> CarouselProject | None:
         """The carousel entity, or None when the id is unknown."""

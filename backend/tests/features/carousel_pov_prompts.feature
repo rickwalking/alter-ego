@@ -100,3 +100,16 @@ Feature: "Ponto de Vista" prompts, hook candidates and rubric (AE-0375, ADR-0021
     Given a Radar IA v4 deck with an 11-word hook and no first person
     When the deck is validated
     Then neither hook_word_limit nor first_person_missing is reported
+
+  # --- Persona context (PR #106 review, item 3) -------------------------------
+
+  Scenario: The POV outline carries the project's persona
+    Given a POV project voiced by persona "Pedro" with signature and forbidden phrases
+    When the outline prompt is rendered
+    Then it holds the persona's voice, its signature phrases and its forbidden phrases
+    And it says the persona shapes how the text sounds, never what the author lived
+
+  Scenario: A project without a persona gets an explicit empty context
+    Given a POV project with no persona
+    When the outline prompt is rendered
+    Then the persona context is the explicit empty NO_PERSONA_CONTEXT

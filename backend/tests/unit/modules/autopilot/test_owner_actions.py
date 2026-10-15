@@ -81,6 +81,7 @@ from rag_backend.modules.editorial.public import (
     REVIEW_ACTION_APPROVE,
     REVIEW_ACTION_REVISE,
 )
+from tests.unit.modules.autopilot.project_inputs_fake import FakeProjectInputs
 from tests.unit.modules.autopilot.test_autopilot_runner import _Recovery
 
 _OWNER = "42"
@@ -513,6 +514,7 @@ def _runner(world: _World, notices: _Notices) -> AutopilotRunner:
             notices=notices,
             recovery=_Recovery(runs=world.runs),
             owner_user_id="owner",
+            inputs=FakeProjectInputs(),
             notifier_configured=True,
         )
     )

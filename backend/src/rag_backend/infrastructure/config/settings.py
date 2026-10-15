@@ -207,6 +207,16 @@ class Settings(BaseSettings):
         ),
     )
 
+    # AE-0371 (PR #106 review): the persona that voices autopilot carousels.
+    # Empty: the persona named "Pedro" is used; none: POV runs escalate unscored.
+    autopilot_persona_id: str = Field(
+        default="",
+        validation_alias=AliasChoices(
+            "AUTOPILOT_PERSONA_ID",
+            "autopilot_persona_id",
+        ),
+    )
+
     carousel_public_base_url: str = ""
 
     cdn_base_url: str = ""

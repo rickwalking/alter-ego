@@ -27,7 +27,11 @@ from rag_backend.modules.autopilot.application.run_recovery import (
     RecoveryDependencies,
     RunRecovery,
 )
-from rag_backend.modules.autopilot.application.run_spec import project_spec
+from rag_backend.modules.autopilot.application.run_spec import (
+    project_spec,
+    spec_refusal,
+    with_inputs,
+)
 from rag_backend.modules.autopilot.constants import (
     GATE_FINAL_REVIEW,
     GATE_RESEARCH,
@@ -52,6 +56,7 @@ from rag_backend.modules.autopilot.domain.gate import (
     GateAction,
     OwnerReadyNotice,
     OwnerReadyNotifier,
+    ProjectInputs,
     ProjectSpec,
     RedriveCommand,
     ResumeCommand,
@@ -63,6 +68,7 @@ from rag_backend.modules.autopilot.domain.gate import (
 from rag_backend.modules.autopilot.domain.models import (
     AutopilotRun,
     AutopilotRunState,
+    TopicCandidate,
     TransitionCommand,
 )
 from rag_backend.modules.autopilot.domain.policy import decide
@@ -106,6 +112,8 @@ class RunnerDependencies:
     notices: OwnerReadyNotifier
     recovery: RunRecoveryStore
     owner_user_id: str
+    # PR #106 review: the persona and the POV slide-1 photo.
+    inputs: ProjectInputs
     notifier_configured: bool = True
     clock: Clock = field(default_factory=SystemClock)
     # AE-0367: the owner's queued "Fix issues" repair.
@@ -164,14 +172,19 @@ class AutopilotRunner:
         if not self._deps.owner_user_id.strip():
             await self._move(run, AutopilotRunState.FAILED, REASON_OWNER_UNCONFIGURED)
             return 1
-        if await self._needs_thesis(run):
+        topic = await self._deps.topics.get_topic(run.topic_candidate_id)
+        if topic is not None and needs_thesis(run, topic):
+            # AE-0377: a POV run waits for the owner's thesis before generating.
             await self._move(
                 run, AutopilotRunState.AWAITING_THESIS, REASON_THESIS_REQUESTED
             )
             return 1
-        spec = await self._spec(run)
-        if spec is None:
-            await self._move(run, AutopilotRunState.FAILED, REASON_TOPIC_MISSING)
+        spec = await self._spec(run, topic)
+        refusal = spec_refusal(spec)
+        if spec is None or refusal is not None:
+            # A missing topic, or a POV run with no slide-1 photo: no carousel.
+            failed = refusal or REASON_TOPIC_MISSING
+            await self._move(run, AutopilotRunState.FAILED, failed)
             return 1
         project_id = await self._project_id(run, spec)
         if project_id is None:
@@ -297,16 +310,13 @@ class AutopilotRunner:
             await self._escalate_at(step, REASON_ENGINE_PARKED)
         return 1
 
-    async def _spec(self, run: AutopilotRun) -> ProjectSpec | None:
-        topic = await self._deps.topics.get_topic(run.topic_candidate_id)
+    async def _spec(
+        self, run: AutopilotRun, topic: TopicCandidate | None
+    ) -> ProjectSpec | None:
         if topic is None:
             return None
-        return project_spec(run, topic, self._deps.owner_user_id)
-
-    async def _needs_thesis(self, run: AutopilotRun) -> bool:
-        """AE-0377: a POV run waits for the owner's thesis before generating."""
-        topic = await self._deps.topics.get_topic(run.topic_candidate_id)
-        return topic is not None and needs_thesis(run, topic)
+        spec = project_spec(run, topic, self._deps.owner_user_id)
+        return await with_inputs(spec, self._deps.inputs)
 
     async def _project_id(self, run: AutopilotRun, spec: ProjectSpec) -> str | None:
         if run.carousel_project_id is not None:

@@ -15,8 +15,8 @@ from rag_backend.modules.autopilot.domain.models import AutopilotRunState
 from rag_backend.modules.autopilot.schedule_constants import TEXT_PUBLISH_CHOICE
 from tests.unit.modules.autopilot.test_owner_actions import _tap
 from tests.unit.modules.autopilot.test_schedule_webhook_ae0370 import (
-    _handle,
     _PROJECT,
+    _handle,
     _local,
     _World,
     _world,

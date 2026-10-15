@@ -168,6 +168,7 @@ jobs:
             AUTOPILOT_OWNER_USER_ID=${{ secrets.AUTOPILOT_OWNER_USER_ID }}
             AUTOPILOT_DAILY_CAP=${{ secrets.AUTOPILOT_DAILY_CAP || '1' }}
             AUTOPILOT_DEFAULT_PUBLISH=${{ secrets.AUTOPILOT_DEFAULT_PUBLISH || 'now' }}
+            AUTOPILOT_PERSONA_ID=${{ secrets.AUTOPILOT_PERSONA_ID }}
             EOF
             # Defensive: the umask above already lands 600; keep an explicit
             # chmod so a future refactor that drops the umask still converges.

@@ -97,6 +97,7 @@ services:
       AUTOPILOT_OWNER_USER_ID: ${AUTOPILOT_OWNER_USER_ID:-}
       AUTOPILOT_DAILY_CAP: ${AUTOPILOT_DAILY_CAP:-1}
       AUTOPILOT_DEFAULT_PUBLISH: ${AUTOPILOT_DEFAULT_PUBLISH:-now}
+      AUTOPILOT_PERSONA_ID: ${AUTOPILOT_PERSONA_ID:-}
     depends_on:
       postgres:
         condition: service_healthy

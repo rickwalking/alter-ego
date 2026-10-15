@@ -45,8 +45,6 @@ from rag_backend.modules.autopilot.constants import (
     PHASE_STATUS_FAILED,
     PHASE_STATUS_IN_PROGRESS,
     REVIEWER_UNSET,
-    SOURCE_FIELD_TITLE,
-    SOURCE_FIELD_TYPE,
 )
 from rag_backend.modules.autopilot.domain.gate import (
     GateSnapshot,
@@ -72,11 +70,11 @@ from rag_backend.modules.autopilot.infrastructure.jpeg_size import jpeg_size
 from rag_backend.modules.autopilot.infrastructure.pov_project import (
     policy_version_for,
     pov_fields_for,
+    start_input_for,
 )
 from rag_backend.modules.autopilot.parked_constants import PARKED_GRACE_SECONDS
 from rag_backend.modules.editorial.public import (
     AutomationRun,
-    AutomationStart,
     CarouselAutomationAcl,
     CarouselProject,
     CarouselProjectWriteOwner,
@@ -84,12 +82,10 @@ from rag_backend.modules.editorial.public import (
     EditorialWorkflowEngine,
     EditorialWorkflowHandlers,
     LegacyCarouselAcl,
-    ResearchSourceType,
     RunHeartbeat,
     StartWorkflowCommand,
     WorkflowEngine,
     WorkflowStateView,
-    build_start_input,
     content_approve_blocker,
     is_provider_outage,
     redrive_automation_phase,
@@ -97,7 +93,6 @@ from rag_backend.modules.editorial.public import (
 )
 
 EngineFactory = Callable[[], EditorialWorkflowEngine]
-_CONTENT = "content"
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -125,7 +120,9 @@ class InProcessEditorialDriver:
         AE-0362: the pipeline's default 7-slide config, the count the editorial
         pipeline actually builds.
         AE-0377: a POV spec creates a "Ponto de Vista" carousel from the
-        owner-confirmed thesis (pov_hook_v1, 9 slides, opinion format, follow CTA).
+        owner-confirmed thesis (pov_hook_v1, follow CTA). PR #106 review: with
+        the scout's format and slide count, the slide-1 photo (staged by the
+        editorial ACL) and the autopilot persona.
         """
         project = CarouselProject(
             topic=spec.topic,
@@ -151,7 +148,7 @@ class InProcessEditorialDriver:
         engine = self._config.engine_factory()
         workflow = StartWorkflowCommand(
             project_id=command.project_id,
-            workflow_input=build_start_input(_start_input(command.spec)),
+            workflow_input=await self._acl.start_input(start_input_for(command.spec)),
         )
         try:
             with workflow_trace_scope(_trace_scope(command.project_id)):
@@ -192,6 +189,7 @@ class InProcessEditorialDriver:
                 parked=gate.parked,
                 parked_overdue=gate.parked_overdue,
                 hero_images_total=await self._acl.hero_image_total(project_id),
+                pov=await self._acl.is_pov(project_id),
             )
         )
 
@@ -293,29 +291,6 @@ def _handlers(session: AsyncSession) -> EditorialWorkflowHandlers:
 
 def _acl(session: AsyncSession) -> LegacyCarouselAcl:
     return LegacyCarouselAcl(session, CarouselProjectWriteOwner(session))
-
-
-def _start_input(spec: ProjectSpec) -> AutomationStart:
-    return AutomationStart(
-        topic=spec.topic,
-        audience=spec.audience,
-        brief=spec.brief,
-        sources=_source_rows(spec.sources),
-        user_id=spec.owner_user_id,
-    )
-
-
-def _source_rows(sources: tuple[str, ...]) -> tuple[dict[str, str], ...]:
-    kind = ResearchSourceType.DOCUMENTATION.value
-    return tuple(_source_row(url, kind) for url in sources)
-
-
-def _source_row(url: str, kind: str) -> dict[str, str]:
-    return {
-        SOURCE_FIELD_TITLE: url,
-        _CONTENT: url,
-        SOURCE_FIELD_TYPE: kind,
-    }
 
 
 def _state_of(view: WorkflowStateView | None) -> dict[str, object]:

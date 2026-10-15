@@ -19,12 +19,24 @@ RADAR_PROMPT_CONTENT = "content"
 OUTLINE_FIELD_HOOK_CANDIDATES = "hook_candidates"
 OUTLINE_FIELD_OUTLINE_CHECKS = "outline_checks"
 OUTLINE_CHECK_THESIS_EARLY = "thesis_early"
+# PR #106 review: the persona block of the POV outline (persona_pov/v1).
+PERSONA_POV_PROMPT_DOMAIN = "persona_pov"
+PERSONA_POV_PROMPT_CONTEXT = "context"
+PERSONA_POV_PROMPT_VERSION = "v1"
+# A project with no persona: the outline gets this explicit empty context.
+NO_PERSONA_CONTEXT = ""
+NO_PHRASES = "nenhuma"
 
 __all__ = [
     "HOOK_CANDIDATE_COUNT",
+    "NO_PERSONA_CONTEXT",
+    "NO_PHRASES",
     "OUTLINE_CHECK_THESIS_EARLY",
     "OUTLINE_FIELD_HOOK_CANDIDATES",
     "OUTLINE_FIELD_OUTLINE_CHECKS",
+    "PERSONA_POV_PROMPT_CONTEXT",
+    "PERSONA_POV_PROMPT_DOMAIN",
+    "PERSONA_POV_PROMPT_VERSION",
     "POV_PROMPT_CAPTION",
     "POV_PROMPT_CONTENT",
     "POV_PROMPT_DOMAIN",

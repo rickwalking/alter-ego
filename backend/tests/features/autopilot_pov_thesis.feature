@@ -133,3 +133,93 @@ Feature: Autopilot "Ponto de Vista" topics and the owner's thesis (AE-0377, ADR-
     When the owner taps Aprovar
     Then the publish-now / schedule choice is shown and nothing is scheduled
     And "Publicar agora" approves and releases the carousel immediately
+
+  # --- Persona and voice gate (PR #106 review, item 3) ------------------------
+
+  Scenario: The autopilot persona comes from AUTOPILOT_PERSONA_ID
+    Given AUTOPILOT_PERSONA_ID names an existing persona
+    When a queued run builds its carousel spec
+    Then the spec, the created carousel and the workflow start carry that persona
+
+  Scenario Outline: An empty or unknown AUTOPILOT_PERSONA_ID falls back to "Pedro"
+    Given AUTOPILOT_PERSONA_ID is <configured> and a persona named "pedro" exists
+    When the persona is resolved
+    Then the "pedro" persona is used
+
+    Examples:
+      | configured      |
+      | empty           |
+      | blank           |
+      | not-a-persona   |
+
+  Scenario: No persona at all is recorded, not invented
+    Given AUTOPILOT_PERSONA_ID is empty and no persona is named "Pedro"
+    When a Radar IA run starts
+    Then it starts with no persona and a "persona unresolved" warning is logged
+
+  Scenario: An unscored POV carousel escalates
+    Given a POV run at the content gate with no voice score
+    When the policy decides
+    Then the run escalates at once with reason "persona_not_scored"
+    And Telegram says "POV precisa da persona Pedro configurada"
+
+  Scenario: An unscored Radar IA carousel keeps AE-0364
+    Given a Radar IA run at the content gate with no voice score
+    When the policy decides
+    Then the content gate is approved
+
+  Scenario: A scored POV carousel follows the voice floor
+    Given a POV run at the content gate with a voice score below 70
+    When the policy decides
+    Then the content gate is revised for "persona_score_below_threshold"
+
+  # --- Slide-1 photo (PR #106 review, item 4) ---------------------------------
+
+  Scenario: The most recently used hook photo opens the POV deck
+    Given the owner has two hook photos and used the older one on a carousel
+    When a POV run creates its carousel
+    Then the older photo is bound and staged where the slides render
+
+  Scenario: Without a used photo the newest hook photo is picked
+    Given the owner has hook photos but none was used yet
+    When a POV run creates its carousel
+    Then the newest hook photo is bound (cta photos are ignored)
+
+  Scenario: An unreadable hook photo counts as missing
+    Given the newest hook photo's stored file is gone
+    When the slide-1 photo is chosen
+    Then the next readable photo is used, or none when no file is left
+
+  Scenario: No hook photo, no POV run
+    Given a confirmed POV run and an owner with no usable hook photo
+    When the runner ticks
+    Then no carousel is created and the run fails with reason "hook_photo_missing"
+    And Telegram asks the owner to upload a hook photo in the dashboard
+
+  # --- Scout POV format (PR #106 review, item 6) ------------------------------
+
+  Scenario: The scout chooses the format and the slide count of a POV topic
+    Given a scout v3 POV topic with pov_format "erros_e_mitos" and slide_count 8
+    When the intake accepts it and the run starts
+    Then the carousel is created with format "erros_e_mitos" and 8 slides
+
+  Scenario: Defaults apply only when the scout chose nothing
+    Given a scout v3 POV topic without pov_format and slide_count
+    When the run starts
+    Then the carousel uses DEFAULT_POV_FORMAT "opiniao" and 9 slides
+
+  Scenario: A Radar IA topic ignores a POV choice
+    Given a Radar IA topic that carries pov_format and slide_count
+    When the intake accepts it
+    Then neither is stored
+
+  Scenario Outline: An invalid POV choice rejects the batch
+    Given a scout v3 POV topic with <choice>
+    When the batch is posted
+    Then the API answers 422 and nothing is stored
+
+    Examples:
+      | choice                 |
+      | pov_format "listicle"  |
+      | slide_count 7          |
+      | slide_count 11         |

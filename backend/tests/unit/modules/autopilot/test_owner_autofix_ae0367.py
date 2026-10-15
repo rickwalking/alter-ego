@@ -68,6 +68,7 @@ from rag_backend.modules.autopilot.webhook_constants import (
     REASON_OWNER_AUTOFIX,
     TEXT_SUPERSEDED,
 )
+from tests.unit.modules.autopilot.project_inputs_fake import FakeProjectInputs
 from tests.unit.modules.autopilot.test_autopilot_runner import _Recovery
 from tests.unit.modules.autopilot.test_owner_actions import (
     _OWNER,
@@ -318,6 +319,7 @@ async def _tick(
             notices=notices,
             recovery=fix.recovery,
             owner_user_id="owner",
+            inputs=FakeProjectInputs(),
             autofix=fix.autofixer if autofix else None,
         )
     )
