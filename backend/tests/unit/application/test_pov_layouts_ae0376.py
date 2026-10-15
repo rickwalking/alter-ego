@@ -269,7 +269,7 @@ class TestArtwork:
     def test_pov_preset(self) -> None:
         assert ("openai", "pov_editorial") in SUPPORTED_IMAGE_COMBOS
         assert (
-            IMAGE_STRATEGY_REGISTRY[("openai", "pov_editorial")]
+            IMAGE_STRATEGY_REGISTRY["openai", "pov_editorial"]
             is OpenAIFlatEditorialStrategy
         )
         assert "pov_editorial" not in SCOUT_IMAGE_STYLES

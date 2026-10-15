@@ -7,6 +7,7 @@ checks of ``creator_assets.py`` (no new infrastructure import here).
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import Annotated
 from uuid import UUID
 
@@ -73,6 +74,40 @@ _RESPONSES: dict[int | str, dict[str, object]] = {
 }
 
 
+@dataclass(frozen=True)
+class _Library:
+    """The caller's context and the creator-asset service."""
+
+    context: CreatorAssetContext
+    service: CreatorAssetService
+
+
+def _library(
+    context: Annotated[CreatorAssetContext, Depends(get_creator_asset_context)],
+    service: Annotated[CreatorAssetService, Depends(get_creator_asset_service)],
+) -> _Library:
+    return _Library(context=context, service=service)
+
+
+@dataclass(frozen=True)
+class _PhotoForm:
+    """The multipart upload: the image, its role and an optional pose tag."""
+
+    file: UploadFile
+    role: str
+    pose_tag: str | None
+
+
+def _photo_form(
+    file: UploadFile,
+    role: Annotated[str, Form(pattern=CREATOR_ASSET_ROLE_PATTERN)],
+    pose_tag: Annotated[
+        str | None, Form(max_length=CREATOR_ASSET_POSE_TAG_MAX_CHARS)
+    ] = None,
+) -> _PhotoForm:
+    return _PhotoForm(file=file, role=role, pose_tag=(pose_tag or "").strip() or None)
+
+
 @router.get(_LIBRARY_PATH, responses=_RESPONSES)
 async def list_creator_assets(
     user: Annotated[User, Depends(require_authenticated_user)],
@@ -90,30 +125,25 @@ async def list_creator_assets(
 @limiter.limit(RATE_LIMIT_CAROUSEL_PUBLISH)
 async def upload_library_photo(
     request: Request,
-    file: UploadFile,
-    role: Annotated[str, Form(pattern=CREATOR_ASSET_ROLE_PATTERN)],
-    context: Annotated[CreatorAssetContext, Depends(get_creator_asset_context)],
-    service: Annotated[CreatorAssetService, Depends(get_creator_asset_service)],
-    pose_tag: Annotated[
-        str | None, Form(max_length=CREATOR_ASSET_POSE_TAG_MAX_CHARS)
-    ] = None,
+    form: Annotated[_PhotoForm, Depends(_photo_form)],
+    library: Annotated[_Library, Depends(_library)],
 ) -> CreatorAssetResponse:
     """Add a photo (PNG/WebP keep transparency, <=5 MB) to the caller's library."""
     del request
-    raw_bytes = await file.read()
+    raw_bytes = await form.file.read()
     if len(raw_bytes) > CREATOR_ASSET_MAX_BYTES:
         raise HTTPException(
             status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
             detail=ERR_CREATOR_ASSET_TOO_LARGE,
         )
     try:
-        asset = await service.upload_to_library(
+        asset = await library.service.upload_to_library(
             LibraryUploadCommand(
-                user=context.user,
+                user=library.context.user,
                 content=raw_bytes,
-                declared_mime=normalize_upload_mime(file.content_type),
-                role=role,
-                pose_tag=(pose_tag or "").strip() or None,
+                declared_mime=normalize_upload_mime(form.file.content_type),
+                role=form.role,
+                pose_tag=form.pose_tag,
             )
         )
     except CreatorAssetValidationError as error:
@@ -143,16 +173,16 @@ async def creator_asset_image(
 async def select_hook_photo(
     request: Request,
     body: CreatorAssetSelectRequest,
-    context: Annotated[CreatorAssetContext, Depends(get_creator_asset_context)],
-    service: Annotated[CreatorAssetService, Depends(get_creator_asset_service)],
+    library: Annotated[_Library, Depends(_library)],
 ) -> HookPhotoResponse:
     """Use one of the owner's photos on slide 1 of a POV carousel."""
-    project = await load_owned_project(context, UUID(request.path_params["project_id"]))
+    project_id = UUID(request.path_params["project_id"])
+    project = await load_owned_project(library.context, project_id)
     try:
-        updated = await service.select_hook_photo(
+        updated = await library.service.select_hook_photo(
             HookPhotoCommand(
                 project=project,
-                user=context.user,
+                user=library.context.user,
                 creator_asset_id=body.creator_asset_id,
                 output_root=default_output_root(project),
             )
