@@ -20,6 +20,8 @@ export const IMAGE_STYLES = {
   HYPERREAL: "hyperreal",
   NEO_ANIME: "neo_anime",
   FLAT_EDITORIAL: "flat_editorial",
+  // AE-0376: "Foto + Editorial" for Ponto de Vista decks.
+  POV_EDITORIAL: "pov_editorial",
 } as const;
 
 /**
@@ -59,6 +61,13 @@ export const IMAGE_PRESETS = [
     style: IMAGE_STYLES.FLAT_EDITORIAL,
     labelKey: "imagePresets.openai_flat_editorial",
   },
+  {
+    // AE-0376: slide 1 = your photo, only point slides get an illustration.
+    value: "openai__pov_editorial",
+    model: IMAGE_MODELS.OPENAI,
+    style: IMAGE_STYLES.POV_EDITORIAL,
+    labelKey: "imagePresets.openai_pov_editorial",
+  },
 ] as const;
 
 /** The light/editorial preset value — recommended for light themes. */
@@ -69,6 +78,16 @@ export const FLAT_EDITORIAL_PRESET = "openai__flat_editorial";
  * autopilot, so not every post looks like the same neon AI art.
  */
 export const DEFAULT_IMAGE_PRESET = FLAT_EDITORIAL_PRESET;
+
+/** AE-0376: the preset a Ponto de Vista deck switches to. */
+export const POV_EDITORIAL_PRESET = "openai__pov_editorial";
+
+/** AE-0376: creator photo library roles. */
+export const CREATOR_PHOTO_ROLES = {
+  HOOK: "hook",
+  CTA: "cta",
+  POV: "pov",
+} as const;
 
 /** Phase 5 per-slide image-generation lifecycle. */
 export const SLIDE_GENERATION_STATUS = {

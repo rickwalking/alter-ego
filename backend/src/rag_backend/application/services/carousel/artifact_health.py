@@ -19,6 +19,9 @@ from rag_backend.application.services.carousel.artifact_path_resolver import (
     resolve_and_reconcile_serving_paths,
     resolve_manifest_path,
 )
+from rag_backend.application.services.carousel.image_artwork import (
+    artwork_slide_numbers,
+)
 from rag_backend.application.services.carousel.image_validation import (
     is_valid_jpeg,
 )
@@ -26,7 +29,7 @@ from rag_backend.application.services.carousel.nodes.images import (
     IMAGE_SLIDE_TYPES,
     filter_image_slides,
 )
-from rag_backend.application.services.carousel.types import unpack_extras
+from rag_backend.application.services.carousel.types import SlideData, unpack_extras
 from rag_backend.domain.constants import (
     CAROUSEL_HEIGHT,
     CAROUSEL_WIDTH,
@@ -294,6 +297,12 @@ def _validate_hd_slide(
     return _validate_jpeg(JpegCheck(path, str(path), dimensions))
 
 
+def _needs_artwork(slide: SlideData, artwork: frozenset[int] | None) -> bool:
+    if artwork is not None:
+        return slide.slide_number in artwork
+    return slide.slide_type in IMAGE_SLIDE_TYPES
+
+
 def _validate_raw_images(
     request: CarouselArtifactHealthRequest,
     output_dir: Path,
@@ -301,13 +310,15 @@ def _validate_raw_images(
     if not request.project.generate_images:
         return []
     slide_data = [unpack_extras(slide) for slide in request.slides]
+    # AE-0376: a role contract illustrates only its image_required slides.
+    artwork = artwork_slide_numbers(request.project)
     errors = [
         _MISSING_IMAGE_PROMPT.format(slide.slide_number)
         for slide in slide_data
-        if slide.slide_type in IMAGE_SLIDE_TYPES and not slide.image_prompt
+        if _needs_artwork(slide, artwork) and not slide.image_prompt
     ]
     raw_slide_numbers = [
-        slide.slide_number for slide in filter_image_slides(slide_data)
+        slide.slide_number for slide in filter_image_slides(slide_data, artwork)
     ]
     for slide_number in raw_slide_numbers:
         path = output_dir / SHARED_IMAGES_DIR_NAME / _slide_filename(slide_number)

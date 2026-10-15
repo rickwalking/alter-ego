@@ -1,7 +1,12 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { CONTENT_MODES, type ContentMode } from "@/constants/create";
+import {
+  CONTENT_MODES,
+  DEFAULT_IMAGE_PRESET,
+  POV_EDITORIAL_PRESET,
+  type ContentMode,
+} from "@/constants/create";
 import {
   BG_CARD,
   NEON_CYAN,
@@ -22,6 +27,13 @@ export interface CreateModeSectionProps {
   form: CreateCarouselFormState;
   onChange: (patch: Partial<CreateCarouselFormState>) => void;
   personas: readonly PersonaOption[];
+}
+
+/** AE-0376: POV decks switch to the "Foto + Editorial" preset, Radar IA back. */
+function modePatch(mode: ContentMode): Partial<CreateCarouselFormState> {
+  const imagePreset =
+    mode === CONTENT_MODES.POV ? POV_EDITORIAL_PRESET : DEFAULT_IMAGE_PRESET;
+  return { contentMode: mode, selectedTemplate: 0, imagePreset };
 }
 
 const MODE_KEYS: Record<ContentMode, string> = {
@@ -59,9 +71,7 @@ export function CreateModeSection({
               type="button"
               role="radio"
               aria-checked={selected}
-              onClick={() =>
-                onChange({ contentMode: mode, selectedTemplate: 0 })
-              }
+              onClick={() => onChange(modePatch(mode))}
               style={{
                 background: selected ? NEON_CYAN_DIM : BG_CARD,
                 border: selected

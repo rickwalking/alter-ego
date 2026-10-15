@@ -173,19 +173,28 @@ def expected_slide_total(project: CarouselProject) -> int:
         return slides_in_config(project.slides_config)
 
 
-def hero_image_total(slides: Sequence[CarouselSlide]) -> int:
+def hero_image_total(
+    slides: Sequence[CarouselSlide], project: CarouselProject | None = None
+) -> int:
     """Hero images the image phase generates for ``slides`` (AE-0365).
 
     The image phase only illustrates the slide types in ``IMAGE_SLIDE_TYPES``
     that carry an image prompt (``filter_image_slides``). The CTA slide uses
     the owner avatar instead, so a 7-slide carousel has 6 hero images.
+    AE-0376: a role contract counts only its ``image_required`` slides (POV:
+    the point slides), the same rule the image phase applies.
     """
+    from rag_backend.application.services.carousel.image_artwork import (
+        artwork_slide_numbers,
+    )
     from rag_backend.application.services.carousel.nodes.images import (
         filter_image_slides,
     )
     from rag_backend.application.services.carousel.types import unpack_extras
 
-    return len(filter_image_slides([unpack_extras(slide) for slide in slides]))
+    artwork = artwork_slide_numbers(project) if project is not None else None
+    data = [unpack_extras(slide) for slide in slides]
+    return len(filter_image_slides(data, artwork))
 
 
 class CarouselAutomationAcl:
@@ -228,7 +237,9 @@ class CarouselAutomationAcl:
         project = await self.load_project(project_id)
         if project is None:
             return 0
-        return hero_image_total(await self._repo.get_slides_by_project(project.id))
+        return hero_image_total(
+            await self._repo.get_slides_by_project(project.id), project
+        )
 
     async def heartbeat(self, project_id: str) -> RunHeartbeat | None:
         """Phase status and run heartbeat, or None when the row is missing."""

@@ -13,6 +13,8 @@ import { CreateSidebar } from "@/app/dashboard/create/create-sidebar";
 import { CreateModeSection } from "@/app/dashboard/create/workspace/create-mode-section";
 import { CreatePovSection } from "@/app/dashboard/create/workspace/create-pov-section";
 import { useDefaultPersona } from "@/app/dashboard/create/use-default-persona";
+import { CreatePhotoSection } from "@/app/dashboard/create/workspace/create-photo-section";
+import { usePovPhoto } from "@/app/dashboard/create/use-pov-photo";
 import { CreateProgressSteps } from "@/app/dashboard/create/create-progress-steps";
 import { CREATE_STEP_IDS } from "@/app/dashboard/create/step-ids";
 import { buildCarouselCreateRequest } from "@/app/dashboard/create/helpers";
@@ -56,12 +58,20 @@ export default function CreateCarouselPage(): React.ReactElement {
     [handleChange],
   );
   useDefaultPersona(personas, selectPersona);
+  const selectPhoto = useCallback(
+    (hookAssetId: string) => handleChange({ hookAssetId }),
+    [handleChange],
+  );
+  const povPhoto = usePovPhoto(form.hookAssetId, selectPhoto);
 
   const handleSubmit = async (): Promise<void> => {
     setError(null);
     try {
       const payload = buildCarouselCreateRequest(form);
       const project = await createCarousel.mutateAsync(payload);
+      if (isPovForm(form)) {
+        await povPhoto.attachTo(project.id);
+      }
       router.push(DASHBOARD_ROUTES.CREATE_WORKSPACE(project.id));
     } catch (err) {
       setError(
@@ -96,6 +106,7 @@ export default function CreateCarouselPage(): React.ReactElement {
             {isPovForm(form) && (
               <CreatePovSection form={form} onChange={handleChange} />
             )}
+            {isPovForm(form) && <CreatePhotoSection {...povPhoto.section} />}
             <CreateTemplateSection form={form} onChange={handleChange} />
             <CreateThemeSection
               form={form}

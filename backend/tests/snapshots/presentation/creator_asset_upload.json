@@ -6,7 +6,9 @@
     "id": "<uuid>",
     "media_type": "image/webp",
     "owner_id": "<uuid>",
+    "pose_tag": null,
     "relative_path": "<derived-path>",
+    "role": null,
     "staged_relative_path": "<derived-path>",
     "updated_at": "<timestamp>",
     "width": 256

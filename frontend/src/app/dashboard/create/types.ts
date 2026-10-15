@@ -29,6 +29,8 @@ export interface CreateCarouselFormState {
   ctaGoal: CtaGoal;
   /** Persona id, or "" for none. */
   personaId: string;
+  /** AE-0376: POV slide-1 photo (creator asset id), or "" for none. */
+  hookAssetId: string;
 }
 
 export const INITIAL_CREATE_FORM_STATE: CreateCarouselFormState = {
@@ -45,6 +47,7 @@ export const INITIAL_CREATE_FORM_STATE: CreateCarouselFormState = {
   slideCount: POV_SLIDE_COUNT_DEFAULT,
   ctaGoal: DEFAULT_CTA_GOAL,
   personaId: "",
+  hookAssetId: "",
 };
 
 /** True in POV mode: the wizard shows the POV inputs and formats. */

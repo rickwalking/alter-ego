@@ -46,6 +46,8 @@ IMAGE_PRESET_DISPLAY: dict[tuple[str, str], str] = {
     ("openai", "cinematic"): "OpenAI Cinematic Photoreal",
     ("openai", "hyperreal"): "OpenAI Hyperreal Graphic Novel",
     ("openai", "neo_anime"): "OpenAI Neo-Anime",
+    ("openai", "flat_editorial"): "OpenAI Flat Editorial",
+    ("openai", "pov_editorial"): "OpenAI Foto + Editorial (POV)",
 }
 
 

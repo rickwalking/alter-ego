@@ -7,7 +7,11 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from rag_backend.domain.models.carousel_creator_asset import CarouselCreatorAsset
+from rag_backend.domain.models.carousel_creator_asset import (
+    CarouselCreatorAsset,
+    CreatorAssetLibraryQuery,
+    CreatorAssetTags,
+)
 from rag_backend.infrastructure.database.models.carousel_creator_asset import (
     CarouselCreatorAssetModel,
 )
@@ -44,6 +48,34 @@ class PostgresCreatorAssetRepository:
         model = CarouselCreatorAssetModel.from_entity(asset)
         self._session.add(model)
         await self._session.flush()
+        return await self._save(model)
+
+    async def _save(self, model: CarouselCreatorAssetModel) -> CarouselCreatorAsset:
+        """The single commit point of this adapter (create and tag updates)."""
         await self._session.commit()
         await self._session.refresh(model)
         return model.to_entity()
+
+    async def list_for_owner(
+        self, query: CreatorAssetLibraryQuery
+    ) -> list[CarouselCreatorAsset]:
+        """AE-0376: the owner's photo library, newest first, optionally by role."""
+        stmt = select(CarouselCreatorAssetModel).where(
+            CarouselCreatorAssetModel.owner_id == query.owner_id
+        )
+        if query.role is not None:
+            stmt = stmt.where(CarouselCreatorAssetModel.role == query.role)
+        stmt = stmt.order_by(CarouselCreatorAssetModel.created_at.desc()).limit(
+            query.limit
+        )
+        result = await self._session.execute(stmt)
+        return [model.to_entity() for model in result.scalars().all()]
+
+    async def set_tags(self, tags: CreatorAssetTags) -> CarouselCreatorAsset | None:
+        """AE-0376: set an asset's library role and pose tag."""
+        model = await self._session.get(CarouselCreatorAssetModel, str(tags.asset_id))
+        if model is None:
+            return None
+        model.role = tags.role
+        model.pose_tag = tags.pose_tag
+        return await self._save(model)

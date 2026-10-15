@@ -40,6 +40,24 @@ describe("CreateModeSection", () => {
     expect(onChange).toHaveBeenCalledWith({
       contentMode: "pov",
       selectedTemplate: 0,
+      imagePreset: "openai__pov_editorial",
+    });
+  });
+
+  it("switches back to Radar IA with the default preset (AE-0376)", () => {
+    const onChange = vi.fn();
+    render(
+      <CreateModeSection
+        form={POV_FORM}
+        onChange={onChange}
+        personas={PERSONAS}
+      />,
+    );
+    fireEvent.click(screen.getByRole("radio", { name: /Radar IA/ }));
+    expect(onChange).toHaveBeenCalledWith({
+      contentMode: "news_analysis",
+      selectedTemplate: 0,
+      imagePreset: "openai__flat_editorial",
     });
   });
 

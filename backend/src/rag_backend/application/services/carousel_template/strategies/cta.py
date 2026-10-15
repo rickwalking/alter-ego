@@ -12,10 +12,7 @@ from rag_backend.application.services.carousel_template.cta_copy import (
 from rag_backend.application.services.carousel_template.slide_number import (
     format_slide_counter,
 )
-from rag_backend.domain.constants.carousel_cta import (
-    DEFAULT_CTA_GOAL,
-    DEFAULT_CTA_HANDLE,
-)
+from rag_backend.domain.constants.carousel_cta import DEFAULT_CTA_HANDLE
 from rag_backend.domain.models import CarouselProject
 from rag_backend.domain.protocols.carousel import _RenderOptions
 
@@ -56,10 +53,10 @@ class CtaCenteredStrategy:
             quote=True,
         )
         handle = project.creator_handle or DEFAULT_CTA_HANDLE
-        avatar = _resolve_creator_avatar_src(project)
+        avatar = resolve_creator_avatar_src(project)
         handle_html = html.escape(handle_with_at(handle), quote=True)
         avatar_url = html.escape(avatar, quote=True)
-        cta_text = html.escape(cta_copy(DEFAULT_CTA_GOAL, language, handle), quote=True)
+        cta_text = html.escape(cta_copy(project.cta_goal, language, handle), quote=True)
         counter = format_slide_counter(str(slide.get("number", "")), total_slides)
         return f"""\
   <div class="slide-content slide-closing">
@@ -76,7 +73,7 @@ class CtaCenteredStrategy:
   </div>"""
 
 
-def _resolve_creator_avatar_src(project: CarouselProject) -> str:
+def resolve_creator_avatar_src(project: CarouselProject) -> str:
     """Prefer staged managed creator asset over legacy avatar URLs."""
     if project.creator_asset_id is not None and project.creator_asset_staged_path:
         return project.creator_asset_staged_path
@@ -85,4 +82,4 @@ def _resolve_creator_avatar_src(project: CarouselProject) -> str:
     return _DEFAULT_CREATOR_AVATAR
 
 
-__all__ = ["CtaCenteredStrategy"]
+__all__ = ["CtaCenteredStrategy", "resolve_creator_avatar_src"]

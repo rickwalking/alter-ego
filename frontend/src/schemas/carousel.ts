@@ -143,6 +143,7 @@ export const SUPPORTED_IMAGE_COMBOS: ReadonlyArray<readonly [string, string]> =
     ["openai", "hyperreal"],
     ["openai", "neo_anime"],
     ["openai", "flat_editorial"],
+    ["openai", "pov_editorial"],
   ];
 
 export const carouselCreateRequestSchema = z
@@ -161,6 +162,7 @@ export const carouselCreateRequestSchema = z
         "hyperreal",
         "neo_anime",
         "flat_editorial",
+        "pov_editorial",
       ])
       // AE-0372: flat editorial is the default everywhere.
       .default("flat_editorial"),

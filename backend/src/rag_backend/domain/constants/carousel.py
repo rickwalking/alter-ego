@@ -111,6 +111,10 @@ IMAGE_STYLE_NEO_ANIME = "neo_anime"
 # Flat editorial vector preset — the light/editorial counterpart, paired with
 # the light palettes (risograph, paper_editorial, clinical_mint).
 IMAGE_STYLE_FLAT_EDITORIAL = "flat_editorial"
+# AE-0376: "Foto + Editorial" for Ponto de Vista decks. Slide 1 is the owner's
+# photo (no generation) and only the point slides get a light flat-editorial
+# illustration (the contract's image_required), which also cuts image spend.
+IMAGE_STYLE_POV_EDITORIAL = "pov_editorial"
 
 VALID_IMAGE_STYLES: set[str] = {
     IMAGE_STYLE_COMIC_NEON,
@@ -118,6 +122,7 @@ VALID_IMAGE_STYLES: set[str] = {
     IMAGE_STYLE_HYPERREAL,
     IMAGE_STYLE_NEO_ANIME,
     IMAGE_STYLE_FLAT_EDITORIAL,
+    IMAGE_STYLE_POV_EDITORIAL,
 }
 
 # Default combo. OpenAI (not Gemini): prod has OPENAI_API_KEY but no GEMINI_API_KEY
@@ -154,6 +159,7 @@ SUPPORTED_IMAGE_COMBOS: set[tuple[str, str]] = {
     (IMAGE_MODEL_OPENAI, IMAGE_STYLE_HYPERREAL),
     (IMAGE_MODEL_OPENAI, IMAGE_STYLE_NEO_ANIME),
     (IMAGE_MODEL_OPENAI, IMAGE_STYLE_FLAT_EDITORIAL),
+    (IMAGE_MODEL_OPENAI, IMAGE_STYLE_POV_EDITORIAL),
 }
 
 __all__ = [
@@ -198,6 +204,7 @@ __all__ = [
     "IMAGE_STYLE_FLAT_EDITORIAL",
     "IMAGE_STYLE_HYPERREAL",
     "IMAGE_STYLE_NEO_ANIME",
+    "IMAGE_STYLE_POV_EDITORIAL",
     "LANGUAGE_EN",
     "LANGUAGE_PT",
     "LIGHT_THEME_KEYS",

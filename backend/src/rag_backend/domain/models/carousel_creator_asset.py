@@ -21,3 +21,21 @@ class CarouselCreatorAsset:
     pose_tag: str | None = None
     created_at: datetime = field(default_factory=datetime.utcnow)
     updated_at: datetime = field(default_factory=datetime.utcnow)
+
+
+@dataclass(frozen=True)
+class CreatorAssetLibraryQuery:
+    """AE-0376: list an owner's photo library, optionally by role."""
+
+    owner_id: str
+    role: str | None = None
+    limit: int = 100
+
+
+@dataclass(frozen=True)
+class CreatorAssetTags:
+    """AE-0376: an asset's library role (hook / cta / pov) and pose tag."""
+
+    asset_id: UUID
+    role: str | None = None
+    pose_tag: str | None = None

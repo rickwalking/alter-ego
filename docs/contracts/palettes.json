@@ -21,6 +21,10 @@
     {
       "model": "openai",
       "style": "neo_anime"
+    },
+    {
+      "model": "openai",
+      "style": "pov_editorial"
     }
   ],
   "light_theme_keys": [
