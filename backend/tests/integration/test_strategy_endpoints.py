@@ -52,10 +52,12 @@ class TestStrategyListEndpoint:
             assert "name" in strategy
             assert "display_name" in strategy
 
-    async def test_list_returns_eight_strategies(self, client: AsyncClient):
+    async def test_list_returns_twelve_strategies(self, client: AsyncClient):
+        """The eight base layouts plus the four POV layouts (AE-0376)."""
         response = await client.get("/api/carousels/strategies")
-        data = response.json()
-        assert len(data["strategies"]) == 8
+        names = {s["name"] for s in response.json()["strategies"]}
+        assert len(names) == 12
+        assert {"hook_face", "statement", "save_checklist", "cta_follow"} <= names
 
 
 @pytest.mark.integration
