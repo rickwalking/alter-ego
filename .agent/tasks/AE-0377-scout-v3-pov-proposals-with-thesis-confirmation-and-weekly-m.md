@@ -27,7 +27,7 @@ The scout only ranks "highest viral potential" news; the autopilot can only make
 - Intake accepts `mode`/`thesis_draft`; migration on `topic_candidates` and `autopilot_runs`.
 - Run state `awaiting_thesis` + Telegram confirm/edit/discard; confirmed thesis copied to the project; expiry after 72 h.
 - Weekly cap: ≤1 Radar IA run per São Paulo ISO week.
-- `PublishSlotPolicy` port + `PovPublishSlots` (Tue/Thu 12:00 BRT) — not wired.
+- `PovPublishSlots` (Tue/Thu 12:00 BRT) + `publish_slots_for`, wired into AE-0370's publish choice (next_slot mode and the Agendar menu).
 
 ## Non-Goals
 
@@ -82,7 +82,7 @@ Feature: Autopilot POV thesis
 - Intake accepts `mode`/`thesis_draft`; migration on `topic_candidates` and `autopilot_runs`.
 - Run state `awaiting_thesis` + Telegram confirm/edit/discard; confirmed thesis copied to the project; expiry after 72 h.
 - Weekly cap: ≤1 Radar IA run per São Paulo ISO week.
-- `PublishSlotPolicy` port + `PovPublishSlots` (Tue/Thu 12:00 BRT) — not wired.
+- `PovPublishSlots` (Tue/Thu 12:00 BRT) + `publish_slots_for`, wired into AE-0370's publish choice (next_slot mode and the Agendar menu).
 
 ### MODIFIED
 

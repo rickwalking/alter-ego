@@ -453,8 +453,11 @@ The run then starts a POV carousel: `content_mode=pov`, the confirmed thesis, th
 `pov_editorial` image preset and the POV defaults. No photo is picked automatically (follow-up).
 
 **Publish slots.** `domain/pov_schedule.py` defines the POV slots (Tuesday and Thursday 12:00
-São Paulo) and `slot_policy_for(mode)`. It is not wired into the publish choice yet: that
-belongs to AE-0370's `publish_choice`.
+São Paulo) and `publish_slots_for(run, now)`, which AE-0370's `publish_choice` calls (section 5.5).
+A run with a confirmed `pov_thesis` is a POV run: with `AUTOPILOT_DEFAULT_PUBLISH=next_slot`,
+Approve schedules it for the next Tuesday or Thursday 12:00 (at least 15 min ahead), and the
+`🗓 Agendar` menu lists that slot first, then AE-0370's next default slots (three buttons in total).
+Radar IA runs keep AE-0370's slots unchanged.
 
 **Migration.** Revision `b1c2d3e4f5a6` (after `b0c1d2e3f4a5`, which follows AE-0370's `a9b0c1d2e3f4`) adds the nullable
 `topic_candidates.content_mode`, `topic_candidates.thesis_draft` and `autopilot_runs.pov_thesis`

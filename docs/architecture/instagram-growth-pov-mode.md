@@ -108,11 +108,9 @@ All columns are nullable; no existing column changes; `NULL` means Radar IA.
 Prod deploys run neither Alembic nor `create_all` for these columns, so the exact SQL for each
 migration is recorded in `.agent/reports/AE-0371.dev-summary.md` for the orchestrator to apply
 by hand; that SQL uses `ADD COLUMN IF NOT EXISTS` / `CREATE TABLE IF NOT EXISTS` so it is
-safe to re-apply. **Alembic head:** AE-0370 adds `a9b0c1d2e3f4` on top of `f8a9b0c1d2e3` on
-its own branch. This branch chains from `f8a9b0c1d2e3` too. Merge order is fixed: AE-0370
-first; this branch then merges `main` and re-points its first (never-merged) migration onto
-AE-0370's head before its own PR merges, and the `migrations` gate checks a single head on the
-merged tree. A migration that reached `main` is never edited (skeptical review #1).
+safe to re-apply. **Alembic head:** AE-0370 adds `a9b0c1d2e3f4` on top of `f8a9b0c1d2e3`. This branch merged
+AE-0370 and re-pointed its first (never-merged) migration `b0c1d2e3f4a5` onto `a9b0c1d2e3f4`, so
+the chain is linear and `c2d3e4f5a6b7` is the single head. A migration that reached `main` is never edited (skeptical review #1).
 
 ### D4. Where the mode is read: from the project row, at generation time
 
@@ -213,11 +211,12 @@ Radar IA's `cta_centered` switches to the follow variant (16.4 #5).
   daily cap, an extra Radar IA topic is stored but not queued and is listed with
   `weekly_news_cap_reached` (a duplicate stays a `duplicate_topic`); within one batch only the
   best-scored Radar IA topic is queued. POV is bounded only by the daily cap.
-- R6 (Tue/Thu scheduling) is **owned by AE-0370**. This epic adds only an isolated
-  `PublishSlotPolicy` port plus `PovPublishSlots` (next Tue/Thu 12:00 America/Sao_Paulo, ≥15 min
-  lead, same rules as AE-0370's `next_slots`) and the slot constants. It is not wired into
-  AE-0370's `publish_choice.py` here; follow-up AE ticket wires `next_slot` to
-  `slot_policy_for(content_mode)` after AE-0370 merges.
+- R6 (Tue/Thu scheduling) is **owned by AE-0370**. This epic adds only the POV glue in
+  `domain/pov_schedule.py`: `PovPublishSlots` (next Tue/Thu 12:00 America/Sao_Paulo, ≥15 min
+  lead, same rules as AE-0370's `next_slots`), the slot constants, and `publish_slots_for(run,
+  now)`, which AE-0370's `publish_choice.py` calls after the merge. A run with a confirmed
+  `pov_thesis` is POV: `AUTOPILOT_DEFAULT_PUBLISH=next_slot` schedules it for the POV slot, and
+  the `🗓 Agendar` menu lists the POV slot first. Radar IA keeps AE-0370's slots.
 
 ### D11. Measurement (R8)
 
@@ -263,7 +262,7 @@ a test.
 | AE-0374 | R3 | `pov_hook_v1.yaml`, `hero_lower_third_v4.yaml`, loader ranges + roles, `expand_policy_for_count`, `MAX_SLIDES` 10, role-aware normalizer, outline-length check, autopilot gate range |
 | AE-0375 | R4 | `carousel_pov/v1/*`, hook candidate step, `PUT …/hook`, POV routing in outline/content/caption, new rubric validators, outline review hook picker |
 | AE-0376 | R5 | four strategies + CSS, role-based strategy selection, photo roles + list + wizard picker, `pov_editorial` preset, policy-aware images node, Radar IA `carousel/v7` outline/content + v4 stamping |
-| AE-0377 | R7 (+R6 glue) | scout v3, intake `mode`/`thesis_draft`, `awaiting_thesis` + Telegram confirm/edit/discard, weekly news cap, POV slot policy (unwired) |
+| AE-0377 | R7 (+R6 glue) | scout v3, intake `mode`/`thesis_draft`, `awaiting_thesis` + Telegram confirm/edit/discard, weekly news cap, POV slots wired into AE-0370's publish choice |
 | AE-0378 | R8 | insights gateway + table + route, dashboard KPI card, analytics flag-off state |
 
 R0 (owner actions, no code) and R6 (AE-0370) are not tickets of this epic.

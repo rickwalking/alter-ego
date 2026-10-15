@@ -29,7 +29,7 @@ The account is flat (336 followers, ~0.9 shares and ~0.1 saves per carousel). AI
 ## Non-Goals
 
 - R0 owner actions (UI only, listed below).
-- R6 scheduler: owned by AE-0370 (`fix/ae-0370-scheduled-publish`). This epic adds only the POV slot glue behind an interface (AE-0377).
+- R6 scheduler: owned by AE-0370 (`fix/ae-0370-scheduled-publish`). This epic adds only the POV slot glue (AE-0377), wired into AE-0370's publish choice after merging it.
 - Reels / video, paid tools, boosting.
 - Inventing opinions, experiences, test results or numbers in prompts or fixtures.
 
@@ -178,6 +178,12 @@ Pending.
   `PovPublishSlots` ship isolated, wiring is a follow-up after AE-0370 merges.
 - 2026-10-15 — **Migrations chain from `f8a9b0c1d2e3`**; re-point onto AE-0370's head when
   merging `main` after AE-0370 lands. Prod SQL is idempotent (`IF NOT EXISTS`).
+- 2026-10-15 — **AE-0370 merged into this branch** (orchestrator, before PR 105 lands):
+  `b0c1d2e3f4a5` now revises `a9b0c1d2e3f4`, one head `c2d3e4f5a6b7`. The R6 glue is wired:
+  `publish_choice` asks `publish_slots_for(run, now)`; the `PublishSlotPolicy` Protocol stub
+  was removed. A run is POV when it has a confirmed `pov_thesis` (the only POV marker on the
+  run; POV runs cannot reach review without one). In `next_slot` mode a POV run is scheduled
+  for the next Tue/Thu 12:00; the Agendar menu shows that slot first, then AE-0370's next two.
 - 2026-10-15 — **Skeptical review** (gemini-2.5-pro, blind): BLOCK → resolved; see
   `.agent/reports/AE-0371.skeptical-review.md` (roles stamped by position, rollback documented,
   merge order fixed, POV inputs create-only).

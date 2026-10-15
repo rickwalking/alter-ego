@@ -96,3 +96,21 @@ Feature: Autopilot "Ponto de Vista" topics and the owner's thesis (AE-0377, ADR-
       | Tuesday 11:50        | Thursday 12:00       |
       | Thursday 12:00       | next Tuesday 12:00   |
       | Saturday 09:00       | next Tuesday 12:00   |
+
+  # --- POV slots wired into AE-0370's publish choice (R6) --------------------------------
+
+  Scenario: next_slot mode schedules a POV run for Tuesday or Thursday at noon
+    Given AUTOPILOT_DEFAULT_PUBLISH is next_slot
+    And a POV run with a confirmed thesis awaits the owner on Thursday 13:00
+    When the owner taps Approve
+    Then the run is scheduled for next Tuesday 12:00
+
+  Scenario: The Agendar menu lists the POV slot first
+    Given a POV run with a confirmed thesis awaits the owner on Thursday 13:00
+    When the owner taps Agendar
+    Then the slots are next Tuesday 12:00, today 18:00 and today 21:00
+
+  Scenario: A Radar IA run keeps the default slots
+    Given a Radar IA run awaits the owner on Thursday 13:00
+    When the owner taps Agendar
+    Then the slots are today 18:00, today 21:00 and tomorrow 12:00

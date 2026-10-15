@@ -2,23 +2,24 @@
 
 - ``sao_paulo_week``: the Monday-to-Monday São Paulo week, for the Radar IA
   weekly cap (growth plan 16.4 #10).
-- ``PublishSlotPolicy`` / ``PovPublishSlots``: the glue roadmap R6 needs. The
+- ``PovPublishSlots`` / ``publish_slots_for``: the glue roadmap R6 needs. The
   scheduler itself is AE-0370 (``scheduled_at``, ``AUTOPILOT_DEFAULT_PUBLISH``
-  = ``next_slot``); POV runs prefer the next Tuesday or Thursday at 12:00 São
-  Paulo. Not wired here: AE-0370 is not on ``main`` yet, so a follow-up passes
-  ``slot_policy_for(content_mode)`` to its slot picker after it merges.
+  = ``next_slot``); its publish choice asks ``publish_slots_for`` for the slots,
+  so a POV run gets the next Tuesday or Thursday at 12:00 São Paulo first.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import UTC, date, datetime, time, timedelta
-from typing import Protocol
 from zoneinfo import ZoneInfo
 
 from rag_backend.domain.constants.content_mode import CONTENT_MODE_POV
 from rag_backend.modules.autopilot.constants import DAILY_CAP_TIMEZONE
+from rag_backend.modules.autopilot.domain.models import AutopilotRun
+from rag_backend.modules.autopilot.domain.schedule import next_slots
 from rag_backend.modules.autopilot.pov_constants import DAYS_PER_WEEK
+from rag_backend.modules.autopilot.schedule_constants import SCHEDULE_SLOT_COUNT
 
 # Growth plan section 8: Tuesday and Thursday, about 12:00 BRT.
 POV_SLOT_WEEKDAYS: frozenset[int] = frozenset({1, 3})
@@ -47,14 +48,6 @@ def sao_paulo_week(moment: datetime) -> tuple[datetime, datetime]:
     return start.astimezone(UTC), end.astimezone(UTC)
 
 
-class PublishSlotPolicy(Protocol):
-    """Picks the publish time for ``next_slot`` (AE-0370's setting)."""
-
-    def next_slot(self, now: datetime) -> datetime:
-        """The next acceptable slot after ``now``, in UTC."""
-        ...
-
-
 @dataclass(frozen=True)
 class PovPublishSlots:
     """Next Tuesday or Thursday at 12:00 São Paulo, at least 15 minutes ahead."""
@@ -79,11 +72,29 @@ class PovPublishSlots:
         return datetime.combine(day, self.at, tzinfo=_zone()).astimezone(UTC)
 
 
-def slot_policy_for(content_mode: str | None) -> PublishSlotPolicy | None:
+def slot_policy_for(content_mode: str | None) -> PovPublishSlots | None:
     """POV runs use Tue/Thu 12:00; None keeps AE-0370's default slots."""
     if content_mode == CONTENT_MODE_POV:
         return PovPublishSlots()
     return None
+
+
+def run_content_mode(run: AutopilotRun) -> str | None:
+    """A run with a confirmed thesis is POV; the rest are Radar IA (None)."""
+    if run.pov_thesis:
+        return CONTENT_MODE_POV
+    return None
+
+
+def publish_slots_for(run: AutopilotRun, now: datetime) -> tuple[datetime, ...]:
+    """AE-0370's next slots; a POV run gets its Tue/Thu 12:00 slot first."""
+    default = next_slots(now)
+    policy = slot_policy_for(run_content_mode(run))
+    if policy is None:
+        return default
+    first = policy.next_slot(now)
+    rest = tuple(slot for slot in default if slot != first)
+    return (first, *rest)[:SCHEDULE_SLOT_COUNT]
 
 
 __all__ = [
@@ -91,7 +102,8 @@ __all__ = [
     "POV_SLOT_TIME",
     "POV_SLOT_WEEKDAYS",
     "PovPublishSlots",
-    "PublishSlotPolicy",
+    "publish_slots_for",
+    "run_content_mode",
     "sao_paulo_week",
     "slot_policy_for",
 ]
