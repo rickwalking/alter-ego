@@ -15,6 +15,9 @@ from rag_backend.modules.autopilot.application.publish_job import SystemClock
 from rag_backend.modules.autopilot.infrastructure.carousel_release import (
     PublishingCarouselReleaser,
 )
+from rag_backend.modules.autopilot.infrastructure.carousel_source import (
+    PublishingCarouselSource,
+)
 from rag_backend.modules.autopilot.infrastructure.editorial_driver import (
     EditorialDriverConfig,
     EngineFactory,
@@ -67,5 +70,9 @@ def build_owner_action_service(build: OwnerActionBuild) -> OwnerActionService:
         recovery=SqlRunRecoveryStore(build.session),
         clock=SystemClock(),
         owner_chat_id=build.settings.telegram_owner_chat_id,
+        carousels=PublishingCarouselSource(
+            build.session, build.settings.carousel_public_base_url
+        ),
+        default_publish=build.settings.autopilot_default_publish,
     )
     return OwnerActionService(deps)

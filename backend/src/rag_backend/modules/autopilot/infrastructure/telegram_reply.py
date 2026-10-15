@@ -92,11 +92,14 @@ class TelegramOwnerMessenger:
         )
 
     async def tell(self, command: OwnerText) -> None:
-        """Send one plain text message."""
-        await self._post(
-            TELEGRAM_METHOD_MESSAGE,
-            {FIELD_CHAT_ID: command.chat_id, FIELD_TEXT: command.text},
-        )
+        """Send one text message, with inline buttons when it has a keyboard."""
+        data: dict[str, object] = {
+            FIELD_CHAT_ID: command.chat_id,
+            FIELD_TEXT: command.text,
+        }
+        if command.keyboard is not None:
+            data[FIELD_REPLY_MARKUP] = inline_markup(command.keyboard)
+        await self._post(TELEGRAM_METHOD_MESSAGE, data)
 
     async def _post(self, method: str, data: dict[str, object]) -> None:
         if not self._token:
