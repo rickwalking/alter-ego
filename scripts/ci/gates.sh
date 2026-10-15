@@ -129,7 +129,8 @@ gate_backend_inline_prompts() { cd "$REPO_ROOT" && python3 scripts/check_inline_
 gate_backend_redis_factory() { cd "$REPO_ROOT" && python3 scripts/check_redis_factory.py; }
 # Autopilot prod env parity (AE-0359): deploy.yml and docker-compose.prod.yml
 # must name the same autopilot variables, with AUTOPILOT_ENABLED defaulting false.
-gate_backend_autopilot_env() { cd "$REPO_ROOT" && python3 scripts/ci/check_autopilot_env_parity.py; }
+# AE-0393: the image bridge settings ride the same gate (deploy/compose/.env.example/Settings).
+gate_backend_autopilot_env() { cd "$REPO_ROOT" && python3 scripts/ci/check_autopilot_env_parity.py && python3 scripts/ci/check_image_bridge_env_parity.py; }
 # Healthcheck loopback (AE-0390): no compose healthcheck or Dockerfile
 # HEALTHCHECK may probe localhost (busybox wget resolves it to [::1]).
 gate_backend_healthcheck_loopback() { cd "$REPO_ROOT" && python3 scripts/ci/check_healthcheck_loopback.py; }

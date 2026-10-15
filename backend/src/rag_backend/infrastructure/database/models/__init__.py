@@ -30,6 +30,9 @@ from rag_backend.infrastructure.database.models.conversation import (
 )
 from rag_backend.infrastructure.database.models.document import DocumentModel
 from rag_backend.infrastructure.database.models.event_outbox import EventOutboxModel
+from rag_backend.infrastructure.database.models.image_bridge_registry import (
+    IMAGE_BRIDGE_TABLES as IMAGE_BRIDGE_TABLES,
+)
 from rag_backend.infrastructure.database.models.notification import NotificationModel
 from rag_backend.infrastructure.database.models.palette import PaletteModel
 from rag_backend.infrastructure.database.models.persona_correction import (
@@ -52,6 +55,7 @@ from rag_backend.infrastructure.database.models.workflow_audit_log import (
 
 __all__ = [
     "AUTOPILOT_TABLES",
+    "IMAGE_BRIDGE_TABLES",
     "BlogPostModel",
     "CarouselArtifactBuildModel",
     "CarouselCreatorAssetModel",

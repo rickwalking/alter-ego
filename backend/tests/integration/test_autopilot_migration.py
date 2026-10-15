@@ -18,6 +18,8 @@ _PREVIOUS_HEAD = "c9d0e1f2a3b4"
 # AE-0378: the insights revision sits on top of AE-0377's POV thesis one.
 _PARENT_HEAD = "b1c2d3e4f5a6"
 _THIS_HEAD = "c2d3e4f5a6b7"
+# AE-0393: the image bridge revision now sits on top of the insights one.
+_SINGLE_HEAD = "d3e4f5a6b7c8"
 _BACKEND_ROOT = Path(__file__).resolve().parents[2]
 _TABLES = (
     "autopilot_runs",
@@ -79,10 +81,13 @@ def _columns(db_path: Path, table: str) -> set[str]:
 
 
 def test_autopilot_revision_is_the_only_head() -> None:
-    """``alembic heads`` is exactly the autopilot revision."""
+    """``alembic heads`` is a single head that descends from the autopilot one."""
     _command, cfg, script_cls = _alembic_config()
     script = script_cls.from_config(cfg)
-    assert list(script.get_heads()) == [_THIS_HEAD]
+    assert list(script.get_heads()) == [_SINGLE_HEAD]
+    bridge = script.get_revision(_SINGLE_HEAD)
+    assert bridge is not None
+    assert bridge.down_revision == _THIS_HEAD
     revision = script.get_revision(_THIS_HEAD)
     assert revision is not None
     assert revision.down_revision == _PARENT_HEAD

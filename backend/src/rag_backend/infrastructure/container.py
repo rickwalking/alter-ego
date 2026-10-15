@@ -65,6 +65,7 @@ from rag_backend.infrastructure.retrieval.document_processor import (
     RecursiveDocumentProcessor,
 )
 from rag_backend.infrastructure.retrieval.hybrid_retriever import HybridRetrieverWithRRF
+from rag_backend.modules.image_bridge import build_carousel_openai_service
 
 
 def _build_carousel_refinement_service(
@@ -175,10 +176,18 @@ class Container(containers.DeclarativeContainer):
         api_key=settings.provided().openai_api_key,
     )
 
+    # AE-0393: the Grok Bot bridge (with OpenAI fallback) when
+    # IMAGE_BRIDGE_ENABLED; the plain OpenAI service otherwise.
+    carousel_openai_image_service = providers.Singleton(
+        build_carousel_openai_service,
+        settings=settings,
+        openai_service=openai_image_service,
+    )
+
     image_provider_registry = providers.Singleton(
         ImageProviderRegistry,
         gemini_service=image_service,
-        openai_service=openai_image_service,
+        openai_service=carousel_openai_image_service,
     )
 
     writing_style_profile = providers.Singleton(

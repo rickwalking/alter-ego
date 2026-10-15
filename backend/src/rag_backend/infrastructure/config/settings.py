@@ -219,6 +219,19 @@ class Settings(BaseSettings):
 
     carousel_public_base_url: str = ""
 
+    # AE-0393 (ADR-0022): carousel images through the Grok Bot webhook, with
+    # OpenAI as the fallback. Off here (dev/tests make no webhook calls); prod
+    # deploy.yml turns it on. Enabled without the webhook URL or the public base
+    # URL, startup logs image_bridge_misconfigured and keeps plain OpenAI.
+    image_bridge_enabled: bool = False
+    image_bridge_fallback_enabled: bool = True
+    image_bridge_timeout_seconds: int = Field(default=600, ge=1)
+    image_bridge_max_concurrency: int = Field(default=2, ge=1)
+    image_bridge_public_base_url: str = ""
+    grokbot_image_webhook_url: SecretStr = SecretStr("")
+    grokbot_image_webhook_auth_header: str = "Authorization"
+    grokbot_image_webhook_auth_value: SecretStr = SecretStr("")
+
     cdn_base_url: str = ""
     cdn_enabled: bool = False
 

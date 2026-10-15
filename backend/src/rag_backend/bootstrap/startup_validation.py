@@ -24,6 +24,7 @@ from rag_backend.infrastructure.redis_clients import (
     RedisConfigError,
     resolve_authed_redis_url,
 )
+from rag_backend.modules.image_bridge import report_image_bridge_config
 
 logger = get_logger()
 
@@ -174,6 +175,9 @@ def run_startup_validations(settings: Settings) -> StartupValidationResult:
     reports which guards flagged a problem.
     """
     validate_redis_credentials(settings)
+    # AE-0393: an enabled bridge without its URLs logs one ERROR and keeps
+    # OpenAI; it never fails startup (prod auto-deploys on merge).
+    report_image_bridge_config(settings)
     return StartupValidationResult(
         checkpoint_durable=validate_checkpointer_durability(settings),
         default_image_provider_usable=validate_default_image_provider_key(settings),
