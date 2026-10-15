@@ -132,6 +132,11 @@ jobs:
             ANTHROPIC_API_KEY=${{ secrets.ANTHROPIC_API_KEY }}
             GLM_API_KEY=${{ secrets.GLM_API_KEY }}
             LLM_PROVIDER=${{ secrets.LLM_PROVIDER }}
+            # AE-0391 per-task carousel models (OpenCode Go endpoint) + fallback.
+            LLM_MODEL_REASONING=${{ secrets.LLM_MODEL_REASONING || 'deepseek-v4-pro' }}
+            LLM_MODEL_FAST=${{ secrets.LLM_MODEL_FAST || 'deepseek-v4.1-flash' }}
+            LLM_MODEL_FALLBACK=${{ secrets.LLM_MODEL_FALLBACK || 'glm-5.3' }}
+            CONTENT_DRAFT_CONCURRENCY=${{ secrets.CONTENT_DRAFT_CONCURRENCY || '4' }}
             SECRET_KEY=${{ secrets.SECRET_KEY }}
             ANON_SECRET_KEY=${{ secrets.ANON_SECRET_KEY }}
             GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}

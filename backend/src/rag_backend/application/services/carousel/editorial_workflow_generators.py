@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from functools import partial
 
 import structlog
 
 from rag_backend.agents.content_draft_agent import ContentDraftAgent
 from rag_backend.agents.outline_agent import OutlineAgent
 from rag_backend.agents.source_synthesis_agent import SourceSynthesisAgent
+from rag_backend.application.services.carousel.bounded_gather import gather_bounded
 from rag_backend.application.services.carousel.content_distinctness import (
     find_duplicate_slide_indices,
     max_similarity_against,
@@ -33,7 +35,10 @@ from rag_backend.application.services.carousel.workflow_state import (
     CarouselWorkflowState,
 )
 from rag_backend.domain.constants.carousel import LANGUAGE_PT
-from rag_backend.domain.constants.carousel_workflow import SOURCE_TYPE_DOCUMENT
+from rag_backend.domain.constants.carousel_workflow import (
+    DEFAULT_CONTENT_DRAFT_CONCURRENCY,
+    SOURCE_TYPE_DOCUMENT,
+)
 from rag_backend.domain.models.persona import PersonaProfile
 from rag_backend.domain.models.pov_prompts import SlidePolicyContext
 
@@ -74,6 +79,8 @@ class SlideDraftGenerationParams:
     previous_drafts: list[dict[str, object]] | None = None
     # AE-0375: the project's content mode (role contract, POV thesis).
     mode: ContentModeBrief | None = None
+    # AE-0391: slides drafted at once (the CONTENT_DRAFT_CONCURRENCY setting).
+    concurrency: int = DEFAULT_CONTENT_DRAFT_CONCURRENCY
 
 
 @dataclass(frozen=True)
@@ -254,7 +261,12 @@ async def generate_slide_drafts(
     content_agent: ContentDraftAgent,
     params: SlideDraftGenerationParams,
 ) -> list[dict[str, object]]:
-    """Draft slide copy for each outline entry with cross-slide distinctness."""
+    """Draft slide copy for each outline entry with cross-slide distinctness.
+
+    AE-0391: slides are drafted concurrently (bounded, results in outline
+    order). Each draft only sees its siblings' OUTLINE context, never a
+    sibling's fresh draft; near-duplicates are caught and re-drafted after.
+    """
     runner = _SlideDraftRunner(
         content_agent=content_agent,
         outline=params.outline,
@@ -264,7 +276,10 @@ async def generate_slide_drafts(
         previous_drafts=params.previous_drafts or [],
         mode=params.mode,
     )
-    drafts = [await runner.draft_at(index) for index in range(len(params.outline))]
+    drafts = await gather_bounded(
+        [partial(runner.draft_at, index) for index in range(len(params.outline))],
+        params.concurrency,
+    )
     return await _redraft_duplicates(runner, drafts)
 
 

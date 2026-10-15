@@ -57,7 +57,7 @@ def autopilot_engine_factory(checkpointer: object | None) -> EngineFactory:
             research = container.research_tool()
         return EditorialWorkflowService(
             EditorialWorkflowConfig(
-                llm=container.llm_service().chat_model,
+                llm=container.llm_service().role_models,
                 checkpointer=checkpointer,
                 event_service=WorkflowEventService(publisher),
                 image_registry=container.image_provider_registry(),

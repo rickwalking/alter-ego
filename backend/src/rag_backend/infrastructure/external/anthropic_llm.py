@@ -10,9 +10,15 @@ from collections.abc import AsyncIterator, Callable
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
 
+from rag_backend.application.services.carousel.editorial_workflow_types import (
+    ChatModelRoles,
+)
 from rag_backend.domain.constants import ROLE_ASSISTANT, ROLE_SYSTEM, ROLE_USER
 from rag_backend.infrastructure.config.settings import Settings
-from rag_backend.infrastructure.external.chat_model_factory import build_chat_model
+from rag_backend.infrastructure.external.chat_model_factory import (
+    build_chat_model,
+    build_role_models,
+)
 
 # Role → LangChain message constructor dispatch.
 _ROLE_TO_MESSAGE: dict[str, Callable[[str], BaseMessage]] = {
@@ -27,14 +33,24 @@ DEFAULT_TEMPERATURE = 0.7
 class AnthropicLLMService:
     """LLMService implementation; the provider is chosen by ``llm_provider``."""
 
-    def __init__(self, settings: Settings) -> None:
+    def __init__(self, settings: Settings, role: str | None = None) -> None:
         self._settings = settings
-        self._llm = build_chat_model(settings)
+        # AE-0391: a role (reasoning / fast) routes this service's calls to that
+        # role's model with the GLM fallback; None keeps the single chat model.
+        self._llm = build_chat_model(settings, role)
+        self._role_models: ChatModelRoles | None = None
 
     @property
     def chat_model(self) -> BaseChatModel:
         """Expose the underlying LangChain chat model."""
         return self._llm
+
+    @property
+    def role_models(self) -> ChatModelRoles:
+        """AE-0391: the carousel pipeline's reasoning + fast models (built once)."""
+        if self._role_models is None:
+            self._role_models = build_role_models(self._settings)
+        return self._role_models
 
     @staticmethod
     def _to_lc_messages(

@@ -32,6 +32,7 @@ from rag_backend.application.services.carousel.editorial_workflow_service_helper
     validate_revision_cap,
 )
 from rag_backend.application.services.carousel.editorial_workflow_support import (
+    ChatModelRoles,
     EditorialWorkflowStartInput,
     ResumeWorkflowInput,
     ReviewEventEmitContext,
@@ -80,7 +81,8 @@ from rag_backend.modules.editorial.public import CarouselProjectWriteOwner
 class EditorialWorkflowConfig:
     """Configuration bundle for EditorialWorkflowService."""
 
-    llm: BaseChatModel
+    # AE-0391: per-role models (reasoning / fast); a single model serves both.
+    llm: BaseChatModel | ChatModelRoles
     checkpointer: object | None = None
     event_service: WorkflowEventService | None = None
     notification_service: NotificationService | None = None
@@ -97,9 +99,10 @@ class EditorialWorkflowService:
         self,
         config: EditorialWorkflowConfig,
     ) -> None:
-        self._llm = config.llm
+        roles = ChatModelRoles.coerce(config.llm)
+        self._llm = roles.fast
         self._orchestrator = CarouselEditorialOrchestrator(
-            llm=config.llm,
+            llm=roles,
             checkpointer=config.checkpointer,
             image_registry=config.image_registry,
         )
@@ -223,7 +226,7 @@ class EditorialWorkflowService:
 
     @property
     def chat_model(self) -> BaseChatModel:
-        """The workflow's chat model (AE-0367 owner autofix EN re-translate)."""
+        """The workflow's fast chat model (AE-0367 owner autofix EN re-translate)."""
         return self._llm
 
     async def update_workflow_state(

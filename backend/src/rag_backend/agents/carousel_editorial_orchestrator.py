@@ -14,6 +14,7 @@ from rag_backend.application.services.carousel.editorial_workflow_generators imp
     synthesize_research,
 )
 from rag_backend.application.services.carousel.editorial_workflow_support import (
+    ChatModelRoles,
     EditorialWorkflowStartInput,
 )
 from rag_backend.application.services.carousel.phase_artifact_runner import (
@@ -34,24 +35,28 @@ class CarouselEditorialOrchestrator:
 
     def __init__(
         self,
-        llm: BaseChatModel,
+        llm: BaseChatModel | ChatModelRoles,
         checkpointer: object | None = None,
         image_registry: ImageProviderRegistry | None = None,
     ) -> None:
-        self._llm = llm
+        # AE-0391: research + outline need reasoning; drafting, persona scoring
+        # and distribution copy (translation, caption) run on the fast model.
+        roles = ChatModelRoles.coerce(llm)
+        self._llm = roles.fast
         self._artifact_runner = PhaseArtifactRunner(
             PhaseArtifactRunnerConfig(
-                outline_agent=OutlineAgent(llm=llm),
-                content_agent=ContentDraftAgent(llm=llm),
-                llm=llm,
+                outline_agent=OutlineAgent(llm=roles.reasoning),
+                content_agent=ContentDraftAgent(llm=roles.fast),
+                llm=roles.fast,
                 image_registry=image_registry,
+                draft_concurrency=roles.draft_concurrency,
             )
         )
         self._engine = CarouselWorkflowEngine(
             checkpointer=checkpointer,
             artifact_runner=self._artifact_runner,
         )
-        self._source_agent = SourceSynthesisAgent(llm=llm)
+        self._source_agent = SourceSynthesisAgent(llm=roles.reasoning)
 
     @property
     def engine(self) -> CarouselWorkflowEngine:
