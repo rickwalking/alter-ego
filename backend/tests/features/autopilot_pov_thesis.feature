@@ -114,3 +114,22 @@ Feature: Autopilot "Ponto de Vista" topics and the owner's thesis (AE-0377, ADR-
     Given a Radar IA run awaits the owner on Thursday 13:00
     When the owner taps Agendar
     Then the slots are today 18:00, today 21:00 and tomorrow 12:00
+
+  # --- POV approve in "now" mode (PR #106 review, item 5) ---------------------
+
+  Scenario Outline: A POV approve in "now" mode is scheduled for the next Tue/Thu noon
+    Given AUTOPILOT_DEFAULT_PUBLISH is "now" and a POV run awaiting the owner
+    When the owner taps Aprovar at <approved_at> São Paulo time
+    Then the run is scheduled for <slot> São Paulo time and nothing is released
+
+    Examples:
+      | approved_at          | slot                 |
+      | Monday 09:00         | Tuesday 12:00        |
+      | Tuesday 11:50        | Thursday 12:00       |
+      | Thursday 13:00       | next Tuesday 12:00   |
+
+  Scenario: A Radar IA approve in "now" mode still publishes now
+    Given AUTOPILOT_DEFAULT_PUBLISH is "now" and a Radar IA run awaiting the owner
+    When the owner taps Aprovar
+    Then the publish-now / schedule choice is shown and nothing is scheduled
+    And "Publicar agora" approves and releases the carousel immediately

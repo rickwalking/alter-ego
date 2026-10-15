@@ -2,6 +2,7 @@
 
 Approve offers ``🚀 Publicar agora`` and ``🗓 Agendar`` (or, with
 ``AUTOPILOT_DEFAULT_PUBLISH=next_slot``, schedules the next slot directly).
+A POV run is always scheduled for its next Tue/Thu 12:00 slot (PR #106 review).
 Publish now keeps the AE-0356 path: approve final review, release, and the
 worker publishes. Scheduling approves final review but releases nothing: the
 run waits in ``scheduled`` and the worker's due tick releases and publishes
@@ -46,7 +47,10 @@ from rag_backend.modules.autopilot.domain.owner_ports import (
     PendingReworkStore,
 )
 from rag_backend.modules.autopilot.domain.ports import AutopilotRunRepository, Clock
-from rag_backend.modules.autopilot.domain.pov_schedule import publish_slots_for
+from rag_backend.modules.autopilot.domain.pov_schedule import (
+    is_pov_run,
+    publish_slots_for,
+)
 from rag_backend.modules.autopilot.domain.schedule import (
     check_choice,
     from_epoch,
@@ -145,8 +149,9 @@ class PublishChoiceActions:
         if run is None:
             await self._replies.finish(update, ANSWER_ALREADY, TEXT_ALREADY)
             return
-        if self._deps.default_publish == PUBLISH_MODE_NEXT_SLOT:
-            # AE-0377 (R6): a POV run's first slot is Tue/Thu 12:00.
+        if self._deps.default_publish == PUBLISH_MODE_NEXT_SLOT or is_pov_run(run):
+            # AE-0377 (R6): a POV run's first slot is Tue/Thu 12:00. PR #106
+            # review: a POV run is scheduled there even when the mode is "now".
             first = publish_slots_for(run, self._deps.clock.now())[0]
             await self._schedule(update, run, _Choice(at=first, next_slot=True))
             return
