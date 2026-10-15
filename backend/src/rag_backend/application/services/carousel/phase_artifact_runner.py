@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from functools import partial
 from typing import TypedDict
 
 from langchain_core.language_models import BaseChatModel
@@ -15,6 +16,7 @@ from rag_backend.agents.persona_agent import PersonaAgent
 from rag_backend.application.services.carousel.blog_composition import (
     research_summary_from_findings,
 )
+from rag_backend.application.services.carousel.bounded_gather import gather_bounded
 from rag_backend.application.services.carousel.content_fail_closed import (
     FailClosedReviewCommand,
     SlideDraftRetryFn,
@@ -48,6 +50,7 @@ from rag_backend.domain.constants.workflow_state_fields import (
     STATE_FIELD_RESEARCH_FINDINGS,
 )
 from rag_backend.domain.models.persona import PersonaProfile
+from rag_backend.infrastructure.config.settings import get_settings
 from rag_backend.infrastructure.external.openai_embeddings import (  # type: ignore[attr-defined]
     OpenAIEmbeddings,
 )
@@ -593,17 +596,20 @@ class PhaseArtifactRunner:
         persona: PersonaProfile,
     ) -> dict[str, object]:
         persona_agent = PersonaAgent(persona=persona, llm=self._llm)
-        persona_scores: dict[str, object] = {}
-        for index, slide in enumerate(slide_drafts):
-            if not isinstance(slide, dict):
-                continue
-            draft_text = str(slide.get("draft_text", ""))
-            if not draft_text:
-                continue
-            persona_scores[f"slide_{index + 1}"] = await persona_agent.evaluate_match(
-                draft_text
-            )
-        return persona_scores
+        texts = {
+            index: str(slide.get("draft_text", ""))
+            for index, slide in enumerate(slide_drafts)
+            if isinstance(slide, dict) and str(slide.get("draft_text", ""))
+        }
+        # AE-0391: scored concurrently (bounded), keyed back in slide order.
+        scores = await gather_bounded(
+            [partial(persona_agent.evaluate_match, text) for text in texts.values()],
+            get_settings().content_draft_concurrency,
+        )
+        return {
+            f"slide_{index + 1}": score
+            for index, score in zip(texts, scores, strict=True)
+        }
 
 
 __all__ = ["PhaseArtifactRunner"]

@@ -47,7 +47,7 @@ def _to_domain_rubric(model: QualityRubricModel) -> QualityRubric:
 
 def _build_quality_service() -> QualityEvaluationService:
     container = get_container()
-    return QualityEvaluationService(llm=container.llm_service().chat_model)
+    return QualityEvaluationService(llm=container.llm_service().role_models.reasoning)
 
 
 @router.post(

@@ -15,6 +15,9 @@ Two distinct failures need two different remedies:
   back with ``JSON_REPAIR_PROMPT`` (the AE-0318 round-trip).
 
 Each remedy costs at most one extra call, and only on the failure path.
+
+AE-0391: when both remedies are exhausted on a role-routed model, the whole
+call is re-issued once on its fallback model (GLM-5.3) before giving up.
 """
 
 from __future__ import annotations
@@ -28,6 +31,13 @@ from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 from langchain_core.runnables import Runnable
 
 from rag_backend.domain.constants.ai_agents import ERR_INVALID_JSON
+from rag_backend.infrastructure.config.llm_routing_constants import (
+    FALLBACK_REASON_BAD_JSON,
+    LOG_LLM_JSON_FALLBACK_USED,
+)
+from rag_backend.infrastructure.external.routed_chat_model import (
+    fallback_runnable_for,
+)
 from rag_backend.infrastructure.llm.json_utils import JSON_REPAIR_PROMPT
 from rag_backend.infrastructure.logging import get_logger
 from rag_backend.infrastructure.monitoring_langfuse import get_langfuse_runnable_config
@@ -56,9 +66,30 @@ async def ainvoke_json(
     """Return the parsed response and the raw text that produced it.
 
     Raises ``ValueError(ERR_INVALID_JSON)`` only after both the re-roll and the
-    repair round-trip have been exhausted, so callers keep their existing
-    error contract.
+    repair round-trip have been exhausted (on the primary and, AE-0391, on the
+    fallback model when one exists), so callers keep their existing contract.
     """
+    try:
+        return await _ainvoke_json_on(runnable, prompt, policy)
+    except (ValueError, TypeError):
+        fallback = fallback_runnable_for(runnable)
+        if fallback is None:
+            raise
+        logger.warning(
+            LOG_LLM_JSON_FALLBACK_USED,
+            agent=policy.agent,
+            model_id=policy.model_id,
+            reason=FALLBACK_REASON_BAD_JSON,
+        )
+    return await _ainvoke_json_on(fallback, prompt, policy)
+
+
+async def _ainvoke_json_on(
+    runnable: Runnable[LanguageModelInput, BaseMessage],
+    prompt: str,
+    policy: JsonRetryPolicy[T],
+) -> tuple[T, str]:
+    """Re-roll an empty response, repair a malformed one (one model)."""
     raw = await _ainvoke_once(runnable, prompt)
     if not raw.strip():
         logger.warning(

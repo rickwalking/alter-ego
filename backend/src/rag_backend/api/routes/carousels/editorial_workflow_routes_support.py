@@ -34,7 +34,7 @@ def build_editorial_workflow_service(request: Request) -> EditorialWorkflowServi
     """Construct the editorial workflow service for route handlers."""
     container = get_container()
     checkpointer = getattr(request.app.state, "carousel_checkpointer", None)
-    llm = container.llm_service().chat_model
+    llm = container.llm_service().role_models
     settings = get_settings()
     publisher = get_event_publisher(settings.redis_url or None)
     events = WorkflowEventService(publisher)

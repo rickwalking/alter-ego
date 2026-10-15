@@ -127,7 +127,7 @@ async def extract_source_key_points(
     )
 
     container = get_container()
-    agent = SourceSynthesisAgent(llm=container.llm_service().chat_model)
+    agent = SourceSynthesisAgent(llm=container.llm_service().role_models.reasoning)
     try:
         extracted = await agent.extract_key_points(
             title=source.title,

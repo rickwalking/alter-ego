@@ -32,6 +32,7 @@ from rag_backend.application.services.tools.research_tool import PlaywrightResea
 from rag_backend.application.services.writing_style_profile import (
     WritingStyleProfile,
 )
+from rag_backend.infrastructure.config.llm_routing_constants import LLM_ROLE_FAST
 from rag_backend.infrastructure.config.settings import get_settings
 from rag_backend.infrastructure.database.carousel_repository import (
     PostgresCarouselRepository,
@@ -114,6 +115,13 @@ class Container(containers.DeclarativeContainer):
         settings=settings,
     )
 
+    # AE-0391: carousel distribution copy + refinement run on the fast model.
+    fast_llm_service = providers.Singleton(
+        AnthropicLLMService,
+        settings=settings,
+        role=LLM_ROLE_FAST,
+    )
+
     vector_store = providers.Singleton(
         PineconeVectorStore,
         settings=settings,
@@ -183,7 +191,7 @@ class Container(containers.DeclarativeContainer):
 
     linkedin_post_generator = providers.Singleton(
         LinkedInPostGenerator,
-        llm_service=llm_service,
+        llm_service=fast_llm_service,
         writing_style=writing_style_profile,
     )
 
@@ -212,7 +220,7 @@ class Container(containers.DeclarativeContainer):
     carousel_refinement_config = providers.Factory(
         CarouselRefinementConfig,
         repository=carousel_repository,
-        llm_service=llm_service,
+        llm_service=fast_llm_service,
         image_registry=image_provider_registry,
         export_service=export_service,
         pdf_slide_builder=pdf_slide_builder,
