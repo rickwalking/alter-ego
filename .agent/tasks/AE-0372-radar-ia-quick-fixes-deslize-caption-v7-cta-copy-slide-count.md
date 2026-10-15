@@ -1,6 +1,6 @@
 # AE-0372 — Radar IA quick fixes: deslize, caption v7, cta copy, slide counter, image defaults
 
-Status: In Development
+Status: Dev Complete
 Tier: T2
 Priority: High
 Type: Feature
@@ -37,11 +37,11 @@ PT slides say "Swipe →"; the caption prompt asks for 12-18 PT/EN hashtags and 
 
 ## Acceptance Criteria
 
-- [ ] WHEN a PT slide renders a swipe hint THE SYSTEM SHALL show "Deslize →"; EN slides SHALL keep "Swipe →".
-- [ ] WHEN a caption prompt is built THE SYSTEM SHALL render `carousel/v7/caption_prompt` which asks for 3-5 hashtags, a single CTA and the hook on line 1.
-- [ ] WHEN a Radar IA CTA slide renders THE SYSTEM SHALL show the follow variant in its locale instead of "Siga para mais conteúdo como esse".
-- [ ] WHEN slide 10 of 10 renders THE SYSTEM SHALL show "10 / 10" and slide 3 of 7 "03 / 07".
-- [ ] WHEN no image style is given THE SYSTEM SHALL use `flat_editorial` in the API, the autopilot and the wizard.
+- [x] WHEN a PT slide renders a swipe hint THE SYSTEM SHALL show "Deslize →"; EN slides SHALL keep "Swipe →".
+- [x] WHEN a caption prompt is built THE SYSTEM SHALL render `carousel/v7/caption_prompt` which asks for 3-5 hashtags, a single CTA and the hook on line 1.
+- [x] WHEN a Radar IA CTA slide renders THE SYSTEM SHALL show the follow variant in its locale instead of "Siga para mais conteúdo como esse".
+- [x] WHEN slide 10 of 10 renders THE SYSTEM SHALL show "10 / 10" and slide 3 of 7 "03 / 07".
+- [x] WHEN no image style is given THE SYSTEM SHALL use `flat_editorial` in the API, the autopilot and the wizard.
 
 ## Gherkin Scenarios
 
@@ -134,13 +134,19 @@ Feature: Radar IA quick fixes
 
 Ticket written from the architect plan (docs/architecture/instagram-growth-pov-mode.md).
 
+### 2026-10-15 (dev)
+
+Implemented in b61548d, 3490849 on `feat/ae-0371-growth-pov-mode`. Ready for the final relay round.
+
 ## Files Touched
 
-Pending.
+Swipe/counter/CTA constants and strategies (`cta.py`, `slides.py`, `lower_third_shell.py`), `carousel/v7/caption_prompt.yaml`, caption routing, image default (`flat_editorial`) in API/autopilot/wizard, outline SKILL, export-and-caption doc, tests + `radar_ia_quick_fixes.feature`.
 
 ## Test Evidence
 
-Pending.
+Static backend gates 16/16 PASS (R1 run); targeted backend 216 passed; frontend typecheck/lint/vitest PASS. Relay READY #1 (`3490849`): test, diff-cover, migrations, schema-drift, frontend, py311 all PASS.
+
+Gate details and GATES_JSON: `.agent/reports/AE-0372.dev-summary.md` and the epic summary `.agent/reports/AE-0371.dev-summary.md`.
 
 ## QA Report
 

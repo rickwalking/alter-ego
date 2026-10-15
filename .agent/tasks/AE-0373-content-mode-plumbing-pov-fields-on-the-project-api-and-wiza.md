@@ -1,6 +1,6 @@
 # AE-0373 — Content mode plumbing: pov fields on the project, api and wizard
 
-Status: Ready
+Status: Dev Complete
 Tier: T2
 Priority: High
 Type: Feature
@@ -34,12 +34,12 @@ The project has no notion of mode, thesis, proof, format, slide count, CTA goal 
 
 ## Acceptance Criteria
 
-- [ ] WHEN a create request omits `content_mode` THE SYSTEM SHALL store it as Radar IA (NULL, reported as `news_analysis`).
-- [ ] WHEN a `pov` create request has a non-blank thesis ≤280 chars, a known format and 8-10 slides THE SYSTEM SHALL persist every POV field and return them.
-- [ ] WHEN a `pov` create request lacks a thesis, has an unknown format or a slide count outside 8-10 THE API SHALL answer 422.
-- [ ] WHEN a `news_analysis` request carries POV-only fields THE API SHALL answer 422.
-- [ ] WHEN a create request carries `persona_id` or `strategy` THE SYSTEM SHALL persist them on the project.
-- [ ] WHEN the wizard is in POV mode THE UI SHALL require the thesis and show the POV fields and formats; in Radar IA mode it SHALL hide them.
+- [x] WHEN a create request omits `content_mode` THE SYSTEM SHALL store it as Radar IA (NULL, reported as `news_analysis`).
+- [x] WHEN a `pov` create request has a non-blank thesis ≤280 chars, a known format and 8-10 slides THE SYSTEM SHALL persist every POV field and return them.
+- [x] WHEN a `pov` create request lacks a thesis, has an unknown format or a slide count outside 8-10 THE API SHALL answer 422.
+- [x] WHEN a `news_analysis` request carries POV-only fields THE API SHALL answer 422.
+- [x] WHEN a create request carries `persona_id` or `strategy` THE SYSTEM SHALL persist them on the project.
+- [x] WHEN the wizard is in POV mode THE UI SHALL require the thesis and show the POV fields and formats; in Radar IA mode it SHALL hide them.
 
 ## Gherkin Scenarios
 
@@ -127,13 +127,19 @@ Feature: Carousel content mode
 
 Ticket written from the architect plan (docs/architecture/instagram-growth-pov-mode.md).
 
+### 2026-10-15 (dev)
+
+Implemented in 0843277, 65729df, 70d64c8 on `feat/ae-0371-growth-pov-mode`. Ready for the final relay round.
+
 ## Files Touched
 
-Pending.
+Migration `b0c1d2e3f4a5`, `carousel_content_mode.py` (ORM mixin, schema), create route + `content_mode_fields.py`, workflow-start persona fallback, wizard mode/POV/persona sections, i18n, `carousel_content_mode.feature` + API/migration tests.
 
 ## Test Evidence
 
-Pending.
+Static gates 16/16 PASS on `33a0884`; content-mode API + migration 344 passed; frontend PASS on `65729df`. Regression found by the consolidation suite (500 on workflow start) fixed in `70d64c8`; consolidation 71 passed.
+
+Gate details and GATES_JSON: `.agent/reports/AE-0373.dev-summary.md` and the epic summary `.agent/reports/AE-0371.dev-summary.md`.
 
 ## QA Report
 

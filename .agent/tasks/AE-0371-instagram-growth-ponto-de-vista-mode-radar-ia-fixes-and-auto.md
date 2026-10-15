@@ -1,6 +1,6 @@
 # AE-0371 — Instagram growth: Ponto de Vista mode, Radar IA fixes and autopilot wiring
 
-Status: Ready
+Status: Dev Complete
 Tier: T3
 Priority: High
 Type: Epic
@@ -35,10 +35,10 @@ The account is flat (336 followers, ~0.9 shares and ~0.1 saves per carousel). AI
 
 ## Acceptance Criteria
 
-- [ ] WHEN every child ticket is Dev Complete THE epic dev summary SHALL contain the per-ticket change table, the GATES_JSON results, the exact migration SQL, the owner actions and the follow-ups.
-- [ ] WHEN a carousel is created without a mode THE SYSTEM SHALL behave as Radar IA (`news_analysis`), with existing projects keeping their stamped policy and prompts.
-- [ ] WHEN the owner creates a POV carousel with a thesis THE SYSTEM SHALL produce an 8-10 slide first-person deck whose slide 1 is a hook over the owner's photo.
-- [ ] WHEN any POV prompt is rendered THE SYSTEM SHALL instruct the model never to invent opinions, experiences, test results or numbers.
+- [x] WHEN every child ticket is Dev Complete THE epic dev summary SHALL contain the per-ticket change table, the GATES_JSON results, the exact migration SQL, the owner actions and the follow-ups.
+- [x] WHEN a carousel is created without a mode THE SYSTEM SHALL behave as Radar IA (`news_analysis`), with existing projects keeping their stamped policy and prompts.
+- [x] WHEN the owner creates a POV carousel with a thesis THE SYSTEM SHALL produce an 8-10 slide first-person deck whose slide 1 is a hook over the owner's photo.
+- [x] WHEN any POV prompt is rendered THE SYSTEM SHALL instruct the model never to invent opinions, experiences, test results or numbers.
 
 ## Gherkin Scenarios
 
@@ -135,13 +135,24 @@ Feature: Instagram growth modes
 
 Ticket written from the architect plan (docs/architecture/instagram-growth-pov-mode.md).
 
+### 2026-10-15 (dev)
+
+All children (AE-0372 … AE-0378) Dev Complete on `feat/ae-0371-growth-pov-mode`, in roadmap
+order R1 → R2 → R3 → R4 → R5 → R7 → R8. Relay rounds after R1 (PASS), after R3 (no result in
+the 60-minute window; a regression it would have caught was found locally and fixed), after
+R5 and at the end — see the dev summary.
+
 ## Files Touched
 
-Pending.
+See each child ticket's Files Touched and the per-ticket table in
+`.agent/reports/AE-0371.dev-summary.md`; plan `docs/architecture/instagram-growth-pov-mode.md`
+(§10 as built), ADR-0021, `docs/architecture/grokbot-autopilot.md` (§4, §5.5).
 
 ## Test Evidence
 
-Pending.
+Static backend gates 16/16 PASS on each roadmap head (R1, `33a0884`, `59f87e4`, `b74de79`,
+`2acb7fe`); targeted backend unit/integration suites and frontend typecheck/lint/vitest
+listed per ticket; relayed DB gates in `.agent/reports/AE-0371.dev-summary.md`.
 
 ## QA Report
 

@@ -1,6 +1,6 @@
 # AE-0377 — Scout v3: pov proposals with thesis confirmation and weekly mix
 
-Status: Ready
+Status: Dev Complete
 Tier: T2
 Priority: Medium
 Type: Feature
@@ -36,13 +36,13 @@ The scout only ranks "highest viral potential" news; the autopilot can only make
 
 ## Acceptance Criteria
 
-- [ ] WHEN a scout v2 proposal (no mode) arrives THE SYSTEM SHALL treat it as `news_analysis` exactly as today.
-- [ ] WHEN a POV proposal without `thesis_draft` arrives THE SYSTEM SHALL reject it (`thesis_missing`).
-- [ ] WHEN a POV run is queued THE SYSTEM SHALL ask the owner on Telegram to confirm, edit or discard the draft thesis before creating the carousel.
-- [ ] WHEN the owner confirms or replies with an edited thesis THE SYSTEM SHALL store it and start generation once; a double tap SHALL start it once.
-- [ ] WHEN a non-owner taps a thesis button THE SYSTEM SHALL ignore it.
-- [ ] WHEN a Radar IA proposal arrives in a São Paulo week that already has one THE SYSTEM SHALL reject it with `weekly_news_cap_reached`.
-- [ ] WHEN the POV slot policy is asked for the next slot THE SYSTEM SHALL return the next Tuesday or Thursday 12:00 America/Sao_Paulo at least 15 minutes ahead.
+- [x] WHEN a scout v2 proposal (no mode) arrives THE SYSTEM SHALL treat it as `news_analysis` exactly as today.
+- [x] WHEN a POV proposal without `thesis_draft` arrives THE SYSTEM SHALL reject it (`thesis_missing`).
+- [x] WHEN a POV run is queued THE SYSTEM SHALL ask the owner on Telegram to confirm, edit or discard the draft thesis before creating the carousel.
+- [x] WHEN the owner confirms or replies with an edited thesis THE SYSTEM SHALL store it and start generation once; a double tap SHALL start it once.
+- [x] WHEN a non-owner taps a thesis button THE SYSTEM SHALL ignore it.
+- [x] WHEN a Radar IA proposal arrives in a São Paulo week that already has one THE SYSTEM SHALL reject it with `weekly_news_cap_reached`.
+- [x] WHEN the POV slot policy is asked for the next slot THE SYSTEM SHALL return the next Tuesday or Thursday 12:00 America/Sao_Paulo at least 15 minutes ahead.
 
 ## Gherkin Scenarios
 
@@ -133,13 +133,19 @@ Feature: Autopilot POV thesis
 
 Ticket written from the architect plan (docs/architecture/instagram-growth-pov-mode.md).
 
+### 2026-10-15 (dev)
+
+Implemented in b74de79 on `feat/ae-0371-growth-pov-mode`. Ready for the final relay round.
+
 ## Files Touched
 
-Pending.
+Scout v3 pack (`ops/grokbot/grok-bot/v3`), intake mode/thesis + weekly Radar IA cap, `awaiting_thesis` state, `thesis.py`, `thesis_prompts.py`, `thesis_actions.py`, `run_spec.py`, `pov_schedule.py`, `pov_project.py`, migration `b1c2d3e4f5a6`, docs, tests + `autopilot_pov_thesis.feature`.
 
 ## Test Evidence
 
-Pending.
+Static gates 16/16 PASS on `b74de79`; autopilot unit 606 passed; autopilot integration (intake, QA r1, hero images, migrations) green after adapting the daily-cap tests to the weekly Radar IA cap.
+
+Gate details and GATES_JSON: `.agent/reports/AE-0377.dev-summary.md` and the epic summary `.agent/reports/AE-0371.dev-summary.md`.
 
 ## QA Report
 
@@ -147,6 +153,7 @@ Pending.
 
 ## Decision Log
 
+- 2026-10-15: The weekly cap behaves like the daily cap: an extra Radar IA topic is stored but not queued and is listed under `weekly_news_cap_reached`.
 - 2026-10-15: design per ADR-0021 and the architect plan; see the epic AE-0371 Decision Log for cross-cutting decisions.
 
 ## Blockers

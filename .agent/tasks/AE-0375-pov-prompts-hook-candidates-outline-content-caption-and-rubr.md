@@ -1,6 +1,6 @@
 # AE-0375 — Pov prompts: hook candidates, outline, content, caption and rubric
 
-Status: Ready
+Status: Dev Complete
 Tier: T2
 Priority: High
 Type: Feature
@@ -36,13 +36,13 @@ Nothing in the pipeline asks for or uses the owner's opinion; slide 1 is a headl
 
 ## Acceptance Criteria
 
-- [ ] WHEN a POV outline is generated THE SYSTEM SHALL render `carousel_pov/v1/outline` with the thesis, proof, format and slide count, and attach 5 hook candidates to slide 1.
-- [ ] WHEN any `carousel_pov/v1` prompt renders THE SYSTEM SHALL include the rule never to invent opinions, experiences, test results or numbers.
-- [ ] WHEN no personal proof is given THE content prompt SHALL tell the model to argue from reasoning, not anecdotes.
-- [ ] WHEN the owner saves a hook ≤60 chars and ≤10 words THE SYSTEM SHALL store it and use it as the slide-1 heading; a longer hook SHALL be rejected with 422.
-- [ ] WHEN slide 1 of a POV deck has more than 10 words THE validator SHALL emit `hook_word_limit` (blocker).
+- [x] WHEN a POV outline is generated THE SYSTEM SHALL render `carousel_pov/v1/outline` with the thesis, proof, format and slide count, and attach 5 hook candidates to slide 1.
+- [x] WHEN any `carousel_pov/v1` prompt renders THE SYSTEM SHALL include the rule never to invent opinions, experiences, test results or numbers.
+- [x] WHEN no personal proof is given THE content prompt SHALL tell the model to argue from reasoning, not anecdotes.
+- [x] WHEN the owner saves a hook ≤60 chars and ≤10 words THE SYSTEM SHALL store it and use it as the slide-1 heading; a longer hook SHALL be rejected with 422.
+- [x] WHEN slide 1 of a POV deck has more than 10 words THE validator SHALL emit `hook_word_limit` (blocker).
 - [ ] WHEN fewer than 3 slides are in first person, or no thesis word is on slides 1-2 THE validator SHALL emit the warning codes.
-- [ ] WHEN a POV caption is built THE SYSTEM SHALL render `carousel_pov/v1/caption` with the hook and the CTA goal.
+- [x] WHEN a POV caption is built THE SYSTEM SHALL render `carousel_pov/v1/caption` with the hook and the CTA goal.
 
 ## Gherkin Scenarios
 
@@ -133,13 +133,19 @@ Feature: POV prompts
 
 Ticket written from the architect plan (docs/architecture/instagram-growth-pov-mode.md).
 
+### 2026-10-15 (dev)
+
+Implemented in 60dce4e, 8739f77, 37f8e0a on `feat/ae-0371-growth-pov-mode`. Ready for the final relay round.
+
 ## Files Touched
 
-Pending.
+`carousel_pov/v1` prompts, `carousel/v7` outline/content/hook, `outline_by_mode.py` (protocol, no agents import), `PUT /api/carousels/{id}/hook`, POV deck rules, hook picker UI, tests + `carousel_pov_prompts.feature`.
 
 ## Test Evidence
 
-Pending.
+Static gates 16/16 PASS on `59f87e4` (after fixing an application→agents import and a 4-argument route); POV prompt/outline units and hook API tests pass; frontend lint/typecheck/vitest PASS.
+
+Gate details and GATES_JSON: `.agent/reports/AE-0375.dev-summary.md` and the epic summary `.agent/reports/AE-0371.dev-summary.md`.
 
 ## QA Report
 
@@ -147,6 +153,7 @@ Pending.
 
 ## Decision Log
 
+- 2026-10-15: `first_person_missing` is a warning deck rule. The thesis-on-slides-1-2 check is stored as `outline_checks.thesis_early` on outline slide 1 (shown at the outline gate), not as a validator warning code; follow-up listed in the epic summary.
 - 2026-10-15: design per ADR-0021 and the architect plan; see the epic AE-0371 Decision Log for cross-cutting decisions.
 
 ## Blockers

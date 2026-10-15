@@ -1,6 +1,6 @@
 # AE-0374 — Variable slide count: pov_hook_v1 and hero_lower_third_v4 contracts
 
-Status: Ready
+Status: Dev Complete
 Tier: T2
 Priority: High
 Type: Feature
@@ -35,12 +35,12 @@ Every deck is 7 slides: the loader knows one fixed sequence, `MAX_SLIDES = 7`, a
 
 ## Acceptance Criteria
 
-- [ ] WHEN a contract has no range keys THE loader SHALL behave as today (min = max = slide_count).
-- [ ] WHEN `pov_hook_v1` is expanded for 8, 9 or 10 slides THE SYSTEM SHALL keep 2, 3 or 4 point slides and renumber the sequence.
-- [ ] WHEN a contract declares an unknown role or min > max THE loader SHALL fail with `presentation_policy_invalid`.
-- [ ] WHEN every outline slide carries a known role THE normalizer SHALL keep the roles and map each to its slide type, up to 10 slides; otherwise it SHALL apply the legacy 7-slide positional normalization unchanged.
-- [ ] WHEN an outline length is outside the contract range THE validator SHALL emit `slide_count_invalid` (blocker).
-- [ ] WHEN a carousel is created THE SYSTEM SHALL stamp `pov_hook_v1` for POV and `hero_lower_third_v4` for Radar IA.
+- [x] WHEN a contract has no range keys THE loader SHALL behave as today (min = max = slide_count).
+- [x] WHEN `pov_hook_v1` is expanded for 8, 9 or 10 slides THE SYSTEM SHALL keep 2, 3 or 4 point slides and renumber the sequence.
+- [x] WHEN a contract declares an unknown role or min > max THE loader SHALL fail with `presentation_policy_invalid`.
+- [x] WHEN every outline slide carries a known role THE normalizer SHALL keep the roles and map each to its slide type, up to 10 slides; otherwise it SHALL apply the legacy 7-slide positional normalization unchanged.
+- [x] WHEN an outline length is outside the contract range THE validator SHALL emit `slide_count_invalid` (blocker).
+- [x] WHEN a carousel is created THE SYSTEM SHALL stamp `pov_hook_v1` for POV and `hero_lower_third_v4` for Radar IA.
 
 ## Gherkin Scenarios
 
@@ -127,13 +127,19 @@ Feature: Variable slide count
 
 Ticket written from the architect plan (docs/architecture/instagram-growth-pov-mode.md).
 
+### 2026-10-15 (dev)
+
+Implemented in eb31476, 33a0884 on `feat/ae-0371-growth-pov-mode`. Ready for the final relay round.
+
 ## Files Touched
 
-Pending.
+`pov_hook_v1.yaml`, `hero_lower_third_v4.yaml`, policy loader ranges/roles, `expand_policy_for_count`, `project_policy`, role-aware normalizer + `stamp_outline_roles`, `slide_count_invalid` deck rule, `MAX_SLIDES` 10, stamping at create, tests + `carousel_variable_slide_count.feature`.
 
 ## Test Evidence
 
-Pending.
+Static gates 16/16 PASS on `33a0884`; full `tests/unit` re-run green after updating 5 tests that pinned the 7-slide/v3 behaviour.
+
+Gate details and GATES_JSON: `.agent/reports/AE-0374.dev-summary.md` and the epic summary `.agent/reports/AE-0371.dev-summary.md`.
 
 ## QA Report
 

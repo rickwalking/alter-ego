@@ -1,6 +1,6 @@
 # AE-0378 — Instagram insights on the dashboard and the analytics load error
 
-Status: Ready
+Status: Dev Complete
 Tier: T2
 Priority: Medium
 Type: Feature
@@ -34,10 +34,10 @@ There is no Instagram insights code; the dashboard's analytics card shows "Faile
 
 ## Acceptance Criteria
 
-- [ ] WHEN the dashboard asks for insights THE SYSTEM SHALL return one row per published post with the stored metrics and ratios.
-- [ ] WHEN a snapshot is older than 6 h THE SYSTEM SHALL refresh it from the Graph API; a Graph failure SHALL keep the last snapshot and flag the row stale.
-- [ ] WHEN the Graph API omits a metric THE SYSTEM SHALL return null and the UI SHALL show "n/d", never an estimate.
-- [ ] WHEN the editorial-analytics flag is off THE dashboard SHALL show a disabled state instead of "Failed to load analytics".
+- [x] WHEN the dashboard asks for insights THE SYSTEM SHALL return one row per published post with the stored metrics and ratios.
+- [x] WHEN a snapshot is older than 6 h THE SYSTEM SHALL refresh it from the Graph API; a Graph failure SHALL keep the last snapshot and flag the row stale.
+- [x] WHEN the Graph API omits a metric THE SYSTEM SHALL return null and the UI SHALL show "n/d", never an estimate.
+- [x] WHEN the editorial-analytics flag is off THE dashboard SHALL show a disabled state instead of "Failed to load analytics".
 
 ## Gherkin Scenarios
 
@@ -120,13 +120,19 @@ Feature: Instagram insights
 
 Ticket written from the architect plan (docs/architecture/instagram-growth-pov-mode.md).
 
+### 2026-10-15 (dev)
+
+Implemented in 2acb7fe on `feat/ae-0371-growth-pov-mode`. Ready for the final relay round.
+
 ## Files Touched
 
-Pending.
+`domain/insights.py`, `application/insights_service.py`, `infrastructure/insights_gateway.py`, `insights_store.py`, `insights_models.py`, `api/insights.py`, `insights_mapping.py`, migration `c2d3e4f5a6b7`, dashboard `instagram-insights-card.tsx`, `dashboard-analytics.tsx`, analytics hook disabled state, i18n, tests + `instagram_insights.feature`.
 
 ## Test Evidence
 
-Pending.
+Insights unit 13 passed; route/store integration 4 passed; autopilot + migrations + route snapshot 636 passed; frontend vitest 45 passed (card, helpers, analytics states), eslint/typecheck/i18n/component-types PASS.
+
+Gate details and GATES_JSON: `.agent/reports/AE-0378.dev-summary.md` and the epic summary `.agent/reports/AE-0371.dev-summary.md`.
 
 ## QA Report
 

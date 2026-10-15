@@ -181,7 +181,8 @@ Creator assets gain `role` (`hook` / `cta` / `pov`) and `pose_tag`; a list endpo
 (`GET /api/carousels/creator-assets?role=hook`) and an upload `role` field. The wizard's
 "Foto do slide 1" picks from that list (default: the last used). The project stores
 `hook_asset_id`; the artifact build stages the photo the same way the CTA avatar is staged.
-PNG/WebP alpha is already kept (WebP re-encode keeps alpha).
+PNG/WebP alpha: the plan assumed it was already kept; it was not (the upload re-encoded to
+RGB). AE-0376 now keeps it: a source with alpha is stored as RGBA WebP.
 
 New image preset `openai__pov_editorial` (`IMAGE_STYLE_POV_EDITORIAL`). The images node asks
 the project's policy which slides need artwork (`image_required`) instead of the hard-coded set,
@@ -208,8 +209,10 @@ Radar IA's `cta_centered` switches to the follow variant (16.4 #5).
   Descartar. Editar uses the existing ForceReply pending-reply mechanism; the confirmed text
   becomes `autopilot_runs.pov_thesis` and the project's `pov_thesis`. A thesis left
   unconfirmed for 72 h expires like an unanswered review.
-- Weekly mix: at most one Radar IA (`news_analysis`) run per São Paulo ISO week
-  (`weekly_news_cap_reached` rejection); POV is bounded only by the daily cap.
+- Weekly mix: at most one Radar IA (`news_analysis`) run per São Paulo ISO week. Like the
+  daily cap, an extra Radar IA topic is stored but not queued and is listed with
+  `weekly_news_cap_reached` (a duplicate stays a `duplicate_topic`); within one batch only the
+  best-scored Radar IA topic is queued. POV is bounded only by the daily cap.
 - R6 (Tue/Thu scheduling) is **owned by AE-0370**. This epic adds only an isolated
   `PublishSlotPolicy` port plus `PovPublishSlots` (next Tue/Thu 12:00 America/Sao_Paulo, ≥15 min
   lead, same rules as AE-0370's `next_slots`) and the slot constants. It is not wired into
@@ -298,3 +301,27 @@ R0 (owner actions, no code) and R6 (AE-0370) are not tickets of this epic.
 | LLM ignores the never-invent rule | rule in every POV prompt; `personal_proof` is the only source of anecdotes; owner reviews every carousel before publish |
 | AE-0370 conflicts (owner actions, state machine, migration head) | new behaviour in new files; small hook points; re-chain on merge |
 | Graph insights metric names change per API version | metric list in constants; unknown/unsupported metric → "n/d", logged |
+
+## 10. As built (2026-10-15)
+
+Differences from the plan above, and facts found while building:
+
+- **Hero images on Radar IA v4.** Autopilot projects are stamped `hero_lower_third_v4`, so only
+  the hook and impact slides get artwork. A 7-slide deck now has 4 hero images (slides 1, 3,
+  4, 5), not 6; the autopilot image gate counts the same policy-aware total.
+- **Export preflight geometry.** The geometry preflight stays on the default policy: nothing in
+  the rendered HTML carries `data-slide-number`, so it never read per-slide geometry anyway
+  (noted in section 1, out of scope).
+- **Outline agent boundary.** `outline_by_mode` reaches the outline agent through a structural
+  protocol and one request object (`generate_outline_for(SizedOutlineRequest)`), so the
+  application layer gains no import of `agents`.
+- **Workflow start regression (fixed).** Holding the project ORM row for the persona fallback
+  made the editorial ACL re-read an expired `updated_at` outside the async greenlet (500 on
+  `workflow/start`). The route now reads only `persona_id`.
+- **Insights.** One Graph call per post asks for all metrics; if Graph refuses the list
+  (a metric it does not offer for that media), each metric is asked alone and the refused one
+  stays null. At most 10 Graph reads per dashboard request; the rest refresh on the next one.
+- **Not wired, by design:** POV publish slots (`slot_policy_for`) wait for AE-0370's
+  `publish_choice`; autopilot POV runs do not pick a slide-1 photo automatically (the owner
+  binds one in the web UI before approval, else the hook slide renders without a photo).
+

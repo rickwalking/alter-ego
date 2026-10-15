@@ -1,6 +1,6 @@
 # AE-0376 — Pov layouts, photo library, pov_editorial images and Radar IA v7 prompts
 
-Status: Ready
+Status: Dev Complete
 Tier: T2
 Priority: High
 Type: Feature
@@ -35,11 +35,11 @@ Slides use generic neon AI art on every slide, the face only appears on the CTA,
 
 ## Acceptance Criteria
 
-- [ ] WHEN a POV slide with role `hook` renders THE SYSTEM SHALL show the hook over the selected photo with the handle, without generated artwork.
-- [ ] WHEN a POV deck renders THE SYSTEM SHALL use statement/insight/save/cta_follow layouts by role and show the `cta_goal` copy on the last slide.
-- [ ] WHEN a photo is uploaded with role `hook` THE SYSTEM SHALL store the role and list it in `GET /api/carousels/creator-assets?role=hook` for its owner only.
-- [ ] WHEN the image phase runs for a policy THE SYSTEM SHALL generate artwork only for slides whose policy entry has `image_required: true`.
-- [ ] WHEN a Radar IA project is stamped `hero_lower_third_v4` THE SYSTEM SHALL use the v7 outline/content prompts (≤1 news slide, ≥3 impact slides, verdict close).
+- [x] WHEN a POV slide with role `hook` renders THE SYSTEM SHALL show the hook over the selected photo with the handle, without generated artwork.
+- [x] WHEN a POV deck renders THE SYSTEM SHALL use statement/insight/save/cta_follow layouts by role and show the `cta_goal` copy on the last slide.
+- [x] WHEN a photo is uploaded with role `hook` THE SYSTEM SHALL store the role and list it in `GET /api/carousels/creator-assets?role=hook` for its owner only.
+- [x] WHEN the image phase runs for a policy THE SYSTEM SHALL generate artwork only for slides whose policy entry has `image_required: true`.
+- [x] WHEN a Radar IA project is stamped `hero_lower_third_v4` THE SYSTEM SHALL use the v7 outline/content prompts (≤1 news slide, ≥3 impact slides, verdict close).
 
 ## Gherkin Scenarios
 
@@ -126,13 +126,19 @@ Feature: POV layouts and photos
 
 Ticket written from the architect plan (docs/architecture/instagram-growth-pov-mode.md).
 
+### 2026-10-15 (dev)
+
+Implemented in 2d4ecab, 59f87e4, 0813b70 on `feat/ae-0371-growth-pov-mode`. Ready for the final relay round.
+
 ## Files Touched
 
-Pending.
+`hook_face`/`statement`/`save_checklist`/`cta_follow` strategies, `role_layouts.py`, `pov_shell.py`, `slide_styles_pov.py`, `image_artwork.py`, policy-aware images node + hero total, creator photo library routes/service/repository, alpha kept on upload, `pov_editorial` preset, wizard photo section, tests + `carousel_pov_layouts.feature`.
 
 ## Test Evidence
 
-Pending.
+Static gates 16/16 PASS on `59f87e4`; units 147 passed; photo library/hook/content-mode/route snapshot 34 passed; autopilot integration 133 passed (hero-image test updated for v4 artwork); frontend full lint PASS, vitest 425 passed.
+
+Gate details and GATES_JSON: `.agent/reports/AE-0376.dev-summary.md` and the epic summary `.agent/reports/AE-0371.dev-summary.md`.
 
 ## QA Report
 
