@@ -164,6 +164,9 @@ from rag_backend.modules.editorial.infrastructure.legacy_carousel_acl import (
     EditorialProjectView,
     LegacyCarouselAcl,
 )
+from rag_backend.modules.editorial.infrastructure.run_trace_scope import (
+    open_run_trace_scope,
+)
 
 __all__ = [
     "AUTOFIX_STATUS_CONFLICT",
@@ -258,6 +261,7 @@ __all__ = [
     "is_carousel_project_lock_held",
     "is_carousel_project_lock_held_session",
     "is_provider_outage",
+    "open_run_trace_scope",
     "read_project_owner_id",
     "read_run_fence",
     "redrive_automation_phase",

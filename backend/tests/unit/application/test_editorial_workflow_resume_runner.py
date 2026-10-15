@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Generator
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, nullcontext
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -64,7 +64,10 @@ def _patch_run_progress_seams() -> Generator[None, None, None]:
     with (
         patch(f"{_RUNNER}.read_run_fence", new=AsyncMock(return_value=None)),
         # AE-0390: the trace scope reads the owner through its own session.
-        patch(f"{_RUNNER}.read_project_owner_id", new=AsyncMock(return_value="")),
+        patch(
+            f"{_RUNNER}.open_run_trace_scope",
+            new=AsyncMock(side_effect=lambda *_: nullcontext()),
+        ),
         patch(
             f"{_RUNNER}.write_run_heartbeat_with_retry",
             new=AsyncMock(return_value=True),
