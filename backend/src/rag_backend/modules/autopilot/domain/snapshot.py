@@ -30,14 +30,17 @@ from rag_backend.modules.autopilot.constants import (
     FIELD_SLIDE_DRAFTS,
     FIELD_SUMMARY,
     FIELD_VIOLATIONS,
+    GATE_CONTENT,
     GATE_DESIGN,
     SEVERITY_BLOCKER,
 )
 from rag_backend.modules.autopilot.domain.gate import (
     GateSnapshot,
+    QualityViolation,
     ResearchSourceFact,
     SnapshotParts,
 )
+from rag_backend.modules.autopilot.domain.quality import quality_violations
 
 
 def assemble_snapshot(parts: SnapshotParts) -> GateSnapshot:
@@ -62,6 +65,7 @@ def assemble_snapshot(parts: SnapshotParts) -> GateSnapshot:
         parked=parts.parked,
         parked_overdue=parts.parked_overdue,
         hero_images_total=parts.hero_images_total,
+        quality_violations=_quality(state, phase),
     )
 
 
@@ -105,10 +109,22 @@ def _float_or_zero(value: object) -> float:
 
 
 def _forbidden(state: Mapping[str, object]) -> tuple[str, ...]:
+    """Forbidden phrases only (AE-0392).
+
+    The content gate's blocking presentation rules are ``quality_violations``:
+    reporting them as forbidden phrases hid what actually failed.
+    """
     hits = list(_strings(state.get(FIELD_FORBIDDEN_HITS)))
-    hits.extend(_violation_codes(state.get(FIELD_CONTENT_GATE)))
     hits.extend(_phrase_scan(state))
     return tuple(dict.fromkeys(hits))
+
+
+def _quality(state: Mapping[str, object], phase: str) -> tuple[QualityViolation, ...]:
+    """The blocking rules of the report the gate's approve enforces."""
+    report_field = _QUALITY_REPORTS.get(phase)
+    if report_field is None:
+        return ()
+    return quality_violations(state.get(report_field), state)
 
 
 def _phrase_scan(state: Mapping[str, object]) -> tuple[str, ...]:
@@ -162,6 +178,12 @@ def _blocker_code(item: object) -> str:
     if FIELD_CODE in item:
         return _text(item.get(FIELD_CODE))
     return SEVERITY_BLOCKER
+
+
+_QUALITY_REPORTS: dict[str, str] = {
+    GATE_CONTENT: FIELD_CONTENT_GATE,
+    GATE_DESIGN: FIELD_PRESENTATION_VALIDATION,
+}
 
 
 def _revisions(raw: object, phase: str) -> int:

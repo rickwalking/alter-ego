@@ -485,8 +485,11 @@ Radar IA runs keep AE-0370's slots unchanged.
 - **content:** when persona scores exist, the lowest must be ≥ 70 (a missing `overall` or an
   unreadable entry counts as 0). A run with no persona has no scores; like the engine, the
   voice check is then skipped and the owner's review reads `Persona: not scored` (AE-0364).
-  Forbidden phrases and the engine's own content-approve refusal still block.
-- **design:** `presentation_validation` has no blockers.
+  Forbidden phrases (reason `forbidden_phrase`, Measured lists the phrases), blocking
+  presentation rules of `content_gate_validation` (reason `content_quality`, AE-0392) and the
+  engine's own content-approve refusal still block.
+- **design:** `presentation_validation` has no blockers. Blocking rules there are also
+  `content_quality`; a missing or rule-less blocking report stays `presentation_validation_blocked`.
 - **images:** one `image_assets` hero image per slide the image phase illustrates, counted by
   the pipeline's own filter on the persisted slides (AE-0365): the CTA slide uses the owner
   avatar, so a 7-slide carousel has 6. Every file is a present JPEG with a decodable size (raw
@@ -494,6 +497,21 @@ Radar IA runs keep AE-0370's slots unchanged.
 
 A failed check means `revise` with templated feedback, at most 2×, then **escalate**.
 Escalation never approves anything blindly.
+
+**Repair before revise (AE-0392).** When the content or design gate fails on
+`content_quality` (or `presentation_validation_blocked`), the runner first runs the owner
+"Fix issues" plan (AE-0367) on the checkpoint's `localized_slides`, through the editorial
+facade `run_gate_repair`: sentence case, proper nouns, features/summary points from the
+outline, `<strong>` balancing, a bounded EN re-translate. The repaired slides go through the
+reviewer-edit path (re-validate, sync `slide_drafts`, `translations_en` and the content-gate
+report) under the project lock and a lock-version CAS; no re-render. The gate is then read
+again: a clean gate is approved without spending a revision (`autopilot_content_autorepaired`
+logs the fixed rules). This also runs before an escalation at the revision cap. What is left
+is revised with the v2 feedback prompt: `Measured` lists `rule@slide` pairs (at most 10) and
+one line per failing slide gives the rule and its current text, asking the model to change
+only those slides. A revise still regenerates the whole content phase (the engine has no
+per-slide regenerate behind a review decision); the content phase re-drafts each blocking
+slide once on its own (AE-0309). A lost CAS waits for the next tick.
 
 **Telegram webhook security** (`POST /api/telegram/webhook`):
 

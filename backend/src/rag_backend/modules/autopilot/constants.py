@@ -300,7 +300,6 @@ REASON_WAITING = "waiting"
 
 PROMPT_DOMAIN_AUTOPILOT = "autopilot"
 PROMPT_REVISE_FEEDBACK = "revise_feedback"
-PROMPT_VERSION_V1 = "v1"
 VAR_PHASE = "phase"
 VAR_REASON = "reason"
 VAR_DETAIL = "detail"

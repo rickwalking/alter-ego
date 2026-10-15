@@ -76,6 +76,22 @@ class ImageFact:
 
 
 @dataclass(frozen=True, kw_only=True)
+class QualityViolation:
+    """One blocking presentation rule on one slide (AE-0392).
+
+    ``slide_index`` is None for a carousel-wide rule. ``text`` is the
+    offending copy when the field is a plain text field, else empty.
+    """
+
+    rule: str
+    slide_index: int | None = None
+    locale: str = ""
+    field: str = ""
+    message: str = ""
+    text: str = ""
+
+
+@dataclass(frozen=True, kw_only=True)
 class SnapshotParts:
     """Inputs for one snapshot. One object keeps the assembler at one argument."""
 
@@ -116,6 +132,9 @@ class GateSnapshot:
     parked_overdue: bool = False
     # AE-0365: the images gate expects this many hero images, not slides_total.
     hero_images_total: int = 0
+    # AE-0392: blocking presentation rules (content and design gates), kept
+    # apart from ``forbidden_hits`` so each is reported under its own reason.
+    quality_violations: tuple[QualityViolation, ...] = ()
 
 
 @dataclass(frozen=True, kw_only=True)
