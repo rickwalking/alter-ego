@@ -2,11 +2,14 @@
 
 The checker fails the ``backend:autopilot-env`` gate when an image bridge
 setting is missing from a prod surface, when a secret is not a GitHub secret
-(or a plain setting is), or when IMAGE_BRIDGE_ENABLED does not default to
-false. These tests prove each seeded violation exits 1.
+(or a plain setting is), when compose/.env.example turn the flag on by
+default, or when deploy.yml drifts from the owner decision (literal flag,
+fallback true, the site origin). These tests prove each seeded violation
+exits 1.
 
 Gherkin: tests/features/image_bridge.feature
-  Scenario: Startup fails without the bridge URLs (the settings exist on every surface)
+  Scenario: Enabled without the bridge URLs falls back to OpenAI (the settings
+  exist on every surface)
 """
 
 from __future__ import annotations
@@ -45,11 +48,18 @@ CHECKER_MOD = _load_checker()
 NAMES: tuple[str, ...] = CHECKER_MOD.REQUIRED_ENV_NAMES
 
 
+_DEPLOY_LITERALS = {
+    "IMAGE_BRIDGE_ENABLED": "true",
+    "IMAGE_BRIDGE_FALLBACK_ENABLED": "true",
+    "IMAGE_BRIDGE_PUBLIC_BASE_URL": "https://marinssolutions.com",
+}
+
+
 def _deploy_value(name: str) -> str:
     if name in _SECRETS:
         return "${{ secrets." + name + " }}"
-    if name == "IMAGE_BRIDGE_ENABLED":
-        return "${{ vars." + name + " || 'false' }}"
+    if name in _DEPLOY_LITERALS:
+        return _DEPLOY_LITERALS[name]
     return "${{ vars." + name + " || 'x' }}"
 
 
@@ -178,13 +188,12 @@ def test_fires_when_a_plain_setting_is_a_secret(tmp_path: Path) -> None:
 @pytest.mark.parametrize(
     ("surface", "value", "label"),
     [
-        ("deploy", "${{ vars.IMAGE_BRIDGE_ENABLED || 'true' }}", "deploy.yml"),
-        ("deploy", "true", "deploy.yml"),
         ("compose", "${IMAGE_BRIDGE_ENABLED:-true}", "docker-compose.prod.yml"),
+        ("compose", "true", "docker-compose.prod.yml"),
         ("env", "true", "backend/.env.example"),
     ],
 )
-def test_fires_when_enabled_defaults_true(
+def test_fires_when_local_surfaces_default_enabled(
     tmp_path: Path, surface: str, value: str, label: str
 ) -> None:
     values = _canonical()
@@ -196,23 +205,56 @@ def test_fires_when_enabled_defaults_true(
     assert "IMAGE_BRIDGE_ENABLED must default to false in " + label in result.stderr
 
 
-def test_literal_false_passes(tmp_path: Path) -> None:
+@pytest.mark.parametrize("value", ["true", "false"])
+def test_deploy_flag_is_a_reviewed_literal(tmp_path: Path, value: str) -> None:
+    """Owner decision: on in prod; flipping the literal off is the rollback."""
     values = _canonical()
-    values["deploy"]["IMAGE_BRIDGE_ENABLED"] = "false"
+    values["deploy"]["IMAGE_BRIDGE_ENABLED"] = value
     result = _run(*_write(tmp_path, values))
     assert result.returncode == EXIT_OK, result.stderr
 
 
-def test_secret_backed_false_is_a_valid_default_but_not_a_secret(
-    tmp_path: Path,
+@pytest.mark.parametrize(
+    "value",
+    ["${{ vars.IMAGE_BRIDGE_ENABLED || 'true' }}", "yes", ""],
+)
+def test_fires_when_the_deploy_flag_is_not_a_literal(
+    tmp_path: Path, value: str
 ) -> None:
     values = _canonical()
-    values["deploy"]["IMAGE_BRIDGE_ENABLED"] = (
-        "${{ secrets.IMAGE_BRIDGE_ENABLED || 'false' }}"
-    )
+    values["deploy"]["IMAGE_BRIDGE_ENABLED"] = value
     result = _run(*_write(tmp_path, values))
     assert result.returncode == EXIT_VIOLATION
-    assert "must default to false" not in result.stderr
+    assert "IMAGE_BRIDGE_ENABLED must be a literal true or false" in result.stderr
+
+
+@pytest.mark.parametrize(
+    "value", ["false", "${{ vars.IMAGE_BRIDGE_FALLBACK_ENABLED }}"]
+)
+def test_fires_when_the_deploy_fallback_is_not_true(tmp_path: Path, value: str) -> None:
+    values = _canonical()
+    values["deploy"]["IMAGE_BRIDGE_FALLBACK_ENABLED"] = value
+    result = _run(*_write(tmp_path, values))
+    assert result.returncode == EXIT_VIOLATION
+    assert "IMAGE_BRIDGE_FALLBACK_ENABLED must be true in deploy.yml" in result.stderr
+
+
+def test_fires_when_the_deploy_base_url_is_not_the_site(tmp_path: Path) -> None:
+    values = _canonical()
+    values["deploy"]["IMAGE_BRIDGE_PUBLIC_BASE_URL"] = "https://example.com"
+    result = _run(*_write(tmp_path, values))
+    assert result.returncode == EXIT_VIOLATION
+    assert (
+        "IMAGE_BRIDGE_PUBLIC_BASE_URL must be https://marinssolutions.com"
+        in result.stderr
+    )
+
+
+def test_fires_when_a_plain_setting_is_a_secret_flag(tmp_path: Path) -> None:
+    values = _canonical()
+    values["deploy"]["IMAGE_BRIDGE_ENABLED"] = "${{ secrets.IMAGE_BRIDGE_ENABLED }}"
+    result = _run(*_write(tmp_path, values))
+    assert result.returncode == EXIT_VIOLATION
     assert "IMAGE_BRIDGE_ENABLED is not a secret" in result.stderr
 
 

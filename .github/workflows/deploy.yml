@@ -168,14 +168,15 @@ jobs:
             AUTOPILOT_OWNER_USER_ID=${{ secrets.AUTOPILOT_OWNER_USER_ID }}
             AUTOPILOT_DAILY_CAP=${{ secrets.AUTOPILOT_DAILY_CAP || '1' }}
             AUTOPILOT_DEFAULT_PUBLISH=${{ secrets.AUTOPILOT_DEFAULT_PUBLISH || 'now' }}
-            # AE-0393 GrokBot image bridge. Off until the IMAGE_BRIDGE_ENABLED
-            # repository variable is true; the webhook URL and auth value are
-            # secrets, the rest are plain repository variables with defaults.
-            IMAGE_BRIDGE_ENABLED=${{ vars.IMAGE_BRIDGE_ENABLED || 'false' }}
-            IMAGE_BRIDGE_FALLBACK_ENABLED=${{ vars.IMAGE_BRIDGE_FALLBACK_ENABLED || 'true' }}
+            # AE-0393 GrokBot image bridge (owner decision 2026-10-15): ON in prod,
+            # OpenAI only when a bridge job fails. Rollback = set ENABLED=false here.
+            # Without the two secrets the backend logs image_bridge_misconfigured and
+            # keeps plain OpenAI (never a crash loop).
+            IMAGE_BRIDGE_ENABLED=true
+            IMAGE_BRIDGE_FALLBACK_ENABLED=true
             IMAGE_BRIDGE_TIMEOUT_SECONDS=${{ vars.IMAGE_BRIDGE_TIMEOUT_SECONDS || '600' }}
             IMAGE_BRIDGE_MAX_CONCURRENCY=${{ vars.IMAGE_BRIDGE_MAX_CONCURRENCY || '2' }}
-            IMAGE_BRIDGE_PUBLIC_BASE_URL=${{ vars.IMAGE_BRIDGE_PUBLIC_BASE_URL || 'https://marinssolutions.com' }}
+            IMAGE_BRIDGE_PUBLIC_BASE_URL=https://marinssolutions.com
             GROKBOT_IMAGE_WEBHOOK_URL=${{ secrets.GROKBOT_IMAGE_WEBHOOK_URL }}
             GROKBOT_IMAGE_WEBHOOK_AUTH_HEADER=${{ vars.GROKBOT_IMAGE_WEBHOOK_AUTH_HEADER || 'Authorization' }}
             GROKBOT_IMAGE_WEBHOOK_AUTH_VALUE=${{ secrets.GROKBOT_IMAGE_WEBHOOK_AUTH_VALUE }}

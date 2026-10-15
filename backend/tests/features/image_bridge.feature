@@ -79,11 +79,19 @@ Feature: GrokBot image bridge (AE-0393, ADR-0022)
     When the waiter polls Postgres
     Then it reads the image bytes once and the stored bytes are nulled
 
-  Scenario: Startup fails without the bridge URLs
+  Scenario: Enabled without the bridge URLs falls back to OpenAI
     Given IMAGE_BRIDGE_ENABLED is true
     And GROKBOT_IMAGE_WEBHOOK_URL or IMAGE_BRIDGE_PUBLIC_BASE_URL is empty
     When the application starts
-    Then startup fails with an error naming the missing setting
+    Then startup logs one image_bridge_misconfigured ERROR naming the missing settings, never their values
+    And the plain OpenAI image service is wired
+    And the application keeps running
+
+  Scenario: Configured bridge is wired
+    Given IMAGE_BRIDGE_ENABLED is true and both URLs are set
+    When the application starts
+    Then no misconfiguration error is logged
+    And the Grok Bot bridge is wired with the OpenAI fallback
 
   Scenario: Tokens are never stored or logged in clear
     Given a bridge job was created

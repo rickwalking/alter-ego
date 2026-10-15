@@ -11,14 +11,16 @@ from rag_backend.modules.image_bridge.public import (
     ImageBridgeConfigError,
     build_carousel_openai_service,
     build_grokbot_image_service,
+    missing_image_bridge_settings,
     register_persistence_models,
-    validate_image_bridge_settings,
+    report_image_bridge_config,
 )
 
 __all__ = [
     "ImageBridgeConfigError",
     "build_carousel_openai_service",
     "build_grokbot_image_service",
+    "missing_image_bridge_settings",
     "register_persistence_models",
-    "validate_image_bridge_settings",
+    "report_image_bridge_config",
 ]

@@ -43,12 +43,18 @@ Chosen: **option 1**. Design and contract: [GrokBot Image Bridge](../architectur
   or an OpenAI error body.
 - The waiter polls Postgres, so it works across workers. It normalizes the image to the
   requested size and writes it to the same path the OpenAI service would.
-- A flag (`IMAGE_BRIDGE_ENABLED`, default off) controls it, and every failure falls back to OpenAI.
+- A flag (`IMAGE_BRIDGE_ENABLED`, off in code) controls it, and every failure falls back to OpenAI.
+- **Owner decision (2026-10-15):** prod runs it **on by default**. `deploy.yml` sets
+  `IMAGE_BRIDGE_ENABLED=true` and `IMAGE_BRIDGE_FALLBACK_ENABLED=true`, so the bridge replaces the
+  OpenAI Images API as the normal path and OpenAI is used only when a bridge job fails.
+- Prod auto-deploys on merge, so a missing bridge secret must never crash-loop prod: an enabled
+  bridge without its URLs logs one `image_bridge_misconfigured` ERROR (setting names only) and
+  wires plain OpenAI. Rollback is setting the flag to `false` in `deploy.yml`.
 
 ### Consequences
 
-- Good: no new spend per image; the workflow is unaware of the provider; instant rollback with
-  the flag.
+- Good: no new spend per image; the workflow is unaware of the provider; rollback is one flag
+  change in `deploy.yml`.
 - Good: no agent process or extra RAM on the prod VPS; the work runs on the Grok Bot side.
 - Bad: images take ~1 min each instead of seconds. That is acceptable for the autopilot, and the
   concurrency cap is 2.

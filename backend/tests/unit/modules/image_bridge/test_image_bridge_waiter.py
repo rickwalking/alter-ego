@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import asyncio
 from dataclasses import dataclass, field
+from datetime import datetime
 from pathlib import Path
 from uuid import UUID
 
@@ -32,6 +33,7 @@ from rag_backend.modules.image_bridge.domain.models import (
     JobDeadline,
     JobFailure,
     JobSuccess,
+    WebhookRequest,
 )
 from rag_backend.modules.image_bridge.domain.tokens import token_digest
 from rag_backend.modules.image_bridge.infrastructure.pillow_codec import (
@@ -184,12 +186,11 @@ async def test_job_expired_by_another_worker_raises(tmp_path: Path) -> None:
 
 
 @dataclass
-class _RacingRepository:
-    """Lets the callback land between the overdue read and the expire."""
+class _DelegatingRepository:
+    """Forwards every port call to the SQLite repository."""
 
     inner: SqlImageBridgeJobRepository
     clock: FakeClock
-    expired_calls: list[UUID] = field(default_factory=list)
 
     async def create(self, job: ImageBridgeJob) -> None:
         await self.inner.create(job)
@@ -204,6 +205,22 @@ class _RacingRepository:
         return await self.inner.fail(failure)
 
     async def expire(self, deadline: JobDeadline) -> bool:
+        return await self.inner.expire(deadline)
+
+    async def take_image(self, job_id: UUID) -> bytes | None:
+        return await self.inner.take_image(job_id)
+
+    async def sweep(self, now: datetime) -> None:
+        await self.inner.sweep(now)
+
+
+@dataclass
+class _RacingRepository(_DelegatingRepository):
+    """Lets the callback land between the overdue read and the expire."""
+
+    expired_calls: list[UUID] = field(default_factory=list)
+
+    async def expire(self, deadline: JobDeadline) -> bool:
         self.expired_calls.append(deadline.job_id)
         # The other worker recorded the image just before the deadline.
         before_deadline = self.clock.now().replace(year=2000)
@@ -212,11 +229,30 @@ class _RacingRepository:
         )
         return await self.inner.expire(deadline)
 
-    async def take_image(self, job_id: UUID) -> bytes | None:
-        return await self.inner.take_image(job_id)
 
-    async def sweep(self, now) -> None:
-        await self.inner.sweep(now)
+@dataclass
+class _InFlight:
+    current: int = 0
+    peak: int = 0
+
+
+@dataclass
+class _CountingWebhook(FakeWebhook):
+    in_flight: _InFlight = field(default_factory=_InFlight)
+
+    async def deliver(self, request: WebhookRequest) -> None:
+        self.in_flight.current += 1
+        self.in_flight.peak = max(self.in_flight.peak, self.in_flight.current)
+        await super().deliver(request)
+
+
+@dataclass
+class _CountingRepository(_DelegatingRepository):
+    in_flight: _InFlight = field(default_factory=_InFlight)
+
+    async def take_image(self, job_id: UUID) -> bytes | None:
+        self.in_flight.current -= 1
+        return await self.inner.take_image(job_id)
 
 
 async def test_callback_winning_the_deadline_race_is_used(tmp_path: Path) -> None:
@@ -269,49 +305,39 @@ async def test_succeeded_job_whose_bytes_were_taken_raises(tmp_path: Path) -> No
 
 # Scenario: Concurrency is capped
 async def test_three_requests_with_a_cap_of_two(tmp_path: Path) -> None:
-    webhook, clock = FakeWebhook(), FakeClock()
-    in_flight = 0
-    peak = 0
-    async with sqlite_repository() as repo:
-        answer = _answer_each_job(repo, webhook, clock)
-        original_deliver = webhook.deliver
-
-        async def counting_deliver(request) -> None:
-            nonlocal in_flight, peak
-            in_flight += 1
-            peak = max(peak, in_flight)
-            await original_deliver(request)
-
-        original_take = repo.take_image
-
-        async def counting_take(job_id: UUID) -> bytes | None:
-            nonlocal in_flight
-            in_flight -= 1
-            return await original_take(job_id)
+    in_flight = _InFlight()
+    webhook, clock = _CountingWebhook(in_flight=in_flight), FakeClock()
+    async with sqlite_repository() as inner:
+        repo = _CountingRepository(inner, clock, in_flight=in_flight)
+        answer = _answer_each_job(inner, webhook, clock)
 
         async def slow_answer() -> None:
             await asyncio.sleep(0.01)
             await answer()
 
-        webhook.deliver = counting_deliver  # type: ignore[method-assign]
-        repo.take_image = counting_take  # type: ignore[method-assign]
         clock.on_sleep = slow_answer
-        service = _service(repo, (webhook, clock), max_concurrency=2)
+        deps = GrokBotImageDeps(
+            repository=repo, webhook=webhook, codec=PillowImageCodec(), clock=clock
+        )
+        service = GrokBotImageService(
+            deps, GrokBotImageConfig(callback_base_url=BASE_URL, max_concurrency=2)
+        )
         paths = [str(tmp_path / f"s{index}.jpg") for index in range(3)]
         results = await asyncio.gather(
             *(service.generate_image("p", path) for path in paths)
         )
     assert results == paths
-    assert peak == 2
+    assert in_flight.peak == 2
     assert len(webhook.requests) == 3
 
 
-def test_invalid_configured_size_fails_fast() -> None:
-    deps = GrokBotImageDeps(
-        repository=None,  # type: ignore[arg-type]
-        webhook=FakeWebhook(),
-        codec=PillowImageCodec(),
-        clock=FakeClock(),
-    )
-    with pytest.raises(ValueError, match="WIDTHxHEIGHT"):
-        GrokBotImageService(deps, GrokBotImageConfig(BASE_URL, size="big"))
+async def test_invalid_configured_size_fails_fast() -> None:
+    async with sqlite_repository() as repo:
+        deps = GrokBotImageDeps(
+            repository=repo,
+            webhook=FakeWebhook(),
+            codec=PillowImageCodec(),
+            clock=FakeClock(),
+        )
+        with pytest.raises(ValueError, match="WIDTHxHEIGHT"):
+            GrokBotImageService(deps, GrokBotImageConfig(BASE_URL, size="big"))

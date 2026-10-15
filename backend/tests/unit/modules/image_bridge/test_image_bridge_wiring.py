@@ -2,7 +2,7 @@
 
 Gherkin: tests/features/image_bridge.feature
   Scenario: Bridge disabled keeps the OpenAI path
-  Scenario: Startup fails without the bridge URLs
+  Scenario: Enabled without the bridge URLs falls back to OpenAI
 """
 
 from __future__ import annotations
@@ -10,6 +10,7 @@ from __future__ import annotations
 import pytest
 from dependency_injector import providers
 from pydantic import SecretStr
+from structlog.testing import capture_logs
 
 from rag_backend.bootstrap.startup_validation import run_startup_validations
 from rag_backend.domain.constants import IMAGE_MODEL_OPENAI
@@ -21,7 +22,8 @@ from rag_backend.modules.image_bridge import (
     ImageBridgeConfigError,
     build_carousel_openai_service,
     build_grokbot_image_service,
-    validate_image_bridge_settings,
+    missing_image_bridge_settings,
+    report_image_bridge_config,
 )
 from rag_backend.modules.image_bridge.application.fallback_image_service import (
     FallbackImageService,
@@ -41,7 +43,7 @@ def _settings(**overrides: object) -> Settings:
         "carousel_checkpoint_backend": "postgres",
     }
     base.update(overrides)
-    return Settings(**base)  # type: ignore[arg-type]
+    return Settings.model_validate(base)
 
 
 def _enabled(**overrides: object) -> Settings:
@@ -89,50 +91,65 @@ def test_enabled_wires_the_bridge_with_the_openai_fallback() -> None:
 
 
 def test_enabled_without_fallback_keeps_the_flag() -> None:
-    openai = object()
     service = build_carousel_openai_service(
-        _enabled(image_bridge_fallback_enabled=False),
-        openai,  # type: ignore[arg-type]
+        _enabled(image_bridge_fallback_enabled=False), OpenAIImageService("sk-test")
     )
     assert isinstance(service, FallbackImageService)
     assert service._config.fallback_enabled is False
 
 
-# Scenario: Startup fails without the bridge URLs
+# Scenario: Enabled without the bridge URLs falls back to OpenAI
 @pytest.mark.parametrize(
     ("overrides", "missing"),
     [
-        ({"grokbot_image_webhook_url": SecretStr("")}, "GROKBOT_IMAGE_WEBHOOK_URL"),
-        ({"image_bridge_public_base_url": "  "}, "IMAGE_BRIDGE_PUBLIC_BASE_URL"),
+        ({"grokbot_image_webhook_url": SecretStr("")}, ["GROKBOT_IMAGE_WEBHOOK_URL"]),
+        ({"image_bridge_public_base_url": "  "}, ["IMAGE_BRIDGE_PUBLIC_BASE_URL"]),
+        (
+            {
+                "grokbot_image_webhook_url": SecretStr(""),
+                "image_bridge_public_base_url": "",
+            },
+            ["GROKBOT_IMAGE_WEBHOOK_URL", "IMAGE_BRIDGE_PUBLIC_BASE_URL"],
+        ),
     ],
 )
-def test_enabled_without_a_url_fails(
-    overrides: dict[str, object], missing: str
+def test_misconfigured_bridge_wires_plain_openai(
+    overrides: dict[str, object], missing: list[str]
 ) -> None:
     settings = _enabled(**overrides)
-    with pytest.raises(ImageBridgeConfigError, match=missing):
-        validate_image_bridge_settings(settings)
-    with pytest.raises(ImageBridgeConfigError, match=missing):
-        build_carousel_openai_service(settings, object())  # type: ignore[arg-type]
+    assert missing_image_bridge_settings(settings) == missing
+    service, openai = _registry_openai_service(settings)
+    assert service is openai
 
 
-def test_both_missing_are_named() -> None:
-    settings = _settings(image_bridge_enabled=True)
-    with pytest.raises(ImageBridgeConfigError) as caught:
-        validate_image_bridge_settings(settings)
-    message = str(caught.value)
-    assert "GROKBOT_IMAGE_WEBHOOK_URL, IMAGE_BRIDGE_PUBLIC_BASE_URL" in message
+def test_startup_logs_one_error_naming_only_the_missing_settings() -> None:
+    settings = _enabled(
+        image_bridge_public_base_url="",
+        grokbot_image_webhook_auth_value=SecretStr("Bearer do-not-log"),
+    )
+    with capture_logs() as logs:
+        result = run_startup_validations(settings)
+    errors = [log for log in logs if log["log_level"] == "error"]
+    assert result is not None
+    assert errors == [
+        {
+            "event": "image_bridge_misconfigured",
+            "log_level": "error",
+            "missing": ["IMAGE_BRIDGE_PUBLIC_BASE_URL"],
+            "image_provider": "openai",
+        }
+    ]
+    assert "hooks.example" not in repr(logs)
+    assert "do-not-log" not in repr(logs)
 
 
-def test_startup_validation_fails_in_any_environment() -> None:
-    settings = _settings(image_bridge_enabled=True, environment="development")
-    with pytest.raises(ImageBridgeConfigError):
-        run_startup_validations(settings)
-
-
-def test_startup_validation_passes_when_configured_or_off() -> None:
-    run_startup_validations(_enabled())
-    run_startup_validations(_settings())
+def test_startup_is_silent_when_configured_or_off() -> None:
+    for settings in (_enabled(), _settings()):
+        with capture_logs() as logs:
+            run_startup_validations(settings)
+        assert not [log for log in logs if log["event"] == "image_bridge_misconfigured"]
+    assert report_image_bridge_config(_enabled()) is True
+    assert report_image_bridge_config(_settings()) is False
 
 
 def test_smoke_builder_works_before_the_flag_is_flipped() -> None:
@@ -140,7 +157,7 @@ def test_smoke_builder_works_before_the_flag_is_flipped() -> None:
     assert isinstance(
         build_grokbot_image_service(disabled_but_configured), GrokBotImageService
     )
-    with pytest.raises(ImageBridgeConfigError):
+    with pytest.raises(ImageBridgeConfigError, match="GROKBOT_IMAGE_WEBHOOK_URL"):
         build_grokbot_image_service(_settings())
 
 

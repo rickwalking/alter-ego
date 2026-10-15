@@ -2,8 +2,8 @@
 
 ``build_carousel_openai_service`` is what the container hands to the image
 provider registry as its OpenAI service: the plain OpenAI service when the
-bridge is off (no behavior change), the Grok Bot bridge with the OpenAI
-fallback when it is on.
+bridge is off or misconfigured (no behavior change), the Grok Bot bridge with
+the OpenAI fallback when it is on.
 """
 
 from __future__ import annotations
@@ -11,6 +11,7 @@ from __future__ import annotations
 from rag_backend.domain.protocols import ImageGenerationService
 from rag_backend.infrastructure.config.settings import Settings
 from rag_backend.infrastructure.database.config import get_session_maker
+from rag_backend.infrastructure.logging import get_logger
 from rag_backend.modules.image_bridge.application.callback import (
     CallbackDeps,
     ImageBridgeCallbackService,
@@ -29,6 +30,8 @@ from rag_backend.modules.image_bridge.constants import (
     ENV_PUBLIC_BASE_URL,
     ENV_WEBHOOK_URL,
     ERR_CONFIG_MISSING,
+    LOG_MISCONFIGURED,
+    PROVIDER_OPENAI,
 )
 from rag_backend.modules.image_bridge.domain.exceptions import ImageBridgeConfigError
 from rag_backend.modules.image_bridge.infrastructure.clock import SystemClock
@@ -43,32 +46,48 @@ from rag_backend.modules.image_bridge.infrastructure.webhook_client import (
     WebhookClientConfig,
 )
 
+logger = get_logger()
 
-def validate_image_bridge_settings(settings: Settings) -> None:
-    """Fail when the bridge is enabled without its URLs (any environment)."""
+
+def missing_image_bridge_settings(settings: Settings) -> list[str]:
+    """Env names of the bridge URLs that are empty (values never returned)."""
+    values = (
+        (ENV_WEBHOOK_URL, settings.grokbot_image_webhook_url.get_secret_value()),
+        (ENV_PUBLIC_BASE_URL, settings.image_bridge_public_base_url),
+    )
+    return [name for name, value in values if not value.strip()]
+
+
+def report_image_bridge_config(settings: Settings) -> bool:
+    """Startup check: whether the bridge will be wired.
+
+    Prod auto-deploys on merge, so a missing secret must never crash-loop the
+    backend: an enabled bridge without its URLs logs one ERROR naming the
+    missing settings and the container keeps the plain OpenAI service.
+    """
     if not settings.image_bridge_enabled:
-        return
-    missing = [
-        name
-        for name, value in (
-            (ENV_WEBHOOK_URL, settings.grokbot_image_webhook_url.get_secret_value()),
-            (ENV_PUBLIC_BASE_URL, settings.image_bridge_public_base_url),
-        )
-        if not value.strip()
-    ]
-    if missing:
-        raise ImageBridgeConfigError(
-            ERR_CONFIG_MISSING.format(names=CONFIG_NAMES_SEPARATOR.join(missing))
-        )
+        return False
+    missing = missing_image_bridge_settings(settings)
+    if not missing:
+        return True
+    logger.error(
+        LOG_MISCONFIGURED,
+        missing=missing,
+        image_provider=PROVIDER_OPENAI,
+    )
+    return False
 
 
 def build_carousel_openai_service(
     settings: Settings, openai_service: ImageGenerationService
 ) -> ImageGenerationService:
-    """The OpenAI-slot service for the registry, bridged when enabled."""
-    if not settings.image_bridge_enabled:
+    """The OpenAI-slot service for the registry, bridged when enabled.
+
+    Disabled, or enabled without its URLs (logged at startup by
+    ``report_image_bridge_config``), keeps the plain OpenAI service.
+    """
+    if not settings.image_bridge_enabled or missing_image_bridge_settings(settings):
         return openai_service
-    validate_image_bridge_settings(settings)
     primary = GrokBotImageService(_waiter_deps(settings), _waiter_config(settings))
     return FallbackImageService(
         FallbackImageConfig(
@@ -82,12 +101,14 @@ def build_carousel_openai_service(
 def build_grokbot_image_service(settings: Settings) -> ImageGenerationService:
     """The bridge alone, without the fallback (the smoke CLI).
 
-    Validates the URLs as if the bridge were enabled, so the smoke test can
-    run before the flag is flipped.
+    Ignores the flag so the smoke test can also run with the bridge off;
+    raises ``ImageBridgeConfigError`` when a URL is missing.
     """
-    validate_image_bridge_settings(
-        settings.model_copy(update={"image_bridge_enabled": True})
-    )
+    missing = missing_image_bridge_settings(settings)
+    if missing:
+        raise ImageBridgeConfigError(
+            ERR_CONFIG_MISSING.format(names=CONFIG_NAMES_SEPARATOR.join(missing))
+        )
     return GrokBotImageService(_waiter_deps(settings), _waiter_config(settings))
 
 

@@ -169,25 +169,54 @@ sees the same artifact it gets from OpenAI today.
 
 `container.py`: when `IMAGE_BRIDGE_ENABLED=true`, `openai_service` passed to
 `ImageProviderRegistry` becomes `FallbackImageService(primary=GrokBotImageService(...),
-fallback=OpenAIImageService(...))`. When false (the default), nothing changes.
+fallback=OpenAIImageService(...))`. When false (the code default), nothing changes.
 
-| Setting | Default | Notes |
-|---|---|---|
-| `IMAGE_BRIDGE_ENABLED` | `false` | Master switch. |
-| `IMAGE_BRIDGE_FALLBACK_ENABLED` | `true` | On failure, call OpenAI. |
-| `IMAGE_BRIDGE_TIMEOUT_SECONDS` | `600` | Per image; includes the Grok Bot queue wait. |
-| `IMAGE_BRIDGE_MAX_CONCURRENCY` | `2` | Bridge jobs in flight per process. |
-| `IMAGE_BRIDGE_PUBLIC_BASE_URL` | — | Builds `callback_url`; required when enabled. |
-| `GROKBOT_IMAGE_WEBHOOK_URL` | — | Required when enabled (secret). |
-| `GROKBOT_IMAGE_WEBHOOK_AUTH_HEADER` | `Authorization` | |
-| `GROKBOT_IMAGE_WEBHOOK_AUTH_VALUE` | — | Secret. |
+**Owner decision (2026-10-15): the bridge is ON in prod.** `deploy.yml` sets
+`IMAGE_BRIDGE_ENABLED=true` and `IMAGE_BRIDGE_FALLBACK_ENABLED=true`: the Grok Bot replaces the
+OpenAI Images API as the normal path, and OpenAI runs only when a bridge job fails. The
+`Settings` defaults stay `false` / `true`, so dev and tests never call a webhook.
 
-Startup validation: when enabled, the URL settings must be set. A missing value is a clear startup
-error, not a runtime surprise.
+| Setting | Default (code) | Prod (`deploy.yml`) | Notes |
+|---|---|---|---|
+| `IMAGE_BRIDGE_ENABLED` | `false` | `true` | Master switch. |
+| `IMAGE_BRIDGE_FALLBACK_ENABLED` | `true` | `true` | On failure, call OpenAI. |
+| `IMAGE_BRIDGE_TIMEOUT_SECONDS` | `600` | `vars` or `600` | Per image; includes the Grok Bot queue wait. |
+| `IMAGE_BRIDGE_MAX_CONCURRENCY` | `2` | `vars` or `2` | Bridge jobs in flight per process. |
+| `IMAGE_BRIDGE_PUBLIC_BASE_URL` | — | `https://marinssolutions.com` | Builds `callback_url`; needed when enabled. |
+| `GROKBOT_IMAGE_WEBHOOK_URL` | — | secret | Needed when enabled. |
+| `GROKBOT_IMAGE_WEBHOOK_AUTH_HEADER` | `Authorization` | `vars` or `Authorization` | |
+| `GROKBOT_IMAGE_WEBHOOK_AUTH_VALUE` | — | secret | |
+
+Startup check: prod auto-deploys on merge, so a missing secret must never crash-loop the
+backend. When the bridge is enabled but `GROKBOT_IMAGE_WEBHOOK_URL` or
+`IMAGE_BRIDGE_PUBLIC_BASE_URL` is empty, startup logs **one ERROR**
+(`image_bridge_misconfigured`, `missing=[names]`, never values) and the container wires the plain
+`OpenAIImageService`. Startup never fails because of the bridge.
 
 All of these must be added to `.github/workflows/deploy.yml` (the deploy rewrites the server
 `.env` from GitHub Secrets) and to `.env.example`. The `backend:autopilot-env` gate pattern
 shows how settings are checked against `deploy.yml`.
+
+As implemented (AE-0393):
+
+- `deploy.yml` reads `GROKBOT_IMAGE_WEBHOOK_URL` and `GROKBOT_IMAGE_WEBHOOK_AUTH_VALUE` from
+  **secrets**. The flag, the fallback and the public base URL are literals (the switch and
+  the rollback are reviewed code); timeout, concurrency and the auth header name are
+  repository variables (`vars.*`) with the defaults above.
+- `docker-compose.prod.yml` passes all eight to the backend service (`IMAGE_BRIDGE_ENABLED`
+  defaults to `false`).
+- `scripts/ci/check_image_bridge_env_parity.py` runs inside `backend:autopilot-env`. It checks
+  that every setting is on all four surfaces (deploy, compose, `backend/.env.example`,
+  `Settings`), that the two secrets are secrets and the others are not, that compose and
+  `.env.example` default the flag to false, and that `deploy.yml` keeps the owner decision
+  (literal flag, fallback `true`, the site origin).
+- `run_startup_validations` calls `report_image_bridge_config`, which logs the
+  `image_bridge_misconfigured` ERROR described above; the container's builder then keeps OpenAI.
+- The sweep (expire overdue `pending` rows, delete rows older than 7 days) runs lazily before
+  each new job; a callback on an overdue job also expires it and answers `409`.
+- Smoke test: `scripts/image_bridge_smoke.py` (bridge only by default; `--with-fallback`
+  allows OpenAI). On prod, pipe it into the backend container:
+  `docker compose -f docker-compose.prod.yml exec -T backend python - < scripts/image_bridge_smoke.py`.
 
 ### 3.5 Schema
 
@@ -231,9 +260,17 @@ and `nginx.conf.ssl`. The global default (1 MB) would reject every callback with
 
 ## 6. Rollout
 
-1. Merge with `IMAGE_BRIDGE_ENABLED=false` (no behavior change).
-2. The owner configures the Grok Bot webhook (section 2) and sets the secrets.
-3. Smoke-test: a `scripts/` CLI that runs one bridge job end to end against prod with a test
-   prompt and reports seconds plus dimensions.
-4. Enable on prod. Watch one autopilot carousel: provider per image, fallback count, wait times.
-5. Keep OpenAI as the fallback. Revisit after two weeks of fallback rate data.
+The merge **is** the enable: `deploy.yml` ships `IMAGE_BRIDGE_ENABLED=true` and every merge to
+`main` auto-deploys.
+
+1. **Before the merge:** set the `GROKBOT_IMAGE_WEBHOOK_URL` and
+   `GROKBOT_IMAGE_WEBHOOK_AUTH_VALUE` secrets, and make sure the Grok Bot routine is live
+   against the contract (section 2). Without the secrets the deploy still comes up: it logs
+   `image_bridge_misconfigured` and keeps plain OpenAI.
+2. Merge → deploy. Check the startup log has no `image_bridge_misconfigured`.
+3. **Post-deploy check:** run `scripts/image_bridge_smoke.py` against prod. It runs one bridge
+   job end to end and prints seconds, dimensions and provider (exit 0 = image written).
+4. Watch one autopilot carousel: `image_provider` per image (`grokbot` vs `openai_fallback`),
+   fallback count, wait times.
+5. **Rollback:** set `IMAGE_BRIDGE_ENABLED=false` in `deploy.yml` and merge (plain OpenAI).
+6. Keep OpenAI as the fallback. Revisit after two weeks of fallback rate data.

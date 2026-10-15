@@ -9,7 +9,8 @@ would make infrastructure depend on the API layer.
 from rag_backend.modules.image_bridge.bootstrap import (
     build_carousel_openai_service,
     build_grokbot_image_service,
-    validate_image_bridge_settings,
+    missing_image_bridge_settings,
+    report_image_bridge_config,
 )
 from rag_backend.modules.image_bridge.domain.exceptions import ImageBridgeConfigError
 
@@ -17,8 +18,9 @@ __all__ = [
     "ImageBridgeConfigError",
     "build_carousel_openai_service",
     "build_grokbot_image_service",
+    "missing_image_bridge_settings",
     "register_persistence_models",
-    "validate_image_bridge_settings",
+    "report_image_bridge_config",
 ]
 
 

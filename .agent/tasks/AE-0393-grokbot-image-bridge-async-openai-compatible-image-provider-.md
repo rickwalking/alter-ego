@@ -33,7 +33,8 @@ agent and return its result to the images phase.
 - Callback `POST /api/v1/image-bridge/jobs/{job_id}/result`. It accepts the OpenAI `ImagesResponse`
   (`b64_json`) or an OpenAI error body, authenticated with the per-job one-time token.
 - Table `image_bridge_jobs` and its Alembic migration.
-- Container wiring behind `IMAGE_BRIDGE_ENABLED` (default false).
+- Container wiring behind `IMAGE_BRIDGE_ENABLED` (code default false; prod `deploy.yml` true,
+  owner decision 2026-10-15).
 - Settings, `.env.example` and `deploy.yml` entries for every new setting.
 - nginx `client_max_body_size 16m` on `/api/v1/image-bridge/` in both nginx configs.
 - Smoke CLI `scripts/image_bridge_smoke.py`: one end-to-end job, reports seconds and dimensions.
@@ -66,13 +67,20 @@ agent and return its result to the images phase.
       `image_bridge_jobs.image_bytes`, which is nulled after the read.
 - [ ] AC7: Tokens are stored only as SHA-256 and compared with `hmac.compare_digest`. No token,
       webhook secret or base64 appears in logs.
-- [ ] AC8: Startup fails with a clear error if the bridge is enabled without
-      `GROKBOT_IMAGE_WEBHOOK_URL` or `IMAGE_BRIDGE_PUBLIC_BASE_URL`.
+- [ ] AC8 (replaced by the owner decision of 2026-10-15): if the bridge is enabled but
+      `GROKBOT_IMAGE_WEBHOOK_URL` or `IMAGE_BRIDGE_PUBLIC_BASE_URL` is empty, startup logs one
+      ERROR (`image_bridge_misconfigured`, listing the missing setting names, never their
+      values) and wires plain `OpenAIImageService`. Startup never fails (prod auto-deploys on
+      merge, so a missing secret must not crash-loop prod). Both branches tested.
 - [ ] AC9: Every new setting is in `settings.py`, `.env.example` and `deploy.yml`, and the
       `backend:autopilot-env`-style gate passes.
 - [ ] AC10: Concurrency is capped by `IMAGE_BRIDGE_MAX_CONCURRENCY` (test with 3 concurrent
       requests and a cap of 2).
 - [ ] AC11: Stale pending jobs expire after the timeout; late callbacks get `409`.
+- [ ] AC12 (owner decision 2026-10-15): `deploy.yml` sets `IMAGE_BRIDGE_ENABLED=true`,
+      `IMAGE_BRIDGE_FALLBACK_ENABLED=true` and `IMAGE_BRIDGE_PUBLIC_BASE_URL=https://marinssolutions.com`
+      (not a secret): the bridge is the normal image path in prod and OpenAI runs only when a
+      bridge job fails. `Settings` defaults stay `false`/`true`. Rollback = flag `false` in `deploy.yml`.
 
 ## Gherkin Scenarios
 
@@ -126,6 +134,13 @@ Feature: GrokBot image bridge
   Scenario: Invalid image
     When the callback carries base64 that is not an image
     Then it answers 422 and the job is failed
+
+  Scenario: Enabled without the bridge URLs falls back to OpenAI
+    Given IMAGE_BRIDGE_ENABLED is true
+    And GROKBOT_IMAGE_WEBHOOK_URL or IMAGE_BRIDGE_PUBLIC_BASE_URL is empty
+    When the application starts
+    Then startup logs one image_bridge_misconfigured ERROR naming the missing settings
+    And the plain OpenAI image service is wired
 
   Scenario: Fallback disabled
     Given IMAGE_BRIDGE_FALLBACK_ENABLED is false
@@ -210,6 +225,8 @@ Pending.
 ## Decision Log
 
 - 2026-10-15: Async webhook + callback behind `ImageGenerationService`, OpenAI fallback (ADR-0022).
+- 2026-10-15 (owner): bridge ON by default in prod with the OpenAI fallback; AC8 changed from
+  "fail at startup" to "log one ERROR and keep OpenAI" (no crash loop on auto-deploy).
 
 ## Blockers
 

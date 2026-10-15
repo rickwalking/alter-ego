@@ -5,8 +5,12 @@ Every image bridge setting must be named in ``deploy.yml``, the backend
 service of ``docker-compose.prod.yml`` and ``backend/.env.example``, and
 declared on ``Settings``. The webhook URL and auth value must come from
 GitHub secrets in ``deploy.yml``; the other settings must not.
-``IMAGE_BRIDGE_ENABLED`` must default to false on every surface, so a
-deploy never turns the bridge on by itself.
+
+Owner decision (2026-10-15): prod runs the bridge with the OpenAI fallback.
+So in ``deploy.yml`` ``IMAGE_BRIDGE_ENABLED`` is a literal ``true``/``false``
+(the switch and the rollback live in reviewed code), the fallback is a
+literal ``true`` and the public base URL is the site origin. Compose and
+``.env.example`` keep the flag defaulting to false.
 
 Runs inside the ``backend:autopilot-env`` gate, after the autopilot checker,
 and reuses its file parsers.
@@ -45,15 +49,20 @@ _DEFAULTS = (
 )
 
 VAR_ENABLED = "IMAGE_BRIDGE_ENABLED"
+VAR_FALLBACK = "IMAGE_BRIDGE_FALLBACK_ENABLED"
+VAR_PUBLIC_BASE_URL = "IMAGE_BRIDGE_PUBLIC_BASE_URL"
+PUBLIC_BASE_URL = "https://marinssolutions.com"
+DEPLOY_ENABLED_VALUES = frozenset({"true", "false"})
+DEPLOY_FALLBACK_VALUE = "true"
 VAR_WEBHOOK_URL = "GROKBOT_IMAGE_WEBHOOK_URL"
 VAR_AUTH_VALUE = "GROKBOT_IMAGE_WEBHOOK_AUTH_VALUE"
 SECRET_ENV_NAMES: tuple[str, ...] = (VAR_WEBHOOK_URL, VAR_AUTH_VALUE)
 REQUIRED_ENV_NAMES: tuple[str, ...] = (
     VAR_ENABLED,
-    "IMAGE_BRIDGE_FALLBACK_ENABLED",
+    VAR_FALLBACK,
     "IMAGE_BRIDGE_TIMEOUT_SECONDS",
     "IMAGE_BRIDGE_MAX_CONCURRENCY",
-    "IMAGE_BRIDGE_PUBLIC_BASE_URL",
+    VAR_PUBLIC_BASE_URL,
     VAR_WEBHOOK_URL,
     "GROKBOT_IMAGE_WEBHOOK_AUTH_HEADER",
     VAR_AUTH_VALUE,
@@ -65,13 +74,7 @@ EXIT_USAGE = 2
 _ARG_COUNT = 4
 
 _SECRET_REF = re.compile(r"\$\{\{\s*secrets\.")
-_ENABLED_FALSE = re.compile(
-    r"^(?:false"
-    r"|\$\{" + VAR_ENABLED + r":-false\}"
-    r"|\$\{\{\s*(?:vars|secrets)\."
-    + VAR_ENABLED
-    + r"\s*\|\|\s*['\"]false['\"]\s*\}\})$"
-)
+_ENABLED_FALSE = re.compile(r"^(?:false|\$\{" + VAR_ENABLED + r":-false\})$")
 _SETTINGS_FIELD = re.compile(r"^\s{4}([a-z][a-z0-9_]*)\s*:", re.MULTILINE)
 
 MSG_MISSING = "{name} missing from {surface}"
@@ -80,6 +83,11 @@ MSG_PLAIN_IN_GH_VAULT = (
     "{name} is not a secret; use a plain value or vars in deploy.yml"
 )
 MSG_ENABLED = VAR_ENABLED + " must default to false in {surface}"
+MSG_DEPLOY_ENABLED = VAR_ENABLED + " must be a literal true or false in deploy.yml"
+MSG_DEPLOY_FALLBACK = VAR_FALLBACK + " must be true in deploy.yml (OpenAI fallback)"
+MSG_DEPLOY_BASE_URL = (
+    VAR_PUBLIC_BASE_URL + " must be " + PUBLIC_BASE_URL + " in deploy.yml"
+)
 MSG_UNREADABLE = "unreadable {path}: {reason}"
 SURFACE_DEPLOY = "deploy.yml"
 SURFACE_COMPOSE = "docker-compose.prod.yml backend environment"
@@ -122,6 +130,7 @@ def gaps(surfaces: BridgeSurfaces) -> list[str]:
         messages.extend(_missing(surfaces, name))
     messages.extend(_secret_rules(surfaces.deploy))
     messages.extend(_enabled_rules(surfaces))
+    messages.extend(_deploy_value_rules(surfaces.deploy))
     return messages
 
 
@@ -189,7 +198,6 @@ def _secret_rules(deploy: dict[str, str]) -> list[str]:
 def _enabled_rules(surfaces: BridgeSurfaces) -> list[str]:
     messages: list[str] = []
     for surface, values in (
-        (SURFACE_DEPLOY, surfaces.deploy),
         (SURFACE_COMPOSE, surfaces.compose),
         (SURFACE_ENV_EXAMPLE, surfaces.env_example),
     ):
@@ -197,6 +205,27 @@ def _enabled_rules(surfaces: BridgeSurfaces) -> list[str]:
         if value is not None and _ENABLED_FALSE.fullmatch(value) is None:
             messages.append(MSG_ENABLED.format(surface=surface))
     return messages
+
+
+def _deploy_value_rules(deploy: dict[str, str]) -> list[str]:
+    checks = (
+        (VAR_ENABLED, lambda value: value in DEPLOY_ENABLED_VALUES, MSG_DEPLOY_ENABLED),
+        (
+            VAR_FALLBACK,
+            lambda value: value == DEPLOY_FALLBACK_VALUE,
+            MSG_DEPLOY_FALLBACK,
+        ),
+        (
+            VAR_PUBLIC_BASE_URL,
+            lambda value: value == PUBLIC_BASE_URL,
+            MSG_DEPLOY_BASE_URL,
+        ),
+    )
+    return [
+        message
+        for name, ok, message in checks
+        if name in deploy and not ok(deploy[name])
+    ]
 
 
 if __name__ == "__main__":
