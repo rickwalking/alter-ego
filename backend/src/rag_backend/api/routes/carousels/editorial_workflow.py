@@ -167,7 +167,12 @@ async def start_editorial_workflow(
     handlers: EditorialWorkflowHandlersDep,
 ) -> EditorialWorkflowStateResponse:
     """Run AI synthesis, outline, and draft phases then pause at human gates."""
-    project = await get_carousel_project_for_user(db, project_id, current_user)
+    # AE-0373: keep only the persona id, never the row. A held row stays in the
+    # session identity map with its server-side ``updated_at`` expired after the
+    # engine's flush, and the ACL re-read would lazy-load it outside the greenlet.
+    project_persona_id = (
+        await get_carousel_project_for_user(db, project_id, current_user)
+    ).persona_id
     if body.reviewer_id is not None:
         await validate_reviewer_user(db, body.reviewer_id)
         if body.reviewer_id == current_user.id:
@@ -178,7 +183,7 @@ async def start_editorial_workflow(
     engine = build_editorial_workflow_service(request)
     # AE-0373: the wizard's persona (stored on the project) when the start
     # request names none, so the persona gate applies to both modes.
-    persona = await load_persona(db, body.persona_id or project.persona_id)
+    persona = await load_persona(db, body.persona_id or project_persona_id)
     sanitized_sources = [
         {
             **source.model_dump(),
