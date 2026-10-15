@@ -12,9 +12,11 @@ from dataclasses import dataclass, field
 
 import structlog
 
-from rag_backend.modules.autopilot.application.feedback import (
-    ReviseFeedbackRequest,
-    revise_feedback,
+from rag_backend.modules.autopilot.application.feedback import gate_feedback
+from rag_backend.modules.autopilot.application.gate_repair import (
+    GateRead,
+    GateRepairDependencies,
+    GateRepairStep,
 )
 from rag_backend.modules.autopilot.application.publish_job import SystemClock
 from rag_backend.modules.autopilot.application.rework_step import (
@@ -32,16 +34,17 @@ from rag_backend.modules.autopilot.constants import (
     MAX_START_ATTEMPTS,
     REASON_GENERATING,
     REASON_OWNER_UNCONFIGURED,
-    REASON_PERSONA_SCORE,
     REASON_PROJECT_MISSING,
     REASON_READY,
-    REASON_RESEARCH,
     REASON_REVISION_CAP,
     REASON_START_FAILED,
     REASON_TOPIC_MISSING,
     RUNS_PER_TICK,
 )
-from rag_backend.modules.autopilot.domain.autofix import ContentAutofixer
+from rag_backend.modules.autopilot.domain.autofix import (
+    ContentAutofixer,
+    GateRepairer,
+)
 from rag_backend.modules.autopilot.domain.carousel_defaults import (
     GuidanceRequest,
     image_guidance_for,
@@ -50,10 +53,8 @@ from rag_backend.modules.autopilot.domain.gate import (
     AttachProjectCommand,
     EditorialDriver,
     GateAction,
-    GateSnapshot,
     OwnerReadyNotice,
     OwnerReadyNotifier,
-    PolicyDecision,
     ProjectSpec,
     RedriveCommand,
     ResumeCommand,
@@ -68,7 +69,7 @@ from rag_backend.modules.autopilot.domain.models import (
     TopicCandidate,
     TransitionCommand,
 )
-from rag_backend.modules.autopilot.domain.policy import decide, source_has_content
+from rag_backend.modules.autopilot.domain.policy import decide
 from rag_backend.modules.autopilot.domain.ports import (
     AutopilotRunRepository,
     Clock,
@@ -111,13 +112,11 @@ class RunnerDependencies:
     clock: Clock = field(default_factory=SystemClock)
     # AE-0367: the owner's queued "Fix issues" repair.
     autofix: ContentAutofixer | None = None
+    # AE-0392: repair a content/design gate before revising it.
+    gate_repair: GateRepairer | None = None
 
 
-@dataclass(frozen=True, kw_only=True)
-class _Step:
-    run: AutopilotRun
-    snapshot: GateSnapshot
-    decision: PolicyDecision
+_Step = GateRead
 
 
 class AutopilotRunner:
@@ -134,6 +133,9 @@ class AutopilotRunner:
                 escalations=self._recovery,
                 autofix=deps.autofix,
             )
+        )
+        self._repair = GateRepairStep(
+            GateRepairDependencies(editorial=deps.editorial, repairer=deps.gate_repair)
         )
 
     async def tick(self) -> int:
@@ -179,8 +181,11 @@ class AutopilotRunner:
             await self._move(run, AutopilotRunState.FAILED, REASON_PROJECT_MISSING)
             return 1
         snapshot = await self._deps.editorial.read_gate(project_id)
-        decision = decide(snapshot)
-        return await self._apply(_Step(run=run, snapshot=snapshot, decision=decision))
+        read = GateRead(run=run, snapshot=snapshot, decision=decide(snapshot))
+        step = await self._repair.apply(read)
+        if step is None:
+            return 1
+        return await self._apply(step)
 
     async def _start(
         self,
@@ -241,7 +246,7 @@ class AutopilotRunner:
     async def _revise(self, step: _Step) -> int:
         if step.snapshot.phase == GATE_FINAL_REVIEW:
             return await self._stop(step)
-        feedback = revise_feedback(_feedback_request(step))
+        feedback = gate_feedback(step.snapshot, step.decision.reason)
         return await self._resume(step, REVIEW_ACTION_REVISE, feedback)
 
     async def _approve(self, step: _Step) -> int:
@@ -371,23 +376,6 @@ def _ready_notice(step: _Step, project_id: str) -> OwnerReadyNotice:
         persona_score=step.snapshot.persona_score,
         sources_count=len(step.snapshot.sources),
     )
-
-
-def _feedback_request(step: _Step) -> ReviseFeedbackRequest:
-    return ReviseFeedbackRequest(
-        phase=step.snapshot.phase,
-        reason=step.decision.reason,
-        detail=_detail(step.snapshot, step.decision.reason),
-    )
-
-
-def _detail(snapshot: GateSnapshot, reason: str) -> str:
-    if reason == REASON_PERSONA_SCORE and snapshot.persona_score is not None:
-        return str(snapshot.persona_score)
-    if reason == REASON_RESEARCH:
-        usable = sum(1 for source in snapshot.sources if source_has_content(source))
-        return str(usable)
-    return ""
 
 
 def _guidance_request(topic: TopicCandidate) -> GuidanceRequest:

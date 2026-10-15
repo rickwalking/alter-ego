@@ -56,3 +56,29 @@ class ContentAutofixer(Protocol):
     async def autofix(self, command: AutofixCommand) -> AutofixOutcome:
         """Repair, re-translate untranslated EN, persist and re-render once."""
         ...
+
+
+@dataclass(frozen=True, kw_only=True)
+class GateRepairCommand:
+    """Repair one gate's checkpoint copy at the lock version the tick read."""
+
+    project_id: str
+    expected_version: int
+    phase: str
+
+
+@dataclass(frozen=True, kw_only=True)
+class GateRepairOutcome:
+    """What the gate repair fixed and which blocking rules are left (AE-0392)."""
+
+    status: AutofixStatus
+    fixed_rules: tuple[str, ...] = ()
+    remaining_rules: tuple[str, ...] = ()
+
+
+class GateRepairer(Protocol):
+    """Deterministic repair of a content/design gate before a revise (AE-0392)."""
+
+    async def repair_gate(self, command: GateRepairCommand) -> GateRepairOutcome:
+        """Repair the checkpoint copy and re-validate. No re-render."""
+        ...
