@@ -174,6 +174,9 @@ export const POV_THESIS_MAX_LENGTH = 280;
 export const POV_PROOF_MAX_LENGTH = 500;
 export const POV_SLIDE_COUNTS = [8, 9, 10] as const;
 export const POV_SLIDE_COUNT_DEFAULT = 9;
+/** AE-0375: slide-1 hook limits (growth plan 16.3 C). */
+export const HOOK_MAX_LENGTH = 60;
+export const HOOK_MAX_WORDS = 10;
 
 /** CTA goals: one specific action per carousel (growth plan 16.3 F). */
 export const CTA_GOALS = ["follow", "send", "comment"] as const;

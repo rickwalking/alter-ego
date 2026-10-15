@@ -23,10 +23,14 @@ from rag_backend.domain.constants.content_mode import (
     DEFAULT_POV_FORMAT,
     ERR_CONTENT_MODE_UNKNOWN,
     ERR_CTA_GOAL_UNKNOWN,
+    ERR_HOOK_BLANK,
+    ERR_HOOK_TOO_MANY_WORDS,
     ERR_POV_FIELDS_ON_NEWS,
     ERR_POV_FORMAT_UNKNOWN,
     ERR_POV_THESIS_REQUIRED,
     ERR_SLIDE_COUNT_RANGE,
+    HOOK_MAX_WORDS,
+    HOOK_TEXT_MAX_CHARS,
     NEWS_SLIDE_COUNT_MAX,
     NEWS_SLIDE_COUNT_MIN,
     POV_FORMAT_MAX_CHARS,
@@ -164,4 +168,32 @@ class ContentModeResponseFields(BaseModel):
         return value or DEFAULT_CONTENT_MODE
 
 
-__all__ = ["ContentModeRequestFields", "ContentModeResponseFields"]
+class HookSelectRequest(BaseModel):
+    """The owner's slide-1 hook (AE-0375): <=60 characters and <=10 words."""
+
+    hook_text: str = Field(..., min_length=1, max_length=HOOK_TEXT_MAX_CHARS)
+
+    @field_validator("hook_text")
+    @classmethod
+    def _check_hook(cls, value: str) -> str:
+        stripped = " ".join(value.split())
+        if not stripped:
+            raise ValueError(ERR_HOOK_BLANK)
+        if len(stripped.split()) > HOOK_MAX_WORDS:
+            raise ValueError(ERR_HOOK_TOO_MANY_WORDS.format(HOOK_MAX_WORDS))
+        return stripped
+
+
+class HookSelectResponse(BaseModel):
+    """The stored hook."""
+
+    project_id: UUID
+    hook_text: str
+
+
+__all__ = [
+    "ContentModeRequestFields",
+    "ContentModeResponseFields",
+    "HookSelectRequest",
+    "HookSelectResponse",
+]

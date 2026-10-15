@@ -28,10 +28,20 @@ from rag_backend.application.services.carousel.presentation_policy import (
 from rag_backend.domain.constants.ai_agents import ERR_INVALID_JSON
 from rag_backend.domain.constants.carousel import CAROUSEL_PROMPT_VERSION_V6
 from rag_backend.domain.constants.carousel_workflow import PHASE_CONTENT
+from rag_backend.domain.constants.pov_prompts import (
+    POV_PROMPT_CONTENT,
+    POV_PROMPT_DOMAIN,
+    POV_PROMPT_VERSION,
+    RADAR_PROMPT_CONTENT,
+    RADAR_PROMPT_DOMAIN,
+    RADAR_PROMPT_VERSION,
+)
 from rag_backend.domain.constants.presentation_policy import (
     CREATE_TIME_PRESENTATION_POLICY_VERSION,
+    DEFAULT_PRESENTATION_POLICY_VERSION,
 )
 from rag_backend.domain.models.persona import PersonaProfile
+from rag_backend.domain.models.pov_prompts import SlidePolicyContext
 from rag_backend.infrastructure.cache.ai_response_cache import get_ai_response_cache
 from rag_backend.infrastructure.llm.json_utils import extract_json
 from rag_backend.infrastructure.logging import get_logger
@@ -52,6 +62,47 @@ def _model_bind_kwargs(model_cfg: dict[str, object]) -> dict[str, object]:
         if isinstance(value, (int, float)) and not isinstance(value, bool):
             bind_kwargs[key] = value
     return bind_kwargs
+
+
+def _render_content_prompt(
+    variables: dict[str, object], slide_policy: SlidePolicyContext | None
+) -> tuple[str, dict[str, object]]:
+    """v6 content (fixed contracts), v7 per role (Radar IA v4, AE-0376), or
+    the POV prompt from the owner's thesis (AE-0375)."""
+    if slide_policy is None:
+        return render_prompt(
+            "carousel",
+            "content",
+            variables=variables,
+            version=CAROUSEL_PROMPT_VERSION_V6,
+        )
+    pov = slide_policy.pov
+    if pov is None:
+        return render_prompt(
+            RADAR_PROMPT_DOMAIN,
+            RADAR_PROMPT_CONTENT,
+            variables={
+                **variables,
+                "role": slide_policy.role,
+                "hook_text": sanitize_model_copy(slide_policy.hook_text),
+            },
+            version=RADAR_PROMPT_VERSION,
+        )
+    return render_prompt(
+        POV_PROMPT_DOMAIN,
+        POV_PROMPT_CONTENT,
+        variables={
+            **variables,
+            "role": pov.role,
+            "slide_count": pov.slide_count,
+            "thesis": sanitize_model_copy(pov.pov.thesis),
+            "personal_proof": sanitize_model_copy(pov.pov.personal_proof),
+            "pov_format": pov.pov.pov_format,
+            "hook_text": sanitize_model_copy(pov.hook_text),
+            "cta_copy": pov.cta_copy,
+        },
+        version=POV_PROMPT_VERSION,
+    )
 
 
 class ContentDraftAgent:
@@ -76,8 +127,14 @@ class ContentDraftAgent:
         revision_notes: str = "",
         sibling_context: str = "",
         previous_draft: str = "",
+        policy: SlidePolicyContext | None = None,
     ) -> dict[str, object]:
-        """Draft copy for a single slide."""
+        """Draft copy for a single slide.
+
+        AE-0375: ``policy`` (role contracts) targets the project's contract and
+        deck size; with ``policy.pov`` the slide is drafted from the owner's
+        thesis with the ``carousel_pov/v1`` prompt.
+        """
         # AE-0366: case-preserving sanitization. The lowercasing sanitizer fed
         # the model "a versão para robótica leva o argon..." for a correctly
         # cased outline title, and GLM echoed the lowercase into the slides.
@@ -98,34 +155,40 @@ class ContentDraftAgent:
                 prompt_version=CAROUSEL_PROMPT_VERSION_V6,
                 sibling_context=sibling_context,
                 previous_draft=previous_draft,
+                policy_version=policy.policy_version
+                if policy
+                else (DEFAULT_PRESENTATION_POLICY_VERSION),
+                slide_count=policy.slide_count if policy else None,
             )
         )
+        rubric_version = (
+            policy.policy_version if policy else CREATE_TIME_PRESENTATION_POLICY_VERSION
+        )
+        slide_policy = policy
         policy = load_presentation_policy(instruction.policy_version)
         # AE-0291: revision notes are rendered ONCE, in the instruction context above.
         # AE-0347: v5 additionally requires long_form_notes (blog source).
         # AE-0366: v6 adds explicit sentence-case and non-empty-body rules.
         # The v4/v5 template no longer carries a second {{ revision_notes }} block.
-        prompt_text, model_cfg = render_prompt(
-            "carousel",
-            "content",
-            variables={
-                "slide_number": slide_index,
-                "title": title,
-                "key_points": ", ".join(safe_points),
-                "locale": locale,
-                "phase": PHASE_CONTENT,
-                "presentation_policy_context": render_presentation_policy_context(
-                    policy
-                ),
-                "persona_context": persona_context or "Default professional voice.",
-                # AE-0366: the current contract's quality rubric (+ self-check).
-                "quality_rubric": render_quality_rubric(
-                    load_presentation_policy(CREATE_TIME_PRESENTATION_POLICY_VERSION),
-                    RUBRIC_AUDIENCE_CONTENT,
-                ),
-            },
-            version=CAROUSEL_PROMPT_VERSION_V6,
-        )
+        variables: dict[str, object] = {
+            "slide_number": slide_index,
+            "title": title,
+            "key_points": ", ".join(safe_points),
+            "locale": locale,
+            "phase": PHASE_CONTENT,
+            "presentation_policy_context": (
+                slide_policy.policy_context
+                if slide_policy and slide_policy.policy_context
+                else render_presentation_policy_context(policy)
+            ),
+            "persona_context": persona_context or "Default professional voice.",
+            # AE-0366: the current contract's quality rubric (+ self-check).
+            # AE-0375: the project's own contract when it is a role contract.
+            "quality_rubric": render_quality_rubric(
+                load_presentation_policy(rubric_version), RUBRIC_AUDIENCE_CONTENT
+            ),
+        }
+        prompt_text, model_cfg = _render_content_prompt(variables, slide_policy)
         full_prompt = f"{instruction.instruction}\n\n{prompt_text}"
         cached = self._cached_raw(full_prompt)
         if cached is not None:

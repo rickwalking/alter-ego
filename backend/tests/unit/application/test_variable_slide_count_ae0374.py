@@ -260,7 +260,12 @@ class TestDeckRule:
 
     @pytest.mark.parametrize("count", [8, 9, 10])
     def test_pov_deck_in_range(self, count: int) -> None:
-        assert deck_violations([{}] * count, load_presentation_policy(_POV)) == []
+        codes = {
+            v.code
+            for v in deck_violations([{}] * count, load_presentation_policy(_POV))
+        }
+        # AE-0375's POV rubric may fire on an empty deck; the size rule must not.
+        assert "slide_count_invalid" not in codes
 
     # Scenario: Legacy decks never get the deck rule
     def test_legacy_deck_is_not_checked(self) -> None:

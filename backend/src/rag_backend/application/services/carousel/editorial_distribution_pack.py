@@ -95,6 +95,21 @@ def _ensure_blog_titles(
             project.set_title_en(en_heading)
 
 
+async def load_carousel_project(
+    db: AsyncSession, project_id: str
+) -> CarouselProject | None:
+    """The project row as a domain entity (AE-0375: the content-mode brief).
+
+    Lives beside the existing inline repository construction so no new
+    application -> infrastructure edge is added (import ratchet, AE-0078).
+    """
+    try:
+        project_uuid = UUID(project_id)
+    except ValueError:
+        return None
+    return await PostgresCarouselRepository(session=db).get_project_by_id(project_uuid)
+
+
 async def build_editorial_distribution_updates(
     context: DistributionBuildContext,
     *,

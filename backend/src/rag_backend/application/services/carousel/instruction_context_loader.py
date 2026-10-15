@@ -15,6 +15,9 @@ from rag_backend.application.services.carousel.presentation_policy import (
     load_presentation_policy,
     render_presentation_policy_context,
 )
+from rag_backend.application.services.carousel.presentation_policy_range import (
+    expand_policy_for_count,
+)
 from rag_backend.domain.constants.carousel import CAROUSEL_PROMPT_VERSION_V3
 from rag_backend.domain.constants.carousel_workflow import (
     PHASE_CONTENT,
@@ -78,6 +81,9 @@ class InstructionContextRequest:
     # (added later) before this cross-slide / rework context.
     sibling_context: str = ""
     previous_draft: str = ""
+    # AE-0375: the project's deck size, so a ranged contract (POV, Radar IA v4)
+    # is rendered and targeted with the slide map the deck actually has.
+    slide_count: int | None = None
 
 
 @dataclass(frozen=True)
@@ -99,7 +105,9 @@ class CarouselInstructionContextLoader:
     @staticmethod
     def load(request: InstructionContextRequest) -> InstructionContextResult:
         """Build bounded instruction context for an editorial phase."""
-        policy = load_presentation_policy(request.policy_version)
+        policy = _sized_policy(
+            load_presentation_policy(request.policy_version), request.slide_count
+        )
         sections = [
             SECTION_SAFETY,
             _safety_block(),
@@ -205,6 +213,19 @@ def _locale_block(locale: str) -> str:
     )
 
 
+def _sized_policy(
+    policy: CarouselPresentationPolicy, slide_count: int | None
+) -> CarouselPresentationPolicy:
+    """The contract sized to the deck; fixed contracts are returned as loaded."""
+    if slide_count is None or not policy.slide_range.accepts(slide_count):
+        return policy
+    return expand_policy_for_count(policy, slide_count)
+
+
+def _role_text(role: str | None) -> str:
+    return f", role {role}" if role else ""
+
+
 def _slide_block(
     slide_number: int | None,
     policy: CarouselPresentationPolicy,
@@ -219,7 +240,8 @@ def _slide_block(
                 else "cta layout (no lower-third ratio)"
             )
             return (
-                f"Target slide {slide.slide_number} ({slide.slide_type}). "
+                f"Target slide {slide.slide_number} "
+                f"({slide.slide_type}{_role_text(slide.role)}). "
                 f"Image required: {slide.image_required}. {ratio}."
             )
     return f"Target slide {slide_number}."

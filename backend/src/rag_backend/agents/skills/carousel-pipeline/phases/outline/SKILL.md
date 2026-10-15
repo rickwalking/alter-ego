@@ -41,6 +41,13 @@ test or result in a hook that the sources (or the owner's own proof) do not back
 Radar IA angle (growth plan 16.4 #1): at most one slide on what happened, at least
 three on what it changes for the reader, and the closing slide is the owner's verdict.
 
+## "Ponto de Vista" outlines (AE-0375)
+
+When the prompt lists slide roles (hook, rehook, pov, point, twist, save, cta), return exactly
+that many slides in that order, one idea per slide. The thesis is the owner's: state it on
+slide 1 or 2, sharpen it, never replace it. At most one slide on "what happened"; the twist
+slide is the counterintuitive point; the save slide is a 3-5 item checklist.
+
 ## Outline output shape
 
 Return ordered slide list with:

@@ -254,7 +254,8 @@
       "openai_hyperreal": "OpenAI · Hyperreal Graphic Novel",
       "openai_cinematic": "OpenAI · Cinematic Photoreal",
       "openai_neo_anime": "OpenAI · Neo-Anime",
-      "openai_flat_editorial": "OpenAI · Flat Editorial (claro, padrão)"
+      "openai_flat_editorial": "OpenAI · Flat Editorial (claro, padrão)",
+      "openai_pov_editorial": "OpenAI · Foto + Editorial (POV)"
     },
     "progress": {
       "complete": "Carrossel gerado com sucesso!",
@@ -372,6 +373,15 @@
           "desc": "O que eu uso para cada tarefa (só testes meus)"
         }
       }
+    },
+    "photo": {
+      "title": "Foto do slide 1",
+      "hint": "Sua foto recortada (PNG/WebP com transparência, até 5 MB) fica ao lado do gancho. A foto mais recente vem selecionada.",
+      "empty": "Nenhuma foto ainda: envie uma (sem foto, o slide 1 mostra só o gancho).",
+      "photoLabel": "Foto",
+      "upload": "Enviar uma foto nova",
+      "uploading": "Enviando…",
+      "uploadFailed": "Não foi possível enviar a foto (PNG, WebP ou JPEG até 5 MB)."
     }
   },
   "blogEditorial": {
@@ -572,6 +582,16 @@
         "blogPreviewError": "Não foi possível carregar a pré-visualização do rascunho.",
         "captionEmpty": "Nenhuma legenda foi gerada ainda.",
         "qualityEmpty": "Pontuações de qualidade ainda não estão disponíveis."
+      },
+      "hookPicker": {
+        "title": "Gancho do slide 1: escolha um ou edite",
+        "editLabel": "Gancho (máx. 60 caracteres, 10 palavras)",
+        "wordCount": "{count} de {max} palavras",
+        "save": "Salvar gancho",
+        "saving": "Salvando…",
+        "saved": "Gancho salvo; a etapa de conteúdo usa ele no slide 1.",
+        "failed": "Não foi possível salvar o gancho.",
+        "thesisNotEarly": "Sua tese ainda não aparece nos slides 1 e 2. Considere um gancho que a diga."
       }
     },
     "failed": {

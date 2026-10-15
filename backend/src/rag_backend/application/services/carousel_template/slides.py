@@ -164,7 +164,7 @@ def _render_cta_slide(
 
     cta_text = html.escape(
         cta_copy(
-            DEFAULT_CTA_GOAL,
+            project.cta_goal if project else DEFAULT_CTA_GOAL,
             language,
             handle or DEFAULT_CTA_HANDLE,
         ),

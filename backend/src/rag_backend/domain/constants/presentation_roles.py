@@ -41,6 +41,11 @@ ROLE_SLIDE_TYPES: dict[str, frozenset[str]] = {
 }
 KNOWN_ROLES: frozenset[str] = frozenset(ROLE_SLIDE_TYPES)
 
+# AE-0375: deck-level POV rubric rule codes. A rule fires only when the
+# contract declares its severity (``pov_hook_v1``), so Radar IA v4 is unchanged.
+VIOLATION_HOOK_WORD_LIMIT = "hook_word_limit"
+VIOLATION_FIRST_PERSON_MISSING = "first_person_missing"
+
 __all__ = [
     "KNOWN_ROLES",
     "ROLE_CTA",
@@ -54,4 +59,6 @@ __all__ = [
     "ROLE_SLIDE_TYPES",
     "ROLE_TWIST",
     "ROLE_VERDICT",
+    "VIOLATION_FIRST_PERSON_MISSING",
+    "VIOLATION_HOOK_WORD_LIMIT",
 ]

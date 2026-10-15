@@ -55,18 +55,43 @@ def build_content_prompt(project: CarouselProject, research_context: str) -> str
 def build_caption_prompt(
     project: CarouselProject, slide_headings: list[tuple[int, str]]
 ) -> str:
-    """AE-0372: caption v7 (hook first, 3-5 hashtags, one CTA by goal)."""
+    """AE-0372: caption v7 (hook first, 3-5 hashtags, one CTA by goal).
+
+    AE-0375: a "Ponto de Vista" project renders ``carousel_pov/v1/caption``
+    with the slide-1 hook and the owner's thesis.
+    """
     from rag_backend.agents.prompts.registry import render_prompt
     from rag_backend.domain.constants.carousel import CAROUSEL_CAPTION_PROMPT_VERSION
     from rag_backend.domain.constants.carousel_cta import DEFAULT_CTA_GOAL
+    from rag_backend.domain.constants.content_mode import CONTENT_MODE_POV
+    from rag_backend.domain.constants.pov_prompts import (
+        POV_PROMPT_CAPTION,
+        POV_PROMPT_DOMAIN,
+        POV_PROMPT_VERSION,
+    )
 
+    cta_goal = project.cta_goal or DEFAULT_CTA_GOAL
+    if project.content_mode == CONTENT_MODE_POV:
+        hook = slide_headings[0][1] if slide_headings else project.hook_text or ""
+        prompt_text, _ = render_prompt(
+            POV_PROMPT_DOMAIN,
+            POV_PROMPT_CAPTION,
+            variables={
+                "hook": hook,
+                "thesis": project.pov_thesis or "",
+                "slide_headings": slide_headings,
+                "cta_goal": cta_goal,
+            },
+            version=POV_PROMPT_VERSION,
+        )
+        return prompt_text
     prompt_text, _ = render_prompt(
         "carousel",
         "caption_prompt",
         variables={
             "title": project.title,
             "slide_headings": slide_headings,
-            "cta_goal": DEFAULT_CTA_GOAL,
+            "cta_goal": cta_goal,
         },
         version=CAROUSEL_CAPTION_PROMPT_VERSION,
     )

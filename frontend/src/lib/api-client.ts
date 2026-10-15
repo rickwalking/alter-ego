@@ -172,3 +172,23 @@ export async function apiCallNoContent(
   const response = await fetchWithCredentials(url, options);
   await throwIfErrorResponse(response);
 }
+
+/**
+ * AE-0376: POST a multipart form (file upload) and validate the JSON reply.
+ *
+ * Unlike `apiCall` it sends no JSON `Content-Type`, so the browser sets the
+ * multipart boundary; errors go through the same `ApiError` path.
+ */
+export async function apiUpload<T>(
+  url: string,
+  schema: z.ZodSchema<T>,
+  form: FormData,
+): Promise<T> {
+  const response = await fetch(url, {
+    method: "POST",
+    body: form,
+    credentials: "include",
+  });
+  await throwIfErrorResponse(response);
+  return schema.parse(await response.json());
+}

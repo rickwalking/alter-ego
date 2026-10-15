@@ -52,6 +52,9 @@ ERR_SLIDE_COUNT_RANGE = "slide_count must be between {} and {} for {}, got {}"
 ERR_POV_FIELDS_ON_NEWS = "{} is only allowed when content_mode is 'pov'"
 ERR_CONTENT_MODE_UNKNOWN = "content_mode must be one of {}, got {!r}"
 ERR_CTA_GOAL_UNKNOWN = "cta_goal must be one of {}, got {!r}"
+ERR_HOOK_BLANK = "hook_text must not be blank"
+ERR_HOOK_TOO_MANY_WORDS = "hook_text must have at most {} words"
+ERR_HOOK_NOT_SUPPORTED = "hook_not_supported_for_this_carousel"
 
 __all__ = [
     "CONTENT_MODES",
@@ -63,6 +66,9 @@ __all__ = [
     "DEFAULT_POV_FORMAT",
     "ERR_CONTENT_MODE_UNKNOWN",
     "ERR_CTA_GOAL_UNKNOWN",
+    "ERR_HOOK_BLANK",
+    "ERR_HOOK_NOT_SUPPORTED",
+    "ERR_HOOK_TOO_MANY_WORDS",
     "ERR_POV_FIELDS_ON_NEWS",
     "ERR_POV_FORMAT_UNKNOWN",
     "ERR_POV_THESIS_REQUIRED",

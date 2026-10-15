@@ -26,7 +26,7 @@ Nothing in the pipeline asks for or uses the owner's opinion; slide 1 is a headl
 - `carousel_pov/v1/{hook,outline,content,caption}.yaml` + README, with the never-invent rule.
 - Mode-aware outline/content/caption generation reading a `ContentModeBrief` from the project; hook candidates stored on outline slide 1.
 - `PUT /api/carousels/{id}/hook`; content uses `hook_text` for slide 1.
-- Validators `hook_word_limit`, `first_person_missing`, `thesis_not_early`, `news_slides_exceeded` with rule-fires tests.
+- Validators `hook_word_limit`, `first_person_missing`, `thesis_not_early` with rule-fires tests ("at most one news slide" is structural, see AE-0374).
 - Outline review shows and picks hook candidates (i18n + tests).
 
 ## Non-Goals
@@ -81,7 +81,7 @@ Feature: POV prompts
 - `carousel_pov/v1/{hook,outline,content,caption}.yaml` + README, with the never-invent rule.
 - Mode-aware outline/content/caption generation reading a `ContentModeBrief` from the project; hook candidates stored on outline slide 1.
 - `PUT /api/carousels/{id}/hook`; content uses `hook_text` for slide 1.
-- Validators `hook_word_limit`, `first_person_missing`, `thesis_not_early`, `news_slides_exceeded` with rule-fires tests.
+- Validators `hook_word_limit`, `first_person_missing`, `thesis_not_early` with rule-fires tests ("at most one news slide" is structural, see AE-0374).
 - Outline review shows and picks hook candidates (i18n + tests).
 
 ### MODIFIED

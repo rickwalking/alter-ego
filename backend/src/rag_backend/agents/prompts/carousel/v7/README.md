@@ -12,6 +12,14 @@ frozen for rollback and for the projects already stamped with them.
   chosen by `cta_goal` (follow / send / comment), plain-text search keywords and 3-5
   mostly-PT hashtags. Rendered by `build_caption_prompt` for every Radar IA project.
 
+- `hook.yaml`, `outline.yaml`, `content.yaml` (AE-0376): rendered for Radar IA projects
+  stamped `hero_lower_third_v4`. The outline lists the contract roles in order (`hook`,
+  `news`, `impact` x3, optional `twist`, `verdict`, `cta`): at most one "what happened"
+  slide, at least three "what it changes for you", and a practical verdict backed by the
+  sources (never an opinion or experience attributed to the owner). The hook prompt returns
+  five slide-1 candidates from the sources only; content drafts one slide per role.
+  Projects stamped v1-v3 keep `carousel/v3` outline and `carousel/v6` content.
+
 The caption is new in v7 rather than in the existing `v3/` folder (where the plan put
 it) because `v3/` already holds the outline/content prompts and existing prompt
 versions are never edited.

@@ -29,6 +29,10 @@ from rag_backend.domain.constants.carousel import (
     SLIDE_TYPE_INTRO,
     SLIDE_TYPE_SUMMARY,
 )
+from rag_backend.domain.constants.pov_prompts import (
+    OUTLINE_FIELD_HOOK_CANDIDATES,
+    OUTLINE_FIELD_OUTLINE_CHECKS,
+)
 from rag_backend.domain.constants.presentation_roles import (
     KNOWN_ROLES,
     ROLE_SLIDE_TYPES,
@@ -103,6 +107,25 @@ def _slide_type_for(
     return sorted(allowed)[0]
 
 
+def _first_slide_extras(item: dict[str, object]) -> dict[str, object]:
+    """AE-0375: slide 1 keeps its hook candidates and outline checks."""
+    extras: dict[str, object] = {}
+    candidates = item.get(OUTLINE_FIELD_HOOK_CANDIDATES)
+    if isinstance(candidates, list):
+        cleaned = [
+            sanitize_visible_copy(text, locale=LANGUAGE_PT)
+            for text in candidates
+            if isinstance(text, str)
+        ]
+        extras[OUTLINE_FIELD_HOOK_CANDIDATES] = [text for text in cleaned if text]
+    checks = item.get(OUTLINE_FIELD_OUTLINE_CHECKS)
+    if isinstance(checks, dict):
+        extras[OUTLINE_FIELD_OUTLINE_CHECKS] = {
+            str(key): value for key, value in checks.items() if isinstance(value, bool)
+        }
+    return extras
+
+
 def normalize_editorial_outline(
     raw_outline: list[dict[str, object]],
 ) -> list[dict[str, object]]:
@@ -140,6 +163,7 @@ def normalize_editorial_outline(
             cleaned_tldr = sanitize_visible_copy(tldr, locale=LANGUAGE_PT)
             if cleaned_tldr:
                 slide[OUTLINE_FIELD_TLDR] = cleaned_tldr
+            slide.update(_first_slide_extras(item))
         normalized.append(slide)
     return normalized
 

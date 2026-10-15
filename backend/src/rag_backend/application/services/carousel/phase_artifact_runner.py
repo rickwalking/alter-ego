@@ -52,6 +52,7 @@ from rag_backend.infrastructure.external.openai_embeddings import (  # type: ign
     OpenAIEmbeddings,
 )
 
+from .content_mode_brief import ContentModeBrief, load_content_mode_brief
 from .editorial_distribution_pack import (
     DistributionBuildContext,
     build_editorial_distribution_updates,
@@ -179,6 +180,25 @@ class PhaseArtifactRunner:
             return
         await publish_workflow_artifacts_from_updates(project_id, phase, updates)
 
+    async def _regen_inputs(self, state: CarouselWorkflowState) -> ContentRegenInputs:
+        """Reviewer notes, the prior drafts and the content mode for a regeneration."""
+        prior_drafts = [
+            draft
+            for draft in (state.get("slide_drafts") or [])
+            if isinstance(draft, dict)
+        ]
+        return ContentRegenInputs(
+            revision_notes=self._content_revision_notes(state),
+            previous_drafts=prior_drafts,
+            mode=await self._mode_brief(state),
+        )
+
+    async def _mode_brief(
+        self, state: CarouselWorkflowState
+    ) -> ContentModeBrief | None:
+        """AE-0375: the project's content mode, read from its row (ADR-0021 D4)."""
+        return await load_content_mode_brief(self._db, str(state.get("project_id", "")))
+
     async def ensure_for_phase(self, state: CarouselWorkflowState) -> dict[str, object]:
         """Build missing artifacts for the active workflow phase."""
         phase = str(state.get("current_phase", ""))
@@ -189,7 +209,9 @@ class PhaseArtifactRunner:
         updates: dict[str, object] = {**outline_updates}
 
         if phase == PHASE_OUTLINE and not state.get("outline"):
-            updates["outline"] = await generate_outline(self._outline_agent, resolved)
+            updates["outline"] = await generate_outline(
+                self._outline_agent, resolved, await self._mode_brief(state)
+            )
         elif phase == PHASE_CONTENT:
             updates.update(
                 await self._ensure_content_artifacts(state, resolved, updates)
@@ -268,20 +290,11 @@ class PhaseArtifactRunner:
         updates: dict[str, object] = {}
         outline, outline_updates = await self._resolve_outline(pending, state)
         updates.update(outline_updates)
-        revision_notes = self._content_revision_notes(state)
-        prior_drafts = [
-            draft
-            for draft in (state.get("slide_drafts") or [])
-            if isinstance(draft, dict)
-        ]
-        should_regenerate = not state.get("slide_drafts") or bool(revision_notes)
+        regen = await self._regen_inputs(state)
+        should_regenerate = not state.get("slide_drafts") or bool(regen.revision_notes)
         if should_regenerate and isinstance(outline, list):
             draft_updates = await self._generate_content_drafts(
-                resolved,
-                outline,
-                ContentRegenInputs(
-                    revision_notes=revision_notes, previous_drafts=prior_drafts
-                ),
+                resolved, outline, regen
             )
             if draft_updates.get("phase_status") == PHASE_STATUS_FAILED:
                 return draft_updates
@@ -323,7 +336,9 @@ class PhaseArtifactRunner:
                     project_id=str(state.get("project_id", "")),
                     slide_drafts=sanitized_state.get("slide_drafts") or [],
                     translations_en=updates.get("translations_en"),
-                    retry_draft=self._resolve_slide_draft_retry(resolved, outline),
+                    retry_draft=self._resolve_slide_draft_retry(
+                        resolved, outline, regen.mode
+                    ),
                     policy_version=_state_policy_version(state),
                 )
             )
@@ -334,6 +349,7 @@ class PhaseArtifactRunner:
         self,
         resolved: EditorialWorkflowStartInput,
         outline: object,
+        mode: ContentModeBrief | None = None,
     ) -> SlideDraftRetryFn | None:
         """Injected retry double when configured, else the agent-backed retry."""
         if self._slide_draft_retry is not None:
@@ -348,6 +364,7 @@ class PhaseArtifactRunner:
             SlideDraftGenerationParams(
                 outline=outline_dicts,
                 persona=resolved.persona,
+                mode=mode,
             ),
         )
 
@@ -397,6 +414,7 @@ class PhaseArtifactRunner:
                     revision_notes=regen.revision_notes or None,
                     learned_examples=learned_examples or None,
                     previous_drafts=regen.previous_drafts or None,
+                    mode=regen.mode,
                 ),
             )
         except ValueError as exc:

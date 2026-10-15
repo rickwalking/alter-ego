@@ -254,7 +254,8 @@
       "openai_hyperreal": "OpenAI · Hyperreal Graphic Novel",
       "openai_cinematic": "OpenAI · Cinematic Photoreal",
       "openai_neo_anime": "OpenAI · Neo-Anime",
-      "openai_flat_editorial": "OpenAI · Flat Editorial (light, default)"
+      "openai_flat_editorial": "OpenAI · Flat Editorial (light, default)",
+      "openai_pov_editorial": "OpenAI · Photo + Editorial (POV)"
     },
     "progress": {
       "complete": "Carousel generated successfully!",
@@ -372,6 +373,15 @@
           "desc": "What I use for each task (my own tests only)"
         }
       }
+    },
+    "photo": {
+      "title": "Slide 1 photo",
+      "hint": "Your cut-out photo (PNG/WebP with transparency, up to 5 MB) sits next to the hook. The newest photo is selected by default.",
+      "empty": "No photos yet: upload one (slide 1 then shows only the hook).",
+      "photoLabel": "Photo",
+      "upload": "Upload a new photo",
+      "uploading": "Uploading…",
+      "uploadFailed": "The photo could not be uploaded (PNG, WebP or JPEG up to 5 MB)."
     }
   },
   "blogEditorial": {
@@ -572,6 +582,16 @@
         "blogPreviewError": "Could not load draft blog preview.",
         "captionEmpty": "No caption has been generated yet.",
         "qualityEmpty": "Quality scores are not available yet."
+      },
+      "hookPicker": {
+        "title": "Slide 1 hook: pick one or edit it",
+        "editLabel": "Hook (max 60 characters, 10 words)",
+        "wordCount": "{count} of {max} words",
+        "save": "Save hook",
+        "saving": "Saving…",
+        "saved": "Hook saved; the content step uses it on slide 1.",
+        "failed": "Could not save the hook.",
+        "thesisNotEarly": "Your thesis does not show up on slides 1-2 yet. Consider a hook that states it."
       }
     },
     "failed": {

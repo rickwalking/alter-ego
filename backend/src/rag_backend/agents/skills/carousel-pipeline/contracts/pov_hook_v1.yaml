@@ -136,7 +136,10 @@ rule_severities:
   translation_not_english: blocker
   emphasis_markup_invalid: blocker
   proper_noun_casing: blocker
-  # AE-0375 adds the POV rubric codes.
+  # AE-0375: POV rubric codes (deck-level, presentation_deck_rules.py). The
+  # first-person check is a heuristic, so it warns instead of blocking.
+  hook_word_limit: blocker
+  first_person_missing: warning
 
 # AE-0312: PT casing rules + configurable proper-noun list. Maintenance
 # ownership is documented in contracts/README.md — add product names here (a
@@ -233,6 +236,25 @@ quality_rubric:
       - body_too_long
       - copy_too_many_lines
     audiences: [content, translation]
+
+  # AE-0375: POV rubric (growth plan 16.3 C). "Thesis on slide 1 or 2" is an
+  # outline check shown at the outline gate; "at most one news slide" is the
+  # contract shape (no news role) and the outline prompt.
+  - rubric_id: hook_word_limit
+    instruction: >-
+      The slide 1 heading is the hook: at most 10 words and 60 characters, it
+      makes sense to a stranger with no context, and the carousel pays it off.
+    rule_codes:
+      - hook_word_limit
+    audiences: [content]
+  - rubric_id: first_person_present
+    instruction: >-
+      At least 3 slides speak in the author's first person ("Eu", "meu",
+      "minha", "no meu trabalho"). Never invent an experience, a test result
+      or a number to sound personal; use only the thesis and the personal proof.
+    rule_codes:
+      - first_person_missing
+    audiences: [content]
 
 lucide_icon_allowlist:
   - chart-column
