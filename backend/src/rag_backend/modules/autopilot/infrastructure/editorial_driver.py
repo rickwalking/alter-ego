@@ -33,17 +33,16 @@ from rag_backend.domain.constants.optimistic_locking import ERR_VERSION_CONFLICT
 from rag_backend.domain.constants.presentation_policy import (
     CREATE_TIME_PRESENTATION_POLICY_VERSION,
 )
-from rag_backend.infrastructure.monitoring_langfuse import propagate_attributes
+from rag_backend.infrastructure.monitoring_langfuse import (
+    WorkflowTraceScope,
+    workflow_trace_scope,
+)
 from rag_backend.modules.autopilot.constants import (
     AGENT_NAME_AUTOPILOT,
     CONTENT_TYPE_CAROUSEL,
     FIELD_CURRENT_PHASE,
     FIELD_IMAGE_ASSETS,
     FIELD_PHASE_STATUS,
-    LANGFUSE_FIELD_AGENT_NAME,
-    LANGFUSE_FIELD_CONTENT_TYPE,
-    LANGFUSE_FIELD_PHASE,
-    LANGFUSE_FIELD_PROJECT_ID,
     LANGUAGE_PT_BR,
     PHASE_STATUS_FAILED,
     PHASE_STATUS_IN_PROGRESS,
@@ -141,15 +140,14 @@ class InProcessEditorialDriver:
         return await self._acl.create_project(project)
 
     async def start(self, command: StartCommand) -> StartStatus:
-        """Start the workflow under autopilot Langfuse metadata."""
+        """Start the workflow; its phase traces carry the autopilot agent."""
         engine = self._config.engine_factory()
         workflow = StartWorkflowCommand(
             project_id=command.project_id,
             workflow_input=build_start_input(_start_input(command.spec)),
         )
-        metadata = _trace(command.project_id, command.phase)
         try:
-            with propagate_attributes(metadata=metadata):
+            with workflow_trace_scope(_trace_scope(command.project_id)):
                 handlers = _handlers(self._config.session)
                 await handlers.start(_as_engine(engine), workflow)
         except Exception as exc:
@@ -204,7 +202,6 @@ class InProcessEditorialDriver:
                 feedback=command.feedback,
                 structured_feedback=_structured_feedback(command),
             ),
-            command.phase,
         )
 
     async def redrive(self, command: RedriveCommand) -> ResumeResult:
@@ -218,14 +215,12 @@ class InProcessEditorialDriver:
                 expected_version=command.expected_version,
                 action="",
             ),
-            command.phase,
         )
 
     async def _run(
         self,
         operation: Callable[[AutomationRun], Awaitable[None]],
         run: AutomationRun,
-        phase: str,
     ) -> ResumeResult:
         """Run one facade operation; map the refusals it raises to a status.
 
@@ -235,7 +230,7 @@ class InProcessEditorialDriver:
         escalates it.
         """
         try:
-            with propagate_attributes(metadata=_trace(run.project_id, phase)):
+            with workflow_trace_scope(_trace_scope(run.project_id)):
                 await operation(run)
         except Exception as exc:
             status = _resume_status(exc)
@@ -347,13 +342,13 @@ def _measure(path: str) -> ImageFact:
     return ImageFact(present=True, is_jpeg=True, width=size.width, height=size.height)
 
 
-def _trace(project_id: str, phase: str) -> dict[str, str]:
-    return {
-        LANGFUSE_FIELD_CONTENT_TYPE: CONTENT_TYPE_CAROUSEL,
-        LANGFUSE_FIELD_AGENT_NAME: AGENT_NAME_AUTOPILOT,
-        LANGFUSE_FIELD_PHASE: phase,
-        LANGFUSE_FIELD_PROJECT_ID: project_id,
-    }
+def _trace_scope(project_id: str) -> WorkflowTraceScope:
+    """AE-0390: the phase seams name the trace; the run adds the owner."""
+    return WorkflowTraceScope(
+        project_id=project_id,
+        agent_name=AGENT_NAME_AUTOPILOT,
+        content_type=CONTENT_TYPE_CAROUSEL,
+    )
 
 
 def _start_status(exc: BaseException) -> StartStatus | None:

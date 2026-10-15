@@ -144,6 +144,7 @@ from rag_backend.modules.editorial.infrastructure.carousel_project_write_owner i
     CarouselProjectWriteOwner,
 )
 from rag_backend.modules.editorial.infrastructure.carousel_run_progress import (
+    read_project_owner_id,
     read_run_fence,
     write_run_heartbeat,
     write_run_heartbeat_once,
@@ -257,6 +258,7 @@ __all__ = [
     "is_carousel_project_lock_held",
     "is_carousel_project_lock_held_session",
     "is_provider_outage",
+    "read_project_owner_id",
     "read_run_fence",
     "redrive_automation_phase",
     "run_automation_phase",

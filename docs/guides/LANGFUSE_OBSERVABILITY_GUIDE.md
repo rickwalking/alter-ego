@@ -205,6 +205,27 @@ async def run_workflow_phase(project_id: str, phase: str, agent_name: str):
     return result
 ```
 
+### 5.1.1 Editorial phase traces in this codebase (AE-0390)
+
+Editorial workflow LLM calls do not open spans by hand. Two helpers in
+`rag_backend.infrastructure.langfuse_phase_trace` (re-exported from
+`infrastructure.monitoring_langfuse`) do it:
+
+- `workflow_trace_scope(WorkflowTraceScope(...))` names the actor for a run:
+  `execute_resume_run` sets `project_id` and the project owner as `user_id`,
+  the autopilot driver adds `agent_name="autopilot"`. Empty fields inherit.
+- `phase_trace({"phase": ...})` (and the legacy `propagate_attributes`) opens a
+  span and a trace named `workflow_<phase>` and propagates the trace name, user,
+  metadata and tags to every generation inside it. The graph seam
+  `ensure_artifacts` wraps outline/content/design/images; `start_workflow`
+  wraps research; the autopilot autofix wraps `owner_autofix`.
+
+Every phase trace carries the metadata keys `project_id`, `phase`,
+`agent_name`, `user_id`, `content_type` (missing values read `unknown`, the
+HTTP path's agent is `editorial_workflow`) and the tags
+`phase:<phase>`, `agent:<agent_name>`, `content:<content_type>`. Constants live
+in `domain/constants/langfuse_tracing.py`.
+
 ### 5.2 Tracing Subagents
 
 ```python

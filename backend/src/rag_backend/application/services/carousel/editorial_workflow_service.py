@@ -63,6 +63,11 @@ from rag_backend.domain.constants.carousel_workflow import (
     WORKFLOW_TRACE_PHASE_HUMAN_REVIEW,
     WORKFLOW_TRACE_PHASE_REVIEW,
 )
+from rag_backend.domain.constants.langfuse_tracing import (
+    TRACE_FIELD_PHASE,
+    TRACE_FIELD_PROJECT_ID,
+    TRACE_FIELD_USER_ID,
+)
 from rag_backend.domain.constants.workflow_validation import CONTENT_TYPE_CAROUSEL
 from rag_backend.domain.models.carousels import ReviewEventParams
 from rag_backend.domain.protocols import ResearchEnrichmentParams, ResearchTool
@@ -128,7 +133,11 @@ class EditorialWorkflowService:
         )
 
         with propagate_attributes(
-            metadata={"project_id": project_id, "phase": PHASE_RESEARCH},
+            metadata={
+                TRACE_FIELD_PROJECT_ID: project_id,
+                TRACE_FIELD_PHASE: PHASE_RESEARCH,
+                TRACE_FIELD_USER_ID: workflow_input.user_id,
+            },
         ):
             enriched_sources = await self._orchestrator.enrich_research_sources(
                 workflow_input.sources,
@@ -271,6 +280,23 @@ class EditorialWorkflowService:
             return
         await CarouselProjectWriteOwner(db).sync_phase(project_id, state)
 
+    async def _sync_and_release_row(
+        self,
+        db: AsyncSession | None,
+        project_id: str,
+        state: CarouselWorkflowState,
+    ) -> None:
+        """Sync the phase columns and commit at once (AE-0390).
+
+        The flushed UPDATE holds the ``carousel_projects`` row lock until
+        commit. The run used to commit only at the very end, so finalize/export,
+        review events, SSE and both stage heartbeats ran under that lock and the
+        heartbeat timed out (``carousel_run_heartbeat_failed``, prod 2026-10-15).
+        """
+        await self._sync_project_phase(db, project_id, state)
+        if db is not None:
+            await CarouselProjectWriteOwner(db).commit()
+
     async def resume_workflow(
         self,
         params: ResumeWorkflowInput,
@@ -380,7 +406,7 @@ class EditorialWorkflowService:
         persisted = await self._orchestrator.get_state(params.project_id)
         if persisted is not None:
             state = persisted
-        await self._sync_project_phase(params.db, params.project_id, state)
+        await self._sync_and_release_row(params.db, params.project_id, state)
         if (
             params.db is not None
             and prior is not None
@@ -434,7 +460,7 @@ class EditorialWorkflowService:
         persisted = await self._orchestrator.get_state(project_id)
         if persisted is not None:
             state = persisted
-        await self._sync_project_phase(db, project_id, state)
+        await self._sync_and_release_row(db, project_id, state)
         await publish_workflow_sse_updates(project_id, state)
         return state
 

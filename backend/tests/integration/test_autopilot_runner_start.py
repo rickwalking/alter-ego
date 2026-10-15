@@ -1,7 +1,8 @@
 """In-process workflow start through the real editorial service (AE-0354).
 
 The orchestrator stands in for the LLM and image providers. The runner
-adapter calls the service directly, with no HTTP client.
+adapter calls the service directly, with no HTTP client. AE-0390: the
+research trace resolves the autopilot agent and the owner from the scope.
 """
 
 from __future__ import annotations
@@ -14,6 +15,7 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from rag_backend.application.services.carousel import editorial_workflow_service
 from rag_backend.application.services.carousel.editorial_workflow_service import (
     EditorialWorkflowConfig,
     EditorialWorkflowService,
@@ -22,6 +24,7 @@ from rag_backend.domain.constants.carousel import CAROUSEL_DEFAULT_SLIDES_CONFIG
 from rag_backend.domain.models.user import UserRole
 from rag_backend.infrastructure.database.models.carousel import CarouselProjectModel
 from rag_backend.infrastructure.database.models.user import UserModel
+from rag_backend.infrastructure.langfuse_phase_trace import build_phase_trace
 from rag_backend.modules.autopilot.constants import (
     AGENT_NAME_AUTOPILOT,
     CONTENT_TYPE_CAROUSEL,
@@ -30,6 +33,7 @@ from rag_backend.modules.autopilot.constants import (
     LANGFUSE_FIELD_CONTENT_TYPE,
     LANGFUSE_FIELD_PHASE,
     LANGFUSE_FIELD_PROJECT_ID,
+    LANGFUSE_FIELD_USER_ID,
     LANGUAGE_PT_BR,
     PHASE_STATUS_AWAITING,
 )
@@ -86,10 +90,10 @@ async def test_start_uses_the_editorial_service_in_process(
         metadata: dict[str, str],
         callbacks: list[object] | None = None,
     ) -> Iterator[None]:
-        captured.append(dict(metadata))
+        captured.append(build_phase_trace(metadata).metadata)
         yield
 
-    monkeypatch.setattr(editorial_driver, "propagate_attributes", _spy)
+    monkeypatch.setattr(editorial_workflow_service, "propagate_attributes", _spy)
     service = _engine()
     driver = InProcessEditorialDriver(
         EditorialDriverConfig(
@@ -127,6 +131,7 @@ async def test_start_uses_the_editorial_service_in_process(
             LANGFUSE_FIELD_AGENT_NAME: AGENT_NAME_AUTOPILOT,
             LANGFUSE_FIELD_PHASE: GATE_RESEARCH,
             LANGFUSE_FIELD_PROJECT_ID: project_id,
+            LANGFUSE_FIELD_USER_ID: _OWNER,
         }
     ]
     assert service._orchestrator.synthesize_research.await_count == 1

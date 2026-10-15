@@ -63,6 +63,8 @@ def _patch_run_progress_seams() -> Generator[None, None, None]:
     dependency on init_db side effects from unrelated tests)."""
     with (
         patch(f"{_RUNNER}.read_run_fence", new=AsyncMock(return_value=None)),
+        # AE-0390: the trace scope reads the owner through its own session.
+        patch(f"{_RUNNER}.read_project_owner_id", new=AsyncMock(return_value="")),
         patch(
             f"{_RUNNER}.write_run_heartbeat_with_retry",
             new=AsyncMock(return_value=True),

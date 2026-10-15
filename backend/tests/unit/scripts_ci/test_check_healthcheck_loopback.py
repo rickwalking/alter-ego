@@ -85,7 +85,8 @@ def test_repository_files_pass() -> None:
 def test_default_scan_covers_compose_and_both_dockerfiles() -> None:
     """The default file set includes prod compose and the two service images."""
     names = {
-        str(path.relative_to(REPO_ROOT)) for path in CHECKER_MOD.default_files(REPO_ROOT)
+        str(path.relative_to(REPO_ROOT))
+        for path in CHECKER_MOD.default_files(REPO_ROOT)
     }
 
     assert "docker-compose.prod.yml" in names
