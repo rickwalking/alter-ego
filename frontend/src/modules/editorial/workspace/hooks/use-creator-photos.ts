@@ -1,8 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
 import { apiCall, apiUpload } from "@/lib/api-client";
-import { API_ENDPOINTS, HTTP_METHODS } from "@/constants/api";
-import type { SetHookPhotoInput, UploadCreatorPhotoInput } from "./types";
+import { API_ENDPOINTS } from "@/constants/api";
+import type { UploadCreatorPhotoInput } from "./types";
 
 /** AE-0376: one photo of the owner's library. */
 export const creatorPhotoSchema = z.object({
@@ -12,10 +12,6 @@ export const creatorPhotoSchema = z.object({
   created_at: z.string(),
 });
 const creatorPhotoListSchema = z.object({ items: z.array(creatorPhotoSchema) });
-const hookPhotoResponseSchema = z.object({
-  project_id: z.string(),
-  hook_asset_id: z.string(),
-});
 
 export type CreatorPhoto = z.infer<typeof creatorPhotoSchema>;
 
@@ -53,20 +49,5 @@ export function useUploadCreatorPhoto() {
         queryKey: creatorPhotoKeys.list(role),
       });
     },
-  });
-}
-
-/** Use one of the owner's photos on slide 1 of a POV carousel. */
-export function useSetHookPhoto() {
-  return useMutation({
-    mutationFn: async ({ projectId, assetId }: SetHookPhotoInput) =>
-      apiCall(
-        API_ENDPOINTS.CAROUSEL_HOOK_PHOTO(projectId),
-        hookPhotoResponseSchema,
-        {
-          method: HTTP_METHODS.PUT,
-          body: JSON.stringify({ creator_asset_id: assetId }),
-        },
-      ),
   });
 }

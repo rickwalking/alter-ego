@@ -34,6 +34,9 @@ from rag_backend.api.schemas import (
     CarouselProjectListResponse,
     CarouselProjectResponse,
 )
+from rag_backend.application.services.carousel.creator_asset_service import (
+    CreatorAssetService,
+)
 from rag_backend.application.services.carousel.project_policy import (
     create_time_policy_version,
 )
@@ -55,6 +58,8 @@ from rag_backend.modules.publishing import (
 )
 
 from .content_mode_fields import content_mode_fields
+from .create_hook_photo import bind_hook_photo, check_hook_photo
+from .creator_assets import get_creator_asset_service
 from .deps import get_carousel_repo
 from .editorial_workflow_routes_validate import load_persona
 from .helpers import assert_carousel_artifacts_healthy
@@ -96,8 +101,11 @@ async def create_carousel(
     user: Annotated[User, Depends(require_editor_or_admin)],
     repo: Annotated[CarouselRepository, Depends(get_carousel_repo)],
     session: Annotated[AsyncSession, Depends(get_session)],
+    assets: Annotated[CreatorAssetService, Depends(get_creator_asset_service)],
 ) -> CarouselProjectResponse:
     """Create a new carousel project."""
+    # PR #106 review: a POV project's slide-1 photo is checked before insert.
+    await check_hook_photo(assets, user, request)
     # `theme` is a string reference (root key | "auto" | custom-palette UUID),
     # already validated by the CarouselProjectCreate schema (AE-0268/0271). The
     # custom palette is resolved + snapshotted at generation (AE-0269 D9).
@@ -126,6 +134,8 @@ async def create_carousel(
     if model is not None:
         model.owner_id = str(user.id)
         await session.commit()
+    created.owner_id = str(user.id)
+    created = await bind_hook_photo(assets, created, user)
     return CarouselProjectResponse.model_validate(created)
 
 

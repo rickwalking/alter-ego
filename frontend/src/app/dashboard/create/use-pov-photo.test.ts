@@ -6,7 +6,6 @@ import { usePovPhoto } from "./use-pov-photo";
 const state = {
   photos: [] as { id: string; created_at: string }[],
   upload: vi.fn(),
-  setHookPhoto: vi.fn(),
 };
 
 vi.mock("@/modules/editorial", () => ({
@@ -16,14 +15,12 @@ vi.mock("@/modules/editorial", () => ({
     isPending: false,
     isError: false,
   }),
-  useSetHookPhoto: () => ({ mutateAsync: state.setHookPhoto }),
 }));
 
 describe("usePovPhoto", () => {
   beforeEach(() => {
     state.photos = [];
     state.upload.mockReset();
-    state.setHookPhoto.mockReset();
   });
 
   it("preselects the newest photo once", () => {
@@ -57,20 +54,5 @@ describe("usePovPhoto", () => {
     const { onSuccess } = state.upload.mock.calls[0][1];
     onSuccess({ id: "uploaded" });
     expect(onSelect).toHaveBeenCalledWith("uploaded");
-  });
-
-  it("binds the chosen photo to the created project", async () => {
-    const { result } = renderHook(() => usePovPhoto("photo-1", vi.fn()));
-    await result.current.attachTo("project-1");
-    expect(state.setHookPhoto).toHaveBeenCalledWith({
-      projectId: "project-1",
-      assetId: "photo-1",
-    });
-  });
-
-  it("does nothing without a photo", async () => {
-    const { result } = renderHook(() => usePovPhoto("", vi.fn()));
-    await result.current.attachTo("project-1");
-    expect(state.setHookPhoto).not.toHaveBeenCalled();
   });
 });

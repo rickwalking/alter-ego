@@ -7,10 +7,26 @@ Feature: POV layouts, photo library, pov_editorial images and Radar IA v7 (AE-03
     When slide 1 is rendered
     Then the slide shows the photo and the hook and no generated artwork
 
-  Scenario: Hook slide without a photo
+  # PR #106 review: slide 1 never renders silently without the owner's photo.
+  Scenario: Hook slide without a photo fails loudly
     Given a POV project without a hook photo
     When slide 1 is rendered
-    Then the slide shows only the hook on the solid background
+    Then rendering fails with HookPhotoError "hook_photo_missing"
+
+  Scenario: Hook photo bound but not staged
+    Given a POV project whose hook photo id is set but its staged path is empty
+    When slide 1 is rendered
+    Then rendering fails with HookPhotoError "hook_photo_missing"
+
+  Scenario: Hook photo unreadable in the output folder
+    Given a POV project whose staged hook photo is not in its output folder
+    When slide 1 is rendered
+    Then rendering fails with HookPhotoError "hook_photo_unreadable" naming the project
+
+  Scenario: Hook photo readable in the output folder
+    Given a POV project whose staged hook photo exists in its output folder
+    When slide 1 is rendered
+    Then the slide shows the photo and the hook
 
   Scenario: Layout by role
     Given a 9-slide POV deck

@@ -9,6 +9,10 @@ from httpx import ASGITransport, AsyncClient
 
 from rag_backend.domain.constants import JWT_ALGORITHM, JWT_TYPE_AUTH
 from rag_backend.domain.models import User, UserRole
+from tests.integration.hook_photo_support import asset_dirs  # noqa: F401
+
+# ``asset_dirs`` (PR #106 review) is re-exported so every integration test can
+# upload the POV slide-1 photo into ``tmp_path``.
 
 TEST_SECRET = "test-secret-for-integration-tests!!"
 

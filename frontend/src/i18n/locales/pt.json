@@ -377,7 +377,7 @@
     "photo": {
       "title": "Foto do slide 1",
       "hint": "Sua foto recortada (PNG/WebP com transparência, até 5 MB) fica ao lado do gancho. A foto mais recente vem selecionada.",
-      "empty": "Nenhuma foto ainda: envie uma (sem foto, o slide 1 mostra só o gancho).",
+      "empty": "Nenhuma foto ainda: envie uma. A foto do slide 1 é obrigatória no Ponto de Vista.",
       "photoLabel": "Foto",
       "upload": "Enviar uma foto nova",
       "uploading": "Enviando…",

@@ -1603,6 +1603,18 @@
             "title": "Generate Images",
             "type": "boolean"
           },
+          "hook_asset_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hook Asset Id"
+          },
           "image_model": {
             "default": "openai",
             "maxLength": 30,
@@ -7393,11 +7405,35 @@
             "title": "Niche",
             "type": "string"
           },
+          "pov_format": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pov Format"
+          },
           "score": {
             "maximum": 100.0,
             "minimum": 0.0,
             "title": "Score",
             "type": "integer"
+          },
+          "slide_count": {
+            "anyOf": [
+              {
+                "maximum": 10.0,
+                "minimum": 8.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Slide Count"
           },
           "sources": {
             "items": {
