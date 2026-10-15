@@ -262,6 +262,10 @@ def _runner_deps(
     session: AsyncSession,
     config: AutopilotTickConfig,
 ) -> RunnerDependencies:
+    from rag_backend.modules.autopilot.infrastructure.content_autofixer import (
+        AutofixerConfig,
+        InProcessContentAutofixer,
+    )
     from rag_backend.modules.autopilot.infrastructure.editorial_driver import (
         EditorialDriverConfig,
         InProcessEditorialDriver,
@@ -284,6 +288,9 @@ def _runner_deps(
         recovery=SqlRunRecoveryStore(session),
         owner_user_id=config.owner_user_id,
         notifier_configured=config.notifier_configured,
+        autofix=InProcessContentAutofixer(
+            AutofixerConfig(session=session, engine_factory=config.engine_factory)
+        ),
     )
 
 
@@ -294,6 +301,8 @@ class TelegramTickConfig:
     token: str
     chat_id: str
     web_base_url: str
+    # AE-0367: lets the review list quality issues and offer "Fix issues".
+    engine_factory: EngineFactory | None = None
 
 
 class TelegramNotifyTickAdapter:
@@ -307,6 +316,10 @@ class TelegramNotifyTickAdapter:
         from rag_backend.modules.autopilot.application.notifications import (
             NotificationDependencies,
             OwnerNotificationService,
+        )
+        from rag_backend.modules.autopilot.infrastructure.content_autofixer import (
+            AutofixerConfig,
+            InProcessContentAutofixer,
         )
         from rag_backend.modules.autopilot.infrastructure.notice_source import (
             SqlAutopilotEventSource,
@@ -325,7 +338,14 @@ class TelegramNotifyTickAdapter:
         deps = NotificationDependencies(
             events=SqlAutopilotEventSource(db),
             runs=SqlAlchemyAutopilotRepository(db),
-            facts=CarouselReviewFacts(db),
+            facts=CarouselReviewFacts(
+                db,
+                InProcessContentAutofixer(
+                    AutofixerConfig(
+                        session=db, engine_factory=self._config.engine_factory
+                    )
+                ),
+            ),
             notices=SqlNoticeLogStore(db),
             notifier=TelegramNotifier(
                 TelegramClientConfig(token=self._config.token, sleeper=AsyncSleeper())

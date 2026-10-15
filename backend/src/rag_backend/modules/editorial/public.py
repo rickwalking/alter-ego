@@ -31,6 +31,11 @@ Consumers SHALL NOT import internals such as
 ``rag_backend.modules.editorial.domain.models`` directly.
 """
 
+from rag_backend.domain.constants.carousel_autofix import (
+    AUTOFIX_STATUS_CONFLICT,
+    AUTOFIX_STATUS_FIXED,
+    AUTOFIX_STATUS_NOTHING_TO_FIX,
+)
 from rag_backend.modules.editorial.application.service import (
     EditorialPorts,
     EditorialService,
@@ -122,6 +127,13 @@ from rag_backend.modules.editorial.infrastructure.carousel_automation_run import
     redrive_automation_phase,
     run_automation_phase,
 )
+from rag_backend.modules.editorial.infrastructure.carousel_owner_autofix import (
+    OwnerAutofixReport,
+    OwnerAutofixRequest,
+    OwnerIssues,
+    inspect_owner_issues,
+    run_owner_autofix,
+)
 from rag_backend.modules.editorial.infrastructure.carousel_project_lock import (
     carousel_project_lock,
     carousel_project_lock_key,
@@ -153,6 +165,9 @@ from rag_backend.modules.editorial.infrastructure.legacy_carousel_acl import (
 )
 
 __all__ = [
+    "AUTOFIX_STATUS_CONFLICT",
+    "AUTOFIX_STATUS_FIXED",
+    "AUTOFIX_STATUS_NOTHING_TO_FIX",
     "CAROUSEL_EDITORIAL_WORKFLOW_STATUS_DRAFT",
     "CAROUSEL_WORKFLOW_PHASES",
     "DEFAULT_PHASE_RETRY_CAP",
@@ -216,6 +231,9 @@ __all__ = [
     "EngineSourceMaterialAdapter",
     "LegacyCarouselAcl",
     "OptimisticLockingPort",
+    "OwnerAutofixReport",
+    "OwnerAutofixRequest",
+    "OwnerIssues",
     "PublicReleasePort",
     "PublicReleaseState",
     "ResearchSource",
@@ -235,12 +253,14 @@ __all__ = [
     "carousel_project_lock",
     "carousel_project_lock_key",
     "content_approve_blocker",
+    "inspect_owner_issues",
     "is_carousel_project_lock_held",
     "is_carousel_project_lock_held_session",
     "is_provider_outage",
     "read_run_fence",
     "redrive_automation_phase",
     "run_automation_phase",
+    "run_owner_autofix",
     "slides_in_config",
     "write_run_heartbeat",
     "write_run_heartbeat_once",

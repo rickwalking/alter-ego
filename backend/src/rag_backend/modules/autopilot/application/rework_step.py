@@ -3,6 +3,11 @@
 The webhook only records phase and feedback and answers Telegram at once.
 The runner calls ``apply`` on the worker tick, where the LLM regeneration
 has no ~100 s Cloudflare cap.
+
+AE-0367: a "Fix issues" tap is queued the same way (phase marker
+``AUTOFIX_REWORK_PHASE``). The tick runs the deterministic repair and
+re-render, then hands the run to the normal final-review stop, which moves it
+back to ``awaiting_owner`` and stages the fresh review (new lock version).
 """
 
 from __future__ import annotations
@@ -15,6 +20,11 @@ from rag_backend.modules.autopilot.constants import (
     PHASE_STATUS_AWAITING,
     REASON_PROJECT_MISSING,
     REASON_REVISION_CAP,
+)
+from rag_backend.modules.autopilot.domain.autofix import (
+    AutofixCommand,
+    AutofixStatus,
+    ContentAutofixer,
 )
 from rag_backend.modules.autopilot.domain.gate import (
     EditorialDriver,
@@ -30,6 +40,7 @@ from rag_backend.modules.autopilot.domain.models import (
 from rag_backend.modules.autopilot.domain.ports import AutopilotRunRepository
 from rag_backend.modules.autopilot.domain.recovery import RunRecoveryStore
 from rag_backend.modules.autopilot.recovery_constants import REASON_REWORK_RETRY
+from rag_backend.modules.autopilot.webhook_constants import AUTOFIX_REWORK_PHASE
 from rag_backend.modules.editorial.public import REVIEW_ACTION_REVISE
 
 
@@ -41,6 +52,7 @@ class ReworkDependencies:
     editorial: EditorialDriver
     recovery: RunRecoveryStore
     escalations: RunRecovery
+    autofix: ContentAutofixer | None = None
 
 
 class ReworkStep:
@@ -66,7 +78,32 @@ class ReworkStep:
         if not _at_final_review(snapshot):
             await self._deps.recovery.clear_rework(run.run_id)
             return None
+        if run.rework_phase == AUTOFIX_REWORK_PHASE:
+            return await self._autofix(run, snapshot, project_id)
         return await self._apply(run, snapshot, project_id)
+
+    async def _autofix(
+        self,
+        run: AutopilotRun,
+        snapshot: GateSnapshot,
+        project_id: str,
+    ) -> int | None:
+        """Repair once; None hands the run to the final-review stop.
+
+        A conflict keeps the intent for the next tick (fresh lock version).
+        """
+        autofix = self._deps.autofix
+        if autofix is None:
+            await self._end(run, AutopilotRunState.AWAITING_OWNER, REASON_REWORK_RETRY)
+            return 1
+        command = AutofixCommand(
+            project_id=project_id, expected_version=snapshot.lock_version
+        )
+        outcome = await autofix.autofix(command)
+        if outcome.status is AutofixStatus.CONFLICT:
+            return 1
+        await self._deps.recovery.clear_rework(run.run_id)
+        return None
 
     async def _apply(
         self,
