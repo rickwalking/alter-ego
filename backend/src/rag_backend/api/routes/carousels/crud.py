@@ -34,13 +34,13 @@ from rag_backend.api.schemas import (
     CarouselProjectListResponse,
     CarouselProjectResponse,
 )
+from rag_backend.application.services.carousel.project_policy import (
+    create_time_policy_version,
+)
 from rag_backend.domain.constants.carousel_workflow import (
     ERR_CAROUSEL_NOT_COMPLETED,
     ERR_WORKFLOW_NOT_APPROVED_FOR_PUBLISH,
     WORKFLOW_STATUS_APPROVED_FOR_PUBLISH,
-)
-from rag_backend.domain.constants.presentation_policy import (
-    CREATE_TIME_PRESENTATION_POLICY_VERSION,
 )
 from rag_backend.domain.constants.rate_limits import RATE_LIMIT_CAROUSEL_PUBLISH
 from rag_backend.domain.models import CarouselProject, CarouselStatus, User
@@ -113,9 +113,9 @@ async def create_carousel(
         image_style=request.image_style,
         theme=theme,
         custom_visual_details=request.custom_visual_details,
-        # AE-0312: new carousels are stamped v2 so PT casing rules apply; DEFAULT
-        # stays v1 for legacy NULL-version rows on re-validation reads.
-        presentation_policy_version=CREATE_TIME_PRESENTATION_POLICY_VERSION,
+        # AE-0374: new carousels are stamped by mode (POV: pov_hook_v1, Radar
+        # IA: hero_lower_third_v4); DEFAULT stays v1 for legacy NULL-version rows.
+        presentation_policy_version=create_time_policy_version(request.resolved_mode),
         # AE-0373: the wizard's template (dropped before) and the persona.
         slide_layout_strategy=request.strategy,
         persona_id=await _persona_id(session, request.persona_id),

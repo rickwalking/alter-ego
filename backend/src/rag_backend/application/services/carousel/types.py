@@ -21,8 +21,10 @@ from rag_backend.domain.models import CarouselSlide
 MAX_FEATURE_ITEMS = 4
 
 # Maximum number of slides in a carousel (includes intro, summary, content,
-# closing, and CTA).
-MAX_SLIDES = 7
+# closing, and CTA). AE-0374: 10, Instagram's carousel limit, so the POV
+# contract (8-10 slides) fits. The fixed 7-slide decks keep LEGACY_SLIDE_COUNT.
+MAX_SLIDES = 10
+LEGACY_SLIDE_COUNT = 7
 
 # Fields copied from SlideData into the persisted `extras` JSON. Listed
 # here so `pack_extras` stays a one-liner loop instead of four branches.
@@ -107,7 +109,7 @@ def slide_count_from_config(slides_config: str) -> int:
     for part in parts:
         with suppress(ValueError, IndexError):
             total += int(part.split()[0])
-    return total if total > 0 else MAX_SLIDES
+    return total if total > 0 else LEGACY_SLIDE_COUNT
 
 
 def style_display_name(model: str, style: str) -> str:

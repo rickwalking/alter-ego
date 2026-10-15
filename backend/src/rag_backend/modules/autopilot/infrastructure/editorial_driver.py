@@ -31,7 +31,7 @@ from rag_backend.domain.constants.carousel_workflow import (
 )
 from rag_backend.domain.constants.optimistic_locking import ERR_VERSION_CONFLICT
 from rag_backend.domain.constants.presentation_policy import (
-    CREATE_TIME_PRESENTATION_POLICY_VERSION,
+    CREATE_TIME_NEWS_PRESENTATION_POLICY_VERSION,
 )
 from rag_backend.infrastructure.monitoring_langfuse import propagate_attributes
 from rag_backend.modules.autopilot.constants import (
@@ -136,7 +136,7 @@ class InProcessEditorialDriver:
             theme=CarouselTheme.AUTO.value,
             custom_visual_details=spec.image_guidance or None,
             owner_id=spec.owner_user_id or None,
-            presentation_policy_version=CREATE_TIME_PRESENTATION_POLICY_VERSION,
+            presentation_policy_version=CREATE_TIME_NEWS_PRESENTATION_POLICY_VERSION,
         )
         return await self._acl.create_project(project)
 

@@ -30,6 +30,9 @@ from rag_backend.application.services.carousel.presentation_content_rules import
     TranslationCheckCommand,
     translation_violations,
 )
+from rag_backend.application.services.carousel.presentation_deck_rules import (
+    deck_violations,
+)
 from rag_backend.application.services.carousel.presentation_policy import (
     CarouselPresentationPolicy,
     load_presentation_policy,
@@ -143,6 +146,8 @@ def validate_localized_slides(
     violations: list[SlideValidationViolation] = []
     for slide in localized_slides:
         violations.extend(_validate_single_slide(slide, policy))
+    # AE-0374: deck size against the contract range (role contracts only).
+    violations.extend(deck_violations(localized_slides, policy))
     # AE-0312: blocking is severity-derived inside build_validation_report so the
     # stored report agrees with the approval-gate decision (no hardcoded literal).
     return build_validation_report(violations)

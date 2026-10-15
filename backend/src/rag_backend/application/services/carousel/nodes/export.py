@@ -77,9 +77,12 @@ async def render_language(
     standard_html = _rewrite_image_paths(config.html_content, "../images/")
     hd_html = _rewrite_image_paths(config.html_content, "../../images/")
 
+    policy_version = config.project.presentation_policy_version
+    slide_count = len(config.slides_data) or config.project.slide_count
     slide_paths = await config.export.export_slides(
         html_content=standard_html,
         output_dir=str(lang_dir),
+        config=ExportConfig(policy_version=policy_version, slide_count=slide_count),
     )
     # Export HD slides too (2160x2700 for archive/retina). Non-blocking:
     # if HD fails the standard slides are still available.
@@ -89,7 +92,9 @@ async def render_language(
         await config.export.export_slides(
             html_content=hd_html,
             output_dir=str(hd_dir),
-            config=ExportConfig(hd=True),
+            config=ExportConfig(
+                hd=True, policy_version=policy_version, slide_count=slide_count
+            ),
         )
     except Exception:
         logger.warning(

@@ -160,8 +160,11 @@ seeds one violation per code. New codes (POV contract only):
 | `hook_word_limit` | slide-1 PT heading > 10 words | blocker |
 | `first_person_missing` | fewer than 3 slides contain a PT first-person marker (`eu`, `meu`, `minha`, `meus`, `minhas`, `comigo`, `me`) | warning |
 | `thesis_not_early` | no content word of the thesis appears in slides 1–2 | warning |
-| `news_slides_exceeded` | more than one slide with role `news` | blocker (structural) |
-| `slide_count_invalid` | outline length outside `[min, max]` | blocker (existing code) |
+| `slide_count_invalid` | deck length outside `[min, max]` (role contracts only) | blocker (existing code) |
+
+"At most one news slide" is structural, not a validator: roles are stamped by position and a
+contract has at most one `news` slot (Radar IA v4; POV has none). A validator counting `news`
+roles could never fire, so the rule lives in the contract shape and in the outline prompts.
 
 The heuristic ones are warnings: they surface in review without blocking, so they can never
 wedge the autopilot. The autopilot persona ≥70 gate (`modules/autopilot/domain/policy.py`)

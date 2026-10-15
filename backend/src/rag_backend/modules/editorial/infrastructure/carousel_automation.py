@@ -27,9 +27,6 @@ from rag_backend.application.services.carousel.presentation_policy_types import 
 from rag_backend.application.services.carousel.workflow_state import (
     CarouselWorkflowState,
 )
-from rag_backend.domain.constants.presentation_policy import (
-    DEFAULT_PRESENTATION_POLICY_VERSION,
-)
 from rag_backend.modules.editorial.domain.models import CarouselProject, CarouselSlide
 from rag_backend.modules.editorial.domain.ports import CarouselRepository
 
@@ -162,15 +159,16 @@ def expected_slide_total(project: CarouselProject) -> int:
 
     The outline agent sizes the carousel from the presentation contract's
     ``slide_count``, not from ``slides_config``, so the contract is the
-    authority. The config is only a fallback when the contract is unreadable.
+    authority. AE-0374: a ranged contract (POV, Radar IA v4) is sized to the
+    project's own slide count. The config is only a fallback when the contract
+    is unreadable.
     """
-    from rag_backend.application.services.carousel import presentation_policy
-
-    version = project.presentation_policy_version or (
-        DEFAULT_PRESENTATION_POLICY_VERSION
+    from rag_backend.application.services.carousel.project_policy import (
+        project_policy,
     )
+
     try:
-        return presentation_policy.load_presentation_policy(version).slide_count
+        return project_policy(project).slide_count
     except PresentationPolicyError:
         return slides_in_config(project.slides_config)
 

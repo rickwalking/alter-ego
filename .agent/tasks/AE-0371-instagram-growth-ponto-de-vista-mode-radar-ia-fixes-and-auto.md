@@ -161,7 +161,8 @@ Pending.
   their frozen policy and prompts (owner: "v2 stays v2").
 - 2026-10-15 — **Mode read from the project row** at generation time (no new LangGraph state).
 - 2026-10-15 — **POV rubric heuristics are warnings** (`first_person_missing`, `thesis_not_early`);
-  only objective ones block (`hook_word_limit`, `news_slides_exceeded`, `slide_count_invalid`).
+  only objective ones block (`hook_word_limit`, `slide_count_invalid`). "At most one news
+  slide" is structural (one `news` role slot), so it has no validator (AE-0374).
 - 2026-10-15 — **R6 glue unwired:** AE-0370 is not on `main`; `PublishSlotPolicy` +
   `PovPublishSlots` ship isolated, wiring is a follow-up after AE-0370 merges.
 - 2026-10-15 — **Migrations chain from `f8a9b0c1d2e3`**; re-point onto AE-0370's head when

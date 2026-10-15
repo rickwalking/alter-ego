@@ -192,7 +192,8 @@ class TestRunContentImageMap:
             "blog_pt": "# Blog",
             "blog_image_map": [
                 {"slide_number": 0, "heading": "Invalid", "alt": ""},
-                {"slide_number": 8, "heading": "Invalid", "alt": ""},
+                # AE-0374: decks go up to 10 slides; 11 is out of range.
+                {"slide_number": 11, "heading": "Invalid", "alt": ""},
                 {"slide_number": 3, "heading": "Valid", "alt": "Valid image"},
             ],
         }

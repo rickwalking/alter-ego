@@ -50,6 +50,8 @@ CAROUSEL_DEFAULT_LANGUAGE = "pt-BR"
 # Default slides config
 CAROUSEL_DEFAULT_SLIDES_CONFIG = "1 intro, 1 summary, 3 content, 1 closing, 1 cta"
 CAROUSEL_SLIDES_CONFIG_SEVEN = "7_slides"
+# AE-0374: the persisted deck size after drafting (``7_slides``, ``9_slides``).
+CAROUSEL_SLIDES_CONFIG_FORMAT = "{count}_slides"
 
 # Template versions
 TEMPLATE_VERSION_V1 = "v1"
@@ -167,6 +169,7 @@ __all__ = [
     "CAROUSEL_PROMPT_VERSION_V4",
     "CAROUSEL_PROMPT_VERSION_V5",
     "CAROUSEL_PROMPT_VERSION_V6",
+    "CAROUSEL_SLIDES_CONFIG_FORMAT",
     "CAROUSEL_SLIDES_CONFIG_SEVEN",
     "CAROUSEL_STATUS_COMPLETED",
     "CAROUSEL_STATUS_DESIGNING",

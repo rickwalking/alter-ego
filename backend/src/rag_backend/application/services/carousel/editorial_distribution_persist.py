@@ -28,8 +28,8 @@ from rag_backend.application.services.carousel.outline_normalize import (
 )
 from rag_backend.application.services.carousel.presentation_policy import (
     CarouselPresentationPolicy,
-    load_presentation_policy,
 )
+from rag_backend.application.services.carousel.project_policy import project_policy
 from rag_backend.application.services.carousel.slide_copy_casing import (
     repair_slide_data_casing,
 )
@@ -38,10 +38,7 @@ from rag_backend.application.services.carousel.types import (
     SlideData,
     pack_extras,
 )
-from rag_backend.domain.constants.carousel import CAROUSEL_SLIDES_CONFIG_SEVEN
-from rag_backend.domain.constants.presentation_policy import (
-    DEFAULT_PRESENTATION_POLICY_VERSION,
-)
+from rag_backend.domain.constants.carousel import CAROUSEL_SLIDES_CONFIG_FORMAT
 from rag_backend.domain.models import CarouselProject, CarouselSlide
 from rag_backend.infrastructure.database.carousel_repository import (
     PostgresCarouselRepository,
@@ -147,7 +144,9 @@ async def _update_existing_slides(
         if draft is None:
             continue
         await _apply_draft_to_existing_slide(state, slide, draft)
-    state.project.slides_config = CAROUSEL_SLIDES_CONFIG_SEVEN
+    state.project.slides_config = CAROUSEL_SLIDES_CONFIG_FORMAT.format(
+        count=len(existing)
+    )
     await state.repo.update_project(state.project)
 
 
@@ -188,18 +187,20 @@ async def _create_new_slides(
     state: _SlideDraftsState,
 ) -> None:
     """Create new slides from draft data and outline."""
+    created = 0
     for index, item in enumerate(state.outline[:MAX_SLIDES]):
         if not isinstance(item, dict):
             continue
         await _create_slide_from_outline_item(state, index, item)
-    state.project.slides_config = CAROUSEL_SLIDES_CONFIG_SEVEN
+        created += 1
+    # AE-0374: the real deck size (was always "7_slides"), read by design.py.
+    state.project.slides_config = CAROUSEL_SLIDES_CONFIG_FORMAT.format(count=created)
     await state.repo.update_project(state.project)
 
 
 def _project_policy(project: CarouselProject) -> CarouselPresentationPolicy:
-    return load_presentation_policy(
-        project.presentation_policy_version or DEFAULT_PRESENTATION_POLICY_VERSION
-    )
+    """AE-0374: the stamped contract sized to the project's deck."""
+    return project_policy(project)
 
 
 # Extras keys that carry visible copy (replaced, or dropped when the edited copy
