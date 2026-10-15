@@ -100,7 +100,6 @@ export const carouselProjectResponseSchema = z.object({
   creator_avatar_url: z.string().nullable().optional(),
   template_version: z.string().nullable().optional(),
   slide_layout_strategy: z.string().nullable().optional(),
-  // AE-0373: content mode echoed by the API (NULL rows read as news_analysis).
   content_mode: z.enum(["news_analysis", "pov"]).optional(),
   pov_thesis: z.string().nullable().optional(),
   pov_personal_proof: z.string().nullable().optional(),

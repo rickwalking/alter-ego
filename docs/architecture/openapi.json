@@ -1094,6 +1094,38 @@
         "title": "Body_upload_document_api_documents_upload_post",
         "type": "object"
       },
+      "Body_upload_library_photo_api_carousels_creator_assets_post": {
+        "properties": {
+          "file": {
+            "contentMediaType": "application/octet-stream",
+            "title": "File",
+            "type": "string"
+          },
+          "pose_tag": {
+            "anyOf": [
+              {
+                "maxLength": 40,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pose Tag"
+          },
+          "role": {
+            "pattern": "^(hook|cta|pov)$",
+            "title": "Role",
+            "type": "string"
+          }
+        },
+        "required": [
+          "file",
+          "role"
+        ],
+        "title": "Body_upload_library_photo_api_carousels_creator_assets_post",
+        "type": "object"
+      },
       "CalendarItemResponse": {
         "description": "Single calendar entry.",
         "properties": {
@@ -1530,6 +1562,30 @@
             "title": "Audience",
             "type": "string"
           },
+          "content_mode": {
+            "anyOf": [
+              {
+                "maxLength": 20,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Content Mode"
+          },
+          "cta_goal": {
+            "anyOf": [
+              {
+                "maxLength": 20,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cta Goal"
+          },
           "custom_visual_details": {
             "anyOf": [
               {
@@ -1554,7 +1610,7 @@
             "type": "string"
           },
           "image_style": {
-            "default": "neo_anime",
+            "default": "flat_editorial",
             "maxLength": 30,
             "title": "Image Style",
             "type": "string"
@@ -1570,6 +1626,65 @@
             "minLength": 1,
             "title": "Niche",
             "type": "string"
+          },
+          "persona_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Persona Id"
+          },
+          "pov_format": {
+            "anyOf": [
+              {
+                "maxLength": 30,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pov Format"
+          },
+          "pov_personal_proof": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pov Personal Proof"
+          },
+          "pov_thesis": {
+            "anyOf": [
+              {
+                "maxLength": 280,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pov Thesis"
+          },
+          "slide_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Slide Count"
           },
           "slides_config": {
             "default": "1 intro, 3 content, 1 closing, 1 cta",
@@ -1705,6 +1820,11 @@
             ],
             "title": "Caption"
           },
+          "content_mode": {
+            "default": "news_analysis",
+            "title": "Content Mode",
+            "type": "string"
+          },
           "created_at": {
             "format": "date-time",
             "title": "Created At",
@@ -1742,6 +1862,17 @@
               }
             ],
             "title": "Creator Name"
+          },
+          "cta_goal": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cta Goal"
           },
           "current_phase": {
             "anyOf": [
@@ -1809,6 +1940,29 @@
             ],
             "title": "Error Message"
           },
+          "hook_asset_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hook Asset Id"
+          },
+          "hook_text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hook Text"
+          },
           "id": {
             "format": "uuid",
             "title": "Id",
@@ -1820,7 +1974,7 @@
             "type": "string"
           },
           "image_style": {
-            "default": "neo_anime",
+            "default": "flat_editorial",
             "title": "Image Style",
             "type": "string"
           },
@@ -1900,6 +2054,17 @@
             ],
             "title": "Pdf Path En"
           },
+          "persona_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Persona Id"
+          },
           "phase_status": {
             "anyOf": [
               {
@@ -1910,6 +2075,39 @@
               }
             ],
             "title": "Phase Status"
+          },
+          "pov_format": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pov Format"
+          },
+          "pov_personal_proof": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pov Personal Proof"
+          },
+          "pov_thesis": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pov Thesis"
           },
           "primary_color": {
             "anyOf": [
@@ -1928,6 +2126,17 @@
             },
             "title": "Research Sources",
             "type": "array"
+          },
+          "slide_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Slide Count"
           },
           "slide_layout_strategy": {
             "anyOf": [
@@ -2312,6 +2521,25 @@
           "conversation_id"
         ],
         "title": "ChatResponse",
+        "type": "object"
+      },
+      "CollectorError": {
+        "description": "A collector that timed out or raised. The bundle still returns.",
+        "properties": {
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source",
+          "message"
+        ],
+        "title": "CollectorError",
         "type": "object"
       },
       "ContentCalendarResponse": {
@@ -2735,6 +2963,23 @@
         "title": "CreateUserResponse",
         "type": "object"
       },
+      "CreatorAssetListResponse": {
+        "description": "AE-0376: the caller's photo library.",
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/CreatorAssetResponse"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "CreatorAssetListResponse",
+        "type": "object"
+      },
       "CreatorAssetResponse": {
         "properties": {
           "content_sha256": {
@@ -2763,9 +3008,31 @@
             "title": "Owner Id",
             "type": "string"
           },
+          "pose_tag": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pose Tag"
+          },
           "relative_path": {
             "title": "Relative Path",
             "type": "string"
+          },
+          "role": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Role"
           },
           "staged_relative_path": {
             "title": "Staged Relative Path",
@@ -3960,6 +4227,272 @@
         "title": "HealthResponse",
         "type": "object"
       },
+      "HookPhotoResponse": {
+        "description": "AE-0376: the project's slide-1 photo.",
+        "properties": {
+          "hook_asset_id": {
+            "format": "uuid",
+            "title": "Hook Asset Id",
+            "type": "string"
+          },
+          "project_id": {
+            "format": "uuid",
+            "title": "Project Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "project_id",
+          "hook_asset_id"
+        ],
+        "title": "HookPhotoResponse",
+        "type": "object"
+      },
+      "HookSelectRequest": {
+        "description": "The owner's slide-1 hook (AE-0375): <=60 characters and <=10 words.",
+        "properties": {
+          "hook_text": {
+            "maxLength": 60,
+            "minLength": 1,
+            "title": "Hook Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "hook_text"
+        ],
+        "title": "HookSelectRequest",
+        "type": "object"
+      },
+      "HookSelectResponse": {
+        "description": "The stored hook.",
+        "properties": {
+          "hook_text": {
+            "title": "Hook Text",
+            "type": "string"
+          },
+          "project_id": {
+            "format": "uuid",
+            "title": "Project Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "project_id",
+          "hook_text"
+        ],
+        "title": "HookSelectResponse",
+        "type": "object"
+      },
+      "InstagramInsightsResponse": {
+        "description": "Rows (newest first) and the KPI ratios over the posts that report them.",
+        "properties": {
+          "configured": {
+            "description": "False when no Graph account is set.",
+            "title": "Configured",
+            "type": "boolean"
+          },
+          "follows_per_post": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Follows Per Post"
+          },
+          "follows_total": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Follows Total"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/InstagramPostInsightsItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "shares_per_100_views": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Shares Per 100 Views"
+          }
+        },
+        "required": [
+          "items",
+          "configured"
+        ],
+        "title": "InstagramInsightsResponse",
+        "type": "object"
+      },
+      "InstagramPostInsightsItem": {
+        "description": "One published post and its last metrics.",
+        "properties": {
+          "carousel_project_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Carousel Project Id"
+          },
+          "fetched_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fetched At"
+          },
+          "follows": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Follows"
+          },
+          "media_id": {
+            "title": "Media Id",
+            "type": "string"
+          },
+          "permalink": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Permalink"
+          },
+          "profile_visits": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Profile Visits"
+          },
+          "reach": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reach"
+          },
+          "saved": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Saved"
+          },
+          "shares": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Shares"
+          },
+          "shares_per_100_views": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Shares Per 100 Views"
+          },
+          "stale": {
+            "description": "True when the metrics are older than 6 h.",
+            "title": "Stale",
+            "type": "boolean"
+          },
+          "topic": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Topic"
+          },
+          "total_interactions": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Interactions"
+          },
+          "views": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Views"
+          }
+        },
+        "required": [
+          "media_id",
+          "stale"
+        ],
+        "title": "InstagramPostInsightsItem",
+        "type": "object"
+      },
       "InstagramPublishRequest": {
         "properties": {
           "caption": {
@@ -4008,6 +4541,53 @@
           "status"
         ],
         "title": "InstagramPublishResponse",
+        "type": "object"
+      },
+      "InstagramPublishStatusResponse": {
+        "description": "Persisted Instagram publish state. Matches the frontend status path.",
+        "properties": {
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "ig_post_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ig Post Id"
+          },
+          "permalink": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Permalink"
+          },
+          "state": {
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "state"
+        ],
+        "title": "InstagramPublishStatusResponse",
         "type": "object"
       },
       "KanbanCardResponse": {
@@ -4376,6 +4956,91 @@
           "created_at"
         ],
         "title": "NotificationResponse",
+        "type": "object"
+      },
+      "ObservedXPost": {
+        "additionalProperties": false,
+        "description": "One browser observation. Unknown keys reject the whole body.",
+        "properties": {
+          "handle": {
+            "maxLength": 15,
+            "minLength": 1,
+            "title": "Handle",
+            "type": "string"
+          },
+          "likes": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Likes"
+          },
+          "observed_at": {
+            "format": "date-time",
+            "title": "Observed At",
+            "type": "string"
+          },
+          "replies": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Replies"
+          },
+          "reposts": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reposts"
+          },
+          "text": {
+            "maxLength": 600,
+            "minLength": 1,
+            "title": "Text",
+            "type": "string"
+          },
+          "url": {
+            "maxLength": 300,
+            "minLength": 1,
+            "title": "Url",
+            "type": "string"
+          },
+          "views": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Views"
+          }
+        },
+        "required": [
+          "url",
+          "handle",
+          "text",
+          "observed_at"
+        ],
+        "title": "ObservedXPost",
         "type": "object"
       },
       "PaletteCatalogResponse": {
@@ -5509,6 +6174,46 @@
         "title": "RefreshDesignTokensResponse",
         "type": "object"
       },
+      "RejectedTopic": {
+        "additionalProperties": false,
+        "description": "A proposal the intake did not queue, with a stable reason code.",
+        "properties": {
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "title",
+          "reason"
+        ],
+        "title": "RejectedTopic",
+        "type": "object"
+      },
+      "RejectedXPost": {
+        "additionalProperties": false,
+        "description": "An observation the intake did not store, with a stable reason code.",
+        "properties": {
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "url",
+          "reason"
+        ],
+        "title": "RejectedXPost",
+        "type": "object"
+      },
       "RenderSlidesResponse": {
         "properties": {
           "errors": {
@@ -5926,6 +6631,38 @@
         "title": "SchedulePublishRequest",
         "type": "object"
       },
+      "ScoutFailedBody": {
+        "additionalProperties": false,
+        "description": "Why the scout stopped. The text is delivered, not interpreted.",
+        "properties": {
+          "reason": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "title": "ScoutFailedBody",
+        "type": "object"
+      },
+      "ScoutFailedResponse": {
+        "additionalProperties": false,
+        "description": "True when the owner was sent exactly one Telegram message.",
+        "properties": {
+          "delivered": {
+            "title": "Delivered",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "delivered"
+        ],
+        "title": "ScoutFailedResponse",
+        "type": "object"
+      },
       "SearchRequest": {
         "properties": {
           "alpha": {
@@ -6060,6 +6797,107 @@
           "severity"
         ],
         "title": "SeoAnalysisResponse",
+        "type": "object"
+      },
+      "Signal": {
+        "description": "One deduped trend item. ``handle`` and ``score_hint`` are optional.",
+        "properties": {
+          "handle": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Handle"
+          },
+          "posted_at": {
+            "format": "date-time",
+            "title": "Posted At",
+            "type": "string"
+          },
+          "score_hint": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Score Hint"
+          },
+          "source": {
+            "$ref": "#/components/schemas/SignalSource"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source",
+          "url",
+          "title",
+          "text",
+          "posted_at"
+        ],
+        "title": "Signal",
+        "type": "object"
+      },
+      "SignalSource": {
+        "description": "Backends a stored signal is allowed to name.\n\n``X_BROWSER`` is not a collector. Grok Bot posts those observations.",
+        "enum": [
+          "x_search",
+          "hn",
+          "hf_papers",
+          "rss",
+          "bluesky",
+          "github",
+          "x_browser"
+        ],
+        "title": "SignalSource",
+        "type": "string"
+      },
+      "SignalsBundle": {
+        "description": "Body of ``GET /api/autopilot/signals``.",
+        "properties": {
+          "errors": {
+            "items": {
+              "$ref": "#/components/schemas/CollectorError"
+            },
+            "title": "Errors",
+            "type": "array"
+          },
+          "generated_at": {
+            "format": "date-time",
+            "title": "Generated At",
+            "type": "string"
+          },
+          "signals": {
+            "items": {
+              "$ref": "#/components/schemas/Signal"
+            },
+            "title": "Signals",
+            "type": "array"
+          }
+        },
+        "required": [
+          "generated_at",
+          "signals",
+          "errors"
+        ],
+        "title": "SignalsBundle",
         "type": "object"
       },
       "SlideImagePrompt": {
@@ -6445,6 +7283,171 @@
         "title": "ToneAttributes",
         "type": "object"
       },
+      "TopicBatch": {
+        "additionalProperties": false,
+        "description": "One to three proposals. The body is an object, not a bare array.",
+        "properties": {
+          "topics": {
+            "items": {
+              "$ref": "#/components/schemas/TopicProposal"
+            },
+            "maxItems": 3,
+            "minItems": 1,
+            "title": "Topics",
+            "type": "array"
+          }
+        },
+        "required": [
+          "topics"
+        ],
+        "title": "TopicBatch",
+        "type": "object"
+      },
+      "TopicIntakeResponse": {
+        "additionalProperties": false,
+        "description": "Accepted candidate ids, queued run ids, and per-proposal rejections.",
+        "properties": {
+          "accepted": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "title": "Accepted",
+            "type": "array"
+          },
+          "queued": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "title": "Queued",
+            "type": "array"
+          },
+          "rejected": {
+            "items": {
+              "$ref": "#/components/schemas/RejectedTopic"
+            },
+            "title": "Rejected",
+            "type": "array"
+          }
+        },
+        "required": [
+          "accepted",
+          "queued",
+          "rejected"
+        ],
+        "title": "TopicIntakeResponse",
+        "type": "object"
+      },
+      "TopicProposal": {
+        "additionalProperties": false,
+        "description": "One scout proposal. Unknown keys are a 422 for the whole batch.",
+        "properties": {
+          "angle": {
+            "maxLength": 300,
+            "minLength": 1,
+            "title": "Angle",
+            "type": "string"
+          },
+          "audience": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Audience",
+            "type": "string"
+          },
+          "brief": {
+            "maxLength": 800,
+            "minLength": 1,
+            "title": "Brief",
+            "type": "string"
+          },
+          "image_guidance": {
+            "anyOf": [
+              {
+                "maxLength": 400,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Image Guidance"
+          },
+          "image_style": {
+            "default": "flat_editorial",
+            "maxLength": 40,
+            "minLength": 1,
+            "title": "Image Style",
+            "type": "string"
+          },
+          "mode": {
+            "default": "news_analysis",
+            "pattern": "^(news_analysis|pov)$",
+            "title": "Mode",
+            "type": "string"
+          },
+          "niche": {
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Niche",
+            "type": "string"
+          },
+          "score": {
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Score",
+            "type": "integer"
+          },
+          "sources": {
+            "items": {
+              "maxLength": 300,
+              "type": "string"
+            },
+            "maxItems": 8,
+            "minItems": 1,
+            "title": "Sources",
+            "type": "array"
+          },
+          "thesis_draft": {
+            "anyOf": [
+              {
+                "maxLength": 280,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Thesis Draft"
+          },
+          "title": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Title",
+            "type": "string"
+          },
+          "why_viral": {
+            "maxLength": 300,
+            "minLength": 1,
+            "title": "Why Viral",
+            "type": "string"
+          }
+        },
+        "required": [
+          "title",
+          "angle",
+          "why_viral",
+          "audience",
+          "niche",
+          "brief",
+          "sources",
+          "score"
+        ],
+        "title": "TopicProposal",
+        "type": "object"
+      },
       "UpdateUserRequest": {
         "description": "Request body for updating a user.",
         "properties": {
@@ -6745,6 +7748,52 @@
           "columns"
         ],
         "title": "WorkflowKanbanResponse",
+        "type": "object"
+      },
+      "XSignalsBatch": {
+        "additionalProperties": false,
+        "description": "One to thirty observations. The body is an object, not a bare array.",
+        "properties": {
+          "posts": {
+            "items": {
+              "$ref": "#/components/schemas/ObservedXPost"
+            },
+            "maxItems": 30,
+            "minItems": 1,
+            "title": "Posts",
+            "type": "array"
+          }
+        },
+        "required": [
+          "posts"
+        ],
+        "title": "XSignalsBatch",
+        "type": "object"
+      },
+      "XSignalsResponse": {
+        "additionalProperties": false,
+        "description": "Canonical URLs stored, and the observations the response rejects.",
+        "properties": {
+          "accepted": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Accepted",
+            "type": "array"
+          },
+          "rejected": {
+            "items": {
+              "$ref": "#/components/schemas/RejectedXPost"
+            },
+            "title": "Rejected",
+            "type": "array"
+          }
+        },
+        "required": [
+          "accepted",
+          "rejected"
+        ],
+        "title": "XSignalsResponse",
         "type": "object"
       }
     },
@@ -7258,6 +8307,178 @@
         "summary": "Login",
         "tags": [
           "auth"
+        ]
+      }
+    },
+    "/api/autopilot/scout-failed": {
+      "post": {
+        "description": "Send the owner one Telegram message containing the scout's reason.",
+        "operationId": "post_autopilot_scout_failed_api_autopilot_scout_failed_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ScoutFailedBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScoutFailedResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "invalid_api_key"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "503": {
+            "description": "autopilot_api_key_unconfigured"
+          }
+        },
+        "summary": "Post Autopilot Scout Failed",
+        "tags": [
+          "autopilot"
+        ]
+      }
+    },
+    "/api/autopilot/signals": {
+      "get": {
+        "description": "Return the deduped signal bundle and remember its URLs for 6 hours.",
+        "operationId": "get_autopilot_signals_api_autopilot_signals_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SignalsBundle"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "invalid_api_key"
+          },
+          "503": {
+            "description": "autopilot_api_key_unconfigured"
+          }
+        },
+        "summary": "Get Autopilot Signals",
+        "tags": [
+          "autopilot"
+        ]
+      }
+    },
+    "/api/autopilot/topics": {
+      "post": {
+        "description": "Store accepted topics and queue runs that still fit today's cap.",
+        "operationId": "post_autopilot_topics_api_autopilot_topics_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TopicBatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TopicIntakeResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "invalid_api_key"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "503": {
+            "description": "autopilot_api_key_unconfigured"
+          }
+        },
+        "summary": "Post Autopilot Topics",
+        "tags": [
+          "autopilot"
+        ]
+      }
+    },
+    "/api/autopilot/x-signals": {
+      "post": {
+        "description": "Store recent X status posts and allowlist their canonical URLs.",
+        "operationId": "post_autopilot_x_signals_api_autopilot_x_signals_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/XSignalsBatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/XSignalsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "invalid_api_key"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "503": {
+            "description": "autopilot_api_key_unconfigured"
+          }
+        },
+        "summary": "Post Autopilot X Signals",
+        "tags": [
+          "autopilot"
         ]
       }
     },
@@ -8672,6 +9893,172 @@
         ]
       }
     },
+    "/api/carousels/creator-assets": {
+      "get": {
+        "description": "The caller's own photos, newest first, optionally by role.",
+        "operationId": "list_creator_assets_api_carousels_creator_assets_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "role",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "pattern": "^(hook|cta|pov)$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Role"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreatorAssetListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "Not authenticated"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Creator Assets",
+        "tags": [
+          "carousels"
+        ]
+      },
+      "post": {
+        "description": "Add a photo (PNG/WebP keep transparency, <=5 MB) to the caller's library.",
+        "operationId": "upload_library_photo_api_carousels_creator_assets_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_upload_library_photo_api_carousels_creator_assets_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreatorAssetResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "Not authenticated"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Upload Library Photo",
+        "tags": [
+          "carousels"
+        ]
+      }
+    },
+    "/api/carousels/creator-assets/{asset_id}/image": {
+      "get": {
+        "description": "One of the caller's photos (owner or admin only).",
+        "operationId": "creator_asset_image_api_carousels_creator_assets__asset_id__image_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "asset_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Asset Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "Not authenticated"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Creator Asset Image",
+        "tags": [
+          "carousels"
+        ]
+      }
+    },
     "/api/carousels/strategies": {
       "get": {
         "operationId": "list_strategies_api_carousels_strategies_get",
@@ -9206,6 +10593,130 @@
         ]
       }
     },
+    "/api/carousels/{project_id}/hook": {
+      "put": {
+        "description": "Store the owner's slide-1 hook (<=60 characters, <=10 words).",
+        "operationId": "select_hook_api_carousels__project_id__hook_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HookSelectRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HookSelectResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "Not authenticated"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "409": {
+            "description": "hook_not_supported_for_this_carousel"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Select Hook",
+        "tags": [
+          "carousels"
+        ]
+      }
+    },
+    "/api/carousels/{project_id}/hook-photo": {
+      "put": {
+        "description": "Use one of the owner's photos on slide 1 of a POV carousel.",
+        "operationId": "select_hook_photo_api_carousels__project_id__hook_photo_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatorAssetSelectRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HookPhotoResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "Not authenticated"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Carousel project not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Select Hook Photo",
+        "tags": [
+          "carousels"
+        ]
+      }
+    },
     "/api/carousels/{project_id}/images/{filename}": {
       "get": {
         "description": "Serve a raw hero image (from <output>/images/).",
@@ -9675,6 +11186,64 @@
         ]
       }
     },
+    "/api/carousels/{project_id}/publish/instagram/status": {
+      "get": {
+        "description": "Return the persisted Instagram publish state for this carousel.",
+        "operationId": "instagram_publish_status_api_carousels__project_id__publish_instagram_status_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InstagramPublishStatusResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "Not authenticated"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Instagram Publish Status",
+        "tags": [
+          "carousels"
+        ]
+      }
+    },
     "/api/carousels/{project_id}/repair": {
       "post": {
         "description": "Run the bounded deterministic repair and return per-slide diffs.",
@@ -9983,6 +11552,51 @@
         "tags": [
           "carousels",
           "carousels-slide-edit"
+        ]
+      }
+    },
+    "/api/carousels/{project_id}/story-image/pt.jpg": {
+      "get": {
+        "description": "Serve the rendered ``story_pt.jpg`` of a public carousel.",
+        "operationId": "get_carousel_story_image_api_carousels__project_id__story_image_pt_jpg_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Carousel Story Image",
+        "tags": [
+          "carousels"
         ]
       }
     },
@@ -11944,6 +13558,33 @@
         ]
       }
     },
+    "/api/instagram/insights": {
+      "get": {
+        "description": "Per-post views, reach, saves, shares, follows and profile visits.",
+        "operationId": "get_instagram_insights_api_instagram_insights_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InstagramInsightsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Instagram Insights",
+        "tags": [
+          "instagram"
+        ]
+      }
+    },
     "/api/notifications": {
       "get": {
         "description": "Return in-app notifications (UI-019).",
@@ -12854,7 +14495,7 @@
     },
     "/api/public/blog-posts": {
       "get": {
-        "description": "Published-only listing; any client status filter is ignored.",
+        "description": "Published-only listing; any client status filter is ignored.\n\nAE-0347: carousel-origin rows are also gated on the parent carousel being\npublic (the dual-write stamps them ``published`` before the site release).",
         "operationId": "list_public_blog_posts_api_public_blog_posts_get",
         "parameters": [
           {
@@ -13420,6 +15061,26 @@
         "summary": "Search Documents",
         "tags": [
           "search"
+        ]
+      }
+    },
+    "/api/telegram/webhook": {
+      "post": {
+        "description": "Accept one Telegram update when the secret header matches.",
+        "operationId": "post_telegram_webhook_api_telegram_webhook_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Post Telegram Webhook",
+        "tags": [
+          "telegram"
         ]
       }
     },
