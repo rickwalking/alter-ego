@@ -1,5 +1,5 @@
 Feature: "Ponto de Vista" prompts, hook candidates and rubric (AE-0375, ADR-0021)
-  The model may sharpen the owner's thesis but never invent his opinion,
+  The model may sharpen the owner's thesis but never invent their opinion,
   experiences, test results or numbers.
 
   # --- Prompts ----------------------------------------------------------------

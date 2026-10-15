@@ -3,7 +3,7 @@
 The prompt family for `content_mode = pov` carousels (growth plan 16.3 E).
 Directory-discovered by `agents/prompts/registry.py`; rendered with `version="v1"`.
 
-**Core rule:** the model may sharpen the owner's thesis, but never invent his
+**Core rule:** the model may sharpen the owner's thesis, but never invent their
 opinion, experiences, test results or numbers. Every template states it; the
 personal proof is the only source of first-person anecdotes and numbers.
 

@@ -8,7 +8,7 @@ rationale (formats, hook formulas, slide structure, cadence, KPIs) and feed the 
 rubric content below.
 
 **Core rule for the whole epic:** the model may sharpen Pedro's thesis, but it never invents
-his opinion, experiences, test results or numbers. Every POV prompt states it, the rubric
+their opinion, experiences, test results or numbers. Every POV prompt states it, the rubric
 checks it where it can, and no fixture or example invents a claim on Pedro's behalf.
 
 ## 1. Verified current state (2026-10-15, `main` @ b7b264c)

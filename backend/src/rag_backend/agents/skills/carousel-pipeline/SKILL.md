@@ -36,7 +36,7 @@ The project's `content_mode` and stamped contract pick the prompts:
 
 Roles (`hook`, `rehook`, `pov`, `point`, `twist`, `save`, `cta`; Radar IA v4: `news`, `impact`,
 `verdict`) are stamped on the outline by position from the contract, never taken from the model.
-The model may sharpen the owner's thesis but never invent his opinion, experiences, test results
+The model may sharpen the owner's thesis but never invent their opinion, experiences, test results
 or numbers.
 
 ## Delegate to phase subagents

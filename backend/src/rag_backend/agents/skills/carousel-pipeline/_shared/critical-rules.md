@@ -20,7 +20,7 @@ Before running generation, verify:
 
 ## Never invent the owner's voice (AE-0375)
 
-The model may sharpen the owner's thesis, but never invent his opinion, experiences, projects,
+The model may sharpen the owner's thesis, but never invent their opinion, experiences, projects,
 clients, test results or numbers. In "Ponto de Vista" carousels the personal proof is the only
 source of first-person anecdotes and personal numbers; without it, argue from reasoning.
 
