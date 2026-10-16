@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import os
 from collections.abc import AsyncIterator, Iterator
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import UTC, datetime
 from uuid import uuid4
 
@@ -240,6 +240,52 @@ async def test_pending_rework_round_trip(db_session: AsyncSession) -> None:
     assert taken is not None
     assert taken.phase == "images"
     assert taken.run_id == run.run_id
+    assert await store.take("42") is None
+
+
+async def _store_with_run(
+    db_session: AsyncSession, state: AutopilotRunState
+) -> tuple[SqlPendingReworkStore, AutopilotRun]:
+    repo = SqlAlchemyAutopilotRepository(db_session)
+    topic = _topic()
+    await repo.add_topic(topic)
+    run = replace(_run(topic), state=state)
+    await repo.add(run)
+    return SqlPendingReworkStore(repo, SqlNoticeLogStore(db_session)), run
+
+
+# Scenario: An edited POV thesis typed after "Editar" is received (AE-0396)
+@pytest.mark.asyncio
+async def test_thesis_reply_is_found_on_a_run_awaiting_its_thesis(
+    db_session: AsyncSession,
+) -> None:
+    store, run = await _store_with_run(db_session, AutopilotRunState.AWAITING_THESIS)
+    await store.put(
+        PendingRework(owner_chat_id="42", run_id=run.run_id, phase="pov_thesis")
+    )
+
+    taken = await store.take("42")
+
+    assert taken is not None
+    assert (taken.run_id, taken.phase) == (run.run_id, "pov_thesis")
+    assert await store.take("42") is None
+
+
+# Scenario: A pending reply only counts on a run in its own state (AE-0396)
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("state", "phase"),
+    [
+        (AutopilotRunState.AWAITING_THESIS, "images"),
+        (AutopilotRunState.AWAITING_OWNER, "pov_thesis"),
+    ],
+)
+async def test_pending_reply_on_a_run_in_another_state_is_ignored(
+    db_session: AsyncSession, state: AutopilotRunState, phase: str
+) -> None:
+    store, run = await _store_with_run(db_session, state)
+    await store.put(PendingRework(owner_chat_id="42", run_id=run.run_id, phase=phase))
+
     assert await store.take("42") is None
 
 
