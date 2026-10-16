@@ -381,14 +381,14 @@ def test_alerts_without_token_are_a_noop() -> None:
     alerts.on_all_down("fast", "x")
 
 
-def _settings(**overrides: object) -> Settings:
-    base: dict[str, object] = {
+def _settings(**overrides: str) -> Settings:
+    base: dict[str, str | SecretStr] = {
         "secret_key": "test-secret-key-for-ci-tests!!",
         "anon_secret_key": "test-anon-secret-for-ci-tests!",
         "llm_provider": "glm",
         "glm_api_key": SecretStr("glm-key"),
     }
-    return Settings(**{**base, **overrides})  # type: ignore[arg-type]
+    return Settings.model_validate({**base, **overrides})
 
 
 def test_queue_spec_parsing() -> None:
