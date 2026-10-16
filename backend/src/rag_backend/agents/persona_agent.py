@@ -72,6 +72,10 @@ class PersonaAgent:
             "suggestions": data.get("suggestions", []),
         }
 
+    def style_guide(self) -> str:
+        """The persona style guide (the AE-0401 slide fix puts it in its prompt)."""
+        return self._build_style_guide()
+
     def _build_style_guide(self) -> str:
         """Build the style guide via the prompt registry (AE-0243).
 

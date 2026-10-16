@@ -140,3 +140,26 @@ def build_autofix_retranslate_prompt(items_json: str) -> str:
         version=AUTOFIX_PROMPT_VERSION,
     )
     return prompt_text
+
+
+def build_slide_fix_prompt(variables: dict[str, object]) -> str:
+    """AE-0401: rewrite one failing slide (autopilot model fix).
+
+    Same baselined lazy registry import as the builders above.
+    """
+    from rag_backend.agents.prompts.registry import (  # integrity-ok: baselined pair
+        render_prompt,
+    )
+    from rag_backend.domain.constants.slide_fix import (
+        SLIDE_FIX_PROMPT_DOMAIN,
+        SLIDE_FIX_PROMPT_NAME,
+        SLIDE_FIX_PROMPT_VERSION,
+    )
+
+    prompt_text, _ = render_prompt(
+        SLIDE_FIX_PROMPT_DOMAIN,
+        SLIDE_FIX_PROMPT_NAME,
+        variables=variables,
+        version=SLIDE_FIX_PROMPT_VERSION,
+    )
+    return prompt_text

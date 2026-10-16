@@ -58,6 +58,7 @@ from rag_backend.modules.autopilot.notify_constants import (
     PERSONA_SCORE_FORMAT,
     TEXT_CAPTION_MISSING,
     TEXT_ESCALATED,
+    TEXT_ESCALATED_DETAIL,
     TEXT_ESCALATED_WITH_LINK,
     TEXT_ESCALATION_CLOSED,
     TEXT_EXPIRED,
@@ -128,6 +129,8 @@ class StatusCopy:
     days_remaining: int | None
     # AE-0369: the Story outcome and the music nudge of a published notice.
     extras: PostExtras | None = None
+    # AE-0401: the slides the model fix gave up on (escalations only).
+    detail: str = ""
 
 
 def callback_data(prefix: str, run_id: UUID) -> str:
@@ -358,6 +361,8 @@ def _reminder(copy: StatusCopy) -> str:
 
 def _escalated(copy: StatusCopy) -> str:
     reason = POV_TEXT_BY_REASON.get(copy.reason, copy.reason)
+    if copy.detail:
+        reason = TEXT_ESCALATED_DETAIL.format(reason=reason, detail=copy.detail)
     if not copy.link:
         return TEXT_ESCALATED.format(reason=reason)
     return TEXT_ESCALATED_WITH_LINK.format(reason=reason, link=copy.link)

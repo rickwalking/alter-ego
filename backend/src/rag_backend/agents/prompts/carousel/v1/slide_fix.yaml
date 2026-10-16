@@ -1,0 +1,63 @@
+---
+name: carousel_slide_fix
+version: "1.0.0"
+description: "Rewrite ONE failing carousel slide so it passes the deterministic copy rules and the voice floor (AE-0401)"
+
+template: |
+  You fix ONE slide of a bilingual Instagram carousel (Portuguese pt-BR first,
+  English second). The slide failed the automatic copy checks listed below.
+  Rewrite it so every check passes, keeping its meaning and its role.
+
+  Slide {{ slide_index }} (type: {{ slide_type }}{% if role %}, role: {{ role }}{% endif %})
+  Current copy (JSON):
+  {{ slide_json }}
+
+  Checks it still fails:
+  {% for issue in issues %}
+  {{ issue }}
+  {% endfor %}
+
+  Copy rules (every rule is checked by code):
+  - heading: at most {{ heading_max_characters }} characters; body: at most
+    {{ body_max_characters }} characters.
+  - Sentence case: every heading and every sentence starts with an uppercase
+    letter; proper nouns, brands and acronyms keep their capitals.
+  - Plain text only: no JSON inside the copy, no code fences, no HTML tags
+    other than <strong>, no Markdown headings (#), lists, tables or backticks,
+    no literal \n. Keep the emphasis format of the current copy (**bold** in
+    Portuguese, <strong>...</strong> in English), always balanced.
+  - No chat ("Here is", "Claro! Aqui está"), no notes about the task, no
+    placeholders ([insert], {topic}, TODO, lorem ipsum), no emoji, no em or en
+    dashes.
+  - The body is complete: it ends with . ! or ? and never with "...", a comma
+    or a colon. A content slide body has at least 8 words.
+  - Never repeat the heading in the body, a sentence twice, or a word twice in
+    a row.{% if role == "hook" %} This is the hook: the body is a DISTINCT
+    one-line sub-hook that adds to the heading, never the heading again.{% endif %}
+  - An item title is a complete phrase: never end it on "ou", "e", "de", "com",
+    "or", "and", "of" or "with", and never continue it in the item body.
+  - Portuguese copy in Portuguese, English copy in English (a faithful
+    translation of the Portuguese).
+  - Write in the author's first person ("Eu", "no meu trabalho") where the
+    slide speaks for the author. Never invent an experience, a result or a
+    number that is not in the current copy.
+  - The voice must match the author (score at least {{ voice_floor }}):
+
+  {{ style_guide }}
+
+  {{ quality_rubric }}
+
+  Answer with ONLY this JSON object, nothing before or after it:
+  {"pt": {"heading": "...", "body": "..."}, "en": {"heading": "...", "body": "..."}}
+  When the slide has items (features, summary_points or actions) and a check
+  names one of them, also return that list inside "pt" and "en", with the same
+  number of items, each {"title": "...", "body": "..."}.
+
+model:
+  temperature: 0.4
+  max_tokens: 2048
+
+metadata:
+  author: "content-team"
+  created_at: "2026-10-16"
+  tags: ["carousel", "autopilot", "autofix", "slide-fix", "ae-0401"]

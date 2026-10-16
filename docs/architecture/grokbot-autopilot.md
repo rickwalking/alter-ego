@@ -513,6 +513,26 @@ only those slides. A revise still regenerates the whole content phase (the engin
 per-slide regenerate behind a review decision); the content phase re-drafts each blocking
 slide once on its own (AE-0309). A lost CAS waits for the next tick.
 
+**Model fix, then escalate (AE-0401).** With the slide fixer wired (the worker always wires
+it), a gate still failing on `content_quality` or `persona_score_below_threshold` after the
+repair (a repair no-op included) is **not revised**. Each failing slide (a blocking rule, or
+at the content gate a `persona_scores["slide_N"].overall` under 70) is rewritten by the
+fast-role model through the editorial facade `run_slide_fix`, in parallel
+(`CONTENT_DRAFT_CONCURRENCY`), at most `AUTOPILOT_AUTOFIX_ATTEMPTS` (default 3) times. Each
+attempt sends the slide's PT/EN copy, every check it still fails, the persona style guide and
+the copy rules (prompt `carousel/v1/slide_fix.yaml`); the strict JSON answer is read
+fence-aware, deterministically repaired, re-validated against the deck and re-scored only when
+its text changed. A model error or an unparseable answer counts as an attempt. Fixed slides are
+written once, through the reviewer-edit path plus their new voice score, under the project lock
+and the lock-version CAS (a lost CAS writes nothing: next tick). The gate is read again: clean
+is approved; anything left escalates at once with the Telegram detail "slide N: rules. Current
+text: "..." (3 fix attempts)". Every attempt logs `autopilot_slide_autofix` (run, project,
+slide, attempt, rules before/after, outcome); Langfuse metadata `phase=autofix`,
+`agent_name=slide_fixer`. The revise budget is never spent on these reasons; research,
+outline, images and forbidden phrases keep revise/escalate. An escalated run is no longer
+active, so a gate cannot loop on a repair no-op (prod 2026-10-16 logged one every minute for
+50 minutes). Rules: [`docs/backend/slide-copy-validators.md`](../backend/slide-copy-validators.md).
+
 **Telegram webhook security** (`POST /api/telegram/webhook`):
 
 - Require the `X-Telegram-Bot-Api-Secret-Token` header, compared in constant time.

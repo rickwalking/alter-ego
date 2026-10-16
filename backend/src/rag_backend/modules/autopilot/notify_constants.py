@@ -64,6 +64,8 @@ CAPTION_TEMPLATE = "{title}\n{persona} {score} \u00b7 {sources} {sources_label}"
 TEXT_CAPTION_MISSING = "Review the slides above."
 TEXT_ESCALATED = "Escalated: {reason}"
 TEXT_ESCALATED_WITH_LINK = "Escalated: {reason}\n{link}"
+# AE-0401: the escalation detail goes between the reason and the link.
+TEXT_ESCALATED_DETAIL = "{reason}\n{detail}"
 TEXT_FAILED = "Failed: {reason}"
 TEXT_PUBLISH_FAILED = "\u274c publish failed: {reason}"
 TEXT_PUBLISHED_MEDIA_UNKNOWN = (

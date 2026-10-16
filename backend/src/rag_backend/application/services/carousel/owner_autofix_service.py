@@ -22,11 +22,8 @@ from dataclasses import dataclass, replace
 from typing import Protocol, TypeVar, cast
 
 import structlog
-from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine, AsyncSession
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from rag_backend.application.services.carousel.carousel_republish import (
-    engine_from_session,
-)
 from rag_backend.application.services.carousel.editorial_distribution_persist import (
     LocalizedCopyProjection,
     project_localized_copy_to_database,
@@ -48,6 +45,11 @@ from rag_backend.application.services.carousel.owner_autofix_issues import (
     noun_issues,
     translation_issues,
     violation_issues,
+)
+from rag_backend.application.services.carousel.owner_autofix_lock import (
+    AutofixConflictError,
+    LockedWrite,
+    write_locked,
 )
 from rag_backend.application.services.carousel.owner_autofix_plan import (
     AutofixPlan,
@@ -79,13 +81,7 @@ from rag_backend.domain.constants.carousel_autofix import (
     LOG_AUTOFIX_NOOP,
     LOG_AUTOFIX_RENDER_FAILED,
 )
-from rag_backend.domain.constants.optimistic_locking import ERR_VERSION_CONFLICT
-from rag_backend.domain.models.carousel_conflict import CarouselConflictError
 from rag_backend.domain.protocols.repositories import CarouselRepository
-from rag_backend.modules.editorial.public import (
-    CarouselProjectWriteOwner,
-    carousel_project_lock,
-)
 
 logger = structlog.get_logger()
 
@@ -138,22 +134,10 @@ class AutofixApplyResult:
     render_errors: tuple[str, ...] = ()
 
 
-class _ConflictError(Exception):
-    """Another writer holds the lock or moved the lock version."""
-
-
 @dataclass(frozen=True)
 class _Fix:
     source: AutofixSource
     records: list[dict[str, object]]
-
-
-def _lock_engine(db: AsyncSession) -> AsyncEngine:
-    """The engine the advisory lock opens its own connection from."""
-    bind = db.bind
-    if isinstance(bind, AsyncConnection):
-        return bind.engine
-    return engine_from_session(db)
 
 
 def _inspection(source: AutofixSource, plan: AutofixPlan) -> AutofixInspection:
@@ -196,7 +180,7 @@ class OwnerAutofixService:
         records = apply_translations(plan.records, translation.texts, source.context)
         try:
             slides = await self._persist(command, _Fix(source=source, records=records))
-        except _ConflictError:
+        except AutofixConflictError:
             logger.info(LOG_AUTOFIX_CONFLICT, project_id=command.project_id)
             return AutofixApplyResult(status=AUTOFIX_STATUS_CONFLICT)
         if not plan.fixable:
@@ -224,7 +208,7 @@ class OwnerAutofixService:
             return gate_noop(command.project_id, source.state)
         try:
             await self._locked(command, lambda: self._patch_gate(command, patch))
-        except _ConflictError:
+        except AutofixConflictError:
             logger.info(LOG_AUTOFIX_CONFLICT, project_id=command.project_id)
             return GateRepairResult(status=AUTOFIX_STATUS_CONFLICT)
         return gate_fixed(
@@ -293,15 +277,10 @@ class OwnerAutofixService:
         self, command: AutofixApplyCommand, write: Callable[[], Awaitable[_T]]
     ) -> _T:
         """Run ``write`` under the project lock after the lock-version CAS."""
-        engine = _lock_engine(self._deps.db)
-        try:
-            async with carousel_project_lock(
-                engine, command.project_id, blocking=False
-            ):
-                await self._take_cas(command)
-                return await write()
-        except CarouselConflictError as exc:
-            raise _ConflictError from exc
+        target = LockedWrite(
+            project_id=command.project_id, expected_version=command.expected_version
+        )
+        return await write_locked(self._deps.db, target, write)
 
     async def _write(self, command: AutofixApplyCommand, fix: _Fix) -> tuple[int, ...]:
         slides: tuple[int, ...] = ()
@@ -317,17 +296,6 @@ class OwnerAutofixService:
         if slides:
             await self._patch_checkpoint(command.project_id, fix)
         return slides
-
-    async def _take_cas(self, command: AutofixApplyCommand) -> None:
-        owner = CarouselProjectWriteOwner(self._deps.db)
-        try:
-            await owner.bump_resume_lock_version(
-                command.project_id, command.expected_version
-            )
-        except ValueError as exc:
-            if str(exc) != ERR_VERSION_CONFLICT:
-                raise
-            raise _ConflictError from exc
 
     async def _patch_checkpoint(self, project_id: str, fix: _Fix) -> None:
         workflow = self._deps.workflow

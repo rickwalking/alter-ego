@@ -42,6 +42,8 @@ EVENT_VERSION = 1
 PAYLOAD_PREVIOUS_STATE = "previous_state"
 PAYLOAD_STATE = "state"
 PAYLOAD_REASON = "reason"
+# AE-0401: escalation copy beyond the reason (slides the model fix gave up on).
+PAYLOAD_DETAIL = "detail"
 METADATA_MODULE = "module"
 
 INVALID_TRANSITION_MESSAGE = "invalid_autopilot_transition"
