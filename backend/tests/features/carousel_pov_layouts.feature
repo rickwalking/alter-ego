@@ -31,8 +31,17 @@ Feature: POV layouts, photo library, pov_editorial images and Radar IA v7 (AE-03
   Scenario: Layout by role
     Given a 9-slide POV deck
     When it is rendered
-    Then slide 1 is hook_face, slides 2-3 are statement, slide 7 is insight_quote, slide 8 is save_checklist and slide 9 is cta_follow
+    Then slide 1 is hook_face, slides 2-3 and 7 are statement, slide 8 is save_checklist and slide 9 is cta_follow
     And the point slides keep the format's layout
+
+  # AE-0394: the twist has no artwork in the contract; the old insight_quote
+  # layout fell back to the artwork layout and asked for an image that the
+  # images phase never generates, so every 9-slide POV export failed.
+  Scenario: The twist slide renders without artwork
+    Given a 9-slide POV deck
+    When slide 7 (the twist) is rendered
+    Then it uses the statement layout
+    And it references no slide image
 
   Scenario: Radar IA decks keep today's layouts
     Given a Radar IA deck
@@ -101,3 +110,21 @@ Feature: POV layouts, photo library, pov_editorial images and Radar IA v7 (AE-03
     Then the v7 outline prompt with the angle rule and roles is used
     And slide 1 carries 5 hook candidates from the sources only
     And slides are drafted with the v7 content prompt by role
+
+  # AE-0394: the export renders on a 1080x1350 (and 2160x2700) canvas.
+  Scenario: POV slides scale for the export canvas
+    Given the standard export canvas
+    When the POV export rules are built
+    Then the statement heading is 84px, the body 36px and the hook 92px
+    And the HD canvas doubles every size
+
+  Scenario: The exporter applies the POV rules
+    Given a carousel being exported
+    When the export page is prepared
+    Then the POV export rules are injected after the base overrides
+
+  Scenario: Slide 1 shows the owner's photo full-bleed
+    Given the POV layout CSS
+    When slide 1 is styled
+    Then the photo fills the slide with object-fit cover
+    And a scrim fades the top of the photo into the background

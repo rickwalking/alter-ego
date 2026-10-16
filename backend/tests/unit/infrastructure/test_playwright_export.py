@@ -117,7 +117,10 @@ class TestPlaywrightExportService:
             )
 
         evaluate_calls = mock_page.evaluate.await_args_list
-        assert len(evaluate_calls) == 2  # default injection + override
+        # default injection + POV injection (AE-0394) + override
+        assert len(evaluate_calls) == 3
+        # Scenario: The exporter applies the POV rules (AE-0394)
+        assert "playwright-export-pov" in evaluate_calls[1].args[0]
 
     async def test_exports_hd(self, tmp_path: Path) -> None:
         service = PlaywrightExportService()

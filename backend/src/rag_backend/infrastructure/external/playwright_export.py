@@ -32,6 +32,9 @@ from rag_backend.domain.constants.playwright_geometry import (
     ERR_SCREENSHOT_DIMENSION_MISMATCH,
 )
 from rag_backend.domain.protocols import CarouselExportService, ExportConfig
+from rag_backend.infrastructure.external.playwright_export_pov import (
+    pov_export_injection,
+)
 from rag_backend.infrastructure.external.playwright_geometry import (
     PlaywrightExportPreflightError,
     run_export_preflight,
@@ -309,6 +312,8 @@ class PlaywrightExportService(CarouselExportService):
 
             # Inject default + optional CSS overrides
             await page.evaluate(injection)
+            # AE-0394: POV layouts scale for the export canvas too.
+            await page.evaluate(pov_export_injection(hd=cfg.hd))
             if cfg.css_overrides:
                 import json
 

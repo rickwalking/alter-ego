@@ -210,7 +210,7 @@ class TestRoleLayouts:
             1: "hook_face",
             2: "statement",
             3: "statement",
-            7: "insight_quote",
+            7: "statement",
             8: "save_checklist",
             9: "cta_follow",
         }
@@ -256,6 +256,8 @@ class TestRoleLayouts:
         assert "pov-cta-sentence" in html
         assert "images/slide_1.jpg" not in html
         assert "images/slide_2.jpg" not in html
+        # Scenario: The twist slide renders without artwork (AE-0394)
+        assert "images/slide_7.jpg" not in html
         # point slides keep the format layout (numbered_list -> hero fallback art)
         assert "images/slide_4.jpg" in html
         assert ".pov-solid" in html
