@@ -13,6 +13,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from rag_backend.application.services.carousel.copy_hygiene_text import (
+    ends_on_connector,
+)
 from rag_backend.application.services.carousel.sentence_case import (
     capitalize_first_letter,
 )
@@ -52,6 +55,9 @@ class FillSource:
     budget: ItemBudget
 
 
+_COMMA = ", "
+
+
 def _cut(text: str, limit: int) -> str:
     """At most ``limit`` characters, cut at the last word boundary."""
     clean = " ".join(text.split())
@@ -76,10 +82,21 @@ def _split_on_words(point: str, title_limit: int) -> tuple[str, str] | None:
         if len(" ".join([*title_words, word])) > title_limit:
             break
         title_words.append(word)
+    # AE-0401: never end a title on a connector ("Comece com dois ou").
+    while title_words and ends_on_connector(title_words[-1]):
+        title_words.pop()
     rest = words[len(title_words) :]
     if not title_words or not rest:
         return None
     return " ".join(title_words), " ".join(rest)
+
+
+def _split_on_comma(point: str, title_limit: int) -> tuple[str, str] | None:
+    """AE-0401: "Comece com dois ou três agentes, não dez." splits at the comma."""
+    title, found, body = point.partition(_COMMA)
+    if not found or not body.strip() or len(title) > title_limit:
+        return None
+    return title.strip(), body.strip()
 
 
 def split_key_point(point: str, title_limit: int) -> tuple[str, str] | None:
@@ -87,7 +104,11 @@ def split_key_point(point: str, title_limit: int) -> tuple[str, str] | None:
     clean = " ".join(point.split())
     if not clean:
         return None
-    return _split_on_separator(clean) or _split_on_words(clean, title_limit)
+    return (
+        _split_on_separator(clean)
+        or _split_on_comma(clean, title_limit)
+        or _split_on_words(clean, title_limit)
+    )
 
 
 def key_point_pairs(

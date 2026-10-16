@@ -7,6 +7,9 @@ from collections.abc import Mapping
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 
+from rag_backend.application.services.carousel.copy_hygiene_repair import (
+    repair_copy_hygiene,
+)
 from rag_backend.application.services.carousel.localized_slide_builder import (
     PRESENTATION_EN_KEY,
     PRESENTATION_PT_KEY,
@@ -62,7 +65,16 @@ def _deterministic_repair_for_policy(
         locale: str,
     ) -> dict[str, object]:
         await asyncio.sleep(0)
-        repaired = deterministic_repair_slide_payload(payload, violations, locale)
+        # AE-0401 first: a JSON blob must be read before a length trim cuts it,
+        # and the other repairs then act on what the unwrapped copy violates.
+        repaired = repair_copy_hygiene(payload, locale, policy)
+        if repaired != dict(payload):
+            violations = tuple(
+                validate_slide_payload(
+                    ValidatePayloadCommand(repaired, locale=locale, policy=policy)
+                )
+            )
+        repaired = deterministic_repair_slide_payload(repaired, violations, locale)
         repaired = repair_body_length_and_heading(repaired, violations, policy)
         # AE-0312: deterministic casing repair (policy-version gated — no-op on v1).
         return repair_casing(repaired, locale, policy)
