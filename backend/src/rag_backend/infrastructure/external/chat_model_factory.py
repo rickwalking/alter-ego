@@ -102,11 +102,18 @@ def _role_model_id(settings: Settings, role: str) -> str:
     }.get(role, settings.glm_model)
 
 
+def _role_fallback_id(settings: Settings, role: str) -> str:
+    """AE-0395: each role falls back to its own fast model (no longer GLM)."""
+    return {
+        LLM_ROLE_REASONING: settings.llm_model_fallback_reasoning,
+    }.get(role, settings.llm_model_fallback)
+
+
 def _build_routed_model(settings: Settings, role: str) -> RoutedChatModel:
-    """AE-0391: the role's model with a per-call timeout and the GLM fallback."""
+    """AE-0391: the role's model with a per-call timeout and its fallback."""
     return RoutedChatModel(
         primary=_build_glm_model(settings, _role_model_id(settings, role)),
-        fallback=_build_glm_model(settings, settings.llm_model_fallback),
+        fallback=_build_glm_model(settings, _role_fallback_id(settings, role)),
         role=role,
         timeout_seconds=_ROLE_TIMEOUTS.get(role, LLM_TIMEOUT_REASONING_SECONDS),
     )

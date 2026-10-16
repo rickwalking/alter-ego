@@ -46,6 +46,7 @@ from rag_backend.modules.autopilot.constants import (
     PHASE_STATUS_IN_PROGRESS,
     REVIEWER_UNSET,
 )
+from rag_backend.modules.autopilot.domain.carousel_defaults import rotated_theme
 from rag_backend.modules.autopilot.domain.gate import (
     GateSnapshot,
     ImageFact,
@@ -78,7 +79,6 @@ from rag_backend.modules.editorial.public import (
     CarouselAutomationAcl,
     CarouselProject,
     CarouselProjectWriteOwner,
-    CarouselTheme,
     EditorialWorkflowEngine,
     EditorialWorkflowHandlers,
     LegacyCarouselAcl,
@@ -115,7 +115,7 @@ class InProcessEditorialDriver:
     async def create_project(self, spec: ProjectSpec) -> str:
         """Insert a private pt-BR carousel owned by the autopilot user.
 
-        AE-0361: OpenAI images, the auto palette, the scout's preset, and its
+        AE-0361: OpenAI images, the scout's preset, and its
         image guidance (or the template) as the project's visual direction.
         AE-0362: the pipeline's default 7-slide config, the count the editorial
         pipeline actually builds.
@@ -123,6 +123,7 @@ class InProcessEditorialDriver:
         owner-confirmed thesis (pov_hook_v1, follow CTA). PR #106 review: with
         the scout's format and slide count, the slide-1 photo (staged by the
         editorial ACL) and the autopilot persona.
+        AE-0395: the palette rotates per São Paulo day (``rotated_theme``).
         """
         project = CarouselProject(
             topic=spec.topic,
@@ -133,7 +134,7 @@ class InProcessEditorialDriver:
             generate_images=True,
             image_model=IMAGE_MODEL_OPENAI,
             image_style=spec.image_style,
-            theme=CarouselTheme.AUTO.value,
+            theme=rotated_theme(self._config.clock.now()),
             custom_visual_details=spec.image_guidance or None,
             owner_id=spec.owner_user_id or None,
             presentation_policy_version=policy_version_for(spec),

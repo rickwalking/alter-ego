@@ -24,6 +24,10 @@ from rag_backend.modules.autopilot.carousel_constants import (
     REASON_NICHE_NOT_SIMPLE,
 )
 from rag_backend.modules.autopilot.constants import REASON_URL_IN_TEXT
+from rag_backend.modules.autopilot.domain.carousel_defaults import (
+    AUTOPILOT_THEME_ROTATION,
+    rotated_theme,
+)
 from rag_backend.modules.autopilot.domain.gate import ProjectSpec
 from rag_backend.modules.autopilot.infrastructure.editorial_driver import (
     EditorialDriverConfig,
@@ -267,7 +271,9 @@ async def test_create_project_sets_openai_auto_style_and_guidance(
     row = await db_session.get(CarouselProjectModel, project_id)
     assert row is not None
     assert row.image_model == "openai"
-    assert row.theme == "auto"
+    # Scenario: The autopilot creates its carousel with the day's palette (AE-0395)
+    assert row.theme == rotated_theme(_DriverClock().now())
+    assert row.theme in AUTOPILOT_THEME_ROTATION
     assert row.image_style == "cinematic"
     assert row.custom_visual_details == guidance
     facts = await CarouselReviewFacts(db_session).load(project_id)

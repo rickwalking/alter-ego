@@ -76,7 +76,12 @@ class PovInputsAcl:
         return str(found) if found is not None else None
 
     async def hook_photo_id(self, owner_id: str) -> str | None:
-        """The owner's usable slide-1 photo: most recently used, else newest."""
+        """The owner's next slide-1 photo (AE-0395 rotation).
+
+        A photo never used on a carousel comes first (newest first), then the
+        used ones from the least recently used, so consecutive POV carousels
+        never repeat a photo while the library has another one.
+        """
         if not owner_id:
             return None
         service = _service(self._session)
@@ -107,7 +112,8 @@ class PovInputsAcl:
         by_id = {str(asset.id): asset for asset in library}
         recent = await self._recently_used(owner_id)
         used = list(dict.fromkeys(key for key in recent if key in by_id))
-        ordered = [*used, *(key for key in by_id if key not in used)]
+        never_used = [key for key in by_id if key not in used]
+        ordered = [*never_used, *reversed(used)]
         return [by_id[key] for key in ordered]
 
     async def _recently_used(self, owner_id: str) -> list[str]:

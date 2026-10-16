@@ -6,6 +6,11 @@ the primary model of its role under a per-call timeout and, when that call
 fails (any error except auth, a timeout, or empty content), re-issues the same
 call on the fallback model, logging ``llm_fallback_used``.
 
+AE-0395: each model gets ``LLM_ATTEMPTS_PER_MODEL`` attempts (exponential
+backoff, logged as ``llm_retry``) before the call moves to the fallback, and the
+fallback gets the same number before the error surfaces. Auth errors never
+retry: the same key would fail the same way.
+
 ``ainvoke`` is overridden so the wrapper adds no generation of its own to
 Langfuse: the inner model's run is the generation, carrying the actual model
 name plus ``role:<role>`` / ``model:<id>`` tags (and ``fallback:true`` on the
@@ -15,7 +20,7 @@ fallback). Token usage is therefore counted once.
 from __future__ import annotations
 
 import asyncio
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 import structlog
 from langchain_core.callbacks import CallbackManagerForLLMRun
@@ -30,14 +35,18 @@ from rag_backend.infrastructure.config.llm_routing_constants import (
     FALLBACK_REASON_EMPTY,
     FALLBACK_REASON_ERROR,
     FALLBACK_REASON_TIMEOUT,
+    LLM_ATTEMPTS_PER_MODEL,
     LLM_METADATA_FALLBACK,
     LLM_METADATA_MODEL,
     LLM_METADATA_ROLE,
+    LLM_RETRY_BACKOFF_BASE_SECONDS,
+    LLM_RETRY_BACKOFF_MAX_SECONDS,
     LLM_TAG_FALLBACK,
     LLM_TAG_MODEL_PREFIX,
     LLM_TAG_ROLE_PREFIX,
     LLM_TIMEOUT_FALLBACK_SECONDS,
     LOG_LLM_FALLBACK_USED,
+    LOG_LLM_RETRY,
 )
 
 logger = structlog.get_logger(__name__)
@@ -47,6 +56,7 @@ _STATUS_CODE_ATTR = "status_code"
 _MODEL_NAME_ATTRS = ("model_name", "model")
 _UNKNOWN_MODEL = "unknown"
 _ERROR_PREVIEW_CHARS = 200
+_ERR_NO_ATTEMPTS = "routed chat model configured with no attempts"
 
 
 class EmptyLLMResponseError(RuntimeError):
@@ -72,6 +82,17 @@ def _is_empty(message: BaseMessage) -> bool:
     return not str(message.content).strip()
 
 
+def retry_delay(attempt: int) -> float:
+    """Seconds to wait after a failed ``attempt`` (1-based), capped."""
+    delay = LLM_RETRY_BACKOFF_BASE_SECONDS * (2 ** (attempt - 1))
+    return float(min(delay, LLM_RETRY_BACKOFF_MAX_SECONDS))
+
+
+async def _sleep(seconds: float) -> None:
+    """Indirection so tests can skip the real backoff."""
+    await asyncio.sleep(seconds)
+
+
 def _fallback_reason(exc: Exception) -> str:
     if isinstance(exc, TimeoutError):
         return FALLBACK_REASON_TIMEOUT
@@ -88,6 +109,7 @@ class RoutedChatModel(BaseChatModel):
     role: str
     timeout_seconds: float
     is_fallback: bool = False
+    attempts: int = LLM_ATTEMPTS_PER_MODEL
 
     @property
     def _llm_type(self) -> str:
@@ -107,6 +129,7 @@ class RoutedChatModel(BaseChatModel):
             role=self.role,
             timeout_seconds=LLM_TIMEOUT_FALLBACK_SECONDS,
             is_fallback=True,
+            attempts=self.attempts,
         )
 
     def _run_config(self, model: BaseChatModel, *, fallback: bool) -> RunnableConfig:
@@ -146,6 +169,23 @@ class RoutedChatModel(BaseChatModel):
             raise EmptyLLMResponseError(model_id_of(model))
         return message
 
+    async def _call_with_retries(
+        self,
+        model: BaseChatModel,
+        request: _RoutedRequest,
+        timeout: float,
+    ) -> AIMessage:
+        """``attempts`` tries on one model; auth errors and the last error raise."""
+        for attempt in range(1, self.attempts + 1):
+            try:
+                return await self._call(model, request, timeout)
+            except Exception as exc:
+                if _is_auth_error(exc) or attempt == self.attempts:
+                    raise
+                _log_retry(_RetryNotice(self.role, model, attempt, exc))
+                await _sleep(retry_delay(attempt))
+        raise RuntimeError(_ERR_NO_ATTEMPTS)
+
     async def ainvoke(
         self,
         prompt: LanguageModelInput,
@@ -154,25 +194,18 @@ class RoutedChatModel(BaseChatModel):
         stop: list[str] | None = None,
         **kwargs: object,
     ) -> AIMessage:
-        """Run the primary model; on failure re-issue the call on the fallback."""
+        """Retry the primary model; then re-issue the call on the fallback."""
         request = _RoutedRequest(prompt=prompt, config=config, stop=stop, kwargs=kwargs)
         try:
-            return await self._call(self.primary, request, self.timeout_seconds)
+            return await self._call_with_retries(
+                self.primary, request, self.timeout_seconds
+            )
         except Exception as exc:
             if self.fallback is None or _is_auth_error(exc):
                 raise
-            logger.warning(
-                LOG_LLM_FALLBACK_USED,
-                role=self.role,
-                primary_model=model_id_of(self.primary),
-                fallback_model=model_id_of(self.fallback),
-                reason=_fallback_reason(exc),
-                error=str(exc)[:_ERROR_PREVIEW_CHARS],
-            )
-        fallback_request = _RoutedRequest(
-            prompt=prompt, config=config, stop=stop, kwargs=kwargs, fallback=True
-        )
-        return await self._call(
+            _log_fallback(self, exc)
+        fallback_request = replace(request, fallback=True)
+        return await self._call_with_retries(
             self.fallback, fallback_request, LLM_TIMEOUT_FALLBACK_SECONDS
         )
 
@@ -185,6 +218,41 @@ class RoutedChatModel(BaseChatModel):
     ) -> ChatResult:
         """Sync path (unused by the carousel pipeline): primary model only."""
         return self.primary._generate(messages, stop, run_manager, **kwargs)
+
+
+@dataclass(frozen=True)
+class _RetryNotice:
+    """One failed attempt, for the ``llm_retry`` log."""
+
+    role: str
+    model: BaseChatModel
+    attempt: int
+    error: Exception
+
+
+def _log_retry(notice: _RetryNotice) -> None:
+    logger.warning(
+        LOG_LLM_RETRY,
+        role=notice.role,
+        model=model_id_of(notice.model),
+        attempt=notice.attempt,
+        reason=_fallback_reason(notice.error),
+        error=str(notice.error)[:_ERROR_PREVIEW_CHARS],
+    )
+
+
+def _log_fallback(routed: RoutedChatModel, exc: Exception) -> None:
+    if routed.fallback is None:
+        return
+    logger.warning(
+        LOG_LLM_FALLBACK_USED,
+        role=routed.role,
+        primary_model=model_id_of(routed.primary),
+        fallback_model=model_id_of(routed.fallback),
+        reason=_fallback_reason(exc),
+        attempts=routed.attempts,
+        error=str(exc)[:_ERROR_PREVIEW_CHARS],
+    )
 
 
 @dataclass(frozen=True)

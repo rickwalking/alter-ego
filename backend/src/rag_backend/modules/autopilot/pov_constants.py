@@ -7,7 +7,7 @@ draft on Telegram. Radar IA (``news_analysis``) runs are capped per week.
 
 from __future__ import annotations
 
-from rag_backend.domain.constants import IMAGE_STYLE_POV_EDITORIAL
+from rag_backend.domain.constants.carousel import IMAGE_STYLE_NEO_ANIME
 from rag_backend.domain.constants.content_mode import (
     CONTENT_MODE_NEWS_ANALYSIS,
     CONTENT_MODE_POV,
@@ -17,7 +17,9 @@ from rag_backend.domain.constants.content_mode import (
 SCOUT_MODES: frozenset[str] = frozenset({CONTENT_MODE_NEWS_ANALYSIS, CONTENT_MODE_POV})
 SCOUT_MODE_PATTERN = "^(news_analysis|pov)$"
 THESIS_DRAFT_MAX_CHARS = POV_THESIS_MAX_CHARS
-POV_IMAGE_STYLE = IMAGE_STYLE_POV_EDITORIAL
+# AE-0395: POV point slides default to neo-anime artwork; a scout topic that
+# names another supported style keeps it (slide 1 is always the owner's photo).
+POV_IMAGE_STYLE = IMAGE_STYLE_NEO_ANIME
 CONTENT_MODE_COLUMN_LENGTH = 20
 
 # Intake rejections.

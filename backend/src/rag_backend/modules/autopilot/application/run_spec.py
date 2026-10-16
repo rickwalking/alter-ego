@@ -18,8 +18,10 @@ from rag_backend.domain.constants.content_mode import (
 )
 from rag_backend.modules.autopilot.constants import REASON_TOPIC_MISSING
 from rag_backend.modules.autopilot.domain.carousel_defaults import (
+    DEFAULT_IMAGE_STYLE,
     GuidanceRequest,
     image_guidance_for,
+    is_supported_style,
 )
 from rag_backend.modules.autopilot.domain.gate import ProjectInputs, ProjectSpec
 from rag_backend.modules.autopilot.domain.models import AutopilotRun, TopicCandidate
@@ -48,13 +50,21 @@ def project_spec(
         brief=topic.brief,
         sources=topic.sources,
         owner_user_id=owner_user_id,
-        image_style=POV_IMAGE_STYLE if pov else topic.image_style,
+        image_style=pov_image_style(topic) if pov else topic.image_style,
         image_guidance=image_guidance_for(_guidance_request(topic)),
         content_mode=topic.content_mode or CONTENT_MODE_NEWS_ANALYSIS,
         pov_thesis=run.pov_thesis if pov else None,
         pov_format=resolved_pov_format(choice) if pov else None,
         slide_count=resolved_slide_count(choice) if pov else None,
     )
+
+
+def pov_image_style(topic: TopicCandidate) -> str:
+    """AE-0395: the scout's explicit supported style, else neo-anime."""
+    style = topic.image_style
+    if style != DEFAULT_IMAGE_STYLE and is_supported_style(style):
+        return style
+    return POV_IMAGE_STYLE
 
 
 async def with_inputs(spec: ProjectSpec, inputs: ProjectInputs) -> ProjectSpec:
@@ -84,4 +94,4 @@ def _guidance_request(topic: TopicCandidate) -> GuidanceRequest:
     )
 
 
-__all__ = ["project_spec", "spec_refusal", "with_inputs"]
+__all__ = ["pov_image_style", "project_spec", "spec_refusal", "with_inputs"]

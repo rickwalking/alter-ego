@@ -17,7 +17,12 @@ Two distinct failures need two different remedies:
 Each remedy costs at most one extra call, and only on the failure path.
 
 AE-0391: when both remedies are exhausted on a role-routed model, the whole
-call is re-issued once on its fallback model (GLM-5.3) before giving up.
+call is re-issued on its fallback model before giving up.
+
+AE-0395: each model gets ``LLM_ATTEMPTS_PER_MODEL`` attempts (each one a fresh
+call plus the re-roll and repair above) before the call moves to the fallback.
+Prod 2026-10-16: one prose caption from the fast model failed a whole content
+phase.
 """
 
 from __future__ import annotations
@@ -33,7 +38,9 @@ from langchain_core.runnables import Runnable
 from rag_backend.domain.constants.ai_agents import ERR_INVALID_JSON
 from rag_backend.infrastructure.config.llm_routing_constants import (
     FALLBACK_REASON_BAD_JSON,
+    LLM_ATTEMPTS_PER_MODEL,
     LOG_LLM_JSON_FALLBACK_USED,
+    LOG_LLM_JSON_RETRY,
 )
 from rag_backend.infrastructure.external.routed_chat_model import (
     fallback_runnable_for,
@@ -70,7 +77,7 @@ async def ainvoke_json(
     fallback model when one exists), so callers keep their existing contract.
     """
     try:
-        return await _ainvoke_json_on(runnable, prompt, policy)
+        return await _attempts_on(runnable, prompt, policy)
     except (ValueError, TypeError):
         fallback = fallback_runnable_for(runnable)
         if fallback is None:
@@ -81,7 +88,26 @@ async def ainvoke_json(
             model_id=policy.model_id,
             reason=FALLBACK_REASON_BAD_JSON,
         )
-    return await _ainvoke_json_on(fallback, prompt, policy)
+    return await _attempts_on(fallback, prompt, policy)
+
+
+async def _attempts_on(
+    runnable: Runnable[LanguageModelInput, BaseMessage],
+    prompt: str,
+    policy: JsonRetryPolicy[T],
+) -> tuple[T, str]:
+    """``LLM_ATTEMPTS_PER_MODEL`` tries on one model; the last failure raises."""
+    for attempt in range(1, LLM_ATTEMPTS_PER_MODEL):
+        try:
+            return await _ainvoke_json_on(runnable, prompt, policy)
+        except (ValueError, TypeError):
+            logger.warning(
+                LOG_LLM_JSON_RETRY,
+                agent=policy.agent,
+                model_id=policy.model_id,
+                attempt=attempt,
+            )
+    return await _ainvoke_json_on(runnable, prompt, policy)
 
 
 async def _ainvoke_json_on(

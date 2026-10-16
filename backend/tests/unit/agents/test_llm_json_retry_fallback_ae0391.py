@@ -10,6 +10,7 @@ import json
 import pytest
 from structlog.testing import capture_logs
 
+from rag_backend.agents import llm_json_retry
 from rag_backend.agents.llm_json_retry import JsonRetryPolicy, ainvoke_json
 from rag_backend.domain.constants.ai_agents import ERR_INVALID_JSON
 from rag_backend.infrastructure.config.llm_routing_constants import (
@@ -32,6 +33,12 @@ def _parse(raw: str) -> dict[str, object]:
 
 
 POLICY = JsonRetryPolicy(parse=_parse, agent="content_draft", model_id="content-draft")
+
+
+@pytest.fixture(autouse=True)
+def _one_attempt_per_model(monkeypatch: pytest.MonkeyPatch) -> None:
+    """These tests pin the fallback order; AE-0395 attempts are tested apart."""
+    monkeypatch.setattr(llm_json_retry, "LLM_ATTEMPTS_PER_MODEL", 1)
 
 
 def _routed(log: CallLog, fallback_reply: str | None) -> RoutedChatModel:

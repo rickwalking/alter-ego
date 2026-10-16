@@ -135,7 +135,8 @@ jobs:
             # AE-0391 per-task carousel models (OpenCode Go endpoint) + fallback.
             LLM_MODEL_REASONING=${{ secrets.LLM_MODEL_REASONING || 'deepseek-v4-pro' }}
             LLM_MODEL_FAST=${{ secrets.LLM_MODEL_FAST || 'deepseek-v4.1-flash' }}
-            LLM_MODEL_FALLBACK=${{ secrets.LLM_MODEL_FALLBACK || 'glm-5.3' }}
+            LLM_MODEL_FALLBACK=${{ secrets.LLM_MODEL_FALLBACK || 'qwen3.8-flash' }}
+            LLM_MODEL_FALLBACK_REASONING=${{ secrets.LLM_MODEL_FALLBACK_REASONING || 'qwen3.8-max' }}
             CONTENT_DRAFT_CONCURRENCY=${{ secrets.CONTENT_DRAFT_CONCURRENCY || '4' }}
             SECRET_KEY=${{ secrets.SECRET_KEY }}
             ANON_SECRET_KEY=${{ secrets.ANON_SECRET_KEY }}
@@ -176,7 +177,7 @@ jobs:
             IMAGE_BRIDGE_ENABLED=true
             IMAGE_BRIDGE_FALLBACK_ENABLED=true
             IMAGE_BRIDGE_TIMEOUT_SECONDS=${{ vars.IMAGE_BRIDGE_TIMEOUT_SECONDS || '600' }}
-            IMAGE_BRIDGE_MAX_CONCURRENCY=${{ vars.IMAGE_BRIDGE_MAX_CONCURRENCY || '2' }}
+            IMAGE_BRIDGE_MAX_CONCURRENCY=${{ vars.IMAGE_BRIDGE_MAX_CONCURRENCY || '1' }}
             IMAGE_BRIDGE_PUBLIC_BASE_URL=https://marinssolutions.com
             GROKBOT_IMAGE_WEBHOOK_URL=${{ secrets.GROKBOT_IMAGE_WEBHOOK_URL }}
             GROKBOT_IMAGE_WEBHOOK_AUTH_HEADER=${{ vars.GROKBOT_IMAGE_WEBHOOK_AUTH_HEADER || 'Authorization' }}

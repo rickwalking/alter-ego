@@ -33,6 +33,7 @@ from rag_backend.application.services.carousel.workflow_state import (
 from rag_backend.domain.constants.carousel_workflow import PHASE_CONTENT
 from rag_backend.infrastructure.cache.ai_response_cache import get_ai_response_cache
 from rag_backend.infrastructure.config.llm_routing_constants import (
+    LLM_ATTEMPTS_PER_MODEL,
     LLM_ROLE_FAST,
     LLM_ROLE_REASONING,
     LLM_TAG_FALLBACK,
@@ -265,8 +266,11 @@ async def test_one_failing_slide_is_retried_then_falls_back_alone() -> None:
     )
 
     assert [d["draft_text"] for d in drafts] == BODIES
-    # 7 first attempts + 1 repair for slide 3 on the primary, then 1 fallback call.
-    assert log.models.count("fast-model") == SLIDE_COUNT + 1
+    # The 6 good slides once; slide 3 gets 5 attempts (call + repair each,
+    # AE-0395) on the primary, then 1 fallback call.
+    assert (
+        log.models.count("fast-model") == (SLIDE_COUNT - 1) + 2 * LLM_ATTEMPTS_PER_MODEL
+    )
     assert log.models.count("glm-fallback") == 1
     fallback_tags = [tags for tags in log.tags if LLM_TAG_FALLBACK in tags]
     assert len(fallback_tags) == 1
