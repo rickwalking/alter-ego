@@ -12,6 +12,14 @@ from rag_backend.infrastructure.config.constants import (
     ENVIRONMENT_DEVELOPMENT,
     NON_PRODUCTION_ENVIRONMENTS,
 )
+from rag_backend.infrastructure.config.llm_queue_constants import (
+    DEFAULT_BREAKER_COOLDOWN_SECONDS,
+    DEFAULT_BREAKER_FAILURES,
+    DEFAULT_BREAKER_FATAL_COOLDOWN_SECONDS,
+    DEFAULT_BREAKER_QUOTA_COOLDOWN_SECONDS,
+    DEFAULT_SIDECAR_CONCURRENCY,
+    DEFAULT_SIDECAR_TIMEOUT_SECONDS,
+)
 from rag_backend.infrastructure.config.llm_routing_constants import (
     DEFAULT_CONTENT_DRAFT_CONCURRENCY,
     DEFAULT_LLM_MODEL_FALLBACK,
@@ -87,6 +95,22 @@ class Settings(BaseSettings):
     llm_model_fast: str = DEFAULT_LLM_MODEL_FAST
     llm_model_fallback: str = DEFAULT_LLM_MODEL_FALLBACK
     llm_model_fallback_reasoning: str = DEFAULT_LLM_MODEL_FALLBACK_REASONING
+    # AE-0399: per-role model queues ("<transport>:<model>" entries, in order;
+    # empty keeps the AE-0391 primary + fallback routing), the circuit breaker
+    # and the OpenCode sidecar (``opencode serve``) that hosts the free model.
+    llm_model_queue_fast: str = ""
+    llm_model_queue_reasoning: str = ""
+    llm_breaker_failures: int = Field(default=DEFAULT_BREAKER_FAILURES, ge=1)
+    llm_breaker_cooldown_seconds: float = DEFAULT_BREAKER_COOLDOWN_SECONDS
+    llm_breaker_quota_cooldown_seconds: float = DEFAULT_BREAKER_QUOTA_COOLDOWN_SECONDS
+    llm_breaker_fatal_cooldown_seconds: float = DEFAULT_BREAKER_FATAL_COOLDOWN_SECONDS
+    opencode_sidecar_url: str = ""
+    opencode_server_password: SecretStr = SecretStr("")
+    opencode_sidecar_timeout_seconds: float = DEFAULT_SIDECAR_TIMEOUT_SECONDS
+    opencode_sidecar_concurrency: int = Field(default=DEFAULT_SIDECAR_CONCURRENCY, ge=1)
+    # AE-0399: send-only Telegram bot for model failures and breaker changes.
+    telegram_alerts_bot_token: SecretStr = SecretStr("")
+    telegram_alerts_chat_id: str = ""
     # AE-0391: slides drafted concurrently in the content phase (>= 1).
     content_draft_concurrency: int = Field(
         default=DEFAULT_CONTENT_DRAFT_CONCURRENCY, ge=1

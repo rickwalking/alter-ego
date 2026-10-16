@@ -109,6 +109,23 @@ def _role_fallback_id(settings: Settings, role: str) -> str:
     }.get(role, settings.llm_model_fallback)
 
 
+def role_timeout(role: str) -> float:
+    """Per-call timeout of one attempt for ``role``."""
+    return _ROLE_TIMEOUTS.get(role, LLM_TIMEOUT_REASONING_SECONDS)
+
+
+def _build_role_model(settings: Settings, role: str) -> BaseChatModel:
+    """AE-0399: the role's model queue when configured, else AE-0391 routing."""
+    from rag_backend.infrastructure.external.model_queue_factory import (
+        build_queue_model,
+    )
+
+    queue = build_queue_model(
+        settings, role, lambda model_id: _build_glm_model(settings, model_id)
+    )
+    return queue if queue is not None else _build_routed_model(settings, role)
+
+
 def _build_routed_model(settings: Settings, role: str) -> RoutedChatModel:
     """AE-0391: the role's model with a per-call timeout and its fallback."""
     return RoutedChatModel(
@@ -146,7 +163,7 @@ def build_chat_model(settings: Settings, role: str | None = None) -> BaseChatMod
         return _build_anthropic_model(settings)
     if role is None:
         return _build_glm_model(settings)
-    return _build_routed_model(settings, role)
+    return _build_role_model(settings, role)
 
 
 def build_role_models(settings: Settings) -> ChatModelRoles:
