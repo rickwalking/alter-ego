@@ -592,6 +592,47 @@
         "saved": "Gancho salvo; a etapa de conteúdo usa ele no slide 1.",
         "failed": "Não foi possível salvar o gancho.",
         "thesisNotEarly": "Sua tese ainda não aparece nos slides 1 e 2. Considere um gancho que a diga."
+      },
+      "fieldErrors": {
+        "codes": {
+          "body_too_long": "Corpo longo demais (máx. {limit} caracteres)",
+          "heading_too_long": "Título longo demais (máx. {limit} caracteres)",
+          "copy_too_many_lines": "Linhas demais (máx. {limit})",
+          "dash_punctuation_forbidden": "Não use travessão (—) nem meia-risca (–)",
+          "heading_not_sentence_case_en": "O título em inglês deve começar com letra maiúscula",
+          "heading_not_sentence_case_pt": "O título deve começar com letra maiúscula",
+          "body_not_sentence_case_en": "As frases do corpo em inglês devem começar com letra maiúscula",
+          "body_not_sentence_case_pt": "As frases do corpo devem começar com letra maiúscula",
+          "emphasis_markup_invalid": "A ênfase deve usar tags {tag} balanceadas",
+          "translation_shape_mismatch": "A versão EN precisa ter a mesma estrutura da versão PT",
+          "translation_not_english": "O texto EN está igual ao PT (não foi traduzido)",
+          "translation_missing": "Falta a tradução EN",
+          "proper_noun_casing": "Escreva o nome próprio com a grafia correta",
+          "visible_emoji_forbidden": "Remova os emojis do texto",
+          "drafting_scaffold_present": "Remova os rótulos de rascunho (ex.: TITLE:, BODY:)",
+          "heading_empty": "O título é obrigatório",
+          "body_empty": "O corpo está vazio",
+          "heading_repeated_in_body": "O corpo não pode repetir o título",
+          "icon_name_not_allowlisted": "Ícone não permitido"
+        },
+        "fields": {
+          "heading": "título",
+          "body": "corpo",
+          "title": "título",
+          "icon": "ícone",
+          "item": "item {index} · {field}"
+        },
+        "locales": {
+          "pt": "PT",
+          "en": "EN"
+        },
+        "summaryLine": "Slide {slide} · {field}: {message}",
+        "slideSummary": "Erros do slide {slide}",
+        "slidesToFix": "Slides para corrigir:",
+        "slideLink": "Slide {slide}",
+        "submitManualFixes": "Enviar correções manuais",
+        "submittingManualFixes": "Enviando correções…",
+        "manualFixesHint": "Corrija os campos destacados e envie as correções manuais. Isso salva as edições e valida de novo, sem aprovar a etapa."
       }
     },
     "failed": {
@@ -783,7 +824,7 @@
       "rebuildPending": "Reconstrução do PDF pendente — o novo PDF refletirá sua edição em breve.",
       "success": "Texto dos slides atualizado e o PDF foi reconstruído.",
       "blockedRunInProgress": "A edição fica indisponível enquanto uma execução do fluxo está em andamento. Tente novamente ao terminar.",
-      "blockingViolations": "Algumas edições ainda violam as regras de conteúdo. Ajuste os slides destacados e salve novamente."
+      "blockingViolations": "Algumas edições ainda violam as regras de conteúdo. Corrija os campos destacados e envie as correções manuais."
     }
   },
   "auth": {

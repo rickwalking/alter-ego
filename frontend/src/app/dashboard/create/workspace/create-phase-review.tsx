@@ -8,7 +8,10 @@ import type {
 import { AutoRepairButton } from "@/modules/editorial";
 import { ResearchPhaseReview } from "./phase-review/research-phase-review";
 import { OutlinePhaseReview } from "./phase-review/outline-phase-review";
-import { ContentPhaseReview } from "./phase-review/content-phase-review";
+import {
+  ContentPhaseReview,
+  type ContentManualFixesActions,
+} from "./phase-review/content-phase-review";
 import { DesignPhaseReview } from "./phase-review/design-phase-review";
 import type { DesignRecoveryActions } from "./phase-review/design-recovery-panel";
 import { ImagesPhaseReview } from "./phase-review/images-phase-review";
@@ -20,6 +23,8 @@ interface EditorialPhaseReviewProps {
   contentSlides?: LocalizedSlideReview[];
   onContentSlidesChange?: (slides: LocalizedSlideReview[]) => void;
   contentEditable?: boolean;
+  /** AE-0403: save content-gate edits without approving (edits-only revise). */
+  contentManualFixes?: ContentManualFixesActions;
   /** AE-0310: design-step recovery actions (edit copy / send back). */
   designRecovery?: DesignRecoveryActions;
   /** AE-0311: refresh workflow state after a one-click deterministic repair. */
@@ -32,6 +37,7 @@ export function CreatePhaseReview({
   contentSlides,
   onContentSlidesChange,
   contentEditable = false,
+  contentManualFixes,
   designRecovery,
   onRepaired,
 }: EditorialPhaseReviewProps): React.JSX.Element | null {
@@ -50,6 +56,7 @@ export function CreatePhaseReview({
             editable={contentEditable}
             slides={contentSlides}
             onSlidesChange={onContentSlidesChange}
+            manualFixes={contentManualFixes}
           />
           <AutoRepairButton projectId={projectId} onRepaired={onRepaired} />
         </div>

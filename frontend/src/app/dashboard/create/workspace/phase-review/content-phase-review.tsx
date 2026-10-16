@@ -1,8 +1,10 @@
 "use client";
 
+import { useEffect, useMemo, useRef } from "react";
+import { WORKFLOW_PHASE_STATUS } from "@/constants/workflow";
 import { useTranslations } from "next-intl";
 import { NeonBadge } from "@/components/atoms/neon-badge";
-import { NeonTextarea } from "@/components/atoms/neon-textarea";
+import { NeonButton } from "@/components/atoms/neon-button";
 import {
   NeonAlert,
   NeonAlertDescription,
@@ -11,59 +13,97 @@ import type {
   EditorialWorkflowState,
   LocalizedSlideReview,
 } from "@/modules/publishing";
-import { PresentationIconPreview } from "@/modules/editorial";
-import { PresentationStructuredItems } from "@/modules/editorial";
 import {
+  addressViolations,
   applySlideCopyEdit,
-  formatBudgetUsage,
+  BlockingSlidesNotice,
+  buildSlideFieldErrors,
+  fieldErrorKey,
+  focusInvalidField,
   hasBlockingContentGateValidation,
   hasBlockingPresentationViolations,
-  isBudgetExceeded,
-  isPresentationStructuredItemList,
   isWarningViolation,
   listContentReviewViolations,
-  listPresentationIconNames,
-  listPresentationStructuredItems,
-  listStructuredExtras,
-  presentationBody,
-  presentationHeading,
   resolveBodyBudget,
   resolveHeadingBudget,
   resolveLocalizedSlides,
+  slideDomId,
+  slidesHaveCopyChanges,
+  SlideViolationSummary,
+  useSlideFieldErrors,
+  violationsForSlide,
   violationToneClasses,
-  type PresentationLocaleKey,
   type SlideCopyEdit,
+  type SlideFieldErrorState,
 } from "@/modules/editorial";
+import {
+  CONTENT_REVIEW_ID_PREFIX,
+  ContentLocaleFields,
+} from "./content-phase-locale-fields";
+
+/**
+ * AE-0403: "submit manual fixes" at the content gate. Saves the edits through
+ * an edits-only revise (apply + re-validate + re-interrupt); it never approves.
+ */
+export interface ContentManualFixesActions {
+  onSubmit: (slides: LocalizedSlideReview[]) => void;
+  submitting?: boolean;
+}
 
 export interface ContentPhaseReviewProps {
   state: EditorialWorkflowState;
   editable?: boolean;
   slides?: LocalizedSlideReview[];
   onSlidesChange?: (slides: LocalizedSlideReview[]) => void;
+  manualFixes?: ContentManualFixesActions;
 }
 
-function formatStructuredValue(value: unknown): string {
-  if (typeof value === "string") {
-    return value;
-  }
-  return JSON.stringify(value, null, 2);
+interface ManualFixesFooterProps {
+  errors: SlideFieldErrorState;
+  canSubmit: boolean;
+  manualFixes: ContentManualFixesActions;
+  onSubmit: () => void;
 }
 
-function renderStructuredExtraValue(value: unknown): React.ReactNode {
-  if (isPresentationStructuredItemList(value)) {
-    return <PresentationStructuredItems items={value} />;
-  }
-  if (typeof value === "string" && value.trim()) {
-    return (
-      <p className="whitespace-pre-wrap text-[var(--color-text-muted)] text-xs">
-        {value}
-      </p>
-    );
-  }
+/** One validation run of the content gate (a resume bumps ``lock_version``). */
+function validationStamp(state: EditorialWorkflowState): string {
+  return [
+    state.lock_version ?? "",
+    state.presentation_validation?.validated_at ?? "",
+    state.content_gate_validation?.validated_at ?? "",
+  ].join("|");
+}
+
+function ManualFixesFooter({
+  errors,
+  canSubmit,
+  manualFixes,
+  onSubmit,
+}: ManualFixesFooterProps): React.ReactElement {
+  const t = useTranslations("editorialWorkflow.review.fieldErrors");
   return (
-    <pre className="whitespace-pre-wrap font-mono text-[var(--color-text-muted)] text-xs">
-      {formatStructuredValue(value)}
-    </pre>
+    <div className="space-y-2 rounded-md border border-destructive/30 p-3">
+      <BlockingSlidesNotice
+        message={t("manualFixesHint")}
+        slideIndexes={errors.slideIndexes}
+        onSelectSlide={(slideIndex) =>
+          focusInvalidField(
+            CONTENT_REVIEW_ID_PREFIX,
+            errors.fieldErrors,
+            slideIndex,
+          )
+        }
+      />
+      <NeonButton
+        size="sm"
+        disabled={!canSubmit || manualFixes.submitting === true}
+        onClick={onSubmit}
+      >
+        {manualFixes.submitting === true
+          ? t("submittingManualFixes")
+          : t("submitManualFixes")}
+      </NeonButton>
+    </div>
   );
 }
 
@@ -72,25 +112,52 @@ export function ContentPhaseReview({
   editable = false,
   slides: controlledSlides,
   onSlidesChange,
+  manualFixes,
 }: ContentPhaseReviewProps): React.ReactElement {
   const t = useTranslations("editorialWorkflow.review");
-  const untitledSlide = t("untitledSlide");
-  const baselineSlides = resolveLocalizedSlides(state);
+  const baselineSlides = useMemo(() => resolveLocalizedSlides(state), [state]);
   const localizedSlides = controlledSlides ?? baselineSlides;
   // AE-0309: merge violations arriving in the content interrupt/gate payload
   // with the presentation validation ones (de-duplicated).
-  const violations = listContentReviewViolations(state);
+  const violations = useMemo(() => listContentReviewViolations(state), [state]);
+  const addressed = useMemo(() => addressViolations(violations), [violations]);
+  const errors = useSlideFieldErrors(addressed, validationStamp(state));
+  const awaitingResult = useRef(false);
+  const runInProgress =
+    state.phase_status === WORKFLOW_PHASE_STATUS.IN_PROGRESS;
   const contentGateBlocked = hasBlockingContentGateValidation(state);
   const approvalBlocked =
     hasBlockingPresentationViolations(state) || contentGateBlocked;
   const promptCount = state.slide_image_prompts?.length ?? 0;
   const canEdit = editable && onSlidesChange !== undefined;
 
+  // AE-0403: once a manual-fix submission comes back (run finished), jump to
+  // the first field that is still invalid (a DOM focus, not data fetching).
+  useEffect(() => {
+    if (!awaitingResult.current || runInProgress) {
+      return;
+    }
+    awaitingResult.current = false;
+    focusInvalidField(
+      CONTENT_REVIEW_ID_PREFIX,
+      buildSlideFieldErrors(addressed),
+    );
+  }, [addressed, runInProgress]);
+
   const handleCopyChange = (edit: SlideCopyEdit): void => {
     if (!onSlidesChange) {
       return;
     }
     onSlidesChange(applySlideCopyEdit(localizedSlides, edit));
+    errors.clearField(fieldErrorKey(edit.slideIndex, edit.locale, edit.field));
+  };
+
+  const submitManualFixes = (): void => {
+    if (!manualFixes) {
+      return;
+    }
+    awaitingResult.current = true;
+    manualFixes.onSubmit(localizedSlides);
   };
 
   if (localizedSlides.length === 0) {
@@ -171,154 +238,28 @@ export function ContentPhaseReview({
 
       <div className="space-y-3">
         {localizedSlides.map((slide) => {
-          const headingBudget = resolveHeadingBudget(
-            slide.slide_type,
-            state.presentation_policy_version,
-          );
-          const bodyBudget = resolveBodyBudget(
-            slide.slide_type,
-            state.presentation_policy_version,
-          );
-          const renderLocale = (
-            localeLabel: string,
-            localeKey: PresentationLocaleKey,
-            presentation: Record<string, unknown>,
-          ) => {
-            const heading = presentationHeading(presentation, untitledSlide);
-            const body = presentationBody(presentation);
-            const structuredExtras = listStructuredExtras(presentation);
-            const structuredItems =
-              listPresentationStructuredItems(presentation);
-            const iconNames = listPresentationIconNames(presentation);
-            const headingBudgetLabel = formatBudgetUsage(
-              heading,
-              headingBudget,
-            );
-            const bodyBudgetLabel = formatBudgetUsage(body, bodyBudget);
-            const headingOverBudget = isBudgetExceeded(heading, headingBudget);
-            const bodyOverBudget = isBudgetExceeded(body, bodyBudget);
-
-            return (
-              <div className="space-y-1 rounded-md border border-[var(--color-border)] p-2">
-                <p className="font-medium text-[var(--color-text-muted)] text-xs uppercase tracking-wide">
-                  {localeLabel}
-                </p>
-                {canEdit ? (
-                  <div className="space-y-1">
-                    <label
-                      className="font-medium text-[var(--color-text-muted)] text-xs"
-                      htmlFor={`slide-${slide.slide_index}-${localeKey}-heading`}
-                    >
-                      {t("headingLabel")}
-                    </label>
-                    <NeonTextarea
-                      id={`slide-${slide.slide_index}-${localeKey}-heading`}
-                      value={heading}
-                      rows={2}
-                      onChange={(event) => {
-                        handleCopyChange({
-                          slideIndex: slide.slide_index,
-                          locale: localeKey,
-                          field: "heading",
-                          value: event.target.value,
-                        });
-                      }}
-                    />
-                  </div>
-                ) : (
-                  <p className="font-medium text-[var(--color-text)]">
-                    {heading}
-                  </p>
-                )}
-                {headingBudgetLabel ? (
-                  <p
-                    className={
-                      headingOverBudget
-                        ? "text-destructive text-xs"
-                        : "text-[var(--color-text-muted)] text-xs"
-                    }
-                  >
-                    {t("fieldBudget", { usage: headingBudgetLabel })}
-                  </p>
-                ) : null}
-                {canEdit ? (
-                  <div className="space-y-1">
-                    <label
-                      className="font-medium text-[var(--color-text-muted)] text-xs"
-                      htmlFor={`slide-${slide.slide_index}-${localeKey}-body`}
-                    >
-                      {t("bodyLabel")}
-                    </label>
-                    <NeonTextarea
-                      id={`slide-${slide.slide_index}-${localeKey}-body`}
-                      value={body}
-                      rows={4}
-                      onChange={(event) => {
-                        handleCopyChange({
-                          slideIndex: slide.slide_index,
-                          locale: localeKey,
-                          field: "body",
-                          value: event.target.value,
-                        });
-                      }}
-                    />
-                  </div>
-                ) : (
-                  <p className="whitespace-pre-wrap text-[var(--color-text-muted)] text-xs">
-                    {body}
-                  </p>
-                )}
-                {bodyBudgetLabel ? (
-                  <p
-                    className={
-                      bodyOverBudget
-                        ? "text-destructive text-xs"
-                        : "text-[var(--color-text-muted)] text-xs"
-                    }
-                  >
-                    {t("fieldBudget", { usage: bodyBudgetLabel })}
-                  </p>
-                ) : null}
-                {iconNames.length > 0 ? (
-                  <div className="flex flex-wrap items-center gap-2 pt-1">
-                    {iconNames.map((iconName) => (
-                      <div
-                        key={`${localeLabel}-${iconName}`}
-                        className="inline-flex items-center gap-1 rounded border border-[var(--color-border)] px-2 py-1 text-xs"
-                      >
-                        <PresentationIconPreview
-                          iconName={iconName}
-                          className="h-3.5 w-3.5 text-[var(--color-text)]"
-                        />
-                        <span className="font-mono text-[var(--color-text-muted)]">
-                          {iconName}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                ) : null}
-                {structuredItems.length > 0 ? (
-                  <PresentationStructuredItems items={structuredItems} />
-                ) : null}
-                {structuredExtras.length > 0 ? (
-                  <div className="space-y-1 pt-1">
-                    {structuredExtras.map((extra) => (
-                      <div key={`${localeLabel}-${extra.key}`}>
-                        <p className="font-medium text-[var(--color-text-muted)] text-xs">
-                          {t("structuredExtra", { field: extra.key })}
-                        </p>
-                        {renderStructuredExtraValue(extra.value)}
-                      </div>
-                    ))}
-                  </div>
-                ) : null}
-              </div>
-            );
+          const budgets = {
+            heading: resolveHeadingBudget(
+              slide.slide_type,
+              state.presentation_policy_version,
+            ),
+            body: resolveBodyBudget(
+              slide.slide_type,
+              state.presentation_policy_version,
+            ),
+          };
+          const localeProps = {
+            slide,
+            budgets,
+            fieldErrors: errors.fieldErrors,
+            onCopyChange: canEdit ? handleCopyChange : undefined,
           };
 
           return (
             <div
               key={`${slide.slide_index}-${slide.slide_type}`}
+              id={slideDomId(CONTENT_REVIEW_ID_PREFIX, slide.slide_index)}
+              tabIndex={-1}
               className="space-y-2 border-[var(--color-border)] border-b pb-3 last:border-0"
             >
               <div className="flex flex-wrap items-center gap-2">
@@ -328,21 +269,39 @@ export function ContentPhaseReview({
                 <NeonBadge variant="secondary">{slide.slide_type}</NeonBadge>
               </div>
               <div className="grid gap-3 md:grid-cols-2">
-                {renderLocale(
-                  t("localePt"),
-                  "presentation_pt",
-                  slide.presentation_pt,
-                )}
-                {renderLocale(
-                  t("localeEn"),
-                  "presentation_en",
-                  slide.presentation_en,
-                )}
+                <ContentLocaleFields
+                  {...localeProps}
+                  localeKey="presentation_pt"
+                  localeLabel={t("localePt")}
+                />
+                <ContentLocaleFields
+                  {...localeProps}
+                  localeKey="presentation_en"
+                  localeLabel={t("localeEn")}
+                />
               </div>
+              {canEdit ? (
+                <SlideViolationSummary
+                  slideIndex={slide.slide_index}
+                  violations={violationsForSlide(
+                    errors.open,
+                    slide.slide_index,
+                  )}
+                />
+              ) : null}
             </div>
           );
         })}
       </div>
+
+      {canEdit && manualFixes && approvalBlocked ? (
+        <ManualFixesFooter
+          errors={errors}
+          canSubmit={slidesHaveCopyChanges(baselineSlides, localizedSlides)}
+          manualFixes={manualFixes}
+          onSubmit={submitManualFixes}
+        />
+      ) : null}
     </div>
   );
 }

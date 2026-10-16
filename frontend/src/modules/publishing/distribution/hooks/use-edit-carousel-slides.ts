@@ -7,6 +7,7 @@ import { z } from "zod";
 import { apiCall } from "@/lib/api-client";
 import { API_ENDPOINTS, HTTP_METHODS } from "@/constants/api";
 import { carouselKeys } from "@/modules/carousel-presentation";
+import { slideFieldViolationSchema } from "@/schemas/carousel";
 import type { LocalizedSlideReview } from "@/modules/publishing/blog/types-ai";
 
 /**
@@ -14,6 +15,7 @@ import type { LocalizedSlideReview } from "@/modules/publishing/blog/types-ai";
  * regenerating images. The endpoint writes the edited copy to the projection +
  * checkpoint, marks a server-guaranteed republish, and returns the fresh
  * severity-aware validation report (rendered on a blocking rejection).
+ * AE-0403: ``field_violations`` addresses each violation to its form field.
  */
 const slideEditResponseSchema = z.object({
   project_id: z.string(),
@@ -26,6 +28,7 @@ const slideEditResponseSchema = z.object({
     .passthrough(),
   needs_republish: z.boolean().optional(),
   updated_slides: z.array(z.number()).optional(),
+  field_violations: z.array(slideFieldViolationSchema).optional(),
 });
 
 export type EditCarouselSlidesResponse = z.infer<

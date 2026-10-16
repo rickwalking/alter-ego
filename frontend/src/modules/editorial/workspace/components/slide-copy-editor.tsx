@@ -1,7 +1,6 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { NeonTextarea } from "@/components/atoms/neon-textarea";
 import {
   formatBudgetUsage,
   isBudgetExceeded,
@@ -14,8 +13,18 @@ import type {
   PresentationLocaleKey,
   SlideStructuredItemEdit,
 } from "@/modules/editorial/workspace/lib/presentation-slide-resolution";
+import {
+  fieldDomId,
+  fieldErrorKey,
+  slideDomId,
+  structuredItemFieldPath,
+  violationsForSlide,
+} from "@/modules/editorial/workspace/lib/slide-field-errors";
 import type { LocalizedSlideReview } from "@/modules/editorial/workspace/types-ai";
+import { FlaggableTextarea, SlideViolationSummary } from "./slide-field-errors";
 import type { SlideCopyEditorProps, StructuredList } from "./types";
+
+const ITEM_BODY_FIELD = "body";
 
 const LOCALE_KEYS: PresentationLocaleKey[] = [
   "presentation_pt",
@@ -67,10 +76,12 @@ function StructuredItemsEditor({
   slide,
   locale,
   onChange,
+  props,
 }: {
   slide: LocalizedSlideReview;
   locale: PresentationLocaleKey;
   onChange: (edit: SlideStructuredItemEdit) => void;
+  props: SlideCopyEditorProps;
 }): React.ReactElement | null {
   const t = useTranslations("editorialWorkflow.review");
   const resolved = resolveStructuredList(slide[locale]);
@@ -82,24 +93,33 @@ function StructuredItemsEditor({
       <p className="font-medium text-[var(--color-text-muted)] text-xs">
         {t("structuredItems")}
       </p>
-      {resolved.items.map((item, itemIndex) => (
-        <NeonTextarea
-          key={`${slide.slide_index}-${locale}-${resolved.listKey}-${itemIndex}`}
-          aria-label={t("structuredItemLabel", { index: itemIndex + 1 })}
-          value={typeof item.body === "string" ? item.body : ""}
-          rows={2}
-          onChange={(event) =>
-            onChange({
-              slideIndex: slide.slide_index,
-              locale,
-              listKey: resolved.listKey,
-              itemIndex,
-              field: "body",
-              value: event.target.value,
-            })
-          }
-        />
-      ))}
+      {resolved.items.map((item, itemIndex) => {
+        const key = fieldErrorKey(
+          slide.slide_index,
+          locale,
+          structuredItemFieldPath(resolved.listKey, itemIndex, ITEM_BODY_FIELD),
+        );
+        return (
+          <FlaggableTextarea
+            key={key}
+            id={fieldDomId(props.idPrefix, key)}
+            violations={props.fieldErrors?.get(key)}
+            aria-label={t("structuredItemLabel", { index: itemIndex + 1 })}
+            value={typeof item.body === "string" ? item.body : ""}
+            rows={2}
+            onChange={(event) =>
+              onChange({
+                slideIndex: slide.slide_index,
+                locale,
+                listKey: resolved.listKey,
+                itemIndex,
+                field: ITEM_BODY_FIELD,
+                value: event.target.value,
+              })
+            }
+          />
+        );
+      })}
     </div>
   );
 }
@@ -118,6 +138,8 @@ function LocaleColumn({
   const localeLabel =
     localeKey === "presentation_pt" ? t("localePt") : t("localeEn");
   const bodyValue = presentationBody(presentation);
+  const headingKey = fieldErrorKey(slide.slide_index, localeKey, "heading");
+  const bodyKey = fieldErrorKey(slide.slide_index, localeKey, "body");
   return (
     <div className="space-y-1">
       <p className="font-medium text-[var(--color-text-muted)] text-xs uppercase tracking-wide">
@@ -125,12 +147,13 @@ function LocaleColumn({
       </p>
       <label
         className="font-medium text-[var(--color-text-muted)] text-xs"
-        htmlFor={`${props.idPrefix}-${slide.slide_index}-${localeKey}-heading`}
+        htmlFor={fieldDomId(props.idPrefix, headingKey)}
       >
         {t("headingLabel")}
       </label>
-      <NeonTextarea
-        id={`${props.idPrefix}-${slide.slide_index}-${localeKey}-heading`}
+      <FlaggableTextarea
+        id={fieldDomId(props.idPrefix, headingKey)}
+        violations={props.fieldErrors?.get(headingKey)}
         value={presentationHeading(presentation, "")}
         rows={2}
         onChange={(event) =>
@@ -144,12 +167,13 @@ function LocaleColumn({
       />
       <label
         className="font-medium text-[var(--color-text-muted)] text-xs"
-        htmlFor={`${props.idPrefix}-${slide.slide_index}-${localeKey}-body`}
+        htmlFor={fieldDomId(props.idPrefix, bodyKey)}
       >
         {t("bodyLabel")}
       </label>
-      <NeonTextarea
-        id={`${props.idPrefix}-${slide.slide_index}-${localeKey}-body`}
+      <FlaggableTextarea
+        id={fieldDomId(props.idPrefix, bodyKey)}
+        violations={props.fieldErrors?.get(bodyKey)}
         value={bodyValue}
         rows={4}
         onChange={(event) =>
@@ -173,6 +197,7 @@ function LocaleColumn({
           slide={slide}
           locale={localeKey}
           onChange={props.onStructuredItemChange}
+          props={props}
         />
       ) : null}
     </div>
@@ -193,6 +218,8 @@ export function SlideCopyEditor(
       {editable.map((slide) => (
         <div
           key={`${props.idPrefix}-${slide.slide_index}`}
+          id={slideDomId(props.idPrefix, slide.slide_index)}
+          tabIndex={-1}
           className="space-y-2 rounded-md border border-[var(--color-border)] p-2"
         >
           <p className="font-medium text-[var(--color-text)] text-xs">
@@ -208,6 +235,13 @@ export function SlideCopyEditor(
               />
             ))}
           </div>
+          <SlideViolationSummary
+            slideIndex={slide.slide_index}
+            violations={violationsForSlide(
+              props.violations ?? [],
+              slide.slide_index,
+            )}
+          />
         </div>
       ))}
     </div>

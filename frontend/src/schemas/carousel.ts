@@ -207,6 +207,22 @@ export const carouselPhaseProgressSchema = z.object({
   slides: z.array(carouselPhaseProgressSlideSchema).optional(),
 });
 
+/**
+ * AE-0403: one slide-edit violation addressed to its form field
+ * (``CarouselSlideEditResponse.field_violations``).
+ */
+export const slideFieldViolationSchema = z.object({
+  code: z.string(),
+  message: z.string(),
+  severity: z.enum(["blocker", "warning"]),
+  slide_index: z.number().nullable().optional(),
+  locale: z.string().nullable().optional(),
+  field: z.string().nullable().optional(),
+  item_list: z.string().nullable().optional(),
+  item_index: z.number().nullable().optional(),
+  item_field: z.string().nullable().optional(),
+});
+
 export type CarouselPhaseProgress = z.infer<typeof carouselPhaseProgressSchema>;
 
 export type CarouselBlogImageMapEntry = z.infer<
@@ -229,3 +245,4 @@ export type CarouselProjectListResponse = z.infer<
 >;
 export type CarouselSlideResponse = z.infer<typeof carouselSlideResponseSchema>;
 export type CarouselCreateRequest = z.infer<typeof carouselCreateRequestSchema>;
+export type SlideFieldViolation = z.infer<typeof slideFieldViolationSchema>;
