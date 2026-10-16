@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
-import ast
 import re
 from collections.abc import Mapping
 from typing import TypedDict
 
+from rag_backend.application.services.carousel.draft_blob_text import (
+    looks_like_object,
+    parse_object_text,
+)
 from rag_backend.application.services.carousel.outline_normalize import (
     OUTLINE_FIELD_TITLE,
     canonical_slide_type,
@@ -135,12 +138,9 @@ def parse_bilingual_draft_blob(raw: object) -> dict[str, object] | None:
     """
     if isinstance(raw, Mapping):
         blob: dict[str, object] = dict(raw)
-    elif isinstance(raw, str) and raw.strip().startswith("{"):
-        try:
-            parsed = ast.literal_eval(raw.strip())
-        except (SyntaxError, ValueError):
-            return None
-        if not isinstance(parsed, dict):
+    elif isinstance(raw, str) and looks_like_object(raw):
+        parsed = parse_object_text(raw)
+        if parsed is None:
             return None
         blob = parsed
     else:
@@ -292,7 +292,7 @@ def _has_valid_presentations(slide: Mapping[str, object]) -> bool:
         return False
     pt_heading = str(presentation_pt.get("heading") or "").strip()
     pt_body = str(presentation_pt.get("body") or "").strip()
-    return not (not pt_heading and pt_body.startswith("{"))
+    return not (not pt_heading and looks_like_object(pt_body))
 
 
 def _resolve_tldr_value(slide: dict[str, object]) -> str | None:
