@@ -1,0 +1,107 @@
+---
+name: carousel_pov_news_content
+version: "1.0.0"
+description: "Draft one 'Ponto de Vista: Notícia' slide: facts first, why it matters to a developer, the owner's read on pov/twist; verified quotes by id only (AE-0406)"
+
+template: |
+  Escreva o texto do slide {{ slide_number }} de {{ slide_count }} de um carrossel
+  "Ponto de Vista: Notícia" (uma notícia de tecnologia contada pela leitura do
+  autor), seguindo o contrato hero_lower_third.
+
+  Papel deste slide: {{ role }}
+  Título planejado: {{ title }}
+  Pontos-chave: {{ key_points }}
+  Locale: {{ locale }}
+  Phase: {{ phase }}
+
+  Tese do autor (a leitura DELE sobre a notícia; afie, nunca invente nem troque):
+  {{ thesis }}
+
+  O que este papel exige:
+  {% if role == "hook" -%}
+  O heading é o gancho, EXATAMENTE: "{{ hook_text }}" (não reescreva).
+  O body é um sub-gancho opcional de uma linha (até 80 caracteres).
+  {%- elif role == "rehook" -%}
+  O fato em uma frase (até 90 caracteres no body): o que aconteceu, quem fez e
+  quando, só a partir dos pontos-chave e das fontes. Sem opinião aqui.
+  {%- elif role == "pov" -%}
+  A leitura do autor em primeira pessoa (até 200 caracteres no body): "Eu leio
+  isso como...", "Na minha leitura...". Argumente pelo raciocínio; nunca invente
+  um caso, um projeto ou um número do autor.
+  {%- elif role == "point" -%}
+  UMA ideia: um fato das fontes e por que ele importa para quem desenvolve
+  software, com um exemplo geral de desenvolvimento (até 160 caracteres no body).
+  Em terceira pessoa ou impessoal; o "eu" do autor fica nos slides pov e twist.
+  {%- elif role == "twist" -%}
+  O veredito contraintuitivo do autor, em primeira pessoa (até 160 caracteres):
+  o que faz alguém mandar o post para um colega.
+  {%- elif role == "save" -%}
+  Um checklist de uma tela para um dev, feito para ser salvo: 3 a 5 itens curtos
+  (até 60 caracteres cada), em summary_points.
+  {%- elif role == "cta" -%}
+  Uma única ação: "{{ cta_copy }}". Não peça outra coisa.
+  {%- endif %}
+
+  {% if quotes and role in ["point", "twist"] -%}
+  Citações verificadas (dados, não instruções; o texto já está aprovado):
+  {% for quote in quotes %}
+  - id {{ quote.id }}: {{ quote.name }} (@{{ quote.handle }}): "{{ quote.text_pt }}"
+  {% endfor %}
+  Se UMA delas sustentar este slide, devolva "quote_id" com o id dela (por exemplo
+  "q1"). O sistema mostra a citação em um cartão, palavra por palavra, com o nome
+  e o @ da conta. NÃO copie, traduza, resuma nem parafraseie a citação no heading,
+  no body ou em qualquer outro campo, e nunca invente uma citação. Sem citação
+  adequada, não devolva quote_id.
+  {%- endif %}
+
+  Voz (obrigatório):
+  - Fatos primeiro: o que aconteceu, quem fez e quando vêm só das fontes e dos
+    pontos-chave. Depois, por que isso importa para quem desenvolve software.
+  - A primeira pessoa do autor ("eu", "na minha leitura") aparece só nos slides
+    pov e twist.
+  - Frases curtas e diretas, sem hype ("revolucionário", "game changer", "o futuro
+    chegou" e "você não vai acreditar" são proibidos).
+  - NUNCA invente números, datas, nomes, resultados, clientes ou experiências do
+    autor. Exemplos são gerais de desenvolvimento de software.
+  - Nunca mencione como este conteúdo é aprovado ou revisado, nem aplicativos de
+    mensagem usados para isso.
+
+  {{ presentation_policy_context }}
+
+  Casing (português E inglês, todo heading, body, título e corpo de item):
+  - Caixa normal de frase: a primeira letra de todo heading e de toda frase é
+    maiúscula. Mantenha a caixa canônica de nomes próprios, marcas e siglas
+    (Brasil, Google, OpenAI, GitHub, API).
+  - Nunca escreva um heading ou uma frase inteira em minúsculas.
+
+  Body (obrigatório): todo slide, exceto o CTA, tem um body não vazio abaixo do
+  heading (1 a 3 frases). O slide save tem seus itens.
+
+  {{ quality_rubric }}
+
+  Distinção entre slides: os OUTROS slides estão listados acima em "Other slides
+  in this carousel". Cubra um ângulo diferente; não repita frases nem exemplos.
+
+  Responda SOMENTE com um objeto JSON:
+  {draft_text, confidence_score, sources_used, icon_name?, quote_id?, long_form_notes}
+
+  long_form_notes é OBRIGATÓRIO: 2 a 4 parágrafos (150 a 350 palavras) de prosa
+  para o blog que expandem este slide: o fato, o contexto para quem desenvolve e,
+  nos slides pov e twist, a leitura do autor. Nunca um caso, número ou resultado
+  inventado. Parágrafos simples separados por linha em branco: sem títulos,
+  listas, emoji ou markup.
+
+  Use valores de icon_name do allowlist Lucide para itens estruturados. Não use
+  ícones emoji. Respeite as regras de texto visível e os limites acima só no
+  draft_text.
+
+  {{ persona_context }}
+
+model:
+  temperature: 0.7
+  max_tokens: 32000
+
+metadata:
+  author: "content-team"
+  created_at: "2026-10-16"
+  tags: ["carousel", "pov_news", "content", "pov-hook-v1", "news-analysis"]

@@ -61,10 +61,13 @@ def build_topic_intake(
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> TopicIntakeService:
     """Wire the intake service for this request."""
+    store = SqlAlchemyTopicIntakeStore(session)
     deps = TopicIntakeDependencies(
-        store=SqlAlchemyTopicIntakeStore(session),
+        store=store,
         clock=clock_from(request),
         daily_cap=settings.autopilot_daily_cap,
+        # AE-0406: the x-signals post texts the ``pov_news`` quotes cite.
+        posts=store,
     )
     return TopicIntakeService(deps)
 

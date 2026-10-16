@@ -13,6 +13,7 @@ from datetime import datetime
 from enum import StrEnum
 from uuid import UUID
 
+from rag_backend.domain.models.news_quote import NewsQuote
 from rag_backend.modules.autopilot.domain.carousel_defaults import DEFAULT_IMAGE_STYLE
 from rag_backend.modules.autopilot.domain.notice_log import NoticeLog
 
@@ -96,6 +97,8 @@ class TopicCandidate:
     # PR #106 review: the scout v3 POV format and slide count (None = default).
     pov_format: str | None = None
     slide_count: int | None = None
+    # AE-0406: the verified quotes of a ``pov_news`` topic (empty otherwise).
+    quotes: tuple[NewsQuote, ...] = ()
 
 
 @dataclass(frozen=True, kw_only=True)

@@ -7,6 +7,7 @@ from typing import TypedDict
 from uuid import UUID, uuid4
 
 from rag_backend.domain.constants import IMAGE_MODEL_DEFAULT, IMAGE_STYLE_DEFAULT
+from rag_backend.domain.models.news_quote import NewsQuote
 
 
 class DesignTokenColors(TypedDict):
@@ -191,6 +192,10 @@ class CarouselProject:
     hook_text: str | None = None
     hook_asset_id: UUID | None = None
     hook_asset_staged_path: str | None = None
+    # AE-0406 (ADR-0023): a ``pov_news`` project's scout-verified quotes and the
+    # topic's sources in order (the caption footer). Create-only.
+    pov_quotes: tuple[NewsQuote, ...] = ()
+    pov_sources: tuple[str, ...] = ()
     # AE-0314: read-only view of the server-guaranteed republish marker. Written
     # ONLY by the write owner (mark/clear); never round-tripped through the ORM
     # ``update_from_entity`` hydrator, so it cannot be clobbered.

@@ -10,14 +10,13 @@ from __future__ import annotations
 from typing import TypedDict
 from uuid import UUID
 
-from rag_backend.domain.constants.content_mode import (
-    CONTENT_MODE_POV,
-    DEFAULT_POV_FORMAT,
-)
+from rag_backend.domain.constants.content_mode import DEFAULT_POV_FORMAT
 from rag_backend.domain.constants.presentation_policy import (
     CREATE_TIME_NEWS_PRESENTATION_POLICY_VERSION,
     CREATE_TIME_POV_PRESENTATION_POLICY_VERSION,
 )
+from rag_backend.domain.content_mode import is_pov_family, is_pov_news
+from rag_backend.domain.models.news_quote import NewsQuote
 from rag_backend.modules.autopilot.constants import (
     SOURCE_FIELD_TITLE,
     SOURCE_FIELD_TYPE,
@@ -38,10 +37,13 @@ class PovFields(TypedDict):
     slide_count: int | None
     hook_asset_id: UUID | None
     persona_id: str | None
+    pov_quotes: tuple[NewsQuote, ...]
+    pov_sources: tuple[str, ...]
 
 
 def _is_pov(spec: ProjectSpec) -> bool:
-    return spec.content_mode == CONTENT_MODE_POV
+    """AE-0406: ``pov`` and ``pov_news`` both build a POV carousel."""
+    return is_pov_family(spec.content_mode)
 
 
 def policy_version_for(spec: ProjectSpec) -> str:
@@ -58,13 +60,19 @@ def pov_fields_for(spec: ProjectSpec) -> PovFields:
             slide_count=None,
             hook_asset_id=None,
             persona_id=spec.persona_id,
+            pov_quotes=(),
+            pov_sources=(),
         )
+    news = is_pov_news(spec.content_mode)
     return PovFields(
         pov_thesis=spec.pov_thesis,
         pov_format=spec.pov_format or DEFAULT_POV_FORMAT,
         slide_count=spec.slide_count,
         hook_asset_id=as_uuid(spec.hook_asset_id),
         persona_id=spec.persona_id,
+        # AE-0406: the verified quotes and the sources of the caption footer.
+        pov_quotes=spec.quotes if news else (),
+        pov_sources=spec.sources if news else (),
     )
 
 

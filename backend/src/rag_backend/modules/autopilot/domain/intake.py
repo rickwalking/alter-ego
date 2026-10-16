@@ -8,36 +8,33 @@ in the application service.
 from __future__ import annotations
 
 from collections.abc import Iterable, Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import cast
 from uuid import UUID, uuid4
 
-from rag_backend.domain.constants.content_mode import (
-    CONTENT_MODE_NEWS_ANALYSIS,
-    CONTENT_MODE_POV,
-)
+from rag_backend.domain.constants.content_mode import CONTENT_MODE_NEWS_ANALYSIS
+from rag_backend.domain.models.news_quote import NewsQuote
 from rag_backend.modules.autopilot.constants import (
     KIND_EXISTING,
     KIND_NEW,
     NO_QUEUE_SLOTS,
     REASON_DAILY_CAP_REACHED,
     REASON_DUPLICATE_TOPIC,
-    REASON_EMPTY_TEXT,
-    REASON_SOURCE_NOT_IN_SIGNALS,
-    REASON_URL_IN_TEXT,
 )
-from rag_backend.modules.autopilot.domain.carousel_defaults import (
-    DEFAULT_IMAGE_STYLE,
-    CarouselText,
-    carousel_reason,
+from rag_backend.modules.autopilot.domain.carousel_defaults import DEFAULT_IMAGE_STYLE
+from rag_backend.modules.autopilot.domain.intake_rules import (
+    Refusal,
+    RuleFacts,
+    TopicFields,
+    refusal_for,
 )
 from rag_backend.modules.autopilot.domain.pov_choice import (
     NO_POV_CHOICE,
     PovChoice,
     pov_choice_for,
 )
+from rag_backend.modules.autopilot.domain.quotes import clean_quote
 from rag_backend.modules.autopilot.domain.topic_text import (
-    contains_url,
     signal_hash,
     strip_controls,
     titles_are_duplicates,
@@ -45,7 +42,6 @@ from rag_backend.modules.autopilot.domain.topic_text import (
 from rag_backend.modules.autopilot.domain.x_status import canonical_url
 from rag_backend.modules.autopilot.pov_constants import (
     MAX_NEWS_RUNS_PER_WEEK,
-    REASON_THESIS_MISSING,
     REASON_WEEKLY_NEWS_CAP,
 )
 
@@ -68,6 +64,9 @@ class ProposalInput:
     content_mode: str = CONTENT_MODE_NEWS_ANALYSIS
     thesis_draft: str | None = None
     pov_choice: PovChoice = NO_POV_CHOICE
+    # AE-0406: the position in the request and the ``pov_news`` quotes.
+    index: int = 0
+    quotes: tuple[NewsQuote, ...] = ()
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -89,11 +88,13 @@ class PreparedProposal:
     content_mode: str = CONTENT_MODE_NEWS_ANALYSIS
     thesis_draft: str | None = None
     pov_choice: PovChoice = NO_POV_CHOICE
+    index: int = 0
+    quotes: tuple[NewsQuote, ...] = ()
 
     @property
     def is_news(self) -> bool:
-        """True for a Radar IA proposal (capped per week)."""
-        return self.content_mode != CONTENT_MODE_POV
+        """True for a Radar IA proposal (capped per week; ``pov_news`` is not)."""
+        return self.content_mode == CONTENT_MODE_NEWS_ANALYSIS
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -107,14 +108,22 @@ class IntakeFacts:
     daily_cap: int
     # AE-0377: Radar IA runs already created this São Paulo week.
     news_runs_this_week: int = 0
+    # AE-0406: canonical status URL -> the post text stored through x-signals.
+    post_texts: Mapping[str, str] = field(default_factory=dict)
 
 
 @dataclass(frozen=True, kw_only=True)
 class TopicRejection:
-    """One proposal the response lists under ``rejected``."""
+    """One proposal the response lists under ``rejected``.
+
+    AE-0406: ``index`` is its position in the request; ``field`` names the
+    field that caused it, when one did.
+    """
 
     title: str
     reason: str
+    index: int = 0
+    field: str | None = None
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -140,7 +149,7 @@ class _Classified:
     proposal: PreparedProposal
     kind: str
     candidate_id: UUID | None
-    reason: str | None
+    refusal: Refusal | None
 
 
 def prepare(proposal: ProposalInput) -> PreparedProposal:
@@ -165,6 +174,8 @@ def prepare(proposal: ProposalInput) -> PreparedProposal:
         content_mode=proposal.content_mode,
         thesis_draft=_optional_text(proposal.thesis_draft),
         pov_choice=pov_choice_for(proposal.content_mode, proposal.pov_choice),
+        index=proposal.index,
+        quotes=tuple(clean_quote(quote) for quote in proposal.quotes),
     )
 
 
@@ -199,13 +210,13 @@ def _classify(
     facts: IntakeFacts,
     known: Mapping[str, UUID],
 ) -> _Classified:
-    reason = _rejection_reason(proposal, facts)
-    if reason is not None:
+    refusal = _refusal(proposal, facts)
+    if refusal is not None:
         return _Classified(
             proposal=proposal,
             kind=KIND_NEW,
             candidate_id=None,
-            reason=reason,
+            refusal=refusal,
         )
     existing = known.get(proposal.signal_hash)
     if existing is not None:
@@ -213,72 +224,41 @@ def _classify(
             proposal=proposal,
             kind=KIND_EXISTING,
             candidate_id=existing,
-            reason=None,
+            refusal=None,
         )
     if _matches_recent_topic(proposal.title, facts.carousel_topics):
         return _Classified(
             proposal=proposal,
             kind=KIND_NEW,
             candidate_id=None,
-            reason=REASON_DUPLICATE_TOPIC,
+            refusal=Refusal(reason=REASON_DUPLICATE_TOPIC),
         )
     return _Classified(
         proposal=proposal,
         kind=KIND_NEW,
         candidate_id=uuid4(),
-        reason=None,
+        refusal=None,
     )
 
 
-def _rejection_reason(proposal: PreparedProposal, facts: IntakeFacts) -> str | None:
-    if _is_blank(proposal):
-        return REASON_EMPTY_TEXT
-    if _text_has_url(proposal):
-        return REASON_URL_IN_TEXT
-    if _missing_source(proposal, facts.allowlist):
-        return REASON_SOURCE_NOT_IN_SIGNALS
-    if not proposal.is_news and not proposal.thesis_draft:
-        # AE-0377: a POV topic needs the scout's draft thesis.
-        return REASON_THESIS_MISSING
-    return carousel_reason(_carousel_text(proposal))
-
-
-def _carousel_text(proposal: PreparedProposal) -> CarouselText:
-    return CarouselText(
-        title=proposal.title,
-        audience=proposal.audience,
-        niche=proposal.niche,
-        brief=proposal.brief,
-        image_style=proposal.image_style,
+def _refusal(proposal: PreparedProposal, facts: IntakeFacts) -> Refusal | None:
+    return refusal_for(
+        TopicFields(
+            title=proposal.title,
+            angle=proposal.angle,
+            why_viral=proposal.why_viral,
+            audience=proposal.audience,
+            niche=proposal.niche,
+            brief=proposal.brief,
+            sources=proposal.sources,
+            image_style=proposal.image_style,
+            image_guidance=proposal.image_guidance,
+            content_mode=proposal.content_mode,
+            thesis_draft=proposal.thesis_draft,
+            quotes=proposal.quotes,
+        ),
+        RuleFacts(allowlist=facts.allowlist, post_texts=facts.post_texts),
     )
-
-
-def _free_text(proposal: PreparedProposal) -> tuple[str, ...]:
-    return (
-        proposal.title,
-        proposal.angle,
-        proposal.why_viral,
-        proposal.audience,
-        proposal.niche,
-        proposal.brief,
-    )
-
-
-def _is_blank(proposal: PreparedProposal) -> bool:
-    return any(text == "" for text in _free_text(proposal))
-
-
-def _text_has_url(proposal: PreparedProposal) -> bool:
-    texts = (
-        *_free_text(proposal),
-        proposal.image_guidance or "",
-        proposal.thesis_draft or "",
-    )
-    return any(contains_url(text) for text in texts)
-
-
-def _missing_source(proposal: PreparedProposal, allowlist: frozenset[str]) -> bool:
-    return any(source not in allowlist for source in proposal.sources)
 
 
 def _matches_recent_topic(title: str, topics: tuple[str, ...]) -> bool:
@@ -313,10 +293,8 @@ def _finish(rows: list[_Classified], facts: IntakeFacts) -> IntakePlan:
 
 
 def _collect_row(row: _Classified, buckets: _Buckets) -> None:
-    if row.reason is not None:
-        buckets.rejected.append(
-            TopicRejection(title=_rejection_title(row.proposal), reason=row.reason)
-        )
+    if row.refusal is not None:
+        buckets.rejected.append(rejection(row.proposal, row.refusal))
         return
     if row.candidate_id is None or row.candidate_id in buckets.seen:
         return
@@ -324,6 +302,16 @@ def _collect_row(row: _Classified, buckets: _Buckets) -> None:
     buckets.accepted.append(row.candidate_id)
     if row.kind == KIND_NEW:
         buckets.fresh.append(row)
+
+
+def rejection(proposal: PreparedProposal, refusal: Refusal) -> TopicRejection:
+    """The response row for a refused proposal (title, index and field)."""
+    return TopicRejection(
+        title=_rejection_title(proposal),
+        reason=refusal.reason,
+        index=proposal.index,
+        field=refusal.field,
+    )
 
 
 def _rejection_title(proposal: PreparedProposal) -> str:
@@ -350,7 +338,10 @@ def _ids_to_queue(fresh: list[_Classified], facts: IntakeFacts) -> frozenset[UUI
 def _within_news_cap(
     ranked: list[_Classified], facts: IntakeFacts
 ) -> list[_Classified]:
-    """AE-0377: queue at most the week's remaining Radar IA runs (POV is free)."""
+    """AE-0377: queue at most the week's remaining Radar IA runs (POV is free).
+
+    AE-0406: ``pov_news`` is POV here: it counts toward the daily cap only.
+    """
     news_left = MAX_NEWS_RUNS_PER_WEEK - facts.news_runs_this_week
     kept: list[_Classified] = []
     for row in ranked:
@@ -371,10 +362,7 @@ def _required_ids(rows: list[_Classified]) -> list[UUID]:
 
 
 def _rejections(rows: Iterable[_Classified], reason: str) -> list[TopicRejection]:
-    return [
-        TopicRejection(title=_rejection_title(row.proposal), reason=reason)
-        for row in rows
-    ]
+    return [rejection(row.proposal, Refusal(reason=reason)) for row in rows]
 
 
 def _weekly_cap_rejections(

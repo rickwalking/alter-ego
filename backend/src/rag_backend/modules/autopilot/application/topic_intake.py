@@ -6,7 +6,7 @@ post of the same signal hash does not create another run.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from uuid import UUID, uuid4
 
@@ -36,6 +36,11 @@ from rag_backend.modules.autopilot.domain.ports import (
     TopicIntakeStore,
 )
 from rag_backend.modules.autopilot.domain.pov_schedule import sao_paulo_week
+from rag_backend.modules.autopilot.domain.quotes import quote_urls
+from rag_backend.modules.autopilot.domain.scout_ports import (
+    XPostLookup,
+    XPostTextReader,
+)
 from rag_backend.modules.autopilot.domain.topic_text import (
     carousel_topic_cutoff,
     sao_paulo_day,
@@ -45,6 +50,16 @@ from rag_backend.modules.autopilot.domain.topic_text import (
 logger = structlog.get_logger()
 
 
+class _NoStoredPosts:
+    """No x-signals reader wired: every quote fails ``quote_source_invalid``."""
+
+    @staticmethod
+    async def x_post_texts(query: XPostLookup) -> dict[str, str]:
+        """Nothing is known."""
+        del query
+        return {}
+
+
 @dataclass(frozen=True, kw_only=True)
 class TopicIntakeDependencies:
     """Collaborators for one intake call. One object keeps the constructor small."""
@@ -52,6 +67,8 @@ class TopicIntakeDependencies:
     store: TopicIntakeStore
     clock: Clock
     daily_cap: int
+    # AE-0406: the stored x-signals post texts that ``pov_news`` quotes cite.
+    posts: XPostTextReader = field(default_factory=_NoStoredPosts)
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -101,18 +118,32 @@ class TopicIntakeService:
         known_hashes = await store.ids_for_hashes(HashLookup(hashes=hashes))
         topics = await store.carousel_topics_since(carousel_topic_cutoff(now))
         runs_today = await store.runs_created_between(DayWindow(start=start, end=end))
-        week_start, week_end = sao_paulo_week(now)
-        news_week = await store.news_runs_created_between(
-            DayWindow(start=week_start, end=week_end)
-        )
         return IntakeFacts(
             allowlist=allowlist,
             known_hashes=known_hashes,
             carousel_topics=topics,
             runs_today=runs_today,
             daily_cap=self._deps.daily_cap,
-            news_runs_this_week=news_week,
+            news_runs_this_week=await self._news_runs_this_week(now),
+            post_texts=await self._post_texts(prepared),
         )
+
+    async def _news_runs_this_week(self, now: datetime) -> int:
+        week_start, week_end = sao_paulo_week(now)
+        return await self._deps.store.news_runs_created_between(
+            DayWindow(start=week_start, end=week_end)
+        )
+
+    async def _post_texts(
+        self, prepared: tuple[PreparedProposal, ...]
+    ) -> dict[str, str]:
+        """AE-0406: the stored posts the batch's quotes cite (no read without)."""
+        urls = tuple(
+            dict.fromkeys(url for item in prepared for url in quote_urls(item.quotes))
+        )
+        if not urls:
+            return {}
+        return await self._deps.posts.x_post_texts(XPostLookup(urls=urls))
 
     async def _stored(self, plan: IntakePlan) -> IntakePlan:
         """Insert new candidates. A hash a concurrent batch won is a duplicate."""
@@ -177,11 +208,16 @@ def _candidate(item: NewCandidate) -> TopicCandidate:
         thesis_draft=proposal.thesis_draft,
         pov_format=proposal.pov_choice.pov_format,
         slide_count=proposal.pov_choice.slide_count,
+        quotes=proposal.quotes,
     )
 
 
 def _duplicate(item: NewCandidate) -> TopicRejection:
-    return TopicRejection(title=item.proposal.title, reason=REASON_DUPLICATE_TOPIC)
+    return TopicRejection(
+        title=item.proposal.title,
+        reason=REASON_DUPLICATE_TOPIC,
+        index=item.proposal.index,
+    )
 
 
 def _score(item: NewCandidate) -> int:

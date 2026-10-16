@@ -25,11 +25,12 @@ from rag_backend.application.services.carousel_template.cta_copy import cta_copy
 from rag_backend.domain.constants.carousel import LANGUAGE_PT
 from rag_backend.domain.constants.carousel_cta import DEFAULT_CTA_HANDLE
 from rag_backend.domain.constants.content_mode import (
-    CONTENT_MODE_POV,
     DEFAULT_CONTENT_MODE,
     DEFAULT_POV_FORMAT,
 )
+from rag_backend.domain.content_mode import is_pov_family, pov_prompt_domain
 from rag_backend.domain.models import CarouselProject
+from rag_backend.domain.models.news_quote import NewsQuote
 
 logger = structlog.get_logger(__name__)
 
@@ -48,11 +49,18 @@ class ContentModeBrief:
     cta_goal: str | None = None
     hook_text: str = ""
     creator_handle: str = DEFAULT_CTA_HANDLE
+    # AE-0406: the scout-verified quotes of a ``pov_news`` project.
+    quotes: tuple[NewsQuote, ...] = ()
 
     @property
     def is_pov(self) -> bool:
-        """True for a "Ponto de Vista" project."""
-        return self.content_mode == CONTENT_MODE_POV
+        """True for a POV-family project (``pov`` and ``pov_news``)."""
+        return is_pov_family(self.content_mode)
+
+    @property
+    def prompt_domain(self) -> str:
+        """AE-0406: the POV prompt family that voices this project."""
+        return pov_prompt_domain(self.content_mode)
 
     @property
     def has_roles(self) -> bool:
@@ -82,6 +90,7 @@ def brief_for_project(project: CarouselProject) -> ContentModeBrief:
         cta_goal=project.cta_goal,
         hook_text=project.hook_text or "",
         creator_handle=project.creator_handle or DEFAULT_CTA_HANDLE,
+        quotes=project.pov_quotes,
     )
 
 

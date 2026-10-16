@@ -6,6 +6,7 @@ scout field (v3 ``pov_format`` / ``slide_count``) is mapped once.
 
 from __future__ import annotations
 
+from rag_backend.domain.models.news_quote import quote_rows, quotes_from_rows
 from rag_backend.modules.autopilot.domain.models import TopicCandidate
 from rag_backend.modules.autopilot.infrastructure.models import TopicCandidateModel
 
@@ -30,6 +31,7 @@ def topic_row(candidate: TopicCandidate) -> TopicCandidateModel:
         thesis_draft=candidate.thesis_draft,
         pov_format=candidate.pov_format,
         slide_count=candidate.slide_count,
+        quotes=_quote_column(candidate),
     )
 
 
@@ -53,7 +55,15 @@ def topic_from_row(row: TopicCandidateModel) -> TopicCandidate:
         thesis_draft=row.thesis_draft,
         pov_format=row.pov_format,
         slide_count=row.slide_count,
+        quotes=quotes_from_rows(row.quotes),
     )
+
+
+def _quote_column(candidate: TopicCandidate) -> list[dict[str, str]] | None:
+    """AE-0406: the quotes as JSON rows; NULL when the topic has none."""
+    if not candidate.quotes:
+        return None
+    return quote_rows(candidate.quotes)
 
 
 __all__ = ["topic_from_row", "topic_row"]

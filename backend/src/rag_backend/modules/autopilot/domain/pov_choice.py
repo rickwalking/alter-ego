@@ -11,10 +11,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from rag_backend.domain.constants.content_mode import (
-    CONTENT_MODE_POV,
+    CONTENT_MODE_POV_NEWS,
     DEFAULT_POV_FORMAT,
     POV_SLIDE_COUNT_DEFAULT,
 )
+from rag_backend.domain.content_mode import is_pov_family
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -29,9 +30,14 @@ NO_POV_CHOICE = PovChoice()
 
 
 def pov_choice_for(content_mode: str | None, choice: PovChoice) -> PovChoice:
-    """The choice a topic stores: empty for a Radar IA topic."""
-    if content_mode != CONTENT_MODE_POV:
+    """The choice a topic stores: empty for a Radar IA topic.
+
+    AE-0406: ``pov_news`` keeps the slide count and ignores the format.
+    """
+    if not is_pov_family(content_mode):
         return NO_POV_CHOICE
+    if content_mode == CONTENT_MODE_POV_NEWS:
+        return PovChoice(slide_count=choice.slide_count)
     return choice
 
 

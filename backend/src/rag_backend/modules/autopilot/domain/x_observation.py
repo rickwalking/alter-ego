@@ -17,6 +17,7 @@ from rag_backend.modules.autopilot.constants import (
     REASON_NOT_STATUS_URL,
     REASON_STALE_STATUS,
 )
+from rag_backend.modules.autopilot.domain.quote_text import spaced
 from rag_backend.modules.autopilot.domain.signals import SignalSource, ensure_utc
 from rag_backend.modules.autopilot.domain.snowflake import posted_at_from_snowflake
 from rag_backend.modules.autopilot.domain.topic_text import strip_controls
@@ -115,7 +116,9 @@ def classify_post(
     target = parse_status_url(cleaned_url)
     if target is None:
         return _reject(cleaned_url, REASON_NOT_STATUS_URL)
-    text = strip_controls(post.text)
+    # AE-0406: line breaks become spaces before control characters are
+    # dropped, so "a\nb" is stored as "a b" (a quote excerpt can span it).
+    text = strip_controls(spaced(post.text))
     if text == "":
         return _reject(cleaned_url, REASON_EMPTY_TEXT)
     reason = _handle_problem(strip_controls(post.handle), target.handle)

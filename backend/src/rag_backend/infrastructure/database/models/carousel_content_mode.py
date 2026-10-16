@@ -9,7 +9,7 @@ from __future__ import annotations
 from typing import TypedDict
 from uuid import UUID
 
-from sqlalchemy import ForeignKey, Integer, String
+from sqlalchemy import JSON, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from rag_backend.domain.constants.content_mode import (
@@ -21,6 +21,11 @@ from rag_backend.domain.constants.content_mode import (
     POV_THESIS_MAX_CHARS,
 )
 from rag_backend.domain.models import CarouselProject
+from rag_backend.domain.models.news_quote import (
+    NewsQuote,
+    quote_rows,
+    quotes_from_rows,
+)
 
 FK_HOOK_ASSET = "fk_carousel_projects_hook_asset"
 _ASSET_FK = "carousel_creator_assets.id"
@@ -39,6 +44,8 @@ class ContentModeFields(TypedDict):
     cta_goal: str | None
     hook_text: str | None
     hook_asset_id: UUID | None
+    pov_quotes: tuple[NewsQuote, ...]
+    pov_sources: tuple[str, ...]
 
 
 class CarouselContentModeColumns:
@@ -68,6 +75,9 @@ class CarouselContentModeColumns:
         ForeignKey(_ASSET_FK, name=FK_HOOK_ASSET, ondelete=_FK_SET_NULL),
         nullable=True,
     )
+    # AE-0406 (ADR-0023): ``pov_news`` quotes and the topic sources (NULL = none).
+    pov_quotes: Mapped[list[dict[str, str]] | None] = mapped_column(JSON, nullable=True)
+    pov_sources: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
 
     def content_mode_fields(self) -> ContentModeFields:
         """The entity keyword arguments for these columns."""
@@ -80,6 +90,8 @@ class CarouselContentModeColumns:
             cta_goal=self.cta_goal,
             hook_text=self.hook_text,
             hook_asset_id=UUID(self.hook_asset_id) if self.hook_asset_id else None,
+            pov_quotes=quotes_from_rows(self.pov_quotes),
+            pov_sources=_source_list(self.pov_sources),
         )
 
     def write_content_mode(self, entity: CarouselProject) -> None:
@@ -90,12 +102,20 @@ class CarouselContentModeColumns:
         self.pov_format = entity.pov_format
         self.slide_count = entity.slide_count
         self.cta_goal = entity.cta_goal
+        self.pov_quotes = quote_rows(entity.pov_quotes) or None
+        self.pov_sources = list(entity.pov_sources) or None
         self.write_owner_edits(entity)
 
     def write_owner_edits(self, entity: CarouselProject) -> None:
         """Copy only the owner-editable fields (update): hook text and photo."""
         self.hook_text = entity.hook_text
         self.hook_asset_id = str(entity.hook_asset_id) if entity.hook_asset_id else None
+
+
+def _source_list(raw: object) -> tuple[str, ...]:
+    if not isinstance(raw, list):
+        return ()
+    return tuple(item for item in raw if isinstance(item, str))
 
 
 __all__ = ["CarouselContentModeColumns", "ContentModeFields"]

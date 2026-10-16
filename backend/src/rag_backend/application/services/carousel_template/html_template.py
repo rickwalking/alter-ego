@@ -12,6 +12,7 @@ from rag_backend.application.services.carousel_template.helpers import (
 )
 from rag_backend.application.services.carousel_template.role_layouts import (
     pov_slide_strategies,
+    quote_card_strategy,
 )
 from rag_backend.application.services.carousel_template.slides import (
     _render_closing_slide,
@@ -195,8 +196,10 @@ def build_carousel_html(
         is_first_or_last = slide["number"] in {_FIRST_SLIDE_NUMBER, str(total_slides)}
 
         if strategy_registry is not None:
-            effective_strategy = role_layouts.get(int(slide["number"])) or (
-                strategy_name or project.slide_layout_strategy
+            effective_strategy = (
+                quote_card_strategy(project, slide)
+                or role_layouts.get(int(slide["number"]))
+                or (strategy_name or project.slide_layout_strategy)
             )
             strategy = strategy_registry.find_for_slide(
                 slide_type,

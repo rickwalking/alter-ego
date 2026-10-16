@@ -14,6 +14,7 @@ from rag_backend.agents.input_sanitizer import (
 )
 from rag_backend.agents.llm_json_retry import JsonRetryPolicy, ainvoke_json
 from rag_backend.agents.persona_agent import PersonaAgent
+from rag_backend.agents.pov_quote_context import quote_prompt_rows
 from rag_backend.agents.prompts.registry import render_prompt
 from rag_backend.application.services.carousel.instruction_context_loader import (
     CarouselInstructionContextLoader,
@@ -30,7 +31,6 @@ from rag_backend.domain.constants.carousel import CAROUSEL_PROMPT_VERSION_V6
 from rag_backend.domain.constants.carousel_workflow import PHASE_CONTENT
 from rag_backend.domain.constants.pov_prompts import (
     POV_PROMPT_CONTENT,
-    POV_PROMPT_DOMAIN,
     POV_PROMPT_VERSION,
     RADAR_PROMPT_CONTENT,
     RADAR_PROMPT_DOMAIN,
@@ -49,6 +49,8 @@ from rag_backend.infrastructure.logging import get_logger
 logger = get_logger()
 
 LOG_LONG_FORM_NOTES_MISSING = "content_draft.long_form_notes_missing"
+# AE-0406: a ``pov_news`` slide may pick a verified quote by id (never its text).
+DRAFT_QUOTE_ID_KEY = "quote_id"
 _MODEL_CFG_TEMPERATURE = "temperature"
 _MODEL_CFG_MAX_TOKENS = "max_tokens"
 _BINDABLE_MODEL_KEYS = (_MODEL_CFG_TEMPERATURE, _MODEL_CFG_MAX_TOKENS)
@@ -89,7 +91,7 @@ def _render_content_prompt(
             version=RADAR_PROMPT_VERSION,
         )
     return render_prompt(
-        POV_PROMPT_DOMAIN,
+        pov.pov.prompt_domain,
         POV_PROMPT_CONTENT,
         variables={
             **variables,
@@ -100,6 +102,7 @@ def _render_content_prompt(
             "pov_format": pov.pov.pov_format,
             "hook_text": sanitize_model_copy(pov.hook_text),
             "cta_copy": pov.cta_copy,
+            "quotes": quote_prompt_rows(pov.pov.quotes),
         },
         version=POV_PROMPT_VERSION,
     )
@@ -266,6 +269,9 @@ class ContentDraftAgent:
             }
         except (TypeError, ValueError) as exc:
             raise ValueError(ERR_INVALID_JSON) from exc
+        quote_id = data.get(DRAFT_QUOTE_ID_KEY)
+        if isinstance(quote_id, str) and quote_id.strip():
+            draft[DRAFT_QUOTE_ID_KEY] = quote_id.strip()
         icon_name = data.get("icon_name")
         if isinstance(icon_name, str) and icon_name.strip():
             draft["icon_name"] = icon_name.strip()

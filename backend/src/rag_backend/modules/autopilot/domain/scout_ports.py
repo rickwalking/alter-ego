@@ -33,6 +33,21 @@ class XSignalStore(Protocol):
         ...
 
 
+@dataclass(frozen=True, kw_only=True)
+class XPostLookup:
+    """AE-0406: canonical status URLs whose stored post text a quote cites."""
+
+    urls: tuple[str, ...]
+
+
+class XPostTextReader(Protocol):
+    """Reads the post text stored through ``POST /x-signals`` (AE-0406)."""
+
+    async def x_post_texts(self, query: XPostLookup) -> dict[str, str]:
+        """Map each stored URL of ``query`` to its post text (unknown ones left out)."""
+        ...
+
+
 class StatusSender(Protocol):
     """Sends one owner status message. AE-0355's notifier implements this."""
 

@@ -1,7 +1,8 @@
 """ "Ponto de Vista" outline and hook candidates for ``OutlineAgent`` (AE-0375).
 
 A mixin so ``outline_agent.py`` stays small and the editorial generators keep
-importing a single agent module. Prompts live in ``carousel_pov/v1``; the model
+importing a single agent module. Prompts live in ``carousel_pov/v1`` (and, for
+``pov_news``, ``carousel_pov_news/v1``, AE-0406: ``PovThesis.prompt_domain``); the model
 may sharpen the owner's thesis, never invent it. Roles are NOT trusted from the
 model: the caller stamps them by position from the contract afterwards.
 """
@@ -16,12 +17,12 @@ from langchain_core.language_models import BaseChatModel
 from rag_backend.agents.input_sanitizer import sanitize_llm_input
 from rag_backend.agents.llm_json_retry import JsonRetryPolicy, ainvoke_json
 from rag_backend.agents.pov_persona_context import pov_persona_context
+from rag_backend.agents.pov_quote_context import quote_prompt_rows
 from rag_backend.agents.prompts.registry import render_prompt
 from rag_backend.domain.constants.ai_agents import ERR_INVALID_JSON
 from rag_backend.domain.constants.carousel_workflow import PHASE_OUTLINE
 from rag_backend.domain.constants.pov_prompts import (
     HOOK_CANDIDATE_COUNT,
-    POV_PROMPT_DOMAIN,
     POV_PROMPT_HOOK,
     POV_PROMPT_OUTLINE,
     POV_PROMPT_VERSION,
@@ -55,6 +56,7 @@ def _thesis_variables(pov: PovThesis) -> dict[str, object]:
         "thesis": sanitize_llm_input(pov.thesis),
         "personal_proof": sanitize_llm_input(pov.personal_proof),
         "pov_format": pov.pov_format,
+        "quotes": quote_prompt_rows(pov.quotes),
     }
 
 
@@ -96,7 +98,7 @@ class PovOutlineMixin:
     ) -> list[dict[str, object]]:
         """Plan the POV deck in the contract's role order."""
         prompt, _ = render_prompt(
-            POV_PROMPT_DOMAIN,
+            request.pov.prompt_domain,
             POV_PROMPT_OUTLINE,
             variables={
                 **_thesis_variables(request.pov),
@@ -128,7 +130,7 @@ class PovOutlineMixin:
     async def hook_candidates(self: _AgentState, request: PovHookRequest) -> list[str]:
         """Five slide-1 hooks, one per formula, from the owner's thesis."""
         prompt, _ = render_prompt(
-            POV_PROMPT_DOMAIN,
+            request.pov.prompt_domain,
             POV_PROMPT_HOOK,
             variables={
                 **_thesis_variables(request.pov),

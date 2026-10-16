@@ -27,7 +27,7 @@ from rag_backend.application.services.carousel.presentation_policy_types import 
 from rag_backend.application.services.carousel.workflow_state import (
     CarouselWorkflowState,
 )
-from rag_backend.domain.constants.content_mode import CONTENT_MODE_POV
+from rag_backend.domain.content_mode import is_pov_family
 from rag_backend.domain.models.persona import PersonaProfile
 from rag_backend.modules.editorial.domain.models import CarouselProject, CarouselSlide
 from rag_backend.modules.editorial.domain.ports import CarouselRepository
@@ -233,9 +233,9 @@ class CarouselAutomationAcl:
         return build_start_input(start, persona)
 
     async def is_pov(self, project_id: str) -> bool:
-        """True for a "Ponto de Vista" carousel (voice must be scored)."""
+        """True for a POV-family carousel (voice must be scored, AE-0406)."""
         project = await self.load_project(project_id)
-        return project is not None and project.content_mode == CONTENT_MODE_POV
+        return project is not None and is_pov_family(project.content_mode)
 
     async def load_project(self, project_id: str) -> CarouselProject | None:
         """The carousel entity, or None when the id is unknown."""

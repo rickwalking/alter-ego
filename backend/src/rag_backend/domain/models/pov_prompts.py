@@ -9,6 +9,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+from rag_backend.domain.constants.pov_prompts import POV_PROMPT_DOMAIN
+from rag_backend.domain.models.news_quote import NewsQuote
 from rag_backend.domain.models.persona import PersonaProfile
 
 
@@ -19,6 +21,10 @@ class PovThesis:
     thesis: str
     personal_proof: str = ""
     pov_format: str = ""
+    # AE-0406: the prompt family (``carousel_pov`` or ``carousel_pov_news``)
+    # and, for ``pov_news``, the verified quotes the content may place by id.
+    prompt_domain: str = POV_PROMPT_DOMAIN
+    quotes: tuple[NewsQuote, ...] = ()
 
 
 @dataclass(frozen=True, kw_only=True)

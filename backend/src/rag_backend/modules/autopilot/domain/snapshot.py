@@ -65,7 +65,7 @@ def assemble_snapshot(parts: SnapshotParts) -> GateSnapshot:
         parked=parts.parked,
         parked_overdue=parts.parked_overdue,
         hero_images_total=parts.hero_images_total,
-        quality_violations=_quality(state, phase),
+        quality_violations=_quality(state, phase) + _quotes(parts, phase),
         pov=parts.pov,
     )
 
@@ -126,6 +126,13 @@ def _quality(state: Mapping[str, object], phase: str) -> tuple[QualityViolation,
     if report_field is None:
         return ()
     return quality_violations(state.get(report_field), state)
+
+
+def _quotes(parts: SnapshotParts, phase: str) -> tuple[QualityViolation, ...]:
+    """AE-0406: quote cards are content; they block only the content gate."""
+    if phase != GATE_CONTENT:
+        return ()
+    return parts.quote_violations
 
 
 def _phrase_scan(state: Mapping[str, object]) -> tuple[str, ...]:

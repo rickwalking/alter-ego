@@ -39,8 +39,10 @@ from rag_backend.domain.constants.carousel_workflow import (
     DEFAULT_CONTENT_DRAFT_CONCURRENCY,
     SOURCE_TYPE_DOCUMENT,
 )
+from rag_backend.domain.content_mode import is_pov_news
 from rag_backend.domain.models.persona import PersonaProfile
 from rag_backend.domain.models.pov_prompts import SlidePolicyContext
+from rag_backend.domain.news_quote_cards import place_quote_cards
 
 from .editorial_workflow_support import EditorialWorkflowStartInput
 
@@ -280,7 +282,16 @@ async def generate_slide_drafts(
         [partial(runner.draft_at, index) for index in range(len(params.outline))],
         params.concurrency,
     )
-    return await _redraft_duplicates(runner, drafts)
+    return _with_quote_cards(await _redraft_duplicates(runner, drafts), params.mode)
+
+
+def _with_quote_cards(
+    drafts: list[dict[str, object]], mode: ContentModeBrief | None
+) -> list[dict[str, object]]:
+    """AE-0406: ``pov_news`` slides get their verified quote cards (by id)."""
+    if mode is None or not is_pov_news(mode.content_mode):
+        return drafts
+    return place_quote_cards(drafts, mode.quotes)
 
 
 def build_slide_draft_retry(

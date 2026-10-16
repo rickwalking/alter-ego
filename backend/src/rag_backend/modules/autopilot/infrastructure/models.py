@@ -128,6 +128,10 @@ class TopicCandidateModel(AutopilotOrmBase):
         String(POV_FORMAT_MAX_CHARS), nullable=True
     )
     slide_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    # AE-0406: the verified ``pov_news`` quotes (NULL = none).
+    quotes: Mapped[list[dict[str, str]] | None] = mapped_column(
+        _JSON_DOCUMENT, nullable=True
+    )
 
     __table_args__ = (UniqueConstraint("signal_hash", name=UQ_TOPIC_SIGNAL_HASH),)
 
