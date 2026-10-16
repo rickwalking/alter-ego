@@ -30,13 +30,13 @@ from rag_backend.domain.constants.presentation_roles import (
 )
 from rag_backend.domain.models import CarouselProject
 
-INSIGHT_QUOTE_STRATEGY = "insight_quote"
 # ``point`` slides keep the format's layout (``slide_layout_strategy``).
 POV_ROLE_STRATEGIES: dict[str, str] = {
     ROLE_HOOK: hook_face.HOOK_FACE_STRATEGY,
     ROLE_REHOOK: statement.STATEMENT_STRATEGY,
     ROLE_POV: statement.STATEMENT_STRATEGY,
-    ROLE_TWIST: INSIGHT_QUOTE_STRATEGY,
+    # AE-0394: the twist has no artwork in the contract (image_required: false).
+    ROLE_TWIST: statement.STATEMENT_STRATEGY,
     ROLE_SAVE: save_checklist.SAVE_CHECKLIST_STRATEGY,
     ROLE_CTA: cta_follow.CTA_FOLLOW_STRATEGY,
 }
@@ -58,4 +58,4 @@ def pov_slide_strategies(project: CarouselProject, total_slides: int) -> dict[in
     }
 
 
-__all__ = ["INSIGHT_QUOTE_STRATEGY", "POV_ROLE_STRATEGIES", "pov_slide_strategies"]
+__all__ = ["POV_ROLE_STRATEGIES", "pov_slide_strategies"]

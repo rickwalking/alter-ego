@@ -73,23 +73,42 @@ def get_pov_slide_css(_theme: dict[str, str]) -> str:
     max-width: 58%;
     margin: 14px 0 0;
   }
+  /* AE-0394: the owner's photo fills slide 1; a scrim fades its top into the
+     background so the hook reads over it. A transparent cut-out still sits
+     on the .pov-solid texture. */
   .pov-hook-photo {
     position: absolute;
-    right: 0;
-    bottom: 0;
-    width: 58%;
-    height: 72%;
+    inset: 0;
+    width: 100%;
+    height: 100%;
     z-index: 1;
-    display: flex;
-    align-items: flex-end;
-    justify-content: flex-end;
   }
   .pov-hook-photo img {
-    max-width: 100%;
-    max-height: 100%;
-    object-fit: contain;
-    object-position: right bottom;
+    width: 100%;
+    height: 100%;
+    max-width: none;
+    max-height: none;
+    object-fit: cover;
+    object-position: center 40%;
     display: block;
+  }
+  .pov-hook-photo::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--bg) 92%, transparent) 0%,
+      color-mix(in srgb, var(--bg) 55%, transparent) 26%,
+      transparent 44%,
+      transparent 78%,
+      color-mix(in srgb, var(--bg) 55%, transparent) 100%
+    );
+  }
+  [data-layout="pov-hook"] .pov-hook-heading { max-width: 92%; }
+  [data-layout="pov-hook"] .pov-hook-sub {
+    max-width: 70%;
+    color: var(--text-80, var(--text));
   }
   .pov-checklist {
     list-style: none;
