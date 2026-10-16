@@ -8,12 +8,14 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import DateTime, Integer, String
+from sqlalchemy import JSON, DateTime, Integer, String
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from rag_backend.modules.autopilot.constants import IG_IDENTIFIER_LENGTH
 from rag_backend.modules.autopilot.infrastructure.models import AutopilotOrmBase
 from rag_backend.modules.autopilot.insights_constants import TABLE_POST_INSIGHTS
+from rag_backend.modules.autopilot.recommend_constants import TABLE_AUDIENCE_HOURS
 
 
 class InstagramPostInsightsModel(AutopilotOrmBase):
@@ -36,4 +38,28 @@ class InstagramPostInsightsModel(AutopilotOrmBase):
     )
 
 
-__all__ = ["InstagramPostInsightsModel"]
+class InstagramAudienceHoursModel(AutopilotOrmBase):
+    """The cached ``online_followers`` of one account (AE-0404).
+
+    ``online_followers`` maps the UTC hour (``"0"``-``"23"``) to followers
+    online. ``checked_at`` is the last Graph attempt; ``fetched_at`` the last
+    success (None until one succeeds).
+    """
+
+    __tablename__ = TABLE_AUDIENCE_HOURS
+
+    ig_user_id: Mapped[str] = mapped_column(
+        String(IG_IDENTIFIER_LENGTH), primary_key=True
+    )
+    online_followers: Mapped[dict[str, int]] = mapped_column(
+        JSON().with_variant(JSONB(), "postgresql"), nullable=False
+    )
+    checked_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+    fetched_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
+
+__all__ = ["InstagramAudienceHoursModel", "InstagramPostInsightsModel"]

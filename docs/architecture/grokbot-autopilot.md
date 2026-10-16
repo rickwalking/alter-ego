@@ -192,7 +192,7 @@ both callers take a compare-and-set publish claim first.
 | `awaiting_thesis` | `queued` / `rejected` / `expired` | owner confirms or edits the thesis / owner discards the topic / 72 h (AE-0377) |
 | `generating` | `awaiting_owner` / `escalated` / `failed` | gates auto-approved to final_review / check failed after retries / workflow failed |
 | `awaiting_owner` | `publishing` / `scheduled` / `reworking` / `rejected` / `expired` | Publicar agora / Agendar (AE-0370) / Rework / Reject / 72 h |
-| `scheduled` | `publishing` / `awaiting_owner` / `expired` | `scheduled_at` is due, or Publicar agora / Cancelar agendamento / the carousel is no longer approved at the due time |
+| `scheduled` | `publishing` / `awaiting_owner` / `expired` / `scheduled` | `scheduled_at` is due, or Publicar agora / Cancelar agendamento / the carousel is no longer approved at the due time / Mudar dia/horário (AE-0404: a new `scheduled_at`) |
 | `reworking` | `awaiting_owner` / `escalated` | revise drove back to final_review / cap hit |
 | `escalated` | `awaiting_owner` / `rejected` | Pedro fixes it in the web UI / the carousel is rejected (web UI or stuck auto-reject), or 72 h pass with no fix |
 | `publishing` | `published` / `publish_failed` / `awaiting_owner` | IG success / 3 retries exhausted / the editorial approve refused the owner's Approve (review stays open) |
@@ -417,11 +417,13 @@ Instagram's Graph API has no native scheduling (`media_publish` posts at once) a
 
 **Agendar.** The next three of the slots `12:00`, `18:00`, `21:00` (America/Sao_Paulo, `schedule_constants.SCHEDULE_SLOTS`), each at least 15 min ahead, rolling over to the next day (`ap:at:<unix seconds>:<run>`, 53 bytes), plus `✏️ Outro horário`. That one sends a ForceReply asking for `HH:MM` (today, else tomorrow) or `DD/MM HH:MM`. Past times and anything more than 30 days ahead are refused with a reply, and the prompt is asked again.
 
-**On a chosen time.** The run moves `awaiting_owner → scheduled` with `scheduled_at` (the compare-and-set makes a double tap act once), then final review is approved (`approved_for_publish`) but the carousel is not released. A refused approve returns the run to `awaiting_owner` with the review keyboard. The owner sees `🗓 Agendado para dd/mm HH:MM` with `🚀 Publicar agora` and `❌ Cancelar agendamento`.
+**On a chosen time.** The run moves `awaiting_owner → scheduled` with `scheduled_at` (the compare-and-set makes a double tap act once), then final review is approved (`approved_for_publish`) but the carousel is not released. A refused approve returns the run to `awaiting_owner` with the review keyboard. The owner sees `🗓 Agendado para Ter 20/10 12:00 (reason)` with `🚀 Publicar agora`, `🗓 Mudar dia/horário` (AE-0404) and `❌ Cancelar agendamento`.
 
 **Due tick.** Before the publish job, the worker's Instagram step runs `ScheduledPublishSweep`. Each run with `scheduled_at <= now` moves `scheduled → publishing` (reason `schedule_due`) and is released public. The publish job then posts it on the same tick (quota, containers, Story, notice). A run more than 10 min late (downtime, deploy) still publishes, and the notice line reads `✅ Publicado: <link> (publicado com atraso de N min)`. If the carousel is no longer `approved_for_publish` at its time (sent back or rejected), the run becomes `expired` (reason `schedule_withdrawn`) and nothing is published.
 
 **Cancel and publish now.** `❌ Cancelar agendamento` moves `scheduled → awaiting_owner`, clears `scheduled_at`, and shows the review keyboard again. `🚀 Publicar agora` on a scheduled run moves it to `publishing` and releases it at once. Final review is already approved, so it is not approved again (also after a cancel).
+
+**Day/time picker (AE-0404).** `🗓 Agendar` (on the review keyboard and the publish choice) and `🗓 Mudar dia/horário` (on every scheduled message) open a two-step picker. Step 1 (`ap:d:<yyyymmdd>:<run>`, 50 bytes) lists seven São Paulo days, from today when a recommended slot is still 15 min ahead, else tomorrow, and stars the best days. Step 2 lists the day's four best whole-hour times (`ap:at:<epoch>:<run>`) with each reason in the message text, plus `✏️ Outro horário` and `← Dias` (`ap:days:<run>`). A slot on an `awaiting_owner` run schedules it as above; on a `scheduled` run it moves `scheduled → scheduled` with the new `scheduled_at` (reason `owner_rescheduled`, a compare-and-set, so a due tick that won first makes the tap answer "already"). Recommendations (`domain/recommend.py`) blend per (weekday, hour): the audience (Graph `online_followers`, cached in `instagram_audience_hours` and read at most once a day; a failure is logged and the cache or nothing is used), the engagement `(saved + shares + total_interactions) / reach` of our published posts in that bucket shrunk by `n / (n + 5)`, and the plan prior (POV Tue/Thu 12:00, else 12:00/18:00/21:00). With `AUTOPILOT_DEFAULT_PUBLISH=next_slot` (and always for POV) Approve schedules the best slot of the next seven days.
 
 **Safety.** Only the owner allowlist can tap. The 72 h review expiry scans `awaiting_owner` only, so a `scheduled` run is never expired before its time. Webhook replies are still sent only after the commit.
 
@@ -453,11 +455,11 @@ The run then starts a POV carousel: `content_mode=pov`, the confirmed thesis, th
 `pov_editorial` image preset and the POV defaults. No photo is picked automatically (follow-up).
 
 **Publish slots.** `domain/pov_schedule.py` defines the POV slots (Tuesday and Thursday 12:00
-São Paulo) and `publish_slots_for(run, now)`, which AE-0370's `publish_choice` calls (section 5.5).
-A run with a confirmed `pov_thesis` is a POV run: with `AUTOPILOT_DEFAULT_PUBLISH=next_slot`,
-Approve schedules it for the next Tuesday or Thursday 12:00 (at least 15 min ahead), and the
-`🗓 Agendar` menu lists that slot first, then AE-0370's next default slots (three buttons in total).
-Radar IA runs keep AE-0370's slots unchanged.
+São Paulo), the POV prior of the AE-0404 slot recommender (section 5.5). A run with a confirmed
+`pov_thesis` is a POV run: Approve auto-schedules it (also in `now` mode) for the best
+recommended slot of the next seven days, which without insights is the next Tuesday or Thursday
+12:00 (at least 15 min ahead); the day/time picker stars those days. Radar IA runs use AE-0370's
+12:00/18:00/21:00 as their prior.
 
 **Migration.** Revision `b1c2d3e4f5a6` (after `b0c1d2e3f4a5`, which follows AE-0370's `a9b0c1d2e3f4`) adds the nullable
 `topic_candidates.content_mode`, `topic_candidates.thesis_draft` and `autopilot_runs.pov_thesis`

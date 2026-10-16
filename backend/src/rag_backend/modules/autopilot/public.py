@@ -86,6 +86,7 @@ def register_persistence_models() -> tuple[str, ...]:
     use the call for its side effect; the tuple keeps the import live.
     """
     from rag_backend.modules.autopilot.infrastructure.insights_models import (
+        InstagramAudienceHoursModel,
         InstagramPostInsightsModel,
     )
     from rag_backend.modules.autopilot.infrastructure.models import (
@@ -111,4 +112,5 @@ def register_persistence_models() -> tuple[str, ...]:
         NotifyCursorModel.__tablename__,
         InstagramStoryModel.__tablename__,
         InstagramPostInsightsModel.__tablename__,
+        InstagramAudienceHoursModel.__tablename__,
     )

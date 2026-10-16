@@ -1,4 +1,4 @@
-"""Publish-time rules for the owner's schedule (AE-0370). Pure, no I/O.
+"""Publish-time rules for the owner's schedule (AE-0370, AE-0404). Pure, no I/O.
 
 Every time is computed in America/Sao_Paulo and returned in UTC, so the
 server's own zone never matters.
@@ -15,25 +15,23 @@ from rag_backend.modules.autopilot.domain.models import (
     AutopilotRunState,
     TransitionCommand,
 )
+from rag_backend.modules.autopilot.recommend_constants import (
+    DAY_DATE_FORMAT,
+    DAY_LABEL_FORMAT,
+    WEEKDAY_ABBREVIATIONS,
+)
 from rag_backend.modules.autopilot.schedule_constants import (
     DATE_TIME_PATTERN,
     ERR_TIME_FORMAT,
     ERR_TIME_PAST,
     ERR_TIME_TOO_FAR,
-    LABEL_TODAY,
-    LABEL_TOMORROW,
-    LOCAL_LABEL_FORMAT,
     LOCAL_TIME_FORMAT,
     REASON_SCHEDULE_DUE,
     SCHEDULE_LATE_NOTICE_MINUTES,
     SCHEDULE_MAX_AHEAD_DAYS,
-    SCHEDULE_MIN_LEAD_MINUTES,
-    SCHEDULE_SLOT_COUNT,
-    SCHEDULE_SLOTS,
     SCHEDULE_TIMEZONE,
     SECONDS_PER_MINUTE,
     TIME_PATTERN,
-    TIME_SEPARATOR,
 )
 
 _TIME = re.compile(TIME_PATTERN)
@@ -60,19 +58,6 @@ def schedule_zone() -> ZoneInfo:
     return ZoneInfo(SCHEDULE_TIMEZONE)
 
 
-def next_slots(now: datetime) -> tuple[datetime, ...]:
-    """The next three slots at least 15 minutes ahead, rolling over to tomorrow."""
-    earliest = now + timedelta(minutes=SCHEDULE_MIN_LEAD_MINUTES)
-    today = now.astimezone(schedule_zone()).date()
-    found: list[datetime] = []
-    offset = 0
-    while len(found) < SCHEDULE_SLOT_COUNT:
-        day = today + timedelta(days=offset)
-        found.extend(slot for slot in _slots_on(day) if slot >= earliest)
-        offset += 1
-    return tuple(found[:SCHEDULE_SLOT_COUNT])
-
-
 def check_choice(at: datetime, now: datetime) -> str | None:
     """Why ``at`` cannot be scheduled (past, or over 30 days ahead), or None."""
     if at <= now:
@@ -94,22 +79,16 @@ def parse_owner_time(text: str, now: datetime) -> TimeChoice:
     return _from_date(dated, now)
 
 
-def local_label(at: datetime) -> str:
-    """``dd/mm HH:MM`` in the owner's zone."""
-    return at.astimezone(schedule_zone()).strftime(LOCAL_LABEL_FORMAT)
+def day_label(day: date) -> str:
+    """``Ter 20/10``: the Portuguese weekday and the date (AE-0404)."""
+    weekday = WEEKDAY_ABBREVIATIONS[day.weekday()]
+    return DAY_LABEL_FORMAT.format(weekday=weekday, date=day.strftime(DAY_DATE_FORMAT))
 
 
-def slot_label(at: datetime, now: datetime) -> str:
-    """``hoje 18:00``, ``amanhã 12:00``, or ``dd/mm HH:MM`` further out."""
-    zone = schedule_zone()
-    local = at.astimezone(zone)
-    days = (local.date() - now.astimezone(zone).date()).days
-    clock = local.strftime(LOCAL_TIME_FORMAT)
-    if days == 0:
-        return LABEL_TODAY.format(time=clock)
-    if days == 1:
-        return LABEL_TOMORROW.format(time=clock)
-    return local_label(at)
+def when_label(at: datetime) -> str:
+    """``Ter 20/10 12:00`` in the owner's zone (AE-0404)."""
+    local = at.astimezone(schedule_zone())
+    return f"{day_label(local.date())} {local.strftime(LOCAL_TIME_FORMAT)}"
 
 
 def late_minutes(scheduled_at: datetime | None, now: datetime) -> int | None:
@@ -140,15 +119,6 @@ def clears_schedule(command: TransitionCommand) -> bool:
     if command.expected is not AutopilotRunState.SCHEDULED:
         return False
     return command.reason != REASON_SCHEDULE_DUE
-
-
-def _slots_on(day: date) -> list[datetime]:
-    return [_utc(day, _slot_time(slot)) for slot in SCHEDULE_SLOTS]
-
-
-def _slot_time(slot: str) -> time:
-    hour, minute = slot.split(TIME_SEPARATOR)
-    return time(int(hour), int(minute))
 
 
 def _utc(day: date, clock: time) -> datetime:

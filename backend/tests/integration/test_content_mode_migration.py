@@ -22,8 +22,8 @@ from tests.integration.test_autopilot_migration import (
 _REVISION = "b0c1d2e3f4a5"
 _PARENT = "a9b0c1d2e3f4"
 _POV_THESIS = "b1c2d3e4f5a6"
-# AE-0393: the image bridge revision is the single head now.
-_HEAD = "d3e4f5a6b7c8"
+# AE-0404: the audience-hours revision is the single head now.
+_HEAD = "a0e4f0a4b4c4"
 _PROJECT_COLUMNS = {
     "content_mode",
     "pov_thesis",
