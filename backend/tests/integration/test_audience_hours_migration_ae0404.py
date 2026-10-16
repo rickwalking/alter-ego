@@ -23,6 +23,8 @@ from tests.integration.test_autopilot_migration import (
 
 _REVISION = "a0e4f0a4b4c4"
 _PARENT = "d3e4f5a6b7c8"
+# AE-0406: the pov_news quotes revision is the single head on top of this one.
+_HEAD = "c4d5e6f7a8b9"
 _TABLE = "instagram_audience_hours"
 _COLUMNS = {"ig_user_id", "online_followers", "checked_at", "fetched_at"}
 
@@ -45,10 +47,11 @@ def _stamp(db_path: Path, revision: str) -> None:
 
 
 def test_revision_is_the_single_head_on_top_of_the_bridge() -> None:
-    """Exactly one head, chained on the AE-0393 image bridge revision."""
+    """Chained on the AE-0393 image bridge revision; one head (AE-0406's)."""
     _command, cfg, script_cls = _alembic_config()
     script = script_cls.from_config(cfg)
-    assert list(script.get_heads()) == [_REVISION]
+    assert list(script.get_heads()) == [_HEAD]
+    assert script.get_revision(_HEAD).down_revision == _REVISION
     revision = script.get_revision(_REVISION)
     assert revision is not None
     assert revision.down_revision == _PARENT

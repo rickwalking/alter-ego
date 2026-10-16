@@ -87,8 +87,14 @@ async def test_accepted_x_urls_join_the_topic_allowlist(
     assert cited.status_code == 200
     assert cited.json()["rejected"] == []
     assert len(cited.json()["accepted"]) == 1
+    # AE-0406: additive ``index`` and ``field`` on every rejection.
     assert foreign.json()["rejected"] == [
-        {"title": "Foreign", "reason": REASON_SOURCE_NOT_IN_SIGNALS}
+        {
+            "index": 0,
+            "title": "Foreign",
+            "reason": REASON_SOURCE_NOT_IN_SIGNALS,
+            "field": "sources[0]",
+        }
     ]
 
 
