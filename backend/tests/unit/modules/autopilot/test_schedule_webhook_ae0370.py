@@ -41,7 +41,7 @@ from rag_backend.modules.autopilot.schedule_constants import (
     REASON_OWNER_SCHEDULED,
     SCHEDULE_PENDING_PHASE,
     TEXT_ASK_TIME,
-    TEXT_CHOOSE_SLOT,
+    TEXT_CHOOSE_DAY,
     TEXT_PUBLISH_CHOICE,
     TEXT_TIME_FORMAT,
     TEXT_TIME_PAST,
@@ -233,16 +233,17 @@ async def test_publish_now_approves_and_releases() -> None:
     assert world.messenger.edits[-1].text == TEXT_APPROVED
 
 
-# Scenario: Agendar lists the next three slots and a custom time
+# Scenario: Agendar opens the day step of the picker (AE-0404)
 @pytest.mark.asyncio
-async def test_schedule_menu_lists_slots() -> None:
+async def test_schedule_menu_lists_days() -> None:
     world = _world()
     await _handle(world, _tap(1, world.data("sched")))
     edit = world.messenger.edits[-1]
-    assert edit.text == TEXT_CHOOSE_SLOT
+    assert edit.text == TEXT_CHOOSE_DAY
     assert edit.keyboard is not None
-    labels = [row[0].text for row in edit.keyboard.rows]
-    assert labels == ["hoje 12:00", "hoje 18:00", "hoje 21:00", "✏️ Outro horário"]
+    labels = [button.text for row in edit.keyboard.rows for button in row]
+    assert labels[0] == "Qui 15/10"
+    assert len(labels) == 7
     assert world.runs.run.state is _S.AWAITING_OWNER
 
 
@@ -258,7 +259,7 @@ async def test_slot_schedules_without_release() -> None:
     assert len(world.editorial.resumes) == 1
     assert world.release.ids == []
     edit = world.messenger.edits[-1]
-    assert edit.text == "\U0001f5d3 Agendado para 15/10 18:00"
+    assert edit.text == "\U0001f5d3 Agendado para Qui 15/10 18:00 (horário padrão)"
     assert edit.keyboard == scheduled_keyboard(world.run_id)
     assert world.messenger.answers[-1].text == ANSWER_SCHEDULED
 
@@ -277,12 +278,12 @@ async def test_double_tap_schedules_once() -> None:
 
 
 @pytest.mark.asyncio
-async def test_stale_slot_offers_fresh_slots() -> None:
+async def test_stale_slot_offers_fresh_days() -> None:
     world = _world()
     await _schedule_slot(world, _local(15, 9))
     assert world.runs.run.state is _S.AWAITING_OWNER
     assert world.messenger.answers[-1].text == TEXT_TIME_PAST
-    assert world.messenger.edits[-1].text == TEXT_CHOOSE_SLOT
+    assert world.messenger.edits[-1].text == TEXT_CHOOSE_DAY
     assert world.editorial.resumes == []
 
 
@@ -318,7 +319,7 @@ async def test_typed_time_schedules_with_buttons_in_a_new_message() -> None:
     assert world.runs.run.state is _S.SCHEDULED
     assert world.runs.run.scheduled_at == _local(15, 19, 30)
     told = world.messenger.texts[-1]
-    assert told.text == "\U0001f5d3 Agendado para 15/10 19:30"
+    assert told.text == "\U0001f5d3 Agendado para Qui 15/10 19:30"
     assert told.keyboard == scheduled_keyboard(world.run_id)
     assert world.pending.item is None
 

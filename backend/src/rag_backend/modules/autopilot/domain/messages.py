@@ -81,7 +81,11 @@ from rag_backend.modules.autopilot.recovery_constants import (
     REASON_REVIEW_REOPENED,
     REASON_REWORK_RETRY,
 )
-from rag_backend.modules.autopilot.schedule_constants import EXPIRED_TEXT_BY_REASON
+from rag_backend.modules.autopilot.schedule_constants import (
+    BUTTON_SCHEDULE,
+    CALLBACK_SCHEDULE_PREFIX,
+    EXPIRED_TEXT_BY_REASON,
+)
 from rag_backend.modules.autopilot.webhook_constants import (
     BUTTON_PHASE_DESIGN,
     BUTTON_PHASE_IMAGES,
@@ -143,22 +147,18 @@ def callback_data(prefix: str, run_id: UUID) -> str:
 
 
 def review_keyboard(run_id: UUID) -> InlineKeyboard:
-    """Approve, Rework, and Reject for one run."""
-    row = (
-        InlineButton(
-            text=BUTTON_APPROVE,
-            callback_data=callback_data(CALLBACK_APPROVE_PREFIX, run_id),
-        ),
-        InlineButton(
-            text=BUTTON_REWORK,
-            callback_data=callback_data(CALLBACK_REWORK_PREFIX, run_id),
-        ),
-        InlineButton(
-            text=BUTTON_REJECT,
-            callback_data=callback_data(CALLBACK_REJECT_PREFIX, run_id),
-        ),
+    """Approve, Rework, and Reject for one run; ``🗓 Agendar`` below (AE-0404)."""
+    actions = (
+        (BUTTON_APPROVE, CALLBACK_APPROVE_PREFIX),
+        (BUTTON_REWORK, CALLBACK_REWORK_PREFIX),
+        (BUTTON_REJECT, CALLBACK_REJECT_PREFIX),
+        (BUTTON_SCHEDULE, CALLBACK_SCHEDULE_PREFIX),
     )
-    return InlineKeyboard(rows=(row,))
+    buttons = tuple(
+        InlineButton(text=text, callback_data=callback_data(prefix, run_id))
+        for text, prefix in actions
+    )
+    return InlineKeyboard(rows=(buttons[:-1], buttons[-1:]))
 
 
 def rework_phase_keyboard(run_id: UUID) -> InlineKeyboard:

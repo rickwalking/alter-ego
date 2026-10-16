@@ -2,31 +2,24 @@
 
 - ``sao_paulo_week``: the Monday-to-Monday São Paulo week, for the Radar IA
   weekly cap (growth plan 16.4 #10).
-- ``PovPublishSlots`` / ``publish_slots_for``: the glue roadmap R6 needs. The
-  scheduler itself is AE-0370 (``scheduled_at``, ``AUTOPILOT_DEFAULT_PUBLISH``
-  = ``next_slot``); its publish choice asks ``publish_slots_for`` for the slots,
-  so a POV run gets the next Tuesday or Thursday at 12:00 São Paulo first.
+- ``POV_SLOT_WEEKDAYS`` / ``POV_SLOT_TIME``: the plan's Tuesday and Thursday
+  12:00 São Paulo slot. Since AE-0404 it is the POV prior of the slot
+  recommender (``domain/recommend.py``), which picks the auto ``next_slot``.
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from datetime import UTC, date, datetime, time, timedelta
+from datetime import UTC, datetime, time, timedelta
 from zoneinfo import ZoneInfo
 
 from rag_backend.domain.constants.content_mode import CONTENT_MODE_POV
 from rag_backend.modules.autopilot.constants import DAILY_CAP_TIMEZONE
 from rag_backend.modules.autopilot.domain.models import AutopilotRun
-from rag_backend.modules.autopilot.domain.schedule import next_slots
 from rag_backend.modules.autopilot.pov_constants import DAYS_PER_WEEK
-from rag_backend.modules.autopilot.schedule_constants import SCHEDULE_SLOT_COUNT
 
 # Growth plan section 8: Tuesday and Thursday, about 12:00 BRT.
 POV_SLOT_WEEKDAYS: frozenset[int] = frozenset({1, 3})
 POV_SLOT_TIME = time(hour=12, minute=0)
-# Same lead as AE-0370's slot list: a slot must be at least 15 minutes away.
-POV_SLOT_MIN_LEAD = timedelta(minutes=15)
-_SEARCH_DAYS = 14
 
 
 def _zone() -> ZoneInfo:
@@ -48,37 +41,6 @@ def sao_paulo_week(moment: datetime) -> tuple[datetime, datetime]:
     return start.astimezone(UTC), end.astimezone(UTC)
 
 
-@dataclass(frozen=True)
-class PovPublishSlots:
-    """Next Tuesday or Thursday at 12:00 São Paulo, at least 15 minutes ahead."""
-
-    weekdays: frozenset[int] = POV_SLOT_WEEKDAYS
-    at: time = POV_SLOT_TIME
-
-    def next_slot(self, now: datetime) -> datetime:
-        """The first matching slot at or after ``now`` + the minimum lead."""
-        earliest = _utc(now) + POV_SLOT_MIN_LEAD
-        start = earliest.astimezone(_zone()).date()
-        for offset in range(_SEARCH_DAYS):
-            slot = self._slot_on(start + timedelta(days=offset))
-            if slot is not None and slot >= earliest:
-                return slot
-        msg = "no POV slot within two weeks"
-        raise LookupError(msg)
-
-    def _slot_on(self, day: date) -> datetime | None:
-        if day.weekday() not in self.weekdays:
-            return None
-        return datetime.combine(day, self.at, tzinfo=_zone()).astimezone(UTC)
-
-
-def slot_policy_for(content_mode: str | None) -> PovPublishSlots | None:
-    """POV runs use Tue/Thu 12:00; None keeps AE-0370's default slots."""
-    if content_mode == CONTENT_MODE_POV:
-        return PovPublishSlots()
-    return None
-
-
 def run_content_mode(run: AutopilotRun) -> str | None:
     """A run with a confirmed thesis is POV; the rest are Radar IA (None)."""
     if run.pov_thesis:
@@ -91,25 +53,10 @@ def is_pov_run(run: AutopilotRun) -> bool:
     return run_content_mode(run) == CONTENT_MODE_POV
 
 
-def publish_slots_for(run: AutopilotRun, now: datetime) -> tuple[datetime, ...]:
-    """AE-0370's next slots; a POV run gets its Tue/Thu 12:00 slot first."""
-    default = next_slots(now)
-    policy = slot_policy_for(run_content_mode(run))
-    if policy is None:
-        return default
-    first = policy.next_slot(now)
-    rest = tuple(slot for slot in default if slot != first)
-    return (first, *rest)[:SCHEDULE_SLOT_COUNT]
-
-
 __all__ = [
-    "POV_SLOT_MIN_LEAD",
     "POV_SLOT_TIME",
     "POV_SLOT_WEEKDAYS",
-    "PovPublishSlots",
     "is_pov_run",
-    "publish_slots_for",
     "run_content_mode",
     "sao_paulo_week",
-    "slot_policy_for",
 ]

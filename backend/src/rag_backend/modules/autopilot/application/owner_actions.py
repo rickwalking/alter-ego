@@ -72,6 +72,7 @@ from rag_backend.modules.autopilot.domain.ports import (
     TopicCandidateRepository,
 )
 from rag_backend.modules.autopilot.domain.recovery import ReworkIntent, RunRecoveryStore
+from rag_backend.modules.autopilot.domain.schedule_ports import ScheduleSignalsSource
 from rag_backend.modules.autopilot.domain.webhook_update import WebhookUpdate, is_owner
 from rag_backend.modules.autopilot.recovery_constants import NO_RETRY_REASONS
 from rag_backend.modules.autopilot.schedule_constants import PUBLISH_MODE_NOW
@@ -132,6 +133,8 @@ class OwnerActionDeps:
     autofix: ContentAutofixer | None = None
     # AE-0377: the POV draft thesis lives on the topic candidate.
     topics: TopicCandidateRepository | None = None
+    # AE-0404: audience and post engagement for the schedule picker.
+    schedule_signals: ScheduleSignalsSource | None = None
 
 
 class OwnerActionService(ThesisOwnerActions):
@@ -326,6 +329,7 @@ def _choice_deps(deps: OwnerActionDeps) -> PublishChoiceDeps:
         approval=approval,
         clock=deps.clock,
         default_publish=deps.default_publish,
+        signals=deps.schedule_signals,
     )
 
 

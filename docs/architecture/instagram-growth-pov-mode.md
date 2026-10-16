@@ -212,11 +212,11 @@ Radar IA's `cta_centered` switches to the follow variant (16.4 #5).
   `weekly_news_cap_reached` (a duplicate stays a `duplicate_topic`); within one batch only the
   best-scored Radar IA topic is queued. POV is bounded only by the daily cap.
 - R6 (Tue/Thu scheduling) is **owned by AE-0370**. This epic adds only the POV glue in
-  `domain/pov_schedule.py`: `PovPublishSlots` (next Tue/Thu 12:00 America/Sao_Paulo, ≥15 min
-  lead, same rules as AE-0370's `next_slots`), the slot constants, and `publish_slots_for(run,
-  now)`, which AE-0370's `publish_choice.py` calls after the merge. A run with a confirmed
-  `pov_thesis` is POV: `AUTOPILOT_DEFAULT_PUBLISH=next_slot` schedules it for the POV slot, and
-  the `🗓 Agendar` menu lists the POV slot first. Radar IA keeps AE-0370's slots.
+  `domain/pov_schedule.py`: the slot constants (Tue/Thu 12:00 America/Sao_Paulo). Since
+  AE-0404 they are the POV prior of the slot recommender (`domain/recommend.py`): a run with a
+  confirmed `pov_thesis` is POV, Approve schedules the best recommended slot of the next seven
+  days (without insights, the next Tue/Thu 12:00 at least 15 min ahead), and the day/time
+  picker stars the POV days. Radar IA's prior is AE-0370's 12:00/18:00/21:00.
 
 ### D11. Measurement (R8)
 
@@ -320,8 +320,7 @@ Differences from the plan above, and facts found while building:
 - **Insights.** One Graph call per post asks for all metrics; if Graph refuses the list
   (a metric it does not offer for that media), each metric is asked alone and the refused one
   stays null. At most 10 Graph reads per dashboard request; the rest refresh on the next one.
-- **Not wired, by design:** POV publish slots (`slot_policy_for`) wait for AE-0370's
-  `publish_choice`; autopilot POV runs do not pick a slide-1 photo automatically (the owner
+- **Not wired, by design:** autopilot POV runs do not pick a slide-1 photo automatically (the owner
   binds one in the web UI before approval, else the hook slide renders without a photo).
 
 

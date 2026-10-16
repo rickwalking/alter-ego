@@ -11,7 +11,7 @@ import pytest
 
 from rag_backend.modules.autopilot.domain.messages import review_keyboard
 from rag_backend.modules.autopilot.domain.models import AutopilotRunState
-from rag_backend.modules.autopilot.domain.schedule import local_label
+from rag_backend.modules.autopilot.domain.schedule import when_label
 from rag_backend.modules.autopilot.domain.schedule_keyboards import (
     scheduled_keyboard,
 )
@@ -100,7 +100,7 @@ async def test_next_slot_mode_schedules_on_approve() -> None:
     assert world.runs.run.state is _S.SCHEDULED
     assert world.runs.run.scheduled_at == _local(15, 12)
     edit = world.messenger.edits[-1]
-    assert edit.text.startswith("\U0001f5d3 Agendado para 15/10 12:00")
+    assert edit.text.startswith("\U0001f5d3 Agendado para Qui 15/10 12:00")
     assert edit.keyboard == scheduled_keyboard(world.run_id)
     assert world.release.ids == []
 
@@ -137,8 +137,8 @@ async def test_slot_on_a_moved_run_is_already_handled() -> None:
     assert world.runs.run.state is _S.REJECTED
 
 
-def test_local_label_of_the_scheduled_time() -> None:
-    assert local_label(_local(15, 18)) == "15/10 18:00"
+def test_when_label_of_the_scheduled_time() -> None:
+    assert when_label(_local(15, 18)) == "Qui 15/10 18:00"
 
 
 # Merge with AE-0367: the fix-issues button and the schedule flows coexist.
@@ -176,4 +176,4 @@ async def test_fix_tap_still_reaches_the_autofix_handler() -> None:
     await _handle(world, _tap(1, world.data("fix")))
     assert world.messenger.answers[-1].text == ANSWER_NOTHING_TO_FIX
     assert world.runs.run.state is _S.AWAITING_OWNER
-    assert local_label(_local(15, 18)) == "15/10 18:00"
+    assert when_label(_local(15, 18)) == "Qui 15/10 18:00"

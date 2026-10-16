@@ -20,6 +20,8 @@ _PARENT_HEAD = "b1c2d3e4f5a6"
 _THIS_HEAD = "c2d3e4f5a6b7"
 # AE-0393: the image bridge revision now sits on top of the insights one.
 _SINGLE_HEAD = "d3e4f5a6b7c8"
+# AE-0404: the audience-hours cache revision sits on top of the bridge one.
+_AUDIENCE_HEAD = "a0e4f0a4b4c4"
 _BACKEND_ROOT = Path(__file__).resolve().parents[2]
 _TABLES = (
     "autopilot_runs",
@@ -84,7 +86,10 @@ def test_autopilot_revision_is_the_only_head() -> None:
     """``alembic heads`` is a single head that descends from the autopilot one."""
     _command, cfg, script_cls = _alembic_config()
     script = script_cls.from_config(cfg)
-    assert list(script.get_heads()) == [_SINGLE_HEAD]
+    assert list(script.get_heads()) == [_AUDIENCE_HEAD]
+    audience = script.get_revision(_AUDIENCE_HEAD)
+    assert audience is not None
+    assert audience.down_revision == _SINGLE_HEAD
     bridge = script.get_revision(_SINGLE_HEAD)
     assert bridge is not None
     assert bridge.down_revision == _THIS_HEAD
