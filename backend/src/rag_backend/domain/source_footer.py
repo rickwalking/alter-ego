@@ -1,7 +1,8 @@
 """The ``pov_news`` caption footer, built by code (AE-0406, spec §5). Pure.
 
 ``Fontes: @kanishksj01, @alexcovo_eth, anthropic.com``: an X source shows as
-``@handle``, any other source as its domain; duplicates are dropped and the
+``@handle``, any other source as its domain; duplicates are dropped
+(case-insensitively, first spelling kept) and the
 order is the topic's ``sources`` order. The model never writes this line.
 """
 
@@ -33,11 +34,18 @@ def source_label(url: str) -> str:
 
 
 def source_footer(sources: Iterable[str]) -> str:
-    """The footer line, or empty when no source has a label."""
-    labels = dict.fromkeys(label for label in map(source_label, sources) if label)
+    """The footer line, or empty when no source has a label.
+
+    PR #124 review: deduped case-insensitively (``@Handle`` = ``@handle``),
+    keeping the first spelling.
+    """
+    labels: dict[str, str] = {}
+    for label in map(source_label, sources):
+        if label:
+            labels.setdefault(label.casefold(), label)
     if not labels:
         return ""
-    return SOURCE_FOOTER_PREFIX + SOURCE_FOOTER_SEPARATOR.join(labels)
+    return SOURCE_FOOTER_PREFIX + SOURCE_FOOTER_SEPARATOR.join(labels.values())
 
 
 def with_source_footer(caption: str, sources: Iterable[str]) -> str:

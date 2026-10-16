@@ -272,6 +272,18 @@ class TestApi:
             ]
         }
 
+    # PR #124 review: a missing quote field rejects one topic, not the batch.
+    def test_a_missing_quote_field_is_not_a_schema_error(self) -> None:
+        body = self._body()
+        topics = body["topics"]
+        assert isinstance(topics, list)
+        quotes = topics[0]["quotes"]
+        assert isinstance(quotes, list)
+        del quotes[0]["text_en"]
+        (proposal,) = command_from(TopicBatch.model_validate(body)).proposals
+        assert proposal.quotes[0].text_en == ""
+        assert proposal.quotes[0].text_pt == _Q1.text_pt
+
     def test_batch_maps_quotes_and_index(self) -> None:
         command = command_from(TopicBatch.model_validate(self._body()))
         (proposal,) = command.proposals

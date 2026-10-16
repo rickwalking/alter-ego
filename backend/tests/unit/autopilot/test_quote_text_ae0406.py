@@ -70,3 +70,11 @@ def test_blank_excerpt_never_matches() -> None:
 def test_spaced_and_word_count() -> None:
     assert spaced("a\n\nb\tc") == "a b c"
     assert word_count("  one two\nthree ") == 3
+
+
+# QA mutation review: the stored text is cut at exactly 600 characters.
+def test_the_cut_is_exactly_600_characters() -> None:
+    at_cut = "a" * 594 + " tail"  # 599 characters
+    assert excerpt_in_post("a tail", at_cut + "x") is True
+    past_cut = "a" * 596 + " tail"  # 601 characters
+    assert excerpt_in_post("a tail", past_cut) is False

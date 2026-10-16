@@ -60,13 +60,14 @@ def _input(item: TopicProposal, index: int) -> ProposalInput:
 
 
 def _quote(item: QuoteProposal) -> NewsQuote:
+    """A missing field becomes "" (the domain rejects it as ``quote_invalid``)."""
     return NewsQuote(
-        quote_id=item.id,
-        url=item.url,
-        handle=item.handle,
-        name=item.name,
-        excerpt=item.excerpt,
-        lang_original=item.lang_original,
-        text_pt=item.text_pt,
-        text_en=item.text_en,
+        quote_id=item.id or "",
+        url=item.url or "",
+        handle=item.handle or "",
+        name=item.name or "",
+        excerpt=item.excerpt or "",
+        lang_original=item.lang_original or "",
+        text_pt=item.text_pt or "",
+        text_en=item.text_en or "",
     )

@@ -15,6 +15,7 @@ from rag_backend.domain.models.news_quote import NewsQuote
 from rag_backend.modules.autopilot.constants import REASON_URL_IN_TEXT
 from rag_backend.modules.autopilot.domain.quote_text import (
     excerpt_in_post,
+    spaced,
     word_count,
 )
 from rag_backend.modules.autopilot.domain.topic_text import contains_url, strip_controls
@@ -74,13 +75,17 @@ _Rule = tuple[str, str, Callable[[_Check], bool]]
 
 
 def clean_quote(quote: NewsQuote) -> NewsQuote:
-    """Strip control characters and surrounding whitespace from every field."""
+    """Strip control characters and surrounding whitespace from every field.
+
+    The excerpt's whitespace runs (line breaks included) become one space
+    first, like the stored post text, so control stripping never glues words.
+    """
     return NewsQuote(
         quote_id=strip_controls(quote.quote_id),
         url=strip_controls(quote.url),
         handle=strip_controls(quote.handle),
         name=strip_controls(quote.name),
-        excerpt=quote.excerpt.strip(),
+        excerpt=strip_controls(spaced(quote.excerpt)),
         lang_original=strip_controls(quote.lang_original),
         text_pt=strip_controls(quote.text_pt),
         text_en=strip_controls(quote.text_en),
@@ -110,6 +115,27 @@ def quote_urls(quotes: tuple[NewsQuote, ...]) -> tuple[str, ...]:
     return tuple(target.canonical_url for target in targets if target is not None)
 
 
+def status_key(url: str) -> str:
+    """PR #124 review: an X status URL compared case-insensitively.
+
+    X handles are case-insensitive, so ``x.com/KanishkSJ01/status/1`` and
+    ``x.com/kanishksj01/status/1`` are the same post (host and handle are
+    lowercased; the status id is digits). Other URLs are returned unchanged.
+    """
+    target = parse_status_url(url)
+    if target is None:
+        return url
+    return target.canonical_url.lower()
+
+
+def keyed_post_texts(post_texts: Mapping[str, str]) -> dict[str, str]:
+    """The stored post texts keyed by ``status_key`` (first spelling wins)."""
+    keyed: dict[str, str] = {}
+    for url, text in post_texts.items():
+        keyed.setdefault(status_key(url), text)
+    return keyed
+
+
 def _problem(reason: str, index: int, name: str) -> QuoteProblem:
     return QuoteProblem(
         reason=reason, field=FIELD_QUOTE_TEMPLATE.format(index=index, name=name)
@@ -117,6 +143,9 @@ def _problem(reason: str, index: int, name: str) -> QuoteProblem:
 
 
 def _quote_problem(check: _Check) -> QuoteProblem | None:
+    blank = _first_blank(check.quote)
+    if blank is not None:
+        return _problem(REASON_QUOTE_INVALID, check.index, blank)
     for reason, name, passes in _RULES:
         if not passes(check):
             return _problem(reason, check.index, name)
@@ -128,7 +157,7 @@ def _id_ok(check: _Check) -> bool:
 
 
 def _name_ok(check: _Check) -> bool:
-    return 0 < len(check.quote.name) <= QUOTE_NAME_MAX_CHARS
+    return len(check.quote.name) <= QUOTE_NAME_MAX_CHARS
 
 
 def _lang_ok(check: _Check) -> bool:
@@ -136,12 +165,17 @@ def _lang_ok(check: _Check) -> bool:
 
 
 def _source_ok(check: _Check) -> bool:
-    """A canonical X status URL, listed in sources, stored through x-signals."""
+    """A canonical X status URL, listed in sources, stored through x-signals.
+
+    Compared by ``status_key`` (handle case-insensitive), like the handle check.
+    """
     url = check.quote.url
     target = parse_status_url(url)
-    if target is None or target.canonical_url != url:
+    if target is None or target.canonical_url.lower() != url.lower():
         return False
-    return url in check.facts.sources and url in check.facts.post_texts
+    key = status_key(url)
+    sources = {status_key(source) for source in check.facts.sources}
+    return key in sources and key in keyed_post_texts(check.facts.post_texts)
 
 
 def _handle_ok(check: _Check) -> bool:
@@ -152,13 +186,25 @@ def _handle_ok(check: _Check) -> bool:
 
 def _excerpt_ok(check: _Check) -> bool:
     excerpt = check.quote.excerpt
-    if not 0 < len(excerpt) <= QUOTE_EXCERPT_MAX_CHARS:
+    if len(excerpt) > QUOTE_EXCERPT_MAX_CHARS:
         return False
-    return excerpt_in_post(excerpt, check.facts.post_texts.get(check.quote.url, ""))
+    stored = keyed_post_texts(check.facts.post_texts)
+    return excerpt_in_post(excerpt, stored.get(status_key(check.quote.url), ""))
 
 
-def _present(value: str) -> bool:
-    return value != ""
+def _first_blank(quote: NewsQuote) -> str | None:
+    """PR #124 review: the first missing or blank field, in the spec's order."""
+    fields = (
+        (FIELD_ID, quote.quote_id),
+        (FIELD_URL, quote.url),
+        (FIELD_HANDLE, quote.handle),
+        (FIELD_NAME, quote.name),
+        (FIELD_EXCERPT, quote.excerpt),
+        (FIELD_LANG, quote.lang_original),
+        (FIELD_TEXT_PT, quote.text_pt),
+        (FIELD_TEXT_EN, quote.text_en),
+    )
+    return next((name for name, value in fields if not value), None)
 
 
 def _no_url(value: str) -> bool:
@@ -169,8 +215,6 @@ _RULES: tuple[_Rule, ...] = (
     (REASON_QUOTE_INVALID, FIELD_ID, _id_ok),
     (REASON_QUOTE_INVALID, FIELD_NAME, _name_ok),
     (REASON_QUOTE_INVALID, FIELD_LANG, _lang_ok),
-    (REASON_QUOTE_INVALID, FIELD_TEXT_PT, lambda c: _present(c.quote.text_pt)),
-    (REASON_QUOTE_INVALID, FIELD_TEXT_EN, lambda c: _present(c.quote.text_en)),
     (REASON_URL_IN_TEXT, FIELD_NAME, lambda c: _no_url(c.quote.name)),
     (REASON_URL_IN_TEXT, FIELD_EXCERPT, lambda c: _no_url(c.quote.excerpt)),
     (REASON_URL_IN_TEXT, FIELD_TEXT_PT, lambda c: _no_url(c.quote.text_pt)),
@@ -194,6 +238,8 @@ __all__ = [
     "QuoteFacts",
     "QuoteProblem",
     "clean_quote",
+    "keyed_post_texts",
     "quote_urls",
     "quotes_problem",
+    "status_key",
 ]

@@ -7,6 +7,8 @@ from __future__ import annotations
 
 from dataclasses import replace
 
+import pytest
+
 from rag_backend.modules.autopilot.domain.intake import (
     IntakeFacts,
     IntakePlan,
@@ -204,3 +206,30 @@ def test_a_duplicate_title_carries_the_index_without_field() -> None:
     assert [(r.index, r.reason, r.field) for r in plan.rejected] == [
         (4, "duplicate_topic", None)
     ]
+
+
+# QA mutation review: every text field is named in its rejection.
+@pytest.mark.parametrize(
+    "name", ["title", "angle", "why_viral", "audience", "niche", "brief"]
+)
+def test_blank_and_linked_fields_are_named(name: str) -> None:
+    blank = _plan(replace(_radar(), **{name: "\x00"}))
+    assert (blank.rejected[0].reason, blank.rejected[0].field) == ("empty_text", name)
+    linked = _plan(replace(_radar(), **{name: "veja www.x.com"}))
+    assert (linked.rejected[0].reason, linked.rejected[0].field) == (
+        "url_in_text",
+        name,
+    )
+
+
+def test_linked_image_guidance_is_named() -> None:
+    plan = _plan(replace(_radar(), image_guidance="www.x.com"))
+    assert (plan.rejected[0].reason, plan.rejected[0].field) == (
+        "url_in_text",
+        "image_guidance",
+    )
+
+
+def test_a_title_stripped_to_nothing_keeps_the_raw_title() -> None:
+    plan = _plan(replace(_radar(), title="\x00"))
+    assert (plan.rejected[0].title, plan.rejected[0].reason) == ("\x00", "empty_text")

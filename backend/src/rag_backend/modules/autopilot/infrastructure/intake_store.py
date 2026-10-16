@@ -118,12 +118,17 @@ class SqlAlchemyTopicIntakeStore:
         return int(result.scalar_one())
 
     async def x_post_texts(self, query: XPostLookup) -> dict[str, str]:
-        """AE-0406: the post text stored through x-signals for each known URL."""
+        """AE-0406: the post text stored through x-signals for each known URL.
+
+        PR #124 review: matched case-insensitively (an X handle's case may
+        differ between the stored post and the quote); keys are the stored URLs.
+        """
         if not query.urls:
             return {}
+        lowered = [url.lower() for url in query.urls]
         result = await self._session.execute(
             select(XBrowserSignalModel.url, XBrowserSignalModel.text).where(
-                XBrowserSignalModel.url.in_(query.urls)
+                func.lower(XBrowserSignalModel.url).in_(lowered)
             )
         )
         return dict(result.tuples().all())

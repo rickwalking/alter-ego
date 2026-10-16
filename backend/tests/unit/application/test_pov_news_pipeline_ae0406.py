@@ -27,6 +27,7 @@ from rag_backend.application.services.carousel.editorial_distribution_pack impor
 )
 from rag_backend.application.services.carousel.editorial_workflow_generators import (
     _with_quote_cards,
+    _without_quote_card,
 )
 from rag_backend.application.services.carousel.project_policy import (
     create_time_policy_version,
@@ -206,6 +207,20 @@ class TestQuoteCards:
         pov = _with_quote_cards(drafts, brief_for_project(_project(content_mode="pov")))
         assert pov is drafts
         assert _with_quote_cards(drafts, None) is drafts
+
+    # Scenario: a single re-drafted slide carries no card (QA review)
+    def test_a_retried_slide_drops_its_quote(self) -> None:
+        draft: dict[str, object] = {
+            "slide_index": 4,
+            "role": "point",
+            "quote_id": "q1",
+            "insight": {"quote": "Inventada"},
+        }
+        news = _without_quote_card(draft, brief_for_project(_project()))
+        assert "quote_id" not in news and "insight" not in news
+        pov = brief_for_project(_project(content_mode="pov"))
+        assert _without_quote_card(draft, pov) is draft
+        assert _without_quote_card(draft, None) is draft
 
     def test_distribution_adds_en_cards_for_pov_news(self) -> None:
         drafts: list[dict[str, object]] = [

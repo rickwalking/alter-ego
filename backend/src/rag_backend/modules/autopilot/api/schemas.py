@@ -63,21 +63,22 @@ _QuoteText = Annotated[str, Field(max_length=QUOTE_FIELD_SCHEMA_MAX_CHARS)]
 class QuoteProposal(BaseModel):
     """AE-0406 (spec §4): one verified quote of a post sent through x-signals.
 
-    Unknown keys are a 422 for the batch. Every other rule (id pattern, name
-    length, excerpt in the stored post, word limits) is a domain rule that
-    rejects only this topic, with its reason code and ``field``.
+    Unknown keys are a 422 for the batch. Every other rule is a domain rule
+    that rejects only this topic, with its reason code and ``field``,
+    including a missing or blank field (PR #124 review: ``quote_invalid``,
+    ``quotes[i].<name>``), so every field defaults to None here.
     """
 
     model_config = ConfigDict(extra="forbid")
 
-    id: _QuoteText
-    url: _QuoteText
-    handle: _QuoteText
-    name: _QuoteText
-    excerpt: _QuoteText
-    lang_original: _QuoteText
-    text_pt: _QuoteText
-    text_en: _QuoteText
+    id: _QuoteText | None = None
+    url: _QuoteText | None = None
+    handle: _QuoteText | None = None
+    name: _QuoteText | None = None
+    excerpt: _QuoteText | None = None
+    lang_original: _QuoteText | None = None
+    text_pt: _QuoteText | None = None
+    text_en: _QuoteText | None = None
 
 
 class TopicProposal(BaseModel):

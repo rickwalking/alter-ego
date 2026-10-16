@@ -19,8 +19,8 @@ from rag_backend.domain.constants.news_quotes import (
 from rag_backend.domain.content_mode import is_pov_news
 from rag_backend.domain.models import CarouselProject
 from rag_backend.domain.news_quote_cards import QuoteCardProblem, quote_card_problems
-from rag_backend.modules.autopilot.constants import FIELD_LOCALIZED_SLIDES
 from rag_backend.modules.autopilot.domain.gate import QualityViolation
+from rag_backend.modules.autopilot.quality_constants import FIELD_LOCALIZED_SLIDES
 
 
 class ProjectLoader(Protocol):
@@ -38,13 +38,9 @@ async def quote_violations(
     project = await acl.load_project(project_id)
     if project is None or not is_pov_news(project.content_mode):
         return ()
-    raw = state.get(FIELD_LOCALIZED_SLIDES)
-    slides = (
-        [item for item in raw if isinstance(item, dict)]
-        if isinstance(raw, list)
-        else []
+    problems = quote_card_problems(
+        _slides(state.get(FIELD_LOCALIZED_SLIDES)), project.pov_quotes
     )
-    problems = quote_card_problems(slides, project.pov_quotes)
     return tuple(_violation(problem) for problem in problems)
 
 

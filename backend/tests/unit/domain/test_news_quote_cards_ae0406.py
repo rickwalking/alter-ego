@@ -169,6 +169,17 @@ def test_footer_labels_dedupes_and_keeps_source_order() -> None:
     )
 
 
+# PR #124 review: @handles dedupe case-insensitively, first spelling kept.
+def test_footer_dedupes_handles_case_insensitively() -> None:
+    sources = (
+        "https://x.com/KanishkSJ01/status/1",
+        "https://x.com/kanishksj01/status/2",
+        "https://www.Anthropic.com/a",
+        "https://anthropic.com/b",
+    )
+    assert source_footer(sources) == "Fontes: @KanishkSJ01, anthropic.com"
+
+
 def test_source_label_edge_cases() -> None:
     assert source_label("https://x.com/") == "x.com"
     assert source_label("not a url") == ""
@@ -197,3 +208,49 @@ def test_bad_rows_are_skipped() -> None:
     assert quotes_from_rows(None) == ()
     assert quotes_from_rows([1, {"id": "q1"}]) == ()
     assert quote_from_row({**_Q1.to_row(), "name": 3}) is None
+
+
+# QA mutation review: the 2-card cap, its gate boundary and odd shapes.
+_Q3 = quote(quote_id="q3", text_pt="Terceira.", text_en="Third.")
+
+
+def test_a_third_distinct_quote_is_not_placed() -> None:
+    drafts = [
+        _draft(4, "point", "q1"),
+        _draft(5, "point", "q2"),
+        _draft(6, "point", "q3"),
+    ]
+    placed = place_quote_cards(drafts, (_Q1, _Q2, _Q3))
+    assert [("insight" in d) for d in placed] == [True, True, False]
+
+
+def test_exactly_two_cards_is_not_a_problem() -> None:
+    slides = [_record(i, _Q1.text_pt, _Q1.text_en) for i in (4, 5)]
+    assert quote_card_problems(slides, (_Q1,)) == []
+
+
+def test_the_card_count_reads_the_pt_payloads() -> None:
+    slides = [_record(i, _Q1.text_pt, None) for i in (4, 5, 6)]
+    assert quote_card_problems(slides, (_Q1,)) == [
+        QuoteCardProblem(rule="too_many_quote_cards")
+    ]
+
+
+def test_an_insight_without_quote_text_is_ignored() -> None:
+    slide = {"presentation_pt": {"insight": {"heading": "x"}}}
+    assert quote_card_problems([slide], (_Q1,)) == []
+
+
+def test_a_non_text_quote_id_places_nothing() -> None:
+    draft: dict[str, object] = {**_draft(4, "point"), "quote_id": ["q1"]}
+    (placed,) = place_quote_cards([draft], (_Q1,))
+    assert "insight" not in placed
+
+
+def test_footer_after_trailing_whitespace() -> None:
+    sources = ("https://x.com/kanishksj01/status/1",)
+    assert with_source_footer("Legenda.\n", sources) == (
+        "Legenda.\n\nFontes: @kanishksj01"
+    )
+    once = "Legenda.\n\nFontes: @kanishksj01"
+    assert with_source_footer(once + "\n", sources) == once + "\n"

@@ -26,7 +26,6 @@ CARD_KEY_NAME = "name"
 CARD_KEY_HANDLE = "handle"
 CARD_KEY_QUOTE_ID = "quote_id"
 HANDLE_PREFIX = "@"
-X_PLATFORM_LABEL = "X"
 ATTRIBUTION_HANDLE_TEMPLATE = "@{handle} · X"
 
 # Deterministic check: a placed quote is exactly one of the supplied quotes.
@@ -86,6 +85,5 @@ __all__ = [
     "SLIDE_ROLE_KEY",
     "SOURCE_FOOTER_PREFIX",
     "SOURCE_FOOTER_SEPARATOR",
-    "X_PLATFORM_LABEL",
     "X_SOURCE_HOSTS",
 ]

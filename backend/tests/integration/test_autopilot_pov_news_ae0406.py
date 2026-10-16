@@ -65,10 +65,10 @@ def _topic(title: str, url: str, quotes: list[dict[str, str]]) -> dict[str, obje
     }
 
 
-async def _send_post(client: AsyncClient) -> str:
-    url = _status_url(_HANDLE, timedelta(hours=2))
+async def _send_post(client: AsyncClient, handle: str = _HANDLE) -> str:
+    url = _status_url(handle, timedelta(hours=2))
     response = await client.post(
-        _PATH_X, headers=_headers(), json={"posts": [_body(url, _HANDLE, _TEXT)]}
+        _PATH_X, headers=_headers(), json={"posts": [_body(url, handle, _TEXT)]}
     )
     assert response.status_code == 200
     assert response.json()["accepted"] == [url]
@@ -156,4 +156,39 @@ async def test_an_unserved_quote_source_is_rejected_first(
     # ``other`` was never served, so the topic's sources fail first.
     assert [(r["reason"], r["field"]) for r in rejected] == [
         ("source_not_in_signals", "sources[1]")
+    ]
+
+
+# PR #124 review: a missing quote field rejects one topic; a handle-case
+# difference between the stored post and the quote URL is still the same post.
+@pytest.mark.asyncio
+async def test_missing_field_and_handle_case(
+    configured_key: None, tmp_path: Path
+) -> None:
+    del configured_key
+    async for client, _engine, _notices in _client(tmp_path / "newscase.db"):
+        url = await _send_post(client, handle="KanishkSJ01")
+        cited = url.replace("KanishkSJ01", _HANDLE)
+        missing = _quote(cited)
+        del missing["text_en"]
+        response = await client.post(
+            _PATH_TOPICS,
+            headers=_headers(),
+            json={
+                "topics": [
+                    _topic("Agentes em paralelo", url, [_quote(cited)]),
+                    _topic("Revisão de agentes", url, [missing]),
+                ]
+            },
+        )
+    assert response.status_code == 200
+    body = response.json()
+    assert len(body["accepted"]) == 1
+    assert body["rejected"] == [
+        {
+            "index": 1,
+            "title": "Revisão de agentes",
+            "reason": "quote_invalid",
+            "field": "quotes[0].text_en",
+        }
     ]

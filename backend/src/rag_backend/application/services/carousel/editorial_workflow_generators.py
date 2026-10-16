@@ -325,9 +325,23 @@ def build_slide_draft_retry(
         position = positions.get(slide_index)
         if position is None:
             return None
-        return await runner.draft_at(position)
+        return _without_quote_card(await runner.draft_at(position), params.mode)
 
     return _retry
+
+
+def _without_quote_card(
+    draft: dict[str, object], mode: ContentModeBrief | None
+) -> dict[str, object]:
+    """AE-0406: a re-drafted ``pov_news`` slide shows no quote card.
+
+    The 2-card cap is per deck and a single-slide retry cannot see the other
+    slides, so its ``quote_id`` (and any model-written insight) is dropped.
+    """
+    if mode is None or not is_pov_news(mode.content_mode):
+        return draft
+    (placed,) = place_quote_cards([draft], ())
+    return placed
 
 
 def resolve_workflow_input(

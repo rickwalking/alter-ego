@@ -123,10 +123,12 @@ Feature: Content mode "pov_news" and scout-verified quotes (AE-0406, ADR-0023)
     And the project stores the quotes and the topic's sources
 
   Scenario: A quote is placed verbatim by id, at most twice
-    Given the content model returns quote_id "q1" on a point slide, the twist and a third point
+    Given the content model returns quote_id "q1" on a point slide, "q2" on the twist and "q3" on a third point
     When the drafts are finalized
-    Then the point slide and the twist carry the q1 card with text_pt
+    Then the point slide carries the q1 card and the twist the q2 card, with text_pt
     And the third slide carries no card
+    And a second use of an already placed quote carries no card
+    And a single re-drafted slide carries no card
     And the EN translation of each card is text_en
 
   Scenario: A model-written quote never reaches a slide

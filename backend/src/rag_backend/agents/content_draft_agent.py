@@ -29,6 +29,7 @@ from rag_backend.application.services.carousel.presentation_policy import (
 from rag_backend.domain.constants.ai_agents import ERR_INVALID_JSON
 from rag_backend.domain.constants.carousel import CAROUSEL_PROMPT_VERSION_V6
 from rag_backend.domain.constants.carousel_workflow import PHASE_CONTENT
+from rag_backend.domain.constants.news_quotes import CARD_KEY_QUOTE_ID
 from rag_backend.domain.constants.pov_prompts import (
     POV_PROMPT_CONTENT,
     POV_PROMPT_VERSION,
@@ -50,7 +51,7 @@ logger = get_logger()
 
 LOG_LONG_FORM_NOTES_MISSING = "content_draft.long_form_notes_missing"
 # AE-0406: a ``pov_news`` slide may pick a verified quote by id (never its text).
-DRAFT_QUOTE_ID_KEY = "quote_id"
+DRAFT_QUOTE_ID_KEY = CARD_KEY_QUOTE_ID
 _MODEL_CFG_TEMPERATURE = "temperature"
 _MODEL_CFG_MAX_TOKENS = "max_tokens"
 _BINDABLE_MODEL_KEYS = (_MODEL_CFG_TEMPERATURE, _MODEL_CFG_MAX_TOKENS)
