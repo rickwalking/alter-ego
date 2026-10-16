@@ -61,6 +61,24 @@ describe("CreateModeSection", () => {
     });
   });
 
+  // Scenario: The owner picks "POV: News" (AE-0406)
+  it("switches to POV: News with the POV preset", () => {
+    const onChange = vi.fn();
+    render(
+      <CreateModeSection
+        form={INITIAL_CREATE_FORM_STATE}
+        onChange={onChange}
+        personas={PERSONAS}
+      />,
+    );
+    fireEvent.click(screen.getByRole("radio", { name: /POV: News/ }));
+    expect(onChange).toHaveBeenCalledWith({
+      contentMode: "pov_news",
+      selectedTemplate: 0,
+      imagePreset: "openai__pov_editorial",
+    });
+  });
+
   it("lists the personas with a no-persona option", () => {
     const onChange = vi.fn();
     render(

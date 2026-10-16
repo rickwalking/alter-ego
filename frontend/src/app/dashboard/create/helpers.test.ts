@@ -141,3 +141,25 @@ describe("buildCarouselCreateRequest content mode (AE-0373)", () => {
     expect(canSubmitCreateForm({ ...BASE_FORM, audience: " " })).toBe(false);
   });
 });
+
+// Scenario: "POV: News" create sends the POV fields (create-content-mode.feature, AE-0406)
+describe("buildCarouselCreateRequest pov_news (AE-0406)", () => {
+  it("sends the POV fields and needs the thesis and photo", () => {
+    const news = {
+      ...BASE_FORM,
+      contentMode: "pov_news" as const,
+      povThesis: "Agentes em paralelo são um gargalo de revisão.",
+      hookAssetId: HOOK_PHOTO_ID,
+    };
+    const request = buildCarouselCreateRequest(news);
+    expect(request).toMatchObject({
+      content_mode: "pov_news",
+      pov_thesis: "Agentes em paralelo são um gargalo de revisão.",
+      slide_count: 9,
+      hook_asset_id: HOOK_PHOTO_ID,
+    });
+    expect(carouselCreateRequestSchema.safeParse(request).success).toBe(true);
+    expect(canSubmitCreateForm(news)).toBe(true);
+    expect(canSubmitCreateForm({ ...news, povThesis: "" })).toBe(false);
+  });
+});

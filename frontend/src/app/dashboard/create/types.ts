@@ -50,7 +50,12 @@ export const INITIAL_CREATE_FORM_STATE: CreateCarouselFormState = {
   hookAssetId: "",
 };
 
-/** True in POV mode: the wizard shows the POV inputs and formats. */
+/** AE-0406: the POV family (thesis, slide-1 photo, 8-10 slides). */
+export function isPovMode(mode: ContentMode): boolean {
+  return mode === CONTENT_MODES.POV || mode === CONTENT_MODES.POV_NEWS;
+}
+
+/** True in a POV-family mode: the wizard shows the POV inputs and formats. */
 export function isPovForm(form: CreateCarouselFormState): boolean {
-  return form.contentMode === CONTENT_MODES.POV;
+  return isPovMode(form.contentMode);
 }

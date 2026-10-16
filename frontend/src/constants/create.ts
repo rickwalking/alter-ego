@@ -184,6 +184,8 @@ export const CREATE_WORKSPACE_ROUTE = (id: string) => `/dashboard/create/${id}`;
 export const CONTENT_MODES = {
   NEWS_ANALYSIS: "news_analysis",
   POV: "pov",
+  /** AE-0406 (ADR-0023): news analysis through the owner's point of view. */
+  POV_NEWS: "pov_news",
 } as const;
 
 export type ContentMode = (typeof CONTENT_MODES)[keyof typeof CONTENT_MODES];

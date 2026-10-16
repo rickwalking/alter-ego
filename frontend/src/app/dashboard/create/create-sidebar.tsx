@@ -17,7 +17,11 @@ import {
   isPovForm,
   type CreateCarouselFormState,
 } from "@/app/dashboard/create/types";
-import { IMAGE_PRESETS, POV_TEMPLATES } from "@/constants/create";
+import {
+  CONTENT_MODES,
+  IMAGE_PRESETS,
+  POV_TEMPLATES,
+} from "@/constants/create";
 
 const sidebarCardStyle = {
   background: BG_CARD,
@@ -34,6 +38,9 @@ export interface CreateSidebarProps {
 }
 
 function modeKey(form: CreateCarouselFormState): string {
+  if (form.contentMode === CONTENT_MODES.POV_NEWS) {
+    return "povNews";
+  }
   return isPovForm(form) ? "pov" : "radar";
 }
 
