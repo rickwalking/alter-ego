@@ -464,6 +464,45 @@ recommended slot of the next seven days, which without insights is the next Tues
 **Migration.** Revision `b1c2d3e4f5a6` (after `b0c1d2e3f4a5`, which follows AE-0370's `a9b0c1d2e3f4`) adds the nullable
 `topic_candidates.content_mode`, `topic_candidates.thesis_draft` and `autopilot_runs.pov_thesis`
 (additive).
+### 5.7 "Ponto de Vista: Notícia" topics and verified quotes (AE-0406, ADR-0023)
+
+Scout contract v2 (spec "POV News Mode Spec v2") adds `mode: "pov_news"`: news analysis told
+through the owner's point of view. It is a **POV-family** mode: the same `thesis_draft`
+requirement (`thesis_missing`), `awaiting_thesis` step (the prompt reads "Ponto de Vista:
+Notícia proposto"), slide-1 photo, `pov_hook_v1` contract, validators, persona voice gate and
+Tue/Thu slot prior as `pov`. `pov_format` is ignored (stored as the default `opiniao`). Only the
+voice differs: prompt family `carousel_pov_news/v1` (outline, hook, content, caption).
+
+**Caps.** `pov_news` counts toward the daily cap, never toward the weekly Radar IA cap
+(`PreparedProposal.is_news` is `content_mode == news_analysis`; the store counts NULL /
+`news_analysis` topics only).
+
+**Quotes (`quotes`, 0-3, `pov_news` only).** Each one is checked against the post text stored
+through `POST /x-signals` (`domain/quotes.py`, `domain/quote_text.py`):
+`id` `^q[1-9]$` unique, `name` 1-60, `lang_original` en/pt (`quote_invalid`); `url` canonical X
+status URL listed in `sources` and stored through x-signals (`quote_source_invalid`); `handle`
+equals the URL's, case-insensitive (`quote_handle_mismatch`); `excerpt` 1-280 characters and a
+substring of the stored text (cut at 600) after NFC, curly→straight quotes and whitespace-run
+collapsing (`quote_not_in_post`); `text_pt` ≤ 15 words, `text_en` ≤ 18 (`quote_too_long`). A URL in
+any quote text is `url_in_text`. A problem rejects only that topic. Unknown keys stay a 422.
+Since AE-0406 x-signals stores line breaks as spaces (they used to be glued), so an excerpt can
+span them.
+
+**Response.** Every `rejected` item has `index` (position in the request) and, when one field
+caused it, `field` (`audience`, `sources[1]`, `thesis_draft`, `quotes[0].excerpt`, ...).
+
+**Carousel.** The quotes ride topic → run spec → `carousel_projects.pov_quotes`, with the
+topic's `sources` in `pov_sources`. On a `point` or `twist` slide the content model may return
+`quote_id`; code places the card verbatim (`text_pt` PT, `text_en` EN, at most 2 per deck,
+model-written insights dropped; `domain/news_quote_cards.py`) and the renderer draws it with the
+`insight_quote` strategy on the POV shell: initial circle, name, `@handle · X`, never a URL. The
+autopilot content gate re-checks every card (`quote_not_verbatim`, `too_many_quote_cards`). The
+caption footer `Fontes: @handle, domain.com` is appended by code (`domain/source_footer.py`).
+
+**Migration.** Revision `c4d5e6f7a8b9` (after `a0e4f0a4b4c4`) adds the nullable JSON
+`topic_candidates.quotes`, `carousel_projects.pov_quotes` and `carousel_projects.pov_sources`.
+`content_mode` is a plain `String(20)`, so `pov_news` needs no enum change.
+
 ## 6. Backend changes (gap → fix)
 
 | Gap found in the codebase | Fix |

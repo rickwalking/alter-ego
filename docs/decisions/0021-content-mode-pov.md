@@ -81,3 +81,5 @@ Chosen: **Option 3**.
 - Epic: AE-0371 (children AE-0372 to AE-0378). Scheduling (roadmap R6) is AE-0370.
 - Related: ADR-0003 (persona-driven content), ADR-0007 (carousel pipelines), ADR-0020
   (GrokBot autopilot).
+- Extended by [ADR-0023](0023-content-mode-pov-news.md): `pov_news`, a POV-family mode with a
+  news-analysis voice and scout-verified quotes (AE-0406).
