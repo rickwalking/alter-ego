@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import asyncio
 from dataclasses import dataclass, replace
+from typing import Protocol, runtime_checkable
 
 import structlog
 from langchain_core.callbacks import CallbackManagerForLLMRun
@@ -266,6 +267,15 @@ class _RoutedRequest:
     fallback: bool = False
 
 
+@runtime_checkable
+class HasFallback(Protocol):
+    """A chat model that can hand a call to its fallback (AE-0391, AE-0399)."""
+
+    def as_fallback(self) -> BaseChatModel | None:
+        """The model to re-issue a call on, or None when there is none."""
+        ...
+
+
 def fallback_runnable_for(
     runnable: Runnable[LanguageModelInput, BaseMessage],
 ) -> Runnable[LanguageModelInput, BaseMessage] | None:
@@ -274,12 +284,12 @@ def fallback_runnable_for(
     Used by the JSON retry policy to re-issue a call whose output never parsed:
     bound sampling kwargs (temperature/max_tokens) are carried over.
     """
-    if isinstance(runnable, RoutedChatModel):
+    if isinstance(runnable, HasFallback):
         return runnable.as_fallback()
     if not isinstance(runnable, RunnableBinding):
         return None
     bound = runnable.bound
-    if not isinstance(bound, RoutedChatModel):
+    if not isinstance(bound, HasFallback):
         return None
     fallback = bound.as_fallback()
     if fallback is None:
@@ -289,6 +299,7 @@ def fallback_runnable_for(
 
 __all__ = [
     "EmptyLLMResponseError",
+    "HasFallback",
     "RoutedChatModel",
     "fallback_runnable_for",
     "model_id_of",

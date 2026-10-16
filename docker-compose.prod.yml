@@ -108,6 +108,14 @@ services:
       GROKBOT_IMAGE_WEBHOOK_URL: ${GROKBOT_IMAGE_WEBHOOK_URL:-}
       GROKBOT_IMAGE_WEBHOOK_AUTH_HEADER: ${GROKBOT_IMAGE_WEBHOOK_AUTH_HEADER:-Authorization}
       GROKBOT_IMAGE_WEBHOOK_AUTH_VALUE: ${GROKBOT_IMAGE_WEBHOOK_AUTH_VALUE:-}
+      # AE-0399: model queue per role (empty = AE-0391 routing), the OpenCode
+      # sidecar for the free model, breaker cooldowns, and the alerts bot.
+      LLM_MODEL_QUEUE_FAST: ${LLM_MODEL_QUEUE_FAST:-}
+      LLM_MODEL_QUEUE_REASONING: ${LLM_MODEL_QUEUE_REASONING:-}
+      OPENCODE_SIDECAR_URL: ${OPENCODE_SIDECAR_URL:-}
+      OPENCODE_SERVER_PASSWORD: ${OPENCODE_SERVER_PASSWORD:-}
+      TELEGRAM_ALERTS_BOT_TOKEN: ${TELEGRAM_ALERTS_BOT_TOKEN:-}
+      TELEGRAM_ALERTS_CHAT_ID: ${TELEGRAM_ALERTS_CHAT_ID:-}
     depends_on:
       postgres:
         condition: service_healthy
@@ -115,6 +123,38 @@ services:
         condition: service_healthy
     volumes:
       - carousel_output:/app/output
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # AE-0399: OpenCode sidecar serving the free DeepSeek model (first in the
+  # carousel model queue). Isolated: no secrets but its own server password,
+  # no published ports, read-only root, tmpfs scratch. Its OpenCode login
+  # lives in the opencode_data volume at /data/opencode (`docker compose exec
+  # opencode opencode auth login` once after the first deploy).
+  opencode:
+    build:
+      context: ops/opencode
+    environment:
+      OPENCODE_SERVER_PASSWORD: ${OPENCODE_SERVER_PASSWORD:-}
+    read_only: true
+    # AE-0402: tmpfs mounts are root-owned by default; the agent runs as 10001
+    # and writes all over its home at runtime (see ops/opencode/Dockerfile).
+    tmpfs:
+      - /tmp:uid=10001,gid=10001,mode=0700
+      - /work:uid=10001,gid=10001,mode=0700
+      - /home/opencode:uid=10001,gid=10001,mode=0700,size=512m
+    volumes:
+      - opencode_data:/data/opencode
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    mem_limit: 1g
+    pids_limit: 256
     restart: unless-stopped
     logging:
       driver: "json-file"
@@ -351,3 +391,4 @@ volumes:
   certbot_www:
   carousel_output:
   minio_data:
+  opencode_data:

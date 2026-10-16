@@ -145,6 +145,9 @@ uv run ruff format src/          # Formatting
   `deepseek-v4.1-flash` (drafting, translation, distribution, refinement, persona
   scoring). Every model gets **5 attempts**, then the role's **fallback** (`qwen3.8-flash` for fast,
   `qwen3.8-max` for reasoning; no longer GLM) on error/timeout/empty/bad JSON (AE-0391, AE-0395).
+- With `LLM_MODEL_QUEUE_FAST` / `_REASONING` set (prod, AE-0399) a role is a **model queue** behind
+  per-model circuit breakers (free DeepSeek via the OpenCode sidecar → DeepSeek Flash → Qwen), with
+  breaker alerts on a send-only Telegram bot.
 - Slides are drafted in parallel (`CONTENT_DRAFT_CONCURRENCY`, default 4).
 - Details and benchmarks: `../docs/backend/llm-model-routing.md`.
 
