@@ -124,6 +124,20 @@ rule_severities:
   translation_not_english: blocker
   emphasis_markup_invalid: blocker
   proper_noun_casing: blocker
+  # AE-0401: copy-hygiene rules (presentation_copy_rules.py). Prod carousel
+  # 98a2e2f0 shipped a fenced JSON blob, an HTML tag and a Markdown heading as
+  # visible copy; each is a blocker the autopilot fixes before a human sees it.
+  structured_payload_in_copy: blocker
+  markup_leak: blocker
+  emphasis_unbalanced: blocker
+  assistant_chatter: blocker
+  placeholder_text: blocker
+  encoding_garbled: blocker
+  copy_truncated: blocker
+  body_too_short: blocker
+  wrong_language: blocker
+  repeated_text: blocker
+  structured_item_split: blocker
 
 # AE-0312: PT casing rules + configurable proper-noun list. Maintenance
 # ownership is documented in contracts/README.md — add product names here (a
@@ -155,6 +169,9 @@ casing:
       exempt_slide_types: [cta]
     - code: proper_noun_casing
       exempt_slide_types: []
+    # AE-0401: the hook's sub-hook and the CTA are fragments, not sentences.
+    - code: copy_truncated
+      exempt_slide_types: [intro, cta]
 
 # AE-0366: the LLM quality rubric. SINGLE SOURCE OF TRUTH for the checklist the
 # content drafter and the EN translator must satisfy (rendered into their
@@ -207,9 +224,45 @@ quality_rubric:
   - rubric_id: strong_emphasis_only
     instruction: >-
       HTML emphasis uses <strong>...</strong> only, with balanced, non-nested
-      tags. Keep every <strong> tag from the source when translating.
+      tags. Keep every <strong> tag from the source when translating. Bold
+      ** marks come in pairs, never empty.
     rule_codes:
       - emphasis_markup_invalid
+      - emphasis_unbalanced
+    audiences: [content, translation]
+  # AE-0401: the copy is the copy, nothing else.
+  - rubric_id: plain_slide_copy
+    instruction: >-
+      Write only the slide copy as plain text: no JSON, no code fences, no keys
+      such as "heading" or "body", no HTML tags other than <strong>, no Markdown
+      headings (#),
+      lists, tables or backticks, no literal \n. No chat preamble ("Here is",
+      "Claro! Aqui está"), no notes about the task, no placeholders ([insert],
+      {topic}, TODO, lorem ipsum).
+    rule_codes:
+      - structured_payload_in_copy
+      - markup_leak
+      - assistant_chatter
+      - placeholder_text
+      - encoding_garbled
+    audiences: [content, translation]
+  - rubric_id: complete_sentences
+    instruction: >-
+      Every body is complete: it ends with . ! or ? (never "...", a comma, a
+      colon or a dangling "e"/"and"). A content slide body has at least 8
+      words. Never repeat a sentence or write a word twice in a row. An item
+      title is a whole phrase: never cut it on "ou", "e", "de", "com".
+    rule_codes:
+      - copy_truncated
+      - body_too_short
+      - repeated_text
+      - structured_item_split
+    audiences: [content, translation]
+  - rubric_id: right_language
+    instruction: >-
+      The Portuguese copy is in Portuguese and the English copy is in English.
+    rule_codes:
+      - wrong_language
     audiences: [content, translation]
   - rubric_id: length_limits
     instruction: >-

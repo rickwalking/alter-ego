@@ -445,10 +445,10 @@ class TestOwnerAutofixServiceEdges:
                 CarouselConflict.for_code("mutation_in_progress")
             )
 
-        from rag_backend.application.services.carousel import owner_autofix_service
+        from rag_backend.application.services.carousel import owner_autofix_lock
 
         monkeypatch.setattr(
-            owner_autofix_service.CarouselProjectWriteOwner,
+            owner_autofix_lock.CarouselProjectWriteOwner,
             "bump_resume_lock_version",
             _held,
         )
@@ -560,10 +560,10 @@ class TestOwnerAutofixWorkerRace:
         async def _broken(*args: object, **kwargs: object) -> None:
             raise ValueError("project row missing")
 
-        from rag_backend.application.services.carousel import owner_autofix_service
+        from rag_backend.application.services.carousel import owner_autofix_lock
 
         monkeypatch.setattr(
-            owner_autofix_service.CarouselProjectWriteOwner,
+            owner_autofix_lock.CarouselProjectWriteOwner,
             "bump_resume_lock_version",
             _broken,
         )
@@ -599,9 +599,9 @@ class TestOwnerAutofixWorkerRace:
 def test_the_lock_uses_the_session_engine() -> None:
     from sqlalchemy.ext.asyncio import create_async_engine
 
-    from rag_backend.application.services.carousel.owner_autofix_service import (
-        _lock_engine,
+    from rag_backend.application.services.carousel.owner_autofix_lock import (
+        lock_engine,
     )
 
     engine = create_async_engine("sqlite+aiosqlite://")
-    assert _lock_engine(AsyncSession(bind=engine)) is engine
+    assert lock_engine(AsyncSession(bind=engine)) is engine

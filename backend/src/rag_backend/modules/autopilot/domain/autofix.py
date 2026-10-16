@@ -82,3 +82,51 @@ class GateRepairer(Protocol):
     async def repair_gate(self, command: GateRepairCommand) -> GateRepairOutcome:
         """Repair the checkpoint copy and re-validate. No re-render."""
         ...
+
+
+@dataclass(frozen=True, kw_only=True)
+class SlideFixCommand:
+    """Model-fix one gate's failing slides at the lock version the tick read."""
+
+    project_id: str
+    expected_version: int
+    phase: str
+
+
+@dataclass(frozen=True, kw_only=True)
+class SlideFixAttemptRecord:
+    """One model attempt on one slide (AE-0401), for the per-attempt log."""
+
+    slide_index: int
+    attempt: int
+    rules_before: tuple[str, ...]
+    rules_after: tuple[str, ...]
+    outcome: str
+
+
+@dataclass(frozen=True, kw_only=True)
+class FailingSlide:
+    """A slide the model fix gave up on: its rules, its text, its attempts."""
+
+    slide_index: int
+    rules: tuple[str, ...]
+    text: str
+    attempts: int
+
+
+@dataclass(frozen=True, kw_only=True)
+class SlideFixOutcome:
+    """What the model fix wrote and which slides are still failing (AE-0401)."""
+
+    status: AutofixStatus
+    failing: tuple[FailingSlide, ...] = ()
+    attempts: tuple[SlideFixAttemptRecord, ...] = ()
+    unfixable_rules: tuple[str, ...] = ()
+
+
+class SlideFixer(Protocol):
+    """Model fix of the slides still failing after the repair (AE-0401)."""
+
+    async def fix_slides(self, command: SlideFixCommand) -> SlideFixOutcome:
+        """Rewrite each failing slide (N attempts), persist the fixed ones."""
+        ...

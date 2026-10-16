@@ -54,6 +54,9 @@ class PolicyDecision:
 
     action: GateAction
     reason: str
+    # AE-0401: what an escalation tells the owner beyond the reason (the
+    # slides the model fix gave up on). Empty for every policy decision.
+    detail: str = ""
 
 
 @dataclass(frozen=True, kw_only=True)

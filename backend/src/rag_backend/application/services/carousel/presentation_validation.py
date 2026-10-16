@@ -15,6 +15,9 @@ from rag_backend.application.services.carousel.presentation_content_rules import
     ContentRuleCommand,
     content_rule_violations,
 )
+from rag_backend.application.services.carousel.presentation_copy_rules import (
+    copy_hygiene_violations,
+)
 from rag_backend.application.services.carousel.presentation_policy import (
     CarouselPresentationPolicy,
     load_presentation_policy,
@@ -285,13 +288,12 @@ def validate_slide_payload(
         slide_index=command.slide_index,
     )
     violations.extend(casing_violations(casing))
-    violations.extend(
-        content_rule_violations(
-            ContentRuleCommand(
-                casing.payload, casing.locale, casing.policy, casing.slide_index
-            )
-        )
+    rules = ContentRuleCommand(
+        casing.payload, casing.locale, casing.policy, casing.slide_index
     )
+    violations.extend(content_rule_violations(rules))
+    # AE-0401: JSON/markup/chatter/placeholder/encoding/truncation/language.
+    violations.extend(copy_hygiene_violations(rules))
     return violations
 
 

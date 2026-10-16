@@ -6,7 +6,8 @@ Pure: no DB, no LLM. Per slide and locale, in this order:
    summary slide's missing points (the EN side gets the PT items, which the
    re-translate step then translates);
 2. balance ``<strong>`` tags and restore the carousel's proper nouns in every
-   visible text;
+   visible text, then the AE-0401 copy-hygiene repair (JSON blobs, markup,
+   emphasis, encoding, doubled words) where the policy enables it;
 3. the AE-0366 ``repair_casing`` (first letter of every heading, body sentence
    and item text, pt-BR accent aware; configured proper nouns).
 
@@ -21,6 +22,9 @@ import copy
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 
+from rag_backend.application.services.carousel.copy_hygiene_repair import (
+    repair_copy_hygiene,
+)
 from rag_backend.application.services.carousel.localized_slide_builder import (
     PRESENTATION_EN_KEY,
     PRESENTATION_PT_KEY,
@@ -216,11 +220,13 @@ def _mirror_fill(
 def _polish(
     payload: Mapping[str, object], locale: str, context: AutofixContext
 ) -> dict[str, object]:
-    """Balance tags, restore proper nouns, then the AE-0366 casing repair."""
+    """Balance tags, restore proper nouns, copy hygiene, then casing (AE-0366)."""
     nouns = context.vocabulary
     cleaned = map_texts(
         payload, lambda text: restore_proper_nouns(balance_strong(text), nouns)
     )
+    # AE-0401: JSON blobs, markup, emphasis, encoding, doubled words.
+    cleaned = repair_copy_hygiene(cleaned, locale, context.policy)
     return repair_casing(cleaned, locale, context.policy)
 
 

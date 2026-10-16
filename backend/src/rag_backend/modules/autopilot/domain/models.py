@@ -55,6 +55,8 @@ class TransitionCommand:
     reason: str
     # AE-0370: the publish time stored when the run enters ``scheduled``.
     scheduled_at: datetime | None = None
+    # AE-0401: extra escalation copy for the owner (the state-changed event).
+    detail: str = ""
 
     def pair(self) -> TransitionPair:
         """The state pair the domain table judges, ignoring persistence."""

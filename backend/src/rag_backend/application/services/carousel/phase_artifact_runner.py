@@ -72,6 +72,7 @@ from .editorial_workflow_support import (
     EditorialWorkflowStartInput,
     publish_workflow_artifacts_from_updates,
 )
+from .localized_rows_sync import sync_rows_to_localized
 from .outline_normalize import normalize_editorial_outline
 
 
@@ -227,6 +228,11 @@ class PhaseArtifactRunner:
             updates.update(await self._ensure_design_artifacts(state, updates))
         elif phase == PHASE_IMAGES:
             updates.update(await self._ensure_image_artifacts(state))
+        if phase in {PHASE_CONTENT, PHASE_DESIGN}:
+            # AE-0401: render what the gate validated (rows = localized copy).
+            await sync_rows_to_localized(
+                self._db, str(state.get("project_id", "")), {**state, **updates}
+            )
 
         await self._publish_phase_updates(state, phase, updates)
         return updates

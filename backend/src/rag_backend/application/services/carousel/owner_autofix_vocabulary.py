@@ -5,7 +5,9 @@ it capitalized. The fix restores capitals from the carousel's own vocabulary:
 a word written capitalized in the MIDDLE of a sentence (never its first word)
 in a sentence-case source (outline titles and key points, the PT/EN copy) is a
 proper noun, unless a trusted source (outline, research) also writes it
-lowercase mid-sentence. Research titles are often Title Case, so from those
+lowercase mid-sentence. A multi-word name ("Claude Code", "Grok Bot") is
+learned whole, never its last word alone (AE-0401). Research titles are often
+Title Case, so from those
 only distinctive tokens are trusted ("OpenAI", "GPT-5"). The constants list and
 the policy's configured proper nouns are always included.
 """
@@ -79,13 +81,46 @@ def _is_candidate(token: str) -> bool:
     return _is_capitalized(token) or _is_distinctive(token)
 
 
+def _runs(sentence: str) -> list[tuple[int, list[str]]]:
+    """(first token position, tokens) of each run of adjacent candidate tokens.
+
+    Tokens separated only by whitespace are one name ("Claude Code", "Grok
+    Bot"); a comma or any other character ends the run.
+    """
+    runs: list[tuple[int, list[str]]] = []
+    previous_end = -1
+    for position, match in enumerate(_TOKEN_PATTERN.finditer(sentence)):
+        token = match.group(0)
+        if not _is_candidate(token):
+            previous_end = -1
+            continue
+        gap = sentence[previous_end : match.start()] if previous_end >= 0 else "x"
+        if runs and not gap.strip():
+            runs[-1][1].append(token)
+        else:
+            runs.append((position, [token]))
+        previous_end = match.end()
+    return runs
+
+
 def _count_sentence_case(text: str, tally: _Tally, *, trusted: bool) -> None:
+    """Count capitalized mid-sentence names; a multi-word name counts whole.
+
+    AE-0401: "Claude Code" used to teach "Code" alone, so "the code" in EN was
+    reported as a lowercased proper noun. Only the full phrase is learned.
+    """
     for sentence in _sentences(text):
-        for token in _mid_tokens(sentence):
-            if _is_candidate(token):
-                tally.capitalized[token] += 1
-            elif trusted and token == token.lower():
-                tally.lowercase_trusted.add(token)
+        for position, tokens in _runs(sentence):
+            if len(tokens) > 1:
+                tally.capitalized[" ".join(tokens)] += 1
+            elif position > 0:
+                tally.capitalized[tokens[0]] += 1
+        if trusted:
+            tally.lowercase_trusted.update(
+                token
+                for token in _mid_tokens(sentence)
+                if token == token.lower() and not _is_candidate(token)
+            )
 
 
 def _is_title_case(title: str) -> bool:

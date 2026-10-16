@@ -90,7 +90,8 @@ class ContentRuleCommand:
     slide_index: int | None = None
 
 
-def _slide_type(payload: Mapping[str, object]) -> str:
+def slide_type_of(payload: Mapping[str, object]) -> str:
+    """The payload's slide type (``slide_type`` or ``type``), or empty."""
     for key in _SLIDE_TYPE_KEYS:
         value = payload.get(key)
         if isinstance(value, str) and value.strip():
@@ -98,7 +99,8 @@ def _slide_type(payload: Mapping[str, object]) -> str:
     return ""
 
 
-def _text(payload: Mapping[str, object], field: str) -> str:
+def text_of(payload: Mapping[str, object], field: str) -> str:
+    """The string value of ``field``, or empty when absent or not a string."""
     value = payload.get(field)
     return value if isinstance(value, str) else ""
 
@@ -110,16 +112,18 @@ def _items(payload: Mapping[str, object], field: str) -> list[Mapping[str, objec
     return [item for item in raw if isinstance(item, Mapping)]
 
 
-def _complete_items(payload: Mapping[str, object], *fields: str) -> int:
+def complete_item_count(payload: Mapping[str, object], *fields: str) -> int:
+    """Items of the given lists that have both a title and a body."""
     count = 0
     for field in fields:
         for item in _items(payload, field):
-            if _text(item, _ITEM_TITLE).strip() and _text(item, _ITEM_BODY).strip():
+            if text_of(item, _ITEM_TITLE).strip() and text_of(item, _ITEM_BODY).strip():
                 count += 1
     return count
 
 
-def _active(policy: CarouselPresentationPolicy, code: str, slide_type: str) -> bool:
+def rule_active(policy: CarouselPresentationPolicy, code: str, slide_type: str) -> bool:
+    """True when the policy declares ``code`` and does not exempt the slide type."""
     if code not in policy.rule_severities:
         return False
     rule = policy.casing_rule(code)
@@ -143,13 +147,13 @@ def _violation(
 
 
 def _body_is_empty(payload: Mapping[str, object], slide_type: str) -> bool:
-    if _text(payload, _FIELD_BODY).strip():
+    if text_of(payload, _FIELD_BODY).strip():
         return False
     if slide_type == SLIDE_TYPE_CONTENT:
-        complete = _complete_items(payload, _KEY_FEATURES)
+        complete = complete_item_count(payload, _KEY_FEATURES)
         return complete < MIN_CONTENT_FEATURES_WITHOUT_BODY
     if slide_type in {SLIDE_TYPE_SUMMARY, SLIDE_TYPE_CLOSING}:
-        return _complete_items(payload, *_ITEM_LIST_FIELDS) == 0
+        return complete_item_count(payload, *_ITEM_LIST_FIELDS) == 0
     return True
 
 
@@ -159,12 +163,13 @@ def _structure_codes(payload: Mapping[str, object], slide_type: str) -> list[str
         codes.append(VIOLATION_BODY_EMPTY)
     if (
         slide_type == SLIDE_TYPE_CLOSING
-        and _complete_items(payload, _KEY_ACTIONS, _KEY_FEATURES) < MIN_CLOSING_ACTIONS
+        and complete_item_count(payload, _KEY_ACTIONS, _KEY_FEATURES)
+        < MIN_CLOSING_ACTIONS
     ):
         codes.append(VIOLATION_CLOSING_ACTIONS_MISSING)
     if (
         slide_type == SLIDE_TYPE_SUMMARY
-        and _complete_items(payload, _KEY_SUMMARY_POINTS) < MIN_SUMMARY_POINTS
+        and complete_item_count(payload, _KEY_SUMMARY_POINTS) < MIN_SUMMARY_POINTS
     ):
         codes.append(VIOLATION_SUMMARY_POINTS_MISSING)
     return codes
@@ -185,15 +190,16 @@ def emphasis_markup_is_valid(text: str) -> bool:
     return depth == 0
 
 
-def _visible_fields(payload: Mapping[str, object]) -> list[tuple[str, str]]:
+def visible_fields(payload: Mapping[str, object]) -> list[tuple[str, str]]:
+    """(field path, text) for the heading, the body and every item title/body."""
     fields = [
-        (_FIELD_HEADING, _text(payload, _FIELD_HEADING)),
-        (_FIELD_BODY, _text(payload, _FIELD_BODY)),
+        (_FIELD_HEADING, text_of(payload, _FIELD_HEADING)),
+        (_FIELD_BODY, text_of(payload, _FIELD_BODY)),
     ]
     for list_field in _ITEM_LIST_FIELDS:
         for index, item in enumerate(_items(payload, list_field)):
             fields.extend(
-                (f"{list_field}[{index}].{key}", _text(item, key))
+                (f"{list_field}[{index}].{key}", text_of(item, key))
                 for key in (_ITEM_TITLE, _ITEM_BODY)
             )
     return fields
@@ -203,16 +209,16 @@ def content_rule_violations(
     command: ContentRuleCommand,
 ) -> list[SlideValidationViolation]:
     """Structure + markup rubric violations for one locale payload (v2+)."""
-    slide_type = _slide_type(command.payload)
+    slide_type = slide_type_of(command.payload)
     violations = [
         _violation(command, code, _FIELD_BODY)
         for code in _structure_codes(command.payload, slide_type)
-        if _active(command.policy, code, slide_type)
+        if rule_active(command.policy, code, slide_type)
     ]
-    if _active(command.policy, VIOLATION_EMPHASIS_MARKUP_INVALID, slide_type):
+    if rule_active(command.policy, VIOLATION_EMPHASIS_MARKUP_INVALID, slide_type):
         violations.extend(
             _violation(command, VIOLATION_EMPHASIS_MARKUP_INVALID, field)
-            for field, text in _visible_fields(command.payload)
+            for field, text in visible_fields(command.payload)
             if not emphasis_markup_is_valid(text)
         )
     return violations
@@ -248,8 +254,8 @@ def translation_violations(
     )
     violations: list[SlideValidationViolation] = []
     for field in (_FIELD_HEADING, _FIELD_BODY):
-        english = _normalized(_text(command.en_payload, field))
-        portuguese = _normalized(_text(command.pt_payload, field))
+        english = _normalized(text_of(command.en_payload, field))
+        portuguese = _normalized(text_of(command.pt_payload, field))
         if len(english) >= MIN_UNTRANSLATED_COMPARE_CHARS and english == portuguese:
             violations.append(_violation(rule_command, code, field))
     return violations
@@ -258,7 +264,12 @@ def translation_violations(
 __all__ = [
     "ContentRuleCommand",
     "TranslationCheckCommand",
+    "complete_item_count",
     "content_rule_violations",
     "emphasis_markup_is_valid",
+    "rule_active",
+    "slide_type_of",
+    "text_of",
     "translation_violations",
+    "visible_fields",
 ]

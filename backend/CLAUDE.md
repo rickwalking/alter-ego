@@ -169,3 +169,4 @@ See `../docs/decisions/` for all ADRs:
 - **LangGraph Deep Agents Guide**: `../docs/architecture/langchain-deep-agents-guide.md`
 - **Professional Pivot Plan**: `../docs/PROFESSIONAL_PIVOT_PLAN.md`
 - **Prompt Registry**: `src/rag_backend/agents/prompts/registry.py`
+- **Slide copy validators + autopilot autofix (AE-0401)**: `../docs/backend/slide-copy-validators.md`

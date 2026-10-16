@@ -231,8 +231,30 @@ def _merged_extras(
     if isinstance(translation, dict):
         previous = extras.get(_TRANSLATION_EN_KEY)
         base = dict(previous) if isinstance(previous, dict) else {}
-        extras[_TRANSLATION_EN_KEY] = {**base, **translation}
+        extras[_TRANSLATION_EN_KEY] = _symmetric_translation(
+            {**base, **translation}, translation, extras
+        )
     return extras or None
+
+
+def _symmetric_translation(
+    merged: dict[str, object],
+    fresh: dict[str, object],
+    extras: dict[str, object],
+) -> dict[str, object]:
+    """EN copy extras shaped like the PT ones (AE-0401).
+
+    The PT side never stores an empty list (``pack_extras``), so an empty EN
+    list, or a stale EN list the fresh copy no longer has, is dropped too:
+    prod 98a2e2f0 had PT without ``features`` and EN ``features == []``, and
+    ``translation_shape_mismatch`` fired on 6 slides.
+    """
+    for key in _COPY_EXTRAS_KEYS:
+        value = merged.get(key)
+        stale = key not in extras and key not in fresh
+        if not value or stale:
+            merged.pop(key, None)
+    return merged
 
 
 @dataclass(frozen=True)

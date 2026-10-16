@@ -13,8 +13,12 @@ from dataclasses import dataclass, field
 import structlog
 
 from rag_backend.modules.autopilot.application.feedback import gate_feedback
-from rag_backend.modules.autopilot.application.gate_repair import (
+from rag_backend.modules.autopilot.application.gate_read import (
     GateRead,
+    escalation_command,
+    ready_notice,
+)
+from rag_backend.modules.autopilot.application.gate_repair import (
     GateRepairDependencies,
     GateRepairStep,
 )
@@ -49,12 +53,12 @@ from rag_backend.modules.autopilot.constants import (
 from rag_backend.modules.autopilot.domain.autofix import (
     ContentAutofixer,
     GateRepairer,
+    SlideFixer,
 )
 from rag_backend.modules.autopilot.domain.gate import (
     AttachProjectCommand,
     EditorialDriver,
     GateAction,
-    OwnerReadyNotice,
     OwnerReadyNotifier,
     ProjectInputs,
     ProjectSpec,
@@ -120,6 +124,8 @@ class RunnerDependencies:
     autofix: ContentAutofixer | None = None
     # AE-0392: repair a content/design gate before revising it.
     gate_repair: GateRepairer | None = None
+    # AE-0401: then model-fix the slides still failing (no revise after it).
+    slide_fix: SlideFixer | None = None
 
 
 _Step = GateRead
@@ -141,7 +147,11 @@ class AutopilotRunner:
             )
         )
         self._repair = GateRepairStep(
-            GateRepairDependencies(editorial=deps.editorial, repairer=deps.gate_repair)
+            GateRepairDependencies(
+                editorial=deps.editorial,
+                repairer=deps.gate_repair,
+                fixer=deps.slide_fix,
+            )
         )
 
     async def tick(self) -> int:
@@ -248,7 +258,7 @@ class AutopilotRunner:
         )
         project_id = step.run.carousel_project_id
         if moved and project_id is not None:
-            await self._deps.notices.notify_ready(_ready_notice(step, project_id))
+            await self._deps.notices.notify_ready(ready_notice(step, project_id))
         return 1
 
     async def _escalate(self, step: _Step) -> int:
@@ -256,7 +266,9 @@ class AutopilotRunner:
         return 1
 
     async def _escalate_at(self, step: _Step, reason: str) -> None:
-        if await self._move(step.run, AutopilotRunState.ESCALATED, reason):
+        # AE-0401: ``detail`` lists the slides the model fix gave up on.
+        command = escalation_command(step, reason)
+        if await self._deps.runs.transition(command):
             await self._recovery.mark(step.run, step.snapshot.lock_version)
 
     async def _revise(self, step: _Step) -> int:
@@ -375,13 +387,3 @@ async def _first_run(runs: AutopilotRunRepository) -> AutopilotRun | None:
         if found:
             return found[0]
     return None
-
-
-def _ready_notice(step: _Step, project_id: str) -> OwnerReadyNotice:
-    return OwnerReadyNotice(
-        run_id=step.run.run_id,
-        project_id=project_id,
-        revision=step.snapshot.lock_version,
-        persona_score=step.snapshot.persona_score,
-        sources_count=len(step.snapshot.sources),
-    )

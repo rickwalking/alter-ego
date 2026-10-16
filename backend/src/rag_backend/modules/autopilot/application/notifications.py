@@ -16,6 +16,7 @@ from rag_backend.modules.autopilot.constants import (
     PAYLOAD_PROJECT_ID,
 )
 from rag_backend.modules.autopilot.domain.carousel_defaults import profile_line
+from rag_backend.modules.autopilot.domain.escalation_detail import detail_of
 from rag_backend.modules.autopilot.domain.exceptions import (
     NotifierUnconfiguredError,
     TelegramDeliveryError,
@@ -378,6 +379,7 @@ def _copy(base_url: str, event: AutopilotOutboxEvent, run: AutopilotRun) -> Stat
         permalink=permalink_of(event.payload),
         days_remaining=days_remaining_of(event.payload),
         extras=post_extras_of(event.payload),
+        detail=detail_of(event.payload),
     )
 
 

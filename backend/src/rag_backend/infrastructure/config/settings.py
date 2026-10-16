@@ -8,6 +8,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from rag_backend.domain.constants import ENCODING_UTF8
 from rag_backend.domain.constants.instagram_publish import GRAPH_HOST_INSTAGRAM
+from rag_backend.domain.constants.slide_fix import AUTOFIX_MODEL_ATTEMPTS
 from rag_backend.infrastructure.config.constants import (
     ENVIRONMENT_DEVELOPMENT,
     NON_PRODUCTION_ENVIRONMENTS,
@@ -240,6 +241,17 @@ class Settings(BaseSettings):
         validation_alias=AliasChoices(
             "AUTOPILOT_PERSONA_ID",
             "autopilot_persona_id",
+        ),
+    )
+
+    # AE-0401: model attempts per failing slide in the autopilot autofix loop
+    # (then the run escalates; the loop never spends a revise).
+    autopilot_autofix_attempts: int = Field(
+        default=AUTOFIX_MODEL_ATTEMPTS,
+        ge=1,
+        validation_alias=AliasChoices(
+            "AUTOPILOT_AUTOFIX_ATTEMPTS",
+            "autopilot_autofix_attempts",
         ),
     )
 

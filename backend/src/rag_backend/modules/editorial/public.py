@@ -152,6 +152,14 @@ from rag_backend.modules.editorial.infrastructure.carousel_run_progress import (
     write_run_heartbeat_once,
     write_run_heartbeat_with_retry,
 )
+from rag_backend.modules.editorial.infrastructure.carousel_slide_fix import (
+    SlideFixAttemptReport,
+    SlideFixModelFactory,
+    SlideFixReport,
+    SlideFixRequest,
+    SlideFixSlideReport,
+    run_slide_fix,
+)
 from rag_backend.modules.editorial.infrastructure.editorial_port_adapters import (
     AclApprovalAdapter,
     AclOptimisticLockingAdapter,
@@ -254,6 +262,11 @@ __all__ = [
     "ReviewWorkflowEngine",
     "ReviewerAssignmentPort",
     "RunHeartbeat",
+    "SlideFixAttemptReport",
+    "SlideFixModelFactory",
+    "SlideFixReport",
+    "SlideFixRequest",
+    "SlideFixSlideReport",
     "SourceMaterialPort",
     "SourceSynthesisEngine",
     "StartWorkflowCommand",
@@ -277,6 +290,7 @@ __all__ = [
     "run_automation_phase",
     "run_gate_repair",
     "run_owner_autofix",
+    "run_slide_fix",
     "slides_in_config",
     "write_run_heartbeat",
     "write_run_heartbeat_once",
