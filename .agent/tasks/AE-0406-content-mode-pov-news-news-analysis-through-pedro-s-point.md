@@ -143,7 +143,7 @@ Feature: Content mode "pov_news" and scout-verified quotes (AE-0406)
 - Docs: ADR-0023, `docs/architecture/grokbot-autopilot.md` §5.7.
 - Prompts/LLM: new `carousel_pov_news/v1`.
 - Observability: none new (same Langfuse paths).
-- Deployment: migration applied on deploy (ADR-0012).
+- Deployment: prod has no `alembic_version` and migrate-on-deploy is disabled in `deploy.yml` (AE-0207), so the three columns (`topic_candidates.quotes` jsonb, `carousel_projects.pov_quotes` json, `carousel_projects.pov_sources` json) were applied manually on prod before merge (2026-10-16, orchestrator). The revision is idempotent.
 
 ## Dependencies
 
@@ -161,11 +161,11 @@ Feature: Content mode "pov_news" and scout-verified quotes (AE-0406)
 
 ## QA Checklist
 
-- [ ] Security reviewed (quote text is escaped in HTML; no URL rendered; prompt data sanitized)
-- [ ] Code quality reviewed
-- [ ] Acceptance criteria validated
-- [ ] Edge cases tested
-- [ ] Orphan/unfinished code checked
+- [x] Security reviewed (quote text is escaped in HTML; no URL rendered; prompt data sanitized)
+- [x] Code quality reviewed
+- [x] Acceptance criteria validated
+- [x] Edge cases tested
+- [x] Orphan/unfinished code checked
 
 ## Progress Log
 
@@ -183,7 +183,7 @@ Pending (CI full run).
 
 ## QA Report
 
-Pending.
+[`.agent/reports/AE-0406.qa.md`](../reports/AE-0406.qa.md). Mode `self-fallback`: opencode, codex and cursor were all unavailable. QA ran as three independent review agents (security/integrity, code quality/mutation, AC/Gherkin). Each returned WARN with no blockers, and every actionable finding is fixed.
 
 ## Content-mode branch list (AE-0406)
 
@@ -257,6 +257,28 @@ Every place that branched on `content_mode == pov` (or "is this POV?") and what 
   (`x.com`, `twitter.com`, `www.`/`mobile.` dropped) show `@handle`, others the bare domain.
 - 2026-10-16: **Telegram:** only the thesis prompt shows the mode today, so only it changes
   ("🧭 Ponto de Vista: Notícia proposto"); the review message does not show a mode and is unchanged.
+- 2026-10-16 (PR #124 review): **prod columns applied manually before merge (2026-10-16)**;
+  migrate-on-deploy is disabled (AE-0207), so the ticket no longer claims "applied on deploy".
+- 2026-10-16 (PR #124 review): **a missing or blank quote field is `quote_invalid`** with
+  `field: quotes[i].<name>` (first blank in spec order) instead of a batch 422; the schema
+  makes every quote field optional and keeps `extra="forbid"`.
+- 2026-10-16 (PR #124 review): **X status URLs compare case-insensitively on the handle**
+  (`status_key`: lowercase host + handle, status id kept) for the sources check, the
+  stored-post lookup (`lower(url)` in SQL) and the excerpt lookup, matching the handle check.
+- 2026-10-16 (PR #124 review): **footer dedup is case-insensitive** (first spelling kept);
+  **the wizard hides the POV format picker for `pov_news`** and sends no `pov_format`.
+- 2026-10-16 (QA): **a single-slide retry drops its quote card** (`_without_quote_card`): the
+  2-card cap is per deck and the retry cannot see the other slides. The excerpt is cleaned like
+  the stored text (whitespace runs → space, then controls dropped) so a `\x00` never reaches JSONB.
+- 2026-10-16 (QA, accepted): the `pov_hook_v1` warning `first_person_missing` (needs 3
+  first-person slides) will often fire on `pov_news`, whose voice keeps "eu" to the pov/twist
+  slides. It is a **warning** (never blocks the gate); kept as is rather than adding a
+  mode-specific exemption to the shared contract. Revisit with a `pov_news` contract if noisy.
+- 2026-10-16 (QA, accepted): the case-insensitive x-signal lookup (`lower(url) IN`) cannot use
+  the primary-key index; `autopilot_x_signals` holds a few hours of posts, so the scan is small.
+- 2026-10-16 (QA, accepted): an unknown `pov_format` value is still a 422 on any topic (as for
+  `news_analysis` today); the owner refine tool may rewrite a caption without the footer
+  (owner's choice).
 - 2026-10-16: **Migration `c4d5e6f7a8b9` chains on `a0e4f0a4b4c4`** (AE-0404). A parallel ticket
   adding a revision on that head needs a `down_revision` rebase at merge.
 
