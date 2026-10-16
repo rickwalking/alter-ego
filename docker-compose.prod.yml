@@ -133,22 +133,22 @@ services:
   # AE-0399: OpenCode sidecar serving the free DeepSeek model (first in the
   # carousel model queue). Isolated: no secrets but its own server password,
   # no published ports, read-only root, tmpfs scratch. Its OpenCode login
-  # lives in the opencode_data volume (`docker compose exec opencode opencode
-  # auth login` once after the first deploy).
+  # lives in the opencode_data volume at /data/opencode (`docker compose exec
+  # opencode opencode auth login` once after the first deploy).
   opencode:
     build:
       context: ops/opencode
     environment:
       OPENCODE_SERVER_PASSWORD: ${OPENCODE_SERVER_PASSWORD:-}
     read_only: true
+    # AE-0402: tmpfs mounts are root-owned by default; the agent runs as 10001
+    # and writes all over its home at runtime (see ops/opencode/Dockerfile).
     tmpfs:
-      - /tmp
-      - /work
-      - /home/opencode/.cache
-      - /home/opencode/.config
-      - /home/opencode/.local/state
+      - /tmp:uid=10001,gid=10001,mode=0700
+      - /work:uid=10001,gid=10001,mode=0700
+      - /home/opencode:uid=10001,gid=10001,mode=0700,size=512m
     volumes:
-      - opencode_data:/home/opencode/.local/share/opencode
+      - opencode_data:/data/opencode
     security_opt:
       - no-new-privileges:true
     cap_drop:
