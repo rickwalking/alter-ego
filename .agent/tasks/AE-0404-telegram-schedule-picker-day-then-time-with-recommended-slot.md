@@ -127,7 +127,7 @@ With `AUTOPILOT_DEFAULT_PUBLISH=next_slot`, Approve scheduled the run straight a
 
 ### 2026-10-16
 
-Reproduced from the prod report and code. Built the picker and recommender. Gates run one at a time (hotfix fast path).
+Reproduced from the prod report and code. Built the picker and recommender. Gates were run one at a time (hotfix fast path). PR #120 opened; CI Test & Coverage passed.
 
 ## Files Touched
 
