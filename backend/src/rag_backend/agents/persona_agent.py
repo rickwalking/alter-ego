@@ -54,30 +54,23 @@ class PersonaAgent:
         return self._parse_evaluation_response(cast(str, response.content))
 
     def _parse_evaluation_response(self, response: str) -> dict[str, object]:
-        """Parse the evaluation response into a structured dictionary."""
+        """Parse the evaluation response into a structured dictionary.
+
+        AE-0398: scores are on 0-100 (the voice gate's floor is 70). The prompt
+        does not name the scale and the model often answers on 0-10 (prod
+        2026-10-16: overall 8.2-8.9 for on-voice copy), which failed every POV
+        voice gate. A response whose five scores are all at most 10 is read as
+        a 0-10 answer and scaled to 0-100.
+        """
         try:
             data = __import__("json").loads(response)
-            return {
-                "tone_match": float(data.get("tone_match", 0)),
-                "sentence_structure_match": float(
-                    data.get("sentence_structure_match", 0)
-                ),
-                "opinion_strength": float(data.get("opinion_strength", 0)),
-                "originality": float(data.get("originality", 0)),
-                "human_authenticity": float(data.get("human_authenticity", 0)),
-                "overall": float(data.get("overall", 0)),
-                "suggestions": data.get("suggestions", []),
-            }
+            scores = {field: float(data.get(field, 0)) for field in _SCORE_FIELDS}
         except Exception:
-            return {
-                "tone_match": 0.0,
-                "sentence_structure_match": 0.0,
-                "opinion_strength": 0.0,
-                "originality": 0.0,
-                "human_authenticity": 0.0,
-                "overall": 0.0,
-                "suggestions": [],
-            }
+            return {**dict.fromkeys(_SCORE_FIELDS, 0.0), "suggestions": []}
+        return {
+            **_on_hundred_point_scale(scores),
+            "suggestions": data.get("suggestions", []),
+        }
 
     def _build_style_guide(self) -> str:
         """Build the style guide via the prompt registry (AE-0243).
@@ -117,3 +110,23 @@ class PersonaAgent:
 
 
 __all__ = ["PersonaAgent"]
+
+
+_SCORE_FIELDS = (
+    "tone_match",
+    "sentence_structure_match",
+    "opinion_strength",
+    "originality",
+    "human_authenticity",
+    "overall",
+)
+_TEN_POINT_MAX = 10.0
+_TEN_TO_HUNDRED = 10.0
+
+
+def _on_hundred_point_scale(scores: dict[str, float]) -> dict[str, float]:
+    """Scores on 0-100; an all-at-most-10 answer is a 0-10 answer (AE-0398)."""
+    values = scores.values()
+    if any(value > _TEN_POINT_MAX for value in values) or not any(values):
+        return scores
+    return {field: value * _TEN_TO_HUNDRED for field, value in scores.items()}
