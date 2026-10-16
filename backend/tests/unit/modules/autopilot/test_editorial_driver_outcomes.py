@@ -138,10 +138,48 @@ async def test_target_phase_is_structured_feedback(
     run = operation.runs[0]
     assert isinstance(run, AutomationRun)
     assert result.status is ResumeStatus.APPLIED
-    assert run.structured_feedback == {"target_phase": "images"}
+    # AE-0405: the autopilot's gate feedback is tagged as autopilot feedback.
+    assert run.structured_feedback == {
+        "target_phase": "images",
+        "feedback_source": "autopilot",
+    }
     assert run.expected_version == 4
     assert run.feedback == "darker palette"
     assert run.session is session
+
+
+@pytest.mark.asyncio
+async def test_content_gate_feedback_is_tagged_autopilot(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Scenario: Autopilot gate feedback is tagged (AE-0405 feature)."""
+    session = AsyncMock()
+    operation = _Operation()
+    monkeypatch.setattr(editorial_driver, "run_automation_phase", operation)
+    driver = _driver(session)
+    await driver.resume(
+        ResumeCommand(
+            project_id=_PROJECT,
+            action="revise",
+            expected_version=3,
+            feedback="persona_score_below_threshold",
+            phase="content",
+        )
+    )
+    await driver.resume(
+        ResumeCommand(
+            project_id=_PROJECT,
+            action="approve",
+            expected_version=4,
+            feedback="  ",
+            phase="content",
+        )
+    )
+    revise, approve = operation.runs
+    assert isinstance(revise, AutomationRun)
+    assert isinstance(approve, AutomationRun)
+    assert revise.structured_feedback == {"feedback_source": "autopilot"}
+    assert approve.structured_feedback is None
 
 
 @pytest.mark.asyncio

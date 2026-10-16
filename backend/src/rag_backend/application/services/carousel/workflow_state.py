@@ -57,6 +57,11 @@ class CarouselWorkflowState(TypedDict, total=False):
     # interrupt payload and the state response for the recovery UI.
     design_recovery_hint: str
     translations_en: dict[str, object]
+    # AE-0405: tagged active notes, consumed-note history and the parked-content
+    # marker (keys outside this schema are dropped by LangGraph).
+    phase_feedback_notes: dict[str, list[dict[str, str]]]
+    phase_feedback_history: dict[str, list[dict[str, str]]]
+    content_artifacts_parked: bool
 
 
 def get_initial_carousel_state(

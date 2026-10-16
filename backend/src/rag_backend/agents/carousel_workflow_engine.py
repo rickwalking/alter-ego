@@ -4,8 +4,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, cast
 
+import structlog
 from langgraph.types import Command
 
+from rag_backend.agents.carousel_content_park import parked_content_updates
 from rag_backend.agents.carousel_workflow_graph import (
     build_carousel_workflow_graph,
     needs_gate_reopen,
@@ -23,10 +25,15 @@ from rag_backend.domain.constants.carousel_workflow import (
     PHASE_STATUS_AWAITING_HUMAN,
     PHASE_STATUS_IN_PROGRESS,
 )
+from rag_backend.domain.constants.content_feedback import (
+    LOG_CONTENT_ARTIFACTS_PARKED,
+)
 from rag_backend.domain.constants.workflow_state_fields import (
     STATE_FIELD_CONTENT_GATE_VALIDATION,
 )
 from rag_backend.domain.models.carousel_run import ensure_checkpoint_commit_allowed
+
+logger = structlog.get_logger()
 
 _REVIEW_INTERRUPT_KEYS = (
     "outline",
@@ -111,7 +118,7 @@ class CarouselWorkflowEngine:
         initial = get_initial_carousel_state(project_id, brief)
         initial.update(state_overrides)
         result = await self._app.ainvoke(initial, config=self._run_config(project_id))
-        return cast(CarouselWorkflowState, result)
+        return await self._park_content_artifacts(project_id, result)
 
     async def resume(
         self,
@@ -148,19 +155,19 @@ class CarouselWorkflowEngine:
                     Command(resume=payload),
                     config=config,
                 )
-                return cast(CarouselWorkflowState, result)
+                return await self._park_content_artifacts(project_id, result)
         if snapshot is not None and needs_gate_reopen(snapshot):
             phase = str((snapshot.values or {}).get("current_phase", ""))
             result = await self._app.ainvoke(
                 Command(goto=phase, resume=payload),
                 config=config,
             )
-            return cast(CarouselWorkflowState, result)
+            return await self._park_content_artifacts(project_id, result)
         result = await self._app.ainvoke(
             Command(resume=payload),
             config=config,
         )
-        return cast(CarouselWorkflowState, result)
+        return await self._park_content_artifacts(project_id, result)
 
     async def continue_pending(self, project_id: str) -> CarouselWorkflowState:
         """Run the parked pending node again, with NO resume value (AE-0363).
@@ -178,7 +185,30 @@ class CarouselWorkflowEngine:
         if not is_parked_before_node(snapshot):
             raise ValueError(ERR_NOTHING_TO_REDRIVE)
         result = await self._app.ainvoke(None, config=config)
-        return cast(CarouselWorkflowState, result)
+        return await self._park_content_artifacts(project_id, result)
+
+    async def _park_content_artifacts(
+        self,
+        project_id: str,
+        result: object,
+    ) -> CarouselWorkflowState:
+        """Save the parked content review's artifacts, then re-park (AE-0405).
+
+        The checkpoint write drops the pending interrupt, so ``ainvoke(None)``
+        replays the content node: it sees the parked marker, reuses the saved
+        artifacts (no LLM call) and opens the review interrupt again.
+        """
+        if self._app.checkpointer is None:
+            # No checkpoint: nothing parks, nothing replays (in-memory runs).
+            return cast(CarouselWorkflowState, result)
+        config = self._run_config(project_id)
+        updates = parked_content_updates(await self._app.aget_state(config))
+        if updates is None:
+            return cast(CarouselWorkflowState, result)
+        await self.update_state(project_id, updates)
+        logger.info(LOG_CONTENT_ARTIFACTS_PARKED, project_id=project_id)
+        reparked = await self._app.ainvoke(None, config=config)
+        return cast(CarouselWorkflowState, reparked)
 
     async def is_parked(self, project_id: str) -> bool:
         """True when :meth:`continue_pending` has a node to re-run (AE-0363)."""

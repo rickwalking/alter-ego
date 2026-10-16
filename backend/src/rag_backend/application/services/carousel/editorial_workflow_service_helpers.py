@@ -11,6 +11,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from rag_backend.agents.carousel_editorial_orchestrator import (
     CarouselEditorialOrchestrator,
 )
+from rag_backend.application.services.carousel.editorial_workflow_feedback import (
+    settle_feedback_before_resume,
+)
 from rag_backend.application.services.carousel.editorial_workflow_support import (
     EventParams,
     PhaseFeedbackPersistParams,
@@ -49,6 +52,11 @@ from rag_backend.domain.constants.carousel_workflow import (
     STRUCTURED_FEEDBACK_EDITED_SLIDES_KEY,
     STRUCTURED_FEEDBACK_EDITED_TEXT_KEY,
     STRUCTURED_FEEDBACK_TARGET_PHASE_KEY,
+)
+from rag_backend.domain.constants.content_feedback import (
+    FEEDBACK_SOURCE_AUTOPILOT,
+    FEEDBACK_SOURCE_HUMAN,
+    STRUCTURED_FEEDBACK_SOURCE_KEY,
 )
 from rag_backend.domain.constants.persona import VOICE_MATCH_MIN_SCORE
 from rag_backend.domain.constants.workflow_validation import CONTENT_TYPE_CAROUSEL
@@ -255,10 +263,13 @@ async def prepare_resume_workflow(
     if action == REVIEW_ACTION_APPROVE:
         validate_content_approve_persona_score(prior)
         validate_content_approve_presentation(prior)
+    engine = context["orchestrator"].engine
+    # AE-0405: settle notes no regeneration will use BEFORE filing a new one.
+    prior = await settle_feedback_before_resume(engine, prior, action)
     if action == REVIEW_ACTION_REVISE:
         structured = context.get("structured_feedback")
         await persist_phase_feedback(
-            context["orchestrator"].engine,
+            engine,
             PhaseFeedbackPersistParams(
                 project_id=context["project_id"],
                 prior=prior,
@@ -267,8 +278,19 @@ async def prepare_resume_workflow(
                 # AE-0310: increment only when a phase budget is charged.
                 count_revision=resolve_revision_cap_phase(prior, structured)
                 is not None,
+                source=_feedback_source(structured),
             ),
         )
+
+
+def _feedback_source(structured_feedback: dict[str, object] | None) -> str:
+    """AE-0405: autopilot gate feedback is tagged; anything else is human."""
+    if not isinstance(structured_feedback, dict):
+        return FEEDBACK_SOURCE_HUMAN
+    source = structured_feedback.get(STRUCTURED_FEEDBACK_SOURCE_KEY)
+    if source == FEEDBACK_SOURCE_AUTOPILOT:
+        return FEEDBACK_SOURCE_AUTOPILOT
+    return FEEDBACK_SOURCE_HUMAN
 
 
 def _resume_target_phase(
