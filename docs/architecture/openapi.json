@@ -2367,8 +2367,15 @@
         "type": "object"
       },
       "CarouselSlideEditResponse": {
-        "description": "Result of a completed-project slide edit: fresh report + republish marker.",
+        "description": "Result of a completed-project slide edit: fresh report + republish marker.\n\nAE-0403: ``field_violations`` restates ``validation.violations`` per form\nfield (additive; ``validation`` keeps its contract).",
         "properties": {
+          "field_violations": {
+            "items": {
+              "$ref": "#/components/schemas/SlideFieldViolation"
+            },
+            "title": "Field Violations",
+            "type": "array"
+          },
           "needs_republish": {
             "default": false,
             "title": "Needs Republish",
@@ -6910,6 +6917,100 @@
           "errors"
         ],
         "title": "SignalsBundle",
+        "type": "object"
+      },
+      "SlideFieldViolation": {
+        "description": "One violation addressed to the form field it belongs to (AE-0403).\n\n``item_list``/``item_index``/``item_field`` are set for structured items\n(e.g. ``summary_points`` item 0 ``body``) and ``None`` for heading/body.",
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "field": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Field"
+          },
+          "item_field": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Item Field"
+          },
+          "item_index": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Item Index"
+          },
+          "item_list": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Item List"
+          },
+          "locale": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Locale"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "severity": {
+            "enum": [
+              "blocker",
+              "warning"
+            ],
+            "title": "Severity",
+            "type": "string"
+          },
+          "slide_index": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Slide Index"
+          }
+        },
+        "required": [
+          "code",
+          "message",
+          "severity"
+        ],
+        "title": "SlideFieldViolation",
         "type": "object"
       },
       "SlideImagePrompt": {
@@ -15117,6 +15218,49 @@
         "summary": "Post Telegram Webhook",
         "tags": [
           "telegram"
+        ]
+      }
+    },
+    "/api/v1/image-bridge/jobs/{job_id}/result": {
+      "post": {
+        "description": "Record the Grok Bot's ImagesResponse or error body on a pending job.",
+        "operationId": "post_image_bridge_result_api_v1_image_bridge_jobs__job_id__result_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "title": "Job Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "invalid callback token"
+          },
+          "409": {
+            "description": "job is no longer pending"
+          },
+          "413": {
+            "description": "callback body too large"
+          },
+          "422": {
+            "description": "callback body is not a valid ImagesResponse or error"
+          }
+        },
+        "summary": "Post Image Bridge Result",
+        "tags": [
+          "image-bridge"
         ]
       }
     },

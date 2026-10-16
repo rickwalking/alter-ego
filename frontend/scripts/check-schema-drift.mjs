@@ -78,6 +78,7 @@ const SCHEMA_MAP = [
   { zod: "carouselProjectResponseSchema", file: "carousel.ts", openapi: "CarouselProjectResponse", kind: "response" },
   { zod: "carouselProjectListResponseSchema", file: "carousel.ts", openapi: "CarouselProjectListResponse", kind: "response" },
   { zod: "carouselSlideResponseSchema", file: "carousel.ts", openapi: "CarouselSlideResponse", kind: "response" },
+  { zod: "slideFieldViolationSchema", file: "carousel.ts", openapi: "SlideFieldViolation", kind: "response" },
 ];
 
 /** Marks a Zod field whose type we do not statically resolve (opaque). */

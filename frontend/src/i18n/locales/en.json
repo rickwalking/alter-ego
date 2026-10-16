@@ -592,6 +592,47 @@
         "saved": "Hook saved; the content step uses it on slide 1.",
         "failed": "Could not save the hook.",
         "thesisNotEarly": "Your thesis does not show up on slides 1-2 yet. Consider a hook that states it."
+      },
+      "fieldErrors": {
+        "codes": {
+          "body_too_long": "Body too long (max {limit} characters)",
+          "heading_too_long": "Heading too long (max {limit} characters)",
+          "copy_too_many_lines": "Too many lines (max {limit})",
+          "dash_punctuation_forbidden": "Do not use em dashes (—) or en dashes (–)",
+          "heading_not_sentence_case_en": "The English heading must start with a capital letter",
+          "heading_not_sentence_case_pt": "The heading must start with a capital letter",
+          "body_not_sentence_case_en": "English body sentences must start with a capital letter",
+          "body_not_sentence_case_pt": "Body sentences must start with a capital letter",
+          "emphasis_markup_invalid": "Emphasis must use balanced {tag} tags",
+          "translation_shape_mismatch": "The EN version must have the same structure as the PT version",
+          "translation_not_english": "The EN copy is the same as the PT copy (not translated)",
+          "translation_missing": "The EN translation is missing",
+          "proper_noun_casing": "Write the proper noun with its correct casing",
+          "visible_emoji_forbidden": "Remove the emoji from the text",
+          "drafting_scaffold_present": "Remove the drafting labels (e.g. TITLE:, BODY:)",
+          "heading_empty": "The heading is required",
+          "body_empty": "The body is empty",
+          "heading_repeated_in_body": "The body must not repeat the heading",
+          "icon_name_not_allowlisted": "Icon not allowed"
+        },
+        "fields": {
+          "heading": "heading",
+          "body": "body",
+          "title": "title",
+          "icon": "icon",
+          "item": "item {index} · {field}"
+        },
+        "locales": {
+          "pt": "PT",
+          "en": "EN"
+        },
+        "summaryLine": "Slide {slide} · {field}: {message}",
+        "slideSummary": "Slide {slide} errors",
+        "slidesToFix": "Slides to fix:",
+        "slideLink": "Slide {slide}",
+        "submitManualFixes": "Submit manual fixes",
+        "submittingManualFixes": "Submitting fixes…",
+        "manualFixesHint": "Fix the highlighted fields and submit your manual fixes. This saves the edits and validates again; it does not approve the step."
       }
     },
     "failed": {
@@ -783,7 +824,7 @@
       "rebuildPending": "PDF rebuild pending — the new PDF will reflect your edit shortly.",
       "success": "Slide text updated and the PDF was rebuilt.",
       "blockedRunInProgress": "Editing is unavailable while a workflow run is in progress. Try again once it finishes.",
-      "blockingViolations": "Some edits still violate the content rules. Adjust the highlighted slides and save again."
+      "blockingViolations": "Some edits still violate the content rules. Fix the highlighted fields and submit your manual fixes."
     }
   },
   "auth": {

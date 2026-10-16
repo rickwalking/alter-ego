@@ -223,6 +223,14 @@ export function CreateWorkflowPanel({
     },
     disabled: loading || !showLiveControls,
   };
+  // AE-0403: the edits ARE the input, so an edits-only revise saves and
+  // re-validates them without approving the content step (AE-0310 semantics).
+  const contentManualFixes = {
+    onSubmit: (slides: LocalizedSlideReview[]): void => {
+      void revise("", { editedLocalizedSlides: slides });
+    },
+    submitting: loading,
+  };
   const showPhaseReview =
     Boolean(state) &&
     (isLiveStep || isHistoricalCreateStep(viewStepId, workflowStepId)) &&
@@ -305,6 +313,7 @@ export function CreateWorkflowPanel({
           contentEditable={contentEditable}
           contentSlides={contentSlides}
           onContentSlidesChange={setEditedContentSlides}
+          contentManualFixes={contentManualFixes}
           designRecovery={designRecovery}
           onRepaired={() => void refreshState()}
         />

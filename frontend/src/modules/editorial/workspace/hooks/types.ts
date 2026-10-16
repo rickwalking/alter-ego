@@ -11,7 +11,9 @@ import type { EditorialWorkflowTransportMode } from "@/constants/editorial-workf
 import type {
   EditorialWorkflowState,
   LocalizedSlideReview,
+  SlideValidationViolation,
 } from "@/modules/editorial/workspace/types-ai";
+import type { SlideFieldErrors } from "@/modules/editorial/workspace/lib/slide-field-errors";
 
 export interface EditorialReviseOptions {
   targetPhase?: string;
@@ -113,4 +115,14 @@ export interface SaveHookInput {
 export interface UploadCreatorPhotoInput {
   file: File;
   role: string;
+}
+
+/** AE-0403: the per-field error state of a slide review form. */
+export interface SlideFieldErrorState {
+  /** Blocking violations still open (edited fields drop out). */
+  open: SlideValidationViolation[];
+  fieldErrors: SlideFieldErrors;
+  slideIndexes: number[];
+  /** Drop a field's errors as soon as that field is edited. */
+  clearField: (key: string) => void;
 }
