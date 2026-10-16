@@ -80,11 +80,11 @@ function ManualFixesFooter({
   manualFixes,
   onSubmit,
 }: ManualFixesFooterProps): React.ReactElement {
-  const t = useTranslations("editorialWorkflow.review.fieldErrors");
+  const t = useTranslations("editorialWorkflow.review");
   return (
     <div className="space-y-2 rounded-md border border-destructive/30 p-3">
       <BlockingSlidesNotice
-        message={t("manualFixesHint")}
+        message={t("fieldErrors.manualFixesHint")}
         slideIndexes={errors.slideIndexes}
         onSelectSlide={(slideIndex) =>
           focusInvalidField(
@@ -100,8 +100,8 @@ function ManualFixesFooter({
         onClick={onSubmit}
       >
         {manualFixes.submitting === true
-          ? t("submittingManualFixes")
-          : t("submitManualFixes")}
+          ? t("fieldErrors.submittingManualFixes")
+          : t("fieldErrors.submitManualFixes")}
       </NeonButton>
     </div>
   );

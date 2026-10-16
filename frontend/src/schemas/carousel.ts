@@ -245,4 +245,3 @@ export type CarouselProjectListResponse = z.infer<
 >;
 export type CarouselSlideResponse = z.infer<typeof carouselSlideResponseSchema>;
 export type CarouselCreateRequest = z.infer<typeof carouselCreateRequestSchema>;
-export type SlideFieldViolation = z.infer<typeof slideFieldViolationSchema>;
