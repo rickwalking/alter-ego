@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
-import ast
 import re
 from collections.abc import Mapping
 
+from rag_backend.application.services.carousel.draft_blob_text import (
+    parse_object_text,
+    strip_code_fence,
+)
 from rag_backend.domain.constants.carousel import LANGUAGE_PT
 
 _EM_DASH = "\u2014"
@@ -27,16 +30,10 @@ def strip_dashes_from_visible_copy(text: str) -> str:
 
 
 def _parse_stringified_mapping(raw: str) -> dict[str, object] | None:
-    stripped = raw.strip()
-    if not stripped.startswith("{"):
-        return None
+    stripped = strip_code_fence(raw)
     if _LOCALE_PT_KEY not in stripped and _LOCALE_EN_KEY not in stripped:
         return None
-    try:
-        parsed = ast.literal_eval(stripped)
-    except (SyntaxError, ValueError):
-        return None
-    return dict(parsed) if isinstance(parsed, dict) else None
+    return parse_object_text(stripped)
 
 
 def resolve_localized_string(
