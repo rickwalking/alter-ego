@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, cast
 
+import structlog
 from langchain_core.runnables import RunnableConfig
 from langgraph.types import interrupt
 
@@ -16,6 +17,7 @@ from rag_backend.domain.constants.carousel_workflow import (
     CAROUSEL_WORKFLOW_PHASES,
     DESIGN_SEND_BACK_PHASES,
     EDITED_SLIDES_ALLOWED_PHASES,
+    INTERRUPT_TYPE_CONTENT_REVIEW,
     INTERRUPT_TYPE_DESIGN_REVIEW,
     INTERRUPT_TYPE_FINAL_REVIEW,
     INTERRUPT_TYPE_IMAGE_REVIEW,
@@ -29,6 +31,7 @@ from rag_backend.domain.constants.carousel_workflow import (
     PHASE_RESEARCH,
     PHASE_STATUS_APPROVED,
     PHASE_STATUS_AWAITING_HUMAN,
+    PHASE_STATUS_FAILED,
     PHASE_STATUS_IN_PROGRESS,
     REVIEW_ACTION_APPROVE,
     REVIEW_ACTION_REJECT,
@@ -37,13 +40,20 @@ from rag_backend.domain.constants.carousel_workflow import (
     STRUCTURED_FEEDBACK_EDITED_SLIDES_KEY,
     STRUCTURED_FEEDBACK_KEY,
     STRUCTURED_FEEDBACK_TARGET_PHASE_KEY,
+    WORKFLOW_ERROR_KEY,
     WORKFLOW_STATUS_APPROVED_FOR_PUBLISH,
+)
+from rag_backend.domain.constants.content_feedback import (
+    LOG_CONTENT_REPLAY_REUSED,
+    PAYLOAD_KEY_PARKED_ARTIFACTS,
+    STATE_FIELD_CONTENT_ARTIFACTS_PARKED,
 )
 from rag_backend.domain.constants.langfuse_tracing import (
     TRACE_FIELD_PHASE,
     TRACE_FIELD_PROJECT_ID,
 )
 from rag_backend.domain.constants.workflow_state_fields import (
+    STATE_FIELD_CONTENT_GATE_VALIDATION,
     STATE_FIELD_DESIGN_RECOVERY_HINT,
     STATE_FIELD_PRESENTATION_VALIDATION,
 )
@@ -56,6 +66,8 @@ if TYPE_CHECKING:
     from rag_backend.application.services.carousel.phase_artifact_runner import (
         PhaseArtifactRunner,
     )
+
+logger = structlog.get_logger()
 
 _CONFIG_ARTIFACT_RUNNER = "artifact_runner"
 
@@ -247,7 +259,7 @@ def _sync_phase_result(
     return result
 
 
-def run_sync_artifact_phase(
+def _run_sync_artifact_phase(
     state: CarouselWorkflowState,
     _config: RunnableConfig | None,
     artifact: SyncArtifactPhaseConfig,
@@ -274,7 +286,7 @@ def outline_phase(
     config: RunnableConfig | None = None,
 ) -> dict[str, object]:
     """Generate outline and request human approval."""
-    return run_sync_artifact_phase(
+    return _run_sync_artifact_phase(
         state,
         config,
         SyncArtifactPhaseConfig(
@@ -285,6 +297,44 @@ def outline_phase(
             message="Review and approve the outline.",
         ),
     )
+
+
+def _content_review_payload(merged: dict[str, object]) -> dict[str, object]:
+    """Content interrupt payload incl. the fail-closed gate report (AE-0309)."""
+    return {
+        "slide_drafts": merged.get("slide_drafts") or [],
+        "persona_scores": merged.get("persona_scores") or {},
+        STATE_FIELD_CONTENT_GATE_VALIDATION: (
+            merged.get(STATE_FIELD_CONTENT_GATE_VALIDATION) or {}
+        ),
+    }
+
+
+def _content_artifact_config(
+    parked_updates: dict[str, object] | None = None,
+) -> SyncArtifactPhaseConfig:
+    """Content gate config; ``parked_updates`` ride the interrupt (AE-0405)."""
+    return SyncArtifactPhaseConfig(
+        phase=PHASE_CONTENT,
+        interrupt_type=INTERRUPT_TYPE_CONTENT_REVIEW,
+        payload_key="slide_drafts",
+        approved_field="content_approved",
+        message="Review slide copy.",
+        payload_builder=_content_review_payload,
+        extra_payload=(
+            {PAYLOAD_KEY_PARKED_ARTIFACTS: parked_updates} if parked_updates else None
+        ),
+        # The node finished: the next content entry runs its ensure again.
+        post_review={STATE_FIELD_CONTENT_ARTIFACTS_PARKED: False},
+    )
+
+
+def content_phase(
+    state: CarouselWorkflowState,
+    config: RunnableConfig | None = None,
+) -> dict[str, object]:
+    """Draft slide content and request human approval."""
+    return _run_sync_artifact_phase(state, config, _content_artifact_config())
 
 
 def _design_review_payload(merged: dict[str, object]) -> dict[str, object]:
@@ -310,7 +360,7 @@ def design_phase(
     config: RunnableConfig | None = None,
 ) -> dict[str, object]:
     """Apply design and request human approval."""
-    return run_sync_artifact_phase(
+    return _run_sync_artifact_phase(
         state,
         config,
         SyncArtifactPhaseConfig(
@@ -331,7 +381,7 @@ def images_phase(
     config: RunnableConfig | None = None,
 ) -> dict[str, object]:
     """Generate images and request human approval."""
-    return run_sync_artifact_phase(
+    return _run_sync_artifact_phase(
         state,
         config,
         SyncArtifactPhaseConfig(
@@ -354,6 +404,58 @@ async def outline_phase_async(
     merged = dict(state)
     merged.update(await ensure_artifacts(state, config, PHASE_OUTLINE))
     sync_result = outline_phase(cast(CarouselWorkflowState, merged), config)
+    return {**merged, **sync_result}
+
+
+async def _content_ensure_or_reuse(
+    state: CarouselWorkflowState,
+    config: RunnableConfig | None,
+) -> dict[str, object]:
+    """Run the content ensure, unless this is the replay of a parked review.
+
+    AE-0405: LangGraph re-runs the interrupted node on resume. The engine wrote
+    the artifacts the reviewer saw to the checkpoint when the graph parked, so
+    the replay reuses them: no second regeneration with the same notes, no
+    LLM call, and the reviewed (or hand-edited) copy is what gets committed.
+    """
+    if state.get(STATE_FIELD_CONTENT_ARTIFACTS_PARKED) is True:
+        logger.info(
+            LOG_CONTENT_REPLAY_REUSED, project_id=str(state.get("project_id", ""))
+        )
+        return {}
+    return await ensure_artifacts(state, config, PHASE_CONTENT)
+
+
+async def content_phase_async(
+    state: CarouselWorkflowState,
+    config: RunnableConfig,
+) -> dict[str, object]:
+    merged = dict(state)
+    artifact_updates = await _content_ensure_or_reuse(state, config)
+    merged.update(artifact_updates)
+    # AE-0330: decide on THIS run's artifact result, not on whatever
+    # phase_status the checkpoint carried in. A failure here returns without
+    # interrupting and the graph routes it to END (_ROUTE_FAILED).
+    if artifact_updates.get("phase_status") == PHASE_STATUS_FAILED:
+        # Name the phase that failed. ensure_artifacts only stamps
+        # current_phase on its own copy, so without this the END state still
+        # says "outline" and needs_gate_reopen checks outline_approved (True)
+        # — a retry then resumes a finished graph and silently does nothing.
+        merged["current_phase"] = PHASE_CONTENT
+        return merged
+    if merged.get("phase_status") == PHASE_STATUS_FAILED:
+        # Stale failure from a previous run whose artifacts have now been
+        # rebuilt successfully. Resume only flips the DB row to in_progress,
+        # never the checkpoint, so without this the old flag re-triggered the
+        # early return above on every retry — the second half of the live
+        # 2026-09-14 loop, with all seven drafts already present.
+        merged["phase_status"] = PHASE_STATUS_IN_PROGRESS
+        merged[WORKFLOW_ERROR_KEY] = ""
+    sync_result = _run_sync_artifact_phase(
+        cast(CarouselWorkflowState, merged),
+        config,
+        _content_artifact_config(artifact_updates),
+    )
     return {**merged, **sync_result}
 
 
@@ -448,10 +550,11 @@ __all__ = [
     "approved_hold_phase",
     "artifact_runner_from_config",
     "brief_phase",
+    "content_phase",
+    "content_phase_async",
     "design_phase_async",
     "final_review_phase",
     "images_phase_async",
     "outline_phase_async",
     "research_phase",
-    "run_sync_artifact_phase",
 ]

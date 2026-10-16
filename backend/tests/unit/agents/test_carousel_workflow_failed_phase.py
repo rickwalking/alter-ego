@@ -28,7 +28,7 @@ from rag_backend.agents.carousel_workflow_graph import (
     route_after_design,
     route_after_gate,
 )
-from rag_backend.agents.carousel_content_phase import content_phase_async
+from rag_backend.agents.carousel_workflow_nodes import content_phase_async
 from rag_backend.application.services.carousel.workflow_state import (
     get_initial_carousel_state,
 )

@@ -15,10 +15,10 @@ from rag_backend.agents.carousel_workflow_graph import (
     route_after_gate,
     route_after_hold,
 )
-from rag_backend.agents.carousel_content_phase import content_phase
 from rag_backend.agents.carousel_workflow_nodes import (
     await_human_review,
     brief_phase,
+    content_phase,
     design_phase,
     final_review_phase,
     images_phase,
