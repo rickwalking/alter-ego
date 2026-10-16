@@ -28,6 +28,9 @@ from rag_backend.api.routes.carousels.deps import (
 from rag_backend.api.routes.carousels.editorial_workflow_routes_sanitize import (
     sanitize_edited_slides,
 )
+from rag_backend.api.routes.carousels.slide_edit_violations import (
+    field_violations_from_report,
+)
 from rag_backend.api.schemas.carousel_conflict import CarouselConflictResponse
 from rag_backend.api.schemas.carousel_slide_edit import (
     CarouselSlideEditRequest,
@@ -48,12 +51,14 @@ router = APIRouter(tags=["carousels-slide-edit"])
 
 def _to_response(project_id: str, result: SlideEditResult) -> CarouselSlideEditResponse:
     """Map the service result onto the API response (fresh report included)."""
+    report = SlideValidationReport.model_validate(result.report)
     return CarouselSlideEditResponse(
         project_id=project_id,
         status=result.status,
-        validation=SlideValidationReport.model_validate(result.report),
+        validation=report,
         needs_republish=result.needs_republish,
         updated_slides=list(result.updated_slides),
+        field_violations=field_violations_from_report(report),
     )
 
 

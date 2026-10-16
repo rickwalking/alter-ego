@@ -2,10 +2,7 @@
 
 from __future__ import annotations
 
-from rag_backend.agents.input_sanitizer import (
-    sanitize_display_input,
-    sanitize_llm_input,
-)
+from rag_backend.agents.input_sanitizer import sanitize_llm_input
 from rag_backend.api.schemas.carousel_workflow import (
     EditorialStructuredFeedback,
     LocalizedSlideReview,
@@ -15,14 +12,16 @@ from rag_backend.domain.constants.carousel_workflow import (
     STRUCTURED_FEEDBACK_EDITED_SLIDES_KEY,
     STRUCTURED_FEEDBACK_TARGET_PHASE_KEY,
 )
+from rag_backend.domain.copy_sanitize import sanitize_edited_copy
 
 
 def _sanitize_payload_strings(value: object) -> object:
     # AE-0289: edited slide copy is FINAL published content, so preserve case
     # (sanitize_display_input) instead of lowercasing it (sanitize_llm_input),
     # which corrupted headings and broke heading_not_sentence_case_en validation.
+    # AE-0403: sanitize_edited_copy also keeps the EN <strong> emphasis pair.
     if isinstance(value, str):
-        return sanitize_display_input(value)
+        return sanitize_edited_copy(value)
     if isinstance(value, list):
         return [_sanitize_payload_strings(item) for item in value]
     if isinstance(value, dict):
@@ -39,7 +38,8 @@ def sanitize_edited_slides(
 
     Shared by the review-step resume path and the AE-0314 completed-project
     slide-edit endpoint so both wires apply identical display-preserving
-    sanitization (markdown emphasis + case survive; markup injection stripped).
+    sanitization (PT ``**`` + EN ``<strong>`` emphasis and case survive; other markup
+    and injection patterns are stripped, AE-0403).
     """
     sanitized: list[dict[str, object]] = []
     for slide in edited_slides:
