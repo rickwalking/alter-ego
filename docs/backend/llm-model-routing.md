@@ -22,6 +22,45 @@ pt-BR caption as strict JSON, 2 runs): `qwen3.8-flash` 9-11 s, `qwen3.8-max` 14-
 `mimo-v2.6-flash` 7-19 s, `kimi-k2.6` 44-47 s, all valid JSON. `claude-haiku-5-5`,
 `gpt-5.6-luna`, `minimax-m2.7` and `grok-4.6` answer `ModelProtocolUnsupported` on this endpoint.
 
+## Model queue and circuit breaker (AE-0399)
+
+When `LLM_MODEL_QUEUE_FAST` / `LLM_MODEL_QUEUE_REASONING` is set, the role is served by a
+`ModelQueueChatModel` (`infrastructure/external/model_queue_chat_model.py`) instead of the
+model + fallback pair above. The queue is a comma list of `go:<model>` (the OpenCode Go
+endpoint) and `sidecar:<provider>/<model>` (the OpenCode sidecar) entries, tried in order.
+Prod: fast = `sidecar:opencode/deepseek-v4.1-flash-free,go:deepseek-v4.1-flash,go:qwen3.8-flash`,
+reasoning = `go:deepseek-v4-pro,go:qwen3.8-max`. An empty setting keeps the AE-0391 routing.
+
+Each model has a circuit breaker (`infrastructure/llm/model_breaker.py`), shared by the process:
+CLOSED (calls pass), OPEN (skipped until the cooldown ends), HALF_OPEN (one probe call). What a
+failure does depends on its class:
+
+| Class | Example | On this model | Breaker |
+|---|---|---|---|
+| fatal | 401/403, `FreeTierError` | give up at once | opens 6 h |
+| quota | 429 usage limit | give up at once | opens 1 h |
+| throttled | 429 rate limit | wait `Retry-After` (≤30 s) or 1-4 s, 2 retries (the debounce) | counts as one transient failure when exhausted |
+| transient | 5xx, timeout | 3 tries, backoff 2 s, 4 s (+ jitter) | opens after 3 in a row for 5 min; a failed probe doubles it (max 1 h) |
+| content | empty answer | re-rolled 3 times | never opens |
+
+A JSON call whose output never parses moves on to the rest of the queue (`as_fallback`). When
+no model answers, `AllModelsUnavailableError` names every model's state. Breaker changes go to
+the logs (`llm_breaker_opened` / `_half_open` / `_closed`) and, with `TELEGRAM_ALERTS_BOT_TOKEN` +
+`TELEGRAM_ALERTS_CHAT_ID`, to a send-only Telegram bot: one message per open/close, and "all
+models unavailable" at most once per 15 min.
+
+### OpenCode sidecar
+
+`opencode/deepseek-v4.1-flash-free` answers only requests made from within OpenCode (a direct
+API call gets 403 `FreeTierError`, and the free tier refuses any restricted permission config).
+OpenCode is a coding agent with shell and file tools, so it runs alone in the `opencode` compose
+service (`ops/opencode/Dockerfile`): no secrets but its own `OPENCODE_SERVER_PASSWORD`, no
+published ports, a read-only root filesystem, tmpfs scratch, `cap_drop: ALL`. The backend calls
+`opencode serve` (`OPENCODE_SIDECAR_URL=http://opencode:4096`, HTTP Basic) with one session per
+call (`OpenCodeSidecarChatModel`). Its login lives in the `opencode_data` volume; after the first
+deploy run `docker compose -f docker-compose.prod.yml exec opencode opencode auth login` once.
+Until then the sidecar model fails as fatal and the queue goes straight to `go:deepseek-v4.1-flash`.
+
 Model ids live only in settings; the defaults are constants in
 `backend/src/rag_backend/infrastructure/config/llm_routing_constants.py`.
 
