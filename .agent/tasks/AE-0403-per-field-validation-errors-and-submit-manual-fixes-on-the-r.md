@@ -141,4 +141,4 @@ None.
 
 ## Final Summary
 
-Pending CI.
+PR #119 merged with CI green (including mutation). Gate evidence: `.agent/reports/AE-0403.dev-summary.md`.
