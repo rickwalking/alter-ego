@@ -160,7 +160,8 @@ def test_fix_callback_parses() -> None:
 def test_review_keyboard_gets_a_fourth_button_when_fixable() -> None:
     run_id = UUID("22222222-2222-4222-8222-222222222222")
     fixable = review_keyboard_with_fix(run_id, fixable=True)
-    assert len(fixable.rows) == 1
+    # AE-0404: "🗓 Agendar" sits on its own second row.
+    assert len(fixable.rows) == 2
     labels = [button.text for button in fixable.rows[0]]
     assert len(labels) == 4
     assert labels[-1] == BUTTON_FIX
@@ -172,7 +173,7 @@ def test_review_keyboard_gets_a_fourth_button_when_fixable() -> None:
 def test_clean_review_keeps_three_buttons_and_no_issue_block() -> None:
     run_id = UUID("22222222-2222-4222-8222-222222222222")
     keyboard = review_keyboard_with_fix(run_id, fixable=False)
-    assert [len(row) for row in keyboard.rows] == [3]
+    assert [len(row) for row in keyboard.rows] == [3, 1]
     assert with_issues("Caption", ()) == "Caption"
     assert with_issues("Caption", _LINES) == (
         f"Caption\n\n{ISSUES_HEADER}\n"

@@ -52,6 +52,8 @@ _SPEC: frozenset[tuple[AutopilotRunState, AutopilotRunState]] = frozenset({
     (_S.SCHEDULED, _S.PUBLISHING),
     (_S.SCHEDULED, _S.AWAITING_OWNER),
     (_S.SCHEDULED, _S.EXPIRED),
+    # AE-0404: the owner moves a scheduled run to another day or time.
+    (_S.SCHEDULED, _S.SCHEDULED),
 })
 
 _ILLEGAL = (

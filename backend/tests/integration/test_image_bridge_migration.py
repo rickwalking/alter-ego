@@ -61,11 +61,11 @@ def _indexes(db_path: Path) -> set[str]:
     return {row[0] for row in rows}
 
 
-def test_revision_is_the_single_head_on_top_of_insights() -> None:
-    """Exactly one head, chained on the AE-0378 insights revision."""
+def test_revision_is_chained_on_top_of_insights() -> None:
+    """Chained on the AE-0378 insights revision; AE-0404's is the head now."""
     _command, cfg, script_cls = _alembic_config()
     script = script_cls.from_config(cfg)
-    assert list(script.get_heads()) == [_REVISION]
+    assert list(script.get_heads()) == ["a0e4f0a4b4c4"]
     revision = script.get_revision(_REVISION)
     assert revision is not None
     assert revision.down_revision == _PARENT

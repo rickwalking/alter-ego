@@ -191,8 +191,8 @@ async def test_tell_sends_the_inline_keyboard() -> None:
 
     markup = sent[0]["reply_markup"]
     assert isinstance(markup, dict)
-    buttons = markup["inline_keyboard"][0]
-    assert buttons[1]["callback_data"] == f"ap:unsched:{run_id}"
+    buttons = markup["inline_keyboard"][1]
+    assert buttons[0]["callback_data"] == f"ap:unsched:{run_id}"
     assert "reply_markup" not in sent[1]
 
 

@@ -34,12 +34,13 @@ from rag_backend.modules.autopilot.domain.notify import (
     StatusNotice,
     StatusSendResult,
 )
-from rag_backend.modules.autopilot.domain.pov_schedule import (
-    PovPublishSlots,
-    sao_paulo_week,
-    slot_policy_for,
-)
+from rag_backend.modules.autopilot.domain.pov_schedule import sao_paulo_week
 from rag_backend.modules.autopilot.domain.publish import RunListQuery
+from rag_backend.modules.autopilot.domain.recommend import (
+    RecommendQuery,
+    ScheduleSignals,
+    best_slot,
+)
 from rag_backend.modules.autopilot.domain.state_machine import ALLOWED_TRANSITIONS
 from rag_backend.modules.autopilot.domain.thesis import (
     clean_thesis,
@@ -335,12 +336,13 @@ class TestPovSlots:
         ids=["tue-early", "tue-too-late", "thu-at-noon", "saturday"],
     )
     def test_next_slot(self, now: datetime, slot: datetime) -> None:
-        assert PovPublishSlots().next_slot(now) == slot
+        # AE-0404: with no insights the recommender's POV prior keeps this slot.
+        query = RecommendQuery(now=now, pov=True, signals=ScheduleSignals())
+        assert best_slot(query).at == slot
 
-    def test_policy_for_mode(self) -> None:
-        assert isinstance(slot_policy_for("pov"), PovPublishSlots)
-        assert slot_policy_for("news_analysis") is None
-        assert slot_policy_for(None) is None
+    def test_radar_run_keeps_the_default_slots(self) -> None:
+        query = RecommendQuery(now=_sp(24, 9), pov=False, signals=ScheduleSignals())
+        assert best_slot(query).at == _sp(24, 12)
 
     def test_week_bounds(self) -> None:
         start, end = sao_paulo_week(_sp(22, 23, 59))

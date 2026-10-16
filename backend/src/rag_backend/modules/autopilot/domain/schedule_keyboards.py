@@ -1,4 +1,4 @@
-"""Telegram keyboards for publish-now and scheduling (AE-0370). Pure."""
+"""Telegram keyboards for publish-now and scheduling (AE-0370, AE-0404). Pure."""
 
 from __future__ import annotations
 
@@ -11,27 +11,51 @@ from rag_backend.modules.autopilot.domain.messages import (
     InlineKeyboard,
     callback_data,
 )
-from rag_backend.modules.autopilot.domain.schedule import epoch_of, slot_label
+from rag_backend.modules.autopilot.domain.recommend import DayOption, ScoredSlot
+from rag_backend.modules.autopilot.domain.schedule import (
+    day_label,
+    epoch_of,
+    schedule_zone,
+)
+from rag_backend.modules.autopilot.recommend_constants import (
+    DAY_BUTTONS_PER_ROW,
+    STAR,
+)
 from rag_backend.modules.autopilot.schedule_constants import (
+    BUTTON_BACK_TO_DAYS,
     BUTTON_CANCEL_SCHEDULE,
+    BUTTON_CHANGE_SCHEDULE,
     BUTTON_OTHER_TIME,
     BUTTON_PUBLISH_NOW,
     BUTTON_SCHEDULE,
+    CALLBACK_DAY_DATE_FORMAT,
+    CALLBACK_DAY_FORMAT,
+    CALLBACK_DAYS_PREFIX,
     CALLBACK_OTHER_TIME_PREFIX,
     CALLBACK_PUBLISH_NOW_PREFIX,
     CALLBACK_SCHEDULE_PREFIX,
     CALLBACK_SLOT_FORMAT,
     CALLBACK_UNSCHEDULE_PREFIX,
+    LOCAL_TIME_FORMAT,
 )
+
+_TIMES_PER_ROW = 2
 
 
 @dataclass(frozen=True, kw_only=True)
-class SlotMenu:
-    """The slot buttons for one run, labelled relative to ``now``."""
+class DayMenu:
+    """The picker's day buttons for one run."""
 
     run_id: UUID
-    slots: tuple[datetime, ...]
-    now: datetime
+    days: tuple[DayOption, ...]
+
+
+@dataclass(frozen=True, kw_only=True)
+class TimeMenu:
+    """The picker's time buttons for one run and day, best first."""
+
+    run_id: UUID
+    slots: tuple[ScoredSlot, ...]
 
 
 def publish_choice_keyboard(run_id: UUID) -> InlineKeyboard:
@@ -43,28 +67,64 @@ def publish_choice_keyboard(run_id: UUID) -> InlineKeyboard:
     return InlineKeyboard(rows=(row,))
 
 
-def slot_keyboard(menu: SlotMenu) -> InlineKeyboard:
-    """One row per slot, then ``✏️ Outro horário``."""
-    rows = tuple(
-        (
-            InlineButton(
-                text=slot_label(slot, menu.now),
-                callback_data=callback_data(_slot_prefix(slot), menu.run_id),
+def day_keyboard(menu: DayMenu) -> InlineKeyboard:
+    """``Ter 20/10 ⭐`` buttons, three per row."""
+    buttons = [
+        InlineButton(
+            text=_starred(day_label(option.day), starred=option.starred),
+            callback_data=callback_data(
+                CALLBACK_DAY_FORMAT.format(
+                    day=option.day.strftime(CALLBACK_DAY_DATE_FORMAT)
+                ),
+                menu.run_id,
             ),
         )
-        for slot in menu.slots
+        for option in menu.days
+    ]
+    return InlineKeyboard(rows=_rows(buttons, DAY_BUTTONS_PER_ROW))
+
+
+def time_keyboard(menu: TimeMenu) -> InlineKeyboard:
+    """The best times (the first starred), then ``Outro horário`` and ``← Dias``."""
+    buttons = [
+        InlineButton(
+            text=_starred(_clock(slot.at), starred=index == 0),
+            callback_data=callback_data(_slot_prefix(slot.at), menu.run_id),
+        )
+        for index, slot in enumerate(menu.slots)
+    ]
+    footer = (
+        _button(BUTTON_OTHER_TIME, CALLBACK_OTHER_TIME_PREFIX, menu.run_id),
+        _button(BUTTON_BACK_TO_DAYS, CALLBACK_DAYS_PREFIX, menu.run_id),
     )
-    other = _button(BUTTON_OTHER_TIME, CALLBACK_OTHER_TIME_PREFIX, menu.run_id)
-    return InlineKeyboard(rows=(*rows, (other,)))
+    return InlineKeyboard(rows=(*_rows(buttons, _TIMES_PER_ROW), footer))
 
 
 def scheduled_keyboard(run_id: UUID) -> InlineKeyboard:
-    """``🚀 Publicar agora`` and ``❌ Cancelar agendamento`` on a scheduled run."""
-    row = (
+    """Publish now, change the day/time, or cancel a scheduled run."""
+    first = (
         _button(BUTTON_PUBLISH_NOW, CALLBACK_PUBLISH_NOW_PREFIX, run_id),
-        _button(BUTTON_CANCEL_SCHEDULE, CALLBACK_UNSCHEDULE_PREFIX, run_id),
+        _button(BUTTON_CHANGE_SCHEDULE, CALLBACK_SCHEDULE_PREFIX, run_id),
     )
-    return InlineKeyboard(rows=(row,))
+    cancel = _button(BUTTON_CANCEL_SCHEDULE, CALLBACK_UNSCHEDULE_PREFIX, run_id)
+    return InlineKeyboard(rows=(first, (cancel,)))
+
+
+def _rows(
+    buttons: list[InlineButton], per_row: int
+) -> tuple[tuple[InlineButton, ...], ...]:
+    return tuple(
+        tuple(buttons[start : start + per_row])
+        for start in range(0, len(buttons), per_row)
+    )
+
+
+def _starred(label: str, *, starred: bool) -> str:
+    return f"{label} {STAR}" if starred else label
+
+
+def _clock(at: datetime) -> str:
+    return at.astimezone(schedule_zone()).strftime(LOCAL_TIME_FORMAT)
 
 
 def _slot_prefix(slot: datetime) -> str:

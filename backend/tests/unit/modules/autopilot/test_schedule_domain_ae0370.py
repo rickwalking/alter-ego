@@ -25,22 +25,30 @@ from rag_backend.modules.autopilot.domain.published_copy import (
     published_text,
     with_late,
 )
+from rag_backend.modules.autopilot.domain.recommend import (
+    RecommendQuery,
+    ScheduleSignals,
+    best_slot,
+    picker_days,
+    top_times,
+)
 from rag_backend.modules.autopilot.domain.schedule import (
     check_choice,
     clears_schedule,
+    day_label,
     epoch_of,
     from_epoch,
     late_minutes,
-    local_label,
-    next_slots,
     parse_owner_time,
-    slot_label,
+    when_label,
 )
 from rag_backend.modules.autopilot.domain.schedule_keyboards import (
-    SlotMenu,
+    DayMenu,
+    TimeMenu,
+    day_keyboard,
     publish_choice_keyboard,
     scheduled_keyboard,
-    slot_keyboard,
+    time_keyboard,
 )
 from rag_backend.modules.autopilot.domain.state_machine import assert_allowed
 from rag_backend.modules.autopilot.notify_constants import (
@@ -65,15 +73,20 @@ def _local(day: int, hour: int, minute: int = 0, month: int = 10) -> datetime:
     return datetime(2026, month, day, hour, minute, tzinfo=_SP).astimezone(UTC)
 
 
-def _labels(slots: tuple[datetime, ...]) -> list[str]:
-    return [local_label(slot) for slot in slots]
+def local_label(at: datetime) -> str:
+    return at.astimezone(_SP).strftime("%d/%m %H:%M")
 
 
-# Scenario: Agendar lists the next three slots and a custom time
-def test_next_slots_from_the_morning() -> None:
-    slots = next_slots(_local(15, 10))
-    assert _labels(slots) == ["15/10 12:00", "15/10 18:00", "15/10 21:00"]
-    assert all(slot.tzinfo is UTC for slot in slots)
+def _first(now: datetime) -> datetime:
+    """AE-0404: the auto slot of a Radar run without insights."""
+    return best_slot(RecommendQuery(now=now, pov=False, signals=ScheduleSignals())).at
+
+
+# Scenario: Without insights a Radar run keeps the default slots (AE-0404)
+def test_first_slot_from_the_morning() -> None:
+    first = _first(_local(15, 10))
+    assert local_label(first) == "15/10 12:00"
+    assert first.tzinfo is UTC
 
 
 # Scenario: A slot less than 15 minutes away is skipped
@@ -82,33 +95,25 @@ def test_next_slots_from_the_morning() -> None:
     [(11, 44, "15/10 12:00"), (11, 45, "15/10 12:00"), (11, 46, "15/10 18:00")],
 )
 def test_fifteen_minute_lead(hour: int, minute: int, first: str) -> None:
-    assert local_label(next_slots(_local(15, hour, minute))[0]) == first
-
-
-def test_slot_skipped_inside_lead_rolls_the_rest() -> None:
-    slots = next_slots(_local(15, 11, 50))
-    assert _labels(slots) == ["15/10 18:00", "15/10 21:00", "16/10 12:00"]
+    assert local_label(_first(_local(15, hour, minute))) == first
 
 
 # Scenario: Slots roll over to the next day
 def test_slots_roll_over_after_the_last_slot() -> None:
-    slots = next_slots(_local(15, 22))
-    assert _labels(slots) == ["16/10 12:00", "16/10 18:00", "16/10 21:00"]
+    assert local_label(_first(_local(15, 22))) == "16/10 12:00"
 
 
 # Scenario: Slots are computed in America/Sao_Paulo, whatever the server zone
 def test_slots_use_sao_paulo_not_utc() -> None:
     now = datetime(2026, 10, 15, 14, 0, tzinfo=UTC)  # 11:00 in Sao Paulo
-    first = next_slots(now)[0]
+    first = _first(now)
     assert local_label(first) == "15/10 12:00"
     assert first == datetime(2026, 10, 15, 15, 0, tzinfo=UTC)
 
 
-def test_slot_labels_today_tomorrow_and_later() -> None:
-    now = _local(15, 22)
-    assert slot_label(_local(15, 23), now) == "hoje 23:00"
-    assert slot_label(_local(16, 12), now) == "amanhã 12:00"
-    assert slot_label(_local(18, 12), now) == "18/10 12:00"
+def test_day_and_when_labels() -> None:
+    assert day_label(_local(20, 12).astimezone(_SP).date()) == "Ter 20/10"
+    assert when_label(_local(18, 9, 5)) == "Dom 18/10 09:05"
 
 
 # Scenario Outline: The owner types a valid time
@@ -234,7 +239,10 @@ def test_callbacks_parse_and_fit_64_bytes() -> None:
     keyboards = (
         publish_choice_keyboard(run_id),
         scheduled_keyboard(run_id),
-        slot_keyboard(SlotMenu(run_id=run_id, slots=next_slots(now), now=now)),
+        day_keyboard(DayMenu(run_id=run_id, days=picker_days(_query(now)))),
+        time_keyboard(
+            TimeMenu(run_id=run_id, slots=top_times(_query(now), _local(16, 9).date()))
+        ),
     )
     for keyboard in keyboards:
         for row in keyboard.rows:
@@ -256,29 +264,35 @@ def test_choice_and_scheduled_buttons() -> None:
         f"ap:pubnow:{run_id}",
         f"ap:sched:{run_id}",
     ]
-    scheduled = scheduled_keyboard(run_id).rows[0]
+    scheduled = [b for row in scheduled_keyboard(run_id).rows for b in row]
     assert [b.callback_data for b in scheduled] == [
         f"ap:pubnow:{run_id}",
+        f"ap:sched:{run_id}",
         f"ap:unsched:{run_id}",
     ]
-    assert scheduled[1].text == "❌ Cancelar agendamento"
+    assert scheduled[1].text == "\U0001f5d3 Mudar dia/horário"
+    assert scheduled[2].text == "❌ Cancelar agendamento"
 
 
-def test_slot_keyboard_rows_and_slot_callback() -> None:
+def _query(now: datetime) -> RecommendQuery:
+    return RecommendQuery(now=now, pov=False, signals=ScheduleSignals())
+
+
+def test_time_keyboard_rows_and_slot_callback() -> None:
     run_id = uuid4()
-    now = _local(15, 10)
-    rows = slot_keyboard(SlotMenu(run_id=run_id, slots=next_slots(now), now=now)).rows
-    assert [row[0].text for row in rows] == [
-        "hoje 12:00",
-        "hoje 18:00",
-        "hoje 21:00",
-        "✏️ Outro horário",
+    slots = top_times(_query(_local(15, 10)), _local(15, 12).astimezone(_SP).date())
+    rows = time_keyboard(TimeMenu(run_id=run_id, slots=slots)).rows
+    assert [[b.text for b in row] for row in rows] == [
+        ["12:00 ⭐", "18:00"],
+        ["21:00", "11:00"],
+        ["✏️ Outro horário", "← Dias"],
     ]
-    parsed = parse_callback(rows[1][0].callback_data)
+    parsed = parse_callback(rows[0][1].callback_data)
     assert parsed is not None
     assert parsed.kind == "at"
     assert from_epoch(parsed.epoch) == _local(15, 18)
-    assert rows[3][0].callback_data == f"ap:other:{run_id}"
+    assert rows[2][0].callback_data == f"ap:other:{run_id}"
+    assert rows[2][1].callback_data == f"ap:days:{run_id}"
 
 
 @pytest.mark.parametrize(

@@ -12,6 +12,9 @@ from rag_backend.modules.autopilot.application.owner_actions import (
     OwnerActionService,
 )
 from rag_backend.modules.autopilot.application.publish_job import SystemClock
+from rag_backend.modules.autopilot.infrastructure.audience_gateway import (
+    build_audience_gateway,
+)
 from rag_backend.modules.autopilot.infrastructure.carousel_release import (
     PublishingCarouselReleaser,
 )
@@ -36,6 +39,10 @@ from rag_backend.modules.autopilot.infrastructure.repository import (
 )
 from rag_backend.modules.autopilot.infrastructure.run_recovery_store import (
     SqlRunRecoveryStore,
+)
+from rag_backend.modules.autopilot.infrastructure.schedule_signals import (
+    ScheduleSignalsConfig,
+    SqlScheduleSignals,
 )
 from rag_backend.modules.autopilot.infrastructure.telegram_reply import (
     ReplyClientConfig,
@@ -82,5 +89,18 @@ def build_owner_action_service(build: OwnerActionBuild) -> OwnerActionService:
             AutofixerConfig(session=build.session, engine_factory=build.engine_factory)
         ),
         topics=repo,
+        schedule_signals=_schedule_signals(build),
     )
     return OwnerActionService(deps)
+
+
+def _schedule_signals(build: OwnerActionBuild) -> SqlScheduleSignals:
+    """AE-0404: the picker's audience (Graph, cached daily) and post engagement."""
+    return SqlScheduleSignals(
+        ScheduleSignalsConfig(
+            session=build.session,
+            clock=SystemClock(),
+            audience=build_audience_gateway(build.settings),
+            ig_user_id=build.settings.meta_ig_user_id,
+        )
+    )
