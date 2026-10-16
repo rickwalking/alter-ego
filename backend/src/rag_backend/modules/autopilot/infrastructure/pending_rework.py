@@ -1,12 +1,15 @@
 """Pending rework phase, stored on the run's notice ledger.
 
-Keyed by the owner chat id. Only runs still ``awaiting_owner`` are visible,
-so a later approve or reject cannot be undone by a stale text message.
+Keyed by the owner chat id. A rework phase is only visible on a run still
+``awaiting_owner``, so a later approve or reject cannot be undone by a stale
+text message. AE-0396: an edited POV thesis ("Editar") is pending on a run
+``awaiting_thesis``; ``take`` used to scan only ``awaiting_owner`` runs, so the
+owner's typed thesis was dropped silently.
 """
 
 from __future__ import annotations
 
-from rag_backend.modules.autopilot.domain.models import AutopilotRunState
+from rag_backend.modules.autopilot.domain.models import AutopilotRun, AutopilotRunState
 from rag_backend.modules.autopilot.domain.notice_log import (
     StoredPending,
     set_pending,
@@ -18,7 +21,13 @@ from rag_backend.modules.autopilot.domain.ports import (
     NoticeLogStore,
 )
 from rag_backend.modules.autopilot.domain.publish import RunListQuery
+from rag_backend.modules.autopilot.pov_constants import THESIS_PENDING_PHASE
 from rag_backend.modules.autopilot.webhook_constants import REWORK_SCAN_LIMIT
+
+# The run state each kind of pending reply belongs to.
+_THESIS_STATE = AutopilotRunState.AWAITING_THESIS
+_REWORK_STATE = AutopilotRunState.AWAITING_OWNER
+_SCANNED_STATES = (_REWORK_STATE, _THESIS_STATE)
 
 
 class SqlPendingReworkStore:
@@ -39,26 +48,29 @@ class SqlPendingReworkStore:
 
     async def take(self, owner_chat_id: str) -> PendingRework | None:
         """Return and clear the pending phase for this owner."""
-        query = RunListQuery(
-            state=AutopilotRunState.AWAITING_OWNER,
-            limit=REWORK_SCAN_LIMIT,
-        )
-        runs = await self._runs.list_by_state(query)
-        for run in runs:
-            found = _match(run.notice_log.pending, owner_chat_id)
-            if found is None:
-                continue
-            cleared = set_pending(run.notice_log, None)
-            await self._notices.save(SaveNoticeLog(run_id=run.run_id, log=cleared))
-            return PendingRework(
-                owner_chat_id=owner_chat_id,
-                run_id=run.run_id,
-                phase=found.phase,
-            )
+        for state in _SCANNED_STATES:
+            for run in await self._runs.list_by_state(
+                RunListQuery(state=state, limit=REWORK_SCAN_LIMIT)
+            ):
+                found = _match(run, owner_chat_id)
+                if found is not None:
+                    return await self._clear(run, found)
         return None
 
+    async def _clear(self, run: AutopilotRun, found: StoredPending) -> PendingRework:
+        cleared = set_pending(run.notice_log, None)
+        await self._notices.save(SaveNoticeLog(run_id=run.run_id, log=cleared))
+        return PendingRework(
+            owner_chat_id=found.owner_chat_id,
+            run_id=run.run_id,
+            phase=found.phase,
+        )
 
-def _match(pending: StoredPending | None, owner_chat_id: str) -> StoredPending | None:
+
+def _match(run: AutopilotRun, owner_chat_id: str) -> StoredPending | None:
+    """The owner's pending reply on ``run``, when it belongs to the run's state."""
+    pending = run.notice_log.pending
     if pending is None or pending.owner_chat_id != owner_chat_id:
         return None
-    return pending
+    expected = _THESIS_STATE if pending.phase == THESIS_PENDING_PHASE else _REWORK_STATE
+    return pending if run.state is expected else None
