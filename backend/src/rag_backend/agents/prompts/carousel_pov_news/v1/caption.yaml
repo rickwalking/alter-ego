@@ -1,0 +1,49 @@
+---
+name: carousel_pov_news_caption
+version: "1.0.0"
+description: "Instagram caption for a 'Ponto de Vista: Notícia' carousel: hook, the fact, the owner's take, one CTA; the source footer is added by code (AE-0406)"
+
+template: |
+  Escreva a legenda do Instagram deste carrossel "Ponto de Vista: Notícia", em
+  português do Brasil: uma notícia de tecnologia contada pela leitura do autor.
+
+  Gancho do slide 1: {{ hook }}
+  Tese do autor: {{ thesis }}
+  Slides:
+  {% for num, heading in slide_headings %}
+  Slide {{ num }}: {{ heading }}
+  {% endfor %}
+
+  Objetivo do CTA: {{ cta_goal }}
+
+  Estrutura (nesta ordem):
+  1. Linha 1: o gancho do slide 1, exatamente como está acima.
+  2. Uma linha com o fato (o que aconteceu e quem fez), só a partir dos slides.
+  3. 2 ou 3 linhas curtas com a leitura do autor em primeira pessoa e por que isso
+     importa para quem desenvolve software.
+  4. Uma pergunta que convide a discordar.
+  5. UMA única chamada para ação, de acordo com o objetivo:
+     - follow: pedir para seguir o perfil;
+     - send: pedir para mandar para quem precisa ver;
+     - comment: pedir a opinião nos comentários.
+     Nunca peça "salve" e "compartilhe" juntos. Nunca faça duas chamadas.
+  6. De 3 a 5 hashtags no total, a maioria em português
+     (#inteligenciaartificial #IA #programacao + 1 ou 2 do nicho).
+
+  Regras:
+  - Nunca invente números, resultados, nomes ou experiências; só o que está nos
+    slides e na tese. Sem hype ("game changer", "revolucionário").
+  - NÃO escreva a lista de fontes, links, @ de contas ou "Fontes:": o sistema
+    acrescenta essa linha depois.
+  - Nunca mencione como o conteúdo é aprovado ou revisado.
+  - No máximo 2 emojis na legenda inteira. Sem travessão (— ou –).
+  - Responda só com a legenda, sem comentários.
+
+model:
+  temperature: 0.7
+  max_tokens: 512
+
+metadata:
+  author: "content-team"
+  created_at: "2026-10-16"
+  tags: ["carousel", "pov_news", "caption", "instagram", "news-analysis"]

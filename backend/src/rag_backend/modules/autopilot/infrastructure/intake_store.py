@@ -28,6 +28,7 @@ from rag_backend.modules.autopilot.domain.ports import (
     QueuedRunCommand,
     RecordServedUrls,
 )
+from rag_backend.modules.autopilot.domain.scout_ports import XPostLookup
 from rag_backend.modules.autopilot.domain.x_status import canonical_url
 from rag_backend.modules.autopilot.infrastructure.advisory_lock import (
     advisory_xact_lock,
@@ -36,6 +37,7 @@ from rag_backend.modules.autopilot.infrastructure.models import (
     AutopilotRunModel,
     ServedSignalUrlModel,
     TopicCandidateModel,
+    XBrowserSignalModel,
 )
 from rag_backend.modules.autopilot.infrastructure.topic_rows import topic_row
 from rag_backend.modules.autopilot.recovery_constants import INTAKE_LOCK_KEY
@@ -114,6 +116,22 @@ class SqlAlchemyTopicIntakeStore:
             )
         )
         return int(result.scalar_one())
+
+    async def x_post_texts(self, query: XPostLookup) -> dict[str, str]:
+        """AE-0406: the post text stored through x-signals for each known URL.
+
+        PR #124 review: matched case-insensitively (an X handle's case may
+        differ between the stored post and the quote); keys are the stored URLs.
+        """
+        if not query.urls:
+            return {}
+        lowered = [url.lower() for url in query.urls]
+        result = await self._session.execute(
+            select(XBrowserSignalModel.url, XBrowserSignalModel.text).where(
+                func.lower(XBrowserSignalModel.url).in_(lowered)
+            )
+        )
+        return dict(result.tuples().all())
 
     async def add_candidate(self, candidate: TopicCandidate) -> bool:
         """Insert one candidate. False when a concurrent batch stored its hash."""

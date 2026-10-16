@@ -77,6 +77,7 @@ from rag_backend.modules.autopilot.infrastructure.pov_project import (
     pov_fields_for,
     start_input_for,
 )
+from rag_backend.modules.autopilot.infrastructure.quote_gate import quote_violations
 from rag_backend.modules.autopilot.parked_constants import PARKED_GRACE_SECONDS
 from rag_backend.modules.editorial.public import (
     AutomationRun,
@@ -195,6 +196,7 @@ class InProcessEditorialDriver:
                 parked_overdue=gate.parked_overdue,
                 hero_images_total=await self._acl.hero_image_total(project_id),
                 pov=await self._acl.is_pov(project_id),
+                quote_violations=await quote_violations(self._acl, project_id, state),
             )
         )
 

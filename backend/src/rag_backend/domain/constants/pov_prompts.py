@@ -8,6 +8,9 @@ POV_PROMPT_OUTLINE = "outline"
 POV_PROMPT_HOOK = "hook"
 POV_PROMPT_CONTENT = "content"
 POV_PROMPT_CAPTION = "caption"
+# AE-0406 (ADR-0023): the news-analysis voice of the POV family. Same prompt
+# names and version as ``carousel_pov``; only the domain differs.
+POV_NEWS_PROMPT_DOMAIN = "carousel_pov_news"
 HOOK_CANDIDATE_COUNT = 5
 # AE-0376: the Radar IA v7 prompts (hero_lower_third_v4 projects).
 RADAR_PROMPT_DOMAIN = "carousel"
@@ -37,6 +40,7 @@ __all__ = [
     "PERSONA_POV_PROMPT_CONTEXT",
     "PERSONA_POV_PROMPT_DOMAIN",
     "PERSONA_POV_PROMPT_VERSION",
+    "POV_NEWS_PROMPT_DOMAIN",
     "POV_PROMPT_CAPTION",
     "POV_PROMPT_CONTENT",
     "POV_PROMPT_DOMAIN",

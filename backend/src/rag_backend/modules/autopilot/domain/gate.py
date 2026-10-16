@@ -13,6 +13,7 @@ from typing import Protocol
 from uuid import UUID
 
 from rag_backend.domain.constants.content_mode import CONTENT_MODE_NEWS_ANALYSIS
+from rag_backend.domain.models.news_quote import NewsQuote
 from rag_backend.modules.autopilot.domain.carousel_defaults import DEFAULT_IMAGE_STYLE
 
 
@@ -114,6 +115,8 @@ class SnapshotParts:
     hero_images_total: int = 0
     # PR #106 review: a POV carousel must be voice-scored at the content gate.
     pov: bool = False
+    # AE-0406: ``pov_news`` quote cards that are not verbatim (content gate).
+    quote_violations: tuple[QualityViolation, ...] = ()
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -166,6 +169,8 @@ class ProjectSpec:
     slide_count: int | None = None
     persona_id: str | None = None
     hook_asset_id: str | None = None
+    # AE-0406: the scout-verified quotes of a ``pov_news`` topic.
+    quotes: tuple[NewsQuote, ...] = ()
 
 
 @dataclass(frozen=True, kw_only=True)

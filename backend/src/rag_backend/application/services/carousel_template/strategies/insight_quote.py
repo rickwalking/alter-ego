@@ -1,4 +1,9 @@
-"""Insight quote strategy — accent-bordered quote card with attribution."""
+"""Insight quote strategy — accent-bordered quote card with attribution.
+
+AE-0406: a ``pov_news`` card (a quoted account with ``name`` and ``handle``)
+renders on the POV statement shell with the attribution row of
+``news_quote``; every other card keeps today's lower-third layout.
+"""
 
 from collections.abc import Mapping
 
@@ -9,20 +14,27 @@ from rag_backend.application.services.carousel_template.lower_third_shell import
     LowerThirdConfig,
     render_lower_third_shell,
 )
+from rag_backend.application.services.carousel_template.pov_shell import (
+    PovShellConfig,
+    render_pov_shell,
+)
+from rag_backend.application.services.carousel_template.strategies import news_quote
 from rag_backend.application.services.carousel_template.strategies.hero_content import (
     HeroContentStrategy,
 )
 from rag_backend.domain.models import CarouselProject
 from rag_backend.domain.protocols.carousel import _RenderOptions
 
+INSIGHT_QUOTE_STRATEGY = "insight_quote"
 _SUPPORTED_TYPES = frozenset({"content", "closing"})
 _FALLBACK = HeroContentStrategy()
+_NEWS_QUOTE_LAYOUT = "pov-quote"
 
 
 class InsightQuoteStrategy:
     """Renders slides with heading and an accent-bordered insight quote card."""
 
-    strategy_name = "insight_quote"
+    strategy_name = INSIGHT_QUOTE_STRATEGY
     display_name = "Insight Quote"
     supported_slide_types = _SUPPORTED_TYPES
 
@@ -40,6 +52,8 @@ class InsightQuoteStrategy:
         insight = slide.get("insight")
         if not insight or not isinstance(insight, dict):
             return _FALLBACK.render(slide, project, theme, options=options)
+        if news_quote.is_news_quote(insight):
+            return _render_news_quote(slide, project, total_slides)
 
         quote = _render_inline(str(insight.get("quote") or ""))
         attribution = _render_inline(str(insight.get("attribution") or ""))
@@ -71,4 +85,31 @@ class InsightQuoteStrategy:
         )
 
 
-__all__ = ["InsightQuoteStrategy"]
+def _render_news_quote(
+    slide: Mapping[str, object], project: CarouselProject, total_slides: int
+) -> str:
+    """AE-0406: heading, body and the verified quote card on the POV shell."""
+    insight = slide.get("insight")
+    card = news_quote.news_quote_card_html(insight) if isinstance(insight, dict) else ""
+    heading = _render_inline(str(slide.get("heading") or ""))
+    body_raw = str(slide.get("body") or "").strip()
+    body_html = (
+        f'<p class="pov-statement-body">{_render_inline(body_raw)}</p>'
+        if body_raw
+        else ""
+    )
+    return render_pov_shell(
+        PovShellConfig(
+            slide_number=str(slide.get("number", "")),
+            total_slides=total_slides,
+            copy_inner_html=(
+                f'<h2 class="pov-statement-heading">{heading}</h2>\n'
+                f"      {body_html}\n      {card}"
+            ),
+            layout=_NEWS_QUOTE_LAYOUT,
+        ),
+        project,
+    )
+
+
+__all__ = ["INSIGHT_QUOTE_STRATEGY", "InsightQuoteStrategy"]

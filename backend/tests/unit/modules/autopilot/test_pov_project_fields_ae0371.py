@@ -79,6 +79,8 @@ class TestPovFields:
             "slide_count": None,
             "hook_asset_id": None,
             "persona_id": "persona-pedro",
+            "pov_quotes": (),
+            "pov_sources": (),
         }
 
     def test_start_input_carries_the_persona_and_sources(self) -> None:

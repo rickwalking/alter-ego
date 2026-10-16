@@ -100,7 +100,7 @@ export const carouselProjectResponseSchema = z.object({
   creator_avatar_url: z.string().nullable().optional(),
   template_version: z.string().nullable().optional(),
   slide_layout_strategy: z.string().nullable().optional(),
-  content_mode: z.enum(["news_analysis", "pov"]).optional(),
+  content_mode: z.enum(["news_analysis", "pov", "pov_news"]).optional(),
   pov_thesis: z.string().nullable().optional(),
   pov_personal_proof: z.string().nullable().optional(),
   pov_format: z.string().nullable().optional(),
@@ -168,7 +168,7 @@ export const carouselCreateRequestSchema = z
     strategy: z.string().max(50).optional(),
     custom_visual_details: z.string().max(500).nullable().optional(),
     // AE-0373 (ADR-0021): content mode and the "Ponto de Vista" inputs.
-    content_mode: z.enum(["news_analysis", "pov"]).optional(),
+    content_mode: z.enum(["news_analysis", "pov", "pov_news"]).optional(),
     pov_thesis: z.string().trim().min(1).max(280).optional(),
     pov_personal_proof: z.string().max(500).nullable().optional(),
     pov_format: z
@@ -177,7 +177,7 @@ export const carouselCreateRequestSchema = z
     slide_count: z.number().int().min(7).max(10).optional(),
     cta_goal: z.enum(["follow", "send", "comment"]).optional(),
     persona_id: z.string().uuid().nullable().optional(),
-    // PR #106 review: required by the API when content_mode is "pov".
+    // PR #106 review: required by the API when content_mode is "pov" or "pov_news".
     hook_asset_id: z.string().uuid().optional(),
   })
   .refine(

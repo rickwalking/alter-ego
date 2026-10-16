@@ -14,7 +14,10 @@ import {
   TEXT,
   TEXT_DIM,
 } from "@/constants/neon";
-import type { CreateCarouselFormState } from "@/app/dashboard/create/types";
+import {
+  isPovMode,
+  type CreateCarouselFormState,
+} from "@/app/dashboard/create/types";
 import { LabeledSelect } from "./labeled-select";
 import { sectionCardStyle, sectionHeaderStyle } from "./section-styles";
 
@@ -31,14 +34,16 @@ export interface CreateModeSectionProps {
 
 /** AE-0376: POV decks switch to the "Foto + Editorial" preset, Radar IA back. */
 function modePatch(mode: ContentMode): Partial<CreateCarouselFormState> {
-  const imagePreset =
-    mode === CONTENT_MODES.POV ? POV_EDITORIAL_PRESET : DEFAULT_IMAGE_PRESET;
+  const imagePreset = isPovMode(mode)
+    ? POV_EDITORIAL_PRESET
+    : DEFAULT_IMAGE_PRESET;
   return { contentMode: mode, selectedTemplate: 0, imagePreset };
 }
 
 const MODE_KEYS: Record<ContentMode, string> = {
   [CONTENT_MODES.NEWS_ANALYSIS]: "radar",
   [CONTENT_MODES.POV]: "pov",
+  [CONTENT_MODES.POV_NEWS]: "povNews",
 };
 
 /**

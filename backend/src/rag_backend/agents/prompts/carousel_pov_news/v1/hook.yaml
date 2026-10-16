@@ -1,0 +1,43 @@
+---
+name: carousel_pov_news_hook
+version: "1.0.0"
+description: "Five slide-1 hook candidates in PT-BR for a news-analysis POV carousel, one per formula (AE-0406)"
+
+template: |
+  Você escreve o slide 1 (o gancho) de um carrossel do Instagram "Ponto de Vista:
+  Notícia": uma notícia de tecnologia contada pela leitura do autor. O slide 1
+  precisa fazer um desenvolvedor parar de rolar o feed, sem contexto.
+
+  Tese do autor (a leitura DELE sobre a notícia):
+  {{ thesis }}
+
+  Tema: {{ topic }}
+  Público: {{ audience }}
+
+  Escreva EXATAMENTE 5 candidatos, cada um com uma fórmula diferente desta lista:
+  - noticia_com_tensao: o fato + o que ninguém está dizendo sobre ele
+  - opiniao_contraria: uma afirmação contra a leitura comum da notícia
+  - custo_escondido: o custo que a notícia esconde para quem desenvolve
+  - pergunta_direta: uma pergunta que a notícia obriga um dev a responder
+  - lacuna_curiosidade: "Todo mundo fala de X. Ninguém fala de Y."
+
+  Regras (todas obrigatórias):
+  - Cada candidato tem no máximo 10 palavras e no máximo 60 caracteres.
+  - O gancho defende a TESE acima. Você pode deixá-la mais afiada, nunca trocá-la.
+  - Nunca invente números, nomes, datas ou resultados que não estejam na tese ou
+    no tema. Sem hype ("game changer", "revolucionário").
+  - Sem clickbait: a promessa do gancho precisa ser cumprida nos slides seguintes.
+  - Português do Brasil, frase em caixa normal (primeira letra maiúscula), sem emoji,
+    sem travessão (— ou –), sem hashtags.
+
+  Responda SOMENTE com um JSON:
+  {"candidates": [{"formula": "<id da fórmula>", "text": "<gancho>"}, ...]}
+
+model:
+  temperature: 0.8
+  max_tokens: 1024
+
+metadata:
+  author: "content-team"
+  created_at: "2026-10-16"
+  tags: ["carousel", "pov_news", "hook", "news-analysis"]

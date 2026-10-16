@@ -53,3 +53,17 @@ Feature: Create wizard content mode (AE-0373, ADR-0021)
     Given the wizard in "Radar IA" mode with a photo left selected
     When the owner starts the carousel
     Then the create request has no hook_asset_id
+
+  # AE-0406 (ADR-0023): news analysis through the owner's point of view.
+  Scenario: The owner picks "POV: News"
+    Given the create wizard
+    When the owner selects "POV: News" ("Ponto de Vista: Notícia" in Portuguese)
+    Then the mode is "pov_news" and the image preset is "Foto + Editorial"
+    And the POV inputs (thesis, slide-1 photo, slide count) are shown
+    But the POV format picker is hidden (the news structure is fixed)
+
+  Scenario: "POV: News" create sends the POV fields
+    Given the wizard in "POV: News" mode with a thesis and a selected photo
+    When the owner starts the carousel
+    Then the create request has content_mode "pov_news", the thesis and hook_asset_id
+    And without a thesis "Start Carousel" is disabled

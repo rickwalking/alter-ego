@@ -21,6 +21,7 @@ import { buildCarouselCreateRequest } from "@/app/dashboard/create/helpers";
 import {
   INITIAL_CREATE_FORM_STATE,
   isPovForm,
+  showsFormatPicker,
   type CreateCarouselFormState,
 } from "@/app/dashboard/create/types";
 import { useCreateCarousel } from "@/modules/editorial";
@@ -104,7 +105,9 @@ export default function CreateCarouselPage(): React.ReactElement {
               <CreatePovSection form={form} onChange={handleChange} />
             )}
             {isPovForm(form) && <CreatePhotoSection {...povPhoto.section} />}
-            <CreateTemplateSection form={form} onChange={handleChange} />
+            {showsFormatPicker(form) && (
+              <CreateTemplateSection form={form} onChange={handleChange} />
+            )}
             <CreateThemeSection
               form={form}
               onChange={handleChange}

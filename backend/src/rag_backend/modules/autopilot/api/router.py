@@ -93,6 +93,8 @@ async def get_autopilot_signals(
 @router.post(
     PATH_TOPICS,
     response_model=TopicIntakeResponse,
+    # AE-0406: a rejection's ``field`` is present only when one field caused it.
+    response_model_exclude_none=True,
     responses={
         status.HTTP_401_UNAUTHORIZED: {"description": DETAIL_API_KEY_INVALID},
         status.HTTP_503_SERVICE_UNAVAILABLE: {

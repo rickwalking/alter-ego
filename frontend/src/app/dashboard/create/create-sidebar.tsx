@@ -15,9 +15,14 @@ import { CREATE_TEMPLATES } from "@/app/dashboard/create/constants";
 import { canSubmitCreateForm } from "@/app/dashboard/create/helpers";
 import {
   isPovForm,
+  showsFormatPicker,
   type CreateCarouselFormState,
 } from "@/app/dashboard/create/types";
-import { IMAGE_PRESETS, POV_TEMPLATES } from "@/constants/create";
+import {
+  CONTENT_MODES,
+  IMAGE_PRESETS,
+  POV_TEMPLATES,
+} from "@/constants/create";
 
 const sidebarCardStyle = {
   background: BG_CARD,
@@ -34,6 +39,9 @@ export interface CreateSidebarProps {
 }
 
 function modeKey(form: CreateCarouselFormState): string {
+  if (form.contentMode === CONTENT_MODES.POV_NEWS) {
+    return "povNews";
+  }
   return isPovForm(form) ? "pov" : "radar";
 }
 
@@ -41,6 +49,9 @@ function useTemplateName(form: CreateCarouselFormState): string {
   const t = useTranslations("create.pov.formats");
   if (!isPovForm(form)) {
     return CREATE_TEMPLATES[form.selectedTemplate]?.name ?? "—";
+  }
+  if (!showsFormatPicker(form)) {
+    return "—";
   }
   const pov = POV_TEMPLATES[form.selectedTemplate];
   return pov ? t(`${pov.format}.name`) : "—";

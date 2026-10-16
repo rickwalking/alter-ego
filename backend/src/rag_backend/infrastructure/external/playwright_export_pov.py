@@ -87,6 +87,27 @@ _POV_EXPORT_RULES = """
   .pov-cta-website {{
     font-size: {cta_site}px !important;
   }}
+  .pov-quote-card {{
+    padding: {quote_pad}px !important;
+    margin-top: {quote_gap}px !important;
+  }}
+  .pov-quote-card .quote-text {{
+    font-size: {quote}px !important;
+    line-height: 1.35 !important;
+  }}
+  .quote-attribution {{
+    gap: {quote_attr_gap}px !important;
+    margin-top: {quote_attr_gap}px !important;
+  }}
+  .quote-avatar {{
+    flex-basis: {quote_avatar}px !important;
+    width: {quote_avatar}px !important;
+    height: {quote_avatar}px !important;
+    font-size: {quote_avatar_font}px !important;
+  }}
+  .quote-name, .quote-handle {{
+    font-size: {quote_attr}px !important;
+  }}
 """
 
 # Pixel values for the 1080x1350 canvas; the HD canvas doubles every one.
@@ -114,6 +135,14 @@ _BASE_PX: dict[str, int] = {
     "cta": 44,
     "cta_gap": 28,
     "cta_site": 20,
+    # AE-0406: the pov_news quote card.
+    "quote": 38,
+    "quote_pad": 32,
+    "quote_gap": 36,
+    "quote_attr_gap": 18,
+    "quote_avatar": 60,
+    "quote_avatar_font": 28,
+    "quote_attr": 26,
 }
 _HD_FACTOR = 2
 

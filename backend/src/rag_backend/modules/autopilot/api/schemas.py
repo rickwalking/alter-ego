@@ -52,6 +52,33 @@ from rag_backend.modules.autopilot.pov_constants import (
     SCOUT_MODE_PATTERN,
     THESIS_DRAFT_MAX_CHARS,
 )
+from rag_backend.modules.autopilot.quote_constants import (
+    QUOTE_FIELD_SCHEMA_MAX_CHARS,
+    QUOTES_SCHEMA_MAX,
+)
+
+_QuoteText = Annotated[str, Field(max_length=QUOTE_FIELD_SCHEMA_MAX_CHARS)]
+
+
+class QuoteProposal(BaseModel):
+    """AE-0406 (spec §4): one verified quote of a post sent through x-signals.
+
+    Unknown keys are a 422 for the batch. Every other rule is a domain rule
+    that rejects only this topic, with its reason code and ``field``,
+    including a missing or blank field (PR #124 review: ``quote_invalid``,
+    ``quotes[i].<name>``), so every field defaults to None here.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    id: _QuoteText | None = None
+    url: _QuoteText | None = None
+    handle: _QuoteText | None = None
+    name: _QuoteText | None = None
+    excerpt: _QuoteText | None = None
+    lang_original: _QuoteText | None = None
+    text_pt: _QuoteText | None = None
+    text_en: _QuoteText | None = None
 
 
 class TopicProposal(BaseModel):
@@ -96,6 +123,11 @@ class TopicProposal(BaseModel):
     slide_count: int | None = Field(
         default=None, ge=POV_SLIDE_COUNT_MIN, le=POV_SLIDE_COUNT_MAX
     )
+    # AE-0406: up to 3 verified quotes on a ``pov_news`` topic (a 4th is a
+    # ``quote_invalid`` rejection of that topic; the cap here is abuse only).
+    quotes: list[QuoteProposal] = Field(
+        default_factory=list, max_length=QUOTES_SCHEMA_MAX
+    )
 
     @field_validator("pov_format")
     @classmethod
@@ -124,12 +156,18 @@ class TopicBatch(BaseModel):
 
 
 class RejectedTopic(BaseModel):
-    """A proposal the intake did not queue, with a stable reason code."""
+    """A proposal the intake did not queue, with a stable reason code.
+
+    AE-0406: ``index`` (position in the request) is always present; ``field``
+    only when one field caused the rejection (the route drops it otherwise).
+    """
 
     model_config = ConfigDict(extra="forbid")
 
+    index: int
     title: str
     reason: str
+    field: str | None = None
 
 
 class TopicIntakeResponse(BaseModel):

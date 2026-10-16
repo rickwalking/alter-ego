@@ -4,7 +4,8 @@ Kept apart from ``carousel.py`` so the create schema stays readable. The rules:
 ``pov`` needs a thesis (the model may sharpen it, never invent it), the slide-1
 photo (``hook_asset_id``, PR #106 review), a known format and 8-10 slides;
 ``news_analysis`` (Radar IA, the default) rejects the POV-only fields and
-allows 7 or 8 slides.
+allows 7 or 8 slides. AE-0406: ``pov_news`` follows the ``pov`` rules; its
+``pov_format`` is ignored (stored as the default, which only picks a layout).
 """
 
 from __future__ import annotations
@@ -18,6 +19,7 @@ from rag_backend.domain.constants.content_mode import (
     CONTENT_MODE_MAX_CHARS,
     CONTENT_MODE_NEWS_ANALYSIS,
     CONTENT_MODE_POV,
+    CONTENT_MODE_POV_NEWS,
     CONTENT_MODES,
     CTA_GOAL_MAX_CHARS,
     DEFAULT_CONTENT_MODE,
@@ -43,6 +45,7 @@ from rag_backend.domain.constants.content_mode import (
     POV_SLIDE_COUNT_MIN,
     POV_THESIS_MAX_CHARS,
 )
+from rag_backend.domain.content_mode import is_pov_family, is_pov_news
 
 _POV_ONLY_FIELDS: tuple[str, ...] = (
     "pov_thesis",
@@ -52,6 +55,7 @@ _POV_ONLY_FIELDS: tuple[str, ...] = (
 )
 _SLIDE_RANGES: dict[str, tuple[int, int]] = {
     CONTENT_MODE_POV: (POV_SLIDE_COUNT_MIN, POV_SLIDE_COUNT_MAX),
+    CONTENT_MODE_POV_NEWS: (POV_SLIDE_COUNT_MIN, POV_SLIDE_COUNT_MAX),
     CONTENT_MODE_NEWS_ANALYSIS: (NEWS_SLIDE_COUNT_MIN, NEWS_SLIDE_COUNT_MAX),
 }
 
@@ -106,25 +110,28 @@ class ContentModeRequestFields(BaseModel):
 
     def check_content_mode(self) -> None:
         """Cross-field rules; raises ``ValueError`` (a 422 in a model validator)."""
-        if self.resolved_mode == CONTENT_MODE_POV:
+        if is_pov_family(self.resolved_mode):
             _check_pov(self)
         else:
             _check_news(self)
         _check_slide_count(self.resolved_mode, self.slide_count)
 
     def resolved_pov_format(self) -> str | None:
-        """POV format (default ``opiniao``); None for Radar IA."""
-        if self.resolved_mode != CONTENT_MODE_POV:
+        """POV format (default ``opiniao``); None for Radar IA.
+
+        AE-0406: ``pov_news`` ignores the format and stores the default.
+        """
+        if not is_pov_family(self.resolved_mode):
             return None
+        if is_pov_news(self.resolved_mode):
+            return DEFAULT_POV_FORMAT
         return self.pov_format or DEFAULT_POV_FORMAT
 
     def resolved_slide_count(self) -> int | None:
         """POV defaults to 9 slides; Radar IA keeps None unless asked for."""
         if self.slide_count is not None:
             return self.slide_count
-        return (
-            POV_SLIDE_COUNT_DEFAULT if self.resolved_mode == CONTENT_MODE_POV else None
-        )
+        return POV_SLIDE_COUNT_DEFAULT if is_pov_family(self.resolved_mode) else None
 
     def resolved_cta_goal(self) -> str:
         """The CTA goal; follow when omitted."""

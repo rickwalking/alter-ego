@@ -15,18 +15,18 @@ from rag_backend.application.services.carousel.presentation_policy_range import 
 from rag_backend.application.services.carousel.presentation_policy_types import (
     CarouselPresentationPolicy,
 )
-from rag_backend.domain.constants.content_mode import CONTENT_MODE_POV
 from rag_backend.domain.constants.presentation_policy import (
     CREATE_TIME_NEWS_PRESENTATION_POLICY_VERSION,
     CREATE_TIME_POV_PRESENTATION_POLICY_VERSION,
     DEFAULT_PRESENTATION_POLICY_VERSION,
 )
+from rag_backend.domain.content_mode import is_pov_family
 from rag_backend.domain.models import CarouselProject
 
 
 def create_time_policy_version(content_mode: str | None) -> str:
-    """The contract a new carousel is stamped with: POV, else Radar IA v4."""
-    if content_mode == CONTENT_MODE_POV:
+    """The contract a new carousel is stamped with: POV family, else Radar IA v4."""
+    if is_pov_family(content_mode):
         return CREATE_TIME_POV_PRESENTATION_POLICY_VERSION
     return CREATE_TIME_NEWS_PRESENTATION_POLICY_VERSION
 

@@ -39,8 +39,10 @@ from rag_backend.domain.constants.carousel_workflow import (
     DEFAULT_CONTENT_DRAFT_CONCURRENCY,
     SOURCE_TYPE_DOCUMENT,
 )
+from rag_backend.domain.content_mode import is_pov_news
 from rag_backend.domain.models.persona import PersonaProfile
 from rag_backend.domain.models.pov_prompts import SlidePolicyContext
+from rag_backend.domain.news_quote_cards import place_quote_cards
 
 from .editorial_workflow_support import EditorialWorkflowStartInput
 
@@ -280,7 +282,16 @@ async def generate_slide_drafts(
         [partial(runner.draft_at, index) for index in range(len(params.outline))],
         params.concurrency,
     )
-    return await _redraft_duplicates(runner, drafts)
+    return _with_quote_cards(await _redraft_duplicates(runner, drafts), params.mode)
+
+
+def _with_quote_cards(
+    drafts: list[dict[str, object]], mode: ContentModeBrief | None
+) -> list[dict[str, object]]:
+    """AE-0406: ``pov_news`` slides get their verified quote cards (by id)."""
+    if mode is None or not is_pov_news(mode.content_mode):
+        return drafts
+    return place_quote_cards(drafts, mode.quotes)
 
 
 def build_slide_draft_retry(
@@ -314,9 +325,23 @@ def build_slide_draft_retry(
         position = positions.get(slide_index)
         if position is None:
             return None
-        return await runner.draft_at(position)
+        return _without_quote_card(await runner.draft_at(position), params.mode)
 
     return _retry
+
+
+def _without_quote_card(
+    draft: dict[str, object], mode: ContentModeBrief | None
+) -> dict[str, object]:
+    """AE-0406: a re-drafted ``pov_news`` slide shows no quote card.
+
+    The 2-card cap is per deck and a single-slide retry cannot see the other
+    slides, so its ``quote_id`` (and any model-written insight) is dropped.
+    """
+    if mode is None or not is_pov_news(mode.content_mode):
+        return draft
+    (placed,) = place_quote_cards([draft], ())
+    return placed
 
 
 def resolve_workflow_input(

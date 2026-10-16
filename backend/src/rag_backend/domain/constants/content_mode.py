@@ -2,18 +2,26 @@
 
 ``news_analysis`` ("Radar IA") is the default and the meaning of every row whose
 ``content_mode`` is NULL. ``pov`` ("Ponto de Vista") carries the owner's thesis:
-the model may sharpen it, never invent it.
+the model may sharpen it, never invent it. ``pov_news`` (AE-0406, ADR-0023) is a
+POV-family mode: the same contract, thesis step and validators, told as news
+analysis through the owner's point of view, with scout-verified quotes.
 """
 
 from __future__ import annotations
 
 CONTENT_MODE_NEWS_ANALYSIS = "news_analysis"
 CONTENT_MODE_POV = "pov"
+CONTENT_MODE_POV_NEWS = "pov_news"
 DEFAULT_CONTENT_MODE = CONTENT_MODE_NEWS_ANALYSIS
 CONTENT_MODES: frozenset[str] = frozenset({
     CONTENT_MODE_NEWS_ANALYSIS,
     CONTENT_MODE_POV,
+    CONTENT_MODE_POV_NEWS,
 })
+# AE-0406: the modes that take every "is this a POV deck?" branch (thesis step,
+# slide-1 photo, pov_hook_v1, role layouts, voice gate). Voice-specific
+# branches (prompt family, caption footer) switch on the exact mode.
+POV_FAMILY_MODES: frozenset[str] = frozenset({CONTENT_MODE_POV, CONTENT_MODE_POV_NEWS})
 
 # POV formats (growth plan 16.3 B): each picks the outline narrative and the
 # layout of the point slides.
@@ -46,7 +54,9 @@ POV_SLIDE_COUNT_DEFAULT = 9
 NEWS_SLIDE_COUNT_MIN = 7
 NEWS_SLIDE_COUNT_MAX = 8
 
-ERR_POV_THESIS_REQUIRED = "pov_thesis is required when content_mode is 'pov'"
+ERR_POV_THESIS_REQUIRED = (
+    "pov_thesis is required when content_mode is 'pov' or 'pov_news'"
+)
 ERR_POV_FORMAT_UNKNOWN = "pov_format must be one of {}, got {!r}"
 ERR_SLIDE_COUNT_RANGE = "slide_count must be between {} and {} for {}, got {}"
 ERR_POV_FIELDS_ON_NEWS = "{} is only allowed when content_mode is 'pov'"
@@ -68,6 +78,7 @@ __all__ = [
     "CONTENT_MODE_MAX_CHARS",
     "CONTENT_MODE_NEWS_ANALYSIS",
     "CONTENT_MODE_POV",
+    "CONTENT_MODE_POV_NEWS",
     "CTA_GOAL_MAX_CHARS",
     "DEFAULT_CONTENT_MODE",
     "DEFAULT_POV_FORMAT",
@@ -88,6 +99,7 @@ __all__ = [
     "HOOK_TEXT_MAX_CHARS",
     "NEWS_SLIDE_COUNT_MAX",
     "NEWS_SLIDE_COUNT_MIN",
+    "POV_FAMILY_MODES",
     "POV_FORMATS",
     "POV_FORMAT_COMPARISON",
     "POV_FORMAT_HOW_I",

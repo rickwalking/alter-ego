@@ -25,7 +25,7 @@ from tests.integration.test_autopilot_migration import (
 _PRE_AUTOPILOT = "c9d0e1f2a3b4"
 _PRE_POV = "a9b0c1d2e3f4"
 # AE-0404: the audience-hours revision is the single head.
-_HEAD = "a0e4f0a4b4c4"
+_HEAD = "c4d5e6f7a8b9"
 _INSIGHTS = "instagram_post_insights"
 _BRIDGE_JOBS = "image_bridge_jobs"
 _BRIDGE_INDEX = "ix_image_bridge_jobs_status_expires_at"

@@ -7,6 +7,7 @@ import {
 import type { CarouselCreateRequest } from "@/schemas/carousel";
 import {
   isPovForm,
+  showsFormatPicker,
   type CreateCarouselFormState,
 } from "@/app/dashboard/create/types";
 import { AUTO_THEME_VALUE } from "@/app/dashboard/create/theme-options";
@@ -47,7 +48,8 @@ function contentModeFields(form: CreateCarouselFormState): ContentModeRequest {
     content_mode: form.contentMode,
     pov_thesis: form.povThesis.trim(),
     pov_personal_proof: form.povPersonalProof.trim() || null,
-    pov_format: template.format,
+    // AE-0406: "POV: News" has no format picker (the backend ignores it).
+    pov_format: showsFormatPicker(form) ? template.format : undefined,
     slide_count: form.slideCount,
     cta_goal: form.ctaGoal,
     // PR #106 review: the slide-1 photo is required for POV.

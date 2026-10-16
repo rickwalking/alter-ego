@@ -11,11 +11,17 @@ from rag_backend.domain.constants.carousel import IMAGE_STYLE_NEO_ANIME
 from rag_backend.domain.constants.content_mode import (
     CONTENT_MODE_NEWS_ANALYSIS,
     CONTENT_MODE_POV,
+    CONTENT_MODE_POV_NEWS,
     POV_THESIS_MAX_CHARS,
 )
 
-SCOUT_MODES: frozenset[str] = frozenset({CONTENT_MODE_NEWS_ANALYSIS, CONTENT_MODE_POV})
-SCOUT_MODE_PATTERN = "^(news_analysis|pov)$"
+# AE-0406: scout v4 adds ``pov_news`` (news through the owner's point of view).
+SCOUT_MODES: frozenset[str] = frozenset({
+    CONTENT_MODE_NEWS_ANALYSIS,
+    CONTENT_MODE_POV,
+    CONTENT_MODE_POV_NEWS,
+})
+SCOUT_MODE_PATTERN = "^(news_analysis|pov|pov_news)$"
 THESIS_DRAFT_MAX_CHARS = POV_THESIS_MAX_CHARS
 # AE-0395: POV point slides default to neo-anime artwork; a scout topic that
 # names another supported style keeps it (slide 1 is always the owner's photo).
@@ -53,8 +59,11 @@ THESIS_PENDING_PHASE = "pov_thesis"
 BUTTON_THESIS_CONFIRM = "✅ Confirmar"
 BUTTON_THESIS_EDIT = "✏️ Editar"
 BUTTON_THESIS_DISCARD = "❌ Descartar"
+# AE-0406: the mode name the thesis prompt shows ("Ponto de Vista: Notícia").
+MODE_LABEL_POV = "Ponto de Vista"
+MODE_LABEL_POV_NEWS = "Ponto de Vista: Notícia"
 TEXT_THESIS_PROMPT = (
-    "🧭 Ponto de Vista proposto\n\nTema: {title}\n\nTese (rascunho do scout):\n"
+    "🧭 {mode} proposto\n\nTema: {title}\n\nTese (rascunho do scout):\n"
     "«{thesis}»\n\nA tese é sua: confirme, edite ou descarte. Nada é gerado antes "
     "da sua confirmação."
 )
@@ -111,6 +120,8 @@ __all__ = [
     "LOG_PERSONA_UNRESOLVED",
     "LOG_THESIS",
     "MAX_NEWS_RUNS_PER_WEEK",
+    "MODE_LABEL_POV",
+    "MODE_LABEL_POV_NEWS",
     "POV_IMAGE_STYLE",
     "POV_TEXT_BY_REASON",
     "REASON_HOOK_PHOTO_MISSING",

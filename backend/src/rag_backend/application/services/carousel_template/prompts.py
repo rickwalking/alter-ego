@@ -58,23 +58,24 @@ def build_caption_prompt(
     """AE-0372: caption v7 (hook first, 3-5 hashtags, one CTA by goal).
 
     AE-0375: a "Ponto de Vista" project renders ``carousel_pov/v1/caption``
-    with the slide-1 hook and the owner's thesis.
+    with the slide-1 hook and the owner's thesis. AE-0406: a ``pov_news``
+    project renders ``carousel_pov_news/v1/caption`` (the source footer is
+    appended by code afterwards, never by the model).
     """
     from rag_backend.agents.prompts.registry import render_prompt
     from rag_backend.domain.constants.carousel import CAROUSEL_CAPTION_PROMPT_VERSION
     from rag_backend.domain.constants.carousel_cta import DEFAULT_CTA_GOAL
-    from rag_backend.domain.constants.content_mode import CONTENT_MODE_POV
     from rag_backend.domain.constants.pov_prompts import (
         POV_PROMPT_CAPTION,
-        POV_PROMPT_DOMAIN,
         POV_PROMPT_VERSION,
     )
+    from rag_backend.domain.content_mode import is_pov_family, pov_prompt_domain
 
     cta_goal = project.cta_goal or DEFAULT_CTA_GOAL
-    if project.content_mode == CONTENT_MODE_POV:
+    if is_pov_family(project.content_mode):
         hook = slide_headings[0][1] if slide_headings else project.hook_text or ""
         prompt_text, _ = render_prompt(
-            POV_PROMPT_DOMAIN,
+            pov_prompt_domain(project.content_mode),
             POV_PROMPT_CAPTION,
             variables={
                 "hook": hook,

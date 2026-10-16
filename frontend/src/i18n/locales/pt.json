@@ -335,6 +335,10 @@
         "name": "Ponto de Vista",
         "desc": "Sua opinião, em primeira pessoa, com sua foto no slide 1"
       },
+      "povNews": {
+        "name": "Ponto de Vista: Notícia",
+        "desc": "A notícia pela sua leitura: fatos, por que importa para devs e sua opinião, com sua foto no slide 1"
+      },
       "personaLabel": "Persona (voz)",
       "personaNone": "Sem persona"
     },

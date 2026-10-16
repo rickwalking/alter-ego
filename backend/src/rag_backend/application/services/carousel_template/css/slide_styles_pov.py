@@ -153,6 +153,41 @@ def get_pov_slide_css(_theme: dict[str, str]) -> str:
     font-size: 10px;
     color: var(--text-48);
   }
+  /* AE-0406: the pov_news quote card (verbatim quote + attribution row). */
+  .pov-quote-card { margin: 16px 0 0; font-style: normal; }
+  .pov-quote-card .quote-text {
+    margin: 0;
+    font-style: italic;
+    color: var(--text);
+    font-size: clamp(13px, 2.7vw, 16px);
+    line-height: 1.4;
+  }
+  .quote-attribution {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 10px;
+    font-style: normal;
+  }
+  .quote-avatar {
+    flex: 0 0 26px;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: var(--bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 13px;
+  }
+  .quote-name { color: var(--text); font-weight: 700; font-size: 12px; }
+  .quote-handle {
+    color: var(--text-55, var(--text));
+    font-family: var(--font-mono);
+    font-size: 11px;
+  }
 """
 
 

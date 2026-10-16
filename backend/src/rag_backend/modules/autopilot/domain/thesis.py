@@ -11,7 +11,7 @@ import re
 from dataclasses import dataclass
 from uuid import UUID
 
-from rag_backend.domain.constants.content_mode import CONTENT_MODE_POV
+from rag_backend.domain.content_mode import is_pov_family, is_pov_news
 from rag_backend.modules.autopilot.domain.messages import (
     InlineButton,
     InlineKeyboard,
@@ -30,6 +30,8 @@ from rag_backend.modules.autopilot.pov_constants import (
     CALLBACK_THESIS_DISCARD_PREFIX,
     CALLBACK_THESIS_EDIT_PREFIX,
     CALLBACK_THESIS_PATTERN,
+    MODE_LABEL_POV,
+    MODE_LABEL_POV_NEWS,
     TEXT_THESIS_PROMPT,
     THESIS_DRAFT_MAX_CHARS,
 )
@@ -47,8 +49,8 @@ class ThesisCallback:
 
 
 def is_pov(topic: TopicCandidate) -> bool:
-    """True for a "Ponto de Vista" topic."""
-    return topic.content_mode == CONTENT_MODE_POV
+    """True for a POV-family topic (``pov`` and, AE-0406, ``pov_news``)."""
+    return is_pov_family(topic.content_mode)
 
 
 def needs_thesis(run: AutopilotRun, topic: TopicCandidate) -> bool:
@@ -92,8 +94,11 @@ def thesis_keyboard(run_id: UUID) -> InlineKeyboard:
 
 
 def thesis_prompt_text(topic: TopicCandidate) -> str:
-    """The Telegram prompt with the topic title and the scout's draft."""
-    return TEXT_THESIS_PROMPT.format(title=topic.title, thesis=topic.thesis_draft or "")
+    """The Telegram prompt with the mode, the topic title and the scout's draft."""
+    mode = MODE_LABEL_POV_NEWS if is_pov_news(topic.content_mode) else MODE_LABEL_POV
+    return TEXT_THESIS_PROMPT.format(
+        mode=mode, title=topic.title, thesis=topic.thesis_draft or ""
+    )
 
 
 def thesis_notice_key(run_id: UUID) -> str:

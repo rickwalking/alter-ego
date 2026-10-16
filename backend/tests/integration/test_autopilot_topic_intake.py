@@ -100,8 +100,14 @@ async def test_foreign_url_rejects_only_that_proposal(
             },
         )
     body = response.json()
+    # AE-0406: additive ``index`` (always) and ``field`` (one field caused it).
     assert body["rejected"] == [
-        {"title": "Invented", "reason": REASON_SOURCE_NOT_IN_SIGNALS}
+        {
+            "index": 0,
+            "title": "Invented",
+            "reason": REASON_SOURCE_NOT_IN_SIGNALS,
+            "field": "sources[0]",
+        }
     ]
     assert len(body["queued"]) == 1
     assert await _queued_scores(engine) == [40]
@@ -123,8 +129,9 @@ async def test_daily_cap_persists_and_does_not_queue(
         )
     body = response.json()
     assert body["queued"] == []
+    # AE-0406: ``index`` always; no ``field`` for a cap (the topic as a whole).
     assert body["rejected"] == [
-        {"title": "Another", "reason": REASON_DAILY_CAP_REACHED}
+        {"index": 0, "title": "Another", "reason": REASON_DAILY_CAP_REACHED}
     ]
     assert len(body["accepted"]) == 1
     assert await _topic_count(engine) == 2

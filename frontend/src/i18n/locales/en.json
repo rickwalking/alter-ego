@@ -335,6 +335,10 @@
         "name": "Ponto de Vista",
         "desc": "Your opinion, in first person, with your photo on slide 1"
       },
+      "povNews": {
+        "name": "POV: News",
+        "desc": "The news through your read: facts, why it matters to developers, then your take, with your photo on slide 1"
+      },
       "personaLabel": "Persona (voice)",
       "personaNone": "No persona"
     },

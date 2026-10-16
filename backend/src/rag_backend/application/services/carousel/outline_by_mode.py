@@ -93,6 +93,8 @@ def _thesis(brief: ContentModeBrief) -> PovThesis:
         thesis=brief.thesis,
         personal_proof=brief.personal_proof,
         pov_format=brief.pov_format,
+        prompt_domain=brief.prompt_domain,
+        quotes=brief.quotes,
     )
 
 

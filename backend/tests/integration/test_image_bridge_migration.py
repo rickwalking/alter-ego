@@ -62,10 +62,10 @@ def _indexes(db_path: Path) -> set[str]:
 
 
 def test_revision_is_chained_on_top_of_insights() -> None:
-    """Chained on the AE-0378 insights revision; AE-0404's is the head now."""
+    """Chained on the AE-0378 insights revision; AE-0406's is the head now."""
     _command, cfg, script_cls = _alembic_config()
     script = script_cls.from_config(cfg)
-    assert list(script.get_heads()) == ["a0e4f0a4b4c4"]
+    assert list(script.get_heads()) == ["c4d5e6f7a8b9"]
     revision = script.get_revision(_REVISION)
     assert revision is not None
     assert revision.down_revision == _PARENT

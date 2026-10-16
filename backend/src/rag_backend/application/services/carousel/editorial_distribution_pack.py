@@ -46,7 +46,10 @@ from rag_backend.domain.constants.carousel_workflow import (
     WORKFLOW_STATE_LINKEDIN_POST_EN_KEY,
     WORKFLOW_STATE_LINKEDIN_POST_PT_KEY,
 )
+from rag_backend.domain.content_mode import is_pov_news
 from rag_backend.domain.models import CarouselProject
+from rag_backend.domain.news_quote_cards import with_en_quote_cards
+from rag_backend.domain.source_footer import with_source_footer
 from rag_backend.infrastructure.database.carousel_repository import (
     PostgresCarouselRepository,
 )
@@ -121,7 +124,11 @@ async def build_editorial_distribution_updates(
     if project is None or not context.slide_drafts:
         return {}
 
-    translations_en = await _generate_en_translations(context.llm, context.slide_drafts)
+    translations_en = _with_news_cards(
+        project,
+        await _generate_en_translations(context.llm, context.slide_drafts),
+        context.slide_drafts,
+    )
     await apply_slide_drafts_to_database(
         SlideDraftsContext(
             db=context.db,
@@ -165,7 +172,7 @@ async def build_editorial_distribution_updates(
     }
 
     caption = await _generate_caption(context.llm, project, context.slide_drafts)
-    project.caption = caption
+    project.caption = _with_news_footer(project, caption)
 
     if linkedin_generator is not None and blog_pt.strip():
         post_pt, post_en = await linkedin_generator.generate_both(project)
@@ -184,6 +191,24 @@ async def build_editorial_distribution_updates(
         WORKFLOW_STATE_TRANSLATIONS_EN_KEY: serialize_translations_en(translations_en),
         "translations_en": translations_en,
     }
+
+
+def _with_news_cards(
+    project: CarouselProject,
+    translations_en: dict[int, dict[str, object]],
+    slide_drafts: list[dict[str, object]],
+) -> dict[int, dict[str, object]]:
+    """AE-0406: a ``pov_news`` EN slide shows its quote card's ``text_en``."""
+    if not is_pov_news(project.content_mode) or not project.pov_quotes:
+        return translations_en
+    return with_en_quote_cards(translations_en, slide_drafts, project.pov_quotes)
+
+
+def _with_news_footer(project: CarouselProject, caption: str) -> str:
+    """AE-0406: ``Fontes: @handle, domain.com`` on a ``pov_news`` caption (code)."""
+    if not is_pov_news(project.content_mode):
+        return caption
+    return with_source_footer(caption, project.pov_sources)
 
 
 # Backward-compatible re-export

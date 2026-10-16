@@ -43,6 +43,8 @@ def _pov_context(mode: ContentModeBrief, slide: dict[str, object]) -> PovSlideCo
             thesis=mode.thesis,
             personal_proof=mode.personal_proof,
             pov_format=mode.pov_format,
+            prompt_domain=mode.prompt_domain,
+            quotes=mode.quotes,
         ),
         role=role,
         slide_count=mode.policy.slide_count,
