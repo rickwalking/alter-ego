@@ -562,6 +562,8 @@ class AsyncMockWrapper:
     def __init__(self, snapshot: Snapshot | None = None) -> None:
         self.snapshot = snapshot
         self.last_config: dict[str, object] | None = None
+        # Like a graph compiled without a checkpointer (AE-0405 park is skipped).
+        self.checkpointer: object | None = None
 
     async def ainvoke(
         self,

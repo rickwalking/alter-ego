@@ -30,6 +30,10 @@ from rag_backend.domain.constants.carousel_workflow import (
     ERR_REVISION_CAP_EXCEEDED,
     STRUCTURED_FEEDBACK_TARGET_PHASE_KEY,
 )
+from rag_backend.domain.constants.content_feedback import (
+    FEEDBACK_SOURCE_AUTOPILOT,
+    STRUCTURED_FEEDBACK_SOURCE_KEY,
+)
 from rag_backend.domain.constants.optimistic_locking import ERR_VERSION_CONFLICT
 from rag_backend.infrastructure.monitoring_langfuse import (
     WorkflowTraceScope,
@@ -306,9 +310,13 @@ def _state_of(view: WorkflowStateView | None) -> dict[str, object]:
 
 
 def _structured_feedback(command: ResumeCommand) -> dict[str, object] | None:
-    if not command.target_phase:
-        return None
-    return {STRUCTURED_FEEDBACK_TARGET_PHASE_KEY: command.target_phase}
+    structured: dict[str, object] = {}
+    if command.target_phase:
+        structured[STRUCTURED_FEEDBACK_TARGET_PHASE_KEY] = command.target_phase
+    if command.feedback.strip():
+        # AE-0405: tag gate feedback so it is applied once, never re-fed.
+        structured[STRUCTURED_FEEDBACK_SOURCE_KEY] = FEEDBACK_SOURCE_AUTOPILOT
+    return structured or None
 
 
 def _images(raw: object) -> tuple[ImageFact, ...]:

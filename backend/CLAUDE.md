@@ -170,3 +170,4 @@ See `../docs/decisions/` for all ADRs:
 - **Professional Pivot Plan**: `../docs/PROFESSIONAL_PIVOT_PLAN.md`
 - **Prompt Registry**: `src/rag_backend/agents/prompts/registry.py`
 - **Slide copy validators + autopilot autofix (AE-0401)**: `../docs/backend/slide-copy-validators.md`
+- **Content revision notes + parked content review (AE-0405)**: `../docs/backend/content-feedback-lifecycle.md`

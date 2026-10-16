@@ -13,6 +13,7 @@ from rag_backend.application.services.carousel.workflow_state import (
 from rag_backend.domain.constants.carousel_workflow import (
     DEFAULT_CONTENT_DRAFT_CONCURRENCY,
 )
+from rag_backend.domain.constants.content_feedback import FEEDBACK_SOURCE_HUMAN
 from rag_backend.domain.models.persona import PersonaProfile
 
 
@@ -87,6 +88,8 @@ class PhaseFeedbackPersistParams:
     feedback: str | None
     target_phase: str | None = None
     count_revision: bool = True
+    # AE-0405: who wrote the note (human reviewer or the autopilot gate).
+    source: str = FEEDBACK_SOURCE_HUMAN
 
 
 __all__ = [

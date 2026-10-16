@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, cast
 
+import structlog
 from langchain_core.runnables import RunnableConfig
 from langgraph.types import interrupt
 
@@ -42,6 +43,11 @@ from rag_backend.domain.constants.carousel_workflow import (
     WORKFLOW_ERROR_KEY,
     WORKFLOW_STATUS_APPROVED_FOR_PUBLISH,
 )
+from rag_backend.domain.constants.content_feedback import (
+    LOG_CONTENT_REPLAY_REUSED,
+    PAYLOAD_KEY_PARKED_ARTIFACTS,
+    STATE_FIELD_CONTENT_ARTIFACTS_PARKED,
+)
 from rag_backend.domain.constants.langfuse_tracing import (
     TRACE_FIELD_PHASE,
     TRACE_FIELD_PROJECT_ID,
@@ -60,6 +66,8 @@ if TYPE_CHECKING:
     from rag_backend.application.services.carousel.phase_artifact_runner import (
         PhaseArtifactRunner,
     )
+
+logger = structlog.get_logger()
 
 _CONFIG_ARTIFACT_RUNNER = "artifact_runner"
 
@@ -302,23 +310,31 @@ def _content_review_payload(merged: dict[str, object]) -> dict[str, object]:
     }
 
 
+def _content_artifact_config(
+    parked_updates: dict[str, object] | None = None,
+) -> SyncArtifactPhaseConfig:
+    """Content gate config; ``parked_updates`` ride the interrupt (AE-0405)."""
+    return SyncArtifactPhaseConfig(
+        phase=PHASE_CONTENT,
+        interrupt_type=INTERRUPT_TYPE_CONTENT_REVIEW,
+        payload_key="slide_drafts",
+        approved_field="content_approved",
+        message="Review slide copy.",
+        payload_builder=_content_review_payload,
+        extra_payload=(
+            {PAYLOAD_KEY_PARKED_ARTIFACTS: parked_updates} if parked_updates else None
+        ),
+        # The node finished: the next content entry runs its ensure again.
+        post_review={STATE_FIELD_CONTENT_ARTIFACTS_PARKED: False},
+    )
+
+
 def content_phase(
     state: CarouselWorkflowState,
     config: RunnableConfig | None = None,
 ) -> dict[str, object]:
     """Draft slide content and request human approval."""
-    return _run_sync_artifact_phase(
-        state,
-        config,
-        SyncArtifactPhaseConfig(
-            phase=PHASE_CONTENT,
-            interrupt_type=INTERRUPT_TYPE_CONTENT_REVIEW,
-            payload_key="slide_drafts",
-            approved_field="content_approved",
-            message="Review slide copy.",
-            payload_builder=_content_review_payload,
-        ),
-    )
+    return _run_sync_artifact_phase(state, config, _content_artifact_config())
 
 
 def _design_review_payload(merged: dict[str, object]) -> dict[str, object]:
@@ -391,12 +407,31 @@ async def outline_phase_async(
     return {**merged, **sync_result}
 
 
+async def _content_ensure_or_reuse(
+    state: CarouselWorkflowState,
+    config: RunnableConfig | None,
+) -> dict[str, object]:
+    """Run the content ensure, unless this is the replay of a parked review.
+
+    AE-0405: LangGraph re-runs the interrupted node on resume. The engine wrote
+    the artifacts the reviewer saw to the checkpoint when the graph parked, so
+    the replay reuses them: no second regeneration with the same notes, no
+    LLM call, and the reviewed (or hand-edited) copy is what gets committed.
+    """
+    if state.get(STATE_FIELD_CONTENT_ARTIFACTS_PARKED) is True:
+        logger.info(
+            LOG_CONTENT_REPLAY_REUSED, project_id=str(state.get("project_id", ""))
+        )
+        return {}
+    return await ensure_artifacts(state, config, PHASE_CONTENT)
+
+
 async def content_phase_async(
     state: CarouselWorkflowState,
     config: RunnableConfig,
 ) -> dict[str, object]:
     merged = dict(state)
-    artifact_updates = await ensure_artifacts(state, config, PHASE_CONTENT)
+    artifact_updates = await _content_ensure_or_reuse(state, config)
     merged.update(artifact_updates)
     # AE-0330: decide on THIS run's artifact result, not on whatever
     # phase_status the checkpoint carried in. A failure here returns without
@@ -416,7 +451,11 @@ async def content_phase_async(
         # 2026-09-14 loop, with all seven drafts already present.
         merged["phase_status"] = PHASE_STATUS_IN_PROGRESS
         merged[WORKFLOW_ERROR_KEY] = ""
-    sync_result = content_phase(cast(CarouselWorkflowState, merged), config)
+    sync_result = _run_sync_artifact_phase(
+        cast(CarouselWorkflowState, merged),
+        config,
+        _content_artifact_config(artifact_updates),
+    )
     return {**merged, **sync_result}
 
 
@@ -511,6 +550,7 @@ __all__ = [
     "approved_hold_phase",
     "artifact_runner_from_config",
     "brief_phase",
+    "content_phase",
     "content_phase_async",
     "design_phase_async",
     "final_review_phase",
