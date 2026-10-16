@@ -1,6 +1,6 @@
 # AE-0406 — Content mode `pov_news` (news analysis through Pedro's point of view) + scout quotes
 
-Status: In Development
+Status: Review
 Tier: T2
 Priority: High
 Type: Feature
@@ -175,11 +175,19 @@ Ticket created; ADR-0023 written; backend, prompts, frontend and tests implement
 
 ## Files Touched
 
-See the PR diff (`feat/ae-0406-pov-news-mode`); summary in Delta.
+PR #124 (`feat/ae-0406-pov-news-mode`). Main groups:
+- **Autopilot:** `modules/autopilot/{api,application,domain,infrastructure}`.
+- **New domain modules:** `domain/{content_mode,news_quote_cards,source_footer}.py`, `domain/models/news_quote.py`, `domain/constants/news_quotes.py`.
+- **Carousel pipeline:** content-mode brief, generators, distribution pack, prompts, role layouts, `insight_quote`/`news_quote` strategies, POV CSS and export CSS.
+- **Agents:** `agents/{content_draft_agent,pov_outline_mixin,pov_quote_context}.py` and the `carousel_pov_news/v1` prompts.
+- **Migration:** `alembic/versions/c4d5e6f7a8b9_pov_news_quotes.py`.
+- **Frontend:** constants, schemas, the create wizard, i18n.
+- **Docs:** ADR-0023, ADR-0021, root `CLAUDE.md`, `docs/architecture/grokbot-autopilot.md` §5.7.
 
 ## Test Evidence
 
-Pending (CI full run).
+- **CI:** all 34 checks green at `806f0eb9`, including backend test, diff-cover, migrations (fresh DB) and mutation at 79.43%. The full GATES_JSON is in `.agent/reports/AE-0406.dev-summary.md`.
+- **Locally:** static gates PASS; targeted backend suites green; frontend `create/` vitest green.
 
 ## QA Report
 
