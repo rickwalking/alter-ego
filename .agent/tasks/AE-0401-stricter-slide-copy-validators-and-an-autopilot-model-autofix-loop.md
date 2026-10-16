@@ -42,6 +42,10 @@ Prod carousel 98a2e2f0 (autopilot run b241ded5, 2026-10-16): slide 3 was a ```` 
 - [x] AC7: Fixed slides are persisted through the reviewer-edit path plus their re-scored voice, under the lock + CAS; a lost CAS writes nothing.
 - [x] AC8: Clean gate → approve; otherwise escalate with every failing slide (rule, text, "3 fix attempts"); never a revise for content quality; a repair no-op cannot loop.
 - [x] AC9: `autopilot_slide_autofix` per attempt; Langfuse `phase=autofix`, `agent_name=slide_fixer`.
+- [x] AC10 (addendum 2): the slide rows are projected from the localized copy every time it is built or changed (content/design ensure, gate repair, model fix); a long `draft_text` never reaches the render.
+- [x] AC11 (addendum 2): empty item lists are symmetric on PT/EN (no `translation_shape_mismatch`).
+- [x] AC12 (addendum 2): "the code"/"the bot" are not flagged as lowercased "Claude Code"/"Grok Bot".
+- [x] AC13 (addendum 2): the POV hook sub-line is at most 40 characters / 1 line; the model fix targets it.
 
 ## Gherkin Scenarios
 
@@ -57,11 +61,13 @@ Prod carousel 98a2e2f0 (autopilot run b241ded5, 2026-10-16): slide 3 was a ```` 
 - `modules/autopilot/{autofix_constants.py,application/gate_read.py,application/slide_autofix.py,domain/escalation_detail.py}`
 - `domain/constants/slide_fix.py`, `agents/prompts/carousel/v1/slide_fix.yaml`
 - `docs/backend/slide-copy-validators.md`, the two feature files and their tests
+- `application/services/carousel/localized_rows_sync.py`, `test_rows_follow_localized_ae0401.py`
 
 ### MODIFIED
 
 - Validation/repair wiring: `presentation_validation.py`, `presentation_content_rules.py` (helpers public), `presentation_review_repair.py`, `owner_autofix_plan.py`, `owner_autofix_fill.py`, `owner_autofix_service.py` (lock extracted)
 - Contracts `pov_hook_v1.yaml`, `hero_lower_third_v4.yaml`; `carousel_presentation.py`
+- Rows/projection: `editorial_distribution_persist.py` (`_symmetric_translation`), `phase_artifact_runner.py`, `owner_autofix_vocabulary.py` (multi-word names)
 - Autopilot: `gate_repair.py`, `runner.py`, `domain/{autofix,gate,models,messages}.py`, `notifications.py`, `repository.py`, `content_autofixer.py`, `bootstrap.py`, constants
 - `persona_agent.py` (`style_guide()`), `settings.py`, `autopilot_worker_factory.py`, `carousel_template/prompts.py`, `modules/editorial/public.py`
 - `docs/architecture/grokbot-autopilot.md`, `backend/CLAUDE.md`
@@ -108,7 +114,7 @@ Prod carousel 98a2e2f0 (autopilot run b241ded5, 2026-10-16): slide 3 was a ```` 
 
 ### 2026-10-16
 
-Owner request after run b241ded5. Orchestrator addendum the same day: `<strong>`/`**` are legit emphasis; four more prod failures (hook heading = body, EN colon casing, gate repair no-op loop, cut summary point).
+Owner request after run b241ded5. Orchestrator addendum the same day: `<strong>`/`**` are legit emphasis; four more prod failures (hook heading = body, EN colon casing, gate repair no-op loop, cut summary point). Addendum 2 (16:35): rows rendered the long draft text instead of the validated localized copy; empty-list PT/EN asymmetry; proper-noun false positives; hook sub-line length. Merged main (AE-0399, AE-0400, AE-0402).
 
 ## Files Touched
 

@@ -326,10 +326,11 @@ copy_budgets:
   intro_heading:
     max_characters: 60
     max_lines: 3
-  # Optional one-line sub-hook.
+  # Optional one-line sub-hook. AE-0401: at most one line (~40 chars) so the
+  # hook copy never covers the owner's face on the photo.
   intro_subtitle:
-    max_characters: 80
-    max_lines: 2
+    max_characters: 40
+    max_lines: 1
   summary_heading:
     max_characters: 64
     max_lines: 3

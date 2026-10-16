@@ -49,6 +49,7 @@ from rag_backend.modules.editorial.public import (
 )
 from tests.unit.application.content_gate_fixtures_ae0392 import (
     EMOJI_BODY_3,
+    FIXED_HEADING_5,
     FORBIDDEN_PHRASE,
     GateSeed,
     RealGate,
@@ -60,6 +61,7 @@ from tests.unit.application.owner_autofix_fixtures_ae0367 import (
     LOCK_VERSION,
     FakeChatModel,
     build_engine,
+    row,
 )
 from tests.unit.llm_fakes_ae0391 import CallLog, FakeChat
 from tests.unit.modules.autopilot.project_inputs_fake import FakeProjectInputs
@@ -214,6 +216,8 @@ class TestSlideAutofixFlow:
         await _tick(flow)
         assert _actions(flow) == [REVIEW_ACTION_APPROVE]
         assert flow.log.models == []
+        # Addendum 2: the rows render the repaired copy.
+        assert (await row(flow.db, flow.project_id, 5)).heading == FIXED_HEADING_5
 
     async def test_fixed_on_attempt_1(self, db_session: AsyncSession) -> None:
         """Scenario: Fixed on attempt 1."""
@@ -221,6 +225,7 @@ class TestSlideAutofixFlow:
         with capture_logs() as logs:
             await _tick(flow)
         assert (await _pt(flow, 3))["body"] == CLEAN_BODY_3
+        assert (await row(flow.db, flow.project_id, 3)).body == CLEAN_BODY_3
         state = await _state(flow)
         assert state["content_gate_validation"] == {}
         drafts = cast(list[dict[str, object]], state["slide_drafts"])

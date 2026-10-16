@@ -28,6 +28,9 @@ import structlog
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.application.services.carousel.bounded_gather import gather_bounded
+from rag_backend.application.services.carousel.localized_rows_sync import (
+    sync_rows_to_localized,
+)
 from rag_backend.application.services.carousel.owner_autofix_lock import (
     AutofixConflictError,
     LockedWrite,
@@ -212,6 +215,7 @@ class SlideFixService:
         )
 
     async def _write(self, project_id: str, updates: dict[str, object]) -> None:
+        await sync_rows_to_localized(self._deps.db, project_id, updates)
         await self._deps.db.commit()
         # ``load_gate_source`` found a checkpoint, so the store is wired.
         workflow = cast(WorkflowStateStore, self._deps.workflow)

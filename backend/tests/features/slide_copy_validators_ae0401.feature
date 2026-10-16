@@ -93,3 +93,29 @@ Feature: Copy-hygiene validators for carousel slides (AE-0401)
     Given the key point "Comece com dois ou três agentes, não dez."
     When it is split into a summary point
     Then the title is "Comece com dois ou três agentes" and the body "não dez."
+
+  # Addendum 2 (2026-10-16 16:35): the rows render the validated copy.
+  Scenario: A long draft_text plus a short localized copy renders the short copy
+    Given a slide row written from a draft whose draft_text is 700 characters
+    And its localized copy has a short body
+    When the localized copy is projected (content, design, gate repair, model fix)
+    Then the persisted row body equals the localized body
+    And the rows validate like the localized copy
+
+  Scenario: Empty item lists are treated the same on PT and EN
+    Given the PT copy has no "features" and the EN copy has "features" = []
+    When the copy is projected onto the rows
+    Then neither side stores "features"
+    And no "translation_shape_mismatch" is reported
+
+  Scenario: "the code" is not a lowercased "Claude Code"
+    Given a carousel that writes "Claude Code" and "Grok Bot"
+    When the proper-noun vocabulary is built
+    Then "Claude Code" and "Grok Bot" are learned whole, not "Code" or "Bot"
+    And only "claude code" or "grok bot" is reported as lowercase
+
+  Scenario: The POV hook sub-line stays on one short line
+    Given a hook sub-line longer than 40 characters
+    When the deck is validated
+    Then slide 1 is blocked by "body_too_long"
+    And the model fix asks the hook for a one-line sub-hook of at most 40 characters

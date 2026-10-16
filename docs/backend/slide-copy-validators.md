@@ -34,6 +34,25 @@ return"); proper nouns, "I" and acronyms keep their capitals.
 
 The repair runs in the generation-time review repair and in the owner/gate autofix plan.
 
+## The rows render the validated copy (addendum 2)
+
+The renderer, the export and the Telegram issue list read the `carousel_slides` rows, while
+the gates validate the checkpoint's `localized_slides`. The rows used to be written from
+`slide_drafts` (falling back to the long `draft_text`) and the localized copy reached them only
+on owner edits, so prod 98a2e2f0 validated short copy and rendered 368-772 character bodies.
+`localized_rows_sync.sync_rows_to_localized` now projects the localized copy onto the rows
+every time it is built or changed: the content and design ensures, the gate repair and the
+model fix (same commit as the CAS). Empty item lists are dropped on both sides
+(`_symmetric_translation`), so a PT without `features` and an EN `features: []` no longer raise
+`translation_shape_mismatch`.
+
+Other fixes from the same run:
+
+- The proper-noun vocabulary learns multi-word names whole ("Claude Code", "Grok Bot"), so
+  "the code" or "the bot" is no longer reported as a lowercased proper noun.
+- The POV hook sub-line budget is one line, 40 characters (`pov_hook_v1` `intro_subtitle`), so
+  the hook copy never covers the owner's face. The model fix uses it as the hook's target.
+
 ## Autopilot autofix
 
 See [`docs/architecture/grokbot-autopilot.md`](../architecture/grokbot-autopilot.md) "Model

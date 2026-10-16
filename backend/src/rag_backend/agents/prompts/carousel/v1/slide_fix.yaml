@@ -32,8 +32,10 @@ template: |
   - The body is complete: it ends with . ! or ? and never with "...", a comma
     or a colon. A content slide body has at least 8 words.
   - Never repeat the heading in the body, a sentence twice, or a word twice in
-    a row.{% if role == "hook" %} This is the hook: the body is a DISTINCT
-    one-line sub-hook that adds to the heading, never the heading again.{% endif %}
+    a row.{% if role == "hook" %} This is the hook: the heading is at most 10
+    words, and the body is a DISTINCT one-line sub-hook of at most
+    {{ body_max_characters }} characters that adds to the heading, never the
+    heading again. Longer copy covers the author's face on the photo.{% endif %}
   - An item title is a complete phrase: never end it on "ou", "e", "de", "com",
     "or", "and", "of" or "with", and never continue it in the item body.
   - Portuguese copy in Portuguese, English copy in English (a faithful

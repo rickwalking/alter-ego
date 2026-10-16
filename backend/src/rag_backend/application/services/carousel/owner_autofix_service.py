@@ -28,6 +28,9 @@ from rag_backend.application.services.carousel.editorial_distribution_persist im
     LocalizedCopyProjection,
     project_localized_copy_to_database,
 )
+from rag_backend.application.services.carousel.localized_rows_sync import (
+    sync_rows_to_localized,
+)
 from rag_backend.application.services.carousel.owner_autofix_checkpoint import (
     checkpoint_patch,
 )
@@ -192,8 +195,8 @@ class OwnerAutofixService:
         """Repair the checkpoint copy at a content or design gate (AE-0392).
 
         Nothing is written (no CAS) when the plan changes nothing, so the
-        caller's revise keeps its lock version. The rows are not touched: the
-        engine projects the checkpoint copy onto them later.
+        caller's revise keeps its lock version. AE-0401: the repaired copy is
+        projected onto the rows in the same commit.
         """
         source = await load_gate_source(self._gate_request(command.project_id))
         if source is None or source.state is None:
@@ -221,6 +224,8 @@ class OwnerAutofixService:
         )
 
     async def _patch_gate(self, command: AutofixApplyCommand, patch: GatePatch) -> None:
+        # AE-0401: the rows follow the repaired copy (same commit as the CAS).
+        await sync_rows_to_localized(self._deps.db, command.project_id, patch.updates)
         await self._deps.db.commit()
         # ``load_gate_source`` found a checkpoint, so the store is wired.
         workflow = cast(WorkflowStateStore, self._deps.workflow)
