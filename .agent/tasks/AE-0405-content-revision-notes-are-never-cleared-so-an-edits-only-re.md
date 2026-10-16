@@ -161,7 +161,22 @@ Implementation (hotfix fast path), branch `fix/ae-0405-content-feedback-lifecycl
 
 ## Test Evidence
 
-TBD.
+- Feature: `backend/tests/features/content_feedback_lifecycle_ae0405.feature`.
+- `backend/tests/unit/agents/test_content_feedback_replay_ae0405.py` (10 tests): a real engine and
+  a real runner on an in-memory checkpointer, with the drafting model and the fail-closed retry as
+  spies. Covers AC1, AC2 (regression: old notes plus an edits-only resubmit → the drafting model is
+  not called and slide 2 is byte-for-byte the edit), AC3, AC4, AC5 (hand-fixed slides kept on
+  approval), the replay reuse (no content ensure on resume), a final-review send-back that re-gates
+  content, and a failed regeneration that keeps the note.
+- `backend/tests/unit/application/test_content_feedback_lifecycle_ae0405.py`: tagging, consumption,
+  duplicates, the legacy 98a2e2f0 state migrating (3 notes), a failed phase keeping its notes, the
+  autopilot drop on approve, malformed entries, persistence and `parked_content_updates`.
+- `backend/tests/unit/modules/autopilot/test_editorial_driver_outcomes.py`: autopilot feedback is
+  tagged; an approve sends no structured feedback.
+- Sanity check: removing the replay reuse, the note consumption or the `content_approved` reset
+  each fails the suite.
+- Static backend gates 17/17 PASS (GATES_JSON in `.agent/reports/AE-0405.dev-summary.md`); the
+  Python 3.11 import check is OK; mutation is deferred to CI (hotfix fast path).
 
 ## QA Report
 
