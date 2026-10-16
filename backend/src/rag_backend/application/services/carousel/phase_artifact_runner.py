@@ -22,6 +22,10 @@ from rag_backend.application.services.carousel.content_fail_closed import (
     SlideDraftRetryFn,
     build_fail_closed_review_updates,
 )
+from rag_backend.application.services.carousel.content_feedback_lifecycle import (
+    active_feedback_notes,
+    consume_feedback_notes,
+)
 from rag_backend.application.services.carousel.editorial_visual_pipeline import (
     CarouselImageGenerationContext,
     apply_design_tokens,
@@ -312,6 +316,8 @@ class PhaseArtifactRunner:
             if draft_updates.get("phase_status") == PHASE_STATUS_FAILED:
                 return draft_updates
             updates.update(draft_updates)
+            # AE-0405: the notes this regeneration used move to the history.
+            updates.update(consume_feedback_notes(state, PHASE_CONTENT))
         slide_drafts = updates.get("slide_drafts") or state.get("slide_drafts") or []
         persona_updates = await self._score_content_drafts(resolved, slide_drafts)
         updates.update(persona_updates)
@@ -498,13 +504,7 @@ class PhaseArtifactRunner:
 
     @staticmethod
     def _content_revision_notes(state: CarouselWorkflowState) -> list[str]:
-        phase_feedback = state.get("phase_feedback") or {}
-        if not isinstance(phase_feedback, dict):
-            return []
-        raw_notes = phase_feedback.get(PHASE_CONTENT, [])
-        if not isinstance(raw_notes, list):
-            return []
-        return [str(note) for note in raw_notes if str(note).strip()]
+        return active_feedback_notes(state, PHASE_CONTENT)
 
     async def _load_learned_examples(
         self,

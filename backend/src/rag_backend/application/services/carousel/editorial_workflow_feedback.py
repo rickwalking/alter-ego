@@ -2,9 +2,19 @@
 
 from __future__ import annotations
 
+from typing import cast
+
 from rag_backend.agents.carousel_workflow import CarouselWorkflowEngine
+from rag_backend.application.services.carousel.content_feedback_lifecycle import (
+    NewFeedbackNote,
+    add_feedback_note,
+    settle_stale_content_feedback,
+)
 from rag_backend.application.services.carousel.editorial_workflow_types import (
     PhaseFeedbackPersistParams,
+)
+from rag_backend.application.services.carousel.workflow_state import (
+    CarouselWorkflowState,
 )
 from rag_backend.domain.constants.carousel_workflow import (
     FINAL_REVIEW_SEND_BACK_PHASES,
@@ -53,11 +63,12 @@ async def persist_phase_feedback(
     phase = _resolve_feedback_phase(params)
     if not phase:
         return
-    phase_feedback = dict(params.prior.get("phase_feedback") or {})
-    existing = phase_feedback.get(phase, [])
-    prior_feedback = existing if isinstance(existing, list) else []
-    phase_feedback[phase] = [*prior_feedback, trimmed]
-    updates: dict[str, object] = {"phase_feedback": phase_feedback}
+    # AE-0405: the note is tagged (source + time) so the regeneration that
+    # uses it can move it to the history.
+    updates = add_feedback_note(
+        params.prior,
+        NewFeedbackNote(phase=phase, note=trimmed, source=params.source),
+    )
     if params.count_revision:
         revision_count = dict(params.prior.get("revision_count") or {})
         revision_count[phase] = int(revision_count.get(phase, 0)) + 1
@@ -65,7 +76,26 @@ async def persist_phase_feedback(
     await engine.update_state(params.project_id, updates)
 
 
+async def settle_feedback_before_resume(
+    engine: CarouselWorkflowEngine,
+    prior: CarouselWorkflowState,
+    action: str,
+) -> CarouselWorkflowState:
+    """Settle content notes no regeneration will use; return the updated prior.
+
+    AE-0405 migration on read: legacy untagged notes already steered the last
+    regeneration and move to the history; an active autopilot note is dropped
+    once the content gate is approved.
+    """
+    updates = settle_stale_content_feedback(prior, action)
+    if not updates:
+        return prior
+    await engine.update_state(str(prior.get("project_id", "")), updates)
+    return cast(CarouselWorkflowState, {**prior, **updates})
+
+
 __all__ = [
     "persist_phase_feedback",
     "read_checkpoint_phase",
+    "settle_feedback_before_resume",
 ]

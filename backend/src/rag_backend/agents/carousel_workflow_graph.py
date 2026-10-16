@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from langgraph.graph import END, StateGraph
 
+from rag_backend.agents.carousel_content_phase import content_phase_async
 from rag_backend.agents.carousel_workflow_nodes import (
     approved_hold_phase,
     brief_phase,
-    content_phase_async,
     design_phase_async,
     final_review_phase,
     images_phase_async,

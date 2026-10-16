@@ -15,10 +15,10 @@ from rag_backend.agents.carousel_workflow_graph import (
     route_after_gate,
     route_after_hold,
 )
+from rag_backend.agents.carousel_content_phase import content_phase
 from rag_backend.agents.carousel_workflow_nodes import (
     await_human_review,
     brief_phase,
-    content_phase,
     design_phase,
     final_review_phase,
     images_phase,
@@ -562,6 +562,8 @@ class AsyncMockWrapper:
     def __init__(self, snapshot: Snapshot | None = None) -> None:
         self.snapshot = snapshot
         self.last_config: dict[str, object] | None = None
+        # Like a graph compiled without a checkpointer (AE-0405 park is skipped).
+        self.checkpointer: object | None = None
 
     async def ainvoke(
         self,

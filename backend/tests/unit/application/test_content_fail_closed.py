@@ -11,7 +11,7 @@ import pytest
 from structlog.testing import capture_logs
 
 from rag_backend.agents.carousel_workflow_engine import _REVIEW_INTERRUPT_KEYS
-from rag_backend.agents.carousel_workflow_nodes import content_phase
+from rag_backend.agents.carousel_content_phase import content_phase
 from rag_backend.application.services.carousel import content_fail_closed
 from rag_backend.application.services.carousel.content_fail_closed import (
     LOG_EVENT_SLIDE_PARSE_FAILED,
