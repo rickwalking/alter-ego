@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Generator
+from collections.abc import Generator, Iterator
 from contextlib import asynccontextmanager, nullcontext
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -34,6 +34,7 @@ from rag_backend.domain.constants.carousel_workflow import (
     REVIEW_ACTION_REJECT,
     REVIEW_ACTION_REVISE,
 )
+from rag_backend.domain.models.persona import PersonaProfile
 from rag_backend.infrastructure.database.models.carousel import CarouselProjectModel
 
 
@@ -223,6 +224,17 @@ class TestScheduleBackgroundResume:
             mock_task.add_done_callback.assert_called_once_with(mock_bg_tasks.discard)
 
 
+@pytest.fixture(autouse=True)
+def _no_project_persona() -> Iterator[AsyncMock]:
+    """AE-0397: the resume loads the project's persona; these tests use none."""
+    with patch(
+        "rag_backend.application.services.carousel.resume_persona.load_project_persona",
+        new_callable=AsyncMock,
+        return_value=None,
+    ) as loader:
+        yield loader
+
+
 @pytest.mark.unit
 class TestExecuteBackgroundResume:
     """Scenario: execute_resume_run runs workflow and handles all branches."""
@@ -280,6 +292,40 @@ class TestExecuteBackgroundResume:
             mock_detect.assert_called_once_with(params, "research", new_state)
             mock_db.commit.assert_awaited_once()
             mock_sse.assert_awaited_once_with(params.project_id, new_state)
+
+    # Scenario: A resume voices the content with the project's persona (AE-0397)
+    @pytest.mark.asyncio
+    async def test_resume_passes_the_project_persona(
+        self, _no_project_persona: AsyncMock
+    ) -> None:
+        persona = PersonaProfile(name="Pedro")
+        _no_project_persona.return_value = persona
+        params = _make_params()
+        service = MagicMock()
+        mock_db = AsyncMock()
+        service.get_workflow_state = AsyncMock(return_value=None)
+        service.resume_workflow = AsyncMock(
+            return_value={"current_phase": "content", "phase_status": "awaiting_human"}
+        )
+
+        with (
+            patch(
+                "rag_backend.application.services.carousel.editorial_workflow_resume_runner.get_session_maker",
+                return_value=_make_session_factory(mock_db),
+            ),
+            patch(
+                "rag_backend.application.services.carousel.editorial_workflow_resume_runner.publish_workflow_sse_updates",
+                new_callable=AsyncMock,
+            ),
+            patch(
+                "rag_backend.application.services.carousel.editorial_workflow_resume_runner._detect_resume_stuck",
+                return_value=False,
+            ),
+        ):
+            await execute_resume_run(service, params)
+
+        _no_project_persona.assert_awaited_once_with(mock_db, params.project_id)
+        assert service.resume_workflow.await_args[0][0].persona is persona
 
     @pytest.mark.asyncio
     async def test_happy_path_with_feedback_and_structured_feedback(self) -> None:

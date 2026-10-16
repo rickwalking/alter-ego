@@ -127,7 +127,13 @@ async def test_run_phase_review_passes_every_field() -> None:
     service.resume_workflow = AsyncMock(return_value=dict(_PERSISTED))
     service.redrive_pending_phase = AsyncMock()
     db = MagicMock()
-    await resume_runner._run_phase(service, _params(REVIEW_ACTION_APPROVE), db)
+    # AE-0397: the resume loads the project's persona (none here).
+    with patch(
+        "rag_backend.application.services.carousel.resume_persona.load_project_persona",
+        new_callable=AsyncMock,
+        return_value=None,
+    ):
+        await resume_runner._run_phase(service, _params(REVIEW_ACTION_APPROVE), db)
     service.redrive_pending_phase.assert_not_awaited()
     service.resume_workflow.assert_awaited_once_with(
         ResumeWorkflowInput(

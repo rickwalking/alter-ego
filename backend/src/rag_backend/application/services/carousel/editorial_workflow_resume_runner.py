@@ -18,6 +18,7 @@ from dataclasses import dataclass
 import structlog
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from rag_backend.application.services.carousel import resume_persona
 from rag_backend.application.services.carousel.editorial_workflow_run_events import (
     publish_run_finished,
     publish_run_stage_changed,
@@ -318,7 +319,7 @@ async def _run_phase(
             reviewer_id=params.reviewer_id,
             feedback=params.feedback,
             db=db,
-            persona=None,
+            persona=await resume_persona.load_project_persona(db, params.project_id),
             project_title=params.project_title,
             structured_feedback=params.structured_feedback,
         ),

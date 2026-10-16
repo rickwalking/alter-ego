@@ -216,3 +216,58 @@ class TestAutomationAcl:
         assert start.persona is not None
         assert str(start.persona.id) == persona
         assert unvoiced.persona is None
+
+
+async def _project_persona(project_id: str) -> PersonaProfile | None:
+    from rag_backend.infrastructure.database.config import get_session_maker
+
+    async with get_session_maker()() as session:
+        return await PovInputsAcl(session).project_persona(project_id)
+
+
+async def _bind_persona(project_id: str, persona_id: str | None) -> None:
+    from sqlalchemy import update
+
+    from rag_backend.infrastructure.database.config import get_session_maker
+    from rag_backend.infrastructure.database.models.carousel import (
+        CarouselProjectModel,
+    )
+
+    async with get_session_maker()() as session:
+        await session.execute(
+            update(CarouselProjectModel)
+            .where(CarouselProjectModel.id == project_id)
+            .values(persona_id=persona_id)
+        )
+        await session.commit()
+
+
+@pytest.mark.integration
+class TestProjectPersona:
+    """Gherkin: tests/features/resume_persona_ae0397.feature (AE-0397)."""
+
+    # Scenario: The project's persona is loaded for the resume
+    @pytest.mark.asyncio
+    async def test_the_projects_persona_is_loaded(
+        self, client: AsyncClient, asset_dirs: Path
+    ) -> None:
+        photo = await upload_photo(client, (1, 1, 1, 0))
+        project_id = await _pov_project(client, photo["id"])
+        persona_id = await _persona("Pedro")
+        await _bind_persona(project_id, persona_id)
+        persona = await _project_persona(project_id)
+        assert persona is not None
+        assert str(persona.id) == persona_id
+        del asset_dirs
+
+    # Scenario: A project without a persona resumes without one
+    @pytest.mark.asyncio
+    async def test_no_persona_or_no_project_is_none(
+        self, client: AsyncClient, asset_dirs: Path
+    ) -> None:
+        photo = await upload_photo(client, (1, 1, 1, 0))
+        project_id = await _pov_project(client, photo["id"])
+        await _bind_persona(project_id, None)
+        assert await _project_persona(project_id) is None
+        assert await _project_persona(str(UUID(int=0))) is None
+        del asset_dirs

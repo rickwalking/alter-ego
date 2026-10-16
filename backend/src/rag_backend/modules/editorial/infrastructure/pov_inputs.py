@@ -58,6 +58,16 @@ class PovInputsAcl:
         model = await self._session.get(PersonaProfileModel, persona_id)
         return model.to_entity() if model is not None else None
 
+    async def project_persona(self, project_id: str) -> PersonaProfile | None:
+        """AE-0397: the persona the project was created with, for its resumes."""
+        from rag_backend.infrastructure.database.models.carousel import (
+            CarouselProjectModel,
+        )
+
+        project = await self._session.get(CarouselProjectModel, project_id)
+        persona_id = project.persona_id if project is not None else None
+        return await self.load_persona(str(persona_id) if persona_id else None)
+
     async def resolve_persona_id(self, configured: str, name: str) -> str | None:
         """The configured persona when it exists, else the newest named ``name``."""
         if configured and await self.load_persona(configured) is not None:
