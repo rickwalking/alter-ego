@@ -5,7 +5,7 @@ import {
   FLAT_EDITORIAL_PRESET,
 } from "@/constants/create";
 import { buildCarouselCreateRequest, canSubmitCreateForm } from "./helpers";
-import { INITIAL_CREATE_FORM_STATE } from "./types";
+import { INITIAL_CREATE_FORM_STATE, showsFormatPicker } from "./types";
 
 // Scenarios: see tests/features/create-image-guidance.feature
 
@@ -158,8 +158,21 @@ describe("buildCarouselCreateRequest pov_news (AE-0406)", () => {
       slide_count: 9,
       hook_asset_id: HOOK_PHOTO_ID,
     });
+    // PR #124 review: no format picker, so no pov_format is sent.
+    expect(request.pov_format).toBeUndefined();
     expect(carouselCreateRequestSchema.safeParse(request).success).toBe(true);
     expect(canSubmitCreateForm(news)).toBe(true);
     expect(canSubmitCreateForm({ ...news, povThesis: "" })).toBe(false);
+  });
+});
+
+// Scenario: "POV: News" hides the format picker (create-content-mode.feature, AE-0406)
+describe("showsFormatPicker (AE-0406)", () => {
+  it("hides the POV format picker for POV: News only", () => {
+    expect(showsFormatPicker({ ...BASE_FORM, contentMode: "pov_news" })).toBe(
+      false,
+    );
+    expect(showsFormatPicker({ ...BASE_FORM, contentMode: "pov" })).toBe(true);
+    expect(showsFormatPicker(BASE_FORM)).toBe(true);
   });
 });

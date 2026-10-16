@@ -60,6 +60,7 @@ Feature: Create wizard content mode (AE-0373, ADR-0021)
     When the owner selects "POV: News" ("Ponto de Vista: Notícia" in Portuguese)
     Then the mode is "pov_news" and the image preset is "Foto + Editorial"
     And the POV inputs (thesis, slide-1 photo, slide count) are shown
+    But the POV format picker is hidden (the news structure is fixed)
 
   Scenario: "POV: News" create sends the POV fields
     Given the wizard in "POV: News" mode with a thesis and a selected photo

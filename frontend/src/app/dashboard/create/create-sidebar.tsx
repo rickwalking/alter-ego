@@ -15,6 +15,7 @@ import { CREATE_TEMPLATES } from "@/app/dashboard/create/constants";
 import { canSubmitCreateForm } from "@/app/dashboard/create/helpers";
 import {
   isPovForm,
+  showsFormatPicker,
   type CreateCarouselFormState,
 } from "@/app/dashboard/create/types";
 import {
@@ -48,6 +49,9 @@ function useTemplateName(form: CreateCarouselFormState): string {
   const t = useTranslations("create.pov.formats");
   if (!isPovForm(form)) {
     return CREATE_TEMPLATES[form.selectedTemplate]?.name ?? "—";
+  }
+  if (!showsFormatPicker(form)) {
+    return "—";
   }
   const pov = POV_TEMPLATES[form.selectedTemplate];
   return pov ? t(`${pov.format}.name`) : "—";

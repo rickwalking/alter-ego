@@ -55,7 +55,15 @@ export function isPovMode(mode: ContentMode): boolean {
   return mode === CONTENT_MODES.POV || mode === CONTENT_MODES.POV_NEWS;
 }
 
-/** True in a POV-family mode: the wizard shows the POV inputs and formats. */
+/** True in a POV-family mode: the wizard shows the POV inputs. */
 export function isPovForm(form: CreateCarouselFormState): boolean {
   return isPovMode(form.contentMode);
+}
+
+/**
+ * AE-0406 (PR #124 review): "POV: News" uses the news-analysis structure, so
+ * the backend ignores the POV format; the wizard hides the format picker.
+ */
+export function showsFormatPicker(form: CreateCarouselFormState): boolean {
+  return form.contentMode !== CONTENT_MODES.POV_NEWS;
 }
