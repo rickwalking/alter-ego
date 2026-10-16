@@ -75,6 +75,11 @@ export { ImagePromptReview } from "./workspace/components/image-prompt-review";
 export { PresentationIconPreview } from "./workspace/components/presentation-icon-preview";
 export { PresentationStructuredItems } from "./workspace/components/presentation-structured-items";
 export { SlideCopyEditor } from "./workspace/components/slide-copy-editor";
+export {
+  BlockingSlidesNotice,
+  FlaggableTextarea,
+  SlideViolationSummary,
+} from "./workspace/components/slide-field-errors";
 export { WorkflowFailedCard } from "./workspace/components/workflow-failed-card";
 export type {
   AutoRepairButtonProps,
@@ -85,6 +90,21 @@ export type {
   SlideCopyEditorProps,
   WorkflowFailedCardProps,
 } from "./workspace/components/types";
+
+/* --- workspace: per-field validation errors (AE-0403) --- */
+export {
+  addressViolations,
+  buildSlideFieldErrors,
+  fieldDomId,
+  fieldErrorKey,
+  focusInvalidField,
+  slideDomId,
+  structuredItemFieldPath,
+  violationsForSlide,
+  type SlideFieldErrors,
+} from "./workspace/lib/slide-field-errors";
+export { useSlideFieldErrors } from "./workspace/hooks/use-slide-field-errors";
+export type { SlideFieldErrorState } from "./workspace/hooks/types";
 
 /* --- workspace: presentation review utilities --- */
 export {

@@ -25,6 +25,12 @@ SLIDE_EDIT_STATUS_UPDATED = "updated"
 # Route-level guard: the edit endpoint is completed-only.
 ERR_SLIDE_EDIT_NOT_COMPLETED = "carousel_slide_edit_requires_completed"
 
+# AE-0403: a structured-item violation field path, e.g. ``summary_points[0].body``
+# (list key, item index, sub-field). Plain ``heading``/``body`` do not match.
+STRUCTURED_ITEM_FIELD_PATTERN = (
+    r"^(?P<list>[a-z_]+)\[(?P<index>\d+)\]\.(?P<field>[a-z_]+)$"
+)
+
 # Republish-sweep default: a marked project older than this is republished by
 # the watchdog as the server-side guarantee (client triggers it sooner).
 REPUBLISH_SWEEP_MIN_AGE_SECONDS = 180
@@ -36,4 +42,5 @@ __all__ = [
     "LOG_EVENT_SLIDE_EDITED",
     "REPUBLISH_SWEEP_MIN_AGE_SECONDS",
     "SLIDE_EDIT_STATUS_UPDATED",
+    "STRUCTURED_ITEM_FIELD_PATTERN",
 ]

@@ -62,6 +62,10 @@ export interface SlideValidationViolation {
   field?: string | null;
   // AE-0312: absent defaults to a blocking treatment client-side.
   severity?: ViolationSeverity | null;
+  // AE-0403: structured-item address (slide-edit ``field_violations`` only).
+  item_list?: string | null;
+  item_index?: number | null;
+  item_field?: string | null;
 }
 
 export interface SlideValidationReport {

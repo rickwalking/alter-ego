@@ -10,4 +10,7 @@ INJECTION_PATTERNS: tuple[str, ...] = (
     "you are now",
 )
 
-__all__ = ["INJECTION_PATTERNS", "MAX_LLM_INPUT_LENGTH"]
+# AE-0403: characters stripped from reviewer-edited copy outside the emphasis tags.
+EDITED_COPY_STRIPPED_CHARS: tuple[str, ...] = ("<", ">", "(", ")")
+
+__all__ = ["EDITED_COPY_STRIPPED_CHARS", "INJECTION_PATTERNS", "MAX_LLM_INPUT_LENGTH"]

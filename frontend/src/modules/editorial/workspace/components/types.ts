@@ -9,7 +9,10 @@
 import type {
   LocalizedSlideReview,
   SlideImagePrompt,
+  SlideValidationViolation,
 } from "@/modules/editorial/workspace/types-ai";
+import type { NeonTextareaProps } from "@/components/atoms/neon-textarea";
+import type { SlideFieldErrors } from "@/modules/editorial/workspace/lib/slide-field-errors";
 import type { PresentationStructuredItem } from "@/modules/editorial/workspace/lib/presentation-review-utils";
 import type {
   SlideCopyEdit,
@@ -52,6 +55,10 @@ export interface SlideCopyEditorProps {
   policyVersion?: string | null;
   showBudget?: boolean;
   onStructuredItemChange?: (edit: SlideStructuredItemEdit) => void;
+  /** AE-0403: blocking violations per field (red border + message + aria). */
+  fieldErrors?: SlideFieldErrors;
+  /** AE-0403: open violations listed at the bottom of each slide form. */
+  violations?: SlideValidationViolation[];
 }
 
 /** AE-0314: a locale's editable structured-item list (summary points/features). */
@@ -81,4 +88,29 @@ export interface HookPickerProps {
   initialHook: string;
   /** False when no thesis word shows up on slides 1-2 (outline check). */
   thesisEarly?: boolean;
+}
+
+/** AE-0403: a textarea that shows its own field error (border + aria). */
+export interface FlaggableTextareaProps extends NeonTextareaProps {
+  id: string;
+  violations: SlideValidationViolation[] | undefined;
+}
+
+/** AE-0403: the error message rendered under one flagged field. */
+export interface FieldErrorMessageProps {
+  id: string;
+  violations: SlideValidationViolation[] | undefined;
+}
+
+/** AE-0403: per-slide summary at the bottom of a slide form. */
+export interface SlideViolationSummaryProps {
+  slideIndex: number;
+  violations: SlideValidationViolation[];
+}
+
+/** AE-0403: the global blocking line, linking every slide still flagged. */
+export interface BlockingSlidesNoticeProps {
+  message: string;
+  slideIndexes: number[];
+  onSelectSlide: (slideIndex: number) => void;
 }
