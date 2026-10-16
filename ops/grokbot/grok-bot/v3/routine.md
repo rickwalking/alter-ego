@@ -62,8 +62,9 @@ with `weekly_news_cap_reached`.
     can accept or rewrite ("A IA escreve código; decidir o que construir continua sendo o
     trabalho do dev.").
   - Never claim experiences, projects, clients, test results or numbers on the owner's behalf.
-  - For `pov`, `image_style` and `image_guidance` are ignored: the backend uses the owner's photo
-    and the `pov_editorial` preset.
+  - For `pov`, slide 1 is always the owner's photo. `image_style` sets the artwork of the point
+    slides: the backend uses neo-anime (`neo_anime`) unless you name another supported style.
+    (`pov_editorial`, the old flat preset, is never chosen by the scout.)
   - Choose the **format** and the **slide count** of every `pov` topic (PR #106 review):
     - `pov_format`: one of `opiniao` (a stance and why), `como_eu_faco` (how the owner does it,
       step by step), `erros_e_mitos` (common mistakes or myths, corrected), `comparacao` (A vs B,

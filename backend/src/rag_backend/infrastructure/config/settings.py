@@ -15,6 +15,7 @@ from rag_backend.infrastructure.config.constants import (
 from rag_backend.infrastructure.config.llm_routing_constants import (
     DEFAULT_CONTENT_DRAFT_CONCURRENCY,
     DEFAULT_LLM_MODEL_FALLBACK,
+    DEFAULT_LLM_MODEL_FALLBACK_REASONING,
     DEFAULT_LLM_MODEL_FAST,
     DEFAULT_LLM_MODEL_REASONING,
 )
@@ -85,6 +86,7 @@ class Settings(BaseSettings):
     llm_model_reasoning: str = DEFAULT_LLM_MODEL_REASONING
     llm_model_fast: str = DEFAULT_LLM_MODEL_FAST
     llm_model_fallback: str = DEFAULT_LLM_MODEL_FALLBACK
+    llm_model_fallback_reasoning: str = DEFAULT_LLM_MODEL_FALLBACK_REASONING
     # AE-0391: slides drafted concurrently in the content phase (>= 1).
     content_draft_concurrency: int = Field(
         default=DEFAULT_CONTENT_DRAFT_CONCURRENCY, ge=1

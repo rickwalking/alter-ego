@@ -9,7 +9,18 @@ by the OpenCode Go OpenAI-compatible endpoint (`GLM_BASE_URL`, default
 |---|---|---|---|---|
 | reasoning | `LLM_MODEL_REASONING` | `deepseek-v4-pro` | 240 s | research synthesis, outline, quality/rubric judgement |
 | fast | `LLM_MODEL_FAST` | `deepseek-v4.1-flash` | 120 s | slide drafting (+ persona enforce), PT→EN translation, caption, LinkedIn/blog distribution copy, refinement, AE-0367 autofix re-translate, persona scoring |
-| fallback | `LLM_MODEL_FALLBACK` | `glm-5.3` | 900 s | any primary call that fails |
+| fast fallback | `LLM_MODEL_FALLBACK` | `qwen3.8-flash` | 180 s | a fast call that failed 5 attempts |
+| reasoning fallback | `LLM_MODEL_FALLBACK_REASONING` | `qwen3.8-max` | 180 s | a reasoning call that failed 5 attempts |
+
+**Retries (AE-0395).** Every model gets 5 attempts (`LLM_ATTEMPTS_PER_MODEL`) for a timeout,
+an error (except 401/403) or empty content, with backoff 2 s, 4 s, 8 s, 15 s (`llm_retry` log),
+before the call moves to the role's fallback, which gets 5 attempts too. A JSON call
+(`agents/llm_json_retry.py`) also gets 5 attempts (each with its re-roll and repair) per model
+(`llm_json_retry` log). GLM-5.3 is no longer a fallback: in prod on 2026-10-16 it returned empty
+content after ~8.5 min, four times in a row. Fallback benchmark (prod endpoint, 2026-10-16, a
+pt-BR caption as strict JSON, 2 runs): `qwen3.8-flash` 9-11 s, `qwen3.8-max` 14-24 s,
+`mimo-v2.6-flash` 7-19 s, `kimi-k2.6` 44-47 s, all valid JSON. `claude-haiku-5-5`,
+`gpt-5.6-luna`, `minimax-m2.7` and `grok-4.6` answer `ModelProtocolUnsupported` on this endpoint.
 
 Model ids live only in settings; the defaults are constants in
 `backend/src/rag_backend/infrastructure/config/llm_routing_constants.py`.

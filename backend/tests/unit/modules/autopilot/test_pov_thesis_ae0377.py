@@ -219,7 +219,8 @@ class TestThesisDomain:
         spec = project_spec(_run(pov_thesis=_THESIS), _topic(), "owner")
         assert spec.content_mode == "pov"
         assert spec.pov_thesis == _THESIS
-        assert spec.image_style == "pov_editorial"
+        # AE-0395: POV point slides default to neo-anime art.
+        assert spec.image_style == "neo_anime"
 
     def test_news_spec(self) -> None:
         spec = project_spec(

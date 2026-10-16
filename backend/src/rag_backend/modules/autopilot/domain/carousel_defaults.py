@@ -10,6 +10,8 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
+from datetime import datetime
+from zoneinfo import ZoneInfo
 
 from rag_backend.domain.constants import (
     IMAGE_MODEL_OPENAI,
@@ -38,6 +40,7 @@ from rag_backend.modules.autopilot.carousel_constants import (
     SIMPLE_WORDS_MAX,
     SIMPLE_WORDS_MIN,
 )
+from rag_backend.modules.autopilot.constants import DAILY_CAP_TIMEZONE
 from rag_backend.modules.autopilot.domain.topic_text import tokens
 
 # AE-0376: the POV preset needs the owner's photo, so the Radar IA scout never
@@ -151,3 +154,25 @@ def with_profile(profile: str, body: str) -> str:
     if not profile:
         return body
     return f"{profile}{PROFILE_SEPARATOR}{body}"
+
+
+# AE-0395: the autopilot rotates the palette per São Paulo day instead of
+# ``auto`` (which put nearly every AI topic on the same blue/amber theme).
+# Dark built-in themes only, so neo-anime art and the POV scrim stay legible.
+AUTOPILOT_THEME_ROTATION: tuple[str, ...] = (
+    "developer_skills",
+    "plasma_magenta",
+    "ember_crimson",
+    "blueprint",
+    "source_code",
+    "acid_lime",
+    "mono_indigo",
+    "cybersecurity",
+    "social_engineering",
+)
+
+
+def rotated_theme(moment: datetime) -> str:
+    """The palette of the São Paulo day containing ``moment``."""
+    day = moment.astimezone(ZoneInfo(DAILY_CAP_TIMEZONE)).date()
+    return AUTOPILOT_THEME_ROTATION[day.toordinal() % len(AUTOPILOT_THEME_ROTATION)]

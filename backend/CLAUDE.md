@@ -143,7 +143,8 @@ uv run ruff format src/          # Formatting
 - Carousel calls use per-role models via `build_chat_model(settings, role)`:
   **reasoning** `deepseek-v4-pro` (research, outline, rubric), **fast**
   `deepseek-v4.1-flash` (drafting, translation, distribution, refinement, persona
-  scoring), automatic **fallback** `glm-5.3` on error/timeout/empty/bad JSON (AE-0391).
+  scoring). Every model gets **5 attempts**, then the role's **fallback** (`qwen3.8-flash` for fast,
+  `qwen3.8-max` for reasoning; no longer GLM) on error/timeout/empty/bad JSON (AE-0391, AE-0395).
 - Slides are drafted in parallel (`CONTENT_DRAFT_CONCURRENCY`, default 4).
 - Details and benchmarks: `../docs/backend/llm-model-routing.md`.
 

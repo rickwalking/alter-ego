@@ -71,15 +71,27 @@ async def _pov_project(client: AsyncClient, photo_id: object) -> str:
 
 @pytest.mark.integration
 class TestHookPhotoChoice:
-    # Scenario: The most recently used hook photo is preferred
+    # Scenario: An unused hook photo opens the next POV deck (AE-0395)
     @pytest.mark.asyncio
-    async def test_prefers_the_recently_used_photo(
+    async def test_prefers_a_photo_never_used(
         self, client: AsyncClient, asset_dirs: Path
     ) -> None:
         older = await upload_photo(client, (1, 1, 1, 0))
-        await upload_photo(client, (2, 2, 2, 0))
+        unused = await upload_photo(client, (2, 2, 2, 0))
         await _pov_project(client, older["id"])
-        assert await _hook_photo(str(older["owner_id"])) == older["id"]
+        assert await _hook_photo(str(older["owner_id"])) == unused["id"]
+        del asset_dirs
+
+    # Scenario: When every hook photo was used, the least recently used comes next
+    @pytest.mark.asyncio
+    async def test_rotates_to_the_least_recently_used_photo(
+        self, client: AsyncClient, asset_dirs: Path
+    ) -> None:
+        photo_a = await upload_photo(client, (1, 1, 1, 0))
+        photo_b = await upload_photo(client, (2, 2, 2, 0))
+        await _pov_project(client, photo_a["id"])
+        await _pov_project(client, photo_b["id"])
+        assert await _hook_photo(str(photo_a["owner_id"])) == photo_a["id"]
         del asset_dirs
 
     # Scenario: Without a used photo the newest hook photo is picked

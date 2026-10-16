@@ -53,15 +53,21 @@ def _settings(**overrides: object) -> Settings:
 
 
 def _routed(primary: FakeChat, fallback: FakeChat | None) -> RoutedChatModel:
+    # One attempt per model: these tests pin the fallback semantics; the
+    # AE-0395 retries are covered in test_llm_retry_ae0395.py.
     return RoutedChatModel(
-        primary=primary, fallback=fallback, role=LLM_ROLE_FAST, timeout_seconds=5.0
+        primary=primary,
+        fallback=fallback,
+        role=LLM_ROLE_FAST,
+        timeout_seconds=5.0,
+        attempts=1,
     )
 
 
 # --- Routing -----------------------------------------------------------------
 
 
-def test_reasoning_role_routes_to_reasoning_model_with_glm_fallback() -> None:
+def test_reasoning_role_routes_to_reasoning_model_with_its_fallback() -> None:
     # Scenario: the reasoning role uses the reasoning model
     model = build_chat_model(_settings(), LLM_ROLE_REASONING)
 
@@ -71,7 +77,7 @@ def test_reasoning_role_routes_to_reasoning_model_with_glm_fallback() -> None:
     assert model.primary.openai_api_base == "https://opencode.ai/zen/go/v1"
     assert model.timeout_seconds == 240.0
     assert isinstance(model.fallback, ChatOpenAI)
-    assert model.fallback.model_name == "glm-5.3"
+    assert model.fallback.model_name == "qwen3.8-max"
     assert model.role == LLM_ROLE_REASONING
 
 
@@ -162,7 +168,8 @@ def test_settings_defaults() -> None:
 
     assert settings.llm_model_reasoning == "deepseek-v4-pro"
     assert settings.llm_model_fast == "deepseek-v4.1-flash"
-    assert settings.llm_model_fallback == "glm-5.3"
+    assert settings.llm_model_fallback == "qwen3.8-flash"
+    assert settings.llm_model_fallback_reasoning == "qwen3.8-max"
     assert settings.content_draft_concurrency == DEFAULT_CONTENT_DRAFT_CONCURRENCY
 
 
@@ -251,6 +258,7 @@ async def test_fallback_answers_on_timeout() -> None:
         fallback=FakeChat(model_name="fallback", log=log),
         role=LLM_ROLE_REASONING,
         timeout_seconds=0.01,
+        attempts=1,
     )
 
     with capture_logs() as logs:

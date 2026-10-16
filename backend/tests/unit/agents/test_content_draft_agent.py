@@ -8,6 +8,9 @@ import pytest
 from rag_backend.agents.content_draft_agent import ContentDraftAgent
 from rag_backend.domain.models.persona import PersonaProfile
 from rag_backend.infrastructure.cache.ai_response_cache import get_ai_response_cache
+from rag_backend.infrastructure.config.llm_routing_constants import (
+    LLM_ATTEMPTS_PER_MODEL,
+)
 
 
 class TestContentDraftAgent:
@@ -198,10 +201,12 @@ class TestContentDraftCachePoisoning:
     async def test_two_empty_responses_raise_and_cache_nothing(
         self, agent: ContentDraftAgent, mock_llm: AsyncMock
     ) -> None:
-        # Scenario: the re-roll is bounded, and a failure caches nothing
+        # Scenario: the re-roll is bounded, and a failure caches nothing.
+        # AE-0395: each of the 5 attempts is a call plus its empty re-roll, so
+        # 10 empty answers exhaust the model.
+        empty_calls = 2 * LLM_ATTEMPTS_PER_MODEL
         mock_llm.ainvoke.side_effect = [
-            MagicMock(content=""),
-            MagicMock(content=""),
+            *(MagicMock(content="") for _ in range(empty_calls)),
             MagicMock(content=json.dumps(self._payload())),
         ]
         with pytest.raises(ValueError, match="Invalid JSON"):
@@ -210,7 +215,7 @@ class TestContentDraftCachePoisoning:
         result = await agent.draft_slide(1, "Title", ["Point"])
 
         assert result["draft_text"] == "Slide copy"
-        assert mock_llm.ainvoke.await_count == 3  # nothing poisoned the retry
+        assert mock_llm.ainvoke.await_count == empty_calls + 1  # nothing poisoned
 
     async def test_malformed_response_is_repaired(
         self, agent: ContentDraftAgent, mock_llm: AsyncMock

@@ -44,7 +44,19 @@ Feature: Autopilot "Ponto de Vista" topics and the owner's thesis (AE-0377, ADR-
   Scenario: A confirmed POV run starts generating
     Given a queued POV run with a confirmed thesis
     When the runner ticks
-    Then a POV carousel is created with the owner's thesis and the pov_editorial preset
+    Then a POV carousel is created with the owner's thesis and neo-anime point-slide art
+
+  # AE-0395: POV point slides default to neo-anime; an explicit scout style wins.
+  Scenario Outline: POV point-slide art follows the scout's explicit style
+    Given a confirmed POV run whose topic image style is <style>
+    When the runner ticks
+    Then the carousel's image preset is <preset>
+
+    Examples:
+      | style          | preset    |
+      | flat_editorial | neo_anime |
+      | cinematic      | cinematic |
+      | unknown_style  | neo_anime |
 
   Scenario: Unanswered thesis expires
     Given a run waiting for its thesis for more than 72 hours
@@ -175,10 +187,16 @@ Feature: Autopilot "Ponto de Vista" topics and the owner's thesis (AE-0377, ADR-
 
   # --- Slide-1 photo (PR #106 review, item 4) ---------------------------------
 
-  Scenario: The most recently used hook photo opens the POV deck
+  # AE-0395: the photo rotates so consecutive POV carousels never repeat one.
+  Scenario: An unused hook photo opens the next POV deck
     Given the owner has two hook photos and used the older one on a carousel
     When a POV run creates its carousel
-    Then the older photo is bound and staged where the slides render
+    Then the photo that was never used is bound and staged where the slides render
+
+  Scenario: When every hook photo was used, the least recently used comes next
+    Given the owner used photo A on a carousel and then photo B on a later one
+    When a POV run creates its carousel
+    Then photo A is bound
 
   Scenario: Without a used photo the newest hook photo is picked
     Given the owner has hook photos but none was used yet

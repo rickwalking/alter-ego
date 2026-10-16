@@ -8,6 +8,9 @@ import pytest
 from rag_backend.agents.outline_agent import OutlineAgent
 from rag_backend.domain.models.pov_prompts import SizedOutlineRequest
 from rag_backend.infrastructure.cache.ai_response_cache import get_ai_response_cache
+from rag_backend.infrastructure.config.llm_routing_constants import (
+    LLM_ATTEMPTS_PER_MODEL,
+)
 
 
 class TestOutlineAgent:
@@ -88,10 +91,11 @@ class TestOutlineCachePoisoning:
     async def test_two_empty_responses_raise_and_cache_nothing(
         self, agent: OutlineAgent, mock_llm: AsyncMock
     ) -> None:
-        # Scenario: the re-roll is bounded, and a failure caches nothing
+        # Scenario: the re-roll is bounded, and a failure caches nothing.
+        # AE-0395: 5 attempts, each a call plus its empty re-roll.
+        empty_calls = 2 * LLM_ATTEMPTS_PER_MODEL
         mock_llm.ainvoke.side_effect = [
-            MagicMock(content=""),
-            MagicMock(content=""),
+            *(MagicMock(content="") for _ in range(empty_calls)),
             MagicMock(content=json.dumps(self._outline())),
         ]
         with pytest.raises(ValueError, match="Invalid JSON"):
@@ -100,7 +104,7 @@ class TestOutlineCachePoisoning:
         result = await agent.generate_outline("Topic", "Devs", "Brief", ["Source"])
 
         assert result[0]["title"] == "Hook"
-        assert mock_llm.ainvoke.await_count == 3  # nothing poisoned the retry
+        assert mock_llm.ainvoke.await_count == empty_calls + 1  # nothing poisoned
 
     async def test_malformed_response_is_repaired(
         self, agent: OutlineAgent, mock_llm: AsyncMock

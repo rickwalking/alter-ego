@@ -167,6 +167,6 @@ def test_v3_routine_states_mode_and_thesis_rules() -> None:
         "thesis_missing",
         "weekly_news_cap_reached",
         "Never claim experiences",
-        "`pov_editorial`",
+        "`neo_anime`",
     ):
         assert phrase in text
