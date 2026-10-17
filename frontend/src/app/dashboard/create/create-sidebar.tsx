@@ -47,8 +47,10 @@ function modeKey(form: CreateCarouselFormState): string {
 
 function useTemplateName(form: CreateCarouselFormState): string {
   const t = useTranslations("create.pov.formats");
+  const tRadar = useTranslations("create.templates");
   if (!isPovForm(form)) {
-    return CREATE_TEMPLATES[form.selectedTemplate]?.name ?? "—";
+    const radar = CREATE_TEMPLATES[form.selectedTemplate];
+    return radar ? tRadar(`${radar.strategy}.name`) : "—";
   }
   if (!showsFormatPicker(form)) {
     return "—";
@@ -69,14 +71,14 @@ export function CreateSidebar({
 
   const summaryRows = [
     { label: t("mode.summaryLabel"), value: t(`mode.${modeKey(form)}.name`) },
-    { label: "Template", value: templateName },
-    { label: "Theme", value: form.theme },
+    { label: t("summary.template"), value: templateName },
+    { label: t("summary.theme"), value: form.theme },
     {
-      label: "Image preset",
+      label: t("summary.imagePreset"),
       value: preset ? t(preset.labelKey) : form.imagePreset,
     },
-    { label: "Topic", value: form.topic.trim() || "—" },
-    { label: "Status", value: "Draft", badge: true },
+    { label: t("summary.topic"), value: form.topic.trim() || "—" },
+    { label: t("summary.status"), value: t("status.draft"), badge: true },
   ] as const;
 
   return (
@@ -92,7 +94,7 @@ export function CreateSidebar({
     >
       <div style={sidebarCardStyle}>
         <h3 style={{ fontSize: "14px", fontWeight: 700, marginBottom: "12px" }}>
-          Project Summary
+          {t("summary.title")}
         </h3>
         {summaryRows.map((row) => (
           <div
@@ -167,7 +169,7 @@ export function CreateSidebar({
         }}
       >
         {isPending ? <NeonSpinner size="sm" /> : null}
-        Start Carousel
+        {t("form.startCarousel")}
       </button>
     </div>
   );

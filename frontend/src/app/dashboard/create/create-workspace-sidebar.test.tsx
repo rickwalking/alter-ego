@@ -7,13 +7,14 @@ import type { CarouselProjectResponse } from "@/schemas/carousel";
 import type { EditorialWorkflowState } from "@/modules/publishing";
 
 /**
- * The active-phase status badge renders the phase name ("content") as its label;
- * its accessible name is "content, <status>" so it is uniquely identifiable.
+ * The active-phase status badge renders the phase name ("Content" — AE-0415:
+ * the translated name, not the raw id) as its label; its accessible name is
+ * "Content, <status>" so it is uniquely identifiable.
  */
 function phaseBadge(): HTMLElement | undefined {
   return screen
-    .getAllByText("content")
-    .find((el) => el.getAttribute("aria-label")?.startsWith("content,"));
+    .getAllByText("Content")
+    .find((el) => el.getAttribute("aria-label")?.startsWith("Content,"));
 }
 
 const project = {

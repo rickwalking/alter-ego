@@ -37,12 +37,40 @@ describe("CreateRunProgressBanner", () => {
       />,
     );
     const banner = screen.getByTestId("run-progress-banner");
-    expect(banner).toHaveTextContent('phase:{"phase":"content"}');
+    expect(banner).toHaveTextContent('phaseAfter:{"phase":"content"}');
     expect(banner).toHaveTextContent("stage.validating");
     expect(banner).toHaveTextContent("startedAt:");
     expect(banner).toHaveTextContent('elapsed:{"minutes":2');
     expect(banner).toHaveTextContent("actionsDisabled");
     expect(banner).toHaveAttribute("role", "status");
+  });
+
+  // Feature: Create-flow UI fixes (AE-0415)
+  // Scenario: The banner names the phase that is running
+  it("names the next phase after an approval", () => {
+    render(
+      <CreateRunProgressBanner
+        currentPhase="research"
+        runningAction="approve"
+        onCheckAgain={() => undefined}
+      />,
+    );
+    const banner = screen.getByTestId("run-progress-banner");
+    expect(banner).toHaveTextContent("titleApprove");
+    expect(banner).toHaveTextContent('phaseNext:{"phase":"outline"}');
+    expect(banner).not.toHaveTextContent('"phase":"research"');
+  });
+
+  it("names the current phase during a revision", () => {
+    render(
+      <CreateRunProgressBanner
+        currentPhase="research"
+        runningAction="revise"
+        onCheckAgain={() => undefined}
+      />,
+    );
+    const banner = screen.getByTestId("run-progress-banner");
+    expect(banner).toHaveTextContent('phaseRevising:{"phase":"research"}');
   });
 
   it("hides Check again for a fresh run", () => {
@@ -85,7 +113,7 @@ describe("CreateRunProgressBanner", () => {
       />,
     );
     const banner = screen.getByTestId("run-progress-banner");
-    expect(banner).toHaveTextContent('phase:{"phase":"design"}');
+    expect(banner).toHaveTextContent('phaseAfter:{"phase":"design"}');
     expect(banner).not.toHaveTextContent("startedAt:");
     expect(screen.queryByText("checkAgain")).toBeNull();
   });

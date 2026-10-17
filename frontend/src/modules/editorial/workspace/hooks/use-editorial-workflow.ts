@@ -20,13 +20,51 @@ import {
   type EditorialReviseOptions,
 } from "./use-editorial-workflow-resume";
 import { useEditorialWorkflowSse } from "./use-editorial-workflow-sse";
-import type { StartWorkflowInput } from "./types";
+import type {
+  RecordedResume,
+  StartWorkflowInput,
+  UseEditorialWorkflowOptions,
+} from "./types";
 
 export type { EditorialReviseOptions };
 
-export function useEditorialWorkflow(projectId: string) {
+/**
+ * AE-0414 (B02): an edits-only revise (content manual fixes, design recovery)
+ * carries the reviewer's slide edits and no feedback. Its callers fire and
+ * forget it, so a rejection would surface as an uncaught page error; the
+ * failure is already shown through the hook's translated ``error``.
+ */
+function isEditsOnlyRevise(
+  feedback: string,
+  options?: EditorialReviseOptions,
+): boolean {
+  return !feedback.trim() && (options?.editedLocalizedSlides?.length ?? 0) > 0;
+}
+
+/** The action that started the running phase, or null when unknown. */
+function resolveRunningAction(
+  state: EditorialWorkflowState | null,
+  lastResume: RecordedResume | null,
+): string | null {
+  if (
+    state?.phase_status !== WORKFLOW_PHASE_STATUS.IN_PROGRESS ||
+    lastResume?.phase !== state.current_phase
+  ) {
+    return null;
+  }
+  return lastResume?.action ?? null;
+}
+
+export function useEditorialWorkflow(
+  projectId: string,
+  options?: UseEditorialWorkflowOptions,
+) {
   const t = useTranslations("editorialWorkflow.errors");
+  const initialFetch = options?.initialFetch ?? true;
   const [state, setState] = useState<EditorialWorkflowState | null>(null);
+  // AE-0415 (B27): which review action started the current run, and on which
+  // phase, so the running banner can name the phase that is really running.
+  const [lastResume, setLastResume] = useState<RecordedResume | null>(null);
   const [phaseEvents, setPhaseEvents] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -77,9 +115,14 @@ export function useEditorialWorkflow(projectId: string) {
     refreshState,
   });
 
+  // AE-0415 (B30): a project that never started its workflow has no state
+  // (GET answers 404); callers that know this skip the request.
   useEffect(() => {
+    if (!initialFetch) {
+      return;
+    }
     void refreshState();
-  }, [refreshState]);
+  }, [initialFetch, refreshState]);
 
   const { resume } = useEditorialWorkflowResume({
     projectId,
@@ -147,10 +190,31 @@ export function useEditorialWorkflow(projectId: string) {
     start,
     resume,
     refreshState,
-    approve: (options?: EditorialReviseOptions) =>
-      resume(EDITORIAL_REVIEW_ACTIONS.APPROVE, undefined, options),
-    revise: (feedback: string, options?: EditorialReviseOptions) =>
-      resume(EDITORIAL_REVIEW_ACTIONS.REVISE, feedback, options),
+    approve: (reviseOptions?: EditorialReviseOptions) => {
+      setLastResume({
+        action: EDITORIAL_REVIEW_ACTIONS.APPROVE,
+        phase: state?.current_phase ?? "",
+      });
+      return resume(EDITORIAL_REVIEW_ACTIONS.APPROVE, undefined, reviseOptions);
+    },
+    revise: (
+      feedback: string,
+      reviseOptions?: EditorialReviseOptions,
+    ): Promise<EditorialWorkflowState | null> => {
+      setLastResume({
+        action: EDITORIAL_REVIEW_ACTIONS.REVISE,
+        phase: state?.current_phase ?? "",
+      });
+      const pending = resume(
+        EDITORIAL_REVIEW_ACTIONS.REVISE,
+        feedback,
+        reviseOptions,
+      );
+      return isEditsOnlyRevise(feedback, reviseOptions)
+        ? pending.catch(() => null)
+        : pending;
+    },
+    runningAction: resolveRunningAction(state, lastResume),
     awaitingHumanReview:
       state?.phase_status === WORKFLOW_PHASE_STATUS.AWAITING_HUMAN,
     hasActiveWorkflow: Boolean(state?.current_phase),

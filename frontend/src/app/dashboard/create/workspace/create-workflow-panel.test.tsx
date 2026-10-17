@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { renderWithProviders as render, screen } from "@/test/utils";
 import { describe, expect, it, vi } from "vitest";
 import {
   CREATE_STEP_IDS,
@@ -49,14 +49,17 @@ function buildWorkflow(
     refreshState: vi.fn(async () => state),
     approve: vi.fn(async () => state),
     revise: vi.fn(async () => state),
-    awaitingHumanReview: true,
+    awaitingHumanReview:
+      state.phase_status === WORKFLOW_PHASE_STATUS.AWAITING_HUMAN,
     hasActiveWorkflow: true,
+    runningAction: null,
   };
 }
 
 function renderPanel(
   state: EditorialWorkflowState,
   viewStepId: CreateStepId = CREATE_STEP_IDS.IMAGES,
+  workflowStepId: CreateStepId = CREATE_STEP_IDS.IMAGES,
 ): void {
   render(
     <CreateWorkflowPanel
@@ -66,7 +69,7 @@ function renderPanel(
       brief="Review AI security risks"
       workflow={buildWorkflow(state)}
       viewStepId={viewStepId}
-      workflowStepId={CREATE_STEP_IDS.IMAGES}
+      workflowStepId={workflowStepId}
     />,
   );
 }
@@ -86,5 +89,126 @@ describe("CreateWorkflowPanel image prompts", () => {
     renderPanel(stateWithPrompts, CREATE_STEP_IDS.CONTENT);
 
     expect(screen.queryByText("Slide image prompts")).not.toBeInTheDocument();
+  });
+});
+
+function gateState(
+  overrides: Partial<EditorialWorkflowState>,
+): EditorialWorkflowState {
+  return {
+    project_id: "project-1",
+    current_phase: EDITORIAL_PHASES.RESEARCH,
+    phase_status: WORKFLOW_PHASE_STATUS.AWAITING_HUMAN,
+    research_findings: [],
+    outline: [],
+    slide_drafts: [],
+    status: "draft",
+    ...overrides,
+  };
+}
+
+// Feature: Create-flow UI fixes (AE-0415) — tests/features/create-flow-ui-ae0415.feature
+describe("CreateWorkflowPanel live gates (AE-0415)", () => {
+  // Scenario: The live research gate shows the findings and their sources
+  it("lists the research findings with their sources on the live research gate", () => {
+    renderPanel(
+      gateState({
+        research_findings: [
+          { source: "https://example.com/a", key_points: ["Point A"] },
+          { source: "https://example.com/b", key_points: ["Point B"] },
+        ],
+      }),
+      CREATE_STEP_IDS.RESEARCH,
+      CREATE_STEP_IDS.RESEARCH,
+    );
+
+    expect(screen.getByText("https://example.com/a")).toBeInTheDocument();
+    expect(screen.getByText("Point B")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Approve Phase" })).toBeEnabled();
+  });
+
+  // Scenario: The live outline gate shows the slide titles and key points
+  it("lists the outline titles and key points on the live outline gate", () => {
+    renderPanel(
+      gateState({
+        current_phase: EDITORIAL_PHASES.OUTLINE,
+        outline: [
+          { title: "Hook slide", key_points: ["Why now"] },
+          { title: "Closing slide", key_points: [] },
+        ],
+      }),
+      CREATE_STEP_IDS.OUTLINE,
+      CREATE_STEP_IDS.OUTLINE,
+    );
+
+    expect(screen.getByText("Hook slide")).toBeInTheDocument();
+    expect(screen.getByText("Why now")).toBeInTheDocument();
+    expect(screen.getByText("Closing slide")).toBeInTheDocument();
+  });
+
+  // Scenario: A reload during a running phase keeps the running state
+  it("shows the running banner and no review actions while a run executes", () => {
+    renderPanel(
+      gateState({
+        current_phase: EDITORIAL_PHASES.CONTENT,
+        phase_status: WORKFLOW_PHASE_STATUS.IN_PROGRESS,
+      }),
+      CREATE_STEP_IDS.CONTENT,
+      CREATE_STEP_IDS.CONTENT,
+    );
+
+    expect(screen.getByTestId("run-progress-banner")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Feedback")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("auto-repair")).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Approve Phase" }),
+    ).toBeDisabled();
+  });
+});
+
+describe("CreateWorkflowPanel persona gate (AE-0415, B01)", () => {
+  const contentGate = (
+    personaScores: Record<string, unknown>,
+  ): EditorialWorkflowState =>
+    gateState({
+      current_phase: EDITORIAL_PHASES.CONTENT,
+      persona_scores: personaScores,
+    });
+
+  // Scenario: A 0-10 persona score is read on the 0-100 scale
+  it("does not block approval for a 0-10 score above the threshold", () => {
+    renderPanel(
+      contentGate({ slide_1: { overall: 84 }, slide_2: { overall: 8.7 } }),
+      CREATE_STEP_IDS.CONTENT,
+      CREATE_STEP_IDS.CONTENT,
+    );
+    expect(screen.queryByText(/Persona voice match/)).not.toBeInTheDocument();
+  });
+
+  // Scenario: An unscored slide is ignored by the persona gate
+  it("ignores unscored slides", () => {
+    renderPanel(
+      contentGate({ slide_1: { overall: 80 }, slide_4: { overall: 0 } }),
+      CREATE_STEP_IDS.CONTENT,
+      CREATE_STEP_IDS.CONTENT,
+    );
+    expect(screen.queryByText(/Persona voice match/)).not.toBeInTheDocument();
+  });
+
+  // Scenario: The persona hint names the slides below the threshold
+  it("names the slides below the threshold with their scores", () => {
+    renderPanel(
+      contentGate({ slide_3: { overall: 91 }, slide_2: { overall: 6.5 } }),
+      CREATE_STEP_IDS.CONTENT,
+      CREATE_STEP_IDS.CONTENT,
+    );
+    expect(
+      screen.getByText(
+        "Persona voice match is below 70/100 on Slide 2 (65/100). Revise these slides before approving.",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Approve Phase" }),
+    ).toBeDisabled();
   });
 });

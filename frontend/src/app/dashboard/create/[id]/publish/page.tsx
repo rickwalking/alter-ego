@@ -27,6 +27,10 @@ import {
   useRepublishCarousel,
 } from "@/modules/publishing";
 import { authenticatedFetch } from "@/lib/authenticated-fetch";
+import {
+  isPublishReady,
+  offersRadarTemplates,
+} from "@/app/dashboard/create/[id]/publish/publish-readiness";
 
 type PublishResult = {
   status: "idle" | "success" | "error";
@@ -44,13 +48,19 @@ export default function DashboardCreatePublishPage(): React.ReactElement {
   const params = useParams<{ id: string }>();
   const projectId = params.id;
   const t = useTranslations("publish");
+  const tCreate = useTranslations("create");
   const {
     data: project,
     isLoading,
     refetch: refetchProject,
   } = useCarouselProject(projectId);
-  const { refreshState, state: workflowState } =
-    useEditorialWorkflow(projectId);
+  // The page refreshes the state itself (below) and waits for it before
+  // deciding whether the artifacts exist (AE-0415, B25).
+  const { refreshState, state: workflowState } = useEditorialWorkflow(
+    projectId,
+    { initialFetch: false },
+  );
+  const [workflowLoaded, setWorkflowLoaded] = useState(false);
   const publishInstagram = usePublishInstagram();
   const republish = useRepublishCarousel();
   const [publishResult, setPublishResult] = useState<PublishResult>({
@@ -72,7 +82,7 @@ export default function DashboardCreatePublishPage(): React.ReactElement {
   );
 
   useEffect(() => {
-    void refreshState();
+    void refreshState().then(() => setWorkflowLoaded(true));
   }, [refreshState]);
 
   useEffect(() => {
@@ -145,7 +155,7 @@ export default function DashboardCreatePublishPage(): React.ReactElement {
     [projectId, publishInstagram, t],
   );
 
-  if (isLoading) {
+  if (isLoading || (project && !workflowLoaded)) {
     return (
       <div
         className="flex flex-1 items-center justify-center text-white"
@@ -159,7 +169,10 @@ export default function DashboardCreatePublishPage(): React.ReactElement {
   if (!project) {
     return (
       <div className="flex flex-1 flex-col p-7 text-white">
-        <NeonTopBar title="Publish" breadcrumb={[{ label: "project" }]} />
+        <NeonTopBar
+          title={t("pageTitle")}
+          breadcrumb={[{ label: tCreate("topBar.project") }]}
+        />
         <p className="mt-6 text-red-400">{t("notFound")}</p>
       </div>
     );
@@ -169,6 +182,7 @@ export default function DashboardCreatePublishPage(): React.ReactElement {
     project,
     workflowState,
   );
+  const artifactsReady = isPublishReady(project, workflowState);
 
   return (
     <div
@@ -176,13 +190,13 @@ export default function DashboardCreatePublishPage(): React.ReactElement {
       style={{ fontFamily: "Inter, system-ui, sans-serif" }}
     >
       <NeonTopBar
-        title="Publish"
+        title={t("pageTitle")}
         breadcrumb={[
           {
             label: project.topic,
             href: DASHBOARD_ROUTES.CREATE_WORKSPACE(projectId),
           },
-          { label: "publish" },
+          { label: t("breadcrumb") },
         ]}
       />
 
@@ -218,6 +232,7 @@ export default function DashboardCreatePublishPage(): React.ReactElement {
             />
           )}
         {!canPublishToSite &&
+          artifactsReady &&
           workflowState?.phase_status !== WORKFLOW_PHASE_STATUS.FAILED && (
             <p
               style={{
@@ -260,63 +275,90 @@ export default function DashboardCreatePublishPage(): React.ReactElement {
           </div>
         )}
 
-        <div style={panelStyle}>
-          <PublishPanel
-            project={publishProject}
-            onPublishInstagram={
-              canPublishToSite ? handlePublishInstagram : undefined
-            }
-            isPublishingInstagram={publishInstagram.isPending}
-            publishResult={publishResult}
-            cacheBustToken={rebuiltVersion ?? undefined}
-          />
-        </div>
+        {!artifactsReady &&
+          workflowState?.phase_status !== WORKFLOW_PHASE_STATUS.FAILED && (
+            <div
+              role="status"
+              data-testid="publish-not-ready"
+              style={{ ...panelStyle, fontSize: "13px", color: TEXT_DIM }}
+            >
+              <p style={{ margin: 0, fontWeight: 600 }}>
+                {t("notReady.title")}
+              </p>
+              <p style={{ margin: "6px 0 0" }}>{t("notReady.body")}</p>
+            </div>
+          )}
 
-        <div style={{ marginTop: "16px" }}>
-          <RebuildPdfSection projectId={projectId} onRebuilt={handleRebuilt} />
-          {/* AE-0311: one-click deterministic repair; a completed carousel
-              chains AE-0313's republish so the served PDF reflects the fix. */}
-          <div style={{ marginTop: "12px" }}>
-            <AutoRepairButton
-              projectId={projectId}
-              onRepaired={() => {
-                void Promise.all([refreshState(), refetchProject()]);
-              }}
-              onRepublishNeeded={() => {
-                republish.mutate(
-                  { projectId },
-                  {
-                    onSuccess: (data) =>
-                      handleRebuilt(data.artifact_version ?? null),
-                  },
-                );
-              }}
-            />
-          </div>
-        </div>
+        {artifactsReady && (
+          <>
+            <div style={panelStyle}>
+              <PublishPanel
+                project={publishProject}
+                onPublishInstagram={
+                  canPublishToSite ? handlePublishInstagram : undefined
+                }
+                isPublishingInstagram={publishInstagram.isPending}
+                publishResult={publishResult}
+                cacheBustToken={rebuiltVersion ?? undefined}
+              />
+            </div>
 
-        {workflowState && (
-          <div style={{ marginTop: "16px" }}>
-            {/* AE-0314: fix slide text after completion without regenerating
-                images; chains the republish so the served PDF reflects the edit. */}
-            <SlideTextEditSection
-              projectId={projectId}
-              slides={resolveLocalizedSlides(workflowState)}
-              policyVersion={workflowState.presentation_policy_version}
-              runInProgress={
-                workflowState.phase_status === WORKFLOW_PHASE_STATUS.IN_PROGRESS
-              }
-              rebuildPending={Boolean(project?.needs_republish_since)}
-              onEdited={() => {
-                void Promise.all([refreshState(), refetchProject()]);
-              }}
-            />
-          </div>
+            <div style={{ marginTop: "16px" }}>
+              <RebuildPdfSection
+                projectId={projectId}
+                onRebuilt={handleRebuilt}
+              />
+              {/* AE-0311: one-click deterministic repair; a completed carousel
+                chains AE-0313's republish so the served PDF reflects the fix. */}
+              <div style={{ marginTop: "12px" }}>
+                <AutoRepairButton
+                  projectId={projectId}
+                  onRepaired={() => {
+                    void Promise.all([refreshState(), refetchProject()]);
+                  }}
+                  onRepublishNeeded={() => {
+                    republish.mutate(
+                      { projectId },
+                      {
+                        onSuccess: (data) =>
+                          handleRebuilt(data.artifact_version ?? null),
+                      },
+                    );
+                  }}
+                />
+              </div>
+            </div>
+
+            {workflowState && (
+              <div style={{ marginTop: "16px" }}>
+                {/* AE-0314: fix slide text after completion without regenerating
+                  images; chains the republish so the served PDF reflects the edit. */}
+                <SlideTextEditSection
+                  projectId={projectId}
+                  slides={resolveLocalizedSlides(workflowState)}
+                  policyVersion={workflowState.presentation_policy_version}
+                  runInProgress={
+                    workflowState.phase_status ===
+                    WORKFLOW_PHASE_STATUS.IN_PROGRESS
+                  }
+                  rebuildPending={Boolean(project?.needs_republish_since)}
+                  onEdited={() => {
+                    void Promise.all([refreshState(), refetchProject()]);
+                  }}
+                />
+              </div>
+            )}
+
+            {offersRadarTemplates(project) && (
+              <div style={{ marginTop: "16px" }}>
+                <RegenerateStrategySection
+                  project={project}
+                  projectId={projectId}
+                />
+              </div>
+            )}
+          </>
         )}
-
-        <div style={{ marginTop: "16px" }}>
-          <RegenerateStrategySection project={project} projectId={projectId} />
-        </div>
       </div>
     </div>
   );

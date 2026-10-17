@@ -72,7 +72,12 @@ describe("ContentPhaseReview content-gate violations (AE-0309)", () => {
     const violation = screen.getByText("slide_parse_failed").closest("li");
     expect(violation).toHaveTextContent("Slide 4");
     expect(violation).toHaveTextContent("PT");
+    // AE-0414 (B24): the known code shows its translated message, not the
+    // backend's English one.
     expect(violation).toHaveTextContent(
+      "The generated copy for this slide could not be read; rewrite its heading and body",
+    );
+    expect(violation).not.toHaveTextContent(
       "Slide copy could not be parsed from the draft output",
     );
   });

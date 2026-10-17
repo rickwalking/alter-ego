@@ -150,14 +150,18 @@ describe("CreateTemplateSection modes", () => {
         onChange={vi.fn()}
       />,
     );
-    expect(screen.getAllByRole("button")).toHaveLength(6);
+    // AE-0415 (B31): the cards are radios that expose the selection.
+    const radios = screen.getAllByRole("radio");
+    expect(radios).toHaveLength(6);
+    expect(radios[0]).toHaveAttribute("aria-checked", "true");
+    expect(radios[1]).toHaveAttribute("aria-checked", "false");
     expect(screen.getByText("Analysis")).toBeInTheDocument();
   });
 
   it("shows only the four POV formats in POV mode", () => {
     const onChange = vi.fn();
     render(<CreateTemplateSection form={POV_FORM} onChange={onChange} />);
-    expect(screen.getAllByRole("button")).toHaveLength(4);
+    expect(screen.getAllByRole("radio")).toHaveLength(4);
     expect(screen.getByText("Opinion (hot take)")).toBeInTheDocument();
     expect(screen.queryByText("Analysis")).not.toBeInTheDocument();
     fireEvent.click(screen.getByText("How I do it"));

@@ -1,5 +1,6 @@
+import { useId } from "react";
 import { TEXT_DIM, TEXT_MUTED } from "@/constants/neon";
-import { inputStyle } from "./section-styles";
+import { INPUT_FOCUS_CLASS, inputStyle } from "./section-styles";
 
 export interface LabeledFieldProps {
   label: string;
@@ -16,10 +17,23 @@ export interface LabeledFieldProps {
   marginBottom?: string;
 }
 
+const counterStyle = {
+  display: "block",
+  marginTop: "4px",
+  fontSize: "11px",
+  color: TEXT_DIM,
+  textAlign: "right",
+  fontVariantNumeric: "tabular-nums",
+} as const;
+
 /**
  * Labelled text field used by the create-carousel workspace sections (AE-0154).
  * The topic/audience/brief fields shared identical label + input markup; they
  * now render through this. Supports both single-line input and textarea.
+ *
+ * AE-0415 (B31/B32): the label is tied to the control (`htmlFor`/`id`), the
+ * control shows a visible focus ring, and a field with a `maxLength` shows a
+ * live `count/max` counter (described-by) instead of silently truncating.
  */
 export function LabeledField({
   label,
@@ -32,9 +46,20 @@ export function LabeledField({
   rows = 4,
   marginBottom,
 }: LabeledFieldProps): React.ReactElement {
+  const id = useId();
+  const counterId = `${id}-counter`;
+  const controlProps = {
+    id,
+    value,
+    placeholder,
+    maxLength,
+    className: INPUT_FOCUS_CLASS,
+    "aria-describedby": maxLength !== undefined ? counterId : undefined,
+  };
   return (
     <div style={marginBottom ? { marginBottom } : undefined}>
       <label
+        htmlFor={id}
         style={{
           fontSize: "12px",
           color: TEXT_MUTED,
@@ -52,22 +77,23 @@ export function LabeledField({
       </label>
       {multiline ? (
         <textarea
-          value={value}
+          {...controlProps}
           onChange={(e) => onChange(e.target.value)}
           rows={rows}
           style={{ ...inputStyle, resize: "vertical", fontFamily: "inherit" }}
-          placeholder={placeholder}
-          maxLength={maxLength}
         />
       ) : (
         <input
+          {...controlProps}
           type="text"
-          value={value}
           onChange={(e) => onChange(e.target.value)}
           style={inputStyle}
-          placeholder={placeholder}
-          maxLength={maxLength}
         />
+      )}
+      {maxLength !== undefined && (
+        <span id={counterId} style={counterStyle}>
+          {value.length}/{maxLength}
+        </span>
       )}
     </div>
   );

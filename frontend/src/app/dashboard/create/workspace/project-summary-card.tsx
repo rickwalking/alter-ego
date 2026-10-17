@@ -1,5 +1,7 @@
 "use client";
 
+import { useTranslations } from "next-intl";
+import { usePhaseLabel } from "@/app/dashboard/create/workspace/editorial-phase-labels";
 import { BG_CARD, TEXT, TEXT_DIM } from "@/constants/neon";
 import { EDITORIAL_WORKFLOW_STATUS } from "@/constants/editorial-workflow";
 import { WorkflowStatusBadge } from "@/app/dashboard/create/workspace/workflow-status-badge";
@@ -38,6 +40,8 @@ export function ProjectSummaryCard({
   workflowStatus,
   phaseStatus = null,
 }: ProjectSummaryCardProps): React.ReactElement {
+  const t = useTranslations("create.summary");
+  const phaseLabel = usePhaseLabel();
   // Prefer the editorial "ready to publish" signal; otherwise reflect the live
   // phase run status. A missing status resolves to Draft inside the badge.
   const effectiveStatus =
@@ -46,16 +50,16 @@ export function ProjectSummaryCard({
       : phaseStatus;
 
   const textRows = [
-    { label: "Topic", value: topic },
-    { label: "Audience", value: audience },
-    { label: "Brief", value: niche },
-    { label: "Phase", value: currentPhase ?? "—" },
+    { label: t("topic"), value: topic },
+    { label: t("audience"), value: audience },
+    { label: t("brief"), value: niche },
+    { label: t("phase"), value: phaseLabel(currentPhase) },
   ] as const;
 
   return (
     <div style={cardStyle}>
       <h3 style={{ fontSize: "14px", fontWeight: 700, marginBottom: "12px" }}>
-        Project Summary
+        {t("title")}
       </h3>
       {textRows.map((row) => (
         <div key={row.label} style={rowStyle}>
@@ -75,7 +79,7 @@ export function ProjectSummaryCard({
         </div>
       ))}
       <div style={{ ...rowStyle, borderBottom: "none" }}>
-        <span style={{ color: TEXT_DIM }}>Status</span>
+        <span style={{ color: TEXT_DIM }}>{t("status")}</span>
         <WorkflowStatusBadge status={effectiveStatus} />
       </div>
     </div>

@@ -159,7 +159,9 @@ describe("useEditorialWorkflowSse", () => {
   });
 
   it("merges review_required gate payloads from SSE events", async () => {
-    const { setState } = renderSseHook();
+    const { setState } = renderSseHook({
+      state: { ...baseState, phase_status: WORKFLOW_PHASE_STATUS.PENDING },
+    });
 
     await waitFor(() => {
       expect(MockEventSource.instances).toHaveLength(1);
@@ -187,6 +189,61 @@ describe("useEditorialWorkflowSse", () => {
       expect.objectContaining({
         current_phase: "research",
         research_findings: [{ title: "Finding" }],
+      }),
+    );
+  });
+
+  // Feature: Create-flow UI fixes (AE-0415)
+  // Scenario: A reload during a running phase keeps the running state
+  //   Then the stale snapshot is confirmed against workflow/state before it is applied
+  it("confirms a same-phase running -> ready flip via refreshState instead of applying it", async () => {
+    const { setState, refreshState } = renderSseHook();
+
+    await waitFor(() => {
+      expect(MockEventSource.instances).toHaveLength(1);
+    });
+    setState.mockClear();
+    refreshState.mockClear();
+
+    act(() => {
+      MockEventSource.instances[0]?.emit(
+        EDITORIAL_WORKFLOW_SSE_EVENTS.REVIEW_REQUIRED,
+        {
+          event: EDITORIAL_WORKFLOW_SSE_EVENTS.REVIEW_REQUIRED,
+          phase: "research",
+          phase_status: WORKFLOW_PHASE_STATUS.AWAITING_HUMAN,
+        },
+      );
+    });
+
+    expect(refreshState).toHaveBeenCalled();
+    expect(setState).not.toHaveBeenCalled();
+  });
+
+  it("applies a running -> ready flip to another phase at once", async () => {
+    const { setState, refreshState } = renderSseHook();
+
+    await waitFor(() => {
+      expect(MockEventSource.instances).toHaveLength(1);
+    });
+    refreshState.mockClear();
+
+    act(() => {
+      MockEventSource.instances[0]?.emit(
+        EDITORIAL_WORKFLOW_SSE_EVENTS.REVIEW_REQUIRED,
+        {
+          event: EDITORIAL_WORKFLOW_SSE_EVENTS.REVIEW_REQUIRED,
+          phase: "outline",
+          phase_status: WORKFLOW_PHASE_STATUS.AWAITING_HUMAN,
+        },
+      );
+    });
+
+    expect(refreshState).not.toHaveBeenCalled();
+    expect(setState).toHaveBeenCalledWith(
+      expect.objectContaining({
+        current_phase: "outline",
+        phase_status: WORKFLOW_PHASE_STATUS.AWAITING_HUMAN,
       }),
     );
   });

@@ -38,9 +38,18 @@ import {
   slidesHaveCopyChanges,
 } from "@/modules/editorial";
 import { ImagePromptReview } from "@/modules/editorial";
+import { personaScoreShortfalls } from "@/app/dashboard/create/workspace/persona-score";
+import { usePhaseLabel } from "@/app/dashboard/create/workspace/editorial-phase-labels";
 import type { useEditorialWorkflow } from "@/modules/editorial";
 
 type CreateWorkflowApi = ReturnType<typeof useEditorialWorkflow>;
+
+const PHASE_REVIEW_STEPS: ReadonlySet<CreateStepId> = new Set([
+  CREATE_STEP_IDS.RESEARCH,
+  CREATE_STEP_IDS.OUTLINE,
+  CREATE_STEP_IDS.CONTENT,
+  CREATE_STEP_IDS.REVIEW,
+]);
 
 interface CreateWorkflowPanelProps {
   projectId: string;
@@ -69,6 +78,7 @@ export function CreateWorkflowPanel({
 }: CreateWorkflowPanelProps): React.JSX.Element {
   const t = useTranslations("editorialWorkflow");
   const tCreate = useTranslations("create.stepHistory");
+  const phaseLabel = usePhaseLabel();
   const startedRef = useRef(false);
   const [feedback, setFeedback] = useState("");
   const [feedbackError, setFeedbackError] = useState<string | null>(null);
@@ -89,6 +99,7 @@ export function CreateWorkflowPanel({
     refreshState,
     awaitingHumanReview,
     hasActiveWorkflow,
+    runningAction,
   } = workflow;
 
   // AE-0315: live in-progress banner on EVERY step while a run executes.
@@ -100,6 +111,7 @@ export function CreateWorkflowPanel({
         currentPhase={state.current_phase}
         runStartedAt={state.run_started_at}
         runStage={state.run_stage}
+        runningAction={runningAction}
         onCheckAgain={() => {
           void refreshState();
         }}
@@ -162,22 +174,26 @@ export function CreateWorkflowPanel({
     });
   };
 
-  const minPersonaScore =
-    state?.current_phase === EDITORIAL_PHASES.CONTENT && state.persona_scores
-      ? Math.min(
-          ...Object.values(state.persona_scores).map((entry) => {
-            if (entry && typeof entry === "object" && "overall" in entry) {
-              const overall = (entry as { overall?: unknown }).overall;
-              return typeof overall === "number"
-                ? overall
-                : Number(overall ?? 0);
-            }
-            return typeof entry === "number" ? entry : 0;
-          }),
-        )
-      : null;
-  const personaApproveBlocked =
-    minPersonaScore !== null && minPersonaScore < PERSONA_VOICE_MATCH_MIN_SCORE;
+  // AE-0415 (B01): one 0-100 scale (a 0-10 answer reads x10) and unscored
+  // slides ignored, as the backend gate does (AE-0407); name the slides.
+  const personaShortfalls =
+    state?.current_phase === EDITORIAL_PHASES.CONTENT
+      ? personaScoreShortfalls(state.persona_scores)
+      : [];
+  const personaApproveBlocked = personaShortfalls.length > 0;
+  const personaShortfallDetail = personaApproveBlocked
+    ? t("persona.belowThresholdSlides", {
+        slides: personaShortfalls
+          .map((item) =>
+            t("persona.slideScore", {
+              slide: item.slideNumber ?? item.key,
+              score: item.score,
+            }),
+          )
+          .join(", "),
+        threshold: PERSONA_VOICE_MATCH_MIN_SCORE,
+      })
+    : null;
   const presentationApproveBlocked = hasBlockingPresentationViolations(state);
   const editBudgetBlocked =
     state?.current_phase === EDITORIAL_PHASES.CONTENT &&
@@ -207,6 +223,8 @@ export function CreateWorkflowPanel({
   });
   const contentEditable =
     state?.current_phase === EDITORIAL_PHASES.CONTENT && showLiveControls;
+  // AE-0415 (B15): nothing that mutates the project while a run executes.
+  const actionsLocked = loading || runInProgress;
   // AE-0310: design-step recovery — blocking content-level violations at the
   // design gate are only resolvable by direct edits or a content send-back;
   // a plain revise is a provable no-op there, so it is disabled.
@@ -221,7 +239,7 @@ export function CreateWorkflowPanel({
     onSendBackToContent: (sendBackFeedback: string): void => {
       void revise(sendBackFeedback, { targetPhase: EDITORIAL_PHASES.CONTENT });
     },
-    disabled: loading || !showLiveControls,
+    disabled: actionsLocked || !showLiveControls,
   };
   // AE-0403: the edits ARE the input, so an edits-only revise saves and
   // re-validates them without approving the content step (AE-0310 semantics).
@@ -229,13 +247,13 @@ export function CreateWorkflowPanel({
     onSubmit: (slides: LocalizedSlideReview[]): void => {
       void revise("", { editedLocalizedSlides: slides });
     },
-    submitting: loading,
+    submitting: actionsLocked,
   };
+  // AE-0415 (B13): the research and outline gates show what is reviewed too.
   const showPhaseReview =
     Boolean(state) &&
     (isLiveStep || isHistoricalCreateStep(viewStepId, workflowStepId)) &&
-    (viewStepId === CREATE_STEP_IDS.REVIEW ||
-      viewStepId === CREATE_STEP_IDS.CONTENT);
+    PHASE_REVIEW_STEPS.has(viewStepId);
   const showImagePromptReview =
     viewStepId === CREATE_STEP_IDS.IMAGES &&
     (state?.slide_image_prompts?.length ?? 0) > 0;
@@ -253,7 +271,9 @@ export function CreateWorkflowPanel({
       >
         {runProgressBanner}
         <p className="text-sm" style={{ color: "rgba(255,255,255,0.55)" }}>
-          {tCreate("historicalHint", { phase: viewPhase ?? viewStepId })}
+          {tCreate("historicalHint", {
+            phase: phaseLabel(viewPhase ?? viewStepId),
+          })}
         </p>
         <CreateStepHistoryPanel viewStepId={viewStepId} state={state} />
       </div>
@@ -282,7 +302,7 @@ export function CreateWorkflowPanel({
           {hasActiveWorkflow && (
             <WorkflowStatusBadge
               status={state?.phase_status ?? null}
-              label={state?.current_phase}
+              label={phaseLabel(state?.current_phase)}
             />
           )}
         </div>
@@ -316,6 +336,7 @@ export function CreateWorkflowPanel({
           contentManualFixes={contentManualFixes}
           designRecovery={designRecovery}
           onRepaired={() => void refreshState()}
+          actionsLocked={actionsLocked}
         />
       )}
 
@@ -337,6 +358,7 @@ export function CreateWorkflowPanel({
           contentHasEdits={contentHasEdits}
           contentSlides={contentSlides}
           personaApproveBlocked={personaApproveBlocked}
+          personaShortfallDetail={personaShortfallDetail}
           presentationApproveBlocked={presentationApproveBlocked}
           editBudgetBlocked={editBudgetBlocked}
           designReviseBlocked={designReviseBlocked}
@@ -351,7 +373,7 @@ export function CreateWorkflowPanel({
               key={phase}
               variant={phase === state?.current_phase ? "default" : "outline"}
             >
-              {phase}
+              {phaseLabel(phase)}
             </NeonBadge>
           ))}
         </div>

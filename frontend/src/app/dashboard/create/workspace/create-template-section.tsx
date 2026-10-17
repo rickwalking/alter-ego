@@ -15,9 +15,14 @@ import {
   type CreateCarouselFormState,
 } from "@/app/dashboard/create/types";
 import { SectionNumber } from "./section-number";
-import { sectionCardStyle, sectionHeaderStyle } from "./section-styles";
+import {
+  INPUT_FOCUS_CLASS,
+  sectionCardStyle,
+  sectionHeaderStyle,
+} from "./section-styles";
 
 const CYAN = NEON_CYAN;
+const TEMPLATE_HEADING_ID = "create-template-heading";
 const CYAN_DIM = NEON_CYAN_DIM;
 
 export interface CreateTemplateSectionProps {
@@ -31,75 +36,107 @@ interface TemplateCard {
   desc: string;
 }
 
-/** AE-0373: the four POV formats in POV mode, the six Radar IA templates otherwise. */
+/**
+ * AE-0373: the four POV formats in POV mode, the six Radar IA templates
+ * otherwise. AE-0415 (B24): Radar names come from `create.templates`.
+ */
 function useTemplateCards(
   form: CreateCarouselFormState,
 ): readonly TemplateCard[] {
-  const t = useTranslations("create.pov.formats");
+  const tPov = useTranslations("create.pov.formats");
+  const tRadar = useTranslations("create.templates");
   if (!isPovForm(form)) {
-    return CREATE_TEMPLATES;
+    return CREATE_TEMPLATES.map((tpl) => ({
+      icon: tpl.icon,
+      name: tRadar(`${tpl.strategy}.name`),
+      desc: tRadar(`${tpl.strategy}.desc`),
+    }));
   }
   return POV_TEMPLATES.map((tpl) => ({
     icon: tpl.icon,
-    name: t(`${tpl.format}.name`),
-    desc: t(`${tpl.format}.desc`),
+    name: tPov(`${tpl.format}.name`),
+    desc: tPov(`${tpl.format}.desc`),
   }));
 }
 
+/**
+ * AE-0415 (B31): the cards are a radio group of real buttons — the selection
+ * is exposed as `aria-checked`, and Enter/Space come from the button itself.
+ */
 export function CreateTemplateSection({
   form,
   onChange,
 }: CreateTemplateSectionProps): React.ReactElement {
+  const t = useTranslations("create.form");
   const cards = useTemplateCards(form);
   return (
     <div style={sectionCardStyle}>
-      <div style={sectionHeaderStyle}>
+      <div style={sectionHeaderStyle} id={TEMPLATE_HEADING_ID}>
         <SectionNumber num={2} />
-        Template Style
+        {t("sectionTemplate")}
       </div>
-      <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 md:grid-cols-3">
-        {cards.map((tpl, idx) => (
-          <div
-            key={tpl.name}
-            role="button"
-            tabIndex={0}
-            onClick={() => onChange({ selectedTemplate: idx })}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" || e.key === " ") {
-                onChange({ selectedTemplate: idx });
-              }
-            }}
-            style={{
-              background: idx === form.selectedTemplate ? CYAN_DIM : BG_CARD,
-              border:
-                idx === form.selectedTemplate
+      <div
+        role="radiogroup"
+        aria-labelledby={TEMPLATE_HEADING_ID}
+        className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 md:grid-cols-3"
+      >
+        {cards.map((tpl, idx) => {
+          const selected = idx === form.selectedTemplate;
+          return (
+            <button
+              key={tpl.name}
+              type="button"
+              role="radio"
+              aria-checked={selected}
+              onClick={() => onChange({ selectedTemplate: idx })}
+              className={INPUT_FOCUS_CLASS}
+              style={{
+                background: selected ? CYAN_DIM : BG_CARD,
+                border: selected
                   ? `1px solid ${CYAN}`
                   : "1px solid rgba(255,255,255,0.06)",
-              borderRadius: "8px",
-              padding: "14px",
-              cursor: "pointer",
-              transition: "all 0.2s",
-              textAlign: "center",
-            }}
-          >
-            <div style={{ fontSize: "20px", marginBottom: "4px" }}>
-              {tpl.icon}
-            </div>
-            <h4
-              style={{
-                fontSize: "12px",
-                fontWeight: 600,
-                color: TEXT,
-                margin: 0,
+                borderRadius: "8px",
+                padding: "14px",
+                cursor: "pointer",
+                transition: "all 0.2s",
+                textAlign: "center",
+                color: "inherit",
+                fontFamily: "inherit",
               }}
             >
-              {tpl.name}
-            </h4>
-            <p style={{ fontSize: "10px", color: TEXT_DIM, margin: "4px 0 0" }}>
-              {tpl.desc}
-            </p>
-          </div>
-        ))}
+              <span
+                aria-hidden="true"
+                style={{
+                  display: "block",
+                  fontSize: "20px",
+                  marginBottom: "4px",
+                }}
+              >
+                {tpl.icon}
+              </span>
+              <span
+                style={{
+                  display: "block",
+                  fontSize: "12px",
+                  fontWeight: 600,
+                  color: TEXT,
+                }}
+              >
+                {tpl.name}
+              </span>
+              <span
+                style={{
+                  display: "block",
+                  fontSize: "10px",
+                  color: TEXT_DIM,
+                  margin: "4px 0 0",
+                }}
+              >
+                {tpl.desc}
+              </span>
+            </button>
+          );
+        })}
       </div>
     </div>
   );

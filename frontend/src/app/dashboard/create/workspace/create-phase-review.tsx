@@ -29,6 +29,8 @@ interface EditorialPhaseReviewProps {
   designRecovery?: DesignRecoveryActions;
   /** AE-0311: refresh workflow state after a one-click deterministic repair. */
   onRepaired?: () => void;
+  /** AE-0415 (B15): a run is executing — no auto-fix (it would 409). */
+  actionsLocked?: boolean;
 }
 
 export function CreatePhaseReview({
@@ -40,8 +42,12 @@ export function CreatePhaseReview({
   contentManualFixes,
   designRecovery,
   onRepaired,
+  actionsLocked = false,
 }: EditorialPhaseReviewProps): React.JSX.Element | null {
   const phase = state.current_phase;
+  const autoRepair = actionsLocked ? null : (
+    <AutoRepairButton projectId={projectId} onRepaired={onRepaired} />
+  );
 
   switch (phase) {
     case EDITORIAL_PHASES.RESEARCH:
@@ -58,14 +64,14 @@ export function CreatePhaseReview({
             onSlidesChange={onContentSlidesChange}
             manualFixes={contentManualFixes}
           />
-          <AutoRepairButton projectId={projectId} onRepaired={onRepaired} />
+          {autoRepair}
         </div>
       );
     case EDITORIAL_PHASES.DESIGN:
       return (
         <div className="space-y-3">
           <DesignPhaseReview state={state} recovery={designRecovery} />
-          <AutoRepairButton projectId={projectId} onRepaired={onRepaired} />
+          {autoRepair}
         </div>
       );
     case EDITORIAL_PHASES.IMAGES:

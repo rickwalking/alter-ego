@@ -81,3 +81,43 @@ describe("LabeledField", () => {
     expect(screen.queryByText(/\(.*\)/)).not.toBeInTheDocument();
   });
 });
+
+// Feature: Create-flow UI fixes (AE-0415)
+describe("LabeledField accessibility and limits (AE-0415)", () => {
+  // Scenario: Create form labels are tied to their inputs
+  it("ties the label to the input and the textarea", () => {
+    render(
+      <>
+        <LabeledField label="Topic" value="" onChange={() => {}} />
+        <LabeledField label="Brief" value="" onChange={() => {}} multiline />
+      </>,
+    );
+    expect(screen.getByLabelText("Topic").tagName).toBe("INPUT");
+    expect(screen.getByLabelText("Brief").tagName).toBe("TEXTAREA");
+  });
+
+  // Scenario: Fields with a limit show a live counter
+  it("shows a count/max counter described by the field", () => {
+    render(
+      <LabeledField
+        label="Topic"
+        value="twelve chars"
+        onChange={() => {}}
+        maxLength={500}
+      />,
+    );
+    const counter = screen.getByText("12/500");
+    expect(screen.getByLabelText("Topic")).toHaveAttribute(
+      "aria-describedby",
+      counter.id,
+    );
+  });
+
+  it("shows no counter without a limit", () => {
+    render(<LabeledField label="Topic" value="abc" onChange={() => {}} />);
+    expect(screen.queryByText(/\/\d+$/)).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Topic")).not.toHaveAttribute(
+      "aria-describedby",
+    );
+  });
+});

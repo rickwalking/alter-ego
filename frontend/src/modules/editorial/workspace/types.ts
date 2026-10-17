@@ -17,6 +17,8 @@ export interface CreateWorkflowControlsProps {
   contentHasEdits: boolean;
   contentSlides: LocalizedSlideReview[];
   personaApproveBlocked: boolean;
+  /** AE-0415 (B01): which slides are under the voice threshold, with scores. */
+  personaShortfallDetail?: string | null;
   presentationApproveBlocked: boolean;
   editBudgetBlocked: boolean;
   /** AE-0310: plain revise is a no-op while the design step is blocking. */
