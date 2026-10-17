@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { NeonTopBar } from "@/components/organisms/neon-top-bar";
 import { NeonSpinner } from "@/components/atoms/neon-spinner";
 import { BG_CARD, TEXT_DIM } from "@/constants/neon";
@@ -24,6 +25,10 @@ import type { CarouselProjectResponse } from "@/schemas/carousel";
 import { BriefStepContent } from "@/app/dashboard/create/workspace/brief-step-content";
 import { WorkflowStepContent } from "@/app/dashboard/create/workspace/workflow-step-content";
 import { createRetryWorkflowHandler } from "@/app/dashboard/create/[id]/create-retry-handler";
+import { useFollowWorkflowStep } from "@/app/dashboard/create/use-follow-workflow-step";
+
+/** AE-0415 (B30): phases of a project whose editorial workflow never started. */
+const NOT_STARTED_PHASES: ReadonlySet<string> = new Set(["", "brief"]);
 
 const LAYOUT_GRID_CLASS =
   "grid grid-cols-1 gap-6 md:grid-cols-[minmax(0,1fr)_360px]";
@@ -41,9 +46,15 @@ export default function CreateWorkspacePage(): React.ReactElement {
   const router = useRouter();
   const searchParams = useSearchParams();
   const activeStepId = parseCreateStepId(searchParams.get("step"));
+  const t = useTranslations("create");
 
   const { data: project, isLoading, isError } = useCarouselProject(projectId);
-  const editorialWorkflow = useEditorialWorkflow(projectId);
+  // AE-0415 (B30): a fresh project has no workflow state (GET answers 404).
+  const editorialWorkflow = useEditorialWorkflow(projectId, {
+    initialFetch:
+      project !== undefined &&
+      !NOT_STARTED_PHASES.has(project.current_phase ?? ""),
+  });
   const [projectSources, setProjectSources] = useState<ContentSource[]>([]);
   const [workflowStarted, setWorkflowStarted] = useState(false);
   const [retrying, setRetrying] = useState(false);
@@ -72,6 +83,21 @@ export default function CreateWorkspacePage(): React.ReactElement {
     },
     [projectId, router],
   );
+
+  const replaceStep = useCallback(
+    (stepId: CreateStepId): void => {
+      router.replace(
+        `${DASHBOARD_ROUTES.CREATE_WORKSPACE(projectId)}?step=${stepId}`,
+      );
+    },
+    [projectId, router],
+  );
+  useFollowWorkflowStep({
+    activeStepId,
+    workflowStepId,
+    hasActiveWorkflow: editorialWorkflow.hasActiveWorkflow,
+    onFollow: replaceStep,
+  });
 
   useEffect(() => {
     if (
@@ -109,14 +135,15 @@ export default function CreateWorkspacePage(): React.ReactElement {
       }
       setWorkflowStarted(true);
       try {
-        await editorialWorkflow.start({
+        const started = await editorialWorkflow.start({
           topic: project.topic,
           audience: project.audience,
           brief: project.niche,
           sources: withMaterials ? mappedSources : [],
         });
+        // AE-0415 (B26): open the gate the workflow is really on.
         router.push(
-          `${DASHBOARD_ROUTES.CREATE_WORKSPACE(projectId)}?step=${CREATE_STEP_IDS.OUTLINE}`,
+          `${DASHBOARD_ROUTES.CREATE_WORKSPACE(projectId)}?step=${resolveStepFromWorkflowPhase(started.current_phase)}`,
         );
       } catch {
         setWorkflowStarted(false);
@@ -171,10 +198,10 @@ export default function CreateWorkspacePage(): React.ReactElement {
     return (
       <div className="flex flex-1 flex-col p-7 text-white">
         <NeonTopBar
-          title="Create Carousel"
-          breadcrumb={[{ label: "project" }]}
+          title={t("topBar.title")}
+          breadcrumb={[{ label: t("topBar.project") }]}
         />
-        <p className="mt-6 text-red-400">Project not found.</p>
+        <p className="mt-6 text-red-400">{t("errors.projectNotFound")}</p>
       </div>
     );
   }
@@ -188,9 +215,9 @@ export default function CreateWorkspacePage(): React.ReactElement {
       style={{ fontFamily: "Inter, system-ui, sans-serif" }}
     >
       <NeonTopBar
-        title="Create Carousel"
+        title={t("topBar.title")}
         breadcrumb={[
-          { label: "projects", href: DASHBOARD_ROUTES.WORKFLOW },
+          { label: t("topBar.projects"), href: DASHBOARD_ROUTES.WORKFLOW },
           { label: project.topic },
         ]}
       />
@@ -224,7 +251,7 @@ export default function CreateWorkspacePage(): React.ReactElement {
             ) : isPublishStep ? (
               <div style={briefCardStyle}>
                 <p style={{ fontSize: "13px", color: TEXT_DIM, marginTop: 0 }}>
-                  Final approval and distribution live on the Publish screen.
+                  {t("publishStep.hint")}
                 </p>
                 <button
                   type="button"
@@ -244,7 +271,7 @@ export default function CreateWorkspacePage(): React.ReactElement {
                     cursor: "pointer",
                   }}
                 >
-                  Go to Publish
+                  {t("publishStep.goToPublish")}
                 </button>
               </div>
             ) : isBriefStep ? (

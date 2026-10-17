@@ -320,7 +320,9 @@ describe("useEditorialWorkflowSse mutation coverage", () => {
   });
 
   it("merges review_required-only payloads through the SSE merge gate", async () => {
-    const { setState } = renderSseHook();
+    const { setState } = renderSseHook({
+      state: { ...baseState, phase_status: WORKFLOW_PHASE_STATUS.PENDING },
+    });
 
     await waitFor(() => {
       expect(MockEventSource.instances).toHaveLength(1);
@@ -365,7 +367,9 @@ describe("useEditorialWorkflowSse mutation coverage", () => {
   });
 
   it("updates workflow state when only phase_status changes", async () => {
-    const { setState } = renderSseHook();
+    const { setState } = renderSseHook({
+      state: { ...baseState, phase_status: WORKFLOW_PHASE_STATUS.PENDING },
+    });
 
     await waitFor(() => {
       expect(MockEventSource.instances).toHaveLength(1);

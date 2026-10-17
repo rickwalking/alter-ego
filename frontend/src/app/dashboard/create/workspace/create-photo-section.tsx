@@ -75,7 +75,7 @@ export function CreatePhotoSection({
             >
               <Image
                 src={API_ENDPOINTS.CREATOR_ASSET_IMAGE(photo.id)}
-                alt=""
+                alt={photo.pose_tag || t("photoLabel")}
                 width={72}
                 height={90}
                 className="h-full w-full object-contain"

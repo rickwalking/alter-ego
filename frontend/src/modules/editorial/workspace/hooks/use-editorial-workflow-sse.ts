@@ -23,6 +23,25 @@ import type {
   WorkflowEventPayload,
 } from "./types";
 
+/**
+ * AE-0415 (B15): the stream's connect-time snapshot reads the raw checkpoint,
+ * which still says awaiting_human while a resumed run executes (the DB row says
+ * in_progress) on the SAME phase. A running -> ready flip on the same phase is
+ * therefore confirmed against GET workflow/state (the DB-merged source of
+ * truth) before it is applied, so a reload mid-run keeps the running banner and
+ * hides the actions. A flip to another phase is a real new gate: applied as is.
+ */
+function needsReadyConfirmation(
+  prev: EditorialWorkflowState | null,
+  next: EditorialWorkflowState,
+): boolean {
+  return (
+    prev?.phase_status === WORKFLOW_PHASE_STATUS.IN_PROGRESS &&
+    next.phase_status === WORKFLOW_PHASE_STATUS.AWAITING_HUMAN &&
+    prev.current_phase === next.current_phase
+  );
+}
+
 export function useEditorialWorkflowSse({
   projectId,
   sseEnabled,
@@ -171,6 +190,10 @@ export function useEditorialWorkflowSse({
           workflowStateRef.current,
           resolved,
         );
+        if (needsReadyConfirmation(workflowStateRef.current, merged)) {
+          void refreshState();
+          return;
+        }
         workflowStateRef.current = merged;
         phaseStatusRef.current = merged.phase_status;
         setState(merged);
@@ -258,6 +281,7 @@ export function useEditorialWorkflowSse({
     clearPollTimeout,
     clearReconnectTimeout,
     enterPollingFallback,
+    refreshState,
     setError,
     setPhaseEvents,
     setState,

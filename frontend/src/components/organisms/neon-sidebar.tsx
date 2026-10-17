@@ -4,7 +4,7 @@ import { useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { useFocusTrap } from "@/lib/use-focus-trap";
 import { useScrollLock } from "@/lib/use-scroll-lock";
@@ -28,6 +28,7 @@ import {
 import type { SidebarSection } from "@/schemas/neon-sidebar";
 import { useAuth } from "@/modules/identity";
 import { SIDEBAR_AVATAR_SIZE } from "@/components/organisms/constants";
+import { LanguageSwitcher } from "@/components/language-switcher";
 
 export interface NeonSidebarProps {
   sections: SidebarSection[];
@@ -46,6 +47,7 @@ export function NeonSidebar({
 }: NeonSidebarProps): React.ReactElement {
   const pathname = usePathname();
   const t = useTranslations("common.sidebar");
+  const locale = useLocale();
   const { user, logout, isLoading } = useAuth();
   const asideRef = useRef<HTMLElement>(null);
   const isOpen = open === true;
@@ -183,6 +185,17 @@ export function NeonSidebar({
           </div>
         ))}
       </nav>
+
+      {/* AE-0415 (B24): the dashboard had no way to switch EN/PT. */}
+      <div
+        data-testid="sidebar-language-switcher"
+        style={{
+          padding: "8px 20px",
+          borderTop: `1px solid ${NEON_BORDER_SUBTLE}`,
+        }}
+      >
+        <LanguageSwitcher currentLocale={locale} variant="neon" />
+      </div>
 
       {showUserFooter && !isLoading && user && (
         <div

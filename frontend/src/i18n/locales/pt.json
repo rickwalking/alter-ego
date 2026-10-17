@@ -231,7 +231,15 @@
       "submitting": "Criando...",
       "imageGuidanceLabel": "Direção de Imagem (opcional)",
       "imageGuidancePlaceholder": "ex.: porto enevoado ao entardecer, oficina retrofuturista, rua neon chuvosa",
-      "imageGuidanceHint": "máx. 500 caracteres — orienta o cenário/fundo das imagens de cada slide; o estilo e a paleta da marca permanecem fixos"
+      "imageGuidanceHint": "máx. 500 caracteres — orienta o cenário/fundo das imagens de cada slide; o estilo e a paleta da marca permanecem fixos",
+      "sectionTopic": "Tópico e brief",
+      "maxChars": "máx. {max} caracteres",
+      "briefLabel": "Brief / Nicho",
+      "briefHint": "opcional, máx. {max} caracteres — se vazio, usa o tópico",
+      "briefPlaceholder": "O que este carrossel deve cobrir?",
+      "sectionTemplate": "Estilo de template",
+      "sectionTheme": "Tema e voz",
+      "startCarousel": "Iniciar carrossel"
     },
     "themes": {
       "auto": "Auto-detectar",
@@ -308,7 +316,10 @@
       "resume": "Retomar do último checkpoint",
       "resuming": "Retomando…",
       "reconnectStream": "Reconectar stream",
-      "error": "Ocorreu um erro ao processar sua solicitação."
+      "error": "Ocorreu um erro ao processar sua solicitação.",
+      "workflowTitle": "Fluxo editorial",
+      "activePhase": "Fase ativa",
+      "startingWorkflow": "Iniciando o fluxo editorial…"
     },
     "chat": {
       "error": "Ocorreu um erro ao processar sua solicitação."
@@ -386,6 +397,91 @@
       "upload": "Enviar uma foto nova",
       "uploading": "Enviando…",
       "uploadFailed": "Não foi possível enviar a foto (PNG, WebP ou JPEG até 5 MB)."
+    },
+    "phases": {
+      "brief": "Brief",
+      "research": "Pesquisa",
+      "outline": "Outline",
+      "content": "Conteúdo",
+      "design": "Design",
+      "images": "Imagens",
+      "final_review": "Revisão final",
+      "published": "Publicado"
+    },
+    "steps": {
+      "ariaLabel": "Etapas de criação do carrossel",
+      "brief": "Brief",
+      "research": "Pesquisa",
+      "outline": "Outline",
+      "content": "Conteúdo",
+      "images": "Imagens",
+      "review": "Revisão",
+      "publish": "Publicar"
+    },
+    "templates": {
+      "stat_card_grid": {
+        "name": "Análise",
+        "desc": "Mergulho com dados"
+      },
+      "feature_grid": {
+        "name": "Comparação",
+        "desc": "Lado a lado"
+      },
+      "numbered_list": {
+        "name": "Tutorial",
+        "desc": "Passo a passo"
+      },
+      "intro_hero": {
+        "name": "Notícia rápida",
+        "desc": "Atualização curta"
+      },
+      "insight_quote": {
+        "name": "Análise profunda",
+        "desc": "Completo"
+      },
+      "hero_content": {
+        "name": "Lista",
+        "desc": "Formato top N"
+      }
+    },
+    "summary": {
+      "title": "Resumo do projeto",
+      "template": "Template",
+      "theme": "Tema",
+      "imagePreset": "Preset de imagem",
+      "topic": "Tópico",
+      "status": "Status",
+      "audience": "Público",
+      "brief": "Brief",
+      "phase": "Fase"
+    },
+    "errors": {
+      "createFailed": "Não foi possível criar o carrossel. Tente novamente.",
+      "createFailedDetail": "Não foi possível criar o carrossel: {detail}",
+      "validation": "Alguns campos são inválidos. Revise e tente novamente.",
+      "tooLong": "{field}: no máximo {max} caracteres",
+      "required": "{field} é obrigatório",
+      "invalid": "{field}: {message}",
+      "projectNotFound": "Projeto não encontrado.",
+      "fields": {
+        "topic": "Tópico",
+        "audience": "Público-alvo",
+        "niche": "Brief / Nicho",
+        "custom_visual_details": "Direção de imagem",
+        "pov_thesis": "Tese",
+        "pov_personal_proof": "Prova pessoal",
+        "hook_asset_id": "Foto do slide 1"
+      }
+    },
+    "topBar": {
+      "title": "Criar carrossel",
+      "newProject": "novo projeto",
+      "project": "projeto",
+      "projects": "projetos"
+    },
+    "publishStep": {
+      "hint": "A aprovação final e a distribuição ficam na tela Publicar.",
+      "goToPublish": "Ir para Publicar"
     }
   },
   "blogEditorial": {
@@ -467,7 +563,7 @@
       "extract": "Extrair Pontos-Chave",
       "addSource": "Adicionar Material",
       "adding": "Adicionando...",
-      "processing": "Processando aprovação… pode levar até um minuto."
+      "processing": "Processando… cada etapa costuma levar alguns minutos."
     },
     "feedback": {
       "label": "Feedback para revisão",
@@ -485,7 +581,9 @@
       }
     },
     "persona": {
-      "belowThreshold": "A correspondência de voz da persona está abaixo do limite exigido. Revise o conteúdo antes de aprovar."
+      "belowThreshold": "A correspondência de voz da persona está abaixo do limite exigido. Revise o conteúdo antes de aprovar.",
+      "belowThresholdSlides": "A correspondência de voz da persona está abaixo de {threshold}/100 em {slides}. Revise esses slides antes de aprovar.",
+      "slideScore": "Slide {slide} ({score}/100)"
     },
     "presentation": {
       "blockedApproval": "Resolva as violações de apresentação bloqueantes antes de aprovar o conteúdo.",
@@ -675,7 +773,12 @@
       "elapsed": "Tempo decorrido: {minutes}min {seconds}s.",
       "actionsDisabled": "As ações de revisão ficam temporariamente indisponíveis enquanto a revisão roda.",
       "stillRunningHint": "Esta execução está demorando mais que o normal. Você pode verificar se ela ainda está ativa.",
-      "checkAgain": "Verificar novamente"
+      "checkAgain": "Verificar novamente",
+      "titleApprove": "Gerando a próxima etapa",
+      "titleRunning": "Etapa em execução",
+      "phaseNext": "Gerando: {phase}",
+      "phaseRevising": "Revisando: {phase}",
+      "phaseAfter": "Em execução a partir da etapa {phase}"
     }
   },
   "palettes": {
@@ -832,6 +935,12 @@
       "success": "Texto dos slides atualizado e o PDF foi reconstruído.",
       "blockedRunInProgress": "A edição fica indisponível enquanto uma execução do fluxo está em andamento. Tente novamente ao terminar.",
       "blockingViolations": "Algumas edições ainda violam as regras de conteúdo. Corrija os campos destacados e envie as correções manuais."
+    },
+    "pageTitle": "Publicar",
+    "breadcrumb": "publicar",
+    "notReady": {
+      "title": "Ainda não está pronto para publicar",
+      "body": "O PDF, as imagens dos slides e as ações de publicação aparecem quando o carrossel chega à revisão final. Continue a revisão na área de trabalho."
     }
   },
   "auth": {
@@ -861,7 +970,9 @@
       "title": "Quadro de Workflow",
       "subtitle": "Acompanhe projetos de carrossel nas fases editoriais.",
       "noProjects": "Nenhum projeto",
-      "retry": "Tentar novamente"
+      "retry": "Tentar novamente",
+      "breadcrumb": "pipeline",
+      "newCard": "Novo card"
     },
     "calendar": {
       "title": "Calendário de Conteúdo",

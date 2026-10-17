@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import {
   BG_CARD,
   NEON_CARD_BORDER,
@@ -41,11 +42,12 @@ export function CreateProgressSteps({
   onStepChange,
   completedStepIds,
 }: CreateProgressStepsProps): React.ReactElement {
+  const t = useTranslations("create.steps");
   const doneSteps = completedStepIds ?? completedStepsBefore(activeStepId);
   return (
     <div
       role="tablist"
-      aria-label="Carousel creation steps"
+      aria-label={t("ariaLabel")}
       // Scroll horizontally on mobile instead of clipping/squishing the steps.
       className="mb-7 flex overflow-x-auto rounded-lg"
       style={{
@@ -108,7 +110,7 @@ export function CreateProgressSteps({
             >
               {step.num}
             </span>
-            <span className="create-step-label">{step.label}</span>
+            <span className="create-step-label">{t(step.id)}</span>
           </button>
         );
       })}

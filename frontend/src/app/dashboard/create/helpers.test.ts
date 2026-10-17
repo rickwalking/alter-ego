@@ -4,7 +4,12 @@ import {
   DEFAULT_IMAGE_PRESET,
   FLAT_EDITORIAL_PRESET,
 } from "@/constants/create";
-import { buildCarouselCreateRequest, canSubmitCreateForm } from "./helpers";
+import {
+  NICHE_MAX_LENGTH,
+  buildCarouselCreateRequest,
+  canSubmitCreateForm,
+  fallbackNiche,
+} from "./helpers";
 import { INITIAL_CREATE_FORM_STATE, showsFormatPicker } from "./types";
 
 // Scenarios: see tests/features/create-image-guidance.feature
@@ -174,5 +179,49 @@ describe("showsFormatPicker (AE-0406)", () => {
     );
     expect(showsFormatPicker({ ...BASE_FORM, contentMode: "pov" })).toBe(true);
     expect(showsFormatPicker(BASE_FORM)).toBe(true);
+  });
+});
+
+// Feature: Create-flow UI fixes (AE-0415) — B18
+// Scenario: A long topic with an empty brief no longer breaks the niche limit
+describe("niche fallback (AE-0415)", () => {
+  const longTopic = `${"palavra ".repeat(56)}fim`; // 451 characters
+
+  it("cuts a long topic at a word boundary to the niche limit", () => {
+    const niche = fallbackNiche(longTopic);
+    expect(niche.length).toBeLessThanOrEqual(NICHE_MAX_LENGTH);
+    expect(niche.endsWith("palavra")).toBe(true);
+    expect(longTopic.startsWith(niche)).toBe(true);
+  });
+
+  it("keeps a short topic as is (trimmed)", () => {
+    expect(fallbackNiche("  short topic  ")).toBe("short topic");
+    const exact = "a".repeat(NICHE_MAX_LENGTH);
+    expect(fallbackNiche(exact)).toBe(exact);
+  });
+
+  it("hard-cuts a topic with no space inside the limit", () => {
+    expect(fallbackNiche("x".repeat(450))).toBe("x".repeat(NICHE_MAX_LENGTH));
+  });
+
+  it("cuts on the space right after the limit", () => {
+    const topic = `${"b".repeat(NICHE_MAX_LENGTH)} tail`;
+    expect(fallbackNiche(topic)).toBe("b".repeat(NICHE_MAX_LENGTH));
+  });
+
+  it("builds a request the API schema accepts with an empty brief", () => {
+    const request = buildCarouselCreateRequest({
+      ...BASE_FORM,
+      topic: longTopic,
+      niche: "",
+    });
+    expect(request.niche.length).toBeLessThanOrEqual(NICHE_MAX_LENGTH);
+    expect(() => carouselCreateRequestSchema.parse(request)).not.toThrow();
+  });
+
+  it("keeps the brief when one is filled", () => {
+    expect(
+      buildCarouselCreateRequest({ ...BASE_FORM, niche: " My brief " }).niche,
+    ).toBe("My brief");
   });
 });
