@@ -136,6 +136,7 @@ describe("formatBlogPostDate (AE-0416)", () => {
   it("formats the date in the dashboard language", () => {
     const date = "2026-10-17T12:00:00Z";
     expect(formatBlogPostDate(date, "en")).toBe("Oct 17, 2026");
-    expect(formatBlogPostDate(date, "pt")).toContain("out");
+    // AE-0417: one dashboard/public date format (AE-0412): pt "17/10/2026".
+    expect(formatBlogPostDate(date, "pt")).toBe("17/10/2026");
   });
 });

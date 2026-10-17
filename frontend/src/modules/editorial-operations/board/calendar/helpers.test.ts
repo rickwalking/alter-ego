@@ -5,6 +5,9 @@ import {
   buildEmptyCalendarDays,
   buildMonthGrid,
   calendarGridRange,
+  calendarWeekdayHeaders,
+  formatCalendarDayLabel,
+  formatCalendarTitle,
 } from "./helpers";
 import { CALENDAR_WEEK_STARTS_ON } from "./constants";
 import type { CalendarItem } from "@/modules/editorial";
@@ -121,5 +124,30 @@ describe("buildCalendarDaysFromApi", () => {
     const empty = buildEmptyCalendarDays(new Date(2026, 6, 1));
     expect(empty.every((cell) => cell.events.length === 0)).toBe(true);
     expect(empty.some((cell) => cell.cur)).toBe(true);
+  });
+});
+
+// Feature: Dashboard dates follow the active locale (AE-0417)
+// tests/features/dashboard-locale-dates-ae0417.feature
+describe("calendar labels in the active locale (AE-0417)", () => {
+  const october = new Date(2026, 9, 1);
+
+  // Scenario: The calendar names months and weekdays in the active locale
+  it("titles the month per locale, capitalised", () => {
+    expect(formatCalendarTitle(october, "pt")).toBe("Outubro de 2026");
+    expect(formatCalendarTitle(october, "en")).toBe("October 2026");
+  });
+
+  it("labels an event day per locale", () => {
+    expect(formatCalendarDayLabel("2026-10-17", "pt")).toBe("17 de out.");
+    expect(formatCalendarDayLabel("2026-10-17", "en")).toBe("Oct 17");
+  });
+
+  it("lists seven weekday headers from the grid's first weekday", () => {
+    const pt = calendarWeekdayHeaders("pt");
+    const en = calendarWeekdayHeaders("en");
+    expect(pt).toHaveLength(7);
+    expect(pt[0]).toBe("dom.");
+    expect(en).toEqual(["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]);
   });
 });

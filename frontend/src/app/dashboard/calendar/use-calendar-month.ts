@@ -1,13 +1,14 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
-import { addMonths, format, startOfMonth, subMonths } from "date-fns";
-import { CALENDAR_TITLE_FORMAT } from "@/modules/editorial-operations";
+import { useLocale } from "next-intl";
+import { addMonths, startOfMonth, subMonths } from "date-fns";
+import { formatCalendarTitle } from "@/modules/editorial-operations";
 
 export type UseCalendarMonthResult = {
   /** First day of the viewed month (stable state used to derive the grid). */
   anchor: Date;
-  /** Human title for the viewed month, e.g. "June 2026". */
+  /** Viewed month in the active locale, e.g. "June 2026" / "Junho de 2026". */
   title: string;
   goPrev: () => void;
   goNext: () => void;
@@ -20,6 +21,7 @@ export type UseCalendarMonthResult = {
  * deterministically and the value stays referentially stable between renders.
  */
 export function useCalendarMonth(): UseCalendarMonthResult {
+  const locale = useLocale();
   const [anchor, setAnchor] = useState<Date>(() => startOfMonth(new Date()));
 
   const goPrev = useCallback(() => {
@@ -32,7 +34,10 @@ export function useCalendarMonth(): UseCalendarMonthResult {
     setAnchor(startOfMonth(new Date()));
   }, []);
 
-  const title = useMemo(() => format(anchor, CALENDAR_TITLE_FORMAT), [anchor]);
+  const title = useMemo(
+    () => formatCalendarTitle(anchor, locale),
+    [anchor, locale],
+  );
 
   return { anchor, title, goPrev, goNext, goToday };
 }

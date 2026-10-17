@@ -1,5 +1,7 @@
 import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
+import { DEFAULT_LOCALE } from "@/i18n/config";
+import { formatLocaleDate } from "@/lib/locale-format";
 
 import {
   MS_PER_SECOND,
@@ -27,15 +29,14 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 /**
- * Format a date to a readable string
+ * Format a date to a readable string in `locale` (AE-0417; en by default:
+ * "Jan 15, 2024", pt "15/01/2024").
  */
-export function formatDate(date: Date | string | number): string {
-  const d = new Date(date);
-  return d.toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
+export function formatDate(
+  date: Date | string | number,
+  locale: string = DEFAULT_LOCALE,
+): string {
+  return formatLocaleDate(date, locale);
 }
 
 /**

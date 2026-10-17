@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
+import { useLocale } from "next-intl";
 import {
   useConversations,
   useCreateConversation,
@@ -28,6 +29,7 @@ const CHAT_CONVERSATIONS_ID = "chat-conversations";
 
 export function DashboardChatView(): React.ReactElement {
   const [activeConv, setActiveConv] = useState<string | null>(null);
+  const locale = useLocale();
   const [isComposingNew, setIsComposingNew] = useState(false);
   const convDrawer = useOffCanvas();
   const [input, setInput] = useState("");
@@ -53,13 +55,16 @@ export function DashboardChatView(): React.ReactElement {
   } = useSseChat({ conversationId: effectiveConvId });
 
   const sidebarConversations = useMemo(
-    () => conversations.map(mapConversationToDashboard),
-    [conversations],
+    () =>
+      conversations.map((conversation, index) =>
+        mapConversationToDashboard(conversation, index, locale),
+      ),
+    [conversations, locale],
   );
 
   const displayMessages = useMemo(
-    () => sseMessages.map(mapMessageToDashboard),
-    [sseMessages],
+    () => sseMessages.map((message) => mapMessageToDashboard(message, locale)),
+    [sseMessages, locale],
   );
 
   const handleSend = useCallback(async () => {

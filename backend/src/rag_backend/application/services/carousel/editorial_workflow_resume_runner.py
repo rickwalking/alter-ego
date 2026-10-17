@@ -23,6 +23,10 @@ from rag_backend.application.services.carousel.editorial_workflow_run_events imp
     publish_run_finished,
     publish_run_stage_changed,
 )
+from rag_backend.application.services.carousel.editorial_workflow_run_heartbeat import (
+    start_heartbeat,
+    stop_heartbeat,
+)
 from rag_backend.application.services.carousel.editorial_workflow_service import (
     EditorialWorkflowService,
 )
@@ -35,7 +39,6 @@ from rag_backend.application.services.carousel.workflow_state import (
     CarouselWorkflowState,
 )
 from rag_backend.domain.constants.carousel_run import (
-    DEFAULT_RUN_HEARTBEAT_INTERVAL_SECONDS,
     LOG_EVENT_RUN_FENCED,
     RUN_FINISHED_REASON_COMPLETED,
     RUN_FINISHED_REASON_FAILED,
@@ -64,7 +67,6 @@ from rag_backend.modules.editorial.public import (
     open_run_trace_scope,
     read_run_fence,
     write_run_heartbeat_once,
-    write_run_heartbeat_with_retry,
 )
 
 logger = structlog.get_logger()
@@ -129,18 +131,6 @@ def cancel_background_resume_task(project_id: str) -> bool:
     return cancelled
 
 
-async def _run_heartbeat_loop(ctx: CarouselRunContext) -> None:
-    """Heartbeat run_heartbeat_at until cancelled or the fence is lost.
-
-    The interval is the domain default (60s); the write itself retries on
-    transient failure and is self-fencing (epoch pinned in its WHERE clause).
-    """
-    while True:
-        await asyncio.sleep(DEFAULT_RUN_HEARTBEAT_INTERVAL_SECONDS)
-        if not await write_run_heartbeat_with_retry(ctx.project_id, ctx.epoch):
-            return
-
-
 async def execute_resume_run(
     service: EditorialWorkflowService,
     params: BackgroundResumeParams,
@@ -162,9 +152,7 @@ async def _execute_owned_run(
 ) -> None:
     fence = await read_run_fence(params.project_id)
     token = carousel_run_epoch_var.set(fence) if fence is not None else None
-    heartbeat = (
-        asyncio.create_task(_run_heartbeat_loop(fence)) if fence is not None else None
-    )
+    heartbeat = start_heartbeat(fence)
     try:
         await _run_background_resume(service, params)
     except StaleRunEpochError:
@@ -173,10 +161,9 @@ async def _execute_owned_run(
         # start. This zombie must not touch anything else.
         logger.warning(LOG_EVENT_RUN_FENCED, project_id=params.project_id)
     finally:
-        if heartbeat is not None:
-            heartbeat.cancel()
         if token is not None:
             carousel_run_epoch_var.reset(token)
+        await stop_heartbeat(heartbeat)
 
 
 async def _beat_and_stage(ctx: CarouselRunContext | None, stage: str) -> None:

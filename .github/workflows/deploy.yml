@@ -15,6 +15,9 @@ concurrency:
 jobs:
   test:
     runs-on: ubuntu-latest
+    # AE-0417: backend + frontend tests take ~15 min; a hung test must not
+    # stall the deploy for hours.
+    timeout-minutes: 40
     steps:
       - name: Checkout code
         uses: actions/checkout@v4

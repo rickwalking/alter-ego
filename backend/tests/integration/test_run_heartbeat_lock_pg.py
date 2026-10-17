@@ -36,6 +36,9 @@ from rag_backend.application.services.carousel import (
     editorial_workflow_resume_runner as resume_runner,
 )
 from rag_backend.application.services.carousel import (
+    editorial_workflow_run_heartbeat as run_heartbeat,
+)
+from rag_backend.application.services.carousel import (
     editorial_workflow_service as workflow_service,
 )
 from rag_backend.application.services.carousel.editorial_workflow_service import (
@@ -176,7 +179,7 @@ def _patch_run(monkeypatch: pytest.MonkeyPatch, probe: _Probe) -> None:
     )
     monkeypatch.setattr(resume_runner, "publish_run_finished", AsyncMock())
     monkeypatch.setattr(
-        resume_runner, "DEFAULT_RUN_HEARTBEAT_INTERVAL_SECONDS", _BEAT_SECONDS
+        run_heartbeat, "DEFAULT_RUN_HEARTBEAT_INTERVAL_SECONDS", _BEAT_SECONDS
     )
 
 
