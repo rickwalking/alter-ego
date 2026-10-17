@@ -13,6 +13,7 @@ from rag_backend.agents.content_draft_agent import ContentDraftAgent
 from rag_backend.agents.feedback_learning import FeedbackLearningLoop
 from rag_backend.agents.outline_agent import OutlineAgent
 from rag_backend.agents.persona_agent import PersonaAgent
+from rag_backend.agents.persona_judge import judge_voice
 from rag_backend.application.services.carousel.blog_composition import (
     research_summary_from_findings,
 )
@@ -631,13 +632,15 @@ class PhaseArtifactRunner:
             if isinstance(slide, dict) and str(slide.get("draft_text", ""))
         }
         # AE-0391: scored concurrently (bounded), keyed back in slide order.
+        # AE-0407: retried once; a slide the judge never scored is left out.
         scores = await gather_bounded(
-            [partial(persona_agent.evaluate_match, text) for text in texts.values()],
+            [partial(judge_voice, persona_agent, text) for text in texts.values()],
             self._draft_concurrency,
         )
         return {
             f"slide_{index + 1}": score
             for index, score in zip(texts, scores, strict=True)
+            if score is not None
         }
 
 

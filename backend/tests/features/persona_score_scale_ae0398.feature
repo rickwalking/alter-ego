@@ -16,7 +16,8 @@ Feature: Voice scores are on 0-100 (AE-0398)
   Scenario: An all-zero or unreadable answer stays at 0
     Given the scorer answers all zeros, or text that is not JSON
     When the answer is parsed
-    Then every score is 0 and the gate fails closed
+    Then every score is 0
+    And the AE-0407 judge retries it once and never stores it as a score
 
   Scenario: On-voice copy passes the voice floor
     Given the scorer answers overall 8.2 on the 0-10 scale
