@@ -9,6 +9,10 @@ Text that opens with an intentionally lowercase token from the policy allowlist
 
 The repair only ever uppercases that first letter. It never guesses proper
 nouns: restoring "argon" to "Argon" is left to regeneration.
+
+AE-0407: a text whose first significant word is an ``@handle`` or a URL
+(``http://``, ``https://``, ``www.``) keeps its case: it is the source's, so
+``@taylorhbuilds`` never becomes ``@Taylorhbuilds``.
 """
 
 from __future__ import annotations
@@ -19,6 +23,8 @@ from collections.abc import Iterable
 _HTML_TAG_PATTERN = re.compile(r"<[^>]+>")
 # Sentence boundary: end punctuation (incl. a trailing "..." run) then whitespace.
 _SENTENCE_BOUNDARY = re.compile(r"(?<=[.!?])\s+")
+_HANDLE_MARK = "@"
+_URL_START = re.compile(r"(?:https?://|www\.)", flags=re.IGNORECASE)
 
 
 def _first_significant_index(text: str, start: int) -> int | None:
@@ -47,6 +53,12 @@ def _allowlisted_at(text: str, index: int, allowlist: Iterable[str]) -> bool:
     return False
 
 
+def _handle_or_url_at(text: str, index: int) -> bool:
+    """True when an ``@handle`` or a URL starts at ``index`` (AE-0407)."""
+    after_mark = index > 0 and text[index - 1] == _HANDLE_MARK
+    return after_mark or _URL_START.match(text, index) is not None
+
+
 def _lowercase_letter_at(
     text: str, index: int | None, allowlist: Iterable[str]
 ) -> bool:
@@ -54,6 +66,8 @@ def _lowercase_letter_at(
         return False
     char = text[index]
     if not char.isalpha() or not char.islower():
+        return False
+    if _handle_or_url_at(text, index):
         return False
     return not _allowlisted_at(text, index, allowlist)
 
