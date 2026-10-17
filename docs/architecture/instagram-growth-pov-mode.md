@@ -194,7 +194,7 @@ POV caption: line 1 = the slide-1 hook; 2–4 first-person lines; one question i
 disagreement; one CTA chosen by `cta_goal`; 3–5 hashtags, mostly PT; plain-text search
 keywords; no "Salve + Compartilhe". Radar IA caption v7: same hashtag/CTA discipline.
 `build_caption_prompt` routes by mode. CTA slide variants (constants, PT/EN):
-follow "Siga @pedromarins.ai: toda terça e quinta eu traduzo IA em decisões reais.",
+follow "Siga @pedromarins.ai: eu traduzo IA em decisões reais.",
 send "Manda pra quem precisa ouvir isso.", comment "Discorda? Me diz nos comentários.".
 Radar IA's `cta_centered` switches to the follow variant (16.4 #5).
 
