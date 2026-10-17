@@ -13,16 +13,33 @@ and re-parks, so the replay on resume reuses them.
 
 from __future__ import annotations
 
+from collections.abc import Mapping
+
+import structlog
+
 from rag_backend.agents.harness.interrupts import iter_interrupt_values
 from rag_backend.domain.constants.carousel_workflow import (
     INTERRUPT_TYPE_CONTENT_REVIEW,
+    PHASE_CONTENT,
+    PHASE_STATUS_APPROVED,
+    SEND_BACK_TARGET_PHASE_KEY,
 )
 from rag_backend.domain.constants.content_feedback import (
+    LOG_CONTENT_MANUAL_FIXES_KEPT,
     PAYLOAD_KEY_PARKED_ARTIFACTS,
     STATE_FIELD_CONTENT_ARTIFACTS_PARKED,
 )
+from rag_backend.domain.constants.workflow_state_fields import (
+    STATE_FIELD_LOCALIZED_SLIDES,
+    STATE_FIELD_PHASE_FEEDBACK,
+    STATE_FIELD_PHASE_STATUS,
+    STATE_FIELD_PROJECT_ID,
+)
+
+logger = structlog.get_logger()
 
 _FIELD_CONTENT_APPROVED = "content_approved"
+_FIELD_CURRENT_PHASE = "current_phase"
 _PAYLOAD_TYPE_KEY = "type"
 
 
@@ -33,7 +50,9 @@ def parked_content_updates(snapshot: object) -> dict[str, object] | None:
     carries no artifacts (legacy interrupt, or a replay that reused them) or
     they are already saved. ``content_approved`` is reset: the review is still
     pending, and a stale True (final-review send-back) would route the write
-    past the content gate.
+    past the content gate. ``current_phase`` is pinned to content (AE-0413):
+    the interrupted node never committed it, so the checkpoint still said
+    ``outline`` on the first content gate.
     """
     values = getattr(snapshot, "values", None)
     if not isinstance(values, dict):
@@ -49,8 +68,61 @@ def parked_content_updates(snapshot: object) -> dict[str, object] | None:
                 **artifacts,
                 STATE_FIELD_CONTENT_ARTIFACTS_PARKED: True,
                 _FIELD_CONTENT_APPROVED: False,
+                _FIELD_CURRENT_PHASE: PHASE_CONTENT,
             }
     return None
 
 
-__all__ = ["parked_content_updates"]
+def _is_manual_fixes_revise(
+    review_update: Mapping[str, object],
+    state: Mapping[str, object],
+) -> bool:
+    """True for a revise that only carried reviewer slide edits (AE-0413).
+
+    The review update already applied and re-validated the edits
+    (``localized_slides`` is only in it when edits were applied). With no
+    send-back and no new content note there is nothing to regenerate.
+    """
+    if review_update.get(STATE_FIELD_PHASE_STATUS) == PHASE_STATUS_APPROVED:
+        return False
+    if STATE_FIELD_LOCALIZED_SLIDES not in review_update:
+        return False
+    if review_update.get(SEND_BACK_TARGET_PHASE_KEY):
+        return False
+    return not _has_active_content_note(state)
+
+
+def _has_active_content_note(state: Mapping[str, object]) -> bool:
+    """A content note no regeneration has used yet (AE-0405 ``phase_feedback``)."""
+    notes = state.get(STATE_FIELD_PHASE_FEEDBACK)
+    if not isinstance(notes, Mapping):
+        return False
+    content = notes.get(PHASE_CONTENT)
+    if not isinstance(content, list):
+        return False
+    return any(str(note).strip() for note in content)
+
+
+def manual_fixes_park_updates(
+    review_update: Mapping[str, object],
+    state: Mapping[str, object],
+) -> dict[str, object]:
+    """Keep hand-fixed copy as the parked artifacts of the next entry (AE-0413).
+
+    "Submit manual fixes" (a revise carrying only ``edited_localized_slides``)
+    re-entered the content node, whose ensure rebuilt every localized slide
+    from the PT drafts (the EN copy fell back to Portuguese, structured items
+    were dropped) and re-drafted the blocking slides with the LLM. With the
+    parked marker set, the next entry reuses the edited, re-validated copy:
+    no regeneration, no translation, no LLM call.
+    """
+    if not _is_manual_fixes_revise(review_update, state):
+        return {}
+    logger.info(
+        LOG_CONTENT_MANUAL_FIXES_KEPT,
+        project_id=str(state.get(STATE_FIELD_PROJECT_ID, "")),
+    )
+    return {STATE_FIELD_CONTENT_ARTIFACTS_PARKED: True}
+
+
+__all__ = ["manual_fixes_park_updates", "parked_content_updates"]

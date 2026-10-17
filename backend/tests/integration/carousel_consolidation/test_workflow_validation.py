@@ -349,7 +349,7 @@ class TestEditorialWorkflowReviseAndFailure:
             if isinstance(notes, list)
             for note in notes
         ]
-        assert "slide 2 tone is too formal" in stored_feedback
+        assert "Slide 2 tone is too formal" in stored_feedback  # AE-0413: case kept
         revision_counts = state_payload.get("revision_count", {})
         assert isinstance(revision_counts, dict)
         assert sum(revision_counts.values()) >= 1
@@ -451,7 +451,7 @@ class TestEditorialWorkflowReviseAndFailure:
         phase_feedback = payload.get("phase_feedback", {})
         assert isinstance(phase_feedback, dict)
         # The note is filed under content (the target), not final_review.
-        assert "slides repeat; diversify per the research" in (
+        assert "Slides repeat; diversify per the research" in (
             phase_feedback.get(PHASE_CONTENT) or []
         )
         assert phase_feedback.get(PHASE_FINAL_REVIEW) in (None, [])

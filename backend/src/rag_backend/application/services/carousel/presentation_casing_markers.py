@@ -40,9 +40,12 @@ CASING_REPAIRS_KEY = "casing_repairs"
 CASING_MARKER_LOCALE = "locale"
 CASING_MARKER_FIELD = "field"
 CASING_MARKER_CODE = "code"
+# AE-0413: the message used to say the text "was auto-capitalized" while the
+# reviewer still saw lowercase copy (only sentence starts are touched, proper
+# nouns are never guessed). It now states the problem and the fix only.
 CASING_REPAIR_MESSAGE = (
-    "The model wrote this text starting in lowercase. It was auto-capitalized, "
-    "but proper nouns may still be lowercase: regenerate or edit this slide"
+    "The model wrote this text in lowercase. Edit or regenerate this slide: "
+    "start every sentence with a capital letter and capitalize proper nouns"
 )
 
 _LOCALE_PAYLOADS: tuple[tuple[str, str], ...] = (

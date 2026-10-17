@@ -190,9 +190,9 @@ class TestTopicSearch:
     def _hits(self, count: int) -> list[dict[str, str]]:
         return [
             {
-                "title": f"Hit {i}",
+                "title": f"Frontier models hit {i}",
                 "url": f"https://hit{i}.example.com",
-                "snippet": f"Snippet {i}",
+                "snippet": f"Snippet {i} on frontier models",
             }
             for i in range(count)
         ]
@@ -206,8 +206,8 @@ class TestTopicSearch:
         assert tool.search_queries == [_TOPIC]
         assert len(enriched) == 2
         assert enriched[0]["source_type"] == SOURCE_TYPE_WEB_SEARCH
-        assert enriched[0]["title"] == "Hit 0"
-        assert enriched[0]["content"] == "Snippet 0"
+        assert enriched[0]["title"] == "Frontier models hit 0"
+        assert enriched[0]["content"] == "Snippet 0 on frontier models"
         assert enriched[0]["url"] == "https://hit0.example.com"
 
     async def test_search_hits_are_capped(self) -> None:
@@ -400,3 +400,95 @@ class TestBlockPageDetection:
         enriched = await enrich_sources(sources, _params(tool))
 
         assert enriched[0]["content"] == "A perfectly normal article body"
+
+
+class TestSearchRelevanceAE0413:
+    """AE-0413: tags are not searched; only PT/EN, on-topic hits are kept.
+
+    Scenarios: tests/features/content_gate_backend_ae0413.feature
+    """
+
+    _QA_TOPIC = "[QA 2026-10-16] Agentes de código em times pequenos 🤖"
+
+    def _params(self, tool: _StubResearchTool) -> ResearchEnrichmentParams:
+        return ResearchEnrichmentParams(topic=self._QA_TOPIC, research_tool=tool)
+
+    async def test_bracketed_tag_and_emoji_are_not_searched(self) -> None:
+        """Scenario: A bracketed tag prefix is not part of the search query."""
+        tool = _StubResearchTool()
+
+        await enrich_sources([], self._params(tool))
+
+        assert tool.search_queries == ["Agentes de código em times pequenos"]
+
+    async def test_foreign_language_and_off_topic_hits_are_dropped(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """Scenario: Foreign-language and off-topic search hits are discarded."""
+        russian = {
+            "title": "QA 2026-10-04 (maksimo)",
+            "url": "https://ru.example.com/stream",
+            "snippet": "Материал представляет собой фрагмент данных трансляции",
+        }
+        sulfur = {
+            "title": "Sulfur market",
+            "url": "https://ft.example.com/sulfur",
+            "snippet": "Industrial sulfur demand rose in the fertilizer market.",
+        }
+        relevant = {
+            "title": "Agentes de código em times pequenos",
+            "url": "https://pt.example.com/agentes",
+            "snippet": "Times pequenos usam agentes de código para revisar PRs.",
+        }
+        english = {
+            "title": "Coding agents in small teams",
+            "url": "https://en.example.com/agents",
+            "snippet": "How small teams adopt code agents for their reviews.",
+        }
+        tool = _StubResearchTool(hits=[russian, sulfur, relevant, english])
+
+        enriched = await enrich_sources([], self._params(tool))
+
+        assert [source["url"] for source in enriched] == [
+            relevant["url"],
+            english["url"],
+        ]
+
+    async def test_owner_sources_are_never_filtered(self) -> None:
+        """Scenario: Owner-provided sources are kept whatever their language."""
+        owner = {
+            "title": "Nota",
+            "content": "Материал владельца",
+            "source_type": "text",
+        }
+        tool = _StubResearchTool()
+
+        enriched = await enrich_sources([owner], self._params(tool))
+
+        assert enriched == [owner]
+
+    async def test_filtered_hits_do_not_consume_the_cap(self) -> None:
+        """Scenario: Foreign-language and off-topic search hits are discarded (cap)."""
+        off_topic = [
+            {
+                "title": f"Sulfur {i}",
+                "url": f"https://x{i}.example.com",
+                "snippet": "Industrial sulfur demand rose this quarter.",
+            }
+            for i in range(MAX_WEB_SEARCH_RESULTS)
+        ]
+        on_topic = [
+            {
+                "title": f"Agentes {i}",
+                "url": f"https://y{i}.example.com",
+                "snippet": "Agentes de código em times pequenos.",
+            }
+            for i in range(MAX_WEB_SEARCH_RESULTS)
+        ]
+        tool = _StubResearchTool(hits=off_topic + on_topic)
+
+        enriched = await enrich_sources([], self._params(tool))
+
+        assert [source["url"] for source in enriched] == [
+            hit["url"] for hit in on_topic
+        ]

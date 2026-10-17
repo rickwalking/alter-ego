@@ -16,9 +16,9 @@ from rag_backend.domain.copy_sanitize import sanitize_edited_copy
 
 
 def _sanitize_payload_strings(value: object) -> object:
-    # AE-0289: edited slide copy is FINAL published content, so preserve case
-    # (sanitize_display_input) instead of lowercasing it (sanitize_llm_input),
-    # which corrupted headings and broke heading_not_sentence_case_en validation.
+    # AE-0289: edited slide copy is FINAL published content, so case is
+    # preserved (sanitize_llm_input lowercased until AE-0413, which corrupted
+    # headings and broke heading_not_sentence_case_en validation).
     # AE-0403: sanitize_edited_copy also keeps the EN <strong> emphasis pair.
     if isinstance(value, str):
         return sanitize_edited_copy(value)
@@ -46,7 +46,9 @@ def sanitize_edited_slides(
         payload = slide.model_dump()
         sanitized.append({
             "slide_index": payload["slide_index"],
-            "slide_type": sanitize_llm_input(str(payload["slide_type"])),
+            # Slide types are lowercase identifiers (AE-0413: the sanitizer
+            # no longer lowercases, so normalize explicitly).
+            "slide_type": sanitize_llm_input(str(payload["slide_type"])).lower(),
             "presentation_pt": _sanitize_payload_strings(payload["presentation_pt"]),
             "presentation_en": _sanitize_payload_strings(payload["presentation_en"]),
         })
