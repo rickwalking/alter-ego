@@ -1,36 +1,41 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { NeonButton } from "@/components/atoms/neon-button";
 import { NeonSearchBar } from "@/components/molecules/neon-search-bar";
 import { NeonTopBar } from "@/components/organisms/neon-top-bar";
-import { filterBlogPosts } from "@/modules/editorial-operations";
-import { mapBlogPostToDashboard } from "@/modules/editorial-operations";
+import {
+  BLOG_POSTS_I18N_NAMESPACE,
+  filterBlogPosts,
+  mapBlogPostToDashboard,
+} from "@/modules/editorial-operations";
 import { useBlogPosts } from "@/modules/publishing";
 import { NeonSpinner } from "@/components/atoms/neon-spinner";
 import { NEON_RED } from "@/constants/neon";
 import { BlogPostsFilters } from "@/app/dashboard/blog-posts/blog-posts-filters";
-import {
-  FeaturedBlogPost,
-  RegularBlogPosts,
-} from "@/app/dashboard/blog-posts/blog-posts-grid";
+import { BlogPostsList } from "@/app/dashboard/blog-posts/blog-posts-grid";
 import { DeleteConfirmModal } from "@/app/dashboard/blog-posts/blog-posts-actions";
 import { useNewBlogPost } from "@/app/dashboard/blog-posts/use-new-blog-post";
 import { useBlogPostActions } from "@/app/dashboard/blog-posts/use-blog-post-actions";
 
+/** API max page size — load as many posts as one request allows (AE-0411). */
+const BLOG_POSTS_LIST_LIMIT = 100;
+
 export default function BlogPostsPage(): React.ReactElement {
+  const t = useTranslations(BLOG_POSTS_I18N_NAMESPACE);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState("");
   const {
     posts,
+    total,
     loading,
     error,
     create,
     delete: deletePost,
     unpublish,
-  } = useBlogPosts();
-  const { creating, handleNewPost } = useNewBlogPost(create);
+  } = useBlogPosts({ limit: BLOG_POSTS_LIST_LIMIT });
+  const { creating, createError, handleNewPost } = useNewBlogPost(create);
   const { actions, deleteTarget, actionError, confirmDelete, cancelDelete } =
     useBlogPostActions({ deletePost, unpublish });
 
@@ -39,11 +44,8 @@ export default function BlogPostsPage(): React.ReactElement {
   const filteredPosts = filterBlogPosts(dashboardPosts, {
     search,
     statusFilter,
-    categoryFilter,
   });
-
-  const featuredPost = filteredPosts.find((post) => post.featured);
-  const regularPosts = filteredPosts.filter((post) => !post.featured);
+  const notice = actionError ?? createError;
 
   return (
     <div
@@ -51,12 +53,12 @@ export default function BlogPostsPage(): React.ReactElement {
       style={{ fontFamily: "Inter, system-ui, sans-serif" }}
     >
       <NeonTopBar
-        title="Blog Posts"
-        breadcrumb={[{ label: "all posts" }]}
+        title={t("title")}
+        breadcrumb={[{ label: t("breadcrumbAll") }]}
         actions={
           <>
             <NeonSearchBar
-              placeholder="Search posts..."
+              placeholder={t("searchPlaceholder")}
               value={search}
               onChange={setSearch}
               className="w-full sm:w-[200px]"
@@ -80,7 +82,7 @@ export default function BlogPostsPage(): React.ReactElement {
                 </svg>
               }
             >
-              New Post
+              {t("newPost")}
             </NeonButton>
           </>
         }
@@ -93,34 +95,36 @@ export default function BlogPostsPage(): React.ReactElement {
           </div>
         )}
         {error && !loading && (
-          <p className="text-center py-8" style={{ color: NEON_RED }}>
-            {error}
+          <p
+            className="text-center py-8"
+            style={{ color: NEON_RED }}
+            role="alert"
+          >
+            {t("errors.loadFailed")}
           </p>
         )}
-        {actionError && !loading && (
+        {notice && !loading && (
           <p
             className="text-center py-2"
             style={{ color: NEON_RED }}
             role="alert"
           >
-            {actionError}
+            {notice}
           </p>
         )}
         {!loading && !error && (
           <>
             <BlogPostsFilters
               statusFilter={statusFilter}
-              categoryFilter={categoryFilter}
               onStatusFilterChange={setStatusFilter}
-              onCategoryFilterChange={setCategoryFilter}
+              shownCount={filteredPosts.length}
+              totalCount={Math.max(total, dashboardPosts.length)}
             />
-
-            <div className="grid gap-4">
-              {featuredPost && (
-                <FeaturedBlogPost post={featuredPost} actions={actions} />
-              )}
-              <RegularBlogPosts posts={regularPosts} actions={actions} />
-            </div>
+            <BlogPostsList
+              posts={filteredPosts}
+              hasNoPosts={dashboardPosts.length === 0}
+              actions={actions}
+            />
           </>
         )}
       </div>

@@ -5,7 +5,10 @@ import {
   BlogPostBadge,
   BlogPostStatusBadge,
 } from "@/modules/editorial-operations";
-import { formatBlogPostDate } from "@/modules/editorial-operations";
+import {
+  formatBlogPostDate,
+  pickFeaturedBlogPost,
+} from "@/modules/editorial-operations";
 import { BLOG_POSTS_I18N_NAMESPACE } from "@/modules/editorial-operations";
 import { BlogPostCardActions } from "@/app/dashboard/blog-posts/blog-posts-actions";
 import {
@@ -18,9 +21,25 @@ import {
 import type {
   BlogPostCardProps,
   BlogPostMetaProps,
+  BlogPostsListProps,
   FeaturedBlogPostProps,
   RegularBlogPostsProps,
 } from "@/app/dashboard/blog-posts/types";
+
+const PUBLISHED_STATUS = "published";
+
+/** Explains a `published` post that readers cannot see yet (AE-0411, B17). */
+function NotLiveHint({ post }: BlogPostMetaProps): React.ReactElement | null {
+  const t = useTranslations(BLOG_POSTS_I18N_NAMESPACE);
+  if (post.status !== PUBLISHED_STATUS || post.isPublic) {
+    return null;
+  }
+  return (
+    <p className="mt-1.5 text-[11px] leading-snug text-[rgba(255,255,255,0.55)]">
+      {t("notLiveHint")}
+    </p>
+  );
+}
 
 function BlogPostMeta({ post }: BlogPostMetaProps): React.ReactElement {
   return (
@@ -52,7 +71,7 @@ export function FeaturedBlogPost({
       />
       <div className="p-6 flex flex-col justify-center">
         <div className="flex gap-1.5 mb-2.5">
-          <BlogPostStatusBadge status={post.status} />
+          <BlogPostStatusBadge status={post.status} isPublic={post.isPublic} />
           <BlogPostBadge color="cyan">{t("featured")}</BlogPostBadge>
         </div>
         <h3 className="text-[20px] font-bold leading-tight mb-2">
@@ -93,7 +112,8 @@ export function BlogPostCard({
         }}
       />
       <div>
-        <BlogPostStatusBadge status={post.status} />
+        <BlogPostStatusBadge status={post.status} isPublic={post.isPublic} />
+        <NotLiveHint post={post} />
         <h3 className="text-[15px] font-bold leading-snug mb-1.5">
           {post.title}
         </h3>
@@ -116,6 +136,34 @@ export function RegularBlogPosts({
       {posts.map((post) => (
         <BlogPostCard key={post.id} post={post} actions={actions} />
       ))}
+    </div>
+  );
+}
+
+/**
+ * The full listing (AE-0411, B07/B20): at most ONE featured card (the newest
+ * live post), every other post as a regular card, and an empty state when
+ * there is nothing to show.
+ */
+export function BlogPostsList({
+  posts,
+  hasNoPosts,
+  actions,
+}: BlogPostsListProps): React.ReactElement {
+  const t = useTranslations(BLOG_POSTS_I18N_NAMESPACE);
+  if (posts.length === 0) {
+    return (
+      <p className="py-12 text-center text-sm text-[rgba(255,255,255,0.55)]">
+        {hasNoPosts ? t("empty") : t("noResults")}
+      </p>
+    );
+  }
+  const featured = pickFeaturedBlogPost(posts);
+  const regular = posts.filter((post) => post.id !== featured?.id);
+  return (
+    <div className="grid gap-4">
+      {featured && <FeaturedBlogPost post={featured} actions={actions} />}
+      <RegularBlogPosts posts={regular} actions={actions} />
     </div>
   );
 }

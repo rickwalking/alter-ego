@@ -23,14 +23,6 @@ const NEUTRAL_BADGE_TEXT = "rgba(255,255,255,0.7)";
 
 export const BLOG_POST_STATUS_FILTER_VALUES = BLOG_POST_STATUSES;
 
-export const BLOG_POST_CATEGORY_OPTIONS = [
-  { value: "", label: "All Categories" },
-  { value: "AI", label: "AI" },
-  { value: "Security", label: "Security" },
-  { value: "Architecture", label: "Architecture" },
-  { value: "Dev", label: "Dev" },
-] as const;
-
 export const BLOG_POST_BADGE_COLORS: Record<string, BlogPostBadgeVisual> = {
   security: { bg: NEON_MAGENTA_DIM, text: NEON_MAGENTA },
   ai: { bg: NEON_TEAL_DIM, text: NEON_TEAL },
@@ -69,6 +61,15 @@ export const BLOG_POST_STATUS_COLORS: Record<
   approved: { bg: NEON_TEAL_DIM, text: NEON_TEAL },
   published: { bg: NEON_GREEN_BADGE_BG, text: NEON_GREEN },
   archived: { bg: NEUTRAL_BADGE_BG, text: NEUTRAL_BADGE_TEXT },
+};
+
+/**
+ * Badge for a post stored `published` that anonymous readers cannot see yet
+ * (carousel not released, AE-0411) — amber like other not-live states.
+ */
+export const BLOG_POST_NOT_LIVE_COLORS: BlogPostBadgeVisual = {
+  bg: NEON_AMBER_DIM,
+  text: NEON_AMBER,
 };
 
 export const BLOG_POST_BADGE_CLASS = "badge";

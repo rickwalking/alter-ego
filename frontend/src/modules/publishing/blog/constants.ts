@@ -47,9 +47,16 @@ export const BLOG_POST_ERR_VERSION_CONFLICT = "version_conflict";
 export const BLOG_POST_ERR_CAROUSEL_DELETE_BLOCKED =
   "carousel_origin_delete_blocked";
 
+/** Create hit an existing slug (backend 409 detail, AE-0411). */
+export const BLOG_POST_ERR_SLUG_CONFLICT = "blog_post_slug_conflict";
+/** Backend rejected the payload (422) — e.g. empty or over-long title. */
+export const BLOG_POST_ERR_VALIDATION = "validation_failed";
+
 export type BlogPostMutationErrorCode =
   | typeof BLOG_POST_ERR_VERSION_CONFLICT
-  | typeof BLOG_POST_ERR_CAROUSEL_DELETE_BLOCKED;
+  | typeof BLOG_POST_ERR_CAROUSEL_DELETE_BLOCKED
+  | typeof BLOG_POST_ERR_SLUG_CONFLICT
+  | typeof BLOG_POST_ERR_VALIDATION;
 
 /** Error carrying the backend guard detail so the UI can map it to copy. */
 export class BlogPostMutationError extends Error {

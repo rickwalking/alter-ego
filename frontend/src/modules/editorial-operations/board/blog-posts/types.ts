@@ -16,9 +16,12 @@ export interface DashboardBlogPost {
    * (drifted) backend status and renders as a neutral badge (AE-0295).
    */
   status: BlogPostStatus | null;
-  /** Content category — a distinct domain from status; unpopulated today. */
-  category: string;
-  featured: boolean;
+  /**
+   * Readable by anonymous visitors right now (AE-0411). A carousel post is
+   * stored `published` but stays hidden until its carousel is released, so
+   * `status === "published"` alone does not mean the post is live.
+   */
+  isPublic: boolean;
 }
 
 export interface BlogPostBadgeVisual {
@@ -26,8 +29,13 @@ export interface BlogPostBadgeVisual {
   text: string;
 }
 
+/** A resolved status badge: its i18n `status.*` key and colors (AE-0411). */
+export interface BlogPostBadgeLook {
+  key: string;
+  visual: BlogPostBadgeVisual;
+}
+
 export interface BlogPostFilters {
   search: string;
   statusFilter: string;
-  categoryFilter: string;
 }

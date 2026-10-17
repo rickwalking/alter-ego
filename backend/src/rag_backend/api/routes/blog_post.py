@@ -4,6 +4,7 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_backend.api.dependencies.database import get_db
@@ -39,6 +40,7 @@ from rag_backend.application.services.workflow_event_service import WorkflowEven
 from rag_backend.domain.constants.blog_ai import ERR_BLOG_POST_NOT_FOUND
 from rag_backend.domain.constants.blog_post import (
     BLOG_POST_HARD_DELETABLE_ORIGINS,
+    ERR_BLOG_POST_SLUG_CONFLICT,
     ERR_CAROUSEL_ORIGIN_DELETE_BLOCKED,
     BlogPostOrigin,
 )
@@ -92,6 +94,19 @@ def _audit_service() -> EditorialAuditService:
     )
 
 
+async def _stage_new_post(db: AsyncSession, post: object) -> None:
+    """Flush the new row; a unique-slug clash becomes a clear 409 (AE-0411)."""
+    db.add(post)
+    try:
+        await db.flush()
+    except IntegrityError as exc:
+        await db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=ERR_BLOG_POST_SLUG_CONFLICT,
+        ) from exc
+
+
 @router.post(
     "/blog-posts",
     response_model=BlogPostResponse,
@@ -110,8 +125,7 @@ async def create_blog_post(
     payload = data.model_dump(exclude={"author_id"})
     post = publishing.service.new_blog_post(payload)
     post.author_id = current_user.id
-    db.add(post)
-    await db.flush()
+    await _stage_new_post(db, post)
     await _audit_service().log_created(
         db,
         entry=_AuditEntry(
@@ -123,6 +137,12 @@ async def create_blog_post(
     await db.commit()
     await db.refresh(post)
     return post
+
+
+def _summary(post: object, public_ids: frozenset[str]) -> BlogPostSummaryResponse:
+    """Serialize a list row plus whether it is publicly readable now (AE-0411)."""
+    summary = BlogPostSummaryResponse.model_validate(post)
+    return summary.model_copy(update={"is_public": str(summary.id) in public_ids})
 
 
 @router.get(
@@ -153,8 +173,11 @@ async def list_blog_posts(
             ),
         )
 
+        public_ids = await publishing.service.public_blog_post_ids([
+            str(p.id) for p in posts
+        ])
         return BlogPostListResponse(
-            items=[BlogPostSummaryResponse.model_validate(p) for p in posts],
+            items=[_summary(p, public_ids) for p in posts],
             total=total,
             limit=params.limit,
             offset=params.offset,

@@ -1,4 +1,10 @@
 import { FALLBACK_DESIGN_TOKENS } from "@/constants/blog";
+import { toPublicCarouselImageUrl } from "@/lib/carousel-media-url";
+import {
+  emphasisHtmlToMarkdown,
+  resolveDisplayTitle,
+  stripEmphasisMarkup,
+} from "@/lib/public-blog-text";
 import { fetchBlogWithDesign, fetchPublicBlogPost } from "@/lib/server-fetch";
 import type { CarouselDesignResponse } from "@/schemas/carousel";
 import type { PublicBlogPostResponse } from "@/schemas/public-blog-post";
@@ -12,6 +18,11 @@ import type { PublicBlogPostResponse } from "@/schemas/public-blog-post";
  *    default public theme (never 404 for missing tokens).
  * 2. Otherwise `id` is treated as a legacy carousel project id (today's URLs)
  *    and rendered through the existing carousel projection path.
+ *
+ * AE-0412: every view is sanitized for anonymous visitors — image URLs use the
+ * public routes (never the owner-only preview route), the title carries no
+ * markup and is never a placeholder ("" when no real title exists), and inline
+ * emphasis HTML in the body becomes markdown emphasis.
  */
 
 const ORIGIN_CAROUSEL = "carousel";
@@ -41,6 +52,32 @@ function extractMarkdown(
     return content.body;
   }
   return "";
+}
+
+function publicDesign(design: CarouselDesignResponse): CarouselDesignResponse {
+  const { hero, slides } = design.images;
+  return {
+    ...design,
+    images: {
+      ...design.images,
+      hero: hero ? toPublicCarouselImageUrl(hero) : hero,
+      slides: slides.map(toPublicCarouselImageUrl),
+    },
+  };
+}
+
+function sanitizeView(
+  view: PublicBlogView,
+  fallbackTitles: ReadonlyArray<string | null | undefined>,
+): PublicBlogView {
+  const title = resolveDisplayTitle([view.title, ...fallbackTitles]);
+  const subtitle = view.subtitle ? stripEmphasisMarkup(view.subtitle) : "";
+  return {
+    title,
+    subtitle: subtitle && subtitle !== title ? subtitle : null,
+    markdown: emphasisHtmlToMarkdown(view.markdown),
+    design: publicDesign(view.design),
+  };
 }
 
 function fromCarousel(data: {
@@ -73,23 +110,34 @@ function fromStandalone(
   };
 }
 
-export async function resolvePublicBlogView(
+async function resolveRawView(
   id: string,
   lang: string,
-): Promise<PublicBlogView | null> {
+): Promise<{ view: PublicBlogView; fallbackTitle?: string } | null> {
   const post = await fetchPublicBlogPost(id);
   if (post) {
     if (post.origin === ORIGIN_CAROUSEL && post.project_id) {
       const enriched = await fetchBlogWithDesign(post.project_id, lang);
       if (enriched) {
-        return fromCarousel(enriched);
+        return { view: fromCarousel(enriched), fallbackTitle: post.title };
       }
     }
     // Default public theme — a published post must never 404 for missing
     // design tokens (fail toward a plain render, not toward not-found).
-    return fromStandalone(post, lang);
+    return { view: fromStandalone(post, lang) };
   }
   // Legacy carousel-projection URL (`/blog/{project_id}`).
   const legacy = await fetchBlogWithDesign(id, lang);
-  return legacy ? fromCarousel(legacy) : null;
+  return legacy ? { view: fromCarousel(legacy) } : null;
+}
+
+export async function resolvePublicBlogView(
+  id: string,
+  lang: string,
+): Promise<PublicBlogView | null> {
+  const resolved = await resolveRawView(id, lang);
+  if (!resolved) {
+    return null;
+  }
+  return sanitizeView(resolved.view, [resolved.fallbackTitle]);
 }

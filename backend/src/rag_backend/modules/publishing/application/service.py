@@ -39,6 +39,7 @@ from rag_backend.modules.publishing.application.release_command import (
     CarouselReleaseCommand,
     CarouselReleaseHandler,
 )
+from rag_backend.modules.publishing.domain.blog_slug import with_generated_slug
 from rag_backend.modules.publishing.domain.models import (
     BlogPostModel,
     CarouselProject,
@@ -209,8 +210,12 @@ class PublishingService:
         return await self._require_read_port().project_analytics(query)
 
     def new_blog_post(self, payload: dict[str, object]) -> BlogPostModel:
-        """Build an unsaved blog row from the create payload (no session write)."""
-        return self._require_crud_port().new_post(payload)
+        """Build an unsaved blog row from the create payload (no session write).
+
+        A missing/blank slug is generated from the title + a short random suffix
+        (AE-0411): ``slug`` is unique, so persisting ``""`` 409'd every later create.
+        """
+        return self._require_crud_port().new_post(with_generated_slug(payload))
 
     async def get_blog_post(self, post_id: str) -> BlogPostModel | None:
         """Load a blog row by id through the request session, or ``None``."""
@@ -222,6 +227,10 @@ class PublishingService:
     ) -> tuple[list[BlogPostModel], int]:
         """List blog summaries + the total count (legacy ``list_summaries``)."""
         return await self._require_crud_port().list_summaries(query)
+
+    async def public_blog_post_ids(self, post_ids: list[str]) -> frozenset[str]:
+        """Subset of ``post_ids`` an anonymous visitor can read right now (AE-0411)."""
+        return await self._require_crud_port().public_post_ids(post_ids)
 
     def _require_read_port(self) -> PublishingReadPort:
         port = self._ports.read

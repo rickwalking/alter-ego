@@ -3,14 +3,26 @@ import { API_ENDPOINTS } from "@/constants/api";
 const SLIDE_FILENAME_PATTERN = /slide_\d+(?:\.jpg)?/;
 const PREVIEW_IMAGES_SEGMENT = "/preview/images/";
 const PUBLIC_IMAGES_SEGMENT = "/images/";
+const LANG_QUERY_PATTERN = /[?&]lang=(pt|en)(?:&|$)/;
 
-/** Map owner-only preview URLs to public carousel image routes for marketing pages. */
+/**
+ * Map owner-only preview URLs to the public carousel image route.
+ *
+ * AE-0412 (B08): the public `/images/{file}` route resolves the shared raw
+ * image first, then the rendered slide of `?lang=` (same order as the preview
+ * route), so the language is kept instead of being dropped.
+ */
 export function toPublicCarouselImageUrl(url: string): string {
-  const pathOnly = url.split("?")[0];
+  const [pathOnly, query = ""] = url.split("?");
   if (!pathOnly.includes(PREVIEW_IMAGES_SEGMENT)) {
     return pathOnly;
   }
-  return pathOnly.replace(PREVIEW_IMAGES_SEGMENT, PUBLIC_IMAGES_SEGMENT);
+  const publicPath = pathOnly.replace(
+    PREVIEW_IMAGES_SEGMENT,
+    PUBLIC_IMAGES_SEGMENT,
+  );
+  const lang = `?${query}`.match(LANG_QUERY_PATTERN)?.[1];
+  return lang ? `${publicPath}?lang=${lang}` : publicPath;
 }
 
 /** Append a cache-buster without breaking existing query strings. */
