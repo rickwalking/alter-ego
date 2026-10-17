@@ -20,7 +20,6 @@ from rag_backend.application.services.carousel.workflow_state import (
 )
 from rag_backend.domain.constants.carousel_workflow import (
     CAROUSEL_GRAPH_RECURSION_LIMIT,
-    CAROUSEL_WORKFLOW_PHASES,
     ERR_NOTHING_TO_REDRIVE,
     PHASE_APPROVED_HOLD,
     PHASE_STATUS_AWAITING_HUMAN,
@@ -316,31 +315,4 @@ def is_parked_before_node(snapshot: object) -> bool:
     return not any(getattr(task, "interrupts", ()) for task in tasks)
 
 
-def checkpoint_gate_phase(snapshot: object) -> str:
-    """The phase of the review gate the checkpoint is parked at (AE-0413).
-
-    An interrupted node's return value is never committed, so on the FIRST
-    gate of a phase the stored ``current_phase`` still names the node before
-    it (``outline`` at the first content gate). The pending node is the gate
-    the reviewer sees, the same rule :meth:`CarouselWorkflowEngine.get_state`
-    applies. The approved-hold park (AE-0288) and a finished graph keep the
-    stored value.
-    """
-    values = getattr(snapshot, "values", None)
-    if not isinstance(values, dict):
-        return ""
-    stored = str(values.get("current_phase", ""))
-    pending_next = getattr(snapshot, "next", ()) or ()
-    if not pending_next:
-        return stored
-    node = str(pending_next[0])
-    if node == PHASE_APPROVED_HOLD or node not in CAROUSEL_WORKFLOW_PHASES:
-        return stored
-    return node
-
-
-__all__ = [
-    "CarouselWorkflowEngine",
-    "checkpoint_gate_phase",
-    "is_parked_before_node",
-]
+__all__ = ["CarouselWorkflowEngine", "is_parked_before_node"]

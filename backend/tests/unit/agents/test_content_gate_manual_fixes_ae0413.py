@@ -18,7 +18,6 @@ import pytest
 
 from rag_backend.agents.carousel_content_park import manual_fixes_park_updates
 from rag_backend.agents.carousel_workflow import CarouselWorkflowEngine
-from rag_backend.agents.carousel_workflow_engine import checkpoint_gate_phase
 from rag_backend.api.routes.carousels.editorial_workflow_routes_validate import (
     ensure_structured_feedback_allowed,
 )
@@ -30,6 +29,7 @@ from rag_backend.api.schemas.carousel_workflow import (
 from rag_backend.application.services.carousel.editorial_workflow_feedback import (
     read_checkpoint_phase,
 )
+from rag_backend.domain.carousel_gate_phase import checkpoint_gate_phase
 from rag_backend.domain.constants.carousel_workflow import (
     PHASE_APPROVED_HOLD,
     PHASE_CONTENT,

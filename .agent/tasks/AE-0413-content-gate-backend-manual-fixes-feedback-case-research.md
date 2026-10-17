@@ -104,14 +104,15 @@ QA run 2026-10-16 (`~/alter-ego-qa/2026-10-16-ui/REPORT.md`):
 
 ### ADDED
 
-- `agents/research_relevance.py`, `api/routes/carousels/editorial_workflow_routes_feedback.py`
+- `agents/research_relevance.py`, `api/routes/carousels/editorial_workflow_routes_feedback.py`,
+  `domain/carousel_gate_phase.py` (`checkpoint_gate_phase`, shared by engine-side and guard-side code
+  without a cross-layer import)
 - `PhaseFeedbackHistoryEntryResponse` + `EditorialWorkflowStateResponse.phase_feedback_history`
 - Feature file and tests (`test_content_gate_manual_fixes_ae0413.py`,
   `test_content_gate_backend_ae0413.py`, research relevance tests)
 
 ### MODIFIED
 
-- `agents/carousel_workflow_engine.py` (`checkpoint_gate_phase`), `agents/carousel_workflow.py`
 - `agents/carousel_content_park.py` (pins content phase; `manual_fixes_park_updates`)
 - `agents/carousel_workflow_nodes.py`, `agents/research_enrichment.py`, `agents/input_sanitizer.py`
 - `application/services/carousel/editorial_workflow_feedback.py`, `phase_artifact_runner.py`,

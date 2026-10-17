@@ -6,7 +6,7 @@ Gherkin: tests/features/content_gate_backend_ae0413.feature
 
 from __future__ import annotations
 
-from typing import ClassVar
+from typing import ClassVar, cast
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -65,7 +65,7 @@ _PT_HEADING = "Agentes de código mudam o review"
 
 
 def _state(**values: object) -> CarouselWorkflowState:
-    return CarouselWorkflowState(**values)  # type: ignore[typeddict-item]
+    return cast(CarouselWorkflowState, values)
 
 
 @pytest.mark.unit

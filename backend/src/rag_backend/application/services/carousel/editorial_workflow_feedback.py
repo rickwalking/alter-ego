@@ -4,10 +4,7 @@ from __future__ import annotations
 
 from typing import cast
 
-from rag_backend.agents.carousel_workflow import (
-    CarouselWorkflowEngine,
-    checkpoint_gate_phase,
-)
+from rag_backend.agents.carousel_workflow import CarouselWorkflowEngine
 from rag_backend.application.services.carousel.content_feedback_lifecycle import (
     NewFeedbackNote,
     add_feedback_note,
@@ -19,6 +16,7 @@ from rag_backend.application.services.carousel.editorial_workflow_types import (
 from rag_backend.application.services.carousel.workflow_state import (
     CarouselWorkflowState,
 )
+from rag_backend.domain.carousel_gate_phase import checkpoint_gate_phase
 from rag_backend.domain.constants.carousel_workflow import (
     FINAL_REVIEW_SEND_BACK_PHASES,
 )
