@@ -36,14 +36,6 @@ export interface KeyboardShortcutsHelpProps {
   onClose: () => void;
 }
 
-export interface RichTextEditorProps {
-  value: string;
-  onChange: (value: string) => void;
-  onSelectionChange?: (selectedText: string) => void;
-  className?: string;
-  placeholder?: string;
-}
-
 export interface SeoPreviewProps {
   postId: string | null;
   title: string;

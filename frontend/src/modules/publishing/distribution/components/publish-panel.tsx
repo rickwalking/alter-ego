@@ -11,13 +11,21 @@ import {
 import { CaptionEditor, countHashtags } from "./caption-editor";
 import { HorizontalCarouselViewer } from "./horizontal-carousel-viewer";
 import type { EditorState, PublishPanelProps } from "./types";
+import {
+  viewerSlidePaths,
+  viewerSlideTitle,
+} from "@/modules/publishing/distribution/lib/viewer-slides";
+import type {
+  ViewerLanguage,
+  ViewerSlideSource,
+} from "@/modules/publishing/distribution/types";
 
 const IG_MAX_CHARS = 2200;
 const IG_MAX_HASHTAGS = 30;
 const LINKEDIN_MAX_CHARS = 3000;
 const LINKEDIN_COMPOSE_URL = "https://www.linkedin.com/feed/?shareActive=true";
 
-type LanguageTab = "pt" | "en";
+type LanguageTab = ViewerLanguage;
 type ActiveTab = "instagram" | "linkedin";
 
 // AE-0313: combine the project's updated_at with the freshly built artifact
@@ -33,32 +41,14 @@ function cacheBustVersion(
 }
 
 function slideUrlsFromProject(
-  project: CarouselProjectResponse,
-  language: "pt" | "en",
+  source: ViewerSlideSource,
   cacheBustToken: string | undefined,
 ): string[] {
-  const tokens = project.design_tokens as
-    | {
-        images?: {
-          slides?: string[];
-          rendered_slides_pt?: string[];
-          rendered_slides_en?: string[];
-        };
-      }
-    | null
-    | undefined;
-  // The publish viewer wants the RENDERED slides (with text overlay),
-  // not the raw hero images. Fall back to legacy `slides` for projects
-  // generated before the rendered_slides_* fields existed.
-  const ptSlides =
-    tokens?.images?.rendered_slides_pt ?? tokens?.images?.slides ?? [];
-  const enSlides = tokens?.images?.rendered_slides_en ?? ptSlides;
-  const slides = language === "en" ? enSlides : ptSlides;
   return slideUrlsForPublishPanel({
-    projectId: project.id,
-    paths: slides,
-    language,
-    updatedAt: cacheBustVersion(project, cacheBustToken),
+    projectId: source.project.id,
+    paths: viewerSlidePaths(source),
+    language: source.language,
+    updatedAt: cacheBustVersion(source.project, cacheBustToken),
   });
 }
 
@@ -92,6 +82,7 @@ export function PublishPanel({
   isPublishingInstagram,
   publishResult,
   cacheBustToken,
+  slideNumbers,
 }: PublishPanelProps) {
   const t = useTranslations("publish");
   const [activeTab, setActiveTab] = useState<ActiveTab>("instagram");
@@ -107,7 +98,10 @@ export function PublishPanel({
     setEditorState(incomingEditorState);
   }
 
-  const slideUrls = slideUrlsFromProject(project, language, cacheBustToken);
+  const slideUrls = slideUrlsFromProject(
+    { project, language, slideNumbers },
+    cacheBustToken,
+  );
   const activeLinkedInText =
     language === "pt" ? editor.linkedinPt : editor.linkedinEn;
   const setCaption = (caption: string) =>
@@ -156,7 +150,7 @@ export function PublishPanel({
         </div>
         <HorizontalCarouselViewer
           slideUrls={slideUrls}
-          alt={project.title || project.topic}
+          alt={viewerSlideTitle(project, language)}
         />
         <a
           href={pdfUrl(project, language, cacheBustToken)}
@@ -194,6 +188,17 @@ export function PublishPanel({
 
         {activeTab === "instagram" && (
           <div className="space-y-3">
+            {/* AE-0416: the Instagram caption is Portuguese only (the account
+              posts in PT; no EN caption is generated), so the EN viewer tab
+              says so instead of presenting the PT caption as English. */}
+            {language === "en" && (
+              <p
+                role="note"
+                className="rounded-md border border-[var(--color-border)] bg-[var(--color-background)] p-3 text-[var(--color-text-muted)] text-xs"
+              >
+                {t("instagram.captionPtOnly")}
+              </p>
+            )}
             <CaptionEditor
               value={editor.caption}
               onChange={setCaption}

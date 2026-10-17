@@ -34,8 +34,3 @@ export interface BlogPostBadgeLook {
   key: string;
   visual: BlogPostBadgeVisual;
 }
-
-export interface BlogPostFilters {
-  search: string;
-  statusFilter: string;
-}

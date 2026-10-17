@@ -42,7 +42,8 @@ class TestBlogComposition:
         )
         markdown = build_blog_markdown_from_long_form_notes(composition)
         assert "# My Topic" in markdown
-        assert "Research synthesis intro." in markdown
+        # AE-0416: the English research intro never opens the PT body.
+        assert "Research synthesis intro." not in markdown
         assert "## Intro" in markdown
         assert "Expanded hook with context." in markdown
         assert "Detailed analysis paragraph." in markdown

@@ -146,23 +146,21 @@ async def build_editorial_distribution_updates(
     _ensure_blog_titles(project, context.slide_drafts, translations_en)
     blog_title = project.title or project.topic
     blog_en_title = project.title_en or blog_title
-    composition_kwargs = {
-        "research_summary": context.research_summary,
-        "outline": context.outline,
-    }
     blog_pt = build_blog_markdown_from_drafts(
         BlogBuildContext(
             slide_drafts=context.slide_drafts,
             title=blog_title,
-            **composition_kwargs,
+            outline=context.outline,
         ),
     )
+    # AE-0416: the research summary is English, so only the EN body gets it.
     blog_en = build_blog_markdown_en_from_translations(
         BlogBuildContext(
             slide_drafts=context.slide_drafts,
             translations_en=translations_en,
             title=blog_en_title,
-            **composition_kwargs,
+            research_summary=context.research_summary,
+            outline=context.outline,
         ),
     )
     project.blog_markdown = blog_pt

@@ -45,6 +45,8 @@ export interface PublishPanelProps {
   // to PDF/slide URLs after a "Rebuild PDF" so the browser fetches the new
   // artifact rather than a cached prior version.
   cacheBustToken?: string;
+  /** AE-0416: 1-based numbers of the real slides; the viewer counts these. */
+  slideNumbers?: readonly number[];
 }
 
 export interface RebuildPdfSectionProps {

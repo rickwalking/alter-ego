@@ -181,6 +181,11 @@ Pending (CI decides).
   Chat relative times use `Intl.RelativeTimeFormat` (pt "há 5 min.", en "5m ago"; "now" /
   "agora" under a minute instead of "Just now").
 
+- 2026-10-17: merging main brought AE-0416's own `formatBlogPostDate(date, locale)` (pt
+  "17 de out. de 2026"). Kept the shared AE-0412 format (pt "17/10/2026") so dashboard and
+  public dates match. The AE-0416 paging test now asserts the exact pt string instead of
+  `toContain("out")`.
+
 ## Blockers
 
 None.

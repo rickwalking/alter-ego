@@ -42,6 +42,10 @@
       {
         "cards": [],
         "phase": "published"
+      },
+      {
+        "cards": [],
+        "phase": "rejected"
       }
     ]
   },

@@ -1,7 +1,7 @@
 import { formatLocaleDate } from "@/lib/locale-format";
-import type { BlogPostFilters, DashboardBlogPost } from "./types";
+import type { DashboardBlogPost } from "./types";
 
-/** Card date in the active locale (AE-0417: pt "17/10/2026", en "Oct 17, 2026"). */
+/** Card date in the active locale (AE-0416/AE-0417: pt "17/10/2026", en "Oct 17, 2026"). */
 export function formatBlogPostDate(date: string, locale: string): string {
   return formatLocaleDate(date, locale);
 }
@@ -15,28 +15,4 @@ export function pickFeaturedBlogPost(
   posts: DashboardBlogPost[],
 ): DashboardBlogPost | undefined {
   return posts.find((post) => post.isPublic);
-}
-
-export function filterBlogPosts(
-  posts: DashboardBlogPost[],
-  filters: BlogPostFilters,
-): DashboardBlogPost[] {
-  const searchLower = filters.search.toLowerCase();
-  const statusLower = filters.statusFilter.toLowerCase();
-
-  return posts.filter((post) => {
-    // Status filter matches the workflow status, not the content category
-    // (conflating the two was the AE-0295 root cause).
-    if (statusLower && (post.status ?? "") !== statusLower) {
-      return false;
-    }
-    if (
-      searchLower &&
-      !post.title.toLowerCase().includes(searchLower) &&
-      !post.excerpt.toLowerCase().includes(searchLower)
-    ) {
-      return false;
-    }
-    return true;
-  });
 }

@@ -933,7 +933,8 @@
       "linkedin": "LinkedIn"
     },
     "instagram": {
-      "captionLabel": "Legenda do Instagram",
+      "captionLabel": "Legenda do Instagram (PT)",
+      "captionPtOnly": "A legenda do Instagram é publicada só em português. O texto em inglês está no post do LinkedIn e no PDF EN.",
       "placeholder": "Escreva sua legenda do Instagram…",
       "hashtagHelp": "Hashtags: {count} / {max}",
       "hashtagOver": "Acima do limite de 30 hashtags — o Instagram rejeitará o post.",
@@ -963,7 +964,9 @@
       "nextSlide": "Próximo slide",
       "goToSlide": "Ir para slide {number}",
       "downloadImages": "Baixar imagens",
-      "downloadingImages": "Baixando..."
+      "downloadingImages": "Baixando...",
+      "slideAlt": "{title} – slide {number}",
+      "slideNotRendered": "Slide ainda não renderizado"
     },
     "regenerateStrategy": {
       "title": "Layout dos Slides",
@@ -1035,7 +1038,8 @@
       "noProjects": "Nenhum projeto",
       "retry": "Tentar novamente",
       "breadcrumb": "pipeline",
-      "newCard": "Novo card"
+      "newCard": "Novo card",
+      "rejectedColumn": "Rejeitados"
     },
     "calendar": {
       "title": "Calendário de Conteúdo",
@@ -1173,6 +1177,12 @@
       "countOne": "{count} post",
       "countOther": "{count} posts",
       "countOfTotal": "{count} de {total} posts",
+      "pager": {
+        "label": "Páginas de posts",
+        "previous": "Anterior",
+        "next": "Próxima",
+        "status": "Página {page} de {count}"
+      },
       "notLiveHint": "Salvo como publicado, mas só aparece para os leitores quando o carrossel for publicado no site.",
       "validation": {
         "titleRequired": "O título é obrigatório.",

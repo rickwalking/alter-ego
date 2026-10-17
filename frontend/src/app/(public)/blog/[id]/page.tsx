@@ -1,14 +1,12 @@
 import { cache } from "react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { cookies } from "next/headers";
 import { getTranslations } from "next-intl/server";
 import { BLOG_LANGUAGES } from "@/constants/api";
 import { designTokensToCssVars } from "@/constants/blog";
 import { resolvePublicBlogView } from "@/lib/public-blog";
 import { toCategoryLabel } from "@/lib/public-blog-text";
-import { DEFAULT_LOCALE, SUPPORTED_LOCALES } from "@/i18n/config";
-import type { SupportedLocale } from "@/i18n/config";
+import { getRequestLocale } from "@/i18n/request-locale";
 import {
   BackLink,
   BlogPostContent,
@@ -38,12 +36,7 @@ async function resolveLang(langParam: string | undefined): Promise<string> {
   ) {
     return langParam;
   }
-  const cookieStore = await cookies();
-  const localeCookie = cookieStore.get("locale")?.value;
-  return localeCookie &&
-    SUPPORTED_LOCALES.includes(localeCookie as SupportedLocale)
-    ? (localeCookie as SupportedLocale)
-    : DEFAULT_LOCALE;
+  return getRequestLocale();
 }
 
 function truncateDescription(text: string): string {

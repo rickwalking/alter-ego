@@ -5,6 +5,8 @@ vi.mock("next/headers", () => ({
   cookies: vi.fn(async () => ({
     get: (name: string) => (name === "locale" ? { value: "pt" } : undefined),
   })),
+  // AE-0416: the request locale also reads Accept-Language.
+  headers: vi.fn(async () => ({ get: () => null })),
 }));
 
 vi.mock("next-intl/server", () => ({
