@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useMemo, useState } from "react";
+import { useLocale } from "next-intl";
 import { useCreateConversation } from "@/modules/conversation";
 import { useSseChat } from "@/modules/conversation";
 import {
@@ -21,6 +22,7 @@ import { ChatMessageList } from "@/app/dashboard/chat/chat-message-list";
 
 export function PublicChatView(): React.ReactElement {
   const [activeConv, setActiveConv] = useState<string | null>(null);
+  const locale = useLocale();
   const [input, setInput] = useState("");
 
   const createConversation = useCreateConversation();
@@ -37,8 +39,8 @@ export function PublicChatView(): React.ReactElement {
   });
 
   const displayMessages = useMemo(
-    () => sseMessages.map(mapMessageToDashboard),
-    [sseMessages],
+    () => sseMessages.map((message) => mapMessageToDashboard(message, locale)),
+    [sseMessages, locale],
   );
 
   const handleSend = useCallback(async () => {

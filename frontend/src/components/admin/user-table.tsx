@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
+import { formatLocaleDate } from "@/lib/locale-format";
 import { RoleBadge } from "./role-badge";
 import { EditUserDialog } from "./edit-user-dialog";
 import { DeleteUserDialog } from "./delete-user-dialog";
@@ -23,6 +24,7 @@ interface UserTableProps {
 
 export function UserTable({ users, onRefresh }: UserTableProps) {
   const t = useTranslations("admin");
+  const locale = useLocale();
   const [editUser, setEditUser] = useState<UserItem | null>(null);
   const [deleteUser, setDeleteUser] = useState<UserItem | null>(null);
   const [resetUser, setResetUser] = useState<UserItem | null>(null);
@@ -76,7 +78,7 @@ export function UserTable({ users, onRefresh }: UserTableProps) {
                 {user.is_active ? t("active") : t("inactive")}
               </td>
               <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
-                {new Date(user.created_at).toLocaleDateString()}
+                {formatLocaleDate(user.created_at, locale)}
               </td>
               <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
                 <button

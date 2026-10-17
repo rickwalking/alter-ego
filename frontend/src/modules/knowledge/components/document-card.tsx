@@ -8,10 +8,12 @@ import {
 import { NeonBadge } from "@/components/atoms/neon-badge";
 
 import { FileText, Trash2 } from "lucide-react";
+import { useLocale } from "next-intl";
 import { formatDate } from "@/lib/utils";
 import { type DocumentCardProps } from "./types";
 
 export function DocumentCard({ document, onDelete }: DocumentCardProps) {
+  const locale = useLocale();
   const meta = document.metadata as Record<string, unknown> | undefined;
   const tags = (meta?.tags as string[] | undefined) ?? [];
   const statusColors: Record<string, string> = {
@@ -36,7 +38,7 @@ export function DocumentCard({ document, onDelete }: DocumentCardProps) {
                 {document.title}
               </NeonCardTitle>
               <div className="flex items-center gap-2 text-xs text-[var(--color-muted-foreground)] mt-1">
-                <span>{formatDate(document.created_at)}</span>
+                <span>{formatDate(document.created_at, locale)}</span>
                 <span>·</span>
                 <span>{document.chunk_count} chunks</span>
               </div>

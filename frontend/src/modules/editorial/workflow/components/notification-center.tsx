@@ -3,12 +3,14 @@ import { NeonBadge } from "@/components/atoms/neon-badge";
 import { NeonButton } from "@/components/atoms/neon-button";
 
 import { useState } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { Bell } from "lucide-react";
+import { formatLocaleDateTime } from "@/lib/locale-format";
 import { useNotifications } from "@/modules/editorial/workflow/hooks/use-notifications";
 
 export function NotificationCenter() {
   const t = useTranslations("workflow.notifications");
+  const locale = useLocale();
   const { notifications, unreadCount, loading, markRead } = useNotifications();
   const [open, setOpen] = useState(false);
 
@@ -57,7 +59,7 @@ export function NotificationCenter() {
                   </p>
                 )}
                 <p className="text-xs text-muted-foreground mt-1">
-                  {new Date(item.created_at).toLocaleString()}
+                  {formatLocaleDateTime(item.created_at, locale)}
                 </p>
               </button>
             ))}

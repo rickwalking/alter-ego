@@ -1,15 +1,15 @@
 "use client";
 
-import { format, parseISO } from "date-fns";
+import { useLocale } from "next-intl";
 import { CalendarSvgIcon } from "@/modules/editorial-operations";
 import {
   CALENDAR_COLORS,
   CALENDAR_CONTENT_META,
-  CALENDAR_EVENT_DAY_FORMAT,
   CALENDAR_FLEX_CENTER,
   CALENDAR_MONO_FONT,
   CALENDAR_STATUS_META,
-  CALENDAR_WEEKDAY_HEADERS,
+  calendarWeekdayHeaders,
+  formatCalendarDayLabel,
 } from "@/modules/editorial-operations";
 import { NEON_BORDER_FOCUS, NEON_BORDER_SUBTLE } from "@/constants/neon";
 import { CONTENT_TYPE_ICON } from "@/app/dashboard/calendar/constants";
@@ -107,7 +107,8 @@ function CalendarDayEvent({
 }
 
 function CalendarDayCell({ cell }: CalendarDayCellProps): React.ReactElement {
-  const dateLabel = format(parseISO(cell.iso), CALENDAR_EVENT_DAY_FORMAT);
+  const locale = useLocale();
+  const dateLabel = formatCalendarDayLabel(cell.iso, locale);
   return (
     <div
       tabIndex={0}
@@ -145,6 +146,8 @@ function CalendarDayCell({ cell }: CalendarDayCellProps): React.ReactElement {
 }
 
 export function CalendarGrid({ days }: CalendarGridProps): React.ReactElement {
+  const locale = useLocale();
+  const weekdayHeaders = calendarWeekdayHeaders(locale);
   const hasCurrentDays = days.filter((day) => day.cur).length > 0;
   return (
     <div className="overflow-x-auto [overscroll-behavior-x:contain]">
@@ -160,7 +163,7 @@ export function CalendarGrid({ days }: CalendarGridProps): React.ReactElement {
           border: `1px solid ${NEON_BORDER_SUBTLE}`,
         }}
       >
-        {CALENDAR_WEEKDAY_HEADERS.map((header) => (
+        {weekdayHeaders.map((header) => (
           <div
             key={header}
             className="snap-start"

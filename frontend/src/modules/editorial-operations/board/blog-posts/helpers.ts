@@ -1,11 +1,9 @@
+import { formatLocaleDate } from "@/lib/locale-format";
 import type { BlogPostFilters, DashboardBlogPost } from "./types";
 
-export function formatBlogPostDate(date: string): string {
-  return new Date(date).toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
+/** Card date in the active locale (AE-0417: pt "17/10/2026", en "Oct 17, 2026"). */
+export function formatBlogPostDate(date: string, locale: string): string {
+  return formatLocaleDate(date, locale);
 }
 
 /**

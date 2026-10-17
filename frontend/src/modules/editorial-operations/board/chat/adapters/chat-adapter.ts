@@ -10,11 +10,7 @@ import type {
   DashboardChatMessage,
   DashboardConversation,
 } from "@/modules/editorial-operations/board/chat/types";
-import {
-  MS_PER_MINUTE,
-  MINUTES_PER_HOUR,
-  HOURS_PER_DAY,
-} from "@/constants/time";
+import { formatLocaleRelative, formatLocaleTime } from "@/lib/locale-format";
 import type { Conversation, Message } from "@/schemas/chat";
 
 const AVATAR_PALETTE = [
@@ -27,27 +23,11 @@ const AVATAR_PALETTE = [
   { avatar: "WF", bg: DASHBOARD_CHAT_TEAL_DIM, color: DASHBOARD_CHAT_TEAL },
 ] as const;
 
-function formatRelativeTime(iso: string): string {
-  const date = new Date(iso);
-  const diffMs = Date.now() - date.getTime();
-  const diffMins = Math.floor(diffMs / MS_PER_MINUTE);
-  if (diffMins < 1) return "Just now";
-  if (diffMins < MINUTES_PER_HOUR) return `${diffMins}m ago`;
-  const diffHours = Math.floor(diffMins / MINUTES_PER_HOUR);
-  if (diffHours < HOURS_PER_DAY) return `${diffHours}h ago`;
-  return date.toLocaleDateString();
-}
-
-function formatMessageTime(iso: string): string {
-  return new Date(iso).toLocaleTimeString([], {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
+/** AE-0417: `locale` is the active UI locale; times are formatted in it. */
 export function mapConversationToDashboard(
   conversation: Conversation,
   index: number,
+  locale: string,
 ): DashboardConversation {
   const palette = AVATAR_PALETTE[index % AVATAR_PALETTE.length];
   const title = conversation.title?.trim() || "New conversation";
@@ -56,7 +36,7 @@ export function mapConversationToDashboard(
     id: conversation.id,
     name: title,
     preview: title,
-    time: formatRelativeTime(conversation.updated_at),
+    time: formatLocaleRelative(conversation.updated_at, locale),
     unread: false,
     avatar: palette.avatar,
     bg: palette.bg,
@@ -64,11 +44,14 @@ export function mapConversationToDashboard(
   };
 }
 
-export function mapMessageToDashboard(message: Message): DashboardChatMessage {
+export function mapMessageToDashboard(
+  message: Message,
+  locale: string,
+): DashboardChatMessage {
   const role = message.role === "user" ? "user" : "assistant";
   return {
     role,
     text: message.content,
-    time: formatMessageTime(message.created_at),
+    time: formatLocaleTime(message.created_at, locale),
   };
 }
