@@ -255,3 +255,98 @@ class TestResearchRelevance:
 
     def test_hit_without_letters_is_judged_by_topic_only(self) -> None:
         assert hit_rejection(ResearchHit("2026", "42"), "") is None
+
+
+_LONG_BODY = (
+    "Times pequenos que usam agentes de código revisam mais rápido, mas só quando "
+    "o dono do repositório define antes o que o agente pode tocar e o que não pode, "
+    "e mede o retrabalho de cada pull request durante as primeiras semanas de uso."
+)
+
+
+def _stored_state(**extra: object) -> dict[str, object]:
+    pt = {"slide_type": "content", "heading": "Agentes em times", "body": _LONG_BODY}
+    en = {"slide_type": "content", "heading": "Agents in teams", "body": "Edited EN."}
+    return {
+        "project_id": "p",
+        "current_phase": "content",
+        "phase_status": "awaiting_human",
+        "slide_drafts": [
+            {
+                "slide_index": 2,
+                "slide_type": "content",
+                "title": "Agentes em times",
+                "draft_text": _LONG_BODY,
+                "presentation_pt": dict(pt),
+            }
+        ],
+        "localized_slides": [
+            {
+                "slide_index": 2,
+                "slide_type": "content",
+                "presentation_pt": pt,
+                "presentation_en": en,
+            }
+        ],
+        "presentation_policy_version": PRESENTATION_POLICY_VERSION_HERO_LOWER_THIRD_V4,
+        **extra,
+    }
+
+
+@pytest.mark.unit
+class TestReadOnlyStateResponse:
+    """AE-0413 (AE-0414 trace): the state GET never rewrites the copy or the policy."""
+
+    @staticmethod
+    def _build(state: dict[str, object]) -> object:
+        from rag_backend.api.routes.carousels.editorial_workflow_routes_response import (
+            build_editorial_workflow_state_response,
+        )
+
+        return build_editorial_workflow_state_response(state)
+
+    def test_get_keeps_the_stored_slides_report_and_policy(self) -> None:
+        report = {
+            "validation_status": "invalid",
+            "validated_at": "2026-10-16T10:00:00Z",
+            "blocking": True,
+            "violations": [],
+        }
+        state = _stored_state(presentation_validation=report)
+
+        response = self._build(state)
+
+        assert response.presentation_policy_version == (
+            PRESENTATION_POLICY_VERSION_HERO_LOWER_THIRD_V4
+        )
+        slide = response.localized_slides[0]
+        assert slide.presentation_en["body"] == "Edited EN."
+        assert slide.presentation_pt["body"] == _LONG_BODY
+        assert response.presentation_validation is not None
+        assert response.presentation_validation.blocking is True
+
+    def test_get_never_clamps_the_drafts(self) -> None:
+        response = self._build(_stored_state())
+
+        assert response.slide_drafts[0]["draft_text"] == _LONG_BODY
+
+    def test_legacy_state_builds_slides_under_its_own_policy(self) -> None:
+        state = _stored_state(localized_slides=[])
+
+        response = self._build(state)
+
+        assert response.presentation_policy_version == (
+            PRESENTATION_POLICY_VERSION_HERO_LOWER_THIRD_V4
+        )
+        assert [slide.slide_index for slide in response.localized_slides] == [2]
+
+    def test_state_without_policy_uses_the_default(self) -> None:
+        from rag_backend.application.services.carousel.workflow_state_sanitize import (
+            read_only_sanitize_command,
+        )
+
+        command = read_only_sanitize_command({"presentation_policy_version": "  "})
+
+        assert command.policy_version == "hero_lower_third_v1"
+        assert command.rebuild_validation is True
+        assert command.clamp_to_budgets is False

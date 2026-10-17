@@ -49,6 +49,25 @@ Feature: Content gate manual fixes, feedback history, LLM input case and researc
     Then a wrong_language violation is reported for the EN heading
     And a v3 policy reports it as translation_not_english
 
+  # --- Read-only state GET and lock order (traced by AE-0414) -------------------
+
+  Scenario: The workflow state GET keeps the stored copy, report and policy version
+    Given a v4 project whose localized slides hold edited EN copy and a long PT body
+    When the workflow state is served
+    Then the localized slides, the validation report and the policy version are the stored ones
+    And no draft is cut to a copy budget
+
+  Scenario: A legacy state without localized slides gets them under its own policy
+    Given a v4 project state with drafts and no localized slides
+    When the workflow state is served
+    Then localized slides are built and the policy version stays v4
+
+  Scenario: A rejected manual fix does not bump the lock version
+    Given a workflow parked at the outline gate
+    When the reviewer submits edited localized slides
+    Then the response is 422 edited_localized_slides_phase_not_allowed
+    And the lock version is unchanged and its bump was never attempted
+
   # --- B16: content notes reach the model and are recorded ----------------------
 
   Scenario: A consumed content note is exposed in the state response

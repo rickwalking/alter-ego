@@ -32,7 +32,7 @@ from rag_backend.application.services.carousel.workflow_state import (
     CarouselWorkflowState,
 )
 from rag_backend.application.services.carousel.workflow_state_sanitize import (
-    SanitizeWorkflowStateCommand,
+    read_only_sanitize_command,
     sanitize_workflow_state_artifacts,
 )
 from rag_backend.domain.constants.carousel_presentation import SEVERITY_BLOCKER
@@ -300,8 +300,8 @@ def build_editorial_workflow_state_response(
     lock_version: int = 1,
 ) -> EditorialWorkflowStateResponse:
     """Build a typed API response from a raw workflow state dictionary."""
-    command = SanitizeWorkflowStateCommand(state=state)
-    sanitized = sanitize_workflow_state_artifacts(command)
+    # AE-0413: a GET is read-only (stored copy, report and policy version).
+    sanitized = sanitize_workflow_state_artifacts(read_only_sanitize_command(state))
     kwargs: dict[str, object] = {name: get(sanitized) for name, get in _FIELD_MAPPING}
     kwargs[STATE_FIELD_PHASE_PROGRESS] = _resolve_phase_progress(
         sanitized, phase_progress

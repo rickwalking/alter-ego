@@ -50,6 +50,9 @@ from rag_backend.domain.constants.carousel_workflow import (
     PHASE_STATUS_FAILED,
     WORKFLOW_ERROR_KEY,
 )
+from rag_backend.domain.constants.presentation_policy import (
+    DEFAULT_PRESENTATION_POLICY_VERSION,
+)
 from rag_backend.domain.constants.workflow_state_fields import (
     STATE_FIELD_DESIGN_RECOVERY_HINT,
     STATE_FIELD_PRESENTATION_VALIDATION,
@@ -363,6 +366,9 @@ class PhaseArtifactRunner:
                     or state.get("slide_drafts")
                     or [],
                 },
+                # AE-0413: the project's budgets, not the v1 defaults.
+                policy_version=_state_policy_version(state)
+                or DEFAULT_PRESENTATION_POLICY_VERSION,
                 rebuild_validation=False,
             ),
         )

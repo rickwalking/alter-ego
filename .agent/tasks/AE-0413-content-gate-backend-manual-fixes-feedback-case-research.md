@@ -72,7 +72,13 @@ QA run 2026-10-16 (`~/alter-ego-qa/2026-10-16-ui/REPORT.md`):
 5. `phase_feedback_history` is served on the workflow state response (additive).
 6. `sanitize_llm_input` preserves case; injection phrases still removed (case-insensitive,
    repeated until stable), `< > ( )` stripped, length capped. Casing message rewritten.
-7. Web-search query drops bracketed tags and emoji; hits must be PT/EN (Latin-script ratio +
+7. (Traced by AE-0414) The workflow state GET is read-only: it keeps the stored
+   `localized_slides`, validation report and policy version and never clamps drafts (it
+   re-clamped drafts to the v1 budgets, rebuilt the slides and report from them and relabelled
+   the project v1: B04 mid-sentence cuts, B09 v4→v1 flip). The content ensure clamps drafts
+   with the project's policy, not v1. The resume route validates structured feedback before
+   the lock bump.
+8. Web-search query drops bracketed tags and emoji; hits must be PT/EN (Latin-script ratio +
    stopwords) and share a keyword stem with the query. Owner sources are never filtered.
 
 ## Non-Goals
@@ -95,6 +101,8 @@ QA run 2026-10-16 (`~/alter-ego-qa/2026-10-16-ui/REPORT.md`):
 - [x] AC8: the casing message no longer claims an auto-capitalization.
 - [x] AC9: bracketed tags are not searched; foreign-language and off-topic hits are discarded
   without consuming the 3-hit cap; owner sources are kept.
+- [x] AC10: the state GET returns the stored slides, report and policy version, unclamped.
+- [x] AC11: a 422 on structured feedback never attempts the lock bump.
 
 ## Gherkin Scenarios
 
@@ -117,7 +125,10 @@ QA run 2026-10-16 (`~/alter-ego-qa/2026-10-16-ui/REPORT.md`):
 - `agents/carousel_workflow_nodes.py`, `agents/research_enrichment.py`, `agents/input_sanitizer.py`
 - `application/services/carousel/editorial_workflow_feedback.py`, `phase_artifact_runner.py`,
   `copy_hygiene_text.py`, `presentation_content_rules.py`, `presentation_casing_markers.py`
-- `api/routes/carousels/editorial_workflow_routes_sanitize.py`, `editorial_workflow_routes_response.py`
+- `api/routes/carousels/editorial_workflow_routes_sanitize.py`, `editorial_workflow_routes_response.py`,
+  `editorial_workflow.py` (validate before lock bump)
+- `application/services/carousel/workflow_state_sanitize.py` (`read_only_sanitize_command`,
+  `clamp_to_budgets`)
 - `domain/constants/content_feedback.py`, `domain/constants/research_enrichment.py`
 - Tests whose expectations encoded the lowercasing (blog AI service, generate_carousel tool,
   input sanitizer) and the parked-update shape.
