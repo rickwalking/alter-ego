@@ -144,13 +144,13 @@ Decision Log for the "unit tests suffice" classification.
 
 Hang reproduced and root-caused; fix + tests; CI timeouts; locale helper and dashboard
 surfaces; gates run (see dev summary). PR #134: first CI run caught two mocks still on the
-old seams (runner heartbeat patch, header \`useLocale\`); fixed in 0ca7e132, then every CI
+old seams (runner heartbeat patch, header `useLocale`); fixed in 0ca7e132, then every CI
 check passed, mutation included.
 
 ## Files Touched
 
-See Delta, plus \`backend/tests/unit/application/test_editorial_workflow_resume_runner.py\` and
-\`frontend/src/components/layout/header.test.tsx\` (mock seams).
+See Delta, plus `backend/tests/unit/application/test_editorial_workflow_resume_runner.py` and
+`frontend/src/components/layout/header.test.tsx` (mock seams).
 
 ## Test Evidence
 
