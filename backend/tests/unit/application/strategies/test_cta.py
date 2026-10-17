@@ -30,7 +30,7 @@ class TestCtaCenteredStrategy:
         assert "@pedromarins.ai" in result
         assert "marinssolutions.com" in result
         # AE-0372: the follow variant replaces the generic CTA line.
-        assert "Siga @pedromarins.ai: toda terça e quinta" in result
+        assert "Siga @pedromarins.ai: eu traduzo IA" in result
         assert "images/about-pedro.jpg" in result
         assert "images/slide_7.jpg" not in result
 
@@ -72,4 +72,4 @@ class TestCtaCenteredStrategy:
             options=_RenderOptions(total_slides=7, language="en"),
         )
 
-        assert "Follow @ai_academy: every Tuesday and Thursday" in result
+        assert "Follow @ai_academy: I turn AI into real decisions" in result

@@ -48,13 +48,13 @@ Feature: Radar IA quick fixes (AE-0372, growth plan 16.4 #3-#7)
   Scenario: CTA slide uses the follow variant in Portuguese
     Given a PT Radar IA carousel by "@pedromarins.ai"
     When the CTA slide is rendered
-    Then it shows "Siga @pedromarins.ai: toda terça e quinta eu traduzo IA em decisões reais."
+    Then it shows "Siga @pedromarins.ai: eu traduzo IA em decisões reais."
     And it no longer shows "Siga para mais conteúdo como esse"
 
   Scenario: CTA slide uses the follow variant in English
     Given an EN Radar IA carousel by "@pedromarins.ai"
     When the CTA slide is rendered
-    Then it shows "Follow @pedromarins.ai: every Tuesday and Thursday I turn AI into real decisions."
+    Then it shows "Follow @pedromarins.ai: I turn AI into real decisions."
 
   # --- Image defaults --------------------------------------------------------
 

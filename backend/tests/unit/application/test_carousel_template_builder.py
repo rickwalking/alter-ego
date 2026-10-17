@@ -226,7 +226,7 @@ class TestCarouselTemplateBuilder:
         assert "slide-closing" in html
         assert "closing-name" in html
         assert "closing-card" in html
-        assert "toda terça e quinta eu traduzo IA em decisões reais." in html
+        assert "eu traduzo IA em decisões reais." in html
 
     def test_build_carousel_html_cta_css_promotes_avatar(
         self, sample_project, sample_theme
