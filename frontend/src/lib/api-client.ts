@@ -34,6 +34,9 @@ function redirectToLoginAfterUnauthorized(): void {
 }
 
 export class ApiError extends Error {
+  /** AE-0415: the raw FastAPI `detail` (e.g. the 422 validation list). */
+  public detail?: unknown;
+
   constructor(
     public status: number,
     message: string,
@@ -47,6 +50,7 @@ export class ApiError extends Error {
 interface ApiErrorBody {
   message?: string;
   code?: string;
+  detail?: unknown;
 }
 
 const FORBIDDEN_REDIRECT_PATH = "/403";
@@ -103,11 +107,13 @@ async function throwIfErrorResponse(response: Response): Promise<void> {
 
   if (!response.ok) {
     const errorData = await parseErrorBody(response);
-    throw new ApiError(
+    const error = new ApiError(
       response.status,
       errorData?.message || `HTTP error! status: ${response.status}`,
       errorData?.code,
     );
+    error.detail = errorData?.detail;
+    throw error;
   }
 }
 

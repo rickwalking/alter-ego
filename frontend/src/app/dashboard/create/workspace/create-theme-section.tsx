@@ -11,10 +11,14 @@ import {
 import { PALETTE_MODES } from "@/schemas/palette";
 import { SectionNumber } from "./section-number";
 import {
+  INPUT_FOCUS_CLASS,
   inputStyle,
   sectionCardStyle,
   sectionHeaderStyle,
 } from "./section-styles";
+
+const THEME_SELECT_ID = "create-theme-select";
+const IMAGE_PRESET_SELECT_ID = "create-image-preset-select";
 
 export interface CreateThemeSectionProps {
   form: CreateCarouselFormState;
@@ -49,11 +53,12 @@ export function CreateThemeSection({
     <div style={sectionCardStyle}>
       <div style={sectionHeaderStyle}>
         <SectionNumber num={3} />
-        Theme & Voice
+        {t("form.sectionTheme")}
       </div>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div>
           <label
+            htmlFor={THEME_SELECT_ID}
             style={{
               fontSize: "12px",
               color: TEXT_MUTED,
@@ -61,11 +66,13 @@ export function CreateThemeSection({
               display: "block",
             }}
           >
-            Theme
+            {t("form.themeLabel")}
           </label>
           <select
+            id={THEME_SELECT_ID}
             value={form.theme}
             onChange={(e) => handleThemeChange(e.target.value)}
+            className={INPUT_FOCUS_CLASS}
             style={inputStyle}
           >
             {themeOptions.map((option) => (
@@ -89,6 +96,7 @@ export function CreateThemeSection({
         </div>
         <div>
           <label
+            htmlFor={IMAGE_PRESET_SELECT_ID}
             style={{
               fontSize: "12px",
               color: TEXT_MUTED,
@@ -96,11 +104,13 @@ export function CreateThemeSection({
               display: "block",
             }}
           >
-            Image Preset (model + style)
+            {t("form.imagePresetLabel")}
           </label>
           <select
+            id={IMAGE_PRESET_SELECT_ID}
             value={form.imagePreset}
             onChange={(e) => onChange({ imagePreset: e.target.value })}
+            className={INPUT_FOCUS_CLASS}
             style={inputStyle}
           >
             {IMAGE_PRESETS.map((preset) => (

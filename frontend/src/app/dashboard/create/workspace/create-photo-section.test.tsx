@@ -42,6 +42,8 @@ describe("CreatePhotoSection", () => {
     expect(image?.getAttribute("src")).toContain(
       "/api/carousels/creator-assets/a1/image",
     );
+    // AE-0415 (B31): the thumbnail image has a text alternative.
+    expect(image?.getAttribute("alt")).toBe("Apontando");
   });
 
   it("explains the empty library", () => {

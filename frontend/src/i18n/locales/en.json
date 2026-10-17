@@ -231,7 +231,15 @@
       "submitting": "Creating...",
       "imageGuidanceLabel": "Image Guidance (optional)",
       "imageGuidancePlaceholder": "e.g. misty harbor at dusk, retro-futuristic workshop, rainy neon street",
-      "imageGuidanceHint": "max 500 chars — steers the scene/backdrop of every slide image; the brand style and palette stay locked"
+      "imageGuidanceHint": "max 500 chars — steers the scene/backdrop of every slide image; the brand style and palette stay locked",
+      "sectionTopic": "Topic & Brief",
+      "maxChars": "max {max} chars",
+      "briefLabel": "Brief / Niche",
+      "briefHint": "optional, max {max} chars — falls back to the topic",
+      "briefPlaceholder": "What should this carousel cover?",
+      "sectionTemplate": "Template Style",
+      "sectionTheme": "Theme & Voice",
+      "startCarousel": "Start Carousel"
     },
     "themes": {
       "auto": "Auto-detect",
@@ -308,7 +316,10 @@
       "resume": "Resume from last checkpoint",
       "resuming": "Resuming…",
       "reconnectStream": "Reconnect stream",
-      "error": "An error occurred while processing your request."
+      "error": "An error occurred while processing your request.",
+      "workflowTitle": "Workflow",
+      "activePhase": "Active phase",
+      "startingWorkflow": "Starting editorial workflow…"
     },
     "chat": {
       "error": "An error occurred while processing your request."
@@ -386,6 +397,91 @@
       "upload": "Upload a new photo",
       "uploading": "Uploading…",
       "uploadFailed": "The photo could not be uploaded (PNG, WebP or JPEG up to 5 MB)."
+    },
+    "phases": {
+      "brief": "Brief",
+      "research": "Research",
+      "outline": "Outline",
+      "content": "Content",
+      "design": "Design",
+      "images": "Images",
+      "final_review": "Final review",
+      "published": "Published"
+    },
+    "steps": {
+      "ariaLabel": "Carousel creation steps",
+      "brief": "Brief",
+      "research": "Research",
+      "outline": "Outline",
+      "content": "Content",
+      "images": "Images",
+      "review": "Review",
+      "publish": "Publish"
+    },
+    "templates": {
+      "stat_card_grid": {
+        "name": "Analysis",
+        "desc": "Deep dive with data"
+      },
+      "feature_grid": {
+        "name": "Comparison",
+        "desc": "Side by side"
+      },
+      "numbered_list": {
+        "name": "Tutorial",
+        "desc": "Step by step"
+      },
+      "intro_hero": {
+        "name": "News Flash",
+        "desc": "Quick update"
+      },
+      "insight_quote": {
+        "name": "Deep Dive",
+        "desc": "Comprehensive"
+      },
+      "hero_content": {
+        "name": "Listicle",
+        "desc": "Top N format"
+      }
+    },
+    "summary": {
+      "title": "Project Summary",
+      "template": "Template",
+      "theme": "Theme",
+      "imagePreset": "Image preset",
+      "topic": "Topic",
+      "status": "Status",
+      "audience": "Audience",
+      "brief": "Brief",
+      "phase": "Phase"
+    },
+    "errors": {
+      "createFailed": "Could not create the carousel. Please try again.",
+      "createFailedDetail": "Could not create the carousel: {detail}",
+      "validation": "Some fields are invalid. Check them and try again.",
+      "tooLong": "{field}: at most {max} characters",
+      "required": "{field} is required",
+      "invalid": "{field}: {message}",
+      "projectNotFound": "Project not found.",
+      "fields": {
+        "topic": "Topic",
+        "audience": "Target audience",
+        "niche": "Brief / Niche",
+        "custom_visual_details": "Image guidance",
+        "pov_thesis": "Thesis",
+        "pov_personal_proof": "Personal proof",
+        "hook_asset_id": "Slide 1 photo"
+      }
+    },
+    "topBar": {
+      "title": "Create Carousel",
+      "newProject": "new project",
+      "project": "project",
+      "projects": "projects"
+    },
+    "publishStep": {
+      "hint": "Final approval and distribution live on the Publish screen.",
+      "goToPublish": "Go to Publish"
     }
   },
   "blogEditorial": {
@@ -467,7 +563,7 @@
       "extract": "Extract Key Points",
       "addSource": "Add Material",
       "adding": "Adding...",
-      "processing": "Processing approval… this may take up to a minute."
+      "processing": "Processing… each phase usually takes a few minutes."
     },
     "feedback": {
       "label": "Feedback for revision",
@@ -485,7 +581,9 @@
       }
     },
     "persona": {
-      "belowThreshold": "Persona voice match is below the required threshold. Revise content before approving."
+      "belowThreshold": "Persona voice match is below the required threshold. Revise content before approving.",
+      "belowThresholdSlides": "Persona voice match is below {threshold}/100 on {slides}. Revise these slides before approving.",
+      "slideScore": "Slide {slide} ({score}/100)"
     },
     "presentation": {
       "blockedApproval": "Blocking presentation violations must be resolved before approving content.",
@@ -735,7 +833,12 @@
       "elapsed": "Elapsed: {minutes}min {seconds}s.",
       "actionsDisabled": "Review actions are temporarily unavailable while the revision runs.",
       "stillRunningHint": "This run is taking longer than usual. You can check whether it is still active.",
-      "checkAgain": "Check again"
+      "checkAgain": "Check again",
+      "titleApprove": "Generating the next phase",
+      "titleRunning": "Phase running",
+      "phaseNext": "Generating: {phase}",
+      "phaseRevising": "Revising: {phase}",
+      "phaseAfter": "Running from the {phase} step"
     }
   },
   "palettes": {
@@ -892,6 +995,12 @@
       "success": "Slide text updated and the PDF was rebuilt.",
       "blockedRunInProgress": "Editing is unavailable while a workflow run is in progress. Try again once it finishes.",
       "blockingViolations": "Some edits still violate the content rules. Fix the highlighted fields and submit your manual fixes."
+    },
+    "pageTitle": "Publish",
+    "breadcrumb": "publish",
+    "notReady": {
+      "title": "Not ready to publish yet",
+      "body": "The PDF, the slide images and the publishing actions appear once the carousel reaches the final review. Continue the review in the workspace."
     }
   },
   "auth": {
@@ -921,7 +1030,9 @@
       "title": "Workflow Board",
       "subtitle": "Track carousel projects across editorial phases.",
       "noProjects": "No projects",
-      "retry": "Retry"
+      "retry": "Retry",
+      "breadcrumb": "pipeline",
+      "newCard": "New Card"
     },
     "calendar": {
       "title": "Content Calendar",

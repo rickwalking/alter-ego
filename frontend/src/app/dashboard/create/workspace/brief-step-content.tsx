@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { BG_CARD, TEXT_DIM } from "@/constants/neon";
 import { CreateDraftBlogPreview } from "./create-draft-blog-preview";
 import { CreateMaterialsGate } from "./create-materials-gate";
@@ -34,13 +35,14 @@ export function BriefStepContent({
   onSourcesChange,
   editorialWorkflow,
 }: BriefStepContentProps): React.ReactElement {
+  const t = useTranslations("create");
   const showGate = !workflowStarted && !editorialWorkflow.hasActiveWorkflow;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
       <div style={briefCardStyle}>
         <h3 style={{ fontSize: "14px", fontWeight: 700, marginBottom: "12px" }}>
-          Topic & Brief
+          {t("form.sectionTopic")}
         </h3>
         <p style={{ fontSize: "15px", fontWeight: 600, margin: "0 0 8px" }}>
           {project.topic}
@@ -75,7 +77,7 @@ export function BriefStepContent({
           role="status"
           data-testid="workflow-starting"
         >
-          Starting editorial workflow…
+          {t("workspace.startingWorkflow")}
         </p>
       )}
 

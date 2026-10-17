@@ -24,6 +24,11 @@ import {
   EDITORIAL_RUN_CHECK_AGAIN_AFTER_MS,
   EDITORIAL_RUN_STAGES,
 } from "@/constants/editorial-workflow";
+import { EDITORIAL_REVIEW_ACTIONS } from "@/constants/blog-ai";
+import {
+  nextEditorialPhase,
+  usePhaseLabel,
+} from "@/app/dashboard/create/workspace/editorial-phase-labels";
 
 const ELAPSED_TICK_MS = 1_000;
 const KNOWN_STAGES: readonly string[] = Object.values(EDITORIAL_RUN_STAGES);
@@ -32,6 +37,11 @@ export interface CreateRunProgressBannerProps {
   currentPhase: string;
   runStartedAt?: string | null;
   runStage?: string | null;
+  /**
+   * AE-0415 (B27): the review action that started the run ("approve" runs the
+   * NEXT phase, "revise" re-runs the current one); null after a reload.
+   */
+  runningAction?: string | null;
   onCheckAgain: () => void;
   checkAgainDisabled?: boolean;
 }
@@ -44,6 +54,38 @@ function parseStartedAt(runStartedAt: string | null | undefined): Date | null {
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 }
 
+interface BannerCopy {
+  titleKey: string;
+  phaseKey: string;
+  phase: string;
+}
+
+/** AE-0415 (B27): name the phase that is really running. */
+function bannerCopy(
+  currentPhase: string,
+  runningAction: string | null | undefined,
+): BannerCopy {
+  if (runningAction === EDITORIAL_REVIEW_ACTIONS.APPROVE) {
+    return {
+      titleKey: "titleApprove",
+      phaseKey: "phaseNext",
+      phase: nextEditorialPhase(currentPhase),
+    };
+  }
+  if (runningAction === EDITORIAL_REVIEW_ACTIONS.REVISE) {
+    return {
+      titleKey: "title",
+      phaseKey: "phaseRevising",
+      phase: currentPhase,
+    };
+  }
+  return {
+    titleKey: "titleRunning",
+    phaseKey: "phaseAfter",
+    phase: currentPhase,
+  };
+}
+
 function formatClock(date: Date): string {
   const hours = String(date.getHours()).padStart(2, "0");
   const minutes = String(date.getMinutes()).padStart(2, "0");
@@ -54,10 +96,13 @@ export function CreateRunProgressBanner({
   currentPhase,
   runStartedAt,
   runStage,
+  runningAction,
   onCheckAgain,
   checkAgainDisabled = false,
 }: CreateRunProgressBannerProps): React.JSX.Element {
   const t = useTranslations("editorialWorkflow.runProgress");
+  const phaseLabel = usePhaseLabel();
+  const copy = bannerCopy(currentPhase, runningAction);
   const startedAt = parseStartedAt(runStartedAt);
   const startedAtMs = startedAt?.getTime() ?? null;
   const [now, setNow] = useState<number>(() => Date.now());
@@ -88,11 +133,11 @@ export function CreateRunProgressBanner({
 
   return (
     <NeonAlert role="status" data-testid="run-progress-banner">
-      <NeonAlertTitle>{t("title")}</NeonAlertTitle>
+      <NeonAlertTitle>{t(copy.titleKey)}</NeonAlertTitle>
       <NeonAlertDescription>
         <div className="space-y-1">
           <p>
-            {t("phase", { phase: currentPhase })}
+            {t(copy.phaseKey, { phase: phaseLabel(copy.phase) })}
             {stageLabel ? ` — ${stageLabel}` : null}
           </p>
           {startedAt && elapsedMinutes !== null && elapsedSeconds !== null && (
